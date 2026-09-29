@@ -1453,3 +1453,37 @@ same process throughout, both BIND units remained under the guard's
 persistent mask and never started, and the read-time texts reported the
 switch as reconciled. One path on Debian 13 with an unsigned local recovery
 kit; no reboot, owner-edit race, source-stopped or target-started cut.
+
+### PowerDNS-to-BIND rollback after the source was stopped, Agent running (2026-09-29)
+
+P0.4; invariants 2, 4, 5. No source, schema or version change: product
+binaries are byte-identical to the `411398d9` build; only the controller
+gained the critical variant (`7c5dfe17`).
+
+[Evidence](../deploy/e2e/dns-kill-matrix/evidence/owner-inverse-critical-20260929/README.md):
+`bind__target-started__after-write` and `bind__source-stopped__after-write`,
+standalone Debian 13, managed PowerDNS source, V2 journal. After the kill the
+restarted Agent wrote `rolling-back`, released its lease and kept running;
+PowerDNS was inactive in both cells; BIND was active and answering in the
+first and guard-masked and never started in the second, where no DNS daemon
+answered. The read-only status named the command and changed nothing. The
+owner command exited 0 in 15.7 s and 8.4 s: BIND stopped, PowerDNS started
+with a new main PID and became the only port-53 authority, the journal was
+retired, the ledger and the state receipt stayed byte-identical, owner files
+were unchanged, and the zone's SOA serial was the same before the cut and at
+the end. Re-run changed nothing (exit 3). 31/31 health samples.
+
+Measured PowerDNS outage, an upper bound taken from the unit journal's
+stopping entry to the first answer the controller saw after the command:
+21.6 s and 9.4 s. In the first cell BIND answered for about ten seconds of
+that window. These cells interrupt DNS by construction; nothing here claims
+continuity or bounds the outage.
+
+Final BIND unit state differs by history and is recorded, not judged:
+unmasked and disabled where BIND had started (the absent preimage is restored
+by unmask/disable and the `bind9.service` alias is removed), still under the
+guard mask where it had not. In both cells the `bind9` packages, the
+install-ownership receipt, the staged generation tree and the non-package
+`rndc.key` remain; `/etc/bind` configuration equals the journal's preimage.
+While running, `named` also listened on loopback and link-local addresses,
+which the listener proofs do not inspect.

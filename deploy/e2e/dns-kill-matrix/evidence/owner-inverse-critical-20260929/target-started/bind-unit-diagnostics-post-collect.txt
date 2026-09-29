@@ -1,0 +1,90 @@
+wall=2026-09-29T09:29:58.683272591Z
+== systemctl show named.service (full)
+Type=notify
+MainPID=0
+ControlPID=0
+ExecMainPID=0
+ExecStart={ path=/usr/sbin/named ; argv[]=/usr/sbin/named -f $OPTIONS ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }
+EnvironmentFiles=/etc/default/named (ignore_errors=yes)
+Id=named.service
+Names=named.service
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+FragmentPath=/usr/lib/systemd/system/named.service
+UnitFileState=disabled
+UnitFilePreset=enabled
+NeedDaemonReload=no
+Transient=no
+== systemctl status named.service
+○ named.service - BIND Domain Name Server
+     Loaded: loaded (/usr/lib/systemd/system/named.service; disabled; preset: enabled)
+     Active: inactive (dead)
+       Docs: man:named(8)
+
+Sep 29 09:28:20 dns-debian13 named[7461]: no longer listening on 192.0.2.10#53
+Sep 29 09:28:20 dns-debian13 named[7461]: no longer listening on ::1#53
+Sep 29 09:28:20 dns-debian13 named[7461]: no longer listening on fec0::5054:ff:fe13:10#53
+== systemctl show bind9.service (full)
+MainPID=0
+ControlPID=0
+ExecMainPID=0
+Id=bind9.service
+Names=bind9.service
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+NeedDaemonReload=no
+LoadError=org.freedesktop.systemd1.NoSuchUnit "Unit bind9.service not found."
+Transient=no
+== systemctl status bind9.service
+Unit bind9.service could not be found.
+== unit files
+ls: cannot access '/etc/systemd/system/named.service': No such file or directory
+ls: cannot access '/etc/systemd/system/bind9.service': No such file or directory
+ls: cannot access '/run/systemd/system/named.service': No such file or directory
+ls: cannot access '/run/systemd/system/bind9.service': No such file or directory
+ls: cannot access '/usr/lib/systemd/system/bind9.service': No such file or directory
+-rw-r--r-- 1 root root 376 2026-09-16 13:42:29.000000000 +0000 /lib/systemd/system/named.service
+-rw-r--r-- 1 root root 376 2026-09-16 13:42:29.000000000 +0000 /usr/lib/systemd/system/named.service
+readlink: /etc/systemd/system/named.service: No such file or directory
+readlink: /etc/systemd/system/bind9.service: No such file or directory
+== list-unit-files
+UNIT FILE                STATE    PRESET
+named-resolvconf.service disabled enabled
+named.service            disabled enabled
+
+2 unit files listed.
+== dpkg -S
+bind9: /usr/lib/systemd/system/named.service
+== /etc/bind
+total 28
+drwxr-sr-x  2 root bind 4096 2026-09-29 09:28:23.679513928 +0000 .
+drwxr-xr-x 71 root root 4096 2026-09-29 09:28:01.469722063 +0000 ..
+-rw-r--r--  1 root bind  455 2026-09-16 13:42:29.000000000 +0000 named.conf
+-rw-r--r--  1 root bind   42 2026-09-29 09:28:23.671514522 +0000 named.conf.local
+-rw-r--r--  1 root bind   43 2026-09-29 09:28:23.667514818 +0000 named.conf.options
+-rw-r--r--  1 root bind  116 2026-09-16 13:42:29.000000000 +0000 named.conf.root-hints
+-rw-r-----  1 bind bind  100 2026-09-29 09:27:59.198030796 +0000 rndc.key
+== ss 53
+udp UNCONN 0      0         192.0.2.10:53 0.0.0.0:* users:(("pdns_server",pid=9415,fd=6))    
+udp UNCONN 0      0          10.0.2.15:53 0.0.0.0:* users:(("pdns_server",pid=9415,fd=5))    
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=372,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=372,fd=18))
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=372,fd=19))
+tcp LISTEN 0      128        10.0.2.15:53 0.0.0.0:* users:(("pdns_server",pid=9415,fd=7))    
+tcp LISTEN 0      128       192.0.2.10:53 0.0.0.0:* users:(("pdns_server",pid=9415,fd=8))    
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=372,fd=21))
+== apt history tail
+
+Start-Date: 2026-09-29  09:27:28
+Commandline: /usr/bin/apt-get install -y --no-install-recommends pdns-backend-sqlite3 pdns-server
+Requested-By: celik (1000)
+Install: pdns-server:amd64 (4.9.17-0+deb13u1), libluajit-5.1-2:amd64 (2.1.0+openresty20250117-2, automatic), pdns-backend-sqlite3:amd64 (4.9.17-0+deb13u1), libboost-program-options1.83.0:amd64 (1.83.0-4.2, automatic), libluajit-5.1-common:amd64 (2.1.0+openresty20250117-2, automatic)
+End-Date: 2026-09-29  09:27:30
+
+Start-Date: 2026-09-29  09:27:58
+Commandline: /usr/bin/apt-get install -y --no-install-recommends bind9
+Install: bind9:amd64 (1:9.20.29-1~deb13u1), bind9-utils:amd64 (1:9.20.29-1~deb13u1, automatic), dns-root-data:amd64 (2025080400~deb13u1, automatic)
+Upgrade: bind9-host:amd64 (1:9.20.26-1~deb13u1, 1:9.20.29-1~deb13u1), bind9-libs:amd64 (1:9.20.26-1~deb13u1, 1:9.20.29-1~deb13u1)
+End-Date: 2026-09-29  09:28:01

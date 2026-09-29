@@ -1,0 +1,56 @@
+{
+  "driver": "bind",
+  "mode": "switch",
+  "schema": "celikpanel-dns-kill-matrix-trigger/v1",
+  "source_engine": "pdns",
+  "source_epoch": 1,
+  "source_fixture": "managed-pdns",
+  "source_revision": 0,
+  "target_engine": "bind",
+  "target_epoch": 2,
+  "topology": "standalone",
+  "zones": [
+    {
+      "delete": false,
+      "desired_generation": 1,
+      "domain": "s1-kill.test",
+      "ordinal": 0,
+      "records": [
+        {
+          "content": "ns1.s1-kill.test hostmaster.s1-kill.test 2026083101 10800 3600 604800 3600",
+          "disabled": false,
+          "name": "s1-kill.test",
+          "prio": 0,
+          "ttl": 3600,
+          "type": "SOA"
+        },
+        {
+          "content": "ns1.s1-kill.test",
+          "disabled": false,
+          "name": "s1-kill.test",
+          "prio": 0,
+          "ttl": 3600,
+          "type": "NS"
+        },
+        {
+          "content": "192.0.2.10",
+          "disabled": false,
+          "name": "ns1.s1-kill.test",
+          "prio": 0,
+          "ttl": 300,
+          "type": "A"
+        },
+        {
+          "content": "192.0.2.10",
+          "disabled": false,
+          "name": "www.s1-kill.test",
+          "prio": 0,
+          "ttl": 300,
+          "type": "A"
+        }
+      ],
+      "zone_qualifier": "",
+      "zone_type": "NATIVE"
+    }
+  ]
+}

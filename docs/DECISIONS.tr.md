@@ -40,6 +40,17 @@ kurulumlar için Agent'tan bağımsız sahip komutu şart değildir. 1. madde i�
 kalan iş kod değil kanıttır: boş tek sunucu PowerDNS, boş çift ikincil (BIND ve
 PowerDNS) ve boş BIND'de başlangıç sonrası kesinti hücreleri.
 
+**Ek, aynı gün.** Gerçek sistem hücreleri, bileşen testlerinin bulamadığı iki
+ürün kusurunu (ilk kurulum geri alması ve V2 BIND geçişi ters işlemi, hiç
+başlamamış hedefi reddediyordu) ve bir kurtarma çıkmazını (sahip komutları
+Agent'ın bilerek bıraktığı işi reddediyordu) ortaya çıkardı. Üçü de düzeltildi
+ve gerçek sistemde yeniden koşuldu. Sahip, kapatmadan önce kaynak durdurulduktan
+sonraki PowerDNS→BIND hücrelerinin koşulmasını seçti; geçtiler ve yol
+haritasının 1. maddesi [kabul kütüğünde](DNS-RECOVERY-ACCEPTANCE.tr.md) adı
+belli sınırlarla kapandı. Bırakılmış bir işte sahip komutu bitmiş defter
+kaydını yeniden yazmaz; sahibe gösterilen metin okuma anında hesaplanır.
+1. maddenin kapanması P0.4'ü kapatmaz.
+
 Karar 1 vaat edilen kapsamı daraltır ve sürüm notlarında açıkça desteklenmeyen
 işlem olarak yazılır; sessizce yapılmaz. İki karar da kurulu sunucuyu, lisans
 politikasını, sahibin kendi kurtarmasını ve panel güncellemesini yalnız

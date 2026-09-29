@@ -1,0 +1,107 @@
+2026-09-29T09:28:10.132683+00:00 dns-debian13 systemd[1]: Starting named.service - BIND Domain Name Server...
+2026-09-29T09:28:10.164856+00:00 dns-debian13 named[7461]: starting BIND 9.20.29-1~deb13u1-Debian (Stable Release) <id:>
+2026-09-29T09:28:10.164880+00:00 dns-debian13 named[7461]: running on Linux x86_64 6.12.105+deb13-cloud-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.12.105-1 (2026-08-24) (Debian GNU/Linux 13 (trixie))
+2026-09-29T09:28:10.164885+00:00 dns-debian13 named[7461]: built with  '--build=x86_64-linux-gnu' '--prefix=/usr' '--includedir=${prefix}/include' '--mandir=${prefix}/share/man' '--infodir=${prefix}/share/info' '--sysconfdir=/etc' '--localstatedir=/var' '--disable-option-checking' '--disable-silent-rules' '--libdir=${prefix}/lib/x86_64-linux-gnu' '--runstatedir=/run' '--disable-maintainer-mode' '--disable-dependency-tracking' '--libdir=/usr/lib/x86_64-linux-gnu' '--sysconfdir=/etc/bind' '--with-python=python3' '--localstatedir=/' '--enable-threads' '--enable-largefile' '--with-libtool' '--enable-shared' '--disable-static' '--with-gost=no' '--with-openssl=/usr' '--with-gssapi=yes' '--with-libidn2' '--with-json-c' '--with-lmdb=/usr' '--with-gnu-ld' '--with-maxminddb' '--with-atf=no' '--enable-ipv6' '--enable-rrl' '--enable-filter-aaaa' '--disable-native-pkcs11' '--enable-dnstap' 'build_alias=x86_64-linux-gnu' 'CFLAGS=-g -O2 -Werror=implicit-function-declaration -ffile-prefix-map=/build/reproducible-path/bind9-9.20.29=. -fstack-protector-strong -fstack-clash-protection -Wformat -Werror=format-security -fcf-protection -fno-strict-aliasing -fno-delete-null-pointer-checks -DNO_VERSION_DATE -DDIG_SIGCHASE' 'LDFLAGS=-Wl,-z,relro -Wl,-z,now' 'CPPFLAGS=-Wdate-time -D_FORTIFY_SOURCE=2'
+2026-09-29T09:28:10.164888+00:00 dns-debian13 named[7461]: running as: named -f -u bind
+2026-09-29T09:28:10.164891+00:00 dns-debian13 named[7461]: compiled by GCC 14.2.0
+2026-09-29T09:28:10.164894+00:00 dns-debian13 named[7461]: compiled with OpenSSL version: OpenSSL 3.5.7 9 Jun 2026
+2026-09-29T09:28:10.164896+00:00 dns-debian13 named[7461]: linked to OpenSSL version: OpenSSL 3.5.7 9 Jun 2026
+2026-09-29T09:28:10.164899+00:00 dns-debian13 named[7461]: compiled with libuv version: 1.50.0
+2026-09-29T09:28:10.164905+00:00 dns-debian13 named[7461]: linked to libuv version: 1.50.0
+2026-09-29T09:28:10.164908+00:00 dns-debian13 named[7461]: compiled with liburcu version: 0.15.2
+2026-09-29T09:28:10.164911+00:00 dns-debian13 named[7461]: compiled with jemalloc version: 5.3.0
+2026-09-29T09:28:10.164914+00:00 dns-debian13 named[7461]: compiled with libnghttp2 version: 1.64.0
+2026-09-29T09:28:10.164924+00:00 dns-debian13 named[7461]: linked to libnghttp2 version: 1.64.0
+2026-09-29T09:28:10.164927+00:00 dns-debian13 named[7461]: compiled with libxml2 version: 2.9.14
+2026-09-29T09:28:10.164930+00:00 dns-debian13 named[7461]: linked to libxml2 version: 20914
+2026-09-29T09:28:10.164933+00:00 dns-debian13 named[7461]: compiled with json-c version: 0.18
+2026-09-29T09:28:10.164939+00:00 dns-debian13 named[7461]: linked to json-c version: 0.18
+2026-09-29T09:28:10.164942+00:00 dns-debian13 named[7461]: compiled with zlib version: 1.3.1
+2026-09-29T09:28:10.164950+00:00 dns-debian13 named[7461]: linked to zlib version: 1.3.1
+2026-09-29T09:28:10.164955+00:00 dns-debian13 named[7461]: linked to maxminddb version: 1.12.2
+2026-09-29T09:28:10.164958+00:00 dns-debian13 named[7461]: compiled with protobuf-c version: 1.5.1
+2026-09-29T09:28:10.164963+00:00 dns-debian13 named[7461]: linked to protobuf-c version: 1.5.1
+2026-09-29T09:28:10.164966+00:00 dns-debian13 named[7461]: ----------------------------------------------------
+2026-09-29T09:28:10.164968+00:00 dns-debian13 named[7461]: BIND 9 is maintained by Internet Systems Consortium,
+2026-09-29T09:28:10.164971+00:00 dns-debian13 named[7461]: Inc. (ISC), a non-profit 501(c)(3) public-benefit
+2026-09-29T09:28:10.164973+00:00 dns-debian13 named[7461]: corporation.  Support and training for BIND 9 are
+2026-09-29T09:28:10.164976+00:00 dns-debian13 named[7461]: available at https://www.isc.org/support
+2026-09-29T09:28:10.164979+00:00 dns-debian13 named[7461]: ----------------------------------------------------
+2026-09-29T09:28:10.164984+00:00 dns-debian13 named[7461]: adjusted limit on open files from 1024 to 524288
+2026-09-29T09:28:10.164988+00:00 dns-debian13 named[7461]: found 2 CPUs, using 2 worker threads
+2026-09-29T09:28:10.166700+00:00 dns-debian13 named[7461]: DNSSEC algorithms: RSASHA1 NSEC3RSASHA1 RSASHA256 RSASHA512 ECDSAP256SHA256 ECDSAP384SHA384 ED25519 ED448
+2026-09-29T09:28:10.166707+00:00 dns-debian13 named[7461]: DS algorithms: SHA-1 SHA-256 SHA-384
+2026-09-29T09:28:10.166711+00:00 dns-debian13 named[7461]: HMAC algorithms: HMAC-MD5 HMAC-SHA1 HMAC-SHA224 HMAC-SHA256 HMAC-SHA384 HMAC-SHA512
+2026-09-29T09:28:10.166715+00:00 dns-debian13 named[7461]: TKEY mode 2 support (Diffie-Hellman): no
+2026-09-29T09:28:10.166719+00:00 dns-debian13 named[7461]: TKEY mode 3 support (GSS-API): yes
+2026-09-29T09:28:10.177839+00:00 dns-debian13 named[7461]: the initial working directory is '/'
+2026-09-29T09:28:10.177863+00:00 dns-debian13 named[7461]: loading configuration from '/etc/bind/named.conf'
+2026-09-29T09:28:10.177965+00:00 dns-debian13 named[7461]: the working directory is now '/var/cache/bind'
+2026-09-29T09:28:10.178126+00:00 dns-debian13 named[7461]: looking for GeoIP2 databases in '/usr/share/GeoIP'
+2026-09-29T09:28:10.178232+00:00 dns-debian13 named[7461]: using default UDP/IPv4 port range: [32768, 60999]
+2026-09-29T09:28:10.178288+00:00 dns-debian13 named[7461]: using default UDP/IPv6 port range: [32768, 60999]
+2026-09-29T09:28:10.178737+00:00 dns-debian13 named[7461]: listening on IPv4 interface lo, 127.0.0.1#53
+2026-09-29T09:28:10.178913+00:00 dns-debian13 named[7461]: listening on IPv4 interface mgmt0, 10.0.2.15#53
+2026-09-29T09:28:10.179018+00:00 dns-debian13 named[7461]: listening on IPv4 interface peer0, 192.0.2.10#53
+2026-09-29T09:28:10.179164+00:00 dns-debian13 named[7461]: IPv6 socket API is incomplete; explicitly binding to each IPv6 address separately
+2026-09-29T09:28:10.179179+00:00 dns-debian13 named[7461]: listening on IPv6 interface lo, ::1#53
+2026-09-29T09:28:10.179281+00:00 dns-debian13 named[7461]: listening on IPv6 interface mgmt0, fec0::5054:ff:fe13:10#53
+2026-09-29T09:28:10.179436+00:00 dns-debian13 named[7461]: listening on IPv6 interface mgmt0, fe80::5054:ff:fe13:10%2#53
+2026-09-29T09:28:10.179563+00:00 dns-debian13 named[7461]: listening on IPv6 interface peer0, fe80::5054:ff:fe53:10%3#53
+2026-09-29T09:28:10.179723+00:00 dns-debian13 named[7461]: Disabling periodic interface re-scans timer
+2026-09-29T09:28:10.179848+00:00 dns-debian13 named[7461]: generating session key for dynamic DNS
+2026-09-29T09:28:10.180385+00:00 dns-debian13 named[7461]: using built-in root key for view _default
+2026-09-29T09:28:10.180430+00:00 dns-debian13 named[7461]: set up managed keys zone for view _default, file 'managed-keys.bind'
+2026-09-29T09:28:10.180732+00:00 dns-debian13 named[7461]: configuring command channel from '/etc/bind/rndc.key'
+2026-09-29T09:28:10.180819+00:00 dns-debian13 named[7461]: command channel listening on 127.0.0.1#953
+2026-09-29T09:28:10.180823+00:00 dns-debian13 named[7461]: configuring command channel from '/etc/bind/rndc.key'
+2026-09-29T09:28:10.180868+00:00 dns-debian13 named[7461]: command channel listening on ::1#953
+2026-09-29T09:28:10.181062+00:00 dns-debian13 named[7461]: managed-keys-zone: loaded serial 0
+2026-09-29T09:28:10.181347+00:00 dns-debian13 named[7461]: zone s1-kill.test/IN: loaded serial 2026083101
+2026-09-29T09:28:10.181672+00:00 dns-debian13 named[7461]: all zones loaded
+2026-09-29T09:28:10.195980+00:00 dns-debian13 named[7461]: FIPS mode is disabled
+2026-09-29T09:28:10.196143+00:00 dns-debian13 named[7461]: running
+2026-09-29T09:28:10.196310+00:00 dns-debian13 systemd[1]: Started named.service - BIND Domain Name Server.
+2026-09-29T09:28:10.197552+00:00 dns-debian13 named[7461]: network unreachable resolving './DNSKEY/IN': 2001:7fe::53#53
+2026-09-29T09:28:10.200194+00:00 dns-debian13 named[7461]: network unreachable resolving './NS/IN': 2001:7fe::53#53
+2026-09-29T09:28:10.200597+00:00 dns-debian13 named[7461]: network unreachable resolving './DNSKEY/IN': 2001:500:a8::e#53
+2026-09-29T09:28:10.201229+00:00 dns-debian13 named[7461]: network unreachable resolving './NS/IN': 2001:500:a8::e#53
+2026-09-29T09:28:10.201388+00:00 dns-debian13 named[7461]: network unreachable resolving './DNSKEY/IN': 2001:dc3::35#53
+2026-09-29T09:28:10.201592+00:00 dns-debian13 named[7461]: network unreachable resolving './NS/IN': 2001:dc3::35#53
+2026-09-29T09:28:10.201759+00:00 dns-debian13 named[7461]: network unreachable resolving './DNSKEY/IN': 2001:7fd::1#53
+2026-09-29T09:28:10.201921+00:00 dns-debian13 named[7461]: network unreachable resolving './NS/IN': 2001:7fd::1#53
+2026-09-29T09:28:10.202075+00:00 dns-debian13 named[7461]: network unreachable resolving './DNSKEY/IN': 2001:503:ba3e::2:30#53
+2026-09-29T09:28:10.202232+00:00 dns-debian13 named[7461]: network unreachable resolving './NS/IN': 2001:503:ba3e::2:30#53
+2026-09-29T09:28:10.202399+00:00 dns-debian13 named[7461]: network unreachable resolving './DNSKEY/IN': 2001:500:2d::d#53
+2026-09-29T09:28:10.202578+00:00 dns-debian13 named[7461]: network unreachable resolving './NS/IN': 2001:500:2d::d#53
+2026-09-29T09:28:10.210986+00:00 dns-debian13 named[7461]: network unreachable resolving './DNSKEY/IN': 2001:500:2::c#53
+2026-09-29T09:28:10.211111+00:00 dns-debian13 named[7461]: network unreachable resolving './NS/IN': 2001:500:2::c#53
+2026-09-29T09:28:10.211398+00:00 dns-debian13 named[7461]: network unreachable resolving './DNSKEY/IN': 2001:500:1::53#53
+2026-09-29T09:28:10.211475+00:00 dns-debian13 named[7461]: network unreachable resolving './NS/IN': 2001:500:1::53#53
+2026-09-29T09:28:10.212088+00:00 dns-debian13 named[7461]: network unreachable resolving './DNSKEY/IN': 2001:503:c27::2:30#53
+2026-09-29T09:28:10.212185+00:00 dns-debian13 named[7461]: network unreachable resolving './NS/IN': 2001:503:c27::2:30#53
+2026-09-29T09:28:10.212808+00:00 dns-debian13 named[7461]: network unreachable resolving './DNSKEY/IN': 2001:500:12::d0d#53
+2026-09-29T09:28:10.212871+00:00 dns-debian13 named[7461]: network unreachable resolving './NS/IN': 2001:500:12::d0d#53
+2026-09-29T09:28:10.213278+00:00 dns-debian13 named[7461]: network unreachable resolving './DNSKEY/IN': 2001:500:2f::f#53
+2026-09-29T09:28:10.213359+00:00 dns-debian13 named[7461]: network unreachable resolving './NS/IN': 2001:500:2f::f#53
+2026-09-29T09:28:10.214264+00:00 dns-debian13 named[7461]: network unreachable resolving './DNSKEY/IN': 2801:1b8:10::b#53
+2026-09-29T09:28:10.214399+00:00 dns-debian13 named[7461]: network unreachable resolving './NS/IN': 2801:1b8:10::b#53
+2026-09-29T09:28:10.216012+00:00 dns-debian13 named[7461]: network unreachable resolving './DNSKEY/IN': 2001:500:9f::42#53
+2026-09-29T09:28:10.216171+00:00 dns-debian13 named[7461]: network unreachable resolving './NS/IN': 2001:500:9f::42#53
+2026-09-29T09:28:10.278194+00:00 dns-debian13 named[7461]: network unreachable resolving './DNSKEY/IN': 2001:500:2::c#53
+2026-09-29T09:28:10.381307+00:00 dns-debian13 named[7461]: managed-keys-zone: Initializing automatic trust anchor management for zone '.'; DNSKEY ID 20326 is now trusted, waiving the normal 30-day waiting period.
+2026-09-29T09:28:10.381340+00:00 dns-debian13 named[7461]: managed-keys-zone: Initializing automatic trust anchor management for zone '.'; DNSKEY ID 38696 is now trusted, waiving the normal 30-day waiting period.
+2026-09-29T09:28:20.220904+00:00 dns-debian13 systemd[1]: Stopping named.service - BIND Domain Name Server...
+2026-09-29T09:28:20.261527+00:00 dns-debian13 named[7461]: received control channel command 'stop'
+2026-09-29T09:28:20.262358+00:00 dns-debian13 named[7461]: no longer listening on 127.0.0.1#53
+2026-09-29T09:28:20.262489+00:00 dns-debian13 named[7461]: no longer listening on 10.0.2.15#53
+2026-09-29T09:28:20.262543+00:00 dns-debian13 named[7461]: no longer listening on 192.0.2.10#53
+2026-09-29T09:28:20.262594+00:00 dns-debian13 named[7461]: no longer listening on ::1#53
+2026-09-29T09:28:20.262644+00:00 dns-debian13 named[7461]: no longer listening on fec0::5054:ff:fe13:10#53
+2026-09-29T09:28:20.262712+00:00 dns-debian13 named[7461]: no longer listening on fe80::5054:ff:fe13:10%2#53
+2026-09-29T09:28:20.262760+00:00 dns-debian13 named[7461]: no longer listening on fe80::5054:ff:fe53:10%3#53
+2026-09-29T09:28:20.262820+00:00 dns-debian13 named[7461]: stopping command channel on 127.0.0.1#953
+2026-09-29T09:28:20.262834+00:00 dns-debian13 named[7461]: stopping command channel on ::1#953
+2026-09-29T09:28:20.262852+00:00 dns-debian13 named[7461]: shutting down: flushing changes
+2026-09-29T09:28:20.266859+00:00 dns-debian13 systemd[1]: named.service: Deactivated successfully.
+2026-09-29T09:28:20.267175+00:00 dns-debian13 systemd[1]: Stopped named.service - BIND Domain Name Server.

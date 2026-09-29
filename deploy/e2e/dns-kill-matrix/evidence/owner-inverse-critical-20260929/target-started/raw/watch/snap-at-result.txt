@@ -1,0 +1,96 @@
+tag=at-result wall=2026-09-29T09:29:02.476812730Z mono=205.64 297.87
+== pdns.service
+MainPID=9415
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 09:28:24 UTC
+ExecMainStartTimestampMonotonic=167934445
+ExecMainPID=9415
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 09:28:24 UTC
+InactiveEnterTimestamp=
+InvocationID=efb2379529c74163920b03f70cb96ece
+== named.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainStartTimestampMonotonic=0
+ExecMainPID=0
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=disabled
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+InvocationID=
+== bind9.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainStartTimestampMonotonic=0
+ExecMainPID=0
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+InvocationID=
+== celikpanel-agent.service
+MainPID=7904
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 09:28:11 UTC
+ExecMainStartTimestampMonotonic=154764701
+ExecMainPID=7904
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 09:28:11 UTC
+InactiveEnterTimestamp=Tue 2026-09-29 09:27:41 UTC
+InvocationID=86b1b55e20344de4a211eb3b78290d9e
+== celikpanel-panel.service
+MainPID=10077
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 09:28:28 UTC
+ExecMainStartTimestampMonotonic=172100993
+ExecMainPID=10077
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 09:28:28 UTC
+InactiveEnterTimestamp=Tue 2026-09-29 09:27:41 UTC
+InvocationID=f587d723195d4b86bd6ca11bf0705b9e
+== processes
+7904 /opt/celikpanel/bin/agent
+9415 /usr/sbin/pdns_server --guardian=no --daemon=no --disable-syslog --log-timestamp=no --write-pid=no
+== journal file
+total 24
+drwx------  2 root celikpanel 4096 2026-09-29 09:28:28.027208972 +0000 .
+drwxr-xr-x 30 root root       4096 2026-09-29 09:27:59.170034690 +0000 ..
+-rw-------  1 root celikpanel  372 2026-09-29 09:27:56.042493412 +0000 dns-engine-install-ownership-bind.json
+-rw-------  1 root celikpanel  560 2026-09-29 09:27:56.034494622 +0000 dns-engine-ownership-pdns.json
+-rw-------  1 root celikpanel  556 2026-09-29 09:27:35.406596130 +0000 dns-engine-state.json
+-rw-------  1 root celikpanel 2936 2026-09-29 09:28:11.648550464 +0000 service-mutations.json
+== ss 53
+udp UNCONN 0      0         192.0.2.10:53 0.0.0.0:* users:(("pdns_server",pid=9415,fd=6))    
+udp UNCONN 0      0          10.0.2.15:53 0.0.0.0:* users:(("pdns_server",pid=9415,fd=5))    
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=372,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=372,fd=18))
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=372,fd=19))
+tcp LISTEN 0      128        10.0.2.15:53 0.0.0.0:* users:(("pdns_server",pid=9415,fd=7))    
+tcp LISTEN 0      128       192.0.2.10:53 0.0.0.0:* users:(("pdns_server",pid=9415,fd=8))    
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=372,fd=21))

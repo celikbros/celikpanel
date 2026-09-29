@@ -43,6 +43,17 @@ required for first installs. What remains for item 1 is evidence, not code:
 native interruption cells for fresh standalone PowerDNS, fresh paired
 secondary (BIND and PowerDNS), and the post-start cut on fresh BIND.
 
+**Addendum, same day.** Native cells found two product defects that
+component tests had not (a first-install rollback and the V2 BIND switch
+inverse both rejected a target that had never started) and one recovery dead
+end (owner inverse commands refused the Agent's own deliberate release).
+All three were fixed and re-run natively. The owner chose to run the
+post-stop PowerDNS→BIND cells before closing; they passed, and roadmap item 1
+is closed with the limits named in the
+[acceptance register](DNS-RECOVERY-ACCEPTANCE.md). For a released job the
+owner command does not rewrite the finished ledger entry; what the owner is
+shown is computed at read time. Closing item 1 does not close P0.4.
+
 Decision 1 narrows promised scope and is stated in release notes as an
 explicit unsupported operation, not silently. Neither decision changes an
 installed server, the license policy, owner-operated recovery or user-only
