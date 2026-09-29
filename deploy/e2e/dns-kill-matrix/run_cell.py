@@ -7890,6 +7890,23 @@ def record_native_versions(
     return report
 
 
+def record_native_versions_after(
+    result: dict[str, Any], environment: Mapping[str, str], timeout: float
+) -> None:
+    """Record ``native_versions.after`` where a flow's recovery finished.
+
+    Every path that finishes a flow calls this: the rpc-retry flow (socket or
+    startup recovery, Agent startup rollback, fresh primary V3 without an owner
+    edit), the fresh primary V3 hold flow, the owner-inverse flow and its resume
+    after --reboot-before-owner-command. Batch 7 ``c05`` lacked ``after``
+    because that resume finished without it.
+    """
+
+    result.setdefault("native_versions", {})["after"] = record_native_versions(
+        environment, timeout
+    )
+
+
 def record_recovery_status(
     settings: Settings,
     environment: Mapping[str, str],
@@ -9149,9 +9166,7 @@ def run_owner_inverse_after_restart(
         flow.request_reboot_before_owner_command()
     flow.owner_steps()
     flow.finish()
-    result.setdefault("native_versions", {})["after"] = record_native_versions(
-        owner_environment, settings.command_timeout
-    )
+    record_native_versions_after(result, owner_environment, settings.command_timeout)
     result["complete_verdict"] = pre_reboot_verdict(result, flow.state())
     maybe_request_reboot_after_recovery(
         settings, result, owner_environment, flow.state()
@@ -10092,6 +10107,7 @@ def resume_owner_inverse_before_owner_command(
     flow.after_boot(boot)
     flow.owner_steps()
     flow.finish()
+    record_native_versions_after(result, owner_environment, settings.command_timeout)
     result["complete_verdict"] = pre_reboot_verdict(result, flow.state())
     maybe_request_reboot_after_recovery(settings, result, owner_environment, flow.state())
     maybe_retry_switch_after_rollback(
@@ -10186,6 +10202,13 @@ def resume_cell(settings: Settings) -> int:
                 safety_failures=safety_failures,
                 verification_failures=verification_failures,
             )
+            # The flow recorded ``after`` before it requested this reboot; a
+            # checkpoint without it (none the current flows write) gets the
+            # post-reboot reading, taken before any retry switch.
+            if "after" not in (result.get("native_versions") or {}):
+                record_native_versions_after(
+                    result, clean_base_environment, settings.command_timeout
+                )
             if state.get("flow") == "owner-inverse":
                 maybe_retry_switch_after_rollback(
                     settings, result, transcript=transcript, ordinary=ordinary,
@@ -11766,8 +11789,7 @@ def run_fresh_primary_hold_flow(
         "PowerDNS never started and the install was not completed: this host has no DNS "
         "engine by design at a held or rolled-back first install"
     )
-    result.setdefault("native_versions", {})["after"] = record_native_versions(
-        owner_environment, settings.command_timeout)
+    record_native_versions_after(result, owner_environment, settings.command_timeout)
     verification_failures.extend(f"fresh primary hold unknown: {item}" for item in unknown)
     result["safety_status"], result["status"] = classify_cell_status(
         safety_failures, verification_failures)
@@ -12010,6 +12032,38 @@ def refuse_unrunnable_v2_cells(settings: Settings) -> None:
         )
     raise ControllerError(
         V2_MANAGED_PDNS_REFUSAL.format(flag=flag) + detail + " Nothing was started."
+    )
+
+
+def finish_rpc_retry_flow(
+    settings: Settings,
+    result: dict[str, Any],
+    environment: Mapping[str, str],
+    *,
+    peer_ip: str,
+    agent_identity: tuple[int, int] | None,
+) -> None:
+    """Close the rpc-retry flow after its judgements.
+
+    One tail for every rpc-retry variant: socket or startup recovery, the
+    Agent's own startup rollback, a fresh primary V3 cell without an owner
+    edit, takeover and reinstall fixtures. It records ``native_versions.after``,
+    then the complete verdict and the optional after-recovery reboot request.
+    """
+
+    record_native_versions_after(result, environment, settings.command_timeout)
+    # ``status`` stays the D-021 verdict; this is the complete one
+    # (classification, retries, probes) the reboot gate also uses.
+    result["complete_verdict"] = pre_reboot_verdict(result, {"flow": "rpc-retry"})
+    maybe_request_reboot_after_recovery(
+        settings,
+        result,
+        environment,
+        {
+            "flow": "rpc-retry",
+            "peer_ip": peer_ip,
+            "agent_identity": list(agent_identity) if agent_identity else None,
+        },
     )
 
 
@@ -13138,21 +13192,9 @@ def run_cell(settings: Settings) -> int:
                 clean_base_environment, settings.command_timeout
             )
         judge_recovery_status_reads(result)
-        result.setdefault("native_versions", {})["after"] = record_native_versions(
-            clean_base_environment, settings.command_timeout
-        )
-        # ``status`` stays the D-021 verdict; this is the complete one
-        # (classification, retries, probes) the reboot gate also uses.
-        result["complete_verdict"] = pre_reboot_verdict(result, {"flow": "rpc-retry"})
-        maybe_request_reboot_after_recovery(
-            settings,
-            result,
-            clean_base_environment,
-            {
-                "flow": "rpc-retry",
-                "peer_ip": peer_ip,
-                "agent_identity": list(agent_identity) if agent_identity else None,
-            },
+        finish_rpc_retry_flow(
+            settings, result, clean_base_environment,
+            peer_ip=peer_ip, agent_identity=agent_identity,
         )
     except RebootRequested as request:
         reboot_request = request

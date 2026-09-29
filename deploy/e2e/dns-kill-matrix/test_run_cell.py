@@ -5143,11 +5143,149 @@ class NativeVersionsTest(unittest.TestCase):
         flow = source[source.index("def run_cell(settings:"):]
         self.assertLess(flow.index('"before": record_native_versions('),
                         flow.index("tagged = start_tagged_agent("))
-        self.assertLess(flow.index('["after"] = record_native_versions('),
-                        flow.index('result["complete_verdict"] = pre_reboot_verdict('))
-        owner = source[source.index("def run_owner_inverse_after_restart("):]
-        self.assertLess(owner.index('["after"] = record_native_versions('),
-                        owner.index("maybe_request_reboot_after_recovery("))
+        # The rpc-retry tail runs after every judgement of that flow.
+        tail = flow.index("finish_rpc_retry_flow(")
+        for judgement in ("judge_agent_startup_rollback(", "judge_fixture_pass_definition(",
+                          "judge_fresh_primary_pass_definition(",
+                          "judge_recovery_status_reads(result)"):
+            self.assertLess(flow.index(judgement), tail, judgement)
+        self.assertLess(tail, flow.index("except RebootRequested as request:"))
+        # One writer of ``after``: every flow-finishing path goes through it.
+        self.assertEqual(source.count('["after"] = record_native_versions('), 1)
+        for function in ("def finish_rpc_retry_flow(", "def run_owner_inverse_after_restart(",
+                         "def resume_owner_inverse_before_owner_command(",
+                         "def run_fresh_primary_hold_flow(", "def resume_cell("):
+            body = source[source.index(function):]
+            body = body[:body.index("\ndef ", 1)]
+            self.assertIn("record_native_versions_after(", body, function)
+
+
+class NativeVersionsEveryFlowTest(unittest.TestCase):
+    """Batch 7 c05: every path that finishes a flow records before and after.
+
+    ``before`` is written by run_cell before the tagged Agent; these tests
+    start from a result that already holds it, as run_cell leaves it, and
+    assert that the path adds ``after`` without replacing ``before``.
+    """
+
+    BEFORE = {"at": "before", "packages": {"bind9": "1"}, "daemons": {}}
+    BOOT = OwnerInverseAfterRestartTest.BOOT
+
+    def setUp(self) -> None:
+        # Reuse the owner-flow scaffolding without re-running its tests; its
+        # results start with ``before`` as run_cell leaves it.
+        self.owner = OwnerInverseAfterRestartTest("test_agent_decides_owner_executes_passes")
+        plain_result = self.owner.flow_result
+
+        def flow_result(*args, **kwargs) -> dict:
+            result = plain_result(*args, **kwargs)
+            result["native_versions"] = {"before": dict(self.BEFORE)}
+            return result
+
+        self.owner.flow_result = flow_result
+
+    def assert_before_and_after(self, result: dict) -> None:
+        versions = result.get("native_versions") or {}
+        self.assertEqual(versions.get("before"), self.BEFORE, versions)
+        self.assertIn("after", versions, versions)
+        self.assertIsNot(versions["after"], None)
+
+    def test_owner_inverse_flow(self) -> None:
+        result, _, _, _ = self.owner.run_flow(FakeOwnerGuest())
+        self.assertEqual(result["status"], "passed")
+        self.assert_before_and_after(result)
+
+    def test_owner_inverse_resume_after_reboot_before_owner_command(self) -> None:
+        guest = FakeOwnerGuest()
+        settings, result, state, lists, _ = self.owner.suspend(guest)
+        # The suspended flow stopped before the owner command: no ``after`` yet.
+        self.assertNotIn("after", result["native_versions"])
+        result = self.owner.resume(guest, settings, result, state, lists)
+        self.assertEqual(result["status"], "passed")
+        self.assert_before_and_after(result)
+
+    def test_post_reboot_resume(self) -> None:
+        for stage_after in (True, False):
+            with self.subTest(after_recorded_before_reboot=stage_after), \
+                    tempfile.TemporaryDirectory() as root:
+                settings = replace(plain_settings(root, reboot_before_owner_command=False,
+                                                  reboot_after_recovery=True),
+                                   resume_after_reboot=True)
+                Path(settings.transcript_path).write_text("first\n", encoding="utf-8")
+                Path(settings.proof_path).write_text("{}\n", encoding="utf-8")
+                versions: dict = {"before": dict(self.BEFORE)}
+                if stage_after:
+                    versions["after"] = {"at": "after-recovery"}
+                run_cell.write_reboot_checkpoint(
+                    settings, 1,
+                    run_cell.RebootRequested(run_cell.REBOOT_AFTER_RECOVERY,
+                                             {"flow": "rpc-retry", "boot": self.BOOT}),
+                    {"status": "passed", "safety_status": "passed",
+                     "native_versions": versions},
+                    kill_proven=True, safety_failures=[], verification_failures=[],
+                    diagnostic_failures=[], boot=self.BOOT,
+                    transcripts=[{"path": settings.transcript_path,
+                                  "sha256": run_cell.sha256_file(settings.transcript_path)}],
+                )
+                rebooted = dict(self.BOOT, boot_id="5" * 8 + "-5555-5555-5555-" + "5" * 12)
+                with mock.patch.multiple(
+                    run_cell,
+                    validate_controller_identity=mock.Mock(return_value={"effective_gid": 1}),
+                    minimal_command_environment=mock.Mock(return_value={}),
+                    validate_settings=mock.Mock(return_value={}),
+                    read_guest_boot_identity=mock.Mock(return_value=rebooted),
+                    ordinary_environment=mock.Mock(return_value={}),
+                    verify_after_recovery_reboot=mock.Mock(),
+                    record_native_versions=mock.Mock(return_value={"at": "post-reboot"}),
+                ):
+                    self.assertEqual(run_cell.resume_cell(settings), 0)
+                result = json.loads(Path(settings.result_path).read_text(encoding="utf-8"))
+                self.assert_before_and_after(result)
+                # An ``after`` taken when recovery finished is kept, not re-read.
+                self.assertEqual(result["native_versions"]["after"],
+                                 {"at": "after-recovery" if stage_after else "post-reboot"})
+
+    def rpc_retry_tail(self, extra: dict | None = None, **changes: object) -> dict:
+        with tempfile.TemporaryDirectory() as root:
+            settings = plain_settings(root, owner_inverse_after_restart=False,
+                                      reboot_before_owner_command=False, **changes)
+            result = complete_rpc_retry_pass(**(extra or {}))
+            result["native_versions"] = {"before": dict(self.BEFORE)}
+            with mock.patch.object(run_cell, "record_native_versions",
+                                   return_value={"at": "after"}):
+                run_cell.finish_rpc_retry_flow(settings, result, {}, peer_ip="",
+                                               agent_identity=(1, 2))
+        self.assertTrue(result["complete_verdict"]["passed"], result["complete_verdict"])
+        return result
+
+    def test_socket_recovery_flow(self) -> None:
+        self.assert_before_and_after(self.rpc_retry_tail(trigger_mode="socket"))
+
+    def test_agent_startup_rollback_flow(self) -> None:
+        self.assert_before_and_after(self.rpc_retry_tail(
+            {"agent_startup_rollback": {"observed": True, "failures": [], "unknown": []}},
+            expect_agent_startup_rollback=True,
+        ))
+
+    def test_rpc_retry_tail_with_reboot_after_recovery_records_before_the_request(self) -> None:
+        # The reboot request carries the result into the checkpoint, so
+        # ``after`` must already be in it.
+        with tempfile.TemporaryDirectory() as root:
+            settings = plain_settings(root, owner_inverse_after_restart=False,
+                                      reboot_before_owner_command=False,
+                                      reboot_after_recovery=True)
+            result = complete_rpc_retry_pass()
+            result["native_versions"] = {"before": dict(self.BEFORE)}
+            with mock.patch.multiple(
+                run_cell,
+                record_native_versions=mock.Mock(return_value={"at": "after"}),
+                observe_serving_authority=mock.Mock(return_value={"authority": {}}),
+                observe_management_units=mock.Mock(return_value={"units": {}, "unknown": []}),
+                read_guest_boot_identity=mock.Mock(return_value=self.BOOT),
+            ), self.assertRaises(run_cell.RebootRequested):
+                run_cell.finish_rpc_retry_flow(settings, result, {}, peer_ip="",
+                                               agent_identity=(1, 2))
+        self.assert_before_and_after(result)
 
 
 class OwnerFlowHelpers:
@@ -5736,9 +5874,10 @@ class RecoveryStatusReadTest(unittest.TestCase):
         self.assertLess(flow.index("judge_fixture_pass_definition("),
                         flow.index("judge_recovery_status_reads(result)"))
         self.assertLess(flow.index("judge_recovery_status_reads(result)"),
-                        flow.index('result["complete_verdict"] = pre_reboot_verdict('))
-        self.assertLess(flow.index('result["complete_verdict"] = pre_reboot_verdict('),
-                        flow.index("maybe_request_reboot_after_recovery("))
+                        flow.index("finish_rpc_retry_flow("))
+        tail = source[source.index("def finish_rpc_retry_flow("):source.index("def run_cell(settings:")]
+        self.assertLess(tail.index('result["complete_verdict"] = pre_reboot_verdict('),
+                        tail.index("maybe_request_reboot_after_recovery("))
 
 
 class AdoptionRolledBackStartupCellTest(unittest.TestCase):

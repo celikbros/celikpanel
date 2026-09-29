@@ -761,8 +761,9 @@ class PassDefinitionTest(unittest.TestCase):
                         flow.index('result["provenance_boundary"] = observe_provenance_boundary('))
         self.assertLess(flow.index('result["provenance_boundary"] = observe_provenance_boundary('),
                         flow.index('"agent-restart",'))
+        # finish_rpc_retry_flow holds the after-recovery reboot request.
         self.assertLess(flow.index("judge_fixture_pass_definition("),
-                        flow.index("maybe_request_reboot_after_recovery("))
+                        flow.index("finish_rpc_retry_flow("))
 
 
 class RebootWithManagementDisabledTest(unittest.TestCase):

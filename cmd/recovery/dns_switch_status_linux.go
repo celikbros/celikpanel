@@ -593,7 +593,62 @@ func rolledBackInactiveTargetUnit(evidence dnsenginerecovery.SwitchEvidence) (st
 	return "", false
 }
 
+// dnsSwitchStatusReaders are the host reads every present-journal status
+// passes through (group, locks, evidence, native units, accepted worker) and
+// the BIND unit identity reads. The installed command uses
+// installedDNSSwitchStatusReaders; tests substitute them to compare the exit
+// status of the same journal class across engines. The engine-specific
+// runtime, listener, generation and adoption proofs remain direct calls.
+//
+// Exit status contract of dns-switch-status: exitOK means the status was read
+// and classified, whatever the classification says about the operation
+// (active, released, rolled back, no owner command applies). exitUnavailable
+// means the evidence or a required native observation could not be read,
+// stayed unstable, or could not be classified; the diagnostic says which. A
+// non-zero exit never reports "the operation is unhealthy".
+type dnsSwitchStatusReaders struct {
+	groupID           func() (uint32, error)
+	stateRoot         func() string
+	acquireLocks      func(hostOwner hostmutationlock.Owner) (release func(), err error)
+	readEvidence      func(root string, owner servicemutationledger.FileOwner, policy dnsengineartifact.JournalPolicy, now time.Time) (dnsenginerecovery.SwitchEvidence, bool, error)
+	probeUnits        func(ctx context.Context, names []string) ([]dnsenginerecovery.NativeUnitObservation, error)
+	inspectWorker     func(id dnsengineartifact.SwitchIdentity, job *transport.ServiceMutationJob, now time.Time) (dnsenginerecovery.WorkerExclusion, error)
+	bindRoot          func(ctx context.Context) error
+	bindNeverStarted  func(ctx context.Context, beforeDecision bool) (string, error)
+	bindVendorAndUnit func(ctx context.Context) error
+}
+
+func installedDNSSwitchStatusReaders() dnsSwitchStatusReaders {
+	return dnsSwitchStatusReaders{
+		groupID:   func() (uint32, error) { return localCelikPanelGroupID("/etc/group") },
+		stateRoot: hostingpath.ServiceMutationStateRoot,
+		acquireLocks: func(hostOwner hostmutationlock.Owner) (func(), error) {
+			locks, err := acquireDNSObservationLocks(
+				"/var/lib/celikpanel-release-transaction/transaction.lock",
+				"/run/celikpanel/service-mutation.lock",
+				hostOwner,
+			)
+			if err != nil {
+				return nil, err
+			}
+			return locks.Close, nil
+		},
+		readEvidence: dnsenginerecovery.ReadSwitchEvidence,
+		probeUnits: func(ctx context.Context, names []string) ([]dnsenginerecovery.NativeUnitObservation, error) {
+			return dnsenginerecovery.ProbeNativeUnits(ctx, names, dnsenginerecovery.SystemdUnitRunner)
+		},
+		inspectWorker:     dnsenginerecovery.InspectAcceptedWorker,
+		bindRoot:          verifyInstalledBINDRoot,
+		bindNeverStarted:  observeInstalledNeverStartedBINDTarget,
+		bindVendorAndUnit: verifyInstalledBINDVendorAndUnit,
+	}
+}
+
 func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
+	return runDNSSwitchStatusWith(args, uid, out, diagnostic, installedDNSSwitchStatusReaders())
+}
+
+func runDNSSwitchStatusWith(args []string, uid int, out, diagnostic io.Writer, readers dnsSwitchStatusReaders) int {
 	quiesced, requestID, validArgs := parseDNSSwitchStatusArgs(args)
 	if !validArgs {
 		return exitUsage
@@ -602,33 +657,29 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		fmt.Fprintln(diagnostic, "Owner authentication is required. Use a root or authorized sudo session.")
 		return exitNotOwner
 	}
-	groupID, groupErr := localCelikPanelGroupID("/etc/group")
+	groupID, groupErr := readers.groupID()
 	if groupErr != nil {
 		fmt.Fprintln(diagnostic, "The installed CelikPanel group could not be verified from local /etc/group. The server owner must inspect that file before recovery observation can resume. "+groupErr.Error())
 		return exitUnavailable
 	}
 	observationCtx, cancelObservation := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancelObservation()
-	root := hostingpath.ServiceMutationStateRoot()
+	root := readers.stateRoot()
 	owner := servicemutationledger.FileOwner{UID: 0, GID: groupID}
 	if requestID != "" && !quiesced {
 		return renderRecordedDNSSwitchStatus(observationCtx, root, owner, requestID, out, diagnostic)
 	}
 
 	if quiesced {
-		locks, lockErr := acquireDNSObservationLocks(
-			"/var/lib/celikpanel-release-transaction/transaction.lock",
-			"/run/celikpanel/service-mutation.lock",
-			hostmutationlock.Owner{UID: owner.UID, GID: owner.GID},
-		)
+		release, lockErr := readers.acquireLocks(hostmutationlock.Owner{UID: owner.UID, GID: owner.GID})
 		if lockErr != nil {
 			fmt.Fprintln(diagnostic, "A quiesced DNS observation cannot acquire the release and host locks. The server owner should follow the existing update or mutation, then retry this observation; no DNS operation was started. "+lockErr.Error())
 			return exitUnavailable
 		}
-		defer locks.Close()
+		defer release()
 	}
 	policy := installedDNSJournalPolicy(owner.GID)
-	evidence, present, err := dnsenginerecovery.ReadSwitchEvidence(root, owner, policy, time.Now().UTC())
+	evidence, present, err := readers.readEvidence(root, owner, policy, time.Now().UTC())
 	observation := evidence.Observation
 	if err != nil {
 		fmt.Fprintln(diagnostic, "DNS switch evidence could not be verified. Preserve the private journal and ledger; the server owner must inspect their ownership, native DNS state and compatibility before the same operation resumes. "+err.Error())
@@ -645,15 +696,15 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		fmt.Fprintln(diagnostic, "A different DNS switch journal is present. Preserve its exact operation and inspect it before continuing; no DNS operation was started.")
 		return exitUnavailable
 	}
-	units, unitErr := dnsenginerecovery.ProbeNativeUnits(observationCtx, observation.NativeUnits, dnsenginerecovery.SystemdUnitRunner)
+	units, unitErr := readers.probeUnits(observationCtx, observation.NativeUnits)
 	if quiesced && unitErr == nil {
-		againEvidence, stillPresent, readErr := dnsenginerecovery.ReadSwitchEvidence(root, owner, policy, time.Now().UTC())
+		againEvidence, stillPresent, readErr := readers.readEvidence(root, owner, policy, time.Now().UTC())
 		again := againEvidence.Observation
 		if readErr != nil || !stillPresent {
 			fmt.Fprintln(diagnostic, "DNS switch evidence changed or became unreadable during the quiesced observation. The server owner should inspect the existing operation and native DNS service, then retry after owner changes settle; no DNS operation was started.")
 			return exitUnavailable
 		}
-		againUnits, probeErr := dnsenginerecovery.ProbeNativeUnits(observationCtx, again.NativeUnits, dnsenginerecovery.SystemdUnitRunner)
+		againUnits, probeErr := readers.probeUnits(observationCtx, again.NativeUnits)
 		if probeErr != nil || !reflect.DeepEqual(evidence.Journal, againEvidence.Journal) ||
 			!dnsenginerecovery.StableQuiescedObservation(observation, again, units, againUnits) {
 			fmt.Fprintln(diagnostic, "DNS switch evidence or native DNS unit properties changed during the quiesced observation. The server owner should inspect the existing operation and native DNS service, then retry after owner changes settle; no DNS operation was started.")
@@ -680,7 +731,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 				Target:    evidence.Journal.TargetEngine,
 				Qualifier: evidence.Journal.ManifestQualifier,
 			}
-			worker, workerErr := dnsenginerecovery.InspectAcceptedWorker(
+			worker, workerErr := readers.inspectWorker(
 				id, &evidence.AcceptedJob, time.Now().UTC(),
 			)
 			if workerErr != nil {
@@ -750,7 +801,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 				fmt.Fprintln(diagnostic, "The retained DNS rollback target could not be proved stopped. The server owner should inspect the native unit and preserve the same journal; no recovery mutation was started. "+stopErr.Error())
 				return exitUnavailable
 			}
-			againEvidence, stillPresent, readErr := dnsenginerecovery.ReadSwitchEvidence(root, owner, policy, time.Now().UTC())
+			againEvidence, stillPresent, readErr := readers.readEvidence(root, owner, policy, time.Now().UTC())
 			if readErr != nil || !stillPresent || evidence.Observation.EvidenceSHA256 != againEvidence.Observation.EvidenceSHA256 ||
 				!reflect.DeepEqual(evidence.Journal, againEvidence.Journal) {
 				fmt.Fprintln(diagnostic, "DNS rollback evidence changed around the native stopped-target observation. Preserve the accepted journal and retry after the owner change settles; no recovery mutation was started.")
@@ -791,7 +842,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 			}
 			fmt.Fprintln(out, "Managed BIND root and selected immutable generation matched the frozen target across two read-only observations. The daemon's loaded configuration, DNS answers, owner edits and recovery authority remain unproved.")
 		} else {
-			if bindErr := verifyInstalledBINDRoot(observationCtx); bindErr != nil {
+			if bindErr := readers.bindRoot(observationCtx); bindErr != nil {
 				fmt.Fprintln(diagnostic, "Managed BIND root ownership is unknown. The server owner should inspect the native BIND directory, service group and package ownership before the same DNS operation resumes; no inverse was started. "+bindErr.Error())
 				return exitUnavailable
 			}
@@ -811,9 +862,9 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 			dnsenginerecovery.BINDV1BeforeActivationJournal(evidence.Journal)
 		if observation.TargetReceipt != dnsenginerecovery.TargetReceiptExact &&
 			(dnsenginerecovery.BINDSwitchNeverStartedTargetJournal(evidence.Journal) || beforeDecision) {
-			neverStarted, vendorErr = observeInstalledNeverStartedBINDTarget(observationCtx, beforeDecision)
+			neverStarted, vendorErr = readers.bindNeverStarted(observationCtx, beforeDecision)
 		} else {
-			vendorErr = verifyInstalledBINDVendorAndUnit(observationCtx)
+			vendorErr = readers.bindVendorAndUnit(observationCtx)
 		}
 		if vendorErr != nil {
 			fmt.Fprintln(diagnostic, "Native BIND vendor files or loaded systemd unit identity are unknown. The server owner should inspect the named service unit, its package ownership and startup options before the same operation resumes; no inverse was started. "+vendorErr.Error())
@@ -909,7 +960,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 			fmt.Fprintln(diagnostic, "The native PowerDNS adoption source could not be matched to its frozen journal. The server owner should inspect the named, bind9 and pdns services, native configuration, database and authoritative DNS answers; preserve the same operation and do not start another switch. No recovery mutation was started. "+nativeErr.Error())
 			return exitUnavailable
 		}
-		againEvidence, stillPresent, readErr := dnsenginerecovery.ReadSwitchEvidence(root, owner, policy, time.Now().UTC())
+		againEvidence, stillPresent, readErr := readers.readEvidence(root, owner, policy, time.Now().UTC())
 		if readErr != nil || !stillPresent ||
 			evidence.Observation.EvidenceSHA256 != againEvidence.Observation.EvidenceSHA256 ||
 			!reflect.DeepEqual(evidence.Journal, againEvidence.Journal) {
@@ -959,8 +1010,8 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 			// Native probes can take several seconds. Recheck the operation,
 			// worker and units before reporting a stable quiesced result.
 			// This remains observation, not inverse authority.
-			finalEvidence, finalPresent, finalErr := dnsenginerecovery.ReadSwitchEvidence(root, owner, policy, time.Now().UTC())
-			finalUnits, finalUnitErr := dnsenginerecovery.ProbeNativeUnits(observationCtx, observation.NativeUnits, dnsenginerecovery.SystemdUnitRunner)
+			finalEvidence, finalPresent, finalErr := readers.readEvidence(root, owner, policy, time.Now().UTC())
+			finalUnits, finalUnitErr := readers.probeUnits(observationCtx, observation.NativeUnits)
 			if finalErr != nil || !finalPresent || finalUnitErr != nil ||
 				!dnsenginerecovery.StableQuiescedSwitchEvidence(evidence, finalEvidence, units, finalUnits) {
 				fmt.Fprintln(diagnostic, "DNS evidence or native units changed during the final quiesced observation. Preserve the original operation and inspect owner changes before retrying; no recovery mutation was started.")
@@ -977,7 +1028,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 					Target:    evidence.Journal.TargetEngine,
 					Qualifier: evidence.Journal.ManifestQualifier,
 				}
-				worker, workerErr := dnsenginerecovery.InspectAcceptedWorker(id, &finalEvidence.AcceptedJob, time.Now().UTC())
+				worker, workerErr := readers.inspectWorker(id, &finalEvidence.AcceptedJob, time.Now().UTC())
 				if workerErr != nil || worker == dnsenginerecovery.WorkerStillAlive {
 					fmt.Fprintln(diagnostic, "The accepted DNS worker could not be excluded after native checks. Preserve the operation and inspect its process before retrying; no recovery mutation was started.")
 					return exitUnavailable

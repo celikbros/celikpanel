@@ -562,7 +562,8 @@ class HoldFlowTest(unittest.TestCase):
              "administrator runs ... --request-id " + REQUEST + ".")
 
     def run_hold(self, root: str, selected: object, *, unrelated: str = "dns-only",
-                 journal_changes: bool = False, **changes: object) -> tuple[dict, list, list]:
+                 journal_changes: bool = False, initial: dict | None = None,
+                 **changes: object) -> tuple[dict, list, list]:
         config = Path(root, "pdns.conf")
         config.write_bytes(b"launch=gsqlite3\n")
         journal = Path(root, "journal.json")
@@ -580,7 +581,7 @@ class HoldFlowTest(unittest.TestCase):
                 journal.write_text('{"phase":"rolling-back"}', encoding="utf-8")
             return {"released": True, "reads": 1, "ledger": {"active_request_id": ""}, "job": job}
 
-        result: dict = {}
+        result: dict = json.loads(json.dumps(initial or {}))
         safety: list[str] = []
         verification: list[str] = []
         with mock.patch.object(run_cell, "FRESH_PRIMARY_V3_CONFIG_EDIT_PATH", str(config)), \
@@ -615,6 +616,20 @@ class HoldFlowTest(unittest.TestCase):
         self.assertEqual(result["status"], "passed")
         self.assertTrue(result["_judge_dns"])
         self.assertFalse(result["_owner_called"])
+
+    def test_hold_flow_records_native_versions_after_beside_before(self) -> None:
+        # Batch 7 c05: every flow-finishing path records both; run_cell wrote
+        # ``before`` before the tagged Agent, the hold flow adds ``after``.
+        before = {"at": "before", "packages": {}, "daemons": {}}
+        for owner_release in (False, True):
+            with self.subTest(owner_release_recovery=owner_release), \
+                    tempfile.TemporaryDirectory() as root:
+                result, _, _ = self.run_hold(
+                    root, v3("target-staged", "after-write"),
+                    initial={"native_versions": {"before": before}},
+                    owner_release_recovery=owner_release)
+                self.assertEqual(result["native_versions"]["before"], before)
+                self.assertIn("after", result["native_versions"])
 
     def test_verified_deviations_fail_the_hold(self) -> None:
         with tempfile.TemporaryDirectory() as root:
