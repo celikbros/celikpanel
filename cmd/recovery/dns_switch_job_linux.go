@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"path/filepath"
 	"sort"
 
@@ -186,10 +187,40 @@ func releasedDNSInverseReconciledOutcome(requestID string) error {
 }
 
 // releasedDNSInverseReconciledText is the owner command's answer to a re-run
-// after that reconciliation. The exit status stays the one used for the other
-// retired-journal outcome.
+// after that reconciliation. The request is complete, so the command exits 0;
+// the text still says that current DNS health is not asserted.
 func releasedDNSInverseReconciledText(lang, requestID string) string {
 	return translated(lang,
-		"Request "+requestID+" is already reconciled: the Agent released this interrupted DNS switch and its journal has since been retired, by this command or by a later Agent start; the evidence cannot tell which. Nothing was changed now. This request no longer blocks DNS changes. Before another switch, check the current DNS engine and authoritative DNS answers in the panel.",
-		requestID+" işlemi zaten sonuçlanmış: Agent yarım kalan bu DNS geçişini bırakmıştı ve günlüğü daha sonra kaldırıldı. Bunu bu komutun mu yoksa Agent'ın sonraki açılışının mı yaptığı kayıtlardan anlaşılamıyor. Şimdi hiçbir şey değiştirilmedi. Bu işlem artık DNS değişikliklerini engellemiyor. Yeni bir geçişten önce panelde güncel DNS motorunu ve yetkili DNS yanıtlarını kontrol edin.")
+		"Request "+requestID+" is already reconciled: the Agent released this interrupted DNS switch and its journal has since been retired, by this command or by a later Agent start; the evidence cannot tell which. Nothing was changed now. This request no longer blocks DNS changes. This command does not check current DNS health. Before another switch, check the current DNS engine and authoritative DNS answers in the panel.",
+		requestID+" işlemi zaten sonuçlanmış: Agent yarım kalan bu DNS geçişini bırakmıştı ve günlüğü daha sonra kaldırıldı. Bunu bu komutun mu yoksa Agent'ın sonraki açılışının mı yaptığı kayıtlardan anlaşılamıyor. Şimdi hiçbir şey değiştirilmedi. Bu işlem artık DNS değişikliklerini engellemiyor. Bu komut DNS'in şu anki sağlığını kontrol etmez. Yeni bir geçişten önce panelde güncel DNS motorunu ve yetkili DNS yanıtlarını kontrol edin.")
+}
+
+// terminalDNSInverseVerdictText is the owner command's answer to a re-run
+// after an earlier owner recovery run recorded the exact rollback verdict for
+// this request and retired its journal. The verdict proves what was verified
+// then; it does not prove current DNS health.
+func terminalDNSInverseVerdictText(lang, requestID string) string {
+	return translated(lang,
+		"Request "+requestID+" is already complete: an earlier owner recovery run rolled it back, recorded the verified rollback verdict and retired its journal. Nothing was changed now. This request no longer blocks DNS changes. This command does not check current DNS health: the previous DNS engine was verified when that rollback ran, not now. Before another switch, check the current DNS engine and authoritative DNS answers in the panel.",
+		requestID+" işlemi zaten tamamlanmış: sahibin daha önce çalıştırdığı kurtarma komutu işlemi geri aldı, doğrulanmış geri alma sonucunu kaydetti ve günlüğü kaldırdı. Şimdi hiçbir şey değiştirilmedi. Bu işlem artık DNS değişikliklerini engellemiyor. Bu komut DNS'in şu anki sağlığını kontrol etmez: önceki DNS motoru o geri alma sırasında doğrulandı, şimdi değil. Yeni bir geçişten önce panelde güncel DNS motorunu ve yetkili DNS yanıtlarını kontrol edin.")
+}
+
+// writeCompletedDNSInverse answers an owner inverse whose request is already
+// complete: the Agent's reconciled deliberate release or an earlier owner run's
+// exact terminal verdict. Both exit 0 with the text on stdout. Any other error
+// is not handled here and keeps the caller's refusal or unknown result.
+func writeCompletedDNSInverse(err error, lang, requestID string, out io.Writer) (int, bool) {
+	var text string
+	switch {
+	case errors.Is(err, errDNSInverseReleasedReconciled):
+		text = releasedDNSInverseReconciledText(lang, requestID)
+	case errors.Is(err, errBINDInverseTerminalLedgerObserved), errors.Is(err, errPDNSInverseTerminalLedgerObserved):
+		text = terminalDNSInverseVerdictText(lang, requestID)
+	default:
+		return 0, false
+	}
+	if _, writeErr := fmt.Fprintln(out, text); writeErr != nil {
+		return exitOutput, true
+	}
+	return exitOK, true
 }

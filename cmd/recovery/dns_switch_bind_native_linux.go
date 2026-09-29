@@ -27,6 +27,14 @@ import (
 
 var bindInverseUnitNames = []string{"named.service", "bind9.service", "pdns.service"}
 
+// bindInverseAbsentTargetSnapshots is the absent BIND preimage whose
+// dnsunitrestore compensation (stop, unmask, disable) precedes the guard seal
+// for every standby-class journal.
+var bindInverseAbsentTargetSnapshots = []dnsengineartifact.UnitSnapshot{
+	{Name: "bind9.service", LoadState: "not-found", ActiveState: "inactive"},
+	{Name: "named.service", LoadState: "not-found", ActiveState: "inactive"},
+}
+
 func bindInverseSourceUnitIdentity(ctx context.Context) error {
 	profile, err := hostplatform.Detect()
 	if err != nil {
@@ -152,6 +160,13 @@ type bindSwitchNativeHost struct {
 	restoreConfigs    func(context.Context, dnsengineartifact.SwitchJournalV1, bindroot.Layout, uint32) error
 	restorePointer    func(dnsengineartifact.SwitchJournalV1, bindroot.Layout) error
 	restoreReceipt    func(dnsengineartifact.SwitchJournalV1) error
+	// generation classifies, read-only, the staged target generation of a
+	// created-BIND journal; removeGeneration deletes it only when exact.
+	generation       func(context.Context, dnsengineartifact.SwitchJournalV1, bindroot.Layout, uint32) (dnsenginerecovery.BINDGenerationResidue, string, error)
+	removeGeneration func(context.Context, dnsengineartifact.SwitchJournalV1, bindroot.Layout, uint32) (bool, error)
+	// runtimeFiles lists, read-only, files named wrote in its working
+	// directory; they are recorded, never removed.
+	runtimeFiles func(bindroot.Layout) (string, []string, error)
 }
 
 func installedBINDSwitchNativeHost(policy dnsengineartifact.JournalPolicy, owner servicemutationledger.FileOwner) bindSwitchNativeHost {
@@ -193,6 +208,13 @@ func installedBINDSwitchNativeHost(policy dnsengineartifact.JournalPolicy, owner
 		},
 		restoreReceipt: func(j dnsengineartifact.SwitchJournalV1) error {
 			return dnsenginerecovery.RestoreExactBINDSwitchSourceReceipt(policy, owner, j)
+		},
+		generation:       dnsenginerecovery.ClassifyStagedBINDGeneration,
+		removeGeneration: dnsenginerecovery.RemoveStagedBINDGeneration,
+		runtimeFiles: func(layout bindroot.Layout) (string, []string, error) {
+			directory := dnsenginerecovery.BINDWorkingDirectory(layout)
+			files, err := dnsenginerecovery.ListBINDRuntimeFiles(directory)
+			return directory, files, err
 		},
 	}
 }
@@ -249,10 +271,21 @@ func bindInverseTargetPreimage(units []dnsenginerecovery.NativeUnitObservation, 
 	if len(units) != 3 {
 		return false
 	}
-	// The package and its guard mask stay installed as rollback standby for a
-	// target this operation created and never activated.
+	// For a target this operation created, the rollback end state is the
+	// package guard's persistent mask on both names (the package stays
+	// installed as rollback standby), or both units absent when no unit file
+	// exists. An unmasked, disabled target is accepted only at the rolled-back
+	// checkpoint, where an earlier recovery binary may have left it.
 	if bindInverseGuardSealedTarget(units, j) {
 		return true
+	}
+	if dnsenginerecovery.BINDSwitchNeverStartedTargetJournal(j) {
+		if bindInverseTargetBothAbsent(units) {
+			return true
+		}
+		if j.Phase != dnsengineartifact.SwitchPhaseRolledBack {
+			return false
+		}
 	}
 	for _, saved := range j.TargetUnitsBefore {
 		found := false
@@ -412,22 +445,7 @@ func bindInverseExactAfterConfigs(ctx context.Context, policy dnsengineartifact.
 }
 
 func bindInverseExpectedTarget(j dnsengineartifact.SwitchJournalV1, layout bindroot.Layout) (binddns.Receipt, error) {
-	zones := make([]binddns.ZoneSnapshot, len(j.Zones))
-	for i, z := range j.Zones {
-		zones[i] = binddns.ZoneSnapshot{
-			DesiredGeneration: z.DesiredGeneration, Domain: z.Domain, Delete: z.Delete,
-			Qualifier: z.ZoneQualifier, MutationRequestID: j.MutationRequestID,
-			MutationOwnerID: j.MutationOwnerID, Records: z.Records,
-		}
-	}
-	generation, err := binddns.RenderManifest(string(layout), binddns.Manifest{EngineEpoch: j.TargetEpoch, Zones: zones})
-	if err != nil {
-		return binddns.Receipt{}, err
-	}
-	if generation.ID != j.TargetGeneration {
-		return binddns.Receipt{}, errors.New("frozen BIND target differs from journal generation")
-	}
-	return generation.ReceiptValue, nil
+	return dnsenginerecovery.BINDSwitchExpectedTargetReceipt(j, layout)
 }
 
 func bindInverseActivePredecessorProof(ctx context.Context, policy dnsengineartifact.JournalPolicy, j dnsengineartifact.SwitchJournalV1, layout bindroot.Layout, gid uint32) error {
@@ -569,7 +587,7 @@ func assessBINDSwitchNative(ctx context.Context, h bindSwitchNativeHost, j dnsen
 		if err := h.unchangedConfig(ctx, j, layout, gid); err != nil {
 			return dnsenginerecovery.BINDSwitchNativeUnknown, err
 		}
-		return dnsenginerecovery.BINDSwitchNativeRestored, nil
+		return assessBINDSwitchResidue(ctx, h, j, units, layout, gid)
 	}
 	if j.Phase == dnsengineartifact.SwitchPhaseRolledBack {
 		return dnsenginerecovery.BINDSwitchNativeUnknown, errors.New("rolled-back checkpoint lacks native source restoration")
@@ -595,7 +613,9 @@ func assessBINDSwitchNative(ctx context.Context, h bindSwitchNativeHost, j dnsen
 // installedBINDTargetSourceOnlyDNS is the installed source-only proof beside a
 // never-started BIND target: no named process, and every public port-53
 // listener belongs to the running source pdns_server MainPID, or no public
-// listener exists while the source PowerDNS unit is stopped.
+// listener exists while the source PowerDNS unit is stopped. Every loopback
+// and link-local port-53 socket must belong to that same verified source
+// process or to the systemd-resolved stub proved by its unit cgroup.
 func installedBINDTargetSourceOnlyDNS(ctx context.Context) error {
 	return proveBINDTargetSourceOnlyDNS(ctx, bindTargetSourceOnlyDNSOps{
 		noNamedProcess: dnsenginerecovery.ProbeNoNamedProcess,
@@ -608,6 +628,7 @@ func installedBINDTargetSourceOnlyDNS(ctx context.Context) error {
 		},
 		sourcePID: verifyInstalledPDNSRuntime,
 		listeners: dnsenginerecovery.SSListenerRunner,
+		cgroup:    dnsenginerecovery.NativeProcessUnifiedCgroup,
 	})
 }
 
@@ -616,15 +637,18 @@ type bindTargetSourceOnlyDNSOps struct {
 	sourceUnit     func(context.Context) (dnsenginerecovery.NativeUnitObservation, error)
 	sourcePID      func(context.Context) (uint64, error)
 	listeners      dnsenginerecovery.BINDListenerRunner
+	cgroup         dnsenginerecovery.ProcessCgroupReader
 }
 
 // proveBINDTargetSourceOnlyDNS reuses the existing listener inventories: the
 // authority proof that every public listener is the verified PowerDNS MainPID
 // (with both TCP and UDP present), and the V4 no-public-listener proof for a
-// stopped source. Loopback and link-local sockets are ignored by both, as by
-// the fresh-install rule.
+// stopped source. Those two skip loopback and link-local sockets, so
+// ProbeLocalDNSListeners then requires each of those to belong to the same
+// verified PowerDNS MainPID (none while the source is stopped) or to the
+// systemd-resolved stub proved by its unit cgroup and address.
 func proveBINDTargetSourceOnlyDNS(ctx context.Context, ops bindTargetSourceOnlyDNSOps) error {
-	if ctx == nil || ops.noNamedProcess == nil || ops.sourceUnit == nil || ops.sourcePID == nil || ops.listeners == nil {
+	if ctx == nil || ops.noNamedProcess == nil || ops.sourceUnit == nil || ops.sourcePID == nil || ops.listeners == nil || ops.cgroup == nil {
 		return errors.New("never-started BIND target source-only proof is incomplete")
 	}
 	if err := ops.noNamedProcess(ctx); err != nil {
@@ -643,6 +667,9 @@ func proveBINDTargetSourceOnlyDNS(ctx context.Context, ops bindTargetSourceOnlyD
 		if err := dnsenginerecovery.ProbeAuthorityListeners(ctx, "pdns_server", pid, "", ops.listeners); err != nil {
 			return fmt.Errorf("public port-53 listeners are not only the source PowerDNS: %w", err)
 		}
+		if _, err := dnsenginerecovery.ProbeLocalDNSListeners(ctx, "pdns_server", pid, ops.listeners, ops.cgroup); err != nil {
+			return fmt.Errorf("local port-53 listeners are not only the source PowerDNS and the resolver stub: %w", err)
+		}
 	case "inactive":
 		for range 2 {
 			rows, err := ops.listeners(ctx)
@@ -652,6 +679,9 @@ func proveBINDTargetSourceOnlyDNS(ctx context.Context, ops bindTargetSourceOnlyD
 			if err := requireNoPublicDNSPort53ListenersV4(rows); err != nil {
 				return err
 			}
+		}
+		if _, err := dnsenginerecovery.ProbeLocalDNSListeners(ctx, "", 0, ops.listeners, ops.cgroup); err != nil {
+			return fmt.Errorf("local port-53 listeners beside the stopped source are not only the resolver stub: %w", err)
 		}
 	default:
 		return errors.New("source PowerDNS unit is neither active nor inactive beside the never-started BIND target")
@@ -914,18 +944,39 @@ func restoreBINDSwitchNative(ctx context.Context, h bindSwitchNativeHost, j dnse
 			return nil
 		},
 		func() error {
-			// A target this operation created and never activated keeps the
-			// installed package and the guard's persistent mask as rollback
-			// standby; dnsunitrestore would unmask and disable it because its
-			// frozen preimage is absent. No systemctl call is made for it.
+			// A target this operation created ends under the package guard's
+			// persistent mask (rollback standby; the package stays installed).
+			// A target still sealed, or absent, needs no systemctl call. A
+			// target that was unmasked (started or not) is stopped and
+			// disabled by dnsunitrestore from its absent preimage, then sealed
+			// again with the guard's own mask. A journal that froze an
+			// existing BIND restores that exact preimage, as before.
 			current, err := h.units(ctx)
 			if err != nil {
 				return err
 			}
-			if bindInverseGuardSealedTarget(current, j) {
+			created := dnsenginerecovery.BINDSwitchNeverStartedTargetJournal(j)
+			if bindInverseGuardSealedTarget(current, j) || (created && bindInverseTargetBothAbsent(current)) {
 				return nil
 			}
-			return h.restoreUnits(ctx, j.TargetUnitsBefore)
+			if !created {
+				return h.restoreUnits(ctx, j.TargetUnitsBefore)
+			}
+			// A frozen guard mask cannot be restored by masking directly:
+			// systemctl refuses to mask over an enabled alias link. Both
+			// standby preimages are therefore compensated from the absent
+			// state first (stop, unmask, disable), then sealed.
+			if err := h.restoreUnits(ctx, bindInverseAbsentTargetSnapshots); err != nil {
+				return err
+			}
+			after, err := h.units(ctx)
+			if err != nil {
+				return err
+			}
+			if bindInverseTargetBothAbsent(after) {
+				return nil
+			}
+			return h.sealTarget(ctx)
 		},
 	); err != nil {
 		return fmt.Errorf("restore target BIND unit preimage: %w", err)
@@ -988,6 +1039,15 @@ func restoreBINDSwitchNative(ctx context.Context, h bindSwitchNativeHost, j dnse
 		if err := h.restoreUnits(ctx, j.SourceUnitsBefore); err != nil {
 			return fmt.Errorf("restore source PowerDNS unit preimage: %w", err)
 		}
+	}
+	// The pointer no longer selects the target, so the exact generation this
+	// operation staged is removed; a tree that differs is left and recorded.
+	removed, err := h.removeGeneration(ctx, j, layout, gid)
+	if err != nil {
+		return fmt.Errorf("remove staged BIND generation %s: %w", j.TargetGeneration, err)
+	}
+	if removed {
+		bindRollbackRecordFrom(ctx).observeRemovedGeneration(string(layout), j.TargetGeneration)
 	}
 	state, err := assessBINDSwitchNative(ctx, h, j)
 	if err != nil || state != dnsenginerecovery.BINDSwitchNativeRestored {

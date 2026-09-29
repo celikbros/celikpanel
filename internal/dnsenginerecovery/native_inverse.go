@@ -25,6 +25,16 @@ const (
 // observation checks. A caller holding only a journal may use it to name that
 // owner command; it grants no recovery or native mutation authority.
 func InactiveBINDSwitchInverseJournal(j dnsengineartifact.SwitchJournalV1) error {
+	if j.Phase != dnsengineartifact.SwitchPhaseRollingBack && j.Phase != dnsengineartifact.SwitchPhaseRolledBack {
+		return errors.New("inactive BIND switch inverse lacks exact retained rollback evidence")
+	}
+	return inactiveBINDSwitchJournalShape(j)
+}
+
+// inactiveBINDSwitchJournalShape is InactiveBINDSwitchInverseJournal without
+// its phase condition: the managed standalone PowerDNS-to-BIND V2 switch with
+// an active PowerDNS source and two inactive BIND target preimages.
+func inactiveBINDSwitchJournalShape(j dnsengineartifact.SwitchJournalV1) error {
 	if j.Schema != dnsengineartifact.SwitchJournalSchemaV2 || j.InversePlan == nil ||
 		j.InversePlan.Kind != dnsengineartifact.BINDSwitchInversePlanKindV2 ||
 		j.InversePlan.SourcePDNS == nil ||
@@ -34,9 +44,7 @@ func InactiveBINDSwitchInverseJournal(j dnsengineartifact.SwitchJournalV1) error
 		j.TargetEngine != transport.DNSEngineBIND ||
 		j.Topology != transport.DNSTopologyStandalone ||
 		j.PairRole != "" || j.LocalIP != "" || j.PeerIP != "" ||
-		!j.StateBefore.Exists ||
-		(j.Phase != dnsengineartifact.SwitchPhaseRollingBack &&
-			j.Phase != dnsengineartifact.SwitchPhaseRolledBack) {
+		!j.StateBefore.Exists {
 		return errors.New("inactive BIND switch inverse lacks exact retained rollback evidence")
 	}
 	if len(j.TargetUnitsBefore) != 2 || len(j.SourceUnitsBefore) != 1 ||
@@ -62,29 +70,78 @@ func InactiveBINDSwitchInverseJournal(j dnsengineartifact.SwitchJournalV1) error
 
 // BINDSwitchNeverStartedTargetJournal reports whether the owner
 // PowerDNS-to-BIND inverse journal (InactiveBINDSwitchInverseJournal) froze
-// both BIND target units absent, so this operation created them. Only then
-// may the inverse accept the pre-start target states, absent or the package
-// guard's persistent mask, and only after proving them natively.
+// both BIND target units in a standby state no earlier switch left serving:
+// both absent (this operation created BIND), or both under the package
+// guard's persistent mask, inactive (the rollback standby an earlier rollback
+// of such a switch leaves; a retry freezes it). Only then may the inverse
+// accept the pre-start target states, absent or the guard's persistent mask,
+// and only after proving them natively; and only then does the rollback end
+// with the target under that mask.
 //
 // A V2 journal does not record the phase that preceded its rollback decision:
 // the Agent's startup Reconcile and its in-process rollback both overwrite the
 // forward phase with rolling-back, and a startup decision is written for any
 // pre-verified phase because the state receipt stays the source until
 // target-verified. This predicate therefore does not prove the target never
-// started. The inverse relies on native evidence instead: activation lifts the
-// guard's persistent mask before it enables or starts named, and neither the
-// forward path nor a rollback of this operation re-creates it for an absent
-// preimage. A loaded target keeps the unchanged loaded-unit proof.
+// started, and neither does a mask observed at rolling-back or rolled-back:
+// the rollback itself stops, disables and re-masks a target that started.
+// Before the rollback decision a present mask still means BIND never started
+// in this operation, because activation lifts it before enable/start. The
+// inverse's safety rests on the stopped proof (inactive/dead, zero PIDs,
+// empty cgroup, no named process, source-only listeners), not on history. A
+// loaded target keeps the unchanged loaded-unit proof.
 func BINDSwitchNeverStartedTargetJournal(j dnsengineartifact.SwitchJournalV1) bool {
-	if InactiveBINDSwitchInverseJournal(j) != nil {
-		return false
-	}
+	return InactiveBINDSwitchInverseJournal(j) == nil && bindSwitchTargetsFrozenStandby(j)
+}
+
+// bindSwitchTargetsFrozenStandby reports both target snapshots absent, or
+// both under the persistent mask; a mixed pair is not a standby state.
+func bindSwitchTargetsFrozenStandby(j dnsengineartifact.SwitchJournalV1) bool {
+	absent, masked := 0, 0
 	for _, unit := range j.TargetUnitsBefore {
-		if unit.LoadState != "not-found" || unit.UnitFileState != "" || unit.ActiveState != "inactive" {
+		switch {
+		case unit.ActiveState != "inactive":
+			return false
+		case unit.LoadState == "not-found" && unit.UnitFileState == "":
+			absent++
+		case unit.LoadState == "masked" && unit.UnitFileState == "masked":
+			masked++
+		default:
 			return false
 		}
 	}
-	return true
+	n := len(j.TargetUnitsBefore)
+	return n > 0 && (absent == n || masked == n)
+}
+
+// BINDSwitchBeforeRollbackDecisionJournal reports whether j has the exact
+// journal shape recover-dns-bind-switch admits (InactiveBINDSwitchInverseJournal)
+// but is still at a forward phase before target-verified, so no rollback
+// decision is recorded. At these phases a starting Agent writes the rollback
+// decision for the same request; no owner inverse command is admitted until
+// then. It is a read-only classification for status guidance and grants no
+// recovery or native mutation authority.
+func BINDSwitchBeforeRollbackDecisionJournal(j dnsengineartifact.SwitchJournalV1) bool {
+	switch j.Phase {
+	case dnsengineartifact.SwitchPhaseIntent, dnsengineartifact.SwitchPhaseTargetStaged,
+		dnsengineartifact.SwitchPhaseSourceStopped, dnsengineartifact.SwitchPhaseTargetStarted:
+		return inactiveBINDSwitchJournalShape(j) == nil
+	}
+	return false
+}
+
+// BINDSwitchNeverStartedBeforeDecisionJournal narrows
+// BINDSwitchBeforeRollbackDecisionJournal to journals that froze both BIND
+// units in the standby class of BINDSwitchNeverStartedTargetJournal (absent,
+// or under the guard's persistent mask) at a phase before target-started.
+// Status may then read the target with the typed never-started observation.
+// target-started is excluded: that phase records that BIND was started, so a
+// masked unit there is not the pre-start class. Like
+// BINDSwitchNeverStartedTargetJournal, the journal alone does not prove BIND
+// never started; the native observation does.
+func BINDSwitchNeverStartedBeforeDecisionJournal(j dnsengineartifact.SwitchJournalV1) bool {
+	return j.Phase != dnsengineartifact.SwitchPhaseTargetStarted &&
+		BINDSwitchBeforeRollbackDecisionJournal(j) && bindSwitchTargetsFrozenStandby(j)
 }
 
 // PDNSAdoptionInverseJournal is the journal-only part of the owner PowerDNS

@@ -92,12 +92,18 @@ Carried to item 2, open, not reclassified:
   the standalone critical cells still expect V1 when run without the
   owner-inverse flag;
 - reboot or power loss during recovery for every row that has none;
-- guidance: re-run exit status 3; no durable record of which actor retired a
-  released journal; status for a V2 journal that has not reached
-  `rolling-back` reports a masked target as unknown;
-- residue after a PowerDNS → BIND rollback, and the differing final BIND unit
-  state;
-- listener proofs ignore loopback and link-local sockets;
+- guidance, fixed in source on 2026-09-29 (component tests; native re-run
+  pending): completed re-runs exit 0; status before the rollback decision
+  names the true next step. Still open: no durable record of which actor
+  retired a released journal; `recover-dns-pdns-fresh-prestart` and the V4
+  command still exit 3 on a terminal re-run;
+- residue and end state after a PowerDNS → BIND rollback, fixed in source the
+  same day (rollback standby: BIND always ends guard-masked; the exact staged
+  generation is removed; owner-changed trees are kept). Still open: files
+  BIND writes in its working directory and the upgraded `bind9` libraries
+  remain;
+- listener proofs now classify loopback and link-local sockets (component
+  tests; native re-run pending);
 - everything is Debian 13 (one Arch BIND cell) with unsigned local builds;
   signed-release and installed-server acceptance belong to items 3 and 4.
 

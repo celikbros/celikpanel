@@ -4,7 +4,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 
@@ -89,15 +88,8 @@ func dispatchOwnerPDNSAdoptionInverse(
 		}
 		return exitOK
 	}
-	if errors.Is(err, errDNSInverseReleasedReconciled) {
-		fmt.Fprintln(diagnostic, releasedDNSInverseReconciledText(lang, requestID))
-		return exitUnavailable
-	}
-	if errors.Is(err, errPDNSInverseTerminalLedgerObserved) {
-		fmt.Fprintln(diagnostic, translated(lang,
-			"The same request has a verified historical rollback verdict, but its retired journal cannot prove current PowerDNS health. The server owner should check authoritative DNS and this request's ledger; preserve the evidence. No new mutation was started. ",
-			"Aynı işlemin doğrulanmış geçmiş geri alma kararı var; ancak kaldırılmış günlük güncel PowerDNS sağlığını kanıtlamaz. Sunucu sahibi yetkili DNS'i ve bu işlemin kaydını kontrol edip kanıtları korumalıdır. Yeni değişiklik başlatılmadı. ")+err.Error())
-		return exitUnavailable
+	if code, complete := writeCompletedDNSInverse(err, lang, requestID, out); complete {
+		return code
 	}
 	fmt.Fprintln(diagnostic, translated(lang,
 		"This PowerDNS adoption rollback could not be verified. The server owner should inspect `recovery dns-switch-status --quiesced --request-id "+requestID+"`, resolve the reported worker, lock, evidence or native DNS condition, then retry this same request. Preserve the journal and ledger; do not start another DNS switch. Reason: ",

@@ -16,6 +16,8 @@ import (
 	"github.com/alicelik/celikpanel/internal/bindroot"
 	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
+	"github.com/alicelik/celikpanel/internal/servicemutationledger"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // These component tests drive recover-dns-bind-switch from the state the
@@ -38,9 +40,17 @@ type neverStartedBINDHost struct {
 	config          string // before, after or owner
 	namedProcess    bool
 	foreignListener bool
-	systemctl       []string
-	effects         []string
-	nextPID         uint64
+	// localListeners adds loopback or link-local port-53 rows to the
+	// inventory; cgroups maps a PID to its cgroup-v2 path.
+	localListeners []string
+	cgroups        map[uint64]string
+	// generation is the staged target tree: "none", "staged" (exactly what
+	// the journal staged) or "retained" (owner-modified).
+	generation   string
+	runtimeFiles []string
+	systemctl    []string
+	effects      []string
+	nextPID      uint64
 }
 
 // newNeverStartedBINDHost is the native state at a pre-start cut: both BIND
@@ -57,8 +67,17 @@ func newNeverStartedBINDHost(pointerTarget bool, config string, sourceStopped bo
 			"bind9.service": {load: "masked", active: "inactive", file: "masked"},
 			"pdns.service":  source,
 		},
-		pointerTarget: pointerTarget, config: config, nextPID: 5000,
+		pointerTarget: pointerTarget, config: config, nextPID: 5000, generation: "none",
+		cgroups: map[uint64]string{370: "/system.slice/systemd-resolved.service"},
 	}
+}
+
+func (f *neverStartedBINDHost) cgroup(_ context.Context, pid uint64) (string, error) {
+	path, ok := f.cgroups[pid]
+	if !ok {
+		return "", fmt.Errorf("process %d cgroup unknown", pid)
+	}
+	return path, nil
 }
 
 func (f *neverStartedBINDHost) unit(name string) (*simulatedDNSUnit, error) {
@@ -83,6 +102,7 @@ func (f *neverStartedBINDHost) listeners(context.Context) ([]byte, error) {
 	if f.foreignListener {
 		rows = append(rows, `udp UNCONN 0 0 10.0.2.15:53 0.0.0.0:* users:(("dnsmasq",pid=777,fd=4))`)
 	}
+	rows = append(rows, f.localListeners...)
 	return []byte(strings.Join(rows, "\n") + "\n"), nil
 }
 
@@ -109,6 +129,16 @@ func (f *neverStartedBINDHost) runSystemd(_ context.Context, path string, args .
 		if args[1] != "--runtime" && u.load == "masked" {
 			u.load, u.file = "loaded", "disabled"
 		}
+	case "mask":
+		if args[1] == "--runtime" {
+			return nil, errors.New("runtime mask is not the guard's seal")
+		}
+		if u.file == "enabled" || u.active == "active" {
+			// systemctl refuses to mask over an enabled alias link; the
+			// inverse must stop and disable first.
+			return nil, errors.New("unit is enabled or running; refusing to mask")
+		}
+		u.load, u.file = "masked", "masked"
 	case "enable":
 		u.file = "enabled"
 	case "disable":
@@ -185,6 +215,7 @@ func (f *neverStartedBINDHost) native(h releasedInverseHost) bindSwitchNativeHos
 				},
 				sourcePID: f.pdnsPID,
 				listeners: f.listeners,
+				cgroup:    f.cgroup,
 			})
 		},
 		vendor: func(ctx context.Context, j dnsengineartifact.SwitchJournalV1, units []dnsenginerecovery.NativeUnitObservation) error {
@@ -222,6 +253,29 @@ func (f *neverStartedBINDHost) native(h releasedInverseHost) bindSwitchNativeHos
 		},
 		restoreReceipt: func(j dnsengineartifact.SwitchJournalV1) error {
 			return dnsenginerecovery.RestoreExactBINDSwitchSourceReceipt(h.policy, h.owner, j)
+		},
+		generation: func(_ context.Context, j dnsengineartifact.SwitchJournalV1, _ bindroot.Layout, _ uint32) (dnsenginerecovery.BINDGenerationResidue, string, error) {
+			if !dnsenginerecovery.BINDSwitchNeverStartedTargetJournal(j) || f.pointerTarget {
+				return dnsenginerecovery.BINDGenerationNone, "", nil
+			}
+			switch f.generation {
+			case "staged":
+				return dnsenginerecovery.BINDGenerationStaged, "", nil
+			case "retained":
+				return dnsenginerecovery.BINDGenerationRetained, "BIND generation contains unexpected top-level entries", nil
+			}
+			return dnsenginerecovery.BINDGenerationNone, "", nil
+		},
+		removeGeneration: func(ctx context.Context, j dnsengineartifact.SwitchJournalV1, layout bindroot.Layout, gid uint32) (bool, error) {
+			if !dnsenginerecovery.BINDSwitchNeverStartedTargetJournal(j) || f.pointerTarget || f.generation != "staged" {
+				return false, nil
+			}
+			f.effects = append(f.effects, "remove staged BIND generation")
+			f.generation = "none"
+			return true, nil
+		},
+		runtimeFiles: func(bindroot.Layout) (string, []string, error) {
+			return "/var/cache/bind", f.runtimeFiles, nil
 		},
 	}
 }
@@ -282,6 +336,19 @@ func TestOwnerBINDSwitchInverseCompletesNeverStartedGuardMaskedTarget(t *testing
 			host:          func() *neverStartedBINDHost { return newNeverStartedBINDHost(true, "after", true) },
 			wantSystemctl: []string{"unmask pdns.service", "unmask --runtime pdns.service", "enable pdns.service", "start pdns.service"},
 			wantEffects:   []string{"restore BIND config before-images", "restore BIND predecessor pointer"},
+		},
+		{
+			// The verified source PowerDNS also holds loopback and link-local
+			// sockets beside the resolver stub; both are accepted.
+			name: "source-owned-local-listeners",
+			host: func() *neverStartedBINDHost {
+				f := newNeverStartedBINDHost(false, "before", false)
+				f.localListeners = []string{
+					`udp UNCONN 0 0 127.0.0.1:53 0.0.0.0:* users:(("pdns_server",pid=3066,fd=9))`,
+					`tcp LISTEN 0 128 [fe80::5054:ff:fe13:10]%mgmt0:53 [::]:* users:(("pdns_server",pid=3066,fd=10))`,
+				}
+				return f
+			},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -350,6 +417,29 @@ func TestOwnerBINDSwitchInverseRefusesUnprovenNeverStartedTarget(t *testing.T) {
 		{name: "owner-edited-staged-config", change: func(f *neverStartedBINDHost) { f.config = "owner" }, want: "differs from the frozen"},
 		{name: "named-process", change: func(f *neverStartedBINDHost) { f.namedProcess = true }, want: "named process"},
 		{name: "listener-not-owned-by-source", change: func(f *neverStartedBINDHost) { f.foreignListener = true }, want: "not only the source PowerDNS"},
+		// Loopback and link-local sockets are no longer skipped.
+		{name: "named-on-loopback", change: func(f *neverStartedBINDHost) {
+			f.localListeners = []string{`udp UNCONN 0 0 127.0.0.1:53 0.0.0.0:* users:(("named",pid=4242,fd=18))`}
+		}, want: "named process (PID 4242) holds local port-53 listener 127.0.0.1"},
+		{name: "named-on-ipv6-loopback", change: func(f *neverStartedBINDHost) {
+			f.localListeners = []string{`tcp LISTEN 0 10 [::1]:53 [::]:* users:(("named",pid=4242,fd=34))`}
+		}, want: "holds local port-53 listener ::1 outside the verified DNS source"},
+		{name: "named-on-link-local", change: func(f *neverStartedBINDHost) {
+			f.localListeners = []string{`tcp LISTEN 0 10 [fe80::5054:ff:fe13:10]%mgmt0:53 [::]:* users:(("named",pid=4242,fd=42))`}
+		}, want: "outside the verified DNS source"},
+		{name: "other-pdns-on-loopback", change: func(f *neverStartedBINDHost) {
+			f.localListeners = []string{`udp UNCONN 0 0 127.0.0.1:53 0.0.0.0:* users:(("pdns_server",pid=9999,fd=9))`}
+		}, want: "pdns_server process (PID 9999)"},
+		{name: "unknown-on-loopback", change: func(f *neverStartedBINDHost) {
+			f.localListeners = []string{`udp UNCONN 0 0 127.0.1.1:53 0.0.0.0:* users:(("dnsmasq",pid=777,fd=4))`}
+		}, want: "unrecognized process"},
+		{name: "resolver-name-outside-its-cgroup", change: func(f *neverStartedBINDHost) {
+			f.localListeners = []string{`udp UNCONN 0 0 127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=999,fd=4))`}
+			f.cgroups[999] = "/system.slice/impostor.service"
+		}, want: "is not in systemd-resolved.service"},
+		{name: "resolver-name-on-other-address", change: func(f *neverStartedBINDHost) {
+			f.localListeners = []string{`udp UNCONN 0 0 127.0.0.1:53 0.0.0.0:* users:(("systemd-resolve",pid=370,fd=30))`}
+		}, want: "unrecognized process"},
 		{name: "runtime-mask", change: func(f *neverStartedBINDHost) { f.units["named.service"].file = "masked-runtime" }, want: "differs from allowed operation states"},
 		{name: "target-running", change: func(f *neverStartedBINDHost) {
 			f.units["named.service"] = &simulatedDNSUnit{load: "loaded", active: "active", file: "enabled", pid: 4242}
@@ -392,9 +482,10 @@ func TestOwnerBINDSwitchInverseRefusesUnprovenNeverStartedTarget(t *testing.T) {
 }
 
 // A target already lifted from the guard but never started (loaded/disabled,
-// bind9 alias absent) keeps the existing inverse: the loaded-unit proof and
-// dnsunitrestore's absent-preimage compensation, unchanged by this rule.
-func TestOwnerBINDSwitchInverseKeepsLoadedTargetPath(t *testing.T) {
+// bind9 alias absent) keeps the loaded-unit proof and dnsunitrestore's
+// absent-preimage compensation, and then ends under the guard's persistent
+// mask like every created-BIND rollback. named is never started.
+func TestOwnerBINDSwitchInverseSealsLiftedTarget(t *testing.T) {
 	h, j := stageNeverStartedBINDSwitch(t, nil)
 	f := newNeverStartedBINDHost(true, "after", true)
 	f.units["named.service"] = &simulatedDNSUnit{load: "loaded", active: "inactive", file: "disabled"}
@@ -406,10 +497,11 @@ func TestOwnerBINDSwitchInverseKeepsLoadedTargetPath(t *testing.T) {
 		t.Fatal("journal not retired")
 	}
 	for _, call := range f.systemctl {
-		if strings.Contains(call, "named.service") && !strings.HasPrefix(call, "unmask") && !strings.HasPrefix(call, "disable") {
-			t.Fatalf("unexpected target mutation %q", call)
+		if strings.Contains(call, "named.service") && strings.HasPrefix(call, "start") {
+			t.Fatalf("rollback started the target: %q", call)
 		}
 	}
+	requireGuardSealed(t, f)
 }
 
 func TestDNSSwitchStatusObservesGuardMaskedTargetWithoutIdentityFailure(t *testing.T) {
@@ -435,13 +527,13 @@ func TestDNSSwitchStatusObservesGuardMaskedTargetWithoutIdentityFailure(t *testi
 	line, err := observeNeverStartedBINDTarget(context.Background(), masked,
 		func(context.Context) error { t.Fatal("loaded identity proof used for a masked target"); return nil },
 		func(unit string) error { proved = append(proved, unit); return nil },
-		func() error { return nil })
+		func() error { return nil }, false)
 	if err != nil || strings.Contains(line, "incomplete DNS unit identity") ||
 		!strings.Contains(line, "persistent mask") || !reflect.DeepEqual(proved, []string{"named.service", "bind9.service"}) {
 		t.Fatalf("masked target status = %q, %v (mask proofs %q)", line, err, proved)
 	}
 	if _, err := observeNeverStartedBINDTarget(context.Background(), masked, func(context.Context) error { return nil },
-		func(string) error { return errors.New("mask link is not root-owned") }, func() error { return nil }); err == nil {
+		func(string) error { return errors.New("mask link is not root-owned") }, func() error { return nil }, false); err == nil {
 		t.Fatal("unproved mask link accepted")
 	}
 	mixed := func(ctx context.Context, name string) ([]byte, error) {
@@ -451,7 +543,7 @@ func TestDNSSwitchStatusObservesGuardMaskedTargetWithoutIdentityFailure(t *testi
 		return masked(ctx, name)
 	}
 	if _, err := observeNeverStartedBINDTarget(context.Background(), mixed, func(context.Context) error { return nil },
-		func(string) error { return nil }, func() error { return nil }); err == nil {
+		func(string) error { return nil }, func() error { return nil }, false); err == nil {
 		t.Fatal("named masked without the alias mask accepted")
 	}
 	loadedCalls := 0
@@ -463,7 +555,7 @@ func TestDNSSwitchStatusObservesGuardMaskedTargetWithoutIdentityFailure(t *testi
 	}
 	if line, err := observeNeverStartedBINDTarget(context.Background(), loaded,
 		func(context.Context) error { loadedCalls++; return nil },
-		func(string) error { t.Fatal("mask proof used for a loaded target"); return nil }, func() error { return nil }); err != nil || line != "" || loadedCalls != 1 {
+		func(string) error { t.Fatal("mask proof used for a loaded target"); return nil }, func() error { return nil }, false); err != nil || line != "" || loadedCalls != 1 {
 		t.Fatalf("loaded target did not keep the unchanged identity proof: %q %v %d", line, err, loadedCalls)
 	}
 	// The retained journal is unchanged by the observation.
@@ -473,5 +565,138 @@ func TestDNSSwitchStatusObservesGuardMaskedTargetWithoutIdentityFailure(t *testi
 	}
 	if encoded, _ := h.policy.EncodeSwitchJournal(j); !bytes.Equal(raw, encoded) {
 		t.Fatal("status observation changed the journal")
+	}
+}
+
+// stageBeforeDecisionBINDSwitch is the state when the Agent was cut at a
+// pre-start phase and has not restarted: the V2 journal at that forward phase
+// beside the still-leased ledger job, the PowerDNS source receipt in place.
+func stageBeforeDecisionBINDSwitch(t *testing.T, phase string) (releasedInverseHost, dnsengineartifact.SwitchJournalV1) {
+	t.Helper()
+	h := newReleasedInverseHost(t)
+	j := releasedBINDSwitchJournal(t, h)
+	j.Phase = phase
+	h.write(t, "dns-engine-state.json", j.StateBefore.Data)
+	raw, err := h.policy.EncodeSwitchJournal(j)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.write(t, "dns-engine-switch-journal.json", raw)
+	now := time.Now().UTC().Truncate(time.Second)
+	job := &transport.ServiceMutationJob{
+		RequestID: j.MutationRequestID, OwnerID: j.MutationOwnerID,
+		Kind: "dns_engine_switch", Target: string(j.TargetEngine), PackageName: j.ManifestQualifier,
+		Status: servicemutationledger.StatusRunning, Phase: "leased", Attempt: 1,
+		StartedAt: now.Add(-time.Minute), UpdatedAt: now.Add(-time.Minute),
+		LeaseExpiresAt: now.Add(time.Hour), DeadlineAt: now.Add(2 * time.Hour),
+	}
+	ledger := servicemutationledger.Ledger{Version: servicemutationledger.Version, ActiveRequestID: job.RequestID,
+		Jobs: map[string]*transport.ServiceMutationJob{job.RequestID: job}}
+	ledgerRaw, err := servicemutationledger.Encode(&ledger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.write(t, "service-mutations.json", ledgerRaw)
+	return h, j
+}
+
+// Before the rollback decision, status reads a guard-masked target with the
+// typed never-started observation, names the Agent restart and the status
+// re-run, and never names an owner inverse command, which is not admitted.
+func TestDNSSwitchStatusBeforeRollbackDecisionObservesNeverStartedTarget(t *testing.T) {
+	for _, phase := range []string{dnsengineartifact.SwitchPhaseIntent, dnsengineartifact.SwitchPhaseTargetStaged, dnsengineartifact.SwitchPhaseSourceStopped} {
+		t.Run(phase, func(t *testing.T) {
+			h, j := stageBeforeDecisionBINDSwitch(t, phase)
+			before := h.files(t)
+			evidence, present, err := dnsenginerecovery.ReadSwitchEvidence(h.root, h.owner, h.policy, time.Now().UTC())
+			if err != nil || !present || evidence.Observation.Status != dnsenginerecovery.EvidenceActive {
+				t.Fatalf("fixture is not an active pre-decision journal: present=%v status=%q err=%v", present, evidence.Observation.Status, err)
+			}
+			if evidence.Observation.TargetReceipt == dnsenginerecovery.TargetReceiptExact ||
+				!dnsenginerecovery.BINDSwitchNeverStartedBeforeDecisionJournal(evidence.Journal) ||
+				dnsenginerecovery.BINDSwitchNeverStartedTargetJournal(evidence.Journal) {
+				t.Fatal("status would not select the before-decision never-started observation")
+			}
+			if got := ownerDNSRecoveryCommand(evidence); got != "" {
+				t.Fatalf("status named %q before the rollback decision", got)
+			}
+			for _, quiesced := range []bool{false, true} {
+				guidance := ownerDNSRecoveryGuidance(evidence, quiesced)
+				if strings.Contains(guidance, "recover-dns-") || !strings.Contains(guidance, "no rollback decision yet (journal phase "+phase+")") ||
+					!strings.Contains(guidance, "systemctl restart celikpanel-agent") ||
+					!strings.Contains(guidance, "--quiesced --request-id "+j.MutationRequestID) ||
+					strings.Contains(guidance, "contact support") {
+					t.Fatalf("before-decision guidance is wrong:\n%s", guidance)
+				}
+			}
+			if !reflect.DeepEqual(h.files(t), before) {
+				t.Fatal("status observation changed the evidence")
+			}
+		})
+	}
+	// A journal whose phase records a started BIND keeps the strict check.
+	h, _ := stageBeforeDecisionBINDSwitch(t, dnsengineartifact.SwitchPhaseTargetStarted)
+	evidence, _, err := dnsenginerecovery.ReadSwitchEvidence(h.root, h.owner, h.policy, time.Now().UTC())
+	if err != nil || dnsenginerecovery.BINDSwitchNeverStartedBeforeDecisionJournal(evidence.Journal) ||
+		!dnsenginerecovery.BINDSwitchBeforeRollbackDecisionJournal(evidence.Journal) {
+		t.Fatalf("target-started journal entered the never-started class: %v", err)
+	}
+	// A released pre-decision journal keeps the existing no-command guidance.
+	released := ownerGuidanceReleased(ownerGuidanceBINDSwitchEvidence(), dnsengineartifact.ReleasedHostWindowCode)
+	released.Journal.Phase, released.Observation.Phase = dnsengineartifact.SwitchPhaseTargetStaged, dnsengineartifact.SwitchPhaseTargetStaged
+	if got := ownerDNSRecoveryGuidance(released, true); strings.Contains(got, "systemctl restart celikpanel-agent") ||
+		!strings.Contains(got, "No owner recovery command applies") {
+		t.Fatalf("released pre-decision journal got before-decision guidance:\n%s", got)
+	}
+}
+
+func TestNeverStartedBINDTargetBeforeDecisionTextNamesNoOwnerCommand(t *testing.T) {
+	masked := func(_ context.Context, name string) ([]byte, error) {
+		return []byte("Id=" + name + "\nNames=" + name + "\nLoadState=masked\nUnitFileState=masked\nFragmentPath=/etc/systemd/system/" + name + "\nDropInPaths=\nSourcePath=\nTransient=no\n"), nil
+	}
+	absent := func(_ context.Context, name string) ([]byte, error) {
+		return []byte("Id=" + name + "\nNames=" + name + "\nLoadState=not-found\nUnitFileState=\nFragmentPath=\n"), nil
+	}
+	for name, runner := range map[string]dnsenginerecovery.BINDIdentityRunner{"masked": masked, "absent": absent} {
+		line, err := observeNeverStartedBINDTarget(context.Background(), runner,
+			func(context.Context) error { t.Fatal("loaded identity proof used"); return nil },
+			func(string) error { return nil }, func() error { return nil }, true)
+		if err != nil || !strings.Contains(line, "BIND never started for this operation") ||
+			strings.Contains(line, "owner recovery command") || strings.Contains(line, "rollback standby") ||
+			!strings.Contains(line, "not proved by this observation") {
+			t.Fatalf("%s: before-decision line = %q, %v", name, line, err)
+		}
+	}
+
+	request := strings.Repeat("a", 32)
+	inactive := &dnsenginerecovery.NativeUnitObservation{Name: "pdns.service", LoadState: "loaded", ActiveState: "inactive", UnitFileState: "disabled"}
+	active := &dnsenginerecovery.NativeUnitObservation{Name: "pdns.service", LoadState: "loaded", ActiveState: "active", UnitFileState: "enabled"}
+	for _, tc := range []struct {
+		name       string
+		workerGone bool
+		pdns       *dnsenginerecovery.NativeUnitObservation
+		want       []string
+		unwanted   []string
+	}{
+		{"interrupted-source-stopped", true, inactive,
+			[]string{"was interrupted before BIND started", "phase source-stopped", "recorded Agent worker is gone", "load=loaded active=inactive unit-file=disabled", "does not answer DNS", "Next step: the server owner restarts the CelikPanel Agent"},
+			[]string{"cannot tell whether the Agent"}},
+		{"worker-not-excluded", false, active,
+			[]string{"BIND has not started", "cannot tell whether the Agent is still running", "load=loaded active=active unit-file=enabled", "If CelikPanel shows no progress"},
+			[]string{"interrupted", "does not answer DNS"}},
+		{"units-unknown", true, nil, []string{"PowerDNS unit state could not be read"}, nil},
+	} {
+		text := beforeRollbackDecisionText(dnsengineartifact.SwitchPhaseSourceStopped, request, tc.workerGone, tc.pdns)
+		for _, want := range append(tc.want, "systemctl restart celikpanel-agent", "records the rollback decision for this same request",
+			"dns-switch-status --quiesced --request-id "+request, "No owner recovery command applies before that decision", "started nothing") {
+			if !strings.Contains(text, want) {
+				t.Fatalf("%s: text lacks %q:\n%s", tc.name, want, text)
+			}
+		}
+		for _, unwanted := range append(tc.unwanted, "recover-dns-") {
+			if strings.Contains(text, unwanted) {
+				t.Fatalf("%s: text contains %q:\n%s", tc.name, unwanted, text)
+			}
+		}
 	}
 }

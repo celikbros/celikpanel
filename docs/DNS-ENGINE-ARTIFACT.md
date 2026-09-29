@@ -1487,3 +1487,60 @@ install-ownership receipt, the staged generation tree and the non-package
 `rndc.key` remain; `/etc/bind` configuration equals the journal's preimage.
 While running, `named` also listened on loopback and link-local addresses,
 which the listener proofs do not inspect.
+
+### Rollback standby, local listeners, completed re-runs, pre-decision status (2026-09-29)
+
+P0.4; constitutional invariants 1, 2, 4, 5, 6; D-024. No journal or ledger
+schema or version change. Component tests only at this commit; the native
+cells must be re-run on this source. This section supersedes two statements
+above: a present guard mask no longer proves by itself that BIND never
+started once a rollback decision exists, and the listener proofs no longer
+ignore loopback and link-local sockets.
+
+**Rollback standby.** After a PowerDNS-to-BIND rollback whose journal froze
+both BIND units as absent, or both under the guard's persistent mask, the
+target always ends under the package guard's persistent mask on both names,
+inactive and never enabled, whether or not BIND had started. A target that
+had started is first compensated from the absent preimage (stop, unmask,
+disable, which removes the enabled alias) and then sealed with the guard's own
+mechanism; a sealed or absent target receives no `systemctl` call. A journal
+that froze another BIND preimage keeps restoring that exact preimage. The
+forward path accepts the sealed state on a retry. Before this change a retry
+from the guard-masked state froze a masked preimage and, if it failed after
+its intent was written, neither the Agent nor the owner command could finish
+its rollback. The Agent's in-process V2 rollback ends in the same unit state.
+
+**Staged generation.** The inverse removes the staged BIND generation tree
+only when the journal and receipt prove the exact generation, the tree
+verifies as what the operation staged, and the pointer does not select it;
+removal is a rename followed by deletion and resumes after an interruption.
+An owner-changed or owner-added tree is left and recorded without failing the
+rollback. In the owner command a removal I/O error retains the journal at
+`rolling-back` after the source has been restored; in the Agent it is logged.
+Files BIND itself writes in its working directory are outside the managed
+root and are listed, never removed. Packages, the rndc key and the
+install-ownership receipt stay and are named in the command's output, which
+now states what was restored, removed, not removed and intentionally kept.
+
+**Local listeners.** The never-started target proof, the fresh-source stopped
+proof and the source-only proof also classify loopback and link-local port-53
+sockets from the same inventory, read twice. Accepted: sockets of the
+verified source process, and `systemd-resolve` on 127.0.0.53 or 127.0.0.54
+whose cgroup is exactly the systemd-resolved unit; accepted stub sockets are
+recorded. Refused: `named` or `pdns_server` outside the verified source, any
+other process, the stub name on another address or cgroup, malformed rows.
+
+**Completed re-runs.** Re-running `recover-dns-bind-switch`,
+`recover-dns-bind-adoption` or `recover-dns-pdns-adoption` after the request
+is already reconciled, or after an earlier owner run recorded the terminal
+verdict, exits 0 with the text on stdout and states that current DNS health
+is not checked. Refusals and unknown results keep exit 3.
+`recover-dns-pdns-fresh-prestart` and `recover-dns-pdns-target-staged` still
+exit 3 on a terminal re-run.
+
+**Status before the rollback decision.** For a V2 PowerDNS-to-BIND journal
+that has not reached `rolling-back`, `recovery dns-switch-status` reads a
+never-started target with the typed observation and names the next step
+truthfully: restart the Agent, which records the decision for the same
+request, then re-run the status check. It names no owner inverse command at
+that phase.

@@ -64,15 +64,30 @@ func dispatchOwnerBINDSwitchInverse(args []string, uid int, inverse func(context
 	if inverse == nil {
 		return exitUnavailable
 	}
-	if err := inverse(context.Background(), request); err != nil {
-		if errors.Is(err, errDNSInverseReleasedReconciled) {
-			fmt.Fprintln(diagnostic, releasedDNSInverseReconciledText(lang, request))
-			return exitUnavailable
+	// What this run restored, removed and intentionally left, and the
+	// resolver-stub listeners accepted by the local port-53 proofs, are this
+	// run's record: printed after the outcome line.
+	ctx, listeners := dnsenginerecovery.WithLocalDNSListenerRecord(context.Background())
+	ctx, rollback := withBINDRollbackRecord(ctx)
+	err := inverse(ctx, request)
+	listenerNote := dnsenginerecovery.LocalDNSListenerRecordText(listeners.Entries())
+	if err != nil {
+		if code, complete := writeCompletedDNSInverse(err, lang, request, out); complete {
+			return code
 		}
 		fmt.Fprintln(diagnostic, translated(lang, "The accepted BIND switch rollback could not be verified. Inspect recovery dns-switch-status --quiesced --request-id "+request+"; resolve the reported evidence, worker, lock or native DNS condition and retry this same request. Preserve the journal and ledger. Reason: ", "Kabul edilmiş BIND geçişi geri alması doğrulanamadı. recovery dns-switch-status --quiesced --request-id "+request+" çıktısını inceleyin; kanıt, çalışan, kilit veya yerel DNS sorununu giderip aynı işlemi yeniden deneyin. Günlüğü ve işlem kaydını koruyun. Neden: ")+err.Error())
+		if listenerNote != "" {
+			fmt.Fprintln(diagnostic, listenerNote)
+		}
 		return exitUnavailable
 	}
 	fmt.Fprintln(out, translated(lang, "The accepted BIND switch rollback reached its terminal verdict for request "+request+". Native PowerDNS was verified during recovery. Check current authoritative DNS health before another switch.", "Kabul edilmiş BIND geçişi geri alması "+request+" işlemi için nihai karara ulaştı. Yerel PowerDNS kurtarma sırasında doğrulandı. Başka geçişten önce güncel yetkili DNS sağlığını kontrol edin."))
+	if summary := bindRollbackSummaryText(lang, rollback); summary != "" {
+		fmt.Fprintln(out, summary)
+	}
+	if listenerNote != "" {
+		fmt.Fprintln(out, listenerNote)
+	}
 	return exitOK
 }
 func runOwnerBINDSwitchInverse(args []string, uid int, out, diagnostic io.Writer) int {
@@ -230,6 +245,9 @@ func bindInverseOps(
 			if !present {
 				if adoption {
 					ledger, err := readJournalAbsentDNSLedger(ctx, root, owner, request)
+					if err == nil && classifyJournalAbsentBINDInverseLedger(ledger, request) == nil {
+						return evidence, false, fmt.Errorf("%w: request %s; inspect owner BIND before treating current service as recovered", errBINDInverseTerminalLedgerObserved, request)
+					}
 					if err == nil && journalFreeAgentReleasedDNSJob(ledger, request, transport.DNSEngineBIND) {
 						return evidence, false, releasedDNSInverseReconciledOutcome(request)
 					}

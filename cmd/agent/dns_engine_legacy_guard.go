@@ -3,10 +3,13 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
+	"log"
 	"net"
 	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
 	"github.com/alicelik/celikpanel/internal/dnslistener"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -18,6 +21,7 @@ var (
 	legacyPowerDNSMutationAuthorityCheck = inspectLegacyPowerDNSMutationAuthorityOnHost
 	legacyPowerDNSRuntimeSafetyCheck     = inspectLegacyPowerDNSRuntimeSafety
 	dnsPort53ConflictCheck               = inspectDNSPort53Conflict
+	dnsLocalPort53ListenersCheck         = inspectDNSLocalPort53Listeners
 )
 
 func validateLegacyPowerDNSDurableAuthority(
@@ -172,19 +176,36 @@ func inspectDNSPort53Conflict(
 ) (bool, error) {
 	ctx, cancel := context.WithTimeout(parent, legacyPowerDNSGuardTimeout)
 	defer cancel()
-	ss, err := firstTrustedExecutable([]string{"/usr/sbin/ss", "/usr/bin/ss"}, "ss")
-	if err != nil {
-		return false, err
-	}
-	output, err := serviceMutationCommand(
-		ctx, ss, "-H", "-lntup", "sport = :53",
-	).CombinedOutputLimited(64 << 10)
+	output, err := readDNSPort53ListenerInventory(ctx)
 	if err != nil {
 		return false, err
 	}
 	return hasUnrelatedPublicDNSListener(
 		string(output), allowBIND, allowPowerDNS,
 	), nil
+}
+
+// readDNSPort53ListenerInventory is the package guard's trusted ss read of
+// every TCP/UDP port-53 listener, public and local.
+func readDNSPort53ListenerInventory(ctx context.Context) ([]byte, error) {
+	ss, err := firstTrustedExecutable([]string{"/usr/sbin/ss", "/usr/bin/ss"}, "ss")
+	if err != nil {
+		return nil, err
+	}
+	return serviceMutationCommand(
+		ctx, ss, "-H", "-lntup", "sport = :53",
+	).CombinedOutputLimited(64 << 10)
+}
+
+// inspectDNSLocalPort53Listeners proves that no DNS daemon holds a loopback or
+// link-local port-53 socket: each must belong to the systemd-resolved stub,
+// identified by its PID's unit cgroup and its address. It returns the accepted
+// stub listeners for the caller to record.
+func inspectDNSLocalPort53Listeners(parent context.Context) ([]string, error) {
+	ctx, cancel := context.WithTimeout(parent, legacyPowerDNSGuardTimeout)
+	defer cancel()
+	return dnsenginerecovery.ProbeLocalDNSListeners(ctx, "", 0,
+		readDNSPort53ListenerInventory, dnsenginerecovery.NativeProcessUnifiedCgroup)
 }
 
 func hasUnrelatedPublicDNSListener(
@@ -267,8 +288,10 @@ func runDNSPort53PreMutationGuard(
 
 // proveNoPublicDNSPort53Listener is the fresh-install package guard's port-53
 // inventory as a proof: a stopped, never-served target must leave no public
-// listener. Loopback and link-local resolver stubs are not public authority;
-// malformed rows fail closed.
+// listener. The public inventory skips loopback and link-local sockets, so
+// each of those must also belong to the systemd-resolved stub (unit cgroup and
+// address proved); a named, pdns_server or unknown local listener refuses.
+// Accepted stub listeners are logged. Malformed rows fail closed.
 func proveNoPublicDNSPort53Listener(ctx context.Context) error {
 	conflict, err := dnsPort53ConflictCheck(ctx, false, false)
 	if err != nil {
@@ -276,6 +299,13 @@ func proveNoPublicDNSPort53Listener(ctx context.Context) error {
 	}
 	if conflict {
 		return errors.New("a public port-53 listener is present")
+	}
+	stubs, err := dnsLocalPort53ListenersCheck(ctx)
+	if err != nil {
+		return fmt.Errorf("local port-53 listeners are not only the resolver stub: %w", err)
+	}
+	if note := dnsenginerecovery.LocalDNSListenerRecordText(stubs); note != "" {
+		log.Print(note)
 	}
 	return nil
 }

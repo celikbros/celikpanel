@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -545,34 +546,122 @@ func TestOwnerInverseRerunReportsReconciledOnlyForDeliberateRelease(t *testing.T
 	}
 }
 
-func TestOwnerInverseDispatchersReportReconciledReleaseInBothLanguages(t *testing.T) {
-	id := strings.Repeat("a", 32)
-	reconciled := func(context.Context, string) error { return releasedDNSInverseReconciledOutcome(id) }
-	for _, tc := range []struct {
-		name     string
-		dispatch func([]string, int, func(context.Context, string) error, io.Writer, io.Writer) int
-	}{
+type ownerInverseDispatcher struct {
+	name     string
+	dispatch func([]string, int, func(context.Context, string) error, io.Writer, io.Writer) int
+}
+
+func ownerInverseDispatchers() []ownerInverseDispatcher {
+	return []ownerInverseDispatcher{
 		{ownerBINDSwitchInverseCommand, dispatchOwnerBINDSwitchInverse},
 		{ownerBINDAdoptionInverseCommand, dispatchOwnerBINDAdoptionInverse},
 		{ownerPDNSAdoptionInverseCommand, dispatchOwnerPDNSAdoptionInverse},
-	} {
+	}
+}
+
+// A request that is already complete exits 0 with its explanation on stdout;
+// the text still says the command does not check current DNS health.
+func TestOwnerInverseDispatchersReportReconciledReleaseInBothLanguages(t *testing.T) {
+	id := strings.Repeat("a", 32)
+	reconciled := func(context.Context, string) error { return releasedDNSInverseReconciledOutcome(id) }
+	for _, tc := range ownerInverseDispatchers() {
 		for _, lang := range []string{"en", "tr"} {
 			var out, diagnostic bytes.Buffer
 			code := tc.dispatch([]string{tc.name, "--request-id", id, "--lang", lang}, 0, reconciled, &out, &diagnostic)
-			text := diagnostic.String()
-			// The exit status stays the one the retired-journal outcome
-			// already used; only the explanation changes.
-			if code != exitUnavailable || out.Len() != 0 || !strings.Contains(text, id) {
-				t.Fatalf("%s %s: code=%d out=%q diagnostic=%q", tc.name, lang, code, out.String(), text)
+			text := out.String()
+			if code != exitOK || diagnostic.Len() != 0 || !strings.Contains(text, id) {
+				t.Fatalf("%s %s: code=%d out=%q diagnostic=%q", tc.name, lang, code, text, diagnostic.String())
 			}
-			want, unwanted := "already reconciled", "retry this same request"
+			want, health, unwanted := "already reconciled", "does not check current DNS health", "retry this same request"
 			if lang == "tr" {
-				want, unwanted = "zaten sonuçlanmış", "yeniden deneyin"
+				want, health, unwanted = "zaten sonuçlanmış", "şu anki sağlığını kontrol etmez", "yeniden deneyin"
 			}
-			if !strings.Contains(text, want) || strings.Contains(text, unwanted) {
+			if !strings.Contains(text, want) || !strings.Contains(text, health) || strings.Contains(text, unwanted) {
 				t.Fatalf("%s %s: reconciled release text is wrong: %q", tc.name, lang, text)
 			}
 		}
+	}
+}
+
+func TestOwnerInverseDispatchersReportEarlierOwnerVerdictAsComplete(t *testing.T) {
+	id := strings.Repeat("a", 32)
+	for _, tc := range ownerInverseDispatchers() {
+		for _, terminal := range []error{errBINDInverseTerminalLedgerObserved, errPDNSInverseTerminalLedgerObserved} {
+			for _, lang := range []string{"en", "tr"} {
+				var out, diagnostic bytes.Buffer
+				code := tc.dispatch([]string{tc.name, "--request-id", id, "--lang", lang}, 0, func(context.Context, string) error {
+					return fmt.Errorf("%w: request %s", terminal, id)
+				}, &out, &diagnostic)
+				text := out.String()
+				if code != exitOK || diagnostic.Len() != 0 || !strings.Contains(text, id) {
+					t.Fatalf("%s %s: code=%d out=%q diagnostic=%q", tc.name, lang, code, text, diagnostic.String())
+				}
+				want, health, unwanted := "already complete", "does not check current DNS health", "retry this same request"
+				if lang == "tr" {
+					want, health, unwanted = "zaten tamamlanmış", "şu anki sağlığını kontrol etmez", "yeniden deneyin"
+				}
+				if !strings.Contains(text, want) || !strings.Contains(text, health) || strings.Contains(text, unwanted) ||
+					strings.Contains(text, "terminal verdict for request") {
+					t.Fatalf("%s %s: earlier verdict text is wrong: %q", tc.name, lang, text)
+				}
+			}
+		}
+	}
+}
+
+// Refusals and unknown results keep exit 3 with the retry guidance.
+func TestOwnerInverseDispatchersKeepUnavailableForRefusalAndUnknown(t *testing.T) {
+	id := strings.Repeat("a", 32)
+	for _, tc := range ownerInverseDispatchers() {
+		for _, refusal := range []error{
+			errors.New("another DNS operation owns retained journal"),
+			fmt.Errorf("journal-absent DNS result is unknown: %w", errors.New("ledger changed")),
+			context.DeadlineExceeded,
+		} {
+			var out, diagnostic bytes.Buffer
+			code := tc.dispatch([]string{tc.name, "--request-id", id}, 0, func(context.Context, string) error { return refusal }, &out, &diagnostic)
+			if code != exitUnavailable || out.Len() != 0 || !strings.Contains(diagnostic.String(), "same request") ||
+				strings.Contains(diagnostic.String(), "already") {
+				t.Fatalf("%s: refusal %v: code=%d out=%q diagnostic=%q", tc.name, refusal, code, out.String(), diagnostic.String())
+			}
+		}
+	}
+}
+
+// After an owner run that recorded its own terminal verdict and retired the
+// journal (no Agent release), each command's re-run reports the earlier
+// verdict and changes nothing.
+func TestOwnerInverseRerunRecognisesEarlierOwnerVerdict(t *testing.T) {
+	for _, tc := range releasedOwnerInverseCases() {
+		t.Run(tc.name, func(t *testing.T) {
+			h := newReleasedInverseHost(t)
+			j := tc.journal(t, h)
+			h.stage(t, j, dnsengineartifact.ReleasedNativeUnknownCode)
+			ledger, err := servicemutationledger.Decode(h.files(t)["service-mutations.json"])
+			if err != nil {
+				t.Fatal(err)
+			}
+			job := ledger.Jobs[j.MutationRequestID]
+			job.ErrorCode = "dns_engine_switch_rolled_back_by_owner_recovery"
+			job.ErrorMessage = "The interrupted DNS engine switch was rolled back to the verified previous state."
+			raw, err := servicemutationledger.Encode(&ledger)
+			if err != nil {
+				t.Fatal(err)
+			}
+			h.write(t, "service-mutations.json", raw)
+			if err := os.Remove(filepath.Join(h.root, "dns-engine-switch-journal.json")); err != nil {
+				t.Fatal(err)
+			}
+			before := h.files(t)
+			native := &releasedBINDNative{}
+			err = tc.run(context.Background(), h, j.MutationRequestID, native)
+			if !errors.Is(err, errBINDInverseTerminalLedgerObserved) && !errors.Is(err, errPDNSInverseTerminalLedgerObserved) {
+				t.Fatalf("earlier owner verdict was not recognised: %v", err)
+			}
+			if native.restores != 0 || !reflect.DeepEqual(h.files(t), before) {
+				t.Fatal("re-run after an owner verdict mutated the host")
+			}
+		})
 	}
 }
 

@@ -1659,12 +1659,26 @@ func (hostDNSEngineBackend) Switch(
 		return runBINDRollbackWithJournal(&journal, bindSwitchRollbackJournalOps{
 			write: writeJournal,
 			rollback: func() error {
+				proveSource := func(proofCtx context.Context) error {
+					return verifyBINDIndependentSourceProof(proofCtx, journal)
+				}
+				// A V2 journal that froze BIND absent or under the package
+				// guard's mask ends where recover-dns-bind-switch ends: the
+				// target under the guard's persistent mask and the exact
+				// staged generation removed.
+				if dnsenginerecovery.BINDSwitchNeverStartedTargetJournal(journal) {
+					if err := rollbackBINDSwitchToStandby(
+						rollbackCtx, systemctl, configs, stateBefore, sourceBefore, proveSource,
+					); err != nil {
+						return err
+					}
+					removeStagedBINDGenerationAfterAgentRollback(rollbackCtx, journal)
+					return nil
+				}
 				return rollbackBINDActivation(
 					rollbackCtx, systemctl, configs, stateBefore, targetBefore, sourceBefore,
 					dnsSwitchJournalHasEmptySource(journal),
-					func(proofCtx context.Context) error {
-						return verifyBINDIndependentSourceProof(proofCtx, journal)
-					},
+					proveSource,
 				)
 			},
 			verify: func() error {
@@ -2629,6 +2643,38 @@ func rollbackBINDActivation(
 	freshSource bool,
 	verifySource ...func(context.Context) error,
 ) error {
+	return rollbackBINDActivationWithTarget(ctx, systemctl, configs, stateBefore, sourceBefore,
+		func(commandCtx context.Context) error {
+			return restoreDNSUnitStates(
+				commandCtx, systemctl, targetBefore, true,
+			)
+		},
+		func(proofCtx context.Context) error {
+			before, ok := targetBefore["named.service"]
+			if !ok {
+				return errors.New("BIND target snapshot lacks named.service")
+			}
+			if before.ActiveState == "active" {
+				return nil
+			}
+			return verifyBINDTargetStoppedBeforeConfigRestore(proofCtx, systemctl, freshSource)
+		},
+		verifySource...,
+	)
+}
+
+// rollbackBINDActivationWithTarget is the shared BIND activation rollback
+// sequence with the caller's target restore and stopped proof: source proof,
+// target, stopped proof, configs, state receipt, then source units.
+func rollbackBINDActivationWithTarget(
+	ctx context.Context,
+	systemctl string,
+	configs bindConfigMutation,
+	stateBefore dnsFileSnapshot,
+	sourceBefore map[string]dnsUnitState,
+	restoreTarget, verifyTargetBeforeConfig func(context.Context) error,
+	verifySource ...func(context.Context) error,
+) error {
 	if ctx == nil {
 		return errors.New("rollback BIND activation requires a bounded context")
 	}
@@ -2647,21 +2693,8 @@ func rollbackBINDActivation(
 		return err
 	}
 	return rollbackBINDActivationWithOps(ctx, bindRollbackActivationOps{
-		restoreTarget: func(commandCtx context.Context) error {
-			return restoreDNSUnitStates(
-				commandCtx, systemctl, targetBefore, true,
-			)
-		},
-		verifyTargetBeforeConfig: func(proofCtx context.Context) error {
-			before, ok := targetBefore["named.service"]
-			if !ok {
-				return errors.New("BIND target snapshot lacks named.service")
-			}
-			if before.ActiveState == "active" {
-				return nil
-			}
-			return verifyBINDTargetStoppedBeforeConfigRestore(proofCtx, systemctl, freshSource)
-		},
+		restoreTarget:            restoreTarget,
+		verifyTargetBeforeConfig: verifyTargetBeforeConfig,
 		restoreConfigs: func() error {
 			return runBINDMutationWithMaskParentProof(
 				verifyBINDMaskParentMetadata,

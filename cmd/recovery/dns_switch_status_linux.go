@@ -162,8 +162,9 @@ func neverStartedTargetStateText(loadState string) string {
 // observation: masked requires both units under the persistent mask, each link
 // proved root-owned to /dev/null, and stable vendor files; absent requires both
 // units absent. It returns the owner-facing line, or "" for the loaded case
-// that prints the existing text.
-func observeInstalledNeverStartedBINDTarget(ctx context.Context) (string, error) {
+// that prints the existing text. beforeDecision selects the wording for a
+// journal that has no rollback decision yet, which names no owner command.
+func observeInstalledNeverStartedBINDTarget(ctx context.Context, beforeDecision bool) (string, error) {
 	return observeNeverStartedBINDTarget(ctx, dnsenginerecovery.SystemdBINDTargetRunner,
 		verifyInstalledBINDVendorAndUnit, bindInversePersistentMask,
 		func() error {
@@ -183,12 +184,67 @@ func observeInstalledNeverStartedBINDTarget(ctx context.Context) (string, error)
 				return errors.New("BIND vendor files changed around masked unit observation")
 			}
 			return nil
-		})
+		}, beforeDecision)
+}
+
+// activeDNSSwitchStatus lists the ledger statuses in which the accepted
+// operation still holds its lease: no release or terminal verdict exists.
+func activeDNSSwitchStatus(status dnsenginerecovery.EvidenceStatus) bool {
+	switch status {
+	case dnsenginerecovery.EvidenceActive, dnsenginerecovery.EvidenceLeaseExpired,
+		dnsenginerecovery.EvidenceWorkerRecorded, dnsenginerecovery.EvidenceOrphanedWorker,
+		dnsenginerecovery.EvidenceExpiredCancellation:
+		return true
+	}
+	return false
+}
+
+func observedPDNSUnit(units []dnsenginerecovery.NativeUnitObservation, err error) *dnsenginerecovery.NativeUnitObservation {
+	if err != nil {
+		return nil
+	}
+	for i := range units {
+		if units[i].Name == "pdns.service" {
+			return &units[i]
+		}
+	}
+	return nil
+}
+
+// beforeRollbackDecisionText explains a V2 PowerDNS-to-BIND journal that has
+// no rollback decision yet and whose BIND target was just observed as never
+// started. workerGone is true only when this status proved the recorded
+// Agent worker absent; otherwise the text does not claim an interruption.
+// pdns is the observed PowerDNS unit, or nil when unit state is unknown. The
+// text names no owner inverse command: none is admitted at this phase.
+func beforeRollbackDecisionText(phase, requestID string, workerGone bool, pdns *dnsenginerecovery.NativeUnitObservation) string {
+	var b strings.Builder
+	if workerGone {
+		fmt.Fprintf(&b, "This PowerDNS-to-BIND switch was interrupted before BIND started: the journal is at phase %s with no rollback decision, and the recorded Agent worker is gone. ", phase)
+	} else {
+		fmt.Fprintf(&b, "BIND has not started for this PowerDNS-to-BIND switch: the journal is at phase %s with no rollback decision. This observation cannot tell whether the Agent is still running the switch. ", phase)
+	}
+	switch {
+	case pdns == nil:
+		b.WriteString("PowerDNS unit state could not be read; see the diagnostic. ")
+	case pdns.ActiveState == "active":
+		fmt.Fprintf(&b, "PowerDNS (pdns.service) was observed load=%s active=%s unit-file=%s. ", pdns.LoadState, pdns.ActiveState, pdns.UnitFileState)
+	default:
+		fmt.Fprintf(&b, "PowerDNS (pdns.service) was observed load=%s active=%s unit-file=%s: it is not running, so PowerDNS does not answer DNS on this host until the rollback starts it again. ", pdns.LoadState, pdns.ActiveState, pdns.UnitFileState)
+	}
+	if !workerGone {
+		b.WriteString("If CelikPanel shows no progress for this request, ")
+	} else {
+		b.WriteString("Next step: ")
+	}
+	fmt.Fprintf(&b, "the server owner restarts the CelikPanel Agent (systemctl restart celikpanel-agent). At start it records the rollback decision for this same request. Then run /usr/libexec/celikpanel/recovery dns-switch-status --quiesced --request-id %s; it names the owner recovery command that continues the rollback. No owner recovery command applies before that decision. This status check started nothing.", requestID)
+	return b.String()
 }
 
 func observeNeverStartedBINDTarget(
 	ctx context.Context, runner dnsenginerecovery.BINDIdentityRunner,
 	loaded func(context.Context) error, maskProof func(string) error, vendorFiles func() error,
+	beforeDecision bool,
 ) (string, error) {
 	if ctx == nil || runner == nil || loaded == nil || maskProof == nil || vendorFiles == nil {
 		return "", errors.New("never-started BIND target observation lacks its readers")
@@ -213,10 +269,19 @@ func observeNeverStartedBINDTarget(
 		if err := vendorFiles(); err != nil {
 			return "", err
 		}
-		return "BIND never started for this operation: named.service and bind9.service are under the package guard's persistent mask (root-owned links to /dev/null) and the installed BIND vendor files were stable across two reads. The package stays installed as rollback standby. Process state, DNS answers and recovery authority are proved by the owner recovery command, not by this observation.", nil
+		if beforeDecision {
+			return "BIND never started for this operation: named.service and bind9.service are under the package guard's persistent mask (root-owned links to /dev/null) and the installed BIND vendor files were stable across two reads. Process state and DNS answers are not proved by this observation.", nil
+		}
+		// After the rollback decision a mask no longer shows history: the
+		// owner recovery command stops, disables and re-masks a target that
+		// started, so it ends in this same standby state.
+		return "named.service and bind9.service are under the package guard's persistent mask (root-owned links to /dev/null) and the installed BIND vendor files were stable across two reads, so systemd cannot start BIND while the mask holds. This is the rollback standby state: either BIND never started for this operation, or the owner recovery command already stopped and masked it. The package stays installed as rollback standby. Process state, DNS answers and recovery authority are proved by the owner recovery command, not by this observation.", nil
 	case dnsunitidentity.TargetAbsent:
 		if alias.State != dnsunitidentity.TargetAbsent {
 			return "", errors.New("named.service is absent but bind9.service is not")
+		}
+		if beforeDecision {
+			return "BIND never started for this operation: named.service and bind9.service are absent (not-found) in two reads. Process state and DNS answers are not proved by this observation.", nil
 		}
 		return "BIND never started for this operation: named.service and bind9.service are absent (not-found) in two reads. Process state, DNS answers and recovery authority are proved by the owner recovery command, not by this observation.", nil
 	default:
@@ -598,6 +663,10 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 	}
 	fmt.Fprintf(out, "DNS switch request %s: %s (journal phase %s).\n", observation.RequestID, observation.Status, observation.Phase)
 	fmt.Fprint(out, ownerDNSRecoveryGuidance(evidence, quiesced))
+	// workerGone records that this status proved the recorded worker (PID and
+	// start token) absent. A process identity that is gone cannot return, so
+	// either observation below is sufficient.
+	workerGone := false
 	if quiesced {
 		switch observation.Status {
 		case dnsenginerecovery.EvidenceActive,
@@ -618,6 +687,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 				fmt.Fprintln(diagnostic, "The exact DNS switch worker could not be excluded under the release and host locks. Preserve the operation and inspect its native process before recovery; no DNS change was started. "+workerErr.Error())
 				return exitUnavailable
 			}
+			workerGone = worker == dnsenginerecovery.WorkerGone
 			fmt.Fprintf(out, "Quiesced worker observation: %s. This is only a point-in-time process check; it does not authorize a DNS inverse.\n", worker)
 		}
 	}
@@ -632,6 +702,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		case !gone:
 			fmt.Fprintln(out, "The recorded worker process matched at this instant. The server owner should follow the same operation in CelikPanel. Do not start another switch; the worker may change after this observation.")
 		default:
+			workerGone = true
 			fmt.Fprintln(out, "No process matching the recorded worker was observed at this instant. The server owner should inspect the same operation and native DNS service. A compatible recovery executor must recheck the worker and host locks before the operation resumes; do not start another switch.")
 		}
 	case dnsenginerecovery.EvidenceExpiredCancellation:
@@ -654,10 +725,13 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		if stoppedName, required := rolledBackInactiveTargetUnit(evidence); required {
 			stoppedState := "a loaded"
 			var stopErr error
+			var localListeners *dnsenginerecovery.LocalDNSListenerRecord
 			if stoppedName == "named.service" && dnsenginerecovery.BINDSwitchNeverStartedTargetJournal(evidence.Journal) {
 				var seen dnsenginerecovery.StoppedUnitObservation
+				var proofCtx context.Context
+				proofCtx, localListeners = dnsenginerecovery.WithLocalDNSListenerRecord(observationCtx)
 				seen, stopErr = dnsenginerecovery.ProbeStoppedNeverStartedBINDTarget(
-					observationCtx, dnsenginerecovery.SystemdUnitRunner,
+					proofCtx, dnsenginerecovery.SystemdUnitRunner,
 					dnsenginerecovery.SystemdPDNSRuntimeRunner,
 					func(ctx context.Context, unit string) error {
 						return dnsenginerecovery.ProbeEmptyUnitCgroup(ctx, unit, dnsenginerecovery.SystemdCgroupUnitRunner, dnsenginerecovery.NativeCgroupEvents)
@@ -683,6 +757,9 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 				return exitUnavailable
 			}
 			fmt.Fprintf(out, "The retained rollback target %s was %s inactive/dead unit with zero systemd main/control PIDs and an empty or absent native cgroup in two reads. This point-in-time observation does not prove later owner-edit exclusion, DNS health or recovery authority.\n", stoppedName, stoppedState)
+			if note := dnsenginerecovery.LocalDNSListenerRecordText(localListeners.Entries()); note != "" {
+				fmt.Fprintln(out, note)
+			}
 		}
 	}
 	if observation.SourceEngine == "bind" || observation.TargetEngine == "bind" {
@@ -704,9 +781,13 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		}
 		neverStarted := ""
 		var vendorErr error
+		// A V2 journal before its rollback decision (the Agent has not
+		// restarted since the cut) uses the same typed, read-only
+		// never-started observation as a rolling-back journal.
+		beforeDecision := dnsenginerecovery.BINDSwitchNeverStartedBeforeDecisionJournal(evidence.Journal)
 		if observation.TargetReceipt != dnsenginerecovery.TargetReceiptExact &&
-			dnsenginerecovery.BINDSwitchNeverStartedTargetJournal(evidence.Journal) {
-			neverStarted, vendorErr = observeInstalledNeverStartedBINDTarget(observationCtx)
+			(dnsenginerecovery.BINDSwitchNeverStartedTargetJournal(evidence.Journal) || beforeDecision) {
+			neverStarted, vendorErr = observeInstalledNeverStartedBINDTarget(observationCtx, beforeDecision)
 		} else {
 			vendorErr = verifyInstalledBINDVendorAndUnit(observationCtx)
 		}
@@ -716,6 +797,9 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		}
 		if neverStarted != "" {
 			fmt.Fprintln(out, neverStarted)
+			if beforeDecision && activeDNSSwitchStatus(observation.Status) {
+				fmt.Fprintln(out, beforeRollbackDecisionText(evidence.Journal.Phase, observation.RequestID, workerGone, observedPDNSUnit(units, unitErr)))
+			}
 		} else {
 			fmt.Fprintln(out, "Certified BIND vendor files and systemd unit identity matched across read-only checks. Process liveness, a pending daemon reload, loaded named configuration and DNS answers remain unproved.")
 		}
@@ -979,6 +1063,10 @@ func ownerDNSRecoveryGuidance(e dnsenginerecovery.SwitchEvidence, quiesced bool)
 			return fmt.Sprintf("This V4 PowerDNS-target switch may be recoverable by the server owner. Rerun this check with --quiesced --request-id %s; it names the exact command only after the release and host locks are held. This status check does not start recovery.\n", request)
 		}
 		return fmt.Sprintf("If this V4 PowerDNS-target switch stopped, the server owner can attempt the same-request pre-start inverse with: /usr/libexec/celikpanel/recovery recover-dns-pdns-target-staged --request-id %s. The command checks the accepted worker, exact candidate, native units and owner changes; a running or changed target is refused and its evidence is preserved. This status check does not start recovery.\n", request)
+	}
+	if request == e.Journal.MutationRequestID && activeDNSSwitchStatus(e.Observation.Status) &&
+		dnsenginerecovery.BINDSwitchBeforeRollbackDecisionJournal(e.Journal) {
+		return fmt.Sprintf("This PowerDNS-to-BIND switch has no rollback decision yet (journal phase %s), so no owner recovery command applies now. If CelikPanel shows no progress for this request, the server owner restarts the CelikPanel Agent (systemctl restart celikpanel-agent); at start it records the rollback decision for this same request. Then rerun this check with --quiesced --request-id %s; it names the owner recovery command when one applies. This status check does not start recovery.\n", e.Journal.Phase, request)
 	}
 	return fmt.Sprintf("No owner recovery command applies to this journal's recorded shape and ledger status. Keep the journal and ledger. If this operation does not resume through CelikPanel or an Agent restart, contact support with request id %s. This status check does not start recovery.\n", request)
 }

@@ -85,9 +85,11 @@ func TestOwnerPDNSAdoptionInverseDistinguishesTerminalHistoryAndUnknown(t *testi
 	args := []string{ownerPDNSAdoptionInverseCommand, "--request-id", id}
 	var out, diagnostic bytes.Buffer
 	terminal := func(context.Context, string) error { return errPDNSInverseTerminalLedgerObserved }
-	if code := dispatchOwnerPDNSAdoptionInverse(args, 0, terminal, &out, &diagnostic); code != exitUnavailable ||
-		strings.Contains(out.String(), "terminal verdict") || !strings.Contains(diagnostic.String(), "historical rollback verdict") ||
-		!strings.Contains(diagnostic.String(), "current PowerDNS health") {
+	// An earlier owner verdict is a completed request (exit 0), but it is not
+	// reported as a new verdict or as current DNS health.
+	if code := dispatchOwnerPDNSAdoptionInverse(args, 0, terminal, &out, &diagnostic); code != exitOK ||
+		strings.Contains(out.String(), "terminal verdict for request") || !strings.Contains(out.String(), "already complete") ||
+		!strings.Contains(out.String(), "does not check current DNS health") || diagnostic.Len() != 0 {
 		t.Fatalf("retired journal was reported as current success: code=%d out=%q diagnostic=%q", code, out.String(), diagnostic.String())
 	}
 	out.Reset()
