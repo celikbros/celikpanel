@@ -50,7 +50,7 @@ Common facts (source references are for `e9d1019d` plus the D-026 gate):
 | 4 | Fresh PowerDNS, standalone (APT hosts only) | V1 | Agent `rollbackPDNSSwitch`, before and after start. No owner CLI (D-026 decision 2). | `verifyOwnerAwarePreimage` | [Fresh-install cells 2026-09-29](../deploy/e2e/dns-kill-matrix/evidence/fresh-install-20260929/README.md): `pdns-switch__target-started__after-write` passed (startup rollback, then the same request re-ran forward on retry; ~3 s DNS gap). `pdns-switch__target-staged__after-write` **failed**: PowerDNS had never started and its unit was the install's own persistent mask, but the V1 rollback's stopped-target proof required `LoadState=loaded`; recovery ended `dns_native_recovery_unknown_after_restart`, the retry was refused, no DNS served. Prior state (no DNS) was not damaged. Fix `VerifyStoppedFreshSourceTarget` (commit `1c336f6d`); [re-run on the fixed source](../deploy/e2e/dns-kill-matrix/evidence/fresh-install-rerun-20260929/README.md): `target-staged__after-write` (same request bytes) and `intent__after-write` both rolled back at Agent startup and converged forward on the same-request retry; 31/31 health, authoritative UDP/TCP. | **PASSED** for the pre-start (intent, target-staged; masked never-started unit) and after-start cuts on Debian 13. **GAP**: the `not-found`/`loaded` accepted states and the runtime-mask refusal have component tests only; no reboot; rolled-back verdict code inferred from journal/ledger, not logged. |
 | 5 | Fresh or reconfigured PowerDNS, paired secondary | V1 | Agent, same request | as 4 | none | **GAP**: no interruption trial |
 | 6 | Fresh paired PowerDNS primary, V3 (empty source) | V3 (tests only) | Before start: owner CLI `recover-dns-pdns-fresh-prestart`. After start: Agent forward only; no after-start inverse. | SQL/daemon drift check refuses | [V3 native after-start forward + SIGKILL](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/README.md), [V3 prestart inverse](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-prestart-20260928/README.md), [V3 zone lifecycle](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-zone-20260928/README.md). Not reached through the public RPC. | **UNSUPPORTED, refused** (`pdns_primary_switch_paused`). Opening it belongs to item 2 and needs an owner-edit cut, an after-start inverse or an explicit forward-only policy, and acceptance through the public RPC. |
-| 7 | PowerDNS → BIND, standalone, PowerDNS active / BIND inactive | **V2** | Agent writes the `rolling-back` decision and then refuses; owner CLI `recover-dns-bind-switch` executes the inverse from rolling-back/rolled-back. After start: forward only once the target is verified. | Main-config edit refused, evidence kept | [Protected owner CLI](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-PROTECTED-OWNER-CLI-20260927.md): rolling-back/after-write after target start, owner edit refused, CLI interrupted, reboot | **PASSED** for that decided-rollback cell (Agent inactive, target had started). **GAP (verified defect)**: pre-start cuts with a running Agent — the owner command is admitted since `7ad24282` but rejected the never-started, guard-masked BIND target ([evidence](../deploy/e2e/dns-kill-matrix/evidence/owner-inverse-after-restart-20260929/README.md)); fixed in source, native re-run pending. Source-stopped and target-started cuts under the V2 producer not run. The six 2026-09-25 Agent-mediated BIND reports used V1 and are historical for this row. |
+| 7 | PowerDNS → BIND, standalone, PowerDNS active / BIND inactive | **V2** | Agent writes the `rolling-back` decision and then refuses; owner CLI `recover-dns-bind-switch` executes the inverse from rolling-back/rolled-back. After start: forward only once the target is verified. | Main-config edit refused, evidence kept | [Protected owner CLI](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-PROTECTED-OWNER-CLI-20260927.md): rolling-back/after-write after target start, owner edit refused, CLI interrupted, reboot | **PASSED** for that decided-rollback cell (Agent inactive, target had started). **PASSED** for the pre-start cuts (intent, target-staged) with the Agent restarted and running: first run failed on `7ad24282` ([evidence](../deploy/e2e/dns-kill-matrix/evidence/owner-inverse-after-restart-20260929/README.md)), fixed in `411398d9`, [re-run passed](../deploy/e2e/dns-kill-matrix/evidence/owner-inverse-after-restart-rerun-20260929/README.md). **GAP**: source-stopped and target-started cuts under the V2 producer with a running Agent (the controller still expects V1 for those cells); reboot; re-run exit status 3; staged BIND generation tree and upgraded `bind9` libraries remain on disk after rollback. The six 2026-09-25 Agent-mediated BIND reports used V1 and are historical for this row. |
 | 8 | PowerDNS → BIND, paired | V1 | Agent, same request | owner-aware | none for paired | **GAP** |
 | 9 | **BIND → PowerDNS**, standalone and paired secondary (card `switch`, or `install` when PowerDNS is absent) | — | — | — | none | **UNSUPPORTED, refused** by D-026 decision 1 (`bind_source_pdns_switch_unsupported`). Before D-026 this row was *unsupported, not refused*: V1 journal, Agent-only inverse, V4 producer with no caller. |
 | 10 | BIND → PowerDNS, paired primary | — | — | — | — | **UNSUPPORTED, refused** (`pdns_primary_switch_paused`) |
@@ -97,9 +97,14 @@ not code:
    guard's persistent mask, which the owner-side stopped-target proof and the
    unit-identity reader reject. PowerDNS kept serving on the same process
    (31/31), owner files and the ledger were unchanged, the journal was kept.
-   Verified defect, fixed in source the same day (never-started,
-   guard-sealed target class for the V2 BIND switch inverse); the cells must
-   be re-run on the fixed source.
+   Verified defect, fixed in `411398d9` (never-started, guard-sealed target
+   class for the V2 BIND switch inverse). [Re-run on the fixed source](../deploy/e2e/dns-kill-matrix/evidence/owner-inverse-after-restart-rerun-20260929/README.md):
+   both cells **passed** (`rolled_back_source_serving`): owner command exit 0,
+   journal `rolled-back` then retired, ledger byte-identical to the Agent's
+   release, PowerDNS on the same process throughout (31/31), BIND units still
+   under the guard mask and never started, staged BIND configuration restored
+   to its preimage, owner files unchanged, status and Panel text report the
+   switch as reconciled (done for the pre-start cuts).
 4. Rows 3 and 5 — fresh paired secondary, BIND and PowerDNS — cannot be
    prepared: no peer script plays a panel-free native *primary* that serves
    the product catalog and member zones with AXFR/NOTIFY to the guest, and the
@@ -116,8 +121,8 @@ using the same admission predicates the commands themselves run, and print an
 explicit "no owner recovery command applies" text otherwise. The Panel shows
 the ledger message verbatim; it points to the status command.
 
-**Owner command after an Agent restart (rows 7, 11, 13) — fixed in source,
-native evidence pending.** When a restarted Agent cannot complete recovery it
+**Owner command after an Agent restart (rows 7, 11, 13) — fixed; native
+evidence for row 7 pre-start cuts, component tests only for rows 11 and 13.** When a restarted Agent cannot complete recovery it
 retains the journal and releases its ledger lease
 (`dns_native_recovery_unknown_after_restart`), which the evidence reader
 reports as `released-undecided`. Until 2026-09-29 `recover-dns-bind-switch`,

@@ -1,0 +1,14 @@
+### 2026-09-29T08:28:36Z start-cell 2 bind__intent__after-write__standalone__peer-reachable debian13
+### 2026-09-29T08:28:36Z prepare
+### 2026-09-29T08:28:37Z start
+### 2026-09-29T08:28:38Z wait-ssh
+### 2026-09-29T08:29:37Z guest-identity
+### 2026-09-29T08:29:38Z install
+### 2026-09-29T08:29:47Z enroll-recovery-runtime
+### 2026-09-29T08:29:55Z prepare-bind
+### 2026-09-29T08:30:16Z pre-run-snapshot
+### 2026-09-29T08:30:22Z start-watcher
+Running as unit: cp-oi2-watch.service; invocation ID: 279515507ab74c32be282ea4d69caa68
+### 2026-09-29T08:30:23Z run-prepared
+RUN_PREPARED_RC=0
+### 2026-09-29T08:31:14Z done-run rc=0

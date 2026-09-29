@@ -50,7 +50,7 @@ Ortak bilgiler (kaynak referansları `e9d1019d` artı D-026 kapısı içindir):
 | 4 | Boş PowerDNS, tek sunucu (yalnızca APT sunucularında) | V1 | Agent `rollbackPDNSSwitch`, başlangıçtan önce ve sonra. Sahip CLI'ı yok (D-026 karar 2). | `verifyOwnerAwarePreimage` | [Fresh-install cells 2026-09-29](../deploy/e2e/dns-kill-matrix/evidence/fresh-install-20260929/README.md): `pdns-switch__target-started__after-write` geçti (başlangıçta geri alma, ardından aynı istek yeniden denemede ileri yönde tekrar çalıştı; ~3 sn DNS boşluğu). `pdns-switch__target-staged__after-write` **başarısız**: PowerDNS hiç başlamamıştı ve birimi kurulumun kendi kalıcı maskesiydi, ama V1 geri almanın durmuş hedef kanıtı `LoadState=loaded` gerektiriyordu; kurtarma `dns_native_recovery_unknown_after_restart` ile sonuçlandı, yeniden deneme reddedildi, DNS sunulmadı. Önceki durum (DNS yok) zarar görmedi. Düzeltme `VerifyStoppedFreshSourceTarget` (commit `1c336f6d`); [düzeltilmiş kaynak üzerinde yeniden çalıştırma](../deploy/e2e/dns-kill-matrix/evidence/fresh-install-rerun-20260929/README.md): `target-staged__after-write` (aynı istek baytları) ve `intent__after-write` ikisi de Agent başlangıcında geri alındı ve aynı istekle yeniden denemede ileri yönde yakınsadı; 31/31 sağlık, yetkili UDP/TCP. | Debian 13'te başlangıç öncesi (intent, target-staged; maskelenmiş hiç başlamamış birim) ve başlangıç sonrası kesintiler için **GEÇTİ**. **EKSİK**: `not-found`/`loaded` kabul edilen durumları ve çalışma zamanı maskesi reddi yalnızca bileşen testlerine sahip; yeniden başlatma yok; geri alınmış karar kodu günlük/ledger'dan çıkarsanmış, günlüğe yazılmamış. |
 | 5 | Boş veya yeniden yapılandırılmış PowerDNS, çiftin ikincili | V1 | Agent, aynı istek | 4 ile aynı | yok | **EKSİK**: kesinti denemesi yok |
 | 6 | Boş çift PowerDNS birincili, V3 (boş kaynak) | V3 (yalnızca testler) | Başlangıçtan önce: sahip CLI'ı `recover-dns-pdns-fresh-prestart`. Başlangıçtan sonra: Agent yalnızca ileri yönde; başlangıç sonrası ters işlem yok. | SQL/daemon sapma denetimi reddeder | [V3 native after-start forward + SIGKILL](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/README.md), [V3 prestart inverse](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-prestart-20260928/README.md), [V3 zone lifecycle](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-zone-20260928/README.md). Genel RPC üzerinden erişilemez. | **DESTEKLENMİYOR, reddediliyor** (`pdns_primary_switch_paused`). Bunu açmak 2. maddeye aittir ve bir sahip-düzenleme kesintisi, bir başlangıç sonrası ters işlem ya da açık bir yalnızca-ileri politikası ile genel RPC üzerinden kabul gerektirir. |
-| 7 | PowerDNS → BIND, tek sunucu, PowerDNS etkin / BIND devre dışı | **V2** | Agent `rolling-back` kararını yazar ve sonra reddeder; sahip CLI'ı `recover-dns-bind-switch`, rolling-back/rolled-back durumundan ters işlemi çalıştırır. Başlangıçtan sonra: hedef doğrulandıktan sonra yalnızca ileri yönde. | Ana yapılandırma düzenlemesi reddedilir, kanıt saklanır | [Protected owner CLI](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-PROTECTED-OWNER-CLI-20260927.md): hedef başladıktan sonra rolling-back/after-write, sahip düzenlemesi reddedildi, CLI kesintiye uğradı, yeniden başlatma | Karar verilmiş geri alma hücresi için **GEÇTİ**. **EKSİK**: V2 üreticisi altında intent, target-staged, source-stopped ve target-started kesintileri. 25 Eylül 2026 tarihli altı Agent-aracılı BIND raporu V1 kullandı ve bu satır için tarihseldir. |
+| 7 | PowerDNS → BIND, tek sunucu, PowerDNS etkin / BIND devre dışı | **V2** | Agent `rolling-back` kararını yazar ve sonra reddeder; sahip CLI'ı `recover-dns-bind-switch`, rolling-back/rolled-back durumundan ters işlemi çalıştırır. Başlangıçtan sonra: hedef doğrulandıktan sonra yalnızca ileri yönde. | Ana yapılandırma düzenlemesi reddedilir, kanıt saklanır | [Protected owner CLI](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-PROTECTED-OWNER-CLI-20260927.md): hedef başladıktan sonra rolling-back/after-write, sahip düzenlemesi reddedildi, CLI kesintiye uğradı, yeniden başlatma | Karar verilmiş geri alma hücresi için **GEÇTİ** (Agent etkisiz, hedef başlamıştı). Agent yeniden başlatılmış ve çalışır durumdayken başlangıç öncesi kesintiler (intent, target-staged) için **GEÇTİ**: ilk çalıştırma `7ad24282` üzerinde başarısız oldu ([kanıt](../deploy/e2e/dns-kill-matrix/evidence/owner-inverse-after-restart-20260929/README.md)), `411398d9` içinde düzeltildi, [yeniden çalıştırma geçti](../deploy/e2e/dns-kill-matrix/evidence/owner-inverse-after-restart-rerun-20260929/README.md). **EKSİK**: V2 üreticisi altında, Agent çalışırken source-stopped ve target-started kesintileri (denetleyici bu hücreler için hâlâ V1 bekliyor); yeniden başlatma; yeniden çalıştırma çıkış durumu 3; geri almadan sonra diskte kalan staged BIND üretim ağacı ve yükseltilmiş `bind9` kütüphaneleri. 25 Eylül 2026 tarihli altı Agent-aracılı BIND raporu V1 kullandı ve bu satır için tarihseldir. |
 | 8 | PowerDNS → BIND, çift | V1 | Agent, aynı istek | sahibi gözeten | çift için yok | **EKSİK** |
 | 9 | **BIND → PowerDNS**, tek sunucu ve çiftin ikincili (`switch` kartı, veya PowerDNS yokken `install`) | — | — | — | yok | D-026 karar 1 ile **DESTEKLENMİYOR, reddediliyor** (`bind_source_pdns_switch_unsupported`). D-026'dan önce bu satır *desteklenmiyor, reddedilmiyor* idi: V1 günlüğü, yalnızca Agent'ın ters işlemi, çağıranı olmayan V4 üreticisi. |
 | 10 | BIND → PowerDNS, çiftin birincili | — | — | — | — | **DESTEKLENMİYOR, reddediliyor** (`pdns_primary_switch_paused`) |
@@ -89,7 +89,28 @@ satırlar kod değil kanıttır:
    sahip-yürütür ayrımının normal yolda gösterilmesi için **sahip
    komutundan önce Agent yeniden başlatılmış olarak** bir erken kesinti
    (intent veya target-staged). Kabul kuralı ve denetleyici akışı kaynakta
-   29 Eylül 2026'dan beri var; gerçek sistem hücresi henüz çalıştırılmadı.
+   29 Eylül 2026'dan beri var.
+   [İlk gerçek sistem çalıştırması](../deploy/e2e/dns-kill-matrix/evidence/owner-inverse-after-restart-20260929/README.md),
+   `7ad24282` üzerinde, `target-staged` ve `intent` hücreleri:
+   **başarısız oldu**, güvenlik geçti. Yeniden başlatılan Agent kararı yazdı
+   ve kirayı serbest bıraktı, salt-okur durum komutu herhangi bir mutasyon
+   yapmadan komutu adlandırdı, ve sahip komutu kabul edildi — ardından
+   gerçek sistem doğrulamasında reddedildi (`DNS target is not a loaded
+   unit`): BIND hedefi ilk başlamadan önce paket korumasının kalıcı
+   maskesi altında oturur; sahip tarafındaki durmuş-hedef kanıtı ve birim
+   kimliği okuyucusu bunu reddeder. PowerDNS aynı süreç üzerinde hizmet
+   vermeye devam etti (31/31), sahip dosyaları ve ledger değişmedi, günlük
+   korundu. Doğrulanmış kusur, `411398d9` içinde düzeltildi (V2 BIND
+   switch ters işlemi için hiç başlamamış, koruma altında mühürlenmiş
+   hedef sınıfı). [Düzeltilmiş kaynak üzerinde yeniden
+   çalıştırma](../deploy/e2e/dns-kill-matrix/evidence/owner-inverse-after-restart-rerun-20260929/README.md):
+   iki hücre de **geçti** (`rolled_back_source_serving`): sahip komutu
+   çıkış 0, günlük `rolled-back` sonra emekliye ayrıldı, ledger Agent'ın
+   serbest bırakmasıyla bayt-özdeş, PowerDNS baştan sona aynı süreç
+   üzerinde (31/31), BIND birimleri hâlâ koruma maskesi altında ve hiç
+   başlamadı, staged BIND yapılandırması ön hâline geri yüklendi, sahip
+   dosyaları değişmedi, durum ve Panel metni switch'i uzlaştırılmış olarak
+   raporluyor (başlangıç öncesi kesintiler için tamamlandı).
 4. Satır 3 ve 5 — boş çiftin ikincili, BIND ve PowerDNS — hazırlanamaz:
    hiçbir eş betik, ürün kataloğunu ve üye bölgelerini AXFR/NOTIFY ile
    konuğa sunan panelsiz gerçek bir *birincili* canlandırmıyor; ayrıca
@@ -108,7 +129,8 @@ aynı kabul yüklemlerini kullanarak yapıyor, aksi hâlde açıkça
 mesajını olduğu gibi gösterir; durum komutuna yönlendirir.
 
 **Agent yeniden başlatmasından sonra sahip komutu (satır 7, 11, 13) —
-kaynakta düzeltildi, gerçek sistem kanıtı bekleniyor.** Yeniden başlatılan
+düzeltildi; satır 7'nin başlangıç öncesi kesintileri için gerçek sistem
+kanıtı, satır 11 ve 13 için yalnızca bileşen testleri.** Yeniden başlatılan
 bir Agent kurtarmayı tamamlayamadığında günlüğü elinde tutar ve ledger
 kirasını serbest bırakır (`dns_native_recovery_unknown_after_restart`);
 kanıt okuyucu bunu `released-undecided` olarak raporlar. 29 Eylül 2026'ya

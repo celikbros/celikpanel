@@ -1442,3 +1442,14 @@ still reports a masked target as unknown; listener proofs ignore loopback and
 link-local sockets; the `named` scan matches the kernel command name only;
 Arch is covered by code reading only. Evidence at this commit is component
 tests; the two failed cells must be re-run on the fixed source.
+
+Native result (2026-09-29, source `411398d9`,
+[evidence](../deploy/e2e/dns-kill-matrix/evidence/owner-inverse-after-restart-rerun-20260929/README.md)):
+the `target-staged` and `intent` cells passed on the
+owner-inverse-after-restart flow with the Agent restarted and running. The
+owner command exited 0, the journal reached `rolled-back` and was retired, the
+ledger stayed byte-identical to the Agent's release, PowerDNS served on the
+same process throughout, both BIND units remained under the guard's
+persistent mask and never started, and the read-time texts reported the
+switch as reconciled. One path on Debian 13 with an unsigned local recovery
+kit; no reboot, owner-edit race, source-stopped or target-started cut.

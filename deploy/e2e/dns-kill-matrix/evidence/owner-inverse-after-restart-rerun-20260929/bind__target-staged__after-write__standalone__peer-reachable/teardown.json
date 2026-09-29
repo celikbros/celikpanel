@@ -1,0 +1,7 @@
+{
+  "action": "teardown",
+  "cell_id": "bind__target-staged__after-write__standalone__peer-reachable",
+  "dry_run": false,
+  "target": "/var/tmp/cp-oi2-0929/cells/e3224bede2eda2ee2dff1060",
+  "warning": "recursive deletion is confined to this validated cell directory"
+}
