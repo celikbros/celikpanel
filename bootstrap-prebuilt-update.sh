@@ -929,6 +929,10 @@ fi
 # This only restores executable modes in the verified staging tree. No enrollment.
 if [[ -d "$SOURCE_ROOT/dns-owner-tools" ]]; then
     chmod 0755 -- "$SOURCE_ROOT/dns-owner-tools/dns-peer-enroll" "$SOURCE_ROOT/dns-owner-tools/bind-peer-inspect"
+    # Releases before the PowerDNS owner writer ship no PowerDNS inspector.
+    if [[ -f "$SOURCE_ROOT/dns-owner-tools/pdns-peer-inspect" ]]; then
+        chmod 0755 -- "$SOURCE_ROOT/dns-owner-tools/pdns-peer-inspect"
+    fi
 fi
 
 if [[ -d "$SOURCE_ROOT/mail-renewal-runtime" ]]; then

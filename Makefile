@@ -68,6 +68,7 @@ dns-owner-tools: check-go ## Build optional owner tools; no installation or enro
 	mkdir -p bin/dns-owner-tools
 	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/dns-owner-tools/dns-peer-enroll ./cmd/dns-peer-enroll
 	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/dns-owner-tools/bind-peer-inspect ./cmd/bind-peer-inspect
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/dns-owner-tools/pdns-peer-inspect ./cmd/pdns-peer-inspect
 	cp cmd/dns-peer-enroll/README.md bin/dns-owner-tools/README.md
 
 recovery: check-go ## Build the independent owner recovery CLI
@@ -128,7 +129,7 @@ dist: build ## Assemble an offline initial-install tarball with verified provena
 	chmod 0755 dist/$(DIST)/update.sh dist/$(DIST)/rollback.sh
 	chmod 0755 dist/$(DIST)/libexec/get.sh
 	chmod 0755 dist/$(DIST)/firewall-runtime/restore
-	chmod 0755 dist/$(DIST)/dns-owner-tools/dns-peer-enroll dist/$(DIST)/dns-owner-tools/bind-peer-inspect
+	chmod 0755 dist/$(DIST)/dns-owner-tools/dns-peer-enroll dist/$(DIST)/dns-owner-tools/bind-peer-inspect dist/$(DIST)/dns-owner-tools/pdns-peer-inspect
 	chmod 0755 dist/$(DIST)/mail-renewal-runtime/renew dist/$(DIST)/mail-renewal-runtime/celikpanel-mail-host-cert
 	chmod 0755 dist/$(DIST)/deploy/write-release-manifest.sh
 	chmod 0755 dist/$(DIST)/recovery-runtime/bin/recovery dist/$(DIST)/recovery-runtime/bin/agent-checker dist/$(DIST)/recovery-runtime/bin/panel-checker dist/$(DIST)/recovery-runtime/bin/schema17-bridge

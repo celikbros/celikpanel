@@ -1,6 +1,6 @@
 //go:build linux
 
-package dnspeerenrollment
+package pdnspeerenrollment
 
 import (
 	"crypto/ed25519"
@@ -17,10 +17,17 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/alicelik/celikpanel/internal/dnspeerproof"
+	"github.com/alicelik/celikpanel/internal/dnspeerenrollment"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/sys/unix"
 )
+
+// OwnerSSHUsername is the fixed locked account the owner secondary installer
+// creates for either native engine (one engine channel per secondary).
+const OwnerSSHUsername = "celikpeer"
+
+// revokedPathPrefix names retained owner records after explicit revocation.
+const revokedPathPrefix = "/var/lib/celikpanel-agent-private/pdns-peer-inspection-revoked-"
 
 // PreparedOwner contains public material only. The private key stays under the
 // root-owned Agent state directory and is inactive until ActivateOwner runs.
@@ -43,20 +50,17 @@ func PrepareOwner() (PreparedOwner, error)                  { return prepareOwne
 func ActivateOwner(input OwnerActivation) (RecordV1, error) { return activateOwnerAt("/", input) }
 func RevokeOwner() error                                    { return revokeOwnerAt("/") }
 
-// PowerDNSEnrollmentPath is pdnspeerenrollment.EnrollmentPath. It is repeated
-// here because that package imports this one; its test pins the equality.
-const PowerDNSEnrollmentPath = "/var/lib/celikpanel-agent-private/pdns-peer-inspection-v1.json"
-
-// refusePowerDNSEnrollmentAt keeps the two native engine enrollments mutually
+// refuseBINDEnrollmentAt keeps the two native engine enrollments mutually
 // exclusive. The Agent never chooses between two enrollments by priority; it
 // reports both as a changed enrollment and keeps the deletion pending.
-func refusePowerDNSEnrollmentAt(root string) error {
-	if _, err := os.Lstat(ownerRootPath(root, PowerDNSEnrollmentPath)); errors.Is(err, os.ErrNotExist) {
+func refuseBINDEnrollmentAt(root string) error {
+	name := ownerRootPath(root, dnspeerenrollment.EnrollmentPath)
+	if _, err := os.Lstat(name); errors.Is(err, os.ErrNotExist) {
 		return nil
 	} else if err != nil {
-		return errors.New("the PowerDNS peer enrollment path cannot be inspected; review it locally before enrolling BIND")
+		return errors.New("the BIND peer enrollment path cannot be inspected; review it locally before enrolling PowerDNS")
 	}
-	return errors.New("a PowerDNS peer enrollment exists at " + PowerDNSEnrollmentPath + "; the Agent accepts one native peer engine enrollment. Run primary-status --engine pdns, and primary-revoke --engine pdns if the secondary now runs BIND, before enrolling BIND")
+	return fmt.Errorf("a BIND peer enrollment exists at %s; the Agent accepts one native peer engine enrollment. Run primary-status --engine bind, and primary-revoke --engine bind if the secondary now runs PowerDNS, before enrolling PowerDNS", dnspeerenrollment.EnrollmentPath)
 }
 
 func prepareOwnerAt(root string) (PreparedOwner, error) {
@@ -65,9 +69,9 @@ func prepareOwnerAt(root string) (PreparedOwner, error) {
 		return zero, err
 	}
 	if _, err := readAt(root); !IsCode(err, Disabled) {
-		return zero, errors.New("an active or unsafe peer enrollment already exists")
+		return zero, errors.New("an active or unsafe PowerDNS peer enrollment already exists; run primary-status --engine pdns and review it before preparing another")
 	}
-	if err := refusePowerDNSEnrollmentAt(root); err != nil {
+	if err := refuseBINDEnrollmentAt(root); err != nil {
 		return zero, err
 	}
 	public, private, err := ed25519.GenerateKey(rand.Reader)
@@ -114,12 +118,12 @@ func activateOwnerAt(root string, input OwnerActivation) (RecordV1, error) {
 		return zero, err
 	}
 	if _, err := readAt(root); !IsCode(err, Disabled) {
-		return zero, errors.New("an active or unsafe peer enrollment already exists")
+		return zero, errors.New("an active or unsafe PowerDNS peer enrollment already exists; run primary-status --engine pdns and review it before activating another")
 	}
-	if err := refusePowerDNSEnrollmentAt(root); err != nil {
+	if err := refuseBINDEnrollmentAt(root); err != nil {
 		return zero, err
 	}
-	if !id16(input.CredentialID) || input.SSHUsername != "celikpeer" {
+	if !id16(input.CredentialID) || input.SSHUsername != OwnerSSHUsername {
 		return zero, errors.New("prepared credential or dedicated SSH account is invalid")
 	}
 	keyPath := CredentialDir + "/" + input.CredentialID + ".key"
@@ -140,9 +144,9 @@ func activateOwnerAt(root string, input OwnerActivation) (RecordV1, error) {
 		return zero, err
 	}
 	record := RecordV1{
-		Schema: SchemaV1, EnrollmentID: id, Revision: 1,
+		Schema: SchemaV1, Engine: "pdns", EnrollmentID: id, Revision: 1,
 		PrimaryIP: input.PrimaryIP, PeerIP: input.PeerIP,
-		CatalogName: input.CatalogName, View: dnspeerproof.DefaultView,
+		CatalogName: input.CatalogName, View: defaultView,
 		SSHUsername: input.SSHUsername, HostKeySHA256: input.HostKeySHA256,
 		CredentialID: input.CredentialID, ClientPublicKeySHA256: hex.EncodeToString(pub[:]),
 	}
@@ -160,7 +164,7 @@ func activateOwnerAt(root string, input OwnerActivation) (RecordV1, error) {
 	// it never silently creates another enrollment or retries a DNS mutation.
 	readback, err := readAt(root)
 	if err != nil || readback.Record != record {
-		return zero, errors.New("new enrollment could not be verified; inspect it before retrying")
+		return zero, errors.New("new PowerDNS enrollment could not be verified; inspect it with primary-status --engine pdns before retrying")
 	}
 	return record, nil
 }
@@ -171,21 +175,21 @@ func revokeOwnerAt(root string) error {
 	}
 	current, err := readAt(root)
 	if err != nil {
-		return errors.New("enrollment cannot be verified for revocation")
+		return errors.New("PowerDNS enrollment cannot be verified for revocation")
 	}
 	if err := recheckAt(root, current); err != nil {
-		return errors.New("enrollment changed before revocation")
+		return errors.New("PowerDNS enrollment changed before revocation")
 	}
 	from := ownerRootPath(root, EnrollmentPath)
-	to := ownerRootPath(root, "/var/lib/celikpanel-agent-private/dns-peer-inspection-revoked-"+current.Record.EnrollmentID+".json")
+	to := ownerRootPath(root, revokedPathPrefix+current.Record.EnrollmentID+".json")
 	if err := unix.Renameat2(unix.AT_FDCWD, from, unix.AT_FDCWD, to, unix.RENAME_NOREPLACE); err != nil {
-		return fmt.Errorf("could not revoke the exact peer enrollment: %w", err)
+		return fmt.Errorf("could not revoke the exact PowerDNS peer enrollment: %w", err)
 	}
 	if err := ownerSyncDirectory(filepath.Dir(from)); err != nil {
 		return err
 	}
 	if _, err := readAt(root); !IsCode(err, Disabled) {
-		return errors.New("revoked enrollment still appears active")
+		return errors.New("revoked PowerDNS enrollment still appears active")
 	}
 	return nil
 }
@@ -230,11 +234,11 @@ func ownerEnrollmentPrivateDir(root string, createKeyDir bool) error {
 	}
 	info, err = os.Lstat(keyDir)
 	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 || info.Mode().Perm() != 0700 {
-		return errors.New("peer credential directory is unsafe")
+		return errors.New("PowerDNS peer credential directory is unsafe")
 	}
 	stat, ok := info.Sys().(*syscall.Stat_t)
 	if !ok || stat.Uid != 0 {
-		return errors.New("peer credential directory has wrong owner")
+		return errors.New("PowerDNS peer credential directory has wrong owner")
 	}
 	return nil
 }

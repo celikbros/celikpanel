@@ -26,10 +26,14 @@ type sshdReceipt struct {
 	ActiveSHA256   string `json:"active_sha256"`
 }
 
+func installSSHDInclude(primaryIP string, resume bool) error {
+	return bindProfile.installSSHDInclude(primaryIP, resume)
+}
+
 // installSSHDInclude stages and validates a complete replacement of the
 // existing sshd_config before one atomic rename. The original bytes and a
 // versioned digest receipt remain root-only for owner review and drift checks.
-func installSSHDInclude(primaryIP string, resume bool) error {
+func (p *profile) installSSHDInclude(primaryIP string, resume bool) error {
 	if err := trustedSSHDOriginal(); err != nil {
 		return err
 	}
@@ -39,23 +43,23 @@ func installSSHDInclude(primaryIP string, resume bool) error {
 	}
 	original := active
 	var priorReceipt []byte
-	backup, backupErr := readManagedFile(SSHDBackupPath, 1<<20, 0600)
+	backup, backupErr := readManagedFile(p.sshdBackup, 1<<20, 0600)
 	if backupErr == nil {
 		if !resume {
-			return errors.New("sshd backup exists; explicit secondary-resume is required")
+			return fmt.Errorf("sshd backup exists; explicit secondary-resume%s is required", p.cliArg)
 		}
 		original = backup
 	} else if !errors.Is(backupErr, os.ErrNotExist) {
 		return backupErr
 	}
-	priorReceipt, err = readManagedFile(SSHDReceiptPath, 4096, 0600)
+	priorReceipt, err = readManagedFile(p.sshdReceipt, 4096, 0600)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 	if backupErr != nil && len(priorReceipt) != 0 {
 		return errors.New("sshd receipt exists without its original; preserve owner evidence")
 	}
-	published, err := classifySSHDPublication(original, active, priorReceipt)
+	published, err := p.classifySSHDPublication(original, active, priorReceipt)
 	if err != nil {
 		return err
 	}
@@ -66,7 +70,7 @@ func installSSHDInclude(primaryIP string, resume bool) error {
 	if err != nil || !st.Mode().IsRegular() || st.Mode().Perm()&0022 != 0 {
 		return errors.New("sshd_config ownership or mode is unsafe")
 	}
-	updated := append(append([]byte(nil), original...), []byte(sshdInclude)...)
+	updated := append(append([]byte(nil), original...), []byte(p.sshdInclude())...)
 	temp, err := os.CreateTemp(filepath.Dir(SSHDMainPath), ".celikpanel-sshd-*")
 	if err != nil {
 		return err
@@ -91,16 +95,16 @@ func installSSHDInclude(primaryIP string, resume bool) error {
 	if _, err := run("sshd", "-t", "-f", tempPath); err != nil {
 		return fmt.Errorf("staged end-of-file Include is rejected; key remains disabled: %w", err)
 	}
-	if err := checkSSHDAt(tempPath, primaryIP); err != nil {
+	if err := p.checkSSHDAt(tempPath, primaryIP); err != nil {
 		return err
 	}
 	oldHash := sha256.Sum256(original)
 	newHash := sha256.Sum256(updated)
-	receipt, _ := json.Marshal(sshdReceipt{Schema: sshdReceiptSchema, OriginalSHA256: hex.EncodeToString(oldHash[:]), ActiveSHA256: hex.EncodeToString(newHash[:])})
-	if err := writeExactOrCreate(SSHDBackupPath, original, 0600); err != nil {
+	receipt, _ := json.Marshal(sshdReceipt{Schema: p.receiptSchema, OriginalSHA256: hex.EncodeToString(oldHash[:]), ActiveSHA256: hex.EncodeToString(newHash[:])})
+	if err := writeExactOrCreate(p.sshdBackup, original, 0600); err != nil {
 		return err
 	}
-	if err := writeExactOrCreate(SSHDReceiptPath, receipt, 0600); err != nil {
+	if err := writeExactOrCreate(p.sshdReceipt, receipt, 0600); err != nil {
 		return err
 	}
 	current, err := readTrustedFile(SSHDMainPath, 1<<20, false)
@@ -118,16 +122,20 @@ func installSSHDInclude(primaryIP string, resume bool) error {
 	return dir.Sync()
 }
 
+func classifySSHDPublication(original, active, receipt []byte) (bool, error) {
+	return bindProfile.classifySSHDPublication(original, active, receipt)
+}
+
 // classifySSHDPublication admits only the recorded before-image or the exact
 // published image. A backup-only cut can continue while the live file is still
 // original; a published image always needs its durable receipt.
-func classifySSHDPublication(original, active, receipt []byte) (bool, error) {
-	if bytes.Contains(original, []byte(SSHDConfigPath)) {
+func (p *profile) classifySSHDPublication(original, active, receipt []byte) (bool, error) {
+	if bytes.Contains(original, []byte(p.sshdConfig)) {
 		return false, errors.New("sshd original already references the managed Match path")
 	}
-	updated := append(append([]byte(nil), original...), []byte(sshdInclude)...)
+	updated := append(append([]byte(nil), original...), []byte(p.sshdInclude())...)
 	if len(receipt) != 0 {
-		if err := validateSSHDReceipt(original, updated, receipt); err != nil {
+		if err := p.validateSSHDReceipt(original, updated, receipt); err != nil {
 			return false, err
 		}
 	}
@@ -140,12 +148,12 @@ func classifySSHDPublication(original, active, receipt []byte) (bool, error) {
 	return false, errors.New("sshd_config differs from the recorded original and publication; preserve the owner edit")
 }
 
-func verifySSHDInclude() error {
-	backup, err := readManagedFile(SSHDBackupPath, 1<<20, 0600)
+func (p *profile) verifySSHDInclude() error {
+	backup, err := readManagedFile(p.sshdBackup, 1<<20, 0600)
 	if err != nil {
 		return err
 	}
-	receiptRaw, err := readManagedFile(SSHDReceiptPath, 4096, 0600)
+	receiptRaw, err := readManagedFile(p.sshdReceipt, 4096, 0600)
 	if err != nil {
 		return err
 	}
@@ -153,10 +161,14 @@ func verifySSHDInclude() error {
 	if err != nil {
 		return err
 	}
-	return validateSSHDReceipt(backup, active, receiptRaw)
+	return p.validateSSHDReceipt(backup, active, receiptRaw)
 }
 
 func validateSSHDReceipt(backup, active, receiptRaw []byte) error {
+	return bindProfile.validateSSHDReceipt(backup, active, receiptRaw)
+}
+
+func (p *profile) validateSSHDReceipt(backup, active, receiptRaw []byte) error {
 	var receipt sshdReceipt
 	dec := json.NewDecoder(bytes.NewReader(receiptRaw))
 	dec.DisallowUnknownFields()
@@ -164,22 +176,110 @@ func validateSSHDReceipt(backup, active, receiptRaw []byte) error {
 		return errors.New("sshd receipt is malformed")
 	}
 	canonical, _ := json.Marshal(receipt)
-	if !bytes.Equal(canonical, receiptRaw) || receipt.Schema != sshdReceiptSchema {
+	if !bytes.Equal(canonical, receiptRaw) || receipt.Schema != p.receiptSchema {
 		return errors.New("sshd receipt is not canonical")
 	}
 	oldHash := sha256.Sum256(backup)
 	activeHash := sha256.Sum256(active)
-	if receipt.OriginalSHA256 != hex.EncodeToString(oldHash[:]) || receipt.ActiveSHA256 != hex.EncodeToString(activeHash[:]) || !bytes.Equal(active, append(append([]byte(nil), backup...), []byte(sshdInclude)...)) {
+	if receipt.OriginalSHA256 != hex.EncodeToString(oldHash[:]) || receipt.ActiveSHA256 != hex.EncodeToString(activeHash[:]) || !bytes.Equal(active, append(append([]byte(nil), backup...), []byte(p.sshdInclude())...)) {
 		return errors.New("owner sshd_config changed since enrollment")
 	}
 	return nil
 }
-func checkSSHDAt(config, primaryIP string) error {
+
+// sshdRestoreDecision allows returning the recorded original only while the
+// live file is exactly the receipt-bound publication. Anything else is an
+// owner edit that revocation must preserve.
+func (p *profile) sshdRestoreDecision(backup, active, receipt []byte) (restore, alreadyOriginal bool) {
+	if bytes.Equal(active, backup) {
+		return false, true
+	}
+	return p.validateSSHDReceipt(backup, active, receipt) == nil, false
+}
+
+// restoreOwnerSSHD runs after the authorized key is already removed, so every
+// outcome here leaves the inspection channel disabled. It never edits an
+// owner-changed sshd_config and keeps the original copy and receipt.
+func (p *profile) restoreOwnerSSHD() RevokeResult {
+	failed := func(reason string) RevokeResult {
+		return RevokeResult{SSHConfig: "restore_failed", Reason: reason}
+	}
+	backup, err := readManagedFile(p.sshdBackup, 1<<20, 0600)
+	if errors.Is(err, os.ErrNotExist) {
+		return failed("the recorded sshd_config original is missing; nothing was changed")
+	}
+	if err != nil {
+		return failed("the recorded sshd_config original cannot be trusted; nothing was changed")
+	}
+	receipt, err := readManagedFile(p.sshdReceipt, 4096, 0600)
+	if err != nil {
+		return failed("the sshd_config receipt is missing or cannot be trusted; nothing was changed")
+	}
+	if err := trustedSSHDOriginal(); err != nil {
+		return failed("sshd_config is not a sole root-owned file; nothing was changed")
+	}
+	active, err := readTrustedFile(SSHDMainPath, 1<<20, false)
+	if err != nil {
+		return failed("sshd_config cannot be read safely; nothing was changed")
+	}
+	restore, original := p.sshdRestoreDecision(backup, active, receipt)
+	if original {
+		return RevokeResult{SSHConfig: "original", Reason: "sshd_config already matches the recorded original"}
+	}
+	if !restore {
+		return RevokeResult{SSHConfig: "preserved_owner_edit", Reason: "sshd_config was changed after enrollment and was left as is"}
+	}
+	st, err := os.Lstat(SSHDMainPath)
+	if err != nil || !st.Mode().IsRegular() || st.Mode().Perm()&0022 != 0 {
+		return failed("sshd_config ownership or mode is unsafe; nothing was changed")
+	}
+	temp, err := os.CreateTemp(filepath.Dir(SSHDMainPath), ".celikpanel-sshd-*")
+	if err != nil {
+		return failed("could not stage the original sshd_config; nothing was changed")
+	}
+	tempPath := temp.Name()
+	defer os.Remove(tempPath)
+	if temp.Chmod(st.Mode().Perm()) != nil {
+		temp.Close()
+		return failed("could not stage the original sshd_config; nothing was changed")
+	}
+	if _, err := temp.Write(backup); err != nil {
+		temp.Close()
+		return failed("could not stage the original sshd_config; nothing was changed")
+	}
+	if temp.Sync() != nil || temp.Close() != nil {
+		return failed("could not stage the original sshd_config; nothing was changed")
+	}
+	if _, err := run("sshd", "-t", "-f", tempPath); err != nil {
+		return failed("sshd rejects the recorded original; the managed Include was left in place")
+	}
+	current, err := readTrustedFile(SSHDMainPath, 1<<20, false)
+	if err != nil || !bytes.Equal(current, active) {
+		return RevokeResult{SSHConfig: "preserved_owner_edit", Reason: "sshd_config changed during restoration and was left as is"}
+	}
+	if err := os.Rename(tempPath, SSHDMainPath); err != nil {
+		return failed("could not replace sshd_config; the managed Include was left in place")
+	}
+	if dir, err := os.Open(filepath.Dir(SSHDMainPath)); err == nil {
+		dir.Sync()
+		dir.Close()
+	}
+	unit, err := activeSSHUnit()
+	if err != nil {
+		return RevokeResult{SSHConfig: "restored_not_reloaded", Reason: "sshd_config was restored but no active OpenSSH service was found to reload"}
+	}
+	if _, err := run("systemctl", "reload", unit); err != nil {
+		return RevokeResult{SSHConfig: "restored_not_reloaded", Reason: "sshd_config was restored but reloading " + unit + " failed"}
+	}
+	return RevokeResult{SSHConfig: "restored", Reason: "the recorded original sshd_config was restored and OpenSSH reloaded"}
+}
+
+func (p *profile) checkSSHDAt(config, primaryIP string) error {
 	args := []string{"-T"}
 	if config != "" {
 		args = append(args, "-f", config)
 	}
-	args = append(args, "-C", "user="+Account+",host=localhost,addr="+primaryIP)
+	args = append(args, "-C", "user="+p.account+",host=localhost,addr="+primaryIP)
 	out, err := run("sshd", args...)
 	if err != nil {
 		return fmt.Errorf("effective sshd policy unavailable: %w", err)
@@ -187,7 +287,7 @@ func checkSSHDAt(config, primaryIP string) error {
 	got := parseSSHDSettings(out)
 	for key, want := range map[string]string{
 		"authenticationmethods": "publickey", "pubkeyauthentication": "yes", "passwordauthentication": "no",
-		"kbdinteractiveauthentication": "no", "authorizedkeysfile": AuthorizedKeysPath, "authorizedkeyscommand": "/usr/bin/false", "authorizedkeyscommanduser": "nobody", "pubkeyacceptedalgorithms": "ssh-ed25519", "forcecommand": WrapperPath,
+		"kbdinteractiveauthentication": "no", "authorizedkeysfile": p.authorized, "authorizedkeyscommand": "/usr/bin/false", "authorizedkeyscommanduser": "nobody", "pubkeyacceptedalgorithms": "ssh-ed25519", "forcecommand": p.wrapper,
 		"disableforwarding": "yes", "permittty": "no", "permituserrc": "no",
 	} {
 		if got[key] != want {

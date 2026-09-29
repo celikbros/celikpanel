@@ -3,7 +3,7 @@
 # Never invokes an installer, updater, enrollment or privileged command.
 set -euo pipefail
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
-for name in dns-peer-enroll bind-peer-inspect; do
+for name in dns-peer-enroll bind-peer-inspect pdns-peer-inspect; do
     [[ -x "$root/bin/dns-owner-tools/$name" ]] || { echo 'Run make dns-owner-tools first' >&2; exit 1; }
 done
 tmp=$(mktemp -d)
@@ -45,7 +45,7 @@ mkdir "$tmp/unpacked"
 tar -xzf "$archive" -C "$tmp/unpacked"
 release="$tmp/unpacked/celikpanel-$version"
 (cd "$release" && sha256sum -c SHA256SUMS >/dev/null)
-for name in dns-peer-enroll bind-peer-inspect; do
+for name in dns-peer-enroll bind-peer-inspect pdns-peer-inspect; do
     cmp -- "$root/bin/dns-owner-tools/$name" "$release/dns-owner-tools/$name"
     [[ "$(stat -c %a "$release/dns-owner-tools/$name")" == 755 ]]
     grep -Fq " ./dns-owner-tools/$name" "$release/SHA256SUMS"

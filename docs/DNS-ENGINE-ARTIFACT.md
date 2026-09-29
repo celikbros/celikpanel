@@ -1770,3 +1770,34 @@ command and a reboot during recovery; a pre-install check of the candidate
 package version; a recovery path for an unsealed partial candidate at
 `intent`; owner enrollment for a PowerDNS secondary and truthful Panel
 guidance for parentless deletion.
+
+### Owner enrollment for a PowerDNS secondary (2026-09-30)
+
+P0.4, P0.5; constitutional invariants 1, 2, 4; D-022, D-024. Component tests
+only; no native enrollment has run.
+
+The Agent could report `dns_peer_enrollment_required` for a PowerDNS peer,
+but only a BIND enrollment writer existed, so on a BIND primary with a
+PowerDNS secondary a parentless zone deletion could stay pending with
+guidance the owner could not follow. `dns-peer-enroll` now takes
+`--engine bind|pdns` on every subcommand (default `bind`), and the owner
+tools package builds `pdns-peer-inspect` next to `bind-peer-inspect`.
+
+The PowerDNS path keeps the BIND contract: locked system account, forced
+command, pinned host key digest handed over a trusted channel, explicit
+revoke, idempotent resume from every checkpoint, refusal of owner edits to
+files it created. The primary record is written in the existing
+`celikpanel-pdns-peer-inspection/v1` reader format and read back before it
+counts. One new persisted record exists on the secondary:
+`celikpanel-pdns-peer-sshd-include/v1`, the receipt of the published
+`sshd_config`, with the same structure as the BIND receipt; revoke restores
+the original only when the live file is exactly the published one. One
+engine per host: the primary refuses to prepare or activate while the other
+engine's record exists, and the secondary refuses to install while any of
+the other engine's channel files exist. BIND output stays byte-identical
+except that no text promises a live exchange that no command performs.
+
+Open: the secondary install, resume and revoke paths depend on real sshd,
+systemctl, useradd and visudo and have component coverage only; the Panel's
+parentless-deletion text still does not name the tool, the steps, which
+owner acts or how the operation resumes.
