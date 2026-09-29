@@ -802,7 +802,13 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		// A V2 journal before its rollback decision (the Agent has not
 		// restarted since the cut) uses the same typed, read-only
 		// never-started observation as a rolling-back journal.
-		beforeDecision := dnsenginerecovery.BINDSwitchNeverStartedBeforeDecisionJournal(evidence.Journal)
+		// A V1 BIND-target journal before activation (first install,
+		// reinstall, stopped-BIND takeover) holds both units under the
+		// install guard's mask; the strict loaded-unit identity cannot read a
+		// masked unit and reported "incomplete DNS unit identity".
+		v2BeforeDecision := dnsenginerecovery.BINDSwitchNeverStartedBeforeDecisionJournal(evidence.Journal)
+		beforeDecision := v2BeforeDecision ||
+			dnsenginerecovery.BINDV1BeforeActivationJournal(evidence.Journal)
 		if observation.TargetReceipt != dnsenginerecovery.TargetReceiptExact &&
 			(dnsenginerecovery.BINDSwitchNeverStartedTargetJournal(evidence.Journal) || beforeDecision) {
 			neverStarted, vendorErr = observeInstalledNeverStartedBINDTarget(observationCtx, beforeDecision)
@@ -815,7 +821,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		}
 		if neverStarted != "" {
 			fmt.Fprintln(out, neverStarted)
-			if beforeDecision && activeDNSSwitchStatus(observation.Status) {
+			if v2BeforeDecision && activeDNSSwitchStatus(observation.Status) {
 				fmt.Fprintln(out, beforeRollbackDecisionText(evidence.Journal.Phase, observation.RequestID, workerGone, observedPDNSUnit(units, unitErr)))
 			}
 		} else {
@@ -1078,6 +1084,9 @@ func ownerDNSRecoveryGuidance(e dnsenginerecovery.SwitchEvidence, quiesced bool)
 	case ownerBINDSwitchInverseCommand:
 		return fmt.Sprintf("This PowerDNS-to-BIND switch retains a rollback decision. The server owner can continue that exact inverse with: /usr/libexec/celikpanel/recovery recover-dns-bind-switch --request-id %s. The command rechecks locks, worker exclusion, the frozen PowerDNS source and owner changes; this status check does not start recovery.\n", request)
 	case ownerPDNSAdoptionInverseCommand:
+		if text := agentFinishedPDNSAdoptionGuidance(e); text != "" {
+			return text
+		}
 		return fmt.Sprintf("This PowerDNS adoption retains a rollback decision. The server owner can continue that exact inverse with: /usr/libexec/celikpanel/recovery recover-dns-pdns-adoption --request-id %s. The command rechecks locks, worker exclusion, the owner's PowerDNS configuration and database and owner changes; this status check does not start recovery.\n", request)
 	case ownerPDNSFreshPrestartV3Command:
 		return fmt.Sprintf("If PowerDNS never started for this fresh paired primary, the server owner can restore the pre-start state with: /usr/libexec/celikpanel/recovery recover-dns-pdns-fresh-prestart --request-id %s. The command checks locks, the accepted worker, native units, configuration and the staged candidate; a started or changed target is refused and its evidence is preserved. This status check does not start recovery.\n", request)
@@ -1091,7 +1100,55 @@ func ownerDNSRecoveryGuidance(e dnsenginerecovery.SwitchEvidence, quiesced bool)
 		dnsenginerecovery.BINDSwitchBeforeRollbackDecisionJournal(e.Journal) {
 		return fmt.Sprintf("This PowerDNS-to-BIND switch has no rollback decision yet (journal phase %s), so no owner recovery command applies now. If CelikPanel shows no progress for this request, the server owner restarts the CelikPanel Agent (systemctl restart celikpanel-agent); at start it records the rollback decision for this same request. Then rerun this check with --quiesced --request-id %s; it names the owner recovery command when one applies. This status check does not start recovery.\n", e.Journal.Phase, request)
 	}
+	if request == e.Journal.MutationRequestID && activeDNSSwitchStatus(e.Observation.Status) &&
+		dnsenginerecovery.BINDV1AgentRecoveredJournal(e.Journal) {
+		return bindV1AgentRecoveredGuidance(e.Journal.Phase, e.Journal.Mode, e.Journal.SourceEngine == "", request)
+	}
 	return fmt.Sprintf("No owner recovery command applies to this journal's recorded shape and ledger status. Keep the journal and ledger. If this operation does not resume through CelikPanel or an Agent restart, contact support with request id %s. This status check does not start recovery.\n", request)
+}
+
+// bindV1AgentRecoveredGuidance explains an active V1 BIND-target journal
+// before its target was verified. The CelikPanel Agent, not the owner, acts:
+// a live worker continues; a restarted Agent reconciles the same request and,
+// when the target is not verified and its absence is proved, rolls it back to
+// the recorded pre-operation state and ends it as failed. No owner command
+// admits this journal, and none is needed.
+func bindV1AgentRecoveredGuidance(phase, mode string, firstInstall bool, request string) string {
+	operation := "This BIND change"
+	switch {
+	case mode == "reinstall":
+		operation = "This BIND reinstall"
+	case firstInstall:
+		operation = "This BIND installation"
+	}
+	return fmt.Sprintf("%s has not reached its verified target (journal phase %s) and no rollback decision is recorded. "+
+		"No owner recovery command applies, and none is needed: the CelikPanel Agent resolves this same request. "+
+		"While its worker is running it continues by itself. If CelikPanel shows no progress, the server owner restarts the Agent (systemctl restart celikpanel-agent); at start it re-checks this request and, unless the target verifies, rolls it back to the recorded state from before the operation and records it as failed (dns_engine_switch_rolled_back_after_restart). "+
+		"CelikPanel then reports the change as not committed and it can be requested again. If the rollback cannot be proved, the journal is kept and this check, rerun with --quiesced --request-id %s, names the next step. This status check does not start recovery.\n",
+		operation, phase, request)
+}
+
+// agentFinishedPDNSAdoptionGuidance words an active V1 PowerDNS adoption whose
+// rollback the restarted Agent finishes by itself (at rolled-back it only
+// re-proves; at rolling-back it re-runs the V1 inverse): the Agent is the
+// first actor, the owner command an alternative. V2 adoption journals, which
+// the Agent never runs, return "".
+func agentFinishedPDNSAdoptionGuidance(e dnsenginerecovery.SwitchEvidence) string {
+	j := e.Journal
+	if j.Schema != dnsengineartifact.SwitchJournalSchemaV1 || !activeDNSSwitchStatus(e.Observation.Status) {
+		return ""
+	}
+	request := e.Observation.RequestID
+	alternative := fmt.Sprintf(" As an alternative the server owner can run /usr/libexec/celikpanel/recovery recover-dns-pdns-adoption --request-id %s. It needs the host lock, so it runs only while the Agent is not holding it, and it rechecks worker exclusion, the owner's PowerDNS configuration and database and owner changes. This status check does not start recovery.\n", request)
+	switch j.Phase {
+	case dnsengineartifact.SwitchPhaseRolledBack:
+		return "This PowerDNS adoption's rollback effects are complete (journal phase rolled-back); only the final proof and the retirement of this journal remain. " +
+			"The CelikPanel Agent finishes it by itself: at its next start (systemctl restart celikpanel-agent if CelikPanel shows no progress) it re-proves the restored PowerDNS under the host lock without changing anything, records the verdict and retires this journal." + alternative
+	case dnsengineartifact.SwitchPhaseRollingBack:
+		return "This PowerDNS adoption retains a rollback decision (journal phase rolling-back). " +
+			"The CelikPanel Agent continues that same rollback by itself: at its next start (systemctl restart celikpanel-agent if CelikPanel shows no progress) it re-runs the recorded inverse under the host lock and retires this journal when the restored PowerDNS is proved." + alternative
+	}
+	return ""
 }
 
 // releasedDNSSwitchGuidance explains a lease the Agent released after its
@@ -1110,7 +1167,12 @@ func releasedDNSSwitchGuidance(e dnsenginerecovery.SwitchEvidence) (text string,
 		switch ownerDNSRecoveryCommand(e) {
 		case ownerPDNSFreshPrestartV3Command:
 			return "The Agent could not prove that this first PowerDNS install as paired primary never started, so it did not undo it and released its lease; the journal is kept. If PowerDNS never started, the server owner can restore the state before the install with the owner recovery command named above; it rechecks locks, owner changes and the native target and refuses a started or changed target. After the reported cause is resolved, restarting the Agent also retries the same automatic undo. The journal blocks a new DNS switch; this read-only status does not start recovery.", true
-		case ownerBINDSwitchInverseCommand, ownerBINDAdoptionInverseCommand, ownerPDNSAdoptionInverseCommand:
+		case ownerPDNSAdoptionInverseCommand:
+			if e.Journal.Schema == dnsengineartifact.SwitchJournalSchemaV1 {
+				return "The Agent could not complete this PowerDNS adoption rollback yet (during the operation or after a restart), released its lease and kept the journal. After the reported cause is resolved, restarting the CelikPanel Agent (systemctl restart celikpanel-agent) retries the same rollback by itself; as an alternative the server owner continues it with the owner recovery command named above, which rechecks locks, owner changes and native DNS before any change. The journal blocks a new DNS switch until one of them retires it; this read-only status does not start recovery.", true
+			}
+			return "The Agent could not complete this DNS switch rollback itself (during the operation or after a restart), released its lease and kept the journal. The server owner continues the same rollback with the owner recovery command named above; it rechecks locks, owner changes and native DNS before any change. The journal blocks a new DNS switch until that command retires it; this read-only status does not start recovery.", true
+		case ownerBINDSwitchInverseCommand, ownerBINDAdoptionInverseCommand:
 			return "The Agent could not complete this DNS switch rollback itself (during the operation or after a restart), released its lease and kept the journal. The server owner continues the same rollback with the owner recovery command named above; it rechecks locks, owner changes and native DNS before any change. The journal blocks a new DNS switch until that command retires it; this read-only status does not start recovery.", true
 		}
 		if !agentRetriesReleasedDNSJournal(e.Journal) {

@@ -1043,10 +1043,23 @@ func exactFinalizedDNSEngineSwitchProvenanceWithBINDVerifier(
 			// Etkin motordaki BAŞKA bir işlemi adlandıran kurulum makbuzu bizim
 			// göz ardı edeceğimiz bir şey değildir ve kapalı arıza vermeyi
 			// sürdürür.
-			if state.Engine == target &&
-				install.ManifestQualifier == qualifier &&
-				install.MutationRequestID == binding.MutationRequestID &&
-				install.MutationOwnerID == binding.MutationOwnerID {
+			//
+			// The same holds for a receipt an EARLIER attempt at this exact
+			// manifest left behind (same qualifier, another request): a
+			// reinstall that failed after its package step and was aborted or
+			// rolled back keeps its receipt by design, authority never moved,
+			// and no journal exists. Without this, a retry that fails before
+			// its own receipt write (a refused package preflight, a busy port
+			// 53) poisoned the whole mutation manager (item 2, 2026-09-30).
+			//
+			// Aynı tam bildirgenin DAHA ÖNCEKİ bir denemesinin bıraktığı
+			// makbuz da aynıdır: yetki hiç değişmemiştir ve günlük yoktur.
+			// Bu olmadan, kendi makbuzunu yazmadan düşen bir yeniden deneme
+			// tüm mutasyon yöneticisini zehirliyordu.
+			// A receipt for a different manifest (the zones changed between
+			// the attempts) is not recognisable as this reinstall's residue
+			// and still fails closed.
+			if state.Engine == target && install.ManifestQualifier == qualifier {
 				return false, nil
 			}
 			return false, errors.New(

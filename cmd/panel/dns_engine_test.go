@@ -22,19 +22,22 @@ import (
 
 type dnsEngineTestAgent struct {
 	durableMutationRPCFixture
-	mu                         sync.Mutex
-	runtimes                   map[transport.DNSEngine]transport.DNSBackendRuntimeState
-	port53Conflict             bool
-	readinessCalls             int
-	onReadiness                func(int)
-	readinessAfterSwitchError  string
-	dnssec                     bool
-	dnssecUnavailable          bool
-	dnssecCalls                int
-	switchCalls                int
-	switchRequests             []transport.SwitchDNSEngineV1Request
-	switchError                string
-	switchErrorLeavesPackage   bool
+	mu                        sync.Mutex
+	runtimes                  map[transport.DNSEngine]transport.DNSBackendRuntimeState
+	port53Conflict            bool
+	readinessCalls            int
+	onReadiness               func(int)
+	readinessAfterSwitchError string
+	dnssec                    bool
+	dnssecUnavailable         bool
+	dnssecCalls               int
+	switchCalls               int
+	switchRequests            []transport.SwitchDNSEngineV1Request
+	switchError               string
+	switchErrorLeavesPackage  bool
+	// switchErrorLeavesStandby also reports the left package as the Agent's
+	// rollback standby (a rolled-back first install).
+	switchErrorLeavesStandby   bool
 	onSwitch                   func()
 	firewallEnabled            bool
 	firewallError              string
@@ -561,6 +564,7 @@ func (agent *dnsEngineTestAgent) SwitchDNSEngineV1(
 		if agent.switchErrorLeavesPackage {
 			target := agent.runtimes[request.TargetEngine]
 			target.Installed, target.Running, target.Managed = true, false, true
+			target.RollbackStandby = agent.switchErrorLeavesStandby
 			agent.runtimes[request.TargetEngine] = target
 		}
 		response.Error = agent.switchError
@@ -569,6 +573,7 @@ func (agent *dnsEngineTestAgent) SwitchDNSEngineV1(
 	for engine, runtime := range agent.runtimes {
 		if engine == request.TargetEngine {
 			runtime.Installed, runtime.Running, runtime.Managed = true, true, true
+			runtime.RollbackStandby = false
 			runtime.PairReady = request.Topology == transport.DNSTopologyPaired &&
 				request.PairRole == transport.DNSPairRolePrimary
 		} else {
@@ -1994,6 +1999,45 @@ func TestDNSEnginePairedBINDCommitPersistsDirectionalIdentity(t *testing.T) {
 			if err != nil || snapshot.PairReady == nil ||
 				*snapshot.PairReady != (test.wantRole == transport.DNSPairRolePrimary) {
 				t.Fatalf("paired readiness snapshot=%+v err=%v", snapshot, err)
+			}
+			// Decision D (2026-09-30): secondary_ready exists exactly on an
+			// active paired secondary; the primary payload has no such key.
+			requirePairJSON := func(want string) {
+				t.Helper()
+				snapshot, err := panel.dnsEngineSnapshot(context.Background())
+				if err != nil {
+					t.Fatal(err)
+				}
+				raw, _ := json.Marshal(snapshot)
+				var fields map[string]json.RawMessage
+				if err := json.Unmarshal(raw, &fields); err != nil {
+					t.Fatal(err)
+				}
+				got, present := fields["secondary_ready"]
+				if want == "" {
+					if present {
+						t.Fatalf("secondary_ready present on %s: %s", test.wantRole, raw)
+					}
+					return
+				}
+				if !present || string(got) != want || string(fields["pair_ready"]) != "false" {
+					t.Fatalf("secondary JSON = %s, want secondary_ready=%s", raw, want)
+				}
+			}
+			if test.wantRole == transport.DNSPairRoleSecondary {
+				requirePairJSON("false")
+				agent.mu.Lock()
+				runtime := agent.runtimes[transport.DNSEngineBIND]
+				runtime.SecondaryReady = true
+				agent.runtimes[transport.DNSEngineBIND] = runtime
+				agent.mu.Unlock()
+				requirePairJSON("true")
+				agent.mu.Lock()
+				runtime.SecondaryReady = false
+				agent.runtimes[transport.DNSEngineBIND] = runtime
+				agent.mu.Unlock()
+			} else {
+				requirePairJSON("")
 			}
 			identity, ready, err := panel.activeDNSPublisher(context.Background())
 			if err != nil || identity.PairRole != test.wantRole ||

@@ -12,6 +12,26 @@ import (
 
 var errServerSetupDNSReconciliationRequired = errors.New("the exact DNS setup operation must finish reconciliation")
 
+// errServerSetupDNSRolledBack marks a DNS setup step whose first install the
+// Agent proved rolled back. The step's request stays terminal; a new plan
+// retries the first install with a new request (Decision B, 2026-09-30).
+var errServerSetupDNSRolledBack = errors.New("the DNS setup operation was rolled back; review a new plan")
+
+// serverSetupDNSRolledBackError carries the host's own operator sentence,
+// when the Agent gave one, next to the rolled-back identity.
+type serverSetupDNSRolledBackError struct{ cause error }
+
+func (e *serverSetupDNSRolledBackError) Error() string {
+	if e.cause == nil {
+		return errServerSetupDNSRolledBack.Error()
+	}
+	return errServerSetupDNSRolledBack.Error() + ": " + e.cause.Error()
+}
+
+func (e *serverSetupDNSRolledBackError) Unwrap() []error {
+	return []error{errServerSetupDNSRolledBack, e.cause}
+}
+
 // setupDNSIdentity validates the reviewed topology without rewriting the OS,
 // panel address, mail identity or a saved authoritative ownership epoch.
 func setupDNSIdentity(draft serverSetupDraft) (dnsSetupRequest, string, error) {
@@ -94,7 +114,7 @@ func (p *Panel) startServerSetupDNS(ctx context.Context, draft serverSetupDraft,
 		}
 		persisted.Action = "install"
 		if persisted.Phase == "rolled_back" {
-			return errors.New("the DNS setup operation was rolled back; review a new plan")
+			return errServerSetupDNSRolledBack
 		}
 		if persisted.Phase != "committed" {
 			if err := attachDNSEngineOperationAction(ctx, p.db.GetDB(), &persisted); err != nil {
@@ -122,7 +142,7 @@ func (p *Panel) startServerSetupDNS(ctx context.Context, draft serverSetupDraft,
 				return setupDNSReconciliationError(err)
 			}
 			if persisted.Phase == "rolled_back" {
-				return errors.New("the DNS setup operation was rolled back; review a new plan")
+				return errServerSetupDNSRolledBack
 			}
 			if persisted.Phase != "committed" {
 				return fmt.Errorf("%w: DNS operation remains %s", errServerSetupDNSReconciliationRequired, persisted.Phase)
@@ -194,8 +214,14 @@ func (p *Panel) startServerSetupDNS(ctx context.Context, draft serverSetupDraft,
 	if hold != "" || zones != 0 || dnsIdentityStagingKind(runtimes, conflict, request.Role, draft.DNSRole, zones) != dnsIdentityStagingFresh {
 		return errors.New("setup cannot adopt unmanaged DNS or replace existing zones")
 	}
-	for _, runtime := range runtimes {
-		if runtime.Installed || runtime.Running {
+	// A rolled-back first install of the chosen engine left its packages as
+	// the Agent's rollback standby; a new plan retries that first install
+	// (Decision B, 2026-09-30). Every other installed or running engine,
+	// including an owner-installed one, is still refused here.
+	for engine, runtime := range runtimes {
+		if runtime.Running || runtime.Installed &&
+			!(engine == transport.DNSEngine(draft.DNSEngine) &&
+				dnsEngineRollbackStandbyTarget(nil, dnsEngineStateUnconfigured, state.EngineEpoch, runtimes, engine)) {
 			return errors.New("setup cannot replace an existing DNS installation")
 		}
 	}
@@ -303,7 +329,7 @@ func (p *Panel) reconcileServerSetupDNSFailure(ctx context.Context, persisted pe
 		return pending(err)
 	}
 	if final.Phase == "rolled_back" {
-		return cause
+		return &serverSetupDNSRolledBackError{cause: cause}
 	}
 	// A committed target still resumes its exact post-commit/mode-save path;
 	// neither an applied receipt nor missing evidence is reported as failure.

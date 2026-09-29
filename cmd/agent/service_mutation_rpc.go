@@ -37,7 +37,10 @@ var (
 	errServiceMutationBusy = errors.New("another service mutation owns the host lease")
 
 	errServiceMutationLedgerAlreadyInitialized = errors.New("service mutation ledger is already initialized")
-	errServiceMutationManagerPoisoned          = errors.New("service mutation manager is fail-closed after an ambiguous ledger write")
+	// errServiceMutationManagerPoisoned is the identity every fail-closed
+	// hold matches with errors.Is. Its words are cause-neutral; the text a
+	// hold reports comes from serviceMutationHoldError, per cause.
+	errServiceMutationManagerPoisoned = errors.New("service mutation manager is fail-closed")
 
 	globalServiceMutationMu      sync.Mutex
 	globalServiceMutationManager *serviceMutationManager
@@ -411,7 +414,7 @@ func (m *serviceMutationManager) healthErrorLocked() error {
 	if m.poisoned == nil {
 		return nil
 	}
-	return errors.Join(errServiceMutationManagerPoisoned, m.poisoned)
+	return errors.Join(newServiceMutationHoldError(m.poisoned), m.poisoned)
 }
 
 // agentMutationHold reports, as a stable code, why durable mutations are being
@@ -461,7 +464,7 @@ func (m *serviceMutationManager) poisonLocked(cause error) error {
 			m.active.cancel()
 		}
 	}
-	return errors.Join(errServiceMutationManagerPoisoned, cause)
+	return errors.Join(newServiceMutationHoldError(cause), cause)
 }
 
 func serviceMutationWriteMayHavePublished(err error) bool {

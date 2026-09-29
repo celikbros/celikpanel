@@ -31,10 +31,22 @@ var errBINDAbandonedGenerationRoot = errors.New(
 
 type bindDirectoryIdentity = bindroot.Identity
 
+// aptBINDStatOverrideOps are the only dpkg statoverride commands the BIND
+// root proof runs, and both are reads. The product no longer registers an
+// override (see bindroot.APTExactStatOverrideLine) and leaves an existing
+// legacy entry in place: releases before this one require it, and an owner
+// rollback to such a release must keep publishing BIND zones (update.sh treats
+// it as monotonic host hardening that rollback retains). Only the package
+// preflight removes the legacy entry, and only once the `bind` group it names
+// is gone, the state in which dpkg refuses every package change.
+//
+// aptBINDStatOverrideOps, BIND kök kanıtının çalıştırdığı iki dpkg komutudur
+// ve ikisi de okumadır. Ürün artık geçersiz kılma kaydetmez ve var olan eski
+// girdiyi yerinde bırakır: önceki sürümler onu ister. Eski girdiyi yalnız paket
+// ön denetimi, adlandırdığı `bind` grubu silinmişse kaldırır.
 type aptBINDStatOverrideOps struct {
 	owner func() ([]byte, error)
 	list  func() ([]byte, error)
-	add   func() ([]byte, error)
 }
 
 type aptBINDStatOverrideRunner func(
@@ -103,9 +115,7 @@ func accessHostBINDGenerationRootWithMode(
 		return fmt.Errorf("open BIND filesystem root: %w", err)
 	}
 	defer unix.Close(rootFD)
-	durability, cancelDurability, err := hostAPTBindStatOverrideProof(
-		ctx, allowParentHardening,
-	)
+	durability, cancelDurability, err := hostAPTBindStatOverrideProof(ctx)
 	if err != nil {
 		return err
 	}
@@ -120,7 +130,6 @@ func accessHostBINDGenerationRootWithMode(
 
 func hostAPTBindStatOverrideProof(
 	ctx context.Context,
-	create bool,
 ) (func(uint32) error, context.CancelFunc, error) {
 	executable, err := firstTrustedExecutable(
 		[]string{"/usr/sbin/dpkg-statoverride", "/usr/bin/dpkg-statoverride"},
@@ -150,12 +159,7 @@ func hostAPTBindStatOverrideProof(
 		return nil, nil, err
 	}
 	return func(mode uint32) error {
-		if err := verifyOrCreateExactAPTBindStatOverride(
-			create, mode, ops,
-		); err != nil {
-			return err
-		}
-		return nil
+		return verifyAPTBindStatOverride(mode, ops)
 	}, cancel, nil
 }
 
@@ -183,13 +187,6 @@ func aptBINDStatOverrideOperations(
 				ctx, executable, "--list", aptBINDCacheParentPath,
 			)
 		},
-		add: func() ([]byte, error) {
-			return runner(
-				ctx, executable,
-				"--no-force-statoverride-add",
-				"--add", "root", "bind", "1775", aptBINDCacheParentPath,
-			)
-		},
 	}, nil
 }
 
@@ -207,12 +204,21 @@ func classifyExactAPTBindStatOverride(
 	return bindroot.ClassifyAPTStatOverride(output, commandErr)
 }
 
-func verifyOrCreateExactAPTBindStatOverride(
-	create bool,
+// verifyAPTBindStatOverride proves the package-owned parent and its dpkg
+// statoverride state, read-only, on every path (read-only and mutating).
+// Absent (every host installed by this release) and the product's exact
+// legacy entry (hosts installed earlier) are both accepted, and the legacy
+// entry is left in place. Any other entry for the path belongs to the owner
+// and is refused, never changed.
+//
+// verifyAPTBindStatOverride her yolda salt-okurdur: yokluk ve ürünün tam eski
+// girdisi kabul edilir, eski girdi yerinde bırakılır; başka her girdi
+// sahibindir, reddedilir ve değiştirilmez.
+func verifyAPTBindStatOverride(
 	parentMode uint32,
 	ops aptBINDStatOverrideOps,
 ) error {
-	if ops.owner == nil || ops.list == nil || (create && ops.add == nil) ||
+	if ops.owner == nil || ops.list == nil ||
 		(parentMode != aptBINDStockCacheParentMode &&
 			parentMode != aptBINDCacheParentMode) {
 		return errors.New("invalid APT BIND statoverride proof")
@@ -222,40 +228,8 @@ func verifyOrCreateExactAPTBindStatOverride(
 		return err
 	}
 	output, err := ops.list()
-	state, err := classifyExactAPTBindStatOverride(output, err)
-	if err != nil {
-		return err
-	}
-	if state == aptBINDStatOverrideExact {
-		return nil
-	}
-	if !create {
-		return errors.New(
-			"/var/cache/bind lacks the exact durable dpkg-statoverride",
-		)
-	}
-	addOutput, addErr := ops.add()
-	unexpectedAddOutput := strings.TrimSpace(string(addOutput)) != ""
-	readback, readbackErr := ops.list()
-	readbackState, readbackParseErr := classifyExactAPTBindStatOverride(
-		readback, readbackErr,
-	)
-	if readbackParseErr != nil || readbackState != aptBINDStatOverrideExact {
-		if readbackParseErr == nil {
-			readbackParseErr = errors.New(
-				"dpkg-statoverride add did not publish the exact durable override",
-			)
-		}
-		return errors.Join(addErr, readbackParseErr)
-	}
-	if unexpectedAddOutput {
-		return errors.New(
-			"dpkg-statoverride --add returned unexpected output",
-		)
-	}
-	// A command can report failure after atomically committing its database
-	// update. Exact readback is authoritative and makes the retry idempotent.
-	return nil
+	_, err = classifyExactAPTBindStatOverride(output, err)
+	return err
 }
 
 type bindGroupLookupRunner func(context.Context, string, ...string) ([]byte, error)

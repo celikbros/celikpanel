@@ -846,10 +846,15 @@ func firewallStatusWithRunnerAndStore(runner firewallCommandRunner, store firewa
 	lock, err := runner.AcquireFirewallLock()
 	if err != nil {
 		reportFirewallExclusion(resp, err)
+		resp.ErrorCode = transport.FirewallStatusBusy
 		return nil
 	}
 	defer lock.Close()
-	return firewallStatusLocked(runner, store, resp)
+	err = firewallStatusLocked(runner, store, resp)
+	if resp.Error != "" && resp.ErrorCode == "" {
+		resp.ErrorCode = transport.FirewallStatusUnknown
+	}
+	return err
 }
 
 func firewallStatusLocked(runner firewallCommandRunner, store firewallStateStore, resp *FirewallStatusResponse) error {
@@ -863,6 +868,7 @@ func firewallStatusLocked(runner firewallCommandRunner, store firewallStateStore
 		setFirewallPersistenceStatus(resp, snapshot, snapshotExists, snapshotLoadErr, false)
 		if snapshotExists {
 			resp.Error = "persistent firewall policy exists but nftables is unavailable"
+			resp.ErrorCode = transport.FirewallStatusEngineUnavailable
 			resp.PersistenceState = firewallPersistenceUnverified
 			resp.PersistenceError = appendFirewallError(resp.PersistenceError, resp.Error)
 		}
@@ -888,7 +894,9 @@ func firewallStatusLocked(runner firewallCommandRunner, store firewallStateStore
 	// ulasamadiginda bunu soyle; paneli okuyan operator bu cumleyi gorur.
 	tables, err := runner.Output("nft", "list", "tables")
 	if err != nil {
-		resp.Error = newFirewallEngineError("nft table discovery failed", tables, err).Error()
+		engineErr := newFirewallEngineError("nft table discovery failed", tables, err)
+		resp.Error = engineErr.Error()
+		resp.ErrorCode = firewallStatusErrorCode(engineErr.fault)
 		resp.PersistenceState = firewallPersistenceUnverified
 		resp.PersistenceError = resp.Error
 		return nil

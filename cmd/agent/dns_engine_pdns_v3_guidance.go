@@ -3,6 +3,9 @@ package main
 import (
 	"errors"
 	"fmt"
+
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
+	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
 )
 
 // Recovery policy for the fresh paired PowerDNS primary (V3 journal), stated
@@ -76,9 +79,12 @@ type freshPrimaryV3RecoveryError struct {
 	// changed names what differed for freshPrimaryV3OwnerChange.
 	changed string
 	// running is the systemd state of pdns.service observed after the
-	// failure: "running", "not running" or "" when it could not be read.
+	// failure: "running", "not running", "failed" or "" when it could not be
+	// read.
 	running string
-	cause   error
+	// phase is the journal phase the recovery started from.
+	phase string
+	cause error
 }
 
 func (e *freshPrimaryV3RecoveryError) Error() string {
@@ -100,6 +106,8 @@ func (e *freshPrimaryV3RecoveryError) runningText() string {
 		return "The PowerDNS service is running on this server now (systemd); that alone does not prove it answers correctly."
 	case "not running":
 		return "The PowerDNS service is not running on this server now, so this server does not answer DNS."
+	case "failed":
+		return "The PowerDNS service is in systemd's failed state on this server now (a start was attempted and ended with an error), so this server does not answer DNS."
 	default:
 		return "Whether the PowerDNS service is running could not be read."
 	}
@@ -110,11 +118,21 @@ func (e *freshPrimaryV3RecoveryError) ledgerMessage() string {
 	held := "The operation's journal is kept and blocks new DNS changes; other server changes can continue."
 	switch e.kind {
 	case freshPrimaryV3PrestartUnproven:
-		return "The first install of PowerDNS as the paired primary was interrupted before PowerDNS started. " +
-			"CelikPanel undoes such an install by itself, but it could not prove that the server is exactly as the install left it, so it changed nothing more. " +
+		// The owner command runs the same native proofs this Agent just
+		// failed, so it is named only as what the status check offers once
+		// its own admission accepts the journal, never as a sure next step.
+		interrupted := "The first install of PowerDNS as the paired primary was interrupted before PowerDNS started. " +
+			"CelikPanel undoes such an install by itself, but it could not prove that the server is exactly as the install left it, so it changed nothing more. "
+		if freshPrimaryPrestartEnablePhaseV3(e.phase) || e.running == "failed" {
+			interrupted = "The first install of PowerDNS as the paired primary was interrupted while PowerDNS was being enabled. " +
+				"CelikPanel undoes such an install by itself only when it can prove PowerDNS never started and the server is exactly as the install left it; it could not, so it changed nothing more. "
+		}
+		return interrupted +
 			e.runningText() + " This server had no DNS engine before the install, so no existing DNS service was affected. " + held +
-			" Next step: the server administrator runs " + status + ". If PowerDNS never started, /usr/libexec/celikpanel/recovery recover-dns-pdns-fresh-prestart --request-id " + e.requestID +
-			" restores the state before the install; after the reported cause is resolved, restarting the Agent retries the same automatic undo."
+			" Next step: the server administrator runs " + status + " and resolves the cause it reports. " +
+			"Only when that check names it, /usr/libexec/celikpanel/recovery recover-dns-pdns-fresh-prestart --request-id " + e.requestID +
+			" restores the state before the install; that command proves again that PowerDNS never started and refuses a started or changed target. " +
+			"After the reported cause is resolved, restarting the Agent retries the same automatic undo."
 	case freshPrimaryV3OwnerChange:
 		return "The first install of PowerDNS as the paired primary found that " + e.changed +
 			" is not as this install wrote it (an administrator edit, PowerDNS behaviour CelikPanel has not measured, or a file it could not read). " +
@@ -135,7 +153,7 @@ func (e *freshPrimaryV3RecoveryError) ledgerMessage() string {
 // classifyFreshPrimaryV3RecoveryError wraps an unfinished recovery with its
 // guidance. prestart selects the before-start class; a change the install did
 // not make overrides both.
-func classifyFreshPrimaryV3RecoveryError(requestID string, prestart bool, running string, err error) error {
+func classifyFreshPrimaryV3RecoveryError(requestID string, prestart bool, running string, err error, phase ...string) error {
 	if err == nil {
 		return nil
 	}
@@ -146,6 +164,9 @@ func classifyFreshPrimaryV3RecoveryError(requestID string, prestart bool, runnin
 	result := &freshPrimaryV3RecoveryError{
 		kind: freshPrimaryV3PoststartPending, requestID: requestID, running: running, cause: err,
 	}
+	if len(phase) == 1 {
+		result.phase = phase[0]
+	}
 	if prestart {
 		result.kind = freshPrimaryV3PrestartUnproven
 	}
@@ -154,4 +175,18 @@ func classifyFreshPrimaryV3RecoveryError(requestID string, prestart bool, runnin
 		result.kind, result.changed = freshPrimaryV3OwnerChange, changed.what
 	}
 	return result
+}
+
+// freshPrimaryPrestartJournalShapeV3 is the journal part of the pre-start
+// class: the owner command's own journal predicate, without a durable native
+// receipt. Whether PowerDNS started is proved natively, never from the phase.
+func freshPrimaryPrestartJournalShapeV3(j dnsEngineSwitchJournal) bool {
+	return j.Schema == dnsengineartifact.SwitchJournalSchemaV3 && j.PDNSFreshPlan != nil &&
+		j.PDNSFreshPlan.Native == nil && len(j.TargetUnitsBefore) == 1 &&
+		dnsenginerecovery.FreshPrimaryPrestartJournalV3(j)
+}
+
+func freshPrimaryPrestartEnablePhaseV3(phase string) bool {
+	return phase == dnsengineartifact.SwitchPhaseTargetEnableIntent ||
+		phase == dnsengineartifact.SwitchPhaseRollingBackTargetEnable
 }

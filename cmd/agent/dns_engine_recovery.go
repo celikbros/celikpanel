@@ -410,8 +410,11 @@ func runDNSSwitchRollbackWithMaskParentProof(
 // kurtarma başlatmaz.
 
 func freshPrimaryPrestartRefusalV3(journal dnsEngineSwitchJournal, reason string) error {
-	if dnsenginerecovery.FreshPrimaryPrestartJournalV3(journal) {
-		return fmt.Errorf("%s; if PowerDNS never started, the server owner can restore the pre-start state with /usr/libexec/celikpanel/recovery recover-dns-pdns-fresh-prestart --request-id %s, which refuses a started or changed target; preserve the journal and target until that exact request is reconciled", reason, journal.MutationRequestID)
+	// The owner command admits only the Agent's own pre-start journal shape
+	// (exactly one target unit, no durable native receipt), so a degenerate
+	// V3 journal is never pointed at it.
+	if freshPrimaryPrestartJournalShapeV3(journal) {
+		return fmt.Errorf("%s; run /usr/libexec/celikpanel/recovery dns-switch-status --quiesced --request-id %s: when it names /usr/libexec/celikpanel/recovery recover-dns-pdns-fresh-prestart --request-id %s, the server owner can restore the pre-start state with that command, which proves PowerDNS never started and refuses a started or changed target; preserve the journal and target until that exact request is reconciled", reason, journal.MutationRequestID, journal.MutationRequestID)
 	}
 	return fmt.Errorf("%s; no owner recovery command applies at phase %s; preserve the journal and target, and contact support with request id %s", reason, journal.Phase, journal.MutationRequestID)
 }
@@ -544,7 +547,7 @@ func rollbackDNSSwitchJournal(
 						ctx, systemctl, configs, journal.StateBefore,
 						dnsUnitSnapshotsMap(journal.TargetUnitsBefore),
 						dnsUnitSnapshotsMap(journal.SourceUnitsBefore),
-						dnsSwitchJournalHasEmptySource(journal),
+						dnsSwitchJournalTargetDidNotServeBefore(journal),
 					)
 				},
 			)
@@ -850,6 +853,85 @@ func canonicalNoPublicDNSAuthorityListeners(
 // this operation.
 func dnsSwitchJournalHasEmptySource(journal dnsEngineSwitchJournal) bool {
 	return journal.SourceEngine == "" && journal.SourceEpoch == 0
+}
+
+// dnsSwitchJournalReinstallsAbsentEngine reports a reinstall journal: the
+// recorded engine is its own target at the same epoch, and the reinstall's
+// entry proof (verifyDNSEngineReinstallSource) admitted it only while that
+// engine was not running and no public port-53 authority existed. Its source
+// is a recorded authority, not a serving process.
+func dnsSwitchJournalReinstallsAbsentEngine(journal dnsEngineSwitchJournal) bool {
+	return journal.Mode == transport.DNSEngineSwitchModeReinstall &&
+		journal.SourceEngine != "" &&
+		journal.SourceEngine == journal.TargetEngine &&
+		journal.SourceEpoch == journal.TargetEpoch &&
+		journal.SourceEpoch >= 1
+}
+
+// dnsSwitchJournalTargetDidNotServeBefore selects the stopped-target proof
+// class that accepts every never-started target state (absent, the package
+// guard's persistent mask, or loaded; each inactive with no public listener).
+// A first install and a reinstall both qualify: neither froze a serving
+// target. Everything else keeps the loaded-unit proof.
+func dnsSwitchJournalTargetDidNotServeBefore(journal dnsEngineSwitchJournal) bool {
+	return dnsSwitchJournalHasEmptySource(journal) ||
+		dnsSwitchJournalReinstallsAbsentEngine(journal)
+}
+
+type restoredReinstallSourceProofOps struct {
+	readState         func() (dnsEngineStateReceipt, bool, error)
+	verifyNoAuthority func() error
+}
+
+// verifyRestoredReinstallSourceWithOps is the terminal proof of an interrupted
+// reinstall's rollback. The restored state is exactly the pre-operation state:
+// the recorded authority still names the engine at its epoch - the receipt
+// equals the journal's frozen StateBefore byte for byte in content - and the
+// engine is not serving (every managed DNS unit inactive, no public port-53
+// listener, observed twice). That is what the owner retries from. It never
+// requires the engine to be active: the reinstall exists because it was not.
+//
+// Yarıda kalan bir yeniden kurulumun geri alınmasının son kanıtı: geri
+// yüklenen durum, işlem öncesi durumun tam kendisidir; kayıtlı yetki motoru
+// aynı çağda adlandırmaya devam eder ve motor hizmet vermez. Motorun etkin
+// olmasını asla istemez; yeniden kurulum tam da etkin olmadığı için vardır.
+func verifyRestoredReinstallSourceWithOps(
+	journal dnsEngineSwitchJournal,
+	ops restoredReinstallSourceProofOps,
+) error {
+	if !dnsSwitchJournalReinstallsAbsentEngine(journal) {
+		return errors.New("restored reinstall proof requires an exact reinstall journal")
+	}
+	if ops.readState == nil || ops.verifyNoAuthority == nil {
+		return errors.New("restored reinstall proof is incomplete")
+	}
+	state, exists, err := ops.readState()
+	if err != nil {
+		return fmt.Errorf("read restored reinstall engine state: %w", err)
+	}
+	same, err := dnsengineartifact.ProveFrozenSwitchSourceState(journal, state, exists)
+	if err != nil {
+		return err
+	}
+	if !same {
+		return errors.New(
+			"restored reinstall engine state differs from the recorded pre-operation authority",
+		)
+	}
+	return ops.verifyNoAuthority()
+}
+
+func verifyRestoredReinstallSource(
+	ctx context.Context,
+	systemctl string,
+	journal dnsEngineSwitchJournal,
+) error {
+	return verifyRestoredReinstallSourceWithOps(journal, restoredReinstallSourceProofOps{
+		readState: readDNSEngineState,
+		verifyNoAuthority: func() error {
+			return verifyNoManagedDNSAuthority(ctx, systemctl, journal)
+		},
+	})
 }
 
 func targetSnapshotWasActive(journal dnsEngineSwitchJournal, unit string) bool {

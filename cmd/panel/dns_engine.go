@@ -105,6 +105,11 @@ type dnsEngineSnapshot struct {
 	Topology         string                      `json:"topology"`
 	PairRole         string                      `json:"pair_role,omitempty"`
 	PairReady        *bool                       `json:"pair_ready,omitempty"`
+	// SecondaryReady is the Agent's proof that this active paired SECONDARY
+	// consumes the primary's catalog. Present exactly for an active paired
+	// secondary (Decision D, 2026-09-30); false when the proof is absent or
+	// the runtime is unknown. pair_ready stays false on a secondary.
+	SecondaryReady *bool `json:"secondary_ready,omitempty"`
 	DNSSECZoneCount  int                         `json:"dnssec_zone_count"`
 	ZoneCount        int                         `json:"zone_count"`
 	PendingZoneCount int                         `json:"pending_zone_count"`
@@ -633,10 +638,15 @@ func (p *Panel) dnsEngineSnapshot(ctx context.Context) (dnsEngineSnapshot, error
 	if state.ActiveEngine == "" && topology == transport.DNSTopologyPaired {
 		pairRole, pairIdentityErr = p.unresolvedDNSPairRole(ctx)
 	}
-	var pairReady *bool
+	var pairReady, secondaryReady *bool
 	if state.ActiveEngine != "" && state.Topology == transport.DNSTopologyPaired {
 		ready := runtimes[state.ActiveEngine].PairReady
 		pairReady = &ready
+		if state.PairRole == transport.DNSPairRoleSecondary {
+			// An unknown runtime (runtimeErr) leaves the zero value: false.
+			consumes := runtimes[state.ActiveEngine].SecondaryReady && !ready
+			secondaryReady = &consumes
+		}
 	}
 	if operation != nil && state.CurrentSwitchID != "" {
 		p.enrichAttachedDNSEngineOperation(ctx, operation, state.CurrentSwitchID)
@@ -654,7 +664,7 @@ func (p *Panel) dnsEngineSnapshot(ctx context.Context) (dnsEngineSnapshot, error
 		Revision: state.Revision, EngineEpoch: state.EngineEpoch,
 		ActiveEngine: enginePointer(state.ActiveEngine),
 		State:        presentationState, Topology: topology, PairRole: pairRole,
-		PairReady:       pairReady,
+		PairReady:       pairReady, SecondaryReady: secondaryReady,
 		DNSSECZoneCount: dnssecCount, ZoneCount: zoneCount,
 		PendingZoneCount: pendingCount, OperationID: state.CurrentSwitchID,
 		Operation: operation,
@@ -1059,6 +1069,39 @@ func adoptableUnmanagedDNSEngine(
 	return true
 }
 
+// dnsEngineRollbackStandbyTarget is the one Panel-side rule for a rolled-back
+// first install (Decision B, 2026-09-30), engine-neutral: no active engine,
+// no recorded epoch, the presentation state unconfigured, the target's
+// packages installed and stopped, and the Agent reporting them as its own
+// rollback standby (transport RollbackStandby: installed by CelikPanel, not
+// adopted; unit inactive and guard-masked or disabled; no engine state or
+// ownership receipt). No other engine may be running. Retrying it is still
+// the first install. An owner-installed engine never carries the Agent's
+// standby signal, so it keeps the takeover or adoption decision.
+//
+// Geri alınmış bir ilk kurulumun tek Panel kuralı; motordan bağımsızdır.
+// Sahibin kurduğu bir motor Agent'ın yedek işaretini asla taşımaz.
+func dnsEngineRollbackStandbyTarget(
+	activeEngine *transport.DNSEngine,
+	state string,
+	engineEpoch int64,
+	runtimes map[transport.DNSEngine]transport.DNSBackendRuntimeState,
+	target transport.DNSEngine,
+) bool {
+	runtime, ok := runtimes[target]
+	if !ok || activeEngine != nil || engineEpoch != 0 ||
+		state != dnsEngineStateUnconfigured ||
+		!runtime.Installed || runtime.Running || !runtime.RollbackStandby {
+		return false
+	}
+	for engine, other := range runtimes {
+		if engine != target && other.Running {
+			return false
+		}
+	}
+	return true
+}
+
 func dnsEngineAction(
 	snapshot dnsEngineSnapshot,
 	target transport.DNSEngine,
@@ -1070,7 +1113,14 @@ func dnsEngineAction(
 	if !runtime.Installed {
 		return "install"
 	}
-	// A failed initial BIND install may leave an exact panel-managed package
+	if dnsEngineRollbackStandbyTarget(
+		snapshot.ActiveEngine, snapshot.State, snapshot.EngineEpoch,
+		snapshot.runtime, target,
+	) {
+		return "install"
+	}
+	// An older Agent does not report RollbackStandby. A failed initial BIND
+	// install may leave an exact panel-managed package
 	// stopped as a rollback standby. With no durable source and no running DNS
 	// backend, retrying is still the initial install/activation operation.
 	if snapshot.ActiveEngine == nil &&
@@ -2002,10 +2052,41 @@ func validateLegacyPDNSPairSecondaryReconfigureScope(
 	return nil
 }
 
-func validateSourceEmptyDNSEngineReconcileScope(
+// validateInitialDNSEngineInstallReconcileScope mirrors the Agent's widened
+// rollback-evidence scope (Decision B, 2026-09-30): a first install of BIND
+// as paired secondary, or of PowerDNS standalone or as paired secondary. The
+// Agent proves the rollback (terminal failed job, no journal, no state, the
+// exact install receipt, the target stopped); the Panel only records it.
+// The fresh paired PowerDNS primary stays outside.
+func validateInitialDNSEngineInstallReconcileScope(
 	persisted persistedDNSEngineSwitch,
 ) error {
 	if err := validateInitialBINDInstallReconcileScope(persisted); err == nil {
+		return nil
+	}
+	standalone := persisted.Topology == transport.DNSTopologyStandalone &&
+		persisted.PairRole == "" && persisted.LocalIP == "" &&
+		persisted.LocalNS == "" && persisted.PeerIP == "" &&
+		persisted.PeerNS == ""
+	secondary := persisted.Topology == transport.DNSTopologyPaired &&
+		persisted.PairRole == transport.DNSPairRoleSecondary &&
+		persisted.LocalIP != "" && persisted.LocalNS != "" &&
+		persisted.PeerIP != "" && persisted.PeerNS != ""
+	if persisted.Mode != transport.DNSEngineSwitchModeSwitch ||
+		persisted.Action != "install" ||
+		persisted.SourceEngine != "" || persisted.SourceEpoch != 0 ||
+		persisted.TargetEpoch != 1 ||
+		!(persisted.TargetEngine == transport.DNSEngineBIND && secondary ||
+			persisted.TargetEngine == transport.DNSEnginePowerDNS && (standalone || secondary)) {
+		return errors.New("DNS engine reconciliation is limited to an initial failed DNS engine install")
+	}
+	return nil
+}
+
+func validateSourceEmptyDNSEngineReconcileScope(
+	persisted persistedDNSEngineSwitch,
+) error {
+	if err := validateInitialDNSEngineInstallReconcileScope(persisted); err == nil {
 		return nil
 	}
 	if err := validateLegacyPDNSPairSecondaryReconfigureScope(persisted); err == nil {
@@ -3515,7 +3596,7 @@ func (p *Panel) executeDNSEngineSwitch(
 				return err
 			}
 			if response.Error != "" {
-				return newDNSEngineAgentRejectedError(response.Error)
+				return dnsEngineAgentRejection(response.Error)
 			}
 			if !response.Applied ||
 				response.ActiveEngine != manifest.TargetEngine ||
@@ -3556,7 +3637,17 @@ func (err *dnsEngineMutationAppliedFollowupError) Unwrap() error {
 type dnsEngineAgentRejectedError struct {
 	diagnosticCode string
 	clientCode     string
+	// hostSentence is the Agent's operator sentence for a switch that ended
+	// before its target for a reason the server owner can act on (a package
+	// manager refusal, a broken dpkg statoverride). It was authored and
+	// sanitized by the Agent and is bounded again here; it is the only agent
+	// text that reaches the ledger job and the HTTP response.
+	hostSentence string
 }
+
+// dnsEngineSwitchIncompleteNamedPrefix is the Agent's wire prefix for such a
+// sentence (cmd/agent host_operator_sentence.go).
+const dnsEngineSwitchIncompleteNamedPrefix = "DNS engine switch did not complete: "
 
 func (err *dnsEngineAgentRejectedError) Error() string {
 	return "agent rejected DNS engine switch"
@@ -3585,6 +3676,13 @@ func newDNSEngineAgentRejectedError(detail string) *dnsEngineAgentRejectedError 
 		rejected.clientCode = errCodeDNSEnginePlanRejected
 	case "DNS engine switch did not complete; inspect the agent log":
 		rejected.diagnosticCode = "backend_switch_failed"
+	default:
+		if sentence, ok := strings.CutPrefix(detail, dnsEngineSwitchIncompleteNamedPrefix); ok {
+			if sentence = boundedOperatorSentence(sentence); sentence != "" {
+				rejected.diagnosticCode = "backend_switch_failed_named"
+				rejected.hostSentence = sentence
+			}
+		}
 	case "DNS engine switch did not return the exact verified target receipt":
 		rejected.diagnosticCode = "target_receipt_mismatch"
 	case "DNS engine switch finished but its durable receipt could not be verified":
@@ -3593,8 +3691,31 @@ func newDNSEngineAgentRejectedError(detail string) *dnsEngineAgentRejectedError 
 	return rejected
 }
 
+// dnsEngineAgentRejection returns the error a switch or reinstall worker ends
+// with for an Agent refusal. A refusal that carries the Agent's operator
+// sentence names it, so the ledger job records that sentence instead of the
+// generic one (R-056 rule, D-024).
+func dnsEngineAgentRejection(detail string) error {
+	rejected := newDNSEngineAgentRejectedError(detail)
+	if rejected.hostSentence == "" {
+		return rejected
+	}
+	return namedHostOperationFailure(rejected.hostSentence, rejected)
+}
+
 func writeDNSEngineChangeNotCommitted(w http.ResponseWriter, switchErr error) {
 	var rejected *dnsEngineAgentRejectedError
+	if errors.As(switchErr, &rejected) && rejected.hostSentence != "" {
+		writeCodedErrorDetails(
+			w,
+			http.StatusConflict,
+			errCodeDNSEngineChangeNotCommitted,
+			"The DNS engine change was not committed. The pre-operation serving state was verified; packages or setup files may still have changed. "+rejected.hostSentence,
+			"",
+			[]string{rejected.hostSentence},
+		)
+		return
+	}
 	if errors.As(switchErr, &rejected) &&
 		rejected.clientCode == errCodeDNSEnginePlanRejected {
 		writeCodedError(

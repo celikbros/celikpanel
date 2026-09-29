@@ -289,7 +289,11 @@ func (p *Panel) buildServerSetupPlan(ctx context.Context, state serverSetupState
 		return plan, err
 	}
 	if existingFirewall.Error != "" {
-		return plan, errors.New("firewall status could not be verified")
+		// A host condition the Agent reported is a plan blocker with a stable
+		// code and the next action, never an internal error (D-024).
+		blocker := setupFirewallStatusBlocker(existingFirewall)
+		log.Printf("setup plan blocked by firewall status %s: %s", blocker, boundedSetupHostReason(existingFirewall.Error))
+		addBlocker(blocker)
 	}
 	plan.TCPPorts = append(plan.TCPPorts, existingFirewall.TCPPorts...)
 	plan.TCPPorts = append(plan.TCPPorts, existingFirewall.SSHPorts...)
@@ -1150,6 +1154,9 @@ func (p *Panel) runServerSetupFirewall(ctx context.Context, plan serverSetupPlan
 		return false, err
 	}
 	if current.Error != "" {
+		if current.ErrorCode == transport.FirewallStatusHostRestartRequired {
+			return false, fmt.Errorf("%w: %s", errServerSetupHostRestartRequired, boundedSetupHostReason(current.Error))
+		}
 		return false, errors.New(current.Error)
 	}
 	if !current.EngineAvailable {
@@ -1257,6 +1264,14 @@ func serverSetupFailureForStep(step serverSetupExecutionStep, cause error) *serv
 		return &serviceOperationError{Code: child.Code, Message: child.Message}
 	}
 	switch {
+	case errors.Is(cause, errServerSetupHostRestartRequired):
+		return &serviceOperationError{Code: transport.FirewallStatusHostRestartRequired, Message: setupHostRestartRequiredMessage}
+	case errors.Is(cause, errServerSetupDNSRolledBack):
+		message := "The DNS engine installation did not complete and CelikPanel undid it: no DNS engine is running on this server, and the installed packages were kept stopped for the next attempt. Nothing else was changed. The server administrator can review a new plan and start this DNS step again; it runs as a new installation."
+		if sentence := namedHostOperationSentence(cause); sentence != "" {
+			message += " Reason: " + sentence
+		}
+		return &serviceOperationError{Code: "server_setup_dns_rolled_back", Message: message}
 	case errors.Is(cause, errServerSetupInfrastructureDNSChanged):
 		return &serviceOperationError{Code: "server_setup_infrastructure_dns_changed", Message: "The DNS zone or its ownership changed after review. Existing records were preserved. Review the infrastructure records again before continuing."}
 	case errors.Is(cause, errServerSetupBuildChanged):
@@ -1287,6 +1302,50 @@ func serverSetupFailureForStep(step serverSetupExecutionStep, cause error) *serv
 }
 
 var errServerSetupLicenseRequired = errors.New("setup requires an active license")
+
+// errServerSetupHostRestartRequired: the Agent proved the running kernel
+// cannot load netfilter until the server is restarted.
+var errServerSetupHostRestartRequired = errors.New("the server must be restarted before its firewall can be checked")
+
+const setupHostRestartRequiredMessage = "This server was updated and must be restarted before its firewall can be checked. " +
+	"Restart the server, then open setup again; your draft continues and nothing was changed."
+
+// setupFirewallStatusBlocker turns the Agent's firewall status error into a
+// plan blocker. The restart case is fully described by its code. The other
+// classified codes carry the Agent's reason, bounded and on one line, behind
+// the code (the wizard shows the part before ':' as text and the whole code
+// under Technical details). An older Agent without a code is unknown.
+func setupFirewallStatusBlocker(status FirewallStatusResp) string {
+	switch status.ErrorCode {
+	case transport.FirewallStatusHostRestartRequired:
+		return transport.FirewallStatusHostRestartRequired
+	case transport.FirewallStatusKernelUnavailable, transport.FirewallStatusEngineUnavailable,
+		transport.FirewallStatusBusy:
+		return status.ErrorCode + ":" + boundedSetupHostReason(status.Error)
+	default:
+		return transport.FirewallStatusUnknown + ":" + boundedSetupHostReason(status.Error)
+	}
+}
+
+// boundedSetupHostReason is the first line of a host-reported reason with
+// control characters removed and bounded, for logs and plan blockers.
+func boundedSetupHostReason(reason string) string {
+	line, _, _ := strings.Cut(strings.TrimSpace(reason), "\n")
+	line = strings.Join(strings.Fields(strings.Map(func(r rune) rune {
+		if r < 0x20 || r == 0x7f {
+			return ' '
+		}
+		return r
+	}, line)), " ")
+	if runes := []rune(line); len(runes) > 180 {
+		line = string(runes[:180]) + "..."
+	}
+	if line == "" {
+		return "no reason reported"
+	}
+	return line
+}
+
 var errServerSetupBuildChanged = errors.New("setup build changed; review the remaining plan")
 
 func (p *Panel) requireServerSetupAdmission() error {

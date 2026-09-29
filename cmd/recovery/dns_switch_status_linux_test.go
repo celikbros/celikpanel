@@ -483,6 +483,14 @@ func TestDNSSwitchStatusReleasedTextPointsToAdmittedOwnerCommand(t *testing.T) {
 			strings.Contains(text, "restart the Agent") {
 			t.Fatalf("%s: deliberate release text does not point to the named command: %q", tc.name, text)
 		}
+		// Item 3b (2026-09-30): the Agent retries a released V1 PowerDNS
+		// adoption by itself at its next start, so that text names the Agent
+		// first and the owner command as the alternative; the V2 BIND switch,
+		// which the Agent never runs, names only the command.
+		agentRetries := strings.Contains(text, "retries the same rollback by itself")
+		if agentRetries != (tc.name == ownerPDNSAdoptionInverseCommand) {
+			t.Fatalf("%s: Agent retry named=%v: %q", tc.name, agentRetries, text)
+		}
 		text, known = releasedDNSSwitchGuidance(ownerGuidanceReleased(tc.evidence, dnsengineartifact.ReleasedHostWindowCode))
 		if !known || !strings.Contains(text, "recovery window") || strings.Contains(text, "named above") {
 			t.Fatalf("%s: host-window release text changed: %q", tc.name, text)

@@ -164,7 +164,12 @@ func prepareFreshPDNSPrimaryIntentV3(
 	if err := verifyPDNSTargetStageFilesystemV4(path); err != nil {
 		return dnsEngineSwitchJournal{}, err
 	}
-	for _, name := range []string{pdnsDBPath(), pdnsDBPath() + "-wal", pdnsDBPath() + "-shm", pdnsDBPath() + "-journal", path, path + "-wal", path + "-shm", path + "-journal"} {
+	build, buildSidecars, err := dnsengineartifact.PDNSFreshCandidateBuildPathsV3(path)
+	if err != nil {
+		return dnsEngineSwitchJournal{}, err
+	}
+	absentBefore := []string{pdnsDBPath(), pdnsDBPath() + "-wal", pdnsDBPath() + "-shm", pdnsDBPath() + "-journal", path, path + "-wal", path + "-shm", path + "-journal", build}
+	for _, name := range append(absentBefore, buildSidecars...) {
 		if _, err := os.Lstat(name); !errors.Is(err, os.ErrNotExist) {
 			if err == nil {
 				err = fmt.Errorf("PowerDNS fresh target path already exists: %s", name)
@@ -195,21 +200,32 @@ func stageFreshPDNSPrimaryCandidateV3(
 	if err := verifyPDNSTargetStageFilesystemV4(intent.PDNSCandidatePath); err != nil {
 		return dnsEngineSwitchJournal{}, err
 	}
+	// Build, verify, own and read the database under this operation's
+	// temporary name; only a complete, verified file is renamed to the
+	// candidate name. A crash in between leaves the temporary file, which the
+	// pre-start inverse removes (item 4b).
+	build, _, err := dnsengineartifact.PDNSFreshCandidateBuildPathsV3(intent.PDNSCandidatePath)
+	if err != nil {
+		return dnsEngineSwitchJournal{}, err
+	}
 	if err := buildPDNSSwitchCandidateWithPrimaryCatalogSerial(
-		ctx, intent.PDNSCandidatePath, manifest, binding, intent.PrimaryCatalogSerial,
+		ctx, build, manifest, binding, intent.PrimaryCatalogSerial,
 	); err != nil {
 		return dnsEngineSwitchJournal{}, err
 	}
 	if err := verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
-		ctx, intent.PDNSCandidatePath, manifest, binding, intent.PrimaryCatalogSerial,
+		ctx, build, manifest, binding, intent.PrimaryCatalogSerial,
 	); err != nil {
 		return dnsEngineSwitchJournal{}, err
 	}
-	if err := setPDNSDatabaseOwnership(intent.PDNSCandidatePath); err != nil {
+	if err := setPDNSDatabaseOwnership(build); err != nil {
 		return dnsEngineSwitchJournal{}, err
 	}
-	staged, err := captureFreshPDNSSQLV3(ctx, intent.PDNSCandidatePath)
+	staged, err := captureFreshPDNSSQLV3(ctx, build)
 	if err != nil {
+		return dnsEngineSwitchJournal{}, err
+	}
+	if err := publishFreshPDNSCandidateBuildV3(build, intent.PDNSCandidatePath); err != nil {
 		return dnsEngineSwitchJournal{}, err
 	}
 	proof, err := dnsenginerecovery.CapturePDNSTargetCandidateV4(intent.PDNSCandidatePath)
@@ -217,6 +233,37 @@ func stageFreshPDNSPrimaryCandidateV3(
 		return dnsEngineSwitchJournal{}, err
 	}
 	return dnsJournalPolicy().StagePDNSFreshPrimaryCandidateV3(intent, proof, staged)
+}
+
+// publishFreshPDNSCandidateBuildV3 makes the complete build durable under the
+// candidate name: fsync the file, rename it without replacing anything in the
+// same root-private directory, fsync the directory. The inode, owner, mode and
+// bytes the journal will seal are exactly the build's.
+func publishFreshPDNSCandidateBuildV3(build, candidate string) error {
+	if filepath.Dir(build) != filepath.Dir(candidate) {
+		return errors.New("v3 candidate build is not beside its candidate name")
+	}
+	file, err := os.OpenFile(build, os.O_RDONLY|unix.O_NOFOLLOW, 0)
+	if err != nil {
+		return err
+	}
+	syncErr := file.Sync()
+	closeErr := file.Close()
+	if err := errors.Join(syncErr, closeErr); err != nil {
+		return fmt.Errorf("sync v3 candidate build: %w", err)
+	}
+	dirFD, err := unix.Open(filepath.Dir(candidate), unix.O_DIRECTORY|unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
+	if err != nil {
+		return err
+	}
+	defer unix.Close(dirFD)
+	if err := unix.Renameat2(dirFD, filepath.Base(build), dirFD, filepath.Base(candidate), unix.RENAME_NOREPLACE); err != nil {
+		return fmt.Errorf("publish v3 candidate build: %w", err)
+	}
+	if err := unix.Fsync(dirFD); err != nil {
+		return fmt.Errorf("sync v3 candidate directory: %w", err)
+	}
+	return nil
 }
 
 func captureFreshPDNSSQLV3(ctx context.Context, path string) (pdnsnative.Snapshot, error) {

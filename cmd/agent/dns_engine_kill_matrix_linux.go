@@ -490,6 +490,60 @@ func dnsKillMatrixLaterBINDFrozenSourceProof(journal dnsEngineSwitchJournal) boo
 		journal.PeerNS == "" && !journal.StateBefore.Exists
 }
 
+// dnsKillMatrixFreshPairedPrimaryV3 reports the one V3 shape the hook admits:
+// the fresh paired PowerDNS primary produced by the pdns-switch driver (empty
+// source, target PowerDNS at epoch 1, paired topology, primary role, a V3
+// fresh-primary plan). Every other V3 journal, and any V3 journal under
+// another driver, keeps the schema refusal.
+//
+// Hook'un kabul ettiği tek V3 biçimi: pdns-switch sürücüsünün ürettiği boş
+// kaynaklı, eşli, birincil PowerDNS ilk kurulumu. Diğer her V3 günlüğü
+// reddedilmeye devam eder.
+func dnsKillMatrixFreshPairedPrimaryV3(driver string, journal dnsEngineSwitchJournal) bool {
+	return driver == dnsEngineSwitchFaultDriverPDNSSwitch &&
+		journal.Schema == dnsengineartifact.SwitchJournalSchemaV3 &&
+		journal.PDNSFreshPlan != nil &&
+		journal.Mode == "switch" &&
+		journal.SourceEngine == "" && journal.SourceEpoch == 0 &&
+		journal.TargetEngine == "pdns" && journal.TargetEpoch == 1 &&
+		journal.Topology == "paired" && journal.PairRole == "primary"
+}
+
+// dnsKillMatrixSelectsPhase decides whether journal is the selected write.
+//
+// V1/V2 journals are selected by their exact phase, unchanged.
+//
+// For the fresh paired PowerDNS primary (V3) two rules are added:
+//   - V3 has no source-stopped phase. The harness names the manifest
+//     coordinate source-stopped for the boundary where the V3 producer
+//     records target-enable-intent (the target unit is about to be enabled
+//     and started); only for this shape does a configured source-stopped
+//     select the target-enable-intent write. A configured target-enable-intent
+//     selects it directly.
+//   - target-started is written twice: once right after the start, and again
+//     with the native observation attached. The selected write is always the
+//     FIRST one (no native observation). The second write is never selected,
+//     so the cut is deterministic whether the point is before- or after-write.
+//
+// V3 fresh-primary günlüğünde source-stopped yoktur; yalnız bu biçim için
+// yapılandırılmış source-stopped, target-enable-intent yazımını seçer.
+// target-started iki kez yazılır; seçilen her zaman ilk yazımdır.
+func (runtime *dnsKillMatrixRuntime) selectsPhase(driver string, journal dnsEngineSwitchJournal) bool {
+	if !dnsKillMatrixFreshPairedPrimaryV3(driver, journal) {
+		return journal.Phase == runtime.config.Phase
+	}
+	switch {
+	case journal.Phase == dnsSwitchPhaseTargetStarted:
+		return runtime.config.Phase == dnsSwitchPhaseTargetStarted &&
+			journal.PDNSFreshPlan.Native == nil
+	case journal.Phase == dnsengineartifact.SwitchPhaseTargetEnableIntent:
+		return runtime.config.Phase == dnsengineartifact.SwitchPhaseTargetEnableIntent ||
+			runtime.config.Phase == dnsSwitchPhaseSourceStopped
+	default:
+		return journal.Phase == runtime.config.Phase
+	}
+}
+
 func (runtime *dnsKillMatrixRuntime) validateObservation(
 	driver string,
 	point string,
@@ -509,7 +563,8 @@ func (runtime *dnsKillMatrixRuntime) validateObservation(
 		)
 	}
 	if journal.Schema != dnsEngineSwitchJournalSchema &&
-		!(driver == dnsEngineSwitchFaultDriverBIND && journal.Schema == dnsengineartifact.SwitchJournalSchemaV2) {
+		!(driver == dnsEngineSwitchFaultDriverBIND && journal.Schema == dnsengineartifact.SwitchJournalSchemaV2) &&
+		!dnsKillMatrixFreshPairedPrimaryV3(driver, journal) {
 		return fmt.Errorf(
 			"DNS kill-matrix journal schema mismatch at %s: observed %q",
 			label, journal.Schema,
@@ -615,7 +670,7 @@ func (runtime *dnsKillMatrixRuntime) hook(
 			driver, point, journal, precursorSpec,
 		)
 	}
-	if point != runtime.config.Point || journal.Phase != runtime.config.Phase {
+	if point != runtime.config.Point || !runtime.selectsPhase(driver, journal) {
 		return nil
 	}
 	if err := runtime.validateObservation(

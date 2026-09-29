@@ -416,11 +416,13 @@ func (hostDNSEngineBackend) Readiness(
 	); err != nil {
 		return transport.DNSBackendReadinessResponse{}, err
 	}
+	units := make([]dnsUnitState, len(states))
 	for index := range states {
 		unit, captureErr := captureDNSUnitState(ctx, systemctl, states[index].Unit)
 		if captureErr != nil {
 			return transport.DNSBackendReadinessResponse{}, captureErr
 		}
+		units[index] = unit
 		states[index].Running = unit.active()
 	}
 	state, exists, stateErr := readDNSEngineState()
@@ -537,6 +539,16 @@ func (hostDNSEngineBackend) Readiness(
 					return powerDNSSecondaryPairReady(proofCtx, state)
 				},
 			}
+		}
+	}
+	if !exists {
+		for index, packages := range [][]string{layout.Packages, pdnsPackages} {
+			if index == 0 && layoutErr != nil {
+				continue
+			}
+			states[index].RollbackStandby = hostRollbackStandbyForBackendReadiness(
+				states[index], units[index], profile.PackageManager, packages,
+			)
 		}
 	}
 	// What a takeover of this BIND would replace, reported as facts so the
@@ -821,6 +833,57 @@ func installOwnedStandbyManagedForBackendReadiness(
 		exactDNSEngineInstallOwnership(
 			receipt, receiptExists, engine, manager, packages,
 		)
+}
+
+// rollbackStandbyForBackendReadiness is the one definition of a rolled-back
+// first install's standby (transport.DNSBackendRuntimeState.RollbackStandby).
+// stateExists is whether any DNS engine state receipt exists.
+func rollbackStandbyForBackendReadiness(
+	runtimeState transport.DNSBackendRuntimeState,
+	unit dnsUnitState,
+	stateExists bool,
+	ownershipExists bool,
+	ownershipErr error,
+	receipt dnsEngineInstallOwnershipReceipt,
+	receiptExists bool,
+	receiptErr error,
+	manager hostplatform.PackageManager,
+	packages []string,
+) bool {
+	if stateExists || ownershipErr != nil || ownershipExists || receiptErr != nil ||
+		!runtimeState.Installed || runtimeState.Running ||
+		unit.Name != runtimeState.Unit || unit.ActiveState != "inactive" {
+		return false
+	}
+	guardMasked := unit.LoadState == "masked" && unit.UnitFileState == "masked"
+	loadedDisabled := unit.LoadState == "loaded" && unit.UnitFileState == "disabled"
+	if !guardMasked && !loadedDisabled {
+		return false
+	}
+	return exactDNSEngineInstallOwnership(
+		receipt, receiptExists, runtimeState.Engine, manager, packages,
+	) && !receipt.AdoptedPresent && len(receipt.MissingBefore) != 0 &&
+		validateDNSEngineInstallOwnership(receipt) == nil
+}
+
+func hostRollbackStandbyForBackendReadiness(
+	runtimeState transport.DNSBackendRuntimeState,
+	unit dnsUnitState,
+	manager hostplatform.PackageManager,
+	packages []string,
+) bool {
+	if !runtimeState.Installed || runtimeState.Running || len(packages) == 0 {
+		return false
+	}
+	_, ownershipExists, ownershipErr := readDNSEngineOwnership(runtimeState.Engine)
+	receipt, receiptExists, receiptErr := readDNSEngineInstallOwnership(runtimeState.Engine)
+	if ownershipErr != nil || receiptErr != nil {
+		log.Printf("%s rollback standby proof failed: %v", runtimeState.Engine, errors.Join(ownershipErr, receiptErr))
+	}
+	return rollbackStandbyForBackendReadiness(
+		runtimeState, unit, false, ownershipExists, ownershipErr,
+		receipt, receiptExists, receiptErr, manager, packages,
+	)
 }
 
 func installOwnershipFallbackAllowed(
@@ -1461,6 +1524,15 @@ func (hostDNSEngineBackend) Switch(
 			missing = append(missing, packageName)
 		}
 	}
+	// Before any receipt, mask or package effect: dpkg would refuse the
+	// install while its statoverride database names a removed user or group.
+	// Repair only the product's own legacy entry; refuse anything else with
+	// the owner's command (D-022, D-024).
+	if len(missing) != 0 && profile.PackageManager == hostplatform.PackageManagerAPT {
+		if err := packageStatOverridePreflight(ctx); err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
+	}
 	// systemctl mask creates persistent links below /etc/systemd/system. Prove
 	// that exact root-owned 0755 parent before publishing install ownership or
 	// allowing any package/config mutation. This is deliberately read-only:
@@ -1710,7 +1782,7 @@ func (hostDNSEngineBackend) Switch(
 				}
 				return rollbackBINDActivation(
 					rollbackCtx, systemctl, configs, stateBefore, targetBefore, sourceBefore,
-					dnsSwitchJournalHasEmptySource(journal),
+					dnsSwitchJournalTargetDidNotServeBefore(journal),
 					proveSource,
 				)
 			},

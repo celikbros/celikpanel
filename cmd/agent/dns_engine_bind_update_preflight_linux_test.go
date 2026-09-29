@@ -229,7 +229,6 @@ func TestBINDUpdatePreflightRootMigrationCandidateReadOnly(t *testing.T) {
 						}
 						return nil, testBINDExitError(1)
 					},
-					add: func() ([]byte, error) { t.Fatal("read-only preflight added statoverride"); return nil, nil },
 				}
 				before := preflightFileSnapshot(t, root)
 				verified := false
@@ -296,7 +295,6 @@ func TestBINDUpdatePreflightRootCandidateRejectsUnsafeOrChangingMetadata(t *test
 					}
 					return nil, testBINDExitError(1)
 				},
-				add: func() ([]byte, error) { t.Fatal("override changed"); return nil, nil },
 			}
 			before := preflightFileSnapshot(t, root)
 			err := verifyAPTBindRootMigrationCandidateAt(fd, testBINDGID, ops, func() error {

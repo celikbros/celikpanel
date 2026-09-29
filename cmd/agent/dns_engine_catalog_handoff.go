@@ -468,6 +468,11 @@ func verifyRestoredDNSSwitchSource(
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 	journal dnsEngineSwitchJournal,
 ) error {
+	// A reinstall's source is the recorded engine that was not running; its
+	// rollback restores exactly that, never a running BIND (item 2, D-026).
+	if dnsSwitchJournalReinstallsAbsentEngine(journal) {
+		return verifyRestoredReinstallSource(ctx, systemctl, journal)
+	}
 	switch journal.SourceEngine {
 	case transport.DNSEnginePowerDNS:
 		if err := verifyOnlyPDNSActive(ctx, systemctl); err != nil {

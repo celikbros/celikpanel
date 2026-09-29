@@ -141,7 +141,7 @@ func completeInstalledFreshPDNSPrestartV3(parent context.Context, request string
 			return shape, err
 		}
 		switch shape {
-		case freshPDNSRecoveryIntentCleanV3, freshPDNSRecoveryStagedV3, freshPDNSRecoveryRenamedV3, freshPDNSRecoveryRestoredV3:
+		case freshPDNSRecoveryIntentCleanV3, freshPDNSRecoveryIntentPartialV3, freshPDNSRecoveryStagedV3, freshPDNSRecoveryRenamedV3, freshPDNSRecoveryRestoredV3:
 			return shape, nil
 		default:
 			return freshPDNSRecoveryUnknownV3, errors.New("PowerDNS may have started; prestart inverse is forbidden")
@@ -199,6 +199,12 @@ func completeInstalledFreshPDNSPrestartV3(parent context.Context, request string
 				if err := dnsenginerecovery.RemoveFreshPrimaryStagedV3(policy, j, func() error { return guard(ctx) }); err != nil {
 					return err
 				}
+			}
+		} else if current, err := assess(j); err != nil {
+			return err
+		} else if current == freshPDNSRecoveryIntentPartialV3 {
+			if err := dnsenginerecovery.RemoveFreshPrimaryPartialV3(policy, j, func() error { return guard(ctx) }); err != nil {
+				return err
 			}
 		}
 		if shape, err = assess(j); err != nil || (shape != freshPDNSRecoveryRestoredV3 && shape != freshPDNSRecoveryIntentCleanV3) {

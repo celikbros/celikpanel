@@ -246,6 +246,25 @@ type DNSBackendRuntimeState struct {
 	// Yapılandırma bütünüyle okundu ve hiçbir view bildirmiyorsa nil'dir
 	// (defter R-044).
 	ForeignViews *DNSForeignEngineViews `json:"foreign_views,omitempty"`
+	// RollbackStandby reports the packages a rolled-back FIRST install left
+	// on the host as rollback standby: no DNS engine state receipt exists,
+	// no engine ownership receipt for this engine exists, CelikPanel's
+	// install-ownership receipt names exactly this engine's packages and
+	// records that it installed them (non-empty missing-before, not an
+	// adoption of packages already present), and the engine's unit is
+	// inactive and either under the package guard's persistent mask or loaded
+	// and disabled. Retrying such an engine is still its first install. An
+	// owner-installed engine never reads true, so it keeps the takeover or
+	// adoption decision. Additive (2026-09-30): an older Agent omits it and
+	// the Panel keeps its earlier behaviour.
+	//
+	// RollbackStandby, geri alınmış bir İLK kurulumun sunucuda yedek olarak
+	// bıraktığı paketleri bildirir: motor durumu makbuzu yok, bu motorun
+	// sahiplik makbuzu yok, CelikPanel'in kurulum makbuzu bu paketleri
+	// kendisinin kurduğunu kaydediyor ve birim etkin değil, koruyucu maskeli ya
+	// da yüklü ve devre dışı. Yeniden denemek yine ilk kurulumdur. Sahibin
+	// kurduğu bir motor asla true okumaz. Eklemelidir; eski Agent onu göndermez.
+	RollbackStandby bool `json:"rollback_standby,omitempty"`
 }
 
 // The vocabulary of a takeover's difference list. The agent reads these

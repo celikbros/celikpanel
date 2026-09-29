@@ -78,9 +78,8 @@ func exactTestAPTBindStatOverrideOps(
 		output []byte
 		err    error
 	},
-) (aptBINDStatOverrideOps, *int) {
+) aptBINDStatOverrideOps {
 	listIndex := 0
-	addCalls := 0
 	return aptBINDStatOverrideOps{
 		owner: func() ([]byte, error) {
 			return []byte(aptBINDExactPackageOwnerLine), nil
@@ -93,11 +92,7 @@ func exactTestAPTBindStatOverrideOps(
 			listIndex++
 			return result.output, result.err
 		},
-		add: func() ([]byte, error) {
-			addCalls++
-			return nil, nil
-		},
-	}, &addCalls
+	}
 }
 
 func TestAPTBindStatOverrideCommandContract(t *testing.T) {
@@ -139,19 +134,23 @@ func TestAPTBindStatOverrideCommandContract(t *testing.T) {
 	}
 	_, _ = ops.owner()
 	_, _ = ops.list()
-	_, _ = ops.add()
 	want := []invocation{
 		{name: "/usr/bin/dpkg-query", args: []string{"-S", "--", "/var/cache/bind"}},
 		{name: "/usr/sbin/dpkg-statoverride", args: []string{"--list", "/var/cache/bind"}},
-		{name: "/usr/sbin/dpkg-statoverride", args: []string{"--no-force-statoverride-add", "--add", "root", "bind", "1775", "/var/cache/bind"}},
 	}
 	if !reflect.DeepEqual(calls, want) {
-		t.Fatalf("dpkg durability calls = %#v, want %#v", calls, want)
+		t.Fatalf("dpkg statoverride calls = %#v, want %#v", calls, want)
 	}
 	for _, call := range calls {
 		for _, argument := range call.args {
+			// The root proof only reads (Decision A, 2026-09-30): it never
+			// registers an override (an entry naming the package's group
+			// breaks dpkg once the owner purges it) and never removes the
+			// legacy one older releases require after a rollback.
 			if argument == "--force" || argument == "--update" ||
-				argument == "--force-statoverride-add" {
+				argument == "--add" || argument == "--remove" ||
+				strings.HasPrefix(argument, "--force-") ||
+				strings.HasPrefix(argument, "#") {
 				t.Fatalf("unsafe dpkg argument in %#v", call)
 			}
 		}
@@ -190,7 +189,10 @@ func TestClassifyExactAPTBindStatOverride(t *testing.T) {
 	}
 }
 
-func TestVerifyOrCreateExactAPTBindStatOverrideLifecycle(t *testing.T) {
+// The root proof accepts absent (hosts installed by this release) and the
+// exact legacy entry (hosts installed earlier) and leaves both untouched on
+// every path; the ops cannot write. A conflicting entry is the owner's.
+func TestVerifyAPTBindStatOverrideAcceptsLegacyAndAbsentReadOnly(t *testing.T) {
 	exactList := struct {
 		output []byte
 		err    error
@@ -199,132 +201,53 @@ func TestVerifyOrCreateExactAPTBindStatOverrideLifecycle(t *testing.T) {
 		output []byte
 		err    error
 	}{err: testBINDExitError(1)}
-
-	for _, mode := range []uint32{
-		aptBINDStockCacheParentMode,
-		aptBINDCacheParentMode,
-	} {
-		t.Run("exact-idempotent-"+strconv.FormatUint(uint64(mode), 8), func(t *testing.T) {
-			ops, addCalls := exactTestAPTBindStatOverrideOps(exactList)
-			if err := verifyOrCreateExactAPTBindStatOverride(true, mode, ops); err != nil {
-				t.Fatalf("exact override rejected: %v", err)
-			}
-			if *addCalls != 0 {
-				t.Fatalf("exact override re-added %d times", *addCalls)
+	conflict := exactList
+	conflict.output = []byte("root root 1775 /var/cache/bind\n")
+	for _, mode := range []uint32{aptBINDStockCacheParentMode, aptBINDCacheParentMode} {
+		name := strconv.FormatUint(uint64(mode), 8)
+		t.Run("absent-"+name, func(t *testing.T) {
+			if err := verifyAPTBindStatOverride(mode, exactTestAPTBindStatOverrideOps(absentList)); err != nil {
+				t.Fatalf("absent override rejected: %v", err)
 			}
 		})
-		t.Run("absent-create-"+strconv.FormatUint(uint64(mode), 8), func(t *testing.T) {
-			ops, addCalls := exactTestAPTBindStatOverrideOps(absentList, exactList)
-			if err := verifyOrCreateExactAPTBindStatOverride(true, mode, ops); err != nil {
-				t.Fatalf("absent override was not created: %v", err)
-			}
-			if *addCalls != 1 {
-				t.Fatalf("add calls = %d, want 1", *addCalls)
+		t.Run("legacy-"+name, func(t *testing.T) {
+			if err := verifyAPTBindStatOverride(mode, exactTestAPTBindStatOverrideOps(exactList)); err != nil {
+				t.Fatalf("legacy override rejected: %v", err)
 			}
 		})
 	}
-
-	t.Run("verify-only-absent", func(t *testing.T) {
-		ops, addCalls := exactTestAPTBindStatOverrideOps(absentList)
-		if err := verifyOrCreateExactAPTBindStatOverride(
-			false, aptBINDCacheParentMode, ops,
-		); err == nil {
-			t.Fatal("verify-only accepted an absent override")
+	if err := verifyAPTBindStatOverride(aptBINDCacheParentMode, exactTestAPTBindStatOverrideOps(conflict)); err == nil {
+		t.Fatal("conflicting override was accepted")
+	}
+	ops := exactTestAPTBindStatOverrideOps(exactList)
+	ops.owner = func() ([]byte, error) { return []byte("local-admin: /var/cache/bind\n"), nil }
+	if err := verifyAPTBindStatOverride(aptBINDCacheParentMode, ops); err == nil {
+		t.Fatal("non-bind9 package ownership was accepted")
+	}
+	ops = exactTestAPTBindStatOverrideOps(exactList)
+	ops.owner = func() ([]byte, error) { return nil, errors.New("query failed") }
+	if err := verifyAPTBindStatOverride(aptBINDCacheParentMode, ops); err == nil {
+		t.Fatal("unverified package ownership was accepted")
+	}
+	ownerCalls := 0
+	ops = aptBINDStatOverrideOps{
+		owner: func() ([]byte, error) { ownerCalls++; return []byte(aptBINDExactPackageOwnerLine), nil },
+		list:  func() ([]byte, error) { return []byte(aptBINDExactStatOverrideLine), nil },
+	}
+	if err := verifyAPTBindStatOverride(0o0755, ops); err == nil || ownerCalls != 0 {
+		t.Fatalf("unsupported parent mode err=%v ownerCalls=%d", err, ownerCalls)
+	}
+	// The mutating and the signed-update paths share this read-only proof:
+	// no path of the root proof can remove the legacy entry.
+	raw, err := os.ReadFile("dns_engine_bind_root_linux.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, forbidden := range []string{`"--remove"`, `"--add"`, "migrateHostBINDLegacyStatOverride"} {
+		if strings.Contains(string(raw), forbidden) {
+			t.Fatalf("the BIND root proof contains %s", forbidden)
 		}
-		if *addCalls != 0 {
-			t.Fatal("verify-only attempted to add an override")
-		}
-	})
-	t.Run("conflicting", func(t *testing.T) {
-		conflict := exactList
-		conflict.output = []byte("root root 1775 /var/cache/bind\n")
-		ops, addCalls := exactTestAPTBindStatOverrideOps(conflict)
-		if err := verifyOrCreateExactAPTBindStatOverride(
-			true, aptBINDCacheParentMode, ops,
-		); err == nil {
-			t.Fatal("conflicting override was accepted")
-		}
-		if *addCalls != 0 {
-			t.Fatal("conflicting override was overwritten")
-		}
-	})
-	t.Run("package-owner-mismatch", func(t *testing.T) {
-		ops, addCalls := exactTestAPTBindStatOverrideOps(exactList)
-		ops.owner = func() ([]byte, error) {
-			return []byte("local-admin: /var/cache/bind\n"), nil
-		}
-		if err := verifyOrCreateExactAPTBindStatOverride(
-			true, aptBINDCacheParentMode, ops,
-		); err == nil {
-			t.Fatal("non-bind9 package ownership was accepted")
-		}
-		if *addCalls != 0 {
-			t.Fatal("override was added to a non-bind9 path")
-		}
-	})
-	t.Run("package-owner-command-failure", func(t *testing.T) {
-		ops, _ := exactTestAPTBindStatOverrideOps(exactList)
-		ops.owner = func() ([]byte, error) { return nil, errors.New("query failed") }
-		if err := verifyOrCreateExactAPTBindStatOverride(
-			true, aptBINDCacheParentMode, ops,
-		); err == nil {
-			t.Fatal("unverified package ownership was accepted")
-		}
-	})
-	t.Run("add-failure-exact-readback", func(t *testing.T) {
-		ops, _ := exactTestAPTBindStatOverrideOps(absentList, exactList)
-		ops.add = func() ([]byte, error) { return nil, errors.New("uncertain add") }
-		if err := verifyOrCreateExactAPTBindStatOverride(
-			true, aptBINDStockCacheParentMode, ops,
-		); err != nil {
-			t.Fatalf("exact committed readback did not reconcile add failure: %v", err)
-		}
-	})
-	t.Run("add-failure-absent-readback", func(t *testing.T) {
-		ops, _ := exactTestAPTBindStatOverrideOps(absentList, absentList)
-		ops.add = func() ([]byte, error) { return nil, errors.New("failed add") }
-		if err := verifyOrCreateExactAPTBindStatOverride(
-			true, aptBINDStockCacheParentMode, ops,
-		); err == nil {
-			t.Fatal("failed absent add was accepted")
-		}
-	})
-	t.Run("unexpected-add-output", func(t *testing.T) {
-		ops, _ := exactTestAPTBindStatOverrideOps(absentList, exactList)
-		ops.add = func() ([]byte, error) { return []byte("warning\n"), nil }
-		if err := verifyOrCreateExactAPTBindStatOverride(
-			true, aptBINDStockCacheParentMode, ops,
-		); err == nil {
-			t.Fatal("unexpected add output was accepted")
-		}
-	})
-	t.Run("readback-conflict", func(t *testing.T) {
-		conflict := exactList
-		conflict.output = []byte("root root 1775 /var/cache/bind\n")
-		ops, _ := exactTestAPTBindStatOverrideOps(absentList, conflict)
-		if err := verifyOrCreateExactAPTBindStatOverride(
-			true, aptBINDStockCacheParentMode, ops,
-		); err == nil {
-			t.Fatal("conflicting add readback was accepted")
-		}
-	})
-	t.Run("unsupported-parent-mode", func(t *testing.T) {
-		ownerCalls := 0
-		ops := aptBINDStatOverrideOps{
-			owner: func() ([]byte, error) {
-				ownerCalls++
-				return []byte(aptBINDExactPackageOwnerLine), nil
-			},
-			list: func() ([]byte, error) { return []byte(aptBINDExactStatOverrideLine), nil },
-			add:  func() ([]byte, error) { return nil, nil },
-		}
-		if err := verifyOrCreateExactAPTBindStatOverride(true, 0o0755, ops); err == nil {
-			t.Fatal("unsupported parent mode was accepted")
-		}
-		if ownerCalls != 0 {
-			t.Fatal("durability commands ran for unsafe parent metadata")
-		}
-	})
+	}
 }
 
 func newAPTBindRootFixture(t *testing.T) (string, int) {

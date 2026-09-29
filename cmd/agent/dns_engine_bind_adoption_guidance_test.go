@@ -99,11 +99,13 @@ func TestV3FreshPrimaryRefusalNamesPrestartOwnerCommand(t *testing.T) {
 		PDNSFreshPlan: &dnsengineartifact.PDNSFreshPrimaryPlanV3{
 			Candidate: &dnsengineartifact.PDNSTargetCandidateProofV4{},
 		},
+		// The owner command admits exactly one frozen target unit (item 3c).
+		TargetUnitsBefore: []dnsUnitSnapshot{{Name: "pdns.service", LoadState: "masked", ActiveState: "inactive", UnitFileState: "masked"}},
 	}
 	requireAgentOwnerCommand(t, rollbackDNSSwitchJournal(context.Background(), journal), "recover-dns-pdns-fresh-prestart")
 	err := freshPrimaryPrestartRefusalV3(journal, "v3 phase has no poststart forward authority")
 	requireAgentOwnerCommand(t, err, "recover-dns-pdns-fresh-prestart")
-	if !strings.HasPrefix(err.Error(), "v3 phase has no poststart forward authority; if PowerDNS never started") {
+	if !strings.HasPrefix(err.Error(), "v3 phase has no poststart forward authority; run /usr/libexec/celikpanel/recovery dns-switch-status --quiesced --request-id "+agentOwnerGuidanceRequest) {
 		t.Fatalf("forward refusal lost its reason: %v", err)
 	}
 	journal.Phase = dnsengineartifact.SwitchPhaseTargetStarted

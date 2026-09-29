@@ -14,7 +14,8 @@ import (
 
 // ProveInstalledPackage checks the package-owned BIND working directory using
 // fixed, root-owned executables and exact bounded output. It never installs or
-// changes a package or a dpkg statoverride.
+// changes a package or a dpkg statoverride. An absent override and the
+// product's exact legacy override are both accepted.
 func ProveInstalledPackage(ctx context.Context, layout Layout) error {
 	if ctx == nil {
 		return errors.New("BIND package proof requires a context")
@@ -27,13 +28,11 @@ func ProveInstalledPackage(ctx context.Context, layout Layout) error {
 		if err := VerifyAPTPackageOwner(owner, err); err != nil {
 			return err
 		}
-		override, err := runTrusted(proofCtx, []string{"/usr/sbin/dpkg-statoverride", "/usr/bin/dpkg-statoverride"}, "--list", "/var/cache/bind")
-		state, err := ClassifyAPTStatOverride(override, err)
-		if err != nil {
+		// Absent (current releases) and the product's exact legacy entry are
+		// both supported; this read-only proof never adds or removes one.
+		override, err := runTrusted(proofCtx, []string{"/usr/sbin/dpkg-statoverride", "/usr/bin/dpkg-statoverride"}, "--list", APTStatOverridePath)
+		if _, err := ClassifyAPTStatOverride(override, err); err != nil {
 			return err
-		}
-		if state != APTStatOverrideExact {
-			return errors.New("/var/cache/bind lacks the exact durable dpkg-statoverride")
 		}
 		return nil
 	case Pacman:

@@ -1384,7 +1384,7 @@ func (a *Agent) SwitchDNSEngineV1(request *SwitchDNSEngineV1Request, response *S
 		}
 		if outcome != dnsEngineSwitchRecoveryCommitted {
 			log.Printf("DNS engine switch to %s at epoch %d failed: %v", commitment.TargetEngine, commitment.TargetEpoch, err)
-			response.Error = "DNS engine switch did not complete; inspect the agent log"
+			response.Error = dnsEngineSwitchIncompleteText(err)
 			return nil
 		}
 		// Same-request recovery verified the target the journal recorded and
@@ -1919,9 +1919,9 @@ func poisonUnfinalizedDNSEngineSwitch(
 		))
 	}
 	m.poisonLock = runtime.lock
-	return m.poisonLocked(fmt.Errorf(
+	return m.poisonLocked(&dnsSwitchFailClosedDecision{err: fmt.Errorf(
 		"finalize active DNS engine switch: %w", cause,
-	))
+	)})
 }
 
 func publishFinalizedDNSEngineSwitchTerminal(

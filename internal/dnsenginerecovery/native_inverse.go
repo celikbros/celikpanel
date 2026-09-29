@@ -144,6 +144,46 @@ func BINDSwitchNeverStartedBeforeDecisionJournal(j dnsengineartifact.SwitchJourn
 		BINDSwitchBeforeRollbackDecisionJournal(j) && bindSwitchTargetsFrozenStandby(j)
 }
 
+// BINDV1AgentRecoveredJournal reports a V1 BIND-target journal the Agent
+// itself resolves before its target is verified: a first install, a
+// reinstall, the stopped half of a takeover, a paired secondary or an older V1
+// PowerDNS-to-BIND switch, at intent, target-staged, source-stopped or
+// target-started. At these phases no rollback decision is recorded; a live
+// worker continues the request, and a restarted Agent reconciles it (it
+// verifies the target or proves it absent and runs the V1 inverse). No owner
+// command admits these journals. Running-BIND adoption is excluded: it has its
+// own owner command and its own guidance. It is a read-only classification
+// for status guidance and grants no recovery or native mutation authority.
+func BINDV1AgentRecoveredJournal(j dnsengineartifact.SwitchJournalV1) bool {
+	if j.Schema != dnsengineartifact.SwitchJournalSchemaV1 ||
+		j.TargetEngine != transport.DNSEngineBIND ||
+		(j.Mode != transport.DNSEngineSwitchModeSwitch &&
+			j.Mode != transport.DNSEngineSwitchModeReinstall) {
+		return false
+	}
+	switch j.Phase {
+	case dnsengineartifact.SwitchPhaseIntent, dnsengineartifact.SwitchPhaseTargetStaged,
+		dnsengineartifact.SwitchPhaseSourceStopped, dnsengineartifact.SwitchPhaseTargetStarted:
+	default:
+		return false
+	}
+	manifest, err := dnsengineartifact.SwitchJournalManifest(j)
+	if err != nil {
+		return false
+	}
+	running, err := dnsengineartifact.RunningBINDAdoptionJournal(manifest, j)
+	return err == nil && !running
+}
+
+// BINDV1BeforeActivationJournal narrows BINDV1AgentRecoveredJournal to the
+// phases before target-started. There the V1 producer holds both BIND units
+// under the package guard's persistent mask (the install seal) until
+// activation lifts it, so status may read the target with the typed
+// never-started observation; the native observation, not the phase, proves it.
+func BINDV1BeforeActivationJournal(j dnsengineartifact.SwitchJournalV1) bool {
+	return j.Phase != dnsengineartifact.SwitchPhaseTargetStarted && BINDV1AgentRecoveredJournal(j)
+}
+
 // PDNSAdoptionInverseJournal is the journal-only part of the owner PowerDNS
 // adoption inverse admission (recover-dns-pdns-adoption). The secured evidence
 // admission applies it before its observation checks. It names a command only;

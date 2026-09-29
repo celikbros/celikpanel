@@ -267,10 +267,18 @@ func TestFreshSourceEmptyPDNSNeverUsesReconfigureRestorationException(t *testing
 	if state.CurrentSwitchID != persisted.SwitchID || state.ActiveEngine != "" {
 		t.Fatalf("fresh source-empty exception detached authority: %+v", state)
 	}
+	// Since Decision B (2026-09-30) a PowerDNS paired-secondary first
+	// install is inside the first-install rollback scope, so the Panel may
+	// ask the Agent's rollback evidence; it still never takes the
+	// reconfigure restoration exception: the running PowerDNS is refused by
+	// the first-install runtime proof and the authority stays attached
+	// (asserted above).
 	agent.mu.Lock()
-	evidenceCalls := agent.rollbackEvidenceCalls
+	requests := append([]transport.DNSEngineRollbackEvidenceRequest(nil), agent.rollbackEvidenceRequests...)
 	agent.mu.Unlock()
-	if evidenceCalls != 0 {
-		t.Fatalf("fresh source-empty install requested reconfigure evidence %d time(s)", evidenceCalls)
+	for _, request := range requests {
+		if request.Mode != transport.DNSEngineSwitchModeSwitch || request.SourceEngine != "" {
+			t.Fatalf("fresh source-empty install requested non-install evidence: %+v", request)
+		}
 	}
 }

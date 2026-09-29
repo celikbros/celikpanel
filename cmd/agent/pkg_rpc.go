@@ -206,6 +206,13 @@ func installPackagesWithCandidateContext(ctx context.Context, family string, pac
 		if err != nil {
 			return "", err
 		}
+		// dpkg refuses every transaction while its statoverride database
+		// names a user or group that no longer exists. Check that before
+		// asking apt, repair only the product's own legacy entry, and refuse
+		// with the owner's command for anything else (D-022).
+		if err := packageStatOverridePreflight(ctx); err != nil {
+			return "", err
+		}
 		refreshAptListsIfStaleWithExecutable(ctx, time.Hour, aptGet)
 		if requiredCandidate = strings.TrimSpace(requiredCandidate); requiredCandidate != "" {
 			candidate, err := aptInstallCandidateWithExecutable(ctx, aptCache, requiredCandidate)
@@ -232,7 +239,7 @@ func installPackagesWithCandidateContext(ctx context.Context, family string, pac
 			out, err = run()
 		}
 		if err != nil {
-			return "", fmt.Errorf("%v: %s", err, strings.TrimSpace(out))
+			return "", newPackageManagerCommandError(packages, []byte(out), err)
 		}
 		return out, nil
 	case "pacman":
@@ -251,7 +258,7 @@ func installPackagesWithCandidateContext(ctx context.Context, family string, pac
 		args := pacmanInstallArgs(packages)
 		out, err := runServiceMutationCombinedOutput(ctx, pacman, args...)
 		if err != nil {
-			return "", fmt.Errorf("%v: %s", err, strings.TrimSpace(string(out)))
+			return "", newPackageManagerCommandError(packages, out, err)
 		}
 		return string(out), nil
 	case "dnf":
@@ -631,4 +638,80 @@ func validPackageName(name string) bool {
 		}
 	}
 	return true
+}
+
+// validDebianVersion accepts a Debian version string ([epoch:]upstream[-rev])
+// as apt prints it; it is only ever joined to a validated package name.
+func validDebianVersion(version string) bool {
+	if version == "" || len(version) > 128 {
+		return false
+	}
+	for i, r := range version {
+		alnum := r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9'
+		if i == 0 && !(r >= '0' && r <= '9') {
+			return false
+		}
+		if !alnum && r != '.' && r != '+' && r != '~' && r != ':' && r != '-' {
+			return false
+		}
+	}
+	return true
+}
+
+// installPackagesAtVersionContext installs every package at exactly version
+// through APT. Under the package lock it refreshes stale lists, requires each
+// package's installation candidate to be that version, and passes
+// "name=version" to apt-get, so a candidate that changed after an earlier
+// read-only check can never install anything else.
+//
+// installPackagesAtVersionContext her paketi APT ile tam olarak o sürümde
+// kurar; aday başka bir sürümse hiçbir şey kurulmaz.
+func installPackagesAtVersionContext(ctx context.Context, packages []string, version string) (string, error) {
+	packageOperationMu.Lock()
+	defer packageOperationMu.Unlock()
+	if len(packages) == 0 {
+		return "", fmt.Errorf("no packages to install")
+	}
+	if !validDebianVersion(version) {
+		return "", fmt.Errorf("invalid package version: %q", version)
+	}
+	pinned := make([]string, 0, len(packages))
+	for _, p := range packages {
+		if !validPackageName(p) {
+			return "", fmt.Errorf("invalid package name: %q", p)
+		}
+		pinned = append(pinned, p+"="+version)
+	}
+	profile, err := verifiedHostProfile("apt")
+	if err != nil {
+		return "", err
+	}
+	aptGet, err := executableForProfile(profile, "apt", "apt-get")
+	if err != nil {
+		return "", err
+	}
+	aptCache, err := executableForProfile(profile, "apt", "apt-cache")
+	if err != nil {
+		return "", err
+	}
+	if err := packageStatOverridePreflight(ctx); err != nil {
+		return "", err
+	}
+	refreshAptListsIfStaleWithExecutable(ctx, time.Hour, aptGet)
+	for _, p := range packages {
+		candidate, err := aptInstallCandidateWithExecutable(ctx, aptCache, p)
+		if err != nil {
+			return "", fmt.Errorf("check APT installation candidate for %s: %w", p, err)
+		}
+		if candidate != version {
+			return "", fmt.Errorf("APT would install %s %q, not the required version %s; nothing was installed", p, candidate, version)
+		}
+	}
+	args := append([]string{"install", "-y", "--no-install-recommends"}, pinned...)
+	env := append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
+	out, err := runServiceMutationCombinedOutputEnv(ctx, env, aptGet, args...)
+	if err != nil {
+		return "", newPackageManagerCommandError(packages, out, err)
+	}
+	return string(out), nil
 }

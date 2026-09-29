@@ -25,6 +25,9 @@ const (
 	freshPDNSRecoveryRestoredV3
 	freshPDNSRecoveryServingUnrecordedV3
 	freshPDNSRecoveryServingRecordedV3
+	// freshPDNSRecoveryIntentPartialV3: an unsealed intent whose only native
+	// effect is this operation's own temporary candidate build file.
+	freshPDNSRecoveryIntentPartialV3
 )
 
 // assessInstalledFreshPrimaryV3 is a read-only native classification. The
@@ -127,7 +130,14 @@ func assessInstalledFreshPrimaryV3(ctx context.Context, policy dnsengineartifact
 				!freshPDNSAllAbsentV3(j.PDNSCandidatePath, policy.PDNSDatabasePath, policy.PDNSDatabasePath+"-wal", policy.PDNSDatabasePath+"-shm", policy.PDNSDatabasePath+"-journal") {
 				return unknown, errors.New("v3 unsealed intent has unknown native effects")
 			}
+			partial, err := dnsenginerecovery.FreshPrimaryPartialBuildV3(policy, j)
+			if err != nil {
+				return unknown, err
+			}
 			shape = freshPDNSRecoveryIntentCleanV3
+			if len(partial) != 0 {
+				shape = freshPDNSRecoveryIntentPartialV3
+			}
 		} else {
 			// The same pre-start shape names this owner command in dns-switch-status.
 			if !dnsenginerecovery.FreshPrimaryPrestartJournalV3(j) {
@@ -193,6 +203,8 @@ func freshPDNSRecoveryDescriptionV3(shape freshPDNSRecoveryShapeV3) string {
 	switch shape {
 	case freshPDNSRecoveryIntentCleanV3:
 		return "empty intent with no native effect"
+	case freshPDNSRecoveryIntentPartialV3:
+		return "intent with only this operation's own interrupted candidate build"
 	case freshPDNSRecoveryStagedV3:
 		return "exact unstarted staged candidate"
 	case freshPDNSRecoveryRestoredV3:

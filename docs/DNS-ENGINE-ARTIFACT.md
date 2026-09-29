@@ -1801,3 +1801,81 @@ Open: the secondary install, resume and revoke paths depend on real sshd,
 systemctl, useradd and visudo and have component coverage only; the Panel's
 parentless-deletion text still does not name the tool, the steps, which
 owner acts or how the operation resumes.
+
+### Package manager safety, reinstall, wizard retry, typed host blockers (2026-09-30)
+
+P0.4, P0.5; constitutional invariants 1-6; D-022, D-024, D-026. No journal,
+ledger or state schema or version change. Two optional wire fields were
+added, both omitted by older Agents: `rollback_standby` on the DNS backend
+runtime state and `error_code` on the firewall status response. Component
+tests only at this commit.
+
+**dpkg statoverride (D-022).** Native cell c6 of batch 6b: the managed BIND
+setup had registered `dpkg-statoverride root bind 1775 /var/cache/bind`; after
+the owner purged `bind9` the group was gone and the override remained, so
+dpkg refused every package operation on the host. dpkg stores an override by
+name even when it is registered by numeric id, and a package upgrade keeps an
+existing directory's owner and mode without an override, so the product no
+longer adds one; it re-asserts ownership and mode itself. On hosts that
+already carry the exact legacy line it is accepted on every path and LEFT IN
+PLACE, because older releases' read-only proofs require it and the update
+contract treats it as hardening that rollback retains. Before any package
+installation the product lists the overrides: its own legacy line is removed
+only when the group it names no longer exists; any other entry naming a
+missing user or group refuses the operation before any mutation and names the
+command the owner can run. Named limits: an owner who removes `bind9` by hand
+on a host set up by an earlier release must also run
+`dpkg-statoverride --remove /var/cache/bind`; a host that gets its first BIND
+under this release carries no override, so after an owner rollback to an
+older release that release's root proof refuses zone publication until one of
+its own BIND operations re-adds it.
+
+**Package failures carry their reason.** When the package manager fails, the
+ledger job and the Panel response carry the package manager's own first
+relevant line, bounded and sanitized, instead of only an exit status.
+
+**Reinstall.** A reinstall exists because the recorded engine is not running,
+so its rollback can never prove "only BIND active". The restored state is the
+pre-operation state: the state receipt equals the frozen one and no managed
+DNS authority is active or listening. The stopped-target proof uses the
+never-served class. An install-ownership receipt left by an earlier attempt of
+the same reinstall manifest is residue, not ambiguity.
+
+**Retry from the setup wizard.** After a rolled-back first install the
+packages stay installed as standby. The Agent reports `rollback_standby` only
+when no engine state or ownership receipt exists, the install-ownership
+receipt shows CelikPanel installed exactly these packages, and the unit is
+inactive under the guard mask or loaded and disabled; an owner-installed
+engine never qualifies and stays a takeover or adoption decision. With the
+signal the Panel treats the target as a new installation for both engines and
+the wizard accepts a new plan; the old request keeps its terminal answer with
+code `server_setup_dns_rolled_back`. The reconcile scope and rollback
+evidence, previously initial BIND standalone or paired primary only, now
+cover BIND as paired secondary and PowerDNS standalone or paired secondary;
+the fresh paired PowerDNS primary stays behind its gate.
+
+**Typed host blockers in setup.** The setup plan answered a generic 500 when
+the Agent could not read the firewall status, for example right after the
+installer upgraded the kernel. The Agent now classifies what it can prove
+(`host_restart_required` from a missing running-kernel module tree with
+another installed, or the OS's reboot-required marker;
+`firewall_kernel_unavailable`; `firewall_engine_unavailable`;
+`firewall_busy`; `firewall_status_unknown`) and the plan returns a blocker
+with the reason and the next action, leaving the draft and DNS identity
+unchanged.
+
+**Fresh paired PowerDNS primary, gate still closed.** The measured package
+version is checked against the package manager's candidate before any
+mutation and the install pins it; the candidate database is built under a
+temporary name and published by an atomic no-replace rename, and recovery
+removes only the operation's own interrupted build. A crash between that
+rename and the `target-staged` checkpoint still leaves a complete but
+unsealed file that is refused as unknown. The tagged kill hook accepts V3
+journals for this shape only.
+
+**Status and hold texts.** Status describes an owner-installed or
+guard-masked BIND before a takeover instead of reporting an identity parse
+failure; names the Agent's own finish first for a V1 PowerDNS adoption;
+names `recover-dns-pdns-fresh-prestart` only through its admission.
+Fail-closed texts follow their cause instead of always saying "after an
+ambiguous ledger write".

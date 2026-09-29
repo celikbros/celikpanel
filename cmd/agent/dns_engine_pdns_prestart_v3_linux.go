@@ -49,27 +49,22 @@ func recoverFreshPrimaryV3(ctx context.Context, id dnsengineartifact.SwitchIdent
 			return ""
 		case state.active():
 			return "running"
-		case state.activeState == "inactive" || state.activeState == "failed":
+		case state.activeState == "inactive":
 			return "not running"
+		case state.activeState == "failed":
+			// Not running, but a start was attempted: routing is unchanged
+			// (only "running" goes forward); the guidance says what it saw.
+			return "failed"
 		}
 		return ""
 	}
 	if freshPrimaryPrestartJournalShapeV3(journal) &&
 		!(journal.Phase == dnsengineartifact.SwitchPhaseTargetEnableIntent && running() == "running") {
 		outcome, err := recoverFreshPrimaryPrestartV3(ctx, journal, systemctl)
-		return outcome, classifyFreshPrimaryV3RecoveryError(journal.MutationRequestID, true, running(), err)
+		return outcome, classifyFreshPrimaryV3RecoveryError(journal.MutationRequestID, true, running(), err, journal.Phase)
 	}
 	outcome, err := recoverFreshPrimaryForwardV3(ctx, id, journal)
-	return outcome, classifyFreshPrimaryV3RecoveryError(journal.MutationRequestID, false, running(), err)
-}
-
-// freshPrimaryPrestartJournalShapeV3 is the journal part of the pre-start
-// class: the owner command's own journal predicate, without a durable native
-// receipt. Whether PowerDNS started is proved natively, never from the phase.
-func freshPrimaryPrestartJournalShapeV3(j dnsEngineSwitchJournal) bool {
-	return j.Schema == dnsengineartifact.SwitchJournalSchemaV3 && j.PDNSFreshPlan != nil &&
-		j.PDNSFreshPlan.Native == nil && len(j.TargetUnitsBefore) == 1 &&
-		dnsenginerecovery.FreshPrimaryPrestartJournalV3(j)
+	return outcome, classifyFreshPrimaryV3RecoveryError(journal.MutationRequestID, false, running(), err, journal.Phase)
 }
 
 type freshPrimaryPrestartShapeV3 uint8
@@ -80,6 +75,10 @@ const (
 	freshPrimaryPrestartStagedV3
 	freshPrimaryPrestartRenamedV3
 	freshPrimaryPrestartRestoredV3
+	// freshPrimaryPrestartIntentPartialV3: an unsealed intent whose only
+	// native effect is this operation's own temporary candidate build file
+	// (a crash while the database was being written). Not restored.
+	freshPrimaryPrestartIntentPartialV3
 )
 
 // freshPrimaryPrestartObserversV3 are fixed, read-only native observers.
@@ -97,6 +96,8 @@ type freshPrimaryPrestartObserversV3 struct {
 	absent        func(...string) bool
 	candidate     func(string) (dnsengineartifact.PDNSTargetCandidateProofV4, error)
 	live          func(dnsengineartifact.PDNSTargetCandidateProofV4, string) error
+	// partial lists the unsealed journal's own temporary build files present.
+	partial func(dnsEngineSwitchJournal) ([]string, error)
 }
 
 func freshPrimaryPrestartRollbackPhaseV3(phase string) bool {
@@ -106,11 +107,6 @@ func freshPrimaryPrestartRollbackPhaseV3(phase string) bool {
 		return true
 	}
 	return false
-}
-
-func freshPrimaryPrestartEnablePhaseV3(phase string) bool {
-	return phase == dnsengineartifact.SwitchPhaseTargetEnableIntent ||
-		phase == dnsengineartifact.SwitchPhaseRollingBackTargetEnable
 }
 
 // freshPrimaryPrestartTargetUnitV3 admits the unit states a stopped,
@@ -137,7 +133,7 @@ func freshPrimaryPrestartTargetUnitV3(unit, frozen dnsUnitSnapshot, phase string
 func assessFreshPrimaryPrestartV3(ctx context.Context, j dnsEngineSwitchJournal, obs freshPrimaryPrestartObserversV3) (freshPrimaryPrestartShapeV3, error) {
 	unknown := freshPrimaryPrestartUnknownV3
 	if ctx == nil || obs.sourceUnitsInactive == nil || obs.targetUnit == nil || obs.stoppedTarget == nil ||
-		obs.configs == nil || obs.absent == nil || obs.candidate == nil || obs.live == nil {
+		obs.configs == nil || obs.absent == nil || obs.candidate == nil || obs.live == nil || obs.partial == nil {
 		return unknown, errors.New("v3 pre-start assessment observers are incomplete")
 	}
 	if err := ctx.Err(); err != nil {
@@ -185,7 +181,16 @@ func assessFreshPrimaryPrestartV3(ctx context.Context, j dnsEngineSwitchJournal,
 		if !obs.absent(append([]string{j.PDNSCandidatePath, db}, sidecars...)...) {
 			return unknown, errors.New("v3 unsealed intent has unknown native effects")
 		}
+		// The candidate is built under a temporary name and renamed only when
+		// complete, so a crash during the build leaves only that file.
+		partial, err := obs.partial(j)
+		if err != nil {
+			return unknown, err
+		}
 		shape = freshPrimaryPrestartIntentCleanV3
+		if len(partial) != 0 {
+			shape = freshPrimaryPrestartIntentPartialV3
+		}
 	} else {
 		proof := *plan.Candidate
 		switch {
@@ -232,6 +237,7 @@ type freshPrimaryPrestartEffectsV3 struct {
 	restoreRenamed func(dnsEngineSwitchJournal, func() error) error
 	restoreConfigs func(context.Context, dnsEngineSwitchJournal, func(context.Context) error) error
 	removeStaged   func(dnsEngineSwitchJournal, func() error) error
+	removePartial  func(dnsEngineSwitchJournal, func() error) error
 }
 
 // runFreshPrimaryPrestartInverseV3 is the Agent's same-request inverse of a
@@ -245,7 +251,7 @@ type freshPrimaryPrestartEffectsV3 struct {
 func runFreshPrimaryPrestartInverseV3(ctx context.Context, journal dnsEngineSwitchJournal, ops freshPrimaryPrestartEffectsV3) (dnsEngineSwitchRecoveryOutcome, error) {
 	absent := dnsenginerecovery.OutcomeAbsent
 	if ctx == nil || ops.read == nil || ops.assess == nil || ops.checkpoint == nil || ops.restoreUnit == nil ||
-		ops.restoreRenamed == nil || ops.restoreConfigs == nil || ops.removeStaged == nil {
+		ops.restoreRenamed == nil || ops.restoreConfigs == nil || ops.removeStaged == nil || ops.removePartial == nil {
 		return absent, errors.New("v3 pre-start inverse operations are incomplete")
 	}
 	if !freshPrimaryPrestartJournalShapeV3(journal) {
@@ -317,6 +323,16 @@ func runFreshPrimaryPrestartInverseV3(ctx context.Context, journal dnsEngineSwit
 					return absent, err
 				}
 			}
+		} else {
+			current, err := ops.assess(ctx, j)
+			if err != nil {
+				return absent, err
+			}
+			if current == freshPrimaryPrestartIntentPartialV3 {
+				if err := ops.removePartial(j, func() error { return guard(ctx) }); err != nil {
+					return absent, err
+				}
+			}
 		}
 		if shape, err = ops.assess(ctx, j); err != nil || !restored(shape) {
 			return absent, errors.Join(errors.New("v3 pre-start inverse did not reach the exact pre-install state"), err)
@@ -374,6 +390,9 @@ func recoverFreshPrimaryPrestartV3(ctx context.Context, journal dnsEngineSwitchJ
 		removeStaged: func(j dnsEngineSwitchJournal, guard func() error) error {
 			return dnsenginerecovery.RemoveFreshPrimaryStagedV3(policy, j, guard)
 		},
+		removePartial: func(j dnsEngineSwitchJournal, guard func() error) error {
+			return dnsenginerecovery.RemoveFreshPrimaryPartialV3(policy, j, guard)
+		},
 	})
 }
 
@@ -424,6 +443,9 @@ func hostFreshPrimaryPrestartObserversV3(policy dnsengineartifact.JournalPolicy,
 		},
 		candidate: dnsenginerecovery.CapturePDNSTargetCandidateV4,
 		live:      dnsenginerecovery.VerifyPDNSTargetLiveV4,
+		partial: func(j dnsEngineSwitchJournal) ([]string, error) {
+			return dnsenginerecovery.FreshPrimaryPartialBuildV3(policy, j)
+		},
 	}
 }
 

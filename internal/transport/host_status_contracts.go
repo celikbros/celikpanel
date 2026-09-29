@@ -26,7 +26,38 @@ type FirewallStatusResponse struct {
 	// SSHPorts'un onu taşıdığı anlamına gelir.
 	SSHDiscoveryReason string `json:"ssh_discovery_reason,omitempty"`
 	Error              string `json:"error,omitempty"`
+	// ErrorCode classifies a non-empty Error with a stable code
+	// (FirewallStatus* below), so the Panel can name the reason and the next
+	// action instead of an internal error (D-024, 2026-09-30). Additive: an
+	// older Agent omits it and the Panel treats the error as unknown.
+	//
+	// ErrorCode, boş olmayan Error'u kararlı bir kodla sınıflandırır; Panel iç
+	// hata yerine nedeni ve sonraki adımı adlandırabilir. Eklemelidir.
+	ErrorCode string `json:"error_code,omitempty"`
 }
+
+// The FirewallStatusResponse.ErrorCode vocabulary.
+// FirewallStatusResponse.ErrorCode sözlüğü.
+const (
+	// FirewallStatusHostRestartRequired: the running kernel cannot load
+	// netfilter because the server was updated and not restarted. Proven by
+	// the running kernel's module tree being gone while another kernel's is
+	// installed (Arch and every OS that removes the old tree), or by the
+	// OS's own reboot-required marker (/run/reboot-required on Debian and
+	// Ubuntu) together with nft failing to reach the kernel.
+	FirewallStatusHostRestartRequired = "host_restart_required"
+	// FirewallStatusKernelUnavailable: nft reported it cannot reach the
+	// kernel's netfilter subsystem and nothing proves a pending restart.
+	FirewallStatusKernelUnavailable = "firewall_kernel_unavailable"
+	// FirewallStatusEngineUnavailable: a persistent firewall policy exists
+	// but the nft binary is not installed.
+	FirewallStatusEngineUnavailable = "firewall_engine_unavailable"
+	// FirewallStatusBusy: another firewall operation holds the host lock.
+	FirewallStatusBusy = "firewall_busy"
+	// FirewallStatusUnknown: any other reported error; Error carries the
+	// reason.
+	FirewallStatusUnknown = "firewall_status_unknown"
+)
 
 // The exact SSHDiscoveryReason vocabulary. Only SSHDiscoveryNoService is a
 // state an operator may knowingly accept: a host with no SSH service has no

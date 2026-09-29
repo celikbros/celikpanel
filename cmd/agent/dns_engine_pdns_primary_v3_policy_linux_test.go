@@ -410,6 +410,19 @@ func (f *prestartObserverFixture) observers() freshPrimaryPrestartObserversV3 {
 		},
 		candidate: func(string) (dnsengineartifact.PDNSTargetCandidateProofV4, error) { return f.candidate, nil },
 		live:      func(dnsengineartifact.PDNSTargetCandidateProofV4, string) error { return f.liveErr },
+		partial: func(j dnsEngineSwitchJournal) ([]string, error) {
+			build, sidecars, err := dnsengineartifact.PDNSFreshCandidateBuildPathsV3(j.PDNSCandidatePath)
+			if err != nil {
+				return nil, err
+			}
+			var present []string
+			for _, path := range append(sidecars, build) {
+				if f.present[path] {
+					present = append(present, path)
+				}
+			}
+			return present, nil
+		},
 	}
 }
 
@@ -457,7 +470,12 @@ func TestAssessFreshPrimaryPrestartV3(t *testing.T) {
 		check   check
 	}{
 		{"intent clean", intent, prestartObserverFixture{unit: freshPDNSGuardMaskV3, configs: allConfigs(before)}, wantShape(freshPrimaryPrestartIntentCleanV3)},
-		{"intent with a partial candidate", intent, prestartObserverFixture{unit: freshPDNSGuardMaskV3, configs: allConfigs(before), present: map[string]bool{intent.PDNSCandidatePath: true}}, wantUnknown},
+		// A file under the candidate name at intent is unsealed and can no
+		// longer be partial (the build is renamed only when complete): it
+		// stays unknown. The operation's own temporary build is its only
+		// admitted effect at intent (item 4b).
+		{"intent with an unsealed file under the candidate name", intent, prestartObserverFixture{unit: freshPDNSGuardMaskV3, configs: allConfigs(before), present: map[string]bool{intent.PDNSCandidatePath: true}}, wantUnknown},
+		{"intent with its own interrupted build", intent, prestartObserverFixture{unit: freshPDNSGuardMaskV3, configs: allConfigs(before), present: map[string]bool{freshPrimaryV3BuildPathForTest(t, intent): true, freshPrimaryV3BuildPathForTest(t, intent) + "-journal": true}}, wantShape(freshPrimaryPrestartIntentPartialV3)},
 		{"intent with configuration already changed", intent, prestartObserverFixture{unit: freshPDNSGuardMaskV3, configs: allConfigs(afterState)}, wantChanged(freshPrimaryV3ChangedConfig)},
 		{"staged candidate", staged, prestartObserverFixture{unit: freshPDNSGuardMaskV3, configs: allConfigs(afterState), candidate: *staged.PDNSFreshPlan.Candidate}, wantShape(freshPrimaryPrestartStagedV3)},
 		{"staged candidate changed", staged, prestartObserverFixture{unit: freshPDNSGuardMaskV3, configs: allConfigs(before)}, wantChanged(freshPrimaryV3ChangedDatabase)},
@@ -554,7 +572,26 @@ func (tr *prestartInverseTrace) effectsOps(t *testing.T) freshPrimaryPrestartEff
 			tr.effects = append(tr.effects, "remove-candidate")
 			return nil
 		},
+		removePartial: func(j dnsEngineSwitchJournal, guard func() error) error {
+			if j.Phase != dnsengineartifact.SwitchPhaseRollingBack {
+				t.Fatalf("partial build removed before a durable rollback decision (phase %s)", j.Phase)
+			}
+			if err := guard(); err != nil {
+				return err
+			}
+			tr.effects = append(tr.effects, "remove-partial")
+			return nil
+		},
 	}
+}
+
+func freshPrimaryV3BuildPathForTest(t *testing.T, j dnsEngineSwitchJournal) string {
+	t.Helper()
+	build, _, err := dnsengineartifact.PDNSFreshCandidateBuildPathsV3(j.PDNSCandidatePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return build
 }
 
 func TestFreshPrimaryPrestartInverseV3(t *testing.T) {
@@ -581,6 +618,12 @@ func TestFreshPrimaryPrestartInverseV3(t *testing.T) {
 		{"intent has no native effect", intent, []freshPrimaryPrestartShapeV3{C, C, C}, nil,
 			dnsenginerecovery.OutcomeRolledBack,
 			[]string{"checkpoint:rolling-back", "checkpoint:rolled-back"}, dnsengineartifact.SwitchPhaseRolledBack},
+		{"intent removes only its own interrupted build", intent, []freshPrimaryPrestartShapeV3{freshPrimaryPrestartIntentPartialV3, freshPrimaryPrestartIntentPartialV3, freshPrimaryPrestartIntentPartialV3, C, C}, nil,
+			dnsenginerecovery.OutcomeRolledBack,
+			[]string{"checkpoint:rolling-back", "remove-partial", "checkpoint:rolled-back"}, dnsengineartifact.SwitchPhaseRolledBack},
+		{"interrupted build that stays is not rolled back", intent, []freshPrimaryPrestartShapeV3{freshPrimaryPrestartIntentPartialV3}, nil,
+			dnsenginerecovery.OutcomeAbsent,
+			[]string{"checkpoint:rolling-back", "remove-partial"}, dnsengineartifact.SwitchPhaseRollingBack},
 		{"resumes a durable decision without a second one", rollingBack, []freshPrimaryPrestartShapeV3{S, S, S, S, S, N, N}, nil,
 			dnsenginerecovery.OutcomeRolledBack,
 			[]string{"configs", "remove-candidate", "checkpoint:rolled-back"}, dnsengineartifact.SwitchPhaseRolledBack},

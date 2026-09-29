@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/hostcmd"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // R-054. `nft` is a userspace client for a kernel subsystem. When the kernel
@@ -32,7 +33,40 @@ import (
 var (
 	firewallKernelReleasePath = "/proc/sys/kernel/osrelease"
 	firewallKernelModulesRoot = "/lib/modules"
+	// firewallRebootRequiredMarker is the marker Debian and Ubuntu packages
+	// (update-notifier-common, unattended-upgrades, kernel postinst hooks)
+	// create when an update needs a restart. Arch has no such marker; there
+	// the missing module tree is the proof.
+	firewallRebootRequiredMarker = "/run/reboot-required"
 )
+
+// hostRebootRequiredMarkerPresent reports the OS's own reboot-required
+// marker: a regular file, never followed through a symlink.
+func hostRebootRequiredMarkerPresent() bool {
+	info, err := os.Lstat(firewallRebootRequiredMarker)
+	return err == nil && info.Mode().IsRegular()
+}
+
+// firewallStatusErrorCode classifies a failed nft table discovery for the
+// Panel. A restart is named only when the machine proves it: the running
+// kernel's module tree is gone, or the OS marker says a restart is pending.
+// nft saying it cannot reach the kernel is otherwise its own code, and
+// anything else is unknown with nft's own words in Error.
+//
+// Yeniden başlatma yalnız makine kanıtladığında adlandırılır; aksi hâlde nft
+// çekirdeğe ulaşamıyorsa kendi kodu, başka her şey bilinmeyendir.
+func firewallStatusErrorCode(fault firewallEngineFault) string {
+	switch {
+	case fault == firewallEngineFaultModulesMissing:
+		return transport.FirewallStatusHostRestartRequired
+	case hostRebootRequiredMarkerPresent():
+		return transport.FirewallStatusHostRestartRequired
+	case fault == firewallEngineFaultKernelUnreachable:
+		return transport.FirewallStatusKernelUnavailable
+	default:
+		return transport.FirewallStatusUnknown
+	}
+}
 
 // firewallEngineFault says why an nft invocation could not do its work.
 // firewallEngineFault, bir nft cagrisinin isini neden yapamadigini soyler.
