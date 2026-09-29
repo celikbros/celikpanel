@@ -3,6 +3,7 @@ package dnsenginerecovery
 import (
 	"context"
 	"errors"
+	"fmt"
 )
 
 // StoppedUnitObservation is a bounded native systemd observation, not an
@@ -26,7 +27,7 @@ func VerifyStoppedUnit(
 	name string,
 	observe func(context.Context) (StoppedUnitObservation, error),
 ) error {
-	return verifyStoppedUnitClass(ctx, name, observe, false)
+	return verifyStoppedUnitClass(ctx, name, observe, stoppedUnitLoaded, nil)
 }
 
 // VerifyStoppedPDNSPersistentMask proves the exact sealed package-install state.
@@ -36,16 +37,63 @@ func VerifyStoppedPDNSPersistentMask(
 	ctx context.Context,
 	observe func(context.Context) (StoppedUnitObservation, error),
 ) error {
-	return verifyStoppedUnitClass(ctx, "pdns.service", observe, true)
+	return verifyStoppedUnitClass(ctx, "pdns.service", observe, stoppedUnitPDNSPersistentMask, nil)
+}
+
+// VerifyStoppedFreshSourceTarget proves the target of a switch journal that
+// records no source engine (a first install: empty SourceEngine, SourceEpoch
+// 0) stopped before its inverse restores database, config or state. Before it
+// first starts, such a target truthfully passes through three unit states:
+// absent before its packages exist (LoadState not-found, empty UnitFileState),
+// the package guard's persistent mask after install (masked/masked), and
+// loaded once activation unmasked it. Each is accepted only inactive/dead with
+// zero systemd main and control PIDs, and each of the two matching
+// observations also requires noListener to prove no public port-53 listener.
+// A runtime-only mask is not the guard's seal and is refused. Journals with a
+// source engine keep VerifyStoppedUnit's loaded requirement. The proof is
+// point-in-time and cannot exclude an independent owner restart.
+func VerifyStoppedFreshSourceTarget(
+	ctx context.Context,
+	name string,
+	observe func(context.Context) (StoppedUnitObservation, error),
+	noListener func(context.Context) error,
+) error {
+	if noListener == nil {
+		return errors.New("fresh DNS target stopped proof requires a port-53 listener observer")
+	}
+	return verifyStoppedUnitClass(ctx, name, observe, stoppedUnitFreshSource, noListener)
+}
+
+type stoppedUnitClass uint8
+
+const (
+	stoppedUnitLoaded stoppedUnitClass = iota
+	stoppedUnitPDNSPersistentMask
+	stoppedUnitFreshSource
+)
+
+func freshSourceStoppedLoadState(seen StoppedUnitObservation) bool {
+	switch seen.LoadState {
+	case "not-found":
+		return seen.UnitFileState == ""
+	case "masked":
+		return seen.UnitFileState == "masked"
+	case "loaded":
+		return true
+	default:
+		return false
+	}
 }
 
 func verifyStoppedUnitClass(
 	ctx context.Context,
 	name string,
 	observe func(context.Context) (StoppedUnitObservation, error),
-	persistentMask bool,
+	class stoppedUnitClass,
+	noListener func(context.Context) error,
 ) error {
-	if ctx == nil || observe == nil || (name != "named.service" && name != "pdns.service") {
+	if ctx == nil || observe == nil || (name != "named.service" && name != "pdns.service") ||
+		(class == stoppedUnitFreshSource) != (noListener != nil) {
 		return errors.New("DNS stopped proof requires a fixed native unit observer")
 	}
 	read := func() (StoppedUnitObservation, error) {
@@ -63,12 +111,25 @@ func verifyStoppedUnitClass(
 			seen.MainPID != 0 || seen.ControlPID != 0 || seen.SubState != "dead" {
 			return StoppedUnitObservation{}, errors.New("DNS target is not an inactive/dead unit with zero systemd main and control PIDs")
 		}
-		if persistentMask {
+		switch class {
+		case stoppedUnitPDNSPersistentMask:
 			if seen.LoadState != "masked" || seen.UnitFileState != "masked" {
 				return StoppedUnitObservation{}, errors.New("PowerDNS target lacks its exact persistent mask")
 			}
-		} else if seen.LoadState != "loaded" {
-			return StoppedUnitObservation{}, errors.New("DNS target is not a loaded unit")
+		case stoppedUnitFreshSource:
+			if !freshSourceStoppedLoadState(seen) {
+				return StoppedUnitObservation{}, errors.New("fresh DNS target is neither absent, persistently masked nor loaded")
+			}
+			if err := noListener(ctx); err != nil {
+				return StoppedUnitObservation{}, fmt.Errorf("prove no public port-53 listener for the never-served DNS target: %w", err)
+			}
+			if err := ctx.Err(); err != nil {
+				return StoppedUnitObservation{}, err
+			}
+		default:
+			if seen.LoadState != "loaded" {
+				return StoppedUnitObservation{}, errors.New("DNS target is not a loaded unit")
+			}
 		}
 		return seen, nil
 	}

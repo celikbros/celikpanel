@@ -44,10 +44,10 @@ Common facts (source references are for `e9d1019d` plus the D-026 gate):
 
 | # | Path (how reached) | Journal | Recovery before target start / after target start | Owner change at recovery | Native evidence (limit) | State |
 |---|---|---|---|---|---|---|
-| 1 | Fresh BIND, standalone (setup or card `install`) | V1 | Agent, same request, both sides. No owner CLI (accepted by D-026 decision 2). | Owner-aware config preimage in rollback | [Arch target-staged/before-write](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-TARGET-STAGED-ARCH-20260925.md): one early cell, forward only | **GAP**: after-start cut, Debian cell, reboot |
+| 1 | Fresh BIND, standalone (setup or card `install`) | V1 | Agent, same request, both sides. No owner CLI (accepted by D-026 decision 2). | Owner-aware config preimage in rollback | [Arch target-staged/before-write](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-TARGET-STAGED-ARCH-20260925.md): one early cell, forward only. [Fresh-install cells 2026-09-29](../deploy/e2e/dns-kill-matrix/evidence/fresh-install-20260929/README.md): `bind__target-verified__before-write` (Arch, cut after `named` started, journal at `target-started`) and `bind__target-verified__after-write` (Debian) both converged forward at Agent startup; same `named` PID, 31/31 health, authoritative UDP/TCP. | **PASSED** for the after-start cut on Debian and Arch. **GAP**: Debian pre-start cell, reboot; no continuity through the cut is claimed. |
 | 2 | Fresh BIND, paired primary | V1 | Agent, same request | as 1 | [Pair target-staged/after-write + management-disabled reboot](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-PAIR-TARGET-STAGED-20260926.md); [V3 deletion terminal](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-V3-DELETION-TERMINAL-20260926.md) | **PASSED** for those two before-start cells. **GAP**: source-stopped, target-started, target-verified cuts |
 | 3 | Fresh BIND, paired secondary | V1 | Agent, same request | as 1 | none — every secondary in the trials so far was panel-free | **GAP**: no interruption trial |
-| 4 | Fresh PowerDNS, standalone (APT hosts only) | V1 | Agent `rollbackPDNSSwitch`, before and after start. No owner CLI (D-026 decision 2). | `verifyOwnerAwarePreimage` | none — no standalone `pdns-switch` cell was ever run | **GAP**: before-start and after-start cells |
+| 4 | Fresh PowerDNS, standalone (APT hosts only) | V1 | Agent `rollbackPDNSSwitch`, before and after start. No owner CLI (D-026 decision 2). | `verifyOwnerAwarePreimage` | [Fresh-install cells 2026-09-29](../deploy/e2e/dns-kill-matrix/evidence/fresh-install-20260929/README.md): `pdns-switch__target-started__after-write` passed (startup rollback, then the same request re-ran forward on retry; ~3 s DNS gap). `pdns-switch__target-staged__after-write` **failed**: PowerDNS had never started and its unit was the install's own persistent mask, but the V1 rollback's stopped-target proof required `LoadState=loaded`; recovery ended `dns_native_recovery_unknown_after_restart`, the retry was refused, no DNS served. Prior state (no DNS) was not damaged. | **PASSED** for the after-start cut. **GAP (verified defect)**: pre-start cut — fix in progress on the stopped-target proof for empty-source journals; the cell must be re-run on the fixed source. |
 | 5 | Fresh or reconfigured PowerDNS, paired secondary | V1 | Agent, same request | as 4 | none | **GAP**: no interruption trial |
 | 6 | Fresh paired PowerDNS primary, V3 (empty source) | V3 (tests only) | Before start: owner CLI `recover-dns-pdns-fresh-prestart`. After start: Agent forward only; no after-start inverse. | SQL/daemon drift check refuses | [V3 native after-start forward + SIGKILL](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/README.md), [V3 prestart inverse](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-prestart-20260928/README.md), [V3 zone lifecycle](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-zone-20260928/README.md). Not reached through the public RPC. | **UNSUPPORTED, refused** (`pdns_primary_switch_paused`). Opening it belongs to item 2 and needs an owner-edit cut, an after-start inverse or an explicit forward-only policy, and acceptance through the public RPC. |
 | 7 | PowerDNS → BIND, standalone, PowerDNS active / BIND inactive | **V2** | Agent writes the `rolling-back` decision and then refuses; owner CLI `recover-dns-bind-switch` executes the inverse from rolling-back/rolled-back. After start: forward only once the target is verified. | Main-config edit refused, evidence kept | [Protected owner CLI](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-PROTECTED-OWNER-CLI-20260927.md): rolling-back/after-write after target start, owner edit refused, CLI interrupted, reboot | **PASSED** for that decided-rollback cell. **GAP**: intent, target-staged, source-stopped and target-started cuts under the V2 producer. The six 2026-09-25 Agent-mediated BIND reports used V1 and are historical for this row. |
@@ -71,10 +71,13 @@ continues or rolls back; owner changes are preserved; pre-start and post-start
 behaviour is explicit. With D-026, the rows that still block it are evidence,
 not code:
 
-1. Row 4 — fresh standalone PowerDNS: one before-start and one after-start cell.
-   The fixture now prepares `pdns-switch__*__standalone__*` with an empty
-   source at every phase (2026-09-29 harness change; preparation only).
-2. Row 1 — fresh standalone BIND: one after-start cell. The fixture now
+1. Row 4 — fresh standalone PowerDNS: the after-start cell passed on
+   2026-09-29; the before-start cell exposed a verified defect (stopped-target
+   proof rejects the install's own mask / a not-yet-installed unit for an
+   empty-source journal). Fix, component tests and a re-run of the
+   `target-staged` and `intent` cells on the fixed source are required.
+2. Row 1 — fresh standalone BIND: the after-start cells passed on Debian and
+   Arch on 2026-09-29 (done). The fixture now
    prepares `bind__target-verified__{before,after}-write__standalone__*` with
    an empty source; the before-write edge cuts after BIND has started with the
    journal still at `target-started`. Fresh BIND at `target-started`,

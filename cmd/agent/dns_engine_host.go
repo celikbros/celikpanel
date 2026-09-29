@@ -1661,6 +1661,7 @@ func (hostDNSEngineBackend) Switch(
 			rollback: func() error {
 				return rollbackBINDActivation(
 					rollbackCtx, systemctl, configs, stateBefore, targetBefore, sourceBefore,
+					dnsSwitchJournalHasEmptySource(journal),
 					func(proofCtx context.Context) error {
 						return verifyBINDIndependentSourceProof(proofCtx, journal)
 					},
@@ -2625,6 +2626,7 @@ func rollbackBINDActivation(
 	configs bindConfigMutation,
 	stateBefore dnsFileSnapshot,
 	targetBefore, sourceBefore map[string]dnsUnitState,
+	freshSource bool,
 	verifySource ...func(context.Context) error,
 ) error {
 	if ctx == nil {
@@ -2658,7 +2660,7 @@ func rollbackBINDActivation(
 			if before.ActiveState == "active" {
 				return nil
 			}
-			return verifyBINDTargetStoppedBeforeConfigRestore(proofCtx, systemctl)
+			return verifyBINDTargetStoppedBeforeConfigRestore(proofCtx, systemctl, freshSource)
 		},
 		restoreConfigs: func() error {
 			return runBINDMutationWithMaskParentProof(

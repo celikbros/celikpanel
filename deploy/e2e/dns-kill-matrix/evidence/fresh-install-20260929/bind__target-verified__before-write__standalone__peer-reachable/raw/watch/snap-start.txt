@@ -1,0 +1,83 @@
+tag=start wall=2026-09-28T22:33:08.089789467Z mono=60.32 96.45
+== pdns.service
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+InvocationID=
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainStartTimestampMonotonic=0
+ExecMainPID=0
+ExecMainCode=0
+ExecMainStatus=0
+== named.service
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+InvocationID=
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainStartTimestampMonotonic=0
+ExecMainPID=0
+ExecMainCode=0
+ExecMainStatus=0
+== bind9.service
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+InvocationID=
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainStartTimestampMonotonic=0
+ExecMainPID=0
+ExecMainCode=0
+ExecMainStatus=0
+== celikpanel-agent.service
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+ActiveEnterTimestamp=Mon 2026-09-28 22:32:59 UTC
+InactiveEnterTimestamp=Mon 2026-09-28 22:33:07 UTC
+InvocationID=8de8d3529c55453884c813682c4c6fbb
+NRestarts=0
+ExecMainStartTimestamp=Mon 2026-09-28 22:32:59 UTC
+ExecMainStartTimestampMonotonic=51754295
+ExecMainPID=1085
+ExecMainCode=2
+ExecMainStatus=15
+== celikpanel-panel.service
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+ActiveEnterTimestamp=Mon 2026-09-28 22:32:59 UTC
+InactiveEnterTimestamp=Mon 2026-09-28 22:33:07 UTC
+InvocationID=ad74884ab5944332800df152ce0b886d
+NRestarts=0
+ExecMainStartTimestamp=Mon 2026-09-28 22:32:59 UTC
+ExecMainStartTimestampMonotonic=51874108
+ExecMainPID=1095
+ExecMainCode=1
+ExecMainStatus=0
+== processes
+564 gpg-agent --homedir /etc/pacman.d/gnupg --use-standard-socket --daemon
+== journal file
+total 8
+drwx------ 1 root celikpanel  44 2026-09-28 22:32:58.381688689 +0000 .
+drwxr-xr-x 1 root root       390 2026-09-28 22:32:58.065688689 +0000 ..
+-rw------- 1 root celikpanel  23 2026-09-28 22:32:58.375910112 +0000 service-mutations.json
+== ss 53
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=261,fd=24))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=261,fd=22))
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=261,fd=23))
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=261,fd=25))

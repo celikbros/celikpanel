@@ -44,10 +44,10 @@ Ortak bilgiler (kaynak referansları `e9d1019d` artı D-026 kapısı içindir):
 
 | # | Yol (nasıl ulaşılır) | Günlük | Kurtarma: hedef başlamadan önce / hedef başladıktan sonra | Kurtarmada sahip değişikliği | Gerçek sistem kanıtı (sınır) | Durum |
 |---|---|---|---|---|---|---|
-| 1 | Boş BIND, tek sunucu (kurulum veya `install` kartı) | V1 | Agent, aynı istek, her iki tarafta da. Sahip CLI'ı yok (D-026 karar 2 ile kabul edildi). | Geri almada sahibi gözeten yapılandırma ön hâli | [Arch target-staged/before-write](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-TARGET-STAGED-ARCH-20260925.md): tek bir erken hücre, yalnızca ileri yönde | **EKSİK**: başlangıç sonrası kesinti, Debian hücresi, yeniden başlatma |
+| 1 | Boş BIND, tek sunucu (kurulum veya `install` kartı) | V1 | Agent, aynı istek, her iki tarafta da. Sahip CLI'ı yok (D-026 karar 2 ile kabul edildi). | Geri almada sahibi gözeten yapılandırma ön hâli | [Arch target-staged/before-write](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-TARGET-STAGED-ARCH-20260925.md): tek bir erken hücre, yalnızca ileri yönde. [Fresh-install cells 2026-09-29](../deploy/e2e/dns-kill-matrix/evidence/fresh-install-20260929/README.md): `bind__target-verified__before-write` (Arch, `named` başladıktan sonra kesildi, günlük `target-started` durumunda) ve `bind__target-verified__after-write` (Debian) Agent başlangıcında ikisi de ileri yönde yakınsadı; aynı `named` PID'si, 31/31 sağlık, yetkili UDP/TCP. | Debian ve Arch'ta başlangıç sonrası kesinti için **GEÇTİ**. **EKSİK**: Debian başlangıç öncesi hücre, yeniden başlatma; kesinti boyunca süreklilik iddia edilmiyor. |
 | 2 | Boş BIND, çiftin birincili | V1 | Agent, aynı istek | 1 ile aynı | [Pair target-staged/after-write + management-disabled reboot](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-PAIR-TARGET-STAGED-20260926.md); [V3 deletion terminal](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-V3-DELETION-TERMINAL-20260926.md) | Bu iki başlangıç öncesi hücre için **GEÇTİ**. **EKSİK**: source-stopped, target-started, target-verified kesintileri |
 | 3 | Boş BIND, çiftin ikincili | V1 | Agent, aynı istek | 1 ile aynı | yok — şimdiye kadarki denemelerde her ikincil panelsizdi | **EKSİK**: kesinti denemesi yok |
-| 4 | Boş PowerDNS, tek sunucu (yalnızca APT sunucularında) | V1 | Agent `rollbackPDNSSwitch`, başlangıçtan önce ve sonra. Sahip CLI'ı yok (D-026 karar 2). | `verifyOwnerAwarePreimage` | yok — hiçbir zaman tek sunuculu `pdns-switch` hücresi çalıştırılmadı | **EKSİK**: başlangıç öncesi ve başlangıç sonrası hücreler |
+| 4 | Boş PowerDNS, tek sunucu (yalnızca APT sunucularında) | V1 | Agent `rollbackPDNSSwitch`, başlangıçtan önce ve sonra. Sahip CLI'ı yok (D-026 karar 2). | `verifyOwnerAwarePreimage` | [Fresh-install cells 2026-09-29](../deploy/e2e/dns-kill-matrix/evidence/fresh-install-20260929/README.md): `pdns-switch__target-started__after-write` geçti (başlangıçta geri alma, ardından aynı istek yeniden denemede ileri yönde tekrar çalıştı; ~3 sn DNS boşluğu). `pdns-switch__target-staged__after-write` **başarısız**: PowerDNS hiç başlamamıştı ve birimi kurulumun kendi kalıcı maskesiydi, ama V1 geri almanın durmuş hedef kanıtı `LoadState=loaded` gerektiriyordu; kurtarma `dns_native_recovery_unknown_after_restart` ile sonuçlandı, yeniden deneme reddedildi, DNS sunulmadı. Önceki durum (DNS yok) zarar görmedi. | Başlangıç sonrası kesinti için **GEÇTİ**. **EKSİK (doğrulanmış kusur)**: başlangıç öncesi kesinti — boş kaynak günlükleri için durmuş hedef kanıtı üzerinde düzeltme sürüyor; hücre düzeltilmiş kaynak üzerinde yeniden çalıştırılmalıdır. |
 | 5 | Boş veya yeniden yapılandırılmış PowerDNS, çiftin ikincili | V1 | Agent, aynı istek | 4 ile aynı | yok | **EKSİK**: kesinti denemesi yok |
 | 6 | Boş çift PowerDNS birincili, V3 (boş kaynak) | V3 (yalnızca testler) | Başlangıçtan önce: sahip CLI'ı `recover-dns-pdns-fresh-prestart`. Başlangıçtan sonra: Agent yalnızca ileri yönde; başlangıç sonrası ters işlem yok. | SQL/daemon sapma denetimi reddeder | [V3 native after-start forward + SIGKILL](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/README.md), [V3 prestart inverse](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-prestart-20260928/README.md), [V3 zone lifecycle](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-zone-20260928/README.md). Genel RPC üzerinden erişilemez. | **DESTEKLENMİYOR, reddediliyor** (`pdns_primary_switch_paused`). Bunu açmak 2. maddeye aittir ve bir sahip-düzenleme kesintisi, bir başlangıç sonrası ters işlem ya da açık bir yalnızca-ileri politikası ile genel RPC üzerinden kabul gerektirir. |
 | 7 | PowerDNS → BIND, tek sunucu, PowerDNS etkin / BIND devre dışı | **V2** | Agent `rolling-back` kararını yazar ve sonra reddeder; sahip CLI'ı `recover-dns-bind-switch`, rolling-back/rolled-back durumundan ters işlemi çalıştırır. Başlangıçtan sonra: hedef doğrulandıktan sonra yalnızca ileri yönde. | Ana yapılandırma düzenlemesi reddedilir, kanıt saklanır | [Protected owner CLI](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-PROTECTED-OWNER-CLI-20260927.md): hedef başladıktan sonra rolling-back/after-write, sahip düzenlemesi reddedildi, CLI kesintiye uğradı, yeniden başlatma | Karar verilmiş geri alma hücresi için **GEÇTİ**. **EKSİK**: V2 üreticisi altında intent, target-staged, source-stopped ve target-started kesintileri. 25 Eylül 2026 tarihli altı Agent-aracılı BIND raporu V1 kullandı ve bu satır için tarihseldir. |
@@ -71,12 +71,14 @@ devam eder veya geri alınır; sahip değişiklikleri korunur; başlangıç önc
 başlangıç sonrası davranış açıktır. D-026 ile birlikte, bunu hâlâ engelleyen
 satırlar kod değil kanıttır:
 
-1. Satır 4 — boş tek sunucu PowerDNS: bir başlangıç öncesi ve bir başlangıç
-   sonrası hücre. Düzenek artık her aşamada boş bir kaynakla
-   `pdns-switch__*__standalone__*` hazırlıyor (29 Eylül 2026 düzenek
-   değişikliği; yalnızca hazırlık).
-2. Satır 1 — boş tek sunucu BIND: bir başlangıç sonrası hücre. Düzenek artık
-   boş bir kaynakla
+1. Satır 4 — boş tek sunucu PowerDNS: başlangıç sonrası hücre 29 Eylül 2026'da
+   geçti; başlangıç öncesi hücre doğrulanmış bir kusuru ortaya çıkardı
+   (durmuş hedef kanıtı, boş kaynak günlüğü için kurulumun kendi maskesini /
+   henüz kurulmamış bir birimi reddediyor). Düzeltme, bileşen testleri ve
+   düzeltilmiş kaynak üzerinde `target-staged` ve `intent` hücrelerinin
+   yeniden çalıştırılması gerekiyor.
+2. Satır 1 — boş tek sunucu BIND: başlangıç sonrası hücreler 29 Eylül 2026'da
+   Debian ve Arch'ta geçti (tamamlandı). Düzenek artık boş bir kaynakla
    `bind__target-verified__{before,after}-write__standalone__*` hazırlıyor;
    before-write ucu, günlük hâlâ `target-started` durumundayken BIND
    başladıktan sonra kesiyor. Boş BIND'in `target-started`, `source-stopped`

@@ -16,10 +16,36 @@ func verifyBINDTargetStoppedBeforeConfigRestoreWithOps(
 	inspectProcesses func(context.Context) (dnsUnitProcesses, error),
 	inspectCgroup func(context.Context) error,
 ) error {
-	if inspectUnit == nil || inspectProcesses == nil || inspectCgroup == nil {
-		return errors.New("BIND target stop proof requires native unit and process observers")
+	return verifyBINDTargetStoppedBeforeConfigRestoreForSourceWithOps(
+		ctx, false, inspectUnit, inspectProcesses, inspectCgroup, nil,
+	)
+}
+
+// A first-install journal (no source engine) also accepts the never-started
+// target states: not-found, the package guard's persistent mask, or loaded,
+// each without a public port-53 listener. A journal with a source keeps the
+// loaded-unit proof above unchanged.
+func verifyBINDTargetStoppedBeforeConfigRestoreForSourceWithOps(
+	ctx context.Context,
+	freshSource bool,
+	inspectUnit func(context.Context) (bindInstallUnitState, error),
+	inspectProcesses func(context.Context) (dnsUnitProcesses, error),
+	inspectCgroup func(context.Context) error,
+	inspectPublicDNSListeners func(context.Context) error,
+) error {
+	if inspectUnit == nil || inspectProcesses == nil || inspectCgroup == nil ||
+		(freshSource && inspectPublicDNSListeners == nil) {
+		return errors.New("BIND target stop proof requires native unit, process and listener observers")
 	}
-	return dnsenginerecovery.VerifyStoppedUnit(ctx, "named.service",
+	verify := func(observe func(context.Context) (dnsenginerecovery.StoppedUnitObservation, error)) error {
+		if freshSource {
+			return dnsenginerecovery.VerifyStoppedFreshSourceTarget(
+				ctx, "named.service", observe, inspectPublicDNSListeners,
+			)
+		}
+		return dnsenginerecovery.VerifyStoppedUnit(ctx, "named.service", observe)
+	}
+	return verify(
 		func(proofCtx context.Context) (dnsenginerecovery.StoppedUnitObservation, error) {
 			unit, err := inspectUnit(proofCtx)
 			if err != nil {
@@ -41,10 +67,10 @@ func verifyBINDTargetStoppedBeforeConfigRestoreWithOps(
 		})
 }
 
-func verifyBINDTargetStoppedBeforeConfigRestore(ctx context.Context, systemctl string) error {
+func verifyBINDTargetStoppedBeforeConfigRestore(ctx context.Context, systemctl string, freshSource bool) error {
 	guard := dnsSystemdStateGuard(systemctl)
-	return verifyBINDTargetStoppedBeforeConfigRestoreWithOps(
-		ctx,
+	return verifyBINDTargetStoppedBeforeConfigRestoreForSourceWithOps(
+		ctx, freshSource,
 		func(proofCtx context.Context) (bindInstallUnitState, error) {
 			return guard.inspect(proofCtx, "named.service")
 		},
@@ -54,5 +80,6 @@ func verifyBINDTargetStoppedBeforeConfigRestore(ctx context.Context, systemctl s
 		func(proofCtx context.Context) error {
 			return dnsenginerecovery.ProbeEmptyUnitCgroup(proofCtx, "named.service", dnsenginerecovery.SystemdCgroupUnitRunner, dnsenginerecovery.NativeCgroupEvents)
 		},
+		proveNoPublicDNSPort53Listener,
 	)
 }

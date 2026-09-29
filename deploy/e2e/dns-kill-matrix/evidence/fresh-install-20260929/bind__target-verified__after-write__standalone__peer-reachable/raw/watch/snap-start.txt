@@ -1,0 +1,82 @@
+tag=start wall=2026-09-28T22:36:50.589865533Z mono=65.57 111.40
+== pdns.service
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainStartTimestampMonotonic=0
+ExecMainPID=0
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+InvocationID=
+== named.service
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainStartTimestampMonotonic=0
+ExecMainPID=0
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+InvocationID=
+== bind9.service
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainStartTimestampMonotonic=0
+ExecMainPID=0
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+InvocationID=
+== celikpanel-agent.service
+NRestarts=0
+ExecMainStartTimestamp=Mon 2026-09-28 22:36:42 UTC
+ExecMainStartTimestampMonotonic=57089509
+ExecMainPID=1195
+ExecMainCode=2
+ExecMainStatus=15
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+ActiveEnterTimestamp=Mon 2026-09-28 22:36:42 UTC
+InactiveEnterTimestamp=Mon 2026-09-28 22:36:49 UTC
+InvocationID=2d6ab0f514cd482a966b6eba2eb2d884
+== celikpanel-panel.service
+NRestarts=0
+ExecMainStartTimestamp=Mon 2026-09-28 22:36:42 UTC
+ExecMainStartTimestampMonotonic=57234355
+ExecMainPID=1205
+ExecMainCode=1
+ExecMainStatus=0
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+ActiveEnterTimestamp=Mon 2026-09-28 22:36:42 UTC
+InactiveEnterTimestamp=Mon 2026-09-28 22:36:49 UTC
+InvocationID=7cb02f87ab7a486aa5ddc32b1b21ea20
+== processes
+== journal file
+total 12
+drwx------  2 root celikpanel 4096 2026-09-28 22:36:40.783221012 +0000 .
+drwxr-xr-x 27 root root       4096 2026-09-28 22:36:40.619221012 +0000 ..
+-rw-------  1 root celikpanel   23 2026-09-28 22:36:40.775221012 +0000 service-mutations.json
+== ss 53
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=18))
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=21))
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=19))

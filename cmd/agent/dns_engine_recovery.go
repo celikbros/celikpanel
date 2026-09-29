@@ -461,6 +461,7 @@ func rollbackDNSSwitchJournal(
 				ctx, systemctl, configs, journal.StateBefore,
 				dnsUnitSnapshotsMap(journal.TargetUnitsBefore),
 				dnsUnitSnapshotsMap(journal.SourceUnitsBefore),
+				dnsSwitchJournalHasEmptySource(journal),
 			)
 		case dnsenginerecovery.NativeInversePDNSAdoption:
 			return rollbackPDNSAdoption(ctx, systemctl, manifest, journal)
@@ -757,6 +758,13 @@ func canonicalNoPublicDNSAuthorityListeners(
 	}
 	sort.Strings(result)
 	return result, nil
+}
+
+// dnsSwitchJournalHasEmptySource reports a first install: the journal froze no
+// source engine and no source epoch, so its target cannot have served before
+// this operation.
+func dnsSwitchJournalHasEmptySource(journal dnsEngineSwitchJournal) bool {
+	return journal.SourceEngine == "" && journal.SourceEpoch == 0
 }
 
 func targetSnapshotWasActive(journal dnsEngineSwitchJournal, unit string) bool {

@@ -129,3 +129,137 @@ func TestVerifyStoppedPDNSPersistentMaskRequiresExactStableNativeEvidence(t *tes
 		t.Fatal("mask changed between observations")
 	}
 }
+
+func TestVerifyStoppedFreshSourceTargetAcceptsOnlyNeverServedStates(t *testing.T) {
+	base := StoppedUnitObservation{Name: "pdns.service", ActiveState: "inactive", SubState: "dead"}
+	with := func(load, file string) StoppedUnitObservation {
+		seen := base
+		seen.LoadState, seen.UnitFileState = load, file
+		return seen
+	}
+	noListener := func(context.Context) error { return nil }
+	for _, tc := range []struct {
+		name string
+		seen StoppedUnitObservation
+	}{
+		{"not-found-before-packages", with("not-found", "")},
+		{"package-guard-persistent-mask", with("masked", "masked")},
+		{"loaded-disabled-after-unmask", with("loaded", "disabled")},
+		{"loaded-enabled-after-enable", with("loaded", "enabled")},
+	} {
+		t.Run("accept/"+tc.name, func(t *testing.T) {
+			reads, listens := 0, 0
+			err := VerifyStoppedFreshSourceTarget(context.Background(), "pdns.service",
+				func(context.Context) (StoppedUnitObservation, error) { reads++; return tc.seen, nil },
+				func(context.Context) error { listens++; return nil })
+			if err != nil || reads != 2 || listens != 2 {
+				t.Fatalf("fresh stopped proof err=%v reads=%d listener proofs=%d", err, reads, listens)
+			}
+			named := tc.seen
+			named.Name = "named.service"
+			if err := VerifyStoppedFreshSourceTarget(context.Background(), "named.service",
+				func(context.Context) (StoppedUnitObservation, error) { return named, nil }, noListener); err != nil {
+				t.Fatalf("fresh BIND target stopped proof: %v", err)
+			}
+		})
+	}
+	for _, tc := range []struct {
+		name   string
+		change func(*StoppedUnitObservation)
+	}{
+		{"active", func(s *StoppedUnitObservation) { s.ActiveState = "active" }},
+		{"activating", func(s *StoppedUnitObservation) { s.ActiveState = "activating" }},
+		{"failed", func(s *StoppedUnitObservation) { s.ActiveState = "failed" }},
+		{"main-pid", func(s *StoppedUnitObservation) { s.MainPID = 17 }},
+		{"control-pid", func(s *StoppedUnitObservation) { s.ControlPID = 19 }},
+		{"not-dead", func(s *StoppedUnitObservation) { s.SubState = "running" }},
+		{"wrong-unit", func(s *StoppedUnitObservation) { s.Name = "named.service" }},
+		{"runtime-mask", func(s *StoppedUnitObservation) { s.UnitFileState = "masked-runtime" }},
+		{"unknown-load-state", func(s *StoppedUnitObservation) { s.LoadState = "bad-setting"; s.UnitFileState = "" }},
+	} {
+		t.Run("reject/"+tc.name, func(t *testing.T) {
+			seen := with("masked", "masked")
+			tc.change(&seen)
+			if err := VerifyStoppedFreshSourceTarget(context.Background(), "pdns.service",
+				func(context.Context) (StoppedUnitObservation, error) { return seen, nil }, noListener); err == nil {
+				t.Fatalf("unsafe fresh target accepted: %+v", seen)
+			}
+		})
+	}
+	t.Run("reject/not-found-with-unit-file", func(t *testing.T) {
+		seen := with("not-found", "disabled")
+		if err := VerifyStoppedFreshSourceTarget(context.Background(), "pdns.service",
+			func(context.Context) (StoppedUnitObservation, error) { return seen, nil }, noListener); err == nil {
+			t.Fatal("not-found unit with a unit-file state was accepted")
+		}
+	})
+	t.Run("reject/public-listener", func(t *testing.T) {
+		listens := 0
+		if err := VerifyStoppedFreshSourceTarget(context.Background(), "pdns.service",
+			func(context.Context) (StoppedUnitObservation, error) { return with("masked", "masked"), nil },
+			func(context.Context) error {
+				listens++
+				if listens == 2 {
+					return errors.New("public port-53 listener appeared")
+				}
+				return nil
+			}); err == nil {
+			t.Fatal("listener appearing on the second observation was accepted")
+		}
+	})
+	t.Run("reject/listener-observer-missing", func(t *testing.T) {
+		if err := VerifyStoppedFreshSourceTarget(context.Background(), "pdns.service",
+			func(context.Context) (StoppedUnitObservation, error) { return with("masked", "masked"), nil }, nil); err == nil {
+			t.Fatal("fresh proof without a listener observer was accepted")
+		}
+	})
+	for _, tc := range []struct {
+		name          string
+		first, second StoppedUnitObservation
+	}{
+		{"masked-to-loaded", with("masked", "masked"), with("loaded", "disabled")},
+		{"not-found-to-masked", with("not-found", ""), with("masked", "masked")},
+		{"disabled-to-enabled", with("loaded", "disabled"), with("loaded", "enabled")},
+	} {
+		t.Run("reject/changed-between-reads/"+tc.name, func(t *testing.T) {
+			reads := 0
+			if err := VerifyStoppedFreshSourceTarget(context.Background(), "pdns.service",
+				func(context.Context) (StoppedUnitObservation, error) {
+					reads++
+					if reads == 2 {
+						return tc.second, nil
+					}
+					return tc.first, nil
+				}, noListener); err == nil {
+				t.Fatal("unit changed between stopped observations was accepted")
+			}
+		})
+	}
+	t.Run("source-present-still-requires-loaded", func(t *testing.T) {
+		for _, seen := range []StoppedUnitObservation{with("masked", "masked"), with("not-found", "")} {
+			if err := VerifyStoppedUnit(context.Background(), "pdns.service",
+				func(context.Context) (StoppedUnitObservation, error) { return seen, nil }); err == nil ||
+				err.Error() != "DNS target is not a loaded unit" {
+				t.Fatalf("source-present proof accepted %+v: %v", seen, err)
+			}
+		}
+		if err := VerifyStoppedUnit(context.Background(), "pdns.service",
+			func(context.Context) (StoppedUnitObservation, error) { return with("loaded", "enabled"), nil }); err != nil {
+			t.Fatalf("source-present loaded proof: %v", err)
+		}
+	})
+	t.Run("v3-persistent-mask-unchanged", func(t *testing.T) {
+		for _, seen := range []StoppedUnitObservation{with("not-found", ""), with("loaded", "disabled")} {
+			if err := VerifyStoppedPDNSPersistentMask(context.Background(),
+				func(context.Context) (StoppedUnitObservation, error) { return seen, nil }); err == nil {
+				t.Fatalf("V3 persistent-mask proof accepted %+v", seen)
+			}
+		}
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	if err := VerifyStoppedFreshSourceTarget(ctx, "pdns.service",
+		func(context.Context) (StoppedUnitObservation, error) { return with("masked", "masked"), nil },
+		func(context.Context) error { cancel(); return nil }); !errors.Is(err, context.Canceled) {
+		t.Fatalf("cancelled listener proof = %v", err)
+	}
+}

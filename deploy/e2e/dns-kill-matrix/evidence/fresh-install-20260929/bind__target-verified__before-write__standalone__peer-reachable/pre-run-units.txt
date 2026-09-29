@@ -1,0 +1,59 @@
+== pdns.service
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+InvocationID=
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+== named.service
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+InvocationID=
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+== bind9.service
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+InvocationID=
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+== celikpanel-agent.service
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+InvocationID=8de8d3529c55453884c813682c4c6fbb
+NRestarts=0
+ExecMainStartTimestamp=Mon 2026-09-28 22:32:59 UTC
+ExecMainPID=1085
+== celikpanel-panel.service
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+InvocationID=ad74884ab5944332800df152ce0b886d
+NRestarts=0
+ExecMainStartTimestamp=Mon 2026-09-28 22:32:59 UTC
+ExecMainPID=1095
+/var/lib/celikpanel-agent-private/:
+total 8
+drwx------ 1 root celikpanel  44 2026-09-28 22:32:58.381688689 +0000 .
+drwxr-xr-x 1 root root       390 2026-09-28 22:32:58.065688689 +0000 ..
+-rw------- 1 root celikpanel  23 2026-09-28 22:32:58.375910112 +0000 service-mutations.json
+
+/var/lib/celikpanel-dns-kill-matrix/:
+total 1396
+drwx------ 1 root root     260 2026-09-28 22:33:07.190688689 +0000 .
+drwxr-xr-x 1 root root     390 2026-09-28 22:32:58.065688689 +0000 ..
+-rw------- 1 root root    3248 2026-09-28 22:33:07.055907103 +0000 controller-argv.json
+-rw------- 1 root root    1016 2026-09-28 22:33:07.180838307 +0000 coordinator-stop-proof.json
+-rw------- 1 root root     728 2026-09-28 22:33:05.433688689 +0000 installed-binaries.sha256
+-rw------- 1 root root 1406962 2026-09-28 22:32:58.282688689 +0000 manifest.json
+drwx------ 1 root root       0 2026-09-28 22:33:06.930688689 +0000 measured
+drwx------ 1 root root     126 2026-09-28 22:33:07.025383289 +0000 results
+-rw------- 1 root root    1315 2026-09-28 22:33:06.928688689 +0000 scenario.json
+-rw------- 1 root root    1442 2026-09-28 22:33:06.992688689 +0000 source-proof.json
+-- No entries --

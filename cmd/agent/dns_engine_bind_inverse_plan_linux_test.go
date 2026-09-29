@@ -15,7 +15,7 @@ import (
 func TestBINDRollbackRefusesSourceChangeBeforeServiceCommands(t *testing.T) {
 	refused := errors.New("source database changed by owner")
 	called := 0
-	err := rollbackBINDActivation(context.Background(), "/nonexistent-systemctl", bindConfigMutation{}, dnsFileSnapshot{}, nil, nil, func(context.Context) error { called++; return refused })
+	err := rollbackBINDActivation(context.Background(), "/nonexistent-systemctl", bindConfigMutation{}, dnsFileSnapshot{}, nil, nil, false, func(context.Context) error { called++; return refused })
 	if !errors.Is(err, refused) || called != 1 {
 		t.Fatalf("source refusal lost before native mutations: calls=%d err=%v", called, err)
 	}

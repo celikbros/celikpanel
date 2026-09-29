@@ -1,0 +1,11 @@
+total 1400
+drwx------ 1 root root     260 Sep 28 22:33 .
+drwxr-xr-x 1 root root     390 Sep 28 22:32 ..
+-rw------- 1 root root    3248 Sep 28 22:33 controller-argv.json
+-rw------- 1 root root    1016 Sep 28 22:33 coordinator-stop-proof.json
+-rw------- 1 root root     728 Sep 28 22:33 installed-binaries.sha256
+-rw------- 1 root root 1406962 Sep 28 22:32 manifest.json
+drwx------ 1 root root      42 Sep 28 22:33 measured
+drwx------ 1 root root     126 Sep 28 22:33 results
+-rw------- 1 root root    1315 Sep 28 22:33 scenario.json
+-rw------- 1 root root    1442 Sep 28 22:33 source-proof.json

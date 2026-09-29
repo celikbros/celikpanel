@@ -1307,3 +1307,38 @@ routed through this gate. Removing the check is not the way to reopen the
 path; a wired producer, pre-start and post-start Agent-independent inverses and
 native evidence are. The [acceptance register](DNS-RECOVERY-ACCEPTANCE.md)
 tracks the remaining rows.
+
+### First-install rollback accepts a target that never started (2026-09-29)
+
+P0.4, constitutional invariants 2/4, D-026 decision 2. The native cell
+`pdns-switch__target-staged__after-write__standalone__peer-reachable`
+([evidence](../deploy/e2e/dns-kill-matrix/evidence/fresh-install-20260929/README.md))
+exposed a verified defect: a fresh PowerDNS install installs its packages
+before the `intent` write and leaves `pdns.service` under the package guard's
+persistent mask until activation, so the journal's `target_units_before`
+records a masked, never-started unit. The V1 rollback's stopped-target proof
+(`VerifyStoppedUnit`) required `LoadState=loaded`, so Agent startup recovery
+ended in `dns_native_recovery_unknown_after_restart` with the journal retained
+at `rolling-back`; the same-request retry was refused and no DNS was served.
+The prior no-DNS state was not damaged.
+
+Fix (source only; native re-run pending): for a journal whose source is
+empty (`SourceEngine == ""`, `SourceEpoch == 0`) the proof is
+`VerifyStoppedFreshSourceTarget`, which accepts exactly the three states a
+never-started target passes through — absent (`not-found`, empty unit-file
+state), the guard's persistent mask (`masked`/`masked`), or `loaded` — each
+only inactive/dead with zero main/control PIDs, twice-observed and identical,
+and each observation additionally proving no public port-53 listener with the
+same inventory the package guard uses. A runtime-only mask is refused. The
+PowerDNS stop step is skipped only when a first-install target reads
+`not-found`. Journals with a source engine keep the `loaded` requirement;
+`VerifyStoppedPDNSPersistentMask` for V3 is unchanged. The identical rule now
+applies to the first-install BIND rollback, whose preimage restore had masked
+the defect. Paired-secondary reconfiguration journals also carry an empty
+source and therefore now require the no-listener proof before restore; their
+target is loaded after the stop, so their outcome is otherwise unchanged.
+Known limit, shared with the V3 inverse: the listener inventory ignores
+loopback and link-local sockets. Component tests cover the accepted and
+refused states; the failed cell and the `intent` cell must be re-run on the
+fixed source before row 4 of the acceptance register can pass its pre-start
+cut.

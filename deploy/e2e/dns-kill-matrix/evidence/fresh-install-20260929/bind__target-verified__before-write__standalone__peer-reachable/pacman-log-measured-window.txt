@@ -1,0 +1,121 @@
+[2026-09-28T22:33:09+0000] [PACMAN] Running '/usr/bin/pacman -Syu --noconfirm --needed bind'
+[2026-09-28T22:33:09+0000] [PACMAN] synchronizing package lists
+[2026-09-28T22:33:11+0000] [PACMAN] starting full system upgrade
+[2026-09-28T22:33:42+0000] [ALPM] running '60-mkinitcpio-remove.hook'...
+[2026-09-28T22:33:43+0000] [ALPM] transaction started
+[2026-09-28T22:33:43+0000] [ALPM] upgraded linux-api-headers (7.1-1 -> 7.2-1)
+[2026-09-28T22:33:43+0000] [ALPM] upgraded tzdata (2026c-1 -> 2026d-1)
+[2026-09-28T22:33:43+0000] [ALPM] upgraded iana-etc (20260530-1 -> 20260617-1)
+[2026-09-28T22:33:43+0000] [ALPM] upgraded glibc (2.44+r24+g16be1518495f-1 -> 2.44+r50+g1848099f063e-1)
+[2026-09-28T22:33:43+0000] [ALPM] upgraded readline (8.3.003-1 -> 8.3.6-1)
+[2026-09-28T22:33:44+0000] [ALPM] upgraded bash (5.3.15-1 -> 5.3.20-1)
+[2026-09-28T22:33:44+0000] [ALPM] installed dnssec-anchors (20250524-1)
+[2026-09-28T22:33:44+0000] [ALPM] installed libmaxminddb (1.14.1-1)
+[2026-09-28T22:33:44+0000] [ALPM] upgraded xz (5.8.3-1 -> 5.8.4-1)
+[2026-09-28T22:33:44+0000] [ALPM] upgraded openssl (3.6.3-1 -> 3.6.4-1)
+[2026-09-28T22:33:44+0000] [ALPM] upgraded libldap (2.6.13-1 -> 2.7.1-1)
+[2026-09-28T22:33:44+0000] [ALPM] upgraded util-linux-libs (2.42.2-1 -> 2.42.4-1)
+[2026-09-28T22:33:44+0000] [ALPM] upgraded libtirpc (1.3.7-1 -> 1.3.8-1)
+[2026-09-28T22:33:44+0000] [ALPM] installed libuv (1.52.1-2)
+[2026-09-28T22:33:45+0000] [ALPM] upgraded libxml2 (2.15.3-1 -> 2.15.4-1)
+[2026-09-28T22:33:45+0000] [ALPM] installed jemalloc (1:5.4.0-1)
+[2026-09-28T22:33:45+0000] [ALPM] installed liburcu (0.15.7-1)
+[2026-09-28T22:33:45+0000] [ALPM] upgraded libgcrypt (1.12.2-1 -> 1.12.4-1)
+[2026-09-28T22:33:45+0000] [ALPM] upgraded systemd-libs (261.2-1 -> 262-1)
+[2026-09-28T22:33:45+0000] [ALPM] upgraded libcap-ng (0.9.3-1 -> 0.9.6-1)
+[2026-09-28T22:33:45+0000] [ALPM] installed bind (9.20.29-1)
+[2026-09-28T22:33:45+0000] [ALPM] upgraded coreutils (9.11-2 -> 9.12-2)
+[2026-09-28T22:33:45+0000] [ALPM] upgraded ca-certificates-mozilla (3.127-1 -> 3.130-1)
+[2026-09-28T22:33:45+0000] [ALPM] upgraded leancrypto (1.8.0-1 -> 1.9.0-1)
+[2026-09-28T22:33:45+0000] [ALPM] upgraded gnutls (3.8.13-2 -> 3.8.13-3)
+[2026-09-28T22:33:45+0000] [ALPM] upgraded curl (8.21.0-1 -> 8.22.0-1)
+[2026-09-28T22:33:45+0000] [ALPM] upgraded libksba (1.8.0-1 -> 1.8.1-1)
+[2026-09-28T22:33:45+0000] [ALPM] upgraded pcre2 (10.47-1 -> 10.48-1)
+[2026-09-28T22:33:45+0000] [ALPM] upgraded libsecret (0.21.7-1 -> 0.21.8.2-1)
+[2026-09-28T22:33:45+0000] [ALPM] upgraded gpgme (2.1.2-1 -> 2.2.0-1)
+[2026-09-28T22:33:45+0000] [ALPM] upgraded cryptsetup (2.8.7-1 -> 2.8.8-1)
+[2026-09-28T22:33:45+0000] [ALPM] upgraded hwdata (0.410-1 -> 0.411-1)
+[2026-09-28T22:33:45+0000] [ALPM] upgraded libelf (0.195-8 -> 0.196-1)
+[2026-09-28T22:33:46+0000] [ALPM] upgraded util-linux (2.42.2-1 -> 2.42.4-1)
+[2026-09-28T22:33:46+0000] [ALPM] upgraded expat (2.8.3-1 -> 2.8.5-1)
+[2026-09-28T22:33:46+0000] [ALPM] upgraded gzip (1.14-2 -> 1.15-1)
+[2026-09-28T22:33:46+0000] [ALPM] upgraded systemd (261.2-1 -> 262-1)
+[2026-09-28T22:33:46+0000] [ALPM-SCRIPTLET] Creating group 'named' with GID 40.
+[2026-09-28T22:33:46+0000] [ALPM-SCRIPTLET] Creating user 'named' (BIND DNS Server) with UID 40 and GID 40.
+[2026-09-28T22:33:47+0000] [ALPM-SCRIPTLET] :: This is a systemd feature update. You may want to have a look at
+[2026-09-28T22:33:47+0000] [ALPM-SCRIPTLET]    NEWS for what changed, or if you observe unexpected behavior:
+[2026-09-28T22:33:47+0000] [ALPM-SCRIPTLET]      /usr/share/doc/systemd/NEWS
+[2026-09-28T22:33:47+0000] [ALPM] upgraded jansson (2.15.0-1 -> 2.15.1-1)
+[2026-09-28T22:33:47+0000] [ALPM] upgraded archlinux-keyring (20260727-1 -> 20260909-1)
+[2026-09-28T22:33:47+0000] [ALPM-SCRIPTLET] ==> Appending keys from archlinux.gpg...
+[2026-09-28T22:33:50+0000] [ALPM-SCRIPTLET] ==> Updating trust database...
+[2026-09-28T22:33:50+0000] [ALPM-SCRIPTLET] gpg: next trustdb check due at 2026-10-26
+[2026-09-28T22:33:50+0000] [ALPM] upgraded grub (2:2.14-1 -> 2:2.16-1)
+[2026-09-28T22:33:50+0000] [ALPM-SCRIPTLET] :: To use the new features provided in this GRUB update, it is recommended
+[2026-09-28T22:33:50+0000] [ALPM-SCRIPTLET]    to install it to the MBR or UEFI. Due to potential configuration
+[2026-09-28T22:33:50+0000] [ALPM-SCRIPTLET]    incompatibilities, it is advised to run both, installation and generation
+[2026-09-28T22:33:50+0000] [ALPM-SCRIPTLET]    of configuration:
+[2026-09-28T22:33:50+0000] [ALPM-SCRIPTLET]      # grub-install ...
+[2026-09-28T22:33:50+0000] [ALPM-SCRIPTLET]      # grub-mkconfig -o /boot/grub/grub.cfg
+[2026-09-28T22:33:50+0000] [ALPM] upgraded libnftnl (1.3.1-1 -> 1.3.2-1)
+[2026-09-28T22:33:50+0000] [ALPM] upgraded libpcap (1.10.6-1 -> 1.11.0-1)
+[2026-09-28T22:33:50+0000] [ALPM] upgraded nftables (1:1.1.6-3 -> 1:1.1.7-3)
+[2026-09-28T22:33:50+0000] [ALPM] upgraded iproute2 (7.1.0-1 -> 7.2.0-1)
+[2026-09-28T22:33:50+0000] [ALPM] upgraded mkinitcpio (41.1-1 -> 42.1-1)
+[2026-09-28T22:33:52+0000] [ALPM] upgraded linux (7.1.8.arch1-3 -> 7.2.7.arch1-1)
+[2026-09-28T22:33:52+0000] [ALPM] upgraded python-charset-normalizer (3.4.7-1 -> 3.5.1-1)
+[2026-09-28T22:33:52+0000] [ALPM] upgraded python-idna (3.18-1 -> 3.20-1)
+[2026-09-28T22:33:52+0000] [ALPM] upgraded qemu-guest-agent (11.1.0-1 -> 11.1.1-4)
+[2026-09-28T22:33:52+0000] [ALPM] upgraded run-parts (5.23.2-1 -> 5.24-1)
+[2026-09-28T22:33:52+0000] [ALPM] upgraded systemd-sysvcompat (261.2-1 -> 262-1)
+[2026-09-28T22:33:52+0000] [ALPM] upgraded tar (1.35-3 -> 1.35-5)
+[2026-09-28T22:33:52+0000] [ALPM-SCRIPTLET] ==> NOTICE: tar backup/restore scripts have been moved
+[2026-09-28T22:33:52+0000] [ALPM-SCRIPTLET] ==>
+[2026-09-28T22:33:52+0000] [ALPM-SCRIPTLET] ==>   The 'tar' package no longer ships the helper scripts
+[2026-09-28T22:33:52+0000] [ALPM-SCRIPTLET] ==>   /usr/bin/backup and /usr/bin/restore.
+[2026-09-28T22:33:52+0000] [ALPM-SCRIPTLET] ==>
+[2026-09-28T22:33:52+0000] [ALPM-SCRIPTLET] ==>   If you rely on these tools, install them separately with:
+[2026-09-28T22:33:52+0000] [ALPM-SCRIPTLET] ==>
+[2026-09-28T22:33:52+0000] [ALPM-SCRIPTLET] ==>       $ pacman -S tar-scripts
+[2026-09-28T22:33:52+0000] [ALPM-SCRIPTLET] ==>
+[2026-09-28T22:33:52+0000] [ALPM-SCRIPTLET] ==>   The core 'tar' archiving utility itself is unaffected.
+[2026-09-28T22:33:52+0000] [ALPM] transaction completed
+[2026-09-28T22:33:52+0000] [ALPM] running '10-glibc-locale-gen.hook'...
+[2026-09-28T22:33:52+0000] [ALPM-SCRIPTLET] Generating locales...
+[2026-09-28T22:33:54+0000] [ALPM-SCRIPTLET]   en_US.UTF-8... done
+[2026-09-28T22:33:54+0000] [ALPM-SCRIPTLET] Generation complete.
+[2026-09-28T22:33:54+0000] [ALPM] running '11-glibc-ldconfig.hook'...
+[2026-09-28T22:33:54+0000] [ALPM] running '12-glibc-iconvconfig.hook'...
+[2026-09-28T22:33:54+0000] [ALPM] running '20-systemd-sysusers.hook'...
+[2026-09-28T22:33:54+0000] [ALPM] running '21-systemd-tmpfiles.hook'...
+[2026-09-28T22:33:54+0000] [ALPM] running '25-systemd-catalog.hook'...
+[2026-09-28T22:33:54+0000] [ALPM] running '25-systemd-hwdb.hook'...
+[2026-09-28T22:33:54+0000] [ALPM] running '25-systemd-sysctl.hook'...
+[2026-09-28T22:33:54+0000] [ALPM] running '30-systemd-daemon-reload-system.hook'...
+[2026-09-28T22:33:55+0000] [ALPM] running '30-systemd-daemon-reload-user.hook'...
+[2026-09-28T22:33:55+0000] [ALPM] running '35-systemd-enqueue-marked.hook'...
+[2026-09-28T22:33:57+0000] [ALPM] running '35-systemd-udev-reload.hook'...
+[2026-09-28T22:33:57+0000] [ALPM] running '35-systemd-update.hook'...
+[2026-09-28T22:33:57+0000] [ALPM] running '40-update-ca-trust.hook'...
+[2026-09-28T22:33:58+0000] [ALPM] running '60-depmod.hook'...
+[2026-09-28T22:33:59+0000] [ALPM] running '90-mkinitcpio-install.hook'...
+[2026-09-28T22:34:00+0000] [ALPM-SCRIPTLET] ==> Building image from preset: /etc/mkinitcpio.d/linux.preset: 'default'
+[2026-09-28T22:34:00+0000] [ALPM-SCRIPTLET] ==> Using default configuration file: '/etc/mkinitcpio.conf'
+[2026-09-28T22:34:00+0000] [ALPM-SCRIPTLET]   -> -k /boot/vmlinuz-linux -g /boot/initramfs-linux.img
+[2026-09-28T22:34:00+0000] [ALPM-SCRIPTLET] ==> Starting build: '7.2.7-arch1-1'
+[2026-09-28T22:34:00+0000] [ALPM-SCRIPTLET]   -> Running build hook: [base]
+[2026-09-28T22:34:00+0000] [ALPM-SCRIPTLET]   -> Running build hook: [systemd]
+[2026-09-28T22:34:02+0000] [ALPM-SCRIPTLET]   -> Running build hook: [autodetect]
+[2026-09-28T22:34:02+0000] [ALPM-SCRIPTLET]   -> Running build hook: [microcode]
+[2026-09-28T22:34:02+0000] [ALPM-SCRIPTLET]   -> Running build hook: [modconf]
+[2026-09-28T22:34:02+0000] [ALPM-SCRIPTLET]   -> Running build hook: [kms]
+[2026-09-28T22:34:03+0000] [ALPM-SCRIPTLET]   -> Running build hook: [keyboard]
+[2026-09-28T22:34:03+0000] [ALPM-SCRIPTLET]   -> Running build hook: [sd-vconsole]
+[2026-09-28T22:34:03+0000] [ALPM-SCRIPTLET]   -> Running build hook: [block]
+[2026-09-28T22:34:03+0000] [ALPM-SCRIPTLET]   -> Running build hook: [filesystems]
+[2026-09-28T22:34:03+0000] [ALPM-SCRIPTLET]   -> Running build hook: [fsck]
+[2026-09-28T22:34:03+0000] [ALPM-SCRIPTLET] ==> Generating module dependencies
+[2026-09-28T22:34:03+0000] [ALPM-SCRIPTLET] ==> Creating zstd-compressed initcpio image: '/boot/initramfs-linux.img'
+[2026-09-28T22:34:04+0000] [ALPM-SCRIPTLET]   -> Early uncompressed CPIO image generation successful
+[2026-09-28T22:34:04+0000] [ALPM-SCRIPTLET] ==> Initcpio image generation successful
+[2026-09-28T22:34:04+0000] [ALPM] running 'dbus-reload.hook'...

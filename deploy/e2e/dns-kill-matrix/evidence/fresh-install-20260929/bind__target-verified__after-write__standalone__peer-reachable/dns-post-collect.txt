@@ -1,0 +1,6 @@
+{"transport": "udp", "server": "10.0.2.15", "id_match": true, "aa": true, "tc": false, "rcode": 0, "answers": ["192.0.2.10"]}
+{"transport": "tcp", "server": "10.0.2.15", "id_match": true, "aa": true, "tc": false, "rcode": 0, "answers": ["192.0.2.10"]}
+{"transport": "udp", "server": "192.0.2.10", "id_match": true, "aa": true, "tc": false, "rcode": 0, "answers": ["192.0.2.10"]}
+{"transport": "tcp", "server": "192.0.2.10", "id_match": true, "aa": true, "tc": false, "rcode": 0, "answers": ["192.0.2.10"]}
+{"transport": "udp", "server": "127.0.0.1", "id_match": true, "aa": true, "tc": false, "rcode": 0, "answers": ["192.0.2.10"]}
+{"transport": "tcp", "server": "127.0.0.1", "id_match": true, "aa": true, "tc": false, "rcode": 0, "answers": ["192.0.2.10"]}

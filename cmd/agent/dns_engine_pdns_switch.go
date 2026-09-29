@@ -1350,16 +1350,29 @@ type pdnsRollbackStoppedProofOps struct {
 	inspectUnit      func(context.Context) (bindInstallUnitState, error)
 	inspectProcesses func(context.Context) (dnsUnitProcesses, error)
 	inspectCgroup    func(context.Context) error
+	// freshSource selects the first-install proof class for a journal with no
+	// source engine; only that class reads inspectPublicDNSListeners.
+	freshSource               bool
+	inspectPublicDNSListeners func(context.Context) error
 }
 
 func verifyPDNSStoppedBeforeDatabaseRestoreWithOps(
 	ctx context.Context,
 	ops pdnsRollbackStoppedProofOps,
 ) error {
-	if ops.inspectUnit == nil || ops.inspectProcesses == nil || ops.inspectCgroup == nil {
-		return errors.New("PowerDNS stopped proof requires native unit, process and cgroup observers")
+	if ops.inspectUnit == nil || ops.inspectProcesses == nil || ops.inspectCgroup == nil ||
+		(ops.freshSource && ops.inspectPublicDNSListeners == nil) {
+		return errors.New("PowerDNS stopped proof requires native unit, process, cgroup and listener observers")
 	}
-	return dnsenginerecovery.VerifyStoppedUnit(ctx, "pdns.service",
+	verify := func(observe func(context.Context) (dnsenginerecovery.StoppedUnitObservation, error)) error {
+		if ops.freshSource {
+			return dnsenginerecovery.VerifyStoppedFreshSourceTarget(
+				ctx, "pdns.service", observe, ops.inspectPublicDNSListeners,
+			)
+		}
+		return dnsenginerecovery.VerifyStoppedUnit(ctx, "pdns.service", observe)
+	}
+	return verify(
 		func(proofCtx context.Context) (dnsenginerecovery.StoppedUnitObservation, error) {
 			unit, err := ops.inspectUnit(proofCtx)
 			if err != nil {
@@ -1381,9 +1394,13 @@ func verifyPDNSStoppedBeforeDatabaseRestoreWithOps(
 		})
 }
 
-func verifyPDNSStoppedBeforeDatabaseRestore(ctx context.Context, systemctl string) error {
+// hostPDNSRollbackStoppedProofOps binds the fixed native observers. The
+// listener observer is the same public port-53 inventory the fresh-install
+// package guard uses; the class is chosen from the journal by
+// pdnsSwitchRollbackTargetOps.
+func hostPDNSRollbackStoppedProofOps(systemctl string) pdnsRollbackStoppedProofOps {
 	guard := dnsSystemdStateGuard(systemctl)
-	return verifyPDNSStoppedBeforeDatabaseRestoreWithOps(ctx, pdnsRollbackStoppedProofOps{
+	return pdnsRollbackStoppedProofOps{
 		inspectUnit: func(proofCtx context.Context) (bindInstallUnitState, error) {
 			return guard.inspect(proofCtx, "pdns.service")
 		},
@@ -1393,7 +1410,51 @@ func verifyPDNSStoppedBeforeDatabaseRestore(ctx context.Context, systemctl strin
 		inspectCgroup: func(proofCtx context.Context) error {
 			return dnsenginerecovery.ProbeEmptyUnitCgroup(proofCtx, "pdns.service", dnsenginerecovery.SystemdCgroupUnitRunner, dnsenginerecovery.NativeCgroupEvents)
 		},
-	})
+		inspectPublicDNSListeners: proveNoPublicDNSPort53Listener,
+	}
+}
+
+// pdnsSwitchRollbackTargetOps derives the target stop and stopped proof from
+// the journal. A first install (no source engine) accepts the never-started
+// unit states: not-found, the package guard's persistent mask, or loaded,
+// each without a public port-53 listener. A journal with a source keeps the
+// loaded-unit proof unchanged.
+func pdnsSwitchRollbackTargetOps(
+	journal dnsEngineSwitchJournal,
+	proof pdnsRollbackStoppedProofOps,
+	stop func(context.Context) error,
+) (func(context.Context) error, func(context.Context) error) {
+	proof.freshSource = dnsSwitchJournalHasEmptySource(journal)
+	return func(ctx context.Context) error {
+			return stopPDNSRollbackTargetWithOps(ctx, proof, stop)
+		}, func(ctx context.Context) error {
+			return verifyPDNSStoppedBeforeDatabaseRestoreWithOps(ctx, proof)
+		}
+}
+
+// stopPDNSRollbackTargetWithOps does not ask systemd to stop a first-install
+// target that does not exist: systemctl refuses to stop a not-found unit
+// ("not loaded"), and such a unit has nothing to stop. The stopped proof that
+// follows still double-reads the unit, processes, cgroup and listeners.
+func stopPDNSRollbackTargetWithOps(
+	ctx context.Context,
+	proof pdnsRollbackStoppedProofOps,
+	stop func(context.Context) error,
+) error {
+	if ctx == nil || stop == nil || proof.inspectUnit == nil {
+		return errors.New("PowerDNS rollback stop requires a unit observer and stop operation")
+	}
+	if proof.freshSource {
+		state, err := proof.inspectUnit(ctx)
+		if err != nil {
+			return err
+		}
+		if state.name == "pdns.service" && state.loadState == "not-found" &&
+			state.unitFileState == "" && state.activeState == "inactive" {
+			return nil
+		}
+	}
+	return stop(ctx)
 }
 func rollbackPDNSSwitch(
 	ctx context.Context,
@@ -1412,8 +1473,9 @@ func rollbackPDNSSwitch(
 			return err
 		},
 		func() error {
-			return rollbackPDNSSwitchWithOps(ctx, pdnsSwitchRollbackOps{
-				stopTarget: func(commandCtx context.Context) error {
+			stopTarget, verifyStopped := pdnsSwitchRollbackTargetOps(
+				journal, hostPDNSRollbackStoppedProofOps(systemctl),
+				func(commandCtx context.Context) error {
 					return runDNSMutationWithSystemdParentProof(
 						verifyBINDMaskParentMetadata,
 						func() error {
@@ -1424,9 +1486,10 @@ func rollbackPDNSSwitch(
 						},
 					)
 				},
-				verifyStopped: func(proofCtx context.Context) error {
-					return verifyPDNSStoppedBeforeDatabaseRestore(proofCtx, systemctl)
-				},
+			)
+			return rollbackPDNSSwitchWithOps(ctx, pdnsSwitchRollbackOps{
+				stopTarget:    stopTarget,
+				verifyStopped: verifyStopped,
 				restorePDNSDatabaseSnapshot: func() error {
 					return restorePDNSDatabase(journal)
 				},

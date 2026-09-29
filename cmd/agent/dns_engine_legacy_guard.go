@@ -264,3 +264,18 @@ func runDNSPort53PreMutationGuard(
 	}
 	return mutation()
 }
+
+// proveNoPublicDNSPort53Listener is the fresh-install package guard's port-53
+// inventory as a proof: a stopped, never-served target must leave no public
+// listener. Loopback and link-local resolver stubs are not public authority;
+// malformed rows fail closed.
+func proveNoPublicDNSPort53Listener(ctx context.Context) error {
+	conflict, err := dnsPort53ConflictCheck(ctx, false, false)
+	if err != nil {
+		return err
+	}
+	if conflict {
+		return errors.New("a public port-53 listener is present")
+	}
+	return nil
+}

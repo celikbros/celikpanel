@@ -1,0 +1,59 @@
+== pdns.service
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+InvocationID=
+== named.service
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+InvocationID=
+== bind9.service
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+InvocationID=
+== celikpanel-agent.service
+NRestarts=0
+ExecMainStartTimestamp=Mon 2026-09-28 22:25:55 UTC
+ExecMainPID=1188
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+InvocationID=c16c9353773c4d01818d2523aec32921
+== celikpanel-panel.service
+NRestarts=0
+ExecMainStartTimestamp=Mon 2026-09-28 22:25:56 UTC
+ExecMainPID=1198
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+InvocationID=cd0a0009070e44f596ecc5b3c33dcd32
+/var/lib/celikpanel-agent-private/:
+total 12
+drwx------  2 root celikpanel 4096 2026-09-28 22:25:54.522555405 +0000 .
+drwxr-xr-x 27 root root       4096 2026-09-28 22:25:54.338555405 +0000 ..
+-rw-------  1 root celikpanel   23 2026-09-28 22:25:54.518555405 +0000 service-mutations.json
+
+/var/lib/celikpanel-dns-kill-matrix/:
+total 1412
+drwx------  4 root root    4096 2026-09-28 22:26:04.618555405 +0000 .
+drwxr-xr-x 27 root root    4096 2026-09-28 22:25:54.338555405 +0000 ..
+-rw-------  1 root root    3272 2026-09-28 22:26:04.114555405 +0000 controller-argv.json
+-rw-------  1 root root    1016 2026-09-28 22:26:04.606555405 +0000 coordinator-stop-proof.json
+-rw-------  1 root root     728 2026-09-28 22:26:01.858555405 +0000 installed-binaries.sha256
+-rw-------  1 root root 1406962 2026-09-28 22:25:54.462555405 +0000 manifest.json
+drwx------  2 root root    4096 2026-09-28 22:26:02.450555405 +0000 measured
+drwx------  3 root root    4096 2026-09-28 22:26:02.726555405 +0000 results
+-rw-------  1 root root    1322 2026-09-28 22:26:02.426555405 +0000 scenario.json
+-rw-------  1 root root    1446 2026-09-28 22:26:02.534555405 +0000 source-proof.json
+-- No entries --

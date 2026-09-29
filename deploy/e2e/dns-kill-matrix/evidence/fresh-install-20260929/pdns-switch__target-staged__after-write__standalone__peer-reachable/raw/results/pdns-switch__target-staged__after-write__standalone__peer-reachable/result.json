@@ -1,0 +1,1439 @@
+{
+  "boundary": {
+    "edge": "after-write",
+    "phase": "target-staged",
+    "point": "after_write"
+  },
+  "boundary_marker": {
+    "cell_id": "pdns-switch__target-staged__after-write__standalone__peer-reachable",
+    "driver": "pdns-switch",
+    "marker": "/var/lib/celikpanel-dns-kill-matrix/results/pdns-switch__target-staged__after-write__standalone__peer-reachable/boundary-marker.json",
+    "nonce": "97cdd0a3fdd5607a175e5a8b8da62fb17c6880e875d41b82e46d2e94cb1eab1c",
+    "observed_driver": "pdns-switch",
+    "observed_journal": {
+      "manifest_qualifier": "dns-engine-switch/v1:sha256:e5c11a68da6220fd4f40774ded9dda73181c50c0cdb756baa06991e27c180e5e",
+      "mode": "switch",
+      "mutation_owner_id": "9fb3f1184e6ff29612bc042de282d7a4",
+      "mutation_request_id": "c60a3d86859d1980ad1d13ce8b86a793",
+      "path": "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json",
+      "phase": "target-staged",
+      "schema": "celikpanel-dns-engine-switch-journal/v1",
+      "source_epoch": 0,
+      "source_revision": 0,
+      "target_engine": "pdns",
+      "target_epoch": 1,
+      "topology": "standalone"
+    },
+    "phase": "target-staged",
+    "pid": 1492,
+    "point": "after_write",
+    "process_start_ticks": "6808",
+    "ready_fd": 5,
+    "recorded_at": "2026-09-28T22:26:16.784833644Z",
+    "request_id": "c60a3d86859d1980ad1d13ce8b86a793",
+    "schema": "celikpanel-dns-kill-matrix-boundary/v1"
+  },
+  "cell_id": "pdns-switch__target-staged__after-write__standalone__peer-reachable",
+  "command_environment": {
+    "fault_selector_names": [
+      "CELIKPANEL_DNS_KILL_MATRIX_CELL_ID",
+      "CELIKPANEL_DNS_KILL_MATRIX_DRIVER",
+      "CELIKPANEL_DNS_KILL_MATRIX_POINT",
+      "CELIKPANEL_DNS_KILL_MATRIX_PHASE",
+      "CELIKPANEL_DNS_KILL_MATRIX_REQUEST_ID",
+      "CELIKPANEL_DNS_KILL_MATRIX_NONCE",
+      "CELIKPANEL_DNS_KILL_MATRIX_MARKER",
+      "CELIKPANEL_DNS_KILL_MATRIX_READY_FD"
+    ],
+    "inherited_caller_names": [
+      "LANG",
+      "PATH"
+    ],
+    "production": {
+      "CELIKPANEL_AGENT_SOCKET": "/run/celikpanel/agent.sock",
+      "CELIKPANEL_AGENT_STATE_DIR": "/var/lib/celikpanel-agent-private",
+      "CELIKPANEL_AGENT_TOKEN_FILE": "/etc/celikpanel/agent.token",
+      "CELIKPANEL_DKIM_DIR": "/etc/celikpanel/dkim",
+      "CELIKPANEL_MUTATION_LOCK": "/run/celikpanel/service-mutation.lock",
+      "CELIKPANEL_RUNTIMES_DIR": "/opt/celikpanel/runtimes",
+      "LANG": "C.UTF-8",
+      "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    }
+  },
+  "commands": {
+    "agent_restart": {
+      "argv": [
+        "/usr/bin/systemctl",
+        "restart",
+        "celikpanel-agent.service"
+      ],
+      "device": 65025,
+      "inode": 4848,
+      "mode": "0755",
+      "path": "/usr/bin/systemctl",
+      "resolved_path": "/usr/bin/systemctl",
+      "sha256": "848c70d7e2c2f43f4f93287897ac8946e8eda45e7daa5f2975d9728071856b1a",
+      "uid": 0
+    },
+    "panel_restart": {
+      "argv": [
+        "/usr/bin/systemctl",
+        "restart",
+        "celikpanel-panel.service"
+      ],
+      "device": 65025,
+      "inode": 4848,
+      "mode": "0755",
+      "path": "/usr/bin/systemctl",
+      "resolved_path": "/usr/bin/systemctl",
+      "sha256": "848c70d7e2c2f43f4f93287897ac8946e8eda45e7daa5f2975d9728071856b1a",
+      "uid": 0
+    },
+    "recovery": {
+      "argv": [
+        "/opt/celikpanel/bin/dns-kill-trigger",
+        "rpc-retry",
+        "--scenario",
+        "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+        "--identity-receipt",
+        "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+        "--timeout",
+        "45m"
+      ],
+      "device": 65025,
+      "inode": 131312,
+      "mode": "0755",
+      "path": "/opt/celikpanel/bin/dns-kill-trigger",
+      "resolved_path": "/opt/celikpanel/bin/dns-kill-trigger",
+      "sha256": "97aa0ce32546e9ba6ae56831e9f300b1f97133893449422811937e365bdfc274",
+      "uid": 0
+    },
+    "recovery_probe": {
+      "argv": [
+        "/opt/celikpanel/libexec/dns-kill-recovery-probe.py",
+        "--cell-id",
+        "pdns-switch__target-staged__after-write__standalone__peer-reachable",
+        "--scenario",
+        "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+        "--identity-receipt",
+        "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+        "--ledger",
+        "/var/lib/celikpanel-agent-private/service-mutations.json",
+        "--state",
+        "/var/lib/celikpanel-agent-private/dns-engine-state.json",
+        "--journal",
+        "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json"
+      ],
+      "device": 65025,
+      "inode": 131313,
+      "mode": "0755",
+      "path": "/opt/celikpanel/libexec/dns-kill-recovery-probe.py",
+      "resolved_path": "/opt/celikpanel/libexec/dns-kill-recovery-probe.py",
+      "sha256": "c0355958b37705547cafac34432df49caf8c2a6ea4238e51596b68c781259285",
+      "uid": 0
+    },
+    "scenario_trigger": {
+      "argv": [
+        "/opt/celikpanel/bin/dns-kill-trigger",
+        "rpc-switch",
+        "--scenario",
+        "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+        "--identity-receipt",
+        "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+        "--timeout",
+        "45m"
+      ],
+      "device": 65025,
+      "inode": 131312,
+      "mode": "0755",
+      "path": "/opt/celikpanel/bin/dns-kill-trigger",
+      "resolved_path": "/opt/celikpanel/bin/dns-kill-trigger",
+      "sha256": "97aa0ce32546e9ba6ae56831e9f300b1f97133893449422811937e365bdfc274",
+      "uid": 0
+    },
+    "socket_identity_contract": {
+      "identity_receipt_path": "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+      "operation_timeout": "45m",
+      "scenario_path": "/var/lib/celikpanel-dns-kill-matrix/scenario.json"
+    },
+    "tagged_agent": {
+      "argv": [
+        "/opt/celikpanel/bin/agent.kill"
+      ],
+      "device": 65025,
+      "inode": 131310,
+      "mode": "0755",
+      "path": "/opt/celikpanel/bin/agent.kill",
+      "resolved_path": "/opt/celikpanel/bin/agent.kill",
+      "sha256": "d6ef322d2ea57cf81df9f4b969d41bf7f722ab18df28c9d7ad8c1d536050d5db",
+      "uid": 0
+    }
+  },
+  "controller_identity": {
+    "effective_gid": 989,
+    "effective_group": "celikpanel",
+    "effective_uid": 0,
+    "expected_umask": "0027"
+  },
+  "diagnostic_failures": [
+    "post-restart-rpc-retry-1: post-restart-rpc-retry-1 exited 1",
+    "post-restart-rpc-retry-2: post-restart-rpc-retry-2 exited 1",
+    "first recovery probe is indeterminate",
+    "second recovery probe is indeterminate"
+  ],
+  "driver": "pdns-switch",
+  "failures": [
+    "dns-after-restart: [Errno 111] Connection refused",
+    "stability sample 1: dns-stability: [Errno 111] Connection refused",
+    "stability sample 2: dns-stability: [Errno 111] Connection refused",
+    "stability sample 3: dns-stability: [Errno 111] Connection refused",
+    "stability sample 4: dns-stability: [Errno 111] Connection refused",
+    "stability sample 5: dns-stability: [Errno 111] Connection refused",
+    "stability sample 6: dns-stability: [Errno 111] Connection refused",
+    "stability sample 7: dns-stability: [Errno 111] Connection refused",
+    "stability sample 8: dns-stability: [Errno 111] Connection refused",
+    "stability sample 9: dns-stability: [Errno 111] Connection refused",
+    "stability sample 10: dns-stability: [Errno 111] Connection refused",
+    "stability sample 11: dns-stability: [Errno 111] Connection refused",
+    "stability sample 12: dns-stability: [Errno 111] Connection refused",
+    "stability sample 13: dns-stability: [Errno 111] Connection refused",
+    "stability sample 14: dns-stability: [Errno 111] Connection refused",
+    "stability sample 15: dns-stability: [Errno 111] Connection refused",
+    "stability sample 16: dns-stability: [Errno 111] Connection refused",
+    "stability sample 17: dns-stability: [Errno 111] Connection refused",
+    "stability sample 18: dns-stability: [Errno 111] Connection refused",
+    "stability sample 19: dns-stability: [Errno 111] Connection refused",
+    "stability sample 20: dns-stability: [Errno 111] Connection refused",
+    "stability sample 21: dns-stability: [Errno 111] Connection refused",
+    "stability sample 22: dns-stability: [Errno 111] Connection refused",
+    "stability sample 23: dns-stability: [Errno 111] Connection refused",
+    "stability sample 24: dns-stability: [Errno 111] Connection refused",
+    "stability sample 25: dns-stability: [Errno 111] Connection refused",
+    "stability sample 26: dns-stability: [Errno 111] Connection refused",
+    "stability sample 27: dns-stability: [Errno 111] Connection refused",
+    "stability sample 28: dns-stability: [Errno 111] Connection refused",
+    "stability sample 29: dns-stability: [Errno 111] Connection refused",
+    "stability sample 30: dns-stability: [Errno 111] Connection refused",
+    "stability sample 31: dns-stability: [Errno 111] Connection refused"
+  ],
+  "finished_at": "2026-09-28T22:26:47.592782Z",
+  "initial_journal": {
+    "exists": false
+  },
+  "journal_at_boundary": {
+    "device": 65025,
+    "exists": true,
+    "expected_phase": "target-staged",
+    "inode": 131561,
+    "mode": "0600",
+    "observed_phase": "target-staged",
+    "request_id": "c60a3d86859d1980ad1d13ce8b86a793",
+    "sha256": "49ddaaaf3a24d0ac1830a8be6877008cc93eed354924bed28d1b2ea62468a890"
+  },
+  "kill": {
+    "delivered_at": "2026-09-28T22:26:16.793273Z",
+    "exit_code": 137,
+    "pid": 1492,
+    "proc_entry_absent_after_reap": true,
+    "process_start_ticks": "6808",
+    "raw_returncode": -9,
+    "signal": "SIGKILL",
+    "signal_number": 9,
+    "state_before_signal": "T"
+  },
+  "kill_proven": true,
+  "nonce": "97cdd0a3fdd5607a175e5a8b8da62fb17c6880e875d41b82e46d2e94cb1eab1c",
+  "peer_after_kill": {
+    "applicable": false,
+    "reason": "standalone cell"
+  },
+  "peer_before_tagged_agent": {
+    "applicable": false,
+    "reason": "standalone cell"
+  },
+  "peer_reachability": "reachable",
+  "post_restart": {
+    "agent": {
+      "detail": {
+        "device": 25,
+        "inode": 2285
+      },
+      "ok": true
+    },
+    "dns": {
+      "error": "[Errno 111] Connection refused",
+      "ok": false
+    },
+    "panel": {
+      "detail": {
+        "address": "127.0.0.1",
+        "port": 2083
+      },
+      "ok": true
+    }
+  },
+  "production_paths": {
+    "agent_token": {
+      "device": 65025,
+      "gid": 989,
+      "inode": 131426,
+      "mode": "0640",
+      "path": "/etc/celikpanel/agent.token",
+      "size": 65,
+      "uid": 0
+    },
+    "dkim_directory": {
+      "device": 65025,
+      "inode": 131306,
+      "path": "/etc/celikpanel/dkim"
+    },
+    "runtimes_directory": {
+      "device": 65025,
+      "inode": 131302,
+      "path": "/opt/celikpanel/runtimes"
+    }
+  },
+  "proof": {
+    "path": "/var/lib/celikpanel-dns-kill-matrix/results/pdns-switch__target-staged__after-write__standalone__peer-reachable/kill-proof.json",
+    "sha256": "d9243425151530492ec8da97b8099da78595d90e72bdebc52d9e0a267fbeb4e6"
+  },
+  "ready_pipe": {
+    "bytes": 65,
+    "fd": 5,
+    "payload_sha256": "116059ddd998698c42fd4490e3e5c6b7ab98428787d80d79395bb54e694935e9"
+  },
+  "recovery": {
+    "agent_ready": {
+      "detail": {
+        "device": 25,
+        "inode": 2285
+      },
+      "ok": true
+    },
+    "attempts": [
+      {
+        "command": {
+          "argv": [
+            "/opt/celikpanel/bin/dns-kill-trigger",
+            "rpc-retry",
+            "--scenario",
+            "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+            "--identity-receipt",
+            "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+            "--timeout",
+            "45m"
+          ],
+          "error": "post-restart-rpc-retry-1 exited 1"
+        },
+        "error": "post-restart-rpc-retry-1: post-restart-rpc-retry-1 exited 1",
+        "identity_receipt_after": {
+          "cell_id": "pdns-switch__target-staged__after-write__standalone__peer-reachable",
+          "device": 65025,
+          "driver": "pdns-switch",
+          "inode": 131444,
+          "manifest_qualifier": "dns-engine-switch/v1:sha256:e5c11a68da6220fd4f40774ded9dda73181c50c0cdb756baa06991e27c180e5e",
+          "mode": "0600",
+          "owner_id": "9fb3f1184e6ff29612bc042de282d7a4",
+          "path": "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+          "request_id": "c60a3d86859d1980ad1d13ce8b86a793",
+          "schema": "celikpanel-dns-kill-matrix-trigger-identity/v1",
+          "sha256": "55c15670cd6aa1fe8ae1bbba89ee9ab8b1908d71533a19607a698688084ac489",
+          "source_fixture": "uninitialized"
+        },
+        "ordinal": 1
+      },
+      {
+        "command": {
+          "argv": [
+            "/opt/celikpanel/bin/dns-kill-trigger",
+            "rpc-retry",
+            "--scenario",
+            "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+            "--identity-receipt",
+            "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+            "--timeout",
+            "45m"
+          ],
+          "error": "post-restart-rpc-retry-2 exited 1"
+        },
+        "error": "post-restart-rpc-retry-2: post-restart-rpc-retry-2 exited 1",
+        "identity_receipt_after": {
+          "cell_id": "pdns-switch__target-staged__after-write__standalone__peer-reachable",
+          "device": 65025,
+          "driver": "pdns-switch",
+          "inode": 131444,
+          "manifest_qualifier": "dns-engine-switch/v1:sha256:e5c11a68da6220fd4f40774ded9dda73181c50c0cdb756baa06991e27c180e5e",
+          "mode": "0600",
+          "owner_id": "9fb3f1184e6ff29612bc042de282d7a4",
+          "path": "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+          "request_id": "c60a3d86859d1980ad1d13ce8b86a793",
+          "schema": "celikpanel-dns-kill-matrix-trigger-identity/v1",
+          "sha256": "55c15670cd6aa1fe8ae1bbba89ee9ab8b1908d71533a19607a698688084ac489",
+          "source_fixture": "uninitialized"
+        },
+        "ordinal": 2
+      }
+    ],
+    "identity": {
+      "cell_id": "pdns-switch__target-staged__after-write__standalone__peer-reachable",
+      "driver": "pdns-switch",
+      "manifest_qualifier": "dns-engine-switch/v1:sha256:e5c11a68da6220fd4f40774ded9dda73181c50c0cdb756baa06991e27c180e5e",
+      "owner_id": "9fb3f1184e6ff29612bc042de282d7a4",
+      "request_id": "c60a3d86859d1980ad1d13ce8b86a793"
+    },
+    "mode": "rpc-retry",
+    "native_pre_retry_status": {
+      "configured": false
+    },
+    "pre_retry_dns": {
+      "error": "[Errno 111] Connection refused",
+      "ok": false
+    },
+    "pre_retry_probe": {
+      "active_dns_engine": "",
+      "argv": [
+        "/opt/celikpanel/libexec/dns-kill-recovery-probe.py",
+        "--cell-id",
+        "pdns-switch__target-staged__after-write__standalone__peer-reachable",
+        "--scenario",
+        "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+        "--identity-receipt",
+        "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+        "--ledger",
+        "/var/lib/celikpanel-agent-private/service-mutations.json",
+        "--state",
+        "/var/lib/celikpanel-agent-private/dns-engine-state.json",
+        "--journal",
+        "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json"
+      ],
+      "converged": false,
+      "detail": "DNS engine state receipt is unavailable: [Errno 2] No such file or directory: '/var/lib/celikpanel-agent-private/dns-engine-state.json'; DNS engine switch journal remains after recovery; PowerDNS target/source unit state is not converged: {'bind9.service': 'inactive', 'named.service': 'inactive', 'pdns.service': 'inactive'}; cannot validate DNS ownership residue without scenario/active state; measured mutation job is not finalized: {'status': {'want': 'succeeded', 'got': 'failed'}, 'phase': {'want': 'commit/dns-engine-switch/v2/finalized/c60a3d86859d1980ad1d13ce8b86a793/dns-engine-switch/v1:sha256:e5c11a68da6220fd4f40774ded9dda73181c50c0cdb756baa06991e27c180e5e', 'got': 'interrupted'}}",
+      "duration_seconds": 0.11988,
+      "fingerprint": "89b41e11c00986c89fa3346ef32ebaaf2c32596aac1939229d71a094e692ca30",
+      "ordinal": 0,
+      "output_bytes": 914,
+      "output_sha256": "91b161d5c4674ffdab61640a90e5aa2cce809ec44c195af93571a2cf5f9c09b9",
+      "output_truncated": false,
+      "recovery_outcome": "indeterminate",
+      "returncode": 0,
+      "valid": true
+    },
+    "pre_retry_source_serving": false,
+    "timing": "after replacement agent socket, before panel restart and final liveness"
+  },
+  "recovery_outcome": {
+    "changed_or_racy": false,
+    "classification": "repeated_nonconvergence",
+    "dns_serving_after_restart": false,
+    "probe_pair_valid": true,
+    "repeated_nonconvergence": true,
+    "rolled_back_source_serving": false,
+    "same_fingerprint": true,
+    "target_converged": false
+  },
+  "recovery_probes": [
+    {
+      "active_dns_engine": "",
+      "argv": [
+        "/opt/celikpanel/libexec/dns-kill-recovery-probe.py",
+        "--cell-id",
+        "pdns-switch__target-staged__after-write__standalone__peer-reachable",
+        "--scenario",
+        "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+        "--identity-receipt",
+        "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+        "--ledger",
+        "/var/lib/celikpanel-agent-private/service-mutations.json",
+        "--state",
+        "/var/lib/celikpanel-agent-private/dns-engine-state.json",
+        "--journal",
+        "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json"
+      ],
+      "converged": false,
+      "detail": "DNS engine state receipt is unavailable: [Errno 2] No such file or directory: '/var/lib/celikpanel-agent-private/dns-engine-state.json'; DNS engine switch journal remains after recovery; PowerDNS target/source unit state is not converged: {'bind9.service': 'inactive', 'named.service': 'inactive', 'pdns.service': 'inactive'}; cannot validate DNS ownership residue without scenario/active state; measured mutation job is not finalized: {'status': {'want': 'succeeded', 'got': 'failed'}, 'phase': {'want': 'commit/dns-engine-switch/v2/finalized/c60a3d86859d1980ad1d13ce8b86a793/dns-engine-switch/v1:sha256:e5c11a68da6220fd4f40774ded9dda73181c50c0cdb756baa06991e27c180e5e', 'got': 'interrupted'}}",
+      "duration_seconds": 0.11534,
+      "fingerprint": "89b41e11c00986c89fa3346ef32ebaaf2c32596aac1939229d71a094e692ca30",
+      "ordinal": 1,
+      "output_bytes": 914,
+      "output_sha256": "91b161d5c4674ffdab61640a90e5aa2cce809ec44c195af93571a2cf5f9c09b9",
+      "output_truncated": false,
+      "recovery_outcome": "indeterminate",
+      "returncode": 0,
+      "valid": true
+    },
+    {
+      "active_dns_engine": "",
+      "argv": [
+        "/opt/celikpanel/libexec/dns-kill-recovery-probe.py",
+        "--cell-id",
+        "pdns-switch__target-staged__after-write__standalone__peer-reachable",
+        "--scenario",
+        "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+        "--identity-receipt",
+        "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+        "--ledger",
+        "/var/lib/celikpanel-agent-private/service-mutations.json",
+        "--state",
+        "/var/lib/celikpanel-agent-private/dns-engine-state.json",
+        "--journal",
+        "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json"
+      ],
+      "converged": false,
+      "detail": "DNS engine state receipt is unavailable: [Errno 2] No such file or directory: '/var/lib/celikpanel-agent-private/dns-engine-state.json'; DNS engine switch journal remains after recovery; PowerDNS target/source unit state is not converged: {'bind9.service': 'inactive', 'named.service': 'inactive', 'pdns.service': 'inactive'}; cannot validate DNS ownership residue without scenario/active state; measured mutation job is not finalized: {'status': {'want': 'succeeded', 'got': 'failed'}, 'phase': {'want': 'commit/dns-engine-switch/v2/finalized/c60a3d86859d1980ad1d13ce8b86a793/dns-engine-switch/v1:sha256:e5c11a68da6220fd4f40774ded9dda73181c50c0cdb756baa06991e27c180e5e', 'got': 'interrupted'}}",
+      "duration_seconds": 0.114861,
+      "fingerprint": "89b41e11c00986c89fa3346ef32ebaaf2c32596aac1939229d71a094e692ca30",
+      "ordinal": 2,
+      "output_bytes": 914,
+      "output_sha256": "91b161d5c4674ffdab61640a90e5aa2cce809ec44c195af93571a2cf5f9c09b9",
+      "output_truncated": false,
+      "recovery_outcome": "indeterminate",
+      "returncode": 0,
+      "valid": true
+    }
+  ],
+  "request_id": "c60a3d86859d1980ad1d13ce8b86a793",
+  "restarted_agent_process": {
+    "gids": [
+      989,
+      989,
+      989,
+      989
+    ],
+    "pid": 2577,
+    "uids": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "umask": "0027"
+  },
+  "restarts": {
+    "agent-restart": {
+      "argv": [
+        "/usr/bin/systemctl",
+        "restart",
+        "celikpanel-agent.service"
+      ],
+      "duration_seconds": 0.032385,
+      "output_bytes": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "output_truncated": false,
+      "returncode": 0
+    },
+    "panel-restart": {
+      "argv": [
+        "/usr/bin/systemctl",
+        "restart",
+        "celikpanel-panel.service"
+      ],
+      "duration_seconds": 0.016442,
+      "output_bytes": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "output_truncated": false,
+      "returncode": 0
+    }
+  },
+  "role": "standalone",
+  "safety_assertions": {
+    "agent_stayed_running": true,
+    "dns_engine_serving": false,
+    "kill_proven": true,
+    "panel_started": true
+  },
+  "safety_failures": [
+    "dns-after-restart: [Errno 111] Connection refused",
+    "stability sample 1: dns-stability: [Errno 111] Connection refused",
+    "stability sample 2: dns-stability: [Errno 111] Connection refused",
+    "stability sample 3: dns-stability: [Errno 111] Connection refused",
+    "stability sample 4: dns-stability: [Errno 111] Connection refused",
+    "stability sample 5: dns-stability: [Errno 111] Connection refused",
+    "stability sample 6: dns-stability: [Errno 111] Connection refused",
+    "stability sample 7: dns-stability: [Errno 111] Connection refused",
+    "stability sample 8: dns-stability: [Errno 111] Connection refused",
+    "stability sample 9: dns-stability: [Errno 111] Connection refused",
+    "stability sample 10: dns-stability: [Errno 111] Connection refused",
+    "stability sample 11: dns-stability: [Errno 111] Connection refused",
+    "stability sample 12: dns-stability: [Errno 111] Connection refused",
+    "stability sample 13: dns-stability: [Errno 111] Connection refused",
+    "stability sample 14: dns-stability: [Errno 111] Connection refused",
+    "stability sample 15: dns-stability: [Errno 111] Connection refused",
+    "stability sample 16: dns-stability: [Errno 111] Connection refused",
+    "stability sample 17: dns-stability: [Errno 111] Connection refused",
+    "stability sample 18: dns-stability: [Errno 111] Connection refused",
+    "stability sample 19: dns-stability: [Errno 111] Connection refused",
+    "stability sample 20: dns-stability: [Errno 111] Connection refused",
+    "stability sample 21: dns-stability: [Errno 111] Connection refused",
+    "stability sample 22: dns-stability: [Errno 111] Connection refused",
+    "stability sample 23: dns-stability: [Errno 111] Connection refused",
+    "stability sample 24: dns-stability: [Errno 111] Connection refused",
+    "stability sample 25: dns-stability: [Errno 111] Connection refused",
+    "stability sample 26: dns-stability: [Errno 111] Connection refused",
+    "stability sample 27: dns-stability: [Errno 111] Connection refused",
+    "stability sample 28: dns-stability: [Errno 111] Connection refused",
+    "stability sample 29: dns-stability: [Errno 111] Connection refused",
+    "stability sample 30: dns-stability: [Errno 111] Connection refused",
+    "stability sample 31: dns-stability: [Errno 111] Connection refused"
+  ],
+  "safety_status": "failed",
+  "scenario_trigger_returncode": 75,
+  "schema": "celikpanel/dns-kill-result/v1",
+  "source_dns_before_tagged_agent": {
+    "queried": false,
+    "reason": "exact uninitialized source; avoid querying an unrelated resolver"
+  },
+  "source_dns_units_before_tagged_agent": {
+    "bind9.service": "inactive",
+    "named.service": "inactive",
+    "pdns.service": "inactive"
+  },
+  "source_proof": {
+    "authoritative_preflight": {
+      "address": "10.0.2.15",
+      "claimed": false,
+      "name": "www.s1-kill.test",
+      "port": 53,
+      "tcp": false,
+      "type": "A",
+      "udp": false
+    },
+    "cell_id": "pdns-switch__target-staged__after-write__standalone__peer-reachable",
+    "device": 65025,
+    "engine": "",
+    "engine_epoch": 0,
+    "engine_state_receipt": {
+      "identity": null,
+      "path": "",
+      "sha256": ""
+    },
+    "external_pdns_preimage": {
+      "exists": false,
+      "path": "absent",
+      "sha256": "absent"
+    },
+    "identity_receipt_path": "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+    "identity_receipt_preexisting": false,
+    "inode": 131439,
+    "mode": "0600",
+    "owner_bind_native_source": null,
+    "path": "/var/lib/celikpanel-dns-kill-matrix/source-proof.json",
+    "peer_ip": "",
+    "receipt_origin": "absent-by-proof",
+    "scenario": {
+      "device": 65025,
+      "inode": 131437,
+      "mode": "0600",
+      "path": "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+      "sha256": "1eafee63015facb31b3fd759c6967c1c8c72440c65c7ca5209e3a906db557acf"
+    },
+    "scenario_identity": {
+      "mode": "switch",
+      "pair_role": "",
+      "source_engine": "",
+      "source_epoch": 0,
+      "source_revision": 0,
+      "target_engine": "pdns",
+      "target_epoch": 1,
+      "topology": "standalone"
+    },
+    "schema": "celikpanel/dns-kill-source-proof/v1",
+    "serving_before_tagged_agent": false,
+    "sha256": "d9b41f573baf52d062540355f94682b5b66e6910de1e0ac6b578b412af5fc021",
+    "source_adoption_proof": {
+      "exists": false,
+      "path": "absent",
+      "sha256": "absent"
+    },
+    "source_fixture": "uninitialized",
+    "source_normalization": {
+      "exists": false,
+      "path": "absent",
+      "sha256": "absent"
+    },
+    "source_ownership_receipts": {
+      "install_bind": {
+        "exists": false,
+        "path": "/var/lib/celikpanel-agent-private/dns-engine-install-ownership-bind.json"
+      },
+      "install_pdns": {
+        "exists": false,
+        "path": "/var/lib/celikpanel-agent-private/dns-engine-install-ownership-pdns.json"
+      },
+      "ownership_bind": {
+        "exists": false,
+        "path": "/var/lib/celikpanel-agent-private/dns-engine-ownership-bind.json"
+      },
+      "ownership_pdns": {
+        "exists": false,
+        "path": "/var/lib/celikpanel-agent-private/dns-engine-ownership-pdns.json"
+      }
+    },
+    "source_preinstall_proof": {
+      "exists": false,
+      "path": "absent",
+      "sha256": "absent"
+    },
+    "source_revision": 0,
+    "source_setup_identity_receipt_sha256": "absent",
+    "source_setup_scenario_sha256": "absent",
+    "topology": "standalone",
+    "uninitialized_global_port53": {
+      "authoritative_answer_observed": false,
+      "tcp_bindable": true,
+      "udp_bindable": true
+    }
+  },
+  "stability": {
+    "duration_seconds": 30.0,
+    "interval_seconds": 1.0,
+    "samples": [
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:17.591057Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 1,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:18.592456Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 2,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:19.594226Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 3,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:20.595643Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 4,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:21.597859Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 5,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:22.599173Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 6,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:23.600252Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 7,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:24.601885Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 8,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:25.616303Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 9,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:26.619245Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 10,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:27.622276Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 11,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:28.623343Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 12,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:29.624599Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 13,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:30.625809Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 14,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:31.627147Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 15,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:32.628769Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 16,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:33.630844Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 17,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:34.632107Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 18,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:35.633800Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 19,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:36.635307Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 20,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:37.637651Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 21,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:38.639257Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 22,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:39.640446Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 23,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:40.641542Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 24,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:41.643044Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 25,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:42.644251Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 26,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:43.645500Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 27,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:44.647797Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 28,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:45.649802Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 29,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:46.651376Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 30,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2285
+          },
+          "ok": true
+        },
+        "at": "2026-09-28T22:26:47.591307Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 31,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        }
+      }
+    ]
+  },
+  "started_at": "2026-09-28T22:26:05.968001Z",
+  "status": "failed",
+  "tagged_agent": {
+    "pid": 1492,
+    "process_identity": {
+      "gids": [
+        989,
+        989,
+        989,
+        989
+      ],
+      "pid": 1492,
+      "uids": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "umask": "0027"
+    },
+    "process_start_ticks": "6808",
+    "socket_identity": {
+      "device": 25,
+      "inode": 2165
+    }
+  },
+  "timeouts_seconds": {
+    "boundary": 2700.0,
+    "command": 2700.0,
+    "dns": 5.0,
+    "endpoint": 60.0,
+    "kill": 15.0,
+    "recovery": 2700.0,
+    "stability": 30.0,
+    "stability_interval": 1.0,
+    "startup": 60.0,
+    "stop": 15.0
+  },
+  "transcript": {
+    "path": "/var/lib/celikpanel-dns-kill-matrix/results/pdns-switch__target-staged__after-write__standalone__peer-reachable/transcript.jsonl",
+    "sha256": "e818c28f02be890b3cb6f1420472ef4b8bf1a75a8288b9af6b1a6cd46478fdbb"
+  },
+  "trigger_identity_receipt": {
+    "cell_id": "pdns-switch__target-staged__after-write__standalone__peer-reachable",
+    "device": 65025,
+    "driver": "pdns-switch",
+    "inode": 131444,
+    "manifest_qualifier": "dns-engine-switch/v1:sha256:e5c11a68da6220fd4f40774ded9dda73181c50c0cdb756baa06991e27c180e5e",
+    "mode": "0600",
+    "owner_id": "9fb3f1184e6ff29612bc042de282d7a4",
+    "path": "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+    "request_id": "c60a3d86859d1980ad1d13ce8b86a793",
+    "schema": "celikpanel-dns-kill-matrix-trigger-identity/v1",
+    "sha256": "55c15670cd6aa1fe8ae1bbba89ee9ab8b1908d71533a19607a698688084ac489",
+    "source_fixture": "uninitialized"
+  },
+  "trigger_mode": "socket",
+  "uninitialized_global_port53_before_tagged_agent": {
+    "address": "10.0.2.15",
+    "authoritative_answer_observed": false,
+    "port": 53,
+    "tcp_bindable": true,
+    "udp_bindable": true
+  },
+  "verification_failures": []
+}

@@ -1,0 +1,15 @@
+2026-09-28T22:30:17.178829+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-28T22:30:17.214157+00:00 dns-debian13 agent[1193]: 2026/09/28 22:30:17 Starting CelikPanel Agent...
+2026-09-28T22:30:17.216238+00:00 dns-debian13 agent[1193]: 2026/09/28 22:30:17 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-28T22:30:17.216504+00:00 dns-debian13 agent[1193]: 2026/09/28 22:30:17 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-09-28T22:30:23.779473+00:00 dns-debian13 systemd[1]: Stopping celikpanel-agent.service - CelikPanel privileged agent...
+2026-09-28T22:30:23.780093+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-28T22:30:23.780365+00:00 dns-debian13 systemd[1]: Stopped celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-28T22:30:37.664579+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-28T22:30:37.712267+00:00 dns-debian13 agent[3072]: 2026/09/28 22:30:37 Starting CelikPanel Agent...
+2026-09-28T22:30:38.441125+00:00 dns-debian13 agent[3072]: 2026/09/28 22:30:38 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-28T22:30:38.441514+00:00 dns-debian13 agent[3072]: 2026/09/28 22:30:38 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-28T22:30:48.442514+00:00 dns-debian13 agent[3072]: 2026/09/28 22:30:48 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-28T22:30:58.443035+00:00 dns-debian13 agent[3072]: 2026/09/28 22:30:58 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-28T22:31:08.442121+00:00 dns-debian13 agent[3072]: 2026/09/28 22:31:08 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-28T22:31:18.446852+00:00 dns-debian13 agent[3072]: 2026/09/28 22:31:18 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
