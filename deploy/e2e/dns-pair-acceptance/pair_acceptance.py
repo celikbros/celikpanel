@@ -1240,7 +1240,9 @@ class Driver:
             return
         shown = texts[0].get("shown") or {}
         english = " ".join(shown.get("en") or [])
-        missing = [flag for flag in ("--engine pdns", "--catalog-account") if flag not in english]
+        # The Panel text names the tool, its steps and the engine selector; the exact
+        # per-command flags (such as --catalog-account) belong to the tool's README.
+        missing = [flag for flag in ("--engine pdns",) if flag not in english]
         if not missing:
             return
         observation = {

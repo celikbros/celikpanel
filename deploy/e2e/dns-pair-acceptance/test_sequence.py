@@ -314,11 +314,10 @@ class SequenceTest(unittest.TestCase):
         self.assertEqual(len(deletes), 2)
         self.assertTrue(any(o["step"] == "zone-delete" and "dns-peer-enroll --engine pdns" in o["action"]
                             for o in result["owner_steps"]))
-        # Item 7: the shown text lacks the engine selector -> a D-024 observation, not a failure.
-        observation = next(f for f in result["findings"]
-                           if f["id"] == "d024-observation-pending-deletion-pdns-engine-selector")
-        self.assertEqual(observation["kind"], "observation")
-        self.assertEqual(observation["missing"], ["--engine pdns", "--catalog-account"])
+        # Item 7: the shipped text names the engine selector since a5c4f80f, so no
+        # D-024 observation is recorded for it.
+        self.assertFalse(any(f["id"] == "d024-observation-pending-deletion-pdns-engine-selector"
+                             for f in result["findings"]))
         self.assertEqual(step["verdict"], "passed")
 
     def test_bind_secondary_enrollment_has_no_engine_selector_observation(self) -> None:
