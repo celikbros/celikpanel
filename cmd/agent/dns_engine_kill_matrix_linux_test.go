@@ -301,6 +301,12 @@ func TestDNSKillMatrixRuntimeSelectsExactBoundaryInOrder(t *testing.T) {
 			now: func() time.Time {
 				return time.Date(2026, time.August, 31, 12, 34, 56, 0, time.UTC)
 			},
+			park: func(reason error) {
+				order = append(order, "park")
+				if !errors.Is(reason, dnsKillMatrixResumedError) {
+					t.Fatalf("park reason = %v", reason)
+				}
+			},
 		},
 	}
 	journal := testBINDSwitchJournal(t)
@@ -316,7 +322,7 @@ func TestDNSKillMatrixRuntimeSelectsExactBoundaryInOrder(t *testing.T) {
 	if err := runtime.hook(config.Driver, config.Point, journal); !errors.Is(err, dnsKillMatrixResumedError) {
 		t.Fatalf("selected boundary error = %v", err)
 	}
-	if want := []string{"marker", "ready", "stop"}; !reflect.DeepEqual(order, want) {
+	if want := []string{"marker", "ready", "stop", "park"}; !reflect.DeepEqual(order, want) {
 		t.Fatalf("boundary order = %v, want %v", order, want)
 	}
 	if captured.Schema != dnsKillMatrixMarkerSchema || captured.CellID != config.CellID ||
@@ -555,6 +561,7 @@ func TestDNSKillMatrixRuntimeRollbackPrecursorThenSelectedBoundary(t *testing.T)
 							now: func() time.Time {
 								return time.Date(2026, time.August, 31, 12, 34, 56, 0, time.UTC)
 							},
+							park: func(error) { order = append(order, "park") },
 						},
 					}
 					journal := testBINDSwitchJournal(t)
@@ -577,7 +584,7 @@ func TestDNSKillMatrixRuntimeRollbackPrecursorThenSelectedBoundary(t *testing.T)
 					if !errors.Is(err, dnsKillMatrixResumedError) {
 						t.Fatalf("selected rollback boundary error = %v", err)
 					}
-					if want := []string{"marker", "ready", "stop"}; !reflect.DeepEqual(order, want) {
+					if want := []string{"marker", "ready", "stop", "park"}; !reflect.DeepEqual(order, want) {
 						t.Fatalf("rollback boundary order = %v, want %v", order, want)
 					}
 					precursor := captured.RollbackPrecursor

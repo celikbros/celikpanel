@@ -231,6 +231,24 @@ func proveBINDStandbySourceOnlyDNSWithOps(ctx context.Context, ops bindStandbySo
 	return ops.noNamedProcess(ctx)
 }
 
+// removeStagedBINDGenerationAfterFailedSwitch runs after publisher.Switch
+// returned, so a first-generation pointer has already been taken down behind
+// the sealed target. It acts only on a completed standby rollback of the V2
+// journal shape (dnsenginerecovery.BINDSwitchNeverStartedTargetJournal at
+// rolled-back); the removal itself still proves the exact tree and that the
+// pointer does not select it.
+func removeStagedBINDGenerationAfterFailedSwitch(ctx context.Context, journal dnsEngineSwitchJournal) {
+	if journal.Phase != dnsSwitchPhaseRolledBack ||
+		!dnsenginerecovery.BINDSwitchNeverStartedTargetJournal(journal) {
+		return
+	}
+	cleanupCtx, cancel := context.WithTimeout(
+		context.WithoutCancel(ctx), dnsEngineSwitchRecoveryLimit,
+	)
+	defer cancel()
+	removeStagedBINDGenerationAfterAgentRollback(cleanupCtx, journal)
+}
+
 // removeStagedBINDGenerationAfterAgentRollback removes the exact staged
 // generation after a completed standby rollback, as the owner command does.
 // A tree that differs is left; every outcome is logged. A failure here never

@@ -8,8 +8,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
+	goruntime "runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -52,6 +54,8 @@ var (
 		dnsKillMatrixEnvMarker,
 		dnsKillMatrixEnvReadyFD,
 	}
+	// Returned only when an injected park operation returns, which the default
+	// runtime never does. It is kept as the fail-closed result of a test park.
 	dnsKillMatrixResumedError = errors.New(
 		"DNS kill-matrix child resumed after SIGSTOP instead of being killed",
 	)
@@ -127,6 +131,11 @@ type dnsKillMatrixRuntimeOps struct {
 	notifyReady func(int, string) error
 	stopProcess func(int) error
 	now         func() time.Time
+	// park holds the calling goroutine after the boundary has been published.
+	// The default never returns, so neither the rest of the journal writer nor
+	// any error path or deferred cleanup of the mutating operation runs in this
+	// process after the marker exists.
+	park func(error)
 }
 
 type dnsKillMatrixRuntime struct {
@@ -178,10 +187,39 @@ func dnsKillMatrixDefaultRuntimeOps() dnsKillMatrixRuntimeOps {
 		startTicks:  serviceMutationProcessStartIdentity,
 		writeMarker: dnsKillMatrixWriteMarker,
 		notifyReady: dnsKillMatrixNotifyReady,
-		stopProcess: func(pid int) error {
-			return unix.Kill(pid, unix.SIGSTOP)
-		},
-		now: time.Now,
+		stopProcess: dnsKillMatrixStopCallingThread,
+		now:         time.Now,
+		park:        dnsKillMatrixParkForever,
+	}
+}
+
+// dnsKillMatrixStopCallingThread stops the whole process from the thread that
+// runs the hook. A process-directed kill(2) may be taken by another thread, so
+// the caller could run for milliseconds before its own thread stops (cell c6,
+// batch 4, 2026-09-29). tgkill(2) to the calling thread marks this thread's
+// pending stop, and the kernel handles it before the syscall returns to user
+// space; the group stop then stops every other thread. The OS thread stays
+// locked because the caller parks afterwards and never unlocks it.
+func dnsKillMatrixStopCallingThread(pid int) error {
+	goruntime.LockOSThread()
+	return unix.Tgkill(pid, unix.Gettid(), unix.SIGSTOP)
+}
+
+// dnsKillMatrixParkForever is reached only if the boundary could not be
+// published or stopped, or if something resumed the stopped process (SIGCONT)
+// instead of killing it. The operation must not continue in either case: its
+// error path would perform native effects outside the named boundary. The
+// controller then sees a sleeping, not stopped, process and refuses the cell.
+func dnsKillMatrixParkForever(reason error) {
+	log.Printf(
+		"DNS kill-matrix boundary holds the mutating operation instead of continuing it: %v",
+		reason,
+	)
+	// A sleeping goroutine keeps a timer pending, so the runtime's deadlock
+	// detector cannot turn the hold into a process exit when no other
+	// goroutine is runnable (as in a bare test binary); select{} would.
+	for {
+		time.Sleep(time.Hour)
 	}
 }
 
@@ -603,7 +641,8 @@ func (runtime *dnsKillMatrixRuntime) stopAtBoundary(
 ) error {
 	if runtime.ops.pid == nil || runtime.ops.startTicks == nil ||
 		runtime.ops.writeMarker == nil || runtime.ops.notifyReady == nil ||
-		runtime.ops.stopProcess == nil || runtime.ops.now == nil {
+		runtime.ops.stopProcess == nil || runtime.ops.now == nil ||
+		runtime.ops.park == nil {
 		return errors.New("DNS kill-matrix runtime operations are incomplete")
 	}
 	pid := runtime.ops.pid()
@@ -634,16 +673,21 @@ func (runtime *dnsKillMatrixRuntime) stopAtBoundary(
 		ObservedJournal:   dnsKillMatrixObservedJournalFor(point, journal),
 		RollbackPrecursor: precursor,
 	}
+	// From the first marker write on, this call never returns into the
+	// operation. The marker can be visible even when its publication reports a
+	// late error, so every outcome below ends in park: the caller's error path
+	// (for example a BIND pointer restore or unit rollback) and its deferred
+	// cleanups must not run after the boundary the controller will record.
+	reason := dnsKillMatrixResumedError
 	if err := runtime.ops.writeMarker(runtime.config.Marker, marker); err != nil {
-		return fmt.Errorf("publish DNS kill-matrix boundary marker: %w", err)
+		reason = fmt.Errorf("publish DNS kill-matrix boundary marker: %w", err)
+	} else if err := runtime.ops.notifyReady(runtime.config.ReadyFD, runtime.config.Nonce); err != nil {
+		reason = fmt.Errorf("notify DNS kill-matrix controller: %w", err)
+	} else if err := runtime.ops.stopProcess(pid); err != nil {
+		reason = fmt.Errorf("stop DNS kill-matrix child process: %w", err)
 	}
-	if err := runtime.ops.notifyReady(runtime.config.ReadyFD, runtime.config.Nonce); err != nil {
-		return fmt.Errorf("notify DNS kill-matrix controller: %w", err)
-	}
-	if err := runtime.ops.stopProcess(pid); err != nil {
-		return fmt.Errorf("stop DNS kill-matrix child process: %w", err)
-	}
-	return dnsKillMatrixResumedError
+	runtime.ops.park(reason)
+	return reason
 }
 
 func dnsKillMatrixWriteMarker(path string, marker dnsKillMatrixMarker) error {

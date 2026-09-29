@@ -29,6 +29,15 @@ type Operations struct {
 	ProveTargetAbsent func(context.Context, dnsengineartifact.SwitchJournalV1) (bool, error)
 	Write             func(context.Context, dnsengineartifact.SwitchJournalV1, dnsengineartifact.SwitchJournalV1) error
 	Inverse           func(context.Context, dnsengineartifact.SwitchJournalV1) error
+	// RepairVerifiedTarget is optional. It runs only after VerifyTarget failed
+	// for a target-verified or committed journal, which can never roll back.
+	// It may restore one exactly identified, missing native artifact of the
+	// target the journal already verified, and reports whether it did. It must
+	// refuse (return an error) instead of repairing whenever the observed state
+	// could be an owner's or another operation's change; false with no error
+	// means the failure is not one it repairs. After a repair the full target
+	// verification runs again before the journal moves forward.
+	RepairVerifiedTarget func(context.Context, dnsengineartifact.SwitchJournalV1) (bool, error)
 }
 
 // Reconcile preserves the original operation. Its caller proves the accepted
@@ -85,7 +94,20 @@ func Reconcile(ctx context.Context, policy dnsengineartifact.JournalPolicy, id d
 		}
 		return OutcomeRolledBack, nil
 	}
-	if err = ops.VerifyTarget(ctx, journal); err == nil {
+	err = ops.VerifyTarget(ctx, journal)
+	if err != nil && ops.RepairVerifiedTarget != nil && ctx.Err() == nil &&
+		(journal.Phase == dnsengineartifact.SwitchPhaseTargetVerified || journal.Phase == dnsengineartifact.SwitchPhaseCommitted) {
+		repaired, repairErr := ops.RepairVerifiedTarget(ctx, journal)
+		if repairErr != nil {
+			return OutcomeAbsent, fmt.Errorf("verified DNS engine target no longer matches its journal: %w; target check: %v", repairErr, err)
+		}
+		if repaired {
+			if err = ops.VerifyTarget(ctx, journal); err != nil {
+				return OutcomeAbsent, fmt.Errorf("verified DNS engine target was repaired but still does not match its journal: %w", err)
+			}
+		}
+	}
+	if err == nil {
 		next := journal
 		next.Phase = dnsengineartifact.SwitchPhaseCommitted
 		if err = ops.Write(ctx, journal, next); err != nil {

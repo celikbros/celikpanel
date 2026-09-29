@@ -307,3 +307,90 @@ func TestGenericRollbackRefusesV4EnableIntentPhases(t *testing.T) {
 		}
 	}
 }
+
+// A verified or committed target may restore one missing native artifact of
+// the target it already verified; it never rolls back, and it moves forward
+// only after the full target check passes again.
+func TestReconcileRepairsVerifiedTargetOnlyForwardAndReverifies(t *testing.T) {
+	p, j, id := switchFixture(t)
+	refused := errors.New("pointer selects another generation")
+	for name, tc := range map[string]struct {
+		phase      string
+		repaired   bool
+		repairErr  error
+		secondErr  error
+		outcome    Outcome
+		steps      []string
+		wantErr    error
+		wantRepair bool
+	}{
+		"verified repaired": {
+			phase: dnsengineartifact.SwitchPhaseTargetVerified, repaired: true,
+			outcome: OutcomeCommitted, wantRepair: true,
+			steps: []string{"read", "verify", "repair", "verify", "write:committed"},
+		},
+		"committed repaired": {
+			phase: dnsengineartifact.SwitchPhaseCommitted, repaired: true,
+			outcome: OutcomeCommitted, wantRepair: true,
+			steps: []string{"read", "verify", "repair", "verify", "write:committed"},
+		},
+		"repair refused keeps evidence": {
+			phase: dnsengineartifact.SwitchPhaseTargetVerified, repairErr: refused,
+			outcome: OutcomeAbsent, wantErr: refused, wantRepair: true,
+			steps: []string{"read", "verify", "repair"},
+		},
+		"not a repairable failure": {
+			phase:   dnsengineartifact.SwitchPhaseCommitted,
+			outcome: OutcomeAbsent, wantRepair: true,
+			steps: []string{"read", "verify", "repair"},
+		},
+		"repaired but still unverified": {
+			phase: dnsengineartifact.SwitchPhaseTargetVerified, repaired: true,
+			secondErr: errors.New("named not serving"), outcome: OutcomeAbsent, wantRepair: true,
+			steps: []string{"read", "verify", "repair", "verify"},
+		},
+		"pre-verified phase never repairs": {
+			phase: dnsengineartifact.SwitchPhaseTargetStarted, repaired: true,
+			outcome: OutcomeRolledBack,
+			steps:   []string{"read", "verify", "prove-absent", "write:rolling-back", "inverse", "write:rolled-back"},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			current := j
+			current.Phase = tc.phase
+			tr := &trace{journal: current, exists: true, absent: true}
+			ops := tr.operations()
+			verifies := 0
+			ops.VerifyTarget = func(context.Context, dnsengineartifact.SwitchJournalV1) error {
+				tr.steps = append(tr.steps, "verify")
+				verifies++
+				if verifies == 1 {
+					return errors.New("file does not exist")
+				}
+				return tc.secondErr
+			}
+			called := false
+			ops.RepairVerifiedTarget = func(_ context.Context, observed dnsengineartifact.SwitchJournalV1) (bool, error) {
+				called = true
+				if !reflect.DeepEqual(observed, current) {
+					t.Fatalf("repair saw %+v", observed)
+				}
+				tr.steps = append(tr.steps, "repair")
+				return tc.repaired, tc.repairErr
+			}
+			outcome, err := Reconcile(context.Background(), p, id, ops)
+			if outcome != tc.outcome || !reflect.DeepEqual(tr.steps, tc.steps) || called != tc.wantRepair {
+				t.Fatalf("outcome=%s err=%v steps=%v repair=%v", outcome, err, tr.steps, called)
+			}
+			if tc.outcome == OutcomeAbsent && err == nil {
+				t.Fatal("unverified target returned no error")
+			}
+			if tc.wantErr != nil && !errors.Is(err, tc.wantErr) {
+				t.Fatalf("error %v does not carry the refusal", err)
+			}
+			if tc.outcome == OutcomeAbsent && tr.writes != 0 {
+				t.Fatalf("refused repair wrote %d checkpoints", tr.writes)
+			}
+		})
+	}
+}

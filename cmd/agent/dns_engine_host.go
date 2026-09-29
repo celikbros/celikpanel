@@ -1683,15 +1683,13 @@ func (hostDNSEngineBackend) Switch(
 				// A V2 journal that froze BIND absent or under the package
 				// guard's mask ends where recover-dns-bind-switch ends: the
 				// target under the guard's persistent mask and the exact
-				// staged generation removed.
+				// staged generation removed. The removal waits until the
+				// publisher has taken the pointer down after this rollback
+				// (see removeStagedBINDGenerationAfterFailedSwitch below).
 				if dnsenginerecovery.BINDSwitchNeverStartedTargetJournal(journal) {
-					if err := rollbackBINDSwitchToStandby(
+					return rollbackBINDSwitchToStandby(
 						rollbackCtx, systemctl, configs, stateBefore, sourceBefore, proveSource,
-					); err != nil {
-						return err
-					}
-					removeStagedBINDGenerationAfterAgentRollback(rollbackCtx, journal)
-					return nil
+					)
 				}
 				return rollbackBINDActivation(
 					rollbackCtx, systemctl, configs, stateBefore, targetBefore, sourceBefore,
@@ -1814,6 +1812,7 @@ func (hostDNSEngineBackend) Switch(
 			return publisher.Switch(ctx, generation.ID, apply, recoverEmpty)
 		},
 	); err != nil {
+		removeStagedBINDGenerationAfterFailedSwitch(ctx, journal)
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	completed, exists, err := readDNSEngineState()

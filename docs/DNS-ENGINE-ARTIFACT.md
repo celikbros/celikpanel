@@ -1597,3 +1597,57 @@ sees the surviving receipt as managed standby.
 `recover-dns-pdns-target-staged` exit 0 only when the ledger holds this
 request's own owner-recovery verdict and the journal is retired; both paths
 remain behind product gates.
+
+### Boundary stop, missing-pointer repair, pointer ordering (2026-09-29)
+
+P0.4; constitutional invariants 1, 2, 4; D-024, D-026. No schema or version
+change. Component tests only at this commit.
+
+Native cell `c6-fresh-bind-reboot`
+([evidence](../deploy/e2e/dns-kill-matrix/evidence/batch4-adoption-reboot-20260929/README.md)):
+a fresh BIND install cut at `target-verified` after-write lost its `current`
+pointer between the kill marker and the SIGKILL. The restarted Agent could
+neither verify the target nor roll back, released the job as unknown, `named`
+served from memory, and after a reboot `named` could not start; DNS was
+refused.
+
+**Boundary stop (test build only, tag `dns_kill_matrix`).** The hook sent a
+process-directed SIGSTOP and returned an error if execution continued, so the
+calling goroutine could run into the product's error path before the process
+stopped and a cut could land past its named boundary. The hook now stops its
+own locked thread with a thread-directed signal and never returns into the
+operation once the marker write has started; it parks. A switch, its
+in-process rollback and its recovery run in one request goroutine, so nothing
+else advances the operation. Retained cells whose hook is followed by a
+mutating error path (most after-write and several before-write boundaries of
+the bind, pdns-switch and adoption drivers) are to be re-run on this source.
+
+**Missing-pointer repair.** During same-request recovery of a BIND-target
+journal at `target-verified` or `committed`, if target verification fails,
+the pointer is absent, the state receipt is exactly the journal's target, the
+exact target generation loads and verifies with matching generation, epoch
+and pairing, and the managed runtime configuration is exact, recovery
+restores the pointer atomically under the same locks as a switch, logs one
+sentence and re-runs the full target verification before continuing forward.
+It refuses and keeps the evidence when the pointer selects another
+generation or is unreadable, the tree is missing or changed, records or
+configuration changed, or the restore fails; the message then states what
+was found, whether BIND can start after a reboot, and the next step. The
+ledger code stays `dns_native_recovery_unknown_after_restart`.
+
+**Pointer ordering.** On a failed first switch the publisher removed the
+pointer before the inverse stopped BIND, and the startup inverse restored the
+pointer before it restored the unit; a crash or reboot in either window left
+an enabled BIND with a missing include. For a first generation the inverse
+now runs while the pointer still selects the target and the pointer is
+removed only after it succeeds; if the inverse fails the pointer is kept. The
+running-BIND adoption rollback restores owner configuration and reloads
+before it changes the pointer, as its startup recovery already did.
+
+Open, not changed: an in-process failure after a durable `target-verified`
+write still runs the full inverse even when the `rolling-back` write fails,
+which conflicts with the rule that a verified target does not enter automatic
+rollback; `recovery dns-switch-status` does not yet name the missing-pointer
+case; a journal before `target-verified` that holds the target state receipt
+and no pointer can exist only on hosts that crashed with an older Agent and
+is not repaired.

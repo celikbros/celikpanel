@@ -300,6 +300,38 @@ func restoreBINDPointerAfterConfigProof(
 	return restorePointer()
 }
 
+// runBINDSwitchInverseInPointerOrder orders the Agent's BIND switch inverse
+// around the generation pointer. The owner-aware configuration proof always
+// comes first. A prior generation is selected again before the target unit is
+// restored, because the restored unit serves it. A first generation's pointer
+// (no prior generation) is removed only after the unit has been stopped and
+// returned to its preimage and the configuration no longer includes the
+// pointer: removing it first would leave an enabled BIND whose include is
+// missing if recovery stopped in between, and BIND would fail at the next boot.
+func runBINDSwitchInverseInPointerOrder(
+	hadPrevious bool,
+	proveCurrent func() error,
+	restorePointer func() error,
+	restoreActivation func() error,
+) error {
+	if proveCurrent == nil || restorePointer == nil || restoreActivation == nil {
+		return errors.New("BIND switch inverse requires config proof, pointer and activation operations")
+	}
+	if hadPrevious {
+		if err := restoreBINDPointerAfterConfigProof(proveCurrent, restorePointer); err != nil {
+			return err
+		}
+		return restoreActivation()
+	}
+	if err := proveCurrent(); err != nil {
+		return err
+	}
+	if err := restoreActivation(); err != nil {
+		return err
+	}
+	return restorePointer()
+}
+
 func runBINDMutationWithMaskParentProof(
 	verifyMaskParent func() error,
 	mutate func() error,
@@ -479,7 +511,8 @@ func rollbackDNSSwitchJournal(
 			if err != nil {
 				return err
 			}
-			if err := restoreBINDPointerAfterConfigProof(
+			return runBINDSwitchInverseInPointerOrder(
+				journal.HadPrevious,
 				func() error {
 					_, _, proofErr := configs.captureOwnerAwareCurrent(ctx, false)
 					return proofErr
@@ -495,14 +528,14 @@ func rollbackDNSSwitchJournal(
 						},
 					)
 				},
-			); err != nil {
-				return err
-			}
-			return rollbackBINDActivation(
-				ctx, systemctl, configs, journal.StateBefore,
-				dnsUnitSnapshotsMap(journal.TargetUnitsBefore),
-				dnsUnitSnapshotsMap(journal.SourceUnitsBefore),
-				dnsSwitchJournalHasEmptySource(journal),
+				func() error {
+					return rollbackBINDActivation(
+						ctx, systemctl, configs, journal.StateBefore,
+						dnsUnitSnapshotsMap(journal.TargetUnitsBefore),
+						dnsUnitSnapshotsMap(journal.SourceUnitsBefore),
+						dnsSwitchJournalHasEmptySource(journal),
+					)
+				},
 			)
 		case dnsenginerecovery.NativeInversePDNSAdoption:
 			return rollbackPDNSAdoption(ctx, systemctl, manifest, journal)
@@ -858,7 +891,8 @@ func (hostDNSEngineBackend) RecoverSwitch(
 		Write: func(_ context.Context, _, j dnsengineartifact.SwitchJournalV1) error {
 			return writeDNSEngineSwitchJournal(j)
 		},
-		Inverse: rollbackDNSSwitchJournal,
+		Inverse:              rollbackDNSSwitchJournal,
+		RepairVerifiedTarget: repairMissingBINDTargetPointer,
 	})
 	return dnsEngineSwitchRecoveryOutcome(outcome), err
 }
