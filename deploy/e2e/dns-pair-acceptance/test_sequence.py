@@ -50,19 +50,28 @@ class Harness:
     def __init__(self, topology_name: str, *, primary_node: str | None = None, licensed: bool = True,
                  license_mode: str = "none", delete_script: list | None = None, edit_method: str = "ui-replace",
                  plan_can_start: bool = True, secondary_script: list | None = None,
-                 primary_script: list | None = None) -> None:
+                 primary_script: list | None = None, acceptance_build: bool | None = None,
+                 acceptance_label: bool = True, pdns_primary_gate_open: bool = False,
+                 refused_plan_side_effect: bool = False) -> None:
         self.temporary = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary.name).resolve()
         self.topology = topo.resolve(topology_name, primary_node=primary_node)
         self.world = fakes.World()
         P, S = self.topology.primary, self.topology.secondary
+        cell = self.topology.cell_id("t1") if license_mode == "acceptance-fixture" else None
+        common = {"acceptance_cell": cell, "acceptance_label": acceptance_label,
+                  "pdns_primary_gate_open": pdns_primary_gate_open,
+                  "refused_plan_side_effect": refused_plan_side_effect}
         self.panels = {
             P.node: fakes.FakePanel(P.node, "primary", P.engine, self.world, licensed=licensed,
                                     plan_can_start=plan_can_start, delete_script=delete_script,
-                                    execution_script=primary_script, peer_node=S.node),
+                                    execution_script=primary_script, peer_node=S.node, **common),
             S.node: fakes.FakePanel(S.node, "secondary", S.engine, self.world, licensed=licensed,
-                                    execution_script=secondary_script, peer_node=P.node),
+                                    execution_script=secondary_script, peer_node=P.node, **common),
         }
+        if acceptance_build is None:
+            acceptance_build = license_mode == "acceptance-fixture"
+        dist = dict(DIST, acceptance_license_build=acceptance_build)
         self.guests = fakes.FakeGuests(self.world, self.topology)
         self.redactor = Redactor()
         self.writer = ev.EvidenceWriter(self.root, "run-test", self.redactor)
@@ -81,7 +90,7 @@ class Harness:
             config, self.topology, self.guests, self.writer, self.redactor, TRANSLATOR,
             fakes.panel_factory(self.panels, self.redactor, self.clock, self.clock.sleep),
             clock=self.clock, sleep=self.clock.sleep, archive_reader=lambda path: b"archive-bytes",
-            dist_identity_reader=lambda path: dict(DIST),
+            dist_identity_reader=lambda path: dict(dist),
         )
 
     def run(self) -> dict:
@@ -173,13 +182,96 @@ class SequenceTest(unittest.TestCase):
             self.assertEqual(verdicts[step_id], "skipped")
         review = h.step("setup-review-primary")
         self.assertIn("PowerDNS primary in a DNS pair is not ready", review["reason"])
-        self.assertEqual(review["guidance"][0]["message_keys"], ["setup.pdnsPrimaryPaused"])
-        self.assertEqual(review["guidance"][0]["shown"]["tr"][0][:10], "DNS çiftin")
+        self.assertIn("server plan", review["reason"])
+        guidance = review["guidance"][0]
+        self.assertEqual(guidance["source"], "setup-plan-blockers")
+        self.assertEqual(guidance["code"], "pdns_primary_switch_paused")
+        self.assertEqual(guidance["title_key"], "setup.planBlocked")
+        self.assertEqual(guidance["message_keys"], ["setup.pdnsPrimaryPaused"])
+        self.assertEqual(guidance["shown"]["tr"][0][:10], "DNS çiftin")
+        self.assertTrue(guidance["actionable"])
+        self.assertEqual(review["checks"]["wizard_code_key_pdns_primary"], "setup.pdnsPrimaryPaused")
+        self.assertEqual(review["checks"]["plan"]["blockers"], ["pdns_primary_switch_paused"])
+        self.assertIs(review["checks"]["refused_plan_left_nothing"], True)
         self.assertEqual(h.panels["debian13"].start_count, 0, "the driver must not start a gated plan")
-        self.assertTrue(any(f["id"] == "pdns-primary-gate-client-side-only" for f in result["findings"]))
+        self.assertFalse(any(f["id"] == "pdns-primary-gate-client-side-only" for f in result["findings"]))
         waiting = [g for g in h.step("setup-secondary-before-primary")["guidance"] if g["state"] == "unmet-prerequisite"]
         self.assertTrue(waiting and waiting[-1]["actionable"])
         self.assertIn("setup.guide.primaryDNSWaiting", waiting[-1]["message_keys"])
+
+    def test_refused_pdns_primary_plan_must_leave_nothing_behind(self) -> None:
+        h = self.harness("pdns-primary/bind-secondary", secondary_script=primary_waits_script(),
+                         refused_plan_side_effect=True)
+        result = h.run()
+        self.assertEqual(result["overall"], "failed")
+        review = h.step("setup-review-primary")
+        self.assertEqual(review["verdict"], "failed")
+        self.assertIn("left changes behind", review["reason"])
+        self.assertIs(review["checks"]["refused_plan_left_nothing"], False)
+        self.assertEqual(h.panels["debian13"].start_count, 0)
+
+    def test_pdns_primary_proceeds_when_the_server_gate_is_open(self) -> None:
+        h = self.harness("pdns-primary/bind-secondary", pdns_primary_gate_open=True)
+        result = h.run()
+        verdicts = h.verdicts()
+        self.assertEqual(verdicts["setup-review-primary"], "passed", h.step("setup-review-primary")["reason"])
+        self.assertEqual(verdicts["setup-start-primary"], "passed")
+        self.assertNotIn("setup-secondary-before-primary", verdicts)
+        self.assertEqual(h.panels["debian13"].start_count, 1)
+        self.assertNotEqual(result["overall"], "refused-by-product-gate")
+
+    def test_acceptance_fixture_mode_activates_once_and_scopes_the_evidence(self) -> None:
+        h = self.harness("bind/bind", primary_node="arch", licensed=False, license_mode="acceptance-fixture")
+        result = h.run()
+        self.assertEqual(result["overall"], "passed", json.dumps(
+            [(s["id"], s["verdict"], s["reason"]) for s in result["steps"]], indent=1))
+        self.assertEqual(result["license_mode"], "acceptance-fixture")
+        self.assertIn("License behaviour is NOT evidenced", result["native_evidence_scope"])
+        self.assertFalse(result["native_evidence"])
+        cell = h.topology.cell_id("t1")
+        for role, node in (("primary", "arch"), ("secondary", "debian13")):
+            self.assertEqual(h.panels[node].activations, [fakes.FIXTURE_KEY], "activate exactly once, fixture key only")
+            status = result["license_status"][role]
+            self.assertEqual(status["license_label"], "ACCEPTANCE FIXTURE \u2014 NOT FOR PRODUCTION")
+            self.assertEqual((status["state"], status["acceptance_cell"], status["acceptance_node"]), ("active", cell, node))
+            step = h.step(f"license-{role}")
+            self.assertEqual(step["checks"]["activation_posts"], 1)
+            self.assertTrue((h.writer.directory / step["evidence_directory"] / f"license-status-{role}.json").is_file())
+            self.assertTrue((h.writer.directory / step["evidence_directory"] / f"license-status-before-{role}.json").is_file())
+        written = json.loads((h.writer.directory / "result.json").read_text(encoding="utf-8"))
+        self.assertEqual(written["license_mode"], "acceptance-fixture")
+        self.assertIn("NOT evidenced", written["native_evidence_scope"])
+        self.assertNotIn(b"CPK-", h.evidence_blob())
+        self.assertEqual(ev.verify_sums(h.writer.directory), [])
+
+    def test_acceptance_fixture_mode_needs_the_acceptance_archive_and_label(self) -> None:
+        customer_archive = self.harness("bind/bind", primary_node="arch", licensed=False,
+                                        license_mode="acceptance-fixture", acceptance_build=False)
+        result = customer_archive.run()
+        self.assertEqual(customer_archive.verdicts()["preflight"], "failed")
+        self.assertIn("build-dist.sh --acceptance-license", customer_archive.step("preflight")["reason"])
+        self.assertTrue(all(not panel.activations for panel in customer_archive.panels.values()))
+        self.assertEqual(result["license_mode"], "acceptance-fixture")
+
+        tagged_in_customer_mode = self.harness("bind/bind", primary_node="arch", acceptance_build=True)
+        tagged_in_customer_mode.run()
+        self.assertEqual(tagged_in_customer_mode.verdicts()["preflight"], "failed")
+        self.assertIn("acceptance_license test tag", tagged_in_customer_mode.step("preflight")["reason"])
+
+        unlabelled = self.harness("bind/bind", primary_node="arch", licensed=False,
+                                  license_mode="acceptance-fixture", acceptance_label=False)
+        unlabelled.run()
+        self.assertEqual(unlabelled.verdicts()["license-primary"], "failed")
+        self.assertIn("does not label its license as the acceptance fixture",
+                      unlabelled.step("license-primary")["reason"])
+        self.assertEqual(unlabelled.verdicts()["setup-review-primary"], "not-run")
+
+    def test_customer_modes_record_their_scope(self) -> None:
+        h = self.harness("bind/bind", primary_node="arch", licensed=False)
+        result = h.run()
+        self.assertEqual(result["license_mode"], "none")
+        self.assertIn("Customer panel build", result["native_evidence_scope"])
+        self.assertNotIn("license_status", result)
 
     def test_pdns_secondary_pending_deletion_is_blocked_product(self) -> None:
         pending = (202, {"status": "deletion_pending", "domain": "pair-accept.example", "stage": "dns_cleanup",
@@ -309,6 +401,17 @@ class CliTest(unittest.TestCase):
         self.assertIn("allow-license-service", str(refused.exception))
         with self.assertRaises(SystemExit):
             pa.main(base + ["--license-key-file-primary", "/x"])
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(pa.main(base + ["--license-mode", "acceptance-fixture"]), 0)
+        plan = json.loads(out.getvalue())
+        self.assertEqual(plan["license_mode"], "acceptance-fixture")
+        self.assertIn("NOT evidenced", plan["native_evidence_scope"])
+        with self.assertRaises(SystemExit) as refused:
+            pa.main(base + ["--license-mode", "acceptance-fixture", "--allow-license-service"])
+        self.assertIn("never contacts the license service", str(refused.exception))
+        with self.assertRaises(SystemExit):
+            pa.main(base + ["--license-mode", "acceptance-fixture", "--license-key-file-primary", "/x"])
 
 
 if __name__ == "__main__":

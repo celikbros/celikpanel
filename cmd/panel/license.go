@@ -35,7 +35,10 @@ func newServerLicense(file string) (*licensing.Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	return licensing.New(file, key, id)
+	// NewServer is exactly licensing.New in every ordinary build. Only the
+	// acceptance_license test build, which release packaging refuses, installs
+	// the acceptance fixture seam there.
+	return licensing.NewServer(file, key, id)
 }
 
 // This command runs before panel database initialization and never emits a key.

@@ -8,6 +8,37 @@ Code decisions live in git; this file is for strategy. Newest first.
 
 ---
 
+## D-027 · Acceptance runs use a test-only fixture license; license policy is unchanged
+
+*September 30, 2026 · Owner decision*
+
+Product-flow acceptance on disposable guests must drive the real Panel: setup
+wizard, domain screens, both servers running CelikPanel. The Panel refuses
+almost every authenticated route until a license is active and re-verifies an
+active license against the license service about every minute; the
+disposable guests are offline. The owner chose a test-only build over using a
+real key on the experiments or skipping the product flow.
+
+**Decision.** A build tag, `acceptance_license`, compiles a seam that accepts
+exactly one fixture license labelled "ACCEPTANCE FIXTURE — NOT FOR
+PRODUCTION", only on a guest that carries the e2e fixture marker, verified
+locally, with every connection attempt to the license service refused and
+counted. Ordinary builds compile a stub with no fixture, no alternate
+verifier and no environment or file lookup, so an ordinary binary cannot be
+switched into acceptance mode at run time; tests prove this from the sources
+and from the built binaries. Release packaging refuses any artifact built
+with the tag or containing the fixture text. The acceptance archive is
+produced only by an explicitly named script and is marked not a release.
+
+This does not change license policy, the verification window, or any
+behaviour of a customer build. A run made with the fixture never counts as
+evidence about license behaviour. Known limit: the License screen shows state
+and expiry only, so on screen the fixture is not distinguishable without a
+web change; the API payload, the logs, the evidence and the panel version
+are.
+
+---
+
 ## D-026 · DNS engine recovery: refuse the unrecoverable switch, accept same-operation recovery for first installs
 
 *September 29, 2026 · Owner decision on the handoff's item 1 (DNS recovery contract)*

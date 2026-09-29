@@ -20,6 +20,8 @@ from urllib.parse import parse_qs, urlsplit
 from panel_api import PanelClient, Response
 
 COOKIE = "fake-session-cookie-value-0123456789"
+FIXTURE_KEY = "CPK-acce57f1c7" + "0" * 54
+FIXTURE_LABEL = "ACCEPTANCE FIXTURE \u2014 NOT FOR PRODUCTION"
 HOST_PUB = "ssh-ed25519 " + base64.b64encode(
     bytes.fromhex("0000000b7373682d6564323535313900000020") + bytes(range(32))).decode()
 
@@ -48,9 +50,18 @@ class FakePanel:
     def __init__(self, node: str, role: str, engine: str, world: World, *, licensed: bool = True,
                  plan_can_start: bool = True, execution_script: list[dict] | None = None,
                  delete_script: list[tuple[int, dict]] | None = None, zone: str = "pair-accept.example",
-                 peer_node: str = "") -> None:
+                 peer_node: str = "", acceptance_cell: str | None = None, acceptance_label: bool = True,
+                 pdns_primary_gate_open: bool = False, refused_plan_side_effect: bool = False) -> None:
         self.node, self.role, self.engine, self.world = node, role, engine, world
         self.licensed = licensed
+        # acceptance_cell: the panel is the acceptance_license test build on a
+        # guest whose marker names this cell (internal/licensing/acceptance_fixture.go).
+        self.acceptance_cell = acceptance_cell
+        self.acceptance_label = acceptance_label
+        self.activations: list[str] = []
+        # 6f2fb028: the server plan refuses a paired PowerDNS primary while the gate is closed.
+        self.pdns_primary_gate_open = pdns_primary_gate_open
+        self.refused_plan_side_effect = refused_plan_side_effect
         self.plan_can_start = plan_can_start
         self.execution_script = execution_script
         self.delete_script = list(delete_script or [])
@@ -94,6 +105,14 @@ class FakePanel:
         if route == "/api/v1/license/access":
             return json_response(200, {"can_use_panel": self.licensed, "state": "active" if self.licensed else "missing",
                                        "observation": "known", "valid_until": 0})
+        if route == "/api/v1/panel/license" and self.acceptance_cell is not None:
+            if method == "POST":
+                self.activations.append(payload.get("key", ""))
+                if payload.get("key") != FIXTURE_KEY:
+                    return json_response(400, {"error": "this panel is an acceptance test build: it accepts only the "
+                                                        "acceptance fixture key", "code": "license_action_failed"})
+                self.licensed = True
+            return json_response(200, self.license_status())
         if route == "/api/v1/panel/license" and method == "POST":
             self.licensed = True
             return json_response(200, {"state": "active"})
@@ -102,6 +121,19 @@ class FakePanel:
                                                 "and scheduled tasks keep running. The server administrator must "
                                                 "activate or renew the license.", "code": "license_required"})
         return self.route(method, route, query, payload)
+
+    def license_status(self) -> dict[str, Any]:
+        status: dict[str, Any] = {"state": "active" if self.licensed else "missing", "observation": "known",
+                                  "can_provision": self.licensed}
+        if self.licensed:
+            status.update({"product": "celikpanel-acceptance-fixture", "license_id": "acceptance-fixture",
+                           "expires_at": 1790000000, "offline_until": 1789000060})
+        if self.acceptance_label:
+            status.update({"license_kind": "acceptance_fixture", "license_label": FIXTURE_LABEL,
+                           "license_service": "not contacted: acceptance test build", "acceptance_guest": "verified",
+                           "acceptance_cell": self.acceptance_cell, "acceptance_node": self.node,
+                           "acceptance_smbios_uuid": "not readable by the panel service user"})
+        return status
 
     def state(self) -> dict[str, Any]:
         return {"version": 1, "revision": self.revision, "origin": "fresh", "status": self.status,
@@ -130,8 +162,16 @@ class FakePanel:
             self.status = "draft"
             return json_response(200, self.state())
         if route == "/api/v1/setup/plan" and method == "POST":
-            return json_response(200, {"id": "plan-" + self.node, "can_start": self.plan_can_start, "blockers": [],
-                                       "purpose": "dns", "steps": [{"id": "01-dns", "kind": "dns", "target": "local"}]})
+            blockers = []
+            if self.draft.get("dns_engine") == "pdns" and self.draft.get("dns_role") == "primary" \
+                    and self.draft.get("dns_mode") == "local" and not self.pdns_primary_gate_open:
+                blockers.append("pdns_primary_switch_paused")
+                if self.refused_plan_side_effect:  # a product defect the driver must catch
+                    self.revision += 1
+                    self.world.bump(self.node)
+            return json_response(200, {"id": "plan-" + self.node, "can_start": self.plan_can_start and not blockers,
+                                       "blockers": blockers, "purpose": "dns",
+                                       "steps": [{"id": "01-dns", "kind": "dns", "target": "local"}]})
         if route == "/api/v1/setup/start" and method == "POST":
             self.start_count += 1
             if self.started and self.started["request_id"] != payload["request_id"]:

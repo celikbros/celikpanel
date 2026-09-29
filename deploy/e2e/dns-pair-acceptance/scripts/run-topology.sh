@@ -5,7 +5,9 @@
 #   DIST_JSON: the dist.json written by build-dist.sh
 # Extra flags are passed through, e.g. --edit-method api-put, --infrastructure-dns,
 # or (owner decision only) --license-mode owner-key --allow-license-service
-# --license-key-file-primary FILE --license-key-file-secondary FILE.
+# --license-key-file-primary FILE --license-key-file-secondary FILE, or
+# --license-mode acceptance-fixture with the dist.json of
+# build-dist.sh --acceptance-license (test only; does not evidence licensing).
 set -euo pipefail
 
 topology=${1:?topology}

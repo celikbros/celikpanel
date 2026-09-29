@@ -1,8 +1,10 @@
 # DNS pair product-flow acceptance driver
 
 *Roadmap item 2 (P0.4/P0.5) harness. Written and tested offline on 2026-09-29
-against source `66db850c`. No guest was started and no run exists: nothing in
-this directory is native evidence.*
+against source `66db850c`; updated offline for `6f2fb028` (server-side
+PowerDNS-primary plan blocker) and the test-only acceptance license seam. No
+guest was started and no run exists: nothing in this directory is native
+evidence.*
 
 The kill matrix drives the Agent RPC with a panel-free peer. This driver
 exercises what an owner does instead: the customer installer on **both**
@@ -16,14 +18,15 @@ isolated peer link.
 
 ## Current expected outcome (read this first)
 
-| Topology | Offline today | With owner-supplied licenses |
+| Topology | `--license-mode none` (customer archive) | `owner-key` or `acceptance-fixture` |
 |---|---|---|
 | any | **blocked-product at `license-*`** (blocker L1) | continues |
-| `pdns-primary/bind-secondary` | — | **refused-by-product-gate** at `setup-review-primary` (`pdns_primary_switch_paused`); the secondary's waiting guidance is still checked |
+| `pdns-primary/bind-secondary` | — | **refused-by-product-gate** at `setup-review-primary`: the server plan carries `pdns_primary_switch_paused` while the gate is closed; the secondary's waiting guidance is still checked |
 | `bind-primary/pdns-secondary` | — | full flow; if parentless deletion needs peer proof, **blocked-product** at `zone-delete` (blocker E1) |
 | `bind/bind` (control) | — | full flow, including owner enrollment with `dns-peer-enroll` if the product asks for it |
 
-The last two columns are what the code does, not observed results.
+The last two columns are what the code does, not observed results. An
+`acceptance-fixture` run never evidences license behaviour (see below).
 
 ### Blocker L1: license activation cannot complete offline
 
@@ -53,12 +56,47 @@ License screen's endpoint (`POST /api/v1/panel/license {"action":"activate"}`)
 with one key per server; it contacts celikpanel.net from the guests, so it
 also needs `--allow-license-service`. Only the owner can decide to do that.
 
-Smallest product change that removes L1 without touching production
-licensing: a build-tagged acceptance seam (for example
-`cmd/panel/license_acceptance_fixture.go` under `//go:build dns_pair_acceptance`)
-that makes `newServerLicense` trust a fixture Ed25519 key and a loopback refresh
-stub, the same way `agent.kill` is a tagged build, with release packaging
-refusing the tag.
+### Test-only acceptance fixture license (`--license-mode acceptance-fixture`)
+
+Owner-approved on 2026-09-30: a special build used only for experiments
+accepts a fixture license; the customer release does not contain this code and
+packaging refuses it; license policy does not change; celikpanel.net is not
+contacted. L1 itself is unchanged for customer builds.
+
+- **Build.** `scripts/build-dist.sh --acceptance-license COMMIT` runs the
+  ordinary `make dist` (which must pass its own packaging checks), then derives
+  a separate archive `celikpanel-<version>-acceptance-license.tar.gz` whose only
+  changed binary is `bin/panel`, rebuilt with `-tags acceptance_license` and the
+  same flags; the version reads `v0.0.0-pairaccept-acceptance-license.<commit>`
+  and the root carries `ACCEPTANCE-LICENSE-BUILD.txt`. The script proves that
+  the packaging guard refuses the derived tree before writing `dist.json`
+  (`license_mode: acceptance-fixture`, `release: false`).
+- **Seam.** `internal/licensing/acceptance_fixture.go` compiles only with the
+  tag; ordinary builds compile `acceptance_off.go`, where `licensing.NewServer`
+  is exactly `licensing.New` (no fixture, verifier, environment variable or file
+  lookup). The tagged panel never contacts the license service and accepts one
+  public fixture key (`CPK-acce57f1c7` followed by 54 zeros) only on a guest
+  whose root-owned `/etc/celikpanel-dns-kill-matrix` marker (written by
+  `fixture.py`) names the fixture schema, a cell and a node; the SMBIOS UUID is
+  compared when readable (the panel service user normally cannot read it). The
+  fixture receipt is `/var/lib/celikpanel/acceptance-fixture-license.json`,
+  bound to machine, cell and node, re-verified locally on the customer schedule
+  (one minute). Off a fixture guest it grants nothing.
+- **What the owner sees.** `GET /api/v1/panel/license` keeps `state: active`
+  (the web accepts no other positive state) and adds `license_kind:
+  acceptance_fixture`, `license_label: "ACCEPTANCE FIXTURE — NOT FOR
+  PRODUCTION"`, `license_service: "not contacted: acceptance test build"`,
+  `acceptance_guest`, `acceptance_cell`, `acceptance_node`; `product` is
+  `celikpanel-acceptance-fixture`. The License screen does not render these
+  fields yet (a web change is needed for a visible label), so screenshots alone
+  cannot tell the builds apart; the panel version and the recorded status can.
+- **Driver.** Preflight refuses a customer archive in this mode and a tagged
+  archive in any other mode. The license step reads the status, requires the
+  label for this cell and node, posts the fixture key once through the License
+  screen's endpoint, and records `license-status-before-<role>.json` and
+  `license-status-<role>.json`. `result.json` carries `license_mode`,
+  `native_evidence_scope` ("License behaviour is NOT evidenced by this run ...")
+  and `license_status`.
 
 ### Blocker E1: no owner enrollment for a PowerDNS secondary
 
@@ -78,20 +116,24 @@ Smallest change: an owner writer in `internal/pdnspeerenrollment` mirroring
 `dns-peer-enroll secondary-install`/`primary-activate` that installs
 `pdns-peer-inspect`, and packaging `pdns-peer-inspect` in `dns-owner-tools`.
 
-### Finding: the PowerDNS-primary gate is client-side in the wizard
+### Finding (updated for 6f2fb028): the PowerDNS-primary gate is server-side
 
-`POST /api/v1/setup/plan` does not block `dns_engine=pdns` + `dns_role=primary`;
-only the UI rule (`web/src/components/ServerSetup.tsx:425-428`) refuses it with
-`setup.pdnsPrimaryPaused`. An API start would stage the DNS identity and then
-fail with the generic `server_setup_dns_failed`
-(`cmd/panel/setup_dns_operations.go:197-206`). The driver acts as the UI: it
-records the plan, the exact English/Turkish text and the DNS engine card's
-`dnsEngine.blocker.pdnsPrimarySwitchPaused` text, adds the finding when the
-plan says `can_start: true`, and never starts the gated plan. The rule is a
-hand port, so at run time the driver confirms that `ServerSetup.tsx` still
-contains it (`guidance.wizard_pdns_primary_rule_present`); if a later release
-removes the rule when the gate opens, the port is not applied and the result
-records `wizard_pdns_primary_rule_in_source: false`.
+Earlier sources refused a paired PowerDNS primary only in the wizard's client
+rule. Since 6f2fb028, `POST /api/v1/setup/plan` returns the blocker
+`pdns_primary_switch_paused` (`can_start: false`) while the gate is closed, and
+`startServerSetupDNS` refuses with the same code before staging any DNS
+identity; `ServerSetup.tsx` only maps the code to `setup.pdnsPrimaryPaused` in
+its `codeKey` table. The driver submits the plan as the UI does and, when the
+plan carries that blocker: reads the wizard's `codeKey` table from the shipped
+source at run time (`guidance.wizard_code_keys`; an unmapped code falls back to
+the generic `setup.blocker.unknown` and fails D-024), records the exact EN/TR
+text under `setup.planBlocked` and the DNS engine card's
+`dnsEngine.blocker.pdnsPrimarySwitchPaused` text, then re-reads
+`GET /api/v1/setup` and `GET /api/v1/dns/engine` and fails the step if the
+refused plan changed the saved draft, revision or status, or any DNS identity
+field (`refused_plan_left_nothing`). Otherwise the verdict is
+`refused-by-product-gate` and no plan is started. A plan without the blocker
+(gate open in a later build) proceeds normally.
 
 ## Files
 
@@ -135,8 +177,8 @@ as a browser does (`cmd/panel/security.go:49-90`); there is no CSRF token.
 | Step | Calls |
 |---|---|
 | login | `POST /api/v1/auth/login`, `GET /api/v1/auth/me`, `GET /api/v1/panel/availability` |
-| license | `GET /api/v1/license/access`; locked: `GET /api/v1/setup` → 403; owner-key: `POST /api/v1/panel/license` |
-| setup review | `GET /api/v1/setup`, `PUT /api/v1/setup/guidance` (guided), `PUT /api/v1/setup` (purpose `dns`, `dns_mode` `local`, engine, role, `ns1`/`ns2`/`peer_ns`, `local_ip`/`peer_ip`, `panel_domain`; optional `infrastructure_dns`), `POST /api/v1/setup/plan` |
+| license | `GET /api/v1/license/access`; locked: `GET /api/v1/setup` → 403; owner-key: `POST /api/v1/panel/license`; acceptance-fixture: `GET /api/v1/panel/license`, `POST` with the fixture key once, both GETs again |
+| setup review | `GET /api/v1/setup`, `PUT /api/v1/setup/guidance` (guided), `GET /api/v1/dns/engine`, `PUT /api/v1/setup` (purpose `dns`, `dns_mode` `local`, engine, role, `ns1`/`ns2`/`peer_ns`, `local_ip`/`peer_ip`, `panel_domain`; optional `infrastructure_dns`), `POST /api/v1/setup/plan`; on a gate blocker the read-only `GET /api/v1/setup` and `GET /api/v1/dns/engine` again |
 | setup start | `POST /api/v1/setup/start` **once** with a fixed `request_id`, then `GET /api/v1/setup/operation?request_id=` every 3 s (ServerSetup.tsx). The secondary starts only after the primary's `dns` step succeeded, as in the accepted precedent |
 | pair ready | `GET /api/v1/dns/engine` until `topology=paired`, the expected `pair_role`, `pair_ready=true`, `state=ready`; then the setup operation until it settles |
 | zone add / re-add | `POST /api/v1/domains/create {project_type: dnsonly, ssl_type: none}`, `GET /api/v1/domains`, `GET .../dns/zone`, `GET .../dns/records` |
@@ -189,8 +231,8 @@ admitted a mutation fails the step).
 | preflight | both QEMU processes of this cell are alive, both guests report the plan's SMBIOS UUID and marker, neither has a CelikPanel layout, the dist archive's digest/root/commit/tree match |
 | install-* | staging, credentials upload, `install.sh` (exit 0), `install.complete` present, credentials consumed, Agent and Panel active and enabled, TLS leaf readable |
 | login-* | 200, session cookie, `/auth/me` role `admin` |
-| license-* | license usable (`can_use_panel`); locked → `blocked-product` with actionable guidance |
-| setup-review-* | fresh setup, draft saved, plan `can_start`; PowerDNS primary → `refused-by-product-gate` with the exact shown text |
+| license-* | license usable (`can_use_panel`); locked → `blocked-product` with actionable guidance; acceptance-fixture: the status names the fixture label, this cell and node, `state: active` |
+| setup-review-* | fresh setup, draft saved, plan `can_start`; plan blocker `pdns_primary_switch_paused` → `refused-by-product-gate` with the exact shown text, only if the refused plan left draft and DNS identity unchanged |
 | setup-start-* | one start; the plan's `dns` step succeeded; every waiting/failed state actionable |
 | pair-ready | both Panels show the paired engine ready; setup settles as succeeded or waiting at a non-DNS phase (public hostname/certificate); no DNS/firewall/service step failed |
 | zone-add / zone-readd | domain listed with a zone; from both guests, both servers answer SOA and NS authoritatively over UDP and TCP with one serial; the Panel's A/AAAA records are served; native state present on both; catalog lists the member. Re-add: new domain ID and no old record |
@@ -213,7 +255,9 @@ request/response pairs), `dns-*.json`, `native-*.json`, `catalog-*.json`,
 `ledger-*.json`, `panel-truth-*.json`, `install-sh.txt`, `guests/<node>/…`,
 `result.json` (schema `celikpanel/dns-pair-acceptance-result/v1`, per-step
 verdict/reason/guidance/checks, `findings`, `product_blockers`,
-`native_evidence: false` until a reviewer says otherwise) and `SHA256SUMS`.
+`native_evidence: false` until a reviewer says otherwise, `license_mode`,
+`native_evidence_scope`, and for acceptance-fixture runs `license_status`) and
+`SHA256SUMS`.
 Cookies, CSRF-like headers, passwords, license keys, tokens and private keys are
 redacted before capture; a registered secret that survives redaction aborts
 the write. `evidence.verify_sums(<dir>)` re-hashes a run.
@@ -237,6 +281,13 @@ wsl.exe -d archlinux -- bash "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dn
 
 # 4. Copy the evidence directory out, then remove the cell
 wsl.exe -d archlinux -- bash "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/scripts/teardown.sh" bind-primary/pdns-secondary auto r1
+```
+
+Acceptance fixture license (test-only; the run does not evidence licensing):
+
+```powershell
+wsl.exe -d archlinux -- bash "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/scripts/build-dist.sh" --acceptance-license <commit>
+wsl.exe -d archlinux -- bash "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/scripts/run-topology.sh" bind/bind debian13 r1 /var/tmp/cp-pair-accept/dist/<commit>-acceptance-license/dist.json --license-mode acceptance-fixture
 ```
 
 Other topologies: `pdns-primary/bind-secondary auto rN` and the control
@@ -271,6 +322,8 @@ the full step/API plan without contacting anything.
 
 - Anything, until a run's evidence is retained and reviewed. It adds no passed
   cell to the kill matrix or the acceptance register.
+- License behaviour, in an `acceptance-fixture` run: activation, renewal,
+  expiry, rejection and the license service are replaced by the fixture seam.
 - Interruption/kill cuts inside zone-sync or setup (row 17), BIND→PowerDNS
   switching (refused by D-026) or PowerDNS primary support (gated).
 - Public hostname DNS, the panel certificate and setup completion: on the
@@ -287,7 +340,7 @@ the full step/API plan without contacting anything.
 
 ## Offline tests
 
-`scripts/offline-tests.sh` (71 tests, Python 3.13 and 3.14): redaction and the
+`scripts/offline-tests.sh` (76 tests; Python 3.13 re-run 2026-09-29): redaction and the
 evidence writer (including refusal to write a surviving secret and
 `SHA256SUMS` tamper detection); topology/OS placement; the API client against
 scripted responses (Origin/cookie handling, TOTP refusal, gate refusal body,
@@ -298,6 +351,8 @@ reviewed reason; the probe's DNS wire parser, a real loopback UDP/TCP/AXFR stub,
 `rndc`/PowerDNS native classification and the ledger digest; guest identity
 refusal before any command, probe streaming and tunnel arguments; and full step
 sequences against a fake Panel/guest world (control pass, API-PUT edit, license
-block, owner-key activation, PowerDNS-primary gate, PowerDNS-secondary
+block, owner-key activation, acceptance-fixture activation and evidence scope,
+acceptance archive/label refusals, the server-side PowerDNS-primary plan
+blocker, a refused plan that leaves changes behind, the gate opened, PowerDNS-secondary
 enrollment blocker, BIND-secondary enrollment with exactly one retry, D-024
 failure, ledger change on management return, unverified guest untouched).

@@ -50,12 +50,34 @@ from panel_api import (  # noqa: E402
 from redaction import Redactor  # noqa: E402
 
 DRIVER_SCHEMA = "celikpanel/dns-pair-acceptance-driver/v1"
-LICENSE_MODES = ("none", "owner-key")
+LICENSE_MODES = ("none", "owner-key", "acceptance-fixture")
+# acceptance-fixture: both panels come from scripts/build-dist.sh
+# --acceptance-license (panel built with the acceptance_license test tag,
+# internal/licensing/acceptance_fixture.go). That build never contacts the
+# license service and accepts only this public fixture key, only on a guest
+# carrying the fixture's cloud-init marker. Release packaging refuses it.
+ACCEPTANCE_FIXTURE_KEY = "CPK-acce57f1c7" + "0" * 54
+ACCEPTANCE_FIXTURE_KIND = "acceptance_fixture"
+ACCEPTANCE_FIXTURE_LABEL = "ACCEPTANCE FIXTURE \u2014 NOT FOR PRODUCTION"
+ACCEPTANCE_BUILD_MARKER = "ACCEPTANCE-LICENSE-BUILD.txt"
+NATIVE_EVIDENCE_SCOPE = {
+    "none": "Customer panel build. The license lock is observed as the product shows it; nothing after it ran.",
+    "owner-key": "Customer panel build with owner-supplied licenses verified by the license service.",
+    "acceptance-fixture": (
+        "License behaviour is NOT evidenced by this run. Both panels were built with the acceptance_license "
+        "test tag and ran on the acceptance fixture license, which exists only in that build: no customer "
+        "license, no license service contact, and no activation, renewal, expiry or rejection path of the "
+        "product. Only the DNS pair product flow after licensing is in scope for review."
+    ),
+}
 EDIT_METHODS = ("ui-replace", "api-put")
 ADMIN_USERNAME = "owner"
 RECORD_LABEL = "accept"
 RECORD_ADDRESSES = ("198.51.100.10", "198.51.100.20")
 RECORD_TTL = 300
+# DNS engine card fields that would show a staged DNS identity or pairing.
+DNS_IDENTITY_KEYS = ("revision", "active_engine", "engine_epoch", "state", "topology", "pair_role", "pair_ready",
+                     "local_nameserver", "peer_nameserver", "local_ip", "peer_ip", "identity")
 NON_DNS_SETUP_PHASES = frozenset({"access_dns", "panel_certificate", "verification", "verify"})
 JOURNAL_UNITS = (
     "celikpanel-panel.service",
@@ -217,6 +239,8 @@ def dist_identity(archive: Path) -> dict[str, str]:
             if not name:
                 continue
             roots.add(name.split("/", 1)[0])
+            if name.count("/") == 1 and name.split("/", 1)[1] == ACCEPTANCE_BUILD_MARKER and member.isfile():
+                values["acceptance_license_build"] = "yes"
             if name.count("/") == 1 and name.split("/", 1)[1] in {"release.commit", "release.tree"} and member.isfile():
                 extracted = bundle.extractfile(member)
                 if extracted is not None:
@@ -224,7 +248,8 @@ def dist_identity(archive: Path) -> dict[str, str]:
     if len(roots) != 1:
         raise ValueError(f"dist archive must contain exactly one root directory, found {sorted(roots)}")
     return {"sha256": digest.hexdigest(), "root": roots.pop(),
-            "commit": values.get("release.commit", ""), "tree": values.get("release.tree", "")}
+            "commit": values.get("release.commit", ""), "tree": values.get("release.tree", ""),
+            "acceptance_license_build": values.get("acceptance_license_build") == "yes"}
 
 
 class Driver:
@@ -270,6 +295,7 @@ class Driver:
         self.snapshots: dict[str, Any] = {}
         self.started_at = now_iso()
         self.identity_ok: set[str] = set()
+        self.license_status: dict[str, dict[str, Any]] = {}
 
     # -- step machinery ---------------------------------------------------------
 
@@ -399,6 +425,8 @@ class Driver:
             "driver": DRIVER_SCHEMA,
             "native_evidence": False,
             "native_evidence_note": "result of one disposable run; a reviewer decides what it proves",
+            "license_mode": self.config.license_mode,
+            "native_evidence_scope": NATIVE_EVIDENCE_SCOPE[self.config.license_mode],
             "started_at": self.started_at,
             "finished_at": now_iso(),
             "topology": self.topology.as_dict(),
@@ -408,6 +436,8 @@ class Driver:
             "findings": self.findings,
             "product_blockers": self.blockers,
         }
+        if self.config.license_mode == "acceptance-fixture":
+            result["license_status"] = self.license_status
         self.evidence.finalize(result)
         return result
 
@@ -514,6 +544,13 @@ class Driver:
             if identity["root"] != self.config.dist_root or identity["commit"] != self.config.dist_commit \
                     or identity["tree"] != self.config.dist_tree:
                 raise StepFailed(f"dist archive identity differs: {identity}")
+            acceptance_build = bool(identity.get("acceptance_license_build"))
+            if self.config.license_mode == "acceptance-fixture" and not acceptance_build:
+                raise StepFailed("--license-mode acceptance-fixture needs the archive from scripts/build-dist.sh "
+                                 f"--acceptance-license ({ACCEPTANCE_BUILD_MARKER} is missing)")
+            if self.config.license_mode != "acceptance-fixture" and acceptance_build:
+                raise StepFailed("this archive's panel was built with the acceptance_license test tag; its license "
+                                 "state is not the product's. Use --license-mode acceptance-fixture or a customer archive")
 
     def install(self, record: StepRecord, role: topo.Role) -> None:
         if self.config.dist_archive is None:
@@ -562,6 +599,9 @@ class Driver:
         with self.panel(role) as client:
             access = client.get("/api/v1/license/access", purpose="LicenseOnboarding access").json() or {}
             record.checks["license_access_before"] = access
+            if self.config.license_mode == "acceptance-fixture":
+                self.acceptance_license(record, role, client, access)
+                return
             if access.get("can_use_panel") is True:
                 return
             if self.config.license_mode == "none":
@@ -583,12 +623,13 @@ class Driver:
                         "cmd/panel/middleware.go:172 (gate on every authenticated request)",
                         "cmd/panel/server_setup_operations.go:534 (setup start requires CanProvision)",
                     ],
-                    "smallest_product_change": (
-                        "A build-tagged acceptance license seam (for example cmd/panel/"
-                        "license_acceptance_fixture.go under //go:build dns_pair_acceptance) that makes "
-                        "newServerLicense trust a fixture Ed25519 key and a loopback refresh stub, in the "
-                        "same way agent.kill is a tagged build; release packaging must refuse the tag. "
-                        "No change to production licensing."
+                    "test_only_workaround": (
+                        "--license-mode acceptance-fixture with scripts/build-dist.sh --acceptance-license: "
+                        "the panel is built with the acceptance_license test tag "
+                        "(internal/licensing/acceptance_fixture.go), accepts only the fixture license on a "
+                        "disposable guest and never contacts the license service; release packaging refuses "
+                        "that build (deploy/release-acceptance-license-guard.sh). Such a run does not evidence "
+                        "license behaviour. Customer license policy is unchanged."
                     ),
                 }
                 if blocker not in self.blockers:
@@ -596,7 +637,8 @@ class Driver:
                 raise ProductBlocked(
                     "license activation cannot complete on a disposable offline host (blocker "
                     "L1-license-activation-offline); rerun with --license-mode owner-key if the owner "
-                    "supplies keys and permits the license service")
+                    "supplies keys and permits the license service, or with --license-mode "
+                    "acceptance-fixture for a run that does not evidence licensing")
             key = self.config.license_keys.get(role.role)
             if not key:
                 raise StepFailed(f"--license-mode owner-key needs a key for the {role.role}")
@@ -611,6 +653,48 @@ class Driver:
             record.checks["license_access_after"] = access
             if access.get("can_use_panel") is not True:
                 raise StepFailed(f"license is not usable after activation: {access.get('state')}")
+
+    def require_fixture_label(self, status: dict[str, Any], role: topo.Role, stage: str) -> None:
+        """The panel must say it runs on the acceptance fixture license, for this cell and node."""
+
+        cell = self.topology.cell_id(self.config.run_label)
+        expected = {"license_kind": ACCEPTANCE_FIXTURE_KIND, "license_label": ACCEPTANCE_FIXTURE_LABEL,
+                    "acceptance_guest": "verified", "acceptance_cell": cell, "acceptance_node": role.node}
+        wrong = {key: status.get(key) for key, value in expected.items() if status.get(key) != value}
+        if wrong or not str(status.get("license_service", "")).startswith("not contacted"):
+            raise StepFailed(f"{role.node} does not label its license as the acceptance fixture for this guest "
+                             f"({stage}): {wrong or status.get('license_service')}; an unlabelled license is "
+                             "never treated as fixture evidence")
+
+    def acceptance_license(self, record: StepRecord, role: topo.Role, client: Any, access: dict[str, Any]) -> None:
+        """Activate the fixture through the License screen's endpoint and record what it reports."""
+
+        self.redactor.register(ACCEPTANCE_FIXTURE_KEY)
+        before = client.get("/api/v1/panel/license", purpose="LicensePanel status")
+        status = before.json() or {}
+        self.record(f"license-status-before-{role.role}.json", {"http_status": before.status, "body": status})
+        record.checks["license_status_before"] = _license_summary(status)
+        self.require_fixture_label(status, role, "before activation")
+        record.checks["activation_posts"] = 0
+        if access.get("can_use_panel") is not True:
+            response = client.post("/api/v1/panel/license", {"action": "activate", "key": ACCEPTANCE_FIXTURE_KEY},
+                                   purpose="LicensePanel activate (acceptance fixture key)")
+            record.checks["activation_posts"] = 1
+            if response.status != 200:
+                item = gd.api_error_guidance(self.translator, response.status, response.json())
+                self.add_guidance(record, item, context="acceptance fixture activation refused")
+                raise StepFailed(f"acceptance fixture activation returned HTTP {response.status}")
+        access = client.get("/api/v1/license/access", purpose="LicenseOnboarding access").json() or {}
+        record.checks["license_access_after"] = access
+        after = client.get("/api/v1/panel/license", purpose="LicensePanel status")
+        status = after.json() or {}
+        self.record(f"license-status-{role.role}.json", {"http_status": after.status, "body": status})
+        record.checks["license_status"] = _license_summary(status)
+        self.license_status[role.role] = record.checks["license_status"]
+        self.require_fixture_label(status, role, "after activation")
+        if access.get("can_use_panel") is not True or status.get("state") != "active" \
+                or status.get("can_provision") is not True:
+            raise StepFailed(f"acceptance fixture license is not usable: access={access} state={status.get('state')}")
 
     def draft(self, role: topo.Role) -> dict[str, Any]:
         t = self.topology
@@ -648,6 +732,7 @@ class Driver:
                 if choice.status != 200:
                     raise StepFailed(f"guidance choice returned HTTP {choice.status}")
                 state = choice.json() or client.get("/api/v1/setup").json() or {}
+            engine_before = client.get("/api/v1/dns/engine", timeout=40, purpose="DNSEngineCard before review").json() or {}
             draft = self.draft(role)
             saved = client.put("/api/v1/setup", {"revision": state.get("revision"), "draft": draft},
                                purpose="ServerSetup draft save")
@@ -656,35 +741,48 @@ class Driver:
                 self.add_guidance(record, item, context="draft save refused")
                 raise StepFailed(f"draft save returned HTTP {saved.status}")
             state = saved.json() or {}
-            rule_present = gd.wizard_pdns_primary_rule_present()
-            record.checks["wizard_pdns_primary_rule_in_source"] = rule_present
-            selection = gd.setup_selection_error(draft, pdns_rule=rule_present)
+            code_keys = gd.wizard_code_keys()
+            record.checks["wizard_code_key_pdns_primary"] = code_keys.get(gd.PDNS_PRIMARY_GATE_CODE)
+            selection = gd.setup_selection_error(draft)
+            if selection:
+                raise StepFailed(f"the wizard's selection rule refuses this draft: {selection}")
             plan_response = client.post("/api/v1/setup/plan", {"revision": state.get("revision")},
                                         purpose="ServerSetup review")
             plan = plan_response.json() or {}
             record.checks["plan"] = {k: plan.get(k) for k in ("id", "can_start", "blockers", "purpose")}
             record.checks["plan_steps"] = [(s.get("id"), s.get("kind"), s.get("target")) for s in plan.get("steps") or []]
             self.record(f"plan-{role.role}.json", plan)
-            if selection:
-                item = gd.gate_refusal_guidance(self.translator, selection, code="pdns_primary_switch_paused")
-                self.add_guidance(record, item, context="wizard selection rule (ServerSetup.tsx dnsSelectionError)")
-                engine_item = gd.preview_blocker_guidance(self.translator, [{"code": "pdns_primary_switch_paused"}])
+            blockers = [code for code in plan.get("blockers") or [] if isinstance(code, str)]
+            if any(code.split(":")[0] == gd.PDNS_PRIMARY_GATE_CODE for code in blockers):
+                self.refused_plan_left_nothing(record, role, client, state, engine_before)
+                item = gd.plan_blocker_guidance(self.translator, blockers, code_keys)
+                self.add_guidance(record, item, context="server plan blocker (ServerSetup review)")
+                engine_item = gd.preview_blocker_guidance(self.translator, [{"code": gd.PDNS_PRIMARY_GATE_CODE}])
                 record.checks["dns_engine_card_text"] = engine_item["shown"]
                 self.require_actionable(record)
                 if plan.get("can_start"):
-                    self.findings.append({
-                        "id": "pdns-primary-gate-client-side-only",
-                        "text": "The reviewed server plan admits dns_engine=pdns with dns_role=primary "
-                                "(can_start=true); only the UI selection rule refuses it "
-                                "(web/src/components/ServerSetup.tsx:425-428). An API start would stage the "
-                                "DNS identity before failing with the generic server_setup_dns_failed "
-                                "(cmd/panel/setup_dns_operations.go:197-206). The driver did not start it.",
-                    })
-                raise GateRefused("PowerDNS primary refused by product gate pdns_primary_switch_paused; shown: "
+                    raise StepFailed("the plan carries pdns_primary_switch_paused but says can_start=true")
+                raise GateRefused("PowerDNS primary refused by the server plan (pdns_primary_switch_paused); shown: "
                                   + " | ".join(item["shown"]["en"]))
             if plan_response.status != 200 or not plan.get("can_start"):
                 raise StepFailed(f"reviewed plan cannot start: HTTP {plan_response.status} blockers={plan.get('blockers')}")
             self.executions[f"plan-{role.role}"] = plan
+
+    def refused_plan_left_nothing(self, record: StepRecord, role: topo.Role, client: Any,
+                                  saved: dict[str, Any], engine_before: dict[str, Any]) -> None:
+        """A refused plan must leave the saved draft and the DNS identity exactly as they were (read-only)."""
+
+        after = client.get("/api/v1/setup", purpose="ServerSetupGate after refused plan").json() or {}
+        engine_after = client.get("/api/v1/dns/engine", timeout=40, purpose="DNSEngineCard after refused plan").json() or {}
+        self.record(f"refused-plan-state-{role.role}.json", {"setup": after, "dns_engine_before": engine_before,
+                                                             "dns_engine_after": engine_after})
+        changes = [f"setup.{key}: {saved.get(key)!r} -> {after.get(key)!r}"
+                   for key in ("revision", "status", "draft") if saved.get(key) != after.get(key)]
+        changes += [f"dns_engine.{key}: {engine_before.get(key)!r} -> {engine_after.get(key)!r}"
+                    for key in DNS_IDENTITY_KEYS if engine_before.get(key) != engine_after.get(key)]
+        record.checks["refused_plan_left_nothing"] = not changes
+        if changes:
+            raise StepFailed(f"the refused plan left changes behind: {changes}")
 
     def _setup_reader(self, request_id: str) -> Callable[[Any], Any]:
         def read(view: Any) -> Any:
@@ -1179,6 +1277,16 @@ def _decode(value: Any) -> str:
     return str(value)
 
 
+LICENSE_SUMMARY_KEYS = ("state", "observation", "can_provision", "product", "license_id", "expires_at",
+                        "offline_until", "license_kind", "license_label", "license_service", "acceptance_guest",
+                        "acceptance_cell", "acceptance_node", "acceptance_smbios_uuid")
+
+
+def _license_summary(status: Any) -> dict[str, Any]:
+    status = status if isinstance(status, dict) else {}
+    return {key: status.get(key) for key in LICENSE_SUMMARY_KEYS if key in status}
+
+
 def _dns_step_done(execution: dict[str, Any]) -> bool:
     return any(step.get("kind") == "dns" and step.get("status") == "succeeded"
                for step in execution.get("steps") or [] if isinstance(step, dict))
@@ -1201,7 +1309,8 @@ def _expected_from_panel(records: list[dict[str, Any]], zone: str) -> dict[tuple
 API_SEQUENCE = [
     ("login", "POST /api/v1/auth/login, GET /api/v1/auth/me, GET /api/v1/panel/availability"),
     ("license", "GET /api/v1/license/access; locked: GET /api/v1/setup -> 403 license_required; "
-                "owner-key: POST /api/v1/panel/license {action:activate}"),
+                "owner-key: POST /api/v1/panel/license {action:activate}; acceptance-fixture: GET "
+                "/api/v1/panel/license (label), POST {action:activate, fixture key} once, GET both again"),
     ("setup-review", "GET /api/v1/setup, PUT /api/v1/setup/guidance, PUT /api/v1/setup, POST /api/v1/setup/plan"),
     ("setup-start", "POST /api/v1/setup/start (once, fixed request_id), poll GET /api/v1/setup/operation?request_id="),
     ("pair-ready", "poll GET /api/v1/dns/engine until paired+pair_ready; poll setup operation until settled"),
@@ -1232,11 +1341,13 @@ def build_plan(args: argparse.Namespace, topology: topo.Topology) -> dict[str, A
              "--identity-file", "<identity>", "--execute"],
         ],
         "license_mode": args.license_mode,
+        "native_evidence_scope": NATIVE_EVIDENCE_SCOPE[args.license_mode],
         "edit_method": args.edit_method,
         "steps": [{"step": name, "api": api} for name, api in API_SEQUENCE],
         "expected_outcome_note": (
             "pdns-primary/bind-secondary is expected to end refused-by-product-gate "
-            "(pdns_primary_switch_paused); --license-mode none is expected to end blocked-product at license"
+            "(server plan blocker pdns_primary_switch_paused) while its gate is closed; --license-mode none is "
+            "expected to end blocked-product at license; acceptance-fixture runs do not evidence license behaviour"
         ),
         "safety": [
             "guests are reached only through the fixture plan's loopback SSH ports",
@@ -1293,6 +1404,9 @@ def validate_run_args(args: argparse.Namespace) -> None:
                 raise SystemExit(f"owner-key license mode needs --{flag.replace('_', '-')}")
     elif args.license_key_file_primary or args.license_key_file_secondary:
         raise SystemExit("license key files are only accepted with --license-mode owner-key")
+    if args.license_mode != "owner-key" and args.allow_license_service:
+        raise SystemExit("--allow-license-service is only meaningful with --license-mode owner-key; "
+                         "the acceptance fixture build never contacts the license service")
     if len({args.local_port_debian13, args.local_port_arch}) != 2:
         raise SystemExit("local tunnel ports must differ")
 

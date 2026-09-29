@@ -8,6 +8,36 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
 ---
 
+## D-027 · Kabul koşuları yalnız deneyde geçerli lisans kullanır; lisans politikası değişmez
+
+*30 Eylül 2026 · Kullanıcı kararı*
+
+Geçici deney sunucularında ürün akışının kabulü gerçek Panel'i kullanmak
+zorunda: kurulum sihirbazı, alan adı ekranları, iki sunucuda da CelikPanel.
+Panel, lisans etkin değilken neredeyse hiçbir işleme izin vermiyor ve etkin
+lisansı yaklaşık dakikada bir lisans hizmetinden doğruluyor; deney sunucuları
+ise internete kapalı. Kullanıcı, deneylerde gerçek anahtar kullanmak ya da
+ürün akışını atlamak yerine yalnız deneyde geçerli bir derlemeyi seçti.
+
+**Karar.** `acceptance_license` derleme etiketi, yalnız "ACCEPTANCE FIXTURE —
+NOT FOR PRODUCTION" etiketli tek bir deney lisansını kabul eden bir dikiş
+derler. Bu lisans yalnız deney düzeneğinin işaretini taşıyan sunucuda
+etkinleşir, yerelde doğrulanır; lisans hizmetine her bağlantı denemesi
+reddedilir ve sayılır. Sıradan derlemede deney lisansı, başka bir doğrulayıcı
+ya da ortam/dosya okuması bulunmayan boş bir gövde derlenir; sıradan bir
+ikili çalışma anında kabul kipine geçirilemez. Bu, kaynaklardan ve derlenmiş
+ikililerden testlerle kanıtlanır. Sürüm paketleme, etiketle derlenmiş ya da
+deney metnini içeren her dosyayı reddeder. Kabul arşivi yalnız adı açıkça
+belirtilmiş bir betikle üretilir ve sürüm değildir.
+
+Bu karar lisans politikasını, doğrulama süresini ya da müşteri derlemesinin
+herhangi bir davranışını değiştirmez. Deney lisansıyla yapılan koşu lisans
+davranışı için kanıt sayılmaz. Bilinen sınır: Lisans ekranı yalnız durum ve
+bitiş tarihini gösterdiği için deney lisansı ekranda ayırt edilemez; API
+yanıtı, günlükler, kanıt ve panel sürüm adı ayırt eder.
+
+---
+
 ## D-026 · DNS motoru kurtarması: kurtarılamayan geçişi reddet, ilk kurulumda aynı işlemle kurtarmayı kabul et
 
 *29 Eylül 2026 · Devirdeki 1. madde (DNS kurtarma sözleşmesi) için kullanıcı kararı*

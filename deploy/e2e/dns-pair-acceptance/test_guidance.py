@@ -154,29 +154,38 @@ class DeletionAndGateTest(unittest.TestCase):
                                                saved=True)
         self.assertFalse(unknown["actionable"])
 
-    def test_wizard_rule_is_read_from_the_shipped_source(self) -> None:
-        self.assertTrue(gd.wizard_pdns_primary_rule_present())
+    def test_wizard_maps_the_server_gate_code_from_the_shipped_source(self) -> None:
+        keys = gd.wizard_code_keys()
+        self.assertEqual(keys["pdns_primary_switch_paused"], "setup.pdnsPrimaryPaused")
+        self.assertEqual(keys["license_required"], "license.restricted")
         import tempfile
         with tempfile.TemporaryDirectory() as directory:
-            opened = Path(directory) / "ServerSetup.tsx"
-            opened.write_text("const dnsSelectionError = null;", encoding="utf-8")
-            self.assertFalse(gd.wizard_pdns_primary_rule_present(opened))
-        draft = {"purpose": "dns", "dns_mode": "local", "dns_role": "primary", "dns_engine": "pdns"}
-        self.assertIsNone(gd.setup_selection_error(draft, pdns_rule=False))
+            unmapped = Path(directory) / "ServerSetup.tsx"
+            unmapped.write_text("const codeKey: Record<string, TranslationKey> = {\n    other: 'x.y',\n};\n",
+                                encoding="utf-8")
+            self.assertEqual(gd.wizard_code_keys(unmapped), {"other": "x.y"})
+            self.assertEqual(gd.wizard_code_keys(Path(directory) / "missing.tsx"), {})
+            item = gd.plan_blocker_guidance(T, ["pdns_primary_switch_paused"], gd.wizard_code_keys(unmapped))
+        # failureText's fallback is generic: an unmapped gate code is not actionable.
+        self.assertEqual(item["message_keys"], ["setup.blocker.unknown"])
+        self.assertFalse(item["actionable"])
 
-    def test_selection_rule_and_gate_text(self) -> None:
+    def test_selection_rule_and_server_gate_text(self) -> None:
         draft = {"purpose": "dns", "dns_mode": "local", "dns_role": "primary", "dns_engine": "pdns"}
-        key = gd.setup_selection_error(draft)
-        self.assertEqual(key, "setup.pdnsPrimaryPaused")
-        self.assertIsNone(gd.setup_selection_error({**draft, "dns_engine": "bind"}))
-        self.assertIsNone(gd.setup_selection_error({**draft, "dns_role": "secondary"}))
-        item = gd.gate_refusal_guidance(T, key, code="pdns_primary_switch_paused")
+        # The wizard no longer refuses a PowerDNS primary itself (6f2fb028).
+        self.assertIsNone(gd.setup_selection_error(draft))
+        self.assertEqual(gd.setup_selection_error({**draft, "dns_mode": "external"}), "setup.components.localDNSRequired")
+        item = gd.plan_blocker_guidance(T, ["pdns_primary_switch_paused"], gd.wizard_code_keys())
         self.assertTrue(item["actionable"])
+        self.assertEqual(item["code"], "pdns_primary_switch_paused")
+        self.assertEqual(item["title_key"], "setup.planBlocked")
+        self.assertEqual(item["title"], CATALOG["en"]["setup.planBlocked"])
         self.assertEqual(item["shown"]["en"], [CATALOG["en"]["setup.pdnsPrimaryPaused"]])
+        self.assertEqual(item["shown"]["tr"], [CATALOG["tr"]["setup.pdnsPrimaryPaused"]])
+        self.assertEqual(item["actor"], "this server's administrator (choose another engine or topology)")
         preview = gd.preview_blocker_guidance(T, [{"code": "pdns_primary_switch_paused"}])
         self.assertTrue(preview["actionable"])
         self.assertEqual(preview["shown"]["en"], [CATALOG["en"]["dnsEngine.blocker.pdnsPrimarySwitchPaused"]])
-
 
 if __name__ == "__main__":
     unittest.main()

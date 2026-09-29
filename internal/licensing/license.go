@@ -72,6 +72,9 @@ type Status struct {
 	ExpiresAt    int64  `json:"expires_at,omitempty"`
 	OfflineUntil int64  `json:"offline_until,omitempty"`
 	CanProvision bool   `json:"can_provision"`
+	// Empty in every ordinary build (acceptance_off.go), so the JSON is unchanged.
+	// Only the acceptance_license test build labels its fixture license here.
+	acceptanceStatus
 }
 
 func ServerID(machineID []byte) (string, error) {
@@ -126,6 +129,18 @@ type Manager struct {
 	clock      func() time.Time
 	retryAfter time.Time
 	rejected   atomic.Bool
+	// seam is assigned only by NewServer in the acceptance_license test build
+	// (acceptance_fixture.go). Ordinary builds have no implementation and no
+	// assignment, so it is always nil there.
+	seam acceptanceSeam
+}
+
+// acceptanceSeam replaces license verification only in the acceptance_license
+// test build. It is an interface with no implementation in ordinary builds.
+type acceptanceSeam interface {
+	status() Status
+	activate(ctx context.Context, key, hostname string) error
+	refresh(ctx context.Context, force bool) error
 }
 
 func New(file string, key ed25519.PublicKey, server string) (*Manager, error) {
@@ -166,6 +181,9 @@ func (m *Manager) read() (Envelope, Claims, error) {
 	return e, c, nil
 }
 func (m *Manager) Status() Status {
+	if m.seam != nil {
+		return m.seam.status()
+	}
 	e, c, err := m.read()
 	if err != nil {
 		if m.rejected.Load() || errors.Is(err, errInvalidState) {
@@ -229,6 +247,9 @@ func (m *Manager) save(e Envelope) error {
 	return dir.Sync()
 }
 func (m *Manager) request(ctx context.Context, action string, input map[string]string) error {
+	if m.seam != nil {
+		return errors.New("license service is never contacted by this build")
+	}
 	body, err := json.Marshal(input)
 	if err != nil {
 		return err
@@ -288,6 +309,9 @@ func (m *Manager) request(ctx context.Context, action string, input map[string]s
 	return nil
 }
 func (m *Manager) Activate(ctx context.Context, key, hostname string) error {
+	if m.seam != nil {
+		return m.seam.activate(ctx, key, hostname)
+	}
 	if !keyPattern.MatchString(key) {
 		return errors.New("invalid license key")
 	}
@@ -296,6 +320,9 @@ func (m *Manager) Activate(ctx context.Context, key, hostname string) error {
 	return m.request(ctx, "activate", map[string]string{"key": key, "server_id": m.server, "hostname": hostname})
 }
 func (m *Manager) Refresh(ctx context.Context, force bool) error {
+	if m.seam != nil {
+		return m.seam.refresh(ctx, force)
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.refreshLocked(ctx, force)

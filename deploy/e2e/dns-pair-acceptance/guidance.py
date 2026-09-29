@@ -15,6 +15,8 @@ translation catalogues in ``web/src/i18n``:
   web/src/components/Domains.tsx).
 * ``setup_selection_error`` - the wizard's client-side selection rule
   (web/src/components/ServerSetup.tsx ``dnsSelectionError``).
+* ``plan_blocker_guidance`` - the review's server plan blockers through the
+  wizard's ``codeKey`` map (``failureText``), read from the shipped source.
 
 A state is *actionable* only when it carries a stable machine code and the
 UI resolves it to a specific, non-generic translated message. A generic
@@ -41,6 +43,7 @@ GENERIC_KEYS = frozenset(
     {
         "setup.guide.unknown",
         "setup.guide.checkUnknown",
+        "setup.blocker.unknown",
         "domains.deletionPending",
         "common.error",
         "dns.recordAddFailed",
@@ -370,7 +373,7 @@ def setup_execution_guidance(translator: Translator, execution: dict[str, Any]) 
 
 
 # ---------------------------------------------------------------------------
-# Domain deletion (202) and the wizard's client-side selection rule
+# Domain deletion (202), the wizard's selection rule and server plan blockers
 # ---------------------------------------------------------------------------
 
 def deletion_pending_guidance(translator: Translator, status: int, body: Any, *, saved: bool = False) -> dict[str, Any]:
@@ -398,40 +401,50 @@ def deletion_pending_guidance(translator: Translator, status: int, body: Any, *,
 
 
 WIZARD_SOURCE = REPO / "web" / "src" / "components" / "ServerSetup.tsx"
-WIZARD_PDNS_RULE = re.compile(
-    r"draft\.dns_mode === 'local' && draft\.dns_role === 'primary' && draft\.dns_engine === 'pdns'"
-    r"\s*\?\s*'setup\.pdnsPrimaryPaused'"
-)
+WIZARD_CODE_MAP_RE = re.compile(r"const codeKey: Record<string, TranslationKey> = \{(?P<body>.*?)\n\};", re.S)
+WIZARD_CODE_ENTRY_RE = re.compile(r"^\s*(?P<code>[A-Za-z0-9_]+)\s*:\s*'(?P<key>[A-Za-z0-9_.]+)'\s*,?\s*$", re.M)
+PDNS_PRIMARY_GATE_CODE = "pdns_primary_switch_paused"
 
 
-def wizard_pdns_primary_rule_present(source: Path = WIZARD_SOURCE) -> bool:
-    """True while the shipped wizard still refuses a PowerDNS primary client-side.
+def wizard_code_keys(source: Path = WIZARD_SOURCE) -> dict[str, str]:
+    """ServerSetup.tsx ``codeKey``: the text key the wizard shows for a server code.
 
-    ``setup_selection_error`` is a hand port of that rule; if the rule leaves
-    ``ServerSetup.tsx`` (for example when the gate opens) the driver must not
-    keep applying it, so it checks the exact source text at run time.
+    Since 6f2fb028 the PowerDNS-primary refusal is the server's plan blocker
+    ``pdns_primary_switch_paused``; the wizard only maps it to a text key.
+    The map is read from the shipped source at run time, so a build whose
+    wizard no longer maps a code falls back to ``setup.blocker.unknown`` exactly
+    as ``failureText`` does, and that generic text fails D-024.
     """
 
     try:
-        return WIZARD_PDNS_RULE.search(source.read_text(encoding="utf-8")) is not None
+        match = WIZARD_CODE_MAP_RE.search(source.read_text(encoding="utf-8"))
     except OSError:
-        return False
+        return {}
+    if match is None:
+        return {}
+    return {entry.group("code"): entry.group("key") for entry in WIZARD_CODE_ENTRY_RE.finditer(match.group("body"))}
 
 
-def setup_selection_error(draft: dict[str, Any], *, pdns_rule: bool = True) -> str | None:
-    """ServerSetup.tsx ``dnsSelectionError`` for the purpose-dns wizard."""
+def setup_selection_error(draft: dict[str, Any]) -> str | None:
+    """ServerSetup.tsx ``dnsSelectionError`` for the purpose-dns wizard.
 
-    is_dns = draft.get("purpose") == "dns"
-    if is_dns and draft.get("dns_mode") != "local":
+    The wizard no longer refuses a PowerDNS primary itself; the server's plan
+    carries that blocker (``plan_blocker_guidance``).
+    """
+
+    if draft.get("purpose") == "dns" and draft.get("dns_mode") != "local":
         return "setup.components.localDNSRequired"
-    if pdns_rule and draft.get("dns_mode") == "local" and draft.get("dns_role") == "primary"             and draft.get("dns_engine") == "pdns":
-        return "setup.pdnsPrimaryPaused"
     return None
 
 
-def gate_refusal_guidance(translator: Translator, key: str, *, code: str) -> dict[str, Any]:
-    return _finish(translator, source="ui-selection-rule", state="unmet-prerequisite", code=code, reason=None,
-                   title=None, messages=[_item(key)], details=[])
+def plan_blocker_guidance(translator: Translator, blockers: list[Any], code_keys: dict[str, str]) -> dict[str, Any]:
+    """The review's blocker list: ``setup.planBlocked`` over ``failureText(code)`` for each code."""
+
+    codes = [code for code in blockers if isinstance(code, str) and code]
+    messages = [_item(code_keys.get(code.split(":")[0], "setup.blocker.unknown")) for code in codes]
+    first = next((code for code in codes if code.split(":")[0] == PDNS_PRIMARY_GATE_CODE), codes[0] if codes else None)
+    return _finish(translator, source="setup-plan-blockers", state="unmet-prerequisite", code=first, reason=None,
+                   title="setup.planBlocked", messages=messages, details=[])
 
 
 def preview_blocker_guidance(translator: Translator, blockers: list[Any]) -> dict[str, Any]:
