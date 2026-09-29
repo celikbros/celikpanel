@@ -94,13 +94,21 @@ düzeltti (`1c336f6d`, `411398d9`), ve bir kurtarma çıkmazı kaldırıldı
   çalıştırıldığında hâlâ V1 bekliyor;
 - hiçbiri olmayan her satır için kurtarma sırasında yeniden başlatma veya
   güç kaybı;
-- yönlendirme: yeniden çalıştırma çıkış durumu 3; serbest bırakılmış bir
-  günlüğü hangi aktörün emekliye ayırdığına dair kalıcı bir kayıt yok;
-  `rolling-back` durumuna ulaşmamış bir V2 günlüğü için durum, maskelenmiş
-  bir hedefi bilinmiyor olarak raporluyor;
-- bir PowerDNS → BIND geri almasından sonra diskte kalan artıklar, ve farklı
-  nihai BIND birim durumu;
-- dinleyici kanıtları loopback ve link-local soketleri görmezden gelir;
+- yönlendirme, 29 Eylül 2026'da kaynakta düzeltildi (bileşen testleri;
+  gerçek sistemde yeniden koşu bekliyor): tamamlanan yeniden çalıştırmalar
+  çıkış 0 veriyor; geri alma kararından önceki durum doğru sonraki adımı
+  adlandırıyor. Hâlâ açık: serbest bırakılmış bir günlüğü hangi aktörün
+  emekliye ayırdığına dair kalıcı bir kayıt yok; `recover-dns-pdns-fresh-prestart`
+  ve V4 komutu terminal yeniden çalıştırmasında hâlâ çıkış 3 veriyor;
+- bir PowerDNS → BIND geri almasından sonraki artıklar ve son durum, aynı
+  gün kaynakta düzeltildi (geri alma yedeği: BIND her zaman paket
+  korumasının maskesi altında sona erer; tam olarak hazırlanan sürüm
+  kaldırılır; sahibin değiştirdiği ağaçlar korunur). Hâlâ açık: BIND'in
+  çalışma dizinine yazdığı dosyalar ve yükseltilmiş `bind9` kütüphaneleri
+  kalır;
+- dinleyici kanıtları artık yerel ve bağlantı-yerel soketleri
+  sınıflandırıyor (bileşen testleri; gerçek sistemde yeniden koşu
+  bekliyor);
 - her şey imzasız yerel derlemelerle Debian 13'tür (bir Arch BIND hücresi);
   imzalı sürüm ve kurulu sunucu kabulü 3. ve 4. maddelere aittir.
 
