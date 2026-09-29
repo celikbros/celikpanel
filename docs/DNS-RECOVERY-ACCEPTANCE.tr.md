@@ -114,6 +114,138 @@ düzeltti (`1c336f6d`, `411398d9`), ve bir kurtarma çıkmazı kaldırıldı
 
 1. maddeyi kapatmak P0.4'ü kapatmaz.
 
+## 2. madde ilerleme günlüğü
+
+Girdiler, yukarıda taşınan listeye karşı tarihli sonuçlardır. Bir satırın
+kayıttaki durum hücresi yalnızca gerçek sistem kanıtı bulunduğunda değişir.
+
+**29 Eylül 2026, 4. grup** ([kanıt](../deploy/e2e/dns-kill-matrix/evidence/batch4-adoption-reboot-20260929/README.md),
+kaynak `8f86bdad`, ürün ikili dosyaları `411398d9` ile özdeş; tek sunucu
+Debian 13'te yedi hücre, her biri bir kez çalıştırıldı):
+
+| Satır | Hücre | Sonuç |
+|---|---|---|
+| 11 | çalışan-BIND devralması, Agent çalışırken sahip komutu | **geçti**: sahibin `named` süreci PID'sini korudu, sahip dosyaları özdeşti. Yeniden başlatma bu hücre için denenmedi (bayrak bu hücre için kabul edilmedi). |
+| 13 | PowerDNS devralması, `intent`, yeniden başlatılan Agent kendisi geri alıyor, kurtarma sonrası yeniden başlatma | **geçti**: yeniden deneme yakınsadı, ikinci pencerede 31/31. |
+| 13 | PowerDNS devralması, `rolled-back`, sahip komutu | **düştü (düzenek)**: ürün tarafı doğru görünüyordu; kurtarma probu, durum makbuzu olmadan sona eren bir harici-PowerDNS geri almasını sınıflandıramıyor. `3cc2de22`'den beri Agent bu kesintiyi kendisi tamamlıyor, bu yüzden hücrenin geçme tanımı değişiyor. |
+| 7 | V2 PowerDNS → BIND `target-started`, Agent'ın kararı ile sahip komutu arasında yeniden başlatma, kurtarma sonrası yeniden başlatma | **geçti**: günlük ve ledger ilk yeniden başlatma boyunca değişmedi; PowerDNS ikincisinden sonra hizmet veriyor; kesinti üst sınırı, yeniden başlatma dahil 93,8 sn. |
+| 7 | V2 PowerDNS → BIND `rolled-back` after-write | **geçti**. |
+| 4 | boş PowerDNS `target-started`, kurtarma sonrası yeniden başlatma | **geçti**: ikinci pencerede 31/31. |
+| 1 | boş BIND `target-verified` after-write, kurtarma sonrası yeniden başlatma | **düştü (güvenlik)**: `current` işaretçisi, kill işareti ile SIGKILL arasında kaldırıldı; yeniden başlatılan Agent ne doğrulayabildi ne de geri alabildi ve işi bilinmeyen olarak serbest bıraktı; `named` yeniden başlatmaya kadar bellekten hizmet verdi, sonra başlamayı başaramadı; DNS 31/31 reddetti. |
+
+O gruptan bulgular, gerçek sistemde yeniden çalıştırılana kadar hepsi açık:
+
+- etiketli kill kancası, çağıran goroutine'in süreç durmadan önce ürünün hata
+  yoluna girmesine izin verebilir, bu yüzden bir kesinti adı geçen kesim
+  sınırının ötesine düşebilir. Kancası bir mutasyon yapan hata yolunun
+  ardından gelen saklanan hücreler, kanca düzeltildikten sonra yeniden
+  çalıştırılmalıdır; o zamana kadar satır 1 ve satır 4'ün after-write
+  geçişleri bu uyarıyı taşır;
+- kancadan bağımsız olarak, ürün işaretçisi eksik olan doğrulanmış bir BIND
+  hedefini onaramıyor ve yayımcının hata yolu, BIND hâlâ etkin olabilecekken
+  işaretçiyi kaldırıyor. Bu durumda bir yeniden başlatma DNS'i düşürür;
+- denetleyici, yeniden denemeleri ve probları başarısız olmuş bir akıştan
+  sonra yeniden başlatıldı;
+- kayıtlı bir kurtarma çalışma zamanı olmayan hücrelerde
+  `recovery dns-switch-status` kullanılamadı.
+
+Aynı gün kaynakta yapılan değişiklikler, yalnızca bileşen testleri, gerçek
+sistemde yeniden koşu bekliyor: geri alma yedeği ve hazırlanan üretimin
+kaldırılması (`f7a844f7`); bir ikincil tarafından kabul edilen her iki eş
+katalog üreticisi, Agent tarafından `rolled-back` durumunda tamamlanan V1
+devralması, devralma yeniden denemesi (`3cc2de22`); her iki motorun da
+panelsiz gerçek bir birincili eşine karşı boş çiftin-ikincili hücreleri
+için düzenek, devralma ve yeniden kurulum düzenekleri (`883102c1`,
+`7ce3827e`).
+
+**29 Eylül 2026, 5. grup, keşif amaçlı** ([kanıt](../deploy/e2e/dns-kill-matrix/evidence/batch5-paired-first-20260929/README.md),
+kaynak `65b86621`, kill-kancası düzeltmesi `c04d8a2b`'den önce derlendi;
+panelsiz birincil eşin ve çiftin-ikincili akışının ilk gerçek sistem
+çalıştırması; her hücre bir kez):
+
+| Satır | Hücre | Sonuç |
+|---|---|---|
+| 3 | boş BIND ikincili, bir BIND birincili karşısında, `target-verified` after-write | **düştü, kill-kancası yarış imzası**: işaretçi, işaret ile SIGKILL arasında kaldırıldı, 4. gruptaki c6'da olduğu gibi. Eş kararı geçti. Düzeltilmiş kancayla yeniden çalıştırılacak. |
+| 3 | aynı hücre, kataloğu BIND katalog biçiminde sunan bir PowerDNS 5.1.4 birincili karşısında, yönetim kapalıyken yeniden açılış | **geçti**, eş kararı geçti, ikinci pencerede 31/31; kill-kancası uyarısını taşır. |
+| 5 | boş PowerDNS ikincili, bir BIND birincili karşısında ve bir PowerDNS birincili karşısında, `target-started` after-write | **doğrulanmadı, kesim sınırından önce ürün kusuru**: PowerDNS 4.9.17 kataloğu tüketti, üyeyi aktardı ve yetkili olarak yanıt verdi, ardından üye satırının `options` alanına `{"consumer": {"unique": …}}` yazdı; Agent bu alanın boş olmasını gerektiriyor, sınırına kadar yeniden denedi ve başarısız oldu; geri alma, canlı veritabanını reddetti; mutasyon yöneticisi güvenli-kapalıya geçti; DNS sunulmadı. |
+| 12 | durdurulmuş, yönetilmeyen bir BIND'in devralınması, `target-staged` after-write | **geçti**; kill-kancası uyarısını taşır. |
+| 14 | BIND yeniden kurulumu | **çalıştırılmadı**: denetleyici, durum makbuzunu v1 anahtarlarıyla okudu ve herhangi bir mutasyondan önce durdu. |
+
+Gerçek sistem yanıtları: PowerDNS, tüketilen üye satırlarına boş olmayan bir
+`options` değeri yazıyor; bir BIND ikincili, BIND biçiminde bir katalog sunan
+bir PowerDNS birincilinden üyeyi gerçekten yüklüyor.
+
+**29 Eylül 2026, 6a. grup, düzeltilmiş kesim sınırı kancası** ([kanıt](../deploy/e2e/dns-kill-matrix/evidence/batch6a-fixed-hook-20260929/README.md),
+kaynak `94cd124b`; on iki hücre, her biri bir kez çalıştırıldı, düzenek geçici
+çözümü yok, yeniden çalıştırma yok): **on ikisi de geçti.** Hiçbir hücrede
+gerçek sistem mutasyonu kill işareti ile SIGKILL arasına düşmedi.
+
+| Satır | Hücre | Sonuç |
+|---|---|---|
+| 1 | boş BIND `target-verified` after-write (Debian) ve before-write (Arch), kurtarma sonrası yeniden başlatma | geçti; 4. grupta DNS kaybeden hücre işaretçisini korudu ve yeniden başlatmadan sonra hizmet verdi |
+| 4 | boş PowerDNS `target-staged` ve `target-started` after-write, kurtarma sonrası yeniden başlatma | geçti |
+| 7 | V2 PowerDNS → BIND `target-staged` ve `target-started`, Agent çalışıyor, sahip komutundan önce (kaynak durdurulduktan sonraki hücre) ve kurtarmadan sonra yeniden başlatma, ardından aynı switch yeni bir istek olarak tekrar | geçti; BIND ikisinde de koruma maskesi altında sona erdi, hazırlanan üretim kaldırıldı, yeniden çalıştırma çıkış 0, yeniden denenen switch maske kaldırılmış olarak ileri yönde tamamlandı |
+| 11 | çalışan-BIND devralması, Agent çalışırken sahip komutu, komuttan önce ve kurtarmadan sonra yeniden başlatma | geçti |
+| 13 | `rolled-back` ve `intent` durumunda PowerDNS devralması, yeniden başlatılan Agent kendisi tamamlıyor | geçti |
+| 12 | durdurulmuş, yönetilmeyen bir BIND'in devralınması, kurtarma sonrası yeniden başlatma | geçti |
+| 3 | gerçek bir BIND birincili karşısında ve kendi PRODUCER kataloğunu yayımlayan gerçek bir PowerDNS 5.1.4 birincili karşısında boş BIND ikincili; yönetim kapalıyken yeniden açılış | ikisi de geçti; Agent kabul ettiği katalog biçimini (BIND, PowerDNS) günlüğe yazdı ve eş kararları geçti |
+
+O grupta denenmeyen: eksik-işaretçi onarımı (işaretçi bozulmadan kaldı),
+herhangi bir PowerDNS ikincili, yeniden kurulum. Gözlemlendi ama
+değerlendirilmedi: bir devralmadan önceki durum okuması çıkış 3 veriyor,
+çünkü okuyucu, sahibin kurduğu, devre dışı bir `named.service`'i
+sınıflandıramıyor; devralma `rolled-back` hücresinin kurtarmasından önceki
+durum okuması, Agent sonradan kendisi tamamlasa da sahip komutunu
+adlandırıyor. Hücre başına bir çalıştırma, bu çalıştırmalarda kesim
+sınırının tutunduğunu gösterir; yarışın imkânsız olduğunu kanıtlamaz.
+
+**30 Eylül 2026, 6b. grup** ([kanıt](../deploy/e2e/dns-kill-matrix/evidence/batch6b-pdns-secondary-20260930/README.md),
+kaynak `6f2fb028`; sekiz hücre, her biri bir kez çalıştırıldı, düzenek geçici
+çözümü yok, yeniden çalıştırma yok): yedisi geçti, biri doğrulanmadı. Kill
+içeren her hücrede kesim sınırı tutundu.
+
+| Satır | Hücre | Sonuç |
+|---|---|---|
+| 5 | boş PowerDNS ikincili, `target-started` after-write, gerçek bir BIND birincili karşısında ve kendi kataloğunu yayımlayan gerçek bir PowerDNS birincili karşısında; yönetim kapalıyken yeniden açılış | **geçti** ikisi de, eş kararları geçti. Yeniden başlatılan Agent, daemon'ın yazdığı bir veritabanını geri aldı, sonra yeniden deneme yakınsadı. |
+| 5 | boş PowerDNS ikincili, `target-staged` after-write; `target-verified` before-write (kurtarma ileri yönde ilerledi); `rolling-back` after-write | **geçti** |
+| 3 | Arch üzerinde boş BIND ikincili, `target-staged` before-write, kendi gerçek kataloğuna sahip bir PowerDNS birincili karşısında; yönetim kapalıyken yeniden açılış | **geçti** |
+| 12 | durdurulmuş, yönetilmeyen bir BIND'in devralınması, standart seçenekler | **geçti**; sahip-direktifli yeniden deneme durumu denenmedi |
+| 14 | sahip `bind9`'u kaldırdıktan sonra BIND yeniden kurulumu | **doğrulanmadı, herhangi bir günlükten önce ürün kusuru**: yönetilen BIND kurulumu, `/var/cache/bind` için grup adına göre bir `dpkg-statoverride` kaydeder; kaldırma işlemi `bind` grubunu sildi ve geçersiz kılmayı bıraktı, bu yüzden dpkg, sahip onu kaldırana kadar o sunucuda hiçbir paketi açmayı reddeder |
+
+Gerçek sistem yanıtları: bir PowerDNS 4.9.17 tüketicisi, tükettiği bir
+üyenin `options` alanına, birincilin sunduğu katalog biçimi ne olursa olsun
+üyenin etiketiyle `{"consumer": {"unique": "<label>."}}` yazar ve tüketilen
+üyeler için hiçbir üst veri, yorum veya anahtar yazmaz; tüketici satırının
+kendisi `options` ve `catalog` alanlarını NULL olarak tutar.
+
+**30 Eylül 2026, 7. grup, genişlik** ([kanıt](../deploy/e2e/dns-kill-matrix/evidence/batch7-breadth-20260930/README.md),
+kaynak `dbd6a6b6`; Debian 13 kill konuğunda on dört hücre, her biri bir kez
+çalıştırıldı, düzenek geçici çözümü yok, yeniden çalıştırma yok): **on
+dördü de geçti**; kesim sınırı her hücrede tutundu.
+
+| Satır | Hücreler | Sonuç |
+|---|---|---|
+| 7 | V2 PowerDNS → BIND before-write uçları: `target-staged` (eşe ulaşılamayan yerleşim), `source-stopped`, `target-started`, `rolled-back`; ve sahip komutundan önce bir yeniden başlatma, kurtarmadan sonra bir yeniden başlatma ve aynı switch'in yeni bir istek olarak yeniden denenmesiyle `source-stopped` after-write | geçti; before-write uçlarının ilk gerçek sistem çalıştırması; yeniden denenen switch iki yeniden başlatmadan sonra ileri yönde tamamlandı |
+| 12 | sahip `recursion` / `allow-transfer` direktiflerini taşıyan, durdurulmuş yönetilmeyen bir BIND'in devralınması, kurtarma sonrası yeniden başlatma | geçti; sahip dosyaları yeniden denemeden önce mühürlü ön hâline dönmüştü ve aynı-istek yeniden denemesi devralma boyunca yakınsadı |
+| 1 | boş BIND `intent` after-write, yeniden başlatma | geçti |
+| 4 | boş PowerDNS `intent`, `target-verified`, `committed` after-write, yeniden başlatma | geçti |
+| 3 | kendi gerçek kataloğuna sahip bir PowerDNS birincili karşısında boş BIND ikincili `intent` after-write, yönetim kapalıyken yeniden açılış | geçti |
+| 5 | BIND ve PowerDNS birincilleri karşısında boş PowerDNS ikincili `intent`, `committed`, `rolled-back` after-write, yönetim kapalıyken yeniden açılış | geçti |
+
+Kaynak durdurulduktan sonraki V2 hücrelerinde ölçülen PowerDNS kesinti üst
+sınırları: 27,2 sn, 8,8 sn ve 25,9 sn (sonuncusu iki yeniden başlatmayı
+çevreleyen işi kapsar, ama yeniden başlatmaların kendisi değerlendirilmez);
+kaydedildi, sınırlandırılmadı.
+
+4. ve 5. gruplardan sonraki kaynak değişiklikleri, yalnızca bileşen
+testleri, gerçek sistemde yeniden koşu bekliyor: kesim sınırı durdurma,
+eksik-işaretçi onarımı ve işaretçi sıralaması (`c04d8a2b`); kalıcı bir geri
+alma kararı olmadan ters işlem yok, tüketilen PowerDNS üye seçenekleri,
+daemon yazdıktan sonra boş bir PowerDNS ikincilinin geri alınması,
+güvenli-kapalı bir mutasyon yöneticisi yerine yalnızca-DNS bekletmesi,
+eksik bir işaretçiyi adlandıran durum (sonraki commit); düzenek uyumu
+(`86c3fa20`, `2ac6dcbe`).
+
 ## 1. maddeyi ne kapattı
 
 Devrin 1. maddesinin kapanma koşulu şudur: desteklenen kesintilerde aynı işlem
