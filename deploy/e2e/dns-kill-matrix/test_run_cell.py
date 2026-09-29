@@ -2933,6 +2933,11 @@ def owner_cell(phase: str = "target-staged", **changes: object) -> object:
         phase=phase,
         edge="after-write",
         point="after_write",
+        source_fixture_policy=(
+            "managed-pdns-required"
+            if phase in run_cell.OWNER_INVERSE_CRITICAL_PHASES
+            else "driver-specific"
+        ),
     )
     return replace(selected, **changes) if changes else selected
 
@@ -2976,6 +2981,13 @@ class FakeOwnerGuest:
             "dns_after_owner_ok": True,
             "pid_after_owner": 600,
             "owner_files_changed": False,
+            # Critical variant (source stopped before the cut).
+            "pdns_step2_state": "inactive",
+            "bind_step2_active": False,
+            "pdns_after_owner_active": True,
+            "bind_after_owner_active": False,
+            "named_after_owner": [],
+            "journal_readable": True,
             **deviations,
         }
         self.journal_exists = True
@@ -3072,8 +3084,17 @@ class FakeOwnerGuest:
         if self.after_owner and not self.d["dns_after_owner_ok"]:
             errors.append("authoritative UDP/TCP DNS: timed out")
             errors.append("BIND target unit is active: {'bind9.service': 'active'}")
+        elif self.after_owner and not self.d["pdns_after_owner_active"]:
+            errors.append("PowerDNS source unit is not active: {'pdns.service': 'inactive'}")
+            errors.append("authoritative UDP/TCP DNS: connection refused")
+        elif self.after_owner and self.d["bind_after_owner_active"]:
+            errors.append("BIND target unit is active: {'named.service': 'active'}")
+            errors.append(
+                f"udp port-53 listeners are not owned only by PowerDNS MainPID {pid}: [812]"
+            )
         else:
             report["dns"] = {"udp": {"answers": 1}, "tcp": {"answers": 1}}
+            report["dns_answered_at"] = "2026-09-29T10:00:40Z"
         report.update({
             "errors": errors, "unknown": [],
             "pdns_main_pid_expected": expected_pid,
@@ -3081,6 +3102,49 @@ class FakeOwnerGuest:
             "ok": not errors,
         })
         return report
+
+    def native(self, settings, environment) -> dict[str, object]:
+        def unit(active: str, load: str = "loaded", file_state: str = "disabled",
+                 pid: int = 0) -> dict[str, str]:
+            return {"LoadState": load, "ActiveState": active, "SubState": "dead",
+                    "UnitFileState": file_state, "MainPID": str(pid)}
+
+        if not self.after_owner:
+            bind_active = self.d["bind_step2_active"]
+            pdns_active = self.d["pdns_step2_state"] == "active"
+            named = [812] if bind_active else []
+        else:
+            bind_active = self.d["bind_after_owner_active"]
+            pdns_active = self.d["pdns_after_owner_active"]
+            named = list(self.d["named_after_owner"]) or ([812] if bind_active else [])
+        bind_state = "active" if bind_active else "inactive"
+        pdns_state = "active" if pdns_active else (
+            "inactive" if self.after_owner else self.d["pdns_step2_state"]
+        )
+        return {
+            "at": "2026-09-29T10:00:20Z",
+            "units": {
+                "pdns.service": unit(
+                    pdns_state, file_state="enabled", pid=700 if pdns_active else 0,
+                ),
+                "named.service": unit(bind_state, pid=812 if bind_active else 0),
+                "bind9.service": unit(bind_state, pid=812 if bind_active else 0),
+            },
+            "named_processes": named,
+            "port53_listeners": {"tcp": [], "udp": []},
+            "dns": {"answered": bind_active or pdns_active, "at": "2026-09-29T10:00:20Z"},
+            "unknown": [],
+        }
+
+    def unit_journal(self, settings, environment, since_epoch) -> dict[str, object]:
+        if not self.d["journal_readable"]:
+            return {"read": False, "error": "journalctl exited 1"}
+        return {
+            "read": True,
+            "stopping_at": "2026-09-29T10:00:00Z",
+            "stopped_at": "2026-09-29T10:00:01Z",
+            "started_after_stop_at": "2026-09-29T10:00:30Z" if self.after_owner else None,
+        }
 
     def probe(self, settings, environment, transcript, ordinal) -> dict[str, object]:
         if not self.after_owner or self.journal_exists:
@@ -3100,24 +3164,75 @@ class OwnerInverseAfterRestartTest(unittest.TestCase):
     }
 
     def test_owner_inverse_cells_are_exact(self) -> None:
-        for phase in ("intent", "target-staged"):
+        phases = ("intent", "target-staged", "source-stopped", "target-started")
+        for phase in phases:
             self.assertTrue(run_cell.is_owner_inverse_cell(owner_cell(phase)))
         self.assertEqual(
-            {owner_cell(phase).cell_id for phase in ("intent", "target-staged")},
+            {owner_cell(phase).cell_id for phase in phases},
             set(run_cell.OWNER_INVERSE_CELLS),
         )
+        self.assertEqual(
+            [run_cell.owner_inverse_expectation(owner_cell(phase)).variant for phase in phases],
+            ["pre-start", "pre-start", "critical", "critical"],
+        )
+        self.assertTrue(
+            run_cell.owner_inverse_expectation(owner_cell("target-started")).bind_active_after_restart
+        )
+        self.assertFalse(
+            run_cell.owner_inverse_expectation(owner_cell("source-stopped")).bind_active_after_restart
+        )
         for changed in (
-            owner_cell("source-stopped"),
+            owner_cell("rolled-back"),
+            owner_cell("committed"),
+            owner_cell("source-stopped", source_fixture_policy="driver-specific"),
+            owner_cell("target-started", edge="before-write", point="before_write"),
+            owner_cell("target-staged", source_fixture_policy="managed-pdns-required"),
             owner_cell("target-staged", edge="before-write", point="before_write"),
             owner_cell("target-staged", peer_reachability="unreachable"),
             owner_cell("target-staged", role="paired-primary"),
             owner_cell("target-staged", source_fixture_policy="managed-pdns-required"),
             replace(owner_cell("target-staged"), phase="intent"),
+            replace(owner_cell("source-stopped"), phase="target-started"),
             owner_cell("target-staged", driver="pdns-switch"),
             replace(cell("rolling-back", "after-write"), cell_id=run_cell.BIND_HANDOFF_CELL),
         ):
             with self.subTest(changed=changed):
                 self.assertFalse(run_cell.is_owner_inverse_cell(changed))
+                with self.assertRaises(run_cell.ControllerError):
+                    run_cell.owner_inverse_expectation(changed)
+
+    def test_critical_cells_keep_stale_v1_without_the_flag(self) -> None:
+        manifest = json.loads(
+            Path(__file__).with_name("manifest.json").read_text(encoding="utf-8")
+        )
+        for phase in sorted(run_cell.OWNER_INVERSE_CRITICAL_PHASES):
+            selected = run_cell.CellSpec.from_manifest(
+                manifest, f"bind__{phase}__after-write__standalone__peer-reachable"
+            )
+            with self.subTest(phase=phase):
+                self.assertTrue(run_cell.is_owner_inverse_cell(selected))
+                self.assertEqual(
+                    run_cell.expected_journal_schema(selected), run_cell.JOURNAL_SCHEMA
+                )
+                self.assertEqual(
+                    run_cell.expected_journal_schema(
+                        selected, owner_inverse_after_restart=True
+                    ),
+                    run_cell.BIND_HANDOFF_JOURNAL_SCHEMA,
+                )
+                identity = boundary_identity()
+                observed = observed_journal_value(selected, phase, "/tmp/j.json", identity)
+                run_cell.validate_observed_journal(selected, observed, "1" * 32, identity)
+                with self.assertRaises(run_cell.BoundaryUnverified):
+                    run_cell.validate_observed_journal(
+                        selected, dict(observed, schema=run_cell.BIND_HANDOFF_JOURNAL_SCHEMA),
+                        "1" * 32, identity,
+                    )
+        # Paired critical cells never join the flow.
+        paired = run_cell.CellSpec.from_manifest(
+            manifest, "bind__source-stopped__after-write__paired-primary__peer-reachable"
+        )
+        self.assertFalse(run_cell.is_owner_inverse_cell(paired))
 
     def test_boundary_requires_v2_journal_only_in_owner_inverse_mode(self) -> None:
         selected = owner_cell("target-staged")
@@ -3214,7 +3329,7 @@ class OwnerInverseAfterRestartTest(unittest.TestCase):
                 self.assertEqual(evidence["owner_recovery"]["path"], executable)
                 self.assertIn("journalctl", evidence)
                 for changed in (
-                    replace(settings, cell=owner_cell("source-stopped")),
+                    replace(settings, cell=owner_cell("rolled-back")),
                     replace(settings, cell=owner_cell("intent", peer_reachability="unreachable")),
                     replace(settings, stop_after_kill_for_independent_recovery=True),
                     replace(settings, bind_rollback_after_target_started=True),
@@ -3350,9 +3465,11 @@ class OwnerInverseAfterRestartTest(unittest.TestCase):
         ):
             self.assertFalse(run_cell.owner_status_names_command(text.encode(), request))
 
-    def run_flow(self, guest: FakeOwnerGuest) -> tuple[dict, list, list, list]:
+    def run_flow(
+        self, guest: FakeOwnerGuest, phase: str = "target-staged"
+    ) -> tuple[dict, list, list, list]:
         settings = mock.Mock(
-            cell=owner_cell("target-staged"), request_id=guest.REQUEST,
+            cell=owner_cell(phase), request_id=guest.REQUEST,
             state_dir="/state", journal_path="/state/journal.json",
             agent_restart_command=("/bin/systemctl", "restart", "celikpanel-agent"),
             panel_restart_command=("/bin/systemctl", "restart", "celikpanel-panel"),
@@ -3364,7 +3481,7 @@ class OwnerInverseAfterRestartTest(unittest.TestCase):
         )
         result: dict = {
             "owner_inverse_preflight": {
-                "source": {"pdns_main_pid": 600},
+                "source": {"pdns_main_pid": 600, "dns_answered_at": "2026-09-29T09:59:50Z"},
                 "observed_at_epoch": 1,
                 "state": {"sha256": "s" * 64, "semantic": {"engine": "pdns"}},
             },
@@ -3391,6 +3508,8 @@ class OwnerInverseAfterRestartTest(unittest.TestCase):
                 side_effect=lambda *a, **k: {"observed": guest.d["refusal_logged"], "attempts": 1}
             ),
             observe_pdns_source_serving=mock.Mock(side_effect=guest.source),
+            observe_native_dns_state=mock.Mock(side_effect=guest.native),
+            read_pdns_unit_journal=mock.Mock(side_effect=guest.unit_journal),
             capture_pdns_journal=mock.Mock(return_value={"captured": True}),
             run_recovery_probe=mock.Mock(side_effect=guest.probe),
             snapshot_private_evidence=mock.Mock(side_effect=guest.snapshot),
@@ -3553,6 +3672,168 @@ class OwnerInverseAfterRestartTest(unittest.TestCase):
         self.assertEqual(result["status"], "unverified")
         self.assertIn("did not release the request", " ".join(verification))
         self.assertEqual((guest.status_calls, guest.owner_calls), (0, []))
+
+    @staticmethod
+    def critical_guest(phase: str, **deviations: object) -> FakeOwnerGuest:
+        values: dict[str, object] = {
+            "pid_after_owner": 700,
+            "bind_step2_active": phase == "target-started",
+        }
+        values.update(deviations)
+        return FakeOwnerGuest(**values)
+
+    def test_critical_cells_pass_with_new_pid_and_recorded_outage(self) -> None:
+        for phase in ("source-stopped", "target-started"):
+            guest = self.critical_guest(phase)
+            result, safety, verification, _ = self.run_flow(guest, phase)
+            flow = result["owner_inverse_after_restart"]
+            with self.subTest(phase=phase):
+                self.assertEqual((result["status"], flow["status"]), ("passed", "passed"),
+                                 flow["failures"] + flow["ambiguities"])
+                self.assertEqual((safety, verification), ([], []))
+                self.assertEqual(flow["variant"], "critical")
+                self.assertEqual(result["recovery_outcome"]["classification"],
+                                 "rolled_back_source_serving")
+                step2 = flow["steps"]["agent_restarted"]
+                self.assertNotIn("source", step2)
+                self.assertEqual(step2["judged"]["pdns_active_state"], "inactive")
+                self.assertEqual(
+                    step2["native"]["units"]["named.service"]["ActiveState"],
+                    "active" if phase == "target-started" else "inactive",
+                )
+                step5 = flow["steps"]["after_owner_command"]
+                self.assertEqual(step5["pdns_main_pid"], {
+                    "judged": False, "pre_cut": 600, "after_owner_command": 700,
+                    "changed": True,
+                    "reason": "the source was stopped before the cut; the inverse starts it again",
+                })
+                self.assertEqual(step5["bind_unit_files"]["named.service"],
+                                 {"LoadState": "loaded", "UnitFileState": "disabled"})
+                self.assertEqual(step5["native"]["named_processes"], [])
+                self.assertFalse(
+                    flow["steps"]["after_stability"]["source"]["pdns_main_pid_changed"]
+                )
+                self.assertEqual(result["dns_outage"], {
+                    "judged": False,
+                    "source_stopped_at": "2026-09-29T10:00:00Z",
+                    "source_serving_again_at": "2026-09-29T10:00:40Z",
+                    "seconds": 40.0,
+                    "measured_from": result["dns_outage"]["measured_from"],
+                    "last_source_answer_before_cut_at": "2026-09-29T09:59:50Z",
+                    "pdns_started_after_stop_at": "2026-09-29T10:00:30Z",
+                })
+                self.assertIn("stopping entry",
+                              result["dns_outage"]["measured_from"]["source_stopped_at"])
+        # The pre-start variant keeps treating a PowerDNS PID change as unknown
+        # and records no outage.
+        result, _, _, _ = self.run_flow(FakeOwnerGuest())
+        self.assertNotIn("dns_outage", result)
+        self.assertEqual(result["owner_inverse_after_restart"]["variant"], "pre-start")
+
+    def test_source_stopped_bind_state_is_recorded_not_judged(self) -> None:
+        for bind_active in (False, True):
+            guest = self.critical_guest("source-stopped", bind_step2_active=bind_active)
+            result, _, _, _ = self.run_flow(guest, "source-stopped")
+            with self.subTest(bind_active=bind_active):
+                self.assertEqual(result["status"], "passed")
+                self.assertNotIn(
+                    "bind_active_states",
+                    result["owner_inverse_after_restart"]["steps"]["agent_restarted"]["judged"],
+                )
+
+    def test_critical_deviations_fail(self) -> None:
+        cases = (
+            ("target-started", {"pdns_after_owner_active": False},
+             ["PowerDNS source unit is not active", "not active and enabled"], True),
+            ("source-stopped", {"bind_after_owner_active": True},
+             ["named.service is active, want inactive", "port-53 listeners"], True),
+            ("target-started", {"named_after_owner": [913]},
+             ["named process remains: [913]"], True),
+            ("target-started", {"owner_changes_ledger": run_cell.AGENT_RELEASED_NATIVE_UNKNOWN},
+             ["changed the ledger the Agent wrote"], True),
+            ("source-stopped", {"owner_retires": False},
+             ["left the switch journal in place"], True),
+            ("target-started", {"status_mutates": True},
+             ["read-only status changed private evidence"], False),
+            ("source-stopped", {"pdns_step2_state": "active"},
+             ["PowerDNS is active, but this cut stopped the source"], True),
+            ("target-started", {"bind_step2_active": False},
+             ["BIND is not active, but this cut started the target"], True),
+        )
+        for phase, deviation, texts, owner_ran in cases:
+            guest = self.critical_guest(phase, **deviation)
+            result, _, _, _ = self.run_flow(guest, phase)
+            flow = result["owner_inverse_after_restart"]
+            with self.subTest(phase=phase, deviation=deviation):
+                self.assertEqual((result["status"], flow["status"]), ("failed", "failed"))
+                joined = " ".join(flow["failures"])
+                for text in texts:
+                    self.assertIn(text, joined)
+                self.assertEqual(bool(guest.owner_calls), owner_ran)
+                self.assertIs(result["dns_outage"]["judged"], False)
+
+    def test_unavailable_outage_timestamps_are_explicit(self) -> None:
+        guest = self.critical_guest("target-started", journal_readable=False)
+        result, _, _, _ = self.run_flow(guest, "target-started")
+        outage = result["dns_outage"]
+        self.assertEqual(result["status"], "passed")
+        self.assertIsNone(outage["source_stopped_at"])
+        self.assertIsNone(outage["seconds"])
+        self.assertTrue(outage["measured_from"]["source_stopped_at"].startswith("unavailable"))
+        self.assertTrue(outage["measured_from"]["seconds"].startswith("unavailable"))
+        guest = self.critical_guest("target-started", status_names=False)
+        result, _, _, _ = self.run_flow(guest, "target-started")
+        self.assertEqual(result["status"], "failed")
+        self.assertIsNone(result["dns_outage"]["source_serving_again_at"])
+        self.assertTrue(result["dns_outage"]["measured_from"]["source_serving_again_at"]
+                        .startswith("unavailable"))
+
+    def test_pdns_unit_journal_and_outage_parsing(self) -> None:
+        def line(message: str, micros: int, message_id: str | None = None) -> str:
+            entry = {"MESSAGE": message, "__REALTIME_TIMESTAMP": str(micros)}
+            if message_id:
+                entry["MESSAGE_ID"] = message_id
+            return json.dumps(entry)
+
+        base = 1_790_000_000_000_000
+        output = "\n".join([
+            line("Started pdns.service - PowerDNS Authoritative Server.", base - 5_000_000),
+            line("PowerDNS shutting down", base - 1),
+            line("Stopping pdns.service - PowerDNS Authoritative Server...", base,
+                 run_cell.SYSTEMD_UNIT_STOPPING_ID),
+            line("Stopped pdns.service - PowerDNS Authoritative Server.", base + 400_000),
+            line("Started pdns.service - PowerDNS Authoritative Server.", base + 30_000_000,
+                 run_cell.SYSTEMD_UNIT_STARTED_ID),
+            "",
+        ])
+        events = run_cell.parse_pdns_unit_journal(output)
+        self.assertEqual(events["stopping_at"], "2026-09-21T14:13:20Z")
+        self.assertEqual(events["stopped_at"], "2026-09-21T14:13:20.400000Z")
+        self.assertEqual(events["started_after_stop_at"], "2026-09-21T14:13:50Z")
+        with self.assertRaises(run_cell.ControllerError):
+            run_cell.parse_pdns_unit_journal("not json")
+        outage = run_cell.build_dns_outage(
+            last_answer_before_cut_at=None,
+            unit_journal={"read": True, **events},
+            serving_again_at="2026-09-21T14:14:00Z",
+        )
+        self.assertEqual(outage["seconds"], 40.0)
+        empty = run_cell.build_dns_outage(
+            last_answer_before_cut_at=None,
+            unit_journal={"read": True, "stopping_at": None, "stopped_at": None},
+            serving_again_at="2026-09-21T14:14:00Z",
+        )
+        self.assertIsNone(empty["seconds"])
+        self.assertIn("no stop entry", empty["measured_from"]["source_stopped_at"])
+
+    def test_named_process_scan_uses_exact_comm(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            for pid, comm in ((10, "named\n"), (11, "named-checkconf\n"), (12, "pdns_server\n")):
+                os.mkdir(os.path.join(root, str(pid)))
+                Path(root, str(pid), "comm").write_text(comm, encoding="utf-8")
+            os.mkdir(os.path.join(root, "self"))
+            os.mkdir(os.path.join(root, "13"))  # exited: no comm
+            self.assertEqual(run_cell.find_named_processes(root), [10])
 
     def test_run_cell_dispatches_owner_flow_after_proven_kill(self) -> None:
         source = MODULE_PATH.read_text(encoding="utf-8")

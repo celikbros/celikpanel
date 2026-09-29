@@ -1998,6 +1998,11 @@ class EarlyManagedPDNSBindCellTest(unittest.TestCase):
         "bind__intent__after-write__standalone__peer-reachable",
         "bind__target-staged__after-write__standalone__peer-reachable",
     })
+    CRITICAL_OWNER_INVERSE = frozenset({
+        "bind__source-stopped__after-write__standalone__peer-reachable",
+        "bind__target-started__after-write__standalone__peer-reachable",
+    })
+    ALL_OWNER_INVERSE = OWNER_INVERSE | CRITICAL_OWNER_INVERSE
 
     @staticmethod
     def preinstall_document(cell_id: str) -> tuple[dict, bytes]:
@@ -2070,14 +2075,24 @@ class EarlyManagedPDNSBindCellTest(unittest.TestCase):
                         run_cell.validate_source_preinstall_document(
                             value, raw, selected, owner_inverse_after_restart=True
                         )
-        self.assertEqual(run_cell.OWNER_INVERSE_CELLS, self.OWNER_INVERSE)
-        self.assertEqual(bootstrap.OWNER_INVERSE_CELLS, self.OWNER_INVERSE)
-        # Critical managed-pdns cells keep their unchanged V1 expectation.
-        critical = run_cell.CellSpec.from_manifest(
-            self.manifest, "bind__source-stopped__after-write__standalone__peer-reachable"
+        self.assertEqual(run_cell.OWNER_INVERSE_CELLS, self.ALL_OWNER_INVERSE)
+        self.assertEqual(bootstrap.OWNER_INVERSE_CELLS, self.ALL_OWNER_INVERSE)
+        # Critical managed-pdns cells: V2 only with the flag, stale V1 without.
+        for cell_id in sorted(self.CRITICAL_OWNER_INVERSE):
+            critical = run_cell.CellSpec.from_manifest(self.manifest, cell_id)
+            with self.subTest(cell_id=cell_id):
+                self.assertEqual(
+                    run_cell.expected_journal_schema(critical, owner_inverse_after_restart=True),
+                    run_cell.BIND_HANDOFF_JOURNAL_SCHEMA,
+                )
+                self.assertEqual(
+                    run_cell.expected_journal_schema(critical), run_cell.JOURNAL_SCHEMA
+                )
+        rolled_back = run_cell.CellSpec.from_manifest(
+            self.manifest, "bind__rolled-back__after-write__standalone__peer-reachable"
         )
         self.assertEqual(
-            run_cell.expected_journal_schema(critical, owner_inverse_after_restart=True),
+            run_cell.expected_journal_schema(rolled_back, owner_inverse_after_restart=True),
             run_cell.JOURNAL_SCHEMA,
         )
 
@@ -2105,7 +2120,7 @@ class EarlyManagedPDNSBindCellTest(unittest.TestCase):
         return json.loads(output.getvalue())
 
     def test_run_prepared_appends_owner_inverse_flag_only_for_exact_cells(self) -> None:
-        for cell_id in sorted(self.OWNER_INVERSE):
+        for cell_id in sorted(self.ALL_OWNER_INVERSE):
             raw = self.raw(cell_id)
             with self.subTest(cell_id=cell_id):
                 command = self.dry_run_prepared(raw, self.owner_args(raw))
@@ -2123,15 +2138,31 @@ class EarlyManagedPDNSBindCellTest(unittest.TestCase):
             (raw, {"stop_after_kill_for_independent_recovery": True}),
             (raw, {"bind_rollback_after_target_started": True}),
             (self.raw("bind__intent__before-write__standalone__peer-unreachable"), {}),
-            (self.raw("bind__source-stopped__after-write__standalone__peer-reachable"), {}),
+            (self.raw("bind__rolled-back__after-write__standalone__peer-reachable"), {}),
+            (self.raw("bind__source-stopped__before-write__standalone__peer-reachable"), {}),
             (self.raw(bootstrap.INDEPENDENT_BIND_HANDOFF_CELL), {}),
             (dict(raw, fault_selector={"phase": "target-staged", "point": "before_write"}), {}),
             (dict(raw, role="paired-primary"), {}),
+            (self.raw("bind__target-started__after-write__standalone__peer-reachable"),
+             {"source_fixture": "uninitialized"}),
+            (dict(self.raw("bind__source-stopped__after-write__standalone__peer-reachable"),
+                  placement={
+                      **self.raw("bind__source-stopped__after-write__standalone__peer-reachable")[
+                          "placement"],
+                      "source_fixture_policy": "driver-specific",
+                  }), {}),
         )
         for selected, change in refusals:
+            # identity/ssh are patched so only cell validation can refuse.
             with self.subTest(cell=selected["id"], change=change), (
                 mock.patch.object(bootstrap, "load_plan", return_value=({}, selected, {}))
-            ), self.assertRaises(bootstrap.BootstrapError):
+            ), mock.patch.object(
+                bootstrap, "identity_file", return_value=Path("/tmp/test-key")
+            ), mock.patch.object(
+                bootstrap, "ssh_base", return_value=["ssh", "guest"]
+            ), mock.patch("sys.stdout", new_callable=io.StringIO), self.assertRaises(
+                bootstrap.BootstrapError
+            ):
                 bootstrap.run_prepared(self.owner_args(selected, **change))
 
     def test_run_prepared_has_no_handoff_for_early_cells(self) -> None:
@@ -2180,7 +2211,7 @@ class EarlyManagedPDNSBindCellTest(unittest.TestCase):
             code = bootstrap.RUN_PREPARED_CODE.replace(
                 "/var/lib/celikpanel-dns-kill-matrix/controller-argv.json", str(prepared)
             ).replace("/opt/celikpanel/libexec/dns-kill-run-cell.py", str(executable))
-            for cell_id in sorted(self.OWNER_INVERSE):
+            for cell_id in sorted(self.ALL_OWNER_INVERSE):
                 base = [str(executable), "--cell-id", cell_id, "--trigger-mode", "socket"]
                 prepared.write_text(json.dumps(base), encoding="utf-8")
                 prepared.chmod(0o600)
@@ -2290,6 +2321,42 @@ class EarlyManagedPDNSBindCellTest(unittest.TestCase):
                     bootstrap.enroll_recovery_runtime(
                         self.owner_args(raw, recovery_runtime=bad)
                     )
+
+    def test_critical_owner_inverse_cells_use_the_unchanged_managed_path(self) -> None:
+        for cell_id in sorted(self.CRITICAL_OWNER_INVERSE):
+            raw = self.raw(cell_id)
+            with self.subTest(cell_id=cell_id):
+                self.assertEqual(raw["placement"]["source_fixture_policy"],
+                                 "managed-pdns-required")
+                bootstrap.validate_owner_inverse_cell(raw, "debian13", "managed-pdns")
+                commands, summary = self.dry_prepare(raw)
+                self.assertEqual(commands[2][-1].split()[3:8], [
+                    "prepare-bind", cell_id, "debian13", raw["boundary"]["phase"],
+                    "managed-pdns",
+                ])
+                self.assertEqual(summary["uploaded"], "scenario.json source-setup-pdns.json")
+                # Without the flag run-prepared is byte-identical to before.
+                plain = self.dry_run_prepared(
+                    raw, self.owner_args(raw, owner_inverse_after_restart=False)
+                )
+                self.assertEqual(plain[-1].rsplit("'", 1)[1], " " + cell_id)
+                with tempfile.TemporaryDirectory() as temporary:
+                    runtime = self.make_runtime(Path(temporary))
+                    with (
+                        mock.patch.object(bootstrap, "load_plan", return_value=({}, raw, {})),
+                        mock.patch.object(bootstrap, "identity_file",
+                                          return_value=Path("/tmp/test-key")),
+                        mock.patch.object(bootstrap, "ssh_base", return_value=["ssh", "guest"]),
+                        mock.patch.object(bootstrap, "scp_base", return_value=["scp"]),
+                        mock.patch.object(bootstrap, "remote_destination",
+                                          side_effect=lambda _node, path: "guest:" + path),
+                        mock.patch.object(bootstrap.subprocess, "run") as run,
+                        mock.patch("sys.stdout", new_callable=io.StringIO),
+                    ):
+                        bootstrap.enroll_recovery_runtime(
+                            self.owner_args(raw, recovery_runtime=runtime)
+                        )
+                        run.assert_not_called()
 
     def test_parser_exposes_owner_inverse_and_enrollment(self) -> None:
         common = [

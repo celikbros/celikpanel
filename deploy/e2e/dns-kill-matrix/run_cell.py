@@ -56,10 +56,16 @@ PDNS_HANDOFF_CELL = "pdns-adopt__rolling-back__after-write__standalone__peer-rea
 # producer write the V2 frozen-source journal from intent on. After the cut the
 # ordinary Agent is restarted and left running; it writes rolling-back, releases
 # its lease and names the owner command, which the owner then runs.
+# Pre-start cells cut before PowerDNS stopped (driver-specific placement);
+# critical cells cut after the source stopped (managed-pdns-required placement).
+OWNER_INVERSE_PRESTART_PHASES = frozenset({"intent", "target-staged"})
+OWNER_INVERSE_CRITICAL_PHASES = frozenset({"source-stopped", "target-started"})
 OWNER_INVERSE_CELLS = frozenset(
     {
         "bind__intent__after-write__standalone__peer-reachable",
         "bind__target-staged__after-write__standalone__peer-reachable",
+        "bind__source-stopped__after-write__standalone__peer-reachable",
+        "bind__target-started__after-write__standalone__peer-reachable",
     }
 )
 OWNER_RECOVERY_EXECUTABLE = "/usr/libexec/celikpanel/recovery"
@@ -3854,18 +3860,63 @@ def is_bind_handoff_cell(cell: CellSpec) -> bool:
 
 
 def is_owner_inverse_cell(cell: CellSpec) -> bool:
-    """Exact standalone Debian BIND cell cut before the target ever started."""
+    """Exact standalone Debian BIND after-write cell of the owner-inverse flow."""
 
+    if cell.phase in OWNER_INVERSE_PRESTART_PHASES:
+        policy = "driver-specific"
+    elif cell.phase in OWNER_INVERSE_CRITICAL_PHASES:
+        policy = "managed-pdns-required"
+    else:
+        return False
     return (
         cell.cell_id in OWNER_INVERSE_CELLS
         and cell.driver == "bind"
-        and cell.phase in {"intent", "target-staged"}
         and cell.cell_id == f"bind__{cell.phase}__after-write__standalone__peer-reachable"
         and cell.edge == "after-write"
         and cell.point == "after_write"
         and cell.role == "standalone"
         and cell.peer_reachability == "reachable"
-        and cell.source_fixture_policy == "driver-specific"
+        and cell.source_fixture_policy == policy
+    )
+
+
+@dataclass(frozen=True)
+class OwnerInverseExpectation:
+    """Per-cell judgement of the owner-inverse flow, kept as data.
+
+    Pre-start cells: PowerDNS never stopped, so it must keep serving with one
+    MainPID throughout. Critical cells: the source was stopped before the cut,
+    so step 2 only records native state (judging PowerDNS inactive, and BIND
+    active after target-started) and a new PowerDNS MainPID is expected.
+    """
+
+    variant: str
+    source_serving_after_restart: bool
+    pdns_inactive_after_restart: bool
+    bind_active_after_restart: bool
+    pdns_pid_continuity_from_cut: bool
+    native_checks_after_owner_command: bool
+
+
+def owner_inverse_expectation(cell: CellSpec) -> OwnerInverseExpectation:
+    if not is_owner_inverse_cell(cell):
+        raise ControllerError("owner inverse expectation requires an exact owner-inverse cell")
+    if cell.phase in OWNER_INVERSE_PRESTART_PHASES:
+        return OwnerInverseExpectation(
+            variant="pre-start",
+            source_serving_after_restart=True,
+            pdns_inactive_after_restart=False,
+            bind_active_after_restart=False,
+            pdns_pid_continuity_from_cut=True,
+            native_checks_after_owner_command=False,
+        )
+    return OwnerInverseExpectation(
+        variant="critical",
+        source_serving_after_restart=False,
+        pdns_inactive_after_restart=True,
+        bind_active_after_restart=cell.phase == "target-started",
+        pdns_pid_continuity_from_cut=False,
+        native_checks_after_owner_command=True,
     )
 
 
@@ -5623,6 +5674,13 @@ def classify_cell_status(
 #   6. an identical re-run changes no file; its exit code/output are recorded;
 #   7. D-021 liveness and the stability window, then rolled_back_source_serving
 #      from the two post-command probes.
+# Critical variant (source-stopped, target-started; OwnerInverseExpectation):
+# at step 2 native state is recorded and only "PowerDNS not active" (and "BIND
+# active" after target-started) is judged; at step 5 PowerDNS must also be
+# active+enabled, BIND units inactive (unit-file state recorded) and no named
+# process may remain; the new PowerDNS MainPID is recorded, not an ambiguity,
+# and later steps keep it. A `dns_outage` object is recorded, never judged:
+# DNS is not continuous in these cells by construction.
 # Verified deviations make the cell "failed"; unknown results make it
 # "unverified". Raw observations are always retained.
 # ---------------------------------------------------------------------------
@@ -5779,10 +5837,218 @@ def observe_pdns_source_serving(
             settings.dns_type,
             settings.dns_timeout,
         )
+        report["dns_answered_at"] = utc_now()
     except (ControllerError, OSError) as exc:
         report["errors"].append(f"authoritative UDP/TCP DNS: {exc}")
     report["ok"] = not report["errors"] and not report["unknown"]
     return report
+
+
+UNIT_PROPERTIES = ("LoadState", "ActiveState", "SubState", "UnitFileState", "MainPID")
+NATIVE_DNS_UNITS = ("pdns.service", "named.service", "bind9.service")
+SYSTEMD_UNIT_STOPPING_ID = "de5b426a63be47a7b6ac3eaac82e2f6f"
+SYSTEMD_UNIT_STOPPED_ID = "9d1aaa27d60140bd96365438aad20286"
+SYSTEMD_UNIT_STARTED_ID = "39f53479d3a045ac8e11786248231fbf"
+
+
+def read_unit_properties(
+    unit: str, timeout: float, environment: Mapping[str, str]
+) -> dict[str, str]:
+    try:
+        completed = subprocess.run(
+            ["/usr/bin/systemctl", "show", "--property=" + ",".join(UNIT_PROPERTIES), unit],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=dict(environment),
+            check=False,
+            timeout=timeout,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise ControllerError(f"inspect {unit} properties: {exc}") from exc
+    properties: dict[str, str] = {}
+    for line in completed.stdout.decode("utf-8", errors="replace").splitlines():
+        key, separator, value = line.partition("=")
+        if separator and key in UNIT_PROPERTIES:
+            properties[key] = value.strip()
+    if completed.returncode != 0 or set(properties) != set(UNIT_PROPERTIES):
+        raise ControllerError(
+            f"{unit} properties are incomplete (exit {completed.returncode}): {properties}"
+        )
+    return properties
+
+
+def find_named_processes(proc_root: str = "/proc") -> list[int]:
+    """PIDs whose kernel command name is exactly `named`."""
+
+    found: list[int] = []
+    try:
+        entries = os.listdir(proc_root)
+    except OSError as exc:
+        raise ControllerError(f"list processes: {exc}") from exc
+    for entry in entries:
+        if not entry.isdecimal():
+            continue
+        try:
+            with open(os.path.join(proc_root, entry, "comm"), encoding="utf-8") as stream:
+                if stream.read().strip() == "named":
+                    found.append(int(entry))
+        except OSError:
+            continue  # the process exited while scanning
+    return sorted(found)
+
+
+def observe_native_dns_state(
+    settings: Settings, environment: Mapping[str, str]
+) -> dict[str, Any]:
+    """Record native DNS state without judging it; failed inspections are unknown."""
+
+    report: dict[str, Any] = {"at": utc_now(), "units": {}, "unknown": []}
+    for unit in NATIVE_DNS_UNITS:
+        try:
+            report["units"][unit] = read_unit_properties(
+                unit, settings.endpoint_timeout, environment
+            )
+        except ControllerError as exc:
+            report["unknown"].append(str(exc))
+    try:
+        report["named_processes"] = find_named_processes()
+    except ControllerError as exc:
+        report["unknown"].append(str(exc))
+    try:
+        report["port53_listeners"] = observe_port53_listeners(settings, environment)
+    except ControllerError as exc:
+        report["unknown"].append(str(exc))
+    try:
+        answer = query_authoritative_dns(
+            settings.dns_address, settings.dns_port, settings.dns_name,
+            settings.dns_type, settings.dns_timeout,
+        )
+        report["dns"] = {"answered": True, "at": utc_now(), "result": answer}
+    except (ControllerError, OSError) as exc:
+        report["dns"] = {"answered": False, "at": utc_now(), "error": str(exc)}
+    return report
+
+
+def _journal_realtime(entry: Mapping[str, Any]) -> str | None:
+    raw = entry.get("__REALTIME_TIMESTAMP")
+    if not isinstance(raw, str) or not raw.isdecimal():
+        return None
+    moment = dt.datetime.fromtimestamp(int(raw) / 1_000_000, tz=dt.timezone.utc)
+    return moment.isoformat().replace("+00:00", "Z")
+
+
+def parse_pdns_unit_journal(output: str) -> dict[str, Any]:
+    """First stopping/stopped/started systemd job entries of pdns.service."""
+
+    events: dict[str, Any] = {"stopping_at": None, "stopped_at": None, "started_after_stop_at": None}
+    for line in output.splitlines():
+        if not line.strip():
+            continue
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise ControllerError(f"pdns.service journal line is not JSON: {exc}") from exc
+        if not isinstance(entry, dict):
+            continue
+        message = entry.get("MESSAGE") if isinstance(entry.get("MESSAGE"), str) else ""
+        message_id = entry.get("MESSAGE_ID")
+        at = _journal_realtime(entry)
+        if at is None:
+            continue
+        stopping = message_id == SYSTEMD_UNIT_STOPPING_ID or message.startswith("Stopping pdns.service")
+        stopped = message_id == SYSTEMD_UNIT_STOPPED_ID or message.startswith("Stopped pdns.service")
+        started = message_id == SYSTEMD_UNIT_STARTED_ID or message.startswith("Started pdns.service")
+        if stopping and events["stopping_at"] is None:
+            events["stopping_at"] = at
+        elif stopped and events["stopped_at"] is None:
+            events["stopped_at"] = at
+        elif (
+            started
+            and events["started_after_stop_at"] is None
+            and (events["stopping_at"] or events["stopped_at"])
+        ):
+            events["started_after_stop_at"] = at
+    return events
+
+
+def read_pdns_unit_journal(
+    settings: Settings, environment: Mapping[str, str], since_epoch: int
+) -> dict[str, Any]:
+    argv = [
+        JOURNALCTL_EXECUTABLE, "--no-pager", "--quiet", "--output=json",
+        "--unit=pdns.service", f"--since=@{since_epoch}",
+    ]
+    try:
+        completed = subprocess.run(
+            argv,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=dict(environment),
+            check=False,
+            timeout=settings.command_timeout,
+        )
+        if completed.returncode != 0 or len(completed.stdout) > MAX_COMMAND_OUTPUT:
+            raise ControllerError(
+                f"journalctl exited {completed.returncode} or exceeded its bound"
+            )
+        events = parse_pdns_unit_journal(completed.stdout.decode("utf-8", errors="replace"))
+    except (OSError, subprocess.SubprocessError, ControllerError) as exc:
+        return {"read": False, "argv": argv, "error": str(exc)}
+    return {"read": True, "argv": argv, **events}
+
+
+def _parse_utc(value: Any) -> dt.datetime | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        return dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def build_dns_outage(
+    *,
+    last_answer_before_cut_at: Any,
+    unit_journal: Mapping[str, Any] | None,
+    serving_again_at: Any,
+) -> dict[str, Any]:
+    """Recorded, never judged: when PowerDNS stopped and answered again."""
+
+    journal = unit_journal or {}
+    stopped_at = journal.get("stopping_at") or journal.get("stopped_at")
+    if stopped_at == journal.get("stopping_at") and stopped_at:
+        stop_source = "pdns.service unit journal: first systemd stopping entry since the pre-cut observation"
+    elif stopped_at:
+        stop_source = "pdns.service unit journal: first systemd stopped entry (no stopping entry found)"
+    elif journal.get("read"):
+        stop_source = "unavailable: the pdns.service unit journal has no stop entry since the pre-cut observation"
+    else:
+        stop_source = "unavailable: the pdns.service unit journal could not be read"
+    start, end = _parse_utc(stopped_at), _parse_utc(serving_again_at)
+    return {
+        "judged": False,
+        "source_stopped_at": stopped_at,
+        "source_serving_again_at": serving_again_at,
+        "seconds": (end - start).total_seconds() if start and end else None,
+        "measured_from": {
+            "source_stopped_at": stop_source,
+            "source_serving_again_at": (
+                "first authoritative UDP+TCP answer observed by the controller after the "
+                "owner command returned; an upper bound, the command may restore service earlier"
+                if serving_again_at
+                else "unavailable: no authoritative answer was observed after the owner command"
+            ),
+            "seconds": (
+                "source_serving_again_at minus source_stopped_at"
+                if start and end
+                else "unavailable: a bounding timestamp is missing"
+            ),
+        },
+        "last_source_answer_before_cut_at": last_answer_before_cut_at,
+        "pdns_started_after_stop_at": journal.get("started_after_stop_at"),
+    }
 
 
 def read_dns_state_semantic(state_dir: str) -> dict[str, Any]:
@@ -6155,6 +6421,10 @@ def run_owner_inverse_after_restart(
         raise ControllerError("owner inverse lost its pre-cut PowerDNS observation")
     pre_cut_pid = preflight["source"]["pdns_main_pid"]
     preflight_epoch = preflight["observed_at_epoch"]
+    expectation = owner_inverse_expectation(settings.cell)
+    # PowerDNS MainPID that later observations must keep. Critical cells stop
+    # the source, so the reference is re-based on the PID after the command.
+    pid_reference: int | None = pre_cut_pid
     identity = {
         "request_id": settings.request_id,
         "owner_id": identity_receipt["owner_id"],
@@ -6164,6 +6434,10 @@ def run_owner_inverse_after_restart(
     ambiguities: list[str] = []
     flow: dict[str, Any] = {
         "mode": "owner-inverse-after-restart",
+        "variant": expectation.variant,
+        "expectation": {
+            key: value for key, value in vars(expectation).items() if key != "variant"
+        },
         "request_id": settings.request_id,
         "pre_cut_pdns_main_pid": pre_cut_pid,
         "owner_command": [
@@ -6179,9 +6453,9 @@ def run_owner_inverse_after_restart(
     steps = flow["steps"]
     result["owner_inverse_after_restart"] = flow
 
-    def source_check(stage: str) -> dict[str, Any]:
+    def source_check(stage: str, expected_pid: int | None) -> dict[str, Any]:
         report = observe_pdns_source_serving(
-            settings, owner_environment, expected_pid=pre_cut_pid
+            settings, owner_environment, expected_pid=expected_pid
         )
         failures.extend(f"{stage}: {error}" for error in report["errors"])
         ambiguities.extend(f"{stage}: {error}" for error in report["unknown"])
@@ -6190,12 +6464,23 @@ def run_owner_inverse_after_restart(
                 settings, owner_environment, transcript, preflight_epoch, stage
             )
             ambiguities.append(
-                f"{stage}: PowerDNS MainPID changed from {pre_cut_pid} to "
+                f"{stage}: PowerDNS MainPID changed from {expected_pid} to "
                 f"{report.get('pdns_main_pid')}; the controller cannot establish why "
                 "(pdns.service journal retained)"
             )
         transcript.event("owner-inverse-source-observed", stage=stage, report=report)
         return report
+
+    def native_record(stage: str) -> dict[str, Any]:
+        # Recorded only; callers judge the specific facts they need and turn
+        # a missing one into an ambiguity.
+        report = observe_native_dns_state(settings, owner_environment)
+        transcript.event("owner-inverse-native-observed", stage=stage, report=report)
+        return report
+
+    def unit_state(report: Mapping[str, Any], unit: str, key: str) -> str | None:
+        value = report.get("units", {}).get(unit, {}).get(key)
+        return value if isinstance(value, str) else None
 
     # Step 2: restart the ordinary Agent and leave it running.
     restart_epoch = int(time.time()) - 1
@@ -6287,7 +6572,40 @@ def run_owner_inverse_after_restart(
                 "Agent journal lacks the refusal naming "
                 f"{OWNER_BIND_SWITCH_COMMAND} --request-id {settings.request_id}"
             )
-        step2["source"] = source_check("after Agent restart")
+        if expectation.source_serving_after_restart:
+            step2["source"] = source_check("after Agent restart", pid_reference)
+        else:
+            stage = "after Agent restart"
+            native = native_record(stage)
+            step2["native"] = native
+            step2["pdns_unit_journal"] = read_pdns_unit_journal(
+                settings, owner_environment, preflight_epoch
+            )
+            judged: dict[str, Any] = {}
+            pdns_active = unit_state(native, "pdns.service", "ActiveState")
+            judged["pdns_active_state"] = pdns_active
+            if pdns_active is None:
+                ambiguities.append(f"{stage}: PowerDNS unit state is unknown")
+            elif expectation.pdns_inactive_after_restart and pdns_active == "active":
+                failures.append(
+                    f"{stage}: PowerDNS is active, but this cut stopped the source "
+                    "before the kill"
+                )
+            if expectation.bind_active_after_restart:
+                bind_states = [
+                    unit_state(native, unit, "ActiveState")
+                    for unit in ("named.service", "bind9.service")
+                ]
+                judged["bind_active_states"] = bind_states
+                if "active" not in bind_states:
+                    if None in bind_states:
+                        ambiguities.append(f"{stage}: BIND unit state is unknown")
+                    else:
+                        failures.append(
+                            f"{stage}: BIND is not active, but this cut started the target "
+                            f"before the kill: {bind_states}"
+                        )
+            step2["judged"] = judged
         step2["pre_owner_probe"] = run_recovery_probe(settings, ordinary, transcript, 0)
     else:
         step2["skipped"] = "restarted Agent socket was not proven"
@@ -6376,7 +6694,58 @@ def run_owner_inverse_after_restart(
             step5["state"] = {"error": str(exc)}
             failures.append(f"DNS state receipt after owner command: {exc}")
         probes.append(run_recovery_probe(settings, ordinary, transcript, 1))
-        step5["source"] = source_check("after owner command")
+        if expectation.pdns_pid_continuity_from_cut:
+            step5["source"] = source_check("after owner command", pid_reference)
+        else:
+            stage = "after owner command"
+            step5["source"] = source_check(stage, None)
+            new_pid = step5["source"].get("pdns_main_pid")
+            step5["pdns_main_pid"] = {
+                "judged": False,
+                "pre_cut": pre_cut_pid,
+                "after_owner_command": new_pid,
+                "changed": new_pid is not None and new_pid != pre_cut_pid,
+                "reason": "the source was stopped before the cut; the inverse starts it again",
+            }
+            pid_reference = new_pid
+        if expectation.native_checks_after_owner_command:
+            stage = "after owner command"
+            native = native_record(stage)
+            step5["native"] = native
+            pdns_units = native.get("units", {}).get("pdns.service")
+            if pdns_units is None:
+                ambiguities.append(f"{stage}: PowerDNS unit properties are unknown")
+            elif (
+                pdns_units.get("ActiveState") != "active"
+                or pdns_units.get("UnitFileState") != "enabled"
+            ):
+                failures.append(
+                    f"{stage}: PowerDNS is not active and enabled: "
+                    f"{pdns_units.get('ActiveState')}/{pdns_units.get('UnitFileState')}"
+                )
+            for unit in ("named.service", "bind9.service"):
+                state = unit_state(native, unit, "ActiveState")
+                if state is None:
+                    ambiguities.append(f"{stage}: {unit} state is unknown")
+                elif state != "inactive":
+                    failures.append(f"{stage}: {unit} is {state}, want inactive")
+            # Recorded, not judged: which absent-preimage restoration was used.
+            step5["bind_unit_files"] = {
+                unit: {
+                    "LoadState": unit_state(native, unit, "LoadState"),
+                    "UnitFileState": unit_state(native, unit, "UnitFileState"),
+                }
+                for unit in ("named.service", "bind9.service")
+            }
+            if "named_processes" not in native:
+                ambiguities.append(f"{stage}: named processes could not be listed")
+            elif native["named_processes"]:
+                failures.append(
+                    f"{stage}: named process remains: {native['named_processes']}"
+                )
+            step5["pdns_unit_journal"] = read_pdns_unit_journal(
+                settings, owner_environment, preflight_epoch
+            )
         try:
             files = owner_pdns_files(settings, result["source_proof"])
             source_normalization = result["source_proof"]["source_normalization"]
@@ -6424,7 +6793,7 @@ def run_owner_inverse_after_restart(
         if rerun_changed:
             failures.append(f"owner command re-run changed private evidence: {rerun_changed}")
         probes.append(run_recovery_probe(settings, ordinary, transcript, 2))
-        rerun_source = source_check("after owner re-run")
+        rerun_source = source_check("after owner re-run", pid_reference)
         steps["rerun"]["source"] = rerun_source
         rerun_dns_ok = "dns" in rerun_source and not any(
             error.startswith("authoritative") for error in rerun_source["errors"]
@@ -6514,7 +6883,30 @@ def run_owner_inverse_after_restart(
         safety_failures.append(
             "stability window could not establish a stable agent identity"
         )
-    steps["after_stability"] = {"source": source_check("after stability window")}
+    steps["after_stability"] = {
+        "source": source_check("after stability window", pid_reference)
+    }
+    if expectation.variant == "critical":
+        step2_journal = steps["agent_restarted"].get("pdns_unit_journal")
+        step5_record = steps.get("after_owner_command", {})
+        unit_journal = step5_record.get("pdns_unit_journal")
+        if not (isinstance(unit_journal, dict) and unit_journal.get("read")):
+            unit_journal = step2_journal
+        elif isinstance(step2_journal, dict) and step2_journal.get("read"):
+            # The stop happened before step 2; keep that capture's stop times.
+            unit_journal = {
+                **unit_journal,
+                "stopping_at": step2_journal.get("stopping_at") or unit_journal.get("stopping_at"),
+                "stopped_at": step2_journal.get("stopped_at") or unit_journal.get("stopped_at"),
+            }
+        after_source = step5_record.get("source")
+        result["dns_outage"] = build_dns_outage(
+            last_answer_before_cut_at=preflight["source"].get("dns_answered_at"),
+            unit_journal=unit_journal if isinstance(unit_journal, dict) else None,
+            serving_again_at=(
+                after_source.get("dns_answered_at") if isinstance(after_source, dict) else None
+            ),
+        )
 
     outcome: dict[str, Any] | None = None
     if len(probes) == 2:
@@ -6992,9 +7384,14 @@ def run_cell(settings: Settings) -> int:
         )
         if settings.owner_inverse_after_restart:
             # Recorded, never enforced here: the proven cut is the boundary.
-            result["owner_inverse_source_at_boundary"] = observe_pdns_source_serving(
-                settings, clean_base_environment
-            )
+            if owner_inverse_expectation(settings.cell).variant == "critical":
+                result["owner_inverse_native_at_boundary"] = observe_native_dns_state(
+                    settings, clean_base_environment
+                )
+            else:
+                result["owner_inverse_source_at_boundary"] = observe_pdns_source_serving(
+                    settings, clean_base_environment
+                )
         if settings.bind_rollback_after_target_started:
             target_before_kill = prove_later_bind_target_before_kill(settings, ordinary)
             result["target_dns_before_kill"] = target_before_kill

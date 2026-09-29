@@ -77,9 +77,12 @@ LATER_BIND_ROLLBACK_FLAG = "--bind-rollback-after-target-started"
 # Agent decides, owner executes: the controller restarts the ordinary Agent,
 # leaves it running and runs the owner recover-dns-bind-switch command.
 OWNER_INVERSE_FLAG = "--owner-inverse-after-restart"
+OWNER_INVERSE_CRITICAL_PHASES = frozenset({"source-stopped", "target-started"})
 OWNER_INVERSE_CELLS = frozenset({
     "bind__intent__after-write__standalone__peer-reachable",
     "bind__target-staged__after-write__standalone__peer-reachable",
+    "bind__source-stopped__after-write__standalone__peer-reachable",
+    "bind__target-started__after-write__standalone__peer-reachable",
 })
 RECOVERY_KIT_NAME = "recovery-kit.tar.gz"
 OWNER_RECOVERY_LAUNCHER = "/usr/libexec/celikpanel/recovery"
@@ -131,6 +134,8 @@ if len(sys.argv) >= 3 and sys.argv[2] == owner_flag:
             or sys.argv[1] not in {
                 "bind__intent__after-write__standalone__peer-reachable",
                 "bind__target-staged__after-write__standalone__peer-reachable",
+                "bind__source-stopped__after-write__standalone__peer-reachable",
+                "bind__target-started__after-write__standalone__peer-reachable",
             }
             or owner_flag in argv
             or argv.count("--trigger-mode") != 1):
@@ -1079,28 +1084,38 @@ def prepare(args: argparse.Namespace) -> None:
 def validate_owner_inverse_cell(
     cell: dict[str, Any], node: str, source_fixture: str
 ) -> None:
-    """Exact Debian standalone BIND cut before target start, managed PowerDNS source."""
+    """Exact Debian standalone BIND after-write cell with a managed PowerDNS source.
+
+    Pre-start cells (intent, target-staged) are driver-specific placements;
+    critical cells (source-stopped, target-started) are managed-pdns-required.
+    """
 
     boundary = cell.get("boundary", {})
     phase = boundary.get("phase")
+    policy = (
+        "driver-specific" if phase in EARLY_MANAGED_PDNS_BIND_PHASES
+        else "managed-pdns-required" if phase in OWNER_INVERSE_CRITICAL_PHASES
+        else None
+    )
     if not (
-        cell.get("id") in OWNER_INVERSE_CELLS
+        policy is not None
+        and cell.get("id") in OWNER_INVERSE_CELLS
         and cell.get("driver") == "bind"
         and cell.get("role") == "standalone"
         and cell.get("peer_reachability") == "reachable"
-        and phase in EARLY_MANAGED_PDNS_BIND_PHASES
         and cell.get("id") == f"bind__{phase}__after-write__standalone__peer-reachable"
         and boundary == {
             "edge": "after-write", "name": f"{phase}:after-write", "phase": phase,
         }
         and cell.get("fault_selector") == {"phase": phase, "point": "after_write"}
-        and cell.get("placement", {}).get("source_fixture_policy") == "driver-specific"
+        and cell.get("placement", {}).get("source_fixture_policy") == policy
         and node == "debian13"
         and source_fixture == "managed-pdns"
     ):
         raise BootstrapError(
             "owner inverse after restart requires an exact Debian standalone BIND "
-            "intent or target-staged after-write cell with a managed PowerDNS source"
+            "intent, target-staged, source-stopped or target-started after-write "
+            "cell with a managed PowerDNS source"
         )
     validate_bind_cell(cell, node, source_fixture)
 

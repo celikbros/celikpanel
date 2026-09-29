@@ -998,12 +998,21 @@ python3 deploy/e2e/dns-kill-matrix/test_run_cell.py
 ### Owner inverse after Agent restart
 
 This mode defines and runs "the Agent decides, the owner executes" for exactly
-two cells:
+four cells. The two pre-start cells are placed `driver-specific`:
 
 - `bind__intent__after-write__standalone__peer-reachable`
 - `bind__target-staged__after-write__standalone__peer-reachable`
 
-They require `--source-fixture managed-pdns`: a serving PowerDNS source that
+The two critical cells are placed `managed-pdns-required`; see
+[Critical variant](#critical-variant-source-stopped-before-the-cut):
+
+- `bind__source-stopped__after-write__standalone__peer-reachable`
+- `bind__target-started__after-write__standalone__peer-reachable`
+
+Without the flag, every one of these cells keeps its earlier behaviour. The
+critical cells in particular keep their stale V1 expectation.
+
+All four require `--source-fixture managed-pdns`: a serving PowerDNS source that
 production installed, on Debian 13, with BIND as the target. With that source
 the certified APT producer writes the V2 frozen-source journal from `intent` on
 (`prepareBINDIndependentInverseJournal` →
@@ -1049,7 +1058,8 @@ Sequence and pass definition:
    - the journal is V2 at `rolling-back`;
    - the `celikpanel-agent.service` journal since the restart names
      `recover-dns-bind-switch --request-id <id>`;
-   - PowerDNS still serves alone (the check above) with the pre-cut MainPID.
+   - pre-start cells: PowerDNS still serves alone (the check above) with the
+     pre-cut MainPID. Critical cells record native state instead; see below.
 
    A read-only probe (ordinal 0) is recorded.
 3. **Status.** `recovery dns-switch-status --quiesced --request-id <id>` runs
@@ -1074,7 +1084,8 @@ Sequence and pass definition:
      is a deviation;
    - the DNS state receipt is semantically equal to the pre-cut source, as the
      command restores it (byte equality is recorded);
-   - PowerDNS serves alone and BIND is inactive;
+   - PowerDNS serves alone and BIND is inactive (pre-start: with the pre-cut
+     MainPID; critical: see below);
    - the owner PowerDNS files are unchanged. The source-normalization proof is
      re-run: main and managed config hashes and identities, database identity,
      `quick_check`, receipt rows and domain count.
@@ -1114,9 +1125,73 @@ Result classification:
 When step 2 or 3 fails, the owner command is not run: an owner following the
 product guidance would not run it either. All observations are kept under the
 additive result keys `owner_inverse_preflight`,
-`owner_inverse_source_at_boundary`, `owner_inverse_after_restart` (steps,
-failures, ambiguities, status) and `owner_inverse_failures`. The result schema
-stays `celikpanel/dns-kill-result/v1`.
+`owner_inverse_source_at_boundary` (pre-start) or
+`owner_inverse_native_at_boundary` (critical), `owner_inverse_after_restart`
+(`variant`, `expectation`, steps, failures, ambiguities, status),
+`owner_inverse_failures` and, for critical cells, `dns_outage`. The result
+schema stays `celikpanel/dns-kill-result/v1`.
+
+#### Critical variant: source stopped before the cut
+
+`source-stopped` and `target-started` cut after the product stopped
+`pdns.service`, so **DNS is not continuous in these cells by construction**.
+The flow, the preconditions and steps 1, 3, 4 and 6 are unchanged. The
+per-cell difference is data (`OwnerInverseExpectation` in `run_cell.py`), not
+a second copy of the flow:
+
+- **Boundary:** native DNS state is recorded, not the PowerDNS-serving check.
+- **Step 2, recorded:** unit `LoadState`/`ActiveState`/`SubState`/
+  `UnitFileState`/`MainPID` for `pdns.service`, `named.service` and
+  `bind9.service`; `named` processes; the port-53 listener owners; whether the
+  DNS address answers authoritatively over UDP and TCP; and the
+  `pdns.service` unit journal since the preflight. The PowerDNS-serving check
+  is not required.
+- **Step 2, judged:** only two facts.
+  - PowerDNS must **not** be active in both cells.
+  - After `target-started`, `named.service` or `bind9.service` must be active.
+
+  After `source-stopped` the BIND state is recorded but not judged: it may be
+  masked, loaded-inactive or mid-activation. The Agent's decision (release,
+  `rolling-back` V2 journal, refusal naming the command) is required exactly
+  as in step 2 above.
+- **Step 5, added requirements:**
+  - PowerDNS must be **active and enabled**;
+  - PowerDNS must be the only port-53 authority, with authoritative UDP+TCP
+    answers;
+  - `named.service` and `bind9.service` must be inactive;
+  - no `named` process may remain.
+
+  Their `LoadState`/`UnitFileState` are recorded, not judged. The product
+  restores an absent preimage by unmask and disable, so `loaded`/`disabled`
+  is expected and `masked` is also acceptable. The ledger, state-receipt and
+  owner-file rules are unchanged.
+- **PowerDNS MainPID:** it is expected to change, because the inverse starts the
+  stopped source. Step 5 records `{pre_cut, after_owner_command, changed}` with
+  `judged: false`, and the new PID becomes the reference for the re-run and
+  the post-stability check. A PID change *after* the owner command is still an
+  ambiguity.
+- **`dns_outage`:** recorded with `judged: false`. It contains:
+  - `source_stopped_at`: the first systemd stopping job entry (or stopped
+    entry) in the `pdns.service` unit journal;
+  - `source_serving_again_at`: the first authoritative UDP+TCP answer the
+    controller observed after the owner command returned. This is an upper
+    bound: the command may have restored service earlier;
+  - `seconds`;
+  - `measured_from`: states the source of each field, or says explicitly that
+    it is unavailable. Nothing is guessed;
+  - `last_source_answer_before_cut_at` (the pre-launch observation) and
+    `pdns_started_after_stop_at` (unit journal), for reference.
+
+A critical cell passes on the same terms as a pre-start cell: D-021 safety,
+every step, and `rolled_back_source_serving`. It fails on these verified
+deviations:
+
+- PowerDNS active at step 2;
+- BIND not active at step 2 after `target-started`;
+- PowerDNS inactive, not enabled or not answering after the command;
+- a BIND unit active, BIND still answering on port 53, or a remaining `named`
+  process;
+- any of the pre-start failures above.
 
 The recovery runtime is fixture work, done as in the
 [2026-09-27 owner CLI trial](NATIVE-BIND-PROTECTED-OWNER-CLI-20260927.md). Build
@@ -1144,7 +1219,7 @@ mapfile -t sources < deploy/recovery/panel-checker.sources
 "$GO" build -trimpath -buildvcs=false -o "$ART/schema17-bridge" ./deploy/schema17bridge
 "$GO" run ./deploy/recovery/bundle --source-root . --binary-root "$ART" --output "$ART/recovery-runtime"
 
-CELL=bind__target-staged__after-write__standalone__peer-reachable  # or bind__intent__after-write__...
+CELL=bind__target-staged__after-write__standalone__peer-reachable  # or intent, source-stopped, target-started
 COMMON=(--work-root "$ROOT" --cell-id "$CELL" --node debian13 \
         --identity-file "$ROOT/id_ed25519" --source-fixture managed-pdns)
 python3 "$BOOTSTRAP" install "${COMMON[@]}" --agent "$ART/agent" \
@@ -1176,11 +1251,22 @@ Limits:
   an invariance control.
 - **Local provenance.** The recovery kit is an unsigned local build enrolled
   as fixture work. It is not release provenance.
-- **Stale critical cells.** The critical managed-pdns standalone cells
-  (`source-stopped`, `target-started`, `rolled-back`) still expect the V1
-  journal, while the current producer writes V2 for that source. This mode
-  does not change them. They need their own pass definition before they are
-  run again.
+- **Stale critical cells without the flag.** Run without
+  `--owner-inverse-after-restart`, the standalone managed-pdns
+  `source-stopped` and `target-started` cells still expect the V1 journal,
+  while the current producer writes V2 for that source. Such a run ends
+  `unverified` at the marker, after a real mutation. Use the flag for them.
+  `rolled-back` and every before-write edge have no V2 pass definition yet.
+- **Critical-variant limits.**
+  - DNS is interrupted from the product's source stop until the owner command
+    restarts PowerDNS; the controller measures that window, it does not bound
+    it.
+  - `source_serving_again_at` is controller-observed, so it is an upper bound.
+    `source_stopped_at` depends on the `pdns.service` unit journal. The last
+    pre-cut answer is the pre-launch observation, not the moment of the stop.
+  - Which BIND unit-file state is restored (`loaded`/`disabled` versus
+    `masked`) is recorded, not judged.
+  - Neither cell has run natively yet.
 - **Not evidence yet.** Nothing here is native evidence. The 268-runnable
   denominator is unchanged.
 
