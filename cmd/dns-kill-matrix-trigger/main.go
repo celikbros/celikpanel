@@ -976,9 +976,15 @@ func validateDriverManifest(
 	case "pdns-switch":
 		if manifest.Mode != transport.DNSEngineSwitchModeSwitch ||
 			manifest.TargetEngine != transport.DNSEnginePowerDNS ||
-			pdnsSecondaryReconfigureManifest(manifest) ||
+			(pdnsSecondaryReconfigureManifest(manifest) &&
+				!freshPDNSPairSecondaryInstall(sourceFixture, manifest)) ||
 			(sourceFixture != "uninitialized" && sourceFixture != "managed-bind") {
 			return errors.New("pdns-switch requires a non-reconfiguration PowerDNS switch manifest")
+		}
+		if sourceFixture == "uninitialized" &&
+			manifest.PairRole == transport.DNSPairRoleSecondary &&
+			!freshPDNSPairSecondaryInstall(sourceFixture, manifest) {
+			return errors.New("a fresh paired-secondary PowerDNS install carries no zones and targets epoch 1")
 		}
 	case "pdns-adopt":
 		if manifest.Mode != transport.DNSEngineSwitchModeAdopt ||
@@ -1047,6 +1053,27 @@ func validateSourceFixture(
 		return fmt.Errorf("unsupported source fixture provenance %q", sourceFixture)
 	}
 	return nil
+}
+
+// freshPDNSPairSecondaryInstall names the fresh paired-secondary PowerDNS
+// install. Its manifest is byte-for-byte the legacy reconfiguration shape: the
+// Panel emits mode "switch" for both its "install" and "reconfigure" actions
+// (cmd/panel/dns_engine_post_commit.go dnsEngineMutationMode), and the Agent
+// tells them apart only from live host state, never from the manifest
+// (cmd/agent/dns_engine_pdns_switch.go classifyPDNSPairSecondarySource: no
+// state receipt, no BIND, pdns.service inactive means fresh and journals under
+// the pdns-switch fault driver; pdns.service active means reconfiguration and
+// journals under pdns-secondary-reconfigure). The harness therefore carries the
+// distinction as source provenance: "uninitialized" is the fresh install and
+// must be proved empty by the source proof, "legacy-pdns-secondary" is the
+// reconfiguration and stays exclusive to its own driver.
+func freshPDNSPairSecondaryInstall(
+	sourceFixture string,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) bool {
+	return sourceFixture == "uninitialized" &&
+		pdnsSecondaryReconfigureManifest(manifest) &&
+		manifest.SourceRevision == 0
 }
 
 func pdnsSecondaryReconfigureManifest(
