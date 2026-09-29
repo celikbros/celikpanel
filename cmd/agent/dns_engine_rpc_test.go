@@ -201,7 +201,10 @@ func pairedZeroZoneSwitchRequest(t *testing.T) SwitchDNSEngineV1Request {
 	}
 }
 
+// Closed paired-primary gate: every PowerDNS paired-primary switch is paused.
+// The open gate is covered by TestFreshPairedPDNSPrimaryOpenGateRPC.
 func TestPDNSPairedPrimarySwitchRefusedBeforeAgentMutationClaim(t *testing.T) {
+	closeFreshPairedPDNSPrimaryGate(t)
 	manifest := testPairedPDNSSwitchManifest(t, transport.DNSPairRolePrimary, nil)
 	request := SwitchDNSEngineV1Request{
 		ServiceMutationBinding: testPDNSEngineBinding(),
@@ -252,7 +255,11 @@ func TestPDNSPairedPrimarySwitchRefusedBeforeAgentMutationClaim(t *testing.T) {
 	}
 }
 
+// Run with the paired-primary gate closed, where the paired primary keeps its
+// own paused reason; with the gate open that manifest gets the BIND-source
+// reason (TestFreshPairedPDNSPrimaryOpenGateRPC).
 func TestBINDSourcePDNSSwitchRefusedBeforeAgentMutationClaim(t *testing.T) {
+	closeFreshPairedPDNSPrimaryGate(t)
 	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifest(
 		transport.DNSEngineSwitchModeSwitch,
 		transport.DNSEngineBIND, transport.DNSEnginePowerDNS, 3, 4, 9,

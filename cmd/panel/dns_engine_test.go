@@ -2075,7 +2075,10 @@ func TestDNSEnginePairedBINDCommitPersistsDirectionalIdentity(t *testing.T) {
 	}
 }
 
+// Closed gate: a paired primary serving BIND is paused. The open-gate
+// counterpart is TestPDNSPairedPrimaryOpenGateKeepsBINDSourceRefusal.
 func TestDNSEnginePairedPrimaryPowerDNSRefusalPreservesBIND(t *testing.T) {
+	closePDNSPairedPrimaryGateForTest(t)
 	t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
 	panel := newDNSPanelForTest(t)
 	setDNSIdentityForTest(t, panel, "paired")
@@ -2155,9 +2158,11 @@ func TestDNSEnginePairedPrimaryPowerDNSRefusalPreservesBIND(t *testing.T) {
 
 // A serving BIND source cannot be switched to PowerDNS in this release, in any
 // topology. The refusal is a preview blocker, so no token, snapshot, job or
-// Agent call exists and BIND keeps serving. The paired primary keeps its own,
-// older refusal code.
+// Agent call exists and BIND keeps serving. With the paired-primary gate
+// closed, the paired primary keeps its own, older refusal code; the open-gate
+// paired primary is TestPDNSPairedPrimaryOpenGateKeepsBINDSourceRefusal.
 func TestDNSEngineStandaloneBINDToPowerDNSSwitchRefusedPreservesBIND(t *testing.T) {
+	closePDNSPairedPrimaryGateForTest(t)
 	for index, test := range []struct {
 		name, serverIP, peerIP, peerNS, role, pairRole string
 		wantBlocker, notBlocker                        string

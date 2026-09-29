@@ -1270,15 +1270,24 @@ func addDNSEngineBlocker(
 
 // freshPairedPDNSPrimaryOffered is the Panel's single product gate for the
 // first install of PowerDNS as the paired primary on a server with no DNS
-// engine (the Agent's V3 journal). It stays false until row 6 of the DNS
-// recovery acceptance register has native evidence through the public RPC;
-// the Agent carries the matching constant (freshPairedPDNSPrimaryAdmitted).
-// Server setup and the DNS engine card both reach it through
+// engine (the Agent's V3 journal). It is open in this acceptance branch only,
+// so the native cells of row 6 of the DNS recovery acceptance register can run
+// through the public RPC; the main line keeps it closed until that evidence
+// passes. The Agent carries the matching constant
+// (freshPairedPDNSPrimaryAdmitted). Open, it offers only a server with no DNS
+// engine (Debian 13 amd64, measured PowerDNS package version, enforced by the
+// Agent's host-profile and package-version preflights); a serving BIND keeps
+// bind_source_pdns_switch_unsupported and any other active engine stays
+// paused. Server setup and the DNS engine card both reach it through
 // dnsEnginePreviewBlockers.
 //
 // freshPairedPDNSPrimaryOffered, DNS motoru olmayan bir sunucuya PowerDNS'in
 // eşli birincil olarak ilk kurulumunun Panel tarafındaki tek ürün kapısıdır.
-const freshPairedPDNSPrimaryOffered = false
+// Yalnız bu kabul dalında açıktır; ana hat yerel kanıt geçene kadar kapalı
+// tutar. Açıkken yalnız DNS motoru olmayan sunucuyu sunar (Debian 13 amd64,
+// ölçülmüş PowerDNS paket sürümü); hizmet veren BIND
+// bind_source_pdns_switch_unsupported reddini korur.
+const freshPairedPDNSPrimaryOffered = true
 
 // pdnsPairedPrimaryGateOpen carries the constant above. Only tests assign it,
 // to exercise the open policy; production never changes it.

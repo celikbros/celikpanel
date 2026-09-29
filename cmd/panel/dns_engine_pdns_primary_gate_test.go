@@ -14,30 +14,33 @@ import (
 )
 
 // The fresh paired PowerDNS primary is one Panel policy with one constant.
-// These tests pin the closed value and exercise the open value through the
-// same preview/commit and setup paths. They are component tests, not native
-// evidence.
+// These tests pin the value this acceptance branch ships (open) and exercise
+// both the closed and the open value through the same preview/commit and
+// setup paths; a test for either value sets the gate explicitly. They are
+// component tests, not native evidence.
+
+func setPDNSPairedPrimaryGateForTest(t *testing.T, open bool) {
+	t.Helper()
+	previous := pdnsPairedPrimaryGateOpen
+	pdnsPairedPrimaryGateOpen = open
+	t.Cleanup(func() { pdnsPairedPrimaryGateOpen = previous })
+}
 
 func openPDNSPairedPrimaryGateForTest(t *testing.T) {
 	t.Helper()
-	previous := pdnsPairedPrimaryGateOpen
-	pdnsPairedPrimaryGateOpen = true
-	t.Cleanup(func() { pdnsPairedPrimaryGateOpen = previous })
+	setPDNSPairedPrimaryGateForTest(t, true)
 }
 
-// closePDNSPairedPrimaryGateForTest pins the closed gate for a test that
-// states the closed behaviour, so the test holds whichever way the product
-// constant stands.
+// closePDNSPairedPrimaryGateForTest exercises the closed-gate behaviour that
+// the main line ships until row 6 has native acceptance.
 func closePDNSPairedPrimaryGateForTest(t *testing.T) {
 	t.Helper()
-	previous := pdnsPairedPrimaryGateOpen
-	pdnsPairedPrimaryGateOpen = false
-	t.Cleanup(func() { pdnsPairedPrimaryGateOpen = previous })
+	setPDNSPairedPrimaryGateForTest(t, false)
 }
 
-func TestPDNSPairedPrimaryPanelGateStaysClosedInThisRelease(t *testing.T) {
-	if freshPairedPDNSPrimaryOffered || pdnsPairedPrimaryGateOpen {
-		t.Fatal("the fresh paired PowerDNS primary gate must stay closed until row 6 has native acceptance")
+func TestPDNSPairedPrimaryPanelGateIsOpenInThisAcceptanceBranch(t *testing.T) {
+	if !freshPairedPDNSPrimaryOffered || !pdnsPairedPrimaryGateOpen {
+		t.Fatal("the fresh paired PowerDNS primary gate must be open in the acceptance branch")
 	}
 }
 
@@ -239,6 +242,7 @@ func observeSetupDNSIdentity(t *testing.T, f serviceOperationTestFixture) setupD
 // with the stable blocker, and neither the review nor a start attempt saves
 // any DNS identity or changes the draft.
 func TestServerSetupPlanRefusesPausedPDNSPrimaryBeforeSavingIdentity(t *testing.T) {
+	closePDNSPairedPrimaryGateForTest(t)
 	f, state := pdnsPrimarySetupFixture(t)
 	before := observeSetupDNSIdentity(t, f)
 	w, plan := postSetupPlanForTest(t, f, state.Revision)

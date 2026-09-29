@@ -203,7 +203,11 @@ func TestDNSSetupStagesFreshPairedIdentityWithoutHostMutation(t *testing.T) {
 	}
 }
 
+// Closed paired-primary gate: the PowerDNS primary cell expects the paused
+// blocker. The open-gate first install is
+// TestPDNSPairedPrimaryOpenGateCardOffersFreshInstall.
 func TestStagedPairedIdentityBuildsExactFirstInstallManifest(t *testing.T) {
+	closePDNSPairedPrimaryGateForTest(t)
 	for directionIndex, direction := range []struct {
 		name, localIP, peerIP, peerNS, pairRole, localNS string
 	}{

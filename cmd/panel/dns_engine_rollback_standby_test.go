@@ -114,8 +114,10 @@ func TestSetupDNSStillRefusesAnOwnerInstalledStoppedEngine(t *testing.T) {
 }
 
 // The paired PowerDNS primary still follows its closed gate after a
-// rollback, whatever the standby signal says.
+// rollback, whatever the standby signal says. The gate is set closed
+// explicitly; the open gate is covered by the gate tests.
 func TestSetupDNSPairedPDNSPrimaryStandbyStillFollowsTheGate(t *testing.T) {
+	closePDNSPairedPrimaryGateForTest(t)
 	p := newDNSPanelForTest(t)
 	seedSetupDNSOwner(t, p)
 	agent := newDNSEngineTestAgent()
@@ -127,9 +129,6 @@ func TestSetupDNSPairedPDNSPrimaryStandbyStillFollowsTheGate(t *testing.T) {
 	draft.DNSEngine = "pdns"
 	t.Setenv("CELIKPANEL_SERVER_IP", draft.LocalIP)
 	err := p.startServerSetupDNS(context.Background(), draft, strings.Repeat("7", 32), serviceOperationActor{UserID: 1})
-	if freshPairedPDNSPrimaryOffered {
-		t.Skip("gate open: covered by the gate tests")
-	}
 	if err == nil || !strings.Contains(err.Error(), "prerequisites changed") {
 		t.Fatalf("paired PowerDNS primary passed the closed gate: %v", err)
 	}

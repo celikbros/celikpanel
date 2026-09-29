@@ -27,17 +27,25 @@ const pdnsPairedPrimarySwitchPausedReason = "PowerDNS paired-primary switch is p
 
 // freshPairedPDNSPrimaryAdmitted is the Agent's single product gate for the
 // first install of PowerDNS as the paired primary on a host with no DNS engine
-// (the V3 journal). It stays false until row 6 of the DNS recovery acceptance
-// register has native evidence through the public RPC; the Panel carries the
-// matching constant (freshPairedPDNSPrimaryOffered). Opening it admits only
-// the empty-source manifest: every other PowerDNS paired-primary manifest
-// stays refused, and a serving BIND source keeps its D-026 refusal.
+// (the V3 journal). It is open in this acceptance branch only, so the native
+// cells of row 6 of the DNS recovery acceptance register can run through the
+// public RPC; the main line keeps it closed until that evidence passes. The
+// Panel carries the matching constant (freshPairedPDNSPrimaryOffered). Open,
+// it admits only the empty-source manifest on a host with no DNS engine
+// (Debian 13 amd64, measured PowerDNS package version, enforced by the V3
+// host-profile and package-version preflights): every other PowerDNS
+// paired-primary manifest stays refused, and a serving BIND source keeps its
+// D-026 refusal (bind_source_pdns_switch_unsupported).
 //
 // freshPairedPDNSPrimaryAdmitted, DNS motoru olmayan bir sunucuya PowerDNS'in
 // eşli birincil olarak ilk kurulumunun (V3 günlüğü) Agent tarafındaki tek ürün
-// kapısıdır. Kabul defterinin 6. satırı herkese açık RPC üzerinden yerel kanıt
-// alana kadar kapalı kalır.
-const freshPairedPDNSPrimaryAdmitted = false
+// kapısıdır. Yalnız bu kabul dalında açıktır; 6. satırın yerel hücreleri
+// herkese açık RPC üzerinden koşabilsin diye. Ana hat, bu kanıt geçene kadar
+// kapıyı kapalı tutar. Açıkken yalnız DNS motoru olmayan sunucudaki boş
+// kaynaklı bildirimi kabul eder (Debian 13 amd64, ölçülmüş PowerDNS paket
+// sürümü); hizmet veren BIND kaynağı bind_source_pdns_switch_unsupported
+// reddini korur.
+const freshPairedPDNSPrimaryAdmitted = true
 
 // pdnsFreshPairedPrimaryGateOpen carries the constant above. Only tests
 // assign it, to exercise the open policy; production never changes it.

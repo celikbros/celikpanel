@@ -52,27 +52,33 @@ func switchRequestForManifest(manifest mutationpayload.DNSEngineSwitchManifestCo
 	}
 }
 
+func setFreshPairedPDNSPrimaryGate(t *testing.T, open bool) {
+	t.Helper()
+	previous := pdnsFreshPairedPrimaryGateOpen
+	pdnsFreshPairedPrimaryGateOpen = open
+	t.Cleanup(func() { pdnsFreshPairedPrimaryGateOpen = previous })
+}
+
 func openFreshPairedPDNSPrimaryGate(t *testing.T) {
 	t.Helper()
-	previous := pdnsFreshPairedPrimaryGateOpen
-	pdnsFreshPairedPrimaryGateOpen = true
-	t.Cleanup(func() { pdnsFreshPairedPrimaryGateOpen = previous })
+	setFreshPairedPDNSPrimaryGate(t, true)
 }
 
-// closeFreshPairedPDNSPrimaryGate pins the closed gate for a test that states
-// the closed behaviour, so the test holds whichever way the product constant
-// stands.
+// closeFreshPairedPDNSPrimaryGate exercises the closed-gate behaviour that the
+// main line ships until row 6 has native acceptance.
 func closeFreshPairedPDNSPrimaryGate(t *testing.T) {
 	t.Helper()
-	previous := pdnsFreshPairedPrimaryGateOpen
-	pdnsFreshPairedPrimaryGateOpen = false
-	t.Cleanup(func() { pdnsFreshPairedPrimaryGateOpen = previous })
+	setFreshPairedPDNSPrimaryGate(t, false)
 }
 
-func TestFreshPairedPDNSPrimaryGateStaysClosedInThisRelease(t *testing.T) {
-	if freshPairedPDNSPrimaryAdmitted || pdnsFreshPairedPrimaryGateOpen {
-		t.Fatal("the fresh paired PowerDNS primary gate must stay closed until row 6 has native acceptance")
+func TestFreshPairedPDNSPrimaryGateIsOpenInThisAcceptanceBranch(t *testing.T) {
+	if !freshPairedPDNSPrimaryAdmitted || !pdnsFreshPairedPrimaryGateOpen {
+		t.Fatal("the fresh paired PowerDNS primary gate must be open in the acceptance branch")
 	}
+	if pdnsPairedPrimarySwitchPaused(freshPairedPDNSPrimaryManifest(t)) {
+		t.Fatal("open gate still paused the fresh paired PowerDNS primary")
+	}
+	closeFreshPairedPDNSPrimaryGate(t)
 	if !pdnsPairedPrimarySwitchPaused(freshPairedPDNSPrimaryManifest(t)) {
 		t.Fatal("closed gate admitted the fresh paired PowerDNS primary")
 	}

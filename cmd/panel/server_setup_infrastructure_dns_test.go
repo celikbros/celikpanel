@@ -531,7 +531,12 @@ func attachInfrastructureDNSAgent(t *testing.T, p *Panel, agent *dnsZoneV3TestAg
 	p.agentClient = transport.NewReconnectingClientWithContextConnector(raw, connector)
 	t.Cleanup(func() { _ = raw.Close() })
 }
+
+// Closed paired-primary gate: setup refuses the PowerDNS primary before any
+// Agent call. The open-gate setup path is
+// TestPDNSPairedPrimaryOpenGateSetupOffersPowerDNS.
 func TestServerSetupInfrastructureDNSBlocksUnpreparedPowerDNSPrimary(t *testing.T) {
+	closePDNSPairedPrimaryGateForTest(t)
 	p := newDNSPanelForTest(t)
 	p.license = testPanelLicense(t, "active")
 	seedSetupDNSOwner(t, p)
