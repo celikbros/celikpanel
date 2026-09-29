@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -108,7 +109,7 @@ func TestAcceptanceFixtureLicenseOpensGatedRoutesThroughTheLicenseScreen(t *test
 	if err := json.Unmarshal(access.Body.Bytes(), &observed); err != nil || len(observed) != 4 || observed["can_use_panel"] != true || observed["state"] != "active" {
 		t.Fatalf("access observation: %v %s", err, access.Body.String())
 	}
-	if err := fixture.panel.requireServerSetupAdmission(); err != nil {
+	if err := fixture.panel.requireServerSetupAdmission(context.Background()); err != nil {
 		t.Fatalf("setup admission with the fixture: %v", err)
 	}
 	if got := licensing.AcceptanceLicenseServiceDialAttempts(); got != dials {
@@ -136,7 +137,7 @@ func TestAcceptanceFixtureLicenseKeepsGatedRoutesClosedWithoutTheGuestMarker(t *
 				t.Fatalf("off a guest %s %s: %d", route.method, route.path, w.Code)
 			}
 		}
-		if err := fixture.panel.requireServerSetupAdmission(); !errors.Is(err, errServerSetupLicenseRequired) {
+		if err := fixture.panel.requireServerSetupAdmission(context.Background()); !errors.Is(err, errServerSetupLicenseRequired) {
 			t.Fatalf("setup admission off a guest: %v", err)
 		}
 	})

@@ -134,19 +134,24 @@ func (p *Panel) startServerSetupDNS(ctx context.Context, draft serverSetupDraft,
 				}
 			} else {
 				if _, _, err := p.reconcileDNSEngineSwitchLocked(ctx); err != nil {
-					return fmt.Errorf("%w: %v", errServerSetupDNSReconciliationRequired, err)
+					var postCommit *dnsEngineReconcilePostCommitError
+					if errors.As(err, &postCommit) {
+						return fmt.Errorf("%w: %v", errServerSetupDNSReconciliationRequired, err)
+					}
+					return p.serverSetupDNSAgentOutcome(ctx, persisted, err)
 				}
 			}
-			persisted, err = readDNSEngineSwitchByRequest(ctx, p.db.GetDB(), requestID)
+			reconciled, err := readDNSEngineSwitchByRequest(ctx, p.db.GetDB(), requestID)
 			if err != nil {
 				return setupDNSReconciliationError(err)
 			}
-			if persisted.Phase == "rolled_back" {
+			if reconciled.Phase == "rolled_back" {
 				return errServerSetupDNSRolledBack
 			}
-			if persisted.Phase != "committed" {
-				return fmt.Errorf("%w: DNS operation remains %s", errServerSetupDNSReconciliationRequired, persisted.Phase)
+			if reconciled.Phase != "committed" {
+				return p.serverSetupDNSAgentOutcome(ctx, persisted, fmt.Errorf("DNS operation remains %s", reconciled.Phase))
 			}
+			persisted = reconciled
 			persisted.Action = "install"
 		}
 		marker, err := readDNSEngineOperationMarker(ctx, p.db.GetDB())
@@ -319,7 +324,14 @@ func (p *Panel) reconcileServerSetupDNSFailure(ctx context.Context, persisted pe
 	}
 	reconciled, _, err := p.reconcileDNSEngineSwitchLocked(ctx)
 	if err != nil {
-		return pending(err)
+		var postCommit *dnsEngineReconcilePostCommitError
+		if errors.As(err, &postCommit) {
+			return pending(err)
+		}
+		// The rollback could not be recorded. What the Agent's ledger holds
+		// for this exact request decides what setup shows (D-024): a
+		// terminal failure or hold is shown as such, not as an unknown.
+		return p.serverSetupDNSAgentOutcome(ctx, persisted, errors.Join(cause, err))
 	}
 	if reconciled.SwitchID != persisted.SwitchID || reconciled.RequestID != persisted.RequestID || reconciled.OwnerID != persisted.OwnerID || reconciled.Qualifier != persisted.Qualifier {
 		return pending(errors.New("DNS reconciliation identity differs"))
@@ -333,7 +345,10 @@ func (p *Panel) reconcileServerSetupDNSFailure(ctx context.Context, persisted pe
 	}
 	// A committed target still resumes its exact post-commit/mode-save path;
 	// neither an applied receipt nor missing evidence is reported as failure.
-	return pending(cause)
+	if final.Phase == "committed" {
+		return pending(cause)
+	}
+	return p.serverSetupDNSAgentOutcome(ctx, persisted, cause)
 }
 
 func setupDNSReconciliationError(err error) error {

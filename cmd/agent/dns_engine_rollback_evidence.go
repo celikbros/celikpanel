@@ -99,11 +99,14 @@ func initialBINDInstallRollbackEvidenceScope(
 // engine card can start whose rollback ends with the target stopped as
 // rollback standby: BIND as paired secondary, and PowerDNS standalone or as
 // paired secondary. The fresh paired PowerDNS primary (V3) keeps its own
-// recovery and gate and stays outside.
+// recovery and is inside only while its product gate is open
+// (freshPairedPDNSPrimaryRollbackEvidenceScope); with the gate closed, as
+// shipped, it stays outside.
 //
 // İlk BIND kapsamını, geri alınması hedefi durmuş yedek olarak bırakan her ilk
 // kuruluma genişletir: eşli ikincil BIND, tek başına ya da eşli ikincil
-// PowerDNS. Eşli PowerDNS birincili (V3) dışarıda kalır.
+// PowerDNS. Eşli PowerDNS birincili (V3) yalnız ürün kapısı açıkken kapsama
+// girer; kapı kapalıyken dışarıda kalır.
 func initialDNSEngineInstallRollbackEvidenceScope(
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 ) bool {
@@ -127,9 +130,33 @@ func initialDNSEngineInstallRollbackEvidenceScope(
 	case transport.DNSEngineBIND:
 		return secondary
 	case transport.DNSEnginePowerDNS:
-		return standalone || secondary
+		return standalone || secondary ||
+			freshPairedPDNSPrimaryRollbackEvidenceScope(manifest, pdnsFreshPairedPrimaryGateOpen)
 	}
 	return false
+}
+
+// freshPairedPDNSPrimaryRollbackEvidenceScope admits the fresh paired
+// PowerDNS primary (V3) only while its product gate is open, so a build that
+// cannot start that install never proves its rollback either. Its evidence
+// is the same as every other first install: no switch journal (the V3
+// pre-start inverse retires it only after the rolled-back checkpoint; a
+// started target keeps it, forward only), no engine state, the exact
+// install-ownership receipt, and the target stopped as rollback standby.
+//
+// Eşli PowerDNS birincilinin ilk kurulumu, yalnız ürün kapısı açıkken geri
+// alma kanıtı kapsamındadır; kanıt diğer ilk kurulumlarla aynıdır.
+func freshPairedPDNSPrimaryRollbackEvidenceScope(
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	gateOpen bool,
+) bool {
+	return gateOpen &&
+		manifest.Topology == transport.DNSTopologyPaired &&
+		manifest.PairRole == transport.DNSPairRolePrimary &&
+		manifest.LocalIP != "" && manifest.LocalNS != "" &&
+		manifest.PeerIP != "" && manifest.PeerNS != "" &&
+		!pdnsPairedPrimarySwitchPausedWithGate(manifest, gateOpen) &&
+		!bindSourcePDNSSwitchUnsupported(manifest)
 }
 
 func exactFailedDNSEngineEvidenceJob(

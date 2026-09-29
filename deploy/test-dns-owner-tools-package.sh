@@ -27,7 +27,7 @@ for file in bin/panel bin/agent bin/schema17-bridge bin/agent-native-contract.js
     mkdir -p -- "$tmp/$(dirname -- "$file")"
     printf 'inert packaging fixture\n' > "$tmp/$file"
 done
-cp -- "$root/deploy/write-release-manifest.sh" "$root/deploy/release-acceptance-license-guard.sh" "$tmp/deploy/"
+cp -- "$root/deploy/write-release-manifest.sh" "$root/deploy/release-acceptance-license-guard.sh" "$root/deploy/release-content-guard.sh" "$root/deploy/prune-release-harness.sh" "$tmp/deploy/"
 cp -r -- "$root/bin/dns-owner-tools" "$tmp/bin/dns-owner-tools"
 version=v0.0.0-owner-tools-test
 archive="$tmp/dist/celikpanel-$version.tar.gz"

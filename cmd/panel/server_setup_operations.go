@@ -18,6 +18,7 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/hostname"
+	"github.com/alicelik/celikpanel/internal/licensing"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -557,8 +558,8 @@ func (p *Panel) handleServerSetupStart(w http.ResponseWriter, r *http.Request) {
 		writeServerError(w, err)
 		return
 	}
-	if err := p.requireServerSetupAdmission(); err != nil {
-		writeCodedError(w, http.StatusForbidden, "license_required", "An active license is required to start setup.", "")
+	if err := p.requireServerSetupAdmission(r.Context()); err != nil {
+		writeServerSetupAdmissionError(w, err, "license_required", "An active license is required to start setup.", "")
 		return
 	}
 	plan, err := p.loadServerSetupPlan(r.Context(), request.PlanID)
@@ -825,9 +826,38 @@ func (p *Panel) advanceServerSetupExecution(plan serverSetupPlan, execution *ser
 			execution.Error = &serviceOperationError{Code: "license_required", Message: "Activate the license to continue the remaining setup steps. Existing services keep running."}
 			return false, p.persistServerSetupExecution(ctx, *execution)
 		}
+		if errors.Is(err, errServerSetupLicenseUnverified) {
+			// Unknown, not "license required": the step waits and the runner
+			// rechecks through the same refresh every 20 s.
+			execution.Status = "waiting"
+			execution.Error = serverSetupLicenseUnverifiedFailure(err)
+			return false, p.persistServerSetupExecution(ctx, *execution)
+		}
+		// The Agent's verified terminal or held result for the exact DNS
+		// request is shown as that result, not as an unknown (D-024). The
+		// step stays unreleased: the Panel has not recorded a rollback, so a
+		// new plan could not start anyway. The runner keeps rereading the
+		// same request every 20 s; reading never starts a mutation.
+		var agentFailed *serverSetupDNSAgentFailedError
+		if step.Kind == "dns" && errors.As(err, &agentFailed) {
+			execution.Status = "waiting"
+			execution.Error = serverSetupDNSAgentFailedMessage(agentFailed)
+			log.Printf("server setup step %s: %v", step.ID, err)
+			return false, p.persistServerSetupExecution(ctx, *execution)
+		}
+		if step.Kind == "dns" && errors.Is(err, errServerSetupDNSAgentRunning) {
+			execution.Status = "running"
+			execution.Error = nil
+			return false, p.persistServerSetupExecution(ctx, *execution)
+		}
 		if errors.Is(err, errServerSetupDNSReconciliationRequired) {
 			execution.Status = "running"
-			execution.Error = &serviceOperationError{Code: "server_setup_reconciling", Message: "The previous DNS operation is being reconciled. Its exact receipt must be verified before the setup plan can change."}
+			now := time.Now()
+			since := time.Time{}
+			if step.Kind == "dns" {
+				since = p.serverSetupDNSUnknownSince(ctx, execution.ID, step.RequestID, now)
+			}
+			execution.Error = serverSetupDNSReconcilingError(step.RequestID, since, now)
 			return false, p.persistServerSetupExecution(ctx, *execution)
 		}
 		if errors.Is(err, errServiceOperationBusy) {
@@ -905,7 +935,7 @@ func (p *Panel) runServerSetupStep(ctx context.Context, plan serverSetupPlan, st
 	case "infrastructure_dns":
 		return p.runServerSetupInfrastructureDNS(ctx, plan, *step)
 	case "dns_readiness":
-		if err := p.requireServerSetupAdmission(); err != nil {
+		if err := p.requireServerSetupAdmission(ctx); err != nil {
 			return false, err
 		}
 		if serverSetupManualSecondaryHosting(plan.Draft) {
@@ -921,14 +951,14 @@ func (p *Panel) runServerSetupStep(ctx context.Context, plan serverSetupPlan, st
 		return true, nil
 	case "dns":
 		if plan.Draft.DNSMode == "external" {
-			if err := p.requireServerSetupAdmission(); err != nil {
+			if err := p.requireServerSetupAdmission(ctx); err != nil {
 				return false, err
 			}
 			return true, p.saveSetupDNSManagementMode(ctx, "external")
 		}
 
 		if plan.Draft.DNSMode == setupDNSModeExisting {
-			if err := p.requireServerSetupAdmission(); err != nil {
+			if err := p.requireServerSetupAdmission(ctx); err != nil {
 				return false, err
 			}
 			if plan.RemoteDNSConnection == nil || plan.RemoteDNSConnection.ID != plan.Draft.RemoteDNSConnectionID {
@@ -954,7 +984,7 @@ func (p *Panel) runServerSetupStep(ctx context.Context, plan serverSetupPlan, st
 			return false, setupDNSReconciliationError(err)
 		}
 		if state == "missing" {
-			if err := p.requireServerSetupAdmission(); err != nil {
+			if err := p.requireServerSetupAdmission(ctx); err != nil {
 				return false, err
 			}
 		}
@@ -1009,7 +1039,7 @@ func (p *Panel) ensureServerSetupChild(ctx context.Context, plan serverSetupPlan
 	if err != nil || found {
 		return prior, err
 	}
-	if err := p.requireServerSetupAdmission(); err != nil {
+	if err := p.requireServerSetupAdmission(ctx); err != nil {
 		return serviceOperation{}, err
 	}
 	if plan.BuildCommit != "" && plan.BuildCommit != strings.TrimSpace(buildCommit) {
@@ -1183,7 +1213,7 @@ func (p *Panel) runServerSetupFirewall(ctx context.Context, plan serverSetupPlan
 		}
 	}
 
-	if err := p.requireServerSetupAdmission(); err != nil {
+	if err := p.requireServerSetupAdmission(ctx); err != nil {
 		return false, err
 	}
 	response, err := p.applyCanonicalFirewallV2Identity(ctx, "firewall_apply", commitment, step.RequestID, step.OwnerID)
@@ -1348,11 +1378,62 @@ func boundedSetupHostReason(reason string) string {
 
 var errServerSetupBuildChanged = errors.New("setup build changed; review the remaining plan")
 
-func (p *Panel) requireServerSetupAdmission() error {
-	if p.license == nil || !p.license.Status().CanProvision {
-		return errServerSetupLicenseRequired
+// requireServerSetupAdmission judges the license exactly as the HTTP access
+// gate does (panelLicenseStatus: licensing.Manager.AccessStatus, which runs
+// the same synchronous refresh under the same one-minute rule before reading
+// the status). The background setup runner has no browser request to refresh
+// the check for it; reading Status() alone let a stale but valid check look
+// like a missing license (pair2 finding P-C). License policy is unchanged:
+// the same function, verification, interval and failure semantics apply.
+// An unreadable or unverifiable status is not a missing or invalid license
+// (D-024, D-025): it is reported as unknown, not as license_required.
+//
+// Kurulum çalıştırıcısı lisansı HTTP erişim kapısıyla aynı biçimde (aynı
+// eşzamanlı yenileme ve aynı bir dakika kuralıyla) değerlendirir. Okunamayan
+// durum "lisans gerekli" değil, bilinmeyen durum olarak bildirilir.
+func (p *Panel) requireServerSetupAdmission(ctx context.Context) error {
+	status := p.panelLicenseStatus(ctx)
+	if status.CanProvision {
+		return nil
 	}
-	return nil
+	if status.Observation != licensing.ObservationKnown {
+		return &serverSetupLicenseUnverifiedError{State: status.State}
+	}
+	return errServerSetupLicenseRequired
+}
+
+// errServerSetupLicenseUnverified: the license status could not be read or
+// currently verified. It does not prove the license missing or invalid.
+var errServerSetupLicenseUnverified = errors.New("setup could not verify the license status")
+
+type serverSetupLicenseUnverifiedError struct{ State string }
+
+func (e *serverSetupLicenseUnverifiedError) Error() string {
+	return errServerSetupLicenseUnverified.Error() + ": " + e.State
+}
+
+func (e *serverSetupLicenseUnverifiedError) Unwrap() error { return errServerSetupLicenseUnverified }
+
+// serverSetupLicenseUnverifiedFailure keeps the access gate's stable codes.
+func serverSetupLicenseUnverifiedFailure(err error) *serviceOperationError {
+	var unverified *serverSetupLicenseUnverifiedError
+	if errors.As(err, &unverified) && unverified.State == "verification_unavailable" {
+		return &serviceOperationError{Code: errCodeLicenseVerificationUnavailable, Message: "The CelikPanel license could not be verified just now. This does not mean the license is missing or invalid. Setup continues by itself as soon as verification succeeds; if this persists, the server administrator can open License settings and check again. Existing services keep running."}
+	}
+	return &serviceOperationError{Code: errCodeLicenseStatusUnavailable, Message: "The CelikPanel license status could not be read just now. This does not mean the license is missing or invalid. Setup continues by itself as soon as the status can be read; if this persists, the server administrator can open License settings and check again. Existing services keep running."}
+}
+
+// writeServerSetupAdmissionError answers a setup request that was not
+// admitted: an unknown license status keeps the access gate's 503 codes, a
+// known inactive license keeps the caller's license_required response.
+func writeServerSetupAdmissionError(w http.ResponseWriter, err error, code, message, location string) {
+	if errors.Is(err, errServerSetupLicenseUnverified) {
+		failure := serverSetupLicenseUnverifiedFailure(err)
+		w.Header().Set("Cache-Control", "no-store")
+		writeCodedError(w, http.StatusServiceUnavailable, failure.Code, failure.Message, "")
+		return
+	}
+	writeCodedError(w, http.StatusForbidden, code, message, location)
 }
 
 // A new request may have committed between the old runner's terminal read and
@@ -1391,7 +1472,7 @@ func (p *Panel) runServerSetupMailCertificate(ctx context.Context, plan serverSe
 		}
 		return false, errors.New("mail host certificate operation failed; review a new attempt")
 	}
-	if err := p.requireServerSetupAdmission(); err != nil {
+	if err := p.requireServerSetupAdmission(ctx); err != nil {
 		return false, err
 	}
 	if plan.BuildCommit != strings.TrimSpace(buildCommit) {

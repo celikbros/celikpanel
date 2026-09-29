@@ -1879,3 +1879,56 @@ failure; names the Agent's own finish first for a V1 PowerDNS adoption;
 names `recover-dns-pdns-fresh-prestart` only through its admission.
 Fail-closed texts follow their cause instead of always saying "after an
 ambiguous ledger write".
+
+### Zero-zone primary, truthful setup states, license refresh, release contents (2026-10-01)
+
+P0.2, P0.4; constitutional invariants 2, 3, 6; D-024, D-027. No journal,
+ledger or state schema or version change. License policy unchanged.
+Component and script tests only at this commit.
+
+Found by the second native run of the pair acceptance driver
+([evidence](../deploy/e2e/dns-pair-acceptance/evidence/pair2-20260930/README.md)),
+on the acceptance branch with the gate open.
+
+**Zero zones.** A fresh paired PowerDNS primary installed through the wizard
+has no zones. Its producer membership check compared the observed member
+list, an empty slice, with the manifest's, a nil slice, using a deep
+comparison that treats them as different, so the install failed its own
+verification. The comparison is now element-wise; order, duplicates and exact
+names stay strict. About 290 list comparisons across the DNS code were
+audited; this was the only affected site. The failed install had in fact
+been rolled back by the same request's pre-start inverse; the host was left
+at rollback standby. Not measured: whether PowerDNS writes its catalog hash
+and re-stamps the producer serial at first start with zero members; the
+forward (post-start) recovery of a zero-zone install depends on it and needs
+a native run before the gate opens on the main line.
+
+**Setup states.** The wizard showed "result not confirmed yet" without end
+while the Agent held a verified failure, because the Panel's reconcile scope
+excluded the operation and every poll mapped the error to reconciling. After
+its own reconcile cannot finish, the Panel now reads the Agent's ledger for
+the exact request, read-only: an active job is progress; a failed job is
+`server_setup_dns_agent_failed`; a job released with a recovery code is
+`server_setup_dns_recovery_held`; anything else is unknown, and after five
+minutes becomes `server_setup_dns_result_unknown`, which states since when,
+that it is not a verified failure and that nothing is started twice. Each
+names who acts and the status command. Polling never mutates. The rollback
+evidence scope includes the fresh paired PowerDNS primary only while its gate
+is open. The primary's role text tells the owner to start the secondary only
+after this server's DNS step shows as finished.
+
+**License refresh in the background.** The setup runner read a license check
+that only HTTP handlers refreshed, so with no browser request for a minute
+it reported `license_required` for an active license. It now performs the
+same synchronous refresh, one-minute rule and failure semantics as the HTTP
+gate. A status that cannot be verified is shown as unverified, never as
+license required.
+
+**Release contents.** The dist recipe copied `deploy/` whole, so the customer
+archive carried the e2e evidence directories. The recipe now prunes every
+`evidence` directory and every `deploy/e2e/**/test_*.py`, and the manifest
+writers refuse an archive or tree that contains such paths. Archive ordering,
+timestamps, ownership and modes are unchanged; the recipe produced
+byte-identical archives under two umasks with a make stand-in. Not executed
+here: a real `make dist`, the release sequence policy test, and the bootstrap
+update contract test, which stops at an earlier Makefile expectation.

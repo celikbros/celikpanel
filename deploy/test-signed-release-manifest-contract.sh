@@ -62,7 +62,7 @@ openssl pkey -in "$tmp/wrong-key.pem" -passin pass: \
 test_repo="$tmp/test-repo"
 mkdir -p "$test_repo/deploy" "$test_repo/download-portal"
 cp -- "$writer_source" "$builder_source" "$test_repo/deploy/"
-cp -- "$repo_root/deploy/release-acceptance-license-guard.sh" "$test_repo/deploy/"
+cp -- "$repo_root/deploy/release-acceptance-license-guard.sh" "$repo_root/deploy/release-content-guard.sh" "$test_repo/deploy/"
 cp -a -- "$repo_root/download-portal/." "$test_repo/download-portal/"
 cp -- "$repo_root/deploy/build-membership.py" "$test_repo/deploy/"
 cp -a -- "$repo_root/portal-membership" "$test_repo/"

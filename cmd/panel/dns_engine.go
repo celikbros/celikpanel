@@ -2057,7 +2057,7 @@ func validateLegacyPDNSPairSecondaryReconfigureScope(
 // as paired secondary, or of PowerDNS standalone or as paired secondary. The
 // Agent proves the rollback (terminal failed job, no journal, no state, the
 // exact install receipt, the target stopped); the Panel only records it.
-// The fresh paired PowerDNS primary stays outside.
+// The fresh paired PowerDNS primary is inside only while its gate is open.
 func validateInitialDNSEngineInstallReconcileScope(
 	persisted persistedDNSEngineSwitch,
 ) error {
@@ -2072,12 +2072,20 @@ func validateInitialDNSEngineInstallReconcileScope(
 		persisted.PairRole == transport.DNSPairRoleSecondary &&
 		persisted.LocalIP != "" && persisted.LocalNS != "" &&
 		persisted.PeerIP != "" && persisted.PeerNS != ""
+	// The fresh paired PowerDNS primary is inside only while its product
+	// gate is open, matching the Agent's rollback-evidence scope; with the
+	// gate closed, as shipped, it stays outside and no such install exists.
+	freshPDNSPrimary := pdnsPairedPrimaryGateOpen &&
+		persisted.Topology == transport.DNSTopologyPaired &&
+		persisted.PairRole == transport.DNSPairRolePrimary &&
+		persisted.LocalIP != "" && persisted.LocalNS != "" &&
+		persisted.PeerIP != "" && persisted.PeerNS != ""
 	if persisted.Mode != transport.DNSEngineSwitchModeSwitch ||
 		persisted.Action != "install" ||
 		persisted.SourceEngine != "" || persisted.SourceEpoch != 0 ||
 		persisted.TargetEpoch != 1 ||
 		!(persisted.TargetEngine == transport.DNSEngineBIND && secondary ||
-			persisted.TargetEngine == transport.DNSEnginePowerDNS && (standalone || secondary)) {
+			persisted.TargetEngine == transport.DNSEnginePowerDNS && (standalone || secondary || freshPDNSPrimary)) {
 		return errors.New("DNS engine reconciliation is limited to an initial failed DNS engine install")
 	}
 	return nil

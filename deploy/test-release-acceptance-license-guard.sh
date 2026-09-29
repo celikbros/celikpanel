@@ -37,7 +37,7 @@ with_go=(PATH=/usr/bin:/bin CELIKPANEL_GUARD_GO="$GO")
 ldflags="-s -w -X main.buildVersion=v0.0.0-guard-test -X main.buildCommit=0123456789abcdef0123456789abcdef01234567"
 for variant in ordinary tagged; do
     mkdir -p "$tmp/$variant/celikpanel-test/bin" "$tmp/$variant/celikpanel-test/deploy"
-    cp -- "$guard" "$repo_root/deploy/write-release-manifest.sh" "$tmp/$variant/celikpanel-test/deploy/"
+    cp -- "$guard" "$repo_root/deploy/write-release-manifest.sh" "$repo_root/deploy/release-content-guard.sh" "$tmp/$variant/celikpanel-test/deploy/"
     printf 'fixture\n' > "$tmp/$variant/celikpanel-test/release.commit"
 done
 gobuild -ldflags "$ldflags" -o "$tmp/ordinary/celikpanel-test/bin/panel" ./cmd/panel

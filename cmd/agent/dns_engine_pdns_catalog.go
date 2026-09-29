@@ -1464,7 +1464,11 @@ func verifyPDNSProducerMembershipTx(
 	}
 	expected := append([]string(nil), expectedMembers...)
 	sort.Strings(expected)
-	if !reflect.DeepEqual(actual, expected) {
+	// Exact order, multiplicity and spelling; an empty member set equals an
+	// empty member set whether either side is nil (a fresh primary installed
+	// before any zone exists has none). reflect.DeepEqual treated
+	// []string{} and nil as different and refused every zero-zone install.
+	if !slices.Equal(actual, expected) {
 		return errors.New("PowerDNS producer membership differs from the switch manifest")
 	}
 	return nil

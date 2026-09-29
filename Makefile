@@ -112,6 +112,9 @@ dist: build ## Assemble an offline initial-install tarball with verified provena
 	cp bin/panel bin/agent bin/agent-native-contract.json bin/schema17-bridge dist/$(DIST)/bin/
 	cp -r web/dist/. dist/$(DIST)/web/dist/
 	cp -r deploy/. dist/$(DIST)/deploy/
+	# Acceptance evidence and harness tests are never read by an installed
+	# server; prune them before the manifest (which refuses them) and archive.
+	bash deploy/prune-release-harness.sh dist/$(DIST)
 	cp -r bin/recovery-runtime dist/$(DIST)/recovery-runtime
 	cp -r bin/firewall-runtime dist/$(DIST)/firewall-runtime
 	cp -r bin/mail-renewal-runtime dist/$(DIST)/mail-renewal-runtime

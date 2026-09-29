@@ -73,8 +73,13 @@ func TestSetupDNSUnprovenFailureKeepsExactChildPending(t *testing.T) {
 			ctx := context.Background()
 			id := strings.Repeat("6", 32)
 			err := p.startServerSetupDNS(ctx, setupDNSTestDraft(), id, serviceOperationActor{UserID: 1})
-			if !errors.Is(err, errServerSetupDNSReconciliationRequired) {
-				t.Fatalf("unproven child became terminal: %v", err)
+			// A failed Agent job whose rollback the Panel cannot prove is a
+			// verified failure with an unconfirmed host state (D-024), not an
+			// unknown; the applied case with a pending follow-up stays unknown.
+			var agentFailed *serverSetupDNSAgentFailedError
+			if applied && !errors.Is(err, errServerSetupDNSReconciliationRequired) ||
+				!applied && (!errors.As(err, &agentFailed) || agentFailed.Held || errors.Is(err, errServerSetupDNSReconciliationRequired) || errors.Is(err, errServerSetupDNSRolledBack)) {
+				t.Fatalf("unproven child outcome: %v", err)
 			}
 			state, err := readDNSEngineDBState(ctx, p.db.GetDB())
 			if err != nil || state.CurrentSwitchID == "" {

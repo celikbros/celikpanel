@@ -49,7 +49,7 @@ func (p *Panel) runServerSetupMailEnrollment(ctx context.Context, plan serverSet
 		return false, err
 	}
 	return advanceSetupMailEnrollment(ctx, request, &execution.Steps[index], func() error {
-		if err := p.requireServerSetupAdmission(); err != nil {
+		if err := p.requireServerSetupAdmission(ctx); err != nil {
 			return err
 		}
 		if plan.BuildCommit != buildCommit {
