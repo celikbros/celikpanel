@@ -994,8 +994,20 @@ SCENARIO_REQUIRED_KEYS = {
     "topology",
     "zones",
 }
+# Rows 12 and 14 (docs/DNS-RECOVERY-ACCEPTANCE.md). Provenance-only fixtures:
+# the takeover's RPC is byte-identical to a fresh install, the Agent selects
+# it from host state (bind9 installed, named stopped, no receipts:
+# cmd/agent/dns_engine_bind_adopt.go:224-242 stoppedBINDTakeoverSelected);
+# the reinstall is mode "reinstall" with source = target = bind and equal
+# epochs (cmd/panel/dns_engine.go:888-900, 1553-1562).
+UNMANAGED_BIND_STOPPED = "unmanaged-bind-stopped"
+MANAGED_BIND_ABSENT = "managed-bind-absent"
+PROVENANCE_BIND_FIXTURES = frozenset({UNMANAGED_BIND_STOPPED, MANAGED_BIND_ABSENT})
 SOURCE_FIXTURE_DRIVERS = {
-    "bind": {"uninitialized", "managed-pdns", "owner-bind"},
+    "bind": {
+        "uninitialized", "managed-pdns", "owner-bind",
+        UNMANAGED_BIND_STOPPED, MANAGED_BIND_ABSENT,
+    },
     "pdns-switch": {"uninitialized", "managed-bind"},
     "pdns-adopt": {"external-pdns-adoption"},
     "pdns-secondary-reconfigure": {"legacy-pdns-secondary"},
@@ -1007,8 +1019,54 @@ SOURCE_FIXTURE_ENGINES = {
     "managed-bind": "bind",
     "external-pdns-adoption": "pdns",
     "legacy-pdns-secondary": "pdns",
+    UNMANAGED_BIND_STOPPED: "",
+    MANAGED_BIND_ABSENT: "bind",
 }
-MANAGED_SOURCE_FIXTURES = {"managed-pdns", "managed-bind"}
+MANAGED_SOURCE_FIXTURES = {"managed-pdns", "managed-bind", MANAGED_BIND_ABSENT}
+# Sources with no serving DNS engine before the tagged Agent: global UDP/TCP
+# port 53 must be bindable and no DNS unit may be active.
+NON_SERVING_SOURCE_FIXTURES = frozenset(
+    {"uninitialized", UNMANAGED_BIND_STOPPED, MANAGED_BIND_ABSENT}
+)
+# One Debian after-write cell each (fixture variants of an existing runnable
+# cell; the manifest is unchanged). target-staged:after-write is the pre-start
+# cut where the distinctive effect has just happened: the takeover has written
+# its adopted install receipt and rewritten named.conf.options/local; the
+# reinstall has reinstalled bind9 under the unit guard. BIND never started.
+PROVENANCE_BIND_CELLS = {
+    UNMANAGED_BIND_STOPPED: "bind__target-staged__after-write__standalone__peer-reachable",
+    MANAGED_BIND_ABSENT: "bind__target-staged__after-write__standalone__peer-reachable",
+}
+SOURCE_PREINSTALL_BIND_SCHEMA = "celikpanel/dns-kill-source-preinstall-bind/v1"
+SOURCE_PREINSTALL_BIND_PROOF_PATH = (
+    "/var/lib/celikpanel-dns-kill-matrix/source-preinstall-bind.json"
+)
+SOURCE_PREINSTALL_BIND_KEYS = {
+    "schema", "cell_id", "source_fixture", "scope", "package", "units",
+    "dns_state", "dns_ownership_bind", "dns_install_ownership_bind",
+    "dns_journal_absent", "pdns_receipts_absent", "global_udp_tcp_53_bindable",
+    "owner_files", "product_rewrites_on_takeover", "preparation",
+}
+# Files the documented takeover rewrites (dns_engine_host.go:2310-2371:
+# OptionsConfig and AnchorConfig on the APT layout). Every other owner file in
+# /etc/bind and /etc/default/named must stay byte-identical.
+TAKEOVER_REWRITTEN_FILES = ("/etc/bind/named.conf.local", "/etc/bind/named.conf.options")
+BIND_INSTALL_OWNERSHIP_PATH_NAME = "dns-engine-install-ownership-bind.json"
+# Fresh paired SECONDARY (rows 3 and 5) against the panel-free native primary
+# peer of native_primary_peer.py. Only peer-reachable cells are admitted.
+PAIRED_SECONDARY_PHASES = {
+    "bind": frozenset({"pre-intent", "intent", "target-staged", "target-verified"}),
+    "pdns-switch": frozenset({
+        "pre-intent", "intent", "target-staged", "source-stopped",
+        "target-started", "target-verified", "committed",
+        "rolling-back", "rolled-back",
+    }),
+}
+PAIRED_SECONDARY_ZONE = "s1-kill.test"
+PAIRED_SECONDARY_QUERY = "www.s1-kill.test"
+PAIRED_SECONDARY_PRIMARY_SERIAL = 2026083101
+PDNS_PEER_CATALOG_ACCOUNT = "celikpanel-peer-catalog-v1"
+PDNS_DATABASE_PATH = "/var/lib/powerdns/pdns.sqlite3"
 DNS_STATE_KEYS = {
     "schema",
     "mode",
@@ -1262,6 +1320,20 @@ def validate_source_setup_provenance(
             raise ControllerError(
                 "uninitialized source proof has invalid absent setup provenance"
             )
+    elif source_fixture == UNMANAGED_BIND_STOPPED:
+        if (
+            origin != "harness-owner-bind-installed-stopped"
+            or scenario_hash != "absent"
+            or identity_hash != "absent"
+        ):
+            raise ControllerError(
+                "stopped unmanaged BIND source has invalid owner-install provenance"
+            )
+    elif source_fixture == MANAGED_BIND_ABSENT:
+        if origin != "production-bind-switch-engine-removed":
+            raise ControllerError("removed managed BIND source has the wrong production origin")
+        if not valid_sha256(scenario_hash) or not valid_sha256(identity_hash):
+            raise ControllerError("removed managed BIND source lacks setup hashes")
     else:
         raise ControllerError(
             f"source fixture {source_fixture!r} has no exact source-proof provenance contract"
@@ -1273,15 +1345,192 @@ def validate_source_setup_provenance(
     }
 
 
+def read_dpkg_package_status(package: str, timeout: float = 10.0) -> dict[str, Any]:
+    """Exact dpkg-query status: installed version, or the exact absence text."""
+
+    try:
+        completed = subprocess.run(
+            ["/usr/bin/dpkg-query", "-W", "-f=${Status}\t${Version}", "--", package],
+            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            env={"PATH": DEFAULT_COMMAND_PATH, "LC_ALL": "C"}, timeout=timeout, check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise ControllerError(f"inspect package {package}: {exc}") from exc
+    stdout = completed.stdout.decode("utf-8", errors="replace")
+    stderr = completed.stderr.decode("utf-8", errors="replace").strip()
+    if completed.returncode == 0:
+        status, _, version = stdout.partition("\t")
+        return {"name": package, "status": status, "version": version}
+    if completed.returncode == 1 and stderr == f"dpkg-query: no packages found matching {package}":
+        return {"name": package, "status": "absent", "version": ""}
+    raise ControllerError(
+        f"package {package} has a non-canonical dpkg status (exit {completed.returncode}): "
+        f"{stdout!r} {stderr!r}"
+    )
+
+
+def hash_owner_file(path: str) -> dict[str, Any]:
+    raw, status = secure_read_bytes(path, f"owner BIND file {path}", maximum=8 << 20)
+    return {
+        "sha256": hashlib.sha256(raw).hexdigest(),
+        "size": status.st_size,
+        "mode": f"{stat.S_IMODE(status.st_mode):04o}",
+        "uid": status.st_uid,
+        "gid": status.st_gid,
+    }
+
+
+def validate_source_bind_preinstall_document(
+    value: Any, raw: bytes, cell: CellSpec, source_fixture: str
+) -> dict[str, Any]:
+    """Rows 12/14 BIND preimage: owner-installed stopped BIND, or removed engine."""
+
+    if not isinstance(value, dict) or set(value) != SOURCE_PREINSTALL_BIND_KEYS:
+        raise ControllerError("BIND source preinstall proof fields differ from the exact contract")
+    if raw != (json.dumps(value, indent=2, sort_keys=True) + "\n").encode("utf-8"):
+        raise ControllerError("BIND source preinstall proof is not canonical sorted JSON")
+    if cell.cell_id != PROVENANCE_BIND_CELLS.get(source_fixture) or cell.role != "standalone":
+        raise ControllerError(f"{source_fixture} is admitted only on its exact Debian cell")
+    takeover = source_fixture == UNMANAGED_BIND_STOPPED
+    expected = {
+        "schema": SOURCE_PREINSTALL_BIND_SCHEMA,
+        "cell_id": cell.cell_id,
+        "source_fixture": source_fixture,
+        "scope": (
+            "owner-installed-stopped-bind-for-takeover"
+            if takeover else "managed-bind-engine-removed-for-reinstall"
+        ),
+        "dns_install_ownership_bind": {"exists": False},
+        "dns_journal_absent": True,
+        "pdns_receipts_absent": True,
+        "global_udp_tcp_53_bindable": True,
+        "product_rewrites_on_takeover": list(TAKEOVER_REWRITTEN_FILES) if takeover else [],
+    }
+    for key, wanted in expected.items():
+        if value.get(key) != wanted:
+            raise ControllerError(
+                f"BIND source preinstall {key}={value.get(key)!r}, want {wanted!r}"
+            )
+    package = value.get("package")
+    if not isinstance(package, dict) or set(package) != {"name", "status", "version"} or (
+        package.get("name") != "bind9"
+    ):
+        raise ControllerError("BIND source preinstall package evidence is invalid")
+    units = value.get("units")
+    if not isinstance(units, dict) or set(units) != {"named.service", "bind9.service"}:
+        raise ControllerError("BIND source preinstall unit evidence is invalid")
+    for unit in units.values():
+        if not isinstance(unit, dict) or set(unit) != {
+            "load_state", "active_state", "unit_file_state",
+        } or unit.get("active_state") != "inactive":
+            raise ControllerError("BIND source preinstall unit is not inactive")
+    if takeover:
+        if package.get("status") != "install ok installed" or not package.get("version"):
+            raise ControllerError("takeover source requires the owner-installed bind9 package")
+        if units["named.service"] != {
+            "load_state": "loaded", "active_state": "inactive", "unit_file_state": "disabled",
+        } or units["bind9.service"].get("load_state") != "not-found":
+            raise ControllerError(
+                "takeover source requires named loaded, inactive and disabled with the alias absent"
+            )
+        if value.get("dns_state") != {"exists": False} or value.get(
+            "dns_ownership_bind"
+        ) != {"exists": False}:
+            raise ControllerError("takeover source must have no CelikPanel engine state")
+        files = value.get("owner_files")
+        if not isinstance(files, dict) or not files or not all(
+            isinstance(path, str) and path.startswith(("/etc/bind/", "/etc/default/"))
+            for path in files
+        ) or not set(TAKEOVER_REWRITTEN_FILES) | {
+            "/etc/bind/named.conf", "/etc/default/named",
+        } <= set(files):
+            raise ControllerError("takeover source owner-file inventory is incomplete")
+        for path, item in files.items():
+            if not isinstance(item, dict) or set(item) != {
+                "sha256", "size", "mode", "uid", "gid",
+            } or not valid_sha256(item.get("sha256")):
+                raise ControllerError(f"takeover owner-file evidence is invalid: {path}")
+    else:
+        if package != {"name": "bind9", "status": "absent", "version": ""}:
+            raise ControllerError("reinstall source requires the bind9 package purged")
+        for unit in units.values():
+            if unit.get("load_state") != "not-found":
+                raise ControllerError("reinstall source requires both BIND units not-found")
+        for key in ("dns_state", "dns_ownership_bind"):
+            item = value.get(key)
+            if not isinstance(item, dict) or set(item) != {"exists", "sha256"} or (
+                item.get("exists") is not True or not valid_sha256(item.get("sha256"))
+            ):
+                raise ControllerError(f"reinstall source must retain {key}")
+        if value.get("owner_files") != {}:
+            raise ControllerError("reinstall source records no owner files")
+    if not isinstance(value.get("preparation"), str) or not value["preparation"]:
+        raise ControllerError("BIND source preinstall proof names no preparation")
+    return value
+
+
+def validate_source_bind_preinstall_provenance(
+    proof: Mapping[str, Any], source_fixture: str, cell: CellSpec, state_dir: str
+) -> dict[str, Any]:
+    if proof.get("source_preinstall_proof_path") != SOURCE_PREINSTALL_BIND_PROOF_PATH or (
+        not valid_sha256(proof.get("source_preinstall_proof_sha256"))
+    ):
+        raise ControllerError(f"{source_fixture} source proof lacks its BIND preinstall path or hash")
+    require_absent_path(SOURCE_PREINSTALL_PROOF_PATH, "PowerDNS source preinstall proof")
+    value, raw, digest, status = secure_json_with_digest(
+        SOURCE_PREINSTALL_BIND_PROOF_PATH, "BIND source preinstall proof", maximum=1 << 20
+    )
+    if digest != proof["source_preinstall_proof_sha256"]:
+        raise ControllerError("BIND source preinstall proof hash differs from source proof")
+    validate_source_bind_preinstall_document(value, raw, cell, source_fixture)
+    live_package = read_dpkg_package_status("bind9")
+    if live_package != value["package"]:
+        raise ControllerError(
+            f"bind9 package changed since preparation: {live_package} != {value['package']}"
+        )
+    changed: list[str] = []
+    for path, item in value["owner_files"].items():
+        if hash_owner_file(path) != item:
+            changed.append(path)
+    if changed:
+        raise ControllerError("owner BIND files changed since preparation: " + ", ".join(changed))
+    if source_fixture == MANAGED_BIND_ABSENT:
+        for key, name in (
+            ("dns_state", "dns-engine-state.json"),
+            ("dns_ownership_bind", "dns-engine-ownership-bind.json"),
+        ):
+            _, _, live_digest, _ = secure_json_with_digest(
+                os.path.join(state_dir, name), f"retained {name}", maximum=1 << 20
+            )
+            if live_digest != value[key]["sha256"]:
+                raise ControllerError(f"{name} changed since the engine was removed")
+    return {
+        "path": SOURCE_PREINSTALL_BIND_PROOF_PATH,
+        "sha256": digest,
+        "device": status.st_dev,
+        "inode": status.st_ino,
+        "schema": value["schema"],
+        "scope": value["scope"],
+        "package": value["package"],
+        "units": value["units"],
+        "owner_files": value["owner_files"],
+        "product_rewrites_on_takeover": value["product_rewrites_on_takeover"],
+        "live_package": live_package,
+    }
+
+
 def validate_source_preinstall_provenance(
     proof: Mapping[str, Any],
     source_fixture: str,
     cell: CellSpec,
     *,
     owner_inverse_after_restart: bool = False,
+    state_dir: str = "/var/lib/celikpanel-agent-private",
 ) -> dict[str, Any]:
     claimed_path = proof.get("source_preinstall_proof_path")
     claimed_hash = proof.get("source_preinstall_proof_sha256")
+    if source_fixture in PROVENANCE_BIND_FIXTURES:
+        return validate_source_bind_preinstall_provenance(proof, source_fixture, cell, state_dir)
     if source_fixture in {"uninitialized", "owner-bind", "managed-bind"}:
         if claimed_path != "absent" or claimed_hash != "absent":
             raise ControllerError(
@@ -1562,7 +1811,10 @@ def validate_source_adoption_provenance(
 ) -> dict[str, Any]:
     claimed_path = proof.get("source_adoption_proof_path")
     claimed_hash = proof.get("source_adoption_proof_sha256")
-    if source_fixture in {"uninitialized", "owner-bind", "external-pdns-adoption", "managed-bind"}:
+    if source_fixture in {
+        "uninitialized", "owner-bind", "external-pdns-adoption", "managed-bind",
+        *PROVENANCE_BIND_FIXTURES,
+    }:
         if claimed_path != "absent" or claimed_hash != "absent":
             raise ControllerError(
                 f"{source_fixture} source proof has invalid absent adoption provenance"
@@ -2425,7 +2677,10 @@ def validate_source_normalization_provenance(
 ) -> dict[str, Any]:
     claimed_path = proof.get("source_normalization_identity_receipt_path")
     claimed_hash = proof.get("source_normalization_identity_receipt_sha256")
-    if source_fixture in {"uninitialized", "owner-bind", "external-pdns-adoption", "managed-bind"}:
+    if source_fixture in {
+        "uninitialized", "owner-bind", "external-pdns-adoption", "managed-bind",
+        *PROVENANCE_BIND_FIXTURES,
+    }:
         if claimed_path != "absent" or claimed_hash != "absent":
             raise ControllerError(
                 f"{source_fixture} source proof has invalid absent normalization provenance"
@@ -2968,7 +3223,13 @@ def validate_managed_bind_setup(
     proof: Mapping[str, Any], cell: CellSpec,
     measured_scenario: Mapping[str, Any], state: Mapping[str, Any]
 ) -> None:
-    if cell.driver != "pdns-switch" or cell.role not in {"standalone", "paired-primary"}:
+    removed_engine = measured_scenario.get("source_fixture") == MANAGED_BIND_ABSENT
+    if removed_engine:
+        # Row 14: the same production fresh BIND switch produced the managed
+        # source; its engine was then removed with every receipt kept.
+        if cell.driver != "bind" or cell.cell_id != PROVENANCE_BIND_CELLS[MANAGED_BIND_ABSENT]:
+            raise ControllerError("removed managed BIND source has no proof for this cell")
+    elif cell.driver != "pdns-switch" or cell.role not in {"standalone", "paired-primary"}:
         raise ControllerError("managed BIND producer has no proof for this driver or role")
     scenario, _raw, digest, _ = secure_json_with_digest(
         MANAGED_BIND_SETUP_SCENARIO_PATH, "managed BIND setup scenario", maximum=1 << 20
@@ -3061,6 +3322,28 @@ def validate_source_scenario(
         raise ControllerError("source scenario fixture is invalid for the cell driver")
     if cell.source_fixture_policy == "managed-pdns-required" and source_fixture != "managed-pdns":
         raise ControllerError("matrix placement requires a managed PowerDNS source")
+    if source_fixture in PROVENANCE_BIND_FIXTURES and (
+        cell.cell_id != PROVENANCE_BIND_CELLS[source_fixture]
+        or cell.source_fixture_policy != "driver-specific"
+    ):
+        raise ControllerError(
+            f"{source_fixture} is admitted only on {PROVENANCE_BIND_CELLS[source_fixture]}"
+        )
+    if (value.get("mode") == "reinstall") != (source_fixture == MANAGED_BIND_ABSENT):
+        raise ControllerError(
+            "mode reinstall belongs exactly to the managed-bind-absent source fixture"
+        )
+    if source_fixture == MANAGED_BIND_ABSENT and (
+        value.get("source_engine") != "bind" or value.get("target_engine") != "bind"
+        or value.get("source_epoch") != value.get("target_epoch")
+        or not isinstance(value.get("target_epoch"), int)
+        or isinstance(value.get("target_epoch"), bool)
+        or value["target_epoch"] < 1
+        or value.get("topology") != "standalone"
+    ):
+        raise ControllerError(
+            "a BIND reinstall keeps source = target = bind with equal epochs >= 1, standalone"
+        )
     if (
         cell.source_fixture_policy == "uninitialized-permitted-noncritical"
         and source_fixture != "uninitialized"
@@ -3079,11 +3362,15 @@ def validate_source_scenario(
     )
     if value.get("source_engine", "") != expected_source_engine:
         raise ControllerError("source scenario engine differs from its fixture")
-    if source_fixture in {"uninitialized", "owner-bind"} and (
+    if source_fixture in {"uninitialized", "owner-bind", UNMANAGED_BIND_STOPPED} and (
         value["source_epoch"] != 0 or value["target_epoch"] != 1
         or value["source_revision"] != 0
     ):
         raise ControllerError("uninitialized scenario is not an exact empty 0/0 source")
+    if source_fixture == UNMANAGED_BIND_STOPPED and (
+        value.get("topology") != "standalone" or value.get("target_engine") != "bind"
+    ):
+        raise ControllerError("the stopped BIND takeover is a standalone BIND switch")
     if source_fixture in MANAGED_SOURCE_FIXTURES and value["source_epoch"] < 1:
         raise ControllerError("managed source scenario has no positive source epoch")
     expected_topology = "standalone" if cell.role == "standalone" else "paired"
@@ -3100,6 +3387,17 @@ def validate_source_scenario(
             ipaddress.ip_address(require_string(value.get("peer_ip"), "scenario peer IP"))
         except ValueError as exc:
             raise ControllerError("source scenario peer IP is invalid") from exc
+        if cell.role == "paired-secondary" and cell.driver in PAIRED_SECONDARY_PHASES and (
+            source_fixture != "uninitialized"
+            or value.get("zones") != []
+            or value.get("local_ns") != "ns2.s1-kill.test"
+            or value.get("peer_ns") != "ns1.s1-kill.test"
+            or value.get("target_epoch") != 1
+        ):
+            raise ControllerError(
+                "a fresh paired-secondary scenario has an empty source, zero zones and "
+                "the ns2 (local) / ns1 (peer) secondary identity"
+            )
     return value, {
         "path": path,
         "sha256": digest,
@@ -3252,7 +3550,7 @@ def validate_socket_source_proof(
         "identity_receipt_preexisting": False,
         "engine": SOURCE_FIXTURE_ENGINES[source_fixture],
         "source_revision": scenario["source_revision"],
-        "serving_before_tagged_agent": source_fixture != "uninitialized",
+        "serving_before_tagged_agent": source_fixture not in NON_SERVING_SOURCE_FIXTURES,
     }
     for key, wanted in expected.items():
         if proof.get(key) != wanted:
@@ -3263,6 +3561,7 @@ def validate_socket_source_proof(
     preinstall_provenance = validate_source_preinstall_provenance(
         proof, source_fixture, cell,
         owner_inverse_after_restart=owner_inverse_after_restart,
+        state_dir=state_dir,
     )
     adoption_provenance = validate_source_adoption_provenance(
         proof, source_fixture, cell,
@@ -3350,7 +3649,7 @@ def validate_socket_source_proof(
             "inode": ownership_status.st_ino,
             "identity": ownership,
         }
-        if source_fixture == "managed-bind":
+        if source_fixture in {"managed-bind", MANAGED_BIND_ABSENT}:
             validate_managed_bind_setup(proof, cell, scenario, state)
         if source_fixture == "managed-pdns":
             # Adoption is a historical checkpoint. Source normalization may
@@ -3380,7 +3679,9 @@ def validate_socket_source_proof(
         ):
             raise ControllerError("unmanaged source proof unexpectedly claims an engine-state receipt")
         state_evidence = {"path": "", "sha256": "", "identity": None}
-        if source_fixture in {"uninitialized", "owner-bind", "external-pdns-adoption"}:
+        if source_fixture in {
+            "uninitialized", "owner-bind", "external-pdns-adoption", UNMANAGED_BIND_STOPPED,
+        }:
             require_absent_path(
                 state_path, f"{source_fixture} source engine-state receipt"
             )
@@ -3433,7 +3734,7 @@ def validate_socket_source_proof(
             "tcp_bindable": True,
             "authoritative_answer_observed": False,
         }
-        if source_fixture == "uninitialized"
+        if source_fixture in NON_SERVING_SOURCE_FIXTURES
         else {
             "udp_bindable": False,
             "tcp_bindable": False,
@@ -4877,6 +5178,10 @@ def validate_source_unit_states(
     ) == "active"
     pdns_active = states.get("pdns.service") == "active"
     expected_engine = SOURCE_FIXTURE_ENGINES[source_fixture]
+    if source_fixture in NON_SERVING_SOURCE_FIXTURES:
+        if bind_active or pdns_active:
+            raise ControllerError(f"{source_fixture} source has an active DNS engine unit")
+        return
     if expected_engine == "" and (bind_active or pdns_active):
         raise ControllerError("uninitialized source has an active DNS engine unit")
     if expected_engine == "bind" and (not bind_active or pdns_active):
@@ -5072,6 +5377,7 @@ class Settings:
     resume_after_reboot: bool = False
     reboot_dir: str | None = None
     expect_agent_startup_rollback: bool = False
+    disable_management_before_reboot: bool = False
 
 
 def inspect_command_executable(
@@ -5357,6 +5663,13 @@ def reboot_checkpoint_paths(reboot_dir: str, ordinal: int) -> dict[str, str]:
 
 def validate_reboot_settings(settings: Settings) -> None:
     wants = settings.reboot_before_owner_command or settings.reboot_after_recovery
+    if settings.disable_management_before_reboot and (
+        not settings.reboot_after_recovery or settings.owner_inverse_after_restart
+    ):
+        raise ControllerError(
+            "--disable-management-before-reboot requires --reboot-after-recovery on the "
+            "rpc-retry flow (not the owner-inverse flow)"
+        )
     if not wants:
         if settings.resume_after_reboot or settings.reboot_dir is not None:
             raise ControllerError(
@@ -5375,9 +5688,14 @@ def validate_reboot_settings(settings: Settings) -> None:
         raise ControllerError(
             "reboot steps require the socket flow without the independent handoff flags"
         )
-    if settings.cell.role != "standalone":
+    if settings.cell.role != "standalone" and not (
+        is_admitted_paired_secondary(settings.cell)
+        and not settings.reboot_before_owner_command
+    ):
         raise ControllerError(
-            "reboot steps are limited to standalone cells: only the kill guest is rebooted"
+            "reboot steps are limited to standalone cells and the admitted fresh "
+            "paired-secondary cells (whose native primary keeps serving): only the "
+            "kill guest is rebooted"
         )
     if settings.reboot_before_owner_command and not settings.owner_inverse_after_restart:
         raise ControllerError(
@@ -5399,9 +5717,12 @@ def validate_settings(settings: Settings) -> dict[str, Any]:
     require_real_directory(settings.command_cwd, "command working directory")
     require_real_directory(settings.state_dir, "agent state directory")
     require_clean_absolute(settings.mutation_lock, "mutation lock")
-    require_real_directory(os.path.dirname(settings.mutation_lock), "mutation lock parent")
     require_clean_absolute(settings.agent_socket, "agent socket")
-    require_real_directory(os.path.dirname(settings.agent_socket), "agent socket parent")
+    if not (settings.resume_after_reboot and settings.disable_management_before_reboot):
+        # After a reboot with the Agent disabled its RuntimeDirectory
+        # (/run/celikpanel) legitimately does not exist.
+        require_real_directory(os.path.dirname(settings.mutation_lock), "mutation lock parent")
+        require_real_directory(os.path.dirname(settings.agent_socket), "agent socket parent")
     require_clean_absolute(settings.agent_token_file, "agent token file")
     require_real_directory(
         os.path.dirname(settings.agent_token_file), "agent token file parent"
@@ -5895,10 +6216,14 @@ def endpoint_check(
 
 def run_stability_window(
     settings: Settings,
-    agent_identity: tuple[int, int],
+    agent_identity: tuple[int, int] | None,
     transcript: Transcript,
     peer_ip: str,
+    *,
+    dns_only: bool = False,
 ) -> tuple[dict[str, Any], list[str], list[str]]:
+    """31 samples over 30 s. ``dns_only``: management is deliberately disabled,
+    so Agent and Panel are recorded as not applicable and only DNS is judged."""
     deadline = time.monotonic() + settings.stability_seconds
     samples: list[dict[str, Any]] = []
     failures: list[str] = []
@@ -5907,36 +6232,15 @@ def run_stability_window(
     while True:
         ordinal += 1
         sample: dict[str, Any] = {"ordinal": ordinal, "at": utc_now()}
-        agent, error = endpoint_check(
-            "agent-stability",
-            lambda: assert_unix_socket_stable(
-                settings.agent_socket,
-                agent_identity,
-                settings.endpoint_timeout,
-            ),
-            transcript,
-        )
-        sample["agent"] = agent
-        if error:
-            failures.append(f"stability sample {ordinal}: {error}")
-        panel, error = endpoint_check(
-            "panel-stability",
-            lambda: (
-                wait_for_tcp(
-                    settings.panel_address,
-                    settings.panel_port,
-                    settings.endpoint_timeout,
-                )
-                or {
-                    "address": settings.panel_address,
-                    "port": settings.panel_port,
-                }
-            ),
-            transcript,
-        )
-        sample["panel"] = panel
-        if error:
-            failures.append(f"stability sample {ordinal}: {error}")
+        if dns_only:
+            sample["agent"] = {"judged": False, "reason": "management disabled"}
+            sample["panel"] = {"judged": False, "reason": "management disabled"}
+        else:
+            if agent_identity is None:
+                raise ControllerError("stability window needs the Agent socket identity")
+            sample.update(_management_stability_sample(
+                settings, agent_identity, transcript, ordinal, failures
+            ))
         dns, error = endpoint_check(
             "dns-stability",
             lambda: query_authoritative_dns(
@@ -5976,8 +6280,50 @@ def run_stability_window(
     return {
         "duration_seconds": settings.stability_seconds,
         "interval_seconds": settings.stability_interval,
+        "dns_only": dns_only,
         "samples": samples,
     }, failures, peer_verification_failures
+
+
+def _management_stability_sample(
+    settings: Settings,
+    agent_identity: tuple[int, int],
+    transcript: Transcript,
+    ordinal: int,
+    failures: list[str],
+) -> dict[str, Any]:
+    sample: dict[str, Any] = {}
+    agent, error = endpoint_check(
+        "agent-stability",
+        lambda: assert_unix_socket_stable(
+            settings.agent_socket,
+            agent_identity,
+            settings.endpoint_timeout,
+        ),
+        transcript,
+    )
+    sample["agent"] = agent
+    if error:
+        failures.append(f"stability sample {ordinal}: {error}")
+    panel, error = endpoint_check(
+        "panel-stability",
+        lambda: (
+            wait_for_tcp(
+                settings.panel_address,
+                settings.panel_port,
+                settings.endpoint_timeout,
+            )
+            or {
+                "address": settings.panel_address,
+                "port": settings.panel_port,
+            }
+        ),
+        transcript,
+    )
+    sample["panel"] = panel
+    if error:
+        failures.append(f"stability sample {ordinal}: {error}")
+    return sample
 
 
 def classify_cell_status(
@@ -8153,15 +8499,207 @@ def maybe_request_reboot_after_recovery(
             ),
         }
         return
+    authority_before = observe_serving_authority(settings, environment)
+    management_before = observe_management_units(settings, environment)
+    disabled: dict[str, Any] | None = None
+    if getattr(settings, "disable_management_before_reboot", False) is True:
+        # Refuse on a non-fixture guest before touching the units.
+        read_guest_boot_identity(settings.cell.cell_id)
+        disabled = disable_management_units(settings, environment)
+        result["management_disabled_before_reboot"] = disabled
+        if disabled["failures"] or disabled["unknown"]:
+            result["status"] = "unverified"
+            result["reboot_after_recovery"] = {
+                "run": False,
+                "reason": (
+                    "the Panel and Agent units could not be proven stopped and disabled; "
+                    "the guest was not rebooted"
+                ),
+            }
+            return
     request_reboot(
         settings,
         REBOOT_AFTER_RECOVERY,
         result,
         {
             **state,
-            "authority_before": observe_serving_authority(settings, environment),
-            "management_before": observe_management_units(settings, environment),
+            "authority_before": authority_before,
+            "management_before": management_before,
+            "management_disabled": disabled is not None,
         },
+    )
+
+
+def disable_management_units(
+    settings: Settings, environment: Mapping[str, str]
+) -> dict[str, Any]:
+    """Stop and disable the Panel and Agent units (owner-independence check).
+
+    The DNS daemon is native and must keep serving without them (D-022). The
+    units are left disabled on this disposable guest; nothing re-enables them.
+    """
+
+    report: dict[str, Any] = {"failures": [], "unknown": []}
+    try:
+        completed = subprocess.run(
+            ["/usr/bin/systemctl", "disable", "--now", *reversed(MANAGEMENT_UNITS)],
+            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            env=dict(environment), timeout=settings.command_timeout, check=False,
+        )
+        report["command"] = {
+            "argv": ["/usr/bin/systemctl", "disable", "--now", *reversed(MANAGEMENT_UNITS)],
+            "returncode": completed.returncode,
+            "stderr": completed.stderr.decode("utf-8", errors="replace")[-4096:],
+        }
+        if completed.returncode != 0:
+            report["failures"].append(f"systemctl disable --now exited {completed.returncode}")
+    except (OSError, subprocess.SubprocessError) as exc:
+        report["unknown"].append(f"disable management units: {exc}")
+        return report
+    units = observe_management_units(settings, environment)
+    report["units"] = units
+    report["unknown"].extend(units["unknown"])
+    for unit, properties in units["units"].items():
+        if properties.get("ActiveState") != "inactive" or properties.get(
+            "UnitFileState"
+        ) != "disabled":
+            report["failures"].append(
+                f"{unit} is not stopped and disabled: {properties.get('ActiveState')}/"
+                f"{properties.get('UnitFileState')}"
+            )
+    return report
+
+
+def compare_serving_authority(
+    stage: str,
+    before: Mapping[str, Any],
+    after: Mapping[str, Any],
+    failures: list[str],
+    unknown: list[str],
+) -> None:
+    """Same port-53 authority, answer counts, state receipt and journal presence."""
+
+    unknown.extend(f"{stage}: {item}" for item in after.get("unknown", []))
+    was, now = before.get("authority", {}), after.get("authority", {})
+    if was.get("engines") is None or now.get("engines") is None:
+        unknown.append(f"{stage}: port-53 authority could not be established")
+    elif was["engines"] != now["engines"]:
+        failures.append(
+            f"{stage}: port-53 authority changed from {was['engines']} to {now['engines']}"
+        )
+    if not now.get("answered"):
+        failures.append(f"{stage}: the DNS address does not answer authoritatively")
+    elif was.get("answer_counts") != now.get("answer_counts"):
+        failures.append(
+            f"{stage}: answer counts changed from {was.get('answer_counts')} "
+            f"to {now.get('answer_counts')}"
+        )
+    before_state, after_state = before.get("state", {}), after.get("state", {})
+    if "error" in before_state or "error" in after_state:
+        unknown.append(f"{stage}: DNS state receipt could not be read")
+    elif before_state.get("semantic") != after_state.get("semantic") or (
+        before_state.get("exists", True) != after_state.get("exists", True)
+    ):
+        failures.append(f"{stage}: DNS engine state receipt changed across the reboot")
+    was_evidence, now_evidence = before.get("evidence"), after.get("evidence")
+    if isinstance(was_evidence, dict) and isinstance(now_evidence, dict):
+        if was_evidence["journal"]["exists"] != now_evidence["journal"]["exists"]:
+            failures.append(f"{stage}: switch journal presence changed across the reboot")
+
+
+SINGLE_NATIVE_AUTHORITY = (
+    {"tcp": ["bind"], "udp": ["bind"]},
+    {"tcp": ["pdns"], "udp": ["pdns"]},
+)
+
+
+def verify_dns_alone_after_reboot(
+    settings: Settings,
+    state: Mapping[str, Any],
+    *,
+    report: dict[str, Any],
+    result: dict[str, Any],
+    transcript: Transcript,
+    owner_environment: Mapping[str, str],
+    failures: list[str],
+    unknown: list[str],
+    safety_failures: list[str],
+    verification_failures: list[str],
+) -> None:
+    """After a reboot with the Panel and Agent disabled: DNS serves alone.
+
+    Judged (verified failure): a management unit that came back (active or no
+    longer disabled), a port-53 authority other than one native engine or
+    different from before the reboot, changed answer counts, a changed state
+    receipt or journal presence, and for a paired secondary the member no
+    longer answered with the primary's serial and records. The window of 31
+    samples judges only DNS; Agent and Panel are recorded as not applicable.
+    """
+
+    before = state["authority_before"]
+    report["management_disabled"] = True
+    for unit, properties in report["management_units"]["units"].items():
+        if properties.get("ActiveState") != "inactive" or properties.get(
+            "UnitFileState"
+        ) != "disabled":
+            failures.append(
+                f"{unit} came back after the reboot although it was disabled: "
+                f"{properties.get('ActiveState')}/{properties.get('UnitFileState')}"
+            )
+
+    def judge(stage: str, after: Mapping[str, Any]) -> None:
+        compare_serving_authority(stage, before, after, failures, unknown)
+        engines = (after.get("authority") or {}).get("engines")
+        if isinstance(engines, dict) and engines not in SINGLE_NATIVE_AUTHORITY:
+            failures.append(
+                f"{stage}: port 53 is not served by one native engine alone: {engines}"
+            )
+
+    after = observe_serving_authority(settings, owner_environment)
+    report["authority_after_boot"] = after
+    judge("after reboot", after)
+    peer_ip = state.get("peer_ip", "") or ""
+    stability, stability_failures, peer_failures = run_stability_window(
+        settings, None, transcript, peer_ip, dns_only=True
+    )
+    report["stability"] = stability
+    safety_failures.extend(f"after reboot: {item}" for item in stability_failures)
+    verification_failures.extend(peer_failures)
+    after_window = observe_serving_authority(settings, owner_environment)
+    report["authority_after_window"] = after_window
+    judge("after the post-reboot window", after_window)
+    if is_admitted_paired_secondary(settings.cell) and peer_ip:
+        serving = check_secondary_serving(settings, peer_ip)
+        report["secondary_serving"] = serving
+        failures.extend(f"after reboot: {item}" for item in serving["failures"])
+        unknown.extend(f"after reboot: {item}" for item in serving["unknown"])
+        if settings.cell.driver == "pdns-switch":
+            rows = check_pdns_secondary_rows(peer_ip)
+            report["pdns_secondary_rows"] = rows
+            failures.extend(f"after reboot: {item}" for item in rows["failures"])
+            unknown.extend(f"after reboot: {item}" for item in rows["unknown"])
+    samples = stability.get("samples", [])
+    report["safety_assertions"] = {
+        "dns_engine_serving": bool(samples)
+        and all(sample.get("dns", {}).get("ok") for sample in samples),
+        "panel_started": "not-applicable: management disabled",
+        "agent_stayed_running": "not-applicable: management disabled",
+    }
+    report["failures"] = failures
+    report["unknown"] = unknown
+    verification_failures.extend(f"reboot after recovery unknown: {item}" for item in unknown)
+    safety_status, status = classify_cell_status(safety_failures, verification_failures)
+    if failures:
+        status = "failed"
+    report["status"] = "failed" if failures else ("unverified" if unknown else "passed")
+    result["safety_status"] = safety_status
+    result["status"] = status
+    transcript.event(
+        "reboot-after-recovery-verified",
+        status=status,
+        management_disabled=True,
+        failures=failures,
+        unknown=unknown,
     )
 
 
@@ -8196,6 +8734,13 @@ def verify_after_recovery_reboot(
     management = observe_management_units(settings, owner_environment)
     report["management_units"] = management
     unknown.extend(management["unknown"])
+    if state.get("management_disabled") is True:
+        verify_dns_alone_after_reboot(
+            settings, state, report=report, result=result, transcript=transcript,
+            owner_environment=owner_environment, failures=failures, unknown=unknown,
+            safety_failures=safety_failures, verification_failures=verification_failures,
+        )
+        return
     for unit, properties in management["units"].items():
         if properties.get("ActiveState") != "active":
             failures.append(
@@ -8236,32 +8781,7 @@ def verify_after_recovery_reboot(
         safety_failures.append(f"after reboot: {error}")
 
     def compare_authority(stage: str, after: Mapping[str, Any]) -> None:
-        unknown.extend(f"{stage}: {item}" for item in after.get("unknown", []))
-        was, now = before.get("authority", {}), after.get("authority", {})
-        if was.get("engines") is None or now.get("engines") is None:
-            unknown.append(f"{stage}: port-53 authority could not be established")
-        elif was["engines"] != now["engines"]:
-            failures.append(
-                f"{stage}: port-53 authority changed from {was['engines']} to {now['engines']}"
-            )
-        if not now.get("answered"):
-            failures.append(f"{stage}: the DNS address does not answer authoritatively")
-        elif was.get("answer_counts") != now.get("answer_counts"):
-            failures.append(
-                f"{stage}: answer counts changed from {was.get('answer_counts')} "
-                f"to {now.get('answer_counts')}"
-            )
-        before_state, after_state = before.get("state", {}), after.get("state", {})
-        if "error" in before_state or "error" in after_state:
-            unknown.append(f"{stage}: DNS state receipt could not be read")
-        elif before_state.get("semantic") != after_state.get("semantic") or (
-            before_state.get("exists", True) != after_state.get("exists", True)
-        ):
-            failures.append(f"{stage}: DNS engine state receipt changed across the reboot")
-        was_evidence, now_evidence = before.get("evidence"), after.get("evidence")
-        if isinstance(was_evidence, dict) and isinstance(now_evidence, dict):
-            if was_evidence["journal"]["exists"] != now_evidence["journal"]["exists"]:
-                failures.append(f"{stage}: switch journal presence changed across the reboot")
+        compare_serving_authority(stage, before, after, failures, unknown)
 
     after = observe_serving_authority(settings, owner_environment)
     report["authority_after_boot"] = after
@@ -8609,6 +9129,427 @@ def resume_cell(settings: Settings) -> int:
     return {"passed": 0, "failed": 1, "unverified": 2}[result["status"]]
 
 
+# ---------------------------------------------------------------------------
+# Fresh paired SECONDARY (register rows 3 and 5) and the BIND takeover and
+# reinstall fixtures (rows 12 and 14). These are data-driven judgements added
+# to the unchanged rpc-retry flow: the same proven SIGKILL, the same Agent
+# restart and same-request rpc-retry, the same two probes and 31 samples.
+# PAIRED-SECONDARY-FIXTURE.md holds the paired pass definition; the peer half
+# (transfer to this guest, peer config unchanged) is judged on the QEMU host
+# by guest_bootstrap.py run-prepared, because only the host reaches the peer.
+# ---------------------------------------------------------------------------
+
+
+def is_admitted_paired_secondary(cell: CellSpec) -> bool:
+    return (
+        cell.role == "paired-secondary"
+        and cell.driver in PAIRED_SECONDARY_PHASES
+        and cell.peer_reachability == "reachable"
+        and cell.phase in PAIRED_SECONDARY_PHASES[cell.driver]
+    )
+
+
+def refuse_unadmitted_paired_secondary(settings: Settings) -> None:
+    """Refuse fresh paired-secondary cells without a pass definition, pre-mutation."""
+
+    cell = settings.cell
+    if cell.role != "paired-secondary" or cell.driver not in PAIRED_SECONDARY_PHASES:
+        return
+    if cell.peer_reachability != "reachable":
+        raise ControllerError(
+            "paired-secondary peer-unreachable cells have no pass definition yet "
+            "(it must be derived from the paired Reconcile behaviour); nothing was started"
+        )
+    if cell.phase not in PAIRED_SECONDARY_PHASES[cell.driver]:
+        raise ControllerError(
+            f"paired-secondary {cell.driver} phase {cell.phase} has no pass definition; "
+            "admitted: " + ", ".join(sorted(PAIRED_SECONDARY_PHASES[cell.driver]))
+            + ". Nothing was started"
+        )
+    if (
+        settings.trigger_mode != "socket"
+        or settings.owner_inverse_after_restart
+        or settings.stop_after_kill_for_independent_recovery
+        or settings.expect_agent_startup_rollback
+    ):
+        raise ControllerError(
+            "a fresh paired-secondary cell runs only on the socket rpc-retry flow"
+        )
+
+
+def _skip_dns_name(message: bytes, offset: int) -> int:
+    for _ in range(128):
+        if offset >= len(message):
+            raise ControllerError("DNS name runs past the message")
+        length = message[offset]
+        if length & 0xC0 == 0xC0:
+            return offset + 2
+        if length & 0xC0:
+            raise ControllerError("DNS name uses an unsupported label type")
+        offset += 1
+        if length == 0:
+            return offset
+        offset += length
+    raise ControllerError("DNS name has too many labels")
+
+
+def parse_dns_rrset(raw: bytes, transaction_id: int, qtype: str, transport: str) -> list[Any]:
+    """Authoritative answer values of ``qtype``: SOA serials or A addresses."""
+
+    header = validate_dns_response(raw, transaction_id, transport)
+    offset = _skip_dns_name(raw, 12) + 4
+    values: list[Any] = []
+    for _ in range(header["answers"]):
+        offset = _skip_dns_name(raw, offset)
+        if offset + 10 > len(raw):
+            raise ControllerError(f"{transport} DNS answer is truncated")
+        rtype, _rclass, _ttl, length = struct.unpack("!HHIH", raw[offset:offset + 10])
+        offset += 10
+        rdata_end = offset + length
+        if rdata_end > len(raw):
+            raise ControllerError(f"{transport} DNS answer data is truncated")
+        if rtype == DNS_TYPES[qtype]:
+            if qtype == "A" and length == 4:
+                values.append(str(ipaddress.IPv4Address(raw[offset:rdata_end])))
+            elif qtype == "SOA":
+                cursor = _skip_dns_name(raw, _skip_dns_name(raw, offset))
+                if cursor + 20 > rdata_end:
+                    raise ControllerError(f"{transport} SOA data is truncated")
+                values.append(struct.unpack("!I", raw[cursor:cursor + 4])[0])
+        offset = rdata_end
+    return sorted(values, key=str)
+
+
+def query_dns_rrset(
+    address: str, port: int, name: str, qtype: str, timeout: float
+) -> dict[str, list[Any]]:
+    """Authoritative UDP and TCP answer values (the query of query_authoritative_dns)."""
+
+    parsed = ipaddress.ip_address(address)
+    family = socket.AF_INET if parsed.version == 4 else socket.AF_INET6
+    destination: tuple[Any, ...] = (
+        (address, port) if family == socket.AF_INET else (address, port, 0, 0)
+    )
+    results: dict[str, list[Any]] = {}
+    for transport in ("udp", "tcp"):
+        transaction_id = secrets.randbelow(65535) + 1
+        query = build_dns_query(name, qtype, transaction_id)
+        if transport == "udp":
+            with socket.socket(family, socket.SOCK_DGRAM) as udp:
+                udp.settimeout(timeout)
+                udp.connect(destination)
+                udp.sendall(query)
+                raw = udp.recv(65535)
+        else:
+            with socket.socket(family, socket.SOCK_STREAM) as tcp:
+                tcp.settimeout(timeout)
+                tcp.connect(destination)
+                tcp.sendall(struct.pack("!H", len(query)) + query)
+                length = struct.unpack("!H", _recv_exact(tcp, 2))[0]
+                if length == 0:
+                    raise ControllerError("TCP DNS response has zero length")
+                raw = _recv_exact(tcp, length)
+        results[transport] = parse_dns_rrset(raw, transaction_id, qtype, transport)
+    return results
+
+
+def peer_catalog_name(peer_ip: str) -> str:
+    """binddns.CatalogDomain: catalog-<hex(IPv4)>.celikpanel.invalid."""
+
+    return "catalog-" + ipaddress.IPv4Address(peer_ip).packed.hex() + ".celikpanel.invalid"
+
+
+def prove_paired_secondary_preflight(settings: Settings, peer_ip: str) -> dict[str, Any]:
+    """Before launch: the native primary serves its catalog to this guest.
+
+    For the PowerDNS secondary it also proves no PowerDNS database exists
+    (pdns.service inactive is the unit-state check of every non-serving
+    source), so the Agent classifies a fresh install under pdns-switch, not
+    the pdns-secondary-reconfigure reconfiguration.
+    """
+
+    catalog = peer_catalog_name(peer_ip)
+    try:
+        soa = query_dns_rrset(peer_ip, 53, catalog, "SOA", settings.dns_timeout)
+    except (ControllerError, OSError) as exc:
+        raise ControllerError(
+            f"the native primary peer does not serve {catalog} authoritatively to this "
+            f"guest before launch: {exc}. Prepare the peer with native_primary_peer.py "
+            "prepare first; nothing was started"
+        ) from exc
+    if soa["udp"] != soa["tcp"] or len(soa["udp"]) != 1 or soa["udp"][0] <= 0:
+        raise ControllerError(f"peer catalog SOA differs between UDP and TCP: {soa}")
+    report: dict[str, Any] = {
+        "peer_ip": peer_ip,
+        "catalog": catalog,
+        "catalog_soa_serial": soa["udp"][0],
+        "authoritative_udp_tcp": True,
+    }
+    if settings.cell.driver == "pdns-switch":
+        require_absent_path(PDNS_DATABASE_PATH, "PowerDNS database of a fresh paired secondary")
+        report["pdns_database_absent"] = True
+        report["expected_classification"] = (
+            "fresh install (pdns.service inactive, no database): fault driver "
+            "pdns-switch, not pdns-secondary-reconfigure"
+        )
+    return report
+
+
+def check_secondary_serving(settings: Settings, peer_ip: str) -> dict[str, Any]:
+    """The guest answers the member authoritatively with the PRIMARY's data."""
+
+    report: dict[str, Any] = {"failures": [], "unknown": []}
+    timeout = settings.dns_timeout
+    try:
+        report["primary"] = {
+            "soa": query_dns_rrset(peer_ip, 53, PAIRED_SECONDARY_ZONE, "SOA", timeout),
+            "www_a": query_dns_rrset(peer_ip, 53, PAIRED_SECONDARY_QUERY, "A", timeout),
+        }
+    except (ControllerError, OSError) as exc:
+        report["unknown"].append(f"the native primary could not be queried: {exc}")
+    try:
+        report["secondary"] = {
+            "soa": query_dns_rrset(
+                settings.dns_address, settings.dns_port, PAIRED_SECONDARY_ZONE, "SOA", timeout
+            ),
+            "www_a": query_dns_rrset(
+                settings.dns_address, settings.dns_port, PAIRED_SECONDARY_QUERY, "A", timeout
+            ),
+        }
+    except (ControllerError, OSError) as exc:
+        report["failures"].append(
+            f"the secondary does not answer {PAIRED_SECONDARY_ZONE} authoritatively: {exc}"
+        )
+        return report
+    secondary = report["secondary"]
+    for transport in ("udp", "tcp"):
+        if secondary["soa"][transport] != [PAIRED_SECONDARY_PRIMARY_SERIAL]:
+            report["failures"].append(
+                f"secondary {transport} SOA serial {secondary['soa'][transport]} is not the "
+                f"primary's {PAIRED_SECONDARY_PRIMARY_SERIAL}"
+            )
+        if secondary["www_a"][transport] != [peer_ip]:
+            report["failures"].append(
+                f"secondary {transport} {PAIRED_SECONDARY_QUERY} A is "
+                f"{secondary['www_a'][transport]}, not the primary's address {peer_ip}"
+            )
+    primary = report.get("primary")
+    if primary is not None and (
+        primary["soa"] != secondary["soa"] or primary["www_a"] != secondary["www_a"]
+    ):
+        report["failures"].append("the secondary's answers differ from the primary's")
+    return report
+
+
+def check_pdns_secondary_rows(peer_ip: str) -> dict[str, Any]:
+    """PowerDNS secondary SQL state (dns_engine_pdns_catalog.go:54-188)."""
+
+    report: dict[str, Any] = {"failures": [], "unknown": []}
+    catalog = peer_catalog_name(peer_ip)
+    try:
+        connection = sqlite3.connect(f"file:{PDNS_DATABASE_PATH}?mode=ro", uri=True, timeout=5)
+        try:
+            rows = connection.execute(
+                "SELECT name, UPPER(type), COALESCE(master,''), COALESCE(account,''), "
+                "COALESCE(catalog,''), COALESCE(options,'') FROM domains "
+                "ORDER BY name COLLATE BINARY"
+            ).fetchall()
+            soa_rows = connection.execute(
+                "SELECT COUNT(*) FROM records r JOIN domains d ON r.domain_id = d.id "
+                "WHERE d.name = ? AND r.type = 'SOA'", (PAIRED_SECONDARY_ZONE,)
+            ).fetchone()[0]
+        finally:
+            connection.close()
+    except sqlite3.Error as exc:
+        report["unknown"].append(f"read the PowerDNS database: {exc}")
+        return report
+    report["domains"] = [list(row) for row in rows]
+    report["member_soa_rows"] = soa_rows
+    consumers = [row for row in rows if row[0] == catalog]
+    members = [row for row in rows if row[0] != catalog]
+    if consumers != [(catalog, "CONSUMER", peer_ip, PDNS_PEER_CATALOG_ACCOUNT, "", "")]:
+        report["failures"].append(
+            f"no exact CONSUMER row for {catalog} with master {peer_ip} and account "
+            f"{PDNS_PEER_CATALOG_ACCOUNT}: {consumers}"
+        )
+    if len(members) != 1 or not (
+        members[0][0] == PAIRED_SECONDARY_ZONE
+        and members[0][1] in {"SLAVE", "SECONDARY"}
+        and members[0][2] == peer_ip
+        and members[0][3] in {"", PDNS_PEER_CATALOG_ACCOUNT}
+        and members[0][4] == catalog
+        and members[0][5] == ""
+    ):
+        report["failures"].append(
+            f"the member is not exactly one secondary zone {PAIRED_SECONDARY_ZONE} "
+            f"from {peer_ip} in catalog {catalog}: {members}"
+        )
+    if soa_rows != 1:
+        report["failures"].append(
+            f"the secondary member holds {soa_rows} SOA records; it is not loaded"
+        )
+    return report
+
+
+def observe_provenance_boundary(settings: Settings, source_fixture: str) -> dict[str, Any]:
+    """Rows 12/14 at the proven cut: the product's own BIND install receipt.
+
+    Takeover: written before intent by assumeExistingDNSEnginePackageOwnership
+    with adopted_present true and an empty missing_before
+    (dns_engine_host.go:1473-1480, dns_engine_ownership.go:533-596).
+    Reinstall: bind9 was purged, so the receipt names it in missing_before
+    (dns_engine_host.go:1495-1507).
+    """
+
+    path = os.path.join(settings.state_dir, BIND_INSTALL_OWNERSHIP_PATH_NAME)
+    report: dict[str, Any] = {
+        "source_fixture": source_fixture, "path": path, "failures": [], "unknown": [],
+    }
+    if not os.path.lexists(path):
+        report["failures"].append(
+            "the product wrote no BIND install-ownership receipt before the cut"
+        )
+        return report
+    try:
+        value, _raw, digest, _ = secure_json_with_digest(
+            path, "BIND install-ownership receipt at the boundary", maximum=64 << 10
+        )
+    except ControllerError as exc:
+        report["unknown"].append(str(exc))
+        return report
+    report["receipt"] = value
+    report["sha256"] = digest
+    if not isinstance(value, dict):
+        report["failures"].append("BIND install-ownership receipt is not an object")
+        return report
+    if value.get("packages") != ["bind9"] or value.get("engine") != "bind":
+        report["failures"].append(f"install receipt names {value.get('packages')}, want bind9")
+    if value.get("mutation_request_id") != settings.request_id:
+        report["failures"].append("install receipt is bound to another request")
+    if source_fixture == UNMANAGED_BIND_STOPPED:
+        if value.get("adopted_present") is not True or value.get("missing_before") != []:
+            report["failures"].append(
+                "the takeover receipt must say adopted_present: true with an empty "
+                f"missing_before; got {value.get('adopted_present')!r} / "
+                f"{value.get('missing_before')!r}"
+            )
+    elif value.get("missing_before") != ["bind9"] or value.get("adopted_present"):
+        report["failures"].append(
+            "the reinstall receipt must name bind9 in missing_before (the package was "
+            f"purged); got {value.get('missing_before')!r} / {value.get('adopted_present')!r}"
+        )
+    return report
+
+
+def check_bind_authority(settings: Settings, environment: Mapping[str, str]) -> dict[str, Any]:
+    authority = observe_serving_authority(settings, environment)
+    report: dict[str, Any] = {
+        "authority": authority.get("authority"),
+        "failures": [],
+        "unknown": list(authority.get("unknown", [])),
+    }
+    engines = (authority.get("authority") or {}).get("engines")
+    if engines is None:
+        report["unknown"].append("port-53 authority could not be established")
+    elif engines != {"tcp": ["bind"], "udp": ["bind"]}:
+        report["failures"].append(f"port 53 is not served by BIND alone: {engines}")
+    return report
+
+
+def check_takeover_owner_files(source_proof: Mapping[str, Any]) -> dict[str, Any]:
+    """Owner files the takeover must not replace stay byte-identical.
+
+    named.conf.options and named.conf.local are rewritten by the documented
+    takeover (managed options block and zone include, owner-aware preimage in
+    the journal); their before/after digests are recorded, not judged.
+    """
+
+    preinstall = source_proof.get("source_preinstall_proof", {})
+    files = preinstall.get("owner_files", {})
+    report: dict[str, Any] = {
+        "judged_byte_identical": {}, "rewritten_by_documented_takeover": {},
+        "failures": [], "unknown": [],
+    }
+    for path, before in sorted(files.items()):
+        try:
+            after = hash_owner_file(path)
+        except ControllerError as exc:
+            if path in TAKEOVER_REWRITTEN_FILES:
+                report["unknown"].append(str(exc))
+            else:
+                report["failures"].append(f"owner file {path} is gone or unreadable: {exc}")
+            continue
+        entry = {"before": before, "after": after}
+        if path in TAKEOVER_REWRITTEN_FILES:
+            report["rewritten_by_documented_takeover"][path] = entry
+        else:
+            report["judged_byte_identical"][path] = entry
+            if after["sha256"] != before["sha256"]:
+                report["failures"].append(f"owner file {path} changed")
+    return report
+
+
+def judge_fixture_pass_definition(
+    settings: Settings,
+    result: dict[str, Any],
+    environment: Mapping[str, str],
+    peer_ip: str,
+    verification_failures: list[str],
+) -> None:
+    """Pass definitions of the paired-secondary and takeover/reinstall cells.
+
+    Common: D-021 safety and ``target_converged`` from both post-retry probes.
+    Paired secondary: the guest answers the member over UDP and TCP with the
+    primary's SOA serial and www A; a PowerDNS secondary also holds the exact
+    CONSUMER row and the member as a loaded secondary zone. Takeover: the
+    boundary receipt is an adoption; BIND alone serves; owner files the
+    takeover does not rewrite are byte-identical. Reinstall: the boundary
+    receipt names the purged package; BIND alone serves.
+    """
+
+    source_proof = result.get("source_proof") or {}
+    fixture_name = source_proof.get("source_fixture")
+    paired = is_admitted_paired_secondary(settings.cell)
+    if not paired and fixture_name not in PROVENANCE_BIND_FIXTURES:
+        return
+    report: dict[str, Any] = {
+        "definition": "paired-secondary" if paired else fixture_name,
+        "failures": [],
+        "unknown": [],
+    }
+    classification = (result.get("recovery_outcome") or {}).get("classification")
+    if classification != "target_converged":
+        report["failures"].append(
+            f"the same request did not converge to the target: {classification}"
+        )
+    parts: dict[str, dict[str, Any]] = {}
+    if paired:
+        parts["secondary_serving"] = check_secondary_serving(settings, peer_ip)
+        if settings.cell.driver == "pdns-switch":
+            parts["pdns_secondary_rows"] = check_pdns_secondary_rows(peer_ip)
+    else:
+        boundary = result.get("provenance_boundary")
+        if boundary is None:
+            report["unknown"].append("the boundary install receipt was not observed")
+        else:
+            parts["boundary"] = boundary
+        parts["bind_authority"] = check_bind_authority(settings, environment)
+        if fixture_name == UNMANAGED_BIND_STOPPED:
+            parts["owner_files"] = check_takeover_owner_files(source_proof)
+    for name, part in parts.items():
+        report[name] = part
+        report["failures"].extend(f"{name}: {item}" for item in part.get("failures", []))
+        report["unknown"].extend(f"{name}: {item}" for item in part.get("unknown", []))
+    result["fixture_pass_definition"] = report
+    verification_failures.extend(
+        f"fixture pass definition unknown: {item}" for item in report["unknown"]
+    )
+    if report["failures"]:
+        result["status"] = "failed"
+    elif report["unknown"] and result.get("status") == "passed":
+        result["status"] = "unverified"
+
+
 V2_MANAGED_PDNS_REFUSAL = (
     "this standalone BIND cell with a managed PowerDNS source makes the current "
     "producer write the V2 frozen-source journal, whose inverse the restarted "
@@ -8677,6 +9618,7 @@ def run_cell(settings: Settings) -> int:
     clean_base_environment = minimal_command_environment(os.environ)
     command_evidence = validate_settings(settings)
     refuse_unrunnable_v2_cells(settings)
+    refuse_unadmitted_paired_secondary(settings)
     production_paths = validate_production_runtime_paths(
         settings.agent_token_file, controller_identity["effective_gid"]
     )
@@ -8878,9 +9820,17 @@ def run_cell(settings: Settings) -> int:
                 cell_id=settings.cell.cell_id,
                 observation=peer_before,
             )
+        if settings.trigger_mode == "socket" and is_admitted_paired_secondary(settings.cell):
+            result["paired_secondary_preflight"] = prove_paired_secondary_preflight(
+                settings, peer_ip
+            )
+            transcript.event(
+                "paired-secondary-peer-primary-proven-before-tagged-agent",
+                observation=result["paired_secondary_preflight"],
+            )
         if (
             settings.trigger_mode == "socket"
-            and result["source_proof"]["source_fixture"] == "uninitialized"
+            and result["source_proof"]["source_fixture"] in NON_SERVING_SOURCE_FIXTURES
         ):
             try:
                 live_port53 = probe_udp_tcp_bindability(settings.dns_address, 53)
@@ -9253,6 +10203,18 @@ def run_cell(settings: Settings) -> int:
         if settings.trigger_mode == "socket" and settings.native_dns_status_command is not None:
             result["native_post_kill_status"] = run_native_dns_status(
                 settings, ordinary, transcript, "post-kill"
+            )
+        if (
+            source_proof is not None
+            and source_proof.get("source_fixture") in PROVENANCE_BIND_FIXTURES
+        ):
+            # Read only, before the Agent restarts: the receipt that tells a
+            # takeover or reinstall apart from a plain fresh install.
+            result["provenance_boundary"] = observe_provenance_boundary(
+                settings, source_proof["source_fixture"]
+            )
+            transcript.event(
+                "provenance-boundary-observed", report=result["provenance_boundary"]
             )
         if settings.stop_after_kill_for_independent_recovery:
             result["independent_recovery_handoff"] = {
@@ -9667,6 +10629,9 @@ def run_cell(settings: Settings) -> int:
         )
         if settings.expect_agent_startup_rollback:
             judge_agent_startup_rollback(result, startup_rollback, verification_failures)
+        judge_fixture_pass_definition(
+            settings, result, clean_base_environment, peer_ip, verification_failures
+        )
         maybe_request_reboot_after_recovery(
             settings,
             result,
@@ -9796,6 +10761,15 @@ def build_argument_parser() -> argparse.ArgumentParser:
         help=(
             "standalone socket flows: after a passing flow, suspend with exit 3 so the "
             "host reboots this guest; the resumed run judges a second window"
+        ),
+    )
+    parser.add_argument(
+        "--disable-management-before-reboot",
+        action="store_true",
+        help=(
+            "with --reboot-after-recovery on the rpc-retry flow: stop and disable the "
+            "Panel and Agent units before the reboot; the DNS daemon must then serve "
+            "alone and the second window judges only DNS"
         ),
     )
     parser.add_argument(
@@ -9959,6 +10933,7 @@ def settings_from_args(args: argparse.Namespace) -> Settings:
         resume_after_reboot=args.resume_after_reboot,
         reboot_dir=args.reboot_dir,
         expect_agent_startup_rollback=args.expect_agent_startup_rollback,
+        disable_management_before_reboot=args.disable_management_before_reboot,
         native_dns_status_command=(
             parse_command_json(args.native_dns_status_command, "native DNS status command")
             if args.native_dns_status_command is not None else None

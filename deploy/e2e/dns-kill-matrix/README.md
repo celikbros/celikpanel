@@ -26,6 +26,10 @@ python3 deploy/e2e/dns-kill-matrix/test_manifest.py
 ```
 
 The audited current-code inventory is 268 runnable and 242 explicit N/A cells.
+These numbers are inventory, not passed tests: a runnable cell is one the
+current code can reach, and says nothing about whether it has run or passed.
+The fresh paired-secondary admission and the row 12/14 fixture variants
+(2026-09-29) did not change the manifest; the counts are unchanged.
 Every N/A cell contains one or more reasons with `file:line` evidence. A future
 uncertain case must stay in the runnable denominator and use
 `applicability: unverified`; uncertainty is not grounds for N/A.
@@ -300,7 +304,9 @@ pretend that this shape covers stopped-source recovery. `prepare-bind` accepts
 this empty source at `pre-intent`, `intent` and `target-staged` for standalone
 and Arch paired-primary cells, and additionally at standalone
 `target-verified` (both edges, either placement host) as a first-install
-post-start cut; see [Fresh-install cells](#fresh-install-cells-d-026).
+post-start cut; see [Fresh-install cells](#fresh-install-cells-d-026). It also
+prepares the admitted fresh paired-secondary BIND cells against a native
+primary peer; see [Fresh paired-secondary cells](#fresh-paired-secondary-cells-rows-3-and-5).
 
 For an Arch `paired-primary` BIND cell with an uninitialized source, prepare
 the Debian guest as a standard native catalog secondary **before** starting
@@ -657,18 +663,131 @@ Still not preparable with an empty source:
   That is a design decision, not a harness gap.
 - Standalone BIND `committed` and `rolling-back`. The fresh path reaches them,
   but this change does not admit them.
-- Every `paired-secondary` cell. It needs a panel-free native primary serving
-  the product catalog `catalog-<hex(peer)>.celikpanel.invalid` and its
-  members, with AXFR and NOTIFY to the guest. The four native peer helpers
-  only act as secondaries/consumers of a production primary on the kill host.
-  The trigger also rejects the fresh PowerDNS paired-secondary manifest under
-  `pdns-switch`, because it has the legacy reconfiguration shape.
+- The paired-secondary cells outside the admitted set of
+  [Fresh paired-secondary cells](#fresh-paired-secondary-cells-rows-3-and-5):
+  every `peer-unreachable` twin, BIND `committed`/`rolling-back`, and the
+  BIND `managed-pdns-required` phases.
 - `pdns-switch` paired-primary beyond the exact intent cell. Fresh
   paired-primary continues on the separate V3 path, and the Agent pauses
   paired-primary PowerDNS switching.
 
 A prepared cell is not a measured result. The 268-runnable denominator is
 unchanged, and admission here adds no passed or native-evidence cell.
+
+### Fresh paired-secondary cells (rows 3 and 5)
+
+*Harness integration of [PAIRED-SECONDARY-FIXTURE.md](PAIRED-SECONDARY-FIXTURE.md),
+2026-09-29. Offline tests only; no guest was started and no row changes state.*
+
+The guest under test becomes a CelikPanel-managed **secondary** of a
+panel-free native **primary** on the other guest (`placement.dns_peer_host`),
+prepared by `native_primary_peer.py`. Admitted, `--source-fixture
+uninitialized` and `peer-reachable` only:
+
+- **BIND, 7 cells** (either kill host): `bind__pre-intent__paired-secondary__peer-reachable`
+  and `bind__{intent,target-staged,target-verified}__{before,after}-write__paired-secondary__peer-reachable`.
+- **PowerDNS, 17 cells** (Debian 13 only): `pdns-switch__pre-intent__paired-secondary__peer-reachable`
+  and `pdns-switch__<phase>__{before,after}-write__paired-secondary__peer-reachable`
+  for `intent`, `target-staged`, `source-stopped`, `target-started`,
+  `target-verified`, `committed`, `rolling-back`, `rolled-back`. The
+  paired-secondary V1 path is the fresh standalone writer
+  `switchToPDNSOnCertifiedProfile` and writes every phase; members are
+  retrieved before `target-started` is written.
+
+Refused before any mutation, with the reason: every `peer-unreachable` twin
+(no pass definition yet; it must be derived from the paired `Reconcile`
+behaviour), BIND `committed` and `rolling-back`, the 12 BIND
+`managed-pdns-required` cells (they need a managed PowerDNS secondary source,
+row 8), and any source other than `uninitialized`.
+
+Every secondary cell is run against a chosen primary flavour, given as
+`--peer-engine {bind,pdns}` to `prepare-bind`/`prepare-pdns-switch` and again
+to `run-prepared` (it must equal the prepared engine; the host checks the
+recorded `peer-prepared.json`). Order, all driven by the bootstrap:
+
+1. `prepare-*` runs `native_primary_peer.py prepare --engine <peer>` on the
+   peer guest, then one baseline `observe`, then prepares the guest: exact
+   secondary scenario (topology `paired`, `pair_role` `secondary`,
+   `local_ns` `ns2.s1-kill.test`, `peer_ns` `ns1.s1-kill.test`, **zero
+   zones**, empty 0/0 source, epoch 1), the empty-source proof, and a read-only
+   check that the peer's catalog SOA answers authoritatively over UDP and TCP
+   from the guest (`peer-primary-preflight.json`). For PowerDNS the guest also
+   proves no PowerDNS database exists (with `pdns.service` inactive), so the
+   Agent classifies a fresh install under `pdns-switch`, not
+   `pdns-secondary-reconfigure`.
+2. `run-prepared` observes the peer again right before the controller
+   (`peer-before-kill.json`), runs the controller (and any reboot), then runs
+   `native_primary_peer.py observe --require-secondary-transfer`, and writes
+   `peer-verdict.json`. Host-side evidence is create-new under
+   `<cell directory>/paired-secondary-peer/`.
+
+**Pass definition** (data-driven, on the unchanged socket flow; nothing is
+copied from the standalone flow):
+
+- exit 137 proven at the named boundary with the V1 journal, fault driver
+  `bind` or `pdns-switch`, `pair_role` `secondary`;
+- same-request recovery through the existing path (Agent restart, two
+  `rpc-retry`, two probes) ending `target_converged`;
+- the guest answers `s1-kill.test` SOA and `www.s1-kill.test` A
+  authoritatively over UDP **and** TCP with the **primary's** serial
+  (`2026083101`) and address, equal to what the primary itself answers;
+- PowerDNS secondary: exactly one `CONSUMER` row for
+  `catalog-<hex(peer)>.celikpanel.invalid` with `master` = primary and account
+  `celikpanel-peer-catalog-v1`, and `s1-kill.test` as a `SLAVE`/`SECONDARY`
+  zone from the primary in that catalog, holding its SOA;
+- D-021 safety and 31 health samples;
+- host side: the after-recovery peer observation shows the catalog **and** the
+  member transferred to this guest, and the peer's native config digests,
+  catalog serial/members, member SOA and `www` A are unchanged from the
+  pre-controller observation. `run-prepared` returns the combined exit: 1 if
+  either side found a verified deviation, 2 if either side is unknown, 0 only
+  if both passed.
+
+Optional: `--reboot-after-recovery --disable-management-before-reboot`
+reboots only the secondary after a passing flow, having first stopped and
+disabled `celikpanel-agent`/`celikpanel-panel` (proven inactive and disabled,
+else no reboot). After the boot the units must still be inactive and disabled,
+one native engine alone must own port 53 with the same answer counts, state
+receipt and journal presence, the member must still answer with the
+primary's data (and the PowerDNS rows hold), and the second window of 31
+samples judges only DNS (Agent and Panel recorded as not applicable). The
+units are left disabled on the disposable guest.
+
+```sh
+# On the Linux QEMU host, from a tree that contains this harness change.
+# Artifacts as in "Guest bootstrap and source provenance". Both guests of the
+# cell must pass wait-ssh. The peer guest gets no CelikPanel install.
+KEY=$HOME/.ssh/id_ed25519
+CELL=bind__target-verified__after-write__paired-secondary__peer-reachable  # kill debian13, peer arch
+PEER=bind   # or pdns: one cell directory per run; teardown between runs
+COMMON=(--work-root "$ROOT" --cell-id "$CELL" --node debian13 \
+        --identity-file "$KEY" --source-fixture uninitialized)
+python3 "$FIXTURE" prepare --work-root "$ROOT" --cell-id "$CELL" --ssh-public-key "$KEY.pub" --execute
+python3 "$FIXTURE" start --work-root "$ROOT" --cell-id "$CELL" --execute
+python3 "$FIXTURE" wait-ssh --work-root "$ROOT" --cell-id "$CELL" --identity-file "$KEY" --execute
+python3 "$BOOTSTRAP" install "${COMMON[@]}" --agent "$ART/agent" \
+  --tagged-agent "$ART/agent.kill" --panel "$ART/panel" \
+  --trigger "$ART/dns-kill-trigger" --web-dir "$PWD/web/dist" --execute
+python3 "$BOOTSTRAP" prepare-bind "${COMMON[@]}" --peer-engine "$PEER" --execute
+python3 "$BOOTSTRAP" run-prepared "${COMMON[@]}" --peer-engine "$PEER" \
+  --reboot-after-recovery --disable-management-before-reboot --execute
+# PowerDNS secondary: CELL=pdns-switch__target-started__after-write__paired-secondary__peer-reachable
+# and prepare-pdns-switch instead of prepare-bind (Debian 13 kill host only).
+```
+
+**Known product gap, not tested here.** A CelikPanel secondary reads the peer
+catalog with the BIND producer policy (`cmd/agent/dns_engine_host.go`
+`probeDNSCatalogAXFR`, `cmd/agent/dns_engine_pdns_catalog.go` `peerPDNSCatalog`).
+`native_primary_peer.py --engine pdns` therefore serves the catalog as an
+ordinary `MASTER` zone in the BIND format; it does **not** publish a native
+PowerDNS `PRODUCER` catalog (base32hex labels, TTL 0), which the secondary
+refuses by the Go tests. So "against a PowerDNS primary" here means a native
+PowerDNS primary serving the BIND-format catalog. A PowerDNS primary
+publishing its native catalog, including a CelikPanel PowerDNS primary, is
+not what these cells test; that gap is tracked under register row 6 (the
+`pdns_primary_switch_paused` gate, item 4 of the gate list in
+PAIRED-SECONDARY-FIXTURE.md) and inferred from source and tests as of
+`8f86bdad`, not observed natively.
 
 Run the offline guest checks with:
 
@@ -779,6 +898,14 @@ source identity; adoption requires `external-pdns-adoption`; secondary
 reconfiguration requires `legacy-pdns-secondary`. This lets early Arch BIND
 cells declare that they do not exercise stopped-source recovery, while the
 critical Debian cells must name and prove a real managed PowerDNS source.
+Two BIND-only fixtures record row 12 and row 14 provenance:
+`unmanaged-bind-stopped` requires the exact fresh standalone BIND install
+commitment (mode `switch`, empty source, epochs 0 to 1, no pair identity),
+because the takeover is selected by the Agent from host state;
+`managed-bind-absent` requires mode `reinstall` with source = target = `bind`,
+equal epochs >= 1 and standalone topology. No other driver accepts either.
+The identity receipt binds the fixture name, so a retry cannot replay a
+takeover as a fresh install.
 
 The trigger canonicalizes the production manifest itself; the scenario cannot
 select a qualifier, snapshot byte count, mutation owner, or RPC binding. It
@@ -1472,8 +1599,19 @@ it, and the authority compared again. Verified deviations fail the cell,
 unknown inspections leave it unverified. A flow that did not pass records
 `reboot_after_recovery.run: false` and is not rebooted.
 
-Both flags may be combined (two reboots). Paired cells are refused: only the
-kill guest would be rebooted.
+Both flags may be combined (two reboots). Paired cells are refused (only the
+kill guest would be rebooted), except the admitted fresh paired-secondary
+cells with `--reboot-after-recovery`: rebooting only the secondary while its
+native primary keeps serving is exactly what they check.
+
+`--disable-management-before-reboot` (with `--reboot-after-recovery`, rpc-retry
+flow only) stops and disables the Panel and Agent units before the reboot and
+proves them inactive and disabled; if it cannot, the guest is not rebooted and
+the cell is unverified. After the boot the resumed controller requires the
+units still inactive and disabled, one native engine alone on port 53 with the
+same answer counts, state receipt and journal presence, and runs the 31-sample
+window on DNS only. The Agent's runtime directory is legitimately absent then;
+only this resume skips that path check.
 
 ```sh
 # On the Linux QEMU host, after install/enroll/prepare as above:
@@ -1481,40 +1619,101 @@ python3 "$BOOTSTRAP" run-prepared "${COMMON[@]}" --owner-inverse-after-restart \
   --reboot-before-owner-command --reboot-after-recovery --reboot-timeout 600 --execute
 ```
 
-#### Rows 12 and 14: not expressible yet
+#### Rows 12 and 14: stopped BIND takeover and BIND reinstall
 
-No cell was added for the stopped unmanaged BIND takeover (row 12) or for
-`reinstall_active` BIND (row 14):
+*2026-09-29. Offline tests only; nothing here is native evidence and no row
+changes state.* Both run as **fixture variants of one existing Debian cell**,
+`bind__target-staged__after-write__standalone__peer-reachable`; the manifest
+is unchanged. A result carries its `source_fixture` in the scenario, source
+proof, trigger identity receipt and `result.json`, so a takeover or reinstall
+run is never confused with a fresh-install run of the same cell ID.
 
-- **Takeover.** On the wire it is byte-identical to a fresh BIND install
-  (`mode switch`, empty source, epochs 0 to 1, standalone); the Agent chooses
-  the takeover from host state (bind9 installed, `named` stopped, no receipts;
-  `adopted_present` install receipt, `bindOptionsTakeover`). The trigger can
-  send it only under `uninitialized`, whose source proof claims an absent
-  engine and does not check packages. Preparing it under that name would
-  record a fresh install while testing a takeover. Needed: a trigger fixture
-  (for example `unmanaged-bind-stopped`: mode switch, empty source, 0 to 1,
-  standalone, bind driver) in `cmd/dns-kill-matrix-trigger`; the same name in
-  `SOURCE_FIXTURE_DRIVERS`/`SOURCE_FIXTURE_ENGINES` with a non-serving,
-  port-53-bindable source-proof contract and a preinstall proof (bind9
-  installed under a mask, then unmasked, `named` inactive and disabled, no
-  receipts); bootstrap preparation for one Debian after-write cell (for
-  example `bind__target-staged__after-write__standalone__peer-reachable`);
-  post-checks for `adopted_present: true` and empty `missing_before`.
-- **Reinstall.** The trigger's bind driver requires `mode switch`; no fixture
-  accepts `reinstall`. Needed: a trigger fixture (for example
-  `managed-bind-absent`) that admits `mode reinstall` with source = target =
-  bind and `source_epoch == target_epoch >= 1`; run_cell support for that
-  mode and epoch rule; bootstrap preparation that installs managed BIND
-  through a production switch, stops it and removes the engine without
-  touching the receipts.
-- A manifest change is needed only if these runs need their own placement
-  policy; otherwise they can run as fixture variants of the existing Debian
-  `bind__*__standalone` cells.
-- Unverified product risk for row 12 (from code reading): after a rolled-back
-  takeover the `adopted_present` install receipt survives, and a
-  same-request retry then selects the exclusive options authority, which
-  would refuse operator directives the takeover would have adopted.
+Why `target-staged:after-write` for both: it is the pre-start cut where the
+distinctive effect has just happened and BIND has never started. The takeover
+has written its adopted install receipt (before intent) and rewritten
+`named.conf.options`/`named.conf.local` (before `target-staged` is written);
+the reinstall has reinstalled `bind9` under the unit guard. A
+`target-started` cut would add the start but, by code reading, the restarted
+Agent still decides a rollback there for both paths (the state receipt is
+persisted only just before `target-verified`), so it tests the same recovery
+decision with less of the preimage intact.
+
+**Takeover (row 12), `--source-fixture unmanaged-bind-stopped`.** Preparation
+(`prepare-bind`): prove the empty source, install `bind9` under the package
+guard mask, unmask, then `systemctl disable named.service` as the owner would
+(named loaded/inactive/disabled, `bind9.service` alias not-found). Nothing of
+CelikPanel's exists: no state, ownership, install receipt or journal. The
+canonical `source-preinstall-bind.json` records the package version, unit
+states, receipt absence, bindable port 53 and a SHA-256/size/mode/owner
+inventory of every regular file in `/etc/bind` plus `/etc/default/named`.
+The RPC is byte-identical to a fresh install; the Agent selects the takeover
+(`stoppedBINDTakeoverSelected`, cmd/agent/dns_engine_bind_adopt.go:224-242).
+
+Pass definition:
+
+- proven exit 137 with the V1 journal at `target-staged`;
+- at the cut, read only: `dns-engine-install-ownership-bind.json` names
+  `bind9`, this request, `adopted_present: true` and an empty
+  `missing_before` (written before intent by
+  `assumeExistingDNSEnginePackageOwnership`). It is checked at the cut because
+  FinalizeSwitch retires the receipt after convergence;
+- same-request recovery (Agent restart, two `rpc-retry`) ending
+  `target_converged`; BIND alone owns port 53; D-021 safety and 31 samples;
+- owner files: `named.conf.options` and `named.conf.local` are rewritten by
+  the documented takeover (managed options block after removing the owner's
+  `recursion`/`allow-*`, and the zone include; owner-aware preimage in the
+  journal). Their before/after digests are recorded, not judged. Every other
+  inventoried file (`named.conf`, `named.conf.default-zones`, `rndc.key`,
+  `bind.keys`, `db.*`, `zones.rfc1918`, `/etc/default/named`) must be
+  byte-identical.
+
+Known product risk this cell exercises (from code reading, unverified): if the
+restarted Agent rolls the cut back, the `adopted_present` install receipt
+survives, and the same-request retry then selects the exclusive options
+authority instead of the takeover authority. With Debian's stock
+`named.conf.options` (no `recursion`/`allow-*` directives) that should still
+converge; owner-set directives would be refused. This cell does not add such
+directives, so it does not exercise that refusal.
+
+**Reinstall (row 14), `--source-fixture managed-bind-absent`.** Preparation:
+a real untagged production fresh BIND switch (same zone as the measured
+scenario, recorded in `source-setup-bind.json` and its identity receipt),
+then the operator removes the engine: `systemctl disable --now named.service`
+and `apt-get purge bind9`. `apt-get remove` is not used: it leaves `deinstall
+ok config-files`, which the Agent's exact package proof refuses. The state
+and ownership receipts must be byte-identical before and after the removal,
+no install receipt may appear, both BIND units must be `not-found`, and port
+53 bindable. The measured request is the Panel's `reinstall_active` manifest:
+mode `reinstall`, source = target = `bind`, epochs 1 to 1, the same zone.
+
+Pass definition: proven exit 137 with the V1 journal (mode `reinstall`) at
+`target-staged`; at the cut the install receipt names `bind9` in
+`missing_before` (the package was purged) and is not an adoption;
+same-request recovery ending `target_converged` (the probe maps the reinstall
+to the managed tenure: the state receipt says mode `switch`, same epoch);
+BIND alone owns port 53; D-021 safety and 31 samples.
+
+Expected risk (from code reading, unverified): a reinstall rollback verifies
+the restored source with `verifyOnlyBINDActive`, but the frozen source is
+BIND not running, so the restarted Agent's rollback cannot verify, keeps the
+journal and releases the job; the retry is then refused over the retained
+journal. If that holds natively, this cell ends `failed` or `unverified` and
+is a product finding, not a harness defect.
+
+Both cells accept `--reboot-after-recovery` (and
+`--disable-management-before-reboot`) after a passing flow.
+
+```sh
+CELL=bind__target-staged__after-write__standalone__peer-reachable
+FIX=unmanaged-bind-stopped   # row 12; managed-bind-absent for row 14 (fresh cell directory each)
+COMMON=(--work-root "$ROOT" --cell-id "$CELL" --node debian13 \
+        --identity-file "$KEY" --source-fixture "$FIX")
+python3 "$BOOTSTRAP" install "${COMMON[@]}" --agent "$ART/agent" \
+  --tagged-agent "$ART/agent.kill" --panel "$ART/panel" \
+  --trigger "$ART/dns-kill-trigger" --web-dir "$PWD/web/dist" --execute
+python3 "$BOOTSTRAP" prepare-bind "${COMMON[@]}" --execute
+python3 "$BOOTSTRAP" run-prepared "${COMMON[@]}" --execute
+```
 
 The [management-absent PowerDNS reboot trial](NATIVE-PDNS-MANAGEMENT-ABSENT-BOOT-20260925.md) repeats the corrected-Agent deleted-child adoption path in a fresh disposable Debian/Arch pair. After same-request convergence, direct authoritative UDP/TCP tests passed before and after one orderly Debian reboot with Panel and Agent units disabled/stopped and their normal executable paths absent. Native pdns.service stayed enabled and active. This adds a bounded P0.5 DNS serving result, not another kill-matrix phase or proof of full panel removal, paired transfer, other workloads, owner edits or independent inverse.
 

@@ -272,6 +272,33 @@ committed switch without a cut, as in the V3 deletion trial.
    refuses; both guests rebooted with management disabled keep serving the
    recovered state.
 
+## Harness integration status (2026-09-29)
+
+Steps (a) and (b) above are now implemented in the harness; step (c) is not.
+Offline tests only: nothing ran natively and no register row changes state.
+See [Fresh paired-secondary cells](README.md#fresh-paired-secondary-cells-rows-3-and-5)
+for the commands and the full pass definition.
+
+- `guest_bootstrap.py`: `validate_bind_cell` / `validate_pdns_switch_cell`
+  admit `paired-secondary` with `uninitialized` only, peer-reachable only:
+  BIND `pre-intent`, `intent`, `target-staged`, `target-verified` (7 cells,
+  either kill host); PowerDNS every phase on Debian 13 (17 cells). The
+  scenario is `paired_secondary_scenario` (zero zones, ns2 local / ns1 peer).
+  `--peer-engine {bind,pdns}` is required for these cells; `prepare-*` runs
+  `native_primary_peer.py prepare` and a baseline `observe` before preparing
+  the guest, and `run-prepared` observes the peer before the controller and
+  with `--require-secondary-transfer` after it, writing `peer-verdict.json`.
+- `guest_bootstrap.sh`: exact secondary scenario check, empty-source proof,
+  and a read-only authoritative UDP+TCP catalog SOA check against the peer
+  from the guest; PowerDNS additionally proves no database exists.
+- `run_cell.py`: pre-mutation refusal of unadmitted secondaries, the same
+  catalog check live before launch, and the pass definition (target
+  convergence; primary serial and `www` A over UDP+TCP from the guest; the
+  PowerDNS CONSUMER row and loaded member). Optional reboot of the secondary
+  with management disabled (`--disable-management-before-reboot`).
+- Unreachable-peer cells remain refused until they have their own pass
+  definition.
+
 ## Cell IDs
 
 **Covered by the peer (a), BIND paired secondary, 22 cells:**

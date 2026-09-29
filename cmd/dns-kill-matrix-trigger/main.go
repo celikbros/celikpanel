@@ -968,9 +968,19 @@ func validateDriverManifest(
 	}
 	switch driver {
 	case "bind":
+		if sourceFixture == fixtureManagedBINDAbsent {
+			// Row 14: the reinstall keeps the BIND identity; its journal is
+			// written under the bind fault driver like every BIND switch.
+			if manifest.Mode != transport.DNSEngineSwitchModeReinstall ||
+				manifest.TargetEngine != transport.DNSEngineBIND {
+				return errors.New("bind driver requires a BIND reinstall manifest for managed-bind-absent")
+			}
+			break
+		}
 		if manifest.Mode != transport.DNSEngineSwitchModeSwitch ||
 			manifest.TargetEngine != transport.DNSEngineBIND ||
-			(sourceFixture != "uninitialized" && sourceFixture != "managed-pdns" && sourceFixture != "owner-bind") {
+			(sourceFixture != "uninitialized" && sourceFixture != "managed-pdns" &&
+				sourceFixture != "owner-bind" && sourceFixture != fixtureUnmanagedBINDStopped) {
 			return errors.New("bind driver requires a BIND switch manifest")
 		}
 	case "pdns-switch":
@@ -1049,10 +1059,68 @@ func validateSourceFixture(
 		if !pdnsSecondaryReconfigureManifest(manifest) {
 			return errors.New("legacy-pdns-secondary fixture requires the exact reconfiguration manifest")
 		}
+	case fixtureUnmanagedBINDStopped:
+		if !freshStandaloneBINDInstallManifest(manifest) {
+			return errors.New(
+				"unmanaged-bind-stopped fixture requires the exact fresh standalone BIND install commitment",
+			)
+		}
+	case fixtureManagedBINDAbsent:
+		if !bindReinstallManifest(manifest) {
+			return errors.New(
+				"managed-bind-absent fixture requires a standalone BIND reinstall with equal source and target epochs >= 1",
+			)
+		}
 	default:
 		return fmt.Errorf("unsupported source fixture provenance %q", sourceFixture)
 	}
 	return nil
+}
+
+// Source provenance for register rows 12 and 14 (docs/DNS-RECOVERY-ACCEPTANCE.md).
+//
+// fixtureUnmanagedBINDStopped: bind9 installed by the owner or the image and
+// stopped, with no CelikPanel engine state or receipt. On the wire it is a
+// fresh standalone install (mode switch, empty source, epochs 0 -> 1); the
+// Agent selects the stopped-BIND takeover from host state
+// (cmd/agent/dns_engine_bind_adopt.go stoppedBINDTakeoverSelected) and records
+// an install-ownership receipt with adopted_present true and an empty
+// missing_before before the intent journal (dns_engine_ownership.go
+// assumeExistingDNSEnginePackageOwnership). FinalizeSwitch retires that receipt,
+// so the harness observes it at the proven cut, not after convergence.
+//
+// fixtureManagedBINDAbsent: a production-managed BIND whose engine packages
+// were removed while its state and ownership receipts were kept: the host
+// shape the Panel's reinstall_active action repairs (cmd/panel/dns_engine.go
+// reinstallableActiveDNSEngine, cmd/agent/dns_engine_host.go
+// verifyDNSEngineReinstallSource).
+const (
+	fixtureUnmanagedBINDStopped = "unmanaged-bind-stopped"
+	fixtureManagedBINDAbsent    = "managed-bind-absent"
+)
+
+func freshStandaloneBINDInstallManifest(
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) bool {
+	return manifest.Mode == transport.DNSEngineSwitchModeSwitch &&
+		manifest.SourceEngine == "" && manifest.SourceEpoch == 0 &&
+		manifest.TargetEngine == transport.DNSEngineBIND &&
+		manifest.TargetEpoch == 1 && manifest.SourceRevision == 0 &&
+		manifest.Topology == transport.DNSTopologyStandalone &&
+		manifest.PairRole == "" && manifest.LocalIP == "" &&
+		manifest.LocalNS == "" && manifest.PeerIP == "" && manifest.PeerNS == ""
+}
+
+func bindReinstallManifest(
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) bool {
+	return manifest.Mode == transport.DNSEngineSwitchModeReinstall &&
+		manifest.SourceEngine == transport.DNSEngineBIND &&
+		manifest.TargetEngine == transport.DNSEngineBIND &&
+		manifest.SourceEpoch >= 1 && manifest.SourceEpoch == manifest.TargetEpoch &&
+		manifest.Topology == transport.DNSTopologyStandalone &&
+		manifest.PairRole == "" && manifest.LocalIP == "" &&
+		manifest.LocalNS == "" && manifest.PeerIP == "" && manifest.PeerNS == ""
 }
 
 // freshPDNSPairSecondaryInstall names the fresh paired-secondary PowerDNS

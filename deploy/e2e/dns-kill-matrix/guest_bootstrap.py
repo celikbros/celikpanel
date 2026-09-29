@@ -53,6 +53,33 @@ PDNS_SWITCH_PHASES = frozenset(
 # inactive target and still writes its phase; rollback phases follow the
 # tagged target-staged precursor. Every matrix phase is therefore real.
 FRESH_PDNS_STANDALONE_PHASES = PDNS_SWITCH_PHASES
+# Fresh paired SECONDARY installs (register rows 3 and 5) against a panel-free
+# native primary peer prepared by native_primary_peer.py. BIND: the early cuts
+# plus target-verified, as for the standalone fresh install; committed and
+# rolling-back have no pass definition yet, and the managed-pdns-required
+# phases need a managed PowerDNS secondary source (row 8). PowerDNS: the
+# paired-secondary V1 path is switchToPDNSOnCertifiedProfile, the same writer
+# as the fresh standalone install, and writes every phase
+# (cmd/agent/dns_engine_pdns_switch.go:1838-2081; zones are retrieved before
+# target-started at 2018-2023); rollback phases use the tagged target-staged
+# precursor. Only peer-reachable cells are admitted: the unreachable twins need
+# their own pass definition derived from the paired Reconcile behaviour.
+FRESH_BIND_SECONDARY_PHASES = EARLY_UNINITIALIZED_PHASES | frozenset({"target-verified"})
+FRESH_PDNS_SECONDARY_PHASES = PDNS_SWITCH_PHASES
+PAIRED_SECONDARY_DRIVERS = frozenset({"bind", "pdns-switch"})
+PEER_ENGINES = ("bind", "pdns")
+SECONDARY_LOCAL_NS = "ns2.s1-kill.test"
+SECONDARY_PEER_NS = "ns1.s1-kill.test"
+PRIMARY_MEMBER_SOA_SERIAL = 2026083101
+# Rows 12 and 14: provenance-only fixtures on existing Debian standalone BIND
+# cells (no manifest change). The takeover is byte-identical to a fresh install
+# on the wire; the reinstall is mode "reinstall" with an equal BIND epoch.
+UNMANAGED_BIND_STOPPED = "unmanaged-bind-stopped"
+MANAGED_BIND_ABSENT = "managed-bind-absent"
+PROVENANCE_BIND_CELLS = {
+    UNMANAGED_BIND_STOPPED: "bind__target-staged__after-write__standalone__peer-reachable",
+    MANAGED_BIND_ABSENT: "bind__target-staged__after-write__standalone__peer-reachable",
+}
 PDNS_ADOPT_PHASES = frozenset(
     {
         "pre-intent",
@@ -118,6 +145,9 @@ STARTUP_ROLLBACK_CELLS = frozenset({
 # fixture.reboot_guest and runs the prepared argv again with RESUME_FLAG.
 REBOOT_BEFORE_OWNER_FLAG = "--reboot-before-owner-command"
 REBOOT_AFTER_RECOVERY_FLAG = "--reboot-after-recovery"
+# Stop and disable the Panel and Agent units before the after-recovery reboot;
+# the DNS daemon must then serve alone and the second window judges only DNS.
+DISABLE_MANAGEMENT_FLAG = "--disable-management-before-reboot"
 RESUME_FLAG = "--resume-after-reboot"
 REBOOT_REQUESTED_EXIT = 3
 # Canonical order of the flags the host passes to the guest program.
@@ -128,6 +158,7 @@ PREPARED_FLAG_ORDER = (
     STARTUP_ROLLBACK_FLAG,
     REBOOT_BEFORE_OWNER_FLAG,
     REBOOT_AFTER_RECOVERY_FLAG,
+    DISABLE_MANAGEMENT_FLAG,
     RESUME_FLAG,
 )
 RECOVERY_KIT_NAME = "recovery-kit.tar.gz"
@@ -182,8 +213,9 @@ owner = "--owner-inverse-after-restart"
 startup = "--expect-agent-startup-rollback"
 reboot_before = "--reboot-before-owner-command"
 reboot_after = "--reboot-after-recovery"
+disable = "--disable-management-before-reboot"
 resume = "--resume-after-reboot"
-order = [handoff, later, owner, startup, reboot_before, reboot_after, resume]
+order = [handoff, later, owner, startup, reboot_before, reboot_after, disable, resume]
 if (len(sys.argv) < 2 or len(set(flags)) != len(flags)
         or any(flag not in order for flag in flags)
         or flags != [flag for flag in order if flag in flags]):
@@ -212,6 +244,8 @@ if reboot_before in chosen and owner not in chosen:
     raise SystemExit("reboot before the owner command requires the owner inverse flow")
 if chosen & {reboot_before, reboot_after} and handoff in chosen:
     raise SystemExit("reboot steps exclude the independent handoff")
+if disable in chosen and (reboot_after not in chosen or owner in chosen):
+    raise SystemExit("disabling management requires the after-recovery reboot of the rpc-retry flow")
 if resume in chosen and not chosen & {reboot_before, reboot_after}:
     raise SystemExit("resume requires the reboot flag of the suspended run")
 if chosen & {handoff, owner, startup, reboot_before, reboot_after}:
@@ -366,12 +400,64 @@ def early_managed_pdns_bind_cell(
     )
 
 
+def paired_secondary_cell(cell: dict[str, Any]) -> bool:
+    return (
+        cell.get("role") == "paired-secondary"
+        and cell.get("driver") in PAIRED_SECONDARY_DRIVERS
+    )
+
+
+def validate_paired_secondary_shape(
+    cell: dict[str, Any], node: str, source_fixture: str, phases: frozenset[str]
+) -> None:
+    """Exact fresh paired-secondary cell: uninitialized source, reachable peer."""
+
+    placement = cell.get("placement", {})
+    boundary = cell.get("boundary", {})
+    phase, edge = boundary.get("phase"), boundary.get("edge")
+    peer = cell.get("peer_reachability")
+    expected_id = (
+        f"{cell.get('driver')}__pre-intent__paired-secondary__peer-{peer}"
+        if phase == "pre-intent"
+        else f"{cell.get('driver')}__{phase}__{edge}__paired-secondary__peer-{peer}"
+    )
+    if source_fixture != "uninitialized":
+        raise BootstrapError(
+            "a paired-secondary cell is prepared only as a fresh install "
+            "(--source-fixture uninitialized); a managed PowerDNS secondary source "
+            "producer does not exist yet (register row 8)"
+        )
+    if placement.get("source_fixture_policy") not in {
+        "driver-specific", "uninitialized-permitted-noncritical",
+    }:
+        raise BootstrapError(
+            "paired-secondary managed-pdns-required cells need a managed PowerDNS "
+            "secondary source producer (register row 8); nothing was prepared"
+        )
+    if phase not in phases:
+        raise BootstrapError(
+            f"paired-secondary {cell.get('driver')} phase {phase!r} has no pass "
+            "definition yet; admitted: " + ", ".join(sorted(phases))
+        )
+    if peer != "reachable":
+        raise BootstrapError(
+            "paired-secondary peer-unreachable cells stay refused until they have "
+            "their own pass definition (derived from the paired Reconcile behaviour)"
+        )
+    if cell.get("id") != expected_id:
+        raise BootstrapError("paired-secondary cell ID differs from its boundary")
+    peer_node = NODE_FOR_PLACEMENT.get(placement.get("dns_peer_host"))
+    if peer_node is None or peer_node == node:
+        raise BootstrapError("paired-secondary placement must name a distinct peer guest")
+
+
 def validate_bind_cell(cell: dict[str, Any], node: str, source_fixture: str) -> None:
     if cell.get("driver") != "bind" or cell.get("role") not in {
         "standalone",
         "paired-primary",
+        "paired-secondary",
     }:
-        raise BootstrapError("BIND bootstrap supports standalone or paired-primary only")
+        raise BootstrapError("BIND bootstrap supports standalone, paired-primary or paired-secondary only")
     placement = cell.get("placement", {})
     expected_node = NODE_FOR_PLACEMENT.get(placement.get("kill_host"))
     if node != expected_node:
@@ -382,6 +468,26 @@ def validate_bind_cell(cell: dict[str, Any], node: str, source_fixture: str) -> 
     source_policy = placement.get("source_fixture_policy")
     if source_policy not in SOURCE_FIXTURE_POLICIES:
         raise BootstrapError("BIND source fixture policy is not canonical")
+    if cell.get("role") == "paired-secondary":
+        validate_paired_secondary_shape(
+            cell, node, source_fixture, FRESH_BIND_SECONDARY_PHASES
+        )
+        return
+    if source_fixture in PROVENANCE_BIND_CELLS:
+        if not (
+            node == "debian13"
+            and cell.get("id") == PROVENANCE_BIND_CELLS[source_fixture]
+            and cell.get("role") == "standalone"
+            and source_policy == "driver-specific"
+            and cell.get("fault_selector") == {
+                "phase": "target-staged", "point": "after_write",
+            }
+        ):
+            raise BootstrapError(
+                f"{source_fixture} is prepared only for the Debian cell "
+                f"{PROVENANCE_BIND_CELLS[source_fixture]}"
+            )
+        return
     if cell.get("role") == "paired-primary":
         if node != "arch" or source_fixture != "uninitialized":
             raise BootstrapError("paired-primary bootstrap requires an uninitialized Arch source")
@@ -474,9 +580,21 @@ def validate_pdns_adopt_cell(
 def validate_pdns_switch_cell(
     cell: dict[str, Any], node: str, source_fixture: str
 ) -> None:
-    if cell.get("driver") != "pdns-switch" or cell.get("role") not in {"standalone", "paired-primary"}:
-        raise BootstrapError("PowerDNS switch fixture supports standalone or paired-primary only")
+    if cell.get("driver") != "pdns-switch" or cell.get("role") not in {
+        "standalone", "paired-primary", "paired-secondary",
+    }:
+        raise BootstrapError("PowerDNS switch fixture supports standalone, paired-primary or paired-secondary only")
     placement = cell.get("placement", {})
+    if cell.get("role") == "paired-secondary":
+        # Fresh install only: pdns.service inactive and no database, so the
+        # Agent journals under pdns-switch, not pdns-secondary-reconfigure
+        # (classifyPDNSPairSecondarySource).
+        if node != "debian13" or NODE_FOR_PLACEMENT.get(placement.get("kill_host")) != node:
+            raise BootstrapError("PowerDNS paired secondary requires the certified Debian placement")
+        validate_paired_secondary_shape(
+            cell, node, source_fixture, FRESH_PDNS_SECONDARY_PHASES
+        )
+        return
     if (
         node != "debian13"
         or NODE_FOR_PLACEMENT.get(placement.get("kill_host")) != node
@@ -498,8 +616,55 @@ def validate_pdns_switch_cell(
         raise BootstrapError("PowerDNS switch fixture has an unsupported matrix phase")
 
 
+def secondary_pair_identity(node: str) -> dict[str, str]:
+    """The Panel's secondary mapping (cmd/panel/dns_engine.go:1498-1502)."""
+
+    if node not in {"arch", "debian13"}:
+        raise BootstrapError("unsupported paired-secondary node")
+    local_ip = "192.0.2.11" if node == "arch" else "192.0.2.10"
+    peer_ip = "192.0.2.10" if node == "arch" else "192.0.2.11"
+    return {
+        "pair_role": "secondary",
+        "local_ip": local_ip,
+        "local_ns": SECONDARY_LOCAL_NS,
+        "peer_ip": peer_ip,
+        "peer_ns": SECONDARY_PEER_NS,
+    }
+
+
+def paired_secondary_scenario(driver: str, node: str) -> dict[str, Any]:
+    """Fresh paired secondary: empty 0/0 source, epoch 1, zero zones.
+
+    A secondary holds no local live zones (cmd/panel/dns_engine.go:1690-1696);
+    the member arrives from the native primary peer by catalog transfer.
+    """
+
+    if driver not in PAIRED_SECONDARY_DRIVERS:
+        raise BootstrapError("unsupported paired-secondary driver")
+    if driver == "pdns-switch" and node != "debian13":
+        raise BootstrapError("PowerDNS paired secondary requires certified Debian 13")
+    return {
+        "schema": SCENARIO_SCHEMA,
+        "driver": driver,
+        "source_fixture": "uninitialized",
+        "mode": "switch",
+        "source_engine": "",
+        "target_engine": "bind" if driver == "bind" else "pdns",
+        "source_epoch": 0,
+        "target_epoch": 1,
+        "source_revision": 0,
+        "topology": "paired",
+        **secondary_pair_identity(node),
+        "zones": [],
+    }
+
+
 def pdns_switch_scenario(*, role: str = "standalone", authority_acceptance: bool = False,
                          source_fixture: str = "managed-bind") -> dict[str, Any]:
+    if role == "paired-secondary":
+        if source_fixture != "uninitialized" or authority_acceptance:
+            raise BootstrapError("a PowerDNS paired secondary is prepared only as a fresh install")
+        return paired_secondary_scenario("pdns-switch", "debian13")
     if role not in {"standalone", "paired-primary"}:
         raise BootstrapError("unsupported PowerDNS switch source role")
     if source_fixture not in {"managed-bind", "uninitialized"}:
@@ -620,6 +785,31 @@ def bind_scenario(
     source_fixture: str, *, role: str = "standalone", node: str = "debian13",
     allow_debian_paired_source: bool = False, authority_acceptance: bool = False,
 ) -> dict[str, Any]:
+    if role == "paired-secondary":
+        if source_fixture != "uninitialized" or authority_acceptance:
+            raise BootstrapError("a BIND paired secondary is prepared only as a fresh install")
+        return paired_secondary_scenario("bind", node)
+    if source_fixture in PROVENANCE_BIND_CELLS:
+        if role != "standalone" or node != "debian13" or authority_acceptance:
+            raise BootstrapError(f"{source_fixture} is a Debian standalone BIND fixture")
+        reinstall = source_fixture == MANAGED_BIND_ABSENT
+        return {
+            "schema": SCENARIO_SCHEMA,
+            "driver": "bind",
+            "source_fixture": source_fixture,
+            # Takeover: on the wire exactly a fresh install (mode switch, empty
+            # source, 0 -> 1); the Agent selects it from host state. Reinstall:
+            # the managed BIND identity is kept, source = target = bind, equal
+            # epochs (the Panel's reinstall_active manifest).
+            "mode": "reinstall" if reinstall else "switch",
+            "source_engine": "bind" if reinstall else "",
+            "target_engine": "bind",
+            "source_epoch": 1 if reinstall else 0,
+            "target_epoch": 1,
+            "source_revision": 0,
+            "topology": "standalone",
+            "zones": [zone_snapshot()],
+        }
     if source_fixture == "uninitialized":
         source_engine, source_epoch, target_epoch, revision = "", 0, 1, 0
     elif source_fixture == "managed-pdns":
@@ -1047,8 +1237,94 @@ def controller_commands(cell_id: str) -> tuple[list[str], list[str], list[str]]:
     return trigger_command, recovery_command, recovery_probe_command
 
 
+PEER_EVIDENCE_DIRECTORY = "paired-secondary-peer"
+
+
+def require_peer_engine(cell: dict[str, Any], peer_engine: Any) -> str | None:
+    """--peer-engine is required for, and limited to, paired-secondary cells."""
+
+    if not isinstance(peer_engine, str):
+        peer_engine = None  # argparse default (or an absent attribute)
+    if paired_secondary_cell(cell):
+        if peer_engine not in PEER_ENGINES:
+            raise BootstrapError(
+                "a paired-secondary cell needs --peer-engine bind or --peer-engine pdns "
+                "(the native primary peer flavour); nothing was prepared"
+            )
+        return str(peer_engine)
+    if peer_engine is not None:
+        raise BootstrapError("--peer-engine applies only to paired-secondary cells")
+    return None
+
+
+def peer_namespace(args: argparse.Namespace, engine: str, *, require_transfer: bool) -> argparse.Namespace:
+    return argparse.Namespace(
+        engine=engine,
+        work_root=args.work_root,
+        cell_id=args.cell_id,
+        identity_file=args.identity_file,
+        manifest=args.manifest,
+        require_secondary_transfer=require_transfer,
+        execute=args.execute,
+    )
+
+
+def write_peer_evidence(
+    plan: dict[str, Any], name: str, value: Any, *, execute: bool
+) -> str | None:
+    """Create-new host-side evidence beside the fixture plan (never replaced)."""
+
+    if not execute:
+        print(json.dumps({"peer_evidence": name, "value": value}, sort_keys=True))
+        return None
+    if re.fullmatch(r"[a-z0-9-]{1,64}\.json", name) is None:
+        raise BootstrapError("peer evidence name is not canonical")
+    directory = Path(plan["cell_directory"]) / PEER_EVIDENCE_DIRECTORY
+    try:
+        directory.mkdir(mode=0o700)
+    except FileExistsError:
+        info = directory.lstat()
+        if stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode):
+            raise BootstrapError("peer evidence directory is not a real directory")
+    path = directory / name
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(descriptor, "wb") as handle:
+        handle.write(json_bytes(value))
+        handle.flush()
+        os.fsync(handle.fileno())
+    return str(path)
+
+
+def read_peer_evidence(plan: dict[str, Any], name: str) -> Any:
+    return read_json(Path(plan["cell_directory"]) / PEER_EVIDENCE_DIRECTORY / name, name)
+
+
+def prepare_native_primary_peer(
+    args: argparse.Namespace, plan: dict[str, Any], engine: str
+) -> None:
+    """Run native_primary_peer.py prepare, then a baseline observe, on the peer.
+
+    Order from PAIRED-SECONDARY-FIXTURE.md: the native primary must serve and
+    NOTIFY/AXFR before the guest's secondary install starts. Its observation
+    here cannot show a transfer yet (the guest has no secondary).
+    """
+
+    import native_primary_peer  # noqa: PLC0415 - imports this module
+
+    prepared = native_primary_peer.prepare(peer_namespace(args, engine, require_transfer=False))
+    print(json.dumps(prepared, sort_keys=True))
+    observed = native_primary_peer.observe(peer_namespace(args, engine, require_transfer=False))
+    print(json.dumps(observed, sort_keys=True))
+    write_peer_evidence(
+        plan, "peer-prepared.json",
+        {"engine": engine, "cell_id": args.cell_id, "prepare": prepared, "observe": observed},
+        execute=args.execute,
+    )
+
+
 def prepare(args: argparse.Namespace) -> None:
-    _, cell, node = load_plan(args)
+    plan, cell, node = load_plan(args)
+    peer_engine = require_peer_engine(cell, getattr(args, "peer_engine", None))
     if args.action == "prepare-bind":
         validate_bind_cell(cell, args.node, args.source_fixture)
         scenario = bind_scenario(
@@ -1078,12 +1354,21 @@ def prepare(args: argparse.Namespace) -> None:
     )
     scenario_guest = trigger_command[3]
     identity_guest = trigger_command[5]
+    if peer_engine is not None:
+        # The native primary must serve before the guest's secondary install.
+        prepare_native_primary_peer(args, plan, peer_engine)
     with tempfile.TemporaryDirectory(prefix="celikpanel-s1-scenario-") as temporary:
         temporary_path = Path(temporary)
         scenario_path = temporary_path / "scenario.json"
         scenario_path.write_bytes(json_bytes(scenario))
         uploads = [scenario_path]
-        if args.source_fixture == "managed-pdns":
+        if args.source_fixture == MANAGED_BIND_ABSENT:
+            # The managed BIND is produced by a real untagged fresh BIND switch
+            # with the same zone, then its engine is removed (receipts kept).
+            source_setup = temporary_path / "source-setup-bind.json"
+            source_setup.write_bytes(json_bytes(bind_scenario("uninitialized", node="debian13")))
+            uploads.append(source_setup)
+        elif args.source_fixture == "managed-pdns":
             source_setup = temporary_path / "source-setup-pdns.json"
             source_setup.write_bytes(json_bytes(pdns_adoption_source_setup_scenario()))
             uploads.append(source_setup)
@@ -1129,8 +1414,11 @@ def prepare(args: argparse.Namespace) -> None:
                         "/var/lib/celikpanel-dns-kill-matrix/source-preinstall-pdns.json"
                         if args.source_fixture
                         in {"managed-pdns", "external-pdns-adoption"}
+                        else "/var/lib/celikpanel-dns-kill-matrix/source-preinstall-bind.json"
+                        if args.source_fixture in PROVENANCE_BIND_CELLS
                         else None
                     ),
+                    "native_primary_peer_engine": peer_engine,
                     "source_adoption_proof": (
                         "/var/lib/celikpanel-dns-kill-matrix/source-adoption-pdns.json"
                         if args.source_fixture == "managed-pdns"
@@ -1250,6 +1538,9 @@ def prepared_flags(args: argparse.Namespace) -> list[str]:
         STARTUP_ROLLBACK_FLAG: getattr(args, "expect_agent_startup_rollback", False) is True,
         REBOOT_BEFORE_OWNER_FLAG: getattr(args, "reboot_before_owner_command", False) is True,
         REBOOT_AFTER_RECOVERY_FLAG: getattr(args, "reboot_after_recovery", False) is True,
+        DISABLE_MANAGEMENT_FLAG: (
+            getattr(args, "disable_management_before_reboot", False) is True
+        ),
     }
     return [flag for flag in PREPARED_FLAG_ORDER if selected.get(flag)]
 
@@ -1346,12 +1637,24 @@ def run_prepared(args: argparse.Namespace) -> int:
         )
     if reboot_before and not owner_inverse:
         raise BootstrapError(f"{REBOOT_BEFORE_OWNER_FLAG} requires {OWNER_INVERSE_FLAG}")
+    disable_management = getattr(args, "disable_management_before_reboot", False) is True
+    if disable_management and (not reboot_after or owner_inverse):
+        raise BootstrapError(
+            f"{DISABLE_MANAGEMENT_FLAG} requires {REBOOT_AFTER_RECOVERY_FLAG} on the "
+            "rpc-retry flow (not the owner-inverse flow)"
+        )
+    # A paired secondary reboots only itself; its native primary peer keeps
+    # serving, which is exactly the "secondary keeps serving" check.
     if (reboot_before or reboot_after) and (
-        args.stop_after_kill_for_independent_recovery or cell.get("role") != "standalone"
+        args.stop_after_kill_for_independent_recovery
+        or (cell.get("role") != "standalone" and not paired_secondary_cell(cell))
+        or (reboot_before and cell.get("role") != "standalone")
     ):
         raise BootstrapError(
-            "reboot steps need a standalone cell without the independent handoff"
+            "reboot steps need a standalone or admitted paired-secondary cell "
+            "without the independent handoff"
         )
+    peer_engine = require_peer_engine(cell, getattr(args, "peer_engine", None))
     refuse_v2_managed_pdns_without_owner_flow(
         cell, args.source_fixture, owner_inverse,
         bool(args.stop_after_kill_for_independent_recovery is True),
@@ -1366,6 +1669,13 @@ def run_prepared(args: argparse.Namespace) -> int:
         else None
     )
     if not args.execute:
+        if peer_engine is not None:
+            print(json.dumps({
+                "before_controller": "native_primary_peer.py observe",
+                "engine": peer_engine,
+                "require_secondary_transfer": False,
+                "evidence": f"{PEER_EVIDENCE_DIRECTORY}/peer-before-kill.json",
+            }))
         print(json.dumps(command))
         if resume_command is not None:
             print(json.dumps({
@@ -1378,7 +1688,17 @@ def run_prepared(args: argparse.Namespace) -> int:
                 },
                 "then": resume_command,
             }))
+        if peer_engine is not None:
+            print(json.dumps({
+                "after_controller": "native_primary_peer.py observe",
+                "engine": peer_engine,
+                "require_secondary_transfer": True,
+                "evidence": f"{PEER_EVIDENCE_DIRECTORY}/peer-verdict.json",
+            }))
         return 0
+    peer_before: dict[str, Any] | None = None
+    if peer_engine is not None:
+        peer_before = observe_peer_before_controller(args, plan, peer_engine)
     returncode = subprocess.run(command, check=False).returncode
     reboots = 0
     while returncode == REBOOT_REQUESTED_EXIT and resume_command is not None:
@@ -1395,7 +1715,138 @@ def run_prepared(args: argparse.Namespace) -> int:
         print(json.dumps(receipt, sort_keys=True))
         reboots += 1
         returncode = subprocess.run(resume_command, check=False).returncode
+    if peer_engine is not None:
+        return finish_peer_verdict(args, plan, peer_engine, peer_before, returncode)
     return returncode
+
+
+def observe_peer_before_controller(
+    args: argparse.Namespace, plan: dict[str, Any], engine: str
+) -> dict[str, Any] | None:
+    """Peer baseline right before the controller (the guest is not a secondary yet)."""
+
+    import native_primary_peer  # noqa: PLC0415 - imports this module
+
+    prepared = read_peer_evidence(plan, "peer-prepared.json")
+    if not isinstance(prepared, dict) or prepared.get("engine") != engine:
+        raise BootstrapError(
+            f"the native primary peer was prepared as {prepared.get('engine') if isinstance(prepared, dict) else None!r}, "
+            f"not {engine!r}; run-prepared must use the prepared --peer-engine. Nothing was started"
+        )
+    observed = native_primary_peer.observe(peer_namespace(args, engine, require_transfer=False))
+    write_peer_evidence(plan, "peer-before-kill.json", observed, execute=True)
+    return observed.get("observation")
+
+
+def _peer_observation_or_error(
+    args: argparse.Namespace, engine: str, *, require_transfer: bool
+) -> tuple[dict[str, Any] | None, str | None]:
+    import native_primary_peer  # noqa: PLC0415 - imports this module
+
+    try:
+        observed = native_primary_peer.observe(
+            peer_namespace(args, engine, require_transfer=require_transfer)
+        )
+    except (BootstrapError, fixture.FixtureError, OSError, ValueError, KeyError,
+            json.JSONDecodeError, subprocess.SubprocessError) as exc:
+        return None, f"{type(exc).__name__}: {exc}"
+    return observed.get("observation"), None
+
+
+def judge_peer_observations(
+    before: dict[str, Any] | None,
+    after: dict[str, Any] | None,
+    required_transfer_passed: bool,
+) -> dict[str, Any]:
+    """Peer half of the paired-secondary pass definition (pure; offline-tested).
+
+    Verified failures: the after-recovery observation shows no logged transfer
+    of the catalog or the member to this guest, or the peer's native config
+    digests, catalog serial/members or member SOA changed across the run.
+    Unknown: an observation that could not be taken.
+    """
+
+    failures: list[str] = []
+    unknown: list[str] = []
+    if before is None:
+        unknown.append("no peer observation before the controller")
+    if after is None:
+        unknown.append("no peer observation after recovery")
+    else:
+        transfers = after.get("transfers_to_secondary")
+        if not isinstance(transfers, dict) or not transfers:
+            unknown.append("peer observation has no transfer record")
+        else:
+            missing = sorted(name for name, seen in transfers.items() if seen is not True)
+            if missing:
+                failures.append(
+                    "the native primary logged no transfer to this guest for: "
+                    + ", ".join(missing)
+                )
+            elif not required_transfer_passed:
+                unknown.append(
+                    "--require-secondary-transfer did not pass although transfers were logged"
+                )
+    if before is not None and after is not None:
+        for key in ("config_sha256", "catalog_serial", "catalog_members", "member_soa", "www_a"):
+            if before.get(key) != after.get(key):
+                failures.append(
+                    f"peer {key} changed across the run: {before.get(key)!r} -> {after.get(key)!r}"
+                )
+    return {
+        "status": "failed" if failures else ("unverified" if unknown else "passed"),
+        "failures": failures,
+        "unknown": unknown,
+    }
+
+
+def combine_paired_secondary_exit(guest_returncode: int, peer_status: str) -> int:
+    """Guest controller exit (0/1/2/64) combined with the host-side peer verdict."""
+
+    if guest_returncode not in (0, 1, 2):
+        return guest_returncode
+    if guest_returncode == 1 or peer_status == "failed":
+        return 1
+    if guest_returncode == 2 or peer_status != "passed":
+        return 2
+    return 0
+
+
+def finish_peer_verdict(
+    args: argparse.Namespace,
+    plan: dict[str, Any],
+    engine: str,
+    before: dict[str, Any] | None,
+    guest_returncode: int,
+) -> int:
+    after, error = _peer_observation_or_error(args, engine, require_transfer=True)
+    required_passed = error is None
+    after_error = None
+    if after is None:
+        # The strict probe failed; take one read-only observation without the
+        # requirement so a missing transfer (failed) is told apart from an
+        # unreachable peer (unknown).
+        after, after_error = _peer_observation_or_error(args, engine, require_transfer=False)
+    verdict = judge_peer_observations(before, after, required_passed)
+    record = {
+        "schema": "celikpanel/dns-kill-paired-secondary-peer-verdict/v1",
+        "cell_id": args.cell_id,
+        "peer_engine": engine,
+        "guest_controller_exit": guest_returncode,
+        "require_secondary_transfer": {"passed": required_passed, "error": error},
+        "observation_error": after_error,
+        "before_controller": before,
+        "after_recovery": after,
+        **verdict,
+        "combined_exit": combine_paired_secondary_exit(guest_returncode, verdict["status"]),
+        "note": (
+            "The peer serves the catalog in the BIND producer format; a PowerDNS primary "
+            "publishing its native PRODUCER catalog is not what this cell tests."
+        ),
+    }
+    write_peer_evidence(plan, "peer-verdict.json", record, execute=True)
+    print(json.dumps(record, sort_keys=True))
+    return record["combined_exit"]
 
 def common_parser(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--work-root", required=True, type=Path)
@@ -1412,6 +1863,15 @@ def common_parser(parser: argparse.ArgumentParser) -> None:
             "owner-bind",
             "managed-bind",
             "external-pdns-adoption",
+            UNMANAGED_BIND_STOPPED,
+            MANAGED_BIND_ABSENT,
+        ),
+    )
+    parser.add_argument(
+        "--peer-engine", choices=PEER_ENGINES, default=None,
+        help=(
+            "paired-secondary cells only: flavour of the panel-free native primary "
+            "peer (native_primary_peer.py --engine)"
         ),
     )
     parser.add_argument("--execute", action="store_true")
@@ -1449,6 +1909,13 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     current.add_argument(STARTUP_ROLLBACK_FLAG, action="store_true")
     current.add_argument(REBOOT_BEFORE_OWNER_FLAG, action="store_true")
     current.add_argument(REBOOT_AFTER_RECOVERY_FLAG, action="store_true")
+    current.add_argument(
+        DISABLE_MANAGEMENT_FLAG, action="store_true",
+        help=(
+            f"with {REBOOT_AFTER_RECOVERY_FLAG}: stop and disable the Panel and Agent "
+            "units before the reboot; the DNS daemon must then serve alone"
+        ),
+    )
     current.add_argument(
         "--reboot-timeout", type=int, default=600,
         help="seconds for each guest reboot (fixture.reboot_guest)",

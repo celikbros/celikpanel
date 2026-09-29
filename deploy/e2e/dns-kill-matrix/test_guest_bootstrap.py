@@ -1481,9 +1481,17 @@ class PreparedCellRunnerTest(unittest.TestCase):
         ):
             with self.assertRaises(bootstrap.BootstrapError):
                 bootstrap.validate_pdns_switch_cell(candidate, "debian13", "uninitialized")
-        with self.assertRaises(bootstrap.BootstrapError):
+        # A fresh paired secondary is its own zero-zone shape (rows 3/5);
+        # any other source for it stays refused.
+        self.assertEqual(
             bootstrap.pdns_switch_scenario(
                 role="paired-secondary", source_fixture="uninitialized"
+            )["zones"],
+            [],
+        )
+        with self.assertRaises(bootstrap.BootstrapError):
+            bootstrap.pdns_switch_scenario(
+                role="paired-secondary", source_fixture="managed-bind"
             )
 
     def test_managed_bind_source_requires_standalone_debian_switch(self) -> None:
@@ -1585,7 +1593,15 @@ class FreshInstallCellTest(unittest.TestCase):
                 continue
             phase = raw["boundary"]["phase"]
             with self.subTest(cell_id=raw["id"]):
-                self.assertNotEqual(raw["role"], "paired-secondary")
+                if raw["role"] == "paired-secondary":
+                    # Rows 3/5: only the admitted peer-reachable phases.
+                    self.assertEqual(raw["peer_reachability"], "reachable")
+                    self.assertIn(phase, (
+                        bootstrap.FRESH_BIND_SECONDARY_PHASES
+                        if raw["driver"] == "bind"
+                        else bootstrap.FRESH_PDNS_SECONDARY_PHASES
+                    ))
+                    continue
                 if raw["driver"] == "bind":
                     self.assertNotIn(phase, bootstrap.CRITICAL_MANAGED_PDNS_PHASES)
                     allowed = (
@@ -1603,16 +1619,17 @@ class FreshInstallCellTest(unittest.TestCase):
             "bind__rolled-back__after-write__standalone__peer-reachable",
             "bind__committed__after-write__standalone__peer-reachable",
             "bind__rolling-back__before-write__standalone__peer-reachable",
-            "bind__target-verified__after-write__paired-secondary__peer-reachable",
-            "bind__intent__after-write__paired-secondary__peer-reachable",
-            "pdns-switch__intent__after-write__paired-secondary__peer-reachable",
+            "bind__target-verified__after-write__paired-secondary__peer-unreachable",
+            "bind__committed__after-write__paired-secondary__peer-reachable",
+            "bind__source-stopped__after-write__paired-secondary__peer-reachable",
+            "pdns-switch__intent__after-write__paired-secondary__peer-unreachable",
             "pdns-switch__target-started__after-write__paired-primary__peer-reachable",
         ):
             raw = next(item for item in self.runnable if item["id"] == cell_id)
             with self.subTest(refused=cell_id):
                 self.assertFalse(self.fresh_admitted(raw))
         with self.assertRaises(bootstrap.BootstrapError):
-            bootstrap.bind_scenario("uninitialized", role="paired-secondary")
+            bootstrap.bind_scenario("managed-pdns", role="paired-secondary")
         with self.assertRaises(bootstrap.BootstrapError):
             bootstrap.validate_pdns_switch_cell(
                 cell("arch", "intent", driver="pdns-switch"), "arch", "uninitialized"
@@ -1700,7 +1717,7 @@ class FreshInstallCellTest(unittest.TestCase):
         for cell_id, action in (
             ("bind__target-started__after-write__standalone__peer-reachable", "prepare-bind"),
             ("bind__committed__after-write__standalone__peer-reachable", "prepare-bind"),
-            ("pdns-switch__intent__after-write__paired-secondary__peer-reachable",
+            ("pdns-switch__intent__after-write__paired-secondary__peer-unreachable",
              "prepare-pdns-switch"),
         ):
             raw = next(item for item in self.runnable if item["id"] == cell_id)
@@ -1715,8 +1732,10 @@ class FreshInstallCellTest(unittest.TestCase):
             "set -euo pipefail\ndie() { exit 1; }\n"
             + self.shell_array("EARLY_UNINITIALIZED_PHASES")
             + self.shell_array("FRESH_BIND_STANDALONE_PHASES")
+            + self.shell_array("FRESH_BIND_SECONDARY_PHASES")
             + self.shell_function("array_contains")
             + self.shell_function("standalone_cell_matches_phase")
+            + self.shell_function("secondary_cell_matches_phase")
             + 'cell_id=$1\nboundary_phase=$2\n' + snippet + "\necho admitted\n"
         )
         cases = (
@@ -1724,7 +1743,11 @@ class FreshInstallCellTest(unittest.TestCase):
             ("bind__target-verified__before-write__standalone__peer-unreachable", "target-verified", 0),
             ("bind__intent__after-write__paired-primary__peer-reachable", "intent", 0),
             ("bind__pre-intent__standalone__peer-reachable", "pre-intent", 0),
-            ("bind__target-verified__after-write__paired-secondary__peer-reachable", "target-verified", 1),
+            ("bind__target-verified__after-write__paired-secondary__peer-reachable", "target-verified", 0),
+            ("bind__pre-intent__paired-secondary__peer-reachable", "pre-intent", 0),
+            ("bind__target-verified__before-write__paired-secondary__peer-unreachable", "target-verified", 1),
+            ("bind__intent__after-write__paired-secondary__peer-unreachable", "intent", 1),
+            ("bind__committed__after-write__paired-secondary__peer-reachable", "committed", 1),
             ("bind__target-started__after-write__standalone__peer-reachable", "target-started", 1),
             ("bind__committed__after-write__standalone__peer-reachable", "committed", 1),
             ("bind__intent__after-write__standalone__peer-reachable", "target-verified", 1),
@@ -1753,8 +1776,11 @@ class FreshInstallCellTest(unittest.TestCase):
             + self.shell_function("array_contains")
             + self.shell_function("require_simple_value")
             + self.shell_function("standalone_cell_matches_phase")
+            + self.shell_array("FRESH_PDNS_SECONDARY_PHASES")
+            + self.shell_function("secondary_cell_matches_phase")
             + self.shell_function("prepare_fresh_pdns_primary")
             + self.shell_function("prepare_fresh_pdns_standalone")
+            + self.shell_function("prepare_fresh_pdns_secondary")
             + 'prepare_fresh_pdns_source() { echo "fresh:$4"; }\n'
             + dispatch
             + 'prepare_pdns_switch "$1" "$2" "$3" uninitialized "$4" /nonexistent\n'
@@ -1779,6 +1805,10 @@ class FreshInstallCellTest(unittest.TestCase):
             ("pdns-switch__intent__after-write__standalone__peer-reachable",
              "debian13", "committed", "driver-specific", 1, ""),
             ("pdns-switch__intent__after-write__paired-secondary__peer-reachable",
+             "debian13", "intent", "driver-specific", 0, "fresh:secondary"),
+            ("pdns-switch__rolled-back__before-write__paired-secondary__peer-reachable",
+             "debian13", "rolled-back", "driver-specific", 0, "fresh:secondary"),
+            ("pdns-switch__intent__after-write__paired-secondary__peer-unreachable",
              "debian13", "intent", "driver-specific", 1, ""),
             ("pdns-switch__target-started__after-write__paired-primary__peer-reachable",
              "debian13", "target-started", "driver-specific", 1, ""),

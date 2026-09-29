@@ -143,13 +143,14 @@ def validate_scenario(value: Any) -> dict[str, Any]:
     scenario = exact_keys(value, SCENARIO_KEYS, SCENARIO_REQUIRED, "scenario")
     if scenario.get("schema") != SCENARIO_SCHEMA:
         raise ProbeObservationError("scenario schema is invalid")
-    if scenario.get("mode") not in {"switch", "adopt"}:
+    if scenario.get("mode") not in {"switch", "adopt", "reinstall"}:
         raise ProbeObservationError("scenario mode is invalid")
     if scenario.get("target_engine") not in {"bind", "pdns"}:
         raise ProbeObservationError("scenario target engine is invalid")
     if scenario.get("source_fixture") not in {
         "uninitialized", "managed-pdns", "managed-bind", "owner-bind",
         "external-pdns-adoption", "legacy-pdns-secondary",
+        "unmanaged-bind-stopped", "managed-bind-absent",
     }:
         raise ProbeObservationError("scenario source fixture is invalid")
     for field in ("source_epoch", "target_epoch", "source_revision"):
@@ -167,6 +168,15 @@ def validate_scenario(value: Any) -> dict[str, Any]:
                 record, RECORD_KEYS, RECORD_KEYS,
                 f"scenario zone {index} record {record_index}",
             )
+    if (scenario.get("mode") == "reinstall") != (
+        scenario.get("source_fixture") == "managed-bind-absent"
+    ) or (scenario.get("mode") == "reinstall" and (
+        scenario.get("source_engine") != "bind"
+        or scenario.get("target_engine") != "bind"
+        or scenario.get("source_epoch") != scenario.get("target_epoch")
+        or scenario.get("topology") != "standalone"
+    )):
+        raise ProbeObservationError("reinstall scenario is not the exact BIND reinstall")
     if scenario.get("source_fixture") == "owner-bind" and (
         scenario.get("driver") != "bind" or scenario.get("mode") != "switch"
         or scenario.get("source_engine", "") != ""
@@ -227,7 +237,9 @@ def validate_state(
     }, "DNS engine state receipt")
     expected = {
         "schema": STATE_SCHEMA,
-        "mode": scenario["mode"],
+        # A reinstall keeps the managed tenure: the Agent records mode
+        # "switch" (cmd/agent/dns_engine_host.go dnsEngineTenureModeForManifest).
+        "mode": "switch" if scenario["mode"] == "reinstall" else scenario["mode"],
         "engine": scenario["target_engine"],
         "engine_epoch": scenario["target_epoch"],
         "source_revision": scenario["source_revision"],
