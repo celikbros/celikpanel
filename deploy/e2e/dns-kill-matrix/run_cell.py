@@ -26,6 +26,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import dataclasses
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, BinaryIO, Mapping, Sequence
@@ -52,29 +53,178 @@ JOURNAL_SCHEMA = "celikpanel-dns-engine-switch-journal/v1"
 BIND_HANDOFF_JOURNAL_SCHEMA = "celikpanel-dns-engine-switch-journal/v2"
 BIND_HANDOFF_CELL = "bind__rolling-back__after-write__standalone__peer-reachable"
 PDNS_HANDOFF_CELL = "pdns-adopt__rolling-back__after-write__standalone__peer-reachable"
-# "Agent decides, owner executes": a managed PowerDNS source makes the
-# producer write the V2 frozen-source journal from intent on. After the cut the
-# ordinary Agent is restarted and left running; it writes rolling-back, releases
-# its lease and names the owner command, which the owner then runs.
-# Pre-start cells cut before PowerDNS stopped (driver-specific placement);
-# critical cells cut after the source stopped (managed-pdns-required placement).
+# "Agent decides, owner executes": after the cut the ordinary Agent is
+# restarted and left running; it cannot finish the inverse itself, so it keeps
+# the journal, releases its lease with AGENT_RELEASED_NATIVE_UNKNOWN and names
+# the owner command, which the owner then runs. Three product paths have this
+# shape (OWNER_INVERSE_PROFILES); every admitted cell is listed with its exact
+# manifest placement in OWNER_INVERSE_ADMISSIONS.
+# PowerDNS -> BIND with a managed PowerDNS source: the producer writes the V2
+# frozen-source journal from intent on. Pre-start cells cut before PowerDNS
+# stopped; critical cells cut after the source stopped.
 OWNER_INVERSE_PRESTART_PHASES = frozenset({"intent", "target-staged"})
 OWNER_INVERSE_CRITICAL_PHASES = frozenset({"source-stopped", "target-started"})
-OWNER_INVERSE_CELLS = frozenset(
-    {
-        "bind__intent__after-write__standalone__peer-reachable",
-        "bind__target-staged__after-write__standalone__peer-reachable",
-        "bind__source-stopped__after-write__standalone__peer-reachable",
-        "bind__target-started__after-write__standalone__peer-reachable",
-    }
-)
 OWNER_RECOVERY_EXECUTABLE = "/usr/libexec/celikpanel/recovery"
 OWNER_BIND_SWITCH_COMMAND = "recover-dns-bind-switch"
 OWNER_BIND_SWITCH_CAPABILITY_COMMAND = "check-bind-source-inverse-v1"
 OWNER_BIND_SWITCH_CAPABILITY_MARKER = "celikpanel-bind-source-inverse/v1"
+OWNER_BIND_ADOPTION_COMMAND = "recover-dns-bind-adoption"
+OWNER_BIND_ADOPTION_CAPABILITY_COMMAND = "check-bind-adoption-inverse-v1"
+OWNER_BIND_ADOPTION_CAPABILITY_MARKER = "celikpanel-bind-adoption-inverse/v1"
+OWNER_PDNS_ADOPTION_COMMAND = "recover-dns-pdns-adoption"
 AGENT_RELEASED_NATIVE_UNKNOWN = "dns_native_recovery_unknown_after_restart"
+AGENT_ROLLED_BACK_AFTER_RESTART = "dns_engine_switch_rolled_back_after_restart"
+
+
+@dataclass(frozen=True)
+class OwnerInverseProfile:
+    """One product inverse the owner runs after the Agent released the job."""
+
+    name: str
+    driver: str
+    source_fixture: str
+    owner_command: str
+    capability_command: str | None
+    capability_marker: str | None
+    journal_schema: str
+    ledger_target: str
+    # The engine that served before the cut and must serve after the inverse.
+    source_engine: str
+    # A changed source MainPID is a verified deviation only where the product
+    # itself promises no stop (running-BIND adoption reloads, never restarts).
+    source_pid_change_fails: bool
+
+
+OWNER_INVERSE_PROFILES = {
+    "bind-switch-v2": OwnerInverseProfile(
+        name="bind-switch-v2", driver="bind", source_fixture="managed-pdns",
+        owner_command=OWNER_BIND_SWITCH_COMMAND,
+        capability_command=OWNER_BIND_SWITCH_CAPABILITY_COMMAND,
+        capability_marker=OWNER_BIND_SWITCH_CAPABILITY_MARKER,
+        journal_schema=BIND_HANDOFF_JOURNAL_SCHEMA, ledger_target="bind",
+        source_engine="pdns", source_pid_change_fails=False,
+    ),
+    # Running owner BIND adopted by the product (V2, inverse_plan.source_bind).
+    "bind-adoption-v2": OwnerInverseProfile(
+        name="bind-adoption-v2", driver="bind", source_fixture="owner-bind",
+        owner_command=OWNER_BIND_ADOPTION_COMMAND,
+        capability_command=OWNER_BIND_ADOPTION_CAPABILITY_COMMAND,
+        capability_marker=OWNER_BIND_ADOPTION_CAPABILITY_MARKER,
+        journal_schema=BIND_HANDOFF_JOURNAL_SCHEMA, ledger_target="bind",
+        source_engine="bind", source_pid_change_fails=True,
+    ),
+    # External PowerDNS adoption (V1). The Agent runs this inverse itself at
+    # restart except from rolled-back, where its restored-source proof demands
+    # rolling-back; that cut is the one deterministic owner path.
+    "pdns-adoption-v1": OwnerInverseProfile(
+        name="pdns-adoption-v1", driver="pdns-adopt",
+        source_fixture="external-pdns-adoption",
+        owner_command=OWNER_PDNS_ADOPTION_COMMAND,
+        capability_command=None, capability_marker=None,
+        journal_schema=JOURNAL_SCHEMA, ledger_target="pdns",
+        source_engine="pdns", source_pid_change_fails=False,
+    ),
+}
+
+
+@dataclass(frozen=True)
+class OwnerInverseAdmission:
+    """Exact manifest shape of one admitted owner-inverse cell, as data."""
+
+    profile: str
+    driver: str
+    phase: str
+    edge: str
+    peer_reachability: str
+    source_fixture_policy: str
+    # "pre-start": the source never stopped and keeps its MainPID.
+    # "critical": the product stopped the source before the cut.
+    variant: str
+    # Journal phase the restarted Agent leaves on disk: it never rewrites
+    # rolling-back or rolled-back and writes rolling-back over earlier phases.
+    step2_journal_phase: str
+    # Only for running-BIND adoption: the target-started rollback precursor.
+    requires_target_started_precursor: bool = False
+
+
+def _admission(
+    profile: str, driver: str, phase: str, edge: str, peer: str, policy: str,
+    variant: str, step2: str = "rolling-back", later: bool = False,
+) -> tuple[str, OwnerInverseAdmission]:
+    cell_id = f"{driver}__{phase}__{edge}__standalone__peer-{peer}"
+    return cell_id, OwnerInverseAdmission(
+        profile=profile, driver=driver, phase=phase, edge=edge,
+        peer_reachability=peer, source_fixture_policy=policy, variant=variant,
+        step2_journal_phase=step2, requires_target_started_precursor=later,
+    )
+
+
+OWNER_INVERSE_ADMISSIONS = dict(
+    (
+        # V2 PowerDNS -> BIND, managed PowerDNS source. At a before-write cut
+        # the disk holds the predecessor: target-staged:before-write has
+        # intent, source-stopped:before-write has target-staged (PowerDNS was
+        # already disabled --now), target-started:before-write has
+        # source-stopped (BIND already started), rolled-back:before-write has
+        # rolling-back (the in-process inverse already ran). Only Debian
+        # placements exist for V2 (APT); target-staged:before-write is
+        # therefore the peer-unreachable standalone invariance control.
+        _admission("bind-switch-v2", "bind", "intent", "after-write", "reachable",
+                   "driver-specific", "pre-start"),
+        _admission("bind-switch-v2", "bind", "target-staged", "after-write", "reachable",
+                   "driver-specific", "pre-start"),
+        _admission("bind-switch-v2", "bind", "target-staged", "before-write", "unreachable",
+                   "driver-specific", "pre-start"),
+        _admission("bind-switch-v2", "bind", "source-stopped", "after-write", "reachable",
+                   "managed-pdns-required", "critical"),
+        _admission("bind-switch-v2", "bind", "source-stopped", "before-write", "reachable",
+                   "managed-pdns-required", "critical"),
+        _admission("bind-switch-v2", "bind", "target-started", "after-write", "reachable",
+                   "managed-pdns-required", "critical"),
+        _admission("bind-switch-v2", "bind", "target-started", "before-write", "reachable",
+                   "managed-pdns-required", "critical"),
+        _admission("bind-switch-v2", "bind", "rolled-back", "before-write", "reachable",
+                   "managed-pdns-required", "pre-start"),
+        _admission("bind-switch-v2", "bind", "rolled-back", "after-write", "reachable",
+                   "managed-pdns-required", "pre-start", step2="rolled-back"),
+        # V2 running-BIND adoption: the exact rollback handoff cell with an
+        # owner BIND source and the target-started precursor (BIND reloaded
+        # with the adoption configuration before the in-process rollback).
+        _admission("bind-adoption-v2", "bind", "rolling-back", "after-write", "reachable",
+                   "driver-specific", "pre-start", later=True),
+        # V1 external PowerDNS adoption, rolled-back:after-write.
+        _admission("pdns-adoption-v1", "pdns-adopt", "rolled-back", "after-write",
+                   "reachable", "driver-specific", "pre-start", step2="rolled-back"),
+    )
+)
+OWNER_INVERSE_CELLS = frozenset(OWNER_INVERSE_ADMISSIONS)
+# Row 13 with a running Agent: from these cuts the restarted Agent runs the V1
+# adoption inverse itself and the same request converges forward on rpc-retry;
+# no owner command applies (--expect-agent-startup-rollback).
+PDNS_ADOPTION_STARTUP_ROLLBACK_CELLS = frozenset(
+    {
+        "pdns-adopt__intent__after-write__standalone__peer-reachable",
+        "pdns-adopt__rolling-back__after-write__standalone__peer-reachable",
+    }
+)
 JOURNALCTL_EXECUTABLE = "/usr/bin/journalctl"
 SS_EXECUTABLE = "/usr/bin/ss"
+# Reboot during recovery. The controller runs inside the guest, so a reboot
+# ends it: it persists a create-new checkpoint and exits REBOOT_REQUESTED_EXIT;
+# the host reboots this exact guest (fixture.py reboot) and runs the same
+# prepared argv again with --resume-after-reboot.
+REBOOT_REQUESTED_EXIT = 3
+REBOOT_BEFORE_OWNER_COMMAND = "before-owner-command"
+REBOOT_AFTER_RECOVERY = "after-recovery"
+REBOOT_STAGES = (REBOOT_BEFORE_OWNER_COMMAND, REBOOT_AFTER_RECOVERY)
+REBOOT_CHECKPOINT_SCHEMA = "celikpanel/dns-kill-reboot-checkpoint/v1"
+REBOOT_RESUMED_SCHEMA = "celikpanel/dns-kill-reboot-resumed/v1"
+FIXTURE_MARKER_PATH = "/etc/celikpanel-dns-kill-matrix"
+FIXTURE_PLAN_SCHEMA = "celikpanel/dns-kill-fixture-plan/v1"
+BOOT_ID_PATH = "/proc/sys/kernel/random/boot_id"
+PRODUCT_UUID_PATH = "/sys/class/dmi/id/product_uuid"
+MANAGEMENT_UNITS = ("celikpanel-agent.service", "celikpanel-panel.service")
+UUID_TEXT_RE = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 PROOF_SCHEMA = "celikpanel/dns-kill-proof/v1"
 RESULT_SCHEMA = "celikpanel/dns-kill-result/v1"
 RECOVERY_PROBE_SCHEMA = "celikpanel/dns-kill-recovery-probe/v1"
@@ -179,6 +329,21 @@ class NativeRecoveryHandoff(Exception):
 
 class OwnerInverseFlowFinished(Exception):
     """The owner-inverse-after-restart flow recorded its own terminal status."""
+
+
+class RebootRequested(Exception):
+    """The flow reached a reboot point; the host must reboot this guest.
+
+    ``stage`` names the reboot point and ``state`` is the JSON-serializable
+    flow state the resumed controller needs to continue after the boot.
+    """
+
+    def __init__(self, stage: str, state: Mapping[str, Any]):
+        if stage not in REBOOT_STAGES:
+            raise ValueError(f"unknown reboot stage {stage!r}")
+        self.stage = stage
+        self.state = dict(state)
+        super().__init__(f"reboot requested at {stage}")
 
 
 class BoundaryUnverified(ControllerError):
@@ -978,7 +1143,7 @@ def validate_source_preinstall_document(
         and (
             cell.phase in {"source-stopped", "target-started", "rolled-back"}
             or is_bind_handoff_cell(cell)
-            or (owner_inverse_after_restart and is_owner_inverse_cell(cell))
+            or (owner_inverse_after_restart and is_owner_inverse_switch_cell(cell))
         )
     ):
         scope = "managed-pdns-source-preparation-for-bind-only"
@@ -1188,7 +1353,7 @@ def validate_source_adoption_document(
         or (
             cell.phase not in {"source-stopped", "target-started", "rolled-back"}
             and not is_bind_handoff_cell(cell)
-            and not (owner_inverse_after_restart and is_owner_inverse_cell(cell))
+            and not (owner_inverse_after_restart and is_owner_inverse_switch_cell(cell))
         )
     ):
         raise ControllerError("source adoption proof escaped critical standalone BIND scope")
@@ -3055,10 +3220,20 @@ def validate_socket_source_proof(
     owner_inverse_after_restart: bool = False,
 ) -> dict[str, Any]:
     scenario, scenario_evidence = validate_source_scenario(scenario_path, cell)
-    if owner_inverse_after_restart and scenario.get("source_fixture") != "managed-pdns":
-        raise ControllerError(
-            "owner inverse after restart requires the managed PowerDNS source fixture"
-        )
+    if owner_inverse_after_restart:
+        profile = owner_inverse_profile(cell)
+        wanted = profile.source_fixture if profile is not None else "managed-pdns"
+        if scenario.get("source_fixture") != wanted:
+            raise ControllerError(
+                "owner inverse after restart requires the "
+                + (
+                    "managed PowerDNS"
+                    if wanted == "managed-pdns"
+                    else "owner BIND" if wanted == "owner-bind"
+                    else "external PowerDNS adoption"
+                )
+                + f" source fixture ({wanted}) for this cell"
+            )
     proof, raw, proof_digest, status = secure_json_with_digest(
         path, "source proof", maximum=1 << 20
     )
@@ -3859,32 +4034,48 @@ def is_bind_handoff_cell(cell: CellSpec) -> bool:
     )
 
 
-def is_owner_inverse_cell(cell: CellSpec) -> bool:
-    """Exact standalone Debian BIND after-write cell of the owner-inverse flow."""
+def owner_inverse_admission(cell: CellSpec) -> OwnerInverseAdmission | None:
+    """The exact admitted owner-inverse shape of this cell, or None."""
 
-    if cell.phase in OWNER_INVERSE_PRESTART_PHASES:
-        policy = "driver-specific"
-    elif cell.phase in OWNER_INVERSE_CRITICAL_PHASES:
-        policy = "managed-pdns-required"
-    else:
-        return False
-    return (
-        cell.cell_id in OWNER_INVERSE_CELLS
-        and cell.driver == "bind"
-        and cell.cell_id == f"bind__{cell.phase}__after-write__standalone__peer-reachable"
-        and cell.edge == "after-write"
-        and cell.point == "after_write"
-        and cell.role == "standalone"
-        and cell.peer_reachability == "reachable"
-        and cell.source_fixture_policy == policy
-    )
+    admission = OWNER_INVERSE_ADMISSIONS.get(cell.cell_id)
+    if admission is None:
+        return None
+    if (
+        cell.driver != admission.driver
+        or cell.phase != admission.phase
+        or cell.edge != admission.edge
+        or cell.point != admission.edge.replace("-", "_")
+        or cell.role != "standalone"
+        or cell.peer_reachability != admission.peer_reachability
+        or cell.source_fixture_policy != admission.source_fixture_policy
+    ):
+        return None
+    return admission
+
+
+def owner_inverse_profile(cell: CellSpec) -> OwnerInverseProfile | None:
+    admission = owner_inverse_admission(cell)
+    return None if admission is None else OWNER_INVERSE_PROFILES[admission.profile]
+
+
+def is_owner_inverse_cell(cell: CellSpec) -> bool:
+    """Exact standalone cell admitted to the owner-inverse flow."""
+
+    return owner_inverse_admission(cell) is not None
+
+
+def is_owner_inverse_switch_cell(cell: CellSpec) -> bool:
+    """Admitted PowerDNS -> BIND switch cell (managed PowerDNS source, V2)."""
+
+    admission = owner_inverse_admission(cell)
+    return admission is not None and admission.profile == "bind-switch-v2"
 
 
 @dataclass(frozen=True)
 class OwnerInverseExpectation:
     """Per-cell judgement of the owner-inverse flow, kept as data.
 
-    Pre-start cells: PowerDNS never stopped, so it must keep serving with one
+    Pre-start cells: the source never stopped, so it must keep serving with one
     MainPID throughout. Critical cells: the source was stopped before the cut,
     so step 2 only records native state (judging PowerDNS inactive, and BIND
     active after target-started) and a new PowerDNS MainPID is expected.
@@ -3899,9 +4090,10 @@ class OwnerInverseExpectation:
 
 
 def owner_inverse_expectation(cell: CellSpec) -> OwnerInverseExpectation:
-    if not is_owner_inverse_cell(cell):
+    admission = owner_inverse_admission(cell)
+    if admission is None:
         raise ControllerError("owner inverse expectation requires an exact owner-inverse cell")
-    if cell.phase in OWNER_INVERSE_PRESTART_PHASES:
+    if admission.variant == "pre-start":
         return OwnerInverseExpectation(
             variant="pre-start",
             source_serving_after_restart=True,
@@ -3924,10 +4116,13 @@ def expected_journal_schema(
     cell: CellSpec, *, owner_inverse_after_restart: bool = False
 ) -> str:
     # The certified Debian producer writes the V2 frozen-source journal for a
-    # serving managed PowerDNS source (requiresBINDIndependentSourceProof). The
-    # owner-inverse flag is admitted only with that source, so V2 is exact here.
-    if owner_inverse_after_restart and is_owner_inverse_cell(cell):
-        return BIND_HANDOFF_JOURNAL_SCHEMA
+    # serving managed PowerDNS source (requiresBINDIndependentSourceProof) and
+    # for a running owner BIND (running-BIND adoption); PowerDNS adoption is V1.
+    # The owner-inverse flag admits each cell only with its profile's source.
+    if owner_inverse_after_restart:
+        profile = owner_inverse_profile(cell)
+        if profile is not None:
+            return profile.journal_schema
     return BIND_HANDOFF_JOURNAL_SCHEMA if is_bind_handoff_cell(cell) else JOURNAL_SCHEMA
 
 
@@ -3992,6 +4187,7 @@ def validate_rollback_precursor(
     expected_journal_identity: Mapping[str, Any],
     *,
     bind_rollback_after_target_started: bool = False,
+    owner_inverse_after_restart: bool = False,
 ) -> None:
     precursor_phase = rollback_precursor_phase(
         cell, bind_rollback_after_target_started=bind_rollback_after_target_started
@@ -4070,6 +4266,7 @@ def validate_rollback_precursor(
         request_id,
         expected_journal_identity,
         expected_phase=precursor_phase,
+        owner_inverse_after_restart=owner_inverse_after_restart,
     )
 
 
@@ -4139,6 +4336,7 @@ def validate_marker(
         journal_path,
         expected_journal_identity,
         bind_rollback_after_target_started=bind_rollback_after_target_started,
+        owner_inverse_after_restart=owner_inverse_after_restart,
     )
     return marker
 
@@ -4173,6 +4371,48 @@ def validate_owner_inverse_frozen_source(journal: Mapping[str, Any]) -> None:
     ):
         raise BoundaryUnverified(
             "owner-inverse journal lacks its V2 frozen PowerDNS source proof"
+        )
+
+
+def validate_owner_inverse_journal_source(
+    journal: Mapping[str, Any], cell: CellSpec | None
+) -> None:
+    """The frozen source each owner inverse re-proves, by profile."""
+
+    profile = owner_inverse_profile(cell) if cell is not None else None
+    if profile is None:
+        raise ControllerError("owner inverse disk proof requires an exact owner-inverse cell")
+    if profile.name == "bind-switch-v2":
+        validate_owner_inverse_frozen_source(journal)
+        return
+    if profile.name == "bind-adoption-v2":
+        plan = journal.get("inverse_plan")
+        source = plan.get("source_bind") if isinstance(plan, dict) else None
+        if (
+            journal.get("source_engine", "") != ""
+            or journal.get("target_engine") != "bind"
+            or not isinstance(plan, dict)
+            or plan.get("kind") != "bind-switch-config/v1"
+            or plan.get("host_layout") != "apt"
+            or not valid_sha256(plan.get("digest"))
+            or "source_pdns" in plan
+            or not isinstance(source, dict)
+            or source.get("kind") != "bind-adoption-source/v1"
+        ):
+            raise BoundaryUnverified(
+                "owner-inverse journal lacks its V2 frozen running-BIND source proof"
+            )
+        return
+    state_before = journal.get("state_before")
+    if (
+        journal.get("mode") != "adopt"
+        or journal.get("source_engine", "") != ""
+        or journal.get("target_engine") != "pdns"
+        or not isinstance(state_before, dict)
+        or state_before.get("exists") is not False
+    ):
+        raise BoundaryUnverified(
+            "owner-inverse journal is not an empty-source PowerDNS adoption"
         )
 
 
@@ -4213,7 +4453,7 @@ def validate_journal_disk_state(
     if journal.get("schema") != want_schema:
         raise BoundaryUnverified("DNS switch journal schema differs")
     if owner_inverse_after_restart:
-        validate_owner_inverse_frozen_source(journal)
+        validate_owner_inverse_journal_source(journal, cell)
     if cell is not None and is_bind_handoff_cell(cell):
         plan = journal.get("inverse_plan")
         source_engine = journal.get("source_engine", "")
@@ -4827,6 +5067,11 @@ class Settings:
     stop_after_kill_for_independent_recovery: bool = False
     bind_rollback_after_target_started: bool = False
     owner_inverse_after_restart: bool = False
+    reboot_before_owner_command: bool = False
+    reboot_after_recovery: bool = False
+    resume_after_reboot: bool = False
+    reboot_dir: str | None = None
+    expect_agent_startup_rollback: bool = False
 
 
 def inspect_command_executable(
@@ -5098,6 +5343,52 @@ def acquire_external_mutation_lock(path: str) -> tuple[int, dict[str, Any]]:
         raise
 
 
+def reboot_checkpoint_paths(reboot_dir: str, ordinal: int) -> dict[str, str]:
+    """Fixed per-ordinal artifact names inside the explicit reboot directory."""
+
+    if ordinal not in (1, 2):
+        raise ControllerError(f"reboot ordinal {ordinal} is outside 1..2")
+    return {
+        "checkpoint": os.path.join(reboot_dir, f"reboot-checkpoint-{ordinal}.json"),
+        "resumed": os.path.join(reboot_dir, f"reboot-resumed-{ordinal}.json"),
+        "transcript": os.path.join(reboot_dir, f"transcript-after-reboot-{ordinal}.jsonl"),
+    }
+
+
+def validate_reboot_settings(settings: Settings) -> None:
+    wants = settings.reboot_before_owner_command or settings.reboot_after_recovery
+    if not wants:
+        if settings.resume_after_reboot or settings.reboot_dir is not None:
+            raise ControllerError(
+                "--resume-after-reboot and --reboot-dir need the reboot flag of the "
+                "suspended run (--reboot-before-owner-command or --reboot-after-recovery)"
+            )
+        return
+    if settings.reboot_dir is None:
+        raise ControllerError("a reboot flag requires the explicit --reboot-dir")
+    require_real_directory(settings.reboot_dir, "reboot checkpoint directory")
+    if (
+        settings.trigger_mode != "socket"
+        or settings.stop_after_kill_for_independent_recovery
+        or settings.bind_rollback_after_target_started
+    ):
+        raise ControllerError(
+            "reboot steps require the socket flow without the independent handoff flags"
+        )
+    if settings.cell.role != "standalone":
+        raise ControllerError(
+            "reboot steps are limited to standalone cells: only the kill guest is rebooted"
+        )
+    if settings.reboot_before_owner_command and not settings.owner_inverse_after_restart:
+        raise ControllerError(
+            "--reboot-before-owner-command requires --owner-inverse-after-restart"
+        )
+    if not settings.resume_after_reboot:
+        for ordinal in (1, 2):
+            for label, path in reboot_checkpoint_paths(settings.reboot_dir, ordinal).items():
+                require_new_output_path(path, f"reboot {label} {ordinal}")
+
+
 def validate_settings(settings: Settings) -> dict[str, Any]:
     if not valid_lower_hex(settings.request_id, 32, 32):
         raise ControllerError(
@@ -5117,21 +5408,34 @@ def validate_settings(settings: Settings) -> dict[str, Any]:
     )
     require_clean_absolute(settings.journal_path, "DNS switch journal")
     require_real_directory(os.path.dirname(settings.journal_path), "journal parent")
-    for path, label in (
-        (settings.marker_path, "boundary marker"),
-        (settings.proof_path, "kill proof"),
-        (settings.result_path, "cell result"),
-        (settings.transcript_path, "raw transcript"),
-    ):
-        require_new_output_path(path, label)
-    try:
-        os.lstat(settings.agent_socket)
-    except FileNotFoundError:
-        pass
-    except OSError as exc:
-        raise ControllerError(f"inspect initial agent socket: {exc}") from exc
+    validate_reboot_settings(settings)
+    if settings.resume_after_reboot:
+        # The marker, proof and first transcript exist and are bound to the
+        # checkpoint by hash; only the final result is still new. The agent
+        # socket belongs to the Agent the boot started.
+        require_new_output_path(settings.result_path, "cell result")
+        for path, label in (
+            (settings.marker_path, "boundary marker"),
+            (settings.proof_path, "kill proof"),
+            (settings.transcript_path, "raw transcript"),
+        ):
+            require_clean_absolute(path, label)
     else:
-        raise ControllerError(f"initial agent socket must be absent: {settings.agent_socket}")
+        for path, label in (
+            (settings.marker_path, "boundary marker"),
+            (settings.proof_path, "kill proof"),
+            (settings.result_path, "cell result"),
+            (settings.transcript_path, "raw transcript"),
+        ):
+            require_new_output_path(path, label)
+        try:
+            os.lstat(settings.agent_socket)
+        except FileNotFoundError:
+            pass
+        except OSError as exc:
+            raise ControllerError(f"inspect initial agent socket: {exc}") from exc
+        else:
+            raise ControllerError(f"initial agent socket must be absent: {settings.agent_socket}")
     for address, label in (
         (settings.dns_address, "DNS address"),
         (settings.panel_address, "panel address"),
@@ -5181,14 +5485,21 @@ def validate_settings(settings: Settings) -> dict[str, Any]:
             "peer-partition command is valid only for paired unreachable cells"
         )
     expected_journal_phase(settings.cell)
+    admission = owner_inverse_admission(settings.cell)
+    owner_later_precursor = bool(
+        settings.owner_inverse_after_restart
+        and admission is not None
+        and admission.requires_target_started_precursor
+    )
     if settings.bind_rollback_after_target_started and not (
-        settings.stop_after_kill_for_independent_recovery
+        (settings.stop_after_kill_for_independent_recovery or owner_later_precursor)
         and is_bind_handoff_cell(settings.cell)
         and settings.trigger_mode == "socket"
         and settings.source_proof_path is not None
     ):
         raise ControllerError(
-            "later BIND rollback precursor requires the exact independent handoff"
+            "later BIND rollback precursor requires the exact independent handoff "
+            "or the running-BIND adoption owner-inverse cell"
         )
     if settings.stop_after_kill_for_independent_recovery and not (
         (settings.cell.cell_id == PDNS_HANDOFF_CELL or is_bind_handoff_cell(settings.cell))
@@ -5203,15 +5514,33 @@ def validate_settings(settings: Settings) -> dict[str, Any]:
             "independent recovery handoff requires the exact PowerDNS adoption or BIND switch rollback cell"
         )
     if settings.owner_inverse_after_restart and not (
-        is_owner_inverse_cell(settings.cell)
+        admission is not None
         and settings.trigger_mode == "socket"
         and settings.source_proof_path is not None
         and not settings.stop_after_kill_for_independent_recovery
-        and not settings.bind_rollback_after_target_started
+        and settings.bind_rollback_after_target_started
+        == admission.requires_target_started_precursor
     ):
         raise ControllerError(
-            "owner inverse after restart requires the exact standalone BIND "
-            "intent or target-staged after-write cell with a socket trigger"
+            "owner inverse after restart requires an admitted owner-inverse cell "
+            f"({', '.join(sorted(OWNER_INVERSE_CELLS))}) with a socket trigger; "
+            "the running-BIND adoption cell also requires "
+            "--bind-rollback-after-target-started"
+        )
+    if settings.expect_agent_startup_rollback and not (
+        settings.cell.cell_id in PDNS_ADOPTION_STARTUP_ROLLBACK_CELLS
+        and settings.cell.driver == "pdns-adopt"
+        and settings.cell.role == "standalone"
+        and settings.cell.edge == "after-write"
+        and settings.trigger_mode == "socket"
+        and settings.source_proof_path is not None
+        and not settings.owner_inverse_after_restart
+        and not settings.stop_after_kill_for_independent_recovery
+    ):
+        raise ControllerError(
+            "--expect-agent-startup-rollback applies only to the PowerDNS adoption "
+            f"cells {', '.join(sorted(PDNS_ADOPTION_STARTUP_ROLLBACK_CELLS))} on the "
+            "socket rpc-retry path"
         )
     if settings.trigger_mode == "startup":
         if (
@@ -5287,6 +5616,13 @@ def validate_settings(settings: Settings) -> dict[str, Any]:
     if settings.peer_partition_command is not None:
         commands["peer_partition"] = inspect_command_executable(
             settings.peer_partition_command, "peer partition"
+        )
+    if settings.expect_agent_startup_rollback:
+        commands["journalctl"] = inspect_command_executable(
+            (JOURNALCTL_EXECUTABLE,), "journalctl"
+        )
+        commands["socket_statistics"] = inspect_command_executable(
+            (SS_EXECUTABLE,), "socket statistics"
         )
     if settings.owner_inverse_after_restart:
         owner = inspect_command_executable(
@@ -6060,46 +6396,170 @@ def read_dns_state_semantic(state_dir: str) -> dict[str, Any]:
     return {"sha256": digest, "semantic": decode_dns_document(value, raw)}
 
 
+def read_dns_state_optional(state_dir: str) -> dict[str, Any]:
+    """The semantic state receipt, or {"exists": False} when it is absent."""
+
+    path = os.path.join(state_dir, "dns-engine-state.json")
+    try:
+        os.lstat(path)
+    except FileNotFoundError:
+        return {"exists": False}
+    except OSError as exc:
+        raise ControllerError(f"inspect DNS engine state receipt: {exc}") from exc
+    return read_dns_state_semantic(state_dir)
+
+
+def observe_bind_source_serving(
+    settings: Settings,
+    environment: Mapping[str, str],
+    *,
+    expected_pid: int | None = None,
+) -> dict[str, Any]:
+    """The owner's BIND answers alone: exclusive unit, listener owner, UDP+TCP AA.
+
+    ``errors`` are verified deviations; ``unknown`` are failed inspections.
+    """
+
+    report: dict[str, Any] = {"at": utc_now(), "errors": [], "unknown": []}
+    try:
+        units = inspect_dns_unit_states(settings.endpoint_timeout, environment)
+        report["units"] = units
+        if units.get("named.service") != "active" and units.get("bind9.service") != "active":
+            report["errors"].append(f"owner BIND unit is not active: {units}")
+        if units.get("pdns.service") == "active":
+            report["errors"].append(f"PowerDNS unit is active: {units}")
+    except ControllerError as exc:
+        report["unknown"].append(str(exc))
+    pid: int | None = None
+    try:
+        pid = read_unit_main_pid("named.service", settings.endpoint_timeout, environment)
+        report["named_main_pid"] = pid
+        if pid <= 0:
+            report["errors"].append("owner BIND has no running MainPID")
+            pid = None
+    except ControllerError as exc:
+        report["unknown"].append(str(exc))
+    report["named_main_pid_expected"] = expected_pid
+    report["named_main_pid_changed"] = bool(
+        expected_pid is not None and pid is not None and pid != expected_pid
+    )
+    try:
+        listeners = observe_port53_listeners(settings, environment)
+        report["port53_listeners"] = listeners
+        for transport in ("tcp", "udp"):
+            owners = {value for item in listeners[transport] for value in item["pids"]}
+            if pid is not None and owners != {pid}:
+                report["errors"].append(
+                    f"{transport} port-53 listeners are not owned only by BIND "
+                    f"MainPID {pid}: {sorted(owners)}"
+                )
+    except ControllerError as exc:
+        report["unknown"].append(str(exc))
+    try:
+        report["dns"] = query_authoritative_dns(
+            settings.dns_address,
+            settings.dns_port,
+            settings.dns_name,
+            settings.dns_type,
+            settings.dns_timeout,
+        )
+        report["dns_answered_at"] = utc_now()
+    except (ControllerError, OSError) as exc:
+        report["errors"].append(f"authoritative UDP/TCP DNS: {exc}")
+    report["ok"] = not report["errors"] and not report["unknown"]
+    return report
+
+
+def source_pid_key(profile: OwnerInverseProfile) -> str:
+    return "named_main_pid" if profile.source_engine == "bind" else "pdns_main_pid"
+
+
+def observe_owner_source_serving(
+    settings: Settings,
+    environment: Mapping[str, str],
+    profile: OwnerInverseProfile,
+    *,
+    expected_pid: int | None = None,
+) -> dict[str, Any]:
+    if profile.source_engine == "bind":
+        return observe_bind_source_serving(settings, environment, expected_pid=expected_pid)
+    return observe_pdns_source_serving(settings, environment, expected_pid=expected_pid)
+
+
+OWNER_SOURCE_LABELS = {
+    "bind-switch-v2": ("BIND source inverse", "managed PowerDNS"),
+    "bind-adoption-v2": ("running BIND adoption inverse", "the owner's BIND"),
+    "pdns-adoption-v1": ("PowerDNS adoption inverse", "the external PowerDNS"),
+}
+
+
 def prove_owner_inverse_preconditions(
     settings: Settings, environment: Mapping[str, str], transcript: Transcript
 ) -> dict[str, Any]:
     """Unmet prerequisites refuse before the tagged Agent can start a mutation."""
 
-    capability = run_bounded_command(
-        (OWNER_RECOVERY_EXECUTABLE, OWNER_BIND_SWITCH_CAPABILITY_COMMAND),
-        "owner-recovery-capability",
-        settings.command_timeout,
-        environment,
-        settings.command_cwd,
-        transcript,
-    )
-    if (
-        capability.returncode != 0
-        or capability.truncated
-        or capability.output != (OWNER_BIND_SWITCH_CAPABILITY_MARKER + "\n").encode()
-    ):
-        raise ControllerError(
-            "the selected owner recovery runtime does not advertise the BIND "
-            "source inverse; enroll the recovery runtime before this cell"
+    profile = owner_inverse_profile(settings.cell)
+    if profile is None:
+        raise ControllerError("owner inverse preconditions require an admitted owner-inverse cell")
+    inverse_label, source_label = OWNER_SOURCE_LABELS[profile.name]
+    if profile.capability_command is not None and profile.capability_marker is not None:
+        capability = run_bounded_command(
+            (OWNER_RECOVERY_EXECUTABLE, profile.capability_command),
+            "owner-recovery-capability",
+            settings.command_timeout,
+            environment,
+            settings.command_cwd,
+            transcript,
         )
-    source = observe_pdns_source_serving(settings, environment)
-    if not source["ok"] or source.get("pdns_main_pid") is None:
+        if (
+            capability.returncode != 0
+            or capability.truncated
+            or capability.output != (profile.capability_marker + "\n").encode()
+        ):
+            raise ControllerError(
+                f"the selected owner recovery runtime does not advertise the {inverse_label}; "
+                "enroll the recovery runtime before this cell"
+            )
+        capability_report: dict[str, Any] = capability.report()
+    else:
+        capability_report = {
+            "probed": False,
+            "reason": (
+                f"{profile.owner_command} has no capability probe; only the "
+                "launcher's root ownership and mode are checked"
+            ),
+        }
+    source = observe_owner_source_serving(settings, environment, profile)
+    pid_key = source_pid_key(profile)
+    if not source["ok"] or source.get(pid_key) is None:
         raise ControllerError(
-            "managed PowerDNS is not the exclusive authoritative source before the "
+            f"{source_label} is not the exclusive authoritative source before the "
             f"cut: errors={source['errors']} unknown={source['unknown']}"
         )
-    state = read_dns_state_semantic(settings.state_dir)
+    state = (
+        read_dns_state_semantic(settings.state_dir)
+        if profile.name == "bind-switch-v2"
+        else read_dns_state_optional(settings.state_dir)
+    )
     preflight = {
-        "capability": capability.report(),
+        "capability": capability_report,
         "source": source,
         "state": state,
         "observed_at_epoch": int(time.time()),
     }
-    transcript.event(
-        "owner-inverse-preconditions-proven",
-        pdns_main_pid=source["pdns_main_pid"],
-        state_sha256=state["sha256"],
-    )
+    if profile.name == "bind-switch-v2":
+        transcript.event(
+            "owner-inverse-preconditions-proven",
+            pdns_main_pid=source["pdns_main_pid"],
+            state_sha256=state["sha256"],
+        )
+    else:
+        transcript.event(
+            "owner-inverse-preconditions-proven",
+            profile=profile.name,
+            source_main_pid=source[pid_key],
+            state=state,
+        )
     return preflight
 
 
@@ -6168,6 +6628,7 @@ def _terminal_job_errors(
     identity: Mapping[str, str],
     error_code: str,
     label: str,
+    target: str = "bind",
 ) -> list[str]:
     if job is None:
         return [f"{label}: ledger has no job for request {identity['request_id']}"]
@@ -6176,7 +6637,7 @@ def _terminal_job_errors(
         "request_id": identity["request_id"],
         "owner_id": identity["owner_id"],
         "kind": "dns_engine_switch",
-        "target": "bind",
+        "target": target,
         "package_name": identity["manifest_qualifier"],
         "status": "failed",
         "phase": "interrupted",
@@ -6206,16 +6667,37 @@ def _terminal_job_errors(
 
 
 def classify_agent_release(
-    ledger: Mapping[str, Any], job: Mapping[str, Any] | None, identity: Mapping[str, str]
+    ledger: Mapping[str, Any],
+    job: Mapping[str, Any] | None,
+    identity: Mapping[str, str],
+    *,
+    target: str = "bind",
 ) -> list[str]:
     return _terminal_job_errors(
-        ledger, job, identity, AGENT_RELEASED_NATIVE_UNKNOWN, "Agent release"
+        ledger, job, identity, AGENT_RELEASED_NATIVE_UNKNOWN, "Agent release", target
     )
 
 
-def owner_status_names_command(output: bytes, request_id: str) -> bool:
+def classify_agent_startup_rollback(
+    ledger: Mapping[str, Any],
+    job: Mapping[str, Any] | None,
+    identity: Mapping[str, str],
+    *,
+    target: str,
+) -> list[str]:
+    """The Agent's own rollback at restart: its terminal verdict, no lease."""
+
+    return _terminal_job_errors(
+        ledger, job, identity, AGENT_ROLLED_BACK_AFTER_RESTART,
+        "Agent startup rollback", target,
+    )
+
+
+def owner_status_names_command(
+    output: bytes, request_id: str, command: str = OWNER_BIND_SWITCH_COMMAND
+) -> bool:
     text = output.decode("utf-8", errors="replace")
-    return f"{OWNER_BIND_SWITCH_COMMAND} --request-id {request_id}" in text
+    return f"{command} --request-id {request_id}" in text
 
 
 def wait_for_agent_release(
@@ -6257,10 +6739,16 @@ def find_agent_owner_refusal(
     environment: Mapping[str, str],
     transcript: Transcript,
     since_epoch: int,
+    *,
+    command: str = OWNER_BIND_SWITCH_COMMAND,
+    poll: bool = True,
 ) -> dict[str, Any]:
-    """Poll the ordinary Agent's journal for the refusal naming the owner command."""
+    """Poll the ordinary Agent's journal for the refusal naming the owner command.
 
-    needle = f"{OWNER_BIND_SWITCH_COMMAND} --request-id {settings.request_id}"
+    ``poll=False`` reads once; it is used where the command must be absent.
+    """
+
+    needle = f"{command} --request-id {settings.request_id}"
     argv = (
         JOURNALCTL_EXECUTABLE, "--no-pager", "--quiet", "--output=cat",
         "--unit=celikpanel-agent.service", f"--since=@{since_epoch}",
@@ -6288,7 +6776,7 @@ def find_agent_owner_refusal(
                 "attempts": attempts,
                 "unknown": f"journalctl exited {completed.returncode}",
             }
-        if needle in text or time.monotonic() >= deadline:
+        if needle in text or not poll or time.monotonic() >= deadline:
             break
         time.sleep(1.0)
     # One bounded, transcript-recorded read retains the raw journal excerpt.
@@ -6360,6 +6848,60 @@ def owner_pdns_files(
     return {"configuration": again["configuration"], "database": again["database"]}
 
 
+def owner_bind_files() -> dict[str, Any]:
+    """Re-run the owner BIND source proof; return the comparable content parts.
+
+    Content hashes and the native inventory are compared; device/inode are not,
+    because the inverse restores its configuration preimages by replacement.
+    """
+
+    evidence = validate_owner_bind_native_source()
+    return owner_bind_comparable(evidence)
+
+
+def owner_bind_comparable(evidence: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "files": {
+            label: evidence[label]["sha256"]
+            for label in ("main", "options", "local", "leaf", "zone")
+        },
+        "inventory": sorted(evidence.get("inventory", [])),
+    }
+
+
+def owner_pdns_adoption_files(source_proof: Mapping[str, Any]) -> dict[str, Any]:
+    """Content hashes of the external PowerDNS configuration and database.
+
+    Compared with the sealed adoption preimage; ownership and metadata are
+    recorded by the preimage proof, not re-judged here.
+    """
+
+    preimage = source_proof["external_pdns_preimage"]
+    current: dict[str, Any] = {"configuration": {}, "database": {}}
+    for label, path, maximum in (
+        ("main", preimage["configuration"]["main"]["path"], 1 << 20),
+        ("managed", preimage["configuration"]["managed"]["path"], 1 << 20),
+    ):
+        raw, _ = secure_read_bytes(path, f"external PowerDNS {label} configuration",
+                                   maximum=maximum)
+        current["configuration"][label] = {"sha256": hashlib.sha256(raw).hexdigest()}
+    raw, _ = secure_read_bytes(preimage["database"]["path"], "external PowerDNS database",
+                               maximum=65 << 20)
+    current["database"] = {"sha256": hashlib.sha256(raw).hexdigest()}
+    return current
+
+
+def owner_pdns_adoption_expected(source_proof: Mapping[str, Any]) -> dict[str, Any]:
+    preimage = source_proof["external_pdns_preimage"]
+    return {
+        "configuration": {
+            label: {"sha256": preimage["configuration"][label]["sha256"]}
+            for label in ("main", "managed")
+        },
+        "database": {"sha256": preimage["database"]["sha256"]},
+    }
+
+
 def run_owner_command(
     settings: Settings,
     argv: Sequence[str],
@@ -6400,6 +6942,913 @@ def classify_owner_inverse(
     return "passed" if outcome.get("classification") == "rolled_back_source_serving" else "failed"
 
 
+class OwnerInverseFlow:
+    """The owner-inverse-after-restart flow, split at its reboot points.
+
+    Steps (README "Owner inverse after Agent restart"): 2 Agent decides,
+    optional reboot, 3 read-only status, 4 owner command, 5 judged outcome,
+    6 idempotent re-run, 7 liveness and stability. Every judgement is taken
+    from the cell's admission (OWNER_INVERSE_ADMISSIONS), its profile
+    (OWNER_INVERSE_PROFILES) and its expectation (OwnerInverseExpectation).
+    ``state()`` is JSON-serializable so the flow can continue after a reboot.
+    """
+
+    def __init__(
+        self,
+        settings: Settings,
+        *,
+        result: dict[str, Any],
+        transcript: Transcript,
+        ordinary: Mapping[str, str],
+        owner_environment: Mapping[str, str],
+        controller_identity: Mapping[str, Any],
+        kill_proven: bool,
+        safety_failures: list[str],
+        verification_failures: list[str],
+        diagnostic_failures: list[str],
+    ) -> None:
+        preflight = result.get("owner_inverse_preflight")
+        if not isinstance(preflight, dict) or "source" not in preflight:
+            raise ControllerError("owner inverse lost its pre-cut PowerDNS observation")
+        admission = owner_inverse_admission(settings.cell)
+        if admission is None:
+            raise ControllerError("owner inverse requires an admitted owner-inverse cell")
+        self.settings = settings
+        self.result = result
+        self.transcript = transcript
+        self.ordinary = ordinary
+        self.owner_environment = owner_environment
+        self.controller_identity = controller_identity
+        self.kill_proven = kill_proven
+        self.safety_failures = safety_failures
+        self.verification_failures = verification_failures
+        self.diagnostic_failures = diagnostic_failures
+        self.admission = admission
+        self.profile = OWNER_INVERSE_PROFILES[admission.profile]
+        self.expectation = owner_inverse_expectation(settings.cell)
+        self.preflight = preflight
+        self.pid_key = source_pid_key(self.profile)
+        self.pre_cut_pid = preflight["source"][self.pid_key]
+        self.preflight_epoch = preflight["observed_at_epoch"]
+        # Source MainPID that later observations must keep. Critical cells stop
+        # the source, so the reference is re-based on the PID after the command;
+        # a reboot re-bases it on the PID the boot started.
+        self.pid_reference: int | None = self.pre_cut_pid
+        self.failures: list[str] = []
+        self.ambiguities: list[str] = []
+        self.identity: dict[str, str] = {}
+        self.boundary_identity: dict[str, Any] = {}
+        self.agent_identity: tuple[int, int] | None = None
+        self.agent_process: dict[str, Any] | None = None
+        self.agent_ready: dict[str, Any] = {}
+        self.old_socket_identity: tuple[int, int] | None = None
+        self.prerequisites_met = False
+        self.restarts: dict[str, Any] = {}
+        self.probes: list[dict[str, Any]] = []
+        self.flow: dict[str, Any] = {}
+
+    # -- serialization -------------------------------------------------------
+
+    def state(self) -> dict[str, Any]:
+        return {
+            "flow": "owner-inverse",
+            "pid_reference": self.pid_reference,
+            "failures": list(self.failures),
+            "ambiguities": list(self.ambiguities),
+            "identity": dict(self.identity),
+            "boundary_identity": dict(self.boundary_identity),
+            "agent_identity": list(self.agent_identity) if self.agent_identity else None,
+            "agent_process": self.agent_process,
+            "agent_ready": self.agent_ready,
+            "old_socket_identity": (
+                list(self.old_socket_identity) if self.old_socket_identity else None
+            ),
+            "prerequisites_met": self.prerequisites_met,
+            "restarts": self.restarts,
+            "probes": self.probes,
+        }
+
+    def restore(self, state: Mapping[str, Any]) -> None:
+        if state.get("flow") != "owner-inverse":
+            raise ControllerError("reboot checkpoint does not hold an owner-inverse flow")
+        self.flow = self.result["owner_inverse_after_restart"]
+        self.pid_reference = state["pid_reference"]
+        self.failures = list(state["failures"])
+        self.ambiguities = list(state["ambiguities"])
+        self.identity = dict(state["identity"])
+        self.boundary_identity = dict(state["boundary_identity"])
+        agent = state.get("agent_identity")
+        self.agent_identity = (int(agent[0]), int(agent[1])) if agent else None
+        self.agent_process = state.get("agent_process")
+        self.agent_ready = state.get("agent_ready") or {}
+        old = state.get("old_socket_identity")
+        self.old_socket_identity = (int(old[0]), int(old[1])) if old else None
+        self.prerequisites_met = bool(state["prerequisites_met"])
+        self.restarts = dict(state.get("restarts") or {})
+        self.probes = list(state.get("probes") or [])
+
+    @property
+    def steps(self) -> dict[str, Any]:
+        return self.flow["steps"]
+
+    # -- observations ----------------------------------------------------------
+
+    def source_check(self, stage: str, expected_pid: int | None) -> dict[str, Any]:
+        report = observe_owner_source_serving(
+            self.settings, self.owner_environment, self.profile, expected_pid=expected_pid
+        )
+        self.failures.extend(f"{stage}: {error}" for error in report["errors"])
+        self.ambiguities.extend(f"{stage}: {error}" for error in report["unknown"])
+        if report.get(self.pid_key + "_changed"):
+            if self.profile.source_engine == "pdns":
+                report["pdns_journal"] = capture_pdns_journal(
+                    self.settings, self.owner_environment, self.transcript,
+                    self.preflight_epoch, stage,
+                )
+                message = (
+                    f"{stage}: PowerDNS MainPID changed from {expected_pid} to "
+                    f"{report.get('pdns_main_pid')}; the controller cannot establish why "
+                    "(pdns.service journal retained)"
+                )
+            else:
+                message = (
+                    f"{stage}: owner BIND MainPID changed from {expected_pid} to "
+                    f"{report.get(self.pid_key)}"
+                )
+            if self.profile.source_pid_change_fails:
+                self.failures.append(
+                    message + "; running-BIND adoption recovery must never stop or "
+                    "restart the owner's named"
+                )
+            else:
+                self.ambiguities.append(message)
+        self.transcript.event("owner-inverse-source-observed", stage=stage, report=report)
+        return report
+
+    def native_record(self, stage: str) -> dict[str, Any]:
+        # Recorded only; callers judge the specific facts they need and turn
+        # a missing one into an ambiguity.
+        report = observe_native_dns_state(self.settings, self.owner_environment)
+        self.transcript.event("owner-inverse-native-observed", stage=stage, report=report)
+        return report
+
+    @staticmethod
+    def unit_state(report: Mapping[str, Any], unit: str, key: str) -> str | None:
+        value = report.get("units", {}).get(unit, {}).get(key)
+        return value if isinstance(value, str) else None
+
+    def journal_label(self) -> str:
+        version = "V2" if self.profile.journal_schema == BIND_HANDOFF_JOURNAL_SCHEMA else "V1"
+        return f"{version} {self.admission.step2_journal_phase}"
+
+    def owner_files(self) -> tuple[Any, Any, str]:
+        source_proof = self.result["source_proof"]
+        if self.profile.name == "bind-switch-v2":
+            files = owner_pdns_files(self.settings, source_proof)
+            normalization = source_proof["source_normalization"]
+            expected = {
+                "configuration": normalization["configuration"],
+                "database": normalization["database"],
+            }
+            return files, expected, "owner PowerDNS configuration or database changed"
+        if self.profile.name == "bind-adoption-v2":
+            return (
+                owner_bind_files(),
+                owner_bind_comparable(source_proof["owner_bind_native_source"]),
+                "owner BIND configuration, zone file or native inventory changed",
+            )
+        return (
+            owner_pdns_adoption_files(source_proof),
+            owner_pdns_adoption_expected(source_proof),
+            "external PowerDNS configuration or database changed",
+        )
+
+    # -- step 2: the restarted Agent decides -----------------------------------
+
+    def start(
+        self,
+        identity_receipt: Mapping[str, Any],
+        boundary_identity: Mapping[str, Any],
+        old_socket_identity: tuple[int, int] | None,
+    ) -> None:
+        settings = self.settings
+        self.identity = {
+            "request_id": settings.request_id,
+            "owner_id": identity_receipt["owner_id"],
+            "manifest_qualifier": identity_receipt["manifest_qualifier"],
+        }
+        self.boundary_identity = dict(boundary_identity)
+        self.old_socket_identity = old_socket_identity
+        self.flow = {
+            "mode": "owner-inverse-after-restart",
+            "variant": self.expectation.variant,
+            "expectation": {
+                key: value
+                for key, value in vars(self.expectation).items()
+                if key != "variant"
+            },
+            "request_id": settings.request_id,
+            "pre_cut_pdns_main_pid": self.pre_cut_pid,
+            "owner_command": [
+                OWNER_RECOVERY_EXECUTABLE, self.profile.owner_command,
+                "--request-id", settings.request_id,
+            ],
+            "status_command": [
+                OWNER_RECOVERY_EXECUTABLE, "dns-switch-status", "--quiesced",
+                "--request-id", settings.request_id,
+            ],
+            "steps": {},
+        }
+        if self.profile.name != "bind-switch-v2":
+            # Additive: absent for the PowerDNS -> BIND switch cells.
+            self.flow["profile"] = self.profile.name
+            self.flow["step2_journal_phase"] = self.admission.step2_journal_phase
+            if self.profile.source_engine == "bind":
+                del self.flow["pre_cut_pdns_main_pid"]
+                self.flow["pre_cut_named_main_pid"] = self.pre_cut_pid
+        self.result["owner_inverse_after_restart"] = self.flow
+        self.step2()
+
+    def step2(self) -> None:
+        settings = self.settings
+        restart_epoch = int(time.time()) - 1
+        agent_restart, error = checked_command(
+            settings, settings.agent_restart_command, "agent-restart",
+            settings.command_timeout, self.ordinary, self.transcript,
+        )
+        self.restarts = {"agent-restart": agent_restart}
+        if error:
+            self.diagnostic_failures.append(error)
+        agent_ready, error = endpoint_check(
+            "agent-ready-for-recovery",
+            lambda: wait_for_unix_socket(
+                settings.agent_socket, settings.endpoint_timeout,
+                previous_identity=self.old_socket_identity,
+            ),
+            self.transcript,
+        )
+        if error:
+            self.safety_failures.append(error)
+        else:
+            detail = agent_ready["detail"]
+            if (
+                not isinstance(detail, tuple)
+                or len(detail) != 2
+                or any(not isinstance(item, int) for item in detail)
+            ):
+                raise ControllerError("agent readiness returned an invalid socket identity")
+            self.agent_identity = detail
+            agent_ready["detail"] = {"device": detail[0], "inode": detail[1]}
+        self.agent_ready = agent_ready
+        step2: dict[str, Any] = {"agent_ready": agent_ready, "restart_epoch": restart_epoch}
+        self.steps["agent_restarted"] = step2
+        self.prerequisites_met = self.agent_identity is not None
+        if self.agent_identity is None:
+            step2["skipped"] = "restarted Agent socket was not proven"
+            return
+        try:
+            self.agent_process = inspect_restarted_agent_process(
+                settings.endpoint_timeout, self.ordinary,
+                self.controller_identity["effective_gid"],
+            )
+            step2["agent_process"] = self.agent_process
+        except ControllerError as exc:
+            step2["agent_process"] = {"error": str(exc)}
+            self.ambiguities.append(f"restarted Agent process identity: {exc}")
+        release = wait_for_agent_release(settings, self.transcript)
+        step2["release"] = release
+        if not release["released"]:
+            self.ambiguities.append(
+                "restarted Agent did not release the request within "
+                f"{settings.recovery_timeout} seconds"
+            )
+            self.prerequisites_met = False
+        else:
+            release_errors = classify_agent_release(
+                release["ledger"], release["job"], self.identity,
+                target=self.profile.ledger_target,
+            )
+            self.failures.extend(release_errors)
+            self.prerequisites_met = self.prerequisites_met and not release_errors
+            # The owner inverse leaves this Agent-written ledger untouched; its
+            # bytes are the step-5 reference.
+            try:
+                step2["ledger_after_release"] = snapshot_private_evidence(
+                    settings.state_dir, settings.journal_path
+                )["ledger"]
+                if not step2["ledger_after_release"]["exists"]:
+                    raise ControllerError("ledger is absent after the Agent release")
+            except ControllerError as exc:
+                step2["ledger_after_release"] = {"error": str(exc)}
+                self.ambiguities.append(f"ledger after Agent release: {exc}")
+                self.prerequisites_met = False
+        try:
+            step2["journal"] = validate_journal_disk_state(
+                settings.journal_path, self.admission.step2_journal_phase,
+                settings.request_id, self.boundary_identity, cell=settings.cell,
+                owner_inverse_after_restart=True,
+            )
+        except (BoundaryUnverified, ControllerError) as exc:
+            step2["journal"] = {"error": str(exc)}
+            self.failures.append(
+                f"journal after Agent restart is not {self.journal_label()}: {exc}"
+            )
+            self.prerequisites_met = False
+        refusal = find_agent_owner_refusal(
+            settings, self.owner_environment, self.transcript, restart_epoch,
+            command=self.profile.owner_command,
+        )
+        step2["agent_journal_refusal"] = refusal
+        if "unknown" in refusal:
+            self.ambiguities.append(f"Agent journal could not be read: {refusal['unknown']}")
+        elif not refusal["observed"]:
+            self.failures.append(
+                "Agent journal lacks the refusal naming "
+                f"{self.profile.owner_command} --request-id {settings.request_id}"
+            )
+        if self.expectation.source_serving_after_restart:
+            step2["source"] = self.source_check("after Agent restart", self.pid_reference)
+        else:
+            self.record_critical_step2(step2)
+        step2["pre_owner_probe"] = run_recovery_probe(settings, self.ordinary, self.transcript, 0)
+
+    def record_critical_step2(self, step2: dict[str, Any]) -> None:
+        stage = "after Agent restart"
+        native = self.native_record(stage)
+        step2["native"] = native
+        step2["pdns_unit_journal"] = read_pdns_unit_journal(
+            self.settings, self.owner_environment, self.preflight_epoch
+        )
+        judged: dict[str, Any] = {}
+        pdns_active = self.unit_state(native, "pdns.service", "ActiveState")
+        judged["pdns_active_state"] = pdns_active
+        if pdns_active is None:
+            self.ambiguities.append(f"{stage}: PowerDNS unit state is unknown")
+        elif self.expectation.pdns_inactive_after_restart and pdns_active == "active":
+            self.failures.append(
+                f"{stage}: PowerDNS is active, but this cut stopped the source "
+                "before the kill"
+            )
+        if self.expectation.bind_active_after_restart:
+            bind_states = [
+                self.unit_state(native, unit, "ActiveState")
+                for unit in ("named.service", "bind9.service")
+            ]
+            judged["bind_active_states"] = bind_states
+            if "active" not in bind_states:
+                if None in bind_states:
+                    self.ambiguities.append(f"{stage}: BIND unit state is unknown")
+                else:
+                    self.failures.append(
+                        f"{stage}: BIND is not active, but this cut started the target "
+                        f"before the kill: {bind_states}"
+                    )
+        step2["judged"] = judged
+
+    # -- optional reboot between step 2 and step 3 ------------------------------
+
+    def after_boot(self, boot: Mapping[str, Any]) -> None:
+        """Judge the state the boot left before the owner acts.
+
+        Judged: Agent and Panel units came up and answer, the journal still has
+        its step-2 phase, the ledger is byte-identical to the Agent's release,
+        and (pre-start) the source serves alone again. Recorded: private
+        evidence changes, native state, the Agent refusal since the boot, the
+        new source MainPID, and a recovery probe.
+        """
+
+        settings = self.settings
+        step: dict[str, Any] = {"boot": dict(boot)}
+        self.steps["after_reboot"] = step
+        boot_epoch = int(time.time()) - 1
+        management = observe_management_units(settings, self.owner_environment)
+        step["management_units"] = management
+        self.ambiguities.extend(f"after reboot: {item}" for item in management["unknown"])
+        for unit, properties in management["units"].items():
+            if properties.get("ActiveState") != "active":
+                self.failures.append(
+                    f"after reboot: {unit} did not come up ({properties.get('ActiveState')})"
+                )
+        agent_ready, error = endpoint_check(
+            "agent-ready-after-reboot",
+            lambda: wait_for_unix_socket(settings.agent_socket, settings.endpoint_timeout),
+            self.transcript,
+        )
+        step["agent_ready"] = agent_ready
+        if error:
+            self.failures.append(f"after reboot: {error}")
+            self.agent_identity = None
+            self.prerequisites_met = False
+        else:
+            detail = agent_ready["detail"]
+            self.agent_identity = (int(detail[0]), int(detail[1]))
+            agent_ready["detail"] = {"device": detail[0], "inode": detail[1]}
+            try:
+                self.agent_process = inspect_restarted_agent_process(
+                    settings.endpoint_timeout, self.ordinary,
+                    self.controller_identity["effective_gid"],
+                )
+                step["agent_process"] = self.agent_process
+            except ControllerError as exc:
+                step["agent_process"] = {"error": str(exc)}
+                self.agent_process = None
+                self.ambiguities.append(f"after reboot: Agent process identity: {exc}")
+        panel, error = endpoint_check(
+            "panel-after-reboot",
+            lambda: (
+                wait_for_tcp(settings.panel_address, settings.panel_port,
+                             settings.endpoint_timeout)
+                or {"address": settings.panel_address, "port": settings.panel_port}
+            ),
+            self.transcript,
+        )
+        step["panel"] = panel
+        if error:
+            self.failures.append(f"after reboot: {error}")
+        try:
+            step["journal"] = validate_journal_disk_state(
+                settings.journal_path, self.admission.step2_journal_phase,
+                settings.request_id, self.boundary_identity, cell=settings.cell,
+                owner_inverse_after_restart=True,
+            )
+        except (BoundaryUnverified, ControllerError) as exc:
+            step["journal"] = {"error": str(exc)}
+            self.failures.append(f"journal after reboot is not {self.journal_label()}: {exc}")
+            self.prerequisites_met = False
+        released = self.steps["agent_restarted"].get("ledger_after_release", {})
+        try:
+            evidence = snapshot_private_evidence(settings.state_dir, settings.journal_path)
+            step["evidence"] = evidence
+            step["ledger_unchanged_since_release"] = all(
+                evidence["ledger"].get(key) == released.get(key)
+                for key in ("exists", "sha256", "size")
+            )
+            if not step["ledger_unchanged_since_release"]:
+                self.failures.append("the reboot changed the ledger the Agent wrote at its release")
+                self.prerequisites_met = False
+            before = self.steps.get("agent_restarted", {}).get("evidence_before_reboot")
+            if isinstance(before, dict):
+                step["changed_evidence"] = changed_private_evidence(before, evidence)
+        except ControllerError as exc:
+            step["evidence"] = {"error": str(exc)}
+            self.ambiguities.append(f"after reboot: private evidence: {exc}")
+            self.prerequisites_met = False
+        step["agent_journal_refusal"] = find_agent_owner_refusal(
+            settings, self.owner_environment, self.transcript, boot_epoch,
+            command=self.profile.owner_command,
+        )
+        step["agent_journal_refusal"]["judged"] = False
+        if self.expectation.source_serving_after_restart:
+            source = self.source_check("after reboot", None)
+            step["source"] = source
+            new_pid = source.get(self.pid_key)
+            step["source_main_pid"] = {
+                "judged": False,
+                "before_reboot": self.pid_reference,
+                "after_reboot": new_pid,
+                "reason": "a reboot starts the source again; later steps keep the new PID",
+            }
+            self.pid_reference = new_pid
+        else:
+            step["native"] = self.native_record("after reboot")
+            step["pdns_unit_journal"] = read_pdns_unit_journal(
+                settings, self.owner_environment, self.preflight_epoch
+            )
+        step["probe"] = run_recovery_probe(settings, self.ordinary, self.transcript, 3)
+        if self.agent_identity is None:
+            self.prerequisites_met = False
+
+    # -- steps 3 to 6: status, owner command, judged outcome, re-run ---------
+
+    def owner_steps(self) -> None:
+        settings = self.settings
+        profile = self.profile
+        self.rerun_dns_ok = False
+        status_named = False
+        if self.prerequisites_met:
+            before = snapshot_private_evidence(settings.state_dir, settings.journal_path)
+            status = run_owner_command(
+                settings, self.flow["status_command"], "owner-dns-switch-status",
+                self.owner_environment, self.transcript,
+            )
+            after = snapshot_private_evidence(settings.state_dir, settings.journal_path)
+            changed = changed_private_evidence(before, after)
+            status_named = bool(status.get("ran")) and owner_status_names_command(
+                status.get("_raw_output", b""), settings.request_id, profile.owner_command
+            )
+            self.steps["status"] = {
+                "command": _public(status),
+                "evidence_before": before,
+                "evidence_after": after,
+                "changed_evidence": changed,
+                "names_owner_command": status_named,
+            }
+            if not status.get("ran"):
+                self.ambiguities.append(
+                    f"status command did not complete: {status.get('unknown')}"
+                )
+            elif not status_named:
+                self.failures.append(
+                    "status output does not name "
+                    f"{profile.owner_command} --request-id {settings.request_id}"
+                )
+            if changed:
+                self.failures.append(f"read-only status changed private evidence: {changed}")
+        else:
+            self.steps["status"] = {"skipped": "Agent decision prerequisites were not proven"}
+
+        if not (
+            self.prerequisites_met
+            and status_named
+            and not self.steps["status"]["changed_evidence"]
+        ):
+            self.steps["owner_command"] = {
+                "skipped": "the Agent decision and read-only status naming were not both proven"
+            }
+            return
+        before = snapshot_private_evidence(settings.state_dir, settings.journal_path)
+        owner = run_owner_command(
+            settings, self.flow["owner_command"], f"owner-{profile.owner_command}",
+            self.owner_environment, self.transcript,
+        )
+        self.steps["owner_command"] = {"command": _public(owner), "evidence_before": before}
+        if not owner.get("ran"):
+            self.ambiguities.append(f"owner command did not complete: {owner.get('unknown')}")
+        self.step5()
+        # Recorded, never judged: what the owner is told once the journal is
+        # retired.
+        told_before = snapshot_private_evidence(settings.state_dir, settings.journal_path)
+        told = run_owner_command(
+            settings, self.flow["status_command"],
+            "owner-dns-switch-status-after-owner-command",
+            self.owner_environment, self.transcript,
+        )
+        told_after = snapshot_private_evidence(settings.state_dir, settings.journal_path)
+        self.steps["status_after_owner_command"] = {
+            "command": _public(told),
+            "changed_evidence": changed_private_evidence(told_before, told_after),
+            "judged": False,
+        }
+
+        # Step 6: the identical re-run is idempotent.
+        rerun_before = snapshot_private_evidence(settings.state_dir, settings.journal_path)
+        rerun = run_owner_command(
+            settings, self.flow["owner_command"], f"owner-{profile.owner_command}-rerun",
+            self.owner_environment, self.transcript,
+        )
+        rerun_after = snapshot_private_evidence(settings.state_dir, settings.journal_path)
+        rerun_changed = changed_private_evidence(rerun_before, rerun_after)
+        self.steps["rerun"] = {
+            "command": _public(rerun),
+            "evidence_before": rerun_before,
+            "evidence_after": rerun_after,
+            "changed_evidence": rerun_changed,
+        }
+        if not rerun.get("ran"):
+            self.ambiguities.append(f"owner re-run did not complete: {rerun.get('unknown')}")
+        if rerun_changed:
+            self.failures.append(f"owner command re-run changed private evidence: {rerun_changed}")
+        self.probes.append(run_recovery_probe(settings, self.ordinary, self.transcript, 2))
+        rerun_source = self.source_check("after owner re-run", self.pid_reference)
+        self.steps["rerun"]["source"] = rerun_source
+        self.rerun_dns_ok = "dns" in rerun_source and not any(
+            error.startswith("authoritative") for error in rerun_source["errors"]
+        )
+
+    def step5(self) -> None:
+        settings = self.settings
+        after = snapshot_private_evidence(settings.state_dir, settings.journal_path)
+        step5: dict[str, Any] = {"evidence": after}
+        self.steps["after_owner_command"] = step5
+        if after["journal"]["exists"]:
+            self.failures.append("owner command left the switch journal in place")
+        # For a job the Agent released, the owner inverse writes no ledger
+        # verdict: the released record must survive byte-identical.
+        released_ledger = self.steps["agent_restarted"]["ledger_after_release"]
+        step5["ledger_unchanged_since_release"] = all(
+            after["ledger"].get(key) == released_ledger.get(key)
+            for key in ("exists", "sha256", "size")
+        )
+        if not step5["ledger_unchanged_since_release"]:
+            self.failures.append(
+                "owner command changed the ledger the Agent wrote at its release"
+            )
+        try:
+            ledger, job = read_request_ledger(settings.state_dir, settings.request_id)
+            step5["ledger"] = ledger
+            step5["job"] = job
+            self.failures.extend(
+                f"after owner command: {error}"
+                for error in classify_agent_release(
+                    ledger, job, self.identity, target=self.profile.ledger_target
+                )
+            )
+        except ControllerError as exc:
+            step5["ledger"] = {"error": str(exc)}
+            self.ambiguities.append(f"ledger after owner command: {exc}")
+        self.judge_state_receipt(step5)
+        self.probes.append(run_recovery_probe(settings, self.ordinary, self.transcript, 1))
+        if self.expectation.pdns_pid_continuity_from_cut:
+            step5["source"] = self.source_check("after owner command", self.pid_reference)
+        else:
+            stage = "after owner command"
+            step5["source"] = self.source_check(stage, None)
+            new_pid = step5["source"].get("pdns_main_pid")
+            step5["pdns_main_pid"] = {
+                "judged": False,
+                "pre_cut": self.pre_cut_pid,
+                "after_owner_command": new_pid,
+                "changed": new_pid is not None and new_pid != self.pre_cut_pid,
+                "reason": "the source was stopped before the cut; the inverse starts it again",
+            }
+            self.pid_reference = new_pid
+        if self.expectation.native_checks_after_owner_command:
+            self.judge_critical_native(step5)
+        if self.profile.name == "bind-adoption-v2":
+            # Recorded, not judged: whether the adoption-only product zone is
+            # still answered (the command proves it unloaded with rndc).
+            try:
+                query_authoritative_dns(
+                    settings.dns_address, settings.dns_port, "www.s1-kill.test",
+                    settings.dns_type, settings.dns_timeout,
+                )
+                step5["adoption_zone_answered"] = {"judged": False, "answered": True}
+            except (ControllerError, OSError) as exc:
+                step5["adoption_zone_answered"] = {
+                    "judged": False, "answered": False, "error": str(exc),
+                }
+        try:
+            files, expected_files, message = self.owner_files()
+            step5["owner_files"] = files
+            step5["owner_files_unchanged"] = files == expected_files
+            if files != expected_files:
+                self.failures.append(message)
+        except (ControllerError, KeyError) as exc:
+            step5["owner_files"] = {"error": str(exc)}
+            label = "PowerDNS" if self.profile.source_engine == "pdns" else "BIND"
+            self.failures.append(f"owner {label} files could not be re-proved: {exc}")
+
+    def judge_state_receipt(self, step5: dict[str, Any]) -> None:
+        pre = self.preflight["state"]
+        if "semantic" in pre:
+            try:
+                state = read_dns_state_semantic(self.settings.state_dir)
+                step5["state"] = state
+                step5["state_bytes_unchanged"] = state["sha256"] == pre["sha256"]
+                if state["semantic"] != pre["semantic"]:
+                    self.failures.append("DNS state receipt differs from the pre-cut source")
+            except ControllerError as exc:
+                step5["state"] = {"error": str(exc)}
+                self.failures.append(f"DNS state receipt after owner command: {exc}")
+            return
+        try:
+            state = read_dns_state_optional(self.settings.state_dir)
+            step5["state"] = state
+            step5["state_bytes_unchanged"] = state == {"exists": False}
+            if state != {"exists": False}:
+                self.failures.append(
+                    "DNS state receipt exists after the owner inverse, but the "
+                    "pre-cut source had none"
+                )
+        except ControllerError as exc:
+            step5["state"] = {"error": str(exc)}
+            self.failures.append(f"DNS state receipt after owner command: {exc}")
+
+    def judge_critical_native(self, step5: dict[str, Any]) -> None:
+        stage = "after owner command"
+        native = self.native_record(stage)
+        step5["native"] = native
+        pdns_units = native.get("units", {}).get("pdns.service")
+        if pdns_units is None:
+            self.ambiguities.append(f"{stage}: PowerDNS unit properties are unknown")
+        elif (
+            pdns_units.get("ActiveState") != "active"
+            or pdns_units.get("UnitFileState") != "enabled"
+        ):
+            self.failures.append(
+                f"{stage}: PowerDNS is not active and enabled: "
+                f"{pdns_units.get('ActiveState')}/{pdns_units.get('UnitFileState')}"
+            )
+        for unit in ("named.service", "bind9.service"):
+            state = self.unit_state(native, unit, "ActiveState")
+            if state is None:
+                self.ambiguities.append(f"{stage}: {unit} state is unknown")
+            elif state != "inactive":
+                self.failures.append(f"{stage}: {unit} is {state}, want inactive")
+        # Recorded, not judged: which absent-preimage restoration was used.
+        step5["bind_unit_files"] = {
+            unit: {
+                "LoadState": self.unit_state(native, unit, "LoadState"),
+                "UnitFileState": self.unit_state(native, unit, "UnitFileState"),
+            }
+            for unit in ("named.service", "bind9.service")
+        }
+        if "named_processes" not in native:
+            self.ambiguities.append(f"{stage}: named processes could not be listed")
+        elif native["named_processes"]:
+            self.failures.append(f"{stage}: named process remains: {native['named_processes']}")
+        step5["pdns_unit_journal"] = read_pdns_unit_journal(
+            self.settings, self.owner_environment, self.preflight_epoch
+        )
+
+    # -- step 7: liveness, stability and the verdict -----------------------------
+
+    def finish(self) -> None:
+        settings = self.settings
+        rerun_dns_ok = getattr(self, "rerun_dns_ok", False)
+        panel_restart, error = checked_command(
+            settings, settings.panel_restart_command, "panel-restart",
+            settings.command_timeout, self.ordinary, self.transcript,
+        )
+        self.restarts["panel-restart"] = panel_restart
+        if error:
+            self.diagnostic_failures.append(error)
+        result = self.result
+        result["restarts"] = self.restarts
+        agent_identity = self.agent_identity
+        agent_check, error = endpoint_check(
+            "agent-after-restart",
+            lambda: (
+                assert_unix_socket_stable(
+                    settings.agent_socket, agent_identity, settings.endpoint_timeout
+                )
+                if agent_identity is not None
+                else wait_for_unix_socket(
+                    settings.agent_socket, settings.endpoint_timeout,
+                    previous_identity=self.old_socket_identity,
+                )
+            ),
+            self.transcript,
+        )
+        if error:
+            self.safety_failures.append(error)
+        elif agent_identity is None:
+            detail = agent_check["detail"]
+            agent_check["detail"] = (
+                {"device": detail[0], "inode": detail[1]}
+                if isinstance(detail, tuple) and len(detail) == 2 else detail
+            )
+        if self.agent_process is not None:
+            try:
+                final_process = inspect_restarted_agent_process(
+                    settings.endpoint_timeout, self.ordinary,
+                    self.controller_identity["effective_gid"],
+                )
+                result["restarted_agent_process"] = final_process
+                if final_process.get("pid") != self.agent_process.get("pid"):
+                    self.safety_failures.append(
+                        "ordinary Agent MainPID changed during the owner-inverse flow"
+                    )
+            except ControllerError as exc:
+                result["restarted_agent_process"] = {"error": str(exc)}
+                self.verification_failures.append(f"restarted agent process identity: {exc}")
+        panel_check, error = endpoint_check(
+            "panel-after-restart",
+            lambda: (
+                wait_for_tcp(settings.panel_address, settings.panel_port, settings.endpoint_timeout)
+                or {"address": settings.panel_address, "port": settings.panel_port}
+            ),
+            self.transcript,
+        )
+        if error:
+            self.safety_failures.append(error)
+        dns_check, error = endpoint_check(
+            "dns-after-restart",
+            lambda: query_authoritative_dns(
+                settings.dns_address, settings.dns_port, settings.dns_name,
+                settings.dns_type, settings.dns_timeout,
+            ),
+            self.transcript,
+        )
+        if error:
+            self.safety_failures.append(error)
+        result["post_restart"] = {"agent": agent_check, "panel": panel_check, "dns": dns_check}
+        if agent_identity is not None:
+            stability, stability_failures, peer_failures = run_stability_window(
+                settings, agent_identity, self.transcript, ""
+            )
+            result["stability"] = stability
+            self.safety_failures.extend(stability_failures)
+            self.verification_failures.extend(peer_failures)
+        else:
+            result["stability"] = {
+                "samples": [],
+                "error": "agent socket never became ready after restart",
+            }
+            self.safety_failures.append(
+                "stability window could not establish a stable agent identity"
+            )
+        self.steps["after_stability"] = {
+            "source": self.source_check("after stability window", self.pid_reference)
+        }
+        if self.expectation.variant == "critical":
+            self.record_outage()
+
+        outcome: dict[str, Any] | None = None
+        if len(self.probes) == 2:
+            outcome = summarize_recovery_outcome(
+                self.probes[0], self.probes[1], bool(rerun_dns_ok and dns_check.get("ok"))
+            )
+            classification = outcome["classification"]
+            if classification in {"unverified", "changed/race"}:
+                self.ambiguities.append(f"post-command probes are {classification}")
+            elif classification != "rolled_back_source_serving":
+                self.failures.append(
+                    f"post-command classification is {classification}, "
+                    "want rolled_back_source_serving"
+                )
+            result["recovery_outcome"] = outcome
+        result["recovery_probes"] = self.probes
+        result["recovery"] = {
+            "mode": "owner-inverse-after-restart",
+            "timing": (
+                "Agent restarted and left running; owner status and command before "
+                "panel restart and final liveness"
+            ),
+            "agent_ready": self.agent_ready,
+            "identity": dict(self.identity),
+        }
+        stability_samples = result["stability"].get("samples", [])
+        result["safety_assertions"] = {
+            "kill_proven": self.kill_proven,
+            "dns_engine_serving": bool(dns_check.get("ok"))
+            and all(sample.get("dns", {}).get("ok") for sample in stability_samples),
+            "panel_started": bool(panel_check.get("ok"))
+            and all(sample.get("panel", {}).get("ok") for sample in stability_samples),
+            "agent_stayed_running": bool(agent_check.get("ok"))
+            and all(sample.get("agent", {}).get("ok") for sample in stability_samples),
+        }
+        flow = self.flow
+        flow["failures"] = list(self.failures)
+        flow["ambiguities"] = list(self.ambiguities)
+        flow["status"] = classify_owner_inverse(self.failures, self.ambiguities, outcome)
+        result["owner_inverse_failures"] = list(self.failures)
+        self.verification_failures.extend(
+            f"owner inverse ambiguous: {item}" for item in self.ambiguities
+        )
+        if flow["status"] == "ambiguous" and not self.ambiguities:
+            self.verification_failures.append(
+                "owner inverse did not reach both post-command probes"
+            )
+        safety_status, status = classify_cell_status(
+            self.safety_failures, self.verification_failures
+        )
+        # A verified owner-inverse deviation is definitive and is never hidden
+        # behind an unrelated unknown; unknowns alone keep the cell unverified.
+        if self.failures or (status == "passed" and flow["status"] != "passed"):
+            status = "failed"
+        result["safety_status"] = safety_status
+        result["status"] = status
+        self.transcript.event(
+            "owner-inverse-finished",
+            status=status,
+            owner_inverse_status=flow["status"],
+            failures=self.failures,
+            ambiguities=self.ambiguities,
+        )
+
+    def record_outage(self) -> None:
+        step2_journal = self.steps["agent_restarted"].get("pdns_unit_journal")
+        step5_record = self.steps.get("after_owner_command", {})
+        unit_journal = step5_record.get("pdns_unit_journal")
+        if not (isinstance(unit_journal, dict) and unit_journal.get("read")):
+            unit_journal = step2_journal
+        elif isinstance(step2_journal, dict) and step2_journal.get("read"):
+            # The stop happened before step 2; keep that capture's stop times.
+            unit_journal = {
+                **unit_journal,
+                "stopping_at": step2_journal.get("stopping_at") or unit_journal.get("stopping_at"),
+                "stopped_at": step2_journal.get("stopped_at") or unit_journal.get("stopped_at"),
+            }
+        after_source = step5_record.get("source")
+        self.result["dns_outage"] = build_dns_outage(
+            last_answer_before_cut_at=self.preflight["source"].get("dns_answered_at"),
+            unit_journal=unit_journal if isinstance(unit_journal, dict) else None,
+            serving_again_at=(
+                after_source.get("dns_answered_at") if isinstance(after_source, dict) else None
+            ),
+        )
+
+    # -- reboot points ------------------------------------------------------------
+
+    def request_reboot_before_owner_command(self) -> None:
+        settings = self.settings
+        try:
+            self.steps["agent_restarted"]["evidence_before_reboot"] = snapshot_private_evidence(
+                settings.state_dir, settings.journal_path
+            )
+        except ControllerError as exc:
+            self.steps["agent_restarted"]["evidence_before_reboot"] = {"error": str(exc)}
+        if not self.prerequisites_met:
+            # An owner following the product guidance would not act either;
+            # the reboot still runs so boot behaviour is observed.
+            self.steps["agent_restarted"]["reboot_note"] = (
+                "Agent decision prerequisites were not proven; the owner command "
+                "stays skipped after the reboot"
+            )
+        request_reboot(settings, REBOOT_BEFORE_OWNER_COMMAND, self.result, self.state())
+
+
 def run_owner_inverse_after_restart(
     settings: Settings,
     *,
@@ -6416,552 +7865,810 @@ def run_owner_inverse_after_restart(
     verification_failures: list[str],
     diagnostic_failures: list[str],
 ) -> None:
-    preflight = result.get("owner_inverse_preflight")
-    if not isinstance(preflight, dict) or "source" not in preflight:
-        raise ControllerError("owner inverse lost its pre-cut PowerDNS observation")
-    pre_cut_pid = preflight["source"]["pdns_main_pid"]
-    preflight_epoch = preflight["observed_at_epoch"]
-    expectation = owner_inverse_expectation(settings.cell)
-    # PowerDNS MainPID that later observations must keep. Critical cells stop
-    # the source, so the reference is re-based on the PID after the command.
-    pid_reference: int | None = pre_cut_pid
-    identity = {
-        "request_id": settings.request_id,
-        "owner_id": identity_receipt["owner_id"],
-        "manifest_qualifier": identity_receipt["manifest_qualifier"],
-    }
-    failures: list[str] = []
-    ambiguities: list[str] = []
-    flow: dict[str, Any] = {
-        "mode": "owner-inverse-after-restart",
-        "variant": expectation.variant,
-        "expectation": {
-            key: value for key, value in vars(expectation).items() if key != "variant"
-        },
-        "request_id": settings.request_id,
-        "pre_cut_pdns_main_pid": pre_cut_pid,
-        "owner_command": [
-            OWNER_RECOVERY_EXECUTABLE, OWNER_BIND_SWITCH_COMMAND,
-            "--request-id", settings.request_id,
-        ],
-        "status_command": [
-            OWNER_RECOVERY_EXECUTABLE, "dns-switch-status", "--quiesced",
-            "--request-id", settings.request_id,
-        ],
-        "steps": {},
-    }
-    steps = flow["steps"]
-    result["owner_inverse_after_restart"] = flow
-
-    def source_check(stage: str, expected_pid: int | None) -> dict[str, Any]:
-        report = observe_pdns_source_serving(
-            settings, owner_environment, expected_pid=expected_pid
-        )
-        failures.extend(f"{stage}: {error}" for error in report["errors"])
-        ambiguities.extend(f"{stage}: {error}" for error in report["unknown"])
-        if report["pdns_main_pid_changed"]:
-            report["pdns_journal"] = capture_pdns_journal(
-                settings, owner_environment, transcript, preflight_epoch, stage
-            )
-            ambiguities.append(
-                f"{stage}: PowerDNS MainPID changed from {expected_pid} to "
-                f"{report.get('pdns_main_pid')}; the controller cannot establish why "
-                "(pdns.service journal retained)"
-            )
-        transcript.event("owner-inverse-source-observed", stage=stage, report=report)
-        return report
-
-    def native_record(stage: str) -> dict[str, Any]:
-        # Recorded only; callers judge the specific facts they need and turn
-        # a missing one into an ambiguity.
-        report = observe_native_dns_state(settings, owner_environment)
-        transcript.event("owner-inverse-native-observed", stage=stage, report=report)
-        return report
-
-    def unit_state(report: Mapping[str, Any], unit: str, key: str) -> str | None:
-        value = report.get("units", {}).get(unit, {}).get(key)
-        return value if isinstance(value, str) else None
-
-    # Step 2: restart the ordinary Agent and leave it running.
-    restart_epoch = int(time.time()) - 1
-    agent_restart, error = checked_command(
-        settings, settings.agent_restart_command, "agent-restart",
-        settings.command_timeout, ordinary, transcript,
+    flow = OwnerInverseFlow(
+        settings,
+        result=result,
+        transcript=transcript,
+        ordinary=ordinary,
+        owner_environment=owner_environment,
+        controller_identity=controller_identity,
+        kill_proven=kill_proven,
+        safety_failures=safety_failures,
+        verification_failures=verification_failures,
+        diagnostic_failures=diagnostic_failures,
     )
-    restarts: dict[str, Any] = {"agent-restart": agent_restart}
-    if error:
-        diagnostic_failures.append(error)
+    flow.start(identity_receipt, boundary_identity, old_socket_identity)
+    if getattr(settings, "reboot_before_owner_command", False) is True:
+        flow.request_reboot_before_owner_command()
+    flow.owner_steps()
+    flow.finish()
+    maybe_request_reboot_after_recovery(
+        settings, result, owner_environment, flow.state()
+    )
+
+
+# ---------------------------------------------------------------------------
+# Reboot during recovery (--reboot-before-owner-command, --reboot-after-recovery).
+#
+# The controller runs inside the guest it would reboot. At a reboot point it
+# records the guest boot identity, writes a create-new 0600 checkpoint holding
+# the result so far and the flow state, and exits REBOOT_REQUESTED_EXIT. The
+# host (guest_bootstrap.py run-prepared) reboots exactly this guest through
+# fixture.py and runs the same prepared argv with --resume-after-reboot. The
+# resumed controller refuses unless the boot ID changed on the same SMBIOS
+# machine UUID and fixture marker, the checkpoint was not consumed before, and
+# the settings, kill proof and earlier transcripts are byte-identical.
+# ---------------------------------------------------------------------------
+
+
+def _read_small_text(path: str, label: str) -> str:
+    try:
+        with open(path, encoding="ascii") as stream:
+            return stream.read(256).strip()
+    except (OSError, UnicodeDecodeError) as exc:
+        raise ControllerError(f"read {label}: {exc}") from exc
+
+
+def read_guest_boot_identity(cell_id: str) -> dict[str, Any]:
+    """Boot ID, SMBIOS UUID and the cloud-init fixture marker of this guest.
+
+    A guest without this cell's fixture marker is not a disposable fixture
+    guest of this cell; the controller never asks for a reboot there.
+    """
+
+    raw, _ = secure_read_bytes(
+        FIXTURE_MARKER_PATH, "fixture marker", maximum=4096, required_uid=0
+    )
+    marker: dict[str, str] = {}
+    for line in raw.decode("utf-8", errors="replace").splitlines():
+        if not line.strip():
+            continue
+        key, separator, value = line.partition("=")
+        if not separator or key in marker:
+            raise ControllerError("fixture marker is not exact key=value lines")
+        marker[key] = value.strip()
+    if (
+        set(marker) != {"schema", "cell_id", "node"}
+        or marker["schema"] != FIXTURE_PLAN_SCHEMA
+        or marker["cell_id"] != cell_id
+        or marker["node"] not in {"debian13", "arch"}
+    ):
+        raise ControllerError(
+            "refusing reboot: this guest's fixture marker does not name this cell; "
+            "reboot steps run only on the cell's own disposable guest"
+        )
+    boot_id = _read_small_text(BOOT_ID_PATH, "boot ID").lower()
+    product_uuid = _read_small_text(PRODUCT_UUID_PATH, "SMBIOS product UUID").lower()
+    for label, value in (("boot ID", boot_id), ("SMBIOS product UUID", product_uuid)):
+        if UUID_TEXT_RE.fullmatch(value) is None:
+            raise ControllerError(f"{label} is not a UUID: {value!r}")
+    return {"boot_id": boot_id, "product_uuid": product_uuid, "fixture_marker": marker}
+
+
+def settings_fingerprint(settings: Settings) -> str:
+    """Hash of every setting except the resume switch itself."""
+
+    value = dataclasses.asdict(settings)
+    value.pop("resume_after_reboot")
+    return hashlib.sha256(
+        json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+
+def observe_management_units(
+    settings: Settings, environment: Mapping[str, str]
+) -> dict[str, Any]:
+    """Agent and Panel unit properties; failed inspections are unknown."""
+
+    report: dict[str, Any] = {"units": {}, "unknown": []}
+    for unit in MANAGEMENT_UNITS:
+        try:
+            report["units"][unit] = read_unit_properties(
+                unit, settings.endpoint_timeout, environment
+            )
+        except ControllerError as exc:
+            report["unknown"].append(str(exc))
+    return report
+
+
+def observe_serving_authority(
+    settings: Settings, environment: Mapping[str, str]
+) -> dict[str, Any]:
+    """Which native engine owns port 53 and answers, plus the DNS receipts.
+
+    ``authority.engines`` maps every relevant port-53 listener PID to the engine
+    whose unit MainPID it is (``pdns`` or ``bind``); any other owner is
+    ``other``. Failed inspections are listed under ``unknown``.
+    """
+
+    report = observe_native_dns_state(settings, environment)
+    main_pids: dict[int, str] = {}
+    for unit, engine in (
+        ("pdns.service", "pdns"), ("named.service", "bind"), ("bind9.service", "bind"),
+    ):
+        raw = report.get("units", {}).get(unit, {}).get("MainPID", "")
+        if isinstance(raw, str) and raw.isdecimal() and int(raw) > 0:
+            main_pids[int(raw)] = engine
+    engines: dict[str, list[str]] = {}
+    listeners = report.get("port53_listeners")
+    if isinstance(listeners, dict):
+        for transport in ("tcp", "udp"):
+            owners = {pid for item in listeners.get(transport, []) for pid in item["pids"]}
+            engines[transport] = sorted({main_pids.get(pid, "other") for pid in owners})
+    dns = report.get("dns", {})
+    report["authority"] = {
+        "engines": engines if isinstance(listeners, dict) else None,
+        "answered": bool(dns.get("answered")),
+        "answer_counts": (
+            {transport: dns["result"][transport]["answers"] for transport in ("udp", "tcp")}
+            if dns.get("answered")
+            else None
+        ),
+    }
+    state_path = os.path.join(settings.state_dir, "dns-engine-state.json")
+    if os.path.lexists(state_path):
+        try:
+            report["state"] = read_dns_state_semantic(settings.state_dir)
+        except ControllerError as exc:
+            report["unknown"].append(f"DNS state receipt: {exc}")
+            report["state"] = {"error": str(exc)}
+    else:
+        report["state"] = {"exists": False}
+    try:
+        report["evidence"] = snapshot_private_evidence(
+            settings.state_dir, settings.journal_path
+        )
+    except ControllerError as exc:
+        report["unknown"].append(f"private evidence: {exc}")
+    return report
+
+
+def write_reboot_checkpoint(
+    settings: Settings,
+    ordinal: int,
+    request: RebootRequested,
+    result: Mapping[str, Any],
+    *,
+    kill_proven: bool,
+    safety_failures: Sequence[str],
+    verification_failures: Sequence[str],
+    diagnostic_failures: Sequence[str],
+    boot: Mapping[str, Any],
+    transcripts: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    if settings.reboot_dir is None:
+        raise ControllerError("reboot checkpoint lost its directory")
+    paths = reboot_checkpoint_paths(settings.reboot_dir, ordinal)
+    checkpoint = {
+        "schema": REBOOT_CHECKPOINT_SCHEMA,
+        "ordinal": ordinal,
+        "stage": request.stage,
+        "cell_id": settings.cell.cell_id,
+        "request_id": settings.request_id,
+        "nonce": settings.nonce,
+        "settings_sha256": settings_fingerprint(settings),
+        "boot": dict(boot),
+        "recorded_at": utc_now(),
+        "proof": (
+            {"path": settings.proof_path, "sha256": sha256_file(settings.proof_path)}
+            if kill_proven
+            else None
+        ),
+        "transcripts": [dict(item) for item in transcripts],
+        "kill_proven": kill_proven,
+        "failures": {
+            "safety": list(safety_failures),
+            "verification": list(verification_failures),
+            "diagnostic": list(diagnostic_failures),
+        },
+        "state": request.state,
+        "result": dict(result),
+    }
+    atomic_write_new_json(paths["checkpoint"], checkpoint)
+    return {"path": paths["checkpoint"], "sha256": sha256_file(paths["checkpoint"])}
+
+
+def load_pending_reboot_checkpoint(settings: Settings) -> tuple[int, dict[str, Any]]:
+    """The one checkpoint that exists and was not consumed by a resume."""
+
+    if settings.reboot_dir is None:
+        raise ControllerError("resume requires the explicit --reboot-dir")
+    pending: list[int] = []
+    for ordinal in (1, 2):
+        paths = reboot_checkpoint_paths(settings.reboot_dir, ordinal)
+        if os.path.lexists(paths["checkpoint"]) and not os.path.lexists(paths["resumed"]):
+            pending.append(ordinal)
+    if len(pending) != 1:
+        raise ControllerError(
+            f"expected exactly one unconsumed reboot checkpoint, found {pending}; "
+            "nothing was resumed"
+        )
+    ordinal = pending[0]
+    if ordinal == 2 and not os.path.lexists(
+        reboot_checkpoint_paths(settings.reboot_dir, 1)["resumed"]
+    ):
+        raise ControllerError("reboot checkpoint 2 exists without a consumed checkpoint 1")
+    checkpoint, _ = secure_read_json(
+        reboot_checkpoint_paths(settings.reboot_dir, ordinal)["checkpoint"],
+        "reboot checkpoint",
+        required_mode=0o600,
+        required_uid=os.geteuid(),
+    )
+    if not isinstance(checkpoint, dict):
+        raise ControllerError("reboot checkpoint root is not an object")
+    expected = {
+        "schema": REBOOT_CHECKPOINT_SCHEMA,
+        "ordinal": ordinal,
+        "cell_id": settings.cell.cell_id,
+        "request_id": settings.request_id,
+        "nonce": settings.nonce,
+        "settings_sha256": settings_fingerprint(settings),
+    }
+    for key, value in expected.items():
+        if checkpoint.get(key) != value:
+            raise ControllerError(
+                f"reboot checkpoint {key}={checkpoint.get(key)!r}, want {value!r}; "
+                "resume with the exact prepared argv of the suspended run"
+            )
+    if checkpoint.get("stage") not in REBOOT_STAGES:
+        raise ControllerError("reboot checkpoint names an unknown stage")
+    for item in checkpoint.get("transcripts", []):
+        if sha256_file(item["path"]) != item["sha256"]:
+            raise ControllerError(f"transcript changed while suspended: {item['path']}")
+    proof = checkpoint.get("proof")
+    if proof is not None and sha256_file(proof["path"]) != proof["sha256"]:
+        raise ControllerError("kill proof changed while suspended")
+    return ordinal, checkpoint
+
+
+def request_reboot(
+    settings: Settings, stage: str, result: dict[str, Any], state: Mapping[str, Any]
+) -> None:
+    """Raise RebootRequested, or refuse (ControllerError) on a non-fixture guest."""
+
+    try:
+        boot = read_guest_boot_identity(settings.cell.cell_id)
+    except ControllerError as exc:
+        result.setdefault("reboots_refused", []).append({"stage": stage, "error": str(exc)})
+        raise
+    raise RebootRequested(stage, {**state, "boot": boot})
+
+
+def maybe_request_reboot_after_recovery(
+    settings: Settings,
+    result: dict[str, Any],
+    environment: Mapping[str, str],
+    state: Mapping[str, Any],
+) -> None:
+    """Reboot after the final health samples, only for a passing flow."""
+
+    if getattr(settings, "reboot_after_recovery", False) is not True:
+        return
+    if result.get("status") != "passed":
+        result["reboot_after_recovery"] = {
+            "run": False,
+            "reason": (
+                f"the flow ended {result.get('status')!r}, not passed; the reboot "
+                "is defined only for a passing flow and was not run"
+            ),
+        }
+        return
+    request_reboot(
+        settings,
+        REBOOT_AFTER_RECOVERY,
+        result,
+        {
+            **state,
+            "authority_before": observe_serving_authority(settings, environment),
+            "management_before": observe_management_units(settings, environment),
+        },
+    )
+
+
+def verify_after_recovery_reboot(
+    settings: Settings,
+    state: Mapping[str, Any],
+    *,
+    result: dict[str, Any],
+    transcript: Transcript,
+    ordinary: Mapping[str, str],
+    owner_environment: Mapping[str, str],
+    controller_identity: Mapping[str, Any],
+    boot: Mapping[str, Any],
+    safety_failures: list[str],
+    verification_failures: list[str],
+) -> None:
+    """Second window after the reboot: same authority, same state, units up.
+
+    Judged (verified failure): an Agent or Panel unit that did not come up, a
+    different port-53 authority or answer count, a changed DNS state receipt,
+    a changed journal presence and, for owner-inverse cells, the profile's
+    source not serving alone (for the PowerDNS -> BIND switch: BIND not
+    serving, no named process). The 31-sample window feeds D-021 safety.
+    Unknown inspections keep the cell unverified.
+    """
+
+    failures: list[str] = []
+    unknown: list[str] = []
+    report: dict[str, Any] = {"run": True, "boot": dict(boot)}
+    result["reboot_after_recovery"] = report
+    before = state["authority_before"]
+    management = observe_management_units(settings, owner_environment)
+    report["management_units"] = management
+    unknown.extend(management["unknown"])
+    for unit, properties in management["units"].items():
+        if properties.get("ActiveState") != "active":
+            failures.append(
+                f"{unit} did not come up after the reboot ({properties.get('ActiveState')})"
+            )
     agent_identity: tuple[int, int] | None = None
     agent_ready, error = endpoint_check(
-        "agent-ready-for-recovery",
-        lambda: wait_for_unix_socket(
-            settings.agent_socket, settings.endpoint_timeout,
-            previous_identity=old_socket_identity,
-        ),
+        "agent-after-recovery-reboot",
+        lambda: wait_for_unix_socket(settings.agent_socket, settings.endpoint_timeout),
         transcript,
     )
+    report["agent_ready"] = agent_ready
     if error:
-        safety_failures.append(error)
+        safety_failures.append(f"after reboot: {error}")
     else:
         detail = agent_ready["detail"]
-        if (
-            not isinstance(detail, tuple)
-            or len(detail) != 2
-            or any(not isinstance(item, int) for item in detail)
-        ):
-            raise ControllerError("agent readiness returned an invalid socket identity")
-        agent_identity = detail
+        agent_identity = (int(detail[0]), int(detail[1]))
         agent_ready["detail"] = {"device": detail[0], "inode": detail[1]}
-    step2: dict[str, Any] = {"agent_ready": agent_ready, "restart_epoch": restart_epoch}
-    steps["agent_restarted"] = step2
     agent_process: dict[str, Any] | None = None
-    prerequisites_met = agent_identity is not None
-    if agent_identity is not None:
-        try:
-            agent_process = inspect_restarted_agent_process(
-                settings.endpoint_timeout, ordinary, controller_identity["effective_gid"]
-            )
-            step2["agent_process"] = agent_process
-        except ControllerError as exc:
-            step2["agent_process"] = {"error": str(exc)}
-            ambiguities.append(f"restarted Agent process identity: {exc}")
-        release = wait_for_agent_release(settings, transcript)
-        step2["release"] = release
-        if not release["released"]:
-            ambiguities.append(
-                "restarted Agent did not release the request within "
-                f"{settings.recovery_timeout} seconds"
-            )
-            prerequisites_met = False
-        else:
-            release_errors = classify_agent_release(
-                release["ledger"], release["job"], identity
-            )
-            failures.extend(release_errors)
-            prerequisites_met = prerequisites_met and not release_errors
-            # The owner inverse leaves this Agent-written ledger untouched; its
-            # bytes are the step-5 reference.
-            try:
-                step2["ledger_after_release"] = snapshot_private_evidence(
-                    settings.state_dir, settings.journal_path
-                )["ledger"]
-                if not step2["ledger_after_release"]["exists"]:
-                    raise ControllerError("ledger is absent after the Agent release")
-            except ControllerError as exc:
-                step2["ledger_after_release"] = {"error": str(exc)}
-                ambiguities.append(f"ledger after Agent release: {exc}")
-                prerequisites_met = False
-        try:
-            step2["journal"] = validate_journal_disk_state(
-                settings.journal_path, "rolling-back", settings.request_id,
-                boundary_identity, cell=settings.cell,
-                owner_inverse_after_restart=True,
-            )
-        except (BoundaryUnverified, ControllerError) as exc:
-            step2["journal"] = {"error": str(exc)}
-            failures.append(f"journal after Agent restart is not V2 rolling-back: {exc}")
-            prerequisites_met = False
-        refusal = find_agent_owner_refusal(
-            settings, owner_environment, transcript, restart_epoch
+    try:
+        agent_process = inspect_restarted_agent_process(
+            settings.endpoint_timeout, ordinary, controller_identity["effective_gid"]
         )
-        step2["agent_journal_refusal"] = refusal
-        if "unknown" in refusal:
-            ambiguities.append(f"Agent journal could not be read: {refusal['unknown']}")
-        elif not refusal["observed"]:
-            failures.append(
-                "Agent journal lacks the refusal naming "
-                f"{OWNER_BIND_SWITCH_COMMAND} --request-id {settings.request_id}"
-            )
-        if expectation.source_serving_after_restart:
-            step2["source"] = source_check("after Agent restart", pid_reference)
-        else:
-            stage = "after Agent restart"
-            native = native_record(stage)
-            step2["native"] = native
-            step2["pdns_unit_journal"] = read_pdns_unit_journal(
-                settings, owner_environment, preflight_epoch
-            )
-            judged: dict[str, Any] = {}
-            pdns_active = unit_state(native, "pdns.service", "ActiveState")
-            judged["pdns_active_state"] = pdns_active
-            if pdns_active is None:
-                ambiguities.append(f"{stage}: PowerDNS unit state is unknown")
-            elif expectation.pdns_inactive_after_restart and pdns_active == "active":
-                failures.append(
-                    f"{stage}: PowerDNS is active, but this cut stopped the source "
-                    "before the kill"
-                )
-            if expectation.bind_active_after_restart:
-                bind_states = [
-                    unit_state(native, unit, "ActiveState")
-                    for unit in ("named.service", "bind9.service")
-                ]
-                judged["bind_active_states"] = bind_states
-                if "active" not in bind_states:
-                    if None in bind_states:
-                        ambiguities.append(f"{stage}: BIND unit state is unknown")
-                    else:
-                        failures.append(
-                            f"{stage}: BIND is not active, but this cut started the target "
-                            f"before the kill: {bind_states}"
-                        )
-            step2["judged"] = judged
-        step2["pre_owner_probe"] = run_recovery_probe(settings, ordinary, transcript, 0)
-    else:
-        step2["skipped"] = "restarted Agent socket was not proven"
-
-    probes: list[dict[str, Any]] = []
-    rerun_dns_ok = False
-    status_named = False
-    if prerequisites_met:
-        # Step 3: read-only status names the owner command and mutates nothing.
-        before = snapshot_private_evidence(settings.state_dir, settings.journal_path)
-        status = run_owner_command(
-            settings, flow["status_command"], "owner-dns-switch-status",
-            owner_environment, transcript,
-        )
-        after = snapshot_private_evidence(settings.state_dir, settings.journal_path)
-        changed = changed_private_evidence(before, after)
-        status_named = bool(status.get("ran")) and owner_status_names_command(
-            status.get("_raw_output", b""), settings.request_id
-        )
-        steps["status"] = {
-            "command": _public(status),
-            "evidence_before": before,
-            "evidence_after": after,
-            "changed_evidence": changed,
-            "names_owner_command": status_named,
-        }
-        if not status.get("ran"):
-            ambiguities.append(f"status command did not complete: {status.get('unknown')}")
-        elif not status_named:
-            failures.append(
-                "status output does not name "
-                f"{OWNER_BIND_SWITCH_COMMAND} --request-id {settings.request_id}"
-            )
-        if changed:
-            failures.append(f"read-only status changed private evidence: {changed}")
-    else:
-        steps["status"] = {"skipped": "Agent decision prerequisites were not proven"}
-
-    if prerequisites_met and status_named and not steps["status"]["changed_evidence"]:
-        # Step 4: the owner runs the command the status named.
-        before = snapshot_private_evidence(settings.state_dir, settings.journal_path)
-        owner = run_owner_command(
-            settings, flow["owner_command"], "owner-recover-dns-bind-switch",
-            owner_environment, transcript,
-        )
-        steps["owner_command"] = {"command": _public(owner), "evidence_before": before}
-        if not owner.get("ran"):
-            ambiguities.append(f"owner command did not complete: {owner.get('unknown')}")
-        # Step 5: judged by journal, ledger and native state, not by its text.
-        after = snapshot_private_evidence(settings.state_dir, settings.journal_path)
-        step5: dict[str, Any] = {"evidence": after}
-        steps["after_owner_command"] = step5
-        if after["journal"]["exists"]:
-            failures.append("owner command left the switch journal in place")
-        # For a job the Agent released, the owner inverse writes no ledger
-        # verdict: the released record must survive byte-identical.
-        released_ledger = steps["agent_restarted"]["ledger_after_release"]
-        step5["ledger_unchanged_since_release"] = all(
-            after["ledger"].get(key) == released_ledger.get(key)
-            for key in ("exists", "sha256", "size")
-        )
-        if not step5["ledger_unchanged_since_release"]:
-            failures.append(
-                "owner command changed the ledger the Agent wrote at its release"
-            )
-        try:
-            ledger, job = read_request_ledger(settings.state_dir, settings.request_id)
-            step5["ledger"] = ledger
-            step5["job"] = job
-            failures.extend(
-                f"after owner command: {error}"
-                for error in classify_agent_release(ledger, job, identity)
-            )
-        except ControllerError as exc:
-            step5["ledger"] = {"error": str(exc)}
-            ambiguities.append(f"ledger after owner command: {exc}")
-        try:
-            state = read_dns_state_semantic(settings.state_dir)
-            step5["state"] = state
-            step5["state_bytes_unchanged"] = (
-                state["sha256"] == preflight["state"]["sha256"]
-            )
-            if state["semantic"] != preflight["state"]["semantic"]:
-                failures.append("DNS state receipt differs from the pre-cut source")
-        except ControllerError as exc:
-            step5["state"] = {"error": str(exc)}
-            failures.append(f"DNS state receipt after owner command: {exc}")
-        probes.append(run_recovery_probe(settings, ordinary, transcript, 1))
-        if expectation.pdns_pid_continuity_from_cut:
-            step5["source"] = source_check("after owner command", pid_reference)
-        else:
-            stage = "after owner command"
-            step5["source"] = source_check(stage, None)
-            new_pid = step5["source"].get("pdns_main_pid")
-            step5["pdns_main_pid"] = {
-                "judged": False,
-                "pre_cut": pre_cut_pid,
-                "after_owner_command": new_pid,
-                "changed": new_pid is not None and new_pid != pre_cut_pid,
-                "reason": "the source was stopped before the cut; the inverse starts it again",
-            }
-            pid_reference = new_pid
-        if expectation.native_checks_after_owner_command:
-            stage = "after owner command"
-            native = native_record(stage)
-            step5["native"] = native
-            pdns_units = native.get("units", {}).get("pdns.service")
-            if pdns_units is None:
-                ambiguities.append(f"{stage}: PowerDNS unit properties are unknown")
-            elif (
-                pdns_units.get("ActiveState") != "active"
-                or pdns_units.get("UnitFileState") != "enabled"
-            ):
-                failures.append(
-                    f"{stage}: PowerDNS is not active and enabled: "
-                    f"{pdns_units.get('ActiveState')}/{pdns_units.get('UnitFileState')}"
-                )
-            for unit in ("named.service", "bind9.service"):
-                state = unit_state(native, unit, "ActiveState")
-                if state is None:
-                    ambiguities.append(f"{stage}: {unit} state is unknown")
-                elif state != "inactive":
-                    failures.append(f"{stage}: {unit} is {state}, want inactive")
-            # Recorded, not judged: which absent-preimage restoration was used.
-            step5["bind_unit_files"] = {
-                unit: {
-                    "LoadState": unit_state(native, unit, "LoadState"),
-                    "UnitFileState": unit_state(native, unit, "UnitFileState"),
-                }
-                for unit in ("named.service", "bind9.service")
-            }
-            if "named_processes" not in native:
-                ambiguities.append(f"{stage}: named processes could not be listed")
-            elif native["named_processes"]:
-                failures.append(
-                    f"{stage}: named process remains: {native['named_processes']}"
-                )
-            step5["pdns_unit_journal"] = read_pdns_unit_journal(
-                settings, owner_environment, preflight_epoch
-            )
-        try:
-            files = owner_pdns_files(settings, result["source_proof"])
-            source_normalization = result["source_proof"]["source_normalization"]
-            expected_files = {
-                "configuration": source_normalization["configuration"],
-                "database": source_normalization["database"],
-            }
-            step5["owner_files"] = files
-            step5["owner_files_unchanged"] = files == expected_files
-            if files != expected_files:
-                failures.append("owner PowerDNS configuration or database changed")
-        except ControllerError as exc:
-            step5["owner_files"] = {"error": str(exc)}
-            failures.append(f"owner PowerDNS files could not be re-proved: {exc}")
-        # Recorded, never judged: what the owner is told once the journal is
-        # retired.
-        told_before = snapshot_private_evidence(settings.state_dir, settings.journal_path)
-        told = run_owner_command(
-            settings, flow["status_command"], "owner-dns-switch-status-after-owner-command",
-            owner_environment, transcript,
-        )
-        told_after = snapshot_private_evidence(settings.state_dir, settings.journal_path)
-        steps["status_after_owner_command"] = {
-            "command": _public(told),
-            "changed_evidence": changed_private_evidence(told_before, told_after),
-            "judged": False,
-        }
-
-        # Step 6: the identical re-run is idempotent.
-        rerun_before = snapshot_private_evidence(settings.state_dir, settings.journal_path)
-        rerun = run_owner_command(
-            settings, flow["owner_command"], "owner-recover-dns-bind-switch-rerun",
-            owner_environment, transcript,
-        )
-        rerun_after = snapshot_private_evidence(settings.state_dir, settings.journal_path)
-        rerun_changed = changed_private_evidence(rerun_before, rerun_after)
-        steps["rerun"] = {
-            "command": _public(rerun),
-            "evidence_before": rerun_before,
-            "evidence_after": rerun_after,
-            "changed_evidence": rerun_changed,
-        }
-        if not rerun.get("ran"):
-            ambiguities.append(f"owner re-run did not complete: {rerun.get('unknown')}")
-        if rerun_changed:
-            failures.append(f"owner command re-run changed private evidence: {rerun_changed}")
-        probes.append(run_recovery_probe(settings, ordinary, transcript, 2))
-        rerun_source = source_check("after owner re-run", pid_reference)
-        steps["rerun"]["source"] = rerun_source
-        rerun_dns_ok = "dns" in rerun_source and not any(
-            error.startswith("authoritative") for error in rerun_source["errors"]
-        )
-    else:
-        steps["owner_command"] = {
-            "skipped": "the Agent decision and read-only status naming were not both proven"
-        }
-
-    # Step 7: D-021 liveness, then the stability window.
-    panel_restart, error = checked_command(
-        settings, settings.panel_restart_command, "panel-restart",
-        settings.command_timeout, ordinary, transcript,
-    )
-    restarts["panel-restart"] = panel_restart
-    if error:
-        diagnostic_failures.append(error)
-    result["restarts"] = restarts
-    agent_check, error = endpoint_check(
-        "agent-after-restart",
-        lambda: (
-            assert_unix_socket_stable(
-                settings.agent_socket, agent_identity, settings.endpoint_timeout
-            )
-            if agent_identity is not None
-            else wait_for_unix_socket(
-                settings.agent_socket, settings.endpoint_timeout,
-                previous_identity=old_socket_identity,
-            )
-        ),
-        transcript,
-    )
-    if error:
-        safety_failures.append(error)
-    elif agent_identity is None:
-        detail = agent_check["detail"]
-        agent_check["detail"] = (
-            {"device": detail[0], "inode": detail[1]}
-            if isinstance(detail, tuple) and len(detail) == 2 else detail
-        )
-    if agent_process is not None:
-        try:
-            final_process = inspect_restarted_agent_process(
-                settings.endpoint_timeout, ordinary, controller_identity["effective_gid"]
-            )
-            result["restarted_agent_process"] = final_process
-            if final_process.get("pid") != agent_process.get("pid"):
-                safety_failures.append(
-                    "ordinary Agent MainPID changed during the owner-inverse flow"
-                )
-        except ControllerError as exc:
-            result["restarted_agent_process"] = {"error": str(exc)}
-            verification_failures.append(f"restarted agent process identity: {exc}")
-    panel_check, error = endpoint_check(
-        "panel-after-restart",
+        report["agent_process"] = agent_process
+    except ControllerError as exc:
+        report["agent_process"] = {"error": str(exc)}
+        unknown.append(f"Agent process identity after reboot: {exc}")
+    panel, error = endpoint_check(
+        "panel-after-recovery-reboot",
         lambda: (
             wait_for_tcp(settings.panel_address, settings.panel_port, settings.endpoint_timeout)
             or {"address": settings.panel_address, "port": settings.panel_port}
         ),
         transcript,
     )
+    report["panel"] = panel
     if error:
-        safety_failures.append(error)
-    dns_check, error = endpoint_check(
-        "dns-after-restart",
-        lambda: query_authoritative_dns(
-            settings.dns_address, settings.dns_port, settings.dns_name,
-            settings.dns_type, settings.dns_timeout,
-        ),
-        transcript,
-    )
-    if error:
-        safety_failures.append(error)
-    result["post_restart"] = {"agent": agent_check, "panel": panel_check, "dns": dns_check}
+        safety_failures.append(f"after reboot: {error}")
+
+    def compare_authority(stage: str, after: Mapping[str, Any]) -> None:
+        unknown.extend(f"{stage}: {item}" for item in after.get("unknown", []))
+        was, now = before.get("authority", {}), after.get("authority", {})
+        if was.get("engines") is None or now.get("engines") is None:
+            unknown.append(f"{stage}: port-53 authority could not be established")
+        elif was["engines"] != now["engines"]:
+            failures.append(
+                f"{stage}: port-53 authority changed from {was['engines']} to {now['engines']}"
+            )
+        if not now.get("answered"):
+            failures.append(f"{stage}: the DNS address does not answer authoritatively")
+        elif was.get("answer_counts") != now.get("answer_counts"):
+            failures.append(
+                f"{stage}: answer counts changed from {was.get('answer_counts')} "
+                f"to {now.get('answer_counts')}"
+            )
+        before_state, after_state = before.get("state", {}), after.get("state", {})
+        if "error" in before_state or "error" in after_state:
+            unknown.append(f"{stage}: DNS state receipt could not be read")
+        elif before_state.get("semantic") != after_state.get("semantic") or (
+            before_state.get("exists", True) != after_state.get("exists", True)
+        ):
+            failures.append(f"{stage}: DNS engine state receipt changed across the reboot")
+        was_evidence, now_evidence = before.get("evidence"), after.get("evidence")
+        if isinstance(was_evidence, dict) and isinstance(now_evidence, dict):
+            if was_evidence["journal"]["exists"] != now_evidence["journal"]["exists"]:
+                failures.append(f"{stage}: switch journal presence changed across the reboot")
+
+    after = observe_serving_authority(settings, owner_environment)
+    report["authority_after_boot"] = after
+    compare_authority("after reboot", after)
+    was_evidence = before.get("evidence")
+    if isinstance(was_evidence, dict) and isinstance(after.get("evidence"), dict):
+        # Recorded, not judged: a boot may legitimately touch private receipts.
+        report["changed_private_evidence"] = {
+            "judged": False,
+            "labels": changed_private_evidence(was_evidence, after["evidence"]),
+        }
+    if state.get("flow") == "owner-inverse":
+        profile = owner_inverse_profile(settings.cell)
+        if profile is not None:
+            source = observe_owner_source_serving(settings, owner_environment, profile)
+            report["source"] = source
+            failures.extend(f"after reboot: {item}" for item in source["errors"])
+            unknown.extend(f"after reboot: {item}" for item in source["unknown"])
+            if profile.name == "bind-switch-v2":
+                named = after.get("named_processes")
+                if named is None:
+                    unknown.append("after reboot: named processes could not be listed")
+                elif named:
+                    failures.append(f"after reboot: BIND is serving again: named {named}")
     if agent_identity is not None:
         stability, stability_failures, peer_failures = run_stability_window(
-            settings, agent_identity, transcript, ""
+            settings, agent_identity, transcript, state.get("peer_ip", "") or ""
         )
-        result["stability"] = stability
-        safety_failures.extend(stability_failures)
+        report["stability"] = stability
+        safety_failures.extend(f"after reboot: {item}" for item in stability_failures)
         verification_failures.extend(peer_failures)
     else:
-        result["stability"] = {
-            "samples": [],
-            "error": "agent socket never became ready after restart",
-        }
-        safety_failures.append(
-            "stability window could not establish a stable agent identity"
-        )
-    steps["after_stability"] = {
-        "source": source_check("after stability window", pid_reference)
-    }
-    if expectation.variant == "critical":
-        step2_journal = steps["agent_restarted"].get("pdns_unit_journal")
-        step5_record = steps.get("after_owner_command", {})
-        unit_journal = step5_record.get("pdns_unit_journal")
-        if not (isinstance(unit_journal, dict) and unit_journal.get("read")):
-            unit_journal = step2_journal
-        elif isinstance(step2_journal, dict) and step2_journal.get("read"):
-            # The stop happened before step 2; keep that capture's stop times.
-            unit_journal = {
-                **unit_journal,
-                "stopping_at": step2_journal.get("stopping_at") or unit_journal.get("stopping_at"),
-                "stopped_at": step2_journal.get("stopped_at") or unit_journal.get("stopped_at"),
-            }
-        after_source = step5_record.get("source")
-        result["dns_outage"] = build_dns_outage(
-            last_answer_before_cut_at=preflight["source"].get("dns_answered_at"),
-            unit_journal=unit_journal if isinstance(unit_journal, dict) else None,
-            serving_again_at=(
-                after_source.get("dns_answered_at") if isinstance(after_source, dict) else None
-            ),
-        )
-
-    outcome: dict[str, Any] | None = None
-    if len(probes) == 2:
-        outcome = summarize_recovery_outcome(
-            probes[0], probes[1], bool(rerun_dns_ok and dns_check.get("ok"))
-        )
-        classification = outcome["classification"]
-        if classification in {"unverified", "changed/race"}:
-            ambiguities.append(f"post-command probes are {classification}")
-        elif classification != "rolled_back_source_serving":
-            failures.append(
-                f"post-command classification is {classification}, "
-                "want rolled_back_source_serving"
+        report["stability"] = {"samples": [], "error": "Agent socket not ready after reboot"}
+        safety_failures.append("after reboot: stability window has no stable Agent identity")
+    if agent_process is not None:
+        try:
+            final = inspect_restarted_agent_process(
+                settings.endpoint_timeout, ordinary, controller_identity["effective_gid"]
             )
-        result["recovery_outcome"] = outcome
-    result["recovery_probes"] = probes
-    result["recovery"] = {
-        "mode": "owner-inverse-after-restart",
-        "timing": (
-            "Agent restarted and left running; owner status and command before "
-            "panel restart and final liveness"
-        ),
-        "agent_ready": agent_ready,
-        "identity": dict(identity),
+            report["agent_process_after_window"] = final
+            if final.get("pid") != agent_process.get("pid"):
+                safety_failures.append("after reboot: Agent MainPID changed during the window")
+        except ControllerError as exc:
+            unknown.append(f"Agent process identity after the window: {exc}")
+    after_window = observe_serving_authority(settings, owner_environment)
+    report["authority_after_window"] = after_window
+    compare_authority("after the post-reboot window", after_window)
+    samples = report["stability"].get("samples", [])
+    report["safety_assertions"] = {
+        "dns_engine_serving": bool(samples)
+        and all(sample.get("dns", {}).get("ok") for sample in samples),
+        "panel_started": bool(panel.get("ok"))
+        and all(sample.get("panel", {}).get("ok") for sample in samples),
+        "agent_stayed_running": bool(agent_ready.get("ok"))
+        and all(sample.get("agent", {}).get("ok") for sample in samples),
     }
-    stability_samples = result["stability"].get("samples", [])
-    result["safety_assertions"] = {
-        "kill_proven": kill_proven,
-        "dns_engine_serving": bool(dns_check.get("ok"))
-        and all(sample.get("dns", {}).get("ok") for sample in stability_samples),
-        "panel_started": bool(panel_check.get("ok"))
-        and all(sample.get("panel", {}).get("ok") for sample in stability_samples),
-        "agent_stayed_running": bool(agent_check.get("ok"))
-        and all(sample.get("agent", {}).get("ok") for sample in stability_samples),
-    }
-    flow["failures"] = list(failures)
-    flow["ambiguities"] = list(ambiguities)
-    flow["status"] = classify_owner_inverse(failures, ambiguities, outcome)
-    result["owner_inverse_failures"] = list(failures)
-    verification_failures.extend(f"owner inverse ambiguous: {item}" for item in ambiguities)
-    if flow["status"] == "ambiguous" and not ambiguities:
-        verification_failures.append("owner inverse did not reach both post-command probes")
+    report["failures"] = failures
+    report["unknown"] = unknown
+    verification_failures.extend(f"reboot after recovery unknown: {item}" for item in unknown)
     safety_status, status = classify_cell_status(safety_failures, verification_failures)
-    # A verified owner-inverse deviation is definitive and is never hidden
-    # behind an unrelated unknown; unknowns alone keep the cell unverified.
-    if failures or (status == "passed" and flow["status"] != "passed"):
+    if failures:
         status = "failed"
+    report["status"] = "failed" if failures else ("unverified" if unknown else "passed")
     result["safety_status"] = safety_status
     result["status"] = status
     transcript.event(
-        "owner-inverse-finished",
+        "reboot-after-recovery-verified",
         status=status,
-        owner_inverse_status=flow["status"],
         failures=failures,
-        ambiguities=ambiguities,
+        unknown=unknown,
+    )
+
+
+def observe_agent_startup_rollback(
+    settings: Settings,
+    environment: Mapping[str, str],
+    transcript: Transcript,
+    identity_receipt: Mapping[str, Any] | None,
+    pre_cut_pid: int | None,
+    since_epoch: int,
+) -> dict[str, Any]:
+    """Row 13 with a running Agent: the Agent rolled back by itself at restart.
+
+    Judged before any same-request retry: the job carries the Agent's own
+    rollback verdict with no lease, the journal is retired, the external
+    PowerDNS still serves alone on its pre-cut MainPID, and the Agent named no
+    owner command. A retained journal stops the retries: an rpc-retry over it
+    would be refused and would poison the Agent's DNS manager.
+    """
+
+    report: dict[str, Any] = {"failures": [], "unknown": []}
+    release = wait_for_agent_release(settings, transcript)
+    report["release"] = release
+    if not release["released"]:
+        report["unknown"].append(
+            "the restarted Agent still held the request after "
+            f"{settings.recovery_timeout} seconds"
+        )
+    elif identity_receipt is None:
+        report["unknown"].append("the request identity receipt was not proven")
+    else:
+        identity = {
+            "request_id": settings.request_id,
+            "owner_id": identity_receipt["owner_id"],
+            "manifest_qualifier": identity_receipt["manifest_qualifier"],
+        }
+        report["failures"].extend(
+            classify_agent_startup_rollback(
+                release["ledger"], release["job"], identity, target="pdns"
+            )
+        )
+    try:
+        os.lstat(settings.journal_path)
+    except FileNotFoundError:
+        report["journal_retired"] = True
+    except OSError as exc:
+        report["unknown"].append(f"inspect switch journal: {exc}")
+    else:
+        report["journal_retired"] = False
+        report["failures"].append(
+            "the restarted Agent kept the switch journal; no rpc-retry is run over a "
+            "retained journal"
+        )
+    source = observe_pdns_source_serving(settings, environment, expected_pid=pre_cut_pid)
+    report["source"] = source
+    report["failures"].extend(f"after Agent restart: {item}" for item in source["errors"])
+    report["unknown"].extend(f"after Agent restart: {item}" for item in source["unknown"])
+    if source.get("pdns_main_pid_changed"):
+        report["unknown"].append(
+            f"PowerDNS MainPID changed from {pre_cut_pid} to {source.get('pdns_main_pid')}; "
+            "the controller cannot establish why"
+        )
+    refusal = find_agent_owner_refusal(
+        settings, environment, transcript, since_epoch,
+        command=OWNER_PDNS_ADOPTION_COMMAND, poll=False,
+    )
+    report["agent_journal_owner_command"] = refusal
+    if "unknown" in refusal:
+        report["unknown"].append(f"Agent journal could not be read: {refusal['unknown']}")
+    elif refusal["observed"]:
+        report["failures"].append(
+            f"the Agent named {OWNER_PDNS_ADOPTION_COMMAND}: it did not roll back by itself"
+        )
+    report["retry_allowed"] = not report["failures"] and not report["unknown"]
+    transcript.event("agent-startup-rollback-observed", report=report)
+    return report
+
+
+def judge_agent_startup_rollback(
+    result: dict[str, Any],
+    report: Mapping[str, Any] | None,
+    verification_failures: list[str],
+) -> None:
+    """Pass = D-021 safety, the Agent's own rollback, then forward convergence."""
+
+    if report is None:
+        result["agent_startup_rollback"] = {"observed": False}
+        verification_failures.append("Agent startup rollback was never observed")
+        if result["status"] == "passed":
+            result["status"] = "unverified"
+        return
+    judged = dict(report)
+    failures = list(judged["failures"])
+    classification = result.get("recovery_outcome", {}).get("classification")
+    if judged["retry_allowed"] and classification != "target_converged":
+        failures.append(f"the same-request retry did not converge forward: {classification}")
+    judged["failures"] = failures
+    result["agent_startup_rollback"] = judged
+    verification_failures.extend(
+        f"Agent startup rollback unknown: {item}" for item in judged["unknown"]
+    )
+    if failures:
+        result["status"] = "failed"
+    elif judged["unknown"] and result["status"] == "passed":
+        result["status"] = "unverified"
+
+
+def resume_owner_inverse_before_owner_command(
+    settings: Settings,
+    state: Mapping[str, Any],
+    *,
+    result: dict[str, Any],
+    transcript: Transcript,
+    ordinary: Mapping[str, str],
+    owner_environment: Mapping[str, str],
+    controller_identity: Mapping[str, Any],
+    boot: Mapping[str, Any],
+    kill_proven: bool,
+    safety_failures: list[str],
+    verification_failures: list[str],
+    diagnostic_failures: list[str],
+) -> None:
+    flow = OwnerInverseFlow(
+        settings,
+        result=result,
+        transcript=transcript,
+        ordinary=ordinary,
+        owner_environment=owner_environment,
+        controller_identity=controller_identity,
+        kill_proven=kill_proven,
+        safety_failures=safety_failures,
+        verification_failures=verification_failures,
+        diagnostic_failures=diagnostic_failures,
+    )
+    flow.restore(state)
+    flow.after_boot(boot)
+    flow.owner_steps()
+    flow.finish()
+    maybe_request_reboot_after_recovery(settings, result, owner_environment, flow.state())
+
+
+def resume_cell(settings: Settings) -> int:
+    """Continue a suspended cell after the host rebooted this guest."""
+
+    controller_identity = validate_controller_identity()
+    clean_base_environment = minimal_command_environment(os.environ)
+    command_evidence = validate_settings(settings)
+    ordinal, checkpoint = load_pending_reboot_checkpoint(settings)
+    boot = read_guest_boot_identity(settings.cell.cell_id)
+    boot_before = checkpoint["boot"]
+    if boot["product_uuid"] != boot_before.get("product_uuid"):
+        raise ControllerError(
+            "the resumed guest has another SMBIOS machine UUID than the suspended one; "
+            "nothing was resumed"
+        )
+    if boot["boot_id"] == boot_before.get("boot_id"):
+        raise ControllerError(
+            f"the guest was not rebooted since reboot checkpoint {ordinal} (boot ID "
+            "unchanged); reboot it with fixture.py reboot or guest_bootstrap.py "
+            "run-prepared, then resume. Nothing was resumed"
+        )
+    if settings.reboot_dir is None:
+        raise ControllerError("resume requires the explicit --reboot-dir")
+    paths = reboot_checkpoint_paths(settings.reboot_dir, ordinal)
+    reboot_record = {
+        "ordinal": ordinal,
+        "stage": checkpoint["stage"],
+        "boot_id_before": boot_before.get("boot_id"),
+        "boot_id_after": boot["boot_id"],
+        "product_uuid": boot["product_uuid"],
+        "checkpoint": {"path": paths["checkpoint"], "sha256": sha256_file(paths["checkpoint"])},
+        "resumed_at": utc_now(),
+    }
+    # Consumed exactly once: a second resume of this checkpoint is refused.
+    atomic_write_new_json(paths["resumed"], {"schema": REBOOT_RESUMED_SCHEMA, **reboot_record})
+    transcript = Transcript(paths["transcript"])
+    result: dict[str, Any] = checkpoint["result"]
+    failures = checkpoint["failures"]
+    safety_failures: list[str] = list(failures["safety"])
+    verification_failures: list[str] = list(failures["verification"])
+    diagnostic_failures: list[str] = list(failures["diagnostic"])
+    kill_proven = bool(checkpoint["kill_proven"])
+    result.setdefault("reboots", []).append(reboot_record)
+    result.setdefault("resumed_commands", []).append(command_evidence)
+    reboot_request: RebootRequested | None = None
+    ordinary = ordinary_environment(
+        clean_base_environment,
+        settings.state_dir,
+        settings.mutation_lock,
+        settings.agent_socket,
+        settings.agent_token_file,
+        cell=settings.cell,
+        request_id=settings.request_id,
+        nonce=settings.nonce,
+        proof_path=settings.proof_path,
+    )
+    try:
+        transcript.event("resumed-after-reboot", **reboot_record)
+        state = checkpoint["state"]
+        if checkpoint["stage"] == REBOOT_BEFORE_OWNER_COMMAND:
+            resume_owner_inverse_before_owner_command(
+                settings,
+                state,
+                result=result,
+                transcript=transcript,
+                ordinary=ordinary,
+                owner_environment=clean_base_environment,
+                controller_identity=controller_identity,
+                boot=reboot_record,
+                kill_proven=kill_proven,
+                safety_failures=safety_failures,
+                verification_failures=verification_failures,
+                diagnostic_failures=diagnostic_failures,
+            )
+        else:
+            verify_after_recovery_reboot(
+                settings,
+                state,
+                result=result,
+                transcript=transcript,
+                ordinary=ordinary,
+                owner_environment=clean_base_environment,
+                controller_identity=controller_identity,
+                boot=reboot_record,
+                safety_failures=safety_failures,
+                verification_failures=verification_failures,
+            )
+    except RebootRequested as request:
+        reboot_request = request
+        transcript.event("reboot-requested", stage=request.stage)
+    except (BoundaryUnverified, ControllerError, OSError, subprocess.SubprocessError) as exc:
+        transcript.event("cell-error", error_type=type(exc).__name__, error=str(exc),
+                         kill_proven=kill_proven)
+        verification_failures.append(str(exc))
+        result["status"] = "unverified"
+        result["safety_status"] = "unverified"
+    finally:
+        result["kill_proven"] = kill_proven
+        result["failures"] = safety_failures
+        result["safety_failures"] = safety_failures
+        result["verification_failures"] = verification_failures
+        result["diagnostic_failures"] = diagnostic_failures
+        result["finished_at"] = utc_now()
+        transcript.event(
+            "cell-suspended-for-reboot" if reboot_request is not None else "cell-finish",
+            status=result.get("status"),
+            safety_status=result.get("safety_status"),
+            kill_proven=kill_proven,
+            safety_failures=safety_failures,
+            verification_failures=verification_failures,
+            diagnostic_failures=diagnostic_failures,
+        )
+        transcript.close()
+    transcripts = list(checkpoint["transcripts"]) + [
+        {"path": paths["transcript"], "sha256": sha256_file(paths["transcript"])}
+    ]
+    result["transcripts_after_reboot"] = transcripts[1:]
+    if reboot_request is not None:
+        if ordinal >= 2:
+            raise ControllerError("more than two reboots were requested for one cell")
+        write_reboot_checkpoint(
+            settings,
+            ordinal + 1,
+            reboot_request,
+            result,
+            kill_proven=kill_proven,
+            safety_failures=safety_failures,
+            verification_failures=verification_failures,
+            diagnostic_failures=diagnostic_failures,
+            boot=reboot_request.state["boot"],
+            transcripts=transcripts,
+        )
+        return REBOOT_REQUESTED_EXIT
+    atomic_write_new_json(settings.result_path, result)
+    return {"passed": 0, "failed": 1, "unverified": 2}[result["status"]]
+
+
+V2_MANAGED_PDNS_REFUSAL = (
+    "this standalone BIND cell with a managed PowerDNS source makes the current "
+    "producer write the V2 frozen-source journal, whose inverse the restarted "
+    "Agent never executes; without {flag} the controller would expect a V1 "
+    "journal and fail at the boundary marker after a real mutation. "
+)
+
+
+def refuse_unrunnable_v2_cells(settings: Settings) -> None:
+    """Refuse V2 managed-PowerDNS BIND cells with no pass definition, pre-mutation.
+
+    Only a readable scenario naming the managed PowerDNS source for a
+    standalone BIND cell is judged here; any other scenario problem is left to
+    the unchanged source-proof validation.
+    """
+
+    cell = settings.cell
+    if (
+        settings.trigger_mode != "socket"
+        or settings.trigger_command is None
+        or cell.driver != "bind"
+        or cell.role != "standalone"
+        or settings.owner_inverse_after_restart
+        or settings.stop_after_kill_for_independent_recovery
+    ):
+        return
+    try:
+        scenario_path = socket_trigger_retry_contract(
+            settings.trigger_command, settings.recovery_command
+        )["scenario_path"]
+        scenario, _ = validate_source_scenario(scenario_path, cell)
+    except ControllerError:
+        return
+    if scenario.get("source_fixture") != "managed-pdns":
+        return
+    flag = "--owner-inverse-after-restart"
+    if is_owner_inverse_switch_cell(cell):
+        raise ControllerError(
+            V2_MANAGED_PDNS_REFUSAL.format(flag=flag)
+            + f"Run it with {flag}, where the Agent decides and the owner runs "
+            f"{OWNER_BIND_SWITCH_COMMAND}. Nothing was started."
+        )
+    if cell.phase == "intent" and cell.edge == "before-write":
+        detail = (
+            "At intent:before-write no journal exists yet, so the owner command "
+            "does not apply and the recovery path is the same-request rpc-retry; "
+            "the controller has no V2-aware marker expectation for that path yet."
+        )
+    elif cell.phase == "target-verified":
+        detail = (
+            "From target-verified the restarted Agent converges forward, so the "
+            "owner command is not the recovery path; no V2 pass definition exists."
+        )
+    else:
+        detail = (
+            f"This cell is not admitted to {flag} (admitted: "
+            f"{', '.join(sorted(c for c in OWNER_INVERSE_CELLS if c.startswith('bind__')))})."
+        )
+    raise ControllerError(
+        V2_MANAGED_PDNS_REFUSAL.format(flag=flag) + detail + " Nothing was started."
     )
 
 
@@ -6969,6 +8676,7 @@ def run_cell(settings: Settings) -> int:
     controller_identity = validate_controller_identity()
     clean_base_environment = minimal_command_environment(os.environ)
     command_evidence = validate_settings(settings)
+    refuse_unrunnable_v2_cells(settings)
     production_paths = validate_production_runtime_paths(
         settings.agent_token_file, controller_identity["effective_gid"]
     )
@@ -7024,6 +8732,8 @@ def run_cell(settings: Settings) -> int:
     socket_contract: dict[str, str] | None = None
     identity_receipt: dict[str, Any] | None = None
     boundary_identity: dict[str, Any] | None = None
+    reboot_request: RebootRequested | None = None
+    startup_rollback: dict[str, Any] | None = None
     try:
         if settings.trigger_mode == "startup":
             external_lock_fd, external_lock = acquire_external_mutation_lock(
@@ -7129,6 +8839,17 @@ def run_cell(settings: Settings) -> int:
                 result["owner_inverse_preflight"] = prove_owner_inverse_preconditions(
                     settings, clean_base_environment, transcript
                 )
+            if settings.expect_agent_startup_rollback:
+                startup_preflight = observe_pdns_source_serving(
+                    settings, clean_base_environment
+                )
+                if not startup_preflight["ok"]:
+                    raise ControllerError(
+                        "the external PowerDNS is not the exclusive authoritative source "
+                        f"before the cut: errors={startup_preflight['errors']} "
+                        f"unknown={startup_preflight['unknown']}"
+                    )
+                result["agent_startup_rollback_preflight"] = startup_preflight
             initial_state = describe_initial_journal(settings.journal_path)
             result["initial_journal"] = initial_state
         if settings.cell.role == "standalone":
@@ -7389,8 +9110,11 @@ def run_cell(settings: Settings) -> int:
                     settings, clean_base_environment
                 )
             else:
-                result["owner_inverse_source_at_boundary"] = observe_pdns_source_serving(
-                    settings, clean_base_environment
+                profile = owner_inverse_profile(settings.cell)
+                if profile is None:
+                    raise ControllerError("owner inverse lost its admitted profile")
+                result["owner_inverse_source_at_boundary"] = observe_owner_source_serving(
+                    settings, clean_base_environment, profile
                 )
         if settings.bind_rollback_after_target_started:
             target_before_kill = prove_later_bind_target_before_kill(settings, ordinary)
@@ -7625,6 +9349,7 @@ def run_cell(settings: Settings) -> int:
             }
 
         restarts: dict[str, Any] = {}
+        agent_restart_epoch = int(time.time()) - 1
         agent_restart, error = checked_command(
             settings,
             settings.agent_restart_command,
@@ -7713,7 +9438,20 @@ def run_cell(settings: Settings) -> int:
                     == "rolled_back_source_active"
                     and pre_retry_dns.get("ok")
                 )
+                retry_allowed = True
+                if settings.expect_agent_startup_rollback:
+                    startup_rollback = observe_agent_startup_rollback(
+                        settings,
+                        clean_base_environment,
+                        transcript,
+                        identity_receipt,
+                        result["agent_startup_rollback_preflight"].get("pdns_main_pid"),
+                        agent_restart_epoch,
+                    )
+                    retry_allowed = startup_rollback["retry_allowed"]
                 for ordinal in (1, 2):
+                    if not retry_allowed:
+                        break
                     retry_report, error = checked_command(
                         settings,
                         settings.recovery_command,
@@ -7927,6 +9665,21 @@ def run_cell(settings: Settings) -> int:
         result["safety_status"], result["status"] = classify_cell_status(
             safety_failures, verification_failures
         )
+        if settings.expect_agent_startup_rollback:
+            judge_agent_startup_rollback(result, startup_rollback, verification_failures)
+        maybe_request_reboot_after_recovery(
+            settings,
+            result,
+            clean_base_environment,
+            {
+                "flow": "rpc-retry",
+                "peer_ip": peer_ip,
+                "agent_identity": list(agent_identity) if agent_identity else None,
+            },
+        )
+    except RebootRequested as request:
+        reboot_request = request
+        transcript.event("reboot-requested", stage=request.stage)
     except OwnerInverseFlowFinished:
         pass
     except NativeRecoveryHandoff:
@@ -7975,7 +9728,7 @@ def run_cell(settings: Settings) -> int:
         result["diagnostic_failures"] = diagnostic_failures
         result["finished_at"] = utc_now()
         transcript.event(
-            "cell-finish",
+            "cell-finish" if reboot_request is None else "cell-suspended-for-reboot",
             status=result["status"],
             safety_status=result["safety_status"],
             kill_proven=kill_proven,
@@ -7988,6 +9741,20 @@ def run_cell(settings: Settings) -> int:
         "path": settings.transcript_path,
         "sha256": sha256_file(settings.transcript_path),
     }
+    if reboot_request is not None:
+        write_reboot_checkpoint(
+            settings,
+            1,
+            reboot_request,
+            result,
+            kill_proven=kill_proven,
+            safety_failures=safety_failures,
+            verification_failures=verification_failures,
+            diagnostic_failures=diagnostic_failures,
+            boot=reboot_request.state["boot"],
+            transcripts=[result["transcript"]],
+        )
+        return REBOOT_REQUESTED_EXIT
     atomic_write_new_json(settings.result_path, result)
     return {"passed": 0, "failed": 1, "unverified": 2}[result["status"]]
 
@@ -8009,9 +9776,43 @@ def build_argument_parser() -> argparse.ArgumentParser:
         "--owner-inverse-after-restart",
         action="store_true",
         help=(
-            "exact standalone BIND intent/target-staged after-write cells with a "
-            "managed PowerDNS source: restart the Agent, then run the owner "
-            "recover-dns-bind-switch command while the Agent keeps running"
+            "admitted owner-inverse cells (OWNER_INVERSE_ADMISSIONS): restart the "
+            "Agent, then run the owner recovery command it names "
+            "(recover-dns-bind-switch, recover-dns-bind-adoption or "
+            "recover-dns-pdns-adoption) while the Agent keeps running"
+        ),
+    )
+    parser.add_argument(
+        "--reboot-before-owner-command",
+        action="store_true",
+        help=(
+            "owner-inverse flow only: after the Agent decision, suspend with exit 3 "
+            "so the host reboots this guest, then continue with --resume-after-reboot"
+        ),
+    )
+    parser.add_argument(
+        "--reboot-after-recovery",
+        action="store_true",
+        help=(
+            "standalone socket flows: after a passing flow, suspend with exit 3 so the "
+            "host reboots this guest; the resumed run judges a second window"
+        ),
+    )
+    parser.add_argument(
+        "--resume-after-reboot",
+        action="store_true",
+        help="continue the one unconsumed reboot checkpoint after the host rebooted",
+    )
+    parser.add_argument(
+        "--reboot-dir",
+        help="explicit directory for reboot checkpoints; required with a reboot flag",
+    )
+    parser.add_argument(
+        "--expect-agent-startup-rollback",
+        action="store_true",
+        help=(
+            "PowerDNS adoption intent/rolling-back after-write: judge that the "
+            "restarted Agent rolled back by itself before the same-request retry"
         ),
     )
     parser.add_argument("--cell-id", required=True)
@@ -8153,6 +9954,11 @@ def settings_from_args(args: argparse.Namespace) -> Settings:
         stop_after_kill_for_independent_recovery=args.stop_after_kill_for_independent_recovery,
         bind_rollback_after_target_started=args.bind_rollback_after_target_started,
         owner_inverse_after_restart=args.owner_inverse_after_restart,
+        reboot_before_owner_command=args.reboot_before_owner_command,
+        reboot_after_recovery=args.reboot_after_recovery,
+        resume_after_reboot=args.resume_after_reboot,
+        reboot_dir=args.reboot_dir,
+        expect_agent_startup_rollback=args.expect_agent_startup_rollback,
         native_dns_status_command=(
             parse_command_json(args.native_dns_status_command, "native DNS status command")
             if args.native_dns_status_command is not None else None
@@ -8172,7 +9978,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = build_argument_parser().parse_args(argv)
     try:
         settings = settings_from_args(args)
-        exit_code = run_cell(settings)
+        exit_code = (
+            resume_cell(settings) if settings.resume_after_reboot else run_cell(settings)
+        )
     except (ControllerError, OSError, subprocess.SubprocessError) as exc:
         print(
             json.dumps(
@@ -8192,9 +10000,16 @@ def main(argv: Sequence[str] | None = None) -> int:
             {
                 "cell_id": settings.cell.cell_id,
                 "exit_code": exit_code,
-                "result": settings.result_path,
+                "result": (
+                    settings.result_path if exit_code != REBOOT_REQUESTED_EXIT else None
+                ),
                 "proof": settings.proof_path if exit_code != 2 else None,
                 "transcript": settings.transcript_path,
+                **(
+                    {"reboot_requested": True, "reboot_dir": settings.reboot_dir}
+                    if exit_code == REBOOT_REQUESTED_EXIT
+                    else {}
+                ),
             },
             sort_keys=True,
         )

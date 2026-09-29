@@ -75,18 +75,66 @@ INDEPENDENT_HANDOFF_CELLS = frozenset({
 INDEPENDENT_PDNS_HANDOFF_FLAG = "--stop-after-kill-for-independent-recovery"
 LATER_BIND_ROLLBACK_FLAG = "--bind-rollback-after-target-started"
 # Agent decides, owner executes: the controller restarts the ordinary Agent,
-# leaves it running and runs the owner recover-dns-bind-switch command.
+# leaves it running and runs the owner command the Agent names. The admitted
+# cells, their source fixture and manifest policy must equal run_cell.py's
+# OWNER_INVERSE_ADMISSIONS (checked by the tests).
 OWNER_INVERSE_FLAG = "--owner-inverse-after-restart"
 OWNER_INVERSE_CRITICAL_PHASES = frozenset({"source-stopped", "target-started"})
-OWNER_INVERSE_CELLS = frozenset({
-    "bind__intent__after-write__standalone__peer-reachable",
-    "bind__target-staged__after-write__standalone__peer-reachable",
-    "bind__source-stopped__after-write__standalone__peer-reachable",
-    "bind__target-started__after-write__standalone__peer-reachable",
+# cell ID -> (source fixture, manifest source policy, target-started precursor)
+OWNER_INVERSE_ADMISSIONS = {
+    "bind__intent__after-write__standalone__peer-reachable":
+        ("managed-pdns", "driver-specific", False),
+    "bind__target-staged__after-write__standalone__peer-reachable":
+        ("managed-pdns", "driver-specific", False),
+    "bind__target-staged__before-write__standalone__peer-unreachable":
+        ("managed-pdns", "driver-specific", False),
+    "bind__source-stopped__after-write__standalone__peer-reachable":
+        ("managed-pdns", "managed-pdns-required", False),
+    "bind__source-stopped__before-write__standalone__peer-reachable":
+        ("managed-pdns", "managed-pdns-required", False),
+    "bind__target-started__after-write__standalone__peer-reachable":
+        ("managed-pdns", "managed-pdns-required", False),
+    "bind__target-started__before-write__standalone__peer-reachable":
+        ("managed-pdns", "managed-pdns-required", False),
+    "bind__rolled-back__before-write__standalone__peer-reachable":
+        ("managed-pdns", "managed-pdns-required", False),
+    "bind__rolled-back__after-write__standalone__peer-reachable":
+        ("managed-pdns", "managed-pdns-required", False),
+    "bind__rolling-back__after-write__standalone__peer-reachable":
+        ("owner-bind", "driver-specific", True),
+    "pdns-adopt__rolled-back__after-write__standalone__peer-reachable":
+        ("external-pdns-adoption", "driver-specific", False),
+}
+OWNER_INVERSE_CELLS = frozenset(OWNER_INVERSE_ADMISSIONS)
+# Row 13 with a running Agent: the Agent rolls back by itself at restart and
+# the same request converges forward on rpc-retry; no owner command applies.
+STARTUP_ROLLBACK_FLAG = "--expect-agent-startup-rollback"
+STARTUP_ROLLBACK_CELLS = frozenset({
+    "pdns-adopt__intent__after-write__standalone__peer-reachable",
+    "pdns-adopt__rolling-back__after-write__standalone__peer-reachable",
 })
+# Reboot during recovery. The controller exits REBOOT_REQUESTED_EXIT after it
+# persisted a checkpoint; run-prepared reboots exactly this guest through
+# fixture.reboot_guest and runs the prepared argv again with RESUME_FLAG.
+REBOOT_BEFORE_OWNER_FLAG = "--reboot-before-owner-command"
+REBOOT_AFTER_RECOVERY_FLAG = "--reboot-after-recovery"
+RESUME_FLAG = "--resume-after-reboot"
+REBOOT_REQUESTED_EXIT = 3
+# Canonical order of the flags the host passes to the guest program.
+PREPARED_FLAG_ORDER = (
+    INDEPENDENT_PDNS_HANDOFF_FLAG,
+    LATER_BIND_ROLLBACK_FLAG,
+    OWNER_INVERSE_FLAG,
+    STARTUP_ROLLBACK_FLAG,
+    REBOOT_BEFORE_OWNER_FLAG,
+    REBOOT_AFTER_RECOVERY_FLAG,
+    RESUME_FLAG,
+)
 RECOVERY_KIT_NAME = "recovery-kit.tar.gz"
 OWNER_RECOVERY_LAUNCHER = "/usr/libexec/celikpanel/recovery"
 BIND_SOURCE_INVERSE_MARKER = "celikpanel-bind-source-inverse/v1"
+BIND_ADOPTION_INVERSE_COMMAND = "check-bind-adoption-inverse-v1"
+BIND_ADOPTION_INVERSE_MARKER = "celikpanel-bind-adoption-inverse/v1"
 SOURCE_FIXTURE_POLICIES = frozenset(
     {
         "driver-specific",
@@ -126,47 +174,66 @@ if (not isinstance(argv, list) or len(argv) < 4
 index = argv.index("--cell-id")
 if index + 1 >= len(argv) or argv[index + 1] != sys.argv[1]:
     raise SystemExit("prepared controller argv belongs to another cell")
-if len(sys.argv) not in (2, 3, 4):
+cell = sys.argv[1]
+flags = sys.argv[2:]
+handoff = "--stop-after-kill-for-independent-recovery"
+later = "--bind-rollback-after-target-started"
+owner = "--owner-inverse-after-restart"
+startup = "--expect-agent-startup-rollback"
+reboot_before = "--reboot-before-owner-command"
+reboot_after = "--reboot-after-recovery"
+resume = "--resume-after-reboot"
+order = [handoff, later, owner, startup, reboot_before, reboot_after, resume]
+if (len(sys.argv) < 2 or len(set(flags)) != len(flags)
+        or any(flag not in order for flag in flags)
+        or flags != [flag for flag in order if flag in flags]):
     raise SystemExit("unexpected prepared controller invocation")
-owner_flag = "--owner-inverse-after-restart"
-if len(sys.argv) >= 3 and sys.argv[2] == owner_flag:
-    if (len(sys.argv) != 3
-            or sys.argv[1] not in {
-                "bind__intent__after-write__standalone__peer-reachable",
-                "bind__target-staged__after-write__standalone__peer-reachable",
-                "bind__source-stopped__after-write__standalone__peer-reachable",
-                "bind__target-started__after-write__standalone__peer-reachable",
-            }
-            or owner_flag in argv
-            or argv.count("--trigger-mode") != 1):
+chosen = set(flags)
+if any(flag in argv for flag in order) or "--reboot-dir" in argv:
+    raise SystemExit("prepared controller argv already carries a mode flag")
+bind_handoff = "bind__rolling-back__after-write__standalone__peer-reachable"
+handoff_cells = {
+    "pdns-adopt__rolling-back__after-write__standalone__peer-reachable",
+    bind_handoff,
+}
+owner_cells = set(@OWNER_CELLS@)
+startup_cells = set(@STARTUP_CELLS@)
+if owner in chosen:
+    if (cell not in owner_cells or handoff in chosen or startup in chosen
+            or (later in chosen) != (cell == bind_handoff)):
         raise SystemExit("owner inverse after restart is not valid for prepared cell")
+if handoff in chosen and cell not in handoff_cells:
+    raise SystemExit("independent recovery handoff is not valid for prepared cell")
+if later in chosen and (cell != bind_handoff or not chosen & {handoff, owner}):
+    raise SystemExit("later BIND rollback requires the exact handoff cell")
+if startup in chosen and (cell not in startup_cells or handoff in chosen):
+    raise SystemExit("agent startup rollback is not valid for prepared cell")
+if reboot_before in chosen and owner not in chosen:
+    raise SystemExit("reboot before the owner command requires the owner inverse flow")
+if chosen & {reboot_before, reboot_after} and handoff in chosen:
+    raise SystemExit("reboot steps exclude the independent handoff")
+if resume in chosen and not chosen & {reboot_before, reboot_after}:
+    raise SystemExit("resume requires the reboot flag of the suspended run")
+if chosen & {handoff, owner, startup, reboot_before, reboot_after}:
+    if argv.count("--trigger-mode") != 1:
+        raise SystemExit("prepared controller mode requires one trigger mode")
     trigger_index = argv.index("--trigger-mode")
     if argv[trigger_index + 1:trigger_index + 2] != ["socket"]:
-        raise SystemExit("owner inverse after restart requires a socket trigger")
-    argv.append(owner_flag)
-    os.execv(argv[0], argv)
-if len(sys.argv) >= 3:
-    handoff_flag = "--stop-after-kill-for-independent-recovery"
-    if (sys.argv[1] not in {
-                "pdns-adopt__rolling-back__after-write__standalone__peer-reachable",
-                "bind__rolling-back__after-write__standalone__peer-reachable",
-            }
-            or sys.argv[2] != handoff_flag
-            or handoff_flag in argv
-            or argv.count("--trigger-mode") != 1):
-        raise SystemExit("independent recovery handoff is not valid for prepared cell")
-    trigger_index = argv.index("--trigger-mode")
-    if argv[trigger_index + 1:trigger_index + 2] != ["socket"]:
-        raise SystemExit("independent recovery handoff requires a socket trigger")
-    argv.append(handoff_flag)
-if len(sys.argv) == 4:
-    later_flag = "--bind-rollback-after-target-started"
-    if (sys.argv[1] != "bind__rolling-back__after-write__standalone__peer-reachable"
-            or sys.argv[3] != later_flag or later_flag in argv):
-        raise SystemExit("later BIND rollback requires the exact handoff cell")
-    argv.append(later_flag)
+        raise SystemExit("prepared controller mode requires a socket trigger")
+argv.extend(flags)
+if chosen & {reboot_before, reboot_after}:
+    if argv.count("--result") != 1:
+        raise SystemExit("prepared controller argv has no single result path")
+    result = argv[argv.index("--result") + 1:argv.index("--result") + 2]
+    if not result or not os.path.isabs(result[0]):
+        raise SystemExit("prepared controller result path is not absolute")
+    argv.extend(["--reboot-dir", os.path.dirname(result[0])])
 os.execv(argv[0], argv)
-"""
+""".replace(
+    "@OWNER_CELLS@", repr(sorted(OWNER_INVERSE_CELLS))
+).replace(
+    "@STARTUP_CELLS@", repr(sorted(STARTUP_ROLLBACK_CELLS))
+)
 
 class BootstrapError(RuntimeError):
     pass
@@ -846,6 +913,11 @@ flock -x -w 60 9
 exec 9>&-
 marker=$(/usr/libexec/celikpanel/recovery check-bind-source-inverse-v1)
 test "$marker" = celikpanel-bind-source-inverse/v1
+if [[ $# -ge 4 ]]; then
+    [[ $3 == check-bind-adoption-inverse-v1 && $4 == celikpanel-bind-adoption-inverse/v1 ]]
+    extra=$(/usr/libexec/celikpanel/recovery "$3")
+    test "$extra" = "$4"
+fi
 sha256sum /usr/libexec/celikpanel/recovery "$root/recovery-runtime/runtime.manifest"
 """
 
@@ -887,11 +959,15 @@ def enroll_recovery_runtime(args: argparse.Namespace) -> None:
 
     The kit is enrolled through the product's own `enroll-runtime` under the
     native release-transaction lock; the launcher must then advertise the BIND
-    source inverse. Dry-run unless --execute.
+    source inverse and, for the running-BIND adoption cell, the BIND adoption
+    inverse. recover-dns-pdns-adoption has no capability probe; for it the BIND
+    source marker only shows that the enrolled runtime is the selected one.
+    Dry-run unless --execute.
     """
 
     _, cell, node = load_plan(args)
     validate_owner_inverse_cell(cell, args.node, args.source_fixture)
+    adoption = OWNER_INVERSE_ADMISSIONS[cell["id"]][0] == "owner-bind"
     runtime = validate_recovery_runtime_dir(args.recovery_runtime)
     identity = identity_file(args.identity_file)
     stage = stage_name(args.cell_id)
@@ -916,6 +992,11 @@ def enroll_recovery_runtime(args: argparse.Namespace) -> None:
             + shlex.quote(stage)
             + " "
             + kit_sha
+            + (
+                f" {BIND_ADOPTION_INVERSE_COMMAND} {BIND_ADOPTION_INVERSE_MARKER}"
+                if adoption
+                else ""
+            )
         )
         run(ssh_base(node, identity) + [remote], execute=args.execute)
     print(
@@ -928,6 +1009,11 @@ def enroll_recovery_runtime(args: argparse.Namespace) -> None:
                 "recovery_kit_sha256": kit_sha,
                 "launcher": OWNER_RECOVERY_LAUNCHER,
                 "required_capability": BIND_SOURCE_INVERSE_MARKER,
+                **(
+                    {"additional_capability": BIND_ADOPTION_INVERSE_MARKER}
+                    if adoption
+                    else {}
+                ),
             },
             sort_keys=True,
         )
@@ -1082,59 +1168,122 @@ def prepare(args: argparse.Namespace) -> None:
 
 
 def validate_owner_inverse_cell(
-    cell: dict[str, Any], node: str, source_fixture: str
+    cell: dict[str, Any],
+    node: str,
+    source_fixture: str,
+    *,
+    later_precursor: bool | None = None,
 ) -> None:
-    """Exact Debian standalone BIND after-write cell with a managed PowerDNS source.
+    """Exact Debian standalone cell admitted to the owner-inverse flow.
 
-    Pre-start cells (intent, target-staged) are driver-specific placements;
-    critical cells (source-stopped, target-started) are managed-pdns-required.
+    Each admitted cell names its source fixture and manifest source policy in
+    OWNER_INVERSE_ADMISSIONS. ``later_precursor`` (None: not judged, as for
+    enrollment) must equal the admission's target-started precursor rule.
     """
 
+    admission = OWNER_INVERSE_ADMISSIONS.get(cell.get("id"))
     boundary = cell.get("boundary", {})
     phase = boundary.get("phase")
-    policy = (
-        "driver-specific" if phase in EARLY_MANAGED_PDNS_BIND_PHASES
-        else "managed-pdns-required" if phase in OWNER_INVERSE_CRITICAL_PHASES
-        else None
-    )
+    edge = boundary.get("edge")
+    if admission is None or not isinstance(edge, str):
+        raise BootstrapError(
+            "owner inverse after restart requires an admitted Debian standalone cell: "
+            + ", ".join(sorted(OWNER_INVERSE_CELLS))
+        )
+    fixture_name, policy, later = admission
+    peer = cell.get("peer_reachability")
     if not (
-        policy is not None
-        and cell.get("id") in OWNER_INVERSE_CELLS
-        and cell.get("driver") == "bind"
-        and cell.get("role") == "standalone"
-        and cell.get("peer_reachability") == "reachable"
-        and cell.get("id") == f"bind__{phase}__after-write__standalone__peer-reachable"
-        and boundary == {
-            "edge": "after-write", "name": f"{phase}:after-write", "phase": phase,
-        }
-        and cell.get("fault_selector") == {"phase": phase, "point": "after_write"}
+        cell.get("role") == "standalone"
+        and cell.get("id") == f"{cell.get('driver')}__{phase}__{edge}__standalone__peer-{peer}"
+        and boundary == {"edge": edge, "name": f"{phase}:{edge}", "phase": phase}
+        and cell.get("fault_selector") == {"phase": phase, "point": edge.replace("-", "_")}
         and cell.get("placement", {}).get("source_fixture_policy") == policy
         and node == "debian13"
-        and source_fixture == "managed-pdns"
+        and source_fixture == fixture_name
+        and (later_precursor is None or later_precursor == later)
     ):
         raise BootstrapError(
-            "owner inverse after restart requires an exact Debian standalone BIND "
-            "intent, target-staged, source-stopped or target-started after-write "
-            "cell with a managed PowerDNS source"
+            f"owner inverse after restart requires the exact Debian standalone cell "
+            f"{cell.get('id')} with the {fixture_name} source fixture"
+            + (" and the target-started rollback precursor" if later else "")
         )
-    validate_bind_cell(cell, node, source_fixture)
+    validate_supported_cell(cell, node, source_fixture)
+
+
+def refuse_v2_managed_pdns_without_owner_flow(
+    cell: dict[str, Any], source_fixture: str, owner_inverse: bool, handoff: bool
+) -> None:
+    """A managed PowerDNS source makes the producer write the V2 journal.
+
+    The controller would expect V1 without the owner-inverse flow and fail at
+    the boundary marker after a real mutation, so the host refuses first.
+    """
+
+    if (
+        source_fixture != "managed-pdns"
+        or cell.get("driver") != "bind"
+        or cell.get("role") != "standalone"
+        or owner_inverse
+        or handoff
+    ):
+        return
+    admission = OWNER_INVERSE_ADMISSIONS.get(cell.get("id"))
+    if admission is not None and admission[0] == "managed-pdns":
+        raise BootstrapError(
+            f"{cell.get('id')} with a managed PowerDNS source writes the V2 journal, "
+            "which the restarted Agent never executes; run it with "
+            f"{OWNER_INVERSE_FLAG}. Nothing was started"
+        )
+    raise BootstrapError(
+        f"{cell.get('id')} with a managed PowerDNS source has no V2 pass definition "
+        f"(it is not admitted to {OWNER_INVERSE_FLAG}); nothing was started"
+    )
+
+
+def prepared_flags(args: argparse.Namespace) -> list[str]:
+    """The guest-program flags of this run, in PREPARED_FLAG_ORDER."""
+
+    selected = {
+        INDEPENDENT_PDNS_HANDOFF_FLAG: args.stop_after_kill_for_independent_recovery is True,
+        LATER_BIND_ROLLBACK_FLAG: getattr(args, "bind_rollback_after_target_started", False) is True,
+        OWNER_INVERSE_FLAG: getattr(args, "owner_inverse_after_restart", False) is True,
+        STARTUP_ROLLBACK_FLAG: getattr(args, "expect_agent_startup_rollback", False) is True,
+        REBOOT_BEFORE_OWNER_FLAG: getattr(args, "reboot_before_owner_command", False) is True,
+        REBOOT_AFTER_RECOVERY_FLAG: getattr(args, "reboot_after_recovery", False) is True,
+    }
+    return [flag for flag in PREPARED_FLAG_ORDER if selected.get(flag)]
+
+
+def prepared_remote(cell_id: str, flags: Iterable[str]) -> str:
+    return (
+        "sudo /usr/sbin/runuser -u root -g celikpanel -- /usr/bin/env -i "
+        "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin "
+        "LANG=C.UTF-8 /usr/bin/python3 -c "
+        + shlex.quote(RUN_PREPARED_CODE)
+        + " "
+        + shlex.quote(cell_id)
+        + "".join(" " + shlex.quote(flag) for flag in flags)
+    )
 
 
 def run_prepared(args: argparse.Namespace) -> int:
-    _, cell, node = load_plan(args)
+    plan, cell, node = load_plan(args)
     validate_supported_cell(cell, args.node, args.source_fixture)
     owner_inverse = getattr(args, "owner_inverse_after_restart", False) is True
+    later = getattr(args, "bind_rollback_after_target_started", False) is True
+    startup = getattr(args, "expect_agent_startup_rollback", False) is True
+    reboot_before = getattr(args, "reboot_before_owner_command", False) is True
+    reboot_after = getattr(args, "reboot_after_recovery", False) is True
     if owner_inverse:
-        if args.stop_after_kill_for_independent_recovery or getattr(
-            args, "bind_rollback_after_target_started", False
-        ) is True:
+        if args.stop_after_kill_for_independent_recovery:
             raise BootstrapError(
                 "owner inverse after restart excludes the independent handoff flags"
             )
-        validate_owner_inverse_cell(cell, args.node, args.source_fixture)
+        validate_owner_inverse_cell(
+            cell, args.node, args.source_fixture, later_precursor=later
+        )
     if args.source_fixture == "owner-bind" and not (
-        args.stop_after_kill_for_independent_recovery
-        and getattr(args, "bind_rollback_after_target_started", False) is True
+        later and (args.stop_after_kill_for_independent_recovery or owner_inverse)
     ):
         raise BootstrapError("owner BIND handoff requires the target-started rollback precursor")
     if args.stop_after_kill_for_independent_recovery and not (
@@ -1160,8 +1309,8 @@ def run_prepared(args: argparse.Namespace) -> int:
             "independent recovery handoff requires an exact Debian PowerDNS "
             "adoption or BIND switch rollback cell"
         )
-    if getattr(args, "bind_rollback_after_target_started", False) is True and not (
-        args.stop_after_kill_for_independent_recovery
+    if later and not (
+        (args.stop_after_kill_for_independent_recovery or owner_inverse)
         and args.cell_id == INDEPENDENT_BIND_HANDOFF_CELL
         and cell.get("id") == args.cell_id
         and cell.get("driver") == "bind"
@@ -1175,34 +1324,78 @@ def run_prepared(args: argparse.Namespace) -> int:
             "phase": "rolling-back", "point": "after_write",
         }
         and args.node == "debian13"
-        and args.source_fixture in {"managed-pdns", "owner-bind"}
+        and (
+            args.source_fixture == "owner-bind"
+            if owner_inverse
+            else args.source_fixture in {"managed-pdns", "owner-bind"}
+        )
     ):
         raise BootstrapError("later BIND rollback requires the exact Debian handoff cell")
-    identity = identity_file(args.identity_file)
-    remote = (
-        "sudo /usr/sbin/runuser -u root -g celikpanel -- /usr/bin/env -i "
-        "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin "
-        "LANG=C.UTF-8 /usr/bin/python3 -c "
-        + shlex.quote(RUN_PREPARED_CODE)
-        + " "
-        + shlex.quote(args.cell_id)
-        + (
-            " " + shlex.quote(INDEPENDENT_PDNS_HANDOFF_FLAG)
-            if args.stop_after_kill_for_independent_recovery
-            else ""
+    if startup and not (
+        args.cell_id in STARTUP_ROLLBACK_CELLS
+        and cell.get("id") == args.cell_id
+        and cell.get("driver") == "pdns-adopt"
+        and args.source_fixture == "external-pdns-adoption"
+        and not owner_inverse
+        and not args.stop_after_kill_for_independent_recovery
+    ):
+        raise BootstrapError(
+            f"{STARTUP_ROLLBACK_FLAG} applies only to "
+            + ", ".join(sorted(STARTUP_ROLLBACK_CELLS))
+            + " with the external PowerDNS adoption fixture"
         )
-        + (
-            " " + shlex.quote(LATER_BIND_ROLLBACK_FLAG)
-            if getattr(args, "bind_rollback_after_target_started", False) is True
-            else ""
+    if reboot_before and not owner_inverse:
+        raise BootstrapError(f"{REBOOT_BEFORE_OWNER_FLAG} requires {OWNER_INVERSE_FLAG}")
+    if (reboot_before or reboot_after) and (
+        args.stop_after_kill_for_independent_recovery or cell.get("role") != "standalone"
+    ):
+        raise BootstrapError(
+            "reboot steps need a standalone cell without the independent handoff"
         )
-        + (" " + shlex.quote(OWNER_INVERSE_FLAG) if owner_inverse else "")
+    refuse_v2_managed_pdns_without_owner_flow(
+        cell, args.source_fixture, owner_inverse,
+        bool(args.stop_after_kill_for_independent_recovery is True),
     )
-    command = ssh_base(node, identity) + [remote]
+    identity = identity_file(args.identity_file)
+    flags = prepared_flags(args)
+    command = ssh_base(node, identity) + [prepared_remote(args.cell_id, flags)]
+    reboots_allowed = int(reboot_before) + int(reboot_after)
+    resume_command = (
+        ssh_base(node, identity) + [prepared_remote(args.cell_id, flags + [RESUME_FLAG])]
+        if reboots_allowed
+        else None
+    )
     if not args.execute:
         print(json.dumps(command))
+        if resume_command is not None:
+            print(json.dumps({
+                "on_exit": REBOOT_REQUESTED_EXIT,
+                "reboot": {
+                    "action": "reboot",
+                    "method": fixture.REBOOT_METHOD,
+                    "node": args.node,
+                    "at_most": reboots_allowed,
+                },
+                "then": resume_command,
+            }))
         return 0
-    return subprocess.run(command, check=False).returncode
+    returncode = subprocess.run(command, check=False).returncode
+    reboots = 0
+    while returncode == REBOOT_REQUESTED_EXIT and resume_command is not None:
+        if reboots >= reboots_allowed:
+            print(
+                "guest bootstrap: the controller requested more reboots than the "
+                "selected reboot flags allow; nothing more was run",
+                file=sys.stderr,
+            )
+            return 1
+        receipt = fixture.reboot_guest(
+            plan, args.node, identity, getattr(args, "reboot_timeout", 600)
+        )
+        print(json.dumps(receipt, sort_keys=True))
+        reboots += 1
+        returncode = subprocess.run(resume_command, check=False).returncode
+    return returncode
 
 def common_parser(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--work-root", required=True, type=Path)
@@ -1253,6 +1446,13 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     current.add_argument(INDEPENDENT_PDNS_HANDOFF_FLAG, action="store_true")
     current.add_argument(LATER_BIND_ROLLBACK_FLAG, action="store_true")
     current.add_argument(OWNER_INVERSE_FLAG, action="store_true")
+    current.add_argument(STARTUP_ROLLBACK_FLAG, action="store_true")
+    current.add_argument(REBOOT_BEFORE_OWNER_FLAG, action="store_true")
+    current.add_argument(REBOOT_AFTER_RECOVERY_FLAG, action="store_true")
+    current.add_argument(
+        "--reboot-timeout", type=int, default=600,
+        help="seconds for each guest reboot (fixture.reboot_guest)",
+    )
     current = subparsers.add_parser("enroll-recovery-runtime")
     common_parser(current)
     current.add_argument("--recovery-runtime", required=True, type=Path)

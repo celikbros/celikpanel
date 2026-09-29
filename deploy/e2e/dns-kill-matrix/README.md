@@ -986,7 +986,9 @@ The controller creates three per-cell artifacts without replacement:
 - The raw transcript interleaves timestamped controller records with uncropped
   child output (bounded to 1 MiB per synchronous command).
 
-Exit status is 0 for a verified safety pass, 1 for a verified safety failure,
+Exit status is 3 when a reboot step suspended the cell (see
+[Reboot during recovery](#reboot-during-recovery)); otherwise it is 0 for a
+verified safety pass, 1 for a verified safety failure,
 2 for an unverified boundary/peer/execution dimension, and 64 for a pre-result
 controller/preflight error. Run isolated
 controller checks with:
@@ -997,22 +999,80 @@ python3 deploy/e2e/dns-kill-matrix/test_run_cell.py
 
 ### Owner inverse after Agent restart
 
-This mode defines and runs "the Agent decides, the owner executes" for exactly
-four cells. The two pre-start cells are placed `driver-specific`:
+This mode defines and runs "the Agent decides, the owner executes". The
+admitted cells are data (`OWNER_INVERSE_ADMISSIONS` in `run_cell.py`, mirrored
+by `guest_bootstrap.py`), each bound to one product inverse
+(`OWNER_INVERSE_PROFILES`):
 
-- `bind__intent__after-write__standalone__peer-reachable`
-- `bind__target-staged__after-write__standalone__peer-reachable`
+| Cell | Profile / source fixture | Journal on disk at the cut | Journal after the Agent restart | Variant |
+|---|---|---|---|---|
+| `bind__intent__after-write__standalone__peer-reachable` | V2 switch, `managed-pdns` | `intent` | `rolling-back` (Agent-written) | pre-start |
+| `bind__target-staged__after-write__standalone__peer-reachable` | V2 switch, `managed-pdns` | `target-staged` | `rolling-back` | pre-start |
+| `bind__target-staged__before-write__standalone__peer-unreachable` | V2 switch, `managed-pdns` | `intent` | `rolling-back` | pre-start |
+| `bind__source-stopped__after-write__standalone__peer-reachable` | V2 switch, `managed-pdns` | `source-stopped` | `rolling-back` | critical |
+| `bind__source-stopped__before-write__standalone__peer-reachable` | V2 switch, `managed-pdns` | `target-staged`; PowerDNS already `disable --now` | `rolling-back` | critical |
+| `bind__target-started__after-write__standalone__peer-reachable` | V2 switch, `managed-pdns` | `target-started` | `rolling-back` | critical |
+| `bind__target-started__before-write__standalone__peer-reachable` | V2 switch, `managed-pdns` | `source-stopped`; BIND already started | `rolling-back` | critical |
+| `bind__rolled-back__before-write__standalone__peer-reachable` | V2 switch, `managed-pdns` | `rolling-back`; the in-process inverse already ran | `rolling-back` (kept) | pre-start |
+| `bind__rolled-back__after-write__standalone__peer-reachable` | V2 switch, `managed-pdns` | `rolled-back` | `rolled-back` (kept, not retired) | pre-start |
+| `bind__rolling-back__after-write__standalone__peer-reachable` | V2 running-BIND adoption, `owner-bind`, with `--bind-rollback-after-target-started` | `rolling-back` | `rolling-back` (kept) | pre-start (no-stop) |
+| `pdns-adopt__rolled-back__after-write__standalone__peer-reachable` | V1 PowerDNS adoption, `external-pdns-adoption` | `rolled-back` | `rolled-back` (kept) | pre-start |
 
-The two critical cells are placed `managed-pdns-required`; see
-[Critical variant](#critical-variant-source-stopped-before-the-cut):
+The owner commands are `recover-dns-bind-switch`, `recover-dns-bind-adoption`
+and `recover-dns-pdns-adoption`. The V2 switch has only Debian placements
+(APT), which is why the `target-staged` before-write edge is its
+peer-unreachable standalone invariance control. Where each before-write edge
+stands (from `cmd/agent/dns_engine_host.go` and `internal/dnsenginerecovery`):
+the kill hook fires before the named phase is persisted, so the disk holds its
+predecessor, and every effect written before that phase has already happened.
+The restarted Agent writes `rolling-back` over any earlier phase
+(`Reconcile`: target not verified, source absent proven), never rewrites
+`rolling-back` or `rolled-back`, never executes a V2 inverse, releases with
+`dns_native_recovery_unknown_after_restart` and names the command.
 
-- `bind__source-stopped__after-write__standalone__peer-reachable`
-- `bind__target-started__after-write__standalone__peer-reachable`
+Excluded edges, with the reason:
 
-Without the flag, every one of these cells keeps its earlier behaviour. The
-critical cells in particular keep their stale V1 expectation.
+- `bind__intent__before-write` (managed PowerDNS): no journal exists at the
+  cut. The restarted Agent fails the job with
+  `agent_restarted_before_dns_engine_switch_commit`; the same-request
+  `rpc-retry` is the recovery path, not an owner command. The controller has no
+  V2-aware marker expectation for that path yet, so the cell is refused.
+- `target-verified` before-write: the state receipt already names BIND; the
+  Agent converges forward. The owner command is not the path.
+- `rolling-back:before-write` would also be an owner path (disk
+  `target-staged`), but its Debian placement is not prepared with a managed
+  PowerDNS source; it is not admitted.
+- The peer-unreachable twins of the critical and `rolled-back` cells have the
+  same shape; they are not admitted and are refused with guidance.
 
-All four require `--source-fixture managed-pdns`: a serving PowerDNS source that
+PowerDNS adoption: the Agent runs the V1 adoption inverse itself at restart
+(`rollbackPDNSAdoption`). From `intent` and `rolling-back` after-write it rolls
+back, retires the journal and records
+`dns_engine_switch_rolled_back_after_restart`; `rpc-retry` then converges the
+same request forward. No owner command applies there on a healthy host (see
+[Agent startup rollback](#powerdns-adoption-agent-startup-rollback)). Only the
+`rolled-back` after-write cut leaves the journal for the owner: the Agent's
+restored-source proof requires phase `rolling-back`, so it fails, keeps the
+`rolled-back` journal, releases the job and names
+`recover-dns-pdns-adoption`. That is the one deterministic owner path for row
+13 with a running Agent, and it is the admitted cell. The Agent's refusal on
+that cut is a product dead end the owner resolves; it is recorded, not fixed
+here.
+
+**Without the flag** the managed-PowerDNS standalone BIND cells are refused
+before any mutation. `run_cell.py` (`refuse_unrunnable_v2_cells`, before the
+transcript or any other artifact exists; exit 64) and `guest_bootstrap.py
+run-prepared` both say that the producer writes V2 and name
+`--owner-inverse-after-restart` for the admitted switch cells; other
+managed-PowerDNS standalone BIND cells get a refusal that says why no V2 pass
+definition exists. Earlier, the critical cells failed at the boundary marker
+after a real mutation. Other sources and the independent handoff are
+unchanged.
+
+The running-BIND adoption cell and the PowerDNS adoption cell keep their
+earlier behaviour without the flag.
+
+The V2 switch cells require `--source-fixture managed-pdns`: a serving PowerDNS source that
 production installed, on Debian 13, with BIND as the target. With that source
 the certified APT producer writes the V2 frozen-source journal from `intent` on
 (`prepareBINDIndependentInverseJournal` →
@@ -1026,13 +1086,19 @@ The server owner runs that command.
 Select the mode with `--owner-inverse-after-restart`, or `run-prepared ...
 --owner-inverse-after-restart` through the bootstrap. The mode requires socket
 mode and a source proof. It cannot be combined with the independent-handoff
-flags. Any other cell, or any source other than `managed-pdns`, is refused
+flags, except that the running-BIND adoption cell requires
+`--bind-rollback-after-target-started` (and no other cell accepts it). Any
+other cell, or any source other than the cell's profile fixture, is refused
 before the tagged Agent starts. Before launch, the controller also requires:
 
 - a root-owned `/usr/libexec/celikpanel/recovery` that is not group- or
   world-writable;
 - output of exactly `celikpanel-bind-source-inverse/v1` from
-  `recovery check-bind-source-inverse-v1`;
+  `recovery check-bind-source-inverse-v1` (V2 switch), or
+  `celikpanel-bind-adoption-inverse/v1` from
+  `recovery check-bind-adoption-inverse-v1` (running-BIND adoption).
+  `recover-dns-pdns-adoption` has no capability probe; for it only the
+  launcher's ownership and mode are checked, and that is recorded;
 - PowerDNS as the only authority: `pdns.service` active, `bind9`/`named` not
   active, every TCP and UDP port-53 listener on the DNS address or a wildcard
   owned by the `pdns.service` MainPID (`ss -H -l -n -p -t -u`), and
@@ -1041,7 +1107,11 @@ before the tagged Agent starts. Before launch, the controller also requires:
 The controller records the pre-cut PowerDNS MainPID and the semantic DNS state
 receipt. If a prerequisite is missing, it refuses before any mutation.
 
-Sequence and pass definition:
+Sequence and pass definition (written for the V2 switch; the adoption
+variants are below). Wherever step 2 or later says `rolling-back`, read the
+"after the Agent restart" column of the table: the two `rolled-back:after-write`
+cells keep `rolled-back`. For before-write cells the boundary journal is the
+predecessor phase in the same table:
 
 1. **Kill.** The tagged Agent is SIGKILLed at the boundary, with the usual kill
    proof: stopped state, exit 137, reap. The marker and the on-disk journal
@@ -1246,17 +1316,19 @@ Limits:
   any install-ownership receipt left by the product are recorded by the probe
   but not judged here. BIND configuration restoration is the command's own
   contract.
-- **One path only.** There is no reboot, owner-edit race, power loss, paired
-  topology, Arch placement or before-write edge. The `peer-reachable` label is
-  an invariance control.
+- **Scope.** There is no owner-edit race, power loss, paired topology or Arch
+  placement. Reboot is covered only by the explicit flags below. The
+  `peer-reachable`/`peer-unreachable` labels of these standalone cells are
+  invariance controls.
 - **Local provenance.** The recovery kit is an unsigned local build enrolled
   as fixture work. It is not release provenance.
-- **Stale critical cells without the flag.** Run without
-  `--owner-inverse-after-restart`, the standalone managed-pdns
-  `source-stopped` and `target-started` cells still expect the V1 journal,
-  while the current producer writes V2 for that source. Such a run ends
-  `unverified` at the marker, after a real mutation. Use the flag for them.
-  `rolled-back` and every before-write edge have no V2 pass definition yet.
+- **Managed-PowerDNS cells without the flag** are refused before any mutation
+  (see above); they no longer end `unverified` at the marker after a real
+  mutation. `intent:before-write`, `target-verified:before-write`,
+  `rolling-back:before-write` and the peer-unreachable twins still have no V2
+  pass definition.
+- **Newly admitted cells** (before-write edges, `rolled-back`, both adoption
+  cells) and every reboot step have offline tests only; none has run natively.
 - **Critical-variant limits.**
   - DNS is interrupted from the product's source stop until the owner command
     restarts PowerDNS; the controller measures that window, it does not bound
@@ -1266,9 +1338,183 @@ Limits:
     pre-cut answer is the pre-launch observation, not the moment of the stop.
   - Which BIND unit-file state is restored (`loaded`/`disabled` versus
     `masked`) is recorded, not judged.
-  - Neither cell has run natively yet.
+  - The two after-write cells passed natively on 2026-09-29
+    ([evidence](evidence/owner-inverse-critical-20260929/README.md)); the
+    before-write edges have not run natively.
 - **Not evidence yet.** Nothing here is native evidence. The 268-runnable
   denominator is unchanged.
+
+#### Adoption variants: running BIND and PowerDNS
+
+Both adoption profiles run the same seven steps; the per-profile differences
+are data (`OwnerInverseProfile`), not a second flow.
+
+**Running-BIND adoption** (`bind-adoption-v2`, row 11), cell
+`bind__rolling-back__after-write__standalone__peer-reachable` with
+`--source-fixture owner-bind` and `--bind-rollback-after-target-started`
+(the precursor the 2026-09-27 trial used: the owner's `named` was reloaded with
+the adoption configuration before the in-process rollback). Pass:
+
+1. Kill as above; the journal is V2 at `rolling-back` with
+   `inverse_plan.source_bind` of kind `bind-adoption-source/v1` and no
+   `source_pdns`. Preflight requires `celikpanel-bind-adoption-inverse/v1`
+   and the owner's BIND as the only authority: `named`/`bind9` active,
+   PowerDNS not active, every relevant port-53 listener owned by the
+   `named.service` MainPID, authoritative UDP+TCP for `www.owner.test`.
+2. The restarted, running Agent released the job with
+   `dns_native_recovery_unknown_after_restart` (ledger target `bind`), kept the
+   V2 journal at `rolling-back`, and its journal names
+   `recover-dns-bind-adoption --request-id <id>`. The owner BIND serves alone
+   with the **pre-cut `named` MainPID**.
+3. Read-only status names `recover-dns-bind-adoption --request-id <id>` and
+   changes no private evidence.
+4. The owner runs `recover-dns-bind-adoption --request-id <id>` once.
+5. The journal is retired; the ledger is byte-identical to the Agent's
+   release; no DNS state receipt exists (the source had none); the owner BIND
+   still serves alone with the **same MainPID** (a changed PID is a verified
+   failure here, because the product promises reload, never restart); the
+   owner files are byte-identical to the source proof (`named.conf`,
+   `named.conf.options`, `named.conf.local`, the root-hints leaf and
+   `db.owner.test`, compared by SHA-256, plus the `named-checkconf -l`
+   inventory; inodes are recorded only because the command restores its two
+   configuration preimages by replacement). Whether the adoption-only product
+   zone still answers is recorded, not judged.
+6. The identical re-run changes no private evidence.
+7. Panel restart, Agent socket and MainPID kept, 31 samples, and
+   `rolled_back_source_serving` from probes 1 and 2.
+
+**PowerDNS adoption** (`pdns-adoption-v1`, row 13), cell
+`pdns-adopt__rolled-back__after-write__standalone__peer-reachable` with
+`--source-fixture external-pdns-adoption`. Same pass with these differences:
+V1 journal (mode `adopt`, empty source, `state_before.exists=false`) at
+`rolled-back` after the restart; ledger target `pdns`; the command is
+`recover-dns-pdns-adoption`; the external PowerDNS serves alone with the
+pre-cut MainPID (a change is an unknown, as in the pre-start switch cells);
+owner files are the main and managed configuration and the database, compared
+by SHA-256 with the sealed adoption preimage; no DNS state receipt afterwards.
+There is no capability probe for this command.
+
+#### PowerDNS adoption: Agent startup rollback
+
+For `pdns-adopt__intent__after-write__standalone__peer-reachable` and
+`pdns-adopt__rolling-back__after-write__standalone__peer-reachable`, row 13's
+running-Agent path needs no owner command. `--expect-agent-startup-rollback`
+(also `run-prepared ... --expect-agent-startup-rollback`) keeps the existing
+socket recovery path and judges, after the Agent restart and before any
+same-request retry:
+
+- the job is `failed`/`interrupted` with
+  `dns_engine_switch_rolled_back_after_restart`, target `pdns`, same owner and
+  qualifier, no worker, no lease, no active request;
+- the switch journal is retired;
+- the external PowerDNS serves alone on its pre-cut MainPID (a change is an
+  unknown);
+- the Agent journal since the restart does not name
+  `recover-dns-pdns-adoption`.
+
+If any of these fails, no `rpc-retry` is run: over a retained journal the
+Agent refuses the retry and poisons its DNS manager. A pass then also needs
+D-021 safety and `target_converged` from the two post-retry probes (the retry
+re-runs the adoption forward). Without the flag both cells keep their earlier
+behaviour.
+
+#### Reboot during recovery
+
+The controller runs inside the guest it would reboot. At a reboot point it
+reads the guest's boot ID, SMBIOS UUID and cloud-init fixture marker (the
+marker must name this cell, or the reboot is refused), writes a create-new
+0600 checkpoint (`reboot-checkpoint-N.json` in the explicit `--reboot-dir`,
+holding the result so far, the failure lists and the flow state) and exits
+**3**. `guest_bootstrap.py run-prepared` then reboots exactly this guest with
+`fixture.reboot_guest` and runs the same prepared argv with
+`--resume-after-reboot`. The prepared guest program passes `--reboot-dir` as
+the directory of the prepared `--result`.
+
+`fixture.py reboot` (and `reboot_guest`) is what the 2026-09-26..28 trials did
+by hand: guest `systemctl reboot`, then the fixture's SSH readiness. It
+refuses unless the cell's QEMU pidfile is alive and the guest reports the
+plan's SMBIOS UUID (uuid5 of cell and node, set by `-uuid`), the plan's fixture
+marker and a boot ID. It returns the boot ID before and after. There is no QMP
+`system_reset` (power loss is not covered).
+
+The resumed controller refuses (exit 64, nothing consumed) unless the boot ID
+changed on the same SMBIOS UUID, exactly one unconsumed checkpoint exists, the
+settings are identical (hash of every setting except the resume switch), and
+the kill proof and earlier transcripts are byte-identical. It then writes
+`reboot-resumed-N.json` create-new, so a checkpoint is consumed once, and
+records into `transcript-after-reboot-N.jsonl`. `result.json` is written only
+at the end; it lists every reboot with both boot IDs.
+
+`--reboot-before-owner-command` (owner-inverse cells only): after step 2 and
+before step 3. After the boot the resumed controller judges: both management
+units active, the Agent socket connectable, the Panel port reachable, the
+journal still at the step-2 phase for the same request, the ledger
+byte-identical to the Agent's release. Pre-start and adoption cells: the
+source serves alone again; its new MainPID is recorded (`judged: false`) and
+becomes the reference for steps 5 to 7. Critical cells: native state and the
+`pdns.service` journal are recorded only. Also recorded: private-evidence
+changes across the boot, the Agent refusal since the boot and a recovery
+probe (ordinal 3). A deviation stops before the owner command, as in step 2.
+Steps 3 to 7 follow; the Agent socket and MainPID after the boot are the
+step-7 reference.
+
+`--reboot-after-recovery` (any standalone socket flow: the rpc-retry flow of
+the fresh-install cells and the owner-inverse cells): only when the flow
+passed, after its final health samples. The authority before the reboot is
+recorded: which engine's unit MainPID owns the port-53 listeners, answer
+counts, the semantic DNS state receipt, private evidence. After the boot:
+both management units came up, Agent socket and Panel port; the same port-53
+authority, the same answer counts, the same semantic state receipt and the
+same journal presence; owner-inverse cells additionally have the profile's
+source serving alone and, for the V2 switch, BIND not serving (no `named`
+process). Then a second window of 31 samples, the Agent MainPID kept through
+it, and the authority compared again. Verified deviations fail the cell,
+unknown inspections leave it unverified. A flow that did not pass records
+`reboot_after_recovery.run: false` and is not rebooted.
+
+Both flags may be combined (two reboots). Paired cells are refused: only the
+kill guest would be rebooted.
+
+```sh
+# On the Linux QEMU host, after install/enroll/prepare as above:
+python3 "$BOOTSTRAP" run-prepared "${COMMON[@]}" --owner-inverse-after-restart \
+  --reboot-before-owner-command --reboot-after-recovery --reboot-timeout 600 --execute
+```
+
+#### Rows 12 and 14: not expressible yet
+
+No cell was added for the stopped unmanaged BIND takeover (row 12) or for
+`reinstall_active` BIND (row 14):
+
+- **Takeover.** On the wire it is byte-identical to a fresh BIND install
+  (`mode switch`, empty source, epochs 0 to 1, standalone); the Agent chooses
+  the takeover from host state (bind9 installed, `named` stopped, no receipts;
+  `adopted_present` install receipt, `bindOptionsTakeover`). The trigger can
+  send it only under `uninitialized`, whose source proof claims an absent
+  engine and does not check packages. Preparing it under that name would
+  record a fresh install while testing a takeover. Needed: a trigger fixture
+  (for example `unmanaged-bind-stopped`: mode switch, empty source, 0 to 1,
+  standalone, bind driver) in `cmd/dns-kill-matrix-trigger`; the same name in
+  `SOURCE_FIXTURE_DRIVERS`/`SOURCE_FIXTURE_ENGINES` with a non-serving,
+  port-53-bindable source-proof contract and a preinstall proof (bind9
+  installed under a mask, then unmasked, `named` inactive and disabled, no
+  receipts); bootstrap preparation for one Debian after-write cell (for
+  example `bind__target-staged__after-write__standalone__peer-reachable`);
+  post-checks for `adopted_present: true` and empty `missing_before`.
+- **Reinstall.** The trigger's bind driver requires `mode switch`; no fixture
+  accepts `reinstall`. Needed: a trigger fixture (for example
+  `managed-bind-absent`) that admits `mode reinstall` with source = target =
+  bind and `source_epoch == target_epoch >= 1`; run_cell support for that
+  mode and epoch rule; bootstrap preparation that installs managed BIND
+  through a production switch, stops it and removes the engine without
+  touching the receipts.
+- A manifest change is needed only if these runs need their own placement
+  policy; otherwise they can run as fixture variants of the existing Debian
+  `bind__*__standalone` cells.
+- Unverified product risk for row 12 (from code reading): after a rolled-back
+  takeover the `adopted_present` install receipt survives, and a
+  same-request retry then selects the exclusive options authority, which
+  would refuse operator directives the takeover would have adopted.
 
 The [management-absent PowerDNS reboot trial](NATIVE-PDNS-MANAGEMENT-ABSENT-BOOT-20260925.md) repeats the corrected-Agent deleted-child adoption path in a fresh disposable Debian/Arch pair. After same-request convergence, direct authoritative UDP/TCP tests passed before and after one orderly Debian reboot with Panel and Agent units disabled/stopped and their normal executable paths absent. Native pdns.service stayed enabled and active. This adds a bounded P0.5 DNS serving result, not another kill-matrix phase or proof of full panel removal, paired transfer, other workloads, owner edits or independent inverse.
 

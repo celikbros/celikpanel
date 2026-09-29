@@ -1293,7 +1293,7 @@ class PreparedCellRunnerTest(unittest.TestCase):
             with self.assertRaises(bootstrap.BootstrapError):
                 bootstrap.run_prepared(args)
         self.assertIn(
-            'sys.argv[3] != later_flag',
+            'if later in chosen and (cell != bind_handoff or not chosen & {handoff, owner}):',
             bootstrap.RUN_PREPARED_CODE,
         )
 
@@ -1997,12 +1997,21 @@ class EarlyManagedPDNSBindCellTest(unittest.TestCase):
     OWNER_INVERSE = frozenset({
         "bind__intent__after-write__standalone__peer-reachable",
         "bind__target-staged__after-write__standalone__peer-reachable",
+        "bind__target-staged__before-write__standalone__peer-unreachable",
     })
     CRITICAL_OWNER_INVERSE = frozenset({
         "bind__source-stopped__after-write__standalone__peer-reachable",
+        "bind__source-stopped__before-write__standalone__peer-reachable",
         "bind__target-started__after-write__standalone__peer-reachable",
+        "bind__target-started__before-write__standalone__peer-reachable",
+        "bind__rolled-back__before-write__standalone__peer-reachable",
+        "bind__rolled-back__after-write__standalone__peer-reachable",
     })
     ALL_OWNER_INVERSE = OWNER_INVERSE | CRITICAL_OWNER_INVERSE
+    ADOPTION_OWNER_INVERSE = frozenset({
+        "bind__rolling-back__after-write__standalone__peer-reachable",
+        "pdns-adopt__rolled-back__after-write__standalone__peer-reachable",
+    })
 
     @staticmethod
     def preinstall_document(cell_id: str) -> tuple[dict, bytes]:
@@ -2075,8 +2084,12 @@ class EarlyManagedPDNSBindCellTest(unittest.TestCase):
                         run_cell.validate_source_preinstall_document(
                             value, raw, selected, owner_inverse_after_restart=True
                         )
-        self.assertEqual(run_cell.OWNER_INVERSE_CELLS, self.ALL_OWNER_INVERSE)
-        self.assertEqual(bootstrap.OWNER_INVERSE_CELLS, self.ALL_OWNER_INVERSE)
+        self.assertEqual(
+            run_cell.OWNER_INVERSE_CELLS, self.ALL_OWNER_INVERSE | self.ADOPTION_OWNER_INVERSE
+        )
+        self.assertEqual(
+            bootstrap.OWNER_INVERSE_CELLS, self.ALL_OWNER_INVERSE | self.ADOPTION_OWNER_INVERSE
+        )
         # Critical managed-pdns cells: V2 only with the flag, stale V1 without.
         for cell_id in sorted(self.CRITICAL_OWNER_INVERSE):
             critical = run_cell.CellSpec.from_manifest(self.manifest, cell_id)
@@ -2093,8 +2106,9 @@ class EarlyManagedPDNSBindCellTest(unittest.TestCase):
         )
         self.assertEqual(
             run_cell.expected_journal_schema(rolled_back, owner_inverse_after_restart=True),
-            run_cell.JOURNAL_SCHEMA,
+            run_cell.BIND_HANDOFF_JOURNAL_SCHEMA,
         )
+        self.assertEqual(run_cell.expected_journal_schema(rolled_back), run_cell.JOURNAL_SCHEMA)
 
     def owner_args(self, raw: dict, **overrides) -> mock.Mock:
         values = dict(
@@ -2138,8 +2152,8 @@ class EarlyManagedPDNSBindCellTest(unittest.TestCase):
             (raw, {"stop_after_kill_for_independent_recovery": True}),
             (raw, {"bind_rollback_after_target_started": True}),
             (self.raw("bind__intent__before-write__standalone__peer-unreachable"), {}),
-            (self.raw("bind__rolled-back__after-write__standalone__peer-reachable"), {}),
-            (self.raw("bind__source-stopped__before-write__standalone__peer-reachable"), {}),
+            (self.raw("bind__rolled-back__after-write__standalone__peer-unreachable"), {}),
+            (self.raw("bind__source-stopped__before-write__standalone__peer-unreachable"), {}),
             (self.raw(bootstrap.INDEPENDENT_BIND_HANDOFF_CELL), {}),
             (dict(raw, fault_selector={"phase": "target-staged", "point": "before_write"}), {}),
             (dict(raw, role="paired-primary"), {}),
@@ -2173,17 +2187,17 @@ class EarlyManagedPDNSBindCellTest(unittest.TestCase):
             stop_after_kill_for_independent_recovery=False,
             bind_rollback_after_target_started=False,
         )
+        # A managed PowerDNS source writes V2: without the owner-inverse flow
+        # the host refuses before anything runs on the guest.
         with (
             mock.patch.object(bootstrap, "load_plan", return_value=({}, raw, {})),
             mock.patch.object(bootstrap, "identity_file", return_value=Path("/tmp/test-key")),
             mock.patch.object(bootstrap, "ssh_base", return_value=["ssh", "guest"]),
             mock.patch.object(bootstrap.subprocess, "run") as run,
-            mock.patch("sys.stdout", new_callable=io.StringIO) as output,
+            self.assertRaisesRegex(bootstrap.BootstrapError, bootstrap.OWNER_INVERSE_FLAG),
         ):
-            self.assertEqual(bootstrap.run_prepared(args), 0)
-            run.assert_not_called()
-        command = json.loads(output.getvalue())
-        self.assertTrue(command[-1].endswith(" " + raw["id"]))
+            bootstrap.run_prepared(args)
+        run.assert_not_called()
         args.stop_after_kill_for_independent_recovery = True
         with (
             mock.patch.object(bootstrap, "load_plan", return_value=({}, raw, {})),
@@ -2335,11 +2349,14 @@ class EarlyManagedPDNSBindCellTest(unittest.TestCase):
                     "managed-pdns",
                 ])
                 self.assertEqual(summary["uploaded"], "scenario.json source-setup-pdns.json")
-                # Without the flag run-prepared is byte-identical to before.
-                plain = self.dry_run_prepared(
-                    raw, self.owner_args(raw, owner_inverse_after_restart=False)
-                )
-                self.assertEqual(plain[-1].rsplit("'", 1)[1], " " + cell_id)
+                # Without the flag the V2 cell is refused before any mutation.
+                with (
+                    mock.patch.object(bootstrap, "load_plan", return_value=({}, raw, {})),
+                    self.assertRaisesRegex(bootstrap.BootstrapError, "writes the V2 journal"),
+                ):
+                    bootstrap.run_prepared(
+                        self.owner_args(raw, owner_inverse_after_restart=False)
+                    )
                 with tempfile.TemporaryDirectory() as temporary:
                     runtime = self.make_runtime(Path(temporary))
                     with (
@@ -2372,6 +2389,280 @@ class EarlyManagedPDNSBindCellTest(unittest.TestCase):
         )
         self.assertEqual(args.recovery_runtime, Path("/tmp/recovery-runtime"))
         self.assertFalse(args.execute)
+
+
+class OwnerProfilesAndRebootRunnerTest(unittest.TestCase):
+    """Adoption owner cells, the startup-rollback expectation and reboot steps.
+
+    Offline only: SSH, SCP and fixture reboots are mocked. Nothing here is
+    native evidence.
+    """
+
+    MANIFEST_PATH = Path(bootstrap.__file__).with_name("manifest.json")
+
+    def raw(self, cell_id: str) -> dict:
+        return bootstrap.load_manifest_cell(self.MANIFEST_PATH, cell_id)
+
+    @staticmethod
+    def args(raw: dict, **overrides) -> mock.Mock:
+        values = dict(
+            cell_id=raw["id"], node="debian13", source_fixture="managed-pdns",
+            identity_file=Path("/tmp/test-key"), execute=False,
+            stop_after_kill_for_independent_recovery=False,
+            bind_rollback_after_target_started=False,
+            owner_inverse_after_restart=False,
+            expect_agent_startup_rollback=False,
+            reboot_before_owner_command=False,
+            reboot_after_recovery=False,
+            reboot_timeout=600,
+        )
+        values.update(overrides)
+        return mock.Mock(**values)
+
+    def dry(self, raw: dict, args: mock.Mock) -> list:
+        with (
+            mock.patch.object(bootstrap, "load_plan", return_value=({}, raw, {})),
+            mock.patch.object(bootstrap, "identity_file", return_value=Path("/tmp/test-key")),
+            mock.patch.object(bootstrap, "ssh_base", return_value=["ssh", "guest"]),
+            mock.patch.object(bootstrap.subprocess, "run") as run,
+            mock.patch("sys.stdout", new_callable=io.StringIO) as output,
+        ):
+            self.assertEqual(bootstrap.run_prepared(args), 0)
+            run.assert_not_called()
+        return [json.loads(line) for line in output.getvalue().splitlines()]
+
+    def refused(self, raw: dict, args: mock.Mock, text: str = "") -> None:
+        with (
+            mock.patch.object(bootstrap, "load_plan", return_value=({}, raw, {})),
+            mock.patch.object(bootstrap, "identity_file", return_value=Path("/tmp/test-key")),
+            mock.patch.object(bootstrap, "ssh_base", return_value=["ssh", "guest"]),
+            mock.patch.object(bootstrap.subprocess, "run") as run,
+            mock.patch("sys.stdout", new_callable=io.StringIO),
+            self.assertRaisesRegex(bootstrap.BootstrapError, text),
+        ):
+            bootstrap.run_prepared(args)
+        run.assert_not_called()
+
+    def test_adoption_owner_cells_need_their_own_fixture_and_precursor(self) -> None:
+        raw = self.raw(bootstrap.INDEPENDENT_BIND_HANDOFF_CELL)
+        lines = self.dry(raw, self.args(
+            raw, source_fixture="owner-bind", owner_inverse_after_restart=True,
+            bind_rollback_after_target_started=True,
+        ))
+        self.assertTrue(lines[0][-1].endswith(
+            f"{raw['id']} {bootstrap.LATER_BIND_ROLLBACK_FLAG} {bootstrap.OWNER_INVERSE_FLAG}"
+        ))
+        for change in (
+            {"bind_rollback_after_target_started": False},
+            {"source_fixture": "managed-pdns"},
+            {"stop_after_kill_for_independent_recovery": True},
+        ):
+            with self.subTest(change=change):
+                self.refused(raw, self.args(
+                    raw, **{"source_fixture": "owner-bind",
+                            "owner_inverse_after_restart": True,
+                            "bind_rollback_after_target_started": True, **change},
+                ))
+        pdns = self.raw("pdns-adopt__rolled-back__after-write__standalone__peer-reachable")
+        lines = self.dry(pdns, self.args(
+            pdns, source_fixture="external-pdns-adoption", owner_inverse_after_restart=True,
+        ))
+        self.assertTrue(lines[0][-1].endswith(f"{pdns['id']} {bootstrap.OWNER_INVERSE_FLAG}"))
+        self.refused(pdns, self.args(
+            pdns, source_fixture="external-pdns-adoption", owner_inverse_after_restart=True,
+            bind_rollback_after_target_started=True,
+        ))
+        # Without the flag the PowerDNS adoption cell keeps its earlier run.
+        lines = self.dry(pdns, self.args(pdns, source_fixture="external-pdns-adoption"))
+        self.assertTrue(lines[0][-1].endswith(" " + pdns["id"]))
+
+    def test_startup_rollback_expectation_is_scoped(self) -> None:
+        for cell_id in sorted(bootstrap.STARTUP_ROLLBACK_CELLS):
+            raw = self.raw(cell_id)
+            with self.subTest(cell_id=cell_id):
+                lines = self.dry(raw, self.args(
+                    raw, source_fixture="external-pdns-adoption",
+                    expect_agent_startup_rollback=True,
+                ))
+                self.assertTrue(lines[0][-1].endswith(
+                    f"{cell_id} {bootstrap.STARTUP_ROLLBACK_FLAG}"
+                ))
+        raw = self.raw("pdns-adopt__rolled-back__after-write__standalone__peer-reachable")
+        self.refused(raw, self.args(raw, source_fixture="external-pdns-adoption",
+                                    expect_agent_startup_rollback=True))
+        raw = self.raw("bind__target-staged__after-write__standalone__peer-reachable")
+        self.refused(raw, self.args(raw, source_fixture="uninitialized",
+                                    expect_agent_startup_rollback=True))
+
+    def test_reboot_flags_plan_the_resume_and_are_gated(self) -> None:
+        raw = self.raw("bind__target-staged__after-write__standalone__peer-reachable")
+        lines = self.dry(raw, self.args(
+            raw, owner_inverse_after_restart=True, reboot_before_owner_command=True,
+            reboot_after_recovery=True,
+        ))
+        self.assertEqual(len(lines), 2)
+        self.assertTrue(lines[0][-1].endswith(
+            f"{raw['id']} {bootstrap.OWNER_INVERSE_FLAG} "
+            f"{bootstrap.REBOOT_BEFORE_OWNER_FLAG} {bootstrap.REBOOT_AFTER_RECOVERY_FLAG}"
+        ))
+        self.assertEqual(lines[1]["on_exit"], bootstrap.REBOOT_REQUESTED_EXIT)
+        self.assertEqual(lines[1]["reboot"]["at_most"], 2)
+        self.assertTrue(lines[1]["then"][-1].endswith(" " + bootstrap.RESUME_FLAG))
+        fresh = self.raw("bind__target-verified__after-write__standalone__peer-reachable")
+        lines = self.dry(fresh, self.args(fresh, source_fixture="uninitialized",
+                                          reboot_after_recovery=True))
+        self.assertTrue(lines[0][-1].endswith(
+            f"{fresh['id']} {bootstrap.REBOOT_AFTER_RECOVERY_FLAG}"
+        ))
+        self.refused(fresh, self.args(fresh, source_fixture="uninitialized",
+                                      reboot_before_owner_command=True),
+                     "requires " + bootstrap.OWNER_INVERSE_FLAG)
+        paired = self.raw("bind__target-staged__after-write__paired-primary__peer-reachable")
+        self.refused(paired, self.args(paired, node="arch", source_fixture="uninitialized",
+                                       reboot_after_recovery=True))
+
+    def test_execute_reboots_this_guest_and_resumes_until_done(self) -> None:
+        raw = self.raw("bind__target-staged__after-write__standalone__peer-reachable")
+        args = self.args(raw, owner_inverse_after_restart=True, execute=True,
+                         reboot_before_owner_command=True, reboot_after_recovery=True)
+        plan = {"cell_id": raw["id"]}
+        receipt = {"action": "reboot", "boot_id_before": "a", "boot_id_after": "b"}
+        for codes, expected, reboots in (([3, 3, 0], 0, 2), ([3, 1], 1, 1), ([3, 3, 3], 1, 2)):
+            with self.subTest(codes=codes), (
+                mock.patch.object(bootstrap, "load_plan", return_value=(plan, raw, {"n": 1}))
+            ), mock.patch.object(
+                bootstrap, "identity_file", return_value=Path("/tmp/test-key")
+            ), mock.patch.object(
+                bootstrap, "ssh_base", return_value=["ssh", "guest"]
+            ), mock.patch.object(
+                bootstrap.subprocess, "run",
+                side_effect=[subprocess.CompletedProcess([], code) for code in codes],
+            ) as run, mock.patch.object(
+                bootstrap.fixture, "reboot_guest", return_value=receipt
+            ) as reboot, mock.patch("sys.stdout", new_callable=io.StringIO), \
+                    mock.patch("sys.stderr", new_callable=io.StringIO):
+                self.assertEqual(bootstrap.run_prepared(args), expected)
+                self.assertEqual(reboot.call_count, reboots)
+                reboot.assert_called_with(plan, "debian13", Path("/tmp/test-key"), 600)
+                commands = [call.args[0][-1] for call in run.call_args_list]
+                self.assertFalse(commands[0].endswith(bootstrap.RESUME_FLAG))
+                self.assertTrue(all(c.endswith(bootstrap.RESUME_FLAG) for c in commands[1:]))
+        # Without reboot flags an exit status 3 is returned as is.
+        plain = self.args(raw, owner_inverse_after_restart=True, execute=True)
+        with mock.patch.object(bootstrap, "load_plan", return_value=(plan, raw, {})), \
+                mock.patch.object(bootstrap, "identity_file", return_value=Path("/tmp/k")), \
+                mock.patch.object(bootstrap, "ssh_base", return_value=["ssh"]), \
+                mock.patch.object(bootstrap.subprocess, "run",
+                                  return_value=subprocess.CompletedProcess([], 3)), \
+                mock.patch.object(bootstrap.fixture, "reboot_guest") as reboot:
+            self.assertEqual(bootstrap.run_prepared(plain), 3)
+            reboot.assert_not_called()
+
+    def test_enrollment_checks_the_adoption_capability(self) -> None:
+        raw = self.raw(bootstrap.INDEPENDENT_BIND_HANDOFF_CELL)
+        with tempfile.TemporaryDirectory() as temporary:
+            runtime = Path(temporary) / "recovery-runtime"
+            (runtime / "bin").mkdir(parents=True)
+            (runtime / "runtime.manifest").write_text("format=test\n", encoding="utf-8")
+            (runtime / "bin" / "recovery").write_text("#!/bin/sh\n", encoding="utf-8")
+            (runtime / "bin" / "recovery").chmod(0o755)
+            args = self.args(raw, source_fixture="owner-bind", recovery_runtime=runtime)
+            with (
+                mock.patch.object(bootstrap, "load_plan", return_value=({}, raw, {})),
+                mock.patch.object(bootstrap, "identity_file", return_value=Path("/tmp/k")),
+                mock.patch.object(bootstrap, "ssh_base", return_value=["ssh", "guest"]),
+                mock.patch.object(bootstrap, "scp_base", return_value=["scp"]),
+                mock.patch.object(bootstrap, "remote_destination",
+                                  side_effect=lambda _node, path: "guest:" + path),
+                mock.patch.object(bootstrap.subprocess, "run") as run,
+                mock.patch("sys.stdout", new_callable=io.StringIO) as output,
+            ):
+                bootstrap.enroll_recovery_runtime(args)
+                run.assert_not_called()
+        lines = [json.loads(line) for line in output.getvalue().splitlines()]
+        self.assertTrue(lines[2][-1].endswith(
+            " check-bind-adoption-inverse-v1 celikpanel-bind-adoption-inverse/v1"
+        ))
+        self.assertEqual(lines[-1]["additional_capability"],
+                         bootstrap.BIND_ADOPTION_INVERSE_MARKER)
+        self.assertIn('extra=$(/usr/libexec/celikpanel/recovery "$3")',
+                      bootstrap.RECOVERY_RUNTIME_ENROLL_SCRIPT)
+
+    def test_parser_exposes_reboot_and_startup_flags(self) -> None:
+        args = bootstrap.parse_args([
+            "run-prepared", "--work-root", "/tmp/root", "--cell-id", "x",
+            "--node", "debian13", "--identity-file", "/tmp/key",
+            "--source-fixture", "managed-pdns", bootstrap.OWNER_INVERSE_FLAG,
+            bootstrap.REBOOT_BEFORE_OWNER_FLAG, bootstrap.REBOOT_AFTER_RECOVERY_FLAG,
+            bootstrap.STARTUP_ROLLBACK_FLAG, "--reboot-timeout", "900",
+        ])
+        self.assertIs(args.reboot_before_owner_command, True)
+        self.assertIs(args.reboot_after_recovery, True)
+        self.assertIs(args.expect_agent_startup_rollback, True)
+        self.assertEqual(args.reboot_timeout, 900)
+
+    @unittest.skipUnless(
+        sys.platform == "linux" and hasattr(os, "geteuid") and os.geteuid() == 0,
+        "prepared argv owner proof requires a root Linux fixture",
+    )
+    def test_guest_program_accepts_only_canonical_flag_sets(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            prepared = root / "controller-argv.json"
+            captured = root / "captured.json"
+            executable = root / "run-cell.py"
+            executable.write_text(
+                "#!/usr/bin/env python3\nimport json, sys\n"
+                f"open({str(captured)!r}, 'w').write(json.dumps(sys.argv))\n",
+                encoding="utf-8",
+            )
+            executable.chmod(0o700)
+            code = bootstrap.RUN_PREPARED_CODE.replace(
+                "/var/lib/celikpanel-dns-kill-matrix/controller-argv.json", str(prepared)
+            ).replace("/opt/celikpanel/libexec/dns-kill-run-cell.py", str(executable))
+
+            def run(cell_id: str, *flags: str) -> list | None:
+                base = [str(executable), "--cell-id", cell_id, "--trigger-mode", "socket",
+                        "--result", "/var/lib/x/results/c/result.json"]
+                prepared.write_text(json.dumps(base), encoding="utf-8")
+                prepared.chmod(0o600)
+                captured.unlink(missing_ok=True)
+                done = subprocess.run([sys.executable, "-c", code, cell_id, *flags],
+                                      check=False, capture_output=True)
+                if done.returncode != 0:
+                    self.assertFalse(captured.exists())
+                    return None
+                return json.loads(captured.read_text(encoding="utf-8"))[len(base):]
+
+            handoff = bootstrap.INDEPENDENT_BIND_HANDOFF_CELL
+            owner, later = bootstrap.OWNER_INVERSE_FLAG, bootstrap.LATER_BIND_ROLLBACK_FLAG
+            before, after = bootstrap.REBOOT_BEFORE_OWNER_FLAG, bootstrap.REBOOT_AFTER_RECOVERY_FLAG
+            resume = bootstrap.RESUME_FLAG
+            switch = "bind__source-stopped__before-write__standalone__peer-reachable"
+            self.assertEqual(run(handoff, later, owner), [later, owner])
+            self.assertEqual(run(switch, owner, before),
+                             [owner, before, "--reboot-dir", "/var/lib/x/results/c"])
+            self.assertEqual(run(switch, owner, before, resume),
+                             [owner, before, resume, "--reboot-dir", "/var/lib/x/results/c"])
+            self.assertEqual(run("bind__target-verified__after-write__standalone__peer-reachable",
+                                 after),
+                             [after, "--reboot-dir", "/var/lib/x/results/c"])
+            startup = sorted(bootstrap.STARTUP_ROLLBACK_CELLS)[0]
+            self.assertEqual(run(startup, bootstrap.STARTUP_ROLLBACK_FLAG),
+                             [bootstrap.STARTUP_ROLLBACK_FLAG])
+            for cell_id, flags in (
+                (handoff, (owner,)),
+                (handoff, (owner, later)),
+                (switch, (owner, later)),
+                (switch, (before,)),
+                (switch, (before, owner)),
+                (switch, (owner, resume)),
+                (switch, (owner, owner)),
+                (startup, (bootstrap.STARTUP_ROLLBACK_FLAG, owner)),
+                ("bind__intent__before-write__standalone__peer-unreachable", (owner,)),
+            ):
+                with self.subTest(cell_id=cell_id, flags=flags):
+                    self.assertIsNone(run(cell_id, *flags))
 
 
 if __name__ == "__main__":

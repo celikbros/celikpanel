@@ -2967,7 +2967,17 @@ class FakeOwnerGuest:
     OWNER = "2" * 32
     QUALIFIER = "dns-engine-switch/v1:sha256:" + "3" * 64
 
-    def __init__(self, **deviations: object) -> None:
+    def __init__(
+        self,
+        *,
+        command: str = "recover-dns-bind-switch",
+        target: str = "bind",
+        pid_key: str = "pdns_main_pid",
+        **deviations: object,
+    ) -> None:
+        self.command = command
+        self.target = target
+        self.pid_key = pid_key
         self.d = {
             "release_code": run_cell.AGENT_RELEASED_NATIVE_UNKNOWN,
             "released": True,
@@ -3001,7 +3011,7 @@ class FakeOwnerGuest:
     def job_for(self, code: object) -> dict[str, object]:
         return {
             "request_id": self.REQUEST, "owner_id": self.OWNER,
-            "kind": "dns_engine_switch", "target": "bind",
+            "kind": "dns_engine_switch", "target": self.target,
             "package_name": self.QUALIFIER, "status": "failed",
             "phase": "interrupted", "attempt": 1,
             "started_at": "2026-09-29T10:00:00Z",
@@ -3032,11 +3042,12 @@ class FakeOwnerGuest:
         return {"released": True, "reads": 1, "ledger": ledger, "job": job}
 
     def journal_state(self, *args: object, **kwargs: object) -> dict[str, object]:
-        if not self.journal_exists or self.d["journal_phase"] != "rolling-back":
+        expected = args[1]
+        if not self.journal_exists or self.d["journal_phase"] != expected:
             raise run_cell.BoundaryUnverified(
-                f"DNS switch journal phase {self.d['journal_phase']!r}, want 'rolling-back'"
+                f"DNS switch journal phase {self.d['journal_phase']!r}, want {expected!r}"
             )
-        return {"exists": True, "observed_phase": "rolling-back"}
+        return {"exists": True, "observed_phase": expected}
 
     def run_owner(self, settings, argv, label, environment, transcript):
         if label == "owner-dns-switch-status-after-owner-command":
@@ -3050,7 +3061,7 @@ class FakeOwnerGuest:
                 self.ledger_sha = "9" * 64
             text = (
                 "The server owner can continue that exact inverse with: "
-                f"/usr/libexec/celikpanel/recovery {run_cell.OWNER_BIND_SWITCH_COMMAND} "
+                f"/usr/libexec/celikpanel/recovery {self.command} "
                 f"--request-id {self.REQUEST}.\n"
                 if self.d["status_names"]
                 else "No owner recovery command applies to this journal.\n"
@@ -3058,7 +3069,7 @@ class FakeOwnerGuest:
             return {"ran": True, "argv": list(argv), "returncode": 0,
                     "output": text, "_raw_output": text.encode()}
         self.owner_calls.append(label)
-        if label == "owner-recover-dns-bind-switch":
+        if label == f"owner-{self.command}":
             self.after_owner = True
             if self.d["owner_retires"]:
                 # The admitted inverse retires the journal and leaves the
@@ -3080,7 +3091,7 @@ class FakeOwnerGuest:
     def source(self, settings, environment, *, expected_pid=None) -> dict[str, object]:
         pid = self.d["pid_after_owner"] if self.after_owner else 600
         errors: list[str] = []
-        report: dict[str, object] = {"pdns_main_pid": pid}
+        report: dict[str, object] = {self.pid_key: pid}
         if self.after_owner and not self.d["dns_after_owner_ok"]:
             errors.append("authoritative UDP/TCP DNS: timed out")
             errors.append("BIND target unit is active: {'bind9.service': 'active'}")
@@ -3097,8 +3108,8 @@ class FakeOwnerGuest:
             report["dns_answered_at"] = "2026-09-29T10:00:40Z"
         report.update({
             "errors": errors, "unknown": [],
-            "pdns_main_pid_expected": expected_pid,
-            "pdns_main_pid_changed": expected_pid is not None and pid != expected_pid,
+            self.pid_key + "_expected": expected_pid,
+            self.pid_key + "_changed": expected_pid is not None and pid != expected_pid,
             "ok": not errors,
         })
         return report
@@ -3164,37 +3175,76 @@ class OwnerInverseAfterRestartTest(unittest.TestCase):
     }
 
     def test_owner_inverse_cells_are_exact(self) -> None:
-        phases = ("intent", "target-staged", "source-stopped", "target-started")
-        for phase in phases:
-            self.assertTrue(run_cell.is_owner_inverse_cell(owner_cell(phase)))
-        self.assertEqual(
-            {owner_cell(phase).cell_id for phase in phases},
-            set(run_cell.OWNER_INVERSE_CELLS),
+        manifest = json.loads(
+            Path(__file__).with_name("manifest.json").read_text(encoding="utf-8")
         )
-        self.assertEqual(
-            [run_cell.owner_inverse_expectation(owner_cell(phase)).variant for phase in phases],
-            ["pre-start", "pre-start", "critical", "critical"],
-        )
+        expected_variants = {
+            "bind__intent__after-write__standalone__peer-reachable": "pre-start",
+            "bind__target-staged__after-write__standalone__peer-reachable": "pre-start",
+            "bind__target-staged__before-write__standalone__peer-unreachable": "pre-start",
+            "bind__source-stopped__after-write__standalone__peer-reachable": "critical",
+            "bind__source-stopped__before-write__standalone__peer-reachable": "critical",
+            "bind__target-started__after-write__standalone__peer-reachable": "critical",
+            "bind__target-started__before-write__standalone__peer-reachable": "critical",
+            "bind__rolled-back__before-write__standalone__peer-reachable": "pre-start",
+            "bind__rolled-back__after-write__standalone__peer-reachable": "pre-start",
+            "bind__rolling-back__after-write__standalone__peer-reachable": "pre-start",
+            "pdns-adopt__rolled-back__after-write__standalone__peer-reachable": "pre-start",
+        }
+        self.assertEqual(set(run_cell.OWNER_INVERSE_CELLS), set(expected_variants))
+        self.assertEqual(set(guest_bootstrap.OWNER_INVERSE_CELLS), set(expected_variants))
+        for cell_id, variant in expected_variants.items():
+            selected = run_cell.CellSpec.from_manifest(manifest, cell_id)
+            admission = run_cell.OWNER_INVERSE_ADMISSIONS[cell_id]
+            profile = run_cell.OWNER_INVERSE_PROFILES[admission.profile]
+            with self.subTest(cell_id=cell_id):
+                self.assertTrue(run_cell.is_owner_inverse_cell(selected))
+                self.assertEqual(run_cell.owner_inverse_expectation(selected).variant, variant)
+                # The host-side table names the same fixture, policy and precursor.
+                self.assertEqual(
+                    guest_bootstrap.OWNER_INVERSE_ADMISSIONS[cell_id],
+                    (profile.source_fixture, admission.source_fixture_policy,
+                     admission.requires_target_started_precursor),
+                )
+                self.assertEqual(
+                    run_cell.expected_journal_schema(
+                        selected, owner_inverse_after_restart=True
+                    ),
+                    profile.journal_schema,
+                )
         self.assertTrue(
             run_cell.owner_inverse_expectation(owner_cell("target-started")).bind_active_after_restart
         )
         self.assertFalse(
             run_cell.owner_inverse_expectation(owner_cell("source-stopped")).bind_active_after_restart
         )
+        before_started = run_cell.CellSpec.from_manifest(
+            manifest, "bind__target-started__before-write__standalone__peer-reachable"
+        )
+        self.assertTrue(run_cell.owner_inverse_expectation(before_started).bind_active_after_restart)
+        self.assertEqual(
+            run_cell.owner_inverse_profile(run_cell.CellSpec.from_manifest(
+                manifest, "pdns-adopt__rolled-back__after-write__standalone__peer-reachable"
+            )).journal_schema,
+            run_cell.JOURNAL_SCHEMA,
+        )
         for changed in (
-            owner_cell("rolled-back"),
             owner_cell("committed"),
             owner_cell("source-stopped", source_fixture_policy="driver-specific"),
-            owner_cell("target-started", edge="before-write", point="before_write"),
             owner_cell("target-staged", source_fixture_policy="managed-pdns-required"),
             owner_cell("target-staged", edge="before-write", point="before_write"),
             owner_cell("target-staged", peer_reachability="unreachable"),
             owner_cell("target-staged", role="paired-primary"),
-            owner_cell("target-staged", source_fixture_policy="managed-pdns-required"),
+            owner_cell("rolled-back", point="before_write"),
             replace(owner_cell("target-staged"), phase="intent"),
             replace(owner_cell("source-stopped"), phase="target-started"),
             owner_cell("target-staged", driver="pdns-switch"),
-            replace(cell("rolling-back", "after-write"), cell_id=run_cell.BIND_HANDOFF_CELL),
+            replace(cell("rolling-back", "after-write"), cell_id=run_cell.BIND_HANDOFF_CELL,
+                    source_fixture_policy="managed-pdns-required"),
+            replace(cell("intent", "before-write", peer="unreachable"),
+                    cell_id="bind__intent__before-write__standalone__peer-unreachable"),
+            replace(cell("rolling-back", "after-write", driver="pdns-adopt"),
+                    cell_id=run_cell.PDNS_HANDOFF_CELL),
         ):
             with self.subTest(changed=changed):
                 self.assertFalse(run_cell.is_owner_inverse_cell(changed))
@@ -3339,6 +3389,30 @@ class OwnerInverseAfterRestartTest(unittest.TestCase):
                         run_cell.ControllerError
                     ):
                         run_cell.validate_settings(changed)
+                manifest = json.loads(
+                    Path(__file__).with_name("manifest.json").read_text(encoding="utf-8")
+                )
+                adoption = replace(settings, cell=run_cell.CellSpec.from_manifest(
+                    manifest, run_cell.BIND_HANDOFF_CELL))
+                with self.assertRaisesRegex(run_cell.ControllerError, "admitted owner-inverse"):
+                    run_cell.validate_settings(adoption)
+                run_cell.validate_settings(
+                    replace(adoption, bind_rollback_after_target_started=True)
+                )
+                startup = replace(
+                    settings, owner_inverse_after_restart=False,
+                    expect_agent_startup_rollback=True,
+                    cell=run_cell.CellSpec.from_manifest(
+                        manifest, "pdns-adopt__intent__after-write__standalone__peer-reachable"
+                    ),
+                )
+                self.assertIn("journalctl", run_cell.validate_settings(startup))
+                for wrong in (
+                    replace(startup, cell=settings.cell),
+                    replace(startup, owner_inverse_after_restart=True),
+                ):
+                    with self.assertRaises(run_cell.ControllerError):
+                        run_cell.validate_settings(wrong)
                 writable = os.path.join(root, "recovery")
                 Path(writable).write_text("#!/bin/sh\n", encoding="utf-8")
                 os.chmod(writable, 0o775)
@@ -3465,11 +3539,9 @@ class OwnerInverseAfterRestartTest(unittest.TestCase):
         ):
             self.assertFalse(run_cell.owner_status_names_command(text.encode(), request))
 
-    def run_flow(
-        self, guest: FakeOwnerGuest, phase: str = "target-staged"
-    ) -> tuple[dict, list, list, list]:
-        settings = mock.Mock(
-            cell=owner_cell(phase), request_id=guest.REQUEST,
+    def flow_settings(self, guest: FakeOwnerGuest, selected: object, **attrs: object):
+        return mock.Mock(
+            cell=selected, request_id=guest.REQUEST,
             state_dir="/state", journal_path="/state/journal.json",
             agent_restart_command=("/bin/systemctl", "restart", "celikpanel-agent"),
             panel_restart_command=("/bin/systemctl", "restart", "celikpanel-panel"),
@@ -3477,27 +3549,17 @@ class OwnerInverseAfterRestartTest(unittest.TestCase):
             endpoint_timeout=1.0, recovery_timeout=1.0, panel_address="127.0.0.1",
             panel_port=2083, dns_address="192.0.2.10", dns_port=53,
             dns_name="www.s1-kill.test", dns_type="A", dns_timeout=1.0,
-            command_cwd="/",
+            command_cwd="/", **attrs,
         )
-        result: dict = {
-            "owner_inverse_preflight": {
-                "source": {"pdns_main_pid": 600, "dns_answered_at": "2026-09-29T09:59:50Z"},
-                "observed_at_epoch": 1,
-                "state": {"sha256": "s" * 64, "semantic": {"engine": "pdns"}},
-            },
-            "source_proof": {"source_normalization": dict(self.NORMALIZATION)},
-        }
+
+    def flow_patches(self, guest: FakeOwnerGuest, extra: dict | None = None):
         files = (
             {"configuration": {"main": {"sha256": "0" * 64}}, "database": {}}
             if guest.d["owner_files_changed"] else dict(self.NORMALIZATION)
         )
         ok = {"ok": True}
         sample = {"agent": ok, "panel": ok, "dns": ok}
-        safety: list = []
-        verification: list = []
-        diagnostic: list = []
-        with mock.patch.multiple(
-            run_cell,
+        patches = dict(
             checked_command=mock.Mock(side_effect=lambda *a, **k: ({"argv": list(a[1])}, None)),
             wait_for_unix_socket=mock.Mock(return_value=(1, 2)),
             assert_unix_socket_stable=mock.Mock(return_value={"device": 1, "inode": 2}),
@@ -3524,7 +3586,46 @@ class OwnerInverseAfterRestartTest(unittest.TestCase):
             run_stability_window=mock.Mock(
                 return_value=({"samples": [sample] * 31}, [], [])
             ),
-        ):
+            observe_bind_source_serving=mock.Mock(side_effect=guest.source),
+            read_dns_state_optional=mock.Mock(return_value={"exists": False}),
+        )
+        patches.update(extra or {})
+        return mock.patch.multiple(run_cell, **patches)
+
+    def flow_result(
+        self,
+        guest: FakeOwnerGuest,
+        state_before: dict | None = None,
+        source_proof: dict | None = None,
+    ) -> dict:
+        return {
+            "owner_inverse_preflight": {
+                "source": {guest.pid_key: 600, "dns_answered_at": "2026-09-29T09:59:50Z"},
+                "observed_at_epoch": 1,
+                "state": state_before or {"sha256": "s" * 64, "semantic": {"engine": "pdns"}},
+            },
+            "source_proof": source_proof or {"source_normalization": dict(self.NORMALIZATION)},
+        }
+
+    def run_flow(
+        self,
+        guest: FakeOwnerGuest,
+        phase: str = "target-staged",
+        *,
+        selected: object | None = None,
+        state_before: dict | None = None,
+        source_proof: dict | None = None,
+        extra: dict | None = None,
+        settings_attrs: dict | None = None,
+    ) -> tuple[dict, list, list, list]:
+        settings = self.flow_settings(
+            guest, selected or owner_cell(phase), **(settings_attrs or {})
+        )
+        result = self.flow_result(guest, state_before, source_proof)
+        safety: list = []
+        verification: list = []
+        diagnostic: list = []
+        with self.flow_patches(guest, extra):
             run_cell.run_owner_inverse_after_restart(
                 settings,
                 result=result,
@@ -3835,6 +3936,373 @@ class OwnerInverseAfterRestartTest(unittest.TestCase):
             os.mkdir(os.path.join(root, "13"))  # exited: no comm
             self.assertEqual(run_cell.find_named_processes(root), [10])
 
+    # -- deliverable 1/3: profiles and newly admitted cells -------------------
+
+    @staticmethod
+    def manifest_cell(cell_id: str) -> object:
+        manifest = json.loads(
+            Path(__file__).with_name("manifest.json").read_text(encoding="utf-8")
+        )
+        return run_cell.CellSpec.from_manifest(manifest, cell_id)
+
+    def test_rolled_back_switch_cells_use_their_step2_phase(self) -> None:
+        for cell_id, phase_on_disk in (
+            ("bind__rolled-back__after-write__standalone__peer-reachable", "rolled-back"),
+            ("bind__rolled-back__before-write__standalone__peer-reachable", "rolling-back"),
+            ("bind__target-staged__before-write__standalone__peer-unreachable", "rolling-back"),
+        ):
+            selected = self.manifest_cell(cell_id)
+            with self.subTest(cell_id=cell_id):
+                guest = FakeOwnerGuest(journal_phase=phase_on_disk)
+                result, _, _, _ = self.run_flow(guest, selected=selected)
+                flow = result["owner_inverse_after_restart"]
+                self.assertEqual((result["status"], flow["status"]), ("passed", "passed"),
+                                 flow["failures"] + flow["ambiguities"])
+                self.assertEqual(flow["variant"], "pre-start")
+                self.assertNotIn("profile", flow)
+                other = "rolling-back" if phase_on_disk == "rolled-back" else "rolled-back"
+                guest = FakeOwnerGuest(journal_phase=other)
+                result, _, _, _ = self.run_flow(guest, selected=selected)
+                self.assertEqual(result["status"], "failed")
+                self.assertIn(f"is not V2 {phase_on_disk}",
+                              " ".join(result["owner_inverse_after_restart"]["failures"]))
+                self.assertEqual(guest.owner_calls, [])
+
+    def test_before_write_critical_cells_pass(self) -> None:
+        for cell_id, bind_active in (
+            ("bind__source-stopped__before-write__standalone__peer-reachable", False),
+            ("bind__target-started__before-write__standalone__peer-reachable", True),
+        ):
+            guest = self.critical_guest("x", bind_step2_active=bind_active)
+            result, _, _, _ = self.run_flow(guest, selected=self.manifest_cell(cell_id))
+            flow = result["owner_inverse_after_restart"]
+            with self.subTest(cell_id=cell_id):
+                self.assertEqual((result["status"], flow["variant"]), ("passed", "critical"),
+                                 flow["failures"] + flow["ambiguities"])
+                self.assertIn("dns_outage", result)
+        guest = self.critical_guest("x", bind_step2_active=False)
+        result, _, _, _ = self.run_flow(guest, selected=self.manifest_cell(
+            "bind__target-started__before-write__standalone__peer-reachable"
+        ))
+        self.assertIn("BIND is not active, but this cut started the target",
+                      " ".join(result["owner_inverse_after_restart"]["failures"]))
+
+    OWNER_BIND_EVIDENCE = {
+        label: {"path": "/etc/bind/" + label, "sha256": char * 64, "device": 1, "inode": n}
+        for n, (label, char) in enumerate(
+            (("main", "1"), ("options", "2"), ("local", "3"), ("leaf", "4"), ("zone", "5"))
+        )
+    }
+
+    def run_adoption(self, **deviations: object) -> tuple[dict, FakeOwnerGuest]:
+        changed_files = deviations.pop("files_changed", False)
+        state_after = deviations.pop("state_after", {"exists": False})
+        guest = FakeOwnerGuest(
+            command=run_cell.OWNER_BIND_ADOPTION_COMMAND, pid_key="named_main_pid",
+            **deviations,
+        )
+        evidence = {**self.OWNER_BIND_EVIDENCE, "inventory": ["b", "a"]}
+        comparable = run_cell.owner_bind_comparable(evidence)
+        if changed_files:
+            comparable = dict(comparable, files=dict(comparable["files"], zone="9" * 64))
+        result, _, _, _ = self.run_flow(
+            guest,
+            selected=self.manifest_cell(run_cell.BIND_HANDOFF_CELL),
+            state_before={"exists": False},
+            source_proof={"owner_bind_native_source": evidence},
+            extra={
+                "owner_bind_files": mock.Mock(return_value=comparable),
+                "read_dns_state_optional": mock.Mock(return_value=state_after),
+            },
+        )
+        return result, guest
+
+    def test_running_bind_adoption_owner_flow(self) -> None:
+        result, guest = self.run_adoption()
+        flow = result["owner_inverse_after_restart"]
+        self.assertEqual((result["status"], flow["status"]), ("passed", "passed"),
+                         flow["failures"] + flow["ambiguities"])
+        self.assertEqual(flow["profile"], "bind-adoption-v2")
+        self.assertEqual(flow["pre_cut_named_main_pid"], 600)
+        self.assertNotIn("pre_cut_pdns_main_pid", flow)
+        self.assertEqual(flow["owner_command"][1], "recover-dns-bind-adoption")
+        self.assertEqual(guest.owner_calls, [
+            "owner-recover-dns-bind-adoption", "owner-recover-dns-bind-adoption-rerun",
+        ])
+        step5 = flow["steps"]["after_owner_command"]
+        self.assertEqual(step5["state"], {"exists": False})
+        self.assertTrue(step5["owner_files_unchanged"])
+        self.assertIs(step5["adoption_zone_answered"]["judged"], False)
+        for deviation, text in (
+            ({"pid_after_owner": 601}, "must never stop or restart the owner's named"),
+            ({"files_changed": True}, "owner BIND configuration, zone file"),
+            ({"state_after": {"sha256": "x" * 64, "semantic": {}}},
+             "pre-cut source had none"),
+            ({"status_names": False}, "does not name recover-dns-bind-adoption"),
+        ):
+            with self.subTest(deviation=deviation):
+                result, _ = self.run_adoption(**deviation)
+                self.assertEqual(result["status"], "failed")
+                self.assertIn(text, " ".join(result["owner_inverse_after_restart"]["failures"]))
+
+    def run_pdns_adoption(self, **deviations: object) -> tuple[dict, FakeOwnerGuest]:
+        drift = deviations.pop("files_changed", False)
+        guest = FakeOwnerGuest(
+            command=run_cell.OWNER_PDNS_ADOPTION_COMMAND,
+            **{"target": "pdns", "journal_phase": "rolled-back", **deviations},
+        )
+        preimage = {
+            "configuration": {
+                "main": {"path": "/etc/powerdns/pdns.conf", "sha256": "1" * 64},
+                "managed": {"path": "/etc/powerdns/pdns.d/celikpanel.conf", "sha256": "2" * 64},
+            },
+            "database": {"path": "/var/lib/powerdns/pdns.sqlite3", "sha256": "3" * 64},
+        }
+        proof = {"external_pdns_preimage": preimage}
+        current = run_cell.owner_pdns_adoption_expected(proof)
+        if drift:
+            current = dict(current, database={"sha256": "4" * 64})
+        result, _, _, _ = self.run_flow(
+            guest,
+            selected=self.manifest_cell(
+                "pdns-adopt__rolled-back__after-write__standalone__peer-reachable"
+            ),
+            state_before={"exists": False},
+            source_proof=proof,
+            extra={"owner_pdns_adoption_files": mock.Mock(return_value=current)},
+        )
+        return result, guest
+
+    def test_pdns_adoption_rolled_back_owner_flow(self) -> None:
+        result, guest = self.run_pdns_adoption()
+        flow = result["owner_inverse_after_restart"]
+        self.assertEqual((result["status"], flow["status"]), ("passed", "passed"),
+                         flow["failures"] + flow["ambiguities"])
+        self.assertEqual(flow["profile"], "pdns-adoption-v1")
+        self.assertEqual(flow["step2_journal_phase"], "rolled-back")
+        self.assertEqual(guest.owner_calls[0], "owner-recover-dns-pdns-adoption")
+        for deviation, text in (
+            ({"files_changed": True}, "external PowerDNS configuration or database changed"),
+            ({"target": "bind"}, "ledger job target"),
+            ({"journal_phase": "rolling-back"}, "is not V1 rolled-back"),
+        ):
+            with self.subTest(deviation=deviation):
+                result, _ = self.run_pdns_adoption(**deviation)
+                self.assertEqual(result["status"], "failed")
+                self.assertIn(text, " ".join(result["owner_inverse_after_restart"]["failures"]))
+        # A PowerDNS PID change stays an unknown for PowerDNS adoption.
+        result, _ = self.run_pdns_adoption(pid_after_owner=601)
+        self.assertEqual(result["status"], "unverified")
+
+    def test_journal_source_is_checked_by_profile(self) -> None:
+        adoption = self.manifest_cell(run_cell.BIND_HANDOFF_CELL)
+        plan = {"kind": "bind-switch-config/v1", "host_layout": "apt", "digest": "a" * 64,
+                "source_bind": {"kind": "bind-adoption-source/v1"}}
+        journal = {"source_engine": "", "target_engine": "bind", "inverse_plan": plan}
+        run_cell.validate_owner_inverse_journal_source(journal, adoption)
+        for bad in (
+            dict(journal, source_engine="pdns"),
+            dict(journal, inverse_plan={**plan, "source_pdns": {}}),
+            dict(journal, inverse_plan={**plan, "source_bind": {"kind": "pdns-source/v1"}}),
+        ):
+            with self.subTest(bad=bad), self.assertRaises(run_cell.BoundaryUnverified):
+                run_cell.validate_owner_inverse_journal_source(bad, adoption)
+        pdns = self.manifest_cell("pdns-adopt__rolled-back__after-write__standalone__peer-reachable")
+        v1 = {"mode": "adopt", "source_engine": "", "target_engine": "pdns",
+              "state_before": {"exists": False}}
+        run_cell.validate_owner_inverse_journal_source(v1, pdns)
+        for bad in (dict(v1, mode="switch"), dict(v1, state_before={"exists": True})):
+            with self.subTest(bad=bad), self.assertRaises(run_cell.BoundaryUnverified):
+                run_cell.validate_owner_inverse_journal_source(bad, pdns)
+        with self.assertRaises(run_cell.ControllerError):
+            run_cell.validate_owner_inverse_journal_source(v1, cell("intent", "after-write"))
+
+    def test_preconditions_use_each_profile_capability_and_source(self) -> None:
+        settings = mock.Mock(command_timeout=1.0, command_cwd="/", state_dir="/state")
+        capability = mock.Mock(
+            returncode=0, truncated=False,
+            output=(run_cell.OWNER_BIND_ADOPTION_CAPABILITY_MARKER + "\n").encode(),
+        )
+        capability.report.return_value = {"argv": []}
+        serving = {"ok": True, "errors": [], "unknown": [], "named_main_pid": 700}
+        settings.cell = self.manifest_cell(run_cell.BIND_HANDOFF_CELL)
+        with mock.patch.object(run_cell, "run_bounded_command", return_value=capability) as run, \
+                mock.patch.object(run_cell, "observe_bind_source_serving", return_value=serving), \
+                mock.patch.object(run_cell, "read_dns_state_optional",
+                                  return_value={"exists": False}):
+            preflight = run_cell.prove_owner_inverse_preconditions(settings, {}, mock.Mock())
+        self.assertEqual(run.call_args.args[0][1], "check-bind-adoption-inverse-v1")
+        self.assertEqual(preflight["state"], {"exists": False})
+        settings.cell = self.manifest_cell(
+            "pdns-adopt__rolled-back__after-write__standalone__peer-reachable"
+        )
+        pdns = {"ok": True, "errors": [], "unknown": [], "pdns_main_pid": 600}
+        with mock.patch.object(run_cell, "run_bounded_command") as run, \
+                mock.patch.object(run_cell, "observe_pdns_source_serving", return_value=pdns), \
+                mock.patch.object(run_cell, "read_dns_state_optional",
+                                  return_value={"exists": False}):
+            preflight = run_cell.prove_owner_inverse_preconditions(settings, {}, mock.Mock())
+            run.assert_not_called()
+        self.assertIs(preflight["capability"]["probed"], False)
+        with mock.patch.object(run_cell, "run_bounded_command"), \
+                mock.patch.object(run_cell, "observe_pdns_source_serving",
+                                  return_value=dict(pdns, ok=False, errors=["x"])), \
+                self.assertRaisesRegex(run_cell.ControllerError, "external PowerDNS"):
+            run_cell.prove_owner_inverse_preconditions(settings, {}, mock.Mock())
+
+    # -- deliverable 2: reboot before the owner command ------------------------
+
+    BOOT = {"boot_id": "1" * 8 + "-1111-1111-1111-" + "1" * 12,
+            "product_uuid": "2" * 8 + "-2222-2222-2222-" + "2" * 12,
+            "fixture_marker": {}}
+
+    def suspend(self, guest: FakeOwnerGuest, selected: object | None = None):
+        settings = self.flow_settings(
+            guest, selected or owner_cell("target-staged"),
+            reboot_before_owner_command=True,
+        )
+        result = self.flow_result(guest)
+        lists: tuple[list, list, list] = ([], [], [])
+        with self.flow_patches(guest, {
+            "read_guest_boot_identity": mock.Mock(return_value=self.BOOT),
+        }), self.assertRaises(run_cell.RebootRequested) as raised:
+            run_cell.run_owner_inverse_after_restart(
+                settings, result=result, transcript=mock.Mock(),
+                ordinary={}, owner_environment={},
+                controller_identity={"effective_gid": 999},
+                identity_receipt={"owner_id": guest.OWNER,
+                                  "manifest_qualifier": guest.QUALIFIER},
+                boundary_identity=boundary_identity(), old_socket_identity=(1, 1),
+                kill_proven=True, safety_failures=lists[0],
+                verification_failures=lists[1], diagnostic_failures=lists[2],
+            )
+        # The checkpoint is JSON: the resumed controller gets the same values.
+        state = json.loads(json.dumps(raised.exception.state))
+        return settings, json.loads(json.dumps(result)), state, lists, raised.exception
+
+    def resume(self, guest, settings, result, state, lists, *, units_active=True,
+               extra=None):
+        management = {"unknown": [], "units": {
+            unit: {"ActiveState": "active" if units_active else "failed"}
+            for unit in run_cell.MANAGEMENT_UNITS
+        }}
+        with self.flow_patches(guest, {
+            "observe_management_units": mock.Mock(return_value=management),
+            **(extra or {}),
+        }):
+            run_cell.resume_owner_inverse_before_owner_command(
+                settings, state, result=result, transcript=mock.Mock(),
+                ordinary={}, owner_environment={},
+                controller_identity={"effective_gid": 999},
+                boot={"boot_id_before": "a", "boot_id_after": "b"},
+                kill_proven=True, safety_failures=lists[0],
+                verification_failures=lists[1], diagnostic_failures=lists[2],
+            )
+        return result
+
+    def test_reboot_before_owner_command_suspends_then_continues(self) -> None:
+        guest = FakeOwnerGuest()
+        settings, result, state, lists, request = self.suspend(guest)
+        self.assertEqual(request.stage, run_cell.REBOOT_BEFORE_OWNER_COMMAND)
+        self.assertEqual(state["flow"], "owner-inverse")
+        self.assertEqual(state["boot"], self.BOOT)
+        self.assertEqual((guest.status_calls, guest.owner_calls), (0, []))
+        self.assertIn("evidence_before_reboot",
+                      result["owner_inverse_after_restart"]["steps"]["agent_restarted"])
+        result = self.resume(guest, settings, result, state, lists)
+        flow = result["owner_inverse_after_restart"]
+        self.assertEqual((result["status"], flow["status"]), ("passed", "passed"),
+                         flow["failures"] + flow["ambiguities"])
+        after = flow["steps"]["after_reboot"]
+        self.assertTrue(after["ledger_unchanged_since_release"])
+        self.assertIs(after["source_main_pid"]["judged"], False)
+        self.assertEqual(guest.owner_calls, [
+            "owner-recover-dns-bind-switch", "owner-recover-dns-bind-switch-rerun",
+        ])
+
+    def test_reboot_deviations_fail_before_the_owner_command(self) -> None:
+        guest = FakeOwnerGuest()
+        settings, result, state, lists, _ = self.suspend(guest)
+        guest.ledger_sha = "8" * 64
+        result = self.resume(guest, settings, result, state, lists)
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("the reboot changed the ledger",
+                      " ".join(result["owner_inverse_after_restart"]["failures"]))
+        self.assertEqual(guest.owner_calls, [])
+        guest = FakeOwnerGuest()
+        settings, result, state, lists, _ = self.suspend(guest)
+        result = self.resume(guest, settings, result, state, lists, units_active=False)
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("celikpanel-panel.service did not come up",
+                      " ".join(result["owner_inverse_after_restart"]["failures"]))
+        guest = FakeOwnerGuest()
+        settings, result, state, lists, _ = self.suspend(guest)
+        guest.d["journal_phase"] = "rolled-back"
+        result = self.resume(guest, settings, result, state, lists)
+        self.assertIn("journal after reboot is not V2 rolling-back",
+                      " ".join(result["owner_inverse_after_restart"]["failures"]))
+        self.assertEqual(guest.owner_calls, [])
+
+    def test_reboot_refused_outside_the_fixture_guest(self) -> None:
+        guest = FakeOwnerGuest()
+        settings = self.flow_settings(guest, owner_cell("target-staged"),
+                                      reboot_before_owner_command=True)
+        result = self.flow_result(guest)
+        with self.flow_patches(guest, {"read_guest_boot_identity": mock.Mock(
+            side_effect=run_cell.ControllerError("refusing reboot: marker"))}), \
+                self.assertRaisesRegex(run_cell.ControllerError, "refusing reboot"):
+            run_cell.run_owner_inverse_after_restart(
+                settings, result=result, transcript=mock.Mock(), ordinary={},
+                owner_environment={}, controller_identity={"effective_gid": 999},
+                identity_receipt={"owner_id": guest.OWNER,
+                                  "manifest_qualifier": guest.QUALIFIER},
+                boundary_identity=boundary_identity(), old_socket_identity=(1, 1),
+                kill_proven=True, safety_failures=[], verification_failures=[],
+                diagnostic_failures=[],
+            )
+        self.assertEqual(result["reboots_refused"][0]["stage"], "before-owner-command")
+        self.assertEqual(guest.owner_calls, [])
+
+    def test_reboot_after_recovery_only_for_a_passing_flow(self) -> None:
+        guest = FakeOwnerGuest()
+        with self.flow_patches(guest, {
+            "observe_serving_authority": mock.Mock(return_value={"authority": {}}),
+            "observe_management_units": mock.Mock(return_value={"units": {}, "unknown": []}),
+            "read_guest_boot_identity": mock.Mock(return_value=self.BOOT),
+        }), self.assertRaises(run_cell.RebootRequested) as whole:
+            run_cell.run_owner_inverse_after_restart(
+                self.flow_settings(guest, owner_cell("target-staged"),
+                                   reboot_after_recovery=True),
+                result=self.flow_result(guest), transcript=mock.Mock(), ordinary={},
+                owner_environment={}, controller_identity={"effective_gid": 999},
+                identity_receipt={"owner_id": guest.OWNER,
+                                  "manifest_qualifier": guest.QUALIFIER},
+                boundary_identity=boundary_identity(), old_socket_identity=(1, 1),
+                kill_proven=True, safety_failures=[], verification_failures=[],
+                diagnostic_failures=[],
+            )
+        # The whole owner flow ran first; the reboot follows the final samples.
+        self.assertEqual(len(guest.owner_calls), 2)
+        self.assertEqual(whole.exception.state["flow"], "owner-inverse")
+        settings = self.flow_settings(guest, owner_cell("target-staged"),
+                                      reboot_after_recovery=True)
+        failed = {"status": "failed"}
+        run_cell.maybe_request_reboot_after_recovery(settings, failed, {}, {})
+        self.assertIs(failed["reboot_after_recovery"]["run"], False)
+        passed = {"status": "passed"}
+        with mock.patch.multiple(
+            run_cell,
+            observe_serving_authority=mock.Mock(return_value={"authority": {"answered": True}}),
+            observe_management_units=mock.Mock(return_value={"units": {}, "unknown": []}),
+            read_guest_boot_identity=mock.Mock(return_value=self.BOOT),
+        ), self.assertRaises(run_cell.RebootRequested) as raised:
+            run_cell.maybe_request_reboot_after_recovery(settings, passed, {}, {"flow": "rpc-retry"})
+        self.assertEqual(raised.exception.stage, run_cell.REBOOT_AFTER_RECOVERY)
+        self.assertEqual(raised.exception.state["authority_before"],
+                         {"authority": {"answered": True}})
+        # A Mock without the flag never reboots.
+        run_cell.maybe_request_reboot_after_recovery(mock.Mock(), passed, {}, {})
+
     def test_run_cell_dispatches_owner_flow_after_proven_kill(self) -> None:
         source = MODULE_PATH.read_text(encoding="utf-8")
         flow = source[source.index("def run_cell(settings:"):]
@@ -3850,6 +4318,400 @@ class OwnerInverseAfterRestartTest(unittest.TestCase):
         )
         parser = run_cell.build_argument_parser()
         self.assertIn("--owner-inverse-after-restart", parser._option_string_actions)
+
+
+def plain_settings(root: str, selected: object | None = None, **changes: object) -> object:
+    trigger = ("/opt/t", "rpc-switch", "--scenario", root + "/scenario.json",
+               "--identity-receipt", root + "/identity.json", "--timeout", "45m")
+    settings = run_cell.Settings(
+        cell=selected or owner_cell("target-staged"), request_id="1" * 32, nonce="a" * 32,
+        tagged_agent_command=("/opt/agent.kill",), trigger_mode="socket",
+        trigger_command=trigger, recovery_command=(trigger[0], "rpc-retry", *trigger[2:]),
+        source_proof_path=root + "/source-proof.json",
+        agent_restart_command=("/bin/true",), panel_restart_command=("/bin/true",),
+        recovery_probe_command=("/bin/true",), peer_partition_command=None,
+        command_cwd=root, state_dir=root, mutation_lock=root + "/lock",
+        agent_socket=root + "/agent.sock", agent_token_file=root + "/token",
+        journal_path=root + "/journal.json", marker_path=root + "/marker.json",
+        proof_path=root + "/proof.json", result_path=root + "/result.json",
+        transcript_path=root + "/transcript.jsonl", dns_address="192.0.2.10",
+        dns_port=53, dns_name="www.s1-kill.test", dns_type="A",
+        panel_address="127.0.0.1", panel_port=2083, startup_timeout=1,
+        boundary_timeout=1, stop_timeout=1, kill_timeout=1, command_timeout=1,
+        recovery_timeout=1, endpoint_timeout=1, dns_timeout=1,
+        stability_seconds=30, stability_interval=1,
+        owner_inverse_after_restart=True, reboot_before_owner_command=True,
+        reboot_dir=root,
+    )
+    return replace(settings, **changes) if changes else settings
+
+
+class RebootCheckpointTest(unittest.TestCase):
+    BOOT = {"boot_id": "1" * 8 + "-1111-1111-1111-" + "1" * 12,
+            "product_uuid": "2" * 8 + "-2222-2222-2222-" + "2" * 12,
+            "fixture_marker": {}}
+
+    def checkpoint(self, root: str, settings: object) -> dict:
+        Path(settings.transcript_path).write_text("first\n", encoding="utf-8")
+        Path(settings.proof_path).write_text("{}\n", encoding="utf-8")
+        request = run_cell.RebootRequested(
+            run_cell.REBOOT_BEFORE_OWNER_COMMAND, {"flow": "owner-inverse", "boot": self.BOOT}
+        )
+        return run_cell.write_reboot_checkpoint(
+            settings, 1, request, {"status": "unverified"}, kill_proven=True,
+            safety_failures=[], verification_failures=["v"], diagnostic_failures=[],
+            boot=self.BOOT,
+            transcripts=[{"path": settings.transcript_path,
+                          "sha256": run_cell.sha256_file(settings.transcript_path)}],
+        )
+
+    def test_checkpoint_roundtrip_binds_settings_proof_and_transcript(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            settings = plain_settings(root)
+            written = self.checkpoint(root, settings)
+            self.assertEqual(stat_mode(written["path"]), 0o600)
+            resumed = replace(settings, resume_after_reboot=True)
+            ordinal, checkpoint = run_cell.load_pending_reboot_checkpoint(resumed)
+            self.assertEqual((ordinal, checkpoint["stage"]), (1, "before-owner-command"))
+            self.assertEqual(checkpoint["failures"]["verification"], ["v"])
+            # The resume switch is the only setting outside the fingerprint.
+            with self.assertRaisesRegex(run_cell.ControllerError, "settings_sha256"):
+                run_cell.load_pending_reboot_checkpoint(replace(resumed, dns_name="x.test"))
+            Path(settings.transcript_path).write_text("tampered\n", encoding="utf-8")
+            with self.assertRaisesRegex(run_cell.ControllerError, "transcript changed"):
+                run_cell.load_pending_reboot_checkpoint(resumed)
+            Path(settings.transcript_path).write_text("first\n", encoding="utf-8")
+            Path(run_cell.reboot_checkpoint_paths(root, 1)["resumed"]).write_text(
+                "{}", encoding="utf-8"
+            )
+            with self.assertRaisesRegex(run_cell.ControllerError, "exactly one unconsumed"):
+                run_cell.load_pending_reboot_checkpoint(resumed)
+            with self.assertRaises(run_cell.ControllerError):
+                self.checkpoint(root, settings)  # create-new, never replaced
+
+    def test_resume_refuses_an_unrebooted_or_foreign_guest(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            settings = replace(plain_settings(root), resume_after_reboot=True)
+            self.checkpoint(root, settings)
+            for boot, text in (
+                (self.BOOT, "was not rebooted"),
+                (dict(self.BOOT, boot_id="3" * 8 + "-3333-3333-3333-" + "3" * 12,
+                      product_uuid="4" * 8 + "-4444-4444-4444-" + "4" * 12),
+                 "another SMBIOS machine UUID"),
+            ):
+                with self.subTest(text=text), mock.patch.multiple(
+                    run_cell,
+                    validate_controller_identity=mock.Mock(return_value={"effective_gid": 1}),
+                    minimal_command_environment=mock.Mock(return_value={}),
+                    validate_settings=mock.Mock(return_value={}),
+                    read_guest_boot_identity=mock.Mock(return_value=boot),
+                ), self.assertRaisesRegex(run_cell.ControllerError, text):
+                    run_cell.resume_cell(settings)
+                self.assertFalse(os.path.exists(
+                    run_cell.reboot_checkpoint_paths(root, 1)["resumed"]
+                ))
+
+    def test_resume_consumes_the_checkpoint_once_and_writes_the_result(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            settings = replace(plain_settings(root), resume_after_reboot=True)
+            self.checkpoint(root, settings)
+            after = dict(self.BOOT, boot_id="5" * 8 + "-5555-5555-5555-" + "5" * 12)
+
+            def finish(*args, **kwargs):
+                kwargs["result"]["status"] = "passed"
+                kwargs["result"]["safety_status"] = "passed"
+
+            with mock.patch.multiple(
+                run_cell,
+                validate_controller_identity=mock.Mock(return_value={"effective_gid": 1}),
+                minimal_command_environment=mock.Mock(return_value={}),
+                validate_settings=mock.Mock(return_value={}),
+                read_guest_boot_identity=mock.Mock(return_value=after),
+                ordinary_environment=mock.Mock(return_value={}),
+                resume_owner_inverse_before_owner_command=mock.Mock(side_effect=finish),
+            ):
+                self.assertEqual(run_cell.resume_cell(settings), 0)
+                with self.assertRaises(run_cell.ControllerError):
+                    run_cell.resume_cell(settings)
+            result = json.loads(Path(settings.result_path).read_text(encoding="utf-8"))
+            self.assertEqual(result["reboots"][0]["boot_id_after"], after["boot_id"])
+            self.assertEqual(len(result["transcripts_after_reboot"]), 1)
+            self.assertTrue(os.path.exists(run_cell.reboot_checkpoint_paths(root, 1)["resumed"]))
+
+    def test_boot_identity_requires_this_cells_fixture_marker(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            boot = Path(root, "boot_id")
+            boot.write_text(self.BOOT["boot_id"] + "\n", encoding="ascii")
+            product = Path(root, "product_uuid")
+            product.write_text(self.BOOT["product_uuid"].upper() + "\n", encoding="ascii")
+            marker = (
+                "schema=celikpanel/dns-kill-fixture-plan/v1\n"
+                "cell_id=bind__x\nnode=debian13\n"
+            ).encode()
+            with mock.patch.multiple(
+                run_cell, BOOT_ID_PATH=str(boot), PRODUCT_UUID_PATH=str(product),
+                secure_read_bytes=mock.Mock(return_value=(marker, None)),
+            ):
+                identity = run_cell.read_guest_boot_identity("bind__x")
+                self.assertEqual(identity["product_uuid"], self.BOOT["product_uuid"])
+                with self.assertRaisesRegex(run_cell.ControllerError, "refusing reboot"):
+                    run_cell.read_guest_boot_identity("bind__other")
+
+    def test_reboot_settings_are_gated(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            settings = plain_settings(root)
+            run_cell.validate_reboot_settings(settings)
+            run_cell.validate_reboot_settings(replace(
+                settings, owner_inverse_after_restart=False,
+                reboot_before_owner_command=False, reboot_after_recovery=False,
+                reboot_dir=None,
+            ))
+            for changed, text in (
+                ({"reboot_dir": None}, "explicit --reboot-dir"),
+                ({"owner_inverse_after_restart": False}, "requires --owner-inverse"),
+                ({"stop_after_kill_for_independent_recovery": True}, "handoff"),
+                ({"cell": owner_cell("target-staged", role="paired-primary")}, "standalone"),
+                ({"reboot_before_owner_command": False, "reboot_dir": None,
+                  "resume_after_reboot": True}, "reboot flag"),
+            ):
+                with self.subTest(changed=changed), self.assertRaisesRegex(
+                    run_cell.ControllerError, text
+                ):
+                    run_cell.validate_reboot_settings(replace(settings, **changed))
+            Path(run_cell.reboot_checkpoint_paths(root, 2)["checkpoint"]).write_text("x")
+            with self.assertRaisesRegex(run_cell.ControllerError, "already exists"):
+                run_cell.validate_reboot_settings(settings)
+            run_cell.validate_reboot_settings(replace(settings, resume_after_reboot=True))
+
+    def authority(self, engines, *, answers=1, semantic=None, journal=False):
+        return {
+            "unknown": [],
+            "authority": {"engines": engines, "answered": True,
+                          "answer_counts": {"udp": answers, "tcp": answers}},
+            "state": {"sha256": "s", "semantic": semantic or {"engine": "pdns"}},
+            "evidence": {"journal": {"exists": journal}},
+            "named_processes": [],
+        }
+
+    def verify(self, state, after, *, units="active", source=None, flow_cell=None):
+        settings = mock.Mock(
+            cell=flow_cell or owner_cell("target-staged"), agent_socket="/s",
+            endpoint_timeout=1.0, panel_address="127.0.0.1", panel_port=2083,
+        )
+        ok = {"ok": True}
+        result: dict = {"status": "passed"}
+        safety: list = []
+        verification: list = []
+        with mock.patch.multiple(
+            run_cell,
+            observe_management_units=mock.Mock(return_value={"unknown": [], "units": {
+                unit: {"ActiveState": units} for unit in run_cell.MANAGEMENT_UNITS}}),
+            wait_for_unix_socket=mock.Mock(return_value=(1, 2)),
+            inspect_restarted_agent_process=mock.Mock(return_value={"pid": 9}),
+            wait_for_tcp=mock.Mock(return_value=None),
+            observe_serving_authority=mock.Mock(return_value=after),
+            observe_owner_source_serving=mock.Mock(
+                return_value=source or {"errors": [], "unknown": []}
+            ),
+            run_stability_window=mock.Mock(return_value=(
+                {"samples": [{"agent": ok, "panel": ok, "dns": ok}] * 31}, [], []
+            )),
+        ):
+            run_cell.verify_after_recovery_reboot(
+                settings, state, result=result, transcript=mock.Mock(), ordinary={},
+                owner_environment={}, controller_identity={"effective_gid": 1},
+                boot={"boot_id_after": "b"}, safety_failures=safety,
+                verification_failures=verification,
+            )
+        return result
+
+    def test_after_recovery_reboot_needs_same_authority_state_and_units(self) -> None:
+        before = self.authority({"tcp": ["pdns"], "udp": ["pdns"]})
+        state = {"flow": "rpc-retry", "authority_before": before}
+        result = self.verify(state, before)
+        report = result["reboot_after_recovery"]
+        self.assertEqual((result["status"], report["status"]), ("passed", "passed"))
+        self.assertEqual(len(report["stability"]["samples"]), 31)
+        for after, kwargs, text in (
+            (self.authority({"tcp": ["bind"], "udp": ["bind"]}), {}, "authority changed"),
+            (self.authority({"tcp": ["pdns"], "udp": ["pdns"]}, semantic={"engine": "bind"}),
+             {}, "state receipt changed"),
+            (self.authority({"tcp": ["pdns"], "udp": ["pdns"]}, journal=True), {},
+             "journal presence changed"),
+            (self.authority({"tcp": ["pdns"], "udp": ["pdns"]}, answers=2), {},
+             "answer counts changed"),
+            (before, {"units": "inactive"}, "did not come up after the reboot"),
+        ):
+            with self.subTest(text=text):
+                result = self.verify(state, after, **kwargs)
+                self.assertEqual(result["status"], "failed")
+                self.assertIn(text, " ".join(result["reboot_after_recovery"]["failures"]))
+        owner_state = {"flow": "owner-inverse", "authority_before": before}
+        serving_bind = dict(before, named_processes=[812])
+        result = self.verify(owner_state, serving_bind)
+        self.assertIn("BIND is serving again", " ".join(
+            result["reboot_after_recovery"]["failures"]))
+        result = self.verify(owner_state, before, source={
+            "errors": ["BIND target unit is active"], "unknown": []})
+        self.assertEqual(result["status"], "failed")
+
+    def test_serving_authority_maps_listener_pids_to_engines(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            settings = mock.Mock(state_dir=root, journal_path=root + "/journal.json")
+            native = {
+                "unknown": [],
+                "units": {
+                    "pdns.service": {"MainPID": "600"},
+                    "named.service": {"MainPID": "0"},
+                    "bind9.service": {"MainPID": "0"},
+                },
+                "port53_listeners": {"tcp": [{"pids": [600]}], "udp": [{"pids": [600, 7]}]},
+                "dns": {"answered": True,
+                        "result": {"udp": {"answers": 1}, "tcp": {"answers": 1}}},
+            }
+            with mock.patch.multiple(
+                run_cell,
+                observe_native_dns_state=mock.Mock(return_value=native),
+                snapshot_private_evidence=mock.Mock(return_value={"journal": {"exists": False}}),
+            ):
+                report = run_cell.observe_serving_authority(settings, {})
+        self.assertEqual(report["authority"]["engines"],
+                         {"tcp": ["pdns"], "udp": ["other", "pdns"]})
+        self.assertEqual(report["state"], {"exists": False})
+
+
+class V2RefusalAndStartupRollbackTest(unittest.TestCase):
+    @staticmethod
+    def manifest_cell(cell_id: str) -> object:
+        manifest = json.loads(
+            Path(__file__).with_name("manifest.json").read_text(encoding="utf-8")
+        )
+        return run_cell.CellSpec.from_manifest(manifest, cell_id)
+
+    def refuse(self, cell_id: str, fixture: str = "managed-pdns", **changes: object):
+        with tempfile.TemporaryDirectory() as root:
+            settings = plain_settings(root, self.manifest_cell(cell_id), **{
+                "owner_inverse_after_restart": False,
+                "reboot_before_owner_command": False, "reboot_dir": None, **changes,
+            })
+            with mock.patch.object(
+                run_cell, "validate_source_scenario",
+                return_value=({"source_fixture": fixture}, {}),
+            ):
+                return run_cell.refuse_unrunnable_v2_cells(settings)
+
+    def test_v2_cells_are_refused_before_any_mutation_without_the_flag(self) -> None:
+        for cell_id in sorted(
+            c for c in run_cell.OWNER_INVERSE_CELLS
+            if run_cell.OWNER_INVERSE_ADMISSIONS[c].profile == "bind-switch-v2"
+        ):
+            with self.subTest(cell_id=cell_id), self.assertRaisesRegex(
+                run_cell.ControllerError, "Run it with --owner-inverse-after-restart"
+            ):
+                self.refuse(cell_id)
+        for cell_id, text in (
+            ("bind__intent__before-write__standalone__peer-unreachable", "no journal exists"),
+            ("bind__source-stopped__after-write__standalone__peer-unreachable",
+             "not admitted"),
+            ("bind__rolled-back__after-write__standalone__peer-unreachable", "not admitted"),
+            (run_cell.BIND_HANDOFF_CELL, "not admitted"),
+        ):
+            with self.subTest(cell_id=cell_id), self.assertRaisesRegex(
+                run_cell.ControllerError, text
+            ):
+                self.refuse(cell_id)
+        # Other sources, the flag, the handoff and other drivers are unchanged.
+        self.assertIsNone(self.refuse(
+            "bind__target-staged__after-write__standalone__peer-reachable", "uninitialized"))
+        self.assertIsNone(self.refuse(
+            "bind__target-staged__after-write__standalone__peer-reachable",
+            owner_inverse_after_restart=True))
+        self.assertIsNone(self.refuse(
+            run_cell.BIND_HANDOFF_CELL, stop_after_kill_for_independent_recovery=True))
+        with mock.patch.object(run_cell, "validate_source_scenario",
+                               side_effect=run_cell.ControllerError("unreadable")):
+            with tempfile.TemporaryDirectory() as root:
+                self.assertIsNone(run_cell.refuse_unrunnable_v2_cells(plain_settings(
+                    root, owner_inverse_after_restart=False,
+                    reboot_before_owner_command=False, reboot_dir=None,
+                )))
+
+    def test_refusal_precedes_every_controller_artifact(self) -> None:
+        source = MODULE_PATH.read_text(encoding="utf-8")
+        flow = source[source.index("def run_cell(settings:"):]
+        self.assertLess(flow.index("refuse_unrunnable_v2_cells(settings)"),
+                        flow.index("transcript = Transcript("))
+        self.assertLess(flow.index("except RebootRequested as request:"),
+                        flow.index("except OwnerInverseFlowFinished:"))
+        self.assertLess(flow.index("write_reboot_checkpoint("),
+                        flow.index("atomic_write_new_json(settings.result_path, result)"))
+        main = source[source.index("def main(argv"):]
+        self.assertIn("resume_cell(settings) if settings.resume_after_reboot", main)
+        parser = run_cell.build_argument_parser()
+        for flag in ("--reboot-before-owner-command", "--reboot-after-recovery",
+                     "--resume-after-reboot", "--reboot-dir",
+                     "--expect-agent-startup-rollback"):
+            self.assertIn(flag, parser._option_string_actions)
+
+    def startup(self, *, job_code=run_cell.AGENT_ROLLED_BACK_AFTER_RESTART,
+                journal=False, named=False, released=True, pid=600):
+        guest = FakeOwnerGuest(release_code=job_code, target="pdns", released=released)
+        with tempfile.TemporaryDirectory() as root:
+            settings = mock.Mock(request_id=guest.REQUEST, journal_path=root + "/j.json",
+                                 recovery_timeout=1.0)
+            if journal:
+                Path(settings.journal_path).write_text("{}", encoding="utf-8")
+            with mock.patch.multiple(
+                run_cell,
+                wait_for_agent_release=mock.Mock(side_effect=guest.wait_release),
+                observe_pdns_source_serving=mock.Mock(return_value={
+                    "errors": [], "unknown": [], "pdns_main_pid": pid,
+                    "pdns_main_pid_changed": pid != 600,
+                }),
+                find_agent_owner_refusal=mock.Mock(return_value={"observed": named}),
+            ):
+                return run_cell.observe_agent_startup_rollback(
+                    settings, {}, mock.Mock(),
+                    {"owner_id": guest.OWNER, "manifest_qualifier": guest.QUALIFIER},
+                    600, 1,
+                )
+
+    def test_agent_startup_rollback_is_judged_before_any_retry(self) -> None:
+        report = self.startup()
+        self.assertTrue(report["retry_allowed"], report)
+        for kwargs, text in (
+            ({"job_code": run_cell.AGENT_RELEASED_NATIVE_UNKNOWN}, "error_code"),
+            ({"journal": True}, "kept the switch journal"),
+            ({"named": True}, "did not roll back by itself"),
+        ):
+            with self.subTest(kwargs=kwargs):
+                report = self.startup(**kwargs)
+                self.assertFalse(report["retry_allowed"])
+                self.assertIn(text, " ".join(report["failures"]))
+        for kwargs in ({"released": False}, {"pid": 601}):
+            with self.subTest(kwargs=kwargs):
+                report = self.startup(**kwargs)
+                self.assertFalse(report["retry_allowed"])
+                self.assertEqual(report["failures"], [])
+                self.assertTrue(report["unknown"])
+        verification: list = []
+        result = {"status": "passed",
+                  "recovery_outcome": {"classification": "target_converged"}}
+        run_cell.judge_agent_startup_rollback(result, self.startup(), verification)
+        self.assertEqual(result["status"], "passed")
+        result = {"status": "passed",
+                  "recovery_outcome": {"classification": "rolled_back_source_serving"}}
+        run_cell.judge_agent_startup_rollback(result, self.startup(), verification)
+        self.assertEqual(result["status"], "failed")
+        result = {"status": "passed"}
+        run_cell.judge_agent_startup_rollback(result, None, verification)
+        self.assertEqual(result["status"], "unverified")
+
+
+def stat_mode(path: str) -> int:
+    import stat as stat_module
+
+    return stat_module.S_IMODE(os.stat(path).st_mode)
 
 
 class DNSProbeTest(unittest.TestCase):
