@@ -74,6 +74,16 @@ INDEPENDENT_HANDOFF_CELLS = frozenset({
 })
 INDEPENDENT_PDNS_HANDOFF_FLAG = "--stop-after-kill-for-independent-recovery"
 LATER_BIND_ROLLBACK_FLAG = "--bind-rollback-after-target-started"
+# Agent decides, owner executes: the controller restarts the ordinary Agent,
+# leaves it running and runs the owner recover-dns-bind-switch command.
+OWNER_INVERSE_FLAG = "--owner-inverse-after-restart"
+OWNER_INVERSE_CELLS = frozenset({
+    "bind__intent__after-write__standalone__peer-reachable",
+    "bind__target-staged__after-write__standalone__peer-reachable",
+})
+RECOVERY_KIT_NAME = "recovery-kit.tar.gz"
+OWNER_RECOVERY_LAUNCHER = "/usr/libexec/celikpanel/recovery"
+BIND_SOURCE_INVERSE_MARKER = "celikpanel-bind-source-inverse/v1"
 SOURCE_FIXTURE_POLICIES = frozenset(
     {
         "driver-specific",
@@ -115,6 +125,21 @@ if index + 1 >= len(argv) or argv[index + 1] != sys.argv[1]:
     raise SystemExit("prepared controller argv belongs to another cell")
 if len(sys.argv) not in (2, 3, 4):
     raise SystemExit("unexpected prepared controller invocation")
+owner_flag = "--owner-inverse-after-restart"
+if len(sys.argv) >= 3 and sys.argv[2] == owner_flag:
+    if (len(sys.argv) != 3
+            or sys.argv[1] not in {
+                "bind__intent__after-write__standalone__peer-reachable",
+                "bind__target-staged__after-write__standalone__peer-reachable",
+            }
+            or owner_flag in argv
+            or argv.count("--trigger-mode") != 1):
+        raise SystemExit("owner inverse after restart is not valid for prepared cell")
+    trigger_index = argv.index("--trigger-mode")
+    if argv[trigger_index + 1:trigger_index + 2] != ["socket"]:
+        raise SystemExit("owner inverse after restart requires a socket trigger")
+    argv.append(owner_flag)
+    os.execv(argv[0], argv)
 if len(sys.argv) >= 3:
     handoff_flag = "--stop-after-kill-for-independent-recovery"
     if (sys.argv[1] not in {
@@ -797,6 +822,113 @@ def install(args: argparse.Namespace) -> None:
         )
 
 
+RECOVERY_RUNTIME_ENROLL_SCRIPT = r"""set -euo pipefail
+stage=$1
+kit_sha=$2
+test -f /etc/celikpanel-dns-kill-matrix
+kit=$stage/recovery-kit.tar.gz
+[[ -f $kit && ! -L $kit ]]
+test "$(sha256sum -- "$kit" | cut -d' ' -f1)" = "$kit_sha"
+root=/root/celikpanel-recovery-kit-${kit_sha:0:16}
+test ! -e "$root"
+install -d -m 0700 "$root"
+tar -xzf "$kit" -C "$root" --no-same-owner
+lock=/var/lib/celikpanel-release-transaction/transaction.lock
+[[ -f $lock && ! -L $lock ]]
+exec 9<>"$lock"
+flock -x -w 60 9
+"$root/recovery-runtime/bin/recovery" enroll-runtime --source "$root/recovery-runtime" --transaction-fd 9
+exec 9>&-
+marker=$(/usr/libexec/celikpanel/recovery check-bind-source-inverse-v1)
+test "$marker" = celikpanel-bind-source-inverse/v1
+sha256sum /usr/libexec/celikpanel/recovery "$root/recovery-runtime/runtime.manifest"
+"""
+
+
+def validate_recovery_runtime_dir(path: Path) -> Path:
+    try:
+        clean = path.resolve(strict=True)
+        info = path.lstat()
+    except OSError as exc:
+        raise BootstrapError(f"inspect recovery runtime: {exc}") from exc
+    if (
+        clean != path.absolute()
+        or stat.S_ISLNK(info.st_mode)
+        or not stat.S_ISDIR(info.st_mode)
+        or clean.name != "recovery-runtime"
+    ):
+        raise BootstrapError(
+            "recovery runtime must be a clean real directory named recovery-runtime"
+        )
+    regular_file(clean / "runtime.manifest", "recovery runtime manifest")
+    regular_file(clean / "bin" / "recovery", "recovery runtime binary", executable=True)
+    return clean
+
+
+def write_recovery_kit(runtime: Path, target: Path) -> None:
+    def root_owned(member: tarfile.TarInfo) -> tarfile.TarInfo:
+        member.uid = 0
+        member.gid = 0
+        member.uname = "root"
+        member.gname = "root"
+        return member
+
+    with tarfile.open(target, "w:gz") as archive:
+        archive.add(runtime, arcname="recovery-runtime", filter=root_owned)
+
+
+def enroll_recovery_runtime(args: argparse.Namespace) -> None:
+    """Select the built recovery runtime in the guest, as the 2026-09-27 trial did.
+
+    The kit is enrolled through the product's own `enroll-runtime` under the
+    native release-transaction lock; the launcher must then advertise the BIND
+    source inverse. Dry-run unless --execute.
+    """
+
+    _, cell, node = load_plan(args)
+    validate_owner_inverse_cell(cell, args.node, args.source_fixture)
+    runtime = validate_recovery_runtime_dir(args.recovery_runtime)
+    identity = identity_file(args.identity_file)
+    stage = stage_name(args.cell_id)
+    with tempfile.TemporaryDirectory(prefix="celikpanel-s1-recovery-kit-") as temporary:
+        kit = Path(temporary) / RECOVERY_KIT_NAME
+        write_recovery_kit(runtime, kit)
+        os.chmod(kit, 0o600)
+        kit_sha = sha256_file(kit)
+        run(
+            ssh_base(node, identity)
+            + [f"test -d {stage} && test ! -e {stage}/{RECOVERY_KIT_NAME}"],
+            execute=args.execute,
+        )
+        run(
+            scp_base(node, identity) + [str(kit), remote_destination(node, stage + "/")],
+            execute=args.execute,
+        )
+        remote = (
+            "sudo /bin/bash -c "
+            + shlex.quote(RECOVERY_RUNTIME_ENROLL_SCRIPT)
+            + " enroll-recovery-runtime "
+            + shlex.quote(stage)
+            + " "
+            + kit_sha
+        )
+        run(ssh_base(node, identity) + [remote], execute=args.execute)
+    print(
+        json.dumps(
+            {
+                "action": "enroll-recovery-runtime",
+                "cell_id": args.cell_id,
+                "node": args.node,
+                "stage": stage,
+                "recovery_kit_sha256": kit_sha,
+                "launcher": OWNER_RECOVERY_LAUNCHER,
+                "required_capability": BIND_SOURCE_INVERSE_MARKER,
+            },
+            sort_keys=True,
+        )
+    )
+
+
 def controller_commands(cell_id: str) -> tuple[list[str], list[str], list[str]]:
     if CELL_RE.fullmatch(cell_id) is None:
         raise BootstrapError("cell ID is not canonical")
@@ -944,9 +1076,47 @@ def prepare(args: argparse.Namespace) -> None:
         )
 
 
+def validate_owner_inverse_cell(
+    cell: dict[str, Any], node: str, source_fixture: str
+) -> None:
+    """Exact Debian standalone BIND cut before target start, managed PowerDNS source."""
+
+    boundary = cell.get("boundary", {})
+    phase = boundary.get("phase")
+    if not (
+        cell.get("id") in OWNER_INVERSE_CELLS
+        and cell.get("driver") == "bind"
+        and cell.get("role") == "standalone"
+        and cell.get("peer_reachability") == "reachable"
+        and phase in EARLY_MANAGED_PDNS_BIND_PHASES
+        and cell.get("id") == f"bind__{phase}__after-write__standalone__peer-reachable"
+        and boundary == {
+            "edge": "after-write", "name": f"{phase}:after-write", "phase": phase,
+        }
+        and cell.get("fault_selector") == {"phase": phase, "point": "after_write"}
+        and cell.get("placement", {}).get("source_fixture_policy") == "driver-specific"
+        and node == "debian13"
+        and source_fixture == "managed-pdns"
+    ):
+        raise BootstrapError(
+            "owner inverse after restart requires an exact Debian standalone BIND "
+            "intent or target-staged after-write cell with a managed PowerDNS source"
+        )
+    validate_bind_cell(cell, node, source_fixture)
+
+
 def run_prepared(args: argparse.Namespace) -> int:
     _, cell, node = load_plan(args)
     validate_supported_cell(cell, args.node, args.source_fixture)
+    owner_inverse = getattr(args, "owner_inverse_after_restart", False) is True
+    if owner_inverse:
+        if args.stop_after_kill_for_independent_recovery or getattr(
+            args, "bind_rollback_after_target_started", False
+        ) is True:
+            raise BootstrapError(
+                "owner inverse after restart excludes the independent handoff flags"
+            )
+        validate_owner_inverse_cell(cell, args.node, args.source_fixture)
     if args.source_fixture == "owner-bind" and not (
         args.stop_after_kill_for_independent_recovery
         and getattr(args, "bind_rollback_after_target_started", False) is True
@@ -1011,6 +1181,7 @@ def run_prepared(args: argparse.Namespace) -> int:
             if getattr(args, "bind_rollback_after_target_started", False) is True
             else ""
         )
+        + (" " + shlex.quote(OWNER_INVERSE_FLAG) if owner_inverse else "")
     )
     command = ssh_base(node, identity) + [remote]
     if not args.execute:
@@ -1066,6 +1237,10 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     common_parser(current)
     current.add_argument(INDEPENDENT_PDNS_HANDOFF_FLAG, action="store_true")
     current.add_argument(LATER_BIND_ROLLBACK_FLAG, action="store_true")
+    current.add_argument(OWNER_INVERSE_FLAG, action="store_true")
+    current = subparsers.add_parser("enroll-recovery-runtime")
+    common_parser(current)
+    current.add_argument("--recovery-runtime", required=True, type=Path)
     return parser.parse_args(argv)
 
 
@@ -1080,6 +1255,8 @@ def main(argv: Iterable[str] | None = None) -> int:
             prepare(args)
         elif args.action == "run-prepared":
             return run_prepared(args)
+        elif args.action == "enroll-recovery-runtime":
+            enroll_recovery_runtime(args)
         else:
             raise BootstrapError("unsupported action")
         return 0

@@ -53,6 +53,28 @@ func excludeInstalledDNSInverseWorker(ctx context.Context, evidence dnsenginerec
 	return ctx.Err()
 }
 
+// excludeInstalledReleasedDNSInverseWorker is the worker exclusion of
+// recover-dns-bind-switch, recover-dns-bind-adoption and
+// recover-dns-pdns-adoption. Beyond the shared exclusion it accepts only the
+// Agent's deliberate release of this exact request: the secured read bound
+// that job to an idle ledger (no active request of any kind), the job records
+// no worker or lease, and the Agent wrote it after proving the worker gone
+// under the host lock this command now holds. Any worker must hold that lock
+// to change DNS. Other commands keep excludeInstalledDNSInverseWorker, which
+// refuses every released job.
+func excludeInstalledReleasedDNSInverseWorker(ctx context.Context, evidence dnsenginerecovery.SwitchEvidence) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if evidence.Observation.Status != dnsenginerecovery.EvidenceReleasedUndecided {
+		return excludeInstalledDNSInverseWorker(ctx, evidence)
+	}
+	if !dnsenginerecovery.AgentReleasedDNSInverseEvidence(evidence) {
+		return errors.New("released DNS job is not the Agent's deliberate release of this exact request")
+	}
+	return ctx.Err()
+}
+
 // requirePDNSAdoptionInverseNativeProof admits only the part of the frozen
 // source that is currently proved on the wire. A database row absence does not
 // prove that the running daemon has stopped serving a deleted zone.
@@ -110,6 +132,9 @@ func journalAbsentPDNSInverseOutcome(
 		return fmt.Errorf("journal-absent DNS result is unknown: %w", err)
 	}
 	if err := classifyJournalAbsentPDNSInverseLedger(ledger, requestID); err != nil {
+		if journalFreeAgentReleasedDNSJob(ledger, requestID, transport.DNSEnginePowerDNS) {
+			return releasedDNSInverseReconciledOutcome(requestID)
+		}
 		return fmt.Errorf("journal-absent DNS result is unknown: %w", err)
 	}
 	return fmt.Errorf("%w: request %s; inspect native PowerDNS before treating current service as recovered",
@@ -175,7 +200,26 @@ func completeInstalledPDNSAdoptionInverseWithAfterEffect(
 	}
 	root := hostingpath.ServiceMutationStateRoot()
 	policy := installedDNSJournalPolicy(owner.GID)
-	return dnsenginerecovery.CompletePDNSAdoptionInverse(ctx, dnsenginerecovery.PDNSAdoptionInverseOps{
+	return dnsenginerecovery.CompletePDNSAdoptionInverse(ctx, pdnsAdoptionInverseOps(
+		root, owner, policy, requestID, verifyLocks,
+		func(ctx context.Context, journal dnsengineartifact.SwitchJournalV1) (pdnsAdoptionNativeProof, error) {
+			return proveInstalledPDNSAdoptionNative(ctx, policy, journal)
+		},
+		afterEffect,
+	))
+}
+
+// pdnsAdoptionInverseOps binds recover-dns-pdns-adoption's durable effects to
+// one private state root. The installed command passes the fixed root, its held
+// release/host locks and the native PowerDNS proof; nothing here acquires a
+// lock or chooses a path from persisted evidence.
+func pdnsAdoptionInverseOps(
+	root string, owner servicemutationledger.FileOwner, policy dnsengineartifact.JournalPolicy,
+	requestID string, verifyLocks func() error,
+	proveNative func(context.Context, dnsengineartifact.SwitchJournalV1) (pdnsAdoptionNativeProof, error),
+	afterEffect pdnsInverseAfterEffect,
+) dnsenginerecovery.PDNSAdoptionInverseOps {
+	return dnsenginerecovery.PDNSAdoptionInverseOps{
 		Read: func(ctx context.Context) (dnsenginerecovery.SwitchEvidence, bool, error) {
 			if err := ctx.Err(); err != nil {
 				return dnsenginerecovery.SwitchEvidence{}, false, err
@@ -195,12 +239,12 @@ func completeInstalledPDNSAdoptionInverseWithAfterEffect(
 			}
 			return evidence, true, nil
 		},
-		ExcludeWorker: excludeInstalledDNSInverseWorker,
+		ExcludeWorker: excludeInstalledReleasedDNSInverseWorker,
 		ProveNative: func(ctx context.Context, journal dnsengineartifact.SwitchJournalV1) error {
 			if err := verifyLocks(); err != nil {
 				return err
 			}
-			proof, err := proveInstalledPDNSAdoptionNative(ctx, policy, journal)
+			proof, err := proveNative(ctx, journal)
 			if err != nil {
 				return err
 			}
@@ -266,5 +310,5 @@ func completeInstalledPDNSAdoptionInverseWithAfterEffect(
 			}
 			return nil
 		},
-	})
+	}
 }

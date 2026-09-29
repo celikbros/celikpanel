@@ -8,8 +8,10 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"sort"
 
 	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
+	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
 	"github.com/alicelik/celikpanel/internal/servicemutationledger"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -76,6 +78,33 @@ func readJournalAbsentDNSLedger(ctx context.Context, stateRoot string, owner ser
 	if !servicemutationledger.ValidIdentity(requestID) {
 		return servicemutationledger.Ledger{}, errors.New("invalid DNS request identity")
 	}
+	ledger, err := readStableJournalFreeDNSLedger(ctx, stateRoot, owner)
+	if err != nil {
+		return servicemutationledger.Ledger{}, err
+	}
+	if ledger.ActiveRequestID != "" && ledger.ActiveRequestID != requestID {
+		return servicemutationledger.Ledger{}, errors.New("another host mutation is active in the ledger")
+	}
+	job := ledger.Jobs[requestID]
+	if job == nil || job.Kind != "dns_engine_switch" {
+		return servicemutationledger.Ledger{}, errors.New("exact DNS switch job is absent from the mutation ledger")
+	}
+	id := dnsengineartifact.SwitchIdentity{
+		RequestID: job.RequestID,
+		OwnerID:   job.OwnerID,
+		Target:    transport.DNSEngine(job.Target),
+		Qualifier: job.PackageName,
+	}
+	if err := id.Validate(); err != nil {
+		return servicemutationledger.Ledger{}, errors.New("exact DNS switch job has an invalid operation identity")
+	}
+	return ledger, nil
+}
+
+// readStableJournalFreeDNSLedger proves no DNS switch journal is present,
+// reads the canonical ledger twice with identical bytes and proves the journal
+// is still absent. It is a point-in-time observation, never recovery authority.
+func readStableJournalFreeDNSLedger(ctx context.Context, stateRoot string, owner servicemutationledger.FileOwner) (servicemutationledger.Ledger, error) {
 	journalPath := filepath.Join(stateRoot, "dns-engine-switch-journal.json")
 	ledgerPath := filepath.Join(stateRoot, "service-mutations.json")
 	journal, present, err := servicemutationledger.ReadFile(journalPath, dnsengineartifact.SwitchJournalLimit, owner)
@@ -99,22 +128,6 @@ func readJournalAbsentDNSLedger(ctx context.Context, stateRoot string, owner ser
 	if err != nil {
 		return servicemutationledger.Ledger{}, fmt.Errorf("decode exact DNS mutation ledger: %w", err)
 	}
-	if ledger.ActiveRequestID != "" && ledger.ActiveRequestID != requestID {
-		return servicemutationledger.Ledger{}, errors.New("another host mutation is active in the ledger")
-	}
-	job := ledger.Jobs[requestID]
-	if job == nil || job.Kind != "dns_engine_switch" {
-		return servicemutationledger.Ledger{}, errors.New("exact DNS switch job is absent from the mutation ledger")
-	}
-	id := dnsengineartifact.SwitchIdentity{
-		RequestID: job.RequestID,
-		OwnerID:   job.OwnerID,
-		Target:    transport.DNSEngine(job.Target),
-		Qualifier: job.PackageName,
-	}
-	if err := id.Validate(); err != nil {
-		return servicemutationledger.Ledger{}, errors.New("exact DNS switch job has an invalid operation identity")
-	}
 	again, againPresent, err := servicemutationledger.ReadFile(ledgerPath, servicemutationledger.MaxSize, owner)
 	if err != nil || !againPresent || !bytes.Equal(raw, again) {
 		return servicemutationledger.Ledger{}, errors.New("DNS mutation ledger changed during observation")
@@ -127,4 +140,56 @@ func readJournalAbsentDNSLedger(ctx context.Context, stateRoot string, owner ser
 		return servicemutationledger.Ledger{}, err
 	}
 	return ledger, nil
+}
+
+// journalFreeAgentReleasedDNSJob reports whether a ledger read with no DNS
+// switch journal present holds, for requestID, exactly the Agent's deliberate
+// lease release for the given target engine. The stored message describes the
+// moment of release; read beside a retired journal it is historical, so
+// callers print releasedDNSSwitchReconciledStatus instead of "unknown".
+func journalFreeAgentReleasedDNSJob(ledger servicemutationledger.Ledger, requestID string, target transport.DNSEngine) bool {
+	job := ledger.Jobs[requestID]
+	return job != nil && job.RequestID == requestID &&
+		(target == "" || job.Target == string(target)) &&
+		dnsenginerecovery.AgentDeliberateReleaseJob(*job)
+}
+
+// agentReleasedDNSRequests lists, in order, every journal-free exact
+// deliberate release in the ledger.
+func agentReleasedDNSRequests(ledger servicemutationledger.Ledger) []string {
+	var requests []string
+	for requestID := range ledger.Jobs {
+		if journalFreeAgentReleasedDNSJob(ledger, requestID, "") {
+			requests = append(requests, requestID)
+		}
+	}
+	sort.Strings(requests)
+	return requests
+}
+
+// releasedDNSSwitchReconciledStatus is the read-time status text for a DNS
+// switch the Agent released and whose journal has since been retired. No
+// durable state records which actor retired it, so the text says so.
+func releasedDNSSwitchReconciledStatus(requestID string) string {
+	return "DNS switch request " + requestID + " was interrupted and the Agent could not recover it automatically when it restarted, so it released the lease. " +
+		"The switch has since been reconciled and its journal is retired, either by the owner recovery command or by a later Agent start; this evidence cannot tell which. " +
+		"This request no longer blocks DNS changes. The current DNS engine and its health are shown by the panel's DNS engine status, not by this record. This status check started nothing."
+}
+
+// errDNSInverseReleasedReconciled means an owner inverse command found no
+// journal for its request and the ledger still holds the Agent's deliberate
+// release: the operation was already reconciled and nothing was changed.
+var errDNSInverseReleasedReconciled = errors.New("the Agent-released DNS switch is already reconciled and its journal is retired")
+
+func releasedDNSInverseReconciledOutcome(requestID string) error {
+	return fmt.Errorf("%w: request %s; no change was made", errDNSInverseReleasedReconciled, requestID)
+}
+
+// releasedDNSInverseReconciledText is the owner command's answer to a re-run
+// after that reconciliation. The exit status stays the one used for the other
+// retired-journal outcome.
+func releasedDNSInverseReconciledText(lang, requestID string) string {
+	return translated(lang,
+		"Request "+requestID+" is already reconciled: the Agent released this interrupted DNS switch and its journal has since been retired, by this command or by a later Agent start; the evidence cannot tell which. Nothing was changed now. This request no longer blocks DNS changes. Before another switch, check the current DNS engine and authoritative DNS answers in the panel.",
+		requestID+" işlemi zaten sonuçlanmış: Agent yarım kalan bu DNS geçişini bırakmıştı ve günlüğü daha sonra kaldırıldı. Bunu bu komutun mu yoksa Agent'ın sonraki açılışının mı yaptığı kayıtlardan anlaşılamıyor. Şimdi hiçbir şey değiştirilmedi. Bu işlem artık DNS değişikliklerini engellemiyor. Yeni bir geçişten önce panelde güncel DNS motorunu ve yetkili DNS yanıtlarını kontrol edin.")
 }

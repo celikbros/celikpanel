@@ -65,6 +65,10 @@ func dispatchOwnerBINDSwitchInverse(args []string, uid int, inverse func(context
 		return exitUnavailable
 	}
 	if err := inverse(context.Background(), request); err != nil {
+		if errors.Is(err, errDNSInverseReleasedReconciled) {
+			fmt.Fprintln(diagnostic, releasedDNSInverseReconciledText(lang, request))
+			return exitUnavailable
+		}
 		fmt.Fprintln(diagnostic, translated(lang, "The accepted BIND switch rollback could not be verified. Inspect recovery dns-switch-status --quiesced --request-id "+request+"; resolve the reported evidence, worker, lock or native DNS condition and retry this same request. Preserve the journal and ledger. Reason: ", "Kabul edilmiş BIND geçişi geri alması doğrulanamadı. recovery dns-switch-status --quiesced --request-id "+request+" çıktısını inceleyin; kanıt, çalışan, kilit veya yerel DNS sorununu giderip aynı işlemi yeniden deneyin. Günlüğü ve işlem kaydını koruyun. Neden: ")+err.Error())
 		return exitUnavailable
 	}
@@ -103,6 +107,9 @@ func journalAbsentBINDInverseOutcome(ctx context.Context, root string, owner ser
 		return fmt.Errorf("journal-absent BIND result unknown: %w", err)
 	}
 	if err := classifyJournalAbsentBINDInverseLedger(ledger, request); err != nil {
+		if journalFreeAgentReleasedDNSJob(ledger, request, transport.DNSEngineBIND) {
+			return releasedDNSInverseReconciledOutcome(request)
+		}
 		return err
 	}
 	return fmt.Errorf("%w: request %s; inspect native PowerDNS before treating current service as recovered", errBINDInverseTerminalLedgerObserved, request)
@@ -162,22 +169,56 @@ func completeInstalledBINDInverse(ctx context.Context, request string, adoption 
 		return verifyLocks()
 	}
 	complete := dnsenginerecovery.CompleteInactiveBINDSwitchInverse
-	var adoptionRuntime *bindAdoptionNativeSession
+	native := bindInverseNative{
+		assess: func(ctx context.Context, j dnsengineartifact.SwitchJournalV1) (dnsenginerecovery.BINDSwitchNativeState, error) {
+			return assessInstalledBINDSwitchNative(ctx, policy, j)
+		},
+		restore: func(ctx context.Context, j dnsengineartifact.SwitchJournalV1) error {
+			return restoreInstalledBINDSwitchNative(ctx, policy, owner, j)
+		},
+	}
 	if adoption {
 		complete = dnsenginerecovery.CompleteRunningBINDAdoptionInverse
-		adoptionRuntime = &bindAdoptionNativeSession{}
+		adoptionRuntime := &bindAdoptionNativeSession{}
+		native = bindInverseNative{
+			assess: func(ctx context.Context, j dnsengineartifact.SwitchJournalV1) (dnsenginerecovery.BINDSwitchNativeState, error) {
+				return adoptionRuntime.assess(ctx, policy, j)
+			},
+			restore: func(ctx context.Context, j dnsengineartifact.SwitchJournalV1) error {
+				return adoptionRuntime.restore(ctx, policy, owner, j)
+			},
+		}
 	}
+	return complete(ctx, bindInverseOps(root, owner, policy, request, adoption, guarded, native))
+}
+
+// bindInverseNative is the native half of recover-dns-bind-switch and
+// recover-dns-bind-adoption: the installed adapters assess and restore the
+// frozen BIND preimage. bindInverseOps never chooses these from evidence.
+type bindInverseNative struct {
+	assess  func(context.Context, dnsengineartifact.SwitchJournalV1) (dnsenginerecovery.BINDSwitchNativeState, error)
+	restore func(context.Context, dnsengineartifact.SwitchJournalV1) error
+}
+
+// bindInverseOps binds the BIND inverse's durable effects to one private state
+// root. guarded must verify the caller's held release and host locks; this
+// function acquires no lock. For a running BIND adoption every durable
+// publication first re-proves the restored owner BIND.
+func bindInverseOps(
+	root string, owner servicemutationledger.FileOwner, policy dnsengineartifact.JournalPolicy,
+	request string, adoption bool, guarded func(context.Context) error, native bindInverseNative,
+) dnsenginerecovery.BINDSwitchInverseOps {
 	terminalProof := func(ctx context.Context, j dnsengineartifact.SwitchJournalV1) error {
 		if !adoption {
 			return nil
 		}
-		state, err := adoptionRuntime.assess(ctx, policy, j)
+		state, err := native.assess(ctx, j)
 		if err != nil || state != dnsenginerecovery.BINDSwitchNativeRestored {
 			return errors.Join(errors.New("owner BIND changed before terminal recovery publication"), err)
 		}
 		return nil
 	}
-	return complete(ctx, dnsenginerecovery.BINDSwitchInverseOps{
+	return dnsenginerecovery.BINDSwitchInverseOps{
 		Read: func(ctx context.Context) (dnsenginerecovery.SwitchEvidence, bool, error) {
 			if err := guarded(ctx); err != nil {
 				return dnsenginerecovery.SwitchEvidence{}, false, err
@@ -188,7 +229,10 @@ func completeInstalledBINDInverse(ctx context.Context, request string, adoption 
 			}
 			if !present {
 				if adoption {
-					_, err := readJournalAbsentDNSLedger(ctx, root, owner, request)
+					ledger, err := readJournalAbsentDNSLedger(ctx, root, owner, request)
+					if err == nil && journalFreeAgentReleasedDNSJob(ledger, request, transport.DNSEngineBIND) {
+						return evidence, false, releasedDNSInverseReconciledOutcome(request)
+					}
 					return evidence, false, errors.Join(errors.New("BIND adoption journal is retired or absent; current native health is unknown, no recovery was attempted"), err)
 				}
 				return evidence, false, journalAbsentBINDInverseOutcome(ctx, root, owner, request)
@@ -198,24 +242,18 @@ func completeInstalledBINDInverse(ctx context.Context, request string, adoption 
 			}
 			return evidence, true, nil
 		},
-		ExcludeWorker: excludeInstalledDNSInverseWorker,
+		ExcludeWorker: excludeInstalledReleasedDNSInverseWorker,
 		AssessNative: func(ctx context.Context, j dnsengineartifact.SwitchJournalV1) (dnsenginerecovery.BINDSwitchNativeState, error) {
 			if err := guarded(ctx); err != nil {
 				return dnsenginerecovery.BINDSwitchNativeUnknown, err
 			}
-			if adoption {
-				return adoptionRuntime.assess(ctx, policy, j)
-			}
-			return assessInstalledBINDSwitchNative(ctx, policy, j)
+			return native.assess(ctx, j)
 		},
 		RestoreNative: func(ctx context.Context, j dnsengineartifact.SwitchJournalV1) error {
 			if err := guarded(ctx); err != nil {
 				return err
 			}
-			if adoption {
-				return adoptionRuntime.restore(ctx, policy, owner, j)
-			}
-			return restoreInstalledBINDSwitchNative(ctx, policy, owner, j)
+			return native.restore(ctx, j)
 		},
 		WritePhase: func(ctx context.Context, before, after dnsengineartifact.SwitchJournalV1) error {
 			if err := guarded(ctx); err != nil {
@@ -244,5 +282,5 @@ func completeInstalledBINDInverse(ctx context.Context, request string, adoption 
 			}
 			return dnsenginerecovery.RemoveExactRollbackJournal(policy, owner, j)
 		},
-	})
+	}
 }

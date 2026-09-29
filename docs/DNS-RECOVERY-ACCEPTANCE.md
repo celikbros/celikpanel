@@ -86,9 +86,9 @@ not code:
    pass there means.
 3. Row 7 — PowerDNS → BIND under the V2 producer: one early cut (intent or
    target-staged) **with the Agent restarted before the owner command**, so
-   the Agent-decides / owner-executes split is shown on the normal path. This
-   is blocked by the released-undecided admission gap below and by the
-   controller; both are open.
+   the Agent-decides / owner-executes split is shown on the normal path. The
+   admission rule and the controller flow exist in source since 2026-09-29;
+   the native cell has not run yet.
 4. Rows 3 and 5 — fresh paired secondary, BIND and PowerDNS — cannot be
    prepared: no peer script plays a panel-free native *primary* that serves
    the product catalog and member zones with AXFR/NOTIFY to the guest, and the
@@ -105,24 +105,52 @@ using the same admission predicates the commands themselves run, and print an
 explicit "no owner recovery command applies" text otherwise. The Panel shows
 the ledger message verbatim; it points to the status command.
 
-**Open code gap found by that work (rows 7, 11, 13) — owner command refused
-after an Agent restart.** When a restarted Agent cannot complete recovery it
+**Owner command after an Agent restart (rows 7, 11, 13) — fixed in source,
+native evidence pending.** When a restarted Agent cannot complete recovery it
 retains the journal and releases its ledger lease
 (`dns_native_recovery_unknown_after_restart`), which the evidence reader
-reports as `released-undecided`. `recover-dns-bind-switch`,
-`recover-dns-bind-adoption` and `recover-dns-pdns-adoption` admit only an
-active-lease status or a terminal rolled-back job
-(`activeDNSInverseStatus`), so with a running Agent a journal left at
-`rolling-back` has no admitted owner command. The retained native passes for
-rows 7 and 11 were taken with the Agent inactive and do not cover this. The
-V2 producer makes this the normal path for row 7: the Agent writes the
-rollback decision and never executes the V2 inverse itself. Closing it needs
-an admission rule for the Agent's own deliberate release, component tests, a
-controller step that restarts the Agent before the owner command, and one
-native cell. The fixture already prepares
+reports as `released-undecided`. Until 2026-09-29 `recover-dns-bind-switch`,
+`recover-dns-bind-adoption` and `recover-dns-pdns-adoption` admitted only an
+active-lease status or a terminal rolled-back job, so with a running Agent a
+journal left at `rolling-back` had no admitted owner command; the retained
+native passes for rows 7 and 11 were taken with the Agent inactive. The V2
+producer makes this the normal path for row 7. The three commands now also
+admit exactly the Agent's own deliberate release: that reason code only, the
+exact request's journal at `rolling-back` or `rolled-back`, the released job
+passing the Agent's own released-job predicate (no worker, no lease), and
+every existing lock, worker-exclusion, native-evidence and owner-change check
+unchanged. No schema or version changes. The command executes the inverse,
+writes the `rolled-back` checkpoint and retires the journal; it does not
+rewrite the finished ledger job. What the owner is shown afterwards is
+computed at read time: a released job whose journal is no longer retained is
+reported as reconciled, not as still blocking. `recover-dns-pdns-fresh-prestart`
+(row 6) and the V4 command still refuse a released job; row 6 is refused by
+the product anyway.
+
+The controller has an explicit `--owner-inverse-after-restart` flow for
 `bind__{intent,target-staged}__after-write__standalone__peer-reachable` with a
-managed PowerDNS source; `run_cell.py` cannot run them yet (it expects a V1
-journal for every cell but the handoff cell and has no owner-command step).
+managed PowerDNS source: kill, Agent restarted and left running, rollback
+decision and release observed, read-only status names the command without
+mutating, owner command run, journal retired with the ledger unchanged,
+PowerDNS still authoritative over UDP/TCP, BIND inactive, owner files
+unchanged, idempotent re-run, 31 health samples.
+
+**Named guidance gap (rows 7, 11, 13).** Re-running an owner inverse command
+after it completed changes nothing and now says "already reconciled", but it
+still exits with the unavailable status (3), as the existing terminal re-run
+does. An owner or script can read that as failure. Changing it alters an
+existing command contract and is left for a separate decision. The read-time
+texts cannot say whether the owner command or a later Agent start retired the
+journal, because no durable record holds that; a versioned owner-recovery
+receipt would be the way to add it.
+
+**Named harness gap (row 7, item 2).** The standalone managed-PowerDNS
+critical cells (`bind` source-stopped, target-started, rolled-back) still
+expect a V1 journal in the controller, while the producer writes V2 for that
+source. They would be rejected at the boundary marker if run today and need
+their own pass definition (the Agent cannot execute the V2 inverse, so
+`rpc-retry` is not their recovery). The six 2026-09-25 reports remain
+historical V1 evidence.
 
 Rows 2, 6 (opening), 8, 11 (further cuts), 12, 14 and 17 remain open and are
 carried by item 2 or later. Repeating a passing cell without a producer change

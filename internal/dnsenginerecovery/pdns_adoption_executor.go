@@ -7,6 +7,8 @@ import (
 	"reflect"
 
 	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
+	"github.com/alicelik/celikpanel/internal/servicemutationledger"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // PDNSAdoptionInverseOps are effects supplied by a privileged owner recovery
@@ -97,10 +99,12 @@ func CompletePDNSAdoptionInverse(ctx context.Context, ops PDNSAdoptionInverseOps
 	if err != nil || !samePDNSAdoptionJournalIgnoringPhase(first.Journal, checkpoint.Journal) ||
 		checkpoint.Journal.Phase != dnsengineartifact.SwitchPhaseRolledBack ||
 		checkpoint.Observation.SourceReceipt != SourceReceiptMutualAbsence ||
-		checkpoint.Observation.Status != restored.Observation.Status ||
+		!sameInverseCheckpointStatus(restored.Observation, checkpoint.Observation) ||
 		!reflect.DeepEqual(checkpoint.AcceptedJob, restored.AcceptedJob) {
 		return errors.Join(errors.New("PowerDNS adoption rollback checkpoint was not retained"), err)
 	}
+	// An Agent-released job is already terminal: no verdict is published
+	// over it, and the re-read below must classify it terminal-rolled-back.
 	if checkpoint.Observation.Status != EvidenceTerminalRolledBack {
 		if !activeDNSInverseStatus(checkpoint.Observation.Status) {
 			return errors.New("PowerDNS adoption rollback lost its exact active job before terminal verdict")
@@ -146,6 +150,69 @@ func activeDNSInverseStatus(status EvidenceStatus) bool {
 	return false
 }
 
+// AgentReleasedDNSInverseEvidence admits exactly one released-undecided case
+// to recover-dns-bind-switch, recover-dns-bind-adoption and
+// recover-dns-pdns-adoption: the restarted Agent's own deliberate release
+// (ReleasedNativeUnknownCode) of this exact request, retained at a durable
+// rollback decision. The Agent writes that release only after proving the
+// recorded worker gone under the host mutation lock, and never executes a V2
+// inverse itself, so without this admission such a journal has no owner path.
+// Other release reasons (unreadable host, closed boot window), another
+// request, or a pre-decision phase stay refused. The released job is already
+// this operation's terminal ledger verdict; the command publishes no ledger
+// change and InspectEvidence classifies the job beside a rolled-back journal
+// as terminal-rolled-back. Success grants no lock, worker or native authority:
+// the caller's journal-shape, evidence, owner-change and lock checks all
+// still apply.
+func AgentReleasedDNSInverseEvidence(e SwitchEvidence) bool {
+	j, o := e.Journal, e.Observation
+	if o.Status != EvidenceReleasedUndecided ||
+		o.ReleaseReason != dnsengineartifact.ReleasedNativeUnknownCode ||
+		o.RequestID != j.MutationRequestID || o.Phase != j.Phase ||
+		(j.Phase != dnsengineartifact.SwitchPhaseRollingBack &&
+			j.Phase != dnsengineartifact.SwitchPhaseRolledBack) {
+		return false
+	}
+	// The secured read already bound this job to an idle ledger. Re-applying
+	// the Agent's own release predicate to the copied job, bound to this
+	// journal's identity, keeps the worker, lease and terminal fields exact
+	// for callers that hold only the evidence.
+	job := e.AcceptedJob
+	return job.RequestID == j.MutationRequestID && job.OwnerID == j.MutationOwnerID &&
+		job.Target == string(j.TargetEngine) && job.PackageName == j.ManifestQualifier &&
+		AgentDeliberateReleaseJob(job)
+}
+
+// AgentDeliberateReleaseJob reports whether a ledger job, read on its own, is
+// exactly the Agent's deliberate lease release (ReleasedNativeUnknownCode) for
+// its own DNS switch identity. It reads nothing else: journal presence, native
+// DNS state and recovery authority remain for the caller to observe.
+func AgentDeliberateReleaseJob(job transport.ServiceMutationJob) bool {
+	id := dnsengineartifact.SwitchIdentity{
+		RequestID: job.RequestID, OwnerID: job.OwnerID,
+		Target: transport.DNSEngine(job.Target), Qualifier: job.PackageName,
+	}
+	return job.ErrorCode == dnsengineartifact.ReleasedNativeUnknownCode &&
+		id.ReleasedUndecidedJob(servicemutationledger.Ledger{
+			Version: servicemutationledger.Version,
+			Jobs:    map[string]*transport.ServiceMutationJob{id.RequestID: &job},
+		})
+}
+
+// sameInverseCheckpointStatus allows the one status change a rollback
+// checkpoint causes without any ledger write: the Agent's deliberate release
+// beside a rolling-back journal becomes terminal-rolled-back once the journal
+// reaches rolled-back. Every other status must remain unchanged.
+func sameInverseCheckpointStatus(before, after EvidenceObservation) bool {
+	if before.Status == after.Status {
+		return true
+	}
+	return before.Status == EvidenceReleasedUndecided &&
+		after.Status == EvidenceTerminalRolledBack &&
+		before.ReleaseReason == dnsengineartifact.ReleasedNativeUnknownCode &&
+		after.ReleaseReason == before.ReleaseReason
+}
+
 // ValidatePDNSAdoptionInverseEvidence is the evidence admission used by
 // CompletePDNSAdoptionInverse. Read-only observers use it to name the owner
 // command; its success grants no lock, worker or native mutation authority.
@@ -158,6 +225,7 @@ func validatePDNSAdoptionInverseEvidence(evidence SwitchEvidence) error {
 	if err := PDNSAdoptionInverseJournal(journal); err != nil {
 		return err
 	}
+	released := AgentReleasedDNSInverseEvidence(evidence)
 	if observed.InverseKind != NativeInversePDNSAdoption ||
 		observed.RequestID != journal.MutationRequestID ||
 		observed.Phase != journal.Phase ||
@@ -168,10 +236,13 @@ func validatePDNSAdoptionInverseEvidence(evidence SwitchEvidence) error {
 		(observed.TargetReceipt != TargetReceiptExact && observed.TargetReceipt != TargetReceiptAbsent) ||
 		(observed.TargetReceipt == TargetReceiptExact && observed.SourceReceipt != SourceReceiptDifferent) ||
 		(observed.TargetReceipt == TargetReceiptAbsent && observed.SourceReceipt != SourceReceiptMutualAbsence) ||
-		(!activeDNSInverseStatus(observed.Status) && observed.Status != EvidenceTerminalRolledBack) ||
+		(!activeDNSInverseStatus(observed.Status) && observed.Status != EvidenceTerminalRolledBack && !released) ||
 		(observed.Status == EvidenceTerminalRolledBack &&
 			(journal.Phase != dnsengineartifact.SwitchPhaseRolledBack ||
 				observed.TargetReceipt != TargetReceiptAbsent ||
+				observed.SourceReceipt != SourceReceiptMutualAbsence)) ||
+		(released && journal.Phase == dnsengineartifact.SwitchPhaseRolledBack &&
+			(observed.TargetReceipt != TargetReceiptAbsent ||
 				observed.SourceReceipt != SourceReceiptMutualAbsence)) ||
 		observed.EvidenceSHA256 == "" {
 		return errors.New("PowerDNS adoption inverse lacks its exact durable rollback evidence")

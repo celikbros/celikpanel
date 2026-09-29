@@ -355,14 +355,16 @@ func runDNSSwitchRollbackWithMaskParentProof(
 // The refusals below name the owner-run recovery command, if any, using the
 // journal-shape part of that command's own admission. The Agent then releases
 // its lease, which can change which command the ledger status admits, so the
-// BIND switch and PowerDNS adoption texts defer to dns-switch-status for the
-// final answer. None of this text starts or authorizes a recovery.
+// BIND switch, running BIND adoption and PowerDNS adoption texts defer to
+// dns-switch-status for the final answer. None of this text starts or
+// authorizes a recovery.
 //
 // Aşağıdaki retler, varsa sunucu sahibinin çalıştıracağı kurtarma komutunu o
 // komutun kendi kabul koşulunun günlük biçimi kısmıyla adlandırır. Agent
 // ardından kiralamayı bırakır; bu, defter durumunun hangi komutu kabul
-// edeceğini değiştirebilir. Bu yüzden BIND geçişi ve PowerDNS devralma
-// metinleri son sözü dns-switch-status'a bırakır. Metin kurtarma başlatmaz.
+// edeceğini değiştirebilir. Bu yüzden BIND geçişi, çalışan BIND devralma ve
+// PowerDNS devralma metinleri son sözü dns-switch-status'a bırakır. Metin
+// kurtarma başlatmaz.
 
 func freshPrimaryPrestartRefusalV3(journal dnsEngineSwitchJournal, reason string) error {
 	if dnsenginerecovery.FreshPrimaryPrestartJournalV3(journal) {
@@ -404,7 +406,7 @@ func rollbackDNSSwitchJournal(
 	if journal.Schema == dnsengineartifact.SwitchJournalSchemaV2 {
 		if journal.InversePlan != nil && journal.InversePlan.SourceBIND != nil {
 			if journal.Phase == dnsengineartifact.SwitchPhaseRollingBack || journal.Phase == dnsengineartifact.SwitchPhaseRolledBack {
-				return fmt.Errorf("running BIND adoption needs independent no-stop recovery; the server owner must run /usr/libexec/celikpanel/recovery recover-dns-bind-adoption --request-id %s; preserve the journal, ledger and native DNS until that exact request is reconciled", journal.MutationRequestID)
+				return fmt.Errorf("running BIND adoption needs independent no-stop recovery; the owner recovery command for this rollback is /usr/libexec/celikpanel/recovery recover-dns-bind-adoption --request-id %s, which the server owner runs when recovery dns-switch-status --quiesced --request-id %s names it; preserve the journal, ledger and native DNS until that exact request is reconciled", journal.MutationRequestID, journal.MutationRequestID)
 			}
 			return fmt.Errorf("running BIND adoption has no durable rollback decision at phase %s; preserve the journal, ledger and native DNS, then inspect the exact DNS switch status for request %s before choosing recovery", journal.Phase, journal.MutationRequestID)
 		}

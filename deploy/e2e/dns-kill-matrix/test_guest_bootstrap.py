@@ -1827,8 +1827,10 @@ class FreshInstallCellTest(unittest.TestCase):
 class EarlyManagedPDNSBindCellTest(unittest.TestCase):
     """Managed PowerDNS source at standalone Debian intent/target-staged BIND.
 
-    Fixture admission only: the controller still refuses these cells (see
-    test_controller_gap_is_explicit), so nothing here is native evidence.
+    The two after-write/peer-reachable cells run only through the explicit
+    owner-inverse-after-restart controller mode; the two before-write cells and
+    every run without that mode keep the earlier refusals. Nothing here is
+    native evidence.
     """
 
     MANIFEST_PATH = Path(bootstrap.__file__).with_name("manifest.json")
@@ -1992,18 +1994,49 @@ class EarlyManagedPDNSBindCellTest(unittest.TestCase):
                         run_cell.expected_journal_phase(selected), expected_phase[cell_id]
                     )
 
-    def test_controller_gap_is_explicit(self) -> None:
-        """The controller cannot run these cells yet; see README.
+    OWNER_INVERSE = frozenset({
+        "bind__intent__after-write__standalone__peer-reachable",
+        "bind__target-staged__after-write__standalone__peer-reachable",
+    })
 
-        It expects the V1 journal although this source makes the producer write
-        V2, admits the managed source proofs only at critical phases, and offers
-        no post-kill handoff or owner-CLI step for these phases.
-        """
+    @staticmethod
+    def preinstall_document(cell_id: str) -> tuple[dict, bytes]:
+        value = {
+            "schema": run_cell.SOURCE_PREINSTALL_SCHEMA,
+            "cell_id": cell_id,
+            "scope": "managed-pdns-source-preparation-for-bind-only",
+            "package_install_origin": "harness-source-preinstall",
+            "source_packages": [
+                {"name": "pdns-backend-sqlite3", "status": "install ok installed",
+                 "version": "4.9.2-1+deb13u1"},
+                {"name": "pdns-server", "status": "install ok installed",
+                 "version": "4.9.2-1+deb13u1"},
+            ],
+            "measured_target_packages": [{"name": "bind9", "status": "absent"}],
+            "install_guard": {
+                "unit": "pdns.service",
+                "persistent_mask_target": "/dev/null",
+                "package_hooks_could_not_start": True,
+            },
+            "mask_removed_before_external_source_start": True,
+            "source_unit_before_external_configuration": {
+                "name": "pdns.service", "load_state": "loaded",
+                "active_state": "inactive", "unit_file_state": "enabled",
+            },
+            "dns_state_absent": True,
+            "dns_journal_absent": True,
+            "dns_ownership_receipts_absent": True,
+            "global_udp_tcp_53_bindable": True,
+            "production_pdns_adoption_pending": True,
+        }
+        return value, (json.dumps(value, indent=2, sort_keys=True) + "\n").encode("utf-8")
 
-        value = {key: None for key in run_cell.SOURCE_PREINSTALL_KEYS}
-        raw = (json.dumps(value, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    def test_controller_refuses_without_owner_inverse_mode(self) -> None:
+        """Without the explicit mode the earlier refusals stay byte-identical."""
+
         for cell_id in sorted(self.ADMITTED):
             selected = run_cell.CellSpec.from_manifest(self.manifest, cell_id)
+            value, raw = self.preinstall_document(cell_id)
             with self.subTest(cell_id=cell_id):
                 self.assertEqual(
                     run_cell.expected_journal_schema(selected), run_cell.JOURNAL_SCHEMA
@@ -2011,6 +2044,95 @@ class EarlyManagedPDNSBindCellTest(unittest.TestCase):
                 self.assertFalse(run_cell.is_bind_handoff_cell(selected))
                 with self.assertRaisesRegex(run_cell.ControllerError, "escaped its exact"):
                     run_cell.validate_source_preinstall_document(value, raw, selected)
+
+    def test_owner_inverse_mode_admits_exactly_two_cells_with_v2_journal(self) -> None:
+        for cell_id in sorted(self.ADMITTED):
+            selected = run_cell.CellSpec.from_manifest(self.manifest, cell_id)
+            value, raw = self.preinstall_document(cell_id)
+            owner = cell_id in self.OWNER_INVERSE
+            with self.subTest(cell_id=cell_id):
+                self.assertEqual(run_cell.is_owner_inverse_cell(selected), owner)
+                self.assertEqual(
+                    run_cell.expected_journal_schema(
+                        selected, owner_inverse_after_restart=True
+                    ),
+                    run_cell.BIND_HANDOFF_JOURNAL_SCHEMA if owner else run_cell.JOURNAL_SCHEMA,
+                )
+                if owner:
+                    self.assertEqual(
+                        run_cell.validate_source_preinstall_document(
+                            value, raw, selected, owner_inverse_after_restart=True
+                        ),
+                        value,
+                    )
+                else:
+                    with self.assertRaisesRegex(run_cell.ControllerError, "escaped its exact"):
+                        run_cell.validate_source_preinstall_document(
+                            value, raw, selected, owner_inverse_after_restart=True
+                        )
+        self.assertEqual(run_cell.OWNER_INVERSE_CELLS, self.OWNER_INVERSE)
+        self.assertEqual(bootstrap.OWNER_INVERSE_CELLS, self.OWNER_INVERSE)
+        # Critical managed-pdns cells keep their unchanged V1 expectation.
+        critical = run_cell.CellSpec.from_manifest(
+            self.manifest, "bind__source-stopped__after-write__standalone__peer-reachable"
+        )
+        self.assertEqual(
+            run_cell.expected_journal_schema(critical, owner_inverse_after_restart=True),
+            run_cell.JOURNAL_SCHEMA,
+        )
+
+    def owner_args(self, raw: dict, **overrides) -> mock.Mock:
+        values = dict(
+            cell_id=raw["id"], node="debian13", source_fixture="managed-pdns",
+            identity_file=Path("/tmp/test-key"), execute=False,
+            stop_after_kill_for_independent_recovery=False,
+            bind_rollback_after_target_started=False,
+            owner_inverse_after_restart=True,
+        )
+        values.update(overrides)
+        return mock.Mock(**values)
+
+    def dry_run_prepared(self, raw: dict, args: mock.Mock) -> list:
+        with (
+            mock.patch.object(bootstrap, "load_plan", return_value=({}, raw, {})),
+            mock.patch.object(bootstrap, "identity_file", return_value=Path("/tmp/test-key")),
+            mock.patch.object(bootstrap, "ssh_base", return_value=["ssh", "guest"]),
+            mock.patch.object(bootstrap.subprocess, "run") as run,
+            mock.patch("sys.stdout", new_callable=io.StringIO) as output,
+        ):
+            self.assertEqual(bootstrap.run_prepared(args), 0)
+            run.assert_not_called()
+        return json.loads(output.getvalue())
+
+    def test_run_prepared_appends_owner_inverse_flag_only_for_exact_cells(self) -> None:
+        for cell_id in sorted(self.OWNER_INVERSE):
+            raw = self.raw(cell_id)
+            with self.subTest(cell_id=cell_id):
+                command = self.dry_run_prepared(raw, self.owner_args(raw))
+                self.assertTrue(command[-1].endswith(
+                    " " + cell_id + " " + bootstrap.OWNER_INVERSE_FLAG
+                ))
+                self.assertEqual(
+                    command[-1].rsplit("'", 1)[1],
+                    " " + cell_id + " " + bootstrap.OWNER_INVERSE_FLAG,
+                )
+        raw = self.raw("bind__target-staged__after-write__standalone__peer-reachable")
+        refusals = (
+            (raw, {"source_fixture": "uninitialized"}),
+            (raw, {"node": "arch"}),
+            (raw, {"stop_after_kill_for_independent_recovery": True}),
+            (raw, {"bind_rollback_after_target_started": True}),
+            (self.raw("bind__intent__before-write__standalone__peer-unreachable"), {}),
+            (self.raw("bind__source-stopped__after-write__standalone__peer-reachable"), {}),
+            (self.raw(bootstrap.INDEPENDENT_BIND_HANDOFF_CELL), {}),
+            (dict(raw, fault_selector={"phase": "target-staged", "point": "before_write"}), {}),
+            (dict(raw, role="paired-primary"), {}),
+        )
+        for selected, change in refusals:
+            with self.subTest(cell=selected["id"], change=change), (
+                mock.patch.object(bootstrap, "load_plan", return_value=({}, selected, {}))
+            ), self.assertRaises(bootstrap.BootstrapError):
+                bootstrap.run_prepared(self.owner_args(selected, **change))
 
     def test_run_prepared_has_no_handoff_for_early_cells(self) -> None:
         raw = self.raw("bind__target-staged__after-write__standalone__peer-reachable")
@@ -2037,6 +2159,152 @@ class EarlyManagedPDNSBindCellTest(unittest.TestCase):
             self.assertRaises(bootstrap.BootstrapError),
         ):
             bootstrap.run_prepared(args)
+
+    @unittest.skipUnless(
+        sys.platform == "linux" and hasattr(os, "geteuid") and os.geteuid() == 0,
+        "prepared argv owner proof requires a root Linux fixture",
+    )
+    def test_guest_program_appends_owner_inverse_flag_only_for_exact_cells(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            prepared = root / "controller-argv.json"
+            captured = root / "captured.json"
+            executable = root / "run-cell.py"
+            executable.write_text(
+                "#!/usr/bin/env python3\n"
+                "import json, sys\n"
+                f"open({str(captured)!r}, 'w').write(json.dumps(sys.argv))\n",
+                encoding="utf-8",
+            )
+            executable.chmod(0o700)
+            code = bootstrap.RUN_PREPARED_CODE.replace(
+                "/var/lib/celikpanel-dns-kill-matrix/controller-argv.json", str(prepared)
+            ).replace("/opt/celikpanel/libexec/dns-kill-run-cell.py", str(executable))
+            for cell_id in sorted(self.OWNER_INVERSE):
+                base = [str(executable), "--cell-id", cell_id, "--trigger-mode", "socket"]
+                prepared.write_text(json.dumps(base), encoding="utf-8")
+                prepared.chmod(0o600)
+                command = [sys.executable, "-c", code, cell_id, bootstrap.OWNER_INVERSE_FLAG]
+                with self.subTest(cell_id=cell_id):
+                    captured.unlink(missing_ok=True)
+                    self.assertEqual(subprocess.run(command, check=False).returncode, 0)
+                    self.assertEqual(
+                        json.loads(captured.read_text(encoding="utf-8")),
+                        base + [bootstrap.OWNER_INVERSE_FLAG],
+                    )
+                    for wrong in (
+                        command + ["--extra"],
+                        command[:3] + [bootstrap.INDEPENDENT_BIND_HANDOFF_CELL,
+                                       bootstrap.OWNER_INVERSE_FLAG],
+                    ):
+                        captured.unlink(missing_ok=True)
+                        self.assertNotEqual(
+                            subprocess.run(wrong, check=False, capture_output=True).returncode,
+                            0,
+                        )
+                        self.assertFalse(captured.exists())
+            cell_id = "bind__intent__after-write__standalone__peer-reachable"
+            prepared.write_text(json.dumps(
+                [str(executable), "--cell-id", cell_id, "--trigger-mode", "startup"]
+            ), encoding="utf-8")
+            self.assertNotEqual(subprocess.run(
+                [sys.executable, "-c", code, cell_id, bootstrap.OWNER_INVERSE_FLAG],
+                check=False, capture_output=True,
+            ).returncode, 0)
+
+    def make_runtime(self, root: Path) -> Path:
+        runtime = root / "recovery-runtime"
+        (runtime / "bin").mkdir(parents=True)
+        (runtime / "runtime.manifest").write_text("format=test\n", encoding="utf-8")
+        binary = runtime / "bin" / "recovery"
+        binary.write_text("#!/bin/sh\n", encoding="utf-8")
+        binary.chmod(0o755)
+        return runtime
+
+    def test_enroll_recovery_runtime_dry_run_uses_product_enrollment(self) -> None:
+        raw = self.raw("bind__intent__after-write__standalone__peer-reachable")
+        stage = bootstrap.stage_name(raw["id"])
+        with tempfile.TemporaryDirectory() as temporary:
+            runtime = self.make_runtime(Path(temporary))
+            args = self.owner_args(raw, recovery_runtime=runtime)
+            with (
+                mock.patch.object(bootstrap, "load_plan", return_value=({}, raw, {})),
+                mock.patch.object(bootstrap, "identity_file", return_value=Path("/tmp/test-key")),
+                mock.patch.object(bootstrap, "ssh_base", return_value=["ssh", "guest"]),
+                mock.patch.object(bootstrap, "scp_base", return_value=["scp"]),
+                mock.patch.object(bootstrap, "remote_destination",
+                                  side_effect=lambda _node, path: "guest:" + path),
+                mock.patch.object(bootstrap.subprocess, "run") as run,
+                mock.patch("sys.stdout", new_callable=io.StringIO) as output,
+            ):
+                bootstrap.enroll_recovery_runtime(args)
+                run.assert_not_called()
+            lines = [json.loads(line) for line in output.getvalue().splitlines()]
+        commands, summary = lines[:-1], lines[-1]
+        self.assertEqual(len(commands), 3)
+        self.assertEqual(
+            commands[0][-1], f"test -d {stage} && test ! -e {stage}/recovery-kit.tar.gz"
+        )
+        self.assertEqual(commands[1][0], "scp")
+        self.assertTrue(commands[1][1].endswith("/recovery-kit.tar.gz"))
+        self.assertEqual(commands[1][2], "guest:" + stage + "/")
+        remote = commands[2][-1]
+        self.assertTrue(remote.startswith("sudo /bin/bash -c "))
+        self.assertTrue(remote.endswith(
+            f" enroll-recovery-runtime {stage} {summary['recovery_kit_sha256']}"
+        ))
+        script = bootstrap.RECOVERY_RUNTIME_ENROLL_SCRIPT
+        for fragment in (
+            "flock -x -w 60 9",
+            'enroll-runtime --source "$root/recovery-runtime" --transaction-fd 9',
+            "/usr/libexec/celikpanel/recovery check-bind-source-inverse-v1",
+            'test "$marker" = celikpanel-bind-source-inverse/v1',
+            'test ! -e "$root"',
+        ):
+            self.assertIn(fragment, script)
+        self.assertLess(script.index("flock -x"), script.index("enroll-runtime"))
+        self.assertEqual(summary["launcher"], "/usr/libexec/celikpanel/recovery")
+        self.assertEqual(summary["required_capability"], bootstrap.BIND_SOURCE_INVERSE_MARKER)
+
+    def test_enroll_recovery_runtime_refuses_other_cells_and_bad_kits(self) -> None:
+        raw = self.raw("bind__target-staged__after-write__standalone__peer-reachable")
+        with tempfile.TemporaryDirectory() as temporary:
+            runtime = self.make_runtime(Path(temporary))
+            for selected, change in (
+                (self.raw(bootstrap.INDEPENDENT_BIND_HANDOFF_CELL), {}),
+                (raw, {"source_fixture": "uninitialized"}),
+            ):
+                with self.subTest(cell=selected["id"], change=change), (
+                    mock.patch.object(bootstrap, "load_plan", return_value=({}, selected, {}))
+                ), self.assertRaises(bootstrap.BootstrapError):
+                    bootstrap.enroll_recovery_runtime(
+                        self.owner_args(selected, recovery_runtime=runtime, **change)
+                    )
+            renamed = Path(temporary) / "other"
+            renamed.mkdir()
+            (runtime / "runtime.manifest").unlink()
+            for bad in (renamed, runtime):
+                with self.subTest(bad=bad.name), (
+                    mock.patch.object(bootstrap, "load_plan", return_value=({}, raw, {}))
+                ), self.assertRaises(bootstrap.BootstrapError):
+                    bootstrap.enroll_recovery_runtime(
+                        self.owner_args(raw, recovery_runtime=bad)
+                    )
+
+    def test_parser_exposes_owner_inverse_and_enrollment(self) -> None:
+        common = [
+            "--work-root", "/tmp/root", "--cell-id",
+            "bind__intent__after-write__standalone__peer-reachable",
+            "--node", "debian13", "--identity-file", "/tmp/key",
+            "--source-fixture", "managed-pdns",
+        ]
+        args = bootstrap.parse_args(["run-prepared", *common, bootstrap.OWNER_INVERSE_FLAG])
+        self.assertIs(args.owner_inverse_after_restart, True)
+        args = bootstrap.parse_args(
+            ["enroll-recovery-runtime", *common, "--recovery-runtime", "/tmp/recovery-runtime"]
+        )
+        self.assertEqual(args.recovery_runtime, Path("/tmp/recovery-runtime"))
+        self.assertFalse(args.execute)
 
 
 if __name__ == "__main__":

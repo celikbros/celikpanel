@@ -2190,7 +2190,11 @@ func (a *Agent) ServiceMutationStatus(
 	// hiç kalkamayan yönetici iş bildirmez ve ledger_unavailable tutulmasını
 	// döner.
 	if manager != nil {
-		response.Job = manager.status(strings.TrimSpace(request.RequestID))
+		// A released DNS switch whose journal is gone is reported as
+		// reconciled; the stored job is unchanged.
+		response.Job = manager.presentReleasedDNSSwitchJob(
+			manager.status(strings.TrimSpace(request.RequestID)),
+		)
 	}
 	// Report the hold with the job. status() deliberately does not fail on a
 	// held manager — a caller still deserves to see the job — but it must not

@@ -467,18 +467,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 	root := hostingpath.ServiceMutationStateRoot()
 	owner := servicemutationledger.FileOwner{UID: 0, GID: groupID}
 	if requestID != "" && !quiesced {
-		ledger, err := readJournalAbsentDNSLedger(observationCtx, root, owner, requestID)
-		if err != nil {
-			fmt.Fprintln(diagnostic, "The exact DNS request has no stable journal-free ledger record. Preserve its evidence and use --quiesced after the release and host locks are available; no DNS operation was started. "+err.Error())
-			return exitUnavailable
-		}
-		verdict, err := recordedDNSJobVerdict(ledger, requestID)
-		if err != nil {
-			fmt.Fprintln(diagnostic, "The exact DNS request is not a terminal historical record. Inspect the active operation and use --quiesced when its locks are available; no DNS operation was started. "+err.Error())
-			return exitUnavailable
-		}
-		fmt.Fprintf(out, "Recorded DNS switch request %s: %s This is a point-in-time ledger observation, not proof of current DNS service health. The server owner should inspect the native DNS service before starting another switch; no operation was started.\n", requestID, verdict)
-		return exitOK
+		return renderRecordedDNSSwitchStatus(observationCtx, root, owner, requestID, out, diagnostic)
 	}
 
 	if quiesced {
@@ -505,17 +494,7 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 		return exitUnavailable
 	}
 	if !present {
-		if requestID != "" {
-			status, readErr := readJournalAbsentDNSJob(observationCtx, root, owner, requestID)
-			if readErr != nil {
-				fmt.Fprintln(diagnostic, "The exact DNS request could not be verified without its journal. Preserve the private evidence and inspect the original operation and native DNS service; no DNS operation was started. "+readErr.Error())
-				return exitUnavailable
-			}
-			fmt.Fprintf(out, "No DNS switch journal was observed for request %s. Its exact ledger job records status %s. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.\n", requestID, status)
-			return exitOK
-		}
-		fmt.Fprintln(out, "No DNS switch journal was observed. This does not prove historical completion or current DNS health. The server owner should inspect the native DNS service and the panel's operation status before starting another switch.")
-		return exitOK
+		return renderJournalFreeDNSSwitchStatus(observationCtx, root, owner, requestID, out, diagnostic)
 	}
 	if requestID != "" && evidence.Journal.MutationRequestID != requestID {
 		fmt.Fprintln(diagnostic, "A different DNS switch journal is present. Preserve its exact operation and inspect it before continuing; no DNS operation was started.")
@@ -578,17 +557,12 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 	case dnsenginerecovery.EvidenceExpiredCancellation:
 		fmt.Fprintln(out, "The accepted lease expired and cancellation is recorded. The server owner should inspect the native DNS service and preserve both receipts. The same operation may resume only through a compatible recovery executor after host and worker checks.")
 	case dnsenginerecovery.EvidenceReleasedUndecided:
-		switch observation.ReleaseReason {
-		case dnsengineartifact.ReleasedUnsupportedHostCode:
-			fmt.Fprintln(out, "The Agent released this interrupted DNS switch lease because the host could not be inspected after restart. The server owner should inspect the host profile and native DNS authority, then retry observation of this same operation after the host is readable. The frozen journal remains; no inverse or new switch is authorized.")
-		case dnsengineartifact.ReleasedHostWindowCode:
-			fmt.Fprintln(out, "The Agent released this interrupted DNS switch lease because host startup did not finish within its recovery window. The server owner should confirm startup and native DNS authority, then retry observation of this same operation. The frozen journal remains; no inverse or new switch is authorized.")
-		case dnsengineartifact.ReleasedNativeUnknownCode:
-			fmt.Fprintln(out, "The Agent could not verify the interrupted DNS switch's native result after restart. The server owner should inspect the DNS service and the original operation, resolve the reported native error, then restart the Agent to retry that same journal. The journal remains and blocks a new DNS switch; this read-only status does not authorize an inverse.")
-		default:
-			fmt.Fprintln(diagnostic, "The released DNS switch has an unknown reason. Preserve its journal and ledger for owner review; no inverse or new switch is authorized.")
+		text, known := releasedDNSSwitchGuidance(evidence)
+		if !known {
+			fmt.Fprintln(diagnostic, text)
 			return exitUnavailable
 		}
+		fmt.Fprintln(out, text)
 	case dnsenginerecovery.EvidenceTerminalRolledBack:
 		fmt.Fprintln(out, "The ledger records a failed DNS switch and its rolled-back journal is retained. The server owner should inspect the same operation and native DNS service. On a compatible Agent restart, the original inverse is re-proved under the host lock before this exact journal is retired; do not start another switch while it remains.")
 	case dnsenginerecovery.EvidenceFinalized:
@@ -808,6 +782,56 @@ func runDNSSwitchStatus(args []string, uid int, out, diagnostic io.Writer) int {
 	return exitOK
 }
 
+// renderRecordedDNSSwitchStatus is the unlocked `--request-id` status: a
+// journal-free ledger record only. The Agent's deliberate release beside a
+// retired journal gets its read-time reconciled text; nothing is written.
+func renderRecordedDNSSwitchStatus(ctx context.Context, root string, owner servicemutationledger.FileOwner, requestID string, out, diagnostic io.Writer) int {
+	ledger, err := readJournalAbsentDNSLedger(ctx, root, owner, requestID)
+	if err != nil {
+		fmt.Fprintln(diagnostic, "The exact DNS request has no stable journal-free ledger record. Preserve its evidence and use --quiesced after the release and host locks are available; no DNS operation was started. "+err.Error())
+		return exitUnavailable
+	}
+	if journalFreeAgentReleasedDNSJob(ledger, requestID, "") {
+		fmt.Fprintln(out, releasedDNSSwitchReconciledStatus(requestID))
+		return exitOK
+	}
+	verdict, err := recordedDNSJobVerdict(ledger, requestID)
+	if err != nil {
+		fmt.Fprintln(diagnostic, "The exact DNS request is not a terminal historical record. Inspect the active operation and use --quiesced when its locks are available; no DNS operation was started. "+err.Error())
+		return exitUnavailable
+	}
+	fmt.Fprintf(out, "Recorded DNS switch request %s: %s This is a point-in-time ledger observation, not proof of current DNS service health. The server owner should inspect the native DNS service before starting another switch; no operation was started.\n", requestID, verdict)
+	return exitOK
+}
+
+// renderJournalFreeDNSSwitchStatus answers when no DNS switch journal is
+// present. The Agent's deliberate release of a request is reported as
+// reconciled with its journal retired; other jobs keep the generic text,
+// which does not infer rollback or completion from absence.
+func renderJournalFreeDNSSwitchStatus(ctx context.Context, root string, owner servicemutationledger.FileOwner, requestID string, out, diagnostic io.Writer) int {
+	if requestID != "" {
+		ledger, err := readJournalAbsentDNSLedger(ctx, root, owner, requestID)
+		if err != nil {
+			fmt.Fprintln(diagnostic, "The exact DNS request could not be verified without its journal. Preserve the private evidence and inspect the original operation and native DNS service; no DNS operation was started. "+err.Error())
+			return exitUnavailable
+		}
+		if journalFreeAgentReleasedDNSJob(ledger, requestID, "") {
+			fmt.Fprintln(out, releasedDNSSwitchReconciledStatus(requestID))
+			return exitOK
+		}
+		fmt.Fprintf(out, "No DNS switch journal was observed for request %s. Its exact ledger job records status %s. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.\n", requestID, ledger.Jobs[requestID].Status)
+		return exitOK
+	}
+	fmt.Fprintln(out, "No DNS switch journal was observed. This does not prove historical completion or current DNS health. The server owner should inspect the native DNS service and the panel's operation status before starting another switch.")
+	// An unreadable ledger adds nothing here; the text above stays true.
+	if ledger, err := readStableJournalFreeDNSLedger(ctx, root, owner); err == nil {
+		for _, released := range agentReleasedDNSRequests(ledger) {
+			fmt.Fprintln(out, releasedDNSSwitchReconciledStatus(released))
+		}
+	}
+	return exitOK
+}
+
 // ownerDNSRecoveryCommand names the single owner-run recovery command whose
 // own evidence admission accepts this secured observation. The predicates are
 // the ones those commands apply; each command still rechecks the locks, the
@@ -849,6 +873,28 @@ func ownerDNSRecoveryGuidance(e dnsenginerecovery.SwitchEvidence, quiesced bool)
 		return fmt.Sprintf("If this V4 PowerDNS-target switch stopped, the server owner can attempt the same-request pre-start inverse with: /usr/libexec/celikpanel/recovery recover-dns-pdns-target-staged --request-id %s. The command checks the accepted worker, exact candidate, native units and owner changes; a running or changed target is refused and its evidence is preserved. This status check does not start recovery.\n", request)
 	}
 	return fmt.Sprintf("No owner recovery command applies to this journal's recorded shape and ledger status. Keep the journal and ledger. If this operation does not resume through CelikPanel or an Agent restart, contact support with request id %s. This status check does not start recovery.\n", request)
+}
+
+// releasedDNSSwitchGuidance explains a lease the Agent released after its
+// restart. known is false for an unrecognized reason, which the caller reports
+// as a diagnostic. When the release is the Agent's own deliberate one and one
+// of the three inverse commands that admit that release names the retained
+// journal, the text points to that command rather than to another Agent
+// restart.
+func releasedDNSSwitchGuidance(e dnsenginerecovery.SwitchEvidence) (text string, known bool) {
+	switch e.Observation.ReleaseReason {
+	case dnsengineartifact.ReleasedUnsupportedHostCode:
+		return "The Agent released this interrupted DNS switch lease because the host could not be inspected after restart. The server owner should inspect the host profile and native DNS authority, then retry observation of this same operation after the host is readable. The frozen journal remains; no inverse or new switch is authorized.", true
+	case dnsengineartifact.ReleasedHostWindowCode:
+		return "The Agent released this interrupted DNS switch lease because host startup did not finish within its recovery window. The server owner should confirm startup and native DNS authority, then retry observation of this same operation. The frozen journal remains; no inverse or new switch is authorized.", true
+	case dnsengineartifact.ReleasedNativeUnknownCode:
+		switch ownerDNSRecoveryCommand(e) {
+		case ownerBINDSwitchInverseCommand, ownerBINDAdoptionInverseCommand, ownerPDNSAdoptionInverseCommand:
+			return "The Agent restarted, could not complete this DNS switch rollback itself, released its lease and kept the journal. The server owner continues the same rollback with the owner recovery command named above; it rechecks locks, owner changes and native DNS before any change. The journal blocks a new DNS switch until that command retires it; this read-only status does not start recovery.", true
+		}
+		return "The Agent could not verify the interrupted DNS switch's native result after restart. The server owner should inspect the DNS service and the original operation, resolve the reported native error, then restart the Agent to retry that same journal. The journal remains and blocks a new DNS switch; this read-only status does not authorize an inverse.", true
+	}
+	return "The released DNS switch has an unknown reason. Preserve its journal and ledger for owner review; no inverse or new switch is authorized.", false
 }
 
 // freshPDNSPrestartV3OwnerRecoveryCandidate is the evidence gate of

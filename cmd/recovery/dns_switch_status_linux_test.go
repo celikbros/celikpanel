@@ -9,11 +9,13 @@ import (
 	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
 	"github.com/alicelik/celikpanel/internal/hostmutationlock"
 	"github.com/alicelik/celikpanel/internal/pdnsnative"
+	"github.com/alicelik/celikpanel/internal/servicemutationledger"
 	"github.com/alicelik/celikpanel/internal/transport"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestDNSSwitchStatusRequiresOwnerAndExactCommand(t *testing.T) {
@@ -292,8 +294,11 @@ func TestDNSSwitchStatusNamesBINDSwitchOwnerCommand(t *testing.T) {
 	e.Observation.Status = dnsenginerecovery.EvidenceTerminalRolledBack
 	e.Observation.SourceReceipt, e.Observation.TargetReceipt = dnsenginerecovery.SourceReceiptExact, dnsenginerecovery.TargetReceiptDifferent
 	requireOwnerGuidance(t, e, ownerBINDSwitchInverseCommand)
-	// After the Agent releases the lease, recover-dns-bind-switch does not
-	// admit a rolling-back journal, so status must not advertise it.
+	// The restarted Agent's deliberate release keeps the rolling-back journal
+	// admitted by recover-dns-bind-switch, so status names the command.
+	requireOwnerGuidance(t, ownerGuidanceReleased(ownerGuidanceBINDSwitchEvidence(), dnsengineartifact.ReleasedNativeUnknownCode), ownerBINDSwitchInverseCommand)
+	// A release for any other reason is not admitted and names no command.
+	requireNoOwnerGuidance(t, ownerGuidanceReleased(ownerGuidanceBINDSwitchEvidence(), dnsengineartifact.ReleasedHostWindowCode))
 	e = ownerGuidanceBINDSwitchEvidence()
 	e.Observation.Status = dnsenginerecovery.EvidenceReleasedUndecided
 	requireNoOwnerGuidance(t, e)
@@ -312,9 +317,55 @@ func TestDNSSwitchStatusNamesPDNSAdoptionOwnerCommand(t *testing.T) {
 	e = ownerGuidancePDNSAdoptionEvidence()
 	e.Journal.Phase, e.Observation.Phase = dnsengineartifact.SwitchPhaseTargetStarted, dnsengineartifact.SwitchPhaseTargetStarted
 	requireNoOwnerGuidance(t, e)
+	requireOwnerGuidance(t, ownerGuidanceReleased(ownerGuidancePDNSAdoptionEvidence(), dnsengineartifact.ReleasedNativeUnknownCode), ownerPDNSAdoptionInverseCommand)
+	requireNoOwnerGuidance(t, ownerGuidanceReleased(ownerGuidancePDNSAdoptionEvidence(), dnsengineartifact.ReleasedUnsupportedHostCode))
 	e = ownerGuidancePDNSAdoptionEvidence()
 	e.Observation.Status = dnsenginerecovery.EvidenceReleasedUndecided
 	requireNoOwnerGuidance(t, e)
+}
+
+// ownerGuidanceReleased turns guidance evidence into the Agent's lease release
+// with the given reason, bound to the journal's exact operation identity.
+func ownerGuidanceReleased(e dnsenginerecovery.SwitchEvidence, code string) dnsenginerecovery.SwitchEvidence {
+	e.Journal.MutationOwnerID = strings.Repeat("b", 32)
+	e.Journal.ManifestQualifier = "dns-engine-switch/v1:sha256:" + strings.Repeat("c", 64)
+	now := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
+	e.Observation.Status = dnsenginerecovery.EvidenceReleasedUndecided
+	e.Observation.ReleaseReason = code
+	e.AcceptedJob = transport.ServiceMutationJob{
+		RequestID: e.Journal.MutationRequestID, OwnerID: e.Journal.MutationOwnerID,
+		Kind: "dns_engine_switch", Target: string(e.Journal.TargetEngine), PackageName: e.Journal.ManifestQualifier,
+		Status: servicemutationledger.StatusFailed, Phase: "interrupted", Attempt: 1,
+		StartedAt: now.Add(-time.Hour), UpdatedAt: now, FinishedAt: now, DeadlineAt: now.Add(time.Hour),
+		ErrorCode: code, ErrorMessage: "The interrupted DNS switch could not be verified after the Agent restarted.",
+	}
+	return e
+}
+
+// The secured reader, not a hand-built observation, decides the naming: each
+// command's retained journal beside the Agent's deliberate release is named,
+// and the same journal beside another release reason is not.
+func TestDNSSwitchStatusNamesOwnerCommandForAgentReleaseOnDisk(t *testing.T) {
+	for _, tc := range releasedOwnerInverseCases() {
+		for _, code := range []string{dnsengineartifact.ReleasedNativeUnknownCode, dnsengineartifact.ReleasedHostWindowCode} {
+			t.Run(tc.name+"/"+code, func(t *testing.T) {
+				h := newReleasedInverseHost(t)
+				j := tc.journal(t, h)
+				h.stage(t, j, code)
+				evidence, present, err := dnsenginerecovery.ReadSwitchEvidence(h.root, h.owner, h.policy, time.Now().UTC())
+				if err != nil || !present {
+					t.Fatalf("released evidence unreadable: %v", err)
+				}
+				want := ""
+				if code == dnsengineartifact.ReleasedNativeUnknownCode {
+					want = tc.name
+				}
+				if got := ownerDNSRecoveryCommand(evidence); got != want {
+					t.Fatalf("status named %q, want %q", got, want)
+				}
+			})
+		}
+	}
 }
 
 func TestDNSSwitchStatusNamesFreshPrestartOwnerCommand(t *testing.T) {
@@ -377,4 +428,36 @@ func TestDNSSwitchStatusKeepsExistingOwnerCommandsAndExplicitNoCommand(t *testin
 		},
 	}
 	requireNoOwnerGuidance(t, unknown)
+}
+
+func TestDNSSwitchStatusReleasedTextPointsToAdmittedOwnerCommand(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		evidence dnsenginerecovery.SwitchEvidence
+	}{
+		{ownerBINDSwitchInverseCommand, ownerGuidanceBINDSwitchEvidence()},
+		{ownerPDNSAdoptionInverseCommand, ownerGuidancePDNSAdoptionEvidence()},
+	} {
+		text, known := releasedDNSSwitchGuidance(ownerGuidanceReleased(tc.evidence, dnsengineartifact.ReleasedNativeUnknownCode))
+		if !known || !strings.Contains(text, "owner recovery command named above") ||
+			strings.Contains(text, "restart the Agent") {
+			t.Fatalf("%s: deliberate release text does not point to the named command: %q", tc.name, text)
+		}
+		text, known = releasedDNSSwitchGuidance(ownerGuidanceReleased(tc.evidence, dnsengineartifact.ReleasedHostWindowCode))
+		if !known || !strings.Contains(text, "recovery window") || strings.Contains(text, "named above") {
+			t.Fatalf("%s: host-window release text changed: %q", tc.name, text)
+		}
+	}
+	// A deliberate release no admitting inverse command accepts keeps the
+	// previous guidance; the fresh prestart command is outside this rule.
+	fresh := ownerGuidanceFreshPrestartEvidence()
+	fresh.Observation.ReleaseReason = dnsengineartifact.ReleasedNativeUnknownCode
+	if text, known := releasedDNSSwitchGuidance(fresh); !known || strings.Contains(text, "named above") ||
+		!strings.Contains(text, "restart the Agent") {
+		t.Fatalf("fresh prestart release text claims an admitting command: %q", text)
+	}
+	unknown := ownerGuidanceReleased(ownerGuidanceBINDSwitchEvidence(), "other_release")
+	if _, known := releasedDNSSwitchGuidance(unknown); known {
+		t.Fatal("unknown release reason was reported as known")
+	}
 }

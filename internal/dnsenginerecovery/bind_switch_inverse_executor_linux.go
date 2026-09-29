@@ -129,10 +129,12 @@ func completeBINDSwitchInverse(ctx context.Context, ops BINDSwitchInverseOps, va
 	if err != nil || !sameBINDSwitchJournalIgnoringPhase(first.Journal, checkpoint.Journal) ||
 		checkpoint.Journal.Phase != dnsengineartifact.SwitchPhaseRolledBack ||
 		checkpoint.Observation.SourceReceipt != source ||
-		checkpoint.Observation.Status != restored.Observation.Status ||
+		!sameInverseCheckpointStatus(restored.Observation, checkpoint.Observation) ||
 		!reflect.DeepEqual(checkpoint.AcceptedJob, restored.AcceptedJob) {
 		return errors.Join(errors.New("BIND rollback checkpoint was not retained"), err)
 	}
+	// An Agent-released job is already terminal: no verdict is published
+	// over it, and the re-read below must classify it terminal-rolled-back.
 	if checkpoint.Observation.Status != EvidenceTerminalRolledBack {
 		if !activeDNSInverseStatus(checkpoint.Observation.Status) {
 			return errors.New("BIND rollback lost its exact active job before terminal verdict")

@@ -383,16 +383,14 @@ roles, `pre-intent` and every other phase stay refused for `managed-pdns`.
 `intent:before-write` cuts before any journal exists, so it cannot show a
 rollback decision.
 
-This is fixture admission only. `run_cell.py` cannot run these four cells yet
-and refuses them before the tagged Agent starts: it admits the managed source
-preinstall and adoption proofs only at `source-stopped`, `target-started`,
-`rolled-back` or the exact rolling-back handoff cell; it expects the V1
-journal schema for every cell except that handoff cell; its
-`--stop-after-kill-for-independent-recovery` stop is limited to the two
-rolling-back handoff cells; and it has no step that restarts the Agent to
-record the refused `rolling-back` decision and then runs the owner
-`recover-dns-bind-switch` command. Those controller changes define what a
-pass means and are not part of this admission.
+`run_cell.py` runs the two `after-write`/`peer-reachable` cells of that set
+only in the explicit mode described in
+[Owner inverse after Agent restart](#owner-inverse-after-agent-restart). Without
+`--owner-inverse-after-restart`, and for the two `before-write` cells, it still
+refuses the managed source before the tagged Agent starts: the managed source
+preinstall and adoption proofs stay scoped to `source-stopped`,
+`target-started`, `rolled-back` and the exact rolling-back handoff cell, and
+the V1 journal schema stays expected for every other cell.
 Bootstrap first proves the BIND target and both PowerDNS source packages absent.
 It refreshes APT, masks `pdns.service`, and installs only `pdns-server` plus
 `pdns-backend-sqlite3` outside the service-mutation ledger. Before the
@@ -996,6 +994,195 @@ controller checks with:
 ```sh
 python3 deploy/e2e/dns-kill-matrix/test_run_cell.py
 ```
+
+### Owner inverse after Agent restart
+
+This mode defines and runs "the Agent decides, the owner executes" for exactly
+two cells:
+
+- `bind__intent__after-write__standalone__peer-reachable`
+- `bind__target-staged__after-write__standalone__peer-reachable`
+
+They require `--source-fixture managed-pdns`: a serving PowerDNS source that
+production installed, on Debian 13, with BIND as the target. With that source
+the certified APT producer writes the V2 frozen-source journal from `intent` on
+(`prepareBINDIndependentInverseJournal` →
+`requiresBINDIndependentSourceProof`). A restarted Agent checks the target,
+proves the frozen source and writes `rolling-back`. It never runs a V2 inverse
+itself. It releases its lease with `dns_native_recovery_unknown_after_restart`
+and logs a refusal that names
+`/usr/libexec/celikpanel/recovery recover-dns-bind-switch --request-id <id>`.
+The server owner runs that command.
+
+Select the mode with `--owner-inverse-after-restart`, or `run-prepared ...
+--owner-inverse-after-restart` through the bootstrap. The mode requires socket
+mode and a source proof. It cannot be combined with the independent-handoff
+flags. Any other cell, or any source other than `managed-pdns`, is refused
+before the tagged Agent starts. Before launch, the controller also requires:
+
+- a root-owned `/usr/libexec/celikpanel/recovery` that is not group- or
+  world-writable;
+- output of exactly `celikpanel-bind-source-inverse/v1` from
+  `recovery check-bind-source-inverse-v1`;
+- PowerDNS as the only authority: `pdns.service` active, `bind9`/`named` not
+  active, every TCP and UDP port-53 listener on the DNS address or a wildcard
+  owned by the `pdns.service` MainPID (`ss -H -l -n -p -t -u`), and
+  authoritative UDP and TCP answers.
+
+The controller records the pre-cut PowerDNS MainPID and the semantic DNS state
+receipt. If a prerequisite is missing, it refuses before any mutation.
+
+Sequence and pass definition:
+
+1. **Kill.** The tagged Agent is SIGKILLed at the boundary, with the usual kill
+   proof: stopped state, exit 137, reap. The marker and the on-disk journal
+   must be V2 at the cell phase, with a frozen `pdns-source/v1` source
+   (`kind`, APT layout, plan digest, database path and logical hash,
+   `/etc/powerdns/pdns.conf` among `config_before`). The PowerDNS observation
+   at the boundary is recorded but not enforced.
+2. **Agent decides.** The ordinary Agent is restarted and left running.
+   Read-only ledger polling, bounded by `--recovery-timeout`, waits until it
+   stops holding the request. Then the controller requires:
+   - the same request's job is `failed`/`interrupted` with `error_code`
+     `dns_native_recovery_unknown_after_restart`, same owner and qualifier, no
+     worker or lease, and no active request;
+   - the journal is V2 at `rolling-back`;
+   - the `celikpanel-agent.service` journal since the restart names
+     `recover-dns-bind-switch --request-id <id>`;
+   - PowerDNS still serves alone (the check above) with the pre-cut MainPID.
+
+   A read-only probe (ordinal 0) is recorded.
+3. **Status.** `recovery dns-switch-status --quiesced --request-id <id>` runs
+   as root with a clean environment. Its output must name
+   `recover-dns-bind-switch --request-id <id>`. The journal, ledger, state and
+   both engines' ownership and install-ownership receipts must be
+   byte-identical (path, hash, device, inode, size, mode) before and after.
+4. **Owner executes.** Only if steps 2 and 3 held,
+   `/usr/libexec/celikpanel/recovery recover-dns-bind-switch --request-id <id>`
+   runs once as root. Its exit code and output are recorded and never judged:
+   no error text is assumed.
+5. **After the command:**
+   - the journal is retired;
+   - the ledger is byte-identical (sha256 and size) to the ledger captured in
+     step 2 right after the Agent's release. For a job the Agent released, the
+     owner inverse writes the journal's `rolled-back` checkpoint and retires
+     the journal. It publishes no ledger verdict:
+     `dns_engine_switch_rolled_back_by_owner_recovery` is written only from
+     active-lease statuses. The same request therefore still reads
+     `failed`/`interrupted` with `dns_native_recovery_unknown_after_restart`,
+     with no worker, no lease and an empty active request. Any ledger change
+     is a deviation;
+   - the DNS state receipt is semantically equal to the pre-cut source, as the
+     command restores it (byte equality is recorded);
+   - PowerDNS serves alone and BIND is inactive;
+   - the owner PowerDNS files are unchanged. The source-normalization proof is
+     re-run: main and managed config hashes and identities, database identity,
+     `quick_check`, receipt rows and domain count.
+
+   Probe 1 is recorded. `recovery dns-switch-status --quiesced --request-id
+   <id>` then runs once more. Its output and any evidence change are recorded
+   but not judged, so the evidence shows what the owner is told after the
+   journal is retired.
+6. **Re-run.** The identical command runs again. No private evidence file may
+   change. Its exit code and output are recorded, not judged by text. Probe 2
+   is recorded.
+7. **Liveness.** The Panel is restarted. The Agent must keep its socket inode
+   and MainPID. The usual post-restart checks and stability window follow: 31
+   samples over 30 s with the prepared argv (Agent, Panel, authoritative
+   UDP+TCP DNS). A final PowerDNS-alone check follows the window.
+
+A pass needs D-021 safety `passed`, every step above, and
+`recovery_outcome.classification: rolled_back_source_serving` from probes 1 and
+2. That is the existing classification. No forward retry is attempted for
+these cells.
+
+Result classification:
+
+- **`failed`:** a verified deviation, such as a wrong release reason, a journal
+  not at `rolling-back`, a status output that does not name the command, a
+  status mutation, the journal left in place, a ledger changed after the
+  Agent's release, answers not
+  from PowerDNS, BIND active, changed owner files, a re-run mutation, or a
+  missing Agent refusal. It stays `failed` even if an unknown result also
+  occurred.
+- **`unverified`:** unknown results, such as no release within the bound, a
+  command timeout, unreadable `journalctl`/`ss`/ledger, invalid or changed
+  probes, or a changed PowerDNS MainPID. The controller cannot explain a PID
+  change. It retains the `pdns.service` journal since the preflight so that
+  the reason can be established.
+
+When step 2 or 3 fails, the owner command is not run: an owner following the
+product guidance would not run it either. All observations are kept under the
+additive result keys `owner_inverse_preflight`,
+`owner_inverse_source_at_boundary`, `owner_inverse_after_restart` (steps,
+failures, ambiguities, status) and `owner_inverse_failures`. The result schema
+stays `celikpanel/dns-kill-result/v1`.
+
+The recovery runtime is fixture work, done as in the
+[2026-09-27 owner CLI trial](NATIVE-BIND-PROTECTED-OWNER-CLI-20260927.md). Build
+the offline kit, then enroll it after `install` and before `prepare-bind`.
+`enroll-recovery-runtime` copies the kit to the guest and runs the product's
+`recovery enroll-runtime --source <kit> --transaction-fd 9` under the native
+release-transaction flock. It then requires the launcher to advertise
+`celikpanel-bind-source-inverse/v1`. It is a dry run unless `--execute` is
+given.
+
+```sh
+# On the Linux QEMU host, from the tested source tree:
+GO=/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go
+ART=/var/tmp/cp-owner-inverse/artifacts
+export GOTOOLCHAIN=local CGO_ENABLED=0
+"$GO" build -trimpath -buildvcs=false -o "$ART/agent" ./cmd/agent
+"$GO" build -trimpath -buildvcs=false -tags dns_kill_matrix -o "$ART/agent.kill" ./cmd/agent
+"$GO" build -trimpath -buildvcs=false -o "$ART/panel" ./cmd/panel
+"$GO" build -trimpath -buildvcs=false -o "$ART/dns-kill-trigger" ./cmd/dns-kill-matrix-trigger
+"$GO" build -trimpath -buildvcs=false -o "$ART/recovery" ./cmd/recovery
+mapfile -t sources < deploy/recovery/agent-checker.sources
+"$GO" build -trimpath -buildvcs=false -o "$ART/agent-checker" "${sources[@]}"
+mapfile -t sources < deploy/recovery/panel-checker.sources
+"$GO" build -trimpath -buildvcs=false -o "$ART/panel-checker" "${sources[@]}"
+"$GO" build -trimpath -buildvcs=false -o "$ART/schema17-bridge" ./deploy/schema17bridge
+"$GO" run ./deploy/recovery/bundle --source-root . --binary-root "$ART" --output "$ART/recovery-runtime"
+
+CELL=bind__target-staged__after-write__standalone__peer-reachable  # or bind__intent__after-write__...
+COMMON=(--work-root "$ROOT" --cell-id "$CELL" --node debian13 \
+        --identity-file "$ROOT/id_ed25519" --source-fixture managed-pdns)
+python3 "$BOOTSTRAP" install "${COMMON[@]}" --agent "$ART/agent" \
+  --tagged-agent "$ART/agent.kill" --panel "$ART/panel" \
+  --trigger "$ART/dns-kill-trigger" --web-dir "$PWD/web/dist" --execute
+python3 "$BOOTSTRAP" enroll-recovery-runtime "${COMMON[@]}" \
+  --recovery-runtime "$ART/recovery-runtime" --execute
+python3 "$BOOTSTRAP" prepare-bind "${COMMON[@]}" --execute
+python3 "$BOOTSTRAP" run-prepared "${COMMON[@]}" --owner-inverse-after-restart --execute
+```
+
+Limits:
+
+- **Owner command admission.** The pass depends on the Go change that admits
+  the Agent's own deliberate release (`released-undecided`) in
+  `recover-dns-bind-switch` and leaves that ledger untouched. A build without
+  it refuses these journals. The honest result is then `failed` at step 5,
+  with the journal and released ledger retained. The ledger alone does not
+  distinguish "rolled back by the owner" from "released, undecided". The
+  retired journal, native state and probes carry that evidence, and the
+  recorded post-command status shows what the owner is told.
+- **Owner files mean PowerDNS only.** The unchanged-file check covers the
+  PowerDNS configuration and database. At `target-staged` the BIND package and
+  any install-ownership receipt left by the product are recorded by the probe
+  but not judged here. BIND configuration restoration is the command's own
+  contract.
+- **One path only.** There is no reboot, owner-edit race, power loss, paired
+  topology, Arch placement or before-write edge. The `peer-reachable` label is
+  an invariance control.
+- **Local provenance.** The recovery kit is an unsigned local build enrolled
+  as fixture work. It is not release provenance.
+- **Stale critical cells.** The critical managed-pdns standalone cells
+  (`source-stopped`, `target-started`, `rolled-back`) still expect the V1
+  journal, while the current producer writes V2 for that source. This mode
+  does not change them. They need their own pass definition before they are
+  run again.
+- **Not evidence yet.** Nothing here is native evidence. The 268-runnable
+  denominator is unchanged.
 
 The [management-absent PowerDNS reboot trial](NATIVE-PDNS-MANAGEMENT-ABSENT-BOOT-20260925.md) repeats the corrected-Agent deleted-child adoption path in a fresh disposable Debian/Arch pair. After same-request convergence, direct authoritative UDP/TCP tests passed before and after one orderly Debian reboot with Panel and Agent units disabled/stopped and their normal executable paths absent. Native pdns.service stayed enabled and active. This adds a bounded P0.5 DNS serving result, not another kill-matrix phase or proof of full panel removal, paired transfer, other workloads, owner edits or independent inverse.
 

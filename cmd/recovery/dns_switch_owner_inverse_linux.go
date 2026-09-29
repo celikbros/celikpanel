@@ -89,6 +89,10 @@ func dispatchOwnerPDNSAdoptionInverse(
 		}
 		return exitOK
 	}
+	if errors.Is(err, errDNSInverseReleasedReconciled) {
+		fmt.Fprintln(diagnostic, releasedDNSInverseReconciledText(lang, requestID))
+		return exitUnavailable
+	}
 	if errors.Is(err, errPDNSInverseTerminalLedgerObserved) {
 		fmt.Fprintln(diagnostic, translated(lang,
 			"The same request has a verified historical rollback verdict, but its retired journal cannot prove current PowerDNS health. The server owner should check authoritative DNS and this request's ledger; preserve the evidence. No new mutation was started. ",

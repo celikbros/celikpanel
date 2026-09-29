@@ -25,7 +25,7 @@ func ValidateRunningBINDAdoptionInverseEvidence(e SwitchEvidence) error {
 		(o.TargetReceipt != TargetReceiptExact && o.TargetReceipt != TargetReceiptAbsent) ||
 		(o.TargetReceipt == TargetReceiptExact && o.SourceReceipt != SourceReceiptDifferent) ||
 		(o.TargetReceipt == TargetReceiptAbsent && o.SourceReceipt != SourceReceiptMutualAbsence) ||
-		(!activeDNSInverseStatus(o.Status) && o.Status != EvidenceTerminalRolledBack) ||
+		(!activeDNSInverseStatus(o.Status) && o.Status != EvidenceTerminalRolledBack && !AgentReleasedDNSInverseEvidence(e)) ||
 		(j.Phase == dnsengineartifact.SwitchPhaseRolledBack && o.SourceReceipt != SourceReceiptMutualAbsence) ||
 		(o.Status == EvidenceTerminalRolledBack && j.Phase != dnsengineartifact.SwitchPhaseRolledBack) {
 		return errors.New("running BIND adoption inverse lacks exact retained rollback evidence")

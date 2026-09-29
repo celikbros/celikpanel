@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/alicelik/celikpanel/internal/recoveryruntime"
 	"github.com/alicelik/celikpanel/internal/servicemutationledger"
@@ -54,6 +55,10 @@ func dispatchOwnerBINDAdoptionInverse(args []string, uid int, inverse func(conte
 		return exitUnavailable
 	}
 	if err := inverse(context.Background(), request); err != nil {
+		if errors.Is(err, errDNSInverseReleasedReconciled) {
+			fmt.Fprintln(diagnostic, releasedDNSInverseReconciledText(lang, request))
+			return exitUnavailable
+		}
 		fmt.Fprintln(diagnostic, translated(lang, "The accepted running BIND adoption rollback could not be verified. Inspect recovery dns-switch-status --quiesced --request-id "+request+"; resolve the reported evidence, worker, lock or native DNS condition and retry this same request. Preserve the journal and ledger. Reason: ", "Kabul edilmiş çalışan BIND devralma geri alması doğrulanamadı. recovery dns-switch-status --quiesced --request-id "+request+" çıktısını inceleyin; kanıt, çalışan, kilit veya yerel DNS sorununu giderip aynı işlemi yeniden deneyin. Günlüğü ve işlem kaydını koruyun. Neden: ")+err.Error())
 		return exitUnavailable
 	}

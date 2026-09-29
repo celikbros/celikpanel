@@ -24,6 +24,12 @@ func TestV2RunningBINDAdoptionRefusalNamesOwnerRecoveryOnlyAfterRollbackDecision
 	if err == nil || !strings.Contains(err.Error(), "recover-dns-bind-adoption --request-id "+journal.MutationRequestID) {
 		t.Fatalf("durable rollback lacked exact owner action: %v", err)
 	}
+	// The Agent then releases its lease; the status command, which applies
+	// the command's own admission to the released ledger, gives the answer.
+	if !strings.Contains(err.Error(), "when recovery dns-switch-status --quiesced --request-id "+journal.MutationRequestID+" names it") ||
+		strings.Contains(err.Error(), "must run") {
+		t.Fatalf("running BIND adoption refusal lacks its status confirmation step: %v", err)
+	}
 	journal.Phase = dnsengineartifact.SwitchPhaseTargetStaged
 	err = rollbackDNSSwitchJournal(context.Background(), journal)
 	if err == nil || !strings.Contains(err.Error(), "no durable rollback decision") || strings.Contains(err.Error(), "recover-dns-bind-adoption") {

@@ -88,8 +88,8 @@ satırlar kod değil kanıttır:
 3. Satır 7 — V2 üreticisi altında PowerDNS → BIND: Agent-karar-verir /
    sahip-yürütür ayrımının normal yolda gösterilmesi için **sahip
    komutundan önce Agent yeniden başlatılmış olarak** bir erken kesinti
-   (intent veya target-staged). Bu, aşağıdaki released-undecided kabul
-   kuralı eksiğiyle ve denetleyiciyle engellenir; ikisi de açıktır.
+   (intent veya target-staged). Kabul kuralı ve denetleyici akışı kaynakta
+   29 Eylül 2026'dan beri var; gerçek sistem hücresi henüz çalıştırılmadı.
 4. Satır 3 ve 5 — boş çiftin ikincili, BIND ve PowerDNS — hazırlanamaz:
    hiçbir eş betik, ürün kataloğunu ve üye bölgelerini AXFR/NOTIFY ile
    konuğa sunan panelsiz gerçek bir *birincili* canlandırmıyor; ayrıca
@@ -107,25 +107,59 @@ aynı kabul yüklemlerini kullanarak yapıyor, aksi hâlde açıkça
 "uygulanabilir sahip kurtarma komutu yok" metnini basıyor. Panel, ledger
 mesajını olduğu gibi gösterir; durum komutuna yönlendirir.
 
-**Bu çalışmanın bulduğu açık kod eksiği (satır 7, 11, 13) — Agent yeniden
-başladıktan sonra sahip komutu reddediliyor.** Yeniden başlatılan bir Agent
-kurtarmayı tamamlayamadığında günlüğü elinde tutar ve ledger kirasını
-serbest bırakır (`dns_native_recovery_unknown_after_restart`); kanıt
-okuyucu bunu `released-undecided` olarak raporlar. `recover-dns-bind-switch`,
-`recover-dns-bind-adoption` ve `recover-dns-pdns-adoption` yalnızca etkin
-kira durumunu veya sonlanmış bir rolled-back işini kabul eder
-(`activeDNSInverseStatus`); bu yüzden Agent çalışırken `rolling-back`
+**Agent yeniden başlatmasından sonra sahip komutu (satır 7, 11, 13) —
+kaynakta düzeltildi, gerçek sistem kanıtı bekleniyor.** Yeniden başlatılan
+bir Agent kurtarmayı tamamlayamadığında günlüğü elinde tutar ve ledger
+kirasını serbest bırakır (`dns_native_recovery_unknown_after_restart`);
+kanıt okuyucu bunu `released-undecided` olarak raporlar. 29 Eylül 2026'ya
+kadar `recover-dns-bind-switch`, `recover-dns-bind-adoption` ve
+`recover-dns-pdns-adoption` yalnızca etkin kira durumunu veya sonlanmış bir
+rolled-back işini kabul ediyordu; bu yüzden Agent çalışırken `rolling-back`
 durumunda bırakılmış bir günlük için kabul edilen hiçbir sahip komutu
-yoktur. Satır 7 ve 11 için alınan gerçek sistem geçişleri Agent etkisizken
-yapılmıştı ve bunu kapsamaz. V2 üreticisi bunu satır 7 için normal yol
-hâline getirir: Agent geri alma kararını yazar ve V2 ters işlemini hiçbir
-zaman kendisi çalıştırmaz. Bunu kapatmak; Agent'ın kendi kasıtlı serbest
-bırakmasına yönelik bir kabul kuralı, bileşen testleri, sahip komutundan
-önce Agent'ı yeniden başlatan bir denetleyici adımı ve bir gerçek sistem
-hücresi gerektirir. Düzenek zaten yönetilen bir PowerDNS kaynağıyla
+yoktu. Satır 7 ve 11 için saklanan gerçek sistem geçişleri Agent etkisizken
+alınmıştı. V2 üreticisi bunu satır 7 için normal yol hâline getirir. Üç
+komut artık ayrıca tam olarak Agent'ın kendi kasıtlı serbest bırakmasını da
+kabul eder: yalnızca o gerekçe kodu, tam olarak o isteğin `rolling-back`
+veya `rolled-back` durumundaki günlüğü, Agent'ın kendi released-job
+yüklemini geçen serbest bırakılmış iş (işçi yok, kira yok) ve mevcut kilit,
+işçi-dışlama, gerçek sistem kanıtı ve sahip-değişikliği denetimlerinin
+tümü değişmeden. Şema veya sürüm değişikliği yok. Komut ters işlemi
+çalıştırır, `rolled-back` kontrol noktasını yazar ve günlüğü emekliye
+ayırır; tamamlanmış ledger işini yeniden yazmaz. Sahibe daha sonra
+gösterilen şey okuma anında hesaplanır: günlüğü artık elde tutulmayan
+serbest bırakılmış bir iş, hâlâ engelliyormuş gibi değil, uzlaştırılmış
+olarak raporlanır. `recover-dns-pdns-fresh-prestart` (satır 6) ve V4 komutu,
+serbest bırakılmış bir işi hâlâ reddeder; satır 6 zaten ürün tarafından
+reddedilir.
+
+Denetleyicide, yönetilen bir PowerDNS kaynağıyla
 `bind__{intent,target-staged}__after-write__standalone__peer-reachable`
-hazırlıyor; `run_cell.py` bunları henüz çalıştıramaz (devir hücresi dışında
-her hücre için bir V1 günlüğü bekler ve bir sahip-komutu adımı yoktur).
+için açık bir `--owner-inverse-after-restart` akışı vardır: kill, Agent
+yeniden başlatılır ve çalışır durumda bırakılır, geri alma kararı ve
+serbest bırakma gözlemlenir, salt-okur durum komutu herhangi bir mutasyon
+yapmadan komutu adlandırır, sahip komutu çalıştırılır, ledger değişmeden
+günlük emekliye ayrılır, PowerDNS UDP/TCP üzerinde hâlâ yetkilidir, BIND
+devre dışıdır, sahip dosyaları değişmemiştir, yeniden çalıştırma
+bağımsızdır (idempotent), 31 sağlık örneği alınır.
+
+**Adı belli açık yönlendirme eksiği (satır 7, 11, 13).** Tamamlandıktan
+sonra bir sahip ters işlem komutunun yeniden çalıştırılması hiçbir şeyi
+değiştirmez ve artık "zaten uzlaştırıldı" der, ama yine de mevcut terminal
+yeniden çalıştırmasında olduğu gibi kullanılamaz durumu (3) ile çıkar. Bir
+sahip veya betik bunu başarısızlık olarak okuyabilir. Bunu değiştirmek
+mevcut bir komut sözleşmesini değiştirir ve ayrı bir karara bırakılmıştır.
+Okuma anındaki metinler, günlüğü sahip komutunun mu yoksa daha sonraki bir
+Agent başlangıcının mı emekliye ayırdığını söyleyemez, çünkü bunu tutan
+kalıcı bir kayıt yoktur; sürümlenmiş bir sahip-kurtarma makbuzu bunu
+eklemenin yolu olurdu.
+
+**Adı belli açık düzenek eksiği (satır 7, 2. madde).** Tek sunucu,
+yönetilen-PowerDNS kritik hücreleri (`bind` source-stopped, target-started,
+rolled-back) denetleyicide hâlâ bir V1 günlüğü bekliyor, oysa üretici o
+kaynak için V2 yazıyor. Bugün çalıştırılsalar sınır işaretinde reddedilirler
+ve kendi geçiş tanımlarına ihtiyaç duyarlar (Agent, V2 ters işlemini
+çalıştıramaz, bu yüzden `rpc-retry` onların kurtarması değildir). 25 Eylül
+2026 tarihli altı rapor tarihsel V1 kanıtı olarak kalır.
 
 Satır 2, 6 (açma), 8, 11 (ek kesintiler), 12, 14 ve 17 açık kalır ve 2. maddeye
 veya sonrasına taşınır. Üretici değişikliği olmadan geçen bir hücreyi

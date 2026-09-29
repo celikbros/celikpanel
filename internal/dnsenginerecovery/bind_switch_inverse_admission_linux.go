@@ -21,6 +21,7 @@ func ValidateInactiveBINDSwitchInverseEvidence(evidence SwitchEvidence) error {
 	if err := InactiveBINDSwitchInverseJournal(j); err != nil {
 		return err
 	}
+	released := AgentReleasedDNSInverseEvidence(evidence)
 	if o.InverseKind != NativeInverseBINDSwitch ||
 		o.EvidenceSHA256 == "" ||
 		o.RequestID != j.MutationRequestID ||
@@ -33,9 +34,10 @@ func ValidateInactiveBINDSwitchInverseEvidence(evidence SwitchEvidence) error {
 		(o.TargetReceipt != TargetReceiptExact && o.SourceReceipt != SourceReceiptExact) ||
 		(o.TargetReceipt == TargetReceiptExact && o.SourceReceipt != SourceReceiptDifferent) ||
 		(o.SourceReceipt == SourceReceiptExact && o.TargetReceipt == TargetReceiptExact) ||
-		(!activeDNSInverseStatus(o.Status) && o.Status != EvidenceTerminalRolledBack) ||
+		(!activeDNSInverseStatus(o.Status) && o.Status != EvidenceTerminalRolledBack && !released) ||
 		(o.Status == EvidenceTerminalRolledBack &&
-			(j.Phase != dnsengineartifact.SwitchPhaseRolledBack || o.SourceReceipt != SourceReceiptExact)) {
+			(j.Phase != dnsengineartifact.SwitchPhaseRolledBack || o.SourceReceipt != SourceReceiptExact)) ||
+		(released && j.Phase == dnsengineartifact.SwitchPhaseRolledBack && o.SourceReceipt != SourceReceiptExact) {
 		return errors.New("inactive BIND switch inverse lacks exact retained rollback evidence")
 	}
 	return nil

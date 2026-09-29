@@ -1342,3 +1342,48 @@ loopback and link-local sockets. Component tests cover the accepted and
 refused states; the failed cell and the `intent` cell must be re-run on the
 fixed source before row 4 of the acceptance register can pass its pre-start
 cut.
+
+### Owner inverse admits the Agent's deliberate release (2026-09-29)
+
+P0.4; constitutional invariants 1, 2, 4 and 5; D-024. No journal or ledger
+schema or version changes.
+
+A restarted Agent that cannot complete switch recovery retains the journal and
+releases its ledger lease with `dns_native_recovery_unknown_after_restart`.
+For V2 journals this is the designed path: the Agent writes the rollback
+decision and never executes the V2 inverse. The evidence reader reports that
+ledger as `released-undecided`. `recover-dns-bind-switch`,
+`recover-dns-bind-adoption` and `recover-dns-pdns-adoption` previously
+admitted only active-lease statuses or a terminal rolled-back job, so a
+journal left at `rolling-back` beside a running Agent had no admitted owner
+command.
+
+Rule: those three commands additionally admit `released-undecided` only when
+the release reason is exactly that code, the journal is the exact request's
+journal at `rolling-back` or `rolled-back` and passes the command's unchanged
+journal-shape predicate, and the released job passes the Agent's own
+released-job predicate (terminal failed/interrupted, no worker, no lease,
+exact owner, target and qualifier). Every existing lock, worker-exclusion,
+native-evidence and owner-change check is unchanged; a released status
+requires an empty active request, so any other active mutation refuses the
+command. `recover-dns-pdns-fresh-prestart` and `recover-dns-pdns-target-staged`
+keep refusing a released job.
+
+Durable path: inverse effects, the `rolled-back` checkpoint, journal
+retirement. The command does not publish a ledger verdict for a released job:
+the verdict publisher requires an active job, a released job already
+satisfies the terminal rolled-back job predicate beside a `rolled-back`
+journal, and the Agent's own later-boot reconciliation likewise refuses to
+rewrite a finished job. A command interrupted after the checkpoint leaves a
+`rolled-back` journal that the same command re-admits as terminal rolled-back.
+
+Truthful state is computed at read time, not stored: when the job is the
+deliberate release and no journal of that request is retained,
+`recovery dns-switch-status`, the owner command's re-run and the Agent's
+`ServiceMutationStatus` reply report the switch as reconciled and no longer
+blocking, and state that the evidence cannot tell whether the owner command or
+a later Agent start retired the journal. A retained or unreadable journal
+keeps the stored blocking text. The stored job is never modified.
+
+Evidence at this commit is component tests only; the native
+`--owner-inverse-after-restart` cells have not run.
