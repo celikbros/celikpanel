@@ -101,12 +101,7 @@ type freshPrimaryPrestartObserversV3 struct {
 }
 
 func freshPrimaryPrestartRollbackPhaseV3(phase string) bool {
-	switch phase {
-	case dnsengineartifact.SwitchPhaseRollingBack, dnsengineartifact.SwitchPhaseRollingBackTargetEnable,
-		dnsengineartifact.SwitchPhaseRolledBack:
-		return true
-	}
-	return false
+	return dnsenginerecovery.FreshPrimaryPrestartRollbackPhaseV3(phase)
 }
 
 // freshPrimaryPrestartTargetUnitV3 admits the unit states a stopped,
@@ -115,16 +110,7 @@ func freshPrimaryPrestartRollbackPhaseV3(phase string) bool {
 // (unmasked, disabled or enabled). A mask is admitted only when the frozen
 // preimage is the guard's persistent mask.
 func freshPrimaryPrestartTargetUnitV3(unit, frozen dnsUnitSnapshot, phase string) bool {
-	if unit.Name != "pdns.service" || unit.ActiveState != "inactive" {
-		return false
-	}
-	if unit == frozen {
-		return true
-	}
-	if !freshPrimaryPrestartEnablePhaseV3(phase) || unit.LoadState != "loaded" {
-		return false
-	}
-	return unit.UnitFileState == "disabled" || unit.UnitFileState == "enabled"
+	return dnsenginerecovery.FreshPrimaryPrestartTargetUnitV3(unit, frozen, phase)
 }
 
 // assessFreshPrimaryPrestartV3 classifies the native state of a pre-start

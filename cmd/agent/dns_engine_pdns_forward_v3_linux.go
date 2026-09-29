@@ -137,25 +137,10 @@ func runFreshPrimaryForwardV3(ctx context.Context, journal dnsEngineSwitchJourna
 	return dnsenginerecovery.OutcomeAbsent, errors.New("v3 forward recovery exceeded its bounded checkpoints")
 }
 
-// An unchanged native file can match both frozen images. The secure probe
-// reports "before" first; that is still the prepared target only when the
-// complete frozen snapshots are identical. A changed file left at "before"
-// remains pending, and an unknown file is never accepted.
+// verifyFreshPrimaryPreparedConfigsV3 is the after-start configuration rule
+// shared with dns-switch-status (dnsenginerecovery).
 func verifyFreshPrimaryPreparedConfigsV3(configs []dnsenginerecovery.PDNSTargetConfigStateV4, j dnsEngineSwitchJournal) error {
-	if j.PDNSFreshPlan == nil || len(configs) != len(j.ConfigBefore) || len(configs) != len(j.PDNSFreshPlan.ConfigAfter) {
-		return errors.New("v3 target config count changed")
-	}
-	for i, config := range configs {
-		if config == dnsenginerecovery.PDNSTargetConfigAfterV4 {
-			continue
-		}
-		if config == dnsenginerecovery.PDNSTargetConfigBeforeV4 &&
-			reflect.DeepEqual(j.ConfigBefore[i], j.PDNSFreshPlan.ConfigAfter[i]) {
-			continue
-		}
-		return errors.New("v3 native PowerDNS config differs from prepared target")
-	}
-	return nil
+	return dnsenginerecovery.VerifyFreshPrimaryPreparedConfigsV3(configs, j)
 }
 
 func observeFreshPrimaryForwardV3(ctx context.Context, profile hostplatform.Profile, systemctl string, j dnsEngineSwitchJournal) (freshPrimaryForwardObservationV3, error) {
@@ -336,12 +321,5 @@ func freshPrimaryProcessIdentityV3(pid uint64) (string, error) {
 }
 
 func freshPrimaryNativeObservationViewV3(j dnsEngineSwitchJournal) dnsEngineSwitchJournal {
-	view := j
-	// The enable-intent may already have started PowerDNS. Only the
-	// observation uses TargetStarted; the durable journal remains unchanged.
-	if view.Phase == dnsengineartifact.SwitchPhaseTargetEnableIntent &&
-		view.PDNSFreshPlan != nil && view.PDNSFreshPlan.Native == nil {
-		view.Phase = dnsengineartifact.SwitchPhaseTargetStarted
-	}
-	return view
+	return dnsenginerecovery.FreshPrimaryNativeObservationViewV3(j)
 }

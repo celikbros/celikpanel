@@ -116,6 +116,21 @@ func pdnsConfigParent(rootFD int, path string) ([]int, []string, error) {
 	return opened, components, nil
 }
 
+// pdnsConfigDifferenceError marks a completed observation that found a file
+// other than the frozen image: missing, present where none was recorded, a
+// symbolic link, or different owner, mode, size, type or bytes. Its text is
+// the underlying message. Every other probe error means the file could not be
+// read or stayed unstable, which is unknown, not a difference.
+type pdnsConfigDifferenceError struct{ err error }
+
+func (e *pdnsConfigDifferenceError) Error() string { return e.err.Error() }
+func (e *pdnsConfigDifferenceError) Unwrap() error { return e.err }
+
+func pdnsConfigDiffers(err error) bool {
+	var difference *pdnsConfigDifferenceError
+	return errors.As(err, &difference)
+}
+
 func probePDNSAdoptionConfigFile(ctx context.Context, rootFD int, snapshot dnsengineartifact.FileSnapshot) (pdnsConfigReadIdentity, error) {
 	// The caller has already checked the fixed path set and journal integrity.
 	opened, components, err := pdnsConfigParent(rootFD, snapshot.Path)
@@ -144,7 +159,13 @@ func probePDNSAdoptionConfigFile(ctx context.Context, rootFD int, snapshot dnsen
 		return pdnsConfigReadIdentity{}, nil
 	}
 	if err != nil {
-		return pdnsConfigReadIdentity{}, fmt.Errorf("open PowerDNS config %s: %w", snapshot.Path, err)
+		opened := fmt.Errorf("open PowerDNS config %s: %w", snapshot.Path, err)
+		// A missing file the image records, or a symbolic link at the
+		// path, is a different file, not an unreadable one.
+		if (errors.Is(err, unix.ENOENT) && snapshot.Exists) || errors.Is(err, unix.ELOOP) {
+			return pdnsConfigReadIdentity{}, &pdnsConfigDifferenceError{err: opened}
+		}
+		return pdnsConfigReadIdentity{}, opened
 	}
 	file := os.NewFile(uintptr(fd), snapshot.Path)
 	if file == nil {
@@ -157,7 +178,7 @@ func probePDNSAdoptionConfigFile(ctx context.Context, rootFD int, snapshot dnsen
 		return pdnsConfigReadIdentity{}, err
 	}
 	if !snapshot.Exists || before.Mode&unix.S_IFMT != unix.S_IFREG || before.Nlink != 1 || before.Mode&0o7777 != snapshot.Mode || before.Uid != snapshot.UID || before.Gid != snapshot.GID || before.Size != int64(len(snapshot.Data)) {
-		return pdnsConfigReadIdentity{}, fmt.Errorf("PowerDNS config %s differs from frozen owner, mode, size or file type", snapshot.Path)
+		return pdnsConfigReadIdentity{}, &pdnsConfigDifferenceError{err: fmt.Errorf("PowerDNS config %s differs from frozen owner, mode, size or file type", snapshot.Path)}
 	}
 	if err := bindroot.RejectACL(fd, "PowerDNS config file"); err != nil {
 		return pdnsConfigReadIdentity{}, err
@@ -180,7 +201,7 @@ func probePDNSAdoptionConfigFile(ctx context.Context, rootFD int, snapshot dnsen
 		return pdnsConfigReadIdentity{}, err
 	}
 	if !bytes.Equal(data, snapshot.Data) {
-		return pdnsConfigReadIdentity{}, fmt.Errorf("PowerDNS config %s bytes differ from frozen evidence", snapshot.Path)
+		return pdnsConfigReadIdentity{}, &pdnsConfigDifferenceError{err: fmt.Errorf("PowerDNS config %s bytes differ from frozen evidence", snapshot.Path)}
 	}
 	if err := unix.Fstat(fd, &after); err != nil {
 		return pdnsConfigReadIdentity{}, err

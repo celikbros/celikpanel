@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
 )
 
@@ -64,10 +63,12 @@ func freshPrimaryV3Changed(what string, cause error) error {
 	return &freshPrimaryV3ChangedError{what: what, cause: cause}
 }
 
+// The changed-thing names are shared with dns-switch-status, which reads the
+// stored ledger message and compares the same things read-only.
 const (
-	freshPrimaryV3ChangedConfig   = "the PowerDNS configuration"
-	freshPrimaryV3ChangedDatabase = "the PowerDNS database"
-	freshPrimaryV3ChangedState    = "CelikPanel's DNS state record"
+	freshPrimaryV3ChangedConfig   = dnsenginerecovery.FreshPrimaryChangedConfigV3
+	freshPrimaryV3ChangedDatabase = dnsenginerecovery.FreshPrimaryChangedDatabaseV3
+	freshPrimaryV3ChangedState    = dnsenginerecovery.FreshPrimaryChangedStateV3
 )
 
 // freshPrimaryV3RecoveryError carries the fixed guidance for one unfinished
@@ -134,8 +135,8 @@ func (e *freshPrimaryV3RecoveryError) ledgerMessage() string {
 			" restores the state before the install; that command proves again that PowerDNS never started and refuses a started or changed target. " +
 			"After the reported cause is resolved, restarting the Agent retries the same automatic undo."
 	case freshPrimaryV3OwnerChange:
-		return "The first install of PowerDNS as the paired primary found that " + e.changed +
-			" is not as this install wrote it (an administrator edit, PowerDNS behaviour CelikPanel has not measured, or a file it could not read). " +
+		return dnsenginerecovery.FreshPrimaryOwnerChangePrefixV3 + e.changed +
+			dnsenginerecovery.FreshPrimaryOwnerChangeSuffixV3 + " (an administrator edit, PowerDNS behaviour CelikPanel has not measured, or a file it could not read). " +
 			"CelikPanel kept that change and neither continued nor undid the install. " + e.runningText() + " " +
 			"The operation's journal and the PowerDNS database are kept and block new DNS changes; other server changes can continue. " +
 			"Next step: the server administrator reviews that change and runs " + status +
@@ -181,12 +182,9 @@ func classifyFreshPrimaryV3RecoveryError(requestID string, prestart bool, runnin
 // class: the owner command's own journal predicate, without a durable native
 // receipt. Whether PowerDNS started is proved natively, never from the phase.
 func freshPrimaryPrestartJournalShapeV3(j dnsEngineSwitchJournal) bool {
-	return j.Schema == dnsengineartifact.SwitchJournalSchemaV3 && j.PDNSFreshPlan != nil &&
-		j.PDNSFreshPlan.Native == nil && len(j.TargetUnitsBefore) == 1 &&
-		dnsenginerecovery.FreshPrimaryPrestartJournalV3(j)
+	return dnsenginerecovery.FreshPrimaryPrestartShapeJournalV3(j)
 }
 
 func freshPrimaryPrestartEnablePhaseV3(phase string) bool {
-	return phase == dnsengineartifact.SwitchPhaseTargetEnableIntent ||
-		phase == dnsengineartifact.SwitchPhaseRollingBackTargetEnable
+	return dnsenginerecovery.FreshPrimaryPrestartEnablePhaseV3(phase)
 }

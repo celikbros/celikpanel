@@ -616,6 +616,9 @@ type dnsSwitchStatusReaders struct {
 	bindRoot          func(ctx context.Context) error
 	bindNeverStarted  func(ctx context.Context, beforeDecision bool) (string, error)
 	bindVendorAndUnit func(ctx context.Context) error
+	// freshPrimaryChange compares a released fresh paired PowerDNS primary
+	// with what its install wrote (quiesced only); nil skips it.
+	freshPrimaryChange freshPrimaryChangeReader
 }
 
 func installedDNSSwitchStatusReaders() dnsSwitchStatusReaders {
@@ -637,10 +640,11 @@ func installedDNSSwitchStatusReaders() dnsSwitchStatusReaders {
 		probeUnits: func(ctx context.Context, names []string) ([]dnsenginerecovery.NativeUnitObservation, error) {
 			return dnsenginerecovery.ProbeNativeUnits(ctx, names, dnsenginerecovery.SystemdUnitRunner)
 		},
-		inspectWorker:     dnsenginerecovery.InspectAcceptedWorker,
-		bindRoot:          verifyInstalledBINDRoot,
-		bindNeverStarted:  observeInstalledNeverStartedBINDTarget,
-		bindVendorAndUnit: verifyInstalledBINDVendorAndUnit,
+		inspectWorker:      dnsenginerecovery.InspectAcceptedWorker,
+		bindRoot:           verifyInstalledBINDRoot,
+		bindNeverStarted:   observeInstalledNeverStartedBINDTarget,
+		bindVendorAndUnit:  verifyInstalledBINDVendorAndUnit,
+		freshPrimaryChange: installedFreshPrimaryChange,
 	}
 }
 
@@ -712,8 +716,22 @@ func runDNSSwitchStatusWith(args []string, uid int, out, diagnostic io.Writer, r
 		}
 		evidence = againEvidence
 	}
+	// A released fresh paired PowerDNS primary is compared with what its
+	// install wrote before any guidance is printed, so the first guidance
+	// line says what differs now (the Agent's recorded reason) or that it
+	// could not be compared.
+	var fresh *freshPrimaryChangeStatus
+	if quiesced {
+		fresh = observeFreshPrimaryChange(observationCtx, readers, root, owner, policy, evidence, units, unitErr)
+	}
 	fmt.Fprintf(out, "DNS switch request %s: %s (journal phase %s).\n", observation.RequestID, observation.Status, observation.Phase)
-	fmt.Fprint(out, ownerDNSRecoveryGuidance(evidence, quiesced))
+	fmt.Fprint(out, fresh.text(evidence, policy, root))
+	if fresh != nil && fresh.err != nil {
+		fmt.Fprintln(diagnostic, "Fresh PowerDNS primary comparison is unknown; no DNS operation was started. "+fresh.err.Error())
+	}
+	if !fresh.replacesGuidance(evidence) {
+		fmt.Fprint(out, ownerDNSRecoveryGuidance(evidence, quiesced))
+	}
 	// workerGone records that this status proved the recorded worker (PID and
 	// start token) absent. A process identity that is gone cannot return, so
 	// either observation below is sufficient.
@@ -764,7 +782,9 @@ func runDNSSwitchStatusWith(args []string, uid int, out, diagnostic io.Writer, r
 			fmt.Fprintln(diagnostic, text)
 			return exitUnavailable
 		}
-		fmt.Fprintln(out, text)
+		if !fresh.replacesGuidance(evidence) {
+			fmt.Fprintln(out, text)
+		}
 	case dnsenginerecovery.EvidenceTerminalRolledBack:
 		fmt.Fprintln(out, terminalRolledBackDNSSwitchGuidance(evidence, quiesced))
 	case dnsenginerecovery.EvidenceFinalized:
@@ -1040,6 +1060,10 @@ func runDNSSwitchStatusWith(args []string, uid int, out, diagnostic io.Writer, r
 		}
 	}
 	if unitErr != nil {
+		return exitUnavailable
+	}
+	if fresh != nil && fresh.err != nil {
+		// The comparison with what the install wrote is unknown.
 		return exitUnavailable
 	}
 	if observationCtx.Err() != nil {
