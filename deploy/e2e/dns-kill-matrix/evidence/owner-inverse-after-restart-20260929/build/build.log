@@ -1,0 +1,77 @@
+2026-09-29T07:11:29Z
+7ad242828eb03242e52dd5d5e10c7b4627fe6a14
+go version go1.26.5 linux/amd64
+go1.26.5
+
+https://proxy.golang.org,direct
+/root/go/pkg/mod
+d87d93e8e6427daafc399e5d8e5c21ec1db5adb414698e872b86a46e22fd3bd6
+== artifacts
+8dd390ce9b7b725a8cacd70da262805d9d160203a78623ce6f40fd3fe74fc15e  /root/cp-oi-artifacts/agent
+e4c05c3afaaaca228bf55bdd67c2ab46946ff9fd3238961d8324dd8d647b4474  /root/cp-oi-artifacts/agent.kill
+793fb81b95fa96f438a216831a146e0869934ce31318881857d3352ffb92e472  /root/cp-oi-artifacts/panel
+97aa0ce32546e9ba6ae56831e9f300b1f97133893449422811937e365bdfc274  /root/cp-oi-artifacts/dns-kill-trigger
+15dbd98bbe7ce54d030b4bc2e5c26fc40a6351639a57373089edbe4976409dd9  /root/cp-oi-artifacts/recovery
+82f2772fe0257dde9139d0f85a34be58e89c98d6a9d1775090f2ecf4cc3b8975  /root/cp-oi-artifacts/agent-checker
+82f23b48908e152e55ad76598ec8be0f780805f463fe7e48ed402d87bc5984e0  /root/cp-oi-artifacts/panel-checker
+fe277c46ea8b50f00a80e71976198f28db89667789a737e0a78c0f4a83e9cb87  /root/cp-oi-artifacts/schema17-bridge
+== recovery-runtime
+82f2772fe0257dde9139d0f85a34be58e89c98d6a9d1775090f2ecf4cc3b8975  ./bin/agent-checker
+82f23b48908e152e55ad76598ec8be0f780805f463fe7e48ed402d87bc5984e0  ./bin/panel-checker
+15dbd98bbe7ce54d030b4bc2e5c26fc40a6351639a57373089edbe4976409dd9  ./bin/recovery
+fe277c46ea8b50f00a80e71976198f28db89667789a737e0a78c0f4a83e9cb87  ./bin/schema17-bridge
+6645927653114b4d59fbf6e29147f12920ceaec058d0ecc7b92faa71fd1bf6c3  ./deploy/panel-tls-snapshot.sh
+391eba13d077e0f8016cdfc8e95ce5fb67711b1e9b4a91ed7446ebdbb4ccf004  ./deploy/recovery/runtime-entry.sh
+f499446812b90aee362112743f4e491d5ecfa40511a510d08cbb006babdd48b0  ./deploy/release-recovery-foundation.sh
+db3e2dd23d4b81d9e533354e5d345d26eb43b7943ba20cf7b4ba19fac20cea1e  ./deploy/release-recovery-observation.sh
+4543920d5cc7a4d76c5c3ff91e8a03f4f02bd0e005577b40dc5c740af32c8257  ./deploy/release-transaction-guard.sh
+f163b496a8f48ae55a12658f34125f666c45672eccc4b27c03d58b7367848fc2  ./deploy/release-unit-transition.sh
+cbe3841aef57c62d0242a2957f728100fceca84a7a23135d51156562006ac822  ./rollback.sh
+d87d93e8e6427daafc399e5d8e5c21ec1db5adb414698e872b86a46e22fd3bd6  ./runtime.manifest
+dea6eafb9608e1b956e8fee7ddc85908e649056fa6727be9c373cec233154db8  ./update.sh
+/root/cp-oi-artifacts/recovery-runtime:
+total 372
+drwxr-xr-x 4 root root   4096 Sep 29 10:11 .
+drwxr-xr-x 3 root root   4096 Sep 29 10:11 ..
+drwxr-xr-x 2 root root   4096 Sep 29 10:11 bin
+drwxr-xr-x 3 root root   4096 Sep 29 10:11 deploy
+-rwxr-xr-x 1 root root 149798 Sep 29 10:11 rollback.sh
+-rw-r--r-- 1 root root   1152 Sep 29 10:11 runtime.manifest
+-rwxr-xr-x 1 root root 207390 Sep 29 10:11 update.sh
+
+/root/cp-oi-artifacts/recovery-runtime/bin:
+total 48120
+drwxr-xr-x 2 root root     4096 Sep 29 10:11 .
+drwxr-xr-x 4 root root     4096 Sep 29 10:11 ..
+-rwxr-xr-x 1 root root  7013300 Sep 29 10:11 agent-checker
+-rwxr-xr-x 1 root root 13962693 Sep 29 10:11 panel-checker
+-rwxr-xr-x 1 root root 18819827 Sep 29 10:11 recovery
+-rwxr-xr-x 1 root root  9464898 Sep 29 10:11 schema17-bridge
+
+/root/cp-oi-artifacts/recovery-runtime/deploy:
+total 248
+drwxr-xr-x 3 root root   4096 Sep 29 10:11 .
+drwxr-xr-x 4 root root   4096 Sep 29 10:11 ..
+-rw-r--r-- 1 root root  73919 Sep 29 10:11 panel-tls-snapshot.sh
+drwxr-xr-x 2 root root   4096 Sep 29 10:11 recovery
+-rw-r--r-- 1 root root  29356 Sep 29 10:11 release-recovery-foundation.sh
+-rw-r--r-- 1 root root  13646 Sep 29 10:11 release-recovery-observation.sh
+-rw-r--r-- 1 root root 100613 Sep 29 10:11 release-transaction-guard.sh
+-rw-r--r-- 1 root root   9422 Sep 29 10:11 release-unit-transition.sh
+
+/root/cp-oi-artifacts/recovery-runtime/deploy/recovery:
+total 60
+drwxr-xr-x 2 root root  4096 Sep 29 10:11 .
+drwxr-xr-x 3 root root  4096 Sep 29 10:11 ..
+-rwxr-xr-x 1 root root 51414 Sep 29 10:11 runtime-entry.sh
+ff9abfa1db719155d83024a1840c2782f4f5dce7868547d648b352db98fd7890  /root/cp-oi-tools/oi-smstatus
+22ca355d5a82790cf5314cbfb4eecafe8a22e951604fa2e83fbf81c3fcf44ed5  /root/cp-oi-tools/overlay.json
+57823885e8778d4fa5f67b3458042fc1f0cab7cb3a0603af00ec2bd202d85077  /root/cp-oi-tools/smstatus.go
+/root/cp-oi-artifacts/agent: go1.26.5
+	path	github.com/alicelik/celikpanel/cmd/agent
+	mod	github.com/alicelik/celikpanel	(devel)	
+/root/cp-oi-artifacts/recovery: go1.26.5
+	path	github.com/alicelik/celikpanel/cmd/recovery
+	mod	github.com/alicelik/celikpanel	(devel)	
+2026-09-29T07:11:48Z
+BUILD-OK

@@ -1,0 +1,13 @@
+### 2026-09-28T22:35:41Z start-cell 4 bind__target-verified__after-write__standalone__peer-reachable debian13 prepare-bind
+### 2026-09-28T22:35:41Z prepare
+### 2026-09-28T22:35:41Z start
+### 2026-09-28T22:35:42Z wait-ssh
+### 2026-09-28T22:36:38Z guest-identity
+### 2026-09-28T22:36:39Z install
+### 2026-09-28T22:36:48Z prepare-bind
+### 2026-09-28T22:36:49Z pre-run-snapshot
+### 2026-09-28T22:36:49Z start-watcher
+Running as unit: cp-d026-watch.service; invocation ID: ff0bd880deab4f7b8280007c736d256e
+### 2026-09-28T22:36:50Z run-prepared
+RUN_PREPARED_RC=0
+### 2026-09-28T22:37:49Z done-run rc=0
