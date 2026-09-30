@@ -16,9 +16,35 @@ import (
 
 func main() {
 	if err := run(); err != nil {
-		fmt.Fprintln(os.Stderr, "native BIND peer observation unavailable")
+		fmt.Fprintln(os.Stderr, failureLine(err))
 		os.Exit(1)
 	}
+}
+
+// inspectionFailure keeps the decoded request's digest with an inspection
+// error, so the only detail the primary can receive is a reviewed reason token
+// bound to that exact challenge.
+type inspectionFailure struct {
+	requestSHA256 string
+	err           error
+}
+
+func (f *inspectionFailure) Error() string { return f.err.Error() }
+func (f *inspectionFailure) Unwrap() error { return f.err }
+
+// failureLine is the single stderr line of a failed inspection: the reviewed
+// reason line when the error is classified and bound to a decoded request,
+// otherwise the fixed generic sentence. Raw error text is never printed.
+func failureLine(err error) string {
+	var failure *inspectionFailure
+	if errors.As(err, &failure) {
+		if line, ok := dnspeerproof.FormatInspectorReason(
+			failure.requestSHA256, bindpeerinspector.Reason(failure.err),
+		); ok {
+			return line
+		}
+	}
+	return "native BIND peer observation unavailable"
 }
 
 func run() error {
@@ -42,9 +68,13 @@ func runWith(ctx context.Context, input io.Reader, output io.Writer, policy bind
 	if err != nil {
 		return err
 	}
-	response, err := bindpeerinspector.Inspect(ctx, request, native, policy, now)
+	digest, err := dnspeerproof.RequestSHA256(request)
 	if err != nil {
 		return err
+	}
+	response, err := bindpeerinspector.Inspect(ctx, request, native, policy, now)
+	if err != nil {
+		return &inspectionFailure{requestSHA256: digest, err: err}
 	}
 	encoded, err := dnspeerproof.EncodeResponse(response)
 	if err != nil {

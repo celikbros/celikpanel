@@ -205,6 +205,17 @@ class DeletionAndGateTest(unittest.TestCase):
         unreviewed = gd.deletion_pending_guidance(T, 202, {**body, "reason": "made_up"})
         self.assertFalse(unreviewed["actionable"])
 
+    def test_refused_local_catalog_transfer_is_reviewed(self) -> None:
+        for status, saved in ((202, False), (200, True)):
+            item = gd.deletion_pending_guidance(T, status, {
+                "status": "deletion_pending", "stage": "dns_cleanup", "message": "m",
+                "reason": "dns_peer_catalog_transfer_refused"}, saved=saved)
+            self.assertTrue(item["actionable"], item)
+            self.assertEqual(item["message_keys"], ["err.DNS_PUBLICATION_FAILED.dns_peer_catalog_transfer_refused"])
+            self.assertEqual(item["actor"], "the secondary's owner (allow the catalog transfer from loopback)")
+            self.assertIn("allow-transfer", item["shown"]["en"][0])
+            self.assertIn("aynı yayını", item["shown"]["tr"][0])
+
     def test_saved_status(self) -> None:
         item = gd.deletion_pending_guidance(T, 200, {"status": "deletion_pending", "stage": "dns_cleanup",
                                                      "reason": "dns_peer_inspection_unknown", "message": "m"},
@@ -246,6 +257,33 @@ class DeletionAndGateTest(unittest.TestCase):
         preview = gd.preview_blocker_guidance(T, [{"code": "pdns_primary_switch_paused"}])
         self.assertTrue(preview["actionable"])
         self.assertEqual(preview["shown"]["en"], [CATALOG["en"]["dnsEngine.blocker.pdnsPrimarySwitchPaused"]])
+
+
+class MailStageDeletionFailureTest(unittest.TestCase):
+    """pair4 P4-2: a verified mail-stage failure is actionable on both reads."""
+
+    BODY = {"status": "deletion_pending", "domain": "pair-accept.example", "stage": "mail_runtime_cleanup",
+            "reason": "mail_runtime_cleanup_failed", "error_line": "open mail root: too many levels of symbolic links",
+            "message": "m"}
+
+    def test_delete_response_and_saved_failure(self) -> None:
+        item = gd.deletion_pending_guidance(T, 202, dict(self.BODY))
+        self.assertTrue(item["actionable"], item["actionable_reason"])
+        self.assertEqual(item["state"], "verified-failure")
+        self.assertEqual(item["message_keys"], ["err.DOMAIN_DELETION_FAILED.mail_runtime_cleanup_failed"])
+        self.assertEqual(item["actor"], "this server's owner (mail storage on this server)")
+        saved = gd.deletion_pending_guidance(T, 200, {**self.BODY, "status": "failed"}, saved=True)
+        self.assertTrue(saved["actionable"])
+        self.assertEqual(saved["state"], "verified-failure")
+        self.assertIn("Retry this deletion", saved["shown"]["en"][0])
+        self.assertIn("Bu silme işlemini yeniden dene", saved["shown"]["tr"][0])
+
+    def test_unreviewed_or_reasonless_mail_stage_stays_generic(self) -> None:
+        bare = {k: v for k, v in self.BODY.items() if k != "reason"}
+        for body in (bare, {**self.BODY, "reason": "made_up"}, {**self.BODY, "stage": "site_cleanup"}):
+            item = gd.deletion_pending_guidance(T, 202, body)
+            self.assertFalse(item["actionable"])
+            self.assertEqual(item["message_keys"], ["domains.deletionPending"])
 
 if __name__ == "__main__":
     unittest.main()

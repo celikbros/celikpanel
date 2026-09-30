@@ -112,6 +112,10 @@ type PairingReceipt struct {
 	// Version 1 binds the explicit catalog secondary zone and the matching
 	// options-scoped subscription. Zero identifies the historical renderer;
 	// it remains readable but is never accepted as current managed policy.
+	// Version 2 (2026-10-01, pair4 P-1) additionally lets the catalog zone be
+	// transferred from loopback, which the owner's read-only inspector needs.
+	// Version 1 remains an accepted earlier managed rendering until the next
+	// generation this product writes, which renders version 2.
 	SecondaryConfigVersion int `json:"secondary_config_version,omitempty"`
 }
 
@@ -142,6 +146,11 @@ type TreePlan struct {
 	pairing       *Pairing
 	catalogSerial uint32
 	zones         []treeZone
+	// secondaryConfigVersion is zero for every newly derived plan (render the
+	// current secondary policy). Only a plan reconstructed from a verified
+	// tree carries that tree's own accepted earlier version, so an existing
+	// immutable generation can be re-verified byte for byte.
+	secondaryConfigVersion int
 }
 
 type treeZone struct {

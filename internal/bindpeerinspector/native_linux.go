@@ -21,6 +21,7 @@ import (
 	"github.com/alicelik/celikpanel/internal/binddns"
 	"github.com/alicelik/celikpanel/internal/dnslistener"
 	"github.com/alicelik/celikpanel/internal/dnspeerproof"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 type Command func(context.Context, string, ...string) ([]byte, error)
@@ -37,61 +38,79 @@ func (n NativeReader) Read(ctx context.Context, request dnspeerproof.RequestV1) 
 	if run == nil {
 		run = runBounded
 	}
+	named := func(message string) error {
+		return reasonError(transport.DNSPeerInspectorReasonNamedUnavailable, message)
+	}
+	listeners := func(message string) error {
+		return reasonError(transport.DNSPeerInspectorReasonListenersUnverified, message)
+	}
+	catalog := func(message string) error {
+		return reasonError(transport.DNSPeerInspectorReasonCatalogUnverified, message)
+	}
 	show, err := run(ctx, "/usr/bin/systemctl", "show", "named.service", "-p", "ActiveState", "-p", "MainPID")
 	if err != nil {
-		return Snapshot{}, errors.New("named service state is unavailable")
+		return Snapshot{}, named("named service state is unavailable")
 	}
 	pid, err := parseNamedProcess(string(show))
 	if err != nil {
-		return Snapshot{}, err
+		return Snapshot{}, named(err.Error())
 	}
 	exe, err := os.Readlink(fmt.Sprintf("/proc/%d/exe", pid))
 	if err != nil || (exe != "/usr/sbin/named" && exe != "/usr/bin/named") {
-		return Snapshot{}, errors.New("named executable identity is unverified")
+		return Snapshot{}, named("named executable identity is unverified")
 	}
 	cmdline, err := readNamedCmdline(pid)
 	if err != nil {
-		return Snapshot{}, errors.New("named invocation is unavailable")
+		return Snapshot{}, named("named invocation is unavailable")
 	}
 	configPath, err := namedDefaultConfigForInvocation(exe, cmdline)
 	if err != nil {
-		return Snapshot{}, err
+		return Snapshot{}, named(err.Error())
 	}
 	startTicks, err := readNamedStartTicks(pid)
 	if err != nil {
-		return Snapshot{}, errors.New("named process start identity is unavailable")
+		return Snapshot{}, named("named process start identity is unavailable")
 	}
 	sockets, err := run(ctx, "/usr/bin/ss", "-H", "-lnupt", "( sport = :53 )")
 	if err != nil {
-		return Snapshot{}, errors.New("native DNS listeners are unavailable")
+		return Snapshot{}, listeners("native DNS listeners are unavailable")
 	}
 	identities, err := dnslistener.CanonicalPublicListeners(string(sockets), "named", pid)
 	if err != nil || !dnslistener.HasIPv4Listener(identities, request.PeerIP, pid) || !localCatalogListenerMatches(string(sockets), pid) {
-		return Snapshot{}, errors.New("native DNS listeners do not match the peer")
+		return Snapshot{}, listeners("native DNS listeners do not match the peer")
 	}
 	controlSockets, err := run(ctx, "/usr/bin/ss", "-H", "-lnpt", "( sport = :953 )")
 	if err != nil || !controlListenerMatches(string(controlSockets), pid) {
-		return Snapshot{}, errors.New("native BIND control listener does not match named")
+		return Snapshot{}, listeners("native BIND control listener does not match named")
 	}
 	config, err := run(ctx, "/usr/bin/named-checkconf", "-p", configPath)
 	if err != nil || len(config) == 0 {
-		return Snapshot{}, errors.New("named configuration is unavailable")
+		return Snapshot{}, named("named configuration is unavailable")
 	}
 	if !configBindsCatalog(string(config), request) {
-		return Snapshot{}, errors.New("native catalog subscription is unverified")
+		return Snapshot{}, catalog("native catalog subscription is unverified")
 	}
 	configHash := sha256.Sum256(config)
 	catalogStatus, statusErr := run(ctx, "/usr/sbin/rndc", "-s", "127.0.0.1", "zonestatus", request.CatalogName)
 	if statusErr != nil || !strings.Contains(string(catalogStatus), "type: secondary") {
-		return Snapshot{}, errors.New("native transferred catalog is unavailable")
+		return Snapshot{}, catalog("native transferred catalog is unavailable")
 	}
 	axfr, err := run(ctx, "/usr/bin/dig", "@127.0.0.1", request.CatalogName, "AXFR", "+tcp", "+noall", "+answer", "+ttlid", "+nocmd", "+nostats", "+nocomments", "+noquestion")
-	if err != nil {
-		return Snapshot{}, errors.New("local catalog AXFR is unavailable; enroll read-only inspector transfer access")
+	if refused := catalogTransferRefused(string(axfr)); refused || err != nil {
+		if refused {
+			// dig 9.20 prints only "; Transfer failed." and exits 0 when
+			// named answers the AXFR with REFUSED (measured 2026-10-01). The
+			// catalog is a loaded secondary here (zonestatus above), so the
+			// practical cause is the zone's transfer ACL excluding loopback.
+			return Snapshot{}, reasonError(transport.DNSPeerInspectorReasonCatalogTransferRefused,
+				"named refused the local catalog AXFR; allow the catalog zone's transfer from 127.0.0.1")
+		}
+		return Snapshot{}, reasonError(transport.DNSPeerInspectorReasonCatalogTransferFailed,
+			"local catalog AXFR is unavailable")
 	}
 	serial, members, err := parseCatalogAXFR(string(axfr), request)
 	if err != nil {
-		return Snapshot{}, err
+		return Snapshot{}, reasonError(transport.DNSPeerInspectorReasonCatalogMalformed, err.Error())
 	}
 	zoneOutput, zoneErr := run(ctx, "/usr/sbin/rndc", "-s", "127.0.0.1", "zonestatus", request.DeletedZone)
 	zoneState := "unknown"
@@ -134,6 +153,17 @@ func runBounded(ctx context.Context, path string, args ...string) ([]byte, error
 		return nil, errors.New("native BIND output exceeded its safe bound")
 	}
 	return output.data.Bytes(), err
+}
+
+// catalogTransferRefused recognises dig's own line for a transfer the server
+// answered with an error (REFUSED/NOTAUTH/...), printed even with +noall.
+func catalogTransferRefused(output string) bool {
+	for _, line := range strings.Split(output, "\n") {
+		if strings.TrimSpace(line) == "; Transfer failed." {
+			return true
+		}
+	}
+	return false
 }
 
 func localCatalogListenerMatches(output string, pid uint64) bool {

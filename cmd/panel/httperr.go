@@ -41,7 +41,11 @@ type apiErrorBody struct {
 	// falls back to the sentence for the code, which is what every screen did
 	// before this existed.
 	// Reason, Code'u inceltir. Eklemelidir.
-	Reason          string `json:"reason,omitempty"`
+	Reason string `json:"reason,omitempty"`
+	// Detail refines Reason with one reviewed machine token (for a pending
+	// DNS deletion: what the secondary's inspector reported). Additive.
+	// Detail, Reason'ı gözden geçirilmiş tek bir makine belirteciyle inceltir.
+	Detail          string `json:"detail,omitempty"`
 	PartialSuccess  bool   `json:"partial_success,omitempty"`
 	MutationApplied bool   `json:"mutation_applied,omitempty"`
 	// Details: the refusal's evidence, one line per item — for

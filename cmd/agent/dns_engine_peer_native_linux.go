@@ -96,7 +96,7 @@ func verifyEnrolledBINDPeerDeletion(ctx context.Context, authority dnsPeerAXFRAu
 	}
 	response, authenticated, err := dnspeertransport.Inspect(ctx, enrollment.Transport, request, dnspeertransport.SSH{})
 	if err != nil {
-		return pendingBINDPeer(transport.DNSPeerPendingInspectionUnknown)
+		return pendingBINDPeer(inspectionPendingCode(dnspeertransport.InspectorReason(err)))
 	}
 	if err := verifyCurrent(); err != nil {
 		return err

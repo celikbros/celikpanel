@@ -2,6 +2,7 @@ package bindpeerinspector
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -325,5 +326,18 @@ func TestNamedStarttimeBindsPIDAndProcessIdentity(t *testing.T) {
 		if _, err := parseNamedStartTicks(42, bad); err == nil {
 			t.Fatalf("invalid process identity accepted: %q", bad)
 		}
+	}
+}
+
+// dig 9.20 answers a refused AXFR with only "; Transfer failed." and exit 0
+// (measured on Debian 13 bind9 1:9.20.26, 2026-10-01).
+func TestLocalCatalogTransferRefusalIsTyped(t *testing.T) {
+	if !catalogTransferRefused("; Transfer failed.\n") || !catalogTransferRefused("x\n; Transfer failed.") ||
+		catalogTransferRefused("catalog. 60 IN SOA invalid. invalid. 3 60 30 3600 30\n") {
+		t.Fatal("transfer refusal recognition is wrong")
+	}
+	if Reason(reasonError("catalog_transfer_refused", "m")) != "catalog_transfer_refused" ||
+		Reason(reasonError("made_up", "m")) != "" || Reason(errors.New("plain")) != "" {
+		t.Fatal("only reviewed reasons may leave the inspector")
 	}
 }

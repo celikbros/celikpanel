@@ -10,9 +10,33 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/binddns"
 	"github.com/alicelik/celikpanel/internal/dnspeerproof"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 const PolicySchemaV1 = "celikpanel-bind-peer-inspector-policy/v1"
+
+// ReasonError is an incomplete observation classified with one reviewed
+// reason token (transport.ValidDNSPeerInspectorReason). The message stays
+// local to the inspector; only the token may be reported to the primary.
+type ReasonError struct {
+	Reason  string
+	Message string
+}
+
+func (e *ReasonError) Error() string { return e.Message }
+
+func reasonError(reason, message string) error {
+	return &ReasonError{Reason: reason, Message: message}
+}
+
+// Reason returns the reviewed reason token of an inspection error, or "".
+func Reason(err error) string {
+	var classified *ReasonError
+	if errors.As(err, &classified) && transport.ValidDNSPeerInspectorReason(classified.Reason) {
+		return classified.Reason
+	}
+	return ""
+}
 
 type OwnerPolicyV1 struct {
 	Schema      string `json:"schema"`
@@ -67,11 +91,13 @@ func Inspect(ctx context.Context, request dnspeerproof.RequestV1, reader Reader,
 	}
 	firstPolicy, firstPolicyHash, err := policy.Read(ctx)
 	if err != nil || firstPolicy.ValidateRequest(request) != nil || firstPolicyHash == "" {
-		return dnspeerproof.ResponseV1{}, errors.New("BIND peer owner policy is unavailable or mismatched")
+		return dnspeerproof.ResponseV1{}, reasonError(transport.DNSPeerInspectorReasonPolicy,
+			"BIND peer owner policy is unavailable or mismatched")
 	}
 	at := now().Unix()
 	if at < request.IssuedAtUnix-5 || at > request.ExpiresAtUnix {
-		return dnspeerproof.ResponseV1{}, errors.New("BIND peer inspection request is outside its valid interval")
+		return dnspeerproof.ResponseV1{}, reasonError(transport.DNSPeerInspectorReasonObservationExpired,
+			"BIND peer inspection request is outside its valid interval")
 	}
 	digest, err := dnspeerproof.RequestSHA256(request)
 	if err != nil {
@@ -87,7 +113,8 @@ func Inspect(ctx context.Context, request dnspeerproof.RequestV1, reader Reader,
 	}
 	secondPolicy, secondPolicyHash, err := policy.Read(ctx)
 	if err != nil || secondPolicy.ValidateRequest(request) != nil || secondPolicyHash != firstPolicyHash {
-		return dnspeerproof.ResponseV1{}, errors.New("BIND peer owner policy changed during inspection")
+		return dnspeerproof.ResponseV1{}, reasonError(transport.DNSPeerInspectorReasonPolicy,
+			"BIND peer owner policy changed during inspection")
 	}
 	catalogState, memberState, nativeState := "unknown", "unknown", "unknown"
 	if complete(first) && complete(second) && first.ProcessID == second.ProcessID && first.ProcessStartTicks == second.ProcessStartTicks && first.ConfigSHA256 == second.ConfigSHA256 && first.CatalogSerial == second.CatalogSerial {
@@ -110,7 +137,8 @@ func Inspect(ctx context.Context, request dnspeerproof.RequestV1, reader Reader,
 	}
 	observed := now().Unix()
 	if observed < request.IssuedAtUnix || observed > request.ExpiresAtUnix {
-		return dnspeerproof.ResponseV1{}, errors.New("BIND peer observation expired")
+		return dnspeerproof.ResponseV1{}, reasonError(transport.DNSPeerInspectorReasonObservationExpired,
+			"BIND peer observation expired")
 	}
 	response := dnspeerproof.ResponseV1{
 		Schema: dnspeerproof.ResponseSchemaV1, RequestSHA256: digest, Nonce: request.Nonce, Attempt: request.Attempt,

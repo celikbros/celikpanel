@@ -56,7 +56,29 @@ const (
 
 // Unknown never asserts absence, failure of the native service, or deletion.
 // Details from SSH, including paths and stderr, are deliberately not returned.
-type Unknown struct{ Code Code }
+// Reason is set only when the pinned, authenticated peer's forced command
+// exited with exactly one reviewed reason line bound to this request
+// (dnspeerproof.ParseInspectorReason); it is a token, never peer text.
+type Unknown struct {
+	Code   Code
+	Reason string
+}
+
+// InspectorReason returns the reviewed reason an authenticated inspector
+// reported for an incomplete observation, or "".
+func InspectorReason(err error) string {
+	var u Unknown
+	if errors.As(err, &u) && u.Code == CodeUnavailable {
+		return u.Reason
+	}
+	return ""
+}
+
+// commandFailure is an authenticated session whose fixed command exited
+// unsuccessfully. Its bounded stderr is parsed only against the request digest.
+type commandFailure struct{ stderr []byte }
+
+func (commandFailure) Error() string { return string(CodeUnavailable) }
 
 func (e Unknown) Error() string { return string(e.Code) }
 
@@ -74,11 +96,11 @@ func (e Enrollment) validate() error {
 		!usernamePattern.MatchString(e.Username) || e.Username == "root" ||
 		len(e.HostKeySHA256) != 64 || !filepath.IsAbs(e.PrivateKeyPath) ||
 		e.Timeout <= 0 || e.Timeout > maxDuration {
-		return Unknown{CodeEnrollment}
+		return Unknown{Code: CodeEnrollment}
 	}
 	b, err := hex.DecodeString(e.HostKeySHA256)
 	if err != nil || len(b) != 32 || hex.EncodeToString(b) != e.HostKeySHA256 {
-		return Unknown{CodeEnrollment}
+		return Unknown{Code: CodeEnrollment}
 	}
 	return nil
 }
@@ -96,31 +118,38 @@ type Exchanger interface {
 func Inspect(ctx context.Context, enrollment Enrollment, request dnspeerproof.RequestV1, exchanger Exchanger) (dnspeerproof.ResponseV1, dnspeerproof.PeerAuthentication, error) {
 	if enrollment.validate() != nil || exchanger == nil || request.Validate() != nil ||
 		request.PeerIP != enrollment.PeerIP || request.PeerIdentitySHA256 != enrollment.HostKeySHA256 {
-		return dnspeerproof.ResponseV1{}, dnspeerproof.PeerAuthentication{}, Unknown{CodeEnrollment}
+		return dnspeerproof.ResponseV1{}, dnspeerproof.PeerAuthentication{}, Unknown{Code: CodeEnrollment}
 	}
 	raw, err := dnspeerproof.EncodeRequest(request)
 	if err != nil || len(raw) > maxWireSize {
-		return dnspeerproof.ResponseV1{}, dnspeerproof.PeerAuthentication{}, Unknown{CodeEnrollment}
+		return dnspeerproof.ResponseV1{}, dnspeerproof.PeerAuthentication{}, Unknown{Code: CodeEnrollment}
 	}
 	deadline := enrollment.Timeout
 	ctx, cancel := context.WithTimeout(ctx, deadline)
 	defer cancel()
 	answer, auth, err := exchanger.Exchange(ctx, enrollment, raw)
+	var failed commandFailure
+	if err != nil && errors.As(err, &failed) {
+		sum := sha256.Sum256(raw)
+		return dnspeerproof.ResponseV1{}, dnspeerproof.PeerAuthentication{}, Unknown{
+			Code: CodeUnavailable, Reason: dnspeerproof.ParseInspectorReason(failed.stderr, hex.EncodeToString(sum[:])),
+		}
+	}
 	if err != nil || !auth.Established || auth.PeerIP != enrollment.PeerIP || auth.IdentitySHA256 != enrollment.HostKeySHA256 {
-		return dnspeerproof.ResponseV1{}, dnspeerproof.PeerAuthentication{}, Unknown{CodeUnavailable}
+		return dnspeerproof.ResponseV1{}, dnspeerproof.PeerAuthentication{}, Unknown{Code: CodeUnavailable}
 	}
 	if len(answer) == 0 || len(answer) > maxWireSize+1 {
-		return dnspeerproof.ResponseV1{}, dnspeerproof.PeerAuthentication{}, Unknown{CodeMalformed}
+		return dnspeerproof.ResponseV1{}, dnspeerproof.PeerAuthentication{}, Unknown{Code: CodeMalformed}
 	}
 	if answer[len(answer)-1] == '\n' {
 		answer = answer[:len(answer)-1]
 	}
 	if len(answer) == 0 || len(answer) > maxWireSize {
-		return dnspeerproof.ResponseV1{}, dnspeerproof.PeerAuthentication{}, Unknown{CodeMalformed}
+		return dnspeerproof.ResponseV1{}, dnspeerproof.PeerAuthentication{}, Unknown{Code: CodeMalformed}
 	}
 	response, err := dnspeerproof.DecodeResponse(answer)
 	if err != nil {
-		return dnspeerproof.ResponseV1{}, dnspeerproof.PeerAuthentication{}, Unknown{CodeMalformed}
+		return dnspeerproof.ResponseV1{}, dnspeerproof.PeerAuthentication{}, Unknown{Code: CodeMalformed}
 	}
 	return response, auth, nil
 }
@@ -143,18 +172,18 @@ func (PowerDNSSSH) Exchange(ctx context.Context, enrollment Enrollment, request 
 
 func exchangeFixed(ctx context.Context, enrollment Enrollment, request []byte, command string) ([]byte, dnspeerproof.PeerAuthentication, error) {
 	if enrollment.validate() != nil || len(request) == 0 || len(request) > maxWireSize {
-		return nil, dnspeerproof.PeerAuthentication{}, Unknown{CodeEnrollment}
+		return nil, dnspeerproof.PeerAuthentication{}, Unknown{Code: CodeEnrollment}
 	}
 	key, err := readOwnerKey(enrollment.PrivateKeyPath)
 	if err != nil {
-		return nil, dnspeerproof.PeerAuthentication{}, Unknown{CodeEnrollment}
+		return nil, dnspeerproof.PeerAuthentication{}, Unknown{Code: CodeEnrollment}
 	}
 	signer, err := ssh.ParsePrivateKey(key)
 	for i := range key {
 		key[i] = 0
 	}
 	if err != nil {
-		return nil, dnspeerproof.PeerAuthentication{}, Unknown{CodeEnrollment}
+		return nil, dnspeerproof.PeerAuthentication{}, Unknown{Code: CodeEnrollment}
 	}
 	var matched bool
 	config := &ssh.ClientConfig{
@@ -175,11 +204,11 @@ func exchangeFixed(ctx context.Context, enrollment Enrollment, request []byte, c
 	}
 	conn, err := (&net.Dialer{}).DialContext(ctx, "tcp", net.JoinHostPort(enrollment.PeerIP, "22"))
 	if err != nil {
-		return nil, dnspeerproof.PeerAuthentication{}, Unknown{CodeUnavailable}
+		return nil, dnspeerproof.PeerAuthentication{}, Unknown{Code: CodeUnavailable}
 	}
 	defer conn.Close()
 	if err := conn.SetDeadline(time.Now().Add(enrollment.Timeout)); err != nil {
-		return nil, dnspeerproof.PeerAuthentication{}, Unknown{CodeUnavailable}
+		return nil, dnspeerproof.PeerAuthentication{}, Unknown{Code: CodeUnavailable}
 	}
 	closed := make(chan struct{})
 	go func() {
@@ -192,13 +221,13 @@ func exchangeFixed(ctx context.Context, enrollment Enrollment, request []byte, c
 	defer close(closed)
 	clientConn, chans, reqs, err := ssh.NewClientConn(conn, net.JoinHostPort(enrollment.PeerIP, "22"), config)
 	if err != nil || !matched {
-		return nil, dnspeerproof.PeerAuthentication{}, Unknown{CodeUnavailable}
+		return nil, dnspeerproof.PeerAuthentication{}, Unknown{Code: CodeUnavailable}
 	}
 	client := ssh.NewClient(clientConn, chans, reqs)
 	defer client.Close()
 	session, err := client.NewSession()
 	if err != nil {
-		return nil, dnspeerproof.PeerAuthentication{}, Unknown{CodeUnavailable}
+		return nil, dnspeerproof.PeerAuthentication{}, Unknown{Code: CodeUnavailable}
 	}
 	defer session.Close()
 	var stdout limitedBuffer
@@ -209,7 +238,14 @@ func exchangeFixed(ctx context.Context, enrollment Enrollment, request []byte, c
 	session.Stdout = &stdout
 	session.Stderr = &stderr
 	if err := session.Run(command); err != nil || stdout.overflow || stderr.overflow {
-		return nil, dnspeerproof.PeerAuthentication{}, Unknown{CodeUnavailable}
+		var exit *ssh.ExitError
+		if err != nil && errors.As(err, &exit) && matched && !stdout.overflow && !stderr.overflow {
+			// The pinned host ran the owner's forced command, which exited
+			// non-zero. Only its bounded stderr is kept, for digest-bound
+			// parsing of one reviewed reason token.
+			return nil, dnspeerproof.PeerAuthentication{}, commandFailure{stderr: append([]byte(nil), stderr.Bytes()...)}
+		}
+		return nil, dnspeerproof.PeerAuthentication{}, Unknown{Code: CodeUnavailable}
 	}
 	auth := dnspeerproof.PeerAuthentication{Established: true, IdentitySHA256: enrollment.HostKeySHA256, PeerIP: enrollment.PeerIP}
 	return stdout.Bytes(), auth, nil

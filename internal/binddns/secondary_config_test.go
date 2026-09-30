@@ -22,7 +22,7 @@ func TestSecondaryCatalogConfigurationUsesExplicitZoneAndOptionsScope(t *testing
 	const want = "catalog-zones {\n\tzone \"catalog-c0000214.celikpanel.invalid\" default-primaries { 192.0.2.20; } in-memory yes;\n};\n"
 	if options != want || strings.Contains(string(generation.Config), "catalog-zones") ||
 		strings.Contains(string(generation.Config), "file ") ||
-		generation.ReceiptValue.Pairing.SecondaryConfigVersion != 1 {
+		generation.ReceiptValue.Pairing.SecondaryConfigVersion != CurrentSecondaryConfigVersion {
 		t.Fatalf("invalid subscription split: options=%q config=%q receipt=%+v", options, generation.Config, generation.ReceiptValue.Pairing)
 	}
 	for _, change := range []func(*Pairing){
@@ -89,7 +89,7 @@ func TestSecondaryCatalogRendererDoesNotReuseLegacyGeneration(t *testing.T) {
 		t.Fatal(err)
 	}
 	invalid := cloneReceipt(corrected.ReceiptValue)
-	invalid.Pairing.SecondaryConfigVersion = 2
+	invalid.Pairing.SecondaryConfigVersion = 3
 	if err := validatePairingReceipt(pairingTestRoot, invalid.Pairing); err == nil {
 		t.Fatal("unknown secondary rendering version accepted")
 	}

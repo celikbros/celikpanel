@@ -23,21 +23,67 @@ func dnsPeerPendingEnglish(code string) string {
 		return "The DNS change is saved, but its private peer challenge cannot be reconciled. This server's administrator must review the retained challenge and exact operation record; only then retry this same publication."
 	case transport.DNSPeerPendingOwnerEditUnknown:
 		return "The DNS change is saved, but local or peer evidence changed during verification. This server's administrator must reconcile the accepted operation with native DNS configuration, then retry this same publication."
+	case transport.DNSPeerPendingCatalogTransferRefused:
+		return "The DNS change is saved, but the secondary has not been shown to have removed the zone: the secondary's named refused the inspector's local transfer of the catalog zone (allow-transfer). The secondary's owner allows that transfer from loopback on the secondary. A secondary whose DNS CelikPanel set up with this release already allows it; on one set up by an earlier release it arrives when CelikPanel next writes that server's DNS configuration. On a secondary you run without CelikPanel, add 127.0.0.1 and ::1 to the catalog zone's allow-transfer in named's configuration and reload named. Then retry the same publication; it continues from where it stopped. Nothing retries by itself."
 	default:
 		return "The DNS change is saved, but paired deletion is unverified. The server administrator must inspect the exact DNS operation and secondary state, then retry this same publication."
 	}
+}
+
+// dnsPeerInspectorDetailEnglish is the product sentence for one reviewed
+// reason the secondary's inspector reported. It is shown after the reason's
+// own text; it never repeats inspector, SSH or native command output.
+func dnsPeerInspectorDetailEnglish(detail string) string {
+	switch detail {
+	case transport.DNSPeerInspectorReasonPolicy:
+		return "The secondary's inspector reported that its owner policy is missing or does not match this request; the secondary's owner checks it with dns-peer-enroll secondary-status."
+	case transport.DNSPeerInspectorReasonNamedUnavailable:
+		return "The secondary's inspector reported that named is not running under its standard service and configuration, or that its configuration could not be read."
+	case transport.DNSPeerInspectorReasonListenersUnverified:
+		return "The secondary's inspector reported that named's DNS or control (rndc) listeners do not match the enrolled address and loopback."
+	case transport.DNSPeerInspectorReasonCatalogUnverified:
+		return "The secondary's inspector reported that named does not hold the primary's catalog zone as a subscribed secondary zone."
+	case transport.DNSPeerInspectorReasonCatalogTransferFailed:
+		return "The secondary's inspector reported that the local transfer of the catalog zone did not complete."
+	case transport.DNSPeerInspectorReasonCatalogMalformed:
+		return "The secondary's inspector reported that the transferred catalog zone does not have the expected content."
+	case transport.DNSPeerInspectorReasonObservationExpired:
+		return "The secondary's inspector reported that the request expired before it finished; check that both servers' clocks are correct."
+	default:
+		return ""
+	}
+}
+
+// dnsPeerPendingGuidance splits a verified pending code into the reviewed
+// reason, its optional reviewed inspector detail and the English fallback.
+func dnsPeerPendingGuidance(code string) (reason, detail, message string, ok bool) {
+	reason, detail, ok = transport.SplitDNSPeerPendingCode(code)
+	if !ok {
+		return "", "", "", false
+	}
+	message = dnsPeerPendingEnglish(reason)
+	if sentence := dnsPeerInspectorDetailEnglish(detail); sentence != "" {
+		message += " " + sentence
+	} else {
+		detail = ""
+	}
+	return reason, detail, message, true
 }
 
 // dnsPeerPendingAPIError recognizes only a reviewed code carried by the
 // verified pending operation. Unknown data must use the generic fallback.
 func dnsPeerPendingAPIError(err error) (apiErrorBody, bool) {
 	var pending *dnsZoneV3PropagationPendingError
-	if !errors.As(err, &pending) || !pending.Exact || !transport.ValidDNSPeerPendingCode(pending.Code) {
+	if !errors.As(err, &pending) || !pending.Exact {
+		return apiErrorBody{}, false
+	}
+	reason, detail, message, ok := dnsPeerPendingGuidance(pending.Code)
+	if !ok {
 		return apiErrorBody{}, false
 	}
 	return apiErrorBody{
-		Code: errCodeDNSPublicationFailed, Reason: pending.Code,
-		Error: dnsPeerPendingEnglish(pending.Code),
+		Code: errCodeDNSPublicationFailed, Reason: reason, Detail: detail,
+		Error: message,
 	}, true
 }
 

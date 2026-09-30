@@ -85,6 +85,20 @@ kanıtlayamaz ve bölge silmeleri yeniden bir anahtar olana kadar bekler. Geri
 alınan bir kurulum anahtarı yalnız CelikPanel oluşturduysa ve değişmemişse
 siler.
 
+### BIND ikincil sunucuda katalog aktarımına yerel döngüden izin (1 Ekim 2026)
+
+Kaynak durumudur; bileşen testleri var, gerçek sistem denemesi bekliyor; henüz
+yayımlanmış bir sürümün parçası değildir.
+
+CelikPanel'in kurduğu bir BIND ikincil sunucu artık birincil sunucunun katalog
+bölgesinin birincilden olduğu gibi yerel döngü adresinden (loopback) de
+aktarılmasına izin verir: yalnız o bölgede
+`allow-transfer { <birincil>/32; 127.0.0.1; ::1; };`. İsteğe bağlı, salt-okur
+silme denetleyiciniz (`bind-peer-inspect`) tam olarak bu yerel aktarıma ihtiyaç
+duyar; başka hiçbir şey değişmez ve anahtar gerekmez. CelikPanel olmadan
+işlettiğiniz bir ikincil sunucuda bu ifadeyi katalog bölgesine kendiniz ekleyip
+named'i yeniden yükleyin.
+
 ## Kanıt
 
 [Yerel doğrulama](validation/native-dns-independence-20260912/README.tr.md),

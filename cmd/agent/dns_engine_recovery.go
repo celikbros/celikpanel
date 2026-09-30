@@ -142,7 +142,9 @@ func verifyDNSSwitchJournalTarget(
 			if planErr != nil {
 				return planErr
 			}
-			expected, err = binddns.RenderTree(layout.GenerationRoot, plan)
+			expected, err = bindExpectedGenerationForTarget(
+				layout.GenerationRoot, plan, journal.TargetGeneration,
+			)
 			if err != nil || expected.ID != journal.TargetGeneration {
 				return errors.New("BIND recovery generation differs from the journal")
 			}
@@ -155,7 +157,9 @@ func verifyDNSSwitchJournalTarget(
 			if planErr != nil {
 				return planErr
 			}
-			expected, err = binddns.RenderTree(layout.GenerationRoot, plan)
+			expected, err = bindExpectedGenerationForTarget(
+				layout.GenerationRoot, plan, receipt.Generation,
+			)
 			if err != nil || expected.ID != receipt.Generation ||
 				expected.ReceiptValue.ConfigSHA256 != receipt.ConfigSHA256 {
 				return errors.New("legacy BIND secondary config differs from the journal")

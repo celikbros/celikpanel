@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { readDomainDeletionPending, readDomainDeletionOutcome, readSavedDomainDeletionStatus } from '../src/lib/domainDeletionPending.ts';
+import { readDomainDeletionPending, readDomainDeletionOutcome, readSavedDomainDeletionStatus, readSavedDomainDeletionState } from '../src/lib/domainDeletionPending.ts';
 import { en } from '../src/i18n/en.ts';
 import { tr } from '../src/i18n/tr.ts';
 import { enScreens } from '../src/i18n/screens/en.ts';
@@ -62,6 +62,7 @@ test('every reviewed pending reason has readable EN/TR copy', () => {
     'dns_peer_native_unknown',
     'dns_peer_journal_unknown',
     'dns_peer_owner_edit_unknown',
+    'dns_peer_catalog_transfer_refused',
     'bind_rndc_unavailable',
   ]) {
     const key = `err.DNS_PUBLICATION_FAILED.${reason}`;
@@ -114,4 +115,51 @@ test('rndc guidance names the reason, the owner, the commands and the retry acti
   assert.ok(tr_.includes(`“${trScreens['domains.retryDeletion']}”`));
   assert.match(en_, /server owner/);
   assert.match(tr_, /sunucunun sahibi/);
+});
+
+test('refused local catalog transfer names the secondary owner, the statement, both cases and the retry', async () => {
+  assert.equal(await readDomainDeletionPending(response(202, {
+    status: 'deletion_pending', stage: 'dns_cleanup', reason: 'dns_peer_catalog_transfer_refused',
+  })), 'dns_peer_catalog_transfer_refused');
+  const en_ = en['err.DNS_PUBLICATION_FAILED.dns_peer_catalog_transfer_refused'];
+  const tr_ = tr['err.DNS_PUBLICATION_FAILED.dns_peer_catalog_transfer_refused'];
+  for (const text of [en_, tr_]) {
+    assert.match(text, /allow-transfer/);
+    assert.match(text, /127\.0\.0\.1/);
+    assert.match(text, /::1/);
+    assert.match(text, /CelikPanel/);
+  }
+  assert.match(en_, /secondary's owner/);
+  assert.match(tr_, /ikincil sunucunun sahibi/);
+  assert.ok(en_.includes(`“${enScreens['domains.retryDeletion']}”`));
+  assert.ok(tr_.includes(`“${trScreens['domains.retryDeletion']}”`));
+});
+
+test('only a reviewed inspector detail of an incomplete inspection is kept, with EN/TR copy', async () => {
+  const details = ['inspector_policy', 'named_unavailable', 'listeners_unverified', 'catalog_unverified',
+    'catalog_transfer_failed', 'catalog_malformed', 'observation_expired'];
+  for (const detail of details) {
+    assert.deepEqual(await readDomainDeletionOutcome(response(202, {
+      status: 'deletion_pending', stage: 'dns_cleanup', reason: 'dns_peer_inspection_unknown', detail,
+    })), { state: 'pending', reason: 'dns_peer_inspection_unknown', detail });
+    assert.deepEqual(await readSavedDomainDeletionState(response(200, {
+      status: 'deletion_pending', stage: 'dns_cleanup', reason: 'dns_peer_inspection_unknown', detail,
+    })), { reason: 'dns_peer_inspection_unknown', detail });
+    const key = `domains.peerInspectorDetail.${detail}`;
+    assert.match(enScreens[key], /secondary's inspector reported/);
+    assert.match(trScreens[key], /denetleyicisi/);
+    assert.doesNotMatch(trScreens[key], /\?/);
+  }
+  for (const [reason, detail] of [
+    ['dns_peer_inspection_unknown', 'raw peer stderr'],
+    ['dns_peer_inspection_unknown', 'catalog_transfer_refused'],
+    ['dns_peer_native_unknown', 'named_unavailable'],
+  ]) {
+    assert.deepEqual(await readDomainDeletionOutcome(response(202, {
+      status: 'deletion_pending', stage: 'dns_cleanup', reason, detail,
+    })), { state: 'pending', reason });
+    assert.equal((await readSavedDomainDeletionState(response(200, {
+      status: 'deletion_pending', stage: 'dns_cleanup', reason, detail,
+    }))).detail, '');
+  }
 });

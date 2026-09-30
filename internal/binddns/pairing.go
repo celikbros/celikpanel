@@ -142,7 +142,32 @@ func CatalogZoneRecords(
 	return domain, records, nil
 }
 
-func pairingReceipt(_ string, pairing Pairing, serial uint32, catalog []byte) PairingReceipt {
+// Secondary rendering versions (PairingReceipt.SecondaryConfigVersion).
+//
+//   - 1: explicit catalog secondary zone; transfers only from the options
+//     scope (the paired primary). Accepted earlier managed rendering.
+//   - 2: the same zone with its own allow-transfer: the paired primary plus
+//     loopback, for the owner's read-only catalog inspector. Current.
+const (
+	SecondaryConfigVersionPeerOnlyCatalog = 1
+	SecondaryConfigVersionLoopbackCatalog = 2
+	CurrentSecondaryConfigVersion         = SecondaryConfigVersionLoopbackCatalog
+)
+
+// AcceptedSecondaryConfigVersion reports a secondary rendering this product
+// wrote and still accepts as managed policy: the current one, or the earlier
+// peer-only catalog rendering that the next written generation upgrades.
+// Version 0 (the historical invalid subscription) is never accepted.
+func AcceptedSecondaryConfigVersion(version int) bool {
+	return version == SecondaryConfigVersionPeerOnlyCatalog ||
+		version == SecondaryConfigVersionLoopbackCatalog
+}
+
+func acceptedSecondaryConfigVersion(version int) bool {
+	return AcceptedSecondaryConfigVersion(version)
+}
+
+func pairingReceipt(_ string, pairing Pairing, serial uint32, catalog []byte, secondaryVersion int) PairingReceipt {
 	receipt := PairingReceipt{
 		Role: pairing.Role, LocalIP: pairing.LocalIP, LocalNS: pairing.LocalNS,
 		PeerIP: pairing.PeerIP, PeerNS: pairing.PeerNS,
@@ -155,7 +180,7 @@ func pairingReceipt(_ string, pairing Pairing, serial uint32, catalog []byte) Pa
 		receipt.CatalogSHA256 = sha256Hex(catalog)
 	} else {
 		receipt.InMemory = true
-		receipt.SecondaryConfigVersion = 1
+		receipt.SecondaryConfigVersion = secondaryVersion
 	}
 	return receipt
 }
@@ -275,6 +300,7 @@ func appendSecondaryCatalogConfig(
 	config *strings.Builder,
 	_ string,
 	pairing Pairing,
+	version int,
 ) {
 	// The catalog itself must be a normal secondary zone. The catalog-zones
 	// subscription belongs inside the host's options block and is emitted by
@@ -283,7 +309,17 @@ func appendSecondaryCatalogConfig(
 	config.WriteString(catalogDomain(pairing.PeerIP))
 	config.WriteString("\" {\n\ttype secondary;\n\tprimaries { ")
 	config.WriteString(pairing.PeerIP)
-	config.WriteString("; };\n};\n")
+	config.WriteString("; };\n")
+	if version >= SecondaryConfigVersionLoopbackCatalog {
+		// Only the catalog zone: the paired primary keeps its transfer, and
+		// loopback may read the catalog (standard BIND practice, no key). The
+		// owner's inspector (bind-peer-inspect) asks exactly this: a local
+		// AXFR of the catalog. Member zones keep the options-scope policy.
+		config.WriteString("\tallow-transfer { ")
+		config.WriteString(pairing.PeerIP)
+		config.WriteString("/32; 127.0.0.1; ::1; };\n")
+	}
+	config.WriteString("};\n")
 }
 
 // SecondaryCatalogOptions returns the exact catalog subscription for insertion
@@ -329,7 +365,7 @@ func validatePairingReceipt(root string, receipt *PairingReceipt) error {
 		return nil
 	}
 	if receipt.CatalogFile != "" || receipt.CatalogSHA256 != "" || !receipt.InMemory ||
-		(receipt.SecondaryConfigVersion != 0 && receipt.SecondaryConfigVersion != 1) {
+		(receipt.SecondaryConfigVersion != 0 && !acceptedSecondaryConfigVersion(receipt.SecondaryConfigVersion)) {
 		return errors.New("BIND secondary catalog receipt is invalid")
 	}
 	return nil

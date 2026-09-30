@@ -332,6 +332,13 @@ export const trScreens: Record<ScreenKey, string> = {
     'domains.deletionWaiting': '{name} için silme işlemi bekliyor',
     'domains.retryDeletion': 'Bu silme işlemini yeniden dene',
     'domains.checkDeletionStatus': 'Silme durumunu kontrol et',
+    'domains.peerInspectorDetail.inspector_policy': 'İkincil sunucunun denetleyicisi, sahip politikasının eksik olduğunu ya da bu istekle eşleşmediğini bildirdi; ikincil sunucunun sahibi bunu dns-peer-enroll secondary-status ile denetler.',
+    'domains.peerInspectorDetail.named_unavailable': 'İkincil sunucunun denetleyicisi, named\'in standart hizmeti ve yapılandırmasıyla çalışmadığını ya da yapılandırmasının okunamadığını bildirdi.',
+    'domains.peerInspectorDetail.listeners_unverified': 'İkincil sunucunun denetleyicisi, named\'in DNS veya denetim (rndc) dinleyicilerinin kayıtlı adresle ve yerel döngü adresiyle eşleşmediğini bildirdi.',
+    'domains.peerInspectorDetail.catalog_unverified': 'İkincil sunucunun denetleyicisi, named\'in birincil sunucunun katalog bölgesini abone olunmuş bir ikincil bölge olarak tutmadığını bildirdi.',
+    'domains.peerInspectorDetail.catalog_transfer_failed': 'İkincil sunucunun denetleyicisi, katalog bölgesinin yerel aktarımının tamamlanmadığını bildirdi.',
+    'domains.peerInspectorDetail.catalog_malformed': 'İkincil sunucunun denetleyicisi, aktarılan katalog bölgesinin beklenen içerikte olmadığını bildirdi.',
+    'domains.peerInspectorDetail.observation_expired': 'İkincil sunucunun denetleyicisi, isteğin süresinin inceleme bitmeden dolduğunu bildirdi; iki sunucunun saatinin doğru olduğunu denetleyin.',
 
     'dns.notServed': 'Bu kayıtlar YAYINLANMIYOR: panel tarafından yönetilen etkin bir yetkili DNS motoru yok. Ayarlar > DNS altyapısı bölümünden BIND veya PowerDNS seçip etkinleştirin.',
     'dbtools.title': 'Veritabanı web araçları',

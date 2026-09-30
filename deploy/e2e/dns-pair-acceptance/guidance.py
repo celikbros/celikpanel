@@ -96,6 +96,9 @@ REVIEWED_DNS_PEER_REASONS = frozenset(
         # pair3: the product's own BIND cannot be asked about zone state
         # (no usable rndc key); the owner acts on that server.
         "bind_rndc_unavailable",
+        # pair4 P4-1: the secondary's named refused the owner inspector's
+        # local (loopback) catalog transfer; the secondary's owner acts.
+        "dns_peer_catalog_transfer_refused",
     }
 )
 
@@ -115,6 +118,7 @@ PEER_START_INSTRUCTION_KEYS = {"primary": ("setup.guide.startSecondary",)}
 # Reviewed actor for codes whose owner the product text names. Anything not
 # listed is recorded as "stated in text" and left to the human reviewer.
 ACTOR_BY_CODE = {
+    "mail_runtime_cleanup_failed": "this server's owner (mail storage on this server)",
     "license_required": "this server's administrator (license activation)",
     "LICENSE_VERIFICATION_UNAVAILABLE": "this server's administrator (license verification service)",
     "LICENSE_STATUS_UNAVAILABLE": "this server's administrator",
@@ -122,6 +126,7 @@ ACTOR_BY_CODE = {
     "dns_peer_enrollment_required": "primary administrator together with the secondary owner",
     "dns_peer_enrollment_changed": "primary administrator (pinned peer enrollment)",
     "dns_peer_inspection_unknown": "primary administrator and secondary owner",
+    "dns_peer_catalog_transfer_refused": "the secondary's owner (allow the catalog transfer from loopback)",
     "server_setup_primary_dns_required": "the primary server's owner",
     "server_setup_dns_readiness_required": "both DNS server owners",
     "server_setup_access_dns_required": "the domain owner (public DNS / registrar)",
@@ -484,21 +489,46 @@ def setup_execution_guidance(translator: Translator, execution: dict[str, Any]) 
 # Domain deletion (202), the wizard's selection rule and server plan blockers
 # ---------------------------------------------------------------------------
 
+# Reviewed verified failures of a non-DNS deletion stage, by stage
+# (web/src/lib/domainDeletionPending.ts reviewedStageFailures). pair4 P4-2: the
+# mail stage on an Arch primary. Data, not wording: add a stage here only after
+# reading the key the Domains screen shows for it.
+REVIEWED_DELETION_STAGE_FAILURES = {"mail_runtime_cleanup": "mail_runtime_cleanup_failed"}
+
+
+def _reviewed_stage_failure(body: dict[str, Any]) -> str:
+    stage, reason = body.get("stage"), body.get("reason")
+    if isinstance(stage, str) and REVIEWED_DELETION_STAGE_FAILURES.get(stage) == reason:
+        return reason
+    return ""
+
+
 def deletion_pending_guidance(translator: Translator, status: int, body: Any, *, saved: bool = False) -> dict[str, Any]:
     body = body if isinstance(body, dict) else {}
     reason = ""
+    stage_failure = False
     if saved:
         # readSavedDomainDeletionStatus
         if status == 200 and body.get("status") == "unknown" and body.get("stage") == "unknown":
             reason = ""
+        elif status == 200 and body.get("status") == "failed":
+            # A recorded, verified stage failure (P4-2).
+            reason = _reviewed_stage_failure(body)
+            stage_failure = True
         elif status == 200 and body.get("status") == "deletion_pending" and body.get("stage") == "dns_cleanup":
             reason = body.get("reason") if body.get("reason") in REVIEWED_DNS_PEER_REASONS else ""
+    elif status == 202 and body.get("status") == "deletion_pending" and body.get("stage") != "dns_cleanup":
+        reason = _reviewed_stage_failure(body)
+        stage_failure = bool(reason)
     elif status == 202 and body.get("status") == "deletion_pending" and body.get("stage") == "dns_cleanup":
         reason = body.get("reason") if body.get("reason") in REVIEWED_DNS_PEER_REASONS else ""
-    key = f"err.DNS_PUBLICATION_FAILED.{reason}" if reason else None
+    if reason in REVIEWED_DELETION_STAGE_FAILURES.values():
+        key = f"err.DOMAIN_DELETION_FAILED.{reason}"
+    else:
+        key = f"err.DNS_PUBLICATION_FAILED.{reason}" if reason else None
     message_key = key if key and translator.has(key) else "domains.deletionPending"
     result = _finish(
-        translator, source="domain-deletion", state="pending",
+        translator, source="domain-deletion", state="verified-failure" if stage_failure else "pending",
         code=reason or (body.get("stage") if isinstance(body.get("stage"), str) else None),
         reason=reason or None, title=None, messages=[_item(message_key)], details=[],
         raw_message=body.get("message") if isinstance(body.get("message"), str) else None,

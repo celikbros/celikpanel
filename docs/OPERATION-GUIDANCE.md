@@ -156,3 +156,38 @@ A completion wave permits one native challenge. If authenticated inspection
 is inconclusive, it returns the reviewed pending reason immediately, rather
 than letting later DNS polls mask it with a generic final check. These changes
 reuse the ledger v1 fields and do not broaden mutation authority.
+
+### Domain deletion mail stage (P0.2 guidance, September 30, 2026)
+
+Pair 4 (finding P4-2, Arch BIND primary) showed a DNS-only domain deletion stop
+at `mail_runtime_cleanup`: Arch ships `/var/mail -> spool/mail`, the Agent's
+symlink-free open returned ELOOP, the 202 had no reason and the saved status read
+`unknown`. The DNS deletion never started.
+
+- **Scope from records.** The mail stage runs only when the Panel's own records
+  show a mail runtime for the domain on this server: mailboxes, forwardings or a
+  catch-all for that domain, or a succeeded Panel installation of Postfix/Dovecot
+  or a mail profile in the service-operation ledger. Otherwise it is a no-op,
+  logged and audited as "no mail runtime for this domain on this server". The
+  filesystem is not probed to decide this. An owner-installed mail stack whose
+  mailboxes were all deleted before the domain is not covered and keeps its
+  files.
+- **Root.** The product root remains `/var/mail/vhosts`, resolved through one
+  permitted link: a root-owned `/var/mail` whose text is exactly `spool/mail` or
+  `/var/spool/mail`, pointing at a root-owned directory reachable without links.
+  Installation writes the resolved path into Postfix, Dovecot and the vmail home;
+  cleanup resolves the same way and opens the result with no symbolic link.
+  Existing configurations with the literal path name the same directory. Any
+  other link is refused with a typed error; no separate root receipt is stored.
+- **Verified failure.** An Agent-answered mail-stage error returns 202 with
+  `reason: mail_runtime_cleanup_failed` and a bounded, redacted `error_line`.
+  The failure is kept with the deletion marker in a versioned `panel_settings`
+  record (no schema migration) and `GET …/deletion-status` reports
+  `status: failed`. A lost reply clears that record and reads `unknown`.
+  A passing or skipped mail stage and completed deletion clear it. The Domains
+  screen names the failure, the server owner, the mail storage check and the
+  existing “Retry this deletion” action, which repeats the same deletion from the
+  mail stage. Failures in other stages (site, certificate, ledger) still read as
+  `unknown`.
+
+Evidence status: component tests only; native re-run pending (pair 5).

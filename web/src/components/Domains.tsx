@@ -7,7 +7,7 @@ import { useI18n } from '../i18n';
 import { Button, EmptyState, SearchInput, Spinner, StatusDot, UsageBar } from './ui';
 import { PageHeader } from './PageHeader';
 import { apiErrorText, readApiError } from '../lib/apiError';
-import { readDomainDeletionOutcome, readSavedDomainDeletionStatus } from '../lib/domainDeletionPending';
+import { domainDeletionReasonKey, readDomainDeletionOutcome, readSavedDomainDeletionState } from '../lib/domainDeletionPending';
 import type { TranslationKey } from '../i18n/en';
 import { useAuth } from '../auth/AuthContext';
 import {
@@ -127,10 +127,15 @@ export function Domains() {
         loadDomains();
     }, [isTeamMember]);
 
-    const pendingMessage = (reason: string) => {
-        const key = reason ? (`err.DNS_PUBLICATION_FAILED.${reason}` as TranslationKey) : null;
+    const pendingMessage = (reason: string, detail = '') => {
+        const key = domainDeletionReasonKey(reason) as TranslationKey | null;
         const translated = key ? t(key) : '';
-        return key && translated !== key ? translated : t('domains.deletionPending');
+        if (!key || translated === key) return t('domains.deletionPending');
+        // What the secondary's inspector reported, as its own sentence after
+        // the reason's guidance. Only reviewed tokens reach this point.
+        const detailKey = detail ? (`domains.peerInspectorDetail.${detail}` as TranslationKey) : null;
+        const detailText = detailKey ? t(detailKey) : '';
+        return detailKey && detailText !== detailKey ? `${translated} ${detailText}` : translated;
     };
 
     const restorePendingDeletions = async (rows: Domain[]) => {
@@ -139,9 +144,9 @@ export function Domains() {
         const observed = await Promise.all(pending.map(async (domain) => {
             try {
                 const response = await fetch(`${API_BASE}/domains/${domain.id}/deletion-status`);
-                const reason = await readSavedDomainDeletionStatus(response);
-                return reason === null ? null : {
-                    id: domain.id, name: domain.domain_name, message: pendingMessage(reason),
+                const saved = await readSavedDomainDeletionState(response);
+                return saved === null ? null : {
+                    id: domain.id, name: domain.domain_name, message: pendingMessage(saved.reason, saved.detail),
                 };
             } catch {
                 return null;
@@ -205,7 +210,7 @@ export function Domains() {
             const res = await fetch(`${API_BASE}/domains/${id}`, { method: 'DELETE' });
             const outcome = await readDomainDeletionOutcome(res);
             if (outcome.state === 'pending') {
-                const message = pendingMessage(outcome.reason);
+                const message = pendingMessage(outcome.reason, outcome.detail);
                 pendingReadEpoch.current++;
                 setPendingDeletions((current) => [
                     ...current.filter((item) => item.id !== id),

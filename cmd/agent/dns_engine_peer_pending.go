@@ -47,6 +47,18 @@ func peerCurrentPendingCodeAt(attempt, enrollment, local func() error) error {
 	return nil
 }
 
+// inspectionPendingCode classifies an incomplete authenticated inspection by
+// the reviewed reason token its forced command reported, if any. A refused
+// local catalog transfer has its own typed reason (the secondary's owner can
+// act on it); any other reviewed reason rides as the detail of
+// dns_peer_inspection_unknown; no reason keeps the plain code.
+func inspectionPendingCode(reason string) string {
+	if reason == transport.DNSPeerInspectorReasonCatalogTransferRefused {
+		return transport.DNSPeerPendingCatalogTransferRefused
+	}
+	return transport.DNSPeerPendingInspectionUnknownWithDetail(reason)
+}
+
 func dnsZoneV3PendingLedgerCode(code string) string {
 	if transport.ValidDNSPeerPendingCode(code) {
 		return code

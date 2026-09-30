@@ -532,8 +532,16 @@ func ensureDovecotSSLCert(ctx context.Context) error {
 // ensureVmailUser, her maildir'in sahibi olan ayrılmış posta kutusu sahibini
 // (uid/gid 5000) oluşturur; tek, girişsiz bir sistem kullanıcısı.
 func ensureVmailUser(ctx context.Context) error {
+	// The vmail home, Postfix base and Dovecot paths all record the resolved
+	// root, so a host whose /var/mail is the distribution's link records the
+	// real directory (for example /var/spool/mail/vhosts) rather than a path
+	// the symlink-free open refuses.
+	root, err := managedMailRootPath()
+	if err != nil {
+		return err
+	}
 	if _, err := user.Lookup(vmailUser); err == nil {
-		return ensureMailRoot()
+		return secureEnsureMailRoot(root)
 	}
 	if _, err := user.LookupGroup(vmailUser); err != nil {
 		if out, err := serviceMutationCommand(ctx, "groupadd", "-g", vmailGID, vmailUser).CombinedOutput(); err != nil {
@@ -541,14 +549,10 @@ func ensureVmailUser(ctx context.Context) error {
 		}
 	}
 	if out, err := serviceMutationCommand(ctx, "useradd", "-r", "-g", vmailGID, "-u", vmailUID,
-		"-d", mailRootDir, "-s", "/usr/sbin/nologin", vmailUser).CombinedOutput(); err != nil {
+		"-d", root, "-s", "/usr/sbin/nologin", vmailUser).CombinedOutput(); err != nil {
 		return fmt.Errorf("useradd: %s", strings.TrimSpace(string(out)))
 	}
-	return ensureMailRoot()
-}
-
-func ensureMailRoot() error {
-	return secureEnsureMailRoot(mailRootDir)
+	return secureEnsureMailRoot(root)
 }
 
 // configurePostfixVirtual points Postfix at our maps and delivers unmatched-
@@ -559,8 +563,12 @@ func configurePostfixVirtual(ctx context.Context) error {
 	// The table type is DISCOVERED, never assumed — see postfixMapType.
 	// Tablo tipi VARSAYILMAZ, keşfedilir — bkz. postfixMapType.
 	mt := postfixMapTypeContext(ctx) + ":"
+	root, err := managedMailRootPath()
+	if err != nil {
+		return err
+	}
 	settings := [][2]string{
-		{"virtual_mailbox_base", mailRootDir},
+		{"virtual_mailbox_base", root},
 		{"virtual_mailbox_domains", mt + postfixDomainsPath},
 		{"virtual_mailbox_maps", mt + postfixVBoxPath},
 		{"virtual_alias_maps", mt + postfixVirtualPath},
@@ -593,7 +601,11 @@ func configureDovecotVirtual() error {
 	if err != nil {
 		return err
 	}
-	conf := buildDovecotVirtualConf(modern)
+	root, err := managedMailRootPath()
+	if err != nil {
+		return err
+	}
+	conf := buildDovecotVirtualConfAt(modern, root)
 
 	confDir := "/etc/dovecot/conf.d"
 	if !fileExistsAgent(confDir) {

@@ -341,6 +341,13 @@ export const enScreens = {
     'domains.deletionWaiting': 'Deletion of {name} is waiting',
     'domains.retryDeletion': 'Retry this deletion',
     'domains.checkDeletionStatus': 'Check deletion status',
+    'domains.peerInspectorDetail.inspector_policy': 'The secondary\'s inspector reported that its owner policy is missing or does not match this request; the secondary\'s owner checks it with dns-peer-enroll secondary-status.',
+    'domains.peerInspectorDetail.named_unavailable': 'The secondary\'s inspector reported that named is not running under its standard service and configuration, or that its configuration could not be read.',
+    'domains.peerInspectorDetail.listeners_unverified': 'The secondary\'s inspector reported that named\'s DNS or control (rndc) listeners do not match the enrolled address and loopback.',
+    'domains.peerInspectorDetail.catalog_unverified': 'The secondary\'s inspector reported that named does not hold the primary\'s catalog zone as a subscribed secondary zone.',
+    'domains.peerInspectorDetail.catalog_transfer_failed': 'The secondary\'s inspector reported that the local transfer of the catalog zone did not complete.',
+    'domains.peerInspectorDetail.catalog_malformed': 'The secondary\'s inspector reported that the transferred catalog zone does not have the expected content.',
+    'domains.peerInspectorDetail.observation_expired': 'The secondary\'s inspector reported that the request expired before it finished; check that both servers\' clocks are correct.',
 
     'dns.notServed': 'These records are NOT being served: no managed authoritative DNS engine is active. Choose and activate BIND or PowerDNS in Settings > DNS infrastructure.',
     'dbtools.title': 'Database web tools',

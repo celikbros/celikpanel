@@ -20,6 +20,9 @@ type domainDeletionStatusSnapshot struct {
 	lease        dnsZoneEngineLease
 	state        dnsZoneSyncState
 	engine       dnsEngineDBState
+	// failure is the last verified stage failure kept with the marker.
+	failure domainDeletionFailureRecord
+	failed  bool
 }
 
 func (p *Panel) readDomainDeletionStatusSnapshot(ctx context.Context, domainID int) (domainDeletionStatusSnapshot, error) {
@@ -46,6 +49,15 @@ func (p *Panel) readDomainDeletionStatusSnapshot(ctx context.Context, domainID i
 	snapshot.marked = true
 	if status != domainDeletionLedgerStatus {
 		snapshot.inconsistent = true
+		return snapshot, nil
+	}
+	snapshot.failure, snapshot.failed, err = readDomainDeletionFailure(ctx, tx, domainID, snapshot.domain)
+	if err != nil {
+		return snapshot, err
+	}
+	if snapshot.failed {
+		// The latest attempt stopped at a recorded stage; the DNS stage was
+		// not reached in that attempt, so no DNS evidence supersedes it.
 		return snapshot, nil
 	}
 	if mode != setupDNSModeLocal || parent.Valid {
@@ -107,10 +119,13 @@ func sameDomainDeletionStatusSnapshot(a, b domainDeletionStatusSnapshot) bool {
 }
 
 type domainDeletionStatusResponse struct {
-	Status  string `json:"status"`
-	Stage   string `json:"stage"`
-	Reason  string `json:"reason,omitempty"`
-	Message string `json:"message"`
+	Status string `json:"status"`
+	Stage  string `json:"stage"`
+	Reason string `json:"reason,omitempty"`
+	Detail string `json:"detail,omitempty"`
+	// ErrorLine is the bounded first line of a verified stage failure.
+	ErrorLine string `json:"error_line,omitempty"`
+	Message   string `json:"message"`
 }
 
 // handleDomainDeletionStatus only observes the saved domain marker, V3 lease,
@@ -138,6 +153,14 @@ func (p *Panel) handleDomainDeletionStatus(w http.ResponseWriter, r *http.Reques
 		})
 		return
 	}
+	if snapshot.failed {
+		_ = json.NewEncoder(w).Encode(domainDeletionStatusResponse{
+			Status: domainDeletionStatusFailed, Stage: snapshot.failure.Stage,
+			Reason: snapshot.failure.Reason, ErrorLine: snapshot.failure.ErrorLine,
+			Message: domainMailCleanupFailedEnglish,
+		})
+		return
+	}
 	result := domainDeletionStatusResponse{
 		Status:  "unknown",
 		Stage:   "unknown",
@@ -155,9 +178,12 @@ func (p *Panel) handleDomainDeletionStatus(w http.ResponseWriter, r *http.Reques
 				result.Status = "unknown"
 				result.Stage = "unknown"
 				result.Message = "The saved deletion state changed during the read. The server administrator must inspect the operation before retrying."
-			} else if code := dnsZoneV3PendingCodeFromJob(job); code != "" {
-				result.Reason = code
-				result.Message = dnsPeerPendingEnglish(code)
+			} else if reason, detail, message, ok := dnsPeerPendingGuidance(
+				dnsZoneV3PendingCodeFromJob(job),
+			); ok {
+				result.Reason = reason
+				result.Detail = detail
+				result.Message = message
 			}
 		}
 	}

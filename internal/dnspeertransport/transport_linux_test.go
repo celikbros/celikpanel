@@ -144,3 +144,37 @@ func TestOwnerKeyFileIsRestricted(t *testing.T) {
 		t.Fatal("writable key directory accepted")
 	}
 }
+
+// An authenticated forced command that exited non-zero may name one reviewed
+// reason bound to this exact request; anything else stays a bare unavailable.
+func TestInspectKeepsOnlyADigestBoundReviewedInspectorReason(t *testing.T) {
+	enrollment, request, _, _ := proofFixture(t)
+	digest, err := dnspeerproof.RequestSHA256(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	line, ok := dnspeerproof.FormatInspectorReason(digest, "catalog_transfer_refused")
+	if !ok {
+		t.Fatal("reviewed reason line was not formatted")
+	}
+	other := strings.Repeat("f", 64)
+	for stderr, want := range map[string]string{
+		line + "\n": "catalog_transfer_refused",
+		line:        "catalog_transfer_refused",
+		dnspeerproof.InspectorReasonPrefixV1 + " " + other + " catalog_transfer_refused\n": "",
+		dnspeerproof.InspectorReasonPrefixV1 + " " + digest + " made_up\n":                 "",
+		"sudo: warning\n" + line + "\n":                                                    "",
+		"native BIND peer observation unavailable\n":                                       "",
+		"": "",
+	} {
+		f := &fakeExchange{err: commandFailure{stderr: []byte(stderr)}}
+		_, _, err := Inspect(context.Background(), enrollment, request, f)
+		if !IsCode(err, CodeUnavailable) || InspectorReason(err) != want {
+			t.Fatalf("stderr %q: err=%v reason=%q want %q", stderr, err, InspectorReason(err), want)
+		}
+	}
+	f := &fakeExchange{err: context.DeadlineExceeded}
+	if _, _, err := Inspect(context.Background(), enrollment, request, f); InspectorReason(err) != "" {
+		t.Fatal("a transport failure carried an inspector reason")
+	}
+}

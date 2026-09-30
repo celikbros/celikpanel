@@ -200,7 +200,7 @@ func (p *Panel) removeDomainMailRuntimeLocked(
 		return fmt.Errorf("remove mail domain runtime: %w", err)
 	}
 	if !response.Applied {
-		return fmt.Errorf("remove mail domain runtime: agent did not confirm convergence")
+		return errDomainMailCleanupNotConfirmed
 	}
 	return nil
 }
@@ -225,7 +225,18 @@ func (p *Panel) writeDomainDeletionPending(
 		if guidance, ok := dnsPublicationGuidanceAPIError(cause); ok {
 			response["reason"] = guidance.Reason
 			response["message"] = guidance.Error
+			if guidance.Detail != "" {
+				response["detail"] = guidance.Detail
+			}
 		}
+	}
+	var stageFailure *domainDeletionStageFailure
+	if errors.As(cause, &stageFailure) && stageFailure.Stage == stage {
+		// A verified stage failure: the deletion stays pending and retryable,
+		// and the reason names what failed on this server.
+		response["reason"] = stageFailure.Reason
+		response["error_line"] = stageFailure.ErrorLine
+		response["message"] = domainMailCleanupFailedEnglish
 	}
 	w.WriteHeader(http.StatusAccepted)
 	_ = json.NewEncoder(w).Encode(response)

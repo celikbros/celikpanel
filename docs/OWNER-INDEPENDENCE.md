@@ -84,6 +84,19 @@ means the panel can no longer prove zone state and its zone deletions wait
 until a key exists again. A rolled-back installation removes the key only if
 CelikPanel created it and it is unchanged.
 
+### Catalog transfer from loopback on a BIND secondary (2026-10-01)
+
+Source state with component tests; native re-run pending; not yet part of a
+published release.
+
+A BIND secondary that CelikPanel sets up now lets the primary's catalog zone be
+transferred from loopback as well as from the primary:
+`allow-transfer { <primary>/32; 127.0.0.1; ::1; };` on that one zone. Your
+optional read-only deletion inspector (`bind-peer-inspect`) needs exactly this
+local transfer; nothing else changes and no key is involved. On a secondary you
+run without CelikPanel, add that statement to the catalog zone yourself and
+reload named.
+
 ## Evidence
 
 [Local validation](validation/native-dns-independence-20260912/README.md) covers

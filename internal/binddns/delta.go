@@ -295,12 +295,20 @@ func planFromVerifiedTree(tree VerifiedTree) TreePlan {
 	if tree.receipt.Pairing != nil {
 		serial = tree.receipt.Pairing.CatalogSerial
 	}
-	return TreePlan{
+	plan := TreePlan{
 		engineEpoch:   tree.receipt.EngineEpoch,
 		pairing:       pairingFromReceipt(tree.receipt.Pairing),
 		catalogSerial: serial,
 		zones:         cloneTreeZones(tree.zones),
 	}
+	// Reconstruct the tree's own accepted secondary policy. Version 0 is not
+	// accepted and falls through to the current renderer, which cannot
+	// reproduce it, so the historical tree stays refused as current policy.
+	if tree.receipt.Pairing != nil && tree.receipt.Pairing.Role == PairRoleSecondary &&
+		acceptedSecondaryConfigVersion(tree.receipt.Pairing.SecondaryConfigVersion) {
+		plan.secondaryConfigVersion = tree.receipt.Pairing.SecondaryConfigVersion
+	}
+	return plan
 }
 
 func cloneReceipt(receipt Receipt) Receipt {

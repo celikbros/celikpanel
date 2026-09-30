@@ -1392,7 +1392,9 @@ func (hostDNSEngineBackend) Switch(
 		if err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err
 		}
-		expected, err := binddns.RenderTree(layout.GenerationRoot, plan)
+		expected, err := bindExpectedGenerationForTarget(
+			layout.GenerationRoot, plan, state.Generation,
+		)
 		if err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err
 		}

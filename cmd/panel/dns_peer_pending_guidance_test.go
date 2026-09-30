@@ -141,3 +141,26 @@ func TestDomainDeletionPendingReportsReviewedExactReason(t *testing.T) {
 		})
 	}
 }
+
+func TestDNSPeerPendingGuidanceSplitsReviewedInspectorDetail(t *testing.T) {
+	reason, detail, message, ok := dnsPeerPendingGuidance("dns_peer_inspection_unknown:named_unavailable")
+	if !ok || reason != transport.DNSPeerPendingInspectionUnknown || detail != "named_unavailable" ||
+		!strings.HasPrefix(message, dnsPeerPendingEnglish(reason)+" The secondary's inspector reported") {
+		t.Fatalf("composite code: %q %q %q %t", reason, detail, message, ok)
+	}
+	reason, detail, message, ok = dnsPeerPendingGuidance(transport.DNSPeerPendingCatalogTransferRefused)
+	if !ok || reason != transport.DNSPeerPendingCatalogTransferRefused || detail != "" ||
+		!strings.Contains(message, "allow-transfer") || !strings.Contains(message, "127.0.0.1 and ::1") ||
+		!strings.Contains(message, "retry the same publication") {
+		t.Fatalf("typed refusal: %q %q %q %t", reason, detail, message, ok)
+	}
+	for _, code := range []string{"dns_peer_inspection_unknown:raw", "dns_peer_native_unknown:named_unavailable", "nope"} {
+		if _, _, _, ok := dnsPeerPendingGuidance(code); ok {
+			t.Fatalf("unreviewed code %q accepted", code)
+		}
+	}
+	body, ok := dnsPeerPendingAPIError(&dnsZoneV3PropagationPendingError{Code: "dns_peer_inspection_unknown:catalog_malformed", Exact: true})
+	if !ok || body.Reason != transport.DNSPeerPendingInspectionUnknown || body.Detail != "catalog_malformed" {
+		t.Fatalf("API body lost the reviewed detail: %+v", body)
+	}
+}

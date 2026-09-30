@@ -2046,3 +2046,102 @@ normally package-provided, recorded, untouched.
 **Evidence.** Component tests only; native re-run pending (Arch BIND secondary
 deletion proof, Arch BIND standalone/primary deletion, rollback with a
 product-created key).
+
+### Managed BIND secondary allows the owner inspector's loopback catalog transfer (2026-10-01)
+
+P0.4; constitutional invariants 1, 2, 4, 6; D-022, D-024, D-025. BIND
+generation receipt: `secondary_config_version` 1 → 2 (a value the field
+already carries, no new field). Ledger v1, switch journal, state receipt and
+peer request/response v1: no schema change. One additive API field
+(`detail`), one new reviewed pending code, one versioned inspector stderr line.
+
+Found by the fourth native run of the pair acceptance driver
+([evidence](../deploy/e2e/dns-pair-acceptance/evidence/pair4-20261001/README.md),
+finding P4-1, topologies t1 and t3): after the owner enrollment completed, the
+retry of a parentless zone deletion stayed pending with
+`dns_peer_inspection_unknown` for 300 s. The owner's `bind-peer-inspect` on the
+CelikPanel-managed Arch BIND secondary asks `dig @127.0.0.1 <catalog> AXFR`;
+the product rendered the catalog zone without its own transfer clause, so the
+options-scope `allow-transfer { <primary>/32; }` applied and named logged
+"zone transfer … denied" from 127.0.0.1. The zone itself was already gone on
+both servers. Measured on Debian 13 `bind9 1:9.20.26`: a refused AXFR makes dig
+print only `; Transfer failed.` and exit 0, so the inspector actually failed on
+the catalog parser, not on the "AXFR unavailable" branch the README described.
+
+**Rendered statement.** The secondary's immutable generation (`zones.conf`)
+now renders the catalog zone as
+
+```
+zone "catalog-<primary>.celikpanel.invalid" {
+	type secondary;
+	primaries { <primary>; };
+	allow-transfer { <primary>/32; 127.0.0.1; ::1; };
+};
+```
+
+(before: the same stanza without the `allow-transfer` line). Only the catalog
+zone: `bind-peer-inspect` transfers nothing else (member zones are read with
+`rndc zonestatus`), so member zones keep the options-scope
+`allow-transfer { <primary>/32; }`. The primary's rendering is unchanged.
+Loopback AXFR needs no key. `named-checkconf -p` prints the clause after
+`primaries`, so the inspector's catalog-binding check is unaffected.
+
+**Rendering transition.** The generation receipt's
+`secondary_config_version` is 2 for the new rendering and 1 for the previous
+one; the version is part of the content-addressed generation ID, so the two
+renderings never share an ID (an existing generation directory is never asked
+to hold different bytes). Version 1 is recognised as this product's own earlier
+output, not as an owner change: `VerifyCurrentConfig` and the publisher
+reconstruct a tree under its own recorded version (1 or 2), and the Agent's
+switch-journal, completed-switch and recovery checks
+(`bindExpectedGenerationForTarget`, `bindSecondaryOptionsFromJournal`,
+`bindSecondaryOptionsFromReceipt`) accept a version-1 target that an earlier
+release recorded. Every newly derived plan (`NewTreePlan`,
+`ReconfigurePairing`) renders version 2, so the upgrade happens at the next
+generation this product writes on that secondary. Any other statement,
+including a self-consistent receipt over an edited `zones.conf`, stays an owner
+change and is refused as before; version 0 stays historical only; version 3+ is
+refused. The options file (`named.conf.options`) is unchanged.
+
+**Reason propagation.** The inspector now classifies an incomplete observation
+with one reviewed token (`inspector_policy`, `named_unavailable`,
+`listeners_unverified`, `catalog_unverified`, `catalog_transfer_refused`,
+`catalog_transfer_failed`, `catalog_malformed`, `observation_expired`); `; Transfer
+failed.` after a verified loaded catalog secondary is `catalog_transfer_refused`.
+The CLI's single stderr line is either the fixed generic sentence or
+`celikpanel-peer-inspect-reason/v1 <request-sha256> <token>`; raw error text is
+never printed. The primary's SSH transport keeps stderr only when the pinned
+host's forced command exited non-zero, and accepts exactly that one line with
+this request's digest and a reviewed token. The Agent records
+`dns_peer_catalog_transfer_refused` (new reviewed pending code) for the refusal
+and `dns_peer_inspection_unknown:<token>` for any other reviewed token in the
+ledger v1 `error_code`; an older reader treats the composite as unreviewed and
+shows generic text. The Panel splits it: `reason` stays a reviewed code and the
+new additive `detail` field carries the token on the 202 deletion-pending
+response and the saved deletion status; the English `message` appends the
+detail sentence. The web shows the reason's text followed by the translated
+detail sentence (`domains.peerInspectorDetail.<token>`). The typed refusal text
+names the secondary's owner, the statement, which case applies (a secondary
+CelikPanel set up with this release already allows it; one set up by an earlier
+release gets it when CelikPanel next writes its DNS configuration; a panel-free
+secondary's owner adds 127.0.0.1 and ::1 by hand and reloads named) and
+“Retry this deletion”. The PowerDNS inspector path is unchanged.
+
+**PowerDNS secondary.** `pdns-peer-inspect` reads the catalog through a
+read-only SQLite connection bound to the daemon's database inode plus the fixed
+`LIST-ZONES` control command; it performs no AXFR, so the loopback gap does not
+exist there. Its reviewed-configuration check, however, accepts only the exact
+panel-free fixture `pdns.conf` (12 keys, `primary=no`, `allow-axfr-ips=<primary>/32,127.0.0.1/32`,
+no `include-dir`), while a CelikPanel-managed PowerDNS secondary has
+`gsqlite3-dnssec`, `include-dir` and a managed drop-in with `primary=yes`,
+`secondary=yes` and `allow-axfr-ips=<primary>`; source reading predicts that
+inspection fails there with "configuration is unreviewed" (not natively
+observed; pair4 t2 stopped before enrollment). Not changed here.
+
+**Remaining gap.** A BIND secondary whose current generation is version 1 has
+no panel action today that writes a new generation (the DNS engine reinstall is
+offered only for standalone engines), so until such a write it keeps the
+peer-only catalog transfer and its owner cannot add the loopback allowance
+without it being detected as an owner change.
+
+**Evidence.** Component tests only; native re-run pending (pair 5).

@@ -39,6 +39,12 @@ func dovecotIs24() (bool, error) {
 // buildDovecotVirtualConf, sanal-posta-kutusu ekini (auth /etc/dovecot/users'a
 // karşı, maildir'ler mailRootDir altında) istenen lehçede üretir.
 func buildDovecotVirtualConf(is24 bool) string {
+	return buildDovecotVirtualConfAt(is24, mailRootDir)
+}
+
+// buildDovecotVirtualConfAt renders the override for an explicit, already
+// resolved mail root (see managedMailRootPath).
+func buildDovecotVirtualConfAt(is24 bool, root string) string {
 	if !is24 {
 		return fmt.Sprintf(`# Managed by CelikPanel — do not edit by hand / elle düzenlemeyin
 mail_location = maildir:%s/%%d/%%n
@@ -54,8 +60,8 @@ userdb {
   args = username_format=%%u %s
   default_fields = uid=%s gid=%s home=%s/%%d/%%n
 }
-`, mailRootDir, vmailUID, vmailGID, vmailUID,
-			dovecotUsersPath, dovecotUsersPath, vmailUID, vmailGID, mailRootDir)
+`, root, vmailUID, vmailGID, vmailUID,
+			dovecotUsersPath, dovecotUsersPath, vmailUID, vmailGID, root)
 	}
 	// 2.4: mail_location → mail_driver+mail_path, %d/%n → %{user | domain} /
 	// %{user | username}, args → explicit settings, default_fields → fields
@@ -84,8 +90,8 @@ userdb passwd-file {
     home:default = %s/%s
   }
 }
-`, mailRootDir, userDir, vmailUID, vmailGID, vmailUID,
-		dovecotUsersPath, dovecotUsersPath, vmailUID, vmailGID, mailRootDir, userDir)
+`, root, userDir, vmailUID, vmailGID, vmailUID,
+		dovecotUsersPath, dovecotUsersPath, vmailUID, vmailGID, root, userDir)
 }
 
 // buildDovecotTLSConf renders the TLS drop-in (default certificate + one

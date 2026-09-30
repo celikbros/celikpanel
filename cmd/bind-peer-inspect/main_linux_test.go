@@ -59,3 +59,26 @@ func TestCommandStartupRejectsMissingPolicyBeforeNative(t *testing.T) {
 		t.Fatalf("missing policy did not stop command startup: err=%v policy=%d native=%d output=%q", err, policy.reads, native.reads, output.String())
 	}
 }
+
+// The CLI prints one line: a digest-bound reviewed reason when Inspect
+// classified the failure, otherwise the fixed generic sentence. Raw error
+// text never reaches stderr.
+func TestFailureLineCarriesOnlyReviewedDigestBoundReason(t *testing.T) {
+	digest := strings.Repeat("9", 64)
+	classified := &inspectionFailure{requestSHA256: digest, err: &bindpeerinspector.ReasonError{
+		Reason: "catalog_transfer_refused", Message: "named refused 127.0.0.1#54631 private detail",
+	}}
+	want := dnspeerproof.InspectorReasonPrefixV1 + " " + digest + " catalog_transfer_refused"
+	if got := failureLine(classified); got != want || dnspeerproof.ParseInspectorReason([]byte(got+"\n"), digest) != "catalog_transfer_refused" {
+		t.Fatalf("classified failure line = %q", got)
+	}
+	for _, err := range []error{
+		errors.New("request exceeds safe bound"),
+		&inspectionFailure{requestSHA256: digest, err: errors.New("unclassified private detail")},
+		&inspectionFailure{requestSHA256: "short", err: &bindpeerinspector.ReasonError{Reason: "named_unavailable"}},
+	} {
+		if got := failureLine(err); got != "native BIND peer observation unavailable" {
+			t.Fatalf("unclassified failure line = %q", got)
+		}
+	}
+}
