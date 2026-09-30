@@ -164,3 +164,18 @@ func TestDNSPeerPendingGuidanceSplitsReviewedInspectorDetail(t *testing.T) {
 		t.Fatalf("API body lost the reviewed detail: %+v", body)
 	}
 }
+
+// The PowerDNS inspector's unreviewed-configuration token has its own
+// sentence naming both reviewed shapes; the reason text still comes first.
+func TestDNSPeerPendingGuidanceNamesPowerDNSConfigUnreviewed(t *testing.T) {
+	reason, detail, message, ok := dnsPeerPendingGuidance("dns_peer_inspection_unknown:config_unreviewed")
+	want := dnsPeerPendingEnglish(transport.DNSPeerPendingInspectionUnknown) +
+		" The secondary's inspector reported that PowerDNS is not running with a configuration it recognises (the panel's own or the documented panel-free one)."
+	if !ok || reason != transport.DNSPeerPendingInspectionUnknown || detail != "config_unreviewed" || message != want {
+		t.Fatalf("config_unreviewed: %q %q %q %t", reason, detail, message, ok)
+	}
+	body, ok := dnsPeerPendingAPIError(&dnsZoneV3PropagationPendingError{Code: "dns_peer_inspection_unknown:config_unreviewed", Exact: true})
+	if !ok || body.Reason != transport.DNSPeerPendingInspectionUnknown || body.Detail != "config_unreviewed" || body.Error != want {
+		t.Fatalf("API body lost the reviewed detail: %+v", body)
+	}
+}

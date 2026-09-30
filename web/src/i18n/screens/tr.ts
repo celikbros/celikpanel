@@ -339,6 +339,7 @@ export const trScreens: Record<ScreenKey, string> = {
     'domains.peerInspectorDetail.catalog_transfer_failed': 'İkincil sunucunun denetleyicisi, katalog bölgesinin yerel aktarımının tamamlanmadığını bildirdi.',
     'domains.peerInspectorDetail.catalog_malformed': 'İkincil sunucunun denetleyicisi, aktarılan katalog bölgesinin beklenen içerikte olmadığını bildirdi.',
     'domains.peerInspectorDetail.observation_expired': 'İkincil sunucunun denetleyicisi, isteğin süresinin inceleme bitmeden dolduğunu bildirdi; iki sunucunun saatinin doğru olduğunu denetleyin.',
+    'domains.peerInspectorDetail.config_unreviewed': 'İkincil sunucunun denetleyicisi, PowerDNS\'in tanıdığı bir yapılandırmayla (panelin kendi yapılandırması ya da belgelenmiş panelsiz yapılandırma) çalışmadığını bildirdi.',
 
     'dns.notServed': 'Bu kayıtlar YAYINLANMIYOR: panel tarafından yönetilen etkin bir yetkili DNS motoru yok. Ayarlar > DNS altyapısı bölümünden BIND veya PowerDNS seçip etkinleştirin.',
     'dbtools.title': 'Veritabanı web araçları',

@@ -2145,3 +2145,88 @@ peer-only catalog transfer and its owner cannot add the loopback allowance
 without it being detected as an owner change.
 
 **Evidence.** Component tests only; native re-run pending (pair 5).
+
+### PowerDNS inspector recognises a CelikPanel-managed secondary (2026-10-01)
+
+P0.4, P0.5; constitutional invariants 1, 2, 4; D-022, D-024, D-025. Closes the
+gap recorded in the previous section's **PowerDNS secondary** paragraph.
+Component tests only; native re-run pending (pair 5 t2).
+
+`pdns-peer-inspect` reviewed the daemon configuration against one exact
+panel-free fixture, so after owner enrollment (`dns-peer-enroll --engine pdns`)
+a parentless deletion on a pair whose secondary is a CelikPanel-managed
+PowerDNS would have stayed pending as "configuration is unreviewed", with no
+reason reaching the primary. The inspector now accepts an explicit allow-list
+of two shapes and refuses anything else:
+
+- **Panel-free fixture** (unchanged): one `pdns.conf` of at most 4096 bytes,
+  `root:root`, with exactly the 12 reviewed directives and no `include-dir`;
+  the daemon must hold 127.0.0.1 and `<peer>` UDP/TCP listeners.
+- **CelikPanel-managed secondary** (new): `pdns.conf` whose only active lines
+  are `include-dir=/etc/powerdns/pdns.d` (required) and, optionally, the empty
+  `launch=` and `security-poll-suffix=` — exactly the Debian/Ubuntu package
+  file (20579 bytes, SHA-256 `8b46927e…f262a`, measured in batch 6b), or an
+  owner file to which the Agent appended only the include-dir. It may be up to
+  64 KiB and belong to root's group or the running daemon's group (the
+  package ships it `root:pdns 0640`). The include directory must load exactly
+  `celikpanel.conf` and `celikpanel-cluster.conf` (root-owned, not group/other
+  writable; hidden and non-`.conf` names are ignored as PowerDNS ignores
+  them; any other loaded `.conf` is refused). Each drop-in must equal,
+  directive for directive, what the product renders: `celikpanel.conf` is
+  re-rendered from its own `local-address` list (which must include the
+  enrolled peer) with the fixed database `/var/lib/powerdns/pdns.sqlite3`
+  (`launch=gsqlite3`, `gsqlite3-dnssec=yes`, `gsqlite3-database`,
+  `local-address`, `zone-cache-refresh-interval=0`, `webserver=no`,
+  `api=no`); `celikpanel-cluster.conf` must be the secondary-role directional
+  rendering for this peer and the policy's primary (`primary=yes`,
+  `secondary=yes`, `allow-axfr-ips=<primary>`), or the same rendering from
+  v0.1.0-alpha.29 to alpha.38, which also carried `autosecondary=yes`. The
+  undirected legacy pair rendering (`also-notify`) is not accepted: it never
+  carries a catalog CONSUMER, so it cannot pass the catalog check anyway. No
+  loopback listener is required, because the product renders only public
+  addresses.
+
+The expected drop-ins come from the product's renderer itself: the Agent's
+`managedPowerDNSStandaloneConfigForAddresses` and
+`dnsDirectionalClusterConfig` now delegate to the new shared package
+`internal/pdnsmanagedconf`, which the inspector imports (bytes unchanged; a
+test reproduces both drop-in SHA-256 digests measured on the batch 6b managed
+secondary). The historical autosecondary rendering is pinned by a byte test.
+
+What the inspector verifies is otherwise identical for both shapes and nothing
+new is observed about the daemon: the same `pdns.service` PID, executable,
+invocation and start time, the peer listener, the SQLite inode the daemon holds
+open, `LIST-ZONES` over the `SO_PEERCRED`-verified control socket, the catalog
+CONSUMER row and the deleted zone's absence or presence, twice. The managed
+pair drop-in's `allow-axfr-ips` names only the primary; that it lacks loopback
+does not matter here, because this inspector performs no AXFR (a test states
+it). Files are read through no-follow descriptors under root-owned ancestors
+and rechecked against their final path; the include directory's identity is
+rechecked after reading. The only additional read is the daemon's
+`/proc/<pid>/status` group, used solely to allow the package's group
+ownership of `pdns.conf`. Any line ending in a backslash is now refused in
+either shape, because PowerDNS joins it with the next line.
+
+**Reason.** Any failure to read or recognise the configuration is classified
+with the new reviewed token `config_unreviewed` and leaves `pdns-peer-inspect`
+as the single `celikpanel-peer-inspect-reason/v1 <request-sha256>
+config_unreviewed` stderr line (the BIND scheme had no equivalent token:
+`named_unavailable` names named). All other PowerDNS inspector failures keep
+the fixed generic sentence. The PowerDNS SSH transport now keeps the
+authenticated forced command's bounded stderr exactly as the BIND transport
+does, accepting only `config_unreviewed` on the PowerDNS channel (and the BIND
+channel no longer accepts it), and the Agent records
+`dns_peer_inspection_unknown:config_unreviewed` through the same
+`inspectionPendingCode`. The Panel appends: "The secondary's inspector
+reported that PowerDNS is not running with a configuration it recognises (the
+panel's own or the documented panel-free one)." (`domains.peerInspectorDetail.config_unreviewed`,
+EN/TR). No new pending reason code, so the pair acceptance driver is
+unchanged.
+
+**Evidence.** Component tests only; native re-run pending (pair 5 t2). Pair 5
+t2 must show, on a pair with a CelikPanel-managed PowerDNS secondary after
+`dns-peer-enroll --engine pdns`, that a parentless deletion's inspection
+returns `catalog_state=transferred`, `member_state=absent`,
+`native_state=unloaded` and the deletion completes; and that an owner edit to
+a drop-in (for example an added `loglevel=`) leaves the deletion pending with
+`detail=config_unreviewed` and the sentence above.

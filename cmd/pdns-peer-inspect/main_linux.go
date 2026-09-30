@@ -16,9 +16,19 @@ import (
 
 func main() {
 	if err := run(); err != nil {
-		fmt.Fprintln(os.Stderr, "native PowerDNS peer observation unavailable")
+		fmt.Fprintln(os.Stderr, failureLine(err))
 		os.Exit(1)
 	}
+}
+
+// failureLine is the single stderr line of a failed inspection: the reviewed
+// reason line when the error is classified and bound to a decoded request,
+// otherwise the fixed generic sentence. Raw error text is never printed.
+func failureLine(err error) string {
+	if line, ok := pdnspeerinspector.ReasonLine(err); ok {
+		return line
+	}
+	return "native PowerDNS peer observation unavailable"
 }
 
 // An owner must install this as a separately reviewed, root-owned forced

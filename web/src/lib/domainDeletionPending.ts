@@ -24,6 +24,8 @@ const reviewedInspectorDetails = new Set([
     'catalog_transfer_failed',
     'catalog_malformed',
     'observation_expired',
+    // PowerDNS only: its configuration matches neither reviewed shape.
+    'config_unreviewed',
 ]);
 
 // A verified failure of a non-DNS deletion stage on this server, by stage.

@@ -137,7 +137,7 @@ test('refused local catalog transfer names the secondary owner, the statement, b
 
 test('only a reviewed inspector detail of an incomplete inspection is kept, with EN/TR copy', async () => {
   const details = ['inspector_policy', 'named_unavailable', 'listeners_unverified', 'catalog_unverified',
-    'catalog_transfer_failed', 'catalog_malformed', 'observation_expired'];
+    'catalog_transfer_failed', 'catalog_malformed', 'observation_expired', 'config_unreviewed'];
   for (const detail of details) {
     assert.deepEqual(await readDomainDeletionOutcome(response(202, {
       status: 'deletion_pending', stage: 'dns_cleanup', reason: 'dns_peer_inspection_unknown', detail,
@@ -162,4 +162,13 @@ test('only a reviewed inspector detail of an incomplete inspection is kept, with
       status: 'deletion_pending', stage: 'dns_cleanup', reason, detail,
     }))).detail, '');
   }
+});
+
+test('the PowerDNS unreviewed-configuration detail names both recognised configurations', () => {
+  const key = 'domains.peerInspectorDetail.config_unreviewed';
+  assert.equal(enScreens[key],
+    "The secondary's inspector reported that PowerDNS is not running with a configuration it recognises (the panel's own or the documented panel-free one).");
+  assert.match(trScreens[key], /PowerDNS/);
+  assert.match(trScreens[key], /panelin kendi yapılandırması/);
+  assert.match(trScreens[key], /panelsiz yapılandırma/);
 });

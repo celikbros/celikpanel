@@ -105,3 +105,10 @@ References: [PowerDNS 5.1.4 DynMessenger](https://github.com/PowerDNS/pdns/blob/
 [DLListZones](https://github.com/PowerDNS/pdns/blob/a063013d3dd7bdaeaef9bc1ceae1f1cb8d91ee90/pdns/dynhandler.cc),
 [PowerDNS control command](https://doc.powerdns.com/authoritative/manpages/pdns_control.1.html),
 [PowerDNS socket-dir setting](https://doc.powerdns.com/authoritative/settings.html#socket-dir).
+
+Since 2026-10-01 a CelikPanel-managed PowerDNS secondary (the package
+`pdns.conf` loading `/etc/powerdns/pdns.d` with exactly the product's
+`celikpanel.conf` and secondary `celikpanel-cluster.conf`, as rendered by
+`internal/pdnsmanagedconf`) is a reviewed configuration shape next to the
+fixture; any other configuration is refused with the reviewed reason
+`config_unreviewed` (see docs/DNS-ENGINE-ARTIFACT.md).

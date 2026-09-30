@@ -10,9 +10,34 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/binddns"
 	"github.com/alicelik/celikpanel/internal/pdnspeerproof"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 const PolicySchemaV1 = "celikpanel-pdns-peer-inspector-policy/v1"
+
+// ReasonError is an incomplete observation classified with one reviewed
+// reason token (transport.ValidDNSPeerInspectorReason). The message stays
+// local to the inspector; only the token may be reported to the primary.
+type ReasonError struct {
+	Reason  string
+	Message string
+}
+
+func (e *ReasonError) Error() string { return e.Message }
+
+func reasonError(reason, message string) error {
+	return &ReasonError{Reason: reason, Message: message}
+}
+
+// Reason returns the reviewed reason token of an inspection error, or "".
+func Reason(err error) string {
+	var classified *ReasonError
+	if errors.As(err, &classified) && transport.ValidDNSPeerInspectorReason(classified.Reason) {
+		return classified.Reason
+	}
+	return ""
+}
+
 const DatabasePath = "/var/lib/powerdns/pdns.sqlite3"
 const ConfigPath = "/etc/powerdns/pdns.conf"
 

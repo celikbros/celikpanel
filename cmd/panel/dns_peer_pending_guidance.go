@@ -49,6 +49,8 @@ func dnsPeerInspectorDetailEnglish(detail string) string {
 		return "The secondary's inspector reported that the transferred catalog zone does not have the expected content."
 	case transport.DNSPeerInspectorReasonObservationExpired:
 		return "The secondary's inspector reported that the request expired before it finished; check that both servers' clocks are correct."
+	case transport.DNSPeerInspectorReasonConfigUnreviewed:
+		return "The secondary's inspector reported that PowerDNS is not running with a configuration it recognises (the panel's own or the documented panel-free one)."
 	default:
 		return ""
 	}

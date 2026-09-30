@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/dnspeerproof"
+	"github.com/alicelik/celikpanel/internal/transport"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/sys/unix"
 )
@@ -80,6 +81,34 @@ type commandFailure struct{ stderr []byte }
 
 func (commandFailure) Error() string { return string(CodeUnavailable) }
 
+// CommandFailed is what an Exchanger returns when the pinned, authenticated
+// peer ran the fixed forced command and it exited non-zero. Only the bounded
+// stderr is kept, for digest-bound parsing of one reviewed reason token.
+func CommandFailed(stderr []byte) error {
+	return commandFailure{stderr: append([]byte(nil), stderr...)}
+}
+
+// CommandFailureReason reports whether err is such a command failure and, if
+// so, the reviewed reason its stderr carries for exactly these request bytes
+// ("" when the stderr is not one reviewed line bound to them).
+func CommandFailureReason(err error, request []byte) (string, bool) {
+	var failed commandFailure
+	if err == nil || !errors.As(err, &failed) {
+		return "", false
+	}
+	sum := sha256.Sum256(request)
+	return dnspeerproof.ParseInspectorReason(failed.stderr, hex.EncodeToString(sum[:])), true
+}
+
+// bindInspectorReason keeps the reasons bind-peer-inspect can report. A
+// PowerDNS-only token from the BIND channel is not trusted as a detail.
+func bindInspectorReason(reason string) string {
+	if reason == transport.DNSPeerInspectorReasonConfigUnreviewed {
+		return ""
+	}
+	return reason
+}
+
 func (e Unknown) Error() string { return string(e.Code) }
 
 func IsCode(err error, code Code) bool {
@@ -128,11 +157,9 @@ func Inspect(ctx context.Context, enrollment Enrollment, request dnspeerproof.Re
 	ctx, cancel := context.WithTimeout(ctx, deadline)
 	defer cancel()
 	answer, auth, err := exchanger.Exchange(ctx, enrollment, raw)
-	var failed commandFailure
-	if err != nil && errors.As(err, &failed) {
-		sum := sha256.Sum256(raw)
+	if reason, failed := CommandFailureReason(err, raw); failed {
 		return dnspeerproof.ResponseV1{}, dnspeerproof.PeerAuthentication{}, Unknown{
-			Code: CodeUnavailable, Reason: dnspeerproof.ParseInspectorReason(failed.stderr, hex.EncodeToString(sum[:])),
+			Code: CodeUnavailable, Reason: bindInspectorReason(reason),
 		}
 	}
 	if err != nil || !auth.Established || auth.PeerIP != enrollment.PeerIP || auth.IdentitySHA256 != enrollment.HostKeySHA256 {
@@ -243,7 +270,7 @@ func exchangeFixed(ctx context.Context, enrollment Enrollment, request []byte, c
 			// The pinned host ran the owner's forced command, which exited
 			// non-zero. Only its bounded stderr is kept, for digest-bound
 			// parsing of one reviewed reason token.
-			return nil, dnspeerproof.PeerAuthentication{}, commandFailure{stderr: append([]byte(nil), stderr.Bytes()...)}
+			return nil, dnspeerproof.PeerAuthentication{}, CommandFailed(stderr.Bytes())
 		}
 		return nil, dnspeerproof.PeerAuthentication{}, Unknown{Code: CodeUnavailable}
 	}

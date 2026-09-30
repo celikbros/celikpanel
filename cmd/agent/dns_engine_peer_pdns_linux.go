@@ -85,6 +85,13 @@ func verifyEnrolledDNSPeerDeletion(ctx context.Context, authority dnsPeerAXFRAut
 	}
 }
 
+// pdnsInspectionPendingCode maps an incomplete PowerDNS inspection the same way
+// the BIND path does: the pending code, plus the reviewed reason the
+// authenticated PowerDNS inspector reported, if any.
+func pdnsInspectionPendingCode(err error) string {
+	return inspectionPendingCode(pdnspeertransport.InspectorReason(err))
+}
+
 func mintPDNSPeerDeletionRequest(plan dnsV3PrimaryPropagationPlan, authority dnsPeerAXFRAuthority,
 	peerIdentity string, attempt uint64, now time.Time) (pdnspeerproof.RequestV1, error) {
 	base, err := mintBINDPeerDeletionRequest(plan, authority, peerIdentity, attempt, now, rand.Reader)
@@ -174,7 +181,7 @@ func verifyEnrolledPDNSPeerDeletion(ctx context.Context, authority dnsPeerAXFRAu
 	}
 	response, authenticated, err := pdnspeertransport.Inspect(ctx, enrollment.Transport, request, pdnspeertransport.SSH{})
 	if err != nil {
-		return pendingBINDPeer(transport.DNSPeerPendingInspectionUnknown)
+		return pendingBINDPeer(pdnsInspectionPendingCode(err))
 	}
 	if err := verifyCurrent(); err != nil {
 		return err

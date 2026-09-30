@@ -15,6 +15,7 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/binddns"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
+	"github.com/alicelik/celikpanel/internal/pdnsmanagedconf"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -648,34 +649,12 @@ const configureDNSClusterLegacyUnsupportedError = "legacy DNS cluster configurat
 
 const configureDNSClusterPairedUnsupportedError = "paired PowerDNS configuration through the legacy cluster RPC is disabled; use the dedicated DNS infrastructure workflow"
 
+// dnsDirectionalClusterConfig renders the directional pair drop-in through
+// the shared renderer the owner's pdns-peer-inspect also uses.
 func dnsDirectionalClusterConfig(
 	pairRole, localIP, peerIP string,
 ) (string, error) {
-	if pairRole != transport.DNSPairRolePrimary &&
-		pairRole != transport.DNSPairRoleSecondary {
-		return ``, errors.New(`PowerDNS pair role must be primary or secondary`)
-	}
-	parsedLocal := net.ParseIP(localIP)
-	parsedPeer := net.ParseIP(peerIP)
-	if parsedLocal == nil || parsedLocal.To4() == nil || parsedLocal.String() != localIP ||
-		!parsedLocal.IsGlobalUnicast() || parsedPeer == nil || parsedPeer.To4() == nil ||
-		parsedPeer.String() != peerIP || !parsedPeer.IsGlobalUnicast() ||
-		parsedLocal.Equal(parsedPeer) {
-		return ``, errors.New(`PowerDNS pair addresses must be canonical and distinct`)
-	}
-	allowAXFR := peerIP
-	notify := ``
-	if pairRole == transport.DNSPairRolePrimary {
-		allowAXFR = localIP + `,` + peerIP
-		notify = `also-notify=` + peerIP + string('\n')
-	}
-	return fmt.Sprintf(`# Managed by CelikPanel - do not edit by hand / elle duzenlemeyin
-# Directional DNS pair: AXFR is restricted to the trusted local proof and exact peer.
-# Yonlu DNS cifti: AXFR guvenilir yerel kanit ve tam es ile sinirlidir.
-primary=yes
-secondary=yes
-allow-axfr-ips=%s
-%s`, allowAXFR, notify), nil
+	return pdnsmanagedconf.DirectionalCluster(pairRole, localIP, peerIP)
 }
 
 func dnsClusterConfigForSwitchManifest(

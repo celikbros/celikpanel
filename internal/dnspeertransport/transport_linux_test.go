@@ -157,10 +157,16 @@ func TestInspectKeepsOnlyADigestBoundReviewedInspectorReason(t *testing.T) {
 	if !ok {
 		t.Fatal("reviewed reason line was not formatted")
 	}
+	pdnsOnly, ok := dnspeerproof.FormatInspectorReason(digest, "config_unreviewed")
+	if !ok {
+		t.Fatal("PowerDNS reason line was not formatted")
+	}
 	other := strings.Repeat("f", 64)
 	for stderr, want := range map[string]string{
-		line + "\n": "catalog_transfer_refused",
-		line:        "catalog_transfer_refused",
+		// A PowerDNS-only token from the BIND channel is not a BIND detail.
+		pdnsOnly + "\n": "",
+		line + "\n":     "catalog_transfer_refused",
+		line:            "catalog_transfer_refused",
 		dnspeerproof.InspectorReasonPrefixV1 + " " + other + " catalog_transfer_refused\n": "",
 		dnspeerproof.InspectorReasonPrefixV1 + " " + digest + " made_up\n":                 "",
 		"sudo: warning\n" + line + "\n":                                                    "",

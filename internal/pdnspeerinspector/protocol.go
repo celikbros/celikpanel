@@ -6,6 +6,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/dnspeerproof"
 	"github.com/alicelik/celikpanel/internal/pdnspeerproof"
 )
 
@@ -27,9 +28,13 @@ func Serve(ctx context.Context, input io.Reader, output io.Writer, policy Policy
 	if err != nil {
 		return err
 	}
-	response, err := Inspect(ctx, request, native, policy, now)
+	digest, err := pdnspeerproof.RequestSHA256(request)
 	if err != nil {
 		return err
+	}
+	response, err := Inspect(ctx, request, native, policy, now)
+	if err != nil {
+		return &InspectionFailure{RequestSHA256: digest, Err: err}
 	}
 	encoded, err := pdnspeerproof.EncodeResponse(response)
 	if err != nil {
@@ -37,4 +42,28 @@ func Serve(ctx context.Context, input io.Reader, output io.Writer, policy Policy
 	}
 	_, err = output.Write(append(encoded, '\n'))
 	return err
+}
+
+// InspectionFailure keeps the decoded request's digest with an inspection
+// error, so the only detail the primary can receive is a reviewed reason
+// token bound to that exact challenge.
+type InspectionFailure struct {
+	RequestSHA256 string
+	Err           error
+}
+
+func (f *InspectionFailure) Error() string { return f.Err.Error() }
+func (f *InspectionFailure) Unwrap() error { return f.Err }
+
+// ReasonLine returns the single reviewed stderr line
+// (dnspeerproof.InspectorReasonPrefixV1) for a failed inspection that is bound
+// to a decoded request and classified with a reviewed reason. Anything else
+// yields false and the caller prints its fixed generic sentence; raw error
+// text is never printed.
+func ReasonLine(err error) (string, bool) {
+	var failure *InspectionFailure
+	if !errors.As(err, &failure) {
+		return "", false
+	}
+	return dnspeerproof.FormatInspectorReason(failure.RequestSHA256, Reason(failure.Err))
 }

@@ -8,6 +8,7 @@ func TestDNSPeerPendingCodesAcceptOnlyReviewedCompositeDetail(t *testing.T) {
 		"dns_peer_catalog_transfer_refused":                    {"dns_peer_catalog_transfer_refused", ""},
 		"dns_peer_inspection_unknown:named_unavailable":        {"dns_peer_inspection_unknown", "named_unavailable"},
 		"dns_peer_inspection_unknown:observation_expired":      {"dns_peer_inspection_unknown", "observation_expired"},
+		"dns_peer_inspection_unknown:config_unreviewed":        {"dns_peer_inspection_unknown", "config_unreviewed"},
 		"dns_peer_inspection_unknown:catalog_transfer_refused": {"", ""},
 		"dns_peer_native_unknown:named_unavailable":            {"", ""},
 		"dns_peer_inspection_unknown:":                         {"", ""},

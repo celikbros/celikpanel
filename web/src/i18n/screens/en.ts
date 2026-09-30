@@ -348,6 +348,7 @@ export const enScreens = {
     'domains.peerInspectorDetail.catalog_transfer_failed': 'The secondary\'s inspector reported that the local transfer of the catalog zone did not complete.',
     'domains.peerInspectorDetail.catalog_malformed': 'The secondary\'s inspector reported that the transferred catalog zone does not have the expected content.',
     'domains.peerInspectorDetail.observation_expired': 'The secondary\'s inspector reported that the request expired before it finished; check that both servers\' clocks are correct.',
+    'domains.peerInspectorDetail.config_unreviewed': 'The secondary\'s inspector reported that PowerDNS is not running with a configuration it recognises (the panel\'s own or the documented panel-free one).',
 
     'dns.notServed': 'These records are NOT being served: no managed authoritative DNS engine is active. Choose and activate BIND or PowerDNS in Settings > DNS infrastructure.',
     'dbtools.title': 'Database web tools',

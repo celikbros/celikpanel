@@ -5,7 +5,6 @@ package pdnspeerinspector
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
 	"errors"
@@ -59,19 +58,21 @@ func (n NativeReader) Read(ctx context.Context, r pdnspeerproof.RequestV1, p Own
 	if err != nil {
 		return Snapshot{}, err
 	}
+	// The configuration is reviewed before the listeners: which loopback
+	// listeners the daemon must hold depends on the reviewed shape.
+	shape, hash, err := readReviewedConfiguration(pid, p)
+	if err != nil {
+		return Snapshot{}, err
+	}
 	listeners, err := run(ctx, "/usr/bin/ss", "-H", "-lnupt", "( sport = :53 )")
 	if err != nil {
 		return Snapshot{}, errors.New("PowerDNS listeners unavailable")
 	}
 	identities, err := dnslistener.CanonicalPublicListeners(string(listeners), "pdns_server", pid)
-	if err != nil || !dnslistener.HasIPv4Listener(identities, r.PeerIP, pid) || !hasLoopbackListeners(string(listeners), pid) {
+	if err != nil || !dnslistener.HasIPv4Listener(identities, r.PeerIP, pid) ||
+		(shape.requiresLoopbackListeners() && !hasLoopbackListeners(string(listeners), pid)) {
 		return Snapshot{}, errors.New("PowerDNS listeners do not match service")
 	}
-	config, err := readTrustedConfig(ConfigPath)
-	if err != nil || !reviewedConfig(string(config), p) {
-		return Snapshot{}, errors.New("PowerDNS SQLite backend configuration is unreviewed")
-	}
-	hash := sha256.Sum256(config)
 	dbDev, dbIno, err := boundDatabase(pid, DatabasePath)
 	if err != nil {
 		return Snapshot{}, err
@@ -224,91 +225,6 @@ func hasLoopbackListeners(raw string, pid uint64) bool {
 		}
 	}
 	return tcp && udp
-}
-func readTrustedConfig(path string) ([]byte, error) {
-	if path != ConfigPath {
-		return nil, errors.New("PowerDNS config path is not reviewed")
-	}
-	return readTrustedConfigAt("/", nil)
-}
-
-// The hook exists only for a deterministic owner-edit regression. Production
-// passes nil and cannot choose a path or run code between read and recheck.
-func readTrustedConfigAt(root string, afterRead func()) ([]byte, error) {
-	fail := func() ([]byte, error) { return nil, errors.New("PowerDNS config unavailable or changed") }
-	if os.Geteuid() != 0 {
-		return fail()
-	}
-	rootFD, err := unix.Open(root, unix.O_PATH|unix.O_DIRECTORY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
-	if err != nil {
-		return fail()
-	}
-	defer unix.Close(rootFD)
-	etcFD, err := unix.Openat(rootFD, "etc", unix.O_PATH|unix.O_DIRECTORY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
-	if err != nil {
-		return fail()
-	}
-	defer unix.Close(etcFD)
-	dirFD, err := unix.Openat(etcFD, "powerdns", unix.O_PATH|unix.O_DIRECTORY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
-	if err != nil {
-		return fail()
-	}
-	defer unix.Close(dirFD)
-	for _, fd := range []int{rootFD, etcFD, dirFD} {
-		var st unix.Stat_t
-		if unix.Fstat(fd, &st) != nil || st.Mode&unix.S_IFMT != unix.S_IFDIR || st.Uid != 0 || st.Gid != 0 || st.Mode&0022 != 0 {
-			return fail()
-		}
-	}
-	fd, err := unix.Openat(dirFD, "pdns.conf", unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW|unix.O_NONBLOCK, 0)
-	if err != nil {
-		return fail()
-	}
-	file := os.NewFile(uintptr(fd), "pdns-native-config")
-	defer file.Close()
-	var before, after, named unix.Stat_t
-	if unix.Fstat(fd, &before) != nil || !secureNativeConfigStat(before) {
-		return fail()
-	}
-	raw, err := io.ReadAll(io.LimitReader(file, 4097))
-	if err != nil || len(raw) == 0 || len(raw) > 4096 {
-		return fail()
-	}
-	if afterRead != nil {
-		afterRead()
-	}
-	if unix.Fstat(fd, &after) != nil || unix.Fstatat(dirFD, "pdns.conf", &named, unix.AT_SYMLINK_NOFOLLOW) != nil ||
-		!samePolicyStat(before, after) || !samePolicyStat(after, named) || int64(len(raw)) != after.Size {
-		return fail()
-	}
-	return raw, nil
-}
-func secureNativeConfigStat(st unix.Stat_t) bool {
-	return st.Mode&unix.S_IFMT == unix.S_IFREG && st.Mode&0022 == 0 && st.Uid == 0 && st.Gid == 0 && st.Nlink == 1 && st.Size > 0 && st.Size <= 4096
-}
-func reviewedConfig(raw string, p OwnerPolicyV1) bool {
-	lines := strings.Split(strings.TrimSuffix(raw, "\n"), "\n")
-	seen := map[string]string{}
-	for _, line := range lines {
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		key, value, ok := strings.Cut(line, "=")
-		if !ok || seen[key] != "" {
-			return false
-		}
-		seen[key] = value
-	}
-	expected := map[string]string{"launch": "gsqlite3", "gsqlite3-database": DatabasePath, "local-address": "127.0.0.1," + p.PeerIP, "local-port": "53", "primary": "no", "secondary": "yes", "xfr-cycle-interval": "1", "autosecondary": "no", "allow-axfr-ips": p.PrimaryIP + "/32,127.0.0.1/32", "disable-axfr": "no", "setuid": "powerdns", "setgid": "powerdns"}
-	if len(seen) != len(expected) {
-		return false
-	}
-	for key, want := range expected {
-		if seen[key] != want {
-			return false
-		}
-	}
-	return true
 }
 func boundDatabase(pid uint64, path string) (uint64, uint64, error) {
 	st, err := os.Stat(path)

@@ -29,6 +29,11 @@ const (
 	DNSPeerInspectorReasonCatalogTransferFailed  = "catalog_transfer_failed"
 	DNSPeerInspectorReasonCatalogMalformed       = "catalog_malformed"
 	DNSPeerInspectorReasonObservationExpired     = "observation_expired"
+	// DNSPeerInspectorReasonConfigUnreviewed: the PowerDNS inspector found the
+	// daemon's configuration in none of its reviewed shapes (the documented
+	// panel-free one or a CelikPanel-managed secondary), or could not read it
+	// safely. Only pdns-peer-inspect reports it.
+	DNSPeerInspectorReasonConfigUnreviewed = "config_unreviewed"
 )
 
 // ValidDNSPeerInspectorReason reports a reviewed inspector reason token.
@@ -41,7 +46,8 @@ func ValidDNSPeerInspectorReason(reason string) bool {
 		DNSPeerInspectorReasonCatalogTransferRefused,
 		DNSPeerInspectorReasonCatalogTransferFailed,
 		DNSPeerInspectorReasonCatalogMalformed,
-		DNSPeerInspectorReasonObservationExpired:
+		DNSPeerInspectorReasonObservationExpired,
+		DNSPeerInspectorReasonConfigUnreviewed:
 		return true
 	default:
 		return false

@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"net"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -20,6 +19,7 @@ import (
 	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
+	"github.com/alicelik/celikpanel/internal/pdnsmanagedconf"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -493,31 +493,10 @@ func managedPowerDNSStandaloneConfig(ctx context.Context) ([]byte, error) {
 	return managedPowerDNSStandaloneConfigForAddresses(addresses)
 }
 
+// managedPowerDNSStandaloneConfigForAddresses renders the managed backend
+// drop-in through the shared renderer the owner's pdns-peer-inspect also uses.
 func managedPowerDNSStandaloneConfigForAddresses(addresses []string) ([]byte, error) {
-	if len(addresses) == 0 {
-		return nil, errors.New("managed PowerDNS requires at least one listen address")
-	}
-	seen := make(map[string]struct{}, len(addresses))
-	for _, address := range addresses {
-		parsed := net.ParseIP(address)
-		if parsed == nil || parsed.String() != address || !parsed.IsGlobalUnicast() ||
-			parsed.IsUnspecified() || parsed.IsLoopback() || parsed.IsLinkLocalUnicast() {
-			return nil, errors.New("managed PowerDNS listen address is not canonical global unicast")
-		}
-		if _, duplicate := seen[address]; duplicate {
-			return nil, errors.New("managed PowerDNS listen addresses contain a duplicate")
-		}
-		seen[address] = struct{}{}
-	}
-	return []byte(fmt.Sprintf(`# Managed by CelikPanel; do not edit by hand.
-launch=gsqlite3
-gsqlite3-dnssec=yes
-gsqlite3-database=%s
-local-address=%s
-zone-cache-refresh-interval=0
-webserver=no
-api=no
-`, pdnsDBPath(), strings.Join(addresses, ","))), nil
+	return pdnsmanagedconf.Standalone(pdnsDBPath(), addresses)
 }
 
 func preparePDNSConfigMutation(

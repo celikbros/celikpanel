@@ -15,6 +15,7 @@ import (
 	"github.com/alicelik/celikpanel/internal/pdnspeerenrollment"
 	"github.com/alicelik/celikpanel/internal/pdnspeerjournal"
 	"github.com/alicelik/celikpanel/internal/pdnspeerproof"
+	"github.com/alicelik/celikpanel/internal/pdnspeertransport"
 	"github.com/alicelik/celikpanel/internal/servicemutationledger"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -130,6 +131,25 @@ func TestNativePDNSHistoricalChallengeRetiresOnlyExactTerminal(t *testing.T) {
 			func() (serviceMutationLedger, error) { return changed, nil },
 			func() (pdnspeerjournal.RecordV1, error) { return previous, nil }, retire); err == nil || retired {
 			t.Fatalf("nonterminal history retired: %v", err)
+		}
+	}
+}
+
+// The PowerDNS path maps an authenticated inspector's reviewed reason exactly
+// as the BIND path does; anything else stays the plain inspection code.
+func TestPDNSInspectionPendingCodeCarriesTheInspectorReason(t *testing.T) {
+	for err, want := range map[error]string{
+		pdnspeertransport.Unknown{Code: pdnspeertransport.CodeUnavailable, Reason: "config_unreviewed"}: "dns_peer_inspection_unknown:config_unreviewed",
+		pdnspeertransport.Unknown{Code: pdnspeertransport.CodeUnavailable}:                              transport.DNSPeerPendingInspectionUnknown,
+		pdnspeertransport.Unknown{Code: pdnspeertransport.CodeMalformed, Reason: "config_unreviewed"}:   transport.DNSPeerPendingInspectionUnknown,
+		errors.New("config_unreviewed"): transport.DNSPeerPendingInspectionUnknown,
+	} {
+		got := pdnsInspectionPendingCode(err)
+		if got != want || !transport.ValidDNSPeerPendingCode(got) {
+			t.Fatalf("%v -> %q, want %q", err, got, want)
+		}
+		if pendingDNSPeerCode(pendingBINDPeer(got)) != want || dnsZoneV3PendingLedgerCode(got) != want {
+			t.Fatalf("%v lost through the pending error or ledger", err)
 		}
 	}
 }

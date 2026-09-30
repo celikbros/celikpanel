@@ -70,3 +70,45 @@ func TestBINDDocumentAndOversizeNeverReadPolicy(t *testing.T) {
 		}
 	}
 }
+
+type unreviewedConfig struct{}
+
+func (unreviewedConfig) Read(context.Context) (pdnspeerinspector.OwnerPolicyV1, string, error) {
+	return pdnspeerinspector.OwnerPolicyV1{
+		Schema: pdnspeerinspector.PolicySchemaV1, PrimaryIP: "192.0.2.10", PeerIP: "192.0.2.11",
+		CatalogName: "catalog-c000020a.celikpanel.invalid", CatalogAccount: "fixture-pdns-peer",
+	}, "policy", nil
+}
+
+type configReader struct{}
+
+func (configReader) Read(context.Context, pdnspeerproof.RequestV1, pdnspeerinspector.OwnerPolicyV1) (pdnspeerinspector.Snapshot, error) {
+	return pdnspeerinspector.Snapshot{}, &pdnspeerinspector.ReasonError{Reason: "config_unreviewed", Message: "/etc/powerdns/pdns.d/zz.conf"}
+}
+
+func TestFailureLineIsTheReviewedReasonOrTheGenericSentence(t *testing.T) {
+	raw := requestDocument(t)
+	request, err := pdnspeerproof.DecodeRequest(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest, err := pdnspeerproof.RequestSHA256(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output bytes.Buffer
+	err = runWith(context.Background(), bytes.NewReader(append(raw, '\n')), &output, unreviewedConfig{}, configReader{}, func() time.Time { return time.Unix(1800000002, 0) })
+	if got := failureLine(err); got != "celikpanel-peer-inspect-reason/v1 "+digest+" config_unreviewed" || output.Len() != 0 {
+		t.Fatalf("reason line: %q (output %q)", got, output.String())
+	}
+	if strings.Contains(failureLine(err), "/etc/") {
+		t.Fatal("local error text crossed to stderr")
+	}
+	err = runWith(context.Background(), bytes.NewReader(append(raw, '\n')), &output, &missingPolicy{}, &nativeProbe{}, time.Now)
+	if got := failureLine(err); got != "native PowerDNS peer observation unavailable" {
+		t.Fatalf("generic line: %q", got)
+	}
+	if got := failureLine(errors.New("inspector accepts no command")); got != "native PowerDNS peer observation unavailable" {
+		t.Fatalf("generic line: %q", got)
+	}
+}

@@ -71,6 +71,7 @@ func TestInspectionPendingCodeCarriesOnlyReviewedInspectorReasons(t *testing.T) 
 		"catalog_transfer_refused":         transport.DNSPeerPendingCatalogTransferRefused,
 		"named_unavailable":                "dns_peer_inspection_unknown:named_unavailable",
 		"catalog_transfer_failed":          "dns_peer_inspection_unknown:catalog_transfer_failed",
+		"config_unreviewed":                "dns_peer_inspection_unknown:config_unreviewed",
 		"denied from 203.0.113.9 by peer":  transport.DNSPeerPendingInspectionUnknown,
 		"dns_peer_inspection_unknown:evil": transport.DNSPeerPendingInspectionUnknown,
 	} {

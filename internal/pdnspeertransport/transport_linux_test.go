@@ -114,3 +114,42 @@ func TestInspectRejectsMismatchedEngineAndPeerBeforeAccepting(t *testing.T) {
 		})
 	}
 }
+
+type failingExchange struct{ err error }
+
+func (f failingExchange) Exchange(context.Context, Enrollment, []byte) ([]byte, pdnspeerproof.PeerAuthentication, error) {
+	return nil, pdnspeerproof.PeerAuthentication{}, f.err
+}
+
+func TestInspectKeepsOnlyADigestBoundPowerDNSInspectorReason(t *testing.T) {
+	enrollment, request, _, _ := transportFixture(t)
+	digest, err := pdnspeerproof.RequestSHA256(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	config, ok := dnspeerproof.FormatInspectorReason(digest, "config_unreviewed")
+	if !ok {
+		t.Fatal("reviewed reason line was not formatted")
+	}
+	bindOnly, _ := dnspeerproof.FormatInspectorReason(digest, "named_unavailable")
+	for stderr, want := range map[string]string{
+		config + "\n": "config_unreviewed",
+		config:        "config_unreviewed",
+		// A BIND-only token from the PowerDNS channel is not a PowerDNS detail.
+		bindOnly + "\n": "",
+		dnspeerproof.InspectorReasonPrefixV1 + " " + strings.Repeat("f", 64) + " config_unreviewed\n": "",
+		"sudo: warning\n" + config + "\n":                "",
+		"native PowerDNS peer observation unavailable\n": "",
+		"": "",
+	} {
+		_, _, err := Inspect(context.Background(), enrollment, request,
+			failingExchange{err: dnspeertransport.CommandFailed([]byte(stderr))})
+		if !IsCode(err, CodeUnavailable) || InspectorReason(err) != want {
+			t.Fatalf("stderr %q: err=%v reason=%q want %q", stderr, err, InspectorReason(err), want)
+		}
+	}
+	_, _, err = Inspect(context.Background(), enrollment, request, failingExchange{err: context.DeadlineExceeded})
+	if !IsCode(err, CodeUnavailable) || InspectorReason(err) != "" {
+		t.Fatal("a transport failure carried an inspector reason")
+	}
+}
