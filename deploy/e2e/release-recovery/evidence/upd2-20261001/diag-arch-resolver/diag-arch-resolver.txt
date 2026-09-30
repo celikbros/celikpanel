@@ -1,0 +1,53 @@
+== os
+arch 
+7.1.8-arch1-3
+== nsswitch
+hosts: mymachines resolve [!UNAVAIL=return] files myhostname dns
+== resolved
+active
+-rw-r--r-- 1 root root 119 Oct 12  2025 /etc/hosts
+lrwxrwxrwx 1 root root  37 Aug 15 12:04 /etc/resolv.conf -> /run/systemd/resolve/stub-resolv.conf
+# Static table lookup for hostnames.
+# See hosts(5) for details.
+127.0.0.1        localhost
+::1              localhost
+== add test entry
+
+127.0.0.1 upd2-diag.example.net # upd2 resolver diagnosis
+== getent hosts upd2-diag.example.net
+127.0.0.1       localhost
+rc=0 elapsed=0.01
+== getent ahostsv4 upd2-diag.example.net
+127.0.0.1       STREAM localhost
+127.0.0.1       DGRAM  
+127.0.0.1       RAW    
+rc=0 elapsed=0.0
+== getent ahosts upd2-diag.example.net
+::1             STREAM localhost
+::1             DGRAM  
+::1             RAW    
+127.0.0.1       STREAM 
+127.0.0.1       DGRAM  
+127.0.0.1       RAW    
+rc=0 elapsed=0.01
+== getent ahostsv6 upd2-diag.example.net
+::ffff:127.0.0.1 STREAM localhost
+::ffff:127.0.0.1 DGRAM  
+::ffff:127.0.0.1 RAW    
+rc=0 elapsed=0.0
+== resolvectl query upd2-diag.example.net
+upd2-diag.example.net: 127.0.0.1                            -- link: lo
+                       ::1                                  -- link: lo
+                       (localhost)
+
+-- Information acquired via protocol DNS in 573us.
+-- Data is authenticated: yes; Data was acquired via local or encrypted transport: yes
+-- Data from: synthetic
+rc=0 elapsed=0.01
+== python3 -c 'import socket;print(socket.getaddrinfo("upd2-diag.example.net",443,0,socket.SOCK_STREAM))'
+[(<AddressFamily.AF_INET6: 10>, <SocketKind.SOCK_STREAM: 1>, 6, '', ('::1', 443, 0, 0)), (<AddressFamily.AF_INET: 2>, <SocketKind.SOCK_STREAM: 1>, 6, '', ('127.0.0.1', 443))]
+rc=0 elapsed=0.02
+== same via the helper environment (PATH only, LC_ALL=C)
+127.0.0.1       localhost
+rc=0 elapsed=0.0
+

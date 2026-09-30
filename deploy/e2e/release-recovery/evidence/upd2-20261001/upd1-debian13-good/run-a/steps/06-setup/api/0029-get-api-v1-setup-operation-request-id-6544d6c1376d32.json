@@ -1,0 +1,213 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": null,
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/setup/operation?request_id=6544d6c1376d3203031aaaf1992ff2c9"
+  },
+  "response": {
+    "elapsed_seconds": 0.003,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Wed, 30 Sep 2026 15:57:56 GMT"
+      ],
+      [
+        "Transfer-Encoding",
+        "chunked"
+      ]
+    ],
+    "json": {
+      "context": {
+        "access_dns_ip": "192.0.2.10",
+        "dns_engine": "",
+        "dns_hosting_management": "",
+        "dns_mode": "external",
+        "dns_role": "",
+        "local_ip": "",
+        "local_nameserver": "",
+        "mail_hostname": "mail-debian13.upd1-infra.test",
+        "panel_domain": "panel-debian13.upd1-infra.test",
+        "peer_ip": "",
+        "peer_nameserver": ""
+      },
+      "id": "6544d6c1376d3203031aaaf1992ff2c9",
+      "panel_url": "https://panel-debian13.upd1-infra.test:2083/",
+      "phase": "05-mail_profile",
+      "plan_id": "022f38b7eb8e6a5f5f2780a28f1c24fe",
+      "request_id": "6544d6c1376d3203031aaaf1992ff2c9",
+      "status": "running",
+      "steps": [
+        {
+          "id": "01-dns",
+          "kind": "dns",
+          "owner_id": "a31a87f2b5ffab04163c5ef2394f9ae5",
+          "request_id": "6d8fe63b3d32d1011743de5446cdcdca",
+          "status": "succeeded",
+          "target": "external"
+        },
+        {
+          "id": "02-service",
+          "kind": "service",
+          "operation_id": "f1a0517dd0d34fa57743a7748412bda5",
+          "owner_id": "7e35abe5b32a3bd49da8c3fbd5e039c2",
+          "request_id": "15898e164f5ad38245863f154675f41e",
+          "status": "succeeded",
+          "target": "nginx"
+        },
+        {
+          "id": "03-service",
+          "kind": "service",
+          "operation_id": "093551c3f6502172e84d68575ca07adb",
+          "owner_id": "032d15eaa518553ff7bf381cdb4d833d",
+          "request_id": "8d32993cd91b620058cd8d95f4e9b826",
+          "status": "succeeded",
+          "target": "php-fpm"
+        },
+        {
+          "id": "04-service",
+          "kind": "service",
+          "operation_id": "365ab112effc299c5be7c1d2384ee78f",
+          "owner_id": "79a2a17af027a39037e8a836be896978",
+          "request_id": "59f4fd127d65ab19b4b2dbb565fcd58f",
+          "status": "succeeded",
+          "target": "mariadb"
+        },
+        {
+          "id": "05-mail_profile",
+          "kind": "mail_profile",
+          "operation_id": "a6484b64760b3fb3b194257523a56add",
+          "owner_id": "5e9c74a3dabbc01d0a75980eaac1fdec",
+          "request_id": "1592d66271b229bb791a76c8f3d86d60",
+          "status": "running",
+          "target": "webmail"
+        },
+        {
+          "id": "06-mail_profile",
+          "kind": "mail_profile",
+          "owner_id": "eff1f7856ebd13fd9ce5e6c085e41acf",
+          "request_id": "e376bf2deaa0fba410b018c8af56d3d9",
+          "status": "pending",
+          "target": "protected-mail"
+        },
+        {
+          "id": "07-service",
+          "kind": "service",
+          "owner_id": "74b665b2a9dc92e6ef2298d84be8bede",
+          "request_id": "edb12136dc96dcfcde9820c4b8901c04",
+          "status": "pending",
+          "target": "cron"
+        },
+        {
+          "id": "08-service",
+          "kind": "service",
+          "owner_id": "fd351ea948d92265c3fb961a7b600303",
+          "request_id": "0830f2f41c664c2a95467f6ee358f9c2",
+          "status": "pending",
+          "target": "certbot"
+        },
+        {
+          "id": "09-firewall",
+          "kind": "firewall",
+          "owner_id": "d8f52477c7f186ff072a11918be484c9",
+          "request_id": "60957a3fe2e09bad983097c081806ab6",
+          "status": "pending",
+          "target": "enable_and_persist"
+        },
+        {
+          "id": "10-access_dns",
+          "kind": "access_dns",
+          "owner_id": "530fc20fa2c97eb53db2b09535dfd258",
+          "qualifier": "192.0.2.10",
+          "request_id": "5681783eeb4e75f2f37715d1f6139da5",
+          "status": "pending",
+          "target": "panel-debian13.upd1-infra.test"
+        },
+        {
+          "id": "11-panel_certificate",
+          "kind": "panel_certificate",
+          "owner_id": "ddea582bf0b60bd54c51e3f56daea74a",
+          "request_id": "8990c8e8dd7dfb5ce405270877fc92af",
+          "status": "pending",
+          "target": "panel-debian13.upd1-infra.test"
+        },
+        {
+          "id": "12-access_dns",
+          "kind": "access_dns",
+          "owner_id": "ba5b64ffa7ed7eb8bf001946d74302a0",
+          "qualifier": "192.0.2.10",
+          "request_id": "b71a7a13f2e7fa5ed3c66a3f32f3d589",
+          "status": "pending",
+          "target": "mail-debian13.upd1-infra.test"
+        },
+        {
+          "id": "13-mail_certificate",
+          "kind": "mail_certificate",
+          "owner_id": "9272fdf7a86a694bccf9e6dce685b6ea",
+          "request_id": "6093195afd3d6a633b99a9e44c223c93",
+          "status": "pending",
+          "target": "mail-debian13.upd1-infra.test"
+        },
+        {
+          "id": "14-mail_enrollment",
+          "kind": "mail_enrollment",
+          "owner_id": "38d04146ec925de196f00ceceb393dfa",
+          "qualifier": "3d048c0bd7db63f8324ad14ec90ba9ad38ba6e4b10f8f5576927ecc6f8b277e9",
+          "request_id": "f191010ea259d91b2b7f89066bf50b28",
+          "status": "pending",
+          "target": "mail-renewal"
+        },
+        {
+          "id": "15-verify",
+          "kind": "verify",
+          "owner_id": "3b74d06eb24353dba6a07a111c8f647c",
+          "request_id": "ecee0e27e8f928babfbf1eaf60eb2b32",
+          "status": "pending",
+          "target": "web_mail"
+        }
+      ]
+    },
+    "status": 200,
+    "text": null
+  }
+}

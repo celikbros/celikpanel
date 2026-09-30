@@ -1,0 +1,3 @@
+ae713f912af8d8e9153a2053cc2ad6f7abe66851 35cea077672ca71f60f749565b549a15e656b504 test(fixture): upd1 defective candidate - migrate-only fails (unpublished, disposable)
+74fe2fe6ed0dd06ba50a53ee92cbca4648ceb352 5424f2a64c99dcb825ea40dc28cddf5d1bcee2c7 test(fixture): upd1 good candidate labelled v0.1.0-alpha.82 (unpublished, disposable)
+e3a569d527ec88c01e14c1df015fa3010ea7f803 23e9ee4bfd5503da911a5979229276bc2c5cb472 test(fixture): upd1 baseline labelled v0.1.0-alpha.81 (unpublished, disposable)

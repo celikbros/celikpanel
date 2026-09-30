@@ -1,0 +1,19 @@
+Formatting '/var/tmp/cp-release-drill-upd2-d13-def-a/cells/5db6235cc0ee9b3b37f6da1d/debian13/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-upd2-d13-def-a/images/debian-13-genericcloud-amd64-20260826-2582.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+Formatting '/var/tmp/cp-release-drill-upd2-d13-def-a/cells/5db6235cc0ee9b3b37f6da1d/arch/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-upd2-d13-def-a/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-upd2-d13-def-a", "cell_id": "release-recovery__d554040cc04a35e0", "ssh_ports": [2361, 2362]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-upd2-d13-def-a", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-upd2-d13-def-a", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+{"step": "preflight", "verdict": "passed", "reason": null}
+{"step": "origin", "verdict": "passed", "reason": null}
+{"step": "baseline-install", "verdict": "passed", "reason": null}
+{"step": "owner-login", "verdict": "passed", "reason": null}
+{"step": "license", "verdict": "passed", "reason": null}
+{"step": "setup", "verdict": "observed", "reason": null}
+{"step": "seed", "verdict": "passed", "reason": null}
+{"step": "pre-state", "verdict": "passed", "reason": null}
+{"step": "arm", "verdict": "passed", "reason": null}
+{"step": "owner-start", "verdict": "failed", "reason": "update start refused: HTTP 202 {'accepted': True, 'request_id': '4a9f97a57acc04d4f8a641fe16a6b79d', 'status': 'queued', 'target': {'version': 'v0.1.0-alpha.82', 'commit': 'ae713f912af8d8e9153a2053cc2ad6f7abe66851', 'sequence': '82', 'os': 'linux', 'arch': 'amd64', 'archive_sha256': 'b12c88ff2de700a0f187cb3ef6a33ab9a3417dcab53dec0a3ff8e8db38d5e1b2', 'archive_size': '66923141', 'published_at': '2026-09-30T15:31:52Z'}}"}
+{"step": "collect", "verdict": "passed", "reason": null}
+{"outcome": "not-terminal", "overall": "failed", "request_id": "4a9f97a57acc04d4f8a641fe16a6b79d"}
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-upd2-d13-def-a", "evidence_retained": true}
+UPD1 cell=upd1-debian13-defective dns_mode=external lab=/var/tmp/cp-release-drill-upd2-d13-def-a driver_exit=1 evidence=/var/tmp/cp-release-drill-upd2-d13-def-a/evidence/*/upd1

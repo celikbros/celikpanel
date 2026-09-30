@@ -1,0 +1,15 @@
+Traceback (most recent call last):
+  File "/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/upd2run/inspect.py", line 10, in <module>
+    import lab  # noqa: E402
+  File "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/release-recovery/lab.py", line 27, in <module>
+    SPEC.loader.exec_module(fixture)
+  File "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/fixture.py", line 23, in <module>
+    from dataclasses import dataclass
+  File "/usr/lib/python3.14/dataclasses.py", line 5, in <module>
+    import inspect
+  File "/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/upd2run/inspect.py", line 13, in <module>
+    root = lab.checked_root(root_s)
+AttributeError: partially initialized module 'lab' from '/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/release-recovery/lab.py' has no attribute 'checked_root' (most likely due to a circular import)
+/var/tmp/cp-upd2-run/side/cell-d13def/inspect-after-seed-20260930T153931Z.txt
+/var/tmp/cp-upd2-run/side/cell-d13def/inspect-pre-update-20260930T154011Z.txt
+sidecar end 2026-09-30T15:40:14Z labels: after-seed pre-update

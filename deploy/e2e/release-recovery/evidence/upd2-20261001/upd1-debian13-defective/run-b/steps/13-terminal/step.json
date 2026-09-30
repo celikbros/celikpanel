@@ -1,0 +1,253 @@
+{
+  "checks": {
+    "build_identity_ok": true,
+    "builds": {
+      "agent": {
+        "identity": "version=v0.1.0-alpha.81\ncommit=e3a569d527ec88c01e14c1df015fa3010ea7f803\n",
+        "returncode": 0,
+        "sha256": "1e6584aac93a1e0652f8d2a8af6c920f8cd2708a0fd95ad46d356294b1ef6cda"
+      },
+      "panel": {
+        "identity": "version=v0.1.0-alpha.81\ncommit=e3a569d527ec88c01e14c1df015fa3010ea7f803\n",
+        "returncode": 0,
+        "sha256": "a49021edfc52de2a8b985225a857635fd86783c446f432c92d3b8d911874cd9f"
+      }
+    },
+    "database": {
+      "differing": [
+        "metrics_samples",
+        "server_setup_executions"
+      ],
+      "post_sha256": "0cb7f7621fcbeedd5a89b123eb7fcbf9c1579fa64481692aa6d8a89b05162024",
+      "pre_sha256": "f6db9b8f6f3341f55b4895d6d7791ed0017f44e00141df60a53863efc3619e7d",
+      "schema_equal": true,
+      "tables_compared": 65,
+      "unexpected": [],
+      "verdict": "equal-except-volatile",
+      "volatile_excluded": [
+        "audit_logs",
+        "metrics_samples",
+        "server_setup_executions",
+        "sessions",
+        "sqlite_sequence"
+      ],
+      "volatile_reasons": {
+        "audit_logs": "authentication or background writer (BOUND-WORKER AJ)",
+        "metrics_samples": "authentication or background writer (BOUND-WORKER AJ)",
+        "server_setup_executions": "the waiting setup runner rewrites its execution row on every retry (about every 25 s: cmd/panel/server_setup_dns_retry.go claimServerSetupDNSRetry and server_setup_operations.go execution update)",
+        "sessions": "authentication or background writer (BOUND-WORKER AJ)",
+        "sqlite_sequence": "authentication or background writer (BOUND-WORKER AJ)"
+      }
+    },
+    "dns": false,
+    "dns_scope": {
+      "mode": "external",
+      "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+      "verdict": "not-provided-external-dns"
+    },
+    "final": {
+      "observation": "known",
+      "observed_at": "2026-09-30T15:53:23Z",
+      "phase": "recovered",
+      "previous_failure": "update_failed",
+      "reason": "rollback_verified",
+      "request_id": "169fdd91d71ad361c9ffc5396e0ee572",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "rollback_verified"
+    },
+    "firewall_equal": true,
+    "floor": {
+      "present": true,
+      "sha256": "fb2c2ef4d514862e2d1e9e08d4d756d697b63e1e8508d27aae418f184f1ebc9c",
+      "text": "format=celikpanel-release-sequence-floor-v1\nsequence=82\nversion=v0.1.0-alpha.82\n"
+    },
+    "foundation": {
+      "present": true,
+      "sha256": "b7098c28e0dfb03a87193ed750e362d6d48c3d79e1df22a8578d113bbf47bde3",
+      "text": "format=celikpanel-release-recovery-foundation-v1\nprotocol=1\nsequence=82\nrelease-version=v0.1.0-alpha.82\nrelease-commit=ae713f912af8d8e9153a2053cc2ad6f7abe66851\nrunner-sha256=391eba13d077e0f8016cdfc8e95ce5fb67711b1e9b4a91ed7446ebdbb4ccf004\nservice-sha256=c570e53138a416a6faf531c2f53e9502ca7aa5cc1131a1f6f6ae870b940fe530\ntimer-sha256=33148e5b0fbc209ff6fd725aaaff2c569bd7470751341d4b83b301d0fa54cd86\nstart-guard-sha256=2e2e0d0d00a7f28059e2300a2f909466136725807b2608d8d7f0c72b1e31dfd4\nagent-dropin-sha256=82e0fe894b3fa676c1b64e65ac964b74b27dcfe5a83ddf91761f44ad5971359f\npanel-dropin-sha256=82e0fe894b3fa676c1b64e65ac964b74b27dcfe5a83ddf91761f44ad5971359f\nprotocol-sha256=a29874f40088f2b5e960b4ce63651657b1ff2622334dcc5cc11c8f338215034c\n"
+    },
+    "login_ok": true,
+    "mailbox": {
+      "checked": true,
+      "present": true,
+      "returncode": 0,
+      "status": "ok"
+    },
+    "outcome": "recovered-automatically",
+    "running_matches_installed": {
+      "celikpanel-agent.service": true,
+      "celikpanel-panel.service": true
+    },
+    "seeded_rows": {
+      "cron": true,
+      "domain": true,
+      "mail": true
+    },
+    "site_marker": true,
+    "smtp": true,
+    "timers": {
+      "changed": {},
+      "compared": 2,
+      "equal": true
+    },
+    "transaction": {
+      "fields": {},
+      "present": false,
+      "status": "ok"
+    },
+    "update_card": {
+      "availability": {
+        "body": {
+          "schema": "celikpanel-panel-availability/v1",
+          "state": "ready"
+        },
+        "http": 200
+      },
+      "check": {
+        "body": {
+          "available": true,
+          "current_commit": "e3a569d527ec88c01e14c1df015fa3010ea7f803",
+          "current_version": "v0.1.0-alpha.81",
+          "supported": true,
+          "target": {
+            "arch": "amd64",
+            "archive_sha256": "b12c88ff2de700a0f187cb3ef6a33ab9a3417dcab53dec0a3ff8e8db38d5e1b2",
+            "archive_size": "66923141",
+            "commit": "ae713f912af8d8e9153a2053cc2ad6f7abe66851",
+            "os": "linux",
+            "published_at": "2026-09-30T15:42:35Z",
+            "sequence": "82",
+            "version": "v0.1.0-alpha.82"
+          }
+        },
+        "http": 200
+      },
+      "cron": {
+        "body": {
+          "jobs": [
+            {
+              "command": "/bin/date -u -Iseconds > \"$HOME/upd1-cron-stamp.txt\"",
+              "comment": "upd1 owner cron",
+              "enabled": true,
+              "id": "00113617",
+              "schedule": "* * * * *"
+            }
+          ]
+        },
+        "http": 200
+      },
+      "domains": {
+        "body": [
+          {
+            "bandwidth": 0,
+            "created_at": "2026-09-30T15:49:46Z",
+            "disk_usage": 0,
+            "domain_name": "upd1-owner.test",
+            "id": 1,
+            "php_version": "",
+            "project_type": "static",
+            "ssl_enabled": false,
+            "status": "active"
+          }
+        ],
+        "http": 200
+      },
+      "license": {
+        "body": {
+          "can_use_panel": true,
+          "observation": "known",
+          "state": "active",
+          "valid_until": 1790783657
+        },
+        "http": 200
+      },
+      "mail_listed": true,
+      "recovery": {
+        "body": {
+          "observation": "known",
+          "observed_at": "2026-09-30T15:53:23Z",
+          "panel_state": "ready",
+          "phase": "recovered",
+          "previous_failure": "update_failed",
+          "reason": "rollback_verified",
+          "request_id": "169fdd91d71ad361c9ffc5396e0ee572",
+          "schema": "celikpanel-recovery-status/v1",
+          "terminal_proof": "rollback_verified"
+        },
+        "http": 200
+      },
+      "recovery_guidance": {
+        "actionable": true,
+        "keys": [
+          "recovery.phase.recovered",
+          "recovery.next.recovered",
+          "recovery.reason.update_failed"
+        ],
+        "missing_keys": [],
+        "no_actor_or_action": false,
+        "texts": {
+          "en": [
+            "Rollback verified",
+            "The server verified restoration of the previous release. Reload CelikPanel to check panel access.",
+            "Update failed"
+          ],
+          "tr": [
+            "Geri alma doğrulandı",
+            "Sunucu önceki sürümün geri yüklendiğini doğruladı. Panel erişimini kontrol etmek için CelikPanel’i yeniden yükleyin.",
+            "Güncelleme başarısız oldu"
+          ]
+        }
+      },
+      "status": {
+        "body": {
+          "created_at": "2026-09-30T15:51:15.018027288Z",
+          "found": true,
+          "request_id": "169fdd91d71ad361c9ffc5396e0ee572",
+          "status": "failed",
+          "summary": "reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason=offline panel database migration failed; its original database and work evidence are preserved detail=",
+          "target": {
+            "arch": "amd64",
+            "archive_sha256": "b12c88ff2de700a0f187cb3ef6a33ab9a3417dcab53dec0a3ff8e8db38d5e1b2",
+            "archive_size": "66923141",
+            "commit": "ae713f912af8d8e9153a2053cc2ad6f7abe66851",
+            "os": "linux",
+            "sequence": "82",
+            "version": "v0.1.0-alpha.82"
+          },
+          "updated_at": "2026-09-30T15:51:59.227541677Z"
+        },
+        "http": 200
+      },
+      "update_card": {
+        "keys": [],
+        "missing_keys": [],
+        "summary": "reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason=offline panel database migration failed; its original database and work evidence are preserved detail=",
+        "texts": {
+          "en": [
+            "reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason=offline panel database migration failed; its original database and work evidence are preserved detail="
+          ],
+          "tr": [
+            "reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason=offline panel database migration failed; its original database and work evidence are preserved detail="
+          ]
+        },
+        "untranslated_summary": true
+      },
+      "version": {
+        "body": {
+          "agent_commit": "e3a569d527ec88c01e14c1df015fa3010ea7f803",
+          "agent_matches": true,
+          "commit": "e3a569d527ec88c01e14c1df015fa3010ea7f803",
+          "hostname": "dns-debian13",
+          "ipv4": "192.0.2.10",
+          "schema_version": 42,
+          "version": "v0.1.0-alpha.81"
+        },
+        "http": 200
+      }
+    }
+  },
+  "finished_at": "2026-09-30T15:53:29Z",
+  "name": "terminal",
+  "started_at": "2026-09-30T15:53:24Z",
+  "verdict": "passed"
+}

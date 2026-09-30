@@ -1,0 +1,33 @@
+{
+  "checks": {
+    "attempts": {
+      "automatic": [],
+      "automatic_count": 0,
+      "journal_admissions": [],
+      "owner": [],
+      "owner_count": 0
+    },
+    "guest_samples": 14,
+    "host_samples": 15,
+    "journals": [
+      "lab",
+      "product",
+      "setup-services"
+    ],
+    "observer": [
+      "armed",
+      "timeline",
+      "timeline",
+      "timeline"
+    ],
+    "recovery_fault_events": "unavailable: CalledProcessError",
+    "stopped_after": [
+      "owner-start"
+    ],
+    "unavailable": {}
+  },
+  "finished_at": "2026-09-30T15:40:13Z",
+  "name": "collect",
+  "started_at": "2026-09-30T15:40:11Z",
+  "verdict": "passed"
+}

@@ -1,0 +1,32 @@
+[16:05:12] cli_raw.en: The last recorded state is updating. Check this same request again.
+Terminal proof: none
+This is a recorded observation; current service health was not checked.
+[16:06:05] cli_raw.en: The producer recorded verified update completion. Check current service health separately.
+Terminal proof: update_verified
+This is a recorded observation; current service health was not checked.
+[16:05:12] cli_raw.tr: Son kayıtta güncelleme sürüyor. Aynı işlemi yeniden sorgulayın.
+Nihai kanıt: none
+Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.
+[16:06:05] cli_raw.tr: Üretici, güncellemenin doğrulanmış tamamlanmasını kaydetmiş. Güncel hizmet sağlığını ayrıca kontrol edin.
+Nihai kanıt: update_verified
+Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.
+[16:05:12] guidance_api.en: Update request recorded || The server recorded this request. This page checks the same operation automatically; it does not submit it again.
+[16:05:14] guidance_api.en: Last recorded step: update in progress || The server last reported work on this update. Wait for the next recorded result; checking this page does not restart it.
+[16:06:05] guidance_api.en: Update verified || The server verified this update. Reload CelikPanel to load the installed interface.
+[16:05:12] guidance_api.tr: Güncelleme isteği kaydedildi || Sunucu bu isteği kaydetti. Bu sayfa aynı işlemi otomatik kontrol eder; yeniden göndermez.
+[16:05:14] guidance_api.tr: Kaydedilmiş son adım: güncelleme sürüyor || Sunucu son olarak bu güncelleme üzerinde çalıştığını bildirdi. Sonraki kayıtlı sonucu bekleyin; bu sayfayı kontrol etmek işlemi yeniden başlatmaz.
+[16:06:05] guidance_api.tr: Güncelleme doğrulandı || Sunucu bu güncellemeyi doğruladı. Kurulu arayüzü yüklemek için CelikPanel’i yeniden yükleyin.
+[16:05:12] guidance_cli.en: Last recorded step: update in progress || The server last reported work on this update. Wait for the next recorded result; checking this page does not restart it.
+[16:06:05] guidance_cli.en: Update verified || The server verified this update. Reload CelikPanel to load the installed interface.
+[16:05:12] guidance_cli.tr: Kaydedilmiş son adım: güncelleme sürüyor || Sunucu son olarak bu güncelleme üzerinde çalıştığını bildirdi. Sonraki kayıtlı sonucu bekleyin; bu sayfayı kontrol etmek işlemi yeniden başlatmaz.
+[16:06:05] guidance_cli.tr: Güncelleme doğrulandı || Sunucu bu güncellemeyi doğruladı. Kurulu arayüzü yüklemek için CelikPanel’i yeniden yükleyin.
+[16:05:12] update_card.en: The update is queued.
+[16:05:14] update_card.en: The update is being applied; the panel may be unavailable briefly.
+[16:05:39] update_card.en: 
+[16:06:05] update_card.en: The update completed. The panel and agent restarted on the new version.
+[16:05:12] update_card.tr: Güncelleme sırada.
+[16:05:14] update_card.tr: Güncelleme uygulanıyor; panel kısa süre erişilemeyebilir.
+[16:05:39] update_card.tr: 
+[16:06:05] update_card.tr: Güncelleme tamamlandı. Panel ve agent yeni sürümle yeniden başladı.
+OFFLINE page {"bytes": 2119, "sha256": "77b855b3caeb0a4688553f2ed8344f31e9644bf0242b691df2fff401620f153b", "status": 200} scripts [('/assets/recovery-CDnDU1Td.js', 200, True)]
+OFFLINE texts {"en": {"check": "Check connection", "checking": "Checking connection…", "help": "This recovery page is saved in your browser. It cannot confirm the server’s current state. A lost connection does not prove that your update failed or your license expired.", "journal": "Read the recovery journal", "next": "Check your connection. This page checks again every 15 seconds while visible. When the panel responds, open it to continue tracking the same operation.", "noReference": "No operation reference is saved in this browser. Ask the server administrator to inspect the recovery journal.", "open": "Open panel", "owner": "If the connection does not return", "ownerHelp": "The server administrator can inspect recovery through an existing SSH connection. These commands only read status; they do not restart an update.", "reachable": "The panel is responding. Open it to sign in or verify the existing operation.", "reference": "Saved operation reference", "referenceHelp": "This ID is a browser hint, not a verified result or permission to retry.", "status": "Read this operation’s status", "title": "The panel connection is unavailable", "waiting": "No current panel response. This page has not started another operation."}, "tr": {"check": "Bağlantıyı kontrol et", "checking": "Bağlantı kontrol ediliyor…", "help": "Bu kurtarma sayfası tarayıcınızda kayıtlıdır. Sunucunun güncel durumunu doğrulayamaz. Bağlantının kesilmesi, güncellemenin başarısız olduğunu veya lisansın süresinin dolduğunu göstermez.", "journal": "Kurtarma günlüğünü oku", "next": "Bağlantınızı kontrol edin. Bu sayfa açıkken 15 saniyede bir yeniden kontrol eder. Panel yanıt verdiğinde aynı işlemi izlemek için paneli açın.", "noReference": "Bu tarayıcıda kayıtlı işlem kimliği yok. Sunucu yöneticisinden kurtarma günlüğünü incelemesini isteyin.", "open": "Paneli aç", "owner": "Bağlantı geri gelmezse", "ownerHelp": "Sunucu yöneticisi mevcut SSH bağlantısından kurtarma durumuna bakabilir. Bu komutlar yalnızca durumu okur; güncellemeyi yeniden başlatmaz.", "reachable": "Panel yanıt veriyor. Giriş yapmak veya mevcut işlemi doğrulamak için paneli açın.", "reference": "Kayıtlı işlem kimliği", "referenceHelp": "Bu kimlik tarayıcıda kayıtlı bir ipucudur; doğrulanmış sonuç veya yeniden deneme yetkisi değildir.", "status": "Bu işlemin durumunu oku", "title": "Panel bağlantısına ulaşılamıyor", "waiting": "Panelden güncel yanıt alınamadı. Bu sayfa yeni bir işlem başlatmadı."}}

@@ -1,0 +1,139 @@
+{
+  "agreement": {
+    "known_sources": [
+      "api",
+      "cli"
+    ],
+    "phase": {
+      "api": "succeeded",
+      "cli": "succeeded"
+    },
+    "reasons": [],
+    "sources": [
+      "api",
+      "cli",
+      "shell"
+    ],
+    "verdict": "agree"
+  },
+  "cli": {
+    "boot_id": "745f12f0-881e-4039-a15b-0c90b2fd27b8",
+    "captured_at": "2026-09-30T16:06:06.403633Z",
+    "en": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "The producer recorded verified update completion. Check current service health separately.\nRequest: 3cd54515b25bc73fe30a24525b849ca8\nRecorded at: 2026-09-30T16:06:04Z\nTerminal proof: update_verified\nThis is a recorded observation; current service health was not checked.\n"
+    },
+    "json": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "{\"schema\":\"celikpanel-recovery-status/v1\",\"request_id\":\"3cd54515b25bc73fe30a24525b849ca8\",\"observation\":\"known\",\"phase\":\"succeeded\",\"terminal_proof\":\"update_verified\",\"reason\":\"update_verified\",\"observed_at\":\"2026-09-30T16:06:04Z\"}\n"
+    },
+    "tr": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "Üretici, güncellemenin doğrulanmış tamamlanmasını kaydetmiş. Güncel hizmet sağlığını ayrıca kontrol edin.\nİşlem: 3cd54515b25bc73fe30a24525b849ca8\nKayıt zamanı: 2026-09-30T16:06:04Z\nNihai kanıt: update_verified\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\n"
+    }
+  },
+  "guidance_api": {
+    "actionable": true,
+    "keys": [
+      "recovery.phase.succeeded",
+      "recovery.next.succeeded"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "texts": {
+      "en": [
+        "Update verified",
+        "The server verified this update. Reload CelikPanel to load the installed interface."
+      ],
+      "tr": [
+        "Güncelleme doğrulandı",
+        "Sunucu bu güncellemeyi doğruladı. Kurulu arayüzü yüklemek için CelikPanel’i yeniden yükleyin."
+      ]
+    }
+  },
+  "guidance_cli": {
+    "actionable": true,
+    "keys": [
+      "recovery.phase.succeeded",
+      "recovery.next.succeeded"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "texts": {
+      "en": [
+        "Update verified",
+        "The server verified this update. Reload CelikPanel to load the installed interface."
+      ],
+      "tr": [
+        "Güncelleme doğrulandı",
+        "Sunucu bu güncellemeyi doğruladı. Kurulu arayüzü yüklemek için CelikPanel’i yeniden yükleyin."
+      ]
+    }
+  },
+  "index": 11,
+  "observed": {
+    "observation": "known",
+    "observed_at": "2026-09-30T16:06:04Z",
+    "phase": "succeeded",
+    "reason": "update_verified",
+    "request_id": "3cd54515b25bc73fe30a24525b849ca8",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "update_verified"
+  },
+  "recovery_api": {
+    "body": {
+      "observation": "known",
+      "observed_at": "2026-09-30T16:06:04Z",
+      "panel_state": "ready",
+      "phase": "succeeded",
+      "reason": "update_verified",
+      "request_id": "3cd54515b25bc73fe30a24525b849ca8",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "update_verified"
+    },
+    "http": 200
+  },
+  "t": 1790784365.3002214,
+  "update_card": {
+    "keys": [
+      "panelUpdate.succeeded"
+    ],
+    "missing_keys": [],
+    "summary": null,
+    "texts": {
+      "en": [
+        "The update completed. The panel and agent restarted on the new version."
+      ],
+      "tr": [
+        "Güncelleme tamamlandı. Panel ve agent yeni sürümle yeniden başladı."
+      ]
+    },
+    "untranslated_summary": false
+  },
+  "update_status": {
+    "body": {
+      "created_at": "2026-09-30T16:05:12.688645726Z",
+      "found": true,
+      "request_id": "3cd54515b25bc73fe30a24525b849ca8",
+      "status": "succeeded",
+      "target": {
+        "arch": "amd64",
+        "archive_sha256": "f9db4686a020dde085760df4c64016483ffd5a08ada3169f3a2db77aa800ba0e",
+        "archive_size": "66923174",
+        "commit": "74fe2fe6ed0dd06ba50a53ee92cbca4648ceb352",
+        "os": "linux",
+        "sequence": "82",
+        "version": "v0.1.0-alpha.82"
+      },
+      "updated_at": "2026-09-30T16:06:04.12445934Z"
+    },
+    "http": 200
+  },
+  "utc": "2026-09-30T16:06:05Z"
+}

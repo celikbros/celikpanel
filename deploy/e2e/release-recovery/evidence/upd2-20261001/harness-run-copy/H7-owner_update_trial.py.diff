@@ -1,0 +1,27 @@
+--- owner_update_trial.py.h6	2026-09-30 19:11:57.946548966 +0300
++++ /var/tmp/cp-upd2-run/harness/deploy/e2e/release-recovery/owner_update_trial.py	2026-09-30 19:11:57.968856303 +0300
+@@ -638,14 +638,21 @@
+     address must be 127.0.0.1 and the fixture must answer HTTP 200.
+     """
+     addresses = []
+-    for line in str((check.get("getent") or {}).get("stdout") or "").splitlines():
++    raw = str((check.get("getent") or {}).get("stdout") or "")
++    for line in raw.splitlines():
+         fields = line.split()
+-        if len(fields) >= 2 and ORIGIN_NAME in fields[1:]:
++        # H7 (upd2 run copy): `getent hosts celikpanel.net` prints only answers for that one
++        # name. With nss-resolve (Arch) a hosts-file name sharing 127.0.0.1 with localhost is
++        # printed under its canonical name ("127.0.0.1 localhost"), without the queried alias.
++        if fields:
+             addresses.append(fields[0])
+     http = str((check.get("https") or {}).get("stdout") or "").strip()
+     unit = check.get("unit") or {}
+     loopback = bool(addresses) and all(address == "127.0.0.1" for address in addresses)
+-    return {"addresses": addresses, "http": http, "loopback_only": loopback,
++    return {"addresses": addresses, "getent_stdout": raw[:512],
++            "getent_status": (check.get("getent") or {}).get("status"),
++            "getent_returncode": (check.get("getent") or {}).get("returncode"),
++            "http": http, "loopback_only": loopback,
+             "unit": {k: unit.get(k) for k in ("ActiveState", "UnitFileState", "NRestarts")},
+             "boot_id": check.get("boot_id"), "ok": loopback and http == "200"}
+ 

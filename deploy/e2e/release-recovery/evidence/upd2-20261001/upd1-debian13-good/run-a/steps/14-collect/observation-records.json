@@ -1,0 +1,6 @@
+{
+  "directory_present": true,
+  "records": {
+    "3cd54515b25bc73fe30a24525b849ca8.status": "schema=celikpanel-recovery-observation/v1\nrequest_id=3cd54515b25bc73fe30a24525b849ca8\ntarget_commit=74fe2fe6ed0dd06ba50a53ee92cbca4648ceb352\nphase=succeeded\nterminal_proof=update_verified\nreason=update_verified\nobserved_at=2026-09-30T16:06:04Z\nprevious_failure=none\n"
+  }
+}

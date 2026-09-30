@@ -1,0 +1,2 @@
+# read-only side inspection lab=cp-release-drill-upd2-arch-good-a node=arch label=pre-update rc=None took=0.0s
+unavailable: ValueError: QEMU identity is unavailable

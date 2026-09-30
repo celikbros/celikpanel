@@ -1,0 +1,59 @@
+{
+  "checks": {
+    "origin_check": {
+      "addresses": [],
+      "boot_id": "060071f0-267a-4621-abb1-a10d997c998f",
+      "http": "200",
+      "loopback_only": false,
+      "ok": false,
+      "unit": {
+        "ActiveState": "active",
+        "NRestarts": "0",
+        "UnitFileState": "enabled"
+      }
+    },
+    "origin_unit": {
+      "path": "/etc/systemd/system/cp-lab-upd1-origin.service",
+      "results": [
+        {
+          "returncode": 0,
+          "status": "ok"
+        },
+        {
+          "returncode": 0,
+          "status": "ok"
+        }
+      ],
+      "unit": "cp-lab-upd1-origin.service",
+      "unit_sha256": "331f8fc4c1389e6614a09e5ed91451006f79f7091c189913423ff402f9b6dcd4"
+    },
+    "provenance": "unpublished-local-artifact-with-disposable-fixture-trust",
+    "provision": {
+      "bind": "127.0.0.1:443",
+      "origin": "https://celikpanel.net",
+      "provenance": "unpublished-local-artifact-with-disposable-fixture-trust",
+      "release_key_enrolled": false
+    },
+    "staged": {
+      "helper": "/root/celikpanel-release-recovery-lab/worker-fixture-origin.py",
+      "intent": "/root/celikpanel-release-recovery-lab/worker-origin-intent.json"
+    },
+    "target": {
+      "arch": "amd64",
+      "archive": "celikpanel-v0.1.0-alpha.82-linux-amd64.tar.gz",
+      "archive_sha256": "b12c88ff2de700a0f187cb3ef6a33ab9a3417dcab53dec0a3ff8e8db38d5e1b2",
+      "archive_size": "66923141",
+      "commit": "ae713f912af8d8e9153a2053cc2ad6f7abe66851",
+      "format": "celikpanel-release-manifest-v2",
+      "os": "linux",
+      "published_at": "2026-09-30T16:07:29Z",
+      "sequence": "82",
+      "version": "v0.1.0-alpha.82"
+    }
+  },
+  "finished_at": "2026-09-30T16:07:58Z",
+  "name": "origin",
+  "reason": "guest-loopback celikpanel.net fixture origin is not serving: {'addresses': [], 'http': '200', 'loopback_only': False, 'unit': {'ActiveState': 'active', 'UnitFileState': 'enabled', 'NRestarts': '0'}, 'boot_id': '060071f0-267a-4621-abb1-a10d997c998f', 'ok': False}",
+  "started_at": "2026-09-30T16:07:28Z",
+  "verdict": "failed"
+}

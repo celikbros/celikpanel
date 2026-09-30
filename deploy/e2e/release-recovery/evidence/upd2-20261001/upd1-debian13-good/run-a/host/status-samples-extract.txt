@@ -1,0 +1,13 @@
+samples 12
+16:05:12Z U 200 queued | R 200 accepted operation_accepted None none ready | CLI known running update_running None none | perr None shell None clierr None | agree disagree
+16:05:14Z U 200 running | R 200 running update_running None none ready | CLI known running update_running None none | perr None shell None clierr None | agree agree
+16:05:16Z U 200 running | R 200 running update_running None none ready | CLI known running update_running None none | perr None shell None clierr None | agree agree
+16:05:18Z U 200 running | R 200 running update_running None none ready | CLI known running update_running None none | perr None shell None clierr None | agree agree
+16:05:23Z U 200 running | R 200 running update_running None none ready | CLI known running update_running None none | perr None shell None clierr None | agree agree
+16:05:29Z U 200 running | R 200 running update_running None none ready | CLI known running update_running None none | perr None shell None clierr None | agree agree
+16:05:39Z U None None | R None None None None None None | CLI known running update_running None none | perr PanelError shell {'error': 'ConnectionResetError', 'note': 'only a browser-saved copy of the shell can show while the Panel is down'} clierr None | agree single-source
+16:05:41Z U None None | R None None None None None None | CLI known running update_running None none | perr PanelError shell {'error': 'ConnectionResetError', 'note': 'only a browser-saved copy of the shell can show while the Panel is down'} clierr None | agree single-source
+16:05:44Z U None None | R None None None None None None | CLI known running update_running None none | perr PanelError shell {'error': 'ConnectionResetError', 'note': 'only a browser-saved copy of the shell can show while the Panel is down'} clierr None | agree single-source
+16:05:48Z U None None | R None None None None None None | CLI known running update_running None none | perr PanelError shell {'error': 'ConnectionResetError', 'note': 'only a browser-saved copy of the shell can show while the Panel is down'} clierr None | agree single-source
+16:05:55Z U None None | R None None None None None None | CLI known running update_running None none | perr PanelError shell {'error': 'ConnectionResetError', 'note': 'only a browser-saved copy of the shell can show while the Panel is down'} clierr None | agree single-source
+16:06:05Z U 200 succeeded | R 200 succeeded update_verified None update_verified ready | CLI known succeeded update_verified None update_verified | perr None shell None clierr None | agree agree
