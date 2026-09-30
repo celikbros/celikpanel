@@ -14,7 +14,7 @@ const compile = path => ts.transpileModule(readFileSync(new URL(path,import.meta
 const accessURL = dataModule(compile('../src/lib/accessObservation.ts'));
 const recoveryURL = dataModule(compile('../src/lib/recoveryObservation.ts'));
 const {parseAccessObservation} = await import(accessURL);
-const {parseRecoveryObservation,savedRecoveryRequestId,reconcileRecoveryObservation} = await import(recoveryURL);
+const {parseRecoveryObservation,savedRecoveryRequestId,reconcileRecoveryObservation,recoveryFailureGuidanceKey} = await import(recoveryURL);
 const stub = dataModule(`import React from '${reactURL}';
  export const api = {me:signal=>globalThis.recoveryFixture.me(signal)};
  export const useI18n=()=>({t:key=>key,locale:'en'});
@@ -214,4 +214,45 @@ test('paused recovery explains owner action, keeps the failure and only reads on
   await act(async()=>{await tree.root.findByType('button').props.onClick()});
   const offline=JSON.stringify(tree.toJSON());assert.ok(offline.includes('recovery.automatic.pausedTitle'));assert.ok(offline.includes('recovery.observationUnavailable'));
  }finally{await clean()}
+});
+
+test('typed update cause is optional, allowlisted and bound to the update failure; older-style unknown values stay generic',()=>{
+ const failed={...known('failed'),previous_failure:'update_failed'};
+ const typed=parseRecoveryObservation({...failed,failure_code:'candidate_panel_startup_check_failed'},id);
+ assert.equal(typed.failure_code,'candidate_panel_startup_check_failed');assert.equal(typed.reason,'update_failed');
+ for(const failure_code of [undefined,'future_code','update_failed',{},null])assert.equal(parseRecoveryObservation({...failed,failure_code},id).failure_code,undefined);
+ // A later recovery failure hides the update cause; the record itself stays valid.
+ const later=parseRecoveryObservation({...known('running'),phase:'recovery_required',reason:'recovery_failed',previous_failure:'recovery_failed',failure_code:'panel_start_unverified'},id);
+ assert.equal(later.failure_code,undefined);assert.equal(later.observation,'known');
+ // Reconcile keeps the cause with its carried failure and drops it for another failure.
+ const recovering=parseRecoveryObservation({...known('running'),phase:'recovering',reason:'recovery_running'},id);
+ assert.equal(reconcileRecoveryObservation(typed,recovering).record.failure_code,'candidate_panel_startup_check_failed');
+ const guidance=(phase,code,extra={})=>recoveryFailureGuidanceKey(parseRecoveryObservation({...known(phase),previous_failure:'update_failed',failure_code:code,...extra},id));
+ assert.equal(guidance('recovered','candidate_panel_startup_check_failed'),'recovery.failure.candidate_panel_startup_check_failed.recovered');
+ assert.equal(guidance('failed','candidate_panel_startup_check_failed'),'recovery.failure.candidate_panel_startup_check_failed.returning');
+ assert.equal(guidance('failed','panel_start_unverified'),'recovery.failure.panel_start_unverified.pending');
+ assert.equal(guidance('succeeded','panel_start_unverified'),undefined);
+ assert.equal(guidance('recovered','panel_start_unverified'),undefined);
+ assert.equal(guidance('failed','future_code'),undefined);
+ assert.equal(recoveryFailureGuidanceKey(parseRecoveryObservation({...known('running'),phase:'recovering',reason:'recovery_running',previous_failure:'update_failed',failure_code:'panel_start_unverified',waiting_for:'starting'},id)),undefined);
+});
+
+test('typed causes replace only the guidance text and the failure label; every key exists in EN and TR',async()=>{
+ const locale=name=>readFileSync(new URL(`../src/i18n/${name}.ts`,import.meta.url),'utf8');
+ for(const key of ['recovery.reason.candidate_panel_startup_check_failed','recovery.reason.panel_start_unverified','recovery.failure.candidate_panel_startup_check_failed.returning','recovery.failure.candidate_panel_startup_check_failed.recovered','recovery.failure.panel_start_unverified.pending'])
+  for(const name of ['en','tr'])assert.ok(locale(name).includes(`'${key}':`),`${name} lacks ${key}`);
+ assert.ok(locale('en').includes('sudo journalctl -u celikpanel-panel -n 50')&&locale('tr').includes('sudo journalctl -u celikpanel-panel -n 50'));
+ for(const [record,next,reason] of [
+  [{...known('recovered'),previous_failure:'update_failed',failure_code:'candidate_panel_startup_check_failed'},'recovery.failure.candidate_panel_startup_check_failed.recovered','recovery.reason.candidate_panel_startup_check_failed'],
+  [{...known('failed'),previous_failure:'update_failed',failure_code:'panel_start_unverified'},'recovery.failure.panel_start_unverified.pending','recovery.reason.panel_start_unverified'],
+ ]){
+  setup(async()=>admin,async()=>Response.json(record));
+  try {
+   await act(async()=>{tree=Renderer.create(React.createElement(RecoveryStatus,{username:'admin'}))});
+   const content=JSON.stringify(tree.toJSON());
+   assert.ok(content.includes(next),content);assert.ok(content.includes(reason));assert.ok(content.includes(`recovery.phase.${record.phase}`));
+   assert.ok(!content.includes(`recovery.next.${record.phase}`));
+   assert.ok(calls.every(([,options])=>!options?.method||options.method==='GET'));
+  }finally{await clean()}
+ }
 });

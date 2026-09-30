@@ -196,3 +196,39 @@ Yapılmayan: Arch'ta e-posta desteğinin kendisi. Paketli ana dosya include'dan
 sonra posta, PAM ve TLS ayarlarını yaptığı için `conf.d` oluşturmak yetmez; bu,
 sahibin yapılandırmasını devralma kararı (D-022) ve Arch'ta posta TLS, gönderim ve
 Roundcube PHP uzantılarının gerçek sistem denetimi gerektirir.
+
+### Güncelleme sırasında aday panelin başlangıç hataları (2026-09-30)
+
+Kaynak durumu bileşen ve sözleşme testleriyle; gerçek sistem denemesi bekliyor.
+İki tipli güncelleme nedeni root CLI (`recovery status`), sahip SSH görünümü ve
+kurtarma ekranında EN ve TR kendi yönlendirmesini taşır.
+
+- **`candidate_panel_startup_check_failed`** (doğrulanmış hata, `active` aşaması).
+  Yeni sürümün paneli, hiçbir şey devreye alınmadan önce salt-okur başlangıç
+  denetiminden geçemedi. Sunucu otomatik olarak önceki sürüme döndürülür ve önceki
+  sürüm çalışmaya devam eder.
+  - Kim: sunucuda kimsenin işlem yapması gerekmez.
+  - Sonraki eylem: panelin güncelleme sayfasında bu güncelleme için gösterilen
+    neden satırını bildirin.
+  - Devam: kurtarma sürerken aynı işlem yeniden denetlenir; doğrulanmış geri
+    almadan sonra sürdürülecek bir şey yoktur.
+- **`panel_start_unverified`** (doğrulanmış hata, `completion` aşaması). Güncelleme
+  uygulandı, ancak yeni sürümün paneli sınırlı bekleme içinde çalışır kalıp kendi
+  adresinde yanıt vermedi.
+  - Kim: sunucu sahibi.
+  - Sonraki eylem: sunucuda `sudo journalctl -u celikpanel-panel -n 50` okuyun.
+  - Devam: tamamlama sınırına kadar otomatik yeniden denenir; sonra kurtarma
+    günlüğü (`sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50`)
+    aynı işlem için tek seferlik yeniden deneme komutunu gösterir. Bu noktadan
+    önceki sürüme desteklenen bir dönüş yoktur.
+
+Neden yalnız son kayıtlı hata güncellemenin kendi hatası olduğunda gösterilir;
+sonraki kurtarma hatası, bekleme veya duraklatılmış kurtarma kendi metnini korur.
+Bilinmeyen nedenler ve eski tarayıcı/CLI genel `update_failed` metnini gösterir.
+Panel adresindeki çevrim dışı sayfa artık sahip SSH görünümü komutunu da gösterir
+(`recovery view --request-id …`, `127.0.0.1:2084` yönlendirmesiyle). Panel
+dururken canlı durum gösteremez.
+
+Açık kalanlar: denetimden geçip açılan ve sonra çöken panel ileri tamamlanır;
+`completion.pending` sonrasında geri alma yoktur; panel dururken panel adresinde
+canlı tarayıcı durumu yoktur.

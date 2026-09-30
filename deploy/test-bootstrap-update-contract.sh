@@ -2586,9 +2586,27 @@ require_sequence "$UPDATE" \
     'run_panel_migrations_offline' \
     'verify_installed_release_artifacts' \
     'verify_database_publication_if_required "$snapshot_name"' \
+    'run_panel_startup_readiness_check' \
     'release_txn_mark_completion_pending \' \
     'if [[ -z ${isolated_database_work:-} ]]; then' \
     'run_panel_migrations_offline'
+# The candidate start check is read-only, runs as the panel account and is a
+# typed failure in phase active. Its behaviour is in
+# deploy/test-update-panel-start-readiness.sh.
+require_function_sequence "$UPDATE" run_panel_startup_readiness_check \
+    'update_failure_code=candidate_panel_startup_check_failed' \
+    'panel_startup_environment' \
+    'sudo -u celikpanel -- env -i' \
+    '"$BIN_DIR/panel" --check-startup-readiness 2>&1) || status=$?' \
+    'die "new panel start check failed before completion:' \
+    'update_failure_code='
+reject_function_literal "$UPDATE" run_panel_startup_readiness_check 'release_txn_'
+require_function_sequence "$UPDATE" wait_for_stable_panel_start \
+    'target=$(panel_probe_target "$listen") || return 1' \
+    'systemctl show --property=ActiveState --property=MainPID' \
+    'panel_http_probe "$scheme" "$target" "$pins"' \
+    'sleep 0.5'
+require_function_literal "$UPDATE" panel_http_probe '[[ -z $pins ]] || tls_args+=(--pinnedpubkey "$pins")'
 require_sequence "$ROLLBACK" \
     'database_restore_policy=$(read_database_migration_policy "$snapshot_name")' \
     'if [[ $database_restore_policy == required ]]; then' \
@@ -2841,7 +2859,9 @@ require_sequence "$UPDATE" \
     'verify_installed_release_artifacts' \
     'verify_saved_enablement' \
     'update completion marker changed during the startup lock handoff' \
+    'update_failure_code=panel_start_unverified' \
     'systemctl start celikpanel-panel.service || die "verified panel could not be started"' \
+    'wait_for_stable_panel_start "$panel_startup_pins" \' \
     'verify_saved_runtime_states' \
     '"${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock' \
     'verify_saved_enablement' \

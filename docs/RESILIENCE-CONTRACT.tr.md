@@ -785,3 +785,33 @@ Agent, `rolling-back/after-write` aşamasında SIGKILL ile sonlandırıldı. Ayn
 İlk deneme, geçici paket sahiplik kaydı kaldığı için kabul edilmedi ve kanıtı ayrı saklandı. Düzeltilmiş kodla yapılan yeni denemenin arşiv SHA-256 değeri `aa296895caa0dd73bdaea881e64c7dbd6ab2ab52a3e676cfe0397014e2511707`. Denetleyicinin bağımsız kurtarmaya devir sonucu bilerek `unverified` kaldı; son salt-okur gözlem `rolled_back_source_active` ve `converged=false` bildirdi. Bu değerler ileri geçişin başarıyla tamamlandığı anlamına gelmez. Kabul, bağımsız kurtarma ve ayrı yerel DNS kontrollerine dayanır.
 
 Bu denemede yeniden başlatma yapılmadı. Tam kayıt kümesi, kesintisiz hizmet garantisi, diğer platform/topolojiler ve imzalı sürüm kabulü açık kalır. PowerDNS geçiş/yeniden kurulum kurtarmaları ile genel 1. madde/P0.4 tamamlanmış değildir.
+
+### Aday panel başlangıç denetimi ve başlatma sonrası kanıt (2026-09-30)
+
+P0.1/P0.2/P0.3, D-025 ilkeleri 2, 3, 4 ve 5. Paneli açılamayan bir aday geç ya da
+hiç fark edilmiyordu: `completion.pending` sonrasında tek `systemctl is-active`,
+işçi ve çalıştırıcı son kanıtında HTTP yok ve kurtarma malzemesi varken
+`rollback.sh`'nin reddettiği bir geri alma komutu yazdırılıyordu.
+
+- **Değişen.** Güncelleyici, ayrı veritabanı yayımlandıktan sonra ve
+  `completion.pending` öncesinde panel hesabıyla salt-okur
+  `panel --check-startup-readiness` çalıştırır; hata `active` aşamasında tipli bir
+  hatadır (`candidate_panel_startup_check_failed`) ve mevcut kurtarma önceki
+  sürüme döner. Gerçek başlatmadan sonra tek `is-active` yerine sınırlı kararlılık
+  beklemesi gelir (en az 5 sn aynı ana PID ve sayaç, `RestartSec=3` üzerinde,
+  ayrıca paneldan loopback `401 AUTH_REQUIRED`; olağan güncellemede denetlenen
+  açık anahtarlara sabitli); hatası `completion` aşamasında kalır
+  (`panel_start_unverified`). Tamamlanma özeti geri alma komutunu yalnız
+  `rollback.sh` kabul edecekse yazar. Root CLI, sahip görünümü ve kurtarma ekranı
+  iki nedeni EN/TR açıklar.
+- **Şema veya sürüm geçişi yok.** Snapshot v6, malzeme v3, işaretçi dilbilgisi,
+  kit protokolü 1 ve sekiz alanlı v1 gözlem kaydı değişmedi. Tipli neden isteğe
+  bağlı, ek bir `<id>.failure` dosyasıdır (`celikpanel-recovery-failure/v1`, ilk
+  neden geçerli); eski okuyucular açmaz. Eski tarayıcılar ek JSON alanını yok sayar.
+- **Kurtarma davranışı.** Değişmedi: `update:active` geri alır,
+  `update:completion` ileri tamamlar.
+- **Kanıt.** Yalnız bileşen ve sözleşme testleri; gerçek sistem denemesi bekliyor.
+
+Açık: denetimden geçip sonra çöken panel ileri tamamlanır ve desteklenen dönüş
+yoktur; `completion.pending` sonrasında geri alma yoktur; panel dururken panel
+adresinde canlı tarayıcı durumu yoktur (yalnız sahip SSH görünümü).

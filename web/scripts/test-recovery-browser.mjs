@@ -74,9 +74,12 @@ try {
         await until(() => evaluate('!!document.getElementById("check")'), 'Offline page did not survive navigation');
         await evaluate(`document.getElementById('lang-${lang}').click()`);
         await until(() => evaluate('!document.getElementById("check").disabled'), 'Offline read did not settle');
-        const result = await evaluate(`({lang:document.documentElement.lang, reference:document.getElementById('operation-id').textContent, overflow:document.documentElement.scrollWidth>innerWidth, forged:document.body.textContent.includes('FORGED RESULT'), openHidden:document.getElementById('open').hidden, storage:JSON.stringify({...localStorage}), text:document.querySelector('h1').textContent, scripts:[...document.scripts].map(s=>s.src), cacheEntries:await Promise.all((await caches.keys()).map(async name=>(await (await caches.open(name)).keys()).map(r=>r.url)))})`);
+        const result = await evaluate(`({lang:document.documentElement.lang, reference:document.getElementById('operation-id').textContent, overflow:document.documentElement.scrollWidth>innerWidth, forged:document.body.textContent.includes('FORGED RESULT'), openHidden:document.getElementById('open').hidden, storage:JSON.stringify({...localStorage}), view:document.getElementById('view-command').textContent, viewHelp:document.querySelector('[data-copy=viewHelp]').textContent, text:document.querySelector('h1').textContent, scripts:[...document.scripts].map(s=>s.src), cacheEntries:await Promise.all((await caches.keys()).map(async name=>(await (await caches.open(name)).keys()).map(r=>r.url)))})`);
         assert.equal(result.lang, lang); assert.equal(result.reference, id); assert.equal(result.overflow, false); assert.equal(result.forged, false); assert.equal(result.openHidden, true);
         assert.equal(result.storage, baseline.storage);
+        // Owner SSH view: exact operation, local forward, no live status claimed at this address.
+        assert.equal(result.view, `ssh -t -o ExitOnForwardFailure=yes -L 127.0.0.1:2084:127.0.0.1:2084 USER@127.0.0.1 sudo /usr/libexec/celikpanel/recovery view --request-id ${id} --lang ${lang}`);
+        assert.ok(result.viewHelp.includes('http://127.0.0.1:2084/'));
         assert.ok(result.cacheEntries.flat().every(url => !url.includes('/api/') && !url.endsWith('/index.html')));
         const png = await call('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
         await writeFile(join(output, `${lang}-${width}.png`), Buffer.from(png.data,'base64'));

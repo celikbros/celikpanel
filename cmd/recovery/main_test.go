@@ -241,3 +241,74 @@ func TestAutomaticPauseGuidancePreservesFailureWithoutReportingCompletion(t *tes
 		}
 	}
 }
+
+func TestFailureCodeGuidanceIsTruthfulPerPhaseAndLanguage(t *testing.T) {
+	statusRun := func(t *testing.T, observed recoveryobs.Status, lang string) string {
+		t.Helper()
+		var output, diagnostics bytes.Buffer
+		code := run([]string{"status", "--request-id", requestID, "--lang", lang}, cliRuntime{
+			func() int { return 0 }, func(string) recoveryobs.Status { return observed }, &output, &diagnostics})
+		if code != exitOK || diagnostics.Len() != 0 {
+			t.Fatalf("status: %d %q", code, diagnostics.String())
+		}
+		return output.String()
+	}
+	with := func(phase, code string) recoveryobs.Status {
+		observed := knownStatus(phase)
+		observed.PreviousFailure, observed.FailureCode = "update_failed", code
+		return observed
+	}
+	for _, test := range []struct {
+		phase, code, en, tr string
+	}{
+		{"recovered", "candidate_panel_startup_check_failed", "returned to the previous version automatically", "otomatik olarak önceki sürüme döndürüldü"},
+		{"failed", "candidate_panel_startup_check_failed", "is being returned to the previous version automatically", "otomatik olarak önceki sürüme döndürülüyor"},
+		{"recovering", "candidate_panel_startup_check_failed", "is being returned to the previous version automatically", "otomatik olarak önceki sürüme döndürülüyor"},
+		{"failed", "panel_start_unverified", "sudo journalctl -u celikpanel-panel -n 50", "sudo journalctl -u celikpanel-panel -n 50"},
+		{"recovering", "panel_start_unverified", "no supported return to the previous version", "önceki sürüme desteklenen bir dönüş yok"},
+	} {
+		en := statusRun(t, with(test.phase, test.code), "en")
+		tr := statusRun(t, with(test.phase, test.code), "tr")
+		if !strings.Contains(en, test.en) || !strings.Contains(tr, test.tr) ||
+			!strings.Contains(en, "Recorded cause: "+test.code) || !strings.Contains(tr, "Kaydedilen neden: "+test.code) ||
+			!strings.Contains(en, "Previous failure: update_failed") {
+			t.Fatalf("%s/%s guidance:\n%s\n%s", test.phase, test.code, en, tr)
+		}
+	}
+	// The forward-only cause never claims a rollback, and the rolled-back cause
+	// never asks the owner to read the panel log.
+	if text := statusRun(t, with("failed", "panel_start_unverified"), "en"); strings.Contains(text, "returned to the previous version") {
+		t.Fatalf("forward failure claims rollback: %q", text)
+	}
+	if text := statusRun(t, with("recovered", "candidate_panel_startup_check_failed"), "en"); strings.Contains(text, "celikpanel-panel -n 50") {
+		t.Fatalf("rolled-back failure asks for panel log: %q", text)
+	}
+	// A later recovery failure or an unknown code keeps the generic guidance.
+	for _, observed := range []recoveryobs.Status{
+		func() recoveryobs.Status {
+			s := with("recovery_required", "panel_start_unverified")
+			s.PreviousFailure = "recovery_failed"
+			return s
+		}(),
+		with("failed", "private_diagnostic"),
+	} {
+		text := statusRun(t, observed, "en")
+		if strings.Contains(text, "Recorded cause") || strings.Contains(text, "new version's panel") {
+			t.Fatalf("stale or unknown cause shown: %q", text)
+		}
+	}
+	// Pause guidance still wins over the cause; the JSON keeps the field.
+	paused := with("recovery_required", "panel_start_unverified")
+	paused.AutomaticRecovery = "paused_retry_limit"
+	if text := statusRun(t, paused, "en"); !strings.Contains(text, "all three attempts") {
+		t.Fatalf("pause guidance lost: %q", text)
+	}
+	var output, diagnostics bytes.Buffer
+	observed := with("failed", "panel_start_unverified")
+	run([]string{"status", "--request-id", requestID, "--json"}, cliRuntime{
+		func() int { return 0 }, func(string) recoveryobs.Status { return observed }, &output, &diagnostics})
+	var got recoveryobs.Status
+	if json.Unmarshal(output.Bytes(), &got) != nil || got != observed {
+		t.Fatalf("JSON: %q", output.String())
+	}
+}

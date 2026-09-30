@@ -283,3 +283,39 @@ packaged main file sets mail storage, PAM login and TLS after its include;
 supporting it means adopting the packaged main file, an owner-configuration
 decision (D-022), plus native checks of mail TLS, submission and Roundcube PHP
 extensions on Arch.
+
+### Candidate panel start failures during an update (2026-09-30)
+
+Source state with component and contract tests; the native run is pending. Two
+typed update causes now carry their own guidance in the root CLI
+(`recovery status`), the owner SSH view and the recovery screen, EN and TR.
+
+- **`candidate_panel_startup_check_failed`** (verified failure, phase `active`).
+  The new version's panel failed its read-only start check before anything was
+  switched on. The server is returned to the previous version automatically and
+  the previous version keeps running.
+  - Who acts: nobody on the server.
+  - Next action: report the reason line shown for this update on the panel's
+    update page.
+  - Resume: while recovery runs, the same operation is checked again; after the
+    verified rollback there is nothing to resume.
+- **`panel_start_unverified`** (verified failure, phase `completion`). The update
+  was applied, but the new version's panel did not stay running and answer on
+  its own address within the bounded wait.
+  - Who acts: the server owner.
+  - Next action: read `sudo journalctl -u celikpanel-panel -n 50` on the server.
+  - Resume: completion is retried automatically up to its limit; after that the
+    recovery log (`sudo journalctl -u celikpanel-release-recovery.service
+    --no-pager -n 50`) shows the one-time same-operation retry command. There is
+    no supported return to the previous version from this point.
+
+The cause is shown only while the update's own failure is the latest recorded
+failure; a later recovery failure, a wait or paused recovery keeps its own text.
+Unknown causes and older browsers or CLIs keep the generic `update_failed` text.
+The offline page at the panel address now also shows the owner SSH view command
+(`recovery view --request-id …` with the `127.0.0.1:2084` forward). It cannot show
+live status while the panel is stopped.
+
+Still open: a panel that passes the check, starts and fails later is completed
+forward; no rollback after `completion.pending`; no live browser status at the
+panel's address while the panel is stopped.

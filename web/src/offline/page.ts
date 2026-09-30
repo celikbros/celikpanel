@@ -28,6 +28,9 @@ function render() {
     if (id) {
         get('operation-id').textContent = id;
         get('status-command').textContent = `sudo /usr/libexec/celikpanel/recovery status --request-id ${id} --lang ${locale}`;
+        // Owner-operated SSH view (docs/RECOVERY-ACCESS.md); the panel address names the server.
+        const server = location.hostname.replace(/^\[|\]$/g, '') || 'SERVER';
+        get('view-command').textContent = `ssh -t -o ExitOnForwardFailure=yes -L 127.0.0.1:2084:127.0.0.1:2084 USER@${server} sudo /usr/libexec/celikpanel/recovery view --request-id ${id} --lang ${locale}`;
     }
 }
 

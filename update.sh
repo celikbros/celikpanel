@@ -88,6 +88,22 @@ rescue_snapshot=
 # the final output line, so emit a bounded summary after recovery completes.
 update_failure_reason=
 update_failure_detail=
+# Typed cause for the two candidate-panel start boundaries; empty otherwise.
+# Aday panel başlangıç sınırları için tipli neden; diğer durumlarda boş.
+update_failure_code=
+# The panel unit restarts a failed process after RestartSec=3. Eleven samples
+# 0.5 s apart (at least 5 s) with one unchanged main PID and restart counter
+# therefore span more than one restart cycle. The whole wait is bounded.
+# Panel birimi çöken süreci RestartSec=3 sonra yeniden başlatır; 0,5 sn arayla
+# en az 5 sn boyunca aynı ana PID bir yeniden başlatma döngüsünden uzundur.
+PANEL_START_STABLE_SAMPLES=11
+PANEL_START_WAIT_SECONDS=60
+PANEL_START_MAX_SAMPLES=120
+CURL_BIN=/usr/bin/curl
+PANEL_ENV_FILE=/etc/celikpanel/panel.env
+panel_startup_listen=
+panel_startup_scheme=
+panel_startup_pins=
 die() {
     [[ -n "${update_failure_reason:-}" ]] || update_failure_reason=$*
     echo "!! $*" >&2
@@ -194,6 +210,12 @@ report_update_failure() {
           ${transaction_completion_verified:-0} -eq 0 && ${scheduler_restore_verified:-0} -eq 0 ]]; then
         state=unchanged
     fi
+    # The candidate start boundaries report their own typed cause. Kit and
+    # runtime preparation uncertainty below still takes precedence.
+    # Aday başlangıç sınırları kendi tipli nedenini bildirir; kit belirsizliği önceliklidir.
+    case "${update_failure_code:-}" in
+        candidate_panel_startup_check_failed|panel_start_unverified) code=$update_failure_code ;;
+    esac
     # An interrupted kit preparation may have changed the independent launcher
     # or selector even though no application transaction was created.
     # Kit hazırlığı kesilirse ürün işlemi başlamadan başlatıcı/seçici değişmiş olabilir.
@@ -225,10 +247,31 @@ report_update_failure() {
         reason='the host package manager is active'
         detail=
     fi
+    # Best-effort, additive observation hint; never alters the outcome or the
+    # summary below, which must stay the last line for older installed workers.
+    case "$code" in
+        candidate_panel_startup_check_failed|panel_start_unverified)
+            publish_update_failure_observation "$code" >/dev/null 2>&1 || true
+            ;;
+    esac
     # Preserve both cause and recovery state within the older agent's 1024-byte
     # error limit, even after its prefix. ASCII diagnostics remain compatible.
     LC_ALL=C printf '!! CELIKPANEL_UPDATE_FAILURE code=%s state=%s reason=%.300s detail=%.450s\n' \
         "$code" "$state" "$reason" "$detail" >&2
+}
+
+# Record the typed cause beside this worker's exact observation (sidecar
+# celikpanel-recovery-failure/v1). Historical releases without the helper, an
+# unbound worker or any validation failure simply leave generic guidance.
+# Tipli nedeni bu işçinin tam gözleminin yanına yazar; olmazsa genel metin kalır.
+publish_update_failure_observation() {
+    local code=$1 id commit
+    declare -F release_observation_publish_failure >/dev/null || return 0
+    declare -F release_observation_worker_request >/dev/null || return 0
+    [[ ${snapshot_name:-} =~ -to-([0-9a-f]{40})-[0-9a-f]{32}$ ]] || return 0
+    commit=${BASH_REMATCH[1]}
+    id=$(release_observation_worker_request) || return 0
+    release_observation_publish_failure "$id" "$commit" "$code"
 }
 
 validate_exact_systemctl() {
@@ -2033,6 +2076,207 @@ run_panel_migrations_offline() {
         || die "agent ledger changed during offline panel migration"
 }
 
+panel_startup_env_key() {
+    case "$1" in
+        CELIKPANEL_DATA_DIR|CELIKPANEL_WEB_DIR|CELIKPANEL_LISTEN|CELIKPANEL_TLS|\
+        CELIKPANEL_TLS_CERT|CELIKPANEL_TLS_KEY|CELIKPANEL_TLS_DIR|\
+        CELIKPANEL_PANEL_INSECURE_COOKIES_FLAG|CELIKPANEL_PANEL_DEMO_FLAG) return 0 ;;
+    esac
+    return 1
+}
+
+# Rebuild the environment systemd gives the panel: the loaded unit's
+# Environment= (including drop-ins), then the owner's root-only panel.env,
+# which systemd applies afterwards. panel.env is data, never sourced.
+# systemd'nin panele verdiği ortamı yeniden kurar; panel.env kaynak olarak
+# çalıştırılmaz, yalnız veri olarak okunur.
+panel_startup_environment() {
+    local raw word key value line value_re='^[][A-Za-z0-9._/:@+,-]*$'
+    local -a words=()
+    local -A values=()
+    PANEL_STARTUP_ENV=()
+    raw=$(systemctl show --property=Environment --value celikpanel-panel.service) || return 1
+    [[ $raw != *[\"\'\\]* ]] || return 1
+    read -r -a words <<< "$raw"
+    for word in "${words[@]}"; do
+        [[ $word == *=* ]] || return 1
+        key=${word%%=*} value=${word#*=}
+        panel_startup_env_key "$key" || continue
+        values[$key]=$value
+    done
+    if [[ -e $PANEL_ENV_FILE || -L $PANEL_ENV_FILE ]]; then
+        [[ -f $PANEL_ENV_FILE && ! -L $PANEL_ENV_FILE &&
+           $(stat -Lc '%u:%g:%a' -- "$PANEL_ENV_FILE") == 0:0:600 ]] || return 1
+        while IFS= read -r line || [[ -n $line ]]; do
+            case "$line" in ''|'#'*) continue ;; esac
+            [[ $line == *=* ]] || return 1
+            key=${line%%=*} value=${line#*=}
+            panel_startup_env_key "$key" || return 1
+            values[$key]=$value
+        done < "$PANEL_ENV_FILE"
+    fi
+    for key in "${!values[@]}"; do
+        [[ ${values[$key]} =~ $value_re ]] || return 1
+        PANEL_STARTUP_ENV+=("$key=${values[$key]}")
+    done
+    PANEL_STARTUP_LISTEN=${values[CELIKPANEL_LISTEN]:-:2083}
+    PANEL_STARTUP_SCHEME=http
+    if [[ ${values[CELIKPANEL_TLS]:-} == 1 || -n ${values[CELIKPANEL_TLS_CERT]:-} ||
+          -n ${values[CELIKPANEL_TLS_KEY]:-} ]]; then
+        PANEL_STARTUP_SCHEME=https
+    fi
+}
+
+# Read-only start proof of the installed candidate panel, run as the panel
+# account while the active marker still selects automatic rollback. A failure
+# is a failure in phase active: on_exit stops both coordinators and the
+# recovery runner returns the server to the previous release.
+# Kurulu aday panelin salt-okur açılış kanıtı; active işaretçisi dururken
+# başarısızlık otomatik geri almaya gider.
+run_panel_startup_readiness_check() {
+    local output status=0 line reason= listen= scheme= pins= last=
+    update_failure_code=candidate_panel_startup_check_failed
+    panel_startup_environment \
+        || die "new panel start check could not read the panel unit environment or panel.env"
+    output=$(sudo -u celikpanel -- env -i \
+        PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+        HOME=/var/lib/celikpanel LC_ALL=C "${PANEL_STARTUP_ENV[@]}" \
+        "$BIN_DIR/panel" --check-startup-readiness 2>&1) || status=$?
+    while IFS= read -r line; do
+        [[ -n $line ]] && last=$line
+        case "$line" in
+            'panel startup check failed: '*)
+                if [[ ${#line} -le 240 && $line =~ ^panel\ startup\ check\ failed:\ [a-z_]+:\ [[:print:]]+$ ]]; then
+                    reason=$line
+                fi
+                ;;
+            listen=*) listen=${line#listen=} ;;
+            scheme=*) scheme=${line#scheme=} ;;
+            pin=*)
+                [[ ${line#pin=} =~ ^sha256//[A-Za-z0-9+/]{43}=$ ]] || status=1
+                pins+=${pins:+;}${line#pin=}
+                ;;
+        esac
+    done <<< "$output"
+    if [[ $status -ne 0 ]]; then
+        update_failure_detail=
+        die "new panel start check failed before completion: ${reason:-no recognized reason line}"
+    fi
+    [[ $last == ready && $listen == "$PANEL_STARTUP_LISTEN" &&
+       ( $scheme == http || ( $scheme == https && -n $pins ) ) ]] \
+        || die "new panel start check returned no verifiable readiness report"
+    panel_startup_listen=$listen
+    panel_startup_scheme=$scheme
+    panel_startup_pins=$pins
+    update_failure_code=
+}
+
+# Loopback address for the panel's own listener. Wildcard binds are reached
+# through the matching loopback address; a specific address is used as is.
+panel_probe_target() {
+    local listen=$1 host port
+    if [[ $listen =~ ^\[([0-9A-Fa-f:.]+)\]:([0-9]{1,5})$ ]]; then
+        host="[${BASH_REMATCH[1]}]" port=${BASH_REMATCH[2]}
+    elif [[ $listen =~ ^([0-9A-Za-z.-]*):([0-9]{1,5})$ ]]; then
+        host=${BASH_REMATCH[1]} port=${BASH_REMATCH[2]}
+    else
+        return 1
+    fi
+    case "$host" in
+        ''|0.0.0.0|localhost) host=127.0.0.1 ;;
+        '[::]') host='[::1]' ;;
+    esac
+    (( 10#$port >= 1 && 10#$port <= 65535 )) || return 1
+    printf '%s:%s\n' "$host" "$((10#$port))"
+}
+
+# One anonymous request. Only the panel's own coded 401 counts: it proves the
+# listener, TLS and the startup handler. With known pins the server key must
+# match one of them; chain and name checks are replaced by that key pin.
+# Tek anonim istek; yalnız panelin kodlu 401 yanıtı sayılır.
+panel_http_probe() {
+    local scheme=$1 target=$2 pins=$3 response
+    local -a tls_args=()
+    if [[ $scheme == https ]]; then
+        tls_args=(--insecure)
+        [[ -z $pins ]] || tls_args+=(--pinnedpubkey "$pins")
+    fi
+    response=$("$CURL_BIN" --silent --max-time 3 --noproxy '*' --proto '=http,https' \
+        "${tls_args[@]}" --header 'Accept: application/json' \
+        --write-out '\n%{http_code}' "$scheme://$target/api/v1/panel/availability" 2>/dev/null) \
+        || return 1
+    [[ ${response##*$'\n'} == 401 && ${response%$'\n'*} == *'"code":"AUTH_REQUIRED"'* ]]
+}
+
+# After the real start: the unit must stay active with one unchanged main PID
+# and restart counter for PANEL_START_STABLE_SAMPLES samples 0.5 s apart, and
+# that same process must answer the loopback probe. Bounded by
+# PANEL_START_WAIT_SECONDS and PANEL_START_MAX_SAMPLES. The caller keeps the
+# completion phase: a failure here is completed forward, never rolled back.
+# Gerçek başlatmadan sonra: birim aynı PID ile kararlı kalmalı ve yanıt vermeli.
+wait_for_stable_panel_start() {
+    local pins=$1 scheme=${panel_startup_scheme:-} listen=${panel_startup_listen:-}
+    local target deadline sample=0 stable=0 answered=0 tracked= line state= pid= restarts=
+    if [[ -z $listen || -z $scheme ]]; then
+        panel_startup_environment || return 1
+        listen=$PANEL_STARTUP_LISTEN scheme=$PANEL_STARTUP_SCHEME
+    fi
+    target=$(panel_probe_target "$listen") || return 1
+    deadline=$((SECONDS + PANEL_START_WAIT_SECONDS))
+    while (( sample < PANEL_START_MAX_SAMPLES && SECONDS <= deadline )); do
+        sample=$((sample + 1))
+        state= pid= restarts=
+        while IFS= read -r line; do
+            case "$line" in
+                ActiveState=*) state=${line#ActiveState=} ;;
+                MainPID=*) pid=${line#MainPID=} ;;
+                NRestarts=*) restarts=${line#NRestarts=} ;;
+            esac
+        done < <(systemctl show --property=ActiveState --property=MainPID \
+            --property=NRestarts celikpanel-panel.service 2>/dev/null)
+        if [[ $state == active && $pid =~ ^[1-9][0-9]*$ && $restarts =~ ^[0-9]+$ ]]; then
+            if [[ $tracked != "$pid:$restarts" ]]; then
+                tracked=$pid:$restarts stable=0 answered=0
+            fi
+            stable=$((stable + 1))
+            if [[ $answered -eq 0 ]] && panel_http_probe "$scheme" "$target" "$pins"; then
+                answered=1
+            fi
+            if [[ $answered -eq 1 && $stable -ge $PANEL_START_STABLE_SAMPLES ]]; then
+                return 0
+            fi
+        else
+            tracked= stable=0 answered=0
+        fi
+        sleep 0.5
+    done
+    return 1
+}
+
+# Mirror rollback.sh: it refuses a new rollback whenever this snapshot's
+# recovery material exists, and it requires the canonical snapshot identity.
+# Only print a rollback command that rollback.sh would admit.
+# rollback.sh'nin reddettiği bir geri alma komutunu yazma.
+print_completed_update_snapshot_guidance() {
+    local snap_path=$1 name=$2 key material=present
+    if [[ $name =~ ^[0-9]{8}T[0-9]{6}Z-from-unknown-to-[0-9a-f]{40}-[0-9a-f]{32}$ ]]; then
+        key=$(printf '%s' "$name" | sha256sum) && key=${key%% *}
+        if [[ $key =~ ^[0-9a-f]{64}$ &&
+              ! -e $RELEASE_STATE_DIR/recovery-material/v1/$key &&
+              ! -L $RELEASE_STATE_DIR/recovery-material/v1/$key ]]; then
+            material=absent
+        fi
+    fi
+    if [[ $material == absent ]]; then
+        echo "    Verified rollback snapshot / Doğrulanmış geri alma snapshot'ı: $snap_path"
+        echo "    Roll back if needed / Gerekirse geri alın: sudo /bin/bash '$TRUSTED_RELEASE_ROOT/rollback.sh' '$snap_path'"
+        return 0
+    fi
+    echo "    Retained snapshot / Korunan snapshot: $snap_path"
+    echo "    It is kept for the independent recovery tool. A manual rollback of a completed update is not supported in this release."
+    echo "    Bağımsız kurtarma aracı için saklanıyor. Tamamlanmış bir güncellemenin elle geri alınması bu sürümde desteklenmiyor."
+}
+
 preflight_staged_installer_runtime
 prepare_snapshot_root
 validate_trusted_release
@@ -2432,8 +2676,11 @@ if [[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" || -L "$RELEASE_TRANSACT
     if service_state_is_active_like "${saved_active_states[celikpanel-panel.service]}"; then
         systemctl start celikpanel-panel.service \
             || die "pending update panel could not be started"
-        systemctl is-active --quiet celikpanel-panel.service \
-            || die "pending update panel is not active"
+        # No candidate code runs here, so no key pin is known: the probe
+        # accepts only the panel's own coded 401 over TLS on its port.
+        # Burada aday kod çalışmaz; anahtar sabitlemesi yoktur.
+        wait_for_stable_panel_start "" \
+            || die "pending update panel did not stay running and answer on its own address"
     fi
 
     verify_independent_completion_terminal
@@ -3643,6 +3890,9 @@ if [[ -n ${isolated_database_work:-} ]]; then
     run_panel_migrations_offline
     verify_installed_release_artifacts
     verify_database_publication_if_required "$snapshot_name"
+    # Read-only candidate start proof while active still selects rollback.
+    # Aday açılış kanıtı; active işaretçisi geri almayı seçerken salt-okur.
+    run_panel_startup_readiness_check
 fi
 release_txn_mark_completion_pending \
     "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
@@ -3681,8 +3931,13 @@ if service_state_is_active_like "${saved_active_states[celikpanel-agent.service]
         || die "update completion marker changed during the startup lock handoff"
 fi
 if service_state_is_active_like "${saved_active_states[celikpanel-panel.service]}"; then
+    # Completion is marked: a start failure is completed forward, not rolled back.
+    # Tamamlanma işaretli: başlatma hatası ileri tamamlanır, geri alınmaz.
+    update_failure_code=panel_start_unverified
     systemctl start celikpanel-panel.service || die "verified panel could not be started"
-    systemctl is-active --quiet celikpanel-panel.service || die "verified panel is not running"
+    wait_for_stable_panel_start "$panel_startup_pins" \
+        || die "the new panel did not stay running and answer on its own address after the update was applied"
+    update_failure_code=
 fi
 verify_saved_runtime_states
 CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
@@ -3741,5 +3996,4 @@ trap - EXIT
 transaction_phase=none
 echo
 echo "==> Update complete / Güncelleme tamamlandı"
-echo "    Verified rollback snapshot / Doğrulanmış geri alma snapshot'ı: $snap"
-echo "    Roll back if needed / Gerekirse geri alın: sudo /bin/bash '$TRUSTED_RELEASE_ROOT/rollback.sh' '$snap'"
+print_completed_update_snapshot_guidance "$snap" "$snapshot_name"

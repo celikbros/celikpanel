@@ -1557,3 +1557,37 @@ journal-free historical ledger receipt without creating that lock or claiming
 native health. It has focused tests, vet and a [disposable Debian post-reboot trial](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-recorded-status-20260928/README.md) using the earlier real rollback's exact canonical terminal ledger. That trial did not rerun the producer/inverse or installed kit.
 No persisted schema or producer transition was introduced. Other cuts, owner
 edits, migration, public admission and P0.4/P0.5 acceptance remain open.
+
+### Candidate panel start check and post-start proof (2026-09-30)
+
+P0.1/P0.2/P0.3, D-025 invariants 2, 3, 4 and 5. A candidate whose panel could not
+start was detected late or not at all: one `systemctl is-active` after
+`completion.pending`, no HTTP proof in the worker or runner final proof, and a
+printed rollback command that `rollback.sh` refuses once recovery material exists.
+
+- **Changed.** The updater runs a read-only `panel --check-startup-readiness`
+  as the panel account after the isolated database publication and before
+  `completion.pending`; a failure is a typed failure in phase `active`
+  (`candidate_panel_startup_check_failed`) and the existing `update:active`
+  recovery returns the previous release. After the real start, a bounded
+  stability wait (unchanged main PID and restart counter for at least 5 s,
+  beyond `RestartSec=3`, plus a loopback `401 AUTH_REQUIRED` from the panel,
+  pinned to the checked public keys in the normal update) replaces the single
+  `is-active`; its failure stays in `completion` (`panel_start_unverified`). The
+  completion summary prints a rollback command only when `rollback.sh` would
+  admit it. Root CLI, owner view and recovery screen explain both causes in
+  EN/TR.
+- **No schema or version transition.** Snapshot v6, material v3, marker grammar,
+  kit protocol 1 and the eight-field v1 observation record are unchanged. The
+  typed cause is an optional, additive `<id>.failure` sidecar
+  (`celikpanel-recovery-failure/v1`, first cause wins) that older readers never
+  open; new readers expose `failure_code` only while the update's own failure is
+  the latest recorded failure. Older browsers ignore the extra JSON field.
+- **Recovery behaviour.** Unchanged dispatch: `update:active` rolls back,
+  `update:completion` completes forward. No new rollback after completion, no
+  new marker or checkpoint.
+- **Evidence.** Component and contract tests only; native run pending.
+
+Open: a panel that passes the check and fails later is completed forward with no
+supported return; no rollback after `completion.pending`; no live browser status
+at the panel's address while the panel is stopped (owner SSH view only).

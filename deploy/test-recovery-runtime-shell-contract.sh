@@ -739,6 +739,10 @@ terminal_flow_case() {
   esac
  }
  stop_release_coordinators_fail_closed() { printf 'stop\n' >> "$case_root/stops"; }
+ # The bounded post-start wait has its own contract
+ # (deploy/test-update-panel-start-readiness.sh). The pending path passes no
+ # pin; here it models only the observed unit state, like is-active before it.
+ wait_for_stable_panel_start() { [[ $# == 1 && -z $1 && $(cat "$case_root/current-state") == active ]]; }
  if [[ $flow == scheduler-* ]]; then
   source "$TEST_ROOT/scheduler-tail.sh"
  else

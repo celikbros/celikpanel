@@ -148,6 +148,44 @@ release_observation_publish() (
     mv -T -- "$stage" "$wait_path" && sync -f -- "$RELEASE_OBSERVATION_ROOT"
 )
 
+# Optional typed cause of the update's own failure, celikpanel-recovery-failure/v1.
+# Only the updater writes it, once per request: the first recorded cause wins
+# and is never rewritten or removed here. The v1 status record is unchanged;
+# old readers never open this file. It grants no recovery or retry authority.
+# Güncellemenin kendi hatasının isteğe bağlı tipli nedeni. İlk kayıt geçerlidir.
+release_observation_publish_failure() (
+    local id=$1 commit=$2 code=$3 gid path stage lock_fd
+    [[ $EUID == 0 && $id =~ ^[0-9a-f]{32}$ && $commit =~ ^[0-9a-f]{40}$ ]] || return 1
+    case "$code" in
+        candidate_panel_startup_check_failed|panel_start_unverified) ;;
+        *) return 1 ;;
+    esac
+    gid=$(_release_observation_gid) || return 1
+    _release_observation_root "$RELEASE_OBSERVATION_ROOT" 0750 "$gid" || return 1
+    _release_observation_file "$RELEASE_OBSERVATION_ROOT/.publish.lock" 600 0 0 || return 1
+    exec {lock_fd}<>"$RELEASE_OBSERVATION_ROOT/.publish.lock" || return 1
+    flock -w 5 -x "$lock_fd" || return 1
+    [[ $(stat -Lc '%d:%i' -- "$RELEASE_OBSERVATION_ROOT/.publish.lock") == \
+       $(stat -Lc '%d:%i' -- "/proc/$BASHPID/fd/$lock_fd") ]] || return 1
+    # Bind to the exact request whose status names the same target commit.
+    _release_observation_read "$id" "$gid" || return 1
+    [[ $OBSERVATION_COMMIT == "$commit" && $OBSERVATION_PROOF == none ]] || return 1
+    path=$RELEASE_OBSERVATION_ROOT/$id.failure
+    if [[ -e $path || -L $path ]]; then
+        _release_observation_file "$path" 640 "$gid" 2048 || return 1
+        return 0
+    fi
+    stage=$(mktemp "$RELEASE_OBSERVATION_ROOT/.observation-XXXXXXXX") || return 1
+    trap 'rm -f -- "$stage"' EXIT
+    printf '%s\n' schema=celikpanel-recovery-failure/v1 "request_id=$id" \
+        "target_commit=$commit" "failure_code=$code" > "$stage" || return 1
+    chown "0:$gid" -- "$stage" && chmod 0640 -- "$stage" && sync -f -- "$stage" || return 1
+    _release_observation_file "$stage" 640 "$gid" 2048 || return 1
+    mv -T -n -- "$stage" "$path" || return 1
+    [[ ! -e $stage ]] || return 1
+    sync -f -- "$RELEASE_OBSERVATION_ROOT"
+)
+
 # Native descendants retain their worker's cgroup across get.sh/bootstrap env -i.
 # Accept only the exact system unit in the kernel's v2 or named-systemd hierarchy.
 # An unsupported layout is unavailable, never a search for the latest worker.

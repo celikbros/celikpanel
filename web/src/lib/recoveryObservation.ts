@@ -2,6 +2,9 @@ export const UPDATE_MARKER_KEY = 'celikpanel.system-update-operation.v1';
 export const recoveryPhases = ['accepted', 'running', 'recovering', 'recovered', 'succeeded', 'failed', 'recovery_required'] as const;
 export const recoveryReasons = ['operation_accepted', 'update_running', 'update_failed', 'recovery_running', 'recovery_failed', 'recovery_incomplete', 'update_verified', 'rollback_verified', 'observation_unavailable'] as const;
 export const recoveryWaitReasons = ['initializing', 'starting', 'stopping'] as const;
+/** Optional typed cause of the update's own failure. Unknown values are ignored (generic text). */
+export const recoveryFailureCodes = ['candidate_panel_startup_check_failed', 'panel_start_unverified'] as const;
+export type RecoveryFailureCode = typeof recoveryFailureCodes[number];
 export type RecoveryReason = typeof recoveryReasons[number];
 export type RecoveryFailureReason = 'update_failed' | 'recovery_failed' | 'recovery_incomplete';
 export type RecoveryObservation = {
@@ -9,6 +12,7 @@ export type RecoveryObservation = {
     phase?: typeof recoveryPhases[number]; terminal_proof: 'none' | 'update_verified' | 'rollback_verified';
     waiting_for?: typeof recoveryWaitReasons[number];
     automatic_recovery?: 'paused_retry_limit';
+    failure_code?: RecoveryFailureCode;
     reason: RecoveryReason; observed_at?: string; previous_failure?: RecoveryFailureReason;
 };
 
@@ -42,7 +46,9 @@ export function parseRecoveryObservation(raw: unknown, requestId: string): Recov
     if (value.previous_failure !== undefined && !['update_failed', 'recovery_failed', 'recovery_incomplete'].includes(String(value.previous_failure))) throw new Error('invalid previous failure');
     const waiting = value.phase === 'recovering' && recoveryWaitReasons.includes(value.waiting_for as never) ? value.waiting_for as RecoveryObservation['waiting_for'] : undefined;
     const automatic = value.phase === 'recovery_required' && value.automatic_recovery === 'paused_retry_limit' ? 'paused_retry_limit' : undefined;
-    return { ...base, observation: 'known', waiting_for: waiting, automatic_recovery: automatic, phase: value.phase as RecoveryObservation['phase'], terminal_proof: proof,
+    // Only meaningful while the update's own failure is the latest recorded one.
+    const failureCode = value.previous_failure === 'update_failed' && recoveryFailureCodes.includes(value.failure_code as never) ? value.failure_code as RecoveryFailureCode : undefined;
+    return { ...base, observation: 'known', waiting_for: waiting, automatic_recovery: automatic, failure_code: failureCode, phase: value.phase as RecoveryObservation['phase'], terminal_proof: proof,
         reason: value.reason as RecoveryReason, observed_at: value.observed_at, previous_failure: value.previous_failure as RecoveryFailureReason | undefined };
 }
 
@@ -55,7 +61,27 @@ export function reconcileRecoveryObservation(previous: RecoveryObservation | nul
         if (previous.terminal_proof !== 'none') return { record: previous, unavailable: stale || next.terminal_proof !== previous.terminal_proof || next.phase !== previous.phase };
         if (stale) return { record: previous, unavailable: true };
         const failure = previous.previous_failure || (['update_failed', 'recovery_failed', 'recovery_incomplete'].includes(previous.reason) ? previous.reason as RecoveryFailureReason : undefined);
-        if (failure && !next.previous_failure) next = { ...next, previous_failure: failure };
+        if (failure && !next.previous_failure) next = { ...next, previous_failure: failure, failure_code: failure === 'update_failed' ? previous.failure_code : undefined };
     }
     return { record: next, unavailable: false };
+}
+
+/**
+ * Reviewed guidance for a typed update cause, matching the owner CLI. The start
+ * check fails before completion is marked, so that failure is returned to the
+ * previous release; a panel that did not come up after the switch is completed
+ * forward only. Waits and paused recovery keep their own guidance.
+ */
+export type RecoveryFailureGuidanceKey = 'recovery.failure.candidate_panel_startup_check_failed.returning'
+    | 'recovery.failure.candidate_panel_startup_check_failed.recovered' | 'recovery.failure.panel_start_unverified.pending';
+export function recoveryFailureGuidanceKey(observation: RecoveryObservation): RecoveryFailureGuidanceKey | undefined {
+    if (observation.observation !== 'known' || observation.previous_failure !== 'update_failed'
+        || observation.waiting_for || observation.automatic_recovery) return undefined;
+    const pending = observation.terminal_proof === 'none' && (observation.phase === 'failed' || observation.phase === 'recovering');
+    if (observation.failure_code === 'candidate_panel_startup_check_failed') {
+        if (observation.phase === 'recovered' && observation.terminal_proof === 'rollback_verified') return 'recovery.failure.candidate_panel_startup_check_failed.recovered';
+        if (pending) return 'recovery.failure.candidate_panel_startup_check_failed.returning';
+    }
+    if (observation.failure_code === 'panel_start_unverified' && pending) return 'recovery.failure.panel_start_unverified.pending';
+    return undefined;
 }

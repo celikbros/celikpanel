@@ -101,6 +101,24 @@ func LoadOrCreate(path string) (*Box, error) {
 	case err != nil:
 		return nil, fmt.Errorf("read key file: %w", err)
 	}
+	return newBox(path, key)
+}
+
+// Load opens an existing key without ever creating one. A missing file keeps
+// os.ErrNotExist in its error chain so a read-only caller can tell "would
+// create" apart from an unreadable or malformed key.
+// Load, var olan anahtarı hiçbir zaman yenisini üretmeden açar. Eksik dosya
+// os.ErrNotExist zincirini korur; salt-okur çağıran "oluşturulacaktı" ile
+// okunamayan ya da bozuk anahtarı ayırabilir.
+func Load(path string) (*Box, error) {
+	key, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read key file: %w", err)
+	}
+	return newBox(path, key)
+}
+
+func newBox(path string, key []byte) (*Box, error) {
 	if len(key) != keySize {
 		return nil, fmt.Errorf("key file %s: expected %d bytes, got %d", path, keySize, len(key))
 	}

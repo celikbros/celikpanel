@@ -491,6 +491,13 @@ func main() {
 	if emitPanelBuildIdentity(os.Args[1:], os.Stdout) {
 		return
 	}
+	// The updater's read-only startup readiness proof is a closed one-argument
+	// mode. It exits before flag parsing, migrations, the listener and Agent.
+	// Güncelleyicinin salt-okur açılış hazırlık kanıtı kapalı, tek bağımsız
+	// değişkenli bir kiptir; migration, dinleyici ve Agent'tan önce çıkar.
+	if handled, status := runStartupReadinessEntry(os.Args[1:], os.Stdout, os.Stderr); handled {
+		os.Exit(status)
+	}
 	checkWALAwareServiceOperationsIdleFlag := flag.Bool("check-service-operations-idle-wal-aware", false, "Prove that the service operation queue is idle in a running database or a stopped database with a WAL, then exit")
 	checkWALAwarePreLedgerServiceOperationsIdleFlag := flag.Bool("check-pre-ledger-service-operations-idle-wal-aware", false, "Prove that a running pre-ledger database or a stopped pre-ledger database with a WAL is safe to migrate, then exit")
 	createAdmin := flag.Bool("create-admin", false, "Create or update an administrator, then exit / Bir yönetici oluştur ya da güncelle, sonra çık")

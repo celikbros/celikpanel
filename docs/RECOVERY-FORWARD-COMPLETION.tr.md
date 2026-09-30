@@ -100,3 +100,35 @@ kaydeder. P, son kanıt kontrollerini içeren nihai kaynağı çalıştırır. D
 kurulu kullanıcı panellerinde güncelleme başlatmadı.
 
 Sonraki kaynak dilimi material v3 ile [ayrı veritabanı dönüşümünü](RECOVERY-ISOLATED-DATABASE.tr.md) getirir. Normal güncelleme, ayrı dönüştürülen kopya doğrulanıp yayımlanana kadar active kalır. O dilimin uyumluluk ve sınırlı Q/R gerçek sistem kabul kaydı ayrıdır; burada anlatılan tarihsel v2 davranışı geriye dönük değiştirilmez.
+
+## Aday panelin başlangıç sınırları (2026-09-30)
+
+D-025 ilkeleri 2, 4 ve 5 / P0.1, P0.2, P0.3. Şema veya sürüm geçişi yok:
+snapshot v6, kurtarma malzemesi v3, işaretçi dilbilgisi, kit protokolü 1 ve v1
+gözlem kaydı değişmedi.
+
+- **`completion.pending` öncesi.** Ayrı veritabanı yayımlanıp doğrulandıktan sonra
+  güncelleyici kurulu adayı panel hesabıyla `panel --check-startup-readiness`
+  olarak çalıştırır. Denetim olağan açılışı dinleyici ve Agent hariç izler: veri
+  dizini, veritabanı (özel WAL-duyarlı kopya: tam gömülü şema ve migration
+  geçmişi, boş kuyruk, en az bir kullanıcı), gizli anahtar, lisans yapılandırması,
+  TLS ayarları ve sunulacak sertifika/anahtar çifti, çerez/TLS uyumu, dinleme
+  adresi ve web `index.html`. Panelin durum, TLS, web ve yapılandırma ağaçlarına
+  hiçbir şey yazmaz. Hata tek, ürünün yazdığı bir neden satırıdır ve
+  `candidate_panel_startup_check_failed` koduyla `active` aşamasında bir hatadır;
+  mevcut kurtarma sunucuyu otomatik olarak önceki sürüme döndürür.
+- **Gerçek başlatmadan sonra.** Tek `is-active` yerine sınırlı bekleme gelir:
+  0,5 sn arayla on bir örnek (en az 5 sn, birimin `RestartSec=3` değerinden uzun)
+  boyunca aynı ana PID ve yeniden başlatma sayacı, ayrıca panelin kendi kodlu
+  `401 AUTH_REQUIRED` yanıtını veren anonim bir loopback isteği. Olağan
+  güncellemede istek, başlangıç denetiminin bildirdiği açık anahtarlara
+  sabitlenir. Bekleme 60 sn ve 120 örnekle sınırlıdır. Hata `completion`
+  aşamasında `panel_start_unverified` koduyla kalır ve ileri tamamlanır.
+- **İleri tamamlama denemeleri** aynı beklemeyi anahtar sabitlemesi olmadan
+  kullanır; bu bağdaştırıcı aday kodu çalıştırmaz.
+
+Açık kalanlar: denetimden geçip açılan ve sonra çöken panel ileri tamamlanır,
+önceki sürüme desteklenen dönüş yoktur; `completion.pending` sonrasında geri alma
+yoktur; panel dururken panel adresinde canlı tarayıcı durumu yoktur (yalnız SSH
+görünümü). Kanıt: yalnız bileşen ve sözleşme testleri; gerçek sistem denemesi
+bekliyor.

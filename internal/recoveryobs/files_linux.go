@@ -72,6 +72,15 @@ func readAt(root, id string, uid, gid uint32, anchor string) Status {
 			status.AutomaticRecovery = decodeAutomatic(automatic, id, identity, raw)
 		}
 	}
+	// The typed update cause stays meaningful across later phases of the same
+	// request (recovering, recovered, succeeded) while the update's own failure
+	// is the latest recorded one. A later recovery failure hides it.
+	if status.PreviousFailure == "update_failed" {
+		failure, _, err := readObservationFile(fd, id+".failure", uid, gid)
+		if err == nil {
+			status.FailureCode = DecodeFailure(failure, id, r.TargetCommit)
+		}
+	}
 	return status
 }
 

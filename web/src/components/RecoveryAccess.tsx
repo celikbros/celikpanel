@@ -4,7 +4,7 @@ import { useI18n } from '../i18n';
 import { BrandMark } from './BrandMark';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { Button, Spinner } from './ui';
-import { parseRecoveryObservation, reconcileRecoveryObservation, savedRecoveryRequestId, UPDATE_MARKER_KEY, type RecoveryObservation } from '../lib/recoveryObservation';
+import { parseRecoveryObservation, reconcileRecoveryObservation, recoveryFailureGuidanceKey, savedRecoveryRequestId, UPDATE_MARKER_KEY, type RecoveryObservation } from '../lib/recoveryObservation';
 
 export function RecoveryStatus({ username, onUnauthorized }: { username: string; onUnauthorized?: () => void }) {
     const { t, locale } = useI18n();
@@ -46,13 +46,13 @@ export function RecoveryStatus({ username, onUnauthorized }: { username: string;
             <p className="mt-3 break-all text-sm text-fg-muted">{t('recovery.operationId')}: <span className="font-mono">{requestId}</span></p>
             <div className="mt-4 space-y-3 text-sm" role="status" aria-live="polite">
                 {(unavailable || !last) && <p>{t(busy && !unavailable && !last ? 'recovery.checking' : 'recovery.observationUnavailable')}</p>}
-                {last?.phase && <><p className="font-semibold">{t(last.automatic_recovery ? 'recovery.automatic.pausedTitle' : last.waiting_for ? `recovery.wait.${last.waiting_for}` : `recovery.phase.${last.phase}`)}</p><p className="max-w-prose text-fg-muted">{t(last.automatic_recovery ? 'recovery.automatic.pausedHelp' : last.waiting_for ? 'recovery.wait.next' : `recovery.next.${last.phase}`)}</p></>}
+                {last?.phase && <><p className="font-semibold">{t(last.automatic_recovery ? 'recovery.automatic.pausedTitle' : last.waiting_for ? `recovery.wait.${last.waiting_for}` : `recovery.phase.${last.phase}`)}</p><p className="max-w-prose text-fg-muted">{t(last.automatic_recovery ? 'recovery.automatic.pausedHelp' : last.waiting_for ? 'recovery.wait.next' : recoveryFailureGuidanceKey(last) ?? `recovery.next.${last.phase}`)}</p></>}
                 {last?.automatic_recovery && <div className="space-y-3">
                     <p className="max-w-prose">{t('recovery.automatic.inspect')}</p>
                     <pre className="whitespace-pre-wrap break-words rounded border border-border bg-surface px-3 py-3 text-sm"><code>sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50</code></pre>
                     <p className="max-w-prose text-fg-muted">{t('recovery.automatic.resume')}</p>
                 </div>}
-                {last?.previous_failure && <p>{t('recovery.previousFailure')}: {t(`recovery.reason.${last.previous_failure}`)}</p>}
+                {last?.previous_failure && <p>{t('recovery.previousFailure')}: {t(`recovery.reason.${last.failure_code ?? last.previous_failure}`)}</p>}
                 {last?.observed_at && <p className="text-fg-muted">{t('recovery.observedAt')}: <time dateTime={last.observed_at}>{new Date(last.observed_at).toLocaleString(locale === 'tr' ? 'tr-TR' : 'en-US')}</time></p>}
             </div>
             <Button className="mt-4" variant="secondary" disabled={busy} onClick={() => void check()}>{t(busy ? 'recovery.checking' : 'recovery.checkStatus')}</Button>

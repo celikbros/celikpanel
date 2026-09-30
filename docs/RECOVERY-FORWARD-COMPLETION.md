@@ -102,3 +102,42 @@ bootstrap-TLS and inactive-scheduler limits remain explicit; no installed user
 panel has been updated by this work.
 
 The next source slice introduces [isolated database migration](RECOVERY-ISOLATED-DATABASE.md) with material v3. It keeps normal updates active until a separately migrated copy is verified and published. That slice has its own compatibility and scoped Q/R native acceptance record; the historical v2 behavior described here is not retroactively changed.
+
+## Candidate panel start boundaries (2026-09-30)
+
+D-025 invariants 2, 4 and 5 / P0.1, P0.2, P0.3. No schema or version
+transition: snapshot v6, recovery material v3, marker grammar, kit protocol 1
+and the v1 observation record are unchanged.
+
+- **Before `completion.pending`.** After the isolated database is published and
+  verified, the updater runs the installed candidate as the panel account with
+  `panel --check-startup-readiness`. The check walks the normal start up to, but
+  excluding, the listener and the Agent: data directory, database (private
+  WAL-aware copy: exact embedded schema and migration history, idle queue, at
+  least one user), secret key, license configuration, TLS settings and the
+  served certificate/key pair, cookie/TLS posture, listen address and the web
+  `index.html`. It writes nothing in the panel's state, TLS, web or
+  configuration trees; the database proof uses the private copy under `/tmp`
+  that the updater's idle checks already use. A failure prints one
+  product-authored reason line and is a failure in phase `active` with code
+  `candidate_panel_startup_check_failed`: the existing `update:active` recovery
+  returns the server to the previous release automatically.
+- **After the real start.** The single `is-active` is replaced by a bounded wait:
+  eleven samples 0.5 s apart (at least 5 s, more than the unit's `RestartSec=3`)
+  with one unchanged main PID and restart counter, and an anonymous loopback
+  request to `/api/v1/panel/availability` that returns the panel's own coded
+  `401 AUTH_REQUIRED`. In the normal update the request is pinned to the served
+  public keys that the start check reported. The wait is bounded at 60 s and
+  120 samples. A failure stays in `completion` with code `panel_start_unverified`
+  and is completed forward by the existing recovery path.
+- **Forward completion retries** use the same wait without a key pin, because
+  this adapter never executes candidate code; only the panel's coded 401 over
+  TLS on its own port counts.
+
+These boundaries only move a detectable start failure before the point of no
+return. They do not add a rollback after `completion.pending`. Remaining open:
+a panel that passes the check, starts and fails later is completed forward with
+no supported return to the previous release; there is no live browser status at
+the panel's address while the panel is stopped (the owner SSH view in
+[recovery access](RECOVERY-ACCESS.md) remains the fallback). Evidence: component
+and contract tests only; native run pending.

@@ -69,6 +69,11 @@ run_case() (
         esac
     }
     verify_installed_release_artifacts() { printf 'verify-artifacts\n' >> "$TRACE"; }
+    # The candidate start check has its own contract; here only its position.
+    run_panel_startup_readiness_check() {
+        printf 'startup-check\n' >> "$TRACE"
+        [[ $local_case != startup-check-failed ]] || die 'new panel start check failed before completion'
+    }
     release_txn_mark_completion_pending() {
         [[ $# == 5 && $1 == "$RELEASE_TRANSACTION_ROOT" && $2 == 9 && $3 == fixture-token && $4 == update && $5 == "$snapshot_name" ]] || exit 98
         printf 'completion-marker\n' >> "$TRACE"
@@ -89,11 +94,13 @@ work='migrate:CELIKPANEL_DATA_DIR=/var/lib/celikpanel/.release-db-migrations/'+'
 assert work in normal
 assert normal.index(work)<normal.index('publish')<normal.index('verify-database')<normal.index('completion-marker')
 assert normal.index('panel-idle')<normal.index('completion-marker')
+assert normal.index('verify-database')<normal.index('startup-check')<normal.index('completion-marker')
+assert normal.count('startup-check')==1 and 'startup-check' not in legacy
 assert normal.count('completion-marker')==1 and normal.count(work)==1
 assert legacy.index('completion-marker')<legacy.index('migrate:CELIKPANEL_DATA_DIR='+str(root))
 assert not any(x in legacy for x in ('publish','verify-database'))
 PY
-for name in migrate-failed publish-failed verify-failed service-active missing-lock invalid-work; do
+for name in migrate-failed publish-failed verify-failed startup-check-failed service-active missing-lock invalid-work; do
     status=0
     run_case "$name" > "$TEST_ROOT/$name.log" 2>&1 || status=$?
     [[ $status == 41 ]] || { cat "$TEST_ROOT/$name.log"; fail "$name did not preserve failure: $status"; }

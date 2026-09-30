@@ -65,14 +65,47 @@ func startPanelHTTP(
 	if server == nil {
 		return nil, errors.New("panel HTTP server is nil")
 	}
+	tlsOn, err := configurePanelHTTPTLS(server, certPath, keyPath)
+	if err != nil {
+		return nil, err
+	}
+
+	listener, err := net.Listen("tcp", server.Addr)
+	if err != nil {
+		return nil, err
+	}
+	serveResult := make(chan error, 1)
+	go func() {
+		if tlsOn {
+			serveResult <- server.ServeTLS(listener, "", "")
+			return
+		}
+		serveResult <- server.Serve(listener)
+	}()
+
+	return &runningPanelHTTPServer{
+		server:      server,
+		addr:        listener.Addr(),
+		serveResult: serveResult,
+	}, nil
+}
+
+// configurePanelHTTPTLS loads and pairs the certificate exactly as the listener
+// will serve it, without binding. The startup readiness check shares it.
+// configurePanelHTTPTLS sertifikayı dinleyicinin sunacağı biçimde yükler ve
+// eşler; bağlanma yapmaz. Açılış hazırlık denetimi de bunu kullanır.
+func configurePanelHTTPTLS(server *http.Server, certPath, keyPath string) (bool, error) {
+	if server == nil {
+		return false, errors.New("panel HTTP server is nil")
+	}
 	tlsOn := certPath != "" || keyPath != ""
 	if tlsOn {
 		if certPath == "" || keyPath == "" {
-			return nil, errors.New("panel TLS certificate pair is incomplete")
+			return false, errors.New("panel TLS certificate pair is incomplete")
 		}
 		pair, err := tls.LoadX509KeyPair(certPath, keyPath)
 		if err != nil {
-			return nil, fmt.Errorf("load panel TLS certificate pair: %w", err)
+			return false, fmt.Errorf("load panel TLS certificate pair: %w", err)
 		}
 		tlsConfig := &tls.Config{}
 		if server.TLSConfig != nil {
@@ -99,25 +132,7 @@ func startPanelHTTP(
 		}
 		server.TLSConfig = tlsConfig
 	}
-
-	listener, err := net.Listen("tcp", server.Addr)
-	if err != nil {
-		return nil, err
-	}
-	serveResult := make(chan error, 1)
-	go func() {
-		if tlsOn {
-			serveResult <- server.ServeTLS(listener, "", "")
-			return
-		}
-		serveResult <- server.Serve(listener)
-	}()
-
-	return &runningPanelHTTPServer{
-		server:      server,
-		addr:        listener.Addr(),
-		serveResult: serveResult,
-	}, nil
+	return tlsOn, nil
 }
 
 func waitPanelHTTP(running *runningPanelHTTPServer) error {

@@ -31,11 +31,42 @@ type Status struct {
 	ObservedAt        string `json:"observed_at,omitempty"`
 	PreviousFailure   string `json:"previous_failure,omitempty"`
 	WaitingFor        string `json:"waiting_for,omitempty"`
+	// FailureCode is optional, additive guidance for a recorded update failure.
+	// It is exposed only while the update's own failure is the latest recorded
+	// one; readers that do not know it keep the generic update_failed text.
+	FailureCode string `json:"failure_code,omitempty"`
 }
 
 // ValidWaitingFor accepts optional guidance, never a phase or mutation authority.
 func ValidWaitingFor(value string) bool {
 	return value == "initializing" || value == "starting" || value == "stopping"
+}
+
+// FailureSchema is the optional <id>.failure sidecar written by the updater.
+// It names the typed cause of the update's own failure. It never changes the
+// v1 status record, its phase, terminal proof or any recovery decision.
+const FailureSchema = "celikpanel-recovery-failure/v1"
+
+// ValidFailureCode is a closed allowlist; unknown codes are ignored.
+func ValidFailureCode(value string) bool {
+	return value == "candidate_panel_startup_check_failed" || value == "panel_start_unverified"
+}
+
+// DecodeFailure accepts exactly four fixed fields bound to one request and its
+// target commit. Anything else yields "" (generic guidance), never an error.
+func DecodeFailure(raw []byte, id, commit string) string {
+	lines := strings.Split(string(raw), "\n")
+	if len(raw) > MaxRecordSize || len(lines) != 5 || lines[0] != "schema="+FailureSchema ||
+		!ValidRequestID(id) || lines[1] != "request_id="+id ||
+		!commitPattern.MatchString(commit) || lines[2] != "target_commit="+commit ||
+		!strings.HasPrefix(lines[3], "failure_code=") || lines[4] != "" {
+		return ""
+	}
+	code := strings.TrimPrefix(lines[3], "failure_code=")
+	if !ValidFailureCode(code) {
+		return ""
+	}
+	return code
 }
 
 // Record is internal producer data, not an HTTP response. Its commit binds the

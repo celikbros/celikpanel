@@ -13,6 +13,8 @@ export const copy = {
         ownerHelp: 'The server administrator can inspect recovery through an existing SSH connection. These commands only read status; they do not restart an update.',
         noReference: 'No operation reference is saved in this browser. Ask the server administrator to inspect the recovery journal.',
         journal: 'Read the recovery journal', status: 'Read this operation’s status',
+        view: 'Or view this operation in your browser. Run this on your own computer, replacing USER with your SSH account:',
+        viewHelp: 'Then open http://127.0.0.1:2084/ on that computer and enter the temporary code shown in the SSH terminal. The view only reads status. An older recovery tool refuses this command; use the status command above instead.',
     },
     tr: {
         title: 'Panel bağlantısına ulaşılamıyor',
@@ -27,5 +29,7 @@ export const copy = {
         ownerHelp: 'Sunucu yöneticisi mevcut SSH bağlantısından kurtarma durumuna bakabilir. Bu komutlar yalnızca durumu okur; güncellemeyi yeniden başlatmaz.',
         noReference: 'Bu tarayıcıda kayıtlı işlem kimliği yok. Sunucu yöneticisinden kurtarma günlüğünü incelemesini isteyin.',
         journal: 'Kurtarma günlüğünü oku', status: 'Bu işlemin durumunu oku',
+        view: 'Ya da bu işlemi tarayıcınızda görüntüleyin. Komutu kendi bilgisayarınızda çalıştırın; USER yerine SSH hesabınızı yazın:',
+        viewHelp: 'Sonra o bilgisayarda http://127.0.0.1:2084/ adresini açın ve SSH terminalinde gösterilen geçici kodu girin. Bu görünüm yalnızca durumu okur. Eski bir kurtarma aracı bu komutu reddeder; bu durumda yukarıdaki durum komutunu kullanın.',
     },
 };
