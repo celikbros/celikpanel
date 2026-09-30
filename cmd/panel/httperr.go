@@ -57,6 +57,11 @@ type apiErrorBody struct {
 	// tane daha" ekler. İsteğe bağlı ve eklemelidir: eski istemci yok
 	// sayar, sözleşme kırılmaz (B3d).
 	Details []string `json:"details,omitempty"`
+	// Vars: named values the screen's localized sentence for Code needs
+	// (for HOSTING_ROOT_NOT_TRAVERSABLE: directory, mode, owner, command).
+	// Optional and additive.
+	// Vars: Code için ekranın yerel cümlesinin ihtiyaç duyduğu adlı değerler.
+	Vars map[string]string `json:"vars,omitempty"`
 }
 
 // Stable refusal codes. Renaming one is an API break — don't.
@@ -126,6 +131,13 @@ const (
 	// Yerel cron, sahibinkiler dahil sunucudaki her görevi çalıştırır; panel
 	// onu asla kaldırmaz (D-022).
 	errCodeNativeCronRemovalRefused = "NATIVE_CRON_REMOVAL_REFUSED"
+	// A directory above the hosting base that CelikPanel did not create keeps
+	// the web server or the site users from reaching site files; the site was
+	// refused before any change (native finding P3; D-022, D-024).
+	// CelikPanel'in oluşturmadığı, barındırma kökünün üstündeki bir dizin web
+	// sunucusunu ya da site kullanıcılarını site dosyalarından uzak tutuyor;
+	// site hiçbir değişiklikten önce reddedildi.
+	errCodeHostingRootNotTraversable = "HOSTING_ROOT_NOT_TRAVERSABLE"
 	// R-053. A database engine this panel installed is running and reachable
 	// and will not take the credential the panel holds for it, because the
 	// panel never set one and the packaged engine has none. That is a fact

@@ -245,6 +245,10 @@ export const enServerScreens = {
     'panelUpdate.unsupported': 'This build pair does not support the signed update channel.',
     'panelUpdate.available': 'A signed update is available.',
     'panelUpdate.none': 'There is no new update on this channel.',
+    'panelUpdate.previousAttempt.title': 'This version already failed on this server',
+    'panelUpdate.previousAttempt.recovered': '{version} was tried on this server on {time}, and the server was returned to the previous version. Starting it again repeats the same update unless the cause has been fixed.',
+    'panelUpdate.previousAttempt.failed': '{version} was tried on this server on {time} and did not complete; this server runs {current} now. Starting it again repeats the same update unless the cause has been fixed.',
+    'panelUpdate.previousAttempt.cause': 'Recorded cause: {cause}.',
     'panelUpdate.checkFailed': 'The update could not be checked.',
     'panelUpdate.randomFailed': 'A secure request identity could not be generated; the update was not started.',
 

@@ -14,7 +14,7 @@ import { remoteDNSEndpoint } from '../lib/remoteDNS';
 import { ServerSetupChoice, ServerSetupManualAction } from './ServerSetupChoice';
 import { Button, inputClass, Spinner } from './ui';
 import { ServerSetupComponents, useSetupComponentCatalog } from './ServerSetupComponents';
-import { setupComponentName, setupExecutionGuidance } from '../lib/serverSetupGuidance';
+import { setupComponentName, setupExecutionGuidance, setupHostingRootBlockerValues } from '../lib/serverSetupGuidance';
 import { setupEffectiveComponents, setupPresetComponents } from '../lib/serverSetupComponents';
 
 function useSetupI18n() {
@@ -197,7 +197,11 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
     const markerRef = useRef(marker);
     markerRef.current = marker;
     const accept = useCallback((value: ServerSetupSnapshot) => { setSnapshot(value); setup.accept(value); }, [setup.accept]);
-    const failureText = (code: string) => t(code === 'mail_enrollment_restored' ? 'setup.guide.mailEnrollmentFailed' : mailServiceUnsupported(code) ? 'setup.blocker.mailUnsupported' : codeKey[code.split(':')[0]] || 'setup.blocker.unknown');
+    const failureText = (code: string) => {
+        const hostingRoot = setupHostingRootBlockerValues(code);
+        if (hostingRoot) return t('setup.blocker.hostingRoot', hostingRoot);
+        return t(code === 'mail_enrollment_restored' ? 'setup.guide.mailEnrollmentFailed' : mailServiceUnsupported(code) ? 'setup.blocker.mailUnsupported' : codeKey[code.split(':')[0]] || 'setup.blocker.unknown');
+    };
     // One localized name per component, shared by the step list and the
     // install-failure guidance so both sentences name the same thing.
     // Adım listesi ve kurulum hatası yönlendirmesi aynı yerel adı kullanır.

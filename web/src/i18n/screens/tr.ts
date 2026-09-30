@@ -1426,6 +1426,7 @@ export const trScreens: Record<ScreenKey, string> = {
     "setup.blocker.services": "Seçilen bağımlılıkların tümü kurulu ve sağlıklı değil. İncelemek için Bileşenler’i açın.",
     "setup.blocker.profile": "Bu sunucu seçilen profilin tamamını desteklemiyor. Uyumlu bir kullanım amacı seçin.",
     "setup.blocker.mailUnsupported": "Bu sunucunun Linux dağıtımında e-posta henüz otomatik kurulamıyor: CelikPanel posta sunucusunu burada kurup yapılandıramıyor. Sunucu yöneticisi e-posta olmadan devam etmek için Web barındırma’yı seçebilir ya da e-postayı işletim sisteminin kendi araçlarıyla kurup yapılandırabilir.",
+    "setup.blocker.hostingRoot": "Bu sunucudaki web siteleri çalışmaz: {directory} dizini (kip {mode}, sahip {owner}) web sunucusunun ya da site kullanıcılarının /var/www/celikpanel dizinine geçmesine izin vermiyor. CelikPanel kendi oluşturmadığı dizinleri değiştirmez. Karar sunucu sahibinindir: geçişe izin vermek için sunucuda {command} komutunu çalıştırın, sonra Kurulum planını incele’yi yeniden seçin.",
     "setup.blocker.operation": "Başka bir sunucu işlemi devam ediyor. Doğrulanmış sonucunu bekleyin.",
     "setup.blocker.unknown": "Gerekli bir kontrol tamamlanmadı. Ayrıntıları ve aşağıdaki erişim veya DNS ayarlarını inceleyin.",
     "setup.blocker.contact": "Sertifika almak için hesap ayarlarında geçerli bir yönetici e-postası belirleyin.",

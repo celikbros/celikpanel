@@ -13,6 +13,8 @@ export type RecoveryObservation = {
     waiting_for?: typeof recoveryWaitReasons[number];
     automatic_recovery?: 'paused_retry_limit';
     failure_code?: RecoveryFailureCode;
+    /** The update's first typed cause, shown only with a paused automatic recovery. */
+    first_failure_code?: RecoveryFailureCode;
     reason: RecoveryReason; observed_at?: string; previous_failure?: RecoveryFailureReason;
 };
 
@@ -48,7 +50,9 @@ export function parseRecoveryObservation(raw: unknown, requestId: string): Recov
     const automatic = value.phase === 'recovery_required' && value.automatic_recovery === 'paused_retry_limit' ? 'paused_retry_limit' : undefined;
     // Only meaningful while the update's own failure is the latest recorded one.
     const failureCode = value.previous_failure === 'update_failed' && recoveryFailureCodes.includes(value.failure_code as never) ? value.failure_code as RecoveryFailureCode : undefined;
-    return { ...base, observation: 'known', waiting_for: waiting, automatic_recovery: automatic, failure_code: failureCode, phase: value.phase as RecoveryObservation['phase'], terminal_proof: proof,
+    // Only meaningful with a paused automatic recovery; unknown values are ignored.
+    const firstFailureCode = automatic && recoveryFailureCodes.includes(value.first_failure_code as never) ? value.first_failure_code as RecoveryFailureCode : undefined;
+    return { ...base, observation: 'known', waiting_for: waiting, automatic_recovery: automatic, failure_code: failureCode, first_failure_code: firstFailureCode, phase: value.phase as RecoveryObservation['phase'], terminal_proof: proof,
         reason: value.reason as RecoveryReason, observed_at: value.observed_at, previous_failure: value.previous_failure as RecoveryFailureReason | undefined };
 }
 

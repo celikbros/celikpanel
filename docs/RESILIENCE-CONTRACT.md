@@ -1591,3 +1591,35 @@ printed rollback command that `rollback.sh` refuses once recovery material exist
 Open: a panel that passes the check and fails later is completed forward with no
 supported return; no rollback after `completion.pending`; no live browser status
 at the panel's address while the panel is stopped (owner SSH view only).
+
+### Guidance after a verified rollback (P0.2, 2026-10-01)
+
+P0.2 (truthful, actionable state), D-025 invariant 3 (typed evidence), D-024.
+From the upd2 Debian 13 defective-candidate run (O1-O4).
+
+- **Changed.** The failed-update notice maps the exact request's recovery
+  observation to owner guidance (rollback verified: both versions, typed or
+  generic cause, who acts, next action, resume; otherwise the recovery screen's
+  state texts) and keeps the worker summary as a secondary "server reported"
+  line. The update check adds `previous_attempt` for the offered target commit
+  from the native observations (read-only, no Agent RPC, bounded directory scan,
+  malformed or foreign records ignored). The root CLI speaks plainly first and
+  moves tokens to a final "Recorded state (for support)" line. The rollback
+  journal prints the restored commit from the manifest-covered Agent build record
+  when it binds the installed Agent bytes. The start guard names its hold. A
+  recovery paused on its retry limit also names the update's first typed cause
+  (read from the existing failure sidecar) before the pause guidance.
+- **No schema or version transition.** Observation v1, the failure sidecar v1,
+  snapshot v6, material v3, marker grammar, kit protocol 1, the browser's stored
+  update record and the CLI `--json` bytes are unchanged. The only wire addition
+  is the optional `previous_attempt` field of `GET /api/v1/panel/update/check`,
+  plus the optional `first_failure_code` of the recovery status (appended last,
+  present only while automatic recovery is paused and the sidecar names a typed
+  cause; also in the CLI `--json` for that state only); older Panels omit them
+  and older browsers ignore them. The start guard's bytes
+  change, so the value (not the format) of the foundation manifest's
+  `start-guard-sha256` changes for releases built from this source.
+- **Recovery behaviour.** Unchanged: `update:active` rolls back,
+  `update:completion` completes forward; the guard admits and refuses exactly
+  as before with the same exit code; Start remains the owner's decision.
+- **Evidence.** Component tests only; native run pending.

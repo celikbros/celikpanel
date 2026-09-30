@@ -2794,10 +2794,34 @@ release_txn_remove_scheduler_restore_pending \
     || die "cannot remove the exact rollback scheduler marker"
 rollback_scheduler_restore_pending=0
 commit=$(tr -d '[:space:]' < "$snap/commit")
+# Journal text only. The snapshot name and its commit file keep "unknown" by
+# design (no independent attestation). The restored Agent's own build record,
+# already covered by the snapshot manifest, names its source commit; it is shown
+# only when its recorded Agent digest equals the Agent now installed.
+# Yalnız günlük metni. Snapshot adı ve commit dosyası tasarım gereği "unknown"
+# kalır; geri yüklenen Agent'ın yapı kaydı, kayıtlı özeti kurulu Agent ile
+# eşleşirse kaynak commit'i gösterir.
+restored_build_commit() {
+    local contract="$snap/bin/agent-native-contract.json" agent="$BIN_DIR/agent" raw digest
+    [[ -f "$contract" && ! -L "$contract" && -f "$agent" && ! -L "$agent" ]] || return 1
+    [[ $(stat -Lc '%s' -- "$contract" 2>/dev/null) -le 2048 ]] || return 1
+    raw=$(head -c 2048 -- "$contract") || return 1
+    [[ "$raw" =~ ^\{\"schema\":\"celikpanel-agent-native-contract/v1\",\"source_commit\":\"([0-9a-f]{40})\",\"agent_sha256\":\"([0-9a-f]{64})\", ]] \
+        || return 1
+    local source_commit=${BASH_REMATCH[1]} agent_digest=${BASH_REMATCH[2]}
+    digest=$(sha256sum -- "$agent" | awk '{print $1}') || return 1
+    [[ "$digest" == "$agent_digest" ]] || return 1
+    printf '%s\n' "$source_commit"
+}
+if restored_commit=$(restored_build_commit 2>/dev/null) && [[ "$restored_commit" =~ ^[0-9a-f]{40}$ ]]; then
+    commit_line="$restored_commit (from the restored Agent's build record / geri yüklenen Agent'ın yapı kaydından)"
+else
+    commit_line="$commit (not recorded in the snapshot / snapshot'ta kayıtlı değil)"
+fi
 trap - EXIT
 echo
 echo "==> Rollback complete / Geri alma tamamlandı"
-echo "    Artifact source commit / Ürün kaynak commit'i: $commit"
+echo "    Restored release source commit / Geri yüklenen sürümün kaynak commit'i: $commit_line"
 echo "    Source checkout was not changed / Kaynak çalışma ağacı değiştirilmedi"
 echo "    Panel: $(systemctl is-active celikpanel-panel.service 2>/dev/null || true)"
 echo "    Agent: $(systemctl is-active celikpanel-agent.service 2>/dev/null || true)"

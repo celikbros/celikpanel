@@ -170,8 +170,8 @@ func failureCodeGuidance(status recoveryobs.Status) (string, string, bool) {
 	switch status.FailureCode {
 	case "candidate_panel_startup_check_failed":
 		if status.Phase == "recovered" && status.TerminalProof == "rollback_verified" {
-			return "The new version's panel failed its start check before anything was switched on, so the server was returned to the previous version automatically. The previous version keeps running. Nothing needs to be done on the server. When you report this, include the reason line shown for this update on the panel's update page.",
-				"Yeni sürümün paneli, hiçbir şey devreye alınmadan önce başlangıç denetiminden geçemedi; bu yüzden sunucu otomatik olarak önceki sürüme döndürüldü. Önceki sürüm çalışmaya devam ediyor. Sunucuda yapmanız gereken bir şey yok. Bunu bildirirken panelin güncelleme sayfasında bu güncelleme için gösterilen neden satırını ekleyin.", true
+			return "The new version's panel failed its start check before anything was switched on, so the server was returned to the previous version automatically. The previous version keeps running. Nothing needs to be done on the server. Do not start the same version again until a corrected version is published. When you report this, include the reason line shown for this update on the panel's update page.",
+				"Yeni sürümün paneli, hiçbir şey devreye alınmadan önce başlangıç denetiminden geçemedi; bu yüzden sunucu otomatik olarak önceki sürüme döndürüldü. Önceki sürüm çalışmaya devam ediyor. Sunucuda yapmanız gereken bir şey yok. Düzeltilmiş bir sürüm yayımlanana kadar aynı sürümü yeniden başlatmayın. Bunu bildirirken panelin güncelleme sayfasında bu güncelleme için gösterilen neden satırını ekleyin.", true
 		}
 		if status.TerminalProof == "none" && (status.Phase == "failed" || status.Phase == "recovering") {
 			return "The new version's panel failed its start check before anything was switched on. The server is being returned to the previous version automatically; nothing needs to be done on the server. Check this same request again for the verified result; do not start another update.",
@@ -187,24 +187,36 @@ func failureCodeGuidance(status recoveryobs.Status) (string, string, bool) {
 }
 
 func writeStatus(w io.Writer, lang string, status recoveryobs.Status) error {
-	en, tr := "The state could not be verified. Check this same request again; preserve evidence and do not start another update.",
-		"Durum doğrulanamadı. Aynı işlemi yeniden sorgulayın; kanıtları koruyun ve başka güncelleme başlatmayın."
+	// The first lines speak to the server owner: what happened, what the server
+	// runs now, who acts and the next action. Internal tokens appear only on the
+	// final support line; --json is a separate, unchanged wire shape.
+	// İlk satırlar sunucu sahibine konuşur; iç belirteçler yalnız son destek
+	// satırındadır. --json ayrı ve değişmemiş bir biçimdir.
+	en, tr := "The result of this update could not be read, so it is unknown. Nothing is known yet about which version the server runs. Check this same request again in a minute; keep the server as it is and do not start another update meanwhile.",
+		"Bu güncellemenin sonucu okunamadı; sonuç bilinmiyor. Sunucunun hangi sürümü çalıştırdığı henüz bilinmiyor. Bir dakika sonra aynı işlemi yeniden sorgulayın; bu arada sunucuya dokunmayın ve başka güncelleme başlatmayın."
 	if status.Observation == "known" {
 		switch status.Phase {
 		case "accepted":
-			en, tr = "The update was accepted. Follow this same request; do not start another update.", "Güncelleme kabul edilmiş. Aynı işlemi takip edin; başka güncelleme başlatmayın."
+			en, tr = "The update was accepted and is about to start. The server still runs its current version. Nothing to do now: check this same request again in a minute and do not start another update.",
+				"Güncelleme kabul edildi ve başlamak üzere. Sunucu hâlâ mevcut sürümünü çalıştırıyor. Şimdi yapmanız gereken bir şey yok: bir dakika sonra aynı işlemi yeniden sorgulayın ve başka güncelleme başlatmayın."
 		case "running":
-			en, tr = "The last recorded state is updating. Check this same request again.", "Son kayıtta güncelleme sürüyor. Aynı işlemi yeniden sorgulayın."
+			en, tr = "The update is being applied; the panel may be unavailable for a short time. Nothing to do now: check this same request again in a minute. Checking does not restart the update.",
+				"Güncelleme uygulanıyor; panel kısa bir süre erişilemeyebilir. Şimdi yapmanız gereken bir şey yok: bir dakika sonra aynı işlemi yeniden sorgulayın. Sorgulamak güncellemeyi yeniden başlatmaz."
 		case "recovering":
-			en, tr = "The last recorded state is recovering. Check this same request again.", "Son kayıtta kurtarma sürüyor. Aynı işlemi yeniden sorgulayın."
+			en, tr = "The update did not finish normally, and automatic recovery is running: the server is either being returned to the previous version or the update is being completed safely. Nothing to do now: check this same request again in a minute and do not start another update.",
+				"Güncelleme normal biçimde tamamlanmadı ve otomatik kurtarma çalışıyor: sunucu ya önceki sürüme döndürülüyor ya da güncelleme güvenle tamamlanıyor. Şimdi yapmanız gereken bir şey yok: bir dakika sonra aynı işlemi yeniden sorgulayın ve başka güncelleme başlatmayın."
 		case "failed":
-			en, tr = "The update reported a failure. Review this request in the panel when available; do not start another update.", "Güncelleme hata bildirmiş. Panel erişilebilir olduğunda bu işlemi inceleyin; başka güncelleme başlatmayın."
+			en, tr = "The update failed. If it stopped before anything was changed, the server keeps running the version it had; otherwise automatic recovery takes over and this status changes to recovery. Nothing to do on the server now: check this same request again in a few minutes and do not start another update. The panel's update page shows the reason when the panel is reachable.",
+				"Güncelleme başarısız oldu. Hiçbir şey değişmeden durduysa sunucu önceki sürümünü çalıştırmaya devam eder; aksi hâlde otomatik kurtarma devreye girer ve bu durum kurtarmaya geçer. Şimdi sunucuda yapmanız gereken bir şey yok: birkaç dakika sonra aynı işlemi yeniden sorgulayın ve başka güncelleme başlatmayın. Panel erişilebilir olduğunda güncelleme sayfası nedeni gösterir."
 		case "recovery_required":
-			en, tr = "Recovery needs attention. Preserve evidence. Inspect the recorded reason and next action with sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50; do not start another update.", "Kurtarma için işlem gerekiyor. Kanıtları koruyun. Kaydedilen neden ve sonraki eylem için sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50 komutunu kullanın; başka güncelleme başlatmayın."
+			en, tr = "Automatic recovery could not finish this update, so the server may be between versions. The server owner must act: read the recorded reason and next step with sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50. Keep the server's files as they are and do not start another update.",
+				"Otomatik kurtarma bu güncellemeyi tamamlayamadı; sunucu iki sürüm arasında kalmış olabilir. Sunucu sahibinin işlem yapması gerekiyor: kaydedilen nedeni ve sonraki adımı sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50 ile okuyun. Sunucudaki dosyalara dokunmayın ve başka güncelleme başlatmayın."
 		case "succeeded":
-			en, tr = "The producer recorded verified update completion. Check current service health separately.", "Üretici, güncellemenin doğrulanmış tamamlanmasını kaydetmiş. Güncel hizmet sağlığını ayrıca kontrol edin."
+			en, tr = "The update completed and the new version was verified when it finished. Nothing else is needed on the server. Open the panel to check that everything works now.",
+				"Güncelleme tamamlandı ve yeni sürüm bittiği anda doğrulandı. Sunucuda başka bir işlem gerekmiyor. Her şeyin şu an çalıştığını görmek için paneli açın."
 		case "recovered":
-			en, tr = "The producer recorded verified restoration. Check current service health separately.", "Üretici, doğrulanmış geri yükleme kaydetmiş. Güncel hizmet sağlığını ayrıca kontrol edin."
+			en, tr = "The update did not complete, and the server was returned automatically to the version it ran before; that restoration was verified. Nothing needs to be done on the server. Do not start the same version again until a corrected version is published; the panel's update page shows what is known about the cause.",
+				"Güncelleme tamamlanmadı ve sunucu otomatik olarak güncellemeden önce çalıştırdığı sürüme döndürüldü; bu geri dönüş doğrulandı. Sunucuda yapmanız gereken bir şey yok. Düzeltilmiş bir sürüm yayımlanana kadar aynı sürümü yeniden başlatmayın; nedenle ilgili bilinenler panelin güncelleme sayfasında gösterilir."
 		}
 	}
 	// A typed update cause refines the phase guidance only while the update's own
@@ -215,10 +227,19 @@ func writeStatus(w io.Writer, lang string, status recoveryobs.Status) error {
 		en, tr = en2, tr2
 	}
 	if status.Phase == "recovering" && status.TerminalProof == "none" && recoveryobs.ValidWaitingFor(status.WaitingFor) {
-		en, tr = "The last recorded state is waiting for the operating system transition. No owner action is needed for this wait; the native timer will check the same operation again when ready. Recovery is not yet complete.", "Son kayıtta işletim sistemi geçişi bekleniyor. Bu bekleme için kullanıcı işlemi gerekmiyor; yerel zamanlayıcı hazır olduğunda aynı işlemi yeniden kontrol edecek. Kurtarma henüz tamamlanmadı."
+		en, tr = "The update did not finish normally, and recovery is waiting for the server to finish starting or stopping. Nothing to do now: the server's recovery timer checks this same operation again by itself when the system is ready. Recovery is not yet complete.",
+			"Güncelleme normal biçimde tamamlanmadı ve kurtarma, sunucunun açılmasını ya da kapanmasını bitirmesini bekliyor. Şimdi yapmanız gereken bir şey yok: sunucunun kurtarma zamanlayıcısı, sistem hazır olduğunda aynı işlemi kendiliğinden yeniden kontrol eder. Kurtarma henüz tamamlanmadı."
 	}
 	if status.Observation == "known" && status.Phase == "recovery_required" && status.TerminalProof == "none" && status.AutomaticRecovery == "paused_retry_limit" {
-		en, tr = "Automatic recovery last reported that all three attempts were used without verified completion. The server owner must inspect sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50, resolve the cause, then use the one-time same-operation retry command shown there. Checking status does not retry recovery.", "Son kayıtta üç otomatik kurtarma denemesi doğrulanmış tamamlanma olmadan kullanılmış. Sunucu sahibi sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50 ile günlüğü incelemeli, nedeni gidermeli ve orada aynı işlem için gösterilen tek seferlik yeniden deneme komutunu kullanmalıdır. Durum sorgusu kurtarmayı yeniden başlatmaz."
+		en, tr = "Automatic recovery used all three attempts without finishing, so the server may be between versions. The server owner must act: read sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50, fix the cause it names, then run the one-time same-operation retry command shown there. Checking status does not retry recovery.",
+			"Otomatik kurtarma üç denemenin hepsini kullandı ve tamamlanamadı; sunucu iki sürüm arasında kalmış olabilir. Sunucu sahibinin işlem yapması gerekiyor: sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50 çıktısını okuyun, belirtilen nedeni giderin ve orada aynı işlem için gösterilen tek seferlik yeniden deneme komutunu çalıştırın. Durum sorgusu kurtarmayı yeniden başlatmaz."
+		// The pause guidance stays; a typed first cause adds, before it, what is
+		// wrong and where to look.
+		// Duraklatma yönlendirmesi kalır; tipli ilk neden, öncesine neyin yanlış
+		// olduğunu ve nereye bakılacağını ekler.
+		if causeEN, causeTR, ok := pausedCauseGuidance(status.FirstFailureCode); ok {
+			en, tr = causeEN+" "+en, causeTR+" "+tr
+		}
 	}
 	if _, err := fmt.Fprintln(w, translated(lang, en, tr)); err != nil {
 		return err
@@ -227,24 +248,54 @@ func writeStatus(w io.Writer, lang string, status recoveryobs.Status) error {
 		return err
 	}
 	if status.Observation == "known" {
-		if _, err := fmt.Fprintf(w, "%s: %s\n%s: %s\n",
-			translated(lang, "Recorded at", "Kayıt zamanı"), status.ObservedAt,
-			translated(lang, "Terminal proof", "Nihai kanıt"), status.TerminalProof); err != nil {
+		if _, err := fmt.Fprintf(w, "%s: %s\n", translated(lang, "Recorded at", "Kayıt zamanı"), status.ObservedAt); err != nil {
 			return err
 		}
-		if status.PreviousFailure != "" {
-			if _, err := fmt.Fprintf(w, "%s: %s\n", translated(lang, "Previous failure", "Önceki hata"), status.PreviousFailure); err != nil {
-				return err
-			}
-		}
-		if status.PreviousFailure == "update_failed" && recoveryobs.ValidFailureCode(status.FailureCode) {
-			if _, err := fmt.Fprintf(w, "%s: %s\n", translated(lang, "Recorded cause", "Kaydedilen neden"), status.FailureCode); err != nil {
-				return err
-			}
+	}
+	if _, err := fmt.Fprintln(w, translated(lang,
+		"This is a recorded observation; current service health was not checked.",
+		"Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.")); err != nil {
+		return err
+	}
+	_, err := fmt.Fprintf(w, "%s: %s\n", translated(lang, "Recorded state (for support)", "Kayıtlı durum (destek için)"), supportState(status))
+	return err
+}
+
+// pausedCauseGuidance names the update's first typed cause while automatic
+// recovery is paused on its retry limit.
+func pausedCauseGuidance(code string) (string, string, bool) {
+	switch code {
+	case "panel_start_unverified":
+		return "The update was applied, but the new version's panel did not come up, and completing the update was retried to its limit. Read the panel log on the server: sudo journalctl -u celikpanel-panel -n 50. Retrying repeats the same start until that cause is fixed. There is no supported return to the previous version from this point.",
+			"Güncelleme uygulandı, ancak yeni sürümün paneli açılmadı ve güncellemenin tamamlanması sınırına kadar yeniden denendi. Sunucudaki panel günlüğünü okuyun: sudo journalctl -u celikpanel-panel -n 50. Bu neden giderilene kadar yeniden deneme aynı başlatmayı tekrarlar. Bu noktadan önceki sürüme desteklenen bir dönüş yok.", true
+	case "candidate_panel_startup_check_failed":
+		return "The new version's panel failed its start check before anything was switched on, and the automatic return to the previous version did not finish. The recovery journal shows what stopped it; retrying continues the same return to the previous version.",
+			"Yeni sürümün paneli, hiçbir şey devreye alınmadan önce başlangıç denetiminden geçemedi ve önceki sürüme otomatik dönüş tamamlanmadı. Kurtarma günlüğü neyin durdurduğunu gösterir; yeniden deneme önceki sürüme aynı dönüşü sürdürür.", true
+	}
+	return "", "", false
+}
+
+// supportState is the only human line carrying internal tokens. Every value is
+// already a closed reader allowlist; unknown optional values are omitted.
+func supportState(status recoveryobs.Status) string {
+	if status.Observation != "known" {
+		return "observation=unavailable reason=" + status.Reason + " proof=" + status.TerminalProof
+	}
+	line := "phase=" + status.Phase + " reason=" + status.Reason + " proof=" + status.TerminalProof
+	if status.PreviousFailure != "" {
+		line += " previous_failure=" + status.PreviousFailure
+	}
+	if status.PreviousFailure == "update_failed" && recoveryobs.ValidFailureCode(status.FailureCode) {
+		line += " failure_code=" + status.FailureCode
+	}
+	if status.Phase == "recovering" && recoveryobs.ValidWaitingFor(status.WaitingFor) {
+		line += " waiting_for=" + status.WaitingFor
+	}
+	if status.Phase == "recovery_required" && status.AutomaticRecovery == "paused_retry_limit" {
+		line += " automatic_recovery=" + status.AutomaticRecovery
+		if recoveryobs.ValidFailureCode(status.FirstFailureCode) {
+			line += " first_failure_code=" + status.FirstFailureCode
 		}
 	}
-	_, err := fmt.Fprintln(w, translated(lang,
-		"This is a recorded observation; current service health was not checked.",
-		"Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi."))
-	return err
+	return line
 }

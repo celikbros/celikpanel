@@ -190,6 +190,19 @@ func (a *Agent) InstallNodeVersion(req *NodeInstallRequest, resp *NodeInstallRes
 		resp.Error = err.Error()
 		return nil
 	}
+	// Site applications run node as their site user, so the product-owned
+	// runtime tree must be 0755. MkdirAll is filtered by the unit's
+	// UMask=0027 and MkdirTemp creates 0700, so both are set explicitly
+	// (the same umask cause as native finding P3).
+	// Site uygulamaları node'u kendi site kullanıcılarıyla çalıştırır; ürüne
+	// ait çalışma ortamı ağacı 0755 olmalıdır. MkdirAll birimin UMask=0027'si
+	// ile süzülür, MkdirTemp 0700 oluşturur; ikisi de açıkça ayarlanır.
+	for _, dir := range []string{filepath.Dir(dest), stage} {
+		if err := os.Chmod(dir, 0o755); err != nil {
+			resp.Error = err.Error()
+			return nil
+		}
+	}
 	if err := os.Rename(stage, dest); err != nil {
 		resp.Error = err.Error()
 		return nil

@@ -35,6 +35,12 @@ type Status struct {
 	// It is exposed only while the update's own failure is the latest recorded
 	// one; readers that do not know it keep the generic update_failed text.
 	FailureCode string `json:"failure_code,omitempty"`
+	// FirstFailureCode is optional, additive guidance shown with a paused
+	// automatic recovery: the update's first typed cause from the same sidecar,
+	// even when a later recovery failure hides FailureCode. It is read only; it
+	// never changes the phase, the pause or any recovery decision. Appended last
+	// so every existing JSON key keeps its position.
+	FirstFailureCode string `json:"first_failure_code,omitempty"`
 }
 
 // ValidWaitingFor accepts optional guidance, never a phase or mutation authority.
@@ -68,6 +74,27 @@ func DecodeFailure(raw []byte, id, commit string) string {
 	}
 	return code
 }
+
+// Attempt names the latest recorded update attempt to one target commit on this
+// server, exposed only when that attempt ended as failed or with a verified
+// rollback. It is guidance for the owner before starting the same version
+// again; it never blocks, authorizes or retries a start.
+// Attempt, bu sunucuda bir hedef commit'e yapılan son kayıtlı güncelleme
+// denemesidir; yalnız başarısız ya da doğrulanmış geri alma ile bittiyse
+// gösterilir. Başlatmayı engellemez, yetkilendirmez, yeniden denemez.
+type Attempt struct {
+	RequestID   string `json:"request_id"`
+	Phase       string `json:"phase"`
+	FailureCode string `json:"failure_code,omitempty"`
+	FinishedAt  string `json:"finished_at"`
+}
+
+// MaxAttemptEntries bounds the directory scan. A larger directory yields no
+// attempt (an honest "unknown"), never a partial and possibly older answer.
+const MaxAttemptEntries = 1024
+
+// ValidCommit reports whether value is a full 40-character lowercase object id.
+func ValidCommit(value string) bool { return commitPattern.MatchString(value) }
 
 // Record is internal producer data, not an HTTP response. Its commit binds the
 // native transaction to the exact reviewed worker. No raw diagnostics belong here.

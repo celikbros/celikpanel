@@ -319,3 +319,110 @@ live status while the panel is stopped.
 Still open: a panel that passes the check, starts and fails later is completed
 forward; no rollback after `completion.pending`; no live browser status at the
 panel's address while the panel is stopped.
+
+### After an update that was rolled back (P0.2, 2026-10-01)
+
+Source state with component and contract tests; the native run is pending. From
+the upd2 Debian 13 run (findings O1-O4), where a defective candidate failed in
+phase `active` and the server returned to the old release by itself.
+
+- **Update notice after a failed update.** The primary text now comes from the
+  same request's recovery observation (`GET /api/v1/recovery/status`, a read that
+  never starts or retries anything), not from the worker's raw summary.
+  - Rollback verified (`recovered`): the update to the target version did not
+    complete; the server was returned to the previous version automatically and
+    runs it now. Then the cause: the typed code (`candidate_panel_startup_check_failed`,
+    `panel_start_unverified`) or "failed before it completed; no more specific
+    cause recorded". Who acts: nobody on the server. Next action: do not start
+    the same version again until a corrected version is published; if the
+    server's message names a problem on this server, fix it first. Resume:
+    nothing resumes by itself; a newer version appears in "Check for updates".
+  - Still recovering, waiting, paused or needing attention: the recovery
+    screen's texts for that state, and the notice keeps reading the same record.
+  - No record yet: "reading", then "not known which version the server runs";
+    reviewed pre-mutation texts (package manager busy, not accepted) stay first.
+  - The server's raw summary is shown only as a secondary "The server reported: …"
+    line, never as the only or the primary text.
+- **A version that already failed here.** `GET /api/v1/panel/update/check` has
+  an optional `previous_attempt` (`request_id`, `phase`, `failure_code`,
+  `finished_at`) for the offered target commit, read from the native recovery
+  observations. It is present only when the latest recorded attempt to that
+  commit ended `failed` or `recovered`. The update card then says, before the
+  Start button, when this version was tried and that the server was returned
+  to the previous version (or that it did not complete); that starting it again
+  repeats the same update unless the cause was fixed; and the recorded cause if
+  typed. Start stays available with the same confirmation.
+- **Root CLI.** Every state opens with plain owner guidance (what happened,
+  what the server runs, who acts, next action). "The producer recorded…",
+  "Terminal proof: none", "Previous failure: update_failed" and "Recorded cause"
+  are gone; internal tokens are on one final line, "Recorded state (for
+  support): phase=… reason=… proof=…". `--json` is byte-identical, except that a paused recovery whose sidecar names a typed cause gains one final key (see below).
+- **Rollback journal.** "Artifact source commit: unknown" is replaced by the
+  restored release's source commit when the restored Agent's build record
+  (`bin/agent-native-contract.json` in the manifest-verified snapshot) binds
+  exactly the installed Agent bytes; otherwise it says the commit is not
+  recorded in the snapshot. The snapshot name (`…-from-unknown-to-…`) and its
+  `commit` file are unchanged: `rollback.sh` validates both as canonical.
+- **Paused recovery with a typed first cause.** When automatic recovery is
+  paused on its retry limit and the update's first-cause sidecar names a typed
+  cause, the pause guidance (recovery journal and the one-time same-operation
+  retry command) stays and is preceded by what is wrong and where to look. For
+  `panel_start_unverified`: the new version's panel did not come up; read
+  `sudo journalctl -u celikpanel-panel -n 50`; retrying repeats the same start
+  until the cause is fixed; no supported return to the previous version. For
+  `candidate_panel_startup_check_failed`: the automatic return to the previous
+  version did not finish; the recovery journal shows what stopped it. Root CLI
+  and recovery screen, EN and TR. The sidecar is only read; the recovery status
+  gains an optional `first_failure_code`, present only while paused.
+- **Start guard log.** While a release marker holds the Panel and Agent and no
+  start authorization exists (for example after a reboot), the log says "held:
+  a CelikPanel update or recovery is in progress; the unit starts when it
+  finishes". A wrong-type path still logs "unsafe directory". Same exit code.
+
+Not done: the offer itself is unchanged (the floor stays at the candidate's
+sequence by design); no live status at the panel address while it is stopped.
+
+### Hosting root traversal (upd2 finding P3, 2026-10-01)
+
+Source state with component tests; the native re-run is pending. On a fresh Arch
+`web` server a new static site answered 404 and its cron job never ran. A
+disposable-guest reproduction proved the cause: `/var/www` does not exist on
+Arch (`pacman -Qo /var/www`: no package owns it); the Agent's first site
+creation made it through `MkdirAll` under the unit's `UMask=0027` and
+`Group=celikpanel`, as `0750 root:celikpanel` (birth time equal to the site
+home). Neither nginx (`http`) nor the site user could pass it.
+
+- **Product-created parents.** Before any site change the Agent creates each
+  missing directory above and including `/var/www/celikpanel` with exactly
+  `0755 root:root`, set explicitly after `mkdir`, and records it in the
+  root-only receipt `/var/lib/celikpanel-agent-private/hosting-root-v1.json`
+  (schema `celikpanel/hosting-root-directories/v1`).
+- **Owner directories are never changed.** An existing directory above the
+  hosting base that the web server account or the site users cannot search
+  refuses the site before any change: Agent code
+  `hosting_root_not_traversable`, Panel `409 HOSTING_ROOT_NOT_TRAVERSABLE` with
+  `vars` (directory, mode, owner, command).
+  - Who acts: the server owner.
+  - Next action: allow traversal, for example `sudo chmod 755 /var/www` (the
+    blocking directory is named).
+  - Resume: create the site again; nothing retries by itself.
+- **Setup review.** Profiles that host sites run the same read-only proof at
+  review. A blocking directory is the blocker
+  `server_setup_hosting_root_not_traversable:<mode>:<owner>:<group>:<directory>`
+  with the same owner action; the owner then reviews the plan again. A missing
+  directory is not a blocker. An inspection error is logged and not shown as a
+  verified block.
+- **Existing servers.** Earlier builds recorded nothing, so a `/var/www 0750`
+  they created cannot be told apart from an owner's choice and is refused with
+  the command. A receipt never authorizes a repair: a product-created `0755`
+  directory that later blocks was changed afterwards.
+- **Node runtimes.** The same umask made `…/runtimes/node` `0750` and each
+  version directory `0700` (from its staging directory), which site
+  applications running as their site user cannot reach. Both are now set to
+  `0755` explicitly.
+
+Not done: POSIX ACLs are not read (a directory relying on an ACL is reported as
+blocking); a symbolic link above the hosting base is followed, but its target's
+parents are not proved. The native Arch re-run must still show the site
+answering 200 with its marker, the cron stamp advancing and `namei -l` of the
+document root.

@@ -905,6 +905,10 @@ export const trServerScreens: Record<ServerScreenKey, string> = {
     'panelUpdate.unsupported': 'Bu build çifti imzalı güncelleme kanalını desteklemiyor.',
     'panelUpdate.available': 'İmzalı bir güncelleme bulundu.',
     'panelUpdate.none': 'Bu kanal için yeni güncelleme yok.',
+    'panelUpdate.previousAttempt.title': 'Bu sürüm bu sunucuda daha önce başarısız oldu',
+    'panelUpdate.previousAttempt.recovered': '{version} bu sunucuda {time} tarihinde denendi ve sunucu önceki sürüme döndürüldü. Neden giderilmediyse yeniden başlatmak aynı güncellemeyi tekrarlar.',
+    'panelUpdate.previousAttempt.failed': '{version} bu sunucuda {time} tarihinde denendi ve tamamlanmadı; bu sunucu şu an {current} sürümünü çalıştırıyor. Neden giderilmediyse yeniden başlatmak aynı güncellemeyi tekrarlar.',
+    'panelUpdate.previousAttempt.cause': 'Kaydedilen neden: {cause}.',
     'panelUpdate.checkFailed': 'Güncelleme kontrol edilemedi.',
     'panelUpdate.randomFailed': 'Güvenli istek kimliği üretilemedi; güncelleme başlatılmadı.',
 };

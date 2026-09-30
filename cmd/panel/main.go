@@ -21,6 +21,7 @@ import (
 	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/db"
 	"github.com/alicelik/celikpanel/internal/licensing"
+	"github.com/alicelik/celikpanel/internal/recoveryobs"
 	"github.com/alicelik/celikpanel/internal/repositories"
 	"github.com/alicelik/celikpanel/internal/secrets"
 	"github.com/alicelik/celikpanel/internal/services"
@@ -69,6 +70,9 @@ type Panel struct {
 	// real Roundcube process. Production leaves it nil and uses the fixed,
 	// Unix-socket-backed probe.
 	webmailReadinessProbe func(context.Context) bool
+	// lastUpdateAttempt is injectable only for handler tests. Production leaves
+	// it nil and reads the native recovery observations directly.
+	lastUpdateAttempt func(commit string) (recoveryobs.Attempt, bool)
 	// pkgFamily caches the host's package-manager family ("apt", "pacman").
 	// It is a property of the machine and never changes while the panel runs,
 	// so it is asked once instead of being persisted with the service scan —

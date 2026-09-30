@@ -132,8 +132,22 @@ fi
 [[ "$quiesce_present" -eq 0 ]] \
     || deny "quiesce phase blocks every service start"
 
-validate_root_directory "$runtime_root" 700
+# A valid release marker without any runtime authorization is the ordinary
+# hold while an update or recovery owns the services (for example after a
+# reboot, when the volatile runtime directory does not exist yet). Say so; an
+# existing path of the wrong type remains an unsafe directory. Same exit code.
+# Geçerli bir release işaretçisi varken çalışma zamanı yetkisinin hiç olmaması,
+# güncelleme ya da kurtarma sürerken olağan bekletmedir. Yanlış türdeki mevcut
+# bir yol güvensiz dizin olarak kalır. Çıkış kodu aynıdır.
+held_for_release_transaction() {
+    printf 'celikpanel release start guard: %s\n' \
+        "held: a CelikPanel update or recovery is in progress; the unit starts when it finishes" >&2
+    exit 1
+}
 authorization=$runtime_root/start.authorization
+[[ -e "$runtime_root" || -L "$runtime_root" ]] || held_for_release_transaction
+validate_root_directory "$runtime_root" 700
+[[ -e "$authorization" || -L "$authorization" ]] || held_for_release_transaction
 validate_root_directory "$authorization" 700
 authorization_marker=$authorization/marker
 authorization_holder=$authorization/holder

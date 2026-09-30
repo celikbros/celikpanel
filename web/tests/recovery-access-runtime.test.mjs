@@ -256,3 +256,25 @@ test('typed causes replace only the guidance text and the failure label; every k
   }finally{await clean()}
  }
 });
+
+test('a paused recovery names the first typed cause before the pause guidance, and only when paused',async()=>{
+ const paused={...known('running'),phase:'recovery_required',reason:'recovery_incomplete',automatic_recovery:'paused_retry_limit',previous_failure:'recovery_failed'};
+ for(const [first,expected] of [['panel_start_unverified','recovery.automatic.cause.panel_start_unverified'],['candidate_panel_startup_check_failed','recovery.automatic.cause.candidate_panel_startup_check_failed'],[undefined,null],['future_code',null]]){
+  const record=first===undefined?paused:{...paused,first_failure_code:first};
+  const parsed=parseRecoveryObservation(record,id);
+  assert.equal(parsed.first_failure_code,expected?first:undefined);
+  setup(async()=>admin,async()=>Response.json(record));
+  try {
+   await act(async()=>{tree=Renderer.create(React.createElement(RecoveryStatus,{username:'admin'}))});
+   const content=JSON.stringify(tree.toJSON());
+   assert.ok(content.includes('recovery.automatic.pausedHelp')&&content.includes('recovery.automatic.resume')&&content.includes('sudo journalctl -u celikpanel-release-recovery.service'));
+   if(expected){assert.ok(content.indexOf(expected)>0&&content.indexOf(expected)<content.indexOf('recovery.automatic.pausedHelp'),content);}
+   else assert.ok(!content.includes('recovery.automatic.cause.'),content);
+  }finally{await clean()}
+ }
+ // Not paused: the field is ignored even if present.
+ assert.equal(parseRecoveryObservation({...paused,automatic_recovery:undefined,first_failure_code:'panel_start_unverified'},id).first_failure_code,undefined);
+ const locale=name=>readFileSync(new URL(`../src/i18n/${name}.ts`,import.meta.url),'utf8');
+ for(const key of ['recovery.automatic.cause.panel_start_unverified','recovery.automatic.cause.candidate_panel_startup_check_failed'])
+  for(const name of ['en','tr'])assert.ok(locale(name).includes(`'${key}':`),`${name} lacks ${key}`);
+});

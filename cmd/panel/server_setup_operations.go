@@ -413,6 +413,11 @@ func (p *Panel) buildServerSetupPlan(ctx context.Context, state serverSetupState
 			addBlocker("server_setup_purpose_invalid")
 		}
 	}
+	if serverSetupHostsSites(draft) {
+		if code := serverSetupHostingRootBlockerCode(); code != "" {
+			addBlocker(code)
+		}
+	}
 	mailProfiles := serverSetupMailProfileIDs(draft)
 	if len(mailProfiles) > 0 {
 		if canonical, err := hostname.CanonicalFQDN(draft.MailHostname); err != nil || canonical != draft.MailHostname {

@@ -815,3 +815,35 @@ işçi ve çalıştırıcı son kanıtında HTTP yok ve kurtarma malzemesi varke
 Açık: denetimden geçip sonra çöken panel ileri tamamlanır ve desteklenen dönüş
 yoktur; `completion.pending` sonrasında geri alma yoktur; panel dururken panel
 adresinde canlı tarayıcı durumu yoktur (yalnız sahip SSH görünümü).
+
+### Doğrulanmış geri almadan sonraki yönlendirme (P0.2, 2026-10-01)
+
+P0.2 (doğru ve uygulanabilir durum), D-025 ilke 3 (tipli kanıt), D-024. upd2
+Debian 13 kusurlu aday denemesinden (O1-O4).
+
+- **Değişen.** Başarısız güncelleme bildirimi, aynı isteğin kurtarma gözlemini
+  sahip yönlendirmesine eşler (geri alma doğrulandı: iki sürüm, tipli ya da genel
+  neden, kim, sonraki eylem, devam; aksi hâlde kurtarma ekranının durum
+  metinleri) ve işçi özetini ikincil "sunucunun bildirdiği" satırında tutar.
+  Güncelleme denetimi, sunulan hedef commit için yerel gözlemlerden
+  `previous_attempt` ekler (salt-okur, Agent RPC yok, sınırlı dizin taraması,
+  bozuk ya da yabancı kayıtlar yok sayılır). Root CLI önce sade konuşur,
+  belirteçleri son "Kayıtlı durum (destek için)" satırına taşır. Geri alma
+  günlüğü, manifestin kapsadığı Agent yapı kaydı kurulu Agent baytlarına bağlıysa
+  geri yüklenen commit'i yazar. Başlatma koruması bekletmeyi adlandırır. Deneme
+  sınırında duraklatılmış kurtarma, duraklatma yönlendirmesinden önce
+  güncellemenin tipli ilk nedenini de (mevcut hata ek dosyasından okunur) söyler.
+- **Şema veya sürüm geçişi yok.** Gözlem v1, hata ek dosyası v1, snapshot v6,
+  malzeme v3, işaretçi dilbilgisi, kit protokolü 1, tarayıcının sakladığı
+  güncelleme kaydı ve CLI `--json` baytları değişmedi. Tek iletişim eki,
+  `GET /api/v1/panel/update/check` yanıtındaki isteğe bağlı `previous_attempt`
+  alanı ile kurtarma durumunun isteğe bağlı `first_failure_code` alanıdır (en
+  sona eklenir; yalnız otomatik kurtarma duraklatılmışken ve ek dosya tipli bir
+  neden bildirirken bulunur; CLI `--json` çıktısında da yalnız o durumda); eski
+  Panel'ler göndermez, eski tarayıcılar yok sayar. Başlatma
+  korumasının baytları değiştiği için, bu kaynaktan üretilen sürümlerde temel
+  manifestindeki `start-guard-sha256` alanının biçimi değil değeri değişir.
+- **Kurtarma davranışı.** Değişmedi: `update:active` geri alır,
+  `update:completion` ileri tamamlar; koruma aynı çıkış koduyla aynı biçimde kabul
+  ve ret eder; Başlat sahibin kararı olarak kalır.
+- **Kanıt.** Yalnız bileşen testleri; gerçek sistem denemesi bekliyor.

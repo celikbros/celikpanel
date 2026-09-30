@@ -86,6 +86,9 @@ if /bin/bash "$REPO_ROOT/deploy/release-transaction-start-guard.sh" \
     2>"$TEST_ROOT/start-blocked.stderr"; then
     fail 'start guard accepted active transaction without authorization'
 fi
+grep -Fxq 'celikpanel release start guard: held: a CelikPanel update or recovery is in progress; the unit starts when it finishes' \
+    "$TEST_ROOT/start-blocked.stderr" \
+    || fail 'start guard did not name the hold for the pending recovery'
 printf 'PASS: start guard blocks ordinary starts while active remains\n'
 
 # Invoke the standard exact marker primitive, not a test implementation.

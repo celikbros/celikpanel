@@ -114,6 +114,37 @@ type CreateSiteResponse struct {
 	NginxConfig  string
 	PHPSocket    string
 	ErrorMessage string
+	// ErrorCode classifies a refusal the Panel explains (today only
+	// HostingRootNotTraversable). Additive: older Agents leave it empty and
+	// the Panel keeps its generic answer.
+	// ErrorCode, Panel'in açıkladığı bir reddi sınıflandırır. Eklemelidir.
+	ErrorCode string
+	// HostingRoot names the blocking directory for HostingRootNotTraversable.
+	// HostingRoot, HostingRootNotTraversable için engelleyen dizini adlandırır.
+	HostingRoot *HostingRootBlock
+}
+
+// HostingRootNotTraversable: a directory above the hosting base
+// (/var/www/celikpanel) exists with a mode or owner that keeps the web server
+// or the site users from reaching their files. The Agent refuses the site
+// before any change and never changes that directory; the server owner
+// decides (D-022, D-024; native finding P3).
+// HostingRootNotTraversable: barındırma kökünün üstündeki bir dizin, web
+// sunucusunun ya da site kullanıcılarının dosyalarına ulaşmasını engelleyen
+// bir kip ya da sahiple var. Agent siteyi hiçbir değişiklikten önce reddeder
+// ve o dizini asla değiştirmez; karar sunucu sahibinindir.
+const HostingRootNotTraversable = "hosting_root_not_traversable"
+
+// HostingRootBlock is the observed blocking directory: its path, octal mode
+// ("0750") and "owner:group".
+// HostingRootBlock, gözlenen engelleyici dizindir.
+type HostingRootBlock struct {
+	Directory string
+	Mode      string
+	Owner     string
+	// Account is the web server account that cannot pass, or "" when the
+	// site users are the ones blocked.
+	Account string
 }
 
 // Data structures for RPC calls

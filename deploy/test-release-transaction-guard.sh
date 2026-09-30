@@ -903,6 +903,26 @@ chmod 0600 -- "$transaction_root/active"
 
 expect_failure "active marker without runtime authorization permitted a start" \
     "$helper_path" "$transaction_root" "$runtime_root"
+# The ordinary hold names itself; only a wrong-type path is an unsafe directory.
+# Olağan bekletme kendini adlandırır; yalnız yanlış türdeki yol güvensiz dizindir.
+held_text='celikpanel release start guard: held: a CelikPanel update or recovery is in progress; the unit starts when it finishes'
+if "$helper_path" "$transaction_root" "$runtime_root" 2>"$tmp/held.stderr"; then
+    fail "active marker without runtime authorization permitted a start"
+fi
+[[ "$(<"$tmp/held.stderr")" == "$held_text" ]] \
+    || fail "missing start authorization was not reported as a hold: $(<"$tmp/held.stderr")"
+if "$helper_path" "$transaction_root" "$tmp/absent-runtime-root" 2>"$tmp/held-absent.stderr"; then
+    fail "absent runtime directory permitted a start"
+fi
+[[ "$(<"$tmp/held-absent.stderr")" == "$held_text" ]] \
+    || fail "absent runtime directory after reboot was not reported as a hold: $(<"$tmp/held-absent.stderr")"
+ln -s -- "$tmp/absent-runtime-root" "$tmp/linked-runtime-root"
+if "$helper_path" "$transaction_root" "$tmp/linked-runtime-root" 2>"$tmp/unsafe-runtime.stderr"; then
+    fail "symlinked runtime directory permitted a start"
+fi
+[[ "$(<"$tmp/unsafe-runtime.stderr")" == "celikpanel release start guard: unsafe directory: $tmp/linked-runtime-root" ]] \
+    || fail "symlinked runtime directory was not reported as unsafe: $(<"$tmp/unsafe-runtime.stderr")"
+rm -f -- "$tmp/linked-runtime-root"
 release_txn_create_start_authorization \
     "$transaction_root" "$runtime_root" "$lock_fd" "$token" "$operation" "$snapshot_name"
 "$helper_path" "$transaction_root" "$runtime_root" \

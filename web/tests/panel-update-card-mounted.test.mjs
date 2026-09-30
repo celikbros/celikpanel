@@ -44,7 +44,12 @@ const uiURL = moduleURL(`
 `);
 const i18nURL = moduleURL(`
     export function useI18n() {
-        return { t: (key, params) => params?.version ? key + ':' + params.version : key };
+        return {
+            t: (key, params) => params?.version && Object.keys(params).length === 1
+                ? key + ':' + params.version
+                : params ? key + ' ' + JSON.stringify(params) : key,
+            locale: 'en',
+        };
     }
 `);
 const apiErrorURL = moduleURL(`
@@ -71,7 +76,12 @@ const admissionURL = moduleURL(`
         return readiness;
     }
 `);
+const recoveryObservationURL = compileURL('../src/lib/recoveryObservation.ts');
+const outcomeURL = compileURL('../src/lib/systemUpdateOutcome.ts', [
+    [/from ['"]\.\/recoveryObservation['"]/g, `from '${recoveryObservationURL}'`],
+]);
 const panelURL = compileURL('../src/components/PanelUpdateCard.tsx', [
+    [/from ['"]\.\.\/lib\/systemUpdateOutcome['"]/g, `from '${outcomeURL}'`],
     [/from ['"]react['"]/g, `from '${reactURL}'`],
     [/from ['"]react\/jsx-runtime['"]/g, `from '${jsxRuntimeURL}'`],
     [/from ['"]lucide-react['"]/g, `from '${iconsURL}'`],
@@ -105,7 +115,7 @@ async function flushMicrotasks() {
     await Promise.resolve();
 }
 
-async function mountCheckedCard(nextReadiness, start) {
+async function mountCheckedCard(nextReadiness, start, check = updateCheck) {
     globalThis.__nextPanelReadiness = nextReadiness;
     globalThis.__panelUpdateOperation = { active: false, start };
     globalThis.fetch = async (input) => {
@@ -114,7 +124,7 @@ async function mountCheckedCard(nextReadiness, start) {
             return { ok: true, json: async () => ({ version: updateCheck.current_version, commit: updateCheck.current_commit }) };
         }
         if (path === '/api/v1/panel/update/check') {
-            return { ok: true, json: async () => updateCheck };
+            return { ok: true, json: async () => check };
         }
         throw new Error('unexpected fetch: ' + path);
     };
@@ -272,5 +282,70 @@ test('a fresh mounted busy preflight remains actionable and never starts the upd
         globalThis.fetch = originalFetch;
         delete globalThis.__nextPanelReadiness;
         delete globalThis.__panelUpdateOperation;
+    }
+});
+
+function textOf(node) {
+    if (typeof node === 'string') return node;
+    return (node.children ?? []).map(textOf).join('');
+}
+
+test('a previously failed target is named before Start, and Start stays with the owner', async () => {
+    const originalFetch = globalThis.fetch;
+    let starts = 0;
+    let renderer;
+    const attempt = { request_id: 'e'.repeat(32), phase: 'recovered', failure_code: 'candidate_panel_startup_check_failed', finished_at: '2026-09-30T15:53:24Z' };
+    try {
+        renderer = await mountCheckedCard(
+            async () => ({ ready: true }),
+            async () => { starts += 1; return { kind: 'accepted' }; },
+            { ...updateCheck, previous_attempt: attempt },
+        );
+        const notes = renderer.root.findAll((node) => node.type === 'div' && node.props.role === 'note');
+        const notice = notes.find((node) => textOf(node).includes('panelUpdate.previousAttempt.title'));
+        assert.ok(notice, 'previous-attempt notice is shown');
+        const text = textOf(notice);
+        assert.match(text, /panelUpdate\.previousAttempt\.recovered/);
+        assert.match(text, /v0\.1\.0-alpha\.52/);
+        assert.match(text, /panelUpdate\.previousAttempt\.cause .*recovery\.reason\.candidate_panel_startup_check_failed/);
+        const all = renderer.root.findAll(() => true);
+        const noticeIndex = all.indexOf(notice);
+        const startIndex = all.indexOf(renderer.root.findByProps({ id: 'panel-update-start-button' }));
+        assert.ok(noticeIndex >= 0 && noticeIndex < startIndex, 'the notice precedes the Start button');
+        const startButton = renderer.root.findByProps({ id: 'panel-update-start-button' });
+        assert.equal(startButton.props.disabled, false);
+        await act(async () => { startButton.props.onClick(); await flushMicrotasks(); });
+        assert.equal(starts, 1);
+    } finally {
+        if (renderer) act(() => renderer.unmount());
+        globalThis.fetch = originalFetch;
+        delete globalThis.__nextPanelReadiness;
+        delete globalThis.__panelUpdateOperation;
+    }
+    for (const [previous, expected] of [
+        [undefined, null],
+        [{ request_id: 'e'.repeat(32), phase: 'failed', failure_code: 'private_detail', finished_at: '2026-09-30T15:53:24Z' }, 'failed'],
+        [{ request_id: 'e'.repeat(32), phase: 'recovering', finished_at: '2026-09-30T15:53:24Z' }, null],
+        [{ request_id: '../x', phase: 'recovered', finished_at: '2026-09-30T15:53:24Z' }, null],
+    ]) {
+        try {
+            renderer = await mountCheckedCard(async () => ({ ready: true }), async () => ({ kind: 'accepted' }),
+                previous ? { ...updateCheck, previous_attempt: previous } : updateCheck);
+            const text = textOf(renderer.root);
+            if (expected === null) {
+                assert.doesNotMatch(text, /previousAttempt/);
+            } else {
+                assert.match(text, /panelUpdate\.previousAttempt\.failed/);
+                assert.match(text, /"current":"v0\.1\.0-alpha\.51"/);
+                assert.doesNotMatch(text, /previousAttempt\.cause|private_detail/);
+            }
+            assert.equal(renderer.root.findByProps({ id: 'panel-update-start-button' }).props.disabled, false);
+        } finally {
+            if (renderer) act(() => renderer.unmount());
+            renderer = null;
+            globalThis.fetch = originalFetch;
+            delete globalThis.__nextPanelReadiness;
+            delete globalThis.__panelUpdateOperation;
+        }
     }
 });

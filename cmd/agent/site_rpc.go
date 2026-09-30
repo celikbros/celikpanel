@@ -38,6 +38,13 @@ func siteUsernameMutex(username string) *sync.Mutex {
 }
 
 type siteLifecycleOps struct {
+	// prepareHostingRoot proves and prepares the directories above the
+	// hosting base; a block is a typed refusal (hosting_root.go). Nil skips
+	// it (component tests that exercise other stages).
+	// prepareHostingRoot, barındırma kökünün üstündeki dizinleri kanıtlar ve
+	// hazırlar; blok tipli bir rettir. Nil atlar (başka aşamaları deneyen
+	// bileşen testleri).
+	prepareHostingRoot   func() (*hostingpath.TraversalBlock, error)
 	prepareChallengeRoot func(*ApplyVhostRequest) error
 	pathExists           func(string) (bool, error)
 	mkdirAll             func(string, os.FileMode) error
@@ -61,6 +68,7 @@ func (a *Agent) resolvedSiteLifecycleOps() siteLifecycleOps {
 		return *a.siteOps
 	}
 	return siteLifecycleOps{
+		prepareHostingRoot:   prepareHostingRoot,
 		prepareChallengeRoot: prepareValidatedVhostChallengeRoot,
 		pathExists: func(path string) (bool, error) {
 			_, err := os.Lstat(path)
@@ -340,6 +348,27 @@ func (a *Agent) CreateSite(req transport.CreateSiteRequest, reply *transport.Cre
 	} else if !unknownSiteUser(lookupErr) {
 		failCreateSite(reply, req.Domain, "site identity preflight", lookupErr, nil)
 		return nil
+	}
+	// The web server and the site users must be able to reach the hosting
+	// base. An owner's directory that blocks them refuses the site here,
+	// before any change; missing parents are created at 0755 root:root.
+	// Web sunucusu ve site kullanıcıları barındırma köküne ulaşabilmeli.
+	// Onları engelleyen bir sahip dizini siteyi burada, hiçbir değişiklikten
+	// önce reddeder; eksik üst dizinler 0755 root:root oluşturulur.
+	if ops.prepareHostingRoot != nil {
+		block, err := ops.prepareHostingRoot()
+		if err != nil {
+			failCreateSite(reply, req.Domain, "hosting root preparation", err, nil)
+			return nil
+		}
+		if block != nil {
+			reply.Success = false
+			reply.ErrorCode = transport.HostingRootNotTraversable
+			reply.HostingRoot = hostingRootTransportBlock(block)
+			reply.ErrorMessage = hostingRootRefusal(block)
+			log.Printf("CreateSite %s: %s", req.Domain, reply.ErrorMessage)
+			return nil
+		}
 	}
 	if err := ops.prepareChallengeRoot(vhostReq); err != nil {
 		failCreateSite(reply, req.Domain, "ACME challenge preparation", err, nil)

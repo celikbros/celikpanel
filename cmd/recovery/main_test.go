@@ -270,8 +270,8 @@ func TestFailureCodeGuidanceIsTruthfulPerPhaseAndLanguage(t *testing.T) {
 		en := statusRun(t, with(test.phase, test.code), "en")
 		tr := statusRun(t, with(test.phase, test.code), "tr")
 		if !strings.Contains(en, test.en) || !strings.Contains(tr, test.tr) ||
-			!strings.Contains(en, "Recorded cause: "+test.code) || !strings.Contains(tr, "Kaydedilen neden: "+test.code) ||
-			!strings.Contains(en, "Previous failure: update_failed") {
+			!strings.Contains(en, "failure_code="+test.code) || !strings.Contains(tr, "failure_code="+test.code) ||
+			!strings.Contains(en, "previous_failure=update_failed") {
 			t.Fatalf("%s/%s guidance:\n%s\n%s", test.phase, test.code, en, tr)
 		}
 	}
@@ -293,7 +293,7 @@ func TestFailureCodeGuidanceIsTruthfulPerPhaseAndLanguage(t *testing.T) {
 		with("failed", "private_diagnostic"),
 	} {
 		text := statusRun(t, observed, "en")
-		if strings.Contains(text, "Recorded cause") || strings.Contains(text, "new version's panel") {
+		if strings.Contains(text, "failure_code=") || strings.Contains(text, "new version's panel") {
 			t.Fatalf("stale or unknown cause shown: %q", text)
 		}
 	}

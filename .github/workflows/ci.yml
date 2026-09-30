@@ -133,6 +133,7 @@ jobs:
       - run: sudo env PATH="$PATH" GOTOOLCHAIN=local bash deploy/test-recovery-runtime-shell-contract.sh
       - run: sudo env PATH="$PATH" GOTOOLCHAIN=local bash deploy/test-rollback-ledger-preservation.sh
       - run: sudo bash deploy/test-rollback-reboot-runtime.sh
+      - run: bash deploy/test-rollback-journal-commit.sh
       - run: sudo bash deploy/test-recovery-resource-shell-contract.sh
       - run: sudo bash deploy/test-rollback-material-admission.sh
       - run: sudo bash deploy/test-release-recovery-observation.sh

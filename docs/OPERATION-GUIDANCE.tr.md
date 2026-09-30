@@ -232,3 +232,114 @@ dururken canlı durum gösteremez.
 Açık kalanlar: denetimden geçip açılan ve sonra çöken panel ileri tamamlanır;
 `completion.pending` sonrasında geri alma yoktur; panel dururken panel adresinde
 canlı tarayıcı durumu yoktur.
+
+### Geri alınan bir güncellemeden sonra (P0.2, 2026-10-01)
+
+Kaynak durumu, bileşen ve sözleşme testleriyle; gerçek sistem denemesi bekliyor.
+Kusurlu bir adayın `active` aşamasında başarısız olduğu ve sunucunun kendiliğinden
+eski sürüme döndüğü upd2 Debian 13 denemesinden (bulgular O1-O4).
+
+- **Başarısız güncellemeden sonraki bildirim.** Birincil metin artık işçinin ham
+  özetinden değil, aynı isteğin kurtarma gözleminden gelir
+  (`GET /api/v1/recovery/status`; hiçbir şey başlatmayan ya da yeniden denemeyen
+  bir okuma).
+  - Geri alma doğrulandı (`recovered`): hedef sürüme güncelleme tamamlanmadı;
+    sunucu otomatik olarak önceki sürüme döndürüldü ve şu an onu çalıştırıyor.
+    Ardından neden: tipli kod (`candidate_panel_startup_check_failed`,
+    `panel_start_unverified`) ya da "tamamlanmadan başarısız oldu; daha belirli
+    neden kaydedilmedi". Kim: sunucuda kimse. Sonraki eylem: düzeltilmiş sürüm
+    yayımlanana kadar aynı sürümü yeniden başlatmayın; sunucunun iletisi bu
+    sunucudaki bir sorunu belirtiyorsa önce onu giderin. Devam: hiçbir şey
+    kendiliğinden sürmez; daha yeni sürüm "Güncellemeyi kontrol et" ile görünür.
+  - Kurtarma sürüyor, bekliyor, duraklatıldı ya da işlem gerekiyor: kurtarma
+    ekranının o durumdaki metinleri; bildirim aynı kaydı okumayı sürdürür.
+  - Henüz kayıt yok: önce "okunuyor", sonra "hangi sürümün çalıştığı
+    bilinmiyor"; incelenmiş değişiklik öncesi metinler (paket yöneticisi meşgul,
+    kabul edilmedi) önde kalır.
+  - Sunucunun ham özeti yalnız ikincil "Sunucunun bildirdiği: …" satırıdır;
+    hiçbir zaman tek ya da birincil metin değildir.
+- **Burada daha önce başarısız olmuş sürüm.** `GET /api/v1/panel/update/check`,
+  sunulan hedef commit için yerel kurtarma gözlemlerinden okunan isteğe bağlı
+  `previous_attempt` alanını (`request_id`, `phase`, `failure_code`,
+  `finished_at`) taşır. Yalnız o commit'e yapılan son kayıtlı deneme `failed` ya
+  da `recovered` ile bittiyse vardır. Güncelleme kartı, Başlat düğmesinden önce
+  bu sürümün ne zaman denendiğini ve sunucunun önceki sürüme döndürüldüğünü (ya
+  da güncellemenin tamamlanmadığını), neden giderilmediyse yeniden başlatmanın
+  aynı güncellemeyi tekrarlayacağını ve tipliyse kaydedilen nedeni söyler.
+  Başlat aynı onayla kullanılabilir kalır.
+- **Root CLI.** Her durum sade sahip yönlendirmesiyle başlar (ne oldu, sunucu ne
+  çalıştırıyor, kim, sonraki eylem). "Üretici … kaydetmiş", "Nihai kanıt: none",
+  "Önceki hata: update_failed" ve "Kaydedilen neden" satırları kalktı; iç
+  belirteçler tek son satırdadır: "Kayıtlı durum (destek için): phase=…
+  reason=… proof=…". `--json` bayt bayt aynıdır; yalnız ek dosyası tipli bir neden bildiren duraklatılmış kurtarma son bir anahtar kazanır (aşağıya bakın).
+- **Geri alma günlüğü.** "Ürün kaynak commit'i: unknown" yerine, geri yüklenen
+  Agent'ın yapı kaydı (manifestle doğrulanmış snapshot'taki
+  `bin/agent-native-contract.json`) kurulu Agent baytlarına tam bağlıysa geri
+  yüklenen sürümün kaynak commit'i yazılır; değilse commit'in snapshot'ta kayıtlı
+  olmadığı söylenir. Snapshot adı (`…-from-unknown-to-…`) ve `commit` dosyası
+  değişmedi: `rollback.sh` ikisini de kanonik olarak doğrular.
+- **Tipli ilk nedenle duraklatılmış kurtarma.** Otomatik kurtarma deneme
+  sınırında duraklatıldığında ve güncellemenin ilk neden ek dosyası tipli bir
+  neden bildirdiğinde, duraklatma yönlendirmesi (kurtarma günlüğü ve aynı işlem
+  için tek seferlik yeniden deneme komutu) kalır ve öncesine neyin yanlış
+  olduğu ile nereye bakılacağı eklenir. `panel_start_unverified` için: yeni
+  sürümün paneli açılmadı; `sudo journalctl -u celikpanel-panel -n 50` okunur;
+  neden giderilene kadar yeniden deneme aynı başlatmayı tekrarlar; önceki sürüme
+  desteklenen dönüş yoktur. `candidate_panel_startup_check_failed` için: önceki
+  sürüme otomatik dönüş tamamlanmadı; kurtarma günlüğü neyin durdurduğunu
+  gösterir. Root CLI ve kurtarma ekranı, EN ve TR. Ek dosya yalnız okunur;
+  kurtarma durumu yalnız duraklatmada bulunan isteğe bağlı `first_failure_code`
+  alanını kazanır.
+- **Başlatma koruması günlüğü.** Bir sürüm işaretçisi Panel ve Agent'ı tutarken
+  başlatma yetkisi yoksa (örneğin yeniden açılıştan sonra) günlük "held: a
+  CelikPanel update or recovery is in progress; the unit starts when it
+  finishes" der. Yanlış türdeki yol yine "unsafe directory" yazar. Çıkış kodu
+  aynıdır.
+
+Yapılmayan: teklifin kendisi değişmedi (taban, tasarım gereği adayın sırasında
+kalır); panel dururken panel adresinde canlı durum yoktur.
+
+### Barındırma köküne geçiş (upd2 bulgusu P3, 2026-10-01)
+
+Bileşen testleriyle kaynak durumu; yerel yeniden koşu bekliyor. Taze bir Arch
+`web` sunucusunda yeni statik site 404 döndürdü ve cron görevi hiç çalışmadı.
+Tek kullanımlık konukta yeniden üretim nedeni kanıtladı: Arch'ta `/var/www` yok
+(`pacman -Qo /var/www`: hiçbir paket sahip değil); Agent'ın ilk site oluşturması
+onu birimin `UMask=0027` ve `Group=celikpanel` ayarıyla `MkdirAll` üzerinden
+`0750 root:celikpanel` olarak yaptı (doğum zamanı site ev diziniyle aynı). Ne
+nginx (`http`) ne de site kullanıcısı oradan geçebildi.
+
+- **Ürünün oluşturduğu üst dizinler.** Agent, hiçbir site değişikliğinden önce
+  `/var/www/celikpanel` dahil üstündeki her eksik dizini tam olarak
+  `0755 root:root` oluşturur (`mkdir`'den sonra açıkça ayarlanır) ve yalnız
+  root'un okuduğu `/var/lib/celikpanel-agent-private/hosting-root-v1.json`
+  makbuzuna yazar (şema `celikpanel/hosting-root-directories/v1`).
+- **Sahip dizinleri asla değiştirilmez.** Barındırma kökünün üstünde var olan ve
+  web sunucusu hesabının ya da site kullanıcılarının giremediği bir dizin,
+  siteyi hiçbir değişiklikten önce reddeder: Agent kodu
+  `hosting_root_not_traversable`, Panel `409 HOSTING_ROOT_NOT_TRAVERSABLE`
+  (`vars`: dizin, kip, sahip, komut).
+  - Kim işlem yapar: sunucu sahibi.
+  - Sonraki eylem: geçişe izin vermek, örneğin `sudo chmod 755 /var/www`
+    (engelleyen dizin adıyla gösterilir).
+  - Devam: siteyi yeniden oluşturmak; hiçbir şey kendiliğinden yeniden denenmez.
+- **Kurulum incelemesi.** Site barındıran profiller aynı salt-okur kanıtı
+  incelemede çalıştırır. Engelleyen dizin
+  `server_setup_hosting_root_not_traversable:<kip>:<sahip>:<grup>:<dizin>`
+  engelidir ve aynı sahip eylemini gösterir; sahip sonra planı yeniden inceler.
+  Eksik dizin engel değildir. İnceleme hatası günlüğe yazılır, doğrulanmış engel
+  olarak gösterilmez.
+- **Mevcut sunucular.** Eski sürümler hiçbir şey kaydetmedi; onların oluşturduğu
+  `/var/www 0750` sahibin tercihinden ayırt edilemez ve komutla reddedilir.
+  Makbuz asla onarım yetkisi vermez: ürünün `0755` oluşturduğu bir dizin sonradan
+  engelliyorsa sonradan değiştirilmiştir.
+- **Node çalışma ortamları.** Aynı umask `…/runtimes/node` dizinini `0750`, her
+  sürüm dizinini (hazırlık dizininden) `0700` yapıyordu; kendi site
+  kullanıcısıyla çalışan site uygulamaları oraya ulaşamazdı. İkisi de artık
+  açıkça `0755` yapılır.
+
+Yapılmayan: POSIX ACL okunmaz (geçiş için ACL'ye dayanan dizin engelleyici
+bildirilir); barındırma kökünün üstündeki sembolik bağ izlenir ama hedefinin üst
+dizinleri kanıtlanmaz. Yerel Arch yeniden koşusu sitenin işaretle 200
+döndürdüğünü, cron damgasının ilerlediğini ve belge kökünün `namei -l` çıktısını
+hâlâ göstermelidir.

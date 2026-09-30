@@ -11,6 +11,21 @@ const text = (key: TranslationKey, values?: Record<string, string>): SetupGuidan
 
 const componentNames: Record<string, string> = { nginx: 'Nginx', 'php-fpm': 'PHP-FPM', mariadb: 'MariaDB', postgresql: 'PostgreSQL', node: 'Node.js', nftables: 'nftables', certbot: 'Certbot', postfix: 'Postfix', dovecot: 'Dovecot', rspamd: 'Rspamd', roundcube: 'Roundcube', bind: 'BIND', pdns: 'PowerDNS', webmail: 'Webmail', 'core-mail': 'Core Mail', 'protected-mail': 'Spam-Protected Mail' };
 export const setupComponentName = (id: string): string => componentNames[id] || id;
+
+// Setup review blocker for an owner's directory above the hosting root that
+// the web server or the site users cannot pass (native finding P3):
+// "server_setup_hosting_root_not_traversable:<mode>:<owner>:<group>:<directory>".
+// The directory is last so it is read whole. Anything else yields null.
+// Barındırma kökünün üstünde, web sunucusunun ya da site kullanıcılarının
+// geçemediği sahip dizini için kurulum inceleme engeli (yerel bulgu P3).
+export function setupHostingRootBlockerValues(code: string): Record<string, string> | null {
+    const parts = code.split(':');
+    if (parts[0] !== 'server_setup_hosting_root_not_traversable' || parts.length < 5) return null;
+    const [, mode, owner, group] = parts;
+    const directory = parts.slice(4).join(':');
+    if (!/^[0-7]{4}$/.test(mode) || !owner || !group || !directory.startsWith('/')) return null;
+    return { directory, mode, owner: `${owner}:${group}`, command: `sudo chmod 755 ${directory}` };
+}
 // A screen passes its localized names (mail profiles, cron) so the guidance
 // sentence names the component exactly as the step list above it does.
 // Ekran yerel adlari verir; yonlendirme bileseni adim listesiyle ayni adlandirir.

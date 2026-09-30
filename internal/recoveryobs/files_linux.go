@@ -51,13 +51,83 @@ func readAt(root, id string, uid, gid uint32, anchor string) Status {
 		return unavailable(id)
 	}
 	defer unix.Close(fd)
-	raw, identity, err := readObservationFile(fd, id+".status", uid, gid)
+	status, _, err := statusAtFD(fd, id, uid, gid)
 	if err != nil {
 		return unavailable(id)
 	}
+	return status
+}
+
+// LastAttemptForTarget reads, without Agent RPC or any mutation, the latest
+// recorded update attempt to commit. It is returned only when that attempt's
+// phase is failed or recovered; otherwise, or when anything is unreadable, the
+// answer is absent.
+func LastAttemptForTarget(commit string) (Attempt, bool) {
+	if !ValidCommit(commit) {
+		return Attempt{}, false
+	}
+	gid, err := panelGID()
+	if err != nil {
+		return Attempt{}, false
+	}
+	return lastAttemptAt(Root, commit, 0, gid, "/")
+}
+
+func lastAttemptAt(root, commit string, uid, gid uint32, anchor string) (Attempt, bool) {
+	if !ValidCommit(commit) {
+		return Attempt{}, false
+	}
+	fd, err := openRoot(root, uid, gid, anchor, false)
+	if err != nil {
+		return Attempt{}, false
+	}
+	defer unix.Close(fd)
+	listFD, err := unix.Openat(fd, ".", unix.O_RDONLY|unix.O_DIRECTORY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
+	if err != nil {
+		return Attempt{}, false
+	}
+	dir := os.NewFile(uintptr(listFD), "recovery-observations")
+	names, err := dir.Readdirnames(MaxAttemptEntries + 1)
+	dir.Close()
+	if (err != nil && !errors.Is(err, io.EOF)) || len(names) > MaxAttemptEntries {
+		return Attempt{}, false
+	}
+	var latest *Status
+	for _, name := range names {
+		id, ok := strings.CutSuffix(name, ".status")
+		if !ok || !ValidRequestID(id) {
+			continue
+		}
+		status, record, err := statusAtFD(fd, id, uid, gid)
+		if err != nil || record.TargetCommit != commit {
+			continue
+		}
+		// Canonical UTC seconds compare lexically; the request ID breaks ties
+		// deterministically.
+		if latest == nil || status.ObservedAt > latest.ObservedAt ||
+			(status.ObservedAt == latest.ObservedAt && status.RequestID > latest.RequestID) {
+			copied := status
+			latest = &copied
+		}
+	}
+	// A newer attempt that is still running, waiting for recovery or verified
+	// forward hides older outcomes; nothing older is described in its place.
+	if latest == nil || (latest.Phase != "failed" && latest.Phase != "recovered") {
+		return Attempt{}, false
+	}
+	return Attempt{RequestID: latest.RequestID, Phase: latest.Phase, FailureCode: latest.FailureCode, FinishedAt: latest.ObservedAt}, true
+}
+
+// statusAtFD reads one request's status and its optional exact sidecars
+// relative to an already verified observation directory descriptor.
+func statusAtFD(fd int, id string, uid, gid uint32) (Status, Record, error) {
+	raw, identity, err := readObservationFile(fd, id+".status", uid, gid)
+	if err != nil {
+		return Status{}, Record{}, ErrUnavailable
+	}
 	r, err := Decode(raw, id)
 	if err != nil {
-		return unavailable(id)
+		return Status{}, Record{}, ErrUnavailable
 	}
 	status := r.Status()
 	if r.Phase == "recovering" && r.TerminalProof == "none" {
@@ -81,7 +151,16 @@ func readAt(root, id string, uid, gid uint32, anchor string) Status {
 			status.FailureCode = DecodeFailure(failure, id, r.TargetCommit)
 		}
 	}
-	return status
+	// A paused recovery keeps the pause guidance and also names the update's
+	// first typed cause, because the owner's next step depends on it (for
+	// example the panel log after a forward completion that never came up).
+	if status.AutomaticRecovery == "paused_retry_limit" {
+		failure, _, err := readObservationFile(fd, id+".failure", uid, gid)
+		if err == nil {
+			status.FirstFailureCode = DecodeFailure(failure, id, r.TargetCommit)
+		}
+	}
+	return status, r, nil
 }
 
 // Every directory component is opened relative to the verified preceding FD.

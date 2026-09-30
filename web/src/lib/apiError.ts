@@ -36,6 +36,20 @@ export interface ApiError {
     // runtime sürümünün kaldırılmasını engelleyen siteler (B3d). Eklemeli:
     // eski cevaplarda yok, eski ekranlar güvenle yok sayar.
     details?: string[];
+    // vars: named values the localized sentence for code needs, e.g. the
+    // blocking directory for HOSTING_ROOT_NOT_TRAVERSABLE. Additive; only
+    // string values are kept.
+    // vars: kodun yerel cümlesinin ihtiyaç duyduğu adlı değerler. Eklemeli.
+    vars?: Record<string, string>;
+}
+
+function stringVars(value: unknown): Record<string, string> | undefined {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    const vars: Record<string, string> = {};
+    for (const [name, item] of Object.entries(value)) {
+        if (typeof item === 'string') vars[name] = item;
+    }
+    return Object.keys(vars).length > 0 ? vars : undefined;
 }
 
 // readApiError tolerates all three generations of error bodies: the coded
@@ -61,6 +75,7 @@ export async function readApiError(res: Response): Promise<ApiError> {
                     details: Array.isArray(d.details)
                         ? d.details.filter((item: unknown): item is string => typeof item === 'string')
                         : undefined,
+                    vars: stringVars(d.vars),
                 };
             }
         } catch {
@@ -89,11 +104,11 @@ export function apiErrorText(e: ApiError, t: T, fallbackKey: TranslationKey = 'c
         // sebebin sözlerini hak eder; hepsini kapsayanları değil.
         if (e.reason) {
             const refined = ('err.' + e.code + '.' + e.reason) as TranslationKey;
-            const named = t(refined);
+            const named = t(refined, e.vars);
             if (named !== refined) return named;
         }
         const key = ('err.' + e.code) as TranslationKey;
-        const s = t(key);
+        const s = t(key, e.vars);
         if (s !== key) return s;
     }
     return e.message || t(fallbackKey);

@@ -1438,6 +1438,7 @@ export const enScreens = {
     "setup.blocker.services": "The selected dependencies are not all installed and healthy. Open Components to review them.",
     "setup.blocker.profile": "This server does not support the complete selected profile. Choose a compatible purpose.",
     "setup.blocker.mailUnsupported": "Mail cannot be set up automatically on this server’s Linux distribution yet: CelikPanel cannot install and configure its mail server here. The server administrator can choose Web hosting to continue without mail, or install and configure mail with the operating system’s own tools.",
+    "setup.blocker.hostingRoot": "Websites on this server would not work: the directory {directory} (mode {mode}, owner {owner}) does not let the web server or the site users through to /var/www/celikpanel. CelikPanel does not change directories it did not create. The server owner decides: to allow access, run {command} on the server, then choose Review setup plan again.",
     "setup.blocker.operation": "Another server operation is still active. Wait for its verified result.",
     "setup.blocker.unknown": "A required check needs attention. Review its details and the access or DNS settings below.",
     "setup.blocker.contact": "Set a valid administrator email in account settings for certificate issuance.",

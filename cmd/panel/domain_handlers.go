@@ -491,6 +491,10 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 			writeClientError(w, http.StatusConflict, "this hostname is already used by a domain, its www name, or an alias")
 			return
 		}
+		if refusal, ok := hostingRootNotTraversable(err); ok {
+			writeHostingRootNotTraversable(w, refusal)
+			return
+		}
 		writeServerError(w, err)
 		return
 	}

@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/recoveryobs"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -49,6 +50,31 @@ type panelUpdateCheckResponse struct {
 	CurrentVersion string             `json:"current_version"`
 	CurrentCommit  string             `json:"current_commit"`
 	Target         *panelUpdateTarget `json:"target,omitempty"`
+	// PreviousAttempt is additive and optional: the latest recorded attempt on
+	// this server to the offered target commit, when it failed or was rolled
+	// back. It is owner guidance only; Start stays available and unchanged.
+	PreviousAttempt *recoveryobs.Attempt `json:"previous_attempt,omitempty"`
+}
+
+// previousPanelUpdateAttempt reads the native recovery observations read-only.
+// Anything other than an exact failed/recovered attempt for this commit is
+// omitted, so older web clients and unknown evidence keep the previous shape.
+func (p *Panel) previousPanelUpdateAttempt(commit string) *recoveryobs.Attempt {
+	read := p.lastUpdateAttempt
+	if read == nil {
+		read = recoveryobs.LastAttemptForTarget
+	}
+	attempt, ok := read(commit)
+	if !ok || !recoveryobs.ValidRequestID(attempt.RequestID) ||
+		(attempt.Phase != "failed" && attempt.Phase != "recovered") ||
+		(attempt.FailureCode != "" && !recoveryobs.ValidFailureCode(attempt.FailureCode)) {
+		return nil
+	}
+	finished, err := time.Parse(time.RFC3339, attempt.FinishedAt)
+	if err != nil || finished.UTC().Format("2006-01-02T15:04:05Z") != attempt.FinishedAt {
+		return nil
+	}
+	return &attempt
 }
 
 type panelUpdateStartRequest struct {
@@ -295,6 +321,9 @@ func (p *Panel) handlePanelUpdateCheck(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		response.Target = &target
+		if target.Commit != buildCommit {
+			response.PreviousAttempt = p.previousPanelUpdateAttempt(target.Commit)
+		}
 	}
 	_ = json.NewEncoder(w).Encode(response)
 }
