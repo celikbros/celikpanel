@@ -68,8 +68,8 @@ func TestPreparePDNSV3PropagationCommandsAreDirectionalAndOrdered(t *testing.T) 
 			want: []string{
 				"purge example.test$",
 				"purge catalog-c000020a.celikpanel.invalid$",
-				"notify-host catalog-c000020a.celikpanel.invalid 192.0.2.20",
-				"notify-host example.test 192.0.2.20",
+				"notify-host catalog-c000020a.celikpanel.invalid 192.0.2.20:53",
+				"notify-host example.test 192.0.2.20:53",
 			},
 		},
 		{
@@ -84,8 +84,8 @@ func TestPreparePDNSV3PropagationCommandsAreDirectionalAndOrdered(t *testing.T) 
 			want: []string{
 				"purge example.test$",
 				"purge catalog-c000020a.celikpanel.invalid$",
-				"notify-host catalog-c000020a.celikpanel.invalid 192.0.2.20",
-				"notify-host example.test 192.0.2.20",
+				"notify-host catalog-c000020a.celikpanel.invalid 192.0.2.20:53",
+				"notify-host example.test 192.0.2.20:53",
 			},
 		},
 		{
@@ -98,7 +98,7 @@ func TestPreparePDNSV3PropagationCommandsAreDirectionalAndOrdered(t *testing.T) 
 			want: []string{
 				"purge example.test$",
 				"purge catalog-c000020a.celikpanel.invalid$",
-				"notify-host catalog-c000020a.celikpanel.invalid 192.0.2.20",
+				"notify-host catalog-c000020a.celikpanel.invalid 192.0.2.20:53",
 			},
 		},
 		{
@@ -127,6 +127,45 @@ func TestPreparePDNSV3PropagationCommandsAreDirectionalAndOrdered(t *testing.T) 
 	}
 }
 
+// PowerDNS 4.9.17 queues a port-less notify-host address as "<ip>:0" and
+// then treats the port-53 answer as spurious (PowerDNS issue 13576), so the
+// operator notify must carry the explicit DNS port in the form its parser
+// accepts: "<ipv4>:53", never the bare address.
+func TestPDNSNotifyHostTargetCarriesExplicitDNSPort(t *testing.T) {
+	for _, test := range []struct{ peer, want string }{
+		{"192.0.2.11", "192.0.2.11:53"},
+		{"192.0.2.20", "192.0.2.20:53"},
+		{"2001:db8::11", "[2001:db8::11]:53"},
+	} {
+		if got := pdnsNotifyHostTarget(test.peer); got != test.want {
+			t.Fatalf("pdnsNotifyHostTarget(%q)=%q want %q", test.peer, got, test.want)
+		}
+	}
+	plan := pdnsV3PropagationPlan{
+		Primary: true,
+		Evidence: testPDNSPrimaryPropagationEvidence(
+			2, []string{"example.test"}, []uint32{41},
+		),
+		Changed: expectedDNSZoneAuthority{Domain: "example.test", Serial: 41},
+	}
+	var targets []string
+	run := func(_ context.Context, args ...string) error {
+		if len(args) > 0 && args[0] == "notify-host" {
+			if len(args) != 3 {
+				t.Fatalf("notify-host argv=%q", args)
+			}
+			targets = append(targets, args[2])
+		}
+		return nil
+	}
+	if err := preparePDNSV3PropagationAt(context.Background(), plan, run); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(targets, []string{"192.0.2.20:53", "192.0.2.20:53"}) {
+		t.Fatalf("notify-host targets=%q", targets)
+	}
+}
+
 func TestPreparePDNSV3PropagationNotifyFailureIsStaticAndStops(t *testing.T) {
 	plan := pdnsV3PropagationPlan{
 		Primary: true,
@@ -151,7 +190,7 @@ func TestPreparePDNSV3PropagationNotifyFailureIsStaticAndStops(t *testing.T) {
 	want := []string{
 		"purge example.test$",
 		"purge catalog-c000020a.celikpanel.invalid$",
-		"notify-host catalog-c000020a.celikpanel.invalid 192.0.2.20",
+		"notify-host catalog-c000020a.celikpanel.invalid 192.0.2.20:53",
 	}
 	if !reflect.DeepEqual(commands, want) {
 		t.Fatalf("commands after failure=%q want=%q", commands, want)

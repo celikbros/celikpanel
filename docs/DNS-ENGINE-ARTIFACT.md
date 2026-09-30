@@ -1932,3 +1932,43 @@ timestamps, ownership and modes are unchanged; the recipe produced
 byte-identical archives under two umasks with a make stand-in. Not executed
 here: a real `make dist`, the release sequence policy test, and the bootstrap
 update contract test, which stops at an earlier Makefile expectation.
+
+### PowerDNS operator notify carries an explicit port (2026-10-01)
+
+No journal, ledger, state schema or version change. Component tests only;
+native re-run pending.
+
+Found in the third native run of the pair acceptance driver
+([evidence](../deploy/e2e/dns-pair-acceptance/evidence/pair3-20261001/README.md),
+topology t3: PowerDNS 4.9.17 primary, BIND 9.20.29 secondary). After a zone
+add the primary logged, for the catalog and the member zone, four "Received
+spurious notify answer … from 192.0.2.11:53" lines and then "Notification
+for … to 192.0.2.11:0 failed after retries". The BIND secondary had received
+the first NOTIFY and transferred both zones within half a second, so
+replication was not affected; the batch 8r kill-matrix journals show the
+same pattern, one ":0 failed after retries" line per operator notify.
+
+**Cause.** After a V3 zone mutation the Agent runs `pdns_control notify-host
+<zone> <peer>` with the bare peer address. In PowerDNS 4.9.17 the notify queue
+stores that address with port 0, sends to port 53, and then matches the
+answer on address and port, so no answer matches: each NOTIFY is re-sent
+until its retries run out and the queue reports a failure that did not
+happen (PowerDNS issue 13576, present since 4.8.0; the upstream fix, commit
+1ec11cb0, is not in 4.9.17). The configured `also-notify` path is not
+affected: PowerDNS applies port 53 there itself, and its answers were
+matched in the same run.
+
+**Change.** The notify-host destination is now `<peer>:53`
+(`pdnsNotifyHostTarget`, `cmd/agent/dns_engine_pdns_propagation.go`), a form
+the 4.9 parser accepts and that a fixed PowerDNS treats identically. Unit
+tests pin the exact argument. Unchanged, with reasons: `also-notify` in the
+directional pair configuration (port 53 is the documented default, and
+changing the rendered line would make existing owner-visible configuration
+differ from what the Agent expects); the consumer catalog's `domains.master`
+(PowerDNS applies port 53); BIND `also-notify` (BIND sends to `#53`, as its
+journals show).
+
+**Native re-run must show:** "Notification request to host 192.0.2.11:53"
+for each zone mutation, no "spurious notify answer" and no ":0 failed after
+retries" on the primary, one NOTIFY per zone received by the secondary, and
+the member zone served by the secondary at the same delay as before.

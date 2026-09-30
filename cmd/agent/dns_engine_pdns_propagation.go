@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"slices"
 	"time"
 
@@ -119,6 +120,19 @@ func prepareManagedPDNSV3Propagation(
 	return plan, nil
 }
 
+// pdnsNotifyHostTarget is the notify-host destination with an explicit DNS
+// port. PowerDNS 4.8.0 through 4.9.17 queues a port-less notify-host address
+// as "<ip>:0", sends to port 53, and then matches the answer on address and
+// port. Every answer is therefore "spurious", the NOTIFY is re-sent four
+// times and the queue logs "to <ip>:0 failed after retries" although the
+// secondary accepted it (PowerDNS issue 13576; upstream fix 1ec11cb0 is not
+// in 4.9.17). With ":53" the queued entry matches the answer and is removed
+// after the first acknowledgement. The peer is a canonical IPv4 address
+// (validateDNSPrimaryCatalogEvidence); JoinHostPort also brackets IPv6.
+func pdnsNotifyHostTarget(peerIP string) string {
+	return net.JoinHostPort(peerIP, "53")
+}
+
 // preparePDNSV3PropagationAt runs only after the SQLite zone transaction and
 // exact receipt have committed. notify-host targets the immutable /32 peer;
 // retries are safe because purge and notification are idempotent.
@@ -152,14 +166,15 @@ func preparePDNSV3PropagationAt(
 	if err := runBounded("purge", plan.Evidence.Domain+"$"); err != nil {
 		return dnsZoneV3RecoveryPending(errors.New("PowerDNS catalog cache purge failed"))
 	}
+	notifyTarget := pdnsNotifyHostTarget(plan.Evidence.PeerIP)
 	if err := runBounded(
-		"notify-host", plan.Evidence.Domain, plan.Evidence.PeerIP,
+		"notify-host", plan.Evidence.Domain, notifyTarget,
 	); err != nil {
 		return dnsZoneV3RecoveryPending(errors.New("PowerDNS paired catalog notification failed"))
 	}
 	if !plan.Changed.Delete {
 		if err := runBounded(
-			"notify-host", plan.Changed.Domain, plan.Evidence.PeerIP,
+			"notify-host", plan.Changed.Domain, notifyTarget,
 		); err != nil {
 			return dnsZoneV3RecoveryPending(errors.New("PowerDNS paired member notification failed"))
 		}
