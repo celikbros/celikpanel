@@ -1,0 +1,12 @@
+#!/bin/bash
+# usage: launch.sh TOPOLOGY PRIMARY LABEL [extra]
+W=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/pair4
+label=$3
+cp $W/topo.sh /root/cp-pair4/topo.sh
+for p in 2201 2202 23053 28443 28444; do ss -ltn "sport = :$p" | tail -n +2; done
+pgrep -a qemu || echo "no qemu"
+[[ ! -e /root/cp-pair4/logs/$label-runner.log ]] || { echo "runner log exists for $label; refusing"; exit 1; }
+setsid nohup bash /root/cp-pair4/topo.sh "$@" > /root/cp-pair4/logs/$label-runner.log 2>&1 < /dev/null &
+sleep 2
+cat /root/cp-pair4/logs/$label-runner.log
+echo launched

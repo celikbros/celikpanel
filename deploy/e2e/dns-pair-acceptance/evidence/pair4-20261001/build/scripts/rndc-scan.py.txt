@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+"""rndc key content check for pair4 evidence.
+
+The rndc secret never left the guests: on each product-installed BIND the collection
+script computed SHA-256 over the secret string of /etc/rndc.key or /etc/bind/rndc.key
+and wrote only that digest to a host-only directory outside the evidence. This scan
+hashes every base64-alphabet token (>= 20 chars, with and without trailing '=' and
+surrounding quotes/semicolons) in every evidence file and compares it with those digests.
+
+usage: rndc-scan.py EVIDENCE_DIR HASH_DIR      exit 0 = no match, 1 = match
+       rndc-scan.py --selftest
+"""
+import hashlib, json, os, re, sys, tempfile
+
+TOKEN = re.compile(r"[A-Za-z0-9+/]{20,}={0,2}")
+
+
+def digests(hash_dir):
+    out = {}
+    for name in sorted(os.listdir(hash_dir)):
+        for line in open(os.path.join(hash_dir, name)):
+            line = line.strip()
+            if re.fullmatch(r"[0-9a-f]{64}", line):
+                out[line] = name
+    return out
+
+
+def scan(root, wanted):
+    files = tokens = 0
+    matches = []
+    for base, _, names in os.walk(root):
+        for name in names:
+            path = os.path.join(base, name)
+            files += 1
+            data = open(path, "rb").read().decode("utf-8", "replace")
+            for m in TOKEN.finditer(data):
+                tokens += 1
+                for cand in {m.group(0), m.group(0).rstrip("=")}:
+                    h = hashlib.sha256(cand.encode()).hexdigest()
+                    if h in wanted:
+                        matches.append((os.path.relpath(path, root), wanted[h]))
+    return files, tokens, matches
+
+
+def main(argv):
+    if argv[1:] == ["--selftest"]:
+        secret = "c2VsZnRlc3Qtbm90LWEtcmVhbC1rZXktMDEyMzQ1Njc4OQ=="
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "ev", "sub")); os.makedirs(os.path.join(d, "h"))
+            open(os.path.join(d, "h", "x.txt"), "w").write(hashlib.sha256(secret.encode()).hexdigest() + "\n")
+            open(os.path.join(d, "ev", "sub", "leak.txt"), "w").write('key "rndc-key" {\n\tsecret "%s";\n};\n' % secret)
+            open(os.path.join(d, "ev", "clean.json"), "w").write('{"sha256": "%s"}\n' % hashlib.sha256(b"other").hexdigest())
+            files, tokens, matches = scan(os.path.join(d, "ev"), digests(os.path.join(d, "h")))
+            ok = [m[0] for m in matches] == [os.path.join("sub", "leak.txt")]
+            print(json.dumps({"selftest": "planted secret found only in the planted file" if ok else "FAILED",
+                              "files": files, "tokens": tokens, "matches": matches}))
+            return 0 if ok else 1
+    root, hash_dir = argv[1], argv[2]
+    wanted = digests(hash_dir)
+    files, tokens, matches = scan(root, wanted)
+    for path, source in matches:
+        print("MATCH %s (digest from %s)" % (path, source))
+    print(json.dumps({"root": root, "digests_compared": len(wanted), "files_scanned": files,
+                      "tokens_hashed": tokens, "matches": len(matches)}))
+    return 1 if matches else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

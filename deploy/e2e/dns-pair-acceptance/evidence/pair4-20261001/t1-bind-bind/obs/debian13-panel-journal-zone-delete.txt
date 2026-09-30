@@ -1,0 +1,7 @@
+2026-09-30T02:14:55+00:00 dns-debian13 panel[3706]: 2026/09/30 02:14:55 http: TLS handshake error from 127.0.0.1:53790: EOF
+2026-09-30T02:15:01+00:00 dns-debian13 panel[3706]: 2026/09/30 02:15:01 domain deletion pending for pair-accept.test at dns_cleanup: publish DNS zone deletion: DNS zone V3 paired propagation recovery is deferred: DNS zone publication is waiting for exact paired propagation recovery
+2026-09-30T02:15:01+00:00 dns-debian13 panel[3706]: DNS zone publication is waiting for exact paired propagation recovery
+2026-09-30T02:15:01+00:00 dns-debian13 panel[3706]: DNS zone publication is waiting for exact paired propagation recovery
+2026-09-30T02:15:04+00:00 dns-debian13 panel[3706]: 2026/09/30 02:15:04 http: TLS handshake error from 127.0.0.1:43930: EOF
+2026-09-30T02:15:14+00:00 dns-debian13 panel[3706]: 2026/09/30 02:15:14 domain deletion pending for pair-accept.test at dns_cleanup: publish DNS zone deletion: DNS zone V3 paired propagation recovery is deferred: DNS zone publication is waiting for exact paired propagation recovery
+2026-09-30T02:15:14+00:00 dns-debian13 panel[3706]: DNS zone publication is waiting for exact paired propagation recovery

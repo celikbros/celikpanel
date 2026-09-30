@@ -1,0 +1,30 @@
+{
+  "action": "reboot",
+  "boot_id_after": "2e981061-e79d-44eb-ac47-bf1098aa85d7",
+  "boot_id_before": "5d731e51-b4d3-4515-a7a6-cea6ecf25be0",
+  "cell_id": "pair-accept__pdns-debian13__bind-arch__p4t3",
+  "elapsed_seconds": 92.322,
+  "method": "guest systemctl reboot (orderly), then fixture SSH readiness",
+  "node": "arch",
+  "product_uuid": "a95522c7-a259-5081-9382-e5a5abfef649",
+  "reboot_command": [
+    "ssh",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "ConnectTimeout=5",
+    "-o",
+    "StrictHostKeyChecking=accept-new",
+    "-o",
+    "HashKnownHosts=no",
+    "-o",
+    "UserKnownHostsFile=/var/tmp/cp-pair4-work/cells/e42f5c7859b3913d2abf6764/ssh-known-hosts",
+    "-i",
+    "/var/tmp/cp-pair4-key/id_ed25519",
+    "-p",
+    "2202",
+    "celik@127.0.0.1",
+    "sudo -n /usr/bin/systemctl reboot"
+  ],
+  "reboot_command_returncode": 0
+}

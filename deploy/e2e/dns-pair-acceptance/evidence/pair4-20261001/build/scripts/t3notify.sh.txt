@@ -1,0 +1,12 @@
+#!/bin/bash
+O=/root/cp-pair4/obs/p4t3
+grep -i 'received notify' $O/arch-bind-notify-journal.txt | cut -c1-200
+echo ---
+grep -i -E 'notify from|sending notif' $O/arch-bind-notify-journal.txt | cut -c1-200 | head -40
+echo --- driver api timestamps for mutations
+R=$(ls -d /var/tmp/cp-pair4-evidence/p4t3-* | tail -1)
+for f in $R/steps/1[2-5]-*/api/*-post-* $R/steps/1[2-5]-*/api/*-delete-*; do python3 -c '
+import json,sys
+d=json.load(open(sys.argv[1])); r=d.get("response") or {}
+h=dict((k,v) for k,v in (r.get("headers") or []))
+print(sys.argv[1].split("/")[-3], sys.argv[1].split("/")[-1], r.get("status"), h.get("Date"), r.get("elapsed_seconds"))' $f; done

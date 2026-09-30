@@ -1,0 +1,16 @@
+{
+  "arch": {
+    "boot_id": "5d731e51-b4d3-4515-a7a6-cea6ecf25be0",
+    "cell_id": "pair-accept__pdns-debian13__bind-arch__p4t3",
+    "node": "arch",
+    "product_uuid": "a95522c7-a259-5081-9382-e5a5abfef649",
+    "schema": "celikpanel/dns-kill-fixture-plan/v1"
+  },
+  "debian13": {
+    "boot_id": "b7058a17-443f-4f40-9442-beadd28b2e74",
+    "cell_id": "pair-accept__pdns-debian13__bind-arch__p4t3",
+    "node": "debian13",
+    "product_uuid": "b776d869-a309-53db-b52a-93d72a82821c",
+    "schema": "celikpanel/dns-kill-fixture-plan/v1"
+  }
+}

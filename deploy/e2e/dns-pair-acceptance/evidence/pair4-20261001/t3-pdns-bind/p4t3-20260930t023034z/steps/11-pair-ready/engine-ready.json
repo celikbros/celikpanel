@@ -1,0 +1,22 @@
+{
+  "primary": {
+    "active_engine": "pdns",
+    "engine_epoch": 1,
+    "pair_ready": true,
+    "pair_role": "primary",
+    "revision": 3,
+    "secondary_ready": "<absent>",
+    "state": "ready",
+    "topology": "paired"
+  },
+  "secondary": {
+    "active_engine": "bind",
+    "engine_epoch": 1,
+    "pair_ready": false,
+    "pair_role": "secondary",
+    "revision": 3,
+    "secondary_ready": true,
+    "state": "ready",
+    "topology": "paired"
+  }
+}

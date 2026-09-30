@@ -1,0 +1,10 @@
+2026-09-30T02:22:48Z
+{
+  "action": "stop",
+  "cell_id": "pair-accept__bind-debian13__bind-arch__p4t1",
+  "dry_run": false,
+  "method": "QMP quit; no fallback signal"
+}
+no qemu
+               total        used        free      shared  buff/cache   available
+Mem:           15697        3207       10910        2387        4179       12489

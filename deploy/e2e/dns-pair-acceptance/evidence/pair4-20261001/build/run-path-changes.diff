@@ -1,0 +1,38 @@
+--- a/scripts/build-dist.sh
++++ b/scripts-run/build-dist.sh
+@@ -49,11 +49,11 @@
+ tree=$(git -c safe.directory='*' -C "$REPO" rev-parse "${full}^{tree}")
+ epoch=$(git -c safe.directory='*' -C "$REPO" log -1 --format=%ct "$full")
+ version="v0.0.0-pairaccept.${full:0:12}"
+-out=/var/tmp/cp-pair-accept/dist/$full
++out=/var/tmp/cp-pair4-dist/$full
+ if [[ $acceptance -eq 1 ]]; then
+     # The version is visible in the panel (API /panel/version) and names the archive.
+     version="v0.0.0-pairaccept-acceptance-license.${full:0:12}"
+-    out=/var/tmp/cp-pair-accept/dist/$full-acceptance-license
++    out=/var/tmp/cp-pair4-dist/$full-acceptance-license
+ fi
+ src=$out/src
+ [[ ! -e $out ]] || { echo "refusing to reuse $out" >&2; exit 2; }
+--- a/scripts/prepare-guests.sh
++++ b/scripts-run/prepare-guests.sh
+@@ -13,7 +13,7 @@
+ ROOT=${CELIKPANEL_PAIR_ROOT:-/var/tmp/cp-pair-accept/work}
+ FIXTURE=$REPO/deploy/e2e/dns-kill-matrix/fixture.py
+ DRIVER=$REPO/deploy/e2e/dns-pair-acceptance/pair_acceptance.py
+-KEY=/var/tmp/cp-pair-accept/id_ed25519
++KEY=/var/tmp/cp-pair4-key/id_ed25519
+ 
+ node_args=()
+ [[ $primary == auto ]] || node_args=(--primary-node "$primary")
+--- a/scripts/run-topology.sh
++++ b/scripts-run/run-topology.sh
+@@ -21,7 +21,7 @@
+ ROOT=${CELIKPANEL_PAIR_ROOT:-/var/tmp/cp-pair-accept/work}
+ EVIDENCE=${CELIKPANEL_PAIR_EVIDENCE:-/var/tmp/cp-pair-accept/evidence}
+ DRIVER=$REPO/deploy/e2e/dns-pair-acceptance/pair_acceptance.py
+-KEY=/var/tmp/cp-pair-accept/id_ed25519
++KEY=/var/tmp/cp-pair4-key/id_ed25519
+ 
+ read_dist() { python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get(sys.argv[2], ""))' "$dist" "$1"; }
+ web_src=$(read_dist product_web_src)

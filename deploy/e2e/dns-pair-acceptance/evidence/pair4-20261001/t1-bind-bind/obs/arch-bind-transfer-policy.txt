@@ -1,0 +1,88 @@
+bash: line 2: hostname: command not found
+## collected 2026-09-30T02:22:03Z on 
+## named-checkconf -p /etc/named.conf : lines naming zone/type/primaries/allow-transfer/also-notify/catalog-zones/controls (key and secret lines dropped)
+1:options {
+7:	allow-query-cache {
+13:	catalog-zones {
+14:		zone "catalog-c000020a.celikpanel.invalid" default-primaries {
+19:	allow-transfer  {
+26:zone "localhost" IN {
+27:	type master;
+30:zone "0.0.127.in-addr.arpa" IN {
+31:	type master;
+34:zone "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa" {
+35:	type master;
+38:zone "catalog-c000020a.celikpanel.invalid" {
+39:	type secondary;
+40:	primaries {
+## journal since 2026-09-30 02:14:00: named transfer/notify/denied lines and inspector sudo lines
+2026-09-30T02:14:47+00:00 dns-arch named[2068]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#40108: zone is up to date
+2026-09-30T02:14:47+00:00 dns-arch named[2068]: client @0x7f630b848c00 192.0.2.10#52672: received notify for zone 'pair-accept.test'
+2026-09-30T02:14:47+00:00 dns-arch named[2068]: zone pair-accept.test/IN: notify from 192.0.2.10#52672: serial 2026093003
+2026-09-30T02:14:47+00:00 dns-arch named[2068]: zone pair-accept.test/IN: Transfer started.
+2026-09-30T02:14:47+00:00 dns-arch named[2068]: 0x7f630e51a000: transfer of 'pair-accept.test/IN' from 192.0.2.10#53: connected using 192.0.2.10#53
+2026-09-30T02:14:47+00:00 dns-arch named[2068]: zone pair-accept.test/IN: transferred serial 2026093003
+2026-09-30T02:14:47+00:00 dns-arch named[2068]: 0x7f630e51a000: transfer of 'pair-accept.test/IN' from 192.0.2.10#53: Transfer status: success
+2026-09-30T02:14:47+00:00 dns-arch named[2068]: 0x7f630e51a000: transfer of 'pair-accept.test/IN' from 192.0.2.10#53: Transfer completed: 1 messages, 12 records, 401 bytes, 0.041 secs (9780 bytes/sec) (serial 2026093003)
+2026-09-30T02:14:48+00:00 dns-arch named[2068]: client @0x7f630b84a800 192.0.2.10#56731 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T02:14:48+00:00 dns-arch named[2068]: client @0x7f630b84a800 192.0.2.10#56731 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T02:14:50+00:00 dns-arch named[2068]: client @0x7f630b84a800 192.0.2.10#39565 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T02:14:50+00:00 dns-arch named[2068]: client @0x7f630b84a800 192.0.2.10#39565 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T02:14:51+00:00 dns-arch named[2068]: client @0x7f630b84a800 192.0.2.10#32825 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T02:14:51+00:00 dns-arch named[2068]: client @0x7f630b84a800 192.0.2.10#32825 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T02:14:51+00:00 dns-arch named[2068]: client @0x7f630e3b1000 192.0.2.10#45208: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T02:14:51+00:00 dns-arch named[2068]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#45208: zone is up to date
+2026-09-30T02:14:51+00:00 dns-arch named[2068]: client @0x7f630b847000 192.0.2.10#48983: received notify for zone 'pair-accept.test'
+2026-09-30T02:14:51+00:00 dns-arch named[2068]: zone pair-accept.test/IN: notify from 192.0.2.10#48983: serial 2026093004
+2026-09-30T02:14:51+00:00 dns-arch named[2068]: zone pair-accept.test/IN: Transfer started.
+2026-09-30T02:14:51+00:00 dns-arch named[2068]: 0x7f630e51a000: transfer of 'pair-accept.test/IN' from 192.0.2.10#53: connected using 192.0.2.10#53
+2026-09-30T02:14:52+00:00 dns-arch named[2068]: zone pair-accept.test/IN: transferred serial 2026093004
+2026-09-30T02:14:52+00:00 dns-arch named[2068]: 0x7f630e51a000: transfer of 'pair-accept.test/IN' from 192.0.2.10#53: Transfer status: success
+2026-09-30T02:14:52+00:00 dns-arch named[2068]: 0x7f630e51a000: transfer of 'pair-accept.test/IN' from 192.0.2.10#53: Transfer completed: 1 messages, 13 records, 424 bytes, 0.043 secs (9860 bytes/sec) (serial 2026093004)
+2026-09-30T02:14:53+00:00 dns-arch named[2068]: client @0x7f630e3bf000 192.0.2.10#45811 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T02:14:53+00:00 dns-arch named[2068]: client @0x7f630e3bf000 192.0.2.10#45811 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T02:14:56+00:00 dns-arch named[2068]: client @0x7f630e3bf000 192.0.2.10#54483 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T02:14:56+00:00 dns-arch named[2068]: client @0x7f630e3bf000 192.0.2.10#54483 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T02:14:56+00:00 dns-arch named[2068]: client @0x7f630b848c00 192.0.2.10#54436: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T02:14:56+00:00 dns-arch named[2068]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#54436: zone is up to date
+2026-09-30T02:14:56+00:00 dns-arch named[2068]: client @0x7f630b847000 192.0.2.10#60947: received notify for zone 'pair-accept.test'
+2026-09-30T02:14:56+00:00 dns-arch named[2068]: zone pair-accept.test/IN: notify from 192.0.2.10#60947: zone is up to date
+2026-09-30T02:14:57+00:00 dns-arch named[2068]: client @0x7f630e3bf000 192.0.2.10#34345 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T02:14:57+00:00 dns-arch named[2068]: client @0x7f630e3bf000 192.0.2.10#34345 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T02:14:57+00:00 dns-arch named[2068]: client @0x7f630b848c00 192.0.2.10#48901: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T02:14:57+00:00 dns-arch named[2068]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#48901: serial 3
+2026-09-30T02:14:57+00:00 dns-arch named[2068]: zone catalog-c000020a.celikpanel.invalid/IN: Transfer started.
+2026-09-30T02:14:57+00:00 dns-arch named[2068]: 0x7f630e51a000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: connected using 192.0.2.10#53
+2026-09-30T02:14:57+00:00 dns-arch named[2068]: zone catalog-c000020a.celikpanel.invalid/IN: transferred serial 3
+2026-09-30T02:14:57+00:00 dns-arch named[2068]: 0x7f630e51a000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer status: success
+2026-09-30T02:14:57+00:00 dns-arch named[2068]: 0x7f630e51a000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer completed: 1 messages, 4 records, 172 bytes, 0.048 secs (3583 bytes/sec) (serial 3)
+2026-09-30T02:14:59+00:00 dns-arch named[2068]: client @0x7f630e3bf000 192.0.2.10#34665 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:14:59+00:00 dns-arch named[2068]: client @0x7f630e3bf000 192.0.2.10#34665 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:14:59+00:00 dns-arch named[2068]: client @0x7f630b84a800 192.0.2.10#42521 (pair-accept.test): bad zone transfer request: 'pair-accept.test/IN': non-authoritative zone (NOTAUTH)
+2026-09-30T02:15:00+00:00 dns-arch named[2068]: client @0x7f630b84a800 192.0.2.10#54107 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:15:00+00:00 dns-arch named[2068]: client @0x7f630b84a800 192.0.2.10#54107 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:15:01+00:00 dns-arch named[2068]: client @0x7f630b84a800 192.0.2.10#52643 (pair-accept.test): bad zone transfer request: 'pair-accept.test/IN': non-authoritative zone (NOTAUTH)
+2026-09-30T02:15:02+00:00 dns-arch sudo[3148]:    celik : PWD=/home/celik ; USER=root ; COMMAND=/bin/bash -c 'set -euo pipefail#012umask 077#012test ! -e /root/celikpanel-primary-inspector.pub#012cat > /root/celikpanel-primary-inspector.pub#012chown root:root /root/celikpanel-primary-inspector.pub#012chmod 0600 /root/celikpanel-primary-inspector.pub#012'
+2026-09-30T02:15:02+00:00 dns-arch sudo[3198]:    celik : PWD=/home/celik ; USER=root ; COMMAND=/var/backups/celikpanel/pair-accept/celikpanel-v0.0.0-pairaccept-acceptance-license.96657d675efe/dns-owner-tools/dns-peer-enroll secondary-install --primary-ip 192.0.2.10 --peer-ip 192.0.2.11 --catalog catalog-c000020a.celikpanel.invalid --primary-public-key /root/celikpanel-primary-inspector.pub --inspector /var/backups/celikpanel/pair-accept/celikpanel-v0.0.0-pairaccept-acceptance-license.96657d675efe/dns-owner-tools/bind-peer-inspect
+2026-09-30T02:15:02+00:00 dns-arch named[2068]: client @0x7f630b848c00 192.0.2.10#45554: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T02:15:02+00:00 dns-arch named[2068]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#45554: zone is up to date
+2026-09-30T02:15:05+00:00 dns-arch named[2068]: client @0x7f630e3bf000 192.0.2.10#59771 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:15:05+00:00 dns-arch named[2068]: client @0x7f630e3bf000 192.0.2.10#59771 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:15:07+00:00 dns-arch named[2068]: client @0x7f630b84a800 192.0.2.10#51123 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:15:07+00:00 dns-arch named[2068]: client @0x7f630b84a800 192.0.2.10#51123 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:15:07+00:00 dns-arch named[2068]: client @0x7f630e3bf000 192.0.2.10#50029 (pair-accept.test): bad zone transfer request: 'pair-accept.test/IN': non-authoritative zone (NOTAUTH)
+2026-09-30T02:15:07+00:00 dns-arch named[2068]: client @0x7f630e3b1000 192.0.2.10#49004: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T02:15:07+00:00 dns-arch named[2068]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#49004: zone is up to date
+2026-09-30T02:15:14+00:00 dns-arch sudo[3316]: celikpeer : PWD=/var/lib/bind-peer-inspector ; USER=root ; COMMAND=/usr/local/libexec/celikpanel-bind-peer-inspect
+2026-09-30T02:15:14+00:00 dns-arch sudo[3316]: pam_unix(sudo:session): session opened for user root(uid=0) by celikpeer(uid=968)
+2026-09-30T02:15:14+00:00 dns-arch named[2068]: client @0x7f630b84a800 127.0.0.1#54631 (catalog-c000020a.celikpanel.invalid): zone transfer 'catalog-c000020a.celikpanel.invalid/AXFR/IN' denied
+## inspector identity and files (metadata only)
+celikpeer:x:968:968::/var/lib/bind-peer-inspector:/bin/sh
+-rwxr-xr-x 1 root root 4898978 2026-09-30 02:15:02.800482152 +0000 celikpanel-bind-peer-inspect
+-rwxr-xr-x 1 root root     187 2026-09-30 02:15:02.824255498 +0000 celikpanel-bind-peer-inspect-wrapper
+total 8
+drwxr-x--- 1 root root   98 2026-09-30 02:15:02.838255700 +0000 .
+drwxr-xr-x 1 root root 2276 2026-09-30 02:15:03.021258338 +0000 ..
+-r--r----- 1 root root  171 2026-09-30 02:10:23.694000000 +0000 90-cloud-init-users
+-r--r----- 1 root root   82 2026-09-30 02:15:02.838255700 +0000 celikpanel-bind-peer-inspector
+(end)

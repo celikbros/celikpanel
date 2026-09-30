@@ -1,0 +1,30 @@
+#!/bin/bash
+W=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/pair4
+C=pair-accept__bind-arch__pdns-debian13__p4t2
+H=$(printf %s "$C" | sha256sum | cut -c1-24)
+KH=/var/tmp/cp-pair4-work/cells/$H/ssh-known-hosts
+O=/root/cp-pair4/obs/p4t2; mkdir -p $O
+sshn() { port=$1; shift; timeout 120 ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$KH -i /var/tmp/cp-pair4-key/id_ed25519 -p $port celik@127.0.0.1 "$@"; }
+bash $W/ro-collect.sh $C p4t2 arch 2202 bind primary > /dev/null
+bash $W/ro-collect.sh $C p4t2 debian13 2201 pdns secondary > /dev/null
+bash $W/diag-options.sh $C p4t2 arch 2202 > /dev/null
+sshn 2202 'bash -s' > $O/arch-mail-root-readonly.txt 2>&1 <<'R'
+echo "## $(date -u +%FT%TZ) mail root path components (metadata only)"
+ls -ld --time-style=full-iso /var/mail /var/spool/mail /var/mail/vhosts /var/spool/mail/vhosts 2>&1
+readlink -v /var/mail 2>&1
+pacman -Qo /var/mail 2>&1
+echo "## Agent journal lines naming mail (all boots)"
+sudo -n journalctl -u celikpanel-agent.service --no-pager -o short-iso | grep -i -E 'mail' | tail -20
+echo "## Panel journal lines naming deletion/mail (all boots)"
+sudo -n journalctl -u celikpanel-panel.service --no-pager -o short-iso | grep -i -E 'deletion|mail' | tail -20
+R
+# DNS state of the zone while the deletion is pending (read-only: the driver's probe, native + catalog)
+PROBE=/root/cp-pair4/driver/deploy/e2e/dns-pair-acceptance/guest_probe.py
+sshn 2202 sudo -n /usr/bin/python3 - native --engine bind --zone pair-accept.test --catalog catalog-c000020b.celikpanel.invalid < $PROBE > $O/arch-native-while-pending.json 2>&1
+sshn 2201 sudo -n /usr/bin/python3 - native --engine pdns --zone pair-accept.test --catalog catalog-c000020b.celikpanel.invalid < $PROBE > $O/debian13-native-while-pending.json 2>&1
+sshn 2201 sudo -n /usr/bin/python3 - catalog --server 192.0.2.11 --catalog catalog-c000020b.celikpanel.invalid < $PROBE > $O/catalog-while-pending.json 2>&1
+cat $O/arch-mail-root-readonly.txt
+for f in $O/*-native-while-pending.json $O/catalog-while-pending.json; do echo "== $f"; python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d.get("native_state"), json.dumps({k:d.get(k) for k in ("members","serial","transferred","zone_files")}))' $f 2>&1 || head -c 600 $f; done
+bash $W/counts.sh p4t2
+for f in $O/*-rndc-key.txt; do echo "=== $f"; cut -c1-400 $f; done
+head -c 3000 $O/debian13-pdns-notify-journal.txt
