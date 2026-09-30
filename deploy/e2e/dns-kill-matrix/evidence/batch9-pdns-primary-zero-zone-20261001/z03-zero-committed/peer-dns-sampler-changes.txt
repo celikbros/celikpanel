@@ -1,0 +1,5 @@
+######## /var/tmp/cp-b9-peerloop1
+2026-09-30T01:09:16.011652+00:00 10:cat:tcp=ERR(ConnectionRefusedError) 10:cat:udp=ERR(TimeoutError) 10:s2soa:tcp=ERR(ConnectionRefusedError) 10:s2soa:udp=ERR(TimeoutError) 10:soa:udp=ERR(TimeoutError) 11:cat:tcp=noaa/rc2/ 11:cat:udp=noaa/rc2/ 11:s2soa:tcp=noaa/rc5/ 11:s2soa:udp=noaa/rc5/ 11:soa:udp=noaa/rc5/
+2026-09-30T01:09:30.044087+00:00 10:cat:tcp=aa/rc0/1790730570 10:cat:udp=aa/rc0/1790730570 10:s2soa:tcp=noaa/rc5/ 10:s2soa:udp=noaa/rc5/ 10:soa:udp=ERR(TimeoutError) 11:cat:tcp=aa/rc0/1790730570 11:cat:udp=aa/rc0/1790730570 11:s2soa:tcp=noaa/rc5/ 11:s2soa:udp=noaa/rc5/ 11:soa:udp=noaa/rc5/
+2026-09-30T01:09:33.276774+00:00 10:cat:tcp=aa/rc0/1790730570 10:cat:udp=aa/rc0/1790730570 10:s2soa:tcp=noaa/rc5/ 10:s2soa:udp=noaa/rc5/ 10:soa:udp=noaa/rc5/ 11:cat:tcp=aa/rc0/1790730570 11:cat:udp=aa/rc0/1790730570 11:s2soa:tcp=noaa/rc5/ 11:s2soa:udp=noaa/rc5/ 11:soa:udp=noaa/rc5/
+samples=99 first=2026-09-30T01:09:16.011652+00:00 last=2026-09-30T01:13:08.939535+00:00

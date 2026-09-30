@@ -1,0 +1,5 @@
+01:01:49.851517657 start boot_id=88eba804-3511-478a-a631-0348292b36a6
+01:01:49.860660912 CHANGE pdnsdb none -> absent pdns=0/inactive/
+01:02:31.717284648 CHANGE pdnsdb absent -> 35cdac176becb2d04628c971b5e5a7fea0c406daa97f4f841fffb5c170b17ece pdns=0/inactive/
+01:02:34.329550206 CHANGE pdnsdb 35cdac176becb2d04628c971b5e5a7fea0c406daa97f4f841fffb5c170b17ece -> ee7a72b06f5fc0087a98030d6cd22465971435020c9471c71d6a3f2e1cd6b8e5 pdns=7102/active/
+done

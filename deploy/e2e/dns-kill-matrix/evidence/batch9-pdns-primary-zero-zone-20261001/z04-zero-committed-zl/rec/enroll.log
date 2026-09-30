@@ -1,0 +1,82 @@
+
+### 2026-09-30T01:35:07.830Z owner-enrollment start cell=pdns-switch__committed__after-write__paired-primary__peer-reachable root=/var/tmp/cp-b9-1001/r2
+52add036ac2e75d9e22c00e5834c0247ef8c4b196605b791cfa162d08191bf88  /var/tmp/cp-b9-1001/r2/artifacts/dns-owner-tools/dns-peer-enroll
+7b8167022da534f16e7d7f8c97d2ef5b1771d56243e0f3b12a55ac74dd4c474a  /var/tmp/cp-b9-1001/r2/artifacts/dns-owner-tools/bind-peer-inspect
+
+### 2026-09-30T01:35:07.843Z restart read-only samplers after the first collect (primary database copy sampler, secondary DNS sampler)
+$ [primary] sudo rm -f /var/tmp/cp-b9-dbwatch.stop && sudo systemd-run --unit=cp-b9-dbwatch-enr --collect /bin/bash /root/cp-b9-dbwatch.sh /var/tmp/cp-b9-watch-dbenr
+Running as unit: cp-b9-dbwatch-enr.service; invocation ID: 4a9b49f3e8c44e58967cdb7e9a6557a0
+[rc=0]
+$ [secondary] sudo bash -s enr < peerloop_start_remote.sh
+Running as unit: cp-b9-peerloopenr.service; invocation ID: 6539ffa89e6f46c7bc49a212139865c2
+peerloopenr start rc=0
+[rc=0]
+
+### 2026-09-30T01:35:08.659Z copy the packaged owner tools to the guests (root-owned, 0755, under /root/dns-owner-tools)
+scp primary rc=0
+scp secondary rc=0
+$ [primary] sudo install -d -o root -g root -m 0700 /root/dns-owner-tools && sudo install -o root -g root -m 0755 /tmp/dns-peer-enroll /root/dns-owner-tools/dns-peer-enroll && sudo sha256sum /root/dns-owner-tools/dns-peer-enroll
+52add036ac2e75d9e22c00e5834c0247ef8c4b196605b791cfa162d08191bf88  /root/dns-owner-tools/dns-peer-enroll
+[rc=0]
+$ [secondary] sudo install -d -o root -g root -m 0700 /root/dns-owner-tools && sudo install -o root -g root -m 0755 /tmp/dns-peer-enroll /root/dns-owner-tools/dns-peer-enroll && sudo install -o root -g root -m 0755 /tmp/bind-peer-inspect /root/dns-owner-tools/bind-peer-inspect && sudo sha256sum /root/dns-owner-tools/*
+sha256sum: '/root/dns-owner-tools/*': No such file or directory
+[rc=1]
+
+### 2026-09-30T01:35:09.747Z status before
+$ [primary] sudo /root/dns-owner-tools/dns-peer-enroll primary-status
+{"next_action":"Prepare an owner enrollment only if parentless deletion proof is required.","state":"disabled"}
+[rc=0]
+$ [secondary] sudo /root/dns-owner-tools/dns-peer-enroll secondary-status
+{"state":"disabled","reason":"reviewed BIND inspector policy is absent","next_action":"Run secondary-install locally with reviewed pair and key"}
+[rc=0]
+
+### 2026-09-30T01:35:10.261Z primary-prepare (primary owner)
+$ [primary] sudo /root/dns-owner-tools/dns-peer-enroll primary-prepare
+{"state":"prepared","credential_id":"8e2691e031f4a6436aba5a5c8055d893","public_key":"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBfj1HLDOcm34HrgqkuAPR8iWQpWADh7qMi/Q6oYBTPA","public_key_sha256":"5c9df6c94c06d1ce1a3382bdbe462b61d65e6628aa26005c669e7fde861b676c","next_action":"Give only the displayed public key to the secondary owner; ask them to run secondary-install locally and return their independently reviewed Ed25519 SSH host-key SHA-256."}
+[rc=0]
+credential_id=8e2691e031f4a6436aba5a5c8055d893
+
+### 2026-09-30T01:35:10.564Z secondary owner saves the reviewed public key (root-owned 0600 regular file /root/celikpanel-primary-inspector.pub)
+$ [secondary] (stdin: the displayed public key) sudo bash -c 'umask 077; test ! -e P; cat > P; chown root:root P; chmod 0600 P'
+-rw------- 1 root root 81 Sep 30 01:35 /root/celikpanel-primary-inspector.pub
+56408d6ac1e7004720e89171774e25509e91b91b5c033c176dc7057bb078f0ce  /root/celikpanel-primary-inspector.pub
+[rc=0]
+
+### 2026-09-30T01:35:10.853Z secondary-install (secondary owner, BIND)
+$ [secondary] sudo /root/dns-owner-tools/dns-peer-enroll secondary-install --primary-ip 192.0.2.10 --peer-ip 192.0.2.11 --catalog catalog-c000020a.celikpanel.invalid --primary-public-key /root/celikpanel-primary-inspector.pub --inspector /root/dns-owner-tools/bind-peer-inspect
+{"next_action":"Run secondary-host-key and give its Ed25519 SSH host-key SHA-256 to the primary owner through a trusted channel for primary-activate. No owner command tests live authentication; the primary Agent makes the first authenticated read-only inspector exchange only while reconciling an admitted pending deletion, and reports its result on that operation.","state":"configured"}
+[rc=0]
+
+### 2026-09-30T01:35:11.342Z secondary-host-key
+$ [secondary] sudo /root/dns-owner-tools/dns-peer-enroll secondary-host-key
+{"host_key_sha256":"7935f52252aebefb893ba85be78c13703d0d9389707c1f0be6c952fac9747a73","next_action":"Compare this digest through a trusted channel before primary-activate; the primary must not learn it from an unauthenticated SSH connection."}
+[rc=0]
+
+### 2026-09-30T01:35:11.644Z primary owner checks the digest independently (SHA-256 of the decoded Ed25519 public key blob read from /etc/ssh/ssh_host_ed25519_key.pub; same SSH management channel, so this is a consistency check, not an out-of-band trust anchor)
+tool digest:        7935f52252aebefb893ba85be78c13703d0d9389707c1f0be6c952fac9747a73
+independent digest: 7935f52252aebefb893ba85be78c13703d0d9389707c1f0be6c952fac9747a73
+DIGEST MATCH
+
+### 2026-09-30T01:35:11.921Z primary-activate (primary owner)
+$ [primary] sudo /root/dns-owner-tools/dns-peer-enroll primary-activate --credential-id 8e2691e031f4a6436aba5a5c8055d893 --primary-ip 192.0.2.10 --peer-ip 192.0.2.11 --catalog catalog-c000020a.celikpanel.invalid --host-key-sha256 7935f52252aebefb893ba85be78c13703d0d9389707c1f0be6c952fac9747a73
+{"state":"configured","enrollment_id":"79e54e59f7f403c5d17736b564aa6b4c","next_action":"For an admitted pending DNS deletion, use that exact operation's recovery action; enrollment alone does not enable a blocked DNS topology, and status polling does not retry the mutation."}
+[rc=0]
+
+### 2026-09-30T01:35:12.172Z status after
+$ [primary] sudo /root/dns-owner-tools/dns-peer-enroll primary-status
+{"catalog_name":"catalog-c000020a.celikpanel.invalid","client_public_key_sha256":"5c9df6c94c06d1ce1a3382bdbe462b61d65e6628aa26005c669e7fde861b676c","enrollment_id":"79e54e59f7f403c5d17736b564aa6b4c","host_key_sha256":"7935f52252aebefb893ba85be78c13703d0d9389707c1f0be6c952fac9747a73","peer_ip":"192.0.2.11","primary_ip":"192.0.2.10","state":"configured"}
+[rc=0]
+$ [secondary] sudo /root/dns-owner-tools/dns-peer-enroll secondary-status
+{"state":"configured","reason":"local policy and SSH configuration verified; live authentication is unproven","next_action":"No owner action is needed now. No status command tests live authentication: the primary Agent makes the first authenticated read-only inspector exchange only while reconciling an admitted pending deletion, and reports its result on that operation","primary_ip":"192.0.2.10","peer_ip":"192.0.2.11","catalog_name":"catalog-c000020a.celikpanel.invalid","primary_key_sha256":"5c9df6c94c06d1ce1a3382bdbe462b61d65e6628aa26005c669e7fde861b676c"}
+[rc=0]
+
+### 2026-09-30T01:35:12.729Z zone-lifecycle --zero-zones --recover-delete
+$ python3 deploy/e2e/dns-kill-matrix/guest_bootstrap.py zone-lifecycle --work-root /var/tmp/cp-b9-1001/r2 --cell-id pdns-switch__committed__after-write__paired-primary__peer-reachable --node debian13 --identity-file /var/tmp/cp-b9-1001/r2/id_ed25519 --source-fixture uninitialized --zero-zones --recover-delete (dry run)
+["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "-o", "StrictHostKeyChecking=accept-new", "-o", "HashKnownHosts=no", "-o", "UserKnownHostsFile=/var/tmp/cp-b9-1001/r2/cells/7392457812ac089a866de6ec/ssh-known-hosts", "-i", "/var/tmp/cp-b9-1001/r2/id_ed25519", "-p", "2201", "celik@127.0.0.1", "sudo /usr/sbin/runuser -u root -g celikpanel -- /usr/bin/env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin LANG=C.UTF-8 CELIKPANEL_AGENT_SOCKET=/run/celikpanel/agent.sock CELIKPANEL_AGENT_TOKEN_FILE=/etc/celikpanel/agent.token /opt/celikpanel/bin/dns-kill-trigger rpc-pdns-primary-zone-v3-recover --scenario /var/lib/celikpanel-dns-kill-matrix/scenario.json --identity-receipt /var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json --step delete --timeout 2m"]
+["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "-o", "StrictHostKeyChecking=accept-new", "-o", "HashKnownHosts=no", "-o", "UserKnownHostsFile=/var/tmp/cp-b9-1001/r2/cells/7392457812ac089a866de6ec/ssh-known-hosts", "-i", "/var/tmp/cp-b9-1001/r2/id_ed25519", "-p", "2201", "celik@127.0.0.1", "sudo /usr/sbin/runuser -u root -g celikpanel -- /usr/bin/env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin LANG=C.UTF-8 CELIKPANEL_AGENT_SOCKET=/run/celikpanel/agent.sock CELIKPANEL_AGENT_TOKEN_FILE=/etc/celikpanel/agent.token /opt/celikpanel/bin/dns-kill-trigger rpc-pdns-primary-zone-v3 --scenario /var/lib/celikpanel-dns-kill-matrix/scenario.json --identity-receipt /var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json --step re-add --timeout 2m"]
+[dry rc=0]
+$ python3 deploy/e2e/dns-kill-matrix/guest_bootstrap.py zone-lifecycle --work-root /var/tmp/cp-b9-1001/r2 --cell-id pdns-switch__committed__after-write__paired-primary__peer-reachable --node debian13 --identity-file /var/tmp/cp-b9-1001/r2/id_ed25519 --source-fixture uninitialized --zero-zones --recover-delete --execute
+ZONE_LIFECYCLE_RECOVER_RC=2
+{"observation": null, "observation_error": null, "recover": true, "result": {"cell_id": "pdns-switch__committed__after-write__paired-primary__peer-reachable", "delete": true, "domain": "s2.s1-kill.test", "error": "the exact deletion is not pending at its propagation phase; nothing was resumed", "generation": 3, "heartbeats": 0, "outcome": "refused_not_pending", "owner_id": "92088666fcbb11382a33c4bccad7796e", "qualifier": "dns-zone-sync/v3:sha256:e90fb9845e27429320ea2b358a36431de04f7585481c0e935b01623592b4d3f1", "request_id": "7fb6a0df9a0df4c78fa75b362d0a2988", "schema": "celikpanel/dns-kill-matrix-pdns-primary-zone-v3/v1", "step": "delete"}, "returncode": 75, "step": "delete", "verdict": "unverified"}
+
+### 2026-09-30T01:35:13.230Z owner-enrollment done

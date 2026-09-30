@@ -1,0 +1,19 @@
+== z04-zero-committed-zl pdns-switch__committed__after-write__paired-primary__peer-reachable
+  status=passed safety=passed class=target_converged complete=True RUN_PREPARED_RC=2 kill_proven=True
+  request=076c692ac1346f2b9c6a0df468b0e9aa controller 2026-09-30T01:26:42.084169Z -> 2026-09-30T01:27:36.060281Z gate=open agent_error='a valid durable service mutation lease is required'
+  boundary=committed disk=committed sha=4cf00f89d3ea marker=2026-09-30T01:27:00.727615501Z kill=2026-09-30T01:27:00.743988Z pid=1936 state=T exit=137 trigger_rc=75
+  failures v=[] s=[] d=[]
+  fp.failures=[] fp.unknown=[]
+  restart: variant=post-start code=None status=succeeded attempt=1 retired=True msg=None
+  forward failures=[] unknown=[] pid={'after_recovery': 4116, 'at_cut': 4116} restamp={"native_serial_at_cut": 1790731618, "restamped": true, "served": {"primary": {"tcp": [1790731618], "udp": [1790731618]}, "secondary": {"tcp": [1790731618], "udp": [1790731618]}}, "staged_serial": 1, "state_serial": 1790731618, "zero_zone_restamp": {"judged": false, "note": "zero-zone primary: the daemon re-stamped a producer without members", "restamped": true}, "zone_set": "empty"}
+  pair primary={"catalog_soa": {"tcp": [1790731618], "udp": [1790731618]}} secondary_equal=True state_serial=1790731618
+  cut: variant=post-start pid=4116 files={'candidate': False, 'database': True, 'state': True} sealed=True staged_serial=1 native_serial=1790731618 unit_before={'active_state': 'inactive', 'load_state': 'masked', 'name': 'pdns.service', 'unit_file_state': 'masked'}
+  status-read after-recovery avail=True rc=0 mutated=False :: 'No DNS switch journal was observed for request 076c692ac1346f2b9c6a0df468b0e9aa. Its exact ledger job records status succeeded. This is a point-in-time ledger o'
+  status-read before-recovery avail=True rc=0 mutated=False :: "DNS switch request 076c692ac1346f2b9c6a0df468b0e9aa: accepted-active (journal phase committed).\nNo owner recovery command applies to this journal's recorded sha"
+  retry 1 rc=0 dur=0.007889
+  retry 2 rc=0 dur=0.008047
+  probe 1 target_converged 0b5cd53cba6d
+  probe 2 target_converged 0b5cd53cba6d
+  stability n=31
+  peer status=passed combined=0 guest_exit=0 error=None serial=1790731618 members=[]
+  smstatus: status=succeeded code=None attempt=1 msg=None

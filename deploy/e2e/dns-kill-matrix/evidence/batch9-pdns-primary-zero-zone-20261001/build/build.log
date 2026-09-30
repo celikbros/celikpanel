@@ -1,0 +1,141 @@
+2026-09-30T00:39:00Z
+repository HEAD at build time (record only): 515596b9108edf336915b415b47d457507d334ca
+tested commit: 3cceb29a714698d208c9e34ab158a02298a3739d
+branch accept/pdns-primary-gate-open-4: 3cceb29a714698d208c9e34ab158a02298a3739d
+parent of tested commit: 8c3dbcf4bc40e5d96b5cce7d7b70c536a2e26169
+web/dist absent in the archive (untracked build output)
+go version go1.26.5 linux/amd64
+go1.26.5
+
+https://proxy.golang.org,direct
+/root/go/pkg/mod
+4279eb74fc1fd36b1bc343fb09a878d6dfda8f11bffde4b739009272c923a49e
+== artifacts
+5c88339c094d49990ed7fe804bf8cc863a329459631a9d6c5de00efa926267e1  /root/cp-b9-artifacts/agent
+c03d44730a20c7345545b13cc1b1785ef5fdd9a739c0dedcd8937f9a53eaf0cb  /root/cp-b9-artifacts/agent.kill
+c518939acf81b5d7e0f06635fa5c4e5d5b8c242dfee7da2d8c3e740d5f60143d  /root/cp-b9-artifacts/panel
+3c60de67b48bc782ff2737fbb9c9168918e202bdd8af4d6b7c1f6ff30fdd6e90  /root/cp-b9-artifacts/dns-kill-trigger
+74eac1173dde06be433c269f7d366a71227a6c02f1fc26614c47e88fe96b9e5f  /root/cp-b9-artifacts/recovery
+fff09f0983e01f9d3774b3e16c6441e5409658214eaf5e3c1ce67ac450f5c81e  /root/cp-b9-artifacts/agent-checker
+8ba2e0f6aee463f33d85ddc7dc2fa89f3496cf2793d63ded7c5d73148e549ebb  /root/cp-b9-artifacts/panel-checker
+fe277c46ea8b50f00a80e71976198f28db89667789a737e0a78c0f4a83e9cb87  /root/cp-b9-artifacts/schema17-bridge
+7b8167022da534f16e7d7f8c97d2ef5b1771d56243e0f3b12a55ac74dd4c474a  /root/cp-b9-artifacts/dns-owner-tools/bind-peer-inspect
+52add036ac2e75d9e22c00e5834c0247ef8c4b196605b791cfa162d08191bf88  /root/cp-b9-artifacts/dns-owner-tools/dns-peer-enroll
+202d1e7a10020f08ad109f070f4b91a7e1eb6911833ee9b48a947084585bd858  /root/cp-b9-artifacts/dns-owner-tools/pdns-peer-inspect
+c32204c42ac891ddd132ad49ba8abc67e55819f285a37eb8c86646d327eed5c7  /root/cp-b9-artifacts/dns-owner-tools/README.md
+== recovery-runtime
+fff09f0983e01f9d3774b3e16c6441e5409658214eaf5e3c1ce67ac450f5c81e  ./bin/agent-checker
+8ba2e0f6aee463f33d85ddc7dc2fa89f3496cf2793d63ded7c5d73148e549ebb  ./bin/panel-checker
+74eac1173dde06be433c269f7d366a71227a6c02f1fc26614c47e88fe96b9e5f  ./bin/recovery
+fe277c46ea8b50f00a80e71976198f28db89667789a737e0a78c0f4a83e9cb87  ./bin/schema17-bridge
+6645927653114b4d59fbf6e29147f12920ceaec058d0ecc7b92faa71fd1bf6c3  ./deploy/panel-tls-snapshot.sh
+391eba13d077e0f8016cdfc8e95ce5fb67711b1e9b4a91ed7446ebdbb4ccf004  ./deploy/recovery/runtime-entry.sh
+f499446812b90aee362112743f4e491d5ecfa40511a510d08cbb006babdd48b0  ./deploy/release-recovery-foundation.sh
+db3e2dd23d4b81d9e533354e5d345d26eb43b7943ba20cf7b4ba19fac20cea1e  ./deploy/release-recovery-observation.sh
+4543920d5cc7a4d76c5c3ff91e8a03f4f02bd0e005577b40dc5c740af32c8257  ./deploy/release-transaction-guard.sh
+f163b496a8f48ae55a12658f34125f666c45672eccc4b27c03d58b7367848fc2  ./deploy/release-unit-transition.sh
+cbe3841aef57c62d0242a2957f728100fceca84a7a23135d51156562006ac822  ./rollback.sh
+4279eb74fc1fd36b1bc343fb09a878d6dfda8f11bffde4b739009272c923a49e  ./runtime.manifest
+dea6eafb9608e1b956e8fee7ddc85908e649056fa6727be9c373cec233154db8  ./update.sh
+85fe7a6214b489135f03c4278d6f426eae7a3a927b588b531293daea78d0b81e  /root/cp-b9-tools/oi-smstatus
+16a82e16747b1d09d7db3d0defe6317b86ee569ce1de1cec18d4013e10b2c4c4  /root/cp-b9-tools/overlay.json
+57823885e8778d4fa5f67b3458042fc1f0cab7cb3a0603af00ec2bd202d85077  /root/cp-b9-tools/smstatus.go
+/root/cp-b9-artifacts/agent: go1.26.5
+	path	github.com/alicelik/celikpanel/cmd/agent
+	mod	github.com/alicelik/celikpanel	(devel)	
+== comparison with the e3591875 batch-8r build (/root/cp-b8r-artifacts, read only)
+DIFFERENT agent
+DIFFERENT agent.kill
+DIFFERENT panel
+DIFFERENT dns-kill-trigger
+IDENTICAL recovery
+IDENTICAL agent-checker
+IDENTICAL panel-checker
+IDENTICAL schema17-bridge
+IDENTICAL recovery-runtime/runtime.manifest
+IDENTICAL dns-owner-tools/dns-peer-enroll
+IDENTICAL dns-owner-tools/bind-peer-inspect
+IDENTICAL dns-owner-tools/pdns-peer-inspect
+recovery-runtime tree IDENTICAL
+IDENTICAL oi-smstatus
+== gate constants in the tested source
+cmd/agent/dns_engine_pdns_switch.go:48:const freshPairedPDNSPrimaryAdmitted = true
+cmd/panel/dns_engine.go:1281:const freshPairedPDNSPrimaryOffered = true
+== changed paths e3591875..3cceb29a
+ .../pair2/engine-pdns-secondary-paired.json        |   47 +
+ .../pair2/license-status-secondary-active.json     |   25 +
+ .../pair2/setup-operation-primary-reconciling.json |   85 +
+ .../pair2/setup-operation-primary-running-dns.json |   81 +
+ ...setup-operation-secondary-license-required.json |   86 +
+ deploy/e2e/dns-pair-acceptance/guidance.py         |  134 +-
+ deploy/e2e/dns-pair-acceptance/pair_acceptance.py  |  340 +-
+ deploy/e2e/dns-pair-acceptance/pair_contract.py    |   95 +-
+ deploy/e2e/dns-pair-acceptance/panel_api.py        |   36 +-
+ .../e2e/dns-pair-acceptance/scripts/build-dist.sh  |   64 +-
+ .../scripts/export-product-web-src.sh              |   34 +
+ .../dns-pair-acceptance/scripts/run-topology.sh    |   12 +-
+ .../e2e/dns-pair-acceptance/test_pair_contract.py  |  217 +-
+ deploy/e2e/dns-pair-acceptance/test_panel_api.py   |   43 +
+ deploy/e2e/dns-pair-acceptance/test_sequence.py    |  347 +-
+ deploy/prune-release-harness.sh                    |   35 +
+ deploy/release-content-guard.sh                    |   62 +
+ deploy/test-bootstrap-update-contract.sh           |    3 +-
+ deploy/test-dns-owner-tools-package.sh             |    2 +-
+ deploy/test-release-acceptance-license-guard.sh    |    2 +-
+ deploy/test-release-content-guard.sh               |  120 +
+ deploy/test-signed-release-manifest-contract.sh    |    2 +-
+ deploy/write-release-manifest.sh                   |    7 +
+ deploy/write-signed-release-manifest.sh            |    5 +
+ docs/DNS-ENGINE-ARTIFACT.md                        |   53 +
+ docs/DNS-RECOVERY-ACCEPTANCE.md                    |   89 +-
+ docs/DNS-RECOVERY-ACCEPTANCE.tr.md                 |  114 +-
+ web/scripts/check-bundle-budget.mjs                |   51 +-
+ web/src/components/ServerSetup.tsx                 |    5 +
+ web/src/i18n/en.ts                                 |    3 +-
+ web/src/i18n/index.tsx                             |   16 +-
+ web/src/i18n/screens/en.ts                         |  906 +--
+ web/src/i18n/screens/server/en.ts                  |  922 +++
+ web/src/i18n/screens/server/tr.ts                  |  909 +++
+ web/src/i18n/screens/tr.ts                         |  896 +--
+ web/tests/api-error.test.mjs                       |   11 +-
+ web/tests/boot-copy-contract.test.mjs              |   61 +-
+ web/tests/i18n-screen-parts-runtime.test.mjs       |  127 +
+ web/tests/locale-catalogue.mjs                     |   36 +-
+ 3154 files changed, 301398 insertions(+), 2195 deletions(-)
+== harness file hashes
+a0ae7f57f58304688a085e94a14845b5f49f5dbaaa698f5bba3343b2912be168  fixture.py
+230c81f09cc028552bac319564ae9b74ebc07c070a6eb5fc79c51067de8d2082  guest_bootstrap.py
+d900f9f039e83b85faf974bd8199deb63f66d46325735701063662673363a19a  guest_bootstrap.sh
+3b6187eb087e96d1acf0056afc14ac191dce8cbd9fcbbf7b3c9b37b2a1e57c69  run_cell.py
+ef5a749a1f7d9015261d54a75c266aa7a6be5d68bb29c9d08d36e5a93a3b54ed  guest_recovery_probe.py
+41d1f112c921c57dc099df2f457e7107f052fe3e93850444f05cf6e7534cec44  native_pdns_bind_peer.py
+a6a9d464061bc63a08429b644668100d414467eb2dd9969b8d6c6515bc0ff80a  native_pdns_peer_probe.py
+dcf6e09c026864ee15566a03b3c4aa30d6e1805333d548753b58d070e7fd1229  manifest.json
+== offline harness tests (from the archive): all kill-matrix Python tests
+............................................................................................................................................................................................................................................................................................
+----------------------------------------------------------------------
+Ran 456 tests in 4.655s
+
+OK
+{"action": "prepare-native-pdns-peer", "catalog": "catalog-c000020a.celikpanel.invalid", "cell_id": "pdns-switch__intent__after-write__paired-primary__peer-reachable", "execute": false, "management_installed_on_secondary": false, "primary_ip": "192.0.2.10", "secondary_ip": "192.0.2.11"}
+python unittest discover rc=0
+Ran 38 tests in 0.387s
+
+OK
+test_fresh_primary_v3.py done
+Ran 24 tests in 0.307s
+
+OK
+test_fresh_primary_batch8_fixes.py done
+Ran 37 tests in 0.099s
+
+OK
+test_fresh_primary_serial_zero_zone.py done
+== offline trigger tests (go test -v ./cmd/dns-kill-matrix-trigger)
+go test rc=0
+top-level PASS: 58 FAIL: 0 SKIP: 0
+--- PASS: TestNativeV3RecoverRejectsWrongResumedPhaseBeforeRecovery (0.00s)
+PASS
+ok  	github.com/alicelik/celikpanel/cmd/dns-kill-matrix-trigger	0.016s
+2026-09-30T00:39:25Z
+BUILD-OK

@@ -1,0 +1,20 @@
+== z05-zero-started-zl-rb pdns-switch__target-started__after-write__paired-primary__peer-reachable
+  status=passed safety=passed class=target_converged complete=True RUN_PREPARED_RC=2 kill_proven=True
+  request=c59b537aac13c590e71b4682a88ed7b1 controller 2026-09-30T01:40:28.064902Z -> 2026-09-30T01:42:09.294854Z gate=open agent_error='a valid durable service mutation lease is required'
+  boundary=target-started disk=target-started sha=1b9b35996707 marker=2026-09-30T01:41:09.963927563Z kill=2026-09-30T01:41:09.974859Z pid=1902 state=T exit=137 trigger_rc=75
+  failures v=[] s=[] d=[]
+  fp.failures=[] fp.unknown=[]
+  restart: variant=post-start code=None status=succeeded attempt=1 retired=True msg=None
+  forward failures=[] unknown=[] pid={'after_recovery': 6728, 'at_cut': 6728} restamp={"native_serial_at_cut": null, "restamped": true, "served": {"primary": {"tcp": [1790732469], "udp": [1790732469]}, "secondary": {"tcp": [1790732469], "udp": [1790732469]}}, "staged_serial": 1, "state_serial": 1790732469, "zero_zone_restamp": {"judged": false, "note": "zero-zone primary: the daemon re-stamped a producer without members", "restamped": true}, "zone_set": "empty"}
+  pair primary={"catalog_soa": {"tcp": [1790732469], "udp": [1790732469]}} secondary_equal=True state_serial=1790732469
+  cut: variant=post-start pid=6728 files={'candidate': False, 'database': True, 'state': False} sealed=True staged_serial=1 native_serial=None unit_before={'active_state': 'inactive', 'load_state': 'masked', 'name': 'pdns.service', 'unit_file_state': 'masked'}
+  status-read after-recovery avail=True rc=0 mutated=False :: 'No DNS switch journal was observed for request c59b537aac13c590e71b4682a88ed7b1. Its exact ledger job records status succeeded. This is a point-in-time ledger o'
+  status-read before-recovery avail=True rc=0 mutated=False :: "DNS switch request c59b537aac13c590e71b4682a88ed7b1: accepted-active (journal phase target-started).\nNo owner recovery command applies to this journal's recorde"
+  reboot_after_recovery run=False status=None reason="the host's zone lifecycle before the reboot ended 'not-passed' (its verdict is judged on the host, zone-lifecycle.json); the reboot is defined only after a passing lifecycle and was not run; management was left running"
+  retry 1 rc=0 dur=0.007876
+  retry 2 rc=0 dur=0.009011
+  probe 1 target_converged 1c8051b09ec3
+  probe 2 target_converged 1c8051b09ec3
+  stability n=31
+  peer status=passed combined=0 guest_exit=0 error=None serial=1790732469 members=[]
+  smstatus: status=succeeded code=None attempt=1 msg=None

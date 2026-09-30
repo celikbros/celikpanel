@@ -1,0 +1,34 @@
+{
+  "cell_id": "pdns-switch__committed__after-write__paired-primary__peer-reachable",
+  "child_step": null,
+  "combined_exit": 0,
+  "error": null,
+  "guest_controller_exit": 0,
+  "guest_controller_suspended_for_zone_lifecycle": false,
+  "note": "The native BIND secondary loaded this zero-zone primary's PowerDNS PRODUCER catalog (no member) and serves its SOA over UDP and TCP exactly as the primary does.",
+  "observation": {
+    "action": "observe-native-pdns-bind-peer",
+    "address": null,
+    "answers": {
+      "192.0.2.10/tcp/catalog-c000020a.celikpanel.invalid/SOA": "1790731618",
+      "192.0.2.10/udp/catalog-c000020a.celikpanel.invalid/SOA": "1790731618",
+      "192.0.2.11/tcp/catalog-c000020a.celikpanel.invalid/SOA": "1790731618",
+      "192.0.2.11/udp/catalog-c000020a.celikpanel.invalid/SOA": "1790731618"
+    },
+    "authoritative_udp_tcp": true,
+    "catalog": "catalog-c000020a.celikpanel.invalid",
+    "catalog_members": [],
+    "catalog_members_expected": [],
+    "catalog_serial": 1790731618,
+    "cell_id": "pdns-switch__committed__after-write__paired-primary__peer-reachable",
+    "execute": true,
+    "management_installed_on_secondary": false,
+    "member": null,
+    "primary_ip": "192.0.2.10",
+    "secondary_ip": "192.0.2.11",
+    "zero_zones": true
+  },
+  "schema": "celikpanel/dns-kill-fresh-primary-peer-verdict/v1",
+  "status": "passed",
+  "zero_zones": true
+}

@@ -1,0 +1,165 @@
+wall=2026-09-30T01:53:29.463103526Z boot_id=fea989e3-69bf-48d1-89c4-aad67146c436
+== pdns.service
+MainPID=4019
+NRestarts=0
+ExecMainStartTimestamp=Wed 2026-09-30 01:50:26 UTC
+ExecMainPID=4019
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Wed 2026-09-30 01:50:26 UTC
+InvocationID=39f0a926eb314be580edb4378682f481
+== named.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InvocationID=
+== bind9.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InvocationID=
+== celikpanel-agent.service
+MainPID=4069
+NRestarts=0
+ExecMainStartTimestamp=Wed 2026-09-30 01:50:26 UTC
+ExecMainPID=4069
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Wed 2026-09-30 01:50:26 UTC
+InvocationID=b494b77e3343468e8fc895a01265cf87
+== celikpanel-panel.service
+MainPID=4264
+NRestarts=0
+ExecMainStartTimestamp=Wed 2026-09-30 01:50:26 UTC
+ExecMainPID=4264
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Wed 2026-09-30 01:50:26 UTC
+InvocationID=8386b1ee30c54c868420136169fc5665
+== named/pdns processes
+4019 /usr/sbin/pdns_server --guardian=no --daemon=no --disable-syslog --log-timestamp=no --write-pid=no
+== boots
+IDX BOOT ID                          FIRST ENTRY                 LAST ENTRY
+  0 fea989e369bf48d189c4aad67146c436 Wed 2026-09-30 01:47:38 UTC Wed 2026-09-30 01:53:29 UTC
+== packages
+dpkg-query: no packages found matching bind9
+dpkg-query: no packages found matching bind9-utils
+bind9-host 1:9.20.26-1~deb13u1 ii 
+bind9-libs 1:9.20.26-1~deb13u1 ii 
+pdns-backend-sqlite3 4.9.17-0+deb13u1 ii 
+pdns-server 4.9.17-0+deb13u1 ii 
+== pdns_server --version
+Sep 30 01:53:29 PowerDNS Authoritative Server 4.9.17 (C) PowerDNS.COM BV
+Sep 30 01:53:29 Using 64-bits mode. Built using gcc 14.2.0.
+Sep 30 01:53:29 PowerDNS comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it according to the terms of the GPL version 2.
+== state dir
+total 80
+drwx------  2 root celikpanel  4096 2026-09-30 01:50:26.970577635 +0000 .
+drwxr-xr-x 29 root root        4096 2026-09-30 01:50:21.034601547 +0000 ..
+-rw-------  1 root celikpanel   430 2026-09-30 01:50:18.574612505 +0000 dns-engine-install-ownership-pdns.json
+-rw-------  1 root celikpanel 63633 2026-09-30 01:50:26.170580672 +0000 dns-engine-switch-journal.json
+-rw-------  1 root celikpanel  2215 2026-09-30 01:50:26.966577650 +0000 service-mutations.json
+6dde871f4ee3758043b484a92aeca15c6ae540773e54d55464899908d6c5919a  dns-engine-install-ownership-pdns.json
+a9498a57e3d026fc055d940e711453b1000a3aade53dda91db76d516730b02de  dns-engine-switch-journal.json
+80950ac2a4e6628a142baef91c9510fd547ab38cd093764ad002ae4cf4ff3a5a  service-mutations.json
+== fixture dir
+total 1412
+drwx------  4 root root    4096 2026-09-30 01:49:21.710754733 +0000 .
+drwxr-xr-x 29 root root    4096 2026-09-30 01:50:21.034601547 +0000 ..
+-rw-------  1 root root    3323 2026-09-30 01:49:21.558754235 +0000 controller-argv.json
+-rw-------  1 root root    1016 2026-09-30 01:49:21.702754707 +0000 coordinator-stop-proof.json
+-rw-------  1 root root     728 2026-09-30 01:48:38.482333290 +0000 installed-binaries.sha256
+-rw-------  1 root root 1406962 2026-09-30 01:48:31.098333290 +0000 manifest.json
+drwx------  2 root root    4096 2026-09-30 01:50:14.970629779 +0000 measured
+drwx------  3 root root    4096 2026-09-30 01:49:21.530754143 +0000 results
+-rw-------  1 root root     443 2026-09-30 01:49:21.394753699 +0000 scenario.json
+-rw-------  1 root root    1472 2026-09-30 01:49:21.494754026 +0000 source-proof.json
+== recovery launcher
+total 18708
+drwx------ 3 root root     4096 2026-09-30 01:48:45.262333290 +0000 .
+drwxr-xr-x 9 root root     4096 2026-09-30 01:48:44.778333290 +0000 ..
+-rwxr-xr-x 1 root root 19143731 2026-09-30 01:48:45.226333290 +0000 recovery
+drwx------ 3 root root     4096 2026-09-30 01:48:44.786333290 +0000 recovery-runtimes
+74eac1173dde06be433c269f7d366a71227a6c02f1fc26614c47e88fe96b9e5f  /usr/libexec/celikpanel/recovery
+== owner files
+/etc/powerdns:
+total 36
+drwxr-xr-x  3 root root  4096 2026-09-30 01:50:21.170600966 +0000 .
+drwxr-xr-x 68 root root  4096 2026-09-30 01:50:22.466595479 +0000 ..
+-rw-r-----  1 root pdns 20579 2026-08-06 19:04:06.000000000 +0000 pdns.conf
+drwxr-xr-x  2 root root  4096 2026-09-30 01:50:23.922589498 +0000 pdns.d
+
+/etc/powerdns/pdns.d:
+total 16
+drwxr-xr-x 2 root root 4096 2026-09-30 01:50:23.922589498 +0000 .
+drwxr-xr-x 3 root root 4096 2026-09-30 01:50:21.170600966 +0000 ..
+-rw-r--r-- 1 root root  310 2026-09-30 01:50:23.902589579 +0000 celikpanel-cluster.conf
+-rw-r--r-- 1 root root  216 2026-09-30 01:50:23.910589547 +0000 celikpanel.conf
+
+/var/lib/powerdns:
+total 188
+drwxr-xr-x  2 pdns pdns  4096 2026-09-30 01:50:26.146580763 +0000 .
+drwxr-xr-x 29 root root  4096 2026-09-30 01:50:21.034601547 +0000 ..
+-rw-r-----  1 pdns pdns 98304 2026-09-30 01:50:26.146580763 +0000 pdns.sqlite3
+-rw-r-----  1 pdns pdns 32768 2026-09-30 01:50:26.226580459 +0000 pdns.sqlite3-shm
+-rw-r-----  1 pdns pdns 45352 2026-09-30 01:50:26.222580475 +0000 pdns.sqlite3-wal
+8b46927e48be83b2f0afc38efabdc2e2237daa5281b1a07ea44989ffa41f262a  /etc/powerdns/pdns.conf
+31ee619ba2589b241c484ed4081b329f22742b8a85ef76555c96352a60882a21  /etc/powerdns/pdns.d/celikpanel-cluster.conf
+0485300f3503e60e09a5ec29a43483c29faf4506c91dd3ee44935367307bde69  /etc/powerdns/pdns.d/celikpanel.conf
+9b1ca507c5c03056cd67a9451d5ef605bc0509c6932c2ff4cd46103920d5fbd0  /var/lib/powerdns/pdns.sqlite3
+== bind dirs
+ls: cannot access '/etc/bind': No such file or directory
+== /etc/bind file hashes
+== /etc/bind inodes
+== /var/cache/bind tree
+find: ‘/var/cache/bind’: No such file or directory
+== named-checkconf -l
+bash: line 16: named-checkconf: command not found
+== ss 53
+udp UNCONN 0      0         192.0.2.10:53 0.0.0.0:* users:(("pdns_server",pid=4019,fd=6))    
+udp UNCONN 0      0          10.0.2.15:53 0.0.0.0:* users:(("pdns_server",pid=4019,fd=5))    
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=373,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=373,fd=18))
+tcp LISTEN 0      128       192.0.2.10:53 0.0.0.0:* users:(("pdns_server",pid=4019,fd=8))    
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=373,fd=21))
+tcp LISTEN 0      128        10.0.2.15:53 0.0.0.0:* users:(("pdns_server",pid=4019,fd=7))    
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=373,fd=19))
+== pdns journal tail
+2026-09-30T01:50:26.028336+00:00 dns-debian13 systemd[1]: Starting pdns.service - PowerDNS Authoritative Server...
+2026-09-30T01:50:26.118115+00:00 dns-debian13 pdns_server[4019]: Loading '/usr/lib/x86_64-linux-gnu/pdns/libgsqlite3backend.so'
+2026-09-30T01:50:26.118790+00:00 dns-debian13 pdns_server[4019]: This is a standalone pdns
+2026-09-30T01:50:26.118927+00:00 dns-debian13 pdns_server[4019]: Listening on controlsocket in '/run/pdns/pdns.controlsocket'
+2026-09-30T01:50:26.119264+00:00 dns-debian13 pdns_server[4019]: UDP server bound to 10.0.2.15:53
+2026-09-30T01:50:26.119326+00:00 dns-debian13 pdns_server[4019]: UDP server bound to 192.0.2.10:53
+2026-09-30T01:50:26.119416+00:00 dns-debian13 pdns_server[4019]: TCP server bound to 10.0.2.15:53
+2026-09-30T01:50:26.119478+00:00 dns-debian13 pdns_server[4019]: TCP server bound to 192.0.2.10:53
+2026-09-30T01:50:26.119640+00:00 dns-debian13 pdns_server[4019]: PowerDNS Authoritative Server 4.9.17 (C) PowerDNS.COM BV
+2026-09-30T01:50:26.119687+00:00 dns-debian13 pdns_server[4019]: Using 64-bits mode. Built using gcc 14.2.0.
+2026-09-30T01:50:26.119725+00:00 dns-debian13 pdns_server[4019]: PowerDNS comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it according to the terms of the GPL version 2.
+2026-09-30T01:50:26.149608+00:00 dns-debian13 pdns_server[4019]: Creating backend connection for TCP
+2026-09-30T01:50:26.150950+00:00 dns-debian13 pdns_server[4019]: Primary/secondary communicator launching
+2026-09-30T01:50:26.151091+00:00 dns-debian13 systemd[1]: Started pdns.service - PowerDNS Authoritative Server.
+2026-09-30T01:50:26.152555+00:00 dns-debian13 pdns_server[4019]: new CATALOG-HASH '47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T01:50:26.153223+00:00 dns-debian13 pdns_server[4019]: About to create 3 backend threads for UDP
+2026-09-30T01:50:26.172640+00:00 dns-debian13 pdns_server[4019]: Unable to queue notification of domain 'catalog-c000020a.celikpanel.invalid' to nameserver 'invalid': nameserver does not resolve!
+2026-09-30T01:50:26.306539+00:00 dns-debian13 pdns_server[4019]: Done launching threads, ready to distribute questions
+2026-09-30T01:50:26.310497+00:00 dns-debian13 pdns_server[4019]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:44729', transfer initiated
+2026-09-30T01:50:26.310497+00:00 dns-debian13 pdns_server[4019]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:44729', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
