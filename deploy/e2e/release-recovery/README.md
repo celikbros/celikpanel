@@ -474,6 +474,8 @@ commits** there (never in the working repository):
 | Baseline B | source HEAD + policy | `v0.1.0-alpha.81` / 81, previous Alpha80 `bd14d97e` | installed by the real installer via `current_worker_baseline.py`; fixture trust root enrolled; `not-production-release-admission` |
 | Good G | B + policy | `v0.1.0-alpha.82` / 82, previous = B | success cell |
 | Defective D | G + `cmd/panel/main.go` fixture patch | `v0.1.0-alpha.82` / 82, previous = B | `--migrate-only` migrates the isolated copy, then exits 1 |
+| Start-check S (upd3) | G + `cmd/panel/server_lifecycle.go` fixture patch | `v0.1.0-alpha.82` / 82, previous = B | `configurePanelHTTPTLS`, shared by the read-only start check and the real start, always fails |
+| Real-start R (upd3) | G + `cmd/panel/main.go` fixture patch | `v0.1.0-alpha.82` / 82, previous = B | `main()` exits just before the listener; the start check never reaches that line |
 
 Each is built by `dns-pair-acceptance/scripts/build-dist.sh --acceptance-license`
 with `CELIKPANEL_DIST_VERSION` (D-027 acceptance license; the archive carries
@@ -609,6 +611,81 @@ part of the harness; they are harness behaviour, not product changes:
 `result.json` carries a `scope` record for DNS, cron, the setup wait and each
 origin check, so nothing counts as passed by omission.
 
+### Corrections from the upd2 run (H6, H7, O5)
+
+From [evidence/upd2-20261001](evidence/upd2-20261001/README.md), where they were
+run-copy diffs; now permanent, with offline tests:
+
+| Id | Now |
+| --- | --- |
+| H6 | `owner-start` accepts HTTP 200 or 202 when the body says `accepted: true` (`start_accepted`). The product answers 202 for an accepted start (`cmd/panel/system_update_handlers.go`); every other answer is still a refusal. |
+| H7 | `origin_verdict` takes the address of every `getent hosts celikpanel.net` answer line. With nss-resolve (Arch) the loopback answer is printed under `localhost`. The loopback-only rule is unchanged; the raw output, status and return code are recorded. |
+| O5 | In a sample within the first poll interval after the owner's start (the first sample, or at most 1.5 s after the start answer), the Panel API saying `accepted` while the root CLI says `running` is recorded as `start-instant-lag`. It is not a disagreement. Every other difference, and the same pair at any later time, is still a disagreement. `agreement_verdict` counts `lag_samples`. |
+
+### Candidate-panel start kinds (upd3: start-check, real-start)
+
+Product commit `8ffc5e06` added two boundaries; until now they had component
+tests only:
+
+1. `panel --check-startup-readiness` runs after the database publication and
+   before `completion.pending`. A failure is a failure in phase `active` with
+   code `candidate_panel_startup_check_failed`, and the automatic rollback
+   returns the old release.
+2. After the real start, a stability wait replaces the single `is-active`.
+   A failure stays in `completion` with code `panel_start_unverified`, and
+   forward completion is retried up to its limit.
+
+Each kind has its own candidate (S, R), two cells and its own verdict rules
+(`judge_start_check`, `judge_real_start`, step `kind-expectation`). The good and
+migrate-only cells are unchanged, and an artifacts document built before upd3
+still serves them. The texts are always loaded from the build, never copied:
+the web catalogues from the product build's `web/src` (`product_web_src`), and
+the root-CLI texts from `cmd/recovery/main.go` of the built commit
+(`git show` in the fixture clone). The CLI output is compared verbatim in EN and
+TR. Both kinds keep `native_evidence: false`.
+
+| Cell | Candidate | Second fault | Expected observation | A finding is |
+| --- | --- | --- | --- | --- |
+| `upd1-debian13-startcheck` | S | QMP reset at `payload_restored` | The update fails in `active` after the database publication. The update's failure line and the `<request>.failure` sidecar (`celikpanel-recovery-failure/v1`, bound to the request and the S commit) both carry `candidate_panel_startup_check_failed`. The check's reason is the fixture's `tls_pair_invalid`. The observer never sees `completion.pending`. Every automatic dispatch receipt says `phase=active` (rollback). The final state is `recovered`/`rollback_verified` with that code. The old release runs. The database equals the pre-update digests (listed exclusions). The CLI prints the product's "returned to the previous version" text in EN and TR. The recovery-screen keys exist in the catalogue. | Any of these differs. In particular: a check reason other than `tls_pair_invalid` (a good candidate could fail the same way), a completion marker, or a forward dispatch. |
+| `upd1-arch-startcheck` | S | SIGKILL of recovery at `runtime_verified` | As above. | As above. |
+| `upd1-debian13-realstart` | R | none | The check passes (no check reason, no `candidate_panel_startup_check_failed`). The observer sees `completion.pending`. The update's failure line and the sidecar carry `panel_start_unverified`. Forward completion is retried (dispatch `phase=completion`; N and timestamps from the receipts and journal), then pauses at `paused_retry_limit`. There is no rollback, and R stays installed. The printed one-time retry command is read with `owner-retry` **without `--execute`**, recorded and **not run**. The CLI printed, in EN and TR, the product's `panel_start_unverified` text, which names the panel log command and says there is no supported return. The paused text follows. Site, mail and cron are never interrupted. The Panel is down from the update to the end (`down-from-update-until-end`). View reachability is recorded (the Panel API and offline page are down; the root CLI answers; the SSH owner view is not attempted). | A rollback, a check refusal, no completion marker, an owner retry run, no printed retry, an interrupted workload, a Panel that came back or was never down, or typed texts that were never shown in EN and TR. |
+| `upd1-arch-realstart` | R | none | As above (Arch has no mail workload). | As above. |
+
+**What these cells prove and do not prove.** start-check shows that the start
+check really runs in the native order: after publication and before
+completion. It also shows that the rollback reverses a published database, and
+it shows the typed guidance in both views. It does not show that the check
+catches every start failure; the fixture fails one shared function.
+real-start shows the forward-only path and the pause, the owner's guidance
+while the Panel cannot start, and workload continuity without the Panel. It
+does not show a recovery from that state: the owner retry would retry the same
+candidate, so it is not run. Neither kind covers production signing, browser
+rendering or power loss.
+
+**Possible finding, recorded rather than assumed.** The product exposes
+`failure_code` only while the update's own failure is the latest recorded one
+(`internal/recoveryobs`). Once a forward attempt fails, and at the pause (which
+takes precedence in the CLI), the typed real-start text may no longer be shown.
+The judge then reports "never printed" rather than inferring it.
+
+Commands (Linux QEMU host, as root, repository root; each cell in a **new** lab):
+
+```sh
+bash deploy/e2e/release-recovery/run-upd1.sh build            # five archives: B G D S R
+ART=/var/tmp/cp-upd1-build/<stamp>/upd1-artifacts.json
+bash deploy/e2e/release-recovery/run-upd1.sh prove "$ART"     # proves every role in the document
+for c in upd1-debian13-startcheck upd1-arch-startcheck upd1-debian13-realstart upd1-arch-realstart; do
+    bash deploy/e2e/release-recovery/run-upd1.sh dry-run "$c" "$ART" upd3-dry
+done
+bash deploy/e2e/release-recovery/run-upd1.sh cell upd1-debian13-startcheck "$ART" upd3-d13-sc-a 2401
+bash deploy/e2e/release-recovery/run-upd1.sh cell upd1-arch-startcheck "$ART" upd3-arch-sc-a 2411
+bash deploy/e2e/release-recovery/run-upd1.sh cell upd1-debian13-realstart "$ART" upd3-d13-rs-a 2421
+bash deploy/e2e/release-recovery/run-upd1.sh cell upd1-arch-realstart "$ART" upd3-arch-rs-a 2431
+```
+
+The build source must include `8ffc5e06` (the start check). The fixture patches
+refuse any other text of `configurePanelHTTPTLS` or the listener line.
+
 ### Offline checks
 
 ```sh
@@ -616,7 +693,7 @@ python3 -m unittest deploy/e2e/release-recovery/test_owner_update_trial.py -v
 python3 -m unittest deploy/e2e/release-recovery/test_recovery_candidate_archive.py -v
 ```
 
-`test_owner_update_trial.py` has 55 offline tests. They cover:
+`test_owner_update_trial.py` has 83 offline tests. They cover:
 
 - plan validation and dry run, fixture policy/defect and the acceptance-notice
   exemption;
@@ -632,10 +709,22 @@ python3 -m unittest deploy/e2e/release-recovery/test_recovery_candidate_archive.
   the retained setup executions), the excluded tables, the cron precondition, the
   persistent origin unit and its name outside the installer's globs, the
   no-lookup rule, and `collect` after a stop at seed, at origin and at
-  preflight.
+  preflight;
+- the upd2 corrections: 202 or 200 with `accepted: true` only (H6), the Arch
+  `getent` shape (H7), and the start-instant lag against every other
+  difference (O5);
+- upd3: plan validation of the four new cells (also through the wrapper), the
+  artifact rules for the S and R roles, the unchanged good and migrate-only
+  cells, both fixture patches applied to the current product source (inside
+  the shared TLS function, and after every early-exit mode of `main()`), the
+  sidecar parser, the update failure line and check reason, the CLI texts
+  parsed from `cmd/recovery/main.go` (in both output shapes the product has
+  had), the web keys from the catalogues, both judges, and the real-start
+  owner continuation (the retry is printed but never run).
 
 `ArtifactProofTests` builds three synthetic archives with `dns-owner-tools/`
-in a temporary Git repository and proves them with `prove`. That test and the
+in a temporary Git repository and proves them with `prove`; a second test
+also proves the five archives B, G, D, S and R. That test and the
 Git-backed tests in `test_recovery_candidate_archive.py` need `git` and a
 POSIX host; otherwise they are skipped. None of these tests establishes a
 native result.

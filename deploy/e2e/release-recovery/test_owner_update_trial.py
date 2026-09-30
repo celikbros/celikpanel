@@ -43,7 +43,7 @@ SNAPSHOT = "20261001T120000Z-from-unknown-to-" + "3" * 40 + "-" + "1" * 32
 RID = "a" * 32
 
 
-def artifacts():
+def artifacts(upd3=False):
     def item(version, sequence, commit, parent=None):
         value = {"version": version, "sequence": sequence, "commit": commit, "tree": "e" * 40, "sha256": "f" * 64,
                  "archive": "/nonexistent.tar.gz", "license_mode": "acceptance-fixture",
@@ -51,16 +51,21 @@ def artifacts():
         if parent:
             value["parent"] = parent
         return value
-    return {"schema": t.ARTIFACTS_SCHEMA, "source_head": "9" * 40, "clone": "/var/tmp/cp-upd1-build/x/repo",
-            "baseline": item("v0.1.0-alpha.81", 81, "1" * 40),
-            "good": item("v0.1.0-alpha.82", 82, "2" * 40, "1" * 40),
-            "defective": item("v0.1.0-alpha.82", 82, "3" * 40, "2" * 40)}
+    document = {"schema": t.ARTIFACTS_SCHEMA, "source_head": "9" * 40, "clone": "/var/tmp/cp-upd1-build/x/repo",
+                "baseline": item("v0.1.0-alpha.81", 81, "1" * 40),
+                "good": item("v0.1.0-alpha.82", 82, "2" * 40, "1" * 40),
+                "defective": item("v0.1.0-alpha.82", 82, "3" * 40, "2" * 40)}
+    if upd3:
+        document["startcheck"] = item("v0.1.0-alpha.82", 82, "4" * 40, "2" * 40)
+        document["realstart"] = item("v0.1.0-alpha.82", 82, "5" * 40, "2" * 40)
+    return document
 
 
 class PlanTests(unittest.TestCase):
-    def test_four_cells_with_the_selected_second_faults(self):
-        self.assertEqual(sorted(t.CELLS), ["upd1-arch-defective", "upd1-arch-good", "upd1-debian13-defective",
-                                           "upd1-debian13-good"])
+    def test_eight_cells_with_the_selected_second_faults(self):
+        self.assertEqual(sorted(t.CELLS), ["upd1-arch-defective", "upd1-arch-good", "upd1-arch-realstart",
+                                           "upd1-arch-startcheck", "upd1-debian13-defective", "upd1-debian13-good",
+                                           "upd1-debian13-realstart", "upd1-debian13-startcheck"])
         self.assertEqual(t.CELLS["upd1-debian13-defective"].recovery_fault,
                          {"action": "reboot", "checkpoint": "payload_restored"})
         self.assertEqual(t.CELLS["upd1-arch-defective"].recovery_fault,
@@ -557,7 +562,7 @@ class WrapperTests(unittest.TestCase):
         for name in ("run-upd1.sh", "owner_update_trial.py"):
             shutil.copy2(HERE / name, target / name)
         art = target.parent / "upd1 artifacts.json"
-        art.write_text(json.dumps(artifacts()))
+        art.write_text(json.dumps(artifacts(upd3=True)))
         return target, art
 
     def test_no_command_is_kept_in_an_unquoted_string(self):
@@ -576,6 +581,13 @@ class WrapperTests(unittest.TestCase):
             self.assertEqual(plan["dns"]["verdict"], t.DNS_NOT_PROVIDED)
             self.assertEqual(plan["draft_choices"], {"dns_mode": "external", "peer_ip": "", "peer_ns": ""})
             self.assertFalse(plan["native_evidence"])
+            for cell in ("upd1-debian13-startcheck", "upd1-arch-startcheck", "upd1-debian13-realstart",
+                         "upd1-arch-realstart"):
+                with self.subTest(cell=cell):
+                    done = subprocess.run(["bash", str(target / "run-upd1.sh"), "dry-run", cell, str(art),
+                                           "upd3-x"], capture_output=True, text=True, cwd=directory, timeout=60)
+                    self.assertEqual(done.returncode, 0, done.stderr)
+                    self.assertEqual(json.loads(done.stdout)["cell"]["name"], cell)
 
     @unittest.skipUnless(os.name == "posix" and os.geteuid() == 0, "the cell command refuses non-root")
     def test_cell_passes_every_path_and_owner_choice_as_one_argument(self):
@@ -921,6 +933,637 @@ class CollectAfterEarlyStopTests(unittest.TestCase):
             t.observation_records_script("x' ; rm -rf / #")
 
 
+# ---------------------------------------------------------------------------
+# upd2 corrections made permanent (H6, H7, O5)
+# ---------------------------------------------------------------------------
+
+class Upd2CorrectionTests(unittest.TestCase):
+    def owner_start_trial(self, status, body):
+        trial = object.__new__(t.Trial)
+        saved = []
+        trial.state = {"request_id": RID, "check": {"current_version": t.BASELINE_VERSION, "current_commit": "1" * 40,
+                                                    "target": {"version": t.CANDIDATE_VERSION}}}
+        trial.node_name, trial.root = "debian13", Path("/nonexistent")
+        trial.trial = SimpleNamespace(save=lambda *a: saved.append(a))
+        trial.p = {"panel_api": SimpleNamespace(UnknownOutcome=type("UnknownOutcome", (Exception,), {}))}
+        calls = []
+
+        def api(method, path, body_=None, **kwargs):
+            calls.append((method, path))
+            if path == "/api/v1/host-mutation-readiness":
+                return SimpleNamespace(status=200, json=lambda: {"ready": True})
+            return SimpleNamespace(status=status, json=lambda: body)
+        trial.api = api
+        return trial, calls
+
+    def test_h6_owner_start_accepts_202_and_200_only_with_accepted_true(self):
+        # The product's own status for an accepted start (cmd/panel/system_update_handlers.go).
+        handlers = (REPO / "cmd/panel/system_update_handlers.go").read_text(encoding="utf-8")
+        self.assertIn("http.StatusAccepted", handlers)
+        self.assertIn('`json:"accepted"`', handlers)
+        for status, body, verdict in ((202, {"accepted": True, "status": "queued"}, "passed"),
+                                      (200, {"accepted": True, "status": "running"}, "passed"),
+                                      (202, {"accepted": False}, "failed"), (202, None, "failed"),
+                                      (409, {"code": "PANEL_UPDATE_BUSY"}, "failed"),
+                                      (201, {"accepted": True}, "failed")):
+            with self.subTest(status=status, body=body):
+                trial, calls = self.owner_start_trial(status, body)
+                checks = {}
+                if verdict == "passed":
+                    self.assertEqual(trial.owner_start(checks), "passed")
+                    self.assertIn("start_answered_at", trial.state)
+                else:
+                    with self.assertRaises(t.StepFailed):
+                        trial.owner_start(checks)
+                self.assertEqual([c for c in calls if c[0] == "POST"], [("POST", "/api/v1/panel/update/start")])
+                self.assertEqual(checks["start"]["http"], status)
+
+    def test_h7_arch_getent_prints_the_loopback_under_localhost(self):
+        def check(getent, http="200"):
+            return {"getent": {"status": "ok", "returncode": 0, "stdout": getent}, "https": {"stdout": http},
+                    "unit": {"ActiveState": "active"}, "boot_id": "b"}
+        arch = t.origin_verdict(check("127.0.0.1       localhost\n"))
+        self.assertTrue(arch["ok"], arch)
+        self.assertEqual(arch["addresses"], ["127.0.0.1"])
+        self.assertEqual(arch["getent_stdout"], "127.0.0.1       localhost\n")
+        self.assertEqual((arch["getent_status"], arch["getent_returncode"]), ("ok", 0))
+        for getent in ("185.95.0.123    celikpanel.net\n", "127.0.0.1 localhost\n185.95.0.123 celikpanel.net\n",
+                       "", "::1 localhost\n"):
+            with self.subTest(getent=getent):
+                self.assertFalse(t.origin_verdict(check(getent))["ok"])
+        self.assertFalse(t.origin_verdict(check("127.0.0.1 localhost\n", "000"))["ok"])
+
+    def known(self, phase, **extra):
+        return dict({"request_id": RID, "observation": "known", "phase": phase, "terminal_proof": "none"}, **extra)
+
+    def test_o5_start_instant_lag_is_recorded_not_a_disagreement(self):
+        shell = {"reference": RID, "status_command": t.shell_status_command(RID, "en")}
+        lag = t.status_agreement(RID, self.known("accepted"), self.known("running"), shell, start_instant=True)
+        self.assertEqual(lag["verdict"], "start-instant-lag")
+        self.assertIn("start-instant lag", lag["lag"])
+        self.assertEqual(lag["reasons"], [])
+        later = t.status_agreement(RID, self.known("accepted"), self.known("running"), shell)
+        self.assertEqual(later["verdict"], "disagree")
+        for api, cli in ((self.known("running"), self.known("accepted")),       # reversed order
+                         (self.known("accepted"), self.known("recovering")),    # not the adjacent step
+                         (self.known("accepted"), self.known("running", previous_failure="update_failed"))):
+            with self.subTest(api=api["phase"], cli=cli["phase"]):
+                self.assertEqual(t.status_agreement(RID, api, cli, shell, start_instant=True)["verdict"], "disagree")
+        bad_shell = t.status_agreement(RID, self.known("accepted"), self.known("running"),
+                                       {"reference": RID, "status_command": "x"}, start_instant=True)
+        self.assertEqual(bad_shell["verdict"], "disagree")
+        a, lagged = {"verdict": "agree"}, {"verdict": "start-instant-lag"}
+        summary = t.agreement_verdict([lagged, a, a])
+        self.assertEqual((summary["verdict"], summary["lag_samples"], summary["agreed_samples"]), ("passed", 1, 2))
+        self.assertEqual(t.agreement_verdict([lagged])["verdict"], "inconclusive")
+
+    def test_o5_only_the_first_poll_interval_counts_as_the_start_instant(self):
+        source = inspect.getsource(t.Trial.status_sample)
+        self.assertIn("start_instant = index == 0 or", source)
+        self.assertIn("POLL_MIN_MS / 1000.0", source)
+
+
+# ---------------------------------------------------------------------------
+# upd3: candidate-panel start kinds (start-check, real-start)
+# ---------------------------------------------------------------------------
+
+def cli_texts():
+    return t.parse_cli_guidance((REPO / "cmd/recovery/main.go").read_text(encoding="utf-8"))
+
+
+def cli_sample(status, texts, utc="2026-10-01T12:00:00Z"):
+    """A cli-status sample whose EN/TR output is the product text writeStatus would print."""
+    key = t.cli_guidance_key(status)
+    out = {}
+    for lang in ("en", "tr"):
+        lines = [texts[key][lang] if key else "generic"]
+        if status.get("failure_code") and status.get("previous_failure") == "update_failed":
+            lines.append(texts["cause_markers"][lang][0].format(code=status["failure_code"]))
+        out[lang] = {"stdout": "\n".join(lines) + "\n"}
+    return {"utc": utc, "observed": status, "cli": dict(out, json={"stdout": json.dumps(status)})}
+
+
+class Upd3CellTests(unittest.TestCase):
+    OLD = {
+        "upd1-debian13-defective": t.Cell("upd1-debian13-defective", "debian13", "defective",
+                                          {"action": "reboot", "checkpoint": "payload_restored"}, True),
+        "upd1-debian13-good": t.Cell("upd1-debian13-good", "debian13", "good", None, True),
+        "upd1-arch-defective": t.Cell("upd1-arch-defective", "arch", "defective",
+                                      {"action": "kill", "checkpoint": "runtime_verified"}, False),
+        "upd1-arch-good": t.Cell("upd1-arch-good", "arch", "good", None, False)}
+
+    def plan(self, cell, document=None):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "a.json"
+            path.write_text(json.dumps(document or artifacts(upd3=True)))
+            out = io.StringIO()
+            with redirect_stdout(out):
+                self.assertEqual(t.main(["plan", "--cell", cell, "--artifacts", str(path),
+                                         "--work-root", "/var/tmp/cp-release-drill-upd3-x", "--dry-run"]), 0)
+            return json.loads(out.getvalue())
+
+    def test_good_and_migrate_only_cells_are_unchanged(self):
+        for name, cell in self.OLD.items():
+            with self.subTest(cell=name):
+                self.assertEqual(t.CELLS[name], cell)
+                self.assertIn(t.candidate_role(cell), ("good", "defective"))
+                self.assertEqual(t.cell_roles(cell), ("baseline", "good", "defective"))
+                self.assertIs(t.provenance_for(cell.variant), t.PROVENANCE)
+                plan = self.plan(name, artifacts())   # a pre-upd3 artifacts document still serves them
+                self.assertNotIn("defect", plan)
+                self.assertNotIn("kind-expectation", [s["name"] for s in plan["steps"]])
+                steps = {s["name"]: s["does"] for s in plan["steps"]}
+                self.assertTrue(steps["owner-continuation (required)"].startswith(
+                    "only if the product reports paused_retry_limit"))
+                self.assertTrue(steps["terminal"].startswith("installed/running identity"))
+                self.assertEqual(plan["expected_outcome"], "succeeded (update_verified)" if cell.variant == "good"
+                                 else "recovered (rollback_verified, previous_failure=update_failed), automatically "
+                                      "or after the owner's one-time retry")
+        self.assertEqual(t.apply_defect((REPO / "cmd/panel/main.go").read_text()).count("upd1 fixture defect:"), 1)
+
+    def test_plan_validation_of_the_four_new_cells(self):
+        expected = {"upd1-debian13-startcheck": ("start-check", "4" * 40, {"action": "reboot",
+                                                                           "checkpoint": "payload_restored"}),
+                    "upd1-arch-startcheck": ("start-check", "4" * 40, {"action": "kill", "checkpoint": "runtime_verified"}),
+                    "upd1-debian13-realstart": ("real-start", "5" * 40, None),
+                    "upd1-arch-realstart": ("real-start", "5" * 40, None)}
+        for name, (variant, commit, fault) in expected.items():
+            with self.subTest(cell=name):
+                plan = self.plan(name)
+                self.assertEqual(plan["cell"]["variant"], variant)
+                self.assertEqual(plan["candidate"]["commit"], commit)
+                self.assertEqual(plan["cell"]["recovery_fault"], fault)
+                self.assertFalse(plan["native_evidence"])
+                self.assertEqual(plan["defect"]["kind"], variant)
+                self.assertEqual(plan["provenance"]["defect"], t.KIND_PROVENANCE[variant])
+                steps = {s["name"]: s["does"] for s in plan["steps"]}
+                self.assertIn("kind-expectation", steps)
+                if variant == "start-check":
+                    self.assertIn("completion.pending is never created", plan["expected_outcome"])
+                    self.assertIn(t.START_CHECK_CODE, plan["expected_outcome"])
+                    self.assertEqual(plan["defect"]["file"], "cmd/panel/server_lifecycle.go")
+                else:
+                    self.assertIn("no rollback", plan["expected_outcome"])
+                    self.assertIn(t.REAL_START_CODE, plan["expected_outcome"])
+                    self.assertEqual(plan["defect"]["owner_retry"], "not run")
+                    self.assertIn("NOT run", steps["owner-continuation (required)"])
+                    self.assertEqual(plan["defect"]["file"], "cmd/panel/main.go")
+                    self.assertIn("expected down from the update until the end", steps["verdicts"])
+                with self.assertRaisesRegex(ValueError, "rebuild with build-upd1-artifacts.sh"):
+                    self.plan(name, artifacts())
+
+    def test_artifact_rules_for_the_start_kinds(self):
+        self.assertEqual(t.validate_artifacts(artifacts(upd3=True), check_files=False)["startcheck"]["commit"],
+                         "4" * 40)
+        for mutate, message in ((lambda d: d["startcheck"].update(parent="3" * 40), "good <- startcheck"),
+                                (lambda d: d["realstart"].update(commit="4" * 40), "distinct"),
+                                (lambda d: d["realstart"].update(version="v0.1.0-alpha.81"), "labelled"),
+                                (lambda d: d["startcheck"].update(license_mode="customer"), "acceptance-license")):
+            broken = artifacts(upd3=True)
+            mutate(broken)
+            with self.subTest(message=message), self.assertRaisesRegex(ValueError, message):
+                t.validate_artifacts(broken, check_files=False)
+        cell = t.CELLS["upd1-arch-realstart"]
+        self.assertEqual(t.cell_roles(cell), ("baseline", "good", "defective", "realstart"))
+        with self.assertRaisesRegex(ValueError, "artifact realstart is missing"):
+            t.validate_cell_artifacts(artifacts(), cell, check_files=False)
+
+    def test_classification_of_the_new_variants(self):
+        recovered = {"observation": "known", "phase": "recovered", "terminal_proof": "rollback_verified"}
+        succeeded = {"observation": "known", "phase": "succeeded", "terminal_proof": "update_verified"}
+        paused = {"observation": "known", "phase": "recovery_required", "terminal_proof": "none",
+                  "automatic_recovery": "paused_retry_limit"}
+        self.assertEqual(t.classify_outcome("start-check", recovered, False), "recovered-automatically")
+        self.assertEqual(t.classify_outcome("start-check", succeeded, False), "defective-candidate-reported-success")
+        self.assertEqual(t.classify_outcome("real-start", paused, False), "paused-owner-action-required")
+        self.assertEqual(t.classify_outcome("real-start", recovered, False), "real-start-candidate-rolled-back")
+        self.assertEqual(t.classify_outcome("real-start", succeeded, False), "real-start-candidate-reported-success")
+
+
+class Upd3FixturePatchTests(unittest.TestCase):
+    def test_start_check_patch_sits_in_the_function_the_check_and_the_real_start_share(self):
+        source = (REPO / t.START_CHECK_FILE).read_text(encoding="utf-8")
+        changed = t.apply_kind_patch("start-check", source)
+        self.assertEqual(changed.count("upd3 fixture defect"), 1)
+        body = changed.split("func configurePanelHTTPTLS(", 1)[1].split("\n}\n", 1)[0]
+        self.assertIn("upd3 fixture defect: this candidate cannot prepare its panel TLS listener", body)
+        self.assertIn("tlsOn, err := configurePanelHTTPTLS(server, certPath, keyPath)", changed)   # real start
+        readiness = (REPO / "cmd/panel/startup_readiness.go").read_text(encoding="utf-8")
+        self.assertIn("configurePanelHTTPTLS(server, certPath, keyPath)", readiness)                # the check
+        self.assertIn('"tls_pair_invalid"', readiness.split("configurePanelHTTPTLS(server, certPath, keyPath)", 1)[1]
+                      .split("\n\t}\n", 1)[0])
+        self.assertEqual(t.START_CHECK_FIXTURE_REASON, "tls_pair_invalid")
+        with self.assertRaisesRegex(ValueError, "start-check"):
+            t.apply_kind_patch("start-check", changed)
+
+    def test_real_start_patch_is_after_every_early_exit_and_outside_the_check(self):
+        source = (REPO / t.REAL_START_FILE).read_text(encoding="utf-8")
+        changed = t.apply_kind_patch("real-start", source)
+        fatal = changed.index("upd3 fixture defect: this candidate exits before its panel listener starts")
+        main = changed.index("\nfunc main() {")
+        for early in ("emitPanelBuildIdentity(os.Args[1:], os.Stdout)", "runStartupReadinessEntry(os.Args[1:]",
+                      "if *migrateOnlyFlag {", "if *countUsersFlag {", "if *createAdmin {"):
+            with self.subTest(early=early):
+                self.assertLess(main, changed.index(early))
+                self.assertLess(changed.index(early), fatal)
+        self.assertLess(fatal, changed.index("runningServer, err := startPanelHTTP(server, certPath, keyPath)"))
+        self.assertNotIn("upd3", (REPO / "cmd/panel/startup_readiness.go").read_text(encoding="utf-8"))
+        with self.assertRaisesRegex(ValueError, "real-start"):
+            t.apply_kind_patch("real-start", changed)
+        with self.assertRaises(ValueError):
+            t.apply_kind_patch("real-start", source.replace("runningServer, err :=", "server2, err :="))
+
+    def test_fixture_source_edits_one_file_in_a_disposable_clone(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory) / "cp-upd1-build" / "repo"
+            (repo / ".git").mkdir(parents=True)
+            (repo / "cmd/panel").mkdir(parents=True)
+            for name in ("main.go", "server_lifecycle.go"):
+                shutil.copy2(REPO / "cmd/panel" / name, repo / "cmd/panel" / name)
+            self.assertEqual(t.fixture_source(repo, "start-check", None),
+                             {"kind": "start-check", "changed": ["cmd/panel/server_lifecycle.go"]})
+            self.assertEqual(t.fixture_source(repo, "real-start", None),
+                             {"kind": "real-start", "changed": ["cmd/panel/main.go"]})
+            self.assertIn("upd3 fixture defect", (repo / "cmd/panel/main.go").read_text(encoding="utf-8"))
+
+    def test_build_script_builds_both_kinds_over_the_good_candidate(self):
+        text = (HERE / "build-upd1-artifacts.sh").read_text()
+        self.assertIn('startcheck=$(commit_fixture start-check', text)
+        self.assertIn('realstart=$(commit_fixture real-start', text)
+        self.assertEqual(text.count('git -C "$clone" checkout --quiet --detach "$good"'), 2)
+        self.assertIn('update-ref "refs/upd1/$kind"', text)
+        self.assertIn('s_json=$(build "$startcheck" v0.1.0-alpha.82)', text)
+        self.assertIn('r_json=$(build "$realstart" v0.1.0-alpha.82)', text)
+        self.assertIn('"startcheck": item(s, 82, good), "realstart": item(r, 82, good)', text)
+        wrapper = (HERE / "run-upd1.sh").read_text().splitlines()
+        last = int(re.search(r"sed -n '2,(\d+)p'", "\n".join(wrapper)).group(1))
+        self.assertTrue(all(line.startswith("#") for line in wrapper[1:last]))
+        self.assertEqual(wrapper[last], "set -euo pipefail")
+        self.assertIn("upd1-arch-realstart", "\n".join(wrapper[:last]))
+
+
+class Upd3SidecarAndTextTests(unittest.TestCase):
+    COMMIT = "4" * 40
+
+    def sidecar(self, code=t.START_CHECK_CODE, request=RID, commit=COMMIT):
+        return (f"schema={t.FAILURE_SIDECAR_SCHEMA}\nrequest_id={request}\ntarget_commit={commit}\n"
+                f"failure_code={code}\n")
+
+    def test_sidecar_schema_matches_the_product(self):
+        record = (REPO / "internal/recoveryobs/record.go").read_text(encoding="utf-8")
+        self.assertIn(f'FailureSchema = "{t.FAILURE_SIDECAR_SCHEMA}"', record)
+        for code in t.FAILURE_CODES:
+            self.assertIn(f'value == "{code}"', record)
+        writer = (REPO / "deploy/release-recovery-observation.sh").read_text(encoding="utf-8")
+        self.assertIn("schema=celikpanel-recovery-failure/v1", writer)
+
+    def test_sidecar_parsing(self):
+        self.assertEqual(t.parse_failure_sidecar(self.sidecar(), RID, self.COMMIT),
+                         {"present": True, "valid": True, "code": t.START_CHECK_CODE})
+        self.assertEqual(t.parse_failure_sidecar(self.sidecar(t.REAL_START_CODE), RID, self.COMMIT)["code"],
+                         t.REAL_START_CODE)
+        for raw in (self.sidecar(commit="5" * 40), self.sidecar(request="b" * 32), self.sidecar("update_failed"),
+                    self.sidecar() + "extra=1\n", self.sidecar().rstrip("\n"), "withheld"):
+            with self.subTest(raw=raw):
+                parsed = t.parse_failure_sidecar(raw, RID, self.COMMIT)
+                self.assertEqual((parsed["present"], parsed["valid"], parsed["code"]), (True, False, None))
+        self.assertEqual(t.parse_failure_sidecar(None, RID, self.COMMIT)["present"], False)
+        records = {"directory_present": True, "records": {RID: "x", RID + ".failure": self.sidecar()}}
+        self.assertTrue(t.sidecar_from_records(records, RID, self.COMMIT)["valid"])
+        self.assertIsNone(t.sidecar_from_records(None, RID, self.COMMIT)["present"])
+        self.assertIn(RID + "*", t.observation_records_script(RID))   # the collect listing includes <id>.failure
+
+    def test_update_failure_line_and_check_reason_parsing(self):
+        journal = ("2026-10-01T12:00:01.1+00:00 h bash[9]: !! new panel start check failed before completion: "
+                   "panel startup check failed: tls_pair_invalid: the panel TLS certificate and private key cannot be "
+                   "loaded as a matching pair\n"
+                   "2026-10-01T12:00:02.1+00:00 h bash[9]: !! CELIKPANEL_UPDATE_FAILURE code="
+                   "candidate_panel_startup_check_failed state=rolled_back reason=new panel start check failed "
+                   "before completion: panel startup check failed: tls_pair_invalid: the panel TLS x detail=\n")
+        lines = t.parse_update_failure_lines(journal)
+        self.assertEqual([(l["code"], l["state"]) for l in lines], [(t.START_CHECK_CODE, "rolled_back")])
+        self.assertEqual({r["code"] for r in t.parse_start_check_reasons(journal)}, {"tls_pair_invalid"})
+        self.assertEqual(t.parse_update_failure_lines("nothing\n"), [])
+        # The product prints exactly these shapes (update.sh).
+        update = (REPO / "update.sh").read_text(encoding="utf-8")
+        self.assertIn("!! CELIKPANEL_UPDATE_FAILURE code=%s state=%s reason=%.300s detail=%.450s", update)
+        self.assertIn("new panel start check failed before completion: ${reason:-", update)
+        self.assertIn('"panel startup check failed: "', (REPO / "cmd/panel/startup_readiness.go").read_text())
+
+    def test_cli_texts_come_from_the_product_source(self):
+        texts = cli_texts()
+        for key in (f"{t.START_CHECK_CODE}.recovered", f"{t.START_CHECK_CODE}.pending",
+                    f"{t.REAL_START_CODE}.pending", "paused"):
+            with self.subTest(key=key):
+                self.assertTrue(texts[key]["en"] and texts[key]["tr"])
+                self.assertNotEqual(texts[key]["en"], texts[key]["tr"])
+        self.assertTrue(texts["cause_markers"]["en"] and texts["cause_markers"]["tr"])
+        command = t.panel_log_command(texts)
+        self.assertTrue(command.startswith("sudo journalctl -u celikpanel-panel"))
+        self.assertIn(command, texts[f"{t.REAL_START_CODE}.pending"]["tr"])
+        with self.assertRaises(ValueError):
+            t.parse_cli_guidance("package main\n")
+
+    def test_cli_parser_accepts_the_committed_and_the_support_line_shapes(self):
+        committed = ('\nfunc failureCodeGuidance(status recoveryobs.Status) (string, string, bool) {\n'
+                     '\tswitch status.FailureCode {\n'
+                     '\tcase "candidate_panel_startup_check_failed":\n'
+                     '\t\tif status.Phase == "recovered" && status.TerminalProof == "rollback_verified" {\n'
+                     '\t\t\treturn "R en",\n\t\t\t\t"R tr", true\n\t\t}\n'
+                     '\t\tif status.TerminalProof == "none" {\n\t\t\treturn "P en",\n\t\t\t\t"P tr", true\n\t\t}\n'
+                     '\tcase "panel_start_unverified":\n'
+                     '\t\tif status.TerminalProof == "none" {\n'
+                     '\t\t\treturn "U en sudo journalctl -u celikpanel-panel -n 50. x",\n\t\t\t\t"U tr", true\n\t\t}\n'
+                     '\t}\n\treturn "", "", false\n}\n'
+                     'if status.AutomaticRecovery == "paused_retry_limit" {\n\t\ten, tr = "Pa en", "Pa tr"\n}\n')
+        old = committed + 'fmt.Fprintf(w, "%s: %s\\n", translated(lang, "Recorded cause", "Kaydedilen neden"), status.FailureCode)\n'
+        new = committed + '\t\tline += " failure_code=" + status.FailureCode\n'
+        self.assertEqual(t.parse_cli_guidance(old)["cause_markers"]["tr"], ["Kaydedilen neden: {code}"])
+        self.assertEqual(t.parse_cli_guidance(new)["cause_markers"]["en"], ["failure_code={code}"])
+        self.assertEqual(t.parse_cli_guidance(new)[f"{t.START_CHECK_CODE}.recovered"], {"en": "R en", "tr": "R tr"})
+        self.assertEqual(t.panel_log_command(t.parse_cli_guidance(new)), "sudo journalctl -u celikpanel-panel -n 50")
+        with self.assertRaisesRegex(ValueError, "no known form"):
+            t.parse_cli_guidance(committed)
+
+    def test_cli_guidance_key_follows_write_status_precedence(self):
+        base = {"observation": "known", "previous_failure": "update_failed", "terminal_proof": "none"}
+        self.assertEqual(t.cli_guidance_key(dict(base, phase="recovered", terminal_proof="rollback_verified",
+                                                 failure_code=t.START_CHECK_CODE)), f"{t.START_CHECK_CODE}.recovered")
+        self.assertEqual(t.cli_guidance_key(dict(base, phase="recovering", failure_code=t.START_CHECK_CODE)),
+                         f"{t.START_CHECK_CODE}.pending")
+        self.assertEqual(t.cli_guidance_key(dict(base, phase="failed", failure_code=t.REAL_START_CODE)),
+                         f"{t.REAL_START_CODE}.pending")
+        self.assertEqual(t.cli_guidance_key(dict(base, phase="recovery_required", failure_code=t.REAL_START_CODE,
+                                                 automatic_recovery="paused_retry_limit")), "paused")
+        self.assertIsNone(t.cli_guidance_key(dict(base, phase="recovering", failure_code=t.REAL_START_CODE,
+                                                  previous_failure="recovery_failed")))
+        self.assertIsNone(t.cli_guidance_key(dict(base, phase="recovering", failure_code=t.REAL_START_CODE,
+                                                  waiting_for="starting")))
+        self.assertIsNone(t.cli_guidance_key(None))
+
+    def test_cli_text_observations_read_the_output_verbatim(self):
+        texts = cli_texts()
+        pending = {"request_id": RID, "observation": "known", "phase": "failed", "terminal_proof": "none",
+                   "previous_failure": "update_failed", "failure_code": t.REAL_START_CODE}
+        paused = {"request_id": RID, "observation": "known", "phase": "recovery_required", "terminal_proof": "none",
+                  "previous_failure": "recovery_failed", "automatic_recovery": "paused_retry_limit"}
+        samples = [cli_sample(pending, texts), cli_sample(paused, texts)]
+        seen = t.cli_text_observations(samples, texts)
+        self.assertEqual(seen["by_key"][f"{t.REAL_START_CODE}.pending"]["en"], 1)
+        self.assertEqual(seen["by_key"]["paused"]["tr"], 1)
+        self.assertEqual(seen["panel_log_command_seen"], {"en": True, "tr": True})
+        self.assertEqual(seen["recorded_cause_lines"], {"en": 1, "tr": 1})
+        self.assertEqual(seen["mismatches"], [])
+        wrong = cli_sample(pending, texts)
+        wrong["cli"]["tr"]["stdout"] = texts[f"{t.REAL_START_CODE}.pending"]["en"] + "\n"
+        seen = t.cli_text_observations([wrong], texts)
+        self.assertEqual([(m["key"], m["language"]) for m in seen["mismatches"]],
+                         [(f"{t.REAL_START_CODE}.pending", "tr")])
+
+    def test_web_guidance_uses_the_product_catalogue_and_failure_code(self):
+        guidance = load("tested_upd3_guidance", "../dns-pair-acceptance/guidance.py")
+        translator = guidance.Translator(guidance.load_catalog(REPO / "web/src/i18n"))
+        recovered = {"request_id": RID, "observation": "known", "phase": "recovered",
+                     "terminal_proof": "rollback_verified", "previous_failure": "update_failed",
+                     "failure_code": t.START_CHECK_CODE}
+        shown = t.recovery_guidance(translator, recovered)
+        self.assertEqual(shown["keys"], ["recovery.phase.recovered",
+                                         f"recovery.failure.{t.START_CHECK_CODE}.recovered",
+                                         f"recovery.reason.{t.START_CHECK_CODE}"])
+        self.assertEqual(shown["missing_keys"], [])
+        self.assertNotEqual(shown["texts"]["en"], shown["texts"]["tr"])
+        pending = dict(recovered, phase="recovering", terminal_proof="none", failure_code=t.REAL_START_CODE)
+        self.assertIn(f"recovery.failure.{t.REAL_START_CODE}.pending", t.recovery_guidance(translator, pending)["keys"])
+        hidden = dict(pending, previous_failure="recovery_failed")
+        self.assertEqual(t.recovery_guidance(translator, hidden)["keys"][1:], ["recovery.next.recovering",
+                                                                            "recovery.reason.recovery_failed"])
+        # Every key the mirror can return is a key of the product's own TypeScript.
+        ts = (REPO / "web/src/lib/recoveryObservation.ts").read_text(encoding="utf-8")
+        for key in (f"recovery.failure.{t.START_CHECK_CODE}.recovered", f"recovery.failure.{t.START_CHECK_CODE}.returning",
+                    f"recovery.failure.{t.REAL_START_CODE}.pending"):
+            self.assertIn(f"'{key}'", ts)
+        self.assertIn("recovery.reason.${last.failure_code ?? last.previous_failure}",
+                      (REPO / "web/src/components/RecoveryAccess.tsx").read_text(encoding="utf-8"))
+
+
+def ideal_start_check(texts):
+    final = {"request_id": RID, "observation": "known", "phase": "recovered", "terminal_proof": "rollback_verified",
+             "previous_failure": "update_failed", "failure_code": t.START_CHECK_CODE}
+    return {"final": final, "update_failure_codes": [t.START_CHECK_CODE], "check_reasons": ["tls_pair_invalid"],
+            "sidecar": {"present": True, "valid": True, "code": t.START_CHECK_CODE}, "completion_marker_seen": False,
+            "receipt_phases": ["active", "active"], "installed": "baseline", "database": "equal-except-volatile",
+            "cli": t.cli_text_observations([cli_sample(final, texts)], texts), "web_keys_missing": [],
+            "owner_retry_run": False}
+
+
+def ideal_real_start(texts):
+    pending = {"request_id": RID, "observation": "known", "phase": "failed", "terminal_proof": "none",
+               "previous_failure": "update_failed", "failure_code": t.REAL_START_CODE}
+    final = {"request_id": RID, "observation": "known", "phase": "recovery_required", "terminal_proof": "none",
+             "previous_failure": "recovery_failed", "automatic_recovery": "paused_retry_limit"}
+    return {"final": final, "update_failure_codes": [t.REAL_START_CODE], "check_reasons": [],
+            "sidecar": {"present": True, "valid": True, "code": t.REAL_START_CODE}, "completion_marker_seen": True,
+            "receipt_phases": ["completion"] * 3, "installed": "candidate", "database": "different",
+            "cli": t.cli_text_observations([cli_sample(pending, texts), cli_sample(final, texts)], texts),
+            "web_keys_missing": [], "owner_retry_run": False,
+            "printed_retry_command": "/usr/libexec/celikpanel/recovery recover --retry --snapshot " + SNAPSHOT,
+            "workloads": {"web": "never-interrupted", "dns": t.DNS_NOT_PROVIDED, "smtp": "never-interrupted",
+                          "cron": "never-interrupted"}, "panel_verdict": t.PANEL_UNTIL_END}
+
+
+class Upd3ExpectationTests(unittest.TestCase):
+    def test_start_check_expects_rollback_and_no_completion_marker(self):
+        texts = cli_texts()
+        judged = t.judge_start_check(ideal_start_check(texts))
+        self.assertEqual((judged["verdict"], judged["findings"], judged["unknown"]), ("as-expected", [], []))
+        self.assertFalse(judged["native_evidence"])
+        self.assertEqual(t.expectation_step_verdict(judged), "passed")
+        for change, rule in (({"completion_marker_seen": True}, "completion.pending was created"),
+                             ({"receipt_phases": ["active", "completion"]}, "expected only active"),
+                             ({"check_reasons": ["database_unverified"]}, "a good candidate could fail"),
+                             ({"installed": "candidate"}, "installed release"),
+                             ({"database": "different"}, "database differs"),
+                             ({"update_failure_codes": [t.REAL_START_CODE]}, "failure line"),
+                             ({"sidecar": {"present": False, "valid": False, "code": None}}, "sidecar"),
+                             ({"final": dict(ideal_start_check(texts)["final"], phase="recovery_required",
+                                             terminal_proof="none", automatic_recovery="paused_retry_limit")},
+                              "not returned")):
+            with self.subTest(rule=rule):
+                judged = t.judge_start_check(dict(ideal_start_check(texts), **change))
+                self.assertEqual(judged["verdict"], "finding")
+                self.assertTrue(any(rule in f for f in judged["findings"]), judged["findings"])
+                self.assertEqual(t.expectation_step_verdict(judged), "failed")
+        unknown = t.judge_start_check(dict(ideal_start_check(texts), completion_marker_seen=None, cli=None))
+        self.assertEqual((unknown["verdict"], sorted(unknown["unknown"])),
+                         ("inconclusive", ["cli-returned-text", "no-completion-marker"]))
+
+    def test_real_start_expects_the_pause_never_a_rollback_and_no_owner_retry(self):
+        texts = cli_texts()
+        judged = t.judge_real_start(ideal_real_start(texts))
+        self.assertEqual((judged["verdict"], judged["findings"], judged["unknown"]), ("as-expected", [], []))
+        self.assertIn("no-rollback", judged["expected"])
+        self.assertIn("owner-retry-not-run", judged["expected"])
+        recovered = dict(ideal_real_start(texts)["final"], phase="recovered", terminal_proof="rollback_verified",
+                         automatic_recovery=None)
+        for change, rule in (({"final": recovered, "installed": "baseline"}, "returned to the previous version"),
+                             ({"owner_retry_run": True}, "owner retry was run"),
+                             ({"check_reasons": ["tls_pair_invalid"],
+                               "update_failure_codes": [t.START_CHECK_CODE]}, "start check refused"),
+                             ({"completion_marker_seen": False}, "never observed"),
+                             ({"receipt_phases": ["active"]}, "expected only completion"),
+                             ({"workloads": {"web": "interrupted", "smtp": "never-interrupted"}}, "web"),
+                             ({"panel_verdict": "came-back"}, "came-back"),
+                             ({"printed_retry_command": ""}, "no one-time retry command")):
+            with self.subTest(rule=rule):
+                judged = t.judge_real_start(dict(ideal_real_start(texts), **change))
+                self.assertEqual(judged["verdict"], "finding")
+                self.assertTrue(any(rule in f for f in judged["findings"]), judged["findings"])
+        # The product may hide failure_code once a forward attempt failed; then the typed text is never shown.
+        paused_only = dict(ideal_real_start(texts))
+        paused_only["cli"] = t.cli_text_observations([cli_sample(paused_only["final"], texts)], texts)
+        judged = t.judge_real_start(paused_only)
+        self.assertEqual(judged["verdict"], "finding")
+        self.assertTrue(any("panel_start_unverified text" in f for f in judged["findings"]))
+        self.assertTrue(any("panel log command" in f for f in judged["findings"]))
+
+    def test_supporting_rules(self):
+        timeline = [{"event": "timeline", "transaction_phase": "active"}]
+        self.assertFalse(t.completion_marker_seen(timeline + [{"event": "released"}]))
+        self.assertTrue(t.completion_marker_seen(timeline + [{"event": "timeline",
+                                                              "transaction_phase": "completion.pending"}]))
+        self.assertIsNone(t.completion_marker_seen([{"event": "armed"}]))
+        self.assertIsNone(t.completion_marker_seen(None))
+        receipt = {"snapshot": SNAPSHOT, "name": "1", "mtime_utc": "T1",
+                   "text": f"schema=celikpanel-recovery-dispatch/v1\nsnapshot={SNAPSHOT}\nattempt=1\n"
+                           f"token_sha256={'4' * 64}\noperation=update\nphase=completion\n"}
+        counted = t.attempts_from_receipts([receipt, dict(receipt, name="2", text=None)], SNAPSHOT)
+        self.assertEqual([a["phase"] for a in counted["automatic"]], ["completion", None])
+        self.assertTrue(w.budget_receipt_safe(receipt["text"].encode()))
+        down = [{"from": 105.0, "to": None, "first_bad": 110.0}]
+        self.assertEqual(t.panel_verdict_until_end(down, 100.0)["verdict"], t.PANEL_UNTIL_END)
+        self.assertEqual(t.panel_verdict_until_end([], 100.0)["verdict"], "never-down")
+        self.assertEqual(t.panel_verdict_until_end([{"from": 105.0, "to": 300.0}], 100.0)["verdict"], "came-back")
+        self.assertEqual(t.panel_verdict_until_end([{"from": 10.0, "to": None}], 100.0)["verdict"],
+                         "down-outside-transaction")
+        builds = {n: {"identity": f"version={t.CANDIDATE_VERSION}\ncommit={'5' * 40}\n"} for n in ("agent", "panel")}
+        self.assertEqual(t.installed_role(builds, artifacts(upd3=True), "realstart"), "candidate")
+        self.assertEqual(t.installed_role(builds, artifacts(upd3=True), "startcheck"), "other")
+        self.assertIsNone(t.installed_role({}, artifacts(upd3=True), "realstart"))
+        views = t.view_reachability([{"update_status": {"http": 200}, "recovery_api": {"http": 200}, "cli": {}},
+                                     {"panel_error": "ConnectionRefusedError", "shell_fetch": {"error": "X"},
+                                      "cli": {"en": {}}}])
+        self.assertEqual(views["summary"]["panel_recovery_status"], {"reachable": 1, "samples": 2})
+        self.assertEqual(views["summary"]["root_cli"], {"reachable": 1, "samples": 2})
+        self.assertFalse(views["last"]["offline_page_served"])
+
+
+class Upd3TrialFlowTests(unittest.TestCase):
+    """The real-start owner continuation reads the printed retry and never runs it; kind_expectation judges
+    from this run's own records."""
+
+    def trial(self, variant):
+        trial = object.__new__(t.Trial)
+        cell = next(c for c in t.CELLS.values() if c.variant == variant)
+        pair = t.pair_modules()
+        guidance = load("tested_upd3_flow_guidance", "../dns-pair-acceptance/guidance.py")
+        trial.cell, trial.artifacts = cell, artifacts(upd3=True)
+        trial.role = t.candidate_role(cell)
+        trial.candidate = trial.artifacts[trial.role]
+        trial.p = dict(pair, guidance=guidance)
+        trial.redactor = pair["redaction"].Redactor()
+        trial.translator = guidance.Translator(guidance.load_catalog(REPO / "web/src/i18n"))
+        trial.state = {"findings": [], "resets": [], "request_id": RID}
+        trial.calls = []
+        return trial
+
+    def test_real_start_owner_continuation_prints_and_never_runs_the_retry(self):
+        trial = self.trial("real-start")
+        texts = cli_texts()
+        paused = ideal_real_start(texts)["final"]
+        sample = cli_sample(paused, texts)
+        sample.update(panel_error="ConnectionRefusedError")
+        sample["cli"]["en"]["stdout"] += "sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50\n"
+        sample["cli"]["tr"]["stdout"] += "sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50\n"
+        trial.state.update(paused=paused, status_samples=[sample])
+        trial.fetch_shell = lambda label: {"status_command": {}, "texts": {}}
+        trial.pending_snapshot = lambda: SNAPSHOT
+        trial.trial = SimpleNamespace(save=lambda *a: self.fail("no owner-continuation attempt is saved"))
+
+        def workload(mode, *args, timeout=120):
+            trial.calls.append((mode, args))
+            return {"action": "validated-not-executed", "snapshot": SNAPSHOT,
+                    "argv": ["/usr/libexec/celikpanel/recovery", "recover", "--retry", "--snapshot", SNAPSHOT]}
+        trial.workload = workload
+        checks = {}
+        self.assertEqual(trial.owner_continuation(checks), "observed")
+        self.assertEqual([c[0] for c in trial.calls], ["owner-retry"])
+        self.assertNotIn("--execute", trial.calls[0][1])
+        self.assertFalse(trial.state.get("owner_continued"))
+        self.assertIn("paused", trial.state)
+        self.assertEqual(trial.state["printed_retry_command"],
+                         "/usr/libexec/celikpanel/recovery recover --retry --snapshot " + SNAPSHOT)
+        self.assertIn("not run by design", checks["owner_retry"])
+        self.assertIn("recover --retry", w.RETRY_LINE_RE.pattern)
+
+    def test_migrate_only_owner_continuation_still_runs_the_retry_once(self):
+        source = inspect.getsource(t.Trial.owner_continuation)
+        self.assertIn('"--snapshot-name", snapshot, "--execute"', source)
+        self.assertIn('if self.cell.variant == "real-start":', source)
+
+    def kind_state(self, trial, product_journal, observer, receipts, samples, terminal, workloads):
+        trial.state.update(journals={"product": product_journal},
+                           observation_records={"records": {RID + ".failure": (
+                               f"schema={t.FAILURE_SIDECAR_SCHEMA}\nrequest_id={RID}\n"
+                               f"target_commit={trial.candidate['commit']}\nfailure_code="
+                               f"{t.START_CHECK_CODE if trial.cell.variant == 'start-check' else t.REAL_START_CODE}\n")}},
+                           observer_events=observer, attempts=t.attempts_from_receipts(receipts, SNAPSHOT),
+                           status_samples=samples, final_status=samples[-1]["observed"], terminal=terminal,
+                           verdict_checks={"workloads": workloads})
+        trial._candidate_translator = trial.translator
+        trial.load_cli_texts = lambda: dict(cli_texts(), source={"role": "test", "commit": "x"})
+
+    def receipt(self, name, phase):
+        return {"snapshot": SNAPSHOT, "name": name, "mtime_utc": "T" + name,
+                "text": f"schema=celikpanel-recovery-dispatch/v1\nsnapshot={SNAPSHOT}\nattempt={name}\n"
+                        f"token_sha256={'4' * 64}\noperation=update\nphase={phase}\n"}
+
+    def test_kind_expectation_for_start_check_from_run_records(self):
+        trial = self.trial("start-check")
+        texts = cli_texts()
+        final = ideal_start_check(texts)["final"]
+        journal = ("x bash[1]: !! new panel start check failed before completion: panel startup check failed: "
+                   "tls_pair_invalid: the panel TLS certificate and private key cannot be loaded as a matching pair\n"
+                   f"x bash[1]: !! CELIKPANEL_UPDATE_FAILURE code={t.START_CHECK_CODE} state=x reason=y detail=\n")
+        self.kind_state(trial, journal, [{"event": "timeline", "transaction_phase": "active"}],
+                        [self.receipt("1", "active")], [cli_sample(final, texts)],
+                        {"installed": "baseline", "database": "equal", "recovery_body": final},
+                        {"web": {"verdict": "never-interrupted"}, "panel": {"verdict": "down-only-during-transaction"}})
+        checks = {}
+        self.assertEqual(trial.kind_expectation(checks), "passed", checks["judged"])
+        self.assertEqual(checks["judged"]["verdict"], "as-expected")
+        self.assertIn(f"recovery.failure.{t.START_CHECK_CODE}.recovered", checks["observations"]["web_keys"])
+
+    def test_kind_expectation_for_real_start_from_run_records(self):
+        trial = self.trial("real-start")
+        texts = cli_texts()
+        ideal = ideal_real_start(texts)
+        pending = dict(ideal["final"], phase="failed", previous_failure="update_failed",
+                       failure_code=t.REAL_START_CODE, automatic_recovery=None)
+        journal = f"x bash[1]: !! CELIKPANEL_UPDATE_FAILURE code={t.REAL_START_CODE} state=x reason=y detail=\n"
+        self.kind_state(trial, journal, [{"event": "timeline", "transaction_phase": "completion.pending"}],
+                        [self.receipt(n, "completion") for n in ("1", "2", "3")],
+                        [cli_sample(pending, texts), cli_sample(ideal["final"], texts)],
+                        {"installed": "candidate", "database": "different"},
+                        {"web": {"verdict": "never-interrupted"}, "smtp": {"verdict": "never-interrupted"},
+                         "cron": {"verdict": "never-interrupted"}, "dns": {"verdict": t.DNS_NOT_PROVIDED},
+                         "panel": {"verdict": t.PANEL_UNTIL_END}})
+        trial.state["printed_retry_command"] = "/usr/libexec/celikpanel/recovery recover --retry --snapshot " + SNAPSHOT
+        checks = {}
+        self.assertEqual(trial.kind_expectation(checks), "passed", checks["judged"])
+        self.assertEqual(checks["observations"]["attempts"]["automatic_count"], 3)
+        self.assertEqual(checks["observations"]["receipt_phases"], ["completion"] * 3)
+
+
 def _git(repository, *args):
     environment = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
     return subprocess.run(["git", "-C", str(repository), "-c", "core.autocrlf=false", "-c", "commit.gpgsign=false",
@@ -1016,6 +1659,26 @@ class ArtifactProofTests(unittest.TestCase):
         with redirect_stdout(out):
             self.assertEqual(t.main(["prove", "--artifacts", str(path)]), 0)
         self.assertEqual(sorted(json.loads(out.getvalue())["proofs"]), ["baseline", "defective", "good"])
+
+    def test_five_archives_with_the_upd3_start_kinds_are_proved(self):
+        good = self.document["good"]["commit"]
+        web = Path(self.document["good"]["product_web_src"])
+        for role, name in (("startcheck", "cmd/panel/server_lifecycle.go"), ("realstart", "cmd/panel/main.go")):
+            _git(self.repo, "checkout", "-q", "--detach", good)
+            (self.repo / name).write_text(f"{role} fixture\n")
+            _git(self.repo, "add", "-A")
+            _git(self.repo, "commit", "-q", "-m", role)
+            commit = _git(self.repo, "rev-parse", "HEAD")
+            self.document[role] = dict(self.item(commit, t.CANDIDATE_VERSION, 82, web), parent=good)
+        t.validate_artifacts(self.document)
+        t.validate_cell_artifacts(self.document, t.CELLS["upd1-debian13-realstart"])
+        path = self.root / "upd1-artifacts.json"
+        path.write_text(json.dumps(self.document))
+        out = io.StringIO()
+        with redirect_stdout(out):
+            self.assertEqual(t.main(["prove", "--artifacts", str(path)]), 0)
+        self.assertEqual(sorted(json.loads(out.getvalue())["proofs"]),
+                         ["baseline", "defective", "good", "realstart", "startcheck"])
 
     def test_an_owner_tools_readme_not_from_the_commit_is_refused(self):
         web = Path(self.document["good"]["product_web_src"])

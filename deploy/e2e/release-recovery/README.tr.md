@@ -488,6 +488,60 @@ düğümlü bir sürüm için saklanır ve `peer_ip`/`peer_ns` ister.
 - `crontab` yoksa zamanlanmış görev oluşturulmaz; durum "cron: not available
   on this baseline" olarak kaydedilir.
 
+İkinci yerel denemeden (upd2) sonra şu düzeltmeler kalıcı hâle geldi:
+
+- Güncelleme başlatma isteği için ürün 202 döndürür. Gövdede
+  `accepted: true` varsa 200 ve 202 kabul sayılır; başka her yanıt ret olarak
+  kalır.
+- Arch'ta `getent`, loopback yanıtını `localhost` adıyla yazar. Artık her
+  yanıt satırı okunur. Yalnız 127.0.0.1 kuralı değişmedi ve ham çıktı
+  kaydedilir.
+- Başlatmadan hemen sonraki ilk yoklama aralığında, Panel API'nin `accepted`
+  ve kök CLI'nin `running` demesi doğal sıralamadır. Bu durum
+  `start-instant-lag` olarak kaydedilir. Başka her fark, aynı çift daha sonra
+  görülse bile, uyuşmazlık sayılır.
+
+**Aday panel başlangıç türleri (upd3).** Ürün `8ffc5e06` iki sınır ekledi.
+Bunlar şimdiye kadar yalnız bileşen testleriyle sınandı. Test düzeneği bu iki
+sınır için iki yeni aday ve dört yeni hücre ekler. İyi hücreler ve
+migrate-only hücreleri değişmedi.
+
+- **start-check (S aday):** `configurePanelHTTPTLS` her zaman hata verir. Bu
+  işlevi hem salt-okur başlangıç denetimi hem gerçek başlatma kullanır.
+  Beklenen gözlem:
+  - Güncelleme, veri tabanı yayımlandıktan sonra `active` aşamasında
+    `candidate_panel_startup_check_failed` koduyla durur. Kod hem hata
+    satırında hem `<request>.failure` dosyasında görünür.
+  - `completion.pending` hiç oluşmaz. Bütün dağıtımlar `phase=active` olur.
+  - Sunucu önceki sürüme otomatik döner. Veri tabanı güncelleme öncesiyle
+    aynıdır.
+  - CLI, ürünün "önceki sürüme döndürüldü" metnini İngilizce ve Türkçe yazar.
+
+  İkinci hata öncekiyle aynıdır (Debian: yeniden başlatma, Arch: kurtarma
+  sürecinin öldürülmesi). Denetimin nedeni `tls_pair_invalid` değilse bu bir
+  bulgudur: iyi bir aday da aynı biçimde reddedilebilir.
+- **real-start (R aday):** `main()` dinleyici başlamadan hemen önce çıkar;
+  denetim o satıra hiç ulaşmaz. Beklenen gözlem:
+  - Denetim geçer ve `completion.pending` oluşur.
+  - Kararlılık beklemesi `panel_start_unverified` koduyla başarısız olur.
+  - İleri tamamlama sınırına kadar yeniden denenir (sayı ve zamanlar
+    kaydedilir), sonra `paused_retry_limit` durumunda duraklar.
+  - Geri alma olmaz.
+  - Sahibin tek seferlik yeniden deneme komutu okunur ve kaydedilir, ama
+    **çalıştırılmaz**: aynı bozuk adayı yeniden dener.
+  - Site, posta ve cron Panel açılmazken kesintisiz çalışmalıdır.
+  - Hangi görünümlere ulaşılabildiği kaydedilir.
+
+  Bu hücrede ikinci hata yoktur.
+
+Bütün metinler ürün derlemesinden okunur, kopyalanmaz. Web metinleri
+derlemenin `web/src` kataloglarından, CLI metinleri derlenen commit'in
+`cmd/recovery/main.go` dosyasından alınır. CLI çıktısı birebir karşılaştırılır.
+Olası bulgu: ürün `failure_code` alanını yalnız son kayıtlı hata
+güncellemenin kendi hatası olduğu sürece gösterir. Bu yüzden duraklamada
+real-start'a özgü metin görünmeyebilir. Değerlendirici bunu varsaymaz;
+görmediyse bulgu olarak yazar.
+
 Komutlar ve hücre ayrıntıları İngilizce bölümdedir
 ([README.md](README.md#owner-started-update-acceptance-upd1)). Çevrimdışı
-testler (`test_owner_update_trial.py`, 55 test) yerel sonucu kanıtlamaz.
+testler (`test_owner_update_trial.py`, 83 test) yerel sonucu kanıtlamaz.

@@ -2,10 +2,10 @@
 # upd1 wrapper for the Linux QEMU host (archlinux), run as root from the repository root.
 #
 #   run-upd1.sh build [SOURCE_COMMIT]
-#       Disposable clone + fixture commits B/G/D + three acceptance-license
+#       Disposable clone + fixture commits B/G/D/S/R + five acceptance-license
 #       archives; prints the upd1-artifacts.json path.
 #   run-upd1.sh prove ARTIFACTS_JSON
-#       Read-only host proof of all three archives (inventory, policy, source).
+#       Read-only host proof of every archive in it (inventory, policy, source).
 #   run-upd1.sh dry-run CELL ARTIFACTS_JSON LAB_NAME
 #       Validate the plan without any guest (no lab is created).
 #   run-upd1.sh cell CELL ARTIFACTS_JSON LAB_NAME SSH_PORT [LOCAL_PORT]
@@ -13,6 +13,8 @@
 #       one cell on its node, then stop the lab (disks and evidence retained).
 #
 # CELL: upd1-debian13-defective | upd1-debian13-good | upd1-arch-defective | upd1-arch-good
+#       upd1-debian13-startcheck | upd1-arch-startcheck | upd1-debian13-realstart | upd1-arch-realstart
+#       (the last four need an upd1-artifacts.json built with the startcheck/realstart roles)
 # One cell per new lab. Never reuse a lab, an intent or a guest.
 # The image cache defaults to /var/tmp/cp-v3n28/images (UPD1_IMAGE_CACHE overrides).
 # UPD1_DNS_MODE: external (default; DNS not provided by this run) | local (two-node variant only).
@@ -27,7 +29,7 @@ DRIVER=(python3 "$HERE/owner_update_trial.py")
 CHOICES=(--dns-mode "$DNS_MODE")
 [[ -z ${UPD1_SETUP_DRAFT_JSON:-} ]] || CHOICES+=(--setup-draft-json "$UPD1_SETUP_DRAFT_JSON")
 
-usage() { sed -n '2,19p' "${BASH_SOURCE[0]}" >&2; exit 2; }
+usage() { sed -n '2,21p' "${BASH_SOURCE[0]}" >&2; exit 2; }
 [[ $# -ge 1 ]] || usage
 command=$1; shift
 case $command in
