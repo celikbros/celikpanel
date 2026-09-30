@@ -1,0 +1,207 @@
+wall=2026-09-30T02:57:35.718555072Z boot_id=31296a2f-3f25-4198-9d79-37af1bb927b4
+== journal this boot: sshd / celikpeer / inspect / sudo lines
+2026-09-30T02:56:29.145284+00:00 dns-arch sshd-session[503]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T02:56:29.176000+00:00 dns-arch audit[503]: USER_START pid=503 uid=0 auid=1000 ses=5 msg='op=PAM:session_open grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T02:56:29.177000+00:00 dns-arch audit[506]: CRED_ACQ pid=506 uid=0 auid=1000 ses=5 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T02:56:29.189000+00:00 dns-arch audit[507]: USER_ACCT pid=507 uid=1000 auid=1000 ses=5 msg='op=PAM:accounting grantors=pam_unix,pam_permit,pam_time acct="celik" exe="/usr/bin/sudo" hostname=? addr=? terminal=? res=success'
+2026-09-30T02:56:29.190000+00:00 dns-arch audit[507]: CRED_REFR pid=507 uid=1000 auid=1000 ses=5 msg='op=PAM:setcred grantors=pam_faillock,pam_permit,pam_env,pam_faillock acct="root" exe="/usr/bin/sudo" hostname=? addr=? terminal=? res=success'
+2026-09-30T02:56:29.191542+00:00 dns-arch sudo[507]: pam_unix(sudo:session): session opened for user root(uid=0) by celik(uid=1000)
+2026-09-30T02:56:29.191000+00:00 dns-arch audit[507]: USER_START pid=507 uid=1000 auid=1000 ses=5 msg='op=PAM:session_open grantors=pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_systemd acct="root" exe="/usr/bin/sudo" hostname=? addr=? terminal=? res=success'
+2026-09-30T02:56:29.207091+00:00 dns-arch sudo[507]: pam_unix(sudo:session): session closed for user root
+2026-09-30T02:56:29.206000+00:00 dns-arch audit[507]: USER_END pid=507 uid=1000 auid=1000 ses=5 msg='op=PAM:session_close grantors=pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_systemd acct="root" exe="/usr/bin/sudo" hostname=? addr=? terminal=? res=success'
+2026-09-30T02:56:29.206000+00:00 dns-arch audit[507]: CRED_DISP pid=507 uid=1000 auid=1000 ses=5 msg='op=PAM:setcred grantors=pam_faillock,pam_permit,pam_env,pam_faillock acct="root" exe="/usr/bin/sudo" hostname=? addr=? terminal=? res=success'
+2026-09-30T02:56:29.208406+00:00 dns-arch sshd-session[506]: Received disconnect from 10.0.2.2 port 47820:11: disconnected by user
+2026-09-30T02:56:29.208556+00:00 dns-arch sshd-session[506]: Disconnected from user celik 10.0.2.2 port 47820
+2026-09-30T02:56:29.209255+00:00 dns-arch sshd-session[503]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T02:56:29.208000+00:00 dns-arch audit[503]: USER_END pid=503 uid=0 auid=1000 ses=5 msg='op=PAM:session_close grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T02:56:29.208000+00:00 dns-arch audit[503]: CRED_DISP pid=503 uid=0 auid=1000 ses=5 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T02:56:30.223000+00:00 dns-arch audit[516]: USER_ACCT pid=516 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:accounting grantors=pam_access,pam_unix,pam_permit,pam_time acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T02:56:30.224279+00:00 dns-arch sshd-session[516]: Accepted publickey for celik from 10.0.2.2 port 51958 ssh2: ED25519 SHA256:7Mzm6sXPqO0QZ1t6FR8PH5GxkMB0VdVPNrjGLe3bYM0
+2026-09-30T02:56:30.225105+00:00 dns-arch kernel: audit: type=1101 audit(1790736990.223:154): pid=516 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:accounting grantors=pam_access,pam_unix,pam_permit,pam_time acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T02:56:30.224000+00:00 dns-arch audit[516]: CRED_ACQ pid=516 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T02:56:30.224000+00:00 dns-arch audit[516]: SYSCALL arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7ffcee186b80 a2=4 a3=0 items=0 ppid=438 pid=516 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=6 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T02:56:30.225532+00:00 dns-arch sshd-session[516]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T02:56:30.226099+00:00 dns-arch kernel: audit: type=1103 audit(1790736990.224:155): pid=516 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T02:56:30.226162+00:00 dns-arch kernel: audit: type=1300 audit(1790736990.224:156): arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7ffcee186b80 a2=4 a3=0 items=0 ppid=438 pid=516 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=6 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T02:56:30.246000+00:00 dns-arch audit[516]: USER_START pid=516 uid=0 auid=1000 ses=6 msg='op=PAM:session_open grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T02:56:30.249075+00:00 dns-arch kernel: audit: type=1105 audit(1790736990.246:157): pid=516 uid=0 auid=1000 ses=6 msg='op=PAM:session_open grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T02:56:30.248000+00:00 dns-arch audit[519]: CRED_ACQ pid=519 uid=0 auid=1000 ses=6 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T02:56:30.250224+00:00 dns-arch kernel: audit: type=1103 audit(1790736990.248:158): pid=519 uid=0 auid=1000 ses=6 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T02:56:30.255288+00:00 dns-arch sshd-session[519]: Received disconnect from 10.0.2.2 port 51958:11: disconnected by user
+2026-09-30T02:56:30.255431+00:00 dns-arch sshd-session[519]: Disconnected from user celik 10.0.2.2 port 51958
+2026-09-30T02:56:30.256006+00:00 dns-arch sshd-session[516]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T02:56:30.255000+00:00 dns-arch audit[516]: USER_END pid=516 uid=0 auid=1000 ses=6 msg='op=PAM:session_close grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T02:56:30.255000+00:00 dns-arch audit[516]: CRED_DISP pid=516 uid=0 auid=1000 ses=6 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T02:56:30.257078+00:00 dns-arch kernel: audit: type=1106 audit(1790736990.255:159): pid=516 uid=0 auid=1000 ses=6 msg='op=PAM:session_close grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T02:56:30.257123+00:00 dns-arch kernel: audit: type=1104 audit(1790736990.255:160): pid=516 uid=0 auid=1000 ses=6 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T02:57:07.322000+00:00 dns-arch audit[527]: USER_ACCT pid=527 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:accounting grantors=pam_access,pam_unix,pam_permit,pam_time acct="celikpeer" exe="/usr/lib/ssh/sshd-session" hostname=192.0.2.10 addr=192.0.2.10 terminal=ssh res=success'
+2026-09-30T02:57:07.323390+00:00 dns-arch sshd-session[527]: Accepted publickey for celikpeer from 192.0.2.10 port 33586 ssh2: ED25519 SHA256:XJ32yUwG0c4aM4K9vkYrYdZeZiiqJgBcZp5/3oYbZ2w
+2026-09-30T02:57:07.324167+00:00 dns-arch kernel: audit: type=1101 audit(1790737027.322:163): pid=527 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:accounting grantors=pam_access,pam_unix,pam_permit,pam_time acct="celikpeer" exe="/usr/lib/ssh/sshd-session" hostname=192.0.2.10 addr=192.0.2.10 terminal=ssh res=success'
+2026-09-30T02:57:07.323000+00:00 dns-arch audit[527]: CRED_ACQ pid=527 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celikpeer" exe="/usr/lib/ssh/sshd-session" hostname=192.0.2.10 addr=192.0.2.10 terminal=ssh res=success'
+2026-09-30T02:57:07.323000+00:00 dns-arch audit[527]: SYSCALL arch=c000003e syscall=1 success=yes exit=3 a0=6 a1=7ffec700ff80 a2=3 a3=0 items=0 ppid=438 pid=527 auid=969 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=7 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T02:57:07.324775+00:00 dns-arch sshd-session[527]: pam_unix(sshd:session): session opened for user celikpeer(uid=969) by celikpeer(uid=0)
+2026-09-30T02:57:07.325081+00:00 dns-arch kernel: audit: type=1103 audit(1790737027.323:164): pid=527 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celikpeer" exe="/usr/lib/ssh/sshd-session" hostname=192.0.2.10 addr=192.0.2.10 terminal=ssh res=success'
+2026-09-30T02:57:07.325148+00:00 dns-arch kernel: audit: type=1300 audit(1790737027.323:165): arch=c000003e syscall=1 success=yes exit=3 a0=6 a1=7ffec700ff80 a2=3 a3=0 items=0 ppid=438 pid=527 auid=969 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=7 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T02:57:07.344217+00:00 dns-arch systemd-logind[330]: New session '7' of user 'celikpeer' with class 'user' and type 'tty'.
+2026-09-30T02:57:07.401000+00:00 dns-arch audit[533]: USER_ACCT pid=533 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:accounting grantors=pam_access,pam_unix,pam_permit,pam_time acct="celikpeer" exe="/usr/lib/systemd/systemd-executor" hostname=? addr=? terminal=? res=success'
+2026-09-30T02:57:07.402686+00:00 dns-arch (systemd)[533]: pam_warn(systemd-user:setcred): function=[pam_sm_setcred] flags=0x8002 service=[systemd-user] terminal=[] user=[celikpeer] ruser=[<unknown>] rhost=[<unknown>]
+2026-09-30T02:57:07.402952+00:00 dns-arch (systemd)[533]: pam_unix(systemd-user:session): session opened for user celikpeer(uid=969) by celikpeer(uid=0)
+2026-09-30T02:57:07.403128+00:00 dns-arch kernel: audit: type=1101 audit(1790737027.401:167): pid=533 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:accounting grantors=pam_access,pam_unix,pam_permit,pam_time acct="celikpeer" exe="/usr/lib/systemd/systemd-executor" hostname=? addr=? terminal=? res=success'
+2026-09-30T02:57:07.401000+00:00 dns-arch audit[533]: CRED_ACQ pid=533 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:setcred grantors=? acct="celikpeer" exe="/usr/lib/systemd/systemd-executor" hostname=? addr=? terminal=? res=failed'
+2026-09-30T02:57:07.404086+00:00 dns-arch kernel: audit: type=1103 audit(1790737027.401:168): pid=533 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:setcred grantors=? acct="celikpeer" exe="/usr/lib/systemd/systemd-executor" hostname=? addr=? terminal=? res=failed'
+2026-09-30T02:57:07.404607+00:00 dns-arch systemd-logind[330]: New session '8' of user 'celikpeer' with class 'manager-early' and type 'unspecified'.
+2026-09-30T02:57:07.403000+00:00 dns-arch audit[533]: USER_START pid=533 uid=0 auid=969 ses=8 msg='op=PAM:session_open grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_umask,pam_systemd,pam_env acct="celikpeer" exe="/usr/lib/systemd/systemd-executor" hostname=? addr=? terminal=? res=success'
+2026-09-30T02:57:07.506328+00:00 dns-arch systemd[1]: Started Session 7 of User celikpeer.
+2026-09-30T02:57:07.506000+00:00 dns-arch audit[527]: USER_START pid=527 uid=0 auid=969 ses=7 msg='op=PAM:session_open grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celikpeer" exe="/usr/lib/ssh/sshd-session" hostname=192.0.2.10 addr=192.0.2.10 terminal=ssh res=success'
+2026-09-30T02:57:07.507000+00:00 dns-arch audit[542]: CRED_ACQ pid=542 uid=0 auid=969 ses=7 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celikpeer" exe="/usr/lib/ssh/sshd-session" hostname=192.0.2.10 addr=192.0.2.10 terminal=ssh res=success'
+2026-09-30T02:57:07.520000+00:00 dns-arch audit[543]: USER_ACCT pid=543 uid=969 auid=969 ses=7 msg='op=PAM:accounting grantors=pam_unix,pam_permit,pam_time acct="celikpeer" exe="/usr/bin/sudo" hostname=? addr=? terminal=? res=success'
+2026-09-30T02:57:07.522458+00:00 dns-arch sudo[543]: celikpeer : PWD=/var/lib/bind-peer-inspector ; USER=root ; COMMAND=/usr/local/libexec/celikpanel-bind-peer-inspect
+2026-09-30T02:57:07.521000+00:00 dns-arch audit[543]: CRED_REFR pid=543 uid=969 auid=969 ses=7 msg='op=PAM:setcred grantors=pam_faillock,pam_permit,pam_env,pam_faillock acct="root" exe="/usr/bin/sudo" hostname=? addr=? terminal=? res=success'
+2026-09-30T02:57:07.522752+00:00 dns-arch sudo[543]: pam_unix(sudo:session): session opened for user root(uid=0) by celikpeer(uid=969)
+2026-09-30T02:57:07.522000+00:00 dns-arch audit[543]: USER_START pid=543 uid=969 auid=969 ses=7 msg='op=PAM:session_open grantors=pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_systemd acct="root" exe="/usr/bin/sudo" hostname=? addr=? terminal=? res=success'
+2026-09-30T02:57:07.618137+00:00 dns-arch sudo[543]: pam_unix(sudo:session): session closed for user root
+2026-09-30T02:57:07.617000+00:00 dns-arch audit[543]: USER_END pid=543 uid=969 auid=969 ses=7 msg='op=PAM:session_close grantors=pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_systemd acct="root" exe="/usr/bin/sudo" hostname=? addr=? terminal=? res=success'
+2026-09-30T02:57:07.617000+00:00 dns-arch audit[543]: CRED_DISP pid=543 uid=969 auid=969 ses=7 msg='op=PAM:setcred grantors=pam_faillock,pam_permit,pam_env,pam_faillock acct="root" exe="/usr/bin/sudo" hostname=? addr=? terminal=? res=success'
+2026-09-30T02:57:07.661388+00:00 dns-arch sshd-session[542]: Connection closed by 192.0.2.10 port 33586
+2026-09-30T02:57:07.662110+00:00 dns-arch sshd-session[527]: pam_unix(sshd:session): session closed for user celikpeer
+2026-09-30T02:57:07.661000+00:00 dns-arch audit[527]: USER_END pid=527 uid=0 auid=969 ses=7 msg='op=PAM:session_close grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celikpeer" exe="/usr/lib/ssh/sshd-session" hostname=192.0.2.10 addr=192.0.2.10 terminal=ssh res=success'
+2026-09-30T02:57:07.661000+00:00 dns-arch audit[527]: CRED_DISP pid=527 uid=0 auid=969 ses=7 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celikpeer" exe="/usr/lib/ssh/sshd-session" hostname=192.0.2.10 addr=192.0.2.10 terminal=ssh res=success'
+2026-09-30T02:57:35.519000+00:00 dns-arch audit[567]: USER_ACCT pid=567 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:accounting grantors=pam_access,pam_unix,pam_permit,pam_time acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T02:57:35.520311+00:00 dns-arch sshd-session[567]: Accepted publickey for celik from 10.0.2.2 port 54010 ssh2: ED25519 SHA256:7Mzm6sXPqO0QZ1t6FR8PH5GxkMB0VdVPNrjGLe3bYM0
+2026-09-30T02:57:35.521088+00:00 dns-arch kernel: audit: type=1101 audit(1790737055.519:183): pid=567 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:accounting grantors=pam_access,pam_unix,pam_permit,pam_time acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T02:57:35.520000+00:00 dns-arch audit[567]: CRED_ACQ pid=567 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T02:57:35.520000+00:00 dns-arch audit[567]: SYSCALL arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7fff610a9d00 a2=4 a3=0 items=0 ppid=438 pid=567 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=9 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T02:57:35.521647+00:00 dns-arch sshd-session[567]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T02:57:35.522073+00:00 dns-arch kernel: audit: type=1103 audit(1790737055.520:184): pid=567 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T02:57:35.522134+00:00 dns-arch kernel: audit: type=1300 audit(1790737055.520:185): arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7fff610a9d00 a2=4 a3=0 items=0 ppid=438 pid=567 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=9 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T02:57:35.699000+00:00 dns-arch audit[567]: USER_START pid=567 uid=0 auid=1000 ses=9 msg='op=PAM:session_open grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T02:57:35.700000+00:00 dns-arch audit[582]: CRED_ACQ pid=582 uid=0 auid=1000 ses=9 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T02:57:35.711000+00:00 dns-arch audit[583]: USER_ACCT pid=583 uid=1000 auid=1000 ses=9 msg='op=PAM:accounting grantors=pam_unix,pam_permit,pam_time acct="celik" exe="/usr/bin/sudo" hostname=? addr=? terminal=? res=success'
+2026-09-30T02:57:35.713000+00:00 dns-arch audit[583]: CRED_REFR pid=583 uid=1000 auid=1000 ses=9 msg='op=PAM:setcred grantors=pam_faillock,pam_permit,pam_env,pam_faillock acct="root" exe="/usr/bin/sudo" hostname=? addr=? terminal=? res=success'
+2026-09-30T02:57:35.714811+00:00 dns-arch sudo[583]: pam_unix(sudo:session): session opened for user root(uid=0) by celik(uid=1000)
+2026-09-30T02:57:35.714000+00:00 dns-arch audit[583]: USER_START pid=583 uid=1000 auid=1000 ses=9 msg='op=PAM:session_open grantors=pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_systemd acct="root" exe="/usr/bin/sudo" hostname=? addr=? terminal=? res=success'
+== journal this boot: all lines from 02:56:59 to 02:57:10
+2026-09-30T02:57:02.041305+00:00 dns-arch named[367]: client @0x7fc9bbb30000 192.0.2.10#42523 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790731620)
+2026-09-30T02:57:02.041807+00:00 dns-arch named[367]: client @0x7fc9bbb30000 192.0.2.10#42523 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1790731620)
+2026-09-30T02:57:02.265271+00:00 dns-arch named[367]: client @0x7fc9b8d7cc00 192.0.2.10#35327 (s2.s1-kill.test): bad zone transfer request: 's2.s1-kill.test/IN': non-authoritative zone (NOTAUTH)
+2026-09-30T02:57:02.611852+00:00 dns-arch named[367]: client @0x7fc9bbb22000 192.0.2.10#14845: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T02:57:02.611893+00:00 dns-arch named[367]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#14845: no serial
+2026-09-30T02:57:05.612652+00:00 dns-arch named[367]: client @0x7fc9bbb22000 192.0.2.10#14845: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T02:57:05.612702+00:00 dns-arch named[367]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#14845: no serial
+2026-09-30T02:57:07.322000+00:00 dns-arch audit[527]: USER_ACCT pid=527 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:accounting grantors=pam_access,pam_unix,pam_permit,pam_time acct="celikpeer" exe="/usr/lib/ssh/sshd-session" hostname=192.0.2.10 addr=192.0.2.10 terminal=ssh res=success'
+2026-09-30T02:57:07.323390+00:00 dns-arch sshd-session[527]: Accepted publickey for celikpeer from 192.0.2.10 port 33586 ssh2: ED25519 SHA256:XJ32yUwG0c4aM4K9vkYrYdZeZiiqJgBcZp5/3oYbZ2w
+2026-09-30T02:57:07.324167+00:00 dns-arch kernel: audit: type=1101 audit(1790737027.322:163): pid=527 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:accounting grantors=pam_access,pam_unix,pam_permit,pam_time acct="celikpeer" exe="/usr/lib/ssh/sshd-session" hostname=192.0.2.10 addr=192.0.2.10 terminal=ssh res=success'
+2026-09-30T02:57:07.323000+00:00 dns-arch audit[527]: CRED_ACQ pid=527 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celikpeer" exe="/usr/lib/ssh/sshd-session" hostname=192.0.2.10 addr=192.0.2.10 terminal=ssh res=success'
+2026-09-30T02:57:07.323000+00:00 dns-arch audit[527]: SYSCALL arch=c000003e syscall=1 success=yes exit=3 a0=6 a1=7ffec700ff80 a2=3 a3=0 items=0 ppid=438 pid=527 auid=969 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=7 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T02:57:07.323000+00:00 dns-arch audit: PROCTITLE proctitle=737368642D73657373696F6E3A2063656C696B70656572205B706F7374617574685D
+2026-09-30T02:57:07.324775+00:00 dns-arch sshd-session[527]: pam_unix(sshd:session): session opened for user celikpeer(uid=969) by celikpeer(uid=0)
+2026-09-30T02:57:07.325081+00:00 dns-arch kernel: audit: type=1103 audit(1790737027.323:164): pid=527 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celikpeer" exe="/usr/lib/ssh/sshd-session" hostname=192.0.2.10 addr=192.0.2.10 terminal=ssh res=success'
+2026-09-30T02:57:07.325124+00:00 dns-arch kernel: audit: type=1006 audit(1790737027.323:165): pid=527 uid=0 old-auid=4294967295 auid=969 tty=(none) old-ses=4294967295 ses=7 res=1
+2026-09-30T02:57:07.325148+00:00 dns-arch kernel: audit: type=1300 audit(1790737027.323:165): arch=c000003e syscall=1 success=yes exit=3 a0=6 a1=7ffec700ff80 a2=3 a3=0 items=0 ppid=438 pid=527 auid=969 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=7 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T02:57:07.325165+00:00 dns-arch kernel: audit: type=1327 audit(1790737027.323:165): proctitle=737368642D73657373696F6E3A2063656C696B70656572205B706F7374617574685D
+2026-09-30T02:57:07.344217+00:00 dns-arch systemd-logind[330]: New session '7' of user 'celikpeer' with class 'user' and type 'tty'.
+2026-09-30T02:57:07.350255+00:00 dns-arch systemd[1]: Created slice User Slice of UID 969.
+2026-09-30T02:57:07.351200+00:00 dns-arch systemd[1]: Starting User Runtime Directory /run/user/969...
+2026-09-30T02:57:07.374409+00:00 dns-arch systemd[1]: Finished User Runtime Directory /run/user/969.
+2026-09-30T02:57:07.373000+00:00 dns-arch audit[1]: SERVICE_START pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=user-runtime-dir@969 comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T02:57:07.375069+00:00 dns-arch kernel: audit: type=1130 audit(1790737027.373:166): pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=user-runtime-dir@969 comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T02:57:07.376188+00:00 dns-arch systemd[1]: Starting User Manager for UID 969...
+2026-09-30T02:57:07.401000+00:00 dns-arch audit[533]: USER_ACCT pid=533 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:accounting grantors=pam_access,pam_unix,pam_permit,pam_time acct="celikpeer" exe="/usr/lib/systemd/systemd-executor" hostname=? addr=? terminal=? res=success'
+2026-09-30T02:57:07.402686+00:00 dns-arch (systemd)[533]: pam_warn(systemd-user:setcred): function=[pam_sm_setcred] flags=0x8002 service=[systemd-user] terminal=[] user=[celikpeer] ruser=[<unknown>] rhost=[<unknown>]
+2026-09-30T02:57:07.402952+00:00 dns-arch (systemd)[533]: pam_unix(systemd-user:session): session opened for user celikpeer(uid=969) by celikpeer(uid=0)
+2026-09-30T02:57:07.403128+00:00 dns-arch kernel: audit: type=1101 audit(1790737027.401:167): pid=533 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:accounting grantors=pam_access,pam_unix,pam_permit,pam_time acct="celikpeer" exe="/usr/lib/systemd/systemd-executor" hostname=? addr=? terminal=? res=success'
+2026-09-30T02:57:07.401000+00:00 dns-arch audit[533]: CRED_ACQ pid=533 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:setcred grantors=? acct="celikpeer" exe="/usr/lib/systemd/systemd-executor" hostname=? addr=? terminal=? res=failed'
+2026-09-30T02:57:07.401000+00:00 dns-arch audit[533]: SYSCALL arch=c000003e syscall=1 success=yes exit=3 a0=a a1=7ffeff20a440 a2=3 a3=0 items=0 ppid=1 pid=533 auid=969 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=8 comm="(systemd)" exe="/usr/lib/systemd/systemd-executor" key=(null)
+2026-09-30T02:57:07.401000+00:00 dns-arch audit: PROCTITLE proctitle="(systemd)"
+2026-09-30T02:57:07.404086+00:00 dns-arch kernel: audit: type=1103 audit(1790737027.401:168): pid=533 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:setcred grantors=? acct="celikpeer" exe="/usr/lib/systemd/systemd-executor" hostname=? addr=? terminal=? res=failed'
+2026-09-30T02:57:07.404135+00:00 dns-arch kernel: audit: type=1006 audit(1790737027.401:169): pid=533 uid=0 old-auid=4294967295 auid=969 tty=(none) old-ses=4294967295 ses=8 res=1
+2026-09-30T02:57:07.404151+00:00 dns-arch kernel: audit: type=1300 audit(1790737027.401:169): arch=c000003e syscall=1 success=yes exit=3 a0=a a1=7ffeff20a440 a2=3 a3=0 items=0 ppid=1 pid=533 auid=969 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=8 comm="(systemd)" exe="/usr/lib/systemd/systemd-executor" key=(null)
+2026-09-30T02:57:07.404607+00:00 dns-arch systemd-logind[330]: New session '8' of user 'celikpeer' with class 'manager-early' and type 'unspecified'.
+2026-09-30T02:57:07.403000+00:00 dns-arch audit[533]: USER_START pid=533 uid=0 auid=969 ses=8 msg='op=PAM:session_open grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_umask,pam_systemd,pam_env acct="celikpeer" exe="/usr/lib/systemd/systemd-executor" hostname=? addr=? terminal=? res=success'
+2026-09-30T02:57:07.472702+00:00 dns-arch systemd[533]: Queued start job for default target Main User Target.
+2026-09-30T02:57:07.482366+00:00 dns-arch systemd[533]: Created slice User Application Slice.
+2026-09-30T02:57:07.482436+00:00 dns-arch systemd[533]: Reached target Paths.
+2026-09-30T02:57:07.482500+00:00 dns-arch systemd[533]: Reached target Timers.
+2026-09-30T02:57:07.483376+00:00 dns-arch systemd[533]: Starting D-Bus User Message Bus Socket...
+2026-09-30T02:57:07.483538+00:00 dns-arch systemd[533]: Listening on GnuPG network certificate management daemon.
+2026-09-30T02:57:07.483603+00:00 dns-arch systemd[533]: Listening on GnuPG cryptographic agent and passphrase cache (access for web browsers).
+2026-09-30T02:57:07.483652+00:00 dns-arch systemd[533]: Listening on GnuPG cryptographic agent and passphrase cache (restricted).
+2026-09-30T02:57:07.483717+00:00 dns-arch systemd[533]: Listening on GnuPG cryptographic agent (ssh-agent emulation).
+2026-09-30T02:57:07.483763+00:00 dns-arch systemd[533]: Listening on GnuPG cryptographic agent and passphrase cache.
+2026-09-30T02:57:07.483808+00:00 dns-arch systemd[533]: Listening on GnuPG public key management service.
+2026-09-30T02:57:07.483868+00:00 dns-arch systemd[533]: Listening on p11-kit server.
+2026-09-30T02:57:07.484733+00:00 dns-arch systemd[533]: Listening on Query the User Interactively for a Password.
+2026-09-30T02:57:07.485268+00:00 dns-arch systemd[533]: Listening on Disk Image Download Service Socket.
+2026-09-30T02:57:07.485804+00:00 dns-arch systemd[533]: Listening on Journal Log Access Socket.
+2026-09-30T02:57:07.485976+00:00 dns-arch systemd[533]: Listening on Virtual Machine and Container Registration Service Socket.
+2026-09-30T02:57:07.486687+00:00 dns-arch systemd[533]: Listening on Simple File System Backed Storage Provider.
+2026-09-30T02:57:07.493782+00:00 dns-arch systemd[533]: Listening on D-Bus User Message Bus Socket.
+2026-09-30T02:57:07.493867+00:00 dns-arch systemd[533]: Reached target Sockets.
+2026-09-30T02:57:07.493897+00:00 dns-arch systemd[533]: Reached target Basic System.
+2026-09-30T02:57:07.493929+00:00 dns-arch systemd[533]: Reached target Main User Target.
+2026-09-30T02:57:07.493954+00:00 dns-arch systemd[533]: Startup finished in 82ms.
+2026-09-30T02:57:07.494214+00:00 dns-arch systemd[1]: Started User Manager for UID 969.
+2026-09-30T02:57:07.493000+00:00 dns-arch audit[1]: SERVICE_START pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=user@969 comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T02:57:07.506328+00:00 dns-arch systemd[1]: Started Session 7 of User celikpeer.
+2026-09-30T02:57:07.506000+00:00 dns-arch audit[527]: USER_START pid=527 uid=0 auid=969 ses=7 msg='op=PAM:session_open grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celikpeer" exe="/usr/lib/ssh/sshd-session" hostname=192.0.2.10 addr=192.0.2.10 terminal=ssh res=success'
+2026-09-30T02:57:07.507000+00:00 dns-arch audit[542]: CRED_ACQ pid=542 uid=0 auid=969 ses=7 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celikpeer" exe="/usr/lib/ssh/sshd-session" hostname=192.0.2.10 addr=192.0.2.10 terminal=ssh res=success'
+2026-09-30T02:57:07.520000+00:00 dns-arch audit[543]: USER_ACCT pid=543 uid=969 auid=969 ses=7 msg='op=PAM:accounting grantors=pam_unix,pam_permit,pam_time acct="celikpeer" exe="/usr/bin/sudo" hostname=? addr=? terminal=? res=success'
+2026-09-30T02:57:07.522458+00:00 dns-arch sudo[543]: celikpeer : PWD=/var/lib/bind-peer-inspector ; USER=root ; COMMAND=/usr/local/libexec/celikpanel-bind-peer-inspect
+2026-09-30T02:57:07.521000+00:00 dns-arch audit[543]: CRED_REFR pid=543 uid=969 auid=969 ses=7 msg='op=PAM:setcred grantors=pam_faillock,pam_permit,pam_env,pam_faillock acct="root" exe="/usr/bin/sudo" hostname=? addr=? terminal=? res=success'
+2026-09-30T02:57:07.522752+00:00 dns-arch sudo[543]: pam_unix(sudo:session): session opened for user root(uid=0) by celikpeer(uid=969)
+2026-09-30T02:57:07.522000+00:00 dns-arch audit[543]: USER_START pid=543 uid=969 auid=969 ses=7 msg='op=PAM:session_open grantors=pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_systemd acct="root" exe="/usr/bin/sudo" hostname=? addr=? terminal=? res=success'
+2026-09-30T02:57:07.618137+00:00 dns-arch sudo[543]: pam_unix(sudo:session): session closed for user root
+2026-09-30T02:57:07.617000+00:00 dns-arch audit[543]: USER_END pid=543 uid=969 auid=969 ses=7 msg='op=PAM:session_close grantors=pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_systemd acct="root" exe="/usr/bin/sudo" hostname=? addr=? terminal=? res=success'
+2026-09-30T02:57:07.617000+00:00 dns-arch audit[543]: CRED_DISP pid=543 uid=969 auid=969 ses=7 msg='op=PAM:setcred grantors=pam_faillock,pam_permit,pam_env,pam_faillock acct="root" exe="/usr/bin/sudo" hostname=? addr=? terminal=? res=success'
+2026-09-30T02:57:07.661388+00:00 dns-arch sshd-session[542]: Connection closed by 192.0.2.10 port 33586
+2026-09-30T02:57:07.662110+00:00 dns-arch sshd-session[527]: pam_unix(sshd:session): session closed for user celikpeer
+2026-09-30T02:57:07.661000+00:00 dns-arch audit[527]: USER_END pid=527 uid=0 auid=969 ses=7 msg='op=PAM:session_close grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celikpeer" exe="/usr/lib/ssh/sshd-session" hostname=192.0.2.10 addr=192.0.2.10 terminal=ssh res=success'
+2026-09-30T02:57:07.661000+00:00 dns-arch audit[527]: CRED_DISP pid=527 uid=0 auid=969 ses=7 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celikpeer" exe="/usr/lib/ssh/sshd-session" hostname=192.0.2.10 addr=192.0.2.10 terminal=ssh res=success'
+2026-09-30T02:57:07.664795+00:00 dns-arch systemd[1]: session-7.scope: Deactivated successfully.
+2026-09-30T02:57:07.665653+00:00 dns-arch systemd-logind[330]: Session 7 logged out. Waiting for processes to exit.
+2026-09-30T02:57:07.666755+00:00 dns-arch systemd-logind[330]: Removed session 7.
+== dns-peer-enroll secondary-status
+{"state":"configured","reason":"local policy and SSH configuration verified; live authentication is unproven","next_action":"No owner action is needed now. No status command tests live authentication: the primary Agent makes the first authenticated read-only inspector exchange only while reconciling an admitted pending deletion, and reports its result on that operation","primary_ip":"192.0.2.10","peer_ip":"192.0.2.11","catalog_name":"catalog-c000020a.celikpanel.invalid","primary_key_sha256":"5c9df6c94c06d1ce1a3382bdbe462b61d65e6628aa26005c669e7fde861b676c"}
+== inspector files (ls only)
+/etc/bind-peer-inspector:
+total 16
+drwxr-x--- 1 root root  140 2026-09-30 01:35:11.387234769 +0000 .
+drwxr-xr-x 1 root root 2218 2026-09-30 02:55:47.765339862 +0000 ..
+-rw------- 1 root root  173 2026-09-30 01:35:11.352234551 +0000 policy.json
+-rw------- 1 root root 3360 2026-09-30 01:35:11.383234744 +0000 sshd-config-original
+-rw------- 1 root root  217 2026-09-30 01:35:11.387234769 +0000 sshd-config-receipt.json
+-rw-r--r-- 1 root root  475 2026-09-30 01:35:11.361234607 +0000 sshd-match.conf
+
+/etc/ssh/bind-peer-inspector:
+total 4
+drwxr-xr-x 1 root root  30 2026-09-30 01:35:11.496235449 +0000 .
+drwxr-xr-x 1 root root 382 2026-09-30 01:35:11.391234794 +0000 ..
+-rw-r--r-- 1 root root 174 2026-09-30 01:35:11.496235449 +0000 authorized_keys
+
+/usr/local/libexec/:
+total 4792
+drwxr-xr-x 1 root root     128 2026-09-30 01:35:11.348234526 +0000 .
+drwxr-xr-x 1 root root      86 2026-09-30 01:35:11.321234357 +0000 ..
+-rwxr-xr-x 1 root root 4898978 2026-09-30 01:35:11.322927780 +0000 celikpanel-bind-peer-inspect
+-rwxr-xr-x 1 root root     187 2026-09-30 01:35:11.348234526 +0000 celikpanel-bind-peer-inspect-wrapper
+
+/var/lib/bind-peer-inspector:
+total 0
+drwxr-xr-x 1 root root   0 2026-09-30 01:35:11.321234357 +0000 .
+drwxr-xr-x 1 root root 212 2026-09-30 01:35:11.321234357 +0000 ..
+total 8
+drwxr-x--- 1 root root   98 2026-09-30 01:35:11.357234582 +0000 .
+drwxr-xr-x 1 root root 2218 2026-09-30 02:55:47.765339862 +0000 ..
+-r--r----- 1 root root  171 2026-09-30 01:24:14.707000000 +0000 90-cloud-init-users
+-r--r----- 1 root root   82 2026-09-30 01:35:11.357234582 +0000 celikpanel-bind-peer-inspector
+celikpeer:x:969:969::/var/lib/bind-peer-inspector:/bin/sh
+uid=969(celikpeer) gid=969(celikpeer) groups=969(celikpeer)
+== sshd_config Include/Match lines
+/etc/ssh/sshd_config:2:Include /etc/ssh/sshd_config.d/*.conf
+/etc/ssh/sshd_config:43:AuthorizedKeysFile	.ssh/authorized_keys
+/etc/ssh/sshd_config:47:#AuthorizedKeysCommand none
+/etc/ssh/sshd_config:48:#AuthorizedKeysCommandUser nobody
+/etc/ssh/sshd_config:120:#	ForceCommand cvs server
+/etc/ssh/sshd_config:122:Include /etc/bind-peer-inspector/sshd-match.conf
+/etc/ssh/sshd_config.d/20-systemd-userdb.conf:5:AuthorizedKeysCommand /usr/bin/userdbctl ssh-authorized-keys %u
+/etc/ssh/sshd_config.d/20-systemd-userdb.conf:6:AuthorizedKeysCommandUser root

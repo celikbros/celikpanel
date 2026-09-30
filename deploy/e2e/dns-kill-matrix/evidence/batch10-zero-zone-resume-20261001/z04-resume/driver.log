@@ -1,0 +1,44 @@
+### 2026-09-30T02:55:36.419Z z04-boot start root=/var/tmp/cp-b9-1001/r2 cell=pdns-switch__committed__after-write__paired-primary__peer-reachable
+pgrep: pattern that searches for process name longer than 15 characters will result in zero matches
+Try `pgrep -f' option to match against the complete command line.
+### 2026-09-30T02:55:36.429Z pre-boot record (read-only; serial logs copied because QEMU truncates them at start)
+### 2026-09-30T02:55:36.479Z fixture-start (QEMU from the batch 9 cell plan; new harness fixture.py, unchanged since 3cceb29a)
+### 2026-09-30T02:55:36.843Z wait-ssh
+### 2026-09-30T02:56:27.297Z first-read (read-only: ledger, agent, journal this boot)
+### 2026-09-30T02:56:28.447Z start-samplers
+Running as unit: cp-b10-peerloop1.service; invocation ID: 589346700b01411499b46d7ee5e8e43a
+peerloop1 start rc=0
+Running as unit: cp-b10-dbwatch.service; invocation ID: b5f9a819bb4e48fca2b95abd61efa93a
+Running as unit: cp-b10-ledwatch.service; invocation ID: 388b67b9ebcb42a1bf536f8b087f677d
+### 2026-09-30T02:56:30.080Z z04-boot done
+Z04-BOOT-DONE
+### 2026-09-30T02:56:58.804Z replace-trigger (batch 9 3c60de67 -> batch 10 419315fe; same owner and mode root:root 0755)
+3c60de67b48bc782ff2737fbb9c9168918e202bdd8af4d6b7c1f6ff30fdd6e90  /opt/celikpanel/bin/dns-kill-trigger
+419315feb17daf6baddf5bd8bb10aab275f8caadbf4161376550c2405e5b96a3  /opt/celikpanel/bin/dns-kill-trigger
+/opt/celikpanel/bin/dns-kill-trigger root:root 755 7995204 2026-09-30 02:56:59.673652504 +0000
+### 2026-09-30T02:56:59.546Z pending-job-just-before (read-only)
+total 24
+drwx------ 2 root root 4096 2026-09-30 04:35:13.203206227 +0300 .
+drwx------ 5 root root 4096 2026-09-30 04:27:37.655209283 +0300 ..
+-rw------- 1 root root 1396 2026-09-30 04:27:37.660557632 +0300 peer-verdict.json
+-rw------- 1 root root 6783 2026-09-30 04:27:52.931069673 +0300 zone-lifecycle.json
+-rw------- 1 root root 1091 2026-09-30 04:35:13.210241071 +0300 zone-lifecycle-recover.json
+### 2026-09-30T02:56:59.948Z zone-lifecycle-recover-dry-run
+dry rc=0
+### 2026-09-30T02:57:00.065Z zone-lifecycle-recover-execute python3 deploy/e2e/dns-kill-matrix/guest_bootstrap.py zone-lifecycle --work-root /var/tmp/cp-b9-1001/r2 --cell-id pdns-switch__committed__after-write__paired-primary__peer-reachable --node debian13 --identity-file /var/tmp/cp-b9-1001/r2/id_ed25519 --source-fixture uninitialized --zero-zones --recover-delete --execute
+ZONE_LIFECYCLE_RECOVER_RC=2 elapsed=7.39s
+total 28
+drwx------ 2 root root 4096 2026-09-30 05:57:07.439459483 +0300 .
+drwx------ 5 root root 4096 2026-09-30 04:27:37.655209283 +0300 ..
+-rw------- 1 root root 1396 2026-09-30 04:27:37.660557632 +0300 peer-verdict.json
+-rw------- 1 root root 6783 2026-09-30 04:27:52.931069673 +0300 zone-lifecycle.json
+-rw------- 1 root root 1858 2026-09-30 05:57:07.442400581 +0300 zone-lifecycle-recover-2.json
+-rw------- 1 root root 1091 2026-09-30 04:35:13.210241071 +0300 zone-lifecycle-recover.json
+### 2026-09-30T02:57:07.479Z after-recover (read-only)
+### 2026-09-30T02:57:07.951Z done
+Z04-RECOVER-DONE
+### 2026-09-30T03:00:27.309Z stop ledwatch; collect
+02:57:07.680026346 CHANGE ledger 9e3741b42e98 -> 7adabf6e2e53 agent=634/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T01:27:40.946978936Z | d8f6f5bc suc
+done
+### 2026-09-30T03:00:54.658Z collect done
+### 2026-09-30T03:01:26.320Z stop z04 guests (QMP quit, overlays kept; resumed delete still pending dns_peer_inspection_unknown)

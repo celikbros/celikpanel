@@ -1,0 +1,158 @@
+2026-09-30T02:53:02Z
+repository HEAD at build time (record only): 6eee3b5b312f7fb19ffd79ce9f5b42da5a315fe8
+tested commit: 0d4c0324db38319173f73c57bc01a68e52c13d32
+branch accept/pdns-primary-gate-open-6: 0d4c0324db38319173f73c57bc01a68e52c13d32
+parent of tested commit: f0910d6e5a8bd07279472657b67aee26284681a4
+main line f0910d6e: f0910d6e5a8bd07279472657b67aee26284681a4
+web/dist absent in the archive (untracked build output)
+go version go1.26.5 linux/amd64
+go1.26.5
+
+https://proxy.golang.org,direct
+/root/go/pkg/mod
+fdcc379d0f7056d2c261e64f8417dc384f92b623dc10cc474985d84df80b0ca1
+== artifacts
+371edc0d2afe06708461d7994fedc98f80ed8092ed4c7466edf78d32afcd1cd7  /root/cp-b10-artifacts/agent
+042b8b8feec10929642517478a1315517e354d220bee8d0d86c4f584be013ec4  /root/cp-b10-artifacts/agent.kill
+280499f77e3e485d4bad33be2d883db7fe616ad23ca1063d0a970ae39258cebb  /root/cp-b10-artifacts/panel
+419315feb17daf6baddf5bd8bb10aab275f8caadbf4161376550c2405e5b96a3  /root/cp-b10-artifacts/dns-kill-trigger
+60bd04bee1e1c784bb4a1199aa7bbb6f307605b6acbcc963a7d2c186e962de6e  /root/cp-b10-artifacts/recovery
+4590da5313436648d5a891e32f03a9f3bb45fcc1e68d436fef16f35ea7951bde  /root/cp-b10-artifacts/agent-checker
+33951fd96f75b4ecc3dceedcc673dc693c0954639fc85c67a2ed7e2d35bc4bdf  /root/cp-b10-artifacts/panel-checker
+fe277c46ea8b50f00a80e71976198f28db89667789a737e0a78c0f4a83e9cb87  /root/cp-b10-artifacts/schema17-bridge
+b2f297dfbf585d74737419d5567261155847774c63f4cf934bf02f27bea09a2c  /root/cp-b10-artifacts/dns-owner-tools/bind-peer-inspect
+5b089fbc03ff952a9c1c4427bfce44b8ea9168b75f003752f385b7a72c675f8a  /root/cp-b10-artifacts/dns-owner-tools/dns-peer-enroll
+a5f8615cc82bd91e1d4c4447230a701fcb342465ec08c64dc0b9ee1e02b8e4f0  /root/cp-b10-artifacts/dns-owner-tools/pdns-peer-inspect
+1f4859f19dbca4de6947f181ef70ed510ddf644a6dd70b51ae85ab5f47ae3131  /root/cp-b10-artifacts/dns-owner-tools/README.md
+== recovery-runtime
+4590da5313436648d5a891e32f03a9f3bb45fcc1e68d436fef16f35ea7951bde  ./bin/agent-checker
+33951fd96f75b4ecc3dceedcc673dc693c0954639fc85c67a2ed7e2d35bc4bdf  ./bin/panel-checker
+60bd04bee1e1c784bb4a1199aa7bbb6f307605b6acbcc963a7d2c186e962de6e  ./bin/recovery
+fe277c46ea8b50f00a80e71976198f28db89667789a737e0a78c0f4a83e9cb87  ./bin/schema17-bridge
+6645927653114b4d59fbf6e29147f12920ceaec058d0ecc7b92faa71fd1bf6c3  ./deploy/panel-tls-snapshot.sh
+391eba13d077e0f8016cdfc8e95ce5fb67711b1e9b4a91ed7446ebdbb4ccf004  ./deploy/recovery/runtime-entry.sh
+f499446812b90aee362112743f4e491d5ecfa40511a510d08cbb006babdd48b0  ./deploy/release-recovery-foundation.sh
+db3e2dd23d4b81d9e533354e5d345d26eb43b7943ba20cf7b4ba19fac20cea1e  ./deploy/release-recovery-observation.sh
+4543920d5cc7a4d76c5c3ff91e8a03f4f02bd0e005577b40dc5c740af32c8257  ./deploy/release-transaction-guard.sh
+f163b496a8f48ae55a12658f34125f666c45672eccc4b27c03d58b7367848fc2  ./deploy/release-unit-transition.sh
+cbe3841aef57c62d0242a2957f728100fceca84a7a23135d51156562006ac822  ./rollback.sh
+fdcc379d0f7056d2c261e64f8417dc384f92b623dc10cc474985d84df80b0ca1  ./runtime.manifest
+dea6eafb9608e1b956e8fee7ddc85908e649056fa6727be9c373cec233154db8  ./update.sh
+24ce3e4db5bb3af04185327cdb6955d09f6b2aa8debc1b3fcef3d0317bf38b69  /root/cp-b10-tools/oi-smstatus
+945efd08ad2e83686dcea88855e6d237d5a2a3db02c2f2c2a4e256ee1b9606af  /root/cp-b10-tools/overlay.json
+57823885e8778d4fa5f67b3458042fc1f0cab7cb3a0603af00ec2bd202d85077  /root/cp-b10-tools/smstatus.go
+/root/cp-b10-artifacts/agent: go1.26.5
+	path	github.com/alicelik/celikpanel/cmd/agent
+	mod	github.com/alicelik/celikpanel	(devel)	
+== comparison with the 3cceb29a batch-9 build (/root/cp-b9-artifacts, read only)
+DIFFERENT agent
+DIFFERENT agent.kill
+DIFFERENT panel
+DIFFERENT dns-kill-trigger
+DIFFERENT recovery
+DIFFERENT agent-checker
+DIFFERENT panel-checker
+IDENTICAL schema17-bridge
+DIFFERENT recovery-runtime/runtime.manifest
+DIFFERENT dns-owner-tools/dns-peer-enroll
+DIFFERENT dns-owner-tools/bind-peer-inspect
+DIFFERENT dns-owner-tools/pdns-peer-inspect
+1,3c1,3
+< fff09f0983e01f9d3774b3e16c6441e5409658214eaf5e3c1ce67ac450f5c81e  ./bin/agent-checker
+< 8ba2e0f6aee463f33d85ddc7dc2fa89f3496cf2793d63ded7c5d73148e549ebb  ./bin/panel-checker
+< 74eac1173dde06be433c269f7d366a71227a6c02f1fc26614c47e88fe96b9e5f  ./bin/recovery
+---
+> 4590da5313436648d5a891e32f03a9f3bb45fcc1e68d436fef16f35ea7951bde  ./bin/agent-checker
+> 33951fd96f75b4ecc3dceedcc673dc693c0954639fc85c67a2ed7e2d35bc4bdf  ./bin/panel-checker
+> 60bd04bee1e1c784bb4a1199aa7bbb6f307605b6acbcc963a7d2c186e962de6e  ./bin/recovery
+12c12
+< 4279eb74fc1fd36b1bc343fb09a878d6dfda8f11bffde4b739009272c923a49e  ./runtime.manifest
+---
+> fdcc379d0f7056d2c261e64f8417dc384f92b623dc10cc474985d84df80b0ca1  ./runtime.manifest
+recovery-runtime tree DIFFERENT
+DIFFERENT oi-smstatus
+== gate constants in the tested source
+cmd/agent/dns_engine_pdns_switch.go:48:const freshPairedPDNSPrimaryAdmitted = true
+cmd/panel/dns_engine.go:1290:const freshPairedPDNSPrimaryOffered = true
+== changed code paths 3cceb29a..0d4c0324 (cmd/ internal/ deploy/e2e/dns-kill-matrix/*.py, excluding evidence)
+ cmd/agent/dns_engine_bind_deletion.go              |   9 +
+ cmd/agent/dns_engine_bind_propagation.go           |  20 +-
+ cmd/agent/dns_engine_bind_rndc_key.go              | 523 +++++++++++++++++++++
+ cmd/agent/dns_engine_bind_rndc_key_test.go         | 320 +++++++++++++
+ cmd/agent/dns_engine_host.go                       |  35 ++
+ cmd/agent/dns_engine_pdns_propagation.go           |  19 +-
+ cmd/agent/dns_engine_pdns_propagation_test.go      |  51 +-
+ cmd/agent/dns_engine_recovery.go                   |  12 +-
+ cmd/agent/dns_engine_rpc.go                        |   7 +
+ cmd/bind-peer-inspect/README.md                    |   2 +-
+ .../pdns_fresh_primary_v3.go                       |  11 +-
+ .../pdns_fresh_primary_v3_test.go                  | 166 +++++++
+ cmd/dns-kill-matrix-trigger/zone_delete_trial.go   |  31 +-
+ cmd/dns-peer-enroll/README.md                      |   2 +-
+ cmd/panel/dns_engine.go                            |   9 +
+ cmd/panel/dns_peer_pending_guidance.go             |  41 ++
+ cmd/panel/dns_publication_failure_guidance_test.go |  44 ++
+ cmd/panel/domain_delete_saga.go                    |   2 +-
+ cmd/panel/domain_dns_handlers.go                   |   2 +-
+ cmd/recovery/dns_switch_bind_native_linux.go       |  11 +
+ cmd/recovery/dns_switch_bind_residue_linux.go      |  95 +++-
+ .../dns_switch_bind_rndc_key_linux_test.go         |  78 +++
+ deploy/e2e/dns-kill-matrix/guest_bootstrap.py      | 210 ++++++++-
+ .../test_fresh_primary_batch8_fixes.py             |   7 +-
+ .../dns-kill-matrix/test_zone_lifecycle_recover.py | 376 +++++++++++++++
+ internal/bindrndckey/bindrndckey_test.go           | 131 ++++++
+ internal/bindrndckey/control.go                    |  95 ++++
+ internal/bindrndckey/file.go                       | 120 +++++
+ internal/bindrndckey/record.go                     | 160 +++++++
+ internal/transport/dns_contracts.go                |   4 +
+ .../transport/dns_publication_failure_codes.go     |  30 ++
+ 31 files changed, 2580 insertions(+), 43 deletions(-)
+== harness file hashes
+a0ae7f57f58304688a085e94a14845b5f49f5dbaaa698f5bba3343b2912be168  fixture.py
+a6d1ca25294e026e95cf013196ddbad219f16f66e5341baf11cd60ff357bbe54  guest_bootstrap.py
+d900f9f039e83b85faf974bd8199deb63f66d46325735701063662673363a19a  guest_bootstrap.sh
+3b6187eb087e96d1acf0056afc14ac191dce8cbd9fcbbf7b3c9b37b2a1e57c69  run_cell.py
+ef5a749a1f7d9015261d54a75c266aa7a6be5d68bb29c9d08d36e5a93a3b54ed  guest_recovery_probe.py
+41d1f112c921c57dc099df2f457e7107f052fe3e93850444f05cf6e7534cec44  native_pdns_bind_peer.py
+a6a9d464061bc63a08429b644668100d414467eb2dd9969b8d6c6515bc0ff80a  native_pdns_peer_probe.py
+dcf6e09c026864ee15566a03b3c4aa30d6e1805333d548753b58d070e7fd1229  manifest.json
+== offline harness tests (from the archive): all kill-matrix Python tests
+.......................................................................................................................................................................................................................................................................................................
+----------------------------------------------------------------------
+Ran 467 tests in 4.895s
+
+OK
+{"action": "prepare-native-pdns-peer", "catalog": "catalog-c000020a.celikpanel.invalid", "cell_id": "pdns-switch__intent__after-write__paired-primary__peer-reachable", "execute": false, "management_installed_on_secondary": false, "primary_ip": "192.0.2.10", "secondary_ip": "192.0.2.11"}
+python unittest discover rc=0
+direct test_fixture.py: ran=12 ok=1
+direct test_fresh_primary_batch8_fixes.py: ran=24 ok=1
+direct test_fresh_primary_serial_zero_zone.py: ran=37 ok=1
+direct test_fresh_primary_v3.py: ran=38 ok=1
+direct test_guest_bootstrap.py: ran=82 ok=1
+direct test_guest_recovery_probe.py: ran=16 ok=1
+direct test_manifest.py: ran=11 ok=1
+direct test_native_bind_inspector_channel.py: ran=7 ok=1
+direct test_native_bind_pdns_authority.py: ran=3 ok=1
+direct test_native_bind_peer.py: ran=2 ok=1
+direct test_native_pdns_bind_peer.py: ran=5 ok=1
+direct test_native_pdns_pdns_pair.py: ran=6 ok=1
+direct test_native_pdns_peer.py: ran=? ok=1
+direct test_native_primary_peer.py: ran=30 ok=1
+direct test_paired_secondary_provenance.py: ran=42 ok=1
+direct test_run_cell.py: ran=132 ok=1
+direct test_zone_lifecycle_recover.py: ran=11 ok=1
+direct total ran=458
+== offline trigger tests (go test -v ./cmd/dns-kill-matrix-trigger)
+go test rc=0
+top-level PASS: 60 FAIL: 0 SKIP: 0
+=== RUN   TestFreshPrimaryZoneRecoveryResumesOnlyAPendingDeletion
+--- PASS: TestFreshPrimaryZoneRecoveryResumesOnlyAPendingDeletion (0.00s)
+=== RUN   TestFreshPrimaryZoneRecoveryResumesThePendingChildDeletion
+--- PASS: TestFreshPrimaryZoneRecoveryResumesThePendingChildDeletion (0.00s)
+=== RUN   TestFreshPrimaryZoneRecoveryRefusesTheParentNameAndOtherShapes
+--- PASS: TestFreshPrimaryZoneRecoveryRefusesTheParentNameAndOtherShapes (0.00s)
+--- PASS: TestNativeV3RecoverRejectsWrongResumedPhaseBeforeRecovery (0.00s)
+PASS
+ok  	github.com/alicelik/celikpanel/cmd/dns-kill-matrix-trigger	0.015s
+2026-09-30T02:53:31Z
+BUILD-OK

@@ -1,0 +1,7 @@
+371edc0d2afe06708461d7994fedc98f80ed8092ed4c7466edf78d32afcd1cd7  /opt/celikpanel/bin/agent
+042b8b8feec10929642517478a1315517e354d220bee8d0d86c4f584be013ec4  /opt/celikpanel/bin/agent.kill
+280499f77e3e485d4bad33be2d883db7fe616ad23ca1063d0a970ae39258cebb  /opt/celikpanel/bin/panel
+419315feb17daf6baddf5bd8bb10aab275f8caadbf4161376550c2405e5b96a3  /opt/celikpanel/bin/dns-kill-trigger
+ef5a749a1f7d9015261d54a75c266aa7a6be5d68bb29c9d08d36e5a93a3b54ed  /opt/celikpanel/libexec/dns-kill-recovery-probe.py
+3b6187eb087e96d1acf0056afc14ac191dce8cbd9fcbbf7b3c9b37b2a1e57c69  /opt/celikpanel/libexec/dns-kill-run-cell.py
+dcf6e09c026864ee15566a03b3c4aa30d6e1805333d548753b58d070e7fd1229  /var/lib/celikpanel-dns-kill-matrix/manifest.json

@@ -1,0 +1,140 @@
+### collect 2026-09-30T03:00:28.716915822Z
+last watcher dir: /var/tmp/cp-b10-watch-led
+request id: 076c692ac1346f2b9c6a0df468b0e9aa
+ownerpost rc=0
+smstatus rc=0
+probe rc=0
+pdnsdb rc=0
+notifycap rc=0
+bindsec rc=0
+peer journal rc=0
+peerloop rc=0 lines=119
+cell directory: /var/tmp/cp-b9-1001/r2/cells/7392457812ac089a866de6ec
+total 28
+drwx------ 2 root root 4096 Sep 30 05:57 .
+drwxr-xr-x 3 root root 4096 Sep 30 06:00 ..
+-rw------- 1 root root 1396 Sep 30 04:27 peer-verdict.json
+-rw------- 1 root root 6783 Sep 30 04:27 zone-lifecycle.json
+-rw------- 1 root root 1858 Sep 30 05:57 zone-lifecycle-recover-2.json
+-rw------- 1 root root 1091 Sep 30 04:35 zone-lifecycle-recover.json
+02:56:29.763196104 start boot_id=e5177a51-35db-4b04-89a5-424e288fbe6e
+02:56:29.786881452 CHANGE pdnsdb none -> eff470136b448d73606a537e5927bd9168f3ea6def56535c789f2a4b426470d6 pdns=652/active/
+done
+tar rc=0 size=604160
+extract rc=0
+/var/tmp/cp-b10-1001/evidence/z04-resume/agent-journal-hold-rollback-lines.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/agent-journal-this-boot.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/bind-secondary-state-post-collect.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/boot-monitor.log
+/var/tmp/cp-b10-1001/evidence/z04-resume/catalog-lines-agent-journal.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/catalog-serial-history.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/collect.log
+/var/tmp/cp-b10-1001/evidence/z04-resume/dns-after-pending-guest.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/dns-after-pending-peer.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/dns-post-collect-guest.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/dns-post-collect-peer.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/driver.log
+/var/tmp/cp-b10-1001/evidence/z04-resume/extra-observe-after-pending.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/fresh-primary-peer/peer-verdict.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/fresh-primary-peer/zone-lifecycle.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/fresh-primary-peer/zone-lifecycle-recover-2.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/fresh-primary-peer/zone-lifecycle-recover.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/guest-recovery-probe-post-collect.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/ledwatch-timeline-snapshot.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/native-and-outage.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/owner-post-state.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/pdns-db-post-collect.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/pdns-db-timeline.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/pdns-notify-journal-and-also-notify.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/peer-daemon-journal.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/peer-dns-sampler.log
+/var/tmp/cp-b10-1001/evidence/z04-resume/peer-facts-post-collect.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/post-state.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/primary-state-after-boot.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/primary-state-after-recover.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/primary-state-before-recover.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/primary-state-post-collect.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/probe-argv.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/fixture/controller-argv.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/fixture/coordinator-stop-proof.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/fixture/installed-binaries.sha256
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/fixture/ls.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/fixture/measured/trigger-identity.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/fixture/scenario.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/fixture/source-proof.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/journald/bind9.service.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/journald/celikpanel-agent.service.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/journald/celikpanel-panel.service.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/journald/list-boots.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/journald/named.service.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/journald/pdns.service.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/results/pdns-switch__committed__after-write__paired-primary__peer-reachable/boundary-marker.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/results/pdns-switch__committed__after-write__paired-primary__peer-reachable/kill-proof.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/results/pdns-switch__committed__after-write__paired-primary__peer-reachable/result.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/results/pdns-switch__committed__after-write__paired-primary__peer-reachable/transcript.jsonl
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/state/dns-engine-ownership-pdns.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/state/dns-engine-state.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/state/dns-engine-switch-v3-archive-076c692ac1346f2b9c6a0df468b0e9aa-11123dcfa872b2069def5eb644a9b665abefed583d03f7f2394f4a35004df4e1.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/state/ls.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/state/service-mutations.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-db/copies/025629.778-eff470136b44.sqlite3
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-db/copies/025629.778-eff470136b44.sqlite3-wal
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-db/timeline.log
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025629.785-ledger-b23400df6f0b.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025700.819-ledger-83b8411d8da2.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025700.970-ledger-f2c4fe1fe714.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025701.114-ledger-bfbd46151ede.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025701.267-ledger-7b83a591c3b2.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025701.423-ledger-11ff1edb5e2c.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025701.575-ledger-d888c757b8d5.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025701.722-ledger-54db5c4ab9f7.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025701.873-ledger-68cf65067bea.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025702.039-ledger-5859eded19f9.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025702.500-ledger-b94ecfe50221.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025702.660-ledger-e8ca0c612871.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025702.805-ledger-21af3c614fe1.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025702.954-ledger-1d985816bb22.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025703.109-ledger-9c748fe372dc.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025703.259-ledger-c6bde81a8fe4.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025703.409-ledger-d03af34b8d57.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025703.555-ledger-1faa23d1a379.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025703.707-ledger-11c526d4d0cf.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025703.854-ledger-f9a7610fc01b.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025703.999-ledger-af19c2a29745.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025704.150-ledger-201d7c5cb510.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025704.299-ledger-7cd476aa3a98.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025704.446-ledger-2644aab63fe0.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025704.602-ledger-d3ef1ee4a4e8.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025704.757-ledger-c47997af932d.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025704.905-ledger-5824fec3f314.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025705.063-ledger-4c0440691eff.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025705.215-ledger-237ee947c296.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025705.364-ledger-81883d6f5e03.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025705.515-ledger-dc428590a0c9.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025705.667-ledger-ce20178dfcbe.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025705.815-ledger-ea4947764529.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025705.964-ledger-335e007c5d40.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025706.111-ledger-b52031878e1e.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025706.263-ledger-5eea0e439e77.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025706.411-ledger-bb083c51e385.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025706.558-ledger-09966597d1a0.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025706.707-ledger-f9c2c6166d20.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025706.852-ledger-2a01d1d617d2.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025707.002-ledger-df54077e1e64.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025707.155-ledger-78bdda96f7b4.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025707.297-ledger-9e3741b42e98.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/copies/025707.654-ledger-7adabf6e2e53.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/raw/watch/cp-b10-watch-led/timeline.log
+/var/tmp/cp-b10-1001/evidence/z04-resume/secondary-after-recover.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/secondary-rndc-prerequisite.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/secondary-state-after-boot.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/service-mutation-status-post-collect.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/smstatus.stderr
+/var/tmp/cp-b10-1001/evidence/z04-resume/start.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/trigger-replacement.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/versions-post-collect-guest.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/versions-post-collect-peer.txt
+/var/tmp/cp-b10-1001/evidence/z04-resume/wait-ssh.json
+/var/tmp/cp-b10-1001/evidence/z04-resume/zone-lifecycle-recover-dryrun.log
+/var/tmp/cp-b10-1001/evidence/z04-resume/zone-lifecycle-recover.log
+### collect done 2026-09-30T03:00:54.655494623Z

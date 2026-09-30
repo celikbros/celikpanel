@@ -1,0 +1,13 @@
+2026-09-30T03:03:48.658579+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-30T03:03:48.694736+00:00 dns-debian13 agent[1199]: 2026/09/30 03:03:48 Starting CelikPanel Agent...
+2026-09-30T03:03:48.696323+00:00 dns-debian13 agent[1199]: 2026/09/30 03:03:48 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-30T03:04:40.248078+00:00 dns-debian13 systemd[1]: Stopping celikpanel-agent.service - CelikPanel privileged agent...
+2026-09-30T03:04:40.248706+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-30T03:04:40.248960+00:00 dns-debian13 systemd[1]: Stopped celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-30T03:05:49.902623+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-30T03:05:49.935445+00:00 dns-debian13 agent[5462]: 2026/09/30 03:05:49 Starting CelikPanel Agent...
+2026-09-30T03:06:03.379071+00:00 dns-debian13 agent[5462]: 2026/09/30 03:06:03 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-30T03:06:56.401920+00:00 dns-debian13 agent[5462]: 2026/09/30 03:06:56 pdns zone publication remains pending for s2.s1-kill.test at epoch 1: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T03:06:56.401920+00:00 dns-debian13 agent[5462]: dns_peer_enrollment_required
+2026-09-30T03:07:58.080690+00:00 dns-debian13 agent[5462]: 2026/09/30 03:07:58 DNS zone V3 recovery remains pending for s2.s1-kill.test: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T03:07:58.080690+00:00 dns-debian13 agent[5462]: dns_peer_inspection_unknown

@@ -1,0 +1,19 @@
+image: /var/tmp/cp-b9-1001/r2/cells/7392457812ac089a866de6ec/arch/overlay.qcow2
+file format: qcow2
+virtual size: 24 GiB (25769803776 bytes)
+disk size: 737 MiB
+cluster_size: 65536
+backing file: /var/tmp/cp-b9-1001/r2/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2
+backing file format: qcow2
+Format specific information:
+    compat: 1.1
+    compression type: zlib
+    lazy refcounts: false
+    refcount bits: 16
+    corrupt: false
+    extended l2: false
+Child node '/file':
+    filename: /var/tmp/cp-b9-1001/r2/cells/7392457812ac089a866de6ec/arch/overlay.qcow2
+    protocol type: file
+    file length: 737 MiB (773193728 bytes)
+    disk size: 737 MiB

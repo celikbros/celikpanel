@@ -1,0 +1,16 @@
+boot_id=31296a2f-3f25-4198-9d79-37af1bb927b4
+7.2.7-arch1-1
+2026-09-30T02:56:28.510276334Z
+active
+running
+Wed 2026-09-30 02:55:50 UTC
+367
+-rw------- 1 root root 81 2026-09-30 01:35:11.010232417 +0000 /root/celikpanel-primary-inspector.pub
+
+/root/dns-owner-tools:
+total 13612
+drwx------ 1 root root      64 2026-09-30 01:35:09.891225811 +0000 .
+drwxr-x--- 1 root root     130 2026-09-30 01:35:11.009232411 +0000 ..
+-rwxr-xr-x 1 root root 4898978 2026-09-30 01:35:09.895225834 +0000 bind-peer-inspect
+-rwxr-xr-x 1 root root 9031842 2026-09-30 01:35:09.876225727 +0000 dns-peer-enroll
+{"state":"configured","reason":"local policy and SSH configuration verified; live authentication is unproven","next_action":"No owner action is needed now. No status command tests live authentication: the primary Agent makes the first authenticated read-only inspector exchange only while reconciling an admitted pending deletion, and reports its result on that operation","primary_ip":"192.0.2.10","peer_ip":"192.0.2.11","catalog_name":"catalog-c000020a.celikpanel.invalid","primary_key_sha256":"5c9df6c94c06d1ce1a3382bdbe462b61d65e6628aa26005c669e7fde861b676c"}

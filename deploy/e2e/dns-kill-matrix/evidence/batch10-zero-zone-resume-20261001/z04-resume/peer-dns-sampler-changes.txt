@@ -1,0 +1,3 @@
+######## /var/tmp/cp-b10-peerloop1
+2026-09-30T02:56:29.245532+00:00 10:cat:tcp=aa/rc0/1790731620 10:cat:udp=aa/rc0/1790731620 10:s2soa:tcp=noaa/rc5/ 10:s2soa:udp=noaa/rc5/ 10:soa:udp=noaa/rc5/ 11:cat:tcp=aa/rc0/1790731620 11:cat:udp=aa/rc0/1790731620 11:s2soa:tcp=noaa/rc5/ 11:s2soa:udp=noaa/rc5/ 11:soa:udp=noaa/rc5/
+samples=118 first=2026-09-30T02:56:29.245532+00:00 last=2026-09-30T03:00:49.828237+00:00

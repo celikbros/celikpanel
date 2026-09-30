@@ -1,0 +1,20 @@
+Batch 10 offline tests, run on the WSL archlinux host from the archive of 0d4c0324 (/root/cp-b10-src), 2026-09-30T02:53Z
+(full logs: build.log section "offline harness tests", trigger-tests.log; per-module counts from tcount.sh)
+
+Kill-matrix Python tests (deploy/e2e/dns-kill-matrix/test_*.py), all OK, 0 failures:
+  python3 -m unittest discover -s deploy/e2e/dns-kill-matrix -p 'test_*.py'  -> Ran 467, OK
+  per module (python3 -m unittest MODULE)                                     -> total 467
+  each file run directly (python3 FILE)                                       -> total 466
+    the difference is test_guest_recovery_probe.py: 16 direct vs 17 as a module (same as batch 9: 455 direct / 456 discover)
+  per file (direct / module): test_fixture 12/12, test_fresh_primary_batch8_fixes 24/24,
+    test_fresh_primary_serial_zero_zone 37/37, test_fresh_primary_v3 38/38, test_guest_bootstrap 82/82,
+    test_guest_recovery_probe 16/17, test_manifest 11/11, test_native_bind_inspector_channel 7/7,
+    test_native_bind_pdns_authority 3/3, test_native_bind_peer 2/2, test_native_pdns_bind_peer 5/5,
+    test_native_pdns_pdns_pair 6/6, test_native_pdns_peer 8/8, test_native_primary_peer 30/30,
+    test_paired_secondary_provenance 42/42, test_run_cell 132/132, test_zone_lifecycle_recover 11/11 (new since batch 9)
+
+Trigger: go test -count=1 -v ./cmd/dns-kill-matrix-trigger -> rc 0; top-level PASS 60, FAIL 0, SKIP 0
+  including TestFreshPrimaryZoneRecoveryResumesOnlyAPendingDeletion, TestFreshPrimaryZoneRecoveryResumesThePendingChildDeletion,
+  TestFreshPrimaryZoneRecoveryRefusesTheParentNameAndOtherShapes (all PASS)
+
+Web: npm ci + npm run build from the archive's web/ -> rc 0 (web-build.log), 105 files hashed (web-dist.sha256)

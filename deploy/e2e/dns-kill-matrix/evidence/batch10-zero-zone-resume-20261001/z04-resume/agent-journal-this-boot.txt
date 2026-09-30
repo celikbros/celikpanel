@@ -1,0 +1,5 @@
+2026-09-30T02:55:45.973243+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-30T02:55:46.146212+00:00 dns-debian13 agent[634]: 2026/09/30 02:55:46 Starting CelikPanel Agent...
+2026-09-30T02:55:46.197246+00:00 dns-debian13 agent[634]: 2026/09/30 02:55:46 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-30T02:57:07.623697+00:00 dns-debian13 agent[634]: 2026/09/30 02:57:07 DNS zone V3 recovery remains pending for s2.s1-kill.test: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T02:57:07.623697+00:00 dns-debian13 agent[634]: dns_peer_inspection_unknown

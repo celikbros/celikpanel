@@ -1,0 +1,3 @@
+3c60de67b48bc782ff2737fbb9c9168918e202bdd8af4d6b7c1f6ff30fdd6e90  /opt/celikpanel/bin/dns-kill-trigger
+419315feb17daf6baddf5bd8bb10aab275f8caadbf4161376550c2405e5b96a3  /opt/celikpanel/bin/dns-kill-trigger
+/opt/celikpanel/bin/dns-kill-trigger root:root 755 7995204 2026-09-30 02:56:59.673652504 +0000
