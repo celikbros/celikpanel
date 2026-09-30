@@ -6,6 +6,8 @@ func TestDNSPeerPendingCodesAcceptOnlyReviewedCompositeDetail(t *testing.T) {
 	for code, want := range map[string][2]string{
 		"dns_peer_inspection_unknown":                          {"dns_peer_inspection_unknown", ""},
 		"dns_peer_catalog_transfer_refused":                    {"dns_peer_catalog_transfer_refused", ""},
+		"dns_peer_proof_internal":                              {"dns_peer_proof_internal", ""},
+		"dns_peer_proof_internal:named_unavailable":            {"", ""},
 		"dns_peer_inspection_unknown:named_unavailable":        {"dns_peer_inspection_unknown", "named_unavailable"},
 		"dns_peer_inspection_unknown:observation_expired":      {"dns_peer_inspection_unknown", "observation_expired"},
 		"dns_peer_inspection_unknown:config_unreviewed":        {"dns_peer_inspection_unknown", "config_unreviewed"},

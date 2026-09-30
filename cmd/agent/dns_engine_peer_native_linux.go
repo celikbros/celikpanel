@@ -36,6 +36,12 @@ func verifyEnrolledBINDPeerDeletion(ctx context.Context, authority dnsPeerAXFRAu
 	if err != nil {
 		return err
 	}
+	// Select the post-inspection catalog probes before any challenge exists.
+	// An unusable plan is the Agent's own precondition, never an owner edit.
+	localCatalogProbe, peerCatalogProbe, err := nativePeerProofCatalogProbes(plan)
+	if err != nil {
+		return err
+	}
 	enrollment, err := dnspeerenrollment.Read()
 	if err != nil {
 		if dnspeerenrollment.IsCode(err, dnspeerenrollment.Disabled) {
@@ -103,10 +109,6 @@ func verifyEnrolledBINDPeerDeletion(ctx context.Context, authority dnsPeerAXFRAu
 	}
 	// The source-bound catalog and no-transfer evidence must still match after
 	// the network round trip. A contradictory positive DNS answer stays fatal.
-	localCatalogProbe, peerCatalogProbe, producerErr := catalogAXFRProbesForSourceEngine(plan.SourceState.Engine)
-	if producerErr != nil {
-		return pendingBINDPeer(transport.DNSPeerPendingOwnerEditUnknown)
-	}
 	fresh, err := verifyDNSPrimaryPairReadyAuthorityAt(ctx, plan.Evidence,
 		probeDNSZoneSOA, localCatalogProbe, peerCatalogProbe)
 	if err != nil || fresh != authority {
@@ -253,14 +255,17 @@ func currentBINDPeerLedgerAttempt(m *serviceMutationManager, runtime *serviceMut
 
 // The primary engine is bound to the accepted operation before any peer
 // challenge. An unknown or changed source cannot authorize a native answer.
+// Every plan carries its source receipt (newDNSV3PrimaryPropagationPlan); an
+// empty or unknown engine is the Agent's own precondition failure.
 func recheckNativePeerLocalEvidence(ctx context.Context, plan dnsV3PrimaryPropagationPlan) error {
 	switch plan.SourceState.Engine {
 	case transport.DNSEnginePowerDNS:
 		return recheckPDNSPeerLocalEvidence(ctx, plan)
-	case "", transport.DNSEngineBIND:
+	case transport.DNSEngineBIND:
 		return recheckBINDPeerLocalEvidence(ctx, plan)
 	default:
-		return errors.New("native peer proof source engine is unknown")
+		return dnsPeerProofInternal(fmt.Errorf(
+			"native peer proof plan source engine %q is unknown", plan.SourceState.Engine))
 	}
 }
 
@@ -273,7 +278,7 @@ func recheckPDNSPeerLocalEvidence(ctx context.Context, plan dnsV3PrimaryPropagat
 		plan.SourceState.Engine != transport.DNSEnginePowerDNS ||
 		plan.SourceState.PairRole != transport.DNSPairRolePrimary ||
 		plan.SourceState.Mode != transport.DNSEngineSwitchModeSwitch {
-		return errors.New("native PowerDNS proof source state is not a managed primary")
+		return dnsPeerProofInternal(errors.New("native PowerDNS proof plan source state is not a managed primary"))
 	}
 	profile, err := verifiedHostProfileForAnyFamily()
 	if err != nil {
@@ -357,7 +362,9 @@ func recheckBINDPeerLocalEvidence(ctx context.Context, plan dnsV3PrimaryPropagat
 	if err := verifyOnlyBINDActive(ctx, profile, systemctl); err != nil {
 		return err
 	}
-	current, primary, err := bindV3PrimaryPropagationPlan(tree, plan.Changed.Domain)
+	// The plan carries the state receipt it was built from; the one read now
+	// must be identical, as must everything derived from the current tree.
+	current, primary, err := bindV3PrimaryPropagationPlan(tree, plan.Changed.Domain, state)
 	if err != nil || !primary || !reflect.DeepEqual(current, plan) {
 		return errors.New("native BIND proof local deletion receipt changed")
 	}

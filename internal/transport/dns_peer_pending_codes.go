@@ -15,6 +15,12 @@ const (
 	// secondary reported that its named refused the local (loopback) AXFR of
 	// the primary's catalog zone. The secondary's owner allows it.
 	DNSPeerPendingCatalogTransferRefused = "dns_peer_catalog_transfer_refused"
+	// DNSPeerPendingProofInternal: the Agent could not run its own proof of
+	// the secondary (an internal precondition of the proof failed, for
+	// example its source engine receipt could not select the catalog
+	// probes). No owner change was observed; the owner changed nothing.
+	// Retrying does not help until the Agent is corrected.
+	DNSPeerPendingProofInternal = "dns_peer_proof_internal"
 )
 
 // Reviewed reasons the owner-enrolled secondary inspector may report for an
@@ -93,7 +99,8 @@ func validDNSPeerPendingReason(code string) bool {
 		DNSPeerPendingNativeUnknown,
 		DNSPeerPendingJournalUnknown,
 		DNSPeerPendingOwnerEditUnknown,
-		DNSPeerPendingCatalogTransferRefused:
+		DNSPeerPendingCatalogTransferRefused,
+		DNSPeerPendingProofInternal:
 		return true
 	default:
 		return false

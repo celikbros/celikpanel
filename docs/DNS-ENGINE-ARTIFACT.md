@@ -2230,3 +2230,88 @@ returns `catalog_state=transferred`, `member_state=absent`,
 `native_state=unloaded` and the deletion completes; and that an owner edit to
 a drop-in (for example an added `loglevel=`) leaves the deletion pending with
 `detail=config_unreviewed` and the sentence above.
+
+### BIND primary plan carries its source state; internal proof failure code (2026-10-01)
+
+P0.4, P0.5; constitutional invariants 1, 4; D-024, D-025. Corrects pair 5
+finding P5-1 (`deploy/e2e/dns-pair-acceptance/evidence/pair5-20261001/README.md`).
+Component tests only; native re-run pending (pair 6).
+
+**Defect.** On a managed BIND primary (pair 5 t1 BIND/BIND, t2 BIND/PowerDNS),
+after owner enrollment the retry of a parentless deletion ran the inspector to
+completion and about one second later the Agent returned
+`dns_peer_owner_edit_unknown`, which it kept. `bindV3PrimaryPropagationPlan`
+built the primary propagation plan without `SourceState`; the pre-inspection
+recheck treated the empty engine as BIND, so the challenge was minted and the
+SSH inspection ran, but after it `catalogAXFRProbesForSourceEngine("")` failed
+and that failure was mapped to the owner-edit code. The PowerDNS plan set
+`SourceState: plan.State` and completed (t3). Nothing had changed on either
+server.
+
+**Plan source state on BIND.** `bindV3PrimaryPropagationPlan(tree, domain,
+source)` now takes the active engine state receipt and refuses anything that
+is not a BIND receipt. The production callers pass the `state` they already
+verified with `bindStateTreePairContract` and persisted with exact readback
+(`completeManagedBINDV3PropagationForState` on the publication path and on
+`RecoverZone`), which is the receipt `recheckBINDPeerLocalEvidence` rereads
+with `readDNSEngineState`. That recheck now rebuilds the plan from the receipt
+it read, so the `reflect.DeepEqual` comparison also covers the source state.
+The stateless `completeManagedBINDV3Propagation` (no caller) was removed.
+
+**Constructor rule.** `newDNSV3PrimaryPropagationPlan(source, evidence,
+changed, legacy, operation)` is the only non-test way to build a non-empty
+`dnsV3PrimaryPropagationPlan`: it refuses an empty or unknown source engine
+(the same selection the proof makes) and then runs
+`validateDNSV3PrimaryPropagationPlan`. Builders: the BIND plan above;
+`completePDNSV3Propagation` (source `plan.State`); the PowerDNS prepare
+validation `validatePDNSPrimaryPropagationPlan` (source `plan.State`, so a
+PowerDNS plan without its receipt no longer validates); the test-only
+`verifyPDNSV3PropagationAt`. A source test parses every non-test file in
+`cmd/agent` and fails on any other non-empty composite literal of the type.
+
+**Probe selection before the challenge.** Both native verifiers
+(`verifyEnrolledBINDPeerDeletion`, `verifyEnrolledPDNSPeerDeletion`) select
+the catalog AXFR probes by `plan.SourceState.Engine` right after the active
+ledger attempt is confirmed and before enrollment is read or any challenge is
+minted, and reuse them after the inspection, so the post-inspection
+re-verification cannot fail on selection. `recheckNativePeerLocalEvidence` no
+longer treats an empty engine as BIND.
+
+**New reviewed code `dns_peer_proof_internal`.** An internal precondition
+failure of the proof (probe selection impossible, an empty or unknown source
+engine, a PowerDNS plan whose source receipt is not a managed primary, a
+missing recheck boundary) is no longer reported as an owner change. It is
+carried like the other codes: `transport.DNSPeerPendingProofInternal`, the
+Agent's pending ledger `error_code`, the Panel's `reason` and English
+fallback, the Domains screen (`err.DNS_PUBLICATION_FAILED.dns_peer_proof_internal`,
+EN/TR, in the reviewed set), and the pair driver's `REVIEWED_DNS_PEER_REASONS`
+with actor "this server's owner (read the Agent log and report it; retry after
+a fixed Agent)". Text: the change is saved but the deletion is not verified;
+this server could not run its own check of the secondary; no change by either
+owner was found and nothing needs to be undone; the server owner reads
+`sudo journalctl -u celikpanel-agent | grep peer` on this server and reports
+it; retrying does not help until the Agent is updated with a fix, after which
+"Retry this deletion" retries the same publication; until then the deletion
+stays pending and DNS answers are unaffected. At that point the Agent now logs
+the underlying error (control characters replaced, at most 512 bytes,
+product-authored text only) as "DNS peer proof could not run its own check
+(<stage>); no owner change was observed: <error>". Evidence that was observed
+and differed after the inspection (pair readiness, peer no-transfer, the
+deleted zone's REFUSED observation, a changed ledger attempt or local receipt)
+keeps `dns_peer_owner_edit_unknown`; its text additionally names the concrete
+action: compare the catalog zone and zone serials on both servers, then retry.
+
+**Transition.** No schema or durable format change; the new code is additive.
+A Panel or driver older than this release shows the generic pending text for
+`dns_peer_proof_internal`. A deletion left pending as
+`dns_peer_owner_edit_unknown` by the defect is retried unchanged after the
+owner updates the panel; the plan then carries the BIND receipt.
+
+**Evidence.** Component tests only; native re-run pending (pair 6). Pair 6
+must show on a BIND primary (t1 BIND/BIND and t2 BIND/PowerDNS) that after
+owner enrollment the retried parentless deletion completes (200 `deleted`,
+ledger job `succeeded`, challenge journal consumed and retired), and on t2 the
+`pdns-peer-inspect` outcome fields (`catalog_state=transferred`,
+`member_state=absent`, `native_state=unloaded`); and that the Agent journal
+has no "DNS peer proof could not run" line and no `dns_peer_proof_internal`
+ledger code.

@@ -8,6 +8,9 @@ const reviewedDNSPeerReasons = new Set([
     'dns_peer_owner_edit_unknown',
     // The secondary's named refused the inspector's local catalog transfer.
     'dns_peer_catalog_transfer_refused',
+    // The Agent could not run its own proof of the secondary; no owner
+    // change was found. A retry waits for a fixed Agent.
+    'dns_peer_proof_internal',
     // Local, not peer: this server's named could not be asked about zone
     // state (no usable rndc key). Same retry action, same pending deletion.
     'bind_rndc_unavailable',

@@ -22,9 +22,11 @@ func dnsPeerPendingEnglish(code string) string {
 	case transport.DNSPeerPendingJournalUnknown:
 		return "The DNS change is saved, but its private peer challenge cannot be reconciled. This server's administrator must review the retained challenge and exact operation record; only then retry this same publication."
 	case transport.DNSPeerPendingOwnerEditUnknown:
-		return "The DNS change is saved, but local or peer evidence changed during verification. This server's administrator must reconcile the accepted operation with native DNS configuration, then retry this same publication."
+		return "The DNS change is saved, but local or peer evidence changed during verification. This server's administrator must reconcile the accepted operation with native DNS configuration: compare the catalog zone and zone serials on both servers, then retry this same publication."
 	case transport.DNSPeerPendingCatalogTransferRefused:
 		return "The DNS change is saved, but the secondary has not been shown to have removed the zone: the secondary's named refused the inspector's local transfer of the catalog zone (allow-transfer). The secondary's owner allows that transfer from loopback on the secondary. A secondary whose DNS CelikPanel set up with this release already allows it; on one set up by an earlier release it arrives when CelikPanel next writes that server's DNS configuration. On a secondary you run without CelikPanel, add 127.0.0.1 and ::1 to the catalog zone's allow-transfer in named's configuration and reload named. Then retry the same publication; it continues from where it stopped. Nothing retries by itself."
+	case transport.DNSPeerPendingProofInternal:
+		return "The DNS change is saved on this server, but the deletion is not verified yet: this server could not run its own check of the secondary. No change by either server's owner was found, and nothing on either server needs to be undone. The server owner checks the CelikPanel Agent log on this server with sudo journalctl -u celikpanel-agent | grep peer and reports those lines to CelikPanel. Retrying does not help until the CelikPanel Agent is updated with a fix; after that update, use “Retry this deletion” to retry the same publication; it continues from where it stopped. Until then the deletion stays pending and DNS answers are unaffected. Nothing retries by itself."
 	default:
 		return "The DNS change is saved, but paired deletion is unverified. The server administrator must inspect the exact DNS operation and secondary state, then retry this same publication."
 	}

@@ -119,6 +119,12 @@ func verifyEnrolledPDNSPeerDeletion(ctx context.Context, authority dnsPeerAXFRAu
 	if err != nil {
 		return err
 	}
+	// Select the post-inspection catalog probes before any challenge exists.
+	// An unusable plan is the Agent's own precondition, never an owner edit.
+	localCatalogProbe, peerCatalogProbe, err := nativePeerProofCatalogProbes(plan)
+	if err != nil {
+		return err
+	}
 	enrollment, err := pdnspeerenrollment.Read()
 	if err != nil {
 		if pdnspeerenrollment.IsCode(err, pdnspeerenrollment.Disabled) {
@@ -185,10 +191,6 @@ func verifyEnrolledPDNSPeerDeletion(ctx context.Context, authority dnsPeerAXFRAu
 	}
 	if err := verifyCurrent(); err != nil {
 		return err
-	}
-	localCatalogProbe, peerCatalogProbe, producerErr := catalogAXFRProbesForSourceEngine(plan.SourceState.Engine)
-	if producerErr != nil {
-		return pendingBINDPeer(transport.DNSPeerPendingOwnerEditUnknown)
 	}
 	fresh, err := verifyDNSPrimaryPairReadyAuthorityAt(ctx, plan.Evidence,
 		probeDNSZoneSOA, localCatalogProbe, peerCatalogProbe)

@@ -6,7 +6,19 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
+
+// testPDNSV3SourceState is the managed PowerDNS primary's engine state
+// receipt; every primary propagation plan carries its source receipt.
+func testPDNSV3SourceState() dnsEngineStateReceipt {
+	return dnsEngineStateReceipt{
+		Mode: transport.DNSEngineSwitchModeSwitch, Engine: transport.DNSEnginePowerDNS,
+		EngineEpoch: 1, PairRole: transport.DNSPairRolePrimary,
+		PairLocalIP: "192.0.2.10", PairPeerIP: "192.0.2.20",
+	}
+}
 
 func testPDNSPrimaryPropagationEvidence(
 	catalogSerial uint32,
@@ -59,7 +71,7 @@ func TestPreparePDNSV3PropagationCommandsAreDirectionalAndOrdered(t *testing.T) 
 		{
 			name: "add",
 			plan: pdnsV3PropagationPlan{
-				Primary: true,
+				Primary: true, State: testPDNSV3SourceState(),
 				Evidence: testPDNSPrimaryPropagationEvidence(
 					2, []string{"example.test"}, []uint32{41},
 				),
@@ -75,7 +87,7 @@ func TestPreparePDNSV3PropagationCommandsAreDirectionalAndOrdered(t *testing.T) 
 		{
 			name: "record-only change",
 			plan: pdnsV3PropagationPlan{
-				Primary: true,
+				Primary: true, State: testPDNSV3SourceState(),
 				Evidence: testPDNSPrimaryPropagationEvidence(
 					2, []string{"example.test"}, []uint32{42},
 				),
@@ -91,7 +103,7 @@ func TestPreparePDNSV3PropagationCommandsAreDirectionalAndOrdered(t *testing.T) 
 		{
 			name: "delete",
 			plan: pdnsV3PropagationPlan{
-				Primary:  true,
+				Primary: true, State: testPDNSV3SourceState(),
 				Evidence: testPDNSPrimaryPropagationEvidence(3, nil, nil),
 				Changed:  expectedDNSZoneAuthority{Domain: "example.test", Delete: true},
 			},
@@ -142,7 +154,7 @@ func TestPDNSNotifyHostTargetCarriesExplicitDNSPort(t *testing.T) {
 		}
 	}
 	plan := pdnsV3PropagationPlan{
-		Primary: true,
+		Primary: true, State: testPDNSV3SourceState(),
 		Evidence: testPDNSPrimaryPropagationEvidence(
 			2, []string{"example.test"}, []uint32{41},
 		),
@@ -168,7 +180,7 @@ func TestPDNSNotifyHostTargetCarriesExplicitDNSPort(t *testing.T) {
 
 func TestPreparePDNSV3PropagationNotifyFailureIsStaticAndStops(t *testing.T) {
 	plan := pdnsV3PropagationPlan{
-		Primary: true,
+		Primary: true, State: testPDNSV3SourceState(),
 		Evidence: testPDNSPrimaryPropagationEvidence(
 			2, []string{"example.test"}, []uint32{41},
 		),
@@ -199,7 +211,7 @@ func TestPreparePDNSV3PropagationNotifyFailureIsStaticAndStops(t *testing.T) {
 
 func TestPDNSV3PropagationRecoveryRepeatsNotificationsIdempotently(t *testing.T) {
 	plan := pdnsV3PropagationPlan{
-		Primary: true,
+		Primary: true, State: testPDNSV3SourceState(),
 		Evidence: testPDNSPrimaryPropagationEvidence(
 			2, []string{"example.test"}, []uint32{41},
 		),
@@ -259,7 +271,7 @@ func TestPDNSV3PropagationRecoveryRepeatsNotificationsIdempotently(t *testing.T)
 func TestVerifyPDNSV3PropagationProvesZeroMemberCatalog(t *testing.T) {
 	evidence := testPDNSPrimaryPropagationEvidence(7, nil, nil)
 	plan := pdnsV3PropagationPlan{
-		Primary: true, Evidence: evidence,
+		Primary: true, State: testPDNSV3SourceState(), Evidence: evidence,
 		Changed: expectedDNSZoneAuthority{Domain: "gone.example.test", Delete: true},
 	}
 	axfr := func(_ context.Context, address, domain string) (dnsCatalogAXFRResult, error) {
@@ -304,7 +316,7 @@ func TestVerifyPDNSV3PropagationProvesZeroMemberCatalog(t *testing.T) {
 func TestVerifyPDNSV3PropagationRejectsStalePeerCatalogSerial(t *testing.T) {
 	evidence := testPDNSPrimaryPropagationEvidence(7, nil, nil)
 	plan := pdnsV3PropagationPlan{
-		Primary: true, Evidence: evidence,
+		Primary: true, State: testPDNSV3SourceState(), Evidence: evidence,
 		Changed: expectedDNSZoneAuthority{Domain: "gone.example.test", Delete: true},
 	}
 	axfr := func(context.Context, string, string) (dnsCatalogAXFRResult, error) {
@@ -334,7 +346,7 @@ func TestVerifyPDNSV3PropagationRejectsStalePeerCatalogSerial(t *testing.T) {
 func TestVerifyPDNSV3PropagationRejectsDeletedMemberStillServed(t *testing.T) {
 	evidence := testPDNSPrimaryPropagationEvidence(8, nil, nil)
 	plan := pdnsV3PropagationPlan{
-		Primary: true, Evidence: evidence,
+		Primary: true, State: testPDNSV3SourceState(), Evidence: evidence,
 		Changed: expectedDNSZoneAuthority{Domain: "gone.example.test", Delete: true},
 	}
 	axfr := func(context.Context, string, string) (dnsCatalogAXFRResult, error) {
@@ -375,7 +387,7 @@ func TestVerifyPDNSV3DeletionProofIsEngineNeutralAndSourceBound(t *testing.T) {
 		t.Run(engines, func(t *testing.T) {
 			evidence := testPDNSPrimaryPropagationEvidence(8, nil, nil)
 			plan := pdnsV3PropagationPlan{
-				Primary: true, Evidence: evidence,
+				Primary: true, State: testPDNSV3SourceState(), Evidence: evidence,
 				Changed: expectedDNSZoneAuthority{
 					Domain: "gone.example.test", Delete: true,
 				},
@@ -454,7 +466,7 @@ func TestVerifyPDNSV3DeletionProofIsEngineNeutralAndSourceBound(t *testing.T) {
 func TestVerifyPDNSV3DeletionNeverProbesZoneWithoutPeerCatalogAuthority(t *testing.T) {
 	evidence := testPDNSPrimaryPropagationEvidence(8, nil, nil)
 	plan := pdnsV3PropagationPlan{
-		Primary: true, Evidence: evidence,
+		Primary: true, State: testPDNSV3SourceState(), Evidence: evidence,
 		Changed: expectedDNSZoneAuthority{
 			Domain: "gone.example.test", Delete: true,
 		},

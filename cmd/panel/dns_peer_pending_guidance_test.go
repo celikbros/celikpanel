@@ -20,6 +20,7 @@ func TestDNSPeerPendingGuidanceOnlyRecognizesReviewedCodes(t *testing.T) {
 		transport.DNSPeerPendingNativeUnknown,
 		transport.DNSPeerPendingJournalUnknown,
 		transport.DNSPeerPendingOwnerEditUnknown,
+		transport.DNSPeerPendingProofInternal,
 	} {
 		body, ok := dnsPeerPendingAPIError(errors.Join(
 			errors.New("untrusted remote output"), &dnsZoneV3PropagationPendingError{Code: code, Exact: true},
@@ -177,5 +178,37 @@ func TestDNSPeerPendingGuidanceNamesPowerDNSConfigUnreviewed(t *testing.T) {
 	body, ok := dnsPeerPendingAPIError(&dnsZoneV3PropagationPendingError{Code: "dns_peer_inspection_unknown:config_unreviewed", Exact: true})
 	if !ok || body.Reason != transport.DNSPeerPendingInspectionUnknown || body.Detail != "config_unreviewed" || body.Error != want {
 		t.Fatalf("API body lost the reviewed detail: %+v", body)
+	}
+}
+
+// pair5 P5-1: the Agent could not run its own proof. The text must not claim
+// an owner change; it names the owner, the log command, that a retry waits
+// for a fixed Agent, and that the deletion stays pending.
+func TestDNSPeerProofInternalGuidanceIsNotAnOwnerEdit(t *testing.T) {
+	reason, detail, message, ok := dnsPeerPendingGuidance(transport.DNSPeerPendingProofInternal)
+	if !ok || reason != transport.DNSPeerPendingProofInternal || detail != "" {
+		t.Fatalf("internal code: %q %q %t", reason, detail, ok)
+	}
+	for _, want := range []string{
+		"could not run its own check of the secondary",
+		"No change by either server's owner was found",
+		"server owner",
+		"sudo journalctl -u celikpanel-agent | grep peer",
+		"Retrying does not help until the CelikPanel Agent is updated",
+		"“Retry this deletion”",
+		"same publication",
+		"deletion stays pending and DNS answers are unaffected",
+	} {
+		if !strings.Contains(message, want) {
+			t.Fatalf("internal guidance lacks %q: %s", want, message)
+		}
+	}
+	if strings.Contains(message, "evidence changed") || strings.Contains(message, "reconcile") {
+		t.Fatalf("internal guidance claims an owner change: %s", message)
+	}
+	_, _, ownerEdit, _ := dnsPeerPendingGuidance(transport.DNSPeerPendingOwnerEditUnknown)
+	if !strings.Contains(ownerEdit, "compare the catalog zone and zone serials on both servers") ||
+		!strings.Contains(ownerEdit, "evidence changed during verification") {
+		t.Fatalf("owner-edit guidance lost its meaning or action: %s", ownerEdit)
 	}
 }

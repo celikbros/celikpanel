@@ -113,6 +113,22 @@ func TestNativeBINDProofIsOneAttemptPerCompletion(t *testing.T) {
 	}
 }
 
+// pair5 P5-1: an empty source engine is no longer treated as BIND. It is the
+// Agent's own precondition failure and never reaches a native recheck.
+func TestNativePeerLocalRecheckRefusesPlanWithoutSourceEngineAsInternal(t *testing.T) {
+	for _, engine := range []transport.DNSEngine{"", "knot"} {
+		plan := dnsV3PrimaryPropagationPlan{
+			SourceState: dnsEngineStateReceipt{Engine: engine},
+			Changed:     expectedDNSZoneAuthority{Domain: "gone.example.test", Delete: true},
+		}
+		err := recheckNativePeerLocalEvidence(context.Background(), plan)
+		var internal *dnsPeerProofInternalError
+		if !errors.As(err, &internal) {
+			t.Fatalf("engine %q: %v", engine, err)
+		}
+	}
+}
+
 func TestNativePowerDNSProofRejectsUntrackedAndWrongSource(t *testing.T) {
 	plan := dnsV3PrimaryPropagationPlan{
 		SourceState: dnsEngineStateReceipt{

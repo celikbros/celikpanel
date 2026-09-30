@@ -99,6 +99,9 @@ REVIEWED_DNS_PEER_REASONS = frozenset(
         # pair4 P4-1: the secondary's named refused the owner inspector's
         # local (loopback) catalog transfer; the secondary's owner acts.
         "dns_peer_catalog_transfer_refused",
+        # pair5 P5-1: the Agent could not run its own proof of the secondary
+        # (internal precondition); no owner change was found.
+        "dns_peer_proof_internal",
     }
 )
 
@@ -127,6 +130,7 @@ ACTOR_BY_CODE = {
     "dns_peer_enrollment_changed": "primary administrator (pinned peer enrollment)",
     "dns_peer_inspection_unknown": "primary administrator and secondary owner",
     "dns_peer_catalog_transfer_refused": "the secondary's owner (allow the catalog transfer from loopback)",
+    "dns_peer_proof_internal": "this server's owner (read the Agent log and report it; retry after a fixed Agent)",
     "server_setup_primary_dns_required": "the primary server's owner",
     "server_setup_dns_readiness_required": "both DNS server owners",
     "server_setup_access_dns_required": "the domain owner (public DNS / registrar)",

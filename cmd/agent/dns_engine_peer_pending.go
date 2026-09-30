@@ -2,6 +2,11 @@ package main
 
 import (
 	"errors"
+	"fmt"
+	"log"
+	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -31,9 +36,15 @@ func pendingDNSPeerCode(err error) string {
 // changed operation or local DNS evidence. The callbacks run in that order so
 // no later observation can replace the first failed boundary. Their raw errors
 // must never become a durable or owner-facing peer reason.
+//
+// A missing boundary, or a local check that could not run because the proof's
+// own plan is unusable (dnsPeerProofInternalError), is an internal
+// precondition failure of the Agent: it is reported as
+// dns_peer_proof_internal, never as an owner change (D-024).
 func peerCurrentPendingCodeAt(attempt, enrollment, local func() error) error {
 	if attempt == nil || enrollment == nil || local == nil {
-		return pendingBINDPeer(transport.DNSPeerPendingOwnerEditUnknown)
+		return pendingDNSPeerProofInternal("current-evidence recheck",
+			errors.New("a recheck boundary is missing"))
 	}
 	if attempt() != nil {
 		return pendingBINDPeer(transport.DNSPeerPendingOwnerEditUnknown)
@@ -41,10 +52,80 @@ func peerCurrentPendingCodeAt(attempt, enrollment, local func() error) error {
 	if enrollment() != nil {
 		return pendingBINDPeer(transport.DNSPeerPendingEnrollmentChanged)
 	}
-	if local() != nil {
+	if err := local(); err != nil {
+		var internal *dnsPeerProofInternalError
+		if errors.As(err, &internal) {
+			return pendingDNSPeerProofInternal("local evidence recheck", internal.err)
+		}
 		return pendingBINDPeer(transport.DNSPeerPendingOwnerEditUnknown)
 	}
 	return nil
+}
+
+// dnsPeerProofInternalError marks a failure of the proof's own preconditions
+// (its plan, source receipt or probe selection), as opposed to evidence that
+// was observed and differed. It is never shown to the owner as text.
+type dnsPeerProofInternalError struct{ err error }
+
+func (e *dnsPeerProofInternalError) Error() string {
+	return "native DNS peer proof precondition failed: " + e.err.Error()
+}
+
+func (e *dnsPeerProofInternalError) Unwrap() error { return e.err }
+
+func dnsPeerProofInternal(err error) error {
+	if err == nil {
+		err = errors.New("unspecified precondition")
+	}
+	return &dnsPeerProofInternalError{err: err}
+}
+
+// dnsPeerProofLogLimit bounds the underlying error text written to the Agent
+// log. The text is product-authored (no peer output, keys or credentials).
+const dnsPeerProofLogLimit = 512
+
+func boundedDNSPeerProofLogText(err error) string {
+	if err == nil {
+		return "no error text"
+	}
+	text := strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return ' '
+		}
+		return r
+	}, err.Error())
+	if len(text) > dnsPeerProofLogLimit {
+		cut := dnsPeerProofLogLimit
+		for cut > 0 && !utf8.RuneStart(text[cut]) {
+			cut--
+		}
+		text = text[:cut] + "..."
+	}
+	return text
+}
+
+// pendingDNSPeerProofInternal records why the Agent could not run its own
+// proof of the secondary (the owner reads it with
+// journalctl -u celikpanel-agent | grep peer) and returns the reviewed code.
+// Nothing about the owner's configuration is claimed.
+func pendingDNSPeerProofInternal(stage string, err error) error {
+	log.Printf("DNS peer proof could not run its own check (%s); no owner change was observed: %s",
+		stage, boundedDNSPeerProofLogText(err))
+	return pendingBINDPeer(transport.DNSPeerPendingProofInternal)
+}
+
+// nativePeerProofCatalogProbes selects the catalog AXFR probes of the native
+// peer proof by the plan's frozen source engine. Both native verifiers call it
+// before any challenge is minted and reuse the result after the inspection,
+// so the post-inspection re-verification cannot fail on selection. A plan
+// without a known source engine is an internal precondition failure.
+func nativePeerProofCatalogProbes(plan dnsV3PrimaryPropagationPlan) (dnsCatalogAXFRProbe, dnsBoundCatalogAXFRProbe, error) {
+	local, peer, err := catalogAXFRProbesForSourceEngine(plan.SourceState.Engine)
+	if err != nil {
+		return nil, nil, pendingDNSPeerProofInternal("catalog probe selection for "+plan.Changed.Domain,
+			fmt.Errorf("plan source engine receipt %q: %w", plan.SourceState.Engine, err))
+	}
+	return local, peer, nil
 }
 
 // inspectionPendingCode classifies an incomplete authenticated inspection by

@@ -49,8 +49,9 @@ func TestPeerCurrentPendingCodeKeepsFirstFailedBoundary(t *testing.T) {
 		{func() error { return nil }, nil, func() error { t.Fatal("unsafe local check reached"); return nil }},
 		{func() error { return nil }, func() error { return nil }, nil},
 	} {
+		// A missing boundary is the Agent's own precondition, not an owner edit.
 		err := peerCurrentPendingCodeAt(checks[0], checks[1], checks[2])
-		if pendingDNSPeerCode(err) != transport.DNSPeerPendingOwnerEditUnknown {
+		if pendingDNSPeerCode(err) != transport.DNSPeerPendingProofInternal {
 			t.Fatalf("missing boundary accepted: %v", err)
 		}
 	}

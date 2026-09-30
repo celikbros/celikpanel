@@ -216,6 +216,20 @@ class DeletionAndGateTest(unittest.TestCase):
             self.assertIn("allow-transfer", item["shown"]["en"][0])
             self.assertIn("aynı yayını", item["shown"]["tr"][0])
 
+    def test_internal_proof_failure_is_reviewed_and_not_an_owner_edit(self) -> None:
+        for status, saved in ((202, False), (200, True)):
+            item = gd.deletion_pending_guidance(T, status, {
+                "status": "deletion_pending", "stage": "dns_cleanup", "message": "m",
+                "reason": "dns_peer_proof_internal"}, saved=saved)
+            self.assertTrue(item["actionable"], item)
+            self.assertEqual(item["message_keys"], ["err.DNS_PUBLICATION_FAILED.dns_peer_proof_internal"])
+            self.assertEqual(item["actor"],
+                             "this server's owner (read the Agent log and report it; retry after a fixed Agent)")
+            self.assertIn("journalctl -u celikpanel-agent | grep peer", item["shown"]["en"][0])
+            self.assertIn("No change by either server's owner was found", item["shown"]["en"][0])
+            self.assertNotIn("evidence changed", item["shown"]["en"][0])
+            self.assertIn("aynı yayını", item["shown"]["tr"][0])
+
     def test_saved_status(self) -> None:
         item = gd.deletion_pending_guidance(T, 200, {"status": "deletion_pending", "stage": "dns_cleanup",
                                                      "reason": "dns_peer_inspection_unknown", "message": "m"},

@@ -8,6 +8,7 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/binddns"
 	"github.com/alicelik/celikpanel/internal/bindrndckey"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 type bindControlRunner func(context.Context, ...string) error
@@ -33,9 +34,15 @@ func trustedBINDControl(ctx context.Context, args ...string) error {
 	return nil
 }
 
+// bindV3PrimaryPropagationPlan builds the primary propagation plan of one
+// zone in the verified current BIND tree. source is the active engine state
+// receipt (the one the native peer proof rereads with readDNSEngineState);
+// the plan carries it exactly as the PowerDNS plan does, so the proof selects
+// the BIND catalog probes after the inspection (pair5 P5-1).
 func bindV3PrimaryPropagationPlan(
 	tree binddns.VerifiedTree,
 	domain string,
+	source dnsEngineStateReceipt,
 ) (dnsV3PrimaryPropagationPlan, bool, error) {
 	receipt := tree.CurrentReceipt()
 	zone, data, found := tree.Zone(domain)
@@ -48,11 +55,15 @@ func bindV3PrimaryPropagationPlan(
 		return dnsV3PrimaryPropagationPlan{}, false, err
 	}
 	if receipt.Pairing == nil {
-		return dnsV3PrimaryPropagationPlan{Changed: changed}, false, nil
+		return dnsV3PrimaryPropagationPlan{}, false, nil
 	}
 	if receipt.Pairing.Role != binddns.PairRolePrimary {
 		return dnsV3PrimaryPropagationPlan{}, false,
 			errors.New("BIND secondary cannot propagate a panel-owned V3 zone")
+	}
+	if source.Engine != transport.DNSEngineBIND {
+		return dnsV3PrimaryPropagationPlan{}, false,
+			errors.New("BIND primary propagation requires the active BIND engine state receipt")
 	}
 	evidence, primary, err := bindPrimaryCatalogEvidence(tree)
 	if err != nil || !primary {
@@ -61,16 +72,14 @@ func bindV3PrimaryPropagationPlan(
 		}
 		return dnsV3PrimaryPropagationPlan{}, false, err
 	}
-	plan := dnsV3PrimaryPropagationPlan{
-		Evidence: evidence, Changed: changed,
-		Operation: dnsV3DeletionOperation{
+	plan, err := newDNSV3PrimaryPropagationPlan(source, evidence, changed, false,
+		dnsV3DeletionOperation{
 			RequestID:  zone.MutationRequestID,
 			OwnerID:    zone.MutationOwnerID,
 			Generation: zone.DesiredGeneration,
 			Qualifier:  zone.Qualifier,
-		},
-	}
-	if err := validateDNSV3PrimaryPropagationPlan(plan); err != nil {
+		})
+	if err != nil {
 		return dnsV3PrimaryPropagationPlan{}, false, err
 	}
 	return plan, true, nil
@@ -117,17 +126,6 @@ func typedBINDNotificationFailure(text string, err error) error {
 	return errors.New(text)
 }
 
-func completeManagedBINDV3Propagation(
-	ctx context.Context,
-	tree binddns.VerifiedTree,
-	domain string,
-) error {
-	return completeManagedBINDV3PropagationAt(
-		ctx, tree, domain, trustedBINDControl,
-		completeBINDDNSV3PrimaryPropagation,
-	)
-}
-
 func completeManagedBINDV3PropagationForState(
 	ctx context.Context,
 	root string,
@@ -142,7 +140,7 @@ func completeManagedBINDV3PropagationForState(
 		return err
 	}
 	return completeManagedBINDV3PropagationAtWithLegacy(
-		ctx, tree, domain, legacy, trustedBINDControl,
+		ctx, tree, domain, state, legacy, trustedBINDControl,
 		completeBINDDNSV3PrimaryPropagation,
 	)
 }
@@ -155,11 +153,12 @@ func completeManagedBINDV3PropagationAt(
 	ctx context.Context,
 	tree binddns.VerifiedTree,
 	domain string,
+	state dnsEngineStateReceipt,
 	run bindControlRunner,
 	complete bindPrimaryPropagationCompleter,
 ) error {
 	return completeManagedBINDV3PropagationAtWithLegacy(
-		ctx, tree, domain, false, run, complete,
+		ctx, tree, domain, state, false, run, complete,
 	)
 }
 
@@ -167,11 +166,12 @@ func completeManagedBINDV3PropagationAtWithLegacy(
 	ctx context.Context,
 	tree binddns.VerifiedTree,
 	domain string,
+	state dnsEngineStateReceipt,
 	legacy bool,
 	run bindControlRunner,
 	complete bindPrimaryPropagationCompleter,
 ) error {
-	plan, primary, err := bindV3PrimaryPropagationPlan(tree, domain)
+	plan, primary, err := bindV3PrimaryPropagationPlan(tree, domain, state)
 	if err != nil || !primary {
 		return err
 	}

@@ -63,6 +63,7 @@ test('every reviewed pending reason has readable EN/TR copy', () => {
     'dns_peer_journal_unknown',
     'dns_peer_owner_edit_unknown',
     'dns_peer_catalog_transfer_refused',
+    'dns_peer_proof_internal',
     'bind_rndc_unavailable',
   ]) {
     const key = `err.DNS_PUBLICATION_FAILED.${reason}`;
@@ -171,4 +172,43 @@ test('the PowerDNS unreviewed-configuration detail names both recognised configu
   assert.match(trScreens[key], /PowerDNS/);
   assert.match(trScreens[key], /panelin kendi yapılandırması/);
   assert.match(trScreens[key], /panelsiz yapılandırma/);
+});
+
+test('an internal proof failure names no owner change, the owner, the log command and the retry', async () => {
+  assert.deepEqual(await readDomainDeletionOutcome(response(202, {
+    status: 'deletion_pending', stage: 'dns_cleanup', reason: 'dns_peer_proof_internal',
+  })), { state: 'pending', reason: 'dns_peer_proof_internal' });
+  assert.equal(await readSavedDomainDeletionStatus(response(200, {
+    status: 'deletion_pending', stage: 'dns_cleanup', reason: 'dns_peer_proof_internal',
+  })), 'dns_peer_proof_internal');
+  const en_ = en['err.DNS_PUBLICATION_FAILED.dns_peer_proof_internal'];
+  const tr_ = tr['err.DNS_PUBLICATION_FAILED.dns_peer_proof_internal'];
+  for (const text of [en_, tr_]) {
+    assert.ok(text.includes('sudo journalctl -u celikpanel-agent | grep peer'));
+    assert.match(text, /CelikPanel Agent/);
+    assert.doesNotMatch(text, /secret|password|parola/i);
+  }
+  assert.match(en_, /could not run its own check of the secondary/);
+  assert.match(en_, /No change by either server's owner was found/);
+  assert.match(en_, /server owner/);
+  assert.match(en_, /Retrying does not help until/);
+  assert.match(en_, /DNS answers are unaffected/);
+  assert.doesNotMatch(en_, /evidence changed|reconcile/);
+  assert.match(tr_, /kendi denetimiyle kontrol edemedi/);
+  assert.match(tr_, /değişiklik bulunmadı/);
+  assert.match(tr_, /sunucunun sahibi/);
+  assert.match(tr_, /DNS yanıtları etkilenmez/);
+  assert.doesNotMatch(tr_, /kanıt değişti|uzlaştır/);
+  assert.ok(en_.includes(`“${enScreens['domains.retryDeletion']}”`));
+  assert.ok(tr_.includes(`“${trScreens['domains.retryDeletion']}”`));
+});
+
+test('owner-edit guidance keeps its meaning and names the serial comparison', () => {
+  const en_ = en['err.DNS_PUBLICATION_FAILED.dns_peer_owner_edit_unknown'];
+  const tr_ = tr['err.DNS_PUBLICATION_FAILED.dns_peer_owner_edit_unknown'];
+  assert.match(en_, /evidence changed during verification/);
+  assert.match(en_, /compare the catalog zone and zone serials on both servers/);
+  assert.match(tr_, /seri numaralarını karşılaştırıp/);
+  assert.ok(en_.includes(`“${enScreens['domains.retryDeletion']}”`));
+  assert.ok(tr_.includes(`“${trScreens['domains.retryDeletion']}”`));
 });

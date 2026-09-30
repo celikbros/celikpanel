@@ -183,12 +183,41 @@ func preparePDNSV3PropagationAt(
 }
 
 func validatePDNSPrimaryPropagationPlan(plan pdnsV3PropagationPlan) error {
-	return validateDNSV3PrimaryPropagationPlan(dnsV3PrimaryPropagationPlan{
-		Evidence:  plan.Evidence,
-		Changed:   plan.Changed,
-		Legacy:    plan.Legacy,
-		Operation: plan.Operation,
-	})
+	_, err := newDNSV3PrimaryPropagationPlan(
+		plan.State, plan.Evidence, plan.Changed, plan.Legacy, plan.Operation,
+	)
+	return err
+}
+
+// newDNSV3PrimaryPropagationPlan is the only non-test constructor of a
+// primary propagation plan. The plan carries the source engine state receipt
+// the native peer proof rereads before and after the inspection; the proof
+// selects its catalog probes by that receipt's engine. An empty or unknown
+// engine is refused here, so a builder cannot omit the receipt silently
+// (pair5 P5-1: the BIND builder left it empty and the post-inspection probe
+// selection failed after a completed inspection).
+func newDNSV3PrimaryPropagationPlan(
+	source dnsEngineStateReceipt,
+	evidence dnsPrimaryCatalogEvidence,
+	changed expectedDNSZoneAuthority,
+	legacy bool,
+	operation dnsV3DeletionOperation,
+) (dnsV3PrimaryPropagationPlan, error) {
+	if _, _, err := catalogAXFRProbesForSourceEngine(source.Engine); err != nil {
+		return dnsV3PrimaryPropagationPlan{},
+			errors.New("DNS primary propagation plan has no known source engine receipt")
+	}
+	plan := dnsV3PrimaryPropagationPlan{
+		SourceState: source,
+		Evidence:    evidence,
+		Changed:     changed,
+		Legacy:      legacy,
+		Operation:   operation,
+	}
+	if err := validateDNSV3PrimaryPropagationPlan(plan); err != nil {
+		return dnsV3PrimaryPropagationPlan{}, err
+	}
+	return plan, nil
 }
 
 func validateDNSV3PrimaryPropagationPlan(plan dnsV3PrimaryPropagationPlan) error {
@@ -226,12 +255,11 @@ func completePDNSV3Propagation(
 	if !plan.Primary {
 		return nil
 	}
-	primaryPlan := dnsV3PrimaryPropagationPlan{
-		SourceState: plan.State,
-		Evidence:    plan.Evidence,
-		Changed:     plan.Changed,
-		Legacy:      plan.Legacy,
-		Operation:   plan.Operation,
+	primaryPlan, err := newDNSV3PrimaryPropagationPlan(
+		plan.State, plan.Evidence, plan.Changed, plan.Legacy, plan.Operation,
+	)
+	if err != nil {
+		return dnsZoneV3RecoveryPending(err)
 	}
 	if !plan.Legacy && plan.State.NativeCatalogV3 == dnsengineartifact.NativeCatalogDebian49V3 {
 		state := plan.State
@@ -243,7 +271,7 @@ func completePDNSV3Propagation(
 			return evidence, nil
 		}
 	}
-	err := completeDNSV3PrimaryPropagation(ctx, primaryPlan)
+	err = completeDNSV3PrimaryPropagation(ctx, primaryPlan)
 	return dnsZoneV3RecoveryPending(err)
 }
 
@@ -385,15 +413,14 @@ func verifyPDNSV3PropagationAt(
 	if !plan.Primary {
 		return nil
 	}
+	primaryPlan, err := newDNSV3PrimaryPropagationPlan(
+		plan.State, plan.Evidence, plan.Changed, plan.Legacy, plan.Operation,
+	)
+	if err != nil {
+		return err
+	}
 	return verifyDNSV3PrimaryPropagationAt(
-		ctx,
-		dnsV3PrimaryPropagationPlan{
-			Evidence:  plan.Evidence,
-			Changed:   plan.Changed,
-			Legacy:    plan.Legacy,
-			Operation: plan.Operation,
-		},
-		soa, localAXFR, peerCatalogAXFR, peerZoneAXFR,
+		ctx, primaryPlan, soa, localAXFR, peerCatalogAXFR, peerZoneAXFR,
 	)
 }
 
