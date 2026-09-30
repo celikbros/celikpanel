@@ -6,7 +6,7 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
-
+	"fmt"
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/dnspeerenrollment"
@@ -106,7 +106,11 @@ func mintPDNSPeerDeletionRequest(plan dnsV3PrimaryPropagationPlan, authority dns
 	return request, nil
 }
 
-func verifyEnrolledPDNSPeerDeletion(ctx context.Context, authority dnsPeerAXFRAuthority, plan dnsV3PrimaryPropagationPlan) error {
+// verifyEnrolledPDNSPeerDeletion is the PowerDNS-secondary form of
+// verifyEnrolledBINDPeerDeletion, with the same steps and bounds
+// (dnsPeerProofSteps). ctx is the request context, never the completion
+// wave's DNS probe context.
+func verifyEnrolledPDNSPeerDeletion(ctx context.Context, authority dnsPeerAXFRAuthority, plan dnsV3PrimaryPropagationPlan) (result error) {
 	if !plan.Changed.Delete || plan.Legacy || ctx.Err() != nil {
 		return errors.New("native PowerDNS deletion proof is unavailable")
 	}
@@ -115,41 +119,53 @@ func verifyEnrolledPDNSPeerDeletion(ctx context.Context, authority dnsPeerAXFRAu
 		return errors.New("native PowerDNS proof lacks an active mutation attempt")
 	}
 	m, runtime := tracker.manager, tracker.runtime
-	attempt, err := currentBINDPeerLedgerAttempt(m, runtime, plan)
-	if err != nil {
-		return err
-	}
-	// Select the post-inspection catalog probes before any challenge exists.
-	// An unusable plan is the Agent's own precondition, never an owner edit.
-	localCatalogProbe, peerCatalogProbe, err := nativePeerProofCatalogProbes(plan)
-	if err != nil {
-		return err
-	}
-	// The attempt's recorded producer catalog (shared with the wave).
-	record := recordedProducerCatalogFor(plan)
-	enrollment, err := pdnspeerenrollment.Read()
-	if err != nil {
-		if pdnspeerenrollment.IsCode(err, pdnspeerenrollment.Disabled) {
-			return pendingBINDPeer(transport.DNSPeerPendingEnrollmentRequired)
+	run := newDNSPeerProofRun(ctx, dnsPeerProofSteps, plan.Changed.Domain, "PowerDNS")
+	defer func() { run.finish(result) }()
+	var (
+		attempt           uint64
+		localCatalogProbe dnsCatalogAXFRProbe
+		peerCatalogProbe  dnsBoundCatalogAXFRProbe
+		record            *dnsRecordedProducerCatalog
+		enrollment        pdnspeerenrollment.Snapshot
+		checks            *nativePeerCurrentChecks
+		request           pdnspeerproof.RequestV1
+		response          pdnspeerproof.ResponseV1
+		authenticated     pdnspeerproof.PeerAuthentication
+	)
+	if err := run.step(dnsPeerProofStepPrepare, func(ctx context.Context) error {
+		var err error
+		if attempt, err = currentBINDPeerLedgerAttempt(m, runtime, plan); err != nil {
+			return err
 		}
-		return pendingBINDPeer(transport.DNSPeerPendingEnrollmentChanged)
-	}
-	if enrollment.Record.PrimaryIP != authority.sourceIP ||
-		enrollment.Record.PeerIP != authority.peerIP ||
-		enrollment.Record.CatalogName != authority.catalog ||
-		enrollment.Record.View != dnspeerproof.DefaultView {
-		return pendingBINDPeer(transport.DNSPeerPendingEnrollmentChanged)
-	}
-	verifyCurrent := func() error {
-		return peerCurrentPendingCodeAt(
-			func() error {
+		// Select the post-inspection catalog probes before any challenge
+		// exists. An unusable plan is the Agent's own precondition, never an
+		// owner edit.
+		if localCatalogProbe, peerCatalogProbe, err = nativePeerProofCatalogProbes(plan); err != nil {
+			return err
+		}
+		// The attempt's recorded producer catalog (shared with the wave).
+		record = recordedProducerCatalogFor(plan)
+		if enrollment, err = pdnspeerenrollment.Read(); err != nil {
+			if pdnspeerenrollment.IsCode(err, pdnspeerenrollment.Disabled) {
+				return pendingBINDPeer(transport.DNSPeerPendingEnrollmentRequired)
+			}
+			return pendingDNSPeerCause(transport.DNSPeerPendingEnrollmentChanged, err)
+		}
+		if enrollment.Record.PrimaryIP != authority.sourceIP ||
+			enrollment.Record.PeerIP != authority.peerIP ||
+			enrollment.Record.CatalogName != authority.catalog ||
+			enrollment.Record.View != dnspeerproof.DefaultView {
+			return pendingBINDPeer(transport.DNSPeerPendingEnrollmentChanged)
+		}
+		checks = &nativePeerCurrentChecks{
+			attempt: func() error {
 				current, currentErr := currentBINDPeerLedgerAttempt(m, runtime, plan)
 				if currentErr != nil || current != attempt {
 					return errors.New("PowerDNS proof lost its active operation attempt")
 				}
 				return nil
 			},
-			func() error {
+			enrollment: func() error {
 				if pdnspeerenrollment.Recheck(enrollment) != nil {
 					return errors.New("PowerDNS peer enrollment changed")
 				}
@@ -158,73 +174,105 @@ func verifyEnrolledPDNSPeerDeletion(ctx context.Context, authority dnsPeerAXFRAu
 				}
 				return nil
 			},
-			func() error { return recheckNativePeerLocalEvidence(ctx, plan, record) },
-		)
-	}
-	if err := verifyCurrent(); err != nil {
-		return err
-	}
-	if reconcileHistoricalPDNSPeerChallenge(m, plan, verifyCurrent) != nil {
-		return pendingBINDPeer(transport.DNSPeerPendingJournalUnknown)
-	}
-	next := uint64(1)
-	previous, err := pdnspeerjournal.Read()
-	if err == nil {
-		if previous.Request.Attempt == ^uint64(0) {
-			return pendingBINDPeer(transport.DNSPeerPendingJournalUnknown)
+			local: func(ctx context.Context) error { return recheckNativePeerLocalEvidence(ctx, plan, record) },
 		}
-		next = previous.Request.Attempt + 1
-	} else if !pdnspeerjournal.IsCode(err, pdnspeerjournal.Missing) {
-		return pendingBINDPeer(transport.DNSPeerPendingJournalUnknown)
-	}
-	// See verifyEnrolledBINDPeerDeletion: a re-stamp admitted since the wave
-	// proved the pair is proved again before any challenge exists.
-	if plan, err = nativePeerChallengePlan(plan, record, authority); err != nil {
+		if err := checks.at(ctx)(); err != nil {
+			return err
+		}
+		if err := checks.journalOp(ctx, "previous challenge reconciliation", func(verify func() error) error {
+			return reconcileHistoricalPDNSPeerChallenge(m, plan, verify)
+		}); err != nil {
+			return err
+		}
+		next := uint64(1)
+		previous, err := pdnspeerjournal.Read()
+		if err == nil {
+			if previous.Request.Attempt == ^uint64(0) {
+				return pendingDNSPeerCause(transport.DNSPeerPendingJournalUnknown,
+					errors.New("challenge journal attempt counter is exhausted"))
+			}
+			next = previous.Request.Attempt + 1
+		} else if !pdnspeerjournal.IsCode(err, pdnspeerjournal.Missing) {
+			return pendingDNSPeerCause(transport.DNSPeerPendingJournalUnknown,
+				fmt.Errorf("challenge journal read: %w", err))
+		}
+		// See verifyEnrolledBINDPeerDeletion: a re-stamp admitted since the
+		// wave proved the pair is proved again before any challenge exists.
+		if plan, err = nativePeerChallengePlan(plan, record, authority); err != nil {
+			return err
+		}
+		if request, err = mintPDNSPeerDeletionRequest(plan, authority,
+			enrollment.Record.HostKeySHA256, next, time.Now()); err != nil {
+			return err
+		}
+		run.challengeMinted(time.Unix(request.ExpiresAtUnix, 0))
+		return nil
+	}); err != nil {
 		return err
 	}
-	request, err := mintPDNSPeerDeletionRequest(plan, authority, enrollment.Record.HostKeySHA256, next, time.Now())
-	if err != nil {
+	if err := run.step(dnsPeerProofStepChallengeWrite, func(ctx context.Context) error {
+		if err := checks.journalOp(ctx, "challenge publish", func(verify func() error) error {
+			return pdnspeerjournal.Publish(request, enrollment.RecordSHA256, attempt, verify)
+		}); err != nil {
+			return err
+		}
+		if err := pdnspeerenrollment.Recheck(enrollment); err != nil {
+			return pendingDNSPeerCause(transport.DNSPeerPendingEnrollmentChanged, err)
+		}
+		return nil
+	}); err != nil {
 		return err
 	}
-	if pdnspeerjournal.Publish(request, enrollment.RecordSHA256, attempt, verifyCurrent) != nil {
-		return pendingBINDPeer(transport.DNSPeerPendingJournalUnknown)
-	}
-	if pdnspeerenrollment.Recheck(enrollment) != nil {
-		return pendingBINDPeer(transport.DNSPeerPendingEnrollmentChanged)
-	}
-	response, authenticated, err := pdnspeertransport.Inspect(ctx, enrollment.Transport, request, pdnspeertransport.SSH{})
-	if err != nil {
-		return pendingBINDPeer(pdnsInspectionPendingCode(err))
-	}
-	if err := verifyCurrent(); err != nil {
+	if err := run.stepWithin(dnsPeerProofStepExchange, enrollment.Transport.Timeout, func(ctx context.Context) error {
+		var err error
+		response, authenticated, err = pdnspeertransport.Inspect(ctx, enrollment.Transport, request, pdnspeertransport.SSH{})
+		if err != nil {
+			return pendingDNSPeerCause(pdnsInspectionPendingCode(err), err)
+		}
+		return nil
+	}); err != nil {
 		return err
 	}
-	if err := verifyNativePeerAfterInspectionAt(ctx, record, authority, plan.Changed.Domain,
-		nativePeerAfterInspectionProbes{
-			soa: probeDNSZoneSOA, localCatalog: localCatalogProbe,
-			peerCatalog: peerCatalogProbe, peerZone: probeDNSBoundZoneAXFR,
-		}, verifyCurrent); err != nil {
+	if err := run.step(dnsPeerProofStepPostInspection, func(ctx context.Context) error {
+		verifyCurrent := checks.at(ctx)
+		if err := verifyCurrent(); err != nil {
+			return err
+		}
+		if err := verifyNativePeerAfterInspectionAt(ctx, record, authority, plan.Changed.Domain,
+			nativePeerAfterInspectionProbes{
+				soa: probeDNSZoneSOA, localCatalog: localCatalogProbe,
+				peerCatalog: peerCatalogProbe, peerZone: probeDNSBoundZoneAXFR,
+			}, verifyCurrent); err != nil {
+			return err
+		}
+		return verifyCurrent()
+	}); err != nil {
 		return err
 	}
-	if err := verifyCurrent(); err != nil {
-		return err
-	}
-	var consumeErr error
-	_, err = pdnspeerproof.Verify(request, response, authenticated, time.Now(), func(digest string) bool {
-		consumeErr = pdnspeerjournal.ConsumeOnce(request, enrollment.RecordSHA256,
-			digest, attempt, verifyCurrent)
-		return consumeErr == nil
-	})
-	if err != nil || consumeErr != nil {
+	return run.consume(func() error {
+		accepted := false
+		var consumeErr error
+		_, err := pdnspeerproof.Verify(request, response, authenticated, time.Now(), func(digest string) bool {
+			// The answer is accepted: consume-once runs under the fresh
+			// consume context, never under an earlier step's clock.
+			accepted = true
+			consumeErr = checks.journalOp(run.accepted(), "consume-once", func(verify func() error) error {
+				return pdnspeerjournal.ConsumeOnce(request, enrollment.RecordSHA256,
+					digest, attempt, verify)
+			})
+			return consumeErr == nil
+		})
+		// The PowerDNS inspector's outcome fields, bounded (pair 6 could only
+		// infer them).
+		run.logAnswer(response.CatalogState, response.MemberState, response.NativeState, accepted, err)
 		if consumeErr != nil {
-			return pendingBINDPeer(transport.DNSPeerPendingJournalUnknown)
+			return consumeErr
 		}
-		return pendingBINDPeer(transport.DNSPeerPendingNativeUnknown)
-	}
-	if err := verifyCurrent(); err != nil {
-		return err
-	}
-	return nil
+		if err != nil {
+			return pendingDNSPeerCause(transport.DNSPeerPendingNativeUnknown, err)
+		}
+		return checks.at(run.accepted())()
+	})
 }
 
 func reconcileHistoricalPDNSPeerChallenge(m *serviceMutationManager, plan dnsV3PrimaryPropagationPlan, verifyCurrent func() error) error {

@@ -14,7 +14,6 @@ import (
 	"path"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/alicelik/celikpanel/internal/binddns"
 	"github.com/alicelik/celikpanel/internal/dnspeerproof"
@@ -188,7 +187,7 @@ func readAt(root string) (Snapshot, error) {
 		Transport: dnspeertransport.Enrollment{
 			PeerIP: record.PeerIP, Username: record.SSHUsername,
 			HostKeySHA256:  record.HostKeySHA256,
-			PrivateKeyPath: keyPath, Timeout: 5 * time.Second,
+			PrivateKeyPath: keyPath, Timeout: dnspeertransport.ExchangeLimit,
 		},
 	}, nil
 }

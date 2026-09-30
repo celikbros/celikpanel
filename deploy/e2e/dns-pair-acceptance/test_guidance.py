@@ -230,6 +230,21 @@ class DeletionAndGateTest(unittest.TestCase):
             self.assertNotIn("evidence changed", item["shown"]["en"][0])
             self.assertIn("aynı yayını", item["shown"]["tr"][0])
 
+    def test_proof_timeout_is_reviewed_with_retry_now(self) -> None:
+        for status, saved in ((202, False), (200, True)):
+            item = gd.deletion_pending_guidance(T, status, {
+                "status": "deletion_pending", "stage": "dns_cleanup", "message": "m",
+                "reason": "dns_peer_proof_timeout"}, saved=saved)
+            self.assertTrue(item["actionable"], item)
+            self.assertEqual(item["message_keys"], ["err.DNS_PUBLICATION_FAILED.dns_peer_proof_timeout"])
+            self.assertEqual(item["actor"],
+                             "this server's owner (retry now; if it repeats, either owner checks SSH reachability and load)")
+            self.assertIn("did not finish within its time", item["shown"]["en"][0])
+            self.assertIn("Nothing was changed on either server", item["shown"]["en"][0])
+            self.assertIn("SSH port", item["shown"]["en"][0])
+            self.assertNotIn("evidence changed", item["shown"]["en"][0])
+            self.assertIn("aynı yayını", item["shown"]["tr"][0])
+
     def test_saved_status(self) -> None:
         item = gd.deletion_pending_guidance(T, 200, {"status": "deletion_pending", "stage": "dns_cleanup",
                                                      "reason": "dns_peer_inspection_unknown", "message": "m"},

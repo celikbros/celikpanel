@@ -12,10 +12,52 @@ import (
 )
 
 // dnsPeerPendingError carries only a reviewed code. Probe, SSH and peer output
-// must never become a durable owner-facing message.
-type dnsPeerPendingError struct{ code string }
+// must never become a durable owner-facing message. cause is the underlying,
+// product-authored error for the Agent log only (D-024); it is never part of
+// Error() and is not unwrapped, so it cannot change the reviewed code.
+type dnsPeerPendingError struct {
+	code  string
+	cause error
+}
 
 func (e *dnsPeerPendingError) Error() string { return e.code }
+
+// pendingDNSPeerCause is pendingBINDPeer that keeps the underlying error for
+// the proof's "stopped at step" log line.
+func pendingDNSPeerCause(code string, cause error) error {
+	err := pendingBINDPeer(code)
+	err.(*dnsPeerPendingError).cause = cause
+	return err
+}
+
+// dnsPeerPendingCause returns the logged cause of a reviewed pending error.
+func dnsPeerPendingCause(err error) error {
+	var peer *dnsPeerPendingError
+	if errors.As(err, &peer) {
+		return peer.cause
+	}
+	return nil
+}
+
+// dnsPeerProofDeadlineError marks a check of the native peer proof that
+// could not complete because its step's time ran out (or the proof was
+// stopped). It is not an observation: it never becomes an owner-edit code.
+// The step runner turns it into dns_peer_proof_timeout before the peer's
+// answer was accepted, and into dns_peer_journal_unknown at consume-once.
+// err is kept for the Agent log and deliberately not unwrapped, so a nested
+// reviewed code cannot leak through it.
+type dnsPeerProofDeadlineError struct{ err error }
+
+func (e *dnsPeerProofDeadlineError) Error() string {
+	return "native DNS peer proof check ran out of time: " + errorTextOrNone(e.err)
+}
+
+func dnsPeerProofDeadline(err error) error { return &dnsPeerProofDeadlineError{err: err} }
+
+func isDNSPeerProofDeadline(err error) bool {
+	var deadline *dnsPeerProofDeadlineError
+	return errors.As(err, &deadline)
+}
 
 func pendingBINDPeer(code string) error {
 	if !transport.ValidDNSPeerPendingCode(code) {
@@ -56,6 +98,10 @@ func peerCurrentPendingCodeAt(attempt, enrollment, local func() error) error {
 		return pendingBINDPeer(transport.DNSPeerPendingEnrollmentChanged)
 	}
 	if err := local(); err != nil {
+		// A check that ran out of time observed nothing (no owner edit).
+		if isDNSPeerProofDeadline(err) {
+			return err
+		}
 		var internal *dnsPeerProofInternalError
 		if errors.As(err, &internal) {
 			return pendingDNSPeerProofInternal("local evidence recheck", internal.err)

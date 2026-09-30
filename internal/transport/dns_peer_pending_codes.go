@@ -21,6 +21,12 @@ const (
 	// probes). No owner change was observed; the owner changed nothing.
 	// Retrying does not help until the Agent is corrected.
 	DNSPeerPendingProofInternal = "dns_peer_proof_internal"
+	// DNSPeerPendingProofTimeout: a step of the native proof of the secondary
+	// (writing the challenge, the SSH exchange with the inspector, or the DNS
+	// checks after it) did not finish within its bound, before the peer's
+	// answer was accepted. Nothing was changed on either server and nothing
+	// was consumed; the same publication is retried as a new attempt.
+	DNSPeerPendingProofTimeout = "dns_peer_proof_timeout"
 )
 
 // Reviewed reasons the owner-enrolled secondary inspector may report for an
@@ -173,7 +179,8 @@ func validDNSPeerPendingReason(code string) bool {
 		DNSPeerPendingJournalUnknown,
 		DNSPeerPendingOwnerEditUnknown,
 		DNSPeerPendingCatalogTransferRefused,
-		DNSPeerPendingProofInternal:
+		DNSPeerPendingProofInternal,
+		DNSPeerPendingProofTimeout:
 		return true
 	default:
 		return false

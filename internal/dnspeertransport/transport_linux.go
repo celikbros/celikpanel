@@ -33,6 +33,13 @@ const (
 	maxDuration          = 10 * time.Second
 )
 
+// ExchangeLimit bounds one enrolled inspector exchange: TCP connect, pinned
+// host key, key authentication, the forced command and its answer. Pair 6
+// measured 2.5-4 s from the challenge write to the end of the inspection on
+// QEMU guests; 2026-10-01 raised from 5 s to the transport maximum for
+// headroom. An exchange that runs out of it is dns_peer_proof_timeout.
+const ExchangeLimit = maxDuration
+
 var usernamePattern = regexp.MustCompile(`^[a-z_][a-z0-9_-]{0,31}$`)
 
 // Enrollment is reviewed owner configuration, never populated from a request.

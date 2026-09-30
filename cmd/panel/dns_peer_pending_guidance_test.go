@@ -21,6 +21,7 @@ func TestDNSPeerPendingGuidanceOnlyRecognizesReviewedCodes(t *testing.T) {
 		transport.DNSPeerPendingJournalUnknown,
 		transport.DNSPeerPendingOwnerEditUnknown,
 		transport.DNSPeerPendingProofInternal,
+		transport.DNSPeerPendingProofTimeout,
 	} {
 		body, ok := dnsPeerPendingAPIError(errors.Join(
 			errors.New("untrusted remote output"), &dnsZoneV3PropagationPendingError{Code: code, Exact: true},
@@ -252,5 +253,45 @@ func TestDNSPeerPendingGuidanceSplitsOwnerEditCheck(t *testing.T) {
 	}
 	if sentence := dnsPeerPendingDetailEnglish(transport.DNSPeerPendingNativeUnknown, "producer_catalog"); sentence != "" {
 		t.Fatalf("detail sentence for a reason without details: %q", sentence)
+	}
+}
+
+// pair6 P6-1: a step of the proof ran out of its time before the peer's
+// answer was accepted. The text says nothing changed, who retries now, what
+// to check if it repeats, and never claims an owner change or a fixed Agent.
+func TestDNSPeerProofTimeoutGuidanceNamesRetryAndChecks(t *testing.T) {
+	reason, detail, message, ok := dnsPeerPendingGuidance(transport.DNSPeerPendingProofTimeout)
+	if !ok || reason != transport.DNSPeerPendingProofTimeout || detail != "" {
+		t.Fatalf("timeout code: %q %q %t", reason, detail, ok)
+	}
+	for _, want := range []string{
+		"did not finish within its time",
+		"Nothing was changed on either server",
+		"deletion stays pending and DNS answers are unaffected",
+		"retry now with “Retry this deletion”",
+		"same publication",
+		"SSH port",
+		"overloaded",
+	} {
+		if !strings.Contains(message, want) {
+			t.Fatalf("timeout guidance lacks %q: %s", want, message)
+		}
+	}
+	for _, not := range []string{"evidence changed", "reconcile", "Retrying does not help"} {
+		if strings.Contains(message, not) {
+			t.Fatalf("timeout guidance says %q: %s", not, message)
+		}
+	}
+	_, _, journal, _ := dnsPeerPendingGuidance(transport.DNSPeerPendingJournalUnknown)
+	for _, want := range []string{
+		"private peer challenge cannot be reconciled",
+		"sudo journalctl -u celikpanel-agent | grep peer",
+		"retry is safe because each challenge can be used only once",
+		"“Retry this deletion”",
+		"same publication",
+	} {
+		if !strings.Contains(journal, want) {
+			t.Fatalf("journal guidance lacks %q: %s", want, journal)
+		}
 	}
 }

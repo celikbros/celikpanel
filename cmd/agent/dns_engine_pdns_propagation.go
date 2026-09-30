@@ -334,7 +334,12 @@ func completeDNSV3PrimaryPropagationWithNativeAt(
 	peerZoneAXFR dnsBoundZoneAXFRProbe,
 	native dnsNativePeerDeletionProof,
 ) error {
-	proofCtx, cancel := context.WithTimeout(ctx, dnsPairProofLimit)
+	// dnsPairProofWaveLimit bounds the wave's DNS answer probes and their
+	// retries while the peer catches up. The native peer proof does not run
+	// under it (2026-10-01, pair 6 P6-1): it receives the request context
+	// and bounds each of its own steps (dnsPeerProofSteps).
+	nativeBase := ctx
+	proofCtx, cancel := context.WithTimeout(ctx, dnsPairProofWaveLimit)
 	defer cancel()
 	// The attempt's recorded producer catalog: every check of this wave and
 	// of its native proof judges against it, and it moves only through an
@@ -348,12 +353,14 @@ func completeDNSV3PrimaryPropagationWithNativeAt(
 	var nativePending error
 	nativeOnce := native
 	if native != nil {
-		nativeOnce = func(ctx context.Context, authority dnsPeerAXFRAuthority, plan dnsV3PrimaryPropagationPlan) error {
+		nativeOnce = func(_ context.Context, authority dnsPeerAXFRAuthority, plan dnsV3PrimaryPropagationPlan) error {
 			if nativeAttempted {
 				return errors.New("native peer inspection was already attempted for this completion")
 			}
 			nativeAttempted = true
-			raw := native(ctx, authority, plan)
+			// The wave's probe context is not passed on: a proof that
+			// started late in the wave keeps its full per-step budget.
+			raw := native(nativeBase, authority, plan)
 			if raw == nil {
 				return nil
 			}

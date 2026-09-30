@@ -102,6 +102,9 @@ REVIEWED_DNS_PEER_REASONS = frozenset(
         # pair5 P5-1: the Agent could not run its own proof of the secondary
         # (internal precondition); no owner change was found.
         "dns_peer_proof_internal",
+        # pair6 P6-1: a step of the proof of the secondary ran out of its time
+        # before the peer's answer was accepted; nothing changed, retry now.
+        "dns_peer_proof_timeout",
     }
 )
 
@@ -131,6 +134,7 @@ ACTOR_BY_CODE = {
     "dns_peer_inspection_unknown": "primary administrator and secondary owner",
     "dns_peer_catalog_transfer_refused": "the secondary's owner (allow the catalog transfer from loopback)",
     "dns_peer_proof_internal": "this server's owner (read the Agent log and report it; retry after a fixed Agent)",
+    "dns_peer_proof_timeout": "this server's owner (retry now; if it repeats, either owner checks SSH reachability and load)",
     "server_setup_primary_dns_required": "the primary server's owner",
     "server_setup_dns_readiness_required": "both DNS server owners",
     "server_setup_access_dns_required": "the domain owner (public DNS / registrar)",

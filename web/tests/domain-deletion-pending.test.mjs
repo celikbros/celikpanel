@@ -64,6 +64,7 @@ test('every reviewed pending reason has readable EN/TR copy', () => {
     'dns_peer_owner_edit_unknown',
     'dns_peer_catalog_transfer_refused',
     'dns_peer_proof_internal',
+    'dns_peer_proof_timeout',
     'bind_rndc_unavailable',
   ]) {
     const key = `err.DNS_PUBLICATION_FAILED.${reason}`;
@@ -199,6 +200,50 @@ test('an internal proof failure names no owner change, the owner, the log comman
   assert.match(tr_, /sunucunun sahibi/);
   assert.match(tr_, /DNS yanıtları etkilenmez/);
   assert.doesNotMatch(tr_, /kanıt değişti|uzlaştır/);
+  assert.ok(en_.includes(`“${enScreens['domains.retryDeletion']}”`));
+  assert.ok(tr_.includes(`“${trScreens['domains.retryDeletion']}”`));
+});
+
+test('a proof timeout says nothing changed, who retries now and what to check if it repeats', async () => {
+  assert.deepEqual(await readDomainDeletionOutcome(response(202, {
+    status: 'deletion_pending', stage: 'dns_cleanup', reason: 'dns_peer_proof_timeout',
+  })), { state: 'pending', reason: 'dns_peer_proof_timeout' });
+  assert.equal(await readSavedDomainDeletionStatus(response(200, {
+    status: 'deletion_pending', stage: 'dns_cleanup', reason: 'dns_peer_proof_timeout',
+  })), 'dns_peer_proof_timeout');
+  const en_ = en['err.DNS_PUBLICATION_FAILED.dns_peer_proof_timeout'];
+  const tr_ = tr['err.DNS_PUBLICATION_FAILED.dns_peer_proof_timeout'];
+  assert.match(en_, /did not finish within its time/);
+  assert.match(en_, /Nothing was changed on either server/);
+  assert.match(en_, /DNS answers are unaffected/);
+  assert.match(en_, /retry now/);
+  assert.match(en_, /SSH port/);
+  assert.match(en_, /overloaded/);
+  assert.doesNotMatch(en_, /evidence changed|reconcile|Retrying does not help/);
+  assert.match(tr_, /sürede bitmedi/);
+  assert.match(tr_, /Hiçbir sunucuda bir şey değiştirilmedi/);
+  assert.match(tr_, /DNS yanıtları etkilenmez/);
+  assert.match(tr_, /SSH bağlantı noktasına/);
+  assert.match(tr_, /aşırı yüklü/);
+  assert.doesNotMatch(tr_, /uzlaştır/);
+  for (const text of [en_, tr_]) {
+    assert.doesNotMatch(text, /secret|password|parola/i);
+  }
+  assert.ok(en_.includes(`“${enScreens['domains.retryDeletion']}”`));
+  assert.ok(tr_.includes(`“${trScreens['domains.retryDeletion']}”`));
+});
+
+test('a challenge that cannot be reconciled names the Agent log and why a retry is safe', () => {
+  const en_ = en['err.DNS_PUBLICATION_FAILED.dns_peer_journal_unknown'];
+  const tr_ = tr['err.DNS_PUBLICATION_FAILED.dns_peer_journal_unknown'];
+  assert.match(en_, /private peer challenge cannot be reconciled/);
+  assert.match(tr_, /uzlaştırılamıyor/);
+  for (const text of [en_, tr_]) {
+    assert.ok(text.includes('sudo journalctl -u celikpanel-agent | grep peer'));
+  }
+  assert.match(en_, /retry is safe because each challenge can be used only once/);
+  assert.match(tr_, /yalnız bir kez kullanılabildiği/);
+  assert.match(tr_, /yeniden denemek güvenlidir/);
   assert.ok(en_.includes(`“${enScreens['domains.retryDeletion']}”`));
   assert.ok(tr_.includes(`“${trScreens['domains.retryDeletion']}”`));
 });

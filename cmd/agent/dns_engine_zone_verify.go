@@ -32,8 +32,16 @@ const (
 	dnsRCodeRefused   = 5
 	dnsRCodeNotAuth   = 9
 	dnsProbeTimeout   = 4 * time.Second
+	// dnsPairProofLimit bounds one DNS pair proof made of DNS answer probes
+	// (SOA, catalog AXFR, zone AXFR) and their retries. Since 2026-10-01 it
+	// no longer bounds the native peer proof (SSH inspection, challenge
+	// journal), which has its own per-step budget (dnsPeerProofSteps).
 	dnsPairProofLimit = 15 * time.Second
 )
+
+// dnsPairProofWaveLimit is dnsPairProofLimit for the V3 completion wave's DNS
+// probes; a variable only so tests can scale the wave down.
+var dnsPairProofWaveLimit = dnsPairProofLimit
 
 type expectedDNSZoneAuthority struct {
 	Domain string

@@ -87,6 +87,11 @@ func verifyNativePeerAfterInspectionAt(
 			}
 		}
 		retry = retry && record.RestampedSince(authority.catalogSerial)
+		if !retry && ctx.Err() != nil {
+			// The step's time ran out: nothing was observed to differ.
+			return dnsPeerProofDeadline(fmt.Errorf("post-inspection catalog pair check (recorded serial %d): %w",
+				evidence.Serial, err))
+		}
 		if !retry {
 			return pendingDNSPeerOwnerEdit(dnsPeerOwnerEditf(transport.DNSPeerOwnerEditCheckCatalogProbe,
 				"after the inspection the catalog pair did not match the recorded evidence (recorded catalog %s serial %d, %d member(s); challenge serial %d; %s): %v",
@@ -109,12 +114,18 @@ func verifyNativePeerAfterInspectionAt(
 			fresh.sourceIP, fresh.peerIP, fresh.catalog, fresh.catalogSerial))
 	}
 	state, err := observePeerZoneTransferAt(ctx, fresh, domain, probes.peerZone)
+	if err != nil && ctx.Err() != nil {
+		return dnsPeerProofDeadline(fmt.Errorf("post-inspection no-transfer probe of %s: %w", domain, err))
+	}
 	if err != nil || state != dnsZoneAXFRNoTransfer {
 		return pendingDNSPeerOwnerEdit(dnsPeerOwnerEditf(transport.DNSPeerOwnerEditCheckTransferObserved,
 			"expected no transfer of %s from peer %s; observed %s (%v)",
 			domain, fresh.peerIP, state, errorTextOrNone(err)))
 	}
 	observation, err := observeDeletedDNSZoneAt(ctx, fresh.sourceIP, fresh.peerIP, domain, probes.soa)
+	if err != nil && ctx.Err() != nil {
+		return dnsPeerProofDeadline(fmt.Errorf("post-inspection SOA probe of %s: %w", domain, err))
+	}
 	if err != nil || observation != dnsDeletedZoneEmptyRefused {
 		return pendingDNSPeerOwnerEdit(dnsPeerOwnerEditf(transport.DNSPeerOwnerEditCheckZoneAnswered,
 			"expected the empty REFUSED answer for %s from peer %s over UDP and TCP seen before the inspection; observed %s (%v)",

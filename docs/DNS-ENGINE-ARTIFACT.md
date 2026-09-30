@@ -2413,7 +2413,11 @@ with no way to proceed after the owner reconciled.
   and `dnspeerproof.Verify` refuses it against the challenge. The attempt stays
   pending as `dns_peer_native_unknown`, and the next retry completes.
 
-**Not changed here: the wave's time bound.** The completion wave and its one
+**Not changed here: the wave's time bound.** *(Corrected 2026-10-01, section
+"Native peer proof per-step budget" below: the native proof no longer shares
+the wave's 15 s context; each of its steps has its own bound, and consume-once
+runs under a fresh context. The following sentences describe the state before
+that correction.)* The completion wave and its one
 native proof share the 15 s `dnsPairProofLimit` context. Every admission in
 this section runs under it: the wave's refresh, the native local rechecks
 (including those inside journal publish and consume-once), and the
@@ -2500,3 +2504,159 @@ re-run pending:
   that check and its logged values decide the next step;
 - pair 6/7 t3 with a delayed retry (more than 60 s after the delete) must show
   the same completion.
+
+### Native peer proof per-step budget; an accepted answer reaches consume-once (2026-10-01)
+
+P0.4, P0.5; constitutional invariants 1, 4; D-024, D-025. Corrects pair 6
+finding P6-1 (`deploy/e2e/dns-pair-acceptance/evidence/pair6-20261001/README.md`).
+Replaces the single 15 s wave bound described as unchanged in the section
+above. No journal, ledger, enrollment or database schema change; one additive
+pending code. Component tests only; native re-run pending (pair 7; batch 12).
+
+**Defect.** On all three pair 6 topologies the retried parentless deletion
+after owner enrollment ran the inspection, `dnspeerproof.Verify` accepted the
+peer's answer, and the attempt then stayed pending as
+`dns_peer_journal_unknown`. The completion wave and its one native proof ran
+under one `context.WithTimeout(ctx, dnsPairProofLimit)` (15 s). Challenge
+write (3.5-4.1 s), SSH exchange (2.5-4 s) and post-inspection probes used it
+up, and consume-once ran its three current-evidence rechecks (`systemctl`,
+`ss`, named/pdns reads through `exec.CommandContext`) under the expired
+context; the consume failure was mapped to the journal code. Wave start to
+pending was 17.1-18.1 s (pair 6); pair 5 t3 completed in 13.8 s. A positive,
+authenticated proof was discarded for a deadline. This is inferred from source
+and timing; the Agent logged only the code.
+
+**Budget.** The wave's DNS answer probes and their retries keep
+`dnsPairProofLimit` (`dnsPairProofWaveLimit` in the wave, a variable only for
+tests). The native proof no longer receives the wave's context: the wave
+passes it the request context, and each step has its own bound
+(`dnsPeerProofSteps`, `cmd/agent/dns_engine_peer_budget.go`):
+
+| Step | Work | Measured (pair 5/6, batch 11) | Bound |
+| --- | --- | --- | --- |
+| `prepare` | active attempt, probe selection, enrollment read, recheck, previous-challenge reconciliation, journal read, challenge mint | about 1-3 s | 8 s |
+| `challenge_write` | journal publish (four rechecks, durable write), enrollment recheck | 3.5-4.1 s | 12 s |
+| `exchange` | SSH connect, pinned host key, key auth, forced command, answer | 2.5-4 s | 10 s = `dnspeertransport.ExchangeLimit` |
+| `post_inspection` | recheck, catalog AXFRs, no-transfer, SOA, recheck (re-stamp wait at most 5 s) | about 2-3 s | 10 s |
+| `consume` | `Verify`, consume-once (three rechecks, durable write), final recheck | about 3-4 s | 20 s, fresh context |
+
+Total wall bound 60 s for the native proof, after at most 15 s of wave DNS
+probes. The enrollment's transport bound (`Enrollment.Timeout`, built by both
+enrollment readers) rises from 5 s to the transport maximum of 10 s; the
+exchange step passes it as its own bound, so the transport's deadline is the
+step's. Once a challenge is minted, every later step before acceptance also
+ends 5 s (`expiryReserve`) before the challenge expires (lifetime 30 s,
+unchanged), so an accepted answer leaves consume-once time to reach its own
+expiry check. The measured values are the pair 6 journal/timeline gaps and the
+batch 11 `z05` resume; they are inferred from other services' log lines, not
+from Agent step timings, which this change adds.
+
+**Fresh context rule.** The consume context is created inside Verify's
+consume callback, that is only after the peer's answer passed validation,
+authentication, the request binding and `transferred`/`absent`/`unloaded`:
+`context.WithTimeout(context.WithoutCancel(requestCtx), 20 s)`. Consume-once's
+rechecks and the final recheck run under it, never under an earlier step's or
+the wave's remaining time. Re-verification keeps its semantics: a recheck
+inside publish, reconciliation or consume-once that found a real difference
+keeps its own reviewed code (`dns_peer_owner_edit_unknown:<check>`,
+`dns_peer_enrollment_changed`, `dns_peer_proof_internal`) instead of being
+flattened to the journal code. A consume failure without such a difference
+(journal state, or the 20 s running out) stays `dns_peer_journal_unknown`.
+
+**Deadline before acceptance: new reviewed code `dns_peer_proof_timeout`.** A
+step before acceptance (prepare, challenge write, exchange, post-inspection)
+that fails after its own bound or the acceptance deadline ran out is
+`dns_peer_proof_timeout`, whatever its inner error. A check that could not run
+because the time ran out is marked as a deadline (`dnsPeerProofDeadlineError`)
+at the local recheck and at the post-inspection probes; it is never logged or
+reported as an owner edit. Publish under an expiring context leaves the
+journal consistent (no retained stage; at most an outstanding challenge of the
+same operation, which the next attempt supersedes), and nothing was sent to or
+changed on the secondary. The code is never used for the consume step. It is
+carried like the other codes: `transport.DNSPeerPendingProofTimeout`, the
+Agent's pending ledger `error_code`, the Panel's `reason` and English
+fallback, the Domains screen (`err.DNS_PUBLICATION_FAILED.dns_peer_proof_timeout`,
+EN/TR, in the reviewed set), and the pair driver's `REVIEWED_DNS_PEER_REASONS`
+with actor "this server's owner (retry now; if it repeats, either owner checks
+SSH reachability and load)". Text: the check of the secondary did not finish
+within its time; nothing was changed on either server; the deletion stays
+pending and DNS answers are unaffected; this server's owner can retry now with
+"Retry this deletion" (the same publication, continuing from where it
+stopped); if it happens again, either server's owner checks that the primary
+can reach the secondary's SSH port and that neither server is overloaded. The
+retry button is on the primary's panel, so the retry itself is named for this
+server's owner; the reachability and load check is for either owner.
+
+**`dns_peer_journal_unknown` guidance (D-024).** Meaning unchanged (the
+private challenge journal could not be reconciled). The text now names the
+concrete check: the Agent log lines for this deletion on this server
+(`sudo journalctl -u celikpanel-agent | grep peer`), which name the step and
+the reason; and that a retry is safe because each challenge is consume-once
+and a retry starts a new one. EN/TR, Panel fallback.
+
+**Agent log lines (D-024).** Per attempt of the native proof, bounded to 512
+bytes of product-authored text, no key material:
+- `DNS peer proof for <zone> (<BIND|PowerDNS> secondary) step times:
+  prepare=<d> challenge_write=<d> exchange=<d> post_inspection=<d>
+  consume=<d>; total <d>; outcome <verified | pending <code> | no challenge
+  (catalog re-stamped; the wave proves the pair again)>` (only the steps
+  reached are listed);
+- for a pending outcome, once: `DNS peer proof for <zone> (<engine>
+  secondary) stopped at step <step> as <code>: <underlying error>` (for
+  example the journal state and the recheck error inside consume-once, or the
+  SSH transport code);
+- after the inspection, for both secondary engines: `DNS peer inspector answer
+  for <zone> (<engine> secondary): catalog_state=<t> member_state=<t>
+  native_state=<t>; accepted | not accepted: <reason>`; each field is
+  reduced to lowercase letters, digits and `_`, at most 32 bytes.
+
+**Other `dnsPairProofLimit` sites (unchanged; each bounds the DNS answer
+probes of one check, not a native proof):** `queryDNSCatalogAXFRFrom`
+(`dns_catalog_axfr.go`, one catalog AXFR), `verifyBINDCatalogDeletionAt`,
+`verifyBINDDeletedZoneAt`, `verifyPrimaryCatalogHandoffEvidenceAt`,
+`completeDNSBackendReadiness` (`dns_engine_host.go`, readiness deadline),
+`retrievePDNSPairSecondaryZones` (recovery context without cancel),
+`readLegacyPDNSPeerCatalogAuthority`, `verifyLegacyPDNSConsumerMemberAuthority`,
+`verifyBINDPairingAuthorityAt`, `waitForExactBINDPairZoneSet`,
+`verifyPDNSPairingAuthority`, `verifyDNSPrimaryPairReadyAuthorityAt` and
+`verifyDNSLegacyPrimaryPairReadyAuthorityAt` (`dns_pair_readiness.go`; inside
+the native proof they now run under the post-inspection step's context, so
+their effective bound is the lower of the two), and
+`verifyDNSSecondaryPairReadyAt`. The completion wave
+(`completeDNSV3PrimaryPropagationWithNativeAt`) uses the same 15 s for its
+DNS probes through `dnsPairProofWaveLimit`.
+
+**Transition and recovery.** No persisted format changes; the new code is
+additive. A Panel or driver older than this release shows the generic pending
+text for `dns_peer_proof_timeout`; Panel and Agent ship together. A deletion
+left pending as `dns_peer_journal_unknown` by the defect keeps its outstanding
+challenge of the same operation; after the owner updates the panel, "Retry this
+deletion" mints the next challenge of that operation and continues. The
+challenge lifetime (30 s) and the consume-once and replay rules are unchanged.
+
+**Evidence.** Component tests only (`cmd/agent/dns_engine_peer_budget_test.go`,
+production proportions scaled by 1/50): the answer accepted at 14.5 s of the
+15 s wave with a 3 s consume-once completes, consume runs past the wave's
+bound, and the native proof no longer receives the wave's deadline; a deadline
+in the exchange (the transport's own bound tighter than the step) is
+`dns_peer_proof_timeout`, logged with its step and cause, and consume never
+runs; the acceptance deadline ends a step before its own bound; checks after
+their deadline are not owner edits and log no "observed different evidence";
+consume's re-verification finding a real difference keeps
+`dns_peer_owner_edit_unknown:producer_catalog`, a journal failure and an
+exhausted consume bound stay `dns_peer_journal_unknown`, and consume survives
+cancellation of the request context; the per-step timing and bounded answer
+field log lines; the production budget (60 s, exchange = transport bound);
+the Panel/web texts EN/TR and the driver's reviewed code. The real verifiers
+(root, journal files, SSH) are not exercised by these tests. Native re-run
+pending:
+- pair 7 (all three topologies) must show that the retried parentless
+  deletion after owner enrollment completes (200 `deleted`, ledger job
+  `succeeded`, challenge consumed and retired), with the Agent journal line
+  "step times: ... consume=...; ... outcome verified" and its per-step times
+  (they replace the inference in pair 6's timing table), and on t2 the
+  "inspector answer" line with `catalog_state=transferred member_state=absent
+  native_state=unloaded; accepted`. A pending result must now show a "stopped
+  at step" line naming the step and the underlying error;
+- batch 12 `z04`/`z05` as listed in the section above, now also with these
+  lines.
