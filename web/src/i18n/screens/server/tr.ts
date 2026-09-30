@@ -543,6 +543,7 @@ export const trServerScreens: Record<ServerScreenKey, string> = {
     'services.cat.cache': 'Önbellek',
     'services.cat.ftp': 'FTP',
     'services.cat.monitoring': 'İzleme',
+    'services.cat.system': 'Sistem',
     'services.installTitle': '{name} kur',
     'services.willInstall': 'Bu sunucuya şu paketler kurulacak:',
     'services.phpVersionNote': 'Dağıtımın varsayılan PHP sürümü kurulur. Ek sürümler site başına çalışma zamanlarından yönetilir.',

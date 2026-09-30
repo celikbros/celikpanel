@@ -575,6 +575,7 @@ export const enServerScreens = {
     'services.cat.cache': 'Cache',
     'services.cat.ftp': 'FTP',
     'services.cat.monitoring': 'Monitoring',
+    'services.cat.system': 'System',
     'services.installTitle': 'Install {name}',
     'services.willInstall': 'The following packages will be installed on this server:',
     'services.phpVersionNote': 'The default PHP version for this distribution is installed. Extra versions are managed per site under runtimes.',

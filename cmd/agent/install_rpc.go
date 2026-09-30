@@ -202,6 +202,16 @@ func (a *Agent) InstallService(req *InstallServiceRequest, resp *InstallServiceR
 		return nil
 	}
 
+	// Native cron is installed only where the host has none. Any existing
+	// cron is the owner's: no package, unit or configuration change (D-022).
+	// Yerel cron yalnız sunucuda hiç yokken kurulur. Var olan her cron
+	// sahibinindir: paket, unit ya da yapılandırma değişmez (D-022).
+	if svc.ID == core.NativeCronServiceID && nativeCronPresent(alreadyPresent, hostNativeCronProbe(systemctl)) {
+		resp.PreservedExisting = true
+		resp.Detail = "an existing cron service was found and left unchanged"
+		return nil
+	}
+
 	pkgs := svc.Packages[family]
 	if len(pkgs) == 0 {
 		resp.Error = fmt.Sprintf("%s cannot be installed automatically on this system yet", svc.Name)
@@ -619,6 +629,10 @@ func (a *Agent) UninstallService(req *InstallServiceRequest, resp *UninstallServ
 		resp.Error = refusal
 		return nil
 	}
+	if refusal := nativeCronRemovalRefusal(svc); refusal != "" {
+		resp.Error = refusal
+		return nil
+	}
 	// Reject an invalid catalogue/package selection before asking for a
 	// privileged lease. This is pure input validation and mirrors InstallService.
 	// Geçersiz katalog/paket seçimini ayrıcalıklı lease istemeden önce reddet.
@@ -665,6 +679,10 @@ func (a *Agent) uninstallServiceWithOps(
 		return nil
 	}
 	if refusal := genericDNSEngineMutationRefusal(svc); refusal != "" {
+		resp.Error = refusal
+		return nil
+	}
+	if refusal := nativeCronRemovalRefusal(svc); refusal != "" {
 		resp.Error = refusal
 		return nil
 	}

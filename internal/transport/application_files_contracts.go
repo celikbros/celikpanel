@@ -63,6 +63,29 @@ type InstallWordPressResponse struct {
 	Error            string `json:"error,omitempty"`
 }
 
+// CronNotInstalled is the exact error text every cron RPC returns when the
+// server has no cron implementation (no `crontab` command). The text is the
+// one earlier Agents already returned from AddCronJob, so a Panel that matches
+// it exactly classifies old and new Agents alike; the Panel turns it into the
+// typed CRON_NOT_INSTALLED answer and never shows the raw line (D-024).
+// CronNotInstalled, sunucuda hiçbir cron uygulaması yokken her cron RPC'sinin
+// döndürdüğü tam hata metnidir. Eski Agent'ların AddCronJob'dan döndürdüğü
+// metnin aynısıdır; Panel onu tipli CRON_NOT_INSTALLED yanıtına çevirir.
+const CronNotInstalled = "cron is not installed on this server"
+
+// MailConfigurationBusy and SiteCertificateBusy are the exact Agent answers
+// when another mail-configuration or site-certificate change holds the host
+// lock. The Panel answers them as HOST_MUTATION_BUSY (another CelikPanel
+// change is running; wait and retry) instead of a masked INTERNAL error. The
+// texts are the ones earlier Agents already returned.
+// MailConfigurationBusy ve SiteCertificateBusy, başka bir posta yapılandırma
+// ya da site sertifikası değişikliği kilidi tutarken Agent'ın tam
+// yanıtlarıdır; Panel onları HOST_MUTATION_BUSY olarak yanıtlar.
+const (
+	MailConfigurationBusy = "mail configuration is busy; retry the mailbox password update"
+	SiteCertificateBusy   = "another site certificate operation is already running; retry shortly"
+)
+
 // Cron RPC contracts.
 type CronJob struct {
 	ID       string `json:"id"`

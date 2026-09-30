@@ -138,6 +138,23 @@ func (p *Panel) runServiceInstall(
 		}
 	}
 	result["installed"] = resp.Installed
+	// An existing native cron is the owner's and was left exactly as found:
+	// no package or unit changed, so there is nothing to configure, and its
+	// running state is the owner's choice rather than this operation's proof.
+	// Refresh the cached scan and finish (D-022).
+	// Var olan yerel cron sahibinindir ve bulunduğu gibi bırakıldı: paket ya da
+	// unit değişmedi; çalışma durumu bu işlemin kanıtı değil sahibin seçimidir.
+	if req.ServiceID == core.NativeCronServiceID && resp.PreservedExisting {
+		if err := advance("scanning"); err != nil {
+			return result, operationAdvanceFailure(err)
+		}
+		if _, err := p.scanManagedServices(ctx); err != nil {
+			return result, serviceInstallFailure(fmt.Errorf("post-install scan: %w", err))
+		}
+		result["preserved_existing"] = true
+		result["success"] = true
+		return result, nil
+	}
 	if err := advance("configuring"); err != nil {
 		return result, operationAdvanceFailure(err)
 	}
@@ -446,6 +463,10 @@ func (p *Panel) handleServiceUninstall(w http.ResponseWriter, r *http.Request) {
 	}
 	if managedDNSEngineServiceID(req.ServiceID) {
 		writeDNSEngineWorkflowRequired(w)
+		return
+	}
+	if req.ServiceID == core.NativeCronServiceID {
+		writeNativeCronRemovalRefused(w)
 		return
 	}
 	release, busy := p.beginServiceMutation(w, r)

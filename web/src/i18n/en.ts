@@ -230,6 +230,11 @@ export const en = {
     'err.ENTITLEMENT_REQUIRED.action': 'View add-ons',
     'err.FIREWALL_ENGINE_MISSING': 'The firewall engine (nftables) is not installed — install it from Services first.',
     'err.FIREWALL_ENGINE_MISSING.action': 'Go to Services',
+    // Scheduled tasks need the server's native cron (upd1, 1 Oct 2026). The
+    // base sentence answers a refused change; .read answers the list.
+    'err.CRON_NOT_INSTALLED': 'Scheduled tasks need this server’s cron service, and it is not installed, so nothing was changed. The server owner installs it once: in CelikPanel, open Components and install “Scheduled tasks (cron)”. Or, on the server, run sudo apt-get install cron on Debian/Ubuntu, or sudo pacman -S cronie and then sudo systemctl enable --now cronie on Arch. Then refresh this page and make the change again; nothing retries by itself.',
+    'err.CRON_NOT_INSTALLED.read': 'Scheduled tasks cannot be shown because this server’s cron service is not installed, and no scheduled task runs until it is. The server owner installs it once: in CelikPanel, open Components and install “Scheduled tasks (cron)”. Or, on the server, run sudo apt-get install cron on Debian/Ubuntu, or sudo pacman -S cronie and then sudo systemctl enable --now cronie on Arch. Then refresh this page.',
+    'err.NATIVE_CRON_REMOVAL_REFUSED': 'CelikPanel does not remove this server’s cron service: it runs every scheduled task on the server, including tasks created outside the panel. Nothing was changed. If removing it is really intended, the server owner does so with the operating system’s package manager.',
     'err.FIREWALL_NO_SSH_SERVICE': 'This server has no SSH service, so no SSH port could be proven. Confirm you accept that, then turn the firewall on.',
     'err.FIREWALL_SSH_NOT_LISTENING': 'This server has an SSH service but no listening SSH port was found. Start SSH, or remove it, then turn the firewall on.',
     'err.FIREWALL_SSH_DISCOVERY_FAILED': 'Whether this server has a reachable SSH port could not be determined, so the firewall was not changed.',

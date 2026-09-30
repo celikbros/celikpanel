@@ -593,6 +593,12 @@ func (p *Panel) handleIssueLetsEncrypt(w http.ResponseWriter, r *http.Request) {
 		// A transport error may arrive after net/rpc decoded lineage/path
 		// fields. Those exact returned identities still authorize cleanup.
 		p.cleanupUncommittedCertificate(cleanupCtx, cleanupTarget)
+		if err == nil && agentResp.Error == transport.SiteCertificateBusy {
+			// Another site certificate operation holds the Agent's lock; this
+			// request changed nothing and can be retried when it finishes.
+			writeServerError(w, agentMutationBusy())
+			return
+		}
 		writeAgentError(w, err, agentResp.Error)
 		return
 	}

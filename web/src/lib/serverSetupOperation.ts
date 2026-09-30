@@ -19,9 +19,12 @@ export interface ServerSetupExecution {
     id: string; request_id: string; plan_id: string;
     status: 'running' | 'waiting' | 'failed' | 'succeeded'; phase: string;
     steps: (SetupPlanStep & { status: 'pending' | 'running' | 'failed' | 'succeeded' })[];
-    error?: { code: string; message: string }; panel_url?: string; checks?: ServerSetupCheck[];
+    error?: SetupExecutionError; panel_url?: string; checks?: ServerSetupCheck[];
     context?: SetupExecutionContext;
 }
+// component/step/detail are optional install-failure guidance; detail is one
+// bounded, redacted host line.
+export interface SetupExecutionError { code: string; message: string; component?: string; step?: string; detail?: string }
 export interface SetupExecutionContext {
     dns_mode: 'local' | 'external' | 'existing'; dns_role: 'primary' | 'secondary' | '';
     dns_engine: string; local_nameserver: string; local_ip: string; peer_nameserver: string; peer_ip: string;
@@ -75,6 +78,15 @@ export function decodeSetupExecution(value: unknown, marker?: SetupStartMarker |
         || (value.panel_url !== undefined && typeof value.panel_url !== 'string')) return null;
     // Invalid optional metadata must not hide the durable execution.
     // Gecersiz istege bagli bilgi kalici islemi gizlememelidir.
+    if (isRecord(value.error)) {
+        const error = value.error;
+        const optional = (key: string, limit: number) => error[key] === undefined || (typeof error[key] === 'string' && (error[key] as string).length <= limit);
+        if (!optional('component', 64) || !optional('step', 32) || !optional('detail', 400)) {
+            const { component: _component, step: _step, detail: _detail, ...kept } = error;
+            value = { ...value, error: kept };
+        }
+    }
+    if (!isRecord(value)) return null;
     const context = value.context;
     if (context !== undefined && (!isRecord(context)
         || !['local', 'external', 'existing'].includes(String(context.dns_mode))

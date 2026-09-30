@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -311,7 +312,7 @@ func (a *Agent) UpdateMailPassword(req *transport.UpdateMailPasswordRequest, res
 	}
 
 	if !mailMutex.TryLock() {
-		return fmt.Errorf("mail configuration is busy; retry the mailbox password update")
+		return errors.New(transport.MailConfigurationBusy)
 	}
 	defer mailMutex.Unlock()
 	if err := validateDovecotUsersFileMetadata(dovecotUsersPath, true); err != nil {

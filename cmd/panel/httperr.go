@@ -115,6 +115,17 @@ const (
 	// istendi; agent bunu yapilandirmanin yoklugu ile kanitlar. Opak bir 500
 	// yerine neyin yanlis oldugu ve once ne yapilacagi soylenir.
 	errCodeVPNNotSetUp = "VPN_NOT_SET_UP"
+	// The Agent proved the server has no cron implementation (no `crontab`),
+	// so no scheduled task can be read or saved. A known host condition with
+	// one owner action, never an opaque 500 (upd1, 1 Oct 2026; D-024).
+	// Agent sunucuda hiçbir cron uygulaması olmadığını kanıtladı; hiçbir
+	// zamanlanmış görev okunamaz ya da kaydedilemez.
+	errCodeCronNotInstalled = "CRON_NOT_INSTALLED"
+	// Native cron runs every scheduled job on the server, including the
+	// owner's own, so the panel never removes it (D-022).
+	// Yerel cron, sahibinkiler dahil sunucudaki her görevi çalıştırır; panel
+	// onu asla kaldırmaz (D-022).
+	errCodeNativeCronRemovalRefused = "NATIVE_CRON_REMOVAL_REFUSED"
 	// R-053. A database engine this panel installed is running and reachable
 	// and will not take the credential the panel holds for it, because the
 	// panel never set one and the packaged engine has none. That is a fact

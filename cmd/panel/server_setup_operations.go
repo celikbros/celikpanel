@@ -381,6 +381,9 @@ func (p *Panel) buildServerSetupPlan(ctx context.Context, state serverSetupState
 		for _, id := range serverSetupRequiredComponents {
 			plan.Components = append(plan.Components, serverSetupPlanComponent{ID: id, Required: true, Installed: installed[id]})
 		}
+		if serverSetupNeedsNativeCron(draft) {
+			plan.Components = append(plan.Components, serverSetupPlanComponent{ID: core.NativeCronServiceID, Required: true, Installed: installed[core.NativeCronServiceID]})
+		}
 	} else {
 		switch draft.Purpose {
 		case "web", "web_mail":
@@ -432,6 +435,9 @@ func (p *Panel) buildServerSetupPlan(ctx context.Context, state serverSetupState
 			}
 			addStep("mail_profile", profileID, "")
 		}
+	}
+	if serverSetupNeedsNativeCron(draft) {
+		addService(core.NativeCronServiceID)
 	}
 	addService("nftables")
 	addService("certbot")
@@ -1004,7 +1010,8 @@ func (p *Panel) runServerSetupStep(ctx context.Context, plan serverSetupPlan, st
 			return true, nil
 		case serviceOperationFailed:
 			if op.Error != nil {
-				return false, &serverSetupChildFailure{Code: op.Error.Code, Message: op.Error.Message}
+				return false, &serverSetupChildFailure{Code: op.Error.Code, Message: op.Error.Message,
+					Component: op.Error.Component, Step: op.Error.Step, Detail: op.Error.Detail}
 			}
 			return false, errors.New("setup child failed")
 		default:
@@ -1284,14 +1291,18 @@ func validateServerSetupExecution(plan serverSetupPlan, execution serverSetupExe
 	return nil
 }
 
-type serverSetupChildFailure struct{ Code, Message string }
+// serverSetupChildFailure carries a child's code and message and, for an
+// install failure, the component, install step and bounded host line that the
+// wizard shows as the cause and next action (D-024).
+type serverSetupChildFailure struct{ Code, Message, Component, Step, Detail string }
 
 func (e *serverSetupChildFailure) Error() string { return e.Code + ": " + e.Message }
 
 func serverSetupFailureForStep(step serverSetupExecutionStep, cause error) *serviceOperationError {
 	var child *serverSetupChildFailure
 	if errors.As(cause, &child) {
-		return &serviceOperationError{Code: child.Code, Message: child.Message}
+		return &serviceOperationError{Code: child.Code, Message: child.Message,
+			Component: child.Component, Step: child.Step, Detail: child.Detail}
 	}
 	switch {
 	case errors.Is(cause, errServerSetupHostRestartRequired):

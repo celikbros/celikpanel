@@ -14,7 +14,7 @@ import { remoteDNSEndpoint } from '../lib/remoteDNS';
 import { ServerSetupChoice, ServerSetupManualAction } from './ServerSetupChoice';
 import { Button, inputClass, Spinner } from './ui';
 import { ServerSetupComponents, useSetupComponentCatalog } from './ServerSetupComponents';
-import { setupExecutionGuidance } from '../lib/serverSetupGuidance';
+import { setupComponentName, setupExecutionGuidance } from '../lib/serverSetupGuidance';
 import { setupEffectiveComponents, setupPresetComponents } from '../lib/serverSetupComponents';
 
 function useSetupI18n() {
@@ -32,8 +32,14 @@ async function setupFetch(url: string, options?: RequestInit) {
 }
 const editorKey = (username: string) => `celikpanel.setup.editor.${username}`;
 const markerKey = (username: string) => `celikpanel.setup.start.${username}`;
+// A mail component this distribution cannot install gets the mail-specific
+// refusal: what is missing, who acts and the two ways forward (upd1 P2).
+const mailServiceUnsupported = (code: string) => /^server_setup_service_unsupported:(postfix|dovecot|rspamd|roundcube)$/.test(code);
 const codeKey: Record<string, TranslationKey> = {
     license_required: 'license.restricted',
+    service_install_failed: 'setup.failure.install',
+    mail_profile_install_failed: 'setup.failure.install',
+    node_runtime_install_failed: 'setup.failure.install',
     server_setup_build_changed: 'setup.guide.buildChanged',
     server_setup_reconciling: 'setup.confirmingPrevious',
     REMOTE_DNS_UNAVAILABLE: 'setup.blocker.remote',
@@ -191,12 +197,19 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
     const markerRef = useRef(marker);
     markerRef.current = marker;
     const accept = useCallback((value: ServerSetupSnapshot) => { setSnapshot(value); setup.accept(value); }, [setup.accept]);
-    const failureText = (code: string) => t(code === 'mail_enrollment_restored' ? 'setup.guide.mailEnrollmentFailed' : codeKey[code.split(':')[0]] || 'setup.blocker.unknown');
+    const failureText = (code: string) => t(code === 'mail_enrollment_restored' ? 'setup.guide.mailEnrollmentFailed' : mailServiceUnsupported(code) ? 'setup.blocker.mailUnsupported' : codeKey[code.split(':')[0]] || 'setup.blocker.unknown');
+    // One localized name per component, shared by the step list and the
+    // install-failure guidance so both sentences name the same thing.
+    // Adım listesi ve kurulum hatası yönlendirmesi aynı yerel adı kullanır.
+    const componentLabel = (target: string) => {
+        if (['webmail', 'core-mail', 'protected-mail'].includes(target)) return t(target === 'protected-mail' ? 'dashboard.audit.profile.protectedMail' : target === 'core-mail' ? 'dashboard.audit.profile.coreMail' : 'dashboard.audit.profile.webmail');
+        if (target === 'cron') return t('setup.component.cron');
+        return setupComponentName(target);
+    };
     const stepTarget = (kind: string, target: string) => {
         if (kind === 'dns' && ['local', 'external', 'existing'].includes(target)) return t(`setup.dns.${target}` as TranslationKey);
         if (kind === 'mail_profile') return t(target === 'protected-mail' ? 'dashboard.audit.profile.protectedMail' : target === 'core-mail' ? 'dashboard.audit.profile.coreMail' : 'dashboard.audit.profile.webmail');
-        const names: Record<string, string> = { nginx: 'Nginx', 'php-fpm': 'PHP-FPM', mariadb: 'MariaDB', postgresql: 'PostgreSQL', node: 'Node.js', nftables: 'nftables', certbot: 'Certbot', postfix: 'Postfix', dovecot: 'Dovecot', rspamd: 'Rspamd', roundcube: 'Roundcube', bind: 'BIND', pdns: 'PowerDNS' };
-        return names[target] || target;
+        return componentLabel(target);
     };
 
     useEffect(() => {
@@ -448,7 +461,7 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
     const observingMailEnrollment = progressCurrentStep?.kind === 'mail_enrollment' && execution?.status === 'running' && ['running', 'rollback', 'unknown', 'not_recorded', 'handoff'].some(reason => execution.error?.code === `server_setup_mail_enrollment_${reason}`);
     const mailEnrollmentToRetry = !reconnecting && retryableMailEnrollmentHandoff(execution);
     const mailEnrollmentToContinue = !reconnecting && continuableMailEnrollment(execution);
-    const guidance = execution && !reconnecting ? setupExecutionGuidance(execution) : null;
+    const guidance = execution && !reconnecting ? setupExecutionGuidance(execution, componentLabel) : null;
     const progressChecks = (verificationResult && !verificationResult.failed ? verificationResult.checks : execution?.checks || snapshot.checks).filter(check => check.state !== 'ready');
     const verifiedBlockers = verificationResult?.checks.filter(check => check.state !== 'ready') || [];
     const verificationMessage = verifyingRequirements ? 'setup.verifyChecking'

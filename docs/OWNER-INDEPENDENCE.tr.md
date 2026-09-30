@@ -99,6 +99,48 @@ duyar; başka hiçbir şey değişmez ve anahtar gerekmez. CelikPanel olmadan
 işlettiğiniz bir ikincil sunucuda bu ifadeyi katalog bölgesine kendiniz ekleyip
 named'i yeniden yükleyin.
 
+## Zamanlanmış görevler ve yerel cron (1 Ekim 2026)
+
+Kaynak durumudur; bileşen testleri var, gerçek sistem denemesi bekliyor; henüz
+yayımlanmış bir sürümün parçası değildir.
+
+Site zamanlanmış görevleri sıradan kullanıcı crontab'larıdır. Her barındırılan
+sitenin görevlerini o sitenin kendi sistem hesabı tutar (`crontab -u <site
+kullanıcısı>`). Görevleri cron uygulaması saklar; örneğin Debian/Ubuntu'da
+`/var/spool/cron/crontabs/<kullanıcı>`, Arch'ta `/var/spool/cron/<kullanıcı>`.
+Hesap adı, alan adındaki nokta ve tirelerin alt çizgiyle değiştirilmesiyle oluşur
+(`example.com` → `example_com`); bu görevleri böyle tanırsınız. Panelde devre dışı
+bırakılan bir görev o crontab'da `# DISABLED:` yorum satırı olarak kalır.
+CelikPanel `/etc/cron.d`, `/etc/cron.hourly` ve `/etc/cron.daily` içine hiçbir
+dosya yazmaz; yapılandırma düzenleyicisi de bu yolları reddeder.
+
+Site barındıran profillerde (Web, Web + posta, Uygulama ya da web sunucusunu
+içeren özel seçim) sunucu kurulumu artık platformun kendi cron'unu olağan bileşen
+adımıyla hazırlar: Debian/Ubuntu'da `cron`, Arch'ta `cronie` paketi kurulur,
+diğer bileşenler gibi etkinleştirilip başlatılır. Bunu yalnız sunucuda hiç cron
+yokken yapar. Bir cron birimi (`cron`, `cronie`, `crond`, `fcron`, `dcron`,
+`bcron`, `systemd-cron`) ya da bir `crontab` komutu zaten varsa kurulum onu korur
+ve hiçbir paketi, birim etkinliğini ya da yapılandırmayı değiştirmez. Durdurduğunuz
+ya da kapattığınız bir birim öyle kalır. Cron yapılandırmanız ve crontab'larınız
+asla yeniden yazılmaz. Yalnız DNS profili cron'a dokunmaz.
+
+CelikPanel cron'u kaldırmaz. Bileşenler sayfası bunu reddeder
+(`NATIVE_CRON_REMOVAL_REFUSED`), çünkü cron panel dışında oluşturulanlar dahil
+sunucudaki her görevi çalıştırır. Kaldırmak istiyorsanız paket yöneticisiyle
+kendiniz yapın.
+
+CelikPanel'i kaldırmak cron'u, etkinliğini ve bütün crontab'ları yerinde bırakır.
+Görevler site kullanıcıları olarak çalışmayı sürdürür. Bir görevin kendi komutu
+panel araçlarını çağırıyorsa bu, incelemeniz gereken kendi bağımlılığınızdır
+(aşağıdaki inceleme tablosuna bakın).
+
+Bu değişiklikten önce kurulmuş ya da cron'u sonradan kaldırılmış bir sunucuda cron
+yoksa, Zamanlanmış görevler ekranı artık iç hata yerine bunu söyler
+(`CRON_NOT_INSTALLED`). Bileşenler sayfasından "Scheduled tasks (cron)" bileşenini
+kurun ya da `sudo apt-get install cron` (Debian/Ubuntu) veya `sudo pacman -S
+cronie` ve ardından `sudo systemctl enable --now cronie` (Arch) çalıştırın. Sonra
+değişikliği yineleyin.
+
 ## Kanıt
 
 [Yerel doğrulama](validation/native-dns-independence-20260912/README.tr.md),
@@ -125,7 +167,7 @@ bağımsızlığını kanıtlamaz.
 | ACME doğrulama yolları | `/var/lib/celikpanel-agent/acme-http-01` ve site Certbot çalışma dizini `/var/lib/celikpanel/certbot` | Doğrulama ve sertifika dizinleri ile yerel yenileme görevleri korunmalı/taşınmalı; gerçek yenileme testi yapılmalı. Dizin adı tek başına çalışan ajan bağımlılığı anlamına gelmez. |
 | Panel HTTPS yenilemesi | Panel sertifikası için ajan çağrılıyor | Panel kancası/sertifikası, ortak site ve posta yenilemesinden ayrı temizlenmeli; Certbot genel olarak kapatılmamalı. |
 | Site, posta ve veritabanı | Yerel hizmetler mevcut; bütün üretilen yollar, posta eşlemeleri, kimlik doğrulama kaynakları ve zamanlanmış dağıtımlar kaldırma için doğrulanmadı | Kesin koruma envanteri; yönetim dosyaları yokken web, veritabanı, posta teslimi/girişi, cron ve yenileme kanıtı gerekiyor. |
-| Kullanıcı cron işleri | `cron_rpc.go` yerel kullanıcı crontab'larına yazıyor | Kullanıcılar, ev dizinleri ve işler korunmalı; iş komutlarındaki ek panel bağımlılıkları incelenmeli. Yerel cron çalışmalı. |
+| Kullanıcı cron işleri | `cron_rpc.go` yerel kullanıcı crontab'larına yazıyor. 1 Ekim 2026'dan beri kurulum yerel cron'u yalnız yokken kurar ve panel onu asla kaldırmaz | Kullanıcılar, ev dizinleri ve işler korunmalı; iş komutlarındaki ek panel bağımlılıkları incelenmeli. Yerel cron çalışmalı. Yönetim yokken görevlerin çalıştığı henüz gerçek sistemde kanıtlanmadı. |
 
 İlgili kaynaklar: `cmd/agent/mail_host_certificate_linux.go`,
 `cmd/agent/mail_host_certificate_renewal.go`,

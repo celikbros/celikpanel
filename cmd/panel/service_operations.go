@@ -57,6 +57,11 @@ type serviceOperationFailure struct {
 	Code    string
 	Message string
 	Cause   error
+	// Component, Step and Detail are the owner guidance for an install
+	// failure (service_failure_guidance.go); empty for other failures.
+	Component string
+	Step      string
+	Detail    string
 }
 
 func operationFailure(code, message string, cause error) *serviceOperationFailure {
@@ -66,6 +71,11 @@ func operationFailure(code, message string, cause error) *serviceOperationFailur
 type serviceOperationError struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
+	// Optional install-failure guidance read back from a failed row: the
+	// component, the install step and one bounded, redacted host line.
+	Component string `json:"component,omitempty"`
+	Step      string `json:"step,omitempty"`
+	Detail    string `json:"detail,omitempty"`
 }
 
 type serviceOperation struct {
@@ -831,6 +841,8 @@ func (p *Panel) launchServiceOperationWithAuditMode(
 			if failure.Cause != nil {
 				log.Printf("service operation %s (%s) failed in %s: %v", op.ID, op.ServiceID, phase, failure.Cause)
 			}
+			annotateServiceOperationFailure(op.ServiceID, phase, failure)
+			result = withServiceFailureGuidance(result, failure)
 			if err := p.finishServiceOperationFailed(terminalCtx, op.ID, phase, result, failure); err != nil {
 				log.Printf("service operation %s failure could not be persisted: %v", op.ID, err)
 				fallback := operationAdvanceFailure(err)
@@ -1053,6 +1065,11 @@ func scanServiceOperation(scanner serviceOperationScanner) (serviceOperation, er
 	}
 	if errorCode.Valid || errorMessage.Valid {
 		op.Error = &serviceOperationError{Code: errorCode.String, Message: errorMessage.String}
+		if op.Status == serviceOperationFailed && op.Result != nil {
+			if guidance, ok := serviceFailureGuidanceFromResult(string(op.Result)); ok {
+				op.Error.Component, op.Error.Step, op.Error.Detail = guidance.Component, guidance.Step, guidance.Detail
+			}
+		}
 	}
 	if operationData.Valid {
 		op.OperationData = operationData.String

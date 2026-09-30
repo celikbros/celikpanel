@@ -185,6 +185,14 @@ type InstallServiceResponse struct {
 	Detail    string `json:"detail,omitempty"`
 	Unit      string `json:"unit,omitempty"`
 	Error     string `json:"error,omitempty"`
+	// PreservedExisting reports that the Agent found an existing
+	// implementation it must not change (today: a native cron already on the
+	// host) and made no package or unit change. Additive: an older Agent
+	// never sets it, and an older Panel ignores it.
+	// PreservedExisting, Agent'ın değiştirmemesi gereken mevcut bir
+	// uygulama bulduğunu (bugün: sunucuda zaten olan yerel cron) ve hiçbir
+	// paket ya da unit değişikliği yapmadığını bildirir. Eklemelidir.
+	PreservedExisting bool `json:"preserved_existing,omitempty"`
 }
 
 type UninstallServiceResponse struct {

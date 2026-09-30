@@ -241,3 +241,14 @@ Relevant sources: `web/src/components/StartGuide.tsx`,
 `web/src/components/AddDomainModal.tsx`, `cmd/panel/mail_profiles.go`,
 `cmd/panel/dns_engine.go`, `cmd/panel/domain_connection.go`,
 `cmd/panel/panel_cert_handler.go`, `internal/hostname/hostname.go`.
+
+## Note, 2026-09-30: mail on Arch and component install failures (upd1 P2)
+
+The `web_mail` purpose (and any plan with mail components) is refused on Arch
+Linux at review with `server_setup_service_unsupported:dovecot`: Arch's Dovecot
+2.4 package keeps its mail, login and TLS settings in one `dovecot.conf` that the
+panel does not manage, so an admitted plan used to stop mid-setup at the mail
+step. A component install failure now names the component, the failed step and
+the host's own line, and the wizard states who acts and how setup continues.
+Details and remaining work: [operation guidance](OPERATION-GUIDANCE.md). Component
+tests only; native evidence is pending.

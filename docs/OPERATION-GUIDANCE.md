@@ -191,3 +191,95 @@ symlink-free open returned ELOOP, the 202 had no reason and the saved status rea
   `unknown`.
 
 Evidence status: component tests only; native re-run pending (pair 5).
+
+### Scheduled tasks and native cron states (2026-10-01)
+
+Source state with component tests; the native re-run is pending. This comes from
+native run upd1: on a fresh Debian 13 `web_mail` server, creating a scheduled task
+returned `500 INTERNAL`. The Agent had correctly reported that cron was absent,
+and the Panel masked that answer.
+
+- **Cron absent (verified).** Every cron RPC first checks for the `crontab`
+  command. When it is missing the Agent returns its fixed text, and the Panel
+  answers `409 CRON_NOT_INSTALLED`. The `read` reason covers the list ("cannot be
+  shown; no task runs until it is"). The `write` reason covers create, change and
+  delete ("nothing was saved").
+  - Who acts: the server owner.
+  - Next action: install "Scheduled tasks (cron)" from Components, or run
+    `sudo apt-get install cron` (Debian/Ubuntu) or `sudo pacman -S cronie` and
+    `sudo systemctl enable --now cronie` (Arch).
+  - Resume: create or change the task again. Nothing retries by itself.
+  - The Agent's line goes to the Panel log only. The Scheduled tasks screen keeps
+    this explanation on screen in place of the "no tasks" empty state.
+  - Before this change, a missing cron listed as "no tasks" and a change reported
+    "cron job not found". Both hid the reason.
+- **Other cron failures** (tenant proof, crontab write) remain an unclassified
+  `INTERNAL` answer. That is an honest fallback, not a diagnosis.
+- **Setup.** Site-hosting profiles plan a `service` step for `cron`. It uses the
+  same install and verify path, operation receipt and failure codes as the other
+  components, for example `service_install_failed` with the component guidance.
+  - When any cron implementation already exists, the Agent changes nothing and
+    returns `preserved_existing`. The step then succeeds as kept without requiring
+    the unit to be running.
+  - An installed catalogue unit makes review show the component as kept, with no
+    step.
+  - The final setup readiness check does not re-verify cron. An accepted plan
+    from an older build has no cron step and is not held back.
+- **Removal.** The generic uninstall is refused in both the Panel and the Agent
+  with `409 NATIVE_CRON_REMOVAL_REFUSED`, before any mutation.
+
+The same audit of domain handlers mapped two fixed Agent "busy" answers to the
+existing `409 HOST_MUTATION_BUSY` (`agent_mutation_active`: wait for the other
+CelikPanel change, then retry) instead of `INTERNAL`:
+
+- the mailbox password change, while mail configuration is locked;
+- Let's Encrypt issuance, while another site certificate operation runs.
+
+The other masked Agent conditions it found remain listed for follow-up. They are
+not covered by this note.
+
+### Component install failures in setup (upd1 finding P2, 2026-09-30)
+
+Source state with component tests; the native re-run is pending (upd2). Native
+run upd1 stopped a fresh Arch `web_mail` setup at `05-mail_profile` with only
+`service_install_failed` ("The service could not be installed and verified.").
+A read-only reproduction on one disposable Arch guest found the cause in the
+Panel log only: `failed in profile/webmail/dovecot/configuring: … mail stack
+configuration: dovecot: dovecot is not installed`. Dovecot was installed
+(`dovecot 2.4.4-1`); Arch's package ships a single `/etc/dovecot/dovecot.conf`
+and no `conf.d`, which the Agent's mail configuration requires.
+
+- **Unmet prerequisite, refused up front.** Automatic Dovecot installation is
+  closed for the `pacman` family with a specific catalogue reason
+  (`core.DovecotPacmanLayoutReason`). Setup review therefore returns the typed
+  blocker `server_setup_service_unsupported:dovecot` for any plan with mail on
+  Arch, before any mutation. The wizard shows `setup.blocker.mailUnsupported`:
+  mail cannot be set up automatically on this distribution; the server
+  administrator chooses Web hosting or installs mail with the operating
+  system's own tools. Web hosting on Arch is unchanged. Packages still observe an
+  existing Arch Dovecot; removal is not affected.
+- **Verified failure, named.** An install failure (`service_install_failed`,
+  `mail_profile_install_failed`, `node_runtime_install_failed`) now carries the
+  component, the step (`preflight`, `package_install`, `configure`,
+  `unit_start`, `verify`, from the operation's last durable phase) and one host
+  line: the package manager's `error:`/`E:` line for a package transaction,
+  otherwise the first line of the reason. The line is bounded to 180 characters
+  with URL user/path/query, hash-shaped tokens and `key=value` secrets removed.
+  It is stored under `failure` in the failed row's existing `result_json` (no
+  schema migration; older rows keep only code and message) and returned as
+  optional `component`/`step`/`detail` on the service operation error and the
+  setup execution error.
+- **Wizard.** For such a failure the guidance names the component and step, shows
+  "The server reported: …", names the server administrator and the action for
+  that step (package manager problem, service status and log, or the reported
+  reason), then "Review a revised plan" to continue with completed steps kept
+  and no automatic retry, and for mail the Web hosting alternative. Layout is
+  unchanged; a failure without guidance keeps the previous generic texts.
+- **Agent text.** A Dovecot without `conf.d` now reports that layout instead of
+  the false "dovecot is not installed", and leaves `dovecot.conf` unchanged.
+
+Not done: Arch mail support itself. Creating `conf.d` is not enough because the
+packaged main file sets mail storage, PAM login and TLS after its include;
+supporting it means adopting the packaged main file, an owner-configuration
+decision (D-022), plus native checks of mail TLS, submission and Roundcube PHP
+extensions on Arch.

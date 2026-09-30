@@ -585,6 +585,10 @@ func configurePostfixVirtual(ctx context.Context) error {
 	return nil
 }
 
+// dovecotConfDirMissingReason is the operator line for a Dovecot whose native
+// configuration has no conf.d directory. dovecot.conf itself is left untouched.
+const dovecotConfDirMissingReason = "Dovecot has no /etc/dovecot/conf.d directory (a single-file configuration, as the Arch Linux package ships); CelikPanel configures Dovecot only through conf.d files and left dovecot.conf unchanged"
+
 // configureDovecotVirtual drops a single override file that makes Dovecot
 // authenticate against /etc/dovecot/users and read the maildirs — loaded last
 // (99-) so it wins over the distro's default mail_location and system auth.
@@ -609,7 +613,12 @@ func configureDovecotVirtual() error {
 
 	confDir := "/etc/dovecot/conf.d"
 	if !fileExistsAgent(confDir) {
-		return fmt.Errorf("dovecot is not installed")
+		// Dovecot is installed; its layout is the problem (Arch's 2.4 package
+		// ships a single dovecot.conf and no conf.d, upd1 finding P2). Say so
+		// instead of the former, false "dovecot is not installed".
+		// Dovecot kurulu; sorun yerleşimidir. Eski, yanlış "kurulu değil"
+		// yerine bunu söyle.
+		return errors.New(dovecotConfDirMissingReason)
 	}
 	managedConf := confDir + "/99-celikpanel.conf"
 	authConf := confDir + "/10-auth.conf"

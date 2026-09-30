@@ -171,6 +171,11 @@ export const tr: Record<ShellKey, string> = {
     'err.ENTITLEMENT_REQUIRED.action': 'Eklentilere bak',
     'err.FIREWALL_ENGINE_MISSING': 'Güvenlik duvarı motoru (nftables) kurulu değil — önce Services sayfasından kurun.',
     'err.FIREWALL_ENGINE_MISSING.action': 'Services sayfasına git',
+    // Zamanlanmış görevler sunucunun yerel cron'unu gerektirir (upd1, 1 Eki
+    // 2026). Temel cümle reddedilen değişikliği, .read listeyi yanıtlar.
+    'err.CRON_NOT_INSTALLED': 'Zamanlanmış görevler bu sunucunun cron hizmetini gerektirir ve cron kurulu değil; bu yüzden hiçbir şey değiştirilmedi. Cron’u sunucu sahibi bir kez kurar: CelikPanel’de Bileşenler sayfasını açar ve “Scheduled tasks (cron)” satırını kurar. Ya da sunucuda Debian/Ubuntu’da sudo apt-get install cron, Arch’ta sudo pacman -S cronie ve ardından sudo systemctl enable --now cronie komutlarını çalıştırır. Sonra bu sayfayı yenileyip değişikliği yeniden yapın; hiçbir şey kendiliğinden yeniden denenmez.',
+    'err.CRON_NOT_INSTALLED.read': 'Zamanlanmış görevler gösterilemiyor, çünkü bu sunucunun cron hizmeti kurulu değil; cron kurulana kadar hiçbir zamanlanmış görev çalışmaz. Cron’u sunucu sahibi bir kez kurar: CelikPanel’de Bileşenler sayfasını açar ve “Scheduled tasks (cron)” satırını kurar. Ya da sunucuda Debian/Ubuntu’da sudo apt-get install cron, Arch’ta sudo pacman -S cronie ve ardından sudo systemctl enable --now cronie komutlarını çalıştırır. Sonra bu sayfayı yenileyin.',
+    'err.NATIVE_CRON_REMOVAL_REFUSED': 'CelikPanel bu sunucunun cron hizmetini kaldırmaz: panel dışında oluşturulanlar dahil sunucudaki her zamanlanmış görevi o çalıştırır. Hiçbir şey değiştirilmedi. Kaldırmak gerçekten isteniyorsa bunu sunucu sahibi işletim sisteminin paket yöneticisiyle yapar.',
     'err.FIREWALL_NO_SSH_SERVICE': 'Bu sunucuda SSH servisi yok; bu yüzden hiçbir SSH portu kanıtlanamadı. Bunu kabul ettiğinizi onaylayın, sonra güvenlik duvarını açın.',
     'err.FIREWALL_SSH_NOT_LISTENING': 'Bu sunucuda bir SSH servisi var ama dinleyen bir SSH portu bulunamadı. SSH’ı başlatın ya da kaldırın, sonra güvenlik duvarını açın.',
     'err.FIREWALL_SSH_DISCOVERY_FAILED': 'Bu sunucuda erişilebilir bir SSH portu olup olmadığı belirlenemedi; bu yüzden güvenlik duvarı değiştirilmedi.',

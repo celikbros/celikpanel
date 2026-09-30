@@ -244,6 +244,15 @@ type ManagedService struct {
 	// would produce an installed daemon that the rest of the panel cannot use.
 	// Existing installations remain visible and manageable.
 	InstallDisabledReason string
+	// FamilyInstallBlockReasons closes automatic installation in one package
+	// ecosystem with a specific, owner-actionable reason, while Packages keeps
+	// observing an installation that already exists there. It is used where
+	// the distro package installs but its native layout is one CelikPanel
+	// cannot yet configure, so Install would stop halfway (upd1 finding P2).
+	// FamilyInstallBlockReasons, otomatik kurulumu bir paket ekosisteminde
+	// belirli ve sahibin eyleme dönüştürebileceği bir gerekçeyle kapatır;
+	// Packages orada zaten var olan kurulumu gözlemeye devam eder.
+	FamilyInstallBlockReasons map[string]string
 	// Repo, when set, is the optional vendor repository this service can enable
 	// to unlock version choice (see ManagedRepo). nil means the service is only
 	// ever installed from the distro — the common, most conservative case.
@@ -360,6 +369,9 @@ func ManagedServiceInstallBlockForHost(svc *ManagedService, host ManagedServiceH
 	}
 	if host.PackageFamily == "" {
 		return ManagedServiceInstallBlockDistribution, "automatic installation is unavailable until the host platform is verified"
+	}
+	if reason := svc.FamilyInstallBlockReasons[host.PackageFamily]; reason != "" {
+		return ManagedServiceInstallBlockDistribution, reason
 	}
 	if svc.LifecycleInstallFamilies != nil && !svc.LifecycleInstallFamilies[host.PackageFamily] {
 		return ManagedServiceInstallBlockDistribution, "the managed service lifecycle is not supported in this package ecosystem yet"
@@ -735,7 +747,20 @@ var ManagedServices = []ManagedService{
 		// bağımlıları tatmin eder.
 		ConflictGroup: "imap-server",
 		Packages:      map[string][]string{"apt": {"dovecot-imapd", "dovecot-pop3d", "dovecot-lmtpd"}, "pacman": {"dovecot"}},
-		FirewallPorts: []FirewallPort{{143, "tcp"}, {993, "tcp"}, {110, "tcp"}, {995, "tcp"}},
+		// Arch's Dovecot 2.4 package ships one /etc/dovecot/dovecot.conf with
+		// its own mail storage, PAM login and TLS settings AFTER an optional
+		// conf.d include, and no conf.d directory. CelikPanel's mail
+		// configuration lives in conf.d files, so those packaged settings
+		// would still win; supporting Arch means adopting the packaged main
+		// file, an owner-configuration decision not made in this release.
+		// Setup refuses mail on Arch up front instead of stopping mid-install
+		// (upd1 finding P2, reproduced 30 Sep 2026 with dovecot 2.4.4-1).
+		// Arch'ın Dovecot 2.4 paketi tek bir dovecot.conf getirir; kendi
+		// posta, PAM ve TLS ayarları isteğe bağlı conf.d include'undan SONRA
+		// gelir ve conf.d dizini yoktur. Kurulum Arch'ta postayı yarıda
+		// kalmak yerine baştan reddeder.
+		FamilyInstallBlockReasons: map[string]string{"pacman": DovecotPacmanLayoutReason},
+		FirewallPorts:             []FirewallPort{{143, "tcp"}, {993, "tcp"}, {110, "tcp"}, {995, "tcp"}},
 	},
 	{
 		// Webmail (operator, 23 Jul: "webmails too"; 24 Jul: "if it can't be
@@ -1097,7 +1122,52 @@ var ManagedServices = []ManagedService{
 			// sunar. Sürüm seçimi PHP/PostgreSQL işidir.
 		},
 	},
+	// The server's native cron daemon. Site scheduled jobs are ordinary user
+	// crontabs (cmd/agent/cron_rpc.go), so nothing runs them unless this
+	// daemon is installed and enabled — a fresh Debian 13 minimal image has
+	// neither the package nor the unit (upd1, 1 Oct 2026). Setup installs it
+	// for profiles that host sites, ONLY when no cron implementation is
+	// present; an existing cron (the owner's, or any other implementation
+	// that provides `crontab`) is left untouched. The panel never removes it
+	// and never edits its configuration or the owner's crontabs (D-022):
+	// removing CelikPanel leaves cron and every job in place.
+	//
+	// Sunucunun yerel cron daemon'ı. Site zamanlanmış görevleri sıradan
+	// kullanıcı crontab'larıdır; bu daemon kurulu ve etkin değilse hiçbiri
+	// çalışmaz. Kurulum, site barındıran profillerde onu YALNIZ hiçbir cron
+	// yokken kurar; var olan cron'a dokunmaz. Panel onu kaldırmaz,
+	// yapılandırmasını ve sahibin crontab'larını değiştirmez (D-022).
+	{
+		ID:          NativeCronServiceID,
+		Name:        "Scheduled tasks (cron)",
+		Description: "Native cron daemon that runs scheduled tasks",
+		Icon:        "⏰",
+		Category:    "system",
+		Kind:        KindService,
+		SystemNames: []string{"cron", "cronie"},
+		Packages:    map[string][]string{"apt": {"cron"}, "pacman": {"cronie"}},
+	},
 }
+
+// NativeCronServiceID is the catalogue entry for the server's own cron daemon.
+// CelikPanel installs and enables it only when no cron implementation is
+// present, never reconfigures an existing one and never removes it (D-022).
+// NativeCronServiceID, sunucunun kendi cron daemon'ının katalog kalemidir.
+// CelikPanel onu yalnız hiçbir cron yokken kurup etkinleştirir; var olanı
+// yeniden yapılandırmaz ve asla kaldırmaz (D-022).
+const NativeCronServiceID = "cron"
+
+// NativeCronRemovalRefusal is the fixed reason the Agent gives when asked to
+// remove native cron. The daemon runs every scheduled job on the server,
+// including jobs the owner created outside the panel, so removal is an owner
+// decision made with the operating system's package manager.
+// NativeCronRemovalRefusal, Agent'ın yerel cron'u kaldırması istendiğinde
+// verdiği sabit gerekçedir.
+const NativeCronRemovalRefusal = "CelikPanel does not remove the server's cron service: it runs every scheduled job on this server, including jobs created outside the panel. The server owner removes it with the operating system's package manager if that is intended."
+
+// DovecotPacmanLayoutReason is the owner-facing reason automatic mail setup is
+// closed on Arch Linux: what is missing, who acts, and the two ways forward.
+const DovecotPacmanLayoutReason = "CelikPanel cannot set up Dovecot on Arch Linux yet: the Arch package keeps its mail, login and TLS settings in one /etc/dovecot/dovecot.conf that CelikPanel does not manage. The server administrator can choose a setup purpose without mail (Web hosting), or install and configure mail with the operating system's own tools."
 
 // GetManagedServiceByID returns a managed service by its ID
 func GetManagedServiceByID(id string) *ManagedService {

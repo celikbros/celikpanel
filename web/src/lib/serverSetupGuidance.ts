@@ -9,11 +9,41 @@ export interface SetupExecutionGuidance {
 }
 const text = (key: TranslationKey, values?: Record<string, string>): SetupGuidanceText => ({ key, values });
 
+const componentNames: Record<string, string> = { nginx: 'Nginx', 'php-fpm': 'PHP-FPM', mariadb: 'MariaDB', postgresql: 'PostgreSQL', node: 'Node.js', nftables: 'nftables', certbot: 'Certbot', postfix: 'Postfix', dovecot: 'Dovecot', rspamd: 'Rspamd', roundcube: 'Roundcube', bind: 'BIND', pdns: 'PowerDNS', webmail: 'Webmail', 'core-mail': 'Core Mail', 'protected-mail': 'Spam-Protected Mail' };
+export const setupComponentName = (id: string): string => componentNames[id] || id;
+// A screen passes its localized names (mail profiles, cron) so the guidance
+// sentence names the component exactly as the step list above it does.
+// Ekran yerel adlari verir; yonlendirme bileseni adim listesiyle ayni adlandirir.
+export type SetupComponentNamer = (id: string) => string;
+
+const installSteps = ['preflight', 'package_install', 'configure', 'unit_start', 'verify'] as const;
+type InstallStep = typeof installSteps[number];
+const mailComponents = ['postfix', 'dovecot', 'rspamd', 'roundcube', 'webmail', 'core-mail', 'protected-mail'];
+
+// An install failure names the component, what stopped, the host's own line,
+// who acts and how setup continues, before the step list (D-024).
+// Kurulum hatasi bileseni, neyin durdugunu, makinenin kendi satirini, kimin
+// ne yapacagini ve kurulumun nasil surecegini adim listesinden once soyler.
+function installFailureMessages(execution: ServerSetupExecution, componentName: SetupComponentNamer): SetupGuidanceText[] | null {
+    const error = execution.error;
+    if (execution.status !== 'failed' || !error?.component || !installSteps.includes(error.step as InstallStep)) return null;
+    const step = error.step as InstallStep;
+    const component = componentName(error.component);
+    const messages = [text(`setup.guide.installFailed.${step}`, { component })];
+    if (error.detail) messages.push(text('setup.guide.installFailedDetail', { detail: error.detail }));
+    messages.push(text(step === 'package_install' ? 'setup.guide.installFailedAction.package'
+        : step === 'unit_start' ? 'setup.guide.installFailedAction.service' : 'setup.guide.installFailedAction.other'));
+    messages.push(text('setup.guide.installFailedResume'));
+    const failedStep = execution.steps.find(item => item.status === 'failed');
+    if (failedStep?.kind === 'mail_profile' || mailComponents.includes(error.component)) messages.push(text('setup.guide.installFailedWithoutMail'));
+    return messages;
+}
+
 // Present reviewed intent separately from observed results. A pending pair proof
 // does not establish that the peer is offline, and a lost response is not failure.
 // Incelenen amac ile gozlenen sonuc ayridir. Eksik es kaniti esin kapali oldugunu,
 // kayip cevap ise islemin basarisiz oldugunu gostermez.
-export function setupExecutionGuidance(execution: ServerSetupExecution): SetupExecutionGuidance | null {
+export function setupExecutionGuidance(execution: ServerSetupExecution, componentName: SetupComponentNamer = setupComponentName): SetupExecutionGuidance | null {
     if (execution.status === 'succeeded') return null;
     const context = execution.context;
     const current = execution.steps.find(step => step.status === 'failed')
@@ -34,6 +64,11 @@ export function setupExecutionGuidance(execution: ServerSetupExecution): SetupEx
     if (phase === 'license') {
         result.title = 'setup.licenseWaiting';
         result.messages.push(text('setup.guide.license'));
+        return result;
+    }
+    const installFailure = ['service', 'runtime', 'mail_profile'].includes(phase) ? installFailureMessages(execution, componentName) : null;
+    if (installFailure) {
+        result.messages.push(...installFailure);
         return result;
     }
     if (confirming) result.messages.push(text('setup.guide.confirm'));

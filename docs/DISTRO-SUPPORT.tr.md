@@ -47,7 +47,7 @@ Kurallar:
 | 📧 Postfix | Servis | `postfix` | `postfix` | SMTP sunucusu | — |
 | 📮 Exim | Servis | — | — | SMTP sunucusu | — |
 | 🧹 Rspamd | Servis | `rspamd` | `rspamd` | spam filtresi | SMTP sunucusu |
-| 📬 Dovecot | Servis | `dovecot-imapd` `dovecot-pop3d` `dovecot-lmtpd` | `dovecot` | IMAP sunucusu | — |
+| 📬 Dovecot | Servis | `dovecot-imapd` `dovecot-pop3d` `dovecot-lmtpd` | — | IMAP sunucusu | — |
 | 🛡️ SpamAssassin | Servis | `spamassassin` `spamd` `spamass-milter` | — | spam filtresi | SMTP sunucusu |
 
 ### Güvenlik
@@ -86,6 +86,12 @@ Kurallar:
 | Bileşen | Tür | APT paket eşlemesi | pacman paket eşlemesi | Koltuk | Gerekenler |
 |---|---|---|---|---|---|
 | 📈 Netdata | Servis | `netdata` · sürüm seçimi: Netdata (repository.netdata.cloud) | `netdata` | — | — |
+
+### Sistem
+
+| Bileşen | Tür | APT paket eşlemesi | pacman paket eşlemesi | Koltuk | Gerekenler |
+|---|---|---|---|---|---|
+| ⏰ Scheduled tasks (cron) | Servis | `cron` | `cronie` | — | — |
 
 ## Resmi sürümden kurulanlar (her dağıtımda aynı)
 

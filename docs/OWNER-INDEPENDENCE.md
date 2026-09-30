@@ -97,6 +97,46 @@ local transfer; nothing else changes and no key is involved. On a secondary you
 run without CelikPanel, add that statement to the catalog zone yourself and
 reload named.
 
+## Scheduled tasks and native cron (2026-10-01)
+
+Source state with component tests; the native re-run is pending; not yet part
+of a published release.
+
+Site scheduled tasks are ordinary user crontabs. Each hosted site's own system
+account holds its jobs (`crontab -u <site user>`; the cron implementation stores
+them, for example in `/var/spool/cron/crontabs/<user>` on Debian/Ubuntu and
+`/var/spool/cron/<user>` on Arch). The account name comes from the domain with
+dots and hyphens replaced by underscores (`example.com` → `example_com`), which is
+how you recognise these jobs. A job disabled in the panel stays in that crontab as
+a `# DISABLED:` comment line. CelikPanel writes no files in `/etc/cron.d`,
+`/etc/cron.hourly` or `/etc/cron.daily`, and its configuration editor refuses
+those paths.
+
+Server setup for profiles that host sites (Web, Web + mail, Application, or a
+custom selection that includes the web server) now prepares the platform's own
+cron through the ordinary component step: the `cron` package on Debian/Ubuntu or
+`cronie` on Arch, enabled and started like the other components. It does this
+only when the server has no cron at all. If a cron unit (`cron`, `cronie`,
+`crond`, `fcron`, `dcron`, `bcron`, `systemd-cron`) or a `crontab` command already
+exists, setup keeps it and changes no package, unit enablement or configuration.
+A unit you stopped or disabled stays that way. Your cron configuration and your
+crontabs are never rewritten. A DNS-only profile makes no cron change.
+
+CelikPanel does not remove cron. The Components page refuses it
+(`NATIVE_CRON_REMOVAL_REFUSED`) because cron runs every job on the server,
+including jobs created outside the panel. If you intend to remove it, use the
+package manager yourself.
+
+Removing CelikPanel leaves cron, its enablement and every crontab in place. The
+jobs keep running as the site users. If a job's own command calls panel tooling,
+that is your dependency to review (see the audit table below).
+
+If cron is missing on a server set up before this change, or removed later, the
+Scheduled tasks screen now says so instead of showing an internal error
+(`CRON_NOT_INSTALLED`). Install "Scheduled tasks (cron)" from Components, or run
+`sudo apt-get install cron` (Debian/Ubuntu) or `sudo pacman -S cronie` followed by
+`sudo systemctl enable --now cronie` (Arch). Then repeat the change.
+
 ## Evidence
 
 [Local validation](validation/native-dns-independence-20260912/README.md) covers
@@ -123,7 +163,7 @@ or whole-host reboot independence.
 | ACME challenge paths | `internal/hostingpath` uses `/var/lib/celikpanel-agent/acme-http-01`; website Certbot work is `/var/lib/celikpanel/certbot` | Retain or migrate challenge roots, lineage/work directories and native renewal schedules with a real renewal test. Directory names do not alone imply a running-agent dependency. |
 | Panel HTTPS renewal | Its deploy hook invokes the agent for panel certificate material | Panel-only lineage/hook cleanup must be separate from shared website/mail renewal; do not disable Certbot globally. |
 | Website/mail/database data and configurations | Native services exist, but not every generated path, mail map, auth source or scheduled deployment has been certified for removal | Produce an exact retention manifest and prove web requests, DB transactions, mail delivery/authentication, cron and renewal with both management binaries absent. |
-| Tenant cron | `cmd/agent/cron_rpc.go` writes native user crontabs | Preserve users/homes/crontabs and inspect the job commands for owner-selected panel dependencies. Native cron must remain enabled. |
+| Tenant cron | `cmd/agent/cron_rpc.go` writes native user crontabs. Since 2026-10-01, setup installs native cron only when it is absent and the panel never removes it | Preserve users/homes/crontabs and inspect the job commands for owner-selected panel dependencies. Native cron must remain enabled. Management-absent job execution is not yet natively proven. |
 
 Relevant source: `cmd/agent/mail_host_certificate_linux.go`,
 `cmd/agent/mail_host_certificate_renewal.go`,

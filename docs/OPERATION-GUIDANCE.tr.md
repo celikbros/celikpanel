@@ -111,3 +111,88 @@ kılar; tamamlanmış uygulama iddiası değildir.
 geçerlidir. Bu yönlendirme gereksinimi asistana canlı sistemi değiştirme veya
 panel güncelleme yetkisi vermez. Kurulu panel güncellemelerini kullanıcı,
 [AGENTS.md](../AGENTS.md) gereği CelikPanel içinden kendisi başlatmaya devam eder.
+
+### Zamanlanmış görevler ve yerel cron durumları (1 Ekim 2026)
+
+Kaynak durumudur; bileşen testleri var, gerçek sistem denemesi bekliyor. Bu not
+upd1 gerçek sistem denemesinden doğdu: yeni kurulmuş bir Debian 13 `web_mail`
+sunucusunda zamanlanmış görev oluşturmak `500 INTERNAL` döndürdü. Agent cron'un
+kurulu olmadığını doğru bildirmişti; Panel bu yanıtı gizledi.
+
+- **Cron yok (doğrulanmış).** Her cron RPC'si önce `crontab` komutunu denetler.
+  Komut yoksa Agent sabit metnini döndürür, Panel de `409 CRON_NOT_INSTALLED`
+  yanıtını verir. `read` gerekçesi liste içindir ("gösterilemiyor; cron kurulana
+  kadar hiçbir görev çalışmaz"). `write` gerekçesi oluşturma, değiştirme ve silme
+  içindir ("hiçbir şey kaydedilmedi").
+  - Kim yapar: sunucu sahibi.
+  - Sonraki adım: Bileşenler sayfasından "Scheduled tasks (cron)" bileşenini
+    kurun ya da `sudo apt-get install cron` (Debian/Ubuntu) veya
+    `sudo pacman -S cronie` ve `sudo systemctl enable --now cronie` (Arch)
+    komutlarını çalıştırın.
+  - Devam: görevi yeniden oluşturun ya da değiştirin. Hiçbir şey kendiliğinden
+    yeniden denenmez.
+  - Agent satırı yalnız Panel günlüğüne yazılır. Zamanlanmış görevler ekranı bu
+    açıklamayı "görev yok" boş durumunun yerine ekranda tutar.
+  - Önceden eksik cron "görev yok" olarak listeleniyor, değişiklik ise "cron job
+    not found" bildiriyordu. İkisi de gerçek nedeni gizliyordu.
+- **Diğer cron hataları** (kiracı kanıtı, crontab yazımı) sınıflandırılmamış
+  `INTERNAL` yanıtı olarak kalır. Bu bir teşhis değil, dürüst bir geri dönüştür.
+- **Kurulum.** Site barındıran profiller `cron` için bir `service` adımı planlar.
+  Bu adım diğer bileşenlerle aynı kurulum ve doğrulama yolunu, işlem kaydını ve
+  hata kodlarını kullanır.
+  - Herhangi bir cron uygulaması zaten varsa Agent hiçbir şeyi değiştirmez ve
+    `preserved_existing` döndürür. Adım, birimin çalışması istenmeden korunmuş
+    olarak başarılı olur.
+  - Kurulu bir katalog birimi varsa inceleme bileşeni adımsız, korunan olarak
+    gösterir.
+  - Son kurulum hazırlık denetimi cron'u yeniden doğrulamaz. Eski bir sürümde
+    kabul edilmiş planda cron adımı yoktur ve bu plan bekletilmez.
+- **Kaldırma.** Genel kaldırma işlemi hem Panel'de hem Agent'ta, hiçbir değişiklik
+  yapılmadan `409 NATIVE_CRON_REMOVAL_REFUSED` ile reddedilir.
+
+Alan adı işleyicilerinin aynı incelemesi, iki sabit Agent "meşgul" yanıtını
+`INTERNAL` yerine mevcut `409 HOST_MUTATION_BUSY` yanıtına bağladı
+(`agent_mutation_active`: diğer CelikPanel değişikliğinin bitmesini bekleyin,
+sonra yeniden deneyin):
+
+- posta yapılandırması kilitliyken posta kutusu parolası değişikliği;
+- başka bir site sertifikası işlemi sürerken Let's Encrypt sertifikası alma.
+
+İncelemenin bulduğu diğer gizlenen Agent durumları sonraki iş olarak listelidir.
+Bu not onları kapsamaz.
+
+### Kurulumda bileşen kurulum hataları (upd1 bulgusu P2, 2026-09-30)
+
+Bileşen testli kaynak durumu; gerçek sistemde yeniden koşu bekliyor (upd2). upd1,
+temiz bir Arch `web_mail` kurulumunu `05-mail_profile` adımında yalnız
+`service_install_failed` ("Servis kurulamadı ve doğrulanamadı.") ile durdurdu.
+Tek bir geçici Arch konuğunda salt-okur yeniden üretim, nedeni yalnız Panel
+günlüğünde buldu: `failed in profile/webmail/dovecot/configuring: … dovecot:
+dovecot is not installed`. Dovecot kuruluydu (`dovecot 2.4.4-1`); Arch paketi tek
+bir `/etc/dovecot/dovecot.conf` getirir ve Agent'ın gerektirdiği `conf.d` yoktur.
+
+- **Baştan reddedilen eksik önkoşul.** Otomatik Dovecot kurulumu `pacman`
+  ailesinde belirli bir katalog gerekçesiyle kapatıldı. Kurulum incelemesi Arch'ta
+  e-posta içeren her plan için değişiklikten önce `server_setup_service_unsupported:dovecot`
+  engelini döndürür. Sihirbaz `setup.blocker.mailUnsupported` metnini gösterir:
+  sunucu yöneticisi Web barındırma'yı seçer ya da e-postayı işletim sisteminin
+  araçlarıyla kurar. Arch'ta web barındırma değişmedi; var olan Dovecot gözlenmeye
+  devam eder, kaldırma etkilenmez.
+- **Adlandırılan doğrulanmış hata.** Kurulum hatası artık bileşeni, adımı
+  (`preflight`, `package_install`, `configure`, `unit_start`, `verify`) ve makinenin
+  tek satırını taşır: paket işleminde paket yöneticisinin `error:`/`E:` satırı,
+  aksi hâlde nedenin ilk satırı; 180 karakterle sınırlı, URL kimlik bilgisi/yol/sorgu,
+  hash biçimli ve `anahtar=değer` gizli bilgiler çıkarılmış. Başarısız satırın
+  mevcut `result_json` alanında `failure` altında saklanır (şema geçişi yok) ve
+  servis işlemi ile kurulum hatasında isteğe bağlı `component`/`step`/`detail`
+  olarak döner.
+- **Sihirbaz.** Bileşen ve adım, "Sunucunun bildirdiği: …", sunucu yöneticisinin
+  yapacağı iş, ardından tamamlanan adımlar korunarak "Düzeltilmiş planı incele" ve
+  e-posta için Web barındırma seçeneği gösterilir. Yerleşim değişmedi.
+- **Agent metni.** `conf.d` olmayan Dovecot artık yanlış "kurulu değil" yerine bu
+  yerleşimi bildirir ve `dovecot.conf` dosyasına dokunmaz.
+
+Yapılmayan: Arch'ta e-posta desteğinin kendisi. Paketli ana dosya include'dan
+sonra posta, PAM ve TLS ayarlarını yaptığı için `conf.d` oluşturmak yetmez; bu,
+sahibin yapılandırmasını devralma kararı (D-022) ve Arch'ta posta TLS, gönderim ve
+Roundcube PHP uzantılarının gerçek sistem denetimi gerektirir.
