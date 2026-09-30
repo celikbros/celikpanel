@@ -119,15 +119,78 @@ class NativePDNSBINDPeerTest(unittest.TestCase):
             self.assertTrue(any("pacman -Syu --noconfirm bind bind-tools" in command for command in commands))
             self.assertTrue(any("named-checkconf /etc/named.conf" in command for command in commands))
             self.assertTrue(any("systemctl enable --now named.service" in command for command in commands))
+            # The owner's rndc key step runs after the config is checked and
+            # before named is (re)started, and never prints key material.
+            key_commands = [c for c in commands if "rndc-confgen -a" in c]
+            self.assertEqual(len(key_commands), 1)
+            self.assertIn("test -e /etc/rndc.key", key_commands[0])
+            self.assertIn("chown root:named /etc/rndc.key", key_commands[0])
+            self.assertIn("chmod 0640 /etc/rndc.key", key_commands[0])
+            self.assertNotIn("cat /etc/rndc.key", key_commands[0])
+            self.assertLess(commands.index(key_commands[0]),
+                            [i for i, c in enumerate(commands)
+                             if "systemctl enable --now named.service" in c][0])
             self.assertFalse(any("dig " in command for command in commands))
             self.assertEqual(result["management_installed_on_secondary"], False)
+            # Dry run never talks to the guest, so the outcome is unknown, not
+            # a guess at "present".
+            self.assertIsNone(result["owner_prepared_rndc_key"])
+
+    def test_prepare_records_the_owner_prepared_rndc_key_outcome(self) -> None:
+        for reply, expected in ((peer.RNDC_KEY_PREPARED + "\n", peer.RNDC_KEY_PREPARED),
+                                (peer.RNDC_KEY_ALREADY_PRESENT, peer.RNDC_KEY_ALREADY_PRESENT)):
+            with self.subTest(expected), tempfile.TemporaryDirectory() as temporary:
+                args = self.args(temporary, execute=True)
+                with (
+                    mock.patch.object(peer, "selected", return_value=(
+                        "192.0.2.10", "192.0.2.11", {}, args.identity_file)),
+                    mock.patch.object(peer, "verify_guest"),
+                    mock.patch.object(bootstrap, "ssh_base", return_value=["ssh"]),
+                    mock.patch.object(bootstrap, "scp_base", return_value=["scp"]),
+                    mock.patch.object(bootstrap, "remote_destination", return_value="celik@peer:fixture"),
+                    mock.patch.object(bootstrap, "run"),
+                    mock.patch.object(peer, "remote_read", return_value=reply),
+                ):
+                    result = peer.prepare(args)
+                self.assertEqual(result["owner_prepared_rndc_key"], expected)
+
+    def test_prepare_refuses_an_unexpected_rndc_key_step_result(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            args = self.args(temporary, execute=True)
+            with (
+                mock.patch.object(peer, "selected", return_value=(
+                    "192.0.2.10", "192.0.2.11", {}, args.identity_file)),
+                mock.patch.object(peer, "verify_guest"),
+                mock.patch.object(bootstrap, "ssh_base", return_value=["ssh"]),
+                mock.patch.object(bootstrap, "scp_base", return_value=["scp"]),
+                mock.patch.object(bootstrap, "remote_destination", return_value="celik@peer:fixture"),
+                mock.patch.object(bootstrap, "run"),
+                mock.patch.object(peer, "remote_read", return_value="rndc: no controls clause\n"),
+            ):
+                with self.assertRaisesRegex(bootstrap.BootstrapError, "unexpected result"):
+                    peer.prepare(args)
+
+    def test_rndc_status_probe_is_exit_code_only(self) -> None:
+        with mock.patch.object(bootstrap, "run") as run:
+            self.assertIsNone(peer.rndc_status_probe(["ssh"], False))
+        command = " ".join(run.call_args.args[0])
+        self.assertIn("rndc -s 127.0.0.1 status", command)
+        self.assertIn(">/dev/null 2>&1", command)
+        self.assertIn("echo $?", command)
+        with mock.patch.object(peer, "remote_read", return_value="0\n"):
+            self.assertTrue(peer.rndc_status_probe(["ssh"], True))
+        with mock.patch.object(peer, "remote_read", return_value="1"):
+            self.assertFalse(peer.rndc_status_probe(["ssh"], True))
+        with mock.patch.object(peer, "remote_read", return_value="not-a-code"):
+            with self.assertRaisesRegex(ValueError, "non-numeric"):
+                peer.rndc_status_probe(["ssh"], True)
 
     def test_observe_requires_source_bound_catalog_and_authoritative_member(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             args = self.args(temporary, "observe", True)
             soa = member_answer(peer.ZONE, "SOA", "ns.test. hostmaster.test. 1 60 30 3600 60")
             address = member_answer(peer.QUERY, "A", "192.0.2.10")
-            replies = ["", pdns_catalog_axfr(), pdns_catalog_axfr()] + [soa] * 4 + [address] * 4
+            replies = ["", "0", pdns_catalog_axfr(), pdns_catalog_axfr()] + [soa] * 4 + [address] * 4
             with (
                 mock.patch.object(peer, "selected", return_value=(
                     "192.0.2.10", "192.0.2.11", {}, args.identity_file)),
@@ -139,9 +202,11 @@ class NativePDNSBINDPeerTest(unittest.TestCase):
             self.assertEqual(result["catalog_serial"], 1)
             self.assertEqual(result["catalog_members"], [peer.ZONE])
             self.assertTrue(result["authoritative_udp_tcp"])
-            self.assertEqual(read.call_count, 11)
-            self.assertIn("@192.0.2.10", read.call_args_list[1].args[1])
-            self.assertIn("@127.0.0.1", read.call_args_list[2].args[1])
+            self.assertTrue(result["rndc_status_ok"])
+            self.assertEqual(read.call_count, 12)
+            self.assertIn("rndc -s 127.0.0.1 status", read.call_args_list[1].args[1])
+            self.assertIn("@192.0.2.10", read.call_args_list[2].args[1])
+            self.assertIn("@127.0.0.1", read.call_args_list[3].args[1])
 
             with (
                 mock.patch.object(peer, "selected", return_value=(
@@ -149,7 +214,7 @@ class NativePDNSBINDPeerTest(unittest.TestCase):
                 mock.patch.object(peer, "verify_guest"),
                 mock.patch.object(bootstrap, "ssh_base", return_value=["ssh"]),
                 mock.patch.object(peer, "remote_read", side_effect=[
-                    "", pdns_catalog_axfr(), pdns_catalog_axfr(2)]),
+                    "", "1", pdns_catalog_axfr(), pdns_catalog_axfr(2)]),
             ):
                 with self.assertRaisesRegex(ValueError, "catalog differs"):
                     peer.observe(args)
@@ -160,7 +225,7 @@ class NativePDNSBINDPeerTest(unittest.TestCase):
                 mock.patch.object(peer, "verify_guest"),
                 mock.patch.object(bootstrap, "ssh_base", return_value=["ssh"]),
                 mock.patch.object(peer, "remote_read", side_effect=[
-                    "", pdns_catalog_axfr(), pdns_catalog_axfr(),
+                    "", "0", pdns_catalog_axfr(), pdns_catalog_axfr(),
                     member_answer(peer.ZONE, "SOA", "ns.test. hostmaster.test. 1 60 30 3600 60", authoritative=False),
                 ]),
             ):

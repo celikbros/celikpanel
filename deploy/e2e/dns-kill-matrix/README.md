@@ -894,6 +894,21 @@ journal. Its peer is the panel-free native **BIND secondary** on Arch
 (`native_pdns_bind_peer.py`, the peer of the 2026-09-28 V3 trials), which
 consumes the primary's native `PRODUCER` catalog and loads the member.
 
+Since batch 10, `native_pdns_bind_peer.py prepare` also performs the owner's
+documented prerequisite for the deletion inspector before named is first
+started: Arch's `bind` package creates no `/etc/rndc.key`, so `rndc -s
+127.0.0.1 zonestatus` (and, through it, `dns-peer-enroll`'s inspector) cannot
+work on a panel-free Arch peer until one exists (`cmd/bind-peer-inspect/README.md`;
+batch 10 hit this after enrollment as `dns_peer_inspection_unknown`, not
+`dns_peer_enrollment_required`). When no key, no `/etc/rndc.conf` and no
+owner `controls` statement are present it runs `rndc-confgen -a` and sets
+`root:named 0640`, mirroring the product's own rule
+(`cmd/agent/dns_engine_bind_rndc_key.go`); an existing key is left untouched.
+The outcome (`created` or `present`, never the key) is recorded as
+`owner_prepared_rndc_key` in the prepare receipt, and `observe` now also
+reports `rndc_status_ok` (the exit code of `rndc -s 127.0.0.1 status`,
+nothing else) so a later run can see the prerequisite is already met.
+
 **Admitted: 12 cells**, peer-reachable only,
 `pdns-switch__<phase>__{before,after}-write__paired-primary__peer-reachable`.
 The V3 producer writes its journal through the hooked writer at intent,
@@ -1352,6 +1367,19 @@ python3 "$BOOTSTRAP" run-prepared "${COMMON[@]}" --zero-zones --zone-lifecycle \
   --reboot-after-recovery --disable-management-before-reboot \
   --resume-held-zone-lifecycle --execute
 ```
+
+**The printed and held `next_step` now depend on the Agent's own code**
+(correction after batch 10, which resumed both `z04` and `z05` past
+enrollment and found the same job stayed pending under a second code):
+`dns_peer_enrollment_required` still names the enrollment action above;
+`dns_peer_inspection_unknown` (an enrolled secondary whose inspector
+exchange ran but produced no observation, as in batch 10) instead says to
+check the secondary's rndc key and loopback catalog transfer, then resume
+with the same command, never enrollment again; any other code is named
+verbatim with "the harness has no owner step for" it, rather than repeating
+either guidance for the wrong reason. `zone-lifecycle-held.json`'s
+`next_step` also carries that real code instead of the empty `pending ():`
+it printed before the fix.
 
 What the resumed flow verifies, in order (any step that does not pass stops
 it; nothing is requested twice):

@@ -614,7 +614,7 @@ class HostOrderTest(unittest.TestCase):
 
         def zone_lifecycle(args, plan, **kwargs):
             events.append("lifecycle")
-            return lifecycle, {0: "passed", 1: "failed"}.get(lifecycle, "unverified")
+            return lifecycle, {0: "passed", 1: "failed"}.get(lifecycle, "unverified"), None
 
         with mock.patch.object(bootstrap, "load_plan", return_value=({}, self.RAW, {"n": 1})), \
                 mock.patch.object(bootstrap, "identity_file", return_value=Path("/tmp/k")), \
@@ -740,7 +740,7 @@ class PeerWithChildTest(unittest.TestCase):
         def run(members: list[str], with_child: bool) -> dict:
             args = argparse.Namespace(cell_id=bind_peer.CELL, execute=True, address="192.0.2.10",
                                       with_child=with_child, identity_file=Path("/k"))
-            replies = ["", catalog(members), catalog(members)] + [soa] * 4 + [address] * 4
+            replies = ["", "0", catalog(members), catalog(members)] + [soa] * 4 + [address] * 4
             with mock.patch.object(bind_peer, "selected", return_value=(
                     "192.0.2.10", "192.0.2.11", {}, Path("/k"))), \
                     mock.patch.object(bind_peer, "verify_guest"), \

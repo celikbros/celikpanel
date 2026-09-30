@@ -77,8 +77,14 @@ class RecoverLifecycleTest(unittest.TestCase):
         return argparse.Namespace(**values)
 
     def run_lifecycle(self, root: Path, outcomes: dict[str, str], *, served_after: dict,
-                      recover_delete: bool = True, args: argparse.Namespace | None = None):
-        """served_after[step]: (catalog members, child SOA answer) after that step."""
+                      recover_delete: bool = True, args: argparse.Namespace | None = None,
+                      job_error_codes: dict[str, str] | None = None):
+        """served_after[step]: (catalog members, child SOA answer) after that step.
+
+        job_error_codes[step], when given, is the trigger's job_error_code for
+        that step (as the Agent's ledger reports it), so a pending outcome can
+        be judged against a real code instead of leaving it absent.
+        """
 
         remotes: list[str] = []
         observed: list[tuple[str, bool]] = []
@@ -91,8 +97,11 @@ class RecoverLifecycleTest(unittest.TestCase):
             remotes.append(remote)
             step = remote.split("--step ", 1)[1].split()[0]
             state["step"] = step
+            extra = {}
+            if job_error_codes and step in job_error_codes:
+                extra["job_error_code"] = job_error_codes[step]
             return subprocess.CompletedProcess(command, 0, stdout=trigger_result(
-                step, outcomes[step]), stderr="")
+                step, outcomes[step], **extra), stderr="")
 
         def read(ssh, command, execute):
             members, child = served_after[state["step"]]
@@ -144,10 +153,10 @@ class RecoverLifecycleTest(unittest.TestCase):
 
     def test_resumed_delete_is_refused_on_both_then_the_child_is_re_added(self) -> None:
         with tempfile.TemporaryDirectory() as root:
-            (code, status), remotes, observed, written = self.run_lifecycle(
+            (code, status, pending), remotes, observed, written = self.run_lifecycle(
                 Path(root), {"delete": "verified_published", "re-add": "verified_published"},
                 served_after={"delete": ((), "REFUSED"), "re-add": ((CHILD,), "2026092803")})
-        self.assertEqual((code, status), (0, "passed"))
+        self.assertEqual((code, status, pending), (0, "passed", None))
         self.assertEqual(len(remotes), 2)
         self.assertIn("dns-kill-trigger rpc-pdns-primary-zone-v3-recover ", remotes[0])
         self.assertIn("--step delete", remotes[0])
@@ -170,10 +179,10 @@ class RecoverLifecycleTest(unittest.TestCase):
         for served, name in ((((CHILD,), "REFUSED"), "still a catalog member"),
                              (((), "NXDOMAIN"), "answered as if a parent were served")):
             with self.subTest(name), tempfile.TemporaryDirectory() as root:
-                (code, status), remotes, observed, written = self.run_lifecycle(
+                (code, status, pending), remotes, observed, written = self.run_lifecycle(
                     Path(root), {"delete": "verified_published", "re-add": "verified_published"},
                     served_after={"delete": served})
-                self.assertEqual((code, status), (1, "failed"))
+                self.assertEqual((code, status, pending), (1, "failed", None))
                 self.assertEqual(len(remotes), 1, "the re-add ran after a failed delete")
                 self.assertTrue(written["zone-lifecycle-recover.json"]["steps"][0]
                                 ["observation_error"].startswith("mismatch:"))
@@ -182,14 +191,45 @@ class RecoverLifecycleTest(unittest.TestCase):
         for outcome, status in (("refused_not_pending", "unverified"),
                                 ("pending_exact_operation", "pending")):
             with self.subTest(outcome), tempfile.TemporaryDirectory() as root:
-                (code, got), remotes, observed, written = self.run_lifecycle(
-                    Path(root), {"delete": outcome}, served_after={})
+                (code, got, pending), remotes, observed, written = self.run_lifecycle(
+                    Path(root), {"delete": outcome}, served_after={},
+                    job_error_codes={"delete": "dns_peer_enrollment_required"}
+                    if outcome == "pending_exact_operation" else None)
                 self.assertEqual((code, got), (2, status))
                 self.assertEqual((len(remotes), observed), (1, []))
                 entry = written["zone-lifecycle-recover.json"]["steps"][0]
                 if status == "pending":
+                    self.assertEqual(pending["job_error_code"], "dns_peer_enrollment_required")
                     self.assertIn("--zero-zones --recover-delete --execute", entry["next_step"])
                     self.assertIn(CHILD, entry["next_step"])
+                    self.assertIn("dns_peer_enrollment_required", entry["next_step"])
+                else:
+                    self.assertIsNone(pending)
+
+    def test_pending_next_step_depends_on_the_agents_own_code(self) -> None:
+        """dns_peer_inspection_unknown (batch 10) and an unnamed code each get
+        their own guidance, never the enrollment text for the wrong code."""
+
+        cases = {
+            "dns_peer_inspection_unknown": (
+                "inspector exchange ran and did not produce an observation",
+                "rndc key",
+            ),
+            "some_future_code": (
+                "the harness has no owner step for some_future_code",
+            ),
+        }
+        for code, expect in cases.items():
+            with self.subTest(code), tempfile.TemporaryDirectory() as root:
+                (code_exit, status, pending), remotes, observed, written = self.run_lifecycle(
+                    Path(root), {"delete": "pending_exact_operation"}, served_after={},
+                    job_error_codes={"delete": code})
+                self.assertEqual((code_exit, status), (2, "pending"))
+                self.assertEqual(pending["job_error_code"], code)
+                entry = written["zone-lifecycle-recover.json"]["steps"][0]
+                for text in expect:
+                    self.assertIn(text, entry["next_step"])
+                self.assertNotIn("dns-peer-enroll --engine bind", entry["next_step"])
 
     def test_each_recovery_attempt_has_its_own_evidence_and_never_replaces_one(self) -> None:
         with tempfile.TemporaryDirectory() as root:
@@ -279,7 +319,9 @@ class HeldLifecycleHostTest(unittest.TestCase):
 
     def test_pending_delete_keeps_the_guest_suspended_then_resume_reboots(self) -> None:
         with tempfile.TemporaryDirectory() as root:
-            code, events, runs, _ = self.run_host(root, [5], [(2, "pending")])
+            code, events, runs, _ = self.run_host(
+                root, [5],
+                [(2, "pending", {"domain": CHILD, "job_error_code": "dns_peer_enrollment_required"})])
             self.assertEqual(code, 2)
             # No continuation: the guest run stays suspended on this boot.
             self.assertEqual(events, ["guest", "peer", "lifecycle"])
@@ -290,10 +332,11 @@ class HeldLifecycleHostTest(unittest.TestCase):
             self.assertIn(bootstrap.RESUME_HELD_LIFECYCLE_FLAG, held["next_step"])
             self.assertIn("--zero-zones", held["next_step"])
             self.assertIn(CHILD, held["next_step"])
+            self.assertIn("dns_peer_enrollment_required", held["next_step"])
 
             # After the owner's enrollment: recover + re-add, continue, reboot.
             code, events, runs, _ = self.run_host(
-                root, [3, 0], [(0, "passed")], resume_held_zone_lifecycle=True)
+                root, [3, 0], [(0, "passed", None)], resume_held_zone_lifecycle=True)
             self.assertEqual(code, 0)
             self.assertEqual(events, ["recover", "guest", "reboot arch", "reboot debian13",
                                       "guest", "peer-after-reboot"])
@@ -304,14 +347,26 @@ class HeldLifecycleHostTest(unittest.TestCase):
 
     def test_resume_that_is_still_pending_stays_suspended_and_a_failure_continues(self) -> None:
         with tempfile.TemporaryDirectory() as root:
-            self.run_host(root, [5], [(2, "pending")])
+            self.run_host(
+                root, [5],
+                [(2, "pending", {"domain": CHILD, "job_error_code": "dns_peer_enrollment_required"})])
             before = self.held_path(root).read_bytes()
-            code, events, runs, _ = self.run_host(
-                root, [], [(2, "pending")], resume_held_zone_lifecycle=True)
+            # Batch 10: after enrollment the same job stayed pending with a
+            # different code. The held record is not rewritten on a resume
+            # (still the same bytes), but the printed record for this attempt
+            # must carry the new code, not the old one or an empty string.
+            code, events, runs, output = self.run_host(
+                root, [],
+                [(2, "pending", {"domain": CHILD, "job_error_code": "dns_peer_inspection_unknown"})],
+                resume_held_zone_lifecycle=True)
             self.assertEqual((code, events, runs), (2, ["recover"], []))
             self.assertEqual(self.held_path(root).read_bytes(), before)
+            printed = json.loads(output.splitlines()[-1])
+            self.assertIn("dns_peer_inspection_unknown", printed["held"]["next_step"])
+            self.assertIn("rndc key", printed["held"]["next_step"])
+            self.assertNotIn("dns-peer-enroll --engine bind", printed["held"]["next_step"])
             code, events, runs, _ = self.run_host(
-                root, [0], [(1, "failed")], resume_held_zone_lifecycle=True)
+                root, [0], [(1, "failed", None)], resume_held_zone_lifecycle=True)
             self.assertEqual((code, events), (1, ["recover", "guest"]))
             self.assertTrue(runs[0].endswith(bootstrap.ZONE_LIFECYCLE_OUTCOME_PREFIX + "not-passed"))
 
@@ -319,7 +374,9 @@ class HeldLifecycleHostTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root:
             with self.assertRaisesRegex(bootstrap.BootstrapError, "did not hold"):
                 self.run_host(root, [], [], resume_held_zone_lifecycle=True)
-            self.run_host(root, [5], [(2, "pending")])
+            self.run_host(
+                root, [5],
+                [(2, "pending", {"domain": CHILD, "job_error_code": "dns_peer_enrollment_required"})])
             for changes in ({"zero_zones": False}, {"cell_id": Z04}):
                 with self.subTest(changes), \
                         self.assertRaisesRegex(bootstrap.BootstrapError, "not this cell"):
@@ -337,6 +394,31 @@ class HeldLifecycleHostTest(unittest.TestCase):
         self.assertEqual(bootstrap.finish_fresh_primary_run(
             self.args(), {}, 5, before_reboot={"outcome": "held", "peer_verdict_exit": 0,
                                                "lifecycle_exit": 2}), 2)
+
+    def test_pending_next_step_names_the_inspection_and_unknown_codes_before_reboot(self) -> None:
+        """Batch 10's two harness guidance defects, in the run-prepared (before-reboot)
+        phrasing: the code, not just the domain, selects the action, and an
+        enrolled-but-unobserved secondary is told to check its rndc key and
+        loopback transfer rather than to enroll again."""
+
+        args = self.args(reboot_after_recovery=True)
+        inspection = bootstrap.zone_lifecycle_pending_next_step(
+            args, {"domain": CHILD, "job_error_code": "dns_peer_inspection_unknown"})
+        self.assertIn(bootstrap.RESUME_HELD_LIFECYCLE_FLAG, inspection)
+        self.assertIn("rndc key", inspection)
+        self.assertIn("loopback catalog transfer", inspection)
+        self.assertIn("dns_peer_inspection_unknown", inspection)
+        self.assertNotIn("dns-peer-enroll --engine bind", inspection)
+
+        unknown = bootstrap.zone_lifecycle_pending_next_step(
+            args, {"domain": CHILD, "job_error_code": "some_other_code"})
+        self.assertIn("the harness has no owner step for some_other_code", unknown)
+        self.assertNotIn("dns-peer-enroll --engine bind", unknown)
+        self.assertNotIn(bootstrap.RESUME_HELD_LIFECYCLE_FLAG, unknown)
+
+        missing = bootstrap.zone_lifecycle_pending_next_step(args, {"domain": CHILD})
+        self.assertIn("pending ():", missing)
+        self.assertIn("the harness has no owner step for", missing)
 
     def test_cli_and_dry_run(self) -> None:
         common = ["--work-root", "/w", "--cell-id", Z05, "--node", "debian13",

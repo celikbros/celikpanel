@@ -624,6 +624,8 @@ class ZeroZonePeerTest(unittest.TestCase):
         def read(ssh, command, execute):
             if command.startswith("systemctl"):
                 return ""
+            if "rndc -s 127.0.0.1 status" in command:
+                return "0"
             if f" {catalog} AXFR" in command:
                 listed = members if "@192.0.2.10 " in command or loaded is None else loaded
                 return empty_catalog_axfr(catalog_serial, listed)

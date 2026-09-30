@@ -131,6 +131,54 @@ def verify_guest(ssh: list[str], cell_id: str, execute: bool) -> None:
     )
 
 
+RNDC_KEY_PREPARED = "created"
+RNDC_KEY_ALREADY_PRESENT = "present"
+
+
+def rndc_key_prepare_command() -> str:
+    """The owner's documented step for a panel-free Arch BIND secondary,
+    before named is first started (cmd/bind-peer-inspect/README.md): Arch's
+    ``bind`` package creates no rndc key, so the deletion inspector's
+    ``rndc -s 127.0.0.1 zonestatus`` cannot work until one exists (observed in
+    evidence/batch10-zero-zone-resume-20261001, dns_peer_inspection_unknown).
+
+    Mirrors the product's own rule for an installed BIND
+    (cmd/agent/dns_engine_bind_rndc_key.go, prepareBINDRNDCKeyWithOps): leave
+    everything alone when a key, an ``/etc/rndc.conf`` or the owner's own
+    ``controls`` statement already exists; otherwise run the native
+    ``rndc-confgen -a`` once and give the created key ``root:named 0640``,
+    the ownership Arch's ``named -u named`` needs after it drops privileges.
+    Prints exactly "created" or "present" on its own last line; never the key
+    material itself.
+    """
+
+    return (
+        "sudo sh -c \""
+        "if test -e /etc/rndc.key || test -e /etc/rndc.conf || grep -q '^controls' /etc/named.conf; "
+        f"then echo {RNDC_KEY_ALREADY_PRESENT}; "
+        "else rndc-confgen -a >/dev/null"
+        " && chown root:named /etc/rndc.key && chmod 0640 /etc/rndc.key"
+        f" && echo {RNDC_KEY_PREPARED}; "
+        "fi\""
+    )
+
+
+def rndc_status_probe(ssh: list[str], execute: bool) -> bool | None:
+    """Whether the loopback control channel the deletion inspector also needs
+    (``rndc -s 127.0.0.1 ...``) currently works: the exit code only, never
+    rndc's own output, so a later run can see the prerequisite is already met
+    instead of only learning about a missing key after a pending deletion.
+    """
+
+    output = remote_read(ssh, "sudo rndc -s 127.0.0.1 status >/dev/null 2>&1; echo $?", execute)
+    if not execute:
+        return None
+    code = output.strip()
+    if not code.isdigit():
+        raise ValueError("rndc status probe returned a non-numeric exit code")
+    return code == "0"
+
+
 def prepare(args: argparse.Namespace) -> dict:
     primary_ip, secondary_ip, peer, identity = selected(args)
     ssh = bootstrap.ssh_base(peer, identity)
@@ -156,7 +204,18 @@ def prepare(args: argparse.Namespace) -> dict:
             ssh + [
                 f"sudo install -m 0640 -o root -g named {remote} /etc/named.conf"
                 " && sudo named-checkconf /etc/named.conf"
-                " && sudo systemctl enable --now named.service"
+            ],
+            execute=args.execute,
+        )
+        # Owner-prepared rndc key: before named is first started, never after.
+        rndc_key_result = remote_read(ssh, rndc_key_prepare_command(), args.execute)
+        rndc_key_status = rndc_key_result.strip() if args.execute else None
+        if args.execute and rndc_key_status not in (RNDC_KEY_PREPARED, RNDC_KEY_ALREADY_PRESENT):
+            raise bootstrap.BootstrapError(
+                "owner-prepared rndc key step on the Arch secondary returned an unexpected result")
+        bootstrap.run(
+            ssh + [
+                "sudo systemctl enable --now named.service"
                 " && systemctl is-active --quiet named.service"
                 f" && rm -- {remote}"
             ],
@@ -166,6 +225,7 @@ def prepare(args: argparse.Namespace) -> dict:
         "action": "prepare-native-pdns-bind-peer", "cell_id": args.cell_id,
         "primary_ip": primary_ip, "secondary_ip": secondary_ip,
         "catalog": catalog_name(primary_ip), "management_installed_on_secondary": False,
+        "owner_prepared_rndc_key": rndc_key_status,
         "execute": args.execute,
     }
 
@@ -329,6 +389,11 @@ def observe(args: argparse.Namespace) -> dict:
     ssh = bootstrap.ssh_base(peer, identity)
     verify_guest(ssh, args.cell_id, args.execute)
     remote_read(ssh, "systemctl is-active --quiet named.service", args.execute)
+    # Whether the deletion inspector's own control-channel prerequisite is
+    # currently met (exit code only; see rndc_status_probe), so a run after
+    # the owner's rndc key preparation shows it, instead of only surfacing a
+    # dns_peer_inspection_unknown after a real deletion attempt.
+    rndc_status_ok = rndc_status_probe(ssh, args.execute)
     catalog = catalog_name(primary_ip)
     source = remote_read(ssh, dig_command(primary_ip, catalog, "AXFR", True), args.execute)
     loaded = remote_read(ssh, dig_command("127.0.0.1", catalog, "AXFR", True), args.execute)
@@ -376,7 +441,8 @@ def observe(args: argparse.Namespace) -> dict:
         "zero_zones": zero,
         "catalog_members_expected": sorted(members_expected),
         "authoritative_udp_tcp": args.execute,
-        "management_installed_on_secondary": False, "execute": args.execute,
+        "management_installed_on_secondary": False, "rndc_status_ok": rndc_status_ok,
+        "execute": args.execute,
     }
 
 

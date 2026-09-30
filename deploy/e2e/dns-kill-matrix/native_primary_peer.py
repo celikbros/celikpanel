@@ -34,6 +34,17 @@ peer is panel-free and the account column is not transferred.
 AXFR is allowed only to the guest under test and the peer's own loopback (for
 the read-only probe); NOTIFY is sent only to the guest under test. Dry-run is
 the default: without ``--execute`` every command is printed, none is run.
+
+This peer is never a target of the owner's optional deletion inspector
+(cmd/bind-peer-inspect, cmd/agent/dns_engine_peer_native_linux.go
+verifyEnrolledBINDPeerDeletion): the inspector only runs from a CelikPanel
+guest that holds the PRIMARY role, to check a native BIND *secondary*
+(recheckPDNSPeerLocalEvidence and recheckBINDPeerLocalEvidence both refuse
+unless the guest's own engine state is the primary). Here the guest under
+test is always the SECONDARY and this peer the panel-free PRIMARY, so the
+Arch ``bind`` flavour's own missing rndc key (see native_pdns_bind_peer.py's
+``rndc_key_prepare_command``, and cmd/bind-peer-inspect/README.md) never
+matters to it and this file does not prepare one.
 """
 
 from __future__ import annotations

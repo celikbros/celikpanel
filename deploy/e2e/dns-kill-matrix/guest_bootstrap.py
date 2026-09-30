@@ -2564,8 +2564,13 @@ def run_zone_lifecycle(
 
 def run_zone_lifecycle_status(
     args: argparse.Namespace, plan: dict[str, Any], *, recover_delete: bool = False
-) -> tuple[int, str]:
-    """run_zone_lifecycle with its status (passed/failed/pending/unverified)."""
+) -> tuple[int, str, dict[str, Any] | None]:
+    """run_zone_lifecycle with its status (passed/failed/pending/unverified).
+
+    The third element is the pending step's own trigger result (``domain`` and
+    ``job_error_code``, when present) so a caller that holds the run can name
+    the exact code the Agent reported, instead of a placeholder.
+    """
 
     import native_pdns_bind_peer  # noqa: PLC0415 - imports this module
 
@@ -2579,6 +2584,7 @@ def run_zone_lifecycle_status(
         "zero_zones": zero_zones_selected(args),
     }
     status = "passed"
+    pending_value: dict[str, Any] | None = None
     for step in steps:
         recover = recover_delete and step == "delete"
         remote = zone_lifecycle_remote(step, recover=recover)
@@ -2605,6 +2611,7 @@ def run_zone_lifecycle_status(
         }
         if verdict == "pending":
             entry["next_step"] = zone_lifecycle_pending_next_step(args, value)
+            pending_value = value
         record["steps"].append(entry)
         print(json.dumps(entry, sort_keys=True))
         if verdict != "passed":
@@ -2615,11 +2622,20 @@ def run_zone_lifecycle_status(
         plan, evidence_name, record, execute=True,
         directory_name=FRESH_PRIMARY_EVIDENCE_DIRECTORY,
     )
-    return {"passed": 0, "failed": 1}.get(status, 2), status
+    return {"passed": 0, "failed": 1}.get(status, 2), status, pending_value
 
 
 def zone_lifecycle_pending_next_step(args: argparse.Namespace, value: dict[str, Any]) -> str:
-    """Who acts and how the pending delete resumes (pure)."""
+    """Who acts and how the pending delete resumes (pure).
+
+    The action depends on the Agent's own error code: an unenrolled secondary
+    (``dns_peer_enrollment_required``) needs the owner's enrollment; an
+    enrolled secondary whose inspector exchange produced no observation
+    (``dns_peer_inspection_unknown``) needs its rndc key and loopback catalog
+    transfer checked instead, not a repeat enrollment. Any other or missing
+    code names itself rather than repeating the enrollment guidance, because
+    this harness has not worked out an owner step for it.
+    """
 
     zero = f" {ZERO_ZONES_FLAG}" if zero_zones_selected(args) else ""
     if zone_lifecycle_before_reboot(args):
@@ -2630,14 +2646,24 @@ def zone_lifecycle_pending_next_step(args: argparse.Namespace, value: dict[str, 
         )
     else:
         resume = f"guest_bootstrap.py zone-lifecycle <same arguments>{zero} --recover-delete --execute"
-    return (
-        "the Agent kept the deletion of " + str(value.get("domain") or "the child zone")
-        + " pending (" + str(value.get("job_error_code", "")) + "): the server owner "
-        "enrolls the native BIND secondary for inspection (dns-peer-enroll --engine bind "
-        "on both guests, as the Agent's error code names), then runs " + resume
-        + "; that resumes the same request (RecoverDNSZoneV3) and never requests a second "
-        "deletion"
-    )
+    domain = str(value.get("domain") or "the child zone")
+    code = str(value.get("job_error_code") or "")
+    prefix = "the Agent kept the deletion of " + domain + " pending (" + code + "): "
+    if code == "dns_peer_enrollment_required":
+        return (
+            prefix + "the server owner enrolls the native BIND secondary for inspection "
+            "(dns-peer-enroll --engine bind on both guests, as the Agent's error code "
+            "names), then runs " + resume + "; that resumes the same request "
+            "(RecoverDNSZoneV3) and never requests a second deletion"
+        )
+    if code == "dns_peer_inspection_unknown":
+        return (
+            prefix + "the inspector exchange ran and did not produce an observation; "
+            "check the secondary's rndc key and loopback catalog transfer, then resume "
+            "with " + resume + "; that resumes the same request (RecoverDNSZoneV3) and "
+            "never requests a second deletion"
+        )
+    return prefix + "the harness has no owner step for " + (code or "this (missing) code")
 
 
 def worst_exit(*codes: int | None) -> int:
@@ -2670,14 +2696,17 @@ def run_zone_lifecycle_before_reboot(
 
     # The guest has no exit yet: it suspended after a complete pass (exit 5).
     peer = finish_fresh_primary_peer_verdict(args, plan, 0, suspended_for_lifecycle=True)
-    lifecycle, status = run_zone_lifecycle_status(args, plan) if peer == 0 else (None, None)
+    lifecycle, status, pending_value = (
+        run_zone_lifecycle_status(args, plan) if peer == 0 else (None, None, None)
+    )
     return continue_or_hold_after_lifecycle(
-        args, plan, node, identity, flags, peer, lifecycle, status, resumed=False)
+        args, plan, node, identity, flags, peer, lifecycle, status, pending_value, resumed=False)
 
 
 def continue_or_hold_after_lifecycle(
     args: argparse.Namespace, plan: dict[str, Any], node: dict[str, Any], identity: Path,
-    flags: list[str], peer: int, lifecycle: int | None, status: str | None, *, resumed: bool,
+    flags: list[str], peer: int, lifecycle: int | None, status: str | None,
+    pending_value: dict[str, Any] | None = None, *, resumed: bool,
 ) -> tuple[int, dict[str, Any]]:
     """Continue the suspended guest run with the lifecycle outcome, or hold it.
 
@@ -2685,6 +2714,11 @@ def continue_or_hold_after_lifecycle(
     stays suspended on this boot (exit 5 is still its last exit), the hold is
     recorded, and the owner's enrollment plus RESUME_HELD_LIFECYCLE_FLAG
     finish the same delete, re-add and continue this run with its reboot.
+
+    ``pending_value`` is the pending step's own trigger result (``domain``,
+    ``job_error_code``), when the caller has it; without it (a defensive
+    fallback only) the held record still names the child zone but carries no
+    code, rather than a wrong one.
     """
 
     if status == "pending":
@@ -2697,7 +2731,8 @@ def continue_or_hold_after_lifecycle(
             "zero_zones": zero_zones_selected(args), "peer_verdict_exit": peer,
             "lifecycle_exit": lifecycle, "lifecycle_status": status,
             "guest": "suspended for the zone lifecycle on the same boot; not continued",
-            "next_step": zone_lifecycle_pending_next_step(args, {"domain": ZONE_LIFECYCLE_CHILD}),
+            "next_step": zone_lifecycle_pending_next_step(
+                args, pending_value or {"domain": ZONE_LIFECYCLE_CHILD}),
         }
         if not resumed:
             write_peer_evidence(plan, ZONE_LIFECYCLE_HELD_EVIDENCE, held, execute=True,
@@ -2752,10 +2787,10 @@ def resume_held_zone_lifecycle(
     """
 
     held = read_zone_lifecycle_hold(args, plan)
-    lifecycle, status = run_zone_lifecycle_status(args, plan, recover_delete=True)
+    lifecycle, status, pending_value = run_zone_lifecycle_status(args, plan, recover_delete=True)
     return continue_or_hold_after_lifecycle(
         args, plan, node, identity, flags, held["peer_verdict_exit"], lifecycle, status,
-        resumed=True)
+        pending_value, resumed=True)
 
 
 def print_fresh_primary_lifecycle_plan(
