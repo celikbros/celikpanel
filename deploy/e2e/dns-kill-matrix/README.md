@@ -1016,7 +1016,9 @@ samples in every forward flow):
   SOA `2026083101` and `www` A `192.0.2.10` over UDP and TCP, and the native
   BIND secondary (`192.0.2.11`) answers the member **and** the catalog SOA
   exactly as the primary does (polled up to the endpoint timeout while it
-  transfers); the served catalog serial equals the state receipt's. On the
+  transfers); the served catalog serial is judged by the serial rule of the
+  check (below: before any zone publication it equals the state receipt's).
+  On the
   QEMU host `run-prepared` then runs `native_pdns_bind_peer.py observe`
   (primary catalog AXFR equals the secondary's loaded catalog, the member
   answers authoritatively and identically on both over UDP/TCP) into
@@ -1032,15 +1034,57 @@ samples in every forward flow):
   the zone's `www` A is the primary's address on the isolated peer link
   (`192.0.2.10`). Batch 8 compared the answer with `--dns-address` and failed
   seven cells whose answers were correct. Both servers, UDP and TCP, must
-  return the scenario's member SOA serial and `www` A; the catalog SOA serial
-  must be equal on both servers and equal to the state receipt's. An
-  unreadable scenario is `unknown`, never a pass. `result.fresh_primary_v3.pair`
+  return the scenario's member SOA serial and `www` A; the catalog is judged
+  by the serial rule below. An unreadable scenario is `unknown`, never a
+  pass. `result.fresh_primary_v3.pair`
   records `expected` (the scenario records and its sha256), `query_targets`
   (the address each server was queried at) and `observations` (per server and
   query: server, port, name, type and, per transport, the flags, RCODE and the
   full answer section with owner, type, TTL and RDATA as text), so expected
   versus observed can be read without the code. The same check runs after a
-  reboot.
+  reboot, with the rule that fits what happened in the cell.
+
+  *Catalog serial rules (corrected after batch 8r `c04`).* The state receipt
+  keeps the serial of the switch; the Agent treats it as a floor
+  (`cmd/agent/dns_engine_pdns.go` refuses only `serial < receipt`), and every
+  zone publication, plus the daemon's own re-stamp after a membership change,
+  raises the served serial. The caller selects the rule explicitly
+  (`run_cell.fresh_primary_serial_rule`), never by a tolerance, and
+  `result.fresh_primary_v3.pair.serial_rule` (after a reboot
+  `reboot_after_recovery.fresh_primary_pair.serial_rule`) records the rule and
+  why:
+
+  - **pre-publication** (the pass definition; an after-reboot check without a
+    zone lifecycle): the served serial equals the state receipt's on both
+    servers, UDP and TCP. A higher serial fails. Why equality is still sound
+    here (batch 8r): PowerDNS 4.9.17 re-stamped the producer a second time
+    (new `CATALOG-HASH`, serial set to the Unix time of the re-stamp, e.g.
+    1790723602 = 23:13:22Z) only at its first periodic check after the
+    lifecycle's add changed the member set (`c04` 23:13:22, `c06` 23:26:36,
+    about 60 s after the first-start re-stamp). No second re-stamp happened
+    without a membership change: `c01` served 1790722508 for 3.5 minutes
+    across a reboot of both guests (93 samples), `c05` and `c09` about a
+    minute each, `c04` after its reboot for over a minute.
+  - **post-publication** (after a zone lifecycle: the after-reboot check of the
+    lifecycle-and-reboot flow): (a) served serial >= the receipt's, a lower one
+    fails; (b) one serial, identical on UDP and TCP on the primary; (c) the
+    secondary serves the same serial within the endpoint wait (if the primary
+    itself moved during the wait, the secondary is `unknown`, not failed);
+    (d) equal to the producer's SOA serial read read-only from the primary's
+    PowerDNS database right after the DNS answer (database read, then the SOA
+    again; up to three samples one second apart; a serial that moved across
+    every sample is `unknown`); (e) the catalogs served by both servers
+    (AXFR from `192.0.2.10`, which the primary's `allow-axfr-ips` and the
+    secondary's `allow-transfer` admit) and the producer's member rows in the
+    database list exactly the zone set at that point (scenario zones plus
+    the re-added child).
+
+  Checks (b)-(e) run under both rules; `catalog.checks.{a_receipt,b_udp_tcp,
+  c_secondary,d_database,e_members}` record expected, observed and the verdict
+  of each, `database.samples` the readings with their timestamps. The
+  database is opened read-only only while PowerDNS holds it in WAL mode (both
+  `-wal` and `-shm` present), so no sidecar owned by root is ever created; the
+  two readings are as close as one process can take them, not simultaneous.
 
 Optional `--reboot-after-recovery [--disable-management-before-reboot]`
 after a passing forward flow reboots **both guests**: the host reboots the
@@ -1068,8 +1112,9 @@ combination). Defined order:
    records the port-53 authority, **disables management** (when requested)
    and asks for the reboot (checkpoint 2, exit 3);
 5. both guests reboot (secondary first); the resumed controller runs the DNS
-   checks: the pair as above **and** the child zone on both servers with the
-   serials read before the reboot, then the post-reboot window (DNS alone
+   checks: the pair as above under the **post-publication** serial rule
+   (the lifecycle published zones) **and** the child zone on both servers with
+   the serials read before the reboot, then the post-reboot window (DNS alone
    when management was disabled). On the host,
    `fresh-primary-peer/peer-verdict-after-reboot.json` requires both catalogs
    to list the member and the child and `observe-child --step re-add` to
@@ -1179,12 +1224,121 @@ requested before the reboot (handled by `run-prepared`), 64 refused before
 any mutation. The standalone `rpc-gate-probe` / `rpc-host-readiness` exit 69
 when no Agent listens on the socket.
 
+#### Zero-zone fresh paired PowerDNS primary (2026-10-01)
+
+*Offline tests only (`test_fresh_primary_serial_zero_zone.py`, the trigger's
+`pdns_fresh_primary_v3_test.go`). No zero-zone cell has run natively.*
+
+A fresh server set up through the wizard has **no zones** when it becomes the
+paired PowerDNS primary; every V3 primary cell so far carried `s1-kill.test`.
+The product fix for the zero-member catalog check (`8a548090`,
+`cmd/agent/dns_engine_pdns_catalog.go`) has component tests only. The
+variant is selected by one flag, the same on every host command:
+`prepare-pdns-switch --zero-zones` writes the scenario with `"zones": []`
+(same identity otherwise, so its own manifest qualifier); `run-prepared` and
+`zone-lifecycle` take `--zero-zones` too and first read the guest's published
+scenario (read-only) and refuse when the flag does not match it. On the
+guest, `prepare-pdns-switch` accepts the empty primary scenario and writes the
+catalog SOA (`catalog-c000020a.celikpanel.invalid SOA`) as the measured DNS
+name and type of the controller argv and the source proof, because the
+catalog is the only zone the primary will serve. The controller derives the
+zone set from the scenario it publishes and refuses, before any mutation, a
+measured name that does not fit it.
+
+What changes in zero-zone mode (nothing changes for the one-member scenario):
+
+- pair check: no member query; the catalog is judged by the serial rules
+  above with the expected member set `[]` (after the lifecycle:
+  `["s2.s1-kill.test"]`): pre-publication for the pass definition and for a
+  reboot without the lifecycle, post-publication after the lifecycle;
+- forward (post-start) judgement: a state receipt with the staged serial 1 is
+  recorded (`catalog_restamp.zero_zone_restamp`), not failed, because whether
+  PowerDNS re-stamps a producer without members at first start is the open
+  question; the served serial must still equal the state's. The pair check's
+  `database` reading records the `CATALOG-HASH` metadata and serial;
+- zone lifecycle: `add` creates the server's **first** zone (the child
+  `s2.s1-kill.test`, no served parent), `delete` returns both catalogs to zero
+  members, and both servers must then **refuse** the child (`REFUSED`), not
+  answer an authoritative NXDOMAIN (no parent zone exists);
+  `native_pdns_bind_peer.py observe --zero-zones` requires both catalogs to be
+  exactly SOA, NS `invalid.`, `version` TXT "2" and no member PTR, and the
+  catalog SOA equal on both servers over UDP and TCP;
+- owner SQL edit: there is no member zone, so the row
+  `owner-note.catalog-c000020a.celikpanel.invalid TXT "edited by the server
+  owner (dns-kill-matrix <request id>)"` goes into the catalog producer zone,
+  the only zone the install wrote;
+- trigger: `rpc-gate-probe` and `rpc-pdns-primary-zone-v3[-recover]` accepted
+  only the one-member scenario and refused the empty one; they now accept
+  both (`freshPairedPrimaryScenario`), and the lifecycle's source check admits
+  a zero-zone state whose catalog serial is 1 (unmeasured re-stamp); the
+  one-member scenario keeps its `> 1` floor. `rpc-switch`/`rpc-retry`
+  already accepted zero zones.
+
+Launch (same host prerequisites as the block above; one fresh fixture per
+cell; `z02`, `z05` and `z06` share a cell ID, so each needs its own work root):
+
+```sh
+KEY=$HOME/.ssh/id_ed25519
+zero_cell() {  # $1 work root, $2 cell ID: fixture, both guests, zero-zone scenario
+  ROOT=$1 CELL=$2
+  COMMON=(--work-root "$ROOT" --cell-id "$CELL" --node debian13 \
+          --identity-file "$KEY" --source-fixture uninitialized)
+  PEER=(--work-root "$ROOT" --cell-id "$CELL" --identity-file "$KEY" \
+        --source-fixture uninitialized)
+  python3 "$FIXTURE" prepare --work-root "$ROOT" --cell-id "$CELL" --ssh-public-key "$KEY.pub" --execute
+  python3 "$FIXTURE" start --work-root "$ROOT" --cell-id "$CELL" --execute
+  python3 "$FIXTURE" wait-ssh --work-root "$ROOT" --cell-id "$CELL" --identity-file "$KEY" --execute
+  python3 "$BOOTSTRAP" install "${COMMON[@]}" --agent "$ART/agent" \
+    --tagged-agent "$ART/agent.kill" --panel "$ART/panel" \
+    --trigger "$ART/dns-kill-trigger" --web-dir "$PWD/web/dist" --execute
+  python3 deploy/e2e/dns-kill-matrix/native_pdns_bind_peer.py prepare "${PEER[@]}" --execute
+  python3 "$BOOTSTRAP" prepare-pdns-switch "${COMMON[@]}" --zero-zones --execute
+}
+# z01 pre-start: target-staged after-write (PowerDNS never started)
+zero_cell /var/tmp/cp-zero/r1 pdns-switch__target-staged__after-write__paired-primary__peer-reachable
+python3 "$BOOTSTRAP" run-prepared "${COMMON[@]}" --zero-zones --execute
+# z02 post-start: target-started after-write
+zero_cell /var/tmp/cp-zero/r1 pdns-switch__target-started__after-write__paired-primary__peer-reachable
+python3 "$BOOTSTRAP" run-prepared "${COMMON[@]}" --zero-zones --execute
+# z03 post-start: committed after-write
+zero_cell /var/tmp/cp-zero/r1 pdns-switch__committed__after-write__paired-primary__peer-reachable
+python3 "$BOOTSTRAP" run-prepared "${COMMON[@]}" --zero-zones --execute
+# z04 committed after-write + zone lifecycle (add = the server's first zone)
+zero_cell /var/tmp/cp-zero/r2 pdns-switch__committed__after-write__paired-primary__peer-reachable
+python3 "$BOOTSTRAP" run-prepared "${COMMON[@]}" --zero-zones --zone-lifecycle --execute
+# z05 target-started after-write + zone lifecycle, then management disabled and both guests rebooted
+zero_cell /var/tmp/cp-zero/r2 pdns-switch__target-started__after-write__paired-primary__peer-reachable
+python3 "$BOOTSTRAP" run-prepared "${COMMON[@]}" --zero-zones --zone-lifecycle \
+  --reboot-after-recovery --disable-management-before-reboot --execute
+# z06 owner SQL edit after the start: target-started after-write
+zero_cell /var/tmp/cp-zero/r3 pdns-switch__target-started__after-write__paired-primary__peer-reachable
+python3 "$BOOTSTRAP" run-prepared "${COMMON[@]}" --zero-zones --owner-edit sql --execute
+# If the Agent keeps the parentless delete pending (dns_peer_enrollment_required),
+# the lifecycle stops with that code; after the owner's enrollment:
+#   python3 "$BOOTSTRAP" zone-lifecycle "${COMMON[@]}" --zero-zones --recover-delete --execute
+```
+
+What each proves if it passes, and what it does not prove:
+
+| Cell | Proves | Does not prove |
+| --- | --- | --- |
+| `z01` | the restarted Agent rolls a zero-zone install back by itself to the pre-install state (unit at its frozen standby, no database, candidate or receipt, configuration at its preimage), then the same request converges forward and the pair check passes with an empty catalog on both servers | any start-up behaviour of PowerDNS before the cut (it never started) |
+| `z02` | forward completion of a zero-zone install cut right after the first start: V3 state for this request, MainPID unchanged, served catalog serial = state's; the forward judgement records whether the daemon re-stamped and wrote `CATALOG-HASH` with zero members (`catalog_restamp.zero_zone_restamp`, `pair.database.database.metadata`); the native BIND secondary loads and serves an empty catalog (SOA, NS, `version`, no PTR) | that the re-stamp behaviour is the same on other PowerDNS builds; a cut between the start and the daemon's hash write |
+| `z03` | the same at the last forward phase (`committed`) | anything about pre-start cuts |
+| `z04` | the lifecycle through the public zone RPCs when the add creates the server's first zone and the delete returns to zero members; post-publication catalog on both servers after each step | the after-reboot state; a parentless delete finished by the owner enrollment unless the Agent kept it pending and the owner ran it |
+| `z05` | the post-publication serial rule after a management-disabled reboot of both guests with the re-added child as the only zone; DNS served without the Panel and Agent | power loss (the reboot is orderly); a pending delete stops the lifecycle before the reboot, so the reboot then does not run in that invocation |
+| `z06` | the Agent refuses a zero-zone install whose database holds a row the install did not write (in the catalog producer zone) and holds only DNS | how the Agent treats an owner's own separate zone (not exercised) |
+
+None of these passes a register row; they are exploratory until the zero-zone
+product fix and the gate are native-tested on the build under test.
+
 Run the offline guest checks with:
 
 ```sh
 python3 deploy/e2e/dns-kill-matrix/test_guest_bootstrap.py
 python3 deploy/e2e/dns-kill-matrix/test_guest_recovery_probe.py
 python3 deploy/e2e/dns-kill-matrix/test_fresh_primary_v3.py
+python3 deploy/e2e/dns-kill-matrix/test_fresh_primary_serial_zero_zone.py
 ```
 
 The base images are immutable, but Debian/Arch package repositories are not

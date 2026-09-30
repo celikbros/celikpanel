@@ -19,6 +19,12 @@ AGENT_SOCKET=/run/celikpanel/agent.sock
 COORDINATOR_STOP_PROOF=$FIXTURE_DIR/coordinator-stop-proof.json
 TOKEN_FILE=/etc/celikpanel/agent.token
 SCENARIO_FILE=$FIXTURE_DIR/scenario.json
+# The name/type the controller samples and the source proof names. Empty: the
+# member www.s1-kill.test A. A zero-zone fresh paired PowerDNS primary serves
+# only its catalog, so prepare_fresh_pdns_source sets the catalog SOA.
+MEASURED_DNS_NAME=
+MEASURED_DNS_TYPE=
+ZERO_ZONE_PRIMARY_CATALOG=catalog-c000020a.celikpanel.invalid
 SOURCE_SETUP_FILE=$FIXTURE_DIR/source-setup-pdns.json
 SOURCE_SETUP_BIND_FILE=$FIXTURE_DIR/source-setup-bind.json
 SOURCE_SETUP_BIND_IDENTITY=$FIXTURE_DIR/source-setup-bind-identity.json
@@ -1937,7 +1943,8 @@ write_source_proof() {
     local source_adoption_path=absent source_adoption_sha=absent
     local external_pdns_preimage_path=absent external_pdns_preimage_sha=absent
     local source_normalization_path=absent source_normalization_sha=absent
-    local authoritative_name=www.s1-kill.test
+    local authoritative_name=${MEASURED_DNS_NAME:-www.s1-kill.test}
+    local authoritative_type=${MEASURED_DNS_TYPE:-A}
     [[ $source_fixture == owner-bind ]] && authoritative_name=www.owner.test
     local measured_scenario_sha
     measured_scenario_sha=$(sha256sum "$SCENARIO_FILE" | cut -d' ' -f1)
@@ -2020,6 +2027,7 @@ write_source_proof() {
     temporary=$(mktemp "$FIXTURE_DIR/.source-proof.XXXXXXXX")
     chmod 0600 "$temporary"
     SOURCE_FIXTURE=$source_fixture CELL_ID=$cell_id ADDRESS=$address AUTH_NAME=$authoritative_name \
+    AUTH_TYPE=$authoritative_type \
     SOURCE_REVISION=$source_revision STATE_SHA=$state_sha STATE_JSON=$state_json \
     STATE_PATH=$state_path \
     SERVING=$serving ENGINE=$engine EPOCH=$epoch \
@@ -2051,7 +2059,7 @@ value = {
         "address": os.environ["ADDRESS"],
         "port": 53,
         "name": os.environ["AUTH_NAME"],
-        "type": "A",
+        "type": os.environ.get("AUTH_TYPE", "A"),
         "udp": os.environ["SERVING"] == "true",
         "tcp": os.environ["SERVING"] == "true",
     },
@@ -2111,9 +2119,11 @@ write_controller_argv() {
     nonce=$(printf '%s\0fault-nonce' "$cell_id" | sha256sum | cut -c1-64)
     temporary=$(mktemp "$FIXTURE_DIR/.controller-argv.XXXXXXXX")
     chmod 0600 "$temporary"
-    local measured_dns_name=www.s1-kill.test
+    local measured_dns_name=${MEASURED_DNS_NAME:-www.s1-kill.test}
+    local measured_dns_type=${MEASURED_DNS_TYPE:-A}
     [[ $source_fixture == owner-bind ]] && measured_dns_name=www.owner.test
-    CELL_ID=$cell_id DNS_ADDRESS=$address DNS_NAME=$measured_dns_name REQUEST_ID=$request_id NONCE=$nonce \
+    CELL_ID=$cell_id DNS_ADDRESS=$address DNS_NAME=$measured_dns_name DNS_TYPE=$measured_dns_type \
+    REQUEST_ID=$request_id NONCE=$nonce \
     RESULT_DIR=$result_dir python3 - "$temporary" <<'PY'
 import json, os, sys
 
@@ -2169,7 +2179,7 @@ argv = [
     "--dns-address", os.environ["DNS_ADDRESS"],
     "--dns-port", "53",
     "--dns-name", os.environ.get("DNS_NAME", "www.s1-kill.test"),
-    "--dns-type", "A",
+    "--dns-type", os.environ.get("DNS_TYPE", "A"),
     "--panel-address", "127.0.0.1",
     "--panel-port", "2083",
     "--startup-timeout", "60",
@@ -2410,10 +2420,19 @@ if role == "secondary":
     if zones != []:
         raise SystemExit("a fresh PowerDNS secondary holds no local zones")
     raise SystemExit(0)
+if role == "primary" and zones == []:
+    # Zero-zone fresh paired primary (guest_bootstrap.py --zero-zones).
+    raise SystemExit(0)
 zone_type = "MASTER" if role == "primary" else "NATIVE"
 if not isinstance(zones, list) or len(zones) != 1 or zones[0].get("domain") != "s1-kill.test" or zones[0].get("zone_type") != zone_type or zones[0].get("delete") is not False:
     raise SystemExit(f"fresh PowerDNS {role} requires one {zone_type} member")
 PYFRESHPDNS
+    if [[ $fresh_role == primary ]] &&
+        python3 -c 'import json,sys; sys.exit(0 if json.load(open(sys.argv[1], encoding="utf-8"))["zones"] == [] else 1)' "$SCENARIO_FILE"; then
+        # Zero-zone primary: the only zone it will serve is its catalog.
+        MEASURED_DNS_NAME=$ZERO_ZONE_PRIMARY_CATALOG
+        MEASURED_DNS_TYPE=SOA
+    fi
     install -d -m 0700 -o root -g root "$MEASURED_IDENTITY_DIR"
     [[ ! -e $MEASURED_IDENTITY && ! -L $MEASURED_IDENTITY ]] ||
         die "measured trigger identity receipt must not preexist"
@@ -2437,9 +2456,10 @@ PYFRESHPDNS
     remove_verified_stale_agent_socket "$agent_stop_evidence" "$panel_stop_evidence"
     assert_no_source_engine "$address"
     sync -f "$SCENARIO_FILE" "$SOURCE_PROOF_FILE" "$COORDINATOR_STOP_PROOF" "$FIXTURE_DIR" "$STATE_DIR"
-    printf '{"scenario":"%s","source_proof":"%s","coordinator_stop_proof":"%s","controller_argv":"%s","dns_address":"%s","dns_name":"www.s1-kill.test","controller_identity":"root:celikpanel"}\n' \
+    printf '{"scenario":"%s","source_proof":"%s","coordinator_stop_proof":"%s","controller_argv":"%s","dns_address":"%s","dns_name":"%s","dns_type":"%s","controller_identity":"root:celikpanel"}\n' \
         "$SCENARIO_FILE" "$SOURCE_PROOF_FILE" "$COORDINATOR_STOP_PROOF" \
-        "$FIXTURE_DIR/controller-argv.json" "$address"
+        "$FIXTURE_DIR/controller-argv.json" "$address" \
+        "${MEASURED_DNS_NAME:-www.s1-kill.test}" "${MEASURED_DNS_TYPE:-A}"
 }
 
 prepare_pdns_switch() {

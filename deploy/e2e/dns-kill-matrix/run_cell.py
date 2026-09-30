@@ -1127,6 +1127,48 @@ FRESH_PRIMARY_V3_NATIVE_CATALOG = "pdns-fresh-paired-primary/debian-4.9/v1"
 FRESH_PRIMARY_V3_CHILD_ZONE = "s2.s1-kill.test"
 FRESH_PRIMARY_V3_CHILD_QUERY = "www.s2.s1-kill.test"
 FRESH_PRIMARY_V3_CHILD_AFTER_LIFECYCLE = {"soa_serial": [2026092803], "www_a": ["192.0.2.10"]}
+# The primary's own address on the isolated peer link. The primary admits a
+# catalog AXFR from it (allow-axfr-ips = local, peer: cmd/agent
+# dns_cluster_rpc.go dnsDirectionalClusterConfig) and the native BIND
+# secondary allows the catalog transfer to it (native_pdns_bind_peer.py
+# secondary_config), so the controller reads both served member lists there.
+FRESH_PRIMARY_V3_LOCAL_IP = "192.0.2.10"
+# Zone set of the prepared scenario. "scenario-member": the one MASTER member
+# s1-kill.test (every V3 primary cell before 2026-10-01). "empty": the
+# zero-zone variant (guest_bootstrap.py prepare-pdns-switch --zero-zones),
+# "zones": [] as a new server installs it through the setup wizard; the only
+# zone the primary serves is its catalog, so the controller's measured DNS
+# name/type (and the source proof's) is the catalog SOA.
+FRESH_PRIMARY_ZONE_SET_MEMBER = "scenario-member"
+FRESH_PRIMARY_ZONE_SET_EMPTY = "empty"
+# Served catalog serial rules of the pair check, selected explicitly by what
+# happened in the cell (never by a tolerance):
+#   pre-publication: no zone was published in this cell: the served serial
+#     equals the state receipt's on both servers (UDP and TCP).
+#   post-publication: a zone publication happened (the zone lifecycle): the
+#     receipt keeps the switch-time serial and the Agent treats it as a floor
+#     (cmd/agent/dns_engine_pdns.go refuses only serial < receipt), so the
+#     served serial must be >= the receipt, equal on UDP/TCP, equal on the
+#     secondary, equal to the producer SOA in the primary's database, and the
+#     catalog must list exactly the expected zone set.
+FRESH_PRIMARY_SERIAL_RULE_PRE = "pre-publication"
+FRESH_PRIMARY_SERIAL_RULE_POST = "post-publication"
+# Why the pre-publication rule stays equality (batch 8r, 2026-10-01): the
+# PowerDNS 4.9.17 daemon re-stamps the producer (new CATALOG-HASH, serial set
+# to the current Unix time) only when the stored hash no longer matches the
+# member set; it checks about every 60 s. Both observed second re-stamps came
+# at the first check after the lifecycle's add (c04 23:13:22, c06 23:26:36),
+# and none happened in any cell without a membership change: c01 kept
+# 1790722508 for 3.5 minutes across a reboot of both guests, c05 and c09 for
+# about a minute, and c04 after its reboot for over a minute.
+FRESH_PRIMARY_SERIAL_RULE_EVIDENCE = (
+    "batch8r-pdns-primary-20261001: second CATALOG-HASH re-stamps only after the "
+    "lifecycle's membership change (c04, c06); none without one (c01 3.5 min across a "
+    "reboot, c05, c09; c04 after its reboot)"
+)
+# Bounded retries of the primary's DNS + database reading when the served
+# serial moves between the two reads.
+FRESH_PRIMARY_DATABASE_SAMPLES = 3
 # Before the measured BeginServiceMutation: wait (read-only) until the Agent's
 # own advisory readiness (Agent.ServiceMutationReadiness, the idle check that
 # BeginServiceMutation repeats) reports the host idle.
@@ -1155,7 +1197,10 @@ RESTART_BEFORE_SWITCH_COMMIT = "agent_restarted_before_dns_engine_switch_commit"
 #   config: appends FRESH_PRIMARY_V3_CONFIG_EDIT_LINE (one comment line) to the
 #           owner's /etc/powerdns/pdns.conf, in place, keeping mode and owner;
 #   sql:    inserts FRESH_PRIMARY_V3_SQL_EDIT (one TXT record of the member
-#           zone) into the live /var/lib/powerdns/pdns.sqlite3.
+#           zone) into the live /var/lib/powerdns/pdns.sqlite3; with the
+#           zero-zone scenario there is no member, so the row is
+#           FRESH_PRIMARY_V3_ZERO_ZONE_SQL_EDIT, one TXT record in the
+#           product-written catalog producer zone (the only zone there is).
 FRESH_PRIMARY_V3_CONFIG_EDIT_PATH = "/etc/powerdns/pdns.conf"
 FRESH_PRIMARY_V3_CONFIG_EDIT_LINE = (
     "# owner note: edited by the server owner during an interrupted install "
@@ -1166,6 +1211,10 @@ FRESH_PRIMARY_V3_SQL_EDIT = {
     "type": "TXT",
     "content": '"edited by the server owner (dns-kill-matrix {request_id})"',
     "ttl": 300,
+}
+FRESH_PRIMARY_V3_ZERO_ZONE_SQL_EDIT = {
+    **FRESH_PRIMARY_V3_SQL_EDIT,
+    "name": "owner-note." + FRESH_PRIMARY_V3_CATALOG,
 }
 OWNER_EDIT_KINDS = ("config", "sql")
 
@@ -9943,12 +9992,16 @@ def _verify_after_recovery_reboot(
     unknown.extend(management["unknown"])
     if is_fresh_primary_v3_cell(settings.cell):
         # Both guests rebooted: the native BIND secondary must again serve
-        # the member and catalog with this primary's data.
-        pair = check_fresh_primary_pair(settings)
+        # the member and catalog with this primary's data. After the zone
+        # lifecycle (a zone publication in this cell) the post-publication
+        # serial rule applies; otherwise served == receipt.
+        lifecycle = state.get("zone_lifecycle")
+        pair = check_fresh_primary_pair(
+            settings, serial_rule=fresh_primary_serial_rule(
+                lifecycle if isinstance(lifecycle, dict) else None))
         report["fresh_primary_pair"] = pair
         failures.extend(f"after reboot: pair: {item}" for item in pair["failures"])
         unknown.extend(f"after reboot: pair: {item}" for item in pair["unknown"])
-        lifecycle = state.get("zone_lifecycle")
         if isinstance(lifecycle, dict) and lifecycle.get("outcome") == "passed":
             # The zone set as it stands after the lifecycle: the re-added
             # child on both servers, as read before the reboot.
@@ -11943,12 +11996,31 @@ def judge_fresh_primary_forward(
         "served": served,
         "restamped": isinstance(state_serial, int) and state_serial > 1,
     }
+    zone_set = fresh_primary_zone_set_or_member(settings)
+    report["catalog_restamp"]["zone_set"] = zone_set
     if isinstance(state_serial, int):
         if primary_serial != [state_serial]:
             report["failures"].append(
                 f"the primary serves catalog serial {primary_serial}, the state records {state_serial}")
-        if state_serial <= 1:
+        if state_serial <= 1 and zone_set == FRESH_PRIMARY_ZONE_SET_EMPTY:
+            # Not measured before: whether PowerDNS 4.9 hashes and re-stamps a
+            # producer with zero members at first start. Recorded, not judged;
+            # the served serial must still equal the state's (above).
+            report["catalog_restamp"]["zero_zone_restamp"] = {
+                "judged": False,
+                "restamped": False,
+                "note": (
+                    "zero-zone primary: the state records the staged catalog serial; the "
+                    "daemon did not re-stamp a producer without members at first start"
+                ),
+            }
+        elif state_serial <= 1:
             report["failures"].append("the state records the staged catalog serial, not the daemon's")
+        elif zone_set == FRESH_PRIMARY_ZONE_SET_EMPTY:
+            report["catalog_restamp"]["zero_zone_restamp"] = {
+                "judged": False, "restamped": True,
+                "note": "zero-zone primary: the daemon re-stamped a producer without members",
+            }
     return report
 
 
@@ -12031,13 +12103,90 @@ def observe_fresh_primary_restart(
     return report
 
 
+def fresh_primary_zone_set_of_scenario(scenario: Mapping[str, Any]) -> str:
+    """The prepared scenario's zone set (pure): "empty" or "scenario-member".
+
+    "empty" only for an explicit empty list (the zero-zone variant); every
+    other shape is judged as the one-member scenario, whose own checks then
+    refuse anything but exactly one published s1-kill.test.
+    """
+
+    zones = scenario.get("zones")
+    if isinstance(zones, list) and not zones:
+        return FRESH_PRIMARY_ZONE_SET_EMPTY
+    return FRESH_PRIMARY_ZONE_SET_MEMBER
+
+
+def fresh_primary_zone_set(settings: Settings) -> str:
+    """Zone set of the scenario document this cell publishes (raises if unreadable)."""
+
+    if settings.trigger_command is None:
+        raise ControllerError("the fresh primary zone set needs the socket trigger's scenario")
+    path = socket_trigger_retry_contract(
+        settings.trigger_command, settings.recovery_command)["scenario_path"]
+    scenario, _ = validate_source_scenario(path, settings.cell)
+    return fresh_primary_zone_set_of_scenario(scenario)
+
+
+def fresh_primary_zone_set_or_member(settings: Settings) -> str:
+    """As fresh_primary_zone_set; an unreadable scenario keeps the strict
+    one-member judgement (the pair check reports the unreadable scenario)."""
+
+    try:
+        return fresh_primary_zone_set(settings)
+    except (ControllerError, OSError):
+        return FRESH_PRIMARY_ZONE_SET_MEMBER
+
+
+def validate_fresh_primary_zone_set(settings: Settings) -> str | None:
+    """Before any mutation: the measured DNS name/type fit the scenario's zone set.
+
+    A zero-zone primary serves only its catalog, so its controller must sample
+    the catalog SOA (the prepared argv and source proof do); a one-member
+    scenario keeps its prepared name. Returns None for other cells.
+    """
+
+    if not is_fresh_primary_v3_cell(settings.cell):
+        return None
+    zone_set = fresh_primary_zone_set(settings)
+    if zone_set == FRESH_PRIMARY_ZONE_SET_EMPTY and (
+        settings.dns_name.rstrip(".").lower() != FRESH_PRIMARY_V3_CATALOG
+        or settings.dns_type != "SOA"
+    ):
+        raise ControllerError(
+            "the zero-zone fresh primary serves only its catalog: the measured DNS name and "
+            f"type must be {FRESH_PRIMARY_V3_CATALOG} SOA (guest_bootstrap.py "
+            "prepare-pdns-switch --zero-zones writes them), not "
+            f"{settings.dns_name} {settings.dns_type}. Nothing was started"
+        )
+    if zone_set == FRESH_PRIMARY_ZONE_SET_MEMBER and (
+        settings.dns_name.rstrip(".").lower() == FRESH_PRIMARY_V3_CATALOG
+    ):
+        raise ControllerError(
+            "the scenario publishes a member zone but the controller samples the catalog; "
+            "prepare the cell again. Nothing was started"
+        )
+    return zone_set
+
+
 def fresh_primary_expected_pair(scenario: Mapping[str, Any]) -> dict[str, Any]:
     """The member records the prepared scenario publishes (pure).
 
     The pass definition compares both servers' answers with these records;
     --dns-address is only where the controller sends the primary's queries.
+    The zero-zone scenario ("zones": []) publishes no member: only the
+    catalog is judged, and it must list no zone.
     """
 
+    if fresh_primary_zone_set_of_scenario(scenario) == FRESH_PRIMARY_ZONE_SET_EMPTY:
+        return {
+            "source": "scenario zones (an explicit empty list: the zero-zone variant)",
+            "zone_set": FRESH_PRIMARY_ZONE_SET_EMPTY,
+            "member_soa": None,
+            "www_a": None,
+            "records": [],
+            "catalog_members": [],
+        }
     zones = [
         zone for zone in scenario.get("zones") or []
         if isinstance(zone, dict) and zone.get("domain") == PAIRED_SECONDARY_ZONE
@@ -12067,14 +12216,21 @@ def fresh_primary_expected_pair(scenario: Mapping[str, Any]) -> dict[str, Any]:
         addresses = sorted(str(ipaddress.IPv4Address(str(item.get("content")))) for item in www)
     except (IndexError, ValueError) as exc:
         raise ControllerError(f"the scenario's member records are not exact: {exc}") from exc
+    members = sorted({
+        str(zone.get("domain", "")).rstrip(".").lower()
+        for zone in scenario.get("zones") or []
+        if isinstance(zone, dict) and zone.get("delete") is not True
+    })
     return {
         "source": f"scenario zones[domain={PAIRED_SECONDARY_ZONE}].records",
+        "zone_set": FRESH_PRIMARY_ZONE_SET_MEMBER,
         "member_soa": [serial],
         "www_a": addresses,
         "records": [
             {key: record.get(key) for key in ("name", "type", "content", "ttl")}
             for record in soa + www
         ],
+        "catalog_members": members,
     }
 
 
@@ -12091,10 +12247,13 @@ def load_fresh_primary_expected_pair(settings: Settings) -> dict[str, Any]:
     return expected
 
 
+FRESH_PRIMARY_CATALOG_QUERIES = (
+    ("catalog_soa", FRESH_PRIMARY_V3_CATALOG, "SOA"),
+)
 FRESH_PRIMARY_PAIR_QUERIES = (
     ("member_soa", PAIRED_SECONDARY_ZONE, "SOA"),
     ("www_a", PAIRED_SECONDARY_QUERY, "A"),
-    ("catalog_soa", FRESH_PRIMARY_V3_CATALOG, "SOA"),
+    *FRESH_PRIMARY_CATALOG_QUERIES,
 )
 
 
@@ -12108,24 +12267,404 @@ def _server_values(observed: Mapping[str, Any]) -> dict[str, dict[str, list[Any]
     return {label: observation_values(item) for label, item in observed.items()}
 
 
-def check_fresh_primary_pair(
-    settings: Settings, expected: Mapping[str, Any] | None = None
+def fresh_primary_serial_rule(zone_lifecycle: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """The catalog-serial rule of a pair check, chosen by what happened in the cell.
+
+    Explicit, never a tolerance: without a zone publication in this cell the
+    pre-publication rule (served == receipt) applies; after the zone
+    lifecycle (the only zone publication these cells make) the
+    post-publication rule applies, and the expected zone set gains the
+    lifecycle's re-added child when the lifecycle passed.
+    """
+
+    if zone_lifecycle is None:
+        return {
+            "rule": FRESH_PRIMARY_SERIAL_RULE_PRE,
+            "zone_publication": False,
+            "catalog_members_added": [],
+            "reason": (
+                "no zone was published in this cell, so the served catalog serial must equal "
+                "the state receipt's. The daemon's own later re-stamp was observed only after "
+                "a catalog membership change, never without one: "
+                + FRESH_PRIMARY_SERIAL_RULE_EVIDENCE
+            ),
+        }
+    outcome = zone_lifecycle.get("outcome")
+    return {
+        "rule": FRESH_PRIMARY_SERIAL_RULE_POST,
+        "zone_publication": True,
+        "zone_lifecycle_outcome": outcome,
+        "catalog_members_added": [FRESH_PRIMARY_V3_CHILD_ZONE] if outcome == "passed" else None,
+        "reason": (
+            "the zone lifecycle published zones in this cell: each publication raises the "
+            "producer serial and the daemon re-stamps after a membership change, while the "
+            "state receipt keeps the switch-time serial, which the Agent treats as a floor "
+            "(cmd/agent/dns_engine_pdns.go refuses only serial < receipt; "
+            "docs/DNS-ENGINE-ARTIFACT.md 'Catalog the primary publishes')"
+        ),
+    }
+
+
+def fresh_primary_expected_members(
+    expected: Mapping[str, Any] | None, rule: Mapping[str, Any]
+) -> list[str] | None:
+    """The catalog member set expected at this check (None: not established)."""
+
+    if expected is None or not isinstance(expected.get("catalog_members"), list):
+        return None
+    added = rule.get("catalog_members_added")
+    if added is None:
+        return None
+    return sorted(set(expected["catalog_members"]) | set(added))
+
+
+def _dns_text_strings(message: bytes, offset: int, length: int) -> list[str]:
+    strings: list[str] = []
+    cursor, end = offset, offset + length
+    while cursor < end:
+        size = message[cursor]
+        cursor += 1
+        if cursor + size > end:
+            raise ControllerError("TXT character-string is truncated")
+        strings.append(message[cursor:cursor + size].decode("ascii", errors="replace"))
+        cursor += size
+    return strings
+
+
+def parse_transfer_message(raw: bytes, transaction_id: int) -> list[tuple[str, str, Any]]:
+    """Answer records of one zone-transfer message: (owner, type, data)."""
+
+    if len(raw) < 12:
+        raise ControllerError("zone transfer message is truncated")
+    response_id, flags, questions, answers, _authority, _additional = struct.unpack(
+        "!HHHHHH", raw[:12])
+    if response_id != transaction_id or flags & 0x8000 == 0:
+        raise ControllerError("zone transfer message is not the reply to this request")
+    if flags & 0x000F:
+        raise ControllerError(f"zone transfer refused: RCODE {flags & 0x000F}")
+    offset = 12
+    for _ in range(questions):
+        offset = _skip_dns_name(raw, offset) + 4
+    records: list[tuple[str, str, Any]] = []
+    for _ in range(answers):
+        owner, offset = _read_dns_name(raw, offset)
+        if offset + 10 > len(raw):
+            raise ControllerError("zone transfer record is truncated")
+        rtype, _rclass, _ttl, length = struct.unpack("!HHIH", raw[offset:offset + 10])
+        offset += 10
+        if offset + length > len(raw):
+            raise ControllerError("zone transfer record data is truncated")
+        if rtype == DNS_TYPES["SOA"]:
+            data: Any = _dns_rdata_text(raw, offset, length, rtype)
+            kind = "SOA"
+        elif rtype == 12:
+            data, kind = _read_dns_name(raw, offset)[0], "PTR"
+        elif rtype == 16:
+            data, kind = _dns_text_strings(raw, offset, length), "TXT"
+        elif rtype == DNS_TYPES["NS"]:
+            data, kind = _read_dns_name(raw, offset)[0], "NS"
+        else:
+            data, kind = raw[offset:offset + length].hex(), DNS_TYPE_NAMES.get(rtype, f"TYPE{rtype}")
+        records.append((owner.lower(), kind, data))
+        offset += length
+    return records
+
+
+def judge_catalog_transfer(
+    records: Sequence[tuple[str, str, Any]], catalog: str
 ) -> dict[str, Any]:
-    """Both servers answer the scenario's member records (UDP and TCP).
+    """A served catalog zone (pure): SOA framing, NS, version TXT, member PTRs.
+
+    An empty catalog is exactly SOA, NS invalid., version TXT "2" and no PTR.
+    """
+
+    apex = catalog.rstrip(".").lower() + "."
+    if len(records) < 2 or records[0][:2] != (apex, "SOA") or records[-1][:2] != (apex, "SOA") \
+            or records[0][2] != records[-1][2]:
+        raise ControllerError("catalog transfer SOA framing differs")
+    fields = str(records[0][2]).split()
+    serial = int(fields[2])
+    members: list[str] = []
+    counts = {"NS": 0, "TXT": 0}
+    for owner, kind, data in records[1:-1]:
+        if kind == "NS" and owner == apex and data == "invalid.":
+            counts["NS"] += 1
+        elif kind == "TXT" and owner == "version." + apex and data == ["2"]:
+            counts["TXT"] += 1
+        elif kind == "PTR" and owner.endswith(".zones." + apex):
+            member = str(data).rstrip(".").lower()
+            if not member or member in members:
+                raise ControllerError(f"catalog transfer lists member {data!r} twice or empty")
+            members.append(member)
+        else:
+            raise ControllerError(f"catalog transfer has an unexpected record {owner} {kind}")
+    if counts != {"NS": 1, "TXT": 1}:
+        raise ControllerError(f"catalog transfer required records differ: {counts}")
+    return {"soa": records[0][2], "serial": serial, "members": sorted(members),
+            "record_count": len(records)}
+
+
+def transfer_fresh_primary_catalog(address: str, timeout: float) -> dict[str, Any]:
+    """AXFR of the catalog from ``address`` over TCP (read only)."""
+
+    transaction_id = secrets.randbelow(65535) + 1
+    query = (struct.pack("!HHHHHH", transaction_id, 0, 1, 0, 0, 0)
+             + encode_dns_name(FRESH_PRIMARY_V3_CATALOG) + struct.pack("!HH", 252, 1))
+    records: list[tuple[str, str, Any]] = []
+    apex = FRESH_PRIMARY_V3_CATALOG + "."
+    with socket.create_connection((address, 53), timeout=timeout) as tcp:
+        tcp.settimeout(timeout)
+        tcp.sendall(struct.pack("!H", len(query)) + query)
+        for _ in range(64):
+            length = struct.unpack("!H", _recv_exact(tcp, 2))[0]
+            records.extend(parse_transfer_message(_recv_exact(tcp, length), transaction_id))
+            if sum(1 for owner, kind, _ in records if (owner, kind) == (apex, "SOA")) >= 2:
+                break
+        else:
+            raise ControllerError("catalog transfer did not end within 64 messages")
+    return {"server": address, "read_at": utc_now(),
+            **judge_catalog_transfer(records, FRESH_PRIMARY_V3_CATALOG)}
+
+
+def read_fresh_primary_catalog_database(path: str | None = None) -> dict[str, Any]:
+    """The producer row, SOA serial, members and metadata (SQLite, read only).
+
+    Opened only while PowerDNS holds the database in WAL mode (both sidecars
+    present): a read-only connection may otherwise create a sidecar owned by
+    root, which the daemon could not open.
+    """
+
+    path = path or PDNS_DATABASE_PATH
+    for suffix in ("-wal", "-shm"):
+        if not os.path.isfile(path + suffix) or os.path.islink(path + suffix):
+            raise ControllerError(
+                f"{path}{suffix} is absent: the database is not opened, so that no sidecar "
+                "is created")
+    connection = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=5)
+    try:
+        connection.execute("PRAGMA query_only=ON")
+        producer = connection.execute(
+            "SELECT id, type, notified_serial FROM domains WHERE name = ? COLLATE NOCASE",
+            (FRESH_PRIMARY_V3_CATALOG,)).fetchall()
+        if len(producer) != 1:
+            raise ControllerError(f"the catalog has {len(producer)} producer rows")
+        domain_id, kind, notified = producer[0]
+        soa = connection.execute(
+            "SELECT content FROM records WHERE domain_id = ? AND type = 'SOA'",
+            (domain_id,)).fetchall()
+        members = connection.execute(
+            "SELECT name FROM domains WHERE catalog = ? COLLATE NOCASE ORDER BY name",
+            (FRESH_PRIMARY_V3_CATALOG,)).fetchall()
+        metadata = connection.execute(
+            "SELECT kind, content FROM domainmetadata WHERE domain_id = ? ORDER BY kind, content",
+            (domain_id,)).fetchall()
+    finally:
+        connection.close()
+    if len(soa) != 1:
+        raise ControllerError(f"the catalog producer has {len(soa)} SOA rows")
+    try:
+        serial = int(str(soa[0][0]).split()[2])
+    except (IndexError, ValueError) as exc:
+        raise ControllerError(f"the catalog producer SOA is not exact: {soa[0][0]!r}") from exc
+    return {
+        "read_at": utc_now(), "path": path, "producer_type": kind,
+        "soa_serial": serial, "soa": soa[0][0], "notified_serial": notified,
+        "members": [str(row[0]).rstrip(".").lower() for row in members],
+        "metadata": [{"kind": row[0], "content": row[1]} for row in metadata],
+    }
+
+
+def sample_fresh_primary_database(
+    settings: Settings, served: Mapping[str, list[Any]], served_at: str
+) -> dict[str, Any]:
+    """The producer serial in the database next to a served reading.
+
+    Order per sample: database read, then the catalog SOA again. A sample is
+    usable when the served serial did not move across it; up to
+    FRESH_PRIMARY_DATABASE_SAMPLES samples, one second apart, until the
+    database serial equals the served one. Every sample is recorded with its
+    timestamps; the database is read as closely to the DNS answer as this
+    process can, not at the same instant.
+    """
+
+    report: dict[str, Any] = {"samples": [], "served_before": dict(served),
+                              "served_before_at": served_at}
+    before = {transport: list(values) for transport, values in served.items()}
+    for attempt in range(FRESH_PRIMARY_DATABASE_SAMPLES):
+        try:
+            database = read_fresh_primary_catalog_database()
+        except (ControllerError, OSError, sqlite3.Error) as exc:
+            report["error"] = f"read the primary's PowerDNS database: {exc}"
+            return report
+        try:
+            after = observation_values(query_dns_observation(
+                settings.dns_address, 53, FRESH_PRIMARY_V3_CATALOG, "SOA", settings.dns_timeout))
+        except (ControllerError, OSError) as exc:
+            report["error"] = f"re-read the served catalog SOA: {exc}"
+            report["database"] = database
+            return report
+        sample = {"served_before": before, "database": database, "served_after": after,
+                  "served_after_at": utc_now(), "stable": after == before}
+        report["samples"].append(sample)
+        report["database"] = database
+        report["served_after"] = after
+        report["stable"] = sample["stable"]
+        if sample["stable"] and after.get("udp") == [database["soa_serial"]]:
+            break
+        before = after
+        if attempt + 1 < FRESH_PRIMARY_DATABASE_SAMPLES:
+            time.sleep(1.0)
+    return report
+
+
+def judge_fresh_primary_catalog(
+    rule: str,
+    *,
+    receipt_serial: Any,
+    primary: Mapping[str, list[Any]],
+    secondary: Mapping[str, list[Any]] | None,
+    secondary_address: str,
+    database: Mapping[str, Any] | None,
+    expected_members: Sequence[str] | None,
+    members: Mapping[str, Any],
+) -> dict[str, Any]:
+    """The catalog serial and member rules (pure): checks (a)-(e) with
+    expected and observed values.
+
+    (a) pre-publication: served == state receipt (UDP and TCP);
+        post-publication: served >= state receipt, a lower serial fails;
+    (b) one serial, identical on UDP and TCP on the primary;
+    (c) the secondary serves the primary's serial (after the caller's wait);
+    (d) the served serial equals the producer SOA serial in the primary's
+        database (a stable sample of sample_fresh_primary_database);
+    (e) the served catalogs (primary and secondary) and the database list
+        exactly the expected zone set at this point.
+    """
+
+    failures: list[str] = []
+    unknown: list[str] = []
+    checks: dict[str, Any] = {}
+    udp, tcp = list(primary.get("udp") or []), list(primary.get("tcp") or [])
+    served = udp[0] if len(udp) == 1 and udp == tcp and isinstance(udp[0], int) else None
+    receipt = receipt_serial if isinstance(receipt_serial, int) and not isinstance(
+        receipt_serial, bool) else None
+    observed = {"udp": udp, "tcp": tcp}
+    if receipt is None:
+        unknown.append("the DNS state receipt names no primary catalog serial")
+        checks["a_receipt"] = {"rule": rule, "expected": None, "observed": observed,
+                               "passed": None}
+    elif rule == FRESH_PRIMARY_SERIAL_RULE_PRE:
+        for transport, values in (("udp", udp), ("tcp", tcp)):
+            if values != [receipt]:
+                failures.append(
+                    f"the primary's {transport} catalog serial {values} differs from the "
+                    f"state receipt's {receipt}")
+        checks["a_receipt"] = {"rule": "served == state receipt", "expected": receipt,
+                               "observed": observed,
+                               "passed": udp == [receipt] and tcp == [receipt]}
+    else:
+        passed = True
+        for transport, values in (("udp", udp), ("tcp", tcp)):
+            if len(values) != 1 or not isinstance(values[0], int):
+                failures.append(
+                    f"the primary's {transport} catalog serial {values} is not one serial")
+                passed = False
+            elif values[0] < receipt:
+                failures.append(
+                    f"the primary's {transport} catalog serial {values[0]} is lower than the "
+                    f"state receipt's {receipt}; after a zone publication the receipt is the "
+                    "floor")
+                passed = False
+        checks["a_receipt"] = {"rule": "served >= state receipt", "expected": f">= {receipt}",
+                               "observed": observed, "passed": passed}
+    udp_tcp = len(udp) == 1 and udp == tcp
+    if not udp_tcp:
+        failures.append(
+            f"the primary's catalog serial is not one value identical on UDP {udp} and TCP {tcp}")
+    checks["b_udp_tcp"] = {"expected": "one serial, UDP == TCP", "observed": observed,
+                           "passed": udp_tcp}
+    if secondary is None:
+        # Not answering (a failure) or not judgeable (unknown): the caller says which.
+        checks["c_secondary"] = {"expected": udp, "observed": None, "passed": None}
+    else:
+        passed = True
+        for transport in ("udp", "tcp"):
+            if list(secondary.get(transport) or []) != udp:
+                passed = False
+                failures.append(
+                    f"secondary {transport} catalog SOA {secondary.get(transport)} (queried at "
+                    f"{secondary_address}) differs from the primary's {udp}")
+        checks["c_secondary"] = {"expected": udp, "observed": dict(secondary), "passed": passed}
+    database_serial = (database or {}).get("soa_serial") if isinstance(database, Mapping) else None
+    if database_serial is None:
+        unknown.append(
+            "the producer SOA serial in the primary's database was not read: "
+            + str((database or {}).get("error", "no reading")))
+        checks["d_database"] = {"expected": served, "observed": None, "passed": None}
+    elif isinstance(database, Mapping) and database.get("stable") is False:
+        unknown.append(
+            "the served catalog serial moved while the database was read; the database "
+            "serial could not be matched to one served serial")
+        checks["d_database"] = {"expected": served, "observed": database_serial, "passed": None}
+    else:
+        served_now = list(((database or {}).get("served_after") or observed).get("udp") or [])
+        passed = served_now == [database_serial] and served is not None
+        if not passed:
+            failures.append(
+                f"the primary serves catalog serial {served_now}, its database's producer SOA "
+                f"serial is {database_serial}")
+        checks["d_database"] = {"expected": served_now, "observed": database_serial,
+                                "database_read_at": (database or {}).get("read_at"),
+                                "passed": passed}
+    member_observed: dict[str, Any] = {}
+    if expected_members is None:
+        unknown.append("the zone set expected at this check is not established")
+    for source in ("primary", "secondary", "database"):
+        value = members.get(source)
+        member_observed[source] = value
+        if not isinstance(value, list):
+            unknown.append(f"the {source} catalog member list was not read: {value}")
+        elif expected_members is not None and sorted(value) != sorted(expected_members):
+            failures.append(
+                f"the {source} catalog lists {sorted(value)}; the expected zone set at this "
+                f"point is {sorted(expected_members)}")
+    checks["e_members"] = {
+        "expected": sorted(expected_members) if expected_members is not None else None,
+        "observed": member_observed,
+        "passed": None if expected_members is None or any(
+            not isinstance(value, list) for value in member_observed.values())
+        else all(sorted(value) == sorted(expected_members) for value in member_observed.values()),
+    }
+    return {"rule": rule, "checks": checks, "failures": failures, "unknown": unknown}
+
+
+def check_fresh_primary_pair(
+    settings: Settings,
+    expected: Mapping[str, Any] | None = None,
+    *,
+    serial_rule: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Both servers answer the scenario's records and serve the same catalog.
 
     Expected RRsets come from the prepared scenario (member SOA serial and
     www A), never from --dns-address, which is only the address the primary's
-    queries are sent to. The catalog SOA serial must be equal on both servers
-    and equal to the state receipt's. Polls up to the endpoint timeout for the
-    secondary to transfer; the primary's answers are judged at once. Every
-    query records its server address and full answer section.
+    queries are sent to. The zero-zone scenario has no member: only the
+    catalog zone is judged. The catalog is judged by ``serial_rule``
+    (fresh_primary_serial_rule: pre-publication unless a zone was published
+    in this cell) with checks (a)-(e) of judge_fresh_primary_catalog. Polls
+    up to the endpoint timeout for the secondary to transfer; the primary's
+    answers are judged at once. Every query records its server address and
+    full answer section.
     """
 
     report: dict[str, Any] = {"failures": [], "unknown": []}
+    rule = dict(serial_rule) if serial_rule is not None else fresh_primary_serial_rule(None)
+    report["serial_rule"] = rule
     timeout = settings.dns_timeout
     local, peer = settings.dns_address, FRESH_PRIMARY_V3_PEER_IP
     report["query_targets"] = {
         "primary": local, "secondary": peer,
+        "catalog_transfer": {"primary": FRESH_PRIMARY_V3_LOCAL_IP, "secondary": peer},
         "note": "addresses the queries were sent to; the expected answers are the scenario's",
     }
     if expected is None:
@@ -12135,30 +12674,35 @@ def check_fresh_primary_pair(
             report["unknown"].append(f"the scenario's expected records could not be read: {exc}")
             expected = None
     report["expected"] = dict(expected) if expected is not None else None
+    zone_set = (expected or {}).get("zone_set", FRESH_PRIMARY_ZONE_SET_MEMBER) if (
+        expected is not None) else None
+    report["zone_set"] = zone_set
+    member_labels = ("member_soa", "www_a") if zone_set == FRESH_PRIMARY_ZONE_SET_MEMBER else ()
+    queries = FRESH_PRIMARY_PAIR_QUERIES if member_labels else FRESH_PRIMARY_CATALOG_QUERIES
     try:
-        primary_observed = _observe_server(local, FRESH_PRIMARY_PAIR_QUERIES, timeout)
+        primary_observed = _observe_server(local, queries, timeout)
     except (ControllerError, OSError) as exc:
         report["failures"].append(
             f"the primary (queried at {local}) does not answer authoritatively: {exc}")
         return report
+    primary_at = utc_now()
     primary = _server_values(primary_observed)
     report["primary"] = primary
+    report["primary_observed_at"] = primary_at
     report["observations"] = {"primary": primary_observed}
 
     def judge(role: str, address: str, values: Mapping[str, Any]) -> None:
         for transport in ("udp", "tcp"):
             if expected is not None:
-                for label in ("member_soa", "www_a"):
+                for label in member_labels:
                     if values[label][transport] != expected[label]:
                         report["failures"].append(
                             f"{role} {transport} {label} {values[label][transport]} (queried at "
                             f"{address}); the scenario publishes {expected[label]}")
-            if values["catalog_soa"][transport] != primary["catalog_soa"]["udp"]:
-                report["failures"].append(
-                    f"{role} {transport} catalog SOA {values['catalog_soa'][transport]} (queried "
-                    f"at {address}) differs from the primary's {primary['catalog_soa']['udp']}")
 
     judge("primary", local, primary)
+    database = sample_fresh_primary_database(settings, primary["catalog_soa"], primary_at)
+    report["database"] = database
     deadline = time.monotonic() + settings.endpoint_timeout
     attempts = 0
     secondary: dict[str, Any] | None = None
@@ -12167,7 +12711,7 @@ def check_fresh_primary_pair(
     while True:
         attempts += 1
         try:
-            secondary_observed = _observe_server(peer, FRESH_PRIMARY_PAIR_QUERIES, timeout)
+            secondary_observed = _observe_server(peer, queries, timeout)
             secondary = _server_values(secondary_observed)
             if secondary == primary:
                 break
@@ -12179,10 +12723,27 @@ def check_fresh_primary_pair(
     report["secondary_attempts"] = attempts
     report["secondary"] = secondary
     report["observations"]["secondary"] = secondary_observed
+    primary_moved = False
+    if secondary is not None and secondary != primary:
+        # The secondary never matched within the wait bound: re-read the
+        # primary once. A primary that moved meanwhile cannot be judged
+        # against the secondary (unknown); an unchanged one makes the
+        # secondary's difference a verified deviation.
+        try:
+            again = _server_values(_observe_server(local, queries, timeout))
+            report["primary_after_wait"] = again
+            primary_moved = again != primary
+        except (ControllerError, OSError) as exc:
+            report["unknown"].append(f"the primary could not be re-read after the wait: {exc}")
+            primary_moved = True
     if secondary is None:
         report["failures"].append(
             f"the native BIND secondary (queried at {peer}) does not answer "
             f"authoritatively: {last_error}")
+    elif primary_moved:
+        report["unknown"].append(
+            "the primary's answers changed while the secondary was polled; the secondary "
+            f"is not judged against them: {primary} -> {report.get('primary_after_wait')}")
     else:
         judge("secondary", peer, secondary)
         if secondary != primary:
@@ -12191,17 +12752,46 @@ def check_fresh_primary_pair(
     try:
         state = read_dns_state_optional(settings.state_dir)
         report["state_catalog_serial"] = state.get("semantic", {}).get("primary_catalog_serial")
-        if report["state_catalog_serial"] is None:
-            report["unknown"].append("the DNS state receipt names no primary catalog serial")
-        else:
-            for transport in ("udp", "tcp"):
-                if primary["catalog_soa"][transport] != [report["state_catalog_serial"]]:
-                    report["failures"].append(
-                        f"the primary's {transport} catalog serial "
-                        f"{primary['catalog_soa'][transport]} differs from the state "
-                        f"receipt's {report['state_catalog_serial']}")
     except ControllerError as exc:
+        report["state_catalog_serial"] = None
         report["unknown"].append(f"DNS state receipt: {exc}")
+        state = None
+    members: dict[str, Any] = {}
+    transfers: dict[str, Any] = {}
+    for role, address in (("primary", FRESH_PRIMARY_V3_LOCAL_IP), ("secondary", peer)):
+        try:
+            transfers[role] = transfer_fresh_primary_catalog(address, timeout)
+            members[role] = transfers[role]["members"]
+        except (ControllerError, OSError, ValueError, IndexError) as exc:
+            transfers[role] = {"server": address, "error": str(exc)}
+            members[role] = f"transfer from {address}: {exc}"
+    members["database"] = (
+        list(database["database"]["members"]) if isinstance(database.get("database"), dict)
+        else database.get("error", "no database reading"))
+    report["catalog_transfers"] = transfers
+    expected_members = fresh_primary_expected_members(expected, rule)
+    verdict = judge_fresh_primary_catalog(
+        rule["rule"],
+        receipt_serial=report["state_catalog_serial"] if state is not None else None,
+        primary=primary["catalog_soa"],
+        secondary=None if secondary is None or primary_moved else secondary["catalog_soa"],
+        secondary_address=peer,
+        database={
+            **(database.get("database") or {}),
+            "stable": database.get("stable"),
+            "served_after": database.get("served_after", primary["catalog_soa"]),
+            **({"error": database["error"]} if "error" in database else {}),
+        },
+        expected_members=expected_members,
+        members=members,
+    )
+    report["catalog"] = verdict
+    if state is None:
+        verdict["unknown"] = [
+            item for item in verdict["unknown"]
+            if item != "the DNS state receipt names no primary catalog serial"]
+    report["failures"].extend(verdict["failures"])
+    report["unknown"].extend(verdict["unknown"])
     return report
 
 
@@ -12312,7 +12902,8 @@ def judge_fresh_primary_pass_definition(
     classification = (result.get("recovery_outcome") or {}).get("classification")
     if classification != "target_converged":
         report["failures"].append(f"the same request did not converge forward: {classification}")
-    pair = check_fresh_primary_pair(settings)
+    # The pass definition runs before any zone publication of this cell.
+    pair = check_fresh_primary_pair(settings, serial_rule=fresh_primary_serial_rule(None))
     report["pair"] = pair
     report["failures"].extend(f"pair: {item}" for item in pair["failures"])
     report["unknown"].extend(f"pair: {item}" for item in pair["unknown"])
@@ -12356,15 +12947,27 @@ def apply_owner_config_edit(settings: Settings, cut: Mapping[str, Any]) -> dict[
     }
 
 
-def _owner_sql_row(settings: Settings) -> dict[str, Any]:
-    edit = FRESH_PRIMARY_V3_SQL_EDIT
+def _owner_sql_row(
+    settings: Settings, zone_set: str = FRESH_PRIMARY_ZONE_SET_MEMBER
+) -> dict[str, Any]:
+    edit = (FRESH_PRIMARY_V3_ZERO_ZONE_SQL_EDIT if zone_set == FRESH_PRIMARY_ZONE_SET_EMPTY
+            else FRESH_PRIMARY_V3_SQL_EDIT)
     return {**edit, "content": edit["content"].format(request_id=settings.request_id)}
 
 
-def apply_owner_sql_edit(settings: Settings) -> dict[str, Any]:
-    """Insert one TXT record of the member zone into the live database."""
+def apply_owner_sql_edit(
+    settings: Settings, zone_set: str = FRESH_PRIMARY_ZONE_SET_MEMBER
+) -> dict[str, Any]:
+    """Insert one TXT record into the live database.
 
-    row = _owner_sql_row(settings)
+    The member zone's (s1-kill.test) for the one-member scenario; with the
+    zero-zone scenario there is no member, so the record goes into the
+    catalog producer zone, the only zone the install wrote.
+    """
+
+    row = _owner_sql_row(settings, zone_set)
+    domain = (FRESH_PRIMARY_V3_CATALOG if zone_set == FRESH_PRIMARY_ZONE_SET_EMPTY
+              else PAIRED_SECONDARY_ZONE)
     before = _file_presence(PDNS_DATABASE_PATH)
     if not before.get("exists"):
         raise ControllerError("the live PowerDNS database is absent; the SQL owner edit has no target")
@@ -12373,10 +12976,10 @@ def apply_owner_sql_edit(settings: Settings) -> dict[str, Any]:
     try:
         connection.execute("BEGIN IMMEDIATE")
         domains = connection.execute(
-            "SELECT id FROM domains WHERE name = ?", (PAIRED_SECONDARY_ZONE,)).fetchall()
+            "SELECT id FROM domains WHERE name = ?", (domain,)).fetchall()
         if len(domains) != 1:
             connection.execute("ROLLBACK")
-            raise ControllerError(f"the member zone has {len(domains)} domain rows")
+            raise ControllerError(f"the zone {domain} has {len(domains)} domain rows")
         cursor = connection.execute(
             "INSERT INTO records (domain_id, name, type, content, ttl, prio, disabled, auth) "
             "VALUES (?, ?, ?, ?, ?, 0, 0, 1)",
@@ -12387,7 +12990,8 @@ def apply_owner_sql_edit(settings: Settings) -> dict[str, Any]:
     finally:
         connection.close()
     return {
-        "kind": "sql", "path": PDNS_DATABASE_PATH, "domain_id": domains[0][0],
+        "kind": "sql", "path": PDNS_DATABASE_PATH, "zone_set": zone_set, "domain": domain,
+        "domain_id": domains[0][0],
         "record_id": record_id, "row": row, "database_before": before,
         "database_after": _file_presence(PDNS_DATABASE_PATH),
     }
@@ -12506,7 +13110,9 @@ def run_fresh_primary_hold_flow(
     if settings.owner_edit == "config":
         edit = apply_owner_config_edit(settings, cut)
     else:
-        edit = apply_owner_sql_edit(settings)
+        zone_set = fresh_primary_zone_set(settings)
+        flow["zone_set"] = zone_set
+        edit = apply_owner_sql_edit(settings, zone_set)
     flow["edit"] = edit
     transcript.event("fresh-primary-owner-edit", edit=edit)
     since_epoch = int(time.time()) - 1
@@ -12892,6 +13498,7 @@ def run_cell(settings: Settings) -> int:
     refuse_unrunnable_v2_cells(settings)
     refuse_unadmitted_paired_secondary(settings)
     refuse_unadmitted_fresh_primary(settings)
+    validate_fresh_primary_zone_set(settings)
     production_paths = validate_production_runtime_paths(
         settings.agent_token_file, controller_identity["effective_gid"]
     )

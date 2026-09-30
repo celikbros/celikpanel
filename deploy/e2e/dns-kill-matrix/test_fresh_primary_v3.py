@@ -103,6 +103,36 @@ def released_job(code: str, status: str = "failed", phase: str = "interrupted") 
 IDENTITY = {"owner_id": OWNER, "manifest_qualifier": QUALIFIER}
 
 
+def catalog_sources(
+    serial: int, members: list, *, secondary_members: list | None = None,
+    database_serial: int | None = None, database_members: list | None = None,
+) -> object:
+    """Patch the pair check's catalog readers: the producer row in the
+    primary's PowerDNS database and the catalog AXFR from each server."""
+
+    database = {
+        "read_at": "2026-10-01T00:00:00Z", "path": run_cell.PDNS_DATABASE_PATH,
+        "producer_type": "PRODUCER",
+        "soa_serial": serial if database_serial is None else database_serial,
+        "soa": "invalid. invalid. 1 3600 600 604800 3600", "notified_serial": 1,
+        "members": sorted(members if database_members is None else database_members),
+        "metadata": [{"kind": "CATALOG-HASH", "content": "x"}],
+    }
+
+    def transfer(address: str, timeout: float) -> dict:
+        listed = members if address == run_cell.FRESH_PRIMARY_V3_LOCAL_IP or (
+            secondary_members is None) else secondary_members
+        return {"server": address, "read_at": "2026-10-01T00:00:00Z", "serial": serial,
+                "soa": "invalid. invalid. 1 3600 600 604800 3600", "members": sorted(listed),
+                "record_count": 4 + len(listed)}
+
+    return mock.patch.multiple(
+        run_cell,
+        read_fresh_primary_catalog_database=mock.Mock(return_value=database),
+        transfer_fresh_primary_catalog=mock.Mock(side_effect=transfer),
+    )
+
+
 class AdmissionTest(unittest.TestCase):
     def test_exactly_twelve_peer_reachable_v3_cells_are_admitted(self) -> None:
         admitted = []
@@ -459,12 +489,14 @@ class JudgementTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root:
             selected = settings(root, v3("committed", "after-write"), dns_address="10.0.2.15")
             with mock.patch.object(run_cell, "query_dns_observation", side_effect=answers(www)), \
-                    mock.patch.object(run_cell, "read_dns_state_optional", return_value=state):
+                    mock.patch.object(run_cell, "read_dns_state_optional", return_value=state), \
+                    catalog_sources(1790588837, ["s1-kill.test"]):
                 self.assertEqual(
                     run_cell.check_fresh_primary_pair(selected, expected)["failures"], [])
             other = {"udp": ["192.0.2.99"], "tcp": ["192.0.2.99"]}
             with mock.patch.object(run_cell, "query_dns_observation", side_effect=answers(other)), \
-                    mock.patch.object(run_cell, "read_dns_state_optional", return_value=state):
+                    mock.patch.object(run_cell, "read_dns_state_optional", return_value=state), \
+                    catalog_sources(1790588837, ["s1-kill.test"]):
                 self.assertTrue(run_cell.check_fresh_primary_pair(selected, expected)["failures"])
 
     def test_release_message_must_be_typed_and_name_the_next_step(self) -> None:

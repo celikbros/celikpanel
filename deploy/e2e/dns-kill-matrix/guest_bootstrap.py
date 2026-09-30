@@ -213,6 +213,13 @@ OWNER_DIRECTIVES_FLAG = "--expect-owner-directives"
 OWNER_DIRECTIVES_STAGE_NAME = "owner-bind-directives"
 GATE_CLOSED_EXIT = 4
 FRESH_PRIMARY_EVIDENCE_DIRECTORY = "fresh-primary-peer"
+# Zero-zone fresh paired PowerDNS primary (prepare-pdns-switch/run-prepared/
+# zone-lifecycle --zero-zones): the scenario carries "zones": [], as a new
+# server installs it through the setup wizard. The guest controller derives the
+# zone set from the scenario it publishes; the host flag must agree with it.
+ZERO_ZONES_FLAG = "--zero-zones"
+FRESH_PRIMARY_CATALOG = "catalog-c000020a.celikpanel.invalid"
+GUEST_SCENARIO_PATH = "/var/lib/celikpanel-dns-kill-matrix/scenario.json"
 REBOOT_REQUESTED_EXIT = 3
 # Canonical order of the flags the host passes to the guest program.
 PREPARED_FLAG_ORDER = (
@@ -824,7 +831,13 @@ def paired_secondary_scenario(driver: str, node: str) -> dict[str, Any]:
 
 
 def pdns_switch_scenario(*, role: str = "standalone", authority_acceptance: bool = False,
-                         source_fixture: str = "managed-bind") -> dict[str, Any]:
+                         source_fixture: str = "managed-bind",
+                         zero_zones: bool = False) -> dict[str, Any]:
+    if zero_zones and (role != "paired-primary" or source_fixture != "uninitialized"
+                       or authority_acceptance):
+        raise BootstrapError(
+            f"{ZERO_ZONES_FLAG} applies only to the fresh paired PowerDNS primary "
+            "(paired-primary, uninitialized source, no authority acceptance)")
     if role == "paired-secondary":
         if source_fixture != "uninitialized" or authority_acceptance:
             raise BootstrapError("a PowerDNS paired secondary is prepared only as a fresh install")
@@ -843,6 +856,9 @@ def pdns_switch_scenario(*, role: str = "standalone", authority_acceptance: bool
         # Only a fresh paired producer requires transferable MASTER members;
         # a fresh standalone install keeps the ordinary NATIVE snapshot.
         zones = [{**zone, "zone_type": "MASTER"} for zone in zones]
+    if zero_zones:
+        # The wizard's first install on a new server: no zone exists yet.
+        zones = []
     return {
         "schema": SCENARIO_SCHEMA,
         "driver": "pdns-switch",
@@ -1571,9 +1587,14 @@ def prepare(args: argparse.Namespace) -> None:
         guest_action = "prepare-pdns-adopt"
     elif args.action == "prepare-pdns-switch":
         validate_pdns_switch_cell(cell, args.node, args.source_fixture)
+        zero = getattr(args, "zero_zones", False) is True
+        if zero and not fresh_pdns_primary_cell(cell):
+            raise BootstrapError(
+                f"{ZERO_ZONES_FLAG} applies only to the fresh paired PowerDNS primary cells; "
+                "nothing was prepared")
         scenario = pdns_switch_scenario(
             role=cell["role"], authority_acceptance=args.authority_acceptance,
-            source_fixture=args.source_fixture)
+            source_fixture=args.source_fixture, zero_zones=zero)
         guest_action = "prepare-pdns-switch"
     else:
         raise BootstrapError("unsupported preparation action")
@@ -1664,6 +1685,10 @@ def prepare(args: argparse.Namespace) -> None:
                         else "/var/lib/celikpanel-dns-kill-matrix/source-preinstall-bind.json"
                         if args.source_fixture in PROVENANCE_BIND_CELLS
                         else None
+                    ),
+                    "zone_set": (
+                        "empty" if scenario.get("zones") == [] and cell["role"] == "paired-primary"
+                        else "scenario"
                     ),
                     "native_primary_peer_engine": peer_engine,
                     "native_primary_peer_catalog_format": peer_catalog_format,
@@ -1958,6 +1983,8 @@ def run_prepared(args: argparse.Namespace) -> int:
     identity = identity_file(args.identity_file)
     flags = prepared_flags(args, peer_catalog_format)
     reboots_allowed = int(reboot_before) + int(reboot_after)
+    if fresh_primary and args.execute:
+        verify_guest_zone_set(node, identity, zero_zones_selected(args))
     # A PowerDNS secondary stores the member's unique label of the peer's
     # catalog on the consumed member row; the controller judges that value
     # against the label the peer probe read right before it (execute only).
@@ -2002,7 +2029,8 @@ def run_prepared(args: argparse.Namespace) -> int:
             }))
             if not isinstance(getattr(args, "owner_edit", None), str):
                 print(json.dumps({
-                    "after_controller": "native_pdns_bind_peer.py observe --address 192.0.2.10",
+                    "after_controller": "native_pdns_bind_peer.py observe "
+                                        + peer_observe_selector(args),
                     "evidence": f"{FRESH_PRIMARY_EVIDENCE_DIRECTORY}/peer-verdict.json",
                 }))
             if getattr(args, "zone_lifecycle", False) is True:
@@ -2010,7 +2038,8 @@ def run_prepared(args: argparse.Namespace) -> int:
                     print(json.dumps({
                         "zone_lifecycle_step": step,
                         "primary": ssh_base(node, identity) + [zone_lifecycle_remote(step)],
-                        "observe": f"native_pdns_bind_peer.py observe-child --step {step}",
+                        "observe": f"native_pdns_bind_peer.py observe-child --step {step}"
+                                   + (f" {ZERO_ZONES_FLAG}" if zero_zones_selected(args) else ""),
                     }))
             return 0
         if peer_engine is not None:
@@ -2304,10 +2333,10 @@ def validate_fresh_primary_run(
             "prepared for; nothing was started"
         )
     if not fresh_pdns_primary_cell(cell):
-        if owner_edit is not None or release or lifecycle:
+        if owner_edit is not None or release or lifecycle or zero_zones_selected(args):
             raise BootstrapError(
-                "--owner-edit, --owner-release-recovery and --zone-lifecycle apply only to "
-                "the fresh paired PowerDNS primary cells; nothing was started"
+                f"--owner-edit, --owner-release-recovery, --zone-lifecycle and {ZERO_ZONES_FLAG} "
+                "apply only to the fresh paired PowerDNS primary cells; nothing was started"
             )
         return
     if args.source_fixture != "uninitialized" or args.node != "debian13":
@@ -2334,6 +2363,48 @@ def validate_fresh_primary_run(
     # reboot] runs in a defined order: pass verdict -> zone lifecycle (Agent
     # running) -> disable management -> reboot both guests -> DNS checks that
     # include the zone set after the lifecycle (ZONE_LIFECYCLE_BEFORE_REBOOT_FLAG).
+
+
+def zero_zones_selected(args: argparse.Namespace) -> bool:
+    return getattr(args, "zero_zones", False) is True
+
+
+def peer_observe_selector(args: argparse.Namespace) -> str:
+    """How the host's observe names what the primary publishes."""
+
+    if zero_zones_selected(args):
+        return ZERO_ZONES_FLAG
+    return "--address " + fresh_primary_expected_www()
+
+
+def guest_zone_set_of(scenario: Any) -> str:
+    """"empty" for the zero-zone scenario, else "scenario" (pure)."""
+
+    if not isinstance(scenario, dict) or not isinstance(scenario.get("zones"), list):
+        raise BootstrapError("the guest scenario has no zone list")
+    return "empty" if scenario["zones"] == [] else "scenario"
+
+
+def verify_guest_zone_set(node: dict[str, Any], identity: Path, zero_zones: bool) -> None:
+    """Read-only: the guest's published scenario has the zone set the host was
+    told (--zero-zones), so the host judges the same thing the guest does."""
+
+    completed = subprocess.run(
+        ssh_base(node, identity) + [f"sudo cat {GUEST_SCENARIO_PATH}"],
+        check=False, capture_output=True, text=True, timeout=60,
+    )
+    if completed.returncode != 0:
+        raise BootstrapError(
+            f"the guest scenario could not be read ({completed.returncode}); nothing was started")
+    try:
+        zone_set = guest_zone_set_of(json.loads(completed.stdout))
+    except json.JSONDecodeError as exc:
+        raise BootstrapError(f"the guest scenario is not JSON: {exc}") from exc
+    if (zone_set == "empty") != zero_zones:
+        raise BootstrapError(
+            f"the guest was prepared with the {zone_set} zone set; run-prepared and "
+            f"zone-lifecycle need {ZERO_ZONES_FLAG} exactly when the cell was prepared with "
+            "it. Nothing was started")
 
 
 ZONE_LIFECYCLE_STEPS = ("add", "edit", "delete", "re-add")
@@ -2416,8 +2487,11 @@ def run_zone_lifecycle(
 
     Each step is one exact V3 request; after each the native BIND secondary
     must answer as the primary does (deletion: both authoritative NXDOMAIN
-    from the served parent, and the child gone from both catalogs). A pending
-    deletion stops the lifecycle and names the owner's next step.
+    from the served parent, and the child gone from both catalogs; with
+    --zero-zones the add creates the server's first zone, the delete returns
+    both catalogs to zero members and both servers refuse the child, as no
+    parent is served). A pending deletion stops the lifecycle and names the
+    owner's next step.
     """
 
     import native_pdns_bind_peer  # noqa: PLC0415 - imports this module
@@ -2445,6 +2519,7 @@ def run_zone_lifecycle(
                     work_root=args.work_root, cell_id=args.cell_id,
                     source_fixture="uninitialized", identity_file=args.identity_file,
                     manifest=args.manifest, step=step, execute=True,
+                    zero_zones=zero_zones_selected(args),
                 ))
             )
         verdict = judge_zone_step(step, value, observation_error)
@@ -2528,8 +2603,7 @@ def print_fresh_primary_lifecycle_plan(
         "on_exit": ZONE_LIFECYCLE_REQUESTED_EXIT,
         "order": [
             "complete pass verdict (guest controller, then suspended on the same boot)",
-            "pair verdict: native_pdns_bind_peer.py observe --address "
-            + fresh_primary_expected_www(),
+            "pair verdict: native_pdns_bind_peer.py observe " + peer_observe_selector(args),
             *(f"zone lifecycle step {step} (Agent running) + observe-child --step {step}"
               for step in ZONE_LIFECYCLE_STEPS),
             "continue the guest run with the lifecycle outcome",
@@ -2623,14 +2697,18 @@ def finish_fresh_primary_peer_verdict(
 
     import native_pdns_bind_peer  # noqa: PLC0415 - imports this module
 
+    zero = zero_zones_selected(args)
+
     def namespace(**extra: Any) -> argparse.Namespace:
         return argparse.Namespace(
             work_root=args.work_root, cell_id=args.cell_id, source_fixture="uninitialized",
-            identity_file=args.identity_file, manifest=args.manifest, execute=True, **extra)
+            identity_file=args.identity_file, manifest=args.manifest, execute=True,
+            zero_zones=zero, **extra)
 
     def observe_all() -> dict[str, Any]:
         member = native_pdns_bind_peer.observe(namespace(
-            address=fresh_primary_expected_www(), with_child=child_step is not None))
+            address=None if zero else fresh_primary_expected_www(),
+            with_child=child_step is not None))
         if child_step is None:
             return member
         return {**member, "child": native_pdns_bind_peer.observe_child(namespace(step=child_step))}
@@ -2647,11 +2725,15 @@ def finish_fresh_primary_peer_verdict(
         "observation": observation,
         "combined_exit": combine_paired_secondary_exit(guest_returncode, status),
         "child_step": child_step,
+        "zero_zones": zero,
         "guest_controller_suspended_for_zone_lifecycle": suspended_for_lifecycle,
         "note": (
-            "The native BIND secondary loaded this primary's PowerDNS PRODUCER catalog and "
-            "member and answers them authoritatively over UDP and TCP exactly as the "
-            "primary does."
+            ("The native BIND secondary loaded this zero-zone primary's PowerDNS PRODUCER "
+             "catalog (no member) and serves its SOA over UDP and TCP exactly as the primary "
+             "does." if zero else
+             "The native BIND secondary loaded this primary's PowerDNS PRODUCER catalog and "
+             "member and answers them authoritatively over UDP and TCP exactly as the "
+             "primary does.")
             + (f" After the zone lifecycle ({child_step}) the catalogs also list the child "
                "zone and both servers answer it as that step published." if child_step else "")
         ),
@@ -2666,6 +2748,9 @@ def zone_lifecycle_action(args: argparse.Namespace) -> int:
     plan, cell, _ = load_plan(args)
     if not fresh_pdns_primary_cell(cell) or args.source_fixture != "uninitialized":
         raise BootstrapError("zone-lifecycle applies only to the fresh paired PowerDNS primary cells")
+    if args.execute:
+        verify_guest_zone_set(
+            plan["nodes"][args.node], identity_file(args.identity_file), zero_zones_selected(args))
     if not args.execute:
         node = plan["nodes"][args.node]
         identity = identity_file(args.identity_file)
@@ -2746,6 +2831,14 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     current = subparsers.add_parser("prepare-pdns-switch")
     common_parser(current)
     current.add_argument("--authority-acceptance", action="store_true")
+    current.add_argument(
+        ZERO_ZONES_FLAG, action="store_true",
+        help=(
+            "fresh paired PowerDNS primary only: prepare the scenario with no zones "
+            "(\"zones\": []), as a new server installs it through the setup wizard; the "
+            "controller then samples the catalog SOA"
+        ),
+    )
     current = subparsers.add_parser("run-prepared")
     common_parser(current)
     current.add_argument(INDEPENDENT_PDNS_HANDOFF_FLAG, action="store_true")
@@ -2785,8 +2878,9 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
         "--owner-edit", choices=tuple(OWNER_EDIT_FLAGS), default=None,
         help=(
             "fresh paired PowerDNS primary: the owner edits pdns.conf (config) or inserts "
-            "a member-zone row into the live database (sql, post-start cells) between the "
-            "kill and the Agent restart; the Agent must refuse and hold only DNS"
+            "a member-zone row (with --zero-zones: a catalog-zone row) into the live "
+            "database (sql, post-start cells) between the kill and the Agent restart; the "
+            "Agent must refuse and hold only DNS"
         ),
     )
     current.add_argument(
@@ -2807,8 +2901,16 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
         "--owner-directives", action="store_true",
         help="stopped-BIND takeover prepared with --owner-directives",
     )
+    current.add_argument(
+        ZERO_ZONES_FLAG, action="store_true",
+        help="the fresh paired PowerDNS primary was prepared with --zero-zones",
+    )
     current = subparsers.add_parser("zone-lifecycle")
     common_parser(current)
+    current.add_argument(
+        ZERO_ZONES_FLAG, action="store_true",
+        help="the fresh paired PowerDNS primary was prepared with --zero-zones",
+    )
     current.add_argument(
         "--recover-delete", action="store_true",
         help=(

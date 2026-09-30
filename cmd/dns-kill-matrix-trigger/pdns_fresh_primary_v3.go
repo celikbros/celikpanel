@@ -66,7 +66,9 @@ const (
 
 // freshPairedPrimaryScenario is the exact manifest the harness prepares for a
 // fresh paired PowerDNS primary on the Debian guest (guest_bootstrap.py
-// pdns_switch_scenario(role="paired-primary", source_fixture="uninitialized")).
+// pdns_switch_scenario(role="paired-primary", source_fixture="uninitialized")):
+// either the one MASTER member s1-kill.test, or no zones at all
+// (--zero-zones, the shape the setup wizard installs on a new server).
 func freshPairedPrimaryScenario(value scenario) bool {
 	return value.Driver == "pdns-switch" && value.SourceFixture == "uninitialized" &&
 		value.Mode == transport.DNSEngineSwitchModeSwitch && value.SourceEngine == "" &&
@@ -74,8 +76,15 @@ func freshPairedPrimaryScenario(value scenario) bool {
 		value.TargetEpoch == 1 && value.SourceRevision == 0 &&
 		value.Topology == transport.DNSTopologyPaired && value.PairRole == "primary" &&
 		value.LocalIP == "192.0.2.10" && value.PeerIP == "192.0.2.11" &&
-		len(value.Zones) == 1 && value.Zones[0].Domain == "s1-kill.test" &&
-		value.Zones[0].ZoneType == "MASTER" && !value.Zones[0].Delete
+		(freshPairedPrimaryZeroZoneScenario(value) ||
+			(len(value.Zones) == 1 && value.Zones[0].Domain == "s1-kill.test" &&
+				value.Zones[0].ZoneType == "MASTER" && !value.Zones[0].Delete))
+}
+
+// freshPairedPrimaryZeroZoneScenario: the zero-zone variant carries an empty,
+// non-nil zone list (the scenario document's "zones": []).
+func freshPairedPrimaryZeroZoneScenario(value scenario) bool {
+	return value.Zones != nil && len(value.Zones) == 0
 }
 
 // freshPairedPrimaryCell accepts the admitted V3 cell identities: pdns-switch,
@@ -430,6 +439,14 @@ func validateFreshPrimaryZoneSource(
 		receipt.ManifestQualifier != switchRequest.ManifestQualifier {
 		return errors.New("zone lifecycle source is not the measured fresh paired PowerDNS primary")
 	}
+	// The switch's catalog publication must exceed the staged serial 1 (the
+	// daemon's first-start re-stamp). Whether PowerDNS 4.9 re-stamps a
+	// producer with zero members is not measured, so for the zero-zone
+	// scenario any positive serial is admitted and the lifecycle measures it.
+	minimumSerial := uint32(2)
+	if freshPairedPrimaryZeroZoneScenario(source) {
+		minimumSerial = 1
+	}
 	a := state.Acquisition
 	if state.Schema != freshPrimaryStateSchema || state.NativeCatalog != freshPrimaryNativeMarker ||
 		a.Schema != "celikpanel-dns-engine-acquisition/v1" || a.Mode != "switch" ||
@@ -438,7 +455,7 @@ func validateFreshPrimaryZoneSource(
 		a.ManifestQualifier != receipt.ManifestQualifier || a.RequestID != receipt.RequestID ||
 		a.OwnerID != receipt.OwnerID ||
 		state.Publication.Schema != "celikpanel-dns-engine-publication/v1" ||
-		state.Publication.CatalogSerial <= 1 {
+		state.Publication.CatalogSerial < minimumSerial {
 		return errors.New("the active DNS state is not the V3 fresh paired primary of this request")
 	}
 	return nil

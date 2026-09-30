@@ -101,9 +101,16 @@ class PairExpectationTest(unittest.TestCase):
         self.assertEqual(expected["www_a"], ["192.0.2.10"])
         self.assertEqual(controller_dns_address("c01-pri-intent"), "10.0.2.15")
         self.assertNotIn(controller_dns_address("c01-pri-intent"), expected["www_a"])
+        self.assertEqual(expected["zone_set"], run_cell.FRESH_PRIMARY_ZONE_SET_MEMBER)
+        self.assertEqual(expected["catalog_members"], ["s1-kill.test"])
+        # An explicit empty list is the zero-zone variant (no member to judge),
+        # never a scenario whose member went missing.
+        empty = run_cell.fresh_primary_expected_pair({**scenario, "zones": []})
+        self.assertEqual((empty["zone_set"], empty["catalog_members"], empty["member_soa"]),
+                         (run_cell.FRESH_PRIMARY_ZONE_SET_EMPTY, [], None))
         for broken in (
-            {**scenario, "zones": []},
             {**scenario, "zones": [{**scenario["zones"][0], "delete": True}]},
+            {**scenario, "zones": [{**scenario["zones"][0], "domain": "other.test"}]},
             {**scenario, "zones": [{**scenario["zones"][0], "records": [
                 record for record in scenario["zones"][0]["records"]
                 if record["name"] != "www.s1-kill.test"]}]},
@@ -127,7 +134,8 @@ class PairExpectationTest(unittest.TestCase):
                 state = {"exists": True, "semantic": {
                     "primary_catalog_serial": pair["state_catalog_serial"]}}
                 with mock.patch.object(run_cell, "query_dns_observation", side_effect=query), \
-                        mock.patch.object(run_cell, "read_dns_state_optional", return_value=state):
+                        mock.patch.object(run_cell, "read_dns_state_optional", return_value=state), \
+                        base.catalog_sources(pair["state_catalog_serial"], ["s1-kill.test"]):
                     report = run_cell.check_fresh_primary_pair(
                         self.selected(root, dns_address), expected)
                 self.assertEqual(report["failures"], [])
@@ -179,7 +187,8 @@ class PairExpectationTest(unittest.TestCase):
             with self.subTest(text=text), tempfile.TemporaryDirectory() as root:
                 state = {"exists": True, "semantic": {"primary_catalog_serial": state_serial}}
                 with mock.patch.object(run_cell, "query_dns_observation", side_effect=replay), \
-                        mock.patch.object(run_cell, "read_dns_state_optional", return_value=state):
+                        mock.patch.object(run_cell, "read_dns_state_optional", return_value=state), \
+                        base.catalog_sources(serial, ["s1-kill.test"]):
                     report = run_cell.check_fresh_primary_pair(
                         self.selected(root, dns_address), expected)
                 self.assertTrue(any(text in item for item in report["failures"]),
@@ -192,7 +201,8 @@ class PairExpectationTest(unittest.TestCase):
         state = {"exists": True, "semantic": {"primary_catalog_serial": pair["state_catalog_serial"]}}
         with tempfile.TemporaryDirectory() as root, \
                 mock.patch.object(run_cell, "query_dns_observation", side_effect=query), \
-                mock.patch.object(run_cell, "read_dns_state_optional", return_value=state):
+                mock.patch.object(run_cell, "read_dns_state_optional", return_value=state), \
+                base.catalog_sources(pair["state_catalog_serial"], ["s1-kill.test"]):
             report = run_cell.check_fresh_primary_pair(self.selected(root, dns_address))
         self.assertEqual(report["failures"], [])
         self.assertTrue(any("expected records could not be read" in item
@@ -613,6 +623,7 @@ class HostOrderTest(unittest.TestCase):
                 mock.patch.object(bootstrap, "finish_fresh_primary_peer_verdict",
                                   side_effect=peer_verdict), \
                 mock.patch.object(bootstrap, "run_zone_lifecycle", side_effect=zone_lifecycle), \
+                mock.patch.object(bootstrap, "verify_guest_zone_set"), \
                 mock.patch.object(bootstrap.fixture, "reboot_guest", side_effect=reboot), \
                 mock.patch("sys.stdout", new_callable=io.StringIO):
             code = bootstrap.run_prepared(self.args(**changes))

@@ -7,6 +7,13 @@ guest_bootstrap.fresh_pdns_primary_cell) with the uninitialized source.
 Preparation does not require the primary to exist yet; observation requires
 both native servers to publish the same catalog and authoritative member
 answers. observe-child follows the zone lifecycle of the accepted primary.
+
+--zero-zones (the primary was prepared with guest_bootstrap.py
+prepare-pdns-switch --zero-zones): the primary publishes no member, so the
+catalogs must list no zone (or only the lifecycle's child), the catalog SOA is
+judged on both servers over UDP and TCP instead of member records, and after
+the child's deletion both servers refuse the child (REFUSED): no served
+parent exists to deny it authoritatively.
 """
 
 from __future__ import annotations
@@ -201,6 +208,34 @@ def authoritative_negative(reply: str) -> None:
         raise ValueError("the negative answer is not an authoritative NXDOMAIN")
 
 
+def not_served(reply: str) -> None:
+    """REFUSED: the server holds no zone for the name (zero-zone primary,
+    child deleted, no parent). Not an authoritative answer by design."""
+
+    if "status: REFUSED" not in reply:
+        raise ValueError("the server does not refuse a name it holds no zone for")
+
+
+def zero_zones(args: argparse.Namespace) -> bool:
+    return getattr(args, "zero_zones", False) is True
+
+
+def catalog_soa_answers(ssh: list[str], catalog: str, primary_ip: str, secondary_ip: str,
+                        execute: bool) -> dict:
+    """The catalog SOA serial from both servers over UDP and TCP (must agree)."""
+
+    answers: dict = {}
+    for ip in (primary_ip, secondary_ip):
+        for tcp in (False, True):
+            reply = remote_read(ssh, dig_command(ip, catalog, "SOA", tcp), execute)
+            if execute:
+                answers[f"{ip}/{'tcp' if tcp else 'udp'}"] = soa_serial(
+                    authoritative_data(reply, catalog, "SOA"))
+    if execute and len(set(answers.values())) != 1:
+        raise ValueError(f"the catalog SOA serial differs between servers or transports: {answers}")
+    return answers
+
+
 def soa_serial(data: tuple[str, ...]) -> str:
     if len(data) != 7:
         raise ValueError("SOA data is not exact")
@@ -227,10 +262,12 @@ def observe_child(args: argparse.Namespace) -> dict:
     catalog = catalog_name(primary_ip)
     source = remote_read(ssh, dig_command(primary_ip, catalog, "AXFR", True), args.execute)
     loaded = remote_read(ssh, dig_command("127.0.0.1", catalog, "AXFR", True), args.execute)
-    members = {ZONE, CHILD} if expected["present"] else {ZONE}
+    base = set() if zero_zones(args) else {ZONE}
+    members = base | {CHILD} if expected["present"] else base
     report: dict = {
         "action": "observe-child-native-pdns-bind-peer", "cell_id": args.cell_id,
         "step": args.step, "child": CHILD, "expected": expected, "execute": args.execute,
+        "zero_zones": zero_zones(args), "catalog_members_expected": sorted(members),
     }
     if args.execute:
         source_serial, source_members = parse_catalog_axfr(source, catalog, producer="powerdns")
@@ -248,8 +285,12 @@ def observe_child(args: argparse.Namespace) -> dict:
             if not args.execute:
                 continue
             if not expected["present"]:
-                authoritative_negative(soa)
-                answers[key] = {"soa": "NXDOMAIN"}
+                if zero_zones(args):
+                    not_served(soa)
+                    answers[key] = {"soa": "REFUSED"}
+                else:
+                    authoritative_negative(soa)
+                    answers[key] = {"soa": "NXDOMAIN"}
                 continue
             serial = soa_serial(authoritative_data(soa, CHILD, "SOA"))
             www = authoritative_data(
@@ -280,8 +321,11 @@ def observe(args: argparse.Namespace) -> dict:
     """
 
     primary_ip, secondary_ip, peer, identity = selected(args)
-    expected_address = str(ipaddress.IPv4Address(args.address))
-    members_expected = {ZONE, CHILD} if getattr(args, "with_child", False) is True else {ZONE}
+    zero = zero_zones(args)
+    expected_address = None if zero else str(ipaddress.IPv4Address(args.address))
+    members_expected = set() if zero else {ZONE}
+    if getattr(args, "with_child", False) is True:
+        members_expected |= {CHILD}
     ssh = bootstrap.ssh_base(peer, identity)
     verify_guest(ssh, args.cell_id, args.execute)
     remote_read(ssh, "systemctl is-active --quiet named.service", args.execute)
@@ -299,7 +343,15 @@ def observe(args: argparse.Namespace) -> dict:
                 f"members {sorted(members_expected)}: primary {source_serial} "
                 f"{sorted(source_members)}, loaded {loaded_serial} {sorted(loaded_members)}")
     answers: dict = {}
-    for name, kind in ((ZONE, "SOA"), (QUERY, "A")):
+    if zero:
+        # No member: the catalog zone itself, identical on both servers.
+        answers = {f"{key}/{catalog}/SOA": value for key, value in catalog_soa_answers(
+            ssh, catalog, primary_ip, secondary_ip, args.execute).items()}
+        if args.execute and set(answers.values()) != {str(source_serial)}:
+            raise ValueError(
+                f"the served catalog SOA differs from the transferred serial {source_serial}: "
+                f"{answers}")
+    for name, kind in (() if zero else ((ZONE, "SOA"), (QUERY, "A"))):
         source_data = None
         for ip in (primary_ip, secondary_ip):
             for tcp in (False, True):
@@ -320,7 +372,8 @@ def observe(args: argparse.Namespace) -> dict:
         "primary_ip": primary_ip, "secondary_ip": secondary_ip, "catalog": catalog,
         "catalog_serial": source_serial if args.execute else None,
         "catalog_members": sorted(source_members) if args.execute else None,
-        "member": ZONE, "address": expected_address, "answers": answers,
+        "member": None if zero else ZONE, "address": expected_address, "answers": answers,
+        "zero_zones": zero,
         "catalog_members_expected": sorted(members_expected),
         "authoritative_udp_tcp": args.execute,
         "management_installed_on_secondary": False, "execute": args.execute,
@@ -340,10 +393,13 @@ def main() -> None:
     parser.add_argument("--step", choices=tuple(CHILD_STEPS), help="lifecycle step for observe-child")
     parser.add_argument("--with-child", action="store_true",
                         help="observe: the catalogs also list the lifecycle's child zone")
+    parser.add_argument("--zero-zones", action="store_true",
+                        help="the primary was prepared with no zones (prepare-pdns-switch "
+                             "--zero-zones): no member, catalog judged by itself")
     parser.add_argument("--execute", action="store_true")
     args = parser.parse_args()
-    if (args.action == "observe") != (args.address is not None):
-        parser.error("--address is required exactly for observe")
+    if (args.action == "observe" and not args.zero_zones) != (args.address is not None):
+        parser.error("--address is required exactly for observe without --zero-zones")
     if (args.action == "observe-child") != (args.step is not None):
         parser.error("--step is required exactly for observe-child")
     actions = {"prepare": prepare, "observe": observe, "observe-child": observe_child}

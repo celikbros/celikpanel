@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -412,5 +414,118 @@ func TestFreshPrimaryZoneRecoveryResumesOnlyAPendingDeletion(t *testing.T) {
 	addRequest, addBegin, _ := freshPrimaryZoneIdentity("add", receipt)
 	if err := recoverFreshPrimaryZoneDeletion(context.Background(), addRequest, addBegin, agent.call, &result); err == nil {
 		t.Fatal("recovery accepted a non-deletion step")
+	}
+}
+
+func freshPrimaryV3ZeroZoneTestScenario() scenario {
+	value := freshPrimaryV3TestScenario()
+	value.Zones = []transport.DNSEngineSwitchZoneSnapshot{}
+	return value
+}
+
+// The zero-zone variant (guest_bootstrap.py --zero-zones): the scenario a new
+// server installs through the wizard. It must pass the same public-RPC path as
+// the one-member scenario: canonical request, gate probe, zone lifecycle source.
+func TestFreshPairedPrimaryZeroZoneScenarioIsAccepted(t *testing.T) {
+	value := freshPrimaryV3ZeroZoneTestScenario()
+	if !freshPairedPrimaryScenario(value) || !freshPairedPrimaryZeroZoneScenario(value) {
+		t.Fatal("the zero-zone fresh paired primary scenario was refused")
+	}
+	request, err := requestForScenario(value, "pdns-switch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(request.Zones) != 0 || request.PairRole != transport.DNSPairRolePrimary ||
+		request.ServiceMutationBinding != (transport.ServiceMutationBinding{}) {
+		t.Fatalf("unexpected zero-zone request: %+v", request)
+	}
+	member, err := requestForScenario(freshPrimaryV3TestScenario(), "pdns-switch")
+	if err != nil || member.ManifestQualifier == request.ManifestQualifier {
+		t.Fatalf("the zero-zone manifest must have its own qualifier: %v", err)
+	}
+	for _, mutate := range []func(*scenario){
+		func(s *scenario) { s.Zones = nil },
+		func(s *scenario) { s.PairRole = "secondary" },
+		func(s *scenario) { s.SourceFixture = "managed-bind" },
+	} {
+		changed := freshPrimaryV3ZeroZoneTestScenario()
+		mutate(&changed)
+		if freshPairedPrimaryScenario(changed) {
+			t.Fatalf("a non-fresh-primary scenario was accepted: %+v", changed)
+		}
+	}
+	other := freshPrimaryV3TestScenario()
+	other.Zones[0].Domain = "other.test"
+	if freshPairedPrimaryScenario(other) {
+		t.Fatal("a one-zone scenario other than s1-kill.test was accepted")
+	}
+}
+
+func TestFreshPairedPrimaryZeroZoneScenarioLoadsFromTheDocument(t *testing.T) {
+	encoded, err := json.Marshal(freshPrimaryV3ZeroZoneTestScenario())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(encoded), `"zones":[]`) {
+		t.Fatalf("the zero-zone document must carry an explicit empty list: %s", encoded)
+	}
+	path := filepath.Join(t.TempDir(), "scenario.json")
+	if err := os.WriteFile(path, encoded, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	loaded, request, err := loadScenario(path, "pdns-switch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !freshPairedPrimaryScenario(loaded) || len(request.Zones) != 0 {
+		t.Fatalf("the loaded zero-zone scenario is not the fresh paired primary: %+v", loaded)
+	}
+	agent := &fakeAgent{handlers: map[string]func(any, any) error{
+		"Agent.SwitchDNSEngineV1": func(req, resp any) error {
+			if len(req.(*transport.SwitchDNSEngineV1Request).Zones) != 0 {
+				return errors.New("the probe sent zones")
+			}
+			resp.(*transport.SwitchDNSEngineV1Response).Error = agentLeaseRequiredReason
+			return nil
+		},
+	}}
+	cell := "pdns-switch__target-started__after-write__paired-primary__peer-reachable"
+	result, err := runGateProbe(context.Background(), cell, request, agent.call)
+	if err != nil || result.Gate != gateOpen || len(agent.calls) != 1 {
+		t.Fatalf("zero-zone gate probe: result=%+v err=%v calls=%v", result, err, agent.calls)
+	}
+}
+
+func TestFreshPrimaryZeroZoneLifecycleSourceAdmitsAnyPositiveSerial(t *testing.T) {
+	request, err := requestForScenario(freshPrimaryV3ZeroZoneTestScenario(), "pdns-switch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt, _ := freshPrimaryV3TestReceipt(t)
+	receipt.ManifestQualifier = request.ManifestQualifier
+	source := freshPrimaryV3ZeroZoneTestScenario()
+	for _, serial := range []uint32{1, 1790588837} {
+		state := freshPrimaryV3TestState(receipt)
+		state.Publication.CatalogSerial = serial
+		if err := validateFreshPrimaryZoneSource(source, request, receipt, state); err != nil {
+			t.Fatalf("zero-zone state with catalog serial %d refused: %v", serial, err)
+		}
+	}
+	state := freshPrimaryV3TestState(receipt)
+	state.Publication.CatalogSerial = 0
+	if validateFreshPrimaryZoneSource(source, request, receipt, state) == nil {
+		t.Fatal("a zero catalog serial was accepted")
+	}
+	// The one-member scenario keeps its re-stamp floor.
+	memberReceipt, memberRequest := freshPrimaryV3TestReceipt(t)
+	memberState := freshPrimaryV3TestState(memberReceipt)
+	memberState.Publication.CatalogSerial = 1
+	if validateFreshPrimaryZoneSource(freshPrimaryV3TestScenario(), memberRequest, memberReceipt, memberState) == nil {
+		t.Fatal("the one-member scenario accepted the staged catalog serial")
+	}
+	// The lifecycle's first step is still the child's add at generation 1.
+	sync, begin, err := freshPrimaryZoneIdentity("add", receipt)
+	if err != nil || sync.DesiredGeneration != 1 || sync.Delete || begin.Target != freshPrimaryZoneDomain {
+		t.Fatalf("zero-zone add identity: %+v %+v %v", sync, begin, err)
 	}
 }
