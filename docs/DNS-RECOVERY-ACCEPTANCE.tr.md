@@ -470,6 +470,22 @@ kayıtlı kanıt yeniden damgalanır ve kod, farklı olan denetimi adlandıran b
 ayrıntı taşır. Kurtarılan silme, yeniden ekleme ve z05 yeniden açılışı
 çalışmadı.
 
+**1 Ekim 2026, çift 6, ürün akışı** ([kanıt](../deploy/e2e/dns-pair-acceptance/evidence/pair6-20261001/README.md),
+kapı açıkken ürün `e50fe50a`, D-027'nin yalnızca test amaçlı lisansı,
+sürücü `37864789`, sürücü yaması yok, geçme kuralı değişikliği yok). Satır
+2, 3, 5, 6, 17. Üç topoloji de kayıt düzenlemeye kadar her adımı geçti; üçü
+de bölge silme içinde tek bir yeni ürün kusurunda durdu. Bu çalıştırma
+hiçbir satırı geçirmiyor.
+
+| Topoloji (birincil / ikincil) | Ulaşılan | Durma noktası |
+|---|---|---|
+| BIND / BIND; BIND (Arch) / PowerDNS; PowerDNS / BIND | ilk silme `dns_peer_enrollment_required` ile beklemede; sahip kaydı (PowerDNS ikincilinde `--engine pdns`); denetim çalıştı ve yanıtı kabul edildi; BIND birincillerinde denetim sonrası katalog aktarımları ve aktarımsızlık sondası ilk kez çalıştı, iç-kanıt ya da sahip-düzenleme kodu görülmedi (5. çiftin kusuru, çalıştırmanın ulaştığı yere kadar kapandı) | yeniden deneme üçünde de 300 sn boyunca `dns_peer_journal_unknown` ile beklemede kaldı; bölge iki sunucudan da yerel olarak kalkmıştı. Kaynak ve zamanlamadan çıkarım, günlüğe yazılmadı: kanıt dalgasının 15 sn sınırı, yanıt kabul edildikten sonra tek-kullanımlık tüketme adımının sunucu yeniden doğrulaması içinde doldu ve dolan süre "günlük bilinmiyor" olarak raporlanıyor; 5. çiftte 13,8 sn'de tamamlanan PowerDNS topolojisi burada 17,1 sn sürdü. Yönlendirme somut bir denetim adlandırmıyor. |
+
+Düzeltme sürüyor: olumlu bir yanıt asla süre yüzünden atılmaz; kanıtın
+bütçesi adım başına sınırlarla tüm alışverişi kapsar; yanıt kabul
+edilmeden önce dolan süre kendi kodunu ve metnini alır; altta yatan hata ve
+denetleyicinin sonuç alanları sınırlı biçimde günlüğe yazılır.
+
 4. ve 5. gruplardan sonra listelenen kaynak değişikliklerinin gerçek
 sistemdeki kapsamı:
 

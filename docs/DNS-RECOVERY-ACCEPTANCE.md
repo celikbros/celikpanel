@@ -446,6 +446,21 @@ identical, the recorded evidence is re-stamped, and the code carries a
 detail naming the differing check. The recovered delete, the re-add and
 the z05 reboot did not run.
 
+**2026-10-01, pair 6, product flow** ([evidence](../deploy/e2e/dns-pair-acceptance/evidence/pair6-20261001/README.md),
+product `e50fe50a` with the gate open, test-only license of D-027, driver
+`37864789`, no driver patch, no pass-rule change). Rows 2, 3, 5, 6, 17. All
+three topologies passed every step through record edit; all three stopped
+inside zone delete on one new product defect. The run passes no row.
+
+| Topology (primary / secondary) | Reached | Stopped at |
+|---|---|---|
+| BIND / BIND; BIND (Arch) / PowerDNS; PowerDNS / BIND | first delete pending on `dns_peer_enrollment_required`; owner enrollment (`--engine pdns` on the PowerDNS secondary); the inspection ran and its answer was accepted; on the BIND primaries the post-inspection catalog transfers and the no-transfer probe ran for the first time, with no proof-internal or owner-edit code (pair 5's defect closed as far as the run reached) | the retry stayed pending as `dns_peer_journal_unknown` for 300 s on all three; the zone was gone natively on both servers. Inferred from source and timing, not logged: the proof wave's 15 s bound expired inside the consume-once step's host re-verification after the answer had been accepted, and the expired deadline is reported as journal unknown; the PowerDNS topology that completed in pair 5 in 13.8 s took 17.1 s here. The guidance names no concrete check. |
+
+Fix in progress: a positive answer is never discarded for a deadline; the
+proof's budget covers the whole exchange with per-step bounds; an expiry
+before the answer is accepted gets its own code and text; the underlying
+error and the inspector's outcome fields are logged, bounded.
+
 Native coverage of the source changes listed after batches 4 and 5:
 
 | Change | First native run that exercised it |
