@@ -9,6 +9,7 @@ import importlib.util
 import io
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import tarfile
@@ -147,6 +148,67 @@ class RecoveryCandidateArchiveTests(unittest.TestCase):
         for name in generated:
             with self.subTest(name=name), self.assertRaisesRegex(ValueError, "candidate full checksum inventory differs"):
                 self.candidate({name: b"changed generated payload\n"}, manifest=manifest)
+
+    # H2 (upd1 2026-09-30): make dist packages dns-owner-tools/ since 2026-09-28.
+    def owner_tools(self, readme=None):
+        committed = self.source_bytes("cmd/dns-peer-enroll/README.md")
+        self.git("add", "--", "cmd/dns-peer-enroll/README.md")
+        self.git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-m", "owner tools readme")
+        self.commit = self.git("rev-parse", "HEAD").strip()
+        self.tree = self.git("rev-parse", "HEAD^{tree}").strip()
+        self.files.update({"release.commit": (self.commit + "\n").encode(), "release.tree": (self.tree + "\n").encode()})
+        tools = {name: ("generated owner tool " + name + "\n").encode()
+                 for name in archive.DNS_OWNER_TOOLS if archive.DNS_OWNER_TOOLS[name] is None}
+        tools["dns-owner-tools/README.md"] = committed if readme is None else readme
+        return tools
+
+    def test_dns_owner_tools_readme_is_proved_against_the_committed_enroll_readme(self):
+        self.assertFalse((self.repository / "dns-owner-tools").exists())
+        candidate = self.candidate(self.owner_tools())
+        proof = archive.verify_committed_source(candidate, self.repository)
+        # The README is one more proved static file; the three tools are build outputs.
+        self.assertEqual(proof["verified_static_files"], self.static_count + 1)
+
+    def test_dns_owner_tools_readme_differing_from_commit_is_rejected(self):
+        candidate = self.candidate(self.owner_tools(readme=b"edited after the commit\n"))
+        with self.assertRaisesRegex(ValueError, "candidate source bytes differ from commit: dns-owner-tools/README.md"):
+            archive.verify_committed_source(candidate, self.repository)
+
+    def test_dns_owner_tools_inventory_must_be_exactly_four_files(self):
+        tools = self.owner_tools()
+        missing = dict(tools)
+        missing.pop("dns-owner-tools/pdns-peer-inspect")
+        extra = dict(tools, **{"dns-owner-tools/install.sh": b"extra\n"})
+        for label, files in (("missing", missing), ("extra", extra)):
+            with self.subTest(label=label), self.assertRaisesRegex(ValueError, "dns-owner-tools inventory differs"):
+                archive.verify_committed_source(self.candidate(files), self.repository)
+
+
+class DNSOwnerToolsRuleTests(unittest.TestCase):
+    """Pure H2 rule (no Git): the exact four-file inventory of make dist."""
+
+    def test_absent_directory_is_not_required(self):
+        self.assertEqual(archive.dns_owner_tools_sources({"install.sh": "1" * 64}), {})
+
+    def test_exact_inventory_maps_readme_and_skips_tools(self):
+        files = {name: "1" * 64 for name in archive.DNS_OWNER_TOOLS}
+        sources = archive.dns_owner_tools_sources(dict(files, **{"install.sh": "2" * 64}))
+        self.assertEqual(sources["dns-owner-tools/README.md"], "cmd/dns-peer-enroll/README.md")
+        self.assertEqual(sorted(n for n, s in sources.items() if s is None),
+                         ["dns-owner-tools/bind-peer-inspect", "dns-owner-tools/dns-peer-enroll",
+                          "dns-owner-tools/pdns-peer-inspect"])
+        for broken in ({"dns-owner-tools/README.md": "1" * 64},
+                       dict(files, **{"dns-owner-tools/sub/x": "1" * 64})):
+            with self.assertRaisesRegex(ValueError, "inventory differs"):
+                archive.dns_owner_tools_sources(broken)
+
+    def test_rule_matches_the_makefile_dist_recipe(self):
+        makefile = (Path(__file__).resolve().parents[3] / "Makefile").read_text()
+        built = set(re.findall(r"-o bin/dns-owner-tools/([a-z-]+) \./cmd/", makefile))
+        self.assertEqual({"dns-owner-tools/" + name for name in built} | {"dns-owner-tools/README.md"},
+                         set(archive.DNS_OWNER_TOOLS))
+        self.assertIn("cp cmd/dns-peer-enroll/README.md bin/dns-owner-tools/README.md", makefile)
+        self.assertIn("cp -r bin/dns-owner-tools dist/$(DIST)/dns-owner-tools", makefile)
 
 
 if __name__ == "__main__":

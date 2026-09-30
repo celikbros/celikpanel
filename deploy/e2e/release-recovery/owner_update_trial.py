@@ -76,6 +76,30 @@ START_REQUEST_TIMEOUT_S = 15
 SAMPLE_INTERVAL_S = 5.0
 # Tables that authentication and background writers change (BOUND-WORKER AJ).
 VOLATILE_TABLES = frozenset({"audit_logs", "metrics_samples", "sessions", "sqlite_sequence"})
+# L2 (upd1 2026-09-30): a setup that waits at a prerequisite (access_dns on an
+# isolated host) is a background writer too. Excluded only when this run
+# recorded such a wait; server_setup_state is still compared (it changes only
+# when setup completes or is abandoned, which would be a real change).
+SETUP_WAIT_VOLATILE = {
+    "server_setup_executions": "the waiting setup runner rewrites its execution row on every retry (about every "
+                               "25 s: cmd/panel/server_setup_dns_retry.go claimServerSetupDNSRetry and "
+                               "server_setup_operations.go execution update)",
+}
+# H5 (upd1 2026-09-30): upd1 is one isolated node. A local-DNS primary publishes
+# only after its peer secondary serves the catalogue (cmd/panel/dns_engine.go),
+# so a single node cannot create a domain (DNS_SERVER_REQUIRED). The owner
+# therefore chooses DNS hosted elsewhere; DNS continuity is covered by the DNS
+# pair runs of roadmap item 2. Local mode stays available for a two-node variant.
+DNS_MODES = ("external", "local")
+DEFAULT_DNS_MODE = "external"
+DNS_NOT_PROVIDED = "not-provided-external-dns"
+# H4: the phases at which an isolated host's setup waits for public DNS / a
+# certificate (same set as dns-pair-acceptance NON_DNS_SETUP_PHASES).
+SETUP_SETTLE_PHASES = frozenset({"access_dns", "panel_certificate", "verification", "verify"})
+SETUP_STABLE_SECONDS = 120.0
+SETUP_STABLE_POLLS = 3
+CRON_NOT_AVAILABLE = "not available on this baseline"
+ORIGIN_NAME = "celikpanel.net"
 GUEST_HELPERS = ("guest_probe.py", "guest_port_fault.py", "guest_update_kill.py", "guest_bound_worker.py",
                  "guest_recovery_fault.py", "guest_recovery_handoff.py", "guest_owner_update_observer.py",
                  "guest_upd1_workload.py")
@@ -469,7 +493,15 @@ def panel_verdict(windows: list[dict], started_at: float | None, terminal_at: fl
             "outside": outside}
 
 
-def compare_databases(before: dict, after: dict, volatile: frozenset = VOLATILE_TABLES) -> dict:
+def volatile_tables(setup_waiting: bool) -> dict:
+    """Every table excluded from the preservation comparison, with its reason (listed in the verdict)."""
+    tables = {name: "authentication or background writer (BOUND-WORKER AJ)" for name in VOLATILE_TABLES}
+    if setup_waiting:
+        tables.update(SETUP_WAIT_VOLATILE)
+    return tables
+
+
+def compare_databases(before: dict, after: dict, volatile: frozenset | dict = VOLATILE_TABLES) -> dict:
     try:
         pre, post = before["semantic"], after["semantic"]
     except (KeyError, TypeError):
@@ -483,9 +515,219 @@ def compare_databases(before: dict, after: dict, volatile: frozenset = VOLATILE_
     verdict = "equal-except-volatile" if schema_equal and not unexpected else "different"
     if schema_equal and not differing:
         verdict = "equal"
-    return {"verdict": verdict, "schema_equal": schema_equal, "tables_compared": len(names),
-            "differing": differing, "unexpected": unexpected, "volatile_excluded": sorted(volatile),
-            "pre_sha256": pre.get("sha256"), "post_sha256": post.get("sha256")}
+    result = {"verdict": verdict, "schema_equal": schema_equal, "tables_compared": len(names),
+              "differing": differing, "unexpected": unexpected, "volatile_excluded": sorted(volatile),
+              "pre_sha256": pre.get("sha256"), "post_sha256": post.get("sha256")}
+    if isinstance(volatile, dict):
+        result["volatile_reasons"] = {name: volatile[name] for name in sorted(volatile)}
+    return result
+
+
+# -- setup, DNS scope, cron and origin rules (upd1 2026-09-30 corrections) ----------
+
+def setup_draft_choice(dns_mode: str, override: dict | None) -> dict:
+    """The owner's draft field choices for ``dns_mode`` (H3/H5).
+
+    ``external`` (default): DNS hosted elsewhere, no peer identity.
+    ``local``: the product requires the paired identity
+    (``server_setup_dns_identity_required``), so ``peer_ip`` and ``peer_ns``
+    must be given through ``--setup-draft-json``.
+    """
+    if dns_mode not in DNS_MODES:
+        raise ValueError(f"--dns-mode must be one of {list(DNS_MODES)}")
+    override = dict(override or {})
+    if "purpose" in override:
+        raise ValueError("--setup-draft-json overrides draft fields other than purpose")
+    if override.get("dns_mode", dns_mode) != dns_mode:
+        raise ValueError(f"--setup-draft-json dns_mode {override['dns_mode']!r} conflicts with --dns-mode {dns_mode}")
+    if dns_mode == "external":
+        if override.get("peer_ip") or override.get("peer_ns"):
+            raise ValueError("external DNS takes no peer identity; use --dns-mode local for a paired node")
+        return dict(override, dns_mode="external", peer_ip="", peer_ns="")
+    if not override.get("peer_ip") or not override.get("peer_ns"):
+        raise ValueError("--dns-mode local needs peer_ip and peer_ns in --setup-draft-json (the product refuses a "
+                         "local DNS setup without its paired identity: server_setup_dns_identity_required)")
+    return dict(override, dns_mode="local")
+
+
+def dns_scope(dns_mode: str) -> dict:
+    if dns_mode == "external":
+        return {"mode": "external", "verdict": DNS_NOT_PROVIDED,
+                "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated "
+                        "node); DNS continuity is covered by the DNS pair runs of roadmap item 2"}
+    return {"mode": "local", "verdict": "measured",
+            "note": "local authoritative DNS; a single node cannot publish (DNS_SERVER_REQUIRED) until a "
+                    "two-node upd1 variant exists"}
+
+
+class SetupWait:
+    """H4: when does the setup poll stop?
+
+    ``terminal`` on succeeded/failed. ``settled`` once the execution has stayed
+    at one of SETUP_SETTLE_PHASES for ``stable_seconds`` over at least
+    ``polls`` reads and the latest read says ``waiting`` (the product flips the
+    row to ``running`` for each retry, so ``running`` at the same phase does not
+    restart the clock). Any other phase or status restarts it.
+    """
+
+    def __init__(self, stable_seconds: float = SETUP_STABLE_SECONDS, polls: int = SETUP_STABLE_POLLS) -> None:
+        self.stable_seconds, self.polls = stable_seconds, polls
+        self.phase: str | None = None
+        self.since: float | None = None
+        self.count = 0
+
+    def observe(self, execution: Any, now: float) -> str:
+        status = execution.get("status") if isinstance(execution, dict) else None
+        phase = execution.get("phase") if isinstance(execution, dict) else None
+        if status in ("succeeded", "failed"):
+            return "terminal"
+        if status not in ("waiting", "running") or phase not in SETUP_SETTLE_PHASES:
+            self.phase, self.since, self.count = None, None, 0
+            return "continue"
+        if phase != self.phase:
+            self.phase, self.since, self.count = phase, now, 0
+        self.count += 1
+        if status == "waiting" and self.count >= self.polls and now - self.since >= self.stable_seconds:
+            return "settled"
+        return "continue"
+
+    def seconds(self, now: float) -> float:
+        return round(now - self.since, 1) if self.since is not None else 0.0
+
+
+def setup_steps(execution: Any) -> list[dict]:
+    return [s for s in ((execution or {}).get("steps") or []) if isinstance(s, dict)] if isinstance(execution, dict) else []
+
+
+def mail_steps_reached(execution: Any) -> bool:
+    """False while any mail_profile step of the setup is still pending (the wizard never got there)."""
+    return not any(s.get("kind") == "mail_profile" and s.get("status") == "pending" for s in setup_steps(execution))
+
+
+def cron_availability(observed: dict) -> dict:
+    """Read-only precondition before the owner's cron job (product finding P1).
+
+    The Agent refuses a cron job when ``crontab`` is absent
+    (cmd/agent/cron_rpc.go); the Panel currently masks that as 500 INTERNAL.
+    Absent ``crontab`` is recorded as ``not available on this baseline``
+    instead of being seeded; once setup installs cron the check passes.
+    """
+    units = {name: value for name, value in (observed.get("units") or {}).items()
+             if isinstance(value, dict) and value.get("LoadState") not in (None, "", "not-found")}
+    crontab = observed.get("crontab") or None
+    available = bool(crontab)
+    return {"available": available, "verdict": "available" if available else CRON_NOT_AVAILABLE,
+            "crontab": crontab, "daemon_units": {name: units[name] for name in sorted(units)},
+            "daemon_active": any(value.get("ActiveState") == "active" for value in units.values())}
+
+
+def hosts_mappings(hosts_text: str, name: str = ORIGIN_NAME) -> list[str]:
+    """Lines of /etc/hosts that map ``name`` (read from the file; no resolver query)."""
+    found = []
+    for line in hosts_text.splitlines():
+        fields = line.split("#", 1)[0].split()
+        if len(fields) >= 2 and name in fields[1:]:
+            found.append(line.strip())
+    return found
+
+
+def origin_verdict(check: dict) -> dict:
+    """Is the guest-loopback fixture origin the only answer for celikpanel.net?
+
+    ``check``: guest_upd1_workload ``origin-check`` output. Every resolved
+    address must be 127.0.0.1 and the fixture must answer HTTP 200.
+    """
+    addresses = []
+    for line in str((check.get("getent") or {}).get("stdout") or "").splitlines():
+        fields = line.split()
+        if len(fields) >= 2 and ORIGIN_NAME in fields[1:]:
+            addresses.append(fields[0])
+    http = str((check.get("https") or {}).get("stdout") or "").strip()
+    unit = check.get("unit") or {}
+    loopback = bool(addresses) and all(address == "127.0.0.1" for address in addresses)
+    return {"addresses": addresses, "http": http, "loopback_only": loopback,
+            "unit": {k: unit.get(k) for k in ("ActiveState", "UnitFileState", "NRestarts")},
+            "boot_id": check.get("boot_id"), "ok": loopback and http == "200"}
+
+
+ORIGIN_UNIT = "cp-lab-upd1-origin.service"
+SAMPLER_UNIT = "cp-lab-upd1-sampler.service"
+BASELINE_INSTALL_UNIT = "celikpanel-lab-current-worker-baseline.service"
+# Services the setup wizard installs or reconfigures (P2: the Arch webmail
+# mail_profile failure needs these journals; globs are journalctl -u patterns).
+SETUP_SERVICE_UNITS = ("nginx.service", "php*-fpm.service", "mariadb.service", "mysql.service",
+                       "named.service", "bind9.service", "pdns.service", "postfix.service", "dovecot.service",
+                       "rspamd.service", "cron.service", "cronie.service", "nftables.service")
+
+
+def journal_groups(request_id: str | None) -> dict:
+    """L3: journals kept by collect, also when the cell stopped at seed or earlier."""
+    product = ["celikpanel-panel.service", "celikpanel-agent.service", "celikpanel-release-recovery.service"]
+    if request_id:
+        product += [f"celikpanel-self-update-{request_id}.service",
+                    f"celikpanel-lab-owner-update-observer-{request_id}.service",
+                    f"celikpanel-lab-recovery-fault-{request_id}.service"]
+    return {"product": product, "setup-services": list(SETUP_SERVICE_UNITS),
+            "lab": [ORIGIN_UNIT, SAMPLER_UNIT, BASELINE_INSTALL_UNIT]}
+
+
+def observation_records_script(request_id: str | None) -> str:
+    """Read-only listing of producer observation records (secret-looking contents withheld)."""
+    if request_id is not None and not HEX32.fullmatch(request_id):
+        raise ValueError("invalid request id")
+    pattern = (request_id or "") + "*"
+    return "\n".join([
+        "python3 -I - <<'CP_UPD1_OBS'",
+        "import json,re",
+        "from pathlib import Path",
+        "out={}",
+        "root=Path('/var/lib/celikpanel-recovery-observations')",
+        "paths=sorted(root.glob('" + pattern + "'))[:16] if root.is_dir() else []",
+        "for p in paths:",
+        "    if not p.is_file() or p.is_symlink(): continue",
+        "    raw=p.read_bytes()[:4096].decode('ascii','replace')",
+        "    out[p.name]=raw if not re.search(r'token|secret|password',raw,re.I) else 'withheld'",
+        "print(json.dumps({'directory_present':root.is_dir(),'records':out}))",
+        "CP_UPD1_OBS", ""])
+
+
+def result_scope(dns_mode: str, cron: dict | None, setup_wait: dict | None, origin_checks: dict | None) -> dict:
+    """What this run did and did not provide, for result.json (never a pass by omission)."""
+    return {"dns": dns_scope(dns_mode),
+            "cron": ({"verdict": "not checked (the cell stopped before seeding)"} if not cron
+                     else {"verdict": cron["verdict"], "crontab": cron.get("crontab")}),
+            "setup": ({"verdict": "not waiting"} if not setup_wait
+                      else {"verdict": "observed isolated-host wait", "phase": setup_wait.get("phase"),
+                            "code": setup_wait.get("code"), "not_run": setup_wait.get("not_run"),
+                            "volatile_tables_added": sorted(SETUP_WAIT_VOLATILE)}),
+            "origin": {label: {k: value.get(k) for k in ("ok", "addresses", "http")}
+                       for label, value in (origin_checks or {}).items()}}
+
+
+def workload_verdicts(samples: list[dict], resets: list[float], *, mail_listed: bool, cron: str,
+                      dns_mode: str) -> dict:
+    """Per-workload verdicts. ``cron``: ``measured`` | CRON_NOT_AVAILABLE | ``not-running-before-update``.
+
+    In external DNS mode DNS is never measured and never counted as passed.
+    """
+    per: dict[str, dict] = {}
+    for key in WORKLOADS:
+        if key == "smtp" and not mail_listed:
+            per[key] = {"verdict": "not-seeded"}
+            continue
+        if key == "dns" and dns_mode == "external":
+            per[key] = dict(dns_scope("external"))
+            continue
+        if key == "cron" and cron == CRON_NOT_AVAILABLE:
+            per[key] = {"verdict": "not-available-on-baseline", "note": "cron: " + CRON_NOT_AVAILABLE}
+            continue
+        if key == "cron" and cron != "measured":
+            per[key] = {"verdict": "not-running-before-update"}
+            continue
+        windows = cron_windows(samples) if key == "cron" else outage_windows(samples, key)
+        classify_windows(windows, resets)
+        per[key] = {"verdict": workload_verdict(windows), "windows": windows}
+    return per
 
 
 def compare_states(before: dict, after: dict, fields: tuple = ("UnitFileState", "ActiveState")) -> dict:
@@ -638,6 +880,32 @@ def acceptance_source_proof(verify: Callable, archive: Path, repository: Path) -
     return wrapped
 
 
+def prove_artifacts(artifacts: dict, roles: Iterable[str], modules: dict | None = None) -> dict:
+    """Host-side and read-only: archive inventory, release policy and committed-source proof.
+
+    The same proof preflight runs per cell; ``owner_update_trial.py prove``
+    runs it for all three archives without any guest (H2: the exact
+    dns-owner-tools/ inventory of make dist is part of it).
+    """
+    m = modules or lab_modules()
+    archive = m["archive"]
+    clone = Path(artifacts["clone"])
+    proofs = {}
+    for role in roles:
+        item = artifacts[role]
+        policy = m["baseline"].RELEASE_POLICY if role == "baseline" else m["origin"].RELEASE_POLICY
+        candidate = archive.inspect_archive(Path(item["archive"]), item["sha256"], release_policy=policy)
+        if candidate["commit"] != item["commit"] or candidate["tree"] != item["tree"]:
+            raise ValueError(f"artifact {role} archive names commit/tree {candidate['commit']}/{candidate['tree']}, "
+                             f"not {item['commit']}/{item['tree']}")
+        proof = acceptance_source_proof(archive.verify_committed_source, Path(item["archive"]), clone)(candidate, clone)
+        proofs[role] = {"commit": candidate["commit"], "tree": candidate["tree"], "files": len(candidate["files"]),
+                        "release_policy": candidate["release_policy"], "source_proof": proof,
+                        "dns_owner_tools": sorted(n for n in candidate["files"] if n.startswith("dns-owner-tools/")),
+                        "agent_sha256": candidate["files"]["bin/agent"], "panel_sha256": candidate["files"]["bin/panel"]}
+    return proofs
+
+
 @contextlib.contextmanager
 def patched(obj: Any, name: str, value: Any):
     old = getattr(obj, name)
@@ -652,26 +920,33 @@ def patched(obj: Any, name: str, value: Any):
 # Plan / dry run
 # ---------------------------------------------------------------------------
 
-def build_plan(cell: Cell, artifacts: dict, work_root: str, local_port: int) -> dict:
+def build_plan(cell: Cell, artifacts: dict, work_root: str, local_port: int,
+               dns_mode: str = DEFAULT_DNS_MODE) -> dict:
     candidate = artifacts["defective" if cell.variant == "defective" else "good"]
     fault = cell.recovery_fault
     steps = [
-        ("preflight", "registered lab identity, fresh guest, host-side artifact and source proofs"),
-        ("origin", "fixture signing key; seal the candidate; guest-loopback celikpanel.net origin (provision + serve) "
-                   "BEFORE the baseline, so nothing reaches the real celikpanel.net"),
+        ("preflight", "registered lab identity, fresh guest (read-only; /etc/hosts is read, the resolver is never "
+                      "asked for celikpanel.net), host-side artifact and source proofs"),
+        ("origin", "fixture signing key; seal the candidate; guest-loopback celikpanel.net origin (provision + the "
+                   "enabled lab unit cp-lab-upd1-origin.service, which survives a restart) BEFORE the baseline; then "
+                   "celikpanel.net must resolve only to 127.0.0.1 and answer 200, so nothing reaches the real origin"),
         ("baseline-install", "current_worker_baseline: real installer + unchanged trust enrollment "
-                             f"({BASELINE_VERSION}, commit {artifacts['baseline']['commit'][:12]})"),
+                             f"({BASELINE_VERSION}, commit {artifacts['baseline']['commit'][:12]}); the owner restart "
+                             "the installer may demand, then the origin is proved again"),
         ("owner-login", "owner credentials (guest root only, host memory only), SSH loopback tunnel, pinned TLS leaf, "
                         "POST /api/v1/auth/login, GET /api/v1/auth/me, GET /api/v1/panel/availability"),
         ("license", "GET /api/v1/panel/license, POST {action:activate, acceptance fixture key} once, GET /api/v1/license/access"),
-        ("setup", "GET /api/v1/setup, PUT /api/v1/setup/guidance, PUT /api/v1/setup (draft), POST /api/v1/setup/plan, "
-                  "POST /api/v1/setup/start (once), poll GET /api/v1/setup/operation?request_id="
+        ("setup", "GET /api/v1/setup, PUT /api/v1/setup/guidance, PUT /api/v1/setup (draft, dns_mode "
+                  f"{dns_mode}), POST /api/v1/setup/plan, POST /api/v1/setup/start (once), poll GET "
+                  "/api/v1/setup/operation?request_id= until succeeded/failed or a stable "
+                  f"{int(SETUP_STABLE_SECONDS)} s wait at {sorted(SETUP_SETTLE_PHASES)} (recorded as observed)"
                   + (" [purpose web_mail]" if cell.mail_required else " [purpose web_mail attempted, web fallback recorded]")),
         ("seed", "POST /api/v1/domains/create {static}; POST /api/v1/domains/{id}/files?path=/index.html {action:write}; "
-                 "GET .../dns/zone, .../dns/records; GET .../mail/setup; POST .../mail/accounts; POST .../cron; GET /api/v1/firewall"),
+                 "GET .../dns/zone, .../dns/records; GET .../mail/setup; POST .../mail/accounts; read-only cron "
+                 "availability, then POST .../cron only when crontab exists; GET /api/v1/firewall"),
         ("pre-state", "guest_probe observation (hashes, DB digests, timers), workload snapshot, offline shell fetch, "
                       "sampler unit (5 s, survives reboot) + host loop (SSH, Panel via tunnel)"),
-        ("arm", "owner-update observer for the chosen request id: " + (
+        ("arm", "origin proved again (127.0.0.1, HTTP 200); owner-update observer for the chosen request id: " + (
             f"checkpoint mode, second fault {fault['action']} at {fault['checkpoint']}" if fault else "watch mode, no fault")),
         ("owner-start", "GET /api/v1/panel/update/check, GET /api/v1/host-mutation-readiness, "
                         "POST /api/v1/panel/update/start {request_id, confirmed:true, current_version, current_commit, ...target} once"),
@@ -683,10 +958,14 @@ def build_plan(cell: Cell, artifacts: dict, work_root: str, local_port: int) -> 
                                           "one-time retry command printed in the recovery journal, once"),
         ("terminal", "installed/running identity, floor/foundation, DB digests vs pre-update, seeded rows, site marker, "
                      "mailbox, cron, timers, firewall, Panel login and update card"),
-        ("collect", "sampler and host samples, observer/recovery-fault events, budget receipts, journals"),
-        ("verdicts", "per-workload outage windows, Panel window, agreement, outcome classification"),
+        ("collect", "always once the guest was prepared, also after an early stop: sampler and host samples, "
+                    "journals (Panel/Agent/recovery, setup services, lab units incl. the fixture origin), "
+                    "observation records, observer/recovery-fault events, budget receipts"),
+        ("verdicts", "per-workload outage windows (DNS: " + dns_scope(dns_mode)["verdict"] + "), Panel window, "
+                     "agreement, outcome classification"),
     ]
     return {"schema": "celikpanel/upd1-plan/v1", "cell": dataclasses.asdict(cell), "work_root": work_root,
+            "dns": dns_scope(dns_mode),
             "local_port": local_port, "baseline": {k: artifacts["baseline"][k] for k in ("version", "commit", "sha256")},
             "candidate": {k: candidate[k] for k in ("version", "commit", "sha256")},
             "expected_outcome": ("recovered (rollback_verified, previous_failure=update_failed), automatically or "
@@ -756,7 +1035,7 @@ class Tunnel:
 
 class Trial:
     def __init__(self, cell: Cell, artifacts: dict, work_root: str, local_port: int,
-                 setup_draft: dict | None = None) -> None:
+                 setup_draft: dict | None = None, dns_mode: str = DEFAULT_DNS_MODE) -> None:
         self.cell, self.artifacts = cell, artifacts
         self.m = lab_modules()
         self.p = pair_modules()
@@ -767,7 +1046,8 @@ class Trial:
         self.node = self.plan["nodes"][cell.node]
         self.identity = self.trial.identity(self.record, self.plan, cell.node)
         self.local_port = local_port
-        self.setup_draft_override = setup_draft
+        self.dns_mode = dns_mode
+        self.setup_draft_override = setup_draft_choice(dns_mode, setup_draft)
         self.candidate = artifacts["defective" if cell.variant == "defective" else "good"]
         self.redactor = self.p["redaction"].Redactor()
         evidence_root = self.root / "evidence" / cell.node / "upd1"
@@ -908,32 +1188,37 @@ class Trial:
         if intent_path.exists() or intent_path.is_symlink():
             raise StepFailed("an upd1 intent already exists for this guest; a cell never reruns on the same guest")
         validate_artifacts(self.artifacts)
-        archive = self.m["archive"]
-        clone = Path(self.artifacts["clone"])
-        proofs = {}
-        for role in ("baseline", "good" if self.cell.variant == "good" else "defective"):
-            item = self.artifacts[role]
-            policy = self.m["baseline"].RELEASE_POLICY if role == "baseline" else self.m["origin"].RELEASE_POLICY
-            candidate = archive.inspect_archive(Path(item["archive"]), item["sha256"], release_policy=policy)
-            proof = acceptance_source_proof(archive.verify_committed_source, Path(item["archive"]), clone)(candidate, clone)
-            proofs[role] = {"commit": candidate["commit"], "tree": candidate["tree"], "files": len(candidate["files"]),
-                            "release_policy": candidate["release_policy"], "source_proof": proof,
-                            "agent_sha256": candidate["files"]["bin/agent"], "panel_sha256": candidate["files"]["bin/panel"]}
+        proofs = prove_artifacts(self.artifacts, ("baseline", "good" if self.cell.variant == "good" else "defective"),
+                                 self.m)
         self.state["proofs"] = proofs
         fresh = self.guest("for p in /opt/celikpanel /etc/celikpanel /var/lib/celikpanel " + PRIVATE +
-                           "/current-worker-baseline-intent.json; do test ! -e \"$p\" || echo \"present $p\"; done; "
-                           "getent hosts celikpanel.net || true", timeout=60).stdout
-        checks.update(proofs=proofs, guest_fresh="present" not in fresh, guest_hosts_before=fresh.strip())
-        if "present" in fresh:
-            raise StepFailed("guest is not fresh: " + fresh.strip())
+                           "/current-worker-baseline-intent.json; do test ! -e \"$p\" || echo \"present $p\"; done",
+                           timeout=60).stdout
+        # Read /etc/hosts and nsswitch only: asking the resolver for celikpanel.net before
+        # the fixture origin exists would resolve the real name (upd1 2026-09-30).
+        hosts = self.guest("cat /etc/hosts", timeout=30).stdout
+        nsswitch = self.guest("grep -E '^hosts:' /etc/nsswitch.conf || true", timeout=30).stdout.strip()
+        mapped = hosts_mappings(hosts)
+        checks.update(proofs=proofs, guest_fresh="present" not in fresh and not mapped,
+                      origin_name_before={"hosts_mappings": mapped, "nsswitch_hosts": nsswitch,
+                                          "resolver_queried": False})
+        if "present" in fresh or mapped:
+            raise StepFailed("guest is not fresh: " + (fresh.strip() + " " + "; ".join(mapped)).strip())
         intent = {"schema": INTENT_SCHEMA, "cell": dataclasses.asdict(self.cell), "identity": self.identity,
                   "artifacts": {role: {k: self.artifacts[role][k] for k in ("version", "commit", "sha256")}
                                 for role in ("baseline", "good", "defective")},
                   "created_at": utc_now(), "provenance": PROVENANCE}
         self.trial.save(self.root, self.node_name, "upd1-intent.json", encoded(intent))
         checks["helpers"] = self.upload_helpers()
+        self.state["helpers_uploaded"] = True
         self.record_json("preflight.json", checks)
         return "passed"
+
+    def origin_check(self, label: str) -> dict:
+        """celikpanel.net must resolve only to 127.0.0.1 and the fixture must answer 200."""
+        verdict = origin_verdict(self.workload("origin-check", timeout=60))
+        self.state.setdefault("origin_checks", {})[label] = verdict
+        return verdict
 
     def origin(self, checks: dict) -> str:
         origin = self.m["origin"]
@@ -954,17 +1239,24 @@ class Trial:
         staged = origin.stage(str(self.root), self.node_name)
         provision = self.guest(shlex.join(["python3", "-I", f"{PRIVATE}/worker-fixture-origin.py", "guest-provision",
                                            "--nonce", self.identity["nonce"]]), timeout=120)
-        serve = ["systemd-run", "--unit=celikpanel-lab-upd1-origin.service", "--property=Type=simple",
-                 "--property=UMask=0077", "python3", "-I", f"{PRIVATE}/worker-fixture-origin.py", "guest-serve",
-                 "--nonce", self.identity["nonce"]]
-        self.guest(shlex.join(serve), timeout=60)
-        time.sleep(2)
-        check = self.guest("getent hosts celikpanel.net; curl --silent --output /dev/null --write-out '%{http_code}' "
-                           "https://celikpanel.net/releases/latest.txt", timeout=60).stdout
+        # L1: an enabled lab unit (never a transient unit), so the origin
+        # returns after the restart the Arch installer demands and after a reset.
+        # Named cp-lab-*: a celikpanel-* unit file would make the real installer
+        # treat the guest as an already-started install (get.sh first_install_has_not_started).
+        unit = self.workload("install-origin", timeout=60)
         checks.update(target=intent["target"], provenance=intent["provenance"], staged=staged,
-                      provision=json.loads(provision.stdout), origin_check=check.strip())
-        if "127.0.0.1" not in check or not check.strip().endswith("200"):
-            raise StepFailed("guest-loopback celikpanel.net fixture origin is not serving: " + check.strip())
+                      provision=json.loads(provision.stdout), origin_unit=unit)
+        if any(result.get("returncode") != 0 for result in unit.get("results", [])):
+            raise StepFailed(f"fixture origin unit was not enabled and started: {unit.get('results')}")
+        verdict = None
+        for _ in range(10):
+            time.sleep(2)
+            verdict = self.origin_check("after-provision")
+            if verdict["ok"]:
+                break
+        checks["origin_check"] = verdict
+        if not verdict["ok"]:
+            raise StepFailed(f"guest-loopback celikpanel.net fixture origin is not serving: {verdict}")
         self.state["origin_target"] = intent["target"]
         return "passed"
 
@@ -1003,6 +1295,16 @@ class Trial:
                            capture_output=True, timeout=30)
             time.sleep(10)
             checks["owner_restart_seconds"] = self.wait_for_ssh()
+            # L1: the fixture origin must come back by itself after that restart.
+            verdict = None
+            for _ in range(15):
+                verdict = self.origin_check("after-owner-restart")
+                if verdict["ok"]:
+                    break
+                time.sleep(4)
+            checks["origin_after_restart"] = verdict
+            if not verdict["ok"]:
+                raise StepFailed(f"the fixture origin did not return after the owner restart: {verdict}")
         return "passed"
 
     def owner_login(self, checks: dict) -> str:
@@ -1061,6 +1363,8 @@ class Trial:
     def setup(self, checks: dict) -> str:
         state = self.api("GET", "/api/v1/setup", purpose="ServerSetupGate").json() or {}
         checks["before"] = {k: state.get(k) for k in ("status", "revision", "guidance", "required")}
+        checks["dns"] = dns_scope(self.dns_mode)
+        checks["draft_choices"] = self.setup_draft_override
         if state.get("guidance") not in ("guided", "manual"):
             state = self.api("PUT", "/api/v1/setup/guidance", {"revision": state.get("revision"), "guidance": "guided"},
                              purpose="ServerSetupChoice guided").json() or {}
@@ -1096,22 +1400,45 @@ class Trial:
             checks["start_outcome"] = f"unknown, reconciling by reads: {exc}"
         deadline = time.monotonic() + 3600
         execution = None
+        wait = SetupWait()
+        decision = "continue"
         with self.panel_client().polling() as view:
             while time.monotonic() < deadline:
                 try:
                     execution = self.api("GET", f"/api/v1/setup/operation?request_id={request_id}", view=view).json()
                 except self.p["panel_api"].PanelError as exc:
                     execution = {"poll_error": str(exc)}
-                if isinstance(execution, dict) and execution.get("status") in ("succeeded", "failed"):
+                decision = wait.observe(execution, time.monotonic())
+                if decision in ("terminal", "settled"):
                     break
                 time.sleep(5)
         checks["execution"] = {k: (execution or {}).get(k) for k in ("status", "phase", "error")}
         self.record_json("setup-execution.json", execution)
+        self.state["setup_execution"] = execution
+        if decision == "settled":
+            # H4: the product's fixed public-resolver check cannot pass on an isolated
+            # host; like the DNS pair driver, a stable wait there settles this step.
+            steps = {s.get("id"): s.get("status") for s in setup_steps(execution)}
+            pending = sorted(k for k, v in steps.items() if v == "pending")
+            record = {"phase": execution.get("phase"), "code": (execution.get("error") or {}).get("code"),
+                      "stable_wait_seconds": wait.seconds(time.monotonic()), "polls": wait.count,
+                      "steps": steps, "not_run": pending, "mail_steps_reached": mail_steps_reached(execution)}
+            checks["isolated_host_wait"] = record
+            self.state["setup_waiting"] = record
+            self.finding(f"{self.node_name}: server setup waits at {record['phase']} ({record['code']}) on an "
+                         f"isolated host; later wizard steps were not run: {pending}")
+            return "observed"
         if not isinstance(execution, dict) or execution.get("status") != "succeeded":
             raise StepFailed(f"server setup did not succeed: {checks['execution']}")
         return "passed"
 
     def seed(self, checks: dict) -> str:
+        # Cron precondition, read-only and before any seeding (product finding P1: the
+        # product does not install cron on Debian and masks the Agent's reason as 500).
+        # Absence is recorded as "cron: not available on this baseline", not seeded.
+        availability = cron_availability(self.workload("cron-availability", timeout=60))
+        self.state["cron_availability"] = availability
+        checks["cron_availability"] = availability
         domain = "upd1-owner.test"
         marker = "upd1-marker-" + secrets.token_hex(16)
         response = self.api("POST", "/api/v1/domains/create", {"domain": domain, "project_type": "static",
@@ -1145,19 +1472,30 @@ class Trial:
             present = address in accounts.text
             mail.update(setup_http=setup.status, create_http=created.status, address=address, listed=present)
             if not present:
-                if self.cell.mail_required:
+                # The wizard never reached its mail steps when it waits earlier (H4).
+                reached = mail_steps_reached(self.state.get("setup_execution"))
+                mail["setup_mail_steps_reached"] = reached
+                if self.cell.mail_required and reached:
                     raise StepFailed(f"mailbox was not created: HTTP {created.status} {created.json()}")
-                self.finding(f"{self.node_name}: mailbox creation did not succeed: HTTP {created.status}")
+                self.finding(f"{self.node_name}: mailbox creation did not succeed: HTTP {created.status}"
+                             + ("" if reached else " (setup waited before its mail steps)"))
         seeded["mail"] = mail
+        availability = self.state["cron_availability"]
         command = '/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt"'
-        cron = self.api("POST", f"/api/v1/domains/{domain_id}/cron",
-                        {"schedule": "* * * * *", "command": command, "comment": "upd1 owner cron"},
-                        purpose="DomainCronManager create")
-        listed = self.api("GET", f"/api/v1/domains/{domain_id}/cron", purpose="DomainCronManager list")
-        seeded["cron"] = {"create_http": cron.status, "command": command, "listed": "upd1-cron-stamp.txt" in listed.text,
-                          "list_sha256": hashlib.sha256(listed.body).hexdigest()}
-        if not seeded["cron"]["listed"]:
-            raise StepFailed(f"cron job was not created: HTTP {cron.status}")
+        if not availability["available"]:
+            seeded["cron"] = dict(availability, seeded=False, listed=False)
+            self.finding(f"{self.node_name}: cron: {CRON_NOT_AVAILABLE} (crontab absent before seeding); the owner "
+                         "cron job was not created and cron continuity is not measured")
+        else:
+            cron = self.api("POST", f"/api/v1/domains/{domain_id}/cron",
+                            {"schedule": "* * * * *", "command": command, "comment": "upd1 owner cron"},
+                            purpose="DomainCronManager create")
+            listed = self.api("GET", f"/api/v1/domains/{domain_id}/cron", purpose="DomainCronManager list")
+            seeded["cron"] = dict(availability, seeded=True, create_http=cron.status, command=command,
+                                  listed="upd1-cron-stamp.txt" in listed.text,
+                                  list_sha256=hashlib.sha256(listed.body).hexdigest())
+            if not seeded["cron"]["listed"]:
+                raise StepFailed(f"cron job was not created although crontab is present: HTTP {cron.status}")
         firewall = self.api("GET", "/api/v1/firewall", purpose="Firewall screen")
         seeded["firewall"] = {"http": firewall.status, "sha256": hashlib.sha256(firewall.body).hexdigest()}
         self.state["seed"] = seeded
@@ -1231,7 +1569,8 @@ class Trial:
     def pre_state(self, checks: dict) -> str:
         self.state["pre_observation"] = self.guest_observation("pre-update")
         self.state["pre_workload"] = self.workload_snapshot("pre-update")
-        if not (self.state["pre_workload"]["dns_udp"].get("ok") and self.state["pre_workload"]["dns_tcp"].get("ok")):
+        if self.dns_mode == "local" and not (self.state["pre_workload"]["dns_udp"].get("ok")
+                                             and self.state["pre_workload"]["dns_tcp"].get("ok")):
             # The zone may be served only on the setup address; the owner's resolver would use that.
             address = self.local_ip()
             retry = self.workload_snapshot("pre-update-setup-address", address)
@@ -1263,11 +1602,14 @@ class Trial:
                                                                          if s.get("cron", {}).get("ok")}) >= 2,
                       firewall_tables=pre["firewall"].get("tables"), timers=sorted(pre["timers"]),
                       database=self.state["pre_observation"].get("database", {}).get("status"))
-        failing = [k for k in ("web_ok", "dns_ok") if not checks[k]]
+        checks["dns"] = dns_scope(self.dns_mode)
+        # External DNS (H5): DNS is not provided by this run and never counted.
+        failing = [k for k in ("web_ok", "dns_ok") if not checks[k] and not (k == "dns_ok" and self.dns_mode == "external")]
         if seed["mail"].get("listed") and not checks["smtp_ok"]:
             failing.append("smtp_ok")
-        self.state["cron_precondition"] = checks["cron_advancing"]
-        if not checks["cron_advancing"]:
+        cron_seeded = bool(seed["cron"].get("seeded"))
+        self.state["cron_precondition"] = cron_seeded and checks["cron_advancing"]
+        if cron_seeded and not checks["cron_advancing"]:
             self.finding(f"{self.node_name}: the owner's cron job did not run within 180 s before the update "
                          "(cron daemon or tenant crontab not active); cron continuity is not measurable")
         if failing:
@@ -1290,6 +1632,11 @@ class Trial:
         return self.state["samples"]
 
     def arm(self, checks: dict) -> str:
+        # L1: the candidate is offered only by the guest-loopback fixture origin; prove it
+        # is still the only answer for celikpanel.net before the update check.
+        checks["origin_check"] = self.origin_check("before-arm")
+        if not checks["origin_check"]["ok"]:
+            raise StepFailed(f"the fixture origin is not serving before arm: {checks['origin_check']}")
         check = self.api("GET", "/api/v1/panel/update/check", purpose="PanelUpdateCard check", timeout=60)
         body = check.json() or {}
         target = body.get("target") or {}
@@ -1582,7 +1929,9 @@ class Trial:
                    and ((value or {}).get("running_executable") or {}).get("sha256")
                    == ((value or {}).get("installed_executable") or {}).get("sha256")
                    for unit, value in services.items()}
-        database = compare_databases(self.state["pre_observation"].get("database", {}), post_obs.get("database", {}))
+        # L2: tables the waiting setup rewrites are excluded only when this run recorded that wait.
+        database = compare_databases(self.state["pre_observation"].get("database", {}), post_obs.get("database", {}),
+                                     volatile_tables(bool(self.state.get("setup_waiting"))))
         timers = compare_states(pre_work.get("timers", {}), post_work.get("timers", {}))
         firewall_equal = pre_work.get("firewall", {}).get("sha256") == post_work.get("firewall", {}).get("sha256")
         # Owner view: a fresh login, then the update card and recovery reader.
@@ -1638,54 +1987,66 @@ class Trial:
             failures.append(f"timers changed: {sorted(timers['changed'])}")
         if not firewall_equal:
             failures.append("firewall ruleset changed")
-        if not checks["site_marker"] or not checks["dns"]:
-            failures.append("site marker or DNS SOA not served")
+        checks["dns_scope"] = dns_scope(self.dns_mode)
+        if not checks["site_marker"]:
+            failures.append("site marker not served")
+        if self.dns_mode == "local" and not checks["dns"]:
+            failures.append("DNS SOA not served")
         if self.state["seed"]["mail"].get("listed") and not (post_work.get("mailbox", {}).get("present") and checks["smtp"]):
             failures.append("mailbox or submission service missing")
-        if not login_ok or not seeded_rows["domain"] or not seeded_rows["cron"]:
+        cron_seeded = bool(self.state["seed"]["cron"].get("seeded"))
+        if not login_ok or not seeded_rows["domain"] or (cron_seeded and not seeded_rows["cron"]):
             failures.append("owner login or seeded rows missing")
         if failures:
             raise StepFailed("; ".join(failures))
         return "passed"
 
     def collect(self, checks: dict) -> str:
+        """L3: runs whatever step stopped the cell, as long as the guest was prepared.
+
+        Each part is attempted on its own; a part that cannot be read is listed
+        under ``unavailable`` and the rest is still kept.
+        """
         self.stop_host_loop.set()
+        if not self.state.get("helpers_uploaded"):
+            checks["reason"] = "the guest was never prepared (preflight stopped before the lab helpers were uploaded)"
+            return "skipped"
         rid = self.state.get("request_id")
-        samples = self.read_samples()
+        unavailable: dict[str, str] = {}
+
+        def attempt(label: str, function: Callable[[], Any]) -> Any:
+            try:
+                return function()
+            except Exception as exc:  # noqa: BLE001 - one missing part never loses the others
+                unavailable[label] = self.redactor.text(f"{type(exc).__name__}: {exc}")[:300]
+                return None
+
+        checks["stopped_after"] = [s["name"] for s in self.steps if s["verdict"] not in ("passed", "observed", "skipped")
+                                   and s["name"] != "collect"][:1]
+        samples = attempt("guest-samples", self.read_samples) or []
         self.ev.write_text(f"{self.step_dir}/guest-samples.jsonl", "\n".join(json.dumps(s, sort_keys=True) for s in samples))
         self.ev.write_text(f"{self.step_dir}/host-samples.jsonl",
                            "\n".join(json.dumps(s, sort_keys=True) for s in self.host_samples))
-        units = ["celikpanel-release-recovery.service", "celikpanel-agent.service", "celikpanel-panel.service",
-                 "cp-lab-upd1-sampler.service"]
-        if rid:
-            units += [f"celikpanel-self-update-{rid}.service", f"celikpanel-lab-owner-update-observer-{rid}.service",
-                      f"celikpanel-lab-recovery-fault-{rid}.service"]
-        journal = self.workload("journal", "--since=-6h", "--lines", "20000", *sum((["--unit", u] for u in units), []),
-                                timeout=120)
-        self.ev.write_text(f"{self.step_dir}/journal.txt", journal.get("stdout", ""))
-        if rid:
-            # Producer observation records for this request (no tokens; bindings are never read out).
-            body = "\n".join([
-                "python3 -I - <<'CP_UPD1_OBS'",
-                "import json,re",
-                "from pathlib import Path",
-                "out={}",
-                "for p in sorted(Path('/var/lib/celikpanel-recovery-observations').glob('" + rid + "*'))[:8]:",
-                "    raw=p.read_bytes()[:4096].decode('ascii','replace')",
-                "    out[p.name]=raw if not re.search(r'token|secret|password',raw,re.I) else 'withheld'",
-                "print(json.dumps(out))",
-                "CP_UPD1_OBS", ""])
-            try:
-                self.record_json("observation-records.json", json.loads(self.guest(body, timeout=30).stdout))
-            except (subprocess.SubprocessError, ValueError) as exc:
-                checks["observation_records"] = f"unavailable: {type(exc).__name__}"
-        observer = self.observer_events() if rid else []
+        journals = {}
+        for label, units in journal_groups(rid).items():
+            value = attempt(f"journal-{label}", lambda units=units: self.workload(
+                "journal", "--since=-12h", "--lines", "20000", *sum((["--unit", u] for u in units), []), timeout=120))
+            if value is not None:
+                journals[label] = value.get("stdout", "")
+                attempt(f"journal-{label}-write",
+                        lambda label=label: self.ev.write_text(f"{self.step_dir}/journal-{label}.txt", journals[label]))
+        observations = attempt("observation-records", lambda: json.loads(
+            self.guest(observation_records_script(rid), timeout=30).stdout))
+        if observations is not None:
+            attempt("observation-records-write", lambda: self.record_json("observation-records.json", observations))
+        observer = (attempt("observer-events", self.observer_events) or []) if rid else []
         self.record_json("observer-events.json", observer)
         snapshot = next((e.get("snapshot") for e in reversed(observer) if e.get("snapshot")), None)
-        budget = self.workload("budget", *(["--snapshot-name", snapshot] if snapshot else []))
-        self.record_json("budget.json", budget)
-        attempts = attempts_from_receipts(budget.get("receipts", []), snapshot)
-        attempts["journal_admissions"] = parse_dispatch_journal(journal.get("stdout", ""))
+        budget = attempt("budget", lambda: self.workload("budget", *(["--snapshot-name", snapshot] if snapshot else [])))
+        if budget is not None:
+            self.record_json("budget.json", budget)
+        attempts = attempts_from_receipts((budget or {}).get("receipts", []), snapshot)
+        attempts["journal_admissions"] = parse_dispatch_journal(journals.get("product", ""))
         self.state["attempts"] = attempts
         if rid and self.cell.recovery_fault:
             try:
@@ -1697,11 +2058,20 @@ class Trial:
                 self.ev.write_text(f"{self.step_dir}/recovery-fault-events.jsonl", raw.decode())
             except Exception as exc:  # noqa: BLE001
                 checks["recovery_fault_events"] = f"unavailable: {type(exc).__name__}"
-        checks.update(guest_samples=len(samples), host_samples=len(self.host_samples),
-                      observer=[e.get("event") for e in observer], attempts=attempts)
-        return "passed"
+        checks.update(guest_samples=len(samples), host_samples=len(self.host_samples), journals=sorted(journals),
+                      observer=[e.get("event") for e in observer], attempts=attempts, unavailable=unavailable)
+        self.state["collect_unavailable"] = unavailable
+        return "passed" if not unavailable else "inconclusive"
+
+    def cron_scope(self) -> str:
+        availability = self.state.get("cron_availability") or {}
+        if availability and not availability.get("available"):
+            return CRON_NOT_AVAILABLE
+        return "measured" if self.state.get("cron_precondition") else "not-running-before-update"
 
     def verdicts(self, checks: dict) -> str:
+        if "guest-samples" in (self.state.get("collect_unavailable") or {}):
+            raise StepInconclusive("the guest sample series could not be read; no outage window is judged")
         samples = self.state.get("samples", [])
         skew = self.state.get("clock_skew") or 0.0
         # Host instants on the guest clock (the reset may also move the guest clock; recorded, not corrected).
@@ -1709,17 +2079,8 @@ class Trial:
         started = self.state["started_at"] + skew if self.state.get("started_at") else None
         terminal_at = self.state["terminal_at"] + skew if self.state.get("terminal_at") else None
         checks["clock_skew_seconds"] = skew
-        per = {}
-        for key in WORKLOADS:
-            if key == "smtp" and not self.state.get("seed", {}).get("mail", {}).get("listed"):
-                per[key] = {"verdict": "not-seeded"}
-                continue
-            if key == "cron" and not self.state.get("cron_precondition"):
-                per[key] = {"verdict": "not-running-before-update"}
-                continue
-            windows = cron_windows(samples) if key == "cron" else outage_windows(samples, key)
-            classify_windows(windows, resets)
-            per[key] = {"verdict": workload_verdict(windows), "windows": windows}
+        per = workload_verdicts(samples, resets, mail_listed=bool(self.state.get("seed", {}).get("mail", {}).get("listed")),
+                                cron=self.cron_scope(), dns_mode=self.dns_mode)
         panel_windows = classify_windows(outage_windows(samples, "panel"), resets)
         per["panel"] = dict(panel_verdict(panel_windows, started, terminal_at), windows=panel_windows)
         host_panel = outage_windows(self.host_samples, "panel")
@@ -1754,8 +2115,10 @@ class Trial:
             self.step("track-after-owner-continuation", lambda checks: self.track(checks, label="after-owner"),
                       needs=("owner-continuation (required)",))
         self.step("terminal", self.terminal, needs=("owner-start",))
-        self.step("collect", self.collect, needs=("seed",))
-        self.step("verdicts", self.verdicts, needs=("collect", "owner-start"))
+        # L3: collect is attempted whatever stopped the cell (it skips itself only when
+        # the guest was never prepared), so a cell stopped at seed or earlier keeps its journals.
+        self.step("collect", self.collect)
+        self.step("verdicts", self.verdicts, needs=("owner-start",))
         self.tunnel.close()
         verdicts = [s["verdict"] for s in self.steps]
         result = {"schema": RESULT_SCHEMA, "native_evidence": False, "cell": dataclasses.asdict(self.cell),
@@ -1769,6 +2132,8 @@ class Trial:
                               "owner_continuation": bool(self.state.get("owner_continued")),
                               "attempts": self.state.get("attempts"), "reboot": self.state.get("reboot"),
                               "pin_changes": self.state.get("pin_changes", [])},
+                  "scope": result_scope(self.dns_mode, self.state.get("cron_availability"),
+                                        self.state.get("setup_waiting"), self.state.get("origin_checks")),
                   "findings": self.state["findings"],
                   "steps": [{k: s.get(k) for k in ("name", "verdict", "reason", "started_at", "finished_at")}
                             for s in self.steps],
@@ -1797,13 +2162,19 @@ def main(argv: list[str] | None = None) -> int:
     fix.add_argument("--repo", required=True, type=Path)
     fix.add_argument("--kind", required=True, choices=("baseline", "good", "defective"))
     fix.add_argument("--previous-commit")
+    prove = sub.add_parser("prove", help="read-only host proof of all three archives (no guest)")
+    prove.add_argument("--artifacts", required=True, type=Path)
     for name in ("plan", "run"):
         cmd = sub.add_parser(name)
         cmd.add_argument("--cell", required=True, choices=sorted(CELLS))
         cmd.add_argument("--artifacts", required=True, type=Path)
         cmd.add_argument("--work-root", required=True)
         cmd.add_argument("--local-port", type=int, default=18443)
-        cmd.add_argument("--setup-draft-json", type=Path, help="optional draft field overrides (owner choices)")
+        cmd.add_argument("--setup-draft-json", type=Path, help="optional draft field overrides (owner choices); "
+                         "--dns-mode local needs peer_ip and peer_ns here")
+        cmd.add_argument("--dns-mode", choices=DNS_MODES, default=DEFAULT_DNS_MODE,
+                         help="external (default): DNS hosted elsewhere on the single node, recorded as not provided "
+                              "by this run (covered by the item 2 pair runs); local: reserved for a two-node variant")
         if name == "plan":
             cmd.add_argument("--dry-run", action="store_true", help="validate the plan without any guest")
         else:
@@ -1812,22 +2183,34 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "fixture-source":
         print(json.dumps(fixture_source(args.repo, args.kind, args.previous_commit)))
         return 0
+    if args.command == "prove":
+        document = validate_artifacts(json.loads(args.artifacts.read_text()))
+        print(json.dumps({"schema": "celikpanel/upd1-artifact-proof/v1", "native_evidence": False,
+                          "proofs": prove_artifacts(document, ("baseline", "good", "defective"))},
+                         indent=2, sort_keys=True))
+        return 0
     cell = validate_cell(args.cell)
     validate_work_root(args.work_root)
     if not 1024 < args.local_port < 65536:
         parser.error("--local-port must be an unprivileged loopback port")
     document = json.loads(args.artifacts.read_text())
     draft = json.loads(args.setup_draft_json.read_text()) if args.setup_draft_json else None
-    if draft is not None and (not isinstance(draft, dict) or "purpose" in draft):
-        parser.error("--setup-draft-json overrides draft fields other than purpose")
+    if draft is not None and not isinstance(draft, dict):
+        parser.error("--setup-draft-json must be a JSON object of draft fields")
+    try:
+        choices = setup_draft_choice(args.dns_mode, draft)
+    except ValueError as exc:
+        parser.error(str(exc))
     if args.command == "plan":
         validate_artifacts(document, check_files=not args.dry_run)
-        print(json.dumps(build_plan(cell, document, args.work_root, args.local_port), indent=2, sort_keys=True))
+        plan = build_plan(cell, document, args.work_root, args.local_port, args.dns_mode)
+        plan["draft_choices"] = choices
+        print(json.dumps(plan, indent=2, sort_keys=True))
         return 0
     if not args.execute:
         parser.error("run mutates one registered disposable guest and requires --execute")
     validate_artifacts(document)
-    result = Trial(cell, document, args.work_root, args.local_port, draft).execute()
+    result = Trial(cell, document, args.work_root, args.local_port, draft, args.dns_mode).execute()
     print(json.dumps({"overall": result["overall"], "outcome": result["outcome"]["classification"],
                       "request_id": result["request_id"]}, sort_keys=True))
     return 0 if result["overall"] != "failed" else 1

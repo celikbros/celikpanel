@@ -158,15 +158,43 @@ def verify_generated_mail_renewal(candidate, repository):
     return expected
 
 
+DNS_OWNER_TOOLS_PREFIX='dns-owner-tools/'
+# make dist (Makefile target dns-owner-tools, since 3197ff84/a47b4a40) packages
+# exactly these four files. The three tools are Go build outputs like bin/ and
+# are covered by the full archive inventory; README.md is a verbatim copy of
+# the committed cmd/dns-peer-enroll/README.md and is proved against that blob.
+DNS_OWNER_TOOLS={'dns-owner-tools/README.md':'cmd/dns-peer-enroll/README.md',
+                 'dns-owner-tools/dns-peer-enroll':None,
+                 'dns-owner-tools/bind-peer-inspect':None,
+                 'dns-owner-tools/pdns-peer-inspect':None}
+
+
+def dns_owner_tools_sources(files):
+    """Committed source for each packaged dns-owner-tools/ file (None: build output).
+
+    Absent directory: {} (archives before 2026-09-28). Present: the exact
+    four-file inventory, or the candidate is refused.
+    """
+    present={name for name in files if name.startswith(DNS_OWNER_TOOLS_PREFIX)}
+    if not present:return {}
+    if present!=set(DNS_OWNER_TOOLS):raise ValueError('candidate dns-owner-tools inventory differs')
+    return dict(DNS_OWNER_TOOLS)
+
+
 def verify_committed_source(candidate,repository):
     commit=candidate['commit']
     actual=subprocess.run(['git','-C',str(repository),'rev-parse',commit+'^{tree}'],check=True,capture_output=True,text=True).stdout.strip()
     if actual!=candidate['tree']:raise ValueError('candidate source tree differs from real committed source')
     generated_firewall=verify_generated_firewall(candidate,repository)
     generated_mail=verify_generated_mail_renewal(candidate,repository)
+    owner_tools=dns_owner_tools_sources(candidate['files'])
     names=[];queries=[]
     for name in candidate['files']:
         if name in generated_firewall or name in generated_mail:continue
+        if name in owner_tools:
+            if owner_tools[name] is not None:
+                names.append(name);queries.append(commit+':'+owner_tools[name])
+            continue
         if name=='SHA256SUMS' or name.startswith(('bin/','web/dist/','release.')):continue
 
         # The kit embeds reviewed static sources under a separate data root.

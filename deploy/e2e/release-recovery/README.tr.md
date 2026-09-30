@@ -467,6 +467,27 @@ tabanı kopyasını taşıdıktan sonra `--migrate-only` ile 1 döndürür; bu h
 biterse sürücü, ürünün günlükte gösterdiği tek seferlik yeniden deneme
 komutunu bir kez çalıştırır ve sonucu "sahip devamıyla kurtarıldı" olarak ayırır.
 
+upd1 tek ve yalıtılmış bir düğümde çalışır. Bu yüzden varsayılan
+`--dns-mode external` seçimidir: DNS başka yerde barındırılır. Her hücre DNS'i
+"bu denemede sağlanmadı; 2. maddenin DNS çifti denemeleri kapsar" diye
+kaydeder ve DNS hiçbir zaman geçti sayılmaz. `--dns-mode local`, ileride iki
+düğümlü bir sürüm için saklanır ve `peer_ip`/`peer_ns` ister.
+
+30 Eylül 2026 denemesinden sonra test düzeneğine şu düzeltmeler eklendi:
+
+- Betik, boşluk içeren depo yolunu tek argüman olarak taşır.
+- `dns-owner-tools/` dizini kaynak kanıtına eklendi (tam dört dosya).
+- Yalıtılmış konukta kurulum `access_dns` adımında 120 saniye kararlı
+  beklerse bu durum `observed` olarak kaydedilir.
+- Test kaynağı, yeniden başlatmadan sağ çıkan etkin bir laboratuvar birimidir
+  (`cp-lab-upd1-origin.service`).
+- Bekleyen kurulumun yeniden yazdığı `server_setup_executions` tablosu veri
+  tabanı karşılaştırmasının dışında tutulur ve gerekçesiyle listelenir.
+- `collect`, hücre erken dursa da günlükleri toplar.
+- Test kaynağı kurulmadan önce `celikpanel.net` adı hiç sorgulanmaz.
+- `crontab` yoksa zamanlanmış görev oluşturulmaz; durum "cron: not available
+  on this baseline" olarak kaydedilir.
+
 Komutlar ve hücre ayrıntıları İngilizce bölümdedir
 ([README.md](README.md#owner-started-update-acceptance-upd1)). Çevrimdışı
-testler (`test_owner_update_trial.py`, 29 test) yerel sonucu kanıtlamaz.
+testler (`test_owner_update_trial.py`, 55 test) yerel sonucu kanıtlamaz.

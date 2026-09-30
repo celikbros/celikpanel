@@ -1,20 +1,30 @@
 """Offline tests for the upd1 owner-started update trial (no guest, no network)."""
+import ast
 import base64
+import fnmatch
 import hashlib
 import importlib.util
+import inspect
 import io
 import json
+import os
 import re
+import secrets
+import shutil
+import subprocess
 import sys
 import tarfile
 import tempfile
+import threading
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from types import SimpleNamespace
+from unittest import mock
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
+RUN_EVIDENCE = HERE / "evidence" / "upd1-20261001"
 
 
 def load(name, filename):
@@ -531,6 +541,489 @@ class ObserverTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertNotIn("worker_frozen", events)
         self.assertEqual(events[-1], "released")
+
+
+# ---------------------------------------------------------------------------
+# upd1 2026-09-30 corrections (H1-H5, L1-L3, origin lookup, cron precondition)
+# ---------------------------------------------------------------------------
+
+@unittest.skipUnless(os.name == "posix" and shutil.which("bash"), "the wrapper runs under bash on the Linux host")
+class WrapperTests(unittest.TestCase):
+    """H1: run-upd1.sh keeps a repository path with spaces as one argument."""
+
+    def harness(self, directory):
+        target = Path(directory) / "CELIKBROS PROJECTS" / "celik panel" / "deploy" / "e2e" / "release-recovery"
+        target.mkdir(parents=True)
+        for name in ("run-upd1.sh", "owner_update_trial.py"):
+            shutil.copy2(HERE / name, target / name)
+        art = target.parent / "upd1 artifacts.json"
+        art.write_text(json.dumps(artifacts()))
+        return target, art
+
+    def test_no_command_is_kept_in_an_unquoted_string(self):
+        text = (HERE / "run-upd1.sh").read_text()
+        self.assertIsNone(re.search(r'\$(DRIVER|LAB)\b(?!\[@\])', text))
+        self.assertIsNone(re.search(r'^\s*(DRIVER|LAB)="', text, re.M))
+        self.assertIn('DRIVER=(python3 "$HERE/owner_update_trial.py")', text)
+
+    def test_dry_run_from_a_path_with_spaces(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target, art = self.harness(directory)
+            done = subprocess.run(["bash", str(target / "run-upd1.sh"), "dry-run", "upd1-debian13-defective", str(art),
+                                   "upd1-d13-def-a"], capture_output=True, text=True, cwd=directory, timeout=60)
+            self.assertEqual(done.returncode, 0, done.stderr)
+            plan = json.loads(done.stdout)
+            self.assertEqual(plan["dns"]["verdict"], t.DNS_NOT_PROVIDED)
+            self.assertEqual(plan["draft_choices"], {"dns_mode": "external", "peer_ip": "", "peer_ns": ""})
+            self.assertFalse(plan["native_evidence"])
+
+    @unittest.skipUnless(os.name == "posix" and os.geteuid() == 0, "the cell command refuses non-root")
+    def test_cell_passes_every_path_and_owner_choice_as_one_argument(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target, art = self.harness(directory)
+            fake = Path(directory) / "fake bin"
+            fake.mkdir()
+            log = Path(directory) / "calls.log"
+            (fake / "python3").write_text('#!/bin/sh\n{ for a in "$@"; do printf \'%s\\037\' "$a"; done; '
+                                          'printf \'\\036\'; } >> "$UPD1_TEST_LOG"\n')
+            (fake / "python3").chmod(0o755)
+            draft = Path(directory) / "owner draft.json"
+            draft.write_text(json.dumps({"peer_ip": "192.0.2.11", "peer_ns": "ns2.upd1-infra.test"}))
+            name = "upd1-wrapper-test-" + secrets.token_hex(6)
+            self.assertFalse(Path("/var/tmp/cp-release-drill-" + name).exists())
+            env = dict(os.environ, PATH=str(fake) + os.pathsep + os.environ.get("PATH", ""), UPD1_TEST_LOG=str(log),
+                       UPD1_DNS_MODE="local", UPD1_SETUP_DRAFT_JSON=str(draft))
+            done = subprocess.run(["bash", str(target / "run-upd1.sh"), "cell", "upd1-debian13-good", str(art), name,
+                                   "2371"], capture_output=True, text=True, cwd=directory, env=env, timeout=60)
+            self.assertEqual(done.returncode, 0, done.stderr)
+            calls = [record.split("\x1f")[:-1] for record in log.read_text().split("\x1e") if record]
+            self.assertEqual([c[0] for c in calls], [str(target / "owner_update_trial.py")] + [str(target / "lab.py")] * 3
+                             + [str(target / "owner_update_trial.py"), str(target / "lab.py")])
+            self.assertEqual([c[1] for c in calls], ["plan", "prepare", "start", "status", "run", "stop"])
+            for call in (calls[0], calls[4]):
+                self.assertIn(str(art), call)
+                self.assertEqual(call[call.index("--dns-mode") + 1], "local")
+                self.assertEqual(call[call.index("--setup-draft-json") + 1], str(draft))
+            self.assertIn("dns_mode=local", done.stdout)
+            self.assertFalse(Path("/var/tmp/cp-release-drill-" + name).exists())
+
+
+class DNSScopeTests(unittest.TestCase):
+    """H3/H5: external DNS by default; local only with the paired identity."""
+
+    def test_external_is_the_default_and_matches_the_run_copy_choice(self):
+        run_copy = json.loads((RUN_EVIDENCE / "harness-run-copy" / "draft-external.json").read_text())
+        self.assertEqual(t.DEFAULT_DNS_MODE, "external")
+        self.assertEqual(t.setup_draft_choice("external", None), run_copy)
+        trial = object.__new__(t.Trial)
+        trial.node_name, trial.setup_draft_override = "debian13", t.setup_draft_choice("external", None)
+        draft = trial.draft("web_mail", "192.0.2.10")
+        self.assertEqual((draft["dns_mode"], draft["peer_ip"], draft["peer_ns"], draft["purpose"]),
+                         ("external", "", "", "web_mail"))
+        self.assertEqual(draft["panel_domain"], "panel-debian13.upd1-infra.test")
+
+    def test_draft_choice_refusals(self):
+        peers = json.loads((RUN_EVIDENCE / "harness-run-copy" / "draft-debian13.json").read_text())
+        self.assertEqual(t.setup_draft_choice("local", peers), dict(peers, dns_mode="local"))
+        for mode, override, message in (
+                ("local", None, "server_setup_dns_identity_required"),
+                ("local", {"peer_ip": "192.0.2.11"}, "peer_ip and peer_ns"),
+                ("external", peers, "no peer identity"),
+                ("external", {"dns_mode": "local"}, "conflicts"),
+                ("external", {"purpose": "web"}, "other than purpose"),
+                ("remote", None, "--dns-mode")):
+            with self.subTest(mode=mode, override=override), self.assertRaisesRegex(ValueError, message):
+                t.setup_draft_choice(mode, override)
+
+    def test_plan_cli_records_the_dns_scope(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "a.json"
+            path.write_text(json.dumps(artifacts()))
+            base = ["plan", "--cell", "upd1-debian13-good", "--artifacts", str(path),
+                    "--work-root", "/var/tmp/cp-release-drill-upd1-x", "--dry-run"]
+            out = io.StringIO()
+            with redirect_stdout(out):
+                self.assertEqual(t.main(base), 0)
+            plan = json.loads(out.getvalue())
+            self.assertEqual(plan["dns"]["mode"], "external")
+            self.assertIn("item 2", plan["dns"]["note"])
+            with self.assertRaises(SystemExit), redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+                t.main(base + ["--dns-mode", "local"])
+            draft = RUN_EVIDENCE / "harness-run-copy" / "draft-debian13.json"
+            out = io.StringIO()
+            with redirect_stdout(out):
+                self.assertEqual(t.main(base + ["--dns-mode", "local", "--setup-draft-json", str(draft)]), 0)
+            self.assertEqual(json.loads(out.getvalue())["draft_choices"]["peer_ip"], "192.0.2.11")
+
+    def test_external_dns_is_never_counted_as_passed(self):
+        def sample(moment, dns_ok):
+            return {"t": moment, "web": {"ok": True}, "dns": {"ok": dns_ok}, "panel": {"ok": True}}
+        for dns_ok in (True, False):
+            samples = [sample(i * 5.0, dns_ok) for i in range(10)]
+            per = t.workload_verdicts(samples, [], mail_listed=False, cron="measured", dns_mode="external")
+            self.assertEqual(per["dns"]["verdict"], t.DNS_NOT_PROVIDED)
+            self.assertNotIn("windows", per["dns"])
+            self.assertEqual(per["web"]["verdict"], "never-interrupted")
+        local = t.workload_verdicts([sample(0, True), sample(5, False), sample(10, True)], [], mail_listed=False,
+                                    cron="measured", dns_mode="local")
+        self.assertEqual(local["dns"]["verdict"], "interrupted")
+        scope = t.result_scope("external", None, None, None)
+        self.assertEqual(scope["dns"]["verdict"], t.DNS_NOT_PROVIDED)
+        self.assertIn("stopped before seeding", scope["cron"]["verdict"])
+
+
+class SetupWaitTests(unittest.TestCase):
+    """H4: a stable wait at access_dns settles the setup step as observed."""
+
+    def ex(self, status, phase="access_dns"):
+        return {"status": status, "phase": phase}
+
+    def test_settle_phases_match_the_pair_driver(self):
+        source = (REPO / "deploy/e2e/dns-pair-acceptance/pair_acceptance.py").read_text()
+        literal = re.search(r"NON_DNS_SETUP_PHASES = frozenset\((\{[^}]*\})\)", source).group(1)
+        self.assertEqual(t.SETUP_SETTLE_PHASES, frozenset(ast.literal_eval(literal)))
+
+    def test_retry_flips_to_running_do_not_restart_the_clock(self):
+        wait = t.SetupWait()
+        observed = [wait.observe(self.ex(s), now) for now, s in
+                    ((0, "running"), (25, "waiting"), (50, "running"), (100, "waiting"), (119, "waiting"))]
+        self.assertEqual(observed, ["continue"] * 5)
+        self.assertEqual(wait.observe(self.ex("running"), 125), "continue")  # the latest read must say waiting
+        self.assertEqual(wait.observe(self.ex("waiting"), 126), "settled")
+        self.assertEqual(wait.seconds(126), 126.0)
+
+    def test_phase_change_error_or_other_phase_restarts_or_never_settles(self):
+        wait = t.SetupWait()
+        wait.observe(self.ex("waiting"), 0)
+        wait.observe(self.ex("waiting", "panel_certificate"), 60)
+        self.assertEqual(wait.observe(self.ex("waiting", "panel_certificate"), 150), "continue")
+        self.assertEqual(wait.observe(self.ex("waiting", "panel_certificate"), 181), "settled")
+        other = t.SetupWait()
+        for now in range(0, 1000, 25):
+            self.assertEqual(other.observe(self.ex("waiting", "mail_profile"), now), "continue")
+        reset = t.SetupWait()
+        reset.observe(self.ex("waiting"), 0)
+        reset.observe({"poll_error": "timeout"}, 60)
+        self.assertEqual(reset.observe(self.ex("waiting"), 130), "continue")
+        self.assertEqual(t.SetupWait().observe(self.ex("failed", "mail_profile"), 0), "terminal")
+        few = t.SetupWait()
+        few.observe(self.ex("waiting"), 0)
+        self.assertEqual(few.observe(self.ex("waiting"), 500), "continue")  # two reads are not a stable wait
+
+    def test_mail_requirement_follows_the_recorded_setup(self):
+        waited_early = json.loads((RUN_EVIDENCE / "upd1-debian13-good/run-b/steps/06-setup/setup-execution.json").read_text())
+        waited_late = json.loads((RUN_EVIDENCE / "upd1-debian13-defective/run-c/steps/06-setup/setup-execution.json").read_text())
+        self.assertFalse(t.mail_steps_reached(waited_early))
+        self.assertTrue(t.mail_steps_reached(waited_late))
+        self.assertTrue(t.mail_steps_reached(None))
+
+
+class DatabaseVolatileTests(unittest.TestCase):
+    """L2: the waiting setup's table is excluded, and listed, only when the wait was recorded."""
+
+    def db(self, tables):
+        return {"semantic": {"schema_sha256": "s", "sha256": "x",
+                             "tables": [{"name": n, "sha256": v} for n, v in tables.items()]}}
+
+    def test_waiting_setup_rows_are_excluded_explicitly(self):
+        pre = self.db({"domains": "1", "server_setup_executions": "a", "server_setup_state": "s"})
+        post = self.db({"domains": "1", "server_setup_executions": "b", "server_setup_state": "s"})
+        waited = t.compare_databases(pre, post, t.volatile_tables(True))
+        self.assertEqual(waited["verdict"], "equal-except-volatile")
+        self.assertIn("server_setup_executions", waited["volatile_excluded"])
+        self.assertIn("claimServerSetupDNSRetry", waited["volatile_reasons"]["server_setup_executions"])
+        self.assertNotIn("server_setup_state", waited["volatile_excluded"])
+        plain = t.compare_databases(pre, post, t.volatile_tables(False))
+        self.assertEqual((plain["verdict"], plain["unexpected"]), ("different", ["server_setup_executions"]))
+        state = t.compare_databases(pre, self.db({"domains": "1", "server_setup_executions": "b",
+                                                  "server_setup_state": "t"}), t.volatile_tables(True))
+        self.assertEqual(state["unexpected"], ["server_setup_state"])
+
+    def test_the_waiting_writer_is_the_product_table(self):
+        retry = (REPO / "cmd/panel/server_setup_dns_retry.go").read_text()
+        self.assertIn("UPDATE server_setup_executions SET status='running'", retry)
+
+
+class CronPreconditionTests(unittest.TestCase):
+    def test_absent_crontab_is_recorded_not_seeded(self):
+        absent = t.cron_availability({"crontab": None, "units": {"cron.service": {"LoadState": "not-found"},
+                                                                  "cronie.service": {"LoadState": "not-found"}}})
+        self.assertEqual((absent["available"], absent["verdict"], absent["daemon_units"]),
+                         (False, "not available on this baseline", {}))
+        present = t.cron_availability({"crontab": "/usr/bin/crontab", "units": {
+            "cron.service": {"LoadState": "loaded", "ActiveState": "active", "UnitFileState": "enabled"}}})
+        self.assertEqual((present["available"], present["daemon_active"]), (True, True))
+        trial = object.__new__(t.Trial)
+        trial.state = {"cron_availability": absent}
+        self.assertEqual(trial.cron_scope(), t.CRON_NOT_AVAILABLE)
+        trial.state = {"cron_availability": present, "cron_precondition": True}
+        self.assertEqual(trial.cron_scope(), "measured")
+        per = t.workload_verdicts([], [], mail_listed=False, cron=t.CRON_NOT_AVAILABLE, dns_mode="external")
+        self.assertEqual(per["cron"]["verdict"], "not-available-on-baseline")
+        self.assertEqual(t.result_scope("external", absent, None, None)["cron"]["verdict"], t.CRON_NOT_AVAILABLE)
+
+    def test_the_agent_gate_is_crontab_on_path(self):
+        # The Agent refuses cron work when `crontab` is not on PATH (wording may change with the P1 fix).
+        agent = (REPO / "cmd/agent/cron_rpc.go").read_text(encoding="utf-8")
+        self.assertIn('LookPath("crontab")', agent)
+
+
+class OriginTests(unittest.TestCase):
+    """L1 (persistent origin unit) and the no-real-lookup rule."""
+
+    NONCE = "b" * 64
+
+    def test_origin_unit_is_enabled_persistent_and_named_outside_the_installer_globs(self):
+        unit = w.origin_unit_text(self.NONCE)
+        self.assertIn("\n[Install]\nWantedBy=multi-user.target\n", unit)
+        self.assertIn("Restart=on-failure", unit)
+        self.assertIn("ExecStart=/usr/bin/python3 -I /root/celikpanel-release-recovery-lab/worker-fixture-origin.py "
+                      "guest-serve --nonce " + self.NONCE + "\n", unit)
+        with self.assertRaises(ValueError):
+            w.origin_unit_text("x; rm -rf /")
+        self.assertEqual(t.ORIGIN_UNIT, w.ORIGIN_UNIT)
+        self.assertEqual(t.SAMPLER_UNIT, w.SAMPLER_UNIT)
+        getsh = (REPO / "download-portal/get.sh").read_text()
+        globs = re.findall(r"(/[\w/]+/systemd/system/celikpanel-\*)", getsh)
+        self.assertGreaterEqual(len(globs), 4)
+        for pattern in globs:
+            self.assertFalse(fnmatch.fnmatch("/etc/systemd/system/" + t.ORIGIN_UNIT, pattern))
+            # The old unit name would have told the installer an install had already started.
+            self.assertTrue(fnmatch.fnmatch(pattern.split("/celikpanel-")[0] + "/celikpanel-lab-upd1-origin.service",
+                                            pattern))
+
+    def test_driver_no_longer_starts_a_transient_origin_or_resolves_before_provisioning(self):
+        self.assertNotIn("systemd-run", inspect.getsource(t.Trial.origin))
+        self.assertNotIn("getent", inspect.getsource(t.Trial.preflight))
+        self.assertIn("origin_check(\"before-arm\")", inspect.getsource(t.Trial.arm))
+        self.assertIn("origin_check(\"after-owner-restart\")", inspect.getsource(t.Trial.baseline_install))
+
+    def test_guest_lookup_and_unit_refuse_before_provisioning(self):
+        with tempfile.TemporaryDirectory() as directory:
+            calls = []
+            missing = Path(directory) / "worker-origin-provisioned.json"
+            with mock.patch.object(w, "ORIGIN_PROVISIONED", missing), \
+                    mock.patch.object(w, "run", lambda *a, **k: calls.append(a) or {}), \
+                    mock.patch.object(w, "private_root", lambda: Path(directory)):
+                with self.assertRaisesRegex(ValueError, "not looked up"):
+                    w.origin_check()
+                with self.assertRaisesRegex(ValueError, "not provisioned"):
+                    w.install_origin({"nonce": self.NONCE})
+            self.assertEqual(calls, [])
+
+    def test_origin_verdict(self):
+        def check(getent, http):
+            return {"getent": {"stdout": getent}, "https": {"stdout": http}, "unit": {"ActiveState": "active"},
+                    "boot_id": "b"}
+        self.assertTrue(t.origin_verdict(check("127.0.0.1       celikpanel.net\n", "200"))["ok"])
+        for getent, http in (("185.95.0.123    celikpanel.net\n", "200"),
+                             ("127.0.0.1 celikpanel.net\n185.95.0.123 celikpanel.net\n", "200"),
+                             ("", "200"), ("127.0.0.1 celikpanel.net\n", "000")):
+            with self.subTest(getent=getent, http=http):
+                self.assertFalse(t.origin_verdict(check(getent, http))["ok"])
+
+    def test_hosts_mappings_read_the_file_only(self):
+        text = ("127.0.0.1 localhost\n# 185.95.0.123 celikpanel.net\n::1 ip6-localhost\n"
+                "127.0.0.1 celikpanel.net # disposable CelikPanel worker fixture\n")
+        self.assertEqual(t.hosts_mappings(text), ["127.0.0.1 celikpanel.net # disposable CelikPanel worker fixture"])
+        self.assertEqual(t.hosts_mappings("127.0.0.1 localhost\n"), [])
+
+    def test_journal_units_accept_globs_only_as_unit_patterns(self):
+        seen = []
+        with mock.patch.object(w, "run", lambda argv, **k: seen.append(argv) or {"status": "ok", "stdout": ""}):
+            w.journal(["php*-fpm.service", t.ORIGIN_UNIT], "-12h", 100)
+            with self.assertRaises(ValueError):
+                w.journal(["x.service; rm -rf /"], "-12h", 100)
+        self.assertIn("php*-fpm.service", seen[0])
+
+
+class CollectAfterEarlyStopTests(unittest.TestCase):
+    """L3: a cell stopped at seed (or earlier) still keeps its journals and observations."""
+
+    class Fake(t.Trial):
+        def __init__(self, directory, stop):  # noqa: D401 - no lab, no guest
+            pair = t.pair_modules()
+            self.redactor = pair["redaction"].Redactor()
+            self.ev = t.evidence_writer_class()(Path(directory), "upd1-debian13-good-20261001t120000z", self.redactor)
+            self.cell, self.node_name = t.CELLS["upd1-debian13-good"], "debian13"
+            self.identity = {"cell_id": "c", "node": "debian13", "vm_uuid": "u", "nonce": "b" * 64}
+            self.artifacts, self.dns_mode = artifacts(), "external"
+            self.setup_draft_override = t.setup_draft_choice("external", None)
+            self.steps, self.step_dir, self.state = [], "steps/00-run", {"findings": [], "resets": []}
+            self.host_samples, self.stop_host_loop = [], threading.Event()
+            self.tunnel = SimpleNamespace(close=lambda: None)
+            self.stop, self.calls = stop, []
+
+        def workload(self, mode, *args, timeout=120):
+            self.calls.append((mode, args))
+            if mode == "samples":
+                return {"jsonl_base64": "", "next_offset": 0}
+            if mode == "journal":
+                return {"stdout": "journal of " + " ".join(args[4::2]) + "\n"}
+            if mode == "budget":
+                return {"present": False, "receipts": []}
+            raise AssertionError(mode)
+
+        def guest(self, body, timeout=120):
+            self.calls.append(("guest", body))
+            return SimpleNamespace(stdout=json.dumps({"directory_present": False, "records": {}}))
+
+        def _stage(self, name):
+            if name == self.stop:
+                raise t.StepFailed(f"{name} stopped here")
+            if name == "preflight":
+                self.state["helpers_uploaded"] = True
+            return "passed"
+
+        def preflight(self, checks): return self._stage("preflight")
+        def origin(self, checks): return self._stage("origin")
+        def baseline_install(self, checks): return self._stage("baseline-install")
+        def owner_login(self, checks): return self._stage("owner-login")
+        def license(self, checks): return self._stage("license")
+        def setup(self, checks): return self._stage("setup")
+        def seed(self, checks): return self._stage("seed")
+
+    def run_fake(self, stop):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        trial = self.Fake(directory.name, stop)
+        with redirect_stdout(io.StringIO()):
+            result = trial.execute()
+        return trial, result, {s["name"]: s["verdict"] for s in result["steps"]}
+
+    def test_collect_runs_after_a_stop_at_seed(self):
+        trial, result, verdicts = self.run_fake("seed")
+        self.assertEqual((verdicts["seed"], verdicts["collect"], verdicts["verdicts"]), ("failed", "passed", "not-run"))
+        self.assertEqual(result["overall"], "failed")
+        collect = next(p for p in trial.ev.directory.glob("steps/*-collect") if p.is_dir())
+        journals = {p.name: p.read_text() for p in collect.glob("journal-*.txt")}
+        self.assertEqual(sorted(journals), ["journal-lab.txt", "journal-product.txt", "journal-setup-services.txt"])
+        self.assertIn(t.ORIGIN_UNIT, journals["journal-lab.txt"])
+        self.assertIn(t.BASELINE_INSTALL_UNIT, journals["journal-lab.txt"])
+        self.assertIn("celikpanel-panel.service celikpanel-agent.service", journals["journal-product.txt"])
+        self.assertIn("php*-fpm.service", journals["journal-setup-services.txt"])
+        self.assertTrue((collect / "observation-records.json").is_file())
+        step = json.loads((collect / "step.json").read_text())
+        self.assertEqual(step["checks"]["stopped_after"], ["seed"])
+        self.assertEqual(result["scope"]["dns"]["verdict"], t.DNS_NOT_PROVIDED)
+
+    def test_collect_runs_after_a_stop_at_origin_and_skips_only_an_unprepared_guest(self):
+        trial, _, verdicts = self.run_fake("origin")
+        self.assertEqual(verdicts["collect"], "passed")
+        _, _, verdicts = self.run_fake("preflight")
+        self.assertEqual(verdicts["collect"], "skipped")
+
+    def test_observation_listing_without_a_request(self):
+        script = t.observation_records_script(None)
+        self.assertIn("root.glob('*')", script)
+        self.assertIn("withheld", script)
+        with self.assertRaises(ValueError):
+            t.observation_records_script("x' ; rm -rf / #")
+
+
+def _git(repository, *args):
+    environment = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    return subprocess.run(["git", "-C", str(repository), "-c", "core.autocrlf=false", "-c", "commit.gpgsign=false",
+                           "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", *args],
+                          check=True, capture_output=True, text=True, env=environment).stdout.strip()
+
+
+@unittest.skipUnless(shutil.which("git") and hasattr(os, "O_NOFOLLOW"), "real Git and POSIX archive reads are required")
+class ArtifactProofTests(unittest.TestCase):
+    """H2: the host-side proof of all three archives with dns-owner-tools/ (synthetic, offline)."""
+
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        self.modules = t.lab_modules()
+        self.archive = self.modules["archive"]
+        repo = self.root / "repo"
+        repo.mkdir()
+        _git(repo, "init", "-q")
+        statics = [n for n in self.archive.REQUIRED if not n.startswith(("bin/", "web/dist/"))]
+        self.sources = {"download-portal/get.sh" if n == "libexec/get.sh" else n: n for n in statics}
+        for source in list(self.sources) + ["cmd/dns-peer-enroll/README.md", "cmd/panel/main.go"]:
+            (repo / source).parent.mkdir(parents=True, exist_ok=True)
+            (repo / source).write_bytes(f"committed {source}\n".encode())
+        policy = repo / "deploy" / "release-sequence-policy"
+        policy.write_text(t.policy_text(t.BASELINE_VERSION, 81, 80, "v0.1.0-alpha.80", t.ALPHA80_COMMIT))
+        _git(repo, "add", "-A")
+        _git(repo, "commit", "-q", "-m", "B")
+        baseline = _git(repo, "rev-parse", "HEAD")
+        policy.write_text(t.policy_text(t.CANDIDATE_VERSION, 82, 81, t.BASELINE_VERSION, baseline))
+        _git(repo, "commit", "-q", "-am", "G")
+        good = _git(repo, "rev-parse", "HEAD")
+        (repo / "cmd/panel/main.go").write_text("defective fixture\n")
+        _git(repo, "commit", "-q", "-am", "D")
+        defective = _git(repo, "rev-parse", "HEAD")
+        web = self.root / "product-web-src"
+        (web / "i18n").mkdir(parents=True)
+        self.repo = repo
+        self.document = {"schema": t.ARTIFACTS_SCHEMA, "source_head": baseline, "clone": str(repo),
+                         "baseline": self.item(baseline, t.BASELINE_VERSION, 81, web),
+                         "good": dict(self.item(good, t.CANDIDATE_VERSION, 82, web), parent=baseline),
+                         "defective": dict(self.item(defective, t.CANDIDATE_VERSION, 82, web), parent=good)}
+
+    def item(self, commit, version, sequence, web, readme=None):
+        tree = _git(self.repo, "rev-parse", commit + "^{tree}")
+        files = {}
+        for source, name in self.sources.items():
+            files[name] = subprocess.run(["git", "-C", str(self.repo), "show", f"{commit}:{source}"], check=True,
+                                         capture_output=True).stdout
+        files["deploy/release-sequence-policy"] = subprocess.run(
+            ["git", "-C", str(self.repo), "show", f"{commit}:deploy/release-sequence-policy"],
+            check=True, capture_output=True).stdout
+        for name in self.archive.REQUIRED:
+            if name.startswith(("bin/", "web/dist/")):
+                files[name] = f"build output {name} {commit}\n".encode()
+        committed_readme = subprocess.run(["git", "-C", str(self.repo), "show", f"{commit}:cmd/dns-peer-enroll/README.md"],
+                                          check=True, capture_output=True).stdout
+        files["dns-owner-tools/README.md"] = committed_readme if readme is None else readme
+        for tool in ("dns-peer-enroll", "bind-peer-inspect", "pdns-peer-inspect"):
+            files["dns-owner-tools/" + tool] = f"tool {tool}\n".encode()
+        files[t.ACCEPTANCE_NOTICE] = t.ACCEPTANCE_NOTICE_PREFIX + b"\nfixture\n"
+        files.update({"release.version": b"1\n", "release.commit": (commit + "\n").encode(),
+                      "release.tree": (tree + "\n").encode()})
+        files["SHA256SUMS"] = "".join(hashlib.sha256(files[n]).hexdigest() + "  ./" + n + "\n"
+                                      for n in sorted(files)).encode()
+        path = self.root / f"{commit}.tar.gz"
+        root = "celikpanel-" + version
+        with tarfile.open(path, "w:gz") as bundle:
+            entry = tarfile.TarInfo(root)
+            entry.type = tarfile.DIRTYPE
+            bundle.addfile(entry)
+            for name, data in files.items():
+                entry = tarfile.TarInfo(root + "/" + name)
+                entry.size, entry.mode = len(data), 0o755
+                bundle.addfile(entry, io.BytesIO(data))
+        return {"version": version, "sequence": sequence, "commit": commit, "tree": tree, "archive": str(path),
+                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(), "license_mode": "acceptance-fixture",
+                "product_web_src": str(web)}
+
+    def test_three_archives_are_proved_with_the_owner_tools_readme(self):
+        t.validate_artifacts(self.document)
+        proofs = t.prove_artifacts(self.document, ("baseline", "good", "defective"), self.modules)
+        for role, proof in proofs.items():
+            with self.subTest(role=role):
+                self.assertEqual(proof["commit"], self.document[role]["commit"])
+                self.assertEqual(len(proof["dns_owner_tools"]), 4)
+                self.assertEqual(proof["source_proof"]["exempted_from_git_proof"], [t.ACCEPTANCE_NOTICE])
+                self.assertEqual(proof["source_proof"]["verified_static_files"], len(self.sources) + 2)  # + policy + README
+        path = self.root / "upd1-artifacts.json"
+        path.write_text(json.dumps(self.document))
+        out = io.StringIO()
+        with redirect_stdout(out):
+            self.assertEqual(t.main(["prove", "--artifacts", str(path)]), 0)
+        self.assertEqual(sorted(json.loads(out.getvalue())["proofs"]), ["baseline", "defective", "good"])
+
+    def test_an_owner_tools_readme_not_from_the_commit_is_refused(self):
+        web = Path(self.document["good"]["product_web_src"])
+        good = self.document["good"]
+        self.document["good"] = dict(self.item(good["commit"], t.CANDIDATE_VERSION, 82, web, readme=b"edited\n"),
+                                     parent=good["parent"])
+        with self.assertRaisesRegex(ValueError, "dns-owner-tools/README.md"):
+            t.prove_artifacts(self.document, ("good",), self.modules)
 
 
 if __name__ == "__main__":

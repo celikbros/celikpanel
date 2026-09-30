@@ -4,8 +4,12 @@
 Disposable registered QEMU guest only (nonce/DMI/marker guard from guest_probe).
 This helper has no product authority. It never edits CelikPanel state, never
 starts an update and never repairs a workload. Its only writes are its own
-evidence files under the private lab root and one lab sampler unit
-(``cp-lab-upd1-sampler.service``) whose single job is to append samples.
+evidence files under the private lab root and two enabled lab units:
+``cp-lab-upd1-sampler.service`` (appends samples) and
+``cp-lab-upd1-origin.service`` (serves the already provisioned guest-loopback
+``celikpanel.net`` fixture origin, so it returns after a restart). Lab units
+are named ``cp-lab-*``: a ``celikpanel-*`` unit file would make the real
+installer treat the guest as an already-started install.
 
 The one exception is ``owner-retry``: after the product itself reported
 ``automatic_recovery=paused_retry_limit``, it executes, at most once, the exact
@@ -15,7 +19,8 @@ written before that command runs; an existing record refuses a second run.
 
 Modes: ``install-sampler``, ``sample-loop``, ``samples``, ``snapshot``,
 ``cli-status``, ``budget``, ``journal``, ``tls-leaf``, ``credentials``,
-``owner-retry``.
+``owner-retry``, ``install-origin``, ``origin-check`` (read-only),
+``cron-availability`` (read-only).
 """
 from __future__ import annotations
 
@@ -32,6 +37,7 @@ from pathlib import Path
 import pwd
 import re
 import shlex
+import shutil
 import socket
 import ssl
 import stat
@@ -45,6 +51,11 @@ PRIVATE_ROOT = Path("/root/celikpanel-release-recovery-lab")
 SAMPLES = PRIVATE_ROOT / "upd1-samples.jsonl"
 SAMPLER_UNIT = "cp-lab-upd1-sampler.service"
 SAMPLER_UNIT_PATH = Path("/etc/systemd/system") / SAMPLER_UNIT
+ORIGIN_UNIT = "cp-lab-upd1-origin.service"
+ORIGIN_UNIT_PATH = Path("/etc/systemd/system") / ORIGIN_UNIT
+ORIGIN_HELPER = PRIVATE_ROOT / "worker-fixture-origin.py"
+ORIGIN_PROVISIONED = PRIVATE_ROOT / "worker-origin-provisioned.json"
+ORIGIN_PROBE_URL = "https://celikpanel.net/releases/latest.txt"
 SAMPLE_SCHEMA = "celikpanel/upd1-workload-sample/v1"
 SNAPSHOT_SCHEMA = "celikpanel/upd1-workload-snapshot/v1"
 RETRY_SCHEMA = "celikpanel/upd1-owner-retry/v1"
@@ -353,6 +364,56 @@ def install_sampler(args, identity) -> dict:
             "results": [{k: r.get(k) for k in ("status", "returncode")} for r in results]}
 
 
+def origin_unit_text(nonce: str) -> str:
+    """L1: the enabled lab unit serving the provisioned fixture origin (survives a restart)."""
+    if not re.fullmatch(r"[0-9a-f]{64}", nonce):
+        raise ValueError("invalid lab nonce")
+    argv = ["/usr/bin/python3", "-I", str(ORIGIN_HELPER), "guest-serve", "--nonce", nonce]
+    return ("[Unit]\nDescription=Disposable upd1 celikpanel.net fixture origin (guest loopback only; lab, no product "
+            "authority)\nAfter=network.target\n\n[Service]\nType=simple\nExecStart=" + shlex.join(argv) +
+            "\nRestart=on-failure\nRestartSec=5\nUMask=0077\n\n[Install]\nWantedBy=multi-user.target\n")
+
+
+def install_origin(identity) -> dict:
+    """Write, enable and start the origin unit once; the origin itself re-checks the sealed intent."""
+    private_root()
+    if not ORIGIN_PROVISIONED.is_file():
+        raise ValueError("the fixture origin is not provisioned; the unit is not installed")
+    if ORIGIN_UNIT_PATH.exists() or ORIGIN_UNIT_PATH.is_symlink():
+        raise ValueError("origin unit already exists; never replaced")
+    unit = origin_unit_text(identity["nonce"])
+    fd = os.open(ORIGIN_UNIT_PATH, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o644)
+    with os.fdopen(fd, "w") as stream:
+        stream.write(unit)
+        stream.flush()
+        os.fsync(stream.fileno())
+    results = [run(["/usr/bin/systemctl", "daemon-reload"]), run(["/usr/bin/systemctl", "enable", "--now", ORIGIN_UNIT])]
+    return {"unit": ORIGIN_UNIT, "path": str(ORIGIN_UNIT_PATH), "unit_sha256": hashlib.sha256(unit.encode()).hexdigest(),
+            "results": [{k: r.get(k) for k in ("status", "returncode")} for r in results]}
+
+
+def origin_check() -> dict:
+    """Read-only: what celikpanel.net resolves to and whether the fixture answers (after provisioning only)."""
+    if not ORIGIN_PROVISIONED.is_file():
+        raise ValueError("the fixture origin is not provisioned; celikpanel.net is not looked up")
+    getent = run(["getent", "hosts", "celikpanel.net"], timeout=10, limit=4096)
+    https = run(["curl", "--silent", "--max-time", "10", "--output", "/dev/null", "--write-out", "%{http_code}",
+                 ORIGIN_PROBE_URL], timeout=15, limit=64)
+    unit = run(["/usr/bin/systemctl", "show", ORIGIN_UNIT, "-p", "ActiveState", "-p", "UnitFileState", "-p", "NRestarts"])
+    return {"boot_id": boot_id(), "getent": {k: getent.get(k) for k in ("status", "returncode", "stdout")},
+            "https": {k: https.get(k) for k in ("status", "returncode", "stdout")},
+            "unit": dict(line.split("=", 1) for line in unit.get("stdout", "").splitlines() if "=" in line)}
+
+
+def cron_availability() -> dict:
+    """Read-only: is crontab (the Agent's own gate) present, and which cron daemon unit is loaded."""
+    units = {}
+    for name in ("cron.service", "cronie.service"):
+        shown = run(["/usr/bin/systemctl", "show", name, "-p", "LoadState", "-p", "ActiveState", "-p", "UnitFileState"])
+        units[name] = dict(line.split("=", 1) for line in shown.get("stdout", "").splitlines() if "=" in line)
+    return {"crontab": shutil.which("crontab", path=ENV["PATH"]), "units": units}
+
+
 def read_samples(offset: int) -> dict:
     try:
         with open(PRIVATE_ROOT / SAMPLES.name, "rb") as stream:
@@ -486,7 +547,8 @@ def cli_status(request_id: str) -> dict:
 def journal(units: list[str], since: str, lines: int) -> dict:
     argv = ["/usr/bin/journalctl", "--no-pager", "-o", "short-iso-precise", "-n", str(lines), "--since", since]
     for unit in units:
-        if not re.fullmatch(r"[A-Za-z0-9@_.:-]{1,120}\.(service|timer)", unit):
+        # A '*' is a journalctl -u glob (e.g. php*-fpm.service); no shell is involved.
+        if not re.fullmatch(r"[A-Za-z0-9@_.:*-]{1,120}\.(service|timer)", unit):
             raise ValueError("invalid journal unit")
         argv += ["-u", unit]
     return run(argv, timeout=30, limit=4 * 1024 * 1024)
@@ -562,7 +624,8 @@ def owner_retry(request_id: str, snapshot_name: str, execute: bool, probe) -> di
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("mode", choices=("install-sampler", "sample-loop", "samples", "snapshot", "cli-status",
-                                         "budget", "journal", "tls-leaf", "credentials", "owner-retry"))
+                                         "budget", "journal", "tls-leaf", "credentials", "owner-retry",
+                                         "install-origin", "origin-check", "cron-availability"))
     for name in ("lab-nonce", "vm-uuid", "cell-id", "node"):
         parser.add_argument("--" + name, required=True)
     parser.add_argument("--domain")
@@ -608,6 +671,12 @@ def main(argv=None) -> int:
         value = tls_leaf()
     elif args.mode == "credentials":
         value = credentials()
+    elif args.mode == "install-origin":
+        value = install_origin(identity)
+    elif args.mode == "origin-check":
+        value = origin_check()
+    elif args.mode == "cron-availability":
+        value = cron_availability()
     else:
         if not args.request_id or not HEX32.fullmatch(args.request_id) or not args.snapshot_name:
             parser.error("owner-retry requires the exact request id and pending snapshot")

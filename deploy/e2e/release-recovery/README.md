@@ -508,6 +508,20 @@ a committed fixture change (label: *simulated defect*).
 | `upd1-arch-defective` | Arch | D | SIGKILL of recovery at `runtime_verified` | as Debian, with a killed recovery instead of a reboot; mail is attempted and recorded | mail continuity if the platform refuses `web_mail` |
 | `upd1-arch-good` | Arch | G | none | forward update on Arch | rollback |
 
+**DNS scope (default `--dns-mode external`).** upd1 runs on one isolated
+node. A local-DNS primary publishes only after its peer secondary serves the
+catalogue (`cmd/panel/dns_engine.go`), so a single node cannot even create a
+domain (`DNS_SERVER_REQUIRED`). The owner therefore chooses DNS hosted
+elsewhere (`dns_mode: external`). Every cell records DNS as **not provided by
+this run; covered by the DNS pair runs of roadmap item 2**
+(`not-provided-external-dns`). The driver never counts DNS as passed in this
+mode: it is not a pre-update health condition, not a terminal check and not an
+outage verdict. `--dns-mode local` (wrapper: `UPD1_DNS_MODE=local`) is kept for
+a future two-node variant; it requires the paired identity (`peer_ip`,
+`peer_ns`) through `--setup-draft-json` (wrapper: `UPD1_SETUP_DRAFT_JSON`),
+because the product refuses a local setup without it
+(`server_setup_dns_identity_required`).
+
 If automatic recovery exhausts its three attempts
 (`automatic_recovery=paused_retry_limit`), the driver does **not** fail: it
 records the Panel recovery-status body, the root CLI EN/TR texts and the saved
@@ -523,6 +537,7 @@ attempts are counted from the dispatch receipts and journal, with timestamps.
 ```sh
 bash deploy/e2e/release-recovery/run-upd1.sh build            # prints .../upd1-artifacts.json
 ART=/var/tmp/cp-upd1-build/<stamp>/upd1-artifacts.json
+bash deploy/e2e/release-recovery/run-upd1.sh prove "$ART"     # read-only proof of all three archives
 bash deploy/e2e/release-recovery/run-upd1.sh dry-run upd1-debian13-defective "$ART" upd1-d13-def-a
 bash deploy/e2e/release-recovery/run-upd1.sh cell upd1-debian13-defective "$ART" upd1-d13-def-a 2361
 bash deploy/e2e/release-recovery/run-upd1.sh cell upd1-debian13-good "$ART" upd1-d13-good-a 2371
@@ -533,7 +548,12 @@ bash deploy/e2e/release-recovery/run-upd1.sh cell upd1-arch-good "$ART" upd1-arc
 `cell` prepares and starts a **new** lab `/var/tmp/cp-release-drill-NAME`
 (image cache `/var/tmp/cp-v3n28/images`, override `UPD1_IMAGE_CACHE`), runs the
 cell on its node and stops the lab; disks and evidence stay. Run cells one at a
-time. Evidence: `<lab>/evidence/<node>/upd1/<cell>-<utc>/` (redacted API
+time. `UPD1_DNS_MODE` (default `external`) and `UPD1_SETUP_DRAFT_JSON` pass the
+owner's DNS choice and draft fields to both `plan` and `run`. The wrapper keeps
+every path as one argument, so it works from a repository path with spaces
+(`/mnt/c/CELIKBROS PROJECTS/celikpanel`). `prove` repeats, without any guest,
+the archive inventory, release-policy and committed-source proof that preflight
+runs per cell. Evidence: `<lab>/evidence/<node>/upd1/<cell>-<utc>/` (redacted API
 exchanges per step, status samples, guest/host sample series, journals,
 observer and recovery-fault events, `result.json`, `SHA256SUMS`). Web assets
 are built fresh in the clone; `CELIKPANEL_UPD1_WEB_DIST` may name a `web/dist`
@@ -567,16 +587,55 @@ window `unexplained`. Terminal checks cover build identity, floor/foundation,
 database digests (volatile tables listed), seeded rows, marker, mailbox, cron,
 timers, firewall ruleset, a fresh login and the update card.
 
+### Corrections from the 2026-09-30 run (H1-H5, L1-L3)
+
+The first native run ([evidence/upd1-20261001](evidence/upd1-20261001/README.md))
+used an uncommitted run copy and reached no update. These corrections are now
+part of the harness; they are harness behaviour, not product changes:
+
+| Id | Now |
+| --- | --- |
+| H1 | `run-upd1.sh` holds the driver and lab commands in Bash arrays; a repository path with spaces stays one argument. |
+| H2 | `candidate_archive.verify_committed_source` knows the `dns-owner-tools/` directory of `make dist`: exactly `README.md`, `dns-peer-enroll`, `bind-peer-inspect`, `pdns-peer-inspect`. The three tools are build outputs like `bin/`; `README.md` is proved against the committed `cmd/dns-peer-enroll/README.md`. Any other inventory is refused. |
+| H3 | `--setup-draft-json` is passed by the wrapper to `plan` and `run`; `--dns-mode local` refuses to start without `peer_ip` and `peer_ns`. |
+| H4 | The setup poll stops at `succeeded`/`failed`, or when the execution has stayed at `access_dns`, `panel_certificate`, `verification` or `verify` for 120 s over at least 3 reads and the last read says `waiting` (the product flips the row to `running` on each retry; that does not restart the clock). The step is then `observed` with an `isolated_host_wait` record (phase, code, steps not run) and a finding. The mailbox is optional only when the wizard's `mail_profile` steps were still pending. |
+| H5 | `--dns-mode external` is the default (see "DNS scope" above). |
+| L1 | The fixture origin is the enabled lab unit `cp-lab-upd1-origin.service` (`Restart=on-failure`, `WantedBy=multi-user.target`), not a transient unit. It is named `cp-lab-*` because a `celikpanel-*` unit file would make the real installer's first-install check (`get.sh`) fail. The driver proves that `celikpanel.net` resolves only to 127.0.0.1 and the fixture answers HTTP 200 after provisioning, again after the owner restart the installer demands, and again at the start of `arm`. |
+| L2 | When this run recorded the setup wait, the database comparison also excludes `server_setup_executions` (the waiting runner rewrites it about every 25 s). The verdict lists every excluded table with its reason (`volatile_reasons`). `server_setup_state` is still compared. No other periodic writer applies to an upd1 guest: backup schedules, certificate renewal and VPN writers need rows upd1 never creates. |
+| L3 | `collect` runs whatever step stopped the cell, as long as preflight had prepared the guest. It keeps the sample series and three journals: `product` (Panel, Agent, recovery), `setup-services` (web, PHP-FPM, database, DNS, mail and cron units) and `lab` (origin, sampler, baseline installer). It also keeps the observation records (all records when no update was started), the observer events and the budget receipts. A part that cannot be read is listed under `unavailable`; the rest is kept. |
+| origin lookup | Preflight no longer asks the resolver for `celikpanel.net` (on 2026-09-30 that resolved the real name before the fixture existed). It reads `/etc/hosts` and the `hosts:` line of `nsswitch.conf` only. The helper's `origin-check` refuses to look the name up before the origin is provisioned. |
+| cron | Before seeding, the driver checks read-only whether `crontab` (the Agent's own gate) is present. If it is absent, the cell records `cron: not available on this baseline` and does not create the cron job. This is product finding P1 (Debian setup does not install cron), which is being fixed separately. Cron continuity is then `not-available-on-baseline`, never passed. Once setup installs cron, the check passes and the job is seeded as before. |
+
+`result.json` carries a `scope` record for DNS, cron, the setup wait and each
+origin check, so nothing counts as passed by omission.
+
 ### Offline checks
 
 ```sh
 python3 -m unittest deploy/e2e/release-recovery/test_owner_update_trial.py -v
+python3 -m unittest deploy/e2e/release-recovery/test_recovery_candidate_archive.py -v
 ```
 
-29 offline tests cover plan validation and dry run, fixture policy/defect,
-the acceptance-notice exemption, UI backoff, three-source agreement, D-024
-guidance through the product catalogues, outcome classification, outage and
-cron windows, reset attribution, database/timer comparison, redaction through
-the real Panel client and evidence writer, the guest DNS/retry parsers and the
-observer (checkpoint proof and fault arming without a signal). They do not
-establish a native result.
+`test_owner_update_trial.py` has 55 offline tests. They cover:
+
+- plan validation and dry run, fixture policy/defect and the acceptance-notice
+  exemption;
+- UI backoff, three-source agreement, D-024 guidance through the product
+  catalogues and outcome classification;
+- outage and cron windows, reset attribution and database/timer comparison;
+- redaction through the real Panel client and evidence writer;
+- the guest DNS/retry parsers and the observer (checkpoint proof and fault
+  arming without a signal);
+- the 2026-09-30 corrections: the wrapper from a path with spaces (dry run; as
+  root also every `cell` invocation, through a stub `python3`), the DNS scope
+  and draft choices, the stable setup wait, the mail rule (checked against
+  the retained setup executions), the excluded tables, the cron precondition, the
+  persistent origin unit and its name outside the installer's globs, the
+  no-lookup rule, and `collect` after a stop at seed, at origin and at
+  preflight.
+
+`ArtifactProofTests` builds three synthetic archives with `dns-owner-tools/`
+in a temporary Git repository and proves them with `prove`. That test and the
+Git-backed tests in `test_recovery_candidate_archive.py` need `git` and a
+POSIX host; otherwise they are skipped. None of these tests establishes a
+native result.
