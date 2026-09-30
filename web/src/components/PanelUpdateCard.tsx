@@ -317,15 +317,17 @@ export function PanelUpdateCard({ activation = false }: { activation?: boolean }
                             <div className="flex items-start gap-2">
                                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
                                 <div>
-                                    <p className="font-semibold text-fg">{t('panelUpdate.previousAttempt.title')}</p>
+                                    <p className="font-semibold text-fg">{t(previousAttempt.phase === 'failed' && previousAttempt.failure_code === 'recovery_runtime_preflight_failed' ? 'panelUpdate.previousAttempt.stoppedTitle' : 'panelUpdate.previousAttempt.title')}</p>
                                     <p className="mt-1 text-fg-muted">
-                                        {t(previousAttempt.phase === 'recovered' ? 'panelUpdate.previousAttempt.recovered' : 'panelUpdate.previousAttempt.failed', {
+                                        {t(previousAttempt.phase === 'recovered' ? 'panelUpdate.previousAttempt.recovered'
+                                            : previousAttempt.failure_code === 'recovery_runtime_preflight_failed' ? 'panelUpdate.previousAttempt.stopped'
+                                                : 'panelUpdate.previousAttempt.failed', {
                                             version: target.version,
                                             current: currentVersion ?? '',
                                             time: new Date(previousAttempt.finished_at).toLocaleString(locale === 'tr' ? 'tr-TR' : 'en-US'),
                                         })}
                                     </p>
-                                    {previousAttempt.failure_code && (
+                                    {previousAttempt.failure_code && previousAttempt.failure_code !== 'recovery_runtime_preflight_failed' && (
                                         <p className="mt-1 text-fg-muted">
                                             {t('panelUpdate.previousAttempt.cause', { cause: t(`recovery.reason.${previousAttempt.failure_code}`) })}
                                         </p>

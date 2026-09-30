@@ -139,7 +139,7 @@ func statusAtFD(fd int, id string, uid, gid uint32) (Status, Record, error) {
 	if r.Phase == "recovery_required" && r.TerminalProof == "none" {
 		automatic, _, err := readObservationFile(fd, id+".automatic", uid, gid)
 		if err == nil {
-			status.AutomaticRecovery = decodeAutomatic(automatic, id, identity, raw)
+			status.AutomaticRecovery = decodeAutomatic(automatic, id, identity, raw, r.Reason)
 		}
 	}
 	// The typed update cause stays meaningful across later phases of the same
@@ -154,7 +154,11 @@ func statusAtFD(fd int, id string, uid, gid uint32) (Status, Record, error) {
 	// A paused recovery keeps the pause guidance and also names the update's
 	// first typed cause, because the owner's next step depends on it (for
 	// example the panel log after a forward completion that never came up).
-	if status.AutomaticRecovery == "paused_retry_limit" {
+	// Between automatic attempts (a scheduled retry, or the next attempt
+	// running after a recovery failure hid FailureCode) the same first cause
+	// stays visible, so the guidance does not lose it until the pause.
+	if status.AutomaticRecovery != "" ||
+		(r.Phase == "recovering" && r.TerminalProof == "none" && status.PreviousFailure == "recovery_failed") {
 		failure, _, err := readObservationFile(fd, id+".failure", uid, gid)
 		if err == nil {
 			status.FirstFailureCode = DecodeFailure(failure, id, r.TargetCommit)
@@ -268,15 +272,24 @@ func decodeWaiting(raw []byte, id, identity string, observation []byte) string {
 }
 
 // Optional, exact-status guidance. It cannot authorize a new recovery dispatch.
-func decodeAutomatic(raw []byte, id, identity string, observation []byte) string {
+// retry_scheduled is bound to a recovery_failed record only; the pause to the
+// incomplete record the runner writes at its retry limit.
+func decodeAutomatic(raw []byte, id, identity string, observation []byte, reason string) string {
 	lines := strings.Split(string(raw), "\n")
 	if len(lines) != 6 || lines[0] != "schema=celikpanel-recovery-automatic/v1" ||
 		lines[1] != "request_id="+id || lines[2] != "observation_identity="+identity ||
 		lines[3] != fmt.Sprintf("observation_sha256=%x", sha256.Sum256(observation)) ||
-		lines[4] != "automatic_recovery=paused_retry_limit" || lines[5] != "" {
+		!strings.HasPrefix(lines[4], "automatic_recovery=") || lines[5] != "" {
 		return ""
 	}
-	return "paused_retry_limit"
+	value := strings.TrimPrefix(lines[4], "automatic_recovery=")
+	switch {
+	case value == "paused_retry_limit":
+		return value
+	case value == "retry_scheduled" && reason == "recovery_failed":
+		return value
+	}
+	return ""
 }
 
 // Publish is best-effort observation only. Callers retain their original

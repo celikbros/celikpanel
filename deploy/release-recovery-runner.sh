@@ -28,6 +28,10 @@ EXPECTED_FINAL_COMMIT=
 EXPECTED_FINAL_SEQUENCE=
 OWNER_RETRY_SNAPSHOT=
 DISPATCH_BUDGET_ROOT=/var/lib/celikpanel-release-state/recovery-dispatch/v1
+# The admitted attempt of this invocation (1-3 or owner) and whether the timer
+# admits another automatic one after it fails. Guidance only, never authority.
+DISPATCH_ATTEMPT=
+RECOVERY_RETRY_SCHEDULED=0
 
 case $# in
     0) ;;
@@ -715,7 +719,69 @@ recovery_budget_reserve() {
     [[ $(stat -Lc '%d:%i' -- "$directory") == "$directory_identity" ]] || die 'attempt directory changed'
     recovery_budget_read "$destination" "$n"
     verify_held_transaction_lock
+    DISPATCH_ATTEMPT=$n
     printf 'Recovery dispatch admitted: attempt=%s snapshot=%s\n' "$n" "$MARKER_SNAPSHOT"
+}
+
+# Certbot renewal is an owner workload (D-022). The update stops its scheduler
+# for the whole transaction. After the last admitted attempt of a forward
+# completion fails, return it to the recorded pre-update state: that retry
+# neither restores nor compares the panel certificate files, and it pauses the
+# scheduler again before continuing. A rollback restores those files from the
+# snapshot, so a renewal before its retry would be undone: renewal stays paused
+# there. This runs once per failed final attempt, never on a status tick, so a
+# later owner change of the scheduler is not overwritten.
+# Yenileme sahibin iş yüküdür; ileri tamamlamada son deneme başarısız olunca
+# zamanlayıcı kayıtlı hâline döner. Geri almada yenileme duraklatılmış kalır.
+restore_renewal_after_final_attempt() {
+    local tls=${RECOVERY_SNAPSHOT_DIR:-}/panel-tls forward=0
+    case "$MARKER_OPERATION:$TRANSACTION_PHASE" in
+        update:completion|update:completion-scheduler|update:scheduler) forward=1 ;;
+        # The scheduler is stopped only after the active marker exists.
+        update:active|rollback:*) ;;
+        *) return 0 ;;
+    esac
+    if declare -F panel_tls_certbot_scheduler_matches_snapshot >/dev/null &&
+       panel_tls_certbot_scheduler_matches_snapshot "$tls" 2>/dev/null; then
+        printf '%s\n' \
+            'Automatic certificate renewal (Certbot) is already in its state from before the update.' \
+            'Otomatik sertifika yenileme (Certbot) zaten güncellemeden önceki durumunda.' >&2
+        return 0
+    fi
+    if [[ $forward != 1 ]]; then
+        printf '%s\n' \
+            'Automatic certificate renewal (Certbot) is not confirmed in its state from before the update and stays paused until this operation is retried and finishes: its rollback restores the panel certificate files from the update snapshot, so a renewal before then would be undone.' \
+            'Otomatik sertifika yenileme (Certbot) güncellemeden önceki durumunda doğrulanmadı ve bu işlem yeniden denenip tamamlanana kadar duraklatılmış kalır: geri alma panel sertifika dosyalarını güncelleme anlık görüntüsünden geri yükler; bundan önceki bir yenileme geri alınırdı.' >&2
+        return 0
+    fi
+    if ! declare -F panel_tls_restore_certbot_scheduler >/dev/null ||
+       ! declare -F panel_tls_certbot_scheduler_matches_snapshot >/dev/null; then
+        printf '%s\n' \
+            'Automatic certificate renewal (Certbot) stays paused until this operation finishes: this recovery code cannot restore it.' \
+            'Otomatik sertifika yenileme (Certbot) bu işlem bitene kadar duraklatılmış kalır: bu kurtarma kodu onu geri yükleyemez.' >&2
+        return 0
+    fi
+    if ( panel_tls_restore_certbot_scheduler "$tls" ); then
+        printf '%s\n' \
+            'Automatic certificate renewal (Certbot) was returned to its state from before the update while this operation waits; the retry pauses it again before it continues.' \
+            'Otomatik sertifika yenileme (Certbot) bu işlem beklerken güncellemeden önceki durumuna döndürüldü; yeniden deneme devam etmeden önce onu yeniden duraklatır.' >&2
+    else
+        printf '%s\n' \
+            'Automatic certificate renewal (Certbot) could not be returned to its state from before the update (the line above names why) and stays as it is until this operation finishes; nothing else was changed.' \
+            'Otomatik sertifika yenileme (Certbot) güncellemeden önceki durumuna döndürülemedi (nedeni yukarıdaki satırdadır) ve bu işlem bitene kadar olduğu gibi kalır; başka bir şey değiştirilmedi.' >&2
+    fi
+    return 0
+}
+
+after_failed_recovery_attempt() {
+    case "$DISPATCH_ATTEMPT" in
+        1|2)
+            [[ -n $OWNER_RETRY_SNAPSHOT ]] || RECOVERY_RETRY_SCHEDULED=1
+            printf 'Automatic recovery attempt %s of 3 did not finish; the native timer admits the next attempt for this same operation. No owner action is needed yet.\n' "$DISPATCH_ATTEMPT" >&2
+            printf 'Otomatik kurtarma denemesi %s/3 tamamlanmadı; yerel zamanlayıcı aynı işlem için sonraki denemeyi başlatır. Henüz kullanıcı işlemi gerekmiyor.\n' "$DISPATCH_ATTEMPT" >&2
+            ;;
+        3|owner) restore_renewal_after_final_attempt ;;
+    esac
 }
 
 [[ $EUID -eq 0 ]] || die 'release recovery must run as root'
@@ -831,6 +897,12 @@ if [[ -n $RECOVERY_CODE_ROOT && $ACTION == update && $TRANSACTION_PHASE == activ
 fi
 source "$RECOVERY_EXEC_ROOT/deploy/release-transaction-guard.sh"
 source "$RECOVERY_EXEC_ROOT/deploy/release-recovery-foundation.sh"
+# The Certbot scheduler helpers call systemctl by name; bind it to the exact
+# binary this runner already uses. Historical code without them stays paused.
+systemctl() { "$SYSTEMCTL_BIN" "$@"; }
+if [[ -f $RECOVERY_EXEC_ROOT/deploy/panel-tls-snapshot.sh && ! -L $RECOVERY_EXEC_ROOT/deploy/panel-tls-snapshot.sh ]]; then
+    source "$RECOVERY_EXEC_ROOT/deploy/panel-tls-snapshot.sh"
+fi
 # Only the exact retained release may provide this optional, non-authorizing
 # observer. Historical releases without a request binding remain unavailable.
 RECOVERY_OBSERVATION_REQUEST=
@@ -838,9 +910,17 @@ RECOVERY_OBSERVATION_COMMIT=
 recovery_observation_exit() {
     local original_status=$?
     if [[ $original_status -ne 0 && -n $RECOVERY_OBSERVATION_REQUEST ]]; then
-        release_observation_publish "$RECOVERY_OBSERVATION_REQUEST" \
-            "$RECOVERY_OBSERVATION_COMMIT" recovery_required none recovery_failed ||
-            printf '%s\n' 'CelikPanel recovery observation is unavailable' >&2
+        # A scheduled automatic retry is an optional hint; an older observer
+        # library that refuses it still records the verified failure.
+        if [[ $RECOVERY_RETRY_SCHEDULED == 1 ]] &&
+           release_observation_publish "$RECOVERY_OBSERVATION_REQUEST" \
+               "$RECOVERY_OBSERVATION_COMMIT" recovery_required none recovery_failed "" retry_scheduled; then
+            :
+        else
+            release_observation_publish "$RECOVERY_OBSERVATION_REQUEST" \
+                "$RECOVERY_OBSERVATION_COMMIT" recovery_required none recovery_failed ||
+                printf '%s\n' 'CelikPanel recovery observation is unavailable' >&2
+        fi
     fi
     return "$original_status"
 }
@@ -960,6 +1040,7 @@ release_txn_verify_inherited_lock "$TRANSACTION_ROOT" "$TRANSACTION_FD" ||
     die 'final transaction flock proof failed'
 verify_held_transaction_lock
 if [[ $child_status -ne 0 ]]; then
+    after_failed_recovery_attempt
     release_transaction_lock
     die "release recovery child failed with status $child_status"
 fi

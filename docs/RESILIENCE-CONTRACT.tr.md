@@ -847,3 +847,95 @@ Debian 13 kusurlu aday denemesinden (O1-O4).
   `update:completion` ileri tamamlar; koruma aynı çıkış koduyla aynı biçimde kabul
   ve ret eder; Başlat sahibin kararı olarak kalır.
 - **Kanıt.** Yalnız bileşen testleri; gerçek sistem denemesi bekliyor.
+
+### Ön denetim nedeni, denemeler arası yeniden deneme ve duraklamada yenileme (P0.1/P0.2/P0.5, 2026-10-01)
+
+D-025 ilkeleri 1 (bağımsız yenileme askıda kalmamalı), 2 (tipli, korunan kanıt),
+3 ve 4 (bir okumanın sınırlı yeniden denenmesi; deneme hakkı bitince kalıcı ve
+uygulanabilir durum); D-022, D-024. upd3 gerçek sistem denemesinden (F1, F2, F3, O6).
+
+- **Değişen.**
+  - F1: `recovery verify-compatibility` `step=<adım>: <denetleyicinin ilk satırı>`
+    döndürür (sınırlı, yazdırılabilir ASCII; iç çalışma ortamı, kilit ve üst veri
+    hataları gizli kalır, yalnız adımları adlandırılır). `update.sh` seçili çalışma
+    ortamının dört ön denetim adımını yakalar, EXIT tuzağı henüz yokken
+    `code=recovery_runtime_preflight_failed state=unchanged` bildirir ve hata ek
+    kaydını bu kodla yazar (anlık görüntü adı yokken commit doğrulanmış hedeften).
+    Bu kodu taşıyan başarısız kayıt, isteği için sondur.
+  - F1 yarışı: kod okumasıyla kanıtlandı, sunucuda gözlenmedi. WAL uyumlu
+    denetleyici canlı veritabanını ve WAL'ı açmadan kopyalar; sabitlemeden sonra
+    veritabanı, `-wal` veya `-shm` üst verisi değiştiyse kapalı kalarak reddeder
+    (`verifyPath` boyut, mtime ve ctime karşılaştırır). Bu aralıktaki her Panel
+    commit'i, checkpoint'i ya da paylaşılan bellek yazımı denetimi reddettirir ve
+    ön denetim Panel çalışırken yapılır. Kaynağı açmadan ya da Panel'i durdurmadan
+    tutarlı bir anlık görüntü mümkün değildir, ön denetim bunları yapamaz; bu
+    yüzden reddeden denetleyici 2 sn'lik sınırlı bir beklemeden sonra bir kez daha
+    okunur (zaman aşımından sonra asla). Aynı tek yeniden okuma yükseltme uyumluluk
+    denetimine de uygulanır. Güncellemenin sonraki donmuş ve kilitli denetimleri
+    değişmedi.
+  - F3: deneme hakkı kalan başarısız bir otomatik deneme isteğe bağlı
+    `celikpanel-recovery-automatic/v1` değeri `retry_scheduled`'ı yazar (yalnız
+    `recovery_required/recovery_failed` kaydında). Okuyucular güncellemenin ilk
+    tipli nedenini yeniden denerken (`retry_scheduled` ve kurtarma hatasından
+    sonra `recovering`) ve duraklamada gösterir.
+  - F2: bir ileri tamamlamanın (`update:completion`, `completion-scheduler`,
+    `scheduler`) son kabul edilen denemesi (üçüncü otomatik deneme ya da sahip
+    yeniden denemesi) başarısız olunca çalıştırıcı Certbot zamanlayıcısını mevcut
+    geri yükleme işleviyle, bir kez ve sürüm kilidi altında kayıtlı güncelleme
+    öncesi durumuna döndürür. Zaten eşleşiyorsa hiçbir şey değişmez; reddedilen
+    bir geri yükleme (örneğin sahibin sonradan etkinleştirmeyi değiştirmesi)
+    bildirilir, zorlanmaz. İleri yeniden deneme anlık görüntüyü doğruladıktan hemen
+    sonra ve herhangi bir koordinatörü durdurmadan önce zamanlayıcıyı yeniden
+    duraklatır; mevcut duraklatma kanıtı değişmiş etkinleştirmeyi reddeder. Geri
+    alma yönleri (`update:active`, `rollback:*`) yenilemeyi duraklatılmış tutar ve
+    nedenini söyler: geri alma panel TLS ağacını, bekleyen etkinleştirmeyi ve
+    dağıtım kancasını anlık görüntüden geri yükler; yeniden denemeden önceki bir
+    yenileme geri alınırdı. Kod kanıtı: ileri yeniden deneme
+    (`validate_pending_update_snapshot`, `verify_installed_release_artifacts`,
+    `VerifyInstalledCompletion`) yalnız anlık görüntü kopyasını doğrular, canlı
+    sertifika dosyalarını karşılaştırmaz ve geri yüklemez; `panel_tls_restore_snapshot`
+    ise geri alma yolunda canlı TLS ağacını değiştirir.
+  - O6: bildirimin ikincil sunucu satırı iç belirteçleri içermez.
+- **Şema veya sürüm geçişi: yok.** Gözlem v1, hata ek kaydı v1 dilbilgisi,
+  otomatik ipucu v1 dilbilgisi, anlık görüntü v6, malzeme v3, işaretçi
+  dilbilgisi, dağıtım makbuzları v1 ve kit protokolü 1 değişmedi. Yeni kapalı
+  değerler: `recovery_runtime_preflight_failed` hata kodu ve `retry_scheduled`
+  otomatik değeri; eski okuyucular ikisini de yok sayar ve genel metni gösterir.
+  Durum JSON'u her anahtarı ve konumunu korur; `first_failure_code` artık yeniden
+  denerken de görünebilir. Çalıştırıcı, güncelleyici ve `panel-tls-snapshot.sh`
+  baytları değiştiği için temel ve kit manifestlerinin biçimi değil değerleri
+  değişir.
+- **Kurtarma davranışı.** Dağıtım, deneme hakkı (üç otomatik kabul ve açık sahip
+  yeniden denemeleri) ve son kanıtlar değişmedi. Yeni değişiklikler: başarısız son
+  ileri denemeden sonra zamanlayıcının geri yüklenmesi ve yeniden denemenin
+  başında yeniden duraklatılması; ikisi de mevcut, doğrulanmış işlevlerle.
+- **Kanıt.** Yalnız bileşen ve sözleşme testleri; gerçek sistem denemesi bekliyor.
+
+Açık: duraklatılan bir geri alma, yeniden denemesi bitene kadar yenilemeyi
+durdurulmuş bırakır; bağımsız `deploy/finalize-pending-update.sh` başlangıcında
+yenilemeyi yeniden duraklatmaz; ön denetim duruşu bildirimi bu değişikliği içeren
+kurulu bir Panel gerektirir; bu dört adım dışında EXIT tuzağından önceki durma
+satırları hâlâ tipli özet taşımaz (örneğin `*_runtime_preparation_unconfirmed`).
+
+#### Sahibin devamında başlatma sınırı (aynı tarih)
+
+`celikpanel-panel.service` hata durumunda 3600 sn'de `StartLimitBurst=30` ile
+yeniden başlar ve hiçbir yaşam döngüsü betiği birimin sayacını sıfırlamıyordu.
+Çöken bir adayla üç ileri denemeden sonra sahibin yazdırılan yeniden denemesi
+"start request repeated too quickly" ile reddedilebilirdi. Her betiğin mevcut
+`systemctl` sarmalayıcısı artık yalnız `start celikpanel-panel.service` ve
+`start celikpanel-agent.service` çağrılarını `release_unit_controlled_start`
+üzerinden geçirir; bu yalnız o birim için `reset-failed` çalıştırır, sonra onu
+başlatır. `Result=start-limit-hit` ile yine reddedilen başlatma, birimi ve
+`sudo systemctl reset-failed <birim>` komutunu ardından yeniden denemeyle birlikte
+`code=unit_start_limit_hit` olarak EN ve TR yazar; güncelleyici kodu özetinde de
+taşır. Kapsanan başlatma yerleri: `update.sh` (normal denetimli başlatmalar,
+sahip yeniden denemesi dahil bekleyen/ileri tamamlama, değişiklik öncesi yeniden
+başlatma), `rollback.sh` (geri yüklenen başlatmalar, önceki hizmetlerin yeniden
+başlatılması), `deploy/finalize-pending-update.sh`,
+`deploy/finalize-pending-rollback.sh` ve `deploy/abort-pre-mutation-active-update.sh`.
+Kurtarma çalıştırıcısı ve Go kurtarma ortamı bu birimlerden hiçbirini başlatmaz
+(bu betikleri çalıştırır). `install.sh` yalnız ilk kurulumda yeniden başlatır
+(yalnız-uygulama kipi daha önce çıkar) ve değişmedi. Şema geçişi yok; sözleşme
+testi `deploy/test-unit-start-limit-contract.sh`. Kod bir gözlem değeri değildir;
+sahip onu kurtarma günlüğünde okur.

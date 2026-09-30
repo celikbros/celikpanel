@@ -165,3 +165,108 @@ func TestPausedGuidanceNamesTheFirstTypedCauseBeforeThePause(t *testing.T) {
 		t.Fatalf("paused JSON:\n got %s\nwant %s", output.String(), want)
 	}
 }
+
+// upd3 F1/F2/F3: a preflight stop is final and safe to start again; between
+// automatic attempts the owner is told nothing is needed yet, with the first
+// typed cause kept; the pause names the renewal state. EN and TR, tokens only
+// on the support line, JSON additive.
+func TestPreflightRetryAndRenewalGuidance(t *testing.T) {
+	status := func(phase, reason, previous, code, automatic, first string) recoveryobs.Status {
+		s := knownStatus(phase)
+		if reason != "" {
+			s.Reason = reason
+		}
+		s.PreviousFailure, s.FailureCode, s.AutomaticRecovery, s.FirstFailureCode = previous, code, automatic, first
+		return s
+	}
+	journal := "sudo journalctl -u celikpanel-self-update-" + requestID + ".service --no-pager -n 20"
+	pending := "The update was applied, but the new version's panel did not come up. The server owner should read the panel log on the server: sudo journalctl -u celikpanel-panel -n 50."
+	pendingTR := "Güncelleme uygulandı, ancak yeni sürümün paneli açılmadı. Sunucu sahibi sunucudaki panel günlüğünü okumalı: sudo journalctl -u celikpanel-panel -n 50."
+	for _, test := range []struct {
+		name     string
+		observed recoveryobs.Status
+		en, tr   []string
+		notEN    []string
+		support  string
+	}{
+		{"preflight", status("failed", "", "update_failed", "recovery_runtime_preflight_failed", "", ""),
+			[]string{"The update stopped before changing the installed version or stopping any service", "keeps running the version it had before", journal, "CELIKPANEL_UPDATE_FAILURE", "only if that reason names a condition on this server", "Starting the update again is safe."},
+			[]string{"kurulu sürümü değiştirmeden ve hiçbir hizmeti durdurmadan durdu", journal, "Güncellemeyi yeniden başlatmak güvenlidir."},
+			[]string{"check this same request again", "do not start another update", "must act"},
+			"phase=failed reason=update_failed proof=none previous_failure=update_failed failure_code=recovery_runtime_preflight_failed"},
+		{"retry-scheduled/cause", status("recovery_required", "recovery_failed", "recovery_failed", "", "retry_scheduled", "panel_start_unverified"),
+			[]string{pending, "tries this same operation again by itself", "about 30 seconds after the previous one ended", "Nothing is needed on the server now", "only if automatic recovery pauses"},
+			[]string{pendingTR, "kendiliğinden yeniden deniyor", "yaklaşık 30 saniye", "Şimdi sunucuda yapmanız gereken bir şey yok"},
+			[]string{"must act", "Keep the server's files"},
+			"phase=recovery_required reason=recovery_failed proof=none previous_failure=recovery_failed automatic_recovery=retry_scheduled first_failure_code=panel_start_unverified"},
+		{"retry-scheduled/generic", status("recovery_required", "recovery_failed", "recovery_failed", "", "retry_scheduled", ""),
+			[]string{"The last automatic recovery attempt did not finish", "Nothing is needed on the server now"},
+			[]string{"Son otomatik kurtarma denemesi tamamlanmadı"},
+			[]string{"must act"},
+			"phase=recovery_required reason=recovery_failed proof=none previous_failure=recovery_failed automatic_recovery=retry_scheduled"},
+		{"next-attempt/cause", status("recovering", "", "recovery_failed", "", "", "panel_start_unverified"),
+			[]string{pending, "retried automatically up to its limit"},
+			[]string{pendingTR},
+			[]string{"must act"},
+			"phase=recovering reason=recovery_running proof=none previous_failure=recovery_failed first_failure_code=panel_start_unverified"},
+		{"paused/renewal", status("recovery_required", "", "recovery_failed", "", "paused_retry_limit", "panel_start_unverified"),
+			[]string{"The server owner must act", "Automatic certificate renewal (Certbot) was stopped for this update; the same recovery journal says whether it was returned to how it was before the update or stays stopped until this operation finishes."},
+			[]string{"Otomatik sertifika yenileme (Certbot) bu güncelleme için durduruldu"},
+			nil,
+			"automatic_recovery=paused_retry_limit first_failure_code=panel_start_unverified"},
+		{"unscheduled-failure", status("recovery_required", "recovery_failed", "recovery_failed", "", "", ""),
+			[]string{"The server owner must act"}, []string{"Sunucu sahibinin işlem yapması gerekiyor"}, nil,
+			"phase=recovery_required reason=recovery_failed proof=none previous_failure=recovery_failed"},
+	} {
+		en := ownerStatusText(t, test.observed, "en")
+		tr := ownerStatusText(t, test.observed, "tr")
+		for _, want := range test.en {
+			if !strings.Contains(en[0], want) {
+				t.Fatalf("%s EN lacks %q: %s", test.name, want, en[0])
+			}
+		}
+		for _, want := range test.tr {
+			if !strings.Contains(tr[0], want) {
+				t.Fatalf("%s TR lacks %q: %s", test.name, want, tr[0])
+			}
+		}
+		for _, unwanted := range test.notEN {
+			if strings.Contains(en[0], unwanted) {
+				t.Fatalf("%s EN says %q: %s", test.name, unwanted, en[0])
+			}
+		}
+		if strings.Contains(tr[0], "The ") {
+			t.Fatalf("%s: English in Turkish output: %s", test.name, tr[0])
+		}
+		for _, line := range [][]string{en, tr} {
+			plain := strings.NewReplacer("celikpanel-release-recovery.service", "", "celikpanel-panel", "", "celikpanel-self-update-"+requestID+".service", "").Replace(line[0])
+			if token := internalToken.FindString(plain); token != "" {
+				t.Fatalf("%s: internal token %q in owner text: %s", test.name, token, line[0])
+			}
+			if !strings.HasSuffix(line[len(line)-1], test.support) {
+				t.Fatalf("%s support line: %q", test.name, line[len(line)-1])
+			}
+		}
+	}
+	// A preflight code outside a failed record is never read as a terminal stop.
+	odd := status("recovering", "", "update_failed", "recovery_runtime_preflight_failed", "", "")
+	if lines := ownerStatusText(t, odd, "en"); strings.Contains(lines[0], "Starting the update again is safe") {
+		t.Fatalf("preflight text outside its state: %s", lines[0])
+	}
+	// The JSON wire shape gains values only; every key keeps its position.
+	for _, test := range []struct {
+		observed recoveryobs.Status
+		want     string
+	}{
+		{status("failed", "", "update_failed", "recovery_runtime_preflight_failed", "", ""),
+			`{"schema":"celikpanel-recovery-status/v1","request_id":"` + requestID + `","observation":"known","phase":"failed","terminal_proof":"none","reason":"update_failed","observed_at":"2026-09-14T12:00:00Z","previous_failure":"update_failed","failure_code":"recovery_runtime_preflight_failed"}` + "\n"},
+		{status("recovery_required", "recovery_failed", "recovery_failed", "", "retry_scheduled", "panel_start_unverified"),
+			`{"automatic_recovery":"retry_scheduled","schema":"celikpanel-recovery-status/v1","request_id":"` + requestID + `","observation":"known","phase":"recovery_required","terminal_proof":"none","reason":"recovery_failed","observed_at":"2026-09-14T12:00:00Z","previous_failure":"recovery_failed","first_failure_code":"panel_start_unverified"}` + "\n"},
+	} {
+		var output, diagnostics bytes.Buffer
+		run([]string{"status", "--request-id", requestID, "--json"}, cliRuntime{func() int { return 0 }, func(string) recoveryobs.Status { return test.observed }, &output, &diagnostics})
+		if output.String() != test.want {
+			t.Fatalf("JSON:\n got %s\nwant %s", output.String(), test.want)
+		}
+	}
+}

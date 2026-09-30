@@ -1,4 +1,10 @@
-import { recoveryFailureCodes, recoveryFailureGuidanceKey, type RecoveryFailureCode, type RecoveryObservation } from './recoveryObservation';
+import { isPreflightStop, recoveryFailureCodes, recoveryFailureGuidanceKey, retryingCauseKey, type RecoveryFailureCode, type RecoveryObservation } from './recoveryObservation';
+import { systemUpdatePreflightStop, withoutInternalTokens } from './systemUpdateFailure';
+
+/** Preflight steps with reviewed owner wording; any other step uses the generic line. */
+export const preflightSteps = ['panel_database_check', 'agent_ledger_check', 'owner_metadata_probe', 'runtime_selection',
+    'runtime_revalidation', 'release_boundary', 'material_support', 'database_support', 'database_metadata'] as const;
+type PreflightStep = typeof preflightSteps[number];
 
 /**
  * Owner guidance for a finished-with-failure update notice. The primary text
@@ -15,6 +21,13 @@ export type OutcomeKey =
     | 'panelUpdate.outcome.rolledBack'
     | 'panelUpdate.outcome.cause.candidate_panel_startup_check_failed'
     | 'panelUpdate.outcome.cause.panel_start_unverified'
+    | 'panelUpdate.outcome.cause.recovery_runtime_preflight_failed'
+    | 'panelUpdate.outcome.stoppedTitle'
+    | 'panelUpdate.outcome.stopped'
+    | `panelUpdate.outcome.preflightStep.${PreflightStep}`
+    | 'panelUpdate.outcome.preflightStep.generic'
+    | 'panelUpdate.outcome.stoppedNext'
+    | 'panelUpdate.outcome.stoppedResume'
     | 'panelUpdate.outcome.cause.generic'
     | 'panelUpdate.outcome.rolledBackNext'
     | 'panelUpdate.outcome.rolledBackResume'
@@ -28,6 +41,9 @@ export type OutcomeKey =
     | 'recovery.automatic.pausedTitle'
     | `recovery.automatic.cause.${RecoveryFailureCode}`
     | 'recovery.automatic.pausedHelp'
+    | 'recovery.automatic.renewal'
+    | 'recovery.automatic.retryTitle'
+    | 'recovery.automatic.retryHelp'
     | 'recovery.automatic.inspect'
     | 'recovery.automatic.resume'
     | NonNullable<ReturnType<typeof recoveryFailureGuidanceKey>>;
@@ -35,8 +51,11 @@ export type OutcomeKey =
 export type OutcomeText = { key: OutcomeKey; vars?: Record<string, string> } | { text: string };
 
 export type FailedUpdateGuidance = {
-    /** rolled_back: verified; recovery: the server's recovery is the source; unknown: no usable observation yet. */
-    state: 'rolled_back' | 'recovery' | 'succeeded' | 'unknown';
+    /**
+     * rolled_back: verified; unchanged: stopped in the read-only preflight, final;
+     * recovery: the server's recovery is the source; unknown: no usable observation yet.
+     */
+    state: 'rolled_back' | 'unchanged' | 'recovery' | 'succeeded' | 'unknown';
     title: OutcomeText;
     lines: OutcomeText[];
     /** A fixed owner command to show as code, never server-supplied text. */
@@ -66,12 +85,40 @@ function causeKey(code: RecoveryFailureCode | undefined): OutcomeKey {
         : 'panelUpdate.outcome.cause.generic';
 }
 
+function preflightStepKey(step: string | undefined): OutcomeKey {
+    return step && (preflightSteps as readonly string[]).includes(step)
+        ? `panelUpdate.outcome.preflightStep.${step as PreflightStep}`
+        : 'panelUpdate.outcome.preflightStep.generic';
+}
+
 export function failedUpdateGuidance(observation: RecoveryObservation | null, input: Input): FailedUpdateGuidance {
     const product = input.message !== '' && input.productMessages.includes(input.message);
     const serverMessage = !product && input.message !== '' ? input.message : undefined;
     const versions = { target: input.targetVersion, previous: input.previousVersion };
+    // A preflight stop changed nothing and nothing follows. The typed record is
+    // the source; the updater's own unchanged summary counts only while no
+    // other recorded outcome contradicts it.
+    const preflight = systemUpdatePreflightStop(input.message);
+    const uncontradicted = !observation || observation.observation !== 'known'
+        || (observation.phase === 'failed' && observation.terminal_proof === 'none' && !observation.failure_code);
+    if (isPreflightStop(observation) || (preflight && uncontradicted)) {
+        const reported = withoutInternalTokens(preflight ? preflight.diagnostic : input.message);
+        return {
+            state: 'unchanged',
+            title: { key: 'panelUpdate.outcome.stoppedTitle' },
+            lines: [
+                { key: 'panelUpdate.outcome.stopped', vars: versions },
+                { key: preflightStepKey(preflight?.step) },
+                { key: 'panelUpdate.outcome.stoppedNext' },
+                { key: 'panelUpdate.outcome.stoppedResume', vars: versions },
+            ],
+            serverMessage: !product && reported ? reported : undefined,
+        };
+    }
     if (observation?.observation === 'known' && observation.phase === 'recovered'
         && observation.terminal_proof === 'rollback_verified') {
+        // The secondary line keeps the server's words without internal tokens.
+        const reported = serverMessage ? withoutInternalTokens(serverMessage) : '';
         return {
             state: 'rolled_back',
             title: { key: 'panelUpdate.outcome.rolledBackTitle' },
@@ -81,7 +128,7 @@ export function failedUpdateGuidance(observation: RecoveryObservation | null, in
                 { key: 'panelUpdate.outcome.rolledBackNext', vars: versions },
                 { key: 'panelUpdate.outcome.rolledBackResume', vars: versions },
             ],
-            serverMessage,
+            serverMessage: reported || undefined,
         };
     }
     if (observation?.observation === 'known' && observation.phase) {
@@ -90,10 +137,16 @@ export function failedUpdateGuidance(observation: RecoveryObservation | null, in
         const lines: OutcomeText[] = [];
         let title: OutcomeText;
         let command: string | undefined;
-        if (observation.automatic_recovery) {
+        if (observation.automatic_recovery === 'retry_scheduled') {
+            // Attempts remain: nothing is asked of the owner before the pause.
+            title = { key: 'recovery.automatic.retryTitle' };
+            const cause = retryingCauseKey(observation.first_failure_code);
+            if (cause) lines.push({ key: cause });
+            lines.push({ key: 'recovery.automatic.retryHelp' });
+        } else if (observation.automatic_recovery) {
             title = { key: 'recovery.automatic.pausedTitle' };
             if (observation.first_failure_code) lines.push({ key: `recovery.automatic.cause.${observation.first_failure_code}` });
-            lines.push({ key: 'recovery.automatic.pausedHelp' }, { key: 'recovery.automatic.inspect' });
+            lines.push({ key: 'recovery.automatic.pausedHelp' }, { key: 'recovery.automatic.renewal' }, { key: 'recovery.automatic.inspect' });
             command = RECOVERY_LOG_COMMAND;
             lines.push({ key: 'recovery.automatic.resume' });
         } else if (observation.waiting_for) {

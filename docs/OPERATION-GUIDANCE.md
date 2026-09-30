@@ -426,3 +426,55 @@ blocking); a symbolic link above the hosting base is followed, but its target's
 parents are not proved. The native Arch re-run must still show the site
 answering 200 with its marker, the cron stamp advancing and `namei -l` of the
 document root.
+
+### Update preflight stop, automatic retries and paused renewal (upd3 F1-F3, O6, 2026-10-01)
+
+Source state with component and contract tests; the native run is pending. From
+the upd3 run (findings F1, F2, F3 and observation O6).
+
+- **The update stopped before changing the installed version (F1).** The
+  selected recovery runtime's read-only preflight (`verify-compatibility`,
+  recovery material and database support, database metadata) now reports its
+  failed step and the checker's first diagnostic line, typed
+  `recovery_runtime_preflight_failed` with `state=unchanged`, and records the
+  request's failure sidecar with that code. The request is final.
+  - Root CLI, recovery screen and the update notice: the update stopped in its
+    read-only check before the installed version was changed or any service was
+    stopped; the server runs the version it had, as before; the reason (the
+    translated step on the notice, the checker's line as the secondary server
+    line; the CLI names the worker journal
+    `sudo journalctl -u celikpanel-self-update-<request>.service --no-pager -n 20`).
+  - Who acts: nobody, unless the reason names a condition on this server (another
+    operation still running, the package manager busy); then let it finish or fix
+    it first. A package-manager refusal keeps the existing
+    `package_manager_busy` text.
+  - Resume: nothing resumes by itself; starting the update again is safe. The
+    notice stops polling for this request.
+  - "This version already failed" for such an attempt says instead that it
+    stopped before changing anything installed and that starting again is safe.
+- **Between automatic attempts (F3).** When an automatic recovery attempt fails
+  and the timer admits another one, the failure record carries the optional hint
+  `automatic_recovery=retry_scheduled`. CLI, recovery screen and notice say the
+  server tries the same operation again by itself (normally about 30 seconds
+  after the previous attempt ended, up to three attempts), that nothing is
+  needed now and that the owner acts only if recovery pauses. The update's first
+  typed cause (`panel_start_unverified`: the panel log command) stays visible
+  during the scheduled retry and the next attempt. "The server owner must act"
+  appears only at the pause or after the last attempt failed.
+- **Certificate renewal at the pause (F2).** The pause text adds that automatic
+  certificate renewal (Certbot) was stopped for the update and that the recovery
+  journal says whether it was returned to its earlier state or stays stopped
+  until the operation finishes (see the resilience contract entry of the same
+  date for when each applies).
+- **Server line after a verified rollback (O6).** The secondary "The server
+  reported" line drops the updater's marker and its `code=`/`state=` tokens and
+  the `reason=`/`detail=` labels; it is omitted when nothing readable remains.
+  The Turkish notice's primary text is Turkish only.
+
+Not done: the notice for a preflight stop appears only when the installed Panel
+already contains this change (the card comes from the installed release; the
+root CLI comes from the selected recovery kit, which the preflight has already
+promoted to the candidate's). Other updater failures that occur before the EXIT
+trap still keep only their die line.
+
+- **Start limit on the continuation (same date).** If systemd refuses to start the Panel or Agent on its start limit, the recovery journal line names the unit and `sudo systemctl reset-failed <unit>`, then the retry (code `unit_start_limit_hit`). Every controlled start now clears only that unit's start limit first, so this should be rare. Who acts: the server owner. Resume: the same retry.

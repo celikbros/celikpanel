@@ -1209,6 +1209,24 @@ _panel_tls_restore_active_state() {
     case "$saved" in active) systemctl start "$unit" || { _panel_tls_fail "cannot restart $unit"; return 1; };; inactive) systemctl stop "$unit" || { _panel_tls_fail "cannot keep $unit inactive"; return 1; };; *) _panel_tls_fail "unsupported active state: $saved"; return 1;; esac
 }
 
+# Read-only: succeeds only when every Certbot unit already has exactly its
+# recorded load, enable and active state (and each timer its definition).
+# Salt-okur: her Certbot birimi kayıtlı durumundaysa başarılı olur.
+panel_tls_certbot_scheduler_matches_snapshot() {
+    local root=${1:?snapshot required} file unit load enabled active extra
+    local actual_load actual_enabled actual_active
+    panel_tls_snapshot_validate "$root" || return 1
+    for file in certbot-services.tsv certbot-timers.tsv; do
+        while IFS=$'\t' read -r unit load enabled active extra || [[ -n ${unit}${load}${enabled}${active}${extra} ]]; do
+            actual_load=$(_panel_tls_systemctl_load_state "$unit") || return 1
+            actual_enabled=$(_panel_tls_systemctl_enabled_state "$unit") || return 1
+            actual_active=$(_panel_tls_systemctl_active_state "$unit") || return 1
+            [[ $actual_load == "$load" && $actual_enabled == "$enabled" && $actual_active == "$active" ]] || return 1
+            [[ $unit != *.timer ]] || _panel_tls_assert_timer_definition "$root" "$unit" || return 1
+        done <"$root/$file"
+    done
+}
+
 panel_tls_restore_certbot_scheduler() {
     local root=${1:?snapshot required} unit file saved load enabled active
     local actual_load actual_enabled actual_active extra

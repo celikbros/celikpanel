@@ -4,7 +4,7 @@ import { useI18n } from '../i18n';
 import { BrandMark } from './BrandMark';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { Button, Spinner } from './ui';
-import { parseRecoveryObservation, reconcileRecoveryObservation, recoveryFailureGuidanceKey, savedRecoveryRequestId, UPDATE_MARKER_KEY, type RecoveryObservation } from '../lib/recoveryObservation';
+import { parseRecoveryObservation, reconcileRecoveryObservation, recoveryFailureGuidanceKey, retryingCauseKey, savedRecoveryRequestId, UPDATE_MARKER_KEY, type RecoveryObservation } from '../lib/recoveryObservation';
 
 export function RecoveryStatus({ username, onUnauthorized }: { username: string; onUnauthorized?: () => void }) {
     const { t, locale } = useI18n();
@@ -46,8 +46,13 @@ export function RecoveryStatus({ username, onUnauthorized }: { username: string;
             <p className="mt-3 break-all text-sm text-fg-muted">{t('recovery.operationId')}: <span className="font-mono">{requestId}</span></p>
             <div className="mt-4 space-y-3 text-sm" role="status" aria-live="polite">
                 {(unavailable || !last) && <p>{t(busy && !unavailable && !last ? 'recovery.checking' : 'recovery.observationUnavailable')}</p>}
-                {last?.phase && <><p className="font-semibold">{t(last.automatic_recovery ? 'recovery.automatic.pausedTitle' : last.waiting_for ? `recovery.wait.${last.waiting_for}` : `recovery.phase.${last.phase}`)}</p>{last.automatic_recovery && last.first_failure_code && <p className="max-w-prose">{t(`recovery.automatic.cause.${last.first_failure_code}`)}</p>}<p className="max-w-prose text-fg-muted">{t(last.automatic_recovery ? 'recovery.automatic.pausedHelp' : last.waiting_for ? 'recovery.wait.next' : recoveryFailureGuidanceKey(last) ?? `recovery.next.${last.phase}`)}</p></>}
-                {last?.automatic_recovery && <div className="space-y-3">
+                {last?.phase && (last.automatic_recovery === 'retry_scheduled' ? <>
+                    {/* Attempts remain: the owner is not asked to act before the pause. */}
+                    <p className="font-semibold">{t('recovery.automatic.retryTitle')}</p>
+                    {retryingCauseKey(last.first_failure_code) && <p className="max-w-prose">{t(retryingCauseKey(last.first_failure_code)!)}</p>}
+                    <p className="max-w-prose text-fg-muted">{t('recovery.automatic.retryHelp')}</p>
+                </> : <><p className="font-semibold">{t(last.automatic_recovery ? 'recovery.automatic.pausedTitle' : last.waiting_for ? `recovery.wait.${last.waiting_for}` : `recovery.phase.${last.phase}`)}</p>{last.automatic_recovery && last.first_failure_code && <p className="max-w-prose">{t(`recovery.automatic.cause.${last.first_failure_code}`)}</p>}<p className="max-w-prose text-fg-muted">{t(last.automatic_recovery ? 'recovery.automatic.pausedHelp' : last.waiting_for ? 'recovery.wait.next' : recoveryFailureGuidanceKey(last) ?? `recovery.next.${last.phase}`)}</p>{last.automatic_recovery && <p className="max-w-prose text-fg-muted">{t('recovery.automatic.renewal')}</p>}</>)}
+                {last?.automatic_recovery === 'paused_retry_limit' && <div className="space-y-3">
                     <p className="max-w-prose">{t('recovery.automatic.inspect')}</p>
                     <pre className="whitespace-pre-wrap break-words rounded border border-border bg-surface px-3 py-3 text-sm"><code>sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50</code></pre>
                     <p className="max-w-prose text-fg-muted">{t('recovery.automatic.resume')}</p>

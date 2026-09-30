@@ -1623,3 +1623,92 @@ From the upd2 Debian 13 defective-candidate run (O1-O4).
   `update:completion` completes forward; the guard admits and refuses exactly
   as before with the same exit code; Start remains the owner's decision.
 - **Evidence.** Component tests only; native run pending.
+
+### Preflight cause, retries between attempts and renewal at the pause (P0.1/P0.2/P0.5, 2026-10-01)
+
+D-025 invariants 1 (independent renewal must not stay suspended), 2 (typed,
+preserved evidence), 3 and 4 (bounded retry of a read; retry exhaustion as a
+durable actionable state); D-022, D-024. From the upd3 native run (F1, F2, F3, O6).
+
+- **Changed.**
+  - F1: `recovery verify-compatibility` returns `step=<step>: <first checker
+    line>` (bounded printable ASCII; internal runtime, lock and metadata errors
+    stay private and are named only by their step). `update.sh` captures the four
+    selected-runtime preflight steps, reports `code=recovery_runtime_preflight_failed
+    state=unchanged` although the EXIT trap does not exist yet, and writes the
+    failure sidecar with that code (commit from the verified target while no
+    snapshot name exists). A failed record with that code is final for its request.
+  - F1 race: established by code reading, not observed on the host. The
+    WAL-aware checker copies the live database and WAL without opening them, then
+    fails closed when the database, `-wal` or `-shm` metadata changed after
+    pinning (`verifyPath` compares size, mtime and ctime). Any Panel commit,
+    checkpoint or shared-memory write in that window refuses the check, and the
+    preflight runs while the Panel is live. A consistent snapshot is not possible
+    here without opening the source or stopping the Panel, which the preflight
+    must not do, so a refused checker is read once more after a bounded 2 s pause
+    (never after a timeout). The same single re-read applies to the promotion
+    compatibility check. The frozen, locked checks later in the update are
+    unchanged.
+  - F3: a failed automatic attempt with attempts left writes the optional
+    `celikpanel-recovery-automatic/v1` value `retry_scheduled` (only on a
+    `recovery_required/recovery_failed` record). Readers expose the update's first
+    typed cause while retrying (`retry_scheduled`, and `recovering` after a
+    recovery failure) as well as at the pause.
+  - F2: when the last admitted attempt (the third automatic one or an owner
+    retry) of a forward completion (`update:completion`, `completion-scheduler`,
+    `scheduler`) fails, the runner returns the Certbot scheduler to its recorded
+    pre-update state with the existing restore function, once, under the release
+    lock. If it already matches, nothing is changed; a refused restore (for
+    example a later owner change of its enablement) is reported, never forced.
+    The forward retry pauses the scheduler again right after validating the
+    snapshot and before stopping any coordinator; the existing quiesce proof
+    refuses a changed enablement. Rollback directions (`update:active`,
+    `rollback:*`) keep renewal paused and say why: the rollback restores the panel
+    TLS tree, the pending activation and the deploy hook from the snapshot, so a
+    renewal before the retry would be undone. Code evidence: the forward retry
+    (`validate_pending_update_snapshot`, `verify_installed_release_artifacts`,
+    `VerifyInstalledCompletion`) validates only the snapshot copy and never
+    compares or restores live certificate files, while `panel_tls_restore_snapshot`
+    replaces the live TLS tree in the rollback path.
+  - O6: the notice's secondary server line drops internal tokens.
+- **Schema or version transition: none.** Observation v1, the failure sidecar v1
+  grammar, the automatic hint v1 grammar, snapshot v6, material v3, marker
+  grammar, dispatch receipts v1 and kit protocol 1 are unchanged. New closed
+  values: failure code `recovery_runtime_preflight_failed` and automatic value
+  `retry_scheduled`; older readers ignore both and show generic text. The status
+  JSON keeps every key and its position; `first_failure_code` may now also
+  appear while retrying. The runner, updater and `panel-tls-snapshot.sh` bytes
+  change, so the values (not the format) of the foundation and kit manifests
+  change.
+- **Recovery behaviour.** Dispatch, the budget (three automatic admissions plus
+  explicit owner retries) and terminal proofs are unchanged. New mutations: the
+  scheduler restore after a failed final forward attempt and the re-pause at the
+  retry's start, both through existing verified functions.
+- **Evidence.** Component and contract tests only; native run pending.
+
+Open: a paused rollback leaves renewal stopped until its retry finishes; the
+standalone `deploy/finalize-pending-update.sh` does not re-pause renewal at its
+start; the preflight-stop notice needs an installed Panel that contains this
+change; die lines before the EXIT trap other than these four steps still carry no
+typed summary (for example `*_runtime_preparation_unconfirmed`).
+
+#### Start limit on the owner's continuation (same date)
+
+`celikpanel-panel.service` restarts on failure with `StartLimitBurst=30` per
+3600 s, and no lifecycle script reset the unit's counter. After three forward
+attempts with a crash-looping candidate, the owner's printed retry could be
+refused with "start request repeated too quickly". Each script's existing
+`systemctl` wrapper now routes exactly `start celikpanel-panel.service` and
+`start celikpanel-agent.service` through `release_unit_controlled_start`, which
+runs `reset-failed` for that unit only and then starts it. A start still refused
+with `Result=start-limit-hit` prints `code=unit_start_limit_hit` with the unit
+and `sudo systemctl reset-failed <unit>` followed by the retry, EN and TR; the
+updater also carries the code in its summary. Start sites covered: `update.sh`
+(normal controlled starts, pending/forward completion including owner retry,
+pre-mutation restart), `rollback.sh` (restored starts, restart of the previous
+services), `deploy/finalize-pending-update.sh`, `deploy/finalize-pending-rollback.sh`
+and `deploy/abort-pre-mutation-active-update.sh`. The recovery runner and the Go
+recovery runtime start neither unit (they dispatch these scripts). `install.sh`
+restarts only on a fresh install (apply-only mode exits before them) and is
+unchanged. No schema transition; contract test `deploy/test-unit-start-limit-contract.sh`.
+The code is not an observation value; the owner reads it in the recovery journal.

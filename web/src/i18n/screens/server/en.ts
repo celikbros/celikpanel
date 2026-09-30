@@ -249,6 +249,8 @@ export const enServerScreens = {
     'panelUpdate.previousAttempt.recovered': '{version} was tried on this server on {time}, and the server was returned to the previous version. Starting it again repeats the same update unless the cause has been fixed.',
     'panelUpdate.previousAttempt.failed': '{version} was tried on this server on {time} and did not complete; this server runs {current} now. Starting it again repeats the same update unless the cause has been fixed.',
     'panelUpdate.previousAttempt.cause': 'Recorded cause: {cause}.',
+    'panelUpdate.previousAttempt.stoppedTitle': "An earlier update to this version stopped before changing anything installed",
+    'panelUpdate.previousAttempt.stopped': "{version} was tried on this server on {time} and stopped before changing anything installed; this server runs {current} as before. Starting it again is safe; if the reason recorded for that attempt names a condition on this server, resolve it first.",
     'panelUpdate.checkFailed': 'The update could not be checked.',
     'panelUpdate.randomFailed': 'A secure request identity could not be generated; the update was not started.',
 

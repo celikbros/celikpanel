@@ -132,3 +132,30 @@ Açık kalanlar: denetimden geçip açılan ve sonra çöken panel ileri tamamla
 yoktur; panel dururken panel adresinde canlı tarayıcı durumu yoktur (yalnız SSH
 görünümü). Kanıt: yalnız bileşen ve sözleşme testleri; gerçek sistem denemesi
 bekliyor.
+
+## Tamamlama beklerken sertifika yenileme (upd3 F2, 2026-10-01)
+
+D-022, D-025 ilkesi 1 / P0.5, P0.3. Şema veya sürüm geçişi yok.
+
+- **Deneme hakkı varken** Certbot zamanlayıcısı eskisi gibi duraklatılmış kalır;
+  her ileri deneme zaten onu duraklatılmış olarak çalıştırır.
+- **Son kabul edilen deneme başarısız olunca** (üçüncü otomatik deneme ya da sahip
+  yeniden denemesi) `update:completion`, `completion-scheduler` veya `scheduler`
+  aşamasında kurtarma çalıştırıcısı zamanlayıcıyı anlık görüntünün `panel-tls`
+  kaydındaki duruma (`panel_tls_restore_certbot_scheduler`), bir kez ve sürüm
+  kilidi altında döndürür. Zaten eşleşen zamanlayıcıya dokunulmaz; reddedilen bir
+  geri yükleme kurtarma günlüğünde bildirilir, zorlanmaz.
+- **Aynı yeniden deneme onu tekrar duraklatır** (`panel_tls_quiesce_certbot_scheduler`):
+  bekleyen anlık görüntü doğrulandıktan hemen sonra ve herhangi bir koordinatör
+  durdurulmadan önce. Duraklatma kanıtı kayıtlı etkinleştirmeyi ister; sahibin
+  sonraki bir değişikliği yeniden denemeyi hiçbir şeyi değiştirmeden durdurur.
+- **Burada neden güvenli:** ileri tamamlama yalnız anlık görüntü kopyasını ve
+  kurulu sürümü doğrular; canlı panel TLS ağacını, bekleyen etkinleştirmeyi veya
+  dağıtım kancasını asla karşılaştırmaz ya da geri yüklemez. Duraklama ile
+  yeniden deneme arasındaki bir yenileme bu yüzden yeniden denemeyi başarısız
+  kılamaz ve onun tarafından geri alınmaz. Geri alma yolları bu dosyaları geri
+  yükler ve yenilemeyi duraklatılmış tutar.
+
+Kanıt: yalnız bileşen ve sözleşme testleri; gerçek sistem denemesi bekliyor.
+Bağımsız `deploy/finalize-pending-update.sh` değişmedi ve başlangıçta yeniden
+duraklatmaz.

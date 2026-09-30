@@ -278,3 +278,29 @@ test('a paused recovery names the first typed cause before the pause guidance, a
  for(const key of ['recovery.automatic.cause.panel_start_unverified','recovery.automatic.cause.candidate_panel_startup_check_failed'])
   for(const name of ['en','tr'])assert.ok(locale(name).includes(`'${key}':`),`${name} lacks ${key}`);
 });
+
+// upd3 F1/F2/F3 on the recovery screen: a scheduled retry asks nothing of the
+// owner and keeps the first cause; a preflight stop is final; the pause names
+// the renewal state. Reads only.
+test('scheduled retry, preflight stop and paused renewal guidance on the recovery screen',async()=>{
+ const retry={...known('running'),phase:'recovery_required',reason:'recovery_failed',automatic_recovery:'retry_scheduled',previous_failure:'recovery_failed',first_failure_code:'panel_start_unverified'};
+ const stop={...known('failed'),previous_failure:'update_failed',failure_code:'recovery_runtime_preflight_failed'};
+ const paused={...known('running'),phase:'recovery_required',reason:'recovery_incomplete',automatic_recovery:'paused_retry_limit',previous_failure:'recovery_failed'};
+ for(const [record,present,absent] of [
+  [retry,['recovery.automatic.retryTitle','recovery.failure.panel_start_unverified.pending','recovery.automatic.retryHelp','recovery.reason.recovery_failed'],['recovery.automatic.pausedTitle','recovery.automatic.pausedHelp','recovery.automatic.resume','recovery.automatic.renewal','celikpanel-release-recovery.service','recovery.next.recovery_required']],
+  [stop,['recovery.phase.failed','recovery.failure.recovery_runtime_preflight_failed.stopped','recovery.reason.recovery_runtime_preflight_failed'],['recovery.next.failed','recovery.automatic.']],
+  [paused,['recovery.automatic.pausedTitle','recovery.automatic.pausedHelp','recovery.automatic.renewal','recovery.automatic.resume'],['recovery.automatic.retryTitle']],
+ ]){
+  setup(async()=>admin,async()=>Response.json(record));
+  try {
+   await act(async()=>{tree=Renderer.create(React.createElement(RecoveryStatus,{username:'admin'}))});
+   const content=JSON.stringify(tree.toJSON());
+   for(const text of present)assert.ok(content.includes(text),`${text} missing: ${content}`);
+   for(const text of absent)assert.ok(!content.includes(text),`${text} shown: ${content}`);
+   assert.ok(calls.every(([,options])=>!options?.method||options.method==='GET'));
+  }finally{await clean()}
+ }
+ const locale=name=>readFileSync(new URL(`../src/i18n/${name}.ts`,import.meta.url),'utf8');
+ for(const key of ['recovery.automatic.retryTitle','recovery.automatic.retryHelp','recovery.automatic.renewal','recovery.reason.recovery_runtime_preflight_failed','recovery.failure.recovery_runtime_preflight_failed.stopped','recovery.automatic.cause.recovery_runtime_preflight_failed'])
+  for(const name of ['en','tr'])assert.ok(locale(name).includes(`'${key}':`),`${name} lacks ${key}`);
+});

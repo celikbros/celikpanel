@@ -77,8 +77,10 @@ const admissionURL = moduleURL(`
     }
 `);
 const recoveryObservationURL = compileURL('../src/lib/recoveryObservation.ts');
+const systemUpdateFailureURL = compileURL('../src/lib/systemUpdateFailure.ts');
 const outcomeURL = compileURL('../src/lib/systemUpdateOutcome.ts', [
     [/from ['"]\.\/recoveryObservation['"]/g, `from '${recoveryObservationURL}'`],
+    [/from ['"]\.\/systemUpdateFailure['"]/g, `from '${systemUpdateFailureURL}'`],
 ]);
 const panelURL = compileURL('../src/components/PanelUpdateCard.tsx', [
     [/from ['"]\.\.\/lib\/systemUpdateOutcome['"]/g, `from '${outcomeURL}'`],
@@ -347,5 +349,30 @@ test('a previously failed target is named before Start, and Start stays with the
             delete globalThis.__nextPanelReadiness;
             delete globalThis.__panelUpdateOperation;
         }
+    }
+});
+
+// upd3 F1: an earlier attempt that stopped in its preflight changed nothing;
+// the notice says so, repeats no cause line and Start stays available.
+test('an earlier preflight stop is named as unchanged before Start', async () => {
+    const originalFetch = globalThis.fetch;
+    let renderer;
+    const attempt = { request_id: 'e'.repeat(32), phase: 'failed', failure_code: 'recovery_runtime_preflight_failed', finished_at: '2026-09-30T17:54:30Z' };
+    try {
+        renderer = await mountCheckedCard(async () => ({ ready: true }), async () => ({ kind: 'accepted' }),
+            { ...updateCheck, previous_attempt: attempt });
+        const notes = renderer.root.findAll((node) => node.type === 'div' && node.props.role === 'note');
+        const notice = notes.find((node) => textOf(node).includes('panelUpdate.previousAttempt.stoppedTitle'));
+        assert.ok(notice, 'preflight notice is shown');
+        const text = textOf(notice);
+        assert.match(text, /panelUpdate\.previousAttempt\.stopped/);
+        assert.match(text, /"current":"v0\.1\.0-alpha\.51"/);
+        assert.doesNotMatch(text, /previousAttempt\.title|previousAttempt\.failed|previousAttempt\.recovered|previousAttempt\.cause/);
+        assert.equal(renderer.root.findByProps({ id: 'panel-update-start-button' }).props.disabled, false);
+    } finally {
+        if (renderer) act(() => renderer.unmount());
+        globalThis.fetch = originalFetch;
+        delete globalThis.__nextPanelReadiness;
+        delete globalThis.__panelUpdateOperation;
     }
 });

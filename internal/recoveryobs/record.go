@@ -54,8 +54,22 @@ func ValidWaitingFor(value string) bool {
 const FailureSchema = "celikpanel-recovery-failure/v1"
 
 // ValidFailureCode is a closed allowlist; unknown codes are ignored.
+// recovery_runtime_preflight_failed is written only before any durable release
+// marker exists: the update stopped in its read-only preflight and changed
+// nothing, so a failed record carrying it is terminal for that request.
+// recovery_runtime_preflight_failed yalnız kalıcı işaretçi yokken yazılır:
+// güncelleme salt-okur ön denetimde durdu ve hiçbir şeyi değiştirmedi.
 func ValidFailureCode(value string) bool {
-	return value == "candidate_panel_startup_check_failed" || value == "panel_start_unverified"
+	return value == "candidate_panel_startup_check_failed" || value == "panel_start_unverified" ||
+		value == "recovery_runtime_preflight_failed"
+}
+
+// ValidAutomatic accepts the optional celikpanel-recovery-automatic/v1 hint:
+// paused_retry_limit (all automatic attempts used) or retry_scheduled (the last
+// admitted attempt failed and the native timer admits another automatic one).
+// Neither value is a phase or grants any recovery or retry authority.
+func ValidAutomatic(value string) bool {
+	return value == "paused_retry_limit" || value == "retry_scheduled"
 }
 
 // DecodeFailure accepts exactly four fixed fields bound to one request and its

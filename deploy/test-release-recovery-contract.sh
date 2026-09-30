@@ -528,6 +528,14 @@ expect_failure observed-child-failure run_recovery
 _release_observation_read "$OBSERVATION_TEST_REQUEST" 0
 [[ $OBSERVATION_PHASE == recovery_required && $OBSERVATION_PROOF == none &&
    $OBSERVATION_REASON == recovery_failed ]] || fail 'runner failure did not publish exact recovery observation'
+# F3 (upd3): attempts remain, so the failure carries the scheduled-retry hint
+# bound to this exact status, and the journal says no owner action is needed yet.
+retry_hint=$RELEASE_OBSERVATION_ROOT/$OBSERVATION_TEST_REQUEST.automatic
+grep -Fx 'automatic_recovery=retry_scheduled' "$retry_hint" >/dev/null || fail 'failed attempt with attempts left has no scheduled-retry hint'
+grep -Fx "observation_identity=$(TZ=UTC0 stat -Lc '%d:%i:%s:%y:%z' "$RELEASE_OBSERVATION_ROOT/$OBSERVATION_TEST_REQUEST.status")" "$retry_hint" >/dev/null ||
+    fail 'scheduled-retry hint is not bound to the exact failure record'
+grep -F 'Automatic recovery attempt 1 of 3 did not finish' "$TEST_ROOT/observed-child-failure.stderr" >/dev/null ||
+    fail 'failed attempt with attempts left did not say the timer retries'
 # A boot transition is a pending prerequisite, not a failed rollback. Exercise
 # the real runner while the fixture child would succeed if wrongly dispatched.
 printf '%s\n' success >"$TEST_ROOT/child-mode"
@@ -641,6 +649,16 @@ mv "$budget/saved-2" "$budget/2"
 CONTRACT_OWNER_RETRY=1
 printf '%s\n' fail >"$TEST_ROOT/child-mode"
 expect_failure owner-retry-failed run_recovery
+# F2 (upd3): a failed owner retry of a rollback keeps renewal paused and says why;
+# no scheduled-retry hint follows an owner attempt.
+grep -F 'and stays paused until this operation is retried and finishes: its rollback restores the panel certificate files' \
+    "$TEST_ROOT/owner-retry-failed.stderr" >/dev/null || fail 'paused rollback did not explain the paused renewal'
+owner_status_identity=$(TZ=UTC0 stat -Lc '%d:%i:%s:%y:%z' "$RELEASE_OBSERVATION_ROOT/$OBSERVATION_TEST_REQUEST.status")
+if grep -Fx 'automatic_recovery=retry_scheduled' "$RELEASE_OBSERVATION_ROOT/$OBSERVATION_TEST_REQUEST.automatic" >/dev/null 2>&1 &&
+   grep -Fx "observation_identity=$owner_status_identity" \
+       "$RELEASE_OBSERVATION_ROOT/$OBSERVATION_TEST_REQUEST.automatic" >/dev/null; then
+    fail 'failed owner retry claimed another automatic attempt'
+fi
 [[ $(sha256sum "$budget/1" "$budget/2" "$budget/3") == "$budget_receipts" ]] || fail 'owner retry reset auto budget'
 CONTRACT_OWNER_RETRY=0
 owner_calls=$(sha256sum "$TEST_ROOT/child-dispatches")

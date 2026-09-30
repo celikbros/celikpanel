@@ -80,6 +80,8 @@ release_observation_publish() (
     case "$automatic" in
         '') ;;
         paused_retry_limit) [[ -z $waiting && $phase:$proof == recovery_required:none ]] || return 1 ;;
+        # The last admitted attempt failed and the timer admits another one.
+        retry_scheduled) [[ -z $waiting && $phase:$proof:$reason == recovery_required:none:recovery_failed ]] || return 1 ;;
         *) return 1 ;;
     esac
     now=$(date -u +%Y-%m-%dT%H:%M:%SZ) || return 1
@@ -134,7 +136,7 @@ release_observation_publish() (
            ${wait_lines[1]} == "request_id=$id" && ${wait_lines[2]} == observation_identity=* &&
            ${wait_lines[3]} =~ ^observation_sha256=[0-9a-f]{64}$ ]] || return 1
         case "$suffix:${wait_lines[4]}" in
-            wait:waiting_for=initializing|wait:waiting_for=starting|wait:waiting_for=stopping|automatic:automatic_recovery=paused_retry_limit) ;;
+            wait:waiting_for=initializing|wait:waiting_for=starting|wait:waiting_for=stopping|automatic:automatic_recovery=paused_retry_limit|automatic:automatic_recovery=retry_scheduled) ;;
             *) return 1 ;;
         esac
         cmp -s -- "$wait_path" <(printf '%s\n' "${wait_lines[@]}") || return 1
@@ -157,7 +159,7 @@ release_observation_publish_failure() (
     local id=$1 commit=$2 code=$3 gid path stage lock_fd
     [[ $EUID == 0 && $id =~ ^[0-9a-f]{32}$ && $commit =~ ^[0-9a-f]{40}$ ]] || return 1
     case "$code" in
-        candidate_panel_startup_check_failed|panel_start_unverified) ;;
+        candidate_panel_startup_check_failed|panel_start_unverified|recovery_runtime_preflight_failed) ;;
         *) return 1 ;;
     esac
     gid=$(_release_observation_gid) || return 1

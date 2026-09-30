@@ -168,6 +168,12 @@ func failureCodeGuidance(status recoveryobs.Status) (string, string, bool) {
 		return "", "", false
 	}
 	switch status.FailureCode {
+	case "recovery_runtime_preflight_failed":
+		// Written only before any durable release marker: nothing changed and
+		// no recovery follows, so this failed record is final for the request.
+		if status.Phase == "failed" && status.TerminalProof == "none" {
+			return preflightStoppedGuidance(status.RequestID)
+		}
 	case "candidate_panel_startup_check_failed":
 		if status.Phase == "recovered" && status.TerminalProof == "rollback_verified" {
 			return "The new version's panel failed its start check before anything was switched on, so the server was returned to the previous version automatically. The previous version keeps running. Nothing needs to be done on the server. Do not start the same version again until a corrected version is published. When you report this, include the reason line shown for this update on the panel's update page.",
@@ -185,6 +191,37 @@ func failureCodeGuidance(status recoveryobs.Status) (string, string, bool) {
 	}
 	return "", "", false
 }
+
+// preflightStoppedGuidance explains a request that ended in the updater's
+// read-only recovery runtime preflight. The typed reason line itself is kept
+// in the worker's journal and on the panel's update page; this record does
+// not carry it.
+func preflightStoppedGuidance(requestID string) (string, string, bool) {
+	journal := "sudo journalctl -u celikpanel-self-update-" + requestID + ".service --no-pager -n 20"
+	return "The update stopped before changing the installed version or stopping any service: its read-only check with the recovery runtime could not verify the current installation. The server keeps running the version it had before, as before, and nothing more happens for this request. The recorded reason is on the panel's update page and in the update log: " + journal + " (the line containing CELIKPANEL_UPDATE_FAILURE). The server owner needs to act only if that reason names a condition on this server, such as the package manager running or another operation still in progress: let it finish or fix it first. Starting the update again is safe.",
+		"Güncelleme, kurulu sürümü değiştirmeden ve hiçbir hizmeti durdurmadan durdu: kurtarma çalışma ortamıyla yapılan salt-okur denetim mevcut kurulumu doğrulayamadı. Sunucu önceki sürümünü eskisi gibi çalıştırmaya devam ediyor ve bu işlem için başka bir şey olmayacak. Kaydedilen neden panelin güncelleme sayfasında ve güncelleme günlüğündedir: " + journal + " (CELIKPANEL_UPDATE_FAILURE içeren satır). Sunucu sahibinin yalnız bu neden sunucudaki bir durumu belirtiyorsa işlem yapması gerekir; örneğin paket yöneticisi çalışıyorsa ya da başka bir işlem sürüyorsa bitmesini bekleyin veya önce sorunu giderin. Güncellemeyi yeniden başlatmak güvenlidir.", true
+}
+
+// retryingCauseGuidance keeps the update's first typed cause visible while
+// automatic recovery still has attempts left, after a recovery attempt failure
+// hid the update's own failure code. It reuses the reviewed pending text.
+func retryingCauseGuidance(status recoveryobs.Status) (string, string, bool) {
+	if !recoveryobs.ValidFailureCode(status.FirstFailureCode) {
+		return "", "", false
+	}
+	pending := status
+	pending.Phase, pending.PreviousFailure, pending.FailureCode = "recovering", "update_failed", status.FirstFailureCode
+	return failureCodeGuidance(pending)
+}
+
+// Automatic certificate renewal is stopped for the whole update transaction.
+// At the pause the runner returns it to its recorded state when the retry
+// cannot undo a renewal (forward completion); a pending rollback keeps it
+// stopped. The recovery journal names which applies.
+const (
+	pausedRenewalEN = " Automatic certificate renewal (Certbot) was stopped for this update; the same recovery journal says whether it was returned to how it was before the update or stays stopped until this operation finishes."
+	pausedRenewalTR = " Otomatik sertifika yenileme (Certbot) bu güncelleme için durduruldu; aynı kurtarma günlüğü, güncellemeden önceki hâline döndürülüp döndürülmediğini ya da bu işlem bitene kadar durdurulmuş kalacağını söyler."
+)
 
 func writeStatus(w io.Writer, lang string, status recoveryobs.Status) error {
 	// The first lines speak to the server owner: what happened, what the server
@@ -225,6 +262,13 @@ func writeStatus(w io.Writer, lang string, status recoveryobs.Status) error {
 	// olduğunda aşama yönlendirmesini inceltir; bekleme ve duraklama önceliklidir.
 	if en2, tr2, ok := failureCodeGuidance(status); ok {
 		en, tr = en2, tr2
+	} else if status.Observation == "known" && status.Phase == "recovering" && status.TerminalProof == "none" &&
+		status.PreviousFailure == "recovery_failed" {
+		// The next automatic attempt runs after an earlier one failed; the
+		// update's first typed cause stays the owner's reference point.
+		if en2, tr2, ok := retryingCauseGuidance(status); ok {
+			en, tr = en2, tr2
+		}
 	}
 	if status.Phase == "recovering" && status.TerminalProof == "none" && recoveryobs.ValidWaitingFor(status.WaitingFor) {
 		en, tr = "The update did not finish normally, and recovery is waiting for the server to finish starting or stopping. Nothing to do now: the server's recovery timer checks this same operation again by itself when the system is ready. Recovery is not yet complete.",
@@ -238,6 +282,17 @@ func writeStatus(w io.Writer, lang string, status recoveryobs.Status) error {
 		// Duraklatma yönlendirmesi kalır; tipli ilk neden, öncesine neyin yanlış
 		// olduğunu ve nereye bakılacağını ekler.
 		if causeEN, causeTR, ok := pausedCauseGuidance(status.FirstFailureCode); ok {
+			en, tr = causeEN+" "+en, causeTR+" "+tr
+		}
+		en, tr = en+pausedRenewalEN, tr+pausedRenewalTR
+	}
+	// The last admitted automatic attempt failed, and the native timer admits
+	// another one: the owner is not asked to act before the pause.
+	// Son otomatik deneme başarısız oldu ve zamanlayıcı bir deneme daha yapacak.
+	if status.Observation == "known" && status.Phase == "recovery_required" && status.TerminalProof == "none" && status.AutomaticRecovery == "retry_scheduled" {
+		en, tr = "The last automatic recovery attempt did not finish, and automatic recovery tries this same operation again by itself: the next attempt normally starts about 30 seconds after the previous one ended, up to three attempts in total. Nothing is needed on the server now: check this same request again in a minute and do not start another update. The server owner has to act only if automatic recovery pauses.",
+			"Son otomatik kurtarma denemesi tamamlanmadı ve otomatik kurtarma aynı işlemi kendiliğinden yeniden deniyor: sonraki deneme normalde bir öncekinin bitişinden yaklaşık 30 saniye sonra başlar, toplamda en çok üç deneme yapılır. Şimdi sunucuda yapmanız gereken bir şey yok: bir dakika sonra aynı işlemi yeniden sorgulayın ve başka güncelleme başlatmayın. Sunucu sahibinin ancak otomatik kurtarma durursa işlem yapması gerekir."
+		if causeEN, causeTR, ok := retryingCauseGuidance(status); ok {
 			en, tr = causeEN+" "+en, causeTR+" "+tr
 		}
 	}
@@ -291,11 +346,14 @@ func supportState(status recoveryobs.Status) string {
 	if status.Phase == "recovering" && recoveryobs.ValidWaitingFor(status.WaitingFor) {
 		line += " waiting_for=" + status.WaitingFor
 	}
-	if status.Phase == "recovery_required" && status.AutomaticRecovery == "paused_retry_limit" {
+	if status.Phase == "recovery_required" && recoveryobs.ValidAutomatic(status.AutomaticRecovery) {
 		line += " automatic_recovery=" + status.AutomaticRecovery
 		if recoveryobs.ValidFailureCode(status.FirstFailureCode) {
 			line += " first_failure_code=" + status.FirstFailureCode
 		}
+	}
+	if status.Phase == "recovering" && status.PreviousFailure == "recovery_failed" && recoveryobs.ValidFailureCode(status.FirstFailureCode) {
+		line += " first_failure_code=" + status.FirstFailureCode
 	}
 	return line
 }

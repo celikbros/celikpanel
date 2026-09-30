@@ -148,6 +148,18 @@ printf 'recovery runtime shell contract: ok\n'
 # always uses FD9. Exercise actual inherited flock and inode identity in a child.
 # Redirect only the fixed selected CLI path into this private fixture.
 eval "$(extract_function prepare_independent_recovery_runtime | sed 's@/usr/libexec/celikpanel/recovery@"$TEST_ROOT/selected-recovery"@g')"
+# upd3 F1: selected-runtime preflight refusals report their typed, unchanged
+# outcome through the real reporter (exit 1, summary last), not the fixture die.
+eval "$(extract_function fail_recovery_runtime_preflight)"
+eval "$(extract_function report_update_failure)"
+eval "$(extract_function publish_update_failure_observation)"
+expect_preflight_stop() {
+    local log=$1 step=$2 last
+    last=$(tail -n 1 "$log")
+    [[ $last == "!! CELIKPANEL_UPDATE_FAILURE code=recovery_runtime_preflight_failed state=unchanged reason=recovery runtime preflight step=$step: "* ]] ||
+        fail "preflight stop $step lost its typed unchanged summary: $last"
+    grep -F 'panel services have not been stopped and nothing was changed' "$log" >/dev/null || fail "preflight stop $step not explained"
+}
 cat > "$TEST_ROOT/selected-recovery" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -199,6 +211,8 @@ elif args[0]=='verify-compatibility':
     assert args==['verify-compatibility','--mode',os.environ['FIXTURE_MODE']]
 else: raise AssertionError(args)
 with open(os.environ['FIXTURE_CALLS'],'a') as f: f.write(args[0]+'\n')
+if args[0]=='verify-compatibility' and os.environ.get('FIXTURE_COMPAT_REJECT')=='1':
+    sys.stderr.write('The selected recovery runtime cannot verify this installation. The update has not stopped the panel. step=panel_database_check: Recovery database check: service operations are not idle: SQLite sidecar -wal changed after pinning\n'); sys.exit(3)
 if args[0]=='prepare-mail-renewal-runtime' and os.environ.get('FIXTURE_MAIL_REJECT')=='1': sys.exit(81)
 if args[0]=='prepare-runtime' and os.environ.get('FIXTURE_REJECT_PREPARATION')=='1': sys.exit(78)
 if args[0]=='prepare-firewall-runtime' and os.environ.get('FIXTURE_FIREWALL_REJECT')=='1': sys.exit(79)
@@ -277,10 +291,18 @@ chmod 0755 "$TEST_ROOT/fresh/recovery-runtime/bin/recovery"
     [[ $status == 41 && $(wc -l < "$FIXTURE_CALLS") -eq $((before_calls + 1)) ]] || fail 'rejected preparation continued'
     [[ $(tail -n 1 "$FIXTURE_CALLS") == prepare-runtime ]] || fail 'unexpected call after rejected preparation'
     unset FIXTURE_REJECT_PREPARATION
+    export FIXTURE_COMPAT_REJECT=1
+    status=0
+    (prepare_independent_recovery_runtime) >"$TEST_ROOT/compat-rejected.log" 2>&1 || status=$?
+    [[ $status == 1 && $(tail -n 1 "$FIXTURE_CALLS") == verify-compatibility ]] || fail 'refused compatibility continued'
+    expect_preflight_stop "$TEST_ROOT/compat-rejected.log" panel_database_check
+    grep -F 'SQLite sidecar -wal changed after pinning detail=' "$TEST_ROOT/compat-rejected.log" >/dev/null || fail 'checker line lost'
+    unset FIXTURE_COMPAT_REJECT
     export FIXTURE_UNSUPPORTED=1
     status=0
     (prepare_independent_recovery_runtime) >"$TEST_ROOT/unsupported-kit.log" 2>&1 || status=$?
-    [[ $status == 41 ]] || fail 'older selected kit was silently admitted'
+    [[ $status == 1 ]] || fail 'older selected kit was silently admitted'
+    expect_preflight_stop "$TEST_ROOT/unsupported-kit.log" material_support
     grep -F 'panel services have not been stopped' "$TEST_ROOT/unsupported-kit.log" >/dev/null
     [[ $(tail -n 1 "$FIXTURE_CALLS") == selected-material-support ]] || fail 'unsupported material continued to database admission'
     unset FIXTURE_UNSUPPORTED
@@ -288,13 +310,15 @@ chmod 0755 "$TEST_ROOT/fresh/recovery-runtime/bin/recovery"
     BOOTSTRAP_PRE_LEDGER=0 BOOTSTRAP_SCHEMA17=0
     status=0
     (prepare_independent_recovery_runtime) >"$TEST_ROOT/unsupported-db-kit.log" 2>&1 || status=$?
-    [[ $status == 41 && $(tail -n 1 "$FIXTURE_CALLS") == selected-database-support ]] || fail 'unsupported database capability continued to metadata probe'
+    [[ $status == 1 && $(tail -n 1 "$FIXTURE_CALLS") == selected-database-support ]] || fail 'unsupported database capability continued to metadata probe'
+    expect_preflight_stop "$TEST_ROOT/unsupported-db-kit.log" database_support
     grep -F 'panel services have not been stopped' "$TEST_ROOT/unsupported-db-kit.log" >/dev/null
     unset FIXTURE_DB_UNSUPPORTED
     export FIXTURE_DB_PROBE_REJECTED=1
     status=0
     (prepare_independent_recovery_runtime) >"$TEST_ROOT/rejected-db-probe.log" 2>&1 || status=$?
-    [[ $status == 41 && $(tail -n 1 "$FIXTURE_CALLS") == probe-update-database ]] || fail 'rejected database metadata probe did not stop preflight'
+    [[ $status == 1 && $(tail -n 1 "$FIXTURE_CALLS") == probe-update-database ]] || fail 'rejected database metadata probe did not stop preflight'
+    expect_preflight_stop "$TEST_ROOT/rejected-db-probe.log" database_metadata
 )
 printf 'PASS: fresh updater preparation and compatibility retain FD9; rejected promotion stops admission\n'
 

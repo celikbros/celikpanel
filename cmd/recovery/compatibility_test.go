@@ -15,9 +15,9 @@ func TestRecoveryCompatibilityUsesOnlyExistingReadOnlyModes(t *testing.T) {
 		mode string
 		want []compatibilityCommand
 	}{
-		{"--normal", []compatibilityCommand{{"panel-checker", []string{"--check-service-operations-idle-wal-aware"}}, {"agent-checker", []string{"--check-service-mutation-idle"}}}},
-		{"--bootstrap-pre-ledger", []compatibilityCommand{{"panel-checker", []string{"--check-pre-ledger-service-operations-idle-wal-aware"}}, {"agent-checker", []string{"--check-pre-ledger-service-mutation-idle"}}}},
-		{"--bootstrap-schema17", []compatibilityCommand{{"schema17-bridge", []string{"check", "--db", "/var/lib/celikpanel/celikpanel.db"}}, {"agent-checker", []string{"--check-pre-ledger-service-mutation-idle"}}}},
+		{"--normal", []compatibilityCommand{{"panel_database_check", "panel-checker", []string{"--check-service-operations-idle-wal-aware"}}, {"agent_ledger_check", "agent-checker", []string{"--check-service-mutation-idle"}}}},
+		{"--bootstrap-pre-ledger", []compatibilityCommand{{"panel_database_check", "panel-checker", []string{"--check-pre-ledger-service-operations-idle-wal-aware"}}, {"agent_ledger_check", "agent-checker", []string{"--check-pre-ledger-service-mutation-idle"}}}},
+		{"--bootstrap-schema17", []compatibilityCommand{{"panel_database_check", "schema17-bridge", []string{"check", "--db", "/var/lib/celikpanel/celikpanel.db"}}, {"agent_ledger_check", "agent-checker", []string{"--check-pre-ledger-service-mutation-idle"}}}},
 	} {
 		t.Run(test.mode, func(t *testing.T) {
 			got, err := recoveryCompatibilityCommands(test.mode)
@@ -73,7 +73,7 @@ func compatibilityTestDependencies(t *testing.T, events *[]string) (compatibilit
 			*events = append(*events, "resolve")
 			return filepath.FromSlash("/verified-selected-kit"), selected, nil
 		},
-		run: func(ctx context.Context, path string, args, environment []string) error {
+		run: func(ctx context.Context, path string, args, environment []string) (string, error) {
 			deadline, ok := ctx.Deadline()
 			if !ok || time.Until(deadline) <= 0 || time.Until(deadline) > compatibilityCheckTimeout {
 				t.Fatal("checker execution has no bounded deadline")
@@ -85,7 +85,13 @@ func compatibilityTestDependencies(t *testing.T, events *[]string) (compatibilit
 				t.Fatal("checker received an alternate environment")
 			}
 			*events = append(*events, "run:"+filepath.Base(path))
-			return nil
+			return "", nil
+		},
+		sleep: func(delay time.Duration) {
+			if delay != compatibilityCheckRetryDelay {
+				t.Fatalf("unbounded retry delay: %s", delay)
+			}
+			*events = append(*events, "sleep")
 		},
 	}
 	return deps, selected
@@ -104,6 +110,10 @@ func TestRecoveryCompatibilityRevalidatesKitAndNoMarkerBoundaryAroundEveryCheck(
 }
 
 func TestRecoveryCompatibilityRefusesUnknownWithoutRunningAnotherCheck(t *testing.T) {
+	steps := map[string]string{"non-root": "owner", "unsupported-mode": "mode", "lock-or-marker": "release_boundary",
+		"resolve": "runtime_selection", "before-first": "runtime_revalidation", "after-first": "runtime_revalidation",
+		"before-second": "runtime_revalidation", "after-second": "runtime_revalidation", "boundary-after-first": "release_boundary",
+		"panel-rejected": "panel_database_check", "agent-rejected": "agent_ledger_check", "close": "runtime_revalidation"}
 	for _, fail := range []string{"non-root", "unsupported-mode", "lock-or-marker", "resolve", "before-first", "after-first", "before-second", "after-second", "boundary-after-first", "panel-rejected", "agent-rejected", "close"} {
 		t.Run(fail, func(t *testing.T) {
 			var events []string
@@ -137,25 +147,27 @@ func TestRecoveryCompatibilityRefusesUnknownWithoutRunningAnotherCheck(t *testin
 					return original(fd)
 				}
 			case "panel-rejected", "agent-rejected":
-				maxRuns = 1
+				// A rejecting checker is read once more after the bounded pause.
+				target := "panel-checker"
+				maxRuns = 2
 				if fail == "agent-rejected" {
-					maxRuns = 2
+					target, maxRuns = "agent-checker", 3
 				}
-				original, count := deps.run, 0
-				deps.run = func(ctx context.Context, path string, args, env []string) error {
-					_ = original(ctx, path, args, env)
-					count++
-					if count == maxRuns {
-						return errors.New("private DB/ledger refusal")
+				original := deps.run
+				deps.run = func(ctx context.Context, path string, args, env []string) (string, error) {
+					_, _ = original(ctx, path, args, env)
+					if filepath.Base(path) == target {
+						return "", errors.New("private DB/ledger refusal")
 					}
-					return nil
+					return "", nil
 				}
 			case "close":
 				selected.closeError, maxRuns = true, 2
 			}
 			err := verifyRecoveryCompatibility(mode, deps)
-			if err != errRecoveryCompatibility || strings.Contains(err.Error(), "private") {
-				t.Fatalf("expected bounded compatibility refusal, got %v", err)
+			if !errors.Is(err, errRecoveryCompatibility) || strings.Contains(err.Error(), "private") ||
+				!strings.HasPrefix(err.Error(), "step="+steps[fail]+": ") {
+				t.Fatalf("expected bounded typed compatibility refusal, got %v", err)
 			}
 			runs := 0
 			for _, event := range events {
@@ -185,5 +197,71 @@ func TestRecoveryCompatibilityIgnoresCallerEnvironment(t *testing.T) {
 	env[0] = "modified"
 	if !reflect.DeepEqual(recoveryCompatibilityEnvironment(), want) {
 		t.Fatal("caller can mutate the next environment")
+	}
+}
+
+// F1 (upd3): the refusal names the step and the checker's first diagnostic
+// line, bounded and printable; a transient refusal is read once more after the
+// bounded pause and then admits; a timed-out check is not run again.
+func TestRecoveryCompatibilityKeepsTypedCauseAndRereadsOnce(t *testing.T) {
+	var events []string
+	deps, _ := compatibilityTestDependencies(t, &events)
+	original, panelRuns := deps.run, 0
+	deps.run = func(ctx context.Context, path string, args, env []string) (string, error) {
+		_, _ = original(ctx, path, args, env)
+		if filepath.Base(path) == "panel-checker" {
+			panelRuns++
+			if panelRuns == 1 {
+				return "Recovery database check: service operations are not idle: SQLite sidecar -wal changed after pinning\nsecond line\n", errors.New("exit status 1")
+			}
+		}
+		return "", nil
+	}
+	if err := verifyRecoveryCompatibility("--normal", deps); err != nil {
+		t.Fatalf("transient refusal was not re-read: %v", err)
+	}
+	want := []string{"boundary", "resolve", "validate", "boundary", "run:panel-checker", "validate", "boundary",
+		"sleep", "validate", "boundary", "run:panel-checker", "validate", "boundary",
+		"validate", "boundary", "run:agent-checker", "validate", "boundary", "close"}
+	if !reflect.DeepEqual(events, want) {
+		t.Fatalf("events=%v", events)
+	}
+
+	events = nil
+	deps, _ = compatibilityTestDependencies(t, &events)
+	deps.run = func(ctx context.Context, path string, args, env []string) (string, error) {
+		if filepath.Base(path) == "agent-checker" {
+			return "\x1b\r\n  Service mutation idle check: service mutation state is not idle: the host package manager is active " + strings.Repeat("x", 400) + "\n", errors.New("exit status 1")
+		}
+		return "", nil
+	}
+	err := verifyRecoveryCompatibility("--normal", deps)
+	message := ""
+	if err != nil {
+		message = err.Error()
+	}
+	wantPrefix := "step=agent_ledger_check: Service mutation idle check: service mutation state is not idle: the host package manager is active x"
+	if !errors.Is(err, errRecoveryCompatibility) || !strings.HasPrefix(message, wantPrefix) ||
+		len(message) != len("step=agent_ledger_check: ")+240 || strings.ContainsAny(message, "\x1b\n") {
+		t.Fatalf("typed cause lost or unbounded: %q", message)
+	}
+
+	events = nil
+	deps, _ = compatibilityTestDependencies(t, &events)
+	runs := 0
+	deps.run = func(ctx context.Context, path string, args, env []string) (string, error) {
+		runs++
+		<-ctx.Done()
+		return "", ctx.Err()
+	}
+	done := make(chan error, 1)
+	go func() { done <- verifyRecoveryCompatibilityWithTimeout("--normal", deps, 20*time.Millisecond) }()
+	select {
+	case err = <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed-out check was not bounded")
+	}
+	if runs != 1 || err == nil || err.Error() != "step=panel_database_check: the read-only check did not finish within its time limit" {
+		t.Fatalf("timeout retried or untyped: runs=%d err=%v", runs, err)
 	}
 }

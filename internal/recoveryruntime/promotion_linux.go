@@ -799,6 +799,10 @@ func exchangePromotion(paths promotionPaths, proof *promotionProof, fd int, laun
 	}
 	return state.verifyDirectory(parent)
 }
+
+// promotionCheckerRetryDelay bounds the single re-read of a refused checker.
+const promotionCheckerRetryDelay = 2 * time.Second
+
 func runPromotionCompatibility(paths promotionPaths, target *Runtime, mode string, fd int, fixture func(string, string) error) error {
 	if !validPromotionMode(mode) {
 		return fail(ReasonUnsupported)
@@ -830,29 +834,40 @@ func runPromotionCompatibility(paths promotionPaths, target *Runtime, mode strin
 			args   []string
 		}{{panel, args}, {"agent-checker", []string{agent}}}
 		for _, command := range commands {
-			if err := target.Revalidate(); err != nil {
-				return err
-			}
-			if err := verifyPromotionBoundary(paths, fd); err != nil {
-				return err
-			}
-			ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
-			cmd := exec.CommandContext(ctx, filepath.Join(target.Root, "bin", command.binary), command.args...)
-			cmd.Env = promotionCheckerEnvironment()
-			cmd.Dir = "/"
-			cmd.Stdout = io.Discard
-			cmd.Stderr = io.Discard
-			err := cmd.Run()
-			deadline := ctx.Err()
-			cancel()
-			if err != nil || deadline != nil {
-				return fail(ReasonUnsupported)
-			}
-			if err := target.Revalidate(); err != nil {
-				return err
-			}
-			if err := verifyPromotionBoundary(paths, fd); err != nil {
-				return err
+			// A live Panel write can invalidate the WAL-aware checker's pinned
+			// copy ("changed after pinning"). A refused read is repeated once
+			// after a bounded pause; a timed-out check is not re-run.
+			// Canlı yazım sabitlenmiş kopyayı geçersiz kılabilir: reddedilen
+			// salt-okur denetim kısa bir beklemeden sonra bir kez yinelenir.
+			for attempt := 0; ; attempt++ {
+				if err := target.Revalidate(); err != nil {
+					return err
+				}
+				if err := verifyPromotionBoundary(paths, fd); err != nil {
+					return err
+				}
+				ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+				cmd := exec.CommandContext(ctx, filepath.Join(target.Root, "bin", command.binary), command.args...)
+				cmd.Env = promotionCheckerEnvironment()
+				cmd.Dir = "/"
+				cmd.Stdout = io.Discard
+				cmd.Stderr = io.Discard
+				err := cmd.Run()
+				deadline := ctx.Err()
+				cancel()
+				if err := target.Revalidate(); err != nil {
+					return err
+				}
+				if err := verifyPromotionBoundary(paths, fd); err != nil {
+					return err
+				}
+				if err == nil && deadline == nil {
+					break
+				}
+				if deadline != nil || attempt > 0 {
+					return fail(ReasonUnsupported)
+				}
+				time.Sleep(promotionCheckerRetryDelay)
 			}
 		}
 	}

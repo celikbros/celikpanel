@@ -13,9 +13,13 @@ const compile = (path) => ts.transpileModule(readFileSync(new URL(path, import.m
     compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2020 },
 }).outputText;
 const recoveryURL = dataModule(compile('../src/lib/recoveryObservation.ts'));
-const { parseRecoveryObservation } = await import(recoveryURL);
-const { failedUpdateGuidance, decodePreviousUpdateAttempt, RECOVERY_LOG_COMMAND } = await import(dataModule(
-    compile('../src/lib/systemUpdateOutcome.ts').replace(/from ['"]\.\/recoveryObservation['"]/g, `from '${recoveryURL}'`)));
+const failureURL = dataModule(compile('../src/lib/systemUpdateFailure.ts'));
+const { parseRecoveryObservation, recoveryFailureGuidanceKey } = await import(recoveryURL);
+const { withoutInternalTokens, systemUpdatePreflightStop } = await import(failureURL);
+const { failedUpdateGuidance, decodePreviousUpdateAttempt, RECOVERY_LOG_COMMAND, preflightSteps } = await import(dataModule(
+    compile('../src/lib/systemUpdateOutcome.ts')
+        .replace(/from ['"]\.\/recoveryObservation['"]/g, `from '${recoveryURL}'`)
+        .replace(/from ['"]\.\/systemUpdateFailure['"]/g, `from '${failureURL}'`)));
 
 const id = 'a'.repeat(32);
 const summary = 'reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason=offline panel database migration failed; its original database and work evidence are preserved detail=';
@@ -49,7 +53,8 @@ test('a verified rollback names both versions, the typed cause, who acts and how
         assert.deepEqual(guidance.lines.map((line) => line.key), [
             'panelUpdate.outcome.rolledBack', causeKey, 'panelUpdate.outcome.rolledBackNext', 'panelUpdate.outcome.rolledBackResume',
         ]);
-        assert.equal(guidance.serverMessage, summary);
+        // upd3 O6: the server's words stay secondary, without internal tokens.
+        assert.equal(guidance.serverMessage, 'reviewed updater failed: exit status 1: offline panel database migration failed; its original database and work evidence are preserved');
         for (const catalog of [en, tr]) {
             const text = primary(catalog, guidance).join('\n');
             assert.match(text, /v0\.1\.0-alpha\.82/);
@@ -171,4 +176,93 @@ test('a paused recovery adds the first typed cause before the pause guidance in 
         assert.match(text, /sudo journalctl -u celikpanel-panel -n 50/);
         primary(catalog, failedUpdateGuidance(observed('recovery_required', { automatic_recovery: 'paused_retry_limit', first_failure_code: 'candidate_panel_startup_check_failed' }), input()));
     }
+});
+
+// upd3 F1: a preflight stop changed nothing and nothing follows it. The notice
+// says so, names the step, says who acts and that starting again is safe.
+const preflightSummary = (step, diagnostic) => `reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=recovery_runtime_preflight_failed state=unchanged reason=recovery runtime preflight step=${step}: ${diagnostic} detail=`;
+
+test('a preflight stop is final, unchanged and safe to start again', () => {
+    const message = preflightSummary('panel_database_check', 'Recovery database check: service operations are not idle: SQLite sidecar -wal changed after pinning');
+    assert.deepEqual(systemUpdatePreflightStop(message), { step: 'panel_database_check', diagnostic: 'Recovery database check: service operations are not idle: SQLite sidecar -wal changed after pinning' });
+    const stop = observed('failed', { failure_code: 'recovery_runtime_preflight_failed' });
+    assert.equal(stop.failure_code, 'recovery_runtime_preflight_failed');
+    assert.equal(recoveryFailureGuidanceKey(stop), 'recovery.failure.recovery_runtime_preflight_failed.stopped');
+    for (const [observation, reading] of [[stop, false], [null, true], [null, false], [observed('failed'), false]]) {
+        const guidance = failedUpdateGuidance(observation, input({ message, reading }));
+        assert.equal(guidance.state, 'unchanged');
+        assert.equal(guidance.title.key, 'panelUpdate.outcome.stoppedTitle');
+        assert.deepEqual(guidance.lines.map((line) => line.key), ['panelUpdate.outcome.stopped',
+            'panelUpdate.outcome.preflightStep.panel_database_check', 'panelUpdate.outcome.stoppedNext', 'panelUpdate.outcome.stoppedResume']);
+        assert.equal(guidance.command, undefined);
+        assert.equal(guidance.serverMessage, 'Recovery database check: service operations are not idle: SQLite sidecar -wal changed after pinning');
+        const english = primary(en, guidance).join('\n');
+        assert.match(english, /before the installed version was changed or any service was stopped/);
+        assert.match(english, /running v0\.1\.0-alpha\.81 as before/);
+        assert.match(english, /Starting the update to v0\.1\.0-alpha\.82 again is safe/);
+        assert.doesNotMatch(english, /do not start|must act|check .* again in/i);
+        const turkish = primary(tr, guidance).join('\n');
+        assert.match(turkish, /v0\.1\.0-alpha\.81 sürümünü eskisi gibi çalıştırıyor/);
+        assert.match(turkish, /yeniden başlatmak güvenlidir/);
+        for (const text of [english, turkish]) assert.doesNotMatch(text, /CELIKPANEL_UPDATE_FAILURE|recovery_runtime|state=|\{/);
+        assert.doesNotMatch(turkish, /\b(The|Reason|Nothing)\b/);
+    }
+    // The record alone (no parsable summary) still says unchanged, with the generic step.
+    const recordOnly = failedUpdateGuidance(stop, input({ message: '' }));
+    assert.equal(recordOnly.state, 'unchanged');
+    assert.equal(recordOnly.lines[1].key, 'panelUpdate.outcome.preflightStep.generic');
+    assert.equal(recordOnly.serverMessage, undefined);
+    // An unknown step keeps the generic reason; every known step has both texts.
+    assert.equal(failedUpdateGuidance(null, input({ message: preflightSummary('private_step', 'x') })).lines[1].key, 'panelUpdate.outcome.preflightStep.generic');
+    for (const step of preflightSteps) {
+        for (const catalog of [en, tr]) primary(catalog, failedUpdateGuidance(null, input({ message: preflightSummary(step, 'x') })));
+    }
+    // A contradicting newer record wins over the summary.
+    const recovering = failedUpdateGuidance(observed('recovering'), input({ message }));
+    assert.equal(recovering.state, 'recovery');
+    // Anything but the exact unchanged outcome is not a preflight stop.
+    assert.equal(systemUpdatePreflightStop(message.replace('state=unchanged', 'state=recovery_required')), undefined);
+    assert.equal(systemUpdatePreflightStop(summary), undefined);
+});
+
+// upd3 F3: while attempts remain the notice says the server retries by itself
+// and keeps the first typed cause; owner action appears only at the pause.
+test('a scheduled automatic retry keeps the first cause and asks nothing of the owner', () => {
+    const retry = observed('recovery_required', { reason: 'recovery_failed', automatic_recovery: 'retry_scheduled', previous_failure: 'recovery_failed', first_failure_code: 'panel_start_unverified' });
+    assert.equal(retry.automatic_recovery, 'retry_scheduled');
+    assert.equal(retry.first_failure_code, 'panel_start_unverified');
+    const guidance = failedUpdateGuidance(retry, input());
+    assert.equal(guidance.title.key, 'recovery.automatic.retryTitle');
+    assert.deepEqual(guidance.lines.map((line) => line.key), ['recovery.failure.panel_start_unverified.pending',
+        'recovery.automatic.retryHelp', 'panelUpdate.outcome.followsRecovery']);
+    assert.equal(guidance.command, undefined);
+    for (const catalog of [en, tr]) {
+        const text = primary(catalog, guidance).join('\n');
+        assert.match(text, /sudo journalctl -u celikpanel-panel -n 50/);
+        assert.match(text, /30/);
+    }
+    assert.doesNotMatch(primary(en, guidance).join('\n'), /must act/);
+    // The hint is accepted only on a recovery failure record.
+    assert.equal(observed('recovery_required', { automatic_recovery: 'retry_scheduled' }).automatic_recovery, undefined);
+    // The next attempt after a recovery failure keeps the same first cause.
+    const next = observed('recovering', { previous_failure: 'recovery_failed', first_failure_code: 'panel_start_unverified' });
+    assert.equal(recoveryFailureGuidanceKey(next), 'recovery.failure.panel_start_unverified.pending');
+    assert.equal(failedUpdateGuidance(next, input()).lines[0].key, 'recovery.failure.panel_start_unverified.pending');
+    assert.equal(observed('recovering', { first_failure_code: 'panel_start_unverified' }).first_failure_code, undefined);
+    // At the pause the renewal line follows the pause help.
+    const paused = failedUpdateGuidance(observed('recovery_required', { automatic_recovery: 'paused_retry_limit', previous_failure: 'recovery_failed' }), input());
+    assert.deepEqual(paused.lines.slice(0, 2).map((line) => line.key), ['recovery.automatic.pausedHelp', 'recovery.automatic.renewal']);
+    for (const catalog of [en, tr]) assert.match(render(catalog, { key: 'recovery.automatic.renewal' }), /Certbot/);
+});
+
+// upd3 O6: the secondary line after a verified rollback carries the server's
+// words without internal tokens, or is omitted when nothing readable remains.
+test('internal tokens are removed from the rolled-back server line', () => {
+    assert.equal(withoutInternalTokens('!! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason= detail='), '');
+    const shortLine = failedUpdateGuidance(observed('recovered'), input({ message: 'reviewed updater failed: !! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason= detail=' }));
+    assert.equal(shortLine.serverMessage, 'reviewed updater failed');
+    const only = failedUpdateGuidance(observed('recovered'), input({ message: '!! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason= detail=' }));
+    assert.equal(only.serverMessage, undefined);
+    const turkish = primary(tr, failedUpdateGuidance(observed('recovered'), input())).join('\n');
+    assert.doesNotMatch(turkish, /\b(The|update|Cause|Nothing)\b/);
 });

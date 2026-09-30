@@ -141,3 +141,28 @@ no supported return to the previous release; there is no live browser status at
 the panel's address while the panel is stopped (the owner SSH view in
 [recovery access](RECOVERY-ACCESS.md) remains the fallback). Evidence: component
 and contract tests only; native run pending.
+
+## Certificate renewal while a completion waits (upd3 F2, 2026-10-01)
+
+D-022, D-025 invariant 1 / P0.5, P0.3. No schema or version transition.
+
+- **While attempts remain** the Certbot scheduler stays paused, as before; each
+  forward attempt already runs with it paused.
+- **After the last admitted attempt fails** (the third automatic one or an owner
+  retry) in `update:completion`, `completion-scheduler` or `scheduler`, the
+  recovery runner returns the scheduler to the state recorded in the snapshot's
+  `panel-tls` ledger (`panel_tls_restore_certbot_scheduler`), once, under the
+  release lock. A scheduler that already matches is left alone; a refused
+  restore is reported in the recovery journal and not forced.
+- **The same retry pauses it again** (`panel_tls_quiesce_certbot_scheduler`)
+  directly after the pending snapshot is validated and before any coordinator is
+  stopped. The quiesce proof requires the recorded enablement, so a later owner
+  change stops the retry before it changes anything.
+- **Why this is safe here:** forward completion validates only the snapshot copy
+  and the installed release; it never compares or restores the live panel TLS
+  tree, the pending activation or the deploy hook. A renewal between the pause
+  and the retry therefore cannot make the retry fail or be undone by it. Rollback
+  paths restore those files and keep renewal paused.
+
+Evidence: component and contract tests only; native run pending. The standalone
+`deploy/finalize-pending-update.sh` is unchanged and does not re-pause at start.

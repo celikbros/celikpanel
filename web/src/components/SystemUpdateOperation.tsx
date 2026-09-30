@@ -1,7 +1,7 @@
 import { prepareRecoveryShell } from '../lib/recoveryShell';
 import { systemUpdateFailureMessage } from '../lib/systemUpdateFailure';
 import { failedUpdateGuidance, type OutcomeText } from '../lib/systemUpdateOutcome';
-import { parseRecoveryObservation, reconcileRecoveryObservation, type RecoveryObservation } from '../lib/recoveryObservation';
+import { isPreflightStop, parseRecoveryObservation, reconcileRecoveryObservation, type RecoveryObservation } from '../lib/recoveryObservation';
 import {
     createContext,
     useCallback,
@@ -1868,7 +1868,8 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
             }
             if (cancelled) return;
             setFailedObservation({ requestID: failedRequestID, observation: latest, settled: true });
-            if (!stop && latest?.terminal_proof !== 'rollback_verified' && latest?.terminal_proof !== 'update_verified') schedule();
+            // A preflight stop is final for its request: nothing follows it.
+            if (!stop && latest?.terminal_proof !== 'rollback_verified' && latest?.terminal_proof !== 'update_verified' && !isPreflightStop(latest)) schedule();
         };
         void read();
         return () => {

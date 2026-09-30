@@ -909,6 +909,8 @@ export const trServerScreens: Record<ServerScreenKey, string> = {
     'panelUpdate.previousAttempt.recovered': '{version} bu sunucuda {time} tarihinde denendi ve sunucu önceki sürüme döndürüldü. Neden giderilmediyse yeniden başlatmak aynı güncellemeyi tekrarlar.',
     'panelUpdate.previousAttempt.failed': '{version} bu sunucuda {time} tarihinde denendi ve tamamlanmadı; bu sunucu şu an {current} sürümünü çalıştırıyor. Neden giderilmediyse yeniden başlatmak aynı güncellemeyi tekrarlar.',
     'panelUpdate.previousAttempt.cause': 'Kaydedilen neden: {cause}.',
+    'panelUpdate.previousAttempt.stoppedTitle': "Bu sürüme yapılan önceki güncelleme kurulu hiçbir şeyi değiştirmeden durdu",
+    'panelUpdate.previousAttempt.stopped': "{version} bu sunucuda {time} tarihinde denendi ve kurulu hiçbir şeyi değiştirmeden durdu; bu sunucu {current} sürümünü eskisi gibi çalıştırıyor. Yeniden başlatmak güvenlidir; o deneme için kaydedilen neden bu sunucudaki bir durumu belirtiyorsa önce onu giderin.",
     'panelUpdate.checkFailed': 'Güncelleme kontrol edilemedi.',
     'panelUpdate.randomFailed': 'Güvenli istek kimliği üretilemedi; güncelleme başlatılmadı.',
 };

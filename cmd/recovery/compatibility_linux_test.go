@@ -27,7 +27,7 @@ func TestRecoveryCompatibilitySubprocessHelper(t *testing.T) {
 		os.Exit(0)
 	case "compatibility-error-helper":
 		fmt.Fprintln(os.Stdout, "private checker DB contents")
-		fmt.Fprintln(os.Stderr, "private checker path")
+		fmt.Fprintln(os.Stderr, "Recovery database check: service operations are not idle")
 		os.Exit(15)
 	case "compatibility-hang-helper":
 		for {
@@ -46,17 +46,20 @@ func TestRecoveryCompatibilityNativeSubprocessEnvironmentDeadlineAndRedaction(t 
 	args := func(mode string) []string {
 		return []string{"-test.run=^TestRecoveryCompatibilitySubprocessHelper$", "--", mode}
 	}
-	if err := runRecoveryCompatibilityCommand(context.Background(), executable, args("compatibility-env-helper"), recoveryCompatibilityEnvironment()); err != nil {
+	if _, err := runRecoveryCompatibilityCommand(context.Background(), executable, args("compatibility-env-helper"), recoveryCompatibilityEnvironment()); err != nil {
 		t.Fatalf("fixed child environment failed: %v", err)
 	}
-	err = runRecoveryCompatibilityCommand(context.Background(), executable, args("compatibility-error-helper"), recoveryCompatibilityEnvironment())
-	if err == nil || strings.Contains(err.Error(), "private") {
-		t.Fatalf("child error leaked output or was accepted: %v", err)
+	// The checker's diagnostic (stderr) is kept for the typed reason; its
+	// standard output is never read.
+	diagnostic, err := runRecoveryCompatibilityCommand(context.Background(), executable, args("compatibility-error-helper"), recoveryCompatibilityEnvironment())
+	if err == nil || strings.Contains(err.Error(), "private") || strings.Contains(diagnostic, "private") ||
+		firstDiagnosticLine(diagnostic) != "Recovery database check: service operations are not idle" {
+		t.Fatalf("child error leaked output, lost its diagnostic or was accepted: %v %q", err, diagnostic)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 	started := time.Now()
-	err = runRecoveryCompatibilityCommand(ctx, executable, args("compatibility-hang-helper"), recoveryCompatibilityEnvironment())
+	_, err = runRecoveryCompatibilityCommand(ctx, executable, args("compatibility-hang-helper"), recoveryCompatibilityEnvironment())
 	if err == nil || ctx.Err() != context.DeadlineExceeded || time.Since(started) > 3*time.Second {
 		t.Fatalf("unbounded checker execution: err=%v context=%v duration=%v", err, ctx.Err(), time.Since(started))
 	}

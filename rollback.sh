@@ -651,6 +651,12 @@ install_release_transaction_guards_with_label_barrier() {
     release_txn_install_and_verify_unit_guards \
         "$@" "$SYSTEMCTL_BIN" restore_celikpanel_selinux_labels || status=$?
     systemctl() {
+        case "$#:${1:-}:${2:-}" in
+            2:start:celikpanel-panel.service|2:start:celikpanel-agent.service)
+                release_unit_controlled_start "$2"
+                return
+                ;;
+        esac
         "$SYSTEMCTL_BIN" "$@"
     }
     return "$status"
@@ -745,7 +751,34 @@ rollback_machine=$(vendor_machine_architecture)
 preflight_rollback_platform "$SELINUX_OS_RELEASE" "$rollback_machine"
 # All existing lifecycle helpers call `systemctl`; bind that command name to
 # the fixed path whose ownership and permissions preflight just verified.
+# A controlled start of the Panel or Agent first clears exactly that unit's
+# failed and start-limit state: a candidate that crash-looped during earlier
+# attempts must not make systemd refuse this start. Never a global reset.
+# If systemd still refuses on its start limit, name the unit and the owner's
+# command (code unit_start_limit_hit). Other units start unchanged.
+# Panel/Agent denetimli başlatması önce yalnız o birimin hata ve başlatma
+# sınırı durumunu temizler; sınır yine reddederse birimi ve komutu adlandırır.
+release_unit_controlled_start() {
+    local unit=$1 status=0 result
+    "$SYSTEMCTL_BIN" reset-failed "$unit" >/dev/null 2>&1 || true
+    "$SYSTEMCTL_BIN" start "$unit" || status=$?
+    [[ $status -ne 0 ]] || return 0
+    result=$("$SYSTEMCTL_BIN" show --property=Result --value "$unit" 2>/dev/null || true)
+    if [[ $result == start-limit-hit ]]; then
+        printf '%s\n' \
+            "!! code=unit_start_limit_hit: systemd refused to start $unit because it was started too often in a short time (start limit). The server owner runs: sudo systemctl reset-failed $unit and then retries the same operation (for a paused recovery, the one-time retry command shown in the recovery journal)." \
+            "!! code=unit_start_limit_hit: systemd, $unit birimini kısa sürede çok sık başlatıldığı için başlatmayı reddetti (başlatma sınırı). Sunucu sahibi sudo systemctl reset-failed $unit komutunu çalıştırır, ardından aynı işlemi yeniden dener (duraklatılmış kurtarmada kurtarma günlüğünde gösterilen tek seferlik yeniden deneme komutu)." >&2
+    fi
+    return "$status"
+}
+
 systemctl() {
+    case "$#:${1:-}:${2:-}" in
+        2:start:celikpanel-panel.service|2:start:celikpanel-agent.service)
+            release_unit_controlled_start "$2"
+            return
+            ;;
+    esac
     "$SYSTEMCTL_BIN" "$@"
 }
 prepare_and_acquire_release_transaction_lock

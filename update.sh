@@ -214,7 +214,7 @@ report_update_failure() {
     # runtime preparation uncertainty below still takes precedence.
     # Aday başlangıç sınırları kendi tipli nedenini bildirir; kit belirsizliği önceliklidir.
     case "${update_failure_code:-}" in
-        candidate_panel_startup_check_failed|panel_start_unverified) code=$update_failure_code ;;
+        candidate_panel_startup_check_failed|panel_start_unverified|recovery_runtime_preflight_failed|unit_start_limit_hit) code=$update_failure_code ;;
     esac
     # An interrupted kit preparation may have changed the independent launcher
     # or selector even though no application transaction was created.
@@ -249,9 +249,16 @@ report_update_failure() {
     fi
     # Best-effort, additive observation hint; never alters the outcome or the
     # summary below, which must stay the last line for older installed workers.
+    # A preflight stop is recorded even when its summary names the host package
+    # manager: both mean the request ended before changing anything.
     case "$code" in
         candidate_panel_startup_check_failed|panel_start_unverified)
             publish_update_failure_observation "$code" >/dev/null 2>&1 || true
+            ;;
+        recovery_runtime_preflight_failed|package_manager_busy)
+            if [[ ${update_failure_code:-} == recovery_runtime_preflight_failed && $state == unchanged ]]; then
+                publish_update_failure_observation recovery_runtime_preflight_failed >/dev/null 2>&1 || true
+            fi
             ;;
     esac
     # Preserve both cause and recovery state within the older agent's 1024-byte
@@ -268,8 +275,16 @@ publish_update_failure_observation() {
     local code=$1 id commit
     declare -F release_observation_publish_failure >/dev/null || return 0
     declare -F release_observation_worker_request >/dev/null || return 0
-    [[ ${snapshot_name:-} =~ -to-([0-9a-f]{40})-[0-9a-f]{32}$ ]] || return 0
-    commit=${BASH_REMATCH[1]}
+    if [[ ${snapshot_name:-} =~ -to-([0-9a-f]{40})-[0-9a-f]{32}$ ]]; then
+        commit=${BASH_REMATCH[1]}
+    elif [[ $code == recovery_runtime_preflight_failed &&
+            ${trusted_release_commit:-} =~ ^[0-9a-f]{40}$ ]]; then
+        # The preflight precedes the snapshot name; the verified target commit
+        # is the same identity the worker's status record names.
+        commit=$trusted_release_commit
+    else
+        return 0
+    fi
     id=$(release_observation_worker_request) || return 0
     release_observation_publish_failure "$id" "$commit" "$code"
 }
@@ -286,7 +301,36 @@ validate_exact_systemctl() {
         die "exact systemctl binary is group/other writable"
 }
 
+# A controlled start of the Panel or Agent first clears exactly that unit's
+# failed and start-limit state: a candidate that crash-looped during earlier
+# attempts must not make systemd refuse this start. Never a global reset.
+# If systemd still refuses on its start limit, name the unit and the owner's
+# command (code unit_start_limit_hit). Other units start unchanged.
+# Panel/Agent denetimli başlatması önce yalnız o birimin hata ve başlatma
+# sınırı durumunu temizler; sınır yine reddederse birimi ve komutu adlandırır.
+release_unit_controlled_start() {
+    local unit=$1 status=0 result
+    "$SYSTEMCTL_BIN" reset-failed "$unit" >/dev/null 2>&1 || true
+    "$SYSTEMCTL_BIN" start "$unit" || status=$?
+    [[ $status -ne 0 ]] || return 0
+    result=$("$SYSTEMCTL_BIN" show --property=Result --value "$unit" 2>/dev/null || true)
+    if [[ $result == start-limit-hit ]]; then
+        update_failure_code=unit_start_limit_hit
+        update_failure_reason="systemd refused to start $unit on its start limit; the server owner runs sudo systemctl reset-failed $unit, then retries"
+        printf '%s\n' \
+            "!! code=unit_start_limit_hit: systemd refused to start $unit because it was started too often in a short time (start limit). The server owner runs: sudo systemctl reset-failed $unit and then retries the same operation (for a paused recovery, the one-time retry command shown in the recovery journal)." \
+            "!! code=unit_start_limit_hit: systemd, $unit birimini kısa sürede çok sık başlatıldığı için başlatmayı reddetti (başlatma sınırı). Sunucu sahibi sudo systemctl reset-failed $unit komutunu çalıştırır, ardından aynı işlemi yeniden dener (duraklatılmış kurtarmada kurtarma günlüğünde gösterilen tek seferlik yeniden deneme komutu)." >&2
+    fi
+    return "$status"
+}
+
 systemctl() {
+    case "$#:${1:-}:${2:-}" in
+        2:start:celikpanel-panel.service|2:start:celikpanel-agent.service)
+            release_unit_controlled_start "$2"
+            return
+            ;;
+    esac
     "$SYSTEMCTL_BIN" "$@"
 }
 
@@ -423,20 +467,54 @@ prepare_independent_recovery_runtime() {
         --transaction-fd 9 9<&"$RELEASE_TRANSACTION_FD" \
         || die "independent recovery runtime preparation is unconfirmed; panel services have not been stopped; inspect the same update and retained recovery evidence"
     recovery_runtime_preparation_verified=1
-    "$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery" verify-compatibility \
+    run_update_idle_probe "$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery" verify-compatibility \
         --mode "$recovery_compatibility_mode" 9<&"$RELEASE_TRANSACTION_FD" \
-        || die "selected recovery runtime cannot verify the current installation before update"
+        || fail_recovery_runtime_preflight compatibility
     # Ask the selected executable itself after verified enrollment/promotion.
     # A writer cannot infer capability solely from its own source version.
-    /usr/libexec/celikpanel/recovery verify-material-support --layout snapshot-name-sha256-v1 \
+    run_update_idle_probe /usr/libexec/celikpanel/recovery verify-material-support --layout snapshot-name-sha256-v1 \
         --schema celikpanel/recovery-material/v3 \
-        || die "selected recovery runtime does not support recovery material v3; panel services have not been stopped"
-    /usr/libexec/celikpanel/recovery verify-database-support --schema celikpanel/database-migration-admission/v1 \
-        || die "selected recovery runtime does not support isolated database migration; panel services have not been stopped"
+        || fail_recovery_runtime_preflight material_support
+    run_update_idle_probe /usr/libexec/celikpanel/recovery verify-database-support --schema celikpanel/database-migration-admission/v1 \
+        || fail_recovery_runtime_preflight database_support
     if [[ $BOOTSTRAP_PRE_LEDGER -eq 0 && $BOOTSTRAP_SCHEMA17 -eq 0 ]]; then
-        /usr/libexec/celikpanel/recovery probe-update-database 9<&"$RELEASE_TRANSACTION_FD" \
-            || die "database metadata is not supported for isolated migration; panel services have not been stopped"
+        run_update_idle_probe /usr/libexec/celikpanel/recovery probe-update-database 9<&"$RELEASE_TRANSACTION_FD" \
+            || fail_recovery_runtime_preflight database_metadata
     fi
+}
+
+# The selected recovery runtime's read-only preflight runs before any durable
+# release marker, coordinator stop or installed-byte change, and before the
+# EXIT trap exists. Report its typed, unchanged outcome here: the step, the
+# checker's first diagnostic line, and the one summary line older workers keep.
+# Seçili kurtarma ortamının salt-okur ön denetimi hiçbir işaretçi, durdurma veya
+# kurulu bayt değişikliğinden önce çalışır; tipli ve değişmemiş sonucu burada bildir.
+fail_recovery_runtime_preflight() {
+    local step=$1 output=${update_failure_detail:-} line index diagnostic= pattern='step=([a-z_]+): (.*)$'
+    local -a lines=()
+    mapfile -t lines <<< "${output//$'\r'/$'\n'}"
+    for (( index=${#lines[@]}-1; index>=0; index-- )); do
+        line=${lines[index]}
+        if [[ $line =~ $pattern ]]; then
+            step=${BASH_REMATCH[1]}
+            diagnostic=${BASH_REMATCH[2]}
+            break
+        fi
+        if [[ -z $diagnostic && -n ${line//[[:space:]]/} ]]; then
+            diagnostic=$line
+        fi
+    done
+    diagnostic=$(LC_ALL=C printf '%s' "$diagnostic" | LC_ALL=C tr -cd '\040-\176' | cut -c1-240)
+    diagnostic=${diagnostic#"${diagnostic%%[![:space:]]*}"}
+    [[ -n $diagnostic ]] || diagnostic='no diagnostic was recorded'
+    update_failure_code=recovery_runtime_preflight_failed
+    update_failure_reason="recovery runtime preflight step=$step: $diagnostic"
+    # Keep a host package-manager refusal recognisable as package_manager_busy.
+    update_failure_detail=
+    [[ $diagnostic != *': the host package manager is active'* ]] || update_failure_detail=$diagnostic
+    echo "!! $update_failure_reason; panel services have not been stopped and nothing was changed" >&2
+    report_update_failure 1 none
+    exit 1
 }
 
 prepare_and_acquire_release_transaction_lock() {
@@ -2583,6 +2661,13 @@ if [[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" || -L "$RELEASE_TRANSACT
             || die "pending update scheduler marker does not match runtime completion"
     fi
     validate_pending_update_snapshot "$pending_snapshot"
+    # A paused completion returns renewal to its recorded state (the runner),
+    # so the same retry pauses it again before stopping or starting anything.
+    # The quiesce proof still refuses a later owner change of its enablement.
+    # Duraklatılan tamamlama yenilemeyi eski hâline döndürür; aynı yeniden
+    # deneme herhangi bir şeyi durdurmadan önce onu yeniden duraklatır.
+    panel_tls_quiesce_certbot_scheduler "$pending_snapshot_path/panel-tls" \
+        || die "pending update Certbot scheduler could not be paused again before the retry"
     verify_installed_release_artifacts
     verify_saved_enablement
     release_txn_validate_pending_token \

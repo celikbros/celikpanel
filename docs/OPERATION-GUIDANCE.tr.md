@@ -343,3 +343,55 @@ bildirilir); barındırma kökünün üstündeki sembolik bağ izlenir ama hedef
 dizinleri kanıtlanmaz. Yerel Arch yeniden koşusu sitenin işaretle 200
 döndürdüğünü, cron damgasının ilerlediğini ve belge kökünün `namei -l` çıktısını
 hâlâ göstermelidir.
+
+### Güncelleme ön denetiminde duruş, otomatik yeniden denemeler ve duraklatılan yenileme (upd3 F1-F3, O6, 2026-10-01)
+
+Bileşen ve sözleşme testleriyle kaynak durumu; gerçek sistem denemesi bekliyor.
+upd3 denemesinden (F1, F2, F3 bulguları ve O6 gözlemi).
+
+- **Güncelleme kurulu sürümü değiştirmeden durdu (F1).** Seçili kurtarma çalışma
+  ortamının salt-okur ön denetimi (`verify-compatibility`, kurtarma verisi ve
+  veritabanı desteği, veritabanı üst verisi) artık başarısız adımı ve denetleyicinin
+  ilk tanı satırını `recovery_runtime_preflight_failed` koduyla ve
+  `state=unchanged` olarak bildirir; isteğin hata ek kaydına bu kodu yazar. İstek
+  sonlanmıştır.
+  - Kök CLI, kurtarma ekranı ve güncelleme bildirimi: güncelleme, kurulu sürüm
+    değiştirilmeden ve hiçbir hizmet durdurulmadan salt-okur denetimde durdu;
+    sunucu önceki sürümünü eskisi gibi çalıştırıyor; neden (bildirimde çevrilmiş
+    adım, ikincil sunucu satırında denetleyicinin satırı; CLI işçi günlüğünü
+    gösterir: `sudo journalctl -u celikpanel-self-update-<istek>.service --no-pager -n 20`).
+  - Kim yapar: neden bu sunucudaki bir durumu (hâlâ süren başka bir işlem, meşgul
+    paket yöneticisi) belirtmiyorsa kimse; belirtiyorsa önce bitmesi beklenir ya
+    da sorun giderilir. Paket yöneticisi reddi mevcut `package_manager_busy`
+    metnini korur.
+  - Sürdürme: hiçbir şey kendiliğinden sürmez; güncellemeyi yeniden başlatmak
+    güvenlidir. Bildirim bu istek için sorgulamayı bırakır.
+  - Böyle bir deneme için "Bu sürüm daha önce başarısız oldu" bildirimi bunun
+    yerine kurulu hiçbir şeyi değiştirmeden durduğunu ve yeniden başlatmanın
+    güvenli olduğunu söyler.
+- **Otomatik denemeler arasında (F3).** Bir otomatik kurtarma denemesi başarısız
+  olup zamanlayıcı bir deneme daha yapacaksa hata kaydı isteğe bağlı
+  `automatic_recovery=retry_scheduled` ipucunu taşır. CLI, kurtarma ekranı ve
+  bildirim sunucunun aynı işlemi kendiliğinden yeniden deneyeceğini (normalde
+  önceki denemenin bitişinden yaklaşık 30 saniye sonra, en çok üç deneme), şimdi
+  bir şey gerekmediğini ve sahibin yalnız kurtarma durursa işlem yapacağını
+  söyler. Güncellemenin ilk tipli nedeni (`panel_start_unverified`: panel günlüğü
+  komutu) planlanan yeniden deneme ve sonraki deneme boyunca görünür kalır.
+  "Sunucu sahibinin işlem yapması gerekiyor" yalnız duraklamada veya son deneme
+  başarısız olduktan sonra görünür.
+- **Duraklamada sertifika yenileme (F2).** Duraklama metni otomatik sertifika
+  yenilemenin (Certbot) güncelleme için durdurulduğunu ve kurtarma günlüğünün onun
+  önceki hâline döndürülüp döndürülmediğini ya da işlem bitene kadar durdurulmuş
+  kalacağını söylediğini ekler (hangisinin ne zaman geçerli olduğu aynı tarihli
+  dayanıklılık sözleşmesi kaydındadır).
+- **Doğrulanmış geri almadan sonra sunucu satırı (O6).** İkincil "Sunucunun
+  bildirdiği" satırı güncelleyicinin işaretini, `code=`/`state=` belirteçlerini ve
+  `reason=`/`detail=` etiketlerini içermez; okunur bir şey kalmazsa gösterilmez.
+  Türkçe bildirimin birincil metni yalnız Türkçedir.
+
+Yapılmayan: ön denetim duruşu bildirimi yalnız kurulu Panel bu değişikliği
+içeriyorsa görünür (kart kurulu sürümden gelir; kök CLI, ön denetimin adayınkine
+yükselttiği seçili kurtarma kitinden gelir). EXIT tuzağından önceki diğer
+güncelleyici hataları hâlâ yalnız kendi durma satırını bırakır.
+
+- **Devamda başlatma sınırı (aynı tarih).** systemd Panel ya da Agent başlatmasını başlatma sınırı yüzünden reddederse kurtarma günlüğü satırı birimi ve `sudo systemctl reset-failed <birim>` komutunu, ardından yeniden denemeyi adlandırır (kod `unit_start_limit_hit`). Her denetimli başlatma artık önce yalnız o birimin sınırını temizlediği için bu seyrek olmalıdır. Kim yapar: sunucu sahibi. Sürdürme: aynı yeniden deneme.
