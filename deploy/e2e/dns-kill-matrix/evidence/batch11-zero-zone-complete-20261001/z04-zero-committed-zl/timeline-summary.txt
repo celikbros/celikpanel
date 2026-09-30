@@ -1,0 +1,236 @@
+######## raw/watch/cp-b11-watch-db/timeline.log
+05:12:22.650157796 CHANGE pdnsdb none -> absent pdns=0/inactive/
+05:12:45.082601180 CHANGE pdnsdb absent -> 91fe2fdb69b8a70792999e9306200aee214a73f5957518082c5fd7c0f5f4dcc4 pdns=0/inactive/
+05:12:48.801225123 CHANGE pdnsdb 91fe2fdb69b8a70792999e9306200aee214a73f5957518082c5fd7c0f5f4dcc4 -> f827a73bebe7a0c845e58802d56195802ac6d881fd593ba9d224f2abb02dd859 pdns=5832/active/
+05:13:34.808903132 CHANGE pdnsdb f827a73bebe7a0c845e58802d56195802ac6d881fd593ba9d224f2abb02dd859 -> 296c26d39451acb93287248d1e5718d13ad0b5483726827404d53c4c9f9d7fa0 pdns=5832/active/
+05:13:43.043404706 CHANGE pdnsdb 296c26d39451acb93287248d1e5718d13ad0b5483726827404d53c4c9f9d7fa0 -> 6ed61e5d41286caf02f0a52ada25a9b6dd3a3cd778bd9920452b1b0cbdc29e21 pdns=5832/active/
+05:13:48.704237602 CHANGE pdnsdb 6ed61e5d41286caf02f0a52ada25a9b6dd3a3cd778bd9920452b1b0cbdc29e21 -> bbb1c5ae6fa023c30b6ce47ff837a79aa9a540de339ba3c5955b2d0ef475df68 pdns=5832/active/
+05:13:50.778335126 CHANGE pdnsdb bbb1c5ae6fa023c30b6ce47ff837a79aa9a540de339ba3c5955b2d0ef475df68 -> b903c5da8f069366c62a2de9e88c02339ff8656c0a830b4d6681e16624858ade pdns=5832/active/
+05:14:48.824084701 CHANGE pdnsdb b903c5da8f069366c62a2de9e88c02339ff8656c0a830b4d6681e16624858ade -> 997dbe8c611f3bddf3271455a113bea382c6f5f734be43c0e8821d27894b9a3c pdns=5832/active/
+done
+######## raw/watch/cp-b11-watch-led/timeline.log
+05:12:23.277055660 CHANGE ledger none -> 177f61d12ed0 agent=0/inactive/ :: 
+05:12:27.569794397 CHANGE ledger 177f61d12ed0 -> 32d62ebeb081 agent=0/inactive/ :: 
+05:12:27.762016012 CHANGE ledger 32d62ebeb081 -> 8eaabb3a5096 agent=0/inactive/ :: 
+05:12:27.926513532 CHANGE ledger 8eaabb3a5096 -> 4d5dbb1d244f agent=0/inactive/ :: 
+05:12:28.123955433 CHANGE ledger 4d5dbb1d244f -> 367c70b835e7 agent=0/inactive/ :: 
+05:12:32.415728633 CHANGE ledger 367c70b835e7 -> 70eb7155bee1 agent=0/inactive/ :: 
+05:12:32.633599601 CHANGE ledger 70eb7155bee1 -> 559b53995379 agent=0/inactive/ :: 
+05:12:33.051181979 CHANGE ledger 559b53995379 -> b55627817208 agent=0/inactive/ :: 
+05:12:33.339398833 CHANGE ledger b55627817208 -> f726862006d2 agent=0/inactive/ :: 
+05:12:34.073380244 CHANGE ledger f726862006d2 -> 48ed9dfb4e7d agent=0/inactive/ :: 
+05:12:34.397528852 CHANGE ledger 48ed9dfb4e7d -> 535cbbe533b9 agent=0/inactive/ :: 
+05:12:34.695493822 CHANGE ledger 535cbbe533b9 -> ea604f55e094 agent=0/inactive/ :: 
+05:12:35.072972123 CHANGE ledger ea604f55e094 -> e8751d7ea411 agent=0/inactive/ :: 
+05:12:35.573079073 CHANGE ledger e8751d7ea411 -> b1b5aa8bd731 agent=0/inactive/ :: 
+05:12:37.588015658 CHANGE ledger b1b5aa8bd731 -> 38c6763f7947 agent=0/inactive/ :: 
+05:12:42.057210348 CHANGE ledger 38c6763f7947 -> b0f23c109602 agent=0/inactive/ :: 
+05:12:42.471550822 CHANGE ledger b0f23c109602 -> 67238842d96f agent=0/inactive/ :: 
+05:12:42.927622632 CHANGE ledger 67238842d96f -> 526740bcd715 agent=0/inactive/ :: 
+05:12:43.094919418 CHANGE ledger 526740bcd715 -> 03e89e6fad23 agent=0/inactive/ :: 
+05:12:43.270787688 CHANGE ledger 03e89e6fad23 -> 110a560bed77 agent=0/inactive/ :: 
+05:12:43.493650116 CHANGE ledger 110a560bed77 -> 056731279fc4 agent=0/inactive/ :: 
+05:12:43.682431371 CHANGE ledger 056731279fc4 -> fee263b8a95c agent=0/inactive/ :: 
+05:12:44.638354223 CHANGE ledger fee263b8a95c -> 8630cbc6f244 agent=0/inactive/ :: 
+05:12:44.801888627 CHANGE ledger 8630cbc6f244 -> 0df062be432b agent=0/inactive/ :: 
+05:12:45.008219319 CHANGE ledger 0df062be432b -> e87e1e672b80 agent=0/inactive/ :: 
+05:12:45.171309171 CHANGE ledger e87e1e672b80 -> 7a78192668b5 agent=0/inactive/ :: 
+05:12:45.337326021 CHANGE ledger 7a78192668b5 -> 4c8de21c201c agent=0/inactive/ :: 
+05:12:45.738992722 CHANGE ledger 4c8de21c201c -> 326f0682f83c agent=0/inactive/ :: 
+05:12:46.050787061 CHANGE ledger 326f0682f83c -> b4a122f1d6f2 agent=0/inactive/ :: 
+05:12:46.406554820 CHANGE ledger b4a122f1d6f2 -> c62943402614 agent=0/inactive/ :: 
+05:12:46.565344778 CHANGE ledger c62943402614 -> ffc975cc5812 agent=0/inactive/ :: 
+05:12:46.743828201 CHANGE ledger ffc975cc5812 -> 8676400ed1c3 agent=0/inactive/ :: 
+05:12:46.918488647 CHANGE ledger 8676400ed1c3 -> 0417e907a029 agent=0/inactive/ :: 
+05:12:47.271008635 CHANGE ledger 0417e907a029 -> e73809d9b473 agent=0/inactive/ :: 
+05:12:47.629949335 CHANGE ledger e73809d9b473 -> 885cc052df60 agent=0/inactive/ :: 
+05:12:47.825593066 CHANGE ledger 885cc052df60 -> dc5a4810379c agent=0/inactive/ :: 
+05:12:48.014586154 CHANGE ledger dc5a4810379c -> 94f2295b360c agent=0/inactive/ :: 
+05:12:48.186439283 CHANGE ledger 94f2295b360c -> 1330a3a87c22 agent=0/inactive/ :: 
+05:12:48.378474955 CHANGE ledger 1330a3a87c22 -> ba446c97a79c agent=0/inactive/ :: 
+05:12:48.543247244 CHANGE ledger ba446c97a79c -> 026e6cdeda08 agent=0/inactive/ :: 
+05:12:48.807745889 CHANGE ledger 026e6cdeda08 -> d1b3820ba042 agent=0/inactive/ :: 
+05:12:48.990456892 CHANGE ledger d1b3820ba042 -> eaf85d7f1502 agent=0/inactive/ :: 
+05:12:49.171840517 CHANGE ledger eaf85d7f1502 -> b84ff5dbd9e4 agent=0/inactive/ :: 
+05:12:49.341346320 CHANGE ledger b84ff5dbd9e4 -> b44f9f514dc5 agent=0/inactive/ :: 
+05:12:49.542758491 CHANGE ledger b44f9f514dc5 -> bb8a4f222ffb agent=0/inactive/ :: 
+05:12:49.729632411 CHANGE ledger bb8a4f222ffb -> cd75464afe4e agent=0/inactive/ :: 
+05:12:49.946512207 CHANGE ledger cd75464afe4e -> bfe7ba1e2ca0 agent=0/inactive/ :: 
+05:12:50.123790119 CHANGE ledger bfe7ba1e2ca0 -> a4515dd896c2 agent=0/inactive/ :: 
+05:12:50.321022158 CHANGE ledger a4515dd896c2 -> 4934629da81e agent=0/inactive/ :: 
+05:12:50.527166066 CHANGE ledger 4934629da81e -> cbce082faf45 agent=0/inactive/ :: 
+05:12:50.847991885 CHANGE ledger cbce082faf45 -> 02db9dadaee6 agent=0/inactive/ :: 
+05:12:51.073700860 CHANGE ledger 02db9dadaee6 -> 6d128a3ab7ac agent=0/inactive/ :: 
+05:12:58.708708182 CHANGE ledger 6d128a3ab7ac -> 1da3e967a0ab agent=6958/active/ :: 
+05:13:32.638282870 CHANGE ledger 1da3e967a0ab -> 5f5cf8463ba4 agent=6958/active/ :: fa261f29 running leased att=1 lease=2026-09-30T05:13:52.573796026Z code= upd=2026-09-30T05:13:32.573796026Z
+05:13:32.811230783 CHANGE ledger 5f5cf8463ba4 -> ee4303b25c8b agent=6958/active/ :: fa261f29 running leased att=1 lease=2026-09-30T05:13:52.740769413Z code= upd=2026-09-30T05:13:32.740769413Z
+05:13:32.970801436 CHANGE ledger ee4303b25c8b -> 5f3175780f06 agent=6958/active/ :: fa261f29 running leased att=1 lease=2026-09-30T05:13:52.908289633Z code= upd=2026-09-30T05:13:32.908289633Z
+05:13:33.133330650 CHANGE ledger 5f3175780f06 -> 81adac53f5ad agent=6958/active/ :: fa261f29 running leased att=1 lease=2026-09-30T05:13:53.075590311Z code= upd=2026-09-30T05:13:33.075590311Z
+05:13:33.315667737 CHANGE ledger 81adac53f5ad -> 0a69da7db37e agent=6958/active/ :: fa261f29 running leased att=1 lease=2026-09-30T05:13:53.250613634Z code= upd=2026-09-30T05:13:33.250613634Z
+05:13:33.516344934 CHANGE ledger 0a69da7db37e -> b27c95ceee69 agent=6958/active/ :: fa261f29 running leased att=1 lease=2026-09-30T05:13:53.433965383Z code= upd=2026-09-30T05:13:33.433965383Z
+05:13:33.724666085 CHANGE ledger b27c95ceee69 -> ffd63dbeb424 agent=6958/active/ :: fa261f29 running leased att=1 lease=2026-09-30T05:13:53.646647865Z code= upd=2026-09-30T05:13:33.646647865Z
+05:13:33.891479259 CHANGE ledger ffd63dbeb424 -> a7422426835d agent=6958/active/ :: fa261f29 running leased att=1 lease=2026-09-30T05:13:53.834915393Z code= upd=2026-09-30T05:13:33.834915393Z
+05:13:34.057573235 CHANGE ledger a7422426835d -> 827b163bf57b agent=6958/active/ :: fa261f29 running leased att=1 lease=2026-09-30T05:13:53.996050814Z code= upd=2026-09-30T05:13:33.996050814Z
+05:13:34.217239315 CHANGE ledger 827b163bf57b -> 9199f8189e9b agent=6958/active/ :: fa261f29 running leased att=1 lease=2026-09-30T05:13:54.160587835Z code= upd=2026-09-30T05:13:34.160587835Z
+05:13:34.376792713 CHANGE ledger 9199f8189e9b -> 4527dfdc5a67 agent=6958/active/ :: fa261f29 running leased att=1 lease=2026-09-30T05:13:54.332087158Z code= upd=2026-09-30T05:13:34.332087158Z
+05:13:34.531748596 CHANGE ledger 4527dfdc5a67 -> a390247d6ced agent=6958/active/ :: fa261f29 running leased att=1 lease=2026-09-30T05:13:54.486689919Z code= upd=2026-09-30T05:13:34.486689919Z
+05:13:34.689507735 CHANGE ledger a390247d6ced -> 5ed4d0255974 agent=6958/active/ :: fa261f29 running applied att=1 lease=2026-09-30T05:13:54.635945605Z code= upd=2026-09-30T05:13:34.635945605Z
+05:13:34.864491199 CHANGE ledger 5ed4d0255974 -> dae04beebee1 agent=6958/active/ :: fa261f29 running applied att=1 lease=2026-09-30T05:13:54.79768111Z code= upd=2026-09-30T05:13:34.79768111Z
+05:13:35.034608705 CHANGE ledger dae04beebee1 -> 756a2dddb62a agent=6958/active/ :: fa261f29 running applied att=1 lease=2026-09-30T05:13:54.979837244Z code= upd=2026-09-30T05:13:34.979837244Z
+05:13:35.198520832 CHANGE ledger 756a2dddb62a -> 094af2358708 agent=6958/active/ :: fa261f29 running applied att=1 lease=2026-09-30T05:13:55.14822595Z code= upd=2026-09-30T05:13:35.14822595Z
+05:13:35.360712334 CHANGE ledger 094af2358708 -> 9b8dc405caa0 agent=6958/active/ :: fa261f29 running applied att=1 lease=2026-09-30T05:13:55.306903429Z code= upd=2026-09-30T05:13:35.306903429Z
+05:13:35.530994797 CHANGE ledger 9b8dc405caa0 -> 1ae39305f237 agent=6958/active/ :: fa261f29 running applied att=1 lease=2026-09-30T05:13:55.464770493Z code= upd=2026-09-30T05:13:35.464770493Z
+05:13:35.698350168 CHANGE ledger 1ae39305f237 -> 14383e0bb927 agent=6958/active/ :: fa261f29 running applied att=1 lease=2026-09-30T05:13:55.6384895Z code= upd=2026-09-30T05:13:35.6384895Z
+05:13:35.885440687 CHANGE ledger 14383e0bb927 -> fc076d6b602b agent=6958/active/ :: fa261f29 running applied att=1 lease=2026-09-30T05:13:55.801528701Z code= upd=2026-09-30T05:13:35.801528701Z
+05:13:36.049674433 CHANGE ledger fc076d6b602b -> f0f636bba6d6 agent=6958/active/ :: fa261f29 running applied att=1 lease=2026-09-30T05:13:56.001906821Z code= upd=2026-09-30T05:13:36.001906821Z
+05:13:36.221259519 CHANGE ledger f0f636bba6d6 -> b49335a0d84b agent=6958/active/ :: fa261f29 running applied att=1 lease=2026-09-30T05:13:56.172797426Z code= upd=2026-09-30T05:13:36.172797426Z
+05:13:36.392265406 CHANGE ledger b49335a0d84b -> c125714e6ad9 agent=6958/active/ :: fa261f29 running applied att=1 lease=2026-09-30T05:13:56.323473386Z code= upd=2026-09-30T05:13:36.323473386Z
+05:13:36.557302669 CHANGE ledger c125714e6ad9 -> 6d7170cab491 agent=6958/active/ :: fa261f29 running applied att=1 lease=2026-09-30T05:13:56.503356942Z code= upd=2026-09-30T05:13:36.503356942Z
+05:13:36.711847683 CHANGE ledger 6d7170cab491 -> 70827090908f agent=6958/active/ :: fa261f29 running applied att=1 lease=2026-09-30T05:13:56.630163579Z code= upd=2026-09-30T05:13:36.630163579Z
+05:13:37.087537202 CHANGE ledger 70827090908f -> d25e9693025d agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z
+05:13:40.933298099 CHANGE ledger d25e9693025d -> 740460f348f4 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc running leased att=1 lease=2026-09-30T05:14:00.866641358Z code= upd=2026-09-30T05:13:40.866641358Z
+05:13:41.103083657 CHANGE ledger 740460f348f4 -> fd72110f2368 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc running leased att=1 lease=2026-09-30T05:14:01.054809315Z code= upd=2026-09-30T05:13:41.054809315Z
+05:13:41.261134095 CHANGE ledger fd72110f2368 -> e394e872a6c9 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc running leased att=1 lease=2026-09-30T05:14:01.2008601Z code= upd=2026-09-30T05:13:41.2008601Z
+05:13:41.422582835 CHANGE ledger e394e872a6c9 -> 14ca10525d08 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc running leased att=1 lease=2026-09-30T05:14:01.378587637Z code= upd=2026-09-30T05:13:41.378587637Z
+05:13:41.584130741 CHANGE ledger 14ca10525d08 -> 335272acd54d agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc running leased att=1 lease=2026-09-30T05:14:01.544288427Z code= upd=2026-09-30T05:13:41.544288427Z
+05:13:41.737517877 CHANGE ledger 335272acd54d -> 8721659f1c2f agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc running leased att=1 lease=2026-09-30T05:14:01.691135583Z code= upd=2026-09-30T05:13:41.691135583Z
+05:13:41.910539971 CHANGE ledger 8721659f1c2f -> 8cae432ca234 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc running leased att=1 lease=2026-09-30T05:14:01.844268564Z code= upd=2026-09-30T05:13:41.844268564Z
+05:13:42.073178710 CHANGE ledger 8cae432ca234 -> 57df38421250 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc running leased att=1 lease=2026-09-30T05:14:02.015843293Z code= upd=2026-09-30T05:13:42.015843293Z
+05:13:42.239535092 CHANGE ledger 57df38421250 -> 3dca01410d4b agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc running leased att=1 lease=2026-09-30T05:14:02.186125558Z code= upd=2026-09-30T05:13:42.186125558Z
+05:13:42.401652739 CHANGE ledger 3dca01410d4b -> 070d3d754d7a agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc running leased att=1 lease=2026-09-30T05:14:02.348141986Z code= upd=2026-09-30T05:13:42.348141986Z
+05:13:42.565011603 CHANGE ledger 070d3d754d7a -> 4684b17f8254 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc running leased att=1 lease=2026-09-30T05:14:02.513444793Z code= upd=2026-09-30T05:13:42.513444793Z
+05:13:42.720143182 CHANGE ledger 4684b17f8254 -> 9f0a3ba236fb agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc running leased att=1 lease=2026-09-30T05:14:02.672184632Z code= upd=2026-09-30T05:13:42.672184632Z
+05:13:42.881572833 CHANGE ledger 9f0a3ba236fb -> bd1ea3716de7 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc running applied att=1 lease=2026-09-30T05:14:02.832309724Z code= upd=2026-09-30T05:13:42.832309724Z
+05:13:43.054944770 CHANGE ledger bd1ea3716de7 -> 26cbca5fa465 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc running applied att=1 lease=2026-09-30T05:14:03.000625252Z code= upd=2026-09-30T05:13:43.000625252Z
+05:13:43.218715056 CHANGE ledger 26cbca5fa465 -> 2b0960f27a63 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc running applied att=1 lease=2026-09-30T05:14:03.176359877Z code= upd=2026-09-30T05:13:43.176359877Z
+05:13:43.380010715 CHANGE ledger 2b0960f27a63 -> 1dac6bae7209 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc running applied att=1 lease=2026-09-30T05:14:03.33039831Z code= upd=2026-09-30T05:13:43.33039831Z
+05:13:43.541832668 CHANGE ledger 1dac6bae7209 -> 60abf412479d agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc running applied att=1 lease=2026-09-30T05:14:03.487820146Z code= upd=2026-09-30T05:13:43.487820146Z
+05:13:43.701982376 CHANGE ledger 60abf412479d -> fb5f42fa2d5b agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc running applied att=1 lease=2026-09-30T05:14:03.656263892Z code= upd=2026-09-30T05:13:43.656263892Z
+05:13:43.867567167 CHANGE ledger fb5f42fa2d5b -> 30e1fb3a2b5b agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc running applied att=1 lease=2026-09-30T05:14:03.813254953Z code= upd=2026-09-30T05:13:43.813254953Z
+05:13:44.046178447 CHANGE ledger 30e1fb3a2b5b -> 7dc953538bd0 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc running applied att=1 lease=2026-09-30T05:14:03.970691757Z code= upd=2026-09-30T05:13:43.970691757Z
+05:13:44.222178981 CHANGE ledger 7dc953538bd0 -> 63ec5179029a agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc running applied att=1 lease=2026-09-30T05:14:04.173321234Z code= upd=2026-09-30T05:13:44.173321234Z
+05:13:44.397933163 CHANGE ledger 63ec5179029a -> 903eef9b7f03 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc running applied att=1 lease=2026-09-30T05:14:04.350343284Z code= upd=2026-09-30T05:13:44.350343284Z
+05:13:44.560926538 CHANGE ledger 903eef9b7f03 -> 718a9b6a059e agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc running applied att=1 lease=2026-09-30T05:14:04.490360936Z code= upd=2026-09-30T05:13:44.490360936Z
+05:13:44.928368988 CHANGE ledger 718a9b6a059e -> 99e20619117c agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z
+05:13:49.010420253 CHANGE ledger 99e20619117c -> a0c526bd9f6a agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:13:49.164502759 CHANGE ledger a0c526bd9f6a -> 65c427d29d17 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:13:49.325301199 CHANGE ledger 65c427d29d17 -> dde29c014ebb agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:13:49.490242695 CHANGE ledger dde29c014ebb -> 0098c440883c agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:13:49.651376768 CHANGE ledger 0098c440883c -> 1dc68a04da0e agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:13:49.814498711 CHANGE ledger 1dc68a04da0e -> f6249263a30e agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:13:49.978987587 CHANGE ledger f6249263a30e -> fbf878242719 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:13:50.139604356 CHANGE ledger fbf878242719 -> 7e9797afa62b agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:13:50.313901614 CHANGE ledger 7e9797afa62b -> 86ea18b5273b agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:13:50.518493628 CHANGE ledger 86ea18b5273b -> 04a65c8208f9 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:13:50.698375192 CHANGE ledger 04a65c8208f9 -> 0bd139299666 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:13:50.884816288 CHANGE ledger 0bd139299666 -> 764dc3ab5273 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:13:51.084310510 CHANGE ledger 764dc3ab5273 -> 0052f746d18e agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:13:51.266965232 CHANGE ledger 0052f746d18e -> 3831eeed7822 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:13:51.467887148 CHANGE ledger 3831eeed7822 -> 20aaf6ec7717 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:13:51.661540060 CHANGE ledger 20aaf6ec7717 -> 08e0f3c63615 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:13:51.860562598 CHANGE ledger 08e0f3c63615 -> 40ebbb06e80c agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:13:53.192009519 CHANGE ledger 40ebbb06e80c -> c109830d2895 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:13:53.734488722 CHANGE ledger c109830d2895 -> 05ced1a9d47c agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:13:53.930904612 CHANGE ledger 05ced1a9d47c -> 536c3a885b20 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:13:54.102631419 CHANGE ledger 536c3a885b20 -> 37615668899f agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:13:55.044047915 CHANGE ledger 37615668899f -> 31542e52f9e0 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:14:45.773614675 CHANGE ledger 31542e52f9e0 -> 2f5dfc40a3c0 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:14:45.932002265 CHANGE ledger 2f5dfc40a3c0 -> a965091d7eec agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:14:46.099916243 CHANGE ledger a965091d7eec -> 394d61134f47 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:14:46.284718590 CHANGE ledger 394d61134f47 -> 193d911e6df0 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:14:46.452943507 CHANGE ledger 193d911e6df0 -> 855ecab7f413 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:14:46.630630062 CHANGE ledger 855ecab7f413 -> 44b4611cd9da agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:14:46.806460262 CHANGE ledger 44b4611cd9da -> 77afe47032c7 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:14:46.992811175 CHANGE ledger 77afe47032c7 -> 5051a1c5f455 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:14:47.165329819 CHANGE ledger 5051a1c5f455 -> 12eb90b29903 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:14:47.333265463 CHANGE ledger 12eb90b29903 -> 92c998d0c532 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:14:47.503725726 CHANGE ledger 92c998d0c532 -> fbead1f11caa agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:14:47.673200200 CHANGE ledger fbead1f11caa -> 5fb81fdc19db agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:14:47.947139443 CHANGE ledger 5fb81fdc19db -> 571db5a7476f agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:14:48.136161248 CHANGE ledger 571db5a7476f -> d9197879fa92 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:14:48.308479682 CHANGE ledger d9197879fa92 -> 1c63a6ca55b8 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:14:48.486746475 CHANGE ledger 1c63a6ca55b8 -> a5d6d8f491d0 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:14:48.673982515 CHANGE ledger a5d6d8f491d0 -> 9abed16d8a9e agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:14:48.853000313 CHANGE ledger 9abed16d8a9e -> 1c1a95d266e7 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:14:49.025529456 CHANGE ledger 1c1a95d266e7 -> 70e2103ea720 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:14:49.200779014 CHANGE ledger 70e2103ea720 -> 9f6cd6c6f104 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:14:49.382646398 CHANGE ledger 9f6cd6c6f104 -> d5e30632df48 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:14:49.568532511 CHANGE ledger d5e30632df48 -> a4ad85e09541 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+05:14:49.732266588 CHANGE ledger a4ad85e09541 -> f9af9c9ec658 agent=6958/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:36.967516679Z | d8f6f5bc succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:13:44.82839102Z | 7fb6a0d
+done
+######## raw/watch/cp-b11-watch/timeline.log
+05:12:22.068174294 CHANGE journal none -> absent
+05:12:22.084389479 CHANGE ledger none -> 177f61d12ed0bb85e6ea535b807b376e26bbe0871405a13867c0b3cb6ea4b211
+05:12:22.090348708 CHANGE state none -> absent
+05:12:22.096292265 CHANGE pdnsdb none -> absent
+05:12:22.101394318 POINTER 
+05:12:22.103359872 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=absent killpid=
+05:12:26.485275222 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=absent killpid=2147,
+05:12:27.696231367 CHANGE ledger 177f61d12ed0bb85e6ea535b807b376e26bbe0871405a13867c0b3cb6ea4b211 -> 8eaabb3a5096d29612425f974025a0fd4672f7b2bd960e1855cc3c02b0cc9a40
+05:12:28.062365410 CHANGE ledger 8eaabb3a5096d29612425f974025a0fd4672f7b2bd960e1855cc3c02b0cc9a40 -> 367c70b835e7ea24b3c019c92e96f0409082f6ac27b443e3c3197c9abcbea401
+05:12:28.071192446 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=absent killpid=2147,2460,
+05:12:32.239166451 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=absent killpid=2147,
+05:12:32.613158103 CHANGE ledger 367c70b835e7ea24b3c019c92e96f0409082f6ac27b443e3c3197c9abcbea401 -> 559b539953791b194e1809436648bfb58e91f0d2578d26b28bd1fa72b1c42188
+05:12:32.631515311 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=absent killpid=2147,3102,
+05:12:33.249874396 CHANGE ledger 559b539953791b194e1809436648bfb58e91f0d2578d26b28bd1fa72b1c42188 -> f726862006d2108f879ed73984a206699445e07e8754d9667fed516bbf9a1490
+05:12:33.272444196 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=absent killpid=2147,
+05:12:34.303461291 CHANGE ledger f726862006d2108f879ed73984a206699445e07e8754d9667fed516bbf9a1490 -> 535cbbe533b904d8a3b473f293b8d1d69a641ff26aaadd58a5acfc2465e91afd
+05:12:35.028186128 CHANGE ledger 535cbbe533b904d8a3b473f293b8d1d69a641ff26aaadd58a5acfc2465e91afd -> e8751d7ea411712b86d698aee1319614d91d5b492525b8b92d8568299198259c
+05:12:35.067146803 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=absent killpid=2147,3342,
+05:12:35.835238452 CHANGE ledger e8751d7ea411712b86d698aee1319614d91d5b492525b8b92d8568299198259c -> b1b5aa8bd731b61f9b704357e45e9579ef00ffa6308d64183c897e3384135fa2
+05:12:37.608796900 CHANGE ledger b1b5aa8bd731b61f9b704357e45e9579ef00ffa6308d64183c897e3384135fa2 -> 38c6763f79470a589c6188783f79712004623415d2a1bfb94268ded50534c636
+05:12:41.842222350 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=absent killpid=2147,
+05:12:42.185556970 CHANGE ledger 38c6763f79470a589c6188783f79712004623415d2a1bfb94268ded50534c636 -> b0f23c1096026e218c275a18516bf04ba723f4f151216846684755c3cd119fee
+05:12:42.190742283 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=absent killpid=2147,4384,
+05:12:42.643830712 CHANGE ledger b0f23c1096026e218c275a18516bf04ba723f4f151216846684755c3cd119fee -> d3d503e505632aba8877c3b5f289f514d6797285580a797a3fb6a79267bc0fd1
+05:12:42.653669948 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=absent killpid=2147,
+05:12:43.083081805 CHANGE ledger d3d503e505632aba8877c3b5f289f514d6797285580a797a3fb6a79267bc0fd1 -> 03e89e6fad2389152f850890f19bdc542130b2824092f9fd48df8f350b029807
+05:12:43.089657362 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=absent killpid=2147,4584,
+05:12:43.408618412 CHANGE ledger 03e89e6fad2389152f850890f19bdc542130b2824092f9fd48df8f350b029807 -> 056731279fc43dfff862082acd782f8f07204ccf024d512a895b0ecd07d10206
+05:12:43.420214992 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=intent killpid=2147,
+05:12:43.803039749 CHANGE journal absent -> 2da5fc4f18273f6dd9d00c2c441093ba854499ddc14c3ee272eb6435e22f4cca
+05:12:43.842818970 CHANGE ledger 056731279fc43dfff862082acd782f8f07204ccf024d512a895b0ecd07d10206 -> fee263b8a95cd23503e9852a95dde6035d957052f39893716b82e70523ede37b
+05:12:44.523532863 CHANGE journal 2da5fc4f18273f6dd9d00c2c441093ba854499ddc14c3ee272eb6435e22f4cca -> aedf7a68074fda6f83c9e009fb81afa753f2789ad1dc4100c409cd4406d09bd8
+05:12:44.533692212 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=target-staged killpid=2147,
+05:12:44.835089443 CHANGE journal aedf7a68074fda6f83c9e009fb81afa753f2789ad1dc4100c409cd4406d09bd8 -> 8d0f6afba721dcd6d95ed6a66d5fce07fe8ab374a6a961e1e3aabc36987becf8
+05:12:44.856566940 CHANGE ledger fee263b8a95cd23503e9852a95dde6035d957052f39893716b82e70523ede37b -> cca863b57f146bf7f082650a362a24bc84382b0d1ab20514edefe7ba3006f53b
+05:12:44.879462182 CHANGE pdnsdb absent -> 91fe2fdb69b8a70792999e9306200aee214a73f5957518082c5fd7c0f5f4dcc4
+05:12:44.884291949 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=target-enable-intent killpid=2147,4976,
+05:12:45.225559402 CHANGE ledger cca863b57f146bf7f082650a362a24bc84382b0d1ab20514edefe7ba3006f53b -> 5d66a84200872b1be31374533939310574b95386dd7607a499d69a17ae63e2a8
+05:12:45.235557056 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=target-enable-intent killpid=2147,5131,
+05:12:45.825198770 CHANGE ledger 5d66a84200872b1be31374533939310574b95386dd7607a499d69a17ae63e2a8 -> 326f0682f83c4d6d5c34a5241fb9f2aaf520f1051d51ef61788656b6400f84fe
+05:12:45.838968211 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=target-enable-intent killpid=2147,5234,
+05:12:46.216389627 CHANGE ledger 326f0682f83c4d6d5c34a5241fb9f2aaf520f1051d51ef61788656b6400f84fe -> b4a122f1d6f2a2f778ca26301247623aed543e47ce97e2a9f7f22e2e4fc0d895
+05:12:46.229959771 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=target-enable-intent killpid=2147,5339,
+05:12:46.592996598 CHANGE ledger b4a122f1d6f2a2f778ca26301247623aed543e47ce97e2a9f7f22e2e4fc0d895 -> 437a9772eeb000dadc837063785784d0ea2139fd39a60a4d373c61b1e42bcfc7
+05:12:46.614429643 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=target-enable-intent killpid=2147,
+05:12:46.956275438 CHANGE ledger 437a9772eeb000dadc837063785784d0ea2139fd39a60a4d373c61b1e42bcfc7 -> 0417e907a029948e86c0560223ad6576ef4ec75ebc8c0325ebe874c463f296bf
+05:12:46.971968035 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=target-enable-intent killpid=2147,5568,
+05:12:47.443592503 CHANGE ledger 0417e907a029948e86c0560223ad6576ef4ec75ebc8c0325ebe874c463f296bf -> e73809d9b47329ecaee0c27d1851591fb01a497f6e8279c440a58f6e1c8af022
+05:12:47.465191591 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=target-enable-intent killpid=2147,
+05:12:47.836555841 CHANGE ledger e73809d9b47329ecaee0c27d1851591fb01a497f6e8279c440a58f6e1c8af022 -> 836330a6101ff0059f5aacb1d233d193efb7c27b62acacc9f5f2d026077baa53
+05:12:47.862219624 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=target-enable-intent killpid=2147,5793,
+05:12:48.227462721 CHANGE ledger 836330a6101ff0059f5aacb1d233d193efb7c27b62acacc9f5f2d026077baa53 -> 1330a3a87c22ec99d4e598d6eb82266b5fac7b8d4e58e52f735c09a8d5226408
+05:12:48.246872341 pdns(MainPID/NRestarts/ActiveState/SubState)=5832/0/activating/start/ agent(MainPID/ActiveState)=0/inactive/ jphase=target-enable-intent killpid=2147,
+05:12:48.588783644 CHANGE journal 8d0f6afba721dcd6d95ed6a66d5fce07fe8ab374a6a961e1e3aabc36987becf8 -> 204c1992fae2560283f279bf9864e78e1b17e74349b68d7dcca210e070590dbf
+05:12:48.607727550 CHANGE ledger 1330a3a87c22ec99d4e598d6eb82266b5fac7b8d4e58e52f735c09a8d5226408 -> a9545571aa927dda8dbccd4c573cadd66b52d71079adadc71ffe36b08464b0f1
+05:12:48.633495602 CHANGE pdnsdb 91fe2fdb69b8a70792999e9306200aee214a73f5957518082c5fd7c0f5f4dcc4 -> f827a73bebe7a0c845e58802d56195802ac6d881fd593ba9d224f2abb02dd859
+05:12:48.642213661 pdns(MainPID/NRestarts/ActiveState/SubState)=5832/0/active/running/ agent(MainPID/ActiveState)=0/inactive/ jphase=target-started killpid=2147,6030,
+05:12:49.049988653 CHANGE ledger a9545571aa927dda8dbccd4c573cadd66b52d71079adadc71ffe36b08464b0f1 -> 610d9c2c859b459a3e8598de718db4a131cee567156f464905011fd8238434ee
+05:12:49.065854525 pdns(MainPID/NRestarts/ActiveState/SubState)=5832/0/active/running/ agent(MainPID/ActiveState)=0/inactive/ jphase=target-started killpid=2147,
+05:12:49.398200033 CHANGE ledger 610d9c2c859b459a3e8598de718db4a131cee567156f464905011fd8238434ee -> 57c63867e394eea7202bcdd6e23618367bdb1d17cfd2c02828e1583ec20c4d2d
+05:12:49.774503584 CHANGE ledger 57c63867e394eea7202bcdd6e23618367bdb1d17cfd2c02828e1583ec20c4d2d -> e2cd67427801750926a0c243c3de9a855e1be372b14d5b623b6cf500ca7fd060
+05:12:50.168725175 CHANGE ledger e2cd67427801750926a0c243c3de9a855e1be372b14d5b623b6cf500ca7fd060 -> bb020afb7bfce96436f389d579791c6c928ee3adf1de786a9858f38e851657dc
+05:12:50.527938590 CHANGE ledger bb020afb7bfce96436f389d579791c6c928ee3adf1de786a9858f38e851657dc -> 42a45946eb881c018fca5f3a469fed142579d9ee4b58dc0e91f3504cdd78ec62
+05:12:50.913876423 CHANGE journal 204c1992fae2560283f279bf9864e78e1b17e74349b68d7dcca210e070590dbf -> adf57fe4848de99c8d555dfbd00843e5440aa224cd9e5d4b51df096e0078d043
+05:12:50.930696853 CHANGE ledger 42a45946eb881c018fca5f3a469fed142579d9ee4b58dc0e91f3504cdd78ec62 -> 6d128a3ab7ac92b46d01c33eedc4d9723b5438470bc5ab4d74764aff658fb0b9
+05:12:50.957602852 pdns(MainPID/NRestarts/ActiveState/SubState)=5832/0/active/running/ agent(MainPID/ActiveState)=0/inactive/ jphase=committed killpid=2147,
+05:12:51.356412384 CHANGE journal adf57fe4848de99c8d555dfbd00843e5440aa224cd9e5d4b51df096e0078d043 -> 8dda164467ca404c59e1cf41d301ebae65c575fcb9ccb922fc9236b18180136c
+05:12:51.392656648 CHANGE state absent -> 307bdc7c5ffa020d987b143672d907f18fcda37eee414ba8da4db4392426bdb4
+05:12:51.410103843 pdns(MainPID/NRestarts/ActiveState/SubState)=5832/0/active/running/ agent(MainPID/ActiveState)=0/inactive/ jphase=committed killpid=
+05:12:52.746510335 pdns(MainPID/NRestarts/ActiveState/SubState)=5832/0/active/running/ agent(MainPID/ActiveState)=6958/active/ jphase=committed killpid=
+05:12:56.161706433 pdns(MainPID/NRestarts/ActiveState/SubState)=5832/0/active/running/ agent(MainPID/ActiveState)=6958/active/ jphase=absent killpid=
+05:12:57.938360306 CHANGE journal 8dda164467ca404c59e1cf41d301ebae65c575fcb9ccb922fc9236b18180136c -> absent
+05:12:58.759821804 CHANGE ledger 6d128a3ab7ac92b46d01c33eedc4d9723b5438470bc5ab4d74764aff658fb0b9 -> 1da3e967a0ab2a047107c1e95a94b72e73e97dc7b821bb3185b9c5c1ffcbcd5c
+05:13:33.371605389 CHANGE ledger 1da3e967a0ab2a047107c1e95a94b72e73e97dc7b821bb3185b9c5c1ffcbcd5c -> e2080fae888356e82e6664f2155cede63288971cf61e8b67c8ee8adc7c7fed7c
+done

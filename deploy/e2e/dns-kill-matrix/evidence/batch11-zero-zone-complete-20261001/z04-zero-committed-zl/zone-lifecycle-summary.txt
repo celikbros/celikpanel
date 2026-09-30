@@ -1,0 +1,15 @@
+## zone-lifecycle-recover.json status= pending recover_delete= True zero_zones= True
+  step delete recover= True rc= 75 outcome= pending_exact_operation verdict= pending job= 7fb6a0df pending ['propagation-pending'] dns_peer_owner_edit_unknown heartbeats= 0 obs_err= None
+## zone-lifecycle.json status= pending recover_delete= False zero_zones= True
+  step add recover= False rc= 0 outcome= verified_published verdict= passed job= fa261f29 succeeded ['published'] None heartbeats= 0 obs_err= None
+  step edit recover= False rc= 0 outcome= verified_published verdict= passed job= d8f6f5bc succeeded ['published'] None heartbeats= 0 obs_err= None
+  step delete recover= False rc= 75 outcome= pending_exact_operation verdict= pending job= 7fb6a0df pending ['propagation-pending'] dns_peer_enrollment_required heartbeats= 1 obs_err= None
+## ledger (collected copy)
+   076c692a dns_engine_switch pdns succeeded finalized att= 1 code= None started= 2026-09-30T05:12:27.456502728Z finished= 2026-09-30T05:12:58.617694744Z dur= 31.16
+   fa261f29 dns_zone_sync s2.s1-kill.test succeeded published att= 1 code= None started= 2026-09-30T05:13:32.530738835Z finished= 2026-09-30T05:13:36.967516679Z dur= 4.44
+   d8f6f5bc dns_zone_sync s2.s1-kill.test succeeded published att= 1 code= None started= 2026-09-30T05:13:40.866641358Z finished= 2026-09-30T05:13:44.82839102Z dur= 3.96
+   7fb6a0df dns_zone_sync s2.s1-kill.test pending propagation-pending att= 2 code= dns_peer_owner_edit_unknown started= 2026-09-30T05:14:45.596187482Z finished= 2026-09-30T05:14:49.668766675Z dur= 4.07
+== pdns daemon CATALOG-HASH lines (all boots)
+2026-09-30T05:12:48.293909+00:00 dns-debian13 pdns_server[5832]: new CATALOG-HASH '47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T05:13:48.424887+00:00 dns-debian13 pdns_server[5832]: new CATALOG-HASH '1Rf5KuuzsJMQRGXVLYxlmzvq+Z93Mwk4oSSCrR9KFCA=' for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T05:14:48.563570+00:00 dns-debian13 pdns_server[5832]: new CATALOG-HASH '47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' for zone 'catalog-c000020a.celikpanel.invalid'

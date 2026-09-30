@@ -1,0 +1,91 @@
+2026-09-30T05:12:48.133831+00:00 dns-debian13 systemd[1]: Starting pdns.service - PowerDNS Authoritative Server...
+2026-09-30T05:12:48.223050+00:00 dns-debian13 pdns_server[5832]: Loading '/usr/lib/x86_64-linux-gnu/pdns/libgsqlite3backend.so'
+2026-09-30T05:12:48.223050+00:00 dns-debian13 pdns_server[5832]: This is a standalone pdns
+2026-09-30T05:12:48.223050+00:00 dns-debian13 pdns_server[5832]: Listening on controlsocket in '/run/pdns/pdns.controlsocket'
+2026-09-30T05:12:48.223050+00:00 dns-debian13 pdns_server[5832]: UDP server bound to 10.0.2.15:53
+2026-09-30T05:12:48.223050+00:00 dns-debian13 pdns_server[5832]: UDP server bound to 192.0.2.10:53
+2026-09-30T05:12:48.223508+00:00 dns-debian13 pdns_server[5832]: TCP server bound to 10.0.2.15:53
+2026-09-30T05:12:48.223508+00:00 dns-debian13 pdns_server[5832]: TCP server bound to 192.0.2.10:53
+2026-09-30T05:12:48.223508+00:00 dns-debian13 pdns_server[5832]: PowerDNS Authoritative Server 4.9.17 (C) PowerDNS.COM BV
+2026-09-30T05:12:48.223508+00:00 dns-debian13 pdns_server[5832]: Using 64-bits mode. Built using gcc 14.2.0.
+2026-09-30T05:12:48.223508+00:00 dns-debian13 pdns_server[5832]: PowerDNS comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it according to the terms of the GPL version 2.
+2026-09-30T05:12:48.293909+00:00 dns-debian13 pdns_server[5832]: Creating backend connection for TCP
+2026-09-30T05:12:48.293909+00:00 dns-debian13 pdns_server[5832]: Primary/secondary communicator launching
+2026-09-30T05:12:48.293909+00:00 dns-debian13 pdns_server[5832]: new CATALOG-HASH '47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T05:12:48.293909+00:00 dns-debian13 pdns_server[5832]: About to create 3 backend threads for UDP
+2026-09-30T05:12:48.287714+00:00 dns-debian13 systemd[1]: Started pdns.service - PowerDNS Authoritative Server.
+2026-09-30T05:12:48.358784+00:00 dns-debian13 pdns_server[5832]: Unable to queue notification of domain 'catalog-c000020a.celikpanel.invalid' to nameserver 'invalid': nameserver does not resolve!
+2026-09-30T05:12:48.442592+00:00 dns-debian13 pdns_server[5832]: Done launching threads, ready to distribute questions
+2026-09-30T05:12:48.445317+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:42890', transfer initiated
+2026-09-30T05:12:48.446913+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:42890', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:12:50.939495+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54638', transfer initiated
+2026-09-30T05:12:50.942313+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54638', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:12:50.961819+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54654', transfer initiated
+2026-09-30T05:12:50.963655+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54654', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:12:53.694391+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54660', transfer initiated
+2026-09-30T05:12:53.695311+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54660', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:12:53.696473+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54662', transfer initiated
+2026-09-30T05:12:53.696473+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54662', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:12:55.354159+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54664', transfer initiated
+2026-09-30T05:12:55.354159+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54664', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:12:55.368035+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54682', transfer initiated
+2026-09-30T05:12:55.368814+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54682', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:12:56.108745+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54688', transfer initiated
+2026-09-30T05:12:56.110273+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54688', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:12:56.126351+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54694', transfer initiated
+2026-09-30T05:12:56.127614+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54694', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:12:58.603342+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54702', transfer initiated
+2026-09-30T05:12:58.604715+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54702', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:12:58.616019+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54726', transfer initiated
+2026-09-30T05:12:58.617277+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54726', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:13:29.957794+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:50266', transfer initiated
+2026-09-30T05:13:29.958889+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:50266', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:13:31.242233+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:34678', transfer initiated
+2026-09-30T05:13:31.243498+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:34678', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:13:34.587212+00:00 dns-debian13 pdns_server[5832]: Cache clear request for 's2.s1-kill.test$' received from operator
+2026-09-30T05:13:34.627639+00:00 dns-debian13 pdns_server[5832]: Cache clear request for 'catalog-c000020a.celikpanel.invalid$' received from operator
+2026-09-30T05:13:34.672958+00:00 dns-debian13 pdns_server[5832]: Notification request to host 192.0.2.11:53 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T05:13:34.716393+00:00 dns-debian13 pdns_server[5832]: Notification request to host 192.0.2.11:53 for zone 's2.s1-kill.test' received from operator
+2026-09-30T05:13:35.429974+00:00 dns-debian13 pdns_server[5832]: IXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:35838', transfer initiated with serial 1790745168
+2026-09-30T05:13:35.433372+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:35838', transfer initiated
+2026-09-30T05:13:35.477354+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 's2.s1-kill.test', client '192.0.2.11:35845', transfer initiated
+2026-09-30T05:13:36.420721+00:00 dns-debian13 pdns_server[5832]: Received unsuccessful notification report for 's2.s1-kill.test' from 192.0.2.11:53, error: Server Not Authoritative for zone / Not Authorized
+2026-09-30T05:13:36.652633+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:50274', transfer initiated
+2026-09-30T05:13:37.809473+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:35896', transfer initiated
+2026-09-30T05:13:42.792099+00:00 dns-debian13 pdns_server[5832]: Cache clear request for 's2.s1-kill.test$' received from operator
+2026-09-30T05:13:42.846049+00:00 dns-debian13 pdns_server[5832]: Cache clear request for 'catalog-c000020a.celikpanel.invalid$' received from operator
+2026-09-30T05:13:42.900911+00:00 dns-debian13 pdns_server[5832]: Notification request to host 192.0.2.11:53 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T05:13:42.934286+00:00 dns-debian13 pdns_server[5832]: Notification request to host 192.0.2.11:53 for zone 's2.s1-kill.test' received from operator
+2026-09-30T05:13:43.475901+00:00 dns-debian13 pdns_server[5832]: IXFR-out zone 's2.s1-kill.test', client '192.0.2.11:35994', transfer initiated with serial 2026092801
+2026-09-30T05:13:43.477136+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 's2.s1-kill.test', client '192.0.2.11:35994', transfer initiated
+2026-09-30T05:13:44.510931+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:42062', transfer initiated
+2026-09-30T05:13:45.628423+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:46927', transfer initiated
+2026-09-30T05:13:48.424887+00:00 dns-debian13 pdns_server[5832]: new CATALOG-HASH '1Rf5KuuzsJMQRGXVLYxlmzvq+Z93Mwk4oSSCrR9KFCA=' for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T05:13:48.516528+00:00 dns-debian13 pdns_server[5832]: Unable to queue notification of domain 's2.s1-kill.test' to nameserver 'ns1.s1-kill.test': nameserver does not resolve!
+2026-09-30T05:13:48.525511+00:00 dns-debian13 pdns_server[5832]: Unable to queue notification of domain 'catalog-c000020a.celikpanel.invalid' to nameserver 'invalid': nameserver does not resolve!
+2026-09-30T05:13:48.576151+00:00 dns-debian13 pdns_server[5832]: IXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:46977', transfer initiated with serial 1790745169
+2026-09-30T05:13:48.576428+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:46977', transfer initiated
+2026-09-30T05:13:50.386533+00:00 dns-debian13 pdns_server[5832]: Cache clear request for 's2.s1-kill.test$' received from operator
+2026-09-30T05:13:50.418790+00:00 dns-debian13 pdns_server[5832]: Cache clear request for 'catalog-c000020a.celikpanel.invalid$' received from operator
+2026-09-30T05:13:50.478292+00:00 dns-debian13 pdns_server[5832]: Notification request to host 192.0.2.11:53 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T05:13:50.539842+00:00 dns-debian13 pdns_server[5832]: IXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:47022', transfer initiated with serial 1790745228
+2026-09-30T05:13:50.541393+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:47022', transfer initiated
+2026-09-30T05:13:50.544466+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:47022', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:13:53.941874+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:36710', transfer initiated
+2026-09-30T05:13:53.943912+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:36710', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:13:54.506369+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:36726', transfer initiated
+2026-09-30T05:13:54.507433+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:36726', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:14:47.384600+00:00 dns-debian13 pdns_server[5832]: Cache clear request for 's2.s1-kill.test$' received from operator
+2026-09-30T05:14:47.420151+00:00 dns-debian13 pdns_server[5832]: Cache clear request for 'catalog-c000020a.celikpanel.invalid$' received from operator
+2026-09-30T05:14:47.455483+00:00 dns-debian13 pdns_server[5832]: Notification request to host 192.0.2.11:53 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T05:14:47.502413+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:39138', transfer initiated
+2026-09-30T05:14:47.502413+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:39138', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:14:48.563570+00:00 dns-debian13 pdns_server[5832]: new CATALOG-HASH '47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T05:14:48.600866+00:00 dns-debian13 pdns_server[5832]: Unable to queue notification of domain 'catalog-c000020a.celikpanel.invalid' to nameserver 'invalid': nameserver does not resolve!
+2026-09-30T05:14:48.622362+00:00 dns-debian13 pdns_server[5832]: IXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:47787', transfer initiated with serial 1790745229
+2026-09-30T05:14:48.622362+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:47787', transfer initiated
+2026-09-30T05:14:48.626380+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:47787', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:16:31.793181+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:46644', transfer initiated
+2026-09-30T05:16:31.794084+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:46644', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:16:33.721365+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:46701', transfer initiated
+2026-09-30T05:16:33.722403+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:46701', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
