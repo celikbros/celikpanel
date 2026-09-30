@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 type pdnsPrimaryNativeBinding struct {
@@ -29,22 +31,49 @@ type pdnsPrimaryNativeBinding struct {
 	DatabaseCtimeNSec int64
 }
 
+// recheckPDNSNativeBindingAt brackets check between two reads of the running
+// daemon's process and database identity. A difference is the
+// native_binding owner-edit check. A difference only in the database file's
+// size or times, with the same process and inode, is what the daemon's own
+// write (for example its catalog re-stamp) causes: it is marked retryable so
+// the recheck reads once more before deciding.
 func recheckPDNSNativeBindingAt(read func() (pdnsPrimaryNativeBinding, error), check func() error) error {
 	if read == nil || check == nil {
-		return errors.New("PowerDNS native binding proof is unavailable")
+		return dnsPeerProofInternal(errors.New("PowerDNS native binding proof is unavailable"))
 	}
 	before, err := read()
 	if err != nil || before.PID == 0 || before.Start == "" || before.DatabaseInode == 0 {
-		return errors.New("PowerDNS native process/database binding is unknown")
+		return dnsPeerOwnerEditf(transport.DNSPeerOwnerEditCheckNativeBinding,
+			"PowerDNS native process/database binding is unknown (pid=%d inode=%d): %s",
+			before.PID, before.DatabaseInode, errorTextOrNone(err))
 	}
 	if err := check(); err != nil {
 		return err
 	}
 	after, err := read()
 	if err != nil || before != after {
-		return errors.New("PowerDNS native process/database binding changed")
+		edit := dnsPeerOwnerEditf(transport.DNSPeerOwnerEditCheckNativeBinding,
+			"PowerDNS native process/database binding changed during the check: before pid=%d inode=%d size=%d mtime=%d.%09d; after pid=%d inode=%d size=%d mtime=%d.%09d (%s)",
+			before.PID, before.DatabaseInode, before.DatabaseSize, before.DatabaseMtimeSec, before.DatabaseMtimeNSec,
+			after.PID, after.DatabaseInode, after.DatabaseSize, after.DatabaseMtimeSec, after.DatabaseMtimeNSec,
+			errorTextOrNone(err))
+		if err == nil && pdnsNativeBindingDatabaseWriteOnly(before, after) {
+			edit.(*dnsPeerOwnerEditError).retryable = true
+		}
+		return edit
 	}
 	return nil
+}
+
+// pdnsNativeBindingDatabaseWriteOnly: the same daemon process holds the same
+// database file (device, inode, owner, mode); only its size and times moved.
+func pdnsNativeBindingDatabaseWriteOnly(before, after pdnsPrimaryNativeBinding) bool {
+	before.DatabaseSize, after.DatabaseSize = 0, 0
+	before.DatabaseMtimeSec, after.DatabaseMtimeSec = 0, 0
+	before.DatabaseMtimeNSec, after.DatabaseMtimeNSec = 0, 0
+	before.DatabaseCtimeSec, after.DatabaseCtimeSec = 0, 0
+	before.DatabaseCtimeNSec, after.DatabaseCtimeNSec = 0, 0
+	return before == after
 }
 
 func readPDNSPrimaryNativeBinding(ctx context.Context, systemctl string) (pdnsPrimaryNativeBinding, error) {

@@ -799,38 +799,12 @@ func TestLegacyPrimaryPeerCatalogFollowsLocalProducer(t *testing.T) {
 	}
 }
 
-func TestPDNSDaemonCatalogSerialAdvance(t *testing.T) {
-	planned := testPDNSPrimaryPropagationEvidence(1790605418, []string{"example.test"}, []uint32{41})
-	daemon := planned
-	daemon.Serial = 1790607757
-	if !pdnsDaemonCatalogSerialAdvance(planned, daemon) {
-		t.Fatal("the daemon's producer serial re-stamp was not followed")
-	}
-	for name, edit := range map[string]func(*dnsPrimaryCatalogEvidence){
-		"same serial":  func(e *dnsPrimaryCatalogEvidence) { e.Serial = planned.Serial },
-		"lower serial": func(e *dnsPrimaryCatalogEvidence) { e.Serial = planned.Serial - 1 },
-		"member added": func(e *dnsPrimaryCatalogEvidence) {
-			e.Members, e.MemberSerials = []string{"example.test", "other.test"}, []uint32{41, 1}
-		},
-		"member serial":    func(e *dnsPrimaryCatalogEvidence) { e.MemberSerials = []uint32{42} },
-		"catalog identity": func(e *dnsPrimaryCatalogEvidence) { e.Domain = "catalog-c0000214.celikpanel.invalid" },
-		"peer address":     func(e *dnsPrimaryCatalogEvidence) { e.PeerIP = "192.0.2.99" },
-		"local address":    func(e *dnsPrimaryCatalogEvidence) { e.LocalIP = "192.0.2.98" },
-	} {
-		fresh := daemon
-		fresh.Members = append([]string(nil), daemon.Members...)
-		fresh.MemberSerials = append([]uint32(nil), daemon.MemberSerials...)
-		edit(&fresh)
-		if pdnsDaemonCatalogSerialAdvance(planned, fresh) {
-			t.Fatalf("%s was accepted as the daemon's own change", name)
-		}
-	}
-}
-
 // A publication's completion wave follows the daemon's producer serial
-// re-stamp (identical members and member serials) and nothing else.
+// re-stamp (identical members and member serials, a new CATALOG-HASH) and
+// nothing else.
 func TestCompleteDNSV3PrimaryPropagationFollowsOnlyDaemonSerial(t *testing.T) {
 	planned := testPDNSPrimaryPropagationEvidence(1790605418, []string{"example.test"}, []uint32{41})
+	planned.CatalogHash = testCatalogHashBefore
 	liveSerial := uint32(1790607757)
 	soa := func(_ context.Context, _, _, domain string) (dnsSOAProbeResult, error) {
 		serial := uint32(41)
@@ -854,20 +828,28 @@ func TestCompleteDNSV3PrimaryPropagationFollowsOnlyDaemonSerial(t *testing.T) {
 		{"daemon re-stamp followed", func() dnsPrimaryCatalogEvidence {
 			fresh := planned
 			fresh.Serial = liveSerial
+			fresh.CatalogHash = testCatalogHashAfter
 			return fresh
 		}, false},
 		{"member change not followed", func() dnsPrimaryCatalogEvidence {
 			fresh := planned
 			fresh.Serial = liveSerial
+			fresh.CatalogHash = testCatalogHashAfter
 			fresh.MemberSerials = []uint32{40}
+			return fresh
+		}, true},
+		{"higher serial without a new hash not followed", func() dnsPrimaryCatalogEvidence {
+			fresh := planned
+			fresh.Serial = liveSerial
 			return fresh
 		}, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			refreshes := 0
 			plan := dnsV3PrimaryPropagationPlan{
-				Evidence: planned,
-				Changed:  expectedDNSZoneAuthority{Domain: "example.test", Serial: 41},
+				SourceState: dnsEngineStateReceipt{Engine: transport.DNSEnginePowerDNS},
+				Evidence:    planned,
+				Changed:     expectedDNSZoneAuthority{Domain: "example.test", Serial: 41},
 				RefreshEvidence: func(context.Context) (dnsPrimaryCatalogEvidence, error) {
 					refreshes++
 					return tc.fresh(), nil

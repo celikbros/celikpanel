@@ -1748,8 +1748,11 @@ change (the checker had left it unconstrained). After commit the producer's
 master, last_check, options and catalog stay NULL and its metadata is none
 or that single row. Zone publication follows a daemon re-stamp during a
 propagation wave only when the serial is strictly higher and identity,
-members and member serials are identical, at most twice per wave and only
-before any native peer inspection.
+members and member serials are identical. *(Changed 2026-10-01: the former
+bound "at most twice per wave and only before any native peer inspection" is
+replaced by the admission rule of the section "PowerDNS daemon catalog
+re-stamp admitted at any point of a V3 operation", which also requires a
+changed `CATALOG-HASH` row.)*
 
 **Producer by local engine.** Three call sites read a legacy primary's own
 catalog, as the peer re-serves it, with the BIND policy regardless of engine;
@@ -2315,3 +2318,185 @@ ledger job `succeeded`, challenge journal consumed and retired), and on t2 the
 `member_state=absent`, `native_state=unloaded`); and that the Agent journal
 has no "DNS peer proof could not run" line and no `dns_peer_proof_internal`
 ledger code.
+
+### PowerDNS daemon catalog re-stamp admitted at any point of a V3 operation; owner-edit check tokens (2026-10-01)
+
+P0.4, P0.5; constitutional invariants 1, 2, 4, 5; D-022, D-024, D-025.
+Replaces the "at most twice per wave and only before any native peer
+inspection" contract of the 2026-09-30 section above. No journal, ledger,
+state, enrollment or database schema change; the ledger `error_code` gains an
+additive composite value. Component tests only; native re-run pending
+(batch 12: `z04`/`z05`; pair 6/7 t3 with a delayed retry).
+
+**Finding** (batch 11,
+`deploy/e2e/dns-kill-matrix/evidence/batch11-zero-zone-complete-20261001/README.md`).
+On a PowerDNS 4.9.17 primary, a parentless deletion pending on
+`dns_peer_enrollment_required` and resumed after the owner's enrollment came
+back pending as `dns_peer_owner_edit_unknown`, although nothing had changed:
+in `z04` the daemon re-stamped the empty catalog inside the resumed attempt
+(1790745229 → 1790745288, new `CATALOG-HASH`), before any inspector exchange;
+in `z05` the attempt started after that re-stamp and failed after a complete
+inspector exchange. The Agent did not log which check produced the code. Pair 5
+t3 completed because its retry came 14 s after the delete, before any
+re-stamp. Batches 8r–11 established that PowerDNS 4.9.17 checks its producer
+catalogs about every 60 s and re-stamps the producer SOA with the epoch serial
+and a new `CATALOG-HASH` whenever the member set changed since the stored
+hash, including to the empty set. That is the daemon, not an owner change.
+
+**Admission rule** (`classifyProducerCatalogEvidence`, one function, one test
+table). An observed producer catalog is compared with the attempt's recorded
+evidence. It is *unchanged* when identity (producer address, peer address,
+catalog name), member list, member serials, serial and `CATALOG-HASH` are all
+equal (member lists element-wise, so an empty and an absent list are the same
+zero-zone catalog). It is an *admitted daemon re-stamp* only on a PowerDNS
+source when the serial is strictly higher, the `CATALOG-HASH` row is present
+and differs from the recorded one, and identity, members and member serials
+are identical. Everything else stays `dns_peer_owner_edit_unknown`
+(detail `producer_catalog`): a member added or removed, a member serial, an
+identity change, a lower or equal serial, and — decided — a higher serial
+under an unchanged or missing hash (the daemon writes both; CelikPanel's own
+publication never happens inside a recorded attempt, because the attempt holds
+the host mutation lock and a pending V3 job blocks every other DNS mutation).
+BIND has no daemon re-stamp: a BIND producer is admitted only when unchanged.
+The hash is read only on a native V3 PowerDNS producer
+(`verifyPDNSProducerBaseWithHashTxMode`, the row
+`verifyNativePDNSProducerDaemonStateTx` already admitted); other PowerDNS
+producers carry no hash, so a re-stamp there is still refused, as before.
+
+**Where the evidence is recorded and re-stamped.** Each attempt — the
+publication of an add, edit or delete (`syncPDNSV3Zone`) and the resumed job
+(`RecoverDNSZoneV3` → `recoverPDNSV3Zone`) — reads the producer once in
+`prepareManagedPDNSV3Propagation`. The completion wave turns that plan into one
+`dnsRecordedProducerCatalog` and shares it with the native peer proof
+(`plan.catalog`). Every comparison of the attempt judges against that record.
+An admitted re-stamp re-stamps the record before the proof continues (the
+wave's pair check re-proves against it; the native recheck admits it only once
+its whole read bracket held). The record is attempt-scoped; there is no
+separate durable copy. Each attempt re-derives it from the durable producer
+rows, which already hold the daemon's re-stamp, so a resume minutes or hours
+later starts from the re-stamped serial (`z05`). A durable copy across
+attempts would add nothing the producer rows do not hold. After a real owner
+edit it would also turn every retry into the same `producer_catalog` refusal,
+with no way to proceed after the owner reconciled.
+
+**Every comparison routed through the rule** (the call sites it replaced):
+- the wave's pre-native catalog pair re-check
+  (`completeDNSV3PrimaryPropagationWithNativeAt`; formerly
+  `pdnsDaemonCatalogSerialAdvance`, bounded to two per wave and to "before any
+  inspection"). This serves add/edit publication, deletion and the resumed
+  job alike;
+- the PowerDNS local recheck in the native proof (`recheckPDNSPeerLocalEvidence`;
+  formerly `reflect.DeepEqual(current, plan.Evidence)`), run before the
+  challenge, inside journal publish and consume-once, after the SSH round trip
+  and before success;
+- the BIND local recheck (`recheckBINDPeerLocalEvidence`; formerly
+  `reflect.DeepEqual(current, plan)`). The plan identity is now compared by
+  `sameDNSV3PlanIdentity` and the evidence by the rule, which for BIND admits
+  nothing;
+- the post-inspection pair check and `fresh != authority`, now shared by the
+  BIND- and PowerDNS-secondary verifiers (`verifyNativePeerAfterInspectionAt`).
+
+**Timing within the native proof.**
+- *Re-stamp before the challenge* (`z04`): the recheck admits it. The recorded
+  serial is then past the serial the wave proved at the peer, so the proof
+  mints no challenge and opens no inspection
+  (`errDNSProducerCatalogRestampedBeforeChallenge`). The wave re-proves the
+  catalog pair at the new serial and calls the native proof again. This does
+  not count as the wave's one inspection.
+- *Re-stamp after the challenge*: the post-inspection pair check judges the
+  re-stamped record. It waits up to 20 × 250 ms for the secondary to transfer
+  the re-stamped catalog (measured about 0.1 s), and only while the record
+  moved from the challenge serial through admitted re-stamps. It accepts the
+  pair identity at the new serial only in that case.
+- *Remaining gap, unchanged*: if the re-stamp reaches the secondary before
+  its inspector reads the catalog, the signed response carries the new serial
+  and `dnspeerproof.Verify` refuses it against the challenge. The attempt stays
+  pending as `dns_peer_native_unknown`, and the next retry completes.
+
+**Not changed here: the wave's time bound.** The completion wave and its one
+native proof share the 15 s `dnsPairProofLimit` context. Every admission in
+this section runs under it: the wave's refresh, the native local rechecks
+(including those inside journal publish and consume-once), and the
+post-inspection wait for a re-stamped catalog, which also stops when that
+context ends. In `z05` the Agent's pending line came about 15.0 s after the
+wave's first probe (05:31:47.7Z → 05:32:02.729Z), which is consistent with
+that bound expiring after the inspection, but this is timing only. Pair 6
+(`deploy/e2e/dns-pair-acceptance/evidence/pair6-20261001/README.md`) found the
+bound expiring inside consume-once after a positive answer; that is a
+separate correction.
+
+**Momentary differences in the PowerDNS local recheck.** The recheck brackets
+its reads between two reads of the daemon's process and database identity. A
+daemon write during the bracket moves only the database file's size and
+times. A half-written re-stamp shows a higher serial with the old hash, or the
+reverse. In either case the recheck reads again, up to three times, 250 ms
+apart, and logs it. A process restart, another inode or a lasting difference
+is decided at once.
+
+**Loop guard.** At most `dnsProducerCatalogRestampLimit` = 3 re-stamps are
+admitted per attempt. The daemon re-stamps once per membership change, and no
+membership change can happen inside an attempt, so one is the expected
+maximum. The fourth is refused as `producer_catalog`, and the log says the
+limit was exceeded.
+
+**Owner-edit check tokens (D-024).** `dns_peer_owner_edit_unknown` now
+carries one reviewed detail naming the check that found the difference, the
+same way as the inspector detail of 2026-09-30: Agent ledger
+`dns_peer_owner_edit_unknown:<check>`, Panel `reason` unchanged plus `detail`,
+Domains screen sentence `domains.peerOwnerEditDetail.<check>` (EN/TR, each
+starting "What differed:" / "Farklı olan:"), English fallback in
+`dnsPeerOwnerEditDetailEnglish`. The reason text, "Retry this deletion" and
+"same publication"/"aynı yayını" are unchanged. Tokens:
+
+| Token | Check |
+| --- | --- |
+| `operation_attempt` | the durable ledger attempt of this operation changed or was lost |
+| `engine_state` | the DNS engine state receipt changed or was unreadable (BIND: also the tree generation or pair receipt) |
+| `active_engine` | another DNS service is active, or the managed one is not |
+| `native_binding` | the daemon's process or database identity (PowerDNS), or the managed runtime configuration (BIND), changed |
+| `deletion_receipt` | the exact durable deletion receipt of the operation changed |
+| `producer_catalog` | the producer catalog differs other than by an admitted re-stamp (or the guard was exceeded) |
+| `catalog_probe` | after the inspection, the catalog served locally or by the secondary did not match the record |
+| `authority` | after the inspection, the pair answered for another identity or an unadmitted serial |
+| `transfer_observed` | after the inspection, the secondary did not refuse the deleted zone's transfer |
+| `zone_answered` | after the inspection, the secondary's answer was not the empty REFUSED seen before |
+
+The Agent logs, at that point, "DNS peer proof observed different evidence
+(check=<token>); the deletion stays pending as dns_peer_owner_edit_unknown:
+<recorded and observed values>". The text is bounded to 512 bytes and
+product-authored: addresses, catalog and member names, serials, a shortened
+catalog hash, receipt generations and process/database identity. It holds no
+key material. An admitted re-stamp logs "DNS peer proof admitted the PowerDNS
+daemon's re-stamp of catalog <name> …: serial a -> b, CATALOG-HASH … -> …;
+re-stamp n of at most 3". An observation that is not typed keeps the plain
+code and logs `check=unclassified`. The managed-BIND configuration owner edit
+recognised at recovery (`pendingExactBINDV3OwnerEdit`) is outside the peer
+proof and keeps the plain code.
+
+**Transition.** No persisted format changes. The composite owner-edit code is
+additive. A Panel older than this Agent treats it as an unreviewed pending
+code, as with the 2026-09-30 inspector composite; Panel and Agent ship
+together. A deletion left pending by this defect is retried unchanged after
+the owner updates the panel. The kill-matrix harness is not changed here; its
+printed codes will carry the new detail.
+
+**Evidence.** Component tests only: the admission table; the record
+re-stamped and read back through the shared record; the loop guard; the
+PowerDNS local recheck with fake readers (each token, a re-stamp written during
+the bracket, a half-written re-stamp); the post-inspection tokens; and fake
+daemon runs of the wave with the production helpers. In those runs a
+re-stamp between pending and resume, inside the resumed attempt before the
+challenge, and after the challenge with a late secondary each completes. An
+owner member change and continuous re-stamping stay `producer_catalog`. The
+tests also cover add/edit publication and the Panel/web texts EN/TR. Native
+re-run pending:
+- batch 12 `z04`/`z05` must show that the resumed deletion completes
+  (`verified_published`, job `succeeded`, challenge consumed and retired). For
+  `z04` (resume within 60 s of the delete) the Agent journal must show the
+  "admitted the PowerDNS daemon's re-stamp" line, with no challenge before it.
+  For `z05` (resume after the re-stamp) it must show none. The harness verdict
+  `observe-child --step delete`, the re-add and, in `z05`, the reboot must
+  follow. If either cell stays pending, the ledger code now names the check;
+  that check and its logged values decide the next step;
+- pair 6/7 t3 with a delayed retry (more than 60 s after the delete) must show
+  the same completion.

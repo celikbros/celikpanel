@@ -60,6 +60,68 @@ func ValidDNSPeerInspectorReason(reason string) bool {
 	}
 }
 
+// Reviewed names of the check that found different evidence when the Agent
+// keeps a deletion pending as dns_peer_owner_edit_unknown (D-024). Each names
+// one bounded comparison of the native peer proof; none carries an observed
+// value. The Agent logs the recorded and observed values separately.
+const (
+	// The durable ledger's attempt of this operation changed or was lost.
+	DNSPeerOwnerEditCheckOperationAttempt = "operation_attempt"
+	// This server's DNS engine state receipt changed or was unreadable.
+	DNSPeerOwnerEditCheckEngineState = "engine_state"
+	// Another DNS service became active, or the managed one stopped.
+	DNSPeerOwnerEditCheckActiveEngine = "active_engine"
+	// The DNS daemon's process, database file or managed runtime
+	// configuration changed during the check.
+	DNSPeerOwnerEditCheckNativeBinding = "native_binding"
+	// The exact durable deletion receipt of this operation changed.
+	DNSPeerOwnerEditCheckDeletionReceipt = "deletion_receipt"
+	// The producer catalog differs from the recorded evidence other than by
+	// an admitted PowerDNS daemon re-stamp.
+	DNSPeerOwnerEditCheckProducerCatalog = "producer_catalog"
+	// After the inspection, the catalog served by this server or the
+	// secondary no longer matched the recorded evidence.
+	DNSPeerOwnerEditCheckCatalogProbe = "catalog_probe"
+	// After the inspection, the catalog pair answered for another identity.
+	DNSPeerOwnerEditCheckAuthority = "authority"
+	// After the inspection, the secondary did not refuse the deleted zone's
+	// transfer, or the check did not complete.
+	DNSPeerOwnerEditCheckTransferObserved = "transfer_observed"
+	// After the inspection, the secondary's answer for the deleted zone was
+	// not the empty REFUSED seen before, or the query did not complete.
+	DNSPeerOwnerEditCheckZoneAnswered = "zone_answered"
+)
+
+// ValidDNSPeerOwnerEditCheck reports a reviewed owner-edit check token.
+func ValidDNSPeerOwnerEditCheck(check string) bool {
+	switch check {
+	case DNSPeerOwnerEditCheckOperationAttempt,
+		DNSPeerOwnerEditCheckEngineState,
+		DNSPeerOwnerEditCheckActiveEngine,
+		DNSPeerOwnerEditCheckNativeBinding,
+		DNSPeerOwnerEditCheckDeletionReceipt,
+		DNSPeerOwnerEditCheckProducerCatalog,
+		DNSPeerOwnerEditCheckCatalogProbe,
+		DNSPeerOwnerEditCheckAuthority,
+		DNSPeerOwnerEditCheckTransferObserved,
+		DNSPeerOwnerEditCheckZoneAnswered:
+		return true
+	default:
+		return false
+	}
+}
+
+// DNSPeerPendingOwnerEditUnknownWithDetail returns the composite code naming
+// the check that found different evidence, for example
+// "dns_peer_owner_edit_unknown:producer_catalog". An unreviewed check keeps
+// the plain reason.
+func DNSPeerPendingOwnerEditUnknownWithDetail(check string) string {
+	if !ValidDNSPeerOwnerEditCheck(check) {
+		return DNSPeerPendingOwnerEditUnknown
+	}
+	return DNSPeerPendingOwnerEditUnknown + dnsPeerPendingDetailSeparator + check
+}
+
 // dnsPeerPendingDetailSeparator joins dns_peer_inspection_unknown with one
 // reviewed inspector reason in the durable ledger error_code, for example
 // "dns_peer_inspection_unknown:named_unavailable". Readers that predate it
@@ -78,14 +140,25 @@ func DNSPeerPendingInspectionUnknownWithDetail(reason string) string {
 }
 
 // SplitDNSPeerPendingCode returns the reviewed reason and optional reviewed
-// inspector detail of a pending code. ok is false for anything unreviewed.
+// detail of a pending code: an inspector reason for
+// dns_peer_inspection_unknown, or an owner-edit check for
+// dns_peer_owner_edit_unknown. ok is false for anything unreviewed.
 func SplitDNSPeerPendingCode(code string) (reason, detail string, ok bool) {
 	reason, detail, composite := strings.Cut(code, dnsPeerPendingDetailSeparator)
 	if !composite {
 		return code, "", validDNSPeerPendingReason(code)
 	}
-	if reason != DNSPeerPendingInspectionUnknown || !ValidDNSPeerInspectorReason(detail) ||
-		detail == DNSPeerInspectorReasonCatalogTransferRefused {
+	switch reason {
+	case DNSPeerPendingInspectionUnknown:
+		if !ValidDNSPeerInspectorReason(detail) ||
+			detail == DNSPeerInspectorReasonCatalogTransferRefused {
+			return "", "", false
+		}
+	case DNSPeerPendingOwnerEditUnknown:
+		if !ValidDNSPeerOwnerEditCheck(detail) {
+			return "", "", false
+		}
+	default:
 		return "", "", false
 	}
 	return reason, detail, true
@@ -107,8 +180,9 @@ func validDNSPeerPendingReason(code string) bool {
 	}
 }
 
-// ValidDNSPeerPendingCode accepts a reviewed reason, or the reviewed
-// inspection_unknown composite carrying one reviewed inspector detail.
+// ValidDNSPeerPendingCode accepts a reviewed reason, the reviewed
+// inspection_unknown composite carrying one reviewed inspector detail, or the
+// owner_edit_unknown composite carrying one reviewed check.
 func ValidDNSPeerPendingCode(code string) bool {
 	_, _, ok := SplitDNSPeerPendingCode(code)
 	return ok

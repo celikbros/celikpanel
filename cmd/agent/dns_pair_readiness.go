@@ -21,6 +21,12 @@ type dnsPrimaryCatalogEvidence struct {
 	// transactionally verified authority data. Live local/peer equality alone
 	// is insufficient: both servers may still be serving the same stale zone.
 	MemberSerials []uint32
+	// CatalogHash is the content of the producer's single CATALOG-HASH
+	// metadata row, read only on a native V3 PowerDNS producer (empty when
+	// the row is absent, and always empty for BIND). PowerDNS 4.9 rewrites it
+	// together with the producer serial when it re-stamps the catalog
+	// (classifyProducerCatalogEvidence). It is a digest, not a secret.
+	CatalogHash string
 }
 
 type dnsPeerAXFRAuthority struct {
@@ -450,6 +456,7 @@ func managedPDNSPrimaryCatalogEvidenceForState(
 		LocalIP: identity.LocalIP, PeerIP: identity.PeerIP,
 		Domain: identity.Domain, Serial: identity.Serial,
 		Members: identity.Members, MemberSerials: identity.MemberSerials,
+		CatalogHash: identity.CatalogHash,
 	}, true, nil
 }
 

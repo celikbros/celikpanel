@@ -212,3 +212,45 @@ func TestDNSPeerProofInternalGuidanceIsNotAnOwnerEdit(t *testing.T) {
 		t.Fatalf("owner-edit guidance lost its meaning or action: %s", ownerEdit)
 	}
 }
+
+// dns_peer_owner_edit_unknown carries the check that differed as a reviewed
+// detail: the reason and its "same publication" retry text are unchanged,
+// and every check has its own sentence.
+func TestDNSPeerPendingGuidanceSplitsOwnerEditCheck(t *testing.T) {
+	base := dnsPeerPendingEnglish(transport.DNSPeerPendingOwnerEditUnknown)
+	for _, check := range []string{
+		transport.DNSPeerOwnerEditCheckOperationAttempt, transport.DNSPeerOwnerEditCheckEngineState,
+		transport.DNSPeerOwnerEditCheckActiveEngine, transport.DNSPeerOwnerEditCheckNativeBinding,
+		transport.DNSPeerOwnerEditCheckDeletionReceipt, transport.DNSPeerOwnerEditCheckProducerCatalog,
+		transport.DNSPeerOwnerEditCheckCatalogProbe, transport.DNSPeerOwnerEditCheckAuthority,
+		transport.DNSPeerOwnerEditCheckTransferObserved, transport.DNSPeerOwnerEditCheckZoneAnswered,
+	} {
+		sentence := dnsPeerOwnerEditDetailEnglish(check)
+		code := transport.DNSPeerPendingOwnerEditUnknownWithDetail(check)
+		reason, detail, message, ok := dnsPeerPendingGuidance(code)
+		if !ok || reason != transport.DNSPeerPendingOwnerEditUnknown || detail != check ||
+			!strings.HasPrefix(sentence, "What differed: ") || message != base+" "+sentence ||
+			!strings.Contains(message, "same publication") {
+			t.Fatalf("%s: %q %q %q %t", check, reason, detail, message, ok)
+		}
+		body, ok := dnsPeerPendingAPIError(&dnsZoneV3PropagationPendingError{Code: code, Exact: true})
+		if !ok || body.Reason != transport.DNSPeerPendingOwnerEditUnknown || body.Detail != check || body.Error != message {
+			t.Fatalf("%s: API body %+v", check, body)
+		}
+		if got := dnsZoneV3PendingCodeFromJob(&agentMutationJob{Status: agentMutationPending, ErrorCode: code}); got != code {
+			t.Fatalf("%s: saved job code %q", check, got)
+		}
+	}
+	// An inspector reason never rides on the owner-edit code, nor the reverse.
+	for _, code := range []string{
+		"dns_peer_owner_edit_unknown:named_unavailable",
+		"dns_peer_inspection_unknown:producer_catalog",
+	} {
+		if _, _, _, ok := dnsPeerPendingGuidance(code); ok {
+			t.Fatalf("cross-reason detail accepted: %q", code)
+		}
+	}
+	if sentence := dnsPeerPendingDetailEnglish(transport.DNSPeerPendingNativeUnknown, "producer_catalog"); sentence != "" {
+		t.Fatalf("detail sentence for a reason without details: %q", sentence)
+	}
+}

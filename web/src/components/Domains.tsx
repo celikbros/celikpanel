@@ -7,7 +7,7 @@ import { useI18n } from '../i18n';
 import { Button, EmptyState, SearchInput, Spinner, StatusDot, UsageBar } from './ui';
 import { PageHeader } from './PageHeader';
 import { apiErrorText, readApiError } from '../lib/apiError';
-import { domainDeletionReasonKey, readDomainDeletionOutcome, readSavedDomainDeletionState } from '../lib/domainDeletionPending';
+import { domainDeletionDetailKey, domainDeletionReasonKey, readDomainDeletionOutcome, readSavedDomainDeletionState } from '../lib/domainDeletionPending';
 import type { TranslationKey } from '../i18n/en';
 import { useAuth } from '../auth/AuthContext';
 import {
@@ -131,9 +131,10 @@ export function Domains() {
         const key = domainDeletionReasonKey(reason) as TranslationKey | null;
         const translated = key ? t(key) : '';
         if (!key || translated === key) return t('domains.deletionPending');
-        // What the secondary's inspector reported, as its own sentence after
-        // the reason's guidance. Only reviewed tokens reach this point.
-        const detailKey = detail ? (`domains.peerInspectorDetail.${detail}` as TranslationKey) : null;
+        // What the secondary's inspector reported, or which check of this
+        // server's proof differed, as its own sentence after the reason's
+        // guidance. Only reviewed tokens reach this point.
+        const detailKey = domainDeletionDetailKey(reason, detail) as TranslationKey | null;
         const detailText = detailKey ? t(detailKey) : '';
         return detailKey && detailText !== detailKey ? `${translated} ${detailText}` : translated;
     };

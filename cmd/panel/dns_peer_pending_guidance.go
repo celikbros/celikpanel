@@ -58,15 +58,60 @@ func dnsPeerInspectorDetailEnglish(detail string) string {
 	}
 }
 
+// dnsPeerOwnerEditDetailEnglish names, for dns_peer_owner_edit_unknown, the
+// one check of the Agent's proof that found different evidence. It is shown
+// after the reason's own text and never carries an observed value; the
+// Agent log has the recorded and observed values.
+func dnsPeerOwnerEditDetailEnglish(check string) string {
+	switch check {
+	case transport.DNSPeerOwnerEditCheckOperationAttempt:
+		return "What differed: this server's record of which attempt is running this deletion changed during the check."
+	case transport.DNSPeerOwnerEditCheckEngineState:
+		return "What differed: this server's saved DNS engine state changed during the check."
+	case transport.DNSPeerOwnerEditCheckActiveEngine:
+		return "What differed: which DNS service runs on this server changed during the check; only the panel's DNS server may be running."
+	case transport.DNSPeerOwnerEditCheckNativeBinding:
+		return "What differed: the DNS server process on this server, its database or its configuration files changed during the check (for example the service was restarted or its configuration was edited)."
+	case transport.DNSPeerOwnerEditCheckDeletionReceipt:
+		return "What differed: this server's saved record of this deletion no longer matches the accepted change."
+	case transport.DNSPeerOwnerEditCheckProducerCatalog:
+		return "What differed: this server's catalog zone changed in a way the DNS server does not make by itself (its member zones, their serials or the catalog's identity)."
+	case transport.DNSPeerOwnerEditCheckCatalogProbe:
+		return "What differed: after the secondary's inspection, the catalog zone served by this server or by the secondary no longer matched this server's saved catalog."
+	case transport.DNSPeerOwnerEditCheckAuthority:
+		return "What differed: after the secondary's inspection, the catalog zone answered for a different pair of servers or a different catalog."
+	case transport.DNSPeerOwnerEditCheckTransferObserved:
+		return "What differed: after the secondary's inspection, the secondary did not refuse a transfer of the deleted zone, or that check did not complete."
+	case transport.DNSPeerOwnerEditCheckZoneAnswered:
+		return "What differed: after the secondary's inspection, the secondary's answer for the deleted zone was no longer the plain refusal seen before, or the query did not complete."
+	default:
+		return ""
+	}
+}
+
+// dnsPeerPendingDetailEnglish selects the detail sentence by the reason the
+// detail refines: an inspector reason or an owner-edit check.
+func dnsPeerPendingDetailEnglish(reason, detail string) string {
+	switch reason {
+	case transport.DNSPeerPendingInspectionUnknown:
+		return dnsPeerInspectorDetailEnglish(detail)
+	case transport.DNSPeerPendingOwnerEditUnknown:
+		return dnsPeerOwnerEditDetailEnglish(detail)
+	default:
+		return ""
+	}
+}
+
 // dnsPeerPendingGuidance splits a verified pending code into the reviewed
-// reason, its optional reviewed inspector detail and the English fallback.
+// reason, its optional reviewed detail (inspector reason or owner-edit check)
+// and the English fallback.
 func dnsPeerPendingGuidance(code string) (reason, detail, message string, ok bool) {
 	reason, detail, ok = transport.SplitDNSPeerPendingCode(code)
 	if !ok {
 		return "", "", "", false
 	}
 	message = dnsPeerPendingEnglish(reason)
-	if sentence := dnsPeerInspectorDetailEnglish(detail); sentence != "" {
+	if sentence := dnsPeerPendingDetailEnglish(reason, detail); sentence != "" {
 		message += " " + sentence
 	} else {
 		detail = ""

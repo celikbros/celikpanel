@@ -31,6 +31,9 @@ type managedPDNSCatalog struct {
 	Serial        uint32
 	Members       []string
 	MemberSerials []uint32
+	// CatalogHash: the daemon's CATALOG-HASH row, read on a native V3
+	// producer only (see dnsPrimaryCatalogEvidence.CatalogHash).
+	CatalogHash string
 }
 
 func peerPDNSCatalog(
@@ -1170,7 +1173,7 @@ func readManagedPDNSPrimaryCatalogWithIdentityMode(
 	if account != pdnsBINDCatalogAccount || zoneType != "PRODUCER" {
 		return managedPDNSCatalog{}, false, errors.New("PowerDNS live catalog is not panel owned")
 	}
-	serial, err := verifyPDNSProducerBaseTxMode(
+	serial, hash, err := verifyPDNSProducerBaseWithHashTxMode(
 		ctx, tx, domainID, identity.Domain, identity.LocalIP, nativeV3,
 	)
 	if err != nil {
@@ -1210,6 +1213,7 @@ func readManagedPDNSPrimaryCatalogWithIdentityMode(
 	identity.Serial = serial
 	identity.Members = members
 	identity.MemberSerials = memberSerials
+	identity.CatalogHash = hash
 	return identity, true, nil
 }
 
@@ -1290,22 +1294,36 @@ func verifyPDNSProducerBaseTxMode(
 	domain string,
 	localIP string, nativeV3 bool,
 ) (uint32, error) {
+	serial, _, err := verifyPDNSProducerBaseWithHashTxMode(ctx, tx, domainID, domain, localIP, nativeV3)
+	return serial, err
+}
+
+// verifyPDNSProducerBaseWithHashTxMode also returns, on a native V3
+// producer, the daemon's CATALOG-HASH row content ("" when absent). On any
+// other producer the hash is not read and is always "".
+func verifyPDNSProducerBaseWithHashTxMode(
+	ctx context.Context,
+	tx *sql.Tx,
+	domainID int64,
+	domain string,
+	localIP string, nativeV3 bool,
+) (uint32, string, error) {
 	records, serial, err := readPDNSBINDCatalogRecordsTx(
 		ctx, tx, domainID, domain,
 	)
 	if err != nil {
-		return 0, err
+		return 0, "", err
 	}
 	expected, err := canonicalPDNSCatalogBaseRecords(localIP, serial, nil)
 	if err != nil {
-		return 0, err
+		return 0, "", err
 	}
 	if nativeV3 && reflect.DeepEqual(canonicalPDNSCatalogRecords(records), expected) {
-		return 0, errors.New("v3 PowerDNS producer reverted to staged RDATA")
+		return 0, "", errors.New("v3 PowerDNS producer reverted to staged RDATA")
 	}
 	if !(nativeV3 && equalPDNSCatalogBaseRecordsWithNativeRDATA(records, expected)) &&
 		!reflect.DeepEqual(canonicalPDNSCatalogRecords(records), expected) {
-		return 0, errors.New("PowerDNS producer contains noncanonical base records")
+		return 0, "", errors.New("PowerDNS producer contains noncanonical base records")
 	}
 	for _, table := range []string{"comments", "cryptokeys"} {
 		var count int
@@ -1315,15 +1333,17 @@ func verifyPDNSProducerBaseTxMode(
 			if err == nil {
 				err = errors.New("PowerDNS producer contains unexpected side data")
 			}
-			return 0, err
+			return 0, "", err
 		}
 	}
+	hash := ""
 	if nativeV3 {
-		if err := verifyNativePDNSProducerDaemonStateTx(ctx, tx, domainID); err != nil {
-			return 0, err
+		hash, err = readNativePDNSProducerDaemonStateTx(ctx, tx, domainID)
+		if err != nil {
+			return 0, "", err
 		}
 	}
-	return serial, nil
+	return serial, hash, nil
 }
 
 // verifyNativePDNSProducerDaemonStateTx admits, on a native V3 producer, only
@@ -1334,37 +1354,49 @@ func verifyPDNSProducerBaseTxMode(
 // metadata kind is admitted; such a change was not made by the daemon or by
 // this product and is refused rather than overwritten.
 func verifyNativePDNSProducerDaemonStateTx(ctx context.Context, tx *sql.Tx, domainID int64) error {
+	_, err := readNativePDNSProducerDaemonStateTx(ctx, tx, domainID)
+	return err
+}
+
+// readNativePDNSProducerDaemonStateTx is verifyNativePDNSProducerDaemonStateTx
+// returning the admitted CATALOG-HASH content ("" when the row is absent).
+func readNativePDNSProducerDaemonStateTx(ctx context.Context, tx *sql.Tx, domainID int64) (string, error) {
 	var foreign int
 	if err := tx.QueryRowContext(ctx, `
 		SELECT COUNT(*) FROM domains WHERE id = ? AND
 		 (COALESCE(master, '') <> '' OR last_check IS NOT NULL OR
 		  COALESCE(options, '') <> '' OR COALESCE(catalog, '') <> '')
 	`, domainID).Scan(&foreign); err != nil {
-		return err
+		return "", err
 	}
 	if foreign != 0 {
-		return errors.New("native PowerDNS producer row has fields the daemon does not write")
+		return "", errors.New("native PowerDNS producer row has fields the daemon does not write")
 	}
 	rows, err := tx.QueryContext(ctx, `
 		SELECT kind, COALESCE(content, '') FROM domainmetadata WHERE domain_id = ?
 	`, domainID)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer rows.Close()
 	count := 0
+	hash := ""
 	for rows.Next() {
 		var kind, content string
 		if err := rows.Scan(&kind, &content); err != nil {
-			return err
+			return "", err
 		}
 		count++
 		decoded, decodeErr := base64.StdEncoding.DecodeString(content)
 		if count > 1 || kind != "CATALOG-HASH" || decodeErr != nil || len(decoded) != 32 {
-			return errors.New("native PowerDNS producer metadata is not only the daemon's catalog hash")
+			return "", errors.New("native PowerDNS producer metadata is not only the daemon's catalog hash")
 		}
+		hash = content
 	}
-	return rows.Err()
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
+	return hash, nil
 }
 
 // PowerDNS 4.9 normalizes the built-in catalog SOA RDATA when the

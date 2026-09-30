@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"slices"
+	"reflect"
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
@@ -44,22 +44,23 @@ type dnsV3PrimaryPropagationPlan struct {
 	// RefreshEvidence is set only for a native V3 PowerDNS producer. It
 	// rereads the durable catalog evidence so the completion wave can follow
 	// the one change the daemon makes by itself after a membership change:
-	// a higher producer SOA serial (pdnsDaemonCatalogSerialAdvance).
+	// a higher producer SOA serial with a new CATALOG-HASH
+	// (classifyProducerCatalogEvidence).
 	RefreshEvidence func(context.Context) (dnsPrimaryCatalogEvidence, error)
+	// catalog is the attempt's recorded producer catalog evidence, set by the
+	// completion wave and shared with the native peer proof so that every
+	// comparison in one attempt judges against the same re-stamped record.
+	// It is never part of the plan's identity (sameDNSV3PlanIdentity).
+	catalog *dnsRecordedProducerCatalog
 }
 
-// pdnsDaemonCatalogSerialAdvance reports whether fresh differs from planned
-// only by a higher producer serial. After CelikPanel's own publication
-// raises the producer serial by one, PowerDNS 4.9 recomputes CATALOG-HASH on
-// its next primary check and re-stamps the producer SOA serial (measured as
-// the current epoch time). Identity, member set and member serials must stay
-// exact; any other difference is not the daemon's and keeps the plan.
-func pdnsDaemonCatalogSerialAdvance(planned, fresh dnsPrimaryCatalogEvidence) bool {
-	return fresh.Serial > planned.Serial &&
-		fresh.LocalIP == planned.LocalIP && fresh.PeerIP == planned.PeerIP &&
-		fresh.Domain == planned.Domain &&
-		slices.Equal(fresh.Members, planned.Members) &&
-		slices.Equal(fresh.MemberSerials, planned.MemberSerials)
+// sameDNSV3PlanIdentity compares everything of two plans except the catalog
+// evidence, which is compared only through classifyProducerCatalogEvidence,
+// and the attempt-local reader and record.
+func sameDNSV3PlanIdentity(a, b dnsV3PrimaryPropagationPlan) bool {
+	return reflect.DeepEqual(a.SourceState, b.SourceState) &&
+		reflect.DeepEqual(a.Changed, b.Changed) &&
+		a.Legacy == b.Legacy && a.Operation == b.Operation
 }
 
 func trustedPDNSControl(ctx context.Context, args ...string) error {
@@ -335,11 +336,15 @@ func completeDNSV3PrimaryPropagationWithNativeAt(
 ) error {
 	proofCtx, cancel := context.WithTimeout(ctx, dnsPairProofLimit)
 	defer cancel()
+	// The attempt's recorded producer catalog: every check of this wave and
+	// of its native proof judges against it, and it moves only through an
+	// admitted PowerDNS daemon re-stamp (dnsProducerCatalogRestampLimit).
+	record := recordedProducerCatalogFor(plan)
+	plan.catalog = record
 	// One completion wave may retry ordinary DNS observations while the peer
 	// catches up, but it mints at most one durable native challenge and opens
 	// at most one SSH inspection. A later owner retry is a new ledger attempt.
 	nativeAttempted := false
-	daemonAdvances := 0
 	var nativePending error
 	nativeOnce := native
 	if native != nil {
@@ -352,6 +357,12 @@ func completeDNSV3PrimaryPropagationWithNativeAt(
 			if raw == nil {
 				return nil
 			}
+			if errors.Is(raw, errDNSProducerCatalogRestampedBeforeChallenge) {
+				// No challenge was minted and no inspection opened: the
+				// re-stamped pair is proved again first.
+				nativeAttempted = false
+				return raw
+			}
 			code := pendingDNSPeerCode(raw)
 			if code == "" {
 				code = transport.DNSPeerPendingNativeUnknown
@@ -361,6 +372,7 @@ func completeDNSV3PrimaryPropagationWithNativeAt(
 		}
 	}
 	for {
+		plan.Evidence = record.Evidence()
 		check, err := verifyDNSV3PrimaryPropagationCheckWithNativeAt(
 			proofCtx, plan, soa, localAXFR, peerCatalogAXFR, peerZoneAXFR, nativeOnce,
 		)
@@ -377,16 +389,13 @@ func completeDNSV3PrimaryPropagationWithNativeAt(
 				nativePending,
 			)
 		}
-		// Follow the daemon's own producer serial re-stamp, and nothing else,
-		// before any native inspection binds this wave to a serial.
-		if check == dnsV3ProofCatalogPair && plan.RefreshEvidence != nil && !nativeAttempted &&
-			daemonAdvances < 2 {
-			if fresh, refreshErr := plan.RefreshEvidence(proofCtx); refreshErr == nil &&
-				pdnsDaemonCatalogSerialAdvance(plan.Evidence, fresh) {
-				plan.Evidence = fresh
-				daemonAdvances++
-				continue
-			}
+		// Follow the daemon's own producer re-stamp, and nothing else, at
+		// any point before the native challenge binds a serial.
+		if errors.Is(err, errDNSProducerCatalogRestampedBeforeChallenge) {
+			continue
+		}
+		if check == dnsV3ProofCatalogPair && record.RefreshAndAdmit(proofCtx) {
+			continue
 		}
 		select {
 		case <-proofCtx.Done():
@@ -520,6 +529,9 @@ func verifyDNSV3PrimaryPropagationCheckWithNativeAt(
 			return dnsV3ProofZoneSOA, errors.New("peer native deletion proof is not configured")
 		}
 		if err := native(ctx, authority, plan); err != nil {
+			if errors.Is(err, errDNSProducerCatalogRestampedBeforeChallenge) {
+				return dnsV3ProofCatalogPair, err
+			}
 			code := pendingDNSPeerCode(err)
 			if code == "" {
 				code = transport.DNSPeerPendingNativeUnknown
@@ -539,6 +551,26 @@ func verifyPeerZoneNoTransferAt(
 	// catalog from the same source address. A negative zone AXFR rules out a
 	// transfer on that path, not a loaded zone with a different transfer ACL.
 	// The caller must also prove authoritative negative SOA over UDP and TCP.
+	state, err := observePeerZoneTransferAt(ctx, authority, domain, probe)
+	if err != nil && state == dnsZoneAXFRIndeterminate && errors.Is(err, errDNSPeerZoneTransferAuthority) {
+		return err
+	}
+	if err != nil || state != dnsZoneAXFRNoTransfer {
+		return errors.New("peer DNS zone transfer is still present or unverified; check the peer native zone and transfer policy")
+	}
+	return nil
+}
+
+var errDNSPeerZoneTransferAuthority = errors.New("DNS peer deletion AXFR authority is invalid")
+
+// observePeerZoneTransferAt returns the peer's zone transfer state for the
+// deleted zone over the source-bound path the authority names.
+func observePeerZoneTransferAt(
+	ctx context.Context,
+	authority dnsPeerAXFRAuthority,
+	domain string,
+	probe dnsBoundZoneAXFRProbe,
+) (dnsZoneAXFRState, error) {
 	if probe == nil || authority.catalogSerial == 0 ||
 		!canonicalPairReadinessIPv4(authority.sourceIP) ||
 		!canonicalPairReadinessIPv4(authority.peerIP) ||
@@ -546,15 +578,9 @@ func verifyPeerZoneNoTransferAt(
 		!serviceMutationCanonicalFQDN(authority.catalog) ||
 		!serviceMutationCanonicalFQDN(domain) ||
 		domain == authority.catalog {
-		return errors.New("DNS peer deletion AXFR authority is invalid")
+		return dnsZoneAXFRIndeterminate, errDNSPeerZoneTransferAuthority
 	}
-	state, err := probe(
-		ctx, authority.sourceIP, authority.peerIP, domain,
-	)
-	if err != nil || state != dnsZoneAXFRNoTransfer {
-		return errors.New("peer DNS zone transfer is still present or unverified; check the peer native zone and transfer policy")
-	}
-	return nil
+	return probe(ctx, authority.sourceIP, authority.peerIP, domain)
 }
 
 func verifyDeletedDNSZoneAt(

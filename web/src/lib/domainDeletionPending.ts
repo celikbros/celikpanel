@@ -31,6 +31,40 @@ const reviewedInspectorDetails = new Set([
     'config_unreviewed',
 ]);
 
+// Which check of this server's proof found different evidence when the
+// deletion stays pending as dns_peer_owner_edit_unknown. Only these tokens are
+// shown, each through its own translated sentence; no observed value is sent.
+const reviewedOwnerEditChecks = new Set([
+    'operation_attempt',
+    'engine_state',
+    'active_engine',
+    'native_binding',
+    'deletion_receipt',
+    'producer_catalog',
+    'catalog_probe',
+    'authority',
+    'transfer_observed',
+    'zone_answered',
+]);
+
+// The reviewed detail tokens of each reason that carries one.
+const reviewedDetailsByReason: Record<string, Set<string>> = {
+    dns_peer_inspection_unknown: reviewedInspectorDetails,
+    dns_peer_owner_edit_unknown: reviewedOwnerEditChecks,
+};
+
+// The translation key of a reviewed detail sentence, or null.
+export function domainDeletionDetailKey(reason: string, detail: string): string | null {
+    if (!detail) return null;
+    if (reason === 'dns_peer_inspection_unknown' && reviewedInspectorDetails.has(detail)) {
+        return `domains.peerInspectorDetail.${detail}`;
+    }
+    if (reason === 'dns_peer_owner_edit_unknown' && reviewedOwnerEditChecks.has(detail)) {
+        return `domains.peerOwnerEditDetail.${detail}`;
+    }
+    return null;
+}
+
 // A verified failure of a non-DNS deletion stage on this server, by stage.
 // The deletion stays pending and the same retry action repeats it.
 const reviewedStageFailures: Record<string, string> = {
@@ -52,8 +86,10 @@ export function domainDeletionReasonKey(reason: string): string | null {
 }
 
 function reviewedDetail(pending: Record<string, unknown>, reason: string): string {
-    return reason === 'dns_peer_inspection_unknown' &&
-        typeof pending.detail === 'string' && reviewedInspectorDetails.has(pending.detail)
+    const allowed = Object.prototype.hasOwnProperty.call(reviewedDetailsByReason, reason)
+        ? reviewedDetailsByReason[reason]
+        : undefined;
+    return allowed !== undefined && typeof pending.detail === 'string' && allowed.has(pending.detail)
         ? pending.detail
         : '';
 }

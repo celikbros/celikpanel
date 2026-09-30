@@ -121,7 +121,7 @@ func TestNativePeerLocalRecheckRefusesPlanWithoutSourceEngineAsInternal(t *testi
 			SourceState: dnsEngineStateReceipt{Engine: engine},
 			Changed:     expectedDNSZoneAuthority{Domain: "gone.example.test", Delete: true},
 		}
-		err := recheckNativePeerLocalEvidence(context.Background(), plan)
+		err := recheckNativePeerLocalEvidence(context.Background(), plan, nil)
 		var internal *dnsPeerProofInternalError
 		if !errors.As(err, &internal) {
 			t.Fatalf("engine %q: %v", engine, err)
@@ -151,7 +151,7 @@ func TestNativePowerDNSProofRejectsUntrackedAndWrongSource(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			changed := plan
 			edit(&changed)
-			if err := recheckPDNSPeerLocalEvidence(context.Background(), changed); err == nil {
+			if err := recheckPDNSPeerLocalEvidence(context.Background(), changed, recordedProducerCatalogFor(changed)); err == nil {
 				t.Fatal("unbound PowerDNS source accepted before native inspection")
 			}
 		})

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { readDomainDeletionPending, readDomainDeletionOutcome, readSavedDomainDeletionStatus, readSavedDomainDeletionState } from '../src/lib/domainDeletionPending.ts';
+import { domainDeletionDetailKey, readDomainDeletionPending, readDomainDeletionOutcome, readSavedDomainDeletionStatus, readSavedDomainDeletionState } from '../src/lib/domainDeletionPending.ts';
 import { en } from '../src/i18n/en.ts';
 import { tr } from '../src/i18n/tr.ts';
 import { enScreens } from '../src/i18n/screens/en.ts';
@@ -211,4 +211,41 @@ test('owner-edit guidance keeps its meaning and names the serial comparison', ()
   assert.match(tr_, /seri numaralarını karşılaştırıp/);
   assert.ok(en_.includes(`“${enScreens['domains.retryDeletion']}”`));
   assert.ok(tr_.includes(`“${trScreens['domains.retryDeletion']}”`));
+});
+
+test('owner-edit pending names the check that differed through its own sentence', async () => {
+  const checks = ['operation_attempt', 'engine_state', 'active_engine', 'native_binding', 'deletion_receipt',
+    'producer_catalog', 'catalog_probe', 'authority', 'transfer_observed', 'zone_answered'];
+  const reason = 'dns_peer_owner_edit_unknown';
+  for (const detail of checks) {
+    assert.deepEqual(await readDomainDeletionOutcome(response(202, {
+      status: 'deletion_pending', stage: 'dns_cleanup', reason, detail,
+    })), { state: 'pending', reason, detail });
+    assert.deepEqual(await readSavedDomainDeletionState(response(200, {
+      status: 'deletion_pending', stage: 'dns_cleanup', reason, detail,
+    })), { reason, detail });
+    const key = domainDeletionDetailKey(reason, detail);
+    assert.equal(key, `domains.peerOwnerEditDetail.${detail}`);
+    assert.match(enScreens[key], /^What differed: /);
+    assert.match(trScreens[key], /^Farklı olan: /);
+    assert.doesNotMatch(trScreens[key], /\?/);
+    assert.doesNotMatch(enScreens[key] + trScreens[key], /secret|password|parola|\d{6,}/i);
+  }
+  // A token is accepted only under the reason it refines.
+  for (const [r, detail] of [
+    ['dns_peer_owner_edit_unknown', 'named_unavailable'],
+    ['dns_peer_owner_edit_unknown', 'serial 1790745288'],
+    ['dns_peer_inspection_unknown', 'producer_catalog'],
+    ['dns_peer_native_unknown', 'producer_catalog'],
+  ]) {
+    assert.deepEqual(await readDomainDeletionOutcome(response(202, {
+      status: 'deletion_pending', stage: 'dns_cleanup', reason: r, detail,
+    })), { state: 'pending', reason: r });
+    assert.equal(domainDeletionDetailKey(r, detail), null);
+  }
+  assert.equal(domainDeletionDetailKey('dns_peer_inspection_unknown', 'named_unavailable'),
+    'domains.peerInspectorDetail.named_unavailable');
+  // The reason text and its retry of the same publication are unchanged.
+  assert.match(en['err.DNS_PUBLICATION_FAILED.dns_peer_owner_edit_unknown'], /same publication/);
+  assert.match(tr['err.DNS_PUBLICATION_FAILED.dns_peer_owner_edit_unknown'], /aynı yayını/);
 });

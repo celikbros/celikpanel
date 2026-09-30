@@ -125,6 +125,8 @@ func verifyEnrolledPDNSPeerDeletion(ctx context.Context, authority dnsPeerAXFRAu
 	if err != nil {
 		return err
 	}
+	// The attempt's recorded producer catalog (shared with the wave).
+	record := recordedProducerCatalogFor(plan)
 	enrollment, err := pdnspeerenrollment.Read()
 	if err != nil {
 		if pdnspeerenrollment.IsCode(err, pdnspeerenrollment.Disabled) {
@@ -156,7 +158,7 @@ func verifyEnrolledPDNSPeerDeletion(ctx context.Context, authority dnsPeerAXFRAu
 				}
 				return nil
 			},
-			func() error { return recheckNativePeerLocalEvidence(ctx, plan) },
+			func() error { return recheckNativePeerLocalEvidence(ctx, plan, record) },
 		)
 	}
 	if err := verifyCurrent(); err != nil {
@@ -175,6 +177,11 @@ func verifyEnrolledPDNSPeerDeletion(ctx context.Context, authority dnsPeerAXFRAu
 	} else if !pdnspeerjournal.IsCode(err, pdnspeerjournal.Missing) {
 		return pendingBINDPeer(transport.DNSPeerPendingJournalUnknown)
 	}
+	// See verifyEnrolledBINDPeerDeletion: a re-stamp admitted since the wave
+	// proved the pair is proved again before any challenge exists.
+	if plan, err = nativePeerChallengePlan(plan, record, authority); err != nil {
+		return err
+	}
 	request, err := mintPDNSPeerDeletionRequest(plan, authority, enrollment.Record.HostKeySHA256, next, time.Now())
 	if err != nil {
 		return err
@@ -192,18 +199,12 @@ func verifyEnrolledPDNSPeerDeletion(ctx context.Context, authority dnsPeerAXFRAu
 	if err := verifyCurrent(); err != nil {
 		return err
 	}
-	fresh, err := verifyDNSPrimaryPairReadyAuthorityAt(ctx, plan.Evidence,
-		probeDNSZoneSOA, localCatalogProbe, peerCatalogProbe)
-	if err != nil || fresh != authority {
-		return pendingBINDPeer(transport.DNSPeerPendingOwnerEditUnknown)
-	}
-	if verifyPeerZoneNoTransferAt(ctx, fresh, plan.Changed.Domain, probeDNSBoundZoneAXFR) != nil {
-		return pendingBINDPeer(transport.DNSPeerPendingOwnerEditUnknown)
-	}
-	observation, err := observeDeletedDNSZoneAt(ctx, fresh.sourceIP, fresh.peerIP,
-		plan.Changed.Domain, probeDNSZoneSOA)
-	if err != nil || observation != dnsDeletedZoneEmptyRefused {
-		return pendingBINDPeer(transport.DNSPeerPendingOwnerEditUnknown)
+	if err := verifyNativePeerAfterInspectionAt(ctx, record, authority, plan.Changed.Domain,
+		nativePeerAfterInspectionProbes{
+			soa: probeDNSZoneSOA, localCatalog: localCatalogProbe,
+			peerCatalog: peerCatalogProbe, peerZone: probeDNSBoundZoneAXFR,
+		}, verifyCurrent); err != nil {
+		return err
 	}
 	if err := verifyCurrent(); err != nil {
 		return err

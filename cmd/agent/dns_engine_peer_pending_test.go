@@ -16,7 +16,8 @@ func TestPeerCurrentPendingCodeKeepsFirstFailedBoundary(t *testing.T) {
 		want  string
 		calls string
 	}{
-		{"current attempt changed", "attempt", transport.DNSPeerPendingOwnerEditUnknown, "attempt"},
+		{"current attempt changed", "attempt",
+			transport.DNSPeerPendingOwnerEditUnknownWithDetail(transport.DNSPeerOwnerEditCheckOperationAttempt), "attempt"},
 		{"enrollment changed", "enrollment", transport.DNSPeerPendingEnrollmentChanged, "attempt,enrollment"},
 		{"native DNS changed", "local", transport.DNSPeerPendingOwnerEditUnknown, "attempt,enrollment,local"},
 		{"all current", "", "", "attempt,enrollment,local"},
