@@ -1,0 +1,33 @@
+2026-09-30T04:30:52.643295+00:00 dns-arch systemd[1]: Starting CelikPanel privileged agent...
+2026-09-30T04:30:52.666995+00:00 dns-arch systemd[1]: Started CelikPanel privileged agent.
+2026-09-30T04:30:52.685805+00:00 dns-arch agent[7109]: 2026/09/30 04:30:52 Starting CelikPanel Agent...
+2026-09-30T04:30:52.690697+00:00 dns-arch agent[7109]: 2026/09/30 04:30:52 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-30T04:30:52.690770+00:00 dns-arch agent[7109]: 2026/09/30 04:30:52 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-09-30T04:30:57.240424+00:00 dns-arch systemd[1]: Stopping CelikPanel privileged agent...
+2026-09-30T04:30:57.253164+00:00 dns-arch systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-30T04:30:57.253631+00:00 dns-arch systemd[1]: Stopped CelikPanel privileged agent.
+-- Boot dfd1ca030b4b405bb879653c7f6fc727 --
+2026-09-30T04:31:13.102465+00:00 dns-arch systemd[1]: Starting CelikPanel privileged agent...
+2026-09-30T04:31:13.139327+00:00 dns-arch systemd[1]: Started CelikPanel privileged agent.
+2026-09-30T04:31:13.204643+00:00 dns-arch agent[409]: 2026/09/30 04:31:13 Starting CelikPanel Agent...
+2026-09-30T04:31:13.214277+00:00 dns-arch agent[409]: 2026/09/30 04:31:13 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-30T04:32:46.963256+00:00 dns-arch agent[409]: 2026/09/30 04:32:46 DNS engine change 857e1b06395f7e2803f9fe3445f346d5: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format
+2026-09-30T04:32:50.531918+00:00 dns-arch agent[409]: 2026/09/30 04:32:50 DNS switch (request 857e1b06395f7e2803f9fe3445f346d5): BIND rndc key /etc/rndc.key is product_created
+2026-09-30T04:32:55.291336+00:00 dns-arch agent[409]: 2026/09/30 04:32:55 DNS engine change completion 857e1b06395f7e2803f9fe3445f346d5: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format
+2026-09-30T04:32:55.779897+00:00 dns-arch agent[409]: 2026/09/30 04:32:55 DNS readiness check: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format
+2026-09-30T04:33:00.214492+00:00 dns-arch agent[409]: 2026/09/30 04:33:00 DNS readiness check: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format
+2026-09-30T04:33:15.015334+00:00 dns-arch agent[409]: 2026/09/30 04:33:15 DNS readiness check: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format
+2026-09-30T04:33:55.755641+00:00 dns-arch agent[409]: 2026/09/30 04:33:55 DNS readiness check: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format
+2026-09-30T04:34:04.696545+00:00 dns-arch agent[409]: 2026/09/30 04:34:04 DNS readiness check: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format
+2026-09-30T04:34:07.100208+00:00 dns-arch agent[409]: 2026/09/30 04:34:07 DNS readiness check: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format
+2026-09-30T04:34:09.049185+00:00 dns-arch systemd[1]: Stopping CelikPanel privileged agent...
+2026-09-30T04:34:09.051214+00:00 dns-arch systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-30T04:34:09.051475+00:00 dns-arch systemd[1]: Stopped CelikPanel privileged agent.
+2026-09-30T04:34:09.051744+00:00 dns-arch systemd[1]: celikpanel-agent.service: Consumed 7.415s CPU time over 2min 55.948s wall clock time, 209.7M memory peak.
+-- Boot ee26de7f16114280992f637380268c6a --
+2026-09-30T04:35:25.435364+00:00 dns-arch systemd[1]: Starting CelikPanel privileged agent...
+2026-09-30T04:35:25.459580+00:00 dns-arch systemd[1]: Started CelikPanel privileged agent.
+2026-09-30T04:35:25.529778+00:00 dns-arch agent[726]: 2026/09/30 04:35:25 Starting CelikPanel Agent...
+2026-09-30T04:35:25.537055+00:00 dns-arch agent[726]: 2026/09/30 04:35:25 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-30T04:35:28.485623+00:00 dns-arch agent[726]: 2026/09/30 04:35:28 DNS readiness check: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format
+2026-09-30T04:35:30.461497+00:00 dns-arch agent[726]: 2026/09/30 04:35:30 DNS readiness check: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format

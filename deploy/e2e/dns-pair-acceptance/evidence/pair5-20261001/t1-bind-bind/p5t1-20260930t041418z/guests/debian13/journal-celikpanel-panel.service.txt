@@ -1,0 +1,40 @@
+2026-09-30T04:14:41.720464+00:00 dns-debian13 systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-09-30T04:14:41.758408+00:00 dns-debian13 systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-09-30T04:14:41.974998+00:00 dns-debian13 panel[3644]: 2026/09/30 04:14:41 Starting CelikPanel Backend...
+2026-09-30T04:14:41.984904+00:00 dns-debian13 panel[3644]: 2026/09/30 04:14:41 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-09-30T04:14:41.985587+00:00 dns-debian13 panel[3644]: 2026/09/30 04:14:41 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-09-30T04:14:41.986661+00:00 dns-debian13 panel[3644]: 2026/09/30 04:14:41 Connected to Agent RPC; preparing normal management access
+2026-09-30T04:14:42.015401+00:00 dns-debian13 panel[3644]: 2026/09/30 04:14:42 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-debian13": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-09-30T04:14:42.017162+00:00 dns-debian13 panel[3644]: 2026/09/30 04:14:42 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-09-30T04:14:42.018524+00:00 dns-debian13 panel[3644]: 2026/09/30 04:14:42 Panel ready on :2083 (HTTPS)
+2026-09-30T04:14:42.780162+00:00 dns-debian13 systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-09-30T04:14:42.793222+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-09-30T04:14:42.793500+00:00 dns-debian13 systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-09-30T04:14:42.793720+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Consumed 396ms CPU time, 76.1M memory peak.
+2026-09-30T04:14:42.891206+00:00 dns-debian13 systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-09-30T04:14:42.936451+00:00 dns-debian13 systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-09-30T04:14:43.156700+00:00 dns-debian13 panel[3709]: 2026/09/30 04:14:43 Starting CelikPanel Backend...
+2026-09-30T04:14:43.162963+00:00 dns-debian13 panel[3709]: 2026/09/30 04:14:43 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-09-30T04:14:43.163590+00:00 dns-debian13 panel[3709]: 2026/09/30 04:14:43 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-09-30T04:14:43.164336+00:00 dns-debian13 panel[3709]: 2026/09/30 04:14:43 Connected to Agent RPC; preparing normal management access
+2026-09-30T04:14:43.176111+00:00 dns-debian13 panel[3709]: 2026/09/30 04:14:43 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-debian13": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-09-30T04:14:43.178403+00:00 dns-debian13 panel[3709]: 2026/09/30 04:14:43 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-09-30T04:14:43.179646+00:00 dns-debian13 panel[3709]: 2026/09/30 04:14:43 Panel ready on :2083 (HTTPS)
+2026-09-30T04:17:05.515165+00:00 dns-debian13 panel[3709]: 2026/09/30 04:17:05 http: TLS handshake error from 127.0.0.1:52938: EOF
+2026-09-30T04:17:06.217203+00:00 dns-debian13 panel[3709]: 2026/09/30 04:17:06 http: TLS handshake error from 127.0.0.1:52970: EOF
+2026-09-30T04:17:06.857024+00:00 dns-debian13 panel[3709]: 2026/09/30 04:17:06 http: TLS handshake error from 127.0.0.1:53022: EOF
+2026-09-30T04:17:08.769254+00:00 dns-debian13 panel[3709]: 2026/09/30 04:17:08 http: TLS handshake error from 127.0.0.1:53056: EOF
+2026-09-30T04:17:38.578172+00:00 dns-debian13 panel[3709]: 2026/09/30 04:17:38 http: TLS handshake error from 127.0.0.1:36152: EOF
+2026-09-30T04:17:46.718267+00:00 dns-debian13 panel[3709]: 2026/09/30 04:17:46 http: TLS handshake error from 127.0.0.1:48628: EOF
+2026-09-30T04:17:53.858804+00:00 dns-debian13 panel[3709]: 2026/09/30 04:17:53 http: TLS handshake error from 127.0.0.1:41986: EOF
+2026-09-30T04:17:56.025241+00:00 dns-debian13 panel[3709]: 2026/09/30 04:17:56 http: TLS handshake error from 127.0.0.1:42016: EOF
+2026-09-30T04:18:01.601480+00:00 dns-debian13 panel[3709]: 2026/09/30 04:18:01 http: TLS handshake error from 127.0.0.1:42042: EOF
+2026-09-30T04:18:11.307955+00:00 dns-debian13 panel[3709]: 2026/09/30 04:18:11 http: TLS handshake error from 127.0.0.1:52806: EOF
+2026-09-30T04:18:12.426132+00:00 dns-debian13 panel[3709]: 2026/09/30 04:18:12 domain deletion for pair-accept.test: mail runtime cleanup skipped: no mail runtime for this domain on this server
+2026-09-30T04:18:16.964903+00:00 dns-debian13 panel[3709]: 2026/09/30 04:18:16 domain deletion pending for pair-accept.test at dns_cleanup: publish DNS zone deletion: DNS zone V3 paired propagation recovery is deferred: DNS zone publication is waiting for exact paired propagation recovery
+2026-09-30T04:18:16.964903+00:00 dns-debian13 panel[3709]: DNS zone publication is waiting for exact paired propagation recovery
+2026-09-30T04:18:16.964903+00:00 dns-debian13 panel[3709]: DNS zone publication is waiting for exact paired propagation recovery
+2026-09-30T04:18:20.489095+00:00 dns-debian13 panel[3709]: 2026/09/30 04:18:20 http: TLS handshake error from 127.0.0.1:54196: EOF
+2026-09-30T04:18:21.417973+00:00 dns-debian13 panel[3709]: 2026/09/30 04:18:21 domain deletion for pair-accept.test: mail runtime cleanup skipped: no mail runtime for this domain on this server
+2026-09-30T04:18:30.540054+00:00 dns-debian13 panel[3709]: 2026/09/30 04:18:30 domain deletion pending for pair-accept.test at dns_cleanup: publish DNS zone deletion: DNS zone V3 paired propagation recovery is deferred: DNS zone publication is waiting for exact paired propagation recovery
+2026-09-30T04:18:30.540054+00:00 dns-debian13 panel[3709]: DNS zone publication is waiting for exact paired propagation recovery

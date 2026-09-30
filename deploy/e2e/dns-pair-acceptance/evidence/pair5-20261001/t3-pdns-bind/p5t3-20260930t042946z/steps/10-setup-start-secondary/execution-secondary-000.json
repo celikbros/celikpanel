@@ -1,0 +1,72 @@
+{
+  "context": {
+    "access_dns_ip": "192.0.2.11",
+    "dns_engine": "bind",
+    "dns_hosting_management": "",
+    "dns_mode": "local",
+    "dns_role": "secondary",
+    "local_ip": "192.0.2.11",
+    "local_nameserver": "ns2.ns-accept.test",
+    "mail_hostname": "",
+    "panel_domain": "panel-arch.ns-accept.test",
+    "peer_ip": "192.0.2.10",
+    "peer_nameserver": "ns1.ns-accept.test"
+  },
+  "id": "29e98ea7192175b5bd569e18531d7309",
+  "panel_url": "https://panel-arch.ns-accept.test:2083/",
+  "phase": "01-dns",
+  "plan_id": "5e76259cec3c927ae2ba37c4e26d18e6",
+  "request_id": "29e98ea7192175b5bd569e18531d7309",
+  "status": "running",
+  "steps": [
+    {
+      "id": "01-dns",
+      "kind": "dns",
+      "owner_id": "d78b824fc9936863a85245c5657560fc",
+      "request_id": "857e1b06395f7e2803f9fe3445f346d5",
+      "status": "running",
+      "target": "local"
+    },
+    {
+      "id": "02-service",
+      "kind": "service",
+      "owner_id": "a724dbda1fb0b80370b5ff42746155a7",
+      "request_id": "f14fcb338f7a65bd4781a80d3d856b27",
+      "status": "pending",
+      "target": "certbot"
+    },
+    {
+      "id": "03-firewall",
+      "kind": "firewall",
+      "owner_id": "ce62905019807245f1b36bbc4cd44bf0",
+      "request_id": "c1f081553e0ccd651dc9e42a86b8e485",
+      "status": "pending",
+      "target": "enable_and_persist"
+    },
+    {
+      "id": "04-access_dns",
+      "kind": "access_dns",
+      "owner_id": "67888838285476bbfc9392ca2ba0d8c6",
+      "qualifier": "192.0.2.11",
+      "request_id": "183ef829e68dd1999a0c8d929dfa87b4",
+      "status": "pending",
+      "target": "panel-arch.ns-accept.test"
+    },
+    {
+      "id": "05-panel_certificate",
+      "kind": "panel_certificate",
+      "owner_id": "6cc8cdd4126874e6a95e2216b2930ff5",
+      "request_id": "220eb35b37a06d2ffa6c0d585e2b3875",
+      "status": "pending",
+      "target": "panel-arch.ns-accept.test"
+    },
+    {
+      "id": "06-verify",
+      "kind": "verify",
+      "owner_id": "9a6043751dec2d69ad95ca718991ca43",
+      "request_id": "88311d506d2b00f185866a0e2cc9df95",
+      "status": "pending",
+      "target": "dns"
+    }
+  ]
+}

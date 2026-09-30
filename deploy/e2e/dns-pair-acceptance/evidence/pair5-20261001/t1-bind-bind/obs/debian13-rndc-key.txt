@@ -1,0 +1,36 @@
+## collected 2026-09-30T04:24:16Z on dns-debian13 (Debian GNU/Linux 13 (trixie))
+## key files: metadata only (ls -l; stat owner/group/mode/size/birth/modify). Content NOT read.
+ls: cannot access '/etc/rndc.key': No such file or directory
+ls: cannot access '/etc/rndc.conf': No such file or directory
+-rw-r----- 1 bind bind 100 2026-09-30 04:17:12.728330797 +0000 /etc/bind/rndc.key
+ls: cannot access '/etc/bind/rndc.conf': No such file or directory
+/etc/bind/rndc.key owner=bind:bind mode=640 size=100 birth=2026-09-30 04:17:12.728330797 +0000 modify=2026-09-30 04:17:12.728330797 +0000 change=2026-09-30 04:17:12.740330717 +0000
+## owning package of the key path
+dpkg-query: no path found matching pattern /etc/bind/rndc.key
+bind9	1:9.20.29-1~deb13u1
+## companion record(s) dns-engine-bind-rndc-key.json (path, provenance, hash only)
+### /var/lib/celikpanel-agent-private/dns-engine-bind-rndc-key.json
+-rw------- 1 root celikpanel 371 2026-09-30 04:17:15.500312540 +0000 /var/lib/celikpanel-agent-private/dns-engine-bind-rndc-key.json
+{"schema":"celikpanel-dns-engine-bind-rndc-key/v1","path":"/etc/bind/rndc.key","provenance":"owner_or_package_provided","basis":"key_present","manifest_qualifier":"dns-engine-switch/v1:sha256:d12877277569dfa61e998aed604f1b1b1dbf8ab7291aedda9401630a64608693","mutation_request_id":"3f47eaa90ebff7f47b30621b498a5703","mutation_owner_id":"43e51b0eed59d91f2ecc85449c9f4471"}
+
+## install-ownership files next to it (names only)
+## named first start in this journal (all boots) and command channel lines
+unit: named.service
+2026-09-30T04:17:19+00:00 dns-debian13 named[5618]: starting BIND 9.20.29-1~deb13u1-Debian (Stable Release) <id:>
+2026-09-30T04:17:19+00:00 dns-debian13 named[5618]: configuring command channel from '/etc/bind/rndc.key'
+2026-09-30T04:17:19+00:00 dns-debian13 named[5618]: command channel listening on 127.0.0.1#953
+2026-09-30T04:17:19+00:00 dns-debian13 named[5618]: configuring command channel from '/etc/bind/rndc.key'
+2026-09-30T04:17:19+00:00 dns-debian13 named[5618]: command channel listening on ::1#953
+2026-09-30T04:17:19+00:00 dns-debian13 systemd[1]: Started named.service - BIND Domain Name Server.
+2026-09-30T04:17:49+00:00 dns-debian13 named[5618]: configuring command channel from '/etc/bind/rndc.key'
+2026-09-30T04:17:49+00:00 dns-debian13 named[5618]: configuring command channel from '/etc/bind/rndc.key'
+2026-09-30T04:17:49+00:00 dns-debian13 rndc[7162]: server reload successful
+2026-09-30T04:17:58+00:00 dns-debian13 named[5618]: configuring command channel from '/etc/bind/rndc.key'
+2026-09-30T04:17:58+00:00 dns-debian13 named[5618]: configuring command channel from '/etc/bind/rndc.key'
+2026-09-30T04:17:58+00:00 dns-debian13 rndc[7818]: server reload successful
+## rndc status (first two lines; uses the key, does not print it)
+version: BIND 9.20.29-1~deb13u1-Debian (Stable Release) <id:>
+running on dns-debian13: Linux x86_64 6.12.105+deb13-cloud-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.12.105-1 (2026-08-24) (Debian GNU/Linux 13 (trixie))
+## Agent journal lines naming rndc (all boots)
+2026-09-30T04:17:15+00:00 dns-debian13 agent[3519]: 2026/09/30 04:17:15 DNS switch (request 3f47eaa90ebff7f47b30621b498a5703): BIND rndc key /etc/bind/rndc.key is owner_or_package_provided (key_present)
+(end)

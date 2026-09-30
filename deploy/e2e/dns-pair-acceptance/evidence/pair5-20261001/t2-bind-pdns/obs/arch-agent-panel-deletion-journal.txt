@@ -1,0 +1,26 @@
+## 2026-09-30T04:47:28Z role=primary Agent journal lines naming peer/inspect/pending/deletion/generation (all boots; secret lines dropped)
+2026-09-30T04:38:34+00:00 dns-arch agent[7036]: 2026/09/30 04:38:34 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-09-30T04:40:45+00:00 dns-arch agent[410]: 2026/09/30 04:40:45 bind primary pair readiness proof failed: DNS peer catalog AXFR is unavailable
+2026-09-30T04:41:35+00:00 dns-arch agent[410]: 2026/09/30 04:41:35 bind zone publication remains pending for pair-accept.test at epoch 1: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T04:41:35+00:00 dns-arch agent[410]: dns_peer_enrollment_required
+2026-09-30T04:41:37+00:00 dns-arch agent[410]: 2026/09/30 04:41:37 DNS zone V3 recovery remains pending for pair-accept.test: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T04:41:37+00:00 dns-arch agent[410]: dns_peer_enrollment_required
+2026-09-30T04:41:53+00:00 dns-arch agent[410]: 2026/09/30 04:41:53 DNS zone V3 recovery remains pending for pair-accept.test: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T04:41:53+00:00 dns-arch agent[410]: dns_peer_owner_edit_unknown
+## Panel journal lines naming deletion/mail (all boots)
+2026-09-30T04:38:35+00:00 dns-arch panel[7175]: 2026/09/30 04:38:35 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-arch": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-09-30T04:38:35+00:00 dns-arch panel[7175]: 2026/09/30 04:38:35 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-09-30T04:38:36+00:00 dns-arch panel[7240]: 2026/09/30 04:38:36 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-arch": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-09-30T04:38:36+00:00 dns-arch panel[7240]: 2026/09/30 04:38:36 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-09-30T04:38:55+00:00 dns-arch panel[421]: 2026/09/30 04:38:55 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: agent RPC platform identity is unavailable: Agent.SyncMailTLSV2: read HostPlatform: detect host platform: systemd is not ready: systemd state "starting" exited with status 1; preserve pending outbox: <nil>
+2026-09-30T04:38:55+00:00 dns-arch panel[421]: 2026/09/30 04:38:55 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-09-30T04:41:32+00:00 dns-arch panel[421]: 2026/09/30 04:41:32 domain deletion for pair-accept.test: mail runtime cleanup skipped: no mail runtime for this domain on this server
+2026-09-30T04:41:37+00:00 dns-arch panel[421]: 2026/09/30 04:41:37 domain deletion pending for pair-accept.test at dns_cleanup: publish DNS zone deletion: DNS zone V3 paired propagation recovery is deferred: DNS zone publication is waiting for exact paired propagation recovery
+2026-09-30T04:41:41+00:00 dns-arch panel[421]: 2026/09/30 04:41:41 domain deletion for pair-accept.test: mail runtime cleanup skipped: no mail runtime for this domain on this server
+2026-09-30T04:41:53+00:00 dns-arch panel[421]: 2026/09/30 04:41:53 domain deletion pending for pair-accept.test at dns_cleanup: publish DNS zone deletion: DNS zone V3 paired propagation recovery is deferred: DNS zone publication is waiting for exact paired propagation recovery
+## PowerDNS peer challenge journal (agent-private), named fields only
+/var/lib/celikpanel-agent-private/pdns-peer-challenge-v1.json root:root 600 2026-09-30 04:41:48.181193223 +0000
+{"ledger_attempt": 3, "request": {"attempt": 1, "catalog_name": "catalog-c000020b.celikpanel.invalid", "catalog_serial": 3, "deleted_zone": "pair-accept.test", "peer_ip": "192.0.2.10", "primary_ip": "192.0.2.11", "view": "_default"}, "schema": "celikpanel-pdns-peer-challenge-journal/v1", "state": "outstanding"}
+## BIND peer challenge journal(s) (agent-private), named fields only
+/var/lib/celikpanel-agent-private/pdns-peer-challenge-v1.json root:root 600 2026-09-30 04:41:48.181193223 +0000
+(end)

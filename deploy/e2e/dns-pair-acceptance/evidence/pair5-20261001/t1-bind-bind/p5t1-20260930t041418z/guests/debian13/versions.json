@@ -1,0 +1,23 @@
+{
+  "binaries": {
+    "/opt/celikpanel/bin/agent": "36fdd64df2ff4c8dc4d67211b3d6c479728dcef234fc05e0502b929d3cbb8a73",
+    "/opt/celikpanel/bin/panel": "ca16117b5060353d00d960b8fb5cdf78f35f7ef5838b53a302f109a06338067f"
+  },
+  "command": "versions",
+  "daemons": {
+    "named": "BIND 9.20.29-1~deb13u1-Debian (Stable Release) <id:>"
+  },
+  "kernel": "6.12.105+deb13-cloud-amd64",
+  "os_release": {
+    "ID": "debian",
+    "PRETTY_NAME": "Debian GNU/Linux 13 (trixie)",
+    "VERSION_ID": "13"
+  },
+  "packages": {
+    "bind9": "ii  1:9.20.29-1~deb13u1",
+    "bind9-libs": "ii  1:9.20.29-1~deb13u1",
+    "pdns-backend-sqlite3": null,
+    "pdns-server": null
+  },
+  "returncode": 0
+}

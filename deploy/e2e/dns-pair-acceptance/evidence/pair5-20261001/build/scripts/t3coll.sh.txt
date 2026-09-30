@@ -1,0 +1,21 @@
+#!/bin/bash
+W=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/pair5
+C=pair-accept__pdns-debian13__bind-arch__p5t3
+L=p5t3
+H=$(printf %s "$C" | sha256sum | cut -c1-24)
+KH=/var/tmp/cp-pair5-work/cells/$H/ssh-known-hosts
+O=/root/cp-pair5/obs/$L; mkdir -p $O
+sshn() { port=$1; shift; timeout 120 ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$KH -i /var/tmp/cp-pair5-key/id_ed25519 -p $port celik@127.0.0.1 "$@"; }
+bash $W/ro-collect.sh $C $L debian13 2201 pdns primary > /dev/null
+bash $W/ro-collect.sh $C $L arch 2202 bind secondary > /dev/null
+bash $W/coll-extra.sh $C $L debian13 2201 primary pdns > /dev/null
+bash $W/coll-extra.sh $C $L arch 2202 secondary bind > /dev/null
+bash $W/diag-bind-transfer.sh $C $L arch 2202 "2026-09-30 04:30:00" > /dev/null
+bash $W/diag-options.sh $C $L arch 2202 > /dev/null
+bash $W/ledgerjob.sh $C $L debian13 2201 > /dev/null
+sshn 2201 'sudo -n journalctl -u celikpanel-agent.service --no-pager -o short-iso --since "2026-09-30 04:33:25" | grep -v -i "secret" | tail -150' > $O/debian13-agent-journal-zone-delete.txt 2>&1
+sshn 2201 'sudo -n journalctl -u celikpanel-panel.service --no-pager -o short-iso --since "2026-09-30 04:33:25" | tail -80' > $O/debian13-panel-journal-zone-delete.txt 2>&1
+sshn 2202 'sudo -n journalctl --no-pager -o short-iso --since "2026-09-30 04:33:25" --until "2026-09-30 04:34:05" | grep -i -E "inspect|celikpeer|rndc|forced|denied|permission|transfer|named|sshd" | grep -v -i "secret \"" | tail -150' > $O/arch-inspector-journal-zone-delete.txt 2>&1
+sshn 2201 sudo -n /usr/bin/python3 - < /root/cp-pair5/pdnsdb.py > $O/debian13-pdns-db-after.json 2>&1
+bash $W/counts.sh $L > $O/notify-counts.txt 2>&1
+ls -la $O

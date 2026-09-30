@@ -1,0 +1,30 @@
+## 2026-09-30T04:24:20Z named-checkconf -p /etc/bind/named.conf, options block and every zone stanza except the three stock localhost zones; lines containing secret/algorithm/key dropped
+options {
+	directory "/var/cache/bind";
+	allow-query-cache {
+		"none";
+	};
+	allow-recursion {
+		"none";
+	};
+	recursion no;
+	allow-transfer  {
+		"none";
+	};
+};
+zone "catalog-c000020a.celikpanel.invalid" {
+	type master;
+	file "/var/cache/bind/celikpanel/generations/66faa88b0b09df447e57e29f9008e0ea260b9be2c8fed8260aa74206664ffe2c/zones/60d6a3773f88bbeb6c3e8d58aee4a38c20e57e9074ec06dfd8605d6f8d791299.zone";
+	allow-transfer  {
+		192.0.2.10/32;
+		192.0.2.11/32;
+	};
+	also-notify {
+		192.0.2.11;
+	};
+	notify yes;
+};
+zone "." {
+	type hint;
+	file "/usr/share/dns/root.hints";
+};

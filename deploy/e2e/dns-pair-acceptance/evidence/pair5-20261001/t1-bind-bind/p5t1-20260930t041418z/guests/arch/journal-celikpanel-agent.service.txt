@@ -1,0 +1,19 @@
+2026-09-30T04:15:28.423928+00:00 dns-arch systemd[1]: Starting CelikPanel privileged agent...
+2026-09-30T04:15:28.446092+00:00 dns-arch systemd[1]: Started CelikPanel privileged agent.
+2026-09-30T04:15:28.465881+00:00 dns-arch agent[7126]: 2026/09/30 04:15:28 Starting CelikPanel Agent...
+2026-09-30T04:15:28.470527+00:00 dns-arch agent[7126]: 2026/09/30 04:15:28 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-30T04:15:28.470702+00:00 dns-arch agent[7126]: 2026/09/30 04:15:28 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-09-30T04:15:32.960674+00:00 dns-arch systemd[1]: Stopping CelikPanel privileged agent...
+2026-09-30T04:15:32.974372+00:00 dns-arch systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-30T04:15:32.976211+00:00 dns-arch systemd[1]: Stopped CelikPanel privileged agent.
+-- Boot d4b011b1c4674ce9a0d43fddfd07e19f --
+2026-09-30T04:15:49.161567+00:00 dns-arch systemd[1]: Starting CelikPanel privileged agent...
+2026-09-30T04:15:49.199407+00:00 dns-arch systemd[1]: Started CelikPanel privileged agent.
+2026-09-30T04:15:49.272880+00:00 dns-arch agent[410]: 2026/09/30 04:15:49 Starting CelikPanel Agent...
+2026-09-30T04:15:49.286299+00:00 dns-arch agent[410]: 2026/09/30 04:15:49 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-30T04:17:26.674979+00:00 dns-arch agent[410]: 2026/09/30 04:17:26 DNS engine change a7f836f065d6a5cf50ec2e596dbe679c: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the BIND catalog format; this operation reads it in that format
+2026-09-30T04:17:30.377202+00:00 dns-arch agent[410]: 2026/09/30 04:17:30 DNS switch (request a7f836f065d6a5cf50ec2e596dbe679c): BIND rndc key /etc/rndc.key is product_created
+2026-09-30T04:17:34.945030+00:00 dns-arch agent[410]: 2026/09/30 04:17:34 DNS engine change completion a7f836f065d6a5cf50ec2e596dbe679c: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the BIND catalog format; this operation reads it in that format
+2026-09-30T04:17:35.400800+00:00 dns-arch agent[410]: 2026/09/30 04:17:35 DNS readiness check: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the BIND catalog format; this operation reads it in that format
+2026-09-30T04:17:40.324865+00:00 dns-arch agent[410]: 2026/09/30 04:17:40 DNS readiness check: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the BIND catalog format; this operation reads it in that format
+2026-09-30T04:17:55.632426+00:00 dns-arch agent[410]: 2026/09/30 04:17:55 DNS readiness check: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the BIND catalog format; this operation reads it in that format

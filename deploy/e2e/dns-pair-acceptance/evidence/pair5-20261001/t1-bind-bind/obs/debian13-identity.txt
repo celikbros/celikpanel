@@ -1,0 +1,5 @@
+schema=celikpanel/dns-kill-fixture-plan/v1
+cell_id=pair-accept__bind-debian13__bind-arch__p5t1
+node=debian13
+
+089f756d-f42a-56d4-812c-ef99a99e1672

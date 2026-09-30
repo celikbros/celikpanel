@@ -1,0 +1,77 @@
+## 2026-09-30T04:47:28Z role=primary named-checkconf -p /etc/named.conf : options allow-transfer and every catalog-*/member zone stanza (secret/algorithm/key lines dropped)
+### options-scope allow-transfer
+	allow-transfer  {
+### zone stanzas (catalog and pair-accept.test)
+zone "catalog-c000020b.celikpanel.invalid" {
+	type master;
+	file "/var/named/celikpanel/generations/45a5233ca47b49983c1856e0d44d890b027da054c7e5c4a23752bb5f9876d19a/zones/cb94ee780a7fa84172a58d341e623334842cd2c23e56e4c61e64c13ad43c0381.zone";
+	allow-transfer  {
+		192.0.2.11/32;
+		192.0.2.10/32;
+	};
+	also-notify {
+		192.0.2.10;
+	};
+	notify yes;
+};
+### generation receipts: pairing object only (id, path, role, secondary_config_version, catalogs)
+#### /var/named/celikpanel/generations/05d42f16f9a1da26259c44b9c6a941108174be78212ecf8f5f8ce2e2ca41a760/receipt.json root:root 444 2026-09-30 04:41:19.687149518 +0000
+  schema = "celikpanel-bind-generation-receipt/v2"
+  pairing.role = "primary"
+  pairing.local_ip = "192.0.2.11"
+  pairing.peer_ip = "192.0.2.10"
+  pairing.local_catalog = "catalog-c000020b.celikpanel.invalid"
+  pairing.peer_catalog = "catalog-c000020a.celikpanel.invalid"
+  pairing.catalog_serial = 2
+  (secondary_config_version key present: False )
+#### /var/named/celikpanel/generations/42f8c4fee81bec6a5f274683836feb25101f0d83124096fda64ef70278e505e1/receipt.json root:root 444 2026-09-30 04:41:28.285153291 +0000
+  schema = "celikpanel-bind-generation-receipt/v2"
+  pairing.role = "primary"
+  pairing.local_ip = "192.0.2.11"
+  pairing.peer_ip = "192.0.2.10"
+  pairing.local_catalog = "catalog-c000020b.celikpanel.invalid"
+  pairing.peer_catalog = "catalog-c000020a.celikpanel.invalid"
+  pairing.catalog_serial = 2
+  (secondary_config_version key present: False )
+#### /var/named/celikpanel/generations/45a5233ca47b49983c1856e0d44d890b027da054c7e5c4a23752bb5f9876d19a/receipt.json root:root 444 2026-09-30 04:41:33.277154692 +0000
+  schema = "celikpanel-bind-generation-receipt/v2"
+  pairing.role = "primary"
+  pairing.local_ip = "192.0.2.11"
+  pairing.peer_ip = "192.0.2.10"
+  pairing.local_catalog = "catalog-c000020b.celikpanel.invalid"
+  pairing.peer_catalog = "catalog-c000020a.celikpanel.invalid"
+  pairing.catalog_serial = 3
+  (secondary_config_version key present: False )
+#### /var/named/celikpanel/generations/466800d9d456674ab94611054813fa37a73348db9484e1b2ceb3ef06cbb7a13d/receipt.json root:root 444 2026-09-30 04:40:40.568050830 +0000
+  schema = "celikpanel-bind-generation-receipt/v2"
+  pairing.role = "primary"
+  pairing.local_ip = "192.0.2.11"
+  pairing.peer_ip = "192.0.2.10"
+  pairing.local_catalog = "catalog-c000020b.celikpanel.invalid"
+  pairing.peer_catalog = "catalog-c000020a.celikpanel.invalid"
+  pairing.catalog_serial = 1
+  (secondary_config_version key present: False )
+#### /var/named/celikpanel/generations/6b8dd4aa4e31429227683fbd35e8627b49e26e0d8e8084438a778c68b8172268/receipt.json root:root 444 2026-09-30 04:41:12.139143959 +0000
+  schema = "celikpanel-bind-generation-receipt/v2"
+  pairing.role = "primary"
+  pairing.local_ip = "192.0.2.11"
+  pairing.peer_ip = "192.0.2.10"
+  pairing.local_catalog = "catalog-c000020b.celikpanel.invalid"
+  pairing.peer_catalog = "catalog-c000020a.celikpanel.invalid"
+  pairing.catalog_serial = 2
+  (secondary_config_version key present: False )
+#### /var/named/celikpanel/generations/b26e30d8d285259aee1a922050435aba04ec9de9dff844c142afb6636b75cb3e/receipt.json root:root 444 2026-09-30 04:41:24.833152022 +0000
+  schema = "celikpanel-bind-generation-receipt/v2"
+  pairing.role = "primary"
+  pairing.local_ip = "192.0.2.11"
+  pairing.peer_ip = "192.0.2.10"
+  pairing.local_catalog = "catalog-c000020b.celikpanel.invalid"
+  pairing.peer_catalog = "catalog-c000020a.celikpanel.invalid"
+  pairing.catalog_serial = 2
+  (secondary_config_version key present: False )
+### current generation pointer(s)
+/var/named/celikpanel/current -> generations/45a5233ca47b49983c1856e0d44d890b027da054c7e5c4a23752bb5f9876d19a
+### named journal lines naming 127.0.0.1 or ::1 with denied/transfer (all boots)
+### named journal lines with denied (any client, all boots)
+### inspector sudo lines (all boots)
+(end)

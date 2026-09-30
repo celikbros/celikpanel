@@ -1,0 +1,120 @@
+{
+  "outcome": "response",
+  "panel": "debian13",
+  "purpose": "ServerSetup draft save",
+  "request": {
+    "body": {
+      "draft": {
+        "database": "",
+        "dns_engine": "bind",
+        "dns_hosting_management": "",
+        "dns_mode": "local",
+        "dns_publisher_endpoint": "",
+        "dns_role": "primary",
+        "local_ip": "192.0.2.10",
+        "mail_hostname": "",
+        "node_version": "",
+        "ns1": "ns1.ns-accept.test",
+        "ns2": "ns2.ns-accept.test",
+        "panel_domain": "panel-debian13.ns-accept.test",
+        "peer_ip": "192.0.2.11",
+        "peer_ns": "ns2.ns-accept.test",
+        "purpose": "dns",
+        "remote_dns_connection_id": ""
+      },
+      "revision": 1
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:28443"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:28443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "PUT",
+    "path": "/api/v1/setup"
+  },
+  "response": {
+    "elapsed_seconds": 0.012,
+    "headers": [
+      [
+        "Cache-Control",
+        "no-store"
+      ],
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Wed, 30 Sep 2026 04:17:06 GMT"
+      ],
+      [
+        "Content-Length",
+        "455"
+      ]
+    ],
+    "json": {
+      "checks": [],
+      "draft": {
+        "database": "",
+        "dns_engine": "bind",
+        "dns_mode": "local",
+        "dns_role": "primary",
+        "local_ip": "192.0.2.10",
+        "mail_hostname": "",
+        "node_version": "",
+        "ns1": "ns1.ns-accept.test",
+        "ns2": "ns2.ns-accept.test",
+        "panel_domain": "panel-debian13.ns-accept.test",
+        "peer_ip": "192.0.2.11",
+        "peer_ns": "ns2.ns-accept.test",
+        "purpose": "dns",
+        "remote_dns_connection_id": ""
+      },
+      "guidance": "guided",
+      "origin": "fresh",
+      "required": true,
+      "revision": 2,
+      "status": "draft",
+      "version": 1
+    },
+    "status": 200,
+    "text": null
+  }
+}

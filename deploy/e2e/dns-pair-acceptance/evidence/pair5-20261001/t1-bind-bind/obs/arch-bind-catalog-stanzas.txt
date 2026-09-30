@@ -1,0 +1,40 @@
+## 2026-09-30T04:28:24Z role=secondary named-checkconf -p /etc/named.conf : options allow-transfer and every catalog-*/member zone stanza (secret/algorithm/key lines dropped)
+### options-scope allow-transfer
+	allow-transfer  {
+### zone stanzas (catalog and pair-accept.test)
+zone "catalog-c000020a.celikpanel.invalid" {
+	type secondary;
+	primaries {
+		192.0.2.10;
+	};
+	allow-transfer  {
+		192.0.2.10/32;
+		127.0.0.1/32;
+		::1/128;
+	};
+};
+### generation receipts: pairing object only (id, path, role, secondary_config_version, catalogs)
+#### /var/named/celikpanel/generations/68b2d37e5514f28e410cc5d09a269b49ab3147ce2c8195f801d818461f26e903/receipt.json root:root 444 2026-09-30 04:17:30.831248370 +0000
+  schema = "celikpanel-bind-generation-receipt/v2"
+  pairing.role = "secondary"
+  pairing.local_ip = "192.0.2.11"
+  pairing.peer_ip = "192.0.2.10"
+  pairing.local_catalog = "catalog-c000020b.celikpanel.invalid"
+  pairing.peer_catalog = "catalog-c000020a.celikpanel.invalid"
+  pairing.catalog_serial = 1
+  pairing.secondary_config_version = 2
+  (secondary_config_version key present: True )
+### current generation pointer(s)
+/var/named/celikpanel/current -> generations/68b2d37e5514f28e410cc5d09a269b49ab3147ce2c8195f801d818461f26e903
+### named journal lines naming 127.0.0.1 or ::1 with denied/transfer (all boots)
+2026-09-30T04:18:29+00:00 dns-arch named[2080]: client @0x7faa4056ac00 127.0.0.1#35003 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:18:29+00:00 dns-arch named[2080]: client @0x7faa4056ac00 127.0.0.1#35003 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 200 bytes, 0.001 secs (200000 bytes/sec) (serial 3)
+2026-09-30T04:18:29+00:00 dns-arch named[2080]: client @0x7faa4333e000 127.0.0.1#35004 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:18:29+00:00 dns-arch named[2080]: client @0x7faa4333e000 127.0.0.1#35004 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 200 bytes, 0.001 secs (200000 bytes/sec) (serial 3)
+### named journal lines with denied (any client, all boots)
+### inspector sudo lines (all boots)
+2026-09-30T04:18:18+00:00 dns-arch sudo[3152]:    celik : PWD=/home/celik ; USER=root ; COMMAND=/bin/bash -c 'set -euo pipefail#012umask 077#012test ! -e /root/celikpanel-primary-inspector.pub#012cat > /root/celikpanel-primary-inspector.pub#012chown root:root /root/celikpanel-primary-inspector.pub#012chmod 0600 /root/celikpanel-primary-inspector.pub#012'
+2026-09-30T04:18:18+00:00 dns-arch sudo[3173]:    celik : PWD=/home/celik ; USER=root ; COMMAND=/var/backups/celikpanel/pair-accept/celikpanel-v0.0.0-pairaccept-acceptance-license.b1e322756736/dns-owner-tools/dns-peer-enroll secondary-install --primary-ip 192.0.2.10 --peer-ip 192.0.2.11 --catalog catalog-c000020a.celikpanel.invalid --primary-public-key /root/celikpanel-primary-inspector.pub --inspector /var/backups/celikpanel/pair-accept/celikpanel-v0.0.0-pairaccept-acceptance-license.b1e322756736/dns-owner-tools/bind-peer-inspect
+2026-09-30T04:18:29+00:00 dns-arch sudo[3325]: celikpeer : PWD=/var/lib/bind-peer-inspector ; USER=root ; COMMAND=/usr/local/libexec/celikpanel-bind-peer-inspect
+2026-09-30T04:18:29+00:00 dns-arch sudo[3325]: pam_unix(sudo:session): session opened for user root(uid=0) by celikpeer(uid=968)
+(end)

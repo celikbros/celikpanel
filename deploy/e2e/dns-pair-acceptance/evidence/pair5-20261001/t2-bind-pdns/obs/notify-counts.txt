@@ -1,0 +1,10 @@
+== /root/cp-pair5/obs/p5t2/debian13-pdns-notify-journal.txt
+Notification request to host ...:53 : 0
+Notification request (any) : 0
+spurious notify answer : 0
+:0 failed after retries : 0
+failed after retries (any) : 0
+Received NOTIFY (incoming) : 0
+== /root/cp-pair5/obs/p5t2/arch-bind-notify-journal.txt
+received notify : 0
+sending notifies : 16

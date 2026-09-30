@@ -1,0 +1,21 @@
+## 2026-09-30T04:36:02Z role=primary Agent journal lines naming peer/inspect/pending/deletion/generation (all boots; secret lines dropped)
+2026-09-30T04:30:07+00:00 dns-debian13 agent[3522]: 2026/09/30 04:30:07 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-09-30T04:32:41+00:00 dns-debian13 agent[3522]: 2026/09/30 04:32:41 pdns primary pair readiness proof failed: DNS peer catalog AXFR is unavailable
+2026-09-30T04:33:33+00:00 dns-debian13 agent[3522]: 2026/09/30 04:33:33 pdns zone publication remains pending for pair-accept.test at epoch 1: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T04:33:33+00:00 dns-debian13 agent[3522]: dns_peer_enrollment_required
+2026-09-30T04:33:34+00:00 dns-debian13 agent[3522]: 2026/09/30 04:33:34 DNS zone V3 recovery remains pending for pair-accept.test: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T04:33:34+00:00 dns-debian13 agent[3522]: dns_peer_enrollment_required
+## Panel journal lines naming deletion/mail (all boots)
+2026-09-30T04:30:09+00:00 dns-debian13 panel[3647]: 2026/09/30 04:30:09 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-debian13": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-09-30T04:30:09+00:00 dns-debian13 panel[3647]: 2026/09/30 04:30:09 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-09-30T04:30:10+00:00 dns-debian13 panel[3713]: 2026/09/30 04:30:10 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-debian13": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-09-30T04:30:10+00:00 dns-debian13 panel[3713]: 2026/09/30 04:30:10 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-09-30T04:33:30+00:00 dns-debian13 panel[3713]: 2026/09/30 04:33:30 domain deletion for pair-accept.test: mail runtime cleanup skipped: no mail runtime for this domain on this server
+2026-09-30T04:33:34+00:00 dns-debian13 panel[3713]: 2026/09/30 04:33:34 domain deletion pending for pair-accept.test at dns_cleanup: publish DNS zone deletion: DNS zone V3 paired propagation recovery is deferred: DNS zone publication is waiting for exact paired propagation recovery
+2026-09-30T04:33:38+00:00 dns-debian13 panel[3713]: 2026/09/30 04:33:38 domain deletion for pair-accept.test: mail runtime cleanup skipped: no mail runtime for this domain on this server
+2026-09-30T04:35:25+00:00 dns-debian13 panel[1082]: 2026/09/30 04:35:25 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-debian13": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-09-30T04:35:25+00:00 dns-debian13 panel[1082]: 2026/09/30 04:35:25 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+## PowerDNS peer challenge journal (agent-private), named fields only
+absent: /var/lib/celikpanel-agent-private/pdns-peer-challenge-v1.json
+## BIND peer challenge journal(s) (agent-private), named fields only
+(end)

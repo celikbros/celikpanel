@@ -1,0 +1,14 @@
+{"raw": "{\"t\":\"2026-09-30T04:13:32Z\",\"catalog_axfr_from_secondary\":Connection to 127.0.0.1 port 2202 timed out"}
+{"raw": "}"}
+{"raw": "{\"t\":\"2026-09-30T04:13:42Z\",\"catalog_axfr_from_secondary\":Connection reset by 127.0.0.1 port 2202"}
+{"raw": "}"}
+{"t":"2026-09-30T04:14:22Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020a.celikpanel.invalid", "command": "catalog", "error": "ConnectionRefusedError: [Errno 111] Connection refused", "server": "192.0.2.10", "transferred": false}}
+{"raw": "{\"t\":\"2026-09-30T04:15:40Z\",\"catalog_axfr_from_secondary\":Connection to 127.0.0.1 port 2202 timed out"}
+{"raw": "}"}
+{"raw": "{\"t\":\"2026-09-30T04:15:50Z\",\"catalog_axfr_from_secondary\":Connection reset by 127.0.0.1 port 2202"}
+{"raw": "}"}
+{"t":"2026-09-30T04:17:11Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020a.celikpanel.invalid", "command": "catalog", "error": "ConnectionRefusedError: [Errno 111] Connection refused", "server": "192.0.2.10", "transferred": false}}
+{"t":"2026-09-30T04:17:21Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020a.celikpanel.invalid", "command": "catalog", "members": [], "serial": 1, "server": "192.0.2.10", "transferred": true}}
+{"t":"2026-09-30T04:17:52Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020a.celikpanel.invalid", "command": "catalog", "members": ["pair-accept.test."], "serial": 2, "server": "192.0.2.10", "transferred": true}}
+{"t":"2026-09-30T04:18:23Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020a.celikpanel.invalid", "command": "catalog", "members": [], "serial": 3, "server": "192.0.2.10", "transferred": true}}
+{"t":"2026-09-30T04:23:37Z","watch":"run ended"}

@@ -1,0 +1,23 @@
+2026-09-30T04:14:40.112440+00:00 dns-debian13 systemd[1]: Starting celikpanel-agent.service - CelikPanel privileged agent...
+2026-09-30T04:14:40.143567+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-30T04:14:40.180901+00:00 dns-debian13 agent[3519]: 2026/09/30 04:14:40 Starting CelikPanel Agent...
+2026-09-30T04:14:40.182744+00:00 dns-debian13 agent[3519]: 2026/09/30 04:14:40 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-30T04:14:40.183141+00:00 dns-debian13 agent[3519]: 2026/09/30 04:14:40 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-09-30T04:17:12.585888+00:00 dns-debian13 addgroup[4403]: Selecting GID from range 100 to 999 ...
+2026-09-30T04:17:12.588204+00:00 dns-debian13 addgroup[4403]: Adding group `bind' (GID 104) ...
+2026-09-30T04:17:12.607850+00:00 dns-debian13 groupadd[4406]: group added to /etc/group: name=bind, GID=104
+2026-09-30T04:17:12.621912+00:00 dns-debian13 groupadd[4406]: group added to /etc/gshadow: name=bind
+2026-09-30T04:17:12.622978+00:00 dns-debian13 groupadd[4406]: new group: name=bind, GID=104
+2026-09-30T04:17:12.662465+00:00 dns-debian13 adduser[4411]: Selecting UID from range 100 to 999 ...
+2026-09-30T04:17:12.664585+00:00 dns-debian13 adduser[4411]: Adding system user `bind' (UID 103) ...
+2026-09-30T04:17:12.666470+00:00 dns-debian13 adduser[4411]: Adding new user `bind' (UID 103) with group `bind' ...
+2026-09-30T04:17:12.685777+00:00 dns-debian13 useradd[4415]: new user: name=bind, UID=103, GID=104, home=/var/cache/bind, shell=/usr/sbin/nologin, from=none
+2026-09-30T04:17:12.706742+00:00 dns-debian13 adduser[4411]: Not creating home directory `/var/cache/bind' as requested.
+2026-09-30T04:17:15.510625+00:00 dns-debian13 agent[3519]: 2026/09/30 04:17:15 DNS switch (request 3f47eaa90ebff7f47b30621b498a5703): BIND rndc key /etc/bind/rndc.key is owner_or_package_provided (key_present)
+2026-09-30T04:17:23.333655+00:00 dns-debian13 agent[3519]: 2026/09/30 04:17:23 bind primary pair readiness proof failed: DNS peer catalog AXFR is unavailable
+2026-09-30T04:18:15.308037+00:00 dns-debian13 agent[3519]: 2026/09/30 04:18:15 bind zone publication remains pending for pair-accept.test at epoch 1: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T04:18:15.308037+00:00 dns-debian13 agent[3519]: dns_peer_enrollment_required
+2026-09-30T04:18:16.956451+00:00 dns-debian13 agent[3519]: 2026/09/30 04:18:16 DNS zone V3 recovery remains pending for pair-accept.test: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T04:18:16.956451+00:00 dns-debian13 agent[3519]: dns_peer_enrollment_required
+2026-09-30T04:18:30.532875+00:00 dns-debian13 agent[3519]: 2026/09/30 04:18:30 DNS zone V3 recovery remains pending for pair-accept.test: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T04:18:30.532875+00:00 dns-debian13 agent[3519]: dns_peer_owner_edit_unknown

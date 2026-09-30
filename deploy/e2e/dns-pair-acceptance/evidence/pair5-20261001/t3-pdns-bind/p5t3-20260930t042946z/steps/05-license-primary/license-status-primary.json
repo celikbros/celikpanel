@@ -1,0 +1,19 @@
+{
+  "body": {
+    "acceptance_cell": "pair-accept__pdns-debian13__bind-arch__p5t3",
+    "acceptance_guest": "verified",
+    "acceptance_node": "debian13",
+    "acceptance_smbios_uuid": "not readable by the panel service user",
+    "can_provision": true,
+    "expires_at": 1791347550,
+    "license_id": "acceptance-fixture",
+    "license_kind": "acceptance_fixture",
+    "license_label": "ACCEPTANCE FIXTURE — NOT FOR PRODUCTION",
+    "license_service": "not contacted: acceptance test build",
+    "observation": "known",
+    "offline_until": 1790742810,
+    "product": "celikpanel-acceptance-fixture",
+    "state": "active"
+  },
+  "http_status": 200
+}

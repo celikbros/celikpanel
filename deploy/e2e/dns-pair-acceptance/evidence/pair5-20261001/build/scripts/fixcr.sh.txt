@@ -1,0 +1,2 @@
+#!/bin/bash
+ls -la /root/cp-pair5/obs/ | cat -A | grep -F '^M' ; rmdir "/root/cp-pair5/obs/p5t1"$'\r' 2>&1 && echo removed-cr-dir; ls /root/cp-pair5/obs/

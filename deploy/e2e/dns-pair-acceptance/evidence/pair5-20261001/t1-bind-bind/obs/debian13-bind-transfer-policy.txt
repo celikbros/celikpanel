@@ -1,0 +1,80 @@
+## collected 2026-09-30T04:24:19Z on dns-debian13
+## named-checkconf -p /etc/bind/named.conf : lines naming zone/type/primaries/allow-transfer/also-notify/catalog-zones/controls (key and secret lines dropped)
+1:options {
+3:	allow-query-cache {
+10:	allow-transfer  {
+14:zone "catalog-c000020a.celikpanel.invalid" {
+15:	type master;
+17:	allow-transfer  {
+21:	also-notify {
+24:	notify yes;
+26:zone "." {
+27:	type hint;
+## journal since 2026-09-30 04:15:00: named transfer/notify/denied lines and inspector sudo lines
+2026-09-30T04:18:23+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#47330 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:18:23+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#47330 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T04:18:34+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#50186 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:18:34+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#50186 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T04:18:44+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#35508 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:18:44+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#35508 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T04:18:55+00:00 dns-debian13 named[5618]: client @0x7f20a4c21c00 192.0.2.11#34444 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:18:55+00:00 dns-debian13 named[5618]: client @0x7f20a4c21c00 192.0.2.11#34444 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T04:19:05+00:00 dns-debian13 named[5618]: client @0x7f20a4c21c00 192.0.2.11#56086 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:19:05+00:00 dns-debian13 named[5618]: client @0x7f20a4c21c00 192.0.2.11#56086 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T04:19:16+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#47864 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:19:16+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#47864 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T04:19:26+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#34866 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:19:26+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#34866 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.003 secs (53666 bytes/sec) (serial 3)
+2026-09-30T04:19:37+00:00 dns-debian13 named[5618]: client @0x7f20a4c21c00 192.0.2.11#40740 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:19:37+00:00 dns-debian13 named[5618]: client @0x7f20a4c21c00 192.0.2.11#40740 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T04:19:47+00:00 dns-debian13 named[5618]: client @0x7f20a4c21c00 192.0.2.11#58326 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:19:47+00:00 dns-debian13 named[5618]: client @0x7f20a4c21c00 192.0.2.11#58326 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T04:19:58+00:00 dns-debian13 named[5618]: client @0x7f20a4c21c00 192.0.2.11#34952 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:19:58+00:00 dns-debian13 named[5618]: client @0x7f20a4c21c00 192.0.2.11#34952 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T04:20:08+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#50154 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:20:08+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#50154 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T04:20:19+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#38384 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:20:19+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#38384 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T04:20:29+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#34400 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:20:29+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#34400 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T04:20:40+00:00 dns-debian13 named[5618]: client @0x7f20a4c21c00 192.0.2.11#48186 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:20:40+00:00 dns-debian13 named[5618]: client @0x7f20a4c21c00 192.0.2.11#48186 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T04:20:50+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#37546 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:20:50+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#37546 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T04:21:01+00:00 dns-debian13 named[5618]: client @0x7f20a4c21c00 192.0.2.11#34436 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:21:01+00:00 dns-debian13 named[5618]: client @0x7f20a4c21c00 192.0.2.11#34436 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T04:21:11+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#49944 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:21:11+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#49944 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T04:21:22+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#50548 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:21:22+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#50548 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T04:21:32+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#33958 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:21:32+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#33958 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T04:21:43+00:00 dns-debian13 named[5618]: client @0x7f20a4c21c00 192.0.2.11#56546 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:21:43+00:00 dns-debian13 named[5618]: client @0x7f20a4c21c00 192.0.2.11#56546 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T04:21:53+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#48126 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:21:53+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#48126 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T04:22:04+00:00 dns-debian13 named[5618]: client @0x7f20a4c21c00 192.0.2.11#44224 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:22:04+00:00 dns-debian13 named[5618]: client @0x7f20a4c21c00 192.0.2.11#44224 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T04:22:14+00:00 dns-debian13 named[5618]: client @0x7f20a4c21c00 192.0.2.11#40666 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:22:14+00:00 dns-debian13 named[5618]: client @0x7f20a4c21c00 192.0.2.11#40666 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T04:22:25+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#54846 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:22:25+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#54846 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T04:22:35+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#37242 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:22:35+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#37242 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T04:22:46+00:00 dns-debian13 named[5618]: client @0x7f20a4c21c00 192.0.2.11#42240 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:22:46+00:00 dns-debian13 named[5618]: client @0x7f20a4c21c00 192.0.2.11#42240 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T04:22:56+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#40560 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:22:56+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#40560 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T04:23:06+00:00 dns-debian13 named[5618]: client @0x7f20a4c21c00 192.0.2.11#51252 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:23:06+00:00 dns-debian13 named[5618]: client @0x7f20a4c21c00 192.0.2.11#51252 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T04:23:17+00:00 dns-debian13 named[5618]: client @0x7f20a4c21c00 192.0.2.11#60226 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:23:17+00:00 dns-debian13 named[5618]: client @0x7f20a4c21c00 192.0.2.11#60226 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T04:23:27+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#57542 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T04:23:27+00:00 dns-debian13 named[5618]: client @0x7f20a7927c00 192.0.2.11#57542 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+## inspector identity and files (metadata only)
+total 16
+drwxr-x---  2 root root 4096 2026-09-30 04:13:30.000000000 +0000 .
+drwxr-xr-x 71 root root 4096 2026-09-30 04:17:28.104234508 +0000 ..
+-r--r-----  1 root root  177 2026-09-30 04:13:30.128000000 +0000 90-cloud-init-users
+-r--r-----  1 root root 1068 2026-04-11 12:21:02.000000000 +0000 README
+(end)

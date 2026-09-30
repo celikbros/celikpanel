@@ -1,0 +1,225 @@
+2026-09-30T04:41:25+00:00 dns-debian13 pdns_server[5023]: AXFR-in zone: 'pair-accept.test', primary: '192.0.2.11', zone committed with serial 2026093003
+2026-09-30T04:41:26+00:00 dns-debian13 pdns_server[5023]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:33055', transfer initiated
+2026-09-30T04:41:27+00:00 dns-debian13 pdns_server[5023]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:56207', transfer initiated
+2026-09-30T04:41:27+00:00 dns-debian13 pdns_server[5023]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:32811', transfer initiated
+2026-09-30T04:41:28+00:00 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-09-30T04:41:28+00:00 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-09-30T04:41:28+00:00 dns-debian13 systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-09-30T04:41:29+00:00 dns-debian13 pdns_server[5023]: AXFR-in zone: 'pair-accept.test', primary: '192.0.2.11', zone committed with serial 2026093004
+2026-09-30T04:41:29+00:00 dns-debian13 pdns_server[5023]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:35849', transfer initiated
+2026-09-30T04:41:30+00:00 dns-debian13 systemd[1]: Started session-56.scope - Session 56 of User celik.
+2026-09-30T04:41:31+00:00 dns-debian13 sudo[6194]: pam_unix(sudo:session): session closed for user root
+2026-09-30T04:41:31+00:00 dns-debian13 sshd-session[6193]: Received disconnect from 10.0.2.2 port 50876:11: disconnected by user
+2026-09-30T04:41:31+00:00 dns-debian13 systemd[1]: session-56.scope: Deactivated successfully.
+2026-09-30T04:41:31+00:00 dns-debian13 systemd-logind[761]: Session 56 logged out. Waiting for processes to exit.
+2026-09-30T04:41:31+00:00 dns-debian13 systemd-logind[761]: Removed session 56.
+2026-09-30T04:41:31+00:00 dns-debian13 systemd[1]: Started session-57.scope - Session 57 of User celik.
+2026-09-30T04:41:31+00:00 dns-debian13 sudo[6207]: pam_unix(sudo:session): session closed for user root
+2026-09-30T04:41:31+00:00 dns-debian13 sshd-session[6206]: Received disconnect from 10.0.2.2 port 50882:11: disconnected by user
+2026-09-30T04:41:31+00:00 dns-debian13 systemd[1]: session-57.scope: Deactivated successfully.
+2026-09-30T04:41:31+00:00 dns-debian13 systemd-logind[761]: Session 57 logged out. Waiting for processes to exit.
+2026-09-30T04:41:31+00:00 dns-debian13 systemd-logind[761]: Removed session 57.
+2026-09-30T04:41:32+00:00 dns-debian13 pdns_server[5023]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:52767', transfer initiated
+2026-09-30T04:41:32+00:00 dns-debian13 pdns_server[5023]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:46513', transfer initiated
+2026-09-30T04:41:33+00:00 dns-debian13 systemd[1]: Started session-58.scope - Session 58 of User celik.
+2026-09-30T04:41:33+00:00 dns-debian13 sudo[6229]: pam_unix(sudo:session): session closed for user root
+2026-09-30T04:41:33+00:00 dns-debian13 sshd-session[6228]: Received disconnect from 10.0.2.2 port 50896:11: disconnected by user
+2026-09-30T04:41:33+00:00 dns-debian13 systemd[1]: session-58.scope: Deactivated successfully.
+2026-09-30T04:41:33+00:00 dns-debian13 systemd-logind[761]: Session 58 logged out. Waiting for processes to exit.
+2026-09-30T04:41:33+00:00 dns-debian13 systemd-logind[761]: Removed session 58.
+2026-09-30T04:41:34+00:00 dns-debian13 pdns_server[5023]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone backend transaction started
+2026-09-30T04:41:34+00:00 dns-debian13 pdns_server[5023]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone delete zone 'pair-accept.test'
+2026-09-30T04:41:34+00:00 dns-debian13 pdns_server[5023]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone backend transaction committed
+2026-09-30T04:41:34+00:00 dns-debian13 pdns_server[5023]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', zone committed with serial 3
+2026-09-30T04:41:35+00:00 dns-debian13 pdns_server[5023]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:39719', transfer initiated
+2026-09-30T04:41:35+00:00 dns-debian13 pdns_server[5023]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:54093', transfer initiated
+2026-09-30T04:41:35+00:00 dns-debian13 pdns_server[5023]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:54093', failed: not authoritative
+2026-09-30T04:41:36+00:00 dns-debian13 pdns_server[5023]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:57461', transfer initiated
+2026-09-30T04:41:36+00:00 dns-debian13 pdns_server[5023]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:35265', transfer initiated
+2026-09-30T04:41:36+00:00 dns-debian13 pdns_server[5023]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:35265', failed: not authoritative
+2026-09-30T04:41:37+00:00 dns-debian13 systemd[1]: Started session-59.scope - Session 59 of User celik.
+2026-09-30T04:41:37+00:00 dns-debian13 sudo[6250]: pam_unix(sudo:session): session closed for user root
+2026-09-30T04:41:37+00:00 dns-debian13 sshd-session[6249]: Received disconnect from 10.0.2.2 port 36100:11: disconnected by user
+2026-09-30T04:41:37+00:00 dns-debian13 systemd[1]: session-59.scope: Deactivated successfully.
+2026-09-30T04:41:37+00:00 dns-debian13 systemd-logind[761]: Session 59 logged out. Waiting for processes to exit.
+2026-09-30T04:41:37+00:00 dns-debian13 systemd-logind[761]: Removed session 59.
+2026-09-30T04:41:38+00:00 dns-debian13 systemd[1]: Started session-60.scope - Session 60 of User celik.
+2026-09-30T04:41:38+00:00 dns-debian13 sudo[6264]: pam_unix(sudo:session): session closed for user root
+2026-09-30T04:41:38+00:00 dns-debian13 sshd-session[6263]: Received disconnect from 10.0.2.2 port 36114:11: disconnected by user
+2026-09-30T04:41:38+00:00 dns-debian13 systemd[1]: session-60.scope: Deactivated successfully.
+2026-09-30T04:41:38+00:00 dns-debian13 systemd-logind[761]: Session 60 logged out. Waiting for processes to exit.
+2026-09-30T04:41:38+00:00 dns-debian13 systemd-logind[761]: Removed session 60.
+2026-09-30T04:41:38+00:00 dns-debian13 systemd[1]: Started session-61.scope - Session 61 of User celik.
+2026-09-30T04:41:38+00:00 dns-debian13 sudo[6280]: pam_unix(sudo:session): session closed for user root
+2026-09-30T04:41:38+00:00 dns-debian13 sshd-session[6279]: Received disconnect from 10.0.2.2 port 36128:11: disconnected by user
+2026-09-30T04:41:38+00:00 dns-debian13 systemd[1]: session-61.scope: Deactivated successfully.
+2026-09-30T04:41:38+00:00 dns-debian13 systemd-logind[761]: Session 61 logged out. Waiting for processes to exit.
+2026-09-30T04:41:38+00:00 dns-debian13 systemd-logind[761]: Removed session 61.
+2026-09-30T04:41:38+00:00 dns-debian13 systemd[1]: Started session-62.scope - Session 62 of User celik.
+2026-09-30T04:41:38+00:00 dns-debian13 sudo[6295]: pam_unix(sudo:session): session closed for user root
+2026-09-30T04:41:38+00:00 dns-debian13 sshd-session[6294]: Received disconnect from 10.0.2.2 port 36136:11: disconnected by user
+2026-09-30T04:41:38+00:00 dns-debian13 systemd[1]: session-62.scope: Deactivated successfully.
+2026-09-30T04:41:38+00:00 dns-debian13 systemd-logind[761]: Session 62 logged out. Waiting for processes to exit.
+2026-09-30T04:41:38+00:00 dns-debian13 systemd-logind[761]: Removed session 62.
+2026-09-30T04:41:38+00:00 dns-debian13 systemd[1]: Started session-63.scope - Session 63 of User celik.
+2026-09-30T04:41:38+00:00 dns-debian13 useradd[6328]: new group: name=celikpeer, GID=987
+2026-09-30T04:41:38+00:00 dns-debian13 useradd[6328]: new user: name=celikpeer, UID=995, GID=987, home=/var/lib/pdns-peer-inspector, shell=/bin/sh, from=none
+2026-09-30T04:41:38+00:00 dns-debian13 systemd[1]: Reloading ssh.service - OpenBSD Secure Shell server...
+2026-09-30T04:41:39+00:00 dns-debian13 sshd[797]: Received SIGHUP; restarting.
+2026-09-30T04:41:39+00:00 dns-debian13 sshd[797]: Server listening on 0.0.0.0 port 22.
+2026-09-30T04:41:39+00:00 dns-debian13 sshd[797]: Server listening on :: port 22.
+2026-09-30T04:41:39+00:00 dns-debian13 systemd[1]: Reloaded ssh.service - OpenBSD Secure Shell server.
+2026-09-30T04:41:39+00:00 dns-debian13 sudo[6311]: pam_unix(sudo:session): session closed for user root
+2026-09-30T04:41:39+00:00 dns-debian13 sshd-session[6310]: Received disconnect from 10.0.2.2 port 36148:11: disconnected by user
+2026-09-30T04:41:39+00:00 dns-debian13 systemd[1]: session-63.scope: Deactivated successfully.
+2026-09-30T04:41:39+00:00 dns-debian13 systemd-logind[761]: Session 63 logged out. Waiting for processes to exit.
+2026-09-30T04:41:39+00:00 dns-debian13 systemd-logind[761]: Removed session 63.
+2026-09-30T04:41:39+00:00 dns-debian13 systemd[1]: Started session-64.scope - Session 64 of User celik.
+2026-09-30T04:41:39+00:00 dns-debian13 sudo[6364]: pam_unix(sudo:session): session closed for user root
+2026-09-30T04:41:39+00:00 dns-debian13 sshd-session[6363]: Received disconnect from 10.0.2.2 port 36156:11: disconnected by user
+2026-09-30T04:41:39+00:00 dns-debian13 systemd[1]: session-64.scope: Deactivated successfully.
+2026-09-30T04:41:39+00:00 dns-debian13 systemd-logind[761]: Session 64 logged out. Waiting for processes to exit.
+2026-09-30T04:41:39+00:00 dns-debian13 systemd-logind[761]: Removed session 64.
+2026-09-30T04:41:39+00:00 dns-debian13 systemd[1]: Started session-65.scope - Session 65 of User celik.
+2026-09-30T04:41:39+00:00 dns-debian13 sudo[6380]: pam_unix(sudo:session): session closed for user root
+2026-09-30T04:41:39+00:00 dns-debian13 sshd-session[6379]: Received disconnect from 10.0.2.2 port 36162:11: disconnected by user
+2026-09-30T04:41:39+00:00 dns-debian13 systemd[1]: session-65.scope: Deactivated successfully.
+2026-09-30T04:41:39+00:00 dns-debian13 systemd-logind[761]: Session 65 logged out. Waiting for processes to exit.
+2026-09-30T04:41:39+00:00 dns-debian13 systemd-logind[761]: Removed session 65.
+2026-09-30T04:41:39+00:00 dns-debian13 systemd[1]: Started session-66.scope - Session 66 of User celik.
+2026-09-30T04:41:39+00:00 dns-debian13 sshd-session[6395]: Received disconnect from 10.0.2.2 port 36176:11: disconnected by user
+2026-09-30T04:41:39+00:00 dns-debian13 systemd-logind[761]: Session 66 logged out. Waiting for processes to exit.
+2026-09-30T04:41:39+00:00 dns-debian13 systemd[1]: session-66.scope: Deactivated successfully.
+2026-09-30T04:41:39+00:00 dns-debian13 systemd-logind[761]: Removed session 66.
+2026-09-30T04:41:40+00:00 dns-debian13 systemd[1]: Started session-67.scope - Session 67 of User celik.
+2026-09-30T04:41:40+00:00 dns-debian13 sudo[6407]: pam_unix(sudo:session): session closed for user root
+2026-09-30T04:41:40+00:00 dns-debian13 sshd-session[6406]: Received disconnect from 10.0.2.2 port 36186:11: disconnected by user
+2026-09-30T04:41:40+00:00 dns-debian13 systemd[1]: session-67.scope: Deactivated successfully.
+2026-09-30T04:41:40+00:00 dns-debian13 systemd-logind[761]: Session 67 logged out. Waiting for processes to exit.
+2026-09-30T04:41:40+00:00 dns-debian13 systemd-logind[761]: Removed session 67.
+2026-09-30T04:41:40+00:00 dns-debian13 systemd[1]: Started session-68.scope - Session 68 of User celik.
+2026-09-30T04:41:40+00:00 dns-debian13 sudo[6423]: pam_unix(sudo:session): session closed for user root
+2026-09-30T04:41:40+00:00 dns-debian13 sshd-session[6422]: Received disconnect from 10.0.2.2 port 36200:11: disconnected by user
+2026-09-30T04:41:40+00:00 dns-debian13 systemd[1]: session-68.scope: Deactivated successfully.
+2026-09-30T04:41:40+00:00 dns-debian13 systemd-logind[761]: Session 68 logged out. Waiting for processes to exit.
+2026-09-30T04:41:40+00:00 dns-debian13 systemd-logind[761]: Removed session 68.
+2026-09-30T04:41:41+00:00 dns-debian13 pdns_server[5023]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:55033', transfer initiated
+2026-09-30T04:41:43+00:00 dns-debian13 pdns_server[5023]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:42347', transfer initiated
+2026-09-30T04:41:43+00:00 dns-debian13 pdns_server[5023]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:35021', transfer initiated
+2026-09-30T04:41:43+00:00 dns-debian13 pdns_server[5023]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:35021', failed: not authoritative
+2026-09-30T04:41:43+00:00 dns-debian13 systemd[1]: Started session-69.scope - Session 69 of User celik.
+2026-09-30T04:41:43+00:00 dns-debian13 sudo[6455]: pam_unix(sudo:session): session closed for user root
+2026-09-30T04:41:43+00:00 dns-debian13 sshd-session[6454]: Received disconnect from 10.0.2.2 port 36208:11: disconnected by user
+2026-09-30T04:41:43+00:00 dns-debian13 systemd[1]: session-69.scope: Deactivated successfully.
+2026-09-30T04:41:43+00:00 dns-debian13 systemd-logind[761]: Session 69 logged out. Waiting for processes to exit.
+2026-09-30T04:41:43+00:00 dns-debian13 systemd-logind[761]: Removed session 69.
+2026-09-30T04:41:51+00:00 dns-debian13 sshd-session[6459]: Accepted publickey for celikpeer from 192.0.2.11 port 44960 ssh2: ED25519 SHA256:KDu65GBTn2w93QH92JmDPmOTvXN/xPU0cO3ZmyfMtOs
+2026-09-30T04:41:51+00:00 dns-debian13 sshd-session[6459]: pam_unix(sshd:session): session opened for user celikpeer(uid=995) by celikpeer(uid=0)
+2026-09-30T04:41:51+00:00 dns-debian13 systemd[1]: Created slice user-995.slice - User Slice of UID 995.
+2026-09-30T04:41:51+00:00 dns-debian13 systemd-logind[761]: New session 70 of user celikpeer.
+2026-09-30T04:41:51+00:00 dns-debian13 systemd[1]: Starting user-runtime-dir@995.service - User Runtime Directory /run/user/995...
+2026-09-30T04:41:51+00:00 dns-debian13 systemd[1]: Finished user-runtime-dir@995.service - User Runtime Directory /run/user/995.
+2026-09-30T04:41:51+00:00 dns-debian13 systemd[1]: Starting user@995.service - User Manager for UID 995...
+2026-09-30T04:41:51+00:00 dns-debian13 (systemd)[6464]: pam_unix(systemd-user:session): session opened for user celikpeer(uid=995) by celikpeer(uid=0)
+2026-09-30T04:41:51+00:00 dns-debian13 systemd-logind[761]: New session 71 of user celikpeer.
+2026-09-30T04:41:51+00:00 dns-debian13 systemd[6464]: Queued start job for default target default.target.
+2026-09-30T04:41:51+00:00 dns-debian13 systemd[6464]: Created slice app.slice - User Application Slice.
+2026-09-30T04:41:51+00:00 dns-debian13 systemd[6464]: Reached target paths.target - Paths.
+2026-09-30T04:41:51+00:00 dns-debian13 systemd[6464]: Reached target timers.target - Timers.
+2026-09-30T04:41:51+00:00 dns-debian13 systemd[6464]: Starting ssh-agent.socket - OpenSSH Agent socket...
+2026-09-30T04:41:51+00:00 dns-debian13 systemd[6464]: Listening on ssh-agent.socket - OpenSSH Agent socket.
+2026-09-30T04:41:51+00:00 dns-debian13 systemd[6464]: Reached target sockets.target - Sockets.
+2026-09-30T04:41:51+00:00 dns-debian13 systemd[6464]: Reached target basic.target - Basic System.
+2026-09-30T04:41:51+00:00 dns-debian13 systemd[6464]: Reached target default.target - Main User Target.
+2026-09-30T04:41:51+00:00 dns-debian13 systemd[6464]: Startup finished in 119ms.
+2026-09-30T04:41:51+00:00 dns-debian13 systemd[1]: Started user@995.service - User Manager for UID 995.
+2026-09-30T04:41:51+00:00 dns-debian13 systemd[1]: Started session-70.scope - Session 70 of User celikpeer.
+2026-09-30T04:41:51+00:00 dns-debian13 sudo[6480]: celikpeer : PWD=/var/lib/pdns-peer-inspector ; USER=root ; COMMAND=/usr/local/libexec/celikpanel-pdns-peer-inspect
+2026-09-30T04:41:51+00:00 dns-debian13 sudo[6480]: pam_unix(sudo:session): session opened for user root(uid=0) by celikpeer(uid=995)
+2026-09-30T04:41:51+00:00 dns-debian13 sudo[6480]: pam_unix(sudo:session): session closed for user root
+2026-09-30T04:41:51+00:00 dns-debian13 sshd-session[6478]: Connection closed by 192.0.2.11 port 44960
+2026-09-30T04:41:51+00:00 dns-debian13 sshd-session[6459]: pam_unix(sshd:session): session closed for user celikpeer
+2026-09-30T04:41:51+00:00 dns-debian13 systemd[1]: session-70.scope: Deactivated successfully.
+2026-09-30T04:41:51+00:00 dns-debian13 systemd-logind[761]: Session 70 logged out. Waiting for processes to exit.
+2026-09-30T04:41:51+00:00 dns-debian13 systemd-logind[761]: Removed session 70.
+2026-09-30T04:41:54+00:00 dns-debian13 systemd[1]: Started session-72.scope - Session 72 of User celik.
+2026-09-30T04:41:54+00:00 dns-debian13 sudo[6501]: pam_unix(sudo:session): session closed for user root
+2026-09-30T04:41:54+00:00 dns-debian13 sshd-session[6500]: Received disconnect from 10.0.2.2 port 32990:11: disconnected by user
+2026-09-30T04:41:54+00:00 dns-debian13 systemd[1]: session-72.scope: Deactivated successfully.
+2026-09-30T04:41:54+00:00 dns-debian13 systemd-logind[761]: Session 72 logged out. Waiting for processes to exit.
+2026-09-30T04:41:54+00:00 dns-debian13 systemd-logind[761]: Removed session 72.
+2026-09-30T04:41:59+00:00 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-09-30T04:41:59+00:00 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-09-30T04:41:59+00:00 dns-debian13 systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-09-30T04:42:02+00:00 dns-debian13 systemd[1]: Stopping user@995.service - User Manager for UID 995...
+2026-09-30T04:42:02+00:00 dns-debian13 systemd[6464]: Activating special unit exit.target...
+2026-09-30T04:42:02+00:00 dns-debian13 systemd[6464]: Stopped target default.target - Main User Target.
+2026-09-30T04:42:02+00:00 dns-debian13 systemd[6464]: Stopped target basic.target - Basic System.
+2026-09-30T04:42:02+00:00 dns-debian13 systemd[6464]: Stopped target paths.target - Paths.
+2026-09-30T04:42:02+00:00 dns-debian13 systemd[6464]: Stopped target sockets.target - Sockets.
+2026-09-30T04:42:02+00:00 dns-debian13 systemd[6464]: Stopped target timers.target - Timers.
+2026-09-30T04:42:02+00:00 dns-debian13 systemd[6464]: Stopping ssh-agent.socket - OpenSSH Agent socket...
+2026-09-30T04:42:02+00:00 dns-debian13 systemd[6464]: Closed ssh-agent.socket - OpenSSH Agent socket.
+2026-09-30T04:42:02+00:00 dns-debian13 systemd[6464]: Removed slice app.slice - User Application Slice.
+2026-09-30T04:42:02+00:00 dns-debian13 systemd[6464]: Reached target shutdown.target - Shutdown.
+2026-09-30T04:42:02+00:00 dns-debian13 systemd[6464]: Finished systemd-exit.service - Exit the Session.
+2026-09-30T04:42:02+00:00 dns-debian13 systemd[6464]: Reached target exit.target - Exit the Session.
+2026-09-30T04:42:02+00:00 dns-debian13 systemd-logind[761]: Removed session 71.
+2026-09-30T04:42:02+00:00 dns-debian13 systemd[1]: user@995.service: Deactivated successfully.
+2026-09-30T04:42:02+00:00 dns-debian13 systemd[1]: Stopped user@995.service - User Manager for UID 995.
+2026-09-30T04:42:02+00:00 dns-debian13 systemd[1]: Stopping user-runtime-dir@995.service - User Runtime Directory /run/user/995...
+2026-09-30T04:42:02+00:00 dns-debian13 systemd[1]: run-user-995.mount: Deactivated successfully.
+2026-09-30T04:42:02+00:00 dns-debian13 systemd[1]: user-runtime-dir@995.service: Deactivated successfully.
+2026-09-30T04:42:02+00:00 dns-debian13 systemd[1]: Stopped user-runtime-dir@995.service - User Runtime Directory /run/user/995.
+2026-09-30T04:42:02+00:00 dns-debian13 systemd[1]: Removed slice user-995.slice - User Slice of UID 995.
+2026-09-30T04:42:04+00:00 dns-debian13 systemd[1]: Started session-73.scope - Session 73 of User celik.
+2026-09-30T04:42:04+00:00 dns-debian13 sudo[6556]: pam_unix(sudo:session): session closed for user root
+2026-09-30T04:42:04+00:00 dns-debian13 sshd-session[6555]: Received disconnect from 10.0.2.2 port 58588:11: disconnected by user
+2026-09-30T04:42:04+00:00 dns-debian13 systemd[1]: session-73.scope: Deactivated successfully.
+2026-09-30T04:42:04+00:00 dns-debian13 systemd-logind[761]: Session 73 logged out. Waiting for processes to exit.
+2026-09-30T04:42:04+00:00 dns-debian13 systemd-logind[761]: Removed session 73.
+2026-09-30T04:42:14+00:00 dns-debian13 systemd[1]: Started session-74.scope - Session 74 of User celik.
+2026-09-30T04:42:14+00:00 dns-debian13 sudo[6569]: pam_unix(sudo:session): session closed for user root
+2026-09-30T04:42:14+00:00 dns-debian13 sshd-session[6568]: Received disconnect from 10.0.2.2 port 52614:11: disconnected by user
+2026-09-30T04:42:14+00:00 dns-debian13 systemd[1]: session-74.scope: Deactivated successfully.
+2026-09-30T04:42:14+00:00 dns-debian13 systemd-logind[761]: Session 74 logged out. Waiting for processes to exit.
+2026-09-30T04:42:14+00:00 dns-debian13 systemd-logind[761]: Removed session 74.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[1]: Stopping user@1000.service - User Manager for UID 1000...
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[1333]: Activating special unit exit.target...
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[1333]: Stopped target default.target - Main User Target.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[1333]: Stopped target basic.target - Basic System.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[1333]: Stopped target paths.target - Paths.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[1333]: Stopped target sockets.target - Sockets.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[1333]: Stopped target timers.target - Timers.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[1333]: Stopping ssh-agent.socket - OpenSSH Agent socket...
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[1333]: Closed ssh-agent.socket - OpenSSH Agent socket.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[1333]: Removed slice app.slice - User Application Slice.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[1333]: Reached target shutdown.target - Shutdown.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[1333]: Finished systemd-exit.service - Exit the Session.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[1333]: Reached target exit.target - Exit the Session.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd-logind[761]: Removed session 27.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[1]: user@1000.service: Deactivated successfully.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[1]: Stopped user@1000.service - User Manager for UID 1000.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[1]: Stopping user-runtime-dir@1000.service - User Runtime Directory /run/user/1000...
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[1]: run-user-1000.mount: Deactivated successfully.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[1]: user-runtime-dir@1000.service: Deactivated successfully.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[1]: Starting user-runtime-dir@1000.service - User Runtime Directory /run/user/1000...
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[1]: Finished user-runtime-dir@1000.service - User Runtime Directory /run/user/1000.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[1]: Starting user@1000.service - User Manager for UID 1000...
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[6586]: Queued start job for default target default.target.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[6586]: Created slice app.slice - User Application Slice.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[6586]: Reached target paths.target - Paths.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[6586]: Reached target timers.target - Timers.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[6586]: Starting ssh-agent.socket - OpenSSH Agent socket...
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[6586]: Listening on ssh-agent.socket - OpenSSH Agent socket.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[6586]: Reached target sockets.target - Sockets.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[6586]: Reached target basic.target - Basic System.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[1]: Started user@1000.service - User Manager for UID 1000.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[1]: Started session-75.scope - Session 75 of User celik.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[6586]: Reached target default.target - Main User Target.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[6586]: Startup finished in 79ms.
+2026-09-30T04:42:25+00:00 dns-debian13 sudo[6601]: pam_unix(sudo:session): session closed for user root
+2026-09-30T04:42:25+00:00 dns-debian13 sshd-session[6600]: Received disconnect from 10.0.2.2 port 48016:11: disconnected by user
+2026-09-30T04:42:25+00:00 dns-debian13 systemd[1]: session-75.scope: Deactivated successfully.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd-logind[761]: Session 75 logged out. Waiting for processes to exit.
+2026-09-30T04:42:25+00:00 dns-debian13 systemd-logind[761]: Removed session 75.

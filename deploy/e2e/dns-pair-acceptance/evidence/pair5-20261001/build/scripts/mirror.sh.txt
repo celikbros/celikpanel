@@ -1,0 +1,7 @@
+#!/bin/bash
+# Mirror host obs and evidence (read copies) into the scratchpad for local reading.
+W=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/pair5
+mkdir -p $W/mirror
+( cd /root/cp-pair5 && tar -cf - obs logs ) | ( cd $W/mirror && tar --no-same-owner -xf - )
+( cd /var/tmp && tar -cf - cp-pair5-evidence ) | ( cd $W/mirror && tar --no-same-owner -xf - )
+echo mirrored
