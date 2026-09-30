@@ -62,6 +62,11 @@ func TestRollbackStandbyForBackendReadiness(t *testing.T) {
 }
 
 func TestInitialDNSEngineInstallRollbackEvidenceScope(t *testing.T) {
+	// The table states the closed gate; pin it so the test holds whichever
+	// way the product constant stands. The open gate has its own test.
+	previousGate := pdnsFreshPairedPrimaryGateOpen
+	pdnsFreshPairedPrimaryGateOpen = false
+	t.Cleanup(func() { pdnsFreshPairedPrimaryGateOpen = previousGate })
 	manifest := func(target transport.DNSEngine, topology, role string) mutationpayload.DNSEngineSwitchManifestCommitment {
 		m := mutationpayload.DNSEngineSwitchManifestCommitment{
 			Mode: transport.DNSEngineSwitchModeSwitch, TargetEngine: target, TargetEpoch: 1, Topology: topology, PairRole: role,

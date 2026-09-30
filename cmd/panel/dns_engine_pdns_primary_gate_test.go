@@ -25,6 +25,16 @@ func openPDNSPairedPrimaryGateForTest(t *testing.T) {
 	t.Cleanup(func() { pdnsPairedPrimaryGateOpen = previous })
 }
 
+// closePDNSPairedPrimaryGateForTest pins the closed gate for a test that
+// states the closed behaviour, so the test holds whichever way the product
+// constant stands.
+func closePDNSPairedPrimaryGateForTest(t *testing.T) {
+	t.Helper()
+	previous := pdnsPairedPrimaryGateOpen
+	pdnsPairedPrimaryGateOpen = false
+	t.Cleanup(func() { pdnsPairedPrimaryGateOpen = previous })
+}
+
 func TestPDNSPairedPrimaryPanelGateStaysClosedInThisRelease(t *testing.T) {
 	if freshPairedPDNSPrimaryOffered || pdnsPairedPrimaryGateOpen {
 		t.Fatal("the fresh paired PowerDNS primary gate must stay closed until row 6 has native acceptance")

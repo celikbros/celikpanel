@@ -103,9 +103,11 @@ func TestServerSetupDNSFreshPDNSPrimaryAgentRollbackShownWithinOnePoll(t *testin
 	}
 }
 
-// Gate closed (as shipped): a fresh paired PowerDNS primary is outside the
-// rollback-evidence scope on both sides.
+// Gate closed: a fresh paired PowerDNS primary is outside the
+// rollback-evidence scope on both sides. Both gate states are pinned here, so
+// the test does not depend on the product constant.
 func TestFreshPDNSPrimaryReconcileScopeFollowsTheGate(t *testing.T) {
+	closePDNSPairedPrimaryGateForTest(t)
 	persisted := persistedDNSEngineSwitch{Mode: transport.DNSEngineSwitchModeSwitch, Action: "install",
 		TargetEngine: transport.DNSEnginePowerDNS, TargetEpoch: 1, Topology: transport.DNSTopologyPaired,
 		PairRole: transport.DNSPairRolePrimary, LocalIP: "192.0.2.1", LocalNS: "ns1.example.test",

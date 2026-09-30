@@ -90,10 +90,11 @@ func TestFreshPrimaryV3FailedCatalogVerificationLeftoverRollsBackByItself(t *tes
 	}
 }
 
-// Gate closed (as shipped) the fresh paired PowerDNS primary stays outside
-// the Agent's rollback-evidence scope; open, only that exact first install
-// enters.
+// Gate closed, the fresh paired PowerDNS primary stays outside the Agent's
+// rollback-evidence scope; open, only that exact first install enters. Both
+// gate states are pinned here.
 func TestFreshPairedPDNSPrimaryRollbackEvidenceScopeFollowsTheGate(t *testing.T) {
+	closeFreshPairedPDNSPrimaryGate(t)
 	manifest := freshPairedPDNSPrimaryManifest(t)
 	if initialDNSEngineInstallRollbackEvidenceScope(manifest) {
 		t.Fatal("closed gate admitted the fresh paired PowerDNS primary rollback evidence")

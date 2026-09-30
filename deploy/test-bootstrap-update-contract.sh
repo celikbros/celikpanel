@@ -2135,7 +2135,7 @@ trap - EXIT
 
 # The Makefile artifact contains the complete offline initial-install payload.
 # Updates and rollbacks still use the immutable bootstrap transaction path.
-require_literal "$MAKEFILE" 'build: panel agent-native-contract schema17-bridge recovery-runtime firewall-runtime mail-renewal-runtime web'
+require_literal "$MAKEFILE" 'build: panel agent-native-contract schema17-bridge recovery-runtime firewall-runtime mail-renewal-runtime dns-owner-tools web'
 require_literal "$MAKEFILE" 'cp -r bin/firewall-runtime dist/$(DIST)/firewall-runtime'
 require_literal "$MAKEFILE" 'chmod 0755 dist/$(DIST)/firewall-runtime/restore'
 require_literal "$MAKEFILE" 'cp bin/firewall-runtime/celikpanel-firewall-restore.service dist/$(DIST)/deploy/systemd/celikpanel-firewall-restore.service'
