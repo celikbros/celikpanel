@@ -404,6 +404,27 @@ unchanged. Fixed notify build on z05: six notifies with port 53, zero
 spurious, zero port-0 lines. Two daemon re-stamps at +60 s and +120 s after
 first start, each after a membership change.
 
+**2026-10-01, pair 5, product flow: first complete topology** ([evidence](../deploy/e2e/dns-pair-acceptance/evidence/pair5-20261001/README.md),
+product `b1e32275` with the gate open, test-only license of D-027, driver
+`4941b605`, no driver patch, no pass-rule change). Rows 2, 3, 5, 6, 17.
+State cells are not changed by this entry; the closing assessment judges
+them.
+
+| Topology (primary / secondary) | Reached | Stopped at |
+|---|---|---|
+| PowerDNS / BIND | **every step**: install, license, setup, pair readiness, zone add, record add and edit, zone delete (pending on `dns_peer_enrollment_required`; owner enrollment with the packaged tools; the retry deleted with the product's proof: REFUSED on both servers, native absent on both, catalog member absent), zone re-add, management-disabled reboot with both servers answering and the ledgers unchanged, management return with the readiness rule holding | — |
+| BIND / BIND; BIND (Arch) / PowerDNS | zone add, record add and edit; first delete pending; enrollment (`--engine pdns` end to end for the first time); the inspector exchange completed | the retry stayed pending as `dns_peer_owner_edit_unknown` although nothing changed: the BIND primary's propagation plan carries no source state, the post-inspection probe selection refuses the empty engine, and that internal refusal is mapped to the owner-edit code (source reading matching the timing; fix in progress) |
+
+Measured natively for the first time: the managed BIND secondary's catalog
+stanza allows loopback transfers and the receipt carries version 2, no
+transfer was denied; the mail stage was skipped for DNS-only domains on
+every host including Arch; the managed PowerDNS secondary was not refused
+by the owner's inspector; rndc keys product-created on Arch and
+package-provided on Debian; thirteen PowerDNS notifies with port 53 and no
+spurious answer. Not exercised: `dns_peer_catalog_transfer_refused`, the
+`detail` field, `mail_runtime_cleanup_failed`, `config_unreviewed`, the
+version 1 to 2 upgrade of an existing secondary, rndc key rollback.
+
 Native coverage of the source changes listed after batches 4 and 5:
 
 | Change | First native run that exercised it |

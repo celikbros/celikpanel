@@ -426,6 +426,28 @@ bildirim, sıfır sahte yanıt, sıfır 0 numaralı bağlantı noktası satırı
 başlangıçtan +60 sn ve +120 sn sonra iki daemon yeniden damgalaması, her
 biri bir üye değişikliğinden sonra.
 
+**1 Ekim 2026, çift 5, ürün akışı: ilk tamamlanan topoloji** ([kanıt](../deploy/e2e/dns-pair-acceptance/evidence/pair5-20261001/README.md),
+kapı açıkken ürün `b1e32275`, D-027'nin yalnızca test amaçlı lisansı,
+sürücü `4941b605`, sürücü yaması yok, geçme kuralı değişikliği yok). Satır
+2, 3, 5, 6, 17. Bu kayıt durum hücrelerini değiştirmiyor; onları kapanış
+değerlendirmesi yargılar.
+
+| Topoloji (birincil / ikincil) | Ulaşılan | Durma noktası |
+|---|---|---|
+| PowerDNS / BIND | **her adım**: kurulum, lisanslama, ilk yapılandırma, çift hazırlığı, bölge ekleme, kayıt ekleme ve düzenleme, bölge silme (`dns_peer_enrollment_required` ile beklemede; paketlenmiş araçlarla sahip kaydı; yeniden deneme ürünün kanıtıyla sildi: iki sunucuda REFUSED, ikisinde de yerel olarak yok, katalog üyesi yok), bölge yeniden ekleme, iki sunucunun da yanıt verdiği ve ledger'ların değişmediği yönetim kapalıyken yeniden açılış, hazırlık kuralının tuttuğu yönetim dönüşü | — |
+| BIND / BIND; BIND (Arch) / PowerDNS | bölge ekleme, kayıt ekleme ve düzenleme; ilk silme beklemede; kayıt (`--engine pdns` ilk kez uçtan uca); denetleyici alışverişi tamamlandı | yeniden deneme, hiçbir şey değişmediği hâlde `dns_peer_owner_edit_unknown` ile beklemede kaldı: BIND birincilinin yayılım planı kaynak durumu taşımıyor, denetim sonrası sonda seçimi boş motoru reddediyor ve bu iç ret sahip-düzenleme koduna eşleniyor (zamanlamayla örtüşen kaynak okuması; düzeltme sürüyor) |
+
+İlk kez gerçek sistemde ölçülen: yönetilen BIND ikincilinin katalog
+bildirimi yerel döngü aktarımlarına izin veriyor ve makbuz sürüm 2
+taşıyor, hiçbir aktarım reddedilmedi; yalnızca DNS'li alan adlarında posta
+aşaması Arch dahil her sunucuda atlandı; yönetilen PowerDNS ikincili sahip
+denetleyicisi tarafından reddedilmedi; rndc anahtarları Arch'ta ürün
+tarafından oluşturuldu, Debian'da paket tarafından sağlandı; 53 numaralı
+bağlantı noktasıyla on üç PowerDNS bildirimi ve sıfır sahte yanıt.
+Denenmeyenler: `dns_peer_catalog_transfer_refused`, `detail` alanı,
+`mail_runtime_cleanup_failed`, `config_unreviewed`, mevcut bir ikincilde
+sürüm 1'den 2'ye yükseltme, rndc anahtarı geri alma.
+
 4. ve 5. gruplardan sonra listelenen kaynak değişikliklerinin gerçek
 sistemdeki kapsamı:
 
