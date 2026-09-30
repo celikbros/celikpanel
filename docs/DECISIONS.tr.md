@@ -26,7 +26,7 @@ sürdürülen ebeveynsiz silme, yönetim kapalıyken yeniden açılışlar) ve 5
 bölge ekleme, kayıt düzenleme, sahip kaydından sonra ürünün kanıtıyla bölge
 silme, yeniden ekleme, panel kapalıyken yeniden açılış, yönetimin dönüşü)
 kabul dalında düzenek geçici çözümü olmadan geçti. Aynı koşular yol boyunca
-dokuz ürün kusuru bulup kapattı; her biri kanıtıyla kabul kütüğünde.
+on bir ürün kusuru bulup kapattı; her biri kanıtıyla kabul kütüğünde.
 
 **Karar.** İki kapı sabiti ana hatta `true`. Sunulan, tam olarak ölçülen
 şeydir: DNS motoru olmayan bir sunucuda çift birincil olarak PowerDNS,

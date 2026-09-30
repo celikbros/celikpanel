@@ -25,7 +25,7 @@ enrollment, management-disabled reboots) and pair runs 5 and 7 (the whole
 product flow on two CelikPanel servers: setup, zone add, record edit, zone
 delete with the product's proof after the owner enrollment, re-add, reboot
 with the panel off, management return) passed on the acceptance branch with
-no harness workaround. The same runs found and closed nine product defects
+no harness workaround. The same runs found and closed eleven product defects
 along the way; each is in the acceptance register with its evidence.
 
 **Decision.** The two gate constants are `true` on the main line. What is

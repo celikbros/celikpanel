@@ -45,22 +45,22 @@ Common facts (source references are for `e9d1019d` plus the D-026 gate):
 | # | Path (how reached) | Journal | Recovery before target start / after target start | Owner change at recovery | Native evidence (limit) | State |
 |---|---|---|---|---|---|---|
 | 1 | Fresh BIND, standalone (setup or card `install`) | V1 | Agent, same request, both sides. No owner CLI (accepted by D-026 decision 2). | Owner-aware config preimage in rollback | [Arch target-staged/before-write](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-TARGET-STAGED-ARCH-20260925.md): one early cell, forward only. [Fresh-install cells 2026-09-29](../deploy/e2e/dns-kill-matrix/evidence/fresh-install-20260929/README.md): `bind__target-verified__before-write` (Arch, cut after `named` started, journal at `target-started`) and `bind__target-verified__after-write` (Debian) both converged forward at Agent startup; same `named` PID, 31/31 health, authoritative UDP/TCP. | **PASSED** for the after-start cut on Debian and Arch. **GAP**: Debian pre-start cell, reboot; no continuity through the cut is claimed. |
-| 2 | Fresh BIND, paired primary | V1 | Agent, same request | as 1 | [Pair target-staged/after-write + management-disabled reboot](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-PAIR-TARGET-STAGED-20260926.md); [V3 deletion terminal](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-V3-DELETION-TERMINAL-20260926.md) | **PASSED** for those two before-start cells. **GAP**: source-stopped, target-started, target-verified cuts |
-| 3 | Fresh BIND, paired secondary | V1 | Agent, same request | as 1 | none — every secondary in the trials so far was panel-free | **GAP**: no interruption trial |
+| 2 | Fresh BIND, paired primary | V1 | Agent, same request | as 1 | [Pair target-staged/after-write + management-disabled reboot](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-PAIR-TARGET-STAGED-20260926.md); [V3 deletion terminal](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-V3-DELETION-TERMINAL-20260926.md) | **PASSED** for those two before-start cells and for the product flow ([pair 7](../deploy/e2e/dns-pair-acceptance/evidence/pair7-20261001/README.md) t1/t2: zone add, edit, delete with the proof after owner enrollment, re-add, management-disabled reboot). **GAP**: source-stopped, target-started, target-verified cuts |
+| 3 | Fresh BIND, paired secondary | V1 | Agent, same request | as 1 | Batches [5](../deploy/e2e/dns-kill-matrix/evidence/batch5-paired-first-20260929/README.md), [6a](../deploy/e2e/dns-kill-matrix/evidence/batch6a-fixed-hook-20260929/README.md), [6b](../deploy/e2e/dns-kill-matrix/evidence/batch6b-pdns-secondary-20260930/README.md), [7](../deploy/e2e/dns-kill-matrix/evidence/batch7-breadth-20260930/README.md): `intent`, `target-staged`, `target-verified` cuts against panel-free BIND and PowerDNS primaries, management-disabled reboots; [pair 7](../deploy/e2e/dns-pair-acceptance/evidence/pair7-20261001/README.md) t1/t3: product flow behind a CelikPanel primary | **PASSED** (2026-10-01) with limits: the interruption cells ran against panel-free primaries; the CelikPanel-primary runs had no cut on the secondary |
 | 4 | Fresh PowerDNS, standalone (APT hosts only) | V1 | Agent `rollbackPDNSSwitch`, before and after start. No owner CLI (D-026 decision 2). | `verifyOwnerAwarePreimage` | [Fresh-install cells 2026-09-29](../deploy/e2e/dns-kill-matrix/evidence/fresh-install-20260929/README.md): `pdns-switch__target-started__after-write` passed (startup rollback, then the same request re-ran forward on retry; ~3 s DNS gap). `pdns-switch__target-staged__after-write` **failed**: PowerDNS had never started and its unit was the install's own persistent mask, but the V1 rollback's stopped-target proof required `LoadState=loaded`; recovery ended `dns_native_recovery_unknown_after_restart`, the retry was refused, no DNS served. Prior state (no DNS) was not damaged. Fix `VerifyStoppedFreshSourceTarget` (commit `1c336f6d`); [re-run on the fixed source](../deploy/e2e/dns-kill-matrix/evidence/fresh-install-rerun-20260929/README.md): `target-staged__after-write` (same request bytes) and `intent__after-write` both rolled back at Agent startup and converged forward on the same-request retry; 31/31 health, authoritative UDP/TCP. | **PASSED** for the pre-start (intent, target-staged; masked never-started unit) and after-start cuts on Debian 13. **GAP**: the `not-found`/`loaded` accepted states and the runtime-mask refusal have component tests only; no reboot; rolled-back verdict code inferred from journal/ledger, not logged. |
-| 5 | Fresh or reconfigured PowerDNS, paired secondary | V1 | Agent, same request | as 4 | none | **GAP**: no interruption trial |
-| 6 | Fresh paired PowerDNS primary, V3 (empty source) | V3 (tests only) | Before start: owner CLI `recover-dns-pdns-fresh-prestart`. After start: Agent forward only; no after-start inverse. | SQL/daemon drift check refuses | [V3 native after-start forward + SIGKILL](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/README.md), [V3 prestart inverse](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-prestart-20260928/README.md), [V3 zone lifecycle](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-zone-20260928/README.md). Not reached through the public RPC. | **UNSUPPORTED, refused** (`pdns_primary_switch_paused`). Opening it belongs to item 2 and needs an owner-edit cut, an after-start inverse or an explicit forward-only policy, and acceptance through the public RPC. |
+| 5 | Fresh or reconfigured PowerDNS, paired secondary | V1 | Agent, same request | as 4 | Batches [6b](../deploy/e2e/dns-kill-matrix/evidence/batch6b-pdns-secondary-20260930/README.md) and [7](../deploy/e2e/dns-kill-matrix/evidence/batch7-breadth-20260930/README.md): `intent`, `target-staged`, `target-started`, `target-verified`, `committed`, `rolling-back`, `rolled-back` cuts against panel-free BIND and PowerDNS primaries, rollback of a database the daemon had written, management-disabled reboots; [pair 7](../deploy/e2e/dns-pair-acceptance/evidence/pair7-20261001/README.md) t2: product flow behind a CelikPanel BIND primary incl. `dns-peer-enroll --engine pdns` | **PASSED** (2026-10-01) for the fresh secondary, with limits: panel-free primaries in the interruption cells; the reconfigured secondary has no interruption trial |
+| 6 | Fresh paired PowerDNS primary, V3 (empty source) | V3 (tests only) | Before start: owner CLI `recover-dns-pdns-fresh-prestart`. After start: Agent forward only; no after-start inverse. | SQL/daemon drift check refuses | [V3 native after-start forward + SIGKILL](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/README.md), [V3 prestart inverse](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-prestart-20260928/README.md), [V3 zone lifecycle](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-zone-20260928/README.md). Not reached through the public RPC. | **PASSED** (2026-10-01, D-028, gate open on the main line) with limits. Through the public RPC: [batch 8r](../deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/README.md) (pre-start cuts rolled back by the Agent, post-start forward, owner configuration and SQL edits held, Agent-released job finished by the owner command, zone lifecycle, management-disabled reboot), [batch 9](../deploy/e2e/dns-kill-matrix/evidence/batch9-pdns-primary-zero-zone-20261001/README.md) and [batch 12](../deploy/e2e/dns-kill-matrix/evidence/batch12-zero-zone-complete-20261001/README.md) (zero zones: the same cuts, the first zone created, a parentless deletion resumed after owner enrollment, reboot), [pair 5](../deploy/e2e/dns-pair-acceptance/evidence/pair5-20261001/README.md) and [pair 7](../deploy/e2e/dns-pair-acceptance/evidence/pair7-20261001/README.md) (product flow). Policy: before start the Agent rolls back by itself and the owner command finishes a released job; after start forward only; an owner change holds DNS only. Limits: one run per cell, Debian 13 PowerDNS 4.9.17 primary with an Arch BIND secondary in the cells and with CelikPanel secondaries in the pair runs; no after-start inverse by design; the daemon re-stamp admission and the proof time-out code did not occur natively. |
 | 7 | PowerDNS → BIND, standalone, PowerDNS active / BIND inactive | **V2** | Agent writes the `rolling-back` decision and then refuses; owner CLI `recover-dns-bind-switch` executes the inverse from rolling-back/rolled-back. After start: forward only once the target is verified. | Main-config edit refused, evidence kept | [Protected owner CLI](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-PROTECTED-OWNER-CLI-20260927.md): rolling-back/after-write after target start, owner edit refused, CLI interrupted, reboot | **PASSED** for that decided-rollback cell (Agent inactive, target had started). **PASSED** for the pre-start cuts (intent, target-staged) with the Agent restarted and running: first run failed on `7ad24282` ([evidence](../deploy/e2e/dns-kill-matrix/evidence/owner-inverse-after-restart-20260929/README.md)), fixed in `411398d9`, [re-run passed](../deploy/e2e/dns-kill-matrix/evidence/owner-inverse-after-restart-rerun-20260929/README.md). **PASSED** for the post-stop cuts (`source-stopped`, `target-started` after-write) with the Agent restarted and running ([evidence](../deploy/e2e/dns-kill-matrix/evidence/owner-inverse-critical-20260929/README.md), source `411398d9`, harness `7c5dfe17`): owner command exit 0, journal retired, ledger and state receipt byte-identical, PowerDNS serving again as the only port-53 authority, SOA serial unchanged, BIND stopped, 31/31; measured PowerDNS outage upper bounds 21.6 s and 9.4 s, DNS not continuous by construction. **GAP**: before-write edges and the `rolled-back` cell under V2; reboot; re-run exit status 3; after rollback the staged BIND generation tree, `rndc.key`, the install-ownership receipt and the upgraded `bind9` libraries remain, and the BIND unit is left unmasked/disabled when it had started but masked when it had not. The six 2026-09-25 Agent-mediated BIND reports used V1 and are historical for this row. |
 | 8 | PowerDNS → BIND, paired | V1 | Agent, same request | owner-aware | none for paired | **GAP** |
 | 9 | **BIND → PowerDNS**, standalone and paired secondary (card `switch`, or `install` when PowerDNS is absent) | — | — | — | none | **UNSUPPORTED, refused** by D-026 decision 1 (`bind_source_pdns_switch_unsupported`). Before D-026 this row was *unsupported, not refused*: V1 journal, Agent-only inverse, V4 producer with no caller. |
 | 10 | BIND → PowerDNS, paired primary | — | — | — | — | **UNSUPPORTED, refused** (`pdns_primary_switch_paused`) |
 | 11 | Running BIND adoption (`adopt_unmanaged`, standalone, Debian; Arch refused) | V2 `SourceBIND` | Agent refuses and names the CLI; owner CLI `recover-dns-bind-adoption` from rolling-back/rolled-back | Same-serial zone edit refused | [Adoption owner CLI](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-ADOPTION-OWNER-CLI-20260927.md): one cell, no reboot, controller handoff deliberately unverified | **PASSED** for one cell. **GAP**: early and after-start cuts, reboot |
-| 12 | Stopped unmanaged BIND takeover | V1 (fresh-install transaction) | as 1 | as 1 | none | **GAP** (same class as 1) |
+| 12 | Stopped unmanaged BIND takeover | V1 (fresh-install transaction) | as 1 | as 1 | Batches [6a](../deploy/e2e/dns-kill-matrix/evidence/batch6a-fixed-hook-20260929/README.md), [6b](../deploy/e2e/dns-kill-matrix/evidence/batch6b-pdns-secondary-20260930/README.md), [7](../deploy/e2e/dns-kill-matrix/evidence/batch7-breadth-20260930/README.md): `target-staged` cut, reboot after recovery, stock options, owner `recursion`/`allow-transfer` directives with the sealed preimage restored before the same-request retry | **PASSED** (2026-10-01) |
 | 13 | External PowerDNS adoption (`adopt`, standalone, APT) | V1 | Agent inverse, plus owner CLI `recover-dns-pdns-adoption` from rolling-back/rolled-back | Static config edit refused | [Adoption cells](../deploy/e2e/dns-kill-matrix/README.md) (`NATIVE-PDNS-ADOPTION-*`), [owner edit](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-OWNER-EDIT-20260925.md), [protected owner CLI + reboot](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-PROTECTED-OWNER-CLI-20260926.md), [management-absent boot](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-MANAGEMENT-ABSENT-BOOT-20260925.md) | **PASSED** (Debian 13, unsigned local build) |
 | 14 | `reinstall_active` BIND, standalone | V1 | Agent, same request | as 1 | none | **GAP** |
 | 15 | `reinstall_active` PowerDNS | — | — | — | — | **UNSUPPORTED, refused** (Panel and Agent) |
 | 16 | Generic engine install/stop/uninstall RPC | — | — | — | — | **UNSUPPORTED, refused** (`genericDNSEngineMutationRefusal`) |
-| 17 | Zone add/edit/delete on a pair (zone-sync V3 ledger, not the switch journal) | zone-sync v3 | Same request through `RecoverDNSZoneV3`, Agent-mediated. Parentless deletion stays pending until owner enrollment proves absence. | Typed owner-edit conflict | [V3 deletion terminal](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-V3-DELETION-TERMINAL-20260926.md), [owner edit](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-V3-OWNER-EDIT-20260927.md) with its [correction](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-V3-OWNER-EDIT-CORRECTION-20260927.md), [V3 zone lifecycle](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-zone-20260928/README.md), [owner-proof deletion](../deploy/e2e/dns-kill-matrix/evidence/pdns-bind-owner-proof-20260928/README.md) | **GAP**: no native SIGKILL inside a zone-sync operation (every cut so far was on the engine switch). Belongs to item 2. |
+| 17 | Zone add/edit/delete on a pair (zone-sync V3 ledger, not the switch journal) | zone-sync v3 | Same request through `RecoverDNSZoneV3`, Agent-mediated. Parentless deletion stays pending until owner enrollment proves absence. | Typed owner-edit conflict | [V3 deletion terminal](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-V3-DELETION-TERMINAL-20260926.md), [owner edit](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-V3-OWNER-EDIT-20260927.md) with its [correction](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-V3-OWNER-EDIT-CORRECTION-20260927.md), [V3 zone lifecycle](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-zone-20260928/README.md), [owner-proof deletion](../deploy/e2e/dns-kill-matrix/evidence/pdns-bind-owner-proof-20260928/README.md) | **PASSED** (2026-10-01) for the product flow on every topology: [pair 7](../deploy/e2e/dns-pair-acceptance/evidence/pair7-20261001/README.md) (BIND/BIND, BIND/PowerDNS, PowerDNS/BIND: add, record edit, delete pending on `dns_peer_enrollment_required`, owner enrollment, retry deleted with the product's proof, re-add, management-disabled reboot) and [batch 12](../deploy/e2e/dns-kill-matrix/evidence/batch12-zero-zone-complete-20261001/README.md) (parentless deletion of the only zone resumed through `RecoverDNSZoneV3` after owner enrollment). **GAP**: no native SIGKILL inside a zone-sync operation (every cut was on the engine switch; the harness has no tagged hook inside zone-sync V3). |
 
 Not yet audited: `ConfigureDNSClusterV2` pairing changes.
 
@@ -108,6 +108,66 @@ Carried to item 2, open, not reclassified:
   signed-release and installed-server acceptance belong to items 3 and 4.
 
 Closing item 1 does not close P0.4.
+
+## Item 2 status: closed on 2026-10-01 with named limits
+
+Item 2 asked for native acceptance of the two-way pair topologies. Between
+2026-09-29 and 2026-10-01 the kill matrix ran batches 4 to 12 and the
+product-flow pair driver ran seven times on two disposable CelikPanel
+servers; every run is in the progress log with its evidence. What closed the
+item: [pair 7](../deploy/e2e/dns-pair-acceptance/evidence/pair7-20261001/README.md)
+passed every step on all three topologies (BIND/BIND, BIND/PowerDNS,
+PowerDNS/BIND) through zone add, record edit, zone delete with the product's
+proof after the owner enrollment, re-add, a reboot with the panel and Agent
+disabled while DNS kept answering, and the return of management; and
+[batch 12](../deploy/e2e/dns-kill-matrix/evidence/batch12-zero-zone-complete-20261001/README.md)
+completed the zero-zone fresh PowerDNS primary cells with a parentless
+deletion resumed after the owner enrollment and a management-disabled
+reboot. On that evidence the fresh paired PowerDNS primary gate is open on
+the main line (D-028), within the measured envelope only.
+
+Rows whose state changed today: 3, 5, 6, 12 and 17 are **PASSED** with the
+limits written in their cells; row 2 gains the product flow. Rows 8 (paired
+PowerDNS → BIND) and 14 (BIND reinstall) stay **GAP**; rows 9, 10, 15 and 16
+stay refused.
+
+Product defects found only by the native runs and closed in source on the
+way, each with the run that first exercised the fix: the zero-zone catalog
+check (`8a548090`; pair 5), truthful setup states and background license
+refresh (`8a548090`; pair 3 onward), evidence in the customer archive
+(`8a548090`; packaging verified twice, byte-identical), the rndc key on Arch
+(`80bb4353`; pair 4), the PowerDNS notify port (`a6d93f06`; pair 4), the
+managed secondary's loopback catalog transfer and inspector reasons
+(`0988bc9a`; pair 5), the mail stage on a DNS-only domain (`0988bc9a`; pair
+5), the owner's inspector on a managed PowerDNS secondary (`4941b605`; pair
+6), the BIND primary plan's source state (`37864789`; pair 6), the daemon
+re-stamp taken for an owner change (`21a84211`; not yet observed natively),
+and a positive proof discarded at the wave bound (`d3d65353`; pair 7).
+
+Named limits, open:
+
+- one run per cell and topology; disposable QEMU guests on a laptop host;
+  orderly reboots, no power loss; unsigned local builds with the test-only
+  license (D-027); no installed server;
+- the daemon re-stamp admission, the proof time-out code and the composite
+  owner-edit code did not occur natively; the native proof's step bounds
+  are single samples (a challenge write of 11.1 s against 12 s was seen);
+- row 17 has no SIGKILL inside a zone-sync operation (no tagged hook exists
+  inside zone-sync V3);
+- rows 3 and 5: the interruption cells ran against panel-free primaries; a
+  reconfigured PowerDNS secondary has no interruption trial;
+- row 8 (paired PowerDNS → BIND) and row 14 (BIND reinstall after the
+  `dpkg-statoverride` decision) have no native trial;
+- a BIND secondary set up before 2026-10-01 keeps its version-1 rendering
+  until the panel next writes that server's DNS configuration, and no panel
+  action triggers that today; `dns_peer_catalog_transfer_refused`, the
+  `detail` field, `mail_runtime_cleanup_failed`, `config_unreviewed`, the
+  rndc key rollback and the version 1 to 2 upgrade were not exercised;
+- the customer archive still carries the e2e harness sources (scripts and
+  fixtures); a decision for item 4;
+- BIND → PowerDNS engine switch stays unsupported and refused (D-026).
+
+Closing item 2 does not close P0.4 and authorises no installed-panel update.
 
 ## Item 2 progress log
 
@@ -460,6 +520,23 @@ Fix in progress: a positive answer is never discarded for a deadline; the
 proof's budget covers the whole exchange with per-step bounds; an expiry
 before the answer is accepted gets its own code and text; the underlying
 error and the inspector's outcome fields are logged, bounded.
+
+**2026-10-01, pair 7 and batch 12: every topology and both zero-zone cells complete** ([pair 7](../deploy/e2e/dns-pair-acceptance/evidence/pair7-20261001/README.md), [batch 12](../deploy/e2e/dns-kill-matrix/evidence/batch12-zero-zone-complete-20261001/README.md);
+product `2efc4de2` = main line `d3d65353` with the gate open, test-only
+license of D-027, driver and harness from the same commits, no patch, no
+pass-rule change, no re-run). Rows 2, 3, 5, 6, 17.
+
+| Run | Result |
+|---|---|
+| pair 7, BIND / BIND; BIND (Arch) / PowerDNS; PowerDNS / BIND | **every step passed** on all three: install, license, setup, pair readiness, zone add, record add and edit, zone delete (pending on `dns_peer_enrollment_required`, owner enrollment, retry deleted in 19.9 to 25.5 s with the product's proof: REFUSED on both servers, native absent, catalog member absent, ledger job succeeded, challenge consumed and retired), zone re-add, management-disabled reboot with DNS answering on both servers, management return. The Agent's step-time lines show proofs of 17.4, 20.9 and 23.1 s completing where pair 6's single 15 s bound failed; the PowerDNS inspector's answer (`transferred`, `absent`, `unloaded`) was recorded natively for the first time. An extra deletion on the PowerDNS primary after enrollment completed in one attempt. |
+| batch 12, z04 (`committed` cut, zone lifecycle, zero zones) | **passed**: first zone created and edited, delete pending, owner enrollment, resumed deletion verified and published (job succeeded), zero members and REFUSED on both servers, re-add. |
+| batch 12, z05 (`target-started` cut, zone lifecycle, management-disabled reboot, zero zones) | **passed**: the same through the resume, then continuation, management disabled, both reboots, after-reboot check under the post-publication rule with the re-added child as the only member on both servers and in the database. |
+
+Not exercised by these runs: the daemon re-stamp admission (no re-stamp
+fell inside a resumed attempt), the proof time-out code, the composite
+owner-edit code. Noted: the challenge write took 11.1 s against its 12 s
+bound in z05 and the consume step 6.5 to 9.5 s; single samples on a loaded
+laptop host.
 
 Native coverage of the source changes listed after batches 4 and 5:
 
