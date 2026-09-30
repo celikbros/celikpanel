@@ -104,7 +104,12 @@ require_sequence "$BOOTSTRAP" \
 require_literal "$MAKEFILE" 'override REQUIRED_GO_VERSION := go1.26.5'
 require_literal "$MAKEFILE" 'check-go:'
 require_literal "$MAKEFILE" 'env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" env GOVERSION'
-require_count "$MAKEFILE" 'env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build' 8
+require_count "$MAKEFILE" 'env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build' 11
+# Every Go build line, including the freebsd-cross ones that add GOOS/GOARCH, must use the hardened env prefix.
+all_go_builds=$(grep -F -c -- '"$(GO)" build' "$MAKEFILE" || true)
+hardened_go_builds=$(grep -F -- 'env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 ' "$MAKEFILE" | grep -F -c -- '"$(GO)" build' || true)
+[[ "$all_go_builds" == "$hardened_go_builds" ]] ||
+    die "Makefile has $all_go_builds Go build lines but only $hardened_go_builds use the hardened env -i invocation"
 require_literal "$MAKEFILE" 'test: check-go'
 require_literal "$MAKEFILE" 'env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" test ./...'
 require_literal "$MAKEFILE" 'vet: check-go'

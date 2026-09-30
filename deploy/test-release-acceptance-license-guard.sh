@@ -72,6 +72,24 @@ grep -Fq 'bin/panel was built with -tags acceptance_license (go version -m)' "$t
 targets=("$tmp/tagged/celikpanel-test/bin/panel")
 expect_guard 1 "a single tagged file" "${without_go[@]}"
 
+# The refusal names the bare path even when the Go version string contains a
+# colon (Go 1.27 prints "go1.27.0-X:nodwarf5"). A stub go prints a fixed header
+# and build-settings block, so this does not depend on the installed toolchain.
+mkdir -p "$tmp/colon/tree/bin" "$tmp/colon/stub"
+printf 'text only, not an ELF file\n' > "$tmp/colon/tree/bin/panel"
+cat > "$tmp/colon/stub/go" <<'EOF'
+#!/bin/sh
+# usage: go version -m ROOT
+printf '%s/bin/panel: go1.27.0-X:nodwarf5\n' "$3"
+printf '\tpath\texample.com/panel\n'
+printf '\tbuild\t-tags=acceptance_license\n'
+EOF
+chmod +x "$tmp/colon/stub/go"
+targets=("$tmp/colon/tree")
+expect_guard 1 "go version -m header with a colon in the version" PATH=/usr/bin:/bin CELIKPANEL_GUARD_GO="$tmp/colon/stub/go"
+grep -Fxq 'refused: bin/panel was built with -tags acceptance_license (go version -m)' "$tmp/guard.out" \
+    || { cat "$tmp/guard.out" >&2; fail "colon-bearing go version header not reduced to the bare path"; }
+
 # Each signal alone is enough; other tags and text mentions are not builds.
 cat > "$tmp/main.go" <<'EOF'
 package main

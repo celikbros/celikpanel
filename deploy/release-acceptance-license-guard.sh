@@ -60,7 +60,11 @@ scan_tree() {
             relative=${file#"$root"/}
             refuse "$label$relative was built with -tags $tag (go version -m)"
         done < <(awk -v tag="$tag" '
-            /^[^\t].*: go/ { sub(/: go[^:]*$/, ""); current = $0; next }
+            /^[^\t].*: go/ {
+                # Path = everything before the first ": go<digit>" (the version may itself contain a colon).
+                if (match($0, /: go[0-9]/) || match($0, /: go/)) current = substr($0, 1, RSTART - 1)
+                next
+            }
             /^\tbuild\t-tags=/ {
                 value = $0; sub(/^\tbuild\t-tags=/, "", value); gsub(/"/, "", value)
                 n = split(value, parts, ",")
