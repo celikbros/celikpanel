@@ -1,0 +1,14 @@
+Formatting '/var/tmp/cp-release-drill-upd1-d13-good-a/cells/4a5f2ff41b7004b4b3f375d4/debian13/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-upd1-d13-good-a/images/debian-13-genericcloud-amd64-20260826-2582.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+Formatting '/var/tmp/cp-release-drill-upd1-d13-good-a/cells/4a5f2ff41b7004b4b3f375d4/arch/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-upd1-d13-good-a/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-upd1-d13-good-a", "cell_id": "release-recovery__a6c86253fc9c88d0", "ssh_ports": [2371, 2372]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-upd1-d13-good-a", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-upd1-d13-good-a", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+{"step": "preflight", "verdict": "passed", "reason": null}
+{"step": "origin", "verdict": "passed", "reason": null}
+{"step": "baseline-install", "verdict": "passed", "reason": null}
+{"step": "owner-login", "verdict": "passed", "reason": null}
+{"step": "license", "verdict": "passed", "reason": null}
+{"step": "setup", "verdict": "failed", "reason": "server setup did not succeed: {'status': 'waiting', 'phase': 'access_dns', 'error': {'code': 'server_setup_access_dns_required', 'message': \"Public DNS must resolve panel-debian13.upd1-infra.test to 192.0.2.10 before a certificate is requested. Check this hostname's A/AAAA records and its zone delegation. For DNS managed here, review the infrastructure DNS records in this wizard; otherwise correct them at the primary DNS server or provider. This check resumes automatically when DNS is verified.\"}}"}
+{"outcome": "not-terminal", "overall": "failed", "request_id": null}
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-upd1-d13-good-a", "evidence_retained": true}
+UPD1 cell=upd1-debian13-good lab=/var/tmp/cp-release-drill-upd1-d13-good-a driver_exit=1 evidence=/var/tmp/cp-release-drill-upd1-d13-good-a/evidence/*/upd1

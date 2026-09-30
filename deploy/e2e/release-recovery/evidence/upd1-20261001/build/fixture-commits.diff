@@ -1,0 +1,33 @@
+diff --git a/cmd/panel/main.go b/cmd/panel/main.go
+index abeed3d0..54373083 100644
+--- a/cmd/panel/main.go
++++ b/cmd/panel/main.go
+@@ -781,8 +781,10 @@ func main() {
+ 	// These bootstrap modes only touch the database, then exit — no agent.
+ 	// Bu önyükleme modları yalnızca veritabanına dokunup çıkar — agent yok.
+ 	if *migrateOnlyFlag {
+-		log.Println("Canonical panel database migrations completed")
+-		return
++		// upd1 disposable fixture defect: never a release. The isolated copy is
++		// migrated, then this candidate reports failure so the signed update fails
++		// after candidate-installed, while the transaction is still active.
++		log.Fatalf("upd1 fixture defect: this candidate cannot complete its offline database migration")
+ 	}
+ 	if *countUsersFlag {
+ 		p := &Panel{db: database}
+diff --git a/deploy/release-sequence-policy b/deploy/release-sequence-policy
+index 43ee6325..fdce0978 100644
+--- a/deploy/release-sequence-policy
++++ b/deploy/release-sequence-policy
+@@ -1,6 +1,6 @@
+ format=celikpanel-release-sequence-policy-v1
+-version=v0.1.0-alpha.80
+-current=80
+-previous=79
+-previous_version=v0.1.0-alpha.79
+-previous_commit=f3390addc85bbe92a0cc865448d9bb366e6b980a
++version=v0.1.0-alpha.82
++current=82
++previous=81
++previous_version=v0.1.0-alpha.81
++previous_commit=864ae9a92111a604dd1f3ea2ff8f65173a39e6cc

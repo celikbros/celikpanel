@@ -1,0 +1,8 @@
+{
+  "checks": {},
+  "finished_at": "2026-09-30T12:45:05Z",
+  "name": "seed",
+  "reason": "cron job was not created: HTTP 500",
+  "started_at": "2026-09-30T12:45:04Z",
+  "verdict": "failed"
+}

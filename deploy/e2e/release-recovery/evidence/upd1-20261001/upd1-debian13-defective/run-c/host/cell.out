@@ -1,0 +1,15 @@
+Formatting '/var/tmp/cp-release-drill-upd1-d13-def-c/cells/83455c384e72c401ffaaa334/debian13/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-upd1-d13-def-c/images/debian-13-genericcloud-amd64-20260826-2582.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+Formatting '/var/tmp/cp-release-drill-upd1-d13-def-c/cells/83455c384e72c401ffaaa334/arch/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-upd1-d13-def-c/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-upd1-d13-def-c", "cell_id": "release-recovery__0bc7df9dc2715636", "ssh_ports": [2361, 2362]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-upd1-d13-def-c", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-upd1-d13-def-c", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+{"step": "preflight", "verdict": "passed", "reason": null}
+{"step": "origin", "verdict": "passed", "reason": null}
+{"step": "baseline-install", "verdict": "passed", "reason": null}
+{"step": "owner-login", "verdict": "passed", "reason": null}
+{"step": "license", "verdict": "passed", "reason": null}
+{"step": "setup", "verdict": "observed", "reason": null}
+{"step": "seed", "verdict": "failed", "reason": "cron job was not created: HTTP 500"}
+{"outcome": "not-terminal", "overall": "failed", "request_id": null}
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-upd1-d13-def-c", "evidence_retained": true}
+UPD1 cell=upd1-debian13-defective lab=/var/tmp/cp-release-drill-upd1-d13-def-c driver_exit=1 evidence=/var/tmp/cp-release-drill-upd1-d13-def-c/evidence/*/upd1

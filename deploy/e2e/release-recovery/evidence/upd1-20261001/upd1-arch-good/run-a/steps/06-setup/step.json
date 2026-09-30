@@ -1,0 +1,31 @@
+{
+  "checks": {
+    "before": {
+      "guidance": "undecided",
+      "required": true,
+      "revision": 0,
+      "status": "new"
+    },
+    "dns_external": true,
+    "execution": {
+      "error": {
+        "code": "service_install_failed",
+        "message": "The service could not be installed and verified."
+      },
+      "phase": "05-mail_profile",
+      "status": "failed"
+    },
+    "plan_web_mail": {
+      "blockers": [],
+      "can_start": true,
+      "http": 200,
+      "id": "6f1587be6907c81f1e0de71fe79c37fe"
+    },
+    "start_http": 202
+  },
+  "finished_at": "2026-09-30T12:58:41Z",
+  "name": "setup",
+  "reason": "server setup did not succeed: {'status': 'failed', 'phase': '05-mail_profile', 'error': {'code': 'service_install_failed', 'message': 'The service could not be installed and verified.'}}",
+  "started_at": "2026-09-30T12:57:43Z",
+  "verdict": "failed"
+}

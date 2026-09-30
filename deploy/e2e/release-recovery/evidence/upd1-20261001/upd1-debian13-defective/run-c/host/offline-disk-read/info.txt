@@ -1,0 +1,14 @@
+rootfs offset 134217728
+== /usr/bin/crontab
+debugfs 1.47.4 (6-Mar-2025)
+/usr/bin/crontab: File not found by ext2_lookup 
+== /usr/sbin/cron
+debugfs 1.47.4 (6-Mar-2025)
+/usr/sbin/cron: File not found by ext2_lookup 
+== /lib/systemd/system/cron.service
+debugfs 1.47.4 (6-Mar-2025)
+/lib/systemd/system/cron.service: File not found by ext2_lookup 
+== /var/spool/cron/crontabs
+debugfs 1.47.4 (6-Mar-2025)
+/var/spool/cron/crontabs: File not found by ext2_lookup 
+journal dir 14ec171541f65b9e9a4e419ba9c7ab8a

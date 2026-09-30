@@ -1,0 +1,23 @@
+{
+  "checks": {
+    "before": {
+      "guidance": "undecided",
+      "required": true,
+      "revision": 0,
+      "status": "new"
+    },
+    "plan_web_mail": {
+      "blockers": [
+        "server_setup_dns_identity_required"
+      ],
+      "can_start": false,
+      "http": 200,
+      "id": "df5e88cdf6536f9961ff61ea1338b0c5"
+    }
+  },
+  "finished_at": "2026-09-30T11:20:58Z",
+  "name": "setup",
+  "reason": "web_mail setup plan refused on debian13: ['server_setup_dns_identity_required']",
+  "started_at": "2026-09-30T11:20:57Z",
+  "verdict": "failed"
+}

@@ -1,0 +1,30 @@
+{
+  "checks": {
+    "before": {
+      "guidance": "undecided",
+      "required": true,
+      "revision": 0,
+      "status": "new"
+    },
+    "execution": {
+      "error": {
+        "code": "server_setup_access_dns_required",
+        "message": "Public DNS must resolve panel-debian13.upd1-infra.test to 192.0.2.10 before a certificate is requested. Check this hostname's A/AAAA records and its zone delegation. For DNS managed here, review the infrastructure DNS records in this wizard; otherwise correct them at the primary DNS server or provider. This check resumes automatically when DNS is verified."
+      },
+      "phase": "access_dns",
+      "status": "waiting"
+    },
+    "plan_web_mail": {
+      "blockers": [],
+      "can_start": true,
+      "http": 200,
+      "id": "4687db4264d06a01539ed3c90a8bb800"
+    },
+    "start_http": 202
+  },
+  "finished_at": "2026-09-30T12:28:12Z",
+  "name": "setup",
+  "reason": "server setup did not succeed: {'status': 'waiting', 'phase': 'access_dns', 'error': {'code': 'server_setup_access_dns_required', 'message': \"Public DNS must resolve panel-debian13.upd1-infra.test to 192.0.2.10 before a certificate is requested. Check this hostname's A/AAAA records and its zone delegation. For DNS managed here, review the infrastructure DNS records in this wizard; otherwise correct them at the primary DNS server or provider. This check resumes automatically when DNS is verified.\"}}",
+  "started_at": "2026-09-30T11:28:09Z",
+  "verdict": "failed"
+}

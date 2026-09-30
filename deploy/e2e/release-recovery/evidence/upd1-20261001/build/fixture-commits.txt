@@ -1,0 +1,4 @@
+9532109705775d1c827f6a65a9c90f5e543d04f2 90e723e2be341f4067d6b19b048ed809c607b9a2 test(fixture): upd1 defective candidate - migrate-only fails (unpublished, disposable)
+69688983d89cfbf94a6d003db6ebc22c85b4341e d3d4c3fa30a375d1736715ae46d98eff9168fcaa test(fixture): upd1 good candidate labelled v0.1.0-alpha.82 (unpublished, disposable)
+864ae9a92111a604dd1f3ea2ff8f65173a39e6cc 15f300b2e8051b0f1c93ce52e5c3cf18ff39073a test(fixture): upd1 baseline labelled v0.1.0-alpha.81 (unpublished, disposable)
+43a7f5547a1b3f0e90c727f81b5267a310a42f78 cad9b11c06477e490464e0ec126d9a69c43f4d77 Release-recovery harness: owner-started update acceptance driver (upd1)

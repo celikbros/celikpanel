@@ -1,0 +1,50 @@
+{
+  "checks": {
+    "before": {
+      "guidance": "undecided",
+      "required": true,
+      "revision": 0,
+      "status": "new"
+    },
+    "execution": {
+      "error": {
+        "code": "server_setup_access_dns_required",
+        "message": "Public DNS must resolve panel-debian13.upd1-infra.test to 192.0.2.10 before a certificate is requested. Check this hostname's A/AAAA records and its zone delegation. For DNS managed here, review the infrastructure DNS records in this wizard; otherwise correct them at the primary DNS server or provider. This check resumes automatically when DNS is verified."
+      },
+      "phase": "access_dns",
+      "status": "waiting"
+    },
+    "isolated_host_wait": {
+      "phase": "access_dns",
+      "stable_wait_seconds": 120.4,
+      "steps": {
+        "01-dns": "succeeded",
+        "02-service": "succeeded",
+        "03-service": "succeeded",
+        "04-firewall": "succeeded",
+        "05-access_dns": "running",
+        "06-panel_certificate": "pending",
+        "07-dns_readiness": "pending",
+        "08-service": "pending",
+        "09-service": "pending",
+        "10-mail_profile": "pending",
+        "11-mail_profile": "pending",
+        "12-access_dns": "pending",
+        "13-mail_certificate": "pending",
+        "14-mail_enrollment": "pending",
+        "15-verify": "pending"
+      }
+    },
+    "plan_web_mail": {
+      "blockers": [],
+      "can_start": true,
+      "http": 200,
+      "id": "4687db4264d06a01539ed3c90a8bb800"
+    },
+    "start_http": 202
+  },
+  "finished_at": "2026-09-30T12:33:28Z",
+  "name": "setup",
+  "started_at": "2026-09-30T12:30:46Z",
+  "verdict": "observed"
+}

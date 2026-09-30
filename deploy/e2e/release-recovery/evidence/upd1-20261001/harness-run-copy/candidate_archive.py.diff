@@ -1,0 +1,18 @@
+diff --git a/deploy/e2e/release-recovery/candidate_archive.py b/deploy/e2e/release-recovery/candidate_archive.py
+index eaeed6cf..d3d23ac4 100644
+--- a/deploy/e2e/release-recovery/candidate_archive.py
++++ b/deploy/e2e/release-recovery/candidate_archive.py
+@@ -173,6 +173,13 @@ def verify_committed_source(candidate,repository):
+         # Its binaries and generated manifest are covered by the full archive
+         # inventory and runtime admission, not fictitious Git source blobs.
+         if name.startswith('recovery-runtime/bin/') or name=='recovery-runtime/runtime.manifest':continue
++        # upd1 run copy (not committed): make dist packages dns-owner-tools/ since
++        # 3197ff84/a47b4a40 (2026-09-28/29). The three tools are build outputs like bin/
++        # (covered by the archive inventory); README.md is cmd/dns-peer-enroll/README.md.
++        if name.startswith('dns-owner-tools/'):
++            if {n for n in candidate['files'] if n.startswith('dns-owner-tools/')}!={'dns-owner-tools/README.md','dns-owner-tools/dns-peer-enroll','dns-owner-tools/bind-peer-inspect','dns-owner-tools/pdns-peer-inspect'}:raise ValueError('candidate dns-owner-tools inventory differs')
++            if name!='dns-owner-tools/README.md':continue
++            names.append(name);queries.append(commit+':cmd/dns-peer-enroll/README.md');continue
+         source='download-portal/get.sh' if name=='libexec/get.sh' else name
+         if name.startswith('recovery-runtime/'):
+             source=name.removeprefix('recovery-runtime/')

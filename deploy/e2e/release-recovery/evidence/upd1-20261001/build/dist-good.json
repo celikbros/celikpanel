@@ -1,0 +1,21 @@
+{
+  "archive": "/var/tmp/cp-pair-accept/dist/69688983d89cfbf94a6d003db6ebc22c85b4341e-acceptance-license/celikpanel-v0.1.0-alpha.82-acceptance-license.tar.gz",
+  "archive_observation": {
+    "entries_under_deploy_e2e": 367,
+    "entries_under_evidence_dirs": 0,
+    "file": "/var/tmp/cp-pair-accept/dist/69688983d89cfbf94a6d003db6ebc22c85b4341e-acceptance-license/archive-evidence-entries.json",
+    "note": "recorded observation only; entries are counted, nothing is refused on them",
+    "total_entries": 650
+  },
+  "commit": "69688983d89cfbf94a6d003db6ebc22c85b4341e",
+  "license_mode": "acceptance-fixture",
+  "note": "not a release; use only with pair_acceptance.py --license-mode acceptance-fixture",
+  "panel_build_tags": "acceptance_license",
+  "product_web_src": "/var/tmp/cp-pair-accept/dist/69688983d89cfbf94a6d003db6ebc22c85b4341e-acceptance-license/product-web-src",
+  "product_web_src_commit": "69688983d89cfbf94a6d003db6ebc22c85b4341e",
+  "release": false,
+  "root": "celikpanel-v0.1.0-alpha.82",
+  "sha256": "94f85797fffca033a4751e910c2bd2bb7cc863c1ecad614b9f273edf78cc75cb",
+  "tree": "d3d4c3fa30a375d1736715ae46d98eff9168fcaa",
+  "version": "v0.1.0-alpha.82"
+}

@@ -1,0 +1,8 @@
+{
+  "checks": {},
+  "finished_at": "2026-09-30T11:15:47Z",
+  "name": "preflight",
+  "reason": "ValueError: candidate contains uncommitted source: dns-owner-tools/README.md",
+  "started_at": "2026-09-30T11:15:46Z",
+  "verdict": "inconclusive"
+}
