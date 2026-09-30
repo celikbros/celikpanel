@@ -302,6 +302,30 @@ herhangi bir politika değişikliği olmadan HTTP kapısıyla aynı lisans
 yenilemesini kullanıyor; kanıt ve düzenek testleri arşivden budanıyor ve bir
 koruma bunları reddediyor.
 
+**1 Ekim 2026, 8r. grup, boş çift PowerDNS birincili, ikinci çalıştırma** ([kanıt](../deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/README.md),
+kabul dalı `accept/pdns-primary-gate-open-2` commit `e3591875`, kapı açık;
+ana dal kapıyı kapalı tutuyor; aynı on hücre, genel Agent RPC'si üzerinden,
+düzeltilmiş eş denetimiyle, her biri bir kez çalıştırıldı, düzenek geçici
+çözümü yok, yeniden çalıştırma yok). Satır 6. Dokuzu geçti, biri bir düzenek
+beklentisinde düştü. Kesim sınırı on kesintinin tümünde tutundu.
+
+| Hücre | Gözlemlenen ürün davranışı | Karar |
+|---|---|---|
+| `intent` (yönetim kapalıyken yeniden açılışla), `target-staged`, `target-enable-intent` durumundaki başlangıç öncesi kesintiler; günlük öncesi kesinti | yeniden başlatılan Agent kurulumu kendisi geri aldı; yerel BIND ikincili birincille aynı yanıtı verdi | **geçti** |
+| `target-verified`, `committed` durumundaki başlangıç sonrası kesintiler | yalnızca ileri yönde; aynı istek başarılı oldu | **geçti**; `committed` hücresinde bölge ekleme, düzenleme, silme ve yeniden ekleme geçti |
+| `target-started` durumunda başlangıç sonrası kesinti, ardından bölge ekleme, düzenleme, silme, yeniden ekleme, ardından yönetim kapalıyken yeniden açılış | yeniden açılıştan önceki her karar geçti; yeniden açılıştan sonra iki sunucu da aynı katalog seri numarasını ve yeniden eklenen bölgeyi yanıtladı; yönetim kapalı kaldı ve DNS baştan sona yanıt verdi | **düştü (düzenek)**: yeniden açılıştan sonra eş denetimi, sunulan katalog seri numarasının durum makbuzundaki seri numarasına eşit olmasını şart koştu; oysa bölge işlemleri onu yükseltmişti. Ürün, makbuzdaki seri numarasını alt sınır sayar. |
+| başlangıç öncesi bir hücrede sahip yapılandırma düzenlemesi | reddedildi ve tutuldu; hücre bu kez kesintisine ulaştı | **geçti** |
+| başlangıç sonrası sahip SQL düzenlemesi | reddedildi; `dns-switch-status` artık ne kurulumun ne de daemon'un yazdığı veritabanı içeriğini adlandırıyor | **geçti** |
+| `recover-dns-pdns-fresh-prestart` tarafından tamamlanan, Agent tarafından serbest bırakılmış başlangıç öncesi kurtarma | çıkış 0; yeniden çalıştırma çıkış 0 | **geçti** |
+
+Gözlemlenen ve henüz açıklanmayan: ilk başlangıçtaki yeniden damgalamadan
+yaklaşık 60 saniye sonra PowerDNS daemon'u kataloğu yeni bir `CATALOG-HASH`
+ile bir kez daha yeniden damgaladı; bir hücrede herhangi bir bölge isteğinin
+dışında, diğerinde silme isteğinin içinde. Hiçbir silme beklemede kalmadı, bu
+yüzden sahip kaydı denenmedi. Senaryo bir bölge taşıyor, bu yüzden sıfır
+bölgeli birincil bu çalıştırmayla ölçülmedi. `target-started` hücresi,
+beklentisi düzeltilip hücre yeniden çalıştırılana kadar düşmüş kalır.
+
 4. ve 5. gruplardan sonra listelenen kaynak değişikliklerinin gerçek
 sistemdeki kapsamı:
 

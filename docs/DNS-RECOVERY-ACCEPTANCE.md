@@ -286,6 +286,30 @@ bounded at five minutes; background setup uses the same license refresh as
 the HTTP gate with no policy change; evidence and harness tests are pruned
 from the archive and a guard refuses them.
 
+**2026-10-01, batch 8r, fresh paired PowerDNS primary, second run** ([evidence](../deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/README.md),
+acceptance branch `accept/pdns-primary-gate-open-2` commit `e3591875`, gate
+open; the main line keeps the gate closed; the same ten cells through the
+public Agent RPC with the corrected pair check, each run once, no harness
+workaround, no re-run). Row 6. Nine passed, one failed on a harness
+expectation. The boundary held in all ten cuts.
+
+| Cell | Product behaviour observed | Verdict |
+|---|---|---|
+| pre-start cuts at `intent` (with a management-disabled reboot), `target-staged`, `target-enable-intent`; pre-journal cut | restarted Agent rolled the install back by itself; the native BIND secondary answered as the primary | **passed** |
+| post-start cuts at `target-verified`, `committed` | forward only; the same request succeeded | **passed**; at `committed` the zone add, edit, delete and re-add all passed |
+| post-start cut at `target-started`, then zone add, edit, delete, re-add, then a management-disabled reboot | every judgment before the reboot passed; after the reboot both servers answered the same catalog serial and the re-added zone; management stayed off and DNS answered throughout | **failed (harness)**: after the reboot the pair check demanded that the served catalog serial equal the state receipt's serial, while the zone operations had raised it. The product treats the receipt's serial as a minimum. |
+| owner configuration edit on a pre-start cell | refused and held; the cell reached its cut this time | **passed** |
+| owner SQL edit, post-start | refused; `dns-switch-status` now names the database content that neither the install nor the daemon wrote | **passed** |
+| Agent-released pre-start recovery finished by `recover-dns-pdns-fresh-prestart` | exit 0; re-run exit 0 | **passed** |
+
+Observed and not yet explained: about 60 seconds after the first-start
+re-stamp the PowerDNS daemon re-stamped the catalog once more with a new
+`CATALOG-HASH`, outside any zone request in one cell and inside the delete
+request in the other. No deletion stayed pending, so owner enrollment was not
+exercised. The scenario carries a zone, so the zero-zone primary is not
+measured by this run. The `target-started` cell stays failed until its
+expectation is corrected and the cell runs again.
+
 Native coverage of the source changes listed after batches 4 and 5:
 
 | Change | First native run that exercised it |
