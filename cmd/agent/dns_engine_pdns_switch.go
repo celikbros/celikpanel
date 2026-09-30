@@ -27,11 +27,11 @@ const pdnsPairedPrimarySwitchPausedReason = "PowerDNS paired-primary switch is p
 
 // freshPairedPDNSPrimaryAdmitted is the Agent's single product gate for the
 // first install of PowerDNS as the paired primary on a host with no DNS engine
-// (the V3 journal). It is open in this acceptance branch only, so the native
-// cells of row 6 of the DNS recovery acceptance register can run through the
-// public RPC; the main line keeps it closed until that evidence passes. The
-// Panel carries the matching constant (freshPairedPDNSPrimaryOffered). Open,
-// it admits only the empty-source manifest on a host with no DNS engine
+// (the V3 journal). Opened on the main line on 2026-10-01 (D-028) after the
+// native evidence of row 6 of the DNS recovery acceptance register passed
+// (kill-matrix batches 8r, 9, 12; pair runs 5 and 7). The Panel carries the
+// matching constant (freshPairedPDNSPrimaryOffered). Open, it admits only the
+// empty-source manifest on a host with no DNS engine
 // (Debian 13 amd64, measured PowerDNS package version, enforced by the V3
 // host-profile and package-version preflights): every other PowerDNS
 // paired-primary manifest stays refused, and a serving BIND source keeps its
@@ -39,9 +39,8 @@ const pdnsPairedPrimarySwitchPausedReason = "PowerDNS paired-primary switch is p
 //
 // freshPairedPDNSPrimaryAdmitted, DNS motoru olmayan bir sunucuya PowerDNS'in
 // eşli birincil olarak ilk kurulumunun (V3 günlüğü) Agent tarafındaki tek ürün
-// kapısıdır. Yalnız bu kabul dalında açıktır; 6. satırın yerel hücreleri
-// herkese açık RPC üzerinden koşabilsin diye. Ana hat, bu kanıt geçene kadar
-// kapıyı kapalı tutar. Açıkken yalnız DNS motoru olmayan sunucudaki boş
+// kapısıdır. 6. satırın gerçek sistem kanıtı geçtikten sonra 1 Ekim 2026'da
+// ana hatta açıldı (D-028). Açıkken yalnız DNS motoru olmayan sunucudaki boş
 // kaynaklı bildirimi kabul eder (Debian 13 amd64, ölçülmüş PowerDNS paket
 // sürümü); hizmet veren BIND kaynağı bind_source_pdns_switch_unsupported
 // reddini korur.

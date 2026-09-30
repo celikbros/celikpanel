@@ -14,7 +14,7 @@ func TestServerSetupProfileDNSMatrixPreservesIdentityAndServiceScope(t *testing.
 			for _, engine := range []string{"bind", "pdns"} {
 				for _, role := range []string{"primary", "secondary"} {
 					// The paired PowerDNS primary cells run with the product
-					// gate closed (main line) and open (acceptance branch);
+					// gate closed (until 2026-10-01) and open (D-028);
 					// every other cell runs with it closed and is unaffected.
 					gates := []bool{false}
 					if engine == "pdns" && role == "primary" {

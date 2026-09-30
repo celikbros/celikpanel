@@ -14,7 +14,7 @@ import (
 )
 
 // The fresh paired PowerDNS primary is one Panel policy with one constant.
-// These tests pin the value this acceptance branch ships (open) and exercise
+// These tests pin the value this release ships (open, D-028) and exercise
 // both the closed and the open value through the same preview/commit and
 // setup paths; a test for either value sets the gate explicitly. They are
 // component tests, not native evidence.
@@ -38,9 +38,9 @@ func closePDNSPairedPrimaryGateForTest(t *testing.T) {
 	setPDNSPairedPrimaryGateForTest(t, false)
 }
 
-func TestPDNSPairedPrimaryPanelGateIsOpenInThisAcceptanceBranch(t *testing.T) {
+func TestPDNSPairedPrimaryPanelGateIsOpenInThisRelease(t *testing.T) {
 	if !freshPairedPDNSPrimaryOffered || !pdnsPairedPrimaryGateOpen {
-		t.Fatal("the fresh paired PowerDNS primary gate must be open in the acceptance branch")
+		t.Fatal("the fresh paired PowerDNS primary gate is open in this release (D-028)")
 	}
 }
 

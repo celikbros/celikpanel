@@ -71,9 +71,9 @@ func closeFreshPairedPDNSPrimaryGate(t *testing.T) {
 	setFreshPairedPDNSPrimaryGate(t, false)
 }
 
-func TestFreshPairedPDNSPrimaryGateIsOpenInThisAcceptanceBranch(t *testing.T) {
+func TestFreshPairedPDNSPrimaryGateIsOpenInThisRelease(t *testing.T) {
 	if !freshPairedPDNSPrimaryAdmitted || !pdnsFreshPairedPrimaryGateOpen {
-		t.Fatal("the fresh paired PowerDNS primary gate must be open in the acceptance branch")
+		t.Fatal("the fresh paired PowerDNS primary gate is open in this release (D-028)")
 	}
 	if pdnsPairedPrimarySwitchPaused(freshPairedPDNSPrimaryManifest(t)) {
 		t.Fatal("open gate still paused the fresh paired PowerDNS primary")

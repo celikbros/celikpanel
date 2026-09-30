@@ -8,6 +8,45 @@ Code decisions live in git; this file is for strategy. Newest first.
 
 ---
 
+## D-028 · The fresh paired PowerDNS primary is offered, within the measured envelope
+
+*October 1, 2026 · Planner decision on the owner's standing direction (D-026 addendum: open the gate when row 6 has native evidence)*
+
+Until today the Panel and the Agent refused the first install of PowerDNS
+as the paired primary on a server with no DNS engine
+(`pdns_primary_switch_paused`), because its V3 journal had no native
+recovery evidence. Every acceptance run since 2026-09-30 was made on a
+branch that flipped the two gate constants; the main line stayed closed.
+
+**Evidence.** Kill-matrix batches 8r, 9 and 12 (cuts before and after the
+first start, with one zone and with zero zones, forward recovery, pre-start
+rollback, owner edits held, a parentless deletion resumed after the owner
+enrollment, management-disabled reboots) and pair runs 5 and 7 (the whole
+product flow on two CelikPanel servers: setup, zone add, record edit, zone
+delete with the product's proof after the owner enrollment, re-add, reboot
+with the panel off, management return) passed on the acceptance branch with
+no harness workaround. The same runs found and closed nine product defects
+along the way; each is in the acceptance register with its evidence.
+
+**Decision.** The two gate constants are `true` on the main line. What is
+offered is exactly what was measured: PowerDNS as the paired primary on a
+server with no DNS engine, Debian 13 amd64, the measured PowerDNS package
+version, enforced by the Agent's host-profile and package-version
+preflights. Every other PowerDNS paired-primary manifest stays refused; a
+serving BIND source keeps the D-026 refusal
+(`bind_source_pdns_switch_unsupported`); nothing changes for BIND or for a
+PowerDNS secondary.
+
+**Limits stated.** One run per cell or topology, disposable guests, orderly
+reboots, a test-only license build (D-027), a laptop host. The daemon
+re-stamp admission, the proof time-out code and the composite owner-edit
+code are in source with component tests and did not occur natively. The
+step-time bounds of the native proof are single samples. Installed servers
+were not touched; the decision does not authorise updating them (the owner
+starts every panel update from the panel's own update screen).
+
+---
+
 ## D-027 · Acceptance runs use a test-only fixture license; license policy is unchanged
 
 *September 30, 2026 · Owner decision*

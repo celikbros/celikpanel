@@ -8,6 +8,45 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
 ---
 
+## D-028 · Boş çift PowerDNS birincili, ölçülen kapsam içinde sunuluyor
+
+*1 Ekim 2026 · Sahibin yürürlükteki yönü üzerine planlayıcı kararı (D-026 eki: 6. satırın gerçek sistem kanıtı gelince kapıyı aç)*
+
+Bugüne kadar Panel ve Agent, DNS motoru olmayan bir sunucuya PowerDNS'in
+çift birincili olarak ilk kurulumunu reddediyordu
+(`pdns_primary_switch_paused`); çünkü V3 günlüğünün gerçek sistem kurtarma
+kanıtı yoktu. 30 Eylül 2026'dan beri her kabul koşusu iki kapı sabitini
+çeviren bir dalda yapıldı; ana hat kapalı kaldı.
+
+**Kanıt.** Kesinti matrisinin 8r, 9 ve 12. grupları (ilk başlatmadan önce ve
+sonra kesintiler, tek bölgeyle ve sıfır bölgeyle, ileri kurtarma, başlangıç
+öncesi geri alma, tutulan sahip düzenlemeleri, sahip kaydından sonra
+sürdürülen ebeveynsiz silme, yönetim kapalıyken yeniden açılışlar) ve 5. ile
+7. çift koşuları (iki CelikPanel sunucusunda ürün akışının tamamı: kurulum,
+bölge ekleme, kayıt düzenleme, sahip kaydından sonra ürünün kanıtıyla bölge
+silme, yeniden ekleme, panel kapalıyken yeniden açılış, yönetimin dönüşü)
+kabul dalında düzenek geçici çözümü olmadan geçti. Aynı koşular yol boyunca
+dokuz ürün kusuru bulup kapattı; her biri kanıtıyla kabul kütüğünde.
+
+**Karar.** İki kapı sabiti ana hatta `true`. Sunulan, tam olarak ölçülen
+şeydir: DNS motoru olmayan bir sunucuda çift birincil olarak PowerDNS,
+Debian 13 amd64, ölçülmüş PowerDNS paket sürümü; Agent'ın sunucu profili ve
+paket sürümü ön denetimleriyle zorlanır. Diğer her PowerDNS çift birincil
+bildirimi reddedilmeye devam eder; hizmet veren BIND kaynağı D-026 reddini
+(`bind_source_pdns_switch_unsupported`) korur; BIND için ve PowerDNS ikincili
+için hiçbir şey değişmez.
+
+**Belirtilen sınırlar.** Hücre ya da topoloji başına tek çalıştırma, geçici
+konuklar, düzenli yeniden açılışlar, yalnızca test amaçlı lisans derlemesi
+(D-027), dizüstü bir ana makine. Daemon yeniden damgalama kabulü, kanıt süre
+aşımı kodu ve bileşik sahip-düzenleme kodu kaynakta bileşen testleriyle var
+ve gerçek sistemde ortaya çıkmadı. Yerel kanıtın adım süresi sınırları tek
+örneklerdir. Kurulu sunuculara dokunulmadı; karar onların güncellenmesine
+yetki vermez (her panel güncellemesini sahibi panelin kendi güncelleme
+ekranından başlatır).
+
+---
+
 ## D-027 · Kabul koşuları yalnız deneyde geçerli lisans kullanır; lisans politikası değişmez
 
 *30 Eylül 2026 · Kullanıcı kararı*
