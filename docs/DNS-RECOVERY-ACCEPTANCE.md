@@ -310,6 +310,33 @@ exercised. The scenario carries a zone, so the zero-zone primary is not
 measured by this run. The `target-started` cell stays failed until its
 expectation is corrected and the cell runs again.
 
+**2026-10-01, pair 3, product flow** ([evidence](../deploy/e2e/dns-pair-acceptance/evidence/pair3-20261001/README.md),
+product `d1f2ad87` with the gate open, test-only license of D-027, driver
+`8d94c8ff`, no driver patch, no pass-rule change). Rows 2, 3, 5, 6, 17. All
+three topologies passed install, license, setup on both servers and pair
+readiness; all three stopped inside zone add on one native read. The run
+passes no row.
+
+| Topology (primary / secondary) | Reached | Stopped at |
+|---|---|---|
+| PowerDNS / BIND | the fresh paired PowerDNS primary with zero zones completed (first native measurement: catalog serial re-stamped to the epoch, `CATALOG-HASH` of empty input, zero members); the first zone was published on both servers with one serial | zone add: the driver proves zone state with `rndc`; the product's fresh BIND on Arch has no rndc key |
+| BIND / PowerDNS | same steps; the BIND primary on Arch published the zone | same read, on the primary |
+| BIND / BIND | same | same read, on the secondary |
+
+Product finding: Arch's `bind` package creates no rndc key, Debian's does,
+and the product creates none. The product's own BIND deletion proof calls
+`rndc zonestatus` without a key argument, so on an Arch BIND installed by
+the product the deletion proof of row 17 is in question from source
+reading, not observed. Decision: the fresh BIND install creates the key
+with the native tool when the package did not, never rewrites an existing
+one, records it as product-created, removes it on rollback only when
+unchanged, and every rndc failure for a missing key becomes a typed reason
+with owner guidance (fix in progress; component tests only). Observation,
+cause not established: the PowerDNS primary logged its notifications to
+the secondary as sent to port 0 and the answers as spurious; the BIND
+secondary transferred both zones regardless. No open-ended unknown state,
+no contradictory guidance, no `license_required` read this time.
+
 Native coverage of the source changes listed after batches 4 and 5:
 
 | Change | First native run that exercised it |

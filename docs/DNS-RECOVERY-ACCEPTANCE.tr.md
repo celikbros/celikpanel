@@ -326,6 +326,34 @@ yüzden sahip kaydı denenmedi. Senaryo bir bölge taşıyor, bu yüzden sıfır
 bölgeli birincil bu çalıştırmayla ölçülmedi. `target-started` hücresi,
 beklentisi düzeltilip hücre yeniden çalıştırılana kadar düşmüş kalır.
 
+**1 Ekim 2026, çift 3, ürün akışı** ([kanıt](../deploy/e2e/dns-pair-acceptance/evidence/pair3-20261001/README.md),
+kapı açıkken ürün `d1f2ad87`, D-027'nin yalnızca test amaçlı lisansı,
+sürücü `8d94c8ff`, sürücü yaması yok, geçme kuralı değişikliği yok). Satır
+2, 3, 5, 6, 17. Üç topoloji de her iki sunucuda kurulum, lisanslama, ilk
+yapılandırma ve çift hazırlığını geçti; üçü de bölge ekleme içinde tek bir
+yerel okumada durdu. Bu çalıştırma hiçbir satırı geçirmiyor.
+
+| Topoloji (birincil / ikincil) | Ulaşılan | Durma noktası |
+|---|---|---|
+| PowerDNS / BIND | sıfır bölgeli boş çift PowerDNS birincili tamamlandı (ilk gerçek sistem ölçümü: katalog seri numarası epoch'a yeniden damgalandı, boş girdinin `CATALOG-HASH`'i, sıfır üye); ilk bölge iki sunucuda da tek seri numarasıyla yayımlandı | bölge ekleme: sürücü bölge durumunu `rndc` ile kanıtlıyor; ürünün Arch üzerindeki boş BIND'inde rndc anahtarı yok |
+| BIND / PowerDNS | aynı adımlar; Arch üzerindeki BIND birincili bölgeyi yayımladı | aynı okuma, birincilde |
+| BIND / BIND | aynı | aynı okuma, ikincilde |
+
+Ürün bulgusu: Arch'ın `bind` paketi rndc anahtarı oluşturmuyor, Debian'ınki
+oluşturuyor, ürün ise hiç oluşturmuyor. Ürünün kendi BIND silme kanıtı
+`rndc zonestatus` komutunu anahtar bağımsız değişkeni olmadan çağırıyor;
+bu yüzden ürünün kurduğu bir Arch BIND'inde satır 17'nin silme kanıtı
+kaynak okumasına göre şüpheli, gözlemlenmedi. Karar: boş BIND kurulumu,
+paket oluşturmadıysa anahtarı yerel araçla oluşturur, var olanı asla
+yeniden yazmaz, ürünün oluşturduğunu kaydeder, geri almada yalnızca
+değişmemişse kaldırır ve eksik anahtar yüzünden her rndc hatası sahip
+yönlendirmesi taşıyan türlenmiş bir nedene dönüşür (düzeltme sürüyor;
+yalnızca bileşen testleri). Gözlem, nedeni belirlenemedi: PowerDNS
+birincili ikincile bildirimlerini 0 numaralı bağlantı noktasına
+gönderilmiş, yanıtları da sahte olarak kaydetti; BIND ikincili iki bölgeyi
+yine de aktardı. Bu kez açık uçlu bilinmeyen durum, çelişkili yönlendirme
+ve `license_required` okuması yok.
+
 4. ve 5. gruplardan sonra listelenen kaynak değişikliklerinin gerçek
 sistemdeki kapsamı:
 
