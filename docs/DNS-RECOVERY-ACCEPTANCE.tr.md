@@ -405,6 +405,27 @@ değişiklik için bölge başına tek bildirim aldı. Bölge yeniden ekleme,
 yönetim kapalıyken yeniden açılış ve yönetimin dönüşü çalışmadı. İki
 kusurun da düzeltmesi sürüyor (yalnızca bileşen testleri).
 
+**1 Ekim 2026, 10. grup, sürdürülen sıfır bölgeli silmeler** ([kanıt](../deploy/e2e/dns-kill-matrix/evidence/batch10-zero-zone-resume-20261001/README.md),
+düzenek ve taze z05 ürünü `accept/pdns-primary-gate-open-6` commit
+`0d4c0324`'ten; z04, 9. grubun tutulan kaplaması üzerinde ürün `3cceb29a`
+ile sürdürüldü; düzenek geçici çözümü yok, yeniden çalıştırma yok). Satır 6
+ve 17. İki hücre de geçmedi. Düzeltilmiş tetikleyici çocuk bölgenin bekleyen
+silmesini eşleştirdi, Agent işi kirayla `recovering` durumuna aldı ve sahip
+kaydıyla kurulan denetleyici kanalı panelsiz BIND ikinciline ilk kez gerçek
+sistemde, iki kez çalıştı; iki seferde de Agent silmeyi
+`dns_peer_inspection_unknown` ile beklemeye geri aldı, bu yüzden kurtarılan
+silme, yeniden ekleme ve z05 yeniden açılışı çalışmadı. Çıkarım, gözlem
+değil: düzeneğin panelsiz Arch BIND ikincilinde denetleyicinin ihtiyaç
+duyduğu ve panelsiz sahibin hazırladığı rndc anahtarı yok (düzenek
+düzeltmesi sürüyor). Denetleyicinin kendi nedeni ne günlüğe yazıldı ne
+gösterildi; kaynakta `0988bc9a` ile kapatıldı (gözden geçirilmiş neden
+belirteçleri; yalnızca bileşen testleri). z05 askıda tutma çalıştı: denetim
+noktası ve önyükleme kimlikleri değişmeden 6,5 dakika askıda kaldı. z05'te
+düzeltilmiş bildirim derlemesi: 53 numaralı bağlantı noktasıyla altı
+bildirim, sıfır sahte yanıt, sıfır 0 numaralı bağlantı noktası satırı. İlk
+başlangıçtan +60 sn ve +120 sn sonra iki daemon yeniden damgalaması, her
+biri bir üye değişikliğinden sonra.
+
 4. ve 5. gruplardan sonra listelenen kaynak değişikliklerinin gerçek
 sistemdeki kapsamı:
 

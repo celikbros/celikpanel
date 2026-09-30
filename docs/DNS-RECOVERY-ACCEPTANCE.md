@@ -385,6 +385,25 @@ six mutations, one notify per zone per mutation received by the secondary.
 Zone re-add, the management-disabled reboot and management return did not
 run. Both defects have fixes in progress (component tests only).
 
+**2026-10-01, batch 10, resumed zero-zone deletions** ([evidence](../deploy/e2e/dns-kill-matrix/evidence/batch10-zero-zone-resume-20261001/README.md),
+harness and fresh z05 product from `accept/pdns-primary-gate-open-6` commit
+`0d4c0324`; z04 resumed on its kept batch 9 overlay with product
+`3cceb29a`; no harness workaround, no re-run). Rows 6 and 17. Neither cell
+passed. The corrected trigger matched the pending deletion of the child
+zone, the Agent took the job to `recovering` with a lease, and the
+owner-enrolled inspector channel to the panel-free BIND secondary ran
+natively for the first time, twice; both times the Agent returned the
+deletion to pending as `dns_peer_inspection_unknown`, so the recovered
+delete, the re-add and the z05 reboot did not run. Inferred, not observed:
+the harness's panel-free Arch BIND secondary has no rndc key, which the
+inspector needs and which a panel-free owner prepares (harness fix in
+progress). The inspector's own reason was neither logged nor shown; closed
+in source by `0988bc9a` (reviewed reason tokens; component tests only). The
+z05 hold worked: 6.5 minutes suspended with the checkpoint and boot IDs
+unchanged. Fixed notify build on z05: six notifies with port 53, zero
+spurious, zero port-0 lines. Two daemon re-stamps at +60 s and +120 s after
+first start, each after a membership change.
+
 Native coverage of the source changes listed after batches 4 and 5:
 
 | Change | First native run that exercised it |
