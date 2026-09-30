@@ -45,22 +45,22 @@ Ortak bilgiler (kaynak referansları `e9d1019d` artı D-026 kapısı içindir):
 | # | Yol (nasıl ulaşılır) | Günlük | Kurtarma: hedef başlamadan önce / hedef başladıktan sonra | Kurtarmada sahip değişikliği | Gerçek sistem kanıtı (sınır) | Durum |
 |---|---|---|---|---|---|---|
 | 1 | Boş BIND, tek sunucu (kurulum veya `install` kartı) | V1 | Agent, aynı istek, her iki tarafta da. Sahip CLI'ı yok (D-026 karar 2 ile kabul edildi). | Geri almada sahibi gözeten yapılandırma ön hâli | [Arch target-staged/before-write](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-TARGET-STAGED-ARCH-20260925.md): tek bir erken hücre, yalnızca ileri yönde. [Fresh-install cells 2026-09-29](../deploy/e2e/dns-kill-matrix/evidence/fresh-install-20260929/README.md): `bind__target-verified__before-write` (Arch, `named` başladıktan sonra kesildi, günlük `target-started` durumunda) ve `bind__target-verified__after-write` (Debian) Agent başlangıcında ikisi de ileri yönde yakınsadı; aynı `named` PID'si, 31/31 sağlık, yetkili UDP/TCP. | Debian ve Arch'ta başlangıç sonrası kesinti için **GEÇTİ**. **EKSİK**: Debian başlangıç öncesi hücre, yeniden başlatma; kesinti boyunca süreklilik iddia edilmiyor. |
-| 2 | Boş BIND, çiftin birincili | V1 | Agent, aynı istek | 1 ile aynı | [Pair target-staged/after-write + management-disabled reboot](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-PAIR-TARGET-STAGED-20260926.md); [V3 deletion terminal](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-V3-DELETION-TERMINAL-20260926.md) | Bu iki başlangıç öncesi hücre için **GEÇTİ**. **EKSİK**: source-stopped, target-started, target-verified kesintileri |
-| 3 | Boş BIND, çiftin ikincili | V1 | Agent, aynı istek | 1 ile aynı | yok — şimdiye kadarki denemelerde her ikincil panelsizdi | **EKSİK**: kesinti denemesi yok |
+| 2 | Boş BIND, çiftin birincili | V1 | Agent, aynı istek | 1 ile aynı | [Pair target-staged/after-write + management-disabled reboot](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-PAIR-TARGET-STAGED-20260926.md); [V3 deletion terminal](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-V3-DELETION-TERMINAL-20260926.md) | Bu iki başlangıç öncesi hücre için ve ürün akışı için **GEÇTİ** ([çift 7](../deploy/e2e/dns-pair-acceptance/evidence/pair7-20261001/README.md) t1/t2: bölge ekleme, düzenleme, sahip kaydından sonra kanıtla silme, yeniden ekleme, yönetim kapalıyken yeniden açılış). **EKSİK**: source-stopped, target-started, target-verified kesintileri |
+| 3 | Boş BIND, çiftin ikincili | V1 | Agent, aynı istek | 1 ile aynı | Gruplar [5](../deploy/e2e/dns-kill-matrix/evidence/batch5-paired-first-20260929/README.md), [6a](../deploy/e2e/dns-kill-matrix/evidence/batch6a-fixed-hook-20260929/README.md), [6b](../deploy/e2e/dns-kill-matrix/evidence/batch6b-pdns-secondary-20260930/README.md), [7](../deploy/e2e/dns-kill-matrix/evidence/batch7-breadth-20260930/README.md): panelsiz BIND ve PowerDNS birincillerine karşı `intent`, `target-staged`, `target-verified` kesintileri, yönetim kapalıyken yeniden açılışlar; [çift 7](../deploy/e2e/dns-pair-acceptance/evidence/pair7-20261001/README.md) t1/t3: bir CelikPanel birincili arkasında ürün akışı | **GEÇTİ** (1 Ekim 2026), sınırlarla: kesinti hücreleri panelsiz birincillere karşı çalıştı; CelikPanel-birincilli çalıştırmalarda ikincilde kesinti yoktu |
 | 4 | Boş PowerDNS, tek sunucu (yalnızca APT sunucularında) | V1 | Agent `rollbackPDNSSwitch`, başlangıçtan önce ve sonra. Sahip CLI'ı yok (D-026 karar 2). | `verifyOwnerAwarePreimage` | [Fresh-install cells 2026-09-29](../deploy/e2e/dns-kill-matrix/evidence/fresh-install-20260929/README.md): `pdns-switch__target-started__after-write` geçti (başlangıçta geri alma, ardından aynı istek yeniden denemede ileri yönde tekrar çalıştı; ~3 sn DNS boşluğu). `pdns-switch__target-staged__after-write` **başarısız**: PowerDNS hiç başlamamıştı ve birimi kurulumun kendi kalıcı maskesiydi, ama V1 geri almanın durmuş hedef kanıtı `LoadState=loaded` gerektiriyordu; kurtarma `dns_native_recovery_unknown_after_restart` ile sonuçlandı, yeniden deneme reddedildi, DNS sunulmadı. Önceki durum (DNS yok) zarar görmedi. Düzeltme `VerifyStoppedFreshSourceTarget` (commit `1c336f6d`); [düzeltilmiş kaynak üzerinde yeniden çalıştırma](../deploy/e2e/dns-kill-matrix/evidence/fresh-install-rerun-20260929/README.md): `target-staged__after-write` (aynı istek baytları) ve `intent__after-write` ikisi de Agent başlangıcında geri alındı ve aynı istekle yeniden denemede ileri yönde yakınsadı; 31/31 sağlık, yetkili UDP/TCP. | Debian 13'te başlangıç öncesi (intent, target-staged; maskelenmiş hiç başlamamış birim) ve başlangıç sonrası kesintiler için **GEÇTİ**. **EKSİK**: `not-found`/`loaded` kabul edilen durumları ve çalışma zamanı maskesi reddi yalnızca bileşen testlerine sahip; yeniden başlatma yok; geri alınmış karar kodu günlük/ledger'dan çıkarsanmış, günlüğe yazılmamış. |
-| 5 | Boş veya yeniden yapılandırılmış PowerDNS, çiftin ikincili | V1 | Agent, aynı istek | 4 ile aynı | yok | **EKSİK**: kesinti denemesi yok |
-| 6 | Boş çift PowerDNS birincili, V3 (boş kaynak) | V3 (yalnızca testler) | Başlangıçtan önce: sahip CLI'ı `recover-dns-pdns-fresh-prestart`. Başlangıçtan sonra: Agent yalnızca ileri yönde; başlangıç sonrası ters işlem yok. | SQL/daemon sapma denetimi reddeder | [V3 native after-start forward + SIGKILL](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/README.md), [V3 prestart inverse](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-prestart-20260928/README.md), [V3 zone lifecycle](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-zone-20260928/README.md). Genel RPC üzerinden erişilemez. | **DESTEKLENMİYOR, reddediliyor** (`pdns_primary_switch_paused`). Bunu açmak 2. maddeye aittir ve bir sahip-düzenleme kesintisi, bir başlangıç sonrası ters işlem ya da açık bir yalnızca-ileri politikası ile genel RPC üzerinden kabul gerektirir. |
+| 5 | Boş veya yeniden yapılandırılmış PowerDNS, çiftin ikincili | V1 | Agent, aynı istek | 4 ile aynı | Gruplar [6b](../deploy/e2e/dns-kill-matrix/evidence/batch6b-pdns-secondary-20260930/README.md) ve [7](../deploy/e2e/dns-kill-matrix/evidence/batch7-breadth-20260930/README.md): panelsiz BIND ve PowerDNS birincillerine karşı `intent`, `target-staged`, `target-started`, `target-verified`, `committed`, `rolling-back`, `rolled-back` kesintileri, daemon'ın yazdığı bir veritabanının geri alınması, yönetim kapalıyken yeniden açılışlar; [çift 7](../deploy/e2e/dns-pair-acceptance/evidence/pair7-20261001/README.md) t2: `dns-peer-enroll --engine pdns` dahil bir CelikPanel BIND birincili arkasında ürün akışı | **GEÇTİ** (1 Ekim 2026) boş ikincil için, sınırlarla: kesinti hücrelerinde panelsiz birincil; yeniden yapılandırılmış ikincilin kesinti denemesi yok |
+| 6 | Boş çift PowerDNS birincili, V3 (boş kaynak) | V3 (yalnızca testler) | Başlangıçtan önce: sahip CLI'ı `recover-dns-pdns-fresh-prestart`. Başlangıçtan sonra: Agent yalnızca ileri yönde; başlangıç sonrası ters işlem yok. | SQL/daemon sapma denetimi reddeder | [V3 native after-start forward + SIGKILL](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/README.md), [V3 prestart inverse](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-prestart-20260928/README.md), [V3 zone lifecycle](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-zone-20260928/README.md). Genel RPC üzerinden erişilemez. | **GEÇTİ** (1 Ekim 2026, D-028, kapı ana dalda açık), sınırlarla. Genel RPC üzerinden: [8r. grup](../deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/README.md) (Agent tarafından kendiliğinden geri alınan başlangıç öncesi kesintiler, başlangıç sonrası yalnızca ileri yönde, sahip yapılandırması ve SQL düzenlemeleri tutundu, Agent'ın serbest bıraktığı iş sahip komutuyla tamamlandı, bölge yaşam döngüsü, yönetim kapalıyken yeniden açılış), [9. grup](../deploy/e2e/dns-kill-matrix/evidence/batch9-pdns-primary-zero-zone-20261001/README.md) ve [12. grup](../deploy/e2e/dns-kill-matrix/evidence/batch12-zero-zone-complete-20261001/README.md) (sıfır bölge: aynı kesintiler, ilk bölgenin oluşturulması, sahip kaydından sonra sürdürülen ebeveynsiz silme, yeniden açılış), [çift 5](../deploy/e2e/dns-pair-acceptance/evidence/pair5-20261001/README.md) ve [çift 7](../deploy/e2e/dns-pair-acceptance/evidence/pair7-20261001/README.md) (ürün akışı). Politika: başlangıçtan önce Agent kendisi geri alır ve sahip komutu serbest bırakılmış bir işi tamamlar; başlangıçtan sonra yalnızca ileri yönde; bir sahip değişikliği yalnızca DNS'i tutar. Sınırlar: hücre başına bir çalıştırma, hücrelerde Arch BIND ikincilli Debian 13 PowerDNS 4.9.17 birincili ve çift çalıştırmalarında CelikPanel ikincilleri; tasarım gereği başlangıç sonrası ters işlem yok; daemon yeniden damgalama kabulü ve kanıt zaman aşımı kodu gerçek sistemde gerçekleşmedi. |
 | 7 | PowerDNS → BIND, tek sunucu, PowerDNS etkin / BIND devre dışı | **V2** | Agent `rolling-back` kararını yazar ve sonra reddeder; sahip CLI'ı `recover-dns-bind-switch`, rolling-back/rolled-back durumundan ters işlemi çalıştırır. Başlangıçtan sonra: hedef doğrulandıktan sonra yalnızca ileri yönde. | Ana yapılandırma düzenlemesi reddedilir, kanıt saklanır | [Protected owner CLI](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-PROTECTED-OWNER-CLI-20260927.md): hedef başladıktan sonra rolling-back/after-write, sahip düzenlemesi reddedildi, CLI kesintiye uğradı, yeniden başlatma | Karar verilmiş geri alma hücresi için **GEÇTİ** (Agent etkisiz, hedef başlamıştı). Agent yeniden başlatılmış ve çalışır durumdayken başlangıç öncesi kesintiler (intent, target-staged) için **GEÇTİ**: ilk çalıştırma `7ad24282` üzerinde başarısız oldu ([kanıt](../deploy/e2e/dns-kill-matrix/evidence/owner-inverse-after-restart-20260929/README.md)), `411398d9` içinde düzeltildi, [yeniden çalıştırma geçti](../deploy/e2e/dns-kill-matrix/evidence/owner-inverse-after-restart-rerun-20260929/README.md). Agent yeniden başlatılmış ve çalışır durumdayken kaynak durdurulduktan sonraki kesintiler (`source-stopped`, `target-started` after-write) için **GEÇTİ** ([kanıt](../deploy/e2e/dns-kill-matrix/evidence/owner-inverse-critical-20260929/README.md), kaynak `411398d9`, düzenek `7c5dfe17`): sahip komutu çıkış 0, günlük emekliye ayrıldı, ledger ve durum makbuzu bayt-özdeş, PowerDNS 53 numaralı bağlantı noktasının tek yetkilisi olarak yeniden hizmet veriyor, SOA seri numarası değişmedi, BIND durduruldu, 31/31; ölçülen PowerDNS kesinti üst sınırları 21,6 sn ve 9,4 sn, tasarım gereği DNS sürekli değil. **EKSİK**: V2 altında before-write uçları ve `rolled-back` hücresi; yeniden başlatma; yeniden çalıştırma çıkış durumu 3; geri almadan sonra diskte kalan staged BIND üretim ağacı, `rndc.key`, kurulum-sahipliği makbuzu ve yükseltilmiş `bind9` kütüphaneleri kalır; BIND birimi, başlamışsa maskesiz/devre dışı, başlamamışsa maskeli bırakılır. 25 Eylül 2026 tarihli altı Agent-aracılı BIND raporu V1 kullandı ve bu satır için tarihseldir. |
 | 8 | PowerDNS → BIND, çift | V1 | Agent, aynı istek | sahibi gözeten | çift için yok | **EKSİK** |
 | 9 | **BIND → PowerDNS**, tek sunucu ve çiftin ikincili (`switch` kartı, veya PowerDNS yokken `install`) | — | — | — | yok | D-026 karar 1 ile **DESTEKLENMİYOR, reddediliyor** (`bind_source_pdns_switch_unsupported`). D-026'dan önce bu satır *desteklenmiyor, reddedilmiyor* idi: V1 günlüğü, yalnızca Agent'ın ters işlemi, çağıranı olmayan V4 üreticisi. |
 | 10 | BIND → PowerDNS, çiftin birincili | — | — | — | — | **DESTEKLENMİYOR, reddediliyor** (`pdns_primary_switch_paused`) |
 | 11 | Çalışan BIND devralması (`adopt_unmanaged`, tek sunucu, Debian; Arch reddedilir) | V2 `SourceBIND` | Agent reddeder ve CLI'ı adlandırır; sahip CLI'ı `recover-dns-bind-adoption`, rolling-back/rolled-back durumundan | Aynı seri numaralı bölge düzenlemesi reddedilir | [Adoption owner CLI](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-ADOPTION-OWNER-CLI-20260927.md): tek hücre, yeniden başlatma yok, denetleyici devri kasıtlı olarak doğrulanmadı | Tek hücre için **GEÇTİ**. **EKSİK**: erken ve başlangıç sonrası kesintiler, yeniden başlatma |
-| 12 | Durdurulmuş, yönetilmeyen BIND devralması | V1 (boş kurulum işlemi) | 1 ile aynı | 1 ile aynı | yok | **EKSİK** (1 ile aynı sınıf) |
+| 12 | Durdurulmuş, yönetilmeyen BIND devralması | V1 (boş kurulum işlemi) | 1 ile aynı | 1 ile aynı | Gruplar [6a](../deploy/e2e/dns-kill-matrix/evidence/batch6a-fixed-hook-20260929/README.md), [6b](../deploy/e2e/dns-kill-matrix/evidence/batch6b-pdns-secondary-20260930/README.md), [7](../deploy/e2e/dns-kill-matrix/evidence/batch7-breadth-20260930/README.md): `target-staged` kesintisi, kurtarma sonrası yeniden başlatma, standart seçenekler, sahip `recursion`/`allow-transfer` direktifleriyle aynı-istek yeniden denemesinden önce geri yüklenen mühürlü ön hâl | **GEÇTİ** (1 Ekim 2026) |
 | 13 | Harici PowerDNS devralması (`adopt`, tek sunucu, APT) | V1 | Agent ters işlemi, artı rolling-back/rolled-back durumundan sahip CLI'ı `recover-dns-pdns-adoption` | Statik yapılandırma düzenlemesi reddedilir | [Adoption cells](../deploy/e2e/dns-kill-matrix/README.md) (`NATIVE-PDNS-ADOPTION-*`), [owner edit](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-OWNER-EDIT-20260925.md), [protected owner CLI + reboot](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-PROTECTED-OWNER-CLI-20260926.md), [management-absent boot](../deploy/e2e/dns-kill-matrix/NATIVE-PDNS-MANAGEMENT-ABSENT-BOOT-20260925.md) | **GEÇTİ** (Debian 13, imzasız yerel derleme) |
 | 14 | `reinstall_active` BIND, tek sunucu | V1 | Agent, aynı istek | 1 ile aynı | yok | **EKSİK** |
 | 15 | `reinstall_active` PowerDNS | — | — | — | — | **DESTEKLENMİYOR, reddediliyor** (Panel ve Agent) |
 | 16 | Genel motor kurulum/durdurma/kaldırma RPC'si | — | — | — | — | **DESTEKLENMİYOR, reddediliyor** (`genericDNSEngineMutationRefusal`) |
-| 17 | Çift üzerinde bölge ekleme/düzenleme/silme (switch günlüğü değil, zone-sync V3 ledger'ı) | zone-sync v3 | `RecoverDNSZoneV3` üzerinden aynı istek, Agent aracılığıyla. Ebeveynsiz silme, sahip kaydı yokluğu kanıtlayana kadar bekleyen durumda kalır. | Türlenmiş sahip-düzenleme çakışması | [V3 deletion terminal](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-V3-DELETION-TERMINAL-20260926.md), [owner edit](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-V3-OWNER-EDIT-20260927.md) ve [düzeltmesi](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-V3-OWNER-EDIT-CORRECTION-20260927.md), [V3 zone lifecycle](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-zone-20260928/README.md), [owner-proof deletion](../deploy/e2e/dns-kill-matrix/evidence/pdns-bind-owner-proof-20260928/README.md) | **EKSİK**: bir zone-sync işlemi içinde gerçek sistem SIGKILL'i yok (şimdiye kadarki her kesinti motor switch'i üzerindeydi). 2. maddeye aittir. |
+| 17 | Çift üzerinde bölge ekleme/düzenleme/silme (switch günlüğü değil, zone-sync V3 ledger'ı) | zone-sync v3 | `RecoverDNSZoneV3` üzerinden aynı istek, Agent aracılığıyla. Ebeveynsiz silme, sahip kaydı yokluğu kanıtlayana kadar bekleyen durumda kalır. | Türlenmiş sahip-düzenleme çakışması | [V3 deletion terminal](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-V3-DELETION-TERMINAL-20260926.md), [owner edit](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-V3-OWNER-EDIT-20260927.md) ve [düzeltmesi](../deploy/e2e/dns-kill-matrix/NATIVE-BIND-V3-OWNER-EDIT-CORRECTION-20260927.md), [V3 zone lifecycle](../deploy/e2e/dns-kill-matrix/evidence/pdns-v3-zone-20260928/README.md), [owner-proof deletion](../deploy/e2e/dns-kill-matrix/evidence/pdns-bind-owner-proof-20260928/README.md) | **GEÇTİ** (1 Ekim 2026) her topolojide ürün akışı için: [çift 7](../deploy/e2e/dns-pair-acceptance/evidence/pair7-20261001/README.md) (BIND/BIND, BIND/PowerDNS, PowerDNS/BIND: ekleme, kayıt düzenleme, `dns_peer_enrollment_required` üzerinde beklemede kalan silme, sahip kaydı, yeniden deneme ürünün kanıtıyla sildi, yeniden ekleme, yönetim kapalıyken yeniden açılış) ve [12. grup](../deploy/e2e/dns-kill-matrix/evidence/batch12-zero-zone-complete-20261001/README.md) (sahip kaydından sonra `RecoverDNSZoneV3` üzerinden sürdürülen, tek bölgenin ebeveynsiz silinmesi). **EKSİK**: bir zone-sync işlemi içinde gerçek sistem SIGKILL'i yok (şimdiye kadarki her kesinti motor switch'i üzerindeydi; düzenekte zone-sync V3 içinde etiketli bir kanca yok). |
 
 Henüz denetlenmedi: `ConfigureDNSClusterV2` eşleme değişiklikleri.
 
@@ -113,6 +113,76 @@ düzeltti (`1c336f6d`, `411398d9`), ve bir kurtarma çıkmazı kaldırıldı
   imzalı sürüm ve kurulu sunucu kabulü 3. ve 4. maddelere aittir.
 
 1. maddeyi kapatmak P0.4'ü kapatmaz.
+
+## 2. maddenin durumu: 1 Ekim 2026'da adı belli sınırlarla kapandı
+
+2. madde, çift yönlü çift topolojilerinin gerçek sistemde kabulünü istedi.
+29 Eylül 2026 ile 1 Ekim 2026 arasında kill matrisi 4'ten 12'ye kadar
+grupları çalıştırdı ve ürün-akışı çift sürücüsü iki tek kullanımlık
+CelikPanel sunucusunda yedi kez çalıştı; her çalıştırma kanıtıyla birlikte
+ilerleme günlüğündedir. Maddeyi kapatan:
+[çift 7](../deploy/e2e/dns-pair-acceptance/evidence/pair7-20261001/README.md)
+üç topolojinin tümünde (BIND/BIND, BIND/PowerDNS, PowerDNS/BIND) bölge
+ekleme, kayıt düzenleme, sahip kaydından sonra ürünün kanıtıyla bölge
+silme, yeniden ekleme, panel ve Agent devre dışıyken DNS'in yanıt vermeye
+devam ettiği bir yeniden açılış ve yönetimin dönüşü boyunca her adımı
+geçti; ve
+[12. grup](../deploy/e2e/dns-kill-matrix/evidence/batch12-zero-zone-complete-20261001/README.md)
+sıfır bölgeli boş çift PowerDNS birincili hücrelerini, sahip kaydından
+sonra sürdürülen bir ebeveynsiz silme ve yönetim kapalıyken bir yeniden
+açılışla tamamladı. Bu kanıtla, boş çift PowerDNS birincili kapısı yalnızca
+ölçülen kapsamla sınırlı olarak ana dalda açıktır (D-028).
+
+Bugün durumu değişen satırlar: 3, 5, 6, 12 ve 17, hücrelerinde yazılan
+sınırlarla **GEÇTİ**; satır 2 ürün akışını kazanıyor. Satır 8 (çiftin
+PowerDNS → BIND'i) ve 14 (BIND yeniden kurulumu) **EKSİK** kalıyor; satır
+9, 10, 15 ve 16 reddedilmiş kalıyor.
+
+Yalnızca gerçek sistem çalıştırmalarıyla bulunan ve yol boyunca kaynakta
+kapatılan ürün kusurları, düzeltmeyi ilk sınayan çalıştırmayla birlikte:
+sıfır-bölge katalog denetimi (`8a548090`; çift 5), doğru kurulum durumları
+ve arka plan lisans yenilemesi (`8a548090`; çift 3'ten itibaren), müşteri
+arşivindeki kanıt (`8a548090`; paketleme iki kez doğrulandı, bayt-özdeş),
+Arch'taki rndc anahtarı (`80bb4353`; çift 4), PowerDNS bildirim bağlantı
+noktası (`a6d93f06`; çift 4), yönetilen ikincilin yerel döngü katalog
+aktarımı ve denetleyici nedenleri (`0988bc9a`; çift 5), yalnızca DNS'li bir
+alan adında posta aşaması (`0988bc9a`; çift 5), yönetilen bir PowerDNS
+ikincilindeki sahibin denetleyicisi (`4941b605`; çift 6), BIND birincili
+planının kaynak durumu (`37864789`; çift 6), bir sahip değişikliği için
+alınan daemon yeniden damgalaması (`21a84211`; henüz gerçek sistemde
+gözlemlenmedi) ve dalga sınırında atılan olumlu bir kanıt (`d3d65353`; çift
+7).
+
+Adı belli sınırlar, açık:
+
+- hücre ve topoloji başına bir çalıştırma; bir dizüstü bilgisayar ana
+  makinesinde tek kullanımlık QEMU konukları; düzenli yeniden açılışlar,
+  güç kaybı yok; D-027'nin yalnızca test amaçlı lisansıyla imzasız yerel
+  derlemeler; kurulu sunucu yok;
+- daemon yeniden damgalama kabulü, kanıt zaman aşımı kodu ve bileşik
+  sahip-düzenleme kodu gerçek sistemde gerçekleşmedi; gerçek sistem
+  kanıtının adım sınırları tek örneklerdir (12 sn'ye karşı 11,1 sn'lik bir
+  sınama yazması gözlemlendi);
+- satır 17'de bir zone-sync işlemi içinde SIGKILL yok (zone-sync V3 içinde
+  etiketli bir kanca yok);
+- satır 3 ve 5: kesinti hücreleri panelsiz birincillere karşı çalıştı;
+  yeniden yapılandırılmış bir PowerDNS ikincilinin kesinti denemesi yok;
+- satır 8 (çiftin PowerDNS → BIND'i) ve satır 14 (`dpkg-statoverride`
+  kararından sonraki BIND yeniden kurulumu) gerçek sistem denemesi
+  görmedi;
+- 1 Ekim 2026'dan önce kurulan bir BIND ikincili, panel o sunucunun DNS
+  yapılandırmasını bir dahaki sefer yazana kadar sürüm-1 görüntülemesini
+  korur ve bugün hiçbir panel eylemi bunu tetiklemiyor;
+  `dns_peer_catalog_transfer_refused`, `detail` alanı,
+  `mail_runtime_cleanup_failed`, `config_unreviewed`, rndc anahtarı geri
+  alma ve sürüm 1'den 2'ye yükseltme denenmedi;
+- müşteri arşivi hâlâ e2e düzenek kaynaklarını (betikler ve fikstürler)
+  taşıyor; bu 4. maddeye ait bir karar;
+- BIND → PowerDNS motor switch'i desteklenmiyor ve reddediliyor olarak
+  kalır (D-026).
+
+2. maddeyi kapatmak P0.4'ü kapatmaz ve kurulu panel güncellemesine yetki
+vermez.
 
 ## 2. madde ilerleme günlüğü
 
@@ -485,6 +555,24 @@ Düzeltme sürüyor: olumlu bir yanıt asla süre yüzünden atılmaz; kanıtın
 bütçesi adım başına sınırlarla tüm alışverişi kapsar; yanıt kabul
 edilmeden önce dolan süre kendi kodunu ve metnini alır; altta yatan hata ve
 denetleyicinin sonuç alanları sınırlı biçimde günlüğe yazılır.
+
+**1 Ekim 2026, çift 7 ve 12. grup: her topoloji ve iki sıfır-bölge hücresi
+de tamamlandı** ([çift 7](../deploy/e2e/dns-pair-acceptance/evidence/pair7-20261001/README.md), [12. grup](../deploy/e2e/dns-kill-matrix/evidence/batch12-zero-zone-complete-20261001/README.md);
+kapı açıkken ürün `2efc4de2` = ana dal `d3d65353`, D-027'nin yalnızca test
+amaçlı lisansı, sürücü ve düzenek aynı commit'lerden, yama yok, geçme
+kuralı değişikliği yok, yeniden çalıştırma yok). Satır 2, 3, 5, 6, 17.
+
+| Çalıştırma | Sonuç |
+|---|---|
+| çift 7, BIND / BIND; BIND (Arch) / PowerDNS; PowerDNS / BIND | üçünde de **her adım geçti**: kurulum, lisanslama, ilk yapılandırma, çift hazırlığı, bölge ekleme, kayıt ekleme ve düzenleme, bölge silme (`dns_peer_enrollment_required` ile beklemede, sahip kaydı, yeniden deneme 19,9 ile 25,5 sn arasında ürünün kanıtıyla sildi: iki sunucuda REFUSED, yerel olarak yok, katalog üyesi yok, ledger işi başarılı oldu, sınama tüketildi ve emekliye ayrıldı), bölge yeniden ekleme, iki sunucuda da DNS'in yanıt verdiği yönetim kapalıyken yeniden açılış, yönetimin dönüşü. Agent'ın adım-süresi satırları, 6. çiftin tek 15 sn sınırının başarısız olduğu yerde 17,4, 20,9 ve 23,1 sn'de tamamlanan kanıtları gösteriyor; PowerDNS denetleyicisinin yanıtı (`transferred`, `absent`, `unloaded`) ilk kez gerçek sistemde kaydedildi. Sahip kaydından sonra PowerDNS birincilinde ek bir silme tek denemede tamamlandı. |
+| 12. grup, z04 (`committed` kesintisi, bölge yaşam döngüsü, sıfır bölge) | **geçti**: ilk bölge oluşturuldu ve düzenlendi, silme beklemede, sahip kaydı, sürdürülen silme doğrulandı ve yayımlandı (iş başarılı oldu), iki sunucuda da sıfır üye ve REFUSED, yeniden ekleme. |
+| 12. grup, z05 (`target-started` kesintisi, bölge yaşam döngüsü, yönetim kapalıyken yeniden açılış, sıfır bölge) | **geçti**: sürdürmeye kadar aynısı, ardından devam, yönetim kapalı, iki yeniden açılış da, iki sunucuda ve veritabanında yeniden eklenen çocuğun tek üye olduğu yayın-sonrası kuralı altında yeniden açılış sonrası kontrol. |
+
+Bu çalıştırmalarda denenmeyen: daemon yeniden damgalama kabulü (sürdürülen
+bir deneme içine hiçbir yeniden damgalama düşmedi), kanıt zaman aşımı kodu,
+bileşik sahip-düzenleme kodu. Not edilen: sınama yazması z05'te 12 sn'lik
+sınırına karşı 11,1 sn sürdü ve tüketme adımı 6,5 ile 9,5 sn arasındaydı;
+yüklü bir dizüstü bilgisayar ana makinesinde tek örnekler.
 
 4. ve 5. gruplardan sonra listelenen kaynak değişikliklerinin gerçek
 sistemdeki kapsamı:
