@@ -1,0 +1,36 @@
+{
+  "catalog_status": {
+    "rndc": {
+      "argv": [
+        "/usr/sbin/rndc",
+        "zonestatus",
+        "catalog-c000020b.celikpanel.invalid"
+      ],
+      "output": "rndc: neither /etc/rndc.conf nor /etc/rndc.key was found",
+      "returncode": 1
+    },
+    "serial": null,
+    "state": "unknown",
+    "type": null
+  },
+  "command": "native",
+  "engine": "bind",
+  "native_state": "unknown",
+  "returncode": 0,
+  "zone": "pair-accept.test",
+  "zone_files": [],
+  "zone_status": {
+    "rndc": {
+      "argv": [
+        "/usr/sbin/rndc",
+        "zonestatus",
+        "pair-accept.test"
+      ],
+      "output": "rndc: neither /etc/rndc.conf nor /etc/rndc.key was found",
+      "returncode": 1
+    },
+    "serial": null,
+    "state": "unknown",
+    "type": null
+  }
+}

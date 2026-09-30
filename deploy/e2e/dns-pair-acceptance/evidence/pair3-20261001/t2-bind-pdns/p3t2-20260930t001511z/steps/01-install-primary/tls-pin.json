@@ -1,0 +1,6 @@
+{
+  "command": "tls",
+  "leaf_sha256": "6eec07fc7c04cdc183322ca398f45237fef826e0dcec2768d36400c3634b6e40",
+  "port": 2083,
+  "returncode": 0
+}

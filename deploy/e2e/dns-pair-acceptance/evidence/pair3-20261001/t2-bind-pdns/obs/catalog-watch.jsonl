@@ -1,0 +1,9 @@
+{"raw": "{\"t\":\"2026-09-30T00:14:12Z\",\"catalog_axfr_from_secondary\":ssh: connect to host 127.0.0.1 port 2201: Connection refused"}
+{"raw": "}"}
+{"raw": "{\"t\":\"2026-09-30T00:14:27Z\",\"catalog_axfr_from_secondary\":Connection to 127.0.0.1 port 2201 timed out"}
+{"raw": "}"}
+{"t":"2026-09-30T00:14:37Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020b.celikpanel.invalid", "command": "catalog", "error": "ConnectionRefusedError: [Errno 111] Connection refused", "server": "192.0.2.11", "transferred": false}}
+{"t":"2026-09-30T00:16:46Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020b.celikpanel.invalid", "command": "catalog", "error": "TimeoutError: timed out", "server": "192.0.2.11", "transferred": false}}
+{"t":"2026-09-30T00:16:56Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020b.celikpanel.invalid", "command": "catalog", "error": "ConnectionRefusedError: [Errno 111] Connection refused", "server": "192.0.2.11", "transferred": false}}
+{"t":"2026-09-30T00:18:18Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020b.celikpanel.invalid", "command": "catalog", "members": [], "serial": 1, "server": "192.0.2.11", "transferred": true}}
+{"t":"2026-09-30T00:19:09Z","watch":"run ended"}
