@@ -22,6 +22,7 @@ import type { SetupDNSKey } from './setupDNS/en';
 // bunlarin hepsinin dusebilecegi ret sozlugu. Gerisi ./screens icindedir ve
 // ihtiyaci olan ekranla birlikte getirilir (defter R-060).
 import type { ScreenKey } from './screens/en';
+import type { ServerScreenKey } from './screens/server/en';
 
 export const en = {
     'app.name': 'CelikPanel',
@@ -338,4 +339,4 @@ export const en = {
 } as const;
 
 export type ShellKey = keyof typeof en;
-export type TranslationKey = ShellKey | ScreenKey | SetupDNSKey;
+export type TranslationKey = ShellKey | ScreenKey | ServerScreenKey | SetupDNSKey;

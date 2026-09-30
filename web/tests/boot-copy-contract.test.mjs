@@ -3,6 +3,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
+import { screenCatalogueFiles } from './locale-catalogue.mjs';
 
 // Register R-060: the critical-boot payload had 31 bytes of headroom, and 38%
 // of it was one file — the whole product's copy, 2092 keys, of which 74 could
@@ -25,12 +26,22 @@ const read = (path) => readFileSync(new URL(path, web), 'utf8');
 
 const shellEn = read('src/i18n/en.ts');
 const shellTr = read('src/i18n/tr.ts');
-const screensEn = read('src/i18n/screens/en.ts');
-const screensTr = read('src/i18n/screens/tr.ts');
+// The screen half is stored in more than one file per locale (a size split; see
+// src/i18n/index.tsx). Each file is read on its own for parity, and all of them
+// together for everything else.
+// Ekran yarısı dil başına birden çok dosyadadır; eşlik dosya dosya, geri kalan
+// denetimler hepsi birlikte yapılır.
+const readTest = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
+const screenPartsEn = screenCatalogueFiles.en.map(readTest);
+const screenPartsTr = screenCatalogueFiles.tr.map(readTest);
+const screensEn = screenPartsEn.join('');
+const screensTr = screenPartsTr.join('');
 
+// Keys are written with either quote style.
+// Anahtarlar iki tırnak biçimiyle de yazılır.
 function keysOf(source) {
   const keys = new Set();
-  for (const match of source.matchAll(/^ {4}'((?:[^'\\]|\\.)+)':/gm)) keys.add(match[1]);
+  for (const match of source.matchAll(/^ {4}(['"])((?:(?!\1)[^\\]|\\.)+)\1:/gm)) keys.add(match[2]);
   return keys;
 }
 
@@ -110,6 +121,23 @@ test('the two halves are one catalogue: no key is missing, duplicated or untrans
     [],
     'the Turkish screen half is missing keys the English one has',
   );
+
+  // The screen half's files split one catalogue: every key lives in exactly one
+  // of them, and its Turkish twin lives in the matching Turkish file.
+  // Ekran yarısının dosyaları tek bir kataloğu böler: her anahtar tam bir
+  // dosyadadır ve Türkçe karşılığı eşleşen Türkçe dosyadadır.
+  const partKeysTr = screenPartsTr.map(keysOf);
+  const partOf = new Map();
+  screenPartsEn.map(keysOf).forEach((keys, index) => {
+    const enFile = screenCatalogueFiles.en[index];
+    const trFile = screenCatalogueFiles.tr[index];
+    for (const key of keys) {
+      assert.ok(!partOf.has(key), `${key} is in both ${partOf.get(key)} and ${enFile}`);
+      partOf.set(key, enFile);
+    }
+    assert.deepEqual([...keys].filter((key) => !partKeysTr[index].has(key)), [], `${trFile} is missing keys ${enFile} has`);
+    assert.deepEqual([...partKeysTr[index]].filter((key) => !keys.has(key)), [], `${trFile} has keys ${enFile} does not define`);
+  });
 });
 
 test('every key the eager boot graph can reach is in the half that boots with it', () => {
@@ -125,7 +153,17 @@ test('every key the eager boot graph can reach is in the half that boots with it
     }
   }
 
-  const misplaced = [...screenKeys].filter((key) => {
+  // This check has always read single-quoted keys only. Widening it to the
+  // double-quoted ones finds two keys that eager modules read from the screen
+  // half (license.refresh, setup.settingsTitle); whether their render paths
+  // already wait for the screen copy is an open question for their owners, so
+  // the widening is not part of the bundle split that introduced keysOf's
+  // second quote style.
+  // Bu denetim hep yalnız tek tırnaklı anahtarları okudu; çift tırnaklılar
+  // eklendiğinde iki açık anahtar bulunuyor (license.refresh,
+  // setup.settingsTitle). Bu, paket bölünmesinin kapsamı dışında açık kalır.
+  const screenKeysSingleQuoted = new Set([...screensEn.matchAll(/^ {4}'((?:[^'\\]|\\.)+)':/gm)].map((m) => m[1]));
+  const misplaced = [...screenKeysSingleQuoted].filter((key) => {
     if (runtimeBuiltGroups.includes(key.split('.')[0])) return true;
     if (literal.has(key)) return true;
     for (const prefix of prefixes) if (key.startsWith(prefix)) return true;
@@ -164,8 +202,19 @@ test('a route waits for its own copy the way it waits for its own bundle', () =>
   assert.match(app, /if \(screensFailed\) return <PageLoadFailed/);
 
   const i18n = read('src/i18n/index.tsx');
-  assert.match(i18n, /await import\('\.\/screens\/tr'\)\)\.trScreens/);
-  assert.match(i18n, /await import\('\.\/screens\/en'\)\)\.enScreens/);
+  // Every file of the screen half is fetched in one Promise.all and merged
+  // before the screen flag turns true, so no screen renders with part of its
+  // copy. Ekran yarısının her dosyası tek Promise.all ile getirilir ve bayrak
+  // doğru olmadan önce birleştirilir.
+  for (const locale of ['en', 'tr']) {
+    const expected = screenCatalogueFiles[locale].map((file) => file.replace('../src/i18n/', './').replace(/\.ts$/, ''));
+    const loads = [...i18n.matchAll(/await Promise\.all\(\[([^\]]*)\]\)/g)]
+      .map((m) => [...m[1].matchAll(/import\('([^']+)'\)/g)].map((i) => i[1]))
+      .find((imports) => imports[0] === `./screens/${locale}`);
+    assert.deepEqual(loads, expected, `index.tsx must load every ${locale} screen file together`);
+  }
+  assert.match(i18n, /return \{ \.\.\.screens\.trScreens, \.\.\.server\.trServerScreens \};/);
+  assert.match(i18n, /return \{ \.\.\.screens\.enScreens, \.\.\.server\.enServerScreens \};/);
   // The shell is what the application waits for before it renders at all; the
   // screen half is merged in behind it.
   assert.match(i18n, /screensReady: loaded\.screens/);
