@@ -1,0 +1,4 @@
+final scans over /mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/evidence/pair7-20261001 with the README, 2026-09-30T09:05:25Z (before SHA256SUMS was written)
+{"root": "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/evidence/pair7-20261001", "files_scanned": 738, "findings": 0, "rules": ["admin-password-shape", "session-cookie-value", "set-cookie-header", "set-cookie-list", "auth-scheme-credential", "pem-private-key", "openssh-key-blob", "license-key-shape", "bind-tsig-secret", "json-secret-key-with-value"]}
+exit=0
+{"root": "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/evidence/pair7-20261001", "digests_compared": 4, "files_scanned": 738, "tokens_hashed": 4927, "matches": 0}

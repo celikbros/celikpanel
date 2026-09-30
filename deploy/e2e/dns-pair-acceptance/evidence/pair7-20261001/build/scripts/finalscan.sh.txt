@@ -1,0 +1,5 @@
+DEST='/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/evidence/pair7-20261001'
+B=/root/cp-pair7
+{ echo "final scans over $DEST with the README, $(date -u +%FT%TZ) (before SHA256SUMS was written)"; python3 $B/secret-scan.py "$DEST" | tail -1; echo "exit=${PIPESTATUS[0]}"; python3 $B/rndc-scan.py "$DEST" $B/secret-hashes | tail -1; } > /root/cp-pair7/final-scan.txt 2>&1
+cp /root/cp-pair7/final-scan.txt "$DEST/build/final-scan.txt"
+cat "$DEST/build/final-scan.txt"

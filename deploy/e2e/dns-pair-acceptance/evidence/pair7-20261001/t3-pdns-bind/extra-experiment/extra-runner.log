@@ -1,0 +1,34 @@
+### 2026-09-30T08:36:18.359Z start cell=pair-accept__pdns-debian13__bind-arch__p7t3 zone=extra-accept.test
+### 2026-09-30T08:36:18.361Z boot ids and units before
+debian13 boot_id=9161db33-8736-49c7-bae3-8e63f3c7d15e
+active
+active
+active
+arch boot_id=6e10af22-d1d1-4d3b-bd86-db95cc479daa
+active
+### 2026-09-30T08:36:18.944Z owner step: separate administrator p7extra via the product CLI (panel --create-admin --admin-credentials-file=-)
+{"command": "setpriv --reuid=999 --regid=989 --clear-groups -- /bin/sh -c umask 077; exec \"$@\" celikpanel-install /opt/celikpanel/bin/panel --create-admin --admin-credentials-file=-", "event": "admin", "rc": 0, "stderr": "2026/09/30 08:36:19 Starting CelikPanel Backend...\n", "stdin": "{username: p7extra, email: p7extra@pair-accept.invalid, password: <32 random chars, not printed>}", "stdout": "Created administrator / Y\u00f6netici olu\u015fturuldu.\n", "t": "2026-09-30T08:36:19.819Z"}
+### 2026-09-30T08:36:19.524Z create
+{"event": "login", "http_status": 200, "me_status": 200, "ok": true, "role": "admin", "session_cookie_set": true, "t": "2026-09-30T08:36:20.090Z"}
+{"body": {"DocumentRoot": "", "Domain": "extra-accept.test", "DomainID": 3, "FTPPassword": "", "FTPUser": "", "PHPVersion": "", "ProjectType": "dnsonly", "SiteID": 3, "TempDomain": ""}, "elapsed_seconds": 5.844, "event": "create", "http_status": 200, "t": "2026-09-30T08:36:25.934Z", "zone": "extra-accept.test"}
+{"domains": [{"domain_name": "extra-accept.test", "id": 3, "status": "active"}, {"domain_name": "pair-accept.test", "id": 2, "status": "active"}], "event": "list", "http_status": 200, "t": "2026-09-30T08:36:25.937Z"}
+domain id: 3
+### 2026-09-30T08:36:25.674Z wait until the secondary serves the catalog member (read-only, up to 120 s)
+2026-09-30T08:36:26Z {"catalog": "catalog-c000020a.celikpanel.invalid", "command": "catalog", "members": ["extra-accept.test.", "pair-accept.test."], "serial": 1790757186, "server": "192.0.2.10", "transferred": true}
+### 2026-09-30T08:36:26.468Z delete (first)
+{"event": "login", "http_status": 200, "me_status": 200, "ok": true, "role": "admin", "session_cookie_set": true, "t": "2026-09-30T08:36:27.039Z"}
+{"body": {"domain": "extra-accept.test", "status": "deleted"}, "domain_id": 3, "elapsed_seconds": 23.863, "event": "delete", "http_status": 200, "t": "2026-09-30T08:36:50.902Z"}
+{"body": {"error": "domain not found"}, "domain_id": 3, "event": "deletion-status", "http_status": 404, "t": "2026-09-30T08:36:50.904Z"}
+first delete http_status=200
+### 2026-09-30T08:36:50.639Z first delete not pending (http 200): no retry
+### 2026-09-30T08:36:50.929Z read-only after-state
+### 2026-09-30T08:36:52.835Z new Agent lines in the window
+2026-09-30T08:36:49.518859+00:00 dns-debian13 agent[1060]: 2026/09/30 08:36:49 DNS peer inspector answer for extra-accept.test (BIND secondary): catalog_state=transferred member_state=absent native_state=unloaded; accepted
+2026-09-30T08:36:50.812128+00:00 dns-debian13 agent[1060]: 2026/09/30 08:36:50 DNS peer proof for extra-accept.test (BIND secondary) step times: prepare=1.275s challenge_write=6.156s exchange=545ms post_inspection=3.41s consume=7.485s; total 18.871s; outcome verified
+### 2026-09-30T08:36:52.838Z pdns CATALOG-HASH lines in the window
+### 2026-09-30T08:36:52.842Z remove the root-only password file of p7extra (the account stays; password never left the guest)
+total 8
+drwx------ 2 root root 4096 Sep 30 08:36 .
+drwx------ 4 root root 4096 Sep 30 08:36 ..
+### 2026-09-30T08:36:52.989Z done
+EXTRA-DONE

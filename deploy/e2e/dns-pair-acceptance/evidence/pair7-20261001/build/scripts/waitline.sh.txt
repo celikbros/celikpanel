@@ -1,0 +1,5 @@
+#!/bin/bash
+# usage: waitline.sh LABEL PATTERN MAXSECONDS -- wait until the runner log has PATTERN
+end=$(( $(date +%s) + ${3:-300} ))
+while [ "$(date +%s)" -lt "$end" ]; do grep -q "$2" /root/cp-pair7/logs/$1-runner.log && break; sleep 5; done
+date -u +%FT%TZ; cat /root/cp-pair7/logs/$1-runner.log

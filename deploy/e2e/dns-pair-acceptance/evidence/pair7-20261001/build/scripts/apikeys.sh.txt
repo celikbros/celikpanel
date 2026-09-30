@@ -1,0 +1,2 @@
+R=$(ls -d /var/tmp/cp-pair7-evidence/$1-* | tail -1)
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(sorted(d)); print(json.dumps(d)[:1500])' $R/steps/15-zone-delete/api/0064-delete-api-v1-domains-1.json

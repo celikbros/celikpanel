@@ -1,0 +1,10 @@
+{"command": "setpriv --reuid=999 --regid=989 --clear-groups -- /bin/sh -c umask 077; exec \"$@\" celikpanel-install /opt/celikpanel/bin/panel --create-admin --admin-credentials-file=-", "event": "admin", "rc": 0, "stderr": "2026/09/30 08:36:19 Starting CelikPanel Backend...\n", "stdin": "{username: p7extra, email: p7extra@pair-accept.invalid, password: <32 random chars, not printed>}", "stdout": "Created administrator / Y\u00f6netici olu\u015fturuldu.\n", "t": "2026-09-30T08:36:19.819Z"}
+{"event": "login", "http_status": 200, "me_status": 200, "ok": true, "role": "admin", "session_cookie_set": true, "t": "2026-09-30T08:36:20.090Z"}
+{"body": {"DocumentRoot": "", "Domain": "extra-accept.test", "DomainID": 3, "FTPPassword": "", "FTPUser": "", "PHPVersion": "", "ProjectType": "dnsonly", "SiteID": 3, "TempDomain": ""}, "elapsed_seconds": 5.844, "event": "create", "http_status": 200, "t": "2026-09-30T08:36:25.934Z", "zone": "extra-accept.test"}
+{"domains": [{"domain_name": "extra-accept.test", "id": 3, "status": "active"}, {"domain_name": "pair-accept.test", "id": 2, "status": "active"}], "event": "list", "http_status": 200, "t": "2026-09-30T08:36:25.937Z"}
+{"event": "login", "http_status": 200, "me_status": 200, "ok": true, "role": "admin", "session_cookie_set": true, "t": "2026-09-30T08:36:27.039Z"}
+{"body": {"domain": "extra-accept.test", "status": "deleted"}, "domain_id": 3, "elapsed_seconds": 23.863, "event": "delete", "http_status": 200, "t": "2026-09-30T08:36:50.902Z"}
+{"body": {"error": "domain not found"}, "domain_id": 3, "event": "deletion-status", "http_status": 404, "t": "2026-09-30T08:36:50.904Z"}
+{"event": "login", "http_status": 200, "me_status": 200, "ok": true, "role": "admin", "session_cookie_set": true, "t": "2026-09-30T08:36:51.217Z"}
+{"body": {"error": "domain not found"}, "domain_id": 3, "event": "deletion-status", "http_status": 404, "t": "2026-09-30T08:36:51.219Z"}
+{"domains": [{"domain_name": "pair-accept.test", "id": 2, "status": "active"}], "event": "list", "http_status": 200, "t": "2026-09-30T08:36:51.221Z"}

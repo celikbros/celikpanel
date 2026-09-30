@@ -1,0 +1,10 @@
+{
+  "cell_id": "pdns-switch__target-started__after-write__paired-primary__peer-reachable",
+  "guest": "suspended for the zone lifecycle on the same boot; not continued",
+  "lifecycle_exit": 2,
+  "lifecycle_status": "pending",
+  "next_step": "the Agent kept the deletion of s2.s1-kill.test pending (dns_peer_enrollment_required): the server owner enrolls the native BIND secondary for inspection (dns-peer-enroll --engine bind on both guests, as the Agent's error code names), then runs guest_bootstrap.py run-prepared <same arguments and run flags> --zero-zones --resume-held-zone-lifecycle --execute (the guest run stays suspended on this boot until then; do not reboot or restart it); that resumes the same request (RecoverDNSZoneV3) and never requests a second deletion",
+  "peer_verdict_exit": 0,
+  "schema": "celikpanel/dns-kill-fresh-primary-zone-lifecycle-held/v1",
+  "zero_zones": true
+}

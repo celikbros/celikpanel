@@ -1,0 +1,1053 @@
+wall=2026-09-30T08:56:01.887176013Z boot_id=84c566f4-52fa-4672-bf44-a0779f380795
+== journal this boot: sshd / celikpeer / inspect / sudo / rndc lines
+2026-09-30T08:55:29.244000+00:00 dns-arch audit[771]: USER_END pid=771 uid=0 auid=1000 ses=37 msg='op=PAM:session_close grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:29.244000+00:00 dns-arch audit[771]: CRED_DISP pid=771 uid=0 auid=1000 ses=37 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:29.369000+00:00 dns-arch audit[779]: USER_ACCT pid=779 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:accounting grantors=pam_access,pam_unix,pam_permit,pam_time acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:29.370074+00:00 dns-arch sshd-session[779]: Accepted publickey for celik from 10.0.2.2 port 38802 ssh2: ED25519 SHA256:2ZKb5jkifnWyYL3uqJiAfjLblSu3sffQp/YwcjiEJ5w
+2026-09-30T08:55:29.370000+00:00 dns-arch audit[779]: CRED_ACQ pid=779 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:29.370000+00:00 dns-arch audit[779]: SYSCALL arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7fffdd63c3e0 a2=4 a3=0 items=0 ppid=434 pid=779 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=38 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T08:55:29.371236+00:00 dns-arch sshd-session[779]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T08:55:29.401000+00:00 dns-arch audit[779]: USER_START pid=779 uid=0 auid=1000 ses=38 msg='op=PAM:session_open grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:29.403000+00:00 dns-arch audit[782]: CRED_ACQ pid=782 uid=0 auid=1000 ses=38 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:29.459981+00:00 dns-arch sshd-session[782]: Received disconnect from 10.0.2.2 port 38802:11: disconnected by user
+2026-09-30T08:55:29.460097+00:00 dns-arch sshd-session[782]: Disconnected from user celik 10.0.2.2 port 38802
+2026-09-30T08:55:29.460698+00:00 dns-arch sshd-session[779]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T08:55:29.460000+00:00 dns-arch audit[779]: USER_END pid=779 uid=0 auid=1000 ses=38 msg='op=PAM:session_close grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:29.460000+00:00 dns-arch audit[779]: CRED_DISP pid=779 uid=0 auid=1000 ses=38 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:29.585000+00:00 dns-arch audit[787]: USER_ACCT pid=787 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:accounting grantors=pam_access,pam_unix,pam_permit,pam_time acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:29.586008+00:00 dns-arch sshd-session[787]: Accepted publickey for celik from 10.0.2.2 port 38806 ssh2: ED25519 SHA256:2ZKb5jkifnWyYL3uqJiAfjLblSu3sffQp/YwcjiEJ5w
+2026-09-30T08:55:29.586563+00:00 dns-arch kernel: audit: type=1101 audit(1790758529.585:385): pid=787 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:accounting grantors=pam_access,pam_unix,pam_permit,pam_time acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:29.586000+00:00 dns-arch audit[787]: CRED_ACQ pid=787 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:29.586000+00:00 dns-arch audit[787]: SYSCALL arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7ffc08299a60 a2=4 a3=0 items=0 ppid=434 pid=787 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=39 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T08:55:29.587154+00:00 dns-arch sshd-session[787]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T08:55:29.587561+00:00 dns-arch kernel: audit: type=1103 audit(1790758529.586:386): pid=787 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:29.587603+00:00 dns-arch kernel: audit: type=1300 audit(1790758529.586:387): arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7ffc08299a60 a2=4 a3=0 items=0 ppid=434 pid=787 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=39 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T08:55:29.632000+00:00 dns-arch audit[787]: USER_START pid=787 uid=0 auid=1000 ses=39 msg='op=PAM:session_open grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:29.633551+00:00 dns-arch kernel: audit: type=1105 audit(1790758529.632:388): pid=787 uid=0 auid=1000 ses=39 msg='op=PAM:session_open grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:29.633000+00:00 dns-arch audit[790]: CRED_ACQ pid=790 uid=0 auid=1000 ses=39 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:29.634524+00:00 dns-arch kernel: audit: type=1103 audit(1790758529.633:389): pid=790 uid=0 auid=1000 ses=39 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:29.691635+00:00 dns-arch sshd-session[790]: Received disconnect from 10.0.2.2 port 38806:11: disconnected by user
+2026-09-30T08:55:29.691748+00:00 dns-arch sshd-session[790]: Disconnected from user celik 10.0.2.2 port 38806
+2026-09-30T08:55:29.692381+00:00 dns-arch sshd-session[787]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T08:55:29.692000+00:00 dns-arch audit[787]: USER_END pid=787 uid=0 auid=1000 ses=39 msg='op=PAM:session_close grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:29.692000+00:00 dns-arch audit[787]: CRED_DISP pid=787 uid=0 auid=1000 ses=39 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:29.693581+00:00 dns-arch kernel: audit: type=1106 audit(1790758529.692:390): pid=787 uid=0 auid=1000 ses=39 msg='op=PAM:session_close grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:29.693623+00:00 dns-arch kernel: audit: type=1104 audit(1790758529.692:391): pid=787 uid=0 auid=1000 ses=39 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:29.817000+00:00 dns-arch audit[795]: USER_ACCT pid=795 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:accounting grantors=pam_access,pam_unix,pam_permit,pam_time acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:29.817996+00:00 dns-arch sshd-session[795]: Accepted publickey for celik from 10.0.2.2 port 38818 ssh2: ED25519 SHA256:2ZKb5jkifnWyYL3uqJiAfjLblSu3sffQp/YwcjiEJ5w
+2026-09-30T08:55:29.819067+00:00 dns-arch kernel: audit: type=1101 audit(1790758529.817:392): pid=795 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:accounting grantors=pam_access,pam_unix,pam_permit,pam_time acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:29.818000+00:00 dns-arch audit[795]: CRED_ACQ pid=795 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:29.818000+00:00 dns-arch audit[795]: SYSCALL arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7fffd2624230 a2=4 a3=0 items=0 ppid=434 pid=795 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=40 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T08:55:29.819549+00:00 dns-arch sshd-session[795]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T08:55:29.869000+00:00 dns-arch audit[795]: USER_START pid=795 uid=0 auid=1000 ses=40 msg='op=PAM:session_open grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:29.871000+00:00 dns-arch audit[798]: CRED_ACQ pid=798 uid=0 auid=1000 ses=40 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:29.887138+00:00 dns-arch sshd-session[798]: Received disconnect from 10.0.2.2 port 38818:11: disconnected by user
+2026-09-30T08:55:29.887432+00:00 dns-arch sshd-session[798]: Disconnected from user celik 10.0.2.2 port 38818
+2026-09-30T08:55:29.888224+00:00 dns-arch sshd-session[795]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T08:55:29.888000+00:00 dns-arch audit[795]: USER_END pid=795 uid=0 auid=1000 ses=40 msg='op=PAM:session_close grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:29.888000+00:00 dns-arch audit[795]: CRED_DISP pid=795 uid=0 auid=1000 ses=40 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.013000+00:00 dns-arch audit[803]: USER_ACCT pid=803 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:accounting grantors=pam_access,pam_unix,pam_permit,pam_time acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.014441+00:00 dns-arch sshd-session[803]: Accepted publickey for celik from 10.0.2.2 port 44224 ssh2: ED25519 SHA256:2ZKb5jkifnWyYL3uqJiAfjLblSu3sffQp/YwcjiEJ5w
+2026-09-30T08:55:30.014000+00:00 dns-arch audit[803]: CRED_ACQ pid=803 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.015000+00:00 dns-arch audit[803]: SYSCALL arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7ffc79c5bb90 a2=4 a3=0 items=0 ppid=434 pid=803 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=41 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T08:55:30.015734+00:00 dns-arch sshd-session[803]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T08:55:30.059000+00:00 dns-arch audit[803]: USER_START pid=803 uid=0 auid=1000 ses=41 msg='op=PAM:session_open grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.061000+00:00 dns-arch audit[806]: CRED_ACQ pid=806 uid=0 auid=1000 ses=41 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.075889+00:00 dns-arch sshd-session[806]: Received disconnect from 10.0.2.2 port 44224:11: disconnected by user
+2026-09-30T08:55:30.076003+00:00 dns-arch sshd-session[806]: Disconnected from user celik 10.0.2.2 port 44224
+2026-09-30T08:55:30.076528+00:00 dns-arch sshd-session[803]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T08:55:30.076000+00:00 dns-arch audit[803]: USER_END pid=803 uid=0 auid=1000 ses=41 msg='op=PAM:session_close grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.076000+00:00 dns-arch audit[803]: CRED_DISP pid=803 uid=0 auid=1000 ses=41 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.201000+00:00 dns-arch audit[811]: USER_ACCT pid=811 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:accounting grantors=pam_access,pam_unix,pam_permit,pam_time acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.201964+00:00 dns-arch sshd-session[811]: Accepted publickey for celik from 10.0.2.2 port 44234 ssh2: ED25519 SHA256:2ZKb5jkifnWyYL3uqJiAfjLblSu3sffQp/YwcjiEJ5w
+2026-09-30T08:55:30.202000+00:00 dns-arch audit[811]: CRED_ACQ pid=811 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.202000+00:00 dns-arch audit[811]: SYSCALL arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7ffc6c5cda20 a2=4 a3=0 items=0 ppid=434 pid=811 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=42 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T08:55:30.203006+00:00 dns-arch sshd-session[811]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T08:55:30.234000+00:00 dns-arch audit[811]: USER_START pid=811 uid=0 auid=1000 ses=42 msg='op=PAM:session_open grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.236000+00:00 dns-arch audit[814]: CRED_ACQ pid=814 uid=0 auid=1000 ses=42 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.250577+00:00 dns-arch sshd-session[814]: Received disconnect from 10.0.2.2 port 44234:11: disconnected by user
+2026-09-30T08:55:30.250679+00:00 dns-arch sshd-session[814]: Disconnected from user celik 10.0.2.2 port 44234
+2026-09-30T08:55:30.251176+00:00 dns-arch sshd-session[811]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T08:55:30.251000+00:00 dns-arch audit[811]: USER_END pid=811 uid=0 auid=1000 ses=42 msg='op=PAM:session_close grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.251000+00:00 dns-arch audit[811]: CRED_DISP pid=811 uid=0 auid=1000 ses=42 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.377000+00:00 dns-arch audit[819]: USER_ACCT pid=819 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:accounting grantors=pam_access,pam_unix,pam_permit,pam_time acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.378168+00:00 dns-arch sshd-session[819]: Accepted publickey for celik from 10.0.2.2 port 44236 ssh2: ED25519 SHA256:2ZKb5jkifnWyYL3uqJiAfjLblSu3sffQp/YwcjiEJ5w
+2026-09-30T08:55:30.378000+00:00 dns-arch audit[819]: CRED_ACQ pid=819 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.378000+00:00 dns-arch audit[819]: SYSCALL arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7fff674d7900 a2=4 a3=0 items=0 ppid=434 pid=819 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=43 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T08:55:30.379416+00:00 dns-arch sshd-session[819]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T08:55:30.414000+00:00 dns-arch audit[819]: USER_START pid=819 uid=0 auid=1000 ses=43 msg='op=PAM:session_open grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.415000+00:00 dns-arch audit[822]: CRED_ACQ pid=822 uid=0 auid=1000 ses=43 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.430172+00:00 dns-arch sshd-session[822]: Received disconnect from 10.0.2.2 port 44236:11: disconnected by user
+2026-09-30T08:55:30.430291+00:00 dns-arch sshd-session[822]: Disconnected from user celik 10.0.2.2 port 44236
+2026-09-30T08:55:30.430805+00:00 dns-arch sshd-session[819]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T08:55:30.430000+00:00 dns-arch audit[819]: USER_END pid=819 uid=0 auid=1000 ses=43 msg='op=PAM:session_close grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.430000+00:00 dns-arch audit[819]: CRED_DISP pid=819 uid=0 auid=1000 ses=43 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.557000+00:00 dns-arch audit[827]: USER_ACCT pid=827 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:accounting grantors=pam_access,pam_unix,pam_permit,pam_time acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.558839+00:00 dns-arch sshd-session[827]: Accepted publickey for celik from 10.0.2.2 port 44240 ssh2: ED25519 SHA256:2ZKb5jkifnWyYL3uqJiAfjLblSu3sffQp/YwcjiEJ5w
+2026-09-30T08:55:30.558000+00:00 dns-arch audit[827]: CRED_ACQ pid=827 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.558000+00:00 dns-arch audit[827]: SYSCALL arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7ffd3655f530 a2=4 a3=0 items=0 ppid=434 pid=827 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=44 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T08:55:30.559193+00:00 dns-arch sshd-session[827]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T08:55:30.597000+00:00 dns-arch audit[827]: USER_START pid=827 uid=0 auid=1000 ses=44 msg='op=PAM:session_open grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.599000+00:00 dns-arch audit[830]: CRED_ACQ pid=830 uid=0 auid=1000 ses=44 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.613587+00:00 dns-arch sshd-session[830]: Received disconnect from 10.0.2.2 port 44240:11: disconnected by user
+2026-09-30T08:55:30.613693+00:00 dns-arch sshd-session[830]: Disconnected from user celik 10.0.2.2 port 44240
+2026-09-30T08:55:30.614264+00:00 dns-arch sshd-session[827]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T08:55:30.614000+00:00 dns-arch audit[827]: USER_END pid=827 uid=0 auid=1000 ses=44 msg='op=PAM:session_close grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.614000+00:00 dns-arch audit[827]: CRED_DISP pid=827 uid=0 auid=1000 ses=44 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.737000+00:00 dns-arch audit[835]: USER_ACCT pid=835 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:accounting grantors=pam_access,pam_unix,pam_permit,pam_time acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.738041+00:00 dns-arch sshd-session[835]: Accepted publickey for celik from 10.0.2.2 port 44242 ssh2: ED25519 SHA256:2ZKb5jkifnWyYL3uqJiAfjLblSu3sffQp/YwcjiEJ5w
+2026-09-30T08:55:30.738000+00:00 dns-arch audit[835]: CRED_ACQ pid=835 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.738000+00:00 dns-arch audit[835]: SYSCALL arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7ffe0650cee0 a2=4 a3=0 items=0 ppid=434 pid=835 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=45 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T08:55:30.739340+00:00 dns-arch sshd-session[835]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T08:55:30.792000+00:00 dns-arch audit[835]: USER_START pid=835 uid=0 auid=1000 ses=45 msg='op=PAM:session_open grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.793000+00:00 dns-arch audit[839]: CRED_ACQ pid=839 uid=0 auid=1000 ses=45 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.807447+00:00 dns-arch sshd-session[839]: Received disconnect from 10.0.2.2 port 44242:11: disconnected by user
+2026-09-30T08:55:30.807596+00:00 dns-arch sshd-session[839]: Disconnected from user celik 10.0.2.2 port 44242
+2026-09-30T08:55:30.808134+00:00 dns-arch sshd-session[835]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T08:55:30.807000+00:00 dns-arch audit[835]: USER_END pid=835 uid=0 auid=1000 ses=45 msg='op=PAM:session_close grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:55:30.808000+00:00 dns-arch audit[835]: CRED_DISP pid=835 uid=0 auid=1000 ses=45 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:56:01.688000+00:00 dns-arch audit[849]: USER_ACCT pid=849 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:accounting grantors=pam_access,pam_unix,pam_permit,pam_time acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:56:01.689365+00:00 dns-arch sshd-session[849]: Accepted publickey for celik from 10.0.2.2 port 46348 ssh2: ED25519 SHA256:2ZKb5jkifnWyYL3uqJiAfjLblSu3sffQp/YwcjiEJ5w
+2026-09-30T08:56:01.688000+00:00 dns-arch audit[849]: CRED_ACQ pid=849 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:56:01.688000+00:00 dns-arch audit[849]: SYSCALL arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7ffeb5788aa0 a2=4 a3=0 items=0 ppid=434 pid=849 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=46 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T08:56:01.690561+00:00 dns-arch sshd-session[849]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T08:56:01.690618+00:00 dns-arch kernel: audit: type=1101 audit(1790758561.688:436): pid=849 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:accounting grantors=pam_access,pam_unix,pam_permit,pam_time acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:56:01.690649+00:00 dns-arch kernel: audit: type=1103 audit(1790758561.688:437): pid=849 uid=0 auid=4294967295 ses=4294967295 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:56:01.690699+00:00 dns-arch kernel: audit: type=1300 audit(1790758561.688:438): arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7ffeb5788aa0 a2=4 a3=0 items=0 ppid=434 pid=849 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=46 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T08:56:01.867000+00:00 dns-arch audit[849]: USER_START pid=849 uid=0 auid=1000 ses=46 msg='op=PAM:session_open grantors=pam_loginuid,pam_keyinit,pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_lastlog2,pam_mail,pam_umask,pam_systemd,pam_env acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:56:01.869000+00:00 dns-arch audit[868]: CRED_ACQ pid=868 uid=0 auid=1000 ses=46 msg='op=PAM:setcred grantors=pam_shells,pam_faillock,pam_permit,pam_env,pam_faillock acct="celik" exe="/usr/lib/ssh/sshd-session" hostname=10.0.2.2 addr=10.0.2.2 terminal=ssh res=success'
+2026-09-30T08:56:01.879000+00:00 dns-arch audit[869]: USER_ACCT pid=869 uid=1000 auid=1000 ses=46 msg='op=PAM:accounting grantors=pam_unix,pam_permit,pam_time acct="celik" exe="/usr/bin/sudo" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:56:01.880000+00:00 dns-arch audit[869]: CRED_REFR pid=869 uid=1000 auid=1000 ses=46 msg='op=PAM:setcred grantors=pam_faillock,pam_permit,pam_env,pam_faillock acct="root" exe="/usr/bin/sudo" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:56:01.882465+00:00 dns-arch sudo[869]: pam_unix(sudo:session): session opened for user root(uid=0) by celik(uid=1000)
+2026-09-30T08:56:01.881000+00:00 dns-arch audit[869]: USER_START pid=869 uid=1000 auid=1000 ses=46 msg='op=PAM:session_open grantors=pam_systemd_home,pam_limits,pam_unix,pam_permit,pam_systemd acct="root" exe="/usr/bin/sudo" hostname=? addr=? terminal=? res=success'
+== journal this boot: all lines from 2026-09-30 08:53:00 to 2026-09-30 08:54:00 (UTC)
+2026-09-30T08:53:53.740750+00:00 archlinux kernel: Linux version 7.2.7-arch1-1 (linux@archlinux) (gcc (GCC) 16.2.1 20260810, GNU ld (GNU Binutils) 2.47) #1 SMP PREEMPT_DYNAMIC Mon, 21 Sep 2026 18:51:14 +0000
+2026-09-30T08:53:53.740791+00:00 archlinux kernel: Command line: BOOT_IMAGE=/boot/vmlinuz-linux root=UUID=7ab979c3-24af-4bcc-8525-ad14a289d144 rw net.ifnames=0 rootflags=compress=zstd:1 console=tty0 console=ttyS0,115200
+2026-09-30T08:53:53.740802+00:00 archlinux kernel: x86 CPU feature dependency check failure: CPU0 has '18*32+31' enabled but '18*32+26' disabled. Kernel might be fine, but no guarantees.
+2026-09-30T08:53:53.740811+00:00 archlinux kernel: BIOS-provided physical RAM map:
+2026-09-30T08:53:53.740819+00:00 archlinux kernel: BIOS-e820: [mem 0x0000000000000000-0x000000000009fbff]  System RAM
+2026-09-30T08:53:53.740826+00:00 archlinux kernel: BIOS-e820: [mem 0x000000000009fc00-0x000000000009ffff]  device reserved
+2026-09-30T08:53:53.740835+00:00 archlinux kernel: BIOS-e820: [gap 0x00000000000a0000-0x00000000000effff]
+2026-09-30T08:53:53.740842+00:00 archlinux kernel: BIOS-e820: [mem 0x00000000000f0000-0x00000000000fffff]  device reserved
+2026-09-30T08:53:53.740850+00:00 archlinux kernel: BIOS-e820: [mem 0x0000000000100000-0x00000000bffd9fff]  System RAM
+2026-09-30T08:53:53.740857+00:00 archlinux kernel: BIOS-e820: [mem 0x00000000bffda000-0x00000000bfffffff]  device reserved
+2026-09-30T08:53:53.740865+00:00 archlinux kernel: BIOS-e820: [gap 0x00000000c0000000-0x00000000feffbfff]
+2026-09-30T08:53:53.740872+00:00 archlinux kernel: BIOS-e820: [mem 0x00000000feffc000-0x00000000feffffff]  device reserved
+2026-09-30T08:53:53.740885+00:00 archlinux kernel: BIOS-e820: [gap 0x00000000ff000000-0x00000000fffbffff]
+2026-09-30T08:53:53.740892+00:00 archlinux kernel: BIOS-e820: [mem 0x00000000fffc0000-0x00000000ffffffff]  device reserved
+2026-09-30T08:53:53.740902+00:00 archlinux kernel: BIOS-e820: [mem 0x0000000100000000-0x000000013fffffff]  System RAM
+2026-09-30T08:53:53.740909+00:00 archlinux kernel: BIOS-e820: [gap 0x0000000140000000-0x000000fcffffffff]
+2026-09-30T08:53:53.740916+00:00 archlinux kernel: BIOS-e820: [mem 0x000000fd00000000-0x000000ffffffffff]  device reserved
+2026-09-30T08:53:53.740923+00:00 archlinux kernel: NX (Execute Disable) protection: active
+2026-09-30T08:53:53.740930+00:00 archlinux kernel: APIC: Static calls initialized
+2026-09-30T08:53:53.740937+00:00 archlinux kernel: DMI: SMBIOS 2.8 present.
+2026-09-30T08:53:53.740945+00:00 archlinux kernel: DMI: QEMU Standard PC (i440FX + PIIX, 1996), BIOS Arch Linux 1.17.0-2-2 04/01/2014
+2026-09-30T08:53:53.740952+00:00 archlinux kernel: DMI: Memory slots populated: 1/1
+2026-09-30T08:53:53.740963+00:00 archlinux kernel: Hypervisor detected: KVM
+2026-09-30T08:53:53.740971+00:00 archlinux kernel: last_pfn = 0xbffda max_arch_pfn = 0x400000000
+2026-09-30T08:53:53.740978+00:00 archlinux kernel: kvm-clock: Using msrs 4b564d01 and 4b564d00
+2026-09-30T08:53:53.740985+00:00 archlinux kernel: kvm-clock: using sched offset of 387920112895 cycles
+2026-09-30T08:53:53.740994+00:00 archlinux kernel: clocksource: kvm-clock: mask: 0xffffffffffffffff max_cycles: 0x1cd42e4dffb, max_idle_ns: 881590591483 ns
+2026-09-30T08:53:53.741002+00:00 archlinux kernel: tsc: Detected 3293.848 MHz processor
+2026-09-30T08:53:53.741010+00:00 archlinux kernel: e820: update [mem 0x00000000-0x00000fff] System RAM ==> device reserved
+2026-09-30T08:53:53.741018+00:00 archlinux kernel: e820: remove [mem 0x000a0000-0x000fffff] System RAM
+2026-09-30T08:53:53.741026+00:00 archlinux kernel: last_pfn = 0x140000 max_arch_pfn = 0x400000000
+2026-09-30T08:53:53.741035+00:00 archlinux kernel: MTRR map: 4 entries (3 fixed + 1 variable; max 19), built from 8 variable MTRRs
+2026-09-30T08:53:53.741043+00:00 archlinux kernel: x86/PAT: Configuration [0-7]: WB  WC  UC- UC  WB  WP  UC- WT  
+2026-09-30T08:53:53.741095+00:00 archlinux kernel: last_pfn = 0xbffda max_arch_pfn = 0x400000000
+2026-09-30T08:53:53.741112+00:00 archlinux kernel: found SMP MP-table at [mem 0x000f66a0-0x000f66af]
+2026-09-30T08:53:53.741121+00:00 archlinux kernel: Using GB pages for direct mapping
+2026-09-30T08:53:53.741129+00:00 archlinux kernel: RAMDISK: [mem 0x3634f000-0x3719efff]
+2026-09-30T08:53:53.741138+00:00 archlinux kernel: ACPI: Early table checksum verification disabled
+2026-09-30T08:53:53.741146+00:00 archlinux kernel: ACPI: RSDP 0x00000000000F64B0 000014 (v00 BOCHS )
+2026-09-30T08:53:53.741155+00:00 archlinux kernel: ACPI: RSDT 0x00000000BFFE2396 000034 (v01 BOCHS  BXPC     00000001 BXPC 00000001)
+2026-09-30T08:53:53.741170+00:00 archlinux kernel: ACPI: FACP 0x00000000BFFE2242 000074 (v01 BOCHS  BXPC     00000001 BXPC 00000001)
+2026-09-30T08:53:53.741180+00:00 archlinux kernel: ACPI: DSDT 0x00000000BFFE0040 002202 (v01 BOCHS  BXPC     00000001 BXPC 00000001)
+2026-09-30T08:53:53.741188+00:00 archlinux kernel: ACPI: FACS 0x00000000BFFE0000 000040
+2026-09-30T08:53:53.741197+00:00 archlinux kernel: ACPI: APIC 0x00000000BFFE22B6 000080 (v03 BOCHS  BXPC     00000001 BXPC 00000001)
+2026-09-30T08:53:53.741205+00:00 archlinux kernel: ACPI: HPET 0x00000000BFFE2336 000038 (v01 BOCHS  BXPC     00000001 BXPC 00000001)
+2026-09-30T08:53:53.741218+00:00 archlinux kernel: ACPI: WAET 0x00000000BFFE236E 000028 (v01 BOCHS  BXPC     00000001 BXPC 00000001)
+2026-09-30T08:53:53.741226+00:00 archlinux kernel: ACPI: Reserving FACP table memory at [mem 0xbffe2242-0xbffe22b5]
+2026-09-30T08:53:53.741235+00:00 archlinux kernel: ACPI: Reserving DSDT table memory at [mem 0xbffe0040-0xbffe2241]
+2026-09-30T08:53:53.741244+00:00 archlinux kernel: ACPI: Reserving FACS table memory at [mem 0xbffe0000-0xbffe003f]
+2026-09-30T08:53:53.741252+00:00 archlinux kernel: ACPI: Reserving APIC table memory at [mem 0xbffe22b6-0xbffe2335]
+2026-09-30T08:53:53.741260+00:00 archlinux kernel: ACPI: Reserving HPET table memory at [mem 0xbffe2336-0xbffe236d]
+2026-09-30T08:53:53.741289+00:00 archlinux kernel: ACPI: Reserving WAET table memory at [mem 0xbffe236e-0xbffe2395]
+2026-09-30T08:53:53.741297+00:00 archlinux kernel: No NUMA configuration found
+2026-09-30T08:53:53.741305+00:00 archlinux kernel: Faking a node at [mem 0x0000000000000000-0x000000013fffffff]
+2026-09-30T08:53:53.741320+00:00 archlinux kernel: NODE_DATA(0) allocated [mem 0x13ffd2f80-0x13fffdfff]
+2026-09-30T08:53:53.741328+00:00 archlinux kernel: ACPI: PM-Timer IO Port: 0x608
+2026-09-30T08:53:53.741337+00:00 archlinux kernel: ACPI: LAPIC_NMI (acpi_id[0xff] dfl dfl lint[0x1])
+2026-09-30T08:53:53.741345+00:00 archlinux kernel: IOAPIC[0]: apic_id 0, version 17, address 0xfec00000, GSI 0-23
+2026-09-30T08:53:53.741355+00:00 archlinux kernel: ACPI: INT_SRC_OVR (bus 0 bus_irq 0 global_irq 2 dfl dfl)
+2026-09-30T08:53:53.741363+00:00 archlinux kernel: ACPI: INT_SRC_OVR (bus 0 bus_irq 5 global_irq 5 high level)
+2026-09-30T08:53:53.741372+00:00 archlinux kernel: ACPI: INT_SRC_OVR (bus 0 bus_irq 9 global_irq 9 high level)
+2026-09-30T08:53:53.741381+00:00 archlinux kernel: ACPI: INT_SRC_OVR (bus 0 bus_irq 10 global_irq 10 high level)
+2026-09-30T08:53:53.741390+00:00 archlinux kernel: ACPI: INT_SRC_OVR (bus 0 bus_irq 11 global_irq 11 high level)
+2026-09-30T08:53:53.741404+00:00 archlinux kernel: ACPI: Using ACPI (MADT) for SMP configuration information
+2026-09-30T08:53:53.741412+00:00 archlinux kernel: ACPI: HPET id: 0x8086a201 base: 0xfed00000
+2026-09-30T08:53:53.741420+00:00 archlinux kernel: TSC deadline timer available
+2026-09-30T08:53:53.741428+00:00 archlinux kernel: CPU topo: Max. logical packages:   1
+2026-09-30T08:53:53.741437+00:00 archlinux kernel: CPU topo: Max. logical nodes:      1
+2026-09-30T08:53:53.741446+00:00 archlinux kernel: CPU topo: Num. nodes per package:  1
+2026-09-30T08:53:53.741454+00:00 archlinux kernel: CPU topo: Max. logical dies:       1
+2026-09-30T08:53:53.741462+00:00 archlinux kernel: CPU topo: Max. dies per package:   1
+2026-09-30T08:53:53.741470+00:00 archlinux kernel: CPU topo: Max. threads per core:   1
+2026-09-30T08:53:53.741478+00:00 archlinux kernel: CPU topo: Num. cores per package:     2
+2026-09-30T08:53:53.741491+00:00 archlinux kernel: CPU topo: Num. threads per package:   2
+2026-09-30T08:53:53.741499+00:00 archlinux kernel: CPU topo: Allowing 2 present CPUs plus 0 hotplug CPUs
+2026-09-30T08:53:53.741629+00:00 archlinux kernel: kvm-guest: APIC: eoi() replaced with kvm_guest_apic_eoi_write()
+2026-09-30T08:53:53.741639+00:00 archlinux kernel: kvm-guest: KVM setup pv remote TLB flush
+2026-09-30T08:53:53.741648+00:00 archlinux kernel: kvm-guest: setup PV sched yield
+2026-09-30T08:53:53.741656+00:00 archlinux kernel: PM: hibernation: Registered nosave memory: [mem 0x00000000-0x00000fff]
+2026-09-30T08:53:53.741665+00:00 archlinux kernel: PM: hibernation: Registered nosave memory: [mem 0x0009f000-0x000fffff]
+2026-09-30T08:53:53.741674+00:00 archlinux kernel: PM: hibernation: Registered nosave memory: [mem 0xbffda000-0xffffffff]
+2026-09-30T08:53:53.741682+00:00 archlinux kernel: [gap 0xc0000000-0xfeffbfff] available for PCI devices
+2026-09-30T08:53:53.741690+00:00 archlinux kernel: Booting paravirtualized kernel on KVM
+2026-09-30T08:53:53.741705+00:00 archlinux kernel: clocksource: refined-jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 1910969940391419 ns
+2026-09-30T08:53:53.741713+00:00 archlinux kernel: Zone ranges:
+2026-09-30T08:53:53.741722+00:00 archlinux kernel:   DMA      [mem 0x0000000000001000-0x0000000000ffffff]
+2026-09-30T08:53:53.741730+00:00 archlinux kernel:   DMA32    [mem 0x0000000001000000-0x00000000ffffffff]
+2026-09-30T08:53:53.741827+00:00 archlinux kernel:   Normal   [mem 0x0000000100000000-0x000000013fffffff]
+2026-09-30T08:53:53.741835+00:00 archlinux kernel:   Device   empty
+2026-09-30T08:53:53.741843+00:00 archlinux kernel: Movable zone start for each node
+2026-09-30T08:53:53.741851+00:00 archlinux kernel: Early memory node ranges
+2026-09-30T08:53:53.741859+00:00 archlinux kernel:   node   0: [mem 0x0000000000001000-0x000000000009efff]
+2026-09-30T08:53:53.741872+00:00 archlinux kernel:   node   0: [mem 0x0000000000100000-0x00000000bffd9fff]
+2026-09-30T08:53:53.741880+00:00 archlinux kernel:   node   0: [mem 0x0000000100000000-0x000000013fffffff]
+2026-09-30T08:53:53.741888+00:00 archlinux kernel: Initmem setup node 0 [mem 0x0000000000001000-0x000000013fffffff]
+2026-09-30T08:53:53.741896+00:00 archlinux kernel: On node 0, zone DMA: 1 pages in unavailable ranges
+2026-09-30T08:53:53.741905+00:00 archlinux kernel: On node 0, zone DMA: 97 pages in unavailable ranges
+2026-09-30T08:53:53.741913+00:00 archlinux kernel: On node 0, zone Normal: 38 pages in unavailable ranges
+2026-09-30T08:53:53.741922+00:00 archlinux kernel: setup_percpu: NR_CPUS:8192 nr_cpumask_bits:2 nr_cpu_ids:2 nr_node_ids:1
+2026-09-30T08:53:53.741929+00:00 archlinux kernel: percpu: Embedded 63 pages/cpu s221184 r8192 d28672 u1048576
+2026-09-30T08:53:53.741937+00:00 archlinux kernel: pcpu-alloc: s221184 r8192 d28672 u1048576 alloc=1*2097152
+2026-09-30T08:53:53.741950+00:00 archlinux kernel: pcpu-alloc: [0] 0 1 
+2026-09-30T08:53:53.741959+00:00 archlinux kernel: kvm-guest: PV spinlocks enabled
+2026-09-30T08:53:53.741967+00:00 archlinux kernel: PV qspinlock hash table entries: 256 (order: 0, 4096 bytes, linear)
+2026-09-30T08:53:53.741976+00:00 archlinux kernel: Kernel command line: BOOT_IMAGE=/boot/vmlinuz-linux root=UUID=7ab979c3-24af-4bcc-8525-ad14a289d144 rw net.ifnames=0 rootflags=compress=zstd:1 console=tty0 console=ttyS0,115200
+2026-09-30T08:53:53.741985+00:00 archlinux kernel: random: crng init done
+2026-09-30T08:53:53.741993+00:00 archlinux kernel: printk: log buffer data + meta data: 131072 + 557056 = 688128 bytes
+2026-09-30T08:53:53.742002+00:00 archlinux kernel: Dentry cache hash table entries: 524288 (order: 10, 4194304 bytes, linear)
+2026-09-30T08:53:53.742010+00:00 archlinux kernel: Inode-cache hash table entries: 262144 (order: 9, 2097152 bytes, linear)
+2026-09-30T08:53:53.742018+00:00 archlinux kernel: software IO TLB: area num 2.
+2026-09-30T08:53:53.742029+00:00 archlinux kernel: Fallback order for Node 0: 0 
+2026-09-30T08:53:53.742038+00:00 archlinux kernel: Built 1 zonelists, mobility grouping on.  Total pages: 1048440
+2026-09-30T08:53:53.742046+00:00 archlinux kernel: Policy zone: Normal
+2026-09-30T08:53:53.742054+00:00 archlinux kernel: mem auto-init: stack:all(zero), heap alloc:on, heap free:off
+2026-09-30T08:53:53.742062+00:00 archlinux kernel: SLUB: HWalign=64, Order=0-3, MinObjects=0, CPUs=2, Nodes=1
+2026-09-30T08:53:53.742071+00:00 archlinux kernel: ftrace: allocating 58734 entries in 232 pages
+2026-09-30T08:53:53.742079+00:00 archlinux kernel: ftrace: allocated 232 pages with 4 groups
+2026-09-30T08:53:53.742087+00:00 archlinux kernel: Dynamic Preempt: full
+2026-09-30T08:53:53.742102+00:00 archlinux kernel: rcu: Preemptible hierarchical RCU implementation.
+2026-09-30T08:53:53.742117+00:00 archlinux kernel: rcu:         RCU restricting CPUs from NR_CPUS=8192 to nr_cpu_ids=2.
+2026-09-30T08:53:53.742128+00:00 archlinux kernel: rcu:         RCU priority boosting: priority 1 delay 500 ms.
+2026-09-30T08:53:53.742136+00:00 archlinux kernel:         Trampoline variant of Tasks RCU enabled.
+2026-09-30T08:53:53.742144+00:00 archlinux kernel:         Rude variant of Tasks RCU enabled.
+2026-09-30T08:53:53.742153+00:00 archlinux kernel:         Tracing variant of Tasks RCU enabled.
+2026-09-30T08:53:53.742161+00:00 archlinux kernel: rcu: RCU calculated value of scheduler-enlistment delay is 100 jiffies.
+2026-09-30T08:53:53.742169+00:00 archlinux kernel: rcu: Adjusting geometry for rcu_fanout_leaf=16, nr_cpu_ids=2
+2026-09-30T08:53:53.742178+00:00 archlinux kernel: RCU Tasks: Setting shift to 1 and lim to 1 rcu_task_cb_adjust=1 rcu_task_cpu_ids=2.
+2026-09-30T08:53:53.742190+00:00 archlinux kernel: RCU Tasks Rude: Setting shift to 1 and lim to 1 rcu_task_cb_adjust=1 rcu_task_cpu_ids=2.
+2026-09-30T08:53:53.742197+00:00 archlinux kernel: NR_IRQS: 524544, nr_irqs: 440, preallocated irqs: 16
+2026-09-30T08:53:53.742205+00:00 archlinux kernel: rcu: srcu_init: Setting srcu_struct sizes based on contention.
+2026-09-30T08:53:53.742213+00:00 archlinux kernel: clocksource: jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 1911260446275000 ns
+2026-09-30T08:53:53.742221+00:00 archlinux kernel: kfence: initialized - using 2097152 bytes for 255 objects at 0x(____ptrval____)-0x(____ptrval____)
+2026-09-30T08:53:53.742230+00:00 archlinux kernel: Console: colour VGA+ 80x25
+2026-09-30T08:53:53.742239+00:00 archlinux kernel: printk: legacy console [tty0] enabled
+2026-09-30T08:53:53.742247+00:00 archlinux kernel: printk: legacy console [ttyS0] enabled
+2026-09-30T08:53:53.742255+00:00 archlinux kernel: ACPI: Core revision 20260408
+2026-09-30T08:53:53.742263+00:00 archlinux kernel: clocksource: hpet: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 19112604467 ns
+2026-09-30T08:53:53.742272+00:00 archlinux kernel: APIC: Switch to symmetric I/O mode setup
+2026-09-30T08:53:53.742280+00:00 archlinux kernel: x2apic enabled
+2026-09-30T08:53:53.742288+00:00 archlinux kernel: APIC: Switched APIC routing to: physical x2apic
+2026-09-30T08:53:53.742295+00:00 archlinux kernel: kvm-guest: APIC: send_IPI_mask() replaced with kvm_send_ipi_mask()
+2026-09-30T08:53:53.742303+00:00 archlinux kernel: kvm-guest: APIC: send_IPI_mask_allbutself() replaced with kvm_send_ipi_mask_allbutself()
+2026-09-30T08:53:53.742311+00:00 archlinux kernel: kvm-guest: setup PV IPIs
+2026-09-30T08:53:53.742317+00:00 archlinux kernel: ..TIMER: vector=0x30 apic1=0 pin1=2 apic2=-1 pin2=-1
+2026-09-30T08:53:53.742323+00:00 archlinux kernel: clocksource: tsc-early: mask: 0xffffffffffffffff max_cycles: 0x2f7a98c406a, max_idle_ns: 440795202126 ns
+2026-09-30T08:53:53.742331+00:00 archlinux kernel: Calibrating delay loop (skipped) preset value.. 6587.69 BogoMIPS (lpj=3293848)
+2026-09-30T08:53:53.742340+00:00 archlinux kernel: x86/cpu: User Mode Instruction Prevention (UMIP) activated
+2026-09-30T08:53:53.742348+00:00 archlinux kernel: Last level iTLB entries: 4KB 512, 2MB 255, 4MB 127
+2026-09-30T08:53:53.742354+00:00 archlinux kernel: Last level dTLB entries: 4KB 512, 2MB 255, 4MB 127, 1GB 0
+2026-09-30T08:53:53.742360+00:00 archlinux kernel: mitigations: Enabled attack vectors: user_kernel, user_user, guest_host, guest_guest, SMT mitigations: auto
+2026-09-30T08:53:53.742365+00:00 archlinux kernel: Speculative Store Bypass: Mitigation: Speculative Store Bypass disabled via prctl
+2026-09-30T08:53:53.742370+00:00 archlinux kernel: Speculative Return Stack Overflow: IBPB-extending microcode not applied!
+2026-09-30T08:53:53.742376+00:00 archlinux kernel: Speculative Return Stack Overflow: WARNING: See https://kernel.org/doc/html/latest/admin-guide/hw-vuln/srso.html for mitigation options.
+2026-09-30T08:53:53.742386+00:00 archlinux kernel: Spectre V2 : Mitigation: Retpolines
+2026-09-30T08:53:53.742394+00:00 archlinux kernel: Speculative Return Stack Overflow: Vulnerable: Safe RET, no microcode
+2026-09-30T08:53:53.742399+00:00 archlinux kernel: Spectre V1 : Mitigation: usercopy/swapgs barriers and __user pointer sanitization
+2026-09-30T08:53:53.742404+00:00 archlinux kernel: Spectre V2 : Spectre v2 / SpectreRSB: Filling RSB on context switch and VMEXIT
+2026-09-30T08:53:53.742409+00:00 archlinux kernel: Spectre V2 : Enabling Restricted Speculation for firmware calls
+2026-09-30T08:53:53.742414+00:00 archlinux kernel: Spectre V2 : mitigation: Enabling conditional Indirect Branch Prediction Barrier
+2026-09-30T08:53:53.742419+00:00 archlinux kernel: active return thunk: srso_alias_return_thunk
+2026-09-30T08:53:53.742425+00:00 archlinux kernel: x86/fpu: Supporting XSAVE feature 0x001: 'x87 floating point registers'
+2026-09-30T08:53:53.742430+00:00 archlinux kernel: x86/fpu: Supporting XSAVE feature 0x002: 'SSE registers'
+2026-09-30T08:53:53.742440+00:00 archlinux kernel: x86/fpu: Supporting XSAVE feature 0x004: 'AVX registers'
+2026-09-30T08:53:53.742447+00:00 archlinux kernel: x86/fpu: Supporting XSAVE feature 0x800: 'Control-flow User registers'
+2026-09-30T08:53:53.742456+00:00 archlinux kernel: x86/fpu: Supporting XSAVE feature 0x1000: 'Control-flow Kernel registers (KVM only)'
+2026-09-30T08:53:53.742463+00:00 archlinux kernel: x86/fpu: xstate_offset[2]:  576, xstate_sizes[2]:  256
+2026-09-30T08:53:53.742471+00:00 archlinux kernel: x86/fpu: xstate_offset[11]:  832, xstate_sizes[11]:   16
+2026-09-30T08:53:53.742476+00:00 archlinux kernel: x86/fpu: xstate_offset[12]:  848, xstate_sizes[12]:   24
+2026-09-30T08:53:53.742481+00:00 archlinux kernel: x86/fpu: Enabled xstate features 0x1807, context size is 872 bytes, using 'compacted' format.
+2026-09-30T08:53:53.742486+00:00 archlinux kernel: pid_max: default: 32768 minimum: 301
+2026-09-30T08:53:53.742491+00:00 archlinux kernel: landlock: Up and running.
+2026-09-30T08:53:53.742546+00:00 archlinux kernel: Yama: becoming mindful.
+2026-09-30T08:53:53.742557+00:00 archlinux kernel: LSM support for eBPF active
+2026-09-30T08:53:53.742565+00:00 archlinux kernel: Mount-cache hash table entries: 8192 (order: 4, 65536 bytes, linear)
+2026-09-30T08:53:53.742570+00:00 archlinux kernel: Mountpoint-cache hash table entries: 8192 (order: 4, 65536 bytes, linear)
+2026-09-30T08:53:53.742576+00:00 archlinux kernel: VFS: Finished mounting rootfs on nullfs
+2026-09-30T08:53:53.742581+00:00 archlinux kernel: smpboot: CPU0: AMD Ryzen 9 5900HX with Radeon Graphics (family: 0x19, model: 0x50, stepping: 0x0)
+2026-09-30T08:53:53.742589+00:00 archlinux kernel: Performance Events: Fam17h+ core perfctr, AMD PMU driver.
+2026-09-30T08:53:53.742597+00:00 archlinux kernel: ... version:                   0
+2026-09-30T08:53:53.742603+00:00 archlinux kernel: ... bit width:                 48
+2026-09-30T08:53:53.742608+00:00 archlinux kernel: ... generic counters:          6
+2026-09-30T08:53:53.742617+00:00 archlinux kernel: ... generic bitmap:            000000000000003f
+2026-09-30T08:53:53.742622+00:00 archlinux kernel: ... fixed-purpose counters:    0
+2026-09-30T08:53:53.742627+00:00 archlinux kernel: ... fixed-purpose bitmap:      0000000000000000
+2026-09-30T08:53:53.742632+00:00 archlinux kernel: ... value mask:                0000ffffffffffff
+2026-09-30T08:53:53.742636+00:00 archlinux kernel: ... max period:                00007fffffffffff
+2026-09-30T08:53:53.742643+00:00 archlinux kernel: ... global_ctrl mask:          000000000000003f
+2026-09-30T08:53:53.742651+00:00 archlinux kernel: signal: max sigframe size: 1776
+2026-09-30T08:53:53.742658+00:00 archlinux kernel: rcu: Hierarchical SRCU implementation.
+2026-09-30T08:53:53.742666+00:00 archlinux kernel: rcu:         Max phase no-delay instances is 400.
+2026-09-30T08:53:53.742671+00:00 archlinux kernel: Timer migration: 1 hierarchy levels; 8 children per group; 1 crossnode level
+2026-09-30T08:53:53.742677+00:00 archlinux kernel: smp: Bringing up secondary CPUs ...
+2026-09-30T08:53:53.742686+00:00 archlinux kernel: smpboot: x86: Booting SMP configuration:
+2026-09-30T08:53:53.742692+00:00 archlinux kernel: .... node  #0, CPUs:      #1
+2026-09-30T08:53:53.742700+00:00 archlinux kernel: smp: Brought up 1 node, 2 CPUs
+2026-09-30T08:53:53.742708+00:00 archlinux kernel: smpboot: Total of 2 processors activated (13175.39 BogoMIPS)
+2026-09-30T08:53:53.742713+00:00 archlinux kernel: Memory: 3971436K/4193760K available (22213K kernel code, 3070K rwdata, 17576K rodata, 4940K init, 5008K bss, 215824K reserved, 0K cma-reserved)
+2026-09-30T08:53:53.742718+00:00 archlinux kernel: devtmpfs: initialized
+2026-09-30T08:53:53.742724+00:00 archlinux kernel: x86/mm: Memory block size: 128MB
+2026-09-30T08:53:53.742728+00:00 archlinux kernel: posixtimers hash table entries: 1024 (order: 2, 16384 bytes, linear)
+2026-09-30T08:53:53.742733+00:00 archlinux kernel: futex hash table entries: 512 (32768 bytes on 1 NUMA nodes, total 32 KiB, linear).
+2026-09-30T08:53:53.742738+00:00 archlinux kernel: xor: automatically using best checksumming function   avx       
+2026-09-30T08:53:53.742743+00:00 archlinux kernel: PM: RTC time: 08:53:52, date: 2026-09-30
+2026-09-30T08:53:53.742748+00:00 archlinux kernel: NET: Registered PF_NETLINK/PF_ROUTE protocol family
+2026-09-30T08:53:53.742755+00:00 archlinux kernel: DMA: preallocated 512 KiB GFP_KERNEL pool for atomic allocations
+2026-09-30T08:53:53.742760+00:00 archlinux kernel: DMA: preallocated 512 KiB GFP_KERNEL|GFP_DMA pool for atomic allocations
+2026-09-30T08:53:53.742765+00:00 archlinux kernel: DMA: preallocated 512 KiB GFP_KERNEL|GFP_DMA32 pool for atomic allocations
+2026-09-30T08:53:53.742770+00:00 archlinux kernel: audit: initializing netlink subsys (disabled)
+2026-09-30T08:53:53.742776+00:00 archlinux kernel: audit: type=2000 audit(1790758431.804:1): state=initialized audit_enabled=0 res=1
+2026-09-30T08:53:53.742781+00:00 archlinux kernel: thermal_sys: Registered thermal governor 'fair_share'
+2026-09-30T08:53:53.742786+00:00 archlinux kernel: thermal_sys: Registered thermal governor 'bang_bang'
+2026-09-30T08:53:53.742792+00:00 archlinux kernel: thermal_sys: Registered thermal governor 'step_wise'
+2026-09-30T08:53:53.742800+00:00 archlinux kernel: thermal_sys: Registered thermal governor 'user_space'
+2026-09-30T08:53:53.742811+00:00 archlinux kernel: thermal_sys: Registered thermal governor 'power_allocator'
+2026-09-30T08:53:53.742820+00:00 archlinux kernel: cpuidle: using governor ladder
+2026-09-30T08:53:53.742826+00:00 archlinux kernel: cpuidle: using governor menu
+2026-09-30T08:53:53.742831+00:00 archlinux kernel: Freeing SMP alternatives memory: 60K
+2026-09-30T08:53:53.742836+00:00 archlinux kernel: acpiphp: ACPI Hot Plug PCI Controller Driver version: 0.5
+2026-09-30T08:53:53.742841+00:00 archlinux kernel: PCI: Using configuration type 1 for base access
+2026-09-30T08:53:53.742860+00:00 archlinux kernel: PCI: Using configuration type 1 for extended access
+2026-09-30T08:53:53.742868+00:00 archlinux kernel: virt/tdx: TDX not supported by the host platform
+2026-09-30T08:53:53.742879+00:00 archlinux kernel: kprobes: kprobe jump-optimization is enabled. All kprobes are optimized if possible.
+2026-09-30T08:53:53.742884+00:00 archlinux kernel: HugeTLB: registered 1.00 GiB page size, pre-allocated 0 pages
+2026-09-30T08:53:53.742889+00:00 archlinux kernel: HugeTLB: 16380 KiB vmemmap can be freed for a 1.00 GiB page
+2026-09-30T08:53:53.742894+00:00 archlinux kernel: HugeTLB: registered 2.00 MiB page size, pre-allocated 0 pages
+2026-09-30T08:53:53.742899+00:00 archlinux kernel: HugeTLB: 28 KiB vmemmap can be freed for a 2.00 MiB page
+2026-09-30T08:53:53.742903+00:00 archlinux kernel: raid6: using avx2x2 recovery algorithm
+2026-09-30T08:53:53.742909+00:00 archlinux kernel: raid6: skipped pq benchmark and selected avx2x4
+2026-09-30T08:53:53.742914+00:00 archlinux kernel: ACPI: Added _OSI(Module Device)
+2026-09-30T08:53:53.742919+00:00 archlinux kernel: ACPI: Added _OSI(Processor Device)
+2026-09-30T08:53:53.742924+00:00 archlinux kernel: ACPI: Added _OSI(Processor Aggregator Device)
+2026-09-30T08:53:53.742931+00:00 archlinux kernel: ACPI: 1 ACPI AML tables successfully acquired and loaded
+2026-09-30T08:53:53.742936+00:00 archlinux kernel: ACPI: \_SB_: platform _OSC: OS support mask [006e7eff]
+2026-09-30T08:53:53.742941+00:00 archlinux kernel: ACPI: Interpreter enabled
+2026-09-30T08:53:53.742946+00:00 archlinux kernel: ACPI: PM: (supports S0 S3 S4 S5)
+2026-09-30T08:53:53.742951+00:00 archlinux kernel: ACPI: Using IOAPIC for interrupt routing
+2026-09-30T08:53:53.742956+00:00 archlinux kernel: PCI: Using host bridge windows from ACPI; if necessary, use "pci=nocrs" and report a bug
+2026-09-30T08:53:53.742961+00:00 archlinux kernel: PCI: Using E820 reservations for host bridge windows
+2026-09-30T08:53:53.742966+00:00 archlinux kernel: ACPI: Enabled 2 GPEs in block 00 to 0F
+2026-09-30T08:53:53.742972+00:00 archlinux kernel: ACPI: PCI Root Bridge [PCI0] (domain 0000 [bus 00-ff])
+2026-09-30T08:53:53.742978+00:00 archlinux kernel: acpiphp: Slot [3] registered
+2026-09-30T08:53:53.742983+00:00 archlinux kernel: acpiphp: Slot [4] registered
+2026-09-30T08:53:53.742988+00:00 archlinux kernel: acpiphp: Slot [5] registered
+2026-09-30T08:53:53.742996+00:00 archlinux kernel: acpiphp: Slot [6] registered
+2026-09-30T08:53:53.743003+00:00 archlinux kernel: acpiphp: Slot [7] registered
+2026-09-30T08:53:53.743008+00:00 archlinux kernel: acpiphp: Slot [8] registered
+2026-09-30T08:53:53.743013+00:00 archlinux kernel: acpiphp: Slot [9] registered
+2026-09-30T08:53:53.743018+00:00 archlinux kernel: acpiphp: Slot [10] registered
+2026-09-30T08:53:53.743023+00:00 archlinux kernel: acpiphp: Slot [11] registered
+2026-09-30T08:53:53.743030+00:00 archlinux kernel: acpiphp: Slot [12] registered
+2026-09-30T08:53:53.743035+00:00 archlinux kernel: acpiphp: Slot [13] registered
+2026-09-30T08:53:53.743039+00:00 archlinux kernel: acpiphp: Slot [14] registered
+2026-09-30T08:53:53.743044+00:00 archlinux kernel: acpiphp: Slot [15] registered
+2026-09-30T08:53:53.743049+00:00 archlinux kernel: acpiphp: Slot [16] registered
+2026-09-30T08:53:53.743054+00:00 archlinux kernel: acpiphp: Slot [17] registered
+2026-09-30T08:53:53.743059+00:00 archlinux kernel: acpiphp: Slot [18] registered
+2026-09-30T08:53:53.743064+00:00 archlinux kernel: acpiphp: Slot [19] registered
+2026-09-30T08:53:53.743069+00:00 archlinux kernel: acpiphp: Slot [20] registered
+2026-09-30T08:53:53.743079+00:00 archlinux kernel: acpiphp: Slot [21] registered
+2026-09-30T08:53:53.743086+00:00 archlinux kernel: acpiphp: Slot [22] registered
+2026-09-30T08:53:53.743092+00:00 archlinux kernel: acpiphp: Slot [23] registered
+2026-09-30T08:53:53.743099+00:00 archlinux kernel: acpiphp: Slot [24] registered
+2026-09-30T08:53:53.743106+00:00 archlinux kernel: acpiphp: Slot [25] registered
+2026-09-30T08:53:53.743113+00:00 archlinux kernel: acpiphp: Slot [26] registered
+2026-09-30T08:53:53.743120+00:00 archlinux kernel: acpiphp: Slot [27] registered
+2026-09-30T08:53:53.743128+00:00 archlinux kernel: acpiphp: Slot [28] registered
+2026-09-30T08:53:53.743136+00:00 archlinux kernel: acpiphp: Slot [29] registered
+2026-09-30T08:53:53.743145+00:00 archlinux kernel: acpiphp: Slot [30] registered
+2026-09-30T08:53:53.743157+00:00 archlinux kernel: acpiphp: Slot [31] registered
+2026-09-30T08:53:53.743165+00:00 archlinux kernel: PCI host bridge to bus 0000:00
+2026-09-30T08:53:53.743555+00:00 archlinux kernel: pci_bus 0000:00: root bus resource [io  0x0000-0x0cf7 window]
+2026-09-30T08:53:53.743811+00:00 archlinux kernel: pci_bus 0000:00: root bus resource [io  0x0d00-0xffff window]
+2026-09-30T08:53:53.743994+00:00 archlinux kernel: pci_bus 0000:00: root bus resource [mem 0x000a0000-0x000bffff window]
+2026-09-30T08:53:53.744181+00:00 archlinux kernel: pci_bus 0000:00: root bus resource [mem 0xc0000000-0xfebfffff window]
+2026-09-30T08:53:53.744355+00:00 archlinux kernel: pci_bus 0000:00: root bus resource [mem 0xe0000000000-0xe007fffffff window]
+2026-09-30T08:53:53.744598+00:00 archlinux kernel: pci_bus 0000:00: root bus resource [bus 00-ff]
+2026-09-30T08:53:53.744837+00:00 archlinux kernel: pci 0000:00:00.0: [8086:1237] type 00 class 0x060000 conventional PCI endpoint
+2026-09-30T08:53:53.745053+00:00 archlinux kernel: pci 0000:00:01.0: [8086:7000] type 00 class 0x060100 conventional PCI endpoint
+2026-09-30T08:53:53.745311+00:00 archlinux kernel: pci 0000:00:01.1: [8086:7010] type 00 class 0x010180 conventional PCI endpoint
+2026-09-30T08:53:53.745482+00:00 archlinux kernel: pci 0000:00:01.1: BAR 4 [io  0xc140-0xc14f]
+2026-09-30T08:53:53.745715+00:00 archlinux kernel: pci 0000:00:01.1: BAR 0 [io  0x01f0-0x01f7]: legacy IDE quirk
+2026-09-30T08:53:53.745927+00:00 archlinux kernel: pci 0000:00:01.1: BAR 1 [io  0x03f6]: legacy IDE quirk
+2026-09-30T08:53:53.746105+00:00 archlinux kernel: pci 0000:00:01.1: BAR 2 [io  0x0170-0x0177]: legacy IDE quirk
+2026-09-30T08:53:53.746293+00:00 archlinux kernel: pci 0000:00:01.1: BAR 3 [io  0x0376]: legacy IDE quirk
+2026-09-30T08:53:53.746603+00:00 archlinux kernel: pci 0000:00:01.3: [8086:7113] type 00 class 0x068000 conventional PCI endpoint
+2026-09-30T08:53:53.746799+00:00 archlinux kernel: pci 0000:00:01.3: quirk: [io  0x0600-0x063f] claimed by PIIX4 ACPI
+2026-09-30T08:53:53.747050+00:00 archlinux kernel: pci 0000:00:01.3: quirk: [io  0x0700-0x070f] claimed by PIIX4 SMB
+2026-09-30T08:53:53.747348+00:00 archlinux kernel: pci 0000:00:02.0: [1234:1111] type 00 class 0x030000 conventional PCI endpoint
+2026-09-30T08:53:53.747732+00:00 archlinux kernel: pci 0000:00:02.0: BAR 0 [mem 0xfd000000-0xfdffffff pref]
+2026-09-30T08:53:53.747991+00:00 archlinux kernel: pci 0000:00:02.0: BAR 2 [mem 0xfebd0000-0xfebd0fff]
+2026-09-30T08:53:53.748221+00:00 archlinux kernel: pci 0000:00:02.0: ROM [mem 0xfebc0000-0xfebcffff pref]
+2026-09-30T08:53:53.749296+00:00 archlinux kernel: pci 0000:00:02.0: Video device with shadowed ROM at [mem 0x000c0000-0x000dffff]
+2026-09-30T08:53:53.750036+00:00 archlinux kernel: pci 0000:00:03.0: [1af4:1000] type 00 class 0x020000 conventional PCI endpoint
+2026-09-30T08:53:53.750257+00:00 archlinux kernel: pci 0000:00:03.0: BAR 0 [io  0xc100-0xc11f]
+2026-09-30T08:53:53.750981+00:00 archlinux kernel: pci 0000:00:03.0: BAR 1 [mem 0xfebd1000-0xfebd1fff]
+2026-09-30T08:53:53.751167+00:00 archlinux kernel: pci 0000:00:03.0: BAR 4 [mem 0xe0000000000-0xe0000003fff 64bit pref]
+2026-09-30T08:53:53.751346+00:00 archlinux kernel: pci 0000:00:03.0: ROM [mem 0xfeb40000-0xfeb7ffff pref]
+2026-09-30T08:53:53.753233+00:00 archlinux kernel: pci 0000:00:04.0: [1af4:1000] type 00 class 0x020000 conventional PCI endpoint
+2026-09-30T08:53:53.753466+00:00 archlinux kernel: pci 0000:00:04.0: BAR 0 [io  0xc120-0xc13f]
+2026-09-30T08:53:53.753720+00:00 archlinux kernel: pci 0000:00:04.0: BAR 1 [mem 0xfebd2000-0xfebd2fff]
+2026-09-30T08:53:53.753992+00:00 archlinux kernel: pci 0000:00:04.0: BAR 4 [mem 0xe0000004000-0xe0000007fff 64bit pref]
+2026-09-30T08:53:53.754177+00:00 archlinux kernel: pci 0000:00:04.0: ROM [mem 0xfeb80000-0xfebbffff pref]
+2026-09-30T08:53:53.754473+00:00 archlinux kernel: pci 0000:00:05.0: [1af4:1001] type 00 class 0x010000 conventional PCI endpoint
+2026-09-30T08:53:53.754768+00:00 archlinux kernel: pci 0000:00:05.0: BAR 0 [io  0xc000-0xc07f]
+2026-09-30T08:53:53.754987+00:00 archlinux kernel: pci 0000:00:05.0: BAR 1 [mem 0xfebd3000-0xfebd3fff]
+2026-09-30T08:53:53.755193+00:00 archlinux kernel: pci 0000:00:05.0: BAR 4 [mem 0xe0000008000-0xe000000bfff 64bit pref]
+2026-09-30T08:53:53.755405+00:00 archlinux kernel: pci 0000:00:06.0: [1af4:1001] type 00 class 0x010000 conventional PCI endpoint
+2026-09-30T08:53:53.755716+00:00 archlinux kernel: pci 0000:00:06.0: BAR 0 [io  0xc080-0xc0ff]
+2026-09-30T08:53:53.757315+00:00 archlinux kernel: pci 0000:00:06.0: BAR 1 [mem 0xfebd4000-0xfebd4fff]
+2026-09-30T08:53:53.757639+00:00 archlinux kernel: pci 0000:00:06.0: BAR 4 [mem 0xe000000c000-0xe000000ffff 64bit pref]
+2026-09-30T08:53:53.757658+00:00 archlinux kernel: ACPI: PCI: Interrupt link LNKA configured for IRQ 10
+2026-09-30T08:53:53.757676+00:00 archlinux kernel: ACPI: PCI: Interrupt link LNKB configured for IRQ 10
+2026-09-30T08:53:53.757685+00:00 archlinux kernel: ACPI: PCI: Interrupt link LNKC configured for IRQ 11
+2026-09-30T08:53:53.757694+00:00 archlinux kernel: ACPI: PCI: Interrupt link LNKD configured for IRQ 11
+2026-09-30T08:53:53.757702+00:00 archlinux kernel: ACPI: PCI: Interrupt link LNKS configured for IRQ 9
+2026-09-30T08:53:53.757711+00:00 archlinux kernel: iommu: Default domain type: Translated
+2026-09-30T08:53:53.757719+00:00 archlinux kernel: iommu: DMA domain TLB invalidation policy: lazy mode
+2026-09-30T08:53:53.757727+00:00 archlinux kernel: SCSI subsystem initialized
+2026-09-30T08:53:53.757851+00:00 archlinux kernel: libata version 3.00 loaded.
+2026-09-30T08:53:53.757863+00:00 archlinux kernel: ACPI: bus type USB registered
+2026-09-30T08:53:53.757877+00:00 archlinux kernel: usbcore: registered new interface driver usbfs
+2026-09-30T08:53:53.757885+00:00 archlinux kernel: usbcore: registered new interface driver hub
+2026-09-30T08:53:53.757893+00:00 archlinux kernel: usbcore: registered new device driver usb
+2026-09-30T08:53:53.757900+00:00 archlinux kernel: EDAC MC: Ver: 3.0.0
+2026-09-30T08:53:53.757908+00:00 archlinux kernel: NetLabel: Initializing
+2026-09-30T08:53:53.757916+00:00 archlinux kernel: NetLabel:  domain hash size = 128
+2026-09-30T08:53:53.757925+00:00 archlinux kernel: NetLabel:  protocols = UNLABELED CIPSOv4 CALIPSO
+2026-09-30T08:53:53.757934+00:00 archlinux kernel: NetLabel:  unlabeled traffic allowed by default
+2026-09-30T08:53:53.757942+00:00 archlinux kernel: mctp: management component transport protocol core
+2026-09-30T08:53:53.757950+00:00 archlinux kernel: NET: Registered PF_MCTP protocol family
+2026-09-30T08:53:53.757960+00:00 archlinux kernel: PCI: Using ACPI for IRQ routing
+2026-09-30T08:53:53.758008+00:00 archlinux kernel: PCI: pci_cache_line_size set to 64 bytes
+2026-09-30T08:53:53.758026+00:00 archlinux kernel: e820: register RAM buffer resource [mem 0x0009fc00-0x0009ffff]
+2026-09-30T08:53:53.758133+00:00 archlinux kernel: e820: register RAM buffer resource [mem 0xbffda000-0xbfffffff]
+2026-09-30T08:53:53.758422+00:00 archlinux kernel: pci 0000:00:02.0: vgaarb: setting as boot VGA device
+2026-09-30T08:53:53.760235+00:00 archlinux kernel: pci 0000:00:02.0: vgaarb: bridge control possible
+2026-09-30T08:53:53.760554+00:00 archlinux kernel: pci 0000:00:02.0: vgaarb: VGA device added: decodes=io+mem,owns=io+mem,locks=none
+2026-09-30T08:53:53.760578+00:00 archlinux kernel: vgaarb: loaded
+2026-09-30T08:53:53.760587+00:00 archlinux kernel: hpet0: at MMIO 0xfed00000, IRQs 2, 8, 0
+2026-09-30T08:53:53.760595+00:00 archlinux kernel: hpet0: 3 comparators, 64-bit 100.000000 MHz counter
+2026-09-30T08:53:53.760603+00:00 archlinux kernel: clocksource: Switched to clocksource kvm-clock
+2026-09-30T08:53:53.760623+00:00 archlinux kernel: VFS: Disk quotas dquot_6.6.0
+2026-09-30T08:53:53.760632+00:00 archlinux kernel: VFS: Dquot-cache hash table entries: 512 (4096 bytes)
+2026-09-30T08:53:53.760640+00:00 archlinux kernel: pnp: PnP ACPI init
+2026-09-30T08:53:53.760850+00:00 archlinux kernel: pnp 00:02: [dma 2]
+2026-09-30T08:53:53.760866+00:00 archlinux kernel: ACPI: IRQ 4 override to edge(!), high(!)
+2026-09-30T08:53:53.761042+00:00 archlinux kernel: pnp: PnP ACPI: found 5 devices
+2026-09-30T08:53:53.761190+00:00 archlinux kernel: clocksource: acpi_pm: mask: 0xffffff max_cycles: 0xffffff, max_idle_ns: 2085701024 ns
+2026-09-30T08:53:53.761214+00:00 archlinux kernel: NET: Registered PF_INET protocol family
+2026-09-30T08:53:53.761226+00:00 archlinux kernel: IP idents hash table entries: 65536 (order: 7, 524288 bytes, linear)
+2026-09-30T08:53:53.761245+00:00 archlinux kernel: tcp_listen_portaddr_hash hash table entries: 2048 (order: 3, 32768 bytes, linear)
+2026-09-30T08:53:53.761303+00:00 archlinux kernel: Table-perturb hash table entries: 65536 (order: 6, 262144 bytes, linear)
+2026-09-30T08:53:53.765648+00:00 archlinux kernel: TCP established hash table entries: 32768 (order: 6, 262144 bytes, linear)
+2026-09-30T08:53:53.765877+00:00 archlinux kernel: TCP bind hash table entries: 32768 (order: 8, 1048576 bytes, linear)
+2026-09-30T08:53:53.765888+00:00 archlinux kernel: TCP: Hash tables configured (established 32768 bind 32768)
+2026-09-30T08:53:53.765896+00:00 archlinux kernel: MPTCP token hash table entries: 4096 (order: 5, 98304 bytes, linear)
+2026-09-30T08:53:53.765904+00:00 archlinux kernel: UDP hash table entries: 2048 (order: 5, 131072 bytes, linear)
+2026-09-30T08:53:53.765911+00:00 archlinux kernel: NET: Registered PF_UNIX/PF_LOCAL protocol family
+2026-09-30T08:53:53.765919+00:00 archlinux kernel: NET: Registered PF_XDP protocol family
+2026-09-30T08:53:53.766145+00:00 archlinux kernel: pci_bus 0000:00: resource 4 [io  0x0000-0x0cf7 window]
+2026-09-30T08:53:53.766309+00:00 archlinux kernel: pci_bus 0000:00: resource 5 [io  0x0d00-0xffff window]
+2026-09-30T08:53:53.766464+00:00 archlinux kernel: pci_bus 0000:00: resource 6 [mem 0x000a0000-0x000bffff window]
+2026-09-30T08:53:53.766702+00:00 archlinux kernel: pci_bus 0000:00: resource 7 [mem 0xc0000000-0xfebfffff window]
+2026-09-30T08:53:53.766884+00:00 archlinux kernel: pci_bus 0000:00: resource 8 [mem 0xe0000000000-0xe007fffffff window]
+2026-09-30T08:53:53.767060+00:00 archlinux kernel: pci 0000:00:01.0: PIIX3: Enabling Passive Release
+2026-09-30T08:53:53.767226+00:00 archlinux kernel: pci 0000:00:00.0: Limiting direct PCI/PCI transfers
+2026-09-30T08:53:53.767237+00:00 archlinux kernel: PCI: CLS 0 bytes, default 64
+2026-09-30T08:53:53.767245+00:00 archlinux kernel: PCI-DMA: Using software bounce buffering for IO (SWIOTLB)
+2026-09-30T08:53:53.767267+00:00 archlinux kernel: software IO TLB: mapped [mem 0x00000000bbfda000-0x00000000bffda000] (64MB)
+2026-09-30T08:53:53.767275+00:00 archlinux kernel: Trying to unpack rootfs image as initramfs...
+2026-09-30T08:53:53.767322+00:00 archlinux kernel: clocksource: tsc: mask: 0xffffffffffffffff max_cycles: 0x2f7a98c406a, max_idle_ns: 440795202126 ns
+2026-09-30T08:53:53.767330+00:00 archlinux kernel: Initialise system trusted keyrings
+2026-09-30T08:53:53.767338+00:00 archlinux kernel: Key type blacklist registered
+2026-09-30T08:53:53.767349+00:00 archlinux kernel: workingset: timestamp_bits=36 (anon: 31) max_order=20 bucket_order=0 (anon: 0)
+2026-09-30T08:53:53.767357+00:00 archlinux kernel: fuse: init (API version 7.45)
+2026-09-30T08:53:53.767364+00:00 archlinux kernel: integrity: Platform Keyring initialized
+2026-09-30T08:53:53.767372+00:00 archlinux kernel: integrity: Machine keyring initialized
+2026-09-30T08:53:53.767379+00:00 archlinux kernel: Key type asymmetric registered
+2026-09-30T08:53:53.767387+00:00 archlinux kernel: Asymmetric key parser 'x509' registered
+2026-09-30T08:53:53.767394+00:00 archlinux kernel: Block layer SCSI generic (bsg) driver version 0.4 loaded (major 245)
+2026-09-30T08:53:53.767402+00:00 archlinux kernel: io scheduler mq-deadline registered
+2026-09-30T08:53:53.767409+00:00 archlinux kernel: io scheduler kyber registered
+2026-09-30T08:53:53.767419+00:00 archlinux kernel: io scheduler bfq registered
+2026-09-30T08:53:53.767426+00:00 archlinux kernel: ledtrig-cpu: registered to indicate activity on CPUs
+2026-09-30T08:53:53.767434+00:00 archlinux kernel: input: Power Button as /devices/platform/LNXPWRBN:00/input/input0
+2026-09-30T08:53:53.767442+00:00 archlinux kernel: ACPI: button: Power Button [PWRF]
+2026-09-30T08:53:53.767450+00:00 archlinux kernel: ACPI: \_SB_.LNKC: Enabled at IRQ 11
+2026-09-30T08:53:53.767458+00:00 archlinux kernel: ACPI: \_SB_.LNKD: Enabled at IRQ 10
+2026-09-30T08:53:53.767465+00:00 archlinux kernel: ACPI: \_SB_.LNKA: Enabled at IRQ 10
+2026-09-30T08:53:53.767473+00:00 archlinux kernel: ACPI: \_SB_.LNKB: Enabled at IRQ 11
+2026-09-30T08:53:53.767481+00:00 archlinux kernel: Serial: 8250/16550 driver, 32 ports, IRQ sharing enabled
+2026-09-30T08:53:53.767490+00:00 archlinux kernel: 00:04: ttyS0 at I/O 0x3f8 (irq = 4, base_baud = 115200) is a 16550A
+2026-09-30T08:53:53.767525+00:00 archlinux kernel: Non-volatile memory driver v1.3
+2026-09-30T08:53:53.767534+00:00 archlinux kernel: ACPI: bus type drm_connector registered
+2026-09-30T08:53:53.767742+00:00 archlinux kernel: virtio_blk virtio2: 2/0/0 default/read/poll queues
+2026-09-30T08:53:53.767916+00:00 archlinux kernel: virtio_blk virtio2: [vda] 50331648 512-byte logical blocks (25.8 GB/24.0 GiB)
+2026-09-30T08:53:53.767927+00:00 archlinux kernel:  vda: vda1 vda2 vda3
+2026-09-30T08:53:53.768142+00:00 archlinux kernel: virtio_blk virtio3: 2/0/0 default/read/poll queues
+2026-09-30T08:53:53.768318+00:00 archlinux kernel: virtio_blk virtio3: [vdb] 736 512-byte logical blocks (377 kB/368 KiB)
+2026-09-30T08:53:53.768329+00:00 archlinux kernel: usbcore: registered new interface driver usbserial_generic
+2026-09-30T08:53:53.768337+00:00 archlinux kernel: usbserial: USB Serial support registered for generic
+2026-09-30T08:53:53.768345+00:00 archlinux kernel: i8042: PNP: PS/2 Controller [PNP0303:KBD,PNP0f13:MOU] at 0x60,0x64 irq 1,12
+2026-09-30T08:53:53.768352+00:00 archlinux kernel: serio: i8042 KBD port at 0x60,0x64 irq 1
+2026-09-30T08:53:53.768360+00:00 archlinux kernel: serio: i8042 AUX port at 0x60,0x64 irq 12
+2026-09-30T08:53:53.768635+00:00 archlinux kernel: rtc_cmos PNP0B00:00: RTC can wake from S4
+2026-09-30T08:53:53.768649+00:00 archlinux kernel: input: AT Translated Set 2 keyboard as /devices/platform/i8042/serio0/input/input1
+2026-09-30T08:53:53.768849+00:00 archlinux kernel: rtc_cmos PNP0B00:00: registered as rtc0
+2026-09-30T08:53:53.769053+00:00 archlinux kernel: rtc_cmos PNP0B00:00: setting system clock to 2026-09-30T08:53:52 UTC (1790758432)
+2026-09-30T08:53:53.769216+00:00 archlinux kernel: rtc_cmos PNP0B00:00: alarms up to one day, y3k, 242 bytes nvram, hpet irqs
+2026-09-30T08:53:53.769226+00:00 archlinux kernel: hid: raw HID events driver (C) Jiri Kosina
+2026-09-30T08:53:53.769234+00:00 archlinux kernel: usbcore: registered new interface driver usbhid
+2026-09-30T08:53:53.769242+00:00 archlinux kernel: usbhid: USB HID core driver
+2026-09-30T08:53:53.769250+00:00 archlinux kernel: drop_monitor: Initializing network drop monitor service
+2026-09-30T08:53:53.769258+00:00 archlinux kernel: NET: Registered PF_INET6 protocol family
+2026-09-30T08:53:53.769270+00:00 archlinux kernel: Segment Routing with IPv6
+2026-09-30T08:53:53.769278+00:00 archlinux kernel: RPL Segment Routing with IPv6
+2026-09-30T08:53:53.769285+00:00 archlinux kernel: In-situ OAM (IOAM) with IPv6
+2026-09-30T08:53:53.769293+00:00 archlinux kernel: NET: Registered PF_PACKET protocol family
+2026-09-30T08:53:53.769300+00:00 archlinux kernel: IPI shorthand broadcast: enabled
+2026-09-30T08:53:53.769308+00:00 archlinux kernel: sched_clock: Marking stable (354039243, 29943911)->(401895028, -17911874)
+2026-09-30T08:53:53.769315+00:00 archlinux kernel: registered taskstats version 1
+2026-09-30T08:53:53.769323+00:00 archlinux kernel: Loading compiled-in X.509 certificates
+2026-09-30T08:53:53.769330+00:00 archlinux kernel: Freeing initrd memory: 14656K
+2026-09-30T08:53:53.769340+00:00 archlinux kernel: Loaded X.509 cert 'Build time autogenerated kernel key: 66a2d286a46b6591e1797e3e5e2b774b3befa48e'
+2026-09-30T08:53:53.769348+00:00 archlinux kernel: zswap: loaded using pool zstd
+2026-09-30T08:53:53.769356+00:00 archlinux kernel: Demotion targets for Node 0: null
+2026-09-30T08:53:53.769363+00:00 archlinux kernel: Key type .fscrypt registered
+2026-09-30T08:53:53.769371+00:00 archlinux kernel: Key type fscrypt-provisioning registered
+2026-09-30T08:53:53.769379+00:00 archlinux kernel: Btrfs loaded, zoned=yes, fsverity=yes
+2026-09-30T08:53:53.769386+00:00 archlinux kernel: Key type big_key registered
+2026-09-30T08:53:53.769394+00:00 archlinux kernel: PM:   Magic number: 10:460:878
+2026-09-30T08:53:53.769401+00:00 archlinux kernel: RAS: Correctable Errors collector initialized.
+2026-09-30T08:53:53.769411+00:00 archlinux kernel: clk: Disabling unused clocks
+2026-09-30T08:53:53.769418+00:00 archlinux kernel: PM: genpd: Disabling unused power domains
+2026-09-30T08:53:53.769426+00:00 archlinux kernel: Freeing unused decrypted memory: 2028K
+2026-09-30T08:53:53.769433+00:00 archlinux kernel: Freeing unused kernel image (initmem) memory: 4940K
+2026-09-30T08:53:53.769441+00:00 archlinux kernel: Write protecting the kernel read-only data: 40960k
+2026-09-30T08:53:53.769449+00:00 archlinux kernel: Freeing unused kernel image (text/rodata gap) memory: 312K
+2026-09-30T08:53:53.769456+00:00 archlinux kernel: Freeing unused kernel image (rodata/data gap) memory: 856K
+2026-09-30T08:53:53.769464+00:00 archlinux kernel: x86/mm: Checked W+X mappings: passed, no W+X pages found.
+2026-09-30T08:53:53.769474+00:00 archlinux kernel: rodata_test: all tests were successful
+2026-09-30T08:53:53.769481+00:00 archlinux kernel: Run /init as init process
+2026-09-30T08:53:53.769488+00:00 archlinux kernel:   with arguments:
+2026-09-30T08:53:53.769496+00:00 archlinux kernel:     /init
+2026-09-30T08:53:53.769545+00:00 archlinux kernel:   with environment:
+2026-09-30T08:53:53.769552+00:00 archlinux kernel:     HOME=/
+2026-09-30T08:53:53.769560+00:00 archlinux kernel:     TERM=linux
+2026-09-30T08:53:53.769568+00:00 archlinux systemd[1]: Successfully made /usr/ read-only.
+2026-09-30T08:53:53.769580+00:00 archlinux systemd[1]: systemd 262-1-arch running in system mode (+PAM +AUDIT -SELINUX +APPARMOR -IMA +IPE +SMACK +SECCOMP +GNUTLS +OPENSSL +ACL +BLKID +CURL +ELFUTILS +FIDO2 +IDN2 +KMOD +LIBCRYPTSETUP +LIBCRYPTSETUP_PLUGINS +LIBFDISK +PCRE2 +PWQUALITY +P11KIT +QRENCODE +TPM2 +BZIP2 +LZ4 +XZ +ZLIB +ZSTD +BPF_FRAMEWORK +BTF +XKBCOMMON +UTMP +LIBARCHIVE)
+2026-09-30T08:53:53.769593+00:00 archlinux systemd[1]: Detected virtualization kvm.
+2026-09-30T08:53:53.769601+00:00 archlinux systemd[1]: Detected architecture x86-64.
+2026-09-30T08:53:53.769609+00:00 archlinux systemd[1]: Running in initrd.
+2026-09-30T08:53:53.769617+00:00 archlinux systemd[1]: Initializing machine ID from SMBIOS/DMI UUID.
+2026-09-30T08:53:53.769626+00:00 archlinux systemd[1]: Queued start job for default target Initrd Default Target.
+2026-09-30T08:53:53.769634+00:00 archlinux systemd[1]: Expecting device /dev/disk/by-uuid/7ab979c3-24af-4bcc-8525-ad14a289d144...
+2026-09-30T08:53:53.769642+00:00 archlinux systemd[1]: Reached target Path Units.
+2026-09-30T08:53:53.769650+00:00 archlinux systemd[1]: Reached target Slice Units.
+2026-09-30T08:53:53.769660+00:00 archlinux systemd[1]: Reached target Swaps.
+2026-09-30T08:53:53.769668+00:00 archlinux systemd[1]: Reached target Timer Units.
+2026-09-30T08:53:53.769676+00:00 archlinux systemd[1]: Listening on Journal Socket (/dev/log).
+2026-09-30T08:53:53.769684+00:00 archlinux systemd[1]: Listening on Journal Sockets.
+2026-09-30T08:53:53.769693+00:00 archlinux systemd[1]: TPM PCR Measurements skipped, unmet condition check ConditionSecurity=measured-os
+2026-09-30T08:53:53.769701+00:00 archlinux systemd[1]: Listening on udev Kernel Socket.
+2026-09-30T08:53:53.769709+00:00 archlinux systemd[1]: Listening on udev Varlink Socket.
+2026-09-30T08:53:53.769717+00:00 archlinux systemd[1]: Reached target Socket Units.
+2026-09-30T08:53:53.769728+00:00 archlinux systemd[1]: Create List of Static Device Nodes skipped, unmet condition check ConditionFileNotEmpty=/lib/modules/7.2.7-arch1-1/modules.devname
+2026-09-30T08:53:53.769803+00:00 archlinux systemd[1]: Early Battery Level Check skipped, unmet condition check ConditionDirectoryNotEmpty=/sys/class/power_supply
+2026-09-30T08:53:53.769812+00:00 archlinux systemd[1]: Display Boot-Time Emergency Messages In Full Screen skipped, unmet condition check ConditionVirtualization=no
+2026-09-30T08:53:53.769820+00:00 archlinux systemd[1]: Starting Journal Service...
+2026-09-30T08:53:53.769828+00:00 archlinux systemd[1]: Starting Load Kernel Modules...
+2026-09-30T08:53:53.769836+00:00 archlinux systemd[1]: TPM PCR OS Separator skipped, unmet condition check ConditionSecurity=measured-os
+2026-09-30T08:53:53.769845+00:00 archlinux systemd[1]: TPM PCR Barrier (initrd) skipped, unmet condition check ConditionSecurity=measured-os
+2026-09-30T08:53:53.769853+00:00 archlinux systemd[1]: Starting Create Static Device Nodes in /dev...
+2026-09-30T08:53:53.769865+00:00 archlinux systemd[1]: Starting Coldplug All udev Devices...
+2026-09-30T08:53:53.769873+00:00 archlinux systemd[1]: Finished Load Kernel Modules.
+2026-09-30T08:53:53.769881+00:00 archlinux systemd[1]: Finished Create Static Device Nodes in /dev.
+2026-09-30T08:53:53.769920+00:00 archlinux systemd-journald[74]: Collecting audit messages is disabled.
+2026-09-30T08:53:53.769946+00:00 archlinux systemd[1]: Reached target Preparation for Local File Systems.
+2026-09-30T08:53:53.769954+00:00 archlinux systemd[1]: Reached target Local File Systems.
+2026-09-30T08:53:53.769962+00:00 archlinux systemd[1]: Starting Rule-based Manager for Device Events and Files...
+2026-09-30T08:53:53.769974+00:00 archlinux systemd-journald[74]: Journal started
+2026-09-30T08:53:53.769992+00:00 archlinux systemd-journald[74]: Runtime Journal (/run/log/journal/a0bc8f96b0e556da96614e088507d2f5) is 8M, max 78.1M, 70.1M free.
+2026-09-30T08:53:53.771550+00:00 archlinux systemd[1]: Started Journal Service.
+2026-09-30T08:53:53.777133+00:00 archlinux systemd[1]: Starting Create System Files and Directories...
+2026-09-30T08:53:53.804970+00:00 archlinux systemd[1]: Finished Create System Files and Directories.
+2026-09-30T08:53:53.820048+00:00 archlinux systemd-udevd[79]: Using default interface naming scheme 'v261'.
+2026-09-30T08:53:53.834211+00:00 archlinux systemd[1]: Started Rule-based Manager for Device Events and Files.
+2026-09-30T08:53:53.963426+00:00 archlinux systemd[1]: Finished Coldplug All udev Devices.
+2026-09-30T08:53:53.966425+00:00 archlinux systemd[1]: Reached target System Initialization.
+2026-09-30T08:53:53.969664+00:00 archlinux systemd[1]: Reached target Basic System.
+2026-09-30T08:53:54.131724+00:00 archlinux systemd[1]: Found device /dev/disk/by-uuid/7ab979c3-24af-4bcc-8525-ad14a289d144.
+2026-09-30T08:53:54.134963+00:00 archlinux systemd[1]: Reached target Initrd Root Device.
+2026-09-30T08:53:54.138550+00:00 archlinux systemd[1]: Starting File System Check on /dev/disk/by-uuid/7ab979c3-24af-4bcc-8525-ad14a289d144...
+2026-09-30T08:53:54.170663+00:00 archlinux systemd[1]: Finished File System Check on /dev/disk/by-uuid/7ab979c3-24af-4bcc-8525-ad14a289d144.
+2026-09-30T08:53:54.208304+00:00 archlinux kernel: bochs-drm 0000:00:02.0: vgaarb: deactivate vga console
+2026-09-30T08:53:54.211567+00:00 archlinux kernel: Floppy drive(s): fd0 is 2.88M AMI BIOS
+2026-09-30T08:53:54.218557+00:00 archlinux kernel: scsi host0: ata_piix
+2026-09-30T08:53:54.218872+00:00 archlinux kernel: scsi host1: ata_piix
+2026-09-30T08:53:54.219123+00:00 archlinux kernel: ata1: PATA max MWDMA2 cmd 0x1f0 ctl 0x3f6 bmdma 0xc140 irq 14 lpm-pol 0
+2026-09-30T08:53:54.219138+00:00 archlinux kernel: ata2: PATA max MWDMA2 cmd 0x170 ctl 0x376 bmdma 0xc148 irq 15 lpm-pol 0
+2026-09-30T08:53:54.220569+00:00 archlinux kernel: clocksource: Watchdog remote CPU 1 read timed out
+2026-09-30T08:53:54.222643+00:00 archlinux kernel: Console: switching to colour dummy device 160x50
+2026-09-30T08:53:54.225228+00:00 archlinux kernel: [drm] Found bochs VGA, ID 0xb0c5.
+2026-09-30T08:53:54.225290+00:00 archlinux kernel: [drm] Framebuffer size 16384 kB @ 0xfd000000, mmio @ 0xfebd0000.
+2026-09-30T08:53:54.225303+00:00 archlinux kernel: bochs-drm 0000:00:02.0: [drm] Registered 1 planes with drm panic
+2026-09-30T08:53:54.227551+00:00 archlinux kernel: [drm] Initialized bochs-drm 1.0.0 for 0000:00:02.0 on minor 0
+2026-09-30T08:53:54.229535+00:00 archlinux kernel: FDC 0 is a S82078B
+2026-09-30T08:53:54.252152+00:00 archlinux systemd[1]: Starting Virtual Console Setup...
+2026-09-30T08:53:54.275671+00:00 archlinux systemd[1]: systemd-vconsole-setup.service: Deactivated successfully.
+2026-09-30T08:53:54.276224+00:00 archlinux systemd[1]: Stopped Virtual Console Setup.
+2026-09-30T08:53:54.320677+00:00 archlinux kernel: Console: switching to colour frame buffer device 160x50
+2026-09-30T08:53:54.361188+00:00 archlinux kernel: bochs-drm 0000:00:02.0: [drm] fb0: bochs-drmdrmfb frame buffer device
+2026-09-30T08:53:54.364675+00:00 archlinux systemd[1]: Starting Virtual Console Setup...
+2026-09-30T08:53:54.371282+00:00 archlinux systemd[1]: systemd-vconsole-setup.service: Deactivated successfully.
+2026-09-30T08:53:54.371625+00:00 archlinux systemd[1]: Stopped Virtual Console Setup.
+2026-09-30T08:53:54.373872+00:00 archlinux systemd[1]: Starting Virtual Console Setup...
+2026-09-30T08:53:54.380553+00:00 archlinux kernel: ata2: found unknown device (class 0)
+2026-09-30T08:53:54.382608+00:00 archlinux kernel: ata2.00: ATAPI: QEMU DVD-ROM, 2.5+, max UDMA/100
+2026-09-30T08:53:54.390232+00:00 archlinux systemd-vconsole-setup[128]: Configuration of first virtual console was skipped, ignoring remaining ones.
+2026-09-30T08:53:54.391025+00:00 archlinux systemd[1]: Finished Virtual Console Setup.
+2026-09-30T08:53:54.394534+00:00 archlinux kernel: scsi 1:0:0:0: CD-ROM            QEMU     QEMU DVD-ROM     2.5+ PQ: 0 ANSI: 5
+2026-09-30T08:53:54.446575+00:00 archlinux kernel: sr 1:0:0:0: [sr0] scsi3-mmc drive: 4x/4x cd/rw xa/form2 tray
+2026-09-30T08:53:54.470580+00:00 archlinux kernel: cdrom: Uniform CD-ROM driver Revision: 3.20
+2026-09-30T08:53:54.485651+00:00 archlinux kernel: sr 1:0:0:0: Attached scsi CD-ROM sr0
+2026-09-30T08:53:54.719270+00:00 archlinux systemd[1]: Mounting /sysroot...
+2026-09-30T08:53:54.734579+00:00 archlinux kernel: BTRFS: device fsid 7ab979c3-24af-4bcc-8525-ad14a289d144 devid 1 transid 142 /dev/vda3 (254:3) scanned by mount (136)
+2026-09-30T08:53:54.736581+00:00 archlinux kernel: BTRFS info (device vda3): first mount of filesystem 7ab979c3-24af-4bcc-8525-ad14a289d144
+2026-09-30T08:53:54.736628+00:00 archlinux kernel: BTRFS info (device vda3): using crc32c checksum algorithm
+2026-09-30T08:53:54.744532+00:00 archlinux kernel: BTRFS info (device vda3): turning on async discard
+2026-09-30T08:53:54.744598+00:00 archlinux kernel: BTRFS info (device vda3): enabling free space tree
+2026-09-30T08:53:54.744606+00:00 archlinux kernel: BTRFS info (device vda3): use zstd compression, level 1
+2026-09-30T08:53:54.746087+00:00 archlinux systemd[1]: Mounted /sysroot.
+2026-09-30T08:53:54.747717+00:00 archlinux systemd[1]: Reached target Initrd Root File System.
+2026-09-30T08:53:54.749972+00:00 archlinux systemd[1]: Starting Mountpoints Configured in the Real Root...
+2026-09-30T08:53:54.768278+00:00 archlinux systemd[1]: initrd-parse-etc.service: Deactivated successfully.
+2026-09-30T08:53:54.768596+00:00 archlinux systemd[1]: Finished Mountpoints Configured in the Real Root.
+2026-09-30T08:53:54.770376+00:00 archlinux systemd[1]: initrd-parse-etc.service: Triggering OnSuccess= dependencies.
+2026-09-30T08:53:54.770708+00:00 archlinux systemd[1]: Reached target Initrd File Systems.
+2026-09-30T08:53:54.772428+00:00 archlinux systemd[1]: Reached target Initrd Default Target.
+2026-09-30T08:53:54.774827+00:00 archlinux systemd[1]: Starting Cleaning Up and Shutting Down Daemons...
+2026-09-30T08:53:54.791657+00:00 archlinux systemd[1]: Stopped target Initrd Default Target.
+2026-09-30T08:53:54.793997+00:00 archlinux systemd[1]: Stopped target Basic System.
+2026-09-30T08:53:54.795192+00:00 archlinux systemd[1]: Stopped target Initrd Root Device.
+2026-09-30T08:53:54.796565+00:00 archlinux systemd[1]: Stopped target Path Units.
+2026-09-30T08:53:54.797806+00:00 archlinux systemd[1]: Stopped target Slice Units.
+2026-09-30T08:53:54.799071+00:00 archlinux systemd[1]: Stopped target Socket Units.
+2026-09-30T08:53:54.800476+00:00 archlinux systemd[1]: Stopped target System Initialization.
+2026-09-30T08:53:54.801835+00:00 archlinux systemd[1]: Stopped target Swaps.
+2026-09-30T08:53:54.802897+00:00 archlinux systemd[1]: Stopped target Timer Units.
+2026-09-30T08:53:54.804534+00:00 archlinux systemd[1]: systemd-modules-load.service: Deactivated successfully.
+2026-09-30T08:53:54.804659+00:00 archlinux systemd[1]: Stopped Load Kernel Modules.
+2026-09-30T08:53:54.805972+00:00 archlinux systemd[1]: systemd-tmpfiles-setup.service: Deactivated successfully.
+2026-09-30T08:53:54.806102+00:00 archlinux systemd[1]: Stopped Create System Files and Directories.
+2026-09-30T08:53:54.807614+00:00 archlinux systemd[1]: Stopped target Local File Systems.
+2026-09-30T08:53:54.808913+00:00 archlinux systemd[1]: Stopped target Preparation for Local File Systems.
+2026-09-30T08:53:54.810402+00:00 archlinux systemd[1]: systemd-udev-trigger.service: Deactivated successfully.
+2026-09-30T08:53:54.810558+00:00 archlinux systemd[1]: Stopped Coldplug All udev Devices.
+2026-09-30T08:53:54.811919+00:00 archlinux systemd[1]: Stopping Rule-based Manager for Device Events and Files...
+2026-09-30T08:53:54.813273+00:00 archlinux systemd[1]: systemd-vconsole-setup.service: Deactivated successfully.
+2026-09-30T08:53:54.813828+00:00 archlinux systemd[1]: Stopped Virtual Console Setup.
+2026-09-30T08:53:54.818137+00:00 archlinux systemd[1]: initrd-cleanup.service: Deactivated successfully.
+2026-09-30T08:53:54.818339+00:00 archlinux systemd[1]: Finished Cleaning Up and Shutting Down Daemons.
+2026-09-30T08:53:54.827217+00:00 archlinux systemd[1]: systemd-udevd.service: Deactivated successfully.
+2026-09-30T08:53:54.827610+00:00 archlinux systemd[1]: Stopped Rule-based Manager for Device Events and Files.
+2026-09-30T08:53:54.829412+00:00 archlinux systemd[1]: systemd-udevd-varlink.socket: Deactivated successfully.
+2026-09-30T08:53:54.829581+00:00 archlinux systemd[1]: Closed udev Varlink Socket.
+2026-09-30T08:53:54.831673+00:00 archlinux systemd[1]: Starting Cleanup udev Database...
+2026-09-30T08:53:54.832857+00:00 archlinux systemd[1]: systemd-tmpfiles-setup-dev.service: Deactivated successfully.
+2026-09-30T08:53:54.832916+00:00 archlinux systemd[1]: Stopped Create Static Device Nodes in /dev.
+2026-09-30T08:53:54.848907+00:00 archlinux systemd[1]: initrd-udevadm-cleanup-db.service: Deactivated successfully.
+2026-09-30T08:53:54.849234+00:00 archlinux systemd[1]: Finished Cleanup udev Database.
+2026-09-30T08:53:54.851534+00:00 archlinux systemd[1]: Reached target Switch Root.
+2026-09-30T08:53:54.854146+00:00 archlinux systemd[1]: Starting Switch Root...
+2026-09-30T08:53:54.880265+00:00 archlinux systemd[1]: Switching root.
+2026-09-30T08:53:54.916797+00:00 archlinux systemd-journald[74]: Journal stopped
+2026-09-30T08:53:56.735834+00:00 dns-arch systemd-journald[74]: Received SIGTERM from PID 1 (systemd).
+2026-09-30T08:53:56.735879+00:00 dns-arch kernel: NET: Registered PF_VSOCK protocol family
+2026-09-30T08:53:56.735908+00:00 dns-arch systemd[1]: systemd 262-1-arch running in system mode (+PAM +AUDIT -SELINUX +APPARMOR -IMA +IPE +SMACK +SECCOMP +GNUTLS +OPENSSL +ACL +BLKID +CURL +ELFUTILS +FIDO2 +IDN2 +KMOD +LIBCRYPTSETUP +LIBCRYPTSETUP_PLUGINS +LIBFDISK +PCRE2 +PWQUALITY +P11KIT +QRENCODE +TPM2 +BZIP2 +LZ4 +XZ +ZLIB +ZSTD +BPF_FRAMEWORK +BTF +XKBCOMMON +UTMP +LIBARCHIVE)
+2026-09-30T08:53:56.735919+00:00 dns-arch systemd[1]: Detected virtualization kvm.
+2026-09-30T08:53:56.735927+00:00 dns-arch systemd[1]: Detected architecture x86-64.
+2026-09-30T08:53:56.735934+00:00 dns-arch systemd[1]: Hostname set to <dns-arch>.
+2026-09-30T08:53:56.735942+00:00 dns-arch systemd[1]: bpf-restrict-fs: LSM BPF program attached
+2026-09-30T08:53:56.735953+00:00 dns-arch kernel: I/O error, dev fd0, sector 0 op 0x0:(READ) flags 0x0 phys_seg 1 prio class 2
+2026-09-30T08:53:56.735964+00:00 dns-arch kernel: floppy: error 10 while reading block 0
+2026-09-30T08:53:56.735972+00:00 dns-arch systemd[1]: initrd-switch-root.service: Deactivated successfully.
+2026-09-30T08:53:56.735979+00:00 dns-arch systemd[1]: Stopped Switch Root.
+2026-09-30T08:53:56.735986+00:00 dns-arch systemd[1]: systemd-journald.service: Scheduled restart job, restart counter is at 1.
+2026-09-30T08:53:56.735993+00:00 dns-arch systemd[1]: Created slice Slice /system/dirmngr.
+2026-09-30T08:53:56.736000+00:00 dns-arch systemd[1]: Created slice Slice /system/getty.
+2026-09-30T08:53:56.736012+00:00 dns-arch systemd[1]: Created slice Slice /system/gpg-agent.
+2026-09-30T08:53:56.736021+00:00 dns-arch systemd[1]: Created slice Slice /system/gpg-agent-browser.
+2026-09-30T08:53:56.736028+00:00 dns-arch systemd[1]: Created slice Slice /system/gpg-agent-extra.
+2026-09-30T08:53:56.736035+00:00 dns-arch systemd[1]: Created slice Slice /system/gpg-agent-ssh.
+2026-09-30T08:53:56.736042+00:00 dns-arch systemd[1]: Created slice Slice /system/keyboxd.
+2026-09-30T08:53:56.736050+00:00 dns-arch systemd[1]: Created slice Slice /system/modprobe.
+2026-09-30T08:53:56.736057+00:00 dns-arch systemd[1]: Created slice Slice /system/serial-getty.
+2026-09-30T08:53:56.736064+00:00 dns-arch systemd[1]: Created slice User and Session Slice.
+2026-09-30T08:53:56.736071+00:00 dns-arch systemd[1]: Started Dispatch Password Requests to Console Directory Watch.
+2026-09-30T08:53:56.736080+00:00 dns-arch systemd[1]: Started Forward Password Requests to Wall Directory Watch.
+2026-09-30T08:53:56.736087+00:00 dns-arch systemd[1]: Set up automount Arbitrary Executable File Formats File System Automount Point.
+2026-09-30T08:53:56.736095+00:00 dns-arch systemd[1]: Expecting device /dev/ttyS0...
+2026-09-30T08:53:56.736101+00:00 dns-arch systemd[1]: Reached target Local dm-clone Devices.
+2026-09-30T08:53:56.736109+00:00 dns-arch systemd[1]: Reached target Image Downloads.
+2026-09-30T08:53:56.736686+00:00 dns-arch systemd[1]: Stopped target Switch Root.
+2026-09-30T08:53:56.736709+00:00 dns-arch systemd[1]: Stopped target Initrd File Systems.
+2026-09-30T08:53:56.736721+00:00 dns-arch systemd[1]: Stopped target Initrd Root File System.
+2026-09-30T08:53:56.736732+00:00 dns-arch systemd[1]: Reached target Local Integrity Protected Volumes.
+2026-09-30T08:53:56.736742+00:00 dns-arch systemd[1]: Reached target Path Units.
+2026-09-30T08:53:56.736753+00:00 dns-arch systemd[1]: Reached target Remote Encrypted Volumes.
+2026-09-30T08:53:56.736792+00:00 dns-arch systemd[1]: Reached target Remote File Systems.
+2026-09-30T08:53:56.736804+00:00 dns-arch systemd[1]: Reached target Remote Integrity Protected Volumes.
+2026-09-30T08:53:56.736815+00:00 dns-arch systemd[1]: Reached target Remote Verity Protected Volumes.
+2026-09-30T08:53:56.736832+00:00 dns-arch systemd[1]: Reached target Slice Units.
+2026-09-30T08:53:56.736843+00:00 dns-arch systemd[1]: Reached target Local Verity Protected Volumes.
+2026-09-30T08:53:56.736854+00:00 dns-arch systemd[1]: Listening on Device-mapper event daemon FIFOs.
+2026-09-30T08:53:56.736866+00:00 dns-arch systemd[1]: Listening on Query the User Interactively for a Password.
+2026-09-30T08:53:56.736877+00:00 dns-arch systemd[1]: Listening on Process Core Dump Socket.
+2026-09-30T08:53:56.736888+00:00 dns-arch systemd[1]: Listening on Credential Encryption/Decryption.
+2026-09-30T08:53:56.736898+00:00 dns-arch systemd[1]: Listening on Disk Encryption Enrollment Service Socket.
+2026-09-30T08:53:56.736909+00:00 dns-arch systemd[1]: Listening on Factory Reset Management.
+2026-09-30T08:53:56.736923+00:00 dns-arch systemd[1]: Listening on Hostname Service Socket.
+2026-09-30T08:53:56.736935+00:00 dns-arch systemd[1]: Listening on Journal Audit Socket.
+2026-09-30T08:53:56.736946+00:00 dns-arch systemd[1]: Listening on DDI File System Mounter Socket.
+2026-09-30T08:53:56.736956+00:00 dns-arch systemd[1]: Listening on Console Output Muting Service Socket.
+2026-09-30T08:53:56.736966+00:00 dns-arch systemd[1]: Listening on Network Management Metrics Varlink Socket.
+2026-09-30T08:53:56.736977+00:00 dns-arch systemd[1]: Listening on Network Management Varlink Socket.
+2026-09-30T08:53:56.736987+00:00 dns-arch systemd[1]: Listening on Network Management Netlink Socket.
+2026-09-30T08:53:56.736998+00:00 dns-arch systemd[1]: Listening on Namespace Resource Manager Socket.
+2026-09-30T08:53:56.737009+00:00 dns-arch systemd[1]: TPM PCR Measurements skipped, unmet condition check ConditionSecurity=measured-os
+2026-09-30T08:53:56.737025+00:00 dns-arch systemd[1]: Make TPM PCR Policy skipped, unmet condition check ConditionSecurity=measured-uki
+2026-09-30T08:53:56.737039+00:00 dns-arch systemd[1]: Listening on Disk Repartitioning Service Socket.
+2026-09-30T08:53:56.737052+00:00 dns-arch systemd[1]: Listening on Report System Basic Metrics Socket.
+2026-09-30T08:53:56.737070+00:00 dns-arch systemd[1]: Listening on CGroup Report Varlink Socket.
+2026-09-30T08:53:56.737082+00:00 dns-arch systemd[1]: Listening on Resolve Monitor Varlink Socket.
+2026-09-30T08:53:56.737093+00:00 dns-arch systemd[1]: Listening on Resolve Service Varlink Socket.
+2026-09-30T08:53:56.737104+00:00 dns-arch systemd[1]: Listening on Simple Block Device Backed Storage Provider.
+2026-09-30T08:53:56.737115+00:00 dns-arch systemd[1]: Listening on Simple File System Backed Storage Provider.
+2026-09-30T08:53:56.737126+00:00 dns-arch systemd[1]: Listening on System Install Tool.
+2026-09-30T08:53:56.737141+00:00 dns-arch systemd[1]: Listening on System Updates.
+2026-09-30T08:53:56.737152+00:00 dns-arch systemd[1]: Listening on udev Varlink Socket.
+2026-09-30T08:53:56.737163+00:00 dns-arch systemd[1]: Listening on User Database Manager Socket.
+2026-09-30T08:53:56.737173+00:00 dns-arch systemd[1]: Mounting Huge Pages File System...
+2026-09-30T08:53:56.737184+00:00 dns-arch systemd[1]: Mounting POSIX Message Queue File System...
+2026-09-30T08:53:56.737194+00:00 dns-arch systemd[1]: Mounting Kernel Debug File System...
+2026-09-30T08:53:56.737205+00:00 dns-arch systemd[1]: Mounting Kernel Trace File System...
+2026-09-30T08:53:56.737216+00:00 dns-arch systemd[1]: Starting Create List of Static Device Nodes...
+2026-09-30T08:53:56.737227+00:00 dns-arch systemd[1]: Load Kernel Module configfs skipped, unmet condition check ConditionKernelModuleLoaded=!configfs
+2026-09-30T08:53:56.737241+00:00 dns-arch systemd[1]: Mounting Kernel Configuration File System...
+2026-09-30T08:53:56.737252+00:00 dns-arch systemd[1]: Load Kernel Module drm skipped, unmet condition check ConditionKernelModuleLoaded=!drm
+2026-09-30T08:53:56.737263+00:00 dns-arch systemd[1]: Load Kernel Module efi_pstore skipped, unmet condition check ConditionKernelModuleLoaded=!efi_pstore
+2026-09-30T08:53:56.737274+00:00 dns-arch systemd[1]: Load Kernel Module fuse skipped, unmet condition check ConditionKernelModuleLoaded=!fuse
+2026-09-30T08:53:56.737285+00:00 dns-arch systemd[1]: Mounting FUSE Control File System...
+2026-09-30T08:53:56.737296+00:00 dns-arch systemd[1]: Clear SysFail Entry If The Boot Is Successful skipped, unmet condition check ConditionPathExists=/sys/firmware/efi/efivars/LoaderEntrySysFail-4a67b082-0a4c-41cf-b6c7-440b29bb8c4f
+2026-09-30T08:53:56.737307+00:00 dns-arch systemd[1]: systemd-fsck-root.service: Deactivated successfully.
+2026-09-30T08:53:56.737318+00:00 dns-arch systemd[1]: Stopped File System Check on Root Device.
+2026-09-30T08:53:56.737332+00:00 dns-arch systemd[1]: Clear Stale Hibernate Storage Info skipped, unmet condition check ConditionPathExists=/sys/firmware/efi/efivars/HibernateLocation-8cf2644b-4b0b-428f-9387-6d876050dc67
+2026-09-30T08:53:56.737342+00:00 dns-arch systemd[1]: Starting Journal Service...
+2026-09-30T08:53:56.737352+00:00 dns-arch systemd[1]: Load Kernel Modules skipped, no trigger condition checks were met.
+2026-09-30T08:53:56.737363+00:00 dns-arch systemd[1]: Starting Generate Network Units from Kernel Command Line...
+2026-09-30T08:53:56.737374+00:00 dns-arch systemd[1]: TPM PCR Machine ID Measurement skipped, unmet condition check ConditionSecurity=measured-os
+2026-09-30T08:53:56.737385+00:00 dns-arch systemd[1]: TPM PCR OS Separator skipped, unmet condition check ConditionSecurity=measured-os
+2026-09-30T08:53:56.737395+00:00 dns-arch systemd[1]: Starting Remount Root and Kernel File Systems...
+2026-09-30T08:53:56.737407+00:00 dns-arch systemd[1]: Starting Apply Kernel Variables...
+2026-09-30T08:53:56.737417+00:00 dns-arch systemd[1]: Starting Wait Until Kernel Time Synchronized...
+2026-09-30T08:53:56.737432+00:00 dns-arch systemd[1]: Early TPM SRK Setup skipped, unmet condition check ConditionSecurity=measured-os
+2026-09-30T08:53:56.737443+00:00 dns-arch systemd[1]: TPM PCR NvPCR Initialization Separator skipped, unmet condition check ConditionPathExists=/etc/initrd-release
+2026-09-30T08:53:56.737455+00:00 dns-arch systemd[1]: Reached target Local Encrypted Volumes.
+2026-09-30T08:53:56.737466+00:00 dns-arch systemd[1]: TPM NvPCR Product ID Measurement skipped, unmet condition check ConditionSecurity=measured-os
+2026-09-30T08:53:56.737476+00:00 dns-arch systemd[1]: Starting Load udev Rules from Credentials...
+2026-09-30T08:53:56.737486+00:00 dns-arch systemd[1]: Starting Coldplug All udev Devices...
+2026-09-30T08:53:56.737580+00:00 dns-arch systemd-journald[208]: Collecting audit messages is enabled.
+2026-09-30T08:53:56.737611+00:00 dns-arch systemd-journald[208]: Journal started
+2026-09-30T08:53:56.737634+00:00 dns-arch systemd-journald[208]: Runtime Journal (/run/log/journal/a0bc8f96b0e556da96614e088507d2f5) is 8M, max 78.1M, 70.1M free.
+2026-09-30T08:53:56.549041+00:00 dns-arch systemd[1]: Queued start job for default target Graphical Interface.
+2026-09-30T08:53:56.552125+00:00 dns-arch systemd[1]: systemd-journald.service: Deactivated successfully.
+2026-09-30T08:53:56.741471+00:00 dns-arch systemd-time-wait-sync[213]: adjtime state 5 status 40 time Wed 2026-09-30 08:53:56.741377 UTC
+2026-09-30T08:53:56.745787+00:00 dns-arch systemd[1]: Started Journal Service.
+2026-09-30T08:53:56.745362+00:00 dns-arch systemd[1]: Mounted Huge Pages File System.
+2026-09-30T08:53:56.744000+00:00 dns-arch audit[1]: SERVICE_START pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=systemd-journald comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:56.748058+00:00 dns-arch kernel: audit: type=1130 audit(1790758436.744:2): pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=systemd-journald comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:56.746874+00:00 dns-arch systemd[1]: Mounted POSIX Message Queue File System.
+2026-09-30T08:53:56.748661+00:00 dns-arch systemd[1]: Mounted Kernel Debug File System.
+2026-09-30T08:53:56.750981+00:00 dns-arch systemd[1]: Mounted Kernel Trace File System.
+2026-09-30T08:53:56.753362+00:00 dns-arch systemd[1]: Finished Create List of Static Device Nodes.
+2026-09-30T08:53:56.754000+00:00 dns-arch audit[1]: SERVICE_START pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=kmod-static-nodes comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:56.755162+00:00 dns-arch systemd[1]: Mounted Kernel Configuration File System.
+2026-09-30T08:53:56.756616+00:00 dns-arch kernel: audit: type=1130 audit(1790758436.754:3): pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=kmod-static-nodes comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:56.756794+00:00 dns-arch systemd[1]: Mounted FUSE Control File System.
+2026-09-30T08:53:56.758713+00:00 dns-arch systemd[1]: Finished Generate Network Units from Kernel Command Line.
+2026-09-30T08:53:56.760000+00:00 dns-arch audit[1]: SERVICE_START pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=systemd-network-generator comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:56.760522+00:00 dns-arch kernel: audit: type=1130 audit(1790758436.760:4): pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=systemd-network-generator comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:56.761088+00:00 dns-arch systemd[1]: Finished Remount Root and Kernel File Systems.
+2026-09-30T08:53:56.762000+00:00 dns-arch audit[1]: SERVICE_START pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=systemd-remount-fs comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:56.763173+00:00 dns-arch kernel: audit: type=1130 audit(1790758436.762:5): pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=systemd-remount-fs comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:56.763263+00:00 dns-arch systemd[1]: Finished Apply Kernel Variables.
+2026-09-30T08:53:56.764000+00:00 dns-arch audit[1]: SERVICE_START pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=systemd-sysctl comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:56.765466+00:00 dns-arch kernel: audit: type=1130 audit(1790758436.764:6): pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=systemd-sysctl comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:56.765661+00:00 dns-arch systemd[1]: Finished Load udev Rules from Credentials.
+2026-09-30T08:53:56.767000+00:00 dns-arch audit[1]: SERVICE_START pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=systemd-udev-load-credentials comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:56.768536+00:00 dns-arch kernel: audit: type=1130 audit(1790758436.767:7): pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=systemd-udev-load-credentials comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:56.777603+00:00 dns-arch systemd[1]: Activating swap /swap/swapfile...
+2026-09-30T08:53:56.778933+00:00 dns-arch systemd[1]: Rebuild Hardware Database skipped, no trigger condition checks were met.
+2026-09-30T08:53:56.780696+00:00 dns-arch systemd[1]: Starting Flush Journal to Persistent Storage...
+2026-09-30T08:53:56.782663+00:00 dns-arch systemd[1]: Platform Persistent Storage Archival skipped, unmet condition check ConditionDirectoryNotEmpty=/sys/fs/pstore
+2026-09-30T08:53:56.784220+00:00 dns-arch systemd[1]: Starting Load/Save OS Random Seed...
+2026-09-30T08:53:56.789622+00:00 dns-arch systemd[1]: Starting Create Static Device Nodes in /dev gracefully...
+2026-09-30T08:53:56.793305+00:00 dns-arch systemd[1]: TPM SRK Setup skipped, unmet condition check ConditionSecurity=measured-os
+2026-09-30T08:53:56.808532+00:00 dns-arch kernel: Adding 524284k swap on /swap/swapfile.  Priority:-1 extents:4 across:1187108k 
+2026-09-30T08:53:56.810131+00:00 dns-arch systemd[1]: Activated swap /swap/swapfile.
+2026-09-30T08:53:56.812227+00:00 dns-arch systemd[1]: Reached target Swaps.
+2026-09-30T08:53:56.816575+00:00 dns-arch systemd-journald[208]: Time spent on flushing to /var/log/journal/a0bc8f96b0e556da96614e088507d2f5 is 23.174ms for 710 entries.
+2026-09-30T08:53:56.816575+00:00 dns-arch systemd-journald[208]: System Journal (/var/log/journal/a0bc8f96b0e556da96614e088507d2f5) is 16M, max 2.3G, 2.3G free.
+2026-09-30T08:53:56.837000+00:00 dns-arch audit: BPF prog-id=31 op=LOAD
+2026-09-30T08:53:56.837000+00:00 dns-arch audit: BPF prog-id=32 op=LOAD
+2026-09-30T08:53:56.837000+00:00 dns-arch audit: BPF prog-id=33 op=LOAD
+2026-09-30T08:53:56.851000+00:00 dns-arch audit[1]: SERVICE_START pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=systemd-random-seed comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:56.843980+00:00 dns-arch systemd[1]: Starting User Database Manager...
+2026-09-30T08:53:56.860434+00:00 dns-arch systemd-journald[208]: Received client request to flush runtime journal.
+2026-09-30T08:53:56.848620+00:00 dns-arch systemd[1]: Finished Load/Save OS Random Seed.
+2026-09-30T08:53:56.860801+00:00 dns-arch kernel: audit: type=1334 audit(1790758436.837:8): prog-id=31 op=LOAD
+2026-09-30T08:53:56.860815+00:00 dns-arch kernel: audit: type=1334 audit(1790758436.837:9): prog-id=32 op=LOAD
+2026-09-30T08:53:56.860823+00:00 dns-arch kernel: audit: type=1334 audit(1790758436.837:10): prog-id=33 op=LOAD
+2026-09-30T08:53:56.861273+00:00 dns-arch systemd[1]: Finished Flush Journal to Persistent Storage.
+2026-09-30T08:53:56.862000+00:00 dns-arch audit[1]: SERVICE_START pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=systemd-journal-flush comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:56.892696+00:00 dns-arch systemd[1]: Started User Database Manager.
+2026-09-30T08:53:56.893000+00:00 dns-arch audit[1]: SERVICE_START pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=systemd-userdbd comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:56.898789+00:00 dns-arch systemd[1]: Starting Load Kernel Module overlay...
+2026-09-30T08:53:56.904579+00:00 dns-arch systemd[1]: Starting Load Kernel Module tun...
+2026-09-30T08:53:56.929594+00:00 dns-arch kernel: tun: Universal TUN/TAP device driver, 1.6
+2026-09-30T08:53:56.931312+00:00 dns-arch systemd[1]: modprobe@tun.service: Deactivated successfully.
+2026-09-30T08:53:56.932309+00:00 dns-arch systemd[1]: Finished Load Kernel Module tun.
+2026-09-30T08:53:56.934000+00:00 dns-arch audit[1]: SERVICE_START pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=modprobe@tun comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:56.934000+00:00 dns-arch audit[1]: SERVICE_STOP pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=modprobe@tun comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:56.935702+00:00 dns-arch systemd[1]: modprobe@overlay.service: Deactivated successfully.
+2026-09-30T08:53:56.936015+00:00 dns-arch systemd[1]: Finished Load Kernel Module overlay.
+2026-09-30T08:53:56.936000+00:00 dns-arch audit[1]: SERVICE_START pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=modprobe@overlay comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:56.936000+00:00 dns-arch audit[1]: SERVICE_STOP pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=modprobe@overlay comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:56.939000+00:00 dns-arch audit: BPF prog-id=34 op=LOAD
+2026-09-30T08:53:56.939000+00:00 dns-arch audit: BPF prog-id=35 op=LOAD
+2026-09-30T08:53:56.939000+00:00 dns-arch audit: BPF prog-id=36 op=LOAD
+2026-09-30T08:53:56.941680+00:00 dns-arch systemd[1]: Starting Namespace Resource Manager...
+2026-09-30T08:53:56.953654+00:00 dns-arch systemd[1]: Finished Coldplug All udev Devices.
+2026-09-30T08:53:56.954000+00:00 dns-arch audit[1]: SERVICE_START pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=systemd-udev-trigger comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:56.978000+00:00 dns-arch audit: BPF prog-id=37 op=LOAD
+2026-09-30T08:53:56.978000+00:00 dns-arch audit[244]: SYSCALL arch=c000003e syscall=321 success=yes exit=13 a0=5 a1=7ffd69f23c60 a2=94 a3=7fba004e9632 items=0 ppid=1 pid=244 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="systemd-nsresou" exe="/usr/lib/systemd/systemd-nsresourced" key=(null)
+2026-09-30T08:53:56.978000+00:00 dns-arch audit: PROCTITLE proctitle="/usr/lib/systemd/systemd-nsresourced"
+2026-09-30T08:53:56.978000+00:00 dns-arch audit: BPF prog-id=37 op=UNLOAD
+2026-09-30T08:53:56.978000+00:00 dns-arch audit[244]: SYSCALL arch=c000003e syscall=3 success=yes exit=0 a0=d a1=0 a2=0 a3=0 items=0 ppid=1 pid=244 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="systemd-nsresou" exe="/usr/lib/systemd/systemd-nsresourced" key=(null)
+2026-09-30T08:53:56.978000+00:00 dns-arch audit: PROCTITLE proctitle="/usr/lib/systemd/systemd-nsresourced"
+2026-09-30T08:53:56.978000+00:00 dns-arch audit: BPF prog-id=38 op=LOAD
+2026-09-30T08:53:56.978000+00:00 dns-arch audit[244]: SYSCALL arch=c000003e syscall=321 success=yes exit=13 a0=5 a1=7ffd69f23c70 a2=a8 a3=2 items=0 ppid=1 pid=244 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="systemd-nsresou" exe="/usr/lib/systemd/systemd-nsresourced" key=(null)
+2026-09-30T08:53:56.978000+00:00 dns-arch audit: PROCTITLE proctitle="/usr/lib/systemd/systemd-nsresourced"
+2026-09-30T08:53:56.978000+00:00 dns-arch audit: BPF prog-id=38 op=UNLOAD
+2026-09-30T08:53:56.978000+00:00 dns-arch audit[244]: SYSCALL arch=c000003e syscall=3 success=yes exit=0 a0=d a1=0 a2=0 a3=0 items=0 ppid=1 pid=244 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="systemd-nsresou" exe="/usr/lib/systemd/systemd-nsresourced" key=(null)
+2026-09-30T08:53:56.978000+00:00 dns-arch audit: PROCTITLE proctitle="/usr/lib/systemd/systemd-nsresourced"
+2026-09-30T08:53:57.001000+00:00 dns-arch audit: BPF prog-id=39 op=LOAD
+2026-09-30T08:53:57.001000+00:00 dns-arch audit[244]: SYSCALL arch=c000003e syscall=321 success=yes exit=34 a0=5 a1=7ffd69f23920 a2=94 a3=7fba00503080 items=0 ppid=1 pid=244 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="systemd-nsresou" exe="/usr/lib/systemd/systemd-nsresourced" key=(null)
+2026-09-30T08:53:57.001000+00:00 dns-arch audit: PROCTITLE proctitle="/usr/lib/systemd/systemd-nsresourced"
+2026-09-30T08:53:57.001000+00:00 dns-arch audit: BPF prog-id=39 op=UNLOAD
+2026-09-30T08:53:57.001000+00:00 dns-arch audit[244]: SYSCALL arch=c000003e syscall=3 success=yes exit=0 a0=22 a1=0 a2=0 a3=0 items=0 ppid=1 pid=244 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="systemd-nsresou" exe="/usr/lib/systemd/systemd-nsresourced" key=(null)
+2026-09-30T08:53:57.001000+00:00 dns-arch audit: PROCTITLE proctitle="/usr/lib/systemd/systemd-nsresourced"
+2026-09-30T08:53:57.001000+00:00 dns-arch audit: BPF prog-id=40 op=LOAD
+2026-09-30T08:53:57.001000+00:00 dns-arch audit[244]: SYSCALL arch=c000003e syscall=321 success=yes exit=34 a0=5 a1=7ffd69f23a50 a2=a8 a3=7fba00503080 items=0 ppid=1 pid=244 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="systemd-nsresou" exe="/usr/lib/systemd/systemd-nsresourced" key=(null)
+2026-09-30T08:53:57.001000+00:00 dns-arch audit: PROCTITLE proctitle="/usr/lib/systemd/systemd-nsresourced"
+2026-09-30T08:53:57.001000+00:00 dns-arch audit: BPF prog-id=40 op=UNLOAD
+2026-09-30T08:53:57.001000+00:00 dns-arch audit[244]: SYSCALL arch=c000003e syscall=3 success=yes exit=0 a0=22 a1=0 a2=0 a3=0 items=0 ppid=1 pid=244 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="systemd-nsresou" exe="/usr/lib/systemd/systemd-nsresourced" key=(null)
+2026-09-30T08:53:57.001000+00:00 dns-arch audit: PROCTITLE proctitle="/usr/lib/systemd/systemd-nsresourced"
+2026-09-30T08:53:57.002000+00:00 dns-arch audit: BPF prog-id=41 op=LOAD
+2026-09-30T08:53:57.002000+00:00 dns-arch audit[244]: SYSCALL arch=c000003e syscall=321 success=yes exit=34 a0=5 a1=7ffd69f23b60 a2=a8 a3=6 items=0 ppid=1 pid=244 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="systemd-nsresou" exe="/usr/lib/systemd/systemd-nsresourced" key=(null)
+2026-09-30T08:53:57.002000+00:00 dns-arch audit: PROCTITLE proctitle="/usr/lib/systemd/systemd-nsresourced"
+2026-09-30T08:53:57.002000+00:00 dns-arch audit: BPF prog-id=41 op=UNLOAD
+2026-09-30T08:53:57.002000+00:00 dns-arch audit[244]: SYSCALL arch=c000003e syscall=3 success=yes exit=0 a0=22 a1=0 a2=0 a3=0 items=0 ppid=1 pid=244 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="systemd-nsresou" exe="/usr/lib/systemd/systemd-nsresourced" key=(null)
+2026-09-30T08:53:57.002000+00:00 dns-arch audit: PROCTITLE proctitle="/usr/lib/systemd/systemd-nsresourced"
+2026-09-30T08:53:57.002000+00:00 dns-arch audit: BPF prog-id=42 op=LOAD
+2026-09-30T08:53:57.002000+00:00 dns-arch audit[244]: SYSCALL arch=c000003e syscall=321 success=yes exit=34 a0=5 a1=7ffd69f23c70 a2=a8 a3=7fba00503080 items=0 ppid=1 pid=244 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="systemd-nsresou" exe="/usr/lib/systemd/systemd-nsresourced" key=(null)
+2026-09-30T08:53:57.002000+00:00 dns-arch audit: PROCTITLE proctitle="/usr/lib/systemd/systemd-nsresourced"
+2026-09-30T08:53:57.004000+00:00 dns-arch audit: BPF prog-id=43 op=LOAD
+2026-09-30T08:53:57.004000+00:00 dns-arch audit[244]: SYSCALL arch=c000003e syscall=321 success=yes exit=35 a0=5 a1=7ffd69f23c70 a2=a8 a3=7fba00503080 items=0 ppid=1 pid=244 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="systemd-nsresou" exe="/usr/lib/systemd/systemd-nsresourced" key=(null)
+2026-09-30T08:53:57.004000+00:00 dns-arch audit: PROCTITLE proctitle="/usr/lib/systemd/systemd-nsresourced"
+2026-09-30T08:53:57.469582+00:00 dns-arch kernel: kauditd_printk_skb: 44 callbacks suppressed
+2026-09-30T08:53:57.469618+00:00 dns-arch kernel: audit: type=1334 audit(1790758437.004:33): prog-id=43 op=LOAD
+2026-09-30T08:53:57.469629+00:00 dns-arch kernel: audit: type=1300 audit(1790758437.004:33): arch=c000003e syscall=321 success=yes exit=35 a0=5 a1=7ffd69f23c70 a2=a8 a3=7fba00503080 items=0 ppid=1 pid=244 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="systemd-nsresou" exe="/usr/lib/systemd/systemd-nsresourced" key=(null)
+2026-09-30T08:53:57.469654+00:00 dns-arch kernel: audit: type=1327 audit(1790758437.004:33): proctitle="/usr/lib/systemd/systemd-nsresourced"
+2026-09-30T08:53:57.559115+00:00 dns-arch systemd[1]: Mounting Temporary Directory /tmp...
+2026-09-30T08:53:57.575397+00:00 dns-arch systemd[1]: Mounted Temporary Directory /tmp.
+2026-09-30T08:53:57.468000+00:00 dns-arch audit: BPF prog-id=44 op=LOAD
+2026-09-30T08:53:57.468000+00:00 dns-arch audit[244]: SYSCALL arch=c000003e syscall=321 success=yes exit=36 a0=5 a1=7ffd69f23c70 a2=a8 a3=7fba00503080 items=0 ppid=1 pid=244 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="systemd-nsresou" exe="/usr/lib/systemd/systemd-nsresourced" key=(null)
+2026-09-30T08:53:57.468000+00:00 dns-arch audit: PROCTITLE proctitle="/usr/lib/systemd/systemd-nsresourced"
+2026-09-30T08:53:57.909560+00:00 dns-arch kernel: audit: type=1334 audit(1790758437.468:34): prog-id=44 op=LOAD
+2026-09-30T08:53:57.909599+00:00 dns-arch kernel: audit: type=1300 audit(1790758437.468:34): arch=c000003e syscall=321 success=yes exit=36 a0=5 a1=7ffd69f23c70 a2=a8 a3=7fba00503080 items=0 ppid=1 pid=244 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="systemd-nsresou" exe="/usr/lib/systemd/systemd-nsresourced" key=(null)
+2026-09-30T08:53:57.909610+00:00 dns-arch kernel: audit: type=1327 audit(1790758437.468:34): proctitle="/usr/lib/systemd/systemd-nsresourced"
+2026-09-30T08:53:57.908000+00:00 dns-arch audit: BPF prog-id=45 op=LOAD
+2026-09-30T08:53:57.908000+00:00 dns-arch audit[244]: SYSCALL arch=c000003e syscall=321 success=yes exit=37 a0=5 a1=7ffd69f23c70 a2=a8 a3=7fba00503080 items=0 ppid=1 pid=244 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="systemd-nsresou" exe="/usr/lib/systemd/systemd-nsresourced" key=(null)
+2026-09-30T08:53:57.908000+00:00 dns-arch audit: PROCTITLE proctitle="/usr/lib/systemd/systemd-nsresourced"
+2026-09-30T08:53:58.328569+00:00 dns-arch kernel: audit: type=1334 audit(1790758437.908:35): prog-id=45 op=LOAD
+2026-09-30T08:53:58.328612+00:00 dns-arch kernel: audit: type=1300 audit(1790758437.908:35): arch=c000003e syscall=321 success=yes exit=37 a0=5 a1=7ffd69f23c70 a2=a8 a3=7fba00503080 items=0 ppid=1 pid=244 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="systemd-nsresou" exe="/usr/lib/systemd/systemd-nsresourced" key=(null)
+2026-09-30T08:53:58.328625+00:00 dns-arch kernel: audit: type=1327 audit(1790758437.908:35): proctitle="/usr/lib/systemd/systemd-nsresourced"
+2026-09-30T08:53:58.327000+00:00 dns-arch audit: BPF prog-id=46 op=LOAD
+2026-09-30T08:53:58.327000+00:00 dns-arch audit[244]: SYSCALL arch=c000003e syscall=321 success=yes exit=38 a0=5 a1=7ffd69f23c70 a2=a8 a3=7fba00503080 items=0 ppid=1 pid=244 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="systemd-nsresou" exe="/usr/lib/systemd/systemd-nsresourced" key=(null)
+2026-09-30T08:53:58.327000+00:00 dns-arch audit: PROCTITLE proctitle="/usr/lib/systemd/systemd-nsresourced"
+2026-09-30T08:53:58.744700+00:00 dns-arch kernel: audit: type=1334 audit(1790758438.327:36): prog-id=46 op=LOAD
+2026-09-30T08:53:58.743000+00:00 dns-arch audit: BPF prog-id=47 op=LOAD
+2026-09-30T08:53:58.743000+00:00 dns-arch audit[244]: SYSCALL arch=c000003e syscall=321 success=yes exit=39 a0=5 a1=7ffd69f23c70 a2=a8 a3=7fba00503080 items=0 ppid=1 pid=244 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="systemd-nsresou" exe="/usr/lib/systemd/systemd-nsresourced" key=(null)
+2026-09-30T08:53:58.743000+00:00 dns-arch audit: PROCTITLE proctitle="/usr/lib/systemd/systemd-nsresourced"
+2026-09-30T08:53:59.456000+00:00 dns-arch audit: BPF prog-id=48 op=LOAD
+2026-09-30T08:53:59.456000+00:00 dns-arch audit[244]: SYSCALL arch=c000003e syscall=321 success=yes exit=40 a0=5 a1=7ffd69f23c70 a2=a8 a3=7fba00503080 items=0 ppid=1 pid=244 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="systemd-nsresou" exe="/usr/lib/systemd/systemd-nsresourced" key=(null)
+2026-09-30T08:53:59.456000+00:00 dns-arch audit: PROCTITLE proctitle="/usr/lib/systemd/systemd-nsresourced"
+2026-09-30T08:53:59.457000+00:00 dns-arch audit: BPF prog-id=49 op=LOAD
+2026-09-30T08:53:59.457000+00:00 dns-arch audit[244]: SYSCALL arch=c000003e syscall=321 success=yes exit=41 a0=5 a1=7ffd69f23c70 a2=a8 a3=7fba00503080 items=0 ppid=1 pid=244 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="systemd-nsresou" exe="/usr/lib/systemd/systemd-nsresourced" key=(null)
+2026-09-30T08:53:59.457000+00:00 dns-arch audit: PROCTITLE proctitle="/usr/lib/systemd/systemd-nsresourced"
+2026-09-30T08:53:59.462449+00:00 dns-arch systemd-nsresourced[244]: userns-restrict BPF-LSM program userns_restrict_path_chown now attached.
+2026-09-30T08:53:59.466147+00:00 dns-arch systemd-nsresourced[244]: userns-restrict BPF-LSM program userns_restrict_path_mkdir now attached.
+2026-09-30T08:53:59.470087+00:00 dns-arch systemd-nsresourced[244]: userns-restrict BPF-LSM program userns_restrict_path_mknod now attached.
+2026-09-30T08:53:59.473831+00:00 dns-arch systemd-nsresourced[244]: userns-restrict BPF-LSM program userns_restrict_path_symlink now attached.
+2026-09-30T08:53:59.477878+00:00 dns-arch systemd-nsresourced[244]: userns-restrict BPF-LSM program userns_restrict_path_link now attached.
+2026-09-30T08:53:59.481864+00:00 dns-arch systemd-nsresourced[244]: userns-restrict BPF-LSM program userns_restrict_sb_kern_mount now attached.
+2026-09-30T08:53:59.485796+00:00 dns-arch systemd-nsresourced[244]: userns-restrict BPF-LSM program userns_restrict_task_fix_setgroups now attached.
+2026-09-30T08:53:59.488000+00:00 dns-arch audit: BPF prog-id=50 op=LOAD
+2026-09-30T08:53:59.488000+00:00 dns-arch audit[244]: SYSCALL arch=c000003e syscall=321 success=yes exit=22 a0=5 a1=7ffd69f23a30 a2=a8 a3=2 items=0 ppid=1 pid=244 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="systemd-nsresou" exe="/usr/lib/systemd/systemd-nsresourced" key=(null)
+2026-09-30T08:53:59.488000+00:00 dns-arch audit: PROCTITLE proctitle="/usr/lib/systemd/systemd-nsresourced"
+2026-09-30T08:53:59.488000+00:00 dns-arch audit: BPF prog-id=50 op=UNLOAD
+2026-09-30T08:53:59.488000+00:00 dns-arch audit[244]: SYSCALL arch=c000003e syscall=3 success=yes exit=0 a0=16 a1=0 a2=0 a3=0 items=0 ppid=1 pid=244 auid=4294967295 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=4294967295 comm="systemd-nsresou" exe="/usr/lib/systemd/systemd-nsresourced" key=(null)
+2026-09-30T08:53:59.488000+00:00 dns-arch audit: PROCTITLE proctitle="/usr/lib/systemd/systemd-nsresourced"
+2026-09-30T08:53:59.488773+00:00 dns-arch systemd-nsresourced[244]: userns-restrict BPF-LSM program userns_restrict_retire_userns_sysctls now attached.
+2026-09-30T08:53:59.490079+00:00 dns-arch systemd[1]: Started Namespace Resource Manager.
+2026-09-30T08:53:59.493000+00:00 dns-arch audit[1]: SERVICE_START pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=systemd-nsresourced comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:59.521711+00:00 dns-arch systemd[1]: Finished Create Static Device Nodes in /dev gracefully.
+2026-09-30T08:53:59.522000+00:00 dns-arch audit[1]: SERVICE_START pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=systemd-tmpfiles-setup-dev-early comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:59.525701+00:00 dns-arch systemd[1]: Starting Create System Users...
+2026-09-30T08:53:59.570094+00:00 dns-arch systemd[1]: Finished Create System Users.
+2026-09-30T08:53:59.570000+00:00 dns-arch audit[1]: SERVICE_START pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=systemd-sysusers comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:59.573531+00:00 dns-arch systemd[1]: Starting Journal Log Access Socket...
+2026-09-30T08:53:59.575000+00:00 dns-arch audit: BPF prog-id=51 op=LOAD
+2026-09-30T08:53:59.577591+00:00 dns-arch systemd[1]: Starting Network Name Resolution...
+2026-09-30T08:53:59.579409+00:00 dns-arch systemd[1]: Starting Create Static Device Nodes in /dev...
+2026-09-30T08:53:59.583950+00:00 dns-arch systemd[1]: Listening on Journal Log Access Socket.
+2026-09-30T08:53:59.622998+00:00 dns-arch systemd-resolved[258]: Positive Trust Anchors:
+2026-09-30T08:53:59.623325+00:00 dns-arch systemd-resolved[258]: . IN DS 20326 8 2 e06d44b80b8f1d39a95c0b0d7c65d08458e880409bbc683457104237c7f8ec8d
+2026-09-30T08:53:59.623362+00:00 dns-arch systemd-resolved[258]: . IN DS 38696 8 2 683d2d0acb8c9b712a1948b27f741219298d0a450d612c483af444a4c0fb2b16
+2026-09-30T08:53:59.623408+00:00 dns-arch systemd-resolved[258]: Negative trust anchors: home.arpa 10.in-addr.arpa 16.172.in-addr.arpa 17.172.in-addr.arpa 18.172.in-addr.arpa 19.172.in-addr.arpa 20.172.in-addr.arpa 21.172.in-addr.arpa 22.172.in-addr.arpa 23.172.in-addr.arpa 24.172.in-addr.arpa 25.172.in-addr.arpa 26.172.in-addr.arpa 27.172.in-addr.arpa 28.172.in-addr.arpa 29.172.in-addr.arpa 30.172.in-addr.arpa 31.172.in-addr.arpa 170.0.0.192.in-addr.arpa 171.0.0.192.in-addr.arpa 168.192.in-addr.arpa d.f.ip6.arpa ipv4only.arpa resolver.arpa corp home internal intranet lan local private test
+2026-09-30T08:53:59.625718+00:00 dns-arch systemd[1]: Finished Create Static Device Nodes in /dev.
+2026-09-30T08:53:59.627000+00:00 dns-arch audit[1]: SERVICE_START pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=systemd-tmpfiles-setup-dev comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:59.627867+00:00 dns-arch systemd[1]: Reached target Preparation for Local File Systems.
+2026-09-30T08:53:59.630255+00:00 dns-arch systemd[1]: Set up automount EFI System Partition Automount.
+2026-09-30T08:53:59.633000+00:00 dns-arch audit: BPF prog-id=6 op=UNLOAD
+2026-09-30T08:53:59.633000+00:00 dns-arch audit: BPF prog-id=5 op=UNLOAD
+2026-09-30T08:53:59.634000+00:00 dns-arch audit: BPF prog-id=52 op=LOAD
+2026-09-30T08:53:59.634000+00:00 dns-arch audit: BPF prog-id=53 op=LOAD
+2026-09-30T08:53:59.633727+00:00 dns-arch systemd[1]: Repartition Root Disk skipped, no trigger condition checks were met.
+2026-09-30T08:53:59.634235+00:00 dns-arch systemd-resolved[258]: Using system hostname 'dns-arch'.
+2026-09-30T08:53:59.635916+00:00 dns-arch systemd[1]: Starting Rule-based Manager for Device Events and Files...
+2026-09-30T08:53:59.637704+00:00 dns-arch systemd[1]: Started Network Name Resolution.
+2026-09-30T08:53:59.638000+00:00 dns-arch audit[1]: SERVICE_START pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=systemd-resolved comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:59.639117+00:00 dns-arch systemd[1]: Reached target Host and Network Name Lookups.
+2026-09-30T08:53:59.641000+00:00 dns-arch audit: BPF prog-id=54 op=LOAD
+2026-09-30T08:53:59.643144+00:00 dns-arch systemd[1]: Starting Network Time Synchronization...
+2026-09-30T08:53:59.659983+00:00 dns-arch systemd-udevd[262]: Using default interface naming scheme 'v261'.
+2026-09-30T08:53:59.683937+00:00 dns-arch systemd[1]: Started Network Time Synchronization.
+2026-09-30T08:53:59.684554+00:00 dns-arch systemd-resolved[258]: Switching to fallback DNS server 9.9.9.9#dns.quad9.net.
+2026-09-30T08:53:59.686305+00:00 dns-arch systemd[1]: Reached target System Time Set.
+2026-09-30T08:53:59.685000+00:00 dns-arch audit[1]: SERVICE_START pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=systemd-timesyncd comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:59.690018+00:00 dns-arch systemd[1]: Started Rule-based Manager for Device Events and Files.
+2026-09-30T08:53:59.691000+00:00 dns-arch audit[1]: SERVICE_START pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=systemd-udevd comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:59.740930+00:00 dns-arch systemd[1]: Load Kernel Module configfs skipped, unmet condition check ConditionKernelModuleLoaded=!configfs
+2026-09-30T08:53:59.746891+00:00 dns-arch systemd[1]: Load Kernel Module fuse skipped, unmet condition check ConditionKernelModuleLoaded=!fuse
+2026-09-30T08:53:59.775385+00:00 dns-arch (udev-worker)[284]: Network interface NamePolicy= disabled on kernel command line.
+2026-09-30T08:53:59.777319+00:00 dns-arch (udev-worker)[278]: Network interface NamePolicy= disabled on kernel command line.
+2026-09-30T08:53:59.779342+00:00 dns-arch systemd[1]: Condition check resulted in /dev/ttyS0 being skipped.
+2026-09-30T08:53:59.903544+00:00 dns-arch kernel: piix4_smbus 0000:00:01.3: SMBus Host Controller at 0x700, revision 0
+2026-09-30T08:53:59.922551+00:00 dns-arch kernel: i2c i2c-0: Memory type 0x07 not supported yet, not instantiating SPD
+2026-09-30T08:53:59.935560+00:00 dns-arch kernel: input: PC Speaker as /devices/platform/pcspkr/input/input3
+2026-09-30T08:53:59.940554+00:00 dns-arch kernel: input: VirtualPS/2 VMware VMMouse as /devices/platform/i8042/serio1/input/input5
+2026-09-30T08:53:59.941556+00:00 dns-arch kernel: input: VirtualPS/2 VMware VMMouse as /devices/platform/i8042/serio1/input/input4
+2026-09-30T08:53:59.965531+00:00 dns-arch kernel: mousedev: PS/2 mouse device common for all mice
+2026-09-30T08:53:59.968263+00:00 dns-arch systemd[1]: Starting Virtual Console Setup...
+2026-09-30T08:53:59.976538+00:00 dns-arch kernel: parport_pc 00:03: reported by Plug and Play ACPI
+2026-09-30T08:53:59.977771+00:00 dns-arch systemd[1]: systemd-vconsole-setup.service: Deactivated successfully.
+2026-09-30T08:53:59.978296+00:00 dns-arch systemd[1]: Stopped Virtual Console Setup.
+2026-09-30T08:53:59.979752+00:00 dns-arch kernel: parport0: PC-style at 0x378, irq 7 [PCSPP,TRISTATE]
+2026-09-30T08:53:59.979000+00:00 dns-arch audit[1]: SERVICE_START pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=systemd-vconsole-setup comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:59.979000+00:00 dns-arch audit[1]: SERVICE_STOP pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=systemd-vconsole-setup comm="systemd" exe="/usr/lib/systemd/systemd" hostname=? addr=? terminal=? res=success'
+2026-09-30T08:53:59.982265+00:00 dns-arch systemd[1]: Starting Virtual Console Setup...
+== dns-peer-enroll secondary-status
+{"state":"configured","reason":"local policy and SSH configuration verified; live authentication is unproven","next_action":"No owner action is needed now. No status command tests live authentication: the primary Agent makes the first authenticated read-only inspector exchange only while reconciling an admitted pending deletion, and reports its result on that operation","primary_ip":"192.0.2.10","peer_ip":"192.0.2.11","catalog_name":"catalog-c000020a.celikpanel.invalid","primary_key_sha256":"e199244de65255ac051b67250bdd50215e8ef026a5ecd4f798a941bcafa55d79"}
+== inspector files (ls only)
+/etc/bind-peer-inspector:
+total 16
+drwxr-x--- 1 root root  140 2026-09-30 08:51:45.682201042 +0000 .
+drwxr-xr-x 1 root root 2234 2026-09-30 08:54:00.781629433 +0000 ..
+-rw------- 1 root root  173 2026-09-30 08:51:45.613197678 +0000 policy.json
+-rw------- 1 root root 3360 2026-09-30 08:51:45.670200457 +0000 sshd-config-original
+-rw------- 1 root root  217 2026-09-30 08:51:45.682201042 +0000 sshd-config-receipt.json
+-rw-r--r-- 1 root root  475 2026-09-30 08:51:45.636198800 +0000 sshd-match.conf
+
+/etc/ssh/bind-peer-inspector:
+total 4
+drwxr-xr-x 1 root root  30 2026-09-30 08:51:45.859209672 +0000 .
+drwxr-xr-x 1 root root 382 2026-09-30 08:51:45.693201579 +0000 ..
+-rw-r--r-- 1 root root 174 2026-09-30 08:51:45.859209672 +0000 authorized_keys
+
+/usr/local/libexec/:
+total 4820
+drwxr-xr-x 1 root root     128 2026-09-30 08:51:45.603197191 +0000 .
+drwxr-xr-x 1 root root      86 2026-09-30 08:51:45.561195143 +0000 ..
+-rwxr-xr-x 1 root root 4927650 2026-09-30 08:51:45.562251379 +0000 celikpanel-bind-peer-inspect
+-rwxr-xr-x 1 root root     187 2026-09-30 08:51:45.603197191 +0000 celikpanel-bind-peer-inspect-wrapper
+
+/var/lib/bind-peer-inspector:
+total 0
+drwxr-xr-x 1 root root   0 2026-09-30 08:51:45.561195143 +0000 .
+drwxr-xr-x 1 root root 212 2026-09-30 08:51:45.561195143 +0000 ..
+total 8
+drwxr-x--- 1 root root   98 2026-09-30 08:51:45.625198263 +0000 .
+drwxr-xr-x 1 root root 2234 2026-09-30 08:54:00.781629433 +0000 ..
+-r--r----- 1 root root  171 2026-09-30 08:47:42.361000000 +0000 90-cloud-init-users
+-r--r----- 1 root root   82 2026-09-30 08:51:45.625198263 +0000 celikpanel-bind-peer-inspector
+celikpeer:x:969:969::/var/lib/bind-peer-inspector:/bin/sh
+uid=969(celikpeer) gid=969(celikpeer) groups=969(celikpeer)
+== sshd_config Include/Match lines
+/etc/ssh/sshd_config:2:Include /etc/ssh/sshd_config.d/*.conf
+/etc/ssh/sshd_config:43:AuthorizedKeysFile	.ssh/authorized_keys
+/etc/ssh/sshd_config:47:#AuthorizedKeysCommand none
+/etc/ssh/sshd_config:48:#AuthorizedKeysCommandUser nobody
+/etc/ssh/sshd_config:120:#	ForceCommand cvs server
+/etc/ssh/sshd_config:122:Include /etc/bind-peer-inspector/sshd-match.conf
+/etc/ssh/sshd_config.d/20-systemd-userdb.conf:5:AuthorizedKeysCommand /usr/bin/userdbctl ssh-authorized-keys %u
+/etc/ssh/sshd_config.d/20-systemd-userdb.conf:6:AuthorizedKeysCommandUser root
+== rndc key file (ls only, content never read)
+ls: cannot access '/etc/rndc.conf': No such file or directory
+-rw-r----- 1 root named 100 2026-09-30 08:49:11.471492214 +0000 /etc/rndc.key

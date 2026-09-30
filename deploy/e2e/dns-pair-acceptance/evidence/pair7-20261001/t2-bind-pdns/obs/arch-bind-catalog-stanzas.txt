@@ -1,0 +1,98 @@
+## 2026-09-30T08:28:01Z role=primary named-checkconf -p /etc/named.conf : options allow-transfer and every catalog-*/member zone stanza (secret/algorithm/key lines dropped)
+### options-scope allow-transfer
+	allow-transfer  {
+### zone stanzas (catalog and pair-accept.test)
+zone "pair-accept.test" {
+	type master;
+	file "/var/named/celikpanel/generations/386afd2d26e1245ace0735b1bb071b5fb992ae43975c93738a09b59add15a89b/zones/027b232cc24e70e82f06a8e88d66283f8c48d7a0d8a0c31cdf47809f64d2596f.zone";
+	allow-transfer  {
+		192.0.2.11/32;
+		192.0.2.10/32;
+	};
+	also-notify {
+		192.0.2.10;
+	};
+	notify yes;
+};
+zone "catalog-c000020b.celikpanel.invalid" {
+	type master;
+	file "/var/named/celikpanel/generations/386afd2d26e1245ace0735b1bb071b5fb992ae43975c93738a09b59add15a89b/zones/cb94ee780a7fa84172a58d341e623334842cd2c23e56e4c61e64c13ad43c0381.zone";
+	allow-transfer  {
+		192.0.2.11/32;
+		192.0.2.10/32;
+	};
+	also-notify {
+		192.0.2.10;
+	};
+	notify yes;
+};
+### generation receipts: pairing object only (id, path, role, secondary_config_version, catalogs)
+#### /var/named/celikpanel/generations/386afd2d26e1245ace0735b1bb071b5fb992ae43975c93738a09b59add15a89b/receipt.json root:root 444 2026-09-30 08:25:51.158501381 +0000
+  schema = "celikpanel-bind-generation-receipt/v2"
+  pairing.role = "primary"
+  pairing.local_ip = "192.0.2.11"
+  pairing.peer_ip = "192.0.2.10"
+  pairing.local_catalog = "catalog-c000020b.celikpanel.invalid"
+  pairing.peer_catalog = "catalog-c000020a.celikpanel.invalid"
+  pairing.catalog_serial = 4
+  (secondary_config_version key present: False )
+#### /var/named/celikpanel/generations/39043e6341f0c7cf18b98fc3e9a70967bf2b020a3a690c183a2b6c3789aae666/receipt.json root:root 444 2026-09-30 08:25:09.714156158 +0000
+  schema = "celikpanel-bind-generation-receipt/v2"
+  pairing.role = "primary"
+  pairing.local_ip = "192.0.2.11"
+  pairing.peer_ip = "192.0.2.10"
+  pairing.local_catalog = "catalog-c000020b.celikpanel.invalid"
+  pairing.peer_catalog = "catalog-c000020a.celikpanel.invalid"
+  pairing.catalog_serial = 3
+  (secondary_config_version key present: False )
+#### /var/named/celikpanel/generations/466800d9d456674ab94611054813fa37a73348db9484e1b2ceb3ef06cbb7a13d/receipt.json root:root 444 2026-09-30 08:24:03.624613061 +0000
+  schema = "celikpanel-bind-generation-receipt/v2"
+  pairing.role = "primary"
+  pairing.local_ip = "192.0.2.11"
+  pairing.peer_ip = "192.0.2.10"
+  pairing.local_catalog = "catalog-c000020b.celikpanel.invalid"
+  pairing.peer_catalog = "catalog-c000020a.celikpanel.invalid"
+  pairing.catalog_serial = 1
+  (secondary_config_version key present: False )
+#### /var/named/celikpanel/generations/89b15e87347caaf6c5a56ab9e920f6c2b2bdf9a329fbcf15a3b17382487f5411/receipt.json root:root 444 2026-09-30 08:25:04.494116812 +0000
+  schema = "celikpanel-bind-generation-receipt/v2"
+  pairing.role = "primary"
+  pairing.local_ip = "192.0.2.11"
+  pairing.peer_ip = "192.0.2.10"
+  pairing.local_catalog = "catalog-c000020b.celikpanel.invalid"
+  pairing.peer_catalog = "catalog-c000020a.celikpanel.invalid"
+  pairing.catalog_serial = 2
+  (secondary_config_version key present: False )
+#### /var/named/celikpanel/generations/8eea8a33672010fb9f44a639e5444fda0013d2210601a486235aabf4d4ce3d5f/receipt.json root:root 444 2026-09-30 08:24:46.379906719 +0000
+  schema = "celikpanel-bind-generation-receipt/v2"
+  pairing.role = "primary"
+  pairing.local_ip = "192.0.2.11"
+  pairing.peer_ip = "192.0.2.10"
+  pairing.local_catalog = "catalog-c000020b.celikpanel.invalid"
+  pairing.peer_catalog = "catalog-c000020a.celikpanel.invalid"
+  pairing.catalog_serial = 2
+  (secondary_config_version key present: False )
+#### /var/named/celikpanel/generations/cc8aba3da31da3b54c9d49ee0756269564ccf464d2fd76c14711bd7cf55644ef/receipt.json root:root 444 2026-09-30 08:25:00.187072163 +0000
+  schema = "celikpanel-bind-generation-receipt/v2"
+  pairing.role = "primary"
+  pairing.local_ip = "192.0.2.11"
+  pairing.peer_ip = "192.0.2.10"
+  pairing.local_catalog = "catalog-c000020b.celikpanel.invalid"
+  pairing.peer_catalog = "catalog-c000020a.celikpanel.invalid"
+  pairing.catalog_serial = 2
+  (secondary_config_version key present: False )
+#### /var/named/celikpanel/generations/d168fc22da36eb60ecc7a14e5db67eca902fff6e85f099b079229a3279435119/receipt.json root:root 444 2026-09-30 08:24:54.902012565 +0000
+  schema = "celikpanel-bind-generation-receipt/v2"
+  pairing.role = "primary"
+  pairing.local_ip = "192.0.2.11"
+  pairing.peer_ip = "192.0.2.10"
+  pairing.local_catalog = "catalog-c000020b.celikpanel.invalid"
+  pairing.peer_catalog = "catalog-c000020a.celikpanel.invalid"
+  pairing.catalog_serial = 2
+  (secondary_config_version key present: False )
+### current generation pointer(s)
+/var/named/celikpanel/current -> generations/386afd2d26e1245ace0735b1bb071b5fb992ae43975c93738a09b59add15a89b
+### named journal lines naming 127.0.0.1 or ::1 with denied/transfer (all boots)
+### named journal lines with denied (any client, all boots)
+### inspector sudo lines (all boots)
+(end)

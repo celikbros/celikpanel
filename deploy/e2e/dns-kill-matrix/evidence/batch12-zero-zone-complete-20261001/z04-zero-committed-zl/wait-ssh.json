@@ -1,0 +1,45 @@
+{
+  "action": "wait-ssh",
+  "cell_id": "pdns-switch__committed__after-write__paired-primary__peer-reachable",
+  "commands": {
+    "arch": [
+      "ssh",
+      "-o",
+      "BatchMode=yes",
+      "-o",
+      "ConnectTimeout=5",
+      "-o",
+      "StrictHostKeyChecking=accept-new",
+      "-o",
+      "HashKnownHosts=no",
+      "-o",
+      "UserKnownHostsFile=/var/tmp/cp-b12-1001/r1/cells/7392457812ac089a866de6ec/ssh-known-hosts",
+      "-i",
+      "/var/tmp/cp-b12-1001/r1/id_ed25519",
+      "-p",
+      "2202",
+      "celik@127.0.0.1",
+      "cloud-init status --wait >/dev/null && test -e /var/lib/cloud/instance/boot-finished && test -e /etc/celikpanel-dns-kill-matrix-ready"
+    ],
+    "debian13": [
+      "ssh",
+      "-o",
+      "BatchMode=yes",
+      "-o",
+      "ConnectTimeout=5",
+      "-o",
+      "StrictHostKeyChecking=accept-new",
+      "-o",
+      "HashKnownHosts=no",
+      "-o",
+      "UserKnownHostsFile=/var/tmp/cp-b12-1001/r1/cells/7392457812ac089a866de6ec/ssh-known-hosts",
+      "-i",
+      "/var/tmp/cp-b12-1001/r1/id_ed25519",
+      "-p",
+      "2201",
+      "celik@127.0.0.1",
+      "cloud-init status --wait >/dev/null && test -e /var/lib/cloud/instance/boot-finished && test -e /etc/celikpanel-dns-kill-matrix-ready"
+    ]
+  },
+  "dry_run": false
+}

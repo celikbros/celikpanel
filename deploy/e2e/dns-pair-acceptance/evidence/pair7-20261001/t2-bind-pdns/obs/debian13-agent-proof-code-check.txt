@@ -1,0 +1,25 @@
+## 2026-09-30T08:28:04Z Agent journal (all boots): lines matching the pair7 check strings
+journal lines total: 34
+boots: 3
+count[DNS peer proof could not run]=0
+count[dns_peer_proof_internal]=0
+count[dns_peer_owner_edit_unknown]=0
+count[dns_peer_enrollment_required]=0
+count[dns_peer_inspection_unknown]=0
+count[dns_peer_catalog_transfer_refused]=0
+count[dns_peer_journal_unknown]=0
+count[dns_peer_proof_timeout]=0
+count[dns_peer_native_unknown]=0
+count[step times]=0
+count[inspector answer]=0
+count[stopped at step]=0
+count[admitted the PowerDNS daemon]=0
+count[observed different evidence]=0
+## pair7 new Agent lines (all boots): step times / inspector answer / stopped at step / admitted re-stamp / observed different evidence
+## ledger file(s): code occurrences
+/var/lib/celikpanel-agent-private/service-mutations.json count[dns_peer_proof_internal]=0
+/var/lib/celikpanel-agent-private/service-mutations.json count[dns_peer_owner_edit_unknown]=0
+/var/lib/celikpanel-agent-private/service-mutations.json count[dns_peer_enrollment_required]=0
+/var/lib/celikpanel-agent-private/service-mutations.json count[dns_peer_journal_unknown]=0
+/var/lib/celikpanel-agent-private/service-mutations.json count[dns_peer_proof_timeout]=0
+(end)

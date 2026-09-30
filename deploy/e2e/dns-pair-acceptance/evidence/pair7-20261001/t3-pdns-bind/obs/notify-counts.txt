@@ -1,0 +1,12 @@
+== /root/cp-pair7/obs/p7t3/debian13-pdns-notify-journal.txt
+Notification request to host ...:53 : 13
+Notification request (any) : 13
+spurious notify answer : 0
+:0 failed after retries : 0
+failed after retries (any) : 1
+Received NOTIFY (incoming) : 0
+== /root/cp-pair7/obs/p7t3/arch-bind-notify-journal.txt
+received notify : 16
+      9 catalog-c000020a.celikpanel.invalid
+      7 pair-accept.test
+sending notifies : 6

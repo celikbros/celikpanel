@@ -1,0 +1,36 @@
+{
+  "catalog_status": {
+    "rndc": {
+      "argv": [
+        "/usr/sbin/rndc",
+        "zonestatus",
+        "catalog-c000020a.celikpanel.invalid"
+      ],
+      "output": "name: catalog-c000020a.celikpanel.invalid\ntype: primary\nfiles: /var/cache/bind/celikpanel/generations/878d2e67c68274688912fa99d0477a26325db409db3d4c9e539510530e739172/zones/60d6a3773f88bbeb6c3e8d58aee4a38c20e57e9074ec06dfd8605d6f8d791299.zone\nserial: 4\nnodes: 3\nlast loaded: Wed, 30 Sep 2026 08:16:50 GMT\nsecure: no\ndynamic: no\nreconfigurable via modzone: no",
+      "returncode": 0
+    },
+    "serial": "4",
+    "state": "loaded",
+    "type": "primary"
+  },
+  "command": "native",
+  "engine": "bind",
+  "native_state": "present",
+  "returncode": 0,
+  "zone": "pair-accept.test",
+  "zone_files": [],
+  "zone_status": {
+    "rndc": {
+      "argv": [
+        "/usr/sbin/rndc",
+        "zonestatus",
+        "pair-accept.test"
+      ],
+      "output": "name: pair-accept.test\ntype: primary\nfiles: /var/cache/bind/celikpanel/generations/878d2e67c68274688912fa99d0477a26325db409db3d4c9e539510530e739172/zones/027b232cc24e70e82f06a8e88d66283f8c48d7a0d8a0c31cdf47809f64d2596f.zone\nserial: 2026093001\nnodes: 4\nlast loaded: Wed, 30 Sep 2026 08:16:49 GMT\nsecure: no\ndynamic: no\nreconfigurable via modzone: no",
+      "returncode": 0
+    },
+    "serial": "2026093001",
+    "state": "loaded",
+    "type": "primary"
+  }
+}

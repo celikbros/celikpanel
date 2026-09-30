@@ -1,0 +1,9 @@
+pending delete job started_at=2026-09-30T08:51:20.914261561Z
+gate opens at 2026-09-30T08:52:50Z (started_at + 90 s); now 2026-09-30T08:52:07.620Z
+gate open at 2026-09-30T08:52:51.687Z
+== primary pdns.service CATALOG-HASH lines (this boot)
+2026-09-30T08:50:20.541280+00:00 dns-debian13 pdns_server[5345]: new CATALOG-HASH '47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T08:51:20.643124+00:00 dns-debian13 pdns_server[5345]: new CATALOG-HASH '1Rf5KuuzsJMQRGXVLYxlmzvq+Z93Mwk4oSSCrR9KFCA=' for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T08:52:20.708229+00:00 dns-debian13 pdns_server[5345]: new CATALOG-HASH '47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' for zone 'catalog-c000020a.celikpanel.invalid'
+== served catalog SOA (primary, UDP) now
+{"server": "192.0.2.10", "qname": "catalog-c000020a.celikpanel.invalid", "qtype": "SOA", "transport": "udp", "id_match": true, "aa": true, "tc": false, "rcode": 0, "answers": [1790758340]}

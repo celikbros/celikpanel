@@ -1,0 +1,80 @@
+2026-09-30T08:36:19.252901+00:00 dns-arch sshd-session[1460]: Received disconnect from 10.0.2.2 port 50862:11: disconnected by user
+2026-09-30T08:36:21.723210+00:00 dns-arch named[439]: client @0x7f985fc48c00 192.0.2.10#45087 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790757185)
+2026-09-30T08:36:21.724086+00:00 dns-arch named[439]: client @0x7f985fc48c00 192.0.2.10#45087 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 230 bytes, 0.001 secs (230000 bytes/sec) (serial 1790757185)
+2026-09-30T08:36:22.594970+00:00 dns-arch named[439]: client @0x7f9862ae4c00 192.0.2.10#35865 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790757185)
+2026-09-30T08:36:22.595477+00:00 dns-arch named[439]: client @0x7f9862ae4c00 192.0.2.10#35865 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 230 bytes, 0.001 secs (230000 bytes/sec) (serial 1790757185)
+2026-09-30T08:36:24.417660+00:00 dns-arch named[439]: client @0x7f9862ae3000 192.0.2.10#12432: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T08:36:24.417708+00:00 dns-arch named[439]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#12432: no serial
+2026-09-30T08:36:24.417828+00:00 dns-arch named[439]: client @0x7f9862ae4c00 192.0.2.10#12432: received notify for zone 'extra-accept.test': NOTAUTH
+2026-09-30T08:36:24.419648+00:00 dns-arch named[439]: zone catalog-c000020a.celikpanel.invalid/IN: Transfer started.
+2026-09-30T08:36:24.420163+00:00 dns-arch named[439]: 0x7f985fc3f000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: connected using 192.0.2.10#53
+2026-09-30T08:36:24.463370+00:00 dns-arch named[439]: zone catalog-c000020a.celikpanel.invalid/IN: transferred serial 1790757186
+2026-09-30T08:36:24.463393+00:00 dns-arch named[439]: 0x7f985fc3f000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer status: success
+2026-09-30T08:36:24.463398+00:00 dns-arch named[439]: 0x7f985fc3f000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer completed: 3 messages, 6 records, 429 bytes, 0.043 secs (9976 bytes/sec) (serial 1790757186)
+2026-09-30T08:36:24.463404+00:00 dns-arch named[439]: catz: catalog-c000020a.celikpanel.invalid: reload start
+2026-09-30T08:36:24.463641+00:00 dns-arch named[439]: catz: updating catalog zone 'catalog-c000020a.celikpanel.invalid' with serial 1790757186
+2026-09-30T08:36:24.463698+00:00 dns-arch named[439]: catz: adding zone 'extra-accept.test' from catalog 'catalog-c000020a.celikpanel.invalid' - success
+2026-09-30T08:36:24.463996+00:00 dns-arch named[439]: catz: catalog-c000020a.celikpanel.invalid: reload done: success
+2026-09-30T08:36:24.465213+00:00 dns-arch named[439]: zone extra-accept.test/IN: Transfer started.
+2026-09-30T08:36:24.465727+00:00 dns-arch named[439]: 0x7f985fc3f000: transfer of 'extra-accept.test/IN' from 192.0.2.10#53: connected using 192.0.2.10#53
+2026-09-30T08:36:24.507406+00:00 dns-arch named[439]: zone extra-accept.test/IN: transferred serial 2026093001
+2026-09-30T08:36:24.507437+00:00 dns-arch named[439]: 0x7f985fc3f000: transfer of 'extra-accept.test/IN' from 192.0.2.10#53: Transfer status: success
+2026-09-30T08:36:24.507443+00:00 dns-arch named[439]: 0x7f985fc3f000: transfer of 'extra-accept.test/IN' from 192.0.2.10#53: Transfer completed: 3 messages, 12 records, 534 bytes, 0.041 secs (13024 bytes/sec) (serial 2026093001)
+2026-09-30T08:36:24.507457+00:00 dns-arch named[439]: zone extra-accept.test/IN: sending notifies (serial 2026093001)
+2026-09-30T08:36:25.510960+00:00 dns-arch named[439]: client @0x7f985fc48c00 192.0.2.10#54369 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790757186)
+2026-09-30T08:36:25.511348+00:00 dns-arch named[439]: client @0x7f985fc48c00 192.0.2.10#54369 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 6 records, 290 bytes, 0.001 secs (290000 bytes/sec) (serial 1790757186)
+2026-09-30T08:36:26.312929+00:00 dns-arch sudo[1468]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:36:26.314370+00:00 dns-arch sshd-session[1467]: Received disconnect from 10.0.2.2 port 48646:11: disconnected by user
+2026-09-30T08:36:26.573678+00:00 dns-arch named[439]: received control channel command 'zonestatus extra-accept.test'
+2026-09-30T08:36:26.585006+00:00 dns-arch named[439]: received control channel command 'zonestatus catalog-c000020a.celikpanel.invalid'
+2026-09-30T08:36:26.596034+00:00 dns-arch sudo[1476]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:36:26.597634+00:00 dns-arch sshd-session[1475]: Received disconnect from 10.0.2.2 port 48652:11: disconnected by user
+2026-09-30T08:36:27.542964+00:00 dns-arch named[439]: client @0x7f985fc48c00 192.0.2.10#38703 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790757186)
+2026-09-30T08:36:27.543179+00:00 dns-arch named[439]: client @0x7f985fc48c00 192.0.2.10#38703 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 6 records, 290 bytes, 0.001 secs (290000 bytes/sec) (serial 1790757186)
+2026-09-30T08:36:28.486981+00:00 dns-arch named[439]: client @0x7f985fc48c00 192.0.2.10#46895 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790757186)
+2026-09-30T08:36:28.487180+00:00 dns-arch named[439]: client @0x7f985fc48c00 192.0.2.10#46895 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 6 records, 290 bytes, 0.001 secs (290000 bytes/sec) (serial 1790757186)
+2026-09-30T08:36:30.418629+00:00 dns-arch named[439]: client @0x7f9862ae4c00 192.0.2.10#12432: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T08:36:30.418657+00:00 dns-arch named[439]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#12432: no serial
+2026-09-30T08:36:30.420702+00:00 dns-arch named[439]: zone catalog-c000020a.celikpanel.invalid/IN: Transfer started.
+2026-09-30T08:36:30.421392+00:00 dns-arch named[439]: 0x7f985fc3f000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: connected using 192.0.2.10#53
+2026-09-30T08:36:30.464519+00:00 dns-arch named[439]: zone catalog-c000020a.celikpanel.invalid/IN: transferred serial 1790757187
+2026-09-30T08:36:30.464573+00:00 dns-arch named[439]: 0x7f985fc3f000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer status: success
+2026-09-30T08:36:30.464585+00:00 dns-arch named[439]: 0x7f985fc3f000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer completed: 3 messages, 5 records, 369 bytes, 0.043 secs (8581 bytes/sec) (serial 1790757187)
+2026-09-30T08:36:30.464607+00:00 dns-arch named[439]: catz: catalog-c000020a.celikpanel.invalid: reload start
+2026-09-30T08:36:30.465257+00:00 dns-arch named[439]: catz: updating catalog zone 'catalog-c000020a.celikpanel.invalid' with serial 1790757187
+2026-09-30T08:36:30.465344+00:00 dns-arch named[439]: catz: deleting zone 'extra-accept.test' from catalog 'catalog-c000020a.celikpanel.invalid' - success
+2026-09-30T08:36:30.465534+00:00 dns-arch named[439]: catz: catz_delzone_cb: zone 'extra-accept.test' deleted
+2026-09-30T08:36:30.465640+00:00 dns-arch named[439]: catz: catalog-c000020a.celikpanel.invalid: reload done: success
+2026-09-30T08:36:31.459093+00:00 dns-arch named[439]: client @0x7f9862ae6800 192.0.2.10#42153 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790757187)
+2026-09-30T08:36:31.459352+00:00 dns-arch named[439]: client @0x7f9862ae6800 192.0.2.10#42153 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 230 bytes, 0.001 secs (230000 bytes/sec) (serial 1790757187)
+2026-09-30T08:36:31.811090+00:00 dns-arch named[439]: client @0x7f985fc48c00 192.0.2.10#57295 (extra-accept.test): bad zone transfer request: 'extra-accept.test/IN': non-authoritative zone (NOTAUTH)
+2026-09-30T08:36:39.507467+00:00 dns-arch sshd-session[1525]: Accepted publickey for celikpeer from 192.0.2.10 port 58584 ssh2: ED25519 SHA256:dnYGrVicPtXuRPeftXAjKiHXCs+vqKMlsdVpQF0h/q8
+2026-09-30T08:36:39.509152+00:00 dns-arch sshd-session[1525]: pam_unix(sshd:session): session opened for user celikpeer(uid=968) by celikpeer(uid=0)
+2026-09-30T08:36:39.584259+00:00 dns-arch systemd-logind[371]: New session '44' of user 'celikpeer' with class 'user' and type 'tty'.
+2026-09-30T08:36:39.602468+00:00 dns-arch (systemd)[1531]: pam_warn(systemd-user:setcred): function=[pam_sm_setcred] flags=0x8002 service=[systemd-user] terminal=[] user=[celikpeer] ruser=[<unknown>] rhost=[<unknown>]
+2026-09-30T08:36:39.602975+00:00 dns-arch (systemd)[1531]: pam_unix(systemd-user:session): session opened for user celikpeer(uid=968) by celikpeer(uid=0)
+2026-09-30T08:36:39.604664+00:00 dns-arch systemd-logind[371]: New session '45' of user 'celikpeer' with class 'manager-early' and type 'unspecified'.
+2026-09-30T08:36:39.697098+00:00 dns-arch systemd[1]: Started Session 44 of User celikpeer.
+2026-09-30T08:36:39.756178+00:00 dns-arch sudo[1542]: celikpeer : PWD=/var/lib/bind-peer-inspector ; USER=root ; COMMAND=/usr/local/libexec/celikpanel-bind-peer-inspect
+2026-09-30T08:36:39.756491+00:00 dns-arch sudo[1542]: pam_unix(sudo:session): session opened for user root(uid=0) by celikpeer(uid=968)
+2026-09-30T08:36:39.825961+00:00 dns-arch named[439]: received control channel command 'zonestatus catalog-c000020a.celikpanel.invalid'
+2026-09-30T08:36:39.839417+00:00 dns-arch named[439]: client @0x7f985fc48c00 127.0.0.1#44857 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790757187)
+2026-09-30T08:36:39.839583+00:00 dns-arch named[439]: client @0x7f985fc48c00 127.0.0.1#44857 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 269 bytes, 0.001 secs (269000 bytes/sec) (serial 1790757187)
+2026-09-30T08:36:39.850586+00:00 dns-arch named[439]: received control channel command 'zonestatus extra-accept.test'
+2026-09-30T08:36:39.891548+00:00 dns-arch named[439]: received control channel command 'zonestatus catalog-c000020a.celikpanel.invalid'
+2026-09-30T08:36:39.903398+00:00 dns-arch named[439]: client @0x7f9862ae6800 127.0.0.1#44860 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790757187)
+2026-09-30T08:36:39.903604+00:00 dns-arch named[439]: client @0x7f9862ae6800 127.0.0.1#44860 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 269 bytes, 0.001 secs (269000 bytes/sec) (serial 1790757187)
+2026-09-30T08:36:39.915893+00:00 dns-arch named[439]: received control channel command 'zonestatus extra-accept.test'
+2026-09-30T08:36:39.918982+00:00 dns-arch sudo[1542]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:36:39.963350+00:00 dns-arch sshd-session[1541]: Connection closed by 192.0.2.10 port 58584
+2026-09-30T08:36:39.964090+00:00 dns-arch sshd-session[1525]: pam_unix(sshd:session): session closed for user celikpeer
+2026-09-30T08:36:41.383333+00:00 dns-arch named[439]: client @0x7f985fc48c00 192.0.2.10#55071 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790757187)
+2026-09-30T08:36:41.383595+00:00 dns-arch named[439]: client @0x7f985fc48c00 192.0.2.10#55071 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 230 bytes, 0.001 secs (230000 bytes/sec) (serial 1790757187)
+2026-09-30T08:36:41.735288+00:00 dns-arch named[439]: client @0x7f9862ae6800 192.0.2.10#56565 (extra-accept.test): bad zone transfer request: 'extra-accept.test/IN': non-authoritative zone (NOTAUTH)
+2026-09-30T08:36:50.182307+00:00 dns-arch (sd-pam)[1534]: pam_unix(systemd-user:session): session closed for user celikpeer
+2026-09-30T08:36:51.633305+00:00 dns-arch named[439]: received control channel command 'zonestatus extra-accept.test'
+2026-09-30T08:36:51.644036+00:00 dns-arch named[439]: received control channel command 'zonestatus catalog-c000020a.celikpanel.invalid'
+2026-09-30T08:36:51.656659+00:00 dns-arch sudo[1599]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:36:51.658025+00:00 dns-arch sshd-session[1598]: Received disconnect from 10.0.2.2 port 39692:11: disconnected by user
+2026-09-30T08:36:52.149745+00:00 dns-arch sudo[1613]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:36:52.151718+00:00 dns-arch sshd-session[1612]: Received disconnect from 10.0.2.2 port 39698:11: disconnected by user

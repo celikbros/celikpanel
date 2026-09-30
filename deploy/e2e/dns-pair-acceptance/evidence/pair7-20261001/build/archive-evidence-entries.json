@@ -1,0 +1,30 @@
+{
+  "archive": "/var/tmp/cp-pair7-dist/2efc4de20038885294cef414178dfaf5f8235f27-acceptance-license/celikpanel-v0.0.0-pairaccept-acceptance-license.2efc4de20038-acceptance-license.tar.gz",
+  "note": "recorded observation only; entries are counted, nothing is refused on them",
+  "schema": "celikpanel/dns-pair-acceptance-archive-observation/v1",
+  "sha256": "cad46975d87bb3c9c5ce7a1b52803eacf087ae256e868f8ef63ec54618ca6c32",
+  "total_entries": 645,
+  "under_deploy_e2e": {
+    "directories": 14,
+    "entries": 362,
+    "files": 348,
+    "sample": [
+      "deploy/e2e/dns-kill-matrix",
+      "deploy/e2e/dns-kill-matrix/NATIVE-BIND-ADOPTION-OWNER-CLI-20260927.md",
+      "deploy/e2e/dns-kill-matrix/NATIVE-BIND-INSPECTOR-CHANNEL-20260926.md",
+      "deploy/e2e/dns-kill-matrix/NATIVE-BIND-INSPECTOR-CHANNEL.md",
+      "deploy/e2e/dns-kill-matrix/NATIVE-BIND-PAIR-CURRENT-20260925.md",
+      "deploy/e2e/dns-kill-matrix/NATIVE-BIND-PAIR-TARGET-STAGED-20260926.md",
+      "deploy/e2e/dns-kill-matrix/NATIVE-BIND-PDNS-ABSENT-REBOOT-STAGE2-20260927.md",
+      "deploy/e2e/dns-kill-matrix/NATIVE-BIND-PDNS-AUTHORITY-20260927.md",
+      "deploy/e2e/dns-kill-matrix/NATIVE-BIND-PDNS-CURRENT-SOURCE-SMOKE-20260927.md",
+      "deploy/e2e/dns-kill-matrix/NATIVE-BIND-PDNS-PEER-STAGE2-20260927.md"
+    ]
+  },
+  "under_evidence_dir": {
+    "directories": 0,
+    "entries": 0,
+    "files": 0,
+    "sample": []
+  }
+}

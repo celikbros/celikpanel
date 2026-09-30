@@ -1,0 +1,2 @@
+Only in /root/cp-b12-src/deploy/e2e/dns-kill-matrix: __pycache__
+diff rc=1 (web/dist excluded: the pair7 Windows npm run build of git archive 2efc4de2 web, copied in; not tracked)

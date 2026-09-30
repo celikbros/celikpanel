@@ -1,0 +1,5 @@
+#!/bin/bash
+W=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/p7b12
+sed 's/ \*\./  ./' $W/web-dist-windows-build.sha256 | tr -d '\r' | LC_ALL=C sort -k2 > /root/cp-pair7/logs/web-dist-windows-normalized.sha256
+LC_ALL=C sort -k2 /root/cp-pair7/logs/web-dist-host.sha256 > /root/cp-pair7/logs/web-dist-host-sorted.sha256
+cmp /root/cp-pair7/logs/web-dist-host-sorted.sha256 /root/cp-pair7/logs/web-dist-windows-normalized.sha256 && echo WEB-DIST-HOST-EQUALS-WINDOWS

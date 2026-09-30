@@ -1,0 +1,71 @@
+{
+  "outcome": "response",
+  "panel": "debian13",
+  "purpose": "Domains handleDelete (owner retries the same deletion)",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:28443"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:28443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "DELETE",
+    "path": "/api/v1/domains/1"
+  },
+  "response": {
+    "elapsed_seconds": 24.074,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Wed, 30 Sep 2026 08:16:42 GMT"
+      ],
+      [
+        "Content-Length",
+        "49"
+      ]
+    ],
+    "json": {
+      "domain": "pair-accept.test",
+      "status": "deleted"
+    },
+    "status": 200,
+    "text": null
+  }
+}

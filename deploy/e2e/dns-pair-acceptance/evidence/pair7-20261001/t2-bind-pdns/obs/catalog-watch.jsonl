@@ -1,0 +1,13 @@
+{"t":"2026-09-30T08:21:07Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020b.celikpanel.invalid", "command": "catalog", "error": "ConnectionRefusedError: [Errno 111] Connection refused", "server": "192.0.2.11", "transferred": false}}
+{"t":"2026-09-30T08:22:06Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020b.celikpanel.invalid", "command": "catalog", "error": "TimeoutError: timed out", "server": "192.0.2.11", "transferred": false}}
+{"t":"2026-09-30T08:22:16Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020b.celikpanel.invalid", "command": "catalog", "error": "ConnectionRefusedError: [Errno 111] Connection refused", "server": "192.0.2.11", "transferred": false}}
+{"t":"2026-09-30T08:24:10Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020b.celikpanel.invalid", "command": "catalog", "members": [], "serial": 1, "server": "192.0.2.11", "transferred": true}}
+{"t":"2026-09-30T08:24:53Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020b.celikpanel.invalid", "command": "catalog", "members": ["pair-accept.test."], "serial": 2, "server": "192.0.2.11", "transferred": true}}
+{"t":"2026-09-30T08:25:13Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020b.celikpanel.invalid", "command": "catalog", "members": [], "serial": 3, "server": "192.0.2.11", "transferred": true}}
+{"t":"2026-09-30T08:25:54Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020b.celikpanel.invalid", "command": "catalog", "members": ["pair-accept.test."], "serial": 4, "server": "192.0.2.11", "transferred": true}}
+{"t":"2026-09-30T08:26:05Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020b.celikpanel.invalid", "command": "catalog", "error": "ConnectionRefusedError: [Errno 111] Connection refused", "server": "192.0.2.11", "transferred": false}}
+{"t":"2026-09-30T08:26:22Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020b.celikpanel.invalid", "command": "catalog", "members": ["pair-accept.test."], "serial": 4, "server": "192.0.2.11", "transferred": true}}
+{"raw": "{\"t\":\"2026-09-30T08:27:08Z\",\"catalog_axfr_from_secondary\":Connection to 127.0.0.1 port 2201 timed out"}
+{"raw": "}"}
+{"t":"2026-09-30T08:27:18Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020b.celikpanel.invalid", "command": "catalog", "members": ["pair-accept.test."], "serial": 4, "server": "192.0.2.11", "transferred": true}}
+{"t":"2026-09-30T08:27:38Z","watch":"run ended"}

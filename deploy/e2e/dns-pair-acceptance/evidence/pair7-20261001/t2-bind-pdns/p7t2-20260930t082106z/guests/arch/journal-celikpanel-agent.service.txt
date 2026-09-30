@@ -1,0 +1,30 @@
+2026-09-30T08:21:50.015832+00:00 dns-arch systemd[1]: Starting CelikPanel privileged agent...
+2026-09-30T08:21:50.039993+00:00 dns-arch systemd[1]: Started CelikPanel privileged agent.
+2026-09-30T08:21:50.062374+00:00 dns-arch agent[7034]: 2026/09/30 08:21:50 Starting CelikPanel Agent...
+2026-09-30T08:21:50.070489+00:00 dns-arch agent[7034]: 2026/09/30 08:21:50 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-30T08:21:50.070641+00:00 dns-arch agent[7034]: 2026/09/30 08:21:50 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-09-30T08:21:54.834195+00:00 dns-arch systemd[1]: Stopping CelikPanel privileged agent...
+2026-09-30T08:21:54.839840+00:00 dns-arch systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-30T08:21:54.842186+00:00 dns-arch systemd[1]: Stopped CelikPanel privileged agent.
+-- Boot 0796b4ba4df64bdc9cdc73c0e840e77b --
+2026-09-30T08:22:13.543182+00:00 dns-arch systemd[1]: Starting CelikPanel privileged agent...
+2026-09-30T08:22:13.583770+00:00 dns-arch systemd[1]: Started CelikPanel privileged agent.
+2026-09-30T08:22:13.683710+00:00 dns-arch agent[408]: 2026/09/30 08:22:13 Starting CelikPanel Agent...
+2026-09-30T08:22:13.696715+00:00 dns-arch agent[408]: 2026/09/30 08:22:13 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-30T08:24:02.587576+00:00 dns-arch agent[408]: 2026/09/30 08:24:02 DNS switch (request 420b2c48e1a7137ce39d880d63a6947b): BIND rndc key /etc/rndc.key is product_created
+2026-09-30T08:24:10.995955+00:00 dns-arch agent[408]: 2026/09/30 08:24:10 bind primary pair readiness proof failed: DNS peer catalog AXFR is unavailable
+2026-09-30T08:25:13.319541+00:00 dns-arch agent[408]: 2026/09/30 08:25:13 bind zone publication remains pending for pair-accept.test at epoch 1: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T08:25:13.319541+00:00 dns-arch agent[408]: dns_peer_enrollment_required
+2026-09-30T08:25:15.244113+00:00 dns-arch agent[408]: 2026/09/30 08:25:15 DNS zone V3 recovery remains pending for pair-accept.test: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T08:25:15.244113+00:00 dns-arch agent[408]: dns_peer_enrollment_required
+2026-09-30T08:25:42.839616+00:00 dns-arch agent[408]: 2026/09/30 08:25:42 DNS peer inspector answer for pair-accept.test (PowerDNS secondary): catalog_state=transferred member_state=absent native_state=unloaded; accepted
+2026-09-30T08:25:44.581596+00:00 dns-arch agent[408]: 2026/09/30 08:25:44 DNS peer proof for pair-accept.test (PowerDNS secondary) step times: prepare=1.581s challenge_write=7.415s exchange=414ms post_inspection=4.217s consume=9.458s; total 23.084s; outcome verified
+2026-09-30T08:26:02.910758+00:00 dns-arch systemd[1]: Stopping CelikPanel privileged agent...
+2026-09-30T08:26:02.913059+00:00 dns-arch systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-30T08:26:02.915055+00:00 dns-arch systemd[1]: Stopped CelikPanel privileged agent.
+2026-09-30T08:26:02.915379+00:00 dns-arch systemd[1]: celikpanel-agent.service: Consumed 26.611s CPU time over 3min 49.369s wall clock time, 211.7M memory peak.
+-- Boot 4e5d44f5a8f9428e99ff26f747d3fa46 --
+2026-09-30T08:27:17.872918+00:00 dns-arch systemd[1]: Starting CelikPanel privileged agent...
+2026-09-30T08:27:17.898576+00:00 dns-arch systemd[1]: Started CelikPanel privileged agent.
+2026-09-30T08:27:17.976198+00:00 dns-arch agent[733]: 2026/09/30 08:27:17 Starting CelikPanel Agent...
+2026-09-30T08:27:17.991791+00:00 dns-arch agent[733]: 2026/09/30 08:27:17 Agent listening on unix socket /run/celikpanel/agent.sock

@@ -1,0 +1,2 @@
+setsid -f nohup bash /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/p7b12/extra.sh > /dev/null 2>&1 < /dev/null
+sleep 20; cat /root/cp-pair7/obs/p7t3-extra/extra-runner.log | cut -c1-600

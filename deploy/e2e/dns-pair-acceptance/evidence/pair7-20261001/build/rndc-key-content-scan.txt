@@ -1,0 +1,4 @@
+digest files (host-only, not in the evidence): p7t1-arch.txt p7t1-debian13.txt p7t2-arch.txt p7t3-arch.txt 
+digests per file: p7t1-arch.txt=1 p7t1-debian13.txt=1 p7t2-arch.txt=1 p7t3-arch.txt=1 
+{"root": "/root/cp-pair7/pack", "digests_compared": 4, "files_scanned": 736, "tokens_hashed": 4915, "matches": 0}
+exit=0

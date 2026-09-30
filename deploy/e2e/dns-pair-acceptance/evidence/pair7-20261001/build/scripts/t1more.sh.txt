@@ -1,0 +1,4 @@
+bash /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/p7b12/journaldiag.sh p7t1 debian13 2201 | head -30
+bash /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/p7b12/guid.sh p7t1 > /root/cp-pair7/logs/p7t1-guid.txt 2>&1
+R=$(ls -d /var/tmp/cp-pair7-evidence/p7t1-* | tail -1)
+ls $R/steps/15-zone-delete/ $R/steps/15-zone-delete/api | head -60

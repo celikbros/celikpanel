@@ -1,0 +1,70 @@
+#!/bin/bash
+# Read-only collection after one pair7 topology run, guests still up.
+# usage: tcoll.sh LABEL SINCE UNTIL   (UTC "YYYY-MM-DD HH:MM:SS"; window around zone-delete)
+L=$1; SINCE=$2; UNTIL=$3
+W=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/p7b12
+case $L in
+  p7t1) C=pair-accept__bind-debian13__bind-arch__p7t1; PN=debian13; PP=2201; PE=bind; SN=arch; SP=2202; SE=bind; PIP=192.0.2.10; CAT=catalog-c000020a.celikpanel.invalid ;;
+  p7t2) C=pair-accept__bind-arch__pdns-debian13__p7t2; PN=arch; PP=2202; PE=bind; SN=debian13; SP=2201; SE=pdns; PIP=192.0.2.11; CAT=catalog-c000020b.celikpanel.invalid ;;
+  p7t3) C=pair-accept__pdns-debian13__bind-arch__p7t3; PN=debian13; PP=2201; PE=pdns; SN=arch; SP=2202; SE=bind; PIP=192.0.2.10; CAT=catalog-c000020a.celikpanel.invalid ;;
+  *) echo "unknown label"; exit 2 ;;
+esac
+H=$(printf %s "$C" | sha256sum | cut -c1-24)
+KH=/var/tmp/cp-pair7-work/cells/$H/ssh-known-hosts
+O=/root/cp-pair7/obs/$L; mkdir -p $O
+sshn() { port=$1; shift; timeout 180 ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$KH -i /var/tmp/cp-pair7-key/id_ed25519 -p $port celik@127.0.0.1 "$@"; }
+bash $W/ro-collect.sh $C $L $PN $PP $PE primary > /dev/null
+bash $W/ro-collect.sh $C $L $SN $SP $SE secondary > /dev/null
+bash $W/coll-extra.sh $C $L $PN $PP primary $PE > /dev/null
+bash $W/coll-extra.sh $C $L $SN $SP secondary $SE > /dev/null
+for n in "$PN:$PP:$PE" "$SN:$SP:$SE"; do IFS=: read node port eng <<< "$n"
+  if [[ $eng == bind ]]; then
+    bash $W/diag-bind-transfer.sh $C $L $node $port "$SINCE" > /dev/null
+    bash $W/diag-options.sh $C $L $node $port > /dev/null
+  fi
+  bash $W/ledgerjob.sh $C $L $node $port > /dev/null
+  # Agent journal: the three codes / proof-internal line, all boots (counts and matching lines)
+  sshn $port 'bash -s' > $O/$node-agent-proof-code-check.txt 2>&1 <<'R'
+echo "## $(date -u +%FT%TZ) Agent journal (all boots): lines matching the pair7 check strings"
+J=$(sudo -n journalctl -u celikpanel-agent.service --no-pager -o short-iso | grep -v -i secret)
+echo "journal lines total: $(printf '%s\n' "$J" | wc -l)"
+echo "boots: $(sudo -n journalctl --list-boots --no-pager | wc -l)"
+for s in 'DNS peer proof could not run' 'dns_peer_proof_internal' 'dns_peer_owner_edit_unknown' 'dns_peer_enrollment_required' 'dns_peer_inspection_unknown' 'dns_peer_catalog_transfer_refused' 'dns_peer_journal_unknown' 'dns_peer_proof_timeout' 'dns_peer_native_unknown' 'step times' 'inspector answer' 'stopped at step' 'admitted the PowerDNS daemon' 'observed different evidence'; do
+  echo "count[$s]=$(printf '%s\n' "$J" | grep -c -F "$s")"
+done
+printf '%s\n' "$J" | grep -F -e 'DNS peer proof could not run' -e 'dns_peer_proof_internal' -e 'dns_peer_owner_edit_unknown' -e 'dns_peer_journal_unknown' -e 'dns_peer_proof_timeout' | head -20
+echo "## pair7 new Agent lines (all boots): step times / inspector answer / stopped at step / admitted re-stamp / observed different evidence"
+printf '%s\n' "$J" | grep -F -e 'step times' -e 'inspector answer' -e 'stopped at step' -e 'admitted the PowerDNS daemon' -e 'observed different evidence' | head -40
+echo "## ledger file(s): code occurrences"
+for p in $(sudo -n find /var/lib -maxdepth 3 -name service-mutations.json 2>/dev/null); do
+  for s in dns_peer_proof_internal dns_peer_owner_edit_unknown dns_peer_enrollment_required dns_peer_journal_unknown dns_peer_proof_timeout; do echo "$p count[$s]=$(sudo -n grep -o -F "$s" $p | wc -l)"; done
+done
+echo "(end)"
+R
+done
+sshn $PP "sudo -n journalctl -u celikpanel-agent.service --no-pager -o short-iso --since '$SINCE' --until '$UNTIL' | grep -v -i secret | tail -200" > $O/$PN-agent-journal-zone-delete.txt 2>&1
+sshn $PP "sudo -n journalctl -u celikpanel-panel.service --no-pager -o short-iso --since '$SINCE' --until '$UNTIL' | tail -120" > $O/$PN-panel-journal-zone-delete.txt 2>&1
+sshn $SP "sudo -n journalctl --no-pager -o short-iso --since '$SINCE' --until '$UNTIL' | grep -v -E 'audit' | grep -i -E 'inspect|celikpeer|rndc|forced|denied|permission|transfer|named|pdns|sshd|sudo' | grep -v -i -E 'secret|tsig' | grep -v -E 'celik : |for celik from|user celik\b|celik\(uid=1000\)' | tail -200" > $O/$SN-inspector-journal-zone-delete.txt 2>&1
+if [[ $PE == bind ]]; then
+  sshn $PP "sudo -n journalctl --no-pager -o short-iso --since '$SINCE' --until '$UNTIL' _COMM=named | tail -150" > $O/$PN-named-journal-zone-delete.txt 2>&1
+else
+  sshn $PP "sudo -n journalctl -u pdns.service --no-pager -o short-iso --since '$SINCE' --until '$UNTIL' | grep -v -i -E 'secret|tsig' | tail -150" > $O/$PN-pdns-journal-zone-delete.txt 2>&1
+  sshn $PP sudo -n /usr/bin/python3 - < /root/cp-pair7/pdnsdb.py > $O/$PN-pdns-db-after.json 2>&1
+fi
+if [[ $SE == pdns ]]; then
+  sshn $SP 'bash -s' > $O/$SN-pdns-journal-summary.txt 2>&1 <<'R'
+echo "## $(date -u +%FT%TZ) pdns.service journal: line count, loglevel settings (names/values only), last 40 lines"
+sudo -n journalctl -u pdns.service --no-pager -o short-iso | wc -l
+sudo -n grep -r -h -E '^\s*(loglevel|log-dns-details|log-dns-queries)\s*=' /etc/powerdns 2>&1
+sudo -n journalctl -u pdns.service --no-pager -o short-iso | grep -v -i -E 'secret|tsig' | tail -40
+R
+  sshn $SP sudo -n /usr/bin/python3 - < /root/cp-pair7/pdnsdb.py > $O/$SN-pdns-db-after.json 2>&1
+fi
+PROBE=/root/cp-pair7/driver/deploy/e2e/dns-pair-acceptance/guest_probe.py
+sshn $PP sudo -n /usr/bin/python3 - native --engine $PE --zone pair-accept.test --catalog $CAT < $PROBE > $O/$PN-native-after-run.json 2>&1
+sshn $SP sudo -n /usr/bin/python3 - native --engine $SE --zone pair-accept.test --catalog $CAT < $PROBE > $O/$SN-native-after-run.json 2>&1
+sshn $SP sudo -n /usr/bin/python3 - catalog --server $PIP --catalog $CAT < $PROBE > $O/catalog-after-run.json 2>&1
+bash $W/counts.sh $L > $O/notify-counts.txt 2>&1
+ls -la $O
+for f in $O/*-agent-proof-code-check.txt; do echo "== $f"; cut -c1-300 $f; done
+for f in $O/*-ledger-dns-jobs.txt; do echo "== $f"; cut -c1-600 $f; done
