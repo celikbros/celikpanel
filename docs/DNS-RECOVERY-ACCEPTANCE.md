@@ -364,6 +364,27 @@ deletion does not name the owner tool; the Panel's screen text does. The
 port-0 notify lines of the unfixed build recurred; the secondary
 transferred every change within seconds (closed in source by `a6d93f06`).
 
+**2026-10-01, pair 4, product flow** ([evidence](../deploy/e2e/dns-pair-acceptance/evidence/pair4-20261001/README.md),
+product `96657d67` with the gate open, test-only license of D-027, driver
+`92fc5eee`, no driver patch, no pass-rule change). Rows 2, 3, 5, 6, 17.
+All three topologies passed install, license, setup, pair readiness, zone
+add, record add and record edit; all three stopped inside zone delete on
+two product defects. The run passes no row.
+
+| Topology (primary / secondary) | Reached | Stopped at |
+|---|---|---|
+| BIND / BIND; PowerDNS / BIND | the parentless deletion was left pending with `dns_peer_enrollment_required`; the owner enrollment with the packaged tools succeeded; the zone was already gone on both servers | the retry stayed pending as `dns_peer_inspection_unknown` for 300 s: the product's inspector on the managed BIND secondary needs a loopback catalog transfer, and the product allows transfers from the paired primary only; the guidance does not name the denied local transfer |
+| BIND (Arch) / PowerDNS | zone add, record add, record edit | domain deletion ran mail cleanup for a DNS-only domain; on Arch `/var/mail` is the distribution's stock symlink and no mail server is installed, so the safe open failed, the saga stopped in `mail_runtime_cleanup` with status unknown, and the screen showed the generic pending text with no actor and no action; the DNS deletion never started |
+
+Measured for the first time natively: the rndc key of `80bb4353` was
+created on every Arch BIND before named first started and recorded as
+product-created; Debian's package key was recorded as provided and left
+alone; rndc worked everywhere. The PowerDNS primary of `a6d93f06` sent every
+notify with port 53: zero spurious answers and zero port-0 failures over
+six mutations, one notify per zone per mutation received by the secondary.
+Zone re-add, the management-disabled reboot and management return did not
+run. Both defects have fixes in progress (component tests only).
+
 Native coverage of the source changes listed after batches 4 and 5:
 
 | Change | First native run that exercised it |

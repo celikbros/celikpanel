@@ -382,6 +382,29 @@ Düzeltilmemiş derlemenin 0 numaralı bağlantı noktası bildirim satırları
 tekrarlandı; ikincil her değişikliği saniyeler içinde aktardı (kaynakta
 `a6d93f06` ile kapatıldı).
 
+**1 Ekim 2026, çift 4, ürün akışı** ([kanıt](../deploy/e2e/dns-pair-acceptance/evidence/pair4-20261001/README.md),
+kapı açıkken ürün `96657d67`, D-027'nin yalnızca test amaçlı lisansı,
+sürücü `92fc5eee`, sürücü yaması yok, geçme kuralı değişikliği yok). Satır
+2, 3, 5, 6, 17. Üç topoloji de kurulum, lisanslama, ilk yapılandırma, çift
+hazırlığı, bölge ekleme, kayıt ekleme ve kayıt düzenlemeyi geçti; üçü de
+bölge silme içinde iki ürün kusurunda durdu. Bu çalıştırma hiçbir satırı
+geçirmiyor.
+
+| Topoloji (birincil / ikincil) | Ulaşılan | Durma noktası |
+|---|---|---|
+| BIND / BIND; PowerDNS / BIND | ebeveynsiz silme `dns_peer_enrollment_required` ile beklemede bırakıldı; paketlenmiş araçlarla sahip kaydı başarılı oldu; bölge iki sunucudan da çoktan kalkmıştı | yeniden deneme 300 sn boyunca `dns_peer_inspection_unknown` ile beklemede kaldı: ürünün yönetilen BIND ikincilindeki denetleyicisi yerel (loopback) katalog aktarımına ihtiyaç duyuyor, ürün ise aktarıma yalnızca çift birincilden izin veriyor; yönlendirme reddedilen yerel aktarımı adlandırmıyor |
+| BIND (Arch) / PowerDNS | bölge ekleme, kayıt ekleme, kayıt düzenleme | alan adı silme, yalnızca DNS'li bir alan adı için posta temizliği çalıştırdı; Arch'ta `/var/mail` dağıtımın hazır sembolik bağı ve posta sunucusu kurulu değil; güvenli açma başarısız oldu, akış `mail_runtime_cleanup` aşamasında bilinmeyen durumla durdu, ekran eylemci ve eylem içermeyen genel bekleme metnini gösterdi; DNS silme hiç başlamadı |
+
+İlk kez gerçek sistemde ölçülen: `80bb4353`'ün rndc anahtarı her Arch
+BIND'inde named ilk başlamadan önce oluşturuldu ve ürünün oluşturduğu olarak
+kaydedildi; Debian'ın paket anahtarı sağlanmış olarak kaydedildi ve
+dokunulmadı; rndc her yerde çalıştı. `a6d93f06`'nın PowerDNS birincili her
+bildirimi 53 numaralı bağlantı noktasıyla gönderdi: altı değişiklikte sıfır
+sahte yanıt ve sıfır 0 numaralı bağlantı noktası hatası, ikincil her
+değişiklik için bölge başına tek bildirim aldı. Bölge yeniden ekleme,
+yönetim kapalıyken yeniden açılış ve yönetimin dönüşü çalışmadı. İki
+kusurun da düzeltmesi sürüyor (yalnızca bileşen testleri).
+
 4. ve 5. gruplardan sonra listelenen kaynak değişikliklerinin gerçek
 sistemdeki kapsamı:
 
