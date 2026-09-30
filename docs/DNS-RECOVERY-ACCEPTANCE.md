@@ -337,6 +337,33 @@ the secondary as sent to port 0 and the answers as spurious; the BIND
 secondary transferred both zones regardless. No open-ended unknown state,
 no contradictory guidance, no `license_required` read this time.
 
+**2026-10-01, batch 9, c04 again and the zero-zone fresh paired PowerDNS primary** ([evidence](../deploy/e2e/dns-kill-matrix/evidence/batch9-pdns-primary-zero-zone-20261001/README.md),
+acceptance branch `accept/pdns-primary-gate-open-4` commit `3cceb29a`, gate
+open; the main line keeps the gate closed; seven cells through the public
+Agent RPC, each run once, no harness workaround, no re-run). Row 6, and row
+17 for the parentless deletion. Five passed, two stopped on a harness
+defect. The boundary held in all seven cuts.
+
+| Cell | Product behaviour observed | Verdict |
+|---|---|---|
+| one member, `target-started` cut, zone lifecycle, management-disabled reboot (batch 8r c04 again) | forward completion; add, edit, delete, re-add; after the reboot both servers served one serial at least the receipt's, equal to the producer SOA in the database, members as expected | **passed** with the post-publication rule; the batch 8r failure did not recur |
+| zero zones, pre-start cut at `target-staged` | Agent rolled the install back by itself to the pre-install state | **passed** |
+| zero zones, post-start cuts at `target-started` and `committed` | forward only; the catalog with zero members verified | **passed** |
+| zero zones, owner SQL edit after start | refused and held; DNS-only hold | **passed** |
+| zero zones, `committed` then zone lifecycle; `target-started` then zone lifecycle and reboot | add created the server's first zone on both servers; edit passed; the delete of the parentless child stayed pending with `dns_peer_enrollment_required`, both servers answered REFUSED for it, both catalogs returned to zero members; the owner enrollment was performed with the packaged tools | **stopped (harness)**: the trigger's resume path matched the pending job with the parent's name while the job carries the child's; the resume, the re-add and the reboot did not run |
+
+First native measurements with zero members: PowerDNS 4.9.17 writes
+`CATALOG-HASH` and re-stamps the producer serial to the epoch at first
+start; the state receipt, both servers and the database agree; the native
+BIND secondary serves the empty catalog as SOA, NS `invalid.`, `version`
+TXT `2` and no member; `notified_serial` stays 1. No second re-stamp
+without a membership change in windows of 3.5 to 10 minutes; the one
+observed came 120 s after the first and after the member set had changed.
+Guidance gap recorded: the Agent's ledger text for the pending parentless
+deletion does not name the owner tool; the Panel's screen text does. The
+port-0 notify lines of the unfixed build recurred; the secondary
+transferred every change within seconds (closed in source by `a6d93f06`).
+
 Native coverage of the source changes listed after batches 4 and 5:
 
 | Change | First native run that exercised it |

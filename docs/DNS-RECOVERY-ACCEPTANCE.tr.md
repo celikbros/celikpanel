@@ -354,6 +354,34 @@ gönderilmiş, yanıtları da sahte olarak kaydetti; BIND ikincili iki bölgeyi
 yine de aktardı. Bu kez açık uçlu bilinmeyen durum, çelişkili yönlendirme
 ve `license_required` okuması yok.
 
+**1 Ekim 2026, 9. grup, c04 yeniden ve sıfır bölgeli boş çift PowerDNS birincili** ([kanıt](../deploy/e2e/dns-kill-matrix/evidence/batch9-pdns-primary-zero-zone-20261001/README.md),
+kabul dalı `accept/pdns-primary-gate-open-4` commit `3cceb29a`, kapı açık;
+ana dal kapıyı kapalı tutuyor; genel Agent RPC'si üzerinden yedi hücre, her
+biri bir kez çalıştırıldı, düzenek geçici çözümü yok, yeniden çalıştırma
+yok). Satır 6 ve ebeveynsiz silme için satır 17. Beşi geçti, ikisi bir
+düzenek kusurunda durdu. Kesim sınırı yedi kesintinin tümünde tutundu.
+
+| Hücre | Gözlemlenen ürün davranışı | Karar |
+|---|---|---|
+| tek üye, `target-started` kesintisi, bölge yaşam döngüsü, yönetim kapalıyken yeniden açılış (8r. grubun c04'ü yeniden) | ileri yönde tamamlanma; ekleme, düzenleme, silme, yeniden ekleme; yeniden açılıştan sonra iki sunucu da en az makbuzdaki kadar tek bir seri numarası sundu, veritabanındaki üretici SOA'ya eşit, üyeler beklendiği gibi | yayın sonrası kuralla **geçti**; 8r. grubun düşüşü tekrarlanmadı |
+| sıfır bölge, `target-staged` durumunda başlangıç öncesi kesinti | Agent kurulumu kendisi kurulum öncesi duruma geri aldı | **geçti** |
+| sıfır bölge, `target-started` ve `committed` durumunda başlangıç sonrası kesintiler | yalnızca ileri yönde; sıfır üyeli katalog doğrulandı | **geçti** |
+| sıfır bölge, başlangıçtan sonra sahip SQL düzenlemesi | reddedildi ve tutuldu; yalnızca-DNS bekletmesi | **geçti** |
+| sıfır bölge, `committed` sonra bölge yaşam döngüsü; `target-started` sonra bölge yaşam döngüsü ve yeniden açılış | ekleme, sunucunun ilk bölgesini iki sunucuda da oluşturdu; düzenleme geçti; ebeveynsiz çocuğun silinmesi `dns_peer_enrollment_required` ile beklemede kaldı, iki sunucu da onun için REFUSED yanıtı verdi, iki katalog da sıfır üyeye döndü; sahip kaydı paketlenmiş araçlarla yapıldı | **durdu (düzenek)**: tetikleyicinin devam yolu bekleyen işi ebeveynin adıyla eşleştirdi, oysa iş çocuğun adını taşıyor; devam, yeniden ekleme ve yeniden açılış çalışmadı |
+
+Sıfır üyeyle ilk gerçek sistem ölçümleri: PowerDNS 4.9.17 ilk başlangıçta
+`CATALOG-HASH` yazıyor ve üretici seri numarasını epoch'a yeniden
+damgalıyor; durum makbuzu, iki sunucu ve veritabanı uyuşuyor; yerel BIND
+ikincili boş kataloğu SOA, NS `invalid.`, `version` TXT `2` ve üyesiz
+sunuyor; `notified_serial` 1'de kalıyor. 3,5 ile 10 dakikalık pencerelerde
+üye değişikliği olmadan ikinci bir yeniden damgalama yok; gözlemlenen tek
+örnek ilkinden 120 sn sonra ve üye kümesi değiştikten sonra geldi.
+Kaydedilen yönlendirme eksiği: bekleyen ebeveynsiz silme için Agent'ın
+ledger metni sahip aracını adlandırmıyor; Panel'in ekran metni adlandırıyor.
+Düzeltilmemiş derlemenin 0 numaralı bağlantı noktası bildirim satırları
+tekrarlandı; ikincil her değişikliği saniyeler içinde aktardı (kaynakta
+`a6d93f06` ile kapatıldı).
+
 4. ve 5. gruplardan sonra listelenen kaynak değişikliklerinin gerçek
 sistemdeki kapsamı:
 
