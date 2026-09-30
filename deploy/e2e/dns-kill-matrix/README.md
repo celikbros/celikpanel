@@ -1381,6 +1381,32 @@ either guidance for the wrong reason. `zone-lifecycle-held.json`'s
 `next_step` also carries that real code instead of the empty `pending ():`
 it printed before the fix.
 
+**Composite owner-edit codes (D-024).** `dns_peer_owner_edit_unknown` (the
+peer proof observed different evidence and could not admit it as an owner
+change) can also arrive as the composite `dns_peer_owner_edit_unknown:<check>`
+naming which comparison differed
+(`operation_attempt`, `engine_state`, `active_engine`, `native_binding`,
+`deletion_receipt`, `producer_catalog`, `catalog_probe`, `authority`,
+`transfer_observed` or `zone_answered`; see "Owner-edit check tokens" in
+`docs/DNS-ENGINE-ARTIFACT.md`). `zone_lifecycle_pending_next_step` and the
+step entry it feeds accept both forms: the plain code and a composite with
+any of those tokens name the check in `next_step` ("the Agent observed
+different evidence in check <check>; compare the catalog and zone serials on
+both servers, then resume") and resume the same way as the codes above,
+never a second deletion. The step entry (and the held record's `next_step`,
+which reuses it) also records the raw code as `job_error_code` and the parsed
+check as `job_error_detail` (`null` for the plain code), so the token is
+never dropped even when this harness cannot act on it further. A composite
+whose token is not in that list is still named in `next_step` and recorded in
+`job_error_detail`, but flagged with `job_error_detail_recognised: false` and
+a sentence saying this harness does not yet recognise it and to report it
+rather than assume it is safe; it is never treated as a pass. The
+guest-only `native_bind_owner_reconcile.py` fixture helper (batch 10's pinned
+owner-edit-stage2 scenario) applies the same rule before it reconciles the
+config it manages: it refuses to proceed on an unrecognised check token
+instead of assuming the pinned reconciliation still applies, and records
+`job_error_code`/`job_error_detail` in its own printed result.
+
 What the resumed flow verifies, in order (any step that does not pass stops
 it; nothing is requested twice):
 

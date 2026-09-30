@@ -2610,6 +2610,16 @@ def run_zone_lifecycle_status(
             "observation_error": observation_error, "verdict": verdict,
         }
         if verdict == "pending":
+            code = str(value.get("job_error_code") or "")
+            entry["job_error_code"] = code
+            owner_edit_matched, owner_edit_check = split_dns_peer_owner_edit_unknown(code)
+            if owner_edit_matched:
+                # Record the check token (D-024) so it is never silently
+                # dropped, whether or not this harness recognises it.
+                entry["job_error_detail"] = owner_edit_check
+                if owner_edit_check is not None:
+                    entry["job_error_detail_recognised"] = (
+                        owner_edit_check in DNS_PEER_OWNER_EDIT_UNKNOWN_CHECKS)
             entry["next_step"] = zone_lifecycle_pending_next_step(args, value)
             pending_value = value
         record["steps"].append(entry)
@@ -2625,6 +2635,42 @@ def run_zone_lifecycle_status(
     return {"passed": 0, "failed": 1}.get(status, 2), status, pending_value
 
 
+# D-024 owner-edit check tokens (docs/DNS-ENGINE-ARTIFACT.md, "Owner-edit
+# check tokens"): the Agent ledger's pending code for the peer proof's
+# observed difference is either the plain code below or the composite
+# "<code>:<check>" naming which comparison differed. The plain code
+# (``pendingExactBINDV3OwnerEdit``, a managed-BIND config owner edit
+# recognised at recovery, outside the peer proof) is unrelated and never
+# carries a colon.
+DNS_PEER_OWNER_EDIT_UNKNOWN_CODE = "dns_peer_owner_edit_unknown"
+DNS_PEER_OWNER_EDIT_UNKNOWN_CHECKS = frozenset((
+    "operation_attempt", "engine_state", "active_engine", "native_binding",
+    "deletion_receipt", "producer_catalog", "catalog_probe", "authority",
+    "transfer_observed", "zone_answered",
+))
+
+
+def split_dns_peer_owner_edit_unknown(code: str) -> tuple[bool, str | None]:
+    """(matched, check) for the D-024 owner-edit-unknown pending code (pure).
+
+    ``matched`` is True for the plain code and for any composite
+    "dns_peer_owner_edit_unknown:<anything>"; ``check`` is None for the plain
+    code and the raw text after the colon for a composite, whether or not
+    this harness recognises it (recognition is the caller's job, against
+    DNS_PEER_OWNER_EDIT_UNKNOWN_CHECKS). A bare "dns_peer_owner_edit_unknown:"
+    with nothing after the colon is not matched: it is not a code the Agent
+    emits, so it falls through to the unnamed-code guidance instead of being
+    read as a plain code with a swallowed detail.
+    """
+
+    if code == DNS_PEER_OWNER_EDIT_UNKNOWN_CODE:
+        return True, None
+    prefix = DNS_PEER_OWNER_EDIT_UNKNOWN_CODE + ":"
+    if code.startswith(prefix) and len(code) > len(prefix):
+        return True, code[len(prefix):]
+    return False, None
+
+
 def zone_lifecycle_pending_next_step(args: argparse.Namespace, value: dict[str, Any]) -> str:
     """Who acts and how the pending delete resumes (pure).
 
@@ -2632,9 +2678,12 @@ def zone_lifecycle_pending_next_step(args: argparse.Namespace, value: dict[str, 
     (``dns_peer_enrollment_required``) needs the owner's enrollment; an
     enrolled secondary whose inspector exchange produced no observation
     (``dns_peer_inspection_unknown``) needs its rndc key and loopback catalog
-    transfer checked instead, not a repeat enrollment. Any other or missing
-    code names itself rather than repeating the enrollment guidance, because
-    this harness has not worked out an owner step for it.
+    transfer checked instead, not a repeat enrollment; a peer proof that
+    observed different evidence (``dns_peer_owner_edit_unknown``, plain or
+    composite with a check token, D-024) needs the catalog and zone serials
+    on both servers compared. Any other or missing code names itself rather
+    than repeating other guidance, because this harness has not worked out an
+    owner step for it.
     """
 
     zero = f" {ZERO_ZONES_FLAG}" if zero_zones_selected(args) else ""
@@ -2662,6 +2711,23 @@ def zone_lifecycle_pending_next_step(args: argparse.Namespace, value: dict[str, 
             "check the secondary's rndc key and loopback catalog transfer, then resume "
             "with " + resume + "; that resumes the same request (RecoverDNSZoneV3) and "
             "never requests a second deletion"
+        )
+    owner_edit_matched, owner_edit_check = split_dns_peer_owner_edit_unknown(code)
+    if owner_edit_matched:
+        if owner_edit_check is None:
+            named = "the Agent observed different evidence but did not name which check"
+        elif owner_edit_check in DNS_PEER_OWNER_EDIT_UNKNOWN_CHECKS:
+            named = "the Agent observed different evidence in check " + owner_edit_check
+        else:
+            named = (
+                "the Agent observed different evidence in check " + owner_edit_check +
+                " (this harness does not yet recognise that check; report it rather "
+                "than assume it is safe)"
+            )
+        return (
+            prefix + named + "; compare the catalog and zone serials on both servers, "
+            "then resume with " + resume + "; that resumes the same request "
+            "(RecoverDNSZoneV3) and never requests a second deletion"
         )
     return prefix + "the harness has no owner step for " + (code or "this (missing) code")
 

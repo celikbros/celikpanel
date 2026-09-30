@@ -231,6 +231,101 @@ class RecoverLifecycleTest(unittest.TestCase):
                     self.assertIn(text, entry["next_step"])
                 self.assertNotIn("dns-peer-enroll --engine bind", entry["next_step"])
 
+    def test_split_dns_peer_owner_edit_unknown_pure(self) -> None:
+        """The plain/composite split (D-024) is pure and never guesses: a
+        composite is matched whether or not its check is recognised, and only
+        an exact plain code or a composite with something after the colon
+        counts as this code family at all."""
+
+        self.assertEqual(bootstrap.split_dns_peer_owner_edit_unknown(
+            "dns_peer_owner_edit_unknown"), (True, None))
+        self.assertEqual(bootstrap.split_dns_peer_owner_edit_unknown(
+            "dns_peer_owner_edit_unknown:producer_catalog"), (True, "producer_catalog"))
+        self.assertEqual(bootstrap.split_dns_peer_owner_edit_unknown(
+            "dns_peer_owner_edit_unknown:some_future_check"),
+            (True, "some_future_check"))
+        for check in sorted(bootstrap.DNS_PEER_OWNER_EDIT_UNKNOWN_CHECKS):
+            self.assertIn(check, bootstrap.DNS_PEER_OWNER_EDIT_UNKNOWN_CHECKS)
+        # Not this code family at all: another code, empty, and a bare
+        # trailing colon (nothing to report, so not read as the plain code).
+        for code in ("", "dns_peer_inspection_unknown", "pendingExactBINDV3OwnerEdit",
+                     "dns_peer_owner_edit_unknown:"):
+            self.assertEqual(bootstrap.split_dns_peer_owner_edit_unknown(code), (False, None))
+
+    def test_pending_next_step_and_entry_for_owner_edit_unknown(self) -> None:
+        """The owner-edit-unknown pending code (D-024), plain or composite,
+        names the check in next_step and is recorded (never dropped) on the
+        step entry; an unrecognised check is recorded and flagged, not
+        treated as a pass; another code's entry is unchanged (no detail
+        fields at all)."""
+
+        cases = {
+            "dns_peer_owner_edit_unknown": {
+                "next_step_has": ("did not name which check",
+                                  "compare the catalog and zone serials"),
+                "next_step_not": ("does not yet recognise", "in check "),
+                "job_error_detail": None,
+                "has_recognised_key": False,
+            },
+            "dns_peer_owner_edit_unknown:producer_catalog": {
+                "next_step_has": ("the Agent observed different evidence in check "
+                                  "producer_catalog",
+                                  "compare the catalog and zone serials on both servers, "
+                                  "then resume"),
+                "next_step_not": ("does not yet recognise",),
+                "job_error_detail": "producer_catalog",
+                "has_recognised_key": True,
+                "recognised": True,
+            },
+            "dns_peer_owner_edit_unknown:some_future_check": {
+                "next_step_has": ("the Agent observed different evidence in check "
+                                  "some_future_check",
+                                  "does not yet recognise that check",
+                                  "compare the catalog and zone serials"),
+                "next_step_not": (),
+                "job_error_detail": "some_future_check",
+                "has_recognised_key": True,
+                "recognised": False,
+            },
+        }
+        for code, expect in cases.items():
+            with self.subTest(code), tempfile.TemporaryDirectory() as root:
+                (code_exit, status, pending), remotes, observed, written = self.run_lifecycle(
+                    Path(root), {"delete": "pending_exact_operation"}, served_after={},
+                    job_error_codes={"delete": code})
+                self.assertEqual((code_exit, status), (2, "pending"))
+                self.assertEqual(pending["job_error_code"], code)
+                entry = written["zone-lifecycle-recover.json"]["steps"][0]
+                self.assertEqual(entry["job_error_code"], code)
+                self.assertIn("job_error_detail", entry)
+                self.assertEqual(entry["job_error_detail"], expect["job_error_detail"])
+                self.assertEqual("job_error_detail_recognised" in entry,
+                                 expect["has_recognised_key"])
+                if expect["has_recognised_key"]:
+                    self.assertEqual(entry["job_error_detail_recognised"], expect["recognised"])
+                for text in expect["next_step_has"]:
+                    self.assertIn(text, entry["next_step"])
+                for text in expect["next_step_not"]:
+                    self.assertNotIn(text, entry["next_step"])
+                self.assertNotIn("harness has no owner step for", entry["next_step"])
+
+    def test_another_codes_entry_carries_no_owner_edit_detail(self) -> None:
+        """A code outside the owner-edit-unknown family is unchanged: the
+        entry gets job_error_code but no job_error_detail at all, so the
+        absence of a detail is never confused with a recorded plain code."""
+
+        for code in ("dns_peer_enrollment_required", "dns_peer_inspection_unknown",
+                     "some_other_code"):
+            with self.subTest(code), tempfile.TemporaryDirectory() as root:
+                (code_exit, status, pending), remotes, observed, written = self.run_lifecycle(
+                    Path(root), {"delete": "pending_exact_operation"}, served_after={},
+                    job_error_codes={"delete": code})
+                self.assertEqual((code_exit, status), (2, "pending"))
+                entry = written["zone-lifecycle-recover.json"]["steps"][0]
+                self.assertEqual(entry["job_error_code"], code)
+                self.assertNotIn("job_error_detail", entry)
+                self.assertNotIn("job_error_detail_recognised", entry)
+
     def test_each_recovery_attempt_has_its_own_evidence_and_never_replaces_one(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             directory = Path(root) / bootstrap.FRESH_PRIMARY_EVIDENCE_DIRECTORY

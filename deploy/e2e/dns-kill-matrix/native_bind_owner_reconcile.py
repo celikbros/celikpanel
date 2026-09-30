@@ -22,6 +22,29 @@ CANONICAL_SHA256 = "d16ee58e0f99bf245c7994fbe767a3aa4da1ba4e39b5083cdaa30fdbe021
 ANCHOR = b"// BEGIN CELIKPANEL MANAGED BIND ZONES\n"
 COMMENT = b"// owner-edit-stage2-managed-block-20260927\n"
 
+# D-024 owner-edit check tokens (docs/DNS-ENGINE-ARTIFACT.md, "Owner-edit
+# check tokens"): the Agent ledger's pending code is either this plain code
+# or the composite "<code>:<check>" naming which comparison differed. This
+# guest-only helper is self-contained (no imports from the harness), so the
+# same small split/allow-list lives here rather than being shared.
+OWNER_EDIT_UNKNOWN_CODE = "dns_peer_owner_edit_unknown"
+OWNER_EDIT_UNKNOWN_CHECKS = frozenset((
+    "operation_attempt", "engine_state", "active_engine", "native_binding",
+    "deletion_receipt", "producer_catalog", "catalog_probe", "authority",
+    "transfer_observed", "zone_answered",
+))
+
+
+def split_owner_edit_unknown(code: str) -> tuple[bool, str | None]:
+    """(matched, check); see guest_bootstrap.split_dns_peer_owner_edit_unknown."""
+
+    if code == OWNER_EDIT_UNKNOWN_CODE:
+        return True, None
+    prefix = OWNER_EDIT_UNKNOWN_CODE + ":"
+    if code.startswith(prefix) and len(code) > len(prefix):
+        return True, code[len(prefix):]
+    return False, None
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -34,12 +57,22 @@ def main() -> None:
     ledger = json.loads(LEDGER.read_bytes())
     jobs = ledger.get("jobs", {})
     job = jobs.get(REQUEST)
+    error_code = str((job or {}).get("error_code", ""))
+    owner_edit_matched, owner_edit_check = split_owner_edit_unknown(error_code)
     if (len(jobs) != 2 or ledger.get("active_request_id") is not None or
             not isinstance(job, dict) or job.get("owner_id") != OWNER or
             job.get("status") != "pending" or
-            job.get("error_code") != "dns_peer_owner_edit_unknown" or
+            not owner_edit_matched or
             "/propagation-pending/" not in job.get("phase", "")):
         parser.error("exact reviewed owner-edit job is not idle and pending")
+    if owner_edit_check is not None and owner_edit_check not in OWNER_EDIT_UNKNOWN_CHECKS:
+        # Recorded and reported, never treated as a pass: an unrecognised
+        # check token means this harness does not know the comparison the
+        # Agent made, so it must not assume the reconciliation still applies.
+        parser.error(
+            "reviewed owner-edit job carries an unrecognised check token "
+            + json.dumps(owner_edit_check) + " (error_code=" + error_code + ")"
+        )
     fd = os.open(CONFIG, os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC)
     try:
         info = os.fstat(fd)
@@ -68,7 +101,9 @@ def main() -> None:
     print(json.dumps({"path": str(CONFIG), "inode": info.st_ino,
                       "before_sha256": EDITED_SHA256,
                       "after_sha256": CANONICAL_SHA256,
-                      "removed": COMMENT.decode("ascii").strip()}, sort_keys=True))
+                      "removed": COMMENT.decode("ascii").strip(),
+                      "job_error_code": error_code,
+                      "job_error_detail": owner_edit_check}, sort_keys=True))
 
 
 if __name__ == "__main__":
