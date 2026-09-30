@@ -542,6 +542,68 @@ güncellemenin kendi hatası olduğu sürece gösterir. Bu yüzden duraklamada
 real-start'a özgü metin görünmeyebilir. Değerlendirici bunu varsaymaz;
 görmediyse bulgu olarak yazar.
 
+**upd3 denemesinden kalıcı düzeltmeler (upd4).** upd3'te kopya üzerinde
+yapılan veya yalnız kaydedilen düzeltmeler artık test düzeneğinin kendisidir:
+
+- **H8:** Durum 600 saniye boyunca ve en az 3 okumada hiç değişmeden
+  `failed`/`none` kalırsa, otomatik kurtarma ve bekleme de yoksa `track` durur.
+  Kuralın adı `settled-failed-before-change`; adım `inconclusive` olur ve
+  gerekçe kaydedilir. upd3'ün ilk hücresi 90 yerine 10 dakikada biterdi.
+- **H9:** Bir dağıtım kaydı `operation=rollback` ise (hangi aşamada olursa
+  olsun) ya da `operation=update phase=active` ise geri almadır.
+  `operation=update phase=completion` ileri denemedir ve start-check hücresinde
+  bulgudur.
+- **H10:** Güncelleme kartı ve kurtarma ekranı, ürün derlemesinin **bugünkü**
+  kodundan üretilir. `web_source_eval.py`, derlemenin `systemUpdateOutcome.ts`,
+  `recoveryObservation.ts` ve `systemUpdateFailure.ts` dosyalarındaki
+  işlevleri (kuralların kopyasını değil, kendilerini) değerlendirir. Ekranın
+  `recovery.automatic.cause.*` satırı da dahildir. Yargı yalnız gerçek bir
+  uyuşmazlıkta bulgu verir: katalogda olmayan anahtar, doldurulmamış yer
+  tutucu veya sunucu kaydıyla çelişen kart durumu. Okunamayan kaynak
+  "bilinmiyor" sayılır, bulgu sayılmaz.
+- **Gözlemci v2:** Salt-okur incelemeler artık sürücünün kendi adımlarıdır.
+  Güncelleme denetiminden sonraki ilk uç, duraklama veya "değişmeden
+  başarısız" durumuna kadar hiçbir inceleme yapılmaz. Böylece güncellemenin ön
+  denetimiyle çakışmaz. `getent` çıkış kodu 2 "bulunamadı" demektir, yoklama
+  hatası değildir.
+
+**Yeni hücreler (upd4, iyi aday G).**
+
+- **owner-continuation** (`upd1-debian13-owner-continuation`,
+  `upd1-arch-owner-continuation`): Güncelleyici eski paneli durdurunca
+  `guest_owner_port_hold.py` `127.0.0.1:2083` portunu tutar. Güncelleyici
+  çıksa ve kurtarma başlasa da portu bırakmaz. Yeni panel bağlanamaz;
+  kararlılık beklemesi `panel_start_unverified` ile başarısız olur. İleri
+  tamamlama üç kez denenir ve duraklar. Sürücü, sahibin gördüğü bütün metinleri
+  kaydeder (CLI İngilizce/Türkçe, Panel yanıt verirse kart ve ekran), ürünün
+  gösterdiği panel günlüğünü okur ve metnin söylediğini yapar: portu bırakır ve
+  basılan tek seferlik yeniden deneme komutunu **bir kez** çalıştırır.
+  Beklenen sınıf `recovered-after-owner-continuation`: aynı istek
+  `update_verified` ile biter, G çalışır, `certbot.timer` ve öteki zamanlayıcılar
+  güncelleme öncesi durumuna döner, site, posta ve cron hiç kesilmez, Panel
+  geri gelir. Başka her sonuç bulgudur.
+- **Port tutma sınırı:** Aday commit'in kendi dosyalarından hesaplanır:
+  `update.sh` kararlılık beklemesi (60 s), kurtarma zamanlayıcısı (30 s + 1 s)
+  ve üç otomatik deneme. Pay eklenince 1053 s çıkar; bir dakikaya yuvarlanır:
+  **1080 s**, `RuntimeMaxSec` 1140 s. upd3'te eski panelin durmasından
+  duraklamaya kadar 391 s (Debian) ve 383 s (Arch) ölçüldü.
+- **mgmt-off-reboot** (`upd1-debian13-mgmt-off-reboot`,
+  `upd1-arch-mgmt-off-reboot`): İyi güncelleme doğrulandıktan sonra Panel ve
+  Agent `systemctl disable --now` ile kapatılır ve konuk bir kez düzgünce
+  yeniden başlatılır. Açılıştan sonra en az 180 saniye boyunca 5 saniyelik
+  örneklerle ölçülür: işaretli site, SMTP (Debian), ilerleyen cron damgası,
+  yerel istemciyle okunan sahip veri tabanı satırı (veri tabanı Panel API ile,
+  tablo sahibin uygulaması gibi yerel istemciyle oluşturulur), sertifika
+  yenileme zamanlayıcısı ve güvenlik duvarı kuralları. Sonra yönetim yeniden
+  açılır ve Panel aynı sahip durumunu göstermelidir. Yönetim gerektiren her şey
+  `needed_panel` altında kaydedilir.
+
+Olası engeller de kaydedilir, varsayılmaz. Panel biriminde saatte 30
+başlatma sınırı vardır ve güncelleyici bu sınırı sıfırlamaz. Sahibin yeniden
+denemesinden önce sınıra ulaşılırsa yeniden deneme reddedilir ve bu bir bulgu
+olur. Arch'ta kurulum MariaDB'yi kurmadan beklerse veri tabanı ölçülmez; bu
+da bulgu olarak yazılır.
+
 Komutlar ve hücre ayrıntıları İngilizce bölümdedir
 ([README.md](README.md#owner-started-update-acceptance-upd1)). Çevrimdışı
-testler (`test_owner_update_trial.py`, 83 test) yerel sonucu kanıtlamaz.
+testler (`test_owner_update_trial.py`, 124 test) yerel sonucu kanıtlamaz.

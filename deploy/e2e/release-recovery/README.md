@@ -686,6 +686,104 @@ bash deploy/e2e/release-recovery/run-upd1.sh cell upd1-arch-realstart "$ART" upd
 The build source must include `8ffc5e06` (the start check). The fixture patches
 refuse any other text of `configurePanelHTTPTLS` or the listener line.
 
+### upd4: the upd3 run-copy corrections made permanent
+
+From [evidence/upd3-20261001](evidence/upd3-20261001/README.md), where H8 was a
+run-copy diff and H9, H10 and the sidecar v1 defects were recorded; now harness
+behaviour with offline tests:
+
+| Id | Now |
+| --- | --- |
+| H8 | Named rule `settled-failed-before-change` (`SettledFailure`): `track` stops after **600 s over at least 3 reads** of an unchanged known status `failed`/`none` with no `automatic_recovery` and no `waiting_for` (every field of the status unchanged; any change or any recovery activity restarts the clock). The step is `inconclusive`; the reason names the rule, and `checks.settled_failure` / `outcome.track_stop` record the status, seconds and reads. Upd3 cell 1 would have ended after 10 min instead of 90. |
+| H9 | Planner's rule (`dispatch_direction`): a dispatch receipt is a **rollback** when it says `operation=rollback` in any phase, or `operation=update phase=active`; `operation=update phase=completion` (or `completion-scheduler`) is **forward**; anything else is `unknown`. In a start-check cell a forward attempt is a finding; unknown ones leave the rule unknown. The arch-startcheck pair `update/active` + `rollback/completion` is a rollback. The real-start judge uses the same rule for "forward only". |
+| H10 | The update card and the recovery screen follow the **product build's current code**: `web_source_eval.py` reads the build's `web/src/lib/systemUpdateOutcome.ts`, `recoveryObservation.ts` and `systemUpdateFailure.ts` and evaluates `failedUpdateGuidance`, `parseRecoveryObservation`, `recoveryFailureGuidanceKey` and `systemUpdateFailureMessage` themselves (a strict TypeScript subset; no copy of their rules). The component's outer selection (found/succeeded/running/failed) and the recovery screen's JSX layout are mirrored; the screen's `recovery.automatic.cause.<code>` line is taken when the build's `RecoveryAccess.tsx` has it. Texts come from the served build's catalogues (baseline after a rollback, the candidate otherwise). `judge_update_card` fails only on a real mismatch: a key the catalogue lacks, an unfilled placeholder, or a card state contradicting the cell's server record. A source the evaluator cannot read gives `unknown`, never a finding; the server-reported line (O6) is recorded, not judged. The old "summary verbatim" finding is gone. |
+| sidecar v2 | The driver's own read-only inspections (`guest_upd1_workload.py inspect`): the hosting-root light series every 30 s while setup runs, then `after-setup`, `after-seed`, `before-check`, and after a terminal, paused or settled state (`after-track`/`at-pause`, `after-continuation`, `after-terminal`, and the management-off points). `inspection_allowed` refuses any inspection between the update check (or the owner's retry) and the next terminal, paused or settled state, so none overlaps the update preflight; the v1 `pre-update` point is gone. `getent` exit code 2 is `not-found`, never a probe failure (`getent_outcome`, also in `origin_verdict`); no command's exit status can lose an inspection. |
+
+### upd4 cells: the owner's continuation and management off
+
+Both kinds use the good candidate G (any artifacts document with B and G).
+
+| Cell | Node | What is done | Expected (verdict class) | A finding is |
+| --- | --- | --- | --- | --- |
+| `upd1-debian13-owner-continuation` | Debian 13 | `guest_owner_port_hold.py` is armed with the observer. Once the updater has stopped the old Panel it holds `127.0.0.1:2083` and keeps it through the update's exit and every forward attempt. The candidate passes the start check, cannot bind, the stability wait fails (`panel_start_unverified`), forward completion is retried three times and pauses. At the pause the driver records every owner text (CLI EN/TR, the card and recovery screen when a Panel answers, the modelled screen with the cause line, the offline page), the panel log the product names (`sudo journalctl -u celikpanel-panel -n 50`), timers (F2 shape) and the hold's events; reads the printed retry without running it; then does what the text tells the owner: releases the port (`systemctl stop` of the hold unit, verified `owner-released`) and runs **exactly the printed retry command once**. The same request is tracked to its end. | `recovered-after-owner-continuation`: `succeeded/update_verified`; G installed and running; `certbot.timer` and every other timer in their pre-update state; site, SMTP and cron never interrupted; the Panel down only inside the operation, then a fresh login; the card `succeeded`. | Any other outcome class (`update-verified-without-owner-continuation`, `rolled-back-instead-of-forward`, a new pause), a hold that ended before the pause, a pause on another cause, fewer than three forward dispatches, a panel log that does not show the port conflict, no printed retry or more than one owner receipt, changed timers, an interrupted workload, a missing EN/TR paused text or catalogue key. |
+| `upd1-arch-owner-continuation` | Arch | As above (no mail workload). | As above. | As above. |
+| `upd1-debian13-mgmt-off-reboot` | Debian 13 | The good update first (same steps and verdicts as the good cell; the seed adds one owner database through `POST /api/v1/domains/{id}/databases` and one table with one row, the site marker, written through the native client as the server owner). After `terminal` passed: `sudo systemctl disable --now celikpanel-panel.service celikpanel-agent.service`, one orderly `sudo systemctl reboot`, at least **180 s** of 5 s samples in the new boot, then `sudo systemctl enable --now celikpanel-agent.service celikpanel-panel.service` and a fresh login. | Every workload served with management off: site HTTP with the marker, SMTP (Debian), new cron stamps without a stall, the owner's row through `mariadb`/`mysql` as root, the renewal timer in its pre-update state, the firewall ruleset present and unchanged; after the return, the same owner state (domains, cron, mailbox, database, version, update and recovery status). | A workload never served or interrupted after the boot, a changed renewal timer or firewall, the Panel/Agent not disabled, a window shorter than 180 s, or a different owner state after the return. `needed_panel` lists anything that needed management. |
+| `upd1-arch-mgmt-off-reboot` | Arch | As above (no mail workload). | As above; Arch's `certbot-renew.timer` was disabled before the update in upd3 (setup waits before its certificate step), so "as before" is all Arch can show. | As above. |
+
+**Port-hold bound.** The hold must outlast the three forward attempts; it is
+sized at run time from the **candidate commit's own files** (`git show` in the
+fixture clone): `PANEL_START_WAIT_SECONDS` in `update.sh` (60),
+`OnUnitInactiveSec`/`AccuracySec` of `celikpanel-release-recovery.timer`
+(30 s / 1 s) and the runner's automatic budget (`$count == 3`). With
+allowances of 120 s update work before the real start, 60 s work per forward
+attempt, 120 s to detect the pause and 300 s for the owner-continuation reads:
+
+    hold = 120 + 60 + 3 x (60 + 60 + 30 + 1) + 120 + 300 = 1053 s -> 1080 s (18 min)
+    RuntimeMaxSec = 1140 s
+
+upd3 measured 391 s (Debian) and 383 s (Arch) from the old Panel's stop to the
+pause with the same wait, timer and budget, so the hold has a 689 s margin
+(`plan --dry-run` shows the bound from the driver checkout under `port_hold`).
+The hold is released early only by the owner, a rollback marker, another
+snapshot, no transaction marker for 5 s, an observation unavailable for 10 s,
+or its bound; one ambiguous read during a marker rename is tolerated.
+
+**What these cells prove and do not prove.** owner-continuation shows, on a
+disposable guest, the one owner path never exercised natively: the retry budget
+exhausted on a transient host cause, the product's own texts leading to that
+cause, and the one-time retry completing the same operation forward, with
+workloads and timers intact. It does not show a cause the owner cannot fix, a
+panel that fails for a product defect, recovery after a second fault during the
+retry, or browser rendering (the Panel is down at the pause, so the card and
+screen are modelled, not seen). mgmt-off-reboot shows native serving of the
+seeded site, mail, cron, database, renewal timer and firewall across one
+orderly reboot with the Panel and Agent disabled, and the Panel returning to
+the same owner state. It does not show a power loss, DNS (external mode), a
+certificate renewal run, or removal of the packages or files. Neither closes a
+P0 row; `native_evidence` stays `false`.
+
+**Product behaviour that may block a cell (recorded, not assumed).**
+
+- The Panel unit is `Restart=on-failure` with `StartLimitBurst=30` per
+  3600 s, and neither `update.sh` nor the runner resets a start limit. The held
+  port makes the candidate Panel fail and restart repeatedly (every forward
+  attempt starts it again). If 30 starts accumulate before the owner's retry,
+  the retry's `systemctl start` is refused (`start-limit-hit`) and
+  `completed-forward` becomes a finding. The `after-continuation` inspection
+  records the unit's `NRestarts`, `Result` and state just before the retry;
+  once the port is free systemd may also start the Panel by itself, which is
+  recorded, not prevented.
+- F1: a good update may stop in its preflight (upd3 cell 1). Then `track`
+  ends by the H8 rule and the new cells' later steps do not run (`not-run`).
+- Arch setup may not install MariaDB before it waits at `access_dns`; then the
+  database create answers non-200, a finding is recorded and the database
+  workload is `not-seeded` (never passed by omission).
+- The firewall ruleset after the reboot comes from
+  `celikpanel-firewall-restore.service`, a product unit that management-off
+  does not disable; its state is recorded in the snapshot.
+
+Commands (Linux QEMU host, as root, repository root; each cell in a **new** lab):
+
+```sh
+bash deploy/e2e/release-recovery/run-upd1.sh build            # B G D S R; the upd4 cells use B and G
+ART=/var/tmp/cp-upd1-build/<stamp>/upd1-artifacts.json
+bash deploy/e2e/release-recovery/run-upd1.sh prove "$ART"
+for c in upd1-debian13-owner-continuation upd1-arch-owner-continuation \
+         upd1-debian13-mgmt-off-reboot upd1-arch-mgmt-off-reboot; do
+    bash deploy/e2e/release-recovery/run-upd1.sh dry-run "$c" "$ART" upd4-dry
+done
+bash deploy/e2e/release-recovery/run-upd1.sh cell upd1-debian13-owner-continuation "$ART" upd4-d13-oc-a 2481
+bash deploy/e2e/release-recovery/run-upd1.sh cell upd1-arch-owner-continuation "$ART" upd4-arch-oc-a 2491
+bash deploy/e2e/release-recovery/run-upd1.sh cell upd1-debian13-mgmt-off-reboot "$ART" upd4-d13-mr-a 2501
+bash deploy/e2e/release-recovery/run-upd1.sh cell upd1-arch-mgmt-off-reboot "$ART" upd4-arch-mr-a 2511
+```
+
+Evidence per cell as before (`<lab>/evidence/<node>/upd1/<cell>-<utc>/`), plus
+`inspect-<point>-NN.json`, the hold's `owner-port-hold-<request>.jsonl` (guest
+private root), `panel-log-at-pause.txt`, `recovery-journal-at-pause.txt`,
+`workload-at-pause.json`, `panel-truth-*.json` and
+`journal-product-before-reboot.txt`.
+
 ### Offline checks
 
 ```sh
@@ -693,7 +791,7 @@ python3 -m unittest deploy/e2e/release-recovery/test_owner_update_trial.py -v
 python3 -m unittest deploy/e2e/release-recovery/test_recovery_candidate_archive.py -v
 ```
 
-`test_owner_update_trial.py` has 83 offline tests. They cover:
+`test_owner_update_trial.py` has 124 offline tests. They cover:
 
 - plan validation and dry run, fixture policy/defect and the acceptance-notice
   exemption;
@@ -720,7 +818,21 @@ python3 -m unittest deploy/e2e/release-recovery/test_recovery_candidate_archive.
   sidecar parser, the update failure line and check reason, the CLI texts
   parsed from `cmd/recovery/main.go` (in both output shapes the product has
   had), the web keys from the catalogues, both judges, and the real-start
-  owner continuation (the retry is printed but never run).
+  owner continuation (the retry is printed but never run);
+- upd4: the H8 rule (alone and inside `track` with a simulated clock), the H9
+  direction rule (including the arch-startcheck receipt pair), the H10 card
+  (the upd3 rolled-back cards reproduced from the product's own functions, the
+  paused card and screen with the cause line, text order following an edited
+  source, an unreadable source giving unknown, the judge failing only on a
+  real mismatch) and the evaluator's subset, the sidecar v2 rules (`getent`
+  rc 2, no inspection inside the preflight window), the port-hold helper (held
+  through the updater's exit and every forward attempt, released by the owner,
+  a rollback, another snapshot, a finished marker, a lasting unreadable state or
+  its bound), the bound derived from the product's files, plan validation of
+  the four upd4 cells (also through the wrapper), both new judges, the owner
+  continuation order (panel log, printed retry read, port released, retry run
+  once), the management-off rules and steps, the update-only verdict window and
+  the guest database helpers.
 
 `ArtifactProofTests` builds three synthetic archives with `dns-owner-tools/`
 in a temporary Git repository and proves them with `prove`; a second test

@@ -17,10 +17,19 @@ one-time retry command the product printed in the recovery journal, exactly
 as the product text instructs the server owner. A durable attempt record is
 written before that command runs; an existing record refuses a second run.
 
+``db-seed`` writes one table with one row into the owner's database that the
+Panel API created, through the native client as the server owner (root over
+the local socket), exactly as an owner's application would; nothing else.
+
 Modes: ``install-sampler``, ``sample-loop``, ``samples``, ``snapshot``,
 ``cli-status``, ``budget``, ``journal``, ``tls-leaf``, ``credentials``,
 ``owner-retry``, ``install-origin``, ``origin-check`` (read-only),
-``cron-availability`` (read-only).
+``cron-availability`` (read-only), ``inspect`` (read-only; the observer
+sidecar's inspection folded into the driver), ``db-seed``, ``db-query``
+(read-only).
+
+``getent`` exit code 2 means "not found" (a valid answer), never a probe
+failure (upd3 sidecar v1 lost every light probe on it).
 """
 from __future__ import annotations
 
@@ -78,6 +87,13 @@ BUDGET_ROW_RE = re.compile(
     r"schema=celikpanel-recovery-dispatch/v1\nsnapshot=[A-Za-z0-9._-]{1,200}\nattempt=(?:[1-3]|owner)\n"
     r"token_sha256=[0-9a-f]{64}\noperation=(?:update|rollback)\n"
     r"phase=(?:quiesce|active|completion|completion-scheduler|scheduler)\n\Z")
+DB_NAME_RE = re.compile(r"[A-Za-z][A-Za-z0-9_]{0,63}\Z")
+DB_TABLE = "upd1_owner"
+DB_CLIENTS = ("mariadb", "mysql")
+HOSTING_PARENTS = ("/var", "/var/www", "/var/www/celikpanel", "/var/www/celikpanel/subscriptions")
+HOSTING_RECEIPT = Path("/var/lib/celikpanel-agent-private/hosting-root-v1.json")
+WEB_ACCOUNTS = ("http", "www-data", "nginx")
+INSPECT_PORTS = (80, 443, 2083, 587, 25, 53)
 TIMER_PATTERNS = ("certbot", "renew", "acme", "celikpanel", "logrotate", "cron")
 SERVICE_UNITS = ("nginx.service", "named.service", "bind9.service", "pdns.service", "postfix.service",
                  "dovecot.service", "cron.service", "cronie.service", "celikpanel-agent.service",
@@ -170,6 +186,26 @@ def budget_receipt_safe(raw: bytes) -> bool:
         return BUDGET_ROW_RE.fullmatch(raw.decode("ascii")) is not None
     except UnicodeDecodeError:
         return False
+
+
+def getent_outcome(result: dict | None) -> str:
+    """getent(1): 0 found, 2 key not found (a valid answer), anything else a probe failure."""
+    if not isinstance(result, dict) or result.get("status") != "ok":
+        return "probe-failed"
+    return {0: "found", 2: "not-found"}.get(result.get("returncode"), "probe-failed")
+
+
+def db_statements(marker: str) -> str:
+    """The owner's one table and one row (the site marker), as an application would create them."""
+    if not MARKER_RE.fullmatch(marker or ""):
+        raise ValueError("invalid marker")
+    return (f"CREATE TABLE IF NOT EXISTS {DB_TABLE} (id INT PRIMARY KEY, marker VARCHAR(64) NOT NULL); "
+            f"INSERT INTO {DB_TABLE} (id, marker) VALUES (1, '{marker}') "
+            "ON DUPLICATE KEY UPDATE marker = VALUES(marker);")
+
+
+def db_query_statement() -> str:
+    return f"SELECT marker FROM {DB_TABLE} WHERE id = 1;"
 
 
 # -- guarded I/O ---------------------------------------------------------------
@@ -319,11 +355,53 @@ def probe_cron(path: Path | None) -> dict:
         return {"ok": False, "path": str(path), "error": type(exc).__name__}
 
 
-def sample(domain: str, marker: str, smtp: bool, cron_path: Path | None, dns_server: str = "127.0.0.1") -> dict:
-    return {"schema": SAMPLE_SCHEMA, "t": time.time(), "utc": utc(), "boot_id": boot_id(),
-            "monotonic": time.monotonic(), "web": probe_http(domain, marker), "dns": probe_dns(domain, server=dns_server),
-            "smtp": probe_smtp() if smtp else {"ok": None, "skipped": "no-mail-workload"},
-            "cron": probe_cron(cron_path), "panel": probe_panel()}
+def db_client() -> str | None:
+    for name in DB_CLIENTS:
+        found = shutil.which(name, path=ENV["PATH"])
+        if found:
+            return found
+    return None
+
+
+def probe_db(name: str | None, marker: str) -> dict:
+    """Read-only: the owner's row through the native client, as the server owner (root, local socket)."""
+    if not name:
+        return {"ok": None, "skipped": "no-owner-database"}
+    if not DB_NAME_RE.fullmatch(name):
+        return {"ok": False, "error": "invalid-database-name"}
+    client = db_client()
+    if client is None:
+        return {"ok": False, "error": "no-native-client"}
+    result = run([client, "--batch", "--skip-column-names", "--connect-timeout=3", name, "-e", db_query_statement()],
+                 timeout=6, limit=1024)
+    value = (result.get("stdout") or "").strip()
+    return {"ok": result.get("status") == "ok" and result.get("returncode") == 0 and value == marker,
+            "status": result.get("status"), "returncode": result.get("returncode"), "row_matches": value == marker,
+            "client": Path(client).name, "error": (result.get("stderr") or "").strip()[:200] or None}
+
+
+def db_seed(name: str, marker: str) -> dict:
+    """The owner's application step: one table, one row, in the database the Panel API created."""
+    if not DB_NAME_RE.fullmatch(name or ""):
+        raise ValueError("invalid database name")
+    client = db_client()
+    if client is None:
+        raise ValueError("no native MariaDB/MySQL client on this server")
+    result = run([client, "--batch", "--connect-timeout=5", name, "-e", db_statements(marker)], timeout=30, limit=4096)
+    return {"database": name, "table": DB_TABLE, "client": Path(client).name, "status": result.get("status"),
+            "returncode": result.get("returncode"), "stderr": (result.get("stderr") or "")[:400],
+            "query": probe_db(name, marker)}
+
+
+def sample(domain: str, marker: str, smtp: bool, cron_path: Path | None, dns_server: str = "127.0.0.1",
+           db_name: str | None = None) -> dict:
+    value = {"schema": SAMPLE_SCHEMA, "t": time.time(), "utc": utc(), "boot_id": boot_id(),
+             "monotonic": time.monotonic(), "web": probe_http(domain, marker), "dns": probe_dns(domain, server=dns_server),
+             "smtp": probe_smtp() if smtp else {"ok": None, "skipped": "no-mail-workload"},
+             "cron": probe_cron(cron_path), "panel": probe_panel()}
+    if db_name:
+        value["db"] = probe_db(db_name, marker)
+    return value
 
 
 def sample_loop(args) -> int:
@@ -335,7 +413,7 @@ def sample_loop(args) -> int:
             started = time.monotonic()
             if cron_path is None or not cron_path.exists():
                 cron_path = cron_stamp_path()
-            value = sample(args.domain, args.marker, args.smtp, cron_path, args.dns_server)
+            value = sample(args.domain, args.marker, args.smtp, cron_path, args.dns_server, args.db_name)
             stream.write((json.dumps(value, sort_keys=True) + "\n").encode())
             stream.flush()
             os.fsync(stream.fileno())
@@ -350,7 +428,8 @@ def install_sampler(args, identity) -> dict:
     argv = ["/usr/bin/python3", "-I", str(PRIVATE_ROOT / "guest_upd1_workload.py"), "sample-loop",
             "--lab-nonce", identity["nonce"], "--vm-uuid", identity["vm_uuid"], "--cell-id", identity["cell_id"],
             "--node", identity["node"], "--domain", args.domain, "--marker", args.marker,
-            "--interval", str(args.interval), "--dns-server", args.dns_server] + (["--smtp"] if args.smtp else [])
+            "--interval", str(args.interval), "--dns-server", args.dns_server] + (["--smtp"] if args.smtp else []) \
+        + (["--db-name", args.db_name] if args.db_name else [])
     unit = ("[Unit]\nDescription=Disposable upd1 workload sampler (lab only; no product authority)\n"
             "After=network-online.target\n\n[Service]\nType=simple\nExecStart=" + shlex.join(argv) +
             "\nRestart=always\nRestartSec=2\nUMask=0077\n\n[Install]\nWantedBy=multi-user.target\n")
@@ -400,7 +479,8 @@ def origin_check() -> dict:
     https = run(["curl", "--silent", "--max-time", "10", "--output", "/dev/null", "--write-out", "%{http_code}",
                  ORIGIN_PROBE_URL], timeout=15, limit=64)
     unit = run(["/usr/bin/systemctl", "show", ORIGIN_UNIT, "-p", "ActiveState", "-p", "UnitFileState", "-p", "NRestarts"])
-    return {"boot_id": boot_id(), "getent": {k: getent.get(k) for k in ("status", "returncode", "stdout")},
+    return {"boot_id": boot_id(), "getent": dict({k: getent.get(k) for k in ("status", "returncode", "stdout")},
+                                                  outcome=getent_outcome(getent)),
             "https": {k: https.get(k) for k in ("status", "returncode", "stdout")},
             "unit": dict(line.split("=", 1) for line in unit.get("stdout", "").splitlines() if "=" in line)}
 
@@ -531,7 +611,90 @@ def snapshot(args, probe) -> dict:
             "build": {name: build_identity("/opt/celikpanel/bin/" + name) for name in ("agent", "panel")},
             "floor": small_record(FLOOR), "foundation": small_record(FOUNDATION),
             "transaction": transaction, "budget": budget(None),
+            "db": probe_db(args.db_name, args.marker),
             "sampler": run(["/usr/bin/systemctl", "show", SAMPLER_UNIT, "-p", "ActiveState", "-p", "UnitFileState"])}
+
+
+def _show(unit: str, *properties: str) -> dict:
+    argv = ["/usr/bin/systemctl", "show", unit]
+    for name in properties:
+        argv += ["-p", name]
+    shown = run(argv, timeout=10, limit=8192)
+    return dict(line.split("=", 1) for line in (shown.get("stdout") or "").splitlines() if "=" in line)
+
+
+def _stat(path: str) -> dict:
+    try:
+        info = os.lstat(path)
+    except FileNotFoundError:
+        return {"path": path, "present": False}
+    except OSError as exc:
+        return {"path": path, "present": None, "error": type(exc).__name__}
+    return {"path": path, "present": True, "mode": format(stat.S_IMODE(info.st_mode), "04o"), "uid": info.st_uid,
+            "gid": info.st_gid, "type": "dir" if stat.S_ISDIR(info.st_mode) else
+            "link" if stat.S_ISLNK(info.st_mode) else "file" if stat.S_ISREG(info.st_mode) else "other"}
+
+
+def inspect(light: bool) -> dict:
+    """Read-only side inspection (upd3 observer sidecar v2, folded into the driver).
+
+    ``light``: the hosting-root probe only (the before-first-site series). No
+    command's exit status can lose the inspection: each result is recorded as
+    data, and ``getent`` exit code 2 is ``not-found``.
+    """
+    value: dict = {"captured_at": utc(), "boot_id": boot_id(), "light": light}
+    value["hosting_parents"] = [_stat(path) for path in HOSTING_PARENTS]
+    sites = sorted(Path("/var/www/celikpanel/subscriptions").glob("*/sites/*"))[:8] \
+        if Path("/var/www/celikpanel/subscriptions").is_dir() else []
+    value["site_paths"] = {str(site): (run(["/usr/bin/namei", "-l", str(site / "public_html")], timeout=5,
+                                           limit=4096).get("stdout") or "") for site in sites}
+    value["hosting_receipt"] = dict(_stat(str(HOSTING_RECEIPT)), **(small_record(HOSTING_RECEIPT)
+                                                                   if HOSTING_RECEIPT.is_file() else {}))
+    agent_log = run(["/usr/bin/journalctl", "-u", "celikpanel-agent.service", "--no-pager", "-o", "short-iso-precise",
+                     "-n", "2000"], timeout=20, limit=1024 * 1024)
+    value["hosting_log_lines"] = [line for line in (agent_log.get("stdout") or "").splitlines()
+                                  if re.search(r"hosting root|site refused", line, re.I)][-10:]
+    accounts = {}
+    for name in WEB_ACCOUNTS:
+        result = run(["getent", "passwd", name], timeout=5, limit=1024)
+        accounts[name] = {"outcome": getent_outcome(result), "returncode": result.get("returncode"),
+                          "entry": (result.get("stdout") or "").strip()}
+    value["web_accounts"] = accounts
+    if light:
+        return value
+    release = {}
+    try:
+        for line in Path("/etc/os-release").read_text().splitlines():
+            key, _, raw = line.partition("=")
+            if key in ("ID", "VERSION_ID"):
+                release[key] = raw.strip('"')
+    except OSError:
+        pass
+    value["os"] = release
+    value["cron_units"] = {name: _show(name, "LoadState", "ActiveState", "SubState", "UnitFileState", "NRestarts")
+                           for name in ("cron.service", "cronie.service")}
+    cron_path = cron_stamp_path()
+    value["cron_stamp"] = probe_cron(cron_path)
+    value["origin_unit"] = _show(ORIGIN_UNIT, "ActiveState", "SubState", "UnitFileState", "NRestarts")
+    try:
+        value["hosts_origin_lines"] = [line for line in Path("/etc/hosts").read_text().splitlines() if "celikpanel" in line]
+    except OSError:
+        value["hosts_origin_lines"] = None
+    origin = run(["getent", "hosts", "celikpanel.net"], timeout=10, limit=4096)
+    value["origin_lookup"] = {"outcome": getent_outcome(origin), "stdout": (origin.get("stdout") or "")[:512]}
+    listeners = run(["/usr/bin/ss", "-ltnpH"], timeout=10, limit=65536)
+    wanted = tuple(f":{port}" for port in INSPECT_PORTS)
+    value["listeners"] = [" ".join(line.split()[3:6]) for line in (listeners.get("stdout") or "").splitlines()
+                          if len(line.split()) > 3 and line.split()[3].endswith(wanted)]
+    for unit in ("celikpanel-panel.service", "celikpanel-agent.service", "celikpanel-release-recovery.service",
+                 "celikpanel-release-recovery.timer", "celikpanel-firewall-restore.service"):
+        value.setdefault("product_units", {})[unit] = _show(
+            unit, "LoadState", "ActiveState", "SubState", "UnitFileState", "NRestarts", "Result", "ExecMainStatus",
+            "ActiveEnterTimestamp", "InactiveEnterTimestamp")
+    value["timers"] = timers()
+    records = Path("/var/lib/celikpanel-recovery-observations")
+    value["observation_record_names"] = sorted(p.name for p in records.iterdir())[:32] if records.is_dir() else None
+    return value
 
 
 def cli_status(request_id: str) -> dict:
@@ -625,7 +788,8 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("mode", choices=("install-sampler", "sample-loop", "samples", "snapshot", "cli-status",
                                          "budget", "journal", "tls-leaf", "credentials", "owner-retry",
-                                         "install-origin", "origin-check", "cron-availability"))
+                                         "install-origin", "origin-check", "cron-availability", "inspect",
+                                         "db-seed", "db-query"))
     for name in ("lab-nonce", "vm-uuid", "cell-id", "node"):
         parser.add_argument("--" + name, required=True)
     parser.add_argument("--domain")
@@ -641,9 +805,16 @@ def main(argv=None) -> int:
     parser.add_argument("--unit", action="append", default=[])
     parser.add_argument("--lines", type=int, default=2000)
     parser.add_argument("--execute", action="store_true")
+    parser.add_argument("--light", action="store_true")
+    parser.add_argument("--db-name")
     args = parser.parse_args(argv)
     probe = _load_probe()
     identity = probe.guard_guest(args)
+    if args.db_name is not None and not DB_NAME_RE.fullmatch(args.db_name):
+        parser.error("--db-name must be a plain database identifier")
+    if args.mode in ("db-seed", "db-query") and (not args.db_name or not args.marker
+                                                 or not MARKER_RE.fullmatch(args.marker)):
+        parser.error("database modes require --db-name and the exact upd1 marker")
     if args.mode in ("install-sampler", "sample-loop", "snapshot"):
         if not args.domain or not DOMAIN_RE.fullmatch(args.domain) or not args.marker or not MARKER_RE.fullmatch(args.marker):
             parser.error("workload modes require an exact domain and upd1 marker")
@@ -677,6 +848,12 @@ def main(argv=None) -> int:
         value = origin_check()
     elif args.mode == "cron-availability":
         value = cron_availability()
+    elif args.mode == "inspect":
+        value = inspect(args.light)
+    elif args.mode == "db-seed":
+        value = db_seed(args.db_name, args.marker)
+    elif args.mode == "db-query":
+        value = probe_db(args.db_name, args.marker)
     else:
         if not args.request_id or not HEX32.fullmatch(args.request_id) or not args.snapshot_name:
             parser.error("owner-retry requires the exact request id and pending snapshot")

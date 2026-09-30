@@ -14,7 +14,9 @@
 #
 # CELL: upd1-debian13-defective | upd1-debian13-good | upd1-arch-defective | upd1-arch-good
 #       upd1-debian13-startcheck | upd1-arch-startcheck | upd1-debian13-realstart | upd1-arch-realstart
-#       (the last four need an upd1-artifacts.json built with the startcheck/realstart roles)
+#       (those four need an upd1-artifacts.json built with the startcheck/realstart roles)
+#       upd1-debian13-owner-continuation | upd1-arch-owner-continuation
+#       upd1-debian13-mgmt-off-reboot | upd1-arch-mgmt-off-reboot   (good candidate G; any document)
 # One cell per new lab. Never reuse a lab, an intent or a guest.
 # The image cache defaults to /var/tmp/cp-v3n28/images (UPD1_IMAGE_CACHE overrides).
 # UPD1_DNS_MODE: external (default; DNS not provided by this run) | local (two-node variant only).
@@ -29,7 +31,7 @@ DRIVER=(python3 "$HERE/owner_update_trial.py")
 CHOICES=(--dns-mode "$DNS_MODE")
 [[ -z ${UPD1_SETUP_DRAFT_JSON:-} ]] || CHOICES+=(--setup-draft-json "$UPD1_SETUP_DRAFT_JSON")
 
-usage() { sed -n '2,21p' "${BASH_SOURCE[0]}" >&2; exit 2; }
+usage() { sed -n '2,23p' "${BASH_SOURCE[0]}" >&2; exit 2; }
 [[ $# -ge 1 ]] || usage
 command=$1; shift
 case $command in

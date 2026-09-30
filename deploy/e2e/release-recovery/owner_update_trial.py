@@ -30,6 +30,21 @@ owner retry is printed but never run). Each is judged by its own rules
 (``judge_start_check`` / ``judge_real_start``) from the product's catalogues and
 recovery CLI source of the built commit and the CLI output verbatim.
 
+upd4 (after the upd3 native run) makes the run-copy corrections permanent -
+H8 (``SettledFailure``: track stops after 600 s of an unchanged failed/none
+status with no recovery activity), H9 (``dispatch_direction``: a rollback
+dispatch is ``operation=rollback`` in any phase or ``operation=update
+phase=active``), H10 (``load_card_rules``: the update card and the recovery
+screen are rendered from the product build's own ``systemUpdateOutcome.ts``,
+``recoveryObservation.ts`` and ``RecoveryAccess.tsx`` rules and catalogues) and
+the observer sidecar v2 (``inspect`` points that never overlap the update's
+preflight) - and adds two cell kinds: ``owner-continuation`` (the good
+candidate cannot bind its port because ``guest_owner_port_hold.py`` holds it,
+forward completion pauses, the owner releases the port and runs the printed
+retry once) and ``mgmt-off-reboot`` (after a verified good update the owner
+disables the Panel and Agent, reboots, and every workload is measured without
+management before it is re-enabled).
+
 It records observations; it does not decide the P0 rows. ``result.json``
 always carries ``native_evidence: false``. Nothing here updates, repairs or
 administers an installed customer panel.
@@ -110,7 +125,7 @@ CRON_NOT_AVAILABLE = "not available on this baseline"
 ORIGIN_NAME = "celikpanel.net"
 GUEST_HELPERS = ("guest_probe.py", "guest_port_fault.py", "guest_update_kill.py", "guest_bound_worker.py",
                  "guest_recovery_fault.py", "guest_recovery_handoff.py", "guest_owner_update_observer.py",
-                 "guest_upd1_workload.py")
+                 "guest_upd1_workload.py", "guest_owner_port_hold.py")
 WORKLOADS = ("web", "dns", "smtp", "cron")
 TERMINAL = {("recovered", "rollback_verified"), ("succeeded", "update_verified")}
 PROVENANCE = {
@@ -131,9 +146,21 @@ KIND_PROVENANCE = {
     "real-start": "fixture source patch: cmd/panel main() exits (log.Fatalf) just before its listener starts; the "
                   "read-only start check exits before flag parsing and never reaches that line, so the check "
                   "passes and the real start fails after completion.pending (simulated by a committed fixture change)",
+    # upd4: no candidate defect; the good candidate G is installed unchanged.
+    "owner-continuation": "no candidate defect (good candidate G); owner-fixable host cause: guest_owner_port_hold.py "
+                          "holds 127.0.0.1:2083 from the moment the updater stops the old Panel, so the new Panel cannot "
+                          "bind, its stability wait fails (panel_start_unverified) and forward completion pauses; the "
+                          "harness then does what the product text tells the owner (release the port, run the printed "
+                          "one-time retry once) (simulated host condition, never a product change)",
+    "mgmt-off-reboot": "no candidate defect (good candidate G); after the verified update the owner disables and stops "
+                       "the Panel and Agent units, reboots once (orderly) and measures every workload without management "
+                       "(owner action on a disposable guest, never a product change)",
 }
 # Cell variant -> artifact role in upd1-artifacts.json.
-VARIANT_ROLES = {"good": "good", "defective": "defective", "start-check": "startcheck", "real-start": "realstart"}
+VARIANT_ROLES = {"good": "good", "defective": "defective", "start-check": "startcheck", "real-start": "realstart",
+                 "owner-continuation": "good", "mgmt-off-reboot": "good"}
+OWNER_VARIANTS = ("owner-continuation", "mgmt-off-reboot")
+FORWARD_VARIANTS = ("good",) + OWNER_VARIANTS
 BASE_ROLES = ("baseline", "good", "defective")
 EXTRA_ROLES = ("startcheck", "realstart")
 ROLLBACK_VARIANTS = ("defective", "start-check")
@@ -181,6 +208,14 @@ CELLS = {
     # limit, then the pause. No second fault; the owner retry is not run (it would retry the same candidate).
     "upd1-debian13-realstart": Cell("upd1-debian13-realstart", "debian13", "real-start", None, True),
     "upd1-arch-realstart": Cell("upd1-arch-realstart", "arch", "real-start", None, False),
+    # upd4: the owner path never exercised natively - forward completion exhausts its budget on a transient,
+    # owner-fixable cause (the Panel port held), and the owner's one-time retry completes the same operation.
+    "upd1-debian13-owner-continuation": Cell("upd1-debian13-owner-continuation", "debian13", "owner-continuation",
+                                             None, True),
+    "upd1-arch-owner-continuation": Cell("upd1-arch-owner-continuation", "arch", "owner-continuation", None, False),
+    # upd4: after a verified good update, management disabled + one orderly reboot; workloads measured without it.
+    "upd1-debian13-mgmt-off-reboot": Cell("upd1-debian13-mgmt-off-reboot", "debian13", "mgmt-off-reboot", None, True),
+    "upd1-arch-mgmt-off-reboot": Cell("upd1-arch-mgmt-off-reboot", "arch", "mgmt-off-reboot", None, False),
 }
 
 
@@ -494,46 +529,255 @@ def web_failure_guidance_key(status: dict | None) -> str | None:
     return None
 
 
-def recovery_guidance(translator: Any, status: dict | None) -> dict:
-    """What RecoveryStatus (web/src/components/RecoveryAccess.tsx) shows for one status."""
-    if not isinstance(status, dict) or status.get("observation") != "known" or not status.get("phase"):
+RECOVERY_LOG_COMMAND = "sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50"
+WAIT_REASONS = ("initializing", "starting", "stopping")
+
+
+def web_observation(status: dict | None, codes: Iterable[str] = FAILURE_CODES) -> dict | None:
+    """The fields parseRecoveryObservation (web/src/lib/recoveryObservation.ts) keeps from one status body.
+
+    ``failure_code`` only with ``previous_failure=update_failed``; ``first_failure_code`` only with a paused
+    automatic recovery; ``waiting_for`` only while recovering; unknown codes are dropped (generic text).
+    """
+    if not isinstance(status, dict):
+        return None
+    if status.get("observation") != "known":
+        return {"observation": status.get("observation") or "unavailable", "request_id": status.get("request_id")}
+    codes = tuple(codes)
+    phase = status.get("phase")
+    automatic = ("paused_retry_limit" if phase == "recovery_required"
+                 and status.get("automatic_recovery") == "paused_retry_limit" else None)
+    value = {"observation": "known", "request_id": status.get("request_id"), "phase": phase,
+             "terminal_proof": status.get("terminal_proof"), "reason": status.get("reason"),
+             "previous_failure": status.get("previous_failure"),
+             "waiting_for": status.get("waiting_for") if phase == "recovering"
+             and status.get("waiting_for") in WAIT_REASONS else None,
+             "automatic_recovery": automatic,
+             "failure_code": status.get("failure_code") if status.get("previous_failure") == "update_failed"
+             and status.get("failure_code") in codes else None,
+             "first_failure_code": status.get("first_failure_code") if automatic
+             and status.get("first_failure_code") in codes else None}
+    return {k: v for k, v in value.items() if v is not None}
+
+
+def recovery_guidance(translator: Any, status: dict | None, rules: dict | None = None) -> dict:
+    """What RecoveryStatus (web/src/components/RecoveryAccess.tsx) shows for one status.
+
+    Order as the component renders it: title, the paused cause line
+    (``recovery.automatic.cause.<first_failure_code>``, when the build's
+    RecoveryAccess.tsx has it), help, the inspect line, the journal command,
+    the resume line, then the previous failure.
+
+    ``rules`` (``load_card_rules`` of the served build): the observation is
+    parsed and the typed guidance key chosen by the build's own
+    ``parseRecoveryObservation`` / ``recoveryFailureGuidanceKey``; the JSX
+    layout (which the evaluator cannot read) is anchored by
+    ``parse_screen_rules``. A root-CLI status carries no ``panel_state``; the
+    Panel adds ``ready`` before the screen sees it, so the model adds it too.
+    Without ``rules``: the Python mirror of the committed 94be6b6e rules.
+    """
+    module = (rules or {}).get("module")
+    cause_line = True if not rules else bool((rules.get("screen") or {}).get("automatic_cause_line"))
+    web, guidance_key = None, None
+    if module is not None and isinstance(status, dict) and HEX32.fullmatch(str(status.get("request_id") or "")):
+        evaluator = web_eval()
+        try:
+            web = module.call("parseRecoveryObservation", dict({"panel_state": "ready"}, **status), status["request_id"])
+            if web.get("observation") == "known":
+                guidance_key = module.call("recoveryFailureGuidanceKey", web)
+        except evaluator.JSThrow:
+            web = None
+        except evaluator.Unsupported:
+            module, web = None, None
+    if module is None:
+        web = web_observation(status)
+        guidance_key = web_failure_guidance_key(web) if isinstance(web, dict) else None
+    if not isinstance(web, dict) or web.get("observation") != "known" or not web.get("phase"):
         keys = ["recovery.observationUnavailable"]
     else:
-        phase, waiting, automatic = status.get("phase"), status.get("waiting_for"), status.get("automatic_recovery")
+        phase, waiting, automatic = web.get("phase"), web.get("waiting_for"), web.get("automatic_recovery")
         keys = [("recovery.automatic.pausedTitle" if automatic else f"recovery.wait.{waiting}" if waiting
-                 else f"recovery.phase.{phase}"),
-                ("recovery.automatic.pausedHelp" if automatic else "recovery.wait.next" if waiting
-                 else web_failure_guidance_key(status) or f"recovery.next.{phase}")]
+                 else f"recovery.phase.{phase}")]
+        if automatic and web.get("first_failure_code") and cause_line:
+            keys.append(f"recovery.automatic.cause.{web['first_failure_code']}")
+        keys.append("recovery.automatic.pausedHelp" if automatic else "recovery.wait.next" if waiting
+                    else guidance_key or f"recovery.next.{phase}")
         if automatic:
             keys += ["recovery.automatic.inspect", "recovery.automatic.resume"]
-        if status.get("previous_failure"):
-            keys.append(f"recovery.reason.{web_failure_code(status) or status['previous_failure']}")
+        if web.get("previous_failure"):
+            keys.append(f"recovery.reason.{web.get('failure_code') or web['previous_failure']}")
     missing = [key for key in keys if not translator.has(key)]
     texts = {language: [translator.text(key, language=language) for key in keys] for language in ("en", "tr")}
-    if status and status.get("automatic_recovery"):
+    if "recovery.automatic.inspect" in keys:
+        position = keys.index("recovery.automatic.inspect") + 1
         for language in ("en", "tr"):
-            texts[language].insert(3, "sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50")
+            texts[language].insert(position, RECOVERY_LOG_COMMAND)
     return {"keys": keys, "texts": texts, "missing_keys": missing,
             "actionable": not missing and keys != ["recovery.observationUnavailable"],
             "no_actor_or_action": bool(missing)}
 
 
-def update_card_guidance(translator: Any, status: dict | None) -> dict:
-    """What SystemUpdateOperation.tsx shows for one /api/v1/panel/update/status body.
+# -- H10: the update card, rendered by the product build's own functions -------------------------
 
-    A ``summary`` is a server string shown as-is in both languages; it is
-    recorded as untranslated rather than judged here.
+CARD_SOURCES = {"outcome": "lib/systemUpdateOutcome.ts", "observation": "lib/recoveryObservation.ts",
+                "typed": "lib/systemUpdateFailure.ts", "screen": "components/RecoveryAccess.tsx"}
+CARD_FUNCTIONS = ("failedUpdateGuidance", "parseRecoveryObservation", "recoveryFailureGuidanceKey",
+                  "systemUpdateFailureMessage")
+PLACEHOLDER_RE = re.compile(r"\{(target|previous|message|version|current|time)\}")
+
+
+class CardModelUnavailable(ValueError):
+    """The build's card source is outside what the evaluator reads; the card is recorded as not modelled."""
+
+
+def web_eval() -> Any:
+    return _load("upd1_web_source_eval", HERE / "web_source_eval.py")
+
+
+def parse_screen_rules(screen_tsx: str) -> dict:
+    """What the build's RecoveryStatus (JSX) shows beyond the shared keys, read from its source."""
+    return {"automatic_cause_line": "recovery.automatic.cause.${last.first_failure_code}" in screen_tsx,
+            "journal_command": RECOVERY_LOG_COMMAND in screen_tsx}
+
+
+def parse_card_rules(sources: dict) -> dict:
+    """The build's own card functions, ready to evaluate (``web_source_eval``), never a frozen copy.
+
+    ``sources``: {"outcome", "observation", "typed"[, "screen"]} source texts.
+    Every function the card calls is parsed up front; a construct outside the
+    evaluator's subset raises ``CardModelUnavailable`` (the judge says unknown).
     """
-    if not isinstance(status, dict) or not status.get("found"):
-        return {"keys": [], "texts": {"en": [], "tr": []}, "summary": None, "untranslated_summary": False}
-    state = status.get("status")
-    key = {"failed": "panelUpdate.failed", "succeeded": "panelUpdate.succeeded",
-           "running": "panelUpdate.running", "queued": "panelUpdate.queued"}.get(state)
-    summary = status.get("summary") if state == "failed" else None
-    texts = {language: [summary] if summary else ([translator.text(key, language=language)] if key else [])
-             for language in ("en", "tr")}
-    return {"keys": [key] if key and not summary else [], "texts": texts, "summary": summary,
-            "untranslated_summary": bool(summary), "missing_keys": [key] if key and not translator.has(key) else []}
+    evaluator = web_eval()
+    try:
+        module = evaluator.Module({name: sources[name] for name in ("outcome", "observation", "typed")})
+        for name in CARD_FUNCTIONS:
+            module.function(name)
+        codes = module.constant("recoveryFailureCodes")
+        command = module.constant("RECOVERY_LOG_COMMAND")
+    except (evaluator.Unsupported, KeyError) as exc:
+        raise CardModelUnavailable(f"the build's card source cannot be read: {type(exc).__name__}: {exc}") from exc
+    return {"module": module, "failure_codes": list(codes), "command": command,
+            "screen": parse_screen_rules(sources.get("screen") or "")}
+
+
+def load_card_rules(web_src: Path) -> dict:
+    """Read the rules from one product build's ``web/src`` (``product_web_src`` of an artifact role)."""
+    root = Path(web_src)
+    texts = {}
+    for name, relative in CARD_SOURCES.items():
+        try:
+            texts[name] = (root / relative).read_text(encoding="utf-8")
+        except OSError as exc:
+            raise CardModelUnavailable(f"{relative}: {type(exc).__name__}") from exc
+    rules = parse_card_rules(texts)
+    rules["source"] = {name: {"path": relative, "sha256": hashlib.sha256(texts[name].encode()).hexdigest()}
+                       for name, relative in CARD_SOURCES.items()}
+    return rules
+
+
+def card_model(rules: dict | None, status_body: dict | None, recovery_body: dict | None, request_id: str | None,
+               versions: dict, translator: Any) -> dict:
+    """What SystemUpdateOperation.tsx shows for one update-status body and the exact request's recovery body.
+
+    The outer selection (found / succeeded / running / failed / identity) is the
+    component's (JSX, mirrored here); for a failed update the card is exactly
+    what the build's ``failedUpdateGuidance`` returns for the observation its
+    ``parseRecoveryObservation`` accepts, with the component's inputs (message
+    = the server summary, product messages, typed message through the build's
+    ``systemUpdateFailureMessage``, the settled read). Items per language:
+    title, lines, the fixed command, the server-reported line.
+    """
+    if rules is None:
+        return {"state": None, "items": {"en": [], "tr": []}, "unavailable": "card rules not loaded"}
+    if not isinstance(status_body, dict) or not status_body.get("found"):
+        return {"state": "none", "items": {"en": [], "tr": []}}
+    status = status_body.get("status")
+    same = status_body.get("request_id") == request_id
+    if same and status == "succeeded":
+        items = [{"key": "panelUpdate.succeeded"}, {"key": "panelUpdate.succeeded"}]
+        return {"state": "succeeded", "items": {"en": items, "tr": items}}
+    if same and status in ("running", "queued"):
+        items = [{"key": "panelUpdate.title"}, {"key": f"panelUpdate.{status}"}]
+        return {"state": "in-progress", "items": {"en": items, "tr": items}}
+    evaluator, module = web_eval(), rules["module"]
+    observation, parse_error = None, None
+    if isinstance(recovery_body, dict) and request_id:
+        try:
+            observation = module.call("parseRecoveryObservation", recovery_body, request_id)
+        except evaluator.JSThrow as exc:
+            parse_error = str(exc)
+    items: dict[str, list] = {}
+    state = None
+    for language in ("en", "tr"):
+        def t(key, values=None, language=language):
+            return translator.text(key, values, language=language)
+        shown = t("panelUpdate.identityMismatchCleared") if not same else (status_body.get("summary")
+                                                                          or t("panelUpdate.failed"))
+        typed = module.call("systemUpdateFailureMessage", shown, t)
+        guidance = module.call("failedUpdateGuidance", observation, {
+            "targetVersion": versions["target"], "previousVersion": versions["previous"],
+            "message": "" if shown == t("panelUpdate.failed") else shown,
+            "productMessages": [t("panelUpdate.notAccepted"), t("panelUpdate.identityMismatchCleared")],
+            "typedMessage": typed if typed != shown else None, "reading": False})
+        if not isinstance(guidance, dict) or not isinstance(guidance.get("lines"), list):
+            raise CardModelUnavailable("failedUpdateGuidance returned no card")
+        entries = [guidance.get("title")] + list(guidance["lines"])
+        rendered = [dict(entry) for entry in entries if isinstance(entry, dict)]
+        if guidance.get("command"):
+            rendered.append({"text": guidance["command"]})
+        if guidance.get("serverMessage"):
+            rendered.append({"key": "panelUpdate.outcome.serverMessage",
+                             "vars": {"message": guidance["serverMessage"]}, "server_message": True})
+        items[language] = rendered
+        state = state or guidance.get("state")
+    return {"state": state, "items": items, "observation": observation, "observation_error": parse_error}
+
+
+def update_card_guidance(translator: Any, status: dict | None, recovery: dict | None = None,
+                         rules: dict | None = None, request_id: str | None = None,
+                         versions: dict | None = None) -> dict:
+    """The rendered update card (keys, EN/TR texts) from the build's own functions; see ``card_model``."""
+    versions = versions or {"target": CANDIDATE_VERSION, "previous": BASELINE_VERSION}
+    request_id = request_id or (status or {}).get("request_id")
+    evaluator = web_eval()
+    try:
+        model = card_model(rules, status, recovery, request_id, versions, translator)
+    except (CardModelUnavailable, evaluator.Unsupported, evaluator.JSThrow) as exc:
+        model = {"state": None, "items": {"en": [], "tr": []}, "unavailable": f"{type(exc).__name__}: {exc}"}
+    texts = {language: [item["text"] if "text" in item else translator.text(item["key"], item.get("vars"),
+                                                                              language=language)
+                        for item in model["items"][language]] for language in ("en", "tr")}
+    keys = [item["key"] for item in model["items"]["en"] if "key" in item]
+    tr_keys = [item["key"] for item in model["items"]["tr"] if "key" in item]
+    server = next((item["vars"]["message"] for item in model["items"]["en"] if item.get("server_message")), None)
+    card = {"state": model["state"], "keys": keys, "texts": texts,
+            "missing_keys": sorted({k for k in keys + tr_keys if not translator.has(k)}),
+            "server_message": server, "unavailable": model.get("unavailable"),
+            "source": (rules or {}).get("source"), "observation_error": model.get("observation_error")}
+    if tr_keys != keys:
+        card["tr_keys"] = tr_keys
+    return card
+
+
+def judge_update_card(card: dict | None, expected_states: Iterable[str]) -> dict:
+    """A finding only for a real mismatch: a key the build's catalogue lacks, an unfilled placeholder, or a card
+    state that contradicts the server's recovery record for this cell. A card that cannot be modelled is unknown;
+    the server-reported secondary line is recorded, never judged."""
+    expected_states = tuple(expected_states)
+    if not isinstance(card, dict) or card.get("unavailable") or card.get("state") is None:
+        return {"verdict": "unknown", "reason": (card or {}).get("unavailable") or "card not read", "findings": []}
+    findings = []
+    if card.get("missing_keys"):
+        findings.append(f"card keys missing from the build's catalogue: {card['missing_keys']}")
+    for language in ("en", "tr"):
+        unfilled = sorted({m.group(0) for text in card["texts"][language] for m in PLACEHOLDER_RE.finditer(text)})
+        if unfilled:
+            findings.append(f"card {language} text has unfilled placeholders {unfilled}")
+    if card.get("state") not in expected_states:
+        findings.append(f"the card shows state {card.get('state')!r} while this cell's server record expects "
+                        f"{list(expected_states)}")
+    return {"verdict": "finding" if findings else "as-expected", "findings": findings,
+            "server_message_line": card.get("server_message")}
 
 
 def classify_status(status: dict | None) -> str:
@@ -547,6 +791,53 @@ def classify_status(status: dict | None) -> str:
     return "in-progress"
 
 
+SETTLED_FAILED_RULE = "settled-failed-before-change"
+SETTLED_FAILED_SECONDS = 600.0
+SETTLED_FAILED_SAMPLES = 3
+
+
+class SettledFailure:
+    """H8 (upd3): when does ``track`` stop on a failure the product keeps unchanged?
+
+    A failure before any change (phase ``failed``, proof ``none``) with no
+    automatic recovery and no wait has no terminal or paused state; the 90-min
+    deadline would only delay the same inconclusive verdict (upd3 cell 1). The
+    rule: the known status has stayed exactly the same failed/none status (every
+    field in ``FIELDS``) for ``seconds`` over at least ``samples`` reads, with no
+    recovery activity. Any change, or any other status, restarts the clock.
+    """
+
+    FIELDS = ("phase", "terminal_proof", "reason", "previous_failure", "failure_code", "first_failure_code",
+              "automatic_recovery", "waiting_for")
+
+    def __init__(self, seconds: float = SETTLED_FAILED_SECONDS, samples: int = SETTLED_FAILED_SAMPLES) -> None:
+        self.seconds, self.samples = seconds, samples
+        self.signature: tuple | None = None
+        self.since: float | None = None
+        self.count = 0
+
+    @staticmethod
+    def quiet(observed: Any) -> bool:
+        return (isinstance(observed, dict) and observed.get("observation") == "known"
+                and observed.get("phase") == "failed" and observed.get("terminal_proof") == "none"
+                and not observed.get("automatic_recovery") and not observed.get("waiting_for"))
+
+    def observe(self, observed: Any, now: float) -> bool:
+        if not self.quiet(observed):
+            self.signature, self.since, self.count = None, None, 0
+            return False
+        signature = tuple(observed.get(field) for field in self.FIELDS)
+        if signature != self.signature:
+            self.signature, self.since, self.count = signature, now, 0
+        self.count += 1
+        return self.count >= self.samples and now - self.since >= self.seconds
+
+    def record(self, now: float) -> dict:
+        since = self.since if self.since is not None else now
+        return {"rule": SETTLED_FAILED_RULE, "seconds": round(now - since, 1), "samples": self.count,
+                "status": dict(zip(self.FIELDS, self.signature or ())), "limit_seconds": self.seconds}
+
+
 def classify_outcome(variant: str, final: dict | None, owner_continued: bool) -> str:
     state = classify_status(final)
     if state == "paused":
@@ -554,6 +845,12 @@ def classify_outcome(variant: str, final: dict | None, owner_continued: bool) ->
     if state != "terminal":
         return "not-terminal"
     phase = final["phase"]
+    if variant == "owner-continuation":
+        # The one expected class; every other end is a finding of the owner-continuation judge.
+        if phase == "succeeded":
+            return ("recovered-after-owner-continuation" if owner_continued
+                    else "update-verified-without-owner-continuation")
+        return "rolled-back-after-owner-continuation" if owner_continued else "rolled-back-instead-of-forward"
     if variant in ROLLBACK_VARIANTS:
         if phase == "recovered":
             return "recovered-after-owner-continuation" if owner_continued else "recovered-automatically"
@@ -835,6 +1132,17 @@ def hosts_mappings(hosts_text: str, name: str = ORIGIN_NAME) -> list[str]:
     return found
 
 
+def getent_outcome(result: dict | None) -> str:
+    """getent(1) exit codes: 0 found, 2 key not found (a valid answer), anything else a probe failure.
+
+    Sidecar v2 (upd3): v1 treated rc 2 as a failed probe and lost every light probe of cell 1.
+    Mirrors guest_upd1_workload.getent_outcome (a test pins the equality).
+    """
+    if not isinstance(result, dict) or result.get("status") != "ok":
+        return "probe-failed"
+    return {0: "found", 2: "not-found"}.get(result.get("returncode"), "probe-failed")
+
+
 def origin_verdict(check: dict) -> dict:
     """Is the guest-loopback fixture origin the only answer for celikpanel.net?
 
@@ -858,6 +1166,8 @@ def origin_verdict(check: dict) -> dict:
     return {"addresses": addresses, "getent_stdout": raw[:512],
             "getent_status": (check.get("getent") or {}).get("status"),
             "getent_returncode": (check.get("getent") or {}).get("returncode"),
+            # Sidecar v2: rc 2 is "not found" (the fixture name does not resolve), not a failed probe.
+            "getent_outcome": getent_outcome(check.get("getent")),
             "http": http, "loopback_only": loopback,
             "unit": {k: unit.get(k) for k in ("ActiveState", "UnitFileState", "NRestarts")},
             "boot_id": check.get("boot_id"), "ok": loopback and http == "200"}
@@ -999,15 +1309,57 @@ def attempts_from_receipts(receipts: list[dict], snapshot: str | None) -> dict:
     owner = [r for r in receipts if str(r.get("name", "")).startswith("owner.")
              and (snapshot is None or r.get("snapshot") == snapshot)]
     return {"automatic_count": len(automatic),
-            "automatic": [{"attempt": r["name"], "at": r.get("mtime_utc"), "phase": receipt_phase(r)}
+            "automatic": [{"attempt": r["name"], "at": r.get("mtime_utc"), "phase": receipt_phase(r),
+                           "operation": receipt_operation(r),
+                           "direction": dispatch_direction(receipt_operation(r), receipt_phase(r))}
                           for r in automatic],
-            "owner_count": len(owner), "owner": [{"name": r["name"], "at": r.get("mtime_utc")} for r in owner]}
+            "owner_count": len(owner),
+            "owner": [{"name": r["name"], "at": r.get("mtime_utc"), "phase": receipt_phase(r),
+                       "operation": receipt_operation(r),
+                       "direction": dispatch_direction(receipt_operation(r), receipt_phase(r))} for r in owner]}
 
 
 def receipt_phase(receipt: dict) -> str | None:
-    """``phase=`` of a dispatch receipt the guest judged safe (active = rollback, completion = forward)."""
+    """``phase=`` of a dispatch receipt the guest judged safe (read with ``operation=``: ``dispatch_direction``)."""
     match = re.search(r"^phase=([a-z-]+)$", str(receipt.get("text") or ""), re.M)
     return match.group(1) if match else None
+
+
+def receipt_operation(receipt: dict) -> str | None:
+    match = re.search(r"^operation=([a-z]+)$", str(receipt.get("text") or ""), re.M)
+    return match.group(1) if match else None
+
+
+FORWARD_PHASES = ("completion", "completion-scheduler")
+
+
+def dispatch_direction(operation: str | None, phase: str | None) -> str:
+    """H9 (planner's rule, upd3): which way one automatic dispatch went.
+
+    ``rollback``: ``operation=rollback`` in ANY phase (a resumed rollback's own
+    completion is ``rollback/completion``, arch-startcheck upd3), or
+    ``operation=update phase=active`` (the update failed while still active).
+    ``forward``: ``operation=update`` with ``phase=completion`` (or its
+    scheduler step). Anything else is ``unknown`` (never guessed).
+    """
+    if operation == "rollback":
+        return "rollback"
+    if operation == "update" and phase == "active":
+        return "rollback"
+    if operation == "update" and phase in FORWARD_PHASES:
+        return "forward"
+    return "unknown"
+
+
+def directions_rule(dispatches: list[dict] | None, expected: str) -> bool | None:
+    """True when every dispatch went ``expected``; False when one went the other known way; None otherwise."""
+    if not dispatches:
+        return None
+    directions = [d.get("direction") or dispatch_direction(d.get("operation"), d.get("phase")) for d in dispatches]
+    other = "forward" if expected == "rollback" else "rollback"
+    if other in directions:
+        return False
+    return True if all(d == expected for d in directions) else None
 
 
 # ---------------------------------------------------------------------------
@@ -1244,9 +1596,13 @@ def judge_start_check(obs: dict) -> dict:
     marker = obs.get("completion_marker_seen")
     _rule(findings, unknown, expected, "no-completion-marker", None if marker is None else not marker,
           "completion.pending was created although the start check failed")
-    phases = obs.get("receipt_phases")
-    _rule(findings, unknown, expected, "rollback-dispatch", None if not phases else set(phases) == {"active"},
-          f"automatic dispatch phases {phases}, expected only active (rollback)")
+    dispatches = obs.get("receipt_dispatches")
+    _rule(findings, unknown, expected, "rollback-dispatch", directions_rule(dispatches, "rollback"),
+          f"automatic dispatches {_dispatch_text(dispatches)}: a forward attempt (operation=update phase=completion) "
+          "in a start-check cell; expected only rollback dispatches (operation=rollback in any phase, or "
+          "operation=update phase=active)")
+    _rule(findings, unknown, expected, "update-card", _card_rule(obs.get("update_card")),
+          f"update card: {(obs.get('update_card') or {}).get('findings')}")
     _rule(findings, unknown, expected, "old-release-running", None if obs.get("installed") is None
           else obs["installed"] == "baseline", f"installed release after recovery: {obs.get('installed')}")
     _rule(findings, unknown, expected, "database-equal", None if obs.get("database") is None
@@ -1282,10 +1638,9 @@ def judge_real_start(obs: dict) -> dict:
           else sidecar.get("valid") and sidecar.get("code") == REAL_START_CODE, f"failure sidecar: {sidecar}")
     marker = obs.get("completion_marker_seen")
     _rule(findings, unknown, expected, "completion-marker", marker, "completion.pending was never observed")
-    phases = obs.get("receipt_phases")
-    _rule(findings, unknown, expected, "forward-dispatch",
-          None if not phases else set(phases) <= {"completion", "completion-scheduler"},
-          f"automatic dispatch phases {phases}, expected only completion (forward)")
+    dispatches = obs.get("receipt_dispatches")
+    _rule(findings, unknown, expected, "forward-dispatch", directions_rule(dispatches, "forward"),
+          f"automatic dispatches {_dispatch_text(dispatches)}, expected only completion (forward)")
     _rule(findings, unknown, expected, "paused", None if not final else final.get("phase") == "recovery_required"
           and final.get("automatic_recovery") == "paused_retry_limit",
           f"forward completion did not pause at its limit: final {final.get('phase')}/"
@@ -1328,13 +1683,326 @@ def judge_real_start(obs: dict) -> dict:
     return _judged("real-start", expected, findings, unknown)
 
 
+# ---------------------------------------------------------------------------
+# upd4: owner-continuation (port hold) and management-off reboot (pure rules; covered offline)
+# ---------------------------------------------------------------------------
+
+PORT_HOLD_UNIT_PREFIX = "celikpanel-lab-owner-port-hold-"
+PORT_HOLD_EVENT_SCHEMA = "celikpanel/upd1-owner-port-hold/v1"
+PORT_HOLD_SOURCES = {"update": "update.sh", "timer": "deploy/systemd/celikpanel-release-recovery.timer",
+                     "runner": "deploy/release-recovery-runner.sh"}
+# Allowances around the product's own constants (each at least twice what upd3 measured natively:
+# 30 s of update work before the real start, 8 s of work per forward attempt, a track poll of <= 15 s
+# plus one CLI sample, and the owner-continuation reads before the release).
+PORT_HOLD_ALLOWANCES = {"start_work_s": 120, "attempt_work_s": 60, "owner_detection_s": 120, "owner_step_s": 300}
+# upd3 native reference (real-start cells, same stability wait, timer and budget): from the old Panel's stop
+# (when the hold binds) to paused_retry_limit.
+PORT_HOLD_MEASURED = {"debian13": {"panel_down": "19:57:31", "pause": "20:04:02", "seconds": 391},
+                      "arch": {"panel_down": "20:44:27", "pause": "20:50:50", "seconds": 383}}
+PORT_CONFLICT_RE = re.compile(r"address already in use|bind: |listen tcp", re.I)
+
+
+def systemd_seconds(value: str) -> float:
+    """systemd.time spans used by the recovery timer (``30s``, ``1min 30s``, ``1s``, ``500ms``, bare seconds)."""
+    text = str(value or "").strip()
+    if re.fullmatch(r"\d+", text):
+        return float(text)
+    total, matched = 0.0, ""
+    units = {"ms": 0.001, "s": 1, "sec": 1, "m": 60, "min": 60, "h": 3600, "hr": 3600}
+    for number, unit in re.findall(r"(\d+)\s*(ms|sec|min|hr|s|m|h)\b", text):
+        total += int(number) * units[unit]
+        matched += number + unit
+    if not matched or re.sub(r"\s+", "", text) != matched:
+        raise ValueError(f"unsupported systemd time span {value!r}")
+    return total
+
+
+def parse_hold_sources(update_sh: str, timer: str, runner: str) -> dict:
+    """The product constants the port hold must outlast, read from the build's own files."""
+    wait = re.search(r"^PANEL_START_WAIT_SECONDS=(\d+)$", update_sh, re.M)
+    inactive = re.search(r"^OnUnitInactiveSec=(.+)$", timer, re.M)
+    accuracy = re.search(r"^AccuracySec=(.+)$", timer, re.M)
+    budget = re.search(r"OWNER_RETRY_SNAPSHOT && \$count == (\d+) \]\]", runner)
+    if not wait or not inactive or not budget:
+        raise ValueError("the stability wait, recovery timer or retry budget is not where the reviewed product has it")
+    return {"panel_start_wait_s": int(wait.group(1)), "timer_inactive_s": systemd_seconds(inactive.group(1)),
+            "timer_accuracy_s": systemd_seconds(accuracy.group(1)) if accuracy else 60.0,
+            "retry_budget": int(budget.group(1))}
+
+
+def port_hold_bound(constants: dict, allowances: dict | None = None) -> dict:
+    """How long the owner-continuation hold may last (hold_seconds) and the unit's RuntimeMaxSec.
+
+    Forward completion reaches the pause after the update's own real start
+    (start work + one stability wait) and ``retry_budget`` forward attempts,
+    each one stability wait + attempt work + the recovery timer's
+    OnUnitInactiveSec + AccuracySec; the runner pauses on the next tick after
+    the last attempt. The hold must then survive the driver's detection of the
+    pause and the owner-continuation reads before the owner releases it.
+    """
+    a = dict(PORT_HOLD_ALLOWANCES, **(allowances or {}))
+    per_attempt = (constants["panel_start_wait_s"] + a["attempt_work_s"] + constants["timer_inactive_s"]
+                   + constants["timer_accuracy_s"])
+    pause_worst = a["start_work_s"] + constants["panel_start_wait_s"] + constants["retry_budget"] * per_attempt
+    hold = pause_worst + a["owner_detection_s"] + a["owner_step_s"]
+    hold_seconds = int(-(-hold // 60) * 60)
+    measured = max(v["seconds"] for v in PORT_HOLD_MEASURED.values())
+    return {"constants": constants, "allowances": a, "per_attempt_s": per_attempt, "pause_worst_s": pause_worst,
+            "hold_seconds": hold_seconds, "runtime_max_seconds": hold_seconds + 60,
+            "measured_pause_s": {k: v["seconds"] for k, v in PORT_HOLD_MEASURED.items()},
+            "margin_over_measured_s": hold_seconds - measured,
+            "formula": "hold = start_work + wait + budget*(wait + attempt_work + OnUnitInactiveSec + AccuracySec) "
+                       "+ owner_detection + owner_step, rounded up to a minute; RuntimeMaxSec = hold + 60"}
+
+
+def plan_port_hold(root: Path | None = None) -> dict:
+    """The bound as the plan shows it, from the driver's own checkout (a run reads the candidate commit's files)."""
+    root = root or HERE.parents[2]
+    try:
+        texts = {name: (root / path).read_text(encoding="utf-8") for name, path in PORT_HOLD_SOURCES.items()}
+        bound = port_hold_bound(parse_hold_sources(texts["update"], texts["timer"], texts["runner"]))
+    except (OSError, ValueError) as exc:
+        return {"unavailable": f"{type(exc).__name__}: {exc}"}
+    return dict(bound, source="driver checkout (plan only; a run reads update.sh, the recovery timer and the runner "
+                              "of the candidate commit)")
+
+
+def port_hold_state(events: list[dict] | None) -> dict:
+    """What the hold's own event stream says (held, phases seen, released and why)."""
+    events = events or []
+    kinds = [e.get("event") for e in events]
+    held = next((e for e in events if e.get("event") == "port_held"), None)
+    released = next((e for e in events if e.get("event") == "released"), None)
+    return {"armed": "armed" in kinds, "held": held is not None, "held_at": (held or {}).get("at"),
+            "phases_seen": [e.get("phase") for e in events if e.get("event") in ("port_held", "phase_seen")],
+            "released": released is not None, "release_reason": (released or {}).get("reason"),
+            "released_at": (released or {}).get("at"), "held_seconds": (released or {}).get("held_seconds")}
+
+
+INSPECTION_POINTS = ("before-site", "after-setup", "after-seed", "before-check", "after-track", "at-pause",
+                     "after-continuation", "after-terminal", "after-reboot", "after-management-return")
+
+
+def inspection_allowed(state: dict, label: str) -> tuple[bool, str]:
+    """Sidecar v2 rule, now the driver's: a read-only inspection never overlaps the update's preflight.
+
+    Allowed before the update check (``check_at`` unset), or while no update or
+    owner retry awaits its terminal state (``awaiting_terminal`` false: the track
+    ended at a terminal, paused or settled state). Never at the old ``pre-update``
+    point, which fell inside the preflight window in upd3 cell 1.
+    """
+    if label not in INSPECTION_POINTS:
+        return False, f"{label!r} is not a scheduled inspection point"
+    if not state.get("check_at"):
+        return True, "before the update check"
+    if state.get("awaiting_terminal"):
+        return False, "between the update check (or the owner's retry) and a terminal, paused or settled state"
+    return True, "after a terminal, paused or settled state"
+
+
+MANAGEMENT_UNITS = ("celikpanel-panel.service", "celikpanel-agent.service")
+MANAGEMENT_OFF_MEASURE_SECONDS = 180.0
+MANAGEMENT_OFF_WORKLOADS = ("web", "smtp", "db")
+RENEWAL_TIMER_PATTERNS = ("certbot", "renew", "acme")
+
+
+def management_state(services: dict | None) -> dict:
+    units = {unit: {k: ((services or {}).get(unit) or {}).get(k) for k in ("ActiveState", "UnitFileState")}
+             for unit in MANAGEMENT_UNITS}
+    off = all(v["ActiveState"] in ("inactive", "failed") and v["UnitFileState"] == "disabled" for v in units.values())
+    on = all(v["ActiveState"] == "active" and v["UnitFileState"] == "enabled" for v in units.values())
+    return {"units": units, "disabled_and_stopped": off, "enabled_and_active": on}
+
+
+def boot_window(samples: Iterable[dict], boot_id: str | None) -> list[dict]:
+    return sorted((s for s in samples if boot_id and s.get("boot_id") == boot_id and "t" in s), key=lambda s: s["t"])
+
+
+def window_seconds(window: list[dict]) -> float:
+    if len(window) < 2:
+        return 0.0
+    return round(float(window[-1].get("monotonic", window[-1]["t"])) - float(window[0].get("monotonic", window[0]["t"])), 1)
+
+
+def served_after_boot(window: list[dict], key: str) -> dict:
+    """``served``: the workload answered after the boot and never failed again in the window."""
+    measured = [s for s in window if isinstance(s.get(key), dict) and s[key].get("ok") is not None]
+    if not measured:
+        return {"verdict": "not-measured", "samples": 0}
+    oks = [index for index, s in enumerate(measured) if s[key]["ok"]]
+    if not oks:
+        return {"verdict": "never-served", "samples": len(measured)}
+    first = oks[0]
+    failing_after = sum(1 for s in measured[first:] if not s[key]["ok"])
+    return {"verdict": "served" if failing_after == 0 else "interrupted", "samples": len(measured),
+            "first_ok_seconds_after_boot": measured[first].get("monotonic"), "failing_before_first_ok": first,
+            "failing_after_first_ok": failing_after}
+
+
+def cron_after_boot(window: list[dict], period_limit: float = 130.0) -> dict:
+    """The owner's cron job ran in this boot: at least two new stamps, none more than ``period_limit`` apart."""
+    if not window:
+        return {"verdict": "not-measured"}
+    started = float(window[0]["t"]) - 5.0
+    stamps = sorted({float(s["cron"]["mtime"]) for s in window if isinstance(s.get("cron"), dict)
+                     and s["cron"].get("ok") and s["cron"].get("mtime") is not None
+                     and float(s["cron"]["mtime"]) >= started})
+    stalls = [w for w in cron_windows(window, period_limit) if (w.get("from") or 0) >= started]
+    verdict = "served" if len(stamps) >= 2 and not stalls else "not-advancing"
+    return {"verdict": verdict, "stamps_in_boot": len(stamps), "stalls": stalls}
+
+
+def renewal_timer_verdict(before: dict | None, after: dict | None) -> dict:
+    """The certificate renewal timer keeps its state across management-off and the reboot."""
+    names = sorted(n for n in set(before or {}) | set(after or {}) if any(p in n for p in RENEWAL_TIMER_PATTERNS))
+    if not names:
+        return {"verdict": "not-present", "timers": {}}
+    per, ok = {}, True
+    for name in names:
+        a = {k: ((before or {}).get(name) or {}).get(k) for k in ("UnitFileState", "ActiveState")}
+        b = {k: ((after or {}).get(name) or {}).get(k) for k in ("UnitFileState", "ActiveState")}
+        good = a["UnitFileState"] == b["UnitFileState"] and (a["ActiveState"] != "active" or b["ActiveState"] == "active")
+        ok = ok and good
+        per[name] = {"before": a, "after": b, "kept": good}
+    enabled = any(v["after"]["UnitFileState"] == "enabled" and v["after"]["ActiveState"] == "active"
+                  for v in per.values())
+    return {"verdict": "as-before" if ok else "changed", "enabled_and_active": enabled, "timers": per}
+
+
+def truth_differences(before: dict | None, after: dict | None) -> list[str]:
+    """Owner-visible Panel state that differs after management returned (volatile fields are not kept)."""
+    before, after = before or {}, after or {}
+    return [f"{key}: {before.get(key)!r} -> {after.get(key)!r}" for key in sorted(set(before) | set(after))
+            if before.get(key) != after.get(key)]
+
+
+def judge_owner_continuation(obs: dict) -> dict:
+    """owner-continuation: forward completion exhausts its budget on the held port, the owner releases the port
+    and runs the printed retry once, and the same request completes forward (recovered-after-owner-continuation).
+    """
+    findings: list[str] = []
+    unknown: list[str] = []
+    expected: list[str] = []
+    final, paused, hold = obs.get("final") or {}, obs.get("paused") or {}, obs.get("hold") or {}
+    codes = obs.get("update_failure_codes")
+    _rule(findings, unknown, expected, "update-failure-line", None if codes is None else REAL_START_CODE in codes,
+          f"the update's failure line does not carry {REAL_START_CODE}: {codes}")
+    _rule(findings, unknown, expected, "hold-through-pause", None if not hold else bool(hold.get("held_at_pause")),
+          f"the port hold did not last until the pause: {hold.get('release_reason')!r} (the cause was gone before "
+          "the owner could act; the cell did not measure the owner path)")
+    _rule(findings, unknown, expected, "paused-on-cause", bool(paused) and paused.get("automatic_recovery")
+          == "paused_retry_limit" and paused.get("first_failure_code") == REAL_START_CODE,
+          f"forward completion did not pause on {REAL_START_CODE}: {paused or 'never paused'}")
+    dispatches = obs.get("receipt_dispatches")
+    _rule(findings, unknown, expected, "forward-dispatch-budget", None if not dispatches
+          else directions_rule(dispatches, "forward") is True and len(dispatches) == 3,
+          f"automatic dispatches {_dispatch_text(dispatches)}, expected three forward attempts")
+    log = obs.get("panel_log")
+    _rule(findings, unknown, expected, "panel-log-names-cause", None if log is None else bool(log.get("names_cause")),
+          "the panel log the product tells the owner to read does not show the port conflict")
+    _rule(findings, unknown, expected, "retry-command-printed", None if obs.get("printed_retry_command") is None
+          else bool(obs["printed_retry_command"]), "the recovery journal printed no one-time retry command")
+    _rule(findings, unknown, expected, "port-released-by-owner", None if not hold
+          else hold.get("release_reason") == "owner-released" and bool(hold.get("released_before_retry")),
+          f"the port was not released by the owner before the retry: {hold.get('release_reason')!r}")
+    retry = obs.get("owner_retry") or {}
+    owner_count = obs.get("owner_receipts")
+    _rule(findings, unknown, expected, "owner-retry-once", None if not retry
+          else retry.get("action") == "executed-once" and owner_count in (None, 1),
+          f"the printed retry was not run exactly once: action={retry.get('action')!r} owner receipts={owner_count}")
+    _rule(findings, unknown, expected, "completed-forward", None if not final
+          else (final.get("phase"), final.get("terminal_proof")) == ("succeeded", "update_verified"),
+          f"the same request did not complete forward: final {final.get('phase')}/{final.get('terminal_proof')}")
+    _rule(findings, unknown, expected, "outcome-class", obs.get("outcome") == "recovered-after-owner-continuation",
+          f"outcome {obs.get('outcome')!r}, expected recovered-after-owner-continuation")
+    _rule(findings, unknown, expected, "candidate-installed", None if obs.get("installed") is None
+          else obs["installed"] == "candidate", f"installed release: {obs.get('installed')}")
+    timers = obs.get("timers")
+    _rule(findings, unknown, expected, "timers-restored", None if timers is None else bool(timers.get("equal")),
+          f"timers did not return to their pre-update state: {sorted((timers or {}).get('changed') or {})}")
+    workloads = obs.get("workloads")
+    if workloads is None:
+        unknown.append("workloads-kept-running")
+    else:
+        broken = sorted(k for k, v in workloads.items() if v == "interrupted")
+        _rule(findings, unknown, expected, "workloads-kept-running", not broken,
+              f"workloads interrupted while the owner path ran: {broken}")
+    panel = obs.get("panel_verdict")
+    _rule(findings, unknown, expected, "panel-back", None if panel is None and obs.get("login_ok") is None
+          else panel == "down-only-during-transaction" and bool(obs.get("login_ok")),
+          f"the Panel did not come back only after the operation: window {panel!r}, login {obs.get('login_ok')}")
+    cli = obs.get("cli")
+    paused_text = (cli or {}).get("by_key", {}).get("paused")
+    _rule(findings, unknown, expected, "cli-paused-text", None if cli is None
+          else bool(paused_text) and paused_text["en"] > 0 and paused_text["tr"] > 0,
+          "the root CLI did not print the product's paused text in EN and TR")
+    web = obs.get("web_keys_missing")
+    _rule(findings, unknown, expected, "web-catalogue", None if web is None else not web,
+          f"recovery screen keys missing from the product catalogue: {web}")
+    _rule(findings, unknown, expected, "update-card", _card_rule(obs.get("update_card")),
+          f"update card: {(obs.get('update_card') or {}).get('findings')}")
+    return _judged("owner-continuation", expected, findings, unknown)
+
+
+def judge_management_off(obs: dict) -> dict:
+    """mgmt-off-reboot: with the Panel and Agent disabled and stopped, after one orderly reboot, every workload is
+    served natively for the measured window; management then returns to the same owner-visible state."""
+    findings: list[str] = []
+    unknown: list[str] = []
+    expected: list[str] = []
+    final = obs.get("final") or {}
+    _rule(findings, unknown, expected, "update-verified", None if not final
+          else (final.get("phase"), final.get("terminal_proof")) == ("succeeded", "update_verified"),
+          f"the good update was not verified first: {final.get('phase')}/{final.get('terminal_proof')}")
+    management = obs.get("management_after_reboot")
+    _rule(findings, unknown, expected, "management-off", None if management is None
+          else bool(management.get("disabled_and_stopped")),
+          f"the Panel/Agent were not disabled and stopped after the reboot: {(management or {}).get('units')}")
+    _rule(findings, unknown, expected, "new-boot", obs.get("new_boot"), "the guest did not boot again")
+    seconds = obs.get("window_seconds")
+    _rule(findings, unknown, expected, "measured-window", None if seconds is None
+          else seconds >= MANAGEMENT_OFF_MEASURE_SECONDS,
+          f"the management-off window lasted {seconds} s, fewer than {MANAGEMENT_OFF_MEASURE_SECONDS:.0f} s")
+    served = obs.get("served") or {}
+    for key, value in sorted(served.items()):
+        verdict = (value or {}).get("verdict")
+        if verdict in ("not-seeded", "not-measured-by-design"):
+            continue
+        _rule(findings, unknown, expected, f"{key}-served-without-management",
+              None if verdict in (None, "not-measured") else verdict == "served",
+              f"{key} with management off: {verdict} ({value})")
+    renewal = obs.get("renewal_timer")
+    _rule(findings, unknown, expected, "renewal-timer-kept", None if renewal is None
+          else renewal.get("verdict") in ("as-before",), f"certificate renewal timer: {renewal}")
+    firewall = obs.get("firewall")
+    _rule(findings, unknown, expected, "firewall-present", None if firewall is None
+          else bool(firewall.get("present")) and bool(firewall.get("equal_to_before")),
+          f"firewall ruleset with management off: {firewall}")
+    back = obs.get("management_return")
+    _rule(findings, unknown, expected, "management-returned", None if back is None
+          else bool(back.get("login_ok")) and not back.get("differences"),
+          f"after management returned: {back}")
+    return _judged("mgmt-off-reboot", expected, findings, unknown)
+
+
+def _dispatch_text(dispatches: list[dict] | None) -> list[str]:
+    return [f"{d.get('operation')}/{d.get('phase')}" for d in dispatches or []]
+
+
+def _card_rule(judged: dict | None) -> bool | None:
+    if not isinstance(judged, dict) or judged.get("verdict") in (None, "unknown"):
+        return None
+    return judged["verdict"] == "as-expected"
+
+
 def _judged(kind: str, expected: list, findings: list, unknown: list) -> dict:
     verdict = "finding" if findings else "inconclusive" if unknown else "as-expected"
     return {"kind": kind, "verdict": verdict, "expected": expected, "findings": findings, "unknown": unknown,
             "native_evidence": False}
 
 
-JUDGES = {"start-check": judge_start_check, "real-start": judge_real_start}
+JUDGES = {"start-check": judge_start_check, "real-start": judge_real_start,
+          "owner-continuation": judge_owner_continuation, "mgmt-off-reboot": judge_management_off}
 
 
 def expectation_step_verdict(judged: dict) -> str:
@@ -1487,6 +2155,16 @@ def build_plan(cell: Cell, artifacts: dict, work_root: str, local_port: int,
     candidate = artifacts[candidate_role(cell)]
     fault = cell.recovery_fault
     real_start = cell.variant == "real-start"
+    owner_path = cell.variant == "owner-continuation"
+    management_off = cell.variant == "mgmt-off-reboot"
+    hold = plan_port_hold() if owner_path else None
+    arm_extra = ("; owner port hold guest_owner_port_hold.py armed for the same request (binds 127.0.0.1:2083 once "
+                 "the updater has stopped the old Panel; kept through the update's exit and every forward attempt; "
+                 f"bound {hold.get('hold_seconds')} s, RuntimeMaxSec {hold.get('runtime_max_seconds')} s)"
+                 if owner_path else "")
+    seed_extra = ("; mgmt-off: POST /api/v1/domains/{id}/databases {name, type:mysql, password} (owner database), then "
+                  "one table with one row (the site marker) through the native client as the server owner"
+                  if management_off else "")
     steps = [
         ("preflight", "registered lab identity, fresh guest (read-only; /etc/hosts is read, the resolver is never "
                       "asked for celikpanel.net), host-side artifact and source proofs"),
@@ -1506,21 +2184,30 @@ def build_plan(cell: Cell, artifacts: dict, work_root: str, local_port: int,
                   + (" [purpose web_mail]" if cell.mail_required else " [purpose web_mail attempted, web fallback recorded]")),
         ("seed", "POST /api/v1/domains/create {static}; POST /api/v1/domains/{id}/files?path=/index.html {action:write}; "
                  "GET .../dns/zone, .../dns/records; GET .../mail/setup; POST .../mail/accounts; read-only cron "
-                 "availability, then POST .../cron only when crontab exists; GET /api/v1/firewall"),
+                 "availability, then POST .../cron only when crontab exists; GET /api/v1/firewall" + seed_extra),
         ("pre-state", "guest_probe observation (hashes, DB digests, timers), workload snapshot, offline shell fetch, "
                       "sampler unit (5 s, survives reboot) + host loop (SSH, Panel via tunnel)"),
-        ("arm", "origin proved again (127.0.0.1, HTTP 200); owner-update observer for the chosen request id: " + (
-            f"checkpoint mode, second fault {fault['action']} at {fault['checkpoint']}" if fault else "watch mode, no fault")),
+        ("arm", "read-only inspection before-check; origin proved again (127.0.0.1, HTTP 200); owner-update observer "
+                "for the chosen request id: " + (
+                    f"checkpoint mode, second fault {fault['action']} at {fault['checkpoint']}" if fault
+                    else "watch mode, no fault") + arm_extra),
         ("owner-start", "GET /api/v1/panel/update/check, GET /api/v1/host-mutation-readiness, "
                         "POST /api/v1/panel/update/start {request_id, confirmed:true, current_version, current_commit, ...target} once"),
         ("track", "GET /api/v1/panel/update/status?request_id= with UI backoff 1.5 s x1.6 <= 15 s; while the Panel is down: "
                   "GET /api/v1/recovery/status?request_id= (same session), root CLI status --json/--lang en/--lang tr, "
-                  "offline shell reference; three-source agreement per sample"
+                  "offline shell reference; three-source agreement per sample; stops inconclusive after "
+                  f"{int(SETTLED_FAILED_SECONDS)} s of an unchanged failed/none status with no recovery activity "
+                  f"({SETTLED_FAILED_RULE}, H8)"
                   + ("; QMP system_reset once at reboot_ready" if fault and fault["action"] == "reboot" else "")),
         ("owner-continuation (required)", (
             "the pause is this cell's expected end: verify all views and record the exact one-time retry command "
             "printed in the recovery journal (owner-retry without --execute); it is NOT run, because it would retry "
             "the same broken candidate" if real_start else
+            "the pause is required: record every owner text (CLI EN/TR, card and recovery screen when reachable, the "
+            "panel log the product names, timers, the hold's events), read the printed one-time retry, then do what "
+            "the text tells the owner: release the port (systemctl stop of the hold unit, verified released) and run "
+            "exactly the printed retry command once; then track the same request to its terminal state"
+            if owner_path else
             "only if the product reports paused_retry_limit: verify all views, run the exact "
             "one-time retry command printed in the recovery journal, once")),
         ("terminal", (
@@ -1528,12 +2215,30 @@ def build_plan(cell: Cell, artifacts: dict, work_root: str, local_port: int,
             "marker, mailbox, cron), timers, firewall; Panel login attempted once and recorded as unreachable"
             if real_start else
             "installed/running identity, floor/foundation, DB digests vs pre-update, seeded rows, site marker, "
-            "mailbox, cron, timers, firewall, Panel login and update card")),
+            "mailbox, cron, timers, firewall, Panel login and update card (rendered from the served build's "
+            "systemUpdateOutcome.ts rules and catalogues, judged only on a real mismatch)")),
+    ]
+    if management_off:
+        steps += [
+            ("management-off", "owner Panel state read once; sudo systemctl disable --now celikpanel-panel.service "
+                               "celikpanel-agent.service; both inactive and disabled"),
+            ("owner-reboot", "sudo systemctl reboot (orderly, once); SSH back; a new boot id"),
+            ("management-off-measure", f"at least {int(MANAGEMENT_OFF_MEASURE_SECONDS)} s of 5 s samples in the new "
+                                       "boot with management off: site HTTP + marker, SMTP (Debian), cron stamps "
+                                       "advancing, the owner's database row through the native client, certificate "
+                                       "renewal timer state, firewall ruleset present and unchanged; anything that "
+                                       "needed the Panel is recorded"),
+            ("management-return", "sudo systemctl enable --now celikpanel-agent.service celikpanel-panel.service; the "
+                                  "Panel TLS answers; fresh login; the same owner state (domains, cron, mailbox, "
+                                  "database, version, update and recovery status) as before management-off"),
+        ]
+    steps += [
         ("collect", "always once the guest was prepared, also after an early stop: sampler and host samples, "
                     "journals (Panel/Agent/recovery, setup services, lab units incl. the fixture origin), "
                     "observation records, observer/recovery-fault events, budget receipts"),
         ("verdicts", "per-workload outage windows (DNS: " + dns_scope(dns_mode)["verdict"] + "), Panel window"
                      + (" (expected down from the update until the end)" if real_start else "")
+                     + (" (the update part only: samples up to management-off)" if management_off else "")
                      + ", agreement, outcome classification"),
     ]
     if cell.variant in KIND_EXPECTED:
@@ -1549,7 +2254,18 @@ def build_plan(cell: Cell, artifacts: dict, work_root: str, local_port: int,
                 "after the owner's one-time retry" if cell.variant == "defective"
                 else "succeeded (update_verified)"),
             "provenance": provenance_for(cell.variant), "native_evidence": False,
+            "inspections": {"points": list(INSPECTION_POINTS),
+                            "rule": "read-only; before the update check, or after a terminal, paused or settled "
+                                    "state; never inside the update preflight window (sidecar v2)"},
             "steps": [{"name": n, "does": d} for n, d in steps]}
+    if owner_path:
+        plan["port_hold"] = dict(hold, unit=PORT_HOLD_UNIT_PREFIX + "<request_id>.service",
+                                 helper="guest_owner_port_hold.py", address="127.0.0.1:2083",
+                                 release="owner: systemctl stop of the hold unit at the pause, before the retry")
+    if management_off:
+        plan["management_off"] = {"units": list(MANAGEMENT_UNITS),
+                                  "measure_seconds": MANAGEMENT_OFF_MEASURE_SECONDS,
+                                  "workloads": ["web", "smtp (Debian)", "cron", "db", "renewal timer", "firewall"]}
     if cell.variant in KIND_PATCHES:
         path, _, _ = KIND_PATCHES[cell.variant]
         plan["defect"] = {"kind": cell.variant, "file": path, "candidate_role": candidate_role(cell),
@@ -1569,6 +2285,21 @@ KIND_EXPECTED = {
                    "pauses (paused_retry_limit); no rollback; the owner retry is printed but not run; texts name the "
                    "panel log command and say there is no supported return; site, mail and cron keep running while "
                    "the Panel stays down"),
+    "owner-continuation": (f"the good candidate passes the start check; the held port makes its real start fail "
+                           f"({REAL_START_CODE}); forward completion is retried three times (dispatch update/completion) "
+                           "and pauses (paused_retry_limit, first_failure_code panel_start_unverified) while the port "
+                           "is still held; the panel log the product names shows the port conflict; the owner "
+                           "releases the port and runs the printed one-time retry exactly once; the same request "
+                           "completes forward to update_verified (recovered-after-owner-continuation); the candidate "
+                           "runs; certbot.timer and every other timer end in their pre-update state; site, mail and "
+                           "cron never interrupted; the Panel is back; every owner text at the pause and after the "
+                           "retry recorded in EN and TR"),
+    "mgmt-off-reboot": ("the good update is verified; the owner disables and stops the Panel and Agent, reboots once "
+                        "(orderly); for at least 180 s after the boot, with management off, the site answers with "
+                        "its marker, SMTP answers (Debian), the cron stamp advances, the owner's database row is read "
+                        "through the native client, the certificate renewal timer keeps its pre-update state and the "
+                        "firewall ruleset is present and unchanged; management is re-enabled and the Panel shows the "
+                        "same owner state"),
 }
 
 
@@ -1742,6 +2473,89 @@ class Trial:
     def upload_helpers(self) -> dict:
         return {name: self.lab.put_file(self.root, self.record, self.plan, self.node_name, HERE / name, name)[1]
                 for name in GUEST_HELPERS}
+
+    def inspect(self, label: str, light: bool = False) -> dict | None:
+        """Read-only side inspection at a scheduled point (sidecar v2 folded in). Never raises; never inside the
+        update's preflight window (``inspection_allowed``)."""
+        allowed, why = inspection_allowed(self.state, label)
+        record = {"label": label, "light": light, "at": utc_now(), "allowed": allowed, "why": why}
+        if allowed:
+            try:
+                record["result"] = self.workload("inspect", *(["--light"] if light else []), timeout=120)
+            except Exception as exc:  # noqa: BLE001 - one lost inspection never stops the cell
+                record["unavailable"] = self.redactor.text(f"{type(exc).__name__}: {exc}")[:300]
+        count = self.state.setdefault("inspections", {}).get(label, 0) + 1
+        self.state["inspections"][label] = count
+        try:
+            self.record_json(f"inspect-{label}-{count:02d}.json", record)
+        except Exception:  # noqa: BLE001 - evidence writer refusal is recorded by the writer itself
+            pass
+        return record
+
+    def lab_events(self, name: str) -> list[dict]:
+        """A private JSONL event file of this lab under the guest's private root (read-only)."""
+        if not re.fullmatch(r"[a-z0-9-]+-[0-9a-f]{32}\.jsonl", name):
+            raise ValueError("invalid lab event file name")
+        body = ("python3 -I - <<'CP_UPD1_EVENTS'\nimport base64\nfrom pathlib import Path\n"
+                f"p=Path('{PRIVATE}/{name}')\n"
+                "print(base64.b64encode(p.read_bytes() if p.exists() else b'').decode())\nCP_UPD1_EVENTS\n")
+        raw = base64.b64decode(self.guest(body, timeout=30).stdout.strip() or b"")
+        return [json.loads(line) for line in raw.splitlines() if line]
+
+    def port_hold_events(self) -> list[dict]:
+        events = self.lab_events(f"owner-port-hold-{self.state['request_id']}.jsonl")
+        for event in events:
+            if (event.get("schema") != PORT_HOLD_EVENT_SCHEMA or event.get("operation_id") != self.state["request_id"]
+                    or event.get("identity") != {k: self.identity[k] for k in ("nonce", "vm_uuid", "cell_id", "node")}):
+                raise StepInconclusive("port hold event identity differs")
+        return events
+
+    # -- the build that serves the owner (texts and card rules come from it) ---------------------
+
+    def served_role(self) -> str:
+        return "baseline" if self.cell.variant in ROLLBACK_VARIANTS else self.role
+
+    def translator_for(self, role: str) -> Any:
+        return self.translator if role == "baseline" else self.candidate_translator()
+
+    def card_rules(self, role: str | None = None) -> dict | None:
+        role = role or self.served_role()
+        cache = self.__dict__.setdefault("_card_rules_cache", {})
+        if role not in cache:
+            try:
+                cache[role] = load_card_rules(Path(self.artifacts[role]["product_web_src"]))
+            except CardModelUnavailable as exc:
+                cache[role] = None
+                self.state.setdefault("card_model_unavailable", {})[role] = str(exc)
+        return cache[role]
+
+    def card(self, status_body: Any, recovery_body: Any, role: str | None = None) -> dict:
+        role = role or self.served_role()
+        rules = self.card_rules(role)
+        card = update_card_guidance(self.translator_for(role), status_body if isinstance(status_body, dict) else None,
+                                    recovery_body if isinstance(recovery_body, dict) else None, rules,
+                                    self.state.get("request_id"))
+        if rules is None:
+            card["unavailable"] = (self.state.get("card_model_unavailable") or {}).get(role) or "card rules not loaded"
+        card["role"] = role
+        return card
+
+    def screen(self, status: Any, role: str | None = None) -> dict:
+        role = role or self.served_role()
+        rules = self.card_rules(role)
+        return recovery_guidance(self.translator_for(role), status, rules)
+
+    def build_file(self, role: str, path: str) -> str:
+        """One file of a built commit, read from the fixture clone (``git show``), never the working tree."""
+        commit = self.artifacts[role]["commit"]
+        return subprocess.run(["git", "-c", "safe.directory=*", "-C", self.artifacts["clone"], "show",
+                               f"{commit}:{path}"], capture_output=True, check=True, timeout=60).stdout.decode("utf-8")
+
+    def port_hold_bound(self) -> dict:
+        texts = {name: self.build_file(self.role, path) for name, path in PORT_HOLD_SOURCES.items()}
+        bound = port_hold_bound(parse_hold_sources(texts["update"], texts["timer"], texts["runner"]))
+        return dict(bound, source={"role": self.role, "commit": self.candidate["commit"],
+                                   "files": dict(PORT_HOLD_SOURCES)})
 
     # -- Panel access ------------------------------------------------------------
 
@@ -1999,8 +2813,13 @@ class Trial:
         execution = None
         wait = SetupWait()
         decision = "continue"
+        last_light = 0.0
         with self.panel_client().polling() as view:
             while time.monotonic() < deadline:
+                if time.monotonic() - last_light >= 30:
+                    # Sidecar v2: the before-first-site hosting-root series, every 30 s until setup settles.
+                    self.inspect("before-site", light=True)
+                    last_light = time.monotonic()
                 try:
                     execution = self.api("GET", f"/api/v1/setup/operation?request_id={request_id}", view=view).json()
                 except self.p["panel_api"].PanelError as exc:
@@ -2009,6 +2828,7 @@ class Trial:
                 if decision in ("terminal", "settled"):
                     break
                 time.sleep(5)
+        self.inspect("after-setup")
         checks["execution"] = {k: (execution or {}).get(k) for k in ("status", "phase", "error")}
         self.record_json("setup-execution.json", execution)
         self.state["setup_execution"] = execution
@@ -2095,10 +2915,46 @@ class Trial:
                 raise StepFailed(f"cron job was not created although crontab is present: HTTP {cron.status}")
         firewall = self.api("GET", "/api/v1/firewall", purpose="Firewall screen")
         seeded["firewall"] = {"http": firewall.status, "sha256": hashlib.sha256(firewall.body).hexdigest()}
+        seeded["database"] = (self.seed_owner_database(domain_id, marker) if self.cell.variant == "mgmt-off-reboot"
+                              else {"seeded": False, "reason": "only the management-off cell seeds an owner database"})
         self.state["seed"] = seeded
         checks["seeded"] = seeded
         self.record_json("seeded.json", seeded)
+        self.inspect("after-seed")
         return "passed"
+
+    def seed_owner_database(self, domain_id: int, marker: str) -> dict:
+        """mgmt-off: the seeded site has no database, so the owner adds one through the Panel API
+        (DomainDatabaseManager) and their application writes one table with one row through the native client.
+        A refusal is recorded as a finding and the database workload as not seeded (never passed by omission)."""
+        password = secrets.token_urlsafe(24)
+        self.redactor.register(password)
+        created = self.api("POST", f"/api/v1/domains/{domain_id}/databases",
+                           {"name": "upd1db", "type": "mysql", "password": password},
+                           purpose="DomainDatabaseManager create database", timeout=180)
+        body = created.json() if created.status == 200 else None
+        listed = self.api("GET", f"/api/v1/domains/{domain_id}/databases", purpose="DomainDatabaseManager list")
+        record = {"create_http": created.status, "name": (body or {}).get("name"), "type": (body or {}).get("type"),
+                  "list_http": listed.status}
+        name = record["name"]
+        if created.status != 200 or not isinstance(name, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,63}", name):
+            self.finding(f"{self.node_name}: the owner database could not be created through the Panel API: HTTP "
+                         f"{created.status}; the database workload is not measured")
+            return dict(record, seeded=False, reason=f"Panel API answered HTTP {created.status}")
+        record["listed"] = name in listed.text
+        try:
+            record["table"] = self.workload("db-seed", "--db-name", name, "--marker", marker, timeout=60)
+        except Exception as exc:  # noqa: BLE001 - recorded; never repeated
+            record["table"] = {"error": self.redactor.text(f"{type(exc).__name__}: {exc}")[:300]}
+        record["seeded"] = bool(((record["table"] or {}).get("query") or {}).get("ok"))
+        if not record["seeded"]:
+            self.finding(f"{self.node_name}: the owner's table could not be written or read through the native client: "
+                         f"{record['table']}")
+        return record
+
+    def owner_db_name(self) -> str | None:
+        database = (self.state.get("seed") or {}).get("database") or {}
+        return database.get("name") if database.get("seeded") else None
 
     def guest_observation(self, label: str) -> dict:
         since = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=6)).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -2115,6 +2971,8 @@ class Trial:
                 "--dns-server", dns_server or self.state.get("dns_server", "127.0.0.1")]
         if seed["mail"].get("listed"):
             args += ["--smtp", "--mailbox", seed["mail"]["address"]]
+        if self.owner_db_name():
+            args += ["--db-name", self.owner_db_name()]
         value = self.workload("snapshot", *args, timeout=180)
         self.record_json(f"workload-{label}.json", value)
         return value
@@ -2180,6 +3038,8 @@ class Trial:
                 "--dns-server", self.state.get("dns_server", "127.0.0.1")]
         if seed["mail"].get("listed"):
             args.append("--smtp")
+        if self.owner_db_name():
+            args += ["--db-name", self.owner_db_name()]
         checks["sampler"] = self.workload("install-sampler", *args)
         self.state["clock_skew"] = self.clock_skew()
         checks["clock_skew_seconds"] = self.state["clock_skew"]
@@ -2229,11 +3089,23 @@ class Trial:
         return self.state["samples"]
 
     def arm(self, checks: dict) -> str:
+        # Sidecar v2: the last read-only inspection before the update check; none follows until a terminal,
+        # paused or settled state (upd3 cell 1's v1 inspection fell inside the update preflight).
+        self.inspect("before-check")
         # L1: the candidate is offered only by the guest-loopback fixture origin; prove it
         # is still the only answer for celikpanel.net before the update check.
         checks["origin_check"] = self.origin_check("before-arm")
         if not checks["origin_check"]["ok"]:
             raise StepFailed(f"the fixture origin is not serving before arm: {checks['origin_check']}")
+        if self.cell.variant == "owner-continuation":
+            # Read before the check: the bound comes from the candidate commit's own files.
+            try:
+                self.state["port_hold_bound"] = self.port_hold_bound()
+            except (subprocess.SubprocessError, OSError, ValueError, UnicodeError) as exc:
+                raise StepInconclusive(f"the port hold bound cannot be derived from the candidate build: {exc}")
+            checks["port_hold_bound"] = self.state["port_hold_bound"]
+        self.state["check_at"] = time.time()
+        self.state["awaiting_terminal"] = True
         check = self.api("GET", "/api/v1/panel/update/check", purpose="PanelUpdateCard check", timeout=60)
         body = check.json() or {}
         target = body.get("target") or {}
@@ -2273,9 +3145,33 @@ class Trial:
             events = self.observer_events()
             if events and events[0].get("event") == "armed":
                 checks.update(request_id=request_id, observer_intent=intent, observer_unit=unit)
+                if self.cell.variant == "owner-continuation":
+                    checks["port_hold"] = self.arm_port_hold(request_id)
                 return "passed"
             time.sleep(0.5)
         raise StepInconclusive("observer did not report armed; the update is not started")
+
+    def arm_port_hold(self, request_id: str) -> dict:
+        """owner-continuation: the owner-fixable cause, armed before the start; it binds only after the updater
+        has stopped the old Panel and is released only by the owner at the pause (or by its own bound)."""
+        bound = self.state["port_hold_bound"]
+        unit = PORT_HOLD_UNIT_PREFIX + request_id + ".service"
+        argv = ["systemd-run", f"--unit={unit}", "--no-block", f"--property=RuntimeMaxSec={bound['runtime_max_seconds']}",
+                "--property=TimeoutStopSec=10", "--property=UMask=0077",
+                "python3", "-I", f"{PRIVATE}/guest_owner_port_hold.py", "--lab-nonce", self.identity["nonce"],
+                "--vm-uuid", self.identity["vm_uuid"], "--cell-id", self.identity["cell_id"], "--node", self.node_name,
+                "--operation-id", request_id, "--hold-seconds", str(bound["hold_seconds"])]
+        self.guest(shlex.join(argv), timeout=60)
+        self.state["port_hold_unit"] = unit
+        deadline = time.monotonic() + 20
+        while time.monotonic() < deadline:
+            events = self.port_hold_events()
+            if events and events[0].get("event") == "armed":
+                if any(e.get("event") == "released" for e in events):
+                    raise StepInconclusive("the port hold released before the update started; not started")
+                return {"unit": unit, "bound": bound, "armed_at": events[0].get("at")}
+            time.sleep(0.5)
+        raise StepInconclusive("the port hold did not report armed; the update is not started")
 
     def observer_events(self) -> list[dict]:
         rid = self.state["request_id"]
@@ -2353,11 +3249,13 @@ class Trial:
         answered = self.state.get("start_answered_at")
         start_instant = index == 0 or (answered is not None and sample["t"] - answered <= POLL_MIN_MS / 1000.0)
         sample["agreement"] = status_agreement(rid, api_recovery, cli, shell, start_instant=start_instant)
-        sample["guidance_api"] = recovery_guidance(self.translator, api_recovery) if api_recovery else None
-        sample["update_card"] = update_card_guidance(self.translator, api_update)
-        sample["guidance_cli"] = recovery_guidance(self.translator, cli) if cli else None
+        # H10: the screen and the card as the served build renders them (its RecoveryAccess.tsx and
+        # systemUpdateOutcome.ts rules and its catalogues), never a frozen model.
+        sample["guidance_api"] = self.screen(api_recovery) if api_recovery else None
+        sample["update_card"] = self.card(api_update, api_recovery) if api_update else None
+        sample["guidance_cli"] = self.screen(cli) if cli else None
         sample["observed"] = cli if isinstance(cli, dict) and cli.get("observation") == "known" else api_recovery
-        if sample["observed"] and recovery_guidance(self.translator, sample["observed"])["no_actor_or_action"]:
+        if sample["observed"] and self.screen(sample["observed"])["no_actor_or_action"]:
             self.finding(f"status without actor/action text: {json.dumps(sample['observed'], sort_keys=True)}")
         return sample
 
@@ -2372,6 +3270,8 @@ class Trial:
         index = len(self.state.get("status_samples", []))
         deadline = time.monotonic() + 5400
         final = None
+        settled = SettledFailure()
+        stop = None
         while time.monotonic() < deadline:
             with self.panel_client().polling() as view:
                 sample = self.status_sample(view, index)
@@ -2383,6 +3283,11 @@ class Trial:
             if state in ("terminal", "paused"):
                 final = observed
                 break
+            if settled.observe(observed, time.monotonic()):
+                # H8: named rule; the verdict stays inconclusive and says why.
+                stop = dict(settled.record(time.monotonic()),
+                            update_status=(sample.get("update_status") or {}).get("body"))
+                break
             key = json.dumps([sample.get("update_status"), observed], sort_keys=True, default=str)
             delay = next_delay_ms(delay, key != previous)
             previous = key
@@ -2393,10 +3298,22 @@ class Trial:
         self.state["terminal_at"] = time.time() if final else None
         checks.update(samples=index, final=final, agreement=agreement_verdict(
             [s["agreement"] for s in self.state["status_samples"]]), reboot=self.state.get("reboot"))
+        if final is not None or stop is not None:
+            self.state["awaiting_terminal"] = False
+            self.inspect("at-pause" if classify_status(final) == "paused" else "after-track")
+        if stop is not None:
+            checks["settled_failure"] = stop
+            self.state["track_stop"] = stop
+            raise StepInconclusive(
+                f"{SETTLED_FAILED_RULE}: the status stayed {stop['status'].get('phase')}/"
+                f"{stop['status'].get('terminal_proof')} (previous_failure={stop['status'].get('previous_failure')}) "
+                f"without automatic recovery or a wait for {stop['seconds']} s over {stop['samples']} reads; "
+                "no terminal or paused state follows a failure the product keeps unchanged")
         if final is None:
             raise StepInconclusive("no terminal or paused state was observed within 90 minutes")
         if classify_status(final) == "paused":
             self.state["paused"] = final
+            self.state["paused_status"] = final
             return "observed"
         return "passed" if checks["agreement"]["verdict"] != "failed" else "failed"
 
@@ -2474,14 +3391,20 @@ class Trial:
         cli_texts = {lang: (last.get("cli", {}).get(lang, {}) or {}).get("stdout", "") for lang in ("en", "tr")}
         api_body = (last.get("recovery_api") or {}).get("body")
         shell = self.fetch_shell("paused")
+        update_body = (last.get("update_status") or {}).get("body")
         views = {
             "cli": {"automatic_recovery": paused.get("automatic_recovery"),
                     "names_journal_command": all("journalctl -u celikpanel-release-recovery.service" in t
                                                  for t in cli_texts.values()),
                     "texts": cli_texts},
             "api": ({"automatic_recovery": api_body.get("automatic_recovery"),
-                     "guidance": recovery_guidance(self.translator, api_body)}
+                     "guidance": self.screen(api_body)}
                     if isinstance(api_body, dict) else {"unavailable": last.get("panel_error") or "no response"}),
+            "update_card": (self.card(update_body, api_body) if isinstance(update_body, dict)
+                            else {"unavailable": "the Panel did not answer; no browser can show the card"}),
+            # What the build's recovery screen renders for this exact status (with the paused cause line), shown
+            # only where a Panel answers; recorded here as the model of that screen, not as a reachable view.
+            "recovery_screen_model": dict(self.screen(paused), reachable=isinstance(api_body, dict)),
             "offline_shell": {"note": "the saved page carries no exhaustion state by design; it names the read-only "
                                       "status command whose output does", "status_command": shell.get("status_command"),
                               "texts": shell.get("texts")},
@@ -2510,9 +3433,13 @@ class Trial:
                                                    == "validated-not-executed" and printed.get("argv") else "")
             self.state["views_at_pause"] = views
             return "observed"
+        self.state["views_at_pause"] = views
+        if self.cell.variant == "owner-continuation":
+            return self.owner_continuation_port(checks, rid, snapshot, paused)
         attempt = {"schema": "celikpanel/upd1-owner-continuation-attempt/v1", "request_id": rid, "snapshot": snapshot,
                    "at": utc_now(), "reason": "product reported paused_retry_limit; owner follows its printed retry"}
         self.trial.save(self.root, self.node_name, f"upd1-owner-continuation-{rid}.json", encoded(attempt))
+        self.state["awaiting_terminal"] = True
         try:
             result = self.workload("owner-retry", "--request-id", rid, "--snapshot-name", snapshot, "--execute",
                                    timeout=3700)
@@ -2520,6 +3447,95 @@ class Trial:
             checks["result"] = f"unknown ({type(exc).__name__}); never repeated - status reads only"
             result = None
         checks["retry"] = result
+        self.state["owner_continued"] = True
+        self.state.pop("paused", None)
+        return "observed"
+
+    def owner_continuation_port(self, checks: dict, rid: str, snapshot: str, paused: dict) -> str:
+        """owner-continuation: exactly what the product's paused text tells the owner, in order.
+
+        1. read the panel log it names (``sudo journalctl -u celikpanel-panel -n 50``) - it must show the cause;
+        2. read the printed one-time retry (owner-retry without --execute; nothing runs);
+        3. fix the cause: release the port (``systemctl stop`` of the hold unit), verified released;
+        4. run exactly the printed retry command, once, with a durable attempt record.
+        Every text the owner sees at the pause is recorded before step 3.
+        """
+        events = self.port_hold_events()
+        hold = port_hold_state(events)
+        checks["hold_at_pause"] = hold
+        self.state["hold_at_pause"] = dict(hold, held_at_pause=hold["held"] and not hold["released"])
+        if not self.state["hold_at_pause"]["held_at_pause"]:
+            self.finding(f"owner-continuation: the port hold was not held at the pause "
+                         f"(released: {hold.get('release_reason')!r}); the cause was already gone")
+        if paused.get("first_failure_code") != REAL_START_CODE:
+            self.finding(f"owner-continuation: the pause names first_failure_code={paused.get('first_failure_code')!r}, "
+                         f"not {REAL_START_CODE}")
+        try:
+            log = self.workload("journal", "--since=-3h", "--lines", "50", "--unit", "celikpanel-panel.service",
+                                timeout=60).get("stdout", "")
+        except Exception as exc:  # noqa: BLE001 - recorded
+            log = None
+            checks["panel_log_error"] = self.redactor.text(f"{type(exc).__name__}: {exc}")[:300]
+        if log is not None:
+            self.ev.write_text(f"{self.step_dir}/panel-log-at-pause.txt", log)
+        self.state["panel_log"] = None if log is None else {
+            "command": "sudo journalctl -u celikpanel-panel -n 50", "lines": len(log.splitlines()),
+            "names_cause": bool(PORT_CONFLICT_RE.search(log)),
+            "matching_lines": [line[-300:] for line in log.splitlines() if PORT_CONFLICT_RE.search(line)][-5:]}
+        checks["panel_log"] = self.state["panel_log"]
+        checks["at_pause_snapshot"] = {k: v for k, v in self.workload_snapshot("at-pause").items()
+                                       if k in ("timers", "services", "transaction", "web", "smtp", "cron")}
+        try:
+            printed = self.workload("owner-retry", "--request-id", rid, "--snapshot-name", snapshot, timeout=120)
+        except Exception as exc:  # noqa: BLE001 - the retry is then not run
+            raise StepInconclusive(f"the printed one-time retry could not be read: {type(exc).__name__}") from exc
+        self.state["printed_retry_command"] = (" ".join(printed["argv"]) if printed.get("action")
+                                               == "validated-not-executed" and printed.get("argv") else "")
+        checks["printed_retry"] = {k: printed.get(k) for k in ("action", "argv", "snapshot", "journal_sha256",
+                                                                "attempted_at")}
+        self.ev.write_text(f"{self.step_dir}/recovery-journal-at-pause.txt", printed.get("journal_text") or "")
+        if not self.state["printed_retry_command"]:
+            raise StepInconclusive("the recovery journal printed no one-time retry command; nothing is run")
+        # The owner fixes the cause: release the port (a hold that already ended has nothing to release).
+        released_at = time.time()
+        hold = port_hold_state(self.port_hold_events())
+        stop_code = None
+        if not hold["released"]:
+            try:
+                stop_code = self.guest(shlex.join(["systemctl", "stop", self.state["port_hold_unit"]]),
+                                       timeout=60).returncode
+            except subprocess.CalledProcessError as exc:
+                stop_code = exc.returncode
+        deadline = time.monotonic() + 20
+        while not hold["released"] and time.monotonic() < deadline:
+            time.sleep(0.5)
+            hold = port_hold_state(self.port_hold_events())
+        hold["released_before_retry"] = hold["released"]
+        hold["held_at_pause"] = self.state["hold_at_pause"]["held_at_pause"]
+        self.state["hold"] = hold
+        checks["release"] = {"command": f"systemctl stop {self.state['port_hold_unit']}", "returncode": stop_code,
+                             "requested_at": utc_now(), "hold": hold,
+                             "note": None if stop_code is not None else "the hold had already ended; nothing to stop"}
+        if not hold["released"]:
+            raise StepInconclusive("the port hold did not report released; the retry is not run")
+        # Read-only, still paused: whether the Panel unit came back by itself once the port was free.
+        self.inspect("after-continuation")
+        attempt ={"schema": "celikpanel/upd1-owner-continuation-attempt/v1", "request_id": rid, "snapshot": snapshot,
+                   "at": utc_now(), "released_at": released_at,
+                   "reason": "product reported paused_retry_limit; the owner fixed the cause the panel log names "
+                             "(released the held port) and follows the printed one-time retry"}
+        self.trial.save(self.root, self.node_name, f"upd1-owner-continuation-{rid}.json", encoded(attempt))
+        self.state["awaiting_terminal"] = True
+        try:
+            result = self.workload("owner-retry", "--request-id", rid, "--snapshot-name", snapshot, "--execute",
+                                   timeout=3700)
+        except subprocess.SubprocessError as exc:
+            checks["result"] = f"unknown ({type(exc).__name__}); never repeated - status reads only"
+            result = None
+        checks["retry"] = None if result is None else {
+            k: result.get(k) for k in ("action", "argv", "started_at", "finished_at", "result")}
+        self.state["owner_retry"] = {"action": (result or {}).get("action"),
+                                     "returncode": ((result or {}).get("result") or {}).get("returncode")}
         self.state["owner_continued"] = True
         self.state.pop("paused", None)
         return "observed"
@@ -2573,15 +3589,27 @@ class Trial:
                                ("cron", f"/api/v1/domains/{self.state['seed']['domain_id']}/cron")):
                 response = self.api("GET", path, purpose=f"terminal {name}")
                 card[name] = {"http": response.status, "body": response.json()}
-            card["recovery_guidance"] = recovery_guidance(self.translator, card["recovery"]["body"])
-            card["update_card"] = update_card_guidance(self.translator, card["status"]["body"])
-            if card["update_card"]["untranslated_summary"]:
-                self.finding("the update card shows the server summary verbatim in both languages: "
-                             + card["update_card"]["summary"])
+            # H10: both rendered from the served build's own rules and catalogues (systemUpdateOutcome.ts,
+            # recoveryObservation.ts, RecoveryAccess.tsx), then judged only on a real mismatch.
+            card["recovery_guidance"] = self.screen(card["recovery"]["body"])
+            card["update_card"] = self.card(card["status"]["body"], card["recovery"]["body"])
+            judged_card = judge_update_card(card["update_card"],
+                                            ("rolled_back",) if rollback else ("succeeded",))
+            card["update_card_judged"] = judged_card
+            self.state["card_judged"] = judged_card
+            for finding in judged_card["findings"]:
+                self.finding(f"update card: {finding}")
             if self.state["seed"]["mail"].get("listed"):
                 accounts = self.api("GET", f"/api/v1/domains/{self.state['seed']['domain_id']}/mail/accounts",
                                     purpose="terminal mail accounts")
                 card["mail_listed"] = self.state["seed"]["mail"]["address"] in accounts.text
+            if self.cell.variant == "mgmt-off-reboot":
+                self.state["truth_terminal"] = self.panel_truth("terminal")
+        if self.cell.variant == "owner-continuation":
+            last = (self.state.get("status_samples") or [{}])[-1]
+            checks["texts_after_retry"] = {
+                "cli": {lang: ((last.get("cli") or {}).get(lang) or {}).get("stdout") for lang in ("en", "tr")},
+                "update_card": card.get("update_card"), "recovery_screen": card.get("recovery_guidance")}
         seeded_rows = {"domain": any(isinstance(d, dict) and d.get("id") == self.state["seed"]["domain_id"]
                                      for d in (card.get("domains", {}).get("body") or [])),
                        "cron": "upd1-cron-stamp.txt" in json.dumps(card.get("cron", {}).get("body")),
@@ -2596,7 +3624,10 @@ class Trial:
                       seeded_rows=seeded_rows)
         self.state["terminal"] = {"installed": installed_role(builds, self.artifacts, self.role),
                                   "database": database.get("verdict"),
-                                  "recovery_body": (card.get("recovery") or {}).get("body")}
+                                  "recovery_body": (card.get("recovery") or {}).get("body"),
+                                  "timers": timers, "login_ok": login_ok}
+        self.state["post_workload"] = post_work
+        self.inspect("after-terminal")
         failures = []
         if not identity_ok:
             failures.append("installed build identity is not the expected release")
@@ -2655,6 +3686,7 @@ class Trial:
                       smtp=post_work.get("smtp", {}).get("ok"), cron=post_work.get("cron"),
                       views_at_pause=self.state.get("views_at_pause"))
         self.state["terminal"] = {"installed": role, "database": database.get("verdict"), "login": login}
+        self.inspect("after-terminal")
         if login.get("ok"):
             self.finding("real-start: the owner could log in to the Panel after the pause; the fixture's panel "
                          "was expected never to listen")
@@ -2671,30 +3703,195 @@ class Trial:
             raise StepFailed("; ".join(failures))
         return "passed"
 
+    # -- upd4: management off, one orderly reboot, management back ---------------------------------
+
+    def panel_truth(self, label: str) -> dict:
+        """The owner-visible Panel state (read-only GETs of the screens), without volatile fields."""
+        seed, rid = self.state["seed"], self.state["request_id"]
+        did = seed["domain_id"]
+        truth: dict[str, Any] = {}
+        with self.panel_client().polling() as view:
+            def body(path: str, purpose: str) -> Any:
+                response = self.api("GET", path, view=view, purpose=purpose)
+                return response.status, response.json() if response.status == 200 else None, response
+            _, version, _ = body("/api/v1/panel/version", "PanelVersion")
+            # cmd/panel/version.go handleVersion; hostname/ipv4 are host facts, not owner state.
+            truth["version"] = {k: (version or {}).get(k) for k in ("version", "commit", "schema_version",
+                                                                    "agent_commit", "agent_matches")}
+            _, domains, _ = body("/api/v1/domains", "Domains list")
+            truth["domains"] = sorted((d.get("id"), d.get("domain_name") or d.get("name")) for d in (domains or [])
+                                      if isinstance(d, dict))
+            _, _, cron = body(f"/api/v1/domains/{did}/cron", "DomainCronManager list")
+            truth["cron_listed"] = "upd1-cron-stamp.txt" in cron.text
+            if seed["mail"].get("listed"):
+                _, _, accounts = body(f"/api/v1/domains/{did}/mail/accounts", "DomainMailManager list")
+                truth["mailbox_listed"] = seed["mail"]["address"] in accounts.text
+            if self.owner_db_name():
+                _, databases, _ = body(f"/api/v1/domains/{did}/databases", "DomainDatabaseManager list")
+                truth["databases"] = sorted(d.get("name") for d in (databases or {}).get("databases") or []
+                                            if isinstance(d, dict))
+            _, status, _ = body(f"/api/v1/panel/update/status?request_id={rid}", "SystemUpdateOperation status")
+            truth["update_status"] = (status or {}).get("status")
+            _, recovery, _ = body(f"/api/v1/recovery/status?request_id={rid}", "RecoveryStatus")
+            truth["recovery"] = {k: (recovery or {}).get(k) for k in ("phase", "terminal_proof", "previous_failure")}
+        self.record_json(f"panel-truth-{label}.json", truth)
+        return truth
+
+    def management_off(self, checks: dict) -> str:
+        # A volatile journal would lose the update's own lines at the reboot; keep them first.
+        try:
+            units = journal_groups(self.state.get("request_id"))["product"]
+            text = self.workload("journal", "--since=-12h", "--lines", "20000",
+                                 *sum((["--unit", u] for u in units), []), timeout=120).get("stdout", "")
+            self.ev.write_text(f"{self.step_dir}/journal-product-before-reboot.txt", text)
+        except Exception as exc:  # noqa: BLE001 - recorded; collect reads the journals again later
+            checks["journal_before_reboot"] = f"unavailable: {type(exc).__name__}"
+        self.state["truth_before_off"] = self.panel_truth("before-management-off")
+        before = self.workload_snapshot("before-management-off")
+        self.state["before_off_workload"] = before
+        command = "systemctl disable --now celikpanel-panel.service celikpanel-agent.service"
+        done = self.guest(command, timeout=180)
+        self.state["management_off_at"] = time.time()
+        after = self.workload_snapshot("management-off")
+        state = management_state(after.get("services"))
+        checks.update(command=f"sudo {command}", returncode=done.returncode, management=state,
+                      before=management_state(before.get("services")))
+        self.state["management_off"] = state
+        if not state["disabled_and_stopped"]:
+            raise StepFailed(f"the Panel/Agent are not disabled and stopped: {state['units']}")
+        return "passed"
+
+    def owner_reboot(self, checks: dict) -> str:
+        before = self.guest("cat /proc/sys/kernel/random/boot_id", timeout=30).stdout.strip()
+        # Orderly, as the owner would; the SSH session may end before it answers (never repeated).
+        try:
+            subprocess.run(self.lab.ssh(self.root, self.record, self.node) + ["sudo systemctl reboot"],
+                           capture_output=True, timeout=30)
+        except subprocess.TimeoutExpired:
+            checks["reboot_command"] = "no answer within 30 s (the session ended with the reboot)"
+        self.state["owner_reboot_at"] = time.time()
+        self.tunnel.close()
+        time.sleep(10)
+        seconds = self.wait_for_ssh()
+        after = self.guest("cat /proc/sys/kernel/random/boot_id", timeout=30).stdout.strip()
+        record = {"before_boot_id": before, "after_boot_id": after, "new_boot": bool(after) and after != before,
+                  "ssh_return_seconds": round(seconds, 1), "command": "sudo systemctl reboot"}
+        self.state["owner_reboot"] = record
+        checks.update(record)
+        if not record["new_boot"]:
+            raise StepFailed("the guest did not boot again")
+        self.inspect("after-reboot")
+        return "passed"
+
+    def management_off_measure(self, checks: dict) -> str:
+        boot_id = self.state["owner_reboot"]["after_boot_id"]
+        deadline = time.monotonic() + 900
+        window: list[dict] = []
+        while time.monotonic() < deadline:
+            window = boot_window(self.read_samples(), boot_id)
+            if window_seconds(window) >= MANAGEMENT_OFF_MEASURE_SECONDS:
+                break
+            time.sleep(10)
+        snapshot = self.workload_snapshot("management-off-after-reboot")
+        observed = self.management_off_observations(window, snapshot)
+        self.state["management_off_measure"] = observed
+        checks.update(observed)
+        if observed["window_seconds"] < MANAGEMENT_OFF_MEASURE_SECONDS:
+            raise StepInconclusive(f"only {observed['window_seconds']} s of samples in the new boot")
+        needed = observed["needed_panel"]
+        if needed or not observed["management_after_reboot"]["disabled_and_stopped"]:
+            raise StepFailed("with management off: " + "; ".join(needed or ["the Panel/Agent were running"]))
+        return "passed"
+
+    def management_off_observations(self, window: list[dict], snapshot: dict) -> dict:
+        seed = self.state["seed"]
+        served = {"web": served_after_boot(window, "web"), "cron": (
+            cron_after_boot(window) if seed["cron"].get("seeded") else {"verdict": "not-seeded"})}
+        served["smtp"] = served_after_boot(window, "smtp") if seed["mail"].get("listed") else {"verdict": "not-seeded"}
+        served["db"] = (served_after_boot(window, "db") if self.owner_db_name()
+                        else {"verdict": "not-seeded", "reason": (seed.get("database") or {}).get("reason")})
+        before = self.state.get("before_off_workload") or {}
+        firewall = snapshot.get("firewall") or {}
+        observed = {"boot_id": self.state["owner_reboot"]["after_boot_id"], "samples": len(window),
+                    "window_seconds": window_seconds(window),
+                    "first_sample_seconds_after_boot": window[0].get("monotonic") if window else None,
+                    "management_after_reboot": management_state(snapshot.get("services")),
+                    "served": served,
+                    "renewal_timer": renewal_timer_verdict((self.state.get("pre_workload") or {}).get("timers"),
+                                                           snapshot.get("timers")),
+                    "firewall": {"present": bool(firewall.get("tables")), "tables": firewall.get("tables"),
+                                 "equal_to_before": firewall.get("sha256") == (before.get("firewall") or {}).get("sha256")},
+                    "services": snapshot.get("services")}
+        needed = [f"{key}: {value.get('verdict')}" for key, value in served.items()
+                  if value.get("verdict") not in ("served", "not-seeded")]
+        if observed["renewal_timer"]["verdict"] == "changed":
+            needed.append("certificate renewal timer changed state")
+        if not observed["firewall"]["present"] or not observed["firewall"]["equal_to_before"]:
+            needed.append("firewall ruleset absent or changed")
+        observed["needed_panel"] = needed
+        return observed
+
+    def management_return(self, checks: dict) -> str:
+        command = "systemctl enable --now celikpanel-agent.service celikpanel-panel.service"
+        done = self.guest(command, timeout=180)
+        checks.update(command=f"sudo {command}", returncode=done.returncode)
+        deadline = time.monotonic() + 180
+        leaf = None
+        while time.monotonic() < deadline:
+            try:
+                leaf = self.refresh_pin()
+                break
+            except Exception:  # noqa: BLE001 - the Panel is still starting
+                time.sleep(3)
+        self.state["management_returned_at"] = time.time()
+        back: dict[str, Any] = {"tls_leaf": leaf}
+        if leaf is None:
+            back["login_ok"] = False
+        else:
+            self.client = None
+            try:
+                self.tunnel.ensure()
+                self.panel_client().login(self.state["username"], self._password)
+                back["login_ok"] = True
+            except Exception as exc:  # noqa: BLE001
+                back.update(login_ok=False, error=type(exc).__name__)
+        if back["login_ok"]:
+            after = self.panel_truth("after-management-return")
+            back["differences"] = truth_differences(self.state.get("truth_before_off"), after)
+        back["management"] = management_state(self.workload_snapshot("after-management-return").get("services"))
+        self.state["management_return"] = back
+        checks["management_return"] = back
+        self.inspect("after-management-return")
+        if not back["login_ok"] or back.get("differences") or not back["management"]["enabled_and_active"]:
+            raise StepFailed(f"management did not return to the same owner state: {back}")
+        return "passed"
+
     def kind_observations(self) -> dict:
-        """Everything judge_start_check / judge_real_start read, from this run's own records."""
+        """Everything the kind judges read, from this run's own records."""
         rid = self.state.get("request_id") or ""
         journals = self.state.get("journals") or {}
         product = journals.get("product")
         terminal = self.state.get("terminal") or {}
         attempts = self.state.get("attempts") or {}
         phases = [a.get("phase") for a in attempts.get("automatic", [])]
+        dispatches = [{k: a.get(k) for k in ("attempt", "operation", "phase", "direction")}
+                      for a in attempts.get("automatic", [])]
         texts = self.state.get("cli_texts")
         samples = self.state.get("status_samples", [])
-        translator = self.translator if self.cell.variant in ROLLBACK_VARIANTS else self.candidate_translator()
-        keys = sorted({key for s in samples for key in recovery_guidance(translator, s.get("observed"))["keys"]
+        translator = self.translator_for(self.served_role())
+        keys = sorted({key for s in samples for key in self.screen(s.get("observed"))["keys"]
                        if s.get("observed")}
-                      | set(recovery_guidance(translator, terminal.get("recovery_body"))["keys"]
+                      | set(self.screen(terminal.get("recovery_body"))["keys"]
                             if terminal.get("recovery_body") else []))
         per = (self.state.get("verdict_checks") or {}).get("workloads") or {}
-        return {"final": self.state.get("final_status"),
+        obs = {"final": self.state.get("final_status"),
                 "update_failure_codes": None if product is None else
                 [line["code"] for line in parse_update_failure_lines(product)],
                 "update_failure_lines": None if product is None else parse_update_failure_lines(product),
                 "check_reasons": None if product is None else [r["code"] for r in parse_start_check_reasons(product)],
                 "sidecar": sidecar_from_records(self.state.get("observation_records"), rid, self.candidate["commit"]),
                 "completion_marker_seen": completion_marker_seen(self.state.get("observer_events")),
-                "receipt_phases": phases or None, "attempts": attempts,
+                "receipt_phases": phases or None, "receipt_dispatches": dispatches or None, "attempts": attempts,
                 "installed": terminal.get("installed"), "database": terminal.get("database"),
                 "cli": cli_text_observations(samples, texts) if texts else None,
                 "web_keys": keys, "web_keys_missing": [k for k in keys if not translator.has(k)] if keys else None,
@@ -2702,7 +3899,26 @@ class Trial:
                 "printed_retry_command": self.state.get("printed_retry_command"),
                 "views": view_reachability(samples),
                 "workloads": {k: v.get("verdict") for k, v in per.items() if k in WORKLOADS} or None,
-                "panel_verdict": (per.get("panel") or {}).get("verdict")}
+                "panel_verdict": (per.get("panel") or {}).get("verdict"),
+                "update_card": self.state.get("card_judged"),
+                "outcome": classify_outcome(self.cell.variant, self.state.get("final_status"),
+                                            bool(self.state.get("owner_continued")))}
+        if self.cell.variant == "owner-continuation":
+            obs.update(paused=self.state.get("paused_status"), hold=self.state.get("hold") or (
+                           dict(self.state["hold_at_pause"], released_before_retry=False)
+                           if self.state.get("hold_at_pause") else None),
+                       panel_log=self.state.get("panel_log"), owner_retry=self.state.get("owner_retry"),
+                       owner_receipts=attempts.get("owner_count") if attempts else None,
+                       timers=terminal.get("timers"), login_ok=terminal.get("login_ok"))
+        if self.cell.variant == "mgmt-off-reboot":
+            measure = self.state.get("management_off_measure") or {}
+            obs.update(management_after_reboot=measure.get("management_after_reboot"),
+                       new_boot=(self.state.get("owner_reboot") or {}).get("new_boot"),
+                       window_seconds=measure.get("window_seconds"), served=measure.get("served"),
+                       renewal_timer=measure.get("renewal_timer"), firewall=measure.get("firewall"),
+                       needed_panel=measure.get("needed_panel"),
+                       management_return=self.state.get("management_return"))
+        return obs
 
     def candidate_translator(self) -> Any:
         """The candidate build's own EN/TR catalogues (the screen a started candidate would serve)."""
@@ -2814,6 +4030,12 @@ class Trial:
             raise StepInconclusive("the guest sample series could not be read; no outage window is judged")
         samples = self.state.get("samples", [])
         skew = self.state.get("clock_skew") or 0.0
+        if self.state.get("management_off_at"):
+            # mgmt-off-reboot: this step judges the update part; the management-off window is judged by
+            # management-off-measure (the Panel is down there by the owner's choice).
+            cut = self.state["management_off_at"] + skew
+            samples = [s for s in samples if float(s.get("t", 0)) <= cut]
+            checks["samples_until_management_off"] = len(samples)
         # Host instants on the guest clock (the reset may also move the guest clock; recorded, not corrected).
         resets = [reset + skew for reset in self.state["resets"]]
         started = self.state["started_at"] + skew if self.state.get("started_at") else None
@@ -2829,8 +4051,11 @@ class Trial:
         else:
             per["panel"] = dict(panel_verdict(panel_windows, started, terminal_at), windows=panel_windows)
             panel_expected = "down-only-during-transaction"
-        host_panel = outage_windows(self.host_samples, "panel")
-        checks.update(workloads=per, host_panel_windows=host_panel, host_ssh_windows=outage_windows(self.host_samples, "ssh"),
+        host_samples = self.host_samples
+        if self.state.get("management_off_at"):
+            host_samples = [s for s in host_samples if float(s.get("t", 0)) <= self.state["management_off_at"]]
+        host_panel = outage_windows(host_samples, "panel")
+        checks.update(workloads=per, host_panel_windows=host_panel, host_ssh_windows=outage_windows(host_samples, "ssh"),
                       agreement=agreement_verdict([s["agreement"] for s in self.state.get("status_samples", [])]),
                       outcome=classify_outcome(self.cell.variant, self.state.get("final_status"),
                                                bool(self.state.get("owner_continued"))),
@@ -2862,6 +4087,13 @@ class Trial:
             self.step("track-after-owner-continuation", lambda checks: self.track(checks, label="after-owner"),
                       needs=("owner-continuation (required)",))
         self.step("terminal", self.terminal, needs=("owner-start",))
+        if self.cell.variant == "mgmt-off-reboot":
+            # upd4: only after the verified good update (terminal passed); management returns even when the
+            # measurement found something, as long as it was switched off.
+            self.step("management-off", self.management_off, needs=("terminal",))
+            self.step("owner-reboot", self.owner_reboot, needs=("management-off",))
+            self.step("management-off-measure", self.management_off_measure, needs=("owner-reboot",))
+            self.step("management-return", self.management_return, needs=("management-off",))
         # L3: collect is attempted whatever stopped the cell (it skips itself only when
         # the guest was never prepared), so a cell stopped at seed or earlier keeps its journals.
         self.step("collect", self.collect)
@@ -2881,7 +4113,10 @@ class Trial:
                               "final_status": self.state.get("final_status"),
                               "owner_continuation": bool(self.state.get("owner_continued")),
                               "attempts": self.state.get("attempts"), "reboot": self.state.get("reboot"),
-                              "pin_changes": self.state.get("pin_changes", [])},
+                              "pin_changes": self.state.get("pin_changes", []),
+                              "track_stop": self.state.get("track_stop"),
+                              "port_hold": self.state.get("hold") or self.state.get("hold_at_pause"),
+                              "owner_reboot": self.state.get("owner_reboot")},
                   "scope": result_scope(self.dns_mode, self.state.get("cron_availability"),
                                         self.state.get("setup_waiting"), self.state.get("origin_checks")),
                   "findings": self.state["findings"],
