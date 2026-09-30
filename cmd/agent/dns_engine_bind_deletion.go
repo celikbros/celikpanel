@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/bindrndckey"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -50,6 +51,11 @@ func verifyBINDDeletedZoneAt(
 		if last == nil {
 			return nil
 		}
+		// A control channel without a usable key does not heal by waiting:
+		// return its typed reason now instead of a generic timeout.
+		if _, unavailable := bindrndckey.ReasonOf(last); unavailable {
+			return fmt.Errorf("BIND zone %s deletion cannot be proved: %w", domain, last)
+		}
 		select {
 		case <-proofCtx.Done():
 			return fmt.Errorf("BIND zone %s deletion did not converge: %w: %v", domain, proofCtx.Err(), last)
@@ -66,6 +72,9 @@ func verifyBINDDeletedZoneOnce(
 	output, statusErr := zonestatus(statusCtx, domain)
 	cancel()
 	if !exactBINDDeletedZoneStatus(domain, output, statusErr) {
+		if unavailable := bindrndckey.ClassifyControlFailure(output, statusErr); unavailable != nil {
+			return unavailable
+		}
 		return fmt.Errorf("BIND did not prove zone %s absent in every view", domain)
 	}
 	for _, network := range []string{"udp", "tcp"} {

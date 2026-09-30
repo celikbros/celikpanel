@@ -5,12 +5,15 @@ package main
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"sync"
 
+	"github.com/alicelik/celikpanel/internal/bindrndckey"
 	"github.com/alicelik/celikpanel/internal/bindroot"
 	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
+	"github.com/alicelik/celikpanel/internal/servicemutationledger"
 )
 
 // This file holds the end-state rule of recover-dns-bind-switch for a V2
@@ -54,6 +57,7 @@ type bindRollbackRecord struct {
 	workingDirectory   string
 	runtimeFiles       []string
 	runtimeUnknown     bool
+	rndcKey            bindRNDCKeyCLIOutcome
 }
 
 type bindRollbackRecordKey struct{}
@@ -96,6 +100,15 @@ func (r *bindRollbackRecord) observeRetainedGeneration(root, generation, kind, d
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.root, r.retainedGeneration, r.retainedKind, r.retainedDetail = root, generation, kind, detail
+}
+
+func (r *bindRollbackRecord) observeRNDCKey(outcome bindRNDCKeyCLIOutcome) {
+	if r == nil {
+		return
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.rndcKey = outcome
 }
 
 func (r *bindRollbackRecord) observeRuntimeFiles(directory string, files []string, unknown bool) {
@@ -156,10 +169,29 @@ func bindRollbackSummaryText(lang string, r *bindRollbackRecord) string {
 			"Not removed: the BIND generation "+r.retainedGeneration+" under "+r.root+"/generations, because it is not exactly what this switch staged ("+r.retainedDetail+"). Check it before removing it yourself.",
 			"Silinmedi: "+r.root+"/generations altındaki "+r.retainedGeneration+" BIND sürümü, çünkü içeriği bu geçişin hazırladığıyla birebir aynı değil. Kendiniz silmeden önce kontrol edin."))
 	}
-	if r.createdBIND {
+	switch {
+	case r.createdBIND && r.rndcKey.Kind == bindRNDCKeyRemoved:
+		lines = append(lines, translated(lang,
+			"Intentionally kept as rollback standby: the installed bind9 packages and the BIND install-ownership record. This command does not remove packages.",
+			"Yedek olarak bilerek bırakılanlar: kurulu bind9 paketleri ve BIND kurulum sahipliği kaydı. Bu komut paket kaldırmaz."))
+	case r.createdBIND:
 		lines = append(lines, translated(lang,
 			"Intentionally kept as rollback standby: the installed bind9 packages, the rndc key and the BIND install-ownership record. This command does not remove packages.",
 			"Yedek olarak bilerek bırakılanlar: kurulu bind9 paketleri, rndc anahtarı ve BIND kurulum sahipliği kaydı. Bu komut paket kaldırmaz."))
+	}
+	switch r.rndcKey.Kind {
+	case bindRNDCKeyRemoved:
+		lines = append(lines, translated(lang,
+			"Removed: the rndc key "+r.rndcKey.Path+" that this switch created; it was unchanged.",
+			"Silinenler: bu geçişin oluşturduğu "+r.rndcKey.Path+" rndc anahtarı; değişmemişti."))
+	case bindRNDCKeyKeptChanged:
+		lines = append(lines, translated(lang,
+			"Not removed: the rndc key "+r.rndcKey.Path+". This switch created it, but it changed since then, so it is treated as yours.",
+			"Silinmedi: "+r.rndcKey.Path+" rndc anahtarı. Bu geçiş onu oluşturdu, ancak o zamandan beri değişti; bu yüzden sizin anahtarınız sayılır."))
+	case bindRNDCKeyKeptUnknown:
+		lines = append(lines, translated(lang,
+			"Not removed: the rndc key "+r.rndcKey.Path+", because its removal could not be completed safely: "+r.rndcKey.Detail,
+			"Silinmedi: "+r.rndcKey.Path+" rndc anahtarı, çünkü güvenle silinemedi: "+r.rndcKey.Detail))
 	}
 	if len(r.runtimeFiles) > 0 {
 		lines = append(lines, translated(lang,
@@ -256,4 +288,65 @@ func assessBINDSwitchResidue(
 	directory, files, listErr := h.runtimeFiles(layout)
 	record.observeRuntimeFiles(directory, files, listErr != nil)
 	return dnsenginerecovery.BINDSwitchNativeRestored, nil
+}
+
+// bindRNDCKeyCLIOutcome is what recover-dns-bind-switch did with the rndc key
+// (the Agent's rule in cmd/agent/dns_engine_bind_rndc_key.go, same record).
+type bindRNDCKeyCLIOutcome struct {
+	Kind   string
+	Path   string
+	Detail string
+}
+
+const (
+	// bindRNDCKeyNotOurs: no record for this switch, or the package or
+	// owner provided the key; the key is not mentioned beyond the standby line.
+	bindRNDCKeyNotOurs     = ""
+	bindRNDCKeyRemoved     = "removed"
+	bindRNDCKeyKeptChanged = "kept-changed"
+	bindRNDCKeyKeptUnknown = "kept-unknown"
+)
+
+type bindRNDCKeyCLIOps struct {
+	read   func() (bindrndckey.Record, bool, error)
+	remove func(path, sha string) (bindrndckey.RemovalOutcome, error)
+}
+
+func retireBINDRNDCKeyForOwnerInverseWithOps(j dnsengineartifact.SwitchJournalV1, ops bindRNDCKeyCLIOps) bindRNDCKeyCLIOutcome {
+	if ops.read == nil || ops.remove == nil {
+		return bindRNDCKeyCLIOutcome{}
+	}
+	record, exists, err := ops.read()
+	if err != nil {
+		return bindRNDCKeyCLIOutcome{Kind: bindRNDCKeyKeptUnknown, Path: "(unknown path)", Detail: "its provenance record is unreadable."}
+	}
+	if !exists || record.Provenance != bindrndckey.ProvenanceProductCreated ||
+		!record.SameTransaction(j.ManifestQualifier, j.MutationRequestID, j.MutationOwnerID) {
+		return bindRNDCKeyCLIOutcome{}
+	}
+	outcome, err := ops.remove(record.Path, record.SHA256)
+	switch {
+	case err != nil:
+		return bindRNDCKeyCLIOutcome{Kind: bindRNDCKeyKeptUnknown, Path: record.Path, Detail: err.Error()}
+	case outcome == bindrndckey.RemovalRemoved || outcome == bindrndckey.RemovalAlreadyAbsent:
+		return bindRNDCKeyCLIOutcome{Kind: bindRNDCKeyRemoved, Path: record.Path}
+	default:
+		return bindRNDCKeyCLIOutcome{Kind: bindRNDCKeyKeptChanged, Path: record.Path}
+	}
+}
+
+func retireBINDRNDCKeyForOwnerInverse(_ context.Context, policy dnsengineartifact.JournalPolicy, j dnsengineartifact.SwitchJournalV1) bindRNDCKeyCLIOutcome {
+	owner := servicemutationledger.FileOwner{UID: policy.StateUID, GID: policy.StateGID}
+	path := filepath.Join(filepath.Dir(policy.StatePath), bindrndckey.RecordFileName)
+	return retireBINDRNDCKeyForOwnerInverseWithOps(j, bindRNDCKeyCLIOps{
+		read: func() (bindrndckey.Record, bool, error) {
+			raw, present, err := servicemutationledger.ReadFile(path, 4<<10, owner)
+			if err != nil || !present {
+				return bindrndckey.Record{}, false, err
+			}
+			record, err := bindrndckey.Decode(raw)
+			return record, err == nil, err
+		},
+		remove: bindrndckey.RemoveIfUnchanged,
+	})
 }

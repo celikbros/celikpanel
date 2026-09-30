@@ -125,6 +125,10 @@ type SyncDNSZoneV3Response struct {
 	EngineEpoch       int64     `json:"engine_epoch"`
 	AppliedGeneration int64     `json:"applied_generation"`
 	Error             string    `json:"error,omitempty"`
+	// FailureReason accompanies Error only, and only with a reviewed
+	// ValidDNSPublicationFailureReason. Older Agents omit it; older Panels
+	// ignore it and keep their generic failure text.
+	FailureReason string `json:"failure_reason,omitempty"`
 }
 
 // RecoverDNSZoneV3 re-drives peer propagation from the immutable host receipt

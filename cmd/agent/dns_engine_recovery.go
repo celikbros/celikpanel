@@ -568,9 +568,17 @@ func rollbackDNSSwitchJournal(
 	); err != nil {
 		return withPDNSAdoptionOwnerRecovery(inverseKind, journal, err)
 	}
-	return withPDNSAdoptionOwnerRecovery(inverseKind, journal, verifyRestoredDNSSwitchSource(
+	if err := verifyRestoredDNSSwitchSource(
 		ctx, profile, systemctl, manifest, journal,
-	))
+	); err != nil {
+		return withPDNSAdoptionOwnerRecovery(inverseKind, journal, err)
+	}
+	// The restored source is proven; a key this BIND transaction created and
+	// nobody changed goes with it (dns_engine_bind_rndc_key.go).
+	if inverseKind == dnsenginerecovery.NativeInverseBINDSwitch {
+		retireBINDRNDCKeyAfterRollback(ctx, journal)
+	}
+	return nil
 }
 
 func verifyNoManagedDNSAuthority(

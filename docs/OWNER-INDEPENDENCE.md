@@ -67,6 +67,23 @@ an earlier release keeps working, and repairs its own entry before it
 installs packages. It never changes an override it did not create; it names
 the entry and the command instead.
 
+### BIND control key (rndc.key) (2026-10-01)
+
+Source state with component tests; native re-run pending; not yet part of a
+published release.
+
+When CelikPanel installs BIND and the package did not create an rndc key (the
+Arch `bind` package creates none; Debian's `bind9` creates
+`/etc/bind/rndc.key`), it creates `/etc/rndc.key` with the standard
+`rndc-confgen -a` before named first starts, owned `root:named` with mode 0640.
+It does nothing when a key, an `rndc.conf` or a `controls` statement of yours
+already exists. You may replace the key at any time (`rndc-confgen -a` and a
+restart of named); CelikPanel never rewrites it. Removing the panel leaves it in
+place. If you delete it, DNS keeps serving; only `rndc` stops working, which
+means the panel can no longer prove zone state and its zone deletions wait
+until a key exists again. A rolled-back installation removes the key only if
+CelikPanel created it and it is unchanged.
+
 ## Evidence
 
 [Local validation](validation/native-dns-independence-20260912/README.md) covers

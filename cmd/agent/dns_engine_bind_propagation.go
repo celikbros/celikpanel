@@ -7,6 +7,7 @@ import (
 	"reflect"
 
 	"github.com/alicelik/celikpanel/internal/binddns"
+	"github.com/alicelik/celikpanel/internal/bindrndckey"
 )
 
 type bindControlRunner func(context.Context, ...string) error
@@ -21,8 +22,12 @@ func trustedBINDControl(ctx context.Context, args ...string) error {
 	output, err := serviceMutationCommand(
 		ctx, control, args...,
 	).CombinedOutputLimited(64 << 10)
-	_ = output
 	if err != nil {
+		// A missing or refused control key is typed (bind_rndc_unavailable,
+		// first output line as detail); any other failure stays generic.
+		if unavailable := bindrndckey.ClassifyControlFailure(output, err); unavailable != nil {
+			return unavailable
+		}
 		return errors.New("BIND control command failed")
 	}
 	return nil
@@ -93,14 +98,23 @@ func prepareBINDV3PrimaryPropagationAt(
 		return run(commandCtx, "notify", domain)
 	}
 	if err := runBounded(plan.Evidence.Domain); err != nil {
-		return errors.New("BIND paired catalog notification failed")
+		return typedBINDNotificationFailure("BIND paired catalog notification failed", err)
 	}
 	if !plan.Changed.Delete {
 		if err := runBounded(plan.Changed.Domain); err != nil {
-			return errors.New("BIND paired member notification failed")
+			return typedBINDNotificationFailure("BIND paired member notification failed", err)
 		}
 	}
 	return nil
+}
+
+// typedBINDNotificationFailure keeps only the reviewed rndc reason; other
+// control output is not carried further.
+func typedBINDNotificationFailure(text string, err error) error {
+	if unavailable, ok := bindrndckey.ReasonOf(err); ok {
+		return fmt.Errorf("%s: %w", text, unavailable)
+	}
+	return errors.New(text)
 }
 
 func completeManagedBINDV3Propagation(

@@ -6,6 +6,9 @@ const reviewedDNSPeerReasons = new Set([
     'dns_peer_native_unknown',
     'dns_peer_journal_unknown',
     'dns_peer_owner_edit_unknown',
+    // Local, not peer: this server's named could not be asked about zone
+    // state (no usable rndc key). Same retry action, same pending deletion.
+    'bind_rndc_unavailable',
 ]);
 
 export async function readDomainDeletionPending(response: Response): Promise<string> {

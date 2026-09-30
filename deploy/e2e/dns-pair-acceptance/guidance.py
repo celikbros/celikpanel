@@ -93,6 +93,9 @@ REVIEWED_DNS_PEER_REASONS = frozenset(
         "dns_peer_native_unknown",
         "dns_peer_journal_unknown",
         "dns_peer_owner_edit_unknown",
+        # pair3: the product's own BIND cannot be asked about zone state
+        # (no usable rndc key); the owner acts on that server.
+        "bind_rndc_unavailable",
     }
 )
 

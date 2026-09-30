@@ -62,6 +62,7 @@ test('every reviewed pending reason has readable EN/TR copy', () => {
     'dns_peer_native_unknown',
     'dns_peer_journal_unknown',
     'dns_peer_owner_edit_unknown',
+    'bind_rndc_unavailable',
   ]) {
     const key = `err.DNS_PUBLICATION_FAILED.${reason}`;
     assert.match(en[key], /same publication/);
@@ -94,4 +95,23 @@ test('reload restores only a verified saved deletion marker and reviewed reason'
   assert.equal(await readSavedDomainDeletionStatus(response(200, {
     status: 'completed', reason: 'dns_peer_journal_unknown',
   })), null);
+});
+
+test('rndc guidance names the reason, the owner, the commands and the retry action', async () => {
+  assert.equal(await readDomainDeletionPending(response(202, {
+    status: 'deletion_pending', stage: 'dns_cleanup', reason: 'bind_rndc_unavailable',
+  })), 'bind_rndc_unavailable');
+  const en_ = en['err.DNS_PUBLICATION_FAILED.bind_rndc_unavailable'];
+  const tr_ = tr['err.DNS_PUBLICATION_FAILED.bind_rndc_unavailable'];
+  for (const text of [en_, tr_]) {
+    assert.match(text, /rndc key|rndc anahtar/);
+    assert.match(text, /sudo rndc-confgen -a/);
+    assert.match(text, /sudo systemctl restart named/);
+    assert.match(text, /\/etc\/bind\/rndc\.key/);
+    assert.doesNotMatch(text, /secret/i);
+  }
+  assert.ok(en_.includes(`“${enScreens['domains.retryDeletion']}”`));
+  assert.ok(tr_.includes(`“${trScreens['domains.retryDeletion']}”`));
+  assert.match(en_, /server owner/);
+  assert.match(tr_, /sunucunun sahibi/);
 });

@@ -473,7 +473,7 @@ func (p *Panel) publishDNSMutation(w http.ResponseWriter, ctx context.Context, d
 		var publicationErr *dnsAgentPublicationError
 		if errors.As(err, &publicationErr) {
 			log.Printf("[409][dns] publish zone %s: %v", domainName, err)
-			if guidance, ok := dnsPeerPendingAPIError(err); ok {
+			if guidance, ok := dnsPublicationGuidanceAPIError(err); ok {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusConflict)
 				_ = json.NewEncoder(w).Encode(guidance)

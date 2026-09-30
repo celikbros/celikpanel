@@ -790,7 +790,16 @@ func (p *Panel) callSyncDNSZoneV3(
 			response.AppliedGeneration != 0 {
 			return errors.New("agent returned a mixed DNS publication failure response")
 		}
+		if response.FailureReason != "" {
+			if !transport.ValidDNSPublicationFailureReason(response.FailureReason) {
+				return errors.New("agent returned an unreviewed DNS publication failure reason")
+			}
+			return &dnsPublicationFailureReasonError{Reason: response.FailureReason}
+		}
 		return errors.New("agent did not confirm the exact DNS publication")
+	}
+	if response.FailureReason != "" {
+		return errors.New("agent returned a DNS publication failure reason without a failure")
 	}
 	if response.RecoveryPending {
 		if response.Synced || response.Engine != request.Engine ||

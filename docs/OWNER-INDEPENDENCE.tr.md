@@ -67,6 +67,24 @@ kurulumlarda bu kuralı artık eklemez; var olan kuralı, önceki sürüme geri 
 onarır. Kendisinin oluşturmadığı bir kuralı asla değiştirmez; bunun yerine kaydı
 ve çalıştırılacak komutu söyler.
 
+### BIND denetim anahtarı (rndc.key) (1 Ekim 2026)
+
+Kaynak durumudur; bileşen testleri var, gerçek sistem denemesi bekliyor; henüz
+yayımlanmış bir sürümün parçası değildir.
+
+CelikPanel BIND'i kurduğunda paket bir rndc anahtarı oluşturmadıysa (Arch
+`bind` paketi oluşturmaz; Debian `bind9` `/etc/bind/rndc.key` dosyasını
+oluşturur), named ilk kez başlamadan önce standart `rndc-confgen -a` ile
+`/etc/rndc.key` dosyasını `root:named` sahipli ve 0640 kipinde oluşturur. Sizin
+bir anahtarınız, `rndc.conf` dosyanız ya da `controls` ifadeniz zaten varsa
+hiçbir şey yapmaz. Anahtarı istediğiniz zaman değiştirebilirsiniz
+(`rndc-confgen -a` ve named'in yeniden başlatılması); CelikPanel onu asla
+yeniden yazmaz. Panelin kaldırılması onu yerinde bırakır. Silerseniz DNS hizmet
+vermeyi sürdürür; yalnız `rndc` çalışmaz, yani panel bölge durumunu artık
+kanıtlayamaz ve bölge silmeleri yeniden bir anahtar olana kadar bekler. Geri
+alınan bir kurulum anahtarı yalnız CelikPanel oluşturduysa ve değişmemişse
+siler.
+
 ## Kanıt
 
 [Yerel doğrulama](validation/native-dns-independence-20260912/README.tr.md),

@@ -1972,3 +1972,77 @@ journals show).
 for each zone mutation, no "spurious notify answer" and no ":0 failed after
 retries" on the primary, one NOTIFY per zone received by the secondary, and
 the member zone served by the secondary at the same delay as before.
+
+### BIND rndc key at fresh install, rollback and typed rndc reason (2026-10-01)
+
+P0.4; constitutional invariants 1, 2, 4, 6; D-022, D-024, D-025. Install-
+ownership receipt, switch journal, ledger and state receipt: no schema or
+version change. One new companion record, one additive wire field.
+
+Found by the third native run of the pair acceptance driver
+([evidence](../deploy/e2e/dns-pair-acceptance/evidence/pair3-20261001/README.md),
+stop S-1): Arch `bind 9.20.29-1` creates no rndc key, so on an Arch BIND the
+product installed `rndc zonestatus` answers "neither /etc/rndc.conf nor
+/etc/rndc.key was found". Debian 13's `bind9` creates `/etc/bind/rndc.key`
+(`bind:bind 0640`) at package configuration. The product's own deletion proof
+(row 17 of the [acceptance register](DNS-RECOVERY-ACCEPTANCE.md)) and the
+owner's `bind-peer-inspect` both ask named through rndc with its defaults.
+
+**When the key is created.** In the BIND switch transaction (fresh install,
+PowerDNS-to-BIND switch, `reinstall_active`, stopped-BIND takeover; every host
+layout alike), after the package step and before named first starts (the
+package guard still masks it), and before the intent journal. The default key
+path comes from the certified layout, not from probing: pacman layout
+(`/etc/named.conf`) uses `/etc/rndc.key`, APT layout (`/etc/bind/named.conf`)
+uses `/etc/bind/rndc.key`; these are each build's compiled-in sysconfdir. The
+product runs the native `rndc-confgen -a` only when the key file is absent,
+no `rndc.conf` exists beside it and `named-checkconf -p <main config>` shows no
+`controls` statement; it then sets `root:named 0640` (Arch) or `bind:bind 0640`
+(Debian, matching the package) and fails the step if `rndc-confgen -a` wrote
+anywhere else. A present key, `rndc.conf` or `controls` statement is never
+touched.
+
+**Record.** `dns-engine-bind-rndc-key.json` (schema
+`celikpanel-dns-engine-bind-rndc-key/v1`) next to
+`dns-engine-install-ownership-bind.json`, bound to the same manifest qualifier,
+request and owner id: `path`, `provenance` (`product_created` with the content
+`sha256`, or `owner_or_package_provided` with `basis` `key_present`,
+`rndc_conf_present` or `controls_statement`). For a created key it is written
+before ownership is changed. It is a separate file rather than a new receipt
+field because the receipt is read byte-exactly by older Agents (unknown fields
+refused), by the owner recovery kit and by the native kill-matrix probe; old
+receipts are unchanged and remain the only install-ownership format. A retry
+recognises a present key as its own only when the record names the install
+receipt that existed before the retry (a never-committed earlier attempt) and
+the content hash still matches; commit retires that receipt, so a committed
+install's key is afterwards always owner or package provided.
+
+**Rollback rule.** After a completed rollback of that transaction (Agent
+in-process, Agent startup recovery of a V1 journal, and `recover-dns-bind-switch`
+for the V2 PowerDNS-to-BIND journal), with no named process, the key is removed
+only when the record names this exact transaction as `product_created` and the
+file is still a regular file with the recorded hash. A changed key is the
+owner's and is kept; a package- or owner-provided key is kept; the outcome is in
+the Agent log line and in the owner command's summary. It never fails the
+rollback. Packages and the install receipt stay as rollback standby as before.
+
+**Typed reason.** Every product rndc call classifies a missing or unreadable
+key, an authentication refusal and a refused control connection as
+`bind_rndc_unavailable` (`internal/bindrndckey`), keeping rndc's first output
+line as log detail. The deletion proof returns it at once instead of waiting
+for the proof limit; `SyncDNSZoneV3Response.failure_reason` (additive, omitted
+by older Agents, ignored by older Panels) carries it; the Panel answers the
+pending domain deletion (202, `stage: dns_cleanup`) and the 409 publication
+failure with `reason: bind_rndc_unavailable` and the D-024 text
+(`err.DNS_PUBLICATION_FAILED.bind_rndc_unavailable`): the server owner runs
+`sudo rndc-confgen -a` and `sudo systemctl restart named` on that server, then
+"Retry this deletion". A lost RPC response loses the reason (generic text), and
+the saved deletion-status read does not show it. The paired primary's optional
+`rndc notify` keeps the typed reason only in its joined log error.
+
+**Hosts affected.** Arch (pacman) BIND: key created on fresh install. Debian:
+normally package-provided, recorded, untouched.
+
+**Evidence.** Component tests only; native re-run pending (Arch BIND secondary
+deletion proof, Arch BIND standalone/primary deletion, rollback with a
+product-created key).

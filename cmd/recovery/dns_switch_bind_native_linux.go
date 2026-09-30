@@ -167,6 +167,9 @@ type bindSwitchNativeHost struct {
 	// runtimeFiles lists, read-only, files named wrote in its working
 	// directory; they are recorded, never removed.
 	runtimeFiles func(bindroot.Layout) (string, []string, error)
+	// rndcKey removes the rndc key only when this switch's provenance
+	// record says product-created and its content is unchanged; nil skips.
+	rndcKey func(context.Context, dnsengineartifact.SwitchJournalV1) bindRNDCKeyCLIOutcome
 }
 
 func installedBINDSwitchNativeHost(policy dnsengineartifact.JournalPolicy, owner servicemutationledger.FileOwner) bindSwitchNativeHost {
@@ -215,6 +218,9 @@ func installedBINDSwitchNativeHost(policy dnsengineartifact.JournalPolicy, owner
 			directory := dnsenginerecovery.BINDWorkingDirectory(layout)
 			files, err := dnsenginerecovery.ListBINDRuntimeFiles(directory)
 			return directory, files, err
+		},
+		rndcKey: func(ctx context.Context, j dnsengineartifact.SwitchJournalV1) bindRNDCKeyCLIOutcome {
+			return retireBINDRNDCKeyForOwnerInverse(ctx, policy, j)
 		},
 	}
 }
@@ -1048,6 +1054,11 @@ func restoreBINDSwitchNative(ctx context.Context, h bindSwitchNativeHost, j dnse
 	}
 	if removed {
 		bindRollbackRecordFrom(ctx).observeRemovedGeneration(string(layout), j.TargetGeneration)
+	}
+	// named is proven stopped; the rndc key goes only when this switch
+	// created it and nobody changed it. The outcome never fails the rollback.
+	if h.rndcKey != nil {
+		bindRollbackRecordFrom(ctx).observeRNDCKey(h.rndcKey(ctx, j))
 	}
 	state, err := assessBINDSwitchNative(ctx, h, j)
 	if err != nil || state != dnsenginerecovery.BINDSwitchNativeRestored {

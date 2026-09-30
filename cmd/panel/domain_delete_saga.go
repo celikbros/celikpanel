@@ -222,7 +222,7 @@ func (p *Panel) writeDomainDeletionPending(
 		"message": "Deletion is incomplete but retryable. Retry this deletion.",
 	}
 	if stage == "dns_cleanup" {
-		if guidance, ok := dnsPeerPendingAPIError(cause); ok {
+		if guidance, ok := dnsPublicationGuidanceAPIError(cause); ok {
 			response["reason"] = guidance.Reason
 			response["message"] = guidance.Error
 		}

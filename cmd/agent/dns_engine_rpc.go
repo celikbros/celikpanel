@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/bindrndckey"
 	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
@@ -224,6 +225,12 @@ func (a *Agent) SyncDNSZoneV3(request *SyncDNSZoneV3Request, response *SyncDNSZo
 		}
 		log.Printf("%s zone publication failed for %s at epoch %d: %v", commitment.Engine, commitment.Domain, commitment.EngineEpoch, err)
 		response.Error = "DNS zone publication failed; inspect the agent log"
+		// Only the reviewed reason crosses the wire; its detail (rndc's first
+		// output line) stays in the log above.
+		if unavailable, ok := bindrndckey.ReasonOf(err); ok {
+			response.Error = "DNS zone publication failed: named cannot be asked about zone state because rndc has no usable key"
+			response.FailureReason = unavailable.Reason()
+		}
 		return nil
 	}
 	if err := publishDNSZoneSyncV3Terminal(ctx, commitment.Domain, commitment.Qualifier); err != nil {

@@ -1566,6 +1566,23 @@ func (hostDNSEngineBackend) Switch(
 	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
+	// The install receipt as it stood before this transaction writes or
+	// rebinds it below: the rndc key rule recognises only its own
+	// never-committed residue through it. An unreadable receipt proves
+	// nothing and leaves any present key the owner's.
+	//
+	// Bu işlemin aşağıda yazmasından ya da yeniden bağlamasından önceki kurulum
+	// makbuzu: rndc anahtar kuralı yalnız kendi tamamlanmamış kalıntısını onunla
+	// tanır. Okunamayan makbuz hiçbir şey kanıtlamaz.
+	priorBINDInstall := bindRNDCKeyPriorInstall{}
+	if prior, priorExists, priorErr := readDNSEngineInstallOwnership(
+		transport.DNSEngineBIND,
+	); priorErr == nil && priorExists {
+		priorBINDInstall = bindRNDCKeyPriorInstall{Exists: true, bindRNDCKeyIdentity: bindRNDCKeyIdentity{
+			Qualifier: prior.ManifestQualifier,
+			RequestID: prior.MutationRequestID, OwnerID: prior.MutationOwnerID,
+		}}
+	}
 	// Nothing to install: BIND's packages are already on this host. That is
 	// still an event with provenance - this mutation takes them under
 	// management - and finalization requires it to be recorded, exactly as an
@@ -1634,6 +1651,21 @@ func (hostDNSEngineBackend) Switch(
 		},
 	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	// The package is installed and named has never started from it (the
+	// install guard's mask holds it). An rndc key must exist before that
+	// first start, or named cannot be asked about zone state (deletion
+	// proofs, peer inspection). See dns_engine_bind_rndc_key.go.
+	//
+	// Paket kuruldu ve named ondan hiç başlamadı. İlk başlatmadan önce rndc
+	// anahtarı bulunmalıdır; yoksa named'e bölge durumu sorulamaz.
+	if _, err := prepareBINDRNDCKeyBeforeFirstStart(ctx, layout, bindRNDCKeyIdentity{
+		Qualifier: manifest.Qualifier,
+		RequestID: binding.MutationRequestID, OwnerID: binding.MutationOwnerID,
+	}, priorBINDInstall); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, fmt.Errorf(
+			"prepare the BIND rndc key before named first starts: %w", err,
+		)
 	}
 	var publisher *binddns.Publisher
 	var validator trackedBINDValidator
@@ -1905,6 +1937,9 @@ func (hostDNSEngineBackend) Switch(
 		},
 	); err != nil {
 		removeStagedBINDGenerationAfterFailedSwitch(ctx, journal)
+		if journal.Phase == dnsSwitchPhaseRolledBack {
+			retireBINDRNDCKeyAfterRollback(ctx, journal)
+		}
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	completed, exists, err := readDNSEngineState()
