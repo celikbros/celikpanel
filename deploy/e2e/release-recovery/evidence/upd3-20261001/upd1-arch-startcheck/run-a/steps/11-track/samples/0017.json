@@ -1,0 +1,149 @@
+{
+  "agreement": {
+    "known_sources": [
+      "api",
+      "cli"
+    ],
+    "phase": {
+      "api": "recovering",
+      "cli": "recovering"
+    },
+    "reasons": [],
+    "sources": [
+      "api",
+      "cli",
+      "shell"
+    ],
+    "verdict": "agree"
+  },
+  "cli": {
+    "boot_id": "ad87aa38-f9db-450a-99da-30d4c9139a33",
+    "captured_at": "2026-09-30T20:34:16.363119Z",
+    "en": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "The new version's panel failed its start check before anything was switched on. The server is being returned to the previous version automatically; nothing needs to be done on the server. Check this same request again for the verified result; do not start another update.\nRequest: 89575bbb00157b7327a066ccabfa298a\nRecorded at: 2026-09-30T20:33:53Z\nThis is a recorded observation; current service health was not checked.\nRecorded state (for support): phase=recovering reason=recovery_running proof=none previous_failure=update_failed failure_code=candidate_panel_startup_check_failed\n"
+    },
+    "json": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "{\"schema\":\"celikpanel-recovery-status/v1\",\"request_id\":\"89575bbb00157b7327a066ccabfa298a\",\"observation\":\"known\",\"phase\":\"recovering\",\"terminal_proof\":\"none\",\"reason\":\"recovery_running\",\"observed_at\":\"2026-09-30T20:33:53Z\",\"previous_failure\":\"update_failed\",\"failure_code\":\"candidate_panel_startup_check_failed\"}\n"
+    },
+    "tr": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "Yeni sürümün paneli, hiçbir şey devreye alınmadan önce başlangıç denetiminden geçemedi. Sunucu otomatik olarak önceki sürüme döndürülüyor; sunucuda yapmanız gereken bir şey yok. Doğrulanmış sonuç için aynı işlemi yeniden sorgulayın; başka güncelleme başlatmayın.\nİşlem: 89575bbb00157b7327a066ccabfa298a\nKayıt zamanı: 2026-09-30T20:33:53Z\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\nKayıtlı durum (destek için): phase=recovering reason=recovery_running proof=none previous_failure=update_failed failure_code=candidate_panel_startup_check_failed\n"
+    }
+  },
+  "guidance_api": {
+    "actionable": true,
+    "keys": [
+      "recovery.phase.recovering",
+      "recovery.failure.candidate_panel_startup_check_failed.returning",
+      "recovery.reason.candidate_panel_startup_check_failed"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "texts": {
+      "en": [
+        "Last recorded step: recovery in progress",
+        "The new version's panel failed its start check before anything was switched on. The server is returning to the previous version automatically; nothing needs to be done on the server. This page checks the same operation for the verified result.",
+        "The new version's panel failed its start check"
+      ],
+      "tr": [
+        "Kaydedilmiş son adım: kurtarma sürüyor",
+        "Yeni sürümün paneli, hiçbir şey devreye alınmadan önce başlangıç denetiminden geçemedi. Sunucu önceki sürüme otomatik olarak dönüyor; sunucuda yapmanız gereken bir şey yok. Bu sayfa doğrulanmış sonuç için aynı işlemi kontrol eder.",
+        "Yeni sürümün paneli başlangıç denetiminden geçemedi"
+      ]
+    }
+  },
+  "guidance_cli": {
+    "actionable": true,
+    "keys": [
+      "recovery.phase.recovering",
+      "recovery.failure.candidate_panel_startup_check_failed.returning",
+      "recovery.reason.candidate_panel_startup_check_failed"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "texts": {
+      "en": [
+        "Last recorded step: recovery in progress",
+        "The new version's panel failed its start check before anything was switched on. The server is returning to the previous version automatically; nothing needs to be done on the server. This page checks the same operation for the verified result.",
+        "The new version's panel failed its start check"
+      ],
+      "tr": [
+        "Kaydedilmiş son adım: kurtarma sürüyor",
+        "Yeni sürümün paneli, hiçbir şey devreye alınmadan önce başlangıç denetiminden geçemedi. Sunucu önceki sürüme otomatik olarak dönüyor; sunucuda yapmanız gereken bir şey yok. Bu sayfa doğrulanmış sonuç için aynı işlemi kontrol eder.",
+        "Yeni sürümün paneli başlangıç denetiminden geçemedi"
+      ]
+    }
+  },
+  "index": 16,
+  "observed": {
+    "failure_code": "candidate_panel_startup_check_failed",
+    "observation": "known",
+    "observed_at": "2026-09-30T20:33:53Z",
+    "phase": "recovering",
+    "previous_failure": "update_failed",
+    "reason": "recovery_running",
+    "request_id": "89575bbb00157b7327a066ccabfa298a",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "none"
+  },
+  "recovery_api": {
+    "body": {
+      "failure_code": "candidate_panel_startup_check_failed",
+      "observation": "known",
+      "observed_at": "2026-09-30T20:33:53Z",
+      "panel_state": "ready",
+      "phase": "recovering",
+      "previous_failure": "update_failed",
+      "reason": "recovery_running",
+      "request_id": "89575bbb00157b7327a066ccabfa298a",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "none"
+    },
+    "http": 200
+  },
+  "t": 1790800455.6236515,
+  "update_card": {
+    "keys": [
+      "panelUpdate.failed"
+    ],
+    "missing_keys": [],
+    "summary": null,
+    "texts": {
+      "en": [
+        "The update could not be completed."
+      ],
+      "tr": [
+        "Güncelleme tamamlanamadı."
+      ]
+    },
+    "untranslated_summary": false
+  },
+  "update_status": {
+    "body": {
+      "created_at": "2026-09-30T20:33:13.940815838Z",
+      "found": true,
+      "request_id": "89575bbb00157b7327a066ccabfa298a",
+      "status": "failed",
+      "target": {
+        "arch": "amd64",
+        "archive_sha256": "4e07e47313b524466bc671f4bcccb7714603465aa92f68cce960a672840ad17b",
+        "archive_size": "67000221",
+        "commit": "592fc7baf38536821450388d44bca18e195b06ef",
+        "os": "linux",
+        "sequence": "82",
+        "version": "v0.1.0-alpha.82"
+      },
+      "updated_at": "2026-09-30T20:33:52.050890077Z"
+    },
+    "http": 200
+  },
+  "utc": "2026-09-30T20:34:15Z"
+}

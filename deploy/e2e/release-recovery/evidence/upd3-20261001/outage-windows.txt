@@ -1,0 +1,32 @@
+== upd1-arch-defective
+  panel  down-only-during-transaction: 20:22:18-20:22:53 bound 25.003-35.003 s kind=failed label=None
+  panel  down-only-during-transaction: 20:23:23-20:23:33 bound 0.0-10.0 s kind=failed label=None
+  host-panel: 20:22:18-20:22:53 bound 25.001-35.001 s
+  host-panel: 20:23:23-20:23:33 bound 0.0-10.0 s
+== upd1-arch-good
+  panel  down-only-during-transaction: 20:13:20-20:13:50 bound 20.002-30.002 s kind=failed label=None
+  host-panel: 20:13:25-20:13:50 bound 15.0-25.001 s
+== upd1-arch-realstart
+  panel  down-from-update-until-end: 20:44:27-None bound 395.021-None s kind=failed label=None
+  host-panel: 20:44:27-None bound 395.011-None s
+== upd1-arch-startcheck
+  panel  down-only-during-transaction: 20:33:24-20:34:04 bound 30.002-40.002 s kind=failed label=None
+  panel  down-only-during-transaction: 20:34:34-20:34:44 bound 0.0-10.0 s kind=failed label=None
+  host-panel: 20:33:29-20:34:09 bound 30.001-40.001 s
+  host-panel: 20:34:39-20:34:49 bound 0.0-10.0 s
+== upd1-debian13-defective
+  panel  down-only-during-transaction: 19:34:21-19:35:57 bound 85.687-95.687 s kind=failed+unobserved label=None
+  smtp   interrupted-only-by-host-reset: 19:34:56-19:35:12 bound 0.0-15.684 s kind=unobserved label=None
+  web    interrupted-only-by-host-reset: 19:34:56-19:35:17 bound 0.0-20.684 s kind=failed+unobserved label=None
+  host-panel: 19:34:26-19:35:58 bound 82.233-92.233 s
+  host-ssh: 19:35:01-19:35:13 bound 0.0-12.231 s
+== upd1-debian13-good
+== upd1-debian13-realstart
+  panel  down-from-update-until-end: 19:57:31-None bound 395.022-None s kind=failed label=None
+  host-panel: 19:57:31-None bound 395.011-None s
+== upd1-debian13-startcheck
+  panel  down-only-during-transaction: 19:46:27-19:48:04 bound 87.081-97.087 s kind=failed+unobserved label=None
+  smtp   interrupted-only-by-host-reset: 19:47:02-19:47:19 bound 0.0-17.078 s kind=unobserved label=None
+  web    interrupted-only-by-host-reset: 19:47:02-19:47:24 bound 0.0-22.079 s kind=failed+unobserved label=None
+  host-panel: 19:46:27-19:48:08 bound 90.821-100.822 s
+  host-ssh: 19:47:07-19:47:23 bound 5.819-15.819 s

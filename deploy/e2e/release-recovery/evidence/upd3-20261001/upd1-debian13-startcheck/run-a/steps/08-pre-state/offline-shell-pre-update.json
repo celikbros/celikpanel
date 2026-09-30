@@ -1,0 +1,55 @@
+{
+  "page": {
+    "bytes": 2227,
+    "sha256": "af74ba836d6bbc687a4d62e83e0c317f8c31bba429c1c6f64c9d0697a7d5a40c",
+    "status": 200
+  },
+  "scripts": [
+    {
+      "carries_status_command": true,
+      "path": "/assets/recovery-DXA3_xQH.js",
+      "sha256": "54ab1f545b3916b9c40068eda8c69d57deac292bdc203d8f30c1b5ac963c1ded",
+      "status": 200
+    }
+  ],
+  "texts": {
+    "en": {
+      "check": "Check connection",
+      "checking": "Checking connection…",
+      "help": "This recovery page is saved in your browser. It cannot confirm the server’s current state. A lost connection does not prove that your update failed or your license expired.",
+      "journal": "Read the recovery journal",
+      "next": "Check your connection. This page checks again every 15 seconds while visible. When the panel responds, open it to continue tracking the same operation.",
+      "noReference": "No operation reference is saved in this browser. Ask the server administrator to inspect the recovery journal.",
+      "open": "Open panel",
+      "owner": "If the connection does not return",
+      "ownerHelp": "The server administrator can inspect recovery through an existing SSH connection. These commands only read status; they do not restart an update.",
+      "reachable": "The panel is responding. Open it to sign in or verify the existing operation.",
+      "reference": "Saved operation reference",
+      "referenceHelp": "This ID is a browser hint, not a verified result or permission to retry.",
+      "status": "Read this operation’s status",
+      "title": "The panel connection is unavailable",
+      "view": "Or view this operation in your browser. Run this on your own computer, replacing USER with your SSH account:",
+      "viewHelp": "Then open http://127.0.0.1:2084/ on that computer and enter the temporary code shown in the SSH terminal. The view only reads status. An older recovery tool refuses this command; use the status command above instead.",
+      "waiting": "No current panel response. This page has not started another operation."
+    },
+    "tr": {
+      "check": "Bağlantıyı kontrol et",
+      "checking": "Bağlantı kontrol ediliyor…",
+      "help": "Bu kurtarma sayfası tarayıcınızda kayıtlıdır. Sunucunun güncel durumunu doğrulayamaz. Bağlantının kesilmesi, güncellemenin başarısız olduğunu veya lisansın süresinin dolduğunu göstermez.",
+      "journal": "Kurtarma günlüğünü oku",
+      "next": "Bağlantınızı kontrol edin. Bu sayfa açıkken 15 saniyede bir yeniden kontrol eder. Panel yanıt verdiğinde aynı işlemi izlemek için paneli açın.",
+      "noReference": "Bu tarayıcıda kayıtlı işlem kimliği yok. Sunucu yöneticisinden kurtarma günlüğünü incelemesini isteyin.",
+      "open": "Paneli aç",
+      "owner": "Bağlantı geri gelmezse",
+      "ownerHelp": "Sunucu yöneticisi mevcut SSH bağlantısından kurtarma durumuna bakabilir. Bu komutlar yalnızca durumu okur; güncellemeyi yeniden başlatmaz.",
+      "reachable": "Panel yanıt veriyor. Giriş yapmak veya mevcut işlemi doğrulamak için paneli açın.",
+      "reference": "Kayıtlı işlem kimliği",
+      "referenceHelp": "Bu kimlik tarayıcıda kayıtlı bir ipucudur; doğrulanmış sonuç veya yeniden deneme yetkisi değildir.",
+      "status": "Bu işlemin durumunu oku",
+      "title": "Panel bağlantısına ulaşılamıyor",
+      "view": "Ya da bu işlemi tarayıcınızda görüntüleyin. Komutu kendi bilgisayarınızda çalıştırın; USER yerine SSH hesabınızı yazın:",
+      "viewHelp": "Sonra o bilgisayarda http://127.0.0.1:2084/ adresini açın ve SSH terminalinde gösterilen geçici kodu girin. Bu görünüm yalnızca durumu okur. Eski bir kurtarma aracı bu komutu reddeder; bu durumda yukarıdaki durum komutunu kullanın.",
+      "waiting": "Panelden güncel yanıt alınamadı. Bu sayfa yeni bir işlem başlatmadı."
+    }
+  }
+}

@@ -1,0 +1,227 @@
+# read-only query q-around.sh lab=upd3-d13-good-a node=debian13 rc=0
+== all journal lines 17:54:10-17:54:35 except panel TLS handshake noise and GET /api
+2026-09-30T17:54:10.908557+00:00 dns-debian13 postfix/submission/smtpd[26030]: connect from localhost[127.0.0.1]
+2026-09-30T17:54:10.909219+00:00 dns-debian13 postfix/submission/smtpd[26030]: disconnect from localhost[127.0.0.1] quit=1 commands=1
+2026-09-30T17:54:13.093805+00:00 dns-debian13 sshd-session[26619]: Accepted publickey for celik from 10.0.2.2 port 48748 ssh2: ED25519 SHA256:gYVua8wITnUpf3nhH/lWc32TPhf8JiCxrkIuiNEvaGk
+2026-09-30T17:54:13.095237+00:00 dns-debian13 sshd-session[26619]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T17:54:13.098411+00:00 dns-debian13 systemd-logind[755]: New session 104 of user celik.
+2026-09-30T17:54:13.117342+00:00 dns-debian13 systemd[1]: Started session-104.scope - Session 104 of User celik.
+2026-09-30T17:54:13.128242+00:00 dns-debian13 sshd-session[26627]: Received disconnect from 10.0.2.2 port 48748:11: disconnected by user
+2026-09-30T17:54:13.128360+00:00 dns-debian13 sshd-session[26627]: Disconnected from user celik 10.0.2.2 port 48748
+2026-09-30T17:54:13.128828+00:00 dns-debian13 sshd-session[26619]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T17:54:13.131198+00:00 dns-debian13 systemd-logind[755]: Session 104 logged out. Waiting for processes to exit.
+2026-09-30T17:54:13.133237+00:00 dns-debian13 systemd[1]: session-104.scope: Deactivated successfully.
+2026-09-30T17:54:13.134317+00:00 dns-debian13 systemd-logind[755]: Removed session 104.
+2026-09-30T17:54:14.894226+00:00 dns-debian13 sshd-session[26630]: Accepted publickey for celik from 10.0.2.2 port 48752 ssh2: ED25519 SHA256:gYVua8wITnUpf3nhH/lWc32TPhf8JiCxrkIuiNEvaGk
+2026-09-30T17:54:14.895236+00:00 dns-debian13 sshd-session[26630]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T17:54:14.898168+00:00 dns-debian13 systemd-logind[755]: New session 105 of user celik.
+2026-09-30T17:54:14.921358+00:00 dns-debian13 systemd[1]: Started session-105.scope - Session 105 of User celik.
+2026-09-30T17:54:14.939174+00:00 dns-debian13 sudo[26639]:    celik : PWD=/home/celik ; USER=root ; COMMAND=/bin/bash -s
+2026-09-30T17:54:14.939489+00:00 dns-debian13 sudo[26639]: pam_unix(sudo:session): session opened for user root(uid=0) by celik(uid=1000)
+2026-09-30T17:54:15.009898+00:00 dns-debian13 sudo[26639]: pam_unix(sudo:session): session closed for user root
+2026-09-30T17:54:15.011126+00:00 dns-debian13 sshd-session[26638]: Received disconnect from 10.0.2.2 port 48752:11: disconnected by user
+2026-09-30T17:54:15.011240+00:00 dns-debian13 sshd-session[26638]: Disconnected from user celik 10.0.2.2 port 48752
+2026-09-30T17:54:15.011927+00:00 dns-debian13 sshd-session[26630]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T17:54:15.014173+00:00 dns-debian13 systemd-logind[755]: Session 105 logged out. Waiting for processes to exit.
+2026-09-30T17:54:15.014198+00:00 dns-debian13 systemd[1]: session-105.scope: Deactivated successfully.
+2026-09-30T17:54:15.015604+00:00 dns-debian13 systemd-logind[755]: Removed session 105.
+2026-09-30T17:54:15.097771+00:00 dns-debian13 sshd-session[26645]: Accepted publickey for celik from 10.0.2.2 port 48766 ssh2: ED25519 SHA256:gYVua8wITnUpf3nhH/lWc32TPhf8JiCxrkIuiNEvaGk
+2026-09-30T17:54:15.098747+00:00 dns-debian13 sshd-session[26645]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T17:54:15.101986+00:00 dns-debian13 systemd-logind[755]: New session 106 of user celik.
+2026-09-30T17:54:15.121366+00:00 dns-debian13 systemd[1]: Started session-106.scope - Session 106 of User celik.
+2026-09-30T17:54:15.138217+00:00 dns-debian13 sudo[26654]:    celik : PWD=/home/celik ; USER=root ; COMMAND=/bin/bash -s
+2026-09-30T17:54:15.138431+00:00 dns-debian13 sudo[26654]: pam_unix(sudo:session): session opened for user root(uid=0) by celik(uid=1000)
+2026-09-30T17:54:15.236062+00:00 dns-debian13 sudo[26654]: pam_unix(sudo:session): session closed for user root
+2026-09-30T17:54:15.237297+00:00 dns-debian13 sshd-session[26653]: Received disconnect from 10.0.2.2 port 48766:11: disconnected by user
+2026-09-30T17:54:15.237443+00:00 dns-debian13 sshd-session[26653]: Disconnected from user celik 10.0.2.2 port 48766
+2026-09-30T17:54:15.237940+00:00 dns-debian13 sshd-session[26645]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T17:54:15.240170+00:00 dns-debian13 systemd[1]: session-106.scope: Deactivated successfully.
+2026-09-30T17:54:15.240699+00:00 dns-debian13 systemd-logind[755]: Session 106 logged out. Waiting for processes to exit.
+2026-09-30T17:54:15.241680+00:00 dns-debian13 systemd-logind[755]: Removed session 106.
+2026-09-30T17:54:15.349963+00:00 dns-debian13 sshd-session[26669]: Accepted publickey for celik from 10.0.2.2 port 48782 ssh2: ED25519 SHA256:gYVua8wITnUpf3nhH/lWc32TPhf8JiCxrkIuiNEvaGk
+2026-09-30T17:54:15.351060+00:00 dns-debian13 sshd-session[26669]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T17:54:15.354009+00:00 dns-debian13 systemd-logind[755]: New session 107 of user celik.
+2026-09-30T17:54:15.373422+00:00 dns-debian13 systemd[1]: Started session-107.scope - Session 107 of User celik.
+2026-09-30T17:54:15.391606+00:00 dns-debian13 sudo[26678]:    celik : PWD=/home/celik ; USER=root ; COMMAND=/usr/bin/python3 -I -c 'import json,os,stat#012from pathlib import Path#012p=Path(\'/etc/celikpanel-release-recovery-lab\')#012i=p.lstat()#012if not (stat.S_ISREG(i.st_mode) and i.st_uid==0 and i.st_gid==0 and stat.S_IMODE(i.st_mode)==0o444 and i.st_nlink==1 and i.st_size<=2048):#012    rais
+2026-09-30T17:54:15.391640+00:00 dns-debian13 sudo[26678]:    celik : (command continued) Path(\'/proc/1/comm\').read_text().strip()!=\'systemd\':#012    raise ValueError(\'native systemd is required\')#012#012import hashlib,sys,tempfile#012root=Path(\'/root/celikpanel-release-recovery-lab\')#012try:#012    root.mkdir(mode=0o700)#012except FileExistsError:#012    pass#012i=root.lstat()#012if not (
+2026-09-30T17:54:15.391643+00:00 dns-debian13 sudo[26678]:    celik : (command continued) target.is_symlink():#012    i=target.lstat()#012    if not (stat.S_ISREG(i.st_mode) and i.st_uid==0 and i.st_gid==0 and i.st_nlink==1):#012        raise ValueError(\'invalid existing guest payload\')#012fd,temporary=tempfile.mkstemp(prefix=\'.incoming-\',dir=root)#012try:#012    with os.fdopen(fd,\'wb\') as o
+2026-09-30T17:54:15.391870+00:00 dns-debian13 sudo[26678]: pam_unix(sudo:session): session opened for user root(uid=0) by celik(uid=1000)
+2026-09-30T17:54:15.432664+00:00 dns-debian13 sudo[26678]: pam_unix(sudo:session): session closed for user root
+2026-09-30T17:54:15.434080+00:00 dns-debian13 sshd-session[26677]: Received disconnect from 10.0.2.2 port 48782:11: disconnected by user
+2026-09-30T17:54:15.434240+00:00 dns-debian13 sshd-session[26677]: Disconnected from user celik 10.0.2.2 port 48782
+2026-09-30T17:54:15.434885+00:00 dns-debian13 sshd-session[26669]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T17:54:15.437505+00:00 dns-debian13 systemd[1]: session-107.scope: Deactivated successfully.
+2026-09-30T17:54:15.438165+00:00 dns-debian13 systemd-logind[755]: Session 107 logged out. Waiting for processes to exit.
+2026-09-30T17:54:15.439183+00:00 dns-debian13 systemd-logind[755]: Removed session 107.
+2026-09-30T17:54:15.518156+00:00 dns-debian13 sshd-session[26682]: Accepted publickey for celik from 10.0.2.2 port 48798 ssh2: ED25519 SHA256:gYVua8wITnUpf3nhH/lWc32TPhf8JiCxrkIuiNEvaGk
+2026-09-30T17:54:15.519227+00:00 dns-debian13 sshd-session[26682]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T17:54:15.522597+00:00 dns-debian13 systemd-logind[755]: New session 108 of user celik.
+2026-09-30T17:54:15.545405+00:00 dns-debian13 systemd[1]: Started session-108.scope - Session 108 of User celik.
+2026-09-30T17:54:15.563662+00:00 dns-debian13 sudo[26691]:    celik : PWD=/home/celik ; USER=root ; COMMAND=/bin/bash -s
+2026-09-30T17:54:15.563990+00:00 dns-debian13 sudo[26691]: pam_unix(sudo:session): session opened for user root(uid=0) by celik(uid=1000)
+2026-09-30T17:54:15.593023+00:00 dns-debian13 systemd[1]: Started celikpanel-lab-owner-update-observer-df01bec5190476fd66baf46177314f54.service - [systemd-run] /usr/bin/python3 -I /root/celikpanel-release-recovery-lab/guest_owner_update_observer.py --lab-nonce 58e28417acf0d7c510c69bd13fd90f8f3fa41d01c7c4b32e6b3ecb3cd2b0aaa9 --vm-uuid fc5d73d7-40e1-5d66-96e5-8307e263b907 --cell-id release-recovery_
+2026-09-30T17:54:15.593820+00:00 dns-debian13 sudo[26691]: pam_unix(sudo:session): session closed for user root
+2026-09-30T17:54:15.595399+00:00 dns-debian13 sshd-session[26690]: Received disconnect from 10.0.2.2 port 48798:11: disconnected by user
+2026-09-30T17:54:15.595754+00:00 dns-debian13 sshd-session[26690]: Disconnected from user celik 10.0.2.2 port 48798
+2026-09-30T17:54:15.596481+00:00 dns-debian13 sshd-session[26682]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T17:54:15.598753+00:00 dns-debian13 systemd[1]: session-108.scope: Deactivated successfully.
+2026-09-30T17:54:15.599067+00:00 dns-debian13 systemd-logind[755]: Session 108 logged out. Waiting for processes to exit.
+2026-09-30T17:54:15.610396+00:00 dns-debian13 systemd-logind[755]: Removed session 108.
+2026-09-30T17:54:15.676117+00:00 dns-debian13 sshd-session[26697]: Accepted publickey for celik from 10.0.2.2 port 48814 ssh2: ED25519 SHA256:gYVua8wITnUpf3nhH/lWc32TPhf8JiCxrkIuiNEvaGk
+2026-09-30T17:54:15.677511+00:00 dns-debian13 sshd-session[26697]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T17:54:15.680853+00:00 dns-debian13 systemd-logind[755]: New session 109 of user celik.
+2026-09-30T17:54:15.709424+00:00 dns-debian13 systemd[1]: Started session-109.scope - Session 109 of User celik.
+2026-09-30T17:54:15.729615+00:00 dns-debian13 sudo[26710]:    celik : PWD=/home/celik ; USER=root ; COMMAND=/bin/bash -s
+2026-09-30T17:54:15.729859+00:00 dns-debian13 sudo[26710]: pam_unix(sudo:session): session opened for user root(uid=0) by celik(uid=1000)
+2026-09-30T17:54:15.767004+00:00 dns-debian13 sudo[26710]: pam_unix(sudo:session): session closed for user root
+2026-09-30T17:54:15.768100+00:00 dns-debian13 sshd-session[26709]: Received disconnect from 10.0.2.2 port 48814:11: disconnected by user
+2026-09-30T17:54:15.768215+00:00 dns-debian13 sshd-session[26709]: Disconnected from user celik 10.0.2.2 port 48814
+2026-09-30T17:54:15.768959+00:00 dns-debian13 sshd-session[26697]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T17:54:15.771544+00:00 dns-debian13 systemd[1]: session-109.scope: Deactivated successfully.
+2026-09-30T17:54:15.772732+00:00 dns-debian13 systemd-logind[755]: Session 109 logged out. Waiting for processes to exit.
+2026-09-30T17:54:15.776308+00:00 dns-debian13 systemd-logind[755]: Removed session 109.
+2026-09-30T17:54:15.894651+00:00 dns-debian13 systemd[1]: Starting celikpanel-self-update-df01bec5190476fd66baf46177314f54.service - [systemd-run] /opt/celikpanel/bin/agent --self-update-worker df01bec5190476fd66baf46177314f54...
+2026-09-30T17:54:15.906049+00:00 dns-debian13 postfix/submission/smtpd[26030]: connect from localhost[127.0.0.1]
+2026-09-30T17:54:15.906583+00:00 dns-debian13 postfix/submission/smtpd[26030]: disconnect from localhost[127.0.0.1] quit=1 commands=1
+2026-09-30T17:54:15.912152+00:00 dns-debian13 systemd[1]: Started celikpanel-self-update-df01bec5190476fd66baf46177314f54.service - [systemd-run] /opt/celikpanel/bin/agent --self-update-worker df01bec5190476fd66baf46177314f54.
+2026-09-30T17:54:16.043614+00:00 dns-debian13 sshd-session[26738]: Accepted publickey for celik from 10.0.2.2 port 48828 ssh2: ED25519 SHA256:gYVua8wITnUpf3nhH/lWc32TPhf8JiCxrkIuiNEvaGk
+2026-09-30T17:54:16.044266+00:00 dns-debian13 sshd-session[26738]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T17:54:16.047473+00:00 dns-debian13 systemd-logind[755]: New session 110 of user celik.
+2026-09-30T17:54:16.061332+00:00 dns-debian13 systemd[1]: Started session-110.scope - Session 110 of User celik.
+2026-09-30T17:54:16.080353+00:00 dns-debian13 sudo[26795]:    celik : PWD=/home/celik ; USER=root ; COMMAND=/bin/bash -s
+2026-09-30T17:54:16.080909+00:00 dns-debian13 sudo[26795]: pam_unix(sudo:session): session opened for user root(uid=0) by celik(uid=1000)
+2026-09-30T17:54:16.185810+00:00 dns-debian13 sudo[26795]: pam_unix(sudo:session): session closed for user root
+2026-09-30T17:54:16.186927+00:00 dns-debian13 sshd-session[26793]: Received disconnect from 10.0.2.2 port 48828:11: disconnected by user
+2026-09-30T17:54:16.187030+00:00 dns-debian13 sshd-session[26793]: Disconnected from user celik 10.0.2.2 port 48828
+2026-09-30T17:54:16.187888+00:00 dns-debian13 sshd-session[26738]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T17:54:16.190554+00:00 dns-debian13 systemd[1]: session-110.scope: Deactivated successfully.
+2026-09-30T17:54:16.192800+00:00 dns-debian13 systemd-logind[755]: Session 110 logged out. Waiting for processes to exit.
+2026-09-30T17:54:16.193953+00:00 dns-debian13 systemd-logind[755]: Removed session 110.
+2026-09-30T17:54:17.378296+00:00 dns-debian13 sshd-session[26983]: Accepted publickey for celik from 10.0.2.2 port 48842 ssh2: ED25519 SHA256:gYVua8wITnUpf3nhH/lWc32TPhf8JiCxrkIuiNEvaGk
+2026-09-30T17:54:17.380337+00:00 dns-debian13 sshd-session[26983]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T17:54:17.391031+00:00 dns-debian13 systemd-logind[755]: New session 111 of user celik.
+2026-09-30T17:54:17.413371+00:00 dns-debian13 systemd[1]: Started session-111.scope - Session 111 of User celik.
+2026-09-30T17:54:17.442483+00:00 dns-debian13 sudo[26996]:    celik : PWD=/home/celik ; USER=root ; COMMAND=/bin/bash -s
+2026-09-30T17:54:17.443085+00:00 dns-debian13 sudo[26996]: pam_unix(sudo:session): session opened for user root(uid=0) by celik(uid=1000)
+2026-09-30T17:54:17.626254+00:00 dns-debian13 sudo[26996]: pam_unix(sudo:session): session closed for user root
+2026-09-30T17:54:17.627437+00:00 dns-debian13 sshd-session[26995]: Received disconnect from 10.0.2.2 port 48842:11: disconnected by user
+2026-09-30T17:54:17.627565+00:00 dns-debian13 sshd-session[26995]: Disconnected from user celik 10.0.2.2 port 48842
+2026-09-30T17:54:17.628258+00:00 dns-debian13 sshd-session[26983]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T17:54:17.634277+00:00 dns-debian13 systemd[1]: session-111.scope: Deactivated successfully.
+2026-09-30T17:54:17.636956+00:00 dns-debian13 systemd-logind[755]: Session 111 logged out. Waiting for processes to exit.
+2026-09-30T17:54:17.641587+00:00 dns-debian13 systemd-logind[755]: Removed session 111.
+2026-09-30T17:54:17.827035+00:00 dns-debian13 sshd-session[27057]: Accepted publickey for celik from 10.0.2.2 port 48844 ssh2: ED25519 SHA256:gYVua8wITnUpf3nhH/lWc32TPhf8JiCxrkIuiNEvaGk
+2026-09-30T17:54:17.828424+00:00 dns-debian13 sshd-session[27057]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T17:54:17.833198+00:00 dns-debian13 systemd-logind[755]: New session 112 of user celik.
+2026-09-30T17:54:17.845311+00:00 dns-debian13 systemd[1]: Started session-112.scope - Session 112 of User celik.
+2026-09-30T17:54:17.874164+00:00 dns-debian13 sudo[27071]:    celik : PWD=/home/celik ; USER=root ; COMMAND=/bin/bash -s
+2026-09-30T17:54:17.874661+00:00 dns-debian13 sudo[27071]: pam_unix(sudo:session): session opened for user root(uid=0) by celik(uid=1000)
+2026-09-30T17:54:17.981057+00:00 dns-debian13 sudo[27071]: pam_unix(sudo:session): session closed for user root
+2026-09-30T17:54:17.986030+00:00 dns-debian13 sshd-session[27070]: Received disconnect from 10.0.2.2 port 48844:11: disconnected by user
+2026-09-30T17:54:17.986136+00:00 dns-debian13 sshd-session[27070]: Disconnected from user celik 10.0.2.2 port 48844
+2026-09-30T17:54:17.986733+00:00 dns-debian13 sshd-session[27057]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T17:54:17.988614+00:00 dns-debian13 systemd[1]: session-112.scope: Deactivated successfully.
+2026-09-30T17:54:17.990630+00:00 dns-debian13 systemd-logind[755]: Session 112 logged out. Waiting for processes to exit.
+2026-09-30T17:54:17.996067+00:00 dns-debian13 systemd-logind[755]: Removed session 112.
+2026-09-30T17:54:18.103960+00:00 dns-debian13 sshd-session[27093]: Accepted publickey for celik from 10.0.2.2 port 48860 ssh2: ED25519 SHA256:gYVua8wITnUpf3nhH/lWc32TPhf8JiCxrkIuiNEvaGk
+2026-09-30T17:54:18.105986+00:00 dns-debian13 sshd-session[27093]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T17:54:18.109209+00:00 dns-debian13 systemd-logind[755]: New session 113 of user celik.
+2026-09-30T17:54:18.125238+00:00 dns-debian13 systemd[1]: Started session-113.scope - Session 113 of User celik.
+2026-09-30T17:54:18.143740+00:00 dns-debian13 sshd-session[27106]: Received disconnect from 10.0.2.2 port 48860:11: disconnected by user
+2026-09-30T17:54:18.143854+00:00 dns-debian13 sshd-session[27106]: Disconnected from user celik 10.0.2.2 port 48860
+2026-09-30T17:54:18.144733+00:00 dns-debian13 sshd-session[27093]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T17:54:18.149381+00:00 dns-debian13 systemd[1]: session-113.scope: Deactivated successfully.
+2026-09-30T17:54:18.150920+00:00 dns-debian13 systemd-logind[755]: Session 113 logged out. Waiting for processes to exit.
+2026-09-30T17:54:18.154019+00:00 dns-debian13 systemd-logind[755]: Removed session 113.
+2026-09-30T17:54:18.433283+00:00 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-09-30T17:54:18.785454+00:00 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-09-30T17:54:18.785802+00:00 dns-debian13 systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-09-30T17:54:19.621315+00:00 dns-debian13 sshd-session[27199]: Accepted publickey for celik from 10.0.2.2 port 48868 ssh2: ED25519 SHA256:gYVua8wITnUpf3nhH/lWc32TPhf8JiCxrkIuiNEvaGk
+2026-09-30T17:54:19.622457+00:00 dns-debian13 sshd-session[27199]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T17:54:19.628070+00:00 dns-debian13 systemd-logind[755]: New session 114 of user celik.
+2026-09-30T17:54:19.633446+00:00 dns-debian13 systemd[1]: Started session-114.scope - Session 114 of User celik.
+2026-09-30T17:54:19.658409+00:00 dns-debian13 sudo[27212]:    celik : PWD=/home/celik ; USER=root ; COMMAND=/bin/bash -s
+2026-09-30T17:54:19.658688+00:00 dns-debian13 sudo[27212]: pam_unix(sudo:session): session opened for user root(uid=0) by celik(uid=1000)
+2026-09-30T17:54:19.806620+00:00 dns-debian13 sudo[27212]: pam_unix(sudo:session): session closed for user root
+2026-09-30T17:54:19.807983+00:00 dns-debian13 sshd-session[27211]: Received disconnect from 10.0.2.2 port 48868:11: disconnected by user
+2026-09-30T17:54:19.808106+00:00 dns-debian13 sshd-session[27211]: Disconnected from user celik 10.0.2.2 port 48868
+2026-09-30T17:54:19.808705+00:00 dns-debian13 sshd-session[27199]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T17:54:19.810783+00:00 dns-debian13 systemd-logind[755]: Session 114 logged out. Waiting for processes to exit.
+2026-09-30T17:54:19.811461+00:00 dns-debian13 systemd[1]: session-114.scope: Deactivated successfully.
+2026-09-30T17:54:19.817559+00:00 dns-debian13 systemd-logind[755]: Removed session 114.
+2026-09-30T17:54:20.920557+00:00 dns-debian13 postfix/submission/smtpd[26030]: connect from localhost[127.0.0.1]
+2026-09-30T17:54:20.923620+00:00 dns-debian13 postfix/submission/smtpd[26030]: disconnect from localhost[127.0.0.1] quit=1 commands=1
+2026-09-30T17:54:22.335394+00:00 dns-debian13 sshd-session[28408]: Accepted publickey for celik from 10.0.2.2 port 58222 ssh2: ED25519 SHA256:gYVua8wITnUpf3nhH/lWc32TPhf8JiCxrkIuiNEvaGk
+2026-09-30T17:54:22.338246+00:00 dns-debian13 sshd-session[28408]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T17:54:22.352618+00:00 dns-debian13 systemd-logind[755]: New session 115 of user celik.
+2026-09-30T17:54:22.369319+00:00 dns-debian13 systemd[1]: Started session-115.scope - Session 115 of User celik.
+2026-09-30T17:54:22.390585+00:00 dns-debian13 sudo[28509]:    celik : PWD=/home/celik ; USER=root ; COMMAND=/bin/bash -s
+2026-09-30T17:54:22.391171+00:00 dns-debian13 sudo[28509]: pam_unix(sudo:session): session opened for user root(uid=0) by celik(uid=1000)
+2026-09-30T17:54:22.510471+00:00 dns-debian13 sudo[28509]: pam_unix(sudo:session): session closed for user root
+2026-09-30T17:54:22.511776+00:00 dns-debian13 sshd-session[28507]: Received disconnect from 10.0.2.2 port 58222:11: disconnected by user
+2026-09-30T17:54:22.512761+00:00 dns-debian13 sshd-session[28507]: Disconnected from user celik 10.0.2.2 port 58222
+2026-09-30T17:54:22.513363+00:00 dns-debian13 sshd-session[28408]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T17:54:22.515258+00:00 dns-debian13 systemd[1]: session-115.scope: Deactivated successfully.
+2026-09-30T17:54:22.516846+00:00 dns-debian13 systemd-logind[755]: Session 115 logged out. Waiting for processes to exit.
+2026-09-30T17:54:22.517462+00:00 dns-debian13 systemd-logind[755]: Removed session 115.
+2026-09-30T17:54:23.107686+00:00 dns-debian13 sshd-session[28884]: Accepted publickey for celik from 10.0.2.2 port 58228 ssh2: ED25519 SHA256:gYVua8wITnUpf3nhH/lWc32TPhf8JiCxrkIuiNEvaGk
+2026-09-30T17:54:23.108973+00:00 dns-debian13 sshd-session[28884]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T17:54:23.112778+00:00 dns-debian13 systemd-logind[755]: New session 116 of user celik.
+2026-09-30T17:54:23.125223+00:00 dns-debian13 systemd[1]: Started session-116.scope - Session 116 of User celik.
+2026-09-30T17:54:23.138225+00:00 dns-debian13 sshd-session[28920]: Received disconnect from 10.0.2.2 port 58228:11: disconnected by user
+2026-09-30T17:54:23.138324+00:00 dns-debian13 sshd-session[28920]: Disconnected from user celik 10.0.2.2 port 58228
+2026-09-30T17:54:23.139240+00:00 dns-debian13 sshd-session[28884]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T17:54:23.145906+00:00 dns-debian13 systemd[1]: session-116.scope: Deactivated successfully.
+2026-09-30T17:54:23.146013+00:00 dns-debian13 systemd-logind[755]: Session 116 logged out. Waiting for processes to exit.
+2026-09-30T17:54:23.147521+00:00 dns-debian13 systemd-logind[755]: Removed session 116.
+2026-09-30T17:54:25.911067+00:00 dns-debian13 postfix/submission/smtpd[26030]: connect from localhost[127.0.0.1]
+2026-09-30T17:54:25.914118+00:00 dns-debian13 postfix/submission/smtpd[26030]: disconnect from localhost[127.0.0.1] quit=1 commands=1
+2026-09-30T17:54:26.490938+00:00 dns-debian13 sshd-session[31189]: Accepted publickey for celik from 10.0.2.2 port 58240 ssh2: ED25519 SHA256:gYVua8wITnUpf3nhH/lWc32TPhf8JiCxrkIuiNEvaGk
+2026-09-30T17:54:26.492904+00:00 dns-debian13 sshd-session[31189]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T17:54:26.496052+00:00 dns-debian13 systemd-logind[755]: New session 117 of user celik.
+2026-09-30T17:54:26.509392+00:00 dns-debian13 systemd[1]: Started session-117.scope - Session 117 of User celik.
+2026-09-30T17:54:26.534578+00:00 dns-debian13 sudo[31279]:    celik : PWD=/home/celik ; USER=root ; COMMAND=/bin/bash -s
+2026-09-30T17:54:26.535199+00:00 dns-debian13 sudo[31279]: pam_unix(sudo:session): session opened for user root(uid=0) by celik(uid=1000)
+2026-09-30T17:54:26.647912+00:00 dns-debian13 sudo[31279]: pam_unix(sudo:session): session closed for user root
+2026-09-30T17:54:26.649275+00:00 dns-debian13 sshd-session[31275]: Received disconnect from 10.0.2.2 port 58240:11: disconnected by user
+2026-09-30T17:54:26.649501+00:00 dns-debian13 sshd-session[31275]: Disconnected from user celik 10.0.2.2 port 58240
+2026-09-30T17:54:26.650715+00:00 dns-debian13 sshd-session[31189]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T17:54:26.655307+00:00 dns-debian13 systemd[1]: session-117.scope: Deactivated successfully.
+2026-09-30T17:54:26.655387+00:00 dns-debian13 systemd-logind[755]: Session 117 logged out. Waiting for processes to exit.
+2026-09-30T17:54:26.657748+00:00 dns-debian13 systemd-logind[755]: Removed session 117.
+2026-09-30T17:54:28.103587+00:00 dns-debian13 sshd-session[31448]: Accepted publickey for celik from 10.0.2.2 port 58254 ssh2: ED25519 SHA256:gYVua8wITnUpf3nhH/lWc32TPhf8JiCxrkIuiNEvaGk
+2026-09-30T17:54:28.104858+00:00 dns-debian13 sshd-session[31448]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T17:54:28.111066+00:00 dns-debian13 systemd-logind[755]: New session 118 of user celik.
+2026-09-30T17:54:28.125256+00:00 dns-debian13 systemd[1]: Started session-118.scope - Session 118 of User celik.
+2026-09-30T17:54:28.145624+00:00 dns-debian13 sshd-session[31462]: Received disconnect from 10.0.2.2 port 58254:11: disconnected by user
+2026-09-30T17:54:28.146021+00:00 dns-debian13 sshd-session[31462]: Disconnected from user celik 10.0.2.2 port 58254
+2026-09-30T17:54:28.146500+00:00 dns-debian13 sshd-session[31448]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T17:54:28.148877+00:00 dns-debian13 systemd[1]: session-118.scope: Deactivated successfully.
+2026-09-30T17:54:28.150431+00:00 dns-debian13 systemd-logind[755]: Session 118 logged out. Waiting for processes to exit.
+2026-09-30T17:54:28.151268+00:00 dns-debian13 systemd-logind[755]: Removed session 118.
+2026-09-30T17:54:30.021419+00:00 dns-debian13 agent[26731]: 2026/09/30 17:54:30 System update worker failed: reviewed updater failed: exit status 1: !! selected recovery runtime cannot verify the current installation before update
+== panel journal 17:50-17:56 excluding TLS noise
+== agent journal 17:50-17:56
+2026-09-30T17:50:13.793993+00:00 dns-debian13 postfix/postfix-script[24389]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-09-30T17:50:14.509580+00:00 dns-debian13 postfix/postfix-script[24590]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-09-30T17:50:21.605637+00:00 dns-debian13 cron[25034]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 24892: Resource temporarily unavailable)
+2026-09-30T17:50:23.936769+00:00 dns-debian13 cron[25075]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 24892: Resource temporarily unavailable)
+2026-09-30T17:50:30.908030+00:00 dns-debian13 cron[25433]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 24892: Resource temporarily unavailable)
+2026-09-30T17:52:37.306394+00:00 dns-debian13 agent[5018]: 2026/09/30 17:52:37 hosting root: created /var/www/celikpanel at 0755 0:0
+2026-09-30T17:52:37.364214+00:00 dns-debian13 useradd[25850]: new group: name=upd1_owner_test, GID=5001
+2026-09-30T17:52:37.364395+00:00 dns-debian13 useradd[25850]: new user: name=upd1_owner_test, UID=5001, GID=5001, home=/var/www/celikpanel/subscriptions/2/sites/1, shell=/bin/bash, from=none
+2026-09-30T17:52:37.488794+00:00 dns-debian13 chpasswd[25857]: pam_unix(chpasswd:chauthtok): password changed for upd1_owner_test
+2026-09-30T17:52:37.831502+00:00 dns-debian13 crontab[25926]: (root) LIST (upd1_owner_test)
+2026-09-30T17:52:37.857322+00:00 dns-debian13 crontab[25928]: (root) LIST (upd1_owner_test)
+== self-update state (request file, secrets filtered)
+{"version":1,"request_id":"df01bec5190476fd66baf46177314f54","status":"failed","target_version":"v0.1.0-alpha.82","target_commit":"901593abf12c90c91222d2c61a8bd7c0040523c3","target_sequence":"82","target_os":"linux","target_arch":"amd64","target_archive_sha256":"36766be1eb37359658ebdb53ddb431660812f620c22639a2097e6f7762066542","target_archive_size":"67005596","expected_current_version":"v0.1.0-alpha.81","expected_current_commit":"58813f1d0b903cbbc645a4fbab724b8a84406b86","created_at":"2026-09-30T17:54:15.842765001Z","updated_at":"2026-09-30T17:54:29.961469358Z","error":"reviewed updater failed: exit status 1: !! selected recovery runtime cannot verify the current installation before update"}
+
+== observation status record
+schema=celikpanel-recovery-observation/v1
+request_id=df01bec5190476fd66baf46177314f54
+target_commit=901593abf12c90c91222d2c61a8bd7c0040523c3
+phase=failed
+terminal_proof=none
+reason=update_failed
+observed_at=2026-09-30T17:54:30Z
+previous_failure=update_failed

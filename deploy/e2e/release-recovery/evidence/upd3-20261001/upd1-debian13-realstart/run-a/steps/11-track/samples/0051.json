@@ -1,0 +1,88 @@
+{
+  "agreement": {
+    "known_sources": [
+      "cli"
+    ],
+    "phase": {
+      "cli": "recovery_required"
+    },
+    "reasons": [],
+    "sources": [
+      "cli",
+      "shell"
+    ],
+    "verdict": "single-source"
+  },
+  "cli": {
+    "boot_id": "74a7b5cd-6de2-45fb-9b9f-a7be53e59a19",
+    "captured_at": "2026-09-30T20:03:32.579422Z",
+    "en": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "Automatic recovery could not finish this update, so the server may be between versions. The server owner must act: read the recorded reason and next step with sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50. Keep the server's files as they are and do not start another update.\nRequest: ded53ec59a2d64864e45c34d5a675bbd\nRecorded at: 2026-09-30T20:03:30Z\nThis is a recorded observation; current service health was not checked.\nRecorded state (for support): phase=recovery_required reason=recovery_failed proof=none previous_failure=recovery_failed\n"
+    },
+    "json": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "{\"schema\":\"celikpanel-recovery-status/v1\",\"request_id\":\"ded53ec59a2d64864e45c34d5a675bbd\",\"observation\":\"known\",\"phase\":\"recovery_required\",\"terminal_proof\":\"none\",\"reason\":\"recovery_failed\",\"observed_at\":\"2026-09-30T20:03:30Z\",\"previous_failure\":\"recovery_failed\"}\n"
+    },
+    "tr": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "Otomatik kurtarma bu güncellemeyi tamamlayamadı; sunucu iki sürüm arasında kalmış olabilir. Sunucu sahibinin işlem yapması gerekiyor: kaydedilen nedeni ve sonraki adımı sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50 ile okuyun. Sunucudaki dosyalara dokunmayın ve başka güncelleme başlatmayın.\nİşlem: ded53ec59a2d64864e45c34d5a675bbd\nKayıt zamanı: 2026-09-30T20:03:30Z\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\nKayıtlı durum (destek için): phase=recovery_required reason=recovery_failed proof=none previous_failure=recovery_failed\n"
+    }
+  },
+  "guidance_api": null,
+  "guidance_cli": {
+    "actionable": true,
+    "keys": [
+      "recovery.phase.recovery_required",
+      "recovery.next.recovery_required",
+      "recovery.reason.recovery_failed"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "texts": {
+      "en": [
+        "Recovery needs attention",
+        "The server owner must inspect the recovery log for this operation. Keep the operation ID; do not start another update until recovery is verified.",
+        "Recovery failed"
+      ],
+      "tr": [
+        "Kurtarma için işlem gerekiyor",
+        "Sunucu sahibi bu işlemin kurtarma günlüğünü incelemelidir. İşlem kimliğini saklayın; kurtarma doğrulanana kadar başka güncelleme başlatmayın.",
+        "Kurtarma başarısız oldu"
+      ]
+    }
+  },
+  "index": 50,
+  "observed": {
+    "observation": "known",
+    "observed_at": "2026-09-30T20:03:30Z",
+    "phase": "recovery_required",
+    "previous_failure": "recovery_failed",
+    "reason": "recovery_failed",
+    "request_id": "ded53ec59a2d64864e45c34d5a675bbd",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "none"
+  },
+  "panel_error": "PanelError",
+  "shell_fetch": {
+    "error": "ConnectionResetError",
+    "note": "only a browser-saved copy of the shell can show while the Panel is down"
+  },
+  "t": 1790798611.9440458,
+  "update_card": {
+    "keys": [],
+    "summary": null,
+    "texts": {
+      "en": [],
+      "tr": []
+    },
+    "untranslated_summary": false
+  },
+  "utc": "2026-09-30T20:03:31Z"
+}

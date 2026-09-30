@@ -1,0 +1,98 @@
+# read-only query q-updlog.sh lab=upd3-d13-good-a node=debian13 rc=0
+== files changed 17:54:00-17:54:40 (excluding /proc /sys /run /dev)
+/root/celikpanel-release-recovery-lab/__pycache__/guest_update_kill.cpython-313.pyc
+/root/celikpanel-release-recovery-lab/__pycache__/guest_bound_worker.cpython-313.pyc
+/root/celikpanel-release-recovery-lab/__pycache__/guest_port_fault.cpython-313.pyc
+/root/celikpanel-release-recovery-lab/owner-update-observer-df01bec5190476fd66baf46177314f54.json
+/root/celikpanel-release-recovery-lab/owner-update-observer-df01bec5190476fd66baf46177314f54.jsonl
+/usr/libexec/celikpanel/mail-renewal/809c5d2b51f6d06ef477f4d4c141ce64ffbbc1e39613c31a2d8e6799054d651e/celikpanel-mail-renewal.timer
+/usr/libexec/celikpanel/mail-renewal/809c5d2b51f6d06ef477f4d4c141ce64ffbbc1e39613c31a2d8e6799054d651e/runtime.manifest
+/usr/libexec/celikpanel/mail-renewal/809c5d2b51f6d06ef477f4d4c141ce64ffbbc1e39613c31a2d8e6799054d651e/renew
+/usr/libexec/celikpanel/mail-renewal/809c5d2b51f6d06ef477f4d4c141ce64ffbbc1e39613c31a2d8e6799054d651e/celikpanel-mail-renewal.service
+/usr/libexec/celikpanel/mail-renewal/809c5d2b51f6d06ef477f4d4c141ce64ffbbc1e39613c31a2d8e6799054d651e/celikpanel-mail-host-cert
+/usr/libexec/celikpanel/recovery-runtimes/v1/17c239bd1c65b8134f1190863782072b55d46ee2f7c62c7bc32b6cdb67dee05a/rollback.sh
+/usr/libexec/celikpanel/recovery-runtimes/v1/17c239bd1c65b8134f1190863782072b55d46ee2f7c62c7bc32b6cdb67dee05a/deploy/release-recovery-observation.sh
+/usr/libexec/celikpanel/recovery-runtimes/v1/17c239bd1c65b8134f1190863782072b55d46ee2f7c62c7bc32b6cdb67dee05a/deploy/release-recovery-foundation.sh
+/usr/libexec/celikpanel/recovery-runtimes/v1/17c239bd1c65b8134f1190863782072b55d46ee2f7c62c7bc32b6cdb67dee05a/deploy/panel-tls-snapshot.sh
+/usr/libexec/celikpanel/recovery-runtimes/v1/17c239bd1c65b8134f1190863782072b55d46ee2f7c62c7bc32b6cdb67dee05a/deploy/release-transaction-guard.sh
+/usr/libexec/celikpanel/recovery-runtimes/v1/17c239bd1c65b8134f1190863782072b55d46ee2f7c62c7bc32b6cdb67dee05a/deploy/release-unit-transition.sh
+/usr/libexec/celikpanel/recovery-runtimes/v1/17c239bd1c65b8134f1190863782072b55d46ee2f7c62c7bc32b6cdb67dee05a/deploy/recovery/runtime-entry.sh
+/usr/libexec/celikpanel/recovery-runtimes/v1/17c239bd1c65b8134f1190863782072b55d46ee2f7c62c7bc32b6cdb67dee05a/bin/panel-checker
+/usr/libexec/celikpanel/recovery-runtimes/v1/17c239bd1c65b8134f1190863782072b55d46ee2f7c62c7bc32b6cdb67dee05a/bin/agent-checker
+/usr/libexec/celikpanel/recovery-runtimes/v1/17c239bd1c65b8134f1190863782072b55d46ee2f7c62c7bc32b6cdb67dee05a/bin/schema17-bridge
+/usr/libexec/celikpanel/recovery-runtimes/v1/17c239bd1c65b8134f1190863782072b55d46ee2f7c62c7bc32b6cdb67dee05a/bin/recovery
+/usr/libexec/celikpanel/recovery-runtimes/v1/17c239bd1c65b8134f1190863782072b55d46ee2f7c62c7bc32b6cdb67dee05a/update.sh
+/usr/libexec/celikpanel/recovery-runtimes/v1/17c239bd1c65b8134f1190863782072b55d46ee2f7c62c7bc32b6cdb67dee05a/runtime.manifest
+/usr/libexec/celikpanel/recovery
+/var/lib/celikpanel-recovery-observations/.publish.lock
+/var/lib/celikpanel-recovery-observations/df01bec5190476fd66baf46177314f54.status
+/var/lib/celikpanel-release-state/recovery-runtime.v1
+/var/lib/celikpanel-release-state/self-update/df01bec5190476fd66baf46177314f54.json
+/var/lib/celikpanel-release-state/self-update/.worker.lock
+/var/lib/celikpanel-release-state/self-update/.lock
+/var/lib/celikpanel-release-state/sequence.floor
+/var/lib/celikpanel-release-state/recovery-promotions/v1/current/committed.json
+/var/lib/celikpanel-release-state/recovery-promotions/v1/current/intent.json
+== /var/log listing
+total 228
+drwxr-xr-x   9 root    root              4096 Sep 30 17:49 .
+drwxr-xr-x  12 root    root              4096 Sep 30 17:46 ..
+lrwxrwxrwx   1 root    root                39 Aug 26 05:07 README -> ../../usr/share/doc/systemd/README.logs
+-rw-r--r--   1 root    root              2180 Sep 30 17:48 alternatives.log
+drwx------   2 root    root              4096 Sep 30 17:50 apt
+-rw-rw----   1 root    utmp                 0 Aug 26 05:04 btmp
+-rw-r-----   1 root    adm               4732 Sep 30 17:44 cloud-init-output.log
+-rw-r-----   1 root    adm             115680 Sep 30 17:44 cloud-init.log
+-rw-r--r--   1 root    root             51717 Sep 30 17:50 dpkg.log
+drwxr-sr-x+  3 root    systemd-journal   4096 Sep 30 17:44 journal
+-rw-rw-r--   1 root    utmp                 0 Aug 26 05:04 lastlog
+drwxr-xr-x   2 root    adm               4096 Sep 30 17:52 nginx
+-rw-------   1 root    root              1249 Sep 30 17:48 php8.4-fpm.log
+drwx------   2 root    root              4096 Aug 26 05:07 private
+drwxr-x---   2 _rspamd _rspamd           4096 Sep 30 17:49 rspamd
+drwxr-xr-x   3 root    root              4096 Aug 26 05:07 runit
+drwxr-x---   2 root    adm               4096 Sep 30 17:44 unattended-upgrades
+-rw-rw-r--   1 root    utmp               768 Sep 30 17:44 wtmp
+== recovery-runtimes
+/usr/libexec/celikpanel/recovery-runtimes:
+total 12
+drwx------ 3 root root 4096 Sep 30 17:46 .
+drwxr-xr-x 5 root root 4096 Sep 30 17:54 ..
+drwx------ 4 root root 4096 Sep 30 17:54 v1
+
+/usr/libexec/celikpanel/recovery-runtimes/v1:
+total 16
+drwx------ 4 root root 4096 Sep 30 17:54 .
+drwx------ 3 root root 4096 Sep 30 17:46 ..
+drwx------ 4 root root 4096 Sep 30 17:54 17c239bd1c65b8134f1190863782072b55d46ee2f7c62c7bc32b6cdb67dee05a
+drwx------ 4 root root 4096 Sep 30 17:46 961600fa759caec760140f20da004c261b8daee2e88c0ee505dc543b31ed8371
+
+/usr/libexec/celikpanel/recovery-runtimes/v1/17c239bd1c65b8134f1190863782072b55d46ee2f7c62c7bc32b6cdb67dee05a:
+total 384
+drwx------ 4 root root   4096 Sep 30 17:54 .
+drwx------ 4 root root   4096 Sep 30 17:54 ..
+drwx------ 2 root root   4096 Sep 30 17:54 bin
+drwx------ 3 root root   4096 Sep 30 17:54 deploy
+-rwxr-xr-x 1 root root 151403 Sep 30 17:54 rollback.sh
+-rw------- 1 root root   1152 Sep 30 17:54 runtime.manifest
+-rwxr-xr-x 1 root root 219551 Sep 30 17:54 update.sh
+
+/usr/libexec/celikpanel/recovery-runtimes/v1/17c239bd1c65b8134f1190863782072b55d46ee2f7c62c7bc32b6cdb67dee05a/bin:
+total 42740
+drwx------ 2 root root     4096 Sep 30 17:54 .
+drwx------ 4 root root     4096 Sep 30 17:54 ..
+-rwxr-xr-x 1 root root  7013332 Sep 30 17:54 agent-checker
+-rwxr-xr-x 1 root root 13962565 Sep 30 17:54 panel-checker
+-rwxr-xr-x 1 root root 13308066 Sep 30 17:54 recovery
+-rwxr-xr-x 1 root root  9464898 Sep 30 17:54 schema17-bridge
+
+/usr/libexec/celikpanel/recovery-runtimes/v1/17c239bd1c65b8134f1190863782072b55d46ee2f7c62c7bc32b6cdb67dee05a/deploy:
+total 248
+drwx------ 3 root root   4096 Sep 30 17:54 .
+drwx------ 4 root root   4096 Sep 30 17:54 ..
+-rw-r--r-- 1 root root  73919 Sep 30 17:54 panel-tls-snapshot.sh
+drwx------ 2 root root   4096 Sep 30 17:54 recovery
+-rw-r--r-- 1 root root  29356 Sep 30 17:54 release-recovery-foundation.sh
+-rw-r--r-- 1 root root  15796 Sep 30 17:54 release-recovery-observation.sh
+== recovery runtime-status
+The recovery kit transition is verified complete. Check the application update and current service health separately.

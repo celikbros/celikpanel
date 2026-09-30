@@ -1,0 +1,34 @@
+{
+  "checks": {
+    "agreement": {
+      "agreed_samples": 8,
+      "lag_samples": 1,
+      "samples": 27,
+      "verdict": "passed"
+    },
+    "final": {
+      "failure_code": "candidate_panel_startup_check_failed",
+      "observation": "known",
+      "observed_at": "2026-09-30T19:48:09Z",
+      "phase": "recovered",
+      "previous_failure": "update_failed",
+      "reason": "rollback_verified",
+      "request_id": "8200886620af7fbfd08be2c39042f970",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "rollback_verified"
+    },
+    "reboot": {
+      "after_boot_id": "c5086585-ac85-4f9b-a64f-833e922377e0",
+      "before_boot_id": "996cee72-30f1-4d0b-9efe-dedcbbea0aed",
+      "new_boot": true,
+      "reset_at": 1790797630.1220138,
+      "ssh_return_seconds": 8.290473803999703,
+      "status": "reset-submitted-once"
+    },
+    "samples": 27
+  },
+  "finished_at": "2026-09-30T19:48:10Z",
+  "name": "track",
+  "started_at": "2026-09-30T19:46:09Z",
+  "verdict": "passed"
+}

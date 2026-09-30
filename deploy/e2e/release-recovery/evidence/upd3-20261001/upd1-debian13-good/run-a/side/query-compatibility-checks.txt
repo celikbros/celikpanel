@@ -1,0 +1,36 @@
+# read-only query q-compat.sh lab=upd3-d13-good-a node=debian13 rc=0
+== utc
+2026-09-30T18:07:05Z
+== agent private state dir
+total 32
+drwx------  2 root celikpanel 4096 Sep 30 17:52 .
+drwxr-xr-x 37 root root       4096 Sep 30 17:54 ..
+-rw-------  1 root celikpanel  330 Sep 30 17:50 firewall-apply-journal.json
+-rw-------  1 root root        227 Sep 30 17:52 hosting-root-v1.json
+-rw-------  1 root celikpanel  246 Sep 30 17:50 mail-tls-committed.json
+-rw-------  1 root celikpanel  246 Sep 30 17:50 mail-tls-sync-journal.json
+-rw-------  1 root celikpanel 5345 Sep 30 17:50 service-mutations.json
+-- /var/lib/celikpanel-agent-private/hosting-root-v1.json
+{
+  "schema": "celikpanel/hosting-root-directories/v1",
+  "directories": [
+    {
+      "path": "/var/www/celikpanel",
+      "mode": "0755",
+      "uid": 0,
+      "gid": 0,
+      "created_at": "2026-09-30T17:52:37Z"
+    }
+  ]
+}
+== hosting parents
+drwxr-xr-x 755 root:root /var/www
+drwxr-xr-x 755 root:root /var/www/celikpanel
+== read-only check: candidate runtime agent-checker --check-service-mutation-idle
+rc=0
+== read-only check: installed agent --check-service-mutation-idle
+2026/09/30 18:07:05 Starting CelikPanel Agent...
+2026/09/30 18:07:05 Service mutation state is idle
+rc=0
+== read-only check: candidate runtime panel-checker --check-service-operations-idle-wal-aware
+rc=0

@@ -1,0 +1,11 @@
+# read-only query q-race.sh lab=upd3-d13-good-a node=debian13 rc=0
+== utc
+2026-09-30T18:23:00Z
+== /opt/celikpanel metadata (ProbeCurrentResources preconditions)
+drwxr-xr-x 755 root:root /opt
+drwxr-xr-x 755 root:root /opt/celikpanel
+(end of non-conforming list)
+(end of non-user xattrs)
+== read-only loop: panel-checker --check-service-operations-idle-wal-aware ok=60 fail=0
+== read-only loop: agent-checker --check-service-mutation-idle ok=60 fail=0
+2026-09-30T18:24:01Z

@@ -1,0 +1,2 @@
+# read-only side inspection lab=cp-release-drill-upd3-d13-good-a node=debian13 label=before-site rc=None took=0.2s
+unavailable: CalledProcessError: Command '['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5', '-o', 'StrictHostKeyChecking=yes', '-o', 'HashKnownHosts=no', '-o', 'UserKnownHostsFile=/var/tmp/cp-release-drill-upd3-d13-good-a/cells/8f069bc188719957e8a5436a/ssh-known-hosts', '-i', '/var/tmp/cp-release-drill-upd3-d13-good-a/key', '-p', '2441', 'celik@127.0.0.1', 'sudo /bin/bash -s']' returned non-zero exit status 2.

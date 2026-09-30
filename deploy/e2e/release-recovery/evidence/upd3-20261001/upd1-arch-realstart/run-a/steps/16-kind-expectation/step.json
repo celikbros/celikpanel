@@ -1,0 +1,192 @@
+{
+  "checks": {
+    "cli_text_source": {
+      "commit": "36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb",
+      "path": "cmd/recovery/main.go",
+      "role": "realstart",
+      "sha256": "89ac3ba7fff70344c63d6a85069e34abd84a06b62cf4b256c39a7e091e0c55d8"
+    },
+    "judged": {
+      "expected": [
+        "check-passed",
+        "update-failure-line",
+        "sidecar",
+        "completion-marker",
+        "forward-dispatch",
+        "paused",
+        "no-rollback",
+        "candidate-installed",
+        "owner-retry-not-run",
+        "retry-command-printed",
+        "cli-real-start-text",
+        "cli-panel-log-command",
+        "cli-paused-text",
+        "web-catalogue",
+        "workloads-kept-running",
+        "panel-down-until-end"
+      ],
+      "findings": [],
+      "kind": "real-start",
+      "native_evidence": false,
+      "unknown": [],
+      "verdict": "as-expected"
+    },
+    "observations": {
+      "attempts": {
+        "automatic": [
+          {
+            "at": "2026-09-30T20:45:54.428709Z",
+            "attempt": "1",
+            "phase": "completion"
+          },
+          {
+            "at": "2026-09-30T20:47:32.664821Z",
+            "attempt": "2",
+            "phase": "completion"
+          },
+          {
+            "at": "2026-09-30T20:49:11.664707Z",
+            "attempt": "3",
+            "phase": "completion"
+          }
+        ],
+        "automatic_count": 3,
+        "journal_admissions": [
+          {
+            "at": "2026-09-30T20:45:54.485174+00:00",
+            "attempt": "1",
+            "snapshot": "20260930T204431Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-45483c2cc4439aa4098f44a8977b2bef"
+          },
+          {
+            "at": "2026-09-30T20:47:32.720830+00:00",
+            "attempt": "2",
+            "snapshot": "20260930T204431Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-45483c2cc4439aa4098f44a8977b2bef"
+          },
+          {
+            "at": "2026-09-30T20:49:11.720186+00:00",
+            "attempt": "3",
+            "snapshot": "20260930T204431Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-45483c2cc4439aa4098f44a8977b2bef"
+          }
+        ],
+        "owner": [],
+        "owner_count": 0
+      },
+      "check_reasons": [],
+      "cli": {
+        "by_key": {
+          "panel_start_unverified.pending": {
+            "en": 8,
+            "first_utc": "2026-09-30T20:46:00Z",
+            "last_utc": "2026-09-30T20:46:56Z",
+            "samples": 8,
+            "tr": 8
+          },
+          "paused": {
+            "en": 1,
+            "first_utc": "2026-09-30T20:51:04Z",
+            "last_utc": "2026-09-30T20:51:04Z",
+            "samples": 1,
+            "tr": 1
+          }
+        },
+        "mismatches": [],
+        "panel_log_command": "sudo journalctl -u celikpanel-panel -n 50",
+        "panel_log_command_seen": {
+          "en": true,
+          "tr": true
+        },
+        "recorded_cause_lines": {
+          "en": 8,
+          "tr": 8
+        }
+      },
+      "completion_marker_seen": true,
+      "database": "equal-except-volatile",
+      "final": {
+        "automatic_recovery": "paused_retry_limit",
+        "first_failure_code": "panel_start_unverified",
+        "observation": "known",
+        "observed_at": "2026-09-30T20:50:50Z",
+        "phase": "recovery_required",
+        "previous_failure": "recovery_failed",
+        "reason": "recovery_incomplete",
+        "request_id": "08ddb2f7396874f11eb0f344839b3365",
+        "schema": "celikpanel-recovery-status/v1",
+        "terminal_proof": "none"
+      },
+      "installed": "candidate",
+      "owner_retry_run": false,
+      "panel_verdict": "down-from-update-until-end",
+      "printed_retry_command": "/usr/libexec/celikpanel/recovery recover --retry --snapshot 20260930T204431Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-45483c2cc4439aa4098f44a8977b2bef",
+      "receipt_phases": [
+        "completion",
+        "completion",
+        "completion"
+      ],
+      "sidecar": {
+        "code": "panel_start_unverified",
+        "present": true,
+        "valid": true
+      },
+      "update_failure_codes": [
+        "panel_start_unverified"
+      ],
+      "update_failure_lines": [
+        {
+          "code": "panel_start_unverified",
+          "reason": "the new panel did not stay running and answer on its own address after the update was applied",
+          "state": "recovery_required"
+        }
+      ],
+      "views": {
+        "last": {
+          "offline_page_served": false,
+          "panel_recovery_status": false,
+          "panel_update_status": false,
+          "root_cli": true
+        },
+        "ssh_owner_view": "not attempted (recovery view needs an interactive SSH terminal and a one-time code)",
+        "summary": {
+          "panel_recovery_status": {
+            "reachable": 5,
+            "samples": 55
+          },
+          "panel_update_status": {
+            "reachable": 5,
+            "samples": 55
+          },
+          "root_cli": {
+            "reachable": 55,
+            "samples": 55
+          }
+        }
+      },
+      "web_keys": [
+        "recovery.automatic.inspect",
+        "recovery.automatic.pausedHelp",
+        "recovery.automatic.pausedTitle",
+        "recovery.automatic.resume",
+        "recovery.failure.panel_start_unverified.pending",
+        "recovery.next.recovering",
+        "recovery.next.recovery_required",
+        "recovery.next.running",
+        "recovery.phase.recovering",
+        "recovery.phase.recovery_required",
+        "recovery.phase.running",
+        "recovery.reason.panel_start_unverified",
+        "recovery.reason.recovery_failed"
+      ],
+      "web_keys_missing": [],
+      "workloads": {
+        "cron": "never-interrupted",
+        "dns": "not-provided-external-dns",
+        "smtp": "not-seeded",
+        "web": "never-interrupted"
+      }
+    }
+  },
+  "finished_at": "2026-09-30T20:51:12Z",
+  "name": "kind-expectation",
+  "started_at": "2026-09-30T20:51:12Z",
+  "verdict": "passed"
+}

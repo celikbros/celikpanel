@@ -1,0 +1,67 @@
+{
+  "checks": {
+    "attempts": {
+      "automatic": [
+        {
+          "at": "2026-09-30T19:34:48.576411Z",
+          "attempt": "1",
+          "phase": "active"
+        },
+        {
+          "at": "2026-09-30T19:35:45.546551Z",
+          "attempt": "2",
+          "phase": "active"
+        }
+      ],
+      "automatic_count": 2,
+      "journal_admissions": [
+        {
+          "at": "2026-09-30T19:34:48.636298+00:00",
+          "attempt": "1",
+          "snapshot": "20260930T193427Z-from-unknown-to-7d11ff6535c86a865add390062311db2fb1d6e50-4b7b93b588bd5c0b5d187fbcc9c6e98a"
+        },
+        {
+          "at": "2026-09-30T19:35:45.598159+00:00",
+          "attempt": "2",
+          "snapshot": "20260930T193427Z-from-unknown-to-7d11ff6535c86a865add390062311db2fb1d6e50-4b7b93b588bd5c0b5d187fbcc9c6e98a"
+        }
+      ],
+      "owner": [],
+      "owner_count": 0
+    },
+    "guest_samples": 44,
+    "host_samples": 46,
+    "journals": [
+      "lab",
+      "product",
+      "setup-services"
+    ],
+    "observer": [
+      "armed",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "worker_frozen",
+      "candidate_installed_checkpoint",
+      "recovery_fault_armed",
+      "worker_released",
+      "timeline",
+      "released"
+    ],
+    "recovery_fault_events": [
+      "armed",
+      "freeze_requested",
+      "freeze_observed",
+      "checkpoint_verified",
+      "reboot_ready"
+    ],
+    "stopped_after": [],
+    "unavailable": {}
+  },
+  "finished_at": "2026-09-30T19:36:09Z",
+  "name": "collect",
+  "started_at": "2026-09-30T19:36:08Z",
+  "verdict": "passed"
+}

@@ -1,0 +1,124 @@
+# read-only side inspection lab=cp-release-drill-upd3-arch-def-a node=arch label=after-seed rc=0 took=0.3s
+== utc
+2026-09-30T20:21:01Z
+f8efea9f-ab53-43f2-b6a5-ee34daf74ea8
+== hosting root: stat of the parents
+drwxr-xr-x 755 root:root /var
+drwxr-xr-x 755 root:root /var/www
+drwxr-xr-x 755 root:root /var/www/celikpanel
+drwxr-xr-x 755 root:celikpanel /var/www/celikpanel/subscriptions
+== hosting root: site directories
+f: /var/www/celikpanel/subscriptions/2/sites/1/public_html
+dr-xr-xr-x root            root       /
+drwxr-xr-x root            root       var
+drwxr-xr-x root            root       www
+drwxr-xr-x root            root       celikpanel
+drwxr-xr-x root            celikpanel subscriptions
+drwxr-x--x root            celikpanel 2
+drwxr-x--x root            celikpanel sites
+drwxr-x--- upd1_owner_test http       1
+drwxr-s--- upd1_owner_test http       public_html
+== hosting root: receipt /var/lib/celikpanel-agent-private/hosting-root-v1.json
+-rw------- 600 root:root /var/lib/celikpanel-agent-private/hosting-root-v1.json
+{
+  "schema": "celikpanel/hosting-root-directories/v1",
+  "directories": [
+    {
+      "path": "/var/www",
+      "mode": "0755",
+      "uid": 0,
+      "gid": 0,
+      "created_at": "2026-09-30T20:20:58Z"
+    },
+    {
+      "path": "/var/www/celikpanel",
+      "mode": "0755",
+      "uid": 0,
+      "gid": 0,
+      "created_at": "2026-09-30T20:20:58Z"
+    }
+  ]
+}
+== hosting root: agent log lines
+2026-09-30T20:20:58.102785+00:00 dns-arch agent[411]: 2026/09/30 20:20:58 hosting root: created /var/www at 0755 0:0
+2026-09-30T20:20:58.102785+00:00 dns-arch agent[411]: 2026/09/30 20:20:58 hosting root: created /var/www/celikpanel at 0755 0:0
+== web server accounts
+http:x:33:33::/srv/http:/usr/bin/nologin
+== os
+arch 
+== cron units
+Id=cron.service
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+NRestarts=0
+
+Id=cronie.service
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+NRestarts=0
+
+== cron spool
+total 4
+drwxr-xr-x 1 root            root       30 Sep 30 20:20 .
+drwxr-xr-x 1 root            root       30 Sep 30 20:18 ..
+-rw------- 1 upd1_owner_test celikpanel 81 Sep 30 20:20 upd1_owner_test
+-- /var/spool/cron/upd1_owner_test (owner upd1_owner_test)
+# upd1 owner cron
+* * * * * /bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt"
+== stamp files
+/var/www/celikpanel/subscriptions/2/sites/1/upd1-cron-stamp.txt mtime=2026-09-30 20:21:00.848694476 +0000 content=2026-09-30T20:21:00+00:00
+== cron journal tail
+2026-09-30T20:18:40+00:00 dns-arch crond[1758]: (CRON) STARTUP (1.7.2)
+2026-09-30T20:18:40+00:00 dns-arch crond[1758]: (CRON) INFO (Syslog will be used instead of sendmail.)
+2026-09-30T20:18:40+00:00 dns-arch crond[1758]: (CRON) INFO (RANDOM_DELAY will be scaled with factor 39% if used.)
+2026-09-30T20:18:40+00:00 dns-arch crond[1758]: (CRON) INFO (running with inotify support)
+2026-09-30T20:21:00+00:00 dns-arch crond[2506]: pam_unix(crond:session): session opened for user upd1_owner_test(uid=1002) by upd1_owner_test(uid=0)
+2026-09-30T20:21:00+00:00 dns-arch CROND[2508]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-09-30T20:21:00+00:00 dns-arch CROND[2506]: (upd1_owner_test) CMDEND (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-09-30T20:21:00+00:00 dns-arch CROND[2506]: pam_unix(crond:session): session closed for user upd1_owner_test
+== origin unit
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+NRestarts=0
+== hosts celikpanel.net
+6:127.0.0.1 celikpanel.net # disposable CelikPanel worker fixture
+127.0.0.1       localhost
+== listeners
+0.0.0.0:80 users:(("nginx",pid=2464,fd=4),("nginx",pid=848,fd=4))
+127.0.0.1:443 users:(("python3",pid=399,fd=3))
+127.0.0.53%lo:53 users:(("systemd-resolve",pid=260,fd=23))
+127.0.0.54:53 users:(("systemd-resolve",pid=260,fd=25))
+*:2083 users:(("panel",pid=421,fd=8))
+[::]:80 users:(("nginx",pid=2464,fd=10),("nginx",pid=848,fd=10))
+== celikpanel units
+  celikpanel-agent.service            loaded active   running CelikPanel privileged agent
+  celikpanel-firewall-restore.service loaded inactive dead    Restore CelikPanel firewall policy before networking
+  celikpanel-panel.service            loaded active   running CelikPanel web panel
+  celikpanel-release-recovery.service loaded inactive dead    CelikPanel verified release transaction recovery
+  celikpanel-release-recovery.timer   loaded active   waiting CelikPanel release transaction recovery watchdog
+== timers
+Wed 2026-09-30 20:21:24 UTC           23s Wed 2026-09-30 20:20:54 UTC 7s ago celikpanel-release-recovery.timer celikpanel-release-recovery.service
+Wed 2026-09-30 20:32:11 UTC         11min -                                - systemd-tmpfiles-clean.timer      systemd-tmpfiles-clean.service
+Thu 2026-10-01 00:00:00 UTC      3h 38min Wed 2026-09-30 20:15:09 UTC      - shadow.timer                      shadow.service
+Sat 2026-10-10 06:13:50 UTC 1 week 2 days Wed 2026-09-30 20:15:09 UTC      - archlinux-keyring-wkd-sync.timer  archlinux-keyring-wkd-sync.service
+== installed build identity
+== recovery observation records
+== site: vhost files naming the domain
+/etc/nginx/sites-available/upd1-owner.test.conf
+== site: local requests
+host-header / -> 200
+<!doctype html><title>upd1 owner site</title><p>upd1-marker-858357de3ffcfa83f84cc76f5fc77ae7</p>
+
+== site: nginx error log tail
+== panel unit
+ActiveState=active
+SubState=running
+ActiveEnterTimestamp=Wed 2026-09-30 20:17:21 UTC
+InactiveEnterTimestamp=
+NRestarts=0
+ExecMainStatus=0
