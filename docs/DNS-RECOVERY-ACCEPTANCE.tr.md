@@ -448,6 +448,28 @@ Denenmeyenler: `dns_peer_catalog_transfer_refused`, `detail` alanı,
 `mail_runtime_cleanup_failed`, `config_unreviewed`, mevcut bir ikincilde
 sürüm 1'den 2'ye yükseltme, rndc anahtarı geri alma.
 
+**1 Ekim 2026, 11. grup, taze fikstürlerde sürdürülen sıfır bölgeli silmeler** ([kanıt](../deploy/e2e/dns-kill-matrix/evidence/batch11-zero-zone-complete-20261001/README.md),
+kabul dalı `accept/pdns-primary-gate-open-8` commit `542ccc8e`, kapı açık;
+taze fikstürler; düzenek geçici çözümü yok, yeniden çalıştırma yok). Satır
+6 ve 17. İki hücre de geçmedi. Panelsiz BIND ikincili artık sahibin
+hazırladığı rndc anahtarını taşıyor (makbuz `created`, rndc durumu önce ve
+sonra iyi) ve 10. grubun `dns_peer_inspection_unknown` kodu tekrarlanmadı.
+Sürdürülen iki ebeveynsiz silme de kirayla `recovering` durumuna geçti ve
+hiçbir üye, bölge ya da kimlik değişmediği hâlde `dns_peer_owner_edit_unknown`
+ile beklemeye geri döndü: z04 herhangi bir denetleyici alışverişinden önce,
+PowerDNS daemon'u denemenin içinde kataloğu yeniden damgalarken; z05 tam bir
+denetleyici alışverişinden sonra, silmeden altı dakika sonra, daemon'un boş
+kataloğu yeniden damgalamasının ardından. Ürün bulgusu: daemon'un dönemsel
+katalog yeniden damgalaması (yaklaşık her 60 sn'de bir, üye kümesi
+değiştiğinde) bir silme ile kanıtı arasına düştüğünde sahip değişikliği
+sayılıyor; 5. çiftin tamamlanan topolojisi 14 sn içinde, herhangi bir
+yeniden damgalamadan önce yeniden denemişti. Kodu hangi denetimin ürettiği
+günlüğe yazılmıyor. Düzeltme sürüyor: kimlik, üyeler ve üye seri numaraları
+aynıysa yeniden damgalama silmenin ömrünün her noktasında kabul edilir,
+kayıtlı kanıt yeniden damgalanır ve kod, farklı olan denetimi adlandıran bir
+ayrıntı taşır. Kurtarılan silme, yeniden ekleme ve z05 yeniden açılışı
+çalışmadı.
+
 4. ve 5. gruplardan sonra listelenen kaynak değişikliklerinin gerçek
 sistemdeki kapsamı:
 

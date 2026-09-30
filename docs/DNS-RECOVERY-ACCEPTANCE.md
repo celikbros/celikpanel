@@ -425,6 +425,27 @@ spurious answer. Not exercised: `dns_peer_catalog_transfer_refused`, the
 `detail` field, `mail_runtime_cleanup_failed`, `config_unreviewed`, the
 version 1 to 2 upgrade of an existing secondary, rndc key rollback.
 
+**2026-10-01, batch 11, resumed zero-zone deletions on fresh fixtures** ([evidence](../deploy/e2e/dns-kill-matrix/evidence/batch11-zero-zone-complete-20261001/README.md),
+acceptance branch `accept/pdns-primary-gate-open-8` commit `542ccc8e`, gate
+open; fresh fixtures; no harness workaround, no re-run). Rows 6 and 17.
+Neither cell passed. The panel-free BIND secondary now carries the
+owner-prepared rndc key (receipt `created`, rndc status ok before and after)
+and batch 10's `dns_peer_inspection_unknown` did not recur. Both resumed
+parentless deletions went to `recovering` with a lease and came back pending
+as `dns_peer_owner_edit_unknown` although no member, zone or identity
+changed: z04 before any inspector exchange while the PowerDNS daemon
+re-stamped the catalog inside the attempt; z05 after a complete inspector
+exchange, six minutes after the delete, following the daemon's re-stamp of
+the empty catalog. Product finding: the daemon's periodic catalog re-stamp
+(about every 60 s, whenever the member set changed) is treated as an owner
+change when it falls between a deletion and its proof; pair 5's completed
+topology retried within 14 s, before any re-stamp. Which check emits the
+code is not logged. Fix in progress: the re-stamp is admitted at any point
+of the deletion's life when identity, members and member serials are
+identical, the recorded evidence is re-stamped, and the code carries a
+detail naming the differing check. The recovered delete, the re-add and
+the z05 reboot did not run.
+
 Native coverage of the source changes listed after batches 4 and 5:
 
 | Change | First native run that exercised it |
