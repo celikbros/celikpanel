@@ -166,21 +166,42 @@ func runRPCDeleteV3RecoverCommand(arguments []string) {
 	}
 }
 
+// zoneDeletionPhase is the Agent's V3 ledger phase for one exact zone
+// operation: state, request ID, the zone the operation itself targets and its
+// package qualifier (servicemutationledger.FormatDNSZoneSyncV3Phase).
+func zoneDeletionPhase(state string, begin transport.ServiceMutationBeginRequest, domain string) string {
+	return "commit/dns-zone-sync/v3/" + state + "/" + begin.RequestID + "/" + domain + "/" + begin.PackageName
+}
+
 func deletionTrialPendingPhase(begin transport.ServiceMutationBeginRequest) string {
-	return "commit/dns-zone-sync/v3/propagation-pending/" + begin.RequestID + "/" + deletionTrialDomain + "/" + begin.PackageName
+	return zoneDeletionPhase("propagation-pending", begin, deletionTrialDomain)
 }
 
 func deletionTrialRecoveringPhase(begin transport.ServiceMutationBeginRequest) string {
-	return "commit/dns-zone-sync/v3/recovering/" + begin.RequestID + "/" + deletionTrialDomain + "/" + begin.PackageName
+	return zoneDeletionPhase("recovering", begin, deletionTrialDomain)
 }
 
 func deletionTrialPublishedPhase(begin transport.ServiceMutationBeginRequest) string {
-	return "commit/dns-zone-sync/v3/published/" + begin.RequestID + "/" + deletionTrialDomain + "/" + begin.PackageName
+	return zoneDeletionPhase("published", begin, deletionTrialDomain)
 }
 
+// exactPendingDeletionJob is the parent deletion of the older trials
+// (s1-kill.test: rpc-delete-v3, rpc-pdns-peer-v3).
 func exactPendingDeletionJob(job *transport.ServiceMutationJob, begin transport.ServiceMutationBeginRequest) bool {
-	return jobIdentityMatches(job, begin) && job.Status == "pending" &&
-		job.Phase == deletionTrialPendingPhase(begin) && job.Attempt > 0 &&
+	return exactPendingZoneDeletionJob(job, begin, deletionTrialDomain)
+}
+
+// exactPendingZoneDeletionJob: the durable job is exactly this deletion of
+// domain (request, owner, kind, target, package qualifier), left pending at
+// its propagation phase for that same domain with no lease or worker. domain
+// must be the operation's own target: a caller cannot match one zone's
+// pending job with another zone's name.
+func exactPendingZoneDeletionJob(
+	job *transport.ServiceMutationJob, begin transport.ServiceMutationBeginRequest, domain string,
+) bool {
+	return domain != "" && domain == begin.Target && begin.PackageName != "" &&
+		jobIdentityMatches(job, begin) && job.Status == "pending" &&
+		job.Phase == zoneDeletionPhase("propagation-pending", begin, domain) && job.Attempt > 0 &&
 		!job.StartedAt.IsZero() && !job.UpdatedAt.IsZero() &&
 		!job.DeadlineAt.IsZero() && !job.FinishedAt.IsZero() &&
 		!job.FinishedAt.Before(job.StartedAt) && !job.UpdatedAt.After(job.FinishedAt) &&

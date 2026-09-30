@@ -1181,7 +1181,11 @@ the server owner enrolls the native BIND secondary for inspection
 (`dns-peer-enroll --engine bind`, as the Agent's message names; not automated
 here), then `zone-lifecycle --recover-delete` resumes the same request with
 `rpc-pdns-primary-zone-v3-recover` (`RecoverDNSZoneV3`, never a second
-delete) and re-adds. Evidence: `fresh-primary-peer/zone-lifecycle*.json`.
+delete) and re-adds. With `--reboot-after-recovery` the guest run is not
+continued on a pending delete: it stays suspended on the same boot and
+`run-prepared ... --resume-held-zone-lifecycle` resumes it (see the zero-zone
+section below for both commands). Evidence:
+`fresh-primary-peer/zone-lifecycle*.json`.
 
 ```sh
 # On the Arch Linux QEMU host, from a tree with this harness change and
@@ -1216,6 +1220,10 @@ python3 "$BOOTSTRAP" run-prepared "${COMMON[@]}" \
 #   run-prepared "${COMMON[@]}" --owner-edit config --owner-release-recovery --execute
 # After a pending deletion and the owner's enrollment:
 #   python3 "$BOOTSTRAP" zone-lifecycle "${COMMON[@]}" --recover-delete --execute
+# ... or, when the run had --reboot-after-recovery (guest still suspended):
+#   python3 "$BOOTSTRAP" run-prepared "${COMMON[@]}" --zone-lifecycle \
+#     --reboot-after-recovery --disable-management-before-reboot \
+#     --resume-held-zone-lifecycle --execute
 ```
 
 Exit codes: 0 passed, 1 verified deviation, 2 unknown, 3 reboot requested
@@ -1314,9 +1322,94 @@ python3 "$BOOTSTRAP" run-prepared "${COMMON[@]}" --zero-zones --zone-lifecycle \
 zero_cell /var/tmp/cp-zero/r3 pdns-switch__target-started__after-write__paired-primary__peer-reachable
 python3 "$BOOTSTRAP" run-prepared "${COMMON[@]}" --zero-zones --owner-edit sql --execute
 # If the Agent keeps the parentless delete pending (dns_peer_enrollment_required),
-# the lifecycle stops with that code; after the owner's enrollment:
-#   python3 "$BOOTSTRAP" zone-lifecycle "${COMMON[@]}" --zero-zones --recover-delete --execute
+# the lifecycle stops with that code; after the owner's enrollment see
+# "Pending parentless delete" below for the resume command of z04 and z05.
 ```
+
+**Pending parentless delete: resume after the owner's enrollment**
+(correction after batch 9 `z04`/`z05`; offline tests only:
+`test_zone_lifecycle_recover.py` and the trigger's
+`TestFreshPrimaryZoneRecovery*`. Not yet run natively.)
+
+In zero-zone mode the lifecycle's delete removes the server's only zone, so
+the Agent may keep it pending: job `status: pending`, `error_code:
+dns_peer_enrollment_required`, phase
+`commit/dns-zone-sync/v3/propagation-pending/<request>/s2.s1-kill.test/dns-zone-sync/v3:sha256:<digest>`.
+The lifecycle stops at that step; its `next_step` says who acts and names the
+resume command. **Who acts:** the server owner enrolls the native BIND
+secondary for inspection with the packaged `dns-peer-enroll` owner tool
+(`primary-prepare`, the public key onto the secondary, `secondary-install`,
+`secondary-host-key`, `primary-activate`, both status commands `configured`;
+batch 9 `z04-zero-committed-zl/rec/enroll.log` has the full sequence). This
+harness does not automate the enrollment. **Then, on the host:**
+
+```sh
+# z04 (lifecycle without the reboot; the guest run has already finished):
+python3 "$BOOTSTRAP" zone-lifecycle "${COMMON[@]}" --zero-zones --recover-delete --execute
+# z05 (lifecycle before the reboot): the same run flags plus the resume flag;
+# the guest run stayed suspended on this boot and is continued, not restarted:
+python3 "$BOOTSTRAP" run-prepared "${COMMON[@]}" --zero-zones --zone-lifecycle \
+  --reboot-after-recovery --disable-management-before-reboot \
+  --resume-held-zone-lifecycle --execute
+```
+
+What the resumed flow verifies, in order (any step that does not pass stops
+it; nothing is requested twice):
+
+1. **Exact pending job.** `rpc-pdns-primary-zone-v3-recover --step delete`
+   reads the ledger and resumes only the lifecycle's own delete: same request
+   ID, owner ID, kind `dns_zone_sync`, target `s2.s1-kill.test`, package
+   qualifier, `status: pending`, phase `propagation-pending/<that
+   request>/s2.s1-kill.test/<that qualifier>`, attempt > 0, no lease and no
+   worker. The zone in the phase is the zone the lifecycle deleted (the
+   child), the same phase its delete step accepted as
+   `pending_exact_operation`. The trigger at `3cceb29a` compared with the
+   parent `s1-kill.test` (the older deletion trials' zone), so it could never
+   match and refused with `refused_not_pending`. Any other job (another zone,
+   request or qualifier, running, leased, already published) is still refused
+   before any mutation; the refused job's status, phase and error code are
+   now in the result. Then `BeginServiceMutation` with resume (phase
+   `recovering`, lease) and `RecoverDNSZoneV3` for the same request. Never
+   `SyncDNSZoneV3` and never a second delete. If the Agent answers pending
+   again (`pending_exact_operation`), the same job stays pending.
+2. **Delete completed.** Job `succeeded` at
+   `published/<request>/s2.s1-kill.test/<qualifier>` (`verified_published`).
+   Then `observe-child --step delete --zero-zones`: both catalogs (the
+   primary's AXFR and the one the secondary loaded) are equal and have **zero
+   members**, and **both servers answer `s2.s1-kill.test` SOA with REFUSED**
+   over UDP and TCP. If the child is still listed or answered NXDOMAIN, that
+   is a verified deviation and the re-add does not run.
+3. **Re-add** (generation 4, begun only after the delete is `published`):
+   `verified_published`, then `observe-child --step re-add --zero-zones`: both
+   catalogs list exactly `[s2.s1-kill.test]`, and both servers answer child
+   SOA 2026092803 and `www.s2.s1-kill.test` A 192.0.2.10 authoritatively over
+   UDP and TCP (`changed` absent).
+4. **z05 only: the reboot.** The host continues the suspended guest run with
+   `--zone-lifecycle-outcome=passed`. The guest reads the child on both
+   servers itself, disables the Panel and Agent, both guests reboot
+   (secondary first), and the after-reboot checks plus
+   `fresh-primary-peer/peer-verdict-after-reboot.json` require the child as
+   the only catalog member under the post-publication serial rule.
+
+**Held run (z05).** With `--reboot-after-recovery`, a pending delete no
+longer continues the guest with `not-passed`. The guest run stays suspended
+at its zone-lifecycle checkpoint on the same boot. The host writes
+`fresh-primary-peer/zone-lifecycle-held.json` (cell, `--zero-zones`, pair
+verdict 0, `lifecycle_status: pending`, `next_step`) and exits 2. Do not
+reboot, restart or stop either guest before the resume: the guest refuses a
+continuation on another boot. The resume uses the recorded pair verdict: it is
+not taken again because the lifecycle has already moved the catalog serial.
+It refuses before any RPC unless that hold exists for this cell with the same
+`--zero-zones`. If the resumed delete is pending again, the run stays suspended
+and the same command can be repeated after the owner acts. A failed or
+unknown resume continues the guest with `not-passed` (no reboot). Each
+attempt writes its own `zone-lifecycle-recover.json` (then `-2` … `-9`),
+chosen before any RPC, so no attempt replaces another's evidence.
+
+Batch 9 overlays: in `z05` the guest run was already continued with
+`not-passed` and has finished, so it cannot be resumed; re-run `z05` on a
+fresh fixture. In `z04`, a recover on its kept overlay would write
+`zone-lifecycle-recover-2.json` beside the refused attempt.
 
 What each proves if it passes, and what it does not prove:
 
@@ -1325,8 +1418,8 @@ What each proves if it passes, and what it does not prove:
 | `z01` | the restarted Agent rolls a zero-zone install back by itself to the pre-install state (unit at its frozen standby, no database, candidate or receipt, configuration at its preimage), then the same request converges forward and the pair check passes with an empty catalog on both servers | any start-up behaviour of PowerDNS before the cut (it never started) |
 | `z02` | forward completion of a zero-zone install cut right after the first start: V3 state for this request, MainPID unchanged, served catalog serial = state's; the forward judgement records whether the daemon re-stamped and wrote `CATALOG-HASH` with zero members (`catalog_restamp.zero_zone_restamp`, `pair.database.database.metadata`); the native BIND secondary loads and serves an empty catalog (SOA, NS, `version`, no PTR) | that the re-stamp behaviour is the same on other PowerDNS builds; a cut between the start and the daemon's hash write |
 | `z03` | the same at the last forward phase (`committed`) | anything about pre-start cuts |
-| `z04` | the lifecycle through the public zone RPCs when the add creates the server's first zone and the delete returns to zero members; post-publication catalog on both servers after each step | the after-reboot state; a parentless delete finished by the owner enrollment unless the Agent kept it pending and the owner ran it |
-| `z05` | the post-publication serial rule after a management-disabled reboot of both guests with the re-added child as the only zone; DNS served without the Panel and Agent | power loss (the reboot is orderly); a pending delete stops the lifecycle before the reboot, so the reboot then does not run in that invocation |
+| `z04` | the lifecycle through the public zone RPCs when the add creates the server's first zone and the delete returns to zero members; post-publication catalog on both servers after each step; if the delete was held pending, the owner enrollment and the recovered delete (REFUSED on both, zero members) followed by the re-add | the after-reboot state; a parentless delete finished by the owner enrollment unless the Agent kept it pending and the owner ran it |
+| `z05` | the post-publication serial rule after a management-disabled reboot of both guests with the re-added child as the only zone; DNS served without the Panel and Agent; with a held delete, that the suspended run resumes on the same boot after the enrollment | power loss (the reboot is orderly); a delete still pending after the resume keeps the run suspended, so the reboot then does not run |
 | `z06` | the Agent refuses a zero-zone install whose database holds a row the install did not write (in the catalog producer zone) and holds only DNS | how the Agent treats an owner's own separate zone (not exercised) |
 
 None of these passes a register row; they are exploratory until the zero-zone
@@ -1339,6 +1432,7 @@ python3 deploy/e2e/dns-kill-matrix/test_guest_bootstrap.py
 python3 deploy/e2e/dns-kill-matrix/test_guest_recovery_probe.py
 python3 deploy/e2e/dns-kill-matrix/test_fresh_primary_v3.py
 python3 deploy/e2e/dns-kill-matrix/test_fresh_primary_serial_zero_zone.py
+python3 deploy/e2e/dns-kill-matrix/test_zone_lifecycle_recover.py
 ```
 
 The base images are immutable, but Debian/Arch package repositories are not

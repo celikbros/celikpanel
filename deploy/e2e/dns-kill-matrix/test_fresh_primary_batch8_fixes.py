@@ -612,9 +612,9 @@ class HostOrderTest(unittest.TestCase):
             events.append("reboot " + node)
             return {"node": node}
 
-        def zone_lifecycle(args, plan):
+        def zone_lifecycle(args, plan, **kwargs):
             events.append("lifecycle")
-            return lifecycle
+            return lifecycle, {0: "passed", 1: "failed"}.get(lifecycle, "unverified")
 
         with mock.patch.object(bootstrap, "load_plan", return_value=({}, self.RAW, {"n": 1})), \
                 mock.patch.object(bootstrap, "identity_file", return_value=Path("/tmp/k")), \
@@ -622,7 +622,8 @@ class HostOrderTest(unittest.TestCase):
                 mock.patch.object(bootstrap.subprocess, "run", side_effect=run), \
                 mock.patch.object(bootstrap, "finish_fresh_primary_peer_verdict",
                                   side_effect=peer_verdict), \
-                mock.patch.object(bootstrap, "run_zone_lifecycle", side_effect=zone_lifecycle), \
+                mock.patch.object(bootstrap, "run_zone_lifecycle_status",
+                                  side_effect=zone_lifecycle), \
                 mock.patch.object(bootstrap, "verify_guest_zone_set"), \
                 mock.patch.object(bootstrap.fixture, "reboot_guest", side_effect=reboot), \
                 mock.patch("sys.stdout", new_callable=io.StringIO):

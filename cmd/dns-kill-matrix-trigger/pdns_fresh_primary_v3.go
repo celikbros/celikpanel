@@ -681,7 +681,13 @@ func recoverFreshPrimaryZoneDeletion(
 	if err := responseError(before); err != nil {
 		return err
 	}
-	if !exactPendingDeletionJob(before.Job, begin) {
+	// The zone this lifecycle deleted (its child, begin.Target checked above),
+	// the same phase its delete step accepted as pending_exact_operation.
+	if !exactPendingZoneDeletionJob(before.Job, begin, freshPrimaryZoneDomain) {
+		if before.Job != nil {
+			result.JobStatus, result.JobPhase = before.Job.Status, before.Job.Phase
+			result.JobCode, result.JobMessage = before.Job.ErrorCode, before.Job.ErrorMessage
+		}
 		result.Outcome = "refused_not_pending"
 		return errors.New("the exact deletion is not pending at its propagation phase; nothing was resumed")
 	}
@@ -723,7 +729,8 @@ func recoverFreshPrimaryZoneDeletion(
 		result.Outcome = "refused"
 		return errors.New("zone V3 recovery was refused; the exact job is preserved")
 	}
-	if recovered.RecoveryPending && !recovered.Recovered && exactPendingDeletionJob(job, begin) {
+	if recovered.RecoveryPending && !recovered.Recovered &&
+		exactPendingZoneDeletionJob(job, begin, freshPrimaryZoneDomain) {
 		if heartbeat.err != nil {
 			result.Outcome = "unknown"
 			return errors.New("recovery heartbeat outcome unknown; the exact job is preserved")

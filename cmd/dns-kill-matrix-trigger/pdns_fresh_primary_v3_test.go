@@ -417,6 +417,172 @@ func TestFreshPrimaryZoneRecoveryResumesOnlyAPendingDeletion(t *testing.T) {
 	}
 }
 
+// The pending deletion exactly as batch 9 z04 recorded it after the owner
+// enrollment: the lifecycle's child, not the parent, in the phase.
+func batch9PendingChildDeletion(begin transport.ServiceMutationBeginRequest, domain string) *transport.ServiceMutationJob {
+	now := time.Now().UTC()
+	return &transport.ServiceMutationJob{
+		RequestID: begin.RequestID, OwnerID: begin.OwnerID, Kind: begin.Kind,
+		Target: begin.Target, PackageName: begin.PackageName, Status: "pending",
+		Phase: "commit/dns-zone-sync/v3/propagation-pending/" + begin.RequestID + "/" +
+			domain + "/" + begin.PackageName,
+		ErrorCode:    "dns_peer_enrollment_required",
+		ErrorMessage: "The exact local DNS publication is waiting for paired propagation recovery.",
+		Attempt:      1, StartedAt: now.Add(-time.Minute), UpdatedAt: now,
+		DeadlineAt: now.Add(time.Hour), FinishedAt: now,
+	}
+}
+
+type recoverFake struct {
+	agent    *fakeAgent
+	statuses int
+	resumed  []transport.ServiceMutationBeginRequest
+	recovery []transport.RecoverDNSZoneV3Request
+}
+
+// newRecoverFake answers the first status with before, resumes into the
+// child's recovering phase, and answers the status after RecoverDNSZoneV3
+// with after (nil: the same pending job).
+func newRecoverFake(
+	begin transport.ServiceMutationBeginRequest, before, after *transport.ServiceMutationJob,
+	response transport.RecoverDNSZoneV3Response,
+) *recoverFake {
+	fake := &recoverFake{}
+	fake.agent = &fakeAgent{handlers: map[string]func(any, any) error{
+		"Agent.ServiceMutationStatus": func(req, resp any) error {
+			if req.(*transport.ServiceMutationStatusRequest).RequestID != begin.RequestID {
+				return errors.New("status of another request")
+			}
+			fake.statuses++
+			job := before
+			if fake.statuses > 1 && after != nil {
+				job = after
+			}
+			resp.(*transport.ServiceMutationResponse).Job = job
+			return nil
+		},
+		"Agent.BeginServiceMutation": func(req, resp any) error {
+			resume := *req.(*transport.ServiceMutationBeginRequest)
+			fake.resumed = append(fake.resumed, resume)
+			job := runningLease(begin)
+			job.Phase = freshPrimaryZonePhase("recovering", begin)
+			resp.(*transport.ServiceMutationResponse).Job = job
+			return nil
+		},
+		"Agent.HeartbeatServiceMutation": func(any, any) error { return nil },
+		"Agent.RecoverDNSZoneV3": func(req, resp any) error {
+			fake.recovery = append(fake.recovery, *req.(*transport.RecoverDNSZoneV3Request))
+			*resp.(*transport.RecoverDNSZoneV3Response) = response
+			return nil
+		},
+	}}
+	return fake
+}
+
+func TestFreshPrimaryZoneRecoveryResumesThePendingChildDeletion(t *testing.T) {
+	receipt, _ := freshPrimaryV3TestReceipt(t)
+	request, begin, err := freshPrimaryZoneIdentity("delete", receipt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(begin.PackageName, "dns-zone-sync/v3:sha256:") {
+		t.Fatalf("the delete qualifier is not the V3 package shape: %q", begin.PackageName)
+	}
+	pending := batch9PendingChildDeletion(begin, "s2.s1-kill.test")
+	if pending.Phase != freshPrimaryZonePhase("propagation-pending", begin) {
+		t.Fatalf("the lifecycle's own pending phase differs from batch 9's: %q", pending.Phase)
+	}
+	published := runningLease(begin)
+	published.Status, published.Phase = mutationSucceeded, freshPrimaryZonePhase("published", begin)
+	published.LeaseExpiresAt, published.FinishedAt = time.Time{}, time.Now().UTC()
+	fake := newRecoverFake(begin, pending, published, transport.RecoverDNSZoneV3Response{Recovered: true})
+	result := freshPrimaryZoneResult{}
+	if err := recoverFreshPrimaryZoneDeletion(context.Background(), request, begin, fake.agent.call, &result); err != nil {
+		t.Fatalf("the pending child deletion was not resumed: %v (%+v)", err, result)
+	}
+	if result.Outcome != "verified_published" || result.JobPhase != published.Phase {
+		t.Fatalf("resumed child deletion: %+v", result)
+	}
+	if len(fake.resumed) != 1 || !fake.resumed[0].Resume ||
+		fake.resumed[0].RequestID != begin.RequestID || fake.resumed[0].PackageName != begin.PackageName {
+		t.Fatalf("the exact identity was not resumed once: %+v", fake.resumed)
+	}
+	if len(fake.recovery) != 1 || fake.recovery[0].Domain != "s2.s1-kill.test" ||
+		fake.recovery[0].Qualifier != begin.PackageName ||
+		fake.recovery[0].MutationRequestID != begin.RequestID ||
+		fake.recovery[0].MutationOwnerID != begin.OwnerID {
+		t.Fatalf("recovery did not name the exact child operation: %+v", fake.recovery)
+	}
+	for _, method := range []string{"Agent.SyncDNSZoneV3", "Agent.FinishServiceMutation"} {
+		if fake.agent.count(method) != 0 {
+			t.Fatalf("recovery issued %s: %v", method, fake.agent.calls)
+		}
+	}
+
+	// Still pending after the Agent's reconciliation: the same job is kept.
+	again := newRecoverFake(begin, pending, nil, transport.RecoverDNSZoneV3Response{RecoveryPending: true})
+	result = freshPrimaryZoneResult{}
+	if err := recoverFreshPrimaryZoneDeletion(context.Background(), request, begin, again.agent.call, &result); err != nil ||
+		result.Outcome != "pending_exact_operation" || again.agent.count("Agent.FinishServiceMutation") != 0 {
+		t.Fatalf("a still-pending child deletion: %v %+v calls=%v", err, result, again.agent.calls)
+	}
+}
+
+func TestFreshPrimaryZoneRecoveryRefusesTheParentNameAndOtherShapes(t *testing.T) {
+	receipt, _ := freshPrimaryV3TestReceipt(t)
+	request, begin, _ := freshPrimaryZoneIdentity("delete", receipt)
+	_, otherBegin, _ := freshPrimaryZoneIdentity("edit", receipt)
+	for name, job := range map[string]*transport.ServiceMutationJob{
+		// The name the old helper built: the served parent, not the deleted child.
+		"parent name": batch9PendingChildDeletion(begin, "s1-kill.test"),
+		"running": func() *transport.ServiceMutationJob {
+			job := batch9PendingChildDeletion(begin, "s2.s1-kill.test")
+			job.Status = mutationRunning
+			return job
+		}(),
+		"published": func() *transport.ServiceMutationJob {
+			job := batch9PendingChildDeletion(begin, "s2.s1-kill.test")
+			job.Phase = freshPrimaryZonePhase("published", begin)
+			return job
+		}(),
+		"another package": func() *transport.ServiceMutationJob {
+			job := batch9PendingChildDeletion(begin, "s2.s1-kill.test")
+			job.Phase = "commit/dns-zone-sync/v3/propagation-pending/" + begin.RequestID +
+				"/s2.s1-kill.test/" + otherBegin.PackageName
+			return job
+		}(),
+		"another request": func() *transport.ServiceMutationJob {
+			job := batch9PendingChildDeletion(begin, "s2.s1-kill.test")
+			job.Phase = "commit/dns-zone-sync/v3/propagation-pending/" + otherBegin.RequestID +
+				"/s2.s1-kill.test/" + begin.PackageName
+			return job
+		}(),
+		"leased": func() *transport.ServiceMutationJob {
+			job := batch9PendingChildDeletion(begin, "s2.s1-kill.test")
+			job.LeaseExpiresAt = time.Now().Add(time.Minute)
+			return job
+		}(),
+	} {
+		fake := newRecoverFake(begin, job, nil, transport.RecoverDNSZoneV3Response{Recovered: true})
+		result := freshPrimaryZoneResult{}
+		err := recoverFreshPrimaryZoneDeletion(context.Background(), request, begin, fake.agent.call, &result)
+		if err == nil || result.Outcome != "refused_not_pending" ||
+			fake.agent.count("Agent.BeginServiceMutation") != 0 || fake.agent.count("Agent.RecoverDNSZoneV3") != 0 {
+			t.Fatalf("%s: resumed or not refused: %v %+v calls=%v", name, err, result, fake.agent.calls)
+		}
+		if result.JobPhase != job.Phase || result.JobCode != job.ErrorCode {
+			t.Fatalf("%s: the refused job's state was not recorded: %+v", name, result)
+		}
+	}
+	// The domain must be the operation's own target.
+	child := batch9PendingChildDeletion(begin, "s2.s1-kill.test")
+	if !exactPendingZoneDeletionJob(child, begin, freshPrimaryZoneDomain) ||
+		exactPendingZoneDeletionJob(child, begin, deletionTrialDomain) ||
+		exactPendingDeletionJob(child, begin) {
+		t.Fatal("the pending-deletion match is not bound to the operation's own zone")
+	}
+}
+
 func freshPrimaryV3ZeroZoneTestScenario() scenario {
 	value := freshPrimaryV3TestScenario()
 	value.Zones = []transport.DNSEngineSwitchZoneSnapshot{}

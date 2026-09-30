@@ -1972,6 +1972,12 @@ def run_prepared(args: argparse.Namespace) -> int:
             "PowerDNS primary cell without the independent handoff"
         )
     validate_fresh_primary_run(args, cell, reboot_after or reboot_before)
+    resume_held = getattr(args, "resume_held_zone_lifecycle", False) is True
+    if resume_held and not (fresh_primary and zone_lifecycle_before_reboot(args)):
+        raise BootstrapError(
+            f"{RESUME_HELD_LIFECYCLE_FLAG} continues a fresh paired PowerDNS primary run "
+            f"started with --zone-lifecycle and {REBOOT_AFTER_RECOVERY_FLAG}; pass the same "
+            "run flags. Nothing was started")
     peer_engine = require_peer_engine(cell, getattr(args, "peer_engine", None))
     peer_catalog_format = require_peer_catalog_format(
         cell, peer_engine, getattr(args, "peer_catalog_format", None)
@@ -2007,6 +2013,21 @@ def run_prepared(args: argparse.Namespace) -> int:
         command, resume_command = commands(
             MEMBER_LABEL_PLACEHOLDER if needs_member_label else None
         )
+        if resume_held:
+            print(json.dumps({
+                "resume_held_zone_lifecycle": [
+                    f"read {FRESH_PRIMARY_EVIDENCE_DIRECTORY}/{ZONE_LIFECYCLE_HELD_EVIDENCE}",
+                    *(f"zone lifecycle step {step}"
+                      + (" (recover the same pending request)" if step == "delete" else "")
+                      + f" + observe-child --step {step}" for step in ("delete", "re-add")),
+                    "continue the suspended guest run with the lifecycle outcome "
+                    "(still pending: stay suspended)",
+                ],
+                "primary": [ssh_base(node, identity) + [zone_lifecycle_remote(
+                    step, recover=step == "delete")] for step in ("delete", "re-add")],
+            }))
+            print_fresh_primary_lifecycle_plan(args, node, identity, flags, resume_command)
+            return 0
         if fresh_primary and zone_lifecycle_before_reboot(args):
             print(json.dumps(command))
             print_fresh_primary_lifecycle_plan(args, node, identity, flags, resume_command)
@@ -2080,9 +2101,14 @@ def run_prepared(args: argparse.Namespace) -> int:
         if needs_member_label:
             member_label = peer_member_label(peer_before)
     command, resume_command = commands(member_label)
-    returncode = subprocess.run(command, check=False).returncode
     before_reboot: dict[str, Any] | None = None
-    if fresh_primary and zone_lifecycle_before_reboot(args) and (
+    if resume_held:
+        # The guest run is still suspended for the lifecycle (exit 5) on the
+        # boot the hold was recorded on; it is not started again.
+        returncode, before_reboot = resume_held_zone_lifecycle(args, plan, node, identity, flags)
+    else:
+        returncode = subprocess.run(command, check=False).returncode
+    if not resume_held and fresh_primary and zone_lifecycle_before_reboot(args) and (
         returncode == ZONE_LIFECYCLE_REQUESTED_EXIT
     ):
         returncode, before_reboot = run_zone_lifecycle_before_reboot(
@@ -2408,6 +2434,9 @@ def verify_guest_zone_set(node: dict[str, Any], identity: Path, zero_zones: bool
 
 
 ZONE_LIFECYCLE_STEPS = ("add", "edit", "delete", "re-add")
+# The lifecycle's zone (trigger freshPrimaryZoneDomain): the child of the
+# served member, or with --zero-zones the server's first and only zone.
+ZONE_LIFECYCLE_CHILD = "s2." + ZONE_NAME
 
 
 def observe_until_converged(
@@ -2480,6 +2509,41 @@ def judge_zone_step(step: str, value: dict[str, Any], observation_error: str | N
     return "unverified"
 
 
+ZONE_LIFECYCLE_EVIDENCE = "zone-lifecycle.json"
+ZONE_LIFECYCLE_RECOVER_EVIDENCE = "zone-lifecycle-recover.json"
+# run-prepared --zone-lifecycle --reboot-after-recovery: a lifecycle whose
+# delete the Agent kept pending leaves the guest controller suspended on the
+# same boot (not continued) and records this; after the owner's enrollment
+# run-prepared RESUME_HELD_LIFECYCLE_FLAG recovers the same delete, re-adds and
+# continues the suspended run (management disabled when requested, reboot).
+ZONE_LIFECYCLE_HELD_EVIDENCE = "zone-lifecycle-held.json"
+ZONE_LIFECYCLE_HELD_SCHEMA = "celikpanel/dns-kill-fresh-primary-zone-lifecycle-held/v1"
+RESUME_HELD_LIFECYCLE_FLAG = "--resume-held-zone-lifecycle"
+ZONE_LIFECYCLE_RECOVER_ATTEMPTS = 9
+
+
+def zone_lifecycle_evidence_name(plan: dict[str, Any], recover_delete: bool) -> str:
+    """The create-new evidence name of this lifecycle run, chosen before any
+    RPC: the lifecycle runs once per cell; each recovery attempt gets its own
+    name (zone-lifecycle-recover.json, then -2 .. -9), so a pending recovery
+    can be retried after the owner acts without replacing earlier evidence."""
+
+    directory = Path(plan["cell_directory"]) / FRESH_PRIMARY_EVIDENCE_DIRECTORY
+    if not recover_delete:
+        candidates = [ZONE_LIFECYCLE_EVIDENCE]
+    else:
+        candidates = [ZONE_LIFECYCLE_RECOVER_EVIDENCE] + [
+            f"zone-lifecycle-recover-{attempt}.json"
+            for attempt in range(2, ZONE_LIFECYCLE_RECOVER_ATTEMPTS + 1)
+        ]
+    for name in candidates:
+        if not os.path.lexists(directory / name):
+            return name
+    raise BootstrapError(
+        f"{FRESH_PRIMARY_EVIDENCE_DIRECTORY}/{candidates[-1]} already exists: this lifecycle "
+        "(or every recovery attempt) already ran for the cell; nothing was requested")
+
+
 def run_zone_lifecycle(
     args: argparse.Namespace, plan: dict[str, Any], *, recover_delete: bool = False
 ) -> int:
@@ -2491,17 +2555,28 @@ def run_zone_lifecycle(
     --zero-zones the add creates the server's first zone, the delete returns
     both catalogs to zero members and both servers refuse the child, as no
     parent is served). A pending deletion stops the lifecycle and names the
-    owner's next step.
+    owner's next step. recover_delete resumes that same pending deletion of
+    the child (never a second delete), then re-adds.
     """
+
+    return run_zone_lifecycle_status(args, plan, recover_delete=recover_delete)[0]
+
+
+def run_zone_lifecycle_status(
+    args: argparse.Namespace, plan: dict[str, Any], *, recover_delete: bool = False
+) -> tuple[int, str]:
+    """run_zone_lifecycle with its status (passed/failed/pending/unverified)."""
 
     import native_pdns_bind_peer  # noqa: PLC0415 - imports this module
 
     node = plan["nodes"][args.node]
     identity = identity_file(args.identity_file)
+    evidence_name = zone_lifecycle_evidence_name(plan, recover_delete)
     steps = ["delete", "re-add"] if recover_delete else list(ZONE_LIFECYCLE_STEPS)
     record: dict[str, Any] = {
         "schema": "celikpanel/dns-kill-fresh-primary-zone-lifecycle/v1",
         "cell_id": args.cell_id, "recover_delete": recover_delete, "steps": [],
+        "zero_zones": zero_zones_selected(args),
     }
     status = "passed"
     for step in steps:
@@ -2529,13 +2604,7 @@ def run_zone_lifecycle(
             "observation_error": observation_error, "verdict": verdict,
         }
         if verdict == "pending":
-            entry["next_step"] = (
-                "the Agent kept the deletion pending (" + str(value.get("job_error_code", ""))
-                + "): the server owner enrolls the native BIND secondary for inspection "
-                "(dns-peer-enroll --engine bind on both guests, as the Agent's message "
-                "names), then runs guest_bootstrap.py zone-lifecycle --recover-delete; no "
-                "second deletion is ever requested"
-            )
+            entry["next_step"] = zone_lifecycle_pending_next_step(args, value)
         record["steps"].append(entry)
         print(json.dumps(entry, sort_keys=True))
         if verdict != "passed":
@@ -2543,10 +2612,32 @@ def run_zone_lifecycle(
             break
     record["status"] = status
     write_peer_evidence(
-        plan, "zone-lifecycle-recover.json" if recover_delete else "zone-lifecycle.json",
-        record, execute=True, directory_name=FRESH_PRIMARY_EVIDENCE_DIRECTORY,
+        plan, evidence_name, record, execute=True,
+        directory_name=FRESH_PRIMARY_EVIDENCE_DIRECTORY,
     )
-    return {"passed": 0, "failed": 1}.get(status, 2)
+    return {"passed": 0, "failed": 1}.get(status, 2), status
+
+
+def zone_lifecycle_pending_next_step(args: argparse.Namespace, value: dict[str, Any]) -> str:
+    """Who acts and how the pending delete resumes (pure)."""
+
+    zero = f" {ZERO_ZONES_FLAG}" if zero_zones_selected(args) else ""
+    if zone_lifecycle_before_reboot(args):
+        resume = (
+            f"guest_bootstrap.py run-prepared <same arguments and run flags>{zero} "
+            f"{RESUME_HELD_LIFECYCLE_FLAG} --execute (the guest run stays suspended on "
+            "this boot until then; do not reboot or restart it)"
+        )
+    else:
+        resume = f"guest_bootstrap.py zone-lifecycle <same arguments>{zero} --recover-delete --execute"
+    return (
+        "the Agent kept the deletion of " + str(value.get("domain") or "the child zone")
+        + " pending (" + str(value.get("job_error_code", "")) + "): the server owner "
+        "enrolls the native BIND secondary for inspection (dns-peer-enroll --engine bind "
+        "on both guests, as the Agent's error code names), then runs " + resume
+        + "; that resumes the same request (RecoverDNSZoneV3) and never requests a second "
+        "deletion"
+    )
 
 
 def worst_exit(*codes: int | None) -> int:
@@ -2579,14 +2670,92 @@ def run_zone_lifecycle_before_reboot(
 
     # The guest has no exit yet: it suspended after a complete pass (exit 5).
     peer = finish_fresh_primary_peer_verdict(args, plan, 0, suspended_for_lifecycle=True)
-    lifecycle = run_zone_lifecycle(args, plan) if peer == 0 else None
+    lifecycle, status = run_zone_lifecycle_status(args, plan) if peer == 0 else (None, None)
+    return continue_or_hold_after_lifecycle(
+        args, plan, node, identity, flags, peer, lifecycle, status, resumed=False)
+
+
+def continue_or_hold_after_lifecycle(
+    args: argparse.Namespace, plan: dict[str, Any], node: dict[str, Any], identity: Path,
+    flags: list[str], peer: int, lifecycle: int | None, status: str | None, *, resumed: bool,
+) -> tuple[int, dict[str, Any]]:
+    """Continue the suspended guest run with the lifecycle outcome, or hold it.
+
+    A delete the Agent kept pending is not a lifecycle outcome yet: the guest
+    stays suspended on this boot (exit 5 is still its last exit), the hold is
+    recorded, and the owner's enrollment plus RESUME_HELD_LIFECYCLE_FLAG
+    finish the same delete, re-add and continue this run with its reboot.
+    """
+
+    if status == "pending":
+        record = {
+            "peer_verdict_exit": peer, "lifecycle_exit": lifecycle, "outcome": "held",
+            "resumed": resumed,
+        }
+        held = {
+            "schema": ZONE_LIFECYCLE_HELD_SCHEMA, "cell_id": args.cell_id,
+            "zero_zones": zero_zones_selected(args), "peer_verdict_exit": peer,
+            "lifecycle_exit": lifecycle, "lifecycle_status": status,
+            "guest": "suspended for the zone lifecycle on the same boot; not continued",
+            "next_step": zone_lifecycle_pending_next_step(args, {"domain": ZONE_LIFECYCLE_CHILD}),
+        }
+        if not resumed:
+            write_peer_evidence(plan, ZONE_LIFECYCLE_HELD_EVIDENCE, held, execute=True,
+                                directory_name=FRESH_PRIMARY_EVIDENCE_DIRECTORY)
+        print(json.dumps({"zone_lifecycle_before_reboot": record, "held": held}, sort_keys=True))
+        return ZONE_LIFECYCLE_REQUESTED_EXIT, record
     outcome = "passed" if peer == 0 and lifecycle == 0 else "not-passed"
     record = {"peer_verdict_exit": peer, "lifecycle_exit": lifecycle, "outcome": outcome}
+    if resumed:
+        record["resumed"] = True
     print(json.dumps({"zone_lifecycle_before_reboot": record}, sort_keys=True))
     continuation = ssh_base(node, identity) + [
         prepared_remote(args.cell_id, list(flags) + [ZONE_LIFECYCLE_OUTCOME_PREFIX + outcome])
     ]
     return subprocess.run(continuation, check=False).returncode, record
+
+
+def read_zone_lifecycle_hold(args: argparse.Namespace, plan: dict[str, Any]) -> dict[str, Any]:
+    """The recorded hold of this cell (read-only), refused unless exact."""
+
+    path = Path(plan["cell_directory"]) / FRESH_PRIMARY_EVIDENCE_DIRECTORY / ZONE_LIFECYCLE_HELD_EVIDENCE
+    if not os.path.lexists(path):
+        raise BootstrapError(
+            f"{RESUME_HELD_LIFECYCLE_FLAG} needs {FRESH_PRIMARY_EVIDENCE_DIRECTORY}/"
+            f"{ZONE_LIFECYCLE_HELD_EVIDENCE}: this cell's run did not hold a pending delete; "
+            "nothing was requested")
+    held = read_json(path, ZONE_LIFECYCLE_HELD_EVIDENCE)
+    if not isinstance(held, dict) or held.get("schema") != ZONE_LIFECYCLE_HELD_SCHEMA or (
+        held.get("cell_id") != args.cell_id
+        or held.get("zero_zones") is not zero_zones_selected(args)
+        or held.get("peer_verdict_exit") != 0 or held.get("lifecycle_status") != "pending"
+    ):
+        raise BootstrapError(
+            "the recorded zone lifecycle hold is not this cell's pending delete after a passed "
+            "pair verdict (cell, --zero-zones and verdict must match); nothing was requested")
+    return held
+
+
+def resume_held_zone_lifecycle(
+    args: argparse.Namespace, plan: dict[str, Any], node: dict[str, Any],
+    identity: Path, flags: list[str],
+) -> tuple[int, dict[str, Any]]:
+    """After the owner's enrollment: recover the held delete, re-add, continue.
+
+    The pair verdict of this boot is the recorded one (it passed before the
+    lifecycle); it is not taken again, because the lifecycle has since moved
+    the catalog serial. The same pending delete is resumed (RecoverDNSZoneV3,
+    never a second delete), observed (both catalogs back to zero members or
+    the parent only, the child REFUSED or NXDOMAIN on both servers), then
+    re-added and observed (the child in both catalogs); the guest run then
+    continues exactly as after an uninterrupted lifecycle.
+    """
+
+    held = read_zone_lifecycle_hold(args, plan)
+    lifecycle, status = run_zone_lifecycle_status(args, plan, recover_delete=True)
+    return continue_or_hold_after_lifecycle(
+        args, plan, node, identity, flags, held["peer_verdict_exit"], lifecycle, status,
+        resumed=True)
 
 
 def print_fresh_primary_lifecycle_plan(
@@ -2652,7 +2821,10 @@ def finish_fresh_primary_run(
     if before_reboot is not None:
         # The lifecycle already ran before the reboot. A lifecycle that did
         # not pass ended the guest run without a reboot; otherwise the pair
-        # and the re-added child are judged again after the reboot.
+        # and the re-added child are judged again after the reboot. A held
+        # (pending) delete left the guest suspended: unknown until resumed.
+        if before_reboot["outcome"] == "held":
+            return worst_exit(before_reboot["peer_verdict_exit"], before_reboot["lifecycle_exit"], 2)
         if before_reboot["outcome"] != "passed":
             return worst_exit(guest_returncode, before_reboot["peer_verdict_exit"],
                               before_reboot["lifecycle_exit"])
@@ -2904,6 +3076,14 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     current.add_argument(
         ZERO_ZONES_FLAG, action="store_true",
         help="the fresh paired PowerDNS primary was prepared with --zero-zones",
+    )
+    current.add_argument(
+        RESUME_HELD_LIFECYCLE_FLAG, action="store_true",
+        help=(
+            "with the same --zone-lifecycle --reboot-after-recovery run flags: after the "
+            "owner's enrollment, recover the delete the Agent kept pending, re-add, and "
+            "continue the guest run that stayed suspended on the same boot (then the reboot)"
+        ),
     )
     current = subparsers.add_parser("zone-lifecycle")
     common_parser(current)
