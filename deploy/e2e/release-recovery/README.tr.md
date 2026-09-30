@@ -444,3 +444,29 @@ Bu kontroller iletişimi taklit eder veya geçici yerel dosyalar kullanır. Ger�
 konuk yaşam döngüsünün sonucunu raporlamaz.
 
 Seçili kurtarma kitinin değiştirilmesi ayrı [geçiş kabul kaydında](RUNTIME-PROMOTION.tr.md) izlenir. Gerçek önceki kit kaydı, ara durumdaki salt-okur yürütme, açık sahip devamı ve geçiş sonrası gerçek otomatik geri alma ayrılır. Kaçırılmış hata deneyi sonuçsuz olarak korunur.
+
+## Sahibin başlattığı güncelleme kabulü (upd1)
+
+*Yol haritası 3. madde, ilk birleşik yerel deneme. Yalnız test düzeneği; ürün
+kodu değişmez. `result.json` her zaman `native_evidence: false` taşır; P0
+satırlarını sahibi değerlendirir.*
+
+`owner_update_trial.py`, her hücrede yeni bir kayıtlı konukta **tek** bir
+güncellemeyi sahibin yönetici oturumuyla Panel API üzerinden başlatır (web
+arayüzünün gönderdiği istekler, Origin başlığı, SSH tüneli üzerinden
+sabitlenmiş TLS). Temel sürüm, kaynak HEAD'in tek kullanımlık klon içinde
+`v0.1.0-alpha.81` olarak etiketlenmiş bir test commit'idir: 45dfc265 Alpha81
+derlemesinde D-027 kabul lisansı yoktur ve lisanssız Panel veri girişini
+reddeder. Aday `v0.1.0-alpha.82` olarak etiketlenir, test anahtarıyla
+imzalanır ve konuk içindeki `celikpanel.net` test kaynağından sunulur; gerçek
+`celikpanel.net` veya lisans hizmetine gidilmez. Hatalı aday, yalıtılmış veri
+tabanı kopyasını taşıdıktan sonra `--migrate-only` ile 1 döndürür; bu hata
+`active` aşamasında oluşur ve geri alma yoluna girer. Debian'da kurtarma
+`payload_restored` noktasında QMP ile yeniden başlatılır, Arch'ta
+`runtime_verified` noktasında kurtarma süreci öldürülür. Üç otomatik deneme
+biterse sürücü, ürünün günlükte gösterdiği tek seferlik yeniden deneme
+komutunu bir kez çalıştırır ve sonucu "sahip devamıyla kurtarıldı" olarak ayırır.
+
+Komutlar ve hücre ayrıntıları İngilizce bölümdedir
+([README.md](README.md#owner-started-update-acceptance-upd1)). Çevrimdışı
+testler (`test_owner_update_trial.py`, 29 test) yerel sonucu kanıtlamaz.

@@ -442,3 +442,141 @@ Selected recovery-kit replacement has its own [promotion acceptance record](RUNT
 [The bounded fixture record](WAL-FIXTURE.md) separates controlled-child WAL
 interruption and populated private SQL copies from native update acceptance.
 The separate [native WAL experiment](NATIVE-WAL.md) now records an unchanged product migrator, one verified physical noncommit WAL write and same-operation automatic rollback. Its scoped acceptance and retained inconclusive attempt do not close the full fault matrix.
+
+## Owner-started update acceptance (upd1)
+
+*Roadmap item 3, first combined native run. D-022 / D-024 / D-025; evidence for
+P0.1, P0.2, P0.3 and P0.5. Harness only: no product code, schema or release
+policy changes. `result.json` always says `native_evidence: false`; the owner
+judges the P0 rows.*
+
+`owner_update_trial.py` runs **one** owner-started update on **one** fresh
+registered guest per cell. The owner's own admin session drives the Panel API
+exactly as the web UI does (session cookie, `Origin` header, TLS leaf pinned
+through a loopback SSH forward); the root recovery CLI is used only where the
+product's text tells the owner to use it. It reuses `lab.py`,
+`worker_fixture_origin.py`, `current_worker_baseline.py`,
+`guest_bound_worker.py`, `guest_recovery_handoff.py`/`guest_recovery_fault.py`,
+`recovery_fault_trial.py` (QMP), `guest_probe.py` and, by path, the DNS pair
+driver's `panel_api`, `redaction`, `evidence`, `guidance` and `install_steps`
+modules. New guest helpers: `guest_owner_update_observer.py` (checkpoint proof
+and fault arming, **never a signal**) and `guest_upd1_workload.py` (sampler,
+read-only state, the owner's printed one-time retry).
+
+### Artifacts and provenance labels
+
+`build-upd1-artifacts.sh` clones the repository into
+`/var/tmp/cp-upd1-build/<stamp>/repo` and makes three **disposable fixture
+commits** there (never in the working repository):
+
+| Role | Commit | Label / policy | Notes |
+| --- | --- | --- | --- |
+| Baseline B | source HEAD + policy | `v0.1.0-alpha.81` / 81, previous Alpha80 `bd14d97e` | installed by the real installer via `current_worker_baseline.py`; fixture trust root enrolled; `not-production-release-admission` |
+| Good G | B + policy | `v0.1.0-alpha.82` / 82, previous = B | success cell |
+| Defective D | G + `cmd/panel/main.go` fixture patch | `v0.1.0-alpha.82` / 82, previous = B | `--migrate-only` migrates the isolated copy, then exits 1 |
+
+Each is built by `dns-pair-acceptance/scripts/build-dist.sh --acceptance-license`
+with `CELIKPANEL_DIST_VERSION` (D-027 acceptance license; the archive carries
+its `ACCEPTANCE-LICENSE-BUILD.txt` notice, the only file exempted from Git-blob
+proof, and its bytes are checked). Candidates are signed at run time with the
+lab's disposable fixture key and served by the guest-loopback `celikpanel.net`
+origin, which is provisioned **before** the baseline is installed, so neither
+the installer, the Agent nor the Panel reaches the real `celikpanel.net` or a
+license service. The update path itself needs no license
+(`cmd/panel/license.go` `licenseRecoveryRequest`).
+
+**Why not the 45dfc265 Alpha81 build:** that commit predates the acceptance
+license seam (`internal/licensing/acceptance_fixture.go` is absent), and its
+Panel refuses every seeding API with `license_required` without a license.
+Owner seeding through the Panel is therefore impossible there. upd1 uses a
+build of HEAD **labelled** as the baseline version; this is recorded in
+`result.json` provenance and is not the historical Alpha81 payload.
+
+**Why this defect:** a Panel that cannot start fails only after
+`completion.pending`, where native recovery selects forward completion, not
+rollback (`release-recovery-runner.sh`, `update:completion`). The migrate-only
+defect fails in phase `active` with a complete snapshot, which is the rollback
+path. It is a genuine candidate failure after `candidate-installed`, produced by
+a committed fixture change (label: *simulated defect*).
+
+### Cells
+
+| Cell | Node | Candidate | Second fault | What it can show | What it cannot show |
+| --- | --- | --- | --- | --- | --- |
+| `upd1-debian13-defective` | Debian 13 | D | QMP `system_reset` at `payload_restored` | owner start, failed candidate, automatic rollback interrupted by a reboot, rollback to B by timer/boot; the same request id in API/CLI/shell; workloads, data, timers and firewall preserved | production signing, browser rendering, power-loss durability, external DNS/mail delivery, certificate issuance or renewal execution |
+| `upd1-debian13-good` | Debian 13 | G | none | owner-started forward update to G with the same observations | rollback |
+| `upd1-arch-defective` | Arch | D | SIGKILL of recovery at `runtime_verified` | as Debian, with a killed recovery instead of a reboot; mail is attempted and recorded | mail continuity if the platform refuses `web_mail` |
+| `upd1-arch-good` | Arch | G | none | forward update on Arch | rollback |
+
+If automatic recovery exhausts its three attempts
+(`automatic_recovery=paused_retry_limit`), the driver does **not** fail: it
+records the Panel recovery-status body, the root CLI EN/TR texts and the saved
+offline page, then runs step `owner-continuation (required)`: exactly the
+one-time `recovery recover --retry --snapshot <pending snapshot>` command the
+product printed in `journalctl -u celikpanel-release-recovery.service -n 50`,
+once, with a durable attempt record. The outcome distinguishes
+`recovered-automatically` from `recovered-after-owner-continuation`; automatic
+attempts are counted from the dispatch receipts and journal, with timestamps.
+
+### Commands (Linux QEMU host, as root, repository root)
+
+```sh
+bash deploy/e2e/release-recovery/run-upd1.sh build            # prints .../upd1-artifacts.json
+ART=/var/tmp/cp-upd1-build/<stamp>/upd1-artifacts.json
+bash deploy/e2e/release-recovery/run-upd1.sh dry-run upd1-debian13-defective "$ART" upd1-d13-def-a
+bash deploy/e2e/release-recovery/run-upd1.sh cell upd1-debian13-defective "$ART" upd1-d13-def-a 2361
+bash deploy/e2e/release-recovery/run-upd1.sh cell upd1-debian13-good "$ART" upd1-d13-good-a 2371
+bash deploy/e2e/release-recovery/run-upd1.sh cell upd1-arch-defective "$ART" upd1-arch-def-a 2381
+bash deploy/e2e/release-recovery/run-upd1.sh cell upd1-arch-good "$ART" upd1-arch-good-a 2391
+```
+
+`cell` prepares and starts a **new** lab `/var/tmp/cp-release-drill-NAME`
+(image cache `/var/tmp/cp-v3n28/images`, override `UPD1_IMAGE_CACHE`), runs the
+cell on its node and stops the lab; disks and evidence stay. Run cells one at a
+time. Evidence: `<lab>/evidence/<node>/upd1/<cell>-<utc>/` (redacted API
+exchanges per step, status samples, guest/host sample series, journals,
+observer and recovery-fault events, `result.json`, `SHA256SUMS`). Web assets
+are built fresh in the clone; `CELIKPANEL_UPD1_WEB_DIST` may name a `web/dist`
+built from the same source commit.
+
+### Owner API sequence and probes
+
+Login (`POST /api/v1/auth/login`, `GET /api/v1/auth/me`,
+`GET /api/v1/panel/availability`); acceptance license (`GET`/`POST
+/api/v1/panel/license`, `GET /api/v1/license/access`); setup wizard (`GET`/`PUT
+/api/v1/setup`, `PUT /api/v1/setup/guidance`, `POST /api/v1/setup/plan`,
+`POST /api/v1/setup/start`, `GET /api/v1/setup/operation`; `web_mail`, where Arch
+may fall back to `web` with the refusal recorded); seeding (`POST
+/api/v1/domains/create` static site, `POST .../files?path=/index.html` with a
+marker, `GET .../dns/zone` and `.../dns/records`, `POST .../mail/accounts`,
+`POST .../cron` writing a timestamp every minute, `GET /api/v1/firewall`);
+update (`GET /api/v1/panel/update/check`, `GET /api/v1/host-mutation-readiness`,
+one `POST /api/v1/panel/update/start` with the UI's body and a fresh 32-hex
+request id, then `GET /api/v1/panel/update/status?request_id=` with the UI
+backoff of 1.5 s x1.6 up to 15 s, `GET /api/v1/recovery/status?request_id=`,
+the root CLI `status --json`, `--lang en` and `--lang tr`, and the saved
+offline page's command).
+
+The guest sampler unit `cp-lab-upd1-sampler.service` (enabled, so it resumes
+after the reboot) records every 5 s: site HTTP with the `Host` header and
+marker, SOA over UDP, the SMTP 587 banner (when a mailbox exists), the cron
+stamp mtime and the Panel HTTPS status. A host loop records SSH reachability
+and the Panel through the tunnel. Outage windows are computed per workload; a
+window overlapping the recorded reset is labelled `host-reset`, any other
+window `unexplained`. Terminal checks cover build identity, floor/foundation,
+database digests (volatile tables listed), seeded rows, marker, mailbox, cron,
+timers, firewall ruleset, a fresh login and the update card.
+
+### Offline checks
+
+```sh
+python3 -m unittest deploy/e2e/release-recovery/test_owner_update_trial.py -v
+```
+
+29 offline tests cover plan validation and dry run, fixture policy/defect,
+the acceptance-notice exemption, UI backoff, three-source agreement, D-024
+guidance through the product catalogues, outcome classification, outage and
+cron windows, reset attribution, database/timer comparison, redaction through
+the real Panel client and evidence writer, the guest DNS/retry parsers and the
+observer (checkpoint proof and fault arming without a signal). They do not
+establish a native result.

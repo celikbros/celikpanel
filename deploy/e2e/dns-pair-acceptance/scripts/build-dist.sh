@@ -55,6 +55,14 @@ if [[ $acceptance -eq 1 ]]; then
     version="v0.0.0-pairaccept-acceptance-license.${full:0:12}"
     out=/var/tmp/cp-pair-accept/dist/$full-acceptance-license
 fi
+# Optional exact label for a disposable fixture commit whose committed release
+# policy names that version (release-recovery upd1: v0.1.0-alpha.81/82). The
+# default labels above are unchanged; make dist still checks policy/version.
+if [[ -n ${CELIKPANEL_DIST_VERSION:-} ]]; then
+    [[ $CELIKPANEL_DIST_VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+-alpha\.[0-9]+$ ]] \
+        || { echo "CELIKPANEL_DIST_VERSION must look like v0.1.0-alpha.N" >&2; exit 2; }
+    version=$CELIKPANEL_DIST_VERSION
+fi
 src=$out/src
 [[ ! -e $out ]] || { echo "refusing to reuse $out" >&2; exit 2; }
 [[ -f $REPO/web/dist/index.html ]] || { echo "build web/dist for $full first" >&2; exit 2; }
