@@ -1,0 +1,14 @@
+## 2026-09-30T06:31:54Z Agent journal (all boots): lines matching the pair6 check strings
+journal lines total: 22
+boots: 2
+count[DNS peer proof could not run]=0
+count[dns_peer_proof_internal]=0
+count[dns_peer_owner_edit_unknown]=0
+count[dns_peer_enrollment_required]=2
+count[dns_peer_inspection_unknown]=0
+count[dns_peer_catalog_transfer_refused]=0
+## ledger file(s): code occurrences
+/var/lib/celikpanel-agent-private/service-mutations.json count[dns_peer_proof_internal]=0
+/var/lib/celikpanel-agent-private/service-mutations.json count[dns_peer_owner_edit_unknown]=0
+/var/lib/celikpanel-agent-private/service-mutations.json count[dns_peer_enrollment_required]=0
+(end)

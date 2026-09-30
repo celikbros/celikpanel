@@ -1,0 +1,1254 @@
+[
+  {
+    "answers": [
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "ns1.ns-accept.test. hostmaster.pair-accept.test. 2026093001 10800 3600 604800 3600",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "SOA"
+          }
+        ],
+        "authoritative": true,
+        "authority": [],
+        "name": "pair-accept.test.",
+        "qtype": "SOA",
+        "rcode": "NOERROR",
+        "server": "192.0.2.10",
+        "transport": "udp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "ns1.ns-accept.test. hostmaster.pair-accept.test. 2026093001 10800 3600 604800 3600",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "SOA"
+          }
+        ],
+        "authoritative": true,
+        "authority": [],
+        "name": "pair-accept.test.",
+        "qtype": "SOA",
+        "rcode": "NOERROR",
+        "server": "192.0.2.10",
+        "transport": "tcp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "ns2.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          },
+          {
+            "data": "ns1.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          }
+        ],
+        "authoritative": true,
+        "authority": [],
+        "name": "pair-accept.test.",
+        "qtype": "NS",
+        "rcode": "NOERROR",
+        "server": "192.0.2.10",
+        "transport": "udp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "ns1.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          },
+          {
+            "data": "ns2.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          }
+        ],
+        "authoritative": true,
+        "authority": [],
+        "name": "pair-accept.test.",
+        "qtype": "NS",
+        "rcode": "NOERROR",
+        "server": "192.0.2.10",
+        "transport": "tcp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "192.0.2.10",
+            "name": "mail.pair-accept.test.",
+            "ttl": 3600,
+            "type": "A"
+          }
+        ],
+        "authoritative": true,
+        "authority": [],
+        "name": "mail.pair-accept.test.",
+        "qtype": "A",
+        "rcode": "NOERROR",
+        "server": "192.0.2.10",
+        "transport": "udp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "192.0.2.10",
+            "name": "mail.pair-accept.test.",
+            "ttl": 3600,
+            "type": "A"
+          }
+        ],
+        "authoritative": true,
+        "authority": [],
+        "name": "mail.pair-accept.test.",
+        "qtype": "A",
+        "rcode": "NOERROR",
+        "server": "192.0.2.10",
+        "transport": "tcp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "fec0::5054:ff:fe13:10",
+            "name": "mail.pair-accept.test.",
+            "ttl": 3600,
+            "type": "AAAA"
+          }
+        ],
+        "authoritative": true,
+        "authority": [],
+        "name": "mail.pair-accept.test.",
+        "qtype": "AAAA",
+        "rcode": "NOERROR",
+        "server": "192.0.2.10",
+        "transport": "udp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "fec0::5054:ff:fe13:10",
+            "name": "mail.pair-accept.test.",
+            "ttl": 3600,
+            "type": "AAAA"
+          }
+        ],
+        "authoritative": true,
+        "authority": [],
+        "name": "mail.pair-accept.test.",
+        "qtype": "AAAA",
+        "rcode": "NOERROR",
+        "server": "192.0.2.10",
+        "transport": "tcp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "192.0.2.10",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "A"
+          }
+        ],
+        "authoritative": true,
+        "authority": [],
+        "name": "pair-accept.test.",
+        "qtype": "A",
+        "rcode": "NOERROR",
+        "server": "192.0.2.10",
+        "transport": "udp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "192.0.2.10",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "A"
+          }
+        ],
+        "authoritative": true,
+        "authority": [],
+        "name": "pair-accept.test.",
+        "qtype": "A",
+        "rcode": "NOERROR",
+        "server": "192.0.2.10",
+        "transport": "tcp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "fec0::5054:ff:fe13:10",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "AAAA"
+          }
+        ],
+        "authoritative": true,
+        "authority": [],
+        "name": "pair-accept.test.",
+        "qtype": "AAAA",
+        "rcode": "NOERROR",
+        "server": "192.0.2.10",
+        "transport": "udp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "fec0::5054:ff:fe13:10",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "AAAA"
+          }
+        ],
+        "authoritative": true,
+        "authority": [],
+        "name": "pair-accept.test.",
+        "qtype": "AAAA",
+        "rcode": "NOERROR",
+        "server": "192.0.2.10",
+        "transport": "tcp",
+        "truncated": false
+      }
+    ],
+    "command": "dns",
+    "observer": "debian13",
+    "returncode": 0,
+    "server": "192.0.2.10"
+  },
+  {
+    "answers": [
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "ns1.ns-accept.test. hostmaster.pair-accept.test. 2026093001 10800 3600 604800 3600",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "SOA"
+          }
+        ],
+        "authoritative": true,
+        "authority": [
+          {
+            "data": "ns2.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          },
+          {
+            "data": "ns1.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          }
+        ],
+        "name": "pair-accept.test.",
+        "qtype": "SOA",
+        "rcode": "NOERROR",
+        "server": "192.0.2.11",
+        "transport": "udp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "ns1.ns-accept.test. hostmaster.pair-accept.test. 2026093001 10800 3600 604800 3600",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "SOA"
+          }
+        ],
+        "authoritative": true,
+        "authority": [
+          {
+            "data": "ns2.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          },
+          {
+            "data": "ns1.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          }
+        ],
+        "name": "pair-accept.test.",
+        "qtype": "SOA",
+        "rcode": "NOERROR",
+        "server": "192.0.2.11",
+        "transport": "tcp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "ns1.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          },
+          {
+            "data": "ns2.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          }
+        ],
+        "authoritative": true,
+        "authority": [],
+        "name": "pair-accept.test.",
+        "qtype": "NS",
+        "rcode": "NOERROR",
+        "server": "192.0.2.11",
+        "transport": "udp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "ns2.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          },
+          {
+            "data": "ns1.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          }
+        ],
+        "authoritative": true,
+        "authority": [],
+        "name": "pair-accept.test.",
+        "qtype": "NS",
+        "rcode": "NOERROR",
+        "server": "192.0.2.11",
+        "transport": "tcp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "192.0.2.10",
+            "name": "mail.pair-accept.test.",
+            "ttl": 3600,
+            "type": "A"
+          }
+        ],
+        "authoritative": true,
+        "authority": [
+          {
+            "data": "ns1.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          },
+          {
+            "data": "ns2.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          }
+        ],
+        "name": "mail.pair-accept.test.",
+        "qtype": "A",
+        "rcode": "NOERROR",
+        "server": "192.0.2.11",
+        "transport": "udp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "192.0.2.10",
+            "name": "mail.pair-accept.test.",
+            "ttl": 3600,
+            "type": "A"
+          }
+        ],
+        "authoritative": true,
+        "authority": [
+          {
+            "data": "ns1.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          },
+          {
+            "data": "ns2.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          }
+        ],
+        "name": "mail.pair-accept.test.",
+        "qtype": "A",
+        "rcode": "NOERROR",
+        "server": "192.0.2.11",
+        "transport": "tcp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "fec0::5054:ff:fe13:10",
+            "name": "mail.pair-accept.test.",
+            "ttl": 3600,
+            "type": "AAAA"
+          }
+        ],
+        "authoritative": true,
+        "authority": [
+          {
+            "data": "ns2.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          },
+          {
+            "data": "ns1.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          }
+        ],
+        "name": "mail.pair-accept.test.",
+        "qtype": "AAAA",
+        "rcode": "NOERROR",
+        "server": "192.0.2.11",
+        "transport": "udp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "fec0::5054:ff:fe13:10",
+            "name": "mail.pair-accept.test.",
+            "ttl": 3600,
+            "type": "AAAA"
+          }
+        ],
+        "authoritative": true,
+        "authority": [
+          {
+            "data": "ns2.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          },
+          {
+            "data": "ns1.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          }
+        ],
+        "name": "mail.pair-accept.test.",
+        "qtype": "AAAA",
+        "rcode": "NOERROR",
+        "server": "192.0.2.11",
+        "transport": "tcp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "192.0.2.10",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "A"
+          }
+        ],
+        "authoritative": true,
+        "authority": [
+          {
+            "data": "ns2.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          },
+          {
+            "data": "ns1.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          }
+        ],
+        "name": "pair-accept.test.",
+        "qtype": "A",
+        "rcode": "NOERROR",
+        "server": "192.0.2.11",
+        "transport": "udp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "192.0.2.10",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "A"
+          }
+        ],
+        "authoritative": true,
+        "authority": [
+          {
+            "data": "ns1.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          },
+          {
+            "data": "ns2.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          }
+        ],
+        "name": "pair-accept.test.",
+        "qtype": "A",
+        "rcode": "NOERROR",
+        "server": "192.0.2.11",
+        "transport": "tcp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "fec0::5054:ff:fe13:10",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "AAAA"
+          }
+        ],
+        "authoritative": true,
+        "authority": [
+          {
+            "data": "ns2.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          },
+          {
+            "data": "ns1.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          }
+        ],
+        "name": "pair-accept.test.",
+        "qtype": "AAAA",
+        "rcode": "NOERROR",
+        "server": "192.0.2.11",
+        "transport": "udp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "fec0::5054:ff:fe13:10",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "AAAA"
+          }
+        ],
+        "authoritative": true,
+        "authority": [
+          {
+            "data": "ns2.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          },
+          {
+            "data": "ns1.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          }
+        ],
+        "name": "pair-accept.test.",
+        "qtype": "AAAA",
+        "rcode": "NOERROR",
+        "server": "192.0.2.11",
+        "transport": "tcp",
+        "truncated": false
+      }
+    ],
+    "command": "dns",
+    "observer": "debian13",
+    "returncode": 0,
+    "server": "192.0.2.11"
+  },
+  {
+    "answers": [
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "ns1.ns-accept.test. hostmaster.pair-accept.test. 2026093001 10800 3600 604800 3600",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "SOA"
+          }
+        ],
+        "authoritative": true,
+        "authority": [],
+        "name": "pair-accept.test.",
+        "qtype": "SOA",
+        "rcode": "NOERROR",
+        "server": "192.0.2.10",
+        "transport": "udp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "ns1.ns-accept.test. hostmaster.pair-accept.test. 2026093001 10800 3600 604800 3600",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "SOA"
+          }
+        ],
+        "authoritative": true,
+        "authority": [],
+        "name": "pair-accept.test.",
+        "qtype": "SOA",
+        "rcode": "NOERROR",
+        "server": "192.0.2.10",
+        "transport": "tcp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "ns2.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          },
+          {
+            "data": "ns1.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          }
+        ],
+        "authoritative": true,
+        "authority": [],
+        "name": "pair-accept.test.",
+        "qtype": "NS",
+        "rcode": "NOERROR",
+        "server": "192.0.2.10",
+        "transport": "udp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "ns1.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          },
+          {
+            "data": "ns2.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          }
+        ],
+        "authoritative": true,
+        "authority": [],
+        "name": "pair-accept.test.",
+        "qtype": "NS",
+        "rcode": "NOERROR",
+        "server": "192.0.2.10",
+        "transport": "tcp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "192.0.2.10",
+            "name": "mail.pair-accept.test.",
+            "ttl": 3600,
+            "type": "A"
+          }
+        ],
+        "authoritative": true,
+        "authority": [],
+        "name": "mail.pair-accept.test.",
+        "qtype": "A",
+        "rcode": "NOERROR",
+        "server": "192.0.2.10",
+        "transport": "udp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "192.0.2.10",
+            "name": "mail.pair-accept.test.",
+            "ttl": 3600,
+            "type": "A"
+          }
+        ],
+        "authoritative": true,
+        "authority": [],
+        "name": "mail.pair-accept.test.",
+        "qtype": "A",
+        "rcode": "NOERROR",
+        "server": "192.0.2.10",
+        "transport": "tcp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "fec0::5054:ff:fe13:10",
+            "name": "mail.pair-accept.test.",
+            "ttl": 3600,
+            "type": "AAAA"
+          }
+        ],
+        "authoritative": true,
+        "authority": [],
+        "name": "mail.pair-accept.test.",
+        "qtype": "AAAA",
+        "rcode": "NOERROR",
+        "server": "192.0.2.10",
+        "transport": "udp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "fec0::5054:ff:fe13:10",
+            "name": "mail.pair-accept.test.",
+            "ttl": 3600,
+            "type": "AAAA"
+          }
+        ],
+        "authoritative": true,
+        "authority": [],
+        "name": "mail.pair-accept.test.",
+        "qtype": "AAAA",
+        "rcode": "NOERROR",
+        "server": "192.0.2.10",
+        "transport": "tcp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "192.0.2.10",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "A"
+          }
+        ],
+        "authoritative": true,
+        "authority": [],
+        "name": "pair-accept.test.",
+        "qtype": "A",
+        "rcode": "NOERROR",
+        "server": "192.0.2.10",
+        "transport": "udp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "192.0.2.10",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "A"
+          }
+        ],
+        "authoritative": true,
+        "authority": [],
+        "name": "pair-accept.test.",
+        "qtype": "A",
+        "rcode": "NOERROR",
+        "server": "192.0.2.10",
+        "transport": "tcp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "fec0::5054:ff:fe13:10",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "AAAA"
+          }
+        ],
+        "authoritative": true,
+        "authority": [],
+        "name": "pair-accept.test.",
+        "qtype": "AAAA",
+        "rcode": "NOERROR",
+        "server": "192.0.2.10",
+        "transport": "udp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "fec0::5054:ff:fe13:10",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "AAAA"
+          }
+        ],
+        "authoritative": true,
+        "authority": [],
+        "name": "pair-accept.test.",
+        "qtype": "AAAA",
+        "rcode": "NOERROR",
+        "server": "192.0.2.10",
+        "transport": "tcp",
+        "truncated": false
+      }
+    ],
+    "command": "dns",
+    "observer": "arch",
+    "returncode": 0,
+    "server": "192.0.2.10"
+  },
+  {
+    "answers": [
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "ns1.ns-accept.test. hostmaster.pair-accept.test. 2026093001 10800 3600 604800 3600",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "SOA"
+          }
+        ],
+        "authoritative": true,
+        "authority": [
+          {
+            "data": "ns2.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          },
+          {
+            "data": "ns1.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          }
+        ],
+        "name": "pair-accept.test.",
+        "qtype": "SOA",
+        "rcode": "NOERROR",
+        "server": "192.0.2.11",
+        "transport": "udp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "ns1.ns-accept.test. hostmaster.pair-accept.test. 2026093001 10800 3600 604800 3600",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "SOA"
+          }
+        ],
+        "authoritative": true,
+        "authority": [
+          {
+            "data": "ns1.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          },
+          {
+            "data": "ns2.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          }
+        ],
+        "name": "pair-accept.test.",
+        "qtype": "SOA",
+        "rcode": "NOERROR",
+        "server": "192.0.2.11",
+        "transport": "tcp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "ns2.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          },
+          {
+            "data": "ns1.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          }
+        ],
+        "authoritative": true,
+        "authority": [],
+        "name": "pair-accept.test.",
+        "qtype": "NS",
+        "rcode": "NOERROR",
+        "server": "192.0.2.11",
+        "transport": "udp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "ns1.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          },
+          {
+            "data": "ns2.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          }
+        ],
+        "authoritative": true,
+        "authority": [],
+        "name": "pair-accept.test.",
+        "qtype": "NS",
+        "rcode": "NOERROR",
+        "server": "192.0.2.11",
+        "transport": "tcp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "192.0.2.10",
+            "name": "mail.pair-accept.test.",
+            "ttl": 3600,
+            "type": "A"
+          }
+        ],
+        "authoritative": true,
+        "authority": [
+          {
+            "data": "ns2.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          },
+          {
+            "data": "ns1.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          }
+        ],
+        "name": "mail.pair-accept.test.",
+        "qtype": "A",
+        "rcode": "NOERROR",
+        "server": "192.0.2.11",
+        "transport": "udp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "192.0.2.10",
+            "name": "mail.pair-accept.test.",
+            "ttl": 3600,
+            "type": "A"
+          }
+        ],
+        "authoritative": true,
+        "authority": [
+          {
+            "data": "ns2.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          },
+          {
+            "data": "ns1.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          }
+        ],
+        "name": "mail.pair-accept.test.",
+        "qtype": "A",
+        "rcode": "NOERROR",
+        "server": "192.0.2.11",
+        "transport": "tcp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "fec0::5054:ff:fe13:10",
+            "name": "mail.pair-accept.test.",
+            "ttl": 3600,
+            "type": "AAAA"
+          }
+        ],
+        "authoritative": true,
+        "authority": [
+          {
+            "data": "ns1.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          },
+          {
+            "data": "ns2.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          }
+        ],
+        "name": "mail.pair-accept.test.",
+        "qtype": "AAAA",
+        "rcode": "NOERROR",
+        "server": "192.0.2.11",
+        "transport": "udp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "fec0::5054:ff:fe13:10",
+            "name": "mail.pair-accept.test.",
+            "ttl": 3600,
+            "type": "AAAA"
+          }
+        ],
+        "authoritative": true,
+        "authority": [
+          {
+            "data": "ns2.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          },
+          {
+            "data": "ns1.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          }
+        ],
+        "name": "mail.pair-accept.test.",
+        "qtype": "AAAA",
+        "rcode": "NOERROR",
+        "server": "192.0.2.11",
+        "transport": "tcp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "192.0.2.10",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "A"
+          }
+        ],
+        "authoritative": true,
+        "authority": [
+          {
+            "data": "ns1.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          },
+          {
+            "data": "ns2.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          }
+        ],
+        "name": "pair-accept.test.",
+        "qtype": "A",
+        "rcode": "NOERROR",
+        "server": "192.0.2.11",
+        "transport": "udp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "192.0.2.10",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "A"
+          }
+        ],
+        "authoritative": true,
+        "authority": [
+          {
+            "data": "ns1.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          },
+          {
+            "data": "ns2.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          }
+        ],
+        "name": "pair-accept.test.",
+        "qtype": "A",
+        "rcode": "NOERROR",
+        "server": "192.0.2.11",
+        "transport": "tcp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "fec0::5054:ff:fe13:10",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "AAAA"
+          }
+        ],
+        "authoritative": true,
+        "authority": [
+          {
+            "data": "ns1.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          },
+          {
+            "data": "ns2.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          }
+        ],
+        "name": "pair-accept.test.",
+        "qtype": "AAAA",
+        "rcode": "NOERROR",
+        "server": "192.0.2.11",
+        "transport": "udp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [
+          {
+            "data": "fec0::5054:ff:fe13:10",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "AAAA"
+          }
+        ],
+        "authoritative": true,
+        "authority": [
+          {
+            "data": "ns2.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          },
+          {
+            "data": "ns1.ns-accept.test.",
+            "name": "pair-accept.test.",
+            "ttl": 3600,
+            "type": "NS"
+          }
+        ],
+        "name": "pair-accept.test.",
+        "qtype": "AAAA",
+        "rcode": "NOERROR",
+        "server": "192.0.2.11",
+        "transport": "tcp",
+        "truncated": false
+      }
+    ],
+    "command": "dns",
+    "observer": "arch",
+    "returncode": 0,
+    "server": "192.0.2.11"
+  }
+]

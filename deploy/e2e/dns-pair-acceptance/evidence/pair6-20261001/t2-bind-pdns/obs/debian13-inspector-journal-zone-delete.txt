@@ -1,0 +1,123 @@
+2026-09-30T06:12:41+00:00 dns-debian13 sudo[6234]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:12:41+00:00 dns-debian13 sshd-session[6233]: Received disconnect from 10.0.2.2 port 41300:11: disconnected by user
+2026-09-30T06:12:41+00:00 dns-debian13 sudo[6247]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:12:41+00:00 dns-debian13 sshd-session[6246]: Received disconnect from 10.0.2.2 port 41306:11: disconnected by user
+2026-09-30T06:12:41+00:00 dns-debian13 pdns_server[5076]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:35787', transfer initiated
+2026-09-30T06:12:42+00:00 dns-debian13 sudo[6266]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:12:42+00:00 dns-debian13 sshd-session[6265]: Received disconnect from 10.0.2.2 port 41312:11: disconnected by user
+2026-09-30T06:12:42+00:00 dns-debian13 pdns_server[5076]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:58471', transfer initiated
+2026-09-30T06:12:44+00:00 dns-debian13 pdns_server[5076]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone backend transaction started
+2026-09-30T06:12:44+00:00 dns-debian13 pdns_server[5076]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone delete zone 'pair-accept.test'
+2026-09-30T06:12:44+00:00 dns-debian13 pdns_server[5076]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone backend transaction committed
+2026-09-30T06:12:44+00:00 dns-debian13 pdns_server[5076]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', zone committed with serial 3
+2026-09-30T06:12:45+00:00 dns-debian13 pdns_server[5076]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:59303', transfer initiated
+2026-09-30T06:12:45+00:00 dns-debian13 pdns_server[5076]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:37791', transfer initiated
+2026-09-30T06:12:45+00:00 dns-debian13 pdns_server[5076]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:37791', failed: not authoritative
+2026-09-30T06:12:47+00:00 dns-debian13 pdns_server[5076]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:57779', transfer initiated
+2026-09-30T06:12:47+00:00 dns-debian13 pdns_server[5076]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:36869', transfer initiated
+2026-09-30T06:12:47+00:00 dns-debian13 pdns_server[5076]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:36869', failed: not authoritative
+2026-09-30T06:12:47+00:00 dns-debian13 sudo[6292]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:12:47+00:00 dns-debian13 sshd-session[6291]: Received disconnect from 10.0.2.2 port 57464:11: disconnected by user
+2026-09-30T06:12:48+00:00 dns-debian13 sudo[6306]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:12:48+00:00 dns-debian13 sshd-session[6305]: Received disconnect from 10.0.2.2 port 57472:11: disconnected by user
+2026-09-30T06:12:48+00:00 dns-debian13 sudo[6322]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:12:48+00:00 dns-debian13 sshd-session[6321]: Received disconnect from 10.0.2.2 port 57478:11: disconnected by user
+2026-09-30T06:12:48+00:00 dns-debian13 sudo[6337]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:12:48+00:00 dns-debian13 sshd-session[6336]: Received disconnect from 10.0.2.2 port 57484:11: disconnected by user
+2026-09-30T06:12:49+00:00 dns-debian13 useradd[6369]: new group: name=celikpeer, GID=987
+2026-09-30T06:12:49+00:00 dns-debian13 useradd[6369]: new user: name=celikpeer, UID=995, GID=987, home=/var/lib/pdns-peer-inspector, shell=/bin/sh, from=none
+2026-09-30T06:12:49+00:00 dns-debian13 sshd[803]: Received SIGHUP; restarting.
+2026-09-30T06:12:49+00:00 dns-debian13 sshd[803]: Server listening on 0.0.0.0 port 22.
+2026-09-30T06:12:49+00:00 dns-debian13 sshd[803]: Server listening on :: port 22.
+2026-09-30T06:12:49+00:00 dns-debian13 sudo[6353]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:12:49+00:00 dns-debian13 sshd-session[6352]: Received disconnect from 10.0.2.2 port 57488:11: disconnected by user
+2026-09-30T06:12:49+00:00 dns-debian13 sudo[6406]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:12:49+00:00 dns-debian13 sshd-session[6405]: Received disconnect from 10.0.2.2 port 57496:11: disconnected by user
+2026-09-30T06:12:49+00:00 dns-debian13 sudo[6422]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:12:49+00:00 dns-debian13 sshd-session[6421]: Received disconnect from 10.0.2.2 port 57510:11: disconnected by user
+2026-09-30T06:12:49+00:00 dns-debian13 sshd-session[6437]: Received disconnect from 10.0.2.2 port 57520:11: disconnected by user
+2026-09-30T06:12:50+00:00 dns-debian13 sudo[6453]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:12:50+00:00 dns-debian13 sshd-session[6452]: Received disconnect from 10.0.2.2 port 57532:11: disconnected by user
+2026-09-30T06:12:51+00:00 dns-debian13 sudo[6469]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:12:51+00:00 dns-debian13 sshd-session[6468]: Received disconnect from 10.0.2.2 port 57536:11: disconnected by user
+2026-09-30T06:12:51+00:00 dns-debian13 pdns_server[5076]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:42407', transfer initiated
+2026-09-30T06:12:52+00:00 dns-debian13 sudo[6526]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:12:52+00:00 dns-debian13 sshd-session[6525]: Received disconnect from 10.0.2.2 port 57544:11: disconnected by user
+2026-09-30T06:12:53+00:00 dns-debian13 pdns_server[5076]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:40459', transfer initiated
+2026-09-30T06:12:53+00:00 dns-debian13 pdns_server[5076]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:42877', transfer initiated
+2026-09-30T06:12:53+00:00 dns-debian13 pdns_server[5076]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:42877', failed: not authoritative
+2026-09-30T06:13:02+00:00 dns-debian13 sshd-session[6534]: Accepted publickey for celikpeer from 192.0.2.11 port 58118 ssh2: ED25519 SHA256:gqy1yQZBFu6MPt7wnLRBSCyJFek3XgcuviQDqAIdqtk
+2026-09-30T06:13:02+00:00 dns-debian13 sshd-session[6534]: pam_unix(sshd:session): session opened for user celikpeer(uid=995) by celikpeer(uid=0)
+2026-09-30T06:13:02+00:00 dns-debian13 systemd-logind[759]: New session 71 of user celikpeer.
+2026-09-30T06:13:02+00:00 dns-debian13 (systemd)[6549]: pam_unix(systemd-user:session): session opened for user celikpeer(uid=995) by celikpeer(uid=0)
+2026-09-30T06:13:02+00:00 dns-debian13 systemd-logind[759]: New session 72 of user celikpeer.
+2026-09-30T06:13:02+00:00 dns-debian13 sudo[6547]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:13:02+00:00 dns-debian13 sshd-session[6546]: Received disconnect from 10.0.2.2 port 46176:11: disconnected by user
+2026-09-30T06:13:02+00:00 dns-debian13 systemd[1]: Started session-71.scope - Session 71 of User celikpeer.
+2026-09-30T06:13:02+00:00 dns-debian13 sudo[6568]: celikpeer : PWD=/var/lib/pdns-peer-inspector ; USER=root ; COMMAND=/usr/local/libexec/celikpanel-pdns-peer-inspect
+2026-09-30T06:13:02+00:00 dns-debian13 sudo[6568]: pam_unix(sudo:session): session opened for user root(uid=0) by celikpeer(uid=995)
+2026-09-30T06:13:03+00:00 dns-debian13 sudo[6568]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:13:03+00:00 dns-debian13 sshd-session[6566]: Connection closed by 192.0.2.11 port 58118
+2026-09-30T06:13:03+00:00 dns-debian13 sshd-session[6534]: pam_unix(sshd:session): session closed for user celikpeer
+2026-09-30T06:13:04+00:00 dns-debian13 pdns_server[5076]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:59777', transfer initiated
+2026-09-30T06:13:04+00:00 dns-debian13 pdns_server[5076]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:45947', transfer initiated
+2026-09-30T06:13:04+00:00 dns-debian13 pdns_server[5076]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:45947', failed: not authoritative
+2026-09-30T06:13:13+00:00 dns-debian13 sudo[6594]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:13:13+00:00 dns-debian13 sshd-session[6593]: Received disconnect from 10.0.2.2 port 53776:11: disconnected by user
+2026-09-30T06:13:13+00:00 dns-debian13 (sd-pam)[6553]: pam_unix(systemd-user:session): session closed for user celikpeer
+2026-09-30T06:13:23+00:00 dns-debian13 sudo[6647]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:13:23+00:00 dns-debian13 sshd-session[6646]: Received disconnect from 10.0.2.2 port 43936:11: disconnected by user
+2026-09-30T06:13:34+00:00 dns-debian13 sudo[6679]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:13:34+00:00 dns-debian13 sshd-session[6678]: Received disconnect from 10.0.2.2 port 46798:11: disconnected by user
+2026-09-30T06:13:44+00:00 dns-debian13 sudo[6705]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:13:44+00:00 dns-debian13 sshd-session[6704]: Received disconnect from 10.0.2.2 port 51140:11: disconnected by user
+2026-09-30T06:13:55+00:00 dns-debian13 sudo[6751]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:13:55+00:00 dns-debian13 sshd-session[6750]: Received disconnect from 10.0.2.2 port 60096:11: disconnected by user
+2026-09-30T06:14:05+00:00 dns-debian13 sudo[6764]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:14:05+00:00 dns-debian13 sshd-session[6763]: Received disconnect from 10.0.2.2 port 51980:11: disconnected by user
+2026-09-30T06:14:15+00:00 dns-debian13 sudo[6777]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:14:15+00:00 dns-debian13 sshd-session[6776]: Received disconnect from 10.0.2.2 port 40844:11: disconnected by user
+2026-09-30T06:14:26+00:00 dns-debian13 sudo[6837]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:14:26+00:00 dns-debian13 sshd-session[6836]: Received disconnect from 10.0.2.2 port 40336:11: disconnected by user
+2026-09-30T06:14:36+00:00 dns-debian13 sudo[6850]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:14:36+00:00 dns-debian13 sshd-session[6849]: Received disconnect from 10.0.2.2 port 41430:11: disconnected by user
+2026-09-30T06:14:46+00:00 dns-debian13 sudo[6863]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:14:46+00:00 dns-debian13 sshd-session[6862]: Received disconnect from 10.0.2.2 port 44180:11: disconnected by user
+2026-09-30T06:14:57+00:00 dns-debian13 sudo[6909]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:14:57+00:00 dns-debian13 sshd-session[6908]: Received disconnect from 10.0.2.2 port 35528:11: disconnected by user
+2026-09-30T06:15:07+00:00 dns-debian13 sudo[6941]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:15:07+00:00 dns-debian13 sshd-session[6940]: Received disconnect from 10.0.2.2 port 43276:11: disconnected by user
+2026-09-30T06:15:18+00:00 dns-debian13 sudo[6954]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:15:18+00:00 dns-debian13 sshd-session[6953]: Received disconnect from 10.0.2.2 port 38328:11: disconnected by user
+2026-09-30T06:15:28+00:00 dns-debian13 sudo[7014]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:15:28+00:00 dns-debian13 sshd-session[7013]: Received disconnect from 10.0.2.2 port 38952:11: disconnected by user
+2026-09-30T06:15:38+00:00 dns-debian13 sudo[7027]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:15:38+00:00 dns-debian13 sshd-session[7026]: Received disconnect from 10.0.2.2 port 46406:11: disconnected by user
+2026-09-30T06:15:49+00:00 dns-debian13 sudo[7040]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:15:49+00:00 dns-debian13 sshd-session[7039]: Received disconnect from 10.0.2.2 port 49800:11: disconnected by user
+2026-09-30T06:15:59+00:00 dns-debian13 sudo[7099]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:15:59+00:00 dns-debian13 sshd-session[7098]: Received disconnect from 10.0.2.2 port 58984:11: disconnected by user
+2026-09-30T06:16:10+00:00 dns-debian13 sudo[7125]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:16:10+00:00 dns-debian13 sshd-session[7124]: Received disconnect from 10.0.2.2 port 36434:11: disconnected by user
+2026-09-30T06:16:20+00:00 dns-debian13 sudo[7138]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:16:20+00:00 dns-debian13 sshd-session[7137]: Received disconnect from 10.0.2.2 port 36100:11: disconnected by user
+2026-09-30T06:16:30+00:00 dns-debian13 sudo[7184]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:16:30+00:00 dns-debian13 sshd-session[7183]: Received disconnect from 10.0.2.2 port 55360:11: disconnected by user
+2026-09-30T06:16:40+00:00 dns-debian13 sudo[7197]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:16:40+00:00 dns-debian13 sshd-session[7196]: Received disconnect from 10.0.2.2 port 42332:11: disconnected by user
+2026-09-30T06:16:51+00:00 dns-debian13 sudo[7224]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:16:51+00:00 dns-debian13 sshd-session[7223]: Received disconnect from 10.0.2.2 port 60812:11: disconnected by user
+2026-09-30T06:17:01+00:00 dns-debian13 sudo[7270]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:17:01+00:00 dns-debian13 sshd-session[7269]: Received disconnect from 10.0.2.2 port 41152:11: disconnected by user
+2026-09-30T06:17:12+00:00 dns-debian13 sudo[7297]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:17:12+00:00 dns-debian13 sshd-session[7296]: Received disconnect from 10.0.2.2 port 48332:11: disconnected by user
+2026-09-30T06:17:22+00:00 dns-debian13 sudo[7330]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:17:22+00:00 dns-debian13 sshd-session[7329]: Received disconnect from 10.0.2.2 port 37704:11: disconnected by user
+2026-09-30T06:17:32+00:00 dns-debian13 sudo[7389]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:17:32+00:00 dns-debian13 sshd-session[7388]: Received disconnect from 10.0.2.2 port 60958:11: disconnected by user
+2026-09-30T06:17:43+00:00 dns-debian13 sudo[7402]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:17:43+00:00 dns-debian13 sshd-session[7401]: Received disconnect from 10.0.2.2 port 37722:11: disconnected by user
+2026-09-30T06:17:53+00:00 dns-debian13 sudo[7417]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:17:53+00:00 dns-debian13 sshd-session[7416]: Received disconnect from 10.0.2.2 port 59276:11: disconnected by user
+2026-09-30T06:18:03+00:00 dns-debian13 sudo[7463]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:18:03+00:00 dns-debian13 sshd-session[7462]: Received disconnect from 10.0.2.2 port 56542:11: disconnected by user

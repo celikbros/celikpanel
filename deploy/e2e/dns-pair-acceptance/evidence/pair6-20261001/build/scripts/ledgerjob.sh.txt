@@ -1,0 +1,32 @@
+#!/bin/bash
+# Read-only: the dns_zone_sync jobs of the Agent ledger (named, non-secret fields only). usage: CELL LABEL NODE PORT
+CELL=$1; LABEL=$2; NODE=$3; PORT=$4
+H=$(printf %s "$CELL" | sha256sum | cut -c1-24)
+KH=/var/tmp/cp-pair6-work/cells/$H/ssh-known-hosts
+O=/root/cp-pair6/obs/$LABEL; mkdir -p $O
+timeout 120 ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$KH -i /var/tmp/cp-pair6-key/id_ed25519 -p $PORT celik@127.0.0.1 'bash -s' > $O/$NODE-ledger-dns-jobs.txt 2>&1 <<'R'
+echo "## $(date -u +%FT%TZ) Agent service-mutation ledger: dns_zone_sync jobs, selected fields (read-only)"
+for p in $(sudo -n find /var/lib -maxdepth 3 -name service-mutations.json 2>/dev/null); do
+  echo "### $p $(sudo -n stat -c '%U:%G %a %y' $p)"
+  sudo -n cat $p | python3 -c 'import json,sys
+d=json.load(sys.stdin)
+jobs=d.get("jobs") if isinstance(d,dict) else None
+if jobs is None:
+    for k,v in (d.items() if isinstance(d,dict) else []):
+        if isinstance(v,list) and v and isinstance(v[0],dict) and "kind" in v[0]: jobs=v
+print("top-level keys:", sorted(d.keys()) if isinstance(d,dict) else type(d).__name__)
+keep=("id","request_id","kind","target","status","phase","attempt","error_code","created_at","updated_at","lease_expires_at","finished_at","worker_pid")
+jobs=list(jobs.values()) if isinstance(jobs,dict) else jobs
+for j in jobs or []:
+    if j.get("kind")=="dns_zone_sync":
+        print(json.dumps({k:j.get(k) for k in keep if k in j}, sort_keys=True))
+print("dns_zone_sync jobs:", sum(1 for j in jobs or [] if j.get("kind")=="dns_zone_sync"), "all jobs:", len(jobs or []))'
+done
+echo "### peer challenge journals (agent-private): named fields only (no nonce)"
+for J in /var/lib/celikpanel-agent-private/dns-peer-challenge-v1.json /var/lib/celikpanel-agent-private/pdns-peer-challenge-v1.json; do
+  if sudo -n test -e $J; then echo "#### $J $(sudo -n stat -c '%U:%G %a %y' $J)"; sudo -n cat $J | python3 -c 'import json,sys
+d=json.load(sys.stdin); r=d.get("request") or {}
+print(json.dumps({"schema":d.get("schema"),"state":d.get("state"),"ledger_attempt":d.get("ledger_attempt"),"request":{k:r.get(k) for k in ("schema","attempt","deleted_zone","primary_ip","peer_ip","catalog_name","catalog_serial","view","issued_at_unix","expires_at_unix","mutation_request_id")}}, sort_keys=True))'; else echo "absent: $J"; fi
+done
+R
+cat $O/$NODE-ledger-dns-jobs.txt | cut -c1-700

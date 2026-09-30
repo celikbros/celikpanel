@@ -1,0 +1,16 @@
+#!/bin/bash
+date -u +%FT%TZ
+uname -r
+free -m
+df -h / /var/tmp /root 2>/dev/null
+nproc
+ls -la /var/tmp /root
+ls -la /var/tmp/cp-v3n28/images 2>/dev/null
+ps -eo pid,etime,rss,args | grep -E 'qemu|python3|pair_acc|watch' | grep -v grep | cut -c1-200
+pgrep -a qemu || echo "no qemu process"
+ls -la /dev/kvm
+python3 --version; git --version; make --version | head -1
+/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go version
+ls -d /var/tmp/cp-pair6* /root/cp-pair6* 2>&1
+for p in 2201 2202 23053 28443 28444; do ss -ltn "sport = :$p" | tail -n +2; done
+echo END

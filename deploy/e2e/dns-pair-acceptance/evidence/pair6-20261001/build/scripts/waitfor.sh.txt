@@ -1,0 +1,12 @@
+#!/bin/bash
+# usage: waitfor.sh LABEL STEP-PREFIX MAXSECONDS : returns when the step dir exists, the run ends, or timeout
+label=$1; want=$2; max=${3:-540}; t0=$(date +%s)
+list() { for d in /var/tmp/cp-pair6-evidence/$label-*/steps; do [[ -d $d ]] && ls $d; done; }
+while (( $(date +%s) - t0 < max )); do
+  list | grep -q "^$want" && break
+  grep -q 'run end' /root/cp-pair6/logs/$label-runner.log 2>/dev/null && break
+  sleep 10
+done
+date -u +%FT%TZ; list | tr '\n' ' '; echo
+grep -h 'end' /root/cp-pair6/logs/$label-runner.log
+tail -2 /root/cp-pair6/logs/$label-catalog-watch.jsonl 2>/dev/null | cut -c1-500

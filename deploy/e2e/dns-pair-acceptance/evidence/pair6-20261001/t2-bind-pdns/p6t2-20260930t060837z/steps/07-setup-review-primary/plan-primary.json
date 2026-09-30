@@ -1,0 +1,76 @@
+{
+  "actor": {
+    "IP": "127.0.0.1",
+    "UserAgent": "",
+    "UserID": 2
+  },
+  "blockers": [],
+  "build_commit": "e50fe50a07746ee6f9cd7dea80b95ccd8999256c",
+  "can_start": true,
+  "contact_email": "owner@ns-accept.test",
+  "draft": {
+    "database": "",
+    "dns_engine": "bind",
+    "dns_mode": "local",
+    "dns_role": "primary",
+    "local_ip": "192.0.2.11",
+    "mail_hostname": "",
+    "node_version": "",
+    "ns1": "ns1.ns-accept.test",
+    "ns2": "ns2.ns-accept.test",
+    "panel_domain": "panel-arch.ns-accept.test",
+    "peer_ip": "192.0.2.10",
+    "peer_ns": "ns2.ns-accept.test",
+    "purpose": "dns",
+    "remote_dns_connection_id": ""
+  },
+  "id": "1ae383479aa0df182aba15342ca26f3e",
+  "persist_firewall": true,
+  "preserve_ssh": true,
+  "purpose": "dns",
+  "revision": 2,
+  "server_ip": "192.0.2.11",
+  "steps": [
+    {
+      "id": "01-dns",
+      "kind": "dns",
+      "target": "local"
+    },
+    {
+      "id": "02-service",
+      "kind": "service",
+      "target": "certbot"
+    },
+    {
+      "id": "03-firewall",
+      "kind": "firewall",
+      "target": "enable_and_persist"
+    },
+    {
+      "id": "04-access_dns",
+      "kind": "access_dns",
+      "qualifier": "192.0.2.11",
+      "target": "panel-arch.ns-accept.test"
+    },
+    {
+      "id": "05-panel_certificate",
+      "kind": "panel_certificate",
+      "target": "panel-arch.ns-accept.test"
+    },
+    {
+      "id": "06-verify",
+      "kind": "verify",
+      "target": "dns"
+    }
+  ],
+  "tcp_ports": [
+    22,
+    53,
+    80,
+    2083
+  ],
+  "udp_ports": [
+    53
+  ],
+  "version": 1
+}

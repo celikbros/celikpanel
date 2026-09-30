@@ -1,0 +1,21 @@
+2026-09-30T06:09:50.223584+00:00 dns-arch systemd[1]: Starting CelikPanel privileged agent...
+2026-09-30T06:09:50.251079+00:00 dns-arch systemd[1]: Started CelikPanel privileged agent.
+2026-09-30T06:09:50.271860+00:00 dns-arch agent[7041]: 2026/09/30 06:09:50 Starting CelikPanel Agent...
+2026-09-30T06:09:50.278720+00:00 dns-arch agent[7041]: 2026/09/30 06:09:50 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-30T06:09:50.279370+00:00 dns-arch agent[7041]: 2026/09/30 06:09:50 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-09-30T06:09:55.854256+00:00 dns-arch systemd[1]: Stopping CelikPanel privileged agent...
+2026-09-30T06:09:55.873146+00:00 dns-arch systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-30T06:09:55.874786+00:00 dns-arch systemd[1]: Stopped CelikPanel privileged agent.
+-- Boot ee47896e56e74c78ad8dcd09286ced59 --
+2026-09-30T06:10:15.669997+00:00 dns-arch systemd[1]: Starting CelikPanel privileged agent...
+2026-09-30T06:10:15.726429+00:00 dns-arch systemd[1]: Started CelikPanel privileged agent.
+2026-09-30T06:10:15.836856+00:00 dns-arch agent[410]: 2026/09/30 06:10:15 Starting CelikPanel Agent...
+2026-09-30T06:10:15.848631+00:00 dns-arch agent[410]: 2026/09/30 06:10:15 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-30T06:11:35.933689+00:00 dns-arch agent[410]: 2026/09/30 06:11:35 DNS switch (request 24d8c611fe8ae476f431f0242ad4a707): BIND rndc key /etc/rndc.key is product_created
+2026-09-30T06:11:43.142125+00:00 dns-arch agent[410]: 2026/09/30 06:11:43 bind primary pair readiness proof failed: DNS peer catalog AXFR is unavailable
+2026-09-30T06:12:45.311695+00:00 dns-arch agent[410]: 2026/09/30 06:12:45 bind zone publication remains pending for pair-accept.test at epoch 1: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T06:12:45.311695+00:00 dns-arch agent[410]: dns_peer_enrollment_required
+2026-09-30T06:12:47.217250+00:00 dns-arch agent[410]: 2026/09/30 06:12:47 DNS zone V3 recovery remains pending for pair-accept.test: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T06:12:47.217250+00:00 dns-arch agent[410]: dns_peer_enrollment_required
+2026-09-30T06:13:08.778204+00:00 dns-arch agent[410]: 2026/09/30 06:13:08 DNS zone V3 recovery remains pending for pair-accept.test: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T06:13:08.778204+00:00 dns-arch agent[410]: dns_peer_journal_unknown

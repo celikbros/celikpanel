@@ -1,0 +1,9 @@
+2026-09-30T06:12:41+00:00 dns-arch panel[420]: 2026/09/30 06:12:41 http: TLS handshake error from 127.0.0.1:37762: EOF
+2026-09-30T06:12:42+00:00 dns-arch panel[420]: 2026/09/30 06:12:42 domain deletion for pair-accept.test: mail runtime cleanup skipped: no mail runtime for this domain on this server
+2026-09-30T06:12:47+00:00 dns-arch panel[420]: 2026/09/30 06:12:47 domain deletion pending for pair-accept.test at dns_cleanup: publish DNS zone deletion: DNS zone V3 paired propagation recovery is deferred: DNS zone publication is waiting for exact paired propagation recovery
+2026-09-30T06:12:47+00:00 dns-arch panel[420]: DNS zone publication is waiting for exact paired propagation recovery
+2026-09-30T06:12:47+00:00 dns-arch panel[420]: DNS zone publication is waiting for exact paired propagation recovery
+2026-09-30T06:12:51+00:00 dns-arch panel[420]: 2026/09/30 06:12:51 http: TLS handshake error from 127.0.0.1:39070: EOF
+2026-09-30T06:12:51+00:00 dns-arch panel[420]: 2026/09/30 06:12:51 domain deletion for pair-accept.test: mail runtime cleanup skipped: no mail runtime for this domain on this server
+2026-09-30T06:13:08+00:00 dns-arch panel[420]: 2026/09/30 06:13:08 domain deletion pending for pair-accept.test at dns_cleanup: publish DNS zone deletion: DNS zone V3 paired propagation recovery is deferred: DNS zone publication is waiting for exact paired propagation recovery
+2026-09-30T06:13:08+00:00 dns-arch panel[420]: DNS zone publication is waiting for exact paired propagation recovery

@@ -1,0 +1,29 @@
+## 2026-09-30T06:18:55Z /var/lib/celikpanel-agent-private: names/metadata only (no content read)
+total 32
+drwx------ 1 root celikpanel  418 2026-09-30 06:13:08.789450428 +0000 .
+drwxr-xr-x 1 root root        494 2026-09-30 06:11:49.214883540 +0000 ..
+-rw------- 1 root celikpanel  410 2026-09-30 06:11:35.822847287 +0000 dns-engine-bind-rndc-key.json
+-rw------- 1 root celikpanel  747 2026-09-30 06:11:42.667869653 +0000 dns-engine-ownership-bind.json
+-rw------- 1 root celikpanel  743 2026-09-30 06:12:44.995222224 +0000 dns-engine-state.json
+-rw------- 1 root celikpanel  319 2026-09-30 06:11:53.256889601 +0000 firewall-apply-journal.json
+-rw------- 1 root root       1078 2026-09-30 06:12:59.109372800 +0000 pdns-peer-challenge-v1.json
+drwx------ 1 root root         72 2026-09-30 06:12:48.286262195 +0000 pdns-peer-inspection-keys
+-rw------- 1 root root        504 2026-09-30 06:12:50.182283774 +0000 pdns-peer-inspection-v1.json
+-rw------- 1 root celikpanel 5710 2026-09-30 06:13:08.777450341 +0000 service-mutations.json
+/var/lib root:root 755 ino=259 nlink=1 2026-09-30 06:11:49.214883540 +0000
+/var/lib/celikpanel-agent-private root:celikpanel 700 ino=78783 nlink=1 2026-09-30 06:13:08.789450428 +0000
+## hidden stage/retired names (any prefix)
+## filesystem of the directory
+TARGET SOURCE    FSTYPE OPTIONS
+/      /dev/vda3 btrfs  rw,relatime,compress=zstd:1,discard=async,space_cache=v2,subvolid=5,subvol=/
+## Agent unit sandbox properties
+ActiveEnterTimestamp=Wed 2026-09-30 06:10:15 UTC
+ExecMainPID=410
+UMask=0027
+User=root
+Group=celikpanel
+ReadWritePaths=
+PrivateTmp=no
+ProtectSystem=no
+NoNewPrivileges=no
+(end)

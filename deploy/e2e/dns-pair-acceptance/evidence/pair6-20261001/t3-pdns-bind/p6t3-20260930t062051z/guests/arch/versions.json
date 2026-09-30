@@ -1,0 +1,20 @@
+{
+  "binaries": {
+    "/opt/celikpanel/bin/agent": "92c415d6de133a3d99142ed20c9d5199f9f64e29887ee35ff983c0c0d0d12531",
+    "/opt/celikpanel/bin/panel": "c068a89a46930f305e4fc2d9b672b7ac45415574330b8dd10d049173f99cb9d0"
+  },
+  "command": "versions",
+  "daemons": {
+    "named": "BIND 9.20.29 (Stable Release) <id:c3d4465>"
+  },
+  "kernel": "7.2.7-arch1-1",
+  "os_release": {
+    "ID": "arch",
+    "PRETTY_NAME": "Arch Linux"
+  },
+  "packages": {
+    "bind": "bind 9.20.29-1",
+    "powerdns": null
+  },
+  "returncode": 0
+}

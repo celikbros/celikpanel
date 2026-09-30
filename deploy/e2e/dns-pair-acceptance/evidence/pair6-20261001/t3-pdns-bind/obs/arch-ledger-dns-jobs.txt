@@ -1,0 +1,7 @@
+## 2026-09-30T06:31:55Z Agent service-mutation ledger: dns_zone_sync jobs, selected fields (read-only)
+### /var/lib/celikpanel-agent-private/service-mutations.json root:celikpanel 600 2026-09-30 06:25:19.327675192 +0000
+top-level keys: ['jobs', 'version']
+dns_zone_sync jobs: 0 all jobs: 3
+### peer challenge journals (agent-private): named fields only (no nonce)
+absent: /var/lib/celikpanel-agent-private/dns-peer-challenge-v1.json
+absent: /var/lib/celikpanel-agent-private/pdns-peer-challenge-v1.json

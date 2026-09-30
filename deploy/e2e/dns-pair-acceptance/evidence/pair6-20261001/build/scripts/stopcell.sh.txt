@@ -1,0 +1,7 @@
+#!/bin/bash
+CELL=$1
+date -u +%FT%TZ
+python3 /root/cp-pair6/driver/deploy/e2e/dns-kill-matrix/fixture.py stop --work-root /var/tmp/cp-pair6-work --cell-id "$CELL" --execute
+sleep 3
+pgrep -a qemu || echo "no qemu"
+free -m | head -2

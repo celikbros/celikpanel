@@ -1,0 +1,16 @@
+#!/bin/bash
+# counts over the collected notify journals for a label
+O=/root/cp-pair6/obs/$1
+for f in $O/*-pdns-notify-journal.txt; do [[ -f $f ]] || continue; echo "== $f"
+  echo "Notification request to host ...:53 : $(grep -c 'Notification request to host [0-9.]*:53' $f)"
+  echo "Notification request (any) : $(grep -c 'Notification request' $f)"
+  echo "spurious notify answer : $(grep -c -i 'spurious notify' $f)"
+  echo ':0 failed after retries : '"$(grep -c ':0 failed after retries' $f)"
+  echo "failed after retries (any) : $(grep -c 'failed after retries' $f)"
+  echo "Received NOTIFY (incoming) : $(grep -c -i 'received notify' $f)"
+done
+for f in $O/*-bind-notify-journal.txt; do [[ -f $f ]] || continue; echo "== $f"
+  echo "received notify : $(grep -c -i 'received notify' $f)"
+  grep -i 'received notify' $f | sed -E "s/.*received notify for zone '([^']*)'.*/\1/" | sort | uniq -c
+  echo "sending notifies : $(grep -c -i 'sending notifies' $f)"
+done

@@ -1,0 +1,7 @@
+{"t":"2026-09-30T06:08:56Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020b.celikpanel.invalid", "command": "catalog", "error": "ConnectionRefusedError: [Errno 111] Connection refused", "server": "192.0.2.11", "transferred": false}}
+{"t":"2026-09-30T06:10:07Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020b.celikpanel.invalid", "command": "catalog", "error": "TimeoutError: timed out", "server": "192.0.2.11", "transferred": false}}
+{"t":"2026-09-30T06:10:18Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020b.celikpanel.invalid", "command": "catalog", "error": "ConnectionRefusedError: [Errno 111] Connection refused", "server": "192.0.2.11", "transferred": false}}
+{"t":"2026-09-30T06:11:40Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020b.celikpanel.invalid", "command": "catalog", "members": [], "serial": 1, "server": "192.0.2.11", "transferred": true}}
+{"t":"2026-09-30T06:12:21Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020b.celikpanel.invalid", "command": "catalog", "members": ["pair-accept.test."], "serial": 2, "server": "192.0.2.11", "transferred": true}}
+{"t":"2026-09-30T06:12:52Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020b.celikpanel.invalid", "command": "catalog", "members": [], "serial": 3, "server": "192.0.2.11", "transferred": true}}
+{"t":"2026-09-30T06:18:23Z","watch":"run ended"}

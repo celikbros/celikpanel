@@ -1,0 +1,18 @@
+2026-09-30T06:24:46+00:00 dns-debian13 pdns_server[4959]: Unable to queue notification of domain 'catalog-c000020a.celikpanel.invalid' to nameserver 'invalid': nameserver does not resolve!
+2026-09-30T06:25:20+00:00 dns-debian13 pdns_server[4959]: Notification for catalog-c000020a.celikpanel.invalid to 192.0.2.11:53 failed after retries
+2026-09-30T06:25:25+00:00 dns-debian13 pdns_server[4959]: Notification request to host 192.0.2.11:53 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T06:25:25+00:00 dns-debian13 pdns_server[4959]: Notification request to host 192.0.2.11:53 for zone 'pair-accept.test' received from operator
+2026-09-30T06:25:27+00:00 dns-debian13 pdns_server[4959]: Received unsuccessful notification report for 'pair-accept.test' from 192.0.2.11:53, error: Server Not Authoritative for zone / Not Authorized
+2026-09-30T06:25:36+00:00 dns-debian13 pdns_server[4959]: Notification request to host 192.0.2.11:53 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T06:25:36+00:00 dns-debian13 pdns_server[4959]: Notification request to host 192.0.2.11:53 for zone 'pair-accept.test' received from operator
+2026-09-30T06:25:43+00:00 dns-debian13 pdns_server[4959]: Notification request to host 192.0.2.11:53 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T06:25:43+00:00 dns-debian13 pdns_server[4959]: Notification request to host 192.0.2.11:53 for zone 'pair-accept.test' received from operator
+2026-09-30T06:25:46+00:00 dns-debian13 pdns_server[4959]: Unable to queue notification of domain 'pair-accept.test' to nameserver 'ns1.ns-accept.test': nameserver does not resolve!
+2026-09-30T06:25:46+00:00 dns-debian13 pdns_server[4959]: Unable to queue notification of domain 'pair-accept.test' to nameserver 'ns2.ns-accept.test': nameserver does not resolve!
+2026-09-30T06:25:46+00:00 dns-debian13 pdns_server[4959]: Unable to queue notification of domain 'catalog-c000020a.celikpanel.invalid' to nameserver 'invalid': nameserver does not resolve!
+2026-09-30T06:25:48+00:00 dns-debian13 pdns_server[4959]: Notification request to host 192.0.2.11:53 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T06:25:48+00:00 dns-debian13 pdns_server[4959]: Notification request to host 192.0.2.11:53 for zone 'pair-accept.test' received from operator
+2026-09-30T06:25:54+00:00 dns-debian13 pdns_server[4959]: Notification request to host 192.0.2.11:53 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T06:25:57+00:00 dns-debian13 pdns_server[4959]: Notification request to host 192.0.2.11:53 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T06:26:04+00:00 dns-debian13 pdns_server[4959]: Notification request to host 192.0.2.11:53 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T06:26:46+00:00 dns-debian13 pdns_server[4959]: Unable to queue notification of domain 'catalog-c000020a.celikpanel.invalid' to nameserver 'invalid': nameserver does not resolve!

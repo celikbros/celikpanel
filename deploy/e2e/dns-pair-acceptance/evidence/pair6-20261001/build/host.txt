@@ -1,0 +1,13 @@
+host: archlinux WSL2 6.18.33.2-microsoft-standard-WSL2
+checked at 2026-09-30T05:48:47Z before the run (hostcheck.sh, full output hostcheck.log):
+memory MiB total 15697, available 14596; swap 4096
+disk / 1007G, 790G free (18% used)
+cpus 16; /dev/kvm present; no qemu process running; no listener on 2201/2202/23053/28443/28444
+python 3.14.7; git version 2.55.0; GNU Make 4.4.1
+go version go1.26.5 linux/amd64
+
+at pack time 2026-09-30T06:35:42Z:
+               total        used        free      shared  buff/cache   available
+Mem:           15697        1123       11534           4        3284       14573
+/dev/sdd       1007G  173G  784G  19% /
+no qemu process
