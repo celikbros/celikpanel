@@ -14,7 +14,7 @@ import { remoteDNSEndpoint } from '../lib/remoteDNS';
 import { ServerSetupChoice, ServerSetupManualAction } from './ServerSetupChoice';
 import { Button, inputClass, Spinner } from './ui';
 import { ServerSetupComponents, useSetupComponentCatalog } from './ServerSetupComponents';
-import { setupComponentName, setupExecutionGuidance, setupHostingRootBlockerValues } from '../lib/serverSetupGuidance';
+import { setupComponentName, setupExecutionGuidance, setupHostBusyKey, setupHostingRootBlockerValues } from '../lib/serverSetupGuidance';
 import { setupEffectiveComponents, setupPresetComponents } from '../lib/serverSetupComponents';
 
 function useSetupI18n() {
@@ -197,9 +197,10 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
     const markerRef = useRef(marker);
     markerRef.current = marker;
     const accept = useCallback((value: ServerSetupSnapshot) => { setSnapshot(value); setup.accept(value); }, [setup.accept]);
-    const failureText = (code: string) => {
+    const failureText = (code: string, message?: string) => {
         const hostingRoot = setupHostingRootBlockerValues(code);
         if (hostingRoot) return t('setup.blocker.hostingRoot', hostingRoot);
+        if (code === 'HOST_MUTATION_BUSY') return t(setupHostBusyKey(message));
         return t(code === 'mail_enrollment_restored' ? 'setup.guide.mailEnrollmentFailed' : mailServiceUnsupported(code) ? 'setup.blocker.mailUnsupported' : codeKey[code.split(':')[0]] || 'setup.blocker.unknown');
     };
     // One localized name per component, shared by the step list and the
@@ -503,7 +504,7 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
                         {execution?.context?.infrastructure_dns && ['infrastructure_dns', 'access_dns'].includes(progressCurrentStep?.kind || execution?.phase || '') && <details className="mt-3 text-sm"><summary className="cursor-pointer font-medium text-primary">{t('setup.infrastructure.reviewTitle')}</summary><SetupInfrastructureDNSReview value={execution.context.infrastructure_dns} compact /></details>}
                         {guidance.details.length > 0 && <details className="mt-3 text-sm leading-6"><summary className="cursor-pointer font-medium text-primary">{t('setup.guide.more')}</summary><ul className="mt-2 list-disc space-y-2 pl-5 text-fg-muted">{guidance.details.map((message, index) => <li key={index}>{t(message.key, message.values)}</li>)}</ul></details>}
                     </aside>}
-                    {execution?.error && !['dns_publisher', 'dns_readiness'].includes(execution.phase) && <div role={confirmingPrevious || waitingDNSPrerequisite || observingMailEnrollment ? 'status' : 'alert'} className="mt-5 space-y-2 text-sm">{(!(confirmingPrevious || observingMailEnrollment) || !guidance) && <p className={confirmingPrevious || waitingDNSPrerequisite ? 'text-fg-muted' : 'text-danger'}>{failureText(execution.error.code)}</p>}<details><summary className="cursor-pointer text-primary">{t('setup.details')}</summary><p className="mt-2 break-words text-fg-muted">{execution.error.message}</p></details></div>}
+                    {execution?.error && !['dns_publisher', 'dns_readiness'].includes(execution.phase) && <div role={confirmingPrevious || waitingDNSPrerequisite || observingMailEnrollment ? 'status' : 'alert'} className="mt-5 space-y-2 text-sm">{(!(confirmingPrevious || observingMailEnrollment) || !guidance) && <p className={confirmingPrevious || waitingDNSPrerequisite ? 'text-fg-muted' : 'text-danger'}>{failureText(execution.error.code, execution.error.message)}</p>}<details><summary className="cursor-pointer text-primary">{t('setup.details')}</summary><p className="mt-2 break-words text-fg-muted">{execution.error.message}</p></details></div>}
                     {progressChecks.length > 0 && waitingVerification && <ul className="mt-5 list-disc space-y-2 pl-5 text-sm text-fg-muted">{progressChecks.map(check => <li key={check.id}>{failureText(check.code)}</li>)}</ul>}
                     <ol className="mt-6 divide-y divide-border" aria-live="polite">
                         {execution?.steps.map(item => {

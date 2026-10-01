@@ -26,6 +26,22 @@ export function setupHostingRootBlockerValues(code: string): Record<string, stri
     if (!/^[0-7]{4}$/.test(mode) || !owner || !group || !directory.startsWith('/')) return null;
     return { directory, mode, owner: `${owner}:${group}`, command: `sudo chmod 755 ${directory}` };
 }
+// A setup step refused with HOST_MUTATION_BUSY carries the Panel's reason
+// sentence (cmd/panel/httperr.go hostMutationBusyMessages) but no reason field,
+// so the sentence's opening selects the headline. A sentence this list does not
+// know, including the Panel's generic one, gets the text that covers every
+// reason. tests/server-setup-host-busy.test.mjs pins the openings to the Panel.
+// HOST_MUTATION_BUSY ile reddedilen adim gerekce alanini tasimaz; Panel'in
+// gerekce cumlesinin basi basligi secer, taninmayan cumle genel metni alir.
+const hostBusyOpenings: [string, TranslationKey][] = [
+    ["This server's package manager is busy", 'setup.blocker.packageBusy'],
+    ['Another CelikPanel change is still running', 'setup.blocker.changeBusy'],
+    ['Another CelikPanel operation is still running', 'setup.blocker.changeBusy'],
+    ['A change that did not finish is still holding this server', 'setup.blocker.hostHeld'],
+];
+export const setupHostBusyKey = (message = ''): TranslationKey =>
+    hostBusyOpenings.find(([opening]) => message.startsWith(opening))?.[1] || 'setup.blocker.hostBusy';
+
 // A screen passes its localized names (mail profiles, cron) so the guidance
 // sentence names the component exactly as the step list above it does.
 // Ekran yerel adlari verir; yonlendirme bileseni adim listesiyle ayni adlandirir.
