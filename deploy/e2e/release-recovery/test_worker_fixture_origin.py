@@ -109,7 +109,8 @@ class NativeTrustPathTests(unittest.TestCase):
     def test_only_native_registered_platform_paths(self):
         for node, directory, command in (
             ('debian13','/usr/local/share/ca-certificates','/usr/sbin/update-ca-certificates'),
-            ('arch','/etc/ca-certificates/trust-source/anchors','/usr/bin/update-ca-trust')):
+            ('arch','/etc/ca-certificates/trust-source/anchors','/usr/bin/update-ca-trust'),
+            ('ubuntu','/usr/local/share/ca-certificates','/usr/sbin/update-ca-certificates')):
             with self.subTest(node=node):
                 cert, argv=f.trust_paths(node,'a'*64)
                 self.assertEqual(cert,Path(directory)/('celikpanel-worker-fixture-'+'a'*16+'.crt'))
@@ -124,7 +125,7 @@ class NativeTrustPathTests(unittest.TestCase):
                           (Path('/tmp/other'),info(0o700))]:
             with self.subTest(path=path,item=item),self.assertRaises(ValueError):f.validate_origin_directory(path,item)
     def test_unknown_platform_or_pathlike_nonce_refused(self):
-        for node,nonce in [('ubuntu','a'*64),('../arch','a'*64),('arch','../owner'),('arch','A'*64),('debian13','a'*63)]:
+        for node,nonce in [('rhel9','a'*64),('../arch','a'*64),('../ubuntu','a'*64),('arch','../owner'),('arch','A'*64),('debian13','a'*63)]:
             with self.subTest(node=node,nonce=nonce),self.assertRaises(ValueError):f.trust_paths(node,nonce)
 
 

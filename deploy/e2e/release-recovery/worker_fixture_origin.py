@@ -292,6 +292,7 @@ def trust_paths(node, nonce):
         raise ValueError('invalid fixture nonce')
     choices = {
         'debian13': ('/usr/local/share/ca-certificates', '/usr/sbin/update-ca-certificates'),
+        'ubuntu': ('/usr/local/share/ca-certificates', '/usr/sbin/update-ca-certificates'),
         'arch': ('/etc/ca-certificates/trust-source/anchors', '/usr/bin/update-ca-trust'),
     }
     if node not in choices:

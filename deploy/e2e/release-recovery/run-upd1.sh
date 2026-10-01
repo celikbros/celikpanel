@@ -18,6 +18,8 @@
 #       (those four need an upd1-artifacts.json built with the startcheck/realstart roles)
 #       upd1-debian13-owner-continuation | upd1-arch-owner-continuation
 #       upd1-debian13-mgmt-off-reboot | upd1-arch-mgmt-off-reboot   (good candidate G; any document)
+#       upd1-ubuntu-good | upd1-ubuntu-owner-continuation | upd1-ubuntu-defective   (upd8: a one-node
+#       Ubuntu 24.04 lab from images-ubuntu.lock.json; the image must be in the image cache)
 # One cell per new lab. Never reuse a lab, an intent or a guest.
 # The image cache defaults to /var/tmp/cp-v3n28/images (UPD1_IMAGE_CACHE overrides).
 # UPD1_DNS_MODE: external (default; DNS not provided by this run) | local (two-node variant only).
@@ -32,7 +34,7 @@ DRIVER=(python3 "$HERE/owner_update_trial.py")
 CHOICES=(--dns-mode "$DNS_MODE")
 [[ -z ${UPD1_SETUP_DRAFT_JSON:-} ]] || CHOICES+=(--setup-draft-json "$UPD1_SETUP_DRAFT_JSON")
 
-usage() { sed -n '2,24p' "${BASH_SOURCE[0]}" >&2; exit 2; }
+usage() { sed -n '2,26p' "${BASH_SOURCE[0]}" >&2; exit 2; }
 [[ $# -ge 1 ]] || usage
 command=$1; shift
 case $command in
@@ -56,7 +58,9 @@ case $command in
         root=/var/tmp/cp-release-drill-$name
         [[ ! -e $root ]] || { echo "lab $root exists; every cell needs a NEW lab" >&2; exit 2; }
         "${DRIVER[@]}" plan --cell "$cell" --artifacts "$artifacts" --work-root "$root" "${CHOICES[@]}" > /dev/null
-        "${LAB[@]}" prepare --work-root "$root" --image-cache "$IMAGES" --ssh-port "$port" --execute
+        platform=debian13-arch
+        [[ $cell != upd1-ubuntu-* ]] || platform=ubuntu
+        "${LAB[@]}" prepare --work-root "$root" --image-cache "$IMAGES" --ssh-port "$port" --platform "$platform" --execute
         "${LAB[@]}" start --work-root "$root" --execute
         "${LAB[@]}" status --work-root "$root"
         status=0

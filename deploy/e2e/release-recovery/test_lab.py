@@ -178,5 +178,45 @@ class PrepareTests(unittest.TestCase):
             load.assert_not_called()
 
 
+class UbuntuLabTests(unittest.TestCase):
+    """upd8: the one-node Ubuntu 24.04 lab."""
+
+    def test_committed_pin_is_the_official_release_image(self):
+        pin = lab.load_ubuntu_pin()
+        self.assertEqual((pin.name, pin.distribution, pin.release, pin.digest_algorithm), ("ubuntu", "Ubuntu", "24.04", "sha256"))
+        self.assertTrue(pin.url.startswith("https://cloud-images.ubuntu.com/releases/noble/release-"))
+
+    def test_pin_refuses_other_hosts_and_unversioned_urls(self):
+        raw = json.loads(lab.UBUNTU_IMAGE_LOCK.read_text())
+        for url in ("https://example.invalid/releases/noble/release-20260826/ubuntu-24.04-server-cloudimg-amd64.img",
+                    "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img",
+                    "http://cloud-images.ubuntu.com/releases/noble/release-20260826/ubuntu-24.04-server-cloudimg-amd64.img"):
+            with self.subTest(url=url), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / "lock.json"
+                path.write_text(json.dumps(dict(raw, image=dict(raw["image"], url=url))))
+                with self.assertRaises(ValueError):
+                    lab.load_ubuntu_pin(path)
+
+    def test_plan_has_one_ubuntu_node_whose_peer_link_listens(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = lab.fixture.initialize_work_root(Path(directory) / "lab")
+            pin = lab.load_ubuntu_pin()
+            plan = lab.build_ubuntu_plan(root, pin, RECORD["cell_id"], "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB key",
+                                         ssh_port=2811, memory_mb=3072, cpus=2, disk_gb=24)
+            self.assertEqual(list(plan["nodes"]), ["ubuntu"])
+            self.assertEqual(plan["start_order"], ["ubuntu"])
+            command = plan["nodes"]["ubuntu"]["qemu_command"]
+            self.assertIn("socket,id=peer,listen=127.0.0.1:2813", command)
+            self.assertIn("user,id=mgmt,hostfwd=tcp:127.0.0.1:2811-:22", command)
+            self.assertIn("groups: [sudo]", plan["nodes"]["ubuntu"]["cloud_init"]["user-data"])
+            cell = Path(plan["cell_directory"])
+            cell.mkdir()
+            (cell / "fixture-plan.json").write_text(json.dumps(plan))
+            self.assertEqual(lab.load_plan(root, RECORD["cell_id"]), plan)
+            (cell / "fixture-plan.json").write_text(json.dumps(dict(plan, start_order=["ubuntu", "arch"])))
+            with self.assertRaises(ValueError):
+                lab.load_plan(root, RECORD["cell_id"])
+
+
 if __name__ == "__main__":
     unittest.main()

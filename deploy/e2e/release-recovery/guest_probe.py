@@ -135,7 +135,7 @@ def validate_identity(raw: bytes, nonce: str, vm_uuid: str, cell_id: str,
         "cell_id": cell_id, "node": node,
     }:
         raise ProbeError("lab marker does not match requested identity")
-    if node not in {"debian13", "arch"} or actual_uuid != expected_uuid:
+    if node not in {"debian13", "arch", "ubuntu"} or actual_uuid != expected_uuid:
         raise ProbeError("guest UUID or node differs")
     if vendor.strip().lower() not in {"qemu", "kvm"}:
         raise ProbeError("guest DMI vendor is not QEMU/KVM")
@@ -831,7 +831,7 @@ def main(argv=None) -> int:
     parser.add_argument("--lab-nonce", required=True)
     parser.add_argument("--vm-uuid", required=True)
     parser.add_argument("--cell-id", required=True)
-    parser.add_argument("--node", choices=("debian13", "arch"), required=True)
+    parser.add_argument("--node", choices=("debian13", "arch", "ubuntu"), required=True)
     parser.add_argument("--zone", type=valid_dns_name, required=True)
     parser.add_argument("--name", type=valid_dns_name, required=True)
     parser.add_argument("--since", type=parse_since, required=True)

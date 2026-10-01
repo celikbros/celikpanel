@@ -82,7 +82,7 @@ def identity(record, node_name, node):
 
 
 def intent_path(root, node_name):
-    if node_name not in ("debian13", "arch"):
+    if node_name not in ("debian13", "arch", "ubuntu"):
         raise ValueError("unsupported registered guest")
     return root / ("current-worker-baseline-" + node_name + "-intent.json")
 
@@ -398,7 +398,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("start", "status", "collect"))
     parser.add_argument("--work-root", required=True)
-    parser.add_argument("--node", choices=("debian13", "arch"), default="debian13")
+    parser.add_argument("--node", choices=("debian13", "arch", "ubuntu"), default="debian13")
     parser.add_argument("--archive")
     parser.add_argument("--archive-sha256")
     parser.add_argument("--public-key-sha256")

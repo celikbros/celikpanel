@@ -18,6 +18,7 @@ import shlex
 import stat
 import subprocess
 import sys
+from urllib.parse import urlsplit
 
 
 HERE = Path(__file__).resolve().parent
@@ -27,6 +28,93 @@ sys.modules[SPEC.name] = fixture
 SPEC.loader.exec_module(fixture)
 SCHEMA = "celikpanel-release-recovery-lab/v1"
 MARKER = "/etc/celikpanel-release-recovery-lab"
+# upd8: a one-node Ubuntu 24.04 lab beside the default Debian 13 + Arch pair. The image is the
+# official cloud image pinned by images-ubuntu.lock.json (SHA-256 from the same release's SHA256SUMS).
+PLATFORMS = ("debian13-arch", "ubuntu")
+UBUNTU_IMAGE_LOCK = HERE / "images-ubuntu.lock.json"
+UBUNTU_LOCK_SCHEMA = "celikpanel-release-recovery-ubuntu-image-lock/v1"
+UBUNTU_URL_RE = re.compile(r"/releases/noble/release-(?P<build>[0-9]{8}(?:\.[0-9]+)?)/ubuntu-24\.04-server-cloudimg-amd64\.img")
+UBUNTU_NODE = fixture.NodeSpec(name="ubuntu", hostname="dns-ubuntu", image="ubuntu", mgmt_mac="52:54:00:13:00:12",
+                               peer_mac="52:54:00:53:00:12", peer_address="192.0.2.12/24", ssh_service="ssh.service",
+                               admin_group="sudo")
+
+
+def load_ubuntu_pin(path=UBUNTU_IMAGE_LOCK):
+    raw = fixture.read_json_regular(Path(path), "Ubuntu image lock")
+    if not isinstance(raw, dict) or set(raw) != {"schema", "image"} or raw["schema"] != UBUNTU_LOCK_SCHEMA:
+        raise ValueError("Ubuntu image lock schema is unsupported")
+    item = raw["image"]
+    fields = {"distribution", "release", "architecture", "url", "filename", "digest", "bytes"}
+    if not isinstance(item, dict) or set(item) != fields:
+        raise ValueError("Ubuntu image pin fields are incomplete or unexpected")
+    if (item["distribution"], item["release"], item["architecture"]) != ("Ubuntu", "24.04", "x86_64"):
+        raise ValueError("Ubuntu image identity is not the pinned 24.04 amd64 cloud image")
+    url = urlsplit(item["url"])
+    match = UBUNTU_URL_RE.fullmatch(url.path)
+    if (url.scheme != "https" or url.hostname != "cloud-images.ubuntu.com" or url.port or url.query or url.fragment
+            or not match):
+        raise ValueError("Ubuntu image must be an immutable cloud-images.ubuntu.com release URL")
+    if item["filename"] != "ubuntu-24.04-server-cloudimg-amd64-" + match["build"] + ".img":
+        raise ValueError("Ubuntu cached image name must carry the release build")
+    digest = item["digest"]
+    if (not isinstance(digest, dict) or set(digest) != {"algorithm", "value"} or digest["algorithm"] != "sha256"
+            or not re.fullmatch(r"[0-9a-f]{64}", str(digest["value"]))):
+        raise ValueError("Ubuntu image digest must be the published SHA-256")
+    if type(item["bytes"]) is not int or item["bytes"] <= 0:
+        raise ValueError("Ubuntu image byte size must be a positive integer")
+    return fixture.ImagePin(name="ubuntu", distribution="Ubuntu", release="24.04", architecture="x86_64",
+                            url=item["url"], filename=item["filename"], digest_algorithm="sha256",
+                            digest=digest["value"], size=item["bytes"])
+
+
+def build_ubuntu_plan(root, pin, cell_id, ssh_public_key, *, ssh_port, memory_mb, cpus, disk_gb):
+    """The fixture's node layout for one Ubuntu guest; its peer NIC listens and stays unconnected."""
+    fixture.validate_cell_id(cell_id)
+    peer_port = ssh_port + 2
+    cell = fixture.cell_directory(root, cell_id, must_exist=False)
+    node = UBUNTU_NODE
+    paths = fixture._node_paths(cell, node)
+    if len(os.fsencode(paths["qmp"])) > 100:
+        raise ValueError("work root is too long for a Unix QMP socket")
+    base = fixture.image_path(root, pin)
+    qemu = fixture._qemu_command(cell_id, node, paths, ssh_port, peer_port, "kvm", memory_mb, cpus)
+    connect = f"socket,id=peer,connect=127.0.0.1:{peer_port}"
+    qemu[qemu.index(connect)] = f"socket,id=peer,listen=127.0.0.1:{peer_port}"
+    entry = {
+        "hostname": node.hostname,
+        "management": {"ssh_host": "127.0.0.1", "ssh_port": ssh_port, "mac": node.mgmt_mac, "mode": "qemu-user-nat"},
+        "peer": {"address": node.peer_address, "mac": node.peer_mac, "device_id": "peer-link",
+                 "transport": "loopback-socket", "transport_port": peer_port},
+        "paths": {key: str(value) for key, value in paths.items()},
+        "cloud_init": fixture.cloud_init_files(cell_id, node, ssh_public_key),
+        "overlay_command": ["qemu-img", "create", "-f", "qcow2", "-F", "qcow2", "-b", str(base),
+                            str(paths["overlay"]), f"{disk_gb}G"],
+        "seed_command": fixture._seed_command("genisoimage", paths),
+        "qemu_command": qemu,
+        "base": {"path": str(base), "digest": {"algorithm": pin.digest_algorithm, "value": pin.digest},
+                 "bytes": pin.size},
+    }
+    return {"schema": fixture.PLAN_SCHEMA, "cell_id": cell_id, "work_root": str(root), "cell_directory": str(cell),
+            "host_requirements": {"os": "linux", "qmp_transport": "unix", "daemonization": "qemu-daemonize",
+                                  "accelerator": "kvm"},
+            "start_order": ["ubuntu"], "peer_link_policy": {"initial": "up", "qmp_device": "peer-link"},
+            "nodes": {"ubuntu": entry}}
+
+
+def load_plan(root, cell_id):
+    try:
+        return fixture.load_cell_plan(root, cell_id)
+    except fixture.FixtureError:
+        cell = fixture.cell_directory(root, cell_id, must_exist=True)
+        plan = fixture.read_json_regular(cell / "fixture-plan.json", "fixture plan")
+        if not isinstance(plan, dict) or set(plan.get("nodes", {})) != {"ubuntu"}:
+            raise
+    if (plan.get("schema") != fixture.PLAN_SCHEMA or plan.get("cell_id") != cell_id
+            or plan.get("work_root") != str(root) or plan.get("cell_directory") != str(cell)
+            or plan.get("start_order") != ["ubuntu"]
+            or plan["nodes"]["ubuntu"].get("paths") != {k: str(v) for k, v in fixture._node_paths(cell, UBUNTU_NODE).items()}):
+        raise ValueError("Ubuntu lab plan identity is invalid")
+    return plan
 
 
 def run(argv, **kwargs):
@@ -55,8 +143,8 @@ def load(root):
     record = read_private(root / "lab.json")
     if record.get("schema") != SCHEMA or not re.fullmatch(r"[0-9a-f]{64}", record.get("nonce", "")):
         raise ValueError("invalid lab identity")
-    plan = fixture.load_cell_plan(root, record["cell_id"])
-    data = (Path(plan["cell_directory"]) / "fixture-plan.json").read_bytes()
+    plan = load_plan(root, record["cell_id"])
+    data =(Path(plan["cell_directory"]) / "fixture-plan.json").read_bytes()
     if hashlib.sha256(data).hexdigest() != record["plan_sha256"]:
         raise ValueError("lab plan changed")
     return record, plan
@@ -189,7 +277,8 @@ def prepare(args):
         raise ValueError("fresh lab root already exists; choose a new name")
     nonce = secrets.token_hex(32)
     cell_id = fixture.validate_cell_id("release-recovery__" + nonce[:16])
-    pins = fixture.load_image_lock(fixture.DEFAULT_IMAGE_LOCK)
+    ubuntu = getattr(args, "platform", PLATFORMS[0]) == "ubuntu"
+    pins = {"ubuntu": load_ubuntu_pin()} if ubuntu else fixture.load_image_lock(fixture.DEFAULT_IMAGE_LOCK)
     cache = Path(args.image_cache).resolve(strict=True)
     for pin in pins.values():
         source = cache / pin.filename
@@ -197,18 +286,26 @@ def prepare(args):
         if not stat.S_ISREG(info.st_mode) or info.st_size != pin.size or fixture.digest_file(source, pin.digest_algorithm) != pin.digest:
             raise ValueError("cached base image does not match the reviewed image pin")
     if not args.execute:
-        print(json.dumps({"action": "prepare", "root": str(root), "nodes": ["debian13", "arch"], "execute": False}))
+        print(json.dumps({"action": "prepare", "root": str(root), "nodes": ["ubuntu"] if ubuntu else ["debian13", "arch"],
+                          "execute": False}))
         return
     fixture.initialize_work_root(root)
     for pin in pins.values():
         target = root / "images" / pin.filename
         run(["cp", "--reflink=auto", "--", str(cache / pin.filename), str(target)])
         target.chmod(0o444)
-    fixture.verify_images(root, pins)
+    if ubuntu:
+        fixture.verify_image(fixture.validate_work_root(root), pins["ubuntu"])
+    else:
+        fixture.verify_images(root, pins)
     run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-f", str(root / "key")])
-    plan = fixture.build_cell_plan(root, pins, cell_id, fixture.read_ssh_public_key(root / "key.pub"),
-                                   debian_ssh_port=args.ssh_port, arch_ssh_port=args.ssh_port + 1,
-                                   peer_port=args.ssh_port + 2, memory_mb=3072, cpus=2, disk_gb=24)
+    if ubuntu:
+        plan = build_ubuntu_plan(root, pins["ubuntu"], cell_id, fixture.read_ssh_public_key(root / "key.pub"),
+                                 ssh_port=args.ssh_port, memory_mb=3072, cpus=2, disk_gb=24)
+    else:
+        plan = fixture.build_cell_plan(root, pins, cell_id, fixture.read_ssh_public_key(root / "key.pub"),
+                                       debian_ssh_port=args.ssh_port, arch_ssh_port=args.ssh_port + 1,
+                                       peer_port=args.ssh_port + 2, memory_mb=3072, cpus=2, disk_gb=24)
     for name, node in plan["nodes"].items():
         identity = {"schema": SCHEMA, "nonce": nonce, "vm_uuid": node["qemu_command"][node["qemu_command"].index("-uuid") + 1],
                     "cell_id": cell_id, "node": name}
@@ -229,6 +326,7 @@ def main():
     parser.add_argument("--work-root", required=True)
     parser.add_argument("--image-cache", default="/var/tmp/cp-install-vm/images")
     parser.add_argument("--ssh-port", type=int, default=2261)
+    parser.add_argument("--platform", choices=PLATFORMS, default=PLATFORMS[0])
     parser.add_argument("--execute", action="store_true")
     args = parser.parse_args()
     if args.command == "prepare":

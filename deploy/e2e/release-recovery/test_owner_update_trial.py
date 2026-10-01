@@ -1,6 +1,7 @@
 """Offline tests for the upd1 owner-started update trial (no guest, no network)."""
 import ast
 import base64
+import dataclasses
 import fnmatch
 import hashlib
 import importlib.util
@@ -61,13 +62,72 @@ def artifacts(upd3=False):
     return document
 
 
+class HostIdleTests(unittest.TestCase):
+    """H19 (upd8): the owner waits for the package manager only where that was observed (Ubuntu)."""
+
+    def test_only_the_ubuntu_node_waits(self):
+        self.assertTrue(t.host_package_manager_waits("ubuntu"))
+        self.assertFalse(t.host_package_manager_waits("debian13"))
+        self.assertFalse(t.host_package_manager_waits("arch"))
+
+    def test_probe_names_are_the_agents_and_it_reports_json(self):
+        agent = (HERE.parents[2] / "cmd/agent/service_mutation_lock_linux.go").read_text()
+        for name in ("packagekitd", "apt-get", "dpkg", "pkcon"):
+            self.assertIn(f'"{name}"', agent)
+            self.assertIn(f'"{name}"', t.HOST_IDLE_PROBE)
+        compile(t.HOST_IDLE_PROBE, "host-idle-probe", "exec")
+        if sys.platform == "linux":
+            done = subprocess.run([sys.executable, "-I", "-c", t.HOST_IDLE_PROBE], capture_output=True, text=True,
+                                  timeout=30)
+            self.assertEqual(done.returncode, 0, done.stderr)
+            self.assertEqual(set(json.loads(done.stdout)), {"processes", "locks"})
+
+    def test_only_a_component_naming_the_busy_cause_makes_the_owner_retry(self):
+        trial = t.Trial.__new__(t.Trial)
+        op = "5e4e273f2bc11d7cb297a252ce86197d"
+        execution = {"status": "failed", "steps": [{"id": "02-mail_profile", "status": "failed", "operation_id": op}]}
+        body = {"operation": {"status": "failed", "error": {"message": "profile/webmail/mail-tls: mail TLS "
+                                                                     "synchronization: " + t.HOST_MUTATION_BUSY_TEXT}}}
+        calls = []
+        trial.api = lambda method, path, *a, **k: (calls.append((method, path)),
+                                                   SimpleNamespace(status=200, json=lambda: body))[1]
+        trial.redactor = SimpleNamespace(text=lambda value: value)
+        log = {"out": ""}
+        trial.guest = lambda body, timeout=0: SimpleNamespace(stdout=log["out"])
+        self.assertTrue(trial.failed_setup_component(execution)["names_host_busy"])
+        self.assertEqual(calls[-1], ("GET", "/api/v1/service/operation?id=" + op))
+        body["operation"]["error"] = {"message": "postfix main.cf validation failed"}
+        self.assertFalse(trial.failed_setup_component(execution)["names_host_busy"])
+        # The generic mail profile failure: the panel log line naming the operation carries the cause.
+        body["operation"]["error"] = {"code": "mail_profile_install_failed", "message": "The mail profile could not be "
+                                      "installed and verified."}
+        log["out"] = (f"service operation {op} (webmail) failed in profile/webmail/mail-tls: mail TLS synchronization: "
+                      + t.HOST_MUTATION_BUSY_TEXT + "\n")
+        got = trial.failed_setup_component(execution)
+        self.assertTrue(got["names_host_busy"])
+        self.assertIn("mail-tls", got["log_line"])
+        self.assertFalse(trial.failed_setup_component({"steps": [{"id": "03-service", "status": "pending"}]})["read"])
+        # A firewall step has no component operation: the panel log line names the cause.
+        line = "server setup step 07-firewall failed: firewall status: " + t.HOST_MUTATION_BUSY_TEXT
+        trial.guest = lambda body, timeout=0: SimpleNamespace(stdout=line + "\n")
+        got = trial.failed_setup_component({"steps": [{"id": "07-firewall", "status": "failed"}]})
+        self.assertEqual((got["source"], got["names_host_busy"]), ("panel journal", True))
+        self.assertFalse(trial.failed_setup_component({"steps": [{"id": "07-firewall;x", "status": "failed"}]})["read"])
+
+
 class PlanTests(unittest.TestCase):
     def test_twelve_cells_with_the_selected_second_faults(self):
         self.assertEqual(sorted(t.CELLS), ["upd1-arch-defective", "upd1-arch-good", "upd1-arch-mgmt-off-reboot",
                                            "upd1-arch-owner-continuation", "upd1-arch-realstart",
                                            "upd1-arch-startcheck", "upd1-debian13-defective", "upd1-debian13-good",
                                            "upd1-debian13-mgmt-off-reboot", "upd1-debian13-owner-continuation",
-                                           "upd1-debian13-realstart", "upd1-debian13-startcheck"])
+                                           "upd1-debian13-realstart", "upd1-debian13-startcheck",
+                                           "upd1-ubuntu-defective", "upd1-ubuntu-good",
+                                           "upd1-ubuntu-owner-continuation"])
+        # upd8: the Ubuntu cells mirror Debian's (mail required, reset at payload_restored).
+        for name in ("upd1-ubuntu-defective", "upd1-ubuntu-good", "upd1-ubuntu-owner-continuation"):
+            debian = t.CELLS[name.replace("ubuntu", "debian13")]
+            self.assertEqual(dataclasses.replace(t.CELLS[name], name=debian.name, node="debian13"), debian)
         self.assertEqual(t.CELLS["upd1-debian13-defective"].recovery_fault,
                          {"action": "reboot", "checkpoint": "payload_restored"})
         self.assertEqual(t.CELLS["upd1-arch-defective"].recovery_fault,

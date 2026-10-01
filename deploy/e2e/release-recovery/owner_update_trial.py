@@ -133,6 +133,49 @@ SETUP_SETTLE_PHASES = frozenset({"access_dns", "panel_certificate", "verificatio
 SETUP_STABLE_SECONDS = 120.0
 SETUP_STABLE_POLLS = 3
 CRON_NOT_AVAILABLE = "not available on this baseline"
+# H19 (upd8 Ubuntu run a): on Ubuntu the cloud image's PackageKit daemon (packagekitd) is started by apt's
+# DPkg::Post-Invoke hook after every package operation and exits about 300 s later; the agent counts it as a
+# package-manager task (cmd/agent/service_mutation_lock_linux.go linuxPackageProcessBusyAt) and v0.1.0-alpha.80's
+# setup step then fails with HOST_MUTATION_BUSY ("... wait and try again"). There the owner does exactly that.
+HOST_MUTATION_BUSY_CODE = "HOST_MUTATION_BUSY"
+# cmd/agent hostMutationBusyMessage (v0.1.0-alpha.80 and the source): the cause a component operation names.
+HOST_MUTATION_BUSY_TEXT = "another server change or package-manager task is still running"
+SETUP_OWNER_ATTEMPTS = 12
+HOST_IDLE_TIMEOUT_S = 900.0
+HOST_IDLE_NODES = ("ubuntu",)
+# The agent's own process names (linuxPackageProcessBusyAt) and apt/dpkg fcntl locks, read only (F_GETLK).
+HOST_IDLE_PROBE = r"""
+import fcntl,json,os,struct
+names={"apt","apt-get","dpkg","dpkg-deb","pacman","makepkg","dnf","dnf5","yum","microdnf","rpm","rpmdb","packagekitd",
+       "packagekit","pkcon","dnfdaemon-server","dnfdaemon-serve"}
+seen=set()
+for pid in os.listdir("/proc"):
+    if pid.isdigit():
+        try:
+            comm=open("/proc/"+pid+"/comm").read().strip()
+        except OSError:
+            continue
+        if comm in names:
+            seen.add(comm)
+locks=[]
+for path in ("/var/lib/dpkg/lock-frontend","/var/lib/dpkg/lock","/var/cache/apt/archives/lock"):
+    try:
+        fd=os.open(path,os.O_RDWR|os.O_NOFOLLOW)
+    except OSError:
+        continue
+    try:
+        got=fcntl.fcntl(fd,fcntl.F_GETLK,struct.pack("hhxxxxqqi4x",fcntl.F_WRLCK,0,0,0,0))
+        if struct.unpack("hhxxxxqqi4x",got)[0]!=fcntl.F_UNLCK:
+            locks.append(path)
+    finally:
+        os.close(fd)
+print(json.dumps({"processes":sorted(seen),"locks":locks}))
+"""
+
+
+def host_package_manager_waits(node: str) -> bool:
+    """H19: only the platform where the owner was observed to need the wait (upd8 Ubuntu run a)."""
+    return node in HOST_IDLE_NODES
 ORIGIN_NAME = "celikpanel.net"
 GUEST_HELPERS = ("guest_probe.py", "guest_port_fault.py", "guest_update_kill.py", "guest_bound_worker.py",
                  "guest_recovery_fault.py", "guest_recovery_handoff.py", "guest_owner_update_observer.py",
@@ -256,6 +299,12 @@ CELLS = {
     # upd4: after a verified good update, management disabled + one orderly reboot; workloads measured without it.
     "upd1-debian13-mgmt-off-reboot": Cell("upd1-debian13-mgmt-off-reboot", "debian13", "mgmt-off-reboot", None, True),
     "upd1-arch-mgmt-off-reboot": Cell("upd1-arch-mgmt-off-reboot", "arch", "mgmt-off-reboot", None, False),
+    # upd8: the same three cells on a one-node Ubuntu 24.04 lab (lab.py --platform ubuntu); mail is required
+    # as on Debian (same apt package family), the second fault is Debian's reset at payload_restored.
+    "upd1-ubuntu-good": Cell("upd1-ubuntu-good", "ubuntu", "good", None, True),
+    "upd1-ubuntu-owner-continuation": Cell("upd1-ubuntu-owner-continuation", "ubuntu", "owner-continuation", None, True),
+    "upd1-ubuntu-defective": Cell("upd1-ubuntu-defective", "ubuntu", "defective",
+                                  {"action": "reboot", "checkpoint": "payload_restored"}, True),
 }
 
 
@@ -3328,6 +3377,61 @@ class Trial:
         draft["purpose"] = purpose
         return draft
 
+    def wait_host_package_manager_idle(self, timeout: float = HOST_IDLE_TIMEOUT_S) -> dict:
+        """H19: read-only; returns when no package-manager process or apt/dpkg lock is seen, or at the limit."""
+        started, seen, polls = time.monotonic(), [], 0
+        while True:
+            polls += 1
+            value = json.loads(self.guest("python3 -I - <<'CP_IDLE'\n" + HOST_IDLE_PROBE + "\nCP_IDLE\n",
+                                          timeout=60).stdout)
+            if value["processes"] or value["locks"]:
+                if value not in seen:
+                    seen.append(value)
+            else:
+                return {"idle": True, "waited_s": round(time.monotonic() - started, 1), "polls": polls,
+                        "busy_seen": seen, "at": utc_now()}
+            if time.monotonic() - started >= timeout:
+                return {"idle": False, "waited_s": round(time.monotonic() - started, 1), "polls": polls,
+                        "busy_seen": seen, "at": utc_now()}
+            time.sleep(10)
+
+    def failed_setup_component(self, execution: dict) -> dict:
+        """H19: read the failed setup step's component operation (GET /api/v1/service/operation?id=...)."""
+        failed = [s for s in setup_steps(execution) if s.get("status") == "failed"]
+        if not failed:
+            return {"read": False, "reason": "no failed setup step"}
+        if not failed[0].get("operation_id"):
+            # A firewall/DNS step calls the Agent itself and has no component operation; its cause is in the
+            # panel log line "server setup step <id> failed: ..." (the log the product texts name).
+            step_id = str(failed[0].get("id") or "")
+            if not re.fullmatch(r"[0-9]{2}-[a-z_]{1,40}", step_id):
+                return {"read": False, "reason": "failed step id is not canonical"}
+            out = self.guest("journalctl -u celikpanel-panel.service --no-pager -o cat -n 2000 | grep -F "
+                             + shlex.quote(f"server setup step {step_id} failed:") + " | tail -n 1 || true",
+                             timeout=60).stdout.strip()
+            return {"read": True, "source": "panel journal", "step": step_id, "line": self.redactor.text(out[-600:]),
+                    "names_host_busy": HOST_MUTATION_BUSY_TEXT in out}
+        operation_id = str(failed[0]["operation_id"])
+        if not HEX32.fullmatch(operation_id):
+            return {"read": False, "reason": "component operation id is not canonical"}
+        response = self.api("GET", f"/api/v1/service/operation?id={operation_id}",
+                            purpose="ServerSetup failed step component operation")
+        body = response.json() or {}
+        operation = body.get("operation") if isinstance(body, dict) else None
+        text = json.dumps(operation or {})
+        found = {"read": True, "http": response.status, "step": failed[0].get("id"), "operation_id": operation_id,
+                 "status": (operation or {}).get("status"), "phase": (operation or {}).get("phase"),
+                 "error": (operation or {}).get("error"), "names_host_busy": HOST_MUTATION_BUSY_TEXT in text}
+        if not found["names_host_busy"]:
+            # H19 (upd8 Ubuntu run c): the mail profile operation shows only its generic code and the phase
+            # profile/webmail/mail-tls; the cause is in the panel log line naming this operation, which the owner
+            # reads (the product's texts name that log).
+            out = self.guest("journalctl -u celikpanel-panel.service --no-pager -o cat -n 3000 | grep -F "
+                             + shlex.quote(f"service operation {operation_id}") + " | tail -n 2 || true",
+                             timeout=60).stdout.strip()
+            found.update(log_line=self.redactor.text(out[-600:]), names_host_busy=HOST_MUTATION_BUSY_TEXT in out)
+        return found
+
     def setup(self, checks: dict) -> str:
         state = self.api("GET", "/api/v1/setup", purpose="ServerSetupGate").json() or {}
         checks["before"] = {k: state.get(k) for k in ("status", "revision", "guidance", "required")}
@@ -3349,53 +3453,87 @@ class Trial:
                                                 "accepted but its 05-mail_profile step fails (upd7 run a); purpose web")
             self.finding(f"{self.node_name}: web_mail was not attempted on the published {LABEL_REF} baseline (it accepts "
                          "the plan but fails at 05-mail_profile); mail is recorded as not provided on this platform")
-        for purpose in purposes:
-            saved = self.api("PUT", "/api/v1/setup", {"revision": state.get("revision"), "draft": self.draft(purpose, local_ip)},
-                             purpose=f"ServerSetup draft save ({purpose})")
-            if saved.status != 200:
-                raise StepFailed(f"draft save ({purpose}) returned HTTP {saved.status}: {saved.json()}")
-            state = saved.json() or {}
-            response = self.api("POST", "/api/v1/setup/plan", {"revision": state.get("revision")},
-                                purpose=f"ServerSetup review ({purpose})")
-            plan = response.json() or {}
-            checks[f"plan_{purpose}"] = {"http": response.status, **{k: plan.get(k) for k in ("id", "can_start", "blockers")}}
-            if response.status == 200 and plan.get("can_start"):
-                break
-            if purpose == "web_mail" and self.cell.mail_required:
-                raise StepFailed(f"web_mail setup plan refused on {self.node_name}: {plan.get('blockers')}")
-            self.finding(f"{self.node_name}: web_mail setup plan was refused ({plan.get('blockers')}); "
-                         "mail is recorded as not provided on this platform")
-            state = self.api("GET", "/api/v1/setup", purpose="ServerSetupGate").json() or {}
-        if not plan or not plan.get("can_start"):
-            raise StepFailed(f"setup plan cannot start: {plan}")
-        self.state["purpose"] = purpose
-        request_id = secrets.token_hex(16)
-        try:
-            response = self.api("POST", "/api/v1/setup/start", {"plan_id": plan["id"], "request_id": request_id,
-                                                                 "confirmed": True},
-                                purpose="ServerSetup start (once)", timeout=120)
-            checks["start_http"] = response.status
-        except self.p["panel_api"].UnknownOutcome as exc:
-            checks["start_outcome"] = f"unknown, reconciling by reads: {exc}"
-        deadline = time.monotonic() + 3600
-        execution = None
-        wait = SetupWait()
-        decision = "continue"
-        last_light = 0.0
-        with self.panel_client().polling() as view:
-            while time.monotonic() < deadline:
-                if time.monotonic() - last_light >= 30:
-                    # Sidecar v2: the before-first-site hosting-root series, every 30 s until setup settles.
-                    self.inspect("before-site", light=True)
-                    last_light = time.monotonic()
-                try:
-                    execution = self.api("GET", f"/api/v1/setup/operation?request_id={request_id}", view=view).json()
-                except self.p["panel_api"].PanelError as exc:
-                    execution = {"poll_error": str(exc)}
-                decision = wait.observe(execution, time.monotonic())
-                if decision in ("terminal", "settled"):
+        attempts: list[dict] = []
+        idle_waits: list[dict] = []
+        for attempt in range(1, SETUP_OWNER_ATTEMPTS + 1):
+            if host_package_manager_waits(self.node_name):
+                # H19 (upd8 Ubuntu run a): the owner follows the product text "wait and try again" -
+                # before each start the owner waits until no package-manager task runs (read-only check).
+                idle_waits.append(dict(self.wait_host_package_manager_idle(), before_attempt=attempt))
+            if attempt > 1:
+                state = self.api("GET", "/api/v1/setup", purpose="ServerSetupGate").json() or {}
+            for purpose in purposes:
+                saved = self.api("PUT", "/api/v1/setup", {"revision": state.get("revision"), "draft": self.draft(purpose, local_ip)},
+                                 purpose=f"ServerSetup draft save ({purpose})")
+                if saved.status != 200:
+                    raise StepFailed(f"draft save ({purpose}) returned HTTP {saved.status}: {saved.json()}")
+                state = saved.json() or {}
+                response = self.api("POST", "/api/v1/setup/plan", {"revision": state.get("revision")},
+                                    purpose=f"ServerSetup review ({purpose})")
+                plan = response.json() or {}
+                checks[f"plan_{purpose}"] = {"http": response.status, **{k: plan.get(k) for k in ("id", "can_start", "blockers")}}
+                if response.status == 200 and plan.get("can_start"):
                     break
-                time.sleep(5)
+                if purpose == "web_mail" and self.cell.mail_required:
+                    raise StepFailed(f"web_mail setup plan refused on {self.node_name}: {plan.get('blockers')}")
+                self.finding(f"{self.node_name}: web_mail setup plan was refused ({plan.get('blockers')}); "
+                             "mail is recorded as not provided on this platform")
+                state = self.api("GET", "/api/v1/setup", purpose="ServerSetupGate").json() or {}
+            if not plan or not plan.get("can_start"):
+                raise StepFailed(f"setup plan cannot start: {plan}")
+            self.state["purpose"] = purpose
+            request_id = secrets.token_hex(16)
+            try:
+                response = self.api("POST", "/api/v1/setup/start", {"plan_id": plan["id"], "request_id": request_id,
+                                                                     "confirmed": True},
+                                    purpose="ServerSetup start (once)", timeout=120)
+                checks["start_http"] = response.status
+            except self.p["panel_api"].UnknownOutcome as exc:
+                checks["start_outcome"] = f"unknown, reconciling by reads: {exc}"
+            deadline = time.monotonic() + 3600
+            execution = None
+            wait = SetupWait()
+            decision = "continue"
+            last_light = 0.0
+            with self.panel_client().polling() as view:
+                while time.monotonic() < deadline:
+                    if time.monotonic() - last_light >= 30:
+                        # Sidecar v2: the before-first-site hosting-root series, every 30 s until setup settles.
+                        self.inspect("before-site", light=True)
+                        last_light = time.monotonic()
+                    try:
+                        execution = self.api("GET", f"/api/v1/setup/operation?request_id={request_id}", view=view).json()
+                    except self.p["panel_api"].PanelError as exc:
+                        execution = {"poll_error": str(exc)}
+                    decision = wait.observe(execution, time.monotonic())
+                    if decision in ("terminal", "settled"):
+                        break
+                    time.sleep(5)
+            busy = (isinstance(execution, dict) and execution.get("status") == "failed"
+                    and (execution.get("error") or {}).get("code") == HOST_MUTATION_BUSY_CODE)
+            summary = {"attempt": attempt, "request_id": request_id, "purpose": purpose,
+                       "status": (execution or {}).get("status"), "phase": (execution or {}).get("phase"),
+                       "error": (execution or {}).get("error"),
+                       "steps": {x.get("id"): x.get("status") for x in setup_steps(execution)}}
+            if (not busy and host_package_manager_waits(self.node_name) and isinstance(execution, dict)
+                    and execution.get("status") == "failed"):
+                # H19 (upd8 Ubuntu run b): a mail profile step installs its packages (PackageKit starts) and its own
+                # next sub-step (mail TLS synchronization) is then refused as busy; the setup shows the generic
+                # mail_profile_install_failed. The owner opens the failed step's component operation (the setup
+                # screen links it) and reads its cause; only that named cause makes the owner wait and retry.
+                component = self.failed_setup_component(execution)
+                summary["component"] = component
+                busy = bool(component.get("names_host_busy"))
+            attempts.append(summary)
+            if not busy or not host_package_manager_waits(self.node_name) or attempt == SETUP_OWNER_ATTEMPTS:
+                break
+            self.record_json(f"setup-execution-attempt-{attempt:02d}.json", execution)
+            self.finding(f"{self.node_name}: server setup attempt {attempt} stopped at {summary['phase']} with "
+                         f"{(summary['error'] or {}).get('code')} (cause: {HOST_MUTATION_BUSY_TEXT}); the owner waits "
+                         "and starts a newly reviewed plan, as the product text says")
+        checks["owner_attempts"] = attempts
+        if idle_waits:
+            checks["owner_idle_waits"] = idle_waits
         self.inspect("after-setup")
         checks["execution"] = {k: (execution or {}).get(k) for k in ("status", "phase", "error")}
         self.record_json("setup-execution.json", execution)
@@ -3418,6 +3556,9 @@ class Trial:
         return "passed"
 
     def seed(self, checks: dict) -> str:
+        if host_package_manager_waits(self.node_name):
+            # H19: no agent mutation (seed) and no update (arm/start) while a package-manager task runs.
+            checks["owner_waited_for_idle"] = self.wait_host_package_manager_idle()
         # Cron precondition, read-only and before any seeding (product finding P1: the
         # product does not install cron on Debian and masks the Agent's reason as 500).
         # Absence is recorded as "cron: not available on this baseline", not seeded.
@@ -3657,6 +3798,9 @@ class Trial:
         return self.state["samples"]
 
     def arm(self, checks: dict) -> str:
+        if host_package_manager_waits(self.node_name):
+            # H19: no agent mutation (seed) and no update (arm/start) while a package-manager task runs.
+            checks["owner_waited_for_idle"] = self.wait_host_package_manager_idle()
         # Sidecar v2: the last read-only inspection before the update check; none follows until a terminal,
         # paused or settled state (upd3 cell 1's v1 inspection fell inside the update preflight).
         self.inspect("before-check")

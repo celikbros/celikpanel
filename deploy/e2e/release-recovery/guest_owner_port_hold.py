@@ -151,7 +151,7 @@ def main(argv=None) -> int:
     parser.add_argument("--lab-nonce", required=True)
     parser.add_argument("--vm-uuid", required=True)
     parser.add_argument("--cell-id", required=True)
-    parser.add_argument("--node", choices=("debian13", "arch"), required=True)
+    parser.add_argument("--node", choices=("debian13", "arch", "ubuntu"), required=True)
     parser.add_argument("--operation-id", required=True)
     parser.add_argument("--hold-seconds", type=int, required=True)
     args = parser.parse_args(argv)
