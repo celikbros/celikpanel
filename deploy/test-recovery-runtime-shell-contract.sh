@@ -158,7 +158,7 @@ expect_preflight_stop() {
     last=$(tail -n 1 "$log")
     [[ $last == "!! CELIKPANEL_UPDATE_FAILURE code=recovery_runtime_preflight_failed state=unchanged reason=recovery runtime preflight step=$step: "* ]] ||
         fail "preflight stop $step lost its typed unchanged summary: $last"
-    grep -F 'panel services have not been stopped and nothing was changed' "$log" >/dev/null || fail "preflight stop $step not explained"
+    grep -F 'panel services have not been stopped and the installed release and its data were not changed' "$log" >/dev/null || fail "preflight stop $step not explained"
 }
 cat > "$TEST_ROOT/selected-recovery" <<'SH'
 #!/usr/bin/env bash

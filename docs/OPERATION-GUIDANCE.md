@@ -538,3 +538,44 @@ catalogue (the boot catalogue has no room); until it has arrived the notice show
 the generic reason. A notice for this stop needs an installed Panel that contains
 this change. The trigger of the upd4 snapshot failure is still unknown; the next
 native run records it.
+
+### Candidate review: unknown update status, aborted quiesce, early owner retry (2026-10-01)
+
+Source state with component and contract tests; the native run is pending. See the
+resilience contract entry "Candidate review corrections" of the same date.
+
+- **Unknown update status.** When an update has no recorded status (it was started
+  by an installed version that records none and the worker identity was not
+  available, or it ran outside its worker), the root CLI still says the result is
+  unknown and to check again, and now adds where to look if it stays unknown: the
+  recovery journal `sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50`
+  shows whether automatic recovery runs or paused and, at a pause, the one-time
+  retry command. The updater's and the runner's journal lines say the same. An
+  update started by v0.1.0-alpha.80 normally records its status itself now.
+- **Aborted interrupted update (quiesce).** When recovery finds an update that was
+  interrupted while the panel was frozen, it returns the panel and Agent to their
+  state from before the update and the update ends: the status becomes "the update
+  failed" and the journal says it stopped before the installed release or its data
+  changed. Who acts: nobody. Resume: start the update again from the panel; nothing
+  retries by itself. No "the timer tries again" or pending-pause text follows.
+- **Owner retry with automatic attempts left.** If the owner retries before the
+  three automatic attempts are used and it fails, the journal says how many
+  automatic attempts remain and that the timer starts the next one; no owner action
+  is needed yet and renewal is not changed. The pause and its retry command come
+  only after the automatic attempts are used.
+- **Panel environment the start check cannot read.** The update failure line keeps
+  the generic code and says the check could not read the panel environment (a
+  quote, backslash, unknown key or unsupported character in the unit's
+  environment, its drop-ins or `panel.env`) and that the new panel was not checked;
+  the update is still returned to the previous version. Who acts: the server owner,
+  if the entry is theirs; then start the update again.
+- **Missing curl.** A host without `/usr/bin/curl` stops the update before any
+  change with "required update tool is missing: /usr/bin/curl; install it
+  explicitly before retrying".
+- **Recovery runtime preflight stop.** Its journal line now says the installed
+  release and its data were not changed (EN and TR).
+
+Not done: the web update screens keep their texts ("stopped before changing
+anything installed", "stopped before changing installed files"); a successful
+update started by alpha.80 shows "being applied" until the new Agent first checks
+that request.

@@ -31,6 +31,8 @@ DISPATCH_BUDGET_ROOT=/var/lib/celikpanel-release-state/recovery-dispatch/v1
 # The admitted attempt of this invocation (1-3 or owner) and whether the timer
 # admits another automatic one after it fails. Guidance only, never authority.
 DISPATCH_ATTEMPT=
+# Automatic receipts (0-3) that existed when this invocation was admitted.
+DISPATCH_AUTOMATIC_USED=
 RECOVERY_RETRY_SCHEDULED=0
 # The last admitted attempt (the third automatic one or an owner retry) failed:
 # the next timer run records the pause and prints the owner's retry command.
@@ -682,6 +684,7 @@ recovery_budget_reserve() {
             gap=1
         fi
     done
+    DISPATCH_AUTOMATIC_USED=$count
     if [[ -z $OWNER_RETRY_SNAPSHOT && $count == 3 ]]; then
         # Stop publishing recovering on every timer tick. Keep the known failure
         # while recording that unverified recovery needs explicit owner action.
@@ -784,6 +787,16 @@ after_failed_recovery_attempt() {
             printf 'Otomatik kurtarma denemesi %s/3 tamamlanmadı; yerel zamanlayıcı aynı işlem için sonraki denemeyi başlatır. Henüz kullanıcı işlemi gerekmiyor.\n' "$DISPATCH_ATTEMPT" >&2
             ;;
         3|owner)
+            # An owner retry admitted before the automatic budget was used up
+            # leaves the remaining automatic attempts to the timer: no pause
+            # follows and renewal is not touched yet.
+            # Otomatik deneme hakkı kalmışken sahibin denemesi duraklama başlatmaz.
+            if [[ $DISPATCH_ATTEMPT == owner && ${DISPATCH_AUTOMATIC_USED:-3} =~ ^[0-2]$ ]]; then
+                RECOVERY_RETRY_SCHEDULED=1
+                printf 'The recovery attempt the owner started did not finish; %s of 3 automatic attempts remain, and the native timer admits the next one for this same operation. No owner action is needed yet.\n' "$((3 - DISPATCH_AUTOMATIC_USED))" >&2
+                printf 'Sahibin başlattığı kurtarma denemesi tamamlanmadı; 3 otomatik denemeden %s tanesi kaldı ve yerel zamanlayıcı aynı işlem için sonrakini başlatır. Henüz kullanıcı işlemi gerekmiyor.\n' "$((3 - DISPATCH_AUTOMATIC_USED))" >&2
+                return 0
+            fi
             RECOVERY_PAUSE_PENDING=1
             restore_renewal_after_final_attempt
             printf '%s\n' \
@@ -791,6 +804,35 @@ after_failed_recovery_attempt() {
                 'İzin verilen son kurtarma denemesi tamamlanmadı. Kurtarma zamanlayıcısının sonraki çalışması duraklamayı kaydeder ve bu işlem için tek seferlik yeniden deneme komutunu yazdırır.' >&2
             ;;
     esac
+}
+
+# A failed child that left no marker ended the operation itself, so the timer
+# has nothing to retry: no retry hint, no pause and no renewal restore follow.
+# A quiesce recovery does this by design: it resumes the exact coordinators,
+# removes the quiesce marker last and exits 1 so the update is started again.
+# That update ended before the release or its data changed; the existing
+# failed record says so. In any other phase the end is unverified: the exit
+# hook records the plain recovery failure, without a retry or pause hint.
+# İşaretçi bırakmayan başarısız alt işlem işlemi bitirmiştir: yeniden deneme,
+# duraklama veya yenileme geri yüklemesi yoktur. Yalnız quiesce iptali failed kaydı alır.
+end_after_failed_child_without_marker() {
+    if [[ $MARKER_OPERATION:$TRANSACTION_PHASE == update:quiesce ]]; then
+        trap - EXIT
+        if [[ -n $RECOVERY_OBSERVATION_REQUEST ]]; then
+            release_observation_publish "$RECOVERY_OBSERVATION_REQUEST" \
+                "$RECOVERY_OBSERVATION_COMMIT" failed none update_failed ||
+                printf '%s\n' 'CelikPanel recovery observation is unavailable' >&2
+        fi
+        printf '%s\n' \
+            'The interrupted update was stopped before the installed release or its data changed: the panel and Agent were returned to their state from before the update and its pending phase was removed. Nothing more happens for this update and no owner action is needed; start the update again from the panel when convenient.' \
+            'Yarım kalan güncelleme, kurulu sürüm veya verileri değişmeden durduruldu: panel ve Agent güncellemeden önceki durumlarına döndürüldü, bekleyen aşaması kaldırıldı. Bu güncelleme için başka bir şey olmayacak ve kullanıcı işlemi gerekmiyor; uygun olduğunda güncellemeyi panelden yeniden başlatın.' >&2
+    else
+        printf '%s\n' \
+            'The recovery attempt did not finish, but it left no pending operation, so automatic recovery has nothing more to do for it. Its result is not verified: the server owner should read this journal above and check that the panel opens.' \
+            'Kurtarma denemesi tamamlanmadı, ancak bekleyen bir işlem bırakmadı; otomatik kurtarmanın bunun için yapacağı başka bir şey yok. Sonucu doğrulanmadı: sunucu sahibi bu günlüğün yukarısını okumalı ve panelin açıldığını kontrol etmelidir.' >&2
+    fi
+    release_transaction_lock
+    die "release recovery child failed with status $child_status and left no pending transaction"
 }
 
 [[ $EUID -eq 0 ]] || die 'release recovery must run as root'
@@ -949,7 +991,9 @@ if [[ -f $RECOVERY_EXEC_ROOT/deploy/release-recovery-observation.sh ]]; then
         RECOVERY_OBSERVATION_COMMIT=$OBSERVATION_BINDING_COMMIT
         trap recovery_observation_exit EXIT
     else
-        printf '%s\n' 'CelikPanel recovery observation is unavailable' >&2
+        printf '%s\n' \
+            'CelikPanel recovery observation is unavailable: the recovery status command shows this operation as unknown. This journal records each attempt and, if automatic recovery pauses, the one-time retry command.' \
+            'CelikPanel kurtarma gözlemi kullanılamıyor: kurtarma durum komutu bu işlemi bilinmiyor olarak gösterir. Bu günlük her denemeyi ve otomatik kurtarma durursa tek seferlik yeniden deneme komutunu kaydeder.' >&2
     fi
 fi
 release_txn_verify_inherited_lock "$TRANSACTION_ROOT" "$TRANSACTION_FD" ||
@@ -1052,6 +1096,9 @@ validate_transaction_root_and_lock
 release_txn_verify_inherited_lock "$TRANSACTION_ROOT" "$TRANSACTION_FD" ||
     die 'final transaction flock proof failed'
 verify_held_transaction_lock
+if [[ $child_status -ne 0 ]] && ! markers_still_present; then
+    end_after_failed_child_without_marker
+fi
 if [[ $child_status -ne 0 ]]; then
     after_failed_recovery_attempt
     release_transaction_lock

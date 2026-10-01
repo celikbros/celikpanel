@@ -1096,3 +1096,103 @@ değişiklik öncesi ret, anlık görüntü nedeni, `pause_pending` ve yenileme 
 
 Hiçbir kurulu sunucuya dokunulmadı. Bu kapanış kurulu panel güncellemesine ve
 sürüme yetki vermez.
+
+### Aday incelemesi düzeltmeleri (P0.1/P0.2/P0.5, 2026-10-01)
+
+D-025 ilkeleri 1 (yenileme sahibin iş yüküdür), 2 (tipli, korunan kanıt), 3
+(etkilenen sınırda durma) ve 4 (deneme hakkı bitince kalıcı ve uygulanabilir
+durum); D-022, D-024. Adayın salt-okur incelemesinden (F1-F4, N1-N3); gerçek
+sistem denemesi yok.
+
+- **Değişen.**
+  - F1 (yayımlanmış `v0.1.0-alpha.80` sürümünden yükseltme): o sürümün Agent'ı
+    `<id>.status` yazmaz; bu yüzden adayın bağlaması, tipli neden, yenileme durumu
+    ve isteğin bütün kurtarma durumları kaydedilmeden kalıyor, root CLI
+    "bilinmiyor" diyordu. Bu yoldaki kimlik: alpha.80'in Agent'ı işçisini geçici
+    `celikpanel-self-update-<istek kimliği>.service` birimi olarak çalıştırır (32
+    onaltılık hane olarak doğruladığı kimlik); onun `get.sh`'i, ilk geçiş ve aday
+    `update.sh` o birimin cgroup'unda kalır; commit, işçinin `--expected-commit`
+    olarak verdiği ve güncelleyicinin doğruladığı değerdir. `update.sh` artık
+    bağlamadan hemen önce, yalnız ikisi de kanıtlanmışsa, ilk `running` kaydını yeni
+    yalnız-oluşturan `release_observation_publish_initial` ile yazar (kilidi
+    altındaki mevcut yayımlayıcı; isteğin herhangi bir kaydı varsa 3 döner ve hiçbir
+    şeyi değiştirmez). Güncelleyici bu kaydı kendisi yazdıysa, güncel Agent'ın
+    işçisinin yaptığı gibi kendi hata çıkışında `failed` geçişini de kaydeder.
+    İşçi kimliği yoksa (sahibin kendi çalıştırması, desteklenmeyen cgroup düzeni)
+    hiçbir şey yazılmaz; güncelleyicinin günlük satırı, çalıştırıcının bağlanmamış
+    satırı ve root CLI'nin bilinmeyen durum metni, denemelerin ve duraklamadaki
+    yeniden deneme komutunun yeri olarak artık
+    `sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50`
+    komutunu adlandırır.
+  - F2: `preflight_staged_installer_runtime`, başlatma sonrası kanıtın kullandığı
+    tam `/usr/bin/curl` yolunu (`CURL_BIN`) herhangi bir değişiklikten önce,
+    komşu retlerle aynı metinle ister. `rollback.sh`,
+    `deploy/finalize-pending-update.sh`, `deploy/finalize-pending-rollback.sh` ve
+    `deploy/abort-pre-mutation-active-update.sh` curl ya da başka bir HTTP
+    denetimi kullanmaz.
+  - F3: quiesce kurtarması dondurulmuş güncellemeyi tasarım gereği geri alır ve 1
+    ile çıkar; çalıştırıcı bunu başarısız deneme sayıyordu (`retry_scheduled` ya da
+    `pause_pending`, hiç çözülmeyen). Başarısız alt işlemden sonra çalıştırıcı artık
+    işaretçilere bakar; hiçbiri kalmadıysa ipucu yayımlamaz, hiçbir şeyi geri
+    yüklemez ve yeniden deneme işlemine geçmez. `update:quiesce` için
+    `failed/update_failed` kaydeder (güncelleme, sürüm ya da verileri değişmeden
+    bitti) ve günlükte bunu söyler; diğer her aşama, çıkış kancasının düz
+    `recovery_required/recovery_failed` kaydını (doğrulanmamış bitiş) sahip
+    yönlendirmesiyle korur. Harcanan dağıtım makbuzu kalır (makbuzlar anlık görüntü
+    başınadır).
+  - F4: aday başlangıç denetimi yalnız IP değerini, boş ana makineyi ya da
+    `localhost` değerini kabul ediyor ve başında sıfır olan bağlantı noktalarını
+    reddediyordu; oysa `install.sh` `valid_panel_listen` ve `net.Listen`
+    `host.example:2083` ve `02083` değerlerini kabul eder; böyle bir panelin her
+    güncellemesi `listen_address_invalid` ile geri alınıyordu. Denetim artık kurulum
+    dil bilgisini kabul eder (boş ana makine, `[A-Za-z0-9._-]+` biçiminde ad ya da
+    IPv4 değeri, köşeli parantez içinde IPv6 değeri; 1..65535 aralığında 1-5 haneli
+    bağlantı noktası). Ad çözümlemez: önceki sürüm zaten bu değerle dinliyor,
+    çözümleyici kesintisi geri almaya yol açmamalı ve gerçek açılışta çözülemeyen
+    bir ad başlatma sonrası kanıtta yakalanır. Güncelleyicinin loopback hedefi,
+    kurulum dil bilgisi gibi addaki `_` karakterini kabul eder.
+  - N1: otomatik deneme hakkı kalmışken kabul edilen sahip yeniden denemesi olağan
+    yeniden deneme ipucunu (`retry_scheduled`) verir ve yenilemeye dokunmaz;
+    `pause_pending` ve yenilemenin geri yüklenmesi yalnız üç otomatik deneme
+    kullanıldığında uygulanır.
+  - N2: başlangıç denetiminin tipli kodu ancak panel ortamı ayrıştırıldıktan sonra
+    atanır; okuyucunun reddettiği bir girdi, yeni panelin denetlenmediğini söyleyen
+    düz bir ayrıntıyla `update_failed` olarak kalır. Aşama yine `active` olduğundan
+    otomatik geri alma değişmez.
+  - N3: kurtarma çalışma ortamı ön denetim satırı "kurulu sürüm ve verileri
+    değiştirilmedi" der ve Türkçe satır eklenir; kurtarma kiti o noktada önceden
+    yükseltilmiş olabilir.
+- **Şema veya sürüm geçişi: yok.** Gözlem v1, hata, yenileme ve otomatik yan
+  dosyaları v1, anlık görüntü v6, malzeme v3, işaretçiler, dağıtım makbuzları ve
+  kit protokolü 1 değişmedi. Yeni kapalı değer yok: güncelleyicinin kendi kaydı,
+  Agent'ın kodlamasıyla bayt bayt aynı `running/update_running` ve
+  `failed/update_failed` değerlerini, quiesce bitişi `failed/update_failed`
+  değerini kullanır. CLI `--json` baytları değişmedi; bilinmeyen durum metnine bir
+  cümle eklendi. Betik ve ikili baytları değiştiği için manifestlerin biçimi değil
+  değerleri değişir.
+- **Kurtarma davranışı.** Dağıtım, üç denemelik hak, geri alma, ileri tamamlama ve
+  her kanıt değişmedi. Geri alınmış bir quiesce artık bekleyen bir yeniden deneme
+  gibi görünmez; erken sahip yeniden denemesi artık duraklatmaz ve yenilemeyi geri
+  yüklemez; `/usr/bin/curl` bulunmayan ana makine herhangi bir değişiklikten önce
+  durur; ad ya da başında sıfır olan dinleme adresi artık geri almaya yol açmaz.
+- **Kanıt.** Yalnız bileşen ve sözleşme testleri:
+  `deploy/test-release-recovery-observation.sh`,
+  `deploy/test-update-failure-report.sh`,
+  `deploy/test-update-panel-start-readiness.sh`,
+  `deploy/test-recovery-renewal-pause-contract.sh`,
+  `deploy/test-recovery-runtime-shell-contract.sh`,
+  `TestUpdaterInitialRecordForAHistoricalWorker`,
+  `TestUnavailableStatusNamesTheRecoveryJournal`,
+  `TestStartupReadinessAcceptsInstalledHostNameAndLeadingZeroPort`,
+  `TestStartupListenAddressFollowsTheInstallGrammar`. Gerçek sistem denemesi
+  bekliyor; hiçbir alpha.80 arşivi yükseltilmedi.
+
+Açık: yayımlanmış alpha.80 arşivinden yükseltme gerçek sistemde çalıştırılmadı;
+alpha.80 işçisiyle başarılı bir güncellemenin kaydı, aday Agent o isteğin durumunu
+ilk kez uzlaştırana kadar `running` kalır (güncelleyici nihai kanıt iddia etmez);
+CLI'nin zamanlanmış yeniden deneme metni erken sahip yeniden denemesinden sonra da
+"son otomatik deneme" der; işaretçi bırakmadan başarısız olan quiesce dışı bir alt
+işlem, duraklama kaydı olmadan `recovery_required` durumunda biter; web'deki
+`panelUpdate.previousAttempt.stoppedTitle`/`stopped` ve
+`panelUpdate.packageManagerBusy` metinleri ("kurulu olan hiçbir şey" / "kurulu
+dosyalar" değişmeden durdu) düzeltilmedi (web kapsam dışı).

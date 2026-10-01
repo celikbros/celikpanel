@@ -8,7 +8,60 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
+
+// Candidate review F1: a historical Agent's worker (v0.1.0-alpha.80) writes no
+// record, so the updater writes the initial running record itself. Readers
+// then follow the request as with the current Agent: running, the failed
+// transition, the typed cause, the pending pause and the pause, and the Agent's
+// own publisher continues the same record. An existing record is never touched.
+func TestUpdaterInitialRecordForAHistoricalWorker(t *testing.T) {
+	shell, read, root, anchor, r := shellObservationFixture(t, "initial-record")
+	shell(`release_observation_publish_initial "$3" "$4"`)
+	if got := read(); got.Observation != "known" || got.Phase != "running" || got.Reason != "update_running" ||
+		got.TerminalProof != "none" || got.PreviousFailure != "" {
+		t.Fatalf("initial record: %#v", got)
+	}
+	path := filepath.Join(root, r.RequestID+".status")
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := Decode(raw, r.RequestID)
+	if err != nil || decoded.TargetCommit != r.TargetCommit || decoded.PreviousFailure != "none" {
+		t.Fatalf("initial record is not a v1 record of this request: %#v %v", decoded, err)
+	}
+	if encoded, err := decoded.Encode(); err != nil || string(encoded) != string(raw) {
+		t.Fatalf("initial record differs from the Agent's encoding: %q", raw)
+	}
+	shell(`status=0; release_observation_publish_initial "$3" "$4" || status=$?; [[ $status == 3 ]]`)
+	if after, _ := os.ReadFile(path); string(after) != string(raw) {
+		t.Fatal("the initial producer rewrote an existing record")
+	}
+	shell(`release_observation_publish_failure "$3" "$4" panel_start_unverified`)
+	shell(`release_observation_publish "$3" "$4" failed none update_failed`)
+	if got := read(); got.Phase != "failed" || got.FailureCode != "panel_start_unverified" {
+		t.Fatalf("failed transition: %#v", got)
+	}
+	shell(`release_observation_publish "$3" "$4" recovering none recovery_running`)
+	shell(`release_observation_publish "$3" "$4" recovery_required none recovery_failed "" pause_pending`)
+	if got := read(); got.AutomaticRecovery != "pause_pending" || got.FirstFailureCode != "panel_start_unverified" {
+		t.Fatalf("pending pause: %#v", got)
+	}
+	shell(`release_observation_publish "$3" "$4" recovery_required none recovery_incomplete "" paused_retry_limit`)
+	if got := read(); got.AutomaticRecovery != "paused_retry_limit" || got.FirstFailureCode != "panel_start_unverified" {
+		t.Fatalf("pause: %#v", got)
+	}
+	r.Phase, r.TerminalProof, r.Reason = "succeeded", "update_verified", "update_verified"
+	r.ObservedAt = time.Now().UTC().Format("2006-01-02T15:04:05Z")
+	if err := publishAt(root, r, 0, 0, anchor); err != nil {
+		t.Fatal(err)
+	}
+	if got := read(); got.Phase != "succeeded" || got.PreviousFailure != "recovery_failed" {
+		t.Fatalf("Agent continuation: %#v", got)
+	}
+}
 
 // F6 (upd4): after the last admitted attempt fails and before the next timer
 // run records the pause, the failure carries pause_pending and the update's

@@ -2608,9 +2608,12 @@ require_sequence "$UPDATE" \
 # The candidate start check is read-only, runs as the panel account and is a
 # typed failure in phase active. Its behaviour is in
 # deploy/test-update-panel-start-readiness.sh.
+# The owner's environment is parsed before the typed candidate code is set: a
+# refused entry is not a verdict on the candidate (candidate review N2).
 require_function_sequence "$UPDATE" run_panel_startup_readiness_check \
+    'if ! panel_startup_environment; then' \
+    'die "new panel start check could not read the panel unit environment or panel.env"' \
     'update_failure_code=candidate_panel_startup_check_failed' \
-    'panel_startup_environment' \
     'sudo -u celikpanel -- env -i' \
     '"$BIN_DIR/panel" --check-startup-readiness 2>&1) || status=$?' \
     'die "new panel start check failed before completion:' \

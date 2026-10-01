@@ -98,7 +98,7 @@ common_doubles() {
     }
     systemctl() {
         if [[ $* == 'show --property=Environment --value celikpanel-panel.service' ]]; then
-            printf '%s\n' 'CELIKPANEL_DATA_DIR=/var/lib/celikpanel CELIKPANEL_WEB_DIR=/opt/celikpanel/web CELIKPANEL_LISTEN=:2083 CELIKPANEL_AGENT_SOCKET=/run/celikpanel/agent.sock CELIKPANEL_AGENT_TOKEN_FILE=/etc/celikpanel/agent.token CELIKPANEL_TLS=1 CELIKPANEL_PANEL_INSECURE_COOKIES_FLAG= CELIKPANEL_PANEL_DEMO_FLAG='
+            printf '%s\n' "${UNIT_ENVIRONMENT:-CELIKPANEL_DATA_DIR=/var/lib/celikpanel CELIKPANEL_WEB_DIR=/opt/celikpanel/web CELIKPANEL_LISTEN=:2083 CELIKPANEL_AGENT_SOCKET=/run/celikpanel/agent.sock CELIKPANEL_AGENT_TOKEN_FILE=/etc/celikpanel/agent.token CELIKPANEL_TLS=1 CELIKPANEL_PANEL_INSECURE_COOKIES_FLAG= CELIKPANEL_PANEL_DEMO_FLAG=}"
             return 0
         fi
         exit 93
@@ -164,6 +164,23 @@ last=$(tail -n 1 "$TEST_ROOT/check-unrecognized.log")
 [[ $status == 1 && $last == *'code=candidate_panel_startup_check_failed '*'no recognized reason line'* && $last != *hunter2* ]] \
     || fail "unrecognized output: $last"
 
+# 2b. N2: an environment entry the reader refuses (here a drop-in value with a
+#     space, which systemd shows quoted) is not blamed on the candidate, whose
+#     panel never ran: generic code, a plain detail, no typed sidecar; the
+#     active phase still returns to the previous release.
+write_panel "printf '%s\n' listen=:2083 scheme=https 'pin=$PIN_A' ready"
+rm -f -- "$TEST_ROOT/panel.env.seen"
+status=0
+UNIT_ENVIRONMENT='CELIKPANEL_LISTEN=:2083 "CELIKPANEL_DATA_DIR=/srv/panel data"' \
+    run_active_tail env-refused > "$TEST_ROOT/env-refused.log" 2>&1 || status=$?
+trace=$(cat "$TEST_ROOT/env-refused.trace")
+last=$(tail -n 1 "$TEST_ROOT/env-refused.log")
+[[ $status == 1 && ! -e $TEST_ROOT/panel.env.seen && $trace != *completion-marker* &&
+   $trace == *coordinators-stopped* && $trace != *failure-sidecar* ]] ||
+    fail "environment refusal outcome: $status $trace"
+[[ $last == '!! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason=new panel start check could not read the panel unit environment or panel.env detail=the start check could not read the panel environment '*'the new panel itself was not checked' ]] ||
+    fail "environment refusal blamed on the candidate: $last"
+
 # 3. A passing check records pins and continues to completion.pending.
 write_panel "printf '%s\n' listen=:2083 scheme=https 'pin=$PIN_A' 'pin=$PIN_B' would_create=sqlite-wal ready"
 run_active_tail check-passed > "$TEST_ROOT/check-passed.log" 2>&1 || { cat "$TEST_ROOT/check-passed.log"; fail 'passing check refused'; }
@@ -209,7 +226,8 @@ fi
 
 # 6. Loopback target for every supported listen form.
 for pair in ':2083=127.0.0.1:2083' '0.0.0.0:2083=127.0.0.1:2083' 'localhost:2083=127.0.0.1:2083' \
-    '127.0.0.1:8443=127.0.0.1:8443' '[::]:2083=[::1]:2083' '[::1]:2083=[::1]:2083' '192.0.2.10:2083=192.0.2.10:2083'; do
+    '127.0.0.1:8443=127.0.0.1:8443' '[::]:2083=[::1]:2083' '[::1]:2083=[::1]:2083' '192.0.2.10:2083=192.0.2.10:2083' \
+    'panel.example.test:2083=panel.example.test:2083' 'panel_host:2083=panel_host:2083' '0.0.0.0:02083=127.0.0.1:2083' ':02083=127.0.0.1:2083'; do
     [[ $(panel_probe_target "${pair%%=*}") == "${pair#*=}" ]] || fail "probe target ${pair%%=*}"
 done
 for bad in 2083 ':0' ':70000' 'host name:1'; do
@@ -332,4 +350,32 @@ out=$(hint "$name")
 out=$(hint not-a-canonical-snapshot)
 [[ $out != *rollback.sh* ]] || fail 'non-canonical snapshot printed a rollback command'
 
-printf 'PASS: candidate start check precedes completion and fails in active; start wait is bounded and typed; final hint matches rollback admission\n'
+# 10. F2: the post-start proof's exact curl is checked in the pre-change tool
+#     preflight, like every other tool; a missing or non-executable one stops
+#     the update before any change instead of after the switch.
+extract_function preflight_staged_installer_runtime > "$TEST_ROOT/preflight.sh"
+[[ -s $TEST_ROOT/preflight.sh ]] || fail 'missing function preflight_staged_installer_runtime'
+# shellcheck disable=SC1091
+source "$TEST_ROOT/preflight.sh"
+preflight_case() (
+    set -euo pipefail
+    CURL_BIN=$1
+    # Host identity and package tools are doubles; the fixture host may lack them.
+    command() { [[ $1 == -v ]] && return 0; builtin command "$@"; }
+    getent() { [[ $* == 'group celikpanel' ]]; }
+    id() { [[ $* == celikpanel ]]; }
+    preflight_staged_installer_runtime
+    echo admitted
+)
+printf '#!/bin/sh\n' > "$TEST_ROOT/curl-not-executable"
+chmod 0644 "$TEST_ROOT/curl-not-executable"
+for missing in "$TEST_ROOT/absent-curl" "$TEST_ROOT/curl-not-executable"; do
+    status=0
+    out=$(preflight_case "$missing" 2>&1) || status=$?
+    [[ $status == 1 && $out == "!! required update tool is missing: $missing; install it explicitly before retrying" ]] ||
+        fail "missing curl admitted or untyped: $status $out"
+done
+[[ $(preflight_case "$TEST_ROOT/curl" 2>&1) == admitted ]] || fail 'present curl refused'
+grep -Fxq 'CURL_BIN=/usr/bin/curl' "$UPDATE" || fail 'probe curl path changed'
+
+printf 'PASS: candidate start check precedes completion and fails in active; start wait is bounded and typed; final hint matches rollback admission; curl checked before any change\n'

@@ -249,8 +249,11 @@ func writeStatus(w io.Writer, lang string, status recoveryobs.Status) error {
 	// final support line; --json is a separate, unchanged wire shape.
 	// İlk satırlar sunucu sahibine konuşur; iç belirteçler yalnız son destek
 	// satırındadır. --json ayrı ve değişmemiş bir biçimdir.
-	en, tr := "The result of this update could not be read, so it is unknown. Nothing is known yet about which version the server runs. Check this same request again in a minute; keep the server as it is and do not start another update meanwhile.",
-		"Bu güncellemenin sonucu okunamadı; sonuç bilinmiyor. Sunucunun hangi sürümü çalıştırdığı henüz bilinmiyor. Bir dakika sonra aynı işlemi yeniden sorgulayın; bu arada sunucuya dokunmayın ve başka güncelleme başlatmayın."
+	// An update started by an installed version that records no status, or run
+	// outside its update worker, stays unknown here; recovery still runs and its
+	// journal is where the owner finds a paused recovery's retry command.
+	en, tr := "The result of this update could not be read, so it is unknown. Nothing is known yet about which version the server runs. Check this same request again in a minute; keep the server as it is and do not start another update meanwhile. If it stays unknown, the recovery journal shows whether automatic recovery is running or paused and, at a pause, the one-time retry command: sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50",
+		"Bu güncellemenin sonucu okunamadı; sonuç bilinmiyor. Sunucunun hangi sürümü çalıştırdığı henüz bilinmiyor. Bir dakika sonra aynı işlemi yeniden sorgulayın; bu arada sunucuya dokunmayın ve başka güncelleme başlatmayın. Bilinmiyor olarak kalırsa kurtarma günlüğü otomatik kurtarmanın çalışıp çalışmadığını ya da durduğunu ve duraklamada tek seferlik yeniden deneme komutunu gösterir: sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50"
 	if status.Observation == "known" {
 		switch status.Phase {
 		case "accepted":

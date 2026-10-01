@@ -235,6 +235,37 @@ func TestStartupReadinessFailsWithTypedReasonAndNoWrite(t *testing.T) {
 	}
 }
 
+// A host name and a leading-zero port are valid installed listen values
+// (install.sh valid_panel_listen; net.Listen binds them). The check reports the
+// value unchanged, so the updater's listen comparison still matches.
+func TestStartupReadinessAcceptsInstalledHostNameAndLeadingZeroPort(t *testing.T) {
+	for _, listen := range []string{"panel.example.test:2083", "0.0.0.0:02083"} {
+		t.Run(listen, func(t *testing.T) {
+			newStartupReadinessFixture(t, true)
+			t.Setenv("CELIKPANEL_LISTEN", listen)
+			report, err := checkStartupReadiness(startupTestDeps(nil))
+			if err != nil || report.listen != listen {
+				t.Fatalf("listen %q: report=%+v err=%v", listen, report, err)
+			}
+		})
+	}
+}
+
+func TestStartupListenAddressFollowsTheInstallGrammar(t *testing.T) {
+	for _, listen := range []string{":2083", ":02083", "0.0.0.0:2083", "127.0.0.1:08443", "localhost:2083",
+		"panel.example.test:2083", "panel_host:2083", "[::]:2083", "[::1]:2083", "[2001:db8::1]:00443", "host:65535"} {
+		if !validStartupListenAddress(listen) {
+			t.Errorf("installed listen value refused: %q", listen)
+		}
+	}
+	for _, listen := range []string{"", "2083", ":", ":0", ":00000", ":65536", ":123456", "host:+80", "host: 80",
+		"host name:2083", "::1:2083", "[panel.example.test]:2083", "[::1]", "[fe80::1%eth0]:2083", "host:2083/x", "ho/st:2083"} {
+		if validStartupListenAddress(listen) {
+			t.Errorf("invalid listen value accepted: %q", listen)
+		}
+	}
+}
+
 func TestStartupReadinessEntryIsAClosedMode(t *testing.T) {
 	var out, errOut bytes.Buffer
 	if handled, _ := runStartupReadinessEntry([]string{"--migrate-only"}, &out, &errOut); handled {

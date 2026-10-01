@@ -65,5 +65,28 @@ expect_failure 'unsafe record repaired' release_observation_publish "$id" "$comm
 chmod 0640 "$RELEASE_OBSERVATION_ROOT/$id.status"
 ln "$RELEASE_OBSERVATION_ROOT/$id.status" "$tmp/extra-link"
 expect_failure 'hardlinked record overwritten' release_observation_publish "$id" "$commit" running none update_running
+rm -f -- "$tmp/extra-link"
+# A historical worker wrote no record: the updater's create-only initial record
+# is the Agent's running record, byte for byte, and the binding accepts it.
+legacy=eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+legacy_snapshot=20260914T100000Z-from-unknown-to-$commit-ffffffffffffffffffffffffffffffff
+release_observation_publish_initial "$legacy" "$commit" || fail 'initial record not created for a request without one'
+_release_observation_read "$legacy" 0
+[[ $OBSERVATION_PHASE:$OBSERVATION_PROOF:$OBSERVATION_REASON:$OBSERVATION_PREVIOUS == running:none:update_running:none ]] ||
+    fail 'initial record is not the running record'
+before=$(sha256sum "$RELEASE_OBSERVATION_ROOT/$legacy.status")
+status=0; release_observation_publish_initial "$legacy" "$commit" || status=$?
+[[ $status == 3 && $(sha256sum "$RELEASE_OBSERVATION_ROOT/$legacy.status") == "$before" ]] || fail "existing record rewritten by the initial producer: $status"
+release_observation_worker_request() { printf '%s\n' "$legacy"; }
+release_observation_bind_update "$tmp/transaction" "$fd" "$token" "$legacy_snapshot" "$commit" || fail 'initial record not accepted by the binding'
+# Any existing phase, even one naming another commit, is never touched.
+for existing in "$id" "$legacy"; do
+    before=$(sha256sum "$RELEASE_OBSERVATION_ROOT/$existing.status")
+    status=0; release_observation_publish_initial "$existing" aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa || status=$?
+    [[ $status == 3 && $(sha256sum "$RELEASE_OBSERVATION_ROOT/$existing.status") == "$before" ]] || fail "existing $existing record changed: $status"
+done
+release_observation_publish "$legacy" "$commit" failed none update_failed
+_release_observation_read "$legacy" 0
+[[ $OBSERVATION_PHASE == failed && $OBSERVATION_PREVIOUS == update_failed ]] || fail 'self-produced record lost the failed transition'
 [[ -z $(find "$tmp" -name '.observation-*' -o -name '.binding-*') ]] || fail 'staging left behind'
-printf 'PASS: real native observation publisher, immutable identity binding and terminal preservation\n'
+printf 'PASS: real native observation publisher, immutable identity binding, create-only initial record and terminal preservation\n'

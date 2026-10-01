@@ -1867,3 +1867,97 @@ renewal sidecar.
 
 No installed server was touched. This closing authorises no installed-panel
 update and no release.
+
+### Candidate review corrections (P0.1/P0.2/P0.5, 2026-10-01)
+
+D-025 invariants 1 (renewal is an owner workload), 2 (typed, preserved
+evidence), 3 (stop at the affected boundary) and 4 (retry exhaustion as a
+durable, actionable state); D-022, D-024. From a read-only review of the
+candidate (F1-F4, N1-N3); no native run.
+
+- **Changed.**
+  - F1 (upgrade from the published `v0.1.0-alpha.80`): that release's Agent
+    writes no `<id>.status`, so the candidate's binding, typed cause, renewal
+    state and every recovery state of the request stayed unrecorded and the root
+    CLI said "unknown". Identity in that path: alpha.80's Agent runs its worker as
+    the transient unit `celikpanel-self-update-<request id>.service` (an id it
+    validated as 32 hex), and its `get.sh`, the bootstrap and the candidate
+    `update.sh` stay in that unit's cgroup; the commit is the one the worker passed
+    as `--expected-commit` and the updater verified. Right before the binding,
+    `update.sh` now writes the initial `running` record through the new create-only
+    `release_observation_publish_initial` (the existing publisher under its lock;
+    it returns 3 and changes nothing when any record of the request exists), only
+    when both are established. When the updater wrote that record, it also
+    records the `failed` transition at its own failure exit, as the current
+    Agent's worker does. Without a worker identity (an owner's own run, an
+    unsupported cgroup layout) nothing is written; the updater's journal line,
+    the runner's unbound line and the root CLI's unknown-state text now name
+    `sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50` as
+    the place of the attempts and of a pause's retry command.
+  - F2: `preflight_staged_installer_runtime` requires the exact `/usr/bin/curl`
+    (`CURL_BIN`) of the post-start proof before any change, with the neighbouring
+    refusal text. `rollback.sh`, `deploy/finalize-pending-update.sh`,
+    `deploy/finalize-pending-rollback.sh` and
+    `deploy/abort-pre-mutation-active-update.sh` use no curl or other HTTP probe.
+  - F3: a quiesce recovery aborts the frozen update and exits 1 by design; the
+    runner counted that as a failed attempt (`retry_scheduled` or
+    `pause_pending`, never resolved). After a failed child the runner now checks
+    the markers; when none remains it publishes no hint, restores nothing and
+    skips the retry handling. For `update:quiesce` it records
+    `failed/update_failed` (the update ended before the release or its data
+    changed) and says so in the journal; any other phase keeps the exit hook's
+    plain `recovery_required/recovery_failed` (an unverified end) with owner
+    guidance. The consumed dispatch receipt stays (receipts are per snapshot).
+  - F4: the candidate start check accepted only an IP literal, an empty host or
+    `localhost` and refused leading-zero ports, while `install.sh`
+    `valid_panel_listen` and `net.Listen` accept `host.example:2083` and `02083`;
+    every update of such a panel rolled back with `listen_address_invalid`. The
+    check now accepts the install grammar (empty host, a name or IPv4 literal
+    `[A-Za-z0-9._-]+`, a bracketed IPv6 literal; a port of 1 to 5 digits in
+    1..65535). It resolves no name: the previous release already listens on that
+    value, a resolver outage must not cause a rollback, and a name that does not
+    resolve at the real start is caught by the post-start proof. The updater's
+    loopback target accepts `_` in a name, as the install grammar does.
+  - N1: an owner retry admitted while automatic attempts remain gives the normal
+    retry hint (`retry_scheduled`) and leaves renewal alone; `pause_pending` and
+    the renewal restore apply only when the three automatic attempts are used.
+  - N2: the start check's typed code is set only after the panel environment is
+    parsed; an entry the reader refuses keeps `update_failed` with a plain detail
+    saying the new panel was not checked. The phase is still `active`, so the
+    automatic rollback is unchanged.
+  - N3: the recovery runtime preflight line says "the installed release and its
+    data were not changed" and has a Turkish line; the recovery kit may already
+    have been promoted at that point.
+- **Schema or version transition: none.** Observation v1, the failure, renewal
+  and automatic sidecars v1, snapshot v6, material v3, markers, dispatch receipts
+  and kit protocol 1 are unchanged. No new closed value: the updater's own record
+  uses `running/update_running` and `failed/update_failed`, byte for byte the
+  Agent's encoding, and the quiesce end uses `failed/update_failed`. The CLI
+  `--json` bytes are unchanged; its unknown-state text gains one sentence. Script
+  and binary bytes change, so manifest values (not formats) change.
+- **Recovery behaviour.** Dispatch, the three-attempt budget, rollback, forward
+  completion and every proof are unchanged. An aborted quiesce no longer looks
+  like a pending retry; an early owner retry no longer pauses or restores
+  renewal; a host without `/usr/bin/curl` stops before any change; a host-name or
+  leading-zero listen address no longer forces a rollback.
+- **Evidence.** Component and contract tests only:
+  `deploy/test-release-recovery-observation.sh`,
+  `deploy/test-update-failure-report.sh`,
+  `deploy/test-update-panel-start-readiness.sh`,
+  `deploy/test-recovery-renewal-pause-contract.sh`,
+  `deploy/test-recovery-runtime-shell-contract.sh`,
+  `TestUpdaterInitialRecordForAHistoricalWorker`,
+  `TestUnavailableStatusNamesTheRecoveryJournal`,
+  `TestStartupReadinessAcceptsInstalledHostNameAndLeadingZeroPort`,
+  `TestStartupListenAddressFollowsTheInstallGrammar`. Native run pending; no
+  alpha.80 archive was upgraded.
+
+Open: the upgrade from the published alpha.80 archive is not run natively; with
+an alpha.80 worker a successful update's record stays `running` until the
+candidate Agent first reconciles that request's status (the updater claims no
+terminal proof); the CLI's scheduled-retry text says "the last automatic
+attempt" also after an early owner retry; a non-quiesce child that fails without
+leaving a marker ends at `recovery_required` with no pause record; the web texts
+`panelUpdate.previousAttempt.stoppedTitle`/`stopped` ("stopped before changing
+anything installed") and `panelUpdate.packageManagerBusy` ("stopped before
+changing installed files") are not adjusted (web out of scope).

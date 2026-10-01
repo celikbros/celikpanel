@@ -93,6 +93,13 @@ update_idle_probe_status=0
 # Typed cause for the two candidate-panel start boundaries; empty otherwise.
 # Aday panel başlangıç sınırları için tipli neden; diğer durumlarda boş.
 update_failure_code=
+# Set only when this updater wrote the request's initial status record itself
+# because its worker (a historical Agent) wrote none; see
+# publish_update_initial_observation. Then it also records the worker's failed
+# transition, as the current Agent's worker does after a failed updater.
+update_observation_self_produced=0
+update_observation_request=
+update_observation_commit=
 # The panel unit restarts a failed process after RestartSec=3. Eleven samples
 # 0.5 s apart (at least 5 s) with one unchanged main PID and restart counter
 # therefore span more than one restart cycle. The whole wait is bounded.
@@ -294,6 +301,14 @@ report_update_failure() {
         reason='the host package manager is active'
         detail=
     fi
+    # A status record this updater produced itself receives the failed
+    # transition its historical worker never writes. Best effort; never the outcome.
+    # Güncelleyicinin kendi yazdığı kayda, eski işçinin yazmadığı failed geçişi eklenir.
+    if [[ ${update_observation_self_produced:-0} -eq 1 ]] &&
+       declare -F release_observation_publish >/dev/null; then
+        release_observation_publish "$update_observation_request" "$update_observation_commit" \
+            failed none update_failed >/dev/null 2>&1 || true
+    fi
     # Best-effort, additive observation hint; never alters the outcome or the
     # summary below, which must stay the last line for older installed workers.
     # A preflight stop is recorded even when its summary names the host package
@@ -356,6 +371,32 @@ publish_update_renewal_observation() {
     done < "$ledger"
     id=$(release_observation_worker_request) || return 0
     release_observation_publish_renewal "$id" "$commit" "$value"
+}
+
+# The worker of a historical Agent (v0.1.0-alpha.80 and earlier) writes no
+# status record, so the binding, the typed cause, the renewal state and every
+# recovery state of this request would stay unrecorded. Its exact request is
+# still named by the worker unit's cgroup, the evidence the binding trusts, and
+# the commit is the verified target the worker requested. Only with both, and
+# only when no record of the request exists, write the initial running record;
+# an existing record (the current Agent's) is never touched. Without that
+# identity nothing is written and the binding below says where the owner reads
+# recovery instead.
+# Eski Agent işçisi durum kaydı yazmaz. Kimlik işçi biriminin cgroup'undan
+# kanıtlanır ve kayıt yoksa ilk running kaydı yazılır; var olan kayda dokunulmaz.
+publish_update_initial_observation() {
+    local id status=0
+    declare -F release_observation_publish_initial >/dev/null || return 0
+    declare -F release_observation_worker_request >/dev/null || return 0
+    [[ ${target_release_commit:-} =~ ^[0-9a-f]{40}$ ]] || return 0
+    id=$(release_observation_worker_request) || return 0
+    release_observation_publish_initial "$id" "$target_release_commit" || status=$?
+    [[ $status -eq 0 ]] || return 0
+    update_observation_request=$id
+    update_observation_commit=$target_release_commit
+    update_observation_self_produced=1
+    echo "==> The installed version that started this update records no update status; the updater recorded it for request $id"
+    echo "==> Bu güncellemeyi başlatan kurulu sürüm güncelleme durumu kaydetmiyor; güncelleyici $id işlemi için kaydetti"
 }
 
 validate_exact_systemctl() {
@@ -581,7 +622,9 @@ fail_recovery_runtime_preflight() {
     # Keep a host package-manager refusal recognisable as package_manager_busy.
     update_failure_detail=
     [[ $diagnostic != *': the host package manager is active'* ]] || update_failure_detail=$diagnostic
-    echo "!! $update_failure_reason; panel services have not been stopped and nothing was changed" >&2
+    # The recovery kit may already have been promoted; the release and data were not touched.
+    echo "!! $update_failure_reason; panel services have not been stopped and the installed release and its data were not changed" >&2
+    echo "!! Kurtarma çalışma ortamı ön denetimi durdu; panel hizmetleri durdurulmadı, kurulu sürüm ve verileri değiştirilmedi" >&2
     report_update_failure 1 none
     exit 1
 }
@@ -903,6 +946,10 @@ preflight_staged_installer_runtime() {
         command -v "$required_command" >/dev/null 2>&1 \
             || die "required update tool is missing: $required_command; install it explicitly before retrying"
     done
+    # The post-start proof calls this exact path; a missing one would be found
+    # only after the switch, as a panel that never answered.
+    [[ -f $CURL_BIN && -x $CURL_BIN ]] \
+        || die "required update tool is missing: $CURL_BIN; install it explicitly before retrying"
     if ! command -v apt-get >/dev/null 2>&1 &&
        ! command -v pacman >/dev/null 2>&1; then
         die "supported package manager metadata is unavailable (apt-get or pacman); update will not install one"
@@ -2322,9 +2369,15 @@ panel_startup_environment() {
 # başarısızlık otomatik geri almaya gider.
 run_panel_startup_readiness_check() {
     local output status=0 line reason= listen= scheme= pins= last=
+    # The environment comes from the panel unit (with every drop-in) and the
+    # owner's panel.env. A form this reader refuses is not a verdict on the new
+    # version's panel, which never ran: keep the generic code and say so.
+    # Okunamayan ortam aday panelin hatası sayılmaz; genel kod ve açık ayrıntı kalır.
+    if ! panel_startup_environment; then
+        update_failure_detail='the start check could not read the panel environment (the panel unit environment with its drop-ins, or panel.env): an entry has a quote, a backslash, an unknown key or an unsupported character; the new panel itself was not checked'
+        die "new panel start check could not read the panel unit environment or panel.env"
+    fi
     update_failure_code=candidate_panel_startup_check_failed
-    panel_startup_environment \
-        || die "new panel start check could not read the panel unit environment or panel.env"
     output=$(sudo -u celikpanel -- env -i \
         PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
         HOME=/var/lib/celikpanel LC_ALL=C "${PANEL_STARTUP_ENV[@]}" \
@@ -2364,7 +2417,7 @@ panel_probe_target() {
     local listen=$1 host port
     if [[ $listen =~ ^\[([0-9A-Fa-f:.]+)\]:([0-9]{1,5})$ ]]; then
         host="[${BASH_REMATCH[1]}]" port=${BASH_REMATCH[2]}
-    elif [[ $listen =~ ^([0-9A-Za-z.-]*):([0-9]{1,5})$ ]]; then
+    elif [[ $listen =~ ^([0-9A-Za-z._-]*):([0-9]{1,5})$ ]]; then
         host=${BASH_REMATCH[1]} port=${BASH_REMATCH[2]}
     else
         return 1
@@ -3364,13 +3417,17 @@ else
     transaction_started=1
     transaction_phase=quiesce-publishing
     # Bind the real worker request before a durable transaction can interrupt it.
-    # A missing legacy observation or unsupported kernel hierarchy is unknown;
+    # A worker that wrote no record (a historical Agent) gets its initial one
+    # here. An unsupported kernel hierarchy or a run outside a worker is unknown;
     # failure to publish this auxiliary record cannot change the update result.
+    publish_update_initial_observation
     if declare -F release_observation_bind_update >/dev/null &&
        ! release_observation_bind_update "$RELEASE_TRANSACTION_ROOT" \
             "$RELEASE_TRANSACTION_FD" "$release_transaction_token" \
             "$snapshot_name" "$target_release_commit"; then
-        printf '%s\n' 'CelikPanel recovery observation is unavailable' >&2
+        printf '%s\n' \
+            'CelikPanel recovery observation is unavailable: the recovery status command will show this update as unknown. If the update does not finish, automatic recovery still runs; its attempts and, if it pauses, the one-time retry command are in: sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50' \
+            'CelikPanel kurtarma gözlemi kullanılamıyor: kurtarma durum komutu bu güncellemeyi bilinmiyor olarak gösterecek. Güncelleme tamamlanmazsa otomatik kurtarma yine çalışır; denemeleri ve duraklarsa tek seferlik yeniden deneme komutu şuradadır: sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50' >&2
     fi
     release_txn_create_quiesce_marker \
         "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \

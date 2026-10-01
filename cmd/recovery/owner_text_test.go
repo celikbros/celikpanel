@@ -86,6 +86,19 @@ func TestOwnerTextSpeaksPlainlyAndKeepsTokensOnTheSupportLine(t *testing.T) {
 	}
 }
 
+// An update whose worker recorded no status stays unknown here; the owner is
+// told where a paused recovery prints its one-time retry command.
+func TestUnavailableStatusNamesTheRecoveryJournal(t *testing.T) {
+	journal := "sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50"
+	for _, lang := range []string{"en", "tr"} {
+		lines := ownerStatusText(t, unavailableStatus(requestID), lang)
+		if !strings.HasSuffix(lines[0], journal) ||
+			!strings.Contains(lines[0], translated(lang, "the one-time retry command", "tek seferlik yeniden deneme komutunu")) {
+			t.Fatalf("%s: unknown status does not name the recovery journal: %q", lang, lines[0])
+		}
+	}
+}
+
 // The machine-readable output is the recoveryobs.Status wire shape, byte for
 // byte; the human wording change must not rename or reorder anything.
 func TestStatusJSONBytesAreUnchanged(t *testing.T) {

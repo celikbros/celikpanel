@@ -101,6 +101,8 @@ release_observation_publish() (
     [[ $(stat -Lc '%d:%i' -- "$RELEASE_OBSERVATION_ROOT/.publish.lock") == \
        $(stat -Lc '%d:%i' -- "/proc/$BASHPID/fd/$lock_fd") ]] || return 1
     if [[ -e $path || -L $path ]]; then
+        # A create-only caller never reads, merges or replaces an existing record.
+        [[ ${_RELEASE_OBSERVATION_CREATE_ONLY:-0} != 1 ]] || return 3
         _release_observation_read "$id" "$gid" || return 1
         [[ $OBSERVATION_COMMIT == "$commit" ]] || return 1
         # Late worker failure cannot erase native terminal verification.
@@ -152,6 +154,19 @@ release_observation_publish() (
     [[ $(TZ=UTC0 stat -Lc '%d:%i:%s:%y:%z' -- "$path") == "$identity" ]] || return 1
     mv -T -- "$stage" "$wait_path" && sync -f -- "$RELEASE_OBSERVATION_ROOT"
 )
+
+# The updater's initial record for a worker that wrote none: the worker of a
+# historical Agent without observations (v0.1.0-alpha.80 and earlier) still
+# runs the new updater. The caller names the request only from its worker
+# unit's cgroup and the commit only from the verified target, the evidence the
+# binding already trusts. Create-only, under the same publish lock: when any
+# record of this request exists it returns 3 and changes nothing. Same v1 bytes
+# as the Agent's own running record; no new schema or value.
+# Eski Agent işçisi kayıt yazmaz; güncelleyici yalnız kayıt yoksa ilk running
+# kaydını yazar. Var olan kayıtta 3 döner ve hiçbir şeyi değiştirmez.
+release_observation_publish_initial() {
+    _RELEASE_OBSERVATION_CREATE_ONLY=1 release_observation_publish "$1" "$2" running none update_running
+}
 
 # Optional typed cause of the update's own failure, celikpanel-recovery-failure/v1.
 # Only the updater writes it, once per request: the first recorded cause wins

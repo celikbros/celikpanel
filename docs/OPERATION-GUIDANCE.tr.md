@@ -459,3 +459,46 @@ katalogundadır (açılış katalogunda yer yok); o gelene kadar bildirim genel 
 gösterir. Bu duruşun bildirimi bu değişikliği içeren kurulu bir Panel gerektirir.
 upd4 anlık görüntü hatasının tetikleyicisi hâlâ bilinmiyor; sonraki gerçek sistem
 denemesi onu kaydeder.
+
+### Aday incelemesi: bilinmeyen güncelleme durumu, geri alınan quiesce, erken sahip yeniden denemesi (2026-10-01)
+
+Bileşen ve sözleşme testleriyle kaynak durumu; gerçek sistem denemesi bekliyor.
+Dayanıklılık sözleşmesindeki aynı tarihli "Aday incelemesi düzeltmeleri" girişine
+bakın.
+
+- **Bilinmeyen güncelleme durumu.** Bir güncellemenin kayıtlı durumu yoksa (durum
+  kaydetmeyen kurulu bir sürüm başlattı ve işçi kimliği bulunamadı ya da işçisinin
+  dışında çalıştı), root CLI yine sonucun bilinmediğini ve yeniden sorgulamayı
+  söyler; artık bilinmiyor olarak kalırsa nereye bakılacağını da ekler: kurtarma
+  günlüğü `sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50`
+  otomatik kurtarmanın çalışıp çalışmadığını ya da durduğunu ve duraklamada tek
+  seferlik yeniden deneme komutunu gösterir. Güncelleyicinin ve çalıştırıcının
+  günlük satırları da aynısını söyler. v0.1.0-alpha.80'in başlattığı bir
+  güncelleme artık normalde durumunu kendisi kaydeder.
+- **Geri alınan yarım güncelleme (quiesce).** Kurtarma, panel dondurulmuşken yarım
+  kalmış bir güncelleme bulursa panel ve Agent'ı güncellemeden önceki durumlarına
+  döndürür ve güncelleme biter: durum "güncelleme başarısız oldu" olur ve günlük,
+  kurulu sürüm veya verileri değişmeden durduğunu söyler. Kim işlem yapar: kimse.
+  Devam: güncellemeyi panelden yeniden başlatın; hiçbir şey kendiliğinden yeniden
+  denenmez. "Zamanlayıcı yeniden dener" ya da bekleyen duraklama metni gelmez.
+- **Otomatik deneme hakkı kalmışken sahip yeniden denemesi.** Sahip, üç otomatik
+  deneme kullanılmadan yeniden dener ve deneme başarısız olursa günlük kaç otomatik
+  deneme kaldığını ve zamanlayıcının sonrakini başlatacağını söyler; henüz sahip
+  işlemi gerekmez ve yenileme değiştirilmez. Duraklama ve yeniden deneme komutu
+  ancak otomatik denemeler bitince gelir.
+- **Başlangıç denetiminin okuyamadığı panel ortamı.** Güncelleme hata satırı genel
+  kodu korur ve denetimin panel ortamını okuyamadığını (birim ortamında, ek
+  dosyalarında ya da `panel.env` içinde tırnak, ters eğik çizgi, bilinmeyen anahtar
+  ya da desteklenmeyen karakter) ve yeni panelin denetlenmediğini söyler;
+  güncelleme yine önceki sürüme döndürülür. Kim işlem yapar: girdi onunsa sunucu
+  sahibi; sonra güncellemeyi yeniden başlatır.
+- **Eksik curl.** `/usr/bin/curl` bulunmayan ana makinede güncelleme herhangi bir
+  değişiklikten önce "required update tool is missing: /usr/bin/curl; install it
+  explicitly before retrying" ile durur.
+- **Kurtarma çalışma ortamı ön denetiminde duruş.** Günlük satırı artık kurulu
+  sürüm ve verilerinin değiştirilmediğini söyler (EN ve TR).
+
+Yapılmayan: web güncelleme ekranları metinlerini korur ("kurulu olan hiçbir şey"
+ve "kurulu dosyalar" değişmeden durdu anlamındaki metinler); alpha.80'in başlattığı
+başarılı bir güncelleme, yeni Agent o isteği ilk kez denetleyene kadar
+"uygulanıyor" gösterir.

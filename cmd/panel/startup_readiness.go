@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -215,16 +216,37 @@ func checkStartupReadiness(deps startupReadinessDeps) (startupReadinessReport, e
 	return report, nil
 }
 
+// startupListenHostPattern is install.sh's valid_panel_listen host grammar for
+// an unbracketed host: a name or an IPv4 literal.
+var startupListenHostPattern = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
+
+// validStartupListenAddress accepts what installed panels are configured with
+// and the real start's net.Listen binds: install.sh's grammar (an empty host,
+// a name or IPv4 literal, or a bracketed IPv6 literal, and a decimal port of at
+// most five digits, leading zeros allowed, in 1..65535). A name is not resolved
+// here: the running previous release already listens on the same value, a
+// resolver outage must not turn into a rollback, and a name that no longer
+// resolves at the real start is caught by the updater's post-start proof.
+// Kurulumun dilbilgisini kabul eder; ad çözümlemesi yapılmaz, çünkü önceki
+// sürüm aynı değerle dinliyor ve gerçek açılıştan sonraki kanıt bunu yakalar.
 func validStartupListenAddress(address string) bool {
 	host, port, err := net.SplitHostPort(address)
-	if err != nil {
+	if err != nil || len(port) < 1 || len(port) > 5 {
 		return false
+	}
+	for _, digit := range port {
+		if digit < '0' || digit > '9' {
+			return false
+		}
 	}
 	number, err := strconv.Atoi(port)
-	if err != nil || number < 1 || number > 65535 || strconv.Itoa(number) != port {
+	if err != nil || number < 1 || number > 65535 {
 		return false
 	}
-	return host == "" || net.ParseIP(host) != nil || host == "localhost"
+	if strings.HasPrefix(address, "[") {
+		return strings.Contains(host, ":") && net.ParseIP(host) != nil
+	}
+	return host == "" || startupListenHostPattern.MatchString(host)
 }
 
 // servedPanelPublicKeyPins returns the SubjectPublicKeyInfo SHA-256 pins of
