@@ -115,6 +115,76 @@ class HostIdleTests(unittest.TestCase):
         self.assertFalse(trial.failed_setup_component({"steps": [{"id": "07-firewall;x", "status": "failed"}]})["read"])
 
 
+class Upd9PackageKitTests(unittest.TestCase):
+    """upd9: the PackageKit cells, the probe and the busy task command."""
+
+    def test_cells_and_owner_model(self):
+        once, busy = t.CELLS["upd1-ubuntu-setuponce"], t.CELLS["upd1-ubuntu-busystart"]
+        self.assertEqual((once.node, once.variant, once.h19, once.pk_observe, once.scenario),
+                         ("ubuntu", "good", False, True, "setup-once"))
+        self.assertEqual((busy.node, busy.variant, busy.h19, busy.pk_observe, busy.scenario),
+                         ("ubuntu", "good", True, True, "busy-start"))
+        for cell in t.CELLS.values():
+            self.assertIn(cell.scenario, t.SCENARIOS)
+            if cell.scenario is None:
+                self.assertTrue(cell.h19)
+                self.assertFalse(cell.pk_observe)
+        trial = t.Trial.__new__(t.Trial)
+        trial.node_name, trial.cell = "ubuntu", once
+        self.assertFalse(trial.owner_waits())
+        trial.cell = busy
+        self.assertTrue(trial.owner_waits())
+        trial.cell = t.CELLS["upd1-ubuntu-good"]
+        self.assertTrue(trial.owner_waits())
+
+    def test_plans(self):
+        plan = t.build_plan(t.CELLS["upd1-ubuntu-setuponce"], artifacts(), "/var/tmp/cp-release-drill-x", 18443)
+        self.assertEqual([s["name"] for s in plan["steps"]][-3:], ["setup", "packagekit-after-setup", "collect"])
+        self.assertIn("ONCE", plan["steps"][-3]["does"])
+        plan = t.build_plan(t.CELLS["upd1-ubuntu-busystart"], artifacts(), "/var/tmp/cp-release-drill-x", 18443)
+        names = [s["name"] for s in plan["steps"]]
+        self.assertEqual(names[names.index("pre-state") + 1:names.index("pre-state") + 3], ["busy-start", "arm"])
+
+    def test_probe_reads_the_rule_inputs_and_reports_json(self):
+        agent = (HERE.parents[2] / "cmd/agent/service_mutation_lock_linux.go").read_text()
+        for path in t.PK_LOCK_PATHS:
+            self.assertIn(f'"{path}"', agent)
+            self.assertIn(f'"{path}"', t.PK_PROBE)
+        self.assertIn("/libpk_backend_aptcc.so", agent)
+        self.assertIn("/libpk_backend_aptcc.so", t.PK_PROBE)
+        compile(t.PK_PROBE, "pk-probe", "exec")
+        if sys.platform == "linux":
+            done = subprocess.run([sys.executable, "-I", "-c", t.PK_PROBE], capture_output=True, text=True, timeout=60)
+            self.assertEqual(done.returncode, 0, done.stderr)
+            value = json.loads(done.stdout)
+            self.assertIn(value["rule"], ("idle", "busy"))
+            self.assertIsInstance(value["packagekitd"], list)
+
+    def test_busy_command_is_download_only_and_bounded(self):
+        command = t.busy_op_command("golang-1.22-src", 80)
+        self.assertIn("apt-get install --download-only -y --no-install-recommends", command)
+        self.assertIn("Acquire::http::Dl-Limit=80", command)
+        self.assertIn("apt-get update", command)
+        for bad in (("golang;rm", 80), ("golang-1.22-src", 0), ("x" * 70, 80)):
+            with self.assertRaises(ValueError):
+                t.busy_op_command(*bad)
+
+    def test_pk_summary_counts_bracketed_answers(self):
+        idle = {"packagekitd": [{"pid": 7, "grep_c_aptcc": 6, "children": []}], "rule": "idle", "lock_lines": [],
+                "other_package_processes": []}
+        records = [{"before": idle, "after": idle, "readiness": {"body": {"ready": True}, "answered_by": "agent"}},
+                   {"before": idle, "after": idle,
+                    "readiness": {"body": {"ready": False, "code": "HOST_MUTATION_BUSY",
+                                           "reason": "panel_operation_active"}, "answered_by": "panel"}},
+                   {"before": idle, "after": dict(idle, packagekitd=[{"pid": 8}]),
+                    "readiness": {"body": {"ready": True}, "answered_by": "agent"}}]
+        got = t.pk_summary(records)
+        self.assertEqual(got["pk_alive_rule_idle_bracketed"],
+                         {"agent_ready": 1, "agent_package_manager_active": 0, "agent_other": 0, "panel_answered": 1})
+        self.assertEqual(got["readiness"], {"ready": 2, "HOST_MUTATION_BUSY/panel_operation_active": 1})
+        self.assertEqual(got["grep_c_aptcc"], [6, None])
+
+
 class PlanTests(unittest.TestCase):
     def test_twelve_cells_with_the_selected_second_faults(self):
         self.assertEqual(sorted(t.CELLS), ["upd1-arch-defective", "upd1-arch-good", "upd1-arch-mgmt-off-reboot",
@@ -122,8 +192,8 @@ class PlanTests(unittest.TestCase):
                                            "upd1-arch-startcheck", "upd1-debian13-defective", "upd1-debian13-good",
                                            "upd1-debian13-mgmt-off-reboot", "upd1-debian13-owner-continuation",
                                            "upd1-debian13-realstart", "upd1-debian13-startcheck",
-                                           "upd1-ubuntu-defective", "upd1-ubuntu-good",
-                                           "upd1-ubuntu-owner-continuation"])
+                                           "upd1-ubuntu-busystart", "upd1-ubuntu-defective", "upd1-ubuntu-good",
+                                           "upd1-ubuntu-owner-continuation", "upd1-ubuntu-setuponce"])
         # upd8: the Ubuntu cells mirror Debian's (mail required, reset at payload_restored).
         for name in ("upd1-ubuntu-defective", "upd1-ubuntu-good", "upd1-ubuntu-owner-continuation"):
             debian = t.CELLS[name.replace("ubuntu", "debian13")]
