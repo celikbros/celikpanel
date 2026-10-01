@@ -1341,3 +1341,58 @@ Bileşen testi geçti, çünkü düzeneği aynı yanlış adı kullanıyordu.
   24.04'te gerçek sistem denemesi yeniden bekliyor; Debian 13'ün ve diğer
   sürümlerin arka uç adları ölçülmedi. Yukarıdaki kurulum sihirbazı başlığı açığı
   `fb04289b` ile kapandı.
+
+### Ubuntu 24.04: alpha.80 kaynağından güncelleme ve paket etkinliği kuralı, kapsamı belirli gerçek sistem kanıtı (P0.1/P0.2/P0.3, 2026-10-02)
+
+D-025 ilkeleri 1, 3 ve 6; D-022, D-024. Yalnız yukarıda kaydedilen değişiklikler
+(`efcba145`, `c855a757` ile düzeltilen) için kanıt; başka ürün değişikliği, şema ya da
+sürüm geçişi yok. P0.1, P0.2 ve P0.3 kısmi kalır.
+
+- **alpha.80 kaynağından güncelleme
+  ([upd8](../deploy/e2e/release-recovery/evidence/upd8-20261001/README.md)).**
+  Ubuntu'da ilk güncelleme kanıtı; hücre başına bir son koşu, taban upd7'deki gibi
+  (etiket lisans deney bağlantı noktasıyla yeniden derlendi, betikler ve Agent
+  etiketle aynı). İyi bir aday kuruldu ve doğrulandı; yeni Panel'in başlaması
+  engellendiğinde üç ileri deneme, `retry_scheduled`, `pause_pending`,
+  `first_failure_code=panel_start_unverified` ile duraklama ve yazdırılan sahip
+  yeniden denemesinin bir kez çalıştırılması `succeeded/update_verified` ile bitti;
+  geçiş kusurlu, `payload_restored` anında VM sıfırlamalı bir aday alpha.80'e döndü
+  (`rollback_verified`); Panel'i ve Agent'ı çalışıyordu. Site, SMTP ve cron yalnızca
+  enjekte edilen sıfırlamayla kesildi. upd7'nin sahibin gördüğü açıkları (dönüşten
+  sonra alpha.80 Panel'inin ham hata satırı göstermesi ve aynı sürümü yeniden
+  sunması; ilk saniyelerde kurtarma CLI'sinin olmaması) burada da yinelenir.
+- **Ubuntu'nun ortaya çıkardığı.** Yalın Ubuntu 24.04'te apt, her paket işleminden
+  sonra `packagekitd`'yi başlatır ve hizmet yaklaşık 300 sn boşta kalır. alpha.80
+  bunu paket yöneticisi etkinliği sayar; bu yüzden kurulumu hücre başına yedi sahip
+  denemesi (yaklaşık 45 dakika) gerektirdi. İyi hücre dört kez koşuldu; ilk üçü, düzenek henüz bir sahibin yapacağı
+  gibi beklemediği için kurulumda durdu ve saklanıyor.
+- **İlk kural tutmadı
+  ([upd9](../deploy/e2e/release-recovery/evidence/upd9-20261001/README.md)).**
+  `efcba145` `libpk_backend_aptcc.so` arıyordu; Ubuntu 24.04
+  `packagekit-backend/libpk_backend_apt.so` yükler. Adayın kendi kurulumu başladıktan
+  8 sn sonra reddedildi ve hizmet yalnızca boştayken bir güncelleme başlatma reddedildi.
+  Bileşen testleri geçmişti, çünkü düzenekleri aynı yanlış adı taşıyordu.
+- **Düzeltilen kural tutuyor
+  ([upd10](../deploy/e2e/release-recovery/evidence/upd10-20261001/README.md),
+  `c67d1861`'den derlendi).** Adayın kurulumu (`web_mail`, sıradan sahip, bekleme
+  yok) `packagekitd` baştan sona canlıyken tek denemede ret olmadan yalıtılmış
+  ana makinenin `access_dns` beklemesine ulaştı. Sahibin kendi paket işi sürerken
+  güncelleme başlatma `HOST_MUTATION_BUSY`, neden `package_manager_active` ile
+  reddedildi; kurulu sürüm ve hizmet süreçleri değişmedi. Hizmet boştayken başlatma
+  kabul edildi ve güncelleme doğrulandı. Çalışan hizmetin 176 okumasında yalnız o
+  arka uç dosyasını eşledi, çocuğu yoktu ve kilit tutmuyor ya da beklemiyordu;
+  Agent yalnızca boştaki hizmetin olduğu 41 gözlemin hepsinde `ready`, gerçek iş
+  sırasında 16 gözlemin 16'sında meşgul yanıtladı. Yalın Debian 13'te PackageKit
+  yok; paketi aynı arka uç dosya adıyla gelir
+  (yalnız dosya listesi, kurulmadı).
+- **Ölçülmedi.** Süren bir PackageKit işlemi (hizmetin kendisi için kuralın meşgul
+  tarafı yalnız bileşen testleriyle kapsanır); Ubuntu 22.04; `aptcc` adı; Ubuntu'da
+  başlatma denetimi türü ve yönetim kapalı; imzalı alpha.80 arşivi; paket
+  hizmetleri farklı olabilecek sahibin gerçek sunucu imajı; tarayıcı. Hücre başına
+  bir koşu.
+- **Açık.** Gerçek paket etkinliği nedeniyle reddedilen bir kurulum adımı bekleyip
+  devam etmek yerine hâlâ başarısız olur; başarısız adımın hatası neden alanı
+  taşımaz (sihirbaz başlığını Panel'in cümlesinden seçer); yeni Panel bir
+  güncelleme içinde başlarken sertifika başlangıç uzlaştırması ve milter bağlama
+  için meşgul reddi günlüğe yazar, bunların sonra yeniden denenip denenmediği
+  belirlenmedi.

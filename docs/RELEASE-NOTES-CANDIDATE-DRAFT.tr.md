@@ -55,6 +55,15 @@ güncelleme bitene kadar onu yeniden durdurur.
 incelemesinde reddedilir. Yerel cron bir kurulum bileşenidir. Web sunucusunun
 geçemediği bir barındırma kökü, yol ve çözümle birlikte bildirilir.
 
+**Ubuntu'da kurulum artık kendini engellemez.** Standart bir Ubuntu 24.04 sunucu
+imajında, bir paket yardımcı hizmeti (PackageKit) her paket işleminden sonra
+yaklaşık beş dakika boyunca boşta çalışır durumda kalır. Önceki sürüm
+(v0.1.0-alpha.80) bunu süren bir paket işi sanıp bir sonraki kurulum aşamasını
+durduruyordu; testlerimizde kurulumu yaklaşık yedi kez başlatmak gerekti. Boştaki
+hizmet artık sayılmaz. Gerçek bir paket işi hâlâ sayılır: kurulum ya da güncelleme
+o zaman, sunucunun paket yöneticisinin meşgul olduğunu ve bitmesini beklemek
+gerektiğini söyleyen iletiyle durur.
+
 **Müşteri arşivi test malzemesi taşımaz.** Sürüm arşivi artık kabul düzeneğini, test
 betiklerini ya da saklanan kanıtı içermez; imzalama adımı içeren bir arşivi
 reddeder.
@@ -63,19 +72,28 @@ reddeder.
 
 Bunlar bilinen ve bilinçli sınırlardır. Gizli kusur değildir.
 
-- **Ölçülen platformlar:** Debian 13 ve Arch. Ubuntu için kanıt yok. RHEL ailesi
-  engelli önizleme olarak kalır.
+- **Ölçülen platformlar:** Debian 13 ve Arch. Ubuntu 24.04'te yalnız üç şey
+  denendi: v0.1.0-alpha.80'den güncelleme (bu adayın daha eski derlemeleriyle), ilk
+  kurulum ve güncelleme başlatma. RHEL ailesi engelli önizleme olarak kalır.
 - **Arch'ta posta** desteklenmez.
 - Hizmet veren bir sunucuda **BIND'ten PowerDNS'e** geçiş reddedilir. Daha eski bir
   sürümün yapılandırdığı BIND ikincil sunucusu, yeni ikincil yapılandırmaya otomatik
   olarak yükseltilmez.
-- **v0.1.0-alpha.80'den ilk güncelleme.** Bu yol yalnız Debian 13'te, alpha.80
-  kaynağından bir deneme lisansıyla yeniden derlenerek ölçüldü; imzalı arşivden
-  değil. Arch ölçülmedi. Bu aday başarısız olur ve sunucu otomatik olarak
+- **v0.1.0-alpha.80'den ilk güncelleme.** Bu yol Debian 13 ve Ubuntu 24.04'te,
+  alpha.80 kaynağından bir deneme lisansıyla yeniden derlenerek ölçüldü; imzalı
+  arşivden değil. Arch ölçülmedi. Bu aday başarısız olur ve sunucu otomatik olarak
   alpha.80'e dönerse alpha.80 Panel'i bunu anlatamaz: ham bir hata satırı gösterir
   ve aynı sürümü yeniden sunar. Durum o zaman SSH üzerinden
   `sudo /usr/libexec/celikpanel/recovery` ile okunur. Güncellemenin ilk
   saniyelerinde bu komut henüz yoktur.
+- **Gerçek bir paket işi yüzünden duran kurulum aşaması kendiliğinden devam
+  etmez.** İşin bitmesini bekleyin, planı gözden geçirip kurulumu yeniden başlatın;
+  zaten kurulu hizmetler yeniden kurulmaz, durmuş olan aşama yeniden çalışır.
+- **v0.1.0-alpha.80 çalıştıran bir Ubuntu sunucusunu güncelleme.** Güncelleme kartı,
+  boştaki paket yardımcı hizmeti çalışırken "Sunucu değişiklikleri geçici olarak
+  kullanılamıyor." gösterebilir. Yaklaşık beş dakika bekleyin, yeniden denetleyin,
+  sonra güncellemeyi başlatın. Kart bunu gösterirken sunucuda hiçbir şey
+  değişmez. Bu, alpha.80 kodundan okundu; bir testte yaşanmadı.
 - **Tamamlandıktan sonra geri alma yok.** Yeni Panel başlayıp sonradan başarısız
   olursa güncelleme geri alınmaz, bitirilir.
 - **Panel durmuşken** adresinde canlı kurtarma durumu görünmez; sahip bunu SSH

@@ -2106,3 +2106,59 @@ used the same wrong name.
   native Ubuntu 24.04 re-run is pending; Debian 13's and other releases' backend
   names are not measured. The setup wizard headline gap above was closed by
   `fb04289b`.
+
+### Ubuntu 24.04: update from the alpha.80 source and the package-activity rule, scoped native evidence (P0.1/P0.2/P0.3, 2026-10-02)
+
+D-025 invariants 1, 3 and 6; D-022, D-024. Evidence only for the changes already
+recorded above (`efcba145`, corrected by `c855a757`); no further product change,
+no schema or version transition. P0.1, P0.2 and P0.3 stay partial.
+
+- **Update from the alpha.80 source
+  ([upd8](../deploy/e2e/release-recovery/evidence/upd8-20261001/README.md)).**
+  First update evidence on Ubuntu, one final run per cell, baseline as in upd7
+  (the tag rebuilt with the license test seam, scripts and Agent identical to the
+  tag). A good candidate was installed and verified; with the new Panel prevented
+  from starting, three forward attempts, `retry_scheduled`, `pause_pending`, the
+  pause with `first_failure_code=panel_start_unverified`, and the printed owner
+  retry run once ended `succeeded/update_verified`; a candidate with a migration
+  defect and a VM reset at `payload_restored` returned to alpha.80
+  (`rollback_verified`) with its Panel and Agent running. Site, SMTP and cron
+  were interrupted only by the injected reset. The owner-visible gaps of upd7
+  (raw failure line and the same version offered again by the alpha.80 Panel
+  after a return; no recovery CLI for the first seconds) repeat here.
+- **What Ubuntu exposed.** On stock Ubuntu 24.04 apt starts `packagekitd` after
+  every package operation and the daemon stays idle for about 300 s. alpha.80
+  counts it as package-manager activity, so its setup needed seven owner attempts
+  (about 45 minutes) per cell. The good cell ran four times; the first three stopped
+  at setup because the harness did not yet wait as an owner would, and are
+  retained.
+- **The first rule did not hold
+  ([upd9](../deploy/e2e/release-recovery/evidence/upd9-20261001/README.md)).**
+  `efcba145` looked for `libpk_backend_aptcc.so`; Ubuntu 24.04 maps
+  `packagekit-backend/libpk_backend_apt.so`. The candidate's own setup was
+  refused 8 s after its start and an update start was refused while the daemon
+  only idled. Component tests had passed because their fixture carried the same
+  wrong name.
+- **The corrected rule holds
+  ([upd10](../deploy/e2e/release-recovery/evidence/upd10-20261001/README.md),
+  built from `c67d1861`).** The candidate's setup (`web_mail`, ordinary owner, no
+  waiting) reached the isolated host's `access_dns` wait in one attempt with no
+  refusal while `packagekitd` was alive throughout. During the owner's own
+  package task the update start was refused with `HOST_MUTATION_BUSY`, reason
+  `package_manager_active`, and the installed version and service processes were
+  unchanged; with the daemon idle the start was admitted and the update verified.
+  In 176 readings of a running daemon it mapped only that backend file, had no
+  child and held or awaited no lock; the Agent answered `ready` in all 41
+  observations with only the idle daemon and busy in 16 of 16 during the real
+  task. Stock Debian 13 has no PackageKit; its package ships the same backend
+  file name (file listing only, not installed).
+- **Not measured.** A PackageKit transaction in progress (the busy side of the
+  rule for the daemon itself is covered by component tests only); Ubuntu 22.04;
+  the `aptcc` name; the start-check kind and management off on Ubuntu; the signed
+  alpha.80 archive; the owner's real server image, whose package services may
+  differ; a browser. One run per cell.
+- **Open.** A setup step refused for real package activity still fails instead
+  of waiting and resuming; the failed step's error carries no reason field (the
+  wizard picks its headline from the Panel's sentence); when the new Panel starts
+  inside an update it logs a busy refusal for certificate startup reconcile and
+  milter wiring, and whether those are retried later is not established.

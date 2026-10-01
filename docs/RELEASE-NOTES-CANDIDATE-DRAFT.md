@@ -55,6 +55,15 @@ it again until the update finishes.
 plan review. Native cron is a setup component. A hosting root that the web server
 cannot traverse is reported with the path and the fix.
 
+**Setup on Ubuntu no longer blocks itself.** On a standard Ubuntu 24.04 server
+image, a package helper service (PackageKit) stays running idle for about five
+minutes after every package operation. The previous release (v0.1.0-alpha.80)
+took that for a package task in progress and stopped the next setup stage; in
+our tests setup had to be started about seven times. The idle service is no
+longer counted. A real package task still is: setup or the update then stops
+with the message that the server's package manager is busy and to wait for it
+to finish.
+
 **The customer archive carries no test material.** The release archive no longer
 contains the acceptance harness, test scripts or retained evidence, and the
 signing step refuses an archive that does.
@@ -63,19 +72,29 @@ signing step refuses an archive that does.
 
 These are known and deliberate. They are not hidden defects.
 
-- **Measured platforms:** Debian 13 and Arch. There is no evidence for Ubuntu. The
-  RHEL family remains a blocked preview.
+- **Measured platforms:** Debian 13 and Arch. On Ubuntu 24.04 only three things
+  were tested: updating from v0.1.0-alpha.80 (with earlier builds of this
+  candidate), first-time setup, and starting an update. The RHEL family remains a blocked preview.
 - **Mail on Arch** is not supported.
 - **BIND to PowerDNS** on a serving server is refused. A BIND secondary configured
   by an older release is not upgraded to the new secondary configuration
   automatically.
 - **The first update from v0.1.0-alpha.80.** This path was measured on Debian 13
-  only, from the alpha.80 source rebuilt with a test license, not from the
-  signed archive; Arch was not measured. If this candidate fails and the server
+  and Ubuntu 24.04, from the alpha.80 source rebuilt with a test license, not
+  from the signed archive; Arch was not measured. If this candidate fails and the server
   returns to alpha.80 automatically, the alpha.80 Panel cannot describe that: it
   shows a raw failure line and offers the same version again. The state is then
   read over SSH with `sudo /usr/libexec/celikpanel/recovery`. For the first
   seconds of the update that command does not exist yet.
+- **A setup stage stopped by a real package task does not resume by itself.**
+  Wait for the task to finish, review the plan and start setup again; services
+  already installed are not installed again, and the stage that was stopped runs
+  again.
+- **Updating an Ubuntu server that still runs v0.1.0-alpha.80.** Its update
+  card can show "Server changes are temporarily unavailable" while the idle
+  package helper runs. Wait about five minutes, check again, then start the
+  update. Nothing on the server is changed while the card says this. This was
+  read from the alpha.80 code; it did not occur in a test.
 - **No rollback after completion.** If the new Panel starts and fails later, the
   update is finished rather than undone.
 - **While the Panel is stopped** its address shows no live recovery status; the
