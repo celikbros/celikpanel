@@ -1,0 +1,7 @@
+evidence /var/tmp/cp-release-drill-upd7-arch-good-a/evidence/arch/upd1/upd1-arch-good-20261001t120547z/
+== distinct CLI texts
+== journal lines
+-- steps/14-collect/journal-setup-services.txt 1
+    2026-10-01T12:09:26.500972+00:00 dns-arch mariadbd[1461]: 2026-10-01 12:09:26 0 [Note] InnoDB: 128 rollback segments in 3 undo tablespaces are active.
+== result {"overall": "failed", "native_evidence": false, "request_id": null} {"attempts": {"automatic": [], "automatic_count": 0, "journal_admissions": [], "owner": [], "owner_count": 0}, "classification": "not-terminal", "final_status": null, "owner_continuation": false, "owner_reboot": null, "pin_changes": [], "port_hold": null, "reboot": null, "track_stop": null}
+findings []

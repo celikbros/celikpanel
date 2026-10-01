@@ -1,0 +1,13 @@
+2026-10-01T12:22:28Z
+360M	/var/tmp/cp-upd7-run
+2.2G	/var/tmp/cp-release-drill-upd7-arch-good-a
+2.3G	/var/tmp/cp-release-drill-upd7-arch-good-b
+2.5G	/var/tmp/cp-release-drill-upd7-d13-def-a
+2.4G	/var/tmp/cp-release-drill-upd7-d13-good-a
+2.4G	/var/tmp/cp-release-drill-upd7-d13-oc-a
+700M	/var/tmp/cp-upd1-build/20261001t111438z
+133M	/var/tmp/cp-pair-accept/dist/f650e8c12d1d0c91764d201802008332f49b8d57-acceptance-license
+676M	/var/tmp/cp-pair-accept/dist/622ddcb40568073d1407983bf78d0b8b8e24b0a5-acceptance-license
+676M	/var/tmp/cp-pair-accept/dist/205abc6463d0bbc047a1c38765e102d2fcf3c05b-acceptance-license
+/dev/sdd           1007G  152G      804G  16% /
+4363b888278fa3d86af32af8199c5bc0  -

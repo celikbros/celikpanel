@@ -1,0 +1,7 @@
+evidence /var/tmp/cp-release-drill-upd7-arch-good-b/evidence/arch/upd1/upd1-arch-good-20261001t121159z/
+== distinct CLI texts
+== journal lines
+-- steps/14-collect/journal-setup-services.txt 1
+    2026-10-01T12:15:22.480235+00:00 dns-arch mariadbd[1429]: 2026-10-01 12:15:22 0 [Note] InnoDB: 128 rollback segments in 3 undo tablespaces are active.
+== result {"overall": "failed", "native_evidence": false, "request_id": null} {"attempts": {"automatic": [], "automatic_count": 0, "journal_admissions": [], "owner": [], "owner_count": 0}, "classification": "not-terminal", "final_status": null, "owner_continuation": false, "owner_reboot": null, "pin_changes": [], "port_hold": null, "reboot": null, "track_stop": null}
+findings ["arch: web_mail was not attempted on the published v0.1.0-alpha.80 baseline (it accepts the plan but fails at 05-mail_profile); mail is recorded as not provided on this platform", "arch: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['08-panel_certificate', '09-verify']", "arch: cron: not available on this baseline (crontab absent before seeding); the owner cron job was not created and cron continuity is not measured"]

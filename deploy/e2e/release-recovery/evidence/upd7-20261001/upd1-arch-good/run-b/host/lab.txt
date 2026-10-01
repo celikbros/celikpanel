@@ -1,0 +1,2 @@
+lab=/var/tmp/cp-release-drill-upd7-arch-good-b
+upd1-arch-good-20261001t121159z

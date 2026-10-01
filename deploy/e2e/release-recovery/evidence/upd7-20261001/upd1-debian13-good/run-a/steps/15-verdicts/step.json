@@ -1,0 +1,74 @@
+{
+  "checks": {
+    "agreement": {
+      "agreed_samples": 1,
+      "lag_samples": 0,
+      "samples": 13,
+      "verdict": "passed"
+    },
+    "attempts": {
+      "automatic": [],
+      "automatic_count": 0,
+      "journal_admissions": [],
+      "owner": [],
+      "owner_count": 0
+    },
+    "clock_skew_seconds": 0.784,
+    "host_panel_windows": [
+      {
+        "failed": true,
+        "first_bad": 1790854106.9925954,
+        "from": 1790854101.9924617,
+        "kind": "failed",
+        "last_bad": 1790854126.9931903,
+        "lower_bound_s": 20.001,
+        "to": 1790854131.9933548,
+        "unobserved": false,
+        "upper_bound_s": 30.001
+      }
+    ],
+    "host_ssh_windows": [],
+    "outcome": "update-verified",
+    "workloads": {
+      "cron": {
+        "note": "cron: not available on this baseline",
+        "verdict": "not-available-on-baseline"
+      },
+      "dns": {
+        "mode": "external",
+        "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+        "verdict": "not-provided-external-dns"
+      },
+      "panel": {
+        "outside": [],
+        "verdict": "down-only-during-transaction",
+        "windows": [
+          {
+            "cause": "unexplained",
+            "failed": true,
+            "first_bad": 1790854102.5886762,
+            "from": 1790854097.5880535,
+            "kind": "failed",
+            "last_bad": 1790854122.5898473,
+            "lower_bound_s": 20.001,
+            "to": 1790854127.5909555,
+            "unobserved": false,
+            "upper_bound_s": 30.003
+          }
+        ]
+      },
+      "smtp": {
+        "verdict": "never-interrupted",
+        "windows": []
+      },
+      "web": {
+        "verdict": "never-interrupted",
+        "windows": []
+      }
+    }
+  },
+  "finished_at": "2026-10-01T11:29:13Z",
+  "name": "verdicts",
+  "started_at": "2026-10-01T11:29:13Z",
+  "verdict": "passed"
+}

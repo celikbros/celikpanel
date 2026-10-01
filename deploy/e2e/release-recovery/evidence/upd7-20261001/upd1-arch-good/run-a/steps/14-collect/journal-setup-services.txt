@@ -1,0 +1,37 @@
+2026-10-01T12:09:01.548070+00:00 dns-arch systemd[1]: Starting nginx web server...
+2026-10-01T12:09:01.570741+00:00 dns-arch nginx[859]: 2026/10/01 12:09:01 [warn] 859#859: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-01T12:09:01.574658+00:00 dns-arch systemd[1]: Started nginx web server.
+2026-10-01T12:09:01.644094+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-01T12:09:01.662993+00:00 dns-arch nginx[875]: 2026/10/01 12:09:01 [warn] 875#875: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-01T12:09:01.666033+00:00 dns-arch nginx[875]: 2026/10/01 12:09:01 [notice] 875#875: signal process started
+2026-10-01T12:09:01.667662+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-01T12:09:10.433442+00:00 dns-arch systemd[1]: Starting The PHP FastCGI Process Manager...
+2026-10-01T12:09:10.504275+00:00 dns-arch php-fpm[1151]: [NOTICE] fpm is running, pid 1151
+2026-10-01T12:09:10.505811+00:00 dns-arch php-fpm[1151]: [NOTICE] ready to handle connections
+2026-10-01T12:09:10.505989+00:00 dns-arch systemd[1]: Started The PHP FastCGI Process Manager.
+2026-10-01T12:09:10.505863+00:00 dns-arch php-fpm[1151]: [NOTICE] systemd monitor interval set to 10000ms
+2026-10-01T12:09:26.300739+00:00 dns-arch systemd[1]: Starting MariaDB 13.0.2 database server...
+2026-10-01T12:09:26.395819+00:00 dns-arch mariadbd[1461]: 2026-10-01 12:09:26 0 [Note] Starting MariaDB 13.0.2-MariaDB source revision 620a4b5624222048fece7fe1789978ae0675cae2 server_uid 84n076SGZKCVkhomPv3Lk5nb1PQ= as process 1461
+2026-10-01T12:09:26.410045+00:00 dns-arch mariadbd[1461]: 2026-10-01 12:09:26 0 [Note] InnoDB: Compressed tables use zlib 1.3.2
+2026-10-01T12:09:26.410976+00:00 dns-arch mariadbd[1461]: 2026-10-01 12:09:26 0 [Note] InnoDB: Number of transaction pools: 1
+2026-10-01T12:09:26.411055+00:00 dns-arch mariadbd[1461]: 2026-10-01 12:09:26 0 [Note] InnoDB: Using crc32 + pclmulqdq instructions
+2026-10-01T12:09:26.411199+00:00 dns-arch mariadbd[1461]: 2026-10-01 12:09:26 0 [Note] InnoDB: Using io_uring
+2026-10-01T12:09:26.411438+00:00 dns-arch mariadbd[1461]: 2026-10-01 12:09:26 0 [Note] InnoDB: innodb_buffer_pool_size_max=8388614m, innodb_buffer_pool_size=128m
+2026-10-01T12:09:26.417176+00:00 dns-arch mariadbd[1461]: 2026-10-01 12:09:26 0 [Note] InnoDB: Initialized memory pressure event listener
+2026-10-01T12:09:26.417176+00:00 dns-arch mariadbd[1461]: 2026-10-01 12:09:26 0 [Note] InnoDB: Completed initialization of buffer pool
+2026-10-01T12:09:26.417176+00:00 dns-arch mariadbd[1461]: 2026-10-01 12:09:26 0 [Note] InnoDB: Buffered log writes (block size=512 bytes)
+2026-10-01T12:09:26.436756+00:00 dns-arch mariadbd[1461]: 2026-10-01 12:09:26 0 [Note] InnoDB: End of log at LSN=45418
+2026-10-01T12:09:26.500767+00:00 dns-arch mariadbd[1461]: 2026-10-01 12:09:26 0 [Note] InnoDB: Opened 3 undo tablespaces
+2026-10-01T12:09:26.500972+00:00 dns-arch mariadbd[1461]: 2026-10-01 12:09:26 0 [Note] InnoDB: 128 rollback segments in 3 undo tablespaces are active.
+2026-10-01T12:09:26.501903+00:00 dns-arch mariadbd[1461]: 2026-10-01 12:09:26 0 [Note] InnoDB: Setting file './ibtmp1' size to 12.000MiB. Physically writing the file full; Please wait ...
+2026-10-01T12:09:26.501903+00:00 dns-arch mariadbd[1461]: 2026-10-01 12:09:26 0 [Note] InnoDB: File './ibtmp1' size is now 12.000MiB.
+2026-10-01T12:09:26.502041+00:00 dns-arch mariadbd[1461]: 2026-10-01 12:09:26 0 [Note] InnoDB: log sequence number 45418; transaction id 14
+2026-10-01T12:09:26.502186+00:00 dns-arch mariadbd[1461]: 2026-10-01 12:09:26 0 [Note] Plugin 'wsrep-provider' is disabled.
+2026-10-01T12:09:26.503200+00:00 dns-arch mariadbd[1461]: 2026-10-01 12:09:26 0 [Note] InnoDB: Loading buffer pool(s) from /var/lib/mysql/ib_buffer_pool
+2026-10-01T12:09:26.506986+00:00 dns-arch mariadbd[1461]: 2026-10-01 12:09:26 0 [Note] InnoDB: Buffer pool(s) load completed at 261001 12:09:26
+2026-10-01T12:09:27.595787+00:00 dns-arch mariadbd[1461]: 2026-10-01 12:09:27 0 [Note] Server socket created on IP: '0.0.0.0', port: '3306'.
+2026-10-01T12:09:27.595787+00:00 dns-arch mariadbd[1461]: 2026-10-01 12:09:27 0 [Note] Server socket created on IP: '::', port: '3306'.
+2026-10-01T12:09:27.624099+00:00 dns-arch mariadbd[1461]: 2026-10-01 12:09:27 0 [Note] mariadbd: Event Scheduler: Loaded 0 events
+2026-10-01T12:09:27.630441+00:00 dns-arch mariadbd[1461]: 2026-10-01 12:09:27 0 [Note] /usr/bin/mariadbd: ready for connections.
+2026-10-01T12:09:27.630441+00:00 dns-arch mariadbd[1461]: Version: '13.0.2-MariaDB'  socket: '/run/mysqld/mysqld.sock'  port: 3306  Arch Linux
+2026-10-01T12:09:27.630622+00:00 dns-arch systemd[1]: Started MariaDB 13.0.2 database server.

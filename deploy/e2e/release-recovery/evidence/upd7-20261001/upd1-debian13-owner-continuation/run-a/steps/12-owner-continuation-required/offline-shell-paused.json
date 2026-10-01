@@ -1,0 +1,9 @@
+{
+  "error": "TimeoutError",
+  "reference": "b8a757e6fd0b5d00513f930a1be58819",
+  "status_command": {
+    "en": "sudo /usr/libexec/celikpanel/recovery status --request-id b8a757e6fd0b5d00513f930a1be58819 --lang en",
+    "tr": "sudo /usr/libexec/celikpanel/recovery status --request-id b8a757e6fd0b5d00513f930a1be58819 --lang tr"
+  },
+  "texts_error": "[Errno 2] No such file or directory: '/var/tmp/cp-pair-accept/dist/f650e8c12d1d0c91764d201802008332f49b8d57-acceptance-license/product-web-src/offline/copy.ts'"
+}
