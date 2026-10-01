@@ -48,7 +48,14 @@ def validate_intent(value, identity, operation):
             or value['schema'] != SCHEMA or value['identity'] != identity
             or value['operation_id'] != operation or not files.HEX32.fullmatch(operation)):
         raise probe.ProbeError('bound-worker intent identity differs')
-    for role, version in (('baseline', 'v0.1.0-alpha.81'), ('target', 'v0.1.0-alpha.82')):
+    # upd7: the closed set of (baseline, target) labels; the second pair is the first update from the
+    # published v0.1.0-alpha.80 to a candidate labelled v0.1.0-alpha.81.
+    pairs = (('v0.1.0-alpha.81', 'v0.1.0-alpha.82'), ('v0.1.0-alpha.80', 'v0.1.0-alpha.81'))
+    labels = tuple((value.get(role) or {}).get('version') if isinstance(value.get(role), dict) else None
+                   for role in ('baseline', 'target'))
+    if labels not in pairs:
+        raise probe.ProbeError('unsupported current-producer artifact identity')
+    for role, version in zip(('baseline', 'target'), labels):
         item = value[role]
         if (not isinstance(item, dict) or set(item) != {'version', 'commit', 'agent_sha256', 'panel_sha256'}
                 or item['version'] != version or not HEX40.fullmatch(item.get('commit', ''))

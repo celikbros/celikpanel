@@ -87,6 +87,15 @@ if [[ $acceptance -eq 1 ]]; then
     [[ -f $src/internal/licensing/acceptance_fixture.go ]] \
         || { echo "commit $full has no acceptance license seam" >&2; exit 2; }
     guard=$src/deploy/release-acceptance-license-guard.sh
+    # upd7: a published tag that predates the guard (v0.1.0-alpha.80) is checked with the
+    # guard named by CELIKPANEL_ACCEPTANCE_GUARD (the harness commit's own copy); the tag's
+    # make dist does not run it, and the tag's deploy/ tree is not changed to add it.
+    if [[ ! -f $guard && -n ${CELIKPANEL_ACCEPTANCE_GUARD:-} ]]; then
+        [[ -f $CELIKPANEL_ACCEPTANCE_GUARD ]] || { echo "CELIKPANEL_ACCEPTANCE_GUARD is not a file" >&2; exit 2; }
+        guard=$CELIKPANEL_ACCEPTANCE_GUARD
+        echo "acceptance guard: $guard (the commit has none)" >> "$out/build.log"
+    fi
+    [[ -f $guard ]] || { echo "commit $full has no acceptance license guard" >&2; exit 2; }
     # The ordinary archive passed make dist's guard; check it once more.
     bash "$guard" "$archive" || { echo "ordinary archive unexpectedly refused" >&2; exit 1; }
     work=$out/acceptance

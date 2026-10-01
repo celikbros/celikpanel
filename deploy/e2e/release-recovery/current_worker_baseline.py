@@ -162,9 +162,22 @@ def verify_foundation_identity(raw, version, sequence, commit):
     return {"version":version,"sequence":sequence,"commit":commit,"sha256":hashlib.sha256(raw).hexdigest()}
 
 
+def floor_bytes(version, sequence):
+    return ("format=celikpanel-release-sequence-floor-v1\nsequence=" + str(sequence) + "\nversion=" + version + "\n").encode()
+
+
 def guest_driver(record, node_name, node, intent_sha256):
+    # upd7: the baseline identity is rendered from this module's VERSION/SEQUENCE/RELEASE_POLICY (the
+    # defaults keep the Alpha81 fixture; owner_update_trial sets the published v0.1.0-alpha.80 baseline).
+    if type(SEQUENCE) is not int or not 0 < SEQUENCE < 2**31 or RELEASE_POLICY.get("version") != VERSION \
+            or RELEASE_POLICY.get("current") != SEQUENCE:
+        raise ValueError("baseline identity is inconsistent")
     return lab.guest_guard(record, node_name, node) + "\n" + inspect.getsource(extract_current_archive) + "\n" + inspect.getsource(verify_foundation_identity) + "\n" + GUEST_DRIVER.replace(
-        "INTENT_SHA256_LITERAL", repr(intent_sha256)).replace("FRESH_PATHS_LITERAL", repr(FRESH_PATHS))
+        "INTENT_SHA256_LITERAL", repr(intent_sha256)).replace("FRESH_PATHS_LITERAL", repr(FRESH_PATHS)).replace(
+        "BASELINE_VERSION_LITERAL", repr(VERSION)).replace("BASELINE_SEQUENCE_LITERAL", repr(SEQUENCE)).replace(
+        "BASELINE_SEQUENCE_TEXT_LITERAL", repr(str(SEQUENCE))).replace(
+        "BASELINE_POLICY_LITERAL", repr(dict(RELEASE_POLICY))).replace(
+        "BASELINE_FLOOR_LITERAL", repr(floor_bytes(VERSION, SEQUENCE)))
 
 
 GUEST_DRIVER = r'''import datetime,fcntl,hashlib,importlib.util,secrets,subprocess,sys,tarfile,time
@@ -209,7 +222,7 @@ if stat.S_IMODE(ROOT.stat().st_mode)!=0o700:raise ValueError("baseline root must
 raw=private_read(ROOT/"current-worker-baseline-intent.json")
 if hashlib.sha256(raw).hexdigest()!=EXPECTED_INTENT:raise ValueError("baseline intent changed")
 intent=json.loads(raw)
-if intent.get("schema")!="celikpanel/current-worker-baseline-intent/v1" or intent.get("identity")!=expected or intent.get("version")!="v0.1.0-alpha.81" or intent.get("sequence")!=81:
+if intent.get("schema")!="celikpanel/current-worker-baseline-intent/v1" or intent.get("identity")!=expected or intent.get("version")!=BASELINE_VERSION_LITERAL or intent.get("sequence")!=BASELINE_SEQUENCE_LITERAL:
     raise ValueError("baseline intent is not for this guest")
 key=ROOT/"worker-origin-public.pem"
 if intent.get("public_key_path")!=str(key) or hashlib.sha256(private_read(key,16384,(0o600,0o644))).hexdigest()!=intent["public_key_sha256"]:
@@ -233,7 +246,7 @@ with os.fdopen(log_fd,"wb") as output:
         spec=importlib.util.spec_from_file_location("current_baseline_archive",helper_path)
         archive=importlib.util.module_from_spec(spec);sys.modules[spec.name]=archive;spec.loader.exec_module(archive)
         packed=ROOT/"current-worker-baseline.tar.gz"
-        candidate=archive.inspect_archive(packed,intent["candidate"]["archive_sha256"],release_policy={"version":"v0.1.0-alpha.81","current":81,"previous":80,"previous_version":"v0.1.0-alpha.80"})
+        candidate=archive.inspect_archive(packed,intent["candidate"]["archive_sha256"],release_policy=BASELINE_POLICY_LITERAL)
         if candidate!=intent["candidate"]:raise ValueError("baseline archive identity differs")
         source=ROOT/"current-worker-baseline-source"
         extract_current_archive(source,packed,candidate,archive)
@@ -248,11 +261,11 @@ with os.fdopen(log_fd,"wb") as output:
         if completed.returncode:raise ValueError("native baseline installer failed")
         if (ROOT/"admin-install.json").exists():raise ValueError("installer did not consume credential input")
         environment.pop("CELIKPANEL_ADMIN_CREDENTIALS_FILE")
-        enrolled=subprocess.run(["/bin/bash",str(source/"deploy/enroll-signed-release-trust.sh"),"--sequence","81","--version",intent["version"],"--commit",candidate["commit"],"--public-key-file",str(key)],cwd=source,env=environment,stdin=subprocess.DEVNULL,stdout=output,stderr=subprocess.STDOUT,timeout=120)
+        enrolled=subprocess.run(["/bin/bash",str(source/"deploy/enroll-signed-release-trust.sh"),"--sequence",BASELINE_SEQUENCE_TEXT_LITERAL,"--version",intent["version"],"--commit",candidate["commit"],"--public-key-file",str(key)],cwd=source,env=environment,stdin=subprocess.DEVNULL,stdout=output,stderr=subprocess.STDOUT,timeout=120)
         proof["enrollment_exit"]=enrolled.returncode
         if enrolled.returncode:raise ValueError("native baseline trust enrollment failed")
         floor=private_read(Path("/var/lib/celikpanel-release-state/sequence.floor"),512)
-        if floor!=b"format=celikpanel-release-sequence-floor-v1\nsequence=81\nversion=v0.1.0-alpha.81\n":raise ValueError("enrolled release floor differs")
+        if floor!=BASELINE_FLOOR_LITERAL:raise ValueError("enrolled release floor differs")
         trusted_key=private_read(Path("/etc/celikpanel/release-signing-ed25519.pem"),16384,(0o644,))
         if hashlib.sha256(trusted_key).hexdigest()!=intent["public_key_sha256"]:raise ValueError("enrolled fixture key differs")
         proof["sequence_floor_sha256"]=hashlib.sha256(floor).hexdigest();proof["public_key_sha256"]=hashlib.sha256(trusted_key).hexdigest()

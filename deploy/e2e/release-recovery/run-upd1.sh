@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # upd1 wrapper for the Linux QEMU host (archlinux), run as root from the repository root.
 #
-#   run-upd1.sh build [SOURCE_COMMIT]
+#   run-upd1.sh build [--baseline-ref v0.1.0-alpha.80] [SOURCE_COMMIT]
 #       Disposable clone + fixture commits B/G/D/S/R + five acceptance-license
-#       archives; prints the upd1-artifacts.json path.
+#       archives; prints the upd1-artifacts.json path. --baseline-ref (upd7):
+#       B is the published tag + the D-027 license seam only; G/D are labelled alpha.81.
 #   run-upd1.sh prove ARTIFACTS_JSON
 #       Read-only host proof of every archive in it (inventory, policy, source).
 #   run-upd1.sh dry-run CELL ARTIFACTS_JSON LAB_NAME
@@ -31,7 +32,7 @@ DRIVER=(python3 "$HERE/owner_update_trial.py")
 CHOICES=(--dns-mode "$DNS_MODE")
 [[ -z ${UPD1_SETUP_DRAFT_JSON:-} ]] || CHOICES+=(--setup-draft-json "$UPD1_SETUP_DRAFT_JSON")
 
-usage() { sed -n '2,23p' "${BASH_SOURCE[0]}" >&2; exit 2; }
+usage() { sed -n '2,24p' "${BASH_SOURCE[0]}" >&2; exit 2; }
 [[ $# -ge 1 ]] || usage
 command=$1; shift
 case $command in

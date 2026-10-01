@@ -28,6 +28,19 @@ SCHEMA = 'celikpanel/worker-fixture-origin/v1'
 PREFIX = 'worker-origin-'
 MAX_ARCHIVE = 100 * 1024 * 1024
 RELEASE_POLICY = {'version': 'v0.1.0-alpha.82', 'current': 82, 'previous': 81, 'previous_version': 'v0.1.0-alpha.81'}
+# upd7: the closed set of target transitions this origin may serve. The first is the upd1-upd6 fixture
+# transition; the second is the first update from the published v0.1.0-alpha.80 (a candidate labelled
+# v0.1.0-alpha.81). The host may select only one of these (owner_update_trial sets RELEASE_POLICY).
+RELEASE_POLICIES = (
+    dict(RELEASE_POLICY),
+    {'version': 'v0.1.0-alpha.81', 'current': 81, 'previous': 80, 'previous_version': 'v0.1.0-alpha.80'},
+)
+
+
+def allowed_policy(policy):
+    """True when every transition field equals one closed transition exactly (value and type)."""
+    return any(all(policy.get(key) == wanted and type(policy.get(key)) is type(wanted) for key, wanted in allowed.items())
+               for allowed in RELEASE_POLICIES)
 
 
 def module(name):
@@ -135,6 +148,8 @@ def prepare(root, node_name, archive, version, commit, sequence, repository):
             or not re.fullmatch(r'[0-9a-f]{40}', commit) or type(sequence) is not int
             or not 0 < sequence < 2**63):
         raise ValueError('invalid fixture release identity')
+    if not allowed_policy(RELEASE_POLICY) or set(RELEASE_POLICY) != set(RELEASE_POLICIES[0]):
+        raise ValueError('origin target transition is not one of the closed fixture transitions')
     archive = Path(archive)
     source = module('candidate_archive')
     candidate = source.inspect_archive(archive, digest(archive), release_policy=RELEASE_POLICY)
@@ -259,7 +274,7 @@ def validate_intent(intent):
     policy = intent['source_proof']['release_policy']
     if (set(policy) != {'format', 'version', 'current', 'previous', 'previous_version', 'previous_commit', 'sha256'}
             or policy['format'] != 'celikpanel-release-sequence-policy-v1'
-            or any(policy[key] != wanted or type(policy[key]) is not type(wanted) for key, wanted in RELEASE_POLICY.items())
+            or not allowed_policy(policy)
             or target.get('sequence') != str(policy['current']) or target['version'] != policy['version']
             or not re.fullmatch('[0-9a-f]{40}', policy['previous_commit']) or policy['previous_commit'] == target['commit']):
         raise ValueError('origin release policy differs from the target transition')

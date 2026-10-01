@@ -158,6 +158,100 @@ class FixtureSourceTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "disposable"):
                 t.fixture_source(Path(directory), "baseline", None)
 
+    def test_upd7_seam_hooks_are_the_seam_commits_own_lines(self):
+        # Each hook replacement is present verbatim in the source's license files (seam commit 01a450e6).
+        license_go = (REPO / t.SEAM_LICENSE).read_text()
+        for original, replacement in t.SEAM_LICENSE_HOOKS:
+            self.assertIn(replacement, license_go)
+            self.assertNotEqual(original, replacement)
+        self.assertIn(t.SEAM_PANEL_HOOK[1], (REPO / t.SEAM_PANEL).read_text())
+        self.assertEqual(list(t.BASELINE_REF_PATCHED), sorted(t.BASELINE_REF_PATCHED))
+        for path in t.BASELINE_REF_PATCHED:
+            self.assertTrue(path.startswith(("internal/licensing/", "cmd/panel/license.go")), path)
+            self.assertFalse(any(path.startswith(p) for p in t.BASELINE_REF_UNCHANGED), path)
+
+    def test_upd7_seam_fixture_adaptation_is_exact(self):
+        source = (REPO / t.SEAM_ADAPTED).read_text()
+        adapted = t.adapt_seam_fixture(source)
+        self.assertNotIn("Observation", adapted)
+        self.assertTrue(adapted.startswith("//go:build acceptance_license\n"))
+        self.assertEqual(adapted.count("var errInvalidState = errors.New("), 1)
+        self.assertEqual(len(adapted.splitlines()) - len(source.splitlines()), 4)
+        with self.assertRaises(ValueError):
+            t.adapt_seam_fixture(adapted)
+        with self.assertRaises(ValueError):
+            t.adapt_seam_fixture(source.replace(", Observation: ObservationKnown", "", 1))
+
+    def test_upd7_labels_and_published_baseline_document(self):
+        document = artifacts()
+        for role, version, sequence in (("baseline", "v0.1.0-alpha.80", 80), ("good", "v0.1.0-alpha.81", 81),
+                                        ("defective", "v0.1.0-alpha.81", 81)):
+            document[role].update(version=version, sequence=sequence)
+        document["baseline"]["parent"] = t.ALPHA80_COMMIT
+        document["baseline_ref"] = {"ref": "v0.1.0-alpha.80", "tag_commit": t.ALPHA80_COMMIT,
+                                    "patched_files": list(t.BASELINE_REF_PATCHED), "proof": "/x"}
+        try:
+            labels = t.configure_labels(document)
+            self.assertEqual((labels["baseline"], labels["candidate"]),
+                             (("v0.1.0-alpha.80", 80), ("v0.1.0-alpha.81", 81)))
+            self.assertIs(t.validate_artifacts(document, check_files=False), document)
+            m = t.lab_modules()
+            self.assertEqual(m["baseline"].RELEASE_POLICY, {"version": "v0.1.0-alpha.80", "current": 80, "previous": 79,
+                                                            "previous_version": "v0.1.0-alpha.79"})
+            self.assertEqual(m["origin"].RELEASE_POLICY["version"], "v0.1.0-alpha.81")
+            self.assertIn("published-tag-v0.1.0-alpha.80", t.provenance_for("good")["baseline"])
+            for mutate in (lambda d: d["baseline_ref"].update(patched_files=["update.sh"]),
+                           lambda d: d["baseline"].update(parent="1" * 40),
+                           lambda d: d["baseline_ref"].update(tag_commit="1" * 40)):
+                broken = json.loads(json.dumps(document))
+                mutate(broken)
+                with self.assertRaises(ValueError):
+                    t.configure_labels(broken)
+                    t.validate_artifacts(broken, check_files=False)
+            with self.assertRaises(ValueError):
+                t.configure_labels(dict(document, baseline_ref={"ref": "v0.1.0-alpha.79", "tag_commit": "1" * 40}))
+        finally:
+            t.configure_labels(artifacts())
+        self.assertEqual((t.BASELINE_VERSION, t.CANDIDATE_VERSION, t.LABEL_REF), ("v0.1.0-alpha.81", "v0.1.0-alpha.82", None))
+        m = t.lab_modules()
+        self.assertEqual(m["baseline"].RELEASE_POLICY["version"], "v0.1.0-alpha.81")
+        self.assertEqual(m["origin"].RELEASE_POLICY, {"version": "v0.1.0-alpha.82", "current": 82, "previous": 81,
+                                                      "previous_version": "v0.1.0-alpha.81"})
+
+    def test_upd7_record_running_after_panel_success_rule(self):
+        rule = t.RunningAfterSuccess(seconds=100)
+        running = {"observation": "known", "phase": "running", "terminal_proof": "none", "reason": "update_running"}
+        ok = {"update_status": {"http": 200, "body": {"status": "succeeded"}}, "utc": "u", "index": 1}
+        self.assertIsNone(rule.observe(ok, running, 0))
+        self.assertIsNone(rule.observe(ok, running, 99))
+        # Any other state restarts the window.
+        self.assertIsNone(rule.observe({"update_status": {"http": 200, "body": {"status": "running"}}}, running, 100))
+        self.assertIsNone(rule.observe(ok, dict(running, phase="succeeded"), 101))
+        self.assertIsNone(rule.observe(ok, running, 200))
+        record = rule.observe(ok, running, 300)
+        self.assertEqual((record["rule"], record["seconds"], record["samples"]), (t.RUNNING_AFTER_SUCCESS_RULE, 100, 2))
+        self.assertIsNone(t.RunningAfterSuccess(seconds=1).observe(ok, None, 0))
+
+    def test_upd7_origin_and_observer_accept_only_the_closed_transitions(self):
+        origin = load("tested_upd7_origin", "worker_fixture_origin.py")
+        self.assertTrue(origin.allowed_policy({"version": "v0.1.0-alpha.81", "current": 81, "previous": 80,
+                                               "previous_version": "v0.1.0-alpha.80", "previous_commit": "1" * 40}))
+        for wrong in ({"version": "v0.1.0-alpha.81", "current": 82, "previous": 80, "previous_version": "v0.1.0-alpha.80"},
+                      {"version": "v0.1.0-alpha.81", "current": "81", "previous": 80, "previous_version": "v0.1.0-alpha.80"},
+                      {"version": "v0.1.0-alpha.80", "current": 80, "previous": 79, "previous_version": "v0.1.0-alpha.79"}):
+            self.assertFalse(origin.allowed_policy(wrong))
+        bound = o.bound
+        identity = {"nonce": "n"}
+        def intent(base, target):
+            return {"schema": bound.SCHEMA, "identity": identity, "operation_id": RID, "recovery_fault": None,
+                    "baseline": {"version": base, "commit": "1" * 40, "agent_sha256": "a" * 64, "panel_sha256": "b" * 64},
+                    "target": {"version": target, "commit": "2" * 40, "agent_sha256": "c" * 64, "panel_sha256": "d" * 64}}
+        for pair in (("v0.1.0-alpha.81", "v0.1.0-alpha.82"), ("v0.1.0-alpha.80", "v0.1.0-alpha.81")):
+            self.assertEqual(bound.validate_intent(intent(*pair), identity, RID)["target"]["version"], pair[1])
+        for pair in (("v0.1.0-alpha.80", "v0.1.0-alpha.82"), ("v0.1.0-alpha.81", "v0.1.0-alpha.81")):
+            with self.assertRaises(bound.probe.ProbeError):
+                bound.validate_intent(intent(*pair), identity, RID)
+
     def test_acceptance_notice_is_the_only_exemption(self):
         with tempfile.TemporaryDirectory() as directory:
             archive = Path(directory) / "a.tar.gz"
@@ -1252,7 +1346,15 @@ class Upd3FixturePatchTests(unittest.TestCase):
         self.assertIn('update-ref "refs/upd1/$kind"', text)
         self.assertIn('s_json=$(build "$startcheck" v0.1.0-alpha.82)', text)
         self.assertIn('r_json=$(build "$realstart" v0.1.0-alpha.82)', text)
-        self.assertIn('"startcheck": item(s, 82, good), "realstart": item(r, 82, good)', text)
+        self.assertIn('document["startcheck"] = item(s, c_seq, good)', text)
+        self.assertIn('document["realstart"] = item(r, c_seq, good)', text)
+        self.assertIn("b_seq=81 c_seq=82", text)
+        # upd7: the published-baseline mode builds B from the tag (seam only), then G and D over the source.
+        self.assertIn("--kind baseline-ref --baseline-ref", text)
+        self.assertIn('b_json=$(build "$baseline" "$BASELINE_REF")', text)
+        self.assertIn('g_json=$(build "$good" v0.1.0-alpha.81)', text)
+        self.assertIn("b_seq=80 c_seq=81 b_parent=$tag_commit", text)
+        self.assertIn("grep -q DIFFERENT", text)
         wrapper = (HERE / "run-upd1.sh").read_text().splitlines()
         last = int(re.search(r"sed -n '2,(\d+)p'", "\n".join(wrapper)).group(1))
         self.assertTrue(all(line.startswith("#") for line in wrapper[1:last]))
