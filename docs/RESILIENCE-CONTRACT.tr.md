@@ -1022,3 +1022,77 @@ Açık: F4 tetikleyicisi (hangi Panel yazımı) ve F5 nedeni belirlenmedi; uyuml
 denetleyicisi zaman aşımı dışındaki her reddi hâlâ bir kez yeniden okur;
 reddedilen denetim metinleri sunucu ekran katalogundadır (gelene kadar genel
 neden); web ekranları O9 geçmiş satırını göstermez (SSH sahip görünümünde var; açılış katalogunda yer yok).
+
+### Yol haritası 3. madde durumu: 2026-10-01 itibarıyla adı belli sınırlarla kapandı (P0.1/P0.2/P0.3/P0.5)
+
+D-025 ilkeleri 1–6; D-022, D-024. Bu bir ürün değişikliği değil, saklanan kanıtın
+değerlendirmesidir: bu girişle şema ya da sürüm geçişi ve kurtarma davranışı
+değişikliği yoktur. **Hiçbir P0 işi bununla kapanmaz.** P0.1, P0.2, P0.3 ve P0.5
+kısmi kalır; yukarıdaki tablo değişmedi. Her koşu kendi sonucunda
+`native_evidence: false` kaydetti ve yargıyı bu girişe bıraktı.
+
+**Ne ölçüldü.** Sahibin başlattığı güncelleme sürücüsünün altı koşusu (upd1
+hiçbir güncellemeye ulaşmadı ve hiçbir şeyi kanıtlamaz; upd2–upd6 güncellemeleri
+ölçtü)
+([upd1](../deploy/e2e/release-recovery/evidence/upd1-20261001/README.md),
+[upd2](../deploy/e2e/release-recovery/evidence/upd2-20261001/README.md),
+[upd3](../deploy/e2e/release-recovery/evidence/upd3-20261001/README.md),
+[upd4](../deploy/e2e/release-recovery/evidence/upd4-20261001/README.md),
+[upd5](../deploy/e2e/release-recovery/evidence/upd5-20261002/README.md),
+[upd6](../deploy/e2e/release-recovery/evidence/upd6-20261002/README.md)) geçici
+Debian 13 ve Arch konuklarında koştu. Her hücrede sürücü sahip olarak giriş yapar
+ve güncellemeyi Panel'in güncelleme başlatma API'siyle, yani güncelleme ekranının
+kullandığı uç noktayla başlatır (tarayıcı yok); aday, konuk içi loopback
+kaynağından gelir, deney anahtarıyla imzalıdır ve D-027 kabul lisansı altındadır;
+DNS dışarıdadır. Tek bir istek kimliği Panel API'si, root CLI ve kurtarma
+kayıtları boyunca izlenir.
+
+| Yol haritası çıkış koşulu | Sonuç | Kanıt ve sınır |
+|---|---|---|
+| Sahibin arayüzden güncelleme kabulü | Ölçüldü, Debian 13 ve Arch | İyi aday kuruldu ve doğrulandı (Debian 13: upd2, upd4, upd5; Arch: upd3, upd4, upd5; upd3'ün Debian hücresi ön denetimde durdu ve kaynakta düzeltildi). Deney imzalama anahtarı ve loopback kaynağı; üretim imzası ve gerçek kaynak denenmedi. |
+| Başarısız aday, otomatik geri alma | Ölçüldü, iki platform | `completion.pending` öncesinde başarısız olan aday (geçiş kusuru; başlangıç denetimi reddi) sahip işlemi olmadan önceki sürüme döner (geçiş kusuru: Debian upd2–upd4, Arch upd3 ve upd4; başlangıç denetimi: iki platform, upd3 ve upd4). |
+| İkinci bir kurtarma arızası | Ölçüldü, platform başına bir sınır | Debian: `payload_restored` anında VM sıfırlama (upd2–upd4); Arch: `runtime_verified` anında SIGKILL (upd3, upd4); aynı geri alma tamamlanır. Diğer kontrol noktaları, güç kaybı ve sahibin yeniden denemesi sırasında arıza ölçülmedi. |
+| `completion.pending` sonrasında başarısız olan aday | Ölçüldü, iki platform | Üç otomatik ileri deneme, `retry_scheduled`, `pause_pending`, `paused_retry_limit` anında duraklama ve ilk hata kodu korunur (gerçek başlatma hücreleri: iki platformda upd5; aynı sıra, sahip devamı hücrelerinde sahibin yeniden denemesinden önce gelir: Debian upd5 ve Arch upd6). Ürün ileri tamamlar; `completion.pending` sonrasında geri almaz (adı belli sınır). |
+| Sahip devamı | Ölçüldü, iki platform en yeni ölçülen yapıda (`6cda60b8`) | Sahip nedeni kaldırdıktan sonra bir kez çalıştırılan, yazdırılmış `recovery recover --retry --snapshot …` komutu `succeeded/update_verified` ile biter (Debian upd4/upd5, Arch upd4/upd6). Neden, sahibin kaldırabileceği biriydi (tutulan bir bağlantı noktası). |
+| Kimlik doğrulamalı yönlendirme tek işlemde uyuşur | Boşlukla ölçüldü | Panel yanıt verdiği sürece Panel API'si, root CLI ve kayıtlar uyuşur. Panel durmuşken durumu yalnız SSH üzerinden root CLI gösterir; duraklamadaki ekranlar tarayıcıdan değil, yapının kaynağından üretilir. |
+| Korunan yerel hizmetler | Tohumlanan küme için ölçüldü | Cron hiç kesilmedi. Site, ikinci arızalı beş Debian hücresi dışında hiç kesilmedi; o hücrelerde site ve SMTP, VM sıfırlamasının çevresinde yaklaşık 22 sn'ye kadar erişilemezdi. Veritabanı satırları, kendiliğinden değişen tablolar dışında eşit; güvenlik duvarı korundu; yenileme zamanlayıcısı durumu upd4'ten itibaren korundu (upd3'te duraklamada kaybedildi, kaynakta düzeltildi; Arch'ta güncellemeden önce kapalıydı). SMTP yalnız Debian'da tohumlandı. |
+| Yeniden açılış boyunca yönetim kapalıyken işletim (P0.5) | Ölçüldü, iki platform | Panel ve Agent kapalı, tek düzenli yeniden açılış (upd4, her hücrenin ikinci koşusu; ilk koşular düzenek kusurlarıyla başarısız oldu ve saklanıyor): site, veritabanı satırı, cron ve güvenlik duvarı kuralları hizmet verdi ya da mevcuttu; SMTP Debian'da. Yenileme zamanlayıcısı yeniden açılış öncesi durumunu korudu (Debian'da etkin, Arch'ta kapalı). Güvenlik duvarı, yönetim kapatma adımının devre dışı bırakmadığı bir geri yükleme biriminden gelir. Bu koşul için DNS, 2. madde çift kanıtındadır. Sertifika verme ya da yenilemenin kendisi çalıştırılmadı. |
+
+**Bu koşuların bulup kaynakta kapattığı ürün kusurları** (her birinin yukarıda ya da
+işlem yönlendirmesinde kendi tarihli girişi var): kurulum bileşeni olarak cron ve
+plan incelemesinde Arch posta reddi; `completion.pending` öncesi aday başlangıç
+denetimi ve başlatma sonrası kararlılık beklemesi; barındırma kökü geçiş makbuzu;
+ön denetim nedeni ve değişmeyen son durum; ileri duraklamada geri yüklenen Certbot
+zamanlayıcıları; her denetimli başlatmadan önce başlangıç sınırı sıfırlaması; tipli
+değişiklik öncesi ret, anlık görüntü nedeni, `pause_pending` ve yenileme yan dosyası.
+
+**Bu kapanışın adı belli sınırları (ilgili P0 işi altında açık kalırlar):**
+
+- Platformlar: yalnız Debian 13 ve Arch. Ubuntu kanıtı yok; RHEL ailesi engelli
+  önizleme olarak kalır. Arch'ta posta desteklenmez ve plan incelemesinde reddedilir.
+- Dizüstü ana makinede tür başına az tekrar; türler farklı yapılarda en son
+  ölçüldü (geçiş kusuru, başlangıç denetimi ve yönetim kapalı: `a6dd5b1e`; iyi
+  aday, gerçek başlatma ve sahip devamı: `6cda60b8`); deney imzalama anahtarı,
+  loopback kaynağı ve kabul lisansı. Üretim imzası, gerçek kaynak ve lisans hizmeti
+  denenmedi.
+- Hiçbir koşuda gerçek sistemde tetiklenmedi: canlı boşta denetiminin 2 sn sonraki
+  yeniden okunması, tipli `update_preflight_refused` yolu ve güncelleme kartındaki
+  tipli sunucu satırı, anlık görüntü nedeni satırı, `unit_start_limit_hit`.
+- Güç kaybı hücresi yok; platform başına tek ikinci arıza sınırı; sahibin yeniden
+  denemesi sırasında ikinci arıza yok; sahibin kaldıramayacağı neden yok.
+- Başlayıp sonradan başarısız olan bir Panel ileri tamamlanır;
+  `completion.pending` sonrasında geri alma yoktur.
+- Panel durmuşken Panel'in adresinde canlı durum yok; hiçbir koşuda tarayıcı yer
+  almadı, bu yüzden güncelleme, duraklama ve hata ekranlarının görünümü
+  yakalanmadı.
+- Duraklayan bir geri alma, sahip işlem yapana kadar yenilemeyi duraklatılmış tutar.
+- Panel kaldırma yolu ve kaldırma iddiası yok; ölçülen tek yokluk koşulu
+  yönetimin kapalı olmasıdır.
+- Güncelleme, yayımlanmış alpha.80 arşivinden değil, aynı kaynak hattından
+  üretilmiş bir taban yapıdan başlar; daha eski yayımlanmış şemalar yalnız yukarıdaki
+  tabloda sayılan önceki kapsamı belirli denemelerle karşılanır.
+- 18 yalnız-root paketleme sözleşmesi testi, 2026-10-01 arşiv içeriği değişikliği
+  için derleme ana makinesinde root olarak çalıştırılmadı.
+
+Hiçbir kurulu sunucuya dokunulmadı. Bu kapanış kurulu panel güncellemesine ve
+sürüme yetki vermez.

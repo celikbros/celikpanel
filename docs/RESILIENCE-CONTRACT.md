@@ -1793,3 +1793,77 @@ Open: the F4 trigger (which Panel write) and the F5 cause are not identified;
 the compatibility checker still re-reads any non-timeout refusal once; the
 refused-check texts live in the server screen catalogue (generic reason until it
 arrives); the web screens omit the O9 history line (the SSH owner view has it; the boot catalogue has no room).
+
+### Roadmap item 3 status: closed on 2026-10-01 with named limits (P0.1/P0.2/P0.3/P0.5)
+
+D-025 invariants 1 to 6; D-022, D-024. This is an assessment of retained evidence,
+not a product change: no schema or version transition and no recovery behaviour
+changes with this entry. **No P0 item is closed by it.** P0.1, P0.2, P0.3 and P0.5
+stay partial; the table above is unchanged. Every run recorded
+`native_evidence: false` in its own result and left the judgement to this entry.
+
+**What was measured.** Six runs of the owner-started update driver (upd1 reached
+no update and proves nothing; upd2 to upd6 measured updates)
+([upd1](../deploy/e2e/release-recovery/evidence/upd1-20261001/README.md),
+[upd2](../deploy/e2e/release-recovery/evidence/upd2-20261001/README.md),
+[upd3](../deploy/e2e/release-recovery/evidence/upd3-20261001/README.md),
+[upd4](../deploy/e2e/release-recovery/evidence/upd4-20261001/README.md),
+[upd5](../deploy/e2e/release-recovery/evidence/upd5-20261002/README.md),
+[upd6](../deploy/e2e/release-recovery/evidence/upd6-20261002/README.md)) on
+disposable Debian 13 and Arch guests. In every cell the driver logs in as the
+owner and starts the update through the Panel's update-start API, the endpoint
+the update screen uses (no browser); the candidate comes from a
+guest-loopback origin, signed with a fixture key, under the D-027 acceptance
+license; DNS is external. One request id is followed through the Panel API, the
+root CLI and the recovery records.
+
+| Roadmap exit condition | Result | Evidence and limit |
+|---|---|---|
+| Owner UI update admission | Measured, Debian 13 and Arch | Good candidate installed and verified (Debian 13: upd2, upd4, upd5; Arch: upd3, upd4, upd5; the Debian cell of upd3 stopped in preflight and was fixed in source). Fixture signing key and loopback origin; production signing and the real origin are not exercised. |
+| Failed candidate, automatic rollback | Measured, both platforms | A candidate that fails before `completion.pending` (migration defect; start-check refusal) returns to the previous release without owner action (migration defect: Debian upd2 to upd4, Arch upd3 and upd4; start check: both platforms, upd3 and upd4). |
+| A second recovery fault | Measured, one boundary per platform | Debian: VM reset at `payload_restored` (upd2 to upd4); Arch: SIGKILL at `runtime_verified` (upd3, upd4); the same rollback completes. Other checkpoints, power loss and a fault during an owner retry are not measured. |
+| A candidate that fails after `completion.pending` | Measured, both platforms | Three automatic forward attempts, `retry_scheduled`, `pause_pending`, pause at `paused_retry_limit` with the first failure code kept (real-start cells: upd5 on both platforms; the same sequence precedes the owner retry in the owner-continuation cells, Debian upd5 and Arch upd6). The product completes forward; it does not roll back after `completion.pending` (named limit). |
+| Owner continuation | Measured, both platforms on the newest measured build (`6cda60b8`) | The printed `recovery recover --retry --snapshot …` run once after the owner removed the cause ends `succeeded/update_verified` (Debian upd4/upd5, Arch upd4/upd6). The cause was one the owner can remove (a held port). |
+| Authenticated guidance agrees on one operation | Measured with a gap | Panel API, root CLI and records agree whenever the Panel answers. While the Panel is stopped only the root CLI over SSH shows the state; screens at the pause are rendered from the build's source, not from a browser. |
+| Preserved native workloads | Measured for the seeded set | Cron was never interrupted. The site was never interrupted except in the five Debian cells with a second fault, where site and SMTP were unavailable for up to about 22 s around the VM reset. Database rows equal apart from self-changing tables; firewall preserved; renewal timer state preserved from upd4 on (lost at the pause in upd3, fixed in source; disabled before the update on Arch). SMTP seeded on Debian only. |
+| Operation with management off across a reboot (P0.5) | Measured, both platforms | Panel and Agent disabled, one orderly reboot (upd4, second run of each cell; the first runs failed on harness defects and are retained): site, database row, cron and firewall rules served or present; SMTP on Debian. The renewal timer kept its pre-reboot state (active on Debian, disabled on Arch). The firewall comes from a restore unit that the management-off step does not disable. DNS for this condition is in the item 2 pair evidence. Certificate issuance or renewal itself was not executed. |
+
+**Product defects these runs found and closed in source** (each has its own dated
+entry above or in the operation guidance): cron as a setup component and the
+Arch mail refusal at plan review; the candidate start check before
+`completion.pending` and the post-start stability wait; the hosting root
+traversal receipt; the preflight cause and unchanged terminal state; Certbot
+timers restored at a forward pause; the start-limit reset before every controlled
+start; the typed pre-change refusal, snapshot cause, `pause_pending` and the
+renewal sidecar.
+
+**Named limits of this closing (they stay open under their P0 item):**
+
+- Platforms: Debian 13 and Arch only. No Ubuntu evidence; the RHEL family stays a
+  blocked preview. Mail on Arch is unsupported and refused at plan review.
+- Few repetitions per kind on a laptop host, and the kinds were last measured at
+  different builds (migration defect, start check and management-off at
+  `a6dd5b1e`; good, real-start and owner continuation at `6cda60b8`); fixture signing key, loopback origin and the
+  acceptance license. Production signing, the real origin and the license
+  service are not exercised.
+- Not triggered natively in any run: the 2 s re-read of the live idle probe, the
+  typed `update_preflight_refused` path and its typed server line on the
+  update card, the snapshot cause line, `unit_start_limit_hit`.
+- No power-loss cell; one second-fault boundary per platform; no second fault
+  during an owner retry; no cause the owner cannot remove.
+- A Panel that starts and fails later is completed forward; there is no rollback
+  after `completion.pending`.
+- No live status at the Panel's address while the Panel is stopped; no browser
+  took part in any run, so rendering of the update, pause and failure screens is
+  not captured.
+- A paused rollback keeps renewal paused until the owner acts.
+- No panel uninstall path and no removal claim; management-disabled is the only
+  absence condition measured.
+- The upgrade starts from a baseline built from the same source line, not from
+  the published alpha.80 archive; older published schemas are covered only by
+  the earlier scoped trials listed in the table above.
+- 18 root-only packaging contract tests were not run as root on the build host
+  for the 2026-10-01 archive content change.
+
+No installed server was touched. This closing authorises no installed-panel
+update and no release.
