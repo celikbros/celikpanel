@@ -1,0 +1,273 @@
+{
+  "checks": {
+    "idle_alive_attempt": {
+      "admitted": false,
+      "owner_texts": {
+        "api_message": "the update service did not accept this request",
+        "code": "PANEL_UPDATE_START_REFUSED"
+      },
+      "packagekitd_alive_after": true,
+      "packagekitd_alive_before": true,
+      "panel_log": "2026-10-01T18:47:11.547791+00:00 dns-ubuntu panel[7262]: 2026/10/01 18:47:11 [panel-update] agent refused start: global service mutation state is not idle: the host package manager is active\n2026-10-01T18:51:20.505801+00:00 dns-ubuntu panel[7262]: 2026/10/01 18:51:20 [panel-update] agent refused start: global service mutation state is not idle: the host package manager is active",
+      "readiness": {
+        "answered_by": "agent",
+        "body": {
+          "code": "HOST_MUTATION_BUSY",
+          "ready": false,
+          "reason": "package_manager_active"
+        },
+        "http": 200,
+        "utc": "2026-10-01T18:51:19Z"
+      },
+      "request_id": "8f21a9dd5045caa9acbc398e651b17c9",
+      "start": {
+        "body": {
+          "code": "PANEL_UPDATE_START_REFUSED",
+          "error": "the update service did not accept this request"
+        },
+        "http": 409,
+        "utc": "2026-10-01T18:51:19Z"
+      },
+      "status": {
+        "body": {
+          "found": false,
+          "request_id": "8f21a9dd5045caa9acbc398e651b17c9"
+        },
+        "http": 200
+      },
+      "version": {
+        "agent_commit": "57cec4f6a51af35ab9ebf1a8c96ba29c60c8f185",
+        "agent_matches": true,
+        "commit": "57cec4f6a51af35ab9ebf1a8c96ba29c60c8f185",
+        "http": 200,
+        "version": "v0.1.0-alpha.81"
+      }
+    },
+    "packagekit_after_answer": {
+      "before": {
+        "at": "2026-10-01T18:56:23.758523Z",
+        "general_lock_lines": [],
+        "lock_lines": [],
+        "other_package_processes": [],
+        "packagekit_unit": [
+          "ExecMainStartTimestamp=",
+          "ActiveState=inactive",
+          "SubState=dead"
+        ],
+        "packagekitd": [],
+        "rule": "idle",
+        "unparsed_lock_lines": []
+      },
+      "host_utc": "2026-10-01T18:56:22Z",
+      "label": "owner-start-after-answer"
+    },
+    "packagekit_before_post": {
+      "before": {
+        "at": "2026-10-01T18:56:23.361679Z",
+        "general_lock_lines": [],
+        "lock_lines": [],
+        "other_package_processes": [],
+        "packagekit_unit": [
+          "ExecMainStartTimestamp=",
+          "ActiveState=inactive",
+          "SubState=dead"
+        ],
+        "packagekitd": [],
+        "rule": "idle",
+        "unparsed_lock_lines": []
+      },
+      "host_utc": "2026-10-01T18:56:22Z",
+      "label": "owner-start-before-post"
+    },
+    "readiness": {
+      "ready": true
+    },
+    "readiness_waits": [
+      {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      }
+    ],
+    "rearm": {
+      "check": {
+        "body": {
+          "available": true,
+          "current_commit": "57cec4f6a51af35ab9ebf1a8c96ba29c60c8f185",
+          "current_version": "v0.1.0-alpha.81",
+          "supported": true,
+          "target": {
+            "arch": "amd64",
+            "archive_sha256": "1f8025050698f158b8658f12539751ca55e6d9e5a9df00cf5b48c5c0800c9eb2",
+            "archive_size": "65644036",
+            "commit": "00030d16b1f912d104fce582a6b15c24b45f159d",
+            "os": "linux",
+            "published_at": "2026-10-01T17:59:18Z",
+            "sequence": "82",
+            "version": "v0.1.0-alpha.82"
+          }
+        },
+        "http": 200
+      },
+      "observer_unit": "celikpanel-lab-owner-update-observer-680cc9d4e144a1f8f92b9b0b3c6a2b6b.service",
+      "packagekit_at_arm": {
+        "after": {
+          "at": "2026-10-01T18:56:22.000513Z",
+          "general_lock_lines": [],
+          "lock_lines": [],
+          "other_package_processes": [],
+          "packagekit_unit": [
+            "ExecMainStartTimestamp=",
+            "ActiveState=inactive",
+            "SubState=dead"
+          ],
+          "packagekitd": [],
+          "rule": "idle",
+          "unparsed_lock_lines": []
+        },
+        "before": {
+          "at": "2026-10-01T18:56:21.686525Z",
+          "general_lock_lines": [],
+          "lock_lines": [],
+          "other_package_processes": [],
+          "packagekit_unit": [
+            "ExecMainStartTimestamp=",
+            "ActiveState=inactive",
+            "SubState=dead"
+          ],
+          "packagekitd": [],
+          "rule": "idle",
+          "unparsed_lock_lines": []
+        },
+        "host_utc": "2026-10-01T18:56:20Z",
+        "label": "arm-before-check",
+        "readiness": {
+          "answered_by": "agent",
+          "body": {
+            "ready": true
+          },
+          "http": 200,
+          "utc": "2026-10-01T18:56:20Z"
+        }
+      },
+      "request_id": "680cc9d4e144a1f8f92b9b0b3c6a2b6b"
+    },
+    "start": {
+      "body": {
+        "accepted": true,
+        "request_id": "680cc9d4e144a1f8f92b9b0b3c6a2b6b",
+        "status": "queued",
+        "target": {
+          "arch": "amd64",
+          "archive_sha256": "1f8025050698f158b8658f12539751ca55e6d9e5a9df00cf5b48c5c0800c9eb2",
+          "archive_size": "65644036",
+          "commit": "00030d16b1f912d104fce582a6b15c24b45f159d",
+          "os": "linux",
+          "published_at": "2026-10-01T17:59:18Z",
+          "sequence": "82",
+          "version": "v0.1.0-alpha.82"
+        }
+      },
+      "http": 202
+    }
+  },
+  "finished_at": "2026-10-01T18:56:22Z",
+  "name": "owner-start",
+  "started_at": "2026-10-01T18:51:19Z",
+  "verdict": "passed"
+}

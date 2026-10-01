@@ -1,0 +1,888 @@
+[
+  {
+    "after": {
+      "at": "2026-10-01T17:50:13.662675Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Thu 2026-10-01 17:49:34 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "aptcc_backend": false,
+          "children": [],
+          "etime_s": 39.3,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "pid": 5072,
+          "rule_idle": false
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-01T17:50:13.421245Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Thu 2026-10-01 17:49:34 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "aptcc_backend": false,
+          "children": [],
+          "etime_s": 39.1,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "pid": 5072,
+          "rule_idle": false
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-01T17:50:12Z",
+    "label": "after-setup-poll",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      "http": 200,
+      "utc": "2026-10-01T17:50:12Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-01T17:50:34.132800Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Thu 2026-10-01 17:49:34 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "aptcc_backend": false,
+          "children": [],
+          "etime_s": 59.8,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "pid": 5072,
+          "rule_idle": false
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-01T17:50:33.893001Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Thu 2026-10-01 17:49:34 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "aptcc_backend": false,
+          "children": [],
+          "etime_s": 59.5,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "pid": 5072,
+          "rule_idle": false
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-01T17:50:32Z",
+    "label": "after-setup-poll",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      "http": 200,
+      "utc": "2026-10-01T17:50:33Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-01T17:50:54.608545Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Thu 2026-10-01 17:49:34 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "aptcc_backend": false,
+          "children": [],
+          "etime_s": 80.3,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "pid": 5072,
+          "rule_idle": false
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-01T17:50:54.365561Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Thu 2026-10-01 17:49:34 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "aptcc_backend": false,
+          "children": [],
+          "etime_s": 80.0,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "pid": 5072,
+          "rule_idle": false
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-01T17:50:53Z",
+    "label": "after-setup-poll",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      "http": 200,
+      "utc": "2026-10-01T17:50:53Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-01T17:51:15.318176Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Thu 2026-10-01 17:49:34 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "aptcc_backend": false,
+          "children": [],
+          "etime_s": 101.0,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "pid": 5072,
+          "rule_idle": false
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-01T17:51:15.074209Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Thu 2026-10-01 17:49:34 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "aptcc_backend": false,
+          "children": [],
+          "etime_s": 100.7,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "pid": 5072,
+          "rule_idle": false
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-01T17:51:13Z",
+    "label": "after-setup-poll",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      "http": 200,
+      "utc": "2026-10-01T17:51:14Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-01T17:51:35.786074Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Thu 2026-10-01 17:49:34 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "aptcc_backend": false,
+          "children": [],
+          "etime_s": 121.4,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "pid": 5072,
+          "rule_idle": false
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-01T17:51:35.544851Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Thu 2026-10-01 17:49:34 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "aptcc_backend": false,
+          "children": [],
+          "etime_s": 121.2,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "pid": 5072,
+          "rule_idle": false
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-01T17:51:34Z",
+    "label": "after-setup-poll",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      "http": 200,
+      "utc": "2026-10-01T17:51:34Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-01T17:51:56.264421Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Thu 2026-10-01 17:49:34 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "aptcc_backend": false,
+          "children": [],
+          "etime_s": 141.9,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "pid": 5072,
+          "rule_idle": false
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-01T17:51:56.011292Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Thu 2026-10-01 17:49:34 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "aptcc_backend": false,
+          "children": [],
+          "etime_s": 141.7,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "pid": 5072,
+          "rule_idle": false
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-01T17:51:54Z",
+    "label": "after-setup-poll",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      "http": 200,
+      "utc": "2026-10-01T17:51:55Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-01T17:52:17.066728Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Thu 2026-10-01 17:49:34 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "aptcc_backend": false,
+          "children": [],
+          "etime_s": 162.7,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "pid": 5072,
+          "rule_idle": false
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-01T17:52:16.769297Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Thu 2026-10-01 17:49:34 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "aptcc_backend": false,
+          "children": [],
+          "etime_s": 162.4,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "pid": 5072,
+          "rule_idle": false
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-01T17:52:15Z",
+    "label": "after-setup-poll",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      "http": 200,
+      "utc": "2026-10-01T17:52:15Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-01T17:52:37.539419Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Thu 2026-10-01 17:49:34 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "aptcc_backend": false,
+          "children": [],
+          "etime_s": 183.2,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "pid": 5072,
+          "rule_idle": false
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-01T17:52:37.298807Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Thu 2026-10-01 17:49:34 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "aptcc_backend": false,
+          "children": [],
+          "etime_s": 183.0,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "pid": 5072,
+          "rule_idle": false
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-01T17:52:36Z",
+    "label": "after-setup-poll",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      "http": 200,
+      "utc": "2026-10-01T17:52:36Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-01T17:52:58.002418Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Thu 2026-10-01 17:49:34 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "aptcc_backend": false,
+          "children": [],
+          "etime_s": 203.7,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "pid": 5072,
+          "rule_idle": false
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-01T17:52:57.766811Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Thu 2026-10-01 17:49:34 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "aptcc_backend": false,
+          "children": [],
+          "etime_s": 203.4,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "pid": 5072,
+          "rule_idle": false
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-01T17:52:56Z",
+    "label": "after-setup-poll",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      "http": 200,
+      "utc": "2026-10-01T17:52:56Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-01T17:53:18.745256Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Thu 2026-10-01 17:49:34 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "aptcc_backend": false,
+          "children": [],
+          "etime_s": 224.4,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "pid": 5072,
+          "rule_idle": false
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-01T17:53:18.493558Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Thu 2026-10-01 17:49:34 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "aptcc_backend": false,
+          "children": [],
+          "etime_s": 224.1,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "pid": 5072,
+          "rule_idle": false
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-01T17:53:17Z",
+    "label": "after-setup-poll",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      "http": 200,
+      "utc": "2026-10-01T17:53:17Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-01T17:53:39.224233Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Thu 2026-10-01 17:49:34 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "aptcc_backend": false,
+          "children": [],
+          "etime_s": 244.9,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "pid": 5072,
+          "rule_idle": false
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-01T17:53:38.982590Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Thu 2026-10-01 17:49:34 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "aptcc_backend": false,
+          "children": [],
+          "etime_s": 244.6,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "pid": 5072,
+          "rule_idle": false
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-01T17:53:37Z",
+    "label": "after-setup-poll",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      "http": 200,
+      "utc": "2026-10-01T17:53:38Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-01T17:53:59.688550Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Thu 2026-10-01 17:49:34 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "aptcc_backend": false,
+          "children": [],
+          "etime_s": 265.3,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "pid": 5072,
+          "rule_idle": false
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-01T17:53:59.447242Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Thu 2026-10-01 17:49:34 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "aptcc_backend": false,
+          "children": [],
+          "etime_s": 265.1,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "pid": 5072,
+          "rule_idle": false
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-01T17:53:58Z",
+    "label": "after-setup-poll",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      "http": 200,
+      "utc": "2026-10-01T17:53:58Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-01T17:54:20.403258Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Thu 2026-10-01 17:49:34 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "aptcc_backend": false,
+          "children": [],
+          "etime_s": 286.1,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "pid": 5072,
+          "rule_idle": false
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-01T17:54:20.159581Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Thu 2026-10-01 17:49:34 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "aptcc_backend": false,
+          "children": [],
+          "etime_s": 285.8,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "pid": 5072,
+          "rule_idle": false
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-01T17:54:18Z",
+    "label": "after-setup-poll",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      "http": 200,
+      "utc": "2026-10-01T17:54:19Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-01T17:54:40.877003Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=",
+        "ActiveState=inactive",
+        "SubState=dead"
+      ],
+      "packagekitd": [],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-01T17:54:40.629501Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=",
+        "ActiveState=inactive",
+        "SubState=dead"
+      ],
+      "packagekitd": [],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-01T17:54:39Z",
+    "label": "after-setup-poll",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "ready": true
+      },
+      "http": 200,
+      "utc": "2026-10-01T17:54:39Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-01T17:54:41.349803Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=",
+        "ActiveState=inactive",
+        "SubState=dead"
+      ],
+      "packagekitd": [],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-01T17:54:41.101600Z",
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=",
+        "ActiveState=inactive",
+        "SubState=dead"
+      ],
+      "packagekitd": [],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-01T17:54:40Z",
+    "label": "after-setup-final",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "ready": true
+      },
+      "http": 200,
+      "utc": "2026-10-01T17:54:40Z"
+    }
+  }
+]

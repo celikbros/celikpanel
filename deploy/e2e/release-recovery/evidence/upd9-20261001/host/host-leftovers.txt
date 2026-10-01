@@ -1,0 +1,19 @@
+2026-10-01T20:20:10Z
+389M	/var/tmp/cp-upd9-run
+948M	/var/tmp/cp-release-drill-upd9-probe-a
+2.1G	/var/tmp/cp-release-drill-upd9-ub-a80-a
+2.4G	/var/tmp/cp-release-drill-upd9-ub-busy-a
+1.5G	/var/tmp/cp-release-drill-upd9-ub-once-a
+725M	/var/tmp/cp-upd1-build/20261001t174240z
+730M	/var/tmp/cp-upd1-build/20261001t174610z
+133M	/var/tmp/cp-pair-accept/dist/0bf21ae6b59117ac8071f5612672a7731957e871-acceptance-license
+705M	/var/tmp/cp-pair-accept/dist/00030d16b1f912d104fce582a6b15c24b45f159d-acceptance-license
+705M	/var/tmp/cp-pair-accept/dist/515edf778589cf5d9567d389ab9410fc6864067a-acceptance-license
+705M	/var/tmp/cp-pair-accept/dist/57cec4f6a51af35ab9ebf1a8c96ba29c60c8f185-acceptance-license
+705M	/var/tmp/cp-pair-accept/dist/5a1d49a4d897edd2eac8b6f7e63b92cf16a2a190-acceptance-license
+705M	/var/tmp/cp-pair-accept/dist/ae3e158245facfa814e2b06ff403d24929008ba2-acceptance-license
+705M	/var/tmp/cp-pair-accept/dist/eb89b68130ebe6858487435f1c2c77052655b06c-acceptance-license
+705M	/var/tmp/cp-pair-accept/dist/f44520941d7efd6d6b9532cd03193b35fe22fa0c-acceptance-license
+no dry-run lab
+/dev/sdd           1007G  182G      775G  19% /
+4363b888278fa3d86af32af8199c5bc0  -

@@ -1,0 +1,230 @@
+{
+  "after_start": {
+    "before": {
+      "at": "2026-10-01T18:47:11.755588Z",
+      "general_lock_lines": [
+        {
+          "line": "1: POSIX  ADVISORY  WRITE 71567 fd:01:84605 0 EOF",
+          "owner": 71567,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        }
+      ],
+      "lock_lines": [
+        {
+          "line": "1: POSIX  ADVISORY  WRITE 71567 fd:01:84605 0 EOF",
+          "owner": 71567,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        }
+      ],
+      "other_package_processes": [
+        {
+          "comm": "apt-get",
+          "pid": 71567
+        }
+      ],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=",
+        "ActiveState=inactive",
+        "SubState=dead"
+      ],
+      "packagekitd": [],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-01T18:47:10Z",
+    "label": "busy-after-start-answer"
+  },
+  "agent_log": "",
+  "check": {
+    "body": {
+      "available": true,
+      "current_commit": "57cec4f6a51af35ab9ebf1a8c96ba29c60c8f185",
+      "current_version": "v0.1.0-alpha.81",
+      "supported": true,
+      "target": {
+        "arch": "amd64",
+        "archive_sha256": "1f8025050698f158b8658f12539751ca55e6d9e5a9df00cf5b48c5c0800c9eb2",
+        "archive_size": "65644036",
+        "commit": "00030d16b1f912d104fce582a6b15c24b45f159d",
+        "os": "linux",
+        "published_at": "2026-10-01T17:59:18Z",
+        "sequence": "82",
+        "version": "v0.1.0-alpha.82"
+      }
+    },
+    "http": 200
+  },
+  "expectations": {
+    "readiness_busy_package_manager_active": true,
+    "release_unchanged": true,
+    "start_refused": true,
+    "status_not_running": true,
+    "task_still_running_at_answer": true
+  },
+  "observation": {
+    "after": {
+      "at": "2026-10-01T18:47:11.460718Z",
+      "general_lock_lines": [
+        {
+          "line": "1: POSIX  ADVISORY  WRITE 71567 fd:01:84605 0 EOF",
+          "owner": 71567,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        }
+      ],
+      "lock_lines": [
+        {
+          "line": "1: POSIX  ADVISORY  WRITE 71567 fd:01:84605 0 EOF",
+          "owner": 71567,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        }
+      ],
+      "other_package_processes": [
+        {
+          "comm": "apt-get",
+          "pid": 71567
+        }
+      ],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=",
+        "ActiveState=inactive",
+        "SubState=dead"
+      ],
+      "packagekitd": [],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-01T18:47:11.221343Z",
+      "general_lock_lines": [
+        {
+          "line": "1: POSIX  ADVISORY  WRITE 71567 fd:01:84605 0 EOF",
+          "owner": 71567,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        }
+      ],
+      "lock_lines": [
+        {
+          "line": "1: POSIX  ADVISORY  WRITE 71567 fd:01:84605 0 EOF",
+          "owner": 71567,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        }
+      ],
+      "other_package_processes": [
+        {
+          "comm": "apt-get",
+          "pid": 71567
+        }
+      ],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=",
+        "ActiveState=inactive",
+        "SubState=dead"
+      ],
+      "packagekitd": [],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-01T18:47:10Z",
+    "label": "busy-during-op",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      "http": 200,
+      "utc": "2026-10-01T18:47:10Z"
+    }
+  },
+  "owner_texts": {
+    "catalogue": {
+      "err.HOST_MUTATION_BUSY.package_manager_active": {
+        "en": "This server's package manager is busy — something outside CelikPanel is installing or updating packages. Try again in a minute.",
+        "tr": "Bu sunucunun paket yöneticisi meşgul — CelikPanel dışında bir şey paket kuruyor ya da güncelliyor. Bir dakika sonra yeniden deneyin."
+      },
+      "err.PANEL_UPDATE_START_REFUSED": "no catalogue entry",
+      "panelUpdate.packageManagerBusy": {
+        "en": "The server was running a package operation. CelikPanel stopped before changing the installed version or its data. Wait for that operation to finish, then retry from Settings → CelikPanel updates.",
+        "tr": "Sunucuda bir paket işlemi çalışıyordu. CelikPanel, kurulu sürümü ve verilerini değiştirmeden durdu. Paket işlemi tamamlandıktan sonra Ayarlar → CelikPanel güncellemeleri bölümünden yeniden deneyin."
+      },
+      "services.mutationReadiness.package_manager_active": {
+        "en": "The operating system is installing or updating packages. Wait for it to finish.",
+        "tr": "İşletim sistemi paket kuruyor veya güncelliyor. Tamamlanmasını bekleyin."
+      },
+      "services.mutationReadiness.title": {
+        "en": "Server changes are temporarily unavailable.",
+        "tr": "Sunucu değişiklikleri geçici olarak kullanılamıyor."
+      }
+    },
+    "start_refusal": {
+      "api_message": "the update service did not accept this request",
+      "code": "PANEL_UPDATE_START_REFUSED"
+    }
+  },
+  "panel_log": "2026-10-01T18:47:11.547791+00:00 dns-ubuntu panel[7262]: 2026/10/01 18:47:11 [panel-update] agent refused start: global service mutation state is not idle: the host package manager is active",
+  "request_id": "b991f0a49b241257488dfdac0513b02d",
+  "start": {
+    "body": {
+      "code": "PANEL_UPDATE_START_REFUSED",
+      "error": "the update service did not accept this request"
+    },
+    "http": 409,
+    "utc": "2026-10-01T18:47:10Z"
+  },
+  "status": {
+    "body": {
+      "found": false,
+      "request_id": "b991f0a49b241257488dfdac0513b02d"
+    },
+    "http": 200
+  },
+  "units_after": [
+    "MainPID=7058",
+    "ExecMainStartTimestamp=Thu 2026-10-01 17:59:54 UTC",
+    "Id=celikpanel-agent.service",
+    "ActiveState=active",
+    "",
+    "MainPID=7262",
+    "ExecMainStartTimestamp=Thu 2026-10-01 17:59:56 UTC",
+    "Id=celikpanel-panel.service",
+    "ActiveState=active"
+  ],
+  "units_before": [
+    "MainPID=7058",
+    "ExecMainStartTimestamp=Thu 2026-10-01 17:59:54 UTC",
+    "Id=celikpanel-agent.service",
+    "ActiveState=active",
+    "",
+    "MainPID=7262",
+    "ExecMainStartTimestamp=Thu 2026-10-01 17:59:56 UTC",
+    "Id=celikpanel-panel.service",
+    "ActiveState=active"
+  ],
+  "version_after": {
+    "agent_commit": "57cec4f6a51af35ab9ebf1a8c96ba29c60c8f185",
+    "agent_matches": true,
+    "commit": "57cec4f6a51af35ab9ebf1a8c96ba29c60c8f185",
+    "http": 200,
+    "version": "v0.1.0-alpha.81"
+  },
+  "version_before": {
+    "agent_commit": "57cec4f6a51af35ab9ebf1a8c96ba29c60c8f185",
+    "agent_matches": true,
+    "commit": "57cec4f6a51af35ab9ebf1a8c96ba29c60c8f185",
+    "http": 200,
+    "version": "v0.1.0-alpha.81"
+  }
+}

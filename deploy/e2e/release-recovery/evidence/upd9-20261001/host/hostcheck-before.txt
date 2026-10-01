@@ -1,0 +1,41 @@
+(output of tools/hostcheck.sh, run 2026-10-01 17:34:46 UTC before anything of upd9; copied verbatim)
+Thu Oct  1 05:34:46 PM UTC 2026
+--- memory
+               total        used        free      shared  buff/cache   available
+Mem:           15697         666       14809           3         417       15031
+Swap:           4096           0        4096
+--- disk (WSL-internal)
+Filesystem     1G-blocks  Used Available Use% Mounted on
+/dev/sdd           1007G  168G      789G  18% /
+/dev/sdd           1007G  168G      789G  18% /
+--- qemu
+--- kvm
+crw-rw-rw- 1 root kvm 10, 232 Oct  1 20:34 /dev/kvm
+--- go
+go version go1.26.5 linux/amd64
+--- node
+v26.8.1
+12.0.2
+--- python
+Python 3.14.7
+--- images
+total 1486060
+drwx------ 2 root root      4096 Oct  1 15:57 .
+drwx------ 5 root root      4096 Sep 28 21:06 ..
+-r--r--r-- 5 root root 556609024 Sep 27 02:09 Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2
+-r--r--r-- 5 root root 340262912 Sep 27 02:09 debian-13-genericcloud-amd64-20260826-2582.qcow2
+-r--r--r-- 2 root root 624829952 Sep  8 20:39 ubuntu-24.04-server-cloudimg-amd64-20260826.img
+--- existing cp-upd9*
+none
+--- other jobs
+--- repo head
+fb04289bd56335ffd6c9a4f9ebecb817a3438e68
+--- efcba145
+efcba145543155b9c4104f9d42538a685cfab17d
+--- alpha80
+bd14d97efc5cfd19acd70ddf0edb9c6343317e2b
+--- builds
+20261001t030434z
+20261001t092830z
+20261001t111438z
+20261001t125717z

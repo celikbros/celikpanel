@@ -1,0 +1,323 @@
+{
+  "artifacts": {
+    "baseline": {
+      "commit": "57cec4f6a51af35ab9ebf1a8c96ba29c60c8f185",
+      "sha256": "78a3659337028b9a76671e3fc3fc8e9137883c25af954f8ea4d09bee4e78a4bf",
+      "version": "v0.1.0-alpha.81"
+    },
+    "defective": {
+      "commit": "ae3e158245facfa814e2b06ff403d24929008ba2",
+      "sha256": "ad8fddd7a0d95071d0104d328d876625b1ae40da1ee1986bee1cd8737681902a",
+      "version": "v0.1.0-alpha.82"
+    },
+    "good": {
+      "commit": "00030d16b1f912d104fce582a6b15c24b45f159d",
+      "sha256": "1f8025050698f158b8658f12539751ca55e6d9e5a9df00cf5b48c5c0800c9eb2",
+      "version": "v0.1.0-alpha.82"
+    }
+  },
+  "busy_start": {
+    "expectations": {
+      "packagekitd_alive_after_task": true,
+      "readiness_busy_package_manager_active": true,
+      "readiness_ready_after_task": false,
+      "release_unchanged": true,
+      "start_refused": true,
+      "status_not_running": true,
+      "task_finished": true,
+      "task_still_running_at_answer": true
+    },
+    "idle_alive_attempt": {
+      "admitted": false,
+      "packagekitd_alive_before": true,
+      "readiness": {
+        "answered_by": "agent",
+        "body": {
+          "code": "HOST_MUTATION_BUSY",
+          "ready": false,
+          "reason": "package_manager_active"
+        },
+        "http": 200,
+        "utc": "2026-10-01T18:51:19Z"
+      },
+      "request_id": "8f21a9dd5045caa9acbc398e651b17c9",
+      "start": {
+        "body": {
+          "code": "PANEL_UPDATE_START_REFUSED",
+          "error": "the update service did not accept this request"
+        },
+        "http": 409,
+        "utc": "2026-10-01T18:51:19Z"
+      }
+    },
+    "request_id": "b991f0a49b241257488dfdac0513b02d",
+    "start": {
+      "body": {
+        "code": "PANEL_UPDATE_START_REFUSED",
+        "error": "the update service did not accept this request"
+      },
+      "http": 409,
+      "utc": "2026-10-01T18:47:10Z"
+    },
+    "status": {
+      "body": {
+        "found": false,
+        "request_id": "b991f0a49b241257488dfdac0513b02d"
+      },
+      "http": 200
+    }
+  },
+  "cell": {
+    "h19": true,
+    "mail_required": true,
+    "name": "upd1-ubuntu-busystart",
+    "node": "ubuntu",
+    "pk_observe": true,
+    "recovery_fault": null,
+    "scenario": "busy-start",
+    "variant": "good"
+  },
+  "findings": [
+    "ubuntu: server setup attempt 1 stopped at 03-service with HOST_MUTATION_BUSY (cause: another server change or package-manager task is still running); the owner waits and starts a newly reviewed plan, as the product text says",
+    "ubuntu: server setup attempt 2 stopped at 03-service with HOST_MUTATION_BUSY (cause: another server change or package-manager task is still running); the owner waits and starts a newly reviewed plan, as the product text says",
+    "ubuntu: server setup attempt 3 stopped at 03-mail_profile with HOST_MUTATION_BUSY (cause: another server change or package-manager task is still running); the owner waits and starts a newly reviewed plan, as the product text says",
+    "ubuntu: server setup attempt 4 stopped at 02-mail_profile with HOST_MUTATION_BUSY (cause: another server change or package-manager task is still running); the owner waits and starts a newly reviewed plan, as the product text says",
+    "ubuntu: server setup attempt 5 stopped at 03-mail_profile with HOST_MUTATION_BUSY (cause: another server change or package-manager task is still running); the owner waits and starts a newly reviewed plan, as the product text says",
+    "ubuntu: server setup attempt 6 stopped at 05-firewall with HOST_MUTATION_BUSY (cause: another server change or package-manager task is still running); the owner waits and starts a newly reviewed plan, as the product text says",
+    "ubuntu: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['06-panel_certificate', '07-access_dns', '08-mail_certificate', '09-mail_enrollment', '10-verify']",
+    "busystart: expectation readiness_ready_after_task not met",
+    "busystart: the update start while packagekitd idled after the owner's package task was refused (HTTP 409 PANEL_UPDATE_START_REFUSED); readiness said {'ready': False, 'code': 'HOST_MUTATION_BUSY', 'reason': 'package_manager_active'}"
+  ],
+  "identity": {
+    "cell_id": "release-recovery__2a4479959c4b80b1",
+    "node": "ubuntu",
+    "vm_uuid": "db228a1b-7c3d-575d-89c7-8f852729cf72"
+  },
+  "native_evidence": false,
+  "note": "Observations for the owner's review; the P0 rows are judged separately.",
+  "outcome": {
+    "attempts": {
+      "automatic": [],
+      "automatic_count": 0,
+      "journal_admissions": [],
+      "owner": [],
+      "owner_count": 0
+    },
+    "classification": "update-verified",
+    "final_status": {
+      "observation": "known",
+      "observed_at": "2026-10-01T18:57:21Z",
+      "phase": "succeeded",
+      "reason": "update_verified",
+      "request_id": "680cc9d4e144a1f8f92b9b0b3c6a2b6b",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "update_verified"
+    },
+    "owner_continuation": false,
+    "owner_reboot": null,
+    "pin_changes": [],
+    "port_hold": null,
+    "reboot": null,
+    "track_stop": null
+  },
+  "overall": "complete-for-review",
+  "packagekit": {
+    "children_seen": [],
+    "grep_c_aptcc": [
+      0
+    ],
+    "lock_lines_seen": [
+      "/var/lib/apt/lists/lock owner=apt-get",
+      "/var/lib/dpkg/lock owner=dpkg",
+      "/var/cache/apt/archives/lock owner=apt-get",
+      "/var/lib/dpkg/lock-frontend owner=apt-get",
+      "/var/lib/dpkg/lock owner=unattended-upgr",
+      "/var/lib/dpkg/lock-frontend owner=unattended-upgr"
+    ],
+    "observations": 97,
+    "other_processes_seen": [
+      "apt-get",
+      "dpkg",
+      "dpkg-deb"
+    ],
+    "pk_alive_rule_idle_bracketed": {
+      "agent_other": 0,
+      "agent_package_manager_active": 0,
+      "agent_ready": 0,
+      "panel_answered": 0
+    },
+    "readiness": {
+      "HOST_MUTATION_BUSY/package_manager_active": 30,
+      "HOST_MUTATION_BUSY/panel_operation_active": 40,
+      "ready": 23
+    },
+    "rule": {
+      "busy": 93,
+      "idle": 97
+    },
+    "with_packagekitd": 28
+  },
+  "provenance": {
+    "baseline": "unpublished-local-fixture-commit-over-HEAD-labelled-v0.1.0-alpha.81; acceptance-license panel build (D-027 fixture); installed by the real installer; fixture trust root enrolled; not-production-release-admission",
+    "candidate": "unpublished-local-fixture-commit-labelled-v0.1.0-alpha.82; signed with the disposable fixture key; served by the guest-loopback celikpanel.net fixture origin; not a release",
+    "defect": "fixture source patch: cmd/panel --migrate-only exits 1 after migrating the isolated copy (genuine candidate failure after candidate-installed, simulated by a committed fixture change)"
+  },
+  "request_id": "680cc9d4e144a1f8f92b9b0b3c6a2b6b",
+  "schema": "celikpanel/upd1-owner-update-result/v1",
+  "scope": {
+    "cron": {
+      "crontab": "/usr/bin/crontab",
+      "verdict": "available"
+    },
+    "dns": {
+      "mode": "external",
+      "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+      "verdict": "not-provided-external-dns"
+    },
+    "origin": {
+      "after-provision": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      },
+      "before-arm": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      }
+    },
+    "setup": {
+      "code": "server_setup_access_dns_required",
+      "not_run": [
+        "06-panel_certificate",
+        "07-access_dns",
+        "08-mail_certificate",
+        "09-mail_enrollment",
+        "10-verify"
+      ],
+      "phase": "access_dns",
+      "verdict": "observed isolated-host wait",
+      "volatile_tables_added": [
+        "server_setup_executions"
+      ]
+    }
+  },
+  "steps": [
+    {
+      "finished_at": "2026-10-01T17:59:17Z",
+      "name": "preflight",
+      "reason": null,
+      "started_at": "2026-10-01T17:59:13Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T17:59:25Z",
+      "name": "origin",
+      "reason": null,
+      "started_at": "2026-10-01T17:59:17Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T17:59:59Z",
+      "name": "baseline-install",
+      "reason": null,
+      "started_at": "2026-10-01T17:59:25Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T18:00:00Z",
+      "name": "owner-login",
+      "reason": null,
+      "started_at": "2026-10-01T17:59:59Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T18:00:00Z",
+      "name": "license",
+      "reason": null,
+      "started_at": "2026-10-01T18:00:00Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T18:45:27Z",
+      "name": "setup",
+      "reason": null,
+      "started_at": "2026-10-01T18:00:00Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-01T18:45:30Z",
+      "name": "seed",
+      "reason": null,
+      "started_at": "2026-10-01T18:45:27Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T18:47:08Z",
+      "name": "pre-state",
+      "reason": null,
+      "started_at": "2026-10-01T18:45:30Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T18:51:16Z",
+      "name": "busy-start",
+      "reason": null,
+      "started_at": "2026-10-01T18:47:08Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-01T18:51:19Z",
+      "name": "arm",
+      "reason": null,
+      "started_at": "2026-10-01T18:51:16Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T18:56:22Z",
+      "name": "owner-start",
+      "reason": null,
+      "started_at": "2026-10-01T18:51:19Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T18:57:22Z",
+      "name": "track",
+      "reason": null,
+      "started_at": "2026-10-01T18:56:22Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T18:57:22Z",
+      "name": "owner-continuation (required)",
+      "reason": null,
+      "started_at": "2026-10-01T18:57:22Z",
+      "verdict": "skipped"
+    },
+    {
+      "finished_at": "2026-10-01T18:57:29Z",
+      "name": "terminal",
+      "reason": null,
+      "started_at": "2026-10-01T18:57:22Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T18:57:32Z",
+      "name": "collect",
+      "reason": null,
+      "started_at": "2026-10-01T18:57:29Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T18:57:32Z",
+      "name": "verdicts",
+      "reason": null,
+      "started_at": "2026-10-01T18:57:32Z",
+      "verdict": "passed"
+    }
+  ]
+}

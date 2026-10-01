@@ -1,0 +1,2 @@
+d0fe84bb5f80853425fa6be28e2c106f30104c3cfe8611933f2e65c9b63f0e30  /var/tmp/cp-v3n28/images/ubuntu-24.04-server-cloudimg-amd64-20260826.img
+/var/tmp/cp-v3n28/images/ubuntu-24.04-server-cloudimg-amd64-20260826.img links=2 size=624829952

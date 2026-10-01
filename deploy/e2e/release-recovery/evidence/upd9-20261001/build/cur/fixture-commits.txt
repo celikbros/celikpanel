@@ -1,0 +1,5 @@
+57cec4f6a51af35ab9ebf1a8c96ba29c60c8f185 tree=97917f7e622f6f6668aa427d2903bd86ab1e2bd1 parents=efcba145543155b9c4104f9d42538a685cfab17d test(fixture): upd1 baseline labelled v0.1.0-alpha.81 (unpublished, disposable)
+ae3e158245facfa814e2b06ff403d24929008ba2 tree=4a2e7586be6054d33536801c5b57321d0ff7e466 parents=00030d16b1f912d104fce582a6b15c24b45f159d test(fixture): upd1 defective candidate - migrate-only fails (unpublished, disposable)
+00030d16b1f912d104fce582a6b15c24b45f159d tree=18b949c912fe36d11b07dc7d09fd43491517adc8 parents=57cec4f6a51af35ab9ebf1a8c96ba29c60c8f185 test(fixture): upd1 good candidate labelled v0.1.0-alpha.82 (unpublished, disposable)
+eb89b68130ebe6858487435f1c2c77052655b06c tree=cf4b2e08ee7b309d5113df53b767cfd1a734c1e6 parents=00030d16b1f912d104fce582a6b15c24b45f159d test(fixture): upd3 real-start candidate - exits before its listener (unpublished, disposable)
+f44520941d7efd6d6b9532cd03193b35fe22fa0c tree=95eded5ab5057ca7631ae8efc7ff4cfc603408d4 parents=00030d16b1f912d104fce582a6b15c24b45f159d test(fixture): upd3 start-check candidate - shared panel TLS preparation fails (unpublished, disposable)

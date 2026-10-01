@@ -1,0 +1,444 @@
+{
+  "checks": {
+    "before": {
+      "guidance": "undecided",
+      "required": true,
+      "revision": 0,
+      "status": "new"
+    },
+    "dns": {
+      "mode": "external",
+      "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+      "verdict": "not-provided-external-dns"
+    },
+    "draft_choices": {
+      "dns_mode": "external",
+      "peer_ip": "",
+      "peer_ns": ""
+    },
+    "execution": {
+      "error": {
+        "code": "server_setup_access_dns_required",
+        "message": "Public DNS must resolve panel-ubuntu.upd1-infra.test to 192.0.2.12 before a certificate is requested. Check this hostname's A/AAAA records and its zone delegation. For DNS managed here, review the infrastructure DNS records in this wizard; otherwise correct them at the primary DNS server or provider. This check resumes automatically when DNS is verified."
+      },
+      "phase": "access_dns",
+      "status": "waiting"
+    },
+    "isolated_host_wait": {
+      "code": "server_setup_access_dns_required",
+      "mail_steps_reached": true,
+      "not_run": [
+        "06-panel_certificate",
+        "07-access_dns",
+        "08-mail_certificate",
+        "09-mail_enrollment",
+        "10-verify"
+      ],
+      "phase": "access_dns",
+      "polls": 24,
+      "stable_wait_seconds": 123.3,
+      "steps": {
+        "01-dns": "succeeded",
+        "02-mail_profile": "succeeded",
+        "03-mail_profile": "succeeded",
+        "04-firewall": "succeeded",
+        "05-access_dns": "running",
+        "06-panel_certificate": "pending",
+        "07-access_dns": "pending",
+        "08-mail_certificate": "pending",
+        "09-mail_enrollment": "pending",
+        "10-verify": "pending"
+      }
+    },
+    "owner_attempts": [
+      {
+        "attempt": 1,
+        "error": {
+          "code": "HOST_MUTATION_BUSY",
+          "message": "This server's package manager is busy — something outside CelikPanel is installing or updating packages. Try again in a minute."
+        },
+        "owner_texts": {
+          "api_message": "This server's package manager is busy — something outside CelikPanel is installing or updating packages. Try again in a minute.",
+          "code": "HOST_MUTATION_BUSY",
+          "err.HOST_MUTATION_BUSY": {
+            "en": "Another server change or operating-system package task is still running. Wait for it to finish, then try again.",
+            "tr": "Başka bir sunucu değişikliği veya işletim sistemi paket işlemi hâlâ sürüyor. Tamamlanmasını bekleyip yeniden deneyin."
+          }
+        },
+        "phase": "03-service",
+        "purpose": "web_mail",
+        "request_id": "7951111da0ff308f35803ed24a0be720",
+        "status": "failed",
+        "steps": {
+          "01-dns": "succeeded",
+          "02-service": "succeeded",
+          "03-service": "failed",
+          "04-service": "pending",
+          "05-mail_profile": "pending",
+          "06-mail_profile": "pending",
+          "07-service": "pending",
+          "08-firewall": "pending",
+          "09-access_dns": "pending",
+          "10-panel_certificate": "pending",
+          "11-access_dns": "pending",
+          "12-mail_certificate": "pending",
+          "13-mail_enrollment": "pending",
+          "14-verify": "pending"
+        }
+      },
+      {
+        "attempt": 2,
+        "error": {
+          "code": "HOST_MUTATION_BUSY",
+          "message": "This server's package manager is busy — something outside CelikPanel is installing or updating packages. Try again in a minute."
+        },
+        "owner_texts": {
+          "api_message": "This server's package manager is busy — something outside CelikPanel is installing or updating packages. Try again in a minute.",
+          "code": "HOST_MUTATION_BUSY",
+          "err.HOST_MUTATION_BUSY": {
+            "en": "Another server change or operating-system package task is still running. Wait for it to finish, then try again.",
+            "tr": "Başka bir sunucu değişikliği veya işletim sistemi paket işlemi hâlâ sürüyor. Tamamlanmasını bekleyip yeniden deneyin."
+          }
+        },
+        "phase": "03-service",
+        "purpose": "web_mail",
+        "request_id": "14386bb3b83ecd7a096f0fd505fa7241",
+        "status": "failed",
+        "steps": {
+          "01-dns": "succeeded",
+          "02-service": "succeeded",
+          "03-service": "failed",
+          "04-mail_profile": "pending",
+          "05-mail_profile": "pending",
+          "06-service": "pending",
+          "07-firewall": "pending",
+          "08-access_dns": "pending",
+          "09-panel_certificate": "pending",
+          "10-access_dns": "pending",
+          "11-mail_certificate": "pending",
+          "12-mail_enrollment": "pending",
+          "13-verify": "pending"
+        }
+      },
+      {
+        "attempt": 3,
+        "error": {
+          "code": "HOST_MUTATION_BUSY",
+          "message": "This server's package manager is busy — something outside CelikPanel is installing or updating packages. Try again in a minute."
+        },
+        "owner_texts": {
+          "api_message": "This server's package manager is busy — something outside CelikPanel is installing or updating packages. Try again in a minute.",
+          "code": "HOST_MUTATION_BUSY",
+          "err.HOST_MUTATION_BUSY": {
+            "en": "Another server change or operating-system package task is still running. Wait for it to finish, then try again.",
+            "tr": "Başka bir sunucu değişikliği veya işletim sistemi paket işlemi hâlâ sürüyor. Tamamlanmasını bekleyip yeniden deneyin."
+          }
+        },
+        "phase": "03-mail_profile",
+        "purpose": "web_mail",
+        "request_id": "e045273a2641d7d67b1ae21269e8a94b",
+        "status": "failed",
+        "steps": {
+          "01-dns": "succeeded",
+          "02-service": "succeeded",
+          "03-mail_profile": "failed",
+          "04-mail_profile": "pending",
+          "05-service": "pending",
+          "06-firewall": "pending",
+          "07-access_dns": "pending",
+          "08-panel_certificate": "pending",
+          "09-access_dns": "pending",
+          "10-mail_certificate": "pending",
+          "11-mail_enrollment": "pending",
+          "12-verify": "pending"
+        }
+      },
+      {
+        "attempt": 4,
+        "error": {
+          "code": "HOST_MUTATION_BUSY",
+          "message": "This server's package manager is busy — something outside CelikPanel is installing or updating packages. Try again in a minute."
+        },
+        "owner_texts": {
+          "api_message": "This server's package manager is busy — something outside CelikPanel is installing or updating packages. Try again in a minute.",
+          "code": "HOST_MUTATION_BUSY",
+          "err.HOST_MUTATION_BUSY": {
+            "en": "Another server change or operating-system package task is still running. Wait for it to finish, then try again.",
+            "tr": "Başka bir sunucu değişikliği veya işletim sistemi paket işlemi hâlâ sürüyor. Tamamlanmasını bekleyip yeniden deneyin."
+          }
+        },
+        "phase": "02-mail_profile",
+        "purpose": "web_mail",
+        "request_id": "83c74b4d78edc8922ccc1562b1c025be",
+        "status": "failed",
+        "steps": {
+          "01-dns": "succeeded",
+          "02-mail_profile": "failed",
+          "03-mail_profile": "pending",
+          "04-service": "pending",
+          "05-firewall": "pending",
+          "06-access_dns": "pending",
+          "07-panel_certificate": "pending",
+          "08-access_dns": "pending",
+          "09-mail_certificate": "pending",
+          "10-mail_enrollment": "pending",
+          "11-verify": "pending"
+        }
+      },
+      {
+        "attempt": 5,
+        "error": {
+          "code": "HOST_MUTATION_BUSY",
+          "message": "This server's package manager is busy — something outside CelikPanel is installing or updating packages. Try again in a minute."
+        },
+        "owner_texts": {
+          "api_message": "This server's package manager is busy — something outside CelikPanel is installing or updating packages. Try again in a minute.",
+          "code": "HOST_MUTATION_BUSY",
+          "err.HOST_MUTATION_BUSY": {
+            "en": "Another server change or operating-system package task is still running. Wait for it to finish, then try again.",
+            "tr": "Başka bir sunucu değişikliği veya işletim sistemi paket işlemi hâlâ sürüyor. Tamamlanmasını bekleyip yeniden deneyin."
+          }
+        },
+        "phase": "03-mail_profile",
+        "purpose": "web_mail",
+        "request_id": "635aa6d61ee186a634e16c897d041d2d",
+        "status": "failed",
+        "steps": {
+          "01-dns": "succeeded",
+          "02-mail_profile": "succeeded",
+          "03-mail_profile": "failed",
+          "04-service": "pending",
+          "05-firewall": "pending",
+          "06-access_dns": "pending",
+          "07-panel_certificate": "pending",
+          "08-access_dns": "pending",
+          "09-mail_certificate": "pending",
+          "10-mail_enrollment": "pending",
+          "11-verify": "pending"
+        }
+      },
+      {
+        "attempt": 6,
+        "error": {
+          "code": "HOST_MUTATION_BUSY",
+          "message": "This server's package manager is busy — something outside CelikPanel is installing or updating packages. Try again in a minute."
+        },
+        "owner_texts": {
+          "api_message": "This server's package manager is busy — something outside CelikPanel is installing or updating packages. Try again in a minute.",
+          "code": "HOST_MUTATION_BUSY",
+          "err.HOST_MUTATION_BUSY": {
+            "en": "Another server change or operating-system package task is still running. Wait for it to finish, then try again.",
+            "tr": "Başka bir sunucu değişikliği veya işletim sistemi paket işlemi hâlâ sürüyor. Tamamlanmasını bekleyip yeniden deneyin."
+          }
+        },
+        "phase": "05-firewall",
+        "purpose": "web_mail",
+        "request_id": "bb98a67df0273aab1f3a823b474c67ce",
+        "status": "failed",
+        "steps": {
+          "01-dns": "succeeded",
+          "02-mail_profile": "succeeded",
+          "03-mail_profile": "succeeded",
+          "04-service": "succeeded",
+          "05-firewall": "failed",
+          "06-access_dns": "pending",
+          "07-panel_certificate": "pending",
+          "08-access_dns": "pending",
+          "09-mail_certificate": "pending",
+          "10-mail_enrollment": "pending",
+          "11-verify": "pending"
+        }
+      },
+      {
+        "attempt": 7,
+        "error": {
+          "code": "server_setup_access_dns_required",
+          "message": "Public DNS must resolve panel-ubuntu.upd1-infra.test to 192.0.2.12 before a certificate is requested. Check this hostname's A/AAAA records and its zone delegation. For DNS managed here, review the infrastructure DNS records in this wizard; otherwise correct them at the primary DNS server or provider. This check resumes automatically when DNS is verified."
+        },
+        "owner_texts": {
+          "api_message": "Public DNS must resolve panel-ubuntu.upd1-infra.test to 192.0.2.12 before a certificate is requested. Check this hostname's A/AAAA records and its zone delegation. For DNS managed here, review the infrastructure DNS records in this wizard; otherwise correct them at the primary DNS server or provider. This check resumes automatically when DNS is verified.",
+          "code": "server_setup_access_dns_required"
+        },
+        "phase": "access_dns",
+        "purpose": "web_mail",
+        "request_id": "3c0b240a2eb46e3d8c6656f96301dab4",
+        "status": "waiting",
+        "steps": {
+          "01-dns": "succeeded",
+          "02-mail_profile": "succeeded",
+          "03-mail_profile": "succeeded",
+          "04-firewall": "succeeded",
+          "05-access_dns": "running",
+          "06-panel_certificate": "pending",
+          "07-access_dns": "pending",
+          "08-mail_certificate": "pending",
+          "09-mail_enrollment": "pending",
+          "10-verify": "pending"
+        }
+      }
+    ],
+    "owner_idle_waits": [
+      {
+        "at": "2026-10-01T18:04:58Z",
+        "before_attempt": 1,
+        "busy_seen": [
+          {
+            "locks": [],
+            "processes": [
+              "packagekitd"
+            ]
+          }
+        ],
+        "idle": true,
+        "polls": 30,
+        "waited_s": 297.5
+      },
+      {
+        "at": "2026-10-01T18:10:17Z",
+        "before_attempt": 2,
+        "busy_seen": [
+          {
+            "locks": [],
+            "processes": [
+              "packagekitd"
+            ]
+          }
+        ],
+        "idle": true,
+        "polls": 30,
+        "waited_s": 297.8
+      },
+      {
+        "at": "2026-10-01T18:15:59Z",
+        "before_attempt": 3,
+        "busy_seen": [
+          {
+            "locks": [
+              "/var/lib/dpkg/lock-frontend",
+              "/var/lib/dpkg/lock"
+            ],
+            "processes": [
+              "packagekitd"
+            ]
+          },
+          {
+            "locks": [],
+            "processes": [
+              "packagekitd"
+            ]
+          }
+        ],
+        "idle": true,
+        "polls": 31,
+        "waited_s": 308.4
+      },
+      {
+        "at": "2026-10-01T18:21:35Z",
+        "before_attempt": 4,
+        "busy_seen": [
+          {
+            "locks": [],
+            "processes": [
+              "packagekitd"
+            ]
+          }
+        ],
+        "idle": true,
+        "polls": 31,
+        "waited_s": 308.4
+      },
+      {
+        "at": "2026-10-01T18:28:03Z",
+        "before_attempt": 5,
+        "busy_seen": [
+          {
+            "locks": [],
+            "processes": [
+              "packagekitd"
+            ]
+          }
+        ],
+        "idle": true,
+        "polls": 29,
+        "waited_s": 287.9
+      },
+      {
+        "at": "2026-10-01T18:34:38Z",
+        "before_attempt": 6,
+        "busy_seen": [
+          {
+            "locks": [],
+            "processes": [
+              "packagekitd"
+            ]
+          }
+        ],
+        "idle": true,
+        "polls": 29,
+        "waited_s": 287.1
+      },
+      {
+        "at": "2026-10-01T18:41:42Z",
+        "before_attempt": 7,
+        "busy_seen": [
+          {
+            "locks": [],
+            "processes": [
+              "packagekitd"
+            ]
+          }
+        ],
+        "idle": true,
+        "polls": 30,
+        "waited_s": 297.3
+      }
+    ],
+    "packagekit": {
+      "children_seen": [],
+      "grep_c_aptcc": [
+        0
+      ],
+      "lock_lines_seen": [
+        "/var/lib/apt/lists/lock owner=apt-get",
+        "/var/lib/dpkg/lock owner=dpkg",
+        "/var/cache/apt/archives/lock owner=apt-get",
+        "/var/lib/dpkg/lock-frontend owner=apt-get",
+        "/var/lib/dpkg/lock owner=unattended-upgr",
+        "/var/lib/dpkg/lock-frontend owner=unattended-upgr"
+      ],
+      "observations": 72,
+      "other_processes_seen": [
+        "apt-get",
+        "dpkg",
+        "dpkg-deb"
+      ],
+      "pk_alive_rule_idle_bracketed": {
+        "agent_other": 0,
+        "agent_package_manager_active": 0,
+        "agent_ready": 0,
+        "panel_answered": 0
+      },
+      "readiness": {
+        "HOST_MUTATION_BUSY/package_manager_active": 11,
+        "HOST_MUTATION_BUSY/panel_operation_active": 40,
+        "ready": 21
+      },
+      "rule": {
+        "busy": 53,
+        "idle": 91
+      },
+      "with_packagekitd": 24
+    },
+    "plan_web_mail": {
+      "blockers": [],
+      "can_start": true,
+      "http": 200,
+      "id": "3c41a249ab995638121325c26ba35709"
+    },
+    "start_http": 202
+  },
+  "finished_at": "2026-10-01T18:45:27Z",
+  "name": "setup",
+  "started_at": "2026-10-01T18:00:00Z",
+  "verdict": "observed"
+}

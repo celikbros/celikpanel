@@ -1,0 +1,77 @@
+..............................................................................................................EEEEEE...............................................................
+======================================================================
+ERROR: test_h6_owner_start_accepts_202_and_200_only_with_accepted_true (deploy.e2e.release-recovery.test_owner_update_trial.Upd2CorrectionTests.test_h6_owner_start_accepts_202_and_200_only_with_accepted_true) (status=202, body={'accepted': True, 'status': 'queued'})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/var/tmp/cp-upd9-run/harness/deploy/e2e/release-recovery/test_owner_update_trial.py", line 1232, in test_h6_owner_start_accepts_202_and_200_only_with_accepted_true
+    self.assertEqual(trial.owner_start(checks), "passed")
+                     ~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "/var/tmp/cp-upd9-run/harness/deploy/e2e/release-recovery/owner_update_trial.py", line 4190, in owner_start
+    if self.cell.pk_observe:
+       ^^^^^^^^^
+AttributeError: 'Trial' object has no attribute 'cell'
+
+======================================================================
+ERROR: test_h6_owner_start_accepts_202_and_200_only_with_accepted_true (deploy.e2e.release-recovery.test_owner_update_trial.Upd2CorrectionTests.test_h6_owner_start_accepts_202_and_200_only_with_accepted_true) (status=200, body={'accepted': True, 'status': 'running'})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/var/tmp/cp-upd9-run/harness/deploy/e2e/release-recovery/test_owner_update_trial.py", line 1232, in test_h6_owner_start_accepts_202_and_200_only_with_accepted_true
+    self.assertEqual(trial.owner_start(checks), "passed")
+                     ~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "/var/tmp/cp-upd9-run/harness/deploy/e2e/release-recovery/owner_update_trial.py", line 4190, in owner_start
+    if self.cell.pk_observe:
+       ^^^^^^^^^
+AttributeError: 'Trial' object has no attribute 'cell'
+
+======================================================================
+ERROR: test_h6_owner_start_accepts_202_and_200_only_with_accepted_true (deploy.e2e.release-recovery.test_owner_update_trial.Upd2CorrectionTests.test_h6_owner_start_accepts_202_and_200_only_with_accepted_true) (status=202, body={'accepted': False})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/var/tmp/cp-upd9-run/harness/deploy/e2e/release-recovery/test_owner_update_trial.py", line 1236, in test_h6_owner_start_accepts_202_and_200_only_with_accepted_true
+    trial.owner_start(checks)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "/var/tmp/cp-upd9-run/harness/deploy/e2e/release-recovery/owner_update_trial.py", line 4190, in owner_start
+    if self.cell.pk_observe:
+       ^^^^^^^^^
+AttributeError: 'Trial' object has no attribute 'cell'
+
+======================================================================
+ERROR: test_h6_owner_start_accepts_202_and_200_only_with_accepted_true (deploy.e2e.release-recovery.test_owner_update_trial.Upd2CorrectionTests.test_h6_owner_start_accepts_202_and_200_only_with_accepted_true) (status=202, body=None)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/var/tmp/cp-upd9-run/harness/deploy/e2e/release-recovery/test_owner_update_trial.py", line 1236, in test_h6_owner_start_accepts_202_and_200_only_with_accepted_true
+    trial.owner_start(checks)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "/var/tmp/cp-upd9-run/harness/deploy/e2e/release-recovery/owner_update_trial.py", line 4190, in owner_start
+    if self.cell.pk_observe:
+       ^^^^^^^^^
+AttributeError: 'Trial' object has no attribute 'cell'
+
+======================================================================
+ERROR: test_h6_owner_start_accepts_202_and_200_only_with_accepted_true (deploy.e2e.release-recovery.test_owner_update_trial.Upd2CorrectionTests.test_h6_owner_start_accepts_202_and_200_only_with_accepted_true) (status=409, body={'code': 'PANEL_UPDATE_BUSY'})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/var/tmp/cp-upd9-run/harness/deploy/e2e/release-recovery/test_owner_update_trial.py", line 1236, in test_h6_owner_start_accepts_202_and_200_only_with_accepted_true
+    trial.owner_start(checks)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "/var/tmp/cp-upd9-run/harness/deploy/e2e/release-recovery/owner_update_trial.py", line 4190, in owner_start
+    if self.cell.pk_observe:
+       ^^^^^^^^^
+AttributeError: 'Trial' object has no attribute 'cell'
+
+======================================================================
+ERROR: test_h6_owner_start_accepts_202_and_200_only_with_accepted_true (deploy.e2e.release-recovery.test_owner_update_trial.Upd2CorrectionTests.test_h6_owner_start_accepts_202_and_200_only_with_accepted_true) (status=201, body={'accepted': True})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/var/tmp/cp-upd9-run/harness/deploy/e2e/release-recovery/test_owner_update_trial.py", line 1236, in test_h6_owner_start_accepts_202_and_200_only_with_accepted_true
+    trial.owner_start(checks)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "/var/tmp/cp-upd9-run/harness/deploy/e2e/release-recovery/owner_update_trial.py", line 4190, in owner_start
+    if self.cell.pk_observe:
+       ^^^^^^^^^
+AttributeError: 'Trial' object has no attribute 'cell'
+
+----------------------------------------------------------------------
+Ran 174 tests in 3.512s
+
+FAILED (errors=6)

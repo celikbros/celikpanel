@@ -1,0 +1,831 @@
+--- a/deploy/e2e/release-recovery/owner_update_trial.py
++++ b/deploy/e2e/release-recovery/owner_update_trial.py
+@@ -176,6 +176,162 @@
+ def host_package_manager_waits(node: str) -> bool:
+     """H19: only the platform where the owner was observed to need the wait (upd8 Ubuntu run a)."""
+     return node in HOST_IDLE_NODES
++
++
++# upd9: what the Agent's rule (efcba145 cmd/agent/service_mutation_lock_linux.go packageKitDaemonProvablyIdle) reads,
++# read here from /proc only (no lock is taken, PackageKit is never contacted): per packagekitd its APT backend in
++# maps (grep -c aptcc), its children, and the /proc/locks lines on the four apt/dpkg lock files or owned by it;
++# plus every other package-manager process name of the Agent's list. "rule" is this probe's reading of the rule;
++# the Agent's own answer is the readiness API read next to it.
++PK_LOCK_PATHS = ("/var/lib/dpkg/lock-frontend", "/var/lib/dpkg/lock", "/var/cache/apt/archives/lock",
++                 "/var/lib/apt/lists/lock")
++PK_PROBE = r"""
++import datetime,json,os,subprocess
++LOCKS=("/var/lib/dpkg/lock-frontend","/var/lib/dpkg/lock","/var/cache/apt/archives/lock","/var/lib/apt/lists/lock")
++NAMES={"apt","apt-get","dpkg","dpkg-deb","pacman","makepkg","dnf","dnf5","yum","microdnf","rpm","rpmdb","packagekit",
++       "pkcon","dnfdaemon-server","dnfdaemon-serve"}
++def rd(p):
++    try:
++        with open(p,"rb") as f:
++            return f.read().decode("utf-8","replace")
++    except OSError:
++        return None
++at=datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
++procs={}
++for d in os.listdir("/proc"):
++    if not d.isdigit():
++        continue
++    comm=rd("/proc/"+d+"/comm"); st=rd("/proc/"+d+"/status")
++    if comm is None or st is None:
++        continue
++    ppid=next((l.split()[1] for l in st.splitlines() if l.startswith("PPid:")),None)
++    procs[int(d)]=(comm.strip(),ppid)
++pk=sorted(p for p,(c,_) in procs.items() if c=="packagekitd")
++inodes={}
++for path in LOCKS:
++    try:
++        inodes[os.stat(path).st_ino]=path
++    except OSError:
++        pass
++lines=[];unparsed=[]
++for line in (rd("/proc/locks") or "").splitlines():
++    f=line.split()
++    if not f:
++        continue
++    i=2 if len(f)>1 and f[1]=="->" else 1
++    try:
++        owner=int(f[i+3]); ident=f[i+4].split(":"); ino=int(ident[-1])
++    except (IndexError,ValueError):
++        unparsed.append(line.strip()); continue
++    if ino in inodes or owner in pk:
++        lines.append({"line":line.strip(),"path":inodes.get(ino),"owner":owner,
++                      "owner_comm":procs.get(owner,(None,None))[0],"waiting":f[1]=="->"})
++uptime=float((rd("/proc/uptime") or "0").split()[0]); tck=os.sysconf("SC_CLK_TCK")
++daemons=[]
++for pid in pk:
++    maps=rd("/proc/%d/maps"%pid); stat=rd("/proc/%d/stat"%pid)
++    etime=None
++    if stat:
++        try:
++            etime=round(uptime-int(stat.rsplit(")",1)[1].split()[19])/tck,1)
++        except (IndexError,ValueError):
++            pass
++    kids=[{"pid":p,"comm":c} for p,(c,pp) in sorted(procs.items()) if pp==str(pid)]
++    held=[l for l in lines if l["owner"]==pid and l["path"]]
++    unowned=[l for l in lines if l["path"] and l["owner"]<=0]
++    backend=None if maps is None else any(l.strip().endswith("/libpk_backend_aptcc.so") for l in maps.splitlines())
++    daemons.append({"pid":pid,"etime_s":etime,
++                    "grep_c_aptcc":None if maps is None else sum(1 for l in maps.splitlines() if "aptcc" in l),
++                    "aptcc_backend":backend,"children":kids,"holds_or_waits":held,
++                    "rule_idle":bool(backend) and not kids and not held and not unowned and not unparsed})
++others=[{"pid":p,"comm":c} for p,(c,_) in sorted(procs.items()) if c in NAMES]
++try:
++    unit=subprocess.run(["systemctl","show","packagekit.service","-p","ActiveState","-p","SubState",
++                         "-p","ExecMainStartTimestamp"],capture_output=True,text=True,timeout=10).stdout.strip().splitlines()
++except Exception as exc:
++    unit=["unavailable: "+type(exc).__name__]
++# The Agent's general fcntl probe covers the first three paths for every process (e.g. unattended-upgrades).
++general=[l for l in lines if l["path"] in LOCKS[:3]]
++rule="busy" if others or general or any(not d["rule_idle"] for d in daemons) else "idle"
++print(json.dumps({"at":at,"packagekitd":daemons,"packagekit_unit":unit,"lock_lines":lines,"unparsed_lock_lines":unparsed,
++                  "other_package_processes":others,"general_lock_lines":general,"rule":rule},sort_keys=True))
++"""
++# upd9 busystart: the owner's harmless long package task - a download-only install of one package that is not
++# installed (nothing is unpacked or configured; no service changes), slowed by apt's own Dl-Limit so it holds the
++# apt archives lock for about BUSY_OP_TARGET_S, then one apt-get update (Ubuntu's apt hook then pings PackageKit,
++# which keeps or starts the idle daemon). Read-only selection first (dpkg-query, apt-cache: no lock).
++def pk_summary(observations: list[dict]) -> dict:
++    """upd9: count the PackageKit readings and set each readiness answer against them. "bracketed" means both /proc
++    readings around the readiness answer agree (same packagekitd pids, same rule reading)."""
++    out: dict[str, Any] = {"observations": len(observations), "with_packagekitd": 0, "rule": {"idle": 0, "busy": 0},
++                           "readiness": {}, "grep_c_aptcc": [], "children_seen": [], "lock_lines_seen": [],
++                           "other_processes_seen": [],
++                           "pk_alive_rule_idle_bracketed": {"agent_ready": 0, "agent_package_manager_active": 0,
++                                                            "agent_other": 0, "panel_answered": 0}}
++    for record in observations:
++        readings = [r for r in (record.get("before"), record.get("after")) if isinstance(r, dict)]
++        for reading in readings:
++            out["rule"][reading.get("rule", "busy")] = out["rule"].get(reading.get("rule", "busy"), 0) + 1
++            for daemon in reading.get("packagekitd") or []:
++                if daemon.get("grep_c_aptcc") not in out["grep_c_aptcc"]:
++                    out["grep_c_aptcc"].append(daemon.get("grep_c_aptcc"))
++                for child in daemon.get("children") or []:
++                    if child.get("comm") not in out["children_seen"]:
++                        out["children_seen"].append(child.get("comm"))
++            for line in reading.get("lock_lines") or []:
++                seen = f"{line.get('path')} owner={line.get('owner_comm')}"
++                if seen not in out["lock_lines_seen"]:
++                    out["lock_lines_seen"].append(seen)
++            for proc in reading.get("other_package_processes") or []:
++                if proc.get("comm") not in out["other_processes_seen"]:
++                    out["other_processes_seen"].append(proc.get("comm"))
++        if any(r.get("packagekitd") for r in readings):
++            out["with_packagekitd"] += 1
++        body = (record.get("readiness") or {}).get("body")
++        if not isinstance(body, dict):
++            continue
++        key = "ready" if body.get("ready") is True else f"{body.get('code')}/{body.get('reason')}"
++        out["readiness"][key] = out["readiness"].get(key, 0) + 1
++        if (len(readings) == 2 and all(r.get("packagekitd") and r.get("rule") == "idle" for r in readings)
++                and [d.get("pid") for d in readings[0]["packagekitd"]] == [d.get("pid") for d in readings[1]["packagekitd"]]):
++            bucket = out["pk_alive_rule_idle_bracketed"]
++            if record["readiness"].get("answered_by") == "panel":
++                bucket["panel_answered"] += 1
++            elif body.get("ready") is True:
++                bucket["agent_ready"] += 1
++            elif body.get("reason") == "package_manager_active":
++                bucket["agent_package_manager_active"] += 1
++            else:
++                bucket["agent_other"] += 1
++    return out
++
++
++BUSY_OP_UNIT = "cp-lab-upd9-owner-apt.service"
++BUSY_OP_TARGET_S = 240
++BUSY_OP_RUNTIME_MAX_S = 1500
++BUSY_OP_CANDIDATES = ("golang-1.22-src", "golang-1.21-src", "golang-1.23-src", "libllvm18", "libllvm17t64",
++                      "gcc-14", "libicu74")
++BUSY_OP_CHOOSE = r"""
++for p in %s; do
++  st=$(dpkg-query -W -f='${Status}' "$p" 2>/dev/null || true)
++  case "$st" in *"install ok installed"*) continue;; esac
++  size=$(apt-cache show --no-all-versions "$p" 2>/dev/null | awk '/^Size:/{print $2; exit}')
++  if [ -n "$size" ] && [ "$size" -ge 5000000 ]; then echo "$p $size"; exit 0; fi
++done
++echo "none 0"
++"""
++
++
++def busy_op_command(package: str, limit_kib: int) -> str:
++    if not re.fullmatch(r"[a-z0-9][a-z0-9.+-]{1,60}", package) or not 4 <= limit_kib <= 100000:
++        raise ValueError("invalid busy operation choice")
++    stamp = "$(date -u +%FT%T.%3NZ)"
++    return ("echo \"op-start " + stamp + "\"; "
++            f"DEBIAN_FRONTEND=noninteractive apt-get install --download-only -y --no-install-recommends "
++            f"-o Acquire::http::Dl-Limit={limit_kib} -o Acquire::https::Dl-Limit={limit_kib} {package}; "
++            "echo \"download-only rc=$? " + stamp + "\"; apt-get update; echo \"update rc=$? " + stamp + "\"")
++
++
+ ORIGIN_NAME = "celikpanel.net"
+ GUEST_HELPERS = ("guest_probe.py", "guest_port_fault.py", "guest_update_kill.py", "guest_bound_worker.py",
+                  "guest_recovery_fault.py", "guest_recovery_handoff.py", "guest_owner_update_observer.py",
+@@ -272,8 +428,17 @@
+     variant: str               # "defective" | "good" | "start-check" | "real-start"
+     recovery_fault: dict | None
+     mail_required: bool
++    # upd9: h19=False is an ordinary owner who starts the reviewed setup plan once (no H19 wait or retry);
++    # pk_observe records the PackageKit facts the Agent's rule reads (/proc only) and the Agent's read-only
++    # readiness answer; scenario None | "setup-once" (the cell ends after setup) | "busy-start" (an update start
++    # during a real package task, then the update while packagekitd idles).
++    h19: bool = True
++    pk_observe: bool = False
++    scenario: str | None = None
+ 
+ 
++SCENARIOS = (None, "setup-once", "busy-start")
++
+ CELLS = {
+     "upd1-debian13-defective": Cell("upd1-debian13-defective", "debian13", "defective",
+                                     {"action": "reboot", "checkpoint": "payload_restored"}, True),
+@@ -305,6 +470,14 @@
+     "upd1-ubuntu-owner-continuation": Cell("upd1-ubuntu-owner-continuation", "ubuntu", "owner-continuation", None, True),
+     "upd1-ubuntu-defective": Cell("upd1-ubuntu-defective", "ubuntu", "defective",
+                                   {"action": "reboot", "checkpoint": "payload_restored"}, True),
++    # upd9 (efcba145: an idle packagekitd is not package activity). setuponce: the candidate installed fresh, the
++    # web_mail setup started once by an ordinary owner, PackageKit observed; the cell ends after setup.
++    "upd1-ubuntu-setuponce": Cell("upd1-ubuntu-setuponce", "ubuntu", "good", None, True,
++                                  h19=False, pk_observe=True, scenario="setup-once"),
++    # busystart: after setup, the owner's own long package task; the update start is tried while it runs (refusal
++    # expected), then the good update is started while packagekitd still idles after it (admission expected).
++    "upd1-ubuntu-busystart": Cell("upd1-ubuntu-busystart", "ubuntu", "good", None, True,
++                                  pk_observe=True, scenario="busy-start"),
+ }
+ 
+ 
+@@ -2826,6 +2999,25 @@
+                         "sample interval, H13/H14)" if management_off else "")
+                      + ", agreement, outcome classification"),
+     ]
++    pk_text = ("; upd9: every ~10 s PackageKit read from /proc (PK_PROBE: packagekitd, grep -c aptcc of its maps, its "
++               "children, /proc/locks lines of the apt/dpkg locks) bracketing GET /api/v1/host-mutation-readiness")
++    if cell.scenario == "setup-once":
++        names = [n for n, _ in steps]
++        steps = steps[:names.index("setup") + 1]
++        steps[-1] = ("setup", steps[-1][1] + "; started ONCE by an ordinary owner (no H19 wait or retry)" + pk_text)
++        steps += [("packagekit-after-setup", "read-only: PackageKit and the readiness answer every 20 s until "
++                                             "packagekitd exits (<= 420 s), then once more"),
++                  ("collect", "journals, observation records (no sampler in this cell)")]
++    elif cell.scenario == "busy-start":
++        names = [n for n, _ in steps]
++        steps.insert(names.index("pre-state") + 1, (
++            "busy-start", f"owner's package task {BUSY_OP_UNIT}: apt-get install --download-only of one package not "
++                          f"installed, Dl-Limit for ~{BUSY_OP_TARGET_S} s, then apt-get update; while it holds the apt "
++                          "lock: readiness, GET update/check, POST update/start once (refusal expected), status, panel "
++                          "log, version and unit PIDs before/after; then wait for the task to end and confirm "
++                          "packagekitd still runs; arm follows without the H19 wait, and owner-start first POSTs the "
++                          "armed request at once while packagekitd idles (no readiness wait); if that is refused, the "
++                          "owner waits for readiness, arms a new request and starts it once"))
+     if cell.variant in KIND_EXPECTED:
+         steps.append(("kind-expectation", "judge the " + cell.variant + " observations: " + KIND_EXPECTED[cell.variant]
+                       + " (texts from the product build's web/src catalogues and cmd/recovery/main.go, CLI output "
+@@ -2845,6 +3037,13 @@
+                             "rule": "read-only; before the update check, or after a terminal, paused or settled "
+                                     "state; never inside the update preflight window (sidecar v2)"},
+             "steps": [{"name": n, "does": d} for n, d in steps]}
++    if cell.scenario == "setup-once":
++        plan["expected_outcome"] = ("the web_mail setup reaches the isolated host's access_dns wait in ONE owner attempt "
++                                    "(no update is started)")
++    elif cell.scenario == "busy-start":
++        plan["expected_outcome"] = ("during the owner's package task: readiness HOST_MUTATION_BUSY/package_manager_active, "
++                                    "update start refused, installed release unchanged; after it, with packagekitd "
++                                    "idle-alive: start admitted and succeeded (update_verified)")
+     if owner_path:
+         plan["port_hold"] = dict(hold, unit=PORT_HOLD_UNIT_PREFIX + "<request_id>.service",
+                                  helper="guest_owner_port_hold.py", address="127.0.0.1:2083",
+@@ -3377,6 +3576,49 @@
+         draft["purpose"] = purpose
+         return draft
+ 
++    def owner_waits(self) -> bool:
++        """H19 applies on Ubuntu unless the cell is an ordinary owner who starts once (upd9 setuponce)."""
++        return host_package_manager_waits(self.node_name) and getattr(getattr(self, "cell", None), "h19", True)
++
++    def pk_on(self) -> bool:
++        """upd9: PackageKit observations for this cell (offline tests build a Trial without a cell)."""
++        return bool(getattr(getattr(self, "cell", None), "pk_observe", False))
++
++    def scenario(self) -> str | None:
++        return getattr(getattr(self, "cell", None), "scenario", None)
++
++    def pk_probe(self) -> dict:
++        """upd9: the PackageKit facts the Agent's rule reads, from /proc only (PK_PROBE)."""
++        return json.loads(self.guest("python3 -I - <<'CP_PK'\n" + PK_PROBE + "\nCP_PK\n", timeout=60).stdout)
++
++    def pk_observation(self, label: str, view: Any = None, readiness: bool = True) -> dict:
++        """upd9: /proc facts, then the Agent's read-only readiness answer through the Panel, then /proc again, so the
++        answer is bracketed by two readings. Never raises; recorded in state for the step's evidence file."""
++        record: dict[str, Any] = {"label": label, "host_utc": utc_now()}
++        for part in ("before", "readiness", "after"):
++            if part == "readiness" and not readiness:
++                continue
++            try:
++                if part == "readiness":
++                    response = self.api("GET", "/api/v1/host-mutation-readiness", view=view, timeout=20,
++                                        purpose="Agent package activity (readiness, read-only)")
++                    body = response.json() or {}
++                    record["readiness"] = {"http": response.status, "body": body, "utc": utc_now(),
++                                           "answered_by": "panel" if body.get("reason") == "panel_operation_active"
++                                           else "agent"}
++                else:
++                    record[part] = self.pk_probe()
++            except Exception as exc:  # noqa: BLE001 - one lost reading never stops the cell
++                record[part + "_error"] = self.redactor.text(f"{type(exc).__name__}: {exc}")[:300]
++            if not readiness:
++                break
++        self.state.setdefault("pk_observations", []).append(record)
++        return record
++
++    def pk_running(self, record: dict) -> bool | None:
++        reading = record.get("after") or record.get("before")
++        return None if not isinstance(reading, dict) else bool(reading.get("packagekitd"))
++
+     def wait_host_package_manager_idle(self, timeout: float = HOST_IDLE_TIMEOUT_S) -> dict:
+         """H19: read-only; returns when no package-manager process or apt/dpkg lock is seen, or at the limit."""
+         started, seen, polls = time.monotonic(), [], 0
+@@ -3455,11 +3697,17 @@
+                          "the plan but fails at 05-mail_profile); mail is recorded as not provided on this platform")
+         attempts: list[dict] = []
+         idle_waits: list[dict] = []
++        if not self.owner_waits():
++            checks["owner_model"] = ("ordinary owner: the reviewed setup plan is started once; no wait for the "
++                                     "package manager and no newly reviewed plan after a stop (H19 off)")
++        pk_first = len(self.state.get("pk_observations", []))
+         for attempt in range(1, SETUP_OWNER_ATTEMPTS + 1):
+-            if host_package_manager_waits(self.node_name):
++            if self.owner_waits():
+                 # H19 (upd8 Ubuntu run a): the owner follows the product text "wait and try again" -
+                 # before each start the owner waits until no package-manager task runs (read-only check).
+                 idle_waits.append(dict(self.wait_host_package_manager_idle(), before_attempt=attempt))
++            if self.pk_on():
++                self.pk_observation(f"setup-a{attempt:02d}-before-start")
+             if attempt > 1:
+                 state = self.api("GET", "/api/v1/setup", purpose="ServerSetupGate").json() or {}
+             for purpose in purposes:
+@@ -3495,37 +3743,56 @@
+             wait = SetupWait()
+             decision = "continue"
+             last_light = 0.0
++            last_pk = 0.0
+             with self.panel_client().polling() as view:
+                 while time.monotonic() < deadline:
+                     if time.monotonic() - last_light >= 30:
+                         # Sidecar v2: the before-first-site hosting-root series, every 30 s until setup settles.
+                         self.inspect("before-site", light=True)
+                         last_light = time.monotonic()
++                    if self.pk_on() and time.monotonic() - last_pk >= 10:
++                        # upd9: PackageKit facts and the readiness answer every ~10 s while setup runs.
++                        self.pk_observation(f"setup-a{attempt:02d}-poll", view=view)
++                        last_pk = time.monotonic()
+                     try:
+                         execution = self.api("GET", f"/api/v1/setup/operation?request_id={request_id}", view=view).json()
+                     except self.p["panel_api"].PanelError as exc:
+                         execution = {"poll_error": str(exc)}
++                    if self.pk_on() and isinstance(execution, dict):
++                        # upd9: the setup's own step transitions on the same host clock (changes only).
++                        phases = self.state.setdefault("pk_setup_phases", [])
++                        entry = {"attempt": attempt, "status": execution.get("status"),
++                                 "phase": execution.get("phase"), "error": execution.get("error"),
++                                 "steps": {x.get("id"): x.get("status") for x in setup_steps(execution)}}
++                        if not phases or {k: v for k, v in phases[-1].items() if k != "utc"} != entry:
++                            phases.append(dict(entry, utc=utc_now()))
+                     decision = wait.observe(execution, time.monotonic())
+                     if decision in ("terminal", "settled"):
+                         break
+                     time.sleep(5)
++            if self.pk_on():
++                self.pk_observation(f"setup-a{attempt:02d}-end")
+             busy = (isinstance(execution, dict) and execution.get("status") == "failed"
+                     and (execution.get("error") or {}).get("code") == HOST_MUTATION_BUSY_CODE)
+             summary = {"attempt": attempt, "request_id": request_id, "purpose": purpose,
+                        "status": (execution or {}).get("status"), "phase": (execution or {}).get("phase"),
+                        "error": (execution or {}).get("error"),
+                        "steps": {x.get("id"): x.get("status") for x in setup_steps(execution)}}
+-            if (not busy and host_package_manager_waits(self.node_name) and isinstance(execution, dict)
++            if summary["error"]:
++                # upd9: what the owner's screen can say for this code (the installed build's catalogues).
++                summary["owner_texts"] = self.owner_error_texts(summary["error"])
++            if (not busy and (self.owner_waits() or self.pk_on()) and isinstance(execution, dict)
+                     and execution.get("status") == "failed"):
+                 # H19 (upd8 Ubuntu run b): a mail profile step installs its packages (PackageKit starts) and its own
+                 # next sub-step (mail TLS synchronization) is then refused as busy; the setup shows the generic
+                 # mail_profile_install_failed. The owner opens the failed step's component operation (the setup
+                 # screen links it) and reads its cause; only that named cause makes the owner wait and retry.
++                # upd9: read for the record also where the owner does not retry (setuponce).
+                 component = self.failed_setup_component(execution)
+                 summary["component"] = component
+                 busy = bool(component.get("names_host_busy"))
+             attempts.append(summary)
+-            if not busy or not host_package_manager_waits(self.node_name) or attempt == SETUP_OWNER_ATTEMPTS:
++            if not busy or not self.owner_waits() or attempt == SETUP_OWNER_ATTEMPTS:
+                 break
+             self.record_json(f"setup-execution-attempt-{attempt:02d}.json", execution)
+             self.finding(f"{self.node_name}: server setup attempt {attempt} stopped at {summary['phase']} with "
+@@ -3534,6 +3801,11 @@
+         checks["owner_attempts"] = attempts
+         if idle_waits:
+             checks["owner_idle_waits"] = idle_waits
++        if self.pk_on():
++            observations = self.state.get("pk_observations", [])[pk_first:]
++            self.record_json("packagekit-observations.json", observations)
++            self.record_json("setup-phases.json", self.state.get("pk_setup_phases", []))
++            checks["packagekit"] = pk_summary(observations)
+         self.inspect("after-setup")
+         checks["execution"] = {k: (execution or {}).get(k) for k in ("status", "phase", "error")}
+         self.record_json("setup-execution.json", execution)
+@@ -3555,8 +3827,19 @@
+             raise StepFailed(f"server setup did not succeed: {checks['execution']}")
+         return "passed"
+ 
++    def owner_error_texts(self, error: Any) -> dict:
++        """upd9: the API's code/message and the catalogue sentences an owner screen can show for it (EN/TR)."""
++        if not isinstance(error, dict):
++            return {}
++        code, reason = str(error.get("code") or ""), str(error.get("reason") or "")
++        texts: dict[str, Any] = {"code": code, "api_message": error.get("message")}
++        for key in ([f"err.{code}.{reason}"] if reason else []) + [f"err.{code}"]:
++            if code and self.translator.has(key):
++                texts[key] = {language: self.translator.text(key, language=language) for language in ("en", "tr")}
++        return texts
++
+     def seed(self, checks: dict) -> str:
+-        if host_package_manager_waits(self.node_name):
++        if self.owner_waits():
+             # H19: no agent mutation (seed) and no update (arm/start) while a package-manager task runs.
+             checks["owner_waited_for_idle"] = self.wait_host_package_manager_idle()
+         # Cron precondition, read-only and before any seeding (product finding P1: the
+@@ -3798,9 +4081,12 @@
+         return self.state["samples"]
+ 
+     def arm(self, checks: dict) -> str:
+-        if host_package_manager_waits(self.node_name):
++        if self.owner_waits() and self.scenario() != "busy-start":
+             # H19: no agent mutation (seed) and no update (arm/start) while a package-manager task runs.
++            # upd9 busystart: the owner has just watched the package task end and starts while packagekitd idles.
+             checks["owner_waited_for_idle"] = self.wait_host_package_manager_idle()
++        if self.pk_on():
++            checks["packagekit_at_arm"] = self.pk_observation("arm-before-check")
+         # Sidecar v2: the last read-only inspection before the update check; none follows until a terminal,
+         # paused or settled state (upd3 cell 1's v1 inspection fell inside the update preflight).
+         self.inspect("before-check")
+@@ -3898,7 +4184,60 @@
+                 raise StepInconclusive("observer event identity differs")
+         return events
+ 
++    def idle_alive_start(self, checks: dict) -> bool:
++        """upd9 busystart: right after the owner's package task ended, packagekitd still idling, the owner presses
++        start for the armed request at once (the API, without waiting for readiness). True when admitted."""
++        obs = self.pk_observation("idle-alive-before-post")
++        rid, check = self.state["request_id"], self.state["check"]
++        body = {"request_id": rid, "confirmed": True, "current_version": check["current_version"],
++                "current_commit": check["current_commit"], **check["target"]}
++        self.trial.save(self.root, self.node_name, f"upd1-owner-start-{rid}.json", encoded(
++            {"schema": "celikpanel/upd1-owner-start-attempt/v1", "request_id": rid, "body": body, "at": utc_now(),
++             "note": "upd9 busystart: started while packagekitd idles after the owner's package task"}))
++        self.state["started_at"] = time.time()
++        try:
++            response = self.api("POST", "/api/v1/panel/update/start", body, timeout=START_REQUEST_TIMEOUT_S,
++                                purpose="SystemUpdateOperation start while packagekitd idles (once)")
++            result = {"http": response.status, "body": response.json(), "utc": utc_now()}
++            admitted = start_accepted(response.status, response.json())
++        except self.p["panel_api"].UnknownOutcome as exc:
++            result = {"outcome": "unknown; reconciled by the status read", "note": str(exc), "utc": utc_now()}
++            admitted = None
++        after = self.pk_observation("idle-alive-after-answer", readiness=False)
++        status = self.api("GET", f"/api/v1/panel/update/status?request_id={rid}",
++                          purpose="SystemUpdateOperation status (read-only)")
++        status_body = status.json() or {}
++        if admitted is None:
++            admitted = status_body.get("status") in ("queued", "running", "succeeded")
++        record = {"request_id": rid, "packagekitd_alive_before": self.pk_running(obs),
++                  "packagekitd_alive_after": self.pk_running(after), "readiness": obs.get("readiness"),
++                  "start": result, "admitted": admitted, "status": {"http": status.status, "body": status_body}}
++        if not admitted:
++            start_body = result.get("body") if isinstance(result.get("body"), dict) else {}
++            record["owner_texts"] = self.owner_error_texts({"code": start_body.get("code"),
++                                                            "message": start_body.get("error")})
++            record["panel_log"] = self.redactor.text(self.guest(
++                "journalctl -u celikpanel-panel.service --no-pager -o short-iso-precise --since=-5min "
++                "| grep -F '[panel-update]' | tail -n 4 || true", timeout=60).stdout.strip())
++            record["version"] = self.panel_version()
++            self.finding("busystart: the update start while packagekitd idled after the owner's package task was "
++                         f"refused (HTTP {result.get('http')} {(start_body or {}).get('code')}); readiness said "
++                         f"{((obs.get('readiness') or {}).get('body'))}")
++        else:
++            self.state["start_answered_at"] = time.time()
++        checks["idle_alive_attempt"] = record
++        self.state["idle_alive_attempt"] = record
++        self.record_json("idle-alive-start.json", record)
++        return bool(admitted)
++
+     def owner_start(self, checks: dict) -> str:
++        if self.scenario() == "busy-start" and not self.state.get("idle_alive_attempt"):
++            if self.idle_alive_start(checks):
++                checks["start"] = self.state["idle_alive_attempt"]["start"]
++                return "passed"
++            # Refused: the owner waits as the card says (readiness below), then checks and arms anew for a new
++            # request (the refused request id is final) and starts once.
++            self.state["rearm_pending"] = True
+         readiness = None
+         deadline = time.monotonic() + 600
+         while time.monotonic() < deadline:
+@@ -3910,6 +4249,13 @@
+         checks["readiness"] = readiness
+         if not readiness or readiness.get("ready") is not True:
+             raise StepFailed(f"host mutation readiness never allowed the owner to start: {readiness}")
++        if self.state.pop("rearm_pending", False):
++            rearm: dict = {}
++            self.arm(rearm)
++            checks["rearm"] = {k: rearm.get(k) for k in ("request_id", "observer_unit", "check", "packagekit_at_arm")}
++        if self.pk_on():
++            # upd9: /proc only (no readiness call, no lock) right before the one start request.
++            checks["packagekit_before_post"] = self.pk_observation("owner-start-before-post", readiness=False)
+         check = self.state["check"]
+         body = {"request_id": self.state["request_id"], "confirmed": True, "current_version": check["current_version"],
+                 "current_commit": check["current_commit"], **check["target"]}
+@@ -3926,8 +4272,169 @@
+         except self.p["panel_api"].UnknownOutcome as exc:
+             checks["start"] = {"outcome": "unknown; reconciled only by status reads", "note": str(exc)}
+         self.state["start_answered_at"] = time.time()
++        if self.pk_on():
++            checks["packagekit_after_answer"] = self.pk_observation("owner-start-after-answer", readiness=False)
+         return "passed"
+ 
++    # -- upd9 scenarios ------------------------------------------------------------------
++
++    def unit_facts(self) -> list[str]:
++        """Read-only: the Panel and Agent units' main PIDs and start times (a restart would change them)."""
++        return self.guest("systemctl show celikpanel-agent.service celikpanel-panel.service -p Id -p MainPID "
++                          "-p ActiveState -p ExecMainStartTimestamp --no-pager", timeout=30).stdout.strip().splitlines()
++
++    def panel_version(self) -> dict:
++        response = self.api("GET", "/api/v1/panel/version", purpose="PanelVersion (read-only)")
++        body = response.json() or {}
++        return {"http": response.status, **{k: body.get(k) for k in ("version", "commit", "agent_commit",
++                                                                      "agent_matches")}}
++
++    def readiness_texts(self) -> dict:
++        """The sentences the update card shows for a refused readiness read (PanelUpdateCard.tsx), EN/TR."""
++        keys = ("services.mutationReadiness.title", "services.mutationReadiness.package_manager_active",
++                "err.HOST_MUTATION_BUSY.package_manager_active", "panelUpdate.packageManagerBusy",
++                "err.PANEL_UPDATE_START_REFUSED")
++        return {key: ({language: self.translator.text(key, language=language) for language in ("en", "tr")}
++                      if self.translator.has(key) else "no catalogue entry") for key in keys}
++
++    def busy_unit_state(self) -> dict:
++        out = self.guest(f"systemctl show {BUSY_OP_UNIT} -p ActiveState -p SubState -p Result -p ExecMainStatus "
++                         "-p ExecMainStartTimestamp -p ExecMainExitTimestamp --no-pager", timeout=30).stdout
++        return dict(line.split("=", 1) for line in out.strip().splitlines() if "=" in line)
++
++    def busy_start(self, checks: dict) -> str:
++        """upd9 busystart: the owner's own long package task; the update start tried once while it runs; then the
++        task ends and the owner confirms packagekitd still idles before arm/start (no H19 wait)."""
++        pk_first = len(self.state.get("pk_observations", []))
++        checks["before_op"] = self.pk_observation("busy-before-op")
++        checks["guest_archives_free_bytes"] = self.guest("df -B1 --output=avail /var/cache/apt/archives | tail -n 1",
++                                                         timeout=30).stdout.strip()
++        chosen = self.guest(BUSY_OP_CHOOSE % " ".join(BUSY_OP_CANDIDATES), timeout=60).stdout.split()
++        if len(chosen) != 2 or chosen[0] == "none":
++            raise StepInconclusive(f"no candidate package for the owner's download-only task: {chosen}")
++        package, size = chosen[0], int(chosen[1])
++        limit = max(4, size // 1024 // BUSY_OP_TARGET_S)
++        command = busy_op_command(package, limit)
++        operation: dict[str, Any] = {"unit": BUSY_OP_UNIT, "package": package, "size_bytes": size,
++                                     "dl_limit_kib_s": limit, "command": command}
++        checks["operation"] = operation
++        argv = ["systemd-run", f"--unit={BUSY_OP_UNIT}", "--no-block", f"--property=RuntimeMaxSec={BUSY_OP_RUNTIME_MAX_S}",
++                "--property=TimeoutStopSec=30", "/bin/bash", "-c", command]
++        started = time.monotonic()
++        operation["started_utc"] = utc_now()
++        self.guest(shlex.join(argv), timeout=60)
++        held = None
++        while time.monotonic() - started < 120:
++            probe = self.pk_probe()
++            if any(p.get("comm") == "apt-get" for p in probe["other_package_processes"]) and probe["general_lock_lines"]:
++                held = probe
++                break
++            time.sleep(1)
++        operation["holding"] = held
++        if held is None:
++            raise StepInconclusive("the owner's package task did not hold an apt/dpkg lock within 120 s")
++        operation["holding_after_s"] = round(time.monotonic() - started, 1)
++        rid = secrets.token_hex(16)
++        busy: dict[str, Any] = {"request_id": rid, "version_before": self.panel_version(),
++                                "units_before": self.unit_facts()}
++        busy["observation"] = self.pk_observation("busy-during-op")
++        check = self.api("GET", "/api/v1/panel/update/check", purpose="PanelUpdateCard check", timeout=60)
++        cbody = check.json() or {}
++        busy["check"] = {"http": check.status, "body": cbody}
++        if check.status != 200 or cbody.get("available") is not True or not isinstance(cbody.get("target"), dict):
++            raise StepInconclusive(f"the update check offered no candidate during the package task: {cbody}")
++        body = {"request_id": rid, "confirmed": True, "current_version": cbody["current_version"],
++                "current_commit": cbody["current_commit"], **cbody["target"]}
++        attempt = {"schema": "celikpanel/upd1-owner-start-attempt/v1", "request_id": rid, "body": body,
++                   "at": utc_now(), "note": "upd9 busystart: started while the owner's package task runs"}
++        self.trial.save(self.root, self.node_name, f"upd1-owner-start-{rid}.json", encoded(attempt))
++        try:
++            response = self.api("POST", "/api/v1/panel/update/start", body, timeout=START_REQUEST_TIMEOUT_S,
++                                purpose="SystemUpdateOperation start during the owner's package task (once)")
++            busy["start"] = {"http": response.status, "body": response.json(), "utc": utc_now()}
++        except self.p["panel_api"].UnknownOutcome as exc:
++            busy["start"] = {"outcome": "unknown; reconciled only by status reads", "note": str(exc), "utc": utc_now()}
++        busy["after_start"] = self.pk_observation("busy-after-start-answer", readiness=False)
++        status = self.api("GET", f"/api/v1/panel/update/status?request_id={rid}",
++                          purpose="SystemUpdateOperation status (read-only)")
++        busy["status"] = {"http": status.status, "body": status.json()}
++        start_body = (busy["start"].get("body") or {}) if isinstance(busy["start"].get("body"), dict) else {}
++        busy["owner_texts"] = {
++            "start_refusal": self.owner_error_texts({"code": start_body.get("code"), "message": start_body.get("error"),
++                                                     "reason": start_body.get("reason")}),
++            "catalogue": self.readiness_texts()}
++        busy["panel_log"] = self.redactor.text(self.guest(
++            "journalctl -u celikpanel-panel.service --no-pager -o short-iso-precise --since=-15min "
++            "| grep -F '[panel-update]' | tail -n 6 || true", timeout=60).stdout.strip())
++        busy["agent_log"] = self.redactor.text(self.guest(
++            "journalctl -u celikpanel-agent.service --no-pager -o short-iso-precise --since=-15min "
++            "| grep -i -E 'update|package manager' | tail -n 8 || true", timeout=60).stdout.strip())
++        busy["version_after"] = self.panel_version()
++        busy["units_after"] = self.unit_facts()
++        readiness = ((busy["observation"].get("readiness") or {}).get("body")) or {}
++        admitted = start_accepted(busy["start"].get("http", 0), start_body) if "http" in busy["start"] else None
++        expectations = {
++            "readiness_busy_package_manager_active": readiness.get("ready") is False
++            and readiness.get("code") == HOST_MUTATION_BUSY_CODE and readiness.get("reason") == "package_manager_active",
++            "start_refused": admitted is False,
++            "status_not_running": (busy["status"]["body"] or {}).get("status") not in ("queued", "running"),
++            "release_unchanged": busy["version_before"] == busy["version_after"]
++            and busy["units_before"] == busy["units_after"],
++            "task_still_running_at_answer": bool((busy["after_start"].get("before") or {}).get("other_package_processes")),
++        }
++        busy["expectations"] = expectations
++        self.state["busy"] = busy
++        self.record_json("busy-start-refusal.json", busy)
++        if admitted is not False:
++            self.state["request_id_busy_admitted"] = rid
++            raise StepFailed(f"the update start during the owner's package task was not refused: {busy['start']}")
++        last = 0.0
++        unit: dict = {}
++        while time.monotonic() - started < BUSY_OP_RUNTIME_MAX_S + 120:
++            unit = self.busy_unit_state()
++            if unit.get("ActiveState") in ("inactive", "failed"):
++                break
++            if time.monotonic() - last >= 15:
++                self.pk_observation("busy-op-poll")
++                last = time.monotonic()
++            time.sleep(3)
++        operation.update(ended_utc=utc_now(), unit=unit, duration_s=round(time.monotonic() - started, 1))
++        operation["journal"] = self.redactor.text(self.guest(
++            f"journalctl -u {BUSY_OP_UNIT} --no-pager -o short-iso-precise | tail -n 80 || true", timeout=60).stdout)
++        after = self.pk_observation("busy-after-op")
++        checks["after_op"] = after
++        after_ready = ((after.get("readiness") or {}).get("body") or {}).get("ready") is True
++        expectations.update(task_finished=unit.get("ActiveState") in ("inactive", "failed"),
++                            packagekitd_alive_after_task=self.pk_running(after) is True,
++                            readiness_ready_after_task=after_ready)
++        observations = self.state.get("pk_observations", [])[pk_first:]
++        self.record_json("packagekit-observations.json", observations)
++        checks.update(busy={k: busy[k] for k in ("request_id", "start", "status", "expectations", "owner_texts")},
++                      packagekit=pk_summary(observations))
++        for name, value in expectations.items():
++            if not value:
++                self.finding(f"busystart: expectation {name} not met")
++        self.state["busy_after_op_at"] = time.time()
++        return "passed" if all(expectations.values()) else "observed"
++
++    def pk_after_setup(self, checks: dict) -> str:
++        """upd9 setuponce: after setup stopped or settled, read PackageKit and the readiness answer every 20 s until
++        packagekitd is gone (or 420 s), then once more: the idle daemon against the Agent's own answer."""
++        pk_first = len(self.state.get("pk_observations", []))
++        started = time.monotonic()
++        with self.panel_client().polling() as view:
++            while True:
++                record = self.pk_observation("after-setup-poll", view=view)
++                if self.pk_running(record) is False or time.monotonic() - started >= 420:
++                    break
++                time.sleep(20)
++            self.pk_observation("after-setup-final", view=view)
++        observations = self.state.get("pk_observations", [])[pk_first:]
++        self.record_json("packagekit-observations.json", observations)
++        checks["packagekit"] = pk_summary(observations)
++        checks["seconds"] = round(time.monotonic() - started, 1)
++        return "observed"
++
+     def status_sample(self, view: Any, index: int) -> dict:
+         rid = self.state["request_id"]
+         sample: dict[str, Any] = {"index": index, "t": time.time(), "utc": utc_now()}
+@@ -4787,12 +5294,17 @@
+ 
+         checks["stopped_after"] = [s["name"] for s in self.steps if s["verdict"] not in ("passed", "observed", "skipped")
+                                    and s["name"] != "collect"][:1]
+-        samples = attempt("guest-samples", self.read_samples) or []
++        # upd9 setuponce never installs the sampler (the cell ends after setup).
++        samples = [] if self.scenario() == "setup-once" else attempt("guest-samples", self.read_samples) or []
+         self.ev.write_text(f"{self.step_dir}/guest-samples.jsonl", "\n".join(json.dumps(s, sort_keys=True) for s in samples))
+         self.ev.write_text(f"{self.step_dir}/host-samples.jsonl",
+                            "\n".join(json.dumps(s, sort_keys=True) for s in self.host_samples))
+         journals = {}
+-        for label, units in journal_groups(rid).items():
++        groups = journal_groups(rid)
++        if self.pk_on():
++            # upd9: PackageKit's own journal (activation/exit times) and the owner's package task.
++            groups["packagekit"] = ["packagekit.service", BUSY_OP_UNIT]
++        for label, units in groups.items():
+             value = attempt(f"journal-{label}", lambda units=units: self.workload(
+                 "journal", "--since=-12h", "--lines", "20000", *sum((["--unit", u] for u in units), []), timeout=120))
+             if value is not None:
+@@ -4920,9 +5432,15 @@
+         self.step("owner-login", self.owner_login, needs=("baseline-install",))
+         self.step("license", self.license, needs=("owner-login",))
+         self.step("setup", self.setup, needs=("license",))
++        if self.scenario() == "setup-once":
++            return self.execute_setup_once()
+         self.step("seed", self.seed, needs=("setup",))
+         self.step("pre-state", self.pre_state, needs=("seed",))
+-        self.step("arm", self.arm, needs=("pre-state",))
++        if self.scenario() == "busy-start":
++            self.step("busy-start", self.busy_start, needs=("pre-state",))
++            self.step("arm", self.arm, needs=("busy-start",))
++        else:
++            self.step("arm", self.arm, needs=("pre-state",))
+         self.step("owner-start", self.owner_start, needs=("arm",))
+         self.step("track", self.track, needs=("owner-start",))
+         self.step("owner-continuation (required)", self.owner_continuation, needs=("track",))
+@@ -4973,6 +5491,45 @@
+                               "judged": self.state.get("kind_judged"),
+                               "measured": None if not judged_kind else not not_reached,
+                               "printed_retry_command": self.state.get("printed_retry_command")}
++        if self.scenario() == "busy-start":
++            busy = self.state.get("busy") or {}
++            result["busy_start"] = {k: busy.get(k) for k in ("request_id", "start", "status", "expectations")}
++            result["busy_start"]["idle_alive_attempt"] = {
++                k: (self.state.get("idle_alive_attempt") or {}).get(k)
++                for k in ("request_id", "packagekitd_alive_before", "admitted", "start", "readiness")}
++            result["packagekit"] = pk_summary(self.state.get("pk_observations", []))
++        self.step_dir = "result"
++        return self.ev.finalize_upd1(result)
++
++    def execute_setup_once(self) -> dict:
++        """upd9 setuponce: the cell ends after setup (no seed, no update); PackageKit is read until it exits."""
++        self.step("packagekit-after-setup", self.pk_after_setup, needs=("license",))
++        self.step("collect", self.collect)
++        self.tunnel.close()
++        verdicts = [s["verdict"] for s in self.steps]
++        attempts = next((s["checks"].get("owner_attempts") for s in self.steps if s["name"] == "setup"), None) or []
++        waiting = self.state.get("setup_waiting") or {}
++        reached = waiting.get("phase") if waiting else None
++        classification = (f"setup-reached-{reached}-wait-in-{len(attempts)}-attempt(s)" if reached
++                          else "setup-succeeded" if (self.state.get("setup_execution") or {}).get("status") == "succeeded"
++                          else "setup-stopped")
++        result = {"schema": RESULT_SCHEMA, "native_evidence": False, "cell": dataclasses.asdict(self.cell),
++                  "identity": {k: self.identity[k] for k in ("cell_id", "node", "vm_uuid")},
++                  "request_id": None, "provenance": provenance_for(self.cell.variant),
++                  "artifacts": {role: {k: self.artifacts[role][k] for k in ("version", "commit", "sha256")}
++                                for role in ("baseline",)},
++                  "outcome": {"classification": classification, "final_status": None,
++                              "setup_attempts": [{k: a.get(k) for k in ("attempt", "status", "phase", "error",
++                                                                        "owner_texts", "component")}
++                                                 for a in attempts]},
++                  "scope": result_scope(self.dns_mode, self.state.get("cron_availability"),
++                                        self.state.get("setup_waiting"), self.state.get("origin_checks")),
++                  "packagekit": pk_summary(self.state.get("pk_observations", [])),
++                  "findings": self.state["findings"],
++                  "steps": [{k: s.get(k) for k in ("name", "verdict", "reason", "started_at", "finished_at")}
++                            for s in self.steps],
++                  "overall": overall(verdicts),
++                  "note": "upd9 setuponce: no update is started; observations for the owner's review."}
+         self.step_dir = "result"
+         return self.ev.finalize_upd1(result)
+ 
+--- a/deploy/e2e/release-recovery/test_owner_update_trial.py
++++ b/deploy/e2e/release-recovery/test_owner_update_trial.py
+@@ -115,6 +115,76 @@
+         self.assertFalse(trial.failed_setup_component({"steps": [{"id": "07-firewall;x", "status": "failed"}]})["read"])
+ 
+ 
++class Upd9PackageKitTests(unittest.TestCase):
++    """upd9: the PackageKit cells, the probe and the busy task command."""
++
++    def test_cells_and_owner_model(self):
++        once, busy = t.CELLS["upd1-ubuntu-setuponce"], t.CELLS["upd1-ubuntu-busystart"]
++        self.assertEqual((once.node, once.variant, once.h19, once.pk_observe, once.scenario),
++                         ("ubuntu", "good", False, True, "setup-once"))
++        self.assertEqual((busy.node, busy.variant, busy.h19, busy.pk_observe, busy.scenario),
++                         ("ubuntu", "good", True, True, "busy-start"))
++        for cell in t.CELLS.values():
++            self.assertIn(cell.scenario, t.SCENARIOS)
++            if cell.scenario is None:
++                self.assertTrue(cell.h19)
++                self.assertFalse(cell.pk_observe)
++        trial = t.Trial.__new__(t.Trial)
++        trial.node_name, trial.cell = "ubuntu", once
++        self.assertFalse(trial.owner_waits())
++        trial.cell = busy
++        self.assertTrue(trial.owner_waits())
++        trial.cell = t.CELLS["upd1-ubuntu-good"]
++        self.assertTrue(trial.owner_waits())
++
++    def test_plans(self):
++        plan = t.build_plan(t.CELLS["upd1-ubuntu-setuponce"], artifacts(), "/var/tmp/cp-release-drill-x", 18443)
++        self.assertEqual([s["name"] for s in plan["steps"]][-3:], ["setup", "packagekit-after-setup", "collect"])
++        self.assertIn("ONCE", plan["steps"][-3]["does"])
++        plan = t.build_plan(t.CELLS["upd1-ubuntu-busystart"], artifacts(), "/var/tmp/cp-release-drill-x", 18443)
++        names = [s["name"] for s in plan["steps"]]
++        self.assertEqual(names[names.index("pre-state") + 1:names.index("pre-state") + 3], ["busy-start", "arm"])
++
++    def test_probe_reads_the_rule_inputs_and_reports_json(self):
++        agent = (HERE.parents[2] / "cmd/agent/service_mutation_lock_linux.go").read_text()
++        for path in t.PK_LOCK_PATHS:
++            self.assertIn(f'"{path}"', agent)
++            self.assertIn(f'"{path}"', t.PK_PROBE)
++        self.assertIn("/libpk_backend_aptcc.so", agent)
++        self.assertIn("/libpk_backend_aptcc.so", t.PK_PROBE)
++        compile(t.PK_PROBE, "pk-probe", "exec")
++        if sys.platform == "linux":
++            done = subprocess.run([sys.executable, "-I", "-c", t.PK_PROBE], capture_output=True, text=True, timeout=60)
++            self.assertEqual(done.returncode, 0, done.stderr)
++            value = json.loads(done.stdout)
++            self.assertIn(value["rule"], ("idle", "busy"))
++            self.assertIsInstance(value["packagekitd"], list)
++
++    def test_busy_command_is_download_only_and_bounded(self):
++        command = t.busy_op_command("golang-1.22-src", 80)
++        self.assertIn("apt-get install --download-only -y --no-install-recommends", command)
++        self.assertIn("Acquire::http::Dl-Limit=80", command)
++        self.assertIn("apt-get update", command)
++        for bad in (("golang;rm", 80), ("golang-1.22-src", 0), ("x" * 70, 80)):
++            with self.assertRaises(ValueError):
++                t.busy_op_command(*bad)
++
++    def test_pk_summary_counts_bracketed_answers(self):
++        idle = {"packagekitd": [{"pid": 7, "grep_c_aptcc": 6, "children": []}], "rule": "idle", "lock_lines": [],
++                "other_package_processes": []}
++        records = [{"before": idle, "after": idle, "readiness": {"body": {"ready": True}, "answered_by": "agent"}},
++                   {"before": idle, "after": idle,
++                    "readiness": {"body": {"ready": False, "code": "HOST_MUTATION_BUSY",
++                                           "reason": "panel_operation_active"}, "answered_by": "panel"}},
++                   {"before": idle, "after": dict(idle, packagekitd=[{"pid": 8}]),
++                    "readiness": {"body": {"ready": True}, "answered_by": "agent"}}]
++        got = t.pk_summary(records)
++        self.assertEqual(got["pk_alive_rule_idle_bracketed"],
++                         {"agent_ready": 1, "agent_package_manager_active": 0, "agent_other": 0, "panel_answered": 1})
++        self.assertEqual(got["readiness"], {"ready": 2, "HOST_MUTATION_BUSY/panel_operation_active": 1})
++        self.assertEqual(got["grep_c_aptcc"], [6, None])
++
++
+ class PlanTests(unittest.TestCase):
+     def test_twelve_cells_with_the_selected_second_faults(self):
+         self.assertEqual(sorted(t.CELLS), ["upd1-arch-defective", "upd1-arch-good", "upd1-arch-mgmt-off-reboot",
+@@ -122,8 +192,8 @@
+                                            "upd1-arch-startcheck", "upd1-debian13-defective", "upd1-debian13-good",
+                                            "upd1-debian13-mgmt-off-reboot", "upd1-debian13-owner-continuation",
+                                            "upd1-debian13-realstart", "upd1-debian13-startcheck",
+-                                           "upd1-ubuntu-defective", "upd1-ubuntu-good",
+-                                           "upd1-ubuntu-owner-continuation"])
++                                           "upd1-ubuntu-busystart", "upd1-ubuntu-defective", "upd1-ubuntu-good",
++                                           "upd1-ubuntu-owner-continuation", "upd1-ubuntu-setuponce"])
+         # upd8: the Ubuntu cells mirror Debian's (mail required, reset at payload_restored).
+         for name in ("upd1-ubuntu-defective", "upd1-ubuntu-good", "upd1-ubuntu-owner-continuation"):
+             debian = t.CELLS[name.replace("ubuntu", "debian13")]

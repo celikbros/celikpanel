@@ -1,0 +1,2 @@
+lab=/var/tmp/cp-release-drill-upd9-ub-busy-a
+upd1-ubuntu-busystart-20261001t175913z

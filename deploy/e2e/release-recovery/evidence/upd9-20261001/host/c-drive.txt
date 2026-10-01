@@ -1,0 +1,7 @@
+Windows C: free bytes (PowerShell Get-PSDrive C)
+2026-10-01T17:33Z before anything: 134861742080
+2026-10-01T17:42Z before the builds: 133789536256 (read as (Get-PSDrive C).Free/1GB = 124.601215362549 GiB)
+2026-10-01T17:48:36Z before cell A (setuponce): 125787619328
+2026-10-01T17:58:43Z before cell B (busystart): 122855772160
+2026-10-01T18:57:47Z before cell C (alpha.80 good): 119587655680
+2026-10-01T20:20:00Z after the last cell (C): 116072202240

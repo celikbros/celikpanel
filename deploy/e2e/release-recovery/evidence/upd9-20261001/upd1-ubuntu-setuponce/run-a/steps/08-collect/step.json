@@ -1,0 +1,28 @@
+{
+  "checks": {
+    "attempts": {
+      "automatic": [],
+      "automatic_count": 0,
+      "journal_admissions": [],
+      "owner": [],
+      "owner_count": 0
+    },
+    "guest_samples": 0,
+    "host_samples": 0,
+    "journals": [
+      "lab",
+      "packagekit",
+      "product",
+      "setup-services"
+    ],
+    "observer": [],
+    "stopped_after": [
+      "setup"
+    ],
+    "unavailable": {}
+  },
+  "finished_at": "2026-10-01T17:54:42Z",
+  "name": "collect",
+  "started_at": "2026-10-01T17:54:40Z",
+  "verdict": "passed"
+}

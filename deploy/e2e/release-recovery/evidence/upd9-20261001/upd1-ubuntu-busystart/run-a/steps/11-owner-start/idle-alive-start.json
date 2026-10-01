@@ -1,0 +1,43 @@
+{
+  "admitted": false,
+  "owner_texts": {
+    "api_message": "the update service did not accept this request",
+    "code": "PANEL_UPDATE_START_REFUSED"
+  },
+  "packagekitd_alive_after": true,
+  "packagekitd_alive_before": true,
+  "panel_log": "2026-10-01T18:47:11.547791+00:00 dns-ubuntu panel[7262]: 2026/10/01 18:47:11 [panel-update] agent refused start: global service mutation state is not idle: the host package manager is active\n2026-10-01T18:51:20.505801+00:00 dns-ubuntu panel[7262]: 2026/10/01 18:51:20 [panel-update] agent refused start: global service mutation state is not idle: the host package manager is active",
+  "readiness": {
+    "answered_by": "agent",
+    "body": {
+      "code": "HOST_MUTATION_BUSY",
+      "ready": false,
+      "reason": "package_manager_active"
+    },
+    "http": 200,
+    "utc": "2026-10-01T18:51:19Z"
+  },
+  "request_id": "8f21a9dd5045caa9acbc398e651b17c9",
+  "start": {
+    "body": {
+      "code": "PANEL_UPDATE_START_REFUSED",
+      "error": "the update service did not accept this request"
+    },
+    "http": 409,
+    "utc": "2026-10-01T18:51:19Z"
+  },
+  "status": {
+    "body": {
+      "found": false,
+      "request_id": "8f21a9dd5045caa9acbc398e651b17c9"
+    },
+    "http": 200
+  },
+  "version": {
+    "agent_commit": "57cec4f6a51af35ab9ebf1a8c96ba29c60c8f185",
+    "agent_matches": true,
+    "commit": "57cec4f6a51af35ab9ebf1a8c96ba29c60c8f185",
+    "http": 200,
+    "version": "v0.1.0-alpha.81"
+  }
+}

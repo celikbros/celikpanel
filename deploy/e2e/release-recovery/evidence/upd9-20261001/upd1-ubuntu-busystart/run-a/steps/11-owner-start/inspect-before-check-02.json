@@ -1,0 +1,7 @@
+{
+  "allowed": false,
+  "at": "2026-10-01T18:56:21Z",
+  "label": "before-check",
+  "light": false,
+  "why": "between the update check (or the owner's retry) and a terminal, paused or settled state"
+}
