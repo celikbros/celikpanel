@@ -293,7 +293,7 @@ export const en = {
     'err.SERVICE_STATE_REFRESH_FAILED': 'The operation outcome and current service state could not be verified. Run Rescan before taking another action.',
     'err.SERVICE_STATE_UNVERIFIED': 'The cached service state is damaged or unverifiable. Run Rescan before changing any component.',
     'err.HOST_MUTATION_BUSY': 'Another server change or operating-system package task is still running. Wait for it to finish, then try again.',
-    'err.HOST_MUTATION_BUSY.package_manager_active': 'This server\'s package manager is busy — something outside CelikPanel is installing or updating packages. Try again in a minute.',
+    'err.HOST_MUTATION_BUSY.package_manager_active': 'This server\'s package manager is busy — a package task is still running on this server. Wait for it to finish, then try again.',
     'err.HOST_MUTATION_BUSY.agent_mutation_active': 'Another CelikPanel change is still running on this server. Wait for it to finish, then try again.',
     'err.HOST_MUTATION_BUSY.panel_operation_active': 'Another CelikPanel operation is still running. Wait for it to finish, then try again.',
     'err.HOST_MUTATION_BUSY.host_lock_busy': 'A change that did not finish is still holding this server, and it will not clear by waiting. Restarting the server releases the hold; if it comes back, this needs looking at.',

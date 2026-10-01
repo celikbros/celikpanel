@@ -208,7 +208,7 @@ export const tr: Record<ShellKey, string> = {
     'err.SERVICE_STATE_REFRESH_FAILED': 'İşlemin sonucu ve servisin güncel durumu doğrulanamadı. Başka bir işlem yapmadan önce Yeniden Tara’yı çalıştırın.',
     'err.SERVICE_STATE_UNVERIFIED': 'Önbellekteki servis durumu bozuk veya doğrulanamıyor. Herhangi bir bileşeni değiştirmeden önce Yeniden Tara’yı çalıştırın.',
     'err.HOST_MUTATION_BUSY': 'Başka bir sunucu değişikliği veya işletim sistemi paket işlemi hâlâ sürüyor. Tamamlanmasını bekleyip yeniden deneyin.',
-    'err.HOST_MUTATION_BUSY.package_manager_active': 'Bu sunucunun paket yöneticisi meşgul — CelikPanel dışında bir şey paket kuruyor ya da güncelliyor. Bir dakika sonra yeniden deneyin.',
+    'err.HOST_MUTATION_BUSY.package_manager_active': 'Bu sunucunun paket yöneticisi meşgul — bu sunucuda bir paket işlemi hâlâ sürüyor. Tamamlanmasını bekleyip yeniden deneyin.',
     'err.HOST_MUTATION_BUSY.agent_mutation_active': 'Bu sunucuda başka bir CelikPanel değişikliği hâlâ sürüyor. Tamamlanmasını bekleyip yeniden deneyin.',
     'err.HOST_MUTATION_BUSY.panel_operation_active': 'Başka bir CelikPanel işlemi hâlâ sürüyor. Tamamlanmasını bekleyip yeniden deneyin.',
     'err.HOST_MUTATION_BUSY.host_lock_busy': 'Tamamlanmamış bir değişiklik bu sunucuyu hâlâ tutuyor ve beklemekle geçmez. Sunucuyu yeniden başlatmak tutmayı bırakır; yine olursa bakılması gerekir.',
