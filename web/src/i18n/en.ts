@@ -138,7 +138,7 @@ export const en = {
     'panelUpdate.queued': 'The update is queued.',
     'panelUpdate.connectionLost': 'The connection was interrupted; the panel may be restarting. The same operation will be tracked.',
     'panelUpdate.markerFailed': 'The request identity could not be stored in the browser; the update was not started.',
-    'panelUpdate.sending': 'Sending the update requestâ€¦',
+    'panelUpdate.sending': 'Sending the update request…',
     'panelUpdate.accepted': 'The request was accepted; secure status tracking started.',
     'panelUpdate.watch': 'Navigate; updates locked.',
     'panelUpdate.canonicalChecking': 'Checking unfinished updates...',

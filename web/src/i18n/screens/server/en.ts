@@ -229,7 +229,7 @@ export const enServerScreens = {
 
     'panelUpdate.description': 'The panel and agent apply only a signed package that matches the verified operating system and architecture.',
     'panelUpdate.check': 'Check for updates',
-    'panelUpdate.checking': 'Checkingâ€¦',
+    'panelUpdate.checking': 'Checking…',
     'panelUpdate.alphaNotice': 'Alpha release: Make sure you have a current backup first. The operation restarts the panel and agent and may cause a short interruption. An update never starts automatically.',
     'panelUpdate.currentVersion': 'Current version',
     'panelUpdate.currentCommit': 'Current commit',
@@ -239,7 +239,7 @@ export const enServerScreens = {
     'panelUpdate.bytes': '{size} bytes',
     'panelUpdate.sha256': 'SHA-256',
     'panelUpdate.start': 'Start signed update to {version}',
-    'panelUpdate.starting': 'Startingâ€¦',
+    'panelUpdate.starting': 'Starting…',
     'panelUpdate.rateLimitedBeforeStart': 'Too many requests were sent. The update was not started; wait briefly and check again.',
     'panelUpdate.identityMismatch': 'The agent reported a different active operation identity. It will be monitored until terminal before this screen is released.',
     'panelUpdate.unsupported': 'This build pair does not support the signed update channel.',
