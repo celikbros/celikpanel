@@ -1331,6 +1331,13 @@ func serverSetupFailureForStep(step serverSetupExecutionStep, cause error) *serv
 	case errors.Is(cause, errFirewallNoEngine):
 		return &serviceOperationError{Code: "firewall_no_engine", Message: "The firewall engine is unavailable. Review the component installation result."}
 	}
+	// The Agent refused the step's mutation because the host was busy: keep
+	// that typed cause and its reason sentence rather than the step's generic
+	// code (upd8 F1: 05-firewall showed only server_setup_firewall_failed).
+	// Ajan ana makine meşgul olduğu için reddettiyse tipli neden korunur.
+	if classification, ok := classifyHostMutationError(cause); ok {
+		return &serviceOperationError{Code: classification.Code, Message: classification.Message}
+	}
 	switch step.Kind {
 	case "infrastructure_dns":
 		return &serviceOperationError{Code: "server_setup_infrastructure_dns_failed", Message: "The infrastructure DNS records could not be published and verified. Review the DNS operation and native DNS service before reviewing a new setup plan."}

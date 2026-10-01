@@ -1195,7 +1195,9 @@ CLI'nin zamanlanmış yeniden deneme metni erken sahip yeniden denemesinden sonr
 işlem, duraklama kaydı olmadan `recovery_required` durumunda biter; web'deki
 `panelUpdate.previousAttempt.stoppedTitle`/`stopped` ve
 `panelUpdate.packageManagerBusy` metinleri ("kurulu olan hiçbir şey" / "kurulu
-dosyalar" değişmeden durdu) düzeltilmedi (web kapsam dışı).
+dosyalar" değişmeden durdu) düzeltilmedi (web kapsam dışı). 2026-10-01'de
+düzeltildi (`706c1c91`): iki metin de artık kurulu sürümün ve verilerinin
+değiştirilmediğini söyler.
 
 ### alpha.80 kaynağından adaya güncelleme: kapsamı belirli gerçek sistem kanıtı (P0.1/P0.2/P0.3, 2026-10-01)
 
@@ -1232,3 +1234,66 @@ değildir. Aday, yukarıdaki aday incelemesi düzeltmelerini taşıyan `48d21d58
   site; neden belirlenmedi). İmzalı alpha.80 arşivinin kendisi, bu tabanda cron
   sürekliliği, başlangıç denetimi türü, yönetim kapalı, üretim imzası, lisans
   hizmeti, tarayıcı.
+
+### Boştaki PackageKit hizmeti paket yöneticisi etkinliği değildir (P0.1/P0.2, 2026-10-01)
+
+D-025 ilkeleri 1 (sahibin PackageKit hizmeti yalnız okunur, asla durdurulmaz), 2
+(meşgul, boşta ve yanıtlanamayan ayrı kalır; yanıtlanamayan meşgul kalır) ve 3
+(güvensiz eylemi gerçek sınırında durdur: bir hizmetin varlığı değil apt/dpkg
+kilidi); D-022, D-024.
+[upd8](../deploy/e2e/release-recovery/evidence/upd8-20261001/README.md) F1/F2'den
+(yalnız alpha.80'de ölçüldü). Kaynak okuması: HEAD'de aynı kural vardı; bu yüzden
+HEAD'in kurulumu yalın Ubuntu 24.04'te aynı sıraya düşerdi (ürünün kendi apt
+çalışması, ardından yaklaşık 300 sn boşta bekleyen `packagekitd`, ardından sonraki
+adımın reddi); ölçülmedi.
+
+- **Değişen.**
+  - Tek kural, Agent'ta (`linuxPackageProcessBusyAt`): her çağrı yeri onu
+    kullanır - değişiklik kabulü (`HOST_MUTATION_BUSY`), hazırlık okuması,
+    güncelleme başlatma kabulü, öksüz işlem kurtarması, posta kaydı kabulü ve
+    `update.sh`, `rollback.sh`, sonlandırıcılar ile kurtarma çalışma ortamının
+    çalıştırdığı `--check-*-idle` denetimleri. Hiçbir ürün kabuk betiği kendi süreç
+    listesini tutmaz (yeni `deploy/test-package-activity-rule-contract.sh`).
+  - `packagekitd` yalnız işlem kanıtıyla meşgul sayılır: APT arka ucunu
+    çalıştırmıyorsa (`libpk_backend_aptcc.so` bellek haritasında yoksa), bir alt
+    süreci varsa (apt indirme yöntemleri, dpkg) ya da
+    `/var/lib/dpkg/lock-frontend`, `/var/lib/dpkg/lock`,
+    `/var/cache/apt/archives/lock` veya `/var/lib/apt/lists/lock` üzerinde bir
+    kilit tutuyor ya da bekliyorsa (`/proc/locks`; bu dosyalarda sahibi
+    belirtilmeyen kilit de sayılır). Okunamayan bellek haritası, durum ya da kilit
+    tablosu veya ayrıştırılamayan satır meşgul bırakır. Yalnız `/proc` okunur;
+    PackageKit'e asla bağlanılmaz, durdurulmaz, sinyal gönderilmez (hizmeti
+    başlatabilecek ya da boşta sayacını sıfırlayabilecek D-Bus çağrısı yok).
+    Listedeki diğer her ad ve dpkg/apt/rpm/pacman kilit denetimleri değişmedi.
+  - Agent'ın paket etkinliği nedeniyle kabul reddi (ve posta kaydınınki) artık
+    var olan `package_manager_active` nedenini taşır (aynı sentinel ve metin);
+    Panel paket yöneticisi cümlesini gösterir.
+  - `HOST_MUTATION_BUSY` ile reddedilen posta profili alt adımı ve kurulum adımı,
+    `mail_profile_install_failed` / `server_setup_firewall_failed` (ve diğer adım
+    kodları) yerine bu kodu ve nedenin cümlesini korur. Birleşik ya da başka
+    nedenler adım kodunu korur.
+- **Şema veya sürüm geçişi: yok.** Yeni kalıcı değer, iletişim alanı, kapalı değer
+  ya da metin anahtarı yok; `HOST_MUTATION_BUSY` ve `package_manager_active` zaten
+  var. Agent ve Panel ikili baytları değişir.
+- **Kurtarma davranışı.** Değişmedi. Gerçek bir işlem, tutulan bir kilit ya da
+  yanıtlanamayan bir soru öncekiyle aynı biçimde reddeder; ek bekleme ya da
+  yeniden deneme yok. Güncelleme, geri alma ve sonlandırıcı denetimleri artık
+  boştaki hizmet yüzünden reddedilmez.
+- **Kanıt.** Yalnız bileşen ve sözleşme testleri:
+  `TestPackageKitIdleDaemonIsNotPackageActivity`,
+  `TestPackageKitTransactionIsPackageActivity`,
+  `TestPackageKitUnanswerableQuestionStaysBusy`,
+  `TestBeginRefusalForPackageActivityNamesThePackageManager`,
+  `TestSetupFailuresKeepTheHostBusyCause`,
+  `deploy/test-package-activity-rule-contract.sh`. Ubuntu'da gerçek sistem
+  denemesi bekliyor.
+
+Açık: Ubuntu'da çalıştırılmadı (Ubuntu'da boştaki `packagekitd`'nin bu kilitlerin
+hiçbirini tutmadığı ve alt süreci olmadığı PackageKit'in APT arka ucundan
+çıkarıldı, ölçülmedi); aşamaları arasındaki bir PackageKit işlemi (kilit almadan
+önce çözümleme) görülmez, dışlamayı kilitler sağlar; APT dışı PackageKit arka
+uçları hizmet çalıştıkça meşgul kalır; gerçek paket etkinliği nedeniyle reddedilen
+kurulum adımı yine başarısız olur ve yeni incelenmiş plan ister (sınırlı bekleme
+yok); kurulum sihirbazı `HOST_MUTATION_BUSY` için başlık eşlemez (genel "dikkat
+gerekiyor" metnini gösterir, cümle ayrıntılarda; web kapsam dışı); hangi paket
+işinin engellediği adlandırılmaz.

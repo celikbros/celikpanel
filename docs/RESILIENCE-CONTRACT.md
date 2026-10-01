@@ -1960,7 +1960,9 @@ attempt" also after an early owner retry; a non-quiesce child that fails without
 leaving a marker ends at `recovery_required` with no pause record; the web texts
 `panelUpdate.previousAttempt.stoppedTitle`/`stopped` ("stopped before changing
 anything installed") and `panelUpdate.packageManagerBusy` ("stopped before
-changing installed files") are not adjusted (web out of scope).
+changing installed files") are not adjusted (web out of scope). Corrected on
+2026-10-01 (`706c1c91`): both texts now say the installed version and its data
+were not changed.
 
 ### Update from the alpha.80 source to the candidate: scoped native evidence (P0.1/P0.2/P0.3, 2026-10-01)
 
@@ -2000,3 +2002,63 @@ candidate is `48d21d58`, which carries the candidate review corrections above.
   update on the second; cause not established). The signed alpha.80 archive
   itself, cron continuity on this baseline, the start-check kind, management off,
   production signing, the license service, a browser.
+
+### An idle PackageKit daemon is not package-manager activity (P0.1/P0.2, 2026-10-01)
+
+D-025 invariants 1 (the owner's PackageKit service is only read, never stopped),
+2 (busy, idle and unanswered stay distinct; unanswered keeps busy) and 3 (stop
+at the actual boundary: the apt/dpkg lock, not a daemon's existence); D-022,
+D-024. From [upd8](../deploy/e2e/release-recovery/evidence/upd8-20261001/README.md)
+F1/F2 (measured on alpha.80 only). Source reading: HEAD had the same rule, so its
+setup on stock Ubuntu 24.04 would hit the same sequence (the product's apt run,
+then `packagekitd` idle for about 300 s, then the next step refused); not
+measured.
+
+- **Changed.**
+  - One rule, in the Agent (`linuxPackageProcessBusyAt`): every call site uses
+    it - mutation admission (`HOST_MUTATION_BUSY`), the readiness read, update
+    start admission, orphan recovery, mail enrollment admission and the
+    `--check-*-idle` probes that `update.sh`, `rollback.sh`, the finalizers and
+    the recovery runtime run. No product shell script keeps its own process
+    list (new `deploy/test-package-activity-rule-contract.sh`).
+  - `packagekitd` counts as busy only with transaction evidence: it does not
+    run the APT backend (`libpk_backend_aptcc.so` absent from its maps), has a
+    child process (apt fetch methods, dpkg), or holds or waits for a lock on
+    `/var/lib/dpkg/lock-frontend`, `/var/lib/dpkg/lock`,
+    `/var/cache/apt/archives/lock` or `/var/lib/apt/lists/lock` (`/proc/locks`;
+    an unattributed lock on those files counts). An unreadable maps, status or
+    lock table, or an unparseable line, keeps busy. Only `/proc` is read;
+    PackageKit is never contacted, stopped or signalled (no D-Bus call, which
+    could activate the daemon or reset its idle timer). Every other listed name
+    and the dpkg/apt/rpm/pacman lock probes are unchanged.
+  - The Agent's admission refusal for package activity (and the mail
+    enrollment's) now carries the existing reason `package_manager_active`
+    (same sentinel and text), so the Panel shows the package-manager sentence.
+  - A mail profile sub-step and a setup step refused with `HOST_MUTATION_BUSY`
+    keep that code and the reason's sentence instead of
+    `mail_profile_install_failed` / `server_setup_firewall_failed` (and the
+    other step codes). Joined or other causes keep the step code.
+- **Schema or version transition: none.** No persisted value, wire field,
+  closed value or text key is new; `HOST_MUTATION_BUSY` and
+  `package_manager_active` exist. Agent and Panel binary bytes change.
+- **Recovery behaviour.** Unchanged. A real transaction, a held lock or an
+  unanswered question still refuses exactly as before; nothing waits or
+  retries in addition. The update, rollback and finalizer probes stop being
+  refused by an idle daemon.
+- **Evidence.** Component and contract tests only:
+  `TestPackageKitIdleDaemonIsNotPackageActivity`,
+  `TestPackageKitTransactionIsPackageActivity`,
+  `TestPackageKitUnanswerableQuestionStaysBusy`,
+  `TestBeginRefusalForPackageActivityNamesThePackageManager`,
+  `TestSetupFailuresKeepTheHostBusyCause`,
+  `deploy/test-package-activity-rule-contract.sh`. Native Ubuntu run pending.
+
+Open: not run on Ubuntu (whether an idle Ubuntu `packagekitd` holds none of
+these locks and has no child is inferred from PackageKit's APT backend, not
+measured); a PackageKit transaction between its phases (resolving before it
+takes a lock) is not seen, the locks remain the exclusion; non-APT PackageKit
+backends stay busy while the daemon runs; a setup step refused for real package
+activity still fails and needs a new reviewed plan (no bounded wait); the setup
+wizard maps no headline to `HOST_MUTATION_BUSY` (it shows its generic
+"needs attention" text with the sentence under details; web out of scope);
+which package task blocks is not named.

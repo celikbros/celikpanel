@@ -5,6 +5,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -434,6 +435,40 @@ func linuxPackageProcessBusy() (bool, error) {
 }
 
 func linuxPackageProcessBusyAt(procRoot string) (bool, error) {
+	return linuxPackageProcessBusyWith(procRoot, linuxPackageKitTransactionLockPaths())
+}
+
+// packageKitDaemonComm is PackageKit's daemon. Ubuntu's apt hook
+// (/etc/apt/apt.conf.d/20packagekit) starts it after every dpkg run and it then
+// idles for about 300 s; that idle daemon is not package-manager activity. Only
+// a daemon with evidence of a transaction (below) counts as busy.
+// packageKitDaemonComm PackageKit hizmetidir. Ubuntu'nun apt kancası onu her dpkg
+// çalışmasından sonra başlatır ve yaklaşık 300 sn boşta bekler; boştaki hizmet
+// paket yöneticisi etkinliği değildir. Yalnız işlem kanıtı olan hizmet meşguldür.
+const packageKitDaemonComm = "packagekitd"
+
+// packageKitAPTBackendModule is the shared object PackageKit loads at start for
+// its APT backend. Only for that backend is the evidence below known to cover
+// every phase that changes packages: apt fetch methods and dpkg run as child
+// processes, and the backend takes the apt/dpkg locks for refresh, download and
+// commit. Any other backend keeps today's answer: busy.
+const packageKitAPTBackendModule = "/libpk_backend_aptcc.so"
+
+const packageKitMapsReadLimit = 8 << 20
+
+// linuxPackageKitTransactionLockPaths are the apt/dpkg locks a PackageKit APT
+// transaction holds. The lists lock is included here although the general
+// fcntl probe does not use it, because a PackageKit cache refresh holds only it.
+func linuxPackageKitTransactionLockPaths() []string {
+	return []string{
+		"/var/lib/dpkg/lock-frontend",
+		"/var/lib/dpkg/lock",
+		"/var/cache/apt/archives/lock",
+		"/var/lib/apt/lists/lock",
+	}
+}
+
+func linuxPackageProcessBusyWith(procRoot string, packageKitLocks []string) (bool, error) {
 	entries, err := os.ReadDir(procRoot)
 	if err != nil {
 		return false, fmt.Errorf("read process table: %w", err)
@@ -443,11 +478,12 @@ func linuxPackageProcessBusyAt(procRoot string) (bool, error) {
 		"pacman": {}, "makepkg": {},
 		"dnf": {}, "dnf5": {}, "yum": {}, "microdnf": {},
 		"rpm": {}, "rpmdb": {},
-		"packagekitd": {}, "packagekit": {}, "pkcon": {},
+		"packagekit": {}, "pkcon": {},
 		// Linux comm names are limited to 15 bytes, so dnfdaemon-server may
 		// be observed in either its full or kernel-truncated spelling.
 		"dnfdaemon-server": {}, "dnfdaemon-serve": {},
 	}
+	var packageKitDaemons []int
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
@@ -468,6 +504,143 @@ func linuxPackageProcessBusyAt(procRoot string) (bool, error) {
 			process = process[:len(process)-1]
 		}
 		if _, found := packageProcesses[process]; found {
+			return true, nil
+		}
+		if process == packageKitDaemonComm {
+			pid, parseErr := strconv.Atoi(name)
+			if parseErr != nil || pid <= 0 || strconv.Itoa(pid) != name {
+				return true, nil
+			}
+			packageKitDaemons = append(packageKitDaemons, pid)
+		}
+	}
+	for _, pid := range packageKitDaemons {
+		if !packageKitDaemonProvablyIdle(procRoot, pid, packageKitLocks) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// packageKitDaemonProvablyIdle answers true only when every question has a
+// definite answer: the daemon runs the APT backend, has no child process and
+// holds or waits for none of the apt/dpkg locks. Any unreadable or unexpected
+// evidence answers false, which keeps the daemon counted as busy. It only reads
+// /proc; it never contacts, stops or signals PackageKit (the owner's service).
+// packageKitDaemonProvablyIdle yalnız her soru kesin yanıtlandığında true döner:
+// APT arka ucu, alt süreç yok, apt/dpkg kilidi tutulmuyor ve beklenmiyor. Okunamayan
+// ya da beklenmeyen kanıt false döner; hizmet meşgul sayılmaya devam eder.
+func packageKitDaemonProvablyIdle(procRoot string, pid int, lockPaths []string) bool {
+	if !packageKitDaemonUsesAPTBackend(procRoot, pid) {
+		return false
+	}
+	hasChild, err := linuxProcessHasChild(procRoot, pid)
+	if err != nil || hasChild {
+		return false
+	}
+	held, err := linuxProcessHoldsLock(procRoot, pid, lockPaths)
+	return err == nil && !held
+}
+
+func packageKitDaemonUsesAPTBackend(procRoot string, pid int) bool {
+	file, err := os.Open(filepath.Join(procRoot, strconv.Itoa(pid), "maps"))
+	if err != nil {
+		return false
+	}
+	defer file.Close()
+	raw, err := io.ReadAll(io.LimitReader(file, packageKitMapsReadLimit+1))
+	if err != nil || len(raw) > packageKitMapsReadLimit {
+		return false
+	}
+	for _, line := range strings.Split(string(raw), "\n") {
+		if strings.HasSuffix(strings.TrimSpace(line), packageKitAPTBackendModule) {
+			return true
+		}
+	}
+	return false
+}
+
+// linuxProcessHasChild reports whether any process names pid as its parent.
+// A process that vanishes during the scan is skipped; any other read failure is
+// an error.
+func linuxProcessHasChild(procRoot string, pid int) (bool, error) {
+	entries, err := os.ReadDir(procRoot)
+	if err != nil {
+		return false, err
+	}
+	want := strconv.Itoa(pid)
+	for _, entry := range entries {
+		name := entry.Name()
+		if !entry.IsDir() || name == "" || name[0] < '0' || name[0] > '9' || name == want {
+			continue
+		}
+		raw, readErr := os.ReadFile(filepath.Join(procRoot, name, "status"))
+		if readErr != nil {
+			if os.IsNotExist(readErr) || errors.Is(readErr, unix.ESRCH) {
+				continue
+			}
+			return false, readErr
+		}
+		parent, found := "", false
+		for _, line := range strings.Split(string(raw), "\n") {
+			if value, ok := strings.CutPrefix(line, "PPid:"); ok {
+				parent, found = strings.TrimSpace(value), true
+				break
+			}
+		}
+		if !found {
+			return false, fmt.Errorf("process %s status has no parent", name)
+		}
+		if parent == want {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// linuxProcessHoldsLock reads <procRoot>/locks and reports whether pid holds
+// or waits for a lock on one of lockPaths. Inodes are compared without the
+// device: a collision can only report a lock, never hide one. A lock on one of
+// those inodes whose owner the kernel does not name (an OFD lock, pid -1) also
+// counts, as does any line that cannot be parsed.
+func linuxProcessHoldsLock(procRoot string, pid int, lockPaths []string) (bool, error) {
+	inodes := map[uint64]struct{}{}
+	for _, path := range lockPaths {
+		var stat unix.Stat_t
+		if err := unix.Stat(path, &stat); err != nil {
+			if errors.Is(err, unix.ENOENT) {
+				continue
+			}
+			return false, err
+		}
+		inodes[stat.Ino] = struct{}{}
+	}
+	raw, err := os.ReadFile(filepath.Join(procRoot, "locks"))
+	if err != nil {
+		return false, err
+	}
+	for _, line := range strings.Split(string(raw), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) == 0 {
+			continue
+		}
+		index := 1
+		if len(fields) > index && fields[index] == "->" {
+			index++
+		}
+		if len(fields) < index+5 {
+			return false, fmt.Errorf("unexpected lock table line %q", line)
+		}
+		owner, ownerErr := strconv.Atoi(fields[index+3])
+		identity := strings.Split(fields[index+4], ":")
+		inode, inodeErr := strconv.ParseUint(identity[len(identity)-1], 10, 64)
+		if ownerErr != nil || inodeErr != nil || len(identity) != 3 {
+			return false, fmt.Errorf("unexpected lock table line %q", line)
+		}
+		if _, watched := inodes[inode]; !watched {
+			continue
+		}
+		if owner == pid || owner <= 0 {
 			return true, nil
 		}
 	}

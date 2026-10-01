@@ -578,4 +578,33 @@ resilience contract entry "Candidate review corrections" of the same date.
 Not done: the web update screens keep their texts ("stopped before changing
 anything installed", "stopped before changing installed files"); a successful
 update started by alpha.80 shows "being applied" until the new Agent first checks
-that request.
+that request. Corrected on 2026-10-01 (`706c1c91`): the two web texts now say the
+installed version and its data were not changed.
+
+### Package manager busy during setup and before an update (upd8 F1/F2, 2026-10-01)
+
+Source state with component and contract tests; the native Ubuntu run is pending.
+See the resilience contract entry of the same date.
+
+- **An idle PackageKit daemon no longer blocks.** On Ubuntu, apt starts
+  PackageKit after every package operation and it stays idle for about five
+  minutes. Setup steps, the update start, the services page readiness and the
+  update/rollback checks no longer report "package manager busy" for that idle
+  daemon. They still do while a package task really runs: apt, dpkg and the
+  other listed tools, or PackageKit with a child process or an apt/dpkg lock.
+- **What the owner sees when a package task really runs.** A setup step, mail
+  profile or firewall step refused for it now shows `HOST_MUTATION_BUSY` with
+  the existing sentence "This server's package manager is busy — something
+  outside CelikPanel is installing or updating packages. Try again in a minute."
+  instead of `mail_profile_install_failed` / `server_setup_firewall_failed`
+  with the cause only in the panel log.
+  - Who acts: nobody but the package task; the server owner only if it is
+    theirs and does not finish.
+  - Resume: setup does not resume by itself; after the task finishes, review
+    and start a new setup plan (completed steps are kept). The update keeps its
+    `package_manager_busy` text: start it again.
+
+Not done: the setup wizard has no headline for `HOST_MUTATION_BUSY`; it shows its
+generic "A required check needs attention" text and the sentence above under
+"Details" (needs a web mapping). The blocking task is not named. A refused
+setup step does not wait and retry by itself.

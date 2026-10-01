@@ -145,7 +145,7 @@ func writeMailEnrollmentReservationAt(stateDir, hostPath string, authority mailE
 			return e
 		}
 		if busy {
-			return errServiceMutationHostBusy
+			return serviceMutationPackageManagerHostBusyError()
 		}
 		candidate, err = servicemutationledger.AdmitMailEnrollment(&manager.ledger, authority.identity, now)
 	case stateErr != nil:

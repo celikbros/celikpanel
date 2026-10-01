@@ -501,4 +501,33 @@ bakın.
 Yapılmayan: web güncelleme ekranları metinlerini korur ("kurulu olan hiçbir şey"
 ve "kurulu dosyalar" değişmeden durdu anlamındaki metinler); alpha.80'in başlattığı
 başarılı bir güncelleme, yeni Agent o isteği ilk kez denetleyene kadar
-"uygulanıyor" gösterir.
+"uygulanıyor" gösterir. 2026-10-01'de düzeltildi (`706c1c91`): iki web metni de
+artık kurulu sürümün ve verilerinin değiştirilmediğini söyler.
+
+### Kurulumda ve güncellemeden önce meşgul paket yöneticisi (upd8 F1/F2, 2026-10-01)
+
+Bileşen ve sözleşme testleriyle kaynak durumu; Ubuntu'da gerçek sistem denemesi
+bekliyor. Aynı tarihli dayanıklılık sözleşmesi girdisine bakın.
+
+- **Boştaki PackageKit hizmeti artık engellemez.** Ubuntu'da apt, her paket
+  işleminden sonra PackageKit'i başlatır ve o yaklaşık beş dakika boşta kalır.
+  Kurulum adımları, güncelleme başlatma, hizmetler sayfasının hazırlık bilgisi ve
+  güncelleme/geri alma denetimleri bu boştaki hizmet için artık "paket yöneticisi
+  meşgul" demez. Gerçekten bir paket işi çalışırken yine der: apt, dpkg ve
+  listedeki diğer araçlar ya da alt süreci veya apt/dpkg kilidi olan PackageKit.
+- **Gerçek bir paket işi çalışırken sahibin gördüğü.** Bu nedenle reddedilen bir
+  kurulum adımı, posta profili ya da güvenlik duvarı adımı artık, nedeni yalnız
+  panel günlüğünde kalan `mail_profile_install_failed` /
+  `server_setup_firewall_failed` yerine `HOST_MUTATION_BUSY` kodunu ve var olan
+  "Bu sunucunun paket yöneticisi meşgul — CelikPanel dışında bir şey paket kuruyor
+  ya da güncelliyor. Bir dakika sonra yeniden deneyin." cümlesini gösterir.
+  - Kim işlem yapar: paket işi dışında kimse; iş sunucu sahibinin ise ve bitmiyorsa
+    sunucu sahibi.
+  - Devam: kurulum kendiliğinden sürmez; iş bittikten sonra yeni bir kurulum planı
+    inceleyip başlatın (tamamlanan adımlar korunur). Güncelleme
+    `package_manager_busy` metnini korur: yeniden başlatın.
+
+Yapılmayan: kurulum sihirbazında `HOST_MUTATION_BUSY` için başlık yok; genel
+"Gerekli bir kontrol tamamlanmadı" metnini ve yukarıdaki cümleyi "Ayrıntılar"
+altında gösterir (web eşlemesi gerekir). Engelleyen iş adlandırılmaz. Reddedilen
+kurulum adımı kendiliğinden bekleyip yeniden denemez.

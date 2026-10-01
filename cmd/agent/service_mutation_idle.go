@@ -49,6 +49,19 @@ func serviceMutationPackageManagerBusyError() error {
 	)
 }
 
+// serviceMutationPackageManagerHostBusyError is the admission refusal for host
+// package activity. It still is errServiceMutationHostBusy (with the same text)
+// for every caller that tests that sentinel, and now carries the
+// package_manager_active reason so the Panel shows the package-manager sentence
+// instead of the generic one (D-024).
+// Paket etkinliği nedeniyle kabul reddi; aynı sentinel ve metin, artık nedenle.
+func serviceMutationPackageManagerHostBusyError() error {
+	return markServiceMutationNotIdle(
+		transport.HostMutationReasonPackageManager,
+		errServiceMutationHostBusy,
+	)
+}
+
 func serviceMutationActiveError(format string, args ...any) error {
 	return markServiceMutationNotIdle(
 		transport.HostMutationReasonAgentMutation,

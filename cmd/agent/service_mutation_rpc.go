@@ -1063,7 +1063,7 @@ func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*S
 		return closeLock(nil, fmt.Errorf("verify package manager lease: %w", err))
 	}
 	if busy {
-		return closeLock(nil, errServiceMutationHostBusy)
+		return closeLock(nil, serviceMutationPackageManagerHostBusyError())
 	}
 	if m.mailRenewalScope != nil {
 		if m.mailRenewalBeforeAdmission == nil {
