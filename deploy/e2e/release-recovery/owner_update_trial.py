@@ -45,6 +45,15 @@ retry once) and ``mgmt-off-reboot`` (after a verified good update the owner
 disables the Panel and Agent, reboots, and every workload is measured without
 management before it is re-enabled).
 
+After the upd4 native run (evidence/upd4-20261001) the harness corrections
+H11-H15 are permanent: the recovery screen is rendered from the build's own
+``RecoveryAccess.tsx`` JSX (H11, ``parse_screen_source``/``recovery_guidance``),
+management-return waits for ``panel_state=ready`` (H12), the update-only verdict
+window ends at the instant taken before the owner's stop command (H13) minus one
+sample interval (H14), and the raw port-hold events are kept in the evidence
+(H15). A start kind whose candidate never ran (upd4 F4/F5) is judged
+``not-measured`` and the cell ends ``inconclusive-kind-not-reached``.
+
 It records observations; it does not decide the P0 rows. ``result.json``
 always carries ``native_evidence: false``. Nothing here updates, repairs or
 administers an installed customer panel.
@@ -503,118 +512,81 @@ def agreement_verdict(samples: list[dict]) -> dict:
     return {"verdict": "passed", "agreed_samples": agreed, "samples": len(verdicts), "lag_samples": lagged}
 
 
-def web_failure_code(status: dict | None) -> str | None:
-    """parseRecoveryObservation (web/src/lib/recoveryObservation.ts): kept only with previous_failure=update_failed."""
-    if (isinstance(status, dict) and status.get("previous_failure") == "update_failed"
-            and status.get("failure_code") in FAILURE_CODES):
-        return status["failure_code"]
-    return None
-
-
-def web_failure_guidance_key(status: dict | None) -> str | None:
-    """recoveryFailureGuidanceKey (web/src/lib/recoveryObservation.ts, since 8ffc5e06)."""
-    if (not isinstance(status, dict) or status.get("observation") != "known"
-            or status.get("previous_failure") != "update_failed" or status.get("waiting_for")
-            or status.get("automatic_recovery")):
-        return None
-    code, phase, proof = web_failure_code(status), status.get("phase"), status.get("terminal_proof")
-    pending = proof == "none" and phase in ("failed", "recovering")
-    if code == START_CHECK_CODE:
-        if phase == "recovered" and proof == "rollback_verified":
-            return f"recovery.failure.{START_CHECK_CODE}.recovered"
-        if pending:
-            return f"recovery.failure.{START_CHECK_CODE}.returning"
-    if code == REAL_START_CODE and pending:
-        return f"recovery.failure.{REAL_START_CODE}.pending"
-    return None
-
-
 RECOVERY_LOG_COMMAND = "sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50"
-WAIT_REASONS = ("initializing", "starting", "stopping")
+# H11 (upd4): the component and region of RecoveryAccess.tsx the screen model renders (read from the build's source).
+SCREEN_COMPONENT = "RecoveryStatus"
+SCREEN_REGION = ("role", "status")
+RENDER_ERRORS = (TypeError, KeyError, IndexError, AttributeError)
 
 
-def web_observation(status: dict | None, codes: Iterable[str] = FAILURE_CODES) -> dict | None:
-    """The fields parseRecoveryObservation (web/src/lib/recoveryObservation.ts) keeps from one status body.
+def screen_unavailable(reason: str) -> dict:
+    """The screen could not be rendered from the build's own source: unknown, never a mismatch or a finding."""
+    return {"keys": [], "texts": {"en": [], "tr": []}, "missing_keys": [], "actionable": None,
+            "no_actor_or_action": False, "unavailable": reason}
 
-    ``failure_code`` only with ``previous_failure=update_failed``; ``first_failure_code`` only with a paused
-    automatic recovery; ``waiting_for`` only while recovering; unknown codes are dropped (generic text).
+
+def recovery_guidance(translator: Any, status: dict | None, rules: dict | None = None,
+                      request_id: str | None = None) -> dict:
+    """What RecoveryStatus (web/src/components/RecoveryAccess.tsx) of the served build shows for one status.
+
+    H11 (upd4): rendered from the build's own source, never a frozen layout.
+    The body goes through the build's ``parseRecoveryObservation`` and
+    ``reconcileRecoveryObservation`` exactly as the component's ``check`` does on a
+    freshly opened screen (no earlier record; a refused body sets ``unavailable``
+    and keeps no record). Then the component's status region (the element with
+    ``role="status"``, read by ``parse_screen_source``) is evaluated with the
+    build's functions (``retryingCauseKey``, ``recoveryFailureGuidanceKey`` ...) and
+    the served catalogue. ``texts`` are the visible lines in source order (the
+    journal command is the region's own ``<code>`` line); ``keys`` every catalogue
+    key the region looked up, in order. Two inputs are fixed and recorded: the
+    read has settled (``busy`` false) and the observed-at line is left out (its
+    text is the browser's locale time). A root-CLI status carries no
+    ``panel_state``; the Panel adds ``ready`` before the screen sees it, so the
+    model adds it too.
+
+    Rules that were not loaded, a changed region or a construct outside the
+    evaluator's subset give ``unavailable``: unknown, never a finding.
     """
-    if not isinstance(status, dict):
-        return None
-    if status.get("observation") != "known":
-        return {"observation": status.get("observation") or "unavailable", "request_id": status.get("request_id")}
-    codes = tuple(codes)
-    phase = status.get("phase")
-    automatic = ("paused_retry_limit" if phase == "recovery_required"
-                 and status.get("automatic_recovery") == "paused_retry_limit" else None)
-    value = {"observation": "known", "request_id": status.get("request_id"), "phase": phase,
-             "terminal_proof": status.get("terminal_proof"), "reason": status.get("reason"),
-             "previous_failure": status.get("previous_failure"),
-             "waiting_for": status.get("waiting_for") if phase == "recovering"
-             and status.get("waiting_for") in WAIT_REASONS else None,
-             "automatic_recovery": automatic,
-             "failure_code": status.get("failure_code") if status.get("previous_failure") == "update_failed"
-             and status.get("failure_code") in codes else None,
-             "first_failure_code": status.get("first_failure_code") if automatic
-             and status.get("first_failure_code") in codes else None}
-    return {k: v for k, v in value.items() if v is not None}
-
-
-def recovery_guidance(translator: Any, status: dict | None, rules: dict | None = None) -> dict:
-    """What RecoveryStatus (web/src/components/RecoveryAccess.tsx) shows for one status.
-
-    Order as the component renders it: title, the paused cause line
-    (``recovery.automatic.cause.<first_failure_code>``, when the build's
-    RecoveryAccess.tsx has it), help, the inspect line, the journal command,
-    the resume line, then the previous failure.
-
-    ``rules`` (``load_card_rules`` of the served build): the observation is
-    parsed and the typed guidance key chosen by the build's own
-    ``parseRecoveryObservation`` / ``recoveryFailureGuidanceKey``; the JSX
-    layout (which the evaluator cannot read) is anchored by
-    ``parse_screen_rules``. A root-CLI status carries no ``panel_state``; the
-    Panel adds ``ready`` before the screen sees it, so the model adds it too.
-    Without ``rules``: the Python mirror of the committed 94be6b6e rules.
-    """
+    screen = (rules or {}).get("screen") or {}
     module = (rules or {}).get("module")
-    cause_line = True if not rules else bool((rules.get("screen") or {}).get("automatic_cause_line"))
-    web, guidance_key = None, None
-    if module is not None and isinstance(status, dict) and HEX32.fullmatch(str(status.get("request_id") or "")):
-        evaluator = web_eval()
+    if module is None or not screen.get("region"):
+        return screen_unavailable(screen.get("unavailable") or "the build's screen rules were not loaded")
+    evaluator = web_eval()
+    rid = request_id or (status.get("request_id") if isinstance(status, dict) else None) or ""
+    last, unavailable = None, False
+    try:
+        if not isinstance(status, dict):
+            raise evaluator.JSThrow("recovery unavailable")         # the component's failed read
+        observed = module.call("parseRecoveryObservation", dict({"panel_state": "ready"}, **status), rid)
+        merged = module.call("reconcileRecoveryObservation", None, observed)
+        last, unavailable = merged.get("record"), bool(merged.get("unavailable"))
+    except evaluator.JSThrow:
+        unavailable = True
+    except (evaluator.Unsupported,) + RENDER_ERRORS as exc:
+        return screen_unavailable(f"{type(exc).__name__}: {exc}")
+    shown = {k: v for k, v in last.items() if k != "observed_at"} if isinstance(last, dict) else None
+    texts: dict[str, list[str]] = {}
+    keys: dict[str, list[str]] = {}
+    for language in ("en", "tr"):
+        called: list[str] = []
+
+        def t(key, values=None, language=language, called=called):
+            called.append(key)
+            return translator.text(key, values, language=language)
         try:
-            web = module.call("parseRecoveryObservation", dict({"panel_state": "ready"}, **status), status["request_id"])
-            if web.get("observation") == "known":
-                guidance_key = module.call("recoveryFailureGuidanceKey", web)
-        except evaluator.JSThrow:
-            web = None
-        except evaluator.Unsupported:
-            module, web = None, None
-    if module is None:
-        web = web_observation(status)
-        guidance_key = web_failure_guidance_key(web) if isinstance(web, dict) else None
-    if not isinstance(web, dict) or web.get("observation") != "known" or not web.get("phase"):
-        keys = ["recovery.observationUnavailable"]
-    else:
-        phase, waiting, automatic = web.get("phase"), web.get("waiting_for"), web.get("automatic_recovery")
-        keys = [("recovery.automatic.pausedTitle" if automatic else f"recovery.wait.{waiting}" if waiting
-                 else f"recovery.phase.{phase}")]
-        if automatic and web.get("first_failure_code") and cause_line:
-            keys.append(f"recovery.automatic.cause.{web['first_failure_code']}")
-        keys.append("recovery.automatic.pausedHelp" if automatic else "recovery.wait.next" if waiting
-                    else guidance_key or f"recovery.next.{phase}")
-        if automatic:
-            keys += ["recovery.automatic.inspect", "recovery.automatic.resume"]
-        if web.get("previous_failure"):
-            keys.append(f"recovery.reason.{web.get('failure_code') or web['previous_failure']}")
-    missing = [key for key in keys if not translator.has(key)]
-    texts = {language: [translator.text(key, language=language) for key in keys] for language in ("en", "tr")}
-    if "recovery.automatic.inspect" in keys:
-        position = keys.index("recovery.automatic.inspect") + 1
-        for language in ("en", "tr"):
-            texts[language].insert(position, RECOVERY_LOG_COMMAND)
-    return {"keys": keys, "texts": texts, "missing_keys": missing,
-            "actionable": not missing and keys != ["recovery.observationUnavailable"],
-            "no_actor_or_action": bool(missing)}
+            texts[language] = evaluator.render_region(screen["region"], {
+                "t": t, "last": shown, "unavailable": unavailable, "busy": False, "requestId": rid,
+                "locale": language}, module)
+        except (evaluator.Unsupported, evaluator.JSThrow) + RENDER_ERRORS as exc:
+            return screen_unavailable(f"{type(exc).__name__}: {exc}")
+        keys[language] = called
+    missing = [key for key in keys["en"] if not translator.has(key)]
+    result = {"keys": keys["en"], "texts": texts, "missing_keys": missing,
+              "actionable": not missing and keys["en"] != ["recovery.observationUnavailable"],
+              "no_actor_or_action": bool(missing), "observation": last, "observation_unavailable": unavailable}
+    if keys["tr"] != keys["en"]:
+        result["tr_keys"] = keys["tr"]
+    return result
 
 
 # -- H10: the update card, rendered by the product build's own functions -------------------------
@@ -634,10 +606,23 @@ def web_eval() -> Any:
     return _load("upd1_web_source_eval", HERE / "web_source_eval.py")
 
 
-def parse_screen_rules(screen_tsx: str) -> dict:
-    """What the build's RecoveryStatus (JSX) shows beyond the shared keys, read from its source."""
-    return {"automatic_cause_line": "recovery.automatic.cause.${last.first_failure_code}" in screen_tsx,
-            "journal_command": RECOVERY_LOG_COMMAND in screen_tsx}
+def parse_screen_source(screen_tsx: str) -> dict:
+    """H11: the build's RecoveryStatus status region (``role="status"``), read from its own RecoveryAccess.tsx.
+
+    Nothing of the layout is copied here. A source whose component or region
+    cannot be found exactly once, or that the evaluator cannot read, gives
+    ``unavailable`` (the screen is then unknown, never a finding).
+    """
+    evaluator = web_eval()
+    try:
+        tree = evaluator.component_return_jsx(screen_tsx, SCREEN_COMPONENT)
+        regions = evaluator.find_elements(tree, *SCREEN_REGION)
+        if len(regions) != 1:
+            raise evaluator.Unsupported(f"{len(regions)} elements with {SCREEN_REGION[0]}=\"{SCREEN_REGION[1]}\"")
+    except (evaluator.Unsupported, IndexError, KeyError) as exc:
+        return {"component": SCREEN_COMPONENT,
+                "unavailable": f"the build's RecoveryAccess.tsx {SCREEN_COMPONENT} cannot be read: {exc}"}
+    return {"component": SCREEN_COMPONENT, "region": regions[0]}
 
 
 def parse_card_rules(sources: dict) -> dict:
@@ -657,7 +642,7 @@ def parse_card_rules(sources: dict) -> dict:
     except (evaluator.Unsupported, KeyError) as exc:
         raise CardModelUnavailable(f"the build's card source cannot be read: {type(exc).__name__}: {exc}") from exc
     return {"module": module, "failure_codes": list(codes), "command": command,
-            "screen": parse_screen_rules(sources.get("screen") or "")}
+            "screen": parse_screen_source(sources.get("screen") or "")}
 
 
 def load_card_rules(web_src: Path) -> dict:
@@ -1266,12 +1251,17 @@ def compare_states(before: dict, after: dict, fields: tuple = ("UnitFileState", 
 STEP_VERDICTS = ("passed", "failed", "observed", "inconclusive", "skipped", "not-run")
 
 
-def overall(verdicts: list[str]) -> str:
+def overall(verdicts: list[str], kind_not_reached: bool = False) -> str:
+    """The cell's verdict from its steps. ``kind_not_reached`` (the kind judge said ``not-measured``): steps that
+    could not run or stayed inconclusive because the candidate never ran are part of that one answer,
+    ``inconclusive-kind-not-reached``; a failed step still makes the cell ``failed``."""
     for verdict in verdicts:
         if verdict not in STEP_VERDICTS:
             raise ValueError(f"unknown step verdict {verdict!r}")
     if "failed" in verdicts:
         return "failed"
+    if kind_not_reached:
+        return OVERALL_KIND_NOT_REACHED
     if "not-run" in verdicts:
         return "incomplete"
     if "inconclusive" in verdicts:
@@ -1558,6 +1548,75 @@ def _rule(findings: list, unknown: list, expected: list, name: str, value: bool 
         findings.append(finding)
 
 
+# upd4 F4/F5: a start kind whose candidate never ran was not measured; that is not a finding about the kind.
+KIND_NOT_MEASURED = "not-measured"
+KIND_NOT_REACHED_RULE = "kind-not-reached"
+OVERALL_KIND_NOT_REACHED = "inconclusive-kind-not-reached"
+KIND_CODES = {"start-check": START_CHECK_CODE, "real-start": REAL_START_CODE}
+KIND_MOMENT = {"start-check": "the candidate Panel's read-only start check",
+               "real-start": "the candidate Panel's real start"}
+
+
+def kind_not_reached(kind: str, obs: dict) -> dict | None:
+    """Did the update stop before the cell's candidate kind could act (upd4 F4, F5)? Positive evidence only.
+
+    The kind was not reached when every one of these holds:
+
+    * the update's failure line was read and names another code (never the kind's or the start check's), the
+      journal holds no start-check reason, and no failure sidecar names a start kind - so the candidate Panel
+      never ran its start check (start-check) or its real start (real-start);
+    * the observer saw no ``completion.pending`` (``False``, not unknown);
+    * the previous release is installed and every automatic dispatch (if any) is a rollback;
+    * and the request ended in one of the two shapes the product gives such a stop:
+      ``stopped-before-change`` (no terminal state; the H8 rule stopped the track on an unchanged
+      ``failed``/``none`` status without a start-kind code, upd4 F4) or ``rolled-back-before-candidate``
+      (``recovered``/``rollback_verified`` without a start-kind code, upd4 F5).
+
+    Anything missing or contradicting leaves the kind judged normally (findings or unknown), so this can only
+    turn an unmeasured cell into "not measured", never hide a measured misbehaviour.
+    """
+    code = KIND_CODES.get(kind)
+    if code is None:
+        return None
+    start_codes = (START_CHECK_CODE, REAL_START_CODE)
+    codes = obs.get("update_failure_codes")
+    sidecar = obs.get("sidecar") or {}
+    dispatches = obs.get("receipt_dispatches")
+    if (not codes or any(c in start_codes for c in codes) or obs.get("check_reasons") is None
+            or obs.get("check_reasons") or sidecar.get("code") in start_codes
+            or obs.get("completion_marker_seen") is not False or obs.get("installed") != "baseline"
+            or (dispatches and directions_rule(dispatches, "rollback") is not True)):
+        return None
+    final, stop = obs.get("final"), obs.get("track_stop") or {}
+    status = stop.get("status") or {}
+    if (final is None and stop.get("rule") == SETTLED_FAILED_RULE and status.get("phase") == "failed"
+            and status.get("terminal_proof") == "none" and status.get("failure_code") not in start_codes):
+        shape = "stopped-before-change"
+        how = (f"the update failed before changing the installed version and stayed {status.get('phase')}/"
+               f"{status.get('terminal_proof')} ({SETTLED_FAILED_RULE} after {stop.get('seconds')} s)")
+    elif (isinstance(final, dict) and (final.get("phase"), final.get("terminal_proof"))
+          == ("recovered", "rollback_verified") and final.get("failure_code") not in start_codes):
+        shape = "rolled-back-before-candidate"
+        how = (f"the update failed and was rolled back ({len(dispatches or [])} rollback dispatch(es)) before the "
+               "candidate ran")
+    else:
+        return None
+    lines = obs.get("update_failure_lines") or [{"code": c} for c in codes]
+    causes = "; ".join(f"code={line.get('code')} state={line.get('state')} reason={line.get('reason')}"
+                       for line in lines)
+    return {"shape": shape, "code_expected": code,
+            "reason": f"{kind} not measured: {how}; {KIND_MOMENT[kind]} never ran (no {code}, no start-check "
+                      f"reason, no completion.pending, previous release installed). Update failure line: {causes}",
+            "evidence": {"update_failure_codes": codes, "completion_marker_seen": False, "installed": "baseline",
+                         "receipt_dispatches": dispatches, "final": final, "track_stop": stop or None}}
+
+
+def not_measured(kind: str, reached: dict) -> dict:
+    """The kind judge's answer for a cell whose kind was not reached: no rule is judged, nothing is a finding."""
+    return {"kind": kind, "verdict": KIND_NOT_MEASURED, "reason": reached["reason"], "not_reached": reached,
+            "expected": [], "findings": [], "unknown": [], "native_evidence": False}
+
+
 def judge_start_check(obs: dict) -> dict:
     """start-check: rollback expected; completion.pending must never exist.
 
@@ -1568,7 +1627,11 @@ def judge_start_check(obs: dict) -> dict:
     the final state is recovered/rollback_verified with that code, the old
     release runs, the database equals the pre-update digests (listed
     exclusions) and the CLI prints the product's "returned" text in EN and TR.
+    An update that stopped before the start check ran is ``not-measured`` (``kind_not_reached``).
     """
+    stopped_before = kind_not_reached("start-check", obs)
+    if stopped_before:
+        return not_measured("start-check", stopped_before)
     findings: list[str] = []
     unknown: list[str] = []
     expected: list[str] = []
@@ -1621,7 +1684,12 @@ def judge_start_check(obs: dict) -> dict:
 def judge_real_start(obs: dict) -> dict:
     """real-start: the check passes, completion.pending exists, the stability wait fails, forward completion is
     retried to its limit and pauses. Rollback must NOT happen; the owner retry is not run by the harness.
+    An update that stopped (or was rolled back) before the candidate's real start is ``not-measured``
+    (``kind_not_reached``, upd4 F4/F5), not a finding about the kind.
     """
+    stopped_before = kind_not_reached("real-start", obs)
+    if stopped_before:
+        return not_measured("real-start", stopped_before)
     findings: list[str] = []
     unknown: list[str] = []
     expected: list[str] = []
@@ -1802,6 +1870,9 @@ def inspection_allowed(state: dict, label: str) -> tuple[bool, str]:
 
 MANAGEMENT_UNITS = ("celikpanel-panel.service", "celikpanel-agent.service")
 MANAGEMENT_OFF_MEASURE_SECONDS = 180.0
+# H12: how long management-return waits (read-only) for panel_state=ready before comparing the owner state.
+MANAGEMENT_RETURN_READY_SECONDS = 180.0
+MANAGEMENT_RETURN_READY_POLL_S = 3.0
 MANAGEMENT_OFF_WORKLOADS = ("web", "smtp", "db")
 RENEWAL_TIMER_PATTERNS = ("certbot", "renew", "acme")
 
@@ -1979,7 +2050,9 @@ def judge_management_off(obs: dict) -> dict:
           else bool(firewall.get("present")) and bool(firewall.get("equal_to_before")),
           f"firewall ruleset with management off: {firewall}")
     back = obs.get("management_return")
+    # H12: an owner state that was never compared (the Panel did not report ready in time) is unknown.
     _rule(findings, unknown, expected, "management-returned", None if back is None
+          or (back.get("login_ok") and "owner_state" in back)
           else bool(back.get("login_ok")) and not back.get("differences"),
           f"after management returned: {back}")
     return _judged("mgmt-off-reboot", expected, findings, unknown)
@@ -2006,7 +2079,8 @@ JUDGES = {"start-check": judge_start_check, "real-start": judge_real_start,
 
 
 def expectation_step_verdict(judged: dict) -> str:
-    return {"as-expected": "passed", "finding": "failed", "inconclusive": "inconclusive"}[judged["verdict"]]
+    return {"as-expected": "passed", "finding": "failed", "inconclusive": "inconclusive",
+            KIND_NOT_MEASURED: "inconclusive"}[judged["verdict"]]
 
 
 def installed_role(builds: dict, artifacts: dict, role: str) -> str | None:
@@ -2064,7 +2138,9 @@ def evidence_writer_class():
         def finalize_upd1(self, result: dict) -> dict:
             if result.get("schema") != RESULT_SCHEMA or result.get("native_evidence") is not False:
                 raise ValueError("upd1 result must carry its schema and native_evidence=false")
-            expected = overall([step["verdict"] for step in result.get("steps", [])])
+            expected = overall([step["verdict"] for step in result.get("steps", [])],
+                               kind_not_reached=((result.get("kind") or {}).get("judged") or {}).get("verdict")
+                               == KIND_NOT_MEASURED)
             if result.get("overall") != expected:
                 raise ValueError(f"overall {result.get('overall')!r} disagrees with step verdicts ({expected!r})")
             self.write_json("result.json", result)
@@ -2229,22 +2305,29 @@ def build_plan(cell: Cell, artifacts: dict, work_root: str, local_port: int,
                                        "renewal timer state, firewall ruleset present and unchanged; anything that "
                                        "needed the Panel is recorded"),
             ("management-return", "sudo systemctl enable --now celikpanel-agent.service celikpanel-panel.service; the "
-                                  "Panel TLS answers; fresh login; the same owner state (domains, cron, mailbox, "
-                                  "database, version, update and recovery status) as before management-off"),
+                                  "Panel TLS answers; fresh login; read-only wait (at most "
+                                  f"{int(MANAGEMENT_RETURN_READY_SECONDS)} s) for panel_state=ready (H12); the same "
+                                  "owner state (domains, cron, mailbox, database, version, update and recovery "
+                                  "status) as before management-off"),
         ]
     steps += [
         ("collect", "always once the guest was prepared, also after an early stop: sampler and host samples, "
                     "journals (Panel/Agent/recovery, setup services, lab units incl. the fixture origin), "
-                    "observation records, observer/recovery-fault events, budget receipts"),
+                    "observation records, observer/recovery-fault events, budget receipts"
+                    + (", the raw port-hold events file (H15)" if owner_path else "")),
         ("verdicts", "per-workload outage windows (DNS: " + dns_scope(dns_mode)["verdict"] + "), Panel window"
-                     + (" (expected down from the update until the end)" if real_start else "")
-                     + (" (the update part only: samples up to management-off)" if management_off else "")
+                     + (" (expected down from the update until the end; an update that stopped before the "
+                        "candidate ran is judged as any update)" if real_start else "")
+                     + (" (the update part only: samples up to management-off, requested-at instant minus one "
+                        "sample interval, H13/H14)" if management_off else "")
                      + ", agreement, outcome classification"),
     ]
     if cell.variant in KIND_EXPECTED:
         steps.append(("kind-expectation", "judge the " + cell.variant + " observations: " + KIND_EXPECTED[cell.variant]
                       + " (texts from the product build's web/src catalogues and cmd/recovery/main.go, CLI output "
-                        "verbatim)"))
+                        "verbatim)"
+                      + (f"; an update that stops before {KIND_MOMENT[cell.variant]} runs is {KIND_NOT_MEASURED} "
+                         f"and the cell ends {OVERALL_KIND_NOT_REACHED}" if cell.variant in KIND_CODES else "")))
     plan = {"schema": "celikpanel/upd1-plan/v1", "cell": dataclasses.asdict(cell), "work_root": work_root,
             "dns": dns_scope(dns_mode),
             "local_port": local_port, "baseline": {k: artifacts["baseline"][k] for k in ("version", "commit", "sha256")},
@@ -2492,18 +2575,34 @@ class Trial:
             pass
         return record
 
-    def lab_events(self, name: str) -> list[dict]:
-        """A private JSONL event file of this lab under the guest's private root (read-only)."""
+    def lab_event_bytes(self, name: str) -> bytes:
+        """A private JSONL event file of this lab under the guest's private root, verbatim (read-only)."""
         if not re.fullmatch(r"[a-z0-9-]+-[0-9a-f]{32}\.jsonl", name):
             raise ValueError("invalid lab event file name")
         body = ("python3 -I - <<'CP_UPD1_EVENTS'\nimport base64\nfrom pathlib import Path\n"
                 f"p=Path('{PRIVATE}/{name}')\n"
                 "print(base64.b64encode(p.read_bytes() if p.exists() else b'').decode())\nCP_UPD1_EVENTS\n")
-        raw = base64.b64decode(self.guest(body, timeout=30).stdout.strip() or b"")
-        return [json.loads(line) for line in raw.splitlines() if line]
+        return base64.b64decode(self.guest(body, timeout=30).stdout.strip() or b"")
+
+    def lab_events(self, name: str) -> list[dict]:
+        return [json.loads(line) for line in self.lab_event_bytes(name).splitlines() if line]
+
+    def port_hold_event_name(self) -> str:
+        return f"owner-port-hold-{self.state['request_id']}.jsonl"
+
+    def keep_port_hold_events(self) -> dict:
+        """H15 (upd4): the hold's raw event stream, copied from the guest's private root into this step's evidence
+        (listed in SHA256SUMS like every evidence file); the summary alone was kept before."""
+        name = self.port_hold_event_name()
+        raw = self.lab_event_bytes(name)
+        if not raw:
+            return {"file": None, "events": 0, "note": f"{PRIVATE}/{name} is absent or empty on the guest"}
+        kept = self.ev.write_text(f"{self.step_dir}/{name}", raw.decode("utf-8", "replace"))
+        return {"file": kept, "events": len([line for line in raw.splitlines() if line]),
+                "guest_sha256": hashlib.sha256(raw).hexdigest(), "guest_path": f"{PRIVATE}/{name}"}
 
     def port_hold_events(self) -> list[dict]:
-        events = self.lab_events(f"owner-port-hold-{self.state['request_id']}.jsonl")
+        events = self.lab_events(self.port_hold_event_name())
         for event in events:
             if (event.get("schema") != PORT_HOLD_EVENT_SCHEMA or event.get("operation_id") != self.state["request_id"]
                     or event.get("identity") != {k: self.identity[k] for k in ("nonce", "vm_uuid", "cell_id", "node")}):
@@ -2543,7 +2642,10 @@ class Trial:
     def screen(self, status: Any, role: str | None = None) -> dict:
         role = role or self.served_role()
         rules = self.card_rules(role)
-        return recovery_guidance(self.translator_for(role), status, rules)
+        screen = recovery_guidance(self.translator_for(role), status, rules, self.state.get("request_id"))
+        if rules is None:
+            screen["unavailable"] = (self.state.get("card_model_unavailable") or {}).get(role) or screen["unavailable"]
+        return screen
 
     def build_file(self, role: str, path: str) -> str:
         """One file of a built commit, read from the fixture clone (``git show``), never the working tree."""
@@ -3516,6 +3618,11 @@ class Trial:
         checks["release"] = {"command": f"systemctl stop {self.state['port_hold_unit']}", "returncode": stop_code,
                              "requested_at": utc_now(), "hold": hold,
                              "note": None if stop_code is not None else "the hold had already ended; nothing to stop"}
+        # H15: the hold's own event stream as it stands at the release (collect keeps the final one too).
+        try:
+            checks["port_hold_events"] = self.keep_port_hold_events()
+        except Exception as exc:  # noqa: BLE001 - recorded; the owner path does not depend on the copy
+            checks["port_hold_events"] = {"unavailable": self.redactor.text(f"{type(exc).__name__}: {exc}")[:300]}
         if not hold["released"]:
             raise StepInconclusive("the port hold did not report released; the retry is not run")
         # Read-only, still paused: whether the Panel unit came back by itself once the port was free.
@@ -3750,12 +3857,17 @@ class Trial:
         before = self.workload_snapshot("before-management-off")
         self.state["before_off_workload"] = before
         command = "systemctl disable --now celikpanel-panel.service celikpanel-agent.service"
-        done = self.guest(command, timeout=180)
+        # H13 (upd4 d13-mgmt-off run-a): the owner's stop starts when the command is issued, so the update-only
+        # verdict window ends at this instant, taken before the command; its completion is kept separately.
         self.state["management_off_at"] = time.time()
+        done = self.guest(command, timeout=180)
+        self.state["management_off_done_at"] = time.time()
         after = self.workload_snapshot("management-off")
         state = management_state(after.get("services"))
         checks.update(command=f"sudo {command}", returncode=done.returncode, management=state,
-                      before=management_state(before.get("services")))
+                      before=management_state(before.get("services")),
+                      management_off_window={"requested_at": self.state["management_off_at"],
+                                             "done_at": self.state["management_off_done_at"]})
         self.state["management_off"] = state
         if not state["disabled_and_stopped"]:
             raise StepFailed(f"the Panel/Agent are not disabled and stopped: {state['units']}")
@@ -3856,53 +3968,100 @@ class Trial:
             except Exception as exc:  # noqa: BLE001
                 back.update(login_ok=False, error=type(exc).__name__)
         if back["login_ok"]:
-            after = self.panel_truth("after-management-return")
-            back["differences"] = truth_differences(self.state.get("truth_before_off"), after)
+            # H12 (upd4 d13-mgmt-off run-a): right after login the Panel still answered 503 PANEL_STARTING ("Panel
+            # management is still starting") and every compared field read as empty. The owner's screens wait for
+            # panel_state=ready; so does this read (read-only, bounded) before the owner state is compared.
+            back["readiness_wait"] = self.wait_panel_ready()
+            if back["readiness_wait"]["ready"]:
+                after = self.panel_truth("after-management-return")
+                back["differences"] = truth_differences(self.state.get("truth_before_off"), after)
+            else:
+                back["owner_state"] = (f"not compared: panel_state was not ready within "
+                                       f"{MANAGEMENT_RETURN_READY_SECONDS:.0f} s")
         back["management"] = management_state(self.workload_snapshot("after-management-return").get("services"))
         self.state["management_return"] = back
         checks["management_return"] = back
         self.inspect("after-management-return")
         if not back["login_ok"] or back.get("differences") or not back["management"]["enabled_and_active"]:
             raise StepFailed(f"management did not return to the same owner state: {back}")
+        if "owner_state" in back:
+            raise StepInconclusive(f"management returned but the Panel never reported panel_state=ready within "
+                                   f"{MANAGEMENT_RETURN_READY_SECONDS:.0f} s; the owner state was not compared")
         return "passed"
 
-    def kind_observations(self) -> dict:
-        """Everything the kind judges read, from this run's own records."""
+    def wait_panel_ready(self, bound: float | None = None) -> dict:
+        """H12: read the exact request's recovery status (read-only) until it says ``panel_state=ready``, at most
+        ``MANAGEMENT_RETURN_READY_SECONDS``; a 503 ``PANEL_STARTING``, ``starting`` or an error is read again."""
+        bound = MANAGEMENT_RETURN_READY_SECONDS if bound is None else bound
+        deadline = time.monotonic() + bound
+        reads: list[dict] = []
+        while True:
+            entry: dict[str, Any] = {"at": utc_now()}
+            try:
+                probe = self.api("GET", f"/api/v1/recovery/status?request_id={self.state['request_id']}",
+                                 purpose="RecoveryStatus (management return readiness, read-only)")
+                body = probe.json()
+                entry["http"] = probe.status
+                if isinstance(body, dict):
+                    entry["panel_state" if probe.status == 200 else "code"] = (
+                        body.get("panel_state") if probe.status == 200 else body.get("code"))
+            except Exception as exc:  # noqa: BLE001 - the Panel is still starting; read again
+                entry["error"] = type(exc).__name__
+            reads.append(entry)
+            if entry.get("panel_state") == "ready" or time.monotonic() >= deadline:
+                break
+            time.sleep(MANAGEMENT_RETURN_READY_POLL_S)
+        return {"ready": reads[-1].get("panel_state") == "ready", "reads": len(reads), "first": reads[0],
+                "last": reads[-1], "bound_seconds": bound}
+
+    def reach_observations(self) -> dict:
+        """The run's records that say whether the cell's candidate kind was reached (``kind_not_reached``)."""
         rid = self.state.get("request_id") or ""
-        journals = self.state.get("journals") or {}
-        product = journals.get("product")
-        terminal = self.state.get("terminal") or {}
+        product = (self.state.get("journals") or {}).get("product")
         attempts = self.state.get("attempts") or {}
-        phases = [a.get("phase") for a in attempts.get("automatic", [])]
         dispatches = [{k: a.get(k) for k in ("attempt", "operation", "phase", "direction")}
                       for a in attempts.get("automatic", [])]
-        texts = self.state.get("cli_texts")
-        samples = self.state.get("status_samples", [])
-        translator = self.translator_for(self.served_role())
-        keys = sorted({key for s in samples for key in self.screen(s.get("observed"))["keys"]
-                       if s.get("observed")}
-                      | set(self.screen(terminal.get("recovery_body"))["keys"]
-                            if terminal.get("recovery_body") else []))
-        per = (self.state.get("verdict_checks") or {}).get("workloads") or {}
-        obs = {"final": self.state.get("final_status"),
-                "update_failure_codes": None if product is None else
-                [line["code"] for line in parse_update_failure_lines(product)],
-                "update_failure_lines": None if product is None else parse_update_failure_lines(product),
+        lines = None if product is None else parse_update_failure_lines(product)
+        return {"final": self.state.get("final_status"), "track_stop": self.state.get("track_stop"),
+                "update_failure_codes": None if lines is None else [line["code"] for line in lines],
+                "update_failure_lines": lines,
                 "check_reasons": None if product is None else [r["code"] for r in parse_start_check_reasons(product)],
                 "sidecar": sidecar_from_records(self.state.get("observation_records"), rid, self.candidate["commit"]),
                 "completion_marker_seen": completion_marker_seen(self.state.get("observer_events")),
-                "receipt_phases": phases or None, "receipt_dispatches": dispatches or None, "attempts": attempts,
-                "installed": terminal.get("installed"), "database": terminal.get("database"),
-                "cli": cli_text_observations(samples, texts) if texts else None,
-                "web_keys": keys, "web_keys_missing": [k for k in keys if not translator.has(k)] if keys else None,
-                "owner_retry_run": bool(self.state.get("owner_continued")),
-                "printed_retry_command": self.state.get("printed_retry_command"),
-                "views": view_reachability(samples),
-                "workloads": {k: v.get("verdict") for k, v in per.items() if k in WORKLOADS} or None,
-                "panel_verdict": (per.get("panel") or {}).get("verdict"),
-                "update_card": self.state.get("card_judged"),
-                "outcome": classify_outcome(self.cell.variant, self.state.get("final_status"),
-                                            bool(self.state.get("owner_continued")))}
+                "receipt_dispatches": dispatches or None,
+                "installed": (self.state.get("terminal") or {}).get("installed")}
+
+    def kind_observations(self) -> dict:
+        """Everything the kind judges read, from this run's own records."""
+        terminal = self.state.get("terminal") or {}
+        attempts = self.state.get("attempts") or {}
+        phases = [a.get("phase") for a in attempts.get("automatic", [])]
+        texts = self.state.get("cli_texts")
+        samples = self.state.get("status_samples", [])
+        translator = self.translator_for(self.served_role())
+        # H11: every screen the owner could have seen, rendered from the served build's own source.
+        screens = [self.screen(s.get("observed")) for s in samples if s.get("observed")]
+        if terminal.get("recovery_body"):
+            screens.append(self.screen(terminal["recovery_body"]))
+        unread = sorted({s["unavailable"] for s in screens if s.get("unavailable")})
+        keys = sorted({key for s in screens for key in s["keys"]})
+        per = (self.state.get("verdict_checks") or {}).get("workloads") or {}
+        obs = self.reach_observations()
+        obs.update({
+            "receipt_phases": phases or None, "attempts": attempts, "database": terminal.get("database"),
+            "cli": cli_text_observations(samples, texts) if texts else None,
+            "web_keys": keys, "web_screen_unavailable": unread or None,
+            # A key a rendered screen looked up and the catalogue lacks is a real mismatch; otherwise a screen that
+            # could not be rendered leaves the rule unknown.
+            "web_keys_missing": [k for k in keys if not translator.has(k)] or (None if unread or not keys else []),
+            "owner_retry_run": bool(self.state.get("owner_continued")),
+            "printed_retry_command": self.state.get("printed_retry_command"),
+            "views": view_reachability(samples),
+            "workloads": {k: v.get("verdict") for k, v in per.items() if k in WORKLOADS} or None,
+            "panel_verdict": (per.get("panel") or {}).get("verdict"),
+            "update_card": self.state.get("card_judged"),
+            "outcome": classify_outcome(self.cell.variant, self.state.get("final_status"),
+                                        bool(self.state.get("owner_continued")))})
         if self.cell.variant == "owner-continuation":
             obs.update(paused=self.state.get("paused_status"), hold=self.state.get("hold") or (
                            dict(self.state["hold_at_pause"], released_before_retry=False)
@@ -3952,6 +4111,9 @@ class Trial:
         self.state["kind_judged"] = judged
         for finding in judged["findings"]:
             self.finding(f"{self.cell.variant}: {finding}")
+        if judged["verdict"] == KIND_NOT_MEASURED:
+            # The cell did not measure its kind; the product's own stop is recorded by the run, not judged here.
+            raise StepInconclusive(f"{KIND_NOT_REACHED_RULE}: {judged['reason']}")
         return expectation_step_verdict(judged)
 
     def collect(self, checks: dict) -> str:
@@ -4004,6 +4166,11 @@ class Trial:
         attempts = attempts_from_receipts((budget or {}).get("receipts", []), snapshot)
         attempts["journal_admissions"] = parse_dispatch_journal(journals.get("product", ""))
         self.state["attempts"] = attempts
+        if rid and self.cell.variant == "owner-continuation":
+            # H15: the raw port-hold events file (guest private root) into the evidence, whatever stopped the cell.
+            kept = attempt("port-hold-events", self.keep_port_hold_events)
+            if kept is not None:
+                checks["port_hold_events"] = kept
         if rid and self.cell.recovery_fault:
             try:
                 native = self.m["native"]
@@ -4033,9 +4200,16 @@ class Trial:
         if self.state.get("management_off_at"):
             # mgmt-off-reboot: this step judges the update part; the management-off window is judged by
             # management-off-measure (the Panel is down there by the owner's choice).
-            cut = self.state["management_off_at"] + skew
+            # H13: management_off_at is taken before the owner's stop command is issued.
+            # H14 (upd4 arch-mgmt-off run-a): a guest sample's "t" is the START of its sampler cycle and its Panel
+            # probe runs last in the cycle (guest_upd1_workload.py sample(): site, DNS, SMTP, cron, then Panel),
+            # about 2 s later on an external-DNS node. A cycle that started up to one interval before the stop
+            # request may probe the Panel after it, so the update-only window ends one interval earlier.
+            cut = self.state["management_off_at"] + skew - SAMPLE_INTERVAL_S
             samples = [s for s in samples if float(s.get("t", 0)) <= cut]
             checks["samples_until_management_off"] = len(samples)
+            checks["management_off_cut"] = {"guest_clock": cut, "margin_seconds": SAMPLE_INTERVAL_S,
+                                            "requested_at_host": self.state["management_off_at"]}
         # Host instants on the guest clock (the reset may also move the guest clock; recorded, not corrected).
         resets = [reset + skew for reset in self.state["resets"]]
         started = self.state["started_at"] + skew if self.state.get("started_at") else None
@@ -4044,16 +4218,25 @@ class Trial:
         per = workload_verdicts(samples, resets, mail_listed=bool(self.state.get("seed", {}).get("mail", {}).get("listed")),
                                 cron=self.cron_scope(), dns_mode=self.dns_mode)
         panel_windows = classify_windows(outage_windows(samples, "panel"), resets)
-        if self.cell.variant == "real-start":
+        stopped_before = (kind_not_reached(self.cell.variant, self.reach_observations())
+                          if self.cell.variant == "real-start" else None)
+        if self.cell.variant == "real-start" and not stopped_before:
             # The fixture's Panel never listens again: down from the update to the end is expected.
             per["panel"] = dict(panel_verdict_until_end(panel_windows, started), windows=panel_windows)
             panel_expected = PANEL_UNTIL_END
         else:
+            # A real-start update that stopped before the candidate ran (upd4 F4/F5) is judged as any other update:
+            # the Panel may be down only inside the operation.
             per["panel"] = dict(panel_verdict(panel_windows, started, terminal_at), windows=panel_windows)
             panel_expected = "down-only-during-transaction"
+            if stopped_before:
+                per["panel"]["rule"] = f"{KIND_NOT_REACHED_RULE}: {stopped_before['shape']}"
+                checks["kind_not_reached"] = stopped_before
         host_samples = self.host_samples
         if self.state.get("management_off_at"):
-            host_samples = [s for s in host_samples if float(s.get("t", 0)) <= self.state["management_off_at"]]
+            # H14: the host series uses the same margin (its samples are taken the same way, start first).
+            host_samples = [s for s in host_samples
+                            if float(s.get("t", 0)) <= self.state["management_off_at"] - SAMPLE_INTERVAL_S]
         host_panel = outage_windows(host_samples, "panel")
         checks.update(workloads=per, host_panel_windows=host_panel, host_ssh_windows=outage_windows(host_samples, "ssh"),
                       agreement=agreement_verdict([s["agreement"] for s in self.state.get("status_samples", [])]),
@@ -4103,6 +4286,8 @@ class Trial:
             self.step("kind-expectation", self.kind_expectation, needs=("owner-start",))
         self.tunnel.close()
         verdicts = [s["verdict"] for s in self.steps]
+        judged_kind = self.state.get("kind_judged") or {}
+        not_reached = judged_kind.get("verdict") == KIND_NOT_MEASURED
         result = {"schema": RESULT_SCHEMA, "native_evidence": False, "cell": dataclasses.asdict(self.cell),
                   "identity": {k: self.identity[k] for k in ("cell_id", "node", "vm_uuid")},
                   "request_id": self.state.get("request_id"), "provenance": provenance_for(self.cell.variant),
@@ -4122,11 +4307,12 @@ class Trial:
                   "findings": self.state["findings"],
                   "steps": [{k: s.get(k) for k in ("name", "verdict", "reason", "started_at", "finished_at")}
                             for s in self.steps],
-                  "overall": overall(verdicts),
+                  "overall": overall(verdicts, kind_not_reached=not_reached),
                   "note": "Observations for the owner's review; the P0 rows are judged separately."}
         if self.cell.variant in JUDGES:
             result["kind"] = {"variant": self.cell.variant, "expected": KIND_EXPECTED[self.cell.variant],
                               "judged": self.state.get("kind_judged"),
+                              "measured": None if not judged_kind else not not_reached,
                               "printed_retry_command": self.state.get("printed_retry_command")}
         self.step_dir = "result"
         return self.ev.finalize_upd1(result)
@@ -4202,7 +4388,8 @@ def main(argv: list[str] | None = None) -> int:
     validate_cell_artifacts(document, cell)
     result = Trial(cell, document, args.work_root, args.local_port, draft, args.dns_mode).execute()
     print(json.dumps({"overall": result["overall"], "outcome": result["outcome"]["classification"],
-                      "request_id": result["request_id"]}, sort_keys=True))
+                      "request_id": result["request_id"],
+                      "kind_measured": (result.get("kind") or {}).get("measured")}, sort_keys=True))
     return 0 if result["overall"] != "failed" else 1
 
 

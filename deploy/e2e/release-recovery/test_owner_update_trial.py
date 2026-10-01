@@ -240,23 +240,43 @@ class RuleTests(unittest.TestCase):
                          "defective-candidate-reported-success")
         self.assertEqual(t.classify_outcome("defective", None, False), "not-terminal")
 
+    def product(self, phase, proof="none", **extra):
+        """A status the product's own parser accepts (its schema, observed_at and the phase's reason)."""
+        value = self.known(phase, proof, **extra)
+        if "reason" not in extra:
+            value.pop("reason")
+        return product_status(value)
+
     def test_recovery_guidance_uses_the_product_catalogue(self):
         guidance = load("tested_upd1_guidance", "../dns-pair-acceptance/guidance.py")
         translator = guidance.Translator(guidance.load_catalog(REPO / "web/src/i18n"))
-        paused = dict(self.known("recovery_required"), automatic_recovery="paused_retry_limit",
-                      previous_failure="recovery_incomplete")
-        shown = t.recovery_guidance(translator, paused)
+        rules = t.load_card_rules(REPO / "web/src")
+        paused = self.product("recovery_required", automatic_recovery="paused_retry_limit",
+                              previous_failure="recovery_incomplete")
+        shown = t.recovery_guidance(translator, paused, rules)
         self.assertTrue(shown["actionable"], shown)
         self.assertIn("sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50", shown["texts"]["en"])
         self.assertIn("sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50", shown["texts"]["tr"])
         self.assertNotEqual(shown["texts"]["en"], shown["texts"]["tr"])
-        done = t.recovery_guidance(translator, self.known("recovered", "rollback_verified", previous_failure="update_failed"))
+        done = t.recovery_guidance(translator, self.product("recovered", "rollback_verified",
+                                                            previous_failure="update_failed"), rules)
         self.assertEqual(done["missing_keys"], [])
-        bogus = t.recovery_guidance(translator, self.known("mystery"))
-        self.assertTrue(bogus["no_actor_or_action"])
-        self.assertFalse(t.recovery_guidance(translator, None)["actionable"])
+        # H11: the product refuses a phase it does not know; its screen then says the observation is unavailable.
+        bogus = t.recovery_guidance(translator, self.known("mystery"), rules)
+        self.assertEqual((bogus["keys"], bogus["actionable"], bogus["observation_unavailable"]),
+                         (["recovery.observationUnavailable"], False, True))
+        self.assertFalse(t.recovery_guidance(translator, None, rules)["actionable"])
+        # A key the served catalogue lacks is "no actor or action" (a real mismatch of the build).
+        thin = guidance.Translator({lang: {k: v for k, v in texts.items() if k != "recovery.automatic.pausedHelp"}
+                                    for lang, texts in translator.catalog.items()})
+        lacking = t.recovery_guidance(thin, paused, rules)
+        self.assertEqual((lacking["missing_keys"], lacking["no_actor_or_action"]),
+                         (["recovery.automatic.pausedHelp"], True))
+        # Without the build's rules the screen is unknown (never a frozen layout, never a finding).
+        unread = t.recovery_guidance(translator, paused)
+        self.assertEqual((unread["keys"], unread["actionable"], unread["no_actor_or_action"]), ([], None, False))
+        self.assertIn("not loaded", unread["unavailable"])
         # H10: the card follows the product's systemUpdateOutcome.ts (no recovery record read yet: unknown result).
-        rules = t.load_card_rules(REPO / "web/src")
         card = t.update_card_guidance(translator, {"found": True, "request_id": RID, "status": "failed"}, None, rules)
         self.assertEqual((card["keys"], card["missing_keys"]),
                          (["panelUpdate.failed", "panelUpdate.outcome.unknownResult"], []))
@@ -264,7 +284,8 @@ class RuleTests(unittest.TestCase):
         summary = t.update_card_guidance(translator, {"found": True, "request_id": RID, "status": "failed",
                                                       "summary": "update failed"}, None, rules)
         self.assertEqual(summary["server_message"], "update failed")
-        self.assertEqual(summary["texts"]["tr"][-1], "Sunucunun bildirdiği: update failed")
+        self.assertEqual(summary["texts"]["tr"][-1], translator.text("panelUpdate.outcome.serverMessage",
+                                                                      {"message": "update failed"}, language="tr"))
         self.assertEqual(t.update_card_guidance(translator, {"found": False}, None, rules)["texts"],
                          {"en": [], "tr": []})
         self.assertTrue(t.update_card_guidance(translator, {"found": True, "status": "failed"})["unavailable"])
@@ -341,6 +362,11 @@ class RuleTests(unittest.TestCase):
         self.assertEqual(t.overall(["failed", "not-run"]), "failed")
         with self.assertRaises(ValueError):
             t.overall(["passed", "PASS"])
+        # upd4 F4/F5: a kind that was never reached is one answer for the cell; a failed step still fails it.
+        self.assertEqual(t.overall(["passed", "inconclusive", "not-run", "inconclusive"], kind_not_reached=True),
+                         t.OVERALL_KIND_NOT_REACHED)
+        self.assertEqual(t.OVERALL_KIND_NOT_REACHED, "inconclusive-kind-not-reached")
+        self.assertEqual(t.overall(["failed", "inconclusive"], kind_not_reached=True), "failed")
 
     def test_offline_copy_and_shell_command(self):
         copy = t.parse_offline_copy((REPO / "web/src/offline/copy.ts").read_text(encoding="utf-8"))
@@ -1243,7 +1269,9 @@ class Upd3SidecarAndTextTests(unittest.TestCase):
         for code in t.FAILURE_CODES:
             self.assertIn(f'value == "{code}"', record)
         writer = (REPO / "deploy/release-recovery-observation.sh").read_text(encoding="utf-8")
-        self.assertIn("schema=celikpanel-recovery-failure/v1", writer)
+        # The writer prints the schema line itself, or passes the schema to its one fact writer ("schema=$schema").
+        self.assertIn("celikpanel-recovery-failure/v1", writer)
+        self.assertTrue("schema=celikpanel-recovery-failure/v1" in writer or '"schema=$schema"' in writer)
 
     def test_sidecar_parsing(self):
         self.assertEqual(t.parse_failure_sidecar(self.sidecar(), RID, self.COMMIT),
@@ -1351,27 +1379,25 @@ class Upd3SidecarAndTextTests(unittest.TestCase):
     def test_web_guidance_uses_the_product_catalogue_and_failure_code(self):
         guidance = load("tested_upd3_guidance", "../dns-pair-acceptance/guidance.py")
         translator = guidance.Translator(guidance.load_catalog(REPO / "web/src/i18n"))
-        recovered = {"request_id": RID, "observation": "known", "phase": "recovered",
-                     "terminal_proof": "rollback_verified", "previous_failure": "update_failed",
-                     "failure_code": t.START_CHECK_CODE}
-        shown = t.recovery_guidance(translator, recovered)
+        rules = t.load_card_rules(REPO / "web/src")
+        recovered = product_status({"request_id": RID, "observation": "known", "phase": "recovered",
+                                    "terminal_proof": "rollback_verified", "previous_failure": "update_failed",
+                                    "failure_code": t.START_CHECK_CODE})
+        shown = t.recovery_guidance(translator, recovered, rules)
+        # H11: the keys the build's RecoveryStatus looks up, in its own order (title, guidance, previous failure).
         self.assertEqual(shown["keys"], ["recovery.phase.recovered",
                                          f"recovery.failure.{t.START_CHECK_CODE}.recovered",
-                                         f"recovery.reason.{t.START_CHECK_CODE}"])
+                                         "recovery.previousFailure", f"recovery.reason.{t.START_CHECK_CODE}"])
         self.assertEqual(shown["missing_keys"], [])
+        self.assertEqual(len(shown["texts"]["en"]), 3)                  # the previous failure is one line
         self.assertNotEqual(shown["texts"]["en"], shown["texts"]["tr"])
-        pending = dict(recovered, phase="recovering", terminal_proof="none", failure_code=t.REAL_START_CODE)
-        self.assertIn(f"recovery.failure.{t.REAL_START_CODE}.pending", t.recovery_guidance(translator, pending)["keys"])
+        pending = dict(recovered, phase="recovering", terminal_proof="none", reason="recovery_running",
+                       failure_code=t.REAL_START_CODE)
+        self.assertIn(f"recovery.failure.{t.REAL_START_CODE}.pending",
+                      t.recovery_guidance(translator, pending, rules)["keys"])
         hidden = dict(pending, previous_failure="recovery_failed")
-        self.assertEqual(t.recovery_guidance(translator, hidden)["keys"][1:], ["recovery.next.recovering",
-                                                                            "recovery.reason.recovery_failed"])
-        # Every key the mirror can return is a key of the product's own TypeScript.
-        ts = (REPO / "web/src/lib/recoveryObservation.ts").read_text(encoding="utf-8")
-        for key in (f"recovery.failure.{t.START_CHECK_CODE}.recovered", f"recovery.failure.{t.START_CHECK_CODE}.returning",
-                    f"recovery.failure.{t.REAL_START_CODE}.pending"):
-            self.assertIn(f"'{key}'", ts)
-        self.assertIn("recovery.reason.${last.failure_code ?? last.previous_failure}",
-                      (REPO / "web/src/components/RecoveryAccess.tsx").read_text(encoding="utf-8"))
+        self.assertEqual(t.recovery_guidance(translator, hidden, rules)["keys"][1:],
+                         ["recovery.next.recovering", "recovery.previousFailure", "recovery.reason.recovery_failed"])
 
 
 def ideal_start_check(texts):
@@ -1794,7 +1820,8 @@ class H10CardModelTests(unittest.TestCase):
     def test_rules_are_the_build_functions(self):
         self.assertTrue(set(t.FAILURE_CODES) <= set(self.rules["failure_codes"]))
         self.assertEqual(self.rules["command"], t.RECOVERY_LOG_COMMAND)
-        self.assertTrue(self.rules["screen"]["automatic_cause_line"])
+        self.assertEqual(self.rules["screen"]["component"], t.SCREEN_COMPONENT)
+        self.assertEqual(self.rules["screen"]["region"]["attrs"]["role"], ("str", "status"))
         self.assertEqual(set(self.rules["source"]), set(t.CARD_SOURCES))
         module = self.rules["module"]
         parsed = module.call("parseRecoveryObservation", UPD3_SC_RECOVERY, UPD3_SC_RECOVERY["request_id"])
@@ -1824,8 +1851,9 @@ class H10CardModelTests(unittest.TestCase):
         defective = self.card(UPD3_DEF_STATUS, UPD3_DEF_RECOVERY)
         self.assertIn("panelUpdate.outcome.cause.generic", defective["keys"])
         self.assertEqual(defective["keys"][-1], "panelUpdate.outcome.serverMessage")
-        self.assertTrue(defective["texts"]["en"][-1].startswith("The server reported: "))
-        self.assertTrue(defective["texts"]["tr"][-1].startswith("Sunucunun bildirdiği: "))   # O6 shape, recorded
+        for language in ("en", "tr"):                                                  # O6 shape, recorded
+            prefix = self.translator.text("panelUpdate.outcome.serverMessage", language=language).split("{message}")[0]
+            self.assertTrue(prefix and defective["texts"][language][-1].startswith(prefix))
         self.assertIn("offline panel database migration failed", defective["server_message"])
         judged = t.judge_update_card(defective, ("rolled_back",))
         self.assertEqual((judged["verdict"], judged["findings"]), ("as-expected", []))
@@ -1844,12 +1872,13 @@ class H10CardModelTests(unittest.TestCase):
         self.assertIn("sudo journalctl -u celikpanel-panel -n 50", card["texts"]["tr"][1])
         screen = t.recovery_guidance(self.translator, UPD3_RS_PAUSED, self.rules)      # a CLI body: no panel_state
         self.assertEqual(screen["keys"][1], f"recovery.automatic.cause.{t.REAL_START_CODE}")
-        self.assertEqual(screen["texts"]["en"][screen["keys"].index("recovery.automatic.inspect") + 1],
-                         t.RECOVERY_LOG_COMMAND)
-        without = t.recovery_guidance(self.translator, UPD3_RS_PAUSED, dict(self.rules, screen={}))
-        self.assertNotIn(f"recovery.automatic.cause.{t.REAL_START_CODE}", without["keys"])
-        mirror = t.recovery_guidance(self.translator, UPD3_RS_PAUSED)                   # no rules: 94be6b6e mirror
-        self.assertEqual(mirror["keys"][:2], screen["keys"][:2])
+        inspect_line = self.translator.text("recovery.automatic.inspect")
+        self.assertEqual(screen["texts"]["en"][screen["texts"]["en"].index(inspect_line) + 1], t.RECOVERY_LOG_COMMAND)
+        # H11: without the build's screen region (or without rules) the screen is unknown, never a frozen copy.
+        for rules in (dict(self.rules, screen={}), None):
+            unread = t.recovery_guidance(self.translator, UPD3_RS_PAUSED, rules)
+            self.assertEqual((unread["keys"], unread["actionable"]), ([], None))
+            self.assertTrue(unread["unavailable"])
 
     def test_succeeded_unknown_and_typed_cards(self):
         after_retry = self.card({"found": True, "request_id": RID, "status": "failed", "summary": "s"},
@@ -1950,6 +1979,183 @@ class WebSourceEvalTests(unittest.TestCase):
             self.module("export function f() { return missing; }").call("f")
         with self.assertRaises(e.Unsupported):
             self.module("export function f() { return 1 * 2; }").call("f")
+
+    def test_return_type_annotations_with_object_types(self):
+        # reconcileRecoveryObservation returns `{ record: ...; unavailable: boolean }`: the body is the next brace.
+        m = self.module("export function f(p: X | null, n: Y): { record: Y | null; unavailable: boolean } {\n"
+                        "    if (p?.id !== n.id) p = null;\n    return { record: p ?? n, unavailable: !p };\n}\n"
+                        "export function g(v: Array<() => void>): v is string[] { return true; }\n")
+        self.assertEqual(m.call("f", None, {"id": 1}), {"record": {"id": 1}, "unavailable": True})
+        self.assertIs(m.call("g", []), True)
+
+    def test_jsx_elements_text_and_non_null(self):
+        e = t.web_eval()
+        source = (
+            "import { useState } from 'react';\n"
+            "export function Shown({ a }: { a: string }) {\n"
+            "    const [x, setX] = useState<string | null>(() => null);\n"
+            "    return <section className=\"s\" aria-live=\"polite\">\n"
+            "        <h2>{t('title')}</h2>\n"
+            "        {!a ? <p>none</p> : <>\n"
+            "            <div role=\"status\">\n"
+            "                {/* a comment child renders nothing */}\n"
+            "                {a && <p className=\"x\">{t(pick(a)!)}: <span>{a}</span></p>}\n"
+            "                <pre><code>sudo true &amp;&amp; echo</code></pre>\n"
+            "                <p>\n                    two\n                    lines\n                </p>\n"
+            "                {a === 'z' && <Button onClick={() => void setX(a)}>{t('no')}</Button>}\n"
+            "            </div>\n"
+            "        </>}\n"
+            "    </section>;\n"
+            "}\n")
+        module = e.Module({"x": "export function pick(v: string): string | undefined "
+                                "{ return v === 'k' ? 'key.k' : undefined; }"})
+        tree = e.component_return_jsx(source, "Shown")
+        [region] = e.find_elements(tree, "role", "status")
+        called = []
+        lines = e.render_region(region, {"t": lambda k: called.append(k) or k.upper(), "a": "k"}, module)
+        self.assertEqual(lines, ["KEY.K: k", "sudo true && echo", "two lines"])
+        self.assertEqual(called, ["key.k"])
+        with self.assertRaisesRegex(e.Unsupported, "component <Button>"):
+            e.render_region(region, {"t": lambda k: k, "a": "z"}, module)
+        with self.assertRaisesRegex(e.Unsupported, "found 0 times"):
+            e.component_return_jsx(source, "Missing")
+        with self.assertRaises(e.Unsupported):
+            e.component_return_jsx(source.replace("</pre>", "</div>", 1), "Shown")      # unbalanced JSX
+
+
+H11_TEXTS = HERE / "evidence" / "upd4-20261001" / "h11-product-screen-texts.txt"
+
+
+def h11_view(title):
+    """One view of the upd4 H11 file (rendered there from the a6dd5b1e build's catalogues): {lang: [lines]}."""
+    if not H11_TEXTS.is_file():
+        raise unittest.SkipTest(f"{H11_TEXTS.name} (upd4 evidence) is not in this checkout")
+    lines = H11_TEXTS.read_text(encoding="utf-8").splitlines()
+    index = next(i for i, line in enumerate(lines) if line.startswith("## " + title))
+    return {line[1:3]: line[5:].split(" || ") for line in lines[index + 1:index + 3]}
+
+
+def retry_scheduled_status():
+    """Between automatic attempts (upd4 owner-continuation, Debian 23:35:10 / Arch 01:01:51)."""
+    return product_status({"request_id": RID, "observation": "known", "phase": "recovery_required",
+                           "terminal_proof": "none", "reason": "recovery_failed", "previous_failure": "recovery_failed",
+                           "automatic_recovery": "retry_scheduled", "first_failure_code": t.REAL_START_CODE})
+
+
+class H11RecoveryScreenTests(unittest.TestCase):
+    """The recovery screen is what the build's RecoveryStatus renders: its JSX, its functions, its catalogues."""
+
+    RETRY_KEYS = ["recovery.automatic.retryTitle", f"recovery.failure.{t.REAL_START_CODE}.pending",
+                  "recovery.automatic.retryHelp", "recovery.previousFailure", "recovery.reason.recovery_failed"]
+    PAUSED_KEYS = ["recovery.automatic.pausedTitle", f"recovery.automatic.cause.{t.REAL_START_CODE}",
+                   "recovery.automatic.pausedHelp", "recovery.automatic.renewal", "recovery.automatic.inspect",
+                   "recovery.automatic.resume", "recovery.previousFailure", "recovery.reason.recovery_failed"]
+
+    def setUp(self):
+        self.translator = product_translator()
+        self.rules = t.load_card_rules(REPO / "web/src")
+        self.sources = {name: (REPO / "web/src" / path).read_text(encoding="utf-8")
+                        for name, path in t.CARD_SOURCES.items()}
+
+    def as_at_upd4(self, keys, view):
+        """True while every catalogue text these keys render is the one the H11 file was rendered from."""
+        return all(self.translator.text(key, language=language) in " || ".join(view[language])
+                   for key in keys for language in ("en", "tr"))
+
+    def test_retry_scheduled_renders_the_retry_screen_not_the_pause(self):
+        screen = t.recovery_guidance(self.translator, retry_scheduled_status(), self.rules)
+        self.assertEqual(screen["keys"], self.RETRY_KEYS)
+        self.assertEqual(screen["missing_keys"], [])
+        self.assertTrue(screen["actionable"])
+        for language in ("en", "tr"):
+            self.assertNotIn(t.RECOVERY_LOG_COMMAND, screen["texts"][language])     # nothing asked of the owner yet
+            self.assertEqual(len(screen["texts"][language]), 4)
+        view = h11_view("screen retry_scheduled")
+        if self.as_at_upd4(self.RETRY_KEYS, view):
+            self.assertEqual(screen["texts"], view)                                 # the H11 file, verbatim
+
+    def test_the_pause_carries_the_renewal_line(self):
+        screen = t.recovery_guidance(self.translator, paused_on_port(), self.rules)
+        self.assertEqual(screen["keys"], self.PAUSED_KEYS)
+        en = screen["texts"]["en"]
+        self.assertEqual(en[3], self.translator.text("recovery.automatic.renewal"))
+        self.assertEqual(en[en.index(self.translator.text("recovery.automatic.inspect")) + 1], t.RECOVERY_LOG_COMMAND)
+        view = h11_view("screen paused_retry_limit")
+        if self.as_at_upd4(self.PAUSED_KEYS, view):
+            self.assertEqual(screen["texts"], view)
+
+    def test_the_card_for_the_same_observations(self):
+        status = {"found": True, "request_id": RID, "status": "failed"}
+        retry = t.update_card_guidance(self.translator, status, dict(retry_scheduled_status(), panel_state="ready"),
+                                       self.rules, RID)
+        view = h11_view("card retry_scheduled")
+        keys = ["recovery.automatic.retryTitle", f"recovery.failure.{t.REAL_START_CODE}.pending",
+                "recovery.automatic.retryHelp", "panelUpdate.outcome.followsRecovery"]
+        self.assertEqual(retry["keys"], keys)
+        if self.as_at_upd4(keys, view):
+            self.assertEqual(retry["texts"], view)
+        paused = t.update_card_guidance(self.translator, status, dict(paused_on_port(), panel_state="ready"),
+                                        self.rules, RID)
+        self.assertIn("recovery.automatic.renewal", paused["keys"])
+        # SystemUpdateOperation.tsx shows the fixed command after every line; the H11 file listed it in the screen's
+        # place. Same lines, the component's order.
+        self.assertEqual(paused["texts"]["en"][-1], t.RECOVERY_LOG_COMMAND)
+        view = h11_view("card paused_retry_limit")
+        if self.as_at_upd4(paused["keys"], view):
+            for language in ("en", "tr"):
+                self.assertEqual(sorted(paused["texts"][language]), sorted(view[language]))
+
+    def test_the_line_order_follows_the_source(self):
+        screen_tsx = self.sources["screen"]
+        inspect_call, resume_call = "t('recovery.automatic.inspect')", "t('recovery.automatic.resume')"
+        if inspect_call not in screen_tsx or resume_call not in screen_tsx:
+            self.skipTest("the build's RecoveryAccess.tsx no longer has both lines")
+        swapped = (screen_tsx.replace(inspect_call, "@X@").replace(resume_call, inspect_call)
+                   .replace("@X@", resume_call))
+        rules = t.parse_card_rules(dict(self.sources, screen=swapped))
+        keys = t.recovery_guidance(self.translator, paused_on_port(), rules)["keys"]
+        self.assertLess(keys.index("recovery.automatic.resume"), keys.index("recovery.automatic.inspect"))
+
+    def test_a_changed_or_unreadable_screen_is_unknown_never_a_finding(self):
+        changes = {
+            "region gone": self.sources["screen"].replace('role="status"', 'role="log"'),
+            "component inside the region": self.sources["screen"].replace(
+                "<pre ", "<Hint />\n                    <pre ", 1),
+            "component renamed": self.sources["screen"].replace("function RecoveryStatus(", "function Status(", 1),
+            "empty": "",
+        }
+        for name, source in changes.items():
+            with self.subTest(change=name):
+                self.assertNotEqual(source, self.sources["screen"])
+                rules = t.parse_card_rules(dict(self.sources, screen=source))
+                screen = t.recovery_guidance(self.translator, paused_on_port(), rules)
+                self.assertTrue(screen["unavailable"], screen)
+                self.assertEqual((screen["keys"], screen["actionable"], screen["no_actor_or_action"]),
+                                 ([], None, False))
+        # The kind judges then leave the catalogue rule unknown.
+        judged = t.judge_owner_continuation(dict(ideal_owner_continuation(cli_texts()), web_keys_missing=None))
+        self.assertEqual((judged["verdict"], judged["findings"], judged["unknown"]),
+                         ("inconclusive", [], ["web-catalogue"]))
+
+    def test_the_trial_records_an_unreadable_screen_as_unknown(self):
+        trial = object.__new__(t.Trial)
+        trial.cell = t.CELLS["upd1-debian13-owner-continuation"]
+        trial.role, trial.artifacts = "good", artifacts()
+        trial.candidate = trial.artifacts["good"]
+        trial.state = {"findings": [], "request_id": RID}
+        trial._card_rules_cache = {"good": dict(self.rules, screen={"unavailable": "region changed"})}
+        trial._candidate_translator = self.translator
+        screen = trial.screen(paused_on_port())
+        self.assertEqual((screen["keys"], screen["unavailable"]), ([], "region changed"))
+        trial.state["status_samples"] = [{"observed": retry_scheduled_status()}, {"observed": paused_on_port()}]
+        obs = trial.kind_observations()
+        self.assertEqual((obs["web_keys"], obs["web_keys_missing"], obs["web_screen_unavailable"]),
+                         ([], None, ["region changed"]))
+        trial._card_rules_cache = {"good": self.rules}
+        self.assertEqual(trial.screen(retry_scheduled_status())["keys"], self.RETRY_KEYS)
+        obs = trial.kind_observations()
+        self.assertEqual((obs["web_keys_missing"], obs["web_screen_unavailable"]), ([], None))
+        self.assertEqual(set(obs["web_keys"]), set(self.RETRY_KEYS) | set(self.PAUSED_KEYS))
 
 
 class SidecarV2Tests(unittest.TestCase):
@@ -2338,10 +2544,22 @@ class ManagementOffRuleTests(unittest.TestCase):
         snapshots = iter([{"services": on, "firewall": {"sha256": "f"}}, {"services": off}])
         trial.workload_snapshot = lambda label: next(snapshots)
         trial.panel_truth = lambda label: {"label": label}
+        # H13: the instant that ends the update-only window is taken before the stop command is issued.
+        clock, issued_at = [100.0], []
+
+        def guest(body, timeout=120):
+            trial.calls.append(body)
+            issued_at.append(clock[0])
+            clock[0] += 9.5                    # the command takes a while to return (upd4: ~10 s)
+            return SimpleNamespace(returncode=0, stdout="")
+        trial.guest = guest
         checks = {}
-        self.assertEqual(trial.management_off(checks), "passed")
+        with mock.patch.object(t.time, "time", lambda: clock[0]):
+            self.assertEqual(trial.management_off(checks), "passed")
         self.assertEqual(trial.calls, ["systemctl disable --now celikpanel-panel.service celikpanel-agent.service"])
-        self.assertIn("management_off_at", trial.state)
+        self.assertEqual((trial.state["management_off_at"], issued_at, trial.state["management_off_done_at"]),
+                         (100.0, [100.0], 109.5))
+        self.assertEqual(checks["management_off_window"], {"requested_at": 100.0, "done_at": 109.5})
         self.assertEqual(trial.state["truth_before_off"], {"label": "before-management-off"})
 
     def test_the_measure_names_what_needed_the_panel(self):
@@ -2360,22 +2578,97 @@ class ManagementOffRuleTests(unittest.TestCase):
         self.assertIn("db: never-served", bad["needed_panel"])
         self.assertIn("firewall ruleset absent or changed", bad["needed_panel"])
 
-    def test_verdicts_judge_the_update_part_only(self):
+    def verdict_trial(self, panel_ok, management_off_at):
         trial = object.__new__(t.Trial)
         trial.cell = t.CELLS["upd1-debian13-mgmt-off-reboot"]
-        samples = [{"t": float(i * 5), "web": {"ok": True}, "panel": {"ok": i < 20}, "smtp": {"ok": True},
+        samples = [{"t": float(i * 5), "web": {"ok": True}, "panel": {"ok": panel_ok(i)}, "smtp": {"ok": True},
                     "cron": {"ok": True, "mtime": float(60 * (i * 5 // 60))}} for i in range(60)]
         trial.state = {"findings": [], "resets": [], "samples": samples, "clock_skew": 0.0, "started_at": 1.0,
-                       "terminal_at": 50.0, "management_off_at": 98.0, "seed": {"mail": {"listed": True}},
+                       "terminal_at": 50.0, "management_off_at": management_off_at, "seed": {"mail": {"listed": True}},
                        "cron_availability": {"available": True}, "cron_precondition": True, "status_samples": []}
         trial.host_samples = []
         trial.dns_mode = "external"
+        return trial
+
+    def test_verdicts_judge_the_update_part_only(self):
+        trial = self.verdict_trial(lambda i: i < 20, 98.0)
         checks = {}
         self.assertEqual(trial.verdicts(checks), "passed")
-        self.assertEqual(checks["samples_until_management_off"], 20)
+        # H14: samples start at t=0, 5, ... 95. The window ends one interval (5 s) before the stop request at 98 s,
+        # at 93 s, so the cycle that started at 95 s (its Panel probe runs about 2 s later, after the request) is
+        # left out: 19 samples (0..90 s), not the 20 of the old cut at 98 s.
+        self.assertEqual(checks["samples_until_management_off"], 19)
+        self.assertEqual(checks["management_off_cut"]["guest_clock"], 93.0)
         trial.state.pop("management_off_at")
         with self.assertRaises(t.StepFailed):
             t.Trial.verdicts(trial, {})
+
+    def test_h14_a_cycle_started_before_the_stop_probes_the_panel_after_it(self):
+        # upd4 arch-mgmt-off run-a: the cycle that started 1.85 s before the owner's stop probed the Panel after
+        # it and was counted as down-outside-transaction. Here: stop requested at 96 s, the cycle at 95 s fails.
+        trial = self.verdict_trial(lambda i: i * 5 <= 90, 96.0)
+        checks = {}
+        self.assertEqual(trial.verdicts(checks), "passed")
+        self.assertEqual(checks["samples_until_management_off"], 19)
+        with mock.patch.object(t, "SAMPLE_INTERVAL_S", 0.0):            # the old cut (no margin)
+            with self.assertRaisesRegex(t.StepFailed, "panel"):
+                self.verdict_trial(lambda i: i * 5 <= 90, 96.0).verdicts({})
+        # The host series ends at the same margin.
+        host = self.verdict_trial(lambda i: i * 5 <= 90, 96.0)
+        host.host_samples = [{"t": float(i * 5), "panel": {"ok": i * 5 <= 90}, "ssh": {"ok": True}} for i in range(30)]
+        host_checks = {}
+        host.verdicts(host_checks)
+        self.assertEqual(host_checks["host_panel_windows"], [])
+
+    def return_trial(self, answers):
+        trial = self.flow_trial()
+        on = {u: {"ActiveState": "active", "UnitFileState": "enabled"} for u in t.MANAGEMENT_UNITS}
+        trial.state.update(truth_before_off={"version": "v"}, username="owner")
+        trial._password = "pw"
+        trial.refresh_pin = lambda: "leaf"
+        trial.tunnel = SimpleNamespace(ensure=lambda timeout=20: True)
+        trial.client = None
+        trial.panel_client = lambda: SimpleNamespace(login=lambda user, password: None)
+        trial.workload_snapshot = lambda label: {"services": on}
+        trial.inspect = lambda label, light=False: None
+        trial.reads, trial.truth_reads = [], []
+
+        def api(method, path, body=None, **kw):
+            status, value = answers(len(trial.reads))
+            trial.reads.append((method, path))
+            return SimpleNamespace(status=status, json=lambda: value)
+        trial.api = api
+        trial.panel_truth = lambda label: trial.truth_reads.append(len(trial.reads)) or {"version": "v"}
+        return trial
+
+    def test_h12_management_return_waits_for_ready_before_reading_the_owner_state(self):
+        sequence = [(503, {"code": "PANEL_STARTING"}), (200, {"panel_state": "starting"}),
+                    (200, {"panel_state": "ready"})]
+        trial = self.return_trial(lambda n: sequence[n])
+        with mock.patch.object(t.time, "sleep", lambda s: None):
+            self.assertEqual(trial.management_return({}), "passed")
+        self.assertEqual(trial.truth_reads, [3])                         # the owner state is read after ready only
+        self.assertTrue(all(m == "GET" and p == f"/api/v1/recovery/status?request_id={RID}" for m, p in trial.reads))
+        wait = trial.state["management_return"]["readiness_wait"]
+        self.assertEqual((wait["reads"], wait["ready"], wait["first"]["code"], wait["bound_seconds"]),
+                         (3, True, "PANEL_STARTING", t.MANAGEMENT_RETURN_READY_SECONDS))
+        self.assertEqual(trial.state["management_return"]["differences"], [])
+
+    def test_h12_a_panel_never_ready_is_unknown_not_a_difference(self):
+        clock = [0.0]
+        trial = self.return_trial(lambda n: (200, {"panel_state": "starting"}))
+        with mock.patch.object(t.time, "monotonic", lambda: clock[0]), \
+                mock.patch.object(t.time, "sleep", lambda s: clock.__setitem__(0, clock[0] + s)):
+            with self.assertRaisesRegex(t.StepInconclusive, "panel_state=ready"):
+                trial.management_return({})
+        back = trial.state["management_return"]
+        self.assertEqual(trial.truth_reads, [])
+        self.assertNotIn("differences", back)
+        self.assertGreaterEqual(clock[0], t.MANAGEMENT_RETURN_READY_SECONDS)
+        self.assertLess(clock[0], t.MANAGEMENT_RETURN_READY_SECONDS + 2 * t.MANAGEMENT_RETURN_READY_POLL_S)
+        judged = t.judge_management_off(dict(ideal_management_off(), management_return=back))
+        self.assertEqual(judged["findings"], [])
+        self.assertIn("management-returned", judged["unknown"])
 
 
 class OwnerContinuationFlowTests(unittest.TestCase):
@@ -2390,7 +2683,8 @@ class OwnerContinuationFlowTests(unittest.TestCase):
         trial.state = {"findings": [], "resets": [], "request_id": RID, "port_hold_unit": "hold.service",
                        "awaiting_terminal": False}
         trial.step_dir = "steps/12-owner-continuation-required"
-        trial.ev = SimpleNamespace(write_text=lambda *a: None)
+        trial.kept = []
+        trial.ev = SimpleNamespace(write_text=lambda path, text: trial.kept.append((path, text)) or path)
         trial.calls = []
         released = [False]
         armed = {"event": "armed", "at": "a"}
@@ -2403,6 +2697,9 @@ class OwnerContinuationFlowTests(unittest.TestCase):
                 base = base + [{"event": "released", "reason": "owner-released", "at": "d", "held_seconds": 500}]
             return base
         trial.port_hold_events = events
+        # H15: the raw events file as the guest holds it (one JSON object per line).
+        trial.lab_event_bytes = lambda name: (trial.calls.append(("events", name))
+                                              or "".join(json.dumps(e) + "\n" for e in events()).encode())
 
         def guest(body, timeout=120):
             trial.calls.append(("guest", body))
@@ -2433,7 +2730,16 @@ class OwnerContinuationFlowTests(unittest.TestCase):
         checks = {}
         self.assertEqual(trial.owner_continuation_port(checks, RID, SNAPSHOT, paused_on_port()), "observed")
         order = [c[0] if c[0] != "guest" else "stop" for c in trial.calls]
-        self.assertEqual(order, ["journal", "snapshot", "owner-retry", "stop", "inspect", "save", "owner-retry"])
+        self.assertEqual(order, ["journal", "snapshot", "owner-retry", "stop", "events", "inspect", "save",
+                                 "owner-retry"])
+        # H15: the raw events file is kept in this step's evidence when the owner releases the hold.
+        name = f"owner-port-hold-{RID}.jsonl"
+        self.assertEqual(trial.calls[4], ("events", name))
+        self.assertEqual([path for path, _ in trial.kept][-1], f"{trial.step_dir}/{name}")
+        kept_events = [json.loads(line) for line in trial.kept[-1][1].splitlines()]
+        self.assertEqual(kept_events[-1]["reason"], "owner-released")
+        self.assertEqual(checks["port_hold_events"]["events"], 3)
+        self.assertEqual(checks["port_hold_events"]["file"], f"{trial.step_dir}/{name}")
         retries = [c for c in trial.calls if c[0] == "owner-retry"]
         self.assertNotIn("--execute", retries[0][1])
         self.assertIn("--execute", retries[1][1])
@@ -2469,6 +2775,173 @@ class OwnerContinuationFlowTests(unittest.TestCase):
         source = inspect.getsource(t.Trial.owner_continuation)
         self.assertIn('if self.cell.variant == "owner-continuation":', source)
         self.assertIn("return self.owner_continuation_port(checks, rid, snapshot, paused)", source)
+
+
+class PortHoldEvidenceTests(unittest.TestCase):
+    """H15: collect keeps the raw port-hold events file of an owner-continuation cell in the evidence."""
+
+    def test_collect_keeps_the_raw_events_file(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        trial = CollectAfterEarlyStopTests.Fake(directory.name, None)
+        trial.cell = t.CELLS["upd1-debian13-owner-continuation"]
+        trial.state.update(request_id=RID, helpers_uploaded=True)
+        trial.observer_events = lambda: []
+        raw = (json.dumps({"event": "armed", "at": "a"}) + "\n"
+               + json.dumps({"event": "released", "reason": "owner-released", "at": "b"}) + "\n").encode()
+        trial.lab_event_bytes = lambda name: raw if name == f"owner-port-hold-{RID}.jsonl" else b""
+        with redirect_stdout(io.StringIO()):
+            self.assertEqual(trial.step("collect", trial.collect), "passed")
+        kept = trial.ev.directory / "steps" / "01-collect" / f"owner-port-hold-{RID}.jsonl"
+        self.assertEqual(kept.read_bytes(), raw)
+        self.assertIn(f"steps/01-collect/owner-port-hold-{RID}.jsonl", trial.ev.files)     # hashed in SHA256SUMS
+        checks = trial.steps[-1]["checks"]["port_hold_events"]
+        self.assertEqual((checks["events"], checks["guest_sha256"]), (2, hashlib.sha256(raw).hexdigest()))
+        # A good cell has no hold: nothing is read.
+        other = CollectAfterEarlyStopTests.Fake(tempfile.mkdtemp(dir=directory.name), None)
+        other.state.update(request_id=RID, helpers_uploaded=True)
+        other.observer_events = lambda: []
+        other.lab_event_bytes = lambda name: self.fail("no hold in a good cell")
+        with redirect_stdout(io.StringIO()):
+            other.step("collect", other.collect)
+        self.assertNotIn("port_hold_events", other.steps[-1]["checks"])
+
+
+# upd4 F4 / F5: the real-start cells' own kind observations (upd4-20261001 <cell>/run-a/steps/16-kind-expectation).
+UPD4_F4 = {"final": None,
+           "track_stop": {"rule": "settled-failed-before-change", "seconds": 606.3, "samples": 44, "limit_seconds": 600.0,
+                          "status": {"phase": "failed", "terminal_proof": "none", "reason": "update_failed",
+                                     "previous_failure": "update_failed", "failure_code": None,
+                                     "first_failure_code": None, "automatic_recovery": None, "waiting_for": None}},
+           "update_failure_codes": ["update_failed"],
+           "update_failure_lines": [{"code": "update_failed", "state": "unchanged",
+                                     "reason": "panel service operations are not idle; update refused; quiesce was "
+                                               "safely aborted, rerun the exact trusted update"}],
+           "check_reasons": [], "sidecar": {"present": False, "valid": False, "code": None},
+           "completion_marker_seen": False, "receipt_dispatches": None, "installed": "baseline",
+           "database": "equal-except-volatile", "printed_retry_command": None, "owner_retry_run": False,
+           "web_keys_missing": [], "cli": None, "outcome": "not-terminal", "panel_verdict": "never-down",
+           "workloads": {"cron": "never-interrupted", "dns": "not-provided-external-dns", "smtp": "never-interrupted",
+                         "web": "never-interrupted"}}
+UPD4_F5 = dict(UPD4_F4, track_stop=None,
+               final={"observation": "known", "observed_at": "2026-10-01T00:49:53Z", "phase": "recovered",
+                      "previous_failure": "update_failed", "reason": "rollback_verified",
+                      "request_id": "b29e0eb359bcd19027b7fe4aa28ae9c9", "schema": "celikpanel-recovery-status/v1",
+                      "terminal_proof": "rollback_verified"},
+               update_failure_lines=[{"code": "update_failed", "state": "recovery_required",
+                                      "reason": "transaction-consistent panel database snapshot failed"}],
+               receipt_dispatches=[{"attempt": "1", "direction": "rollback", "operation": "update", "phase": "active"}],
+               outcome="real-start-candidate-rolled-back", panel_verdict="came-back")
+
+
+class KindNotReachedTests(unittest.TestCase):
+    """A start kind whose candidate never ran is not measured: the cell says so instead of judging the kind."""
+
+    def test_both_upd4_real_start_stops_are_not_measured(self):
+        for name, obs, shape in (("F4", UPD4_F4, "stopped-before-change"), ("F5", UPD4_F5, "rolled-back-before-candidate")):
+            with self.subTest(finding=name):
+                judged = t.judge_real_start(obs)
+                self.assertEqual((judged["verdict"], judged["findings"], judged["unknown"]),
+                                 (t.KIND_NOT_MEASURED, [], []))
+                self.assertEqual(judged["not_reached"]["shape"], shape)
+                self.assertIn("real-start not measured", judged["reason"])
+                self.assertIn("real start never ran", judged["reason"])
+                self.assertIn(obs["update_failure_lines"][0]["reason"], judged["reason"])
+                self.assertFalse(judged["native_evidence"])
+                self.assertEqual(t.expectation_step_verdict(judged), "inconclusive")
+                checked = t.judge_start_check(obs)                    # the same stop in a start-check cell
+                self.assertEqual(checked["verdict"], t.KIND_NOT_MEASURED)
+                self.assertIn("start check never ran", checked["reason"])
+
+    def test_any_sign_that_the_candidate_ran_keeps_the_kind_judged(self):
+        for change in ({"completion_marker_seen": True}, {"completion_marker_seen": None},
+                       {"update_failure_codes": [t.REAL_START_CODE]}, {"update_failure_codes": None},
+                       {"update_failure_codes": []}, {"update_failure_codes": ["update_failed", t.START_CHECK_CODE]},
+                       {"check_reasons": ["tls_pair_invalid"]}, {"check_reasons": None},
+                       {"sidecar": {"present": True, "valid": True, "code": t.REAL_START_CODE}},
+                       {"installed": "candidate"}, {"installed": None},
+                       {"receipt_dispatches": [{"operation": "update", "phase": "completion"}]},
+                       {"track_stop": None}):
+            with self.subTest(change=change):
+                for obs in (UPD4_F4, UPD4_F5):
+                    if "track_stop" in change and obs is UPD4_F5:
+                        continue
+                    self.assertNotEqual(t.judge_real_start(dict(obs, **change))["verdict"], t.KIND_NOT_MEASURED)
+        paused = dict(UPD4_F5, final=ideal_real_start(cli_texts())["final"])
+        self.assertNotEqual(t.judge_real_start(paused)["verdict"], t.KIND_NOT_MEASURED)
+        typed = dict(UPD4_F5, final=dict(UPD4_F5["final"], failure_code=t.START_CHECK_CODE))
+        self.assertNotEqual(t.judge_start_check(typed)["verdict"], t.KIND_NOT_MEASURED)
+        # The measured paths are unchanged.
+        texts = cli_texts()
+        self.assertEqual(t.judge_real_start(ideal_real_start(texts))["verdict"], "as-expected")
+        self.assertEqual(t.judge_start_check(ideal_start_check(texts))["verdict"], "as-expected")
+        self.assertIsNone(t.kind_not_reached("owner-continuation", UPD4_F4))
+
+    def trial(self, variant="real-start"):
+        trial = Upd3TrialFlowTests.trial(self, variant)
+        trial.state.update(journals={"product": "x bash[1]: !! CELIKPANEL_UPDATE_FAILURE code=update_failed "
+                                                "state=unchanged reason=panel service operations are not idle "
+                                                "detail=\n"},
+                           observation_records={"records": {}}, observer_events=[
+                               {"event": "timeline", "transaction_phase": "active"}],
+                           attempts={"automatic": []}, terminal={"installed": "baseline"},
+                           track_stop=UPD4_F4["track_stop"], final_status=None, status_samples=[],
+                           verdict_checks={"workloads": {}})
+        trial._candidate_translator = trial.translator
+        trial.load_cli_texts = lambda: dict(cli_texts(), source={"role": "test", "commit": "x"})
+        return trial
+
+    def test_the_cell_says_the_kind_was_not_measured(self):
+        trial = self.trial()
+        checks = {}
+        with self.assertRaisesRegex(t.StepInconclusive, t.KIND_NOT_REACHED_RULE + ": real-start not measured"):
+            trial.kind_expectation(checks)
+        self.assertEqual(checks["judged"]["verdict"], t.KIND_NOT_MEASURED)
+        self.assertEqual(trial.state["findings"], [])                      # nothing is said about the kind
+        # The result: overall inconclusive-kind-not-reached; the evidence writer accepts exactly that.
+        steps = [{"name": "track", "verdict": "inconclusive"}, {"name": "owner-continuation (required)",
+                                                                  "verdict": "not-run"},
+                 {"name": "verdicts", "verdict": "passed"}, {"name": "kind-expectation", "verdict": "inconclusive"}]
+        result = {"schema": t.RESULT_SCHEMA, "native_evidence": False, "steps": steps,
+                  "kind": {"judged": checks["judged"]},
+                  "overall": t.overall([s["verdict"] for s in steps], kind_not_reached=True)}
+        self.assertEqual(result["overall"], "inconclusive-kind-not-reached")
+        with tempfile.TemporaryDirectory() as directory:
+            writer = t.evidence_writer_class()(Path(directory), "upd1-debian13-realstart-20261001t120000z",
+                                               t.pair_modules()["redaction"].Redactor())
+            with self.assertRaises(ValueError):
+                writer.finalize_upd1(dict(result, overall="incomplete"))
+            self.assertEqual(writer.finalize_upd1(result)["overall"], "inconclusive-kind-not-reached")
+
+    def verdict_trial(self, panel_ok, **state):
+        trial = self.trial()
+        samples = [{"t": float(i * 5), "web": {"ok": True}, "panel": {"ok": panel_ok(i)}, "smtp": {"ok": True},
+                    "cron": {"ok": True, "mtime": float(60 * (i * 5 // 60))}} for i in range(40)]
+        trial.state.update(dict(dict(samples=samples, clock_skew=0.0, started_at=50.0, terminal_at=None,
+                                     seed={"mail": {"listed": True}}, cron_availability={"available": True},
+                                     cron_precondition=True), **state))
+        trial.host_samples = []
+        trial.dns_mode = "external"
+        return trial
+
+    def test_verdicts_judge_an_unreached_real_start_like_any_update(self):
+        # F4: the Panel was never down; the real-start rule (down until the end) would call that a failure.
+        trial = self.verdict_trial(lambda i: True)
+        checks = {}
+        self.assertEqual(trial.verdicts(checks), "passed")
+        self.assertEqual(checks["workloads"]["panel"]["verdict"], "down-only-during-transaction")
+        self.assertEqual(checks["kind_not_reached"]["shape"], "stopped-before-change")
+        # F5: down 15-25 s during the rollback and back; inside the operation.
+        trial = self.verdict_trial(lambda i: not 13 <= i <= 16, final_status=UPD4_F5["final"], terminal_at=110.0,
+                                   track_stop=None, attempts={"automatic": [{"operation": "update", "phase": "active",
+                                                                             "direction": "rollback"}]})
+        checks = {}
+        self.assertEqual(trial.verdicts(checks), "passed")
+        self.assertIn(t.KIND_NOT_REACHED_RULE, checks["workloads"]["panel"]["rule"])
+        # Once the candidate ran (completion.pending seen), the real-start rule applies again.
+        trial.state["observer_events"] = [{"event": "timeline", "transaction_phase": "completion.pending"}]
+        with self.assertRaises(t.StepFailed):
+            trial.verdicts({})
 
 
 class GuestDatabaseTests(unittest.TestCase):

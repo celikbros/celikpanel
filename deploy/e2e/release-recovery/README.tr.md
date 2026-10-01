@@ -604,6 +604,35 @@ denemesinden önce sınıra ulaşılırsa yeniden deneme reddedilir ve bu bir bu
 olur. Arch'ta kurulum MariaDB'yi kurmadan beklerse veri tabanı ölçülmez; bu
 da bulgu olarak yazılır.
 
+**upd4 denemesinden kalıcı düzeltmeler (H11-H15).** upd4'te kopya üzerinde
+yapılan veya yalnız kaydedilen düzeltmeler artık test düzeneğinin kendisidir:
+
+- **H11:** Kurtarma ekranı artık sunulan derlemenin kendi `RecoveryAccess.tsx`
+  JSX kodundan üretilir; düzen kopyalanmaz. Durum, derlemenin kendi
+  işlevlerinden geçer ve `role="status"` bölgesi kaynaktaki sırayla okunur.
+  Böylece `retry_scheduled` duraklama ekranı gibi gösterilmez ve duraklamada
+  sertifika yenileme satırı da görünür. Metinler upd4'ün
+  `h11-product-screen-texts.txt` dosyasıyla aynıdır. Kaynak değişirse veya
+  okunamazsa ekran "bilinmiyor" sayılır, bulgu sayılmaz.
+- **H12:** Yönetim geri açıldıktan sonra sahip durumu okunmadan önce Panel'in
+  `panel_state=ready` demesi beklenir. Bu bekleme salt-okurdur ve en çok 180
+  saniye sürer. Panel hazır olmazsa adım `inconclusive` olur.
+- **H13, H14:** Yalnız güncellemeyi kapsayan değerlendirme penceresi, sahibin
+  durdurma komutu verilmeden önce alınan andan bir örnek aralığı (5 s) önce
+  biter. Bir örneğin zamanı, ölçüm döngüsünün başlangıcıdır. Panel yoklaması
+  döngünün sonunda, yaklaşık 2 saniye sonra yapılır.
+- **H15:** Port tutucunun ham olay dosyası, sahip portu bıraktığında ve
+  `collect` adımında kanıta kopyalanır.
+
+**Ölçülemeyen başlangıç türleri (upd4 F4, F5).** Güncelleme, adayın başlangıç
+denetimi veya gerçek başlatması hiç çalışmadan durabilir ya da geri alınabilir.
+Bunun kanıtı şunlardır: başka bir hata kodu, başlangıç denetimi nedeninin
+olmaması, `completion.pending` görülmemesi, önceki sürümün kurulu olması ve
+yalnız geri alma dağıtımları. Bu durumda tür yargısı `not-measured` der ve bulgu
+yazmaz. Hücrenin genel sonucu `inconclusive-kind-not-reached` olur. Başarısız bir
+adım varsa sonuç yine `failed` kalır. Adayın çalıştığına dair her iz, türü
+normal biçimde değerlendirtir. Bilinmeyen kayıtlar da aynı sonucu verir.
+
 Komutlar ve hücre ayrıntıları İngilizce bölümdedir
 ([README.md](README.md#owner-started-update-acceptance-upd1)). Çevrimdışı
-testler (`test_owner_update_trial.py`, 124 test) yerel sonucu kanıtlamaz.
+testler (`test_owner_update_trial.py`, 140 test) yerel sonucu kanıtlamaz.

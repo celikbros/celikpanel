@@ -696,7 +696,7 @@ behaviour with offline tests:
 | --- | --- |
 | H8 | Named rule `settled-failed-before-change` (`SettledFailure`): `track` stops after **600 s over at least 3 reads** of an unchanged known status `failed`/`none` with no `automatic_recovery` and no `waiting_for` (every field of the status unchanged; any change or any recovery activity restarts the clock). The step is `inconclusive`; the reason names the rule, and `checks.settled_failure` / `outcome.track_stop` record the status, seconds and reads. Upd3 cell 1 would have ended after 10 min instead of 90. |
 | H9 | Planner's rule (`dispatch_direction`): a dispatch receipt is a **rollback** when it says `operation=rollback` in any phase, or `operation=update phase=active`; `operation=update phase=completion` (or `completion-scheduler`) is **forward**; anything else is `unknown`. In a start-check cell a forward attempt is a finding; unknown ones leave the rule unknown. The arch-startcheck pair `update/active` + `rollback/completion` is a rollback. The real-start judge uses the same rule for "forward only". |
-| H10 | The update card and the recovery screen follow the **product build's current code**: `web_source_eval.py` reads the build's `web/src/lib/systemUpdateOutcome.ts`, `recoveryObservation.ts` and `systemUpdateFailure.ts` and evaluates `failedUpdateGuidance`, `parseRecoveryObservation`, `recoveryFailureGuidanceKey` and `systemUpdateFailureMessage` themselves (a strict TypeScript subset; no copy of their rules). The component's outer selection (found/succeeded/running/failed) and the recovery screen's JSX layout are mirrored; the screen's `recovery.automatic.cause.<code>` line is taken when the build's `RecoveryAccess.tsx` has it. Texts come from the served build's catalogues (baseline after a rollback, the candidate otherwise). `judge_update_card` fails only on a real mismatch: a key the catalogue lacks, an unfilled placeholder, or a card state contradicting the cell's server record. A source the evaluator cannot read gives `unknown`, never a finding; the server-reported line (O6) is recorded, not judged. The old "summary verbatim" finding is gone. |
+| H10 | The update card and the recovery screen follow the **product build's current code**: `web_source_eval.py` reads the build's `web/src/lib/systemUpdateOutcome.ts`, `recoveryObservation.ts` and `systemUpdateFailure.ts` and evaluates `failedUpdateGuidance`, `parseRecoveryObservation`, `recoveryFailureGuidanceKey` and `systemUpdateFailureMessage` themselves (a strict TypeScript subset; no copy of their rules). The card component's outer selection (found/succeeded/running/failed) is mirrored; the recovery screen is rendered from the build's own JSX since H11 (below). Texts come from the served build's catalogues (baseline after a rollback, the candidate otherwise). `judge_update_card` fails only on a real mismatch: a key the catalogue lacks, an unfilled placeholder, or a card state contradicting the cell's server record. A source the evaluator cannot read gives `unknown`, never a finding; the server-reported line (O6) is recorded, not judged. The old "summary verbatim" finding is gone. |
 | sidecar v2 | The driver's own read-only inspections (`guest_upd1_workload.py inspect`): the hosting-root light series every 30 s while setup runs, then `after-setup`, `after-seed`, `before-check`, and after a terminal, paused or settled state (`after-track`/`at-pause`, `after-continuation`, `after-terminal`, and the management-off points). `inspection_allowed` refuses any inspection between the update check (or the owner's retry) and the next terminal, paused or settled state, so none overlaps the update preflight; the v1 `pre-update` point is gone. `getent` exit code 2 is `not-found`, never a probe failure (`getent_outcome`, also in `origin_verdict`); no command's exit status can lose an inspection. |
 
 ### upd4 cells: the owner's continuation and management off
@@ -779,10 +779,44 @@ bash deploy/e2e/release-recovery/run-upd1.sh cell upd1-arch-mgmt-off-reboot "$AR
 ```
 
 Evidence per cell as before (`<lab>/evidence/<node>/upd1/<cell>-<utc>/`), plus
-`inspect-<point>-NN.json`, the hold's `owner-port-hold-<request>.jsonl` (guest
-private root), `panel-log-at-pause.txt`, `recovery-journal-at-pause.txt`,
-`workload-at-pause.json`, `panel-truth-*.json` and
-`journal-product-before-reboot.txt`.
+`inspect-<point>-NN.json`, the hold's raw `owner-port-hold-<request>.jsonl`
+(copied from the guest's private root into the owner-continuation step when the
+owner releases the hold and into `collect`, H15), `panel-log-at-pause.txt`,
+`recovery-journal-at-pause.txt`, `workload-at-pause.json`, `panel-truth-*.json`
+and `journal-product-before-reboot.txt`.
+
+### Corrections from the upd4 run (H11-H15) and unmeasured start kinds
+
+From [evidence/upd4-20261001](evidence/upd4-20261001/README.md), where H12-H14
+were run-copy diffs and H11 and H15 were recorded; now harness behaviour with
+offline tests:
+
+| Id | Now | Why |
+| --- | --- | --- |
+| H11 | The recovery screen is rendered from the served build's own `RecoveryAccess.tsx`. `web_source_eval.py` reads JSX (elements, fragments, text with JSX whitespace rules, `{expression}` children, the TypeScript `x!`) and finds the one JSX tree `RecoveryStatus` returns and its `role="status"` region (`parse_screen_source`). `recovery_guidance` passes the status through the build's `parseRecoveryObservation` and `reconcileRecoveryObservation` as a freshly opened screen does, then evaluates the region with the build's functions (`retryingCauseKey`, `recoveryFailureGuidanceKey`) and the served catalogue: one line per `<p>`/`<pre>` in source order, `keys` every key looked up. Fixed inputs: the read has settled, and the observed-at line (browser locale time) is left out. No layout is copied, so nothing has to be kept in step with the product. A missing component or region, a component or other element inside the region, or any construct outside the evaluator's subset makes the screen `unavailable`: unknown, never a finding (`web_keys_missing` is then unknown in the kind judges). The Python mirror of 94be6b6e is gone. | The mirror showed `retry_scheduled` as the paused screen and left out the renewal line at the pause. The rendered texts now equal `h11-product-screen-texts.txt` for both states. |
+| H12 | `management-return` reads the exact request's recovery status (read-only, every 3 s, at most 180 s) until `panel_state=ready`, then compares the owner state. If it is never ready, the step is `inconclusive` and the judge's `management-returned` rule is unknown. | Right after login the Panel still answered 503 `PANEL_STARTING`, and every compared field read as empty (d13 run-a). |
+| H13 | `management_off_at` is taken before `systemctl disable --now` is issued; the completion is kept as `management_off_done_at`. | The instant taken after the command returned counted the owner's own stop as a Panel outage (d13 run-a). |
+| H14 | The update-only verdict window ends one sample interval (5 s) before that instant, for the guest and the host series. The test that pinned the old cut now expects 19 samples instead of 20. | A sample's `t` is the start of its sampler cycle, and its Panel probe runs last in the cycle, about 2 s later on an external-DNS node. The cycle that started 1.85 s before the stop probed the Panel after it (arch run-a). |
+| H15 | The raw port-hold events file is copied into the evidence (listed in `SHA256SUMS`) by the owner-continuation step when it releases the hold and again by `collect`. | Only its summary was kept; the raw file stayed in the stopped overlays. |
+
+**Start kinds that were not reached (upd4 F4, F5).** `kind_not_reached` uses
+positive evidence only. The update's failure line was read and names another
+code. There is no start-check reason and no sidecar naming a start kind. The
+observer saw no `completion.pending` (`false`, not unknown). The previous release
+is installed. Every automatic dispatch is a rollback. The request ended in one
+of two shapes: stopped before change (the H8 rule on an unchanged
+`failed`/`none` status, F4) or `recovered`/`rollback_verified` without a
+start-kind code (F5). When all of these hold, the start-check and real-start
+judges answer `not-measured` with the reason, judge no rule and report no
+finding. The `kind-expectation` step is `inconclusive`
+(`kind-not-reached: ...`), and the cell's `overall` is
+**`inconclusive-kind-not-reached`**, unless a step failed. `result.kind.measured`
+is `false`. For a real-start cell in that case, `verdicts` uses the ordinary
+Panel rule (down only during the operation) instead of "down until the end".
+Any sign that the candidate ran keeps the kind judged normally: a start-kind
+code, a start-check reason, `completion.pending`, the candidate installed, or a
+forward dispatch. So does any unknown record. The product's own stop is still
+recorded by the run (journal, track stop, outcome).
 
 ### Offline checks
 
@@ -791,7 +825,7 @@ python3 -m unittest deploy/e2e/release-recovery/test_owner_update_trial.py -v
 python3 -m unittest deploy/e2e/release-recovery/test_recovery_candidate_archive.py -v
 ```
 
-`test_owner_update_trial.py` has 124 offline tests. They cover:
+`test_owner_update_trial.py` has 140 offline tests. They cover:
 
 - plan validation and dry run, fixture policy/defect and the acceptance-notice
   exemption;
@@ -832,7 +866,20 @@ python3 -m unittest deploy/e2e/release-recovery/test_recovery_candidate_archive.
   the four upd4 cells (also through the wrapper), both new judges, the owner
   continuation order (panel log, printed retry read, port released, retry run
   once), the management-off rules and steps, the update-only verdict window and
-  the guest database helpers.
+  the guest database helpers;
+- the upd4 corrections: H11 (the `retry_scheduled` and paused screens equal to
+  `h11-product-screen-texts.txt` while the catalogue keeps that wording, with
+  the renewal line at the pause; the same observations on the card; line order
+  following an edited JSX source; a removed region, a component inside it, a
+  renamed component or an empty source giving unknown; the JSX subset and return
+  types with object shapes), H12 (ready after a 503 and a `starting` read, then
+  the owner state; never ready gives unknown), H13 (the instant before the
+  command), H14 (19 samples, and the upd4 cycle that started before the stop
+  left out, guest and host), H15 (the raw events file kept at the release and by
+  `collect`), and the unmeasured start kinds (F4 and F5 records as
+  `not-measured` for both judges, every sign of a running candidate keeping the
+  judge, the step `inconclusive`, `overall` `inconclusive-kind-not-reached`
+  accepted by the evidence writer, and the ordinary Panel rule in `verdicts`).
 
 `ArtifactProofTests` builds three synthetic archives with `dns-owner-tools/`
 in a temporary Git repository and proves them with `prove`; a second test

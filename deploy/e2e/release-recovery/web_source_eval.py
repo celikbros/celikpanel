@@ -23,10 +23,24 @@ Anything outside the subset raises ``Unsupported``; the driver then records
 the card as *not modelled* (unknown), never as a mismatch. No code is executed
 other than these interpreted expressions; nothing is imported or evaluated by
 Python's ``eval``.
+
+H11 (upd4): the recovery screen (``RecoveryStatus`` in ``RecoveryAccess.tsx``)
+is JSX, so the same subset reads JSX expressions too (``tokenize(..., jsx=True)``):
+elements, fragments, string and expression attributes (attributes are kept,
+never evaluated), text children (JSX whitespace rules, HTML entities) and
+``{expression}`` children, plus the TypeScript non-null ``x!``.
+``component_return_jsx`` finds the one JSX tree a component returns,
+``find_elements`` the region the driver reads (``role="status"``) and
+``render_region`` evaluates that region with the build's own functions and
+returns its visible lines in source order: one line per block element (``p``,
+``pre``, headings), inline elements (``span``, ``code``, ``time`` ...) joined
+into their line. A component (capitalised tag) or any other element inside the
+region is ``Unsupported``: the screen is then *not modelled*, never a mismatch.
 """
 from __future__ import annotations
 
 import datetime as dt
+import html
 import math
 import re
 from typing import Any
@@ -51,17 +65,41 @@ PUNCTUATORS = sorted(["...", "===", "!==", "=>", "==", "!=", "<=", ">=", "&&", "
                       "=", ".", "&", "|", "@", "/", "^", "~"], key=len, reverse=True)
 KEYWORDS = {"const", "let", "var", "if", "else", "return", "throw", "function", "new", "typeof", "true", "false",
             "null", "undefined", "as", "export", "import", "type", "readonly"}
+NON_NULL_FOLLOWERS = {")", "]", ",", ";", "}", ".", "?.", ":", None}
 REGEX_PRECEDERS = {"(", ",", "=", ":", "[", "!", "&&", "||", "??", "?", "{", "}", ";", "return", "===", "!==",
                    "==", "!=", "+", "-", "typeof"}
 
 
 # -- tokenizer --------------------------------------------------------------------
 
-def tokenize(source: str) -> list[tuple[str, Any]]:
+JSX_PRECEDERS = {"(", ",", "=", ":", "[", "?", "{", "&&", "||", "??", "return", "=>"}
+
+
+def tokenize(source: str, jsx: bool = False) -> list[tuple[str, Any]]:
+    """Tokens of ``source``; with ``jsx`` a JSX element in expression position is one ``("jsx", tree)`` token."""
+    tokens, _ = _tokens(source, 0, jsx=jsx, until_brace=False)
+    tokens.append(("eof", None))
+    return tokens
+
+
+def _tokens(source: str, i: int, *, jsx: bool, until_brace: bool) -> tuple[list[tuple[str, Any]], int]:
+    """Tokens from ``i``; with ``until_brace`` up to the ``}`` closing an already opened ``{`` (returned past it)."""
     tokens: list[tuple[str, Any]] = []
-    i, n = 0, len(source)
+    n = len(source)
+    depth = 0
     while i < n:
         c = source[i]
+        if until_brace and c == "}" and depth == 0:
+            return tokens, i + 1
+        if c == "{":
+            depth += 1
+        elif c == "}":
+            depth -= 1
+        if (jsx and c == "<" and i + 1 < n and (source[i + 1].isalpha() or source[i + 1] == ">")
+                and (not tokens or tokens[-1][0] in ("punct", "kw") and tokens[-1][1] in JSX_PRECEDERS)):
+            tree, i = _jsx_element(source, i)
+            tokens.append(("jsx", tree))
+            continue
         if c.isspace():
             i += 1
             continue
@@ -108,7 +146,7 @@ def tokenize(source: str) -> list[tuple[str, Any]]:
             tokens.append(("template", parts))
             i = j + 1
             continue
-        if c == "/" and (not tokens or tokens[-1][1] in REGEX_PRECEDERS and tokens[-1][0] in ("punct", "kw")):
+        if c == "/" and (not tokens or tokens[-1][0] in ("punct", "kw") and tokens[-1][1] in REGEX_PRECEDERS):
             j, in_class = i + 1, False
             while j < n:
                 ch = source[j]
@@ -146,8 +184,111 @@ def tokenize(source: str) -> list[tuple[str, Any]]:
                 break
         else:
             raise Unsupported(f"unexpected character {c!r}")
-    tokens.append(("eof", None))
-    return tokens
+    if until_brace:
+        raise Unsupported("unterminated JSX expression")
+    return tokens, i
+
+
+JSX_NAME = re.compile(r"[A-Za-z_$][A-Za-z0-9_$.:-]*")
+
+
+def _jsx_element(source: str, i: int) -> tuple[dict, int]:
+    """One JSX element or fragment starting at ``source[i] == "<"``; returns its tree and the index after it.
+
+    Tree: ``{"tag": name | None (fragment), "attrs": {name: ("str", text) | ("tokens", [...]) | ("bool", True)},
+    "children": [("text", raw) | ("expr", [tokens]) | ("element", tree)]}``.
+    """
+    n = len(source)
+    i += 1
+    attrs: dict[str, tuple] = {}
+    if source[i] == ">":
+        tag, i = None, i + 1
+    else:
+        match = JSX_NAME.match(source, i)
+        if not match:
+            raise Unsupported("JSX tag name")
+        tag, i = match.group(0), match.end()
+        while True:
+            while i < n and source[i].isspace():
+                i += 1
+            if source.startswith("/>", i):
+                return {"tag": tag, "attrs": attrs, "children": []}, i + 2
+            if i >= n:
+                raise Unsupported("unterminated JSX tag")
+            if source[i] == ">":
+                i += 1
+                break
+            if source[i] == "{":
+                tokens, i = _tokens(source, i + 1, jsx=True, until_brace=True)
+                attrs["..." + str(len(attrs))] = ("tokens", tokens)
+                continue
+            match = JSX_NAME.match(source, i)
+            if not match:
+                raise Unsupported(f"JSX attribute at {source[i:i + 12]!r}")
+            name, i = match.group(0), match.end()
+            while i < n and source[i].isspace():
+                i += 1
+            if i < n and source[i] == "=":
+                i += 1
+                while i < n and source[i].isspace():
+                    i += 1
+                if i < n and source[i] in "'\"":
+                    end = source.find(source[i], i + 1)
+                    if end < 0:
+                        raise Unsupported("unterminated JSX attribute string")
+                    attrs[name] = ("str", html.unescape(source[i + 1:end]))
+                    i = end + 1
+                elif i < n and source[i] == "{":
+                    tokens, i = _tokens(source, i + 1, jsx=True, until_brace=True)
+                    attrs[name] = ("tokens", tokens)
+                else:
+                    raise Unsupported(f"JSX attribute value of {name}")
+            else:
+                attrs[name] = ("bool", True)
+    children: list[tuple] = []
+    while True:
+        if i >= n:
+            raise Unsupported(f"unclosed JSX element {tag}")
+        if source.startswith("</", i):
+            j = i + 2
+            match = JSX_NAME.match(source, j)
+            closing = match.group(0) if match else None
+            j = match.end() if match else j
+            while j < n and source[j].isspace():
+                j += 1
+            if closing != tag or j >= n or source[j] != ">":
+                raise Unsupported(f"JSX closing tag {closing!r} for {tag!r}")
+            return {"tag": tag, "attrs": attrs, "children": children}, j + 1
+        if source[i] == "<":
+            child, i = _jsx_element(source, i)
+            children.append(("element", child))
+            continue
+        if source[i] == "{":
+            tokens, i = _tokens(source, i + 1, jsx=True, until_brace=True)
+            children.append(("expr", tokens))
+            continue
+        j = i
+        while j < n and source[j] not in "<{":
+            j += 1
+        children.append(("text", source[i:j]))
+        i = j
+
+
+def clean_jsx_text(raw: str) -> str:
+    """JSX text as React renders it (Babel's rule): lines trimmed at their inner edges, blank lines dropped,
+    the remaining lines joined by one space; HTML entities decoded."""
+    lines = re.split(r"\r\n|\n|\r", raw)
+    last_non_empty = max((index for index, line in enumerate(lines) if line.strip(" \t")), default=-1)
+    out = []
+    for index, line in enumerate(lines):
+        text = line.replace("\t", " ")
+        if index != 0:
+            text = text.lstrip(" ")
+        if index != len(lines) - 1:
+            text = text.rstrip(" ")
+        if text:
+            out.append(text if index == last_non_empty else text + " ")
+    return html.unescape("".join(out))
 
 
 # -- parser -------------------------------------------------------------------------
@@ -346,6 +487,9 @@ class Parser:
                 expr = ("index", expr, index, False)
             elif k == "punct" and v == "(":
                 expr = ("call", expr, self.arguments())
+            elif (k == "punct" and v == "!" and self.peek(1)[0] in ("punct", "eof")
+                  and self.peek(1)[1] in NON_NULL_FOLLOWERS):
+                self.eat()        # TypeScript non-null assertion ``x!``: no runtime effect
             else:
                 return expr
 
@@ -381,6 +525,9 @@ class Parser:
         if k == "regex":
             self.i += 1
             return ("regex", v[0], v[1])
+        if k == "jsx":
+            self.i += 1
+            return ("jsx", v)
         if k == "kw" and v in ("true", "false"):
             self.i += 1
             return ("lit", v == "true")
@@ -609,9 +756,7 @@ class Module:
                 name = tokens[i + 1][1]
                 close = self._close(tokens, i + 2)
                 params = self._param_names(tokens[i + 3:close])
-                body = close + 1
-                while tokens[body][0] != "eof" and tokens[body] != ("punct", "{"):
-                    body += 1
+                body = self._body_start(tokens, close)
                 end = self._close(tokens, body)
                 self.functions[name] = ("tokens", params, tokens[body:end + 1] + [("eof", None)])
                 i = end + 1
@@ -632,6 +777,69 @@ class Module:
                 i = k
                 continue
             i += 1
+
+    @classmethod
+    def _body_start(cls, tokens: list, close: int) -> int:
+        """Index of a function body's ``{`` after its parameter list, past a return type annotation (which may
+        itself be an object type such as ``{ record: X; unavailable: boolean }``)."""
+        body = close + 1
+        if tokens[body] == ("punct", ":"):
+            end = cls._type_end(tokens, body + 1)
+            if end is not None and tokens[end] == ("punct", "{"):
+                return end
+        while tokens[body][0] != "eof" and tokens[body] != ("punct", "{"):
+            body += 1
+        return body
+
+    @classmethod
+    def _type_end(cls, tokens: list, i: int) -> int | None:
+        """Index after one TypeScript type at ``i``: unions and intersections of names (dotted, generic), literal,
+        object, tuple, parenthesised and function types, array suffixes and ``x is T`` predicates; ``None`` when
+        the type is not of that shape."""
+        try:
+            while True:
+                kind, value = tokens[i]
+                if (kind == "kw" and value in ("readonly", "typeof")) or (kind == "name" and value == "keyof"):
+                    i += 1
+                    continue
+                if kind == "punct" and value in ("{", "["):
+                    i = cls._close(tokens, i) + 1
+                elif kind == "punct" and value == "(":
+                    i = cls._close(tokens, i) + 1
+                    if tokens[i] == ("punct", "=>"):
+                        i += 1
+                        continue
+                elif kind in ("name", "str", "num") or (kind == "kw" and value in ("null", "undefined", "true",
+                                                                                      "false")):
+                    i += 1
+                    while tokens[i] == ("punct", ".") and tokens[i + 1][0] == "name":
+                        i += 2
+                    if tokens[i] == ("punct", "<"):
+                        depth = 0
+                        while True:
+                            k, v = tokens[i]
+                            if k == "eof":
+                                return None
+                            if k == "punct" and v == "<":
+                                depth += 1
+                            elif k == "punct" and v == ">":
+                                depth -= 1
+                            i += 1
+                            if depth == 0:
+                                break
+                    if tokens[i] == ("name", "is"):
+                        i += 1
+                        continue
+                else:
+                    return None
+                while tokens[i] == ("punct", "[") and tokens[i + 1] == ("punct", "]"):
+                    i += 2
+                if tokens[i][0] == "punct" and tokens[i][1] in ("|", "&"):
+                    i += 1
+                    continue
+                return i
+        except (IndexError, Unsupported):
+            return None
 
     @staticmethod
     def _close(tokens: list, start: int) -> int:
@@ -842,4 +1050,131 @@ def evaluate(node, scopes: list[dict], module: Module) -> Any:
         if node[1] == "Error":
             return {"message": evaluate(node[2][0], scopes, module) if node[2] else ""}
         raise Unsupported(f"new {node[1]}")
+    if kind == "jsx":
+        return render_element(node[1], scopes, module)
     raise Unsupported(f"expression {kind}")
+
+
+# -- JSX (H11: the recovery screen) ---------------------------------------------------------
+
+class JSXNode:
+    """A rendered element: its tag, its string attributes and its evaluated children."""
+
+    def __init__(self, tag: str | None, attrs: dict, children: list) -> None:
+        self.tag, self.attrs, self.children = tag, attrs, children
+
+
+BLOCK_TAGS = frozenset({"p", "pre", "h1", "h2", "h3", "h4", "li", "dt", "dd"})
+CONTAINER_TAGS = frozenset({None, "div", "section", "ul", "ol", "dl", "main", "header", "footer", "article", "nav"})
+INLINE_TAGS = frozenset({"span", "code", "time", "strong", "em", "b", "i", "kbd", "small", "abbr", "a"})
+
+
+def _expression_tokens(tokens: list) -> Any:
+    parser = Parser(list(tokens) + [("eof", None)])
+    expr = parser.expression()
+    if parser.peek()[0] != "eof":
+        raise Unsupported(f"JSX expression continues after {parser.peek()[1]!r}")
+    return expr
+
+
+def render_element(tree: dict, scopes: list[dict], module: "Module") -> JSXNode:
+    """Evaluate one JSX tree in ``scopes``: text cleaned, ``{expr}`` children evaluated (in source order),
+    attributes kept only when they are strings (expression attributes are never evaluated)."""
+    children: list = []
+    for kind, value in tree["children"]:
+        if kind == "text":
+            text = clean_jsx_text(value)
+            if text:
+                children.append(text)
+        elif kind == "element":
+            children.append(render_element(value, scopes, module))
+        elif value:                         # ``{/* comment */}`` has no tokens and renders nothing
+            children.append(evaluate(_expression_tokens(value), scopes, module))
+    attrs = {name: value for name, (kind, value) in tree["attrs"].items() if kind == "str"}
+    return JSXNode(tree["tag"], attrs, children)
+
+
+def _flatten(value: Any) -> list[tuple[str, str]]:
+    """React's output of one child as ("inline", text) and ("block", text) parts."""
+    if value is None or isinstance(value, bool) or value == "":
+        return []
+    if isinstance(value, (str, int, float)):
+        return [("inline", to_string(value))]
+    if isinstance(value, list):
+        return [part for item in value for part in _flatten(item)]
+    if not isinstance(value, JSXNode):
+        raise Unsupported(f"JSX child of type {type(value).__name__}")
+    tag = value.tag
+    if tag is not None and tag[:1].isupper():
+        raise Unsupported(f"component <{tag}> inside the rendered region")
+    parts = [part for child in value.children for part in _flatten(child)]
+    if tag in CONTAINER_TAGS:
+        return parts
+    if any(kind == "block" for kind, _ in parts):
+        raise Unsupported(f"block content inside <{tag}>")
+    text = "".join(text for _, text in parts)
+    if tag in INLINE_TAGS:
+        return [("inline", text)]
+    if tag in BLOCK_TAGS:
+        return [("block", text)]
+    raise Unsupported(f"element <{tag}> inside the rendered region")
+
+
+def jsx_lines(value: Any) -> list[str]:
+    """The visible lines of a rendered value: each block element one line, adjacent inline content one line."""
+    lines: list[str] = []
+    inline: list[str] = []
+    for kind, text in _flatten(value):
+        if kind == "inline":
+            inline.append(text)
+            continue
+        if inline:
+            lines.append("".join(inline))
+            inline = []
+        lines.append(text)
+    if inline:
+        lines.append("".join(inline))
+    return [line.strip() for line in lines if line.strip()]
+
+
+def component_return_jsx(source: str, name: str) -> dict:
+    """The JSX tree returned by the top-level ``function NAME`` of a ``.tsx`` source (its one ``return <...>``)."""
+    tokens = tokenize(source, jsx=True)
+    starts = [i for i in range(len(tokens) - 1) if tokens[i] == ("kw", "function") and tokens[i + 1] == ("name", name)]
+    if len(starts) != 1:
+        raise Unsupported(f"component {name} found {len(starts)} times")
+    close = Module._close(tokens, starts[0] + 2)
+    body = close + 1
+    while tokens[body][0] != "eof" and tokens[body] != ("punct", "{"):
+        body += 1
+    end = Module._close(tokens, body)
+    found, depth = [], 0
+    for index in range(body + 1, end):
+        kind, value = tokens[index]
+        if kind == "punct" and value in ("{", "(", "["):
+            depth += 1
+        elif kind == "punct" and value in ("}", ")", "]"):
+            depth -= 1
+        elif depth == 0 and (kind, value) == ("kw", "return") and tokens[index + 1][0] == "jsx":
+            found.append(tokens[index + 1][1])
+    if len(found) != 1:
+        raise Unsupported(f"component {name} returns JSX {len(found)} times at its top level")
+    return found[0]
+
+
+def find_elements(tree: dict, attribute: str, value: str) -> list[dict]:
+    """Every element (also inside ``{expression}`` children and conditionals) with ``attribute="value"``."""
+    found = [tree] if tree["attrs"].get(attribute) == ("str", value) else []
+    for kind, child in tree["children"]:
+        if kind == "element":
+            found += find_elements(child, attribute, value)
+        elif kind == "expr":
+            for token_kind, token in child:
+                if token_kind == "jsx":
+                    found += find_elements(token, attribute, value)
+    return found
+
+
+def render_region(region: dict, variables: dict, module: "Module") -> list[str]:
+    """The lines one region of a component shows for ``variables`` (its state and ``t``), in source order."""
+    return jsx_lines(render_element(region, [dict(variables)], module))
