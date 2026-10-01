@@ -150,8 +150,10 @@ class Upd9PackageKitTests(unittest.TestCase):
         for path in t.PK_LOCK_PATHS:
             self.assertIn(f'"{path}"', agent)
             self.assertIn(f'"{path}"', t.PK_PROBE)
-        self.assertIn("/libpk_backend_aptcc.so", agent)
-        self.assertIn("/libpk_backend_aptcc.so", t.PK_PROBE)
+        # upd10: the probe reads the backend as c855a757 does (directory packagekit-backend, both module names).
+        for name in ('"libpk_backend_apt.so"', '"libpk_backend_aptcc.so"', '"packagekit-backend"'):
+            self.assertIn(name, agent)
+            self.assertIn(name, t.PK_PROBE)
         compile(t.PK_PROBE, "pk-probe", "exec")
         if sys.platform == "linux":
             done = subprocess.run([sys.executable, "-I", "-c", t.PK_PROBE], capture_output=True, text=True, timeout=60)
@@ -159,6 +161,31 @@ class Upd9PackageKitTests(unittest.TestCase):
             value = json.loads(done.stdout)
             self.assertIn(value["rule"], ("idle", "busy"))
             self.assertIsInstance(value["packagekitd"], list)
+            self.assertIsInstance(value["context_processes"], list)
+
+    def test_probe_backend_rule_matches_the_agent_cases(self):
+        """upd10: PK_BACKEND_RULE on the pathnames of the Agent's own test cases (upd9 Ubuntu probe and the rest)."""
+        rule: dict = {}
+        exec(t.PK_BACKEND_RULE, rule)  # noqa: S102 - the probe's own text, executed as the guest does
+        base = "/usr/lib/x86_64-linux-gnu/packagekit-backend/"
+
+        def maps(*paths):
+            return "\n".join(f"7f00{i:04x}000-7f00{i:04x}fff r-xp 00000000 fc:01 {100 + i}                    {p}"
+                             for i, p in enumerate(paths)) + "\n7ffd0000-7ffd1000 rw-p 00000000 00:00 0 \n"
+
+        ubuntu = maps("/usr/lib/x86_64-linux-gnu/libapt-pkg.so.6.0.0", base + "libpk_backend_apt.so",
+                      "/usr/libexec/packagekitd")
+        self.assertEqual(rule["backend_pathnames"](ubuntu), [base + "libpk_backend_apt.so"])
+        self.assertTrue(rule["apt_backend_only"](rule["backend_pathnames"](ubuntu)))
+        self.assertTrue(rule["apt_backend_only"](rule["backend_pathnames"](maps(base + "libpk_backend_aptcc.so"))))
+        for busy in (maps(base + "libpk_backend_dnf.so"), maps(base + "libpk_backend_apt.so", base + "libpk_backend_test_spawn.so"),
+                     maps(base + "libpk_backend_apt.so (deleted)"), maps("/usr/lib/x86_64-linux-gnu/libpk_backend_apt.so"),
+                     maps("/usr/lib/x86_64-linux-gnu/packagekit-backend/../packagekit-backend/libpk_backend_apt.so"),
+                     maps("/usr/libexec/packagekitd"), ""):
+            self.assertFalse(rule["apt_backend_only"](rule["backend_pathnames"](busy)), busy)
+        self.assertEqual(rule["maps_pathname"]("7ffd0000-7ffd1000 rw-p 00000000 00:00 0"), "")
+        self.assertEqual(rule["maps_pathname"]("5-6 r-xp 0 fc:01 9   /opt/a b/packagekit-backend/x.so "),
+                         "/opt/a b/packagekit-backend/x.so")
 
     def test_busy_command_is_download_only_and_bounded(self):
         command = t.busy_op_command("golang-1.22-src", 80)
@@ -170,8 +197,10 @@ class Upd9PackageKitTests(unittest.TestCase):
                 t.busy_op_command(*bad)
 
     def test_pk_summary_counts_bracketed_answers(self):
-        idle = {"packagekitd": [{"pid": 7, "grep_c_aptcc": 6, "children": []}], "rule": "idle", "lock_lines": [],
-                "other_package_processes": []}
+        idle = {"packagekitd": [{"pid": 7, "grep_c_aptcc": 6, "children": [], "apt_backend": True,
+                                 "backend_pathnames": ["/usr/lib/packagekit-backend/libpk_backend_apt.so"]}],
+                "rule": "idle", "lock_lines": [], "other_package_processes": [],
+                "context_processes": [{"pid": 9, "comm": "unattended-upgr"}]}
         records = [{"before": idle, "after": idle, "readiness": {"body": {"ready": True}, "answered_by": "agent"}},
                    {"before": idle, "after": idle,
                     "readiness": {"body": {"ready": False, "code": "HOST_MUTATION_BUSY",
@@ -183,6 +212,9 @@ class Upd9PackageKitTests(unittest.TestCase):
                          {"agent_ready": 1, "agent_package_manager_active": 0, "agent_other": 0, "panel_answered": 1})
         self.assertEqual(got["readiness"], {"ready": 2, "HOST_MUTATION_BUSY/panel_operation_active": 1})
         self.assertEqual(got["grep_c_aptcc"], [6, None])
+        self.assertEqual(got["backend_pathnames_seen"], ["/usr/lib/packagekit-backend/libpk_backend_apt.so"])
+        self.assertEqual(got["apt_backend"], [True, None])
+        self.assertEqual(got["context_processes_seen"], ["unattended-upgr"])
 
 
 class PlanTests(unittest.TestCase):

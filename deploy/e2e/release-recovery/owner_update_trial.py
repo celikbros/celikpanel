@@ -178,15 +178,49 @@ def host_package_manager_waits(node: str) -> bool:
     return node in HOST_IDLE_NODES
 
 
-# upd9: what the Agent's rule (efcba145 cmd/agent/service_mutation_lock_linux.go packageKitDaemonProvablyIdle) reads,
+# upd9: what the Agent's rule (cmd/agent/service_mutation_lock_linux.go packageKitDaemonProvablyIdle) reads,
 # read here from /proc only (no lock is taken, PackageKit is never contacted): per packagekitd its APT backend in
-# maps (grep -c aptcc), its children, and the /proc/locks lines on the four apt/dpkg lock files or owned by it;
-# plus every other package-manager process name of the Agent's list. "rule" is this probe's reading of the rule;
-# the Agent's own answer is the readiness API read next to it.
+# maps, its children, and the /proc/locks lines on the four apt/dpkg lock files or owned by it; plus every other
+# package-manager process name of the Agent's list. upd10: the backend is read as c855a757 reads it - every mapped
+# pathname under a packagekit-backend directory is recorded in full (backend_pathnames) and apt_backend is
+# PK_BACKEND_RULE's answer; the efcba145 reading (aptcc_backend, grep_c_aptcc) is kept beside it. "rule" is this
+# probe's reading of the corrected rule; the Agent's own answer is the readiness API read next to it.
 PK_LOCK_PATHS = ("/var/lib/dpkg/lock-frontend", "/var/lib/dpkg/lock", "/var/cache/apt/archives/lock",
                  "/var/lib/apt/lists/lock")
-PK_PROBE = r"""
+# upd10: the backend part of the rule as c855a757 reads it (packageKitMapsShowOnlyAPTBackend, procMapsPathname): the
+# pathname column of every maps line whose directory is named exactly packagekit-backend; the daemon can be idle
+# only when at least one is mapped and every one is an absolute, clean libpk_backend_apt.so or
+# libpk_backend_aptcc.so. Shared by PK_PROBE and the offline tests (same text, executed in both).
+PK_BACKEND_RULE = r"""
+import posixpath
+PK_BACKEND_DIR="packagekit-backend"
+PK_APT_MODULES=("libpk_backend_apt.so","libpk_backend_aptcc.so")
+def maps_pathname(line):
+    parts=line.split(None,5)
+    return parts[5].strip() if len(parts)==6 else ""
+def backend_pathnames(maps):
+    out=[]
+    for line in maps.splitlines():
+        p=maps_pathname(line)
+        if p and posixpath.basename(posixpath.dirname(p))==PK_BACKEND_DIR and p not in out:
+            out.append(p)
+    return out
+def apt_backend_only(paths):
+    if not paths:
+        return False
+    for p in paths:
+        if not p.startswith("/") or posixpath.normpath(p)!=p or posixpath.basename(p) not in PK_APT_MODULES:
+            return False
+    return True
+"""
+# upd10: package-related processes outside the Agent's list, named so a refusal can be told apart (real activity
+# such as unattended-upgrades, needrestart, apt's fetch methods vs only the idle daemon); comm and a short cmdline.
+PK_CONTEXT_NAMES = ("unattended-upgr", "needrestart", "apt.systemd.dai", "apt-check", "update-notifier", "aptd",
+                    "http", "https", "store", "gpgv", "apt-key", "debconf", "frontend", "dpkg-preconfigu",
+                    "dpkg-trigger", "dpkg-divert", "dpkg-statoverri", "update-initramf", "ldconfig")
+PK_PROBE = PK_BACKEND_RULE + r"""
 import datetime,json,os,subprocess
+CONTEXT=set(""" + repr(PK_CONTEXT_NAMES) + r""")
 LOCKS=("/var/lib/dpkg/lock-frontend","/var/lib/dpkg/lock","/var/cache/apt/archives/lock","/var/lib/apt/lists/lock")
 NAMES={"apt","apt-get","dpkg","dpkg-deb","pacman","makepkg","dnf","dnf5","yum","microdnf","rpm","rpmdb","packagekit",
        "pkcon","dnfdaemon-server","dnfdaemon-serve"}
@@ -239,12 +273,21 @@ for pid in pk:
     kids=[{"pid":p,"comm":c} for p,(c,pp) in sorted(procs.items()) if pp==str(pid)]
     held=[l for l in lines if l["owner"]==pid and l["path"]]
     unowned=[l for l in lines if l["path"] and l["owner"]<=0]
-    backend=None if maps is None else any(l.strip().endswith("/libpk_backend_aptcc.so") for l in maps.splitlines())
-    daemons.append({"pid":pid,"etime_s":etime,
+    # upd9 kept for comparison: the efcba145 reading (suffix /libpk_backend_aptcc.so) and grep -c aptcc.
+    aptcc=None if maps is None else any(l.strip().endswith("/libpk_backend_aptcc.so") for l in maps.splitlines())
+    paths=None if maps is None else backend_pathnames(maps)
+    backend=bool(paths) and apt_backend_only(paths)
+    daemons.append({"pid":pid,"etime_s":etime,"maps_read":maps is not None,
+                    "backend_pathnames":paths,"apt_backend":backend,
                     "grep_c_aptcc":None if maps is None else sum(1 for l in maps.splitlines() if "aptcc" in l),
-                    "aptcc_backend":backend,"children":kids,"holds_or_waits":held,
-                    "rule_idle":bool(backend) and not kids and not held and not unowned and not unparsed})
+                    "aptcc_backend":aptcc,"children":kids,"holds_or_waits":held,
+                    "rule_idle":backend and not kids and not held and not unowned and not unparsed})
 others=[{"pid":p,"comm":c} for p,(c,_) in sorted(procs.items()) if c in NAMES]
+context=[]
+for p,(c,pp) in sorted(procs.items()):
+    if c in CONTEXT or pp in [str(x) for x in pk]:
+        cl=rd("/proc/%d/cmdline"%p)
+        context.append({"pid":p,"ppid":pp,"comm":c,"cmdline":None if cl is None else cl.replace("\0"," ").strip()[:200]})
 try:
     unit=subprocess.run(["systemctl","show","packagekit.service","-p","ActiveState","-p","SubState",
                          "-p","ExecMainStartTimestamp"],capture_output=True,text=True,timeout=10).stdout.strip().splitlines()
@@ -254,7 +297,8 @@ except Exception as exc:
 general=[l for l in lines if l["path"] in LOCKS[:3]]
 rule="busy" if others or general or any(not d["rule_idle"] for d in daemons) else "idle"
 print(json.dumps({"at":at,"packagekitd":daemons,"packagekit_unit":unit,"lock_lines":lines,"unparsed_lock_lines":unparsed,
-                  "other_package_processes":others,"general_lock_lines":general,"rule":rule},sort_keys=True))
+                  "other_package_processes":others,"general_lock_lines":general,"context_processes":context,
+                  "rule":rule},sort_keys=True))
 """
 # upd9 busystart: the owner's harmless long package task - a download-only install of one package that is not
 # installed (nothing is unpacked or configured; no service changes), slowed by apt's own Dl-Limit so it holds the
@@ -264,8 +308,9 @@ def pk_summary(observations: list[dict]) -> dict:
     """upd9: count the PackageKit readings and set each readiness answer against them. "bracketed" means both /proc
     readings around the readiness answer agree (same packagekitd pids, same rule reading)."""
     out: dict[str, Any] = {"observations": len(observations), "with_packagekitd": 0, "rule": {"idle": 0, "busy": 0},
-                           "readiness": {}, "grep_c_aptcc": [], "children_seen": [], "lock_lines_seen": [],
-                           "other_processes_seen": [],
+                           "readiness": {}, "grep_c_aptcc": [], "backend_pathnames_seen": [], "apt_backend": [],
+                           "children_seen": [], "lock_lines_seen": [], "other_processes_seen": [],
+                           "context_processes_seen": [],
                            "pk_alive_rule_idle_bracketed": {"agent_ready": 0, "agent_package_manager_active": 0,
                                                             "agent_other": 0, "panel_answered": 0}}
     for record in observations:
@@ -275,6 +320,11 @@ def pk_summary(observations: list[dict]) -> dict:
             for daemon in reading.get("packagekitd") or []:
                 if daemon.get("grep_c_aptcc") not in out["grep_c_aptcc"]:
                     out["grep_c_aptcc"].append(daemon.get("grep_c_aptcc"))
+                for name in daemon.get("backend_pathnames") or []:
+                    if name not in out["backend_pathnames_seen"]:
+                        out["backend_pathnames_seen"].append(name)
+                if daemon.get("apt_backend") not in out["apt_backend"]:
+                    out["apt_backend"].append(daemon.get("apt_backend"))
                 for child in daemon.get("children") or []:
                     if child.get("comm") not in out["children_seen"]:
                         out["children_seen"].append(child.get("comm"))
@@ -285,6 +335,9 @@ def pk_summary(observations: list[dict]) -> dict:
             for proc in reading.get("other_package_processes") or []:
                 if proc.get("comm") not in out["other_processes_seen"]:
                     out["other_processes_seen"].append(proc.get("comm"))
+            for proc in reading.get("context_processes") or []:
+                if proc.get("comm") not in out["context_processes_seen"]:
+                    out["context_processes_seen"].append(proc.get("comm"))
         if any(r.get("packagekitd") for r in readings):
             out["with_packagekitd"] += 1
         body = (record.get("readiness") or {}).get("body")
@@ -2999,8 +3052,9 @@ def build_plan(cell: Cell, artifacts: dict, work_root: str, local_port: int,
                         "sample interval, H13/H14)" if management_off else "")
                      + ", agreement, outcome classification"),
     ]
-    pk_text = ("; upd9: every ~10 s PackageKit read from /proc (PK_PROBE: packagekitd, grep -c aptcc of its maps, its "
-               "children, /proc/locks lines of the apt/dpkg locks) bracketing GET /api/v1/host-mutation-readiness")
+    pk_text = ("; upd9: every ~10 s PackageKit read from /proc (PK_PROBE: packagekitd, the mapped pathnames under "
+               "packagekit-backend (upd10), its children, /proc/locks lines of the apt/dpkg locks) bracketing "
+               "GET /api/v1/host-mutation-readiness")
     if cell.scenario == "setup-once":
         names = [n for n, _ in steps]
         steps = steps[:names.index("setup") + 1]
