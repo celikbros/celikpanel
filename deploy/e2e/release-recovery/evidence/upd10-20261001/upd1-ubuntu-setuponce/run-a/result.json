@@ -1,0 +1,194 @@
+{
+  "artifacts": {
+    "baseline": {
+      "commit": "2e583a9031ec50fb27d10305ef02b909f10b7674",
+      "sha256": "a52c3ee03e92144e3803f57b0bd722a717a22331a6423425c6cd8e93bc6734cf",
+      "version": "v0.1.0-alpha.81"
+    }
+  },
+  "cell": {
+    "h19": false,
+    "mail_required": true,
+    "name": "upd1-ubuntu-setuponce",
+    "node": "ubuntu",
+    "pk_observe": true,
+    "recovery_fault": null,
+    "scenario": "setup-once",
+    "variant": "good"
+  },
+  "findings": [
+    "ubuntu: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['10-panel_certificate', '11-access_dns', '12-mail_certificate', '13-mail_enrollment', '14-verify']"
+  ],
+  "identity": {
+    "cell_id": "release-recovery__266c4cb2046d1eb2",
+    "node": "ubuntu",
+    "vm_uuid": "532fa8a6-caab-5314-b3fb-e39b9d1d8ea1"
+  },
+  "native_evidence": false,
+  "note": "upd9 setuponce: no update is started; observations for the owner's review.",
+  "outcome": {
+    "classification": "setup-reached-access_dns-wait-in-1-attempt(s)",
+    "final_status": null,
+    "setup_attempts": [
+      {
+        "attempt": 1,
+        "component": null,
+        "error": {
+          "code": "server_setup_access_dns_required",
+          "message": "Public DNS must resolve panel-ubuntu.upd1-infra.test to 192.0.2.12 before a certificate is requested. Check this hostname's A/AAAA records and its zone delegation. For DNS managed here, review the infrastructure DNS records in this wizard; otherwise correct them at the primary DNS server or provider. This check resumes automatically when DNS is verified."
+        },
+        "owner_texts": {
+          "api_message": "Public DNS must resolve panel-ubuntu.upd1-infra.test to 192.0.2.12 before a certificate is requested. Check this hostname's A/AAAA records and its zone delegation. For DNS managed here, review the infrastructure DNS records in this wizard; otherwise correct them at the primary DNS server or provider. This check resumes automatically when DNS is verified.",
+          "code": "server_setup_access_dns_required"
+        },
+        "phase": "access_dns",
+        "status": "waiting"
+      }
+    ]
+  },
+  "overall": "complete-for-review",
+  "packagekit": {
+    "apt_backend": [
+      true
+    ],
+    "backend_pathnames_seen": [
+      "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+    ],
+    "children_seen": [],
+    "context_processes_seen": [
+      "unattended-upgr",
+      "frontend",
+      "apt-check",
+      "needrestart"
+    ],
+    "grep_c_aptcc": [
+      0
+    ],
+    "lock_lines_seen": [
+      "/var/lib/dpkg/lock owner=apt-get",
+      "/var/lib/dpkg/lock-frontend owner=apt-get",
+      "/var/lib/dpkg/lock owner=dpkg",
+      "/var/cache/apt/archives/lock owner=apt-get"
+    ],
+    "observations": 51,
+    "other_processes_seen": [
+      "apt-get",
+      "dpkg",
+      "dpkg-deb"
+    ],
+    "pk_alive_rule_idle_bracketed": {
+      "agent_other": 0,
+      "agent_package_manager_active": 0,
+      "agent_ready": 24,
+      "panel_answered": 9
+    },
+    "readiness": {
+      "HOST_MUTATION_BUSY/panel_operation_active": 25,
+      "ready": 26
+    },
+    "rule": {
+      "busy": 26,
+      "idle": 76
+    },
+    "with_packagekitd": 49
+  },
+  "provenance": {
+    "baseline": "unpublished-local-fixture-commit-over-HEAD-labelled-v0.1.0-alpha.81; acceptance-license panel build (D-027 fixture); installed by the real installer; fixture trust root enrolled; not-production-release-admission",
+    "candidate": "unpublished-local-fixture-commit-labelled-v0.1.0-alpha.82; signed with the disposable fixture key; served by the guest-loopback celikpanel.net fixture origin; not a release",
+    "defect": "fixture source patch: cmd/panel --migrate-only exits 1 after migrating the isolated copy (genuine candidate failure after candidate-installed, simulated by a committed fixture change)"
+  },
+  "request_id": null,
+  "schema": "celikpanel/upd1-owner-update-result/v1",
+  "scope": {
+    "cron": {
+      "verdict": "not checked (the cell stopped before seeding)"
+    },
+    "dns": {
+      "mode": "external",
+      "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+      "verdict": "not-provided-external-dns"
+    },
+    "origin": {
+      "after-provision": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      }
+    },
+    "setup": {
+      "code": "server_setup_access_dns_required",
+      "not_run": [
+        "10-panel_certificate",
+        "11-access_dns",
+        "12-mail_certificate",
+        "13-mail_enrollment",
+        "14-verify"
+      ],
+      "phase": "access_dns",
+      "verdict": "observed isolated-host wait",
+      "volatile_tables_added": [
+        "server_setup_executions"
+      ]
+    }
+  },
+  "steps": [
+    {
+      "finished_at": "2026-10-01T21:13:19Z",
+      "name": "preflight",
+      "reason": null,
+      "started_at": "2026-10-01T21:13:12Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T21:13:33Z",
+      "name": "origin",
+      "reason": null,
+      "started_at": "2026-10-01T21:13:19Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T21:15:07Z",
+      "name": "baseline-install",
+      "reason": null,
+      "started_at": "2026-10-01T21:13:33Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T21:15:09Z",
+      "name": "owner-login",
+      "reason": null,
+      "started_at": "2026-10-01T21:15:07Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T21:15:09Z",
+      "name": "license",
+      "reason": null,
+      "started_at": "2026-10-01T21:15:09Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T21:23:08Z",
+      "name": "setup",
+      "reason": null,
+      "started_at": "2026-10-01T21:15:09Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-01T21:25:59Z",
+      "name": "packagekit-after-setup",
+      "reason": null,
+      "started_at": "2026-10-01T21:23:08Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-01T21:26:01Z",
+      "name": "collect",
+      "reason": null,
+      "started_at": "2026-10-01T21:25:59Z",
+      "verdict": "passed"
+    }
+  ]
+}

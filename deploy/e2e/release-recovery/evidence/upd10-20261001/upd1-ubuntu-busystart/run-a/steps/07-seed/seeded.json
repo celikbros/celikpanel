@@ -1,0 +1,48 @@
+{
+  "cron": {
+    "available": true,
+    "command": "/bin/date -u -Iseconds > \"$HOME/upd1-cron-stamp.txt\"",
+    "create_http": 200,
+    "crontab": "/usr/bin/crontab",
+    "daemon_active": true,
+    "daemon_units": {
+      "cron.service": {
+        "ActiveState": "active",
+        "LoadState": "loaded",
+        "UnitFileState": "enabled"
+      }
+    },
+    "list_sha256": "99569101ac78f8330598fe1e8f993454221f75add380d25e0b7f12c7cb813032",
+    "listed": true,
+    "seeded": true,
+    "verdict": "available"
+  },
+  "database": {
+    "reason": "only the management-off cell seeds an owner database",
+    "seeded": false
+  },
+  "domain": "upd1-owner.test",
+  "domain_id": 1,
+  "firewall": {
+    "http": 200,
+    "sha256": "0da71220eee9b3b488535b16e3884c9b94b2bc452c845e9224b9e2f5722503f4"
+  },
+  "index_sha256": "1cb438465ceea851371a178f4470ff91e28940abfed19b8b499467d354dbff75",
+  "mail": {
+    "address": "owner@upd1-owner.test",
+    "attempted": true,
+    "create_http": 200,
+    "listed": true,
+    "setup_http": 200
+  },
+  "marker": "upd1-marker-c95852e2f8c831836cb2c0513f2de761",
+  "records_http": 200,
+  "records_sha256": "ca87e97c42c30d75fff1e03572121e19b62c85d02a23cb7ed35b9e3355ba3b5e",
+  "zone": {
+    "managed": false,
+    "management": "external",
+    "name": "upd1-owner.test",
+    "type": "EXTERNAL"
+  },
+  "zone_http": 200
+}

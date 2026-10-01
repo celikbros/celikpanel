@@ -1,0 +1,13 @@
+Traceback (most recent call last):
+  File "<stdin>", line 23, in <module>
+  File "<stdin>", line 6, in g
+  File "/var/tmp/cp-upd10-run/harness/deploy/e2e/release-recovery/lab.py", line 208, in guarded_script
+    return run(ssh(root, record, node) + ["sudo /bin/bash -s"], input=prefix + body, text=True,
+               capture_output=capture, timeout=timeout)
+  File "/var/tmp/cp-upd10-run/harness/deploy/e2e/release-recovery/lab.py", line 121, in run
+    return subprocess.run(argv, check=True, **kwargs)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5', '-o', 'StrictHostKeyChecking=yes', '-o', 'HashKnownHosts=no', '-o', 'UserKnownHostsFile=/var/tmp/cp-release-drill-upd10-deb-probe-c/cells/9ec095f5a8fba2c93ebf83cf/ssh-known-hosts', '-i', '/var/tmp/cp-release-drill-upd10-deb-probe-c/key', '-p', '3017', 'celik@127.0.0.1', 'sudo /bin/bash -s']' returned non-zero exit status 1.

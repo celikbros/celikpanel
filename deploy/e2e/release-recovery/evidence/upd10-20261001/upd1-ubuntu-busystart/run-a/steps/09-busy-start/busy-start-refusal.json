@@ -1,0 +1,281 @@
+{
+  "after_start": {
+    "before": {
+      "at": "2026-10-01T21:45:13.238344Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 873,
+          "ppid": "1"
+        },
+        {
+          "cmdline": "/usr/lib/apt/methods/http",
+          "comm": "http",
+          "pid": 43178,
+          "ppid": "43010"
+        }
+      ],
+      "general_lock_lines": [
+        {
+          "line": "8: POSIX  ADVISORY  WRITE 43010 fd:01:84605 0 EOF",
+          "owner": 43010,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        }
+      ],
+      "lock_lines": [
+        {
+          "line": "8: POSIX  ADVISORY  WRITE 43010 fd:01:84605 0 EOF",
+          "owner": 43010,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        }
+      ],
+      "other_package_processes": [
+        {
+          "comm": "apt-get",
+          "pid": 43010
+        }
+      ],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=",
+        "ActiveState=inactive",
+        "SubState=dead"
+      ],
+      "packagekitd": [],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-01T21:45:12Z",
+    "label": "busy-after-start-answer"
+  },
+  "agent_log": "",
+  "check": {
+    "body": {
+      "available": true,
+      "current_commit": "2e583a9031ec50fb27d10305ef02b909f10b7674",
+      "current_version": "v0.1.0-alpha.81",
+      "supported": true,
+      "target": {
+        "arch": "amd64",
+        "archive_sha256": "e2de75c2013ed6095676129765bf8249832d996c87e83d7f623b223141e96eff",
+        "archive_size": "65647230",
+        "commit": "962e6f242b2dbcb0d42edae9e741d3822a92c8cc",
+        "os": "linux",
+        "published_at": "2026-10-01T21:27:16Z",
+        "sequence": "82",
+        "version": "v0.1.0-alpha.82"
+      }
+    },
+    "http": 200
+  },
+  "expectations": {
+    "readiness_busy_package_manager_active": true,
+    "release_unchanged": true,
+    "start_refused": true,
+    "status_not_running": true,
+    "task_still_running_at_answer": true
+  },
+  "observation": {
+    "after": {
+      "at": "2026-10-01T21:45:12.906836Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 873,
+          "ppid": "1"
+        },
+        {
+          "cmdline": "/usr/lib/apt/methods/http",
+          "comm": "http",
+          "pid": 43178,
+          "ppid": "43010"
+        }
+      ],
+      "general_lock_lines": [
+        {
+          "line": "8: POSIX  ADVISORY  WRITE 43010 fd:01:84605 0 EOF",
+          "owner": 43010,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        }
+      ],
+      "lock_lines": [
+        {
+          "line": "8: POSIX  ADVISORY  WRITE 43010 fd:01:84605 0 EOF",
+          "owner": 43010,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        }
+      ],
+      "other_package_processes": [
+        {
+          "comm": "apt-get",
+          "pid": 43010
+        }
+      ],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=",
+        "ActiveState=inactive",
+        "SubState=dead"
+      ],
+      "packagekitd": [],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-01T21:45:12.634938Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 873,
+          "ppid": "1"
+        },
+        {
+          "cmdline": "/usr/lib/apt/methods/http",
+          "comm": "http",
+          "pid": 43178,
+          "ppid": "43010"
+        }
+      ],
+      "general_lock_lines": [
+        {
+          "line": "8: POSIX  ADVISORY  WRITE 43010 fd:01:84605 0 EOF",
+          "owner": 43010,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        }
+      ],
+      "lock_lines": [
+        {
+          "line": "8: POSIX  ADVISORY  WRITE 43010 fd:01:84605 0 EOF",
+          "owner": 43010,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        }
+      ],
+      "other_package_processes": [
+        {
+          "comm": "apt-get",
+          "pid": 43010
+        }
+      ],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=",
+        "ActiveState=inactive",
+        "SubState=dead"
+      ],
+      "packagekitd": [],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-01T21:45:11Z",
+    "label": "busy-during-op",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "package_manager_active"
+      },
+      "http": 200,
+      "utc": "2026-10-01T21:45:11Z"
+    }
+  },
+  "owner_texts": {
+    "catalogue": {
+      "err.HOST_MUTATION_BUSY.package_manager_active": {
+        "en": "This server's package manager is busy — a package task is still running on this server. Wait for it to finish, then try again.",
+        "tr": "Bu sunucunun paket yöneticisi meşgul — bu sunucuda bir paket işlemi hâlâ sürüyor. Tamamlanmasını bekleyip yeniden deneyin."
+      },
+      "err.PANEL_UPDATE_START_REFUSED": "no catalogue entry",
+      "panelUpdate.packageManagerBusy": {
+        "en": "The server was running a package operation. CelikPanel stopped before changing the installed version or its data. Wait for that operation to finish, then retry from Settings → CelikPanel updates.",
+        "tr": "Sunucuda bir paket işlemi çalışıyordu. CelikPanel, kurulu sürümü ve verilerini değiştirmeden durdu. Paket işlemi tamamlandıktan sonra Ayarlar → CelikPanel güncellemeleri bölümünden yeniden deneyin."
+      },
+      "services.mutationReadiness.package_manager_active": {
+        "en": "The operating system is installing or updating packages. Wait for it to finish.",
+        "tr": "İşletim sistemi paket kuruyor veya güncelliyor. Tamamlanmasını bekleyin."
+      },
+      "services.mutationReadiness.title": {
+        "en": "Server changes are temporarily unavailable.",
+        "tr": "Sunucu değişiklikleri geçici olarak kullanılamıyor."
+      }
+    },
+    "start_refusal": {
+      "api_message": "This server's package manager is busy — a package task is still running on this server. Wait for it to finish, then try again.",
+      "code": "HOST_MUTATION_BUSY",
+      "err.HOST_MUTATION_BUSY": {
+        "en": "Another server change or operating-system package task is still running. Wait for it to finish, then try again.",
+        "tr": "Başka bir sunucu değişikliği veya işletim sistemi paket işlemi hâlâ sürüyor. Tamamlanmasını bekleyip yeniden deneyin."
+      },
+      "err.HOST_MUTATION_BUSY.package_manager_active": {
+        "en": "This server's package manager is busy — a package task is still running on this server. Wait for it to finish, then try again.",
+        "tr": "Bu sunucunun paket yöneticisi meşgul — bu sunucuda bir paket işlemi hâlâ sürüyor. Tamamlanmasını bekleyip yeniden deneyin."
+      }
+    }
+  },
+  "panel_log": "2026-10-01T21:45:13.009707+00:00 dns-ubuntu panel[7321]: 2026/10/01 21:45:13 [panel-update] agent refused start: global service mutation state is not idle: the host package manager is active",
+  "request_id": "435669941ed19f9cd64de676173081ab",
+  "start": {
+    "body": {
+      "code": "HOST_MUTATION_BUSY",
+      "error": "This server's package manager is busy — a package task is still running on this server. Wait for it to finish, then try again.",
+      "reason": "package_manager_active"
+    },
+    "http": 409,
+    "utc": "2026-10-01T21:45:12Z"
+  },
+  "status": {
+    "body": {
+      "found": false,
+      "request_id": "435669941ed19f9cd64de676173081ab"
+    },
+    "http": 200
+  },
+  "units_after": [
+    "MainPID=7058",
+    "ExecMainStartTimestamp=Thu 2026-10-01 21:27:57 UTC",
+    "Id=celikpanel-agent.service",
+    "ActiveState=active",
+    "",
+    "MainPID=7321",
+    "ExecMainStartTimestamp=Thu 2026-10-01 21:27:59 UTC",
+    "Id=celikpanel-panel.service",
+    "ActiveState=active"
+  ],
+  "units_before": [
+    "MainPID=7058",
+    "ExecMainStartTimestamp=Thu 2026-10-01 21:27:57 UTC",
+    "Id=celikpanel-agent.service",
+    "ActiveState=active",
+    "",
+    "MainPID=7321",
+    "ExecMainStartTimestamp=Thu 2026-10-01 21:27:59 UTC",
+    "Id=celikpanel-panel.service",
+    "ActiveState=active"
+  ],
+  "version_after": {
+    "agent_commit": "2e583a9031ec50fb27d10305ef02b909f10b7674",
+    "agent_matches": true,
+    "commit": "2e583a9031ec50fb27d10305ef02b909f10b7674",
+    "http": 200,
+    "version": "v0.1.0-alpha.81"
+  },
+  "version_before": {
+    "agent_commit": "2e583a9031ec50fb27d10305ef02b909f10b7674",
+    "agent_matches": true,
+    "commit": "2e583a9031ec50fb27d10305ef02b909f10b7674",
+    "http": 200,
+    "version": "v0.1.0-alpha.81"
+  }
+}

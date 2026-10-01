@@ -1,0 +1,42 @@
+Thu Oct  1 09:00:46 PM UTC 2026
+--- memory
+               total        used        free      shared  buff/cache   available
+Mem:           15697         718       14759           3         414       14979
+Swap:           4096           0        4096
+--- disk (WSL-internal)
+Filesystem     1G-blocks  Used Available Use% Mounted on
+/dev/sdd           1007G  182G      775G  19% /
+/dev/sdd           1007G  182G      775G  19% /
+--- qemu
+--- kvm
+crw-rw-rw- 1 root kvm 10, 232 Oct  2 00:00 /dev/kvm
+--- go
+go version go1.26.5 linux/amd64
+--- node
+v26.8.1
+12.0.2
+--- python
+Python 3.14.7
+--- images
+total 1486060
+drwx------ 2 root root      4096 Oct  1 15:57 .
+drwx------ 5 root root      4096 Sep 28 21:06 ..
+-r--r--r-- 5 root root 556609024 Sep 27 02:09 Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2
+-r--r--r-- 5 root root 340262912 Sep 27 02:09 debian-13-genericcloud-amd64-20260826-2582.qcow2
+-r--r--r-- 2 root root 624829952 Sep  8 20:39 ubuntu-24.04-server-cloudimg-amd64-20260826.img
+--- existing cp-upd10*
+none
+--- other jobs
+--- repo head
+c67d18617178c0cc524298e5ff21c992779a1af2
+--- c67d1861
+c67d18617178c0cc524298e5ff21c992779a1af2
+--- builds
+20261001t030434z
+20261001t092830z
+20261001t111438z
+20261001t125717z
+20261001t174240z
+20261001t174610z
+--- git local config key list
+4363b888278fa3d86af32af8199c5bc0  -

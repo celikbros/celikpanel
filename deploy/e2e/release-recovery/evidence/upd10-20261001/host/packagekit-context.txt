@@ -1,0 +1,58 @@
+01-preflight
+02-origin
+03-baseline-install
+04-owner-login
+05-license
+06-setup
+07-packagekit-after-setup
+08-collect
+2026-10-01T21:14:06.011923+00:00 dns-ubuntu PackageKit[4920]: daemon start
+2026-10-01T21:14:32.141714+00:00 dns-ubuntu PackageKit[5168]: daemon start
+2026-10-01T21:25:57.468857+00:00 dns-ubuntu PackageKit[5168]: daemon quit
+06-setup/pac setup-a01-before-start 21:15:11 {'cmdline': '/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal', 'comm': 'unattended-upgr', 'pid': 872, 'ppid': '1'}
+pk 21:15:11 {'pid': 5168, 'etime_s': 39.5, 'backend_pathnames': ['/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so'], 'apt_backend': True, 'grep_c_aptcc': 0, 'aptcc_backend': False, 'children': [], 'holds_or_waits': [], 'rule_idle': True}
+06-setup/pac setup-a01-poll 21:16:15 {'cmdline': '/usr/bin/perl /usr/share/debconf/frontend /usr/bin/ucf /usr/share/php8.3-common/common/tokenizer.ini /etc/php/8.3/mods-available/tokenizer.ini', 'comm': 'frontend', 'pid': 13448, 'ppid': '9712'}
+06-setup/pac setup-a01-poll 21:16:26 {'cmdline': '/usr/bin/python3 /usr/lib/update-notifier/apt-check --human-readable', 'comm': 'apt-check', 'pid': 15825, 'ppid': '15811'}
+06-setup/pac setup-a01-poll 21:17:28 {'cmdline': '/usr/bin/perl /usr/share/debconf/frontend /var/lib/dpkg/tmp.ci/preinst install', 'comm': 'frontend', 'pid': 17925, 'ppid': '17851'}
+06-setup/pac setup-a01-poll 21:17:40 {'cmdline': '/usr/bin/perl /usr/share/debconf/frontend /var/lib/dpkg/info/postfix.postinst configure', 'comm': 'frontend', 'pid': 18110, 'ppid': '18014'}
+06-setup/pac setup-a01-poll 21:18:24 {'cmdline': '/usr/bin/perl /usr/share/debconf/frontend /usr/sbin/needrestart -m u', 'comm': 'frontend', 'pid': 23193, 'ppid': '23192'}
+06-setup/pac setup-a01-poll 21:18:24 {'cmdline': '/usr/bin/perl /usr/sbin/needrestart -m u', 'comm': 'needrestart', 'pid': 23244, 'ppid': '23193'}
+06-setup/pac setup-a01-poll 21:19:12 {'cmdline': None, 'comm': 'frontend', 'pid': 26176, 'ppid': '25714'}
+06-setup/pac setup-a01-poll 21:19:13 {'cmdline': '/usr/bin/perl /usr/share/debconf/frontend /usr/bin/ucf /usr/share/php8.3-xml/xml/xmlreader.ini /etc/php/8.3/mods-available/xmlreader.ini', 'comm': 'frontend', 'pid': 26507, 'ppid': '25714'}
+01-preflight
+02-origin
+03-baseline-install
+04-owner-login
+05-license
+06-setup
+07-seed
+08-pre-state
+09-busy-start
+10-arm
+11-owner-start
+12-track
+13-owner-continuation-required
+14-terminal
+15-collect
+16-verdicts
+2026-10-01T21:27:34.563393+00:00 dns-ubuntu PackageKit[4845]: daemon start
+2026-10-01T21:27:48.192735+00:00 dns-ubuntu PackageKit[5076]: daemon start
+2026-10-01T21:32:53.082251+00:00 dns-ubuntu PackageKit[5076]: daemon quit
+2026-10-01T21:33:02.616287+00:00 dns-ubuntu PackageKit[10409]: daemon start
+2026-10-01T21:43:08.078395+00:00 dns-ubuntu PackageKit[10409]: daemon quit
+2026-10-01T21:49:15.206424+00:00 dns-ubuntu PackageKit[51688]: daemon start
+06-setup/pac setup-a01-before-start 21:32:55 {'cmdline': '/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal', 'comm': 'unattended-upgr', 'pid': 873, 'ppid': '1'}
+06-setup/pac setup-a01-poll 21:33:02 {'cmdline': '/usr/lib/apt/methods/http', 'comm': 'http', 'pid': 10131, 'ppid': '10120'}
+06-setup/pac setup-a01-poll 21:33:02 {'cmdline': '/usr/lib/apt/methods/gpgv', 'comm': 'gpgv', 'pid': 10182, 'ppid': '10120'}
+06-setup/pac setup-a01-poll 21:33:02 {'cmdline': '/usr/lib/apt/methods/https', 'comm': 'https', 'pid': 10196, 'ppid': '10130'}
+pk 21:33:13 {'pid': 10409, 'etime_s': 11.3, 'backend_pathnames': ['/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so'], 'apt_backend': True, 'grep_c_aptcc': 0, 'aptcc_backend': False, 'children': [], 'holds_or_waits': [], 'rule_idle': True}
+06-setup/pac setup-a01-poll 21:33:24 {'cmdline': '/usr/bin/perl /usr/share/debconf/frontend /usr/bin/ucf /usr/share/php8.3-common/common/calendar.ini /etc/php/8.3/mods-available/calendar.ini', 'comm': 'frontend', 'pid': 11604, 'ppid': '11603'}
+06-setup/pac setup-a01-poll 21:33:36 {'cmdline': '/usr/bin/perl /usr/share/debconf/frontend /usr/sbin/needrestart -m u', 'comm': 'frontend', 'pid': 17780, 'ppid': '17779'}
+06-setup/pac setup-a01-poll 21:33:57 {'cmdline': '/usr/bin/perl /usr/share/debconf/frontend /var/lib/dpkg/info/mariadb-server.postinst configure', 'comm': 'frontend', 'pid': 18899, 'ppid': '18828'}
+06-setup/pac setup-a01-poll 21:34:20 {'cmdline': '/usr/bin/perl /usr/share/debconf/frontend /var/lib/dpkg/info/postfix.postinst configure', 'comm': 'frontend', 'pid': 20251, 'ppid': '20153'}
+06-setup/pac setup-a01-poll 21:34:44 {'cmdline': '/bin/sh /usr/bin/apt-key --quiet --readonly --keyring /usr/share/keyrings/ubuntu-archive-keyring.gpg verify --status-fd 3 /tmp/apt.sig.RcwNDC /tmp/apt.data.TGftRh', 'comm': 'apt-key', 'pid': 21928, 'ppid': '21927'}
+06-setup/pac setup-a01-poll 21:35:53 {'cmdline': '/usr/bin/perl /usr/share/debconf/frontend /usr/bin/ucf /usr/share/php8.3-xml/xml/xmlreader.ini /etc/php/8.3/mods-available/xmlreader.ini', 'comm': 'frontend', 'pid': 29120, 'ppid': '28371'}
+06-setup/pac setup-a01-poll 21:35:53 {'cmdline': '/usr/bin/perl /usr/share/debconf/frontend /usr/bin/ucf /usr/share/php8.3-xml/xml/xmlwriter.ini /etc/php/8.3/mods-available/xmlwriter.ini', 'comm': 'frontend', 'pid': 29450, 'ppid': '28371'}
+06-setup/pac setup-a01-poll 21:37:13 {'cmdline': '/usr/bin/perl /usr/sbin/needrestart -m u', 'comm': 'needrestart', 'pid': 34251, 'ppid': '34250'}
+06-setup/pac setup-a01-poll 21:38:03 {'cmdline': '/usr/bin/python3 /usr/lib/update-notifier/apt-check --human-readable', 'comm': 'apt-check', 'pid': 37100, 'ppid': '37086'}
+pk 21:49:16 {'pid': 51688, 'etime_s': 1.7, 'backend_pathnames': ['/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so'], 'apt_backend': True, 'grep_c_aptcc': 0, 'aptcc_backend': False, 'children': [], 'holds_or_waits': [], 'rule_idle': True}

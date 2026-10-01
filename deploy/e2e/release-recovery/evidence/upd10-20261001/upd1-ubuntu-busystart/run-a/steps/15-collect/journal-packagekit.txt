@@ -1,0 +1,41 @@
+2026-10-01T21:27:34.554155+00:00 dns-ubuntu systemd[1]: Starting packagekit.service - PackageKit Daemon...
+2026-10-01T21:27:34.563393+00:00 dns-ubuntu PackageKit[4845]: daemon start
+2026-10-01T21:27:34.594314+00:00 dns-ubuntu systemd[1]: Started packagekit.service - PackageKit Daemon.
+2026-10-01T21:27:48.179770+00:00 dns-ubuntu systemd[1]: Stopping packagekit.service - PackageKit Daemon...
+2026-10-01T21:27:48.180814+00:00 dns-ubuntu systemd[1]: packagekit.service: Deactivated successfully.
+2026-10-01T21:27:48.181041+00:00 dns-ubuntu systemd[1]: Stopped packagekit.service - PackageKit Daemon.
+2026-10-01T21:27:48.189205+00:00 dns-ubuntu systemd[1]: Starting packagekit.service - PackageKit Daemon...
+2026-10-01T21:27:48.192735+00:00 dns-ubuntu PackageKit[5076]: daemon start
+2026-10-01T21:27:48.211106+00:00 dns-ubuntu systemd[1]: Started packagekit.service - PackageKit Daemon.
+2026-10-01T21:32:53.082251+00:00 dns-ubuntu PackageKit[5076]: daemon quit
+2026-10-01T21:32:53.087936+00:00 dns-ubuntu systemd[1]: packagekit.service: Deactivated successfully.
+2026-10-01T21:33:02.611859+00:00 dns-ubuntu systemd[1]: Starting packagekit.service - PackageKit Daemon...
+2026-10-01T21:33:02.616287+00:00 dns-ubuntu PackageKit[10409]: daemon start
+2026-10-01T21:33:02.634817+00:00 dns-ubuntu systemd[1]: Started packagekit.service - PackageKit Daemon.
+2026-10-01T21:43:08.078395+00:00 dns-ubuntu PackageKit[10409]: daemon quit
+2026-10-01T21:43:08.082329+00:00 dns-ubuntu systemd[1]: packagekit.service: Deactivated successfully.
+2026-10-01T21:45:11.794109+00:00 dns-ubuntu systemd[1]: Started cp-lab-upd9-owner-apt.service - /bin/bash -c "echo \"op-start \$(date -u +%FT%T.%3NZ)\"; DEBIAN_FRONTEND=noninteractive apt-get install --download-only -y --no-install-recommends -o Acquire::http::Dl-Limit=80 -o Acquire::https::Dl-Limit=80 golang-1.22-src; echo \"download-only rc=\$? \$(date -u +%FT%T.%3NZ)\"; apt-get update; echo \"update rc=\$? \$(date -u +%FT%T.%3NZ)\"".
+2026-10-01T21:45:11.800172+00:00 dns-ubuntu bash[43008]: op-start 2026-10-01T21:45:11.799Z
+2026-10-01T21:45:11.818529+00:00 dns-ubuntu bash[43010]: Reading package lists...
+2026-10-01T21:45:12.187261+00:00 dns-ubuntu bash[43010]: Building dependency tree...
+2026-10-01T21:45:12.188552+00:00 dns-ubuntu bash[43010]: Reading state information...
+2026-10-01T21:45:12.509706+00:00 dns-ubuntu bash[43010]: The following NEW packages will be installed:
+2026-10-01T21:45:12.511899+00:00 dns-ubuntu bash[43010]:   golang-1.22-src
+2026-10-01T21:45:12.677495+00:00 dns-ubuntu bash[43010]: 0 upgraded, 1 newly installed, 0 to remove and 114 not upgraded.
+2026-10-01T21:45:12.677495+00:00 dns-ubuntu bash[43010]: Need to get 19.7 MB of archives.
+2026-10-01T21:45:12.677495+00:00 dns-ubuntu bash[43010]: After this operation, 125 MB of additional disk space will be used.
+2026-10-01T21:45:12.677495+00:00 dns-ubuntu bash[43010]: Get:1 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 golang-1.22-src all 1.22.2-2ubuntu0.4 [19.7 MB]
+2026-10-01T21:49:14.482691+00:00 dns-ubuntu bash[43010]: Fetched 19.7 MB in 4min 2s (81.5 kB/s)
+2026-10-01T21:49:14.482691+00:00 dns-ubuntu bash[43010]: Download complete and in download only mode
+2026-10-01T21:49:14.491215+00:00 dns-ubuntu bash[43008]: download-only rc=0 2026-10-01T21:49:14.490Z
+2026-10-01T21:49:14.721893+00:00 dns-ubuntu bash[51514]: Hit:1 http://security.ubuntu.com/ubuntu noble-security InRelease
+2026-10-01T21:49:14.857905+00:00 dns-ubuntu bash[51514]: Hit:2 http://archive.ubuntu.com/ubuntu noble InRelease
+2026-10-01T21:49:14.987921+00:00 dns-ubuntu bash[51514]: Hit:3 http://archive.ubuntu.com/ubuntu noble-updates InRelease
+2026-10-01T21:49:15.118338+00:00 dns-ubuntu bash[51514]: Hit:4 http://archive.ubuntu.com/ubuntu noble-backports InRelease
+2026-10-01T21:49:15.202240+00:00 dns-ubuntu systemd[1]: Starting packagekit.service - PackageKit Daemon...
+2026-10-01T21:49:15.206424+00:00 dns-ubuntu PackageKit[51688]: daemon start
+2026-10-01T21:49:15.226481+00:00 dns-ubuntu systemd[1]: Started packagekit.service - PackageKit Daemon.
+2026-10-01T21:49:16.164319+00:00 dns-ubuntu bash[51514]: Reading package lists...
+2026-10-01T21:49:16.181487+00:00 dns-ubuntu bash[43008]: update rc=0 2026-10-01T21:49:16.181Z
+2026-10-01T21:49:16.182164+00:00 dns-ubuntu systemd[1]: cp-lab-upd9-owner-apt.service: Deactivated successfully.
+2026-10-01T21:49:16.182421+00:00 dns-ubuntu systemd[1]: cp-lab-upd9-owner-apt.service: Consumed 2.706s CPU time, 43.3M memory peak, 0B memory swap peak.
