@@ -375,6 +375,10 @@ func (a *Agent) StartSystemUpdate(request *transport.SystemUpdateStartRequest, r
 	}
 	if err != nil {
 		reply.Error = sanitizedSystemUpdateError(err)
+		// The typed host cause, so the Panel can name it (upd9 F2, D-024).
+		if reason, ok := serviceMutationReadinessReason(err); ok {
+			reply.Reason = reason
+		}
 	}
 	return nil
 }

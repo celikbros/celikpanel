@@ -336,6 +336,31 @@ func writePanelUpdateAgentFailure(w http.ResponseWriter, err error) {
 	writeCodedError(w, status, code, message, "")
 }
 
+// writePanelUpdateStartHostBusy answers a start the agent refused because the
+// host package manager is active with the same refusal every other server
+// change gets for it: HOST_MUTATION_BUSY, reason package_manager_active and that
+// reason's sentence (the web catalogue has both languages for it). Only the
+// agent's typed reason selects it; any other refusal keeps
+// PANEL_UPDATE_START_REFUSED. No update record exists for either (upd9 F2).
+// Paket yöneticisi etkin diye reddedilen başlatma, diğer değişikliklerle aynı
+// kodu, nedeni ve cümleyi alır; yalnız agent'ın tipli nedeni bunu seçer.
+func writePanelUpdateStartHostBusy(w http.ResponseWriter, reply transport.SystemUpdateStartResponse) bool {
+	if reply.Accepted || reply.Reason != transport.HostMutationReasonPackageManager {
+		return false
+	}
+	classification, ok := classifyHostMutationError(&hostMutationBusyError{reason: reply.Reason})
+	if !ok {
+		return false
+	}
+	w.WriteHeader(classification.Status)
+	_ = json.NewEncoder(w).Encode(apiErrorBody{
+		Error:  classification.Message,
+		Code:   classification.Code,
+		Reason: classification.Reason,
+	})
+	return true
+}
+
 func (p *Panel) handlePanelUpdateCheck(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
@@ -501,6 +526,9 @@ func (p *Panel) handlePanelUpdateStart(w http.ResponseWriter, r *http.Request) {
 	if !reply.Accepted || strings.TrimSpace(reply.Error) != "" ||
 		(reply.Status != "queued" && reply.Status != "running") {
 		log.Printf("[panel-update] agent refused start: %s", sanitizePanelUpdateSummary(reply.Error))
+		if writePanelUpdateStartHostBusy(w, reply) {
+			return
+		}
 		writeCodedError(w, http.StatusConflict, "PANEL_UPDATE_START_REFUSED", "the update service did not accept this request", "")
 		return
 	}

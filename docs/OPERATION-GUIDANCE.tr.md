@@ -529,5 +529,28 @@ bekliyor. Aynı tarihli dayanıklılık sözleşmesi girdisine bakın.
 
 Yapılmayan: kurulum sihirbazında `HOST_MUTATION_BUSY` için başlık yok; genel
 "Gerekli bir kontrol tamamlanmadı" metnini ve yukarıdaki cümleyi "Ayrıntılar"
-altında gösterir (web eşlemesi gerekir). Engelleyen iş adlandırılmaz. Reddedilen
-kurulum adımı kendiliğinden bekleyip yeniden denemez.
+altında gösterir (web eşlemesi gerekir). 2026-10-01'de düzeltildi (`fb04289b`).
+Engelleyen iş adlandırılmaz. Reddedilen kurulum adımı kendiliğinden bekleyip
+yeniden denemez.
+
+2026-10-01'de düzeltildi (upd9 F1-F3; bileşen testleri, Ubuntu'da gerçek sistem
+denemesi yeniden bekliyor). Ubuntu 24.04'te yukarıdaki boştaki hizmet yine de
+engelliyordu: kural yanlış PackageKit arka uç dosya adını arıyordu; artık
+Ubuntu'nunkini tanır.
+
+- **Gerçek paket etkinliği nedeniyle reddedilen kurulum adımı.** Panel'in
+  ("Ayrıntılar" altında gösterilen) cümlesi artık "This server's package manager
+  is busy — a package task is still running on this server. Wait for it to
+  finish, then try again." İş CelikPanel'in kendi önceki adımı olabilir ve süresi
+  bilinmez; bu yüzden cümle artık "CelikPanel dışında" ya da "bir dakika" demez.
+  Sihirbaz başlığı değişmedi.
+- **Gerçek paket etkinliği nedeniyle reddedilen güncelleme başlatma.** Sahip genel
+  ve çevrilmemiş "the update service did not accept this request"
+  (`PANEL_UPDATE_START_REFUSED`) yerine `HOST_MUTATION_BUSY`, `package_manager_active`
+  nedeni ve kendi dilinde paket yöneticisi cümlesini alır. Kim işlem yapar: paket
+  işi dışında kimse. Devam: güncelleme kartı sunucuyu hazır gösterene dek bekleyin,
+  sonra güncellemeyi yeniden başlatın; hiçbir şey kurulmadı ya da kaydedilmedi.
+  Nedeni göndermeyen eski Agent genel metni korur.
+- Yapılmayan: tarayıcının `HOST_MUTATION_BUSY` / `package_manager_active` katalog
+  cümlesi (EN ve TR) hâlâ "CelikPanel dışında" ve "bir dakika" der; `web/`
+  içinde aynı yeniden yazım gerekir.

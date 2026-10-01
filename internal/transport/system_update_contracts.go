@@ -47,6 +47,12 @@ type SystemUpdateStartResponse struct {
 	Accepted bool   `json:"accepted"`
 	Status   string `json:"status,omitempty"`
 	Error    string `json:"error,omitempty"`
+	// Reason names a refused start's host cause with one of the stable
+	// HostMutationReason* codes when the agent knows it (for example
+	// package_manager_active), as ServiceMutationResponse.Reason does. Empty
+	// for every other refusal and from an agent that predates it. Additive.
+	// Reason, reddedilen başlatmanın bilinen ana makine nedenidir; eklemelidir.
+	Reason string `json:"reason,omitempty"`
 }
 
 // Abandon carries the exact same immutable identity as Start. The agent uses

@@ -2062,3 +2062,47 @@ activity still fails and needs a new reviewed plan (no bounded wait); the setup
 wizard maps no headline to `HOST_MUTATION_BUSY` (it shows its generic
 "needs attention" text with the sentence under details; web out of scope);
 which package task blocks is not named.
+
+**Correction, 2026-10-01 (upd9).** The entry above names the wrong backend file.
+[upd9](../deploy/e2e/release-recovery/evidence/upd9-20261001/README.md) measured
+`efcba145` on stock Ubuntu 24.04: its PackageKit 1.2.8-2ubuntu1.5 maps the APT
+backend as `/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so`
+(`BackendName 'apt'`), not `libpk_backend_aptcc.so` (`grep -c aptcc` 0 in all 88
+readings of a running daemon). The rule therefore never recognised an Ubuntu 24.04
+daemon and an idle `packagekitd` stayed busy for its whole ~305 s life: setup
+refused 8 s after the start of a fresh install, seven owner attempts, and an
+update start refused until the daemon quit (upd9 F1). The no-child and no-lock
+conditions held in every reading. The component test passed because its fixture
+used the same wrong name.
+
+- **Changed.** The daemon runs the APT backend when at least one file mapped
+  from a `packagekit-backend` directory exists and every such file has the exact
+  base name `libpk_backend_apt.so` (measured) or `libpk_backend_aptcc.so` (the
+  same apt-pkg backend under its name before upstream renamed it "apt"; kept for
+  older releases, not measured). The pathname column of each maps line is
+  compared, not a suffix: a lookalike name (`libpk_backend_apt-x.so`), that name
+  in another directory, a non-absolute or unclean path, a replaced file
+  (` (deleted)`), any other backend beside it, or no backend at all keeps busy.
+  dnf, zypp, alpm and every other backend stay busy; unreadable evidence stays
+  busy. The no-child and no-lock conditions are unchanged.
+- **Also changed (upd9 F2, F3).** The Agent's update-start reply carries the
+  typed reason (`SystemUpdateStartResponse.Reason`, additive, empty from an older
+  Agent), and the Panel answers a start refused for package activity with
+  `HOST_MUTATION_BUSY` / `package_manager_active` and that reason's sentence
+  instead of the generic `PANEL_UPDATE_START_REFUSED`; every other refusal is
+  unchanged. The Panel's sentence for that reason no longer says "something
+  outside CelikPanel" or "a minute" (the task can be CelikPanel's own previous
+  step; its length is not known).
+- **Schema or version transition.** One additive wire field (above); no
+  persisted value. Agent and Panel binary bytes change.
+- **Recovery behaviour.** Unchanged; an idle Ubuntu daemon no longer refuses.
+- **Evidence.** Component tests only: the fixture now uses the pathnames upd9
+  read from the daemon (`TestPackageKitIdleUbuntu2404DaemonIsNotPackageActivity`
+  fails on `efcba145`), `TestPackageKitIdleLegacyAptccDaemonIsNotPackageActivity`,
+  new lookalike/other-backend cases in
+  `TestPackageKitUnanswerableQuestionStaysBusy`,
+  `TestSystemUpdateStartRefusalForPackageActivityCarriesTheReason`,
+  `TestPanelUpdateStartRefusedForPackageActivityNamesThePackageManager`. The
+  native Ubuntu 24.04 re-run is pending; Debian 13's and other releases' backend
+  names are not measured. The setup wizard headline gap above was closed by
+  `fb04289b`.

@@ -1297,3 +1297,47 @@ kurulum adımı yine başarısız olur ve yeni incelenmiş plan ister (sınırl�
 yok); kurulum sihirbazı `HOST_MUTATION_BUSY` için başlık eşlemez (genel "dikkat
 gerekiyor" metnini gösterir, cümle ayrıntılarda; web kapsam dışı); hangi paket
 işinin engellediği adlandırılmaz.
+
+**Düzeltme, 2026-10-01 (upd9).** Yukarıdaki girdi yanlış arka uç dosyasını
+adlandırır. [upd9](../deploy/e2e/release-recovery/evidence/upd9-20261001/README.md)
+`efcba145`'i yalın Ubuntu 24.04'te ölçtü: PackageKit 1.2.8-2ubuntu1.5 APT arka
+ucunu `libpk_backend_aptcc.so` olarak değil
+`/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so` olarak eşler
+(`BackendName 'apt'`; çalışan hizmetin 88 okumasının hepsinde `grep -c aptcc` 0).
+Kural bu yüzden hiçbir Ubuntu 24.04 hizmetini tanımadı ve boştaki `packagekitd`
+~305 sn'lik ömrü boyunca meşgul kaldı: yeni kurulumda kurulum başladıktan 8 sn
+sonra reddedildi, sahip yedi kez denedi, güncelleme başlatma hizmet kapanana dek
+reddedildi (upd9 F1). Alt süreç yok ve kilit yok koşulları her okumada sağlandı.
+Bileşen testi geçti, çünkü düzeneği aynı yanlış adı kullanıyordu.
+
+- **Değişen.** Hizmet, bir `packagekit-backend` dizininden eşlenen en az bir dosya
+  varsa ve bu dosyaların her birinin tam temel adı `libpk_backend_apt.so`
+  (ölçülen) ya da `libpk_backend_aptcc.so` (aynı apt-pkg arka ucunun, üst kaynak
+  onu "apt" diye yeniden adlandırmadan önceki adı; eski sürümler için tutuldu,
+  ölçülmedi) ise APT arka ucunu çalıştırır. Her bellek haritası satırının yol
+  sütunu karşılaştırılır, sonek değil: benzer ad (`libpk_backend_apt-x.so`), bu
+  adın başka dizinde olması, mutlak olmayan ya da düzgün olmayan yol, değiştirilmiş
+  dosya (` (deleted)`), yanında başka bir arka uç ya da hiç arka uç olmaması meşgul
+  bırakır. dnf, zypp, alpm ve diğer her arka uç meşgul kalır; okunamayan kanıt
+  meşgul bırakır. Alt süreç ve kilit koşulları değişmedi.
+- **Ayrıca değişen (upd9 F2, F3).** Agent'ın güncelleme başlatma yanıtı tipli
+  nedeni taşır (`SystemUpdateStartResponse.Reason`, eklemeli, eski Agent'ta boş);
+  Panel paket etkinliği nedeniyle reddedilen başlatmayı genel
+  `PANEL_UPDATE_START_REFUSED` yerine `HOST_MUTATION_BUSY` /
+  `package_manager_active` ve o nedenin cümlesiyle yanıtlar; diğer her ret
+  değişmedi. Panel'in bu neden için cümlesi artık "CelikPanel dışında bir şey" ya
+  da "bir dakika" demez (iş CelikPanel'in kendi önceki adımı olabilir; süresi
+  bilinmez).
+- **Şema veya sürüm geçişi.** Bir eklemeli iletişim alanı (yukarıda); kalıcı değer
+  yok. Agent ve Panel ikili baytları değişir.
+- **Kurtarma davranışı.** Değişmedi; boştaki Ubuntu hizmeti artık reddettirmez.
+- **Kanıt.** Yalnız bileşen testleri: düzenek artık upd9'un hizmetten okuduğu
+  yolları kullanır (`TestPackageKitIdleUbuntu2404DaemonIsNotPackageActivity`
+  `efcba145`'te başarısız olur),
+  `TestPackageKitIdleLegacyAptccDaemonIsNotPackageActivity`,
+  `TestPackageKitUnanswerableQuestionStaysBusy` içinde yeni benzer ad/başka arka
+  uç durumları, `TestSystemUpdateStartRefusalForPackageActivityCarriesTheReason`,
+  `TestPanelUpdateStartRefusedForPackageActivityNamesThePackageManager`. Ubuntu
+  24.04'te gerçek sistem denemesi yeniden bekliyor; Debian 13'ün ve diğer
+  sürümlerin arka uç adları ölçülmedi. Yukarıdaki kurulum sihirbazı başlığı açığı
+  `fb04289b` ile kapandı.

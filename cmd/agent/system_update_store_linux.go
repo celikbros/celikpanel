@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/hostplatform"
+	"github.com/alicelik/celikpanel/internal/transport"
 	"golang.org/x/sys/unix"
 )
 
@@ -232,7 +233,12 @@ func acquireSystemUpdateServiceMutationIdleLock() (*serviceMutationFileLock, err
 		return fail(fmt.Errorf("inspect package manager activity: %w", err))
 	}
 	if busy {
-		return fail(errors.New("the host package manager is active"))
+		// Same sentence as before, now with the typed reason the start
+		// response carries to the Panel (upd9 F2).
+		return fail(markServiceMutationNotIdle(
+			transport.HostMutationReasonPackageManager,
+			errors.New("the host package manager is active"),
+		))
 	}
 	return lock, nil
 }

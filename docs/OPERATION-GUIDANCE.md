@@ -606,5 +606,28 @@ See the resilience contract entry of the same date.
 
 Not done: the setup wizard has no headline for `HOST_MUTATION_BUSY`; it shows its
 generic "A required check needs attention" text and the sentence above under
-"Details" (needs a web mapping). The blocking task is not named. A refused
-setup step does not wait and retry by itself.
+"Details" (needs a web mapping). Corrected on 2026-10-01 (`fb04289b`). The
+blocking task is not named. A refused setup step does not wait and retry by
+itself.
+
+Corrected on 2026-10-01 (upd9 F1-F3; component tests, native Ubuntu re-run
+pending). On Ubuntu 24.04 the idle daemon above still blocked: the rule looked
+for the wrong PackageKit backend file name; it now recognises Ubuntu's.
+
+- **Setup step refused for real package activity.** The Panel's sentence (shown
+  under "Details") is now "This server's package manager is busy — a package
+  task is still running on this server. Wait for it to finish, then try again."
+  The task can be CelikPanel's own previous step, and its length is not known,
+  so the sentence no longer says "outside CelikPanel" or "a minute". The
+  wizard headline is unchanged.
+- **Update start refused for real package activity.** Instead of the generic,
+  untranslated "the update service did not accept this request"
+  (`PANEL_UPDATE_START_REFUSED`), the owner gets `HOST_MUTATION_BUSY` with
+  reason `package_manager_active` and the package-manager sentence in their
+  language. Who acts: nobody but the package task. Resume: wait until the update
+  card shows the server ready, then start the update again; nothing was
+  installed or recorded. An older Agent without the reason keeps the generic
+  text.
+- Not done: the browser's catalogue sentence for `HOST_MUTATION_BUSY` /
+  `package_manager_active` (EN and TR) still says "outside CelikPanel" and "a
+  minute"; it needs the same rewording in `web/`.

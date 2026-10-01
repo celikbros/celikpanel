@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -447,12 +448,27 @@ func linuxPackageProcessBusyAt(procRoot string) (bool, error) {
 // paket yöneticisi etkinliği değildir. Yalnız işlem kanıtı olan hizmet meşguldür.
 const packageKitDaemonComm = "packagekitd"
 
-// packageKitAPTBackendModule is the shared object PackageKit loads at start for
-// its APT backend. Only for that backend is the evidence below known to cover
-// every phase that changes packages: apt fetch methods and dpkg run as child
-// processes, and the backend takes the apt/dpkg locks for refresh, download and
-// commit. Any other backend keeps today's answer: busy.
-const packageKitAPTBackendModule = "/libpk_backend_aptcc.so"
+// packageKitAPTBackendModules are the file names of PackageKit's APT backend,
+// which the daemon maps from its packagekit-backend directory at start. Only for
+// that backend is the evidence below known to cover every phase that changes
+// packages: apt fetch methods and dpkg run as child processes, and the backend
+// takes the apt/dpkg locks for refresh, download and commit. Any other backend
+// (dnf, zypp, alpm, ...) keeps today's answer: busy.
+//
+// libpk_backend_apt.so is the name measured on stock Ubuntu 24.04 (PackageKit
+// 1.2.8-2ubuntu1.5, BackendName "apt"; upd9). libpk_backend_aptcc.so is the
+// same apt-pkg backend under its name before upstream renamed it to "apt"; it
+// is accepted for older releases and was not measured.
+// packageKitAPTBackendModules PackageKit APT arka ucunun dosya adlarıdır;
+// Ubuntu 24.04'te ölçülen ad libpk_backend_apt.so'dur, aptcc eski adıdır.
+var packageKitAPTBackendModules = map[string]struct{}{
+	"libpk_backend_apt.so":   {},
+	"libpk_backend_aptcc.so": {},
+}
+
+// packageKitBackendDirectory is the directory name PackageKit loads its
+// backends from (/usr/lib/<triplet>/packagekit-backend, /usr/lib64/...).
+const packageKitBackendDirectory = "packagekit-backend"
 
 const packageKitMapsReadLimit = 8 << 20
 
@@ -552,12 +568,48 @@ func packageKitDaemonUsesAPTBackend(procRoot string, pid int) bool {
 	if err != nil || len(raw) > packageKitMapsReadLimit {
 		return false
 	}
-	for _, line := range strings.Split(string(raw), "\n") {
-		if strings.HasSuffix(strings.TrimSpace(line), packageKitAPTBackendModule) {
-			return true
+	return packageKitMapsShowOnlyAPTBackend(string(raw))
+}
+
+// packageKitMapsShowOnlyAPTBackend answers true only when the maps text maps at
+// least one file from a packagekit-backend directory and every such file is the
+// APT backend by its exact base name. Another backend, an unknown file there, a
+// non-absolute or unclean path, or a replaced file (" (deleted)") answers false.
+// A file of that name outside a packagekit-backend directory is not a backend.
+// Yalnız packagekit-backend dizininden eşlenen her dosya tam adıyla APT arka
+// ucuysa ve en az bir tane varsa true; diğer her durum false (meşgul kalır).
+func packageKitMapsShowOnlyAPTBackend(maps string) bool {
+	apt := false
+	for _, line := range strings.Split(maps, "\n") {
+		pathname := procMapsPathname(line)
+		if pathname == "" || path.Base(path.Dir(pathname)) != packageKitBackendDirectory {
+			continue
 		}
+		if !strings.HasPrefix(pathname, "/") || path.Clean(pathname) != pathname {
+			return false
+		}
+		if _, known := packageKitAPTBackendModules[path.Base(pathname)]; !known {
+			return false
+		}
+		apt = true
 	}
-	return false
+	return apt
+}
+
+// procMapsPathname returns the pathname column of one /proc/<pid>/maps line
+// (everything after address, perms, offset, dev and inode, spaces kept), or ""
+// for an anonymous mapping or a line with fewer columns.
+func procMapsPathname(line string) string {
+	rest := line
+	for column := 0; column < 5; column++ {
+		rest = strings.TrimLeft(rest, " \t")
+		end := strings.IndexAny(rest, " \t")
+		if end <= 0 {
+			return ""
+		}
+		rest = rest[end:]
+	}
+	return strings.TrimSpace(rest)
 }
 
 // linuxProcessHasChild reports whether any process names pid as its parent.

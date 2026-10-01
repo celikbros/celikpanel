@@ -312,9 +312,11 @@ func classifyAgentRPCPlatformError(err error) (agentRPCPlatformErrorClassificati
 // hostMutationBusyMessages: uceun her biri icin cumle; cunku operatordan farkli
 // seyler isterler.
 var hostMutationBusyMessages = map[string]string{
+	// The task can be CelikPanel's own previous step finishing, and how long
+	// it runs is not known, so the sentence names neither (upd9 F3).
 	transport.HostMutationReasonPackageManager: "This server's package manager is busy — " +
-		"something outside CelikPanel is installing or updating packages. " +
-		"Try again in a minute.",
+		"a package task is still running on this server. " +
+		"Wait for it to finish, then try again.",
 	transport.HostMutationReasonAgentMutation: "Another CelikPanel change is still running " +
 		"on this server. Wait for it to finish, then try again.",
 	transport.HostMutationReasonPanelOperation: "Another CelikPanel operation is still running. " +
