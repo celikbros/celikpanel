@@ -1,0 +1,9 @@
+{
+  "directory_present": true,
+  "records": {
+    "64a87b68438919b32870d6ccc1bf3d0e.automatic": "schema=celikpanel-recovery-automatic/v1\nrequest_id=64a87b68438919b32870d6ccc1bf3d0e\nobservation_identity=34:84907:278:2026-10-01 09:46:23.555956262 +0000:2026-10-01 09:46:23.583956583 +0000\nobservation_sha256=86e4a0bf9ce0b1b8ad57c9344bdfaae41dbfdc119222a1bd9cea474e08b7850f\nautomatic_recovery=paused_retry_limit\n",
+    "64a87b68438919b32870d6ccc1bf3d0e.failure": "schema=celikpanel-recovery-failure/v1\nrequest_id=64a87b68438919b32870d6ccc1bf3d0e\ntarget_commit=8b89ef29a9e931a6ff2b8e20f68a4fc3c4ac90be\nfailure_code=panel_start_unverified\n",
+    "64a87b68438919b32870d6ccc1bf3d0e.renewal": "schema=celikpanel-recovery-renewal/v1\nrequest_id=64a87b68438919b32870d6ccc1bf3d0e\ntarget_commit=8b89ef29a9e931a6ff2b8e20f68a4fc3c4ac90be\nrenewal_before_update=off\n",
+    "64a87b68438919b32870d6ccc1bf3d0e.status": "schema=celikpanel-recovery-observation/v1\nrequest_id=64a87b68438919b32870d6ccc1bf3d0e\ntarget_commit=8b89ef29a9e931a6ff2b8e20f68a4fc3c4ac90be\nphase=succeeded\nterminal_proof=update_verified\nreason=update_verified\nobserved_at=2026-10-01T09:46:51Z\nprevious_failure=recovery_failed\n"
+  }
+}

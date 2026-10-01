@@ -1,0 +1,141 @@
+{
+  "checks": {
+    "check": {
+      "body": {
+        "available": true,
+        "current_commit": "d0676ba398836721884c6d586be9ff86c14056ac",
+        "current_version": "v0.1.0-alpha.81",
+        "supported": true,
+        "target": {
+          "arch": "amd64",
+          "archive_sha256": "f076c7c9f4aa0335bcfd59e41f7c87aef17f36ea1b6a6456fe15cc2856c360d0",
+          "archive_size": "67099651",
+          "commit": "8b89ef29a9e931a6ff2b8e20f68a4fc3c4ac90be",
+          "os": "linux",
+          "published_at": "2026-10-01T09:32:46Z",
+          "sequence": "82",
+          "version": "v0.1.0-alpha.82"
+        }
+      },
+      "http": 200
+    },
+    "observer_intent": {
+      "baseline": {
+        "agent_sha256": "7ddd2fffcbe4402c8caf7ce2b10854bd817423f167fd9c78815344d0b922d515",
+        "commit": "d0676ba398836721884c6d586be9ff86c14056ac",
+        "panel_sha256": "e54c5ab9a046a9d60960629882ffe94c1a5ae055bc50751a2994ae448b7419e1",
+        "version": "v0.1.0-alpha.81"
+      },
+      "identity": {
+        "cell_id": "release-recovery__9d86c87e9f579591",
+        "node": "arch",
+        "nonce": "9d86c87e9f579591aedcd68ffcc644aaf78731138a6bee8b1f57b61bd50cccc4",
+        "vm_uuid": "af185f46-3064-5165-95e0-682bea6e45df"
+      },
+      "mode": "watch",
+      "operation_id": "64a87b68438919b32870d6ccc1bf3d0e",
+      "recovery_fault": null,
+      "schema": "celikpanel/owner-update-observer-intent/v1",
+      "target": {
+        "agent_sha256": "7c427aec3a90bcc47ed3dbff7fdbc0032e91f460af64e0fe70fdafcfab94adf3",
+        "commit": "8b89ef29a9e931a6ff2b8e20f68a4fc3c4ac90be",
+        "panel_sha256": "501ae1dee605016fba6711555dabb113148424a375cf77b9a1ac7fc8c4a84fcb",
+        "version": "v0.1.0-alpha.82"
+      }
+    },
+    "observer_unit": "celikpanel-lab-owner-update-observer-64a87b68438919b32870d6ccc1bf3d0e.service",
+    "origin_check": {
+      "addresses": [
+        "127.0.0.1"
+      ],
+      "boot_id": "833c121f-199d-4fff-bf5f-4468edf6a82e",
+      "getent_outcome": "found",
+      "getent_returncode": 0,
+      "getent_status": "ok",
+      "getent_stdout": "127.0.0.1       localhost\n",
+      "http": "200",
+      "loopback_only": true,
+      "ok": true,
+      "unit": {
+        "ActiveState": "active",
+        "NRestarts": "0",
+        "UnitFileState": "enabled"
+      }
+    },
+    "port_hold": {
+      "armed_at": "2026-10-01T09:39:13.236915+00:00",
+      "bound": {
+        "allowances": {
+          "attempt_work_s": 60,
+          "owner_detection_s": 120,
+          "owner_step_s": 300,
+          "start_work_s": 120
+        },
+        "constants": {
+          "panel_start_wait_s": 60,
+          "retry_budget": 3,
+          "timer_accuracy_s": 1.0,
+          "timer_inactive_s": 30.0
+        },
+        "formula": "hold = start_work + wait + budget*(wait + attempt_work + OnUnitInactiveSec + AccuracySec) + owner_detection + owner_step, rounded up to a minute; RuntimeMaxSec = hold + 60",
+        "hold_seconds": 1080,
+        "margin_over_measured_s": 689,
+        "measured_pause_s": {
+          "arch": 383,
+          "debian13": 391
+        },
+        "pause_worst_s": 633.0,
+        "per_attempt_s": 151.0,
+        "runtime_max_seconds": 1140,
+        "source": {
+          "commit": "8b89ef29a9e931a6ff2b8e20f68a4fc3c4ac90be",
+          "files": {
+            "runner": "deploy/release-recovery-runner.sh",
+            "timer": "deploy/systemd/celikpanel-release-recovery.timer",
+            "update": "update.sh"
+          },
+          "role": "good"
+        }
+      },
+      "unit": "celikpanel-lab-owner-port-hold-64a87b68438919b32870d6ccc1bf3d0e.service"
+    },
+    "port_hold_bound": {
+      "allowances": {
+        "attempt_work_s": 60,
+        "owner_detection_s": 120,
+        "owner_step_s": 300,
+        "start_work_s": 120
+      },
+      "constants": {
+        "panel_start_wait_s": 60,
+        "retry_budget": 3,
+        "timer_accuracy_s": 1.0,
+        "timer_inactive_s": 30.0
+      },
+      "formula": "hold = start_work + wait + budget*(wait + attempt_work + OnUnitInactiveSec + AccuracySec) + owner_detection + owner_step, rounded up to a minute; RuntimeMaxSec = hold + 60",
+      "hold_seconds": 1080,
+      "margin_over_measured_s": 689,
+      "measured_pause_s": {
+        "arch": 383,
+        "debian13": 391
+      },
+      "pause_worst_s": 633.0,
+      "per_attempt_s": 151.0,
+      "runtime_max_seconds": 1140,
+      "source": {
+        "commit": "8b89ef29a9e931a6ff2b8e20f68a4fc3c4ac90be",
+        "files": {
+          "runner": "deploy/release-recovery-runner.sh",
+          "timer": "deploy/systemd/celikpanel-release-recovery.timer",
+          "update": "update.sh"
+        },
+        "role": "good"
+      }
+    },
+    "request_id": "64a87b68438919b32870d6ccc1bf3d0e"
+  },
+  "finished_at": "2026-10-01T09:39:12Z",
+  "name": "arm",
+  "started_at": "2026-10-01T09:39:10Z",
+  "verdict": "passed"
+}
