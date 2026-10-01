@@ -6,7 +6,7 @@ candidate="$repo_root/update.sh"
 extract() {
     awk -v header="$1() {" '$0 == header { inside=1 } inside { print } inside && $0 == "}" { exit }' "$candidate"
 }
-for name in die run_update_idle_probe check_bind_update_compatibility preflight_bind_before_quiesce report_update_failure on_exit fail_before_active; do
+for name in die run_update_idle_probe update_probe_diagnostic fail_update_preflight check_bind_update_compatibility preflight_bind_before_quiesce report_update_failure on_exit fail_before_active; do
     source <(extract "$name")
 done
 fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
@@ -119,8 +119,9 @@ for mode in 0 1; do
     [[ $(cat "$bind_fixture/trace") == $'prepare\nacquire\nrelease' ]] ||
         fail 'failed BIND preflight did not release its lock before refusal'
     last=${output##*$'\n'}
-    [[ $last == *'state=unchanged'* &&
-       $last == *'reason=managed BIND compatibility check failed before stopping panel services'* &&
+    # upd4: a refused read-only check before the freeze is typed and unchanged.
+    [[ $last == *'code=update_preflight_refused state=unchanged'* &&
+       $last == *'reason=update preflight step=bind_compatibility class=check_failed: managed BIND compatibility check failed before stopping panel services'* &&
        $last == *'BIND state and ownership receipts disagree'* ]] ||
         fail "BIND cause or unchanged outcome lost: $last"
 

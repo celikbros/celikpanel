@@ -75,6 +75,6 @@ dns_pre=s.index('"$mail_compatibility_inspector" verify-dns-application')
 dns_final=s.index('"$mail_compatibility_inspector" verify-dns-application',dns_pre+1)
 assert dns_pre<stop<dns_final<publication
 s=(r/'update.sh').read_text()
-assert s.index('check_mail_application_compatibility || die')<s.index('if ! check_mail_application_compatibility; then')<s.index('==> Freezing panel and agent')
+assert s.index('check_mail_application_compatibility ||\n        fail_update_preflight application_compatibility')<s.index('if ! check_mail_application_compatibility; then')<s.index('==> Freezing panel and agent')
 PY
 printf 'PASS: candidate/baseline compatibility uses verified readers, stops on uncertainty, and precedes publication\n'

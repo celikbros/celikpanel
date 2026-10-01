@@ -201,6 +201,9 @@ jobs:
       # Tam koordinatör kimliğini ve çökme güvenli quiesce kurtarmasını kanıtla.
       - run: bash deploy/test-update-quiesce-exit-contract.sh update.sh
       - run: bash deploy/test-update-failure-report.sh
+      # upd4 F4/F5/O8: live-probe re-read only for a concurrent write, typed
+      # unchanged preflight refusal, snapshot cause, recorded renewal state.
+      - run: bash deploy/test-update-preflight-refusal-contract.sh
       # Keep a restored host firewalled: the unit is re-enabled only when a
       # snapshot was actually restored, and the restore arms the ruleset before
       # the installer returns instead of waiting for a reboot that has already

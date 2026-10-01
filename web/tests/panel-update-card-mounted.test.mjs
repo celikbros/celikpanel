@@ -354,10 +354,12 @@ test('a previously failed target is named before Start, and Start stays with the
 
 // upd3 F1: an earlier attempt that stopped in its preflight changed nothing;
 // the notice says so, repeats no cause line and Start stays available.
-test('an earlier preflight stop is named as unchanged before Start', async () => {
+// upd4 F4: a refused update check reads the same.
+for (const code of ['recovery_runtime_preflight_failed', 'update_preflight_refused'])
+test(`an earlier preflight stop (${code}) is named as unchanged before Start`, async () => {
     const originalFetch = globalThis.fetch;
     let renderer;
-    const attempt = { request_id: 'e'.repeat(32), phase: 'failed', failure_code: 'recovery_runtime_preflight_failed', finished_at: '2026-09-30T17:54:30Z' };
+    const attempt = { request_id: 'e'.repeat(32), phase: 'failed', failure_code: code, finished_at: '2026-09-30T17:54:30Z' };
     try {
         renderer = await mountCheckedCard(async () => ({ ready: true }), async () => ({ kind: 'accepted' }),
             { ...updateCheck, previous_attempt: attempt });

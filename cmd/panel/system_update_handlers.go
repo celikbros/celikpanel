@@ -236,17 +236,82 @@ func validPanelUpdateStatus(status string) bool {
 
 // sanitizePanelUpdateSummary treats agent text as untrusted. Paths, URLs,
 // controls and oversized detail remain in the agent journal, never the API.
+// A reviewed updater failure line that is too long or carries a path is not
+// dropped: the Panel rebuilds a bounded form from its closed tokens (code,
+// state, the preflight step and reason class) and keeps a free reason only
+// when it is itself short and plain. The agent journal keeps the full line
+// ("System update worker failed: …"); no agent text is copied beyond that.
+// Güncelleyicinin uzun ya da yol içeren hata satırı düşürülmez; Panel kapalı
+// belirteçlerden sınırlı bir biçim kurar. Tam satır agent günlüğünde kalır.
 func sanitizePanelUpdateSummary(raw string) string {
 	value := strings.TrimSpace(raw)
-	if value == "" || len(value) > 240 || strings.ContainsAny(value, "/\\\r\n\t") || strings.Contains(value, "://") {
-		return ""
+	if plainPanelUpdateSummary(value, 240) {
+		return value
+	}
+	return boundedPanelUpdateFailure(value)
+}
+
+func plainPanelUpdateSummary(value string, limit int) bool {
+	if value == "" || len(value) > limit || strings.ContainsAny(value, "/\\\r\n\t") || strings.Contains(value, "://") {
+		return false
 	}
 	for _, r := range value {
 		if r < 0x20 || r == 0x7f {
-			return ""
+			return false
 		}
 	}
-	return value
+	return true
+}
+
+// Updater failure codes whose meaning the product defines (update.sh).
+var panelUpdateFailureCodes = map[string]bool{
+	"update_failed": true, "update_preflight_refused": true, "recovery_runtime_preflight_failed": true,
+	"package_manager_busy": true, "candidate_panel_startup_check_failed": true, "panel_start_unverified": true,
+	"unit_start_limit_hit": true, "recovery_runtime_preparation_unconfirmed": true,
+	"firewall_runtime_preparation_unconfirmed": true, "mail_runtime_preparation_unconfirmed": true,
+}
+
+var (
+	panelUpdateFailureLine = regexp.MustCompile(`(?:^|: )!! CELIKPANEL_UPDATE_FAILURE code=([a-z_]{1,64}) state=(unchanged|recovery_required) reason=`)
+	// The step and reason class of a refused update preflight, and the step of
+	// a recovery runtime preflight stop: closed lowercase tokens only.
+	panelUpdatePreflightReason = regexp.MustCompile(`^update preflight step=([a-z_]{1,40}) class=([a-z_]{1,40})(?:[: ]|$)`)
+	panelUpdateRuntimeReason   = regexp.MustCompile(`^recovery runtime preflight step=([a-z_]{1,40})(?:[: ]|$)`)
+)
+
+const panelUpdateFailureMarker = "!! CELIKPANEL_UPDATE_FAILURE"
+
+func boundedPanelUpdateFailure(value string) string {
+	match := panelUpdateFailureLine.FindStringSubmatchIndex(value)
+	if match == nil {
+		return ""
+	}
+	code, state := value[match[2]:match[3]], value[match[4]:match[5]]
+	if !panelUpdateFailureCodes[code] {
+		return ""
+	}
+	reason := value[match[1]:]
+	if end := strings.LastIndex(reason, " detail="); end >= 0 {
+		reason = reason[:end]
+	}
+	reason = strings.TrimSpace(reason)
+	switch {
+	case code == "update_preflight_refused":
+		if parts := panelUpdatePreflightReason.FindStringSubmatch(reason); parts != nil {
+			reason = "update preflight step=" + parts[1] + " class=" + parts[2]
+		} else {
+			reason = ""
+		}
+	case code == "recovery_runtime_preflight_failed":
+		if parts := panelUpdateRuntimeReason.FindStringSubmatch(reason); parts != nil {
+			reason = "recovery runtime preflight step=" + parts[1]
+		} else {
+			reason = ""
+		}
+	case !plainPanelUpdateSummary(reason, 120):
+		reason = ""
+	}
+	return panelUpdateFailureMarker + " code=" + code + " state=" + state + " reason=" + reason + " detail="
 }
 
 func writePanelUpdateUnavailable(w http.ResponseWriter, err error) {

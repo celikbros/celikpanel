@@ -4,6 +4,8 @@ import test from 'node:test';
 import ts from 'typescript';
 import { en } from '../src/i18n/en.ts';
 import { tr } from '../src/i18n/tr.ts';
+import { enServerScreens } from '../src/i18n/screens/server/en.ts';
+import { trServerScreens } from '../src/i18n/screens/server/tr.ts';
 
 // The failed-update notice takes its primary text from the exact request's
 // recovery observation and typed cause. The worker's raw summary is only ever a
@@ -16,13 +18,18 @@ const recoveryURL = dataModule(compile('../src/lib/recoveryObservation.ts'));
 const failureURL = dataModule(compile('../src/lib/systemUpdateFailure.ts'));
 const { parseRecoveryObservation, recoveryFailureGuidanceKey } = await import(recoveryURL);
 const { withoutInternalTokens, systemUpdatePreflightStop } = await import(failureURL);
-const { failedUpdateGuidance, decodePreviousUpdateAttempt, RECOVERY_LOG_COMMAND, preflightSteps } = await import(dataModule(
+const { failedUpdateGuidance, decodePreviousUpdateAttempt, previousAttemptStopped, RECOVERY_LOG_COMMAND, preflightSteps, preflightReasonClasses } = await import(dataModule(
     compile('../src/lib/systemUpdateOutcome.ts')
         .replace(/from ['"]\.\/recoveryObservation['"]/g, `from '${recoveryURL}'`)
         .replace(/from ['"]\.\/systemUpdateFailure['"]/g, `from '${failureURL}'`)));
 
 const id = 'a'.repeat(32);
 const summary = 'reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason=offline panel database migration failed; its original database and work evidence are preserved detail=';
+// upd4 O7: every secondary server line is the summary without internal tokens.
+const reportedSummary = 'reviewed updater failed: exit status 1: offline panel database migration failed; its original database and work evidence are preserved';
+// The notice's refused-check lines live in the server screen catalogue.
+const enAll = { ...en, ...enServerScreens };
+const trAll = { ...tr, ...trServerScreens };
 const observed = (phase, extra = {}) => parseRecoveryObservation({
     schema: 'celikpanel-recovery-status/v1', panel_state: 'ready', request_id: id, observation: 'known', phase,
     terminal_proof: phase === 'recovered' ? 'rollback_verified' : phase === 'succeeded' ? 'update_verified' : 'none',
@@ -94,7 +101,7 @@ test('recovery still in progress follows the recovery screen texts, never the ra
         assert.equal(guidance.title.key, title);
         assert.equal(guidance.lines[0].key, first);
         assert.equal(guidance.lines.at(-1).key, 'panelUpdate.outcome.followsRecovery');
-        assert.equal(guidance.serverMessage, summary);
+        assert.equal(guidance.serverMessage, reportedSummary);
         for (const catalog of [en, tr]) {
             assert.doesNotMatch(primary(catalog, guidance).join('\n'), /CELIKPANEL_UPDATE_FAILURE/);
         }
@@ -104,6 +111,9 @@ test('recovery still in progress follows the recovery screen texts, never the ra
     const forward = failedUpdateGuidance(observed('succeeded', { previous_failure: 'update_failed' }), input());
     assert.equal(forward.state, 'succeeded');
     assert.equal(forward.title.key, 'recovery.phase.succeeded');
+    // upd4 O9: a verified update carries no failure line or server failure text.
+    assert.equal(forward.serverMessage, undefined);
+    for (const catalog of [en, tr]) assert.doesNotMatch(primary(catalog, forward).join('\n'), /fail|başarısız|Recovery failed/i);
 });
 
 test('without an observation the summary is secondary and the result is stated as unknown', () => {
@@ -113,15 +123,16 @@ test('without an observation the summary is secondary and the result is stated a
     const unknown = failedUpdateGuidance(parseRecoveryObservation({ schema: 'celikpanel-recovery-status/v1', panel_state: 'ready', request_id: id, observation: 'unavailable' }, id), input());
     assert.deepEqual(unknown.lines, [{ key: 'panelUpdate.outcome.unknownResult' }]);
     assert.equal(unknown.title.key, 'panelUpdate.failed');
-    assert.equal(unknown.serverMessage, summary);
+    assert.equal(unknown.serverMessage, reportedSummary);
     // Product text stored instead of a summary is primary and never labelled as the server's.
     const product = failedUpdateGuidance(null, input({ message: en['panelUpdate.notAccepted'] }));
     assert.deepEqual(product.lines, [{ text: en['panelUpdate.notAccepted'] }]);
     assert.equal(product.serverMessage, undefined);
-    // A reviewed typed pre-mutation stop keeps its guidance first and the summary second.
+    // A reviewed typed pre-mutation stop is the translated summary: the
+    // server's English line is not repeated (upd4 O7).
     const typed = failedUpdateGuidance(null, input({ typedMessage: en['panelUpdate.packageManagerBusy'] }));
     assert.deepEqual(typed.lines, [{ text: en['panelUpdate.packageManagerBusy'] }]);
-    assert.equal(typed.serverMessage, summary);
+    assert.equal(typed.serverMessage, undefined);
     const empty = failedUpdateGuidance(null, input({ message: '' }));
     assert.equal(empty.serverMessage, undefined);
 });
@@ -215,7 +226,7 @@ test('a preflight stop is final, unchanged and safe to start again', () => {
     // An unknown step keeps the generic reason; every known step has both texts.
     assert.equal(failedUpdateGuidance(null, input({ message: preflightSummary('private_step', 'x') })).lines[1].key, 'panelUpdate.outcome.preflightStep.generic');
     for (const step of preflightSteps) {
-        for (const catalog of [en, tr]) primary(catalog, failedUpdateGuidance(null, input({ message: preflightSummary(step, 'x') })));
+        for (const catalog of [enAll, trAll]) primary(catalog, failedUpdateGuidance(null, input({ message: preflightSummary(step, 'x') })));
     }
     // A contradicting newer record wins over the summary.
     const recovering = failedUpdateGuidance(observed('recovering'), input({ message }));
@@ -265,4 +276,105 @@ test('internal tokens are removed from the rolled-back server line', () => {
     assert.equal(only.serverMessage, undefined);
     const turkish = primary(tr, failedUpdateGuidance(observed('recovered'), input())).join('\n');
     assert.doesNotMatch(turkish, /\b(The|update|Cause|Nothing)\b/);
+});
+
+// upd4 F4: a read-only check refused before the freeze. The Panel's bounded
+// form carries the step and reason class; a translated class replaces the
+// server's line; the record alone still says unchanged and final.
+const refusedSummary = (step, reasonClass, detail = '') => `!! CELIKPANEL_UPDATE_FAILURE code=update_preflight_refused state=unchanged reason=update preflight step=${step} class=${reasonClass} detail=${detail}`;
+
+test('a refused update check is final, unchanged, translated and safe to start again', () => {
+    const bounded = refusedSummary('idle_probe', 'concurrent_write');
+    assert.deepEqual(systemUpdatePreflightStop(bounded), { step: 'idle_probe', reasonClass: 'concurrent_write', diagnostic: '' });
+    const plain = 'reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=update_preflight_refused state=unchanged reason=update preflight step=agent_idle class=check_failed: an existing server operation requires completion detail=Service mutation idle check: the ledger is not idle';
+    assert.deepEqual(systemUpdatePreflightStop(plain), { step: 'agent_idle', reasonClass: 'check_failed', diagnostic: 'Service mutation idle check: the ledger is not idle' });
+    const stop = observed('failed', { failure_code: 'update_preflight_refused' });
+    assert.equal(stop.failure_code, 'update_preflight_refused');
+    assert.equal(recoveryFailureGuidanceKey(stop), 'recovery.failure.recovery_runtime_preflight_failed.stopped');
+    for (const [reasonClass, line] of [['concurrent_write', 'panelUpdate.outcome.preflightClass.concurrent_write'], ['operation_active', 'panelUpdate.outcome.preflightClass.operation_active']]) {
+        for (const observation of [stop, null]) {
+            const guidance = failedUpdateGuidance(observation, input({ message: refusedSummary('idle_probe', reasonClass) }));
+            assert.equal(guidance.state, 'unchanged');
+            assert.equal(guidance.title.key, 'panelUpdate.outcome.stoppedTitle');
+            assert.deepEqual(guidance.lines.map((value) => value.key), ['panelUpdate.outcome.stopped', line, 'panelUpdate.outcome.stoppedNext', 'panelUpdate.outcome.stoppedResume']);
+            // Until the screen catalogue arrives the boot catalogue's reason shows.
+            assert.equal(guidance.lines[1].fallback, 'panelUpdate.outcome.preflightStep.generic');
+            assert.equal(guidance.serverMessage, undefined);
+            const english = primary(enAll, guidance).join('\n');
+            assert.match(english, /Starting the update to v0\.1\.0-alpha\.82 again is safe/);
+            assert.doesNotMatch(english, /must act|do not start|CELIKPANEL|class=|step=/);
+            const turkish = primary(trAll, guidance).join('\n');
+            assert.match(turkish, /yeniden başlatmak güvenlidir/);
+            assert.doesNotMatch(turkish, /\b(The|Reason|Nothing)\b|class=|step=/);
+        }
+    }
+    // A step without a translated class keeps the server's line (its checker words).
+    const agent = failedUpdateGuidance(stop, input({ message: plain }));
+    assert.equal(agent.lines[1].key, 'panelUpdate.outcome.preflightStep.agent_idle');
+    assert.equal(agent.serverMessage, 'Service mutation idle check: the ledger is not idle');
+    // The record alone: the generic reason, from the boot catalogue.
+    const recordOnly = failedUpdateGuidance(stop, input({ message: '' }));
+    assert.equal(recordOnly.state, 'unchanged');
+    assert.deepEqual(recordOnly.lines[1], { key: 'panelUpdate.outcome.preflightStep.generic' });
+    for (const catalog of [en, tr]) assert.doesNotMatch(render(catalog, recordOnly.lines[1]), /recovery runtime|kurtarma çalışma ortamı/);
+    // Every class and step has both texts, and each fallback is in the boot catalogue.
+    for (const reasonClass of preflightReasonClasses) {
+        for (const catalog of [enAll, trAll]) primary(catalog, failedUpdateGuidance(null, input({ message: refusedSummary('idle_probe', reasonClass) })));
+    }
+    for (const step of preflightSteps) {
+        const guidance = failedUpdateGuidance(null, input({ message: refusedSummary(step, 'check_failed') }));
+        for (const catalog of [enAll, trAll]) primary(catalog, guidance);
+        for (const catalog of [en, tr]) if (guidance.lines[1].fallback) render(catalog, { key: guidance.lines[1].fallback });
+    }
+    // Not unchanged: never a preflight stop.
+    assert.equal(systemUpdatePreflightStop(bounded.replace('state=unchanged', 'state=recovery_required')), undefined);
+    // The update check's previous attempt: either typed preflight stop.
+    for (const code of ['update_preflight_refused', 'recovery_runtime_preflight_failed']) {
+        const attempt = decodePreviousUpdateAttempt({ request_id: id, phase: 'failed', failure_code: code, finished_at: '2026-10-01T00:00:00Z' });
+        assert.equal(attempt.failure_code, code);
+        assert.equal(previousAttemptStopped(attempt), true);
+    }
+    assert.equal(previousAttemptStopped({ request_id: id, phase: 'recovered', failure_code: 'panel_start_unverified', finished_at: '2026-10-01T00:00:00Z' }), false);
+    assert.equal(previousAttemptStopped(undefined), false);
+});
+
+// upd4 F6: after the last attempt failed and before the pause is recorded the
+// notice keeps the first cause and says recovery is finishing; nothing is
+// asked of the owner and no command is shown. O8: the pause's renewal line.
+test('the last attempt finishing keeps the first cause; the pause names renewal by its recorded state', () => {
+    const pending = observed('recovery_required', { reason: 'recovery_failed', automatic_recovery: 'pause_pending', previous_failure: 'recovery_failed', first_failure_code: 'panel_start_unverified' });
+    assert.equal(pending.automatic_recovery, 'pause_pending');
+    assert.equal(pending.first_failure_code, 'panel_start_unverified');
+    const guidance = failedUpdateGuidance(pending, input());
+    assert.equal(guidance.title.key, 'recovery.automatic.pausingTitle');
+    assert.deepEqual(guidance.lines.map((line) => line.key), ['recovery.failure.panel_start_unverified.pending',
+        'recovery.automatic.pausingHelp', 'panelUpdate.outcome.followsRecovery']);
+    assert.equal(guidance.command, undefined);
+    assert.doesNotMatch(primary(en, guidance).join('\n'), /must act|Keep the server's files|will try again/);
+    assert.match(primary(en, guidance).join('\n'), /within about a minute/i);
+    assert.match(primary(tr, guidance).join('\n'), /yaklaşık bir dakika/);
+    // The hint binds to a recovery failure record only.
+    assert.equal(observed('recovery_required', { automatic_recovery: 'pause_pending' }).automatic_recovery, undefined);
+    const pause = (renewal) => failedUpdateGuidance(observed('recovery_required', { automatic_recovery: 'paused_retry_limit', previous_failure: 'recovery_failed', ...(renewal ? { renewal_before_update: renewal } : {}) }), input());
+    assert.equal(pause('off').lines[1].key, 'recovery.automatic.renewalOff');
+    assert.equal(pause('on').lines[1].key, 'recovery.automatic.renewal');
+    assert.equal(pause(undefined).lines[1].key, 'recovery.automatic.renewal');
+    for (const catalog of [en, tr]) {
+        assert.doesNotMatch(render(catalog, { key: 'recovery.automatic.renewalOff' }), /was stopped|durduruldu\./);
+        assert.match(render(catalog, { key: 'recovery.automatic.renewalOff' }), /Certbot/);
+    }
+});
+
+// upd4 O7: the server's line is never the raw updater line while recovery
+// runs, and the Turkish notice labels it as the server's English log line.
+test('the server line drops internal tokens in every state and is labelled as English in Turkish', () => {
+    const raw = 'reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason=offline panel database migration failed; its original database and work evidence are preserved detail=';
+    for (const observation of [observed('recovering'), observed('failed'), null]) {
+        const guidance = failedUpdateGuidance(observation, input({ message: raw }));
+        assert.equal(guidance.serverMessage, reportedSummary);
+    }
+    assert.match(tr['panelUpdate.outcome.serverMessage'], /^Sunucunun İngilizce günlük satırı: \{message\}$/);
+    assert.match(en['panelUpdate.outcome.serverMessage'], /\{message\}/);
+    const tracker = readFileSync(new URL('../src/components/SystemUpdateOperation.tsx', import.meta.url), 'utf8');
+    assert.match(tracker, /value\.fallback && !screensReady \? value\.fallback : value\.key/);
 });

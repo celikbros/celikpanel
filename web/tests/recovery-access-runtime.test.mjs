@@ -304,3 +304,37 @@ test('scheduled retry, preflight stop and paused renewal guidance on the recover
  for(const key of ['recovery.automatic.retryTitle','recovery.automatic.retryHelp','recovery.automatic.renewal','recovery.reason.recovery_runtime_preflight_failed','recovery.failure.recovery_runtime_preflight_failed.stopped','recovery.automatic.cause.recovery_runtime_preflight_failed'])
   for(const name of ['en','tr'])assert.ok(locale(name).includes(`'${key}':`),`${name} lacks ${key}`);
 });
+
+// upd4 F6/O8/O9/F4 on the recovery screen: while the last attempt is finishing
+// the owner is not asked to act and the first cause stays; the pause's renewal
+// line follows the recorded scheduler state; a verified update shows no
+// failure label; a refused update check is final. Reads only.
+test('finishing the last attempt, renewal already off, verified after a failure and a refused check on the recovery screen',async()=>{
+ const pending={...known('running'),phase:'recovery_required',reason:'recovery_failed',automatic_recovery:'pause_pending',previous_failure:'recovery_failed',first_failure_code:'panel_start_unverified'};
+ const pausedOff={...known('running'),phase:'recovery_required',reason:'recovery_incomplete',automatic_recovery:'paused_retry_limit',previous_failure:'recovery_failed',renewal_before_update:'off'};
+ const verified={...known('succeeded'),previous_failure:'recovery_failed'};
+ const refused={...known('failed'),previous_failure:'update_failed',failure_code:'update_preflight_refused'};
+ for(const [record,present,absent] of [
+  [pending,['recovery.automatic.pausingTitle','recovery.failure.panel_start_unverified.pending','recovery.automatic.pausingHelp'],['recovery.automatic.pausedTitle','recovery.automatic.pausedHelp','recovery.automatic.retryTitle','recovery.automatic.resume','recovery.automatic.renewal','recovery.next.recovery_required','celikpanel-release-recovery.service']],
+  [pausedOff,['recovery.automatic.pausedTitle','recovery.automatic.renewalOff','recovery.automatic.resume'],['"recovery.automatic.renewal"']],
+  [verified,['recovery.phase.succeeded','recovery.next.succeeded'],['recovery.previousFailure','recovery.reason.recovery_failed']],
+  [refused,['recovery.phase.failed','recovery.failure.recovery_runtime_preflight_failed.stopped','recovery.reason.update_preflight_refused'],['recovery.next.failed','recovery.automatic.']],
+ ]){
+  setup(async()=>admin,async()=>Response.json(record));
+  try {
+   await act(async()=>{tree=Renderer.create(React.createElement(RecoveryStatus,{username:'admin'}))});
+   const content=JSON.stringify(tree.toJSON());
+   for(const text of present)assert.ok(content.includes(text),`${text} missing: ${content}`);
+   for(const text of absent)assert.ok(!content.includes(text),`${text} shown: ${content}`);
+   assert.ok(calls.every(([,options])=>!options?.method||options.method==='GET'));
+  }finally{await clean()}
+ }
+ // The hints bind to their records only; renewal is read only at the pause.
+ assert.equal(parseRecoveryObservation({...pending,reason:'recovery_incomplete'},id).automatic_recovery,undefined);
+ assert.equal(parseRecoveryObservation({...pending,renewal_before_update:'off'},id).renewal_before_update,undefined);
+ assert.equal(parseRecoveryObservation({...pausedOff,renewal_before_update:'maybe'},id).renewal_before_update,undefined);
+ assert.equal(parseRecoveryObservation({...pending,first_failure_code:'update_preflight_refused'},id).first_failure_code,undefined);
+ const locale=name=>readFileSync(new URL(`../src/i18n/${name}.ts`,import.meta.url),'utf8');
+ for(const key of ['recovery.automatic.pausingTitle','recovery.automatic.pausingHelp','recovery.automatic.renewalOff','recovery.reason.update_preflight_refused'])
+  for(const name of ['en','tr'])assert.ok(locale(name).includes(`'${key}':`),`${name} lacks ${key}`);
+});

@@ -24,7 +24,9 @@ const (
 func main() {
 	if err := runRecoveryPanelCheck(os.Args[1:]); err != nil {
 		fmt.Fprintln(os.Stderr, "Recovery database check: "+err.Error())
-		os.Exit(1)
+		// 75 only when the sole reason is a concurrent write to the live
+		// database (see serviceOperationIdleExitCode); otherwise 1.
+		os.Exit(serviceOperationIdleExitCode(err))
 	}
 }
 

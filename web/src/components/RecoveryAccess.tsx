@@ -46,18 +46,19 @@ export function RecoveryStatus({ username, onUnauthorized }: { username: string;
             <p className="mt-3 break-all text-sm text-fg-muted">{t('recovery.operationId')}: <span className="font-mono">{requestId}</span></p>
             <div className="mt-4 space-y-3 text-sm" role="status" aria-live="polite">
                 {(unavailable || !last) && <p>{t(busy && !unavailable && !last ? 'recovery.checking' : 'recovery.observationUnavailable')}</p>}
-                {last?.phase && (last.automatic_recovery === 'retry_scheduled' ? <>
-                    {/* Attempts remain: the owner is not asked to act before the pause. */}
-                    <p className="font-semibold">{t('recovery.automatic.retryTitle')}</p>
+                {last?.phase && (last.automatic_recovery === 'retry_scheduled' || last.automatic_recovery === 'pause_pending' ? <>
+                    {/* Attempts remain, or the last one is finishing: the owner is not asked to act before the pause. */}
+                    <p className="font-semibold">{t(last.automatic_recovery === 'pause_pending' ? 'recovery.automatic.pausingTitle' : 'recovery.automatic.retryTitle')}</p>
                     {retryingCauseKey(last.first_failure_code) && <p className="max-w-prose">{t(retryingCauseKey(last.first_failure_code)!)}</p>}
-                    <p className="max-w-prose text-fg-muted">{t('recovery.automatic.retryHelp')}</p>
-                </> : <><p className="font-semibold">{t(last.automatic_recovery ? 'recovery.automatic.pausedTitle' : last.waiting_for ? `recovery.wait.${last.waiting_for}` : `recovery.phase.${last.phase}`)}</p>{last.automatic_recovery && last.first_failure_code && <p className="max-w-prose">{t(`recovery.automatic.cause.${last.first_failure_code}`)}</p>}<p className="max-w-prose text-fg-muted">{t(last.automatic_recovery ? 'recovery.automatic.pausedHelp' : last.waiting_for ? 'recovery.wait.next' : recoveryFailureGuidanceKey(last) ?? `recovery.next.${last.phase}`)}</p>{last.automatic_recovery && <p className="max-w-prose text-fg-muted">{t('recovery.automatic.renewal')}</p>}</>)}
+                    <p className="max-w-prose text-fg-muted">{t(last.automatic_recovery === 'pause_pending' ? 'recovery.automatic.pausingHelp' : 'recovery.automatic.retryHelp')}</p>
+                </> : <><p className="font-semibold">{t(last.automatic_recovery ? 'recovery.automatic.pausedTitle' : last.waiting_for ? `recovery.wait.${last.waiting_for}` : `recovery.phase.${last.phase}`)}</p>{last.automatic_recovery && last.first_failure_code && <p className="max-w-prose">{t(`recovery.automatic.cause.${last.first_failure_code}`)}</p>}<p className="max-w-prose text-fg-muted">{t(last.automatic_recovery ? 'recovery.automatic.pausedHelp' : last.waiting_for ? 'recovery.wait.next' : recoveryFailureGuidanceKey(last) ?? `recovery.next.${last.phase}`)}</p>{last.automatic_recovery && <p className="max-w-prose text-fg-muted">{t(last.renewal_before_update === 'off' ? 'recovery.automatic.renewalOff' : 'recovery.automatic.renewal')}</p>}</>)}
                 {last?.automatic_recovery === 'paused_retry_limit' && <div className="space-y-3">
                     <p className="max-w-prose">{t('recovery.automatic.inspect')}</p>
                     <pre className="whitespace-pre-wrap break-words rounded border border-border bg-surface px-3 py-3 text-sm"><code>sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50</code></pre>
                     <p className="max-w-prose text-fg-muted">{t('recovery.automatic.resume')}</p>
                 </div>}
-                {last?.previous_failure && <p>{t('recovery.previousFailure')}: {t(`recovery.reason.${last.failure_code ?? last.previous_failure}`)}</p>}
+                {/* upd4 O9: a verified update shows no failure label for its earlier attempts. */}
+                {last?.previous_failure && last.terminal_proof !== 'update_verified' && <p>{t('recovery.previousFailure')}: {t(`recovery.reason.${last.failure_code ?? last.previous_failure}`)}</p>}
                 {last?.observed_at && <p className="text-fg-muted">{t('recovery.observedAt')}: <time dateTime={last.observed_at}>{new Date(last.observed_at).toLocaleString(locale === 'tr' ? 'tr-TR' : 'en-US')}</time></p>}
             </div>
             <Button className="mt-4" variant="secondary" disabled={busy} onClick={() => void check()}>{t(busy ? 'recovery.checking' : 'recovery.checkStatus')}</Button>

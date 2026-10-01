@@ -3,19 +3,28 @@ export const recoveryPhases = ['accepted', 'running', 'recovering', 'recovered',
 export const recoveryReasons = ['operation_accepted', 'update_running', 'update_failed', 'recovery_running', 'recovery_failed', 'recovery_incomplete', 'update_verified', 'rollback_verified', 'observation_unavailable'] as const;
 export const recoveryWaitReasons = ['initializing', 'starting', 'stopping'] as const;
 /** Optional typed cause of the update's own failure. Unknown values are ignored (generic text). */
-export const recoveryFailureCodes = ['candidate_panel_startup_check_failed', 'panel_start_unverified', 'recovery_runtime_preflight_failed'] as const;
+export const recoveryFailureCodes = ['candidate_panel_startup_check_failed', 'panel_start_unverified', 'recovery_runtime_preflight_failed', 'update_preflight_refused'] as const;
+/** Causes written only for a request that stopped before changing the installed version. */
+export const preflightStopCodes = ['recovery_runtime_preflight_failed', 'update_preflight_refused'] as const;
 export type RecoveryFailureCode = typeof recoveryFailureCodes[number];
+/** A cause that can precede a retry or a pause: a refused update check never does. */
+export type PausedCauseCode = Exclude<RecoveryFailureCode, 'update_preflight_refused'>;
 export type RecoveryReason = typeof recoveryReasons[number];
 export type RecoveryFailureReason = 'update_failed' | 'recovery_failed' | 'recovery_incomplete';
 export type RecoveryObservation = {
     request_id: string; observation: 'known' | 'unavailable'; panel_state: 'starting' | 'ready';
     phase?: typeof recoveryPhases[number]; terminal_proof: 'none' | 'update_verified' | 'rollback_verified';
     waiting_for?: typeof recoveryWaitReasons[number];
-    /** paused_retry_limit: all automatic attempts used; retry_scheduled: the timer admits another one. */
-    automatic_recovery?: 'paused_retry_limit' | 'retry_scheduled';
+    /**
+     * paused_retry_limit: all automatic attempts used; retry_scheduled: the timer admits another one;
+     * pause_pending: the last admitted attempt failed and the next timer run records the pause.
+     */
+    automatic_recovery?: 'paused_retry_limit' | 'retry_scheduled' | 'pause_pending';
+    /** At the pause: whether Certbot renewal was on before the update paused it. Absent: not recorded. */
+    renewal_before_update?: 'on' | 'off';
     failure_code?: RecoveryFailureCode;
     /** The update's first typed cause, kept between automatic attempts and at the pause. */
-    first_failure_code?: RecoveryFailureCode;
+    first_failure_code?: PausedCauseCode;
     reason: RecoveryReason; observed_at?: string; previous_failure?: RecoveryFailureReason;
 };
 
@@ -49,13 +58,15 @@ export function parseRecoveryObservation(raw: unknown, requestId: string): Recov
     if (value.previous_failure !== undefined && !['update_failed', 'recovery_failed', 'recovery_incomplete'].includes(String(value.previous_failure))) throw new Error('invalid previous failure');
     const waiting = value.phase === 'recovering' && recoveryWaitReasons.includes(value.waiting_for as never) ? value.waiting_for as RecoveryObservation['waiting_for'] : undefined;
     const automatic = value.phase === 'recovery_required' && value.automatic_recovery === 'paused_retry_limit' ? 'paused_retry_limit'
-        : value.phase === 'recovery_required' && value.reason === 'recovery_failed' && value.automatic_recovery === 'retry_scheduled' ? 'retry_scheduled' : undefined;
+        : value.phase === 'recovery_required' && value.reason === 'recovery_failed' && value.automatic_recovery === 'retry_scheduled' ? 'retry_scheduled'
+        : value.phase === 'recovery_required' && value.reason === 'recovery_failed' && value.automatic_recovery === 'pause_pending' ? 'pause_pending' : undefined;
+    const renewal = automatic === 'paused_retry_limit' && (value.renewal_before_update === 'on' || value.renewal_before_update === 'off') ? value.renewal_before_update as 'on' | 'off' : undefined;
     // Only meaningful while the update's own failure is the latest recorded one.
     const failureCode = value.previous_failure === 'update_failed' && recoveryFailureCodes.includes(value.failure_code as never) ? value.failure_code as RecoveryFailureCode : undefined;
     // Only meaningful between automatic attempts or at the pause; unknown values are ignored.
     const betweenAttempts = automatic || (value.phase === 'recovering' && value.previous_failure === 'recovery_failed');
-    const firstFailureCode = betweenAttempts && recoveryFailureCodes.includes(value.first_failure_code as never) ? value.first_failure_code as RecoveryFailureCode : undefined;
-    return { ...base, observation: 'known', waiting_for: waiting, automatic_recovery: automatic, failure_code: failureCode, first_failure_code: firstFailureCode, phase: value.phase as RecoveryObservation['phase'], terminal_proof: proof,
+    const firstFailureCode = betweenAttempts && recoveryFailureCodes.includes(value.first_failure_code as never) && value.first_failure_code !== 'update_preflight_refused' ? value.first_failure_code as PausedCauseCode : undefined;
+    return { ...base, observation: 'known', waiting_for: waiting, automatic_recovery: automatic, renewal_before_update: renewal, failure_code: failureCode, first_failure_code: firstFailureCode, phase: value.phase as RecoveryObservation['phase'], terminal_proof: proof,
         reason: value.reason as RecoveryReason, observed_at: value.observed_at, previous_failure: value.previous_failure as RecoveryFailureReason | undefined };
 }
 
@@ -91,8 +102,8 @@ export function recoveryFailureGuidanceKey(observation: RecoveryObservation): Re
     }
     if (observation.previous_failure !== 'update_failed') return undefined;
     const pending = observation.terminal_proof === 'none' && (observation.phase === 'failed' || observation.phase === 'recovering');
-    // Written only before any release marker: nothing changed and nothing follows.
-    if (observation.failure_code === 'recovery_runtime_preflight_failed') {
+    // Written only when the update stopped before changing anything: nothing follows.
+    if (preflightStopCodes.includes(observation.failure_code as never)) {
         return observation.phase === 'failed' && observation.terminal_proof === 'none' ? 'recovery.failure.recovery_runtime_preflight_failed.stopped' : undefined;
     }
     if (observation.failure_code === 'candidate_panel_startup_check_failed') {
@@ -110,8 +121,8 @@ export function retryingCauseKey(code: RecoveryFailureCode | undefined): Recover
     return undefined;
 }
 
-/** A failed record whose typed cause says the update stopped in its read-only preflight. */
+/** A failed record whose typed cause says the update stopped in a read-only check before changing anything. */
 export function isPreflightStop(observation: RecoveryObservation | null): boolean {
     return observation?.observation === 'known' && observation.phase === 'failed' && observation.terminal_proof === 'none'
-        && observation.previous_failure === 'update_failed' && observation.failure_code === 'recovery_runtime_preflight_failed';
+        && observation.previous_failure === 'update_failed' && preflightStopCodes.includes(observation.failure_code as never);
 }

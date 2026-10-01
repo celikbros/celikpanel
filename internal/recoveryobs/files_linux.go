@@ -164,6 +164,14 @@ func statusAtFD(fd int, id string, uid, gid uint32) (Status, Record, error) {
 			status.FirstFailureCode = DecodeFailure(failure, id, r.TargetCommit)
 		}
 	}
+	// The pause text says whether the update paused automatic renewal; it
+	// depends on the scheduler state the updater recorded before pausing it.
+	if status.AutomaticRecovery == "paused_retry_limit" {
+		renewal, _, err := readObservationFile(fd, id+".renewal", uid, gid)
+		if err == nil {
+			status.RenewalBeforeUpdate = DecodeRenewal(renewal, id, r.TargetCommit)
+		}
+	}
 	return status, r, nil
 }
 
@@ -272,8 +280,8 @@ func decodeWaiting(raw []byte, id, identity string, observation []byte) string {
 }
 
 // Optional, exact-status guidance. It cannot authorize a new recovery dispatch.
-// retry_scheduled is bound to a recovery_failed record only; the pause to the
-// incomplete record the runner writes at its retry limit.
+// retry_scheduled and pause_pending are bound to a recovery_failed record only;
+// the pause to the incomplete record the runner writes at its retry limit.
 func decodeAutomatic(raw []byte, id, identity string, observation []byte, reason string) string {
 	lines := strings.Split(string(raw), "\n")
 	if len(lines) != 6 || lines[0] != "schema=celikpanel-recovery-automatic/v1" ||
@@ -286,7 +294,7 @@ func decodeAutomatic(raw []byte, id, identity string, observation []byte, reason
 	switch {
 	case value == "paused_retry_limit":
 		return value
-	case value == "retry_scheduled" && reason == "recovery_failed":
+	case (value == "retry_scheduled" || value == "pause_pending") && reason == "recovery_failed":
 		return value
 	}
 	return ""

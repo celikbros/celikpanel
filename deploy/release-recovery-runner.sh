@@ -32,6 +32,9 @@ DISPATCH_BUDGET_ROOT=/var/lib/celikpanel-release-state/recovery-dispatch/v1
 # admits another automatic one after it fails. Guidance only, never authority.
 DISPATCH_ATTEMPT=
 RECOVERY_RETRY_SCHEDULED=0
+# The last admitted attempt (the third automatic one or an owner retry) failed:
+# the next timer run records the pause and prints the owner's retry command.
+RECOVERY_PAUSE_PENDING=0
 
 case $# in
     0) ;;
@@ -780,7 +783,13 @@ after_failed_recovery_attempt() {
             printf 'Automatic recovery attempt %s of 3 did not finish; the native timer admits the next attempt for this same operation. No owner action is needed yet.\n' "$DISPATCH_ATTEMPT" >&2
             printf 'Otomatik kurtarma denemesi %s/3 tamamlanmadı; yerel zamanlayıcı aynı işlem için sonraki denemeyi başlatır. Henüz kullanıcı işlemi gerekmiyor.\n' "$DISPATCH_ATTEMPT" >&2
             ;;
-        3|owner) restore_renewal_after_final_attempt ;;
+        3|owner)
+            RECOVERY_PAUSE_PENDING=1
+            restore_renewal_after_final_attempt
+            printf '%s\n' \
+                'The last admitted recovery attempt did not finish. The next run of the recovery timer records the pause and prints the one-time retry command for this operation.' \
+                'İzin verilen son kurtarma denemesi tamamlanmadı. Kurtarma zamanlayıcısının sonraki çalışması duraklamayı kaydeder ve bu işlem için tek seferlik yeniden deneme komutunu yazdırır.' >&2
+            ;;
     esac
 }
 
@@ -910,11 +919,15 @@ RECOVERY_OBSERVATION_COMMIT=
 recovery_observation_exit() {
     local original_status=$?
     if [[ $original_status -ne 0 && -n $RECOVERY_OBSERVATION_REQUEST ]]; then
-        # A scheduled automatic retry is an optional hint; an older observer
-        # library that refuses it still records the verified failure.
+        # A scheduled automatic retry or a pending pause is an optional hint; an
+        # older observer library that refuses it still records the verified failure.
         if [[ $RECOVERY_RETRY_SCHEDULED == 1 ]] &&
            release_observation_publish "$RECOVERY_OBSERVATION_REQUEST" \
                "$RECOVERY_OBSERVATION_COMMIT" recovery_required none recovery_failed "" retry_scheduled; then
+            :
+        elif [[ $RECOVERY_PAUSE_PENDING == 1 ]] &&
+           release_observation_publish "$RECOVERY_OBSERVATION_REQUEST" \
+               "$RECOVERY_OBSERVATION_COMMIT" recovery_required none recovery_failed "" pause_pending; then
             :
         else
             release_observation_publish "$RECOVERY_OBSERVATION_REQUEST" \

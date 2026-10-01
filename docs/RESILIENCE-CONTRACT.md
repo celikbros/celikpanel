@@ -1712,3 +1712,84 @@ recovery runtime start neither unit (they dispatch these scripts). `install.sh`
 restarts only on a fresh install (apply-only mode exits before them) and is
 unchanged. No schema transition; contract test `deploy/test-unit-start-limit-contract.sh`.
 The code is not an observation value; the owner reads it in the recovery journal.
+
+### Refused update checks, snapshot cause, pending pause and renewal state (P0.1/P0.2/P0.5, 2026-10-01)
+
+D-025 invariants 2 (typed, preserved evidence), 3 (stop at the affected
+boundary), 4 (bounded retry of a read; retry exhaustion as a durable actionable
+state) and 1 (renewal is an owner workload); D-022, D-024. From the upd4 native run
+(F4, F5, F6, O7, O8, O9; one sample each).
+
+- **Changed.**
+  - F4: the WAL-aware idle check now types its one concurrent-write refusal: the
+    live database (same file, written) or its `-wal`/`-shm` (written, removed on a
+    last close, recreated with the same owner and mode) changed while it was read.
+    Only that refusal, returned directly (not joined with another error, not from
+    the private copy), exits 75; every other refusal, including a busy queue, a
+    rollback journal, a replaced or re-moded file, exits 1 with an unchanged
+    message. `update.sh` reads its two preliminary live panel probes once more
+    after 2 s on exit 75 only (`run_update_live_panel_probe`); the frozen, stopped
+    and snapshot proofs never re-read, and the compatibility checker keeps its
+    a6dd5b1e rule. Every read-only check that refuses before the freeze (the
+    preliminary panel and Agent idle probes, the Agent probe under the lock, BIND
+    and mail/DNS compatibility, the bootstrap state) reports
+    `update_preflight_refused` with `step=` (`idle_probe`, `agent_idle`,
+    `bind_compatibility`, `application_compatibility`, `bootstrap_state`) and
+    `class=` (`concurrent_write`, `operation_active`, `check_failed`) and the
+    checker's first diagnostic line, but only when the outcome is
+    `state=unchanged`; a failed quiesce abort or a resumed active phase keeps
+    `update_failed`. The failure sidecar records the code; it is terminal for the
+    request like `recovery_runtime_preflight_failed`. The Panel's summary
+    sanitizer no longer drops a reviewed updater line that is over 240 bytes or
+    contains `/`: it returns a form built only from closed tokens (allowlisted
+    code, state, `[a-z_]` step and class, a free reason only when it is itself
+    short and plain) and never copies the detail. It still drops unknown codes,
+    paths, controls and URLs; the full line stays in the Agent journal.
+  - F5: the transaction-consistent snapshot and the rescue snapshot run through
+    the capturing probe; on failure the tool's first diagnostic line (timestamp
+    removed, printable ASCII, 240 bytes; the start banner is skipped) is printed
+    and becomes `detail=` of the failure line, which the Agent logs and stores in
+    the update status. Who could write the database after the freeze is not
+    established: the Panel is killed and its cgroup proven empty, the Agent is
+    stopped, the snapshot quarantines the directory to root 0700 and refuses any
+    process with the panel UID or an open handle, but root processes (the
+    recovery timer's runner, owner tools) are not excluded by evidence, and the
+    upd4 failure's own cause was not recorded. So there is no re-read there; the
+    next run records the cause.
+  - F6: when the third automatic attempt or an owner retry fails, the runner
+    writes the optional automatic value `pause_pending` (only on a
+    `recovery_required/recovery_failed` record) and says in the journal that the
+    next timer run records the pause. Readers keep `first_failure_code` and say
+    recovery is finishing its last attempt; "the server owner must act" appears
+    only with the recorded pause.
+  - O8: the updater writes the optional sidecar `<id>.renewal`
+    (`celikpanel-recovery-renewal/v1`: `renewal_before_update=on|off`, first value
+    wins) right after it adds the Certbot timers to its service ledger. Readers
+    expose it as `renewal_before_update` only at the pause; `off` replaces the
+    "renewal was stopped for this update" sentence.
+  - O7/O9: texts only (see the operation guidance entry of the same date).
+- **Schema or version transition: none for existing artifacts.** Observation v1,
+  the failure sidecar v1 grammar, the automatic hint v1 grammar, snapshot v6,
+  material v3, markers, dispatch receipts and kit protocol 1 are unchanged. New
+  closed values: failure code `update_preflight_refused`, automatic value
+  `pause_pending`; older readers ignore both (generic text, as before). One new
+  optional sidecar, `celikpanel-recovery-renewal/v1`, that older readers never
+  open. The status JSON keeps every key and position; `renewal_before_update` is
+  appended last and present only at the pause. The panel checker's exit status
+  changes from 1 to 75 for the concurrent-write refusal only. Script and binary
+  bytes change, so manifest values (not formats) change.
+- **Recovery behaviour.** Unchanged: dispatch, the three-attempt budget, the
+  pause, owner retry, rollback and forward completion, and every frozen proof.
+  The only new automatic action is one 2 s re-read of a read-only live probe
+  before any coordinator is frozen; a pre-freeze refusal aborts the quiesce as
+  before.
+- **Evidence.** Go, shell contract and web tests only
+  (`deploy/test-update-preflight-refusal-contract.sh`, the renewal pause contract,
+  `TestConcurrentPanelWriteIsTheOnlyRetryableIdleRefusal`,
+  `TestPanelUpdateSummaryKeepsABoundedReviewedForm`, the recoveryobs and CLI
+  tests); native run pending.
+
+Open: the F4 trigger (which Panel write) and the F5 cause are not identified;
+the compatibility checker still re-reads any non-timeout refusal once; the
+refused-check texts live in the server screen catalogue (generic reason until it
+arrives); the web screens omit the O9 history line (the SSH owner view has it; the boot catalogue has no room).

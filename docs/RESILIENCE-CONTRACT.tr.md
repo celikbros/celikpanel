@@ -939,3 +939,86 @@ Kurtarma çalıştırıcısı ve Go kurtarma ortamı bu birimlerden hiçbirini b
 (yalnız-uygulama kipi daha önce çıkar) ve değişmedi. Şema geçişi yok; sözleşme
 testi `deploy/test-unit-start-limit-contract.sh`. Kod bir gözlem değeri değildir;
 sahip onu kurtarma günlüğünde okur.
+
+### Reddedilen güncelleme denetimleri, anlık görüntü nedeni, bekleyen duraklama ve yenileme durumu (P0.1/P0.2/P0.5, 2026-10-01)
+
+D-025 ilkeleri 2 (tipli, korunan kanıt), 3 (etkilenen sınırda durma), 4 (bir
+okumanın sınırlı yeniden denenmesi; deneme hakkı bitince kalıcı ve uygulanabilir
+durum) ve 1 (yenileme sahibin iş yüküdür); D-022, D-024. upd4 gerçek sistem
+denemesinden (F4, F5, F6, O7, O8, O9; her biri bir örnek).
+
+- **Değişen.**
+  - F4: WAL'a duyarlı boşta denetimi tek eşzamanlı yazım reddini artık tipler:
+    canlı veritabanı (aynı dosya, yazılmış) ya da `-wal`/`-shm` (yazılmış, son
+    kapanışta silinmiş, aynı sahip ve kipte yeniden oluşturulmuş) okunurken
+    değişti. Yalnız doğrudan dönen bu ret (başka hatayla birleşmemiş, özel
+    kopyadan gelmeyen) 75 ile çıkar; meşgul kuyruk, geri alma günlüğü, değiştirilmiş
+    ya da kipi değişmiş dosya dahil diğer her ret değişmeyen iletiyle 1 ile çıkar.
+    `update.sh` iki canlı ön panel denetimini yalnız 75 çıkışında 2 sn sonra bir
+    kez daha okur (`run_update_live_panel_probe`); dondurulmuş, durdurulmuş ve
+    anlık görüntü kanıtları asla yeniden okunmaz, uyumluluk denetleyicisi a6dd5b1e
+    kuralını korur. Dondurmadan önce reddeden her salt-okur denetim (ön panel ve
+    Agent boşta denetimleri, kilit altındaki Agent denetimi, BIND ve posta/DNS
+    uyumluluğu, ilk geçiş durumu), yalnız sonuç `state=unchanged` ise,
+    `update_preflight_refused` kodunu `step=` (`idle_probe`, `agent_idle`,
+    `bind_compatibility`, `application_compatibility`, `bootstrap_state`),
+    `class=` (`concurrent_write`, `operation_active`, `check_failed`) ve
+    denetleyicinin ilk tanı satırıyla bildirir; başarısız quiesce geri alması ya
+    da sürdürülen active aşaması `update_failed` olarak kalır. Hata kaydı kodu
+    yazar; istek için `recovery_runtime_preflight_failed` gibi son durumdur.
+    Panel'in özet temizleyicisi 240 baytı aşan ya da `/` içeren gözden geçirilmiş
+    güncelleyici satırını artık düşürmez: yalnız kapalı belirteçlerden (izinli kod,
+    durum, `[a-z_]` adım ve sınıf, yalnız kendisi kısa ve düz ise serbest neden)
+    kurulan bir biçim döndürür ve ayrıntıyı asla kopyalamaz. Bilinmeyen kodları,
+    yolları, denetim karakterlerini ve URL'leri yine düşürür; tam satır Agent
+    günlüğünde kalır.
+  - F5: işlem tutarlı anlık görüntü ve kurtarma anlık görüntüsü yakalayan
+    denetimle çalışır; hatada aracın ilk tanı satırı (zaman damgası çıkarılmış,
+    yazdırılabilir ASCII, 240 bayt; başlangıç satırı atlanır) yazdırılır ve hata
+    satırının `detail=` alanı olur; Agent onu günlüğe ve güncelleme durumuna yazar.
+    Dondurmadan sonra veritabanına kimin yazabileceği kanıtlanamadı: Panel
+    öldürülür ve cgroup'unun boş olduğu kanıtlanır, Agent durur, anlık görüntü
+    dizini root 0700 olarak karantinaya alır ve panel UID'li ya da açık tanıtıcılı
+    her süreci reddeder; ancak root süreçleri (kurtarma zamanlayıcısının
+    çalıştırıcısı, sahip araçları) kanıtla dışlanmadı ve upd4 hatasının kendi
+    nedeni kaydedilmedi. Bu yüzden orada yeniden okuma yok; sonraki deneme nedeni
+    kaydeder.
+  - F6: üçüncü otomatik deneme ya da sahibin yeniden denemesi başarısız olunca
+    çalıştırıcı isteğe bağlı otomatik değer `pause_pending` yazar (yalnız
+    `recovery_required/recovery_failed` kaydında) ve günlüğe sonraki zamanlayıcı
+    çalışmasının duraklamayı kaydedeceğini yazar. Okuyucular `first_failure_code`
+    alanını korur ve kurtarmanın son denemesini bitirdiğini söyler; "Sunucu
+    sahibinin işlem yapması gerekiyor" yalnız kaydedilen duraklamayla görünür.
+  - O8: güncelleyici, Certbot zamanlayıcılarını hizmet defterine ekledikten hemen
+    sonra isteğe bağlı `<id>.renewal` yan dosyasını yazar
+    (`celikpanel-recovery-renewal/v1`: `renewal_before_update=on|off`, ilk değer
+    geçerli). Okuyucular onu yalnız duraklamada `renewal_before_update` olarak
+    gösterir; `off`, "yenileme bu güncelleme için durduruldu" cümlesinin yerini
+    alır.
+  - O7/O9: yalnız metinler (aynı tarihli işlem yönlendirmesi kaydına bakın).
+- **Şema veya sürüm geçişi: mevcut yapıtlar için yok.** Gözlem v1, hata yan
+  dosyası v1 dil bilgisi, otomatik ipucu v1 dil bilgisi, anlık görüntü v6,
+  malzeme v3, işaretçiler, dağıtım makbuzları ve kit protokolü 1 değişmedi. Yeni
+  kapalı değerler: `update_preflight_refused` hata kodu, `pause_pending` otomatik
+  değeri; eski okuyucular ikisini de yok sayar (önceki gibi genel metin). Eski
+  okuyucuların hiç açmadığı yeni bir isteğe bağlı yan dosya:
+  `celikpanel-recovery-renewal/v1`. Durum JSON'u her anahtarı ve konumunu korur;
+  `renewal_before_update` en sona eklenir ve yalnız duraklamada bulunur. Panel
+  denetleyicisinin çıkış kodu yalnız eşzamanlı yazım reddinde 1'den 75'e değişir.
+  Betik ve ikili baytları değiştiği için manifestlerin biçimi değil değerleri
+  değişir.
+- **Kurtarma davranışı.** Değişmedi: dağıtım, üç denemelik hak, duraklama, sahip
+  yeniden denemesi, geri alma ve ileri tamamlama ile her dondurulmuş kanıt. Tek
+  yeni otomatik eylem, herhangi bir koordinatör dondurulmadan önce salt-okur canlı
+  bir denetimin 2 sn sonra bir kez yeniden okunmasıdır; dondurma öncesi ret
+  quiesce'i önceki gibi geri alır.
+- **Kanıt.** Yalnız Go, kabuk sözleşmesi ve web testleri
+  (`deploy/test-update-preflight-refusal-contract.sh`, yenileme duraklama
+  sözleşmesi, `TestConcurrentPanelWriteIsTheOnlyRetryableIdleRefusal`,
+  `TestPanelUpdateSummaryKeepsABoundedReviewedForm`, recoveryobs ve CLI testleri);
+  gerçek sistem denemesi bekliyor.
+
+Açık: F4 tetikleyicisi (hangi Panel yazımı) ve F5 nedeni belirlenmedi; uyumluluk
+denetleyicisi zaman aşımı dışındaki her reddi hâlâ bir kez yeniden okur;
+reddedilen denetim metinleri sunucu ekran katalogundadır (gelene kadar genel
+neden); web ekranları O9 geçmiş satırını göstermez (SSH sahip görünümünde var; açılış katalogunda yer yok).

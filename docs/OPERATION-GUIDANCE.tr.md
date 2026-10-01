@@ -395,3 +395,67 @@ yükselttiği seçili kurtarma kitinden gelir). EXIT tuzağından önceki diğer
 güncelleyici hataları hâlâ yalnız kendi durma satırını bırakır.
 
 - **Devamda başlatma sınırı (aynı tarih).** systemd Panel ya da Agent başlatmasını başlatma sınırı yüzünden reddederse kurtarma günlüğü satırı birimi ve `sudo systemctl reset-failed <birim>` komutunu, ardından yeniden denemeyi adlandırır (kod `unit_start_limit_hit`). Her denetimli başlatma artık önce yalnız o birimin sınırını temizlediği için bu seyrek olmalıdır. Kim yapar: sunucu sahibi. Sürdürme: aynı yeniden deneme.
+
+### Reddedilen güncelleme denetimi, biten son deneme, zaten kapalı yenileme (upd4 F4-F6, O7-O9, 2026-10-01)
+
+Bileşen ve sözleşme testleriyle kaynak durumu; gerçek sistem denemesi bekliyor.
+upd4 denemesinden (F4, F5, F6 bulguları ve O7, O8, O9 gözlemleri).
+
+- **Salt-okur bir denetim güncellemeyi hiçbir şey değişmeden reddetti (F4).**
+  Güncelleyicinin koordinatörler dondurulmadan önceki kendi denetimleri (panel
+  işlem kuyruğu, Agent işlemleri, BIND ve posta/DNS uyumluluğu, ilk geçiş durumu)
+  artık `state=unchanged` ile tipli `update_preflight_refused` olarak biter; adımı,
+  bir neden sınıfını ve denetleyicinin satırını taşır ve isteğin hata kaydını
+  yazar. Yayımlanmış bir quiesce önce geri alınır; bu geri alma başarısız olursa
+  sonuç kurtarma gerektiren `update_failed` olarak kalır.
+  - Eşzamanlı panel yazımı: canlı panel veritabanı ya da `-wal`/`-shm` dosyası
+    denetim okurken değişti (meşgul kuyruk değil, panel kaydı veya checkpoint).
+    Denetim 2 sn sonra bir kez daha okunur; ancak yine değişirse güncelleme durur.
+    Meşgul işlem kuyruğu ya da başka bir ret asla yeniden okunmaz.
+  - Kök CLI, kurtarma ekranı ve güncelleme bildirimi: güncelleme kurulu sürümü
+    değiştirmeden ve hiçbir hizmeti durdurmadan durdu ve sunucu önceki sürümünü
+    çalıştırıyor. Bildirim nedeni adlandırır (eşzamanlı yazım: "denetim panel
+    veritabanını okurken panel veri kaydediyordu ... Sunucuda bir sorun yok";
+    sırada ya da çalışan işlem: "güncellemeyi yeniden başlatmadan önce bitmesini
+    bekleyin"; diğer adımlar denetimi adlandırır); CLI nedeni taşıyan güncelleme
+    günlüğü satırını gösterir.
+  - Kim yapar: neden başka bir işlemi adlandırmıyorsa kimse; adlandırıyorsa
+    bitmesini bekleyin.
+  - Sürdürme: hiçbir şey kendiliğinden sürmez; güncellemeyi yeniden başlatmak
+    güvenlidir. Bildirim sorgulamayı bırakır.
+  - Panel böyle bir özeti uzun olduğu ya da yol içerdiği için artık düşürmez:
+    kapalı belirteçlerden (kod, durum, adım, neden sınıfı) kurulan sınırlı bir
+    biçim gösterir. Tam satır Agent günlüğünde kalır ("System update worker
+    failed: …").
+- **Başarısız panel veritabanı anlık görüntüsü nedenini korur (F5).** Anlık görüntü
+  aracının ilk tanı satırı (günlük zaman damgası olmadan, yazdırılabilir, en çok
+  240 bayt) artık hata satırında (`detail=`), dolayısıyla Agent günlüğünde ve
+  güncelleme durum kaydındadır. Otomatik geri alma değişmedi. Burada yeniden okuma
+  yoktur.
+- **Son deneme bitiyor (F6).** Üçüncü otomatik deneme ya da sahibin yeniden
+  denemesi başarısız olunca kayıt, sonraki zamanlayıcı çalışması duraklamayı
+  kaydedene kadar `automatic_recovery=pause_pending` taşır. Her okuyucu
+  güncellemenin ilk tipli nedenini korur, kurtarmanın son denemesini bitirdiğini
+  ve sonraki adımı ile tek seferlik yeniden deneme komutunu içeren duraklamanın
+  yaklaşık bir dakika içinde kaydedileceğini, o zamana kadar bir şey gerekmediğini
+  söyler. "Sunucu sahibinin işlem yapması gerekiyor" yalnız kaydedilen duraklamada
+  görünür.
+- **Kurtarma sürerken sunucu satırı (O7).** Bildirim ham güncelleyici satırını
+  asla göstermez: iç belirteçler her durumda çıkarılır ve gözden geçirilmiş çevrili
+  bir özet aynısını söylüyorsa (paket yöneticisi meşgul, çevrili neden sınıfı)
+  satır gösterilmez. Türkçede "Sunucunun İngilizce günlük satırı" olarak etiketlenir.
+- **Duraklamada yenileme (O8).** Güncelleyici, Certbot zamanlayıcısının
+  güncellemeden önce açık (bir zamanlayıcı etkin ya da çalışıyor) mı kapalı mı
+  olduğunu kaydeder. Kapalıysa duraklama, yenilemenin zaten kapalı olduğunu ve
+  güncellemenin onu durdurmadığını söyler (CLI ayrıca: açık olması gerekip
+  gerekmediğini kontrol edin); aksi hâlde ya da kayıt yoksa mevcut cümle kalır.
+- **Önceki hatadan sonra doğrulanan güncelleme (O9).** Başarılı bir yeniden
+  denemeden sonra kurtarma ekranı ve bildirim hata başlığı ya da "Kurtarma başarısız
+  oldu" etiketi göstermez; SSH sahip görünümü önceki denemelerin tamamlanmadığını
+  ve sonraki bir denemenin güncellemeyi tamamladığını söyler.
+
+Yapılmayan: reddedilen denetimin adım ve neden sınıfı metinleri sunucu ekran
+katalogundadır (açılış katalogunda yer yok); o gelene kadar bildirim genel nedeni
+gösterir. Bu duruşun bildirimi bu değişikliği içeren kurulu bir Panel gerektirir.
+upd4 anlık görüntü hatasının tetikleyicisi hâlâ bilinmiyor; sonraki gerçek sistem
+denemesi onu kaydeder.

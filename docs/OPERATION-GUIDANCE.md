@@ -478,3 +478,63 @@ promoted to the candidate's). Other updater failures that occur before the EXIT
 trap still keep only their die line.
 
 - **Start limit on the continuation (same date).** If systemd refuses to start the Panel or Agent on its start limit, the recovery journal line names the unit and `sudo systemctl reset-failed <unit>`, then the retry (code `unit_start_limit_hit`). Every controlled start now clears only that unit's start limit first, so this should be rare. Who acts: the server owner. Resume: the same retry.
+
+### Refused update check, the last attempt finishing, renewal already off (upd4 F4-F6, O7-O9, 2026-10-01)
+
+Source state with component and contract tests; the native run is pending. From
+the upd4 run (findings F4, F5, F6 and observations O7, O8, O9).
+
+- **A read-only check refused the update before anything changed (F4).** The
+  updater's own checks before the coordinators are frozen (panel operation queue,
+  Agent operations, BIND and mail/DNS compatibility, the bootstrap state) now end
+  typed `update_preflight_refused` with `state=unchanged`, the step, a reason class
+  and the checker's line, and record the request's failure record. Any published
+  quiesce is aborted first; if that abort fails, the outcome stays `update_failed`
+  with recovery required.
+  - Concurrent panel write: the live panel database or its `-wal`/`-shm` changed
+    while the check read it (a panel commit or checkpoint, not a busy queue). The
+    check is read once more after 2 s; only if it changes again does the update
+    stop. A busy operation queue or any other refusal is never read again.
+  - Root CLI, recovery screen and update notice: the update stopped before
+    changing the installed version or stopping any service, and the server runs
+    the version it had. The notice names the reason (concurrent write: "the panel
+    was saving data while the check read its database ... Nothing is wrong on the
+    server"; operation still queued or running: "let it finish before you start
+    the update again"; other steps name the check); the CLI names the update log
+    line that carries it.
+  - Who acts: nobody, unless the reason names another operation; then let it finish.
+  - Resume: nothing resumes by itself; starting the update again is safe. The
+    notice stops polling.
+  - The Panel no longer drops such a summary because it is long or contains a
+    path: it shows a bounded form built from closed tokens (code, state, step,
+    reason class). The full line stays in the Agent journal ("System update worker
+    failed: …").
+- **A failed panel database snapshot keeps its cause (F5).** The snapshot tool's
+  first diagnostic line (without the log timestamp, printable, at most 240 bytes)
+  is now in the failure line (`detail=`), therefore in the Agent journal and the
+  update status record. Automatic rollback is unchanged. There is no re-read here.
+- **The last attempt is finishing (F6).** When the third automatic attempt or an
+  owner retry fails, the record carries `automatic_recovery=pause_pending` until
+  the next timer run records the pause. Every reader keeps the update's first
+  typed cause and says that recovery is finishing its last attempt and that the
+  pause, with the next step and the one-time retry command, is recorded within
+  about a minute; nothing is needed before then. "The server owner must act"
+  appears only at the recorded pause.
+- **Server line while recovery runs (O7).** The notice never shows the raw updater
+  line: internal tokens are removed in every state, and the line is omitted when
+  a reviewed translated summary says the same (package manager busy, a translated
+  reason class). In Turkish it is labelled "Sunucunun İngilizce günlük satırı".
+- **Renewal at the pause (O8).** The updater records whether the Certbot scheduler
+  was on (a timer enabled or active) or off before the update. When it was off,
+  the pause says renewal was already off and the update did not stop it (CLI also:
+  check whether it should be on); otherwise, or when not recorded, the existing
+  sentence stays.
+- **Verified after an earlier failure (O9).** After a successful retry the recovery
+  screen and notice show no failure title or "Recovery failed" label; the SSH owner
+  view says the earlier attempts did not finish and a later attempt completed it.
+
+Not done: the refused-check step and reason-class texts are in the server screen
+catalogue (the boot catalogue has no room); until it has arrived the notice shows
+the generic reason. A notice for this stop needs an installed Panel that contains
+this change. The trigger of the upd4 snapshot failure is still unknown; the next
+native run records it.

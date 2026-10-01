@@ -82,6 +82,9 @@ release_observation_publish() (
         paused_retry_limit) [[ -z $waiting && $phase:$proof == recovery_required:none ]] || return 1 ;;
         # The last admitted attempt failed and the timer admits another one.
         retry_scheduled) [[ -z $waiting && $phase:$proof:$reason == recovery_required:none:recovery_failed ]] || return 1 ;;
+        # The last admitted attempt failed and no automatic attempt remains: the
+        # next timer run records the pause and prints the owner's retry command.
+        pause_pending) [[ -z $waiting && $phase:$proof:$reason == recovery_required:none:recovery_failed ]] || return 1 ;;
         *) return 1 ;;
     esac
     now=$(date -u +%Y-%m-%dT%H:%M:%SZ) || return 1
@@ -136,7 +139,7 @@ release_observation_publish() (
            ${wait_lines[1]} == "request_id=$id" && ${wait_lines[2]} == observation_identity=* &&
            ${wait_lines[3]} =~ ^observation_sha256=[0-9a-f]{64}$ ]] || return 1
         case "$suffix:${wait_lines[4]}" in
-            wait:waiting_for=initializing|wait:waiting_for=starting|wait:waiting_for=stopping|automatic:automatic_recovery=paused_retry_limit|automatic:automatic_recovery=retry_scheduled) ;;
+            wait:waiting_for=initializing|wait:waiting_for=starting|wait:waiting_for=stopping|automatic:automatic_recovery=paused_retry_limit|automatic:automatic_recovery=retry_scheduled|automatic:automatic_recovery=pause_pending) ;;
             *) return 1 ;;
         esac
         cmp -s -- "$wait_path" <(printf '%s\n' "${wait_lines[@]}") || return 1
@@ -156,31 +159,49 @@ release_observation_publish() (
 # old readers never open this file. It grants no recovery or retry authority.
 # Güncellemenin kendi hatasının isteğe bağlı tipli nedeni. İlk kayıt geçerlidir.
 release_observation_publish_failure() (
-    local id=$1 commit=$2 code=$3 gid path stage lock_fd
-    [[ $EUID == 0 && $id =~ ^[0-9a-f]{32}$ && $commit =~ ^[0-9a-f]{40}$ ]] || return 1
+    local id=$1 commit=$2 code=$3
     case "$code" in
-        candidate_panel_startup_check_failed|panel_start_unverified|recovery_runtime_preflight_failed) ;;
+        candidate_panel_startup_check_failed|panel_start_unverified|recovery_runtime_preflight_failed|update_preflight_refused) ;;
         *) return 1 ;;
     esac
+    _release_observation_publish_fact "$id" "$commit" failure celikpanel-recovery-failure/v1 "failure_code=$code"
+)
+
+# Optional Certbot scheduler state recorded before the update paused it,
+# celikpanel-recovery-renewal/v1: on (enabled or active), off (neither). Only
+# the updater writes it, once per request; old readers never open this file.
+# It grants nothing; the pause text only stops claiming renewal was stopped.
+# Güncellemenin duraklatmadan önceki Certbot zamanlayıcı durumu; yalnız metin içindir.
+release_observation_publish_renewal() (
+    local id=$1 commit=$2 value=$3
+    case "$value" in
+        on|off) ;;
+        *) return 1 ;;
+    esac
+    _release_observation_publish_fact "$id" "$commit" renewal celikpanel-recovery-renewal/v1 "renewal_before_update=$value"
+)
+
+# One immutable four-field fact beside a request's status: the first value wins.
+_release_observation_publish_fact() (
+    local id=$1 commit=$2 suffix=$3 schema=$4 field=$5 gid path stage lock_fd
+    [[ $EUID == 0 && $id =~ ^[0-9a-f]{32}$ && $commit =~ ^[0-9a-f]{40}$ ]] || return 1
     gid=$(_release_observation_gid) || return 1
     _release_observation_root "$RELEASE_OBSERVATION_ROOT" 0750 "$gid" || return 1
     _release_observation_file "$RELEASE_OBSERVATION_ROOT/.publish.lock" 600 0 0 || return 1
     exec {lock_fd}<>"$RELEASE_OBSERVATION_ROOT/.publish.lock" || return 1
     flock -w 5 -x "$lock_fd" || return 1
-    [[ $(stat -Lc '%d:%i' -- "$RELEASE_OBSERVATION_ROOT/.publish.lock") == \
-       $(stat -Lc '%d:%i' -- "/proc/$BASHPID/fd/$lock_fd") ]] || return 1
+    [[ $(stat -Lc '%d:%i' -- "$RELEASE_OBSERVATION_ROOT/.publish.lock") == $(stat -Lc '%d:%i' -- "/proc/$BASHPID/fd/$lock_fd") ]] || return 1
     # Bind to the exact request whose status names the same target commit.
     _release_observation_read "$id" "$gid" || return 1
     [[ $OBSERVATION_COMMIT == "$commit" && $OBSERVATION_PROOF == none ]] || return 1
-    path=$RELEASE_OBSERVATION_ROOT/$id.failure
+    path=$RELEASE_OBSERVATION_ROOT/$id.$suffix
     if [[ -e $path || -L $path ]]; then
         _release_observation_file "$path" 640 "$gid" 2048 || return 1
         return 0
     fi
     stage=$(mktemp "$RELEASE_OBSERVATION_ROOT/.observation-XXXXXXXX") || return 1
     trap 'rm -f -- "$stage"' EXIT
-    printf '%s\n' schema=celikpanel-recovery-failure/v1 "request_id=$id" \
-        "target_commit=$commit" "failure_code=$code" > "$stage" || return 1
+    printf '%s\n' "schema=$schema" "request_id=$id" "target_commit=$commit" "$field" > "$stage" || return 1
     chown "0:$gid" -- "$stage" && chmod 0640 -- "$stage" && sync -f -- "$stage" || return 1
     _release_observation_file "$stage" 640 "$gid" 2048 || return 1
     mv -T -n -- "$stage" "$path" || return 1

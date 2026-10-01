@@ -41,6 +41,12 @@ type Status struct {
 	// never changes the phase, the pause or any recovery decision. Appended last
 	// so every existing JSON key keeps its position.
 	FirstFailureCode string `json:"first_failure_code,omitempty"`
+	// RenewalBeforeUpdate is optional guidance shown with a paused automatic
+	// recovery: "on" when the Certbot scheduler was enabled or active before
+	// the update (the update paused it), "off" when it was neither (the update
+	// changed nothing about renewal). Read from the optional <id>.renewal
+	// sidecar; absent means not recorded. Appended last; never an authority.
+	RenewalBeforeUpdate string `json:"renewal_before_update,omitempty"`
 }
 
 // ValidWaitingFor accepts optional guidance, never a phase or mutation authority.
@@ -59,17 +65,46 @@ const FailureSchema = "celikpanel-recovery-failure/v1"
 // nothing, so a failed record carrying it is terminal for that request.
 // recovery_runtime_preflight_failed yalnız kalıcı işaretçi yokken yazılır:
 // güncelleme salt-okur ön denetimde durdu ve hiçbir şeyi değiştirmedi.
+// update_preflight_refused has the same terminal meaning: a read-only check of
+// the updater refused before the coordinators were frozen, and the quiesce was
+// safely aborted (state=unchanged).
+// update_preflight_refused aynı anlamdadır: dondurmadan önce salt-okur denetim
+// reddetti ve quiesce güvenle geri alındı.
 func ValidFailureCode(value string) bool {
 	return value == "candidate_panel_startup_check_failed" || value == "panel_start_unverified" ||
-		value == "recovery_runtime_preflight_failed"
+		value == "recovery_runtime_preflight_failed" || value == "update_preflight_refused"
 }
 
 // ValidAutomatic accepts the optional celikpanel-recovery-automatic/v1 hint:
-// paused_retry_limit (all automatic attempts used) or retry_scheduled (the last
-// admitted attempt failed and the native timer admits another automatic one).
-// Neither value is a phase or grants any recovery or retry authority.
+// paused_retry_limit (all automatic attempts used), retry_scheduled (the last
+// admitted attempt failed and the native timer admits another automatic one)
+// or pause_pending (the last admitted attempt failed and no automatic attempt
+// remains: the next timer run records the pause with the owner's retry
+// command). No value is a phase or grants any recovery or retry authority.
 func ValidAutomatic(value string) bool {
-	return value == "paused_retry_limit" || value == "retry_scheduled"
+	return value == "paused_retry_limit" || value == "retry_scheduled" || value == "pause_pending"
+}
+
+// RenewalSchema is the optional <id>.renewal sidecar written by the updater
+// when it records the Certbot scheduler state before pausing it.
+const RenewalSchema = "celikpanel-recovery-renewal/v1"
+
+// DecodeRenewal accepts exactly four fixed fields bound to one request and its
+// target commit. Anything else yields "" (not recorded), never an error.
+func DecodeRenewal(raw []byte, id, commit string) string {
+	lines := strings.Split(string(raw), "\n")
+	if len(raw) > MaxRecordSize || len(lines) != 5 || lines[0] != "schema="+RenewalSchema ||
+		!ValidRequestID(id) || lines[1] != "request_id="+id ||
+		!commitPattern.MatchString(commit) || lines[2] != "target_commit="+commit || lines[4] != "" {
+		return ""
+	}
+	switch lines[3] {
+	case "renewal_before_update=on":
+		return "on"
+	case "renewal_before_update=off":
+		return "off"
+	}
+	return ""
 }
 
 // DecodeFailure accepts exactly four fixed fields bound to one request and its

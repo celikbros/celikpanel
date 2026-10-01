@@ -23,6 +23,9 @@ SH
 chmod 0755 "$TEST_ROOT/probe"
 eval "$(extract update.sh run_update_idle_probe)"
 eval "$(extract update.sh preflight_mutations_before_quiesce)"
+# upd4: the refusal is reported typed through the updater's own helper.
+eval "$(extract update.sh update_probe_diagnostic)"
+eval "$(extract update.sh fail_update_preflight)"
 die() { printf 'refused: %s; detail=%s\n' "$*" "$update_failure_detail" >&2; exit 73; }
 PREFLIGHT_AGENT=$TEST_ROOT/probe
 AGENT_STATE_DIR=$TEST_ROOT/state

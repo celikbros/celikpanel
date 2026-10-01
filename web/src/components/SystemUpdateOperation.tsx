@@ -620,7 +620,7 @@ function terminalResultFromRecord(record: TerminalUpdateRecord): TerminalResult 
 }
 
 export function SystemUpdateOperationProvider({ children }: { children: ReactNode }) {
-    const { t } = useI18n();
+    const { t, screensReady } = useI18n();
     const [initialRecord] = useState<StoredUpdateRecord | null>(() => readStoredRecord());
     const [canonicalReady, setCanonicalReady] = useState(false);
     const canonicalReadyRef = useRef(false);
@@ -1893,7 +1893,10 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
             });
         })()
         : null;
-    const outcomeText = (value: OutcomeText) => ('text' in value ? value.text : t(value.key, value.vars));
+    // A line whose text lives in a screen catalogue shows its boot-catalogue
+    // fallback until that catalogue has arrived; a key never renders as its name.
+    const outcomeText = (value: OutcomeText) => ('text' in value ? value.text
+        : t(value.fallback && !screensReady ? value.fallback : value.key, value.vars));
     const terminalKind = pendingReload || requiredReloadMarker ? 'succeeded'
         : failureGuidance?.state === 'succeeded' ? 'succeeded' : displayedTerminal?.kind;
     const disconnected = !pendingReload && !requiredReloadMarker && marker !== null && view.disconnected;

@@ -749,14 +749,18 @@ func main() {
 	}
 	if *checkWALAwarePreLedgerServiceOperationsIdleFlag {
 		if err := checkWALAwarePreLedgerServiceOperationsIdle(databaseFile()); err != nil {
-			log.Fatalf("WAL-aware pre-ledger service operation check failed: %v", err)
+			log.Printf("WAL-aware pre-ledger service operation check failed: %v", err)
+			os.Exit(serviceOperationIdleExitCode(err))
 		}
 		log.Println("WAL-aware pre-ledger service operation state is idle")
 		return
 	}
 	if *checkWALAwareServiceOperationsIdleFlag {
 		if err := checkWALAwareServiceOperationsIdle(databaseFile()); err != nil {
-			log.Fatalf("WAL-aware service operation idle check failed: %v", err)
+			// Exit 75 only when the sole reason is a concurrent write; see
+			// serviceOperationIdleExitCode. The message is unchanged.
+			log.Printf("WAL-aware service operation idle check failed: %v", err)
+			os.Exit(serviceOperationIdleExitCode(err))
 		}
 		log.Println("WAL-aware service operation state is idle")
 		return

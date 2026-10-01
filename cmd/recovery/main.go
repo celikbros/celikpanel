@@ -174,6 +174,12 @@ func failureCodeGuidance(status recoveryobs.Status) (string, string, bool) {
 		if status.Phase == "failed" && status.TerminalProof == "none" {
 			return preflightStoppedGuidance(status.RequestID)
 		}
+	case "update_preflight_refused":
+		// A read-only check refused before the coordinators were frozen and
+		// any published quiesce was aborted: final for the request.
+		if status.Phase == "failed" && status.TerminalProof == "none" {
+			return preflightRefusedGuidance(status.RequestID)
+		}
 	case "candidate_panel_startup_check_failed":
 		if status.Phase == "recovered" && status.TerminalProof == "rollback_verified" {
 			return "The new version's panel failed its start check before anything was switched on, so the server was returned to the previous version automatically. The previous version keeps running. Nothing needs to be done on the server. Do not start the same version again until a corrected version is published. When you report this, include the reason line shown for this update on the panel's update page.",
@@ -202,6 +208,16 @@ func preflightStoppedGuidance(requestID string) (string, string, bool) {
 		"Güncelleme, kurulu sürümü değiştirmeden ve hiçbir hizmeti durdurmadan durdu: kurtarma çalışma ortamıyla yapılan salt-okur denetim mevcut kurulumu doğrulayamadı. Sunucu önceki sürümünü eskisi gibi çalıştırmaya devam ediyor ve bu işlem için başka bir şey olmayacak. Kaydedilen neden panelin güncelleme sayfasında ve güncelleme günlüğündedir: " + journal + " (CELIKPANEL_UPDATE_FAILURE içeren satır). Sunucu sahibinin yalnız bu neden sunucudaki bir durumu belirtiyorsa işlem yapması gerekir; örneğin paket yöneticisi çalışıyorsa ya da başka bir işlem sürüyorsa bitmesini bekleyin veya önce sorunu giderin. Güncellemeyi yeniden başlatmak güvenlidir.", true
 }
 
+// preflightRefusedGuidance explains a request that one of the updater's own
+// read-only checks refused before any coordinator was frozen. The typed reason
+// line (step and reason class) is on the panel's update page and in the
+// worker's journal; this record does not carry it.
+func preflightRefusedGuidance(requestID string) (string, string, bool) {
+	journal := "sudo journalctl -u celikpanel-self-update-" + requestID + ".service --no-pager -n 20"
+	return "The update stopped before changing the installed version or stopping any service: one of its read-only checks refused to continue, for example because another panel operation was still running or the panel database changed while it was being read. The server keeps running the version it had before, as before, and nothing more happens for this request. The recorded reason is on the panel's update page and in the update log: " + journal + " (the line containing CELIKPANEL_UPDATE_FAILURE). The server owner needs to act only if that reason names a condition on this server, such as another operation still in progress or the package manager running: let it finish or fix it first. Starting the update again is safe.",
+		"Güncelleme, kurulu sürümü değiştirmeden ve hiçbir hizmeti durdurmadan durdu: salt-okur denetimlerinden biri devam etmeyi reddetti; örneğin başka bir panel işlemi hâlâ sürüyordu ya da panel veritabanı okunurken değişti. Sunucu önceki sürümünü eskisi gibi çalıştırmaya devam ediyor ve bu işlem için başka bir şey olmayacak. Kaydedilen neden panelin güncelleme sayfasında ve güncelleme günlüğündedir: " + journal + " (CELIKPANEL_UPDATE_FAILURE içeren satır). Sunucu sahibinin yalnız bu neden sunucudaki bir durumu belirtiyorsa işlem yapması gerekir; örneğin başka bir işlem sürüyorsa ya da paket yöneticisi çalışıyorsa bitmesini bekleyin veya önce sorunu giderin. Güncellemeyi yeniden başlatmak güvenlidir.", true
+}
+
 // retryingCauseGuidance keeps the update's first typed cause visible while
 // automatic recovery still has attempts left, after a recovery attempt failure
 // hid the update's own failure code. It reuses the reviewed pending text.
@@ -221,6 +237,10 @@ func retryingCauseGuidance(status recoveryobs.Status) (string, string, bool) {
 const (
 	pausedRenewalEN = " Automatic certificate renewal (Certbot) was stopped for this update; the same recovery journal says whether it was returned to how it was before the update or stays stopped until this operation finishes."
 	pausedRenewalTR = " Otomatik sertifika yenileme (Certbot) bu güncelleme için durduruldu; aynı kurtarma günlüğü, güncellemeden önceki hâline döndürülüp döndürülmediğini ya da bu işlem bitene kadar durdurulmuş kalacağını söyler."
+	// The updater recorded that no Certbot timer was enabled or active before
+	// it paused the scheduler: the update did not stop renewal.
+	pausedRenewalOffEN = " Automatic certificate renewal (Certbot) was already off before this update, so the update did not stop it; check whether it should be on."
+	pausedRenewalOffTR = " Otomatik sertifika yenileme (Certbot) bu güncellemeden önce zaten kapalıydı, bu yüzden güncelleme onu durdurmadı; açık olması gerekip gerekmediğini kontrol edin."
 )
 
 func writeStatus(w io.Writer, lang string, status recoveryobs.Status) error {
@@ -284,7 +304,22 @@ func writeStatus(w io.Writer, lang string, status recoveryobs.Status) error {
 		if causeEN, causeTR, ok := pausedCauseGuidance(status.FirstFailureCode); ok {
 			en, tr = causeEN+" "+en, causeTR+" "+tr
 		}
-		en, tr = en+pausedRenewalEN, tr+pausedRenewalTR
+		if status.RenewalBeforeUpdate == "off" {
+			en, tr = en+pausedRenewalOffEN, tr+pausedRenewalOffTR
+		} else {
+			en, tr = en+pausedRenewalEN, tr+pausedRenewalTR
+		}
+	}
+	// The last admitted attempt failed and no automatic attempt remains: until
+	// the next timer run records the pause (with the retry command), the owner
+	// is told recovery is finishing, not yet asked to act; the typed cause stays.
+	// Son deneme başarısız oldu; duraklama kaydedilene kadar sahipten işlem istenmez.
+	if status.Observation == "known" && status.Phase == "recovery_required" && status.TerminalProof == "none" && status.AutomaticRecovery == "pause_pending" {
+		en, tr = "The last admitted recovery attempt did not finish, and no automatic attempt remains. Recovery is finishing this attempt: the next state, with what the server owner needs to do and the one-time retry command, is recorded within about a minute. Nothing to do yet: check this same request again in a minute and do not start another update.",
+			"İzin verilen son kurtarma denemesi tamamlanmadı ve başka otomatik deneme kalmadı. Kurtarma bu denemeyi kapatıyor: sunucu sahibinin ne yapacağını ve tek seferlik yeniden deneme komutunu içeren sonraki durum yaklaşık bir dakika içinde kaydedilir. Henüz yapılacak bir şey yok: bir dakika sonra aynı işlemi yeniden sorgulayın ve başka güncelleme başlatmayın."
+		if causeEN, causeTR, ok := retryingCauseGuidance(status); ok {
+			en, tr = causeEN+" "+en, causeTR+" "+tr
+		}
 	}
 	// The last admitted automatic attempt failed, and the native timer admits
 	// another one: the owner is not asked to act before the pause.
@@ -350,6 +385,9 @@ func supportState(status recoveryobs.Status) string {
 		line += " automatic_recovery=" + status.AutomaticRecovery
 		if recoveryobs.ValidFailureCode(status.FirstFailureCode) {
 			line += " first_failure_code=" + status.FirstFailureCode
+		}
+		if status.AutomaticRecovery == "paused_retry_limit" && (status.RenewalBeforeUpdate == "on" || status.RenewalBeforeUpdate == "off") {
+			line += " renewal_before_update=" + status.RenewalBeforeUpdate
 		}
 	}
 	if status.Phase == "recovering" && status.PreviousFailure == "recovery_failed" && recoveryobs.ValidFailureCode(status.FirstFailureCode) {

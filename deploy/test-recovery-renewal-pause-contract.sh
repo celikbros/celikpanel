@@ -28,17 +28,20 @@ run_case() {
     printf '%s\n' "$restore" > "$work/restore"
     (
         MARKER_OPERATION=$operation TRANSACTION_PHASE=$phase DISPATCH_ATTEMPT=$attempt
-        OWNER_RETRY_SNAPSHOT=$owner RECOVERY_RETRY_SCHEDULED=0
+        OWNER_RETRY_SNAPSHOT=$owner RECOVERY_RETRY_SCHEDULED=0 RECOVERY_PAUSE_PENDING=0
         after_failed_recovery_attempt
         printf 'scheduled=%s\n' "$RECOVERY_RETRY_SCHEDULED" >> "$work/trace"
+        printf '%s\n' "$RECOVERY_PAUSE_PENDING" > "$work/pending"
     ) 2> "$work/stderr"
 }
+pending_line='The last admitted recovery attempt did not finish. The next run of the recovery timer records the pause and prints the one-time retry command for this operation.'
 
 # Attempts left: never touch renewal; schedule the automatic retry hint.
 for attempt in 1 2; do
     run_case update completion "$attempt" '' no ok
     [[ $(cat "$work/trace") == 'scheduled=1' ]] || fail "attempt $attempt changed renewal or lost the retry hint"
     grep -F "Automatic recovery attempt $attempt of 3 did not finish" "$work/stderr" >/dev/null || fail 'attempt guidance missing'
+    [[ $(cat "$work/pending") == 0 ]] || fail "attempt $attempt claimed a pending pause"
 done
 # An owner retry never claims another automatic attempt.
 run_case update completion 2 fixture-snapshot no ok
@@ -51,6 +54,9 @@ for phase in completion completion-scheduler scheduler; do
         [[ $(cat "$work/trace") == $'match /fixture/snapshot/panel-tls\nrestore /fixture/snapshot/panel-tls\nscheduled=0' ]] ||
             fail "forward $phase/$attempt did not restore renewal: $(cat "$work/trace")"
         grep -F 'was returned to its state from before the update' "$work/stderr" >/dev/null || fail 'restore not explained'
+        # upd4 F6: the last admitted attempt records that the pause follows.
+        [[ $(cat "$work/pending") == 1 ]] || fail "forward $phase/$attempt did not mark the pending pause"
+        grep -Fx "$pending_line" "$work/stderr" >/dev/null || fail 'pending pause not explained'
     done
 done
 # Already in its recorded state (for example a timer that was disabled before
@@ -72,9 +78,11 @@ for pair in update:active rollback:active rollback:completion rollback:completio
     run_case "${pair%%:*}" "${pair#*:}" owner fixture-snapshot yes ok
     grep -F 'is already in its state from before the update' "$work/stderr" >/dev/null || fail "$pair unpaused renewal misreported"
 done
-# Before the active marker the scheduler was never stopped: nothing to say.
+# Before the active marker the scheduler was never stopped: nothing to say
+# about renewal; the pending pause is still recorded and explained.
 run_case update quiesce 3 '' no ok
-[[ $(cat "$work/trace") == 'scheduled=0' && ! -s $work/stderr ]] || fail 'quiesce phase reported or touched renewal'
+[[ $(cat "$work/trace") == 'scheduled=0' && $(cat "$work/pending") == 1 && $(grep -vxF "$pending_line" "$work/stderr" | grep -v '^İzin verilen son kurtarma denemesi' || true) == '' ]] ||
+    fail 'quiesce phase reported or touched renewal'
 
 # Historical recovery code without the helpers never guesses.
 unset -f panel_tls_certbot_scheduler_matches_snapshot
@@ -96,4 +104,35 @@ first_stop=$(awk -v from="$validate" 'NR > from && /systemctl stop celikpanel-pa
 [[ -n $validate && -n $repause && -n $first_stop && $validate -lt $repause && $repause -lt $first_stop ]] ||
     fail 'forward retry does not pause renewal again before stopping coordinators'
 
-echo 'PASS: renewal restored once after a failed final forward attempt, kept paused for rollbacks, re-paused by the retry'
+# upd4 F6: the exit hook records pause_pending for the last admitted attempt and
+# falls back to the plain failure when an older observer refuses the hint.
+source <(extract "$runner" recovery_observation_exit)
+declare -F recovery_observation_exit >/dev/null || fail 'runner observation exit hook is missing'
+publish_case() {
+    local scheduled=$1 pending=$2 refuse_hints=$3
+    : > "$work/published"
+    (
+        RECOVERY_OBSERVATION_REQUEST=44444444444444444444444444444444
+        RECOVERY_OBSERVATION_COMMIT=3333333333333333333333333333333333333333
+        RECOVERY_RETRY_SCHEDULED=$scheduled RECOVERY_PAUSE_PENDING=$pending
+        release_observation_publish() {
+            printf '%s|%s\n' "$*" "${7:-}" >> "$work/published"
+            [[ -z ${7:-} || $refuse_hints == no ]]
+        }
+        false || recovery_observation_exit
+    ) 2>/dev/null || true
+}
+plain='44444444444444444444444444444444 3333333333333333333333333333333333333333 recovery_required none recovery_failed|'
+publish_case 0 1 no
+[[ $(cat "$work/published") == '44444444444444444444444444444444 3333333333333333333333333333333333333333 recovery_required none recovery_failed  pause_pending|pause_pending' ]] ||
+    fail "pause_pending not published: $(cat "$work/published")"
+publish_case 1 0 no
+[[ $(cat "$work/published") == *'|retry_scheduled' ]] || fail 'retry_scheduled hint lost'
+publish_case 0 0 no
+[[ $(cat "$work/published") == "$plain" ]] || fail "plain failure changed: $(cat "$work/published")"
+# An older observer library refuses the new hint: the failure is still recorded.
+publish_case 0 1 yes
+[[ $(cat "$work/published") == *$'|pause_pending\n'"$plain" ]] || fail "refused hint lost the failure: $(cat "$work/published")"
+grep -Fq 'recovery_required none recovery_failed "" pause_pending' "$runner" || fail 'runner does not publish pause_pending'
+
+echo 'PASS: renewal restored once after a failed final forward attempt, kept paused for rollbacks, re-paused by the retry; pause_pending recorded until the pause'

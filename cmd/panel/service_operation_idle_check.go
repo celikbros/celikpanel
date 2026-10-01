@@ -17,6 +17,43 @@ import (
 
 var errServiceOperationsNotIdle = errors.New("service operations are not idle")
 
+// panelDatabaseChangedError is the one refusal that names a concurrent write:
+// the live database or its -wal/-shm changed while the read-only check held
+// its pinned view (a panel commit or checkpoint, not a busy operation queue).
+// Its text is unchanged from the earlier untyped refusals.
+// Salt-okur denetim sabitlenmiş görünümü tutarken canlı veritabanı veya
+// -wal/-shm değişti: eşzamanlı yazım; meşgul işlem kuyruğu değildir.
+type panelDatabaseChangedError struct{ detail string }
+
+func (e *panelDatabaseChangedError) Error() string {
+	return errServiceOperationsNotIdle.Error() + ": " + e.detail
+}
+
+func (e *panelDatabaseChangedError) Unwrap() error { return errServiceOperationsNotIdle }
+
+// serviceOperationIdleConcurrentWriteExitCode tells the updater that the only
+// reason for a refusal was a concurrent write (EX_TEMPFAIL). The updater reads
+// its preliminary live probe once more after a short pause on this code only;
+// every other refusal keeps exit status 1 and is never re-read.
+// Güncelleyici yalnız bu kodda canlı ön denetimi bir kez yeniden okur.
+const serviceOperationIdleConcurrentWriteExitCode = 75
+
+// isConcurrentPanelDatabaseWrite is true only when err itself is the typed
+// concurrent-write refusal: not wrapped by a private-copy validation, and not
+// joined with another error (a cleanup failure, for example).
+func isConcurrentPanelDatabaseWrite(err error) bool {
+	_, ok := err.(*panelDatabaseChangedError)
+	return ok
+}
+
+// serviceOperationIdleExitCode maps an idle-check refusal to its exit status.
+func serviceOperationIdleExitCode(err error) int {
+	if isConcurrentPanelDatabaseWrite(err) {
+		return serviceOperationIdleConcurrentWriteExitCode
+	}
+	return 1
+}
+
 const (
 	durableServiceOperationSchemaVersion = 22
 	serviceOperationDataSchemaVersion    = 31
@@ -744,7 +781,12 @@ func (p *pinnedPanelDatabase) pinSidecars(allowNonEmptyWAL, preserveAccessTime b
 		}
 		if !info.Mode().IsRegular() || !os.SameFile(pathInfo, info) {
 			file.Close()
-			return fmt.Errorf("%w: SQLite sidecar %s changed while it was pinned", errServiceOperationsNotIdle, suffix)
+			detail := "SQLite sidecar " + suffix + " changed while it was pinned"
+			if suffix != "-journal" && info.Mode().IsRegular() && pathInfo.Mode().IsRegular() &&
+				samePinnedSQLiteFileOwnerAndMode(pathInfo, info) {
+				return &panelDatabaseChangedError{detail: detail}
+			}
+			return fmt.Errorf("%w: %s", errServiceOperationsNotIdle, detail)
 		}
 		if suffix == "-wal" && info.Size() != 0 && !allowNonEmptyWAL {
 			file.Close()
@@ -793,6 +835,11 @@ func (p *pinnedPanelDatabase) verifyPath() error {
 	if !pathInfo.Mode().IsRegular() || !currentInfo.Mode().IsRegular() ||
 		!samePinnedSQLiteFileMetadata(p.info, pathInfo) ||
 		!samePinnedSQLiteFileMetadata(p.info, currentInfo) {
+		if pathInfo.Mode().IsRegular() && currentInfo.Mode().IsRegular() &&
+			samePinnedSQLiteFileIdentity(p.info, pathInfo) && samePinnedSQLiteFileIdentity(p.info, currentInfo) {
+			// The same file was written (a commit or checkpoint), not replaced.
+			return &panelDatabaseChangedError{detail: "panel database path changed after SQLite opened it"}
+		}
 		return fmt.Errorf("%w: panel database path changed after SQLite opened it", errServiceOperationsNotIdle)
 	}
 	if p.descriptorOnly {
@@ -801,9 +848,17 @@ func (p *pinnedPanelDatabase) verifyPath() error {
 	for _, suffix := range []string{"-wal", "-shm", "-journal"} {
 		sidecar := p.sidecars[suffix]
 		pathInfo, err := os.Lstat(p.siblingPath(suffix))
+		// A WAL-mode writer creates, rewrites or (on its last close) removes
+		// -wal and -shm; those changes are the concurrent-write class. A
+		// rollback -journal or a non-regular entry is never that class.
+		walSidecar := suffix == "-wal" || suffix == "-shm"
 		if sidecar == nil {
 			if err == nil {
-				return fmt.Errorf("%w: SQLite sidecar %s appeared after pinning", errServiceOperationsNotIdle, suffix)
+				detail := "SQLite sidecar " + suffix + " appeared after pinning"
+				if walSidecar && pathInfo.Mode().IsRegular() {
+					return &panelDatabaseChangedError{detail: detail}
+				}
+				return fmt.Errorf("%w: %s", errServiceOperationsNotIdle, detail)
 			}
 			if !errors.Is(err, os.ErrNotExist) {
 				return fmt.Errorf("%w: inspect SQLite sidecar %s: %v", errServiceOperationsNotIdle, suffix, err)
@@ -811,6 +866,9 @@ func (p *pinnedPanelDatabase) verifyPath() error {
 			continue
 		}
 		if err != nil {
+			if walSidecar && errors.Is(err, os.ErrNotExist) {
+				return &panelDatabaseChangedError{detail: fmt.Sprintf("verify SQLite sidecar %s: %v", suffix, err)}
+			}
 			return fmt.Errorf("%w: verify SQLite sidecar %s: %v", errServiceOperationsNotIdle, suffix, err)
 		}
 		currentInfo, err := sidecar.file.Stat()
@@ -820,6 +878,11 @@ func (p *pinnedPanelDatabase) verifyPath() error {
 		if !pathInfo.Mode().IsRegular() || !currentInfo.Mode().IsRegular() ||
 			!samePinnedSQLiteFileMetadata(sidecar.info, pathInfo) ||
 			!samePinnedSQLiteFileMetadata(sidecar.info, currentInfo) {
+			if walSidecar && pathInfo.Mode().IsRegular() && currentInfo.Mode().IsRegular() &&
+				samePinnedSQLiteFileOwnerAndMode(sidecar.info, pathInfo) &&
+				samePinnedSQLiteFileOwnerAndMode(sidecar.info, currentInfo) {
+				return &panelDatabaseChangedError{detail: "SQLite sidecar " + suffix + " changed after pinning"}
+			}
 			return fmt.Errorf("%w: SQLite sidecar %s changed after pinning", errServiceOperationsNotIdle, suffix)
 		}
 	}

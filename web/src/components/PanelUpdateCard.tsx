@@ -18,7 +18,7 @@ import {
     type UpdateMarker,
     type UpdateTarget,
 } from './SystemUpdateOperation';
-import { decodePreviousUpdateAttempt, type PreviousUpdateAttempt } from '../lib/systemUpdateOutcome';
+import { decodePreviousUpdateAttempt, previousAttemptStopped, type PreviousUpdateAttempt } from '../lib/systemUpdateOutcome';
 
 type Translate = ReturnType<typeof useI18n>['t'];
 
@@ -267,6 +267,8 @@ export function PanelUpdateCard({ activation = false }: { activation?: boolean }
         ? t(`services.mutationReadiness.${readiness.reason}`)
         : '';
     const previousAttempt = target ? check?.previous_attempt : undefined;
+    // Either typed cause means it stopped before changing anything installed.
+    const previousStopped = previousAttemptStopped(previousAttempt);
     const readinessTitle = readinessChecking
         ? t('services.mutationReadiness.checking')
         : readiness?.ready === true
@@ -317,17 +319,17 @@ export function PanelUpdateCard({ activation = false }: { activation?: boolean }
                             <div className="flex items-start gap-2">
                                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
                                 <div>
-                                    <p className="font-semibold text-fg">{t(previousAttempt.phase === 'failed' && previousAttempt.failure_code === 'recovery_runtime_preflight_failed' ? 'panelUpdate.previousAttempt.stoppedTitle' : 'panelUpdate.previousAttempt.title')}</p>
+                                    <p className="font-semibold text-fg">{t(previousAttempt.phase === 'failed' && previousStopped ? 'panelUpdate.previousAttempt.stoppedTitle' : 'panelUpdate.previousAttempt.title')}</p>
                                     <p className="mt-1 text-fg-muted">
                                         {t(previousAttempt.phase === 'recovered' ? 'panelUpdate.previousAttempt.recovered'
-                                            : previousAttempt.failure_code === 'recovery_runtime_preflight_failed' ? 'panelUpdate.previousAttempt.stopped'
+                                            : previousStopped ? 'panelUpdate.previousAttempt.stopped'
                                                 : 'panelUpdate.previousAttempt.failed', {
                                             version: target.version,
                                             current: currentVersion ?? '',
                                             time: new Date(previousAttempt.finished_at).toLocaleString(locale === 'tr' ? 'tr-TR' : 'en-US'),
                                         })}
                                     </p>
-                                    {previousAttempt.failure_code && previousAttempt.failure_code !== 'recovery_runtime_preflight_failed' && (
+                                    {previousAttempt.failure_code && !previousStopped && (
                                         <p className="mt-1 text-fg-muted">
                                             {t('panelUpdate.previousAttempt.cause', { cause: t(`recovery.reason.${previousAttempt.failure_code}`) })}
                                         </p>

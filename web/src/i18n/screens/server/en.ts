@@ -251,6 +251,15 @@ export const enServerScreens = {
     'panelUpdate.previousAttempt.cause': 'Recorded cause: {cause}.',
     'panelUpdate.previousAttempt.stoppedTitle': "An earlier update to this version stopped before changing anything installed",
     'panelUpdate.previousAttempt.stopped': "{version} was tried on this server on {time} and stopped before changing anything installed; this server runs {current} as before. Starting it again is safe; if the reason recorded for that attempt names a condition on this server, resolve it first.",
+    // upd4 F4: the notice's refused-preflight step and reason class; the notice
+    // shows the shell's generic reason until this catalogue has arrived.
+    'panelUpdate.outcome.preflightStep.idle_probe': "Reason: the check of the panel's operation queue did not pass.",
+    'panelUpdate.outcome.preflightStep.agent_idle': "Reason: the Agent reported an operation that is still in progress or needs recovery first.",
+    'panelUpdate.outcome.preflightStep.bind_compatibility': "Reason: the managed BIND DNS configuration could not be confirmed as compatible with the new version.",
+    'panelUpdate.outcome.preflightStep.application_compatibility': "Reason: the recorded mail and DNS state could not be confirmed as compatible with the new version.",
+    'panelUpdate.outcome.preflightStep.bootstrap_state': "Reason: the panel database is not at the exact earlier version this update starts from.",
+    'panelUpdate.outcome.preflightClass.concurrent_write': "Reason: the panel was saving data while the check read its database, and again when it was read 2 seconds later. Nothing is wrong on the server.",
+    'panelUpdate.outcome.preflightClass.operation_active': "Reason: another panel operation was still queued or running. Let it finish before you start the update again.",
     'panelUpdate.checkFailed': 'The update could not be checked.',
     'panelUpdate.randomFailed': 'A secure request identity could not be generated; the update was not started.',
 

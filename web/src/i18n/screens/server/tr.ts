@@ -911,6 +911,15 @@ export const trServerScreens: Record<ServerScreenKey, string> = {
     'panelUpdate.previousAttempt.cause': 'Kaydedilen neden: {cause}.',
     'panelUpdate.previousAttempt.stoppedTitle': "Bu sürüme yapılan önceki güncelleme kurulu hiçbir şeyi değiştirmeden durdu",
     'panelUpdate.previousAttempt.stopped': "{version} bu sunucuda {time} tarihinde denendi ve kurulu hiçbir şeyi değiştirmeden durdu; bu sunucu {current} sürümünü eskisi gibi çalıştırıyor. Yeniden başlatmak güvenlidir; o deneme için kaydedilen neden bu sunucudaki bir durumu belirtiyorsa önce onu giderin.",
+    // upd4 F4: the notice's refused-preflight step and reason class; the notice
+    // shows the shell's generic reason until this catalogue has arrived.
+    'panelUpdate.outcome.preflightStep.idle_probe': "Neden: panelin işlem kuyruğu denetimi geçmedi.",
+    'panelUpdate.outcome.preflightStep.agent_idle': "Neden: Agent, hâlâ süren ya da önce kurtarılması gereken bir işlem bildirdi.",
+    'panelUpdate.outcome.preflightStep.bind_compatibility': "Neden: yönetilen BIND DNS yapılandırmasının yeni sürümle uyumlu olduğu doğrulanamadı.",
+    'panelUpdate.outcome.preflightStep.application_compatibility': "Neden: kayıtlı posta ve DNS durumunun yeni sürümle uyumlu olduğu doğrulanamadı.",
+    'panelUpdate.outcome.preflightStep.bootstrap_state': "Neden: panel veritabanı, bu güncellemenin başladığı tam önceki sürümde değil.",
+    'panelUpdate.outcome.preflightClass.concurrent_write': "Neden: denetim panel veritabanını okurken panel veri kaydediyordu; 2 saniye sonraki ikinci okumada da öyleydi. Sunucuda bir sorun yok.",
+    'panelUpdate.outcome.preflightClass.operation_active': "Neden: başka bir panel işlemi hâlâ sırada ya da çalışıyordu. Güncellemeyi yeniden başlatmadan önce bitmesini bekleyin.",
     'panelUpdate.checkFailed': 'Güncelleme kontrol edilemedi.',
     'panelUpdate.randomFailed': 'Güvenli istek kimliği üretilemedi; güncelleme başlatılmadı.',
 };
