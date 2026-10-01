@@ -176,7 +176,24 @@ ROLLBACK_VARIANTS = ("defective", "start-check")
 START_CHECK_CODE = "candidate_panel_startup_check_failed"
 REAL_START_CODE = "panel_start_unverified"
 FAILURE_SIDECAR_SCHEMA = "celikpanel-recovery-failure/v1"
-FAILURE_CODES = (START_CHECK_CODE, REAL_START_CODE)
+# upd5: the two typed stops before any change (internal/recoveryobs ValidFailureCode). The product writes the record's
+# code only for state=unchanged (update.sh report_update_failure); the request is then final, nothing follows.
+PREFLIGHT_REFUSED_CODE = "update_preflight_refused"
+RUNTIME_PREFLIGHT_CODE = "recovery_runtime_preflight_failed"
+PREFLIGHT_STOP_CODES = (PREFLIGHT_REFUSED_CODE, RUNTIME_PREFLIGHT_CODE)
+FAILURE_CODES = (START_CHECK_CODE, REAL_START_CODE) + PREFLIGHT_STOP_CODES
+# Phases in which cmd/recovery failureCodeGuidance prints each code's pending text (the preflight stops: failed only).
+CLI_PENDING_PHASES = {START_CHECK_CODE: ("failed", "recovering"), REAL_START_CODE: ("failed", "recovering"),
+                      PREFLIGHT_REFUSED_CODE: ("failed",), RUNTIME_PREFLIGHT_CODE: ("failed",)}
+# upd5: automatic recovery values that are still recovery in progress: neither the pause nor an owner action.
+# pause_pending: the last admitted attempt failed and the next timer run records the pause (keeps first_failure_code).
+AUTOMATIC_IN_PROGRESS = ("retry_scheduled", "pause_pending")
+# upd5: optional <request>.renewal sidecar (internal/recoveryobs DecodeRenewal), shown only at the pause.
+RENEWAL_SIDECAR_SCHEMA = "celikpanel-recovery-renewal/v1"
+# update.sh publish_update_renewal_observation: "on" when one of these timers was enabled or active before the pause.
+RENEWAL_UNITS = ("certbot.timer", "certbot-renew.timer")
+RENEWAL_ON_UNIT_FILE = ("enabled", "enabled-runtime")
+RENEWAL_ON_ACTIVE = ("active", "activating", "reloading", "refreshing")
 # The start-check fixture fails inside configurePanelHTTPTLS; the product maps that to this reason code
 # (cmd/panel/startup_readiness.go). Any other reason means the check refused for a cause that is not the fixture's.
 START_CHECK_FIXTURE_REASON = "tls_pair_invalid"
@@ -734,11 +751,20 @@ def update_card_guidance(translator: Any, status: dict | None, recovery: dict | 
                         for item in model["items"][language]] for language in ("en", "tr")}
     keys = [item["key"] for item in model["items"]["en"] if "key" in item]
     tr_keys = [item["key"] for item in model["items"]["tr"] if "key" in item]
+    # upd5: OutcomeText.fallback - SystemUpdateOperation shows the boot-catalogue fallback until the screen catalogue
+    # holding ``key`` has arrived. ``texts`` are the settled card (screens ready); the fallback lines are kept beside.
+    fallbacks = {language: [{"key": item["key"], "fallback": item["fallback"],
+                             "text": translator.text(item["fallback"], item.get("vars"), language=language)}
+                            for item in model["items"][language] if isinstance(item.get("fallback"), str)]
+                 for language in ("en", "tr")}
+    fallback_keys = [entry["fallback"] for entry in fallbacks["en"]]
     server = next((item["vars"]["message"] for item in model["items"]["en"] if item.get("server_message")), None)
     card = {"state": model["state"], "keys": keys, "texts": texts,
-            "missing_keys": sorted({k for k in keys + tr_keys if not translator.has(k)}),
+            "missing_keys": sorted({k for k in keys + tr_keys + fallback_keys if not translator.has(k)}),
             "server_message": server, "unavailable": model.get("unavailable"),
             "source": (rules or {}).get("source"), "observation_error": model.get("observation_error")}
+    if fallback_keys:
+        card["fallbacks"] = fallbacks
     if tr_keys != keys:
         card["tr_keys"] = tr_keys
     return card
@@ -765,15 +791,39 @@ def judge_update_card(card: dict | None, expected_states: Iterable[str]) -> dict
             "server_message_line": card.get("server_message")}
 
 
+def stopped_before_change(status: dict | None) -> bool:
+    """upd5: the product's typed stop before any change: ``failed``/``none`` with ``previous_failure=update_failed``
+    and a preflight stop code. The record carries that code only when the updater reported ``state=unchanged``, and
+    nothing follows for the request (cmd/recovery: "nothing more happens for this request")."""
+    return (isinstance(status, dict) and status.get("observation") == "known" and status.get("phase") == "failed"
+            and status.get("terminal_proof") == "none" and status.get("previous_failure") == "update_failed"
+            and status.get("failure_code") in PREFLIGHT_STOP_CODES
+            and not status.get("automatic_recovery") and not status.get("waiting_for"))
+
+
 def classify_status(status: dict | None) -> str:
+    """``terminal``, ``stopped`` (a typed stop before any change, final for the request), ``paused`` (the owner must
+    act), ``in-progress`` (including ``retry_scheduled`` and ``pause_pending``: recovery still runs) or ``unknown``."""
     if not isinstance(status, dict) or status.get("observation") != "known":
         return "unknown"
     pair = (status.get("phase"), status.get("terminal_proof"))
     if pair in TERMINAL:
         return "terminal"
+    if stopped_before_change(status):
+        return "stopped"
     if status.get("phase") == "recovery_required" and status.get("automatic_recovery") == "paused_retry_limit":
         return "paused"
+    # pause_pending is not the pause: the owner is not asked to act before the next timer run records it.
     return "in-progress"
+
+
+def stop_line_confirms(final: dict | None, lines: list[dict] | None) -> bool | None:
+    """Does the updater's own failure line confirm the record's typed stop (same code, ``state=unchanged``)?
+    None while the line was not read."""
+    if lines is None:
+        return None
+    code = (final or {}).get("failure_code")
+    return any(line.get("code") == code and line.get("state") == "unchanged" for line in lines)
 
 
 SETTLED_FAILED_RULE = "settled-failed-before-change"
@@ -823,8 +873,19 @@ class SettledFailure:
                 "status": dict(zip(self.FIELDS, self.signature or ())), "limit_seconds": self.seconds}
 
 
-def classify_outcome(variant: str, final: dict | None, owner_continued: bool) -> str:
+STOPPED_BEFORE_CHANGE = "stopped-before-change"
+
+
+def classify_outcome(variant: str, final: dict | None, owner_continued: bool,
+                     failure_lines: list[dict] | None = None) -> str:
+    """The cell's outcome class. A typed stop before any change is ``stopped-before-change`` once the updater's
+    failure line confirms it (same code, ``state=unchanged``); ``-unconfirmed`` while that line was not read and
+    ``-contradicted`` when the line read says otherwise."""
     state = classify_status(final)
+    if state == "stopped":
+        confirmed = stop_line_confirms(final, failure_lines)
+        return (STOPPED_BEFORE_CHANGE if confirmed else STOPPED_BEFORE_CHANGE + "-unconfirmed" if confirmed is None
+                else STOPPED_BEFORE_CHANGE + "-contradicted")
     if state == "paused":
         return "paused-owner-action-required"
     if state != "terminal":
@@ -1385,17 +1446,100 @@ def sidecar_from_records(records: dict | None, request_id: str, target_commit: s
                                  target_commit)
 
 
+def parse_renewal_sidecar(raw: str | None, request_id: str, target_commit: str) -> dict:
+    """<request>.renewal, celikpanel-recovery-renewal/v1 (internal/recoveryobs DecodeRenewal), read only.
+
+    Exactly four fixed lines bound to this request and the candidate commit, the last
+    ``renewal_before_update=on|off``; anything else is invalid (the product then says "not recorded")."""
+    if raw is None:
+        return {"present": False, "valid": False, "value": None}
+    if raw == "withheld":
+        return {"present": True, "valid": False, "value": None, "reason": "withheld by the secret-looking filter"}
+    lines = raw.split("\n")
+    expected = [f"schema={RENEWAL_SIDECAR_SCHEMA}", f"request_id={request_id}", f"target_commit={target_commit}"]
+    if (len(raw.encode()) > 2048 or len(lines) != 5 or lines[:3] != expected or lines[4] != ""
+            or lines[3] not in ("renewal_before_update=on", "renewal_before_update=off")):
+        return {"present": True, "valid": False, "value": None, "reason": "fields, request, commit or value differ",
+                "text": raw[:512]}
+    return {"present": True, "valid": True, "value": lines[3].split("=", 1)[1]}
+
+
+def renewal_sidecar_from_records(records: dict | None, request_id: str, target_commit: str) -> dict:
+    if not isinstance(records, dict):
+        return {"present": None, "valid": False, "value": None, "reason": "observation records not collected"}
+    return parse_renewal_sidecar((records.get("records") or {}).get(request_id + ".renewal"), request_id,
+                                 target_commit)
+
+
+def renewal_expected(timers: dict | None) -> str | None:
+    """What the updater should record from the pre-update timer snapshot (update.sh rule): ``on`` when a Certbot
+    timer was enabled or active, ``off`` when neither (or none is installed); None without a snapshot."""
+    if not isinstance(timers, dict):
+        return None
+    for unit in RENEWAL_UNITS:
+        state = timers.get(unit) or {}
+        if state.get("UnitFileState") in RENEWAL_ON_UNIT_FILE or state.get("ActiveState") in RENEWAL_ON_ACTIVE:
+            return "on"
+    return "off"
+
+
+def renewal_at_pause(status: dict | None, pre_timers: dict | None, sidecar: dict | None = None) -> dict:
+    """``renewal_before_update`` at the pause against the pre-update timer snapshot (and, once collected, the
+    sidecar). ``mismatch`` is a finding; ``not-recorded`` (an older product or no sidecar) and ``unknown``
+    (no snapshot) are not."""
+    recorded = (status or {}).get("renewal_before_update")
+    recorded = recorded if recorded in ("on", "off") else None
+    expected = renewal_expected(pre_timers)
+    snapshot = {unit: {k: ((pre_timers or {}).get(unit) or {}).get(k) for k in ("UnitFileState", "ActiveState")}
+                for unit in RENEWAL_UNITS if unit in (pre_timers or {})}
+    result = {"recorded": recorded, "expected_from_pre_update_timers": expected, "pre_update_timers": snapshot,
+              "findings": []}
+    if sidecar and sidecar.get("present") is not None:
+        result["sidecar"] = sidecar
+        if sidecar.get("valid") and sidecar.get("value") != recorded:
+            result["findings"].append(f"the <request>.renewal sidecar says {sidecar.get('value')!r} but the status at "
+                                      f"the pause says renewal_before_update={recorded!r}")
+    if recorded is None:
+        result["verdict"] = "not-recorded"
+    elif expected is None:
+        result["verdict"] = "unknown"
+    elif recorded == expected:
+        result["verdict"] = "as-before"
+    else:
+        result["verdict"] = "mismatch"
+        result["findings"].append(f"the pause says renewal_before_update={recorded} but the pre-update timer "
+                                  f"snapshot says {expected}: {snapshot or 'no Certbot timer installed'}")
+    if result["findings"] and result["verdict"] != "mismatch":
+        result["verdict"] = "mismatch"
+    return result
+
+
 UPDATE_FAILURE_RE = re.compile(r"CELIKPANEL_UPDATE_FAILURE code=(\S*) state=(\S*) reason=(.*?) detail=(.*)$")
 START_CHECK_REASON_RE = re.compile(r"panel startup check failed: ([a-z_]+): ([^\n]+)")
+# update.sh fail_update_preflight / cmd/panel boundedPanelUpdateFailure: closed lowercase step and class tokens.
+PREFLIGHT_REASON_RE = re.compile(r"^update preflight step=([a-z_]{1,40}) class=([a-z_]{1,40})(?:[: ]|$)")
+RUNTIME_REASON_RE = re.compile(r"^recovery runtime preflight step=([a-z_]{1,40})(?:[: ]|$)")
 
 
 def parse_update_failure_lines(text: str) -> list[dict]:
-    """The update's final ``!! CELIKPANEL_UPDATE_FAILURE code=.. state=.. reason=.. detail=..`` lines (update.sh)."""
+    """The update's final ``!! CELIKPANEL_UPDATE_FAILURE code=.. state=.. reason=.. detail=..`` lines (update.sh).
+
+    upd5: a refused preflight also yields its ``step`` and ``class``, a runtime preflight stop its ``step``;
+    ``bounded`` marks the Panel's form rebuilt from closed tokens only (reason = the tokens, empty detail)."""
     found = []
     for line in str(text or "").splitlines():
         match = UPDATE_FAILURE_RE.search(line)
         if match:
-            found.append({"code": match.group(1), "state": match.group(2), "reason": match.group(3)[:300]})
+            code, reason, detail = match.group(1), match.group(3), match.group(4)
+            entry = {"code": code, "state": match.group(2), "reason": reason[:300]}
+            typed = (PREFLIGHT_REASON_RE.match(reason) if code == PREFLIGHT_REFUSED_CODE
+                     else RUNTIME_REASON_RE.match(reason) if code == RUNTIME_PREFLIGHT_CODE else None)
+            if typed:
+                entry["step"] = typed.group(1)
+                if code == PREFLIGHT_REFUSED_CODE:
+                    entry["class"] = typed.group(2)
+                entry["bounded"] = detail == "" and reason == typed.group(0).rstrip(": ")
+            found.append(entry)
     return found
 
 
@@ -1407,6 +1551,58 @@ def parse_start_check_reasons(text: str) -> list[dict]:
 
 def _go_string(literal: str) -> str:
     return json.loads(literal)
+
+
+GO_TERM_RE = re.compile(r'\s*(?:("(?:[^"\\]|\\.)*")|([A-Za-z_]\w*))')
+
+
+def _go_concat(source: str, pos: int, env: dict) -> tuple[str, int]:
+    """One Go string concatenation (literals and names bound in ``env``) from ``pos``; returns (value, end)."""
+    parts = []
+    while True:
+        match = GO_TERM_RE.match(source, pos)
+        if not match:
+            raise ValueError(f"unsupported Go expression at {source[pos:pos + 40]!r}")
+        if match.group(1):
+            parts.append(_go_string(match.group(1)))
+        elif match.group(2) in env:
+            parts.append(env[match.group(2)])
+        else:
+            raise ValueError(f"unbound Go name {match.group(2)!r}")
+        pos = match.end()
+        plus = re.match(r"\s*\+", source[pos:])
+        if not plus:
+            return "".join(parts), pos
+        pos += plus.end()
+
+
+def _go_request_text(go_source: str, name: str) -> dict:
+    """EN/TR of a ``func <name>(requestID string) (string, string, bool)`` guidance (cmd/recovery
+    preflightStoppedGuidance / preflightRefusedGuidance) with ``{request_id}`` where the request id goes."""
+    body = re.search(r"\nfunc " + re.escape(name) + r"\(requestID string\) \(string, string, bool\) \{\n(.*?)\n}\n",
+                     go_source, re.S)
+    if not body:
+        raise ValueError(f"cmd/recovery/main.go has no {name}")
+    env = {"requestID": "{request_id}"}
+    text = body.group(1)
+    for assign in re.finditer(r"\n?\t(\w+) := ", text):
+        env[assign.group(1)] = _go_concat(text, assign.end(), env)[0]
+    ret = re.search(r"\treturn ", text)
+    if not ret:
+        raise ValueError(f"{name} returns no text")
+    en, pos = _go_concat(text, ret.end(), env)
+    comma = re.match(r"\s*,", text[pos:])
+    if not comma:
+        raise ValueError(f"{name} returns no Turkish text")
+    tr, pos = _go_concat(text, pos + comma.end(), env)
+    if not re.match(r"\s*,\s*true\s*$", text[pos:]):
+        raise ValueError(f"{name} does not end with true")
+    return {"en": en, "tr": tr}
+
+
+def cli_text(texts: dict, key: str, language: str, status: dict | None) -> str:
+    """The reviewed CLI text for one key and language, with this status's request id where the product puts it."""
+    return texts[key][language].replace("{request_id}", str((status or {}).get("request_id") or ""))
 
 
 def parse_cli_guidance(go_source: str) -> dict:
@@ -1429,11 +1625,26 @@ def parse_cli_guidance(go_source: str) -> dict:
                                             segment):
             state = "recovered" if '"recovered"' in condition else "pending"
             texts[f"{code}.{state}"] = {"en": _go_string(en), "tr": _go_string(tr)}
+        # upd5: the preflight stops return a request-bound text from a helper (``{request_id}`` in the template).
+        for condition, helper in re.findall(r"if ([^{]+)\{\s*return (\w+)\(status\.RequestID\)", segment):
+            state = "recovered" if '"recovered"' in condition else "pending"
+            texts[f"{code}.{state}"] = _go_request_text(go_source, helper)
     paused = re.search(r'AutomaticRecovery == "paused_retry_limit" \{\s*en, tr = ' + string + r",\s*" + string,
                        go_source)
     if not paused:
         raise ValueError("cmd/recovery/main.go paused_retry_limit text not found")
     texts["paused"] = {"en": _go_string(paused.group(1)), "tr": _go_string(paused.group(2))}
+    # upd5: recovery still finishing its last attempt (optional: older products have no pause_pending).
+    pending = re.search(r'AutomaticRecovery == "pause_pending" \{\s*en, tr = ' + string + r",\s*" + string, go_source)
+    if pending:
+        texts["pause_pending"] = {"en": _go_string(pending.group(1)), "tr": _go_string(pending.group(2))}
+    # upd5: the pause's renewal sentence, "on" (renewal was stopped) or "off" (already off before the update).
+    renewal = {name: _go_string(value) for name, value in
+               re.findall(r"\n\t(pausedRenewal(?:Off)?(?:EN|TR)) += " + string, go_source)}
+    if {"pausedRenewalEN", "pausedRenewalTR"} <= set(renewal):
+        texts["paused_renewal"] = {"on": {"en": renewal["pausedRenewalEN"], "tr": renewal["pausedRenewalTR"]}}
+        if {"pausedRenewalOffEN", "pausedRenewalOffTR"} <= set(renewal):
+            texts["paused_renewal"]["off"] = {"en": renewal["pausedRenewalOffEN"], "tr": renewal["pausedRenewalOffTR"]}
     markers: dict[str, list] = {"en": [], "tr": []}
     label = re.search(r'translated\(lang, ("[^"]+"), ("[^"]+")\), status\.FailureCode', go_source)
     if label:
@@ -1458,13 +1669,15 @@ def cli_guidance_key(status: dict | None) -> str | None:
     phase, proof = status.get("phase"), status.get("terminal_proof")
     if phase == "recovery_required" and proof == "none" and status.get("automatic_recovery") == "paused_retry_limit":
         return "paused"
+    if phase == "recovery_required" and proof == "none" and status.get("automatic_recovery") == "pause_pending":
+        return "pause_pending"
     if phase == "recovering" and proof == "none" and status.get("waiting_for") in ("initializing", "starting",
                                                                                   "stopping"):
         return None
     code = status.get("failure_code") if status.get("previous_failure") == "update_failed" else None
     if code == START_CHECK_CODE and phase == "recovered" and proof == "rollback_verified":
         return f"{START_CHECK_CODE}.recovered"
-    if code in FAILURE_CODES and proof == "none" and phase in ("failed", "recovering"):
+    if code in CLI_PENDING_PHASES and proof == "none" and phase in CLI_PENDING_PHASES[code]:
         return f"{code}.pending"
     return None
 
@@ -1501,17 +1714,26 @@ def cli_text_observations(samples: list[dict], texts: dict) -> dict:
             if code and any(marker.format(code=code) in out[lang] for marker in texts["cause_markers"][lang]):
                 cause_lines[lang] += 1
         key = cli_guidance_key(status)
-        if key is None:
-            continue
-        entry = by_key.setdefault(key, {"samples": 0, "en": 0, "tr": 0, "first_utc": sample.get("utc")})
-        entry["samples"] += 1
-        entry["last_utc"] = sample.get("utc")
-        for lang in ("en", "tr"):
-            if texts[key][lang] in out[lang]:
-                entry[lang] += 1
-            else:
-                mismatches.append({"utc": sample.get("utc"), "key": key, "language": lang,
-                                   "printed_first_line": out[lang].split("\n", 1)[0][:400]})
+        if key is None or key not in texts:
+            continue                                    # no reviewed text applies (or this product has none)
+        checked = [key]
+        if key == "paused" and "paused_renewal" in texts:
+            # upd5: the pause's renewal sentence follows the recorded renewal_before_update (off, else on).
+            renewal = "off" if (status or {}).get("renewal_before_update") == "off" else "on"
+            if renewal in texts["paused_renewal"]:
+                checked.append(f"paused.renewal.{renewal}")
+        for name in checked:
+            entry = by_key.setdefault(name, {"samples": 0, "en": 0, "tr": 0, "first_utc": sample.get("utc")})
+            entry["samples"] += 1
+            entry["last_utc"] = sample.get("utc")
+            for lang in ("en", "tr"):
+                expected = (texts["paused_renewal"][name.rsplit(".", 1)[1]][lang] if name.startswith("paused.renewal.")
+                            else cli_text(texts, name, lang, status))
+                if expected in out[lang]:
+                    entry[lang] += 1
+                else:
+                    mismatches.append({"utc": sample.get("utc"), "key": name, "language": lang,
+                                       "printed_first_line": out[lang].split("\n", 1)[0][:400]})
     return {"by_key": by_key, "mismatches": mismatches, "panel_log_command": command,
             "panel_log_command_seen": command_seen, "recorded_cause_lines": cause_lines}
 
@@ -1591,9 +1813,19 @@ def kind_not_reached(kind: str, obs: dict) -> dict | None:
     status = stop.get("status") or {}
     if (final is None and stop.get("rule") == SETTLED_FAILED_RULE and status.get("phase") == "failed"
             and status.get("terminal_proof") == "none" and status.get("failure_code") not in start_codes):
-        shape = "stopped-before-change"
+        shape = STOPPED_BEFORE_CHANGE
         how = (f"the update failed before changing the installed version and stayed {status.get('phase')}/"
                f"{status.get('terminal_proof')} ({SETTLED_FAILED_RULE} after {stop.get('seconds')} s)")
+    elif (classify_status(final) == "stopped"
+          and stop_line_confirms(final, obs.get("update_failure_lines")) is True
+          and sidecar.get("code") in (None, final.get("failure_code"))):
+        # upd5: the product's own typed final stop (failed/none, update_failed, a preflight stop code) confirmed by
+        # the updater's failure line (same code, state=unchanged); a sidecar, when read, names the same code.
+        shape = STOPPED_BEFORE_CHANGE
+        line = next(line for line in obs["update_failure_lines"] if line.get("code") == final.get("failure_code"))
+        typed = "".join(f" {k}={line[k]}" for k in ("step", "class") if line.get(k))
+        how = (f"the update stopped before changing the installed version: typed final stop "
+               f"failure_code={final.get('failure_code')}{typed}, state=unchanged")
     elif (isinstance(final, dict) and (final.get("phase"), final.get("terminal_proof"))
           == ("recovered", "rollback_verified") and final.get("failure_code") not in start_codes):
         shape = "rolled-back-before-candidate"
@@ -3382,7 +3614,8 @@ class Trial:
             self.ev.write_json(f"{self.step_dir}/samples/{index:04d}.json", sample)
             observed = sample.get("observed")
             state = classify_status(observed)
-            if state in ("terminal", "paused"):
+            if state in ("terminal", "paused", "stopped"):
+                # upd5: a typed stop before any change is final for the request; no H8 wait is needed.
                 final = observed
                 break
             if settled.observe(observed, time.monotonic()):
@@ -3416,6 +3649,11 @@ class Trial:
         if classify_status(final) == "paused":
             self.state["paused"] = final
             self.state["paused_status"] = final
+            return "observed"
+        if classify_status(final) == "stopped":
+            # The product's own final answer for this request; whether it is the cell's expected end is judged later.
+            checks["stopped_before_change"] = {k: final.get(k) for k in ("phase", "terminal_proof", "previous_failure",
+                                                                         "failure_code")}
             return "observed"
         return "passed" if checks["agreement"]["verdict"] != "failed" else "failed"
 
@@ -3512,6 +3750,13 @@ class Trial:
                               "texts": shell.get("texts")},
         }
         checks["views"] = views
+        # upd5: renewal_before_update recorded at the pause, against the pre-update timer snapshot.
+        renewal = renewal_at_pause(paused if paused.get("renewal_before_update") or not isinstance(api_body, dict)
+                                   else api_body, (self.state.get("pre_workload") or {}).get("timers"))
+        checks["renewal_before_update"] = renewal
+        self.state["renewal_at_pause"] = renewal
+        for finding in renewal["findings"]:
+            self.finding(f"renewal at the pause: {finding}")
         if not views["cli"]["names_journal_command"]:
             self.finding("paused CLI text does not name the recovery journal command in both languages")
         if isinstance(api_body, dict) and api_body.get("automatic_recovery") != "paused_retry_limit":
@@ -3660,7 +3905,9 @@ class Trial:
         post_obs = self.guest_observation("post-recovery")
         post_work = self.workload_snapshot("post-recovery")
         pre_work = self.state["pre_workload"]
-        rollback = self.cell.variant in ROLLBACK_VARIANTS
+        # upd5: after a typed stop before any change the previous release runs and nothing was changed.
+        stopped = classify_status(final) == "stopped"
+        rollback = self.cell.variant in ROLLBACK_VARIANTS or stopped
         expected = self.artifacts["baseline"] if rollback else self.candidate
         builds = post_work.get("build", {})
         identity_ok = all(f"version={expected['version']}\ncommit={expected['commit']}\n" == (builds.get(n) or {}).get("identity")
@@ -3700,8 +3947,8 @@ class Trial:
             # recoveryObservation.ts, RecoveryAccess.tsx), then judged only on a real mismatch.
             card["recovery_guidance"] = self.screen(card["recovery"]["body"])
             card["update_card"] = self.card(card["status"]["body"], card["recovery"]["body"])
-            judged_card = judge_update_card(card["update_card"],
-                                            ("rolled_back",) if rollback else ("succeeded",))
+            judged_card = judge_update_card(card["update_card"], ("unchanged",) if stopped
+                                            else ("rolled_back",) if rollback else ("succeeded",))
             card["update_card_judged"] = judged_card
             self.state["card_judged"] = judged_card
             for finding in judged_card["findings"]:
@@ -4014,6 +4261,15 @@ class Trial:
         return {"ready": reads[-1].get("panel_state") == "ready", "reads": len(reads), "first": reads[0],
                 "last": reads[-1], "bound_seconds": bound}
 
+    def failure_lines(self) -> list[dict] | None:
+        """The updater's failure lines from the collected product journal (None before collect)."""
+        product = (self.state.get("journals") or {}).get("product")
+        return None if product is None else parse_update_failure_lines(product)
+
+    def outcome(self) -> str:
+        return classify_outcome(self.cell.variant, self.state.get("final_status"),
+                                bool(self.state.get("owner_continued")), self.failure_lines())
+
     def reach_observations(self) -> dict:
         """The run's records that say whether the cell's candidate kind was reached (``kind_not_reached``)."""
         rid = self.state.get("request_id") or ""
@@ -4021,12 +4277,14 @@ class Trial:
         attempts = self.state.get("attempts") or {}
         dispatches = [{k: a.get(k) for k in ("attempt", "operation", "phase", "direction")}
                       for a in attempts.get("automatic", [])]
-        lines = None if product is None else parse_update_failure_lines(product)
+        lines = self.failure_lines()
         return {"final": self.state.get("final_status"), "track_stop": self.state.get("track_stop"),
                 "update_failure_codes": None if lines is None else [line["code"] for line in lines],
                 "update_failure_lines": lines,
                 "check_reasons": None if product is None else [r["code"] for r in parse_start_check_reasons(product)],
                 "sidecar": sidecar_from_records(self.state.get("observation_records"), rid, self.candidate["commit"]),
+                "renewal_sidecar": renewal_sidecar_from_records(self.state.get("observation_records"), rid,
+                                                                self.candidate["commit"]),
                 "completion_marker_seen": completion_marker_seen(self.state.get("observer_events")),
                 "receipt_dispatches": dispatches or None,
                 "installed": (self.state.get("terminal") or {}).get("installed")}
@@ -4060,8 +4318,7 @@ class Trial:
             "workloads": {k: v.get("verdict") for k, v in per.items() if k in WORKLOADS} or None,
             "panel_verdict": (per.get("panel") or {}).get("verdict"),
             "update_card": self.state.get("card_judged"),
-            "outcome": classify_outcome(self.cell.variant, self.state.get("final_status"),
-                                        bool(self.state.get("owner_continued")))})
+            "outcome": self.outcome()})
         if self.cell.variant == "owner-continuation":
             obs.update(paused=self.state.get("paused_status"), hold=self.state.get("hold") or (
                            dict(self.state["hold_at_pause"], released_before_retry=False)
@@ -4156,7 +4413,19 @@ class Trial:
         if observations is not None:
             attempt("observation-records-write", lambda: self.record_json("observation-records.json", observations))
         self.state["observation_records"] = observations
-        observer = (attempt("observer-events", self.observer_events) or []) if rid else []
+        if self.state.get("paused_status") and observations is not None:
+            # upd5: the <request>.renewal sidecar (read only) against what the status said at the pause.
+            sidecar = renewal_sidecar_from_records(observations, rid, self.candidate["commit"])
+            before = self.state.get("renewal_at_pause") or {}
+            renewal = renewal_at_pause(dict(self.state["paused_status"],
+                                            renewal_before_update=before.get("recorded")),
+                                       (self.state.get("pre_workload") or {}).get("timers"), sidecar)
+            checks["renewal_before_update"] = renewal
+            for finding in renewal["findings"]:
+                if finding not in before.get("findings", []):
+                    self.finding(f"renewal at the pause: {finding}")
+            self.state["renewal_at_pause"] = renewal
+        observer =(attempt("observer-events", self.observer_events) or []) if rid else []
         self.state["observer_events"] = observer
         self.record_json("observer-events.json", observer)
         snapshot = next((e.get("snapshot") for e in reversed(observer) if e.get("snapshot")), None)
@@ -4240,8 +4509,7 @@ class Trial:
         host_panel = outage_windows(host_samples, "panel")
         checks.update(workloads=per, host_panel_windows=host_panel, host_ssh_windows=outage_windows(host_samples, "ssh"),
                       agreement=agreement_verdict([s["agreement"] for s in self.state.get("status_samples", [])]),
-                      outcome=classify_outcome(self.cell.variant, self.state.get("final_status"),
-                                               bool(self.state.get("owner_continued"))),
+                      outcome=self.outcome(),
                       attempts=self.state.get("attempts"))
         self.state["verdict_checks"] = {"workloads": per}
         interrupted = [k for k in WORKLOADS if per[k]["verdict"] == "interrupted"]
@@ -4293,8 +4561,7 @@ class Trial:
                   "request_id": self.state.get("request_id"), "provenance": provenance_for(self.cell.variant),
                   "artifacts": {role: {k: self.artifacts[role][k] for k in ("version", "commit", "sha256")}
                                 for role in cell_roles(self.cell)},
-                  "outcome": {"classification": classify_outcome(self.cell.variant, self.state.get("final_status"),
-                                                                 bool(self.state.get("owner_continued"))),
+                  "outcome": {"classification": self.outcome(),
                               "final_status": self.state.get("final_status"),
                               "owner_continuation": bool(self.state.get("owner_continued")),
                               "attempts": self.state.get("attempts"), "reboot": self.state.get("reboot"),

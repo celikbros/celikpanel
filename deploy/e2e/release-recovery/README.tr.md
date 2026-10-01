@@ -633,6 +633,20 @@ yazmaz. Hücrenin genel sonucu `inconclusive-kind-not-reached` olur. Başarısı
 adım varsa sonuç yine `failed` kalır. Adayın çalıştığına dair her iz, türü
 normal biçimde değerlendirtir. Bilinmeyen kayıtlar da aynı sonucu verir.
 
+**upd4 sonrası ürün durumları (upd5 sürücü bilgisi).** Sürücü artık
+`update_preflight_refused` kodunu tanır. `failed`/`none` durumunda bu kod ya da
+`recovery_runtime_preflight_failed`, istek için son yanıttır. İzleme H8'in
+600 saniyesini beklemeden durur. Güncelleyicinin hata satırı aynı kodu ve
+`state=unchanged` değerini gösterirse sonuç sınıfı `stopped-before-change`
+olur. Satır okunmadıysa sonuç `-unconfirmed`, satır başka bir şey diyorsa
+`-contradicted` ekini alır. Gerçek başlatma ve başlangıç denetimi hücrelerinde
+bu durum, F4 gibi olumlu kanıtla "tür ölçülmedi" sayılır. `pause_pending`
+duraklama değildir, sahipten işlem de istemez; kurtarma sürüyor sayılır.
+Duraklamada `renewal_before_update` kaydedilir ve güncelleme öncesi zamanlayıcı
+anlık görüntüsüyle karşılaştırılır. `<id>.renewal` dosyası yalnız okunur.
+Uyumsuzluk bulgudur. Güncelleme kartındaki `fallback` satırı ürünün kendi
+kaynağından değerlendirilir. Yedek anahtar katalogda yoksa bu bir bulgudur.
+
 Komutlar ve hücre ayrıntıları İngilizce bölümdedir
 ([README.md](README.md#owner-started-update-acceptance-upd1)). Çevrimdışı
-testler (`test_owner_update_trial.py`, 140 test) yerel sonucu kanıtlamaz.
+testler (`test_owner_update_trial.py`, 161 test) yerel sonucu kanıtlamaz.

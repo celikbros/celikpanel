@@ -1090,7 +1090,11 @@ def cli_sample(status, texts, utc="2026-10-01T12:00:00Z"):
     key = t.cli_guidance_key(status)
     out = {}
     for lang in ("en", "tr"):
-        lines = [texts[key][lang] if key else "generic"]
+        lines = [t.cli_text(texts, key, lang, status) if key else "generic"]
+        if key == "paused" and "paused_renewal" in texts:
+            # writeStatus appends the renewal sentence (the "off" one only when the updater recorded off).
+            renewal = "off" if status.get("renewal_before_update") == "off" else "on"
+            lines[0] += texts["paused_renewal"][renewal][lang]
         if status.get("failure_code") and status.get("previous_failure") == "update_failed":
             lines.append(texts["cause_markers"][lang][0].format(code=status["failure_code"]))
         out[lang] = {"stdout": "\n".join(lines) + "\n"}
@@ -3092,6 +3096,407 @@ class ArtifactProofTests(unittest.TestCase):
                                      parent=good["parent"])
         with self.assertRaisesRegex(ValueError, "dns-owner-tools/README.md"):
             t.prove_artifacts(self.document, ("good",), self.modules)
+
+
+# ---------------------------------------------------------------------------
+# upd5: the typed refused preflight, pause_pending, renewal_before_update and the card fallback
+# ---------------------------------------------------------------------------
+
+REFUSED = t.PREFLIGHT_REFUSED_CODE
+REFUSED_LINE = ("x bash[1]: !! CELIKPANEL_UPDATE_FAILURE code=update_preflight_refused state=unchanged reason=update "
+                "preflight step=idle_probe class=concurrent_write: panel service operations are not idle; update "
+                "refused detail=Panel service-operation database changed while it was read\n")
+BOUNDED_LINE = ("!! CELIKPANEL_UPDATE_FAILURE code=update_preflight_refused state=unchanged reason=update preflight "
+                "step=idle_probe class=concurrent_write detail=")
+
+
+def refused_status(**extra):
+    return failed_status(**dict({"failure_code": REFUSED}, **extra))
+
+
+def pause_pending_status(**extra):
+    """The last admitted attempt failed and no automatic attempt remains (release-recovery-runner.sh)."""
+    return product_status(dict({"request_id": RID, "observation": "known", "phase": "recovery_required",
+                                "terminal_proof": "none", "reason": "recovery_failed",
+                                "previous_failure": "recovery_failed", "automatic_recovery": "pause_pending",
+                                "first_failure_code": t.REAL_START_CODE}, **extra))
+
+
+def renewal_sidecar(value="on", request=RID, commit="5" * 40):
+    return (f"schema={t.RENEWAL_SIDECAR_SCHEMA}\nrequest_id={request}\ntarget_commit={commit}\n"
+            f"renewal_before_update={value}\n")
+
+
+# The typed F4 shape: the same stop as upd4 F4, now the product's own final record (no H8 wait).
+UPD5_TYPED = dict(UPD4_F4, track_stop=None, final=refused_status(),
+                  update_failure_codes=[REFUSED],
+                  update_failure_lines=t.parse_update_failure_lines(REFUSED_LINE),
+                  sidecar={"present": True, "valid": True, "code": REFUSED}, outcome=t.STOPPED_BEFORE_CHANGE)
+
+
+class Upd5ProductCodeTests(unittest.TestCase):
+    """The driver knows exactly the product's typed codes and their CLI texts."""
+
+    def test_failure_codes_are_the_product_codes(self):
+        record = (REPO / "internal/recoveryobs/record.go").read_text(encoding="utf-8")
+        body = re.search(r"func ValidFailureCode\(value string\) bool \{(.*?)\n}", record, re.S).group(1)
+        self.assertEqual(set(re.findall(r'value == "([a-z_]+)"', body)), set(t.FAILURE_CODES))
+        writer = (REPO / "deploy/release-recovery-observation.sh").read_text(encoding="utf-8")
+        self.assertIn("|update_preflight_refused)", writer)
+        for code in t.PREFLIGHT_STOP_CODES:
+            with self.subTest(code=code):
+                self.assertEqual(t.parse_failure_sidecar(Upd3SidecarAndTextTests.sidecar(None, code), RID,
+                                                         Upd3SidecarAndTextTests.COMMIT)["code"], code)
+
+    def test_cli_pending_phases_are_the_product_conditions(self):
+        source = (REPO / "cmd/recovery/main.go").read_text(encoding="utf-8")
+        body = re.search(r"\nfunc failureCodeGuidance\(.*?\n}\n", source, re.S).group(0)
+        parsed = {}
+        for segment in re.split(r'\n\tcase "', body)[1:]:
+            code = segment.split('"', 1)[0]
+            for condition in re.findall(r"if ([^{]+)\{", segment):
+                if '"recovered"' not in condition:
+                    parsed[code] = tuple(sorted(re.findall(r'status\.Phase == "([a-z_]+)"', condition)))
+        self.assertEqual(parsed, {code: tuple(sorted(phases)) for code, phases in t.CLI_PENDING_PHASES.items()})
+
+    def test_preflight_stop_and_pause_pending_texts_come_from_the_product(self):
+        texts = cli_texts()
+        for key in (f"{REFUSED}.pending", f"{t.RUNTIME_PREFLIGHT_CODE}.pending", "pause_pending"):
+            with self.subTest(key=key):
+                self.assertTrue(texts[key]["en"] and texts[key]["tr"])
+                self.assertNotEqual(texts[key]["en"], texts[key]["tr"])
+        journal = f"sudo journalctl -u celikpanel-self-update-{RID}.service --no-pager -n 20"
+        for lang in ("en", "tr"):
+            self.assertIn("{request_id}", texts[f"{REFUSED}.pending"][lang])
+            self.assertIn(journal, t.cli_text(texts, f"{REFUSED}.pending", lang, refused_status()))
+        self.assertIn("read-only checks refused", texts[f"{REFUSED}.pending"]["en"])
+        self.assertEqual(set(texts["paused_renewal"]), {"on", "off"})
+        self.assertIn("already off", texts["paused_renewal"]["off"]["en"])
+        # The helper parser reads Go concatenations only; anything else is refused, never guessed.
+        go = ('\nfunc helper(requestID string) (string, string, bool) {\n\tj := "a-" + requestID + ".s"\n'
+              '\treturn "E " + j + ".",\n\t\t"T " + j, true\n}\n')
+        self.assertEqual(t._go_request_text(go, "helper"), {"en": "E a-{request_id}.s.", "tr": "T a-{request_id}.s"})
+        with self.assertRaisesRegex(ValueError, "unbound Go name"):
+            t._go_request_text(go.replace('"T " + j', '"T " + other'), "helper")
+        with self.assertRaisesRegex(ValueError, "no missing"):
+            t._go_request_text(go, "missing")
+
+    def test_cli_keys_follow_write_status(self):
+        self.assertEqual(t.cli_guidance_key(refused_status()), f"{REFUSED}.pending")
+        self.assertEqual(t.cli_guidance_key(failed_status(failure_code=t.RUNTIME_PREFLIGHT_CODE)),
+                         f"{t.RUNTIME_PREFLIGHT_CODE}.pending")
+        self.assertIsNone(t.cli_guidance_key(refused_status(phase="recovering", reason="recovery_running")))
+        self.assertEqual(t.cli_guidance_key(failed_status(phase="recovering", failure_code=t.REAL_START_CODE)),
+                         f"{t.REAL_START_CODE}.pending")                   # unchanged for the start kinds
+        self.assertEqual(t.cli_guidance_key(pause_pending_status()), "pause_pending")
+        self.assertEqual(t.cli_guidance_key(dict(paused_on_port(), renewal_before_update="off")), "paused")
+
+    def test_cli_text_observations_check_the_new_texts_verbatim(self):
+        texts = cli_texts()
+        off = dict(paused_on_port(), renewal_before_update="off")
+        samples = [cli_sample(refused_status(), texts), cli_sample(pause_pending_status(), texts),
+                   cli_sample(off, texts), cli_sample(paused_on_port(), texts)]
+        seen = t.cli_text_observations(samples, texts)
+        self.assertEqual(seen["mismatches"], [])
+        for key in (f"{REFUSED}.pending", "pause_pending", "paused", "paused.renewal.off", "paused.renewal.on"):
+            with self.subTest(key=key):
+                self.assertEqual((seen["by_key"][key]["en"], seen["by_key"][key]["tr"]),
+                                 (seen["by_key"][key]["samples"],) * 2)
+        # The pause printing the "renewal was stopped" sentence although the updater recorded off is a mismatch.
+        wrong = cli_sample(off, texts)
+        for lang in ("en", "tr"):
+            wrong["cli"][lang]["stdout"] = wrong["cli"][lang]["stdout"].replace(
+                texts["paused_renewal"]["off"][lang], texts["paused_renewal"]["on"][lang])
+        self.assertEqual([(m["key"], m["language"]) for m in t.cli_text_observations([wrong], texts)["mismatches"]],
+                         [("paused.renewal.off", "en"), ("paused.renewal.off", "tr")])
+        # Another request's journal command is not this request's text.
+        other = cli_sample(refused_status(), texts)
+        for lang in ("en", "tr"):
+            other["cli"][lang]["stdout"] = other["cli"][lang]["stdout"].replace(RID, "b" * 32)
+        self.assertEqual(len(t.cli_text_observations([other], texts)["mismatches"]), 2)
+
+
+class Upd5ClassificationTests(unittest.TestCase):
+    def test_a_typed_stop_is_final_and_pause_pending_is_still_recovery(self):
+        self.assertEqual(t.classify_status(refused_status()), "stopped")
+        self.assertEqual(t.classify_status(failed_status(failure_code=t.RUNTIME_PREFLIGHT_CODE)), "stopped")
+        for status in (failed_status(), failed_status(failure_code=t.REAL_START_CODE),
+                       refused_status(previous_failure="recovery_failed"),
+                       refused_status(phase="recovering", reason="recovery_running"),
+                       refused_status(waiting_for="starting")):
+            with self.subTest(status=status):
+                self.assertEqual(t.classify_status(status), "in-progress")
+        for automatic in t.AUTOMATIC_IN_PROGRESS:
+            with self.subTest(automatic=automatic):
+                status = pause_pending_status(automatic_recovery=automatic)
+                self.assertEqual(t.classify_status(status), "in-progress")
+                self.assertEqual(t.classify_outcome("real-start", status, False), "not-terminal")
+        self.assertEqual(t.classify_status(paused_on_port()), "paused")
+
+    def test_the_outcome_class_needs_the_updater_line(self):
+        lines = t.parse_update_failure_lines(REFUSED_LINE)
+        for variant in ("good", "real-start", "start-check", "owner-continuation"):
+            with self.subTest(variant=variant):
+                self.assertEqual(t.classify_outcome(variant, refused_status(), False, lines), "stopped-before-change")
+        self.assertEqual(t.classify_outcome("good", refused_status(), False), "stopped-before-change-unconfirmed")
+        for contradicting in (REFUSED_LINE.replace("state=unchanged", "state=recovery_required"),
+                              REFUSED_LINE.replace("code=update_preflight_refused", "code=update_failed"), ""):
+            with self.subTest(line=contradicting):
+                self.assertEqual(t.classify_outcome("good", refused_status(), False,
+                                                    t.parse_update_failure_lines(contradicting)),
+                                 "stopped-before-change-contradicted")
+
+    def test_track_ends_at_the_typed_stop_without_the_h8_wait(self):
+        clock = [0.0]
+        trial = H8SettledFailureTests.track_trial(self, [failed_status()] * 3 + [refused_status()])
+        checks = {}
+        with mock.patch.object(t.time, "monotonic", lambda: clock[0]), \
+                mock.patch.object(t.time, "sleep", lambda s: clock.__setitem__(0, clock[0] + s)):
+            self.assertEqual(trial.track(checks), "observed")
+        self.assertLess(clock[0], 60)
+        self.assertEqual(trial.state["final_status"], refused_status())
+        self.assertEqual(checks["stopped_before_change"]["failure_code"], REFUSED)
+        self.assertNotIn("paused", trial.state)
+        self.assertEqual(trial.inspections, ["after-track"])
+
+    def test_track_waits_through_pause_pending_until_the_pause(self):
+        clock = [0.0]
+        trial = H8SettledFailureTests.track_trial(self, [pause_pending_status()] * 20 + [paused_on_port()])
+        with mock.patch.object(t.time, "monotonic", lambda: clock[0]), \
+                mock.patch.object(t.time, "sleep", lambda s: clock.__setitem__(0, clock[0] + s)):
+            self.assertEqual(trial.track({}), "observed")
+        self.assertEqual(trial.state["paused"], paused_on_port())            # the owner is asked only now
+        self.assertEqual(trial.inspections, ["at-pause"])
+
+    def test_failure_line_step_class_and_the_bounded_form(self):
+        full, = t.parse_update_failure_lines(REFUSED_LINE)
+        self.assertEqual((full["code"], full["state"], full["step"], full["class"], full["bounded"]),
+                         (REFUSED, "unchanged", "idle_probe", "concurrent_write", False))
+        bounded, = t.parse_update_failure_lines("System update worker failed: " + BOUNDED_LINE)
+        self.assertEqual((bounded["step"], bounded["class"], bounded["bounded"]),
+                         ("idle_probe", "concurrent_write", True))
+        runtime, = t.parse_update_failure_lines("!! CELIKPANEL_UPDATE_FAILURE code=recovery_runtime_preflight_failed "
+                                                "state=unchanged reason=recovery runtime preflight step=release_boundary "
+                                                "detail=")
+        self.assertEqual((runtime["step"], runtime.get("class"), runtime["bounded"]), ("release_boundary", None, True))
+        plain, = t.parse_update_failure_lines("!! CELIKPANEL_UPDATE_FAILURE code=update_failed state=unchanged "
+                                              "reason=x detail=")
+        self.assertNotIn("step", plain)
+        # The shapes the product writes: update.sh fail_update_preflight and the Panel's bounded rebuild.
+        update = (REPO / "update.sh").read_text(encoding="utf-8")
+        self.assertIn('update_failure_reason="update preflight step=$step class=$class: $reason"', update)
+        handlers = (REPO / "cmd/panel/system_update_handlers.go").read_text(encoding="utf-8")
+        self.assertIn('reason = "update preflight step=" + parts[1] + " class=" + parts[2]', handlers)
+        self.assertIn('" state=" + state + " reason=" + reason + " detail="', handlers)
+
+
+class Upd5KindNotReachedTests(unittest.TestCase):
+    """A real-start (or start-check) cell that ends in the product's typed stop is not measured, by positive evidence."""
+
+    def test_the_typed_stop_is_kind_not_reached(self):
+        for judge, kind in ((t.judge_real_start, "real-start"), (t.judge_start_check, "start-check")):
+            with self.subTest(kind=kind):
+                judged = judge(UPD5_TYPED)
+                self.assertEqual((judged["verdict"], judged["findings"], judged["unknown"]),
+                                 (t.KIND_NOT_MEASURED, [], []))
+                self.assertEqual(judged["not_reached"]["shape"], t.STOPPED_BEFORE_CHANGE)
+                self.assertIn("failure_code=update_preflight_refused step=idle_probe class=concurrent_write, "
+                              "state=unchanged", judged["reason"])
+        self.assertEqual(t.judge_real_start(dict(UPD5_TYPED, sidecar={"present": False, "valid": False,
+                                                                      "code": None}))["verdict"], t.KIND_NOT_MEASURED)
+
+    def test_without_positive_evidence_the_kind_stays_judged(self):
+        lines = UPD5_TYPED["update_failure_lines"]
+        for change in ({"update_failure_lines": None},
+                       {"update_failure_lines": [dict(lines[0], state="recovery_required")]},
+                       {"update_failure_lines": [dict(lines[0], code="update_failed")],
+                        "update_failure_codes": ["update_failed"]},
+                       {"sidecar": {"present": True, "valid": True, "code": t.RUNTIME_PREFLIGHT_CODE}},
+                       {"sidecar": {"present": True, "valid": True, "code": t.REAL_START_CODE}},
+                       {"completion_marker_seen": True}, {"installed": "candidate"},
+                       {"final": refused_status(phase="recovering", reason="recovery_running")}):
+            with self.subTest(change=change):
+                self.assertNotEqual(t.judge_real_start(dict(UPD5_TYPED, **change))["verdict"], t.KIND_NOT_MEASURED)
+
+    def test_verdicts_judge_the_typed_stop_like_any_update(self):
+        trial = KindNotReachedTests.verdict_trial(self, lambda i: True, track_stop=None, final_status=refused_status(),
+                                                  journals={"product": REFUSED_LINE},
+                                                  observation_records={"records": {RID + ".failure": (
+                                                      f"schema={t.FAILURE_SIDECAR_SCHEMA}\nrequest_id={RID}\n"
+                                                      f"target_commit={'5' * 40}\nfailure_code={REFUSED}\n")}})
+        checks = {}
+        self.assertEqual(trial.verdicts(checks), "passed")
+        self.assertEqual(checks["kind_not_reached"]["shape"], t.STOPPED_BEFORE_CHANGE)
+        self.assertEqual(checks["outcome"], t.STOPPED_BEFORE_CHANGE)
+        self.assertEqual(trial.reach_observations()["sidecar"]["code"], REFUSED)
+
+    def trial(self):
+        return KindNotReachedTests.trial(self)
+
+
+class Upd5RenewalTests(unittest.TestCase):
+    COMMIT = "5" * 40
+
+    def test_sidecar_schema_and_rule_match_the_product(self):
+        record = (REPO / "internal/recoveryobs/record.go").read_text(encoding="utf-8")
+        self.assertIn(f'RenewalSchema = "{t.RENEWAL_SIDECAR_SCHEMA}"', record)
+        writer = (REPO / "deploy/release-recovery-observation.sh").read_text(encoding="utf-8")
+        self.assertIn(f"renewal {t.RENEWAL_SIDECAR_SCHEMA} \"renewal_before_update=$value\"", writer)
+        update = (REPO / "update.sh").read_text(encoding="utf-8")
+        self.assertIn('case "$unit" in ' + "|".join(t.RENEWAL_UNITS) + ") ;;", update)
+        states = "|".join([f"{s}:*" for s in t.RENEWAL_ON_UNIT_FILE] + [f"*:{s}" for s in t.RENEWAL_ON_ACTIVE])
+        self.assertIn(f"{states}) value=on ;;", update)
+        self.assertIn(RID + "*", t.observation_records_script(RID))     # the collect listing includes <id>.renewal
+
+    def test_sidecar_parsing_is_exact(self):
+        for value in ("on", "off"):
+            self.assertEqual(t.parse_renewal_sidecar(renewal_sidecar(value), RID, self.COMMIT),
+                             {"present": True, "valid": True, "value": value})
+        for raw in (renewal_sidecar("maybe"), renewal_sidecar(commit="4" * 40), renewal_sidecar(request="b" * 32),
+                    renewal_sidecar().rstrip("\n"), renewal_sidecar() + "x=1\n",
+                    renewal_sidecar().replace(t.RENEWAL_SIDECAR_SCHEMA, t.FAILURE_SIDECAR_SCHEMA), "withheld"):
+            with self.subTest(raw=raw):
+                parsed = t.parse_renewal_sidecar(raw, RID, self.COMMIT)
+                self.assertEqual((parsed["present"], parsed["valid"], parsed["value"]), (True, False, None))
+        self.assertEqual(t.parse_renewal_sidecar(None, RID, self.COMMIT)["present"], False)
+        records = {"records": {RID: "x", RID + ".renewal": renewal_sidecar("off")}}
+        self.assertEqual(t.renewal_sidecar_from_records(records, RID, self.COMMIT)["value"], "off")
+        self.assertIsNone(t.renewal_sidecar_from_records(None, RID, self.COMMIT)["present"])
+
+    def test_expected_value_from_the_pre_update_timer_snapshot(self):
+        on = {"UnitFileState": "enabled", "ActiveState": "active"}
+        off = {"UnitFileState": "disabled", "ActiveState": "inactive"}
+        self.assertEqual(t.renewal_expected({"certbot.timer": on, "logrotate.timer": on}), "on")
+        self.assertEqual(t.renewal_expected({"certbot-renew.timer": dict(off, ActiveState="active")}), "on")
+        self.assertEqual(t.renewal_expected({"certbot.timer": off}), "off")
+        self.assertEqual(t.renewal_expected({"logrotate.timer": on}), "off")         # no Certbot timer installed
+        self.assertIsNone(t.renewal_expected(None))
+
+    def test_the_pause_against_the_snapshot(self):
+        timers = {"certbot.timer": {"UnitFileState": "enabled", "ActiveState": "active"}}
+        same = t.renewal_at_pause(dict(paused_on_port(), renewal_before_update="on"), timers)
+        self.assertEqual((same["verdict"], same["findings"]), ("as-before", []))
+        wrong = t.renewal_at_pause(dict(paused_on_port(), renewal_before_update="off"), timers)
+        self.assertEqual(wrong["verdict"], "mismatch")
+        self.assertIn("pre-update timer snapshot says on", wrong["findings"][0])
+        self.assertEqual(t.renewal_at_pause(paused_on_port(), timers)["verdict"], "not-recorded")
+        self.assertEqual(t.renewal_at_pause(dict(paused_on_port(), renewal_before_update="on"), None)["verdict"],
+                         "unknown")
+        sidecar = t.parse_renewal_sidecar(renewal_sidecar("off"), RID, self.COMMIT)
+        both = t.renewal_at_pause(dict(paused_on_port(), renewal_before_update="on"), timers, sidecar)
+        self.assertEqual(both["verdict"], "mismatch")
+        self.assertIn("sidecar says 'off'", both["findings"][0])
+        agree = t.renewal_at_pause(dict(paused_on_port(), renewal_before_update="on"), timers,
+                                   t.parse_renewal_sidecar(renewal_sidecar("on"), RID, self.COMMIT))
+        self.assertEqual((agree["verdict"], agree["sidecar"]["value"]), ("as-before", "on"))
+
+    def paused_trial(self, renewal, timers):
+        trial = Upd3TrialFlowTests.trial(self, "real-start")
+        texts = cli_texts()
+        paused = dict(ideal_real_start(texts)["final"], renewal_before_update=renewal)
+        sample = cli_sample(paused, texts)
+        sample.update(panel_error="ConnectionRefusedError")
+        for lang in ("en", "tr"):
+            sample["cli"][lang]["stdout"] += "sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50\n"
+        trial.state.update(paused=paused, paused_status=paused, status_samples=[sample],
+                           pre_workload={"timers": timers})
+        trial.fetch_shell = lambda label: {"status_command": {}, "texts": {}}
+        trial.pending_snapshot = lambda: SNAPSHOT
+        trial.workload = lambda mode, *args, timeout=120: {
+            "action": "validated-not-executed", "snapshot": SNAPSHOT,
+            "argv": ["/usr/libexec/celikpanel/recovery", "recover", "--retry", "--snapshot", SNAPSHOT]}
+        return trial
+
+    def test_the_owner_continuation_step_records_it_at_the_pause(self):
+        timers = {"certbot.timer": {"UnitFileState": "enabled", "ActiveState": "active"}}
+        trial = self.paused_trial("on", timers)
+        checks = {}
+        self.assertEqual(trial.owner_continuation(checks), "observed")
+        self.assertEqual(checks["renewal_before_update"]["verdict"], "as-before")
+        self.assertFalse([f for f in trial.state["findings"] if "renewal" in f])
+        trial = self.paused_trial("off", timers)
+        trial.owner_continuation({})
+        self.assertEqual(trial.state["renewal_at_pause"]["verdict"], "mismatch")
+        self.assertTrue(any(f.startswith("renewal at the pause: the pause says renewal_before_update=off")
+                            for f in trial.state["findings"]))
+
+    def test_collect_cross_checks_the_sidecar_read_only(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        trial = CollectAfterEarlyStopTests.Fake(directory.name, None)
+        trial.candidate = trial.artifacts["good"]
+        timers = {"certbot.timer": {"UnitFileState": "enabled", "ActiveState": "active"}}
+        paused = dict(paused_on_port(), renewal_before_update="on")
+        trial.state.update(request_id=RID, helpers_uploaded=True, paused_status=paused,
+                           pre_workload={"timers": timers},
+                           renewal_at_pause=t.renewal_at_pause(paused, timers))
+        trial.observer_events = lambda: []
+        records = {"directory_present": True,
+                   "records": {RID + ".renewal": renewal_sidecar("off", commit=trial.candidate["commit"])}}
+        trial.guest = lambda body, timeout=120: SimpleNamespace(stdout=json.dumps(records))
+        with redirect_stdout(io.StringIO()):
+            self.assertEqual(trial.step("collect", trial.collect), "passed")
+        checked = trial.steps[-1]["checks"]["renewal_before_update"]
+        self.assertEqual((checked["verdict"], checked["sidecar"]["value"]), ("mismatch", "off"))
+        self.assertEqual(len([f for f in trial.state["findings"] if "sidecar says 'off'" in str(f)]), 1)
+
+
+class Upd5CardAndScreenTests(unittest.TestCase):
+    """The card and screen for the new statuses, evaluated from the build's own source (the subset covers them)."""
+
+    def setUp(self):
+        self.translator = product_translator()
+        self.rules = t.load_card_rules(REPO / "web/src")
+        self.sources = {name: (REPO / "web/src" / path).read_text(encoding="utf-8")
+                        for name, path in t.CARD_SOURCES.items()}
+
+    def card(self, summary, recovery, rules=None):
+        return t.update_card_guidance(self.translator, {"found": True, "request_id": RID, "status": "failed",
+                                                        "summary": summary}, dict(recovery, panel_state="ready"),
+                                      rules or self.rules, RID)
+
+    def test_the_refused_stop_card_has_its_class_line_and_the_generic_fallback(self):
+        card = self.card("System update worker failed: " + BOUNDED_LINE, refused_status())
+        self.assertIsNone(card["unavailable"])
+        self.assertEqual(card["state"], "unchanged")
+        self.assertIn("panelUpdate.outcome.preflightClass.concurrent_write", card["keys"])
+        self.assertEqual(card["missing_keys"], [])
+        self.assertIsNone(card["server_message"])                        # a translated class replaces the line
+        generic = "panelUpdate.outcome.preflightStep.generic"
+        for language in ("en", "tr"):
+            entry, = card["fallbacks"][language]
+            self.assertEqual((entry["key"], entry["fallback"]),
+                             ("panelUpdate.outcome.preflightClass.concurrent_write", generic))
+            self.assertEqual(entry["text"], self.translator.text(generic, language=language))
+        self.assertEqual(t.judge_update_card(card, ("unchanged",))["verdict"], "as-expected")
+        step = self.card(BOUNDED_LINE.replace("class=concurrent_write", "class=check_failed")
+                         .replace("step=idle_probe", "step=agent_idle"), refused_status())
+        self.assertIn("panelUpdate.outcome.preflightStep.agent_idle", step["keys"])
+        self.assertEqual(step["fallbacks"]["en"][0]["fallback"], generic)
+        # A fallback key the catalogue lacks is a real mismatch.
+        changed = self.sources["outcome"].replace("const generic: OutcomeKey = 'panelUpdate.outcome.preflightStep.generic'",
+                                                  "const generic: OutcomeKey = 'panelUpdate.outcome.preflightStep.gone'")
+        if changed == self.sources["outcome"]:
+            self.skipTest("the build's systemUpdateOutcome.ts no longer names the generic fallback this way")
+        gone = self.card(BOUNDED_LINE, refused_status(), t.parse_card_rules(dict(self.sources, outcome=changed)))
+        self.assertIn("panelUpdate.outcome.preflightStep.gone", gone["missing_keys"])
+        self.assertTrue(t.judge_update_card(gone, ("unchanged",))["findings"])
+
+    def test_the_screens_for_the_new_statuses(self):
+        stop = t.recovery_guidance(self.translator, refused_status(), self.rules)
+        self.assertEqual((stop["missing_keys"], stop["actionable"]), ([], True))
+        self.assertEqual(stop["keys"][-1], f"recovery.reason.{REFUSED}")
+        finishing = t.recovery_guidance(self.translator, pause_pending_status(), self.rules)
+        self.assertEqual((finishing["keys"][0], finishing["missing_keys"]), ("recovery.automatic.pausingTitle", []))
+        self.assertIn("recovery.automatic.pausingHelp", finishing["keys"])
+        for language in ("en", "tr"):
+            self.assertNotIn(t.RECOVERY_LOG_COMMAND, finishing["texts"][language])   # nothing asked of the owner yet
+        off = t.recovery_guidance(self.translator, dict(paused_on_port(), renewal_before_update="off"), self.rules)
+        self.assertIn("recovery.automatic.renewalOff", off["keys"])
+        self.assertNotIn("recovery.automatic.renewal", off["keys"])
+        card = self.card("x", pause_pending_status())
+        self.assertEqual((card["state"], card["keys"][0]), ("recovery", "recovery.automatic.pausingTitle"))
+        self.assertNotIn(t.RECOVERY_LOG_COMMAND, card["texts"]["en"])
 
 
 if __name__ == "__main__":

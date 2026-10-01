@@ -818,6 +818,30 @@ code, a start-check reason, `completion.pending`, the candidate installed, or a
 forward dispatch. So does any unknown record. The product's own stop is still
 recorded by the run (journal, track stop, outcome).
 
+**Product states after upd4 (upd5 driver knowledge, offline only).** The
+driver knows `update_preflight_refused` (`FAILURE_CODES`, the sidecar and the
+CLI text, which is read from `cmd/recovery/main.go` with the request's own
+journal command). A `failed`/`none` record with `previous_failure=update_failed`
+and a preflight stop code (`update_preflight_refused` or
+`recovery_runtime_preflight_failed`) is final for the request. `track` stops
+there at once, without the 600 s H8 wait, and `terminal` expects the previous
+release and an `unchanged` card. The outcome class is `stopped-before-change`
+only when the updater's failure line names the same code with
+`state=unchanged`. It is `-unconfirmed` while the line is unread and
+`-contradicted` when the line says otherwise. The line's `step=`/`class=` and
+the Panel's bounded form are parsed. In a real-start or start-check cell, that
+confirmed stop is a fourth positive-evidence shape of "kind not reached". The
+sidecar, when read, must name the same code. `pause_pending` is recovery in
+progress: it is neither the pause nor an owner action, and its CLI text is
+checked verbatim. At the pause, `renewal_before_update` is recorded and compared
+with the pre-update timer snapshot (`certbot.timer`/`certbot-renew.timer`
+enabled or active means `on`, the rule in `update.sh`). `collect` cross-checks
+the `<id>.renewal` sidecar, read only. A mismatch is a finding, while
+`not-recorded` (an older product) is not. The CLI's renewal sentence (on or
+off) is checked verbatim. The card keeps each `OutcomeText.fallback` beside the
+settled text, and a fallback key missing from the catalogue is a mismatch. The
+evaluator subset already covered the new constructs (no extension).
+
 ### Offline checks
 
 ```sh
@@ -825,7 +849,8 @@ python3 -m unittest deploy/e2e/release-recovery/test_owner_update_trial.py -v
 python3 -m unittest deploy/e2e/release-recovery/test_recovery_candidate_archive.py -v
 ```
 
-`test_owner_update_trial.py` has 140 offline tests. They cover:
+`test_owner_update_trial.py` has 161 offline tests (21 of them for the upd5
+paragraph above). They cover:
 
 - plan validation and dry run, fixture policy/defect and the acceptance-notice
   exemption;
