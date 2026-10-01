@@ -1,0 +1,117 @@
+# Sonraki sürüm adayı: taslak notlar
+
+[English](RELEASE-NOTES-CANDIDATE-DRAFT.md)
+
+*Taslak, 2026-10-01. Sürüm numarası atanmadı ve hiçbir şey yayımlanmadı. Sürümü,
+yayımlamayı ve kurulu her panelin güncellemesini sunucu sahibi belirler. Sürüm
+seçildiğinde bu dosyanın adını `RELEASE-NOTES-<version>.tr.md` olarak değiştirin.*
+
+Bu aday v0.1.0-alpha.80 sürümünü izler. DNS motoru değişikliklerinin, eşli DNS
+sunucularının ve panel güncellemelerinin kesintiden nasıl kurtulduğunu değiştirir;
+neyin ölçüldüğünü, neyin ölçülmediğini de açıkça belirtir.
+
+## Sunucu sahibi için ne değişiyor
+
+**DNS motoru değişiklikleri aynı işlem üzerinde kurtarılır.** İlk BIND ya da
+PowerDNS kurulumu, PowerDNS'ten BIND'e geçiş ve mevcut bir PowerDNS'in devralınması
+yarıda kesilirse aynı işlem üzerinde tamamlanır veya geri alınır: Agent'ın bir
+sonraki başlangıcında ya da durum çıktısının adlandırdığı sahip komutuyla. Agent
+çalışırken mevcut bir PowerDNS'in devralınması yalnız bileşen testleriyle
+karşılanır. Hizmet veren bir BIND'i PowerDNS'e geçirmenin kurtarma sözleşmesi
+yoktur; Panel'de, kurulumda ve Agent'ta reddedilir.
+
+**Eşli iki sunucu üç birleşimde çalışır.** Birincil/ikincil olarak BIND/BIND,
+BIND/PowerDNS ve PowerDNS/BIND; kurulumu, bölge eklemeyi, kayıt düzenlemeyi, bölge
+silmeyi, yeniden eklemeyi ve Panel ile Agent kapalıyken yeniden açılışı (DNS yanıt
+vermeyi sürdürürken) geçer. Eşli yeni bir PowerDNS birincil sunucusu artık,
+henüz DNS motoru olmayan bir sunucuda sunuluyor (yalnız Debian 13, ölçülen PowerDNS
+sürümüyle). Eşleştirme standart bölge aktarımı ve katalog bölgeleri kullanır; ikincil
+sunucunun uzaktaki bir CelikPanel API'sine ihtiyacı yoktur.
+
+**Eşli sunucuda bölge silme ikincil sunucuda kanıtlanır.** Panel, silmeyi
+tamamlanmış bildirmeden önce ikincil sunucunun bölgeyi bıraktığını doğrular. Bunun
+için iki sunucu arasında bir kez sahip kaydı gerekir (`dns-peer-enroll`, ikisinde de
+çalıştırılır). O zamana kadar silme bekler; ekran kimin işlem yapması gerektiğini,
+neyin çalıştırılacağını ve işin nasıl süreceğini söyler. Bu, sunucuda üst bölgesi
+olmayan bir üst düzey bölgeyi de kapsar.
+
+**Başarısız bir güncelleme geliştirici olmadan geri döner ya da sürer.** Geçiş
+yapamayan ya da Panel'ini başlatamayan bir aday tamamlanmadan reddedilir ve önceki
+sürüm otomatik olarak geri döner; bu, sıfırlama ya da sonlandırılmış bir kurtarma
+işleminden sonra da geçerlidir. Tamamlandıktan sonra başarısız olan aday üç kez
+yeniden denenir; ardından kurtarma duraklar, ilk nedeni korur ve nedeni
+kaldırdıktan sonra sahibin çalıştıracağı tek bir komut yazdırır. Güncelleme kartı,
+root komutu `/usr/libexec/celikpanel/recovery` ve kurtarma kayıtları aynı işlemi
+anlatır; Panel çalışırken bu böyledir, durmuşken yalnız root komutu anlatır.
+
+**Barındırılan hizmetler Panel'e bağlı değildir.** Panel ve Agent yeniden açılış
+boyunca kapalıyken site, veritabanı, zamanlanmış işler, güvenlik duvarı kuralları ve
+(Debian'da) SMTP, ölçülen hücrelerde çalışmayı sürdürdü. Bir güncellemenin tamamlanması üç
+otomatik denemeden sonra duraklarsa, güncelleyicinin durdurduğu sertifika yenileme,
+siz nedeni kaldırırken önceki durumuna döndürülür; sahibin yeniden denemesi
+güncelleme bitene kadar onu yeniden durdurur.
+
+**Kurulum, desteklenmeyeni başlamadan önce söyler.** Arch'ta posta plan
+incelemesinde reddedilir. Yerel cron bir kurulum bileşenidir. Web sunucusunun
+geçemediği bir barındırma kökü, yol ve çözümle birlikte bildirilir.
+
+**Müşteri arşivi test malzemesi taşımaz.** Sürüm arşivi artık kabul düzeneğini, test
+betiklerini ya da saklanan kanıtı içermez; imzalama adımı içeren bir arşivi
+reddeder.
+
+## Bu sürümün sınırları
+
+Bunlar bilinen ve bilinçli sınırlardır. Gizli kusur değildir.
+
+- **Ölçülen platformlar:** Debian 13 ve Arch. Ubuntu için kanıt yok. RHEL ailesi
+  engelli önizleme olarak kalır.
+- **Arch'ta posta** desteklenmez.
+- Hizmet veren bir sunucuda **BIND'ten PowerDNS'e** geçiş reddedilir. Daha eski bir
+  sürümün yapılandırdığı BIND ikincil sunucusu, yeni ikincil yapılandırmaya otomatik
+  olarak yükseltilmez.
+- **v0.1.0-alpha.80'den ilk güncelleme.** Bu yol yalnız Debian 13'te, alpha.80
+  kaynağından bir deneme lisansıyla yeniden derlenerek ölçüldü; imzalı arşivden
+  değil. Arch ölçülmedi. Bu aday başarısız olur ve sunucu otomatik olarak
+  alpha.80'e dönerse alpha.80 Panel'i bunu anlatamaz: ham bir hata satırı gösterir
+  ve aynı sürümü yeniden sunar. Durum o zaman SSH üzerinden
+  `sudo /usr/libexec/celikpanel/recovery` ile okunur. Güncellemenin ilk
+  saniyelerinde bu komut henüz yoktur.
+- **Tamamlandıktan sonra geri alma yok.** Yeni Panel başlayıp sonradan başarısız
+  olursa güncelleme geri alınmaz, bitirilir.
+- **Panel durmuşken** adresinde canlı kurtarma durumu görünmez; sahip bunu SSH
+  üzerinden kurtarma komutuyla okur.
+- **Duraklayan bir geri alma, sahip işlem yapana kadar sertifika yenilemeyi
+  duraklatılmış tutar.**
+- **Panel kaldırma yolu sunulmaz** ve CelikPanel'i kaldırmaya dair hiçbir iddia
+  yoktur. Yalnız "yönetim kapalı" ölçüldü.
+- **Kanıt kapsamı:** tek bir dizüstü ana makinedeki geçici sanal makineler, bir
+  deneme imzalama anahtarı, bir loopback sürüm kaynağı ve yalnız test için lisans;
+  durum başına az tekrar; güç kaybı denemesi yok; güncelleme koşularında hiçbir
+  tarayıcı yer almadı. Üretim imzalama yolu, gerçek sürüm kaynağı ve lisans hizmeti
+  bu koşularda denenmedi.
+- **Denenmemiş iletiler:** dört güvenlik iletisi hiçbir deneme koşusunda ortaya
+  çıkmadı; bu yüzden ekrandaki ifadeleri denenmedi: güncellemeden önce Panel'in meşgul
+  olup olmadığının kısa ikinci denetimi, "güncelleme denetimi reddedildi" iletisi,
+  başarısız bir güncelleme öncesi anlık görüntünün nedeni ve servis başlatma sınırı
+  iletisi.
+- **Arayüz borçları:** Bileşenler sayfası katalog adlarını İngilizce gösterir; cron
+  Kaldır düğmesi gösterilir ve onaydan sonra reddeder; değişen ekranların görsel
+  tarayıcı incelemesi bekliyor.
+- **Açık kabul işleri:** dayanıklılık denetim listesi kısmen açık kalır. Bkz.
+  [dayanıklılık sözleşmesi](RESILIENCE-CONTRACT.tr.md) ve
+  [DNS kurtarma kayıt defteri](DNS-RECOVERY-ACCEPTANCE.tr.md).
+
+## Yayımlamadan önce (sahip kararları ve kalan denetimler)
+
+1. Sürüm numarasını seçin.
+2. root gerektiren paketleme sözleşmesi testlerini (18 betik) geçici bir makinede ya
+   da CI'da çalıştırın; derleme ana makinesinde root olarak çalıştırılmadılar.
+3. Üretim süreciyle derleyip imzalayın; imzalı arşivi ve v0.1.0-alpha.80 ile kurtarma
+   uyumluluğunu doğrulayın.
+4. Satıcı yayımlama araçlarının (indirme portalı ve üyelik betikleri) müşteri
+   arşivinde kalıp kalmayacağına karar verin.
+5. Kurulu herhangi bir panel güncellenmeden önce geçici bir sunucuda sahip denemesi
+   yapın.
+
+Bu sürümü yalnız CelikPanel'in güncelleme arayüzünden kurun. Yayımlamak kurulu
+sunucuları güncellemez.

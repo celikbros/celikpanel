@@ -1961,3 +1961,42 @@ leaving a marker ends at `recovery_required` with no pause record; the web texts
 `panelUpdate.previousAttempt.stoppedTitle`/`stopped` ("stopped before changing
 anything installed") and `panelUpdate.packageManagerBusy` ("stopped before
 changing installed files") are not adjusted (web out of scope).
+
+### Update from the alpha.80 source to the candidate: scoped native evidence (P0.1/P0.2/P0.3, 2026-10-01)
+
+D-025 invariants 2, 4 and 5; D-024. Evidence only: no product change, no schema
+or version transition, no recovery behaviour change. P0.1, P0.2 and P0.3 stay
+partial.
+
+[upd7](../deploy/e2e/release-recovery/evidence/upd7-20261001/README.md) is the
+first run whose baseline is the published `v0.1.0-alpha.80` source rather than
+the current source line. The baseline is the tag rebuilt with a six-file license
+test seam; the update, rollback, bootstrap, get and release scripts, `deploy/`,
+`web/` and `cmd/agent` are identical to the tag
+(`build/baseline-ref-proof.txt`). It is not the signed release archive. The
+candidate is `48d21d58`, which carries the candidate review corrections above.
+
+- **Measured on Debian 13, one run each.** A good candidate was installed and
+  verified. With the new Panel prevented from starting, recovery made three
+  forward attempts, showed `retry_scheduled` and `pause_pending`, paused with
+  `first_failure_code=panel_start_unverified`, and the printed owner retry, run
+  once after the owner removed the cause, ended `succeeded/update_verified`. A
+  candidate with a migration defect, with a VM reset at `payload_restored`,
+  returned to alpha.80 (`rollback_verified`); the alpha.80 Panel and Agent
+  started and served with the candidate's records on disk.
+- **The initial record.** The root CLI read `running` while the alpha.80 worker
+  was still active. That is consistent with the record the candidate updater now
+  creates for a worker that writes none; no evidence file names the writer, so
+  this is an inference. The record did not stay `running` after success in this
+  one run.
+- **Owner-visible gaps found (limits of the first upgrade, not fixable in the
+  installed alpha.80).** After an automatic return, the alpha.80 Panel shows the
+  raw failure line although the server is `rollback_verified`, has no recovery
+  reader, and offers the same version again; only the root CLI says not to start
+  it. For about 11 s after the start the recovery CLI does not exist yet, and for
+  about 6 s more it reads `observation=unavailable`.
+- **Not measured.** Any Arch path from alpha.80 (two failed attempts are
+  retained: the mail profile on the first, a seeded site answering 404 before the
+  update on the second; cause not established). The signed alpha.80 archive
+  itself, cron continuity on this baseline, the start-check kind, management off,
+  production signing, the license service, a browser.

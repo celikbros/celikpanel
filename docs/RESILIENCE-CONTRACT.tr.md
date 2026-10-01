@@ -1196,3 +1196,39 @@ işlem, duraklama kaydı olmadan `recovery_required` durumunda biter; web'deki
 `panelUpdate.previousAttempt.stoppedTitle`/`stopped` ve
 `panelUpdate.packageManagerBusy` metinleri ("kurulu olan hiçbir şey" / "kurulu
 dosyalar" değişmeden durdu) düzeltilmedi (web kapsam dışı).
+
+### alpha.80 kaynağından adaya güncelleme: kapsamı belirli gerçek sistem kanıtı (P0.1/P0.2/P0.3, 2026-10-01)
+
+D-025 ilkeleri 2, 4 ve 5; D-024. Yalnız kanıt: ürün değişikliği, şema ya da sürüm
+geçişi ve kurtarma davranışı değişikliği yok. P0.1, P0.2 ve P0.3 kısmi kalır.
+
+[upd7](../deploy/e2e/release-recovery/evidence/upd7-20261001/README.md), taban yapısı
+mevcut kaynak hattı değil, yayımlanmış `v0.1.0-alpha.80` kaynağı olan ilk koşudur.
+Taban, altı dosyalık bir lisans deney bağlantı noktasıyla yeniden derlenmiş etikettir;
+güncelleme, geri alma, bootstrap, get ve sürüm betikleri, `deploy/`, `web/` ve
+`cmd/agent` etiketle aynıdır (`build/baseline-ref-proof.txt`). İmzalı sürüm arşivi
+değildir. Aday, yukarıdaki aday incelemesi düzeltmelerini taşıyan `48d21d58`dir.
+
+- **Debian 13'te ölçüldü, her biri bir koşu.** İyi bir aday kuruldu ve doğrulandı.
+  Yeni Panel'in başlaması engellendiğinde kurtarma üç ileri deneme yaptı,
+  `retry_scheduled` ve `pause_pending` durumlarını gösterdi,
+  `first_failure_code=panel_start_unverified` ile duraklattı; sahip nedeni
+  kaldırdıktan sonra bir kez çalıştırılan yazdırılmış sahip yeniden denemesi
+  `succeeded/update_verified` ile bitti. Geçiş kusurlu, `payload_restored` anında VM
+  sıfırlamalı bir aday alpha.80'e döndü (`rollback_verified`); alpha.80 Panel'i ve
+  Agent'ı, adayın kayıtları diskteyken başladı ve hizmet verdi.
+- **İlk kayıt.** Root CLI, alpha.80 işçisi hâlâ etkinken `running` okudu. Bu, aday
+  güncelleyicinin artık kayıt yazmayan bir işçi için oluşturduğu kayıtla uyumludur;
+  hiçbir kanıt dosyası yazanı adlandırmadığı için bu bir çıkarımdır. Kayıt bu tek
+  koşuda başarıdan sonra `running` kalmadı.
+- **Sahibin gördüğü açıklar (ilk yükseltmenin sınırları; kurulu alpha.80'de
+  düzeltilemez).** Otomatik dönüşten sonra alpha.80 Panel'i, sunucu
+  `rollback_verified` olduğu hâlde ham hata satırını gösterir, kurtarma okuyucusu
+  yoktur ve aynı sürümü yeniden sunar; yalnız root CLI onu başlatmamayı söyler.
+  Başlangıçtan sonra yaklaşık 11 sn boyunca kurtarma CLI'si henüz yoktur, yaklaşık 6
+  sn daha `observation=unavailable` okur.
+- **Ölçülmedi.** alpha.80'den herhangi bir Arch yolu (iki başarısız deneme saklanıyor:
+  ilkinde posta profili, ikincisinde güncellemeden önce 404 yanıtlayan tohumlanmış
+  site; neden belirlenmedi). İmzalı alpha.80 arşivinin kendisi, bu tabanda cron
+  sürekliliği, başlangıç denetimi türü, yönetim kapalı, üretim imzası, lisans
+  hizmeti, tarayıcı.

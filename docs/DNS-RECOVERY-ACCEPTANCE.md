@@ -164,7 +164,10 @@ Named limits, open:
   `detail` field, `mail_runtime_cleanup_failed`, `config_unreviewed`, the
   rndc key rollback and the version 1 to 2 upgrade were not exercised;
 - the customer archive still carries the e2e harness sources (scripts and
-  fixtures); a decision for item 4;
+  fixtures); a decision for item 4; Corrected on 2026-10-01: the release archive
+  no longer carries the harness, test scripts or evidence, and the content guard
+  refuses an archive that does (commit `4a7701d5`; see
+  [release signing](release-signing.md)).
 - BIND → PowerDNS engine switch stays unsupported and refused (D-026).
 
 Closing item 2 does not close P0.4 and authorises no installed-panel update.

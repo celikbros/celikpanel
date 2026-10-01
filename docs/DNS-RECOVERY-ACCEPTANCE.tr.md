@@ -177,7 +177,10 @@ Adı belli sınırlar, açık:
   `mail_runtime_cleanup_failed`, `config_unreviewed`, rndc anahtarı geri
   alma ve sürüm 1'den 2'ye yükseltme denenmedi;
 - müşteri arşivi hâlâ e2e düzenek kaynaklarını (betikler ve fikstürler)
-  taşıyor; bu 4. maddeye ait bir karar;
+  taşıyor; bu 4. maddeye ait bir karar; 1 Ekim 2026'da düzeltildi: sürüm arşivi
+  artık düzeneği, test betiklerini ya da kanıtı taşımıyor ve içerik koruması bunu
+  taşıyan bir arşivi reddediyor (commit `4a7701d5`; bkz.
+  [sürüm imzalama](release-signing.tr.md)).
 - BIND → PowerDNS motor switch'i desteklenmiyor ve reddediliyor olarak
   kalır (D-026).
 
