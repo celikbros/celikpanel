@@ -133,7 +133,7 @@ export const en = {
     'panelUpdate.failed': 'The update could not be completed.',
     'panelUpdate.dismissFailure': 'Close notification',
     'panelUpdate.failureAcknowledgement': 'Closing this notification lets you review updates again. It does not start another update.',
-    'panelUpdate.packageManagerBusy': 'The server was running a package operation. CelikPanel stopped before changing installed files. Wait for that operation to finish, then retry from Settings → CelikPanel updates.',
+    'panelUpdate.packageManagerBusy': 'The server was running a package operation. CelikPanel stopped before changing the installed version or its data. Wait for that operation to finish, then retry from Settings → CelikPanel updates.',
     'panelUpdate.running': 'The update is being applied; the panel may be unavailable briefly.',
     'panelUpdate.queued': 'The update is queued.',
     'panelUpdate.connectionLost': 'The connection was interrupted; the panel may be restarting. The same operation will be tracked.',

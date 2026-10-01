@@ -249,8 +249,8 @@ export const enServerScreens = {
     'panelUpdate.previousAttempt.recovered': '{version} was tried on this server on {time}, and the server was returned to the previous version. Starting it again repeats the same update unless the cause has been fixed.',
     'panelUpdate.previousAttempt.failed': '{version} was tried on this server on {time} and did not complete; this server runs {current} now. Starting it again repeats the same update unless the cause has been fixed.',
     'panelUpdate.previousAttempt.cause': 'Recorded cause: {cause}.',
-    'panelUpdate.previousAttempt.stoppedTitle': "An earlier update to this version stopped before changing anything installed",
-    'panelUpdate.previousAttempt.stopped': "{version} was tried on this server on {time} and stopped before changing anything installed; this server runs {current} as before. Starting it again is safe; if the reason recorded for that attempt names a condition on this server, resolve it first.",
+    'panelUpdate.previousAttempt.stoppedTitle': "An earlier update to this version stopped before changing the installed version",
+    'panelUpdate.previousAttempt.stopped': "{version} was tried on this server on {time} and stopped before changing the installed version or its data; this server runs {current} as before. Starting it again is safe; if the reason recorded for that attempt names a condition on this server, resolve it first.",
     // upd4 F4: the notice's refused-preflight step and reason class; the notice
     // shows the shell's generic reason until this catalogue has arrived.
     'panelUpdate.outcome.preflightStep.idle_probe': "Reason: the check of the panel's operation queue did not pass.",

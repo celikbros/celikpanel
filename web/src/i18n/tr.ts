@@ -327,7 +327,7 @@ export const tr: Record<ShellKey, string> = {
     'panelUpdate.failed': 'Güncelleme tamamlanamadı.',
     'panelUpdate.dismissFailure': 'Bildirimi kapat',
     'panelUpdate.failureAcknowledgement': 'Bildirimi kapattıktan sonra güncellemeleri yeniden kontrol edebilirsiniz. Bu işlem yeni bir güncelleme başlatmaz.',
-    'panelUpdate.packageManagerBusy': 'Sunucuda bir paket işlemi çalışıyordu. CelikPanel, kurulu dosyaları değiştirmeden durdu. Paket işlemi tamamlandıktan sonra Ayarlar → CelikPanel güncellemeleri bölümünden yeniden deneyin.',
+    'panelUpdate.packageManagerBusy': 'Sunucuda bir paket işlemi çalışıyordu. CelikPanel, kurulu sürümü ve verilerini değiştirmeden durdu. Paket işlemi tamamlandıktan sonra Ayarlar → CelikPanel güncellemeleri bölümünden yeniden deneyin.',
     'panelUpdate.running': 'Güncelleme uygulanıyor; panel kısa süre erişilemeyebilir.',
     'panelUpdate.queued': 'Güncelleme sırada.',
     'panelUpdate.connectionLost': 'Bağlantı kesildi; panel yeniden başlıyor olabilir. Aynı işlem izlenecek.',
