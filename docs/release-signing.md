@@ -121,6 +121,22 @@ signed manifest. Portal publication remains a separate same-filesystem atomic
 exchange; a candidate is never merged into the live tree, and every previous
 version and rollback backup is preserved.
 
+### Release archive content (2026-10-01)
+
+The customer archive from `make dist` carries only run-time material for
+installation, update, rollback, recovery and the owner tools. After every
+payload copy, `deploy/prune-release-harness.sh` removes from the staged tree:
+any `evidence` directory, the whole `deploy/e2e` tree, every `deploy/test-*`
+entry, and anywhere `*_test.go`, `*_test.sh`, `test_*.py`, `*.test.mjs` and
+`__pycache__`. `deploy/release-content-guard.sh` refuses exactly that set in a
+tree or archive; `make dist` (through `write-release-manifest.sh`) and
+`write-signed-release-manifest.sh` run it, so such an archive is never given a
+manifest or signed. An installed older release (checked against
+`v0.1.0-alpha.80`) checks a candidate only against its own `SHA256SUMS` and
+named run-time files, none of which are removed. Release-engineering helpers
+that are not test material (the download-portal and membership publishers, the
+Go bundle sources, the build guards) still ship.
+
 ### Production portal publication
 
 `deploy/publish-download-portal.ps1` is the only supported production portal

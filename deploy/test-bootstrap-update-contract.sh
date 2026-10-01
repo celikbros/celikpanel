@@ -2153,6 +2153,21 @@ reject_literal "$MAKEFILE" '$(NPM) install --no-audit --no-fund'
 require_literal "$MAKEFILE" 'cp bin/panel bin/agent bin/agent-native-contract.json bin/schema17-bridge dist/$(DIST)/bin/'
 require_literal "$MAKEFILE" 'cp -r deploy/. dist/$(DIST)/deploy/'
 require_literal "$MAKEFILE" 'bash deploy/prune-release-harness.sh dist/$(DIST)'
+# Development and test material is pruned from the COMPLETE staged tree: after
+# the last payload copy and before modes, the manifest and the archive.
+dist_recipe=$(awk '/^dist: /{inside=1; next} inside && /^[^\t]/{exit} inside' "$MAKEFILE")
+dist_line() {
+    local found
+    found=$(grep -nF -- "$1" <<< "$dist_recipe" | head -n 1 | cut -d: -f1)
+    [[ -n "$found" ]] || die "dist recipe lacks: $1"
+    printf '%s\n' "$found"
+}
+prune_line=$(dist_line 'bash deploy/prune-release-harness.sh dist/$(DIST)')
+last_copy_line=$(grep -nE '^\s*(cp|echo) ' <<< "$dist_recipe" | tail -n 1 | cut -d: -f1)
+(( prune_line > last_copy_line )) || die 'dist prunes before the last payload copy'
+(( prune_line < $(dist_line 'find dist/$(DIST) -type f -exec chmod 0644 {} +') )) || die 'dist prunes after normalising modes'
+(( prune_line < $(dist_line 'bash dist/$(DIST)/deploy/write-release-manifest.sh dist/$(DIST)') )) || die 'dist prunes after writing the manifest'
+[[ $(grep -cF -- 'prune-release-harness.sh' <<< "$dist_recipe") == 1 ]] || die 'dist must prune exactly once'
 require_literal "$MAKEFILE" 'cp install.sh bootstrap-update.sh bootstrap-prebuilt-update.sh update.sh rollback.sh Makefile README.md SECURITY.md NOTICE dist/$(DIST)/'
 require_literal "$MAKEFILE" 'sha256sum "$(DIST).tar.gz" > "$(DIST).tar.gz.sha256"'
 require_literal "$MAKEFILE" 'dist-sign: dist'

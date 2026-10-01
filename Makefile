@@ -112,9 +112,6 @@ dist: build ## Assemble an offline initial-install tarball with verified provena
 	cp bin/panel bin/agent bin/agent-native-contract.json bin/schema17-bridge dist/$(DIST)/bin/
 	cp -r web/dist/. dist/$(DIST)/web/dist/
 	cp -r deploy/. dist/$(DIST)/deploy/
-	# Acceptance evidence and harness tests are never read by an installed
-	# server; prune them before the manifest (which refuses them) and archive.
-	bash deploy/prune-release-harness.sh dist/$(DIST)
 	cp -r bin/recovery-runtime dist/$(DIST)/recovery-runtime
 	cp -r bin/firewall-runtime dist/$(DIST)/firewall-runtime
 	cp -r bin/mail-renewal-runtime dist/$(DIST)/mail-renewal-runtime
@@ -125,6 +122,12 @@ dist: build ## Assemble an offline initial-install tarball with verified provena
 	echo 1 > dist/$(DIST)/release.version
 	echo $(COMMIT) > dist/$(DIST)/release.commit
 	echo $(TREE) > dist/$(DIST)/release.tree
+	# The customer archive carries only run-time material. Development and test
+	# material (deploy/e2e, deploy/test-*, *_test.go, *_test.sh, test_*.py,
+	# *.test.mjs, __pycache__, evidence directories) is never read by an
+	# installed server; prune it from the complete staged tree before the
+	# manifest (whose content guard refuses it) and the archive.
+	bash deploy/prune-release-harness.sh dist/$(DIST)
 	find dist/$(DIST) -type d -exec chmod 0755 {} +
 	find dist/$(DIST) -type f -exec chmod 0644 {} +
 	chmod 0755 dist/$(DIST)/bin/panel dist/$(DIST)/bin/agent dist/$(DIST)/bin/schema17-bridge

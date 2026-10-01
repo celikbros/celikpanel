@@ -31,9 +31,9 @@ if ! bash "$guard" "$root"; then
     echo "release tree contains an acceptance_license test build; no checksum manifest was written" >&2
     exit 1
 fi
-# Acceptance evidence and harness tests are never part of a release.
+# Development and test material (harnesses, evidence, tests) is never part of a release.
 if ! bash "$content_guard" "$root"; then
-    echo "release tree contains acceptance evidence or harness tests; no checksum manifest was written" >&2
+    echo "release tree contains development or test material; no checksum manifest was written" >&2
     exit 1
 fi
 (

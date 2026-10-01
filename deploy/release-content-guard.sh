@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
-# Refuse release artifacts that carry acceptance-harness material the
-# installed product never reads (see prune-release-harness.sh):
-#   - any path under a directory named "evidence", and
-#   - any deploy/e2e/**/test_*.py.
+# Refuse release artifacts that carry development or test material the
+# installed product never reads (the rule set of prune-release-harness.sh),
+# paths relative to the release root:
+#   - any path under a directory named "evidence",
+#   - any path under deploy/e2e (acceptance harnesses),
+#   - any deploy/test-* entry (contract tests, any extension),
+#   - anywhere: *_test.go, *_test.sh, test_*.py, *.test.mjs, and any path
+#     under a __pycache__ directory.
 #
 # usage: release-content-guard.sh PATH...
 #   PATH: a release tree directory (its root is the release root) or a
@@ -26,7 +30,10 @@ check_paths() {
         { p = $0; sub(/^\.\//, "", p); sub(/\/$/, "", p) }
         p == "" || p == "." { next }
         p ~ /(^|\/)evidence(\/|$)/ { print "evidence: " p; next }
-        p ~ /^deploy\/e2e\/(.*\/)?test_[^\/]*\.py$/ { print "harness test: " p }
+        p ~ /^deploy\/e2e(\/|$)/ { print "acceptance harness: " p; next }
+        p ~ /^deploy\/test-[^\/]*(\/|$)/ { print "contract test: " p; next }
+        p ~ /(^|\/)__pycache__(\/|$)/ { print "bytecode cache: " p; next }
+        p ~ /(^|\/)[^\/]*_test\.(go|sh)$/ || p ~ /(^|\/)test_[^\/]*\.py$/ || p ~ /(^|\/)[^\/]*\.test\.mjs$/ { print "test file: " p }
     ' <<< "$2")
     [[ -n "$found" ]] || return 0
     refused=1
@@ -54,7 +61,7 @@ for target in "$@"; do
 done
 if [[ "$refused" -ne 0 ]]; then
     printf '%s\n' \
-        "Why: the release contains acceptance-harness evidence or harness tests that no installed server uses." \
+        "Why: the release contains development or test material (acceptance harnesses, evidence, contract tests) that no installed server uses." \
         "Nothing was packaged or signed." \
         "Next: build the release with make dist, which prunes them (deploy/prune-release-harness.sh), then package again." >&2
     exit 1

@@ -166,7 +166,7 @@ content_guard="$script_dir/release-content-guard.sh"
 [[ -f "$content_guard" && ! -L "$content_guard" ]] \
   || die "release content guard is unavailable"
 bash "$content_guard" "$archive" \
-  || die "release archive contains acceptance evidence or harness tests; it was not signed"
+  || die "release archive contains development or test material; it was not signed"
 
 manifest=$output/release-manifest-v2
 signature=$output/release-manifest-v2.sig

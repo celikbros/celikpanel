@@ -124,6 +124,22 @@ aynı dosya sisteminde ayrı bir atomic exchange olmaya devam eder; candidate
 canlı ağaca hiçbir zaman merge edilmez, bütün önceki sürümler ve rollback backup
 korunur.
 
+### Sürüm arşivinin içeriği (2026-10-01)
+
+`make dist` ile üretilen müşteri arşivi yalnız kurulum, güncelleme, geri alma,
+kurtarma ve sahip araçlarının çalışırken kullandığı malzemeyi taşır. Bütün yük
+kopyalandıktan sonra `deploy/prune-release-harness.sh` hazırlanan ağaçtan
+şunları çıkarır: her `evidence` dizini, `deploy/e2e` ağacının tamamı, her
+`deploy/test-*` girdisi ve her yerde `*_test.go`, `*_test.sh`, `test_*.py`,
+`*.test.mjs` ile `__pycache__`. `deploy/release-content-guard.sh` bu kümenin
+tamamını ağaçta veya arşivde reddeder; `make dist` (`write-release-manifest.sh`
+üzerinden) ve `write-signed-release-manifest.sh` onu çalıştırır, böyle bir arşiv
+manifest almaz ve imzalanmaz. Kurulu eski bir sürüm (`v0.1.0-alpha.80` ile
+denetlendi) adayı yalnız kendi `SHA256SUMS` dosyasına ve adı belli çalışma
+dosyalarına göre doğrular; bunların hiçbiri çıkarılmaz. Test malzemesi olmayan
+sürüm hazırlama yardımcıları (indirme portalı ve üyelik yayımlayıcıları, Go
+paket kaynakları, derleme denetimleri) arşivde kalır.
+
 ### Production portal publication
 
 `deploy/publish-download-portal.ps1` desteklenen tek production portal giriş
