@@ -1,0 +1,17 @@
+upd8 read-only host check (tools/hostcheck.sh), archlinux WSL, Thu Oct  1 12:42:28 PM UTC 2026 (transcribed from the run output)
+--- memory: 15697 MB total, 14807 MB free; swap 4096 MB
+--- disk (WSL-internal): /dev/sdd 1007G, 152G used, 804G available (C: is read with PowerShell, host/c-drive.txt)
+--- qemu: no process
+--- kvm: crw-rw-rw- 1 root kvm 10, 232 /dev/kvm
+--- go: go version go1.26.5 linux/amd64
+--- node: v26.8.1, npm 12.0.2
+--- python: Python 3.14.7
+--- images in /var/tmp/cp-v3n28/images before this run:
+    Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2 (556609024 bytes)
+    debian-13-genericcloud-amd64-20260826-2582.qcow2 (340262912 bytes)
+--- any Ubuntu image on the host: /var/tmp/cp-install-vm/images/ubuntu-24.04-20260826.img
+--- existing cp-upd8*: none
+--- other jobs: none
+--- tools: genisoimage, qemu-img, curl, sha256sum, gpg present
+--- repo head: e9e2d3f39793001610e23f9fcabcd62018215ed3
+--- v0.1.0-alpha.80: bd14d97efc5cfd19acd70ddf0edb9c6343317e2b

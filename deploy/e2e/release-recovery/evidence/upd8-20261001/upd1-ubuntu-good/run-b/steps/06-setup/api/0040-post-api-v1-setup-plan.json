@@ -1,0 +1,175 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "ServerSetup review (web_mail)",
+  "request": {
+    "body": {
+      "revision": 5
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/setup/plan"
+  },
+  "response": {
+    "elapsed_seconds": 0.615,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Thu, 01 Oct 2026 13:41:17 GMT"
+      ],
+      [
+        "Content-Length",
+        "1551"
+      ]
+    ],
+    "json": {
+      "actor": {
+        "IP": "127.0.0.1",
+        "UserAgent": "",
+        "UserID": 2
+      },
+      "blockers": [],
+      "build_commit": "57f4372c0485cc2e568b45d5b9c05785d3633320",
+      "can_start": true,
+      "contact_email": "labadmin@example.invalid",
+      "draft": {
+        "database": "",
+        "dns_engine": "bind",
+        "dns_mode": "external",
+        "dns_role": "primary",
+        "local_ip": "192.0.2.12",
+        "mail_hostname": "mail-ubuntu.upd1-infra.test",
+        "node_version": "",
+        "ns1": "ns1.upd1-infra.test",
+        "ns2": "ns2.upd1-infra.test",
+        "panel_domain": "panel-ubuntu.upd1-infra.test",
+        "peer_ip": "",
+        "peer_ns": "",
+        "purpose": "web_mail",
+        "remote_dns_connection_id": ""
+      },
+      "id": "d1f438b116af8e85b230a6ac24dca743",
+      "persist_firewall": true,
+      "preserve_ssh": true,
+      "purpose": "web_mail",
+      "revision": 5,
+      "server_ip": "192.0.2.12",
+      "steps": [
+        {
+          "id": "01-dns",
+          "kind": "dns",
+          "target": "external"
+        },
+        {
+          "id": "02-mail_profile",
+          "kind": "mail_profile",
+          "target": "webmail"
+        },
+        {
+          "id": "03-mail_profile",
+          "kind": "mail_profile",
+          "target": "protected-mail"
+        },
+        {
+          "id": "04-service",
+          "kind": "service",
+          "target": "certbot"
+        },
+        {
+          "id": "05-firewall",
+          "kind": "firewall",
+          "target": "enable_and_persist"
+        },
+        {
+          "id": "06-access_dns",
+          "kind": "access_dns",
+          "qualifier": "192.0.2.12",
+          "target": "panel-ubuntu.upd1-infra.test"
+        },
+        {
+          "id": "07-panel_certificate",
+          "kind": "panel_certificate",
+          "target": "panel-ubuntu.upd1-infra.test"
+        },
+        {
+          "id": "08-access_dns",
+          "kind": "access_dns",
+          "qualifier": "192.0.2.12",
+          "target": "mail-ubuntu.upd1-infra.test"
+        },
+        {
+          "id": "09-mail_certificate",
+          "kind": "mail_certificate",
+          "target": "mail-ubuntu.upd1-infra.test"
+        },
+        {
+          "id": "10-verify",
+          "kind": "verify",
+          "target": "web_mail"
+        }
+      ],
+      "tcp_ports": [
+        22,
+        25,
+        80,
+        110,
+        143,
+        443,
+        465,
+        587,
+        993,
+        995,
+        2083
+      ],
+      "udp_ports": [],
+      "version": 1
+    },
+    "status": 200,
+    "text": null
+  }
+}

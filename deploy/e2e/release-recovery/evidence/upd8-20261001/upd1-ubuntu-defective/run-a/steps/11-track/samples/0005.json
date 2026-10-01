@@ -1,0 +1,87 @@
+{
+  "agreement": {
+    "known_sources": [],
+    "phase": {},
+    "reasons": [],
+    "sources": [
+      "cli",
+      "shell"
+    ],
+    "verdict": "no-known-source"
+  },
+  "cli": {
+    "boot_id": "cb60ec8e-0b49-414a-a85c-df2c36448f01",
+    "captured_at": "2026-10-01T16:48:30.053346Z",
+    "en": {
+      "returncode": 3,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "The result of this update could not be read, so it is unknown. Nothing is known yet about which version the server runs. Check this same request again in a minute; keep the server as it is and do not start another update meanwhile. If it stays unknown, the recovery journal shows whether automatic recovery is running or paused and, at a pause, the one-time retry command: sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50\nRequest: a4795fd7c17f70edaf8a920830de5a98\nThis is a recorded observation; current service health was not checked.\nRecorded state (for support): observation=unavailable reason=observation_unavailable proof=none\n"
+    },
+    "json": {
+      "returncode": 3,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "{\"schema\":\"celikpanel-recovery-status/v1\",\"request_id\":\"a4795fd7c17f70edaf8a920830de5a98\",\"observation\":\"unavailable\",\"terminal_proof\":\"none\",\"reason\":\"observation_unavailable\"}\n"
+    },
+    "tr": {
+      "returncode": 3,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "Bu güncellemenin sonucu okunamadı; sonuç bilinmiyor. Sunucunun hangi sürümü çalıştırdığı henüz bilinmiyor. Bir dakika sonra aynı işlemi yeniden sorgulayın; bu arada sunucuya dokunmayın ve başka güncelleme başlatmayın. Bilinmiyor olarak kalırsa kurtarma günlüğü otomatik kurtarmanın çalışıp çalışmadığını ya da durduğunu ve duraklamada tek seferlik yeniden deneme komutunu gösterir: sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50\nİşlem: a4795fd7c17f70edaf8a920830de5a98\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\nKayıtlı durum (destek için): observation=unavailable reason=observation_unavailable proof=none\n"
+    }
+  },
+  "guidance_api": null,
+  "guidance_cli": {
+    "actionable": null,
+    "keys": [],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "texts": {
+      "en": [],
+      "tr": []
+    },
+    "unavailable": "lib/systemUpdateOutcome.ts: FileNotFoundError"
+  },
+  "index": 4,
+  "observed": null,
+  "recovery_api": {
+    "body": null,
+    "http": 404
+  },
+  "t": 1790873308.7553754,
+  "update_card": {
+    "keys": [],
+    "missing_keys": [],
+    "observation_error": null,
+    "role": "baseline",
+    "server_message": null,
+    "source": null,
+    "state": null,
+    "texts": {
+      "en": [],
+      "tr": []
+    },
+    "unavailable": "lib/systemUpdateOutcome.ts: FileNotFoundError"
+  },
+  "update_status": {
+    "body": {
+      "created_at": "2026-10-01T16:48:13.723162922Z",
+      "found": true,
+      "request_id": "a4795fd7c17f70edaf8a920830de5a98",
+      "status": "running",
+      "target": {
+        "arch": "amd64",
+        "archive_sha256": "5b7bea0946796a82c7e4bb88d4cdfa862c48316067fde58068274687a51bc5d4",
+        "archive_size": "65626970",
+        "commit": "80d7a43fdd326d7155da9d671836ba1e054b07b3",
+        "os": "linux",
+        "sequence": "81",
+        "version": "v0.1.0-alpha.81"
+      },
+      "updated_at": "2026-10-01T16:48:13.781959905Z"
+    },
+    "http": 200
+  },
+  "utc": "2026-10-01T16:48:28Z"
+}

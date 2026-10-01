@@ -1,0 +1,7 @@
+evidence /var/tmp/cp-release-drill-upd8-ub-good-c/evidence/ubuntu/upd1/upd1-ubuntu-good-20261001t134618z/
+== distinct CLI texts
+== journal lines
+-- steps/14-collect/journal-setup-services.txt 1
+    2026-10-01T14:03:08.535796+00:00 dns-ubuntu mariadbd[22169]: 2026-10-01 14:03:08 0 [Note] InnoDB: 128 rollback segments are active.
+== result {"overall": "failed", "native_evidence": false, "request_id": null} {"attempts": {"automatic": [], "automatic_count": 0, "journal_admissions": [], "owner": [], "owner_count": 0}, "classification": "not-terminal", "final_status": null, "owner_continuation": false, "owner_reboot": null, "pin_changes": [], "port_hold": null, "reboot": null, "track_stop": null}
+findings ["ubuntu: server setup attempt 1 stopped at 03-service with HOST_MUTATION_BUSY (cause: another server change or package-manager task is still running); the owner waits and starts a newly reviewed plan, as the product text says", "ubuntu: server setup attempt 2 stopped at 03-service with HOST_MUTATION_BUSY (cause: another server change or package-manager task is still running); the owner waits and starts a newly reviewed plan, as the product text says", "ubuntu: server setup attempt 3 stopped at 03-mail_profile with HOST_MUTATION_BUSY (cause: another server change or package-manager task is still running); the owner waits and starts a newly reviewed plan, as the product text says"]

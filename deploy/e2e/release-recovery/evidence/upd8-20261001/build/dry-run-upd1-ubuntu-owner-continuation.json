@@ -1,0 +1,149 @@
+{
+  "baseline": {
+    "commit": "57f4372c0485cc2e568b45d5b9c05785d3633320",
+    "sha256": "7d95ab7a92639081b888bd8f3bfee08f9454ef380186a9a233f4b717add6abf7",
+    "version": "v0.1.0-alpha.80"
+  },
+  "candidate": {
+    "commit": "8c71415e56a2b9a13232377d501cf4bb8a23a9c8",
+    "sha256": "8ccd0f25b8ccad2641b63ccfb9dad0ed54584f327947839f1bc9fde2eab86821",
+    "version": "v0.1.0-alpha.81"
+  },
+  "cell": {
+    "mail_required": true,
+    "name": "upd1-ubuntu-owner-continuation",
+    "node": "ubuntu",
+    "recovery_fault": null,
+    "variant": "owner-continuation"
+  },
+  "dns": {
+    "mode": "external",
+    "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+    "verdict": "not-provided-external-dns"
+  },
+  "draft_choices": {
+    "dns_mode": "external",
+    "peer_ip": "",
+    "peer_ns": ""
+  },
+  "expected_outcome": "the good candidate passes the start check; the held port makes its real start fail (panel_start_unverified); forward completion is retried three times (dispatch update/completion) and pauses (paused_retry_limit, first_failure_code panel_start_unverified) while the port is still held; the panel log the product names shows the port conflict; the owner releases the port and runs the printed one-time retry exactly once; the same request completes forward to update_verified (recovered-after-owner-continuation); the candidate runs; certbot.timer and every other timer end in their pre-update state; site, mail and cron never interrupted; the Panel is back; every owner text at the pause and after the retry recorded in EN and TR",
+  "inspections": {
+    "points": [
+      "before-site",
+      "after-setup",
+      "after-seed",
+      "before-check",
+      "after-track",
+      "at-pause",
+      "after-continuation",
+      "after-terminal",
+      "after-reboot",
+      "after-management-return"
+    ],
+    "rule": "read-only; before the update check, or after a terminal, paused or settled state; never inside the update preflight window (sidecar v2)"
+  },
+  "local_port": 18443,
+  "native_evidence": false,
+  "port_hold": {
+    "address": "127.0.0.1:2083",
+    "allowances": {
+      "attempt_work_s": 60,
+      "owner_detection_s": 120,
+      "owner_step_s": 300,
+      "start_work_s": 120
+    },
+    "constants": {
+      "panel_start_wait_s": 60,
+      "retry_budget": 3,
+      "timer_accuracy_s": 1.0,
+      "timer_inactive_s": 30.0
+    },
+    "formula": "hold = start_work + wait + budget*(wait + attempt_work + OnUnitInactiveSec + AccuracySec) + owner_detection + owner_step, rounded up to a minute; RuntimeMaxSec = hold + 60",
+    "helper": "guest_owner_port_hold.py",
+    "hold_seconds": 1080,
+    "margin_over_measured_s": 689,
+    "measured_pause_s": {
+      "arch": 383,
+      "debian13": 391
+    },
+    "pause_worst_s": 633.0,
+    "per_attempt_s": 151.0,
+    "release": "owner: systemctl stop of the hold unit at the pause, before the retry",
+    "runtime_max_seconds": 1140,
+    "source": "driver checkout (plan only; a run reads update.sh, the recovery timer and the runner of the candidate commit)",
+    "unit": "celikpanel-lab-owner-port-hold-<request_id>.service"
+  },
+  "provenance": {
+    "baseline": "published-tag-v0.1.0-alpha.80-tree-plus-the-D-027-acceptance-license-seam-only (Panel license code: cmd/panel/license.go, internal/licensing/acceptance_fixture.go, internal/licensing/acceptance_off.go, internal/licensing/acceptance_owner_linux.go, internal/licensing/acceptance_owner_other.go, internal/licensing/license.go); its release policy, installer, update/rollback/recovery/bootstrap scripts, get.sh and Agent are byte-identical to the tag; installed by the real installer; fixture trust root enrolled; not-production-release-admission",
+    "candidate": "unpublished-local-fixture-commit-over-the-source-labelled-v0.1.0-alpha.81; signed with the disposable fixture key; served by the guest-loopback celikpanel.net fixture origin; not a release",
+    "defect": "no candidate defect (good candidate G); owner-fixable host cause: guest_owner_port_hold.py holds 127.0.0.1:2083 from the moment the updater stops the old Panel, so the new Panel cannot bind, its stability wait fails (panel_start_unverified) and forward completion pauses; the harness then does what the product text tells the owner (release the port, run the printed one-time retry once) (simulated host condition, never a product change)"
+  },
+  "schema": "celikpanel/upd1-plan/v1",
+  "steps": [
+    {
+      "does": "registered lab identity, fresh guest (read-only; /etc/hosts is read, the resolver is never asked for celikpanel.net), host-side artifact and source proofs",
+      "name": "preflight"
+    },
+    {
+      "does": "fixture signing key; seal the candidate; guest-loopback celikpanel.net origin (provision + the enabled lab unit cp-lab-upd1-origin.service, which survives a restart) BEFORE the baseline; then celikpanel.net must resolve only to 127.0.0.1 and answer 200, so nothing reaches the real origin",
+      "name": "origin"
+    },
+    {
+      "does": "current_worker_baseline: real installer + unchanged trust enrollment (v0.1.0-alpha.80, commit 57f4372c0485); the owner restart the installer may demand, then the origin is proved again",
+      "name": "baseline-install"
+    },
+    {
+      "does": "owner credentials (guest root only, host memory only), SSH loopback tunnel, pinned TLS leaf, POST /api/v1/auth/login, GET /api/v1/auth/me, GET /api/v1/panel/availability",
+      "name": "owner-login"
+    },
+    {
+      "does": "GET /api/v1/panel/license, POST {action:activate, acceptance fixture key} once, GET /api/v1/license/access",
+      "name": "license"
+    },
+    {
+      "does": "GET /api/v1/setup, PUT /api/v1/setup/guidance, PUT /api/v1/setup (draft, dns_mode external), POST /api/v1/setup/plan, POST /api/v1/setup/start (once), poll GET /api/v1/setup/operation?request_id= until succeeded/failed or a stable 120 s wait at ['access_dns', 'panel_certificate', 'verification', 'verify'] (recorded as observed) [purpose web_mail]",
+      "name": "setup"
+    },
+    {
+      "does": "POST /api/v1/domains/create {static}; POST /api/v1/domains/{id}/files?path=/index.html {action:write}; GET .../dns/zone, .../dns/records; GET .../mail/setup; POST .../mail/accounts; read-only cron availability, then POST .../cron only when crontab exists; GET /api/v1/firewall",
+      "name": "seed"
+    },
+    {
+      "does": "guest_probe observation (hashes, DB digests, timers), workload snapshot, offline shell fetch, sampler unit (5 s, survives reboot) + host loop (SSH, Panel via tunnel)",
+      "name": "pre-state"
+    },
+    {
+      "does": "read-only inspection before-check; origin proved again (127.0.0.1, HTTP 200); owner-update observer for the chosen request id: watch mode, no fault; owner port hold guest_owner_port_hold.py armed for the same request (binds 127.0.0.1:2083 once the updater has stopped the old Panel; kept through the update's exit and every forward attempt; bound 1080 s, RuntimeMaxSec 1140 s)",
+      "name": "arm"
+    },
+    {
+      "does": "GET /api/v1/panel/update/check, GET /api/v1/host-mutation-readiness, POST /api/v1/panel/update/start {request_id, confirmed:true, current_version, current_commit, ...target} once",
+      "name": "owner-start"
+    },
+    {
+      "does": "GET /api/v1/panel/update/status?request_id= with UI backoff 1.5 s x1.6 <= 15 s; while the Panel is down: GET /api/v1/recovery/status?request_id= (same session), root CLI status --json/--lang en/--lang tr, offline shell reference; three-source agreement per sample; stops inconclusive after 600 s of an unchanged failed/none status with no recovery activity (settled-failed-before-change, H8)",
+      "name": "track"
+    },
+    {
+      "does": "the pause is required: record every owner text (CLI EN/TR, card and recovery screen when reachable, the panel log the product names, timers, the hold's events), read the printed one-time retry, then do what the text tells the owner: release the port (systemctl stop of the hold unit, verified released) and run exactly the printed retry command once; then track the same request to its terminal state",
+      "name": "owner-continuation (required)"
+    },
+    {
+      "does": "installed/running identity, floor/foundation, DB digests vs pre-update, seeded rows, site marker, mailbox, cron, timers, firewall, Panel login and update card (rendered from the served build's systemUpdateOutcome.ts rules and catalogues, judged only on a real mismatch)",
+      "name": "terminal"
+    },
+    {
+      "does": "always once the guest was prepared, also after an early stop: sampler and host samples, journals (Panel/Agent/recovery, setup services, lab units incl. the fixture origin), observation records, observer/recovery-fault events, budget receipts, the raw port-hold events file (H15)",
+      "name": "collect"
+    },
+    {
+      "does": "per-workload outage windows (DNS: not-provided-external-dns), Panel window, agreement, outcome classification",
+      "name": "verdicts"
+    },
+    {
+      "does": "judge the owner-continuation observations: the good candidate passes the start check; the held port makes its real start fail (panel_start_unverified); forward completion is retried three times (dispatch update/completion) and pauses (paused_retry_limit, first_failure_code panel_start_unverified) while the port is still held; the panel log the product names shows the port conflict; the owner releases the port and runs the printed one-time retry exactly once; the same request completes forward to update_verified (recovered-after-owner-continuation); the candidate runs; certbot.timer and every other timer end in their pre-update state; site, mail and cron never interrupted; the Panel is back; every owner text at the pause and after the retry recorded in EN and TR (texts from the product build's web/src catalogues and cmd/recovery/main.go, CLI output verbatim)",
+      "name": "kind-expectation"
+    }
+  ],
+  "work_root": "/var/tmp/cp-release-drill-upd8-dry"
+}

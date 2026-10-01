@@ -1,0 +1,31 @@
+Formatting '/var/tmp/cp-release-drill-upd8-probe-c/cells/41302b0389692f063d9b362b/ubuntu/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-upd8-probe-c/images/ubuntu-24.04-server-cloudimg-amd64-20260826.img backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-upd8-probe-c", "cell_id": "release-recovery__fb8bcca4b5edc435", "ssh_ports": [2897, 2898]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-upd8-probe-c", "nodes": {"ubuntu": "verified-disposable-systemd-guest"}}
+13:09:46
+update rc=0
+13:09:58
+apt rc=0
+Setting up nginx-common (1.24.0-2ubuntu7.18) ...
+Setting up nginx (1.24.0-2ubuntu7.18) ...
+No services need to be restarted.
+No containers need to be restarted.
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+13:10:05
+ExecMainStartTimestamp=Thu 2026-10-01 13:09:53 UTC
+ActiveState=active
+   1721      12 packagekitd
+
+13:10:05 | active |    1721      12 packagekitd
+13:10:36 | active |    1721      42 packagekitd
+13:11:07 | active |    1721      73 packagekitd
+13:11:38 | active |    1721     103 packagekitd
+13:12:08 | active |    1721     134 packagekitd
+13:12:39 | active |    1721     164 packagekitd
+13:13:09 | active |    1721     195 packagekitd
+13:13:40 | active |    1721     225 packagekitd
+13:14:10 | active |    1721     256 packagekitd
+13:14:41 | active |    1721     286 packagekitd
+13:15:11 | inactive | none
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-upd8-probe-c", "evidence_retained": true}

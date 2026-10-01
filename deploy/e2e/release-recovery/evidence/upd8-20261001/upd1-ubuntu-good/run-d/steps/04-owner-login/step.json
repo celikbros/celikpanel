@@ -1,0 +1,18 @@
+{
+  "checks": {
+    "availability": {
+      "code": "license_required",
+      "error": "Panel access requires an active server license. Existing services and scheduled tasks keep running. The server administrator must activate or renew the license."
+    },
+    "identity": {
+      "effective_role": "admin",
+      "role": "admin",
+      "username": "labadmin"
+    },
+    "tls_leaf": "2bd4477209fa3d1f99b01be07c2437b57aa439869d4ba800f12844b5986d18c5"
+  },
+  "finished_at": "2026-10-01T14:12:57Z",
+  "name": "owner-login",
+  "started_at": "2026-10-01T14:12:57Z",
+  "verdict": "passed"
+}

@@ -1,0 +1,2 @@
+lab=/var/tmp/cp-release-drill-upd8-ub-oc-a
+upd1-ubuntu-owner-continuation-20261001t150250z

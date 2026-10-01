@@ -1,0 +1,138 @@
+{
+  "checks": {
+    "agreement": {
+      "agreed_samples": 0,
+      "lag_samples": 0,
+      "samples": 26,
+      "verdict": "inconclusive"
+    },
+    "attempts": {
+      "automatic": [
+        {
+          "at": "2026-10-01T16:49:01.236428Z",
+          "attempt": "1",
+          "direction": "rollback",
+          "operation": "update",
+          "phase": "active"
+        },
+        {
+          "at": "2026-10-01T16:50:11.827269Z",
+          "attempt": "2",
+          "direction": "rollback",
+          "operation": "rollback",
+          "phase": "active"
+        }
+      ],
+      "automatic_count": 2,
+      "journal_admissions": [
+        {
+          "at": "2026-10-01T16:49:01.313527+00:00",
+          "attempt": "1",
+          "snapshot": "20261001T164830Z-from-unknown-to-80d7a43fdd326d7155da9d671836ba1e054b07b3-034463038dd6809ab7a99f2d9e476014"
+        },
+        {
+          "at": "2026-10-01T16:50:11.899379+00:00",
+          "attempt": "2",
+          "snapshot": "20261001T164830Z-from-unknown-to-80d7a43fdd326d7155da9d671836ba1e054b07b3-034463038dd6809ab7a99f2d9e476014"
+        }
+      ],
+      "owner": [],
+      "owner_count": 0
+    },
+    "clock_skew_seconds": 0.907,
+    "host_panel_windows": [
+      {
+        "failed": true,
+        "first_bad": 1790873312.6483796,
+        "from": 1790873307.6482325,
+        "kind": "failed+unobserved",
+        "last_bad": 1790873422.797038,
+        "lower_bound_s": 110.149,
+        "to": 1790873427.7971952,
+        "unobserved": true,
+        "upper_bound_s": 120.149
+      }
+    ],
+    "host_ssh_windows": [
+      {
+        "failed": true,
+        "first_bad": 1790873362.6505852,
+        "from": 1790873357.650374,
+        "kind": "failed+unobserved",
+        "last_bad": 1790873362.6505852,
+        "lower_bound_s": 0.0,
+        "to": 1790873377.7955015,
+        "unobserved": true,
+        "upper_bound_s": 20.145
+      }
+    ],
+    "outcome": "recovered-automatically",
+    "workloads": {
+      "cron": {
+        "verdict": "never-interrupted",
+        "windows": []
+      },
+      "dns": {
+        "mode": "external",
+        "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+        "verdict": "not-provided-external-dns"
+      },
+      "panel": {
+        "outside": [],
+        "verdict": "down-only-during-transaction",
+        "windows": [
+          {
+            "cause": "host-reset",
+            "failed": true,
+            "first_bad": 1790873313.3140786,
+            "from": 1790873308.3139105,
+            "kind": "failed+unobserved",
+            "last_bad": 1790873421.6500287,
+            "lower_bound_s": 108.336,
+            "to": 1790873426.6501107,
+            "unobserved": true,
+            "upper_bound_s": 118.336
+          }
+        ]
+      },
+      "smtp": {
+        "verdict": "interrupted-only-by-host-reset",
+        "windows": [
+          {
+            "cause": "host-reset",
+            "failed": false,
+            "first_bad": null,
+            "from": 1790873358.32005,
+            "kind": "unobserved",
+            "last_bad": null,
+            "lower_bound_s": 0.0,
+            "to": 1790873377.0689492,
+            "unobserved": true,
+            "upper_bound_s": 18.749
+          }
+        ]
+      },
+      "web": {
+        "verdict": "interrupted-only-by-host-reset",
+        "windows": [
+          {
+            "cause": "host-reset",
+            "failed": true,
+            "first_bad": 1790873377.0689492,
+            "from": 1790873358.32005,
+            "kind": "failed+unobserved",
+            "last_bad": 1790873377.0689492,
+            "lower_bound_s": 0.0,
+            "to": 1790873382.0693245,
+            "unobserved": true,
+            "upper_bound_s": 23.749
+          }
+        ]
+      }
+    }
+  },
+  "finished_at": "2026-10-01T16:50:42Z",
+  "name": "verdicts",
+  "started_at": "2026-10-01T16:50:42Z",
+  "verdict": "passed"
+}

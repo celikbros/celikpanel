@@ -1,0 +1,27 @@
+upd8 Ubuntu image provenance (host archlinux WSL)
+
+Image used: the file already on the host, /var/tmp/cp-install-vm/images/ubuntu-24.04-20260826.img
+  (present since 2026-09-08 20:39 +0300, 0444 root:root; an earlier install trial's cache). No image was downloaded.
+  size 624829952 bytes, qcow2 (virtual 3.5 GiB)
+  sha256 d0fe84bb5f80853425fa6be28e2c106f30104c3cfe8611933f2e65c9b63f0e30
+
+Verification against the official publisher (only these two small files were fetched, 2026-10-01 12:43Z, HTTPS 200):
+  https://cloud-images.ubuntu.com/releases/noble/release-20260826/SHA256SUMS      (7843 bytes)
+  https://cloud-images.ubuntu.com/releases/noble/release-20260826/SHA256SUMS.gpg  (833 bytes)
+  SHA256SUMS line 52: d0fe84bb5f80853425fa6be28e2c106f30104c3cfe8611933f2e65c9b63f0e30 *ubuntu-24.04-server-cloudimg-amd64.img
+  -> the host file is byte-identical to the published Ubuntu 24.04 LTS (noble) server cloud image amd64, release 20260826:
+     https://cloud-images.ubuntu.com/releases/noble/release-20260826/ubuntu-24.04-server-cloudimg-amd64.img
+  Signature: SHA256SUMS.gpg made 2026-08-26 by RSA key D2EB44626FDDC30B513D5BB71A5D6C4C7DB87C81; NOT verified here
+  (the Ubuntu cloud image signing key is not in the host keyring and nothing else was downloaded). The trust in the
+  image is: HTTPS fetch of SHA256SUMS from cloud-images.ubuntu.com + matching digest.
+  Copies: build/ubuntu-noble-release-20260826.SHA256SUMS{,.gpg}, build/ubuntu-noble-release-20260826.gpg-verify.txt
+
+Image cache: hard link (no copy, nothing removed) created by this run:
+  /var/tmp/cp-v3n28/images/ubuntu-24.04-server-cloudimg-amd64-20260826.img -> same inode as the file above (link count 2)
+Pin: deploy/e2e/release-recovery/images-ubuntu.lock.json (sha256, bytes, URL above); each lab copies the image into
+  its own root (cp --reflink=auto, 0444) and verifies size and SHA-256 before use (lab.py load_ubuntu_pin / prepare).
+
+Why 24.04: v0.1.0-alpha.80's install.sh (and HEAD's) selects the package ecosystem from os-release ID/ID_LIKE
+  (package_hint_for_token: debian|ubuntu -> apt) with no VERSION_ID allowlist; internal/hostplatform familyForToken maps
+  ubuntu to the Debian family; the tag's README names "Boston/NS2 on Ubuntu 24.04" as the tested fixture. 24.04 is
+  therefore the supported LTS named by the tag.

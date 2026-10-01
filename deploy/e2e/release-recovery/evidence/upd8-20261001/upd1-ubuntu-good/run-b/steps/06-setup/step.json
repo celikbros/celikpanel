@@ -1,0 +1,202 @@
+{
+  "checks": {
+    "before": {
+      "guidance": "undecided",
+      "required": true,
+      "revision": 0,
+      "status": "new"
+    },
+    "dns": {
+      "mode": "external",
+      "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+      "verdict": "not-provided-external-dns"
+    },
+    "draft_choices": {
+      "dns_mode": "external",
+      "peer_ip": "",
+      "peer_ns": ""
+    },
+    "execution": {
+      "error": {
+        "code": "mail_profile_install_failed",
+        "message": "The mail profile could not be installed and verified."
+      },
+      "phase": "02-mail_profile",
+      "status": "failed"
+    },
+    "owner_attempts": [
+      {
+        "attempt": 1,
+        "error": {
+          "code": "HOST_MUTATION_BUSY",
+          "message": "another server change or package-manager task is still running; wait and try again"
+        },
+        "phase": "03-service",
+        "purpose": "web_mail",
+        "request_id": "02aef08593840a647a66ffb5734818fb",
+        "status": "failed",
+        "steps": {
+          "01-dns": "succeeded",
+          "02-service": "succeeded",
+          "03-service": "failed",
+          "04-service": "pending",
+          "05-mail_profile": "pending",
+          "06-mail_profile": "pending",
+          "07-service": "pending",
+          "08-firewall": "pending",
+          "09-access_dns": "pending",
+          "10-panel_certificate": "pending",
+          "11-access_dns": "pending",
+          "12-mail_certificate": "pending",
+          "13-verify": "pending"
+        }
+      },
+      {
+        "attempt": 2,
+        "error": {
+          "code": "HOST_MUTATION_BUSY",
+          "message": "another server change or package-manager task is still running; wait and try again"
+        },
+        "phase": "03-service",
+        "purpose": "web_mail",
+        "request_id": "8d678c077247ea463e272174b608673d",
+        "status": "failed",
+        "steps": {
+          "01-dns": "succeeded",
+          "02-service": "succeeded",
+          "03-service": "failed",
+          "04-mail_profile": "pending",
+          "05-mail_profile": "pending",
+          "06-service": "pending",
+          "07-firewall": "pending",
+          "08-access_dns": "pending",
+          "09-panel_certificate": "pending",
+          "10-access_dns": "pending",
+          "11-mail_certificate": "pending",
+          "12-verify": "pending"
+        }
+      },
+      {
+        "attempt": 3,
+        "error": {
+          "code": "HOST_MUTATION_BUSY",
+          "message": "another server change or package-manager task is still running; wait and try again"
+        },
+        "phase": "03-mail_profile",
+        "purpose": "web_mail",
+        "request_id": "769bf6e82e85182f6840ef8f957c09ec",
+        "status": "failed",
+        "steps": {
+          "01-dns": "succeeded",
+          "02-service": "succeeded",
+          "03-mail_profile": "failed",
+          "04-mail_profile": "pending",
+          "05-service": "pending",
+          "06-firewall": "pending",
+          "07-access_dns": "pending",
+          "08-panel_certificate": "pending",
+          "09-access_dns": "pending",
+          "10-mail_certificate": "pending",
+          "11-verify": "pending"
+        }
+      },
+      {
+        "attempt": 4,
+        "error": {
+          "code": "mail_profile_install_failed",
+          "message": "The mail profile could not be installed and verified."
+        },
+        "phase": "02-mail_profile",
+        "purpose": "web_mail",
+        "request_id": "0f119ecf0436819f737c959720230579",
+        "status": "failed",
+        "steps": {
+          "01-dns": "succeeded",
+          "02-mail_profile": "failed",
+          "03-mail_profile": "pending",
+          "04-service": "pending",
+          "05-firewall": "pending",
+          "06-access_dns": "pending",
+          "07-panel_certificate": "pending",
+          "08-access_dns": "pending",
+          "09-mail_certificate": "pending",
+          "10-verify": "pending"
+        }
+      }
+    ],
+    "owner_idle_waits": [
+      {
+        "at": "2026-10-01T13:25:08Z",
+        "before_attempt": 1,
+        "busy_seen": [
+          {
+            "locks": [],
+            "processes": [
+              "packagekitd"
+            ]
+          }
+        ],
+        "idle": true,
+        "polls": 28,
+        "waited_s": 277.3
+      },
+      {
+        "at": "2026-10-01T13:30:24Z",
+        "before_attempt": 2,
+        "busy_seen": [
+          {
+            "locks": [],
+            "processes": [
+              "packagekitd"
+            ]
+          }
+        ],
+        "idle": true,
+        "polls": 30,
+        "waited_s": 297.2
+      },
+      {
+        "at": "2026-10-01T13:35:50Z",
+        "before_attempt": 3,
+        "busy_seen": [
+          {
+            "locks": [],
+            "processes": [
+              "packagekitd"
+            ]
+          }
+        ],
+        "idle": true,
+        "polls": 30,
+        "waited_s": 297.3
+      },
+      {
+        "at": "2026-10-01T13:41:16Z",
+        "before_attempt": 4,
+        "busy_seen": [
+          {
+            "locks": [],
+            "processes": [
+              "packagekitd"
+            ]
+          }
+        ],
+        "idle": true,
+        "polls": 30,
+        "waited_s": 297.4
+      }
+    ],
+    "plan_web_mail": {
+      "blockers": [],
+      "can_start": true,
+      "http": 200,
+      "id": "d1f438b116af8e85b230a6ac24dca743"
+    },
+    "start_http": 202
+  },
+  "finished_at": "2026-10-01T13:42:47Z",
+  "name": "setup",
+  "reason": "server setup did not succeed: {'status': 'failed', 'phase': '02-mail_profile', 'error': {'code': 'mail_profile_install_failed', 'message': 'The mail profile could not be installed and verified.'}}",
+  "started_at": "2026-10-01T13:20:30Z",
+  "verdict": "failed"
+}

@@ -1,0 +1,14 @@
+Formatting '/var/tmp/cp-release-drill-upd8-ub-good-b/cells/118525100c14d46a35272348/ubuntu/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-upd8-ub-good-b/images/ubuntu-24.04-server-cloudimg-amd64-20260826.img backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-upd8-ub-good-b", "cell_id": "release-recovery__d14bd200a11c628d", "ssh_ports": [2821, 2822]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-upd8-ub-good-b", "nodes": {"ubuntu": "verified-disposable-systemd-guest"}}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-upd8-ub-good-b", "nodes": {"ubuntu": "verified-disposable-systemd-guest"}}
+{"step": "preflight", "verdict": "passed", "reason": null}
+{"step": "origin", "verdict": "passed", "reason": null}
+{"step": "baseline-install", "verdict": "passed", "reason": null}
+{"step": "owner-login", "verdict": "passed", "reason": null}
+{"step": "license", "verdict": "passed", "reason": null}
+{"step": "setup", "verdict": "failed", "reason": "server setup did not succeed: {'status': 'failed', 'phase': '02-mail_profile', 'error': {'code': 'mail_profile_install_failed', 'message': 'The mail profile could not be installed and verified.'}}"}
+{"step": "collect", "verdict": "passed", "reason": null}
+{"kind_measured": null, "outcome": "not-terminal", "overall": "failed", "request_id": null}
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-upd8-ub-good-b", "evidence_retained": true}
+UPD1 cell=upd1-ubuntu-good dns_mode=external lab=/var/tmp/cp-release-drill-upd8-ub-good-b driver_exit=1 evidence=/var/tmp/cp-release-drill-upd8-ub-good-b/evidence/*/upd1

@@ -1,0 +1,40 @@
+{
+  "checks": {
+    "before": {
+      "guidance": "undecided",
+      "required": true,
+      "revision": 0,
+      "status": "new"
+    },
+    "dns": {
+      "mode": "external",
+      "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+      "verdict": "not-provided-external-dns"
+    },
+    "draft_choices": {
+      "dns_mode": "external",
+      "peer_ip": "",
+      "peer_ns": ""
+    },
+    "execution": {
+      "error": {
+        "code": "HOST_MUTATION_BUSY",
+        "message": "another server change or package-manager task is still running; wait and try again"
+      },
+      "phase": "02-service",
+      "status": "failed"
+    },
+    "plan_web_mail": {
+      "blockers": [],
+      "can_start": true,
+      "http": 200,
+      "id": "953fe6ded74ac17b1edc9d747e0d1d2f"
+    },
+    "start_http": 202
+  },
+  "finished_at": "2026-10-01T13:01:22Z",
+  "name": "setup",
+  "reason": "server setup did not succeed: {'status': 'failed', 'phase': '02-service', 'error': {'code': 'HOST_MUTATION_BUSY', 'message': 'another server change or package-manager task is still running; wait and try again'}}",
+  "started_at": "2026-10-01T13:01:14Z",
+  "verdict": "failed"
+}

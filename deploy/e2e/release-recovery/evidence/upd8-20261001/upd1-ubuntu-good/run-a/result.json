@@ -1,0 +1,188 @@
+{
+  "artifacts": {
+    "baseline": {
+      "commit": "57f4372c0485cc2e568b45d5b9c05785d3633320",
+      "sha256": "7d95ab7a92639081b888bd8f3bfee08f9454ef380186a9a233f4b717add6abf7",
+      "version": "v0.1.0-alpha.80"
+    },
+    "defective": {
+      "commit": "80d7a43fdd326d7155da9d671836ba1e054b07b3",
+      "sha256": "5b7bea0946796a82c7e4bb88d4cdfa862c48316067fde58068274687a51bc5d4",
+      "version": "v0.1.0-alpha.81"
+    },
+    "good": {
+      "commit": "8c71415e56a2b9a13232377d501cf4bb8a23a9c8",
+      "sha256": "8ccd0f25b8ccad2641b63ccfb9dad0ed54584f327947839f1bc9fde2eab86821",
+      "version": "v0.1.0-alpha.81"
+    }
+  },
+  "cell": {
+    "mail_required": true,
+    "name": "upd1-ubuntu-good",
+    "node": "ubuntu",
+    "recovery_fault": null,
+    "variant": "good"
+  },
+  "findings": [],
+  "identity": {
+    "cell_id": "release-recovery__730411753c38a1d3",
+    "node": "ubuntu",
+    "vm_uuid": "4c0d2745-1744-5e77-9a42-d735b01dd98a"
+  },
+  "native_evidence": false,
+  "note": "Observations for the owner's review; the P0 rows are judged separately.",
+  "outcome": {
+    "attempts": {
+      "automatic": [],
+      "automatic_count": 0,
+      "journal_admissions": [],
+      "owner": [],
+      "owner_count": 0
+    },
+    "classification": "not-terminal",
+    "final_status": null,
+    "owner_continuation": false,
+    "owner_reboot": null,
+    "pin_changes": [],
+    "port_hold": null,
+    "reboot": null,
+    "track_stop": null
+  },
+  "overall": "failed",
+  "provenance": {
+    "baseline": "published-tag-v0.1.0-alpha.80-tree-plus-the-D-027-acceptance-license-seam-only (Panel license code: cmd/panel/license.go, internal/licensing/acceptance_fixture.go, internal/licensing/acceptance_off.go, internal/licensing/acceptance_owner_linux.go, internal/licensing/acceptance_owner_other.go, internal/licensing/license.go); its release policy, installer, update/rollback/recovery/bootstrap scripts, get.sh and Agent are byte-identical to the tag; installed by the real installer; fixture trust root enrolled; not-production-release-admission",
+    "candidate": "unpublished-local-fixture-commit-over-the-source-labelled-v0.1.0-alpha.81; signed with the disposable fixture key; served by the guest-loopback celikpanel.net fixture origin; not a release",
+    "defect": "fixture source patch: cmd/panel --migrate-only exits 1 after migrating the isolated copy (genuine candidate failure after candidate-installed, simulated by a committed fixture change)"
+  },
+  "request_id": null,
+  "schema": "celikpanel/upd1-owner-update-result/v1",
+  "scope": {
+    "cron": {
+      "verdict": "not checked (the cell stopped before seeding)"
+    },
+    "dns": {
+      "mode": "external",
+      "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+      "verdict": "not-provided-external-dns"
+    },
+    "origin": {
+      "after-provision": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      }
+    },
+    "setup": {
+      "verdict": "not waiting"
+    }
+  },
+  "steps": [
+    {
+      "finished_at": "2026-10-01T13:00:15Z",
+      "name": "preflight",
+      "reason": null,
+      "started_at": "2026-10-01T13:00:11Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T13:00:23Z",
+      "name": "origin",
+      "reason": null,
+      "started_at": "2026-10-01T13:00:15Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T13:01:13Z",
+      "name": "baseline-install",
+      "reason": null,
+      "started_at": "2026-10-01T13:00:23Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T13:01:14Z",
+      "name": "owner-login",
+      "reason": null,
+      "started_at": "2026-10-01T13:01:13Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T13:01:14Z",
+      "name": "license",
+      "reason": null,
+      "started_at": "2026-10-01T13:01:14Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T13:01:22Z",
+      "name": "setup",
+      "reason": "server setup did not succeed: {'status': 'failed', 'phase': '02-service', 'error': {'code': 'HOST_MUTATION_BUSY', 'message': 'another server change or package-manager task is still running; wait and try again'}}",
+      "started_at": "2026-10-01T13:01:14Z",
+      "verdict": "failed"
+    },
+    {
+      "finished_at": null,
+      "name": "seed",
+      "reason": "a required earlier step did not pass: setup",
+      "started_at": "2026-10-01T13:01:22Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "pre-state",
+      "reason": "a required earlier step did not pass: seed",
+      "started_at": "2026-10-01T13:01:22Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "arm",
+      "reason": "a required earlier step did not pass: pre-state",
+      "started_at": "2026-10-01T13:01:22Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "owner-start",
+      "reason": "a required earlier step did not pass: arm",
+      "started_at": "2026-10-01T13:01:22Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "track",
+      "reason": "a required earlier step did not pass: owner-start",
+      "started_at": "2026-10-01T13:01:22Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "owner-continuation (required)",
+      "reason": "a required earlier step did not pass: track",
+      "started_at": "2026-10-01T13:01:22Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "terminal",
+      "reason": "a required earlier step did not pass: owner-start",
+      "started_at": "2026-10-01T13:01:22Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": "2026-10-01T13:01:24Z",
+      "name": "collect",
+      "reason": null,
+      "started_at": "2026-10-01T13:01:22Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": null,
+      "name": "verdicts",
+      "reason": "a required earlier step did not pass: owner-start",
+      "started_at": "2026-10-01T13:01:24Z",
+      "verdict": "not-run"
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+Formatting '/var/tmp/cp-release-drill-upd8-probe-a/cells/71ed5fe51a2e27af30894c64/ubuntu/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-upd8-probe-a/images/ubuntu-24.04-server-cloudimg-amd64-20260826.img backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-upd8-probe-a", "cell_id": "release-recovery__99fd9920cc4df2ae", "ssh_ports": [2891, 2892]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-upd8-probe-a", "nodes": {"ubuntu": "verified-disposable-systemd-guest"}}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-upd8-probe-a", "nodes": {"ubuntu": "verified-disposable-systemd-guest"}}
+13:04:14
+ 13:04:14 up 0 min,  1 user,  load average: 2.03, 0.44, 0.14
+||/ Name                Version           Architecture Description
++++-===================-=================-============-===============================================================
+ii  cron                3.0pl1-184ubuntu2 amd64        process scheduling daemon
+ii  needrestart         3.6-7ubuntu4.5    all          check which daemons need to be restarted after library upgrades
+ii  packagekit          1.2.8-2ubuntu1.5  amd64        Provides a package management service
+ii  unattended-upgrades 2.9.1+nmu4ubuntu1 all          automatic installation of security upgrades
+[Daemon]
+ExecMainStartTimestamp=
+ActiveState=inactive
+SubState=dead
+    888       4 unattended-upgr
+NEXT                                 LEFT LAST PASSED UNIT                           ACTIVATES
+Thu 2026-10-01 13:09:00 UTC      4min 46s -         - update-notifier-download.timer update-notifier-download.service
+Thu 2026-10-01 13:10:00 UTC          5min -         - sysstat-collect.timer          sysstat-collect.service
+Thu 2026-10-01 13:18:57 UTC         14min -         - systemd-tmpfiles-clean.timer   systemd-tmpfiles-clean.service
+Thu 2026-10-01 14:01:30 UTC         57min -         - fwupd-refresh.timer            fwupd-refresh.service
+Thu 2026-10-01 23:38:37 UTC           10h -         - apt-daily.timer                apt-daily.service
+Fri 2026-10-02 00:00:00 UTC           10h -         - dpkg-db-backup.timer           dpkg-db-backup.service
+Fri 2026-10-02 00:00:00 UTC           10h -         - logrotate.timer                logrotate.service
+Fri 2026-10-02 00:07:00 UTC           11h -         - sysstat-summary.timer          sysstat-summary.service
+Fri 2026-10-02 00:52:03 UTC           11h -         - motd-news.timer                motd-news.service
+Fri 2026-10-02 04:35:57 UTC           15h -         - man-db.timer                   man-db.service
+Fri 2026-10-02 06:37:20 UTC           17h -         - apt-daily-upgrade.timer        apt-daily-upgrade.service
+Sun 2026-10-04 03:10:01 UTC        2 days -         - e2scrub_all.timer              e2scrub_all.service
+Mon 2026-10-05 00:25:30 UTC        3 days -         - fstrim.timer                   fstrim.service
+Sat 2026-10-10 14:25:16 UTC 1 week 2 days -         - update-notifier-motd.timer     update-notifier-motd.service
+-                                       - -         - apport-autoreport.timer        apport-autoreport.service
+-                                       - -         - snapd.snap-repair.timer        snapd.snap-repair.service
+-                                       - -         - ua-timer.timer                 ua-timer.service
+
+17 timers listed.
+// THIS FILE IS USED TO INFORM PACKAGEKIT THAT THE UPDATE-INFO MIGHT HAVE CHANGED
+
+// Whenever dpkg is called we might have different updates
+// i.e. if an user removes a package that had an update
+DPkg::Post-Invoke {
+"/usr/bin/test -e /usr/share/dbus-1/system-services/org.freedesktop.PackageKit.service && /usr/bin/test -S /var/run/dbus/system_bus_socket && /usr/bin/gdbus call --system --dest org.freedesktop.PackageKit --object-path /org/freedesktop/PackageKit --timeout 4 --method org.freedesktop.PackageKit.StateHasChanged cache-update > /dev/null; /bin/echo > /dev/null";
+};
+
+// When APT's cache is updated (i.e. apt-cache update)
+APT::Update::Post-Invoke-Success {
+"/usr/bin/test -e /usr/share/dbus-1/system-services/org.freedesktop.PackageKit.service && /usr/bin/test -S /var/run/dbus/system_bus_socket && /usr/bin/gdbus call --system --dest org.freedesktop.PackageKit --object-path /org/freedesktop/PackageKit --timeout 4 --method org.freedesktop.PackageKit.StateHasChanged cache-update > /dev/null; /bin/echo > /dev/null";
+};
+
+13:04:14
+apt rc=0
+Reading package lists...
+Building dependency tree...
+Reading state information...
+nftables is already the newest version (1.0.9-1ubuntu0.1).
+nftables set to manually installed.
+0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
+13:04:14
+
+13:04:15 |     888       4 unattended-upgr
+13:04:46 |     888      35 unattended-upgr
+13:05:17 |     888      65 unattended-upgr
+13:05:47 |     888      96 unattended-upgr
+13:06:18 |     888     126 unattended-upgr
+13:06:48 |     888     157 unattended-upgr
+13:07:19 |     888     187 unattended-upgr
+13:07:49 |     888     218 unattended-upgr
+13:08:20 |     888     248 unattended-upgr
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-upd8-probe-a", "evidence_retained": true}

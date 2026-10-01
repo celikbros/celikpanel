@@ -1,0 +1,21 @@
+2026-10-01T16:51:26Z
+373M	/var/tmp/cp-upd8-run
+16K	/var/tmp/cp-upd8-img
+341M	/var/tmp/cp-upd8-quick
+652M	/var/tmp/cp-release-drill-upd8-probe-a
+625M	/var/tmp/cp-release-drill-upd8-probe-b
+966M	/var/tmp/cp-release-drill-upd8-probe-c
+2.2G	/var/tmp/cp-release-drill-upd8-ub-def-a
+1.3G	/var/tmp/cp-release-drill-upd8-ub-good-a
+1.5G	/var/tmp/cp-release-drill-upd8-ub-good-b
+1.6G	/var/tmp/cp-release-drill-upd8-ub-good-c
+2.1G	/var/tmp/cp-release-drill-upd8-ub-good-d
+2.1G	/var/tmp/cp-release-drill-upd8-ub-oc-a
+713M	/var/tmp/cp-upd1-build/20261001t125717z
+133M	/var/tmp/cp-pair-accept/dist/57f4372c0485cc2e568b45d5b9c05785d3633320-acceptance-license
+689M	/var/tmp/cp-pair-accept/dist/8c71415e56a2b9a13232377d501cf4bb8a23a9c8-acceptance-license
+689M	/var/tmp/cp-pair-accept/dist/80d7a43fdd326d7155da9d671836ba1e054b07b3-acceptance-license
+/var/tmp/cp-v3n28/images/ubuntu-24.04-server-cloudimg-amd64-20260826.img links=2 size=624829952
+/var/tmp/cp-install-vm/images/ubuntu-24.04-20260826.img links=2 size=624829952
+/dev/sdd           1007G  168G      789G  18% /
+4363b888278fa3d86af32af8199c5bc0  -

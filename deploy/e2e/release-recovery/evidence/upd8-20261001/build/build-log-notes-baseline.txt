@@ -1,0 +1,1 @@
+acceptance guard: /var/tmp/cp-upd8-run/harness/deploy/e2e/release-recovery/../../../deploy/release-acceptance-license-guard.sh (the commit has none)
