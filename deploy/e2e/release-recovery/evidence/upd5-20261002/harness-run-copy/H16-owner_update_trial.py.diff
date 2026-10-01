@@ -1,0 +1,31 @@
+--- harness/deploy/e2e/release-recovery/owner_update_trial.py	2026-10-01 06:02:28.000000000 +0300
++++ harness-h16/deploy/e2e/release-recovery/owner_update_trial.py	2026-10-01 07:25:55.790167690 +0300
+@@ -3018,8 +3018,27 @@
+         checks["start"] = started
+         deadline = time.monotonic() + 3000
+         status = None
++        # H16 (upd5 run copy): a status read can fail while the native installer upgrades the platform's own
++        # packages (Arch install.sh runs pacman -Syu, which replaces systemd and its libraries; a concurrent
++        # `systemctl show` then exited 127 in upd5 arch-oc run-a). A failed read is recorded and read again
++        # 15 s later; it never restarts or repeats the installation. Five consecutive failed reads stop the
++        # step as before.
++        read_errors: list[dict] = []
++        consecutive = 0
+         while time.monotonic() < deadline:
+-            status = baseline.status(self.root, self.record, self.plan, self.node_name)
++            try:
++                status = baseline.status(self.root, self.record, self.plan, self.node_name)
++            except subprocess.CalledProcessError as exc:
++                consecutive += 1
++                stderr = exc.stderr if isinstance(exc.stderr, str) else (exc.stderr or b"").decode("utf-8", "replace")
++                read_errors.append({"at": utc_now(), "returncode": exc.returncode,
++                                    "guest_stderr_tail": self.redactor.text(stderr[-600:])})
++                checks["status_read_errors"] = read_errors
++                if consecutive >= 5:
++                    raise
++                time.sleep(15)
++                continue
++            consecutive = 0
+             if status.get("installation") is not None:
+                 break
+             time.sleep(15)

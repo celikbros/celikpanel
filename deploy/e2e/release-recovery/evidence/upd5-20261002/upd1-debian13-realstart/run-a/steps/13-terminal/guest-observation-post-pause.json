@@ -1,0 +1,724 @@
+{
+  "captured_at_utc": "2026-10-01T03:37:16.291604+00:00",
+  "completed_at_utc": "2026-10-01T03:37:16.427636+00:00",
+  "database": {
+    "integrity_check": [
+      "ok"
+    ],
+    "migrations": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42
+    ],
+    "read_mode": "sqlite-read-only-transaction",
+    "schema_version": 42,
+    "semantic": {
+      "application_id": 0,
+      "excluded_tables": [],
+      "row_count": 143,
+      "schema": "celikpanel/sqlite-semantic-observation/v1",
+      "schema_sha256": "a8f444f7fd6e45811f6964174345789eb0f20d81fc56cb6f644f65480bb02f8b",
+      "sha256": "a11eaacba4b3f37f48bb44345b6957a751e363e85e06bd26fe3d53dd37c26499",
+      "tables": [
+        {
+          "columns": 6,
+          "name": "additional_user_domain_permissions",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 6,
+          "name": "additional_user_subscription_permissions",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 13,
+          "name": "application_install_operations",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 8,
+          "name": "audit_logs",
+          "rowid_included": true,
+          "rows": 13,
+          "sha256": "cf61e6ca5e18c8b1dde5dbac9f753035b0afa2af9efe717d52a7ccbfe6cd72a8"
+        },
+        {
+          "columns": 12,
+          "name": "backup_schedules",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 8,
+          "name": "database_server_types",
+          "rowid_included": true,
+          "rows": 2,
+          "sha256": "f243adc02cfcd263532bd278241538b975e0df73ea7a1043909b5adab7f67921"
+        },
+        {
+          "columns": 14,
+          "name": "database_servers",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 5,
+          "name": "database_user_grants",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 7,
+          "name": "database_users",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 10,
+          "name": "databases",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 7,
+          "name": "databases_v2",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 10,
+          "name": "dns_bind_pair_state",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 7,
+          "name": "dns_bind_pair_switches",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 8,
+          "name": "dns_engine_state",
+          "rowid_included": true,
+          "rows": 1,
+          "sha256": "85ed06cbffaa4c234c3eae683c90e4f2e20d86f437f81b97c375ebb203057d3e"
+        },
+        {
+          "columns": 19,
+          "name": "dns_engine_switch_snapshots",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 13,
+          "name": "dns_engine_switch_zones",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 4,
+          "name": "dns_zone_deletion_markers",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 13,
+          "name": "dns_zone_engine_applications",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 12,
+          "name": "dns_zone_engine_leases",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 4,
+          "name": "dns_zone_generation_high_water",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 17,
+          "name": "dns_zone_sync_state",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 4,
+          "name": "domain_aliases",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 4,
+          "name": "domain_deletion_operations",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 13,
+          "name": "domains",
+          "rowid_included": true,
+          "rows": 1,
+          "sha256": "87196b6e09804fa4c46f9ae3515d1855676c2abbb368b030f0c223b21744d223"
+        },
+        {
+          "columns": 7,
+          "name": "email_accounts",
+          "rowid_included": true,
+          "rows": 1,
+          "sha256": "b94e644286afa00c4fc182aeea5e3b59f3e243b3054a6e1aab7aaebf2f71a677"
+        },
+        {
+          "columns": 5,
+          "name": "email_forwardings",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 9,
+          "name": "ftp_accounts",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 5,
+          "name": "hostname_reservations",
+          "rowid_included": true,
+          "rows": 3,
+          "sha256": "74b253a6dc23f436d1e3d8ea2a9885c3408731067574b8b627f11ea88696f5ae"
+        },
+        {
+          "columns": 7,
+          "name": "ip_addresses",
+          "rowid_included": true,
+          "rows": 1,
+          "sha256": "17f80b72f07dae56f16b8ace7e7430702f05c9dd5036db638cdd1c6cde8bdd41"
+        },
+        {
+          "columns": 3,
+          "name": "mail_catch_all",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 7,
+          "name": "metrics_samples",
+          "rowid_included": true,
+          "rows": 20,
+          "sha256": "93b818bd7a2bf1c972b16b7216f6b55bd8e9cf30afc90205df51cccd4ee48543"
+        },
+        {
+          "columns": 3,
+          "name": "panel_settings",
+          "rowid_included": true,
+          "rows": 4,
+          "sha256": "06e88b97bc5b8619f26f11d7aa5ad3603111478c430ce099f37ae1f507f7a23a"
+        },
+        {
+          "columns": 7,
+          "name": "pdns_comments",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 6,
+          "name": "pdns_cryptokeys",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 4,
+          "name": "pdns_domainmetadata",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 9,
+          "name": "pdns_domains",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 10,
+          "name": "pdns_records",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 3,
+          "name": "pdns_supermasters",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 4,
+          "name": "pdns_tsigkeys",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 5,
+          "name": "remote_dns_clients",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 9,
+          "name": "remote_dns_connections",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 3,
+          "name": "remote_dns_enrollments",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 7,
+          "name": "remote_dns_origin_history",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 8,
+          "name": "remote_dns_records",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 6,
+          "name": "remote_dns_zone_ownership",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 6,
+          "name": "remote_dns_zones",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 4,
+          "name": "schema_migrations",
+          "rowid_included": true,
+          "rows": 42,
+          "sha256": "5873b2661631c5978889dfcc52c17318be4dd4e0c35cbed39cedd2d5d08227b4"
+        },
+        {
+          "columns": 7,
+          "name": "server_setup_executions",
+          "rowid_included": true,
+          "rows": 1,
+          "sha256": "d2c8c419d3375ef533d6999af21debf4c9caf36e7eb0fbba919f06c5d97d54df"
+        },
+        {
+          "columns": 5,
+          "name": "server_setup_plans",
+          "rowid_included": true,
+          "rows": 1,
+          "sha256": "22da487e3d24d7f72335aee8e469c6c657bb3931d9c571ba7e9b1649410efea4"
+        },
+        {
+          "columns": 8,
+          "name": "server_setup_state",
+          "rowid_included": true,
+          "rows": 1,
+          "sha256": "61183dc91cdec2b24d0cacafacdf08d8b932a2f9958a173e4fafe27fa83afacb"
+        },
+        {
+          "columns": 10,
+          "name": "service_metadata",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 18,
+          "name": "service_operations",
+          "rowid_included": true,
+          "rows": 7,
+          "sha256": "84cc0b6f7209ae1b39dd44897da5a8a640786f7cba982bc768da470206f64d95"
+        },
+        {
+          "columns": 10,
+          "name": "service_plans",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 3,
+          "name": "service_scan_cache",
+          "rowid_included": true,
+          "rows": 1,
+          "sha256": "1344e6caf80585985a7848b24e1040770ddea3fac7801a077cd630eacc75246c"
+        },
+        {
+          "columns": 4,
+          "name": "sessions",
+          "rowid_included": true,
+          "rows": 1,
+          "sha256": "87d17a31be22cd3a04bd5bf9f0cfc127f8741fb2471805bea165c3a982ef25b8"
+        },
+        {
+          "columns": 32,
+          "name": "sites",
+          "rowid_included": true,
+          "rows": 1,
+          "sha256": "33dda65bd4627c518f16737a4a0c1bc7e527fd246ac89a61882aa1d57fb40de9"
+        },
+        {
+          "columns": 2,
+          "name": "sqlite_sequence",
+          "rowid_included": true,
+          "rows": 8,
+          "sha256": "d241894cf0e1b0b9460a0557ea7ac2f40bb12dee4b5f95f16b1210aee1bcbd4c"
+        },
+        {
+          "columns": 19,
+          "name": "ssl_certificates",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 3,
+          "name": "store_offering_components",
+          "rowid_included": true,
+          "rows": 11,
+          "sha256": "d4340d234cfb5bdfeefc055cc503fbabfb6a80a9d5990b73775cedb4925ac636"
+        },
+        {
+          "columns": 11,
+          "name": "store_offerings",
+          "rowid_included": true,
+          "rows": 20,
+          "sha256": "d91632415b1fbc95bc7a6e3b41bb75be54d8e9511d0e3b0d4435e0345847935f"
+        },
+        {
+          "columns": 6,
+          "name": "subscription_entitlements",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 13,
+          "name": "subscriptions",
+          "rowid_included": true,
+          "rows": 1,
+          "sha256": "a7a577dab3411b3fb1bb28cc6dbde6fcb7c5804acaf794d578b5c03b2cdab160"
+        },
+        {
+          "columns": 13,
+          "name": "users",
+          "rowid_included": true,
+          "rows": 1,
+          "sha256": "0f4cfcaa62e79b791245e5684a180409ba5c4330761f0912c3efd45cc7ce289d"
+        },
+        {
+          "columns": 15,
+          "name": "vpn_peers",
+          "rowid_included": true,
+          "rows": 0,
+          "sha256": "2eec78cbecebaa2ee47ad870635c5bdb8ee211e171b102c20a48e5921af5c0bc"
+        },
+        {
+          "columns": 8,
+          "name": "vpn_sync_state",
+          "rowid_included": true,
+          "rows": 1,
+          "sha256": "4b36f1185ba72103ef60ef649df8b30157aa724a4b3ede2b10710df67485fb40"
+        }
+      ],
+      "user_version": 0
+    },
+    "source_metadata_changed": {
+      "database": false,
+      "shm": true,
+      "wal": true
+    },
+    "status": "ok",
+    "user_version": 0,
+    "wal_included": true
+  },
+  "dns": {
+    "a_tcp": {
+      "reason": "loopback DNS query failed",
+      "status": "unknown"
+    },
+    "a_udp": {
+      "reason": "loopback DNS query failed",
+      "status": "unknown"
+    },
+    "name": "upd1-owner.test",
+    "server": "127.0.0.1",
+    "soa_tcp": {
+      "reason": "loopback DNS query failed",
+      "status": "unknown"
+    },
+    "soa_udp": {
+      "reason": "loopback DNS query failed",
+      "status": "unknown"
+    },
+    "zone": "upd1-owner.test"
+  },
+  "identity": {
+    "cell_id": "release-recovery__734ebecffdbf63b3",
+    "node": "debian13",
+    "nonce": "734ebecffdbf63b390f9a1a82daa889b2b127ce82d9be41ae18457bc9fbe718d",
+    "vm_uuid": "5b1e7286-c523-5fb0-8e9a-fd7aa335f0aa"
+  },
+  "journal": {
+    "events": [
+      {
+        "kind": "update_failure",
+        "safe_message": "CELIKPANEL_UPDATE_FAILURE code=panel_start_unverified state=recovery_required",
+        "timestamp_us": "1790825527695477",
+        "unit": "celikpanel-self-update-f76e3871fcb75d4dc22963c25c19a31c.service"
+      }
+    ],
+    "operation_id": "f76e3871fcb75d4dc22963c25c19a31c",
+    "records_read": 127,
+    "status": "ok",
+    "truncated": false
+  },
+  "schema": "celikpanel/release-recovery-observation/v1",
+  "services": {
+    "celikpanel-agent.service": {
+      "installed_executable": {
+        "sha256": "935cdef54898839e48194e6f6463d5d1ec967d98cabe22a4f41b1822343996b6",
+        "size": 25006242,
+        "status": "ok"
+      },
+      "properties": {
+        "ActiveState": "inactive",
+        "ControlGroup": "",
+        "ExecMainCode": "2",
+        "ExecMainStatus": "15",
+        "Id": "celikpanel-agent.service",
+        "InvocationID": "76b47e29ccf741ef91439a33ce037520",
+        "LoadState": "loaded",
+        "MainPID": "0",
+        "Result": "success",
+        "SubState": "dead"
+      },
+      "running_executable": {
+        "reason": "no running MainPID",
+        "status": "absent"
+      },
+      "status": "ok"
+    },
+    "celikpanel-panel.service": {
+      "installed_executable": {
+        "sha256": "22cc9e4367b23c7f50e4906c530522bcfdc4da5a4041d90b7a2308aca9f65e32",
+        "size": 21565602,
+        "status": "ok"
+      },
+      "properties": {
+        "ActiveState": "inactive",
+        "ControlGroup": "",
+        "ExecMainCode": "1",
+        "ExecMainStatus": "1",
+        "Id": "celikpanel-panel.service",
+        "InvocationID": "9359248d02e84fff96437e26aa392418",
+        "LoadState": "loaded",
+        "MainPID": "0",
+        "Result": "exit-code",
+        "SubState": "dead"
+      },
+      "running_executable": {
+        "reason": "no running MainPID",
+        "status": "absent"
+      },
+      "status": "ok"
+    }
+  },
+  "status": "observed",
+  "timers": {
+    "celikpanel-firewall-restore.service": {
+      "properties": {
+        "ActiveState": "inactive",
+        "ControlGroup": "",
+        "ExecMainCode": "0",
+        "ExecMainStatus": "0",
+        "Id": "celikpanel-firewall-restore.service",
+        "InvocationID": "",
+        "LoadState": "loaded",
+        "MainPID": "0",
+        "Result": "success",
+        "SubState": "dead"
+      },
+      "status": "ok"
+    },
+    "celikpanel-mail-certificate-renewal.timer": {
+      "properties": {
+        "ActiveState": "inactive",
+        "Id": "celikpanel-mail-certificate-renewal.timer",
+        "LastTriggerUSec": "",
+        "LoadState": "not-found",
+        "NextElapseUSecMonotonic": "infinity",
+        "NextElapseUSecRealtime": "",
+        "SubState": "dead",
+        "Unit": ""
+      },
+      "status": "ok"
+    },
+    "celikpanel-release-recovery.service": {
+      "properties": {
+        "ActiveState": "inactive",
+        "ControlGroup": "",
+        "ExecMainCode": "1",
+        "ExecMainStatus": "0",
+        "Id": "celikpanel-release-recovery.service",
+        "InvocationID": "8df59bd5d3674b1ca2cd4820a3a635c3",
+        "LoadState": "loaded",
+        "MainPID": "0",
+        "Result": "success",
+        "SubState": "dead"
+      },
+      "status": "ok"
+    },
+    "celikpanel-release-recovery.timer": {
+      "properties": {
+        "ActiveState": "active",
+        "Id": "celikpanel-release-recovery.timer",
+        "LastTriggerUSec": "Thu 2026-10-01 03:37:11 UTC",
+        "LoadState": "loaded",
+        "NextElapseUSecMonotonic": "18min 4.811900s",
+        "NextElapseUSecRealtime": "",
+        "SubState": "waiting",
+        "Unit": "celikpanel-release-recovery.service"
+      },
+      "status": "ok"
+    },
+    "certbot.timer": {
+      "properties": {
+        "ActiveState": "active",
+        "Id": "certbot.timer",
+        "LastTriggerUSec": "Thu 2026-10-01 03:25:55 UTC",
+        "LoadState": "loaded",
+        "NextElapseUSecMonotonic": "0",
+        "NextElapseUSecRealtime": "Thu 2026-10-01 20:03:34 UTC",
+        "SubState": "waiting",
+        "Unit": "certbot.service"
+      },
+      "status": "ok"
+    }
+  },
+  "tls": {
+    "not_after": "Oct  1 03:21:18 2028 GMT",
+    "not_before": "Oct  1 02:21:18 2026 GMT",
+    "served": {
+      "reason": "loopback TLS unavailable: ConnectionRefusedError",
+      "status": "unknown"
+    },
+    "sha256_fingerprint": "30fb908891a35706d15123b071bff1333f33018f4c9be380bcfb8bca1ed543fb",
+    "status": "ok",
+    "subject_alt_name": [
+      "DNS:dns-debian13",
+      "DNS:localhost",
+      "IP Address:127.0.0.1",
+      "IP Address:0:0:0:0:0:0:0:1",
+      "IP Address:10.0.2.15",
+      "IP Address:192.0.2.10",
+      "IP Address:FEC0:0:0:0:5054:FF:FE13:10"
+    ]
+  },
+  "transaction": {
+    "fields": {},
+    "present": false,
+    "status": "ok"
+  },
+  "web": {
+    "algorithm": "sha256(sorted-traversal(relative-path,NUL,file-sha256,LF))",
+    "byte_count": 2295028,
+    "file_count": 107,
+    "status": "ok",
+    "tree_sha256": "783b14b7301192ed4eef465ebf65e563bf2feea7aa1aff2559674761e2fe70e9"
+  }
+}

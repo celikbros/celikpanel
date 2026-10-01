@@ -1,0 +1,304 @@
+{
+  "artifacts": {
+    "baseline": {
+      "commit": "ad55cab84ce93627721040997870993cf91d81b2",
+      "sha256": "c8f02220201aca986f2dc23c8a5a7434462adf1faba738f8eca421e17655029f",
+      "version": "v0.1.0-alpha.81"
+    },
+    "defective": {
+      "commit": "9f7bd8292b881e192512d129c9039b240d538259",
+      "sha256": "a62d32166e513ba809451112649a3e0ccfc35633a65c45548b65766f74bbe95a",
+      "version": "v0.1.0-alpha.82"
+    },
+    "good": {
+      "commit": "d1b562d6fbe9749767dbbbe1f86ff7fbe2e4fc7c",
+      "sha256": "0d37222c75367c0d4b486fa971f8700a6e9a5ed5b1a83aa644f09bcf60dcdb25",
+      "version": "v0.1.0-alpha.82"
+    },
+    "realstart": {
+      "commit": "ed1f31e0ce0a2bff37ca0480f31d0442d4c82cc5",
+      "sha256": "9fc535663c0f64c9a7773a22c1f2c7c1809fdca550f924c50d14253cb6b6292b",
+      "version": "v0.1.0-alpha.82"
+    }
+  },
+  "cell": {
+    "mail_required": true,
+    "name": "upd1-debian13-realstart",
+    "node": "debian13",
+    "recovery_fault": null,
+    "variant": "real-start"
+  },
+  "findings": [
+    "debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']",
+    "while the recovery budget was exhausted the Panel recovery-status API was unavailable; only the root CLI showed the exhausted state"
+  ],
+  "identity": {
+    "cell_id": "release-recovery__734ebecffdbf63b3",
+    "node": "debian13",
+    "vm_uuid": "5b1e7286-c523-5fb0-8e9a-fd7aa335f0aa"
+  },
+  "kind": {
+    "expected": "the start check passes; completion.pending exists; the stability wait fails with panel_start_unverified; forward completion is retried to its limit (N and timestamps recorded) and pauses (paused_retry_limit); no rollback; the owner retry is printed but not run; texts name the panel log command and say there is no supported return; site, mail and cron keep running while the Panel stays down",
+    "judged": {
+      "expected": [
+        "check-passed",
+        "update-failure-line",
+        "sidecar",
+        "completion-marker",
+        "forward-dispatch",
+        "paused",
+        "no-rollback",
+        "candidate-installed",
+        "owner-retry-not-run",
+        "retry-command-printed",
+        "cli-real-start-text",
+        "cli-panel-log-command",
+        "cli-paused-text",
+        "web-catalogue",
+        "workloads-kept-running",
+        "panel-down-until-end"
+      ],
+      "findings": [],
+      "kind": "real-start",
+      "native_evidence": false,
+      "unknown": [],
+      "verdict": "as-expected"
+    },
+    "measured": true,
+    "printed_retry_command": "/usr/libexec/celikpanel/recovery recover --retry --snapshot 20261001T033038Z-from-unknown-to-ed1f31e0ce0a2bff37ca0480f31d0442d4c82cc5-4b64db4a9322ac5bde1921dbab45a4c3",
+    "variant": "real-start"
+  },
+  "native_evidence": false,
+  "note": "Observations for the owner's review; the P0 rows are judged separately.",
+  "outcome": {
+    "attempts": {
+      "automatic": [
+        {
+          "at": "2026-10-01T03:32:09.044582Z",
+          "attempt": "1",
+          "direction": "forward",
+          "operation": "update",
+          "phase": "completion"
+        },
+        {
+          "at": "2026-10-01T03:33:50.197209Z",
+          "attempt": "2",
+          "direction": "forward",
+          "operation": "update",
+          "phase": "completion"
+        },
+        {
+          "at": "2026-10-01T03:35:31.217508Z",
+          "attempt": "3",
+          "direction": "forward",
+          "operation": "update",
+          "phase": "completion"
+        }
+      ],
+      "automatic_count": 3,
+      "journal_admissions": [
+        {
+          "at": "2026-10-01T03:32:09.121226+00:00",
+          "attempt": "1",
+          "snapshot": "20261001T033038Z-from-unknown-to-ed1f31e0ce0a2bff37ca0480f31d0442d4c82cc5-4b64db4a9322ac5bde1921dbab45a4c3"
+        },
+        {
+          "at": "2026-10-01T03:33:50.276907+00:00",
+          "attempt": "2",
+          "snapshot": "20261001T033038Z-from-unknown-to-ed1f31e0ce0a2bff37ca0480f31d0442d4c82cc5-4b64db4a9322ac5bde1921dbab45a4c3"
+        },
+        {
+          "at": "2026-10-01T03:35:31.308477+00:00",
+          "attempt": "3",
+          "snapshot": "20261001T033038Z-from-unknown-to-ed1f31e0ce0a2bff37ca0480f31d0442d4c82cc5-4b64db4a9322ac5bde1921dbab45a4c3"
+        }
+      ],
+      "owner": [],
+      "owner_count": 0
+    },
+    "classification": "paused-owner-action-required",
+    "final_status": {
+      "automatic_recovery": "paused_retry_limit",
+      "first_failure_code": "panel_start_unverified",
+      "observation": "known",
+      "observed_at": "2026-10-01T03:37:13Z",
+      "phase": "recovery_required",
+      "previous_failure": "recovery_failed",
+      "reason": "recovery_incomplete",
+      "renewal_before_update": "on",
+      "request_id": "f76e3871fcb75d4dc22963c25c19a31c",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "none"
+    },
+    "owner_continuation": false,
+    "owner_reboot": null,
+    "pin_changes": [],
+    "port_hold": null,
+    "reboot": null,
+    "track_stop": null
+  },
+  "overall": "complete-for-review",
+  "provenance": {
+    "baseline": "unpublished-local-fixture-commit-over-HEAD-labelled-v0.1.0-alpha.81; acceptance-license panel build (D-027 fixture); installed by the real installer; fixture trust root enrolled; not-production-release-admission",
+    "candidate": "unpublished-local-fixture-commit-labelled-v0.1.0-alpha.82; signed with the disposable fixture key; served by the guest-loopback celikpanel.net fixture origin; not a release",
+    "defect": "fixture source patch: cmd/panel main() exits (log.Fatalf) just before its listener starts; the read-only start check exits before flag parsing and never reaches that line, so the check passes and the real start fails after completion.pending (simulated by a committed fixture change)"
+  },
+  "request_id": "f76e3871fcb75d4dc22963c25c19a31c",
+  "schema": "celikpanel/upd1-owner-update-result/v1",
+  "scope": {
+    "cron": {
+      "crontab": "/usr/bin/crontab",
+      "verdict": "available"
+    },
+    "dns": {
+      "mode": "external",
+      "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+      "verdict": "not-provided-external-dns"
+    },
+    "origin": {
+      "after-provision": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      },
+      "before-arm": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      }
+    },
+    "setup": {
+      "code": "server_setup_access_dns_required",
+      "not_run": [
+        "11-panel_certificate",
+        "12-access_dns",
+        "13-mail_certificate",
+        "14-mail_enrollment",
+        "15-verify"
+      ],
+      "phase": "access_dns",
+      "verdict": "observed isolated-host wait",
+      "volatile_tables_added": [
+        "server_setup_executions"
+      ]
+    }
+  },
+  "steps": [
+    {
+      "finished_at": "2026-10-01T03:20:37Z",
+      "name": "preflight",
+      "reason": null,
+      "started_at": "2026-10-01T03:20:33Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T03:20:45Z",
+      "name": "origin",
+      "reason": null,
+      "started_at": "2026-10-01T03:20:37Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T03:21:35Z",
+      "name": "baseline-install",
+      "reason": null,
+      "started_at": "2026-10-01T03:20:45Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T03:21:36Z",
+      "name": "owner-login",
+      "reason": null,
+      "started_at": "2026-10-01T03:21:35Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T03:21:36Z",
+      "name": "license",
+      "reason": null,
+      "started_at": "2026-10-01T03:21:36Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T03:28:04Z",
+      "name": "setup",
+      "reason": null,
+      "started_at": "2026-10-01T03:21:36Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-01T03:28:07Z",
+      "name": "seed",
+      "reason": null,
+      "started_at": "2026-10-01T03:28:04Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T03:30:15Z",
+      "name": "pre-state",
+      "reason": null,
+      "started_at": "2026-10-01T03:28:07Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T03:30:17Z",
+      "name": "arm",
+      "reason": null,
+      "started_at": "2026-10-01T03:30:15Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T03:30:17Z",
+      "name": "owner-start",
+      "reason": null,
+      "started_at": "2026-10-01T03:30:17Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T03:37:15Z",
+      "name": "track",
+      "reason": null,
+      "started_at": "2026-10-01T03:30:17Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-01T03:37:15Z",
+      "name": "owner-continuation (required)",
+      "reason": null,
+      "started_at": "2026-10-01T03:37:15Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-01T03:37:20Z",
+      "name": "terminal",
+      "reason": null,
+      "started_at": "2026-10-01T03:37:15Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T03:37:22Z",
+      "name": "collect",
+      "reason": null,
+      "started_at": "2026-10-01T03:37:20Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T03:37:22Z",
+      "name": "verdicts",
+      "reason": null,
+      "started_at": "2026-10-01T03:37:22Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T03:37:22Z",
+      "name": "kind-expectation",
+      "reason": null,
+      "started_at": "2026-10-01T03:37:22Z",
+      "verdict": "passed"
+    }
+  ]
+}

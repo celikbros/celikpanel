@@ -1,0 +1,73 @@
+{
+  "checks": {
+    "agreement": {
+      "agreed_samples": 9,
+      "lag_samples": 1,
+      "samples": 14,
+      "verdict": "passed"
+    },
+    "attempts": {
+      "automatic": [],
+      "automatic_count": 0,
+      "journal_admissions": [],
+      "owner": [],
+      "owner_count": 0
+    },
+    "clock_skew_seconds": 0.663,
+    "host_panel_windows": [
+      {
+        "failed": true,
+        "first_bad": 1790827477.0243173,
+        "from": 1790827472.0241902,
+        "kind": "failed",
+        "last_bad": 1790827492.0247533,
+        "lower_bound_s": 15.0,
+        "to": 1790827497.024984,
+        "unobserved": false,
+        "upper_bound_s": 25.001
+      }
+    ],
+    "host_ssh_windows": [],
+    "outcome": "update-verified",
+    "workloads": {
+      "cron": {
+        "verdict": "never-interrupted",
+        "windows": []
+      },
+      "dns": {
+        "mode": "external",
+        "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+        "verdict": "not-provided-external-dns"
+      },
+      "panel": {
+        "outside": [],
+        "verdict": "down-only-during-transaction",
+        "windows": [
+          {
+            "cause": "unexplained",
+            "failed": true,
+            "first_bad": 1790827477.4457102,
+            "from": 1790827472.4455724,
+            "kind": "failed",
+            "last_bad": 1790827492.4471035,
+            "lower_bound_s": 15.001,
+            "to": 1790827497.4472609,
+            "unobserved": false,
+            "upper_bound_s": 25.002
+          }
+        ]
+      },
+      "smtp": {
+        "verdict": "not-seeded"
+      },
+      "web": {
+        "verdict": "never-interrupted",
+        "windows": []
+      }
+    }
+  },
+  "finished_at": "2026-10-01T04:05:19Z",
+  "name": "verdicts",
+  "started_at": "2026-10-01T04:05:19Z",
+  "verdict": "passed"
+}

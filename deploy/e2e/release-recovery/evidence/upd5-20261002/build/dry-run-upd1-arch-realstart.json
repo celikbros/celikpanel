@@ -1,0 +1,127 @@
+{
+  "baseline": {
+    "commit": "ad55cab84ce93627721040997870993cf91d81b2",
+    "sha256": "c8f02220201aca986f2dc23c8a5a7434462adf1faba738f8eca421e17655029f",
+    "version": "v0.1.0-alpha.81"
+  },
+  "candidate": {
+    "commit": "ed1f31e0ce0a2bff37ca0480f31d0442d4c82cc5",
+    "sha256": "9fc535663c0f64c9a7773a22c1f2c7c1809fdca550f924c50d14253cb6b6292b",
+    "version": "v0.1.0-alpha.82"
+  },
+  "cell": {
+    "mail_required": false,
+    "name": "upd1-arch-realstart",
+    "node": "arch",
+    "recovery_fault": null,
+    "variant": "real-start"
+  },
+  "defect": {
+    "candidate_role": "realstart",
+    "file": "cmd/panel/main.go",
+    "kind": "real-start",
+    "owner_retry": "not run",
+    "second_fault": null
+  },
+  "dns": {
+    "mode": "external",
+    "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+    "verdict": "not-provided-external-dns"
+  },
+  "draft_choices": {
+    "dns_mode": "external",
+    "peer_ip": "",
+    "peer_ns": ""
+  },
+  "expected_outcome": "the start check passes; completion.pending exists; the stability wait fails with panel_start_unverified; forward completion is retried to its limit (N and timestamps recorded) and pauses (paused_retry_limit); no rollback; the owner retry is printed but not run; texts name the panel log command and say there is no supported return; site, mail and cron keep running while the Panel stays down",
+  "inspections": {
+    "points": [
+      "before-site",
+      "after-setup",
+      "after-seed",
+      "before-check",
+      "after-track",
+      "at-pause",
+      "after-continuation",
+      "after-terminal",
+      "after-reboot",
+      "after-management-return"
+    ],
+    "rule": "read-only; before the update check, or after a terminal, paused or settled state; never inside the update preflight window (sidecar v2)"
+  },
+  "local_port": 18443,
+  "native_evidence": false,
+  "provenance": {
+    "baseline": "unpublished-local-fixture-commit-over-HEAD-labelled-v0.1.0-alpha.81; acceptance-license panel build (D-027 fixture); installed by the real installer; fixture trust root enrolled; not-production-release-admission",
+    "candidate": "unpublished-local-fixture-commit-labelled-v0.1.0-alpha.82; signed with the disposable fixture key; served by the guest-loopback celikpanel.net fixture origin; not a release",
+    "defect": "fixture source patch: cmd/panel main() exits (log.Fatalf) just before its listener starts; the read-only start check exits before flag parsing and never reaches that line, so the check passes and the real start fails after completion.pending (simulated by a committed fixture change)"
+  },
+  "schema": "celikpanel/upd1-plan/v1",
+  "steps": [
+    {
+      "does": "registered lab identity, fresh guest (read-only; /etc/hosts is read, the resolver is never asked for celikpanel.net), host-side artifact and source proofs",
+      "name": "preflight"
+    },
+    {
+      "does": "fixture signing key; seal the candidate; guest-loopback celikpanel.net origin (provision + the enabled lab unit cp-lab-upd1-origin.service, which survives a restart) BEFORE the baseline; then celikpanel.net must resolve only to 127.0.0.1 and answer 200, so nothing reaches the real origin",
+      "name": "origin"
+    },
+    {
+      "does": "current_worker_baseline: real installer + unchanged trust enrollment (v0.1.0-alpha.81, commit ad55cab84ce9); the owner restart the installer may demand, then the origin is proved again",
+      "name": "baseline-install"
+    },
+    {
+      "does": "owner credentials (guest root only, host memory only), SSH loopback tunnel, pinned TLS leaf, POST /api/v1/auth/login, GET /api/v1/auth/me, GET /api/v1/panel/availability",
+      "name": "owner-login"
+    },
+    {
+      "does": "GET /api/v1/panel/license, POST {action:activate, acceptance fixture key} once, GET /api/v1/license/access",
+      "name": "license"
+    },
+    {
+      "does": "GET /api/v1/setup, PUT /api/v1/setup/guidance, PUT /api/v1/setup (draft, dns_mode external), POST /api/v1/setup/plan, POST /api/v1/setup/start (once), poll GET /api/v1/setup/operation?request_id= until succeeded/failed or a stable 120 s wait at ['access_dns', 'panel_certificate', 'verification', 'verify'] (recorded as observed) [purpose web_mail attempted, web fallback recorded]",
+      "name": "setup"
+    },
+    {
+      "does": "POST /api/v1/domains/create {static}; POST /api/v1/domains/{id}/files?path=/index.html {action:write}; GET .../dns/zone, .../dns/records; GET .../mail/setup; POST .../mail/accounts; read-only cron availability, then POST .../cron only when crontab exists; GET /api/v1/firewall",
+      "name": "seed"
+    },
+    {
+      "does": "guest_probe observation (hashes, DB digests, timers), workload snapshot, offline shell fetch, sampler unit (5 s, survives reboot) + host loop (SSH, Panel via tunnel)",
+      "name": "pre-state"
+    },
+    {
+      "does": "read-only inspection before-check; origin proved again (127.0.0.1, HTTP 200); owner-update observer for the chosen request id: watch mode, no fault",
+      "name": "arm"
+    },
+    {
+      "does": "GET /api/v1/panel/update/check, GET /api/v1/host-mutation-readiness, POST /api/v1/panel/update/start {request_id, confirmed:true, current_version, current_commit, ...target} once",
+      "name": "owner-start"
+    },
+    {
+      "does": "GET /api/v1/panel/update/status?request_id= with UI backoff 1.5 s x1.6 <= 15 s; while the Panel is down: GET /api/v1/recovery/status?request_id= (same session), root CLI status --json/--lang en/--lang tr, offline shell reference; three-source agreement per sample; stops inconclusive after 600 s of an unchanged failed/none status with no recovery activity (settled-failed-before-change, H8)",
+      "name": "track"
+    },
+    {
+      "does": "the pause is this cell's expected end: verify all views and record the exact one-time retry command printed in the recovery journal (owner-retry without --execute); it is NOT run, because it would retry the same broken candidate",
+      "name": "owner-continuation (required)"
+    },
+    {
+      "does": "candidate installed and not running (Panel down), completion marker present, seeded workloads (site marker, mailbox, cron), timers, firewall; Panel login attempted once and recorded as unreachable",
+      "name": "terminal"
+    },
+    {
+      "does": "always once the guest was prepared, also after an early stop: sampler and host samples, journals (Panel/Agent/recovery, setup services, lab units incl. the fixture origin), observation records, observer/recovery-fault events, budget receipts",
+      "name": "collect"
+    },
+    {
+      "does": "per-workload outage windows (DNS: not-provided-external-dns), Panel window (expected down from the update until the end; an update that stopped before the candidate ran is judged as any update), agreement, outcome classification",
+      "name": "verdicts"
+    },
+    {
+      "does": "judge the real-start observations: the start check passes; completion.pending exists; the stability wait fails with panel_start_unverified; forward completion is retried to its limit (N and timestamps recorded) and pauses (paused_retry_limit); no rollback; the owner retry is printed but not run; texts name the panel log command and say there is no supported return; site, mail and cron keep running while the Panel stays down (texts from the product build's web/src catalogues and cmd/recovery/main.go, CLI output verbatim); an update that stops before the candidate Panel's real start runs is not-measured and the cell ends inconclusive-kind-not-reached",
+      "name": "kind-expectation"
+    }
+  ],
+  "work_root": "/var/tmp/cp-release-drill-upd5-dry"
+}

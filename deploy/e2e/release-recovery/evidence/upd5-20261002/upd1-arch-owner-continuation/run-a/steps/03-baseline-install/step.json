@@ -1,0 +1,18 @@
+{
+  "checks": {
+    "start": {
+      "action": "started",
+      "archive_sha256": "c8f02220201aca986f2dc23c8a5a7434462adf1faba738f8eca421e17655029f",
+      "credentials": "[REDACTED]",
+      "node": "arch",
+      "source_commit": "ad55cab84ce93627721040997870993cf91d81b2",
+      "unit": "celikpanel-lab-current-worker-baseline.service",
+      "version": "v0.1.0-alpha.81"
+    }
+  },
+  "finished_at": "2026-10-01T04:23:48Z",
+  "name": "baseline-install",
+  "reason": "CalledProcessError: Command '['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5', '-o', 'StrictHostKeyChecking=yes', '-o', 'HashKnownHosts=no', '-o', 'UserKnownHostsFile=/var/tmp/cp-release-drill-upd5-arch-oc-a/cells/f6680aa19072de9229a85851/ssh-known-hosts', '-i', '/var/tmp/cp-release-drill-upd5-arch-oc-a/key', '-p', '2592', 'celik@127.0.0.1', 'sudo /bin/bash -s']' returned non-zero exit status 1. | guest stderr: Traceback (most recent call last):\n  File \"<stdin>\", line 5, in <module>\n  File \"/usr/lib/python3.14/subprocess.py\", line 578, in run\n    raise CalledProcessError(retcode, process.args,\n                             output=stdout, stderr=stderr)\nsubprocess.CalledProcessError: Command '['systemctl', 'show', 'celikpanel-lab-current-worker-baseline.service', '-p', 'ActiveState', '-p', 'SubState', '-p', 'Result', '-p', 'ExecMainStatus']' returned non-zero exit status 127.\n",
+  "started_at": "2026-10-01T04:22:43Z",
+  "verdict": "inconclusive"
+}
