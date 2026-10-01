@@ -1,0 +1,42 @@
+{
+  "checks": {
+    "before": {
+      "disabled_and_stopped": false,
+      "enabled_and_active": true,
+      "units": {
+        "celikpanel-agent.service": {
+          "ActiveState": "active",
+          "UnitFileState": "enabled"
+        },
+        "celikpanel-panel.service": {
+          "ActiveState": "active",
+          "UnitFileState": "enabled"
+        }
+      }
+    },
+    "command": "sudo systemctl disable --now celikpanel-panel.service celikpanel-agent.service",
+    "management": {
+      "disabled_and_stopped": true,
+      "enabled_and_active": false,
+      "units": {
+        "celikpanel-agent.service": {
+          "ActiveState": "inactive",
+          "UnitFileState": "disabled"
+        },
+        "celikpanel-panel.service": {
+          "ActiveState": "inactive",
+          "UnitFileState": "disabled"
+        }
+      }
+    },
+    "management_off_window": {
+      "done_at": 1790817435.0829787,
+      "requested_at": 1790817434.6356528
+    },
+    "returncode": 0
+  },
+  "finished_at": "2026-10-01T01:17:19Z",
+  "name": "management-off",
+  "started_at": "2026-10-01T01:17:09Z",
+  "verdict": "passed"
+}

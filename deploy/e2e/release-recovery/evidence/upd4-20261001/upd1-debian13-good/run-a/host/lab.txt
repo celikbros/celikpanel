@@ -1,0 +1,2 @@
+lab=/var/tmp/cp-release-drill-upd4-d13-good-a
+upd1-debian13-good-20260930t222444z

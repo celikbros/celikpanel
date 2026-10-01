@@ -1,0 +1,113 @@
+{
+  "checks": {
+    "boot_id": "be1ecb0f-40a7-4b8b-93a2-11729f97211d",
+    "firewall": {
+      "equal_to_before": true,
+      "present": true,
+      "tables": [
+        "table inet celikpanel_fw"
+      ]
+    },
+    "first_sample_seconds_after_boot": 12.25910418,
+    "management_after_reboot": {
+      "disabled_and_stopped": true,
+      "enabled_and_active": false,
+      "units": {
+        "celikpanel-agent.service": {
+          "ActiveState": "inactive",
+          "UnitFileState": "disabled"
+        },
+        "celikpanel-panel.service": {
+          "ActiveState": "inactive",
+          "UnitFileState": "disabled"
+        }
+      }
+    },
+    "needed_panel": [],
+    "renewal_timer": {
+      "enabled_and_active": false,
+      "timers": {
+        "certbot-renew.timer": {
+          "after": {
+            "ActiveState": "inactive",
+            "UnitFileState": "disabled"
+          },
+          "before": {
+            "ActiveState": "inactive",
+            "UnitFileState": "disabled"
+          },
+          "kept": true
+        }
+      },
+      "verdict": "as-before"
+    },
+    "samples": 37,
+    "served": {
+      "cron": {
+        "stalls": [],
+        "stamps_in_boot": 2,
+        "verdict": "served"
+      },
+      "db": {
+        "failing_after_first_ok": 0,
+        "failing_before_first_ok": 0,
+        "first_ok_seconds_after_boot": 12.25910418,
+        "samples": 37,
+        "verdict": "served"
+      },
+      "smtp": {
+        "verdict": "not-seeded"
+      },
+      "web": {
+        "failing_after_first_ok": 0,
+        "failing_before_first_ok": 0,
+        "first_ok_seconds_after_boot": 12.25910418,
+        "samples": 37,
+        "verdict": "served"
+      }
+    },
+    "services": {
+      "celikpanel-agent.service": {
+        "ActiveState": "inactive",
+        "LoadState": "loaded",
+        "SubState": "dead",
+        "UnitFileState": "disabled"
+      },
+      "celikpanel-firewall-restore.service": {
+        "ActiveState": "active",
+        "LoadState": "loaded",
+        "SubState": "exited",
+        "UnitFileState": "enabled"
+      },
+      "celikpanel-panel.service": {
+        "ActiveState": "inactive",
+        "LoadState": "loaded",
+        "SubState": "dead",
+        "UnitFileState": "disabled"
+      },
+      "cronie.service": {
+        "ActiveState": "active",
+        "LoadState": "loaded",
+        "SubState": "running",
+        "UnitFileState": "enabled"
+      },
+      "nftables.service": {
+        "ActiveState": "inactive",
+        "LoadState": "loaded",
+        "SubState": "dead",
+        "UnitFileState": "disabled"
+      },
+      "nginx.service": {
+        "ActiveState": "active",
+        "LoadState": "loaded",
+        "SubState": "running",
+        "UnitFileState": "enabled"
+      }
+    },
+    "window_seconds": 180.0
+  },
+  "finished_at": "2026-10-01T01:20:49Z",
+  "name": "management-off-measure",
+  "started_at": "2026-10-01T01:18:51Z",
+  "verdict": "passed"
+}

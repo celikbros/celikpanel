@@ -1,0 +1,37 @@
+{
+  "checks": {
+    "command": "sudo systemctl enable --now celikpanel-agent.service celikpanel-panel.service",
+    "management_return": {
+      "differences": [
+        "cron_listed: True -> False",
+        "databases: ['upd1_owner_test_upd1db'] -> []",
+        "domains: [(1, 'upd1-owner.test')] -> []",
+        "mailbox_listed: True -> False",
+        "update_status: 'succeeded' -> None",
+        "version: {'version': 'v0.1.0-alpha.82', 'commit': 'e1fdca3898d950a6408bb5161f5b25ac32440d28', 'schema_version': 42, 'agent_commit': 'e1fdca3898d950a6408bb5161f5b25ac32440d28', 'agent_matches': True} -> {'version': None, 'commit': None, 'schema_version': None, 'agent_commit': None, 'agent_matches': None}"
+      ],
+      "login_ok": true,
+      "management": {
+        "disabled_and_stopped": false,
+        "enabled_and_active": true,
+        "units": {
+          "celikpanel-agent.service": {
+            "ActiveState": "active",
+            "UnitFileState": "enabled"
+          },
+          "celikpanel-panel.service": {
+            "ActiveState": "active",
+            "UnitFileState": "enabled"
+          }
+        }
+      },
+      "tls_leaf": "eb865be94b1c12ce46cc3b5af5991c4eaf7e160234a7300320b6b64c06665f0f"
+    },
+    "returncode": 0
+  },
+  "finished_at": "2026-09-30T23:55:05Z",
+  "name": "management-return",
+  "reason": "management did not return to the same owner state: {'tls_leaf': 'eb865be94b1c12ce46cc3b5af5991c4eaf7e160234a7300320b6b64c06665f0f', 'login_ok': True, 'differences': ['cron_listed: True -> False', \"databases: ['upd1_owner_test_upd1db'] -> []\", \"domains: [(1, 'upd1-owner.test')] -> []\", 'mailbox_listed: True -> False', \"update_status: 'succeeded' -> None\", \"version: {'version': 'v0.1.0-alpha.82', 'commit': 'e1fdca3898d950a6408bb5161f5b25ac32440d28', 'schema_version': 42, 'agent_commit': 'e1fdca3898d950a6408bb5161f5b25ac32440d28', 'agent_matches': True} -> {'version': None, 'commit': None, 'schema_version': None, 'agent_commit': None, 'agent_matches': None}\"], 'management': {'units': {'celikpanel-panel.service': {'ActiveState': 'active', 'UnitFileState': 'enabled'}, 'celikpanel-agent.service': {'ActiveState': 'active', 'UnitFileState': 'enabled'}}, 'disabled_and_stopped': False, 'enabled_and_active': True}}",
+  "started_at": "2026-09-30T23:54:59Z",
+  "verdict": "failed"
+}

@@ -1,0 +1,86 @@
+{
+  "checks": {
+    "attempts": {
+      "automatic": [
+        {
+          "at": "2026-10-01T01:00:57.580178Z",
+          "attempt": "1",
+          "direction": "forward",
+          "operation": "update",
+          "phase": "completion"
+        },
+        {
+          "at": "2026-10-01T01:02:36.808651Z",
+          "attempt": "2",
+          "direction": "forward",
+          "operation": "update",
+          "phase": "completion"
+        },
+        {
+          "at": "2026-10-01T01:04:16.744158Z",
+          "attempt": "3",
+          "direction": "forward",
+          "operation": "update",
+          "phase": "completion"
+        }
+      ],
+      "automatic_count": 3,
+      "journal_admissions": [
+        {
+          "at": "2026-10-01T01:00:57.635559+00:00",
+          "attempt": "1",
+          "snapshot": "20261001T005932Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-c0330bbe5baad02c2df5efe451b8d128"
+        },
+        {
+          "at": "2026-10-01T01:02:36.880650+00:00",
+          "attempt": "2",
+          "snapshot": "20261001T005932Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-c0330bbe5baad02c2df5efe451b8d128"
+        },
+        {
+          "at": "2026-10-01T01:04:16.821803+00:00",
+          "attempt": "3",
+          "snapshot": "20261001T005932Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-c0330bbe5baad02c2df5efe451b8d128"
+        }
+      ],
+      "owner": [
+        {
+          "at": "2026-10-01T01:06:25.386157Z",
+          "direction": "forward",
+          "name": "owner.B2lnxA2p",
+          "operation": "update",
+          "phase": "completion"
+        }
+      ],
+      "owner_count": 1
+    },
+    "guest_samples": 84,
+    "host_samples": 100,
+    "journals": [
+      "lab",
+      "product",
+      "setup-services"
+    ],
+    "observer": [
+      "armed",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "released"
+    ],
+    "stopped_after": [],
+    "unavailable": {}
+  },
+  "finished_at": "2026-10-01T01:06:56Z",
+  "name": "collect",
+  "started_at": "2026-10-01T01:06:54Z",
+  "verdict": "passed"
+}

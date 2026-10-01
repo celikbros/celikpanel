@@ -1,0 +1,114 @@
+{
+  "checks": {
+    "builds": {
+      "agent": {
+        "identity": "version=v0.1.0-alpha.81\ncommit=0e515e908fc7b3de5c4e74dc7535638cbe56d401\n",
+        "returncode": 0,
+        "sha256": "fb68e57bbb7ff5756ceb72c25943fe270f63c8ca6dcdad1699563f8205572851"
+      },
+      "panel": {
+        "identity": "version=v0.1.0-alpha.81\ncommit=0e515e908fc7b3de5c4e74dc7535638cbe56d401\n",
+        "returncode": 0,
+        "sha256": "bed928c464ef198dd91a1cfde31ddffb4e1736ea2baf5aaed43a65509d03c536"
+      }
+    },
+    "cron": {
+      "content": "2026-10-01T00:50:00+00:00",
+      "mtime": 1790815800.104041,
+      "ok": true,
+      "path": "/var/www/celikpanel/subscriptions/2/sites/1/upd1-cron-stamp.txt"
+    },
+    "database_note": "recorded only: the candidate database was published before completion.pending",
+    "database_vs_pre_update": {
+      "differing": [
+        "metrics_samples",
+        "server_setup_executions"
+      ],
+      "post_sha256": "43f82b971d47070d940a83acbbfaab6727ba93731da704bbf3bb0ee3739fa5fd",
+      "pre_sha256": "e115d5a68eea56f7d15b16e141991bc58aeeda899f7dfb9e686bdc8457d1289c",
+      "schema_equal": true,
+      "tables_compared": 65,
+      "unexpected": [],
+      "verdict": "equal-except-volatile",
+      "volatile_excluded": [
+        "audit_logs",
+        "metrics_samples",
+        "server_setup_executions",
+        "sessions",
+        "sqlite_sequence"
+      ],
+      "volatile_reasons": {
+        "audit_logs": "authentication or background writer (BOUND-WORKER AJ)",
+        "metrics_samples": "authentication or background writer (BOUND-WORKER AJ)",
+        "server_setup_executions": "the waiting setup runner rewrites its execution row on every retry (about every 25 s: cmd/panel/server_setup_dns_retry.go claimServerSetupDNSRetry and server_setup_operations.go execution update)",
+        "sessions": "authentication or background writer (BOUND-WORKER AJ)",
+        "sqlite_sequence": "authentication or background writer (BOUND-WORKER AJ)"
+      }
+    },
+    "final": {
+      "observation": "known",
+      "observed_at": "2026-10-01T00:49:53Z",
+      "phase": "recovered",
+      "previous_failure": "update_failed",
+      "reason": "rollback_verified",
+      "request_id": "b29e0eb359bcd19027b7fe4aa28ae9c9",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "rollback_verified"
+    },
+    "firewall_equal": true,
+    "installed": "baseline",
+    "login": {
+      "attempted": true,
+      "ok": true
+    },
+    "mailbox": {
+      "checked": false
+    },
+    "outcome": "real-start-candidate-rolled-back",
+    "panel_service": {
+      "installed_executable": {
+        "sha256": "bed928c464ef198dd91a1cfde31ddffb4e1736ea2baf5aaed43a65509d03c536",
+        "size": 21557410,
+        "status": "ok"
+      },
+      "properties": {
+        "ActiveState": "active",
+        "ControlGroup": "/system.slice/celikpanel-panel.service",
+        "ExecMainCode": "0",
+        "ExecMainStatus": "0",
+        "Id": "celikpanel-panel.service",
+        "InvocationID": "23016cc3f1f0444f8fab109ced2beae8",
+        "LoadState": "loaded",
+        "MainPID": "17715",
+        "Result": "success",
+        "SubState": "running"
+      },
+      "running_executable": {
+        "pid": 17715,
+        "sha256": "bed928c464ef198dd91a1cfde31ddffb4e1736ea2baf5aaed43a65509d03c536",
+        "size": 21557410,
+        "start_ticks": "41599",
+        "status": "ok",
+        "target": "/opt/celikpanel/bin/panel"
+      },
+      "status": "ok"
+    },
+    "site_marker": true,
+    "smtp": null,
+    "timers": {
+      "changed": {},
+      "compared": 2,
+      "equal": true
+    },
+    "transaction": {
+      "fields": {},
+      "present": false,
+      "status": "ok"
+    },
+    "views_at_pause": null
+  },
+  "finished_at": "2026-10-01T00:50:02Z",
+  "name": "terminal",
+  "started_at": "2026-10-01T00:49:56Z",
+  "verdict": "passed"
+}

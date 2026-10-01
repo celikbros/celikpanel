@@ -1,0 +1,182 @@
+{
+  "agreement": {
+    "known_sources": [
+      "api",
+      "cli"
+    ],
+    "phase": {
+      "api": "recovered",
+      "cli": "recovered"
+    },
+    "reasons": [],
+    "sources": [
+      "api",
+      "cli",
+      "shell"
+    ],
+    "verdict": "agree"
+  },
+  "cli": {
+    "boot_id": "2d0e6498-0b73-4ea2-805c-4ee4c9db3726",
+    "captured_at": "2026-09-30T23:00:33.999596Z",
+    "en": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "The new version's panel failed its start check before anything was switched on, so the server was returned to the previous version automatically. The previous version keeps running. Nothing needs to be done on the server. Do not start the same version again until a corrected version is published. When you report this, include the reason line shown for this update on the panel's update page.\nRequest: 7a7b01ebeb24bf40a384437f6c2473c9\nRecorded at: 2026-09-30T23:00:31Z\nThis is a recorded observation; current service health was not checked.\nRecorded state (for support): phase=recovered reason=rollback_verified proof=rollback_verified previous_failure=update_failed failure_code=candidate_panel_startup_check_failed\n"
+    },
+    "json": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "{\"schema\":\"celikpanel-recovery-status/v1\",\"request_id\":\"7a7b01ebeb24bf40a384437f6c2473c9\",\"observation\":\"known\",\"phase\":\"recovered\",\"terminal_proof\":\"rollback_verified\",\"reason\":\"rollback_verified\",\"observed_at\":\"2026-09-30T23:00:31Z\",\"previous_failure\":\"update_failed\",\"failure_code\":\"candidate_panel_startup_check_failed\"}\n"
+    },
+    "tr": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "Yeni sürümün paneli, hiçbir şey devreye alınmadan önce başlangıç denetiminden geçemedi; bu yüzden sunucu otomatik olarak önceki sürüme döndürüldü. Önceki sürüm çalışmaya devam ediyor. Sunucuda yapmanız gereken bir şey yok. Düzeltilmiş bir sürüm yayımlanana kadar aynı sürümü yeniden başlatmayın. Bunu bildirirken panelin güncelleme sayfasında bu güncelleme için gösterilen neden satırını ekleyin.\nİşlem: 7a7b01ebeb24bf40a384437f6c2473c9\nKayıt zamanı: 2026-09-30T23:00:31Z\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\nKayıtlı durum (destek için): phase=recovered reason=rollback_verified proof=rollback_verified previous_failure=update_failed failure_code=candidate_panel_startup_check_failed\n"
+    }
+  },
+  "guidance_api": {
+    "actionable": true,
+    "keys": [
+      "recovery.phase.recovered",
+      "recovery.failure.candidate_panel_startup_check_failed.recovered",
+      "recovery.reason.candidate_panel_startup_check_failed"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "texts": {
+      "en": [
+        "Rollback verified",
+        "The new version's panel failed its start check before anything was switched on, so the server was returned to the previous version automatically. The previous version keeps running and nothing needs to be done on the server. When you report this, include the reason line shown for this update on the update page.",
+        "The new version's panel failed its start check"
+      ],
+      "tr": [
+        "Geri alma doğrulandı",
+        "Yeni sürümün paneli, hiçbir şey devreye alınmadan önce başlangıç denetiminden geçemedi; bu yüzden sunucu otomatik olarak önceki sürüme döndürüldü. Önceki sürüm çalışmaya devam ediyor ve sunucuda yapmanız gereken bir şey yok. Bunu bildirirken güncelleme sayfasında bu güncelleme için gösterilen neden satırını ekleyin.",
+        "Yeni sürümün paneli başlangıç denetiminden geçemedi"
+      ]
+    }
+  },
+  "guidance_cli": {
+    "actionable": true,
+    "keys": [
+      "recovery.phase.recovered",
+      "recovery.failure.candidate_panel_startup_check_failed.recovered",
+      "recovery.reason.candidate_panel_startup_check_failed"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "texts": {
+      "en": [
+        "Rollback verified",
+        "The new version's panel failed its start check before anything was switched on, so the server was returned to the previous version automatically. The previous version keeps running and nothing needs to be done on the server. When you report this, include the reason line shown for this update on the update page.",
+        "The new version's panel failed its start check"
+      ],
+      "tr": [
+        "Geri alma doğrulandı",
+        "Yeni sürümün paneli, hiçbir şey devreye alınmadan önce başlangıç denetiminden geçemedi; bu yüzden sunucu otomatik olarak önceki sürüme döndürüldü. Önceki sürüm çalışmaya devam ediyor ve sunucuda yapmanız gereken bir şey yok. Bunu bildirirken güncelleme sayfasında bu güncelleme için gösterilen neden satırını ekleyin.",
+        "Yeni sürümün paneli başlangıç denetiminden geçemedi"
+      ]
+    }
+  },
+  "index": 28,
+  "observed": {
+    "failure_code": "candidate_panel_startup_check_failed",
+    "observation": "known",
+    "observed_at": "2026-09-30T23:00:31Z",
+    "phase": "recovered",
+    "previous_failure": "update_failed",
+    "reason": "rollback_verified",
+    "request_id": "7a7b01ebeb24bf40a384437f6c2473c9",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "rollback_verified"
+  },
+  "recovery_api": {
+    "body": {
+      "failure_code": "candidate_panel_startup_check_failed",
+      "observation": "known",
+      "observed_at": "2026-09-30T23:00:31Z",
+      "panel_state": "ready",
+      "phase": "recovered",
+      "previous_failure": "update_failed",
+      "reason": "rollback_verified",
+      "request_id": "7a7b01ebeb24bf40a384437f6c2473c9",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "rollback_verified"
+    },
+    "http": 200
+  },
+  "t": 1790809233.28192,
+  "update_card": {
+    "keys": [
+      "panelUpdate.outcome.rolledBackTitle",
+      "panelUpdate.outcome.rolledBack",
+      "panelUpdate.outcome.cause.candidate_panel_startup_check_failed",
+      "panelUpdate.outcome.rolledBackNext",
+      "panelUpdate.outcome.rolledBackResume"
+    ],
+    "missing_keys": [],
+    "observation_error": null,
+    "role": "baseline",
+    "server_message": null,
+    "source": {
+      "observation": {
+        "path": "lib/recoveryObservation.ts",
+        "sha256": "96ca7d7d9bdffb4a2e3da60c8f1e90044ad057fd53e4721ff91090480868cfaa"
+      },
+      "outcome": {
+        "path": "lib/systemUpdateOutcome.ts",
+        "sha256": "375cdc01e87934903e7523972e8af4ae6fff771e5758080c2b9f1b5d077e10e5"
+      },
+      "screen": {
+        "path": "components/RecoveryAccess.tsx",
+        "sha256": "f3d60455af13e728b3eb7e933416651394a3a6c3aeb085507278bd88887b4456"
+      },
+      "typed": {
+        "path": "lib/systemUpdateFailure.ts",
+        "sha256": "df27fa82c8ab99a6864384b315f1336253031e2ee85fbcd230bdf8f6f9a33040"
+      }
+    },
+    "state": "rolled_back",
+    "texts": {
+      "en": [
+        "Update not completed; previous version restored",
+        "The update to v0.1.0-alpha.82 did not complete. The server was returned to v0.1.0-alpha.81 automatically and is running it now.",
+        "Cause: the new version's panel failed its start check before anything was switched on.",
+        "Nothing needs to be done on the server. Do not start the update to v0.1.0-alpha.82 again until a corrected version is published. If the server's message names a problem on this server, fix it first.",
+        "Nothing resumes by itself: the server keeps running v0.1.0-alpha.81. When a newer version is published, “Check for updates” offers it."
+      ],
+      "tr": [
+        "Güncelleme tamamlanmadı; önceki sürüm geri yüklendi",
+        "v0.1.0-alpha.82 sürümüne güncelleme tamamlanmadı. Sunucu otomatik olarak v0.1.0-alpha.81 sürümüne döndürüldü ve şu an onu çalıştırıyor.",
+        "Neden: yeni sürümün paneli, hiçbir şey devreye alınmadan önce başlangıç denetiminden geçemedi.",
+        "Sunucuda yapmanız gereken bir şey yok. Düzeltilmiş bir sürüm yayımlanana kadar v0.1.0-alpha.82 güncellemesini yeniden başlatmayın. Sunucunun iletisi bu sunucudaki bir sorunu belirtiyorsa önce onu giderin.",
+        "Hiçbir işlem kendiliğinden sürmez: sunucu v0.1.0-alpha.81 sürümünü çalıştırmaya devam eder. Daha yeni bir sürüm yayımlandığında “Güncellemeyi kontrol et” onu gösterir."
+      ]
+    },
+    "unavailable": null
+  },
+  "update_status": {
+    "body": {
+      "created_at": "2026-09-30T22:58:12.79745075Z",
+      "found": true,
+      "request_id": "7a7b01ebeb24bf40a384437f6c2473c9",
+      "status": "failed",
+      "target": {
+        "arch": "amd64",
+        "archive_sha256": "e510c85ef966cf4357a7a285824939f40830a4187d3c4a2854d87fa6ed5d105c",
+        "archive_size": "67067842",
+        "commit": "96de9cdb6b48a8e5fa2cd02bd6cd9845579255f5",
+        "os": "linux",
+        "sequence": "82",
+        "version": "v0.1.0-alpha.82"
+      },
+      "updated_at": "2026-09-30T22:59:07.568153046Z"
+    },
+    "http": 200
+  },
+  "utc": "2026-09-30T23:00:33Z"
+}

@@ -1,0 +1,37 @@
+{
+  "present": true,
+  "receipts": [
+    {
+      "mtime": 1790811241.9858856,
+      "mtime_utc": "2026-09-30T23:34:01.985886Z",
+      "name": "1",
+      "sha256": "9b29aa0ccadc4cf61757eb57ca7831f51d915d45959261a6c93dbb485ce518d0",
+      "snapshot": "20260930T233233Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-dcded64ee4c7e6f26b3133dd6213f9d8",
+      "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20260930T233233Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-dcded64ee4c7e6f26b3133dd6213f9d8\nattempt=1\ntoken_sha256=[REDACTED]\noperation=update\nphase=completion\n"
+    },
+    {
+      "mtime": 1790811342.8743658,
+      "mtime_utc": "2026-09-30T23:35:42.874366Z",
+      "name": "2",
+      "sha256": "628e12c65cbf5b62ad9db2a7018d57f45403d0e775902b2a67106127d924c9f7",
+      "snapshot": "20260930T233233Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-dcded64ee4c7e6f26b3133dd6213f9d8",
+      "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20260930T233233Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-dcded64ee4c7e6f26b3133dd6213f9d8\nattempt=2\ntoken_sha256=[REDACTED]\noperation=update\nphase=completion\n"
+    },
+    {
+      "mtime": 1790811442.9947286,
+      "mtime_utc": "2026-09-30T23:37:22.994729Z",
+      "name": "3",
+      "sha256": "daddec929e7308a6808c583fee2b975ddb35d8d49a580cdb3be0bb0f70196a2d",
+      "snapshot": "20260930T233233Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-dcded64ee4c7e6f26b3133dd6213f9d8",
+      "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20260930T233233Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-dcded64ee4c7e6f26b3133dd6213f9d8\nattempt=3\ntoken_sha256=[REDACTED]\noperation=update\nphase=completion\n"
+    },
+    {
+      "mtime": 1790811581.567152,
+      "mtime_utc": "2026-09-30T23:39:41.567152Z",
+      "name": "owner.KAwdNAQz",
+      "sha256": "1107dd6eb751687b0272e3c38e3269f3aff92aa97bfcc113612690555d5c4445",
+      "snapshot": "20260930T233233Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-dcded64ee4c7e6f26b3133dd6213f9d8",
+      "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20260930T233233Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-dcded64ee4c7e6f26b3133dd6213f9d8\nattempt=owner\ntoken_sha256=[REDACTED]\noperation=update\nphase=completion\n"
+    }
+  ]
+}

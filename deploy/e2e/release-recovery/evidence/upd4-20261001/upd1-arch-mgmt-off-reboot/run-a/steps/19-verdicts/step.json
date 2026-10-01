@@ -1,0 +1,100 @@
+{
+  "checks": {
+    "agreement": {
+      "agreed_samples": 10,
+      "lag_samples": 0,
+      "samples": 14,
+      "verdict": "passed"
+    },
+    "attempts": {
+      "automatic": [],
+      "automatic_count": 0,
+      "journal_admissions": [],
+      "owner": [],
+      "owner_count": 0
+    },
+    "clock_skew_seconds": 0.613,
+    "host_panel_windows": [
+      {
+        "failed": true,
+        "first_bad": 1790817388.358809,
+        "from": 1790817383.358669,
+        "kind": "failed",
+        "last_bad": 1790817403.3592105,
+        "lower_bound_s": 15.0,
+        "to": 1790817408.3593748,
+        "unobserved": false,
+        "upper_bound_s": 25.001
+      }
+    ],
+    "host_ssh_windows": [],
+    "outcome": "update-verified",
+    "samples_until_management_off": 33,
+    "workloads": {
+      "cron": {
+        "verdict": "never-interrupted",
+        "windows": []
+      },
+      "dns": {
+        "mode": "external",
+        "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+        "verdict": "not-provided-external-dns"
+      },
+      "panel": {
+        "outside": [
+          {
+            "cause": "unexplained",
+            "failed": true,
+            "first_bad": 1790817433.7159615,
+            "from": 1790817428.7157621,
+            "kind": "failed",
+            "last_bad": 1790817433.7159615,
+            "lower_bound_s": 0.0,
+            "to": null,
+            "unobserved": false,
+            "upper_bound_s": null
+          }
+        ],
+        "verdict": "down-outside-transaction",
+        "windows": [
+          {
+            "cause": "unexplained",
+            "failed": true,
+            "first_bad": 1790817388.7130072,
+            "from": 1790817383.7128816,
+            "kind": "failed",
+            "last_bad": 1790817403.7141047,
+            "lower_bound_s": 15.001,
+            "to": 1790817408.7151701,
+            "unobserved": false,
+            "upper_bound_s": 25.002
+          },
+          {
+            "cause": "unexplained",
+            "failed": true,
+            "first_bad": 1790817433.7159615,
+            "from": 1790817428.7157621,
+            "kind": "failed",
+            "last_bad": 1790817433.7159615,
+            "lower_bound_s": 0.0,
+            "to": null,
+            "unobserved": false,
+            "upper_bound_s": null
+          }
+        ]
+      },
+      "smtp": {
+        "verdict": "not-seeded"
+      },
+      "web": {
+        "verdict": "never-interrupted",
+        "windows": []
+      }
+    }
+  },
+  "finished_at": "2026-10-01T01:20:58Z",
+  "name": "verdicts",
+  "reason": "workload interruption outside the expected windows: panel",
+  "started_at": "2026-10-01T01:20:58Z",
+  "verdict": "failed"
+}

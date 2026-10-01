@@ -1,0 +1,2 @@
+lab=/var/tmp/cp-release-drill-upd4-d13-mr-a
+upd1-debian13-mgmt-off-reboot-20260930t234125z

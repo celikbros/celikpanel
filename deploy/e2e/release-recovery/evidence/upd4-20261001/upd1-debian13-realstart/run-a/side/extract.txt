@@ -1,0 +1,189 @@
+# extraction of /var/tmp/cp-release-drill-upd4-d13-rs-a/evidence/debian13/upd1/upd1-debian13-realstart-20260930t230155z/
+native_evidence=False overall=failed request_id=9f1146eca59630763bd22327cbf32e70
+outcome.classification="not-terminal" owner_continuation=False
+## steps
+  preflight                          passed       2026-09-30T23:01:55Z -> 2026-09-30T23:01:59Z  
+  origin                             passed       2026-09-30T23:01:59Z -> 2026-09-30T23:02:08Z  
+  baseline-install                   passed       2026-09-30T23:02:08Z -> 2026-09-30T23:03:12Z  
+  owner-login                        passed       2026-09-30T23:03:12Z -> 2026-09-30T23:03:13Z  
+  license                            passed       2026-09-30T23:03:13Z -> 2026-09-30T23:03:13Z  
+  setup                              observed     2026-09-30T23:03:13Z -> 2026-09-30T23:09:35Z  
+  seed                               passed       2026-09-30T23:09:35Z -> 2026-09-30T23:09:37Z  
+  pre-state                          passed       2026-09-30T23:09:37Z -> 2026-09-30T23:11:05Z  
+  arm                                passed       2026-09-30T23:11:05Z -> 2026-09-30T23:11:06Z  
+  owner-start                        passed       2026-09-30T23:11:06Z -> 2026-09-30T23:11:07Z  
+  track                              inconclusive 2026-09-30T23:11:07Z -> 2026-09-30T23:21:41Z  settled-failed-before-change: the status stayed failed/none (previous_failure=update_failed) without automatic recovery or a wait for 606.3 s over 44 reads; no terminal or paused state follows a failure the product keeps unchanged
+  owner-continuation (required)      not-run      2026-09-30T23:21:41Z -> None  a required earlier step did not pass: track
+  terminal                           passed       2026-09-30T23:21:41Z -> 2026-09-30T23:21:47Z  
+  collect                            passed       2026-09-30T23:21:47Z -> 2026-09-30T23:21:49Z  
+  verdicts                           failed       2026-09-30T23:21:49Z -> 2026-09-30T23:21:49Z  workload interruption outside the expected windows: panel
+  kind-expectation                   failed       2026-09-30T23:21:49Z -> 2026-09-30T23:21:49Z  
+## findings
+  - debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']
+  - real-start: the owner could log in to the Panel after the pause; the fixture's panel was expected never to listen
+  - real-start: the update's failure line does not carry panel_start_unverified: ['update_failed']
+  - real-start: failure sidecar: {'present': False, 'valid': False, 'code': None}
+  - real-start: completion.pending was never observed
+  - real-start: installed release: baseline
+  - real-start: the root CLI never printed the product's panel_start_unverified text (panel log command, no supported return) in EN and TR; it may be shown only while previous_failure=update_failed and the phase is failed/recovering
+  - real-start: no CLI sample named the panel log command in both languages: {'en': False, 'tr': False}
+  - real-start: the root CLI did not print the product's paused text in EN and TR
+  - real-start: Panel window 'never-down', expected down-from-update-until-end for this fixture
+## outcome
+  final_status: null
+  attempts: {"automatic": [], "automatic_count": 0, "journal_admissions": [], "owner": [], "owner_count": 0}
+  reboot: null
+  track_stop: {"limit_seconds": 600.0, "rule": "settled-failed-before-change", "samples": 44, "seconds": 606.3, "status": {"automatic_recovery": null, "failure_code": null, "first_failure_code": null, "phase": "failed", "previous_failure": "update_failed", "reason": "update_failed", "terminal_proof": "none", "waiting_for": null}, "update_status": {"created_at": "2026-09-30T23:11:07.43531622Z", "found": true, "request_id": "9f1146eca59630763bd22327cbf32e70", "status": "failed", "target": {"arch": "amd64", "archive_sha256": "fc34970a51de54501bfc9baeea9909c7bec94029e52e4c8bcf440a3059a639fd", "archive_size": "67066677", "commit": "dd4adede7c24bd1ad92118612fd379beb7874b0b", "os": "linux", "sequence": "82", "version": "v0.1.0-alpha.82"}, "updated_at": "2026-09-30T23:11:32.209303195Z"}}
+  port_hold: null
+  owner_reboot: null
+  pin_changes: []
+## kind judged
+  {"expected": "the start check passes; completion.pending exists; the stability wait fails with panel_start_unverified; forward completion is retried to its limit (N and timestamps recorded) and pauses (paused_retry_limit); no rollback; the owner retry is printed but not run; texts name the panel log command and say there is no supported return; site, mail and cron keep running while the Panel stays down", "judged": {"expected": ["check-passed", "owner-retry-not-run", "web-catalogue", "workloads-kept-running"], "findings": ["the update's failure line does not carry panel_start_unverified: ['update_failed']", "failure sidecar: {'present': False, 'valid': False, 'code': None}", "completion.pending was never observed", "installed release: baseline", "the root CLI never printed the product's panel_start_unverified text (panel log command, no supported return) in EN and TR; it may be shown only while previous_failure=update_failed and the phase is failed/recovering", "no CLI sample named the panel log command in both languages: {'en': False, 'tr': False}", "the root CLI did not print the product's paused text in EN and TR", "Panel window 'never-down', expected down-from-update-until-end for this fixture"], "kind": "real-start", "native_evidence": false, "unknown": ["forward-dispatch", "paused", "no-rollback", "retry-command-printed"], "verdict": "finding"}, "printed_retry_command": null, "variant": "real-start"}
+## scope
+  {"cron": {"crontab": "/usr/bin/crontab", "verdict": "available"}, "dns": {"mode": "external", "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2", "verdict": "not-provided-external-dns"}, "origin": {"after-provision": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "before-arm": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}}, "setup": {"code": "server_setup_access_dns_required", "not_run": ["11-panel_certificate", "12-access_dns", "13-mail_certificate", "14-mail_enrollment", "15-verify"], "phase": "access_dns", "verdict": "observed isolated-host wait", "volatile_tables_added": ["server_setup_executions"]}}
+## status samples (50)
+  23:11:07Z 11-track U 200 queued | R 200 running/none None fc=None | CLI running/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:11:08Z 11-track U 200 running | R 200 running/none None fc=None | CLI running/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:11:10Z 11-track U 200 running | R 200 running/none None fc=None | CLI running/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:11:13Z 11-track U 200 running | R 200 running/none None fc=None | CLI running/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:11:17Z 11-track U 200 running | R 200 running/none None fc=None | CLI running/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:11:24Z 11-track U 200 running | R 200 running/none None fc=None | CLI running/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:11:34Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:11:36Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:11:38Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:11:43Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:11:49Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:11:59Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:12:14Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:12:30Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:12:45Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:13:00Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:13:16Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:13:31Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:13:46Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:14:01Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:14:17Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:14:32Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:14:47Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:15:03Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:15:18Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:15:33Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:15:48Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:16:04Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:16:19Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:16:34Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:16:50Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:17:05Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:17:20Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:17:35Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:17:51Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:18:06Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:18:21Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:18:37Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:18:52Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:19:07Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:19:23Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:19:38Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:19:53Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:20:08Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:20:24Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:20:39Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:20:54Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:21:10Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:21:25Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  23:21:40Z 11-track U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+## guidance texts seen (first time, per source)
+[23:11:07] cli_raw.en:
+    The update is being applied; the panel may be unavailable for a short time. Nothing to do now: check this same request again in a minute. Checking does not restart the update.
+    This is a recorded observation; current service health was not checked.
+    Recorded state (for support): phase=running reason=update_running proof=none
+[23:11:34] cli_raw.en:
+    The update failed. If it stopped before anything was changed, the server keeps running the version it had; otherwise automatic recovery takes over and this status changes to recovery. Nothing to do on the server now: check this same request again in a few minutes and do not start another update. The panel's update page shows the reason when the panel is reachable.
+    This is a recorded observation; current service health was not checked.
+    Recorded state (for support): phase=failed reason=update_failed proof=none previous_failure=update_failed
+[23:11:07] cli_raw.tr:
+    Güncelleme uygulanıyor; panel kısa bir süre erişilemeyebilir. Şimdi yapmanız gereken bir şey yok: bir dakika sonra aynı işlemi yeniden sorgulayın. Sorgulamak güncellemeyi yeniden başlatmaz.
+    Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.
+    Kayıtlı durum (destek için): phase=running reason=update_running proof=none
+[23:11:34] cli_raw.tr:
+    Güncelleme başarısız oldu. Hiçbir şey değişmeden durduysa sunucu önceki sürümünü çalıştırmaya devam eder; aksi hâlde otomatik kurtarma devreye girer ve bu durum kurtarmaya geçer. Şimdi sunucuda yapmanız gereken bir şey yok: birkaç dakika sonra aynı işlemi yeniden sorgulayın ve başka güncelleme başlatmayın. Panel erişilebilir olduğunda güncelleme sayfası nedeni gösterir.
+    Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.
+    Kayıtlı durum (destek için): phase=failed reason=update_failed proof=none previous_failure=update_failed
+[23:11:07] guidance_api.en:
+    Last recorded step: update in progress || The server last reported work on this update. Wait for the next recorded result; checking this page does not restart it.
+[23:11:34] guidance_api.en:
+    The update failed || The server owner must inspect the update log using this operation ID. Keep the ID and check the recovery result before retrying an update. || Update failed
+[23:11:07] guidance_api.tr:
+    Kaydedilmiş son adım: güncelleme sürüyor || Sunucu son olarak bu güncelleme üzerinde çalıştığını bildirdi. Sonraki kayıtlı sonucu bekleyin; bu sayfayı kontrol etmek işlemi yeniden başlatmaz.
+[23:11:34] guidance_api.tr:
+    Güncelleme başarısız oldu || Sunucu sahibi bu işlem kimliğiyle güncelleme günlüğünü incelemelidir. Kimliği saklayın ve güncellemeyi yeniden denemeden önce kurtarma sonucunu kontrol edin. || Güncelleme başarısız oldu
+[23:11:07] guidance_cli.en:
+    Last recorded step: update in progress || The server last reported work on this update. Wait for the next recorded result; checking this page does not restart it.
+[23:11:34] guidance_cli.en:
+    The update failed || The server owner must inspect the update log using this operation ID. Keep the ID and check the recovery result before retrying an update. || Update failed
+[23:11:07] guidance_cli.tr:
+    Kaydedilmiş son adım: güncelleme sürüyor || Sunucu son olarak bu güncelleme üzerinde çalıştığını bildirdi. Sonraki kayıtlı sonucu bekleyin; bu sayfayı kontrol etmek işlemi yeniden başlatmaz.
+[23:11:34] guidance_cli.tr:
+    Güncelleme başarısız oldu || Sunucu sahibi bu işlem kimliğiyle güncelleme günlüğünü incelemelidir. Kimliği saklayın ve güncellemeyi yeniden denemeden önce kurtarma sonucunu kontrol edin. || Güncelleme başarısız oldu
+[23:11:07] update_card.en:
+    CelikPanel updates || The update is queued.
+[23:11:08] update_card.en:
+    CelikPanel updates || The update is being applied; the panel may be unavailable briefly.
+[23:11:34] update_card.en:
+    The update failed || The server owner must inspect the update log using this operation ID. Keep the ID and check the recovery result before retrying an update. || This notice follows the server's recovery record for this update and refreshes by itself. It does not start anything.
+[23:11:07] update_card.tr:
+    CelikPanel güncellemeleri || Güncelleme sırada.
+[23:11:08] update_card.tr:
+    CelikPanel güncellemeleri || Güncelleme uygulanıyor; panel kısa süre erişilemeyebilir.
+[23:11:34] update_card.tr:
+    Güncelleme başarısız oldu || Sunucu sahibi bu işlem kimliğiyle güncelleme günlüğünü incelemelidir. Kimliği saklayın ve güncellemeyi yeniden denemeden önce kurtarma sonucunu kontrol edin. || Bu bildirim, sunucunun bu güncelleme için tuttuğu kurtarma kaydını izler ve kendiliğinden yenilenir. Hiçbir işlem başlatmaz.
+## track checks (keys) ["agreement", "final", "reboot", "samples", "settled_failure"]
+  samples: 50
+  agreement: {"agreed_samples": 50, "lag_samples": 0, "samples": 50, "verdict": "passed"}
+  settled_failure: {"limit_seconds": 600.0, "rule": "settled-failed-before-change", "samples": 44, "seconds": 606.3, "status": {"automatic_recovery": null, "failure_code": null, "first_failure_code": null, "phase": "failed", "previous_failure": "update_failed", "reason": "update_failed", "terminal_proof": "none", "waiting_for": null}, "update_status": {"created_at": "2026-09-30T23:11:07.43531622Z", "found": true, "request_id": "9f1146eca59630763bd22327cbf32e70", "status": "failed", "target": {"arch": "amd64", "archive_sha256": "fc34970a51de54501bfc9baeea9909c7bec94029e52e4c8bcf440a3059a639fd", "archive_size": "67066677", "commit": "dd4adede7c24bd1ad92118612fd379beb7874b0b", "os": "linux", "sequence": "82", "version": "v0.1.0-alpha.82"}, "updated_at": "2026-09-30T23:11:32.209303195Z"}}
+  final: null
+## terminal: passed 
+  final: null
+  outcome: "not-terminal"
+  installed: "baseline"
+  transaction: {"fields": {}, "present": false, "status": "ok"}
+  firewall_equal: true
+  site_marker: true
+  smtp: true
+  mailbox: {"checked": true, "present": true, "returncode": 0, "status": "ok"}
+  login: {"attempted": true, "ok": true}
+  timers: {"changed": {}, "compared": 2, "equal": true}
+  panel_service: {"installed_executable": {"sha256": "bed928c464ef198dd91a1cfde31ddffb4e1736ea2baf5aaed43a65509d03c536", "size": 21557410, "status": "ok"}, "properties": {"ActiveState": "active", "ControlGroup": "/system.slice/celikpanel-panel.service", "ExecMainCode": "0", "ExecMainStatus": "0", "Id": "celikpanel-panel.service", "InvocationID": "06795fe21d1345d8bd3949286d7d4f0f", "LoadState": "loaded", "MainPID": "5218", "Result": "success", "SubState": "running"}, "running_executable": {"pid": 5218, "sha256": "bed928c464ef198dd91a1cfde31ddffb4e1736ea2baf5aaed43a65509d03c536", "size": 21557410, "start_ticks": "13141", "status": "ok", "target": "/opt/celikpanel/bin/panel"}, "status": "ok"}
+  cron: {"content": "2026-09-30T23:21:01+00:00", "mtime": 1790810461.1694474, "ok": true, "path": "/var/www/celikpanel/subscriptions/2/sites/1/upd1-cron-stamp.txt"}
+  database: equal-except-volatile unexpected=[] excluded=['audit_logs', 'metrics_samples', 'server_setup_executions', 'sessions', 'sqlite_sequence']
+  UPDATE CARD (product rules): null
+  card judged: null
+  RECOVERY SCREEN: null
+  status body: null
+  recovery body: null
+  check body: null
+  views_at_pause: null
+## verdicts: failed workload interruption outside the expected windows: panel
+  workload cron: never-interrupted windows=[]
+  workload dns: not-provided-external-dns windows=null
+  workload panel: never-down windows=[]
+  workload smtp: never-interrupted windows=[]
+  workload web: never-interrupted windows=[]
+  host_panel_windows []
+  host_ssh_windows []
+  agreement {"agreed_samples": 50, "lag_samples": 0, "samples": 50, "verdict": "passed"} skew 0.537
+## observer events
+  2026-09-30T23:11:07.256554+00:00 armed {"mode": "watch", "recovery_fault": null, "timeout_seconds": 3600.0}
+  2026-09-30T23:11:07.303334+00:00 timeline {"recovery": "inactive", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "inactive", "worker_freezer": "running"}
+  2026-09-30T23:11:07.512206+00:00 timeline {"recovery": "inactive", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "activating", "worker_freezer": "running"}
+  2026-09-30T23:11:07.579552+00:00 timeline {"recovery": "inactive", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "active", "worker_freezer": "running"}
+  2026-09-30T23:11:19.063552+00:00 timeline {"recovery": "activating", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "active", "worker_freezer": "running"}
+  2026-09-30T23:11:19.447212+00:00 timeline {"recovery": "inactive", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "active", "worker_freezer": "running"}
+  2026-09-30T23:11:28.986878+00:00 timeline {"recovery": "activating", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "active", "worker_freezer": "running"}
+  2026-09-30T23:11:29.366000+00:00 timeline {"recovery": "inactive", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "active", "worker_freezer": "running"}
+  2026-09-30T23:11:32.267954+00:00 timeline {"recovery": "activating", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "active", "worker_freezer": "running"}
+  2026-09-30T23:11:32.330338+00:00 timeline {"recovery": "activating", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "failed", "worker_freezer": "running"}
+  2026-09-30T23:11:32.335914+00:00 released {"checkpoint_verified": false, "kill_sent": false, "reason": "worker-exited", "recovery_fault_armed": false, "thaw_exit": null}
+## budget receipts
+## product journal key lines
+  2026-09-30T23:11:32.256252+00:00 dns-debian13 agent[26679]: 2026/09/30 23:11:32 System update worker failed: reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=update_failed state=unchanged reason=panel service operations are not idle; update refused; quiesce was safely aborted, rerun the exact trusted update detail=2026/09/30 23:11:31 Starting CelikPanel Backend... 2026/09/30 23:11:31 WAL-aware service operation idle check failed: service operations are not idle: SQLite s

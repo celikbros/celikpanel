@@ -1,0 +1,50 @@
+{
+  "checks": {
+    "agreement": {
+      "agreed_samples": 50,
+      "lag_samples": 0,
+      "samples": 50,
+      "verdict": "passed"
+    },
+    "final": null,
+    "reboot": null,
+    "samples": 50,
+    "settled_failure": {
+      "limit_seconds": 600.0,
+      "rule": "settled-failed-before-change",
+      "samples": 44,
+      "seconds": 606.3,
+      "status": {
+        "automatic_recovery": null,
+        "failure_code": null,
+        "first_failure_code": null,
+        "phase": "failed",
+        "previous_failure": "update_failed",
+        "reason": "update_failed",
+        "terminal_proof": "none",
+        "waiting_for": null
+      },
+      "update_status": {
+        "created_at": "2026-09-30T23:11:07.43531622Z",
+        "found": true,
+        "request_id": "9f1146eca59630763bd22327cbf32e70",
+        "status": "failed",
+        "target": {
+          "arch": "amd64",
+          "archive_sha256": "fc34970a51de54501bfc9baeea9909c7bec94029e52e4c8bcf440a3059a639fd",
+          "archive_size": "67066677",
+          "commit": "dd4adede7c24bd1ad92118612fd379beb7874b0b",
+          "os": "linux",
+          "sequence": "82",
+          "version": "v0.1.0-alpha.82"
+        },
+        "updated_at": "2026-09-30T23:11:32.209303195Z"
+      }
+    }
+  },
+  "finished_at": "2026-09-30T23:21:41Z",
+  "name": "track",
+  "reason": "settled-failed-before-change: the status stayed failed/none (previous_failure=update_failed) without automatic recovery or a wait for 606.3 s over 44 reads; no terminal or paused state follows a failure the product keeps unchanged",
+  "started_at": "2026-09-30T23:11:07Z",
+  "verdict": "inconclusive"
+}

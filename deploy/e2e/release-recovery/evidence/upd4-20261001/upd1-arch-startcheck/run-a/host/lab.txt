@@ -1,0 +1,2 @@
+lab=/var/tmp/cp-release-drill-upd4-arch-sc-a
+upd1-arch-startcheck-20261001t003118z

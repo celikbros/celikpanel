@@ -1,0 +1,32 @@
+{
+  "checks": {
+    "access_after": {
+      "can_use_panel": true,
+      "observation": "known",
+      "state": "active",
+      "valid_until": 1790810760
+    },
+    "access_before": {
+      "can_use_panel": false,
+      "observation": "known",
+      "state": "missing",
+      "valid_until": 0
+    },
+    "activation_http": 200,
+    "after": {
+      "can_provision": true,
+      "license_service": "not contacted: acceptance test build",
+      "state": "active"
+    },
+    "before": {
+      "can_provision": false,
+      "fixture": null,
+      "license_service": "not contacted: acceptance test build",
+      "state": "missing"
+    }
+  },
+  "finished_at": "2026-09-30T23:24:59Z",
+  "name": "license",
+  "started_at": "2026-09-30T23:24:59Z",
+  "verdict": "passed"
+}

@@ -1,0 +1,28 @@
+upd1-arch-defective/run-a origin: {"after-owner-restart": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "after-provision": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "before-arm": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}}
+   license step: not-contacted mentions: 2 keys: ['access_after', 'access_before', 'activation_http', 'after', 'before']
+upd1-arch-good/run-a origin: {"after-owner-restart": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "after-provision": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "before-arm": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}}
+   license step: not-contacted mentions: 2 keys: ['access_after', 'access_before', 'activation_http', 'after', 'before']
+upd1-arch-mgmt-off-reboot/run-a origin: {"after-owner-restart": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "after-provision": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "before-arm": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}}
+   license step: not-contacted mentions: 2 keys: ['access_after', 'access_before', 'activation_http', 'after', 'before']
+upd1-arch-mgmt-off-reboot/run-b origin: {"after-owner-restart": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "after-provision": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "before-arm": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}}
+   license step: not-contacted mentions: 2 keys: ['access_after', 'access_before', 'activation_http', 'after', 'before']
+upd1-arch-owner-continuation/run-a origin: {"after-owner-restart": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "after-provision": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "before-arm": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}}
+   license step: not-contacted mentions: 2 keys: ['access_after', 'access_before', 'activation_http', 'after', 'before']
+upd1-arch-realstart/run-a origin: {"after-owner-restart": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "after-provision": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "before-arm": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}}
+   license step: not-contacted mentions: 2 keys: ['access_after', 'access_before', 'activation_http', 'after', 'before']
+upd1-arch-startcheck/run-a origin: {"after-owner-restart": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "after-provision": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "before-arm": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}}
+   license step: not-contacted mentions: 2 keys: ['access_after', 'access_before', 'activation_http', 'after', 'before']
+upd1-debian13-defective/run-a origin: {"after-provision": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "before-arm": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}}
+   license step: not-contacted mentions: 2 keys: ['access_after', 'access_before', 'activation_http', 'after', 'before']
+upd1-debian13-good/run-a origin: {"after-provision": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "before-arm": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}}
+   license step: not-contacted mentions: 2 keys: ['access_after', 'access_before', 'activation_http', 'after', 'before']
+upd1-debian13-mgmt-off-reboot/run-a origin: {"after-provision": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "before-arm": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}}
+   license step: not-contacted mentions: 2 keys: ['access_after', 'access_before', 'activation_http', 'after', 'before']
+upd1-debian13-mgmt-off-reboot/run-b origin: {"after-provision": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "before-arm": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}}
+   license step: not-contacted mentions: 2 keys: ['access_after', 'access_before', 'activation_http', 'after', 'before']
+upd1-debian13-owner-continuation/run-a origin: {"after-provision": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "before-arm": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}}
+   license step: not-contacted mentions: 2 keys: ['access_after', 'access_before', 'activation_http', 'after', 'before']
+upd1-debian13-realstart/run-a origin: {"after-provision": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "before-arm": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}}
+   license step: not-contacted mentions: 2 keys: ['access_after', 'access_before', 'activation_http', 'after', 'before']
+upd1-debian13-startcheck/run-a origin: {"after-provision": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "before-arm": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}}
+   license step: not-contacted mentions: 2 keys: ['access_after', 'access_before', 'activation_http', 'after', 'before']

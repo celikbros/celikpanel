@@ -1,0 +1,25 @@
+{
+  "checks": {
+    "agreement": {
+      "agreed_samples": 9,
+      "lag_samples": 1,
+      "samples": 15,
+      "verdict": "passed"
+    },
+    "final": {
+      "observation": "known",
+      "observed_at": "2026-09-30T22:35:18Z",
+      "phase": "succeeded",
+      "reason": "update_verified",
+      "request_id": "b14c6b9fa520b9fd57b2c043b5806a6f",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "update_verified"
+    },
+    "reboot": null,
+    "samples": 15
+  },
+  "finished_at": "2026-09-30T22:35:19Z",
+  "name": "track",
+  "started_at": "2026-09-30T22:34:16Z",
+  "verdict": "passed"
+}

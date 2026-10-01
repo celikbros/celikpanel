@@ -1,0 +1,26 @@
+2026-10-01T01:08:31.470955+00:00 dns-arch systemd[1]: Started Disposable upd1 celikpanel.net fixture origin (guest loopback only; lab, no product authority).
+2026-10-01T01:08:36.642755+00:00 dns-arch systemd[1]: Starting [systemd-run] /usr/bin/python3 -I /root/celikpanel-release-recovery-lab/current-worker-baseline-driver.py...
+2026-10-01T01:09:37.433032+00:00 dns-arch groupadd[5930]: group added to /etc/group: name=celikpanel, GID=969
+2026-10-01T01:09:37.458448+00:00 dns-arch groupadd[5930]: group added to /etc/gshadow: name=celikpanel
+2026-10-01T01:09:37.458613+00:00 dns-arch groupadd[5930]: new group: name=celikpanel, GID=969
+2026-10-01T01:09:37.518368+00:00 dns-arch useradd[5932]: new user: name=celikpanel, UID=969, GID=969, home=/var/lib/celikpanel, shell=/usr/sbin/nologin, from=none
+2026-10-01T01:09:48.561637+00:00 dns-arch systemd[1]: celikpanel-lab-current-worker-baseline.service: Deactivated successfully.
+2026-10-01T01:09:48.561908+00:00 dns-arch systemd[1]: Finished [systemd-run] /usr/bin/python3 -I /root/celikpanel-release-recovery-lab/current-worker-baseline-driver.py.
+2026-10-01T01:09:48.562267+00:00 dns-arch systemd[1]: celikpanel-lab-current-worker-baseline.service: Consumed 34.023s CPU time over 1min 11.918s wall clock time, 1.2G memory peak.
+2026-10-01T01:09:55.232982+00:00 dns-arch systemd[1]: Stopping Disposable upd1 celikpanel.net fixture origin (guest loopback only; lab, no product authority)...
+2026-10-01T01:09:55.663483+00:00 dns-arch systemd[1]: cp-lab-upd1-origin.service: Deactivated successfully.
+2026-10-01T01:09:55.663832+00:00 dns-arch systemd[1]: Stopped Disposable upd1 celikpanel.net fixture origin (guest loopback only; lab, no product authority).
+2026-10-01T01:09:55.666006+00:00 dns-arch systemd[1]: cp-lab-upd1-origin.service: Consumed 154ms CPU time over 1min 24.192s wall clock time, 79.5M memory peak.
+-- Boot b9c4a17ff3c84ab9a6b6b91a33a263e0 --
+2026-10-01T01:10:11.099946+00:00 dns-arch systemd[1]: Started Disposable upd1 celikpanel.net fixture origin (guest loopback only; lab, no product authority).
+2026-10-01T01:14:33.616311+00:00 dns-arch systemd[1]: Started Disposable upd1 workload sampler (lab only; no product authority).
+2026-10-01T01:17:20.087511+00:00 dns-arch systemd[1]: Stopping Disposable upd1 celikpanel.net fixture origin (guest loopback only; lab, no product authority)...
+2026-10-01T01:17:20.106782+00:00 dns-arch systemd[1]: Stopping Disposable upd1 workload sampler (lab only; no product authority)...
+2026-10-01T01:17:20.476264+00:00 dns-arch systemd[1]: cp-lab-upd1-origin.service: Deactivated successfully.
+2026-10-01T01:17:20.476641+00:00 dns-arch systemd[1]: Stopped Disposable upd1 celikpanel.net fixture origin (guest loopback only; lab, no product authority).
+2026-10-01T01:17:20.479353+00:00 dns-arch systemd[1]: cp-lab-upd1-origin.service: Consumed 335ms CPU time over 7min 9.376s wall clock time, 146.5M memory peak.
+2026-10-01T01:17:20.552485+00:00 dns-arch systemd[1]: cp-lab-upd1-sampler.service: Deactivated successfully.
+2026-10-01T01:17:20.552715+00:00 dns-arch systemd[1]: Stopped Disposable upd1 workload sampler (lab only; no product authority).
+-- Boot be1ecb0f40a74b8b93a211729f97211d --
+2026-10-01T01:17:35.092379+00:00 dns-arch systemd[1]: Started Disposable upd1 celikpanel.net fixture origin (guest loopback only; lab, no product authority).
+2026-10-01T01:17:37.384137+00:00 dns-arch systemd[1]: Started Disposable upd1 workload sampler (lab only; no product authority).

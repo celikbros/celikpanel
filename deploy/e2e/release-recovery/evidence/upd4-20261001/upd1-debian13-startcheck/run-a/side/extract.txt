@@ -1,0 +1,210 @@
+# extraction of /var/tmp/cp-release-drill-upd4-d13-sc-a/evidence/debian13/upd1/upd1-debian13-startcheck-20260930t224837z/
+native_evidence=False overall=complete-for-review request_id=7a7b01ebeb24bf40a384437f6c2473c9
+outcome.classification="recovered-automatically" owner_continuation=False
+## steps
+  preflight                          passed       2026-09-30T22:48:37Z -> 2026-09-30T22:48:43Z  
+  origin                             passed       2026-09-30T22:48:43Z -> 2026-09-30T22:48:52Z  
+  baseline-install                   passed       2026-09-30T22:48:52Z -> 2026-09-30T22:49:41Z  
+  owner-login                        passed       2026-09-30T22:49:41Z -> 2026-09-30T22:49:42Z  
+  license                            passed       2026-09-30T22:49:42Z -> 2026-09-30T22:49:42Z  
+  setup                              observed     2026-09-30T22:49:42Z -> 2026-09-30T22:56:09Z  
+  seed                               passed       2026-09-30T22:56:09Z -> 2026-09-30T22:56:12Z  
+  pre-state                          passed       2026-09-30T22:56:12Z -> 2026-09-30T22:58:10Z  
+  arm                                passed       2026-09-30T22:58:10Z -> 2026-09-30T22:58:12Z  
+  owner-start                        passed       2026-09-30T22:58:12Z -> 2026-09-30T22:58:12Z  
+  track                              passed       2026-09-30T22:58:12Z -> 2026-09-30T23:00:34Z  
+  owner-continuation (required)      skipped      2026-09-30T23:00:34Z -> 2026-09-30T23:00:34Z  
+  terminal                           passed       2026-09-30T23:00:34Z -> 2026-09-30T23:00:40Z  
+  collect                            passed       2026-09-30T23:00:40Z -> 2026-09-30T23:00:42Z  
+  verdicts                           passed       2026-09-30T23:00:42Z -> 2026-09-30T23:00:42Z  
+  kind-expectation                   passed       2026-09-30T23:00:42Z -> 2026-09-30T23:00:42Z  
+## findings
+  - debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']
+## outcome
+  final_status: {"failure_code": "candidate_panel_startup_check_failed", "observation": "known", "observed_at": "2026-09-30T23:00:31Z", "phase": "recovered", "previous_failure": "update_failed", "reason": "rollback_verified", "request_id": "7a7b01ebeb24bf40a384437f6c2473c9", "schema": "celikpanel-recovery-status/v1", "terminal_proof": "rollback_verified"}
+  attempts: {"automatic": [{"at": "2026-09-30T22:59:09.028062Z", "attempt": "1", "direction": "rollback", "operation": "update", "phase": "active"}, {"at": "2026-09-30T23:00:11.610208Z", "attempt": "2", "direction": "rollback", "operation": "rollback", "phase": "active"}], "automatic_count": 2, "journal_admissions": [{"at": "2026-09-30T22:59:09.123185+00:00", "attempt": "1", "snapshot": "20260930T225836Z-from-unknown-to-96de9cdb6b48a8e5fa2cd02bd6cd9845579255f5-16f681bc9e9251bd4f19a75b612bcf60"}, {"at": "2026-09-30T23:00:11.706475+00:00", "attempt": "2", "snapshot": "20260930T225836Z-from-unknown-to-96de9cdb6b48a8e5fa2cd02bd6cd9845579255f5-16f681bc9e9251bd4f19a75b612bcf60"}], "owner": [], "owner_count": 0}
+  reboot: {"after_boot_id": "2d0e6498-0b73-4ea2-805c-4ee4c9db3726", "before_boot_id": "ef3369ce-9a3a-48b3-b25c-c74f4c3d83ab", "new_boot": true, "reset_at": 1790809166.4669774, "ssh_return_seconds": 8.296260210000128, "status": "reset-submitted-once"}
+  track_stop: null
+  port_hold: null
+  owner_reboot: null
+  pin_changes: []
+## kind judged
+  {"expected": "the update fails in phase active after the database publication with candidate_panel_startup_check_failed (failure line and <request>.failure sidecar; check reason tls_pair_invalid); completion.pending is never created; automatic rollback (dispatch phase=active, inverse database exchange) to recovered/rollback_verified; old release running; database equal to the pre-update digests (listed exclusions); CLI EN/TR 'returned to the previous version'", "judged": {"expected": ["rolled-back", "status-failure-code", "update-failure-line", "fixture-reason", "sidecar", "no-completion-marker", "rollback-dispatch", "update-card", "old-release-running", "database-equal", "cli-returned-text", "web-catalogue"], "findings": [], "kind": "start-check", "native_evidence": false, "unknown": [], "verdict": "as-expected"}, "printed_retry_command": null, "variant": "start-check"}
+## scope
+  {"cron": {"crontab": "/usr/bin/crontab", "verdict": "available"}, "dns": {"mode": "external", "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2", "verdict": "not-provided-external-dns"}, "origin": {"after-provision": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "before-arm": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}}, "setup": {"code": "server_setup_access_dns_required", "not_run": ["11-panel_certificate", "12-access_dns", "13-mail_certificate", "14-mail_enrollment", "15-verify"], "phase": "access_dns", "verdict": "observed isolated-host wait", "volatile_tables_added": ["server_setup_executions"]}}
+## status samples (29)
+  22:58:12Z 11-track U 200 queued | R 200 running/none None fc=None | CLI running/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  22:58:14Z 11-track U 200 running | R 200 running/none None fc=None | CLI running/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  22:58:16Z 11-track U 200 running | R 200 running/none None fc=None | CLI running/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  22:58:19Z 11-track U 200 running | R 200 running/none None fc=None | CLI running/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  22:58:23Z 11-track U 200 running | R 200 running/none None fc=None | CLI running/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  22:58:29Z 11-track U 200 running | R 200 running/none None fc=None | CLI running/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  22:58:40Z 11-track U None None | R None None/None None fc=None | CLI running/none None wait=None fc=None ffc=None next=None | perr=PanelError clierr=None | single-source 
+  22:58:41Z 11-track U None None | R None None/None None fc=None | CLI running/none None wait=None fc=None ffc=None next=None | perr=PanelError clierr=None | single-source 
+  22:58:44Z 11-track U None None | R None None/None None fc=None | CLI running/none None wait=None fc=None ffc=None next=None | perr=PanelError clierr=None | single-source 
+  22:58:48Z 11-track U None None | R None None/None None fc=None | CLI running/none None wait=None fc=None ffc=None next=None | perr=PanelError clierr=None | single-source 
+  22:58:55Z 11-track U None None | R None None/None None fc=None | CLI running/none None wait=None fc=None ffc=None next=None | perr=PanelError clierr=None | single-source 
+  22:59:05Z 11-track U None None | R None None/None None fc=None | CLI running/none None wait=None fc=None ffc=None next=None | perr=PanelError clierr=None | single-source 
+  22:59:20Z 11-track U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=candidate_panel_startup_check_failed ffc=None next=None | perr=PanelError clierr=None | single-source 
+  22:59:23Z 11-track U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=candidate_panel_startup_check_failed ffc=None next=None | perr=PanelError clierr=None | single-source 
+  22:59:25Z 11-track U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=candidate_panel_startup_check_failed ffc=None next=None | perr=PanelError clierr=None | single-source 
+  22:59:34Z 11-track U None None | R None None/None None fc=None | CLI None/None None wait=None fc=None ffc=None next=None | perr=PanelError clierr=CalledProcessError | no-known-source 
+  22:59:37Z 11-track U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=candidate_panel_startup_check_failed ffc=None next=None | perr=PanelError clierr=None | single-source 
+  22:59:39Z 11-track U None None | R None None/None None fc=None | CLI recovering/none None wait=starting fc=candidate_panel_startup_check_failed ffc=None next=None | perr=PanelError clierr=None | single-source 
+  22:59:41Z 11-track U None None | R None None/None None fc=None | CLI recovering/none None wait=starting fc=candidate_panel_startup_check_failed ffc=None next=None | perr=PanelError clierr=None | single-source 
+  22:59:44Z 11-track U None None | R None None/None None fc=None | CLI recovering/none None wait=starting fc=candidate_panel_startup_check_failed ffc=None next=None | perr=PanelError clierr=None | single-source 
+  22:59:48Z 11-track U None None | R None None/None None fc=None | CLI recovering/none None wait=starting fc=candidate_panel_startup_check_failed ffc=None next=None | perr=PanelError clierr=None | single-source 
+  22:59:54Z 11-track U None None | R None None/None None fc=None | CLI recovering/none None wait=starting fc=candidate_panel_startup_check_failed ffc=None next=None | perr=PanelError clierr=None | single-source 
+  23:00:04Z 11-track U None None | R None None/None None fc=None | CLI recovering/none None wait=starting fc=candidate_panel_startup_check_failed ffc=None next=None | perr=PanelError clierr=None | single-source 
+  23:00:20Z 11-track U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=candidate_panel_startup_check_failed ffc=None next=None | perr=PanelError clierr=None | single-source 
+  23:00:21Z 11-track U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=candidate_panel_startup_check_failed ffc=None next=None | perr=PanelError clierr=None | single-source 
+  23:00:24Z 11-track U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=candidate_panel_startup_check_failed ffc=None next=None | perr=PanelError clierr=None | single-source 
+  23:00:28Z 11-track U 200 failed | R 200 recovering/none None fc=candidate_panel_startup_check_failed | CLI recovering/none None wait=None fc=candidate_panel_startup_check_failed ffc=None next=None | perr=None clierr=None | agree 
+  23:00:30Z 11-track U 200 failed | R 200 recovering/none None fc=candidate_panel_startup_check_failed | CLI recovering/none None wait=None fc=candidate_panel_startup_check_failed ffc=None next=None | perr=None clierr=None | agree 
+  23:00:33Z 11-track U 200 failed | R 200 recovered/rollback_verified None fc=candidate_panel_startup_check_failed | CLI recovered/rollback_verified None wait=None fc=candidate_panel_startup_check_failed ffc=None next=None | perr=None clierr=None | agree 
+## guidance texts seen (first time, per source)
+[22:58:12] cli_raw.en:
+    The update is being applied; the panel may be unavailable for a short time. Nothing to do now: check this same request again in a minute. Checking does not restart the update.
+    This is a recorded observation; current service health was not checked.
+    Recorded state (for support): phase=running reason=update_running proof=none
+[22:59:20] cli_raw.en:
+    The new version's panel failed its start check before anything was switched on. The server is being returned to the previous version automatically; nothing needs to be done on the server. Check this same request again for the verified result; do not start another update.
+    This is a recorded observation; current service health was not checked.
+    Recorded state (for support): phase=recovering reason=recovery_running proof=none previous_failure=update_failed failure_code=candidate_panel_startup_check_failed
+[22:59:39] cli_raw.en:
+    The update did not finish normally, and recovery is waiting for the server to finish starting or stopping. Nothing to do now: the server's recovery timer checks this same operation again by itself when the system is ready. Recovery is not yet complete.
+    This is a recorded observation; current service health was not checked.
+    Recorded state (for support): phase=recovering reason=recovery_running proof=none previous_failure=update_failed failure_code=candidate_panel_startup_check_failed waiting_for=starting
+[23:00:33] cli_raw.en:
+    The new version's panel failed its start check before anything was switched on, so the server was returned to the previous version automatically. The previous version keeps running. Nothing needs to be done on the server. Do not start the same version again until a corrected version is published. When you report this, include the reason line shown for this update on the panel's update page.
+    This is a recorded observation; current service health was not checked.
+    Recorded state (for support): phase=recovered reason=rollback_verified proof=rollback_verified previous_failure=update_failed failure_code=candidate_panel_startup_check_failed
+[22:58:12] cli_raw.tr:
+    Güncelleme uygulanıyor; panel kısa bir süre erişilemeyebilir. Şimdi yapmanız gereken bir şey yok: bir dakika sonra aynı işlemi yeniden sorgulayın. Sorgulamak güncellemeyi yeniden başlatmaz.
+    Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.
+    Kayıtlı durum (destek için): phase=running reason=update_running proof=none
+[22:59:20] cli_raw.tr:
+    Yeni sürümün paneli, hiçbir şey devreye alınmadan önce başlangıç denetiminden geçemedi. Sunucu otomatik olarak önceki sürüme döndürülüyor; sunucuda yapmanız gereken bir şey yok. Doğrulanmış sonuç için aynı işlemi yeniden sorgulayın; başka güncelleme başlatmayın.
+    Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.
+    Kayıtlı durum (destek için): phase=recovering reason=recovery_running proof=none previous_failure=update_failed failure_code=candidate_panel_startup_check_failed
+[22:59:39] cli_raw.tr:
+    Güncelleme normal biçimde tamamlanmadı ve kurtarma, sunucunun açılmasını ya da kapanmasını bitirmesini bekliyor. Şimdi yapmanız gereken bir şey yok: sunucunun kurtarma zamanlayıcısı, sistem hazır olduğunda aynı işlemi kendiliğinden yeniden kontrol eder. Kurtarma henüz tamamlanmadı.
+    Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.
+    Kayıtlı durum (destek için): phase=recovering reason=recovery_running proof=none previous_failure=update_failed failure_code=candidate_panel_startup_check_failed waiting_for=starting
+[23:00:33] cli_raw.tr:
+    Yeni sürümün paneli, hiçbir şey devreye alınmadan önce başlangıç denetiminden geçemedi; bu yüzden sunucu otomatik olarak önceki sürüme döndürüldü. Önceki sürüm çalışmaya devam ediyor. Sunucuda yapmanız gereken bir şey yok. Düzeltilmiş bir sürüm yayımlanana kadar aynı sürümü yeniden başlatmayın. Bunu bildirirken panelin güncelleme sayfasında bu güncelleme için gösterilen neden satırını ekleyin.
+    Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.
+    Kayıtlı durum (destek için): phase=recovered reason=rollback_verified proof=rollback_verified previous_failure=update_failed failure_code=candidate_panel_startup_check_failed
+[22:58:12] guidance_api.en:
+    Last recorded step: update in progress || The server last reported work on this update. Wait for the next recorded result; checking this page does not restart it.
+[23:00:28] guidance_api.en:
+    Last recorded step: recovery in progress || The new version's panel failed its start check before anything was switched on. The server is returning to the previous version automatically; nothing needs to be done on the server. This page checks the same operation for the verified result. || The new version's panel failed its start check
+[23:00:33] guidance_api.en:
+    Rollback verified || The new version's panel failed its start check before anything was switched on, so the server was returned to the previous version automatically. The previous version keeps running and nothing needs to be done on the server. When you report this, include the reason line shown for this update on the update page. || The new version's panel failed its start check
+[22:58:12] guidance_api.tr:
+    Kaydedilmiş son adım: güncelleme sürüyor || Sunucu son olarak bu güncelleme üzerinde çalıştığını bildirdi. Sonraki kayıtlı sonucu bekleyin; bu sayfayı kontrol etmek işlemi yeniden başlatmaz.
+[23:00:28] guidance_api.tr:
+    Kaydedilmiş son adım: kurtarma sürüyor || Yeni sürümün paneli, hiçbir şey devreye alınmadan önce başlangıç denetiminden geçemedi. Sunucu önceki sürüme otomatik olarak dönüyor; sunucuda yapmanız gereken bir şey yok. Bu sayfa doğrulanmış sonuç için aynı işlemi kontrol eder. || Yeni sürümün paneli başlangıç denetiminden geçemedi
+[23:00:33] guidance_api.tr:
+    Geri alma doğrulandı || Yeni sürümün paneli, hiçbir şey devreye alınmadan önce başlangıç denetiminden geçemedi; bu yüzden sunucu otomatik olarak önceki sürüme döndürüldü. Önceki sürüm çalışmaya devam ediyor ve sunucuda yapmanız gereken bir şey yok. Bunu bildirirken güncelleme sayfasında bu güncelleme için gösterilen neden satırını ekleyin. || Yeni sürümün paneli başlangıç denetiminden geçemedi
+[22:58:12] guidance_cli.en:
+    Last recorded step: update in progress || The server last reported work on this update. Wait for the next recorded result; checking this page does not restart it.
+[22:59:20] guidance_cli.en:
+    Last recorded step: recovery in progress || The new version's panel failed its start check before anything was switched on. The server is returning to the previous version automatically; nothing needs to be done on the server. This page checks the same operation for the verified result. || The new version's panel failed its start check
+[22:59:39] guidance_cli.en:
+    Last recorded step: waiting for the server to finish starting || No action is needed for this wait. The server's recovery timer will check the same operation again when the operating system is ready. Recovery is not yet complete; this page checks for its result automatically. || The new version's panel failed its start check
+[23:00:33] guidance_cli.en:
+    Rollback verified || The new version's panel failed its start check before anything was switched on, so the server was returned to the previous version automatically. The previous version keeps running and nothing needs to be done on the server. When you report this, include the reason line shown for this update on the update page. || The new version's panel failed its start check
+[22:58:12] guidance_cli.tr:
+    Kaydedilmiş son adım: güncelleme sürüyor || Sunucu son olarak bu güncelleme üzerinde çalıştığını bildirdi. Sonraki kayıtlı sonucu bekleyin; bu sayfayı kontrol etmek işlemi yeniden başlatmaz.
+[22:59:20] guidance_cli.tr:
+    Kaydedilmiş son adım: kurtarma sürüyor || Yeni sürümün paneli, hiçbir şey devreye alınmadan önce başlangıç denetiminden geçemedi. Sunucu önceki sürüme otomatik olarak dönüyor; sunucuda yapmanız gereken bir şey yok. Bu sayfa doğrulanmış sonuç için aynı işlemi kontrol eder. || Yeni sürümün paneli başlangıç denetiminden geçemedi
+[22:59:39] guidance_cli.tr:
+    Kaydedilmiş son adım: sunucunun açılması bekleniyor || Bu bekleme için işlem yapmanız gerekmiyor. Sunucunun kurtarma zamanlayıcısı, işletim sistemi hazır olduğunda aynı işlemi yeniden kontrol edecek. Kurtarma henüz tamamlanmadı; bu sayfa sonucunu otomatik kontrol eder. || Yeni sürümün paneli başlangıç denetiminden geçemedi
+[23:00:33] guidance_cli.tr:
+    Geri alma doğrulandı || Yeni sürümün paneli, hiçbir şey devreye alınmadan önce başlangıç denetiminden geçemedi; bu yüzden sunucu otomatik olarak önceki sürüme döndürüldü. Önceki sürüm çalışmaya devam ediyor ve sunucuda yapmanız gereken bir şey yok. Bunu bildirirken güncelleme sayfasında bu güncelleme için gösterilen neden satırını ekleyin. || Yeni sürümün paneli başlangıç denetiminden geçemedi
+[22:58:12] update_card.en:
+    CelikPanel updates || The update is queued.
+[22:58:14] update_card.en:
+    CelikPanel updates || The update is being applied; the panel may be unavailable briefly.
+[23:00:28] update_card.en:
+    Last recorded step: recovery in progress || The new version's panel failed its start check before anything was switched on. The server is returning to the previous version automatically; nothing needs to be done on the server. This page checks the same operation for the verified result. || This notice follows the server's recovery record for this update and refreshes by itself. It does not start anything.
+[23:00:33] update_card.en:
+    Update not completed; previous version restored || The update to v0.1.0-alpha.82 did not complete. The server was returned to v0.1.0-alpha.81 automatically and is running it now. || Cause: the new version's panel failed its start check before anything was switched on. || Nothing needs to be done on the server. Do not start the update to v0.1.0-alpha.82 again until a corrected version is published. If the server's message names a problem on this server, fix it first. || Nothing resumes by itself: the server keeps running v0.1.0-alpha.81. When a newer version is published, “Check for updates” offers it.
+[22:58:12] update_card.tr:
+    CelikPanel güncellemeleri || Güncelleme sırada.
+[22:58:14] update_card.tr:
+    CelikPanel güncellemeleri || Güncelleme uygulanıyor; panel kısa süre erişilemeyebilir.
+[23:00:28] update_card.tr:
+    Kaydedilmiş son adım: kurtarma sürüyor || Yeni sürümün paneli, hiçbir şey devreye alınmadan önce başlangıç denetiminden geçemedi. Sunucu önceki sürüme otomatik olarak dönüyor; sunucuda yapmanız gereken bir şey yok. Bu sayfa doğrulanmış sonuç için aynı işlemi kontrol eder. || Bu bildirim, sunucunun bu güncelleme için tuttuğu kurtarma kaydını izler ve kendiliğinden yenilenir. Hiçbir işlem başlatmaz.
+[23:00:33] update_card.tr:
+    Güncelleme tamamlanmadı; önceki sürüm geri yüklendi || v0.1.0-alpha.82 sürümüne güncelleme tamamlanmadı. Sunucu otomatik olarak v0.1.0-alpha.81 sürümüne döndürüldü ve şu an onu çalıştırıyor. || Neden: yeni sürümün paneli, hiçbir şey devreye alınmadan önce başlangıç denetiminden geçemedi. || Sunucuda yapmanız gereken bir şey yok. Düzeltilmiş bir sürüm yayımlanana kadar v0.1.0-alpha.82 güncellemesini yeniden başlatmayın. Sunucunun iletisi bu sunucudaki bir sorunu belirtiyorsa önce onu giderin. || Hiçbir işlem kendiliğinden sürmez: sunucu v0.1.0-alpha.81 sürümünü çalıştırmaya devam eder. Daha yeni bir sürüm yayımlandığında “Güncellemeyi kontrol et” onu gösterir.
+## track checks (keys) ["agreement", "final", "reboot", "samples"]
+  samples: 29
+  agreement: {"agreed_samples": 9, "lag_samples": 0, "samples": 29, "verdict": "passed"}
+  final: {"failure_code": "candidate_panel_startup_check_failed", "observation": "known", "observed_at": "2026-09-30T23:00:31Z", "phase": "recovered", "previous_failure": "update_failed", "reason": "rollback_verified", "request_id": "7a7b01ebeb24bf40a384437f6c2473c9", "schema": "celikpanel-recovery-status/v1", "terminal_proof": "rollback_verified"}
+## owner-continuation (required): skipped 
+## terminal: passed 
+  final: {"failure_code": "candidate_panel_startup_check_failed", "observation": "known", "observed_at": "2026-09-30T23:00:31Z", "phase": "recovered", "previous_failure": "update_failed", "reason": "rollback_verified", "request_id": "7a7b01ebeb24bf40a384437f6c2473c9", "schema": "celikpanel-recovery-status/v1", "terminal_proof": "rollback_verified"}
+  outcome: "recovered-automatically"
+  build_identity_ok: true
+  floor: {"present": true, "sha256": "fb2c2ef4d514862e2d1e9e08d4d756d697b63e1e8508d27aae418f184f1ebc9c", "text": "format=celikpanel-release-sequence-floor-v1\nsequence=82\nversion=v0.1.0-alpha.82\n"}
+  foundation: {"present": true, "sha256": "3d2b38fca2c56b851402b0295528c7319442479299b8d278d02233a122f0557a", "text": "format=celikpanel-release-recovery-foundation-v1\nprotocol=1\nsequence=82\nrelease-version=v0.1.0-alpha.82\nrelease-commit=96de9cdb6b48a8e5fa2cd02bd6cd9845579255f5\nrunner-sha256=b3e253506c599ca6c6309ff4609b3fd2e268df10d64036ae72865f2bb2a308d2\nservice-sha256=c570e53138a416a6faf531c2f53e9502ca7aa5cc1131a1f6f6ae870b940fe530\ntimer-sha256=33148e5b0fbc209ff6fd725aaaff2c569bd7470751341d4b83b301d0fa54cd86\nstart-guard-sha256=6abd30be38302b4ad09bd5c7db893aa49b97db779514b3236a2f0a4afb60cc12\nagent-dropin-sha256=82e0fe894b3fa676c1b64e65ac964b74b27dcfe5a83ddf91761f44ad5971359f\npanel-dropin-sha256=82e0fe894b3fa676c1b64e65ac964b74b27dcfe5a83ddf91761f44ad5971359f\nprotocol-sha256=a29874f40088f2b5e960b4ce63651657b1ff2622334dcc5cc11c8f338215034c\n"}
+  transaction: {"fields": {}, "present": false, "status": "ok"}
+  firewall_equal: true
+  site_marker: true
+  smtp: true
+  mailbox: {"checked": true, "present": true, "returncode": 0, "status": "ok"}
+  login_ok: true
+  seeded_rows: {"cron": true, "domain": true, "mail": true}
+  timers: {"changed": {}, "compared": 2, "equal": true}
+  database: equal-except-volatile unexpected=[] excluded=['audit_logs', 'metrics_samples', 'server_setup_executions', 'sessions', 'sqlite_sequence']
+  UPDATE CARD (product rules): {"keys": ["panelUpdate.outcome.rolledBackTitle", "panelUpdate.outcome.rolledBack", "panelUpdate.outcome.cause.candidate_panel_startup_check_failed", "panelUpdate.outcome.rolledBackNext", "panelUpdate.outcome.rolledBackResume"], "missing_keys": [], "observation_error": null, "role": "baseline", "server_message": null, "source": {"observation": {"path": "lib/recoveryObservation.ts", "sha256": "96ca7d7d9bdffb4a2e3da60c8f1e90044ad057fd53e4721ff91090480868cfaa"}, "outcome": {"path": "lib/systemUpdateOutcome.ts", "sha256": "375cdc01e87934903e7523972e8af4ae6fff771e5758080c2b9f1b5d077e10e5"}, "screen": {"path": "components/RecoveryAccess.tsx", "sha256": "f3d60455af13e728b3eb7e933416651394a3a6c3aeb085507278bd88887b4456"}, "typed": {"path": "lib/systemUpdateFailure.ts", "sha256": "df27fa82c8ab99a6864384b315f1336253031e2ee85fbcd230bdf8f6f9a33040"}}, "state": "rolled_back", "texts": {"en": ["Update not completed; previous version restored", "The update to v0.1.0-alpha.82 did not complete. The server was returned to v0.1.0-alpha.81 automatically and is running it now.", "Cause: the new version's panel failed its start check before anything was switched on.", "Nothing needs to be done on the server. Do not start the update to v0.1.0-alpha.82 again until a corrected version is published. If the server's message names a problem on this server, fix it first.", "Nothing resumes by itself: the server keeps running v0.1.0-alpha.81. When a newer version is published, “Check for updates” offers it."], "tr": ["Güncelleme tamamlanmadı; önceki sürüm geri yüklendi", "v0.1.0-alpha.82 sürümüne güncelleme tamamlanmadı. Sunucu otomatik olarak v0.1.0-alpha.81 sürümüne döndürüldü ve şu an onu çalıştırıyor.", "Neden: yeni sürümün paneli, hiçbir şey devreye alınmadan önce başlangıç denetiminden geçemedi.", "Sunucuda yapmanız gereken bir şey yok. Düzeltilmiş bir sürüm yayımlanana kadar v0.1.0-alpha.82 güncellemesini yeniden başlatmayın. Sunucunun iletisi bu sunucudaki bir sorunu belirtiyorsa önce onu giderin.", "Hiçbir işlem kendiliğinden sürmez: sunucu v0.1.0-alpha.81 sürümünü çalıştırmaya devam eder. Daha yeni bir sürüm yayımlandığında “Güncellemeyi kontrol et” onu gösterir."]}, "unavailable": null}
+  card judged: {"findings": [], "server_message_line": null, "verdict": "as-expected"}
+  RECOVERY SCREEN: {"actionable": true, "keys": ["recovery.phase.recovered", "recovery.failure.candidate_panel_startup_check_failed.recovered", "recovery.reason.candidate_panel_startup_check_failed"], "missing_keys": [], "no_actor_or_action": false, "texts": {"en": ["Rollback verified", "The new version's panel failed its start check before anything was switched on, so the server was returned to the previous version automatically. The previous version keeps running and nothing needs to be done on the server. When you report this, include the reason line shown for this update on the update page.", "The new version's panel failed its start check"], "tr": ["Geri alma doğrulandı", "Yeni sürümün paneli, hiçbir şey devreye alınmadan önce başlangıç denetiminden geçemedi; bu yüzden sunucu otomatik olarak önceki sürüme döndürüldü. Önceki sürüm çalışmaya devam ediyor ve sunucuda yapmanız gereken bir şey yok. Bunu bildirirken güncelleme sayfasında bu güncelleme için gösterilen neden satırını ekleyin.", "Yeni sürümün paneli başlangıç denetiminden geçemedi"]}}
+  status body: {"created_at": "2026-09-30T22:58:12.79745075Z", "found": true, "request_id": "7a7b01ebeb24bf40a384437f6c2473c9", "status": "failed", "target": {"arch": "amd64", "archive_sha256": "e510c85ef966cf4357a7a285824939f40830a4187d3c4a2854d87fa6ed5d105c", "archive_size": "67067842", "commit": "96de9cdb6b48a8e5fa2cd02bd6cd9845579255f5", "os": "linux", "sequence": "82", "version": "v0.1.0-alpha.82"}, "updated_at": "2026-09-30T22:59:07.568153046Z"}
+  recovery body: {"failure_code": "candidate_panel_startup_check_failed", "observation": "known", "observed_at": "2026-09-30T23:00:31Z", "panel_state": "ready", "phase": "recovered", "previous_failure": "update_failed", "reason": "rollback_verified", "request_id": "7a7b01ebeb24bf40a384437f6c2473c9", "schema": "celikpanel-recovery-status/v1", "terminal_proof": "rollback_verified"}
+  check body: {"available": true, "current_commit": "0e515e908fc7b3de5c4e74dc7535638cbe56d401", "current_version": "v0.1.0-alpha.81", "previous_attempt": {"failure_code": "candidate_panel_startup_check_failed", "finished_at": "2026-09-30T23:00:31Z", "phase": "recovered", "request_id": "7a7b01ebeb24bf40a384437f6c2473c9"}, "supported": true, "target": {"arch": "amd64", "archive_sha256": "e510c85ef966cf4357a7a285824939f40830a4187d3c4a2854d87fa6ed5d105c", "archive_size": "67067842", "commit": "96de9cdb6b48a8e5fa2cd02bd6cd9845579255f5", "os": "linux", "published_at": "2026-09-30T22:48:44Z", "sequence": "82", "version": "v0.1.0-alpha.82"}}
+## verdicts: passed 
+  workload cron: never-interrupted windows=[]
+  workload dns: not-provided-external-dns windows=null
+  workload panel: down-only-during-transaction windows=[{"cause": "host-reset", "failed": true, "first_bad": 1790809118.238951, "from": 1790809113.233115, "kind": "failed+unobserved", "last_bad": 1790809222.0690224, "lower_bound_s": 103.83, "to": 1790809227.0694094, "unobserved": true, "upper_bound_s": 113.836}]
+  workload smtp: interrupted-only-by-host-reset windows=[{"cause": "host-reset", "failed": false, "first_bad": null, "from": 1790809163.2448418, "kind": "unobserved", "last_bad": null, "lower_bound_s": 0.0, "to": 1790809177.067349, "unobserved": true, "upper_bound_s": 13.823}]
+  workload web: interrupted-only-by-host-reset windows=[{"cause": "host-reset", "failed": true, "first_bad": 1790809177.067349, "from": 1790809163.2448418, "kind": "failed+unobserved", "last_bad": 1790809177.067349, "lower_bound_s": 0.0, "to": 1790809182.067389, "unobserved": true, "upper_bound_s": 18.823}]
+  host_panel_windows [{"failed": true, "first_bad": 1790809117.9197898, "from": 1790809112.9196455, "kind": "failed", "last_bad": 1790809220.7329652, "lower_bound_s": 102.813, "to": 1790809225.7331111, "unobserved": false, "upper_bound_s": 112.813}]
+  host_ssh_windows [{"failed": true, "first_bad": 1790809167.921298, "from": 1790809162.9211369, "kind": "failed", "last_bad": 1790809175.73156, "lower_bound_s": 7.81, "to": 1790809180.7317138, "unobserved": false, "upper_bound_s": 17.811}]
+  agreement {"agreed_samples": 9, "lag_samples": 0, "samples": 29, "verdict": "passed"} skew 0.533
+## observer events
+  2026-09-30T22:58:12.584912+00:00 armed {"mode": "checkpoint", "recovery_fault": {"action": "reboot", "checkpoint": "payload_restored"}, "timeout_seconds": 3600.0}
+  2026-09-30T22:58:12.614135+00:00 timeline {"recovery": "inactive", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "inactive", "worker_freezer": "running"}
+  2026-09-30T22:58:12.884410+00:00 timeline {"recovery": "inactive", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "activating", "worker_freezer": "running"}
+  2026-09-30T22:58:12.950709+00:00 timeline {"recovery": "inactive", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "active", "worker_freezer": "running"}
+  2026-09-30T22:58:34.482275+00:00 timeline {"recovery": "activating", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "active", "worker_freezer": "running"}
+  2026-09-30T22:58:34.885710+00:00 timeline {"recovery": "inactive", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "active", "worker_freezer": "running"}
+  2026-09-30T22:58:38.680782+00:00 timeline {"recovery": "inactive", "snapshot": "20260930T225836Z-from-unknown-to-96de9cdb6b48a8e5fa2cd02bd6cd9845579255f5-16f681bc9e9251bd4f19a75b612bcf60", "transaction_operation": "update", "transaction_phase": "active", "worker": "active", "worker_freezer": "running"
+  2026-09-30T22:58:56.023164+00:00 worker_frozen {"snapshot": "20260930T225836Z-from-unknown-to-96de9cdb6b48a8e5fa2cd02bd6cd9845579255f5-16f681bc9e9251bd4f19a75b612bcf60", "worker": {"boot_id": "ef3369ce-9a3a-48b3-b25c-c74f4c3d83ab", "cgroup": "/system.slice/celikpanel-self-update-7a7b01ebeb24bf40a384437f6c2
+  2026-09-30T22:58:56.248182+00:00 candidate_installed_checkpoint {"bound_worker": {"binding_sha256": "5b40a97a30b60628a7dbd367e550e794087c0049f1d27a48aeae2a45f0545e6b", "observation_sha256": "351bb9fd780e5f17686dfddaa22e40b8e9097160b32bf7fd81eb997726341f9c", "phase": "running", "request_id": "7a7b01ebeb24bf40a384437f6c2473c
+  2026-09-30T22:58:56.603476+00:00 recovery_fault_armed {"handoff": {"armed_events_sha256": "afe5131874b96844ba902f84e537b01633a4f7550a518a4f9a3bb68b0c278e28", "identity": {"cell_id": "release-recovery__6a65d04c8bfa0a23", "node": "debian13", "nonce": "6a65d04c8bfa0a23c1b4aa89675f57a66962139aeecfffc88144e399d0c29dbe
+  2026-09-30T22:58:56.696029+00:00 worker_released {"signal_sent": false, "snapshot": "20260930T225836Z-from-unknown-to-96de9cdb6b48a8e5fa2cd02bd6cd9845579255f5-16f681bc9e9251bd4f19a75b612bcf60", "thaw_exit": 0, "worker": {"boot_id": "ef3369ce-9a3a-48b3-b25c-c74f4c3d83ab", "cgroup": "/system.slice/celikpanel-s
+  2026-09-30T22:59:05.334338+00:00 timeline {"recovery": "activating", "snapshot": "20260930T225836Z-from-unknown-to-96de9cdb6b48a8e5fa2cd02bd6cd9845579255f5-16f681bc9e9251bd4f19a75b612bcf60", "transaction_operation": "update", "transaction_phase": "active", "worker": "active", "worker_freezer": "runnin
+  2026-09-30T22:59:05.878464+00:00 timeline {"recovery": "inactive", "snapshot": "20260930T225836Z-from-unknown-to-96de9cdb6b48a8e5fa2cd02bd6cd9845579255f5-16f681bc9e9251bd4f19a75b612bcf60", "transaction_operation": "update", "transaction_phase": "active", "worker": "active", "worker_freezer": "running"
+  2026-09-30T22:59:08.008039+00:00 timeline {"recovery": "activating", "snapshot": "20260930T225836Z-from-unknown-to-96de9cdb6b48a8e5fa2cd02bd6cd9845579255f5-16f681bc9e9251bd4f19a75b612bcf60", "transaction_operation": "update", "transaction_phase": "active", "worker": "failed", "worker_freezer": "runnin
+  2026-09-30T22:59:08.017173+00:00 released {"checkpoint_verified": true, "kill_sent": false, "reason": "worker-exited", "recovery_fault_armed": true, "thaw_exit": null}
+## recovery-fault events
+  2026-09-30T22:58:56.564943+00:00 armed {"checkpoint": "payload_restored"}
+  2026-09-30T22:59:26.038297+00:00 freeze_requested {}
+  2026-09-30T22:59:26.103151+00:00 freeze_observed {}
+  2026-09-30T22:59:26.231352+00:00 checkpoint_verified {"checkpoint": {"boot_id": "ef3369ce-9a3a-48b3-b25c-c74f4c3d83ab", "checkpoint": "payload_restored", "invocation_id": "f404b4625ebd4eb78768c899fd3b2188", "main_pid": 41464, "main_start_ticks": "68528"
+  2026-09-30T22:59:26.280384+00:00 reboot_ready {}
+## budget receipts
+  {"mtime": 1790809149.0280619, "mtime_utc": "2026-09-30T22:59:09.028062Z", "name": "1", "sha256": "b92e46e46b0336d1d75921c854feb0e81016a79563de6d6520c2d8bbf4108bab", "snapshot": "20260930T225836Z-from-unknown-to-96de9cdb6b48a8e5fa2cd02bd6cd9845579255f5-16f681bc9e9251bd4f19a75b612bcf60", "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20260930T225836Z-from-unknown-to-96de9cdb6b48a8e5fa2cd0
+  {"mtime": 1790809211.610208, "mtime_utc": "2026-09-30T23:00:11.610208Z", "name": "2", "sha256": "71bccd02ea4320b0dc1692c030be536045d36d105c218d02721907671c116934", "snapshot": "20260930T225836Z-from-unknown-to-96de9cdb6b48a8e5fa2cd02bd6cd9845579255f5-16f681bc9e9251bd4f19a75b612bcf60", "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20260930T225836Z-from-unknown-to-96de9cdb6b48a8e5fa2cd02
+## product journal key lines
+  2026-09-30T22:59:07.622607+00:00 dns-debian13 agent[26775]: 2026/09/30 22:59:07 System update worker failed: reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=candidate_panel_startup_check_failed state=recovery_required reason=new panel start check failed before completion: panel startup check failed: tls_pair_invalid: the panel TLS certificate and private key cannot be loaded as a matching pair detail=
+  2026-09-30T22:59:09.123185+00:00 dns-debian13 release-recovery[41464]: Recovery dispatch admitted: attempt=1 snapshot=20260930T225836Z-from-unknown-to-96de9cdb6b48a8e5fa2cd02bd6cd9845579255f5-16f681bc9e9251bd4f19a75b612bcf60
+  2026-09-30T22:59:36.919621+00:00 dns-debian13 release-transaction-start-guard[685]: celikpanel release start guard: held: a CelikPanel update or recovery is in progress; the unit starts when it finishes
+  2026-09-30T22:59:37.605305+00:00 dns-debian13 release-transaction-start-guard[796]: celikpanel release start guard: held: a CelikPanel update or recovery is in progress; the unit starts when it finishes
+  2026-09-30T22:59:39.352296+00:00 dns-debian13 release-recovery[686]: Recovery waiting for the operating system transition; no owner action is needed. The native recovery timer will retry this same operation. Recovery is not yet complete.
+  2026-09-30T23:00:11.706475+00:00 dns-debian13 release-recovery[2012]: Recovery dispatch admitted: attempt=2 snapshot=20260930T225836Z-from-unknown-to-96de9cdb6b48a8e5fa2cd02bd6cd9845579255f5-16f681bc9e9251bd4f19a75b612bcf60
+  2026-09-30T23:00:31.035550+00:00 dns-debian13 release-recovery[2356]: ==> Rollback complete / Geri alma tamamlandı
+  2026-09-30T23:00:31.035550+00:00 dns-debian13 release-recovery[2356]:     Restored release source commit / Geri yüklenen sürümün kaynak commit'i: 0e515e908fc7b3de5c4e74dc7535638cbe56d401 (from the restored Agent's build record / geri yüklenen Agent'ın yapı kaydından)

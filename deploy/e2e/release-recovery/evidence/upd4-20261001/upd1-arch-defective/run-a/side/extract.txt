@@ -1,0 +1,186 @@
+# extraction of /var/tmp/cp-release-drill-upd4-arch-def-a/evidence/arch/upd1/upd1-arch-defective-20261001t002134z/
+native_evidence=False overall=complete-for-review request_id=459df5fb92fab16431b9f3e6353fd629
+outcome.classification="recovered-automatically" owner_continuation=False
+## steps
+  preflight                          passed       2026-10-01T00:21:34Z -> 2026-10-01T00:21:38Z  
+  origin                             passed       2026-10-01T00:21:38Z -> 2026-10-01T00:21:47Z  
+  baseline-install                   passed       2026-10-01T00:21:47Z -> 2026-10-01T00:23:44Z  
+  owner-login                        passed       2026-10-01T00:23:44Z -> 2026-10-01T00:23:45Z  
+  license                            passed       2026-10-01T00:23:45Z -> 2026-10-01T00:23:45Z  
+  setup                              observed     2026-10-01T00:23:45Z -> 2026-10-01T00:26:32Z  
+  seed                               passed       2026-10-01T00:26:32Z -> 2026-10-01T00:26:34Z  
+  pre-state                          passed       2026-10-01T00:26:34Z -> 2026-10-01T00:28:13Z  
+  arm                                passed       2026-10-01T00:28:13Z -> 2026-10-01T00:28:15Z  
+  owner-start                        passed       2026-10-01T00:28:15Z -> 2026-10-01T00:28:15Z  
+  track                              passed       2026-10-01T00:28:15Z -> 2026-10-01T00:29:53Z  
+  owner-continuation (required)      skipped      2026-10-01T00:29:53Z -> 2026-10-01T00:29:53Z  
+  terminal                           passed       2026-10-01T00:29:53Z -> 2026-10-01T00:29:59Z  
+  collect                            passed       2026-10-01T00:29:59Z -> 2026-10-01T00:30:01Z  
+  verdicts                           passed       2026-10-01T00:30:01Z -> 2026-10-01T00:30:01Z  
+## findings
+  - arch: web_mail setup plan was refused (['server_setup_service_unsupported:dovecot']); mail is recorded as not provided on this platform
+  - arch: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['09-panel_certificate', '10-verify']
+## outcome
+  final_status: {"observation": "known", "observed_at": "2026-10-01T00:29:50Z", "phase": "recovered", "previous_failure": "update_failed", "reason": "rollback_verified", "request_id": "459df5fb92fab16431b9f3e6353fd629", "schema": "celikpanel-recovery-status/v1", "terminal_proof": "rollback_verified"}
+  attempts: {"automatic": [{"at": "2026-10-01T00:28:50.933208Z", "attempt": "1", "direction": "rollback", "operation": "update", "phase": "active"}, {"at": "2026-10-01T00:29:37.937516Z", "attempt": "2", "direction": "rollback", "operation": "rollback", "phase": "completion"}], "automatic_count": 2, "journal_admissions": [{"at": "2026-10-01T00:28:50.994189+00:00", "attempt": "1", "snapshot": "20261001T002832Z-from-unknown-to-bd0e626ee8efae8bb11f3e4f8fa3cf0e7ff39df9-7d27bf75c6b4b33da949d936dcd96725"}, {"at": "2026-10-01T00:29:37.991288+00:00", "attempt": "2", "snapshot": "20261001T002832Z-from-unknown-to-bd0e626ee8efae8bb11f3e4f8fa3cf0e7ff39df9-7d27bf75c6b4b33da949d936dcd96725"}], "owner": [], "owner_count": 0}
+  reboot: null
+  track_stop: null
+  port_hold: null
+  owner_reboot: null
+  pin_changes: []
+## scope
+  {"cron": {"crontab": "/usr/sbin/crontab", "verdict": "available"}, "dns": {"mode": "external", "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2", "verdict": "not-provided-external-dns"}, "origin": {"after-owner-restart": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "after-provision": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "before-arm": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}}, "setup": {"code": "server_setup_access_dns_required", "not_run": ["09-panel_certificate", "10-verify"], "phase": "access_dns", "verdict": "observed isolated-host wait", "volatile_tables_added": ["server_setup_executions"]}}
+## status samples (22)
+  00:28:15Z 11-track U 200 queued | R 200 running/none None fc=None | CLI running/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  00:28:17Z 11-track U 200 running | R 200 running/none None fc=None | CLI running/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  00:28:18Z 11-track U 200 running | R 200 running/none None fc=None | CLI running/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  00:28:21Z 11-track U 200 running | R 200 running/none None fc=None | CLI running/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  00:28:25Z 11-track U 200 running | R 200 running/none None fc=None | CLI running/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  00:28:32Z 11-track U 200 running | R 200 running/none None fc=None | CLI running/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  00:28:42Z 11-track U None None | R None None/None None fc=None | CLI running/none None wait=None fc=None ffc=None next=None | perr=PanelError clierr=None | single-source 
+  00:28:44Z 11-track U None None | R None None/None None fc=None | CLI running/none None wait=None fc=None ffc=None next=None | perr=PanelError clierr=None | single-source 
+  00:28:47Z 11-track U None None | R None None/None None fc=None | CLI running/none None wait=None fc=None ffc=None next=None | perr=PanelError clierr=None | single-source 
+  00:28:51Z 11-track U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=None ffc=None next=None | perr=PanelError clierr=None | single-source 
+  00:28:53Z 11-track U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=None ffc=None next=None | perr=PanelError clierr=None | single-source 
+  00:28:56Z 11-track U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=None ffc=None next=None | perr=PanelError clierr=None | single-source 
+  00:29:00Z 11-track U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=None ffc=None next=None | perr=PanelError clierr=None | single-source 
+  00:29:06Z 11-track U 200 failed | R 200 recovering/none None fc=None | CLI recovering/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  00:29:08Z 11-track U 200 failed | R 200 recovering/none None fc=None | CLI recovering/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  00:29:11Z 11-track U 200 failed | R 200 recovering/none None fc=None | CLI recovering/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  00:29:15Z 11-track U 200 failed | R 200 recovering/none None fc=None | CLI recovering/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  00:29:22Z 11-track U 200 failed | R 200 recovering/none None fc=None | CLI recovering/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  00:29:32Z 11-track U 200 failed | R 200 recovering/none None fc=None | CLI recovering/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  00:29:47Z 11-track U 200 failed | R 200 recovering/none None fc=None | CLI recovering/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  00:29:49Z 11-track U 200 failed | R 200 recovering/none None fc=None | CLI recovering/none None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+  00:29:52Z 11-track U 200 failed | R 200 recovered/rollback_verified None fc=None | CLI recovered/rollback_verified None wait=None fc=None ffc=None next=None | perr=None clierr=None | agree 
+## guidance texts seen (first time, per source)
+[00:28:15] cli_raw.en:
+    The update is being applied; the panel may be unavailable for a short time. Nothing to do now: check this same request again in a minute. Checking does not restart the update.
+    This is a recorded observation; current service health was not checked.
+    Recorded state (for support): phase=running reason=update_running proof=none
+[00:28:51] cli_raw.en:
+    The update did not finish normally, and automatic recovery is running: the server is either being returned to the previous version or the update is being completed safely. Nothing to do now: check this same request again in a minute and do not start another update.
+    This is a recorded observation; current service health was not checked.
+    Recorded state (for support): phase=recovering reason=recovery_running proof=none previous_failure=update_failed
+[00:29:52] cli_raw.en:
+    The update did not complete, and the server was returned automatically to the version it ran before; that restoration was verified. Nothing needs to be done on the server. Do not start the same version again until a corrected version is published; the panel's update page shows what is known about the cause.
+    This is a recorded observation; current service health was not checked.
+    Recorded state (for support): phase=recovered reason=rollback_verified proof=rollback_verified previous_failure=update_failed
+[00:28:15] cli_raw.tr:
+    Güncelleme uygulanıyor; panel kısa bir süre erişilemeyebilir. Şimdi yapmanız gereken bir şey yok: bir dakika sonra aynı işlemi yeniden sorgulayın. Sorgulamak güncellemeyi yeniden başlatmaz.
+    Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.
+    Kayıtlı durum (destek için): phase=running reason=update_running proof=none
+[00:28:51] cli_raw.tr:
+    Güncelleme normal biçimde tamamlanmadı ve otomatik kurtarma çalışıyor: sunucu ya önceki sürüme döndürülüyor ya da güncelleme güvenle tamamlanıyor. Şimdi yapmanız gereken bir şey yok: bir dakika sonra aynı işlemi yeniden sorgulayın ve başka güncelleme başlatmayın.
+    Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.
+    Kayıtlı durum (destek için): phase=recovering reason=recovery_running proof=none previous_failure=update_failed
+[00:29:52] cli_raw.tr:
+    Güncelleme tamamlanmadı ve sunucu otomatik olarak güncellemeden önce çalıştırdığı sürüme döndürüldü; bu geri dönüş doğrulandı. Sunucuda yapmanız gereken bir şey yok. Düzeltilmiş bir sürüm yayımlanana kadar aynı sürümü yeniden başlatmayın; nedenle ilgili bilinenler panelin güncelleme sayfasında gösterilir.
+    Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.
+    Kayıtlı durum (destek için): phase=recovered reason=rollback_verified proof=rollback_verified previous_failure=update_failed
+[00:28:15] guidance_api.en:
+    Last recorded step: update in progress || The server last reported work on this update. Wait for the next recorded result; checking this page does not restart it.
+[00:29:06] guidance_api.en:
+    Last recorded step: recovery in progress || The server last reported automatic recovery. Wait for a verified recovery result before starting another operation. || Update failed
+[00:29:52] guidance_api.en:
+    Rollback verified || The server verified restoration of the previous release. Reload CelikPanel to check panel access. || Update failed
+[00:28:15] guidance_api.tr:
+    Kaydedilmiş son adım: güncelleme sürüyor || Sunucu son olarak bu güncelleme üzerinde çalıştığını bildirdi. Sonraki kayıtlı sonucu bekleyin; bu sayfayı kontrol etmek işlemi yeniden başlatmaz.
+[00:29:06] guidance_api.tr:
+    Kaydedilmiş son adım: kurtarma sürüyor || Sunucu son olarak otomatik kurtarma bildirdi. Başka bir işlem başlatmadan önce doğrulanmış kurtarma sonucunu bekleyin. || Güncelleme başarısız oldu
+[00:29:52] guidance_api.tr:
+    Geri alma doğrulandı || Sunucu önceki sürümün geri yüklendiğini doğruladı. Panel erişimini kontrol etmek için CelikPanel’i yeniden yükleyin. || Güncelleme başarısız oldu
+[00:28:15] guidance_cli.en:
+    Last recorded step: update in progress || The server last reported work on this update. Wait for the next recorded result; checking this page does not restart it.
+[00:28:51] guidance_cli.en:
+    Last recorded step: recovery in progress || The server last reported automatic recovery. Wait for a verified recovery result before starting another operation. || Update failed
+[00:29:52] guidance_cli.en:
+    Rollback verified || The server verified restoration of the previous release. Reload CelikPanel to check panel access. || Update failed
+[00:28:15] guidance_cli.tr:
+    Kaydedilmiş son adım: güncelleme sürüyor || Sunucu son olarak bu güncelleme üzerinde çalıştığını bildirdi. Sonraki kayıtlı sonucu bekleyin; bu sayfayı kontrol etmek işlemi yeniden başlatmaz.
+[00:28:51] guidance_cli.tr:
+    Kaydedilmiş son adım: kurtarma sürüyor || Sunucu son olarak otomatik kurtarma bildirdi. Başka bir işlem başlatmadan önce doğrulanmış kurtarma sonucunu bekleyin. || Güncelleme başarısız oldu
+[00:29:52] guidance_cli.tr:
+    Geri alma doğrulandı || Sunucu önceki sürümün geri yüklendiğini doğruladı. Panel erişimini kontrol etmek için CelikPanel’i yeniden yükleyin. || Güncelleme başarısız oldu
+[00:28:15] update_card.en:
+    CelikPanel updates || The update is queued.
+[00:28:17] update_card.en:
+    CelikPanel updates || The update is being applied; the panel may be unavailable briefly.
+[00:29:06] update_card.en:
+    Last recorded step: recovery in progress || The server last reported automatic recovery. Wait for a verified recovery result before starting another operation. || This notice follows the server's recovery record for this update and refreshes by itself. It does not start anything. || The server reported: reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason=offline panel database migration failed; its original database and work evidence are preserved detail=
+[00:29:52] update_card.en:
+    Update not completed; previous version restored || The update to v0.1.0-alpha.82 did not complete. The server was returned to v0.1.0-alpha.81 automatically and is running it now. || Cause: the update failed before it completed; the server recorded no more specific cause. || Nothing needs to be done on the server. Do not start the update to v0.1.0-alpha.82 again until a corrected version is published. If the server's message names a problem on this server, fix it first. || Nothing resumes by itself: the server keeps running v0.1.0-alpha.81. When a newer version is published, “Check for updates” offers it. || The server reported: reviewed updater failed: exit status 1: offline panel database migration failed; its original database and work evidence are preserved
+[00:28:15] update_card.tr:
+    CelikPanel güncellemeleri || Güncelleme sırada.
+[00:28:17] update_card.tr:
+    CelikPanel güncellemeleri || Güncelleme uygulanıyor; panel kısa süre erişilemeyebilir.
+[00:29:06] update_card.tr:
+    Kaydedilmiş son adım: kurtarma sürüyor || Sunucu son olarak otomatik kurtarma bildirdi. Başka bir işlem başlatmadan önce doğrulanmış kurtarma sonucunu bekleyin. || Bu bildirim, sunucunun bu güncelleme için tuttuğu kurtarma kaydını izler ve kendiliğinden yenilenir. Hiçbir işlem başlatmaz. || Sunucunun bildirdiği: reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason=offline panel database migration failed; its original database and work evidence are preserved detail=
+[00:29:52] update_card.tr:
+    Güncelleme tamamlanmadı; önceki sürüm geri yüklendi || v0.1.0-alpha.82 sürümüne güncelleme tamamlanmadı. Sunucu otomatik olarak v0.1.0-alpha.81 sürümüne döndürüldü ve şu an onu çalıştırıyor. || Neden: güncelleme tamamlanmadan başarısız oldu; sunucu daha belirli bir neden kaydetmedi. || Sunucuda yapmanız gereken bir şey yok. Düzeltilmiş bir sürüm yayımlanana kadar v0.1.0-alpha.82 güncellemesini yeniden başlatmayın. Sunucunun iletisi bu sunucudaki bir sorunu belirtiyorsa önce onu giderin. || Hiçbir işlem kendiliğinden sürmez: sunucu v0.1.0-alpha.81 sürümünü çalıştırmaya devam eder. Daha yeni bir sürüm yayımlandığında “Güncellemeyi kontrol et” onu gösterir. || Sunucunun bildirdiği: reviewed updater failed: exit status 1: offline panel database migration failed; its original database and work evidence are preserved
+## track checks (keys) ["agreement", "final", "reboot", "samples"]
+  samples: 22
+  agreement: {"agreed_samples": 15, "lag_samples": 0, "samples": 22, "verdict": "passed"}
+  final: {"observation": "known", "observed_at": "2026-10-01T00:29:50Z", "phase": "recovered", "previous_failure": "update_failed", "reason": "rollback_verified", "request_id": "459df5fb92fab16431b9f3e6353fd629", "schema": "celikpanel-recovery-status/v1", "terminal_proof": "rollback_verified"}
+## owner-continuation (required): skipped 
+## terminal: passed 
+  final: {"observation": "known", "observed_at": "2026-10-01T00:29:50Z", "phase": "recovered", "previous_failure": "update_failed", "reason": "rollback_verified", "request_id": "459df5fb92fab16431b9f3e6353fd629", "schema": "celikpanel-recovery-status/v1", "terminal_proof": "rollback_verified"}
+  outcome: "recovered-automatically"
+  build_identity_ok: true
+  floor: {"present": true, "sha256": "fb2c2ef4d514862e2d1e9e08d4d756d697b63e1e8508d27aae418f184f1ebc9c", "text": "format=celikpanel-release-sequence-floor-v1\nsequence=82\nversion=v0.1.0-alpha.82\n"}
+  foundation: {"present": true, "sha256": "5263f7c9f883afda2b3ea452900ed5b736c4b9abeaebbd946b7eeeb135b4b9b2", "text": "format=celikpanel-release-recovery-foundation-v1\nprotocol=1\nsequence=82\nrelease-version=v0.1.0-alpha.82\nrelease-commit=bd0e626ee8efae8bb11f3e4f8fa3cf0e7ff39df9\nrunner-sha256=b3e253506c599ca6c6309ff4609b3fd2e268df10d64036ae72865f2bb2a308d2\nservice-sha256=c570e53138a416a6faf531c2f53e9502ca7aa5cc1131a1f6f6ae870b940fe530\ntimer-sha256=33148e5b0fbc209ff6fd725aaaff2c569bd7470751341d4b83b301d0fa54cd86\nstart-guard-sha256=6abd30be38302b4ad09bd5c7db893aa49b97db779514b3236a2f0a4afb60cc12\nagent-dropin-sha256=82e0fe894b3fa676c1b64e65ac964b74b27dcfe5a83ddf91761f44ad5971359f\npanel-dropin-sha256=82e0fe894b3fa676c1b64e65ac964b74b27dcfe5a83ddf91761f44ad5971359f\nprotocol-sha256=a29874f40088f2b5e960b4ce63651657b1ff2622334dcc5cc11c8f338215034c\n"}
+  transaction: {"fields": {}, "present": false, "status": "ok"}
+  firewall_equal: true
+  site_marker: true
+  smtp: null
+  mailbox: {"checked": false}
+  login_ok: true
+  seeded_rows: {"cron": true, "domain": true, "mail": null}
+  timers: {"changed": {}, "compared": 2, "equal": true}
+  database: equal-except-volatile unexpected=[] excluded=['audit_logs', 'metrics_samples', 'server_setup_executions', 'sessions', 'sqlite_sequence']
+  UPDATE CARD (product rules): {"keys": ["panelUpdate.outcome.rolledBackTitle", "panelUpdate.outcome.rolledBack", "panelUpdate.outcome.cause.generic", "panelUpdate.outcome.rolledBackNext", "panelUpdate.outcome.rolledBackResume", "panelUpdate.outcome.serverMessage"], "missing_keys": [], "observation_error": null, "role": "baseline", "server_message": "reviewed updater failed: exit status 1: offline panel database migration failed; its original database and work evidence are preserved", "source": {"observation": {"path": "lib/recoveryObservation.ts", "sha256": "96ca7d7d9bdffb4a2e3da60c8f1e90044ad057fd53e4721ff91090480868cfaa"}, "outcome": {"path": "lib/systemUpdateOutcome.ts", "sha256": "375cdc01e87934903e7523972e8af4ae6fff771e5758080c2b9f1b5d077e10e5"}, "screen": {"path": "components/RecoveryAccess.tsx", "sha256": "f3d60455af13e728b3eb7e933416651394a3a6c3aeb085507278bd88887b4456"}, "typed": {"path": "lib/systemUpdateFailure.ts", "sha256": "df27fa82c8ab99a6864384b315f1336253031e2ee85fbcd230bdf8f6f9a33040"}}, "state": "rolled_back", "texts": {"en": ["Update not completed; previous version restored", "The update to v0.1.0-alpha.82 did not complete. The server was returned to v0.1.0-alpha.81 automatically and is running it now.", "Cause: the update failed before it completed; the server recorded no more specific cause.", "Nothing needs to be done on the server. Do not start the update to v0.1.0-alpha.82 again until a corrected version is published. If the server's message names a problem on this server, fix it first.", "Nothing resumes by itself: the server keeps running v0.1.0-alpha.81. When a newer version is published, “Check for updates” offers it.", "The server reported: reviewed updater failed: exit status 1: offline panel database migration failed; its original database and work evidence are preserved"], "tr": ["Güncelleme tamamlanmadı; önceki sürüm geri yüklendi", "v0.1.0-alpha.82 sürümüne güncelleme tamamlanmadı. Sunucu otomatik olarak v0.1.0-alpha.81 sürümüne döndürüldü ve şu an onu çalıştırıyor.", "Neden: güncelleme tamamlanmadan başarısız oldu; sunucu daha belirli bir neden kaydetmedi.", "Sunucuda yapmanız gereken bir şey yok. Düzeltilmiş bir sürüm yayımlanana kadar v0.1.0-alpha.82 güncellemesini yeniden başlatmayın. Sunucunun iletisi bu sunucudaki bir sorunu belirtiyorsa önce onu giderin.", "Hiçbir işlem kendiliğinden sürmez: sunucu v0.1.0-alpha.81 sürümünü çalıştırmaya devam eder. Daha yeni bir sürüm yayımlandığında “Güncellemeyi kontrol et” onu gösterir.", "Sunucunun bildirdiği: reviewed updater failed: exit status 1: offline panel database migration failed; its original database and work evidence are preserved"]}, "unavailable": null}
+  card judged: {"findings": [], "server_message_line": "reviewed updater failed: exit status 1: offline panel database migration failed; its original database and work evidence are preserved", "verdict": "as-expected"}
+  RECOVERY SCREEN: {"actionable": true, "keys": ["recovery.phase.recovered", "recovery.next.recovered", "recovery.reason.update_failed"], "missing_keys": [], "no_actor_or_action": false, "texts": {"en": ["Rollback verified", "The server verified restoration of the previous release. Reload CelikPanel to check panel access.", "Update failed"], "tr": ["Geri alma doğrulandı", "Sunucu önceki sürümün geri yüklendiğini doğruladı. Panel erişimini kontrol etmek için CelikPanel’i yeniden yükleyin.", "Güncelleme başarısız oldu"]}}
+  status body: {"created_at": "2026-10-01T00:28:15.625286514Z", "found": true, "request_id": "459df5fb92fab16431b9f3e6353fd629", "status": "failed", "summary": "reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason=offline panel database migration failed; its original database and work evidence are preserved detail=", "target": {"arch": "amd64", "archive_sha256": "cdd55db8b3ab6b0011811303b6ed355dcb414edcded8bec51b70be59052e6899", "archive_size": "67066648", "commit": "bd0e626ee8efae8bb11f3e4f8fa3cf0e7ff39df9", "os": "linux", "sequence": "82", "version": "v0.1.0-alpha.82"}, "updated_at": "2026-10-01T00:28:49.922322855Z"}
+  recovery body: {"observation": "known", "observed_at": "2026-10-01T00:29:50Z", "panel_state": "ready", "phase": "recovered", "previous_failure": "update_failed", "reason": "rollback_verified", "request_id": "459df5fb92fab16431b9f3e6353fd629", "schema": "celikpanel-recovery-status/v1", "terminal_proof": "rollback_verified"}
+  check body: {"available": true, "current_commit": "0e515e908fc7b3de5c4e74dc7535638cbe56d401", "current_version": "v0.1.0-alpha.81", "previous_attempt": {"finished_at": "2026-10-01T00:29:50Z", "phase": "recovered", "request_id": "459df5fb92fab16431b9f3e6353fd629"}, "supported": true, "target": {"arch": "amd64", "archive_sha256": "cdd55db8b3ab6b0011811303b6ed355dcb414edcded8bec51b70be59052e6899", "archive_size": "67066648", "commit": "bd0e626ee8efae8bb11f3e4f8fa3cf0e7ff39df9", "os": "linux", "published_at": "2026-10-01T00:21:39Z", "sequence": "82", "version": "v0.1.0-alpha.82"}}
+## verdicts: passed 
+  workload cron: never-interrupted windows=[]
+  workload dns: not-provided-external-dns windows=null
+  workload panel: down-only-during-transaction windows=[{"cause": "unexplained", "failed": true, "first_bad": 1790814510.6515, "from": 1790814505.6513715, "kind": "failed", "last_bad": 1790814540.6529517, "lower_bound_s": 30.001, "to": 1790814545.6541903, "unobserved": false, "upper_bound_s": 40.003}, {"cause": "unexplained", "failed": true, "first_bad": 1790814580.65535, "from": 1790814575.655276, "kind": "failed", "last_bad": 1790814580.65535, "lower_bound_s": 0.0, "to": 1790814585.6555157, "unobserved": false, "upper_bound_s": 10.0}]
+  workload smtp: not-seeded windows=null
+  workload web: never-interrupted windows=[]
+  host_panel_windows [{"failed": true, "first_bad": 1790814515.2935443, "from": 1790814510.293377, "kind": "failed", "last_bad": 1790814540.2943194, "lower_bound_s": 25.001, "to": 1790814545.2944417, "unobserved": false, "upper_bound_s": 35.001}, {"failed": true, "first_bad": 1790814580.2958214, "from": 1790814575.2956972, "kind": "failed", "last_bad": 1790814580.2958214, "lower_bound_s": 0.0, "to": 1790814585.2959886, "unobserved": false, "upper_bound_s": 10.0}]
+  host_ssh_windows []
+  agreement {"agreed_samples": 15, "lag_samples": 0, "samples": 22, "verdict": "passed"} skew 0.584
+## observer events
+  2026-10-01T00:28:15.407038+00:00 armed {"mode": "checkpoint", "recovery_fault": {"action": "kill", "checkpoint": "runtime_verified"}, "timeout_seconds": 3600.0}
+  2026-10-01T00:28:15.426497+00:00 timeline {"recovery": "activating", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "inactive", "worker_freezer": "running"}
+  2026-10-01T00:28:15.694646+00:00 timeline {"recovery": "activating", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "active", "worker_freezer": "running"}
+  2026-10-01T00:28:15.812219+00:00 timeline {"recovery": "inactive", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "active", "worker_freezer": "running"}
+  2026-10-01T00:28:31.002574+00:00 timeline {"recovery": "activating", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "active", "worker_freezer": "running"}
+  2026-10-01T00:28:31.373227+00:00 timeline {"recovery": "inactive", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "active", "worker_freezer": "running"}
+  2026-10-01T00:28:33.690702+00:00 timeline {"recovery": "inactive", "snapshot": "20261001T002832Z-from-unknown-to-bd0e626ee8efae8bb11f3e4f8fa3cf0e7ff39df9-7d27bf75c6b4b33da949d936dcd96725", "transaction_operation": "update", "transaction_phase": "active", "worker": "active", "worker_freezer": "running"
+  2026-10-01T00:28:45.856064+00:00 worker_frozen {"snapshot": "20261001T002832Z-from-unknown-to-bd0e626ee8efae8bb11f3e4f8fa3cf0e7ff39df9-7d27bf75c6b4b33da949d936dcd96725", "worker": {"boot_id": "080c78bf-1d46-4db6-847e-870a4009a727", "cgroup": "/system.slice/celikpanel-self-update-459df5fb92fab16431b9f3e6353
+  2026-10-01T00:28:46.056061+00:00 candidate_installed_checkpoint {"bound_worker": {"binding_sha256": "18b35310bd0970af3f8ea69d7d6ac8c484f238ac81c2b361adee5f87894a18c5", "observation_sha256": "497a1154f87ac85d6232f52c804de4821465bdae826b2016cb64f22dddeabd86", "phase": "running", "request_id": "459df5fb92fab16431b9f3e6353fd62
+  2026-10-01T00:28:46.392444+00:00 recovery_fault_armed {"handoff": {"armed_events_sha256": "0de2611367b2a4ab18a4b0a8336bf4ddaa6feda36076904bd245529e6597c4be", "identity": {"cell_id": "release-recovery__27fc4b8dd967c89d", "node": "arch", "nonce": "27fc4b8dd967c89d3cad7f11412af129971acfa26ca848c3c3f9e05dca50d660", "
+  2026-10-01T00:28:46.446971+00:00 worker_released {"signal_sent": false, "snapshot": "20261001T002832Z-from-unknown-to-bd0e626ee8efae8bb11f3e4f8fa3cf0e7ff39df9-7d27bf75c6b4b33da949d936dcd96725", "thaw_exit": 0, "worker": {"boot_id": "080c78bf-1d46-4db6-847e-870a4009a727", "cgroup": "/system.slice/celikpanel-s
+  2026-10-01T00:28:50.074904+00:00 timeline {"recovery": "activating", "snapshot": "20261001T002832Z-from-unknown-to-bd0e626ee8efae8bb11f3e4f8fa3cf0e7ff39df9-7d27bf75c6b4b33da949d936dcd96725", "transaction_operation": "update", "transaction_phase": "active", "worker": "failed", "worker_freezer": "runnin
+  2026-10-01T00:28:50.078535+00:00 released {"checkpoint_verified": true, "kill_sent": false, "reason": "worker-exited", "recovery_fault_armed": true, "thaw_exit": null}
+## recovery-fault events
+  2026-10-01T00:28:46.301002+00:00 armed {"checkpoint": "runtime_verified"}
+  2026-10-01T00:29:06.622372+00:00 freeze_requested {}
+  2026-10-01T00:29:06.671009+00:00 freeze_observed {}
+  2026-10-01T00:29:06.784577+00:00 checkpoint_verified {"checkpoint": {"boot_id": "080c78bf-1d46-4db6-847e-870a4009a727", "checkpoint": "runtime_verified", "invocation_id": "52577b8a09a744eab18803ad98832bd6", "main_pid": 15564, "main_start_ticks": "35169"
+  2026-10-01T00:29:06.803504+00:00 kill_requested {}
+  2026-10-01T00:29:06.810742+00:00 kill_sent {}
+  2026-10-01T00:29:06.830629+00:00 released {}
+## budget receipts
+  {"mtime": 1790814530.9332085, "mtime_utc": "2026-10-01T00:28:50.933208Z", "name": "1", "sha256": "9daa0fb98fa6161bf5b00a2eb4a517e1eec73f02bfca783aefa141619caa2780", "snapshot": "20261001T002832Z-from-unknown-to-bd0e626ee8efae8bb11f3e4f8fa3cf0e7ff39df9-7d27bf75c6b4b33da949d936dcd96725", "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20261001T002832Z-from-unknown-to-bd0e626ee8efae8bb11f3e
+  {"mtime": 1790814577.9375157, "mtime_utc": "2026-10-01T00:29:37.937516Z", "name": "2", "sha256": "d1030b8bd54973c626f13fab969b72b0e99e8c014813961bab90c222bd616638", "snapshot": "20261001T002832Z-from-unknown-to-bd0e626ee8efae8bb11f3e4f8fa3cf0e7ff39df9-7d27bf75c6b4b33da949d936dcd96725", "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20261001T002832Z-from-unknown-to-bd0e626ee8efae8bb11f3e
+## product journal key lines
+  2026-10-01T00:28:49.936290+00:00 dns-arch agent[3052]: 2026/10/01 00:28:49 System update worker failed: reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason=offline panel database migration failed; its original database and work evidence are preserved detail=
+  2026-10-01T00:28:50.994189+00:00 dns-arch release-recovery[15564]: Recovery dispatch admitted: attempt=1 snapshot=20261001T002832Z-from-unknown-to-bd0e626ee8efae8bb11f3e4f8fa3cf0e7ff39df9-7d27bf75c6b4b33da949d936dcd96725
+  2026-10-01T00:29:37.991288+00:00 dns-arch release-recovery[19827]: Recovery dispatch admitted: attempt=2 snapshot=20261001T002832Z-from-unknown-to-bd0e626ee8efae8bb11f3e4f8fa3cf0e7ff39df9-7d27bf75c6b4b33da949d936dcd96725
+  2026-10-01T00:29:50.698824+00:00 dns-arch release-recovery[20159]: ==> Rollback complete / Geri alma tamamlandı
+  2026-10-01T00:29:50.698824+00:00 dns-arch release-recovery[20159]:     Restored release source commit / Geri yüklenen sürümün kaynak commit'i: 0e515e908fc7b3de5c4e74dc7535638cbe56d401 (from the restored Agent's build record / geri yüklenen Agent'ın yapı kaydından)

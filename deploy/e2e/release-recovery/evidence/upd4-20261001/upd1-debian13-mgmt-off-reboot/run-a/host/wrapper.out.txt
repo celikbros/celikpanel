@@ -1,0 +1,28 @@
+Formatting '/var/tmp/cp-release-drill-upd4-d13-mr-a/cells/7d2d165852d00b08d7a6bd44/debian13/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-upd4-d13-mr-a/images/debian-13-genericcloud-amd64-20260826-2582.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+Formatting '/var/tmp/cp-release-drill-upd4-d13-mr-a/cells/7d2d165852d00b08d7a6bd44/arch/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-upd4-d13-mr-a/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-upd4-d13-mr-a", "cell_id": "release-recovery__4a9fe9c0756c2a9e", "ssh_ports": [2501, 2502]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-upd4-d13-mr-a", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-upd4-d13-mr-a", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+{"step": "preflight", "verdict": "passed", "reason": null}
+{"step": "origin", "verdict": "passed", "reason": null}
+{"step": "baseline-install", "verdict": "passed", "reason": null}
+{"step": "owner-login", "verdict": "passed", "reason": null}
+{"step": "license", "verdict": "passed", "reason": null}
+{"step": "setup", "verdict": "observed", "reason": null}
+{"step": "seed", "verdict": "passed", "reason": null}
+{"step": "pre-state", "verdict": "passed", "reason": null}
+{"step": "arm", "verdict": "passed", "reason": null}
+{"step": "owner-start", "verdict": "passed", "reason": null}
+{"step": "track", "verdict": "passed", "reason": null}
+{"step": "owner-continuation (required)", "verdict": "skipped", "reason": null}
+{"step": "terminal", "verdict": "passed", "reason": null}
+{"step": "management-off", "verdict": "passed", "reason": null}
+{"step": "owner-reboot", "verdict": "passed", "reason": null}
+{"step": "management-off-measure", "verdict": "passed", "reason": null}
+{"step": "management-return", "verdict": "failed", "reason": "management did not return to the same owner state: {'tls_leaf': 'eb865be94b1c12ce46cc3b5af5991c4eaf7e160234a7300320b6b64c06665f0f', 'login_ok': True, 'differences': ['cron_listed: True -> False', \"databases: ['upd1_owner_test_upd1db'] -> []\", \"domains: [(1, 'upd1-owner.test')] -> []\", 'mailbox_listed: True -> False', \"update_status: 'succeeded' -> None\", \"version: {'version': 'v0.1.0-alpha.82', 'commit': 'e1fdca3898d950a6408bb5161f5b25ac32440d28', 'schema_version': 42, 'agent_commit': 'e1fdca3898d950a6408bb5161f5b25ac32440d28', 'agent_matches': True} -> {'version': None, 'commit': None, 'schema_version': None, 'agent_commit': None, 'agent_matches': None}\"], 'management': {'units': {'celikpanel-panel.service': {'ActiveState': 'active', 'UnitFileState': 'enabled'}, 'celikpanel-agent.service': {'ActiveState': 'active', 'UnitFileState': 'enabled'}}, 'disabled_and_stopped': False, 'enabled_and_active': True}}"}
+{"step": "collect", "verdict": "passed", "reason": null}
+{"step": "verdicts", "verdict": "failed", "reason": "workload interruption outside the expected windows: panel"}
+{"step": "kind-expectation", "verdict": "failed", "reason": null}
+{"outcome": "update-verified", "overall": "failed", "request_id": "512ed17736658ec73fc5d2d8c9b8a67f"}
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-upd4-d13-mr-a", "evidence_retained": true}
+UPD1 cell=upd1-debian13-mgmt-off-reboot dns_mode=external lab=/var/tmp/cp-release-drill-upd4-d13-mr-a driver_exit=1 evidence=/var/tmp/cp-release-drill-upd4-d13-mr-a/evidence/*/upd1

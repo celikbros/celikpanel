@@ -1,0 +1,174 @@
+{
+  "agreement": {
+    "known_sources": [
+      "api",
+      "cli"
+    ],
+    "phase": {
+      "api": "failed",
+      "cli": "failed"
+    },
+    "reasons": [],
+    "sources": [
+      "api",
+      "cli",
+      "shell"
+    ],
+    "verdict": "agree"
+  },
+  "cli": {
+    "boot_id": "cf3f0d4c-e0d1-4d94-9e4c-42f612421b35",
+    "captured_at": "2026-09-30T23:17:36.677984Z",
+    "en": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "The update failed. If it stopped before anything was changed, the server keeps running the version it had; otherwise automatic recovery takes over and this status changes to recovery. Nothing to do on the server now: check this same request again in a few minutes and do not start another update. The panel's update page shows the reason when the panel is reachable.\nRequest: 9f1146eca59630763bd22327cbf32e70\nRecorded at: 2026-09-30T23:11:32Z\nThis is a recorded observation; current service health was not checked.\nRecorded state (for support): phase=failed reason=update_failed proof=none previous_failure=update_failed\n"
+    },
+    "json": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "{\"schema\":\"celikpanel-recovery-status/v1\",\"request_id\":\"9f1146eca59630763bd22327cbf32e70\",\"observation\":\"known\",\"phase\":\"failed\",\"terminal_proof\":\"none\",\"reason\":\"update_failed\",\"observed_at\":\"2026-09-30T23:11:32Z\",\"previous_failure\":\"update_failed\"}\n"
+    },
+    "tr": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "Güncelleme başarısız oldu. Hiçbir şey değişmeden durduysa sunucu önceki sürümünü çalıştırmaya devam eder; aksi hâlde otomatik kurtarma devreye girer ve bu durum kurtarmaya geçer. Şimdi sunucuda yapmanız gereken bir şey yok: birkaç dakika sonra aynı işlemi yeniden sorgulayın ve başka güncelleme başlatmayın. Panel erişilebilir olduğunda güncelleme sayfası nedeni gösterir.\nİşlem: 9f1146eca59630763bd22327cbf32e70\nKayıt zamanı: 2026-09-30T23:11:32Z\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\nKayıtlı durum (destek için): phase=failed reason=update_failed proof=none previous_failure=update_failed\n"
+    }
+  },
+  "guidance_api": {
+    "actionable": true,
+    "keys": [
+      "recovery.phase.failed",
+      "recovery.next.failed",
+      "recovery.reason.update_failed"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "texts": {
+      "en": [
+        "The update failed",
+        "The server owner must inspect the update log using this operation ID. Keep the ID and check the recovery result before retrying an update.",
+        "Update failed"
+      ],
+      "tr": [
+        "Güncelleme başarısız oldu",
+        "Sunucu sahibi bu işlem kimliğiyle güncelleme günlüğünü incelemelidir. Kimliği saklayın ve güncellemeyi yeniden denemeden önce kurtarma sonucunu kontrol edin.",
+        "Güncelleme başarısız oldu"
+      ]
+    }
+  },
+  "guidance_cli": {
+    "actionable": true,
+    "keys": [
+      "recovery.phase.failed",
+      "recovery.next.failed",
+      "recovery.reason.update_failed"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "texts": {
+      "en": [
+        "The update failed",
+        "The server owner must inspect the update log using this operation ID. Keep the ID and check the recovery result before retrying an update.",
+        "Update failed"
+      ],
+      "tr": [
+        "Güncelleme başarısız oldu",
+        "Sunucu sahibi bu işlem kimliğiyle güncelleme günlüğünü incelemelidir. Kimliği saklayın ve güncellemeyi yeniden denemeden önce kurtarma sonucunu kontrol edin.",
+        "Güncelleme başarısız oldu"
+      ]
+    }
+  },
+  "index": 33,
+  "observed": {
+    "observation": "known",
+    "observed_at": "2026-09-30T23:11:32Z",
+    "phase": "failed",
+    "previous_failure": "update_failed",
+    "reason": "update_failed",
+    "request_id": "9f1146eca59630763bd22327cbf32e70",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "none"
+  },
+  "recovery_api": {
+    "body": {
+      "observation": "known",
+      "observed_at": "2026-09-30T23:11:32Z",
+      "panel_state": "ready",
+      "phase": "failed",
+      "previous_failure": "update_failed",
+      "reason": "update_failed",
+      "request_id": "9f1146eca59630763bd22327cbf32e70",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "none"
+    },
+    "http": 200
+  },
+  "t": 1790810255.9566243,
+  "update_card": {
+    "keys": [
+      "recovery.phase.failed",
+      "recovery.next.failed",
+      "panelUpdate.outcome.followsRecovery"
+    ],
+    "missing_keys": [],
+    "observation_error": null,
+    "role": "realstart",
+    "server_message": null,
+    "source": {
+      "observation": {
+        "path": "lib/recoveryObservation.ts",
+        "sha256": "96ca7d7d9bdffb4a2e3da60c8f1e90044ad057fd53e4721ff91090480868cfaa"
+      },
+      "outcome": {
+        "path": "lib/systemUpdateOutcome.ts",
+        "sha256": "375cdc01e87934903e7523972e8af4ae6fff771e5758080c2b9f1b5d077e10e5"
+      },
+      "screen": {
+        "path": "components/RecoveryAccess.tsx",
+        "sha256": "f3d60455af13e728b3eb7e933416651394a3a6c3aeb085507278bd88887b4456"
+      },
+      "typed": {
+        "path": "lib/systemUpdateFailure.ts",
+        "sha256": "df27fa82c8ab99a6864384b315f1336253031e2ee85fbcd230bdf8f6f9a33040"
+      }
+    },
+    "state": "recovery",
+    "texts": {
+      "en": [
+        "The update failed",
+        "The server owner must inspect the update log using this operation ID. Keep the ID and check the recovery result before retrying an update.",
+        "This notice follows the server's recovery record for this update and refreshes by itself. It does not start anything."
+      ],
+      "tr": [
+        "Güncelleme başarısız oldu",
+        "Sunucu sahibi bu işlem kimliğiyle güncelleme günlüğünü incelemelidir. Kimliği saklayın ve güncellemeyi yeniden denemeden önce kurtarma sonucunu kontrol edin.",
+        "Bu bildirim, sunucunun bu güncelleme için tuttuğu kurtarma kaydını izler ve kendiliğinden yenilenir. Hiçbir işlem başlatmaz."
+      ]
+    },
+    "unavailable": null
+  },
+  "update_status": {
+    "body": {
+      "created_at": "2026-09-30T23:11:07.43531622Z",
+      "found": true,
+      "request_id": "9f1146eca59630763bd22327cbf32e70",
+      "status": "failed",
+      "target": {
+        "arch": "amd64",
+        "archive_sha256": "fc34970a51de54501bfc9baeea9909c7bec94029e52e4c8bcf440a3059a639fd",
+        "archive_size": "67066677",
+        "commit": "dd4adede7c24bd1ad92118612fd379beb7874b0b",
+        "os": "linux",
+        "sequence": "82",
+        "version": "v0.1.0-alpha.82"
+      },
+      "updated_at": "2026-09-30T23:11:32.209303195Z"
+    },
+    "http": 200
+  },
+  "utc": "2026-09-30T23:17:35Z"
+}

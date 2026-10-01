@@ -1,0 +1,13 @@
+{
+  "present": true,
+  "receipts": [
+    {
+      "mtime": 1790815773.8777275,
+      "mtime_utc": "2026-10-01T00:49:33.877728Z",
+      "name": "1",
+      "sha256": "ecc746332ffe84d799df5a578f7549e6bc03510a9d840cb5374fd877c619b087",
+      "snapshot": "20261001T004929Z-from-unknown-to-dd4adede7c24bd1ad92118612fd379beb7874b0b-fe2920b052e2bd380d1874d8c44974c0",
+      "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20261001T004929Z-from-unknown-to-dd4adede7c24bd1ad92118612fd379beb7874b0b-fe2920b052e2bd380d1874d8c44974c0\nattempt=1\ntoken_sha256=[REDACTED]\noperation=update\nphase=active\n"
+    }
+  ]
+}

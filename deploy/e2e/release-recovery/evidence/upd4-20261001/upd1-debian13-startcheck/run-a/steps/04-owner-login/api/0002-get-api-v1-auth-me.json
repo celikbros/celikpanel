@@ -1,0 +1,74 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "session identity (usePanelSession.ts)",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/auth/me"
+  },
+  "response": {
+    "elapsed_seconds": 0.003,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Wed, 30 Sep 2026 22:49:42 GMT"
+      ],
+      [
+        "Content-Length",
+        "180"
+      ]
+    ],
+    "json": {
+      "account_type": "account",
+      "effective_role": "admin",
+      "email": "labadmin@example.invalid",
+      "features": {
+        "team_members": false
+      },
+      "impersonating": false,
+      "role": "admin",
+      "username": "labadmin"
+    },
+    "status": 200,
+    "text": null
+  }
+}
