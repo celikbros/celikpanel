@@ -1,0 +1,34 @@
+evidence /var/tmp/cp-release-drill-upd12-d13-oc-a/evidence/debian13/upd1/upd1-debian13-owner-continuation-20261002t143411z/
+## initial-record (updater wrote it): 0 hits (0 in .txt)
+## curl preflight refusal: 0 hits (0 in .txt)
+## no-marker after child failure: 0 hits (0 in .txt)
+## pause_pending journal: 2 hits (2 in .txt)
+   steps/12-owner-continuation-required/recovery-journal-at-pause.txt:37: Oct 02 14:49:21 dns-debian13 release-recovery[49698]: The last admitted recovery attempt did not finish. The next run of the recovery timer records the pause and prints the one-time retry command for this operation.
+   steps/16-collect/journal-product.txt:692: 2026-10-02T14:49:21.419682+00:00 dns-debian13 release-recovery[49698]: The last admitted recovery attempt did not finish. The next run of the recovery timer records the pause and prints the one-time retry command for this operation.
+## renewal restore at pause: 2 hits (2 in .txt)
+   steps/12-owner-continuation-required/recovery-journal-at-pause.txt:35: Oct 02 14:49:21 dns-debian13 release-recovery[49698]: Automatic certificate renewal (Certbot) was returned to its state from before the update while this operation waits; the retry pauses it again before it continues.
+   steps/16-collect/journal-product.txt:690: 2026-10-02T14:49:21.419434+00:00 dns-debian13 release-recovery[49698]: Automatic certificate renewal (Certbot) was returned to its state from before the update while this operation waits; the retry pauses it again before it continues.
+## pause recorded: 2 hits (2 in .txt)
+   steps/12-owner-continuation-required/recovery-journal-at-pause.txt:45: Oct 02 14:49:52 dns-debian13 release-recovery[54032]: Automatic recovery paused after three admitted attempts. No recovery child was started. Preserve evidence and inspect the recovery service journal.
+   steps/16-collect/journal-product.txt:700: 2026-10-02T14:49:52.670917+00:00 dns-debian13 release-recovery[54032]: Automatic recovery paused after three admitted attempts. No recovery child was started. Preserve evidence and inspect the recovery service journal.
+## start check failure: 0 hits (0 in .txt)
+## package-activity refusal (startup reconcile): 6 hits (4 in .txt)
+   steps/15-deferred-mail-watch/journal-panel.txt:374: 2026-10-02T14:50:29.333651+00:00 dns-debian13 panel[56887]: 2026/10/02 14:50:29 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minu
+   steps/15-deferred-mail-watch/journal-panel.txt:375: 2026-10-02T14:50:29.335326+00:00 dns-debian13 panel[56887]: 2026/10/02 14:50:29 milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+## package_manager_active / HOST_MUTATION_BUSY: 0 hits (0 in .txt)
+## startup reconcile success: 2 hits (2 in .txt)
+   steps/15-deferred-mail-watch/journal-panel.txt:373: 2026-10-02T14:50:29.332840+00:00 dns-debian13 panel[56887]: 2026/10/02 14:50:29 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload
+## milter chain/wiring: 9 hits (6 in .txt)
+   steps/15-deferred-mail-watch/journal-panel.txt:8: 2026-10-02T14:34:43.109190+00:00 dns-debian13 panel[5080]: 2026/10/02 14:34:43 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/15-deferred-mail-watch/journal-panel.txt:21: 2026-10-02T14:34:44.232832+00:00 dns-debian13 panel[5148]: 2026/10/02 14:34:44 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/15-deferred-mail-watch/journal-panel.txt:375: 2026-10-02T14:50:29.335326+00:00 dns-debian13 panel[56887]: 2026/10/02 14:50:29 milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+## root CLI states (first seen)
+   2026-10-02T14:43:11Z ('running', 'update_running', None, None, None)
+   2026-10-02T14:44:54Z ('recovering', 'recovery_running', None, 'panel_start_unverified', None)
+   2026-10-02T14:45:47Z ('recovery_required', 'recovery_failed', 'retry_scheduled', None, 'panel_start_unverified')
+   2026-10-02T14:46:22Z ('recovering', 'recovery_running', None, None, 'panel_start_unverified')
+   2026-10-02T14:49:26Z ('recovery_required', 'recovery_failed', 'pause_pending', None, 'panel_start_unverified')
+   2026-10-02T14:49:43Z ('recovery_required', 'recovery_incomplete', 'paused_retry_limit', None, 'panel_start_unverified')
+   2026-10-02T14:50:42Z ('succeeded', 'update_verified', None, None, None)
+## CELIKPANEL_LISTEN mentions
+   steps/16-collect/journal-product.txt 2026-10-02T14:43:49.688961+00:00 dns-debian13 sudo[37186]:     root : PWD=/var/backups/celikpanel/releases/6be145014be6-99d59c540bc292d3892ed9e7 ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/l

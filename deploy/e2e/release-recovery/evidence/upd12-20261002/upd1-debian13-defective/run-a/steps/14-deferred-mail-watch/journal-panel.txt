@@ -1,0 +1,242 @@
+2026-10-02T14:20:38.642038+00:00 dns-debian13 systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-02T14:20:38.671899+00:00 dns-debian13 systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-02T14:20:38.851906+00:00 dns-debian13 panel[5076]: 2026/10/02 14:20:38 Starting CelikPanel Backend...
+2026-10-02T14:20:38.857853+00:00 dns-debian13 panel[5076]: 2026/10/02 14:20:38 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-02T14:20:38.858825+00:00 dns-debian13 panel[5076]: 2026/10/02 14:20:38 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-02T14:20:38.859599+00:00 dns-debian13 panel[5076]: 2026/10/02 14:20:38 Connected to Agent RPC; preparing normal management access
+2026-10-02T14:20:38.881947+00:00 dns-debian13 panel[5076]: 2026/10/02 14:20:38 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-debian13": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-10-02T14:20:38.885118+00:00 dns-debian13 panel[5076]: 2026/10/02 14:20:38 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-10-02T14:20:38.885118+00:00 dns-debian13 panel[5076]: 2026/10/02 14:20:38 Panel ready on :2083 (HTTPS)
+2026-10-02T14:20:39.690145+00:00 dns-debian13 systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-02T14:20:39.701094+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-02T14:20:39.701438+00:00 dns-debian13 systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-02T14:20:39.701626+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Consumed 312ms CPU time, 74.2M memory peak.
+2026-10-02T14:20:39.784255+00:00 dns-debian13 systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-02T14:20:39.812157+00:00 dns-debian13 systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-02T14:20:40.014428+00:00 dns-debian13 panel[5140]: 2026/10/02 14:20:40 Starting CelikPanel Backend...
+2026-10-02T14:20:40.019967+00:00 dns-debian13 panel[5140]: 2026/10/02 14:20:40 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-02T14:20:40.020715+00:00 dns-debian13 panel[5140]: 2026/10/02 14:20:40 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-02T14:20:40.021679+00:00 dns-debian13 panel[5140]: 2026/10/02 14:20:40 Connected to Agent RPC; preparing normal management access
+2026-10-02T14:20:40.037257+00:00 dns-debian13 panel[5140]: 2026/10/02 14:20:40 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-debian13": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-10-02T14:20:40.039569+00:00 dns-debian13 panel[5140]: 2026/10/02 14:20:40 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-10-02T14:20:40.041440+00:00 dns-debian13 panel[5140]: 2026/10/02 14:20:40 Panel ready on :2083 (HTTPS)
+2026-10-02T14:20:52.757736+00:00 dns-debian13 panel[5140]: 2026/10/02 14:20:52 http: TLS handshake error from 127.0.0.1:55114: EOF
+2026-10-02T14:20:52.971525+00:00 dns-debian13 panel[5140]: 2026/10/02 14:20:52 http: TLS handshake error from 127.0.0.1:55134: EOF
+2026-10-02T14:20:53.151638+00:00 dns-debian13 panel[5140]: 2026/10/02 14:20:53 http: TLS handshake error from 127.0.0.1:55148: EOF
+2026-10-02T14:20:53.161954+00:00 dns-debian13 panel[5140]: 2026/10/02 14:20:53 http: TLS handshake error from 127.0.0.1:55172: EOF
+2026-10-02T14:20:53.171738+00:00 dns-debian13 panel[5140]: 2026/10/02 14:20:53 http: TLS handshake error from 127.0.0.1:55188: EOF
+2026-10-02T14:20:53.180659+00:00 dns-debian13 panel[5140]: 2026/10/02 14:20:53 http: TLS handshake error from 127.0.0.1:55204: EOF
+2026-10-02T14:20:53.197091+00:00 dns-debian13 panel[5140]: 2026/10/02 14:20:53 http: TLS handshake error from 127.0.0.1:55222: EOF
+2026-10-02T14:20:53.206159+00:00 dns-debian13 panel[5140]: 2026/10/02 14:20:53 http: TLS handshake error from 127.0.0.1:55240: EOF
+2026-10-02T14:20:53.216768+00:00 dns-debian13 panel[5140]: 2026/10/02 14:20:53 http: TLS handshake error from 127.0.0.1:55264: EOF
+2026-10-02T14:20:53.227101+00:00 dns-debian13 panel[5140]: 2026/10/02 14:20:53 http: TLS handshake error from 127.0.0.1:55286: EOF
+2026-10-02T14:20:53.389640+00:00 dns-debian13 panel[5140]: 2026/10/02 14:20:53 http: TLS handshake error from 127.0.0.1:55310: EOF
+2026-10-02T14:20:53.409443+00:00 dns-debian13 panel[5140]: 2026/10/02 14:20:53 http: TLS handshake error from 127.0.0.1:55314: EOF
+2026-10-02T14:20:54.041991+00:00 dns-debian13 panel[5140]: 2026/10/02 14:20:54 http: TLS handshake error from 127.0.0.1:55342: EOF
+2026-10-02T14:20:54.601974+00:00 dns-debian13 panel[5140]: 2026/10/02 14:20:54 http: TLS handshake error from 127.0.0.1:55368: EOF
+2026-10-02T14:20:55.098952+00:00 dns-debian13 panel[5140]: 2026/10/02 14:20:55 http: TLS handshake error from 127.0.0.1:55378: EOF
+2026-10-02T14:21:00.110278+00:00 dns-debian13 panel[5140]: 2026/10/02 14:21:00 http: TLS handshake error from 127.0.0.1:55088: EOF
+2026-10-02T14:21:05.122106+00:00 dns-debian13 panel[5140]: 2026/10/02 14:21:05 http: TLS handshake error from 127.0.0.1:55110: EOF
+2026-10-02T14:21:10.132509+00:00 dns-debian13 panel[5140]: 2026/10/02 14:21:10 http: TLS handshake error from 127.0.0.1:45064: EOF
+2026-10-02T14:21:15.148327+00:00 dns-debian13 panel[5140]: 2026/10/02 14:21:15 http: TLS handshake error from 127.0.0.1:45082: EOF
+2026-10-02T14:21:20.159634+00:00 dns-debian13 panel[5140]: 2026/10/02 14:21:20 http: TLS handshake error from 127.0.0.1:53540: EOF
+2026-10-02T14:21:25.396916+00:00 dns-debian13 panel[5140]: 2026/10/02 14:21:25 http: TLS handshake error from 127.0.0.1:53572: EOF
+2026-10-02T14:21:30.407552+00:00 dns-debian13 panel[5140]: 2026/10/02 14:21:30 http: TLS handshake error from 127.0.0.1:47546: EOF
+2026-10-02T14:21:35.418565+00:00 dns-debian13 panel[5140]: 2026/10/02 14:21:35 http: TLS handshake error from 127.0.0.1:47564: EOF
+2026-10-02T14:21:40.430180+00:00 dns-debian13 panel[5140]: 2026/10/02 14:21:40 http: TLS handshake error from 127.0.0.1:59000: EOF
+2026-10-02T14:21:45.442837+00:00 dns-debian13 panel[5140]: 2026/10/02 14:21:45 http: TLS handshake error from 127.0.0.1:59016: EOF
+2026-10-02T14:21:50.455144+00:00 dns-debian13 panel[5140]: 2026/10/02 14:21:50 http: TLS handshake error from 127.0.0.1:57078: EOF
+2026-10-02T14:21:55.699551+00:00 dns-debian13 panel[5140]: 2026/10/02 14:21:55 http: TLS handshake error from 127.0.0.1:57108: EOF
+2026-10-02T14:22:00.714351+00:00 dns-debian13 panel[5140]: 2026/10/02 14:22:00 http: TLS handshake error from 127.0.0.1:58986: EOF
+2026-10-02T14:22:05.733132+00:00 dns-debian13 panel[5140]: 2026/10/02 14:22:05 http: TLS handshake error from 127.0.0.1:59010: EOF
+2026-10-02T14:22:10.747014+00:00 dns-debian13 panel[5140]: 2026/10/02 14:22:10 http: TLS handshake error from 127.0.0.1:50460: EOF
+2026-10-02T14:22:15.762323+00:00 dns-debian13 panel[5140]: 2026/10/02 14:22:15 http: TLS handshake error from 127.0.0.1:50486: EOF
+2026-10-02T14:22:20.775976+00:00 dns-debian13 panel[5140]: 2026/10/02 14:22:20 http: TLS handshake error from 127.0.0.1:40032: EOF
+2026-10-02T14:22:26.014778+00:00 dns-debian13 panel[5140]: 2026/10/02 14:22:26 http: TLS handshake error from 127.0.0.1:40042: EOF
+2026-10-02T14:22:31.028755+00:00 dns-debian13 panel[5140]: 2026/10/02 14:22:31 http: TLS handshake error from 127.0.0.1:45882: EOF
+2026-10-02T14:22:36.043858+00:00 dns-debian13 panel[5140]: 2026/10/02 14:22:36 http: TLS handshake error from 127.0.0.1:45898: EOF
+2026-10-02T14:22:41.057496+00:00 dns-debian13 panel[5140]: 2026/10/02 14:22:41 http: TLS handshake error from 127.0.0.1:59258: EOF
+2026-10-02T14:22:46.071046+00:00 dns-debian13 panel[5140]: 2026/10/02 14:22:46 http: TLS handshake error from 127.0.0.1:59276: EOF
+2026-10-02T14:22:51.085368+00:00 dns-debian13 panel[5140]: 2026/10/02 14:22:51 http: TLS handshake error from 127.0.0.1:47482: EOF
+2026-10-02T14:22:56.320556+00:00 dns-debian13 panel[5140]: 2026/10/02 14:22:56 http: TLS handshake error from 127.0.0.1:47502: EOF
+2026-10-02T14:23:01.334726+00:00 dns-debian13 panel[5140]: 2026/10/02 14:23:01 http: TLS handshake error from 127.0.0.1:41624: EOF
+2026-10-02T14:23:06.349621+00:00 dns-debian13 panel[5140]: 2026/10/02 14:23:06 http: TLS handshake error from 127.0.0.1:41642: EOF
+2026-10-02T14:23:11.366950+00:00 dns-debian13 panel[5140]: 2026/10/02 14:23:11 http: TLS handshake error from 127.0.0.1:35798: EOF
+2026-10-02T14:23:16.380592+00:00 dns-debian13 panel[5140]: 2026/10/02 14:23:16 http: TLS handshake error from 127.0.0.1:35826: EOF
+2026-10-02T14:23:21.397816+00:00 dns-debian13 panel[5140]: 2026/10/02 14:23:21 http: TLS handshake error from 127.0.0.1:39180: EOF
+2026-10-02T14:23:26.627169+00:00 dns-debian13 panel[5140]: 2026/10/02 14:23:26 http: TLS handshake error from 127.0.0.1:59310: EOF
+2026-10-02T14:23:31.641495+00:00 dns-debian13 panel[5140]: 2026/10/02 14:23:31 http: TLS handshake error from 127.0.0.1:59338: EOF
+2026-10-02T14:23:36.662930+00:00 dns-debian13 panel[5140]: 2026/10/02 14:23:36 http: TLS handshake error from 127.0.0.1:50682: EOF
+2026-10-02T14:23:41.681928+00:00 dns-debian13 panel[5140]: 2026/10/02 14:23:41 http: TLS handshake error from 127.0.0.1:50698: EOF
+2026-10-02T14:23:46.696828+00:00 dns-debian13 panel[5140]: 2026/10/02 14:23:46 http: TLS handshake error from 127.0.0.1:39022: EOF
+2026-10-02T14:23:51.711741+00:00 dns-debian13 panel[5140]: 2026/10/02 14:23:51 http: TLS handshake error from 127.0.0.1:39030: EOF
+2026-10-02T14:23:56.939202+00:00 dns-debian13 panel[5140]: 2026/10/02 14:23:56 http: TLS handshake error from 127.0.0.1:46506: EOF
+2026-10-02T14:24:01.953758+00:00 dns-debian13 panel[5140]: 2026/10/02 14:24:01 http: TLS handshake error from 127.0.0.1:46516: EOF
+2026-10-02T14:24:06.967974+00:00 dns-debian13 panel[5140]: 2026/10/02 14:24:06 http: TLS handshake error from 127.0.0.1:50628: EOF
+2026-10-02T14:24:11.983200+00:00 dns-debian13 panel[5140]: 2026/10/02 14:24:11 http: TLS handshake error from 127.0.0.1:50638: EOF
+2026-10-02T14:24:16.997659+00:00 dns-debian13 panel[5140]: 2026/10/02 14:24:16 http: TLS handshake error from 127.0.0.1:57022: EOF
+2026-10-02T14:24:22.016083+00:00 dns-debian13 panel[5140]: 2026/10/02 14:24:22 http: TLS handshake error from 127.0.0.1:57038: EOF
+2026-10-02T14:24:30.094416+00:00 dns-debian13 panel[5140]: 2026/10/02 14:24:30 http: TLS handshake error from 127.0.0.1:42360: EOF
+2026-10-02T14:24:35.108944+00:00 dns-debian13 panel[5140]: 2026/10/02 14:24:35 http: TLS handshake error from 127.0.0.1:42368: EOF
+2026-10-02T14:24:40.121699+00:00 dns-debian13 panel[5140]: 2026/10/02 14:24:40 http: TLS handshake error from 127.0.0.1:47060: EOF
+2026-10-02T14:24:45.137408+00:00 dns-debian13 panel[5140]: 2026/10/02 14:24:45 http: TLS handshake error from 127.0.0.1:47072: EOF
+2026-10-02T14:24:50.153243+00:00 dns-debian13 panel[5140]: 2026/10/02 14:24:50 http: TLS handshake error from 127.0.0.1:48968: EOF
+2026-10-02T14:24:55.167900+00:00 dns-debian13 panel[5140]: 2026/10/02 14:24:55 http: TLS handshake error from 127.0.0.1:48992: EOF
+2026-10-02T14:25:00.407253+00:00 dns-debian13 panel[5140]: 2026/10/02 14:25:00 http: TLS handshake error from 127.0.0.1:59202: EOF
+2026-10-02T14:25:05.423205+00:00 dns-debian13 panel[5140]: 2026/10/02 14:25:05 http: TLS handshake error from 127.0.0.1:59224: EOF
+2026-10-02T14:25:10.441238+00:00 dns-debian13 panel[5140]: 2026/10/02 14:25:10 http: TLS handshake error from 127.0.0.1:45772: EOF
+2026-10-02T14:25:15.454941+00:00 dns-debian13 panel[5140]: 2026/10/02 14:25:15 http: TLS handshake error from 127.0.0.1:45802: EOF
+2026-10-02T14:25:20.468902+00:00 dns-debian13 panel[5140]: 2026/10/02 14:25:20 http: TLS handshake error from 127.0.0.1:52750: EOF
+2026-10-02T14:25:25.483275+00:00 dns-debian13 panel[5140]: 2026/10/02 14:25:25 http: TLS handshake error from 127.0.0.1:52766: EOF
+2026-10-02T14:25:30.715219+00:00 dns-debian13 panel[5140]: 2026/10/02 14:25:30 http: TLS handshake error from 127.0.0.1:55108: EOF
+2026-10-02T14:25:35.729629+00:00 dns-debian13 panel[5140]: 2026/10/02 14:25:35 http: TLS handshake error from 127.0.0.1:55130: EOF
+2026-10-02T14:25:40.746639+00:00 dns-debian13 panel[5140]: 2026/10/02 14:25:40 http: TLS handshake error from 127.0.0.1:40404: EOF
+2026-10-02T14:25:45.761958+00:00 dns-debian13 panel[5140]: 2026/10/02 14:25:45 http: TLS handshake error from 127.0.0.1:40412: EOF
+2026-10-02T14:25:50.776419+00:00 dns-debian13 panel[5140]: 2026/10/02 14:25:50 http: TLS handshake error from 127.0.0.1:41794: EOF
+2026-10-02T14:25:55.790285+00:00 dns-debian13 panel[5140]: 2026/10/02 14:25:55 http: TLS handshake error from 127.0.0.1:41810: EOF
+2026-10-02T14:26:01.031867+00:00 dns-debian13 panel[5140]: 2026/10/02 14:26:01 http: TLS handshake error from 127.0.0.1:36598: EOF
+2026-10-02T14:26:06.047187+00:00 dns-debian13 panel[5140]: 2026/10/02 14:26:06 http: TLS handshake error from 127.0.0.1:36602: EOF
+2026-10-02T14:26:11.064484+00:00 dns-debian13 panel[5140]: 2026/10/02 14:26:11 http: TLS handshake error from 127.0.0.1:35894: EOF
+2026-10-02T14:26:16.079534+00:00 dns-debian13 panel[5140]: 2026/10/02 14:26:16 http: TLS handshake error from 127.0.0.1:35910: EOF
+2026-10-02T14:26:21.095123+00:00 dns-debian13 panel[5140]: 2026/10/02 14:26:21 http: TLS handshake error from 127.0.0.1:34314: EOF
+2026-10-02T14:26:26.110783+00:00 dns-debian13 panel[5140]: 2026/10/02 14:26:26 http: TLS handshake error from 127.0.0.1:34330: EOF
+2026-10-02T14:26:31.352591+00:00 dns-debian13 panel[5140]: 2026/10/02 14:26:31 http: TLS handshake error from 127.0.0.1:45926: EOF
+2026-10-02T14:26:36.366505+00:00 dns-debian13 panel[5140]: 2026/10/02 14:26:36 http: TLS handshake error from 127.0.0.1:45954: EOF
+2026-10-02T14:26:41.380595+00:00 dns-debian13 panel[5140]: 2026/10/02 14:26:41 http: TLS handshake error from 127.0.0.1:45374: EOF
+2026-10-02T14:26:46.394734+00:00 dns-debian13 panel[5140]: 2026/10/02 14:26:46 http: TLS handshake error from 127.0.0.1:45380: EOF
+2026-10-02T14:26:51.409812+00:00 dns-debian13 panel[5140]: 2026/10/02 14:26:51 http: TLS handshake error from 127.0.0.1:60728: EOF
+2026-10-02T14:26:56.423943+00:00 dns-debian13 panel[5140]: 2026/10/02 14:26:56 http: TLS handshake error from 127.0.0.1:60756: EOF
+2026-10-02T14:27:01.670247+00:00 dns-debian13 panel[5140]: 2026/10/02 14:27:01 http: TLS handshake error from 127.0.0.1:40466: EOF
+2026-10-02T14:27:02.581033+00:00 dns-debian13 panel[5140]: 2026/10/02 14:27:02 http: TLS handshake error from 127.0.0.1:40476: EOF
+2026-10-02T14:27:03.674201+00:00 dns-debian13 panel[5140]: 2026/10/02 14:27:03 http: TLS handshake error from 127.0.0.1:40482: EOF
+2026-10-02T14:27:03.701053+00:00 dns-debian13 panel[5140]: 2026/10/02 14:27:03 http: TLS handshake error from 127.0.0.1:40498: EOF
+2026-10-02T14:27:03.713343+00:00 dns-debian13 panel[5140]: 2026/10/02 14:27:03 http: TLS handshake error from 127.0.0.1:40516: EOF
+2026-10-02T14:27:03.725565+00:00 dns-debian13 panel[5140]: 2026/10/02 14:27:03 http: TLS handshake error from 127.0.0.1:40532: EOF
+2026-10-02T14:27:03.763169+00:00 dns-debian13 panel[5140]: 2026/10/02 14:27:03 http: TLS handshake error from 127.0.0.1:40548: EOF
+2026-10-02T14:27:03.891567+00:00 dns-debian13 panel[5140]: 2026/10/02 14:27:03 http: TLS handshake error from 127.0.0.1:40564: EOF
+2026-10-02T14:27:03.904203+00:00 dns-debian13 panel[5140]: 2026/10/02 14:27:03 http: TLS handshake error from 127.0.0.1:40586: EOF
+2026-10-02T14:27:03.929298+00:00 dns-debian13 panel[5140]: 2026/10/02 14:27:03 http: TLS handshake error from 127.0.0.1:40612: EOF
+2026-10-02T14:27:03.944046+00:00 dns-debian13 panel[5140]: 2026/10/02 14:27:03 http: TLS handshake error from 127.0.0.1:40616: EOF
+2026-10-02T14:27:08.999052+00:00 dns-debian13 panel[5140]: 2026/10/02 14:27:08 http: TLS handshake error from 127.0.0.1:33648: EOF
+2026-10-02T14:27:09.959374+00:00 dns-debian13 panel[5140]: 2026/10/02 14:27:09 http: TLS handshake error from 127.0.0.1:33684: EOF
+2026-10-02T14:27:14.932847+00:00 dns-debian13 panel[5140]: 2026/10/02 14:27:14 http: TLS handshake error from 127.0.0.1:33712: EOF
+2026-10-02T14:27:19.931604+00:00 dns-debian13 panel[5140]: 2026/10/02 14:27:19 http: TLS handshake error from 127.0.0.1:59424: EOF
+2026-10-02T14:27:24.931626+00:00 dns-debian13 panel[5140]: 2026/10/02 14:27:24 http: TLS handshake error from 127.0.0.1:59446: EOF
+2026-10-02T14:27:29.927741+00:00 dns-debian13 panel[5140]: 2026/10/02 14:27:29 http: TLS handshake error from 127.0.0.1:55852: EOF
+2026-10-02T14:27:34.931486+00:00 dns-debian13 panel[5140]: 2026/10/02 14:27:34 http: TLS handshake error from 127.0.0.1:55878: EOF
+2026-10-02T14:27:39.944164+00:00 dns-debian13 panel[5140]: 2026/10/02 14:27:39 http: TLS handshake error from 127.0.0.1:54412: EOF
+2026-10-02T14:27:44.931900+00:00 dns-debian13 panel[5140]: 2026/10/02 14:27:44 http: TLS handshake error from 127.0.0.1:54424: EOF
+2026-10-02T14:27:49.945174+00:00 dns-debian13 panel[5140]: 2026/10/02 14:27:49 http: TLS handshake error from 127.0.0.1:50738: EOF
+2026-10-02T14:27:54.957446+00:00 dns-debian13 panel[5140]: 2026/10/02 14:27:54 http: TLS handshake error from 127.0.0.1:50772: EOF
+2026-10-02T14:27:59.943330+00:00 dns-debian13 panel[5140]: 2026/10/02 14:27:59 http: TLS handshake error from 127.0.0.1:50952: EOF
+2026-10-02T14:28:04.947507+00:00 dns-debian13 panel[5140]: 2026/10/02 14:28:04 http: TLS handshake error from 127.0.0.1:50990: EOF
+2026-10-02T14:28:09.931280+00:00 dns-debian13 panel[5140]: 2026/10/02 14:28:09 http: TLS handshake error from 127.0.0.1:40900: EOF
+2026-10-02T14:28:14.945206+00:00 dns-debian13 panel[5140]: 2026/10/02 14:28:14 http: TLS handshake error from 127.0.0.1:40932: EOF
+2026-10-02T14:28:19.943314+00:00 dns-debian13 panel[5140]: 2026/10/02 14:28:19 http: TLS handshake error from 127.0.0.1:38864: EOF
+2026-10-02T14:28:24.931951+00:00 dns-debian13 panel[5140]: 2026/10/02 14:28:24 http: TLS handshake error from 127.0.0.1:38882: EOF
+2026-10-02T14:28:29.931816+00:00 dns-debian13 panel[5140]: 2026/10/02 14:28:29 http: TLS handshake error from 127.0.0.1:57328: EOF
+2026-10-02T14:28:34.936539+00:00 dns-debian13 panel[5140]: 2026/10/02 14:28:34 http: TLS handshake error from 127.0.0.1:57356: EOF
+2026-10-02T14:28:39.936252+00:00 dns-debian13 panel[5140]: 2026/10/02 14:28:39 http: TLS handshake error from 127.0.0.1:34494: EOF
+2026-10-02T14:28:44.931730+00:00 dns-debian13 panel[5140]: 2026/10/02 14:28:44 http: TLS handshake error from 127.0.0.1:34526: EOF
+2026-10-02T14:28:49.935594+00:00 dns-debian13 panel[5140]: 2026/10/02 14:28:49 http: TLS handshake error from 127.0.0.1:39354: EOF
+2026-10-02T14:28:54.937142+00:00 dns-debian13 panel[5140]: 2026/10/02 14:28:54 http: TLS handshake error from 127.0.0.1:39372: EOF
+2026-10-02T14:28:59.935203+00:00 dns-debian13 panel[5140]: 2026/10/02 14:28:59 http: TLS handshake error from 127.0.0.1:34002: EOF
+2026-10-02T14:29:04.936489+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:04 http: TLS handshake error from 127.0.0.1:34030: EOF
+2026-10-02T14:29:09.935684+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:09 http: TLS handshake error from 127.0.0.1:45972: EOF
+2026-10-02T14:29:13.482653+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:13 http: TLS handshake error from 127.0.0.1:46006: EOF
+2026-10-02T14:29:14.024408+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:14 http: TLS handshake error from 127.0.0.1:46034: EOF
+2026-10-02T14:29:14.044398+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:14 http: TLS handshake error from 127.0.0.1:46048: EOF
+2026-10-02T14:29:14.152003+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:14 http: TLS handshake error from 127.0.0.1:46078: EOF
+2026-10-02T14:29:14.152356+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:14 http: TLS handshake error from 127.0.0.1:46090: EOF
+2026-10-02T14:29:14.152492+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:14 http: TLS handshake error from 127.0.0.1:46104: EOF
+2026-10-02T14:29:14.184841+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:14 http: TLS handshake error from 127.0.0.1:46112: EOF
+2026-10-02T14:29:14.958650+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:14 http: TLS handshake error from 127.0.0.1:46132: EOF
+2026-10-02T14:29:16.004962+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:16 http: TLS handshake error from 127.0.0.1:46154: EOF
+2026-10-02T14:29:16.004962+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:16 http: TLS handshake error from 127.0.0.1:46166: EOF
+2026-10-02T14:29:16.006534+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:16 http: TLS handshake error from 127.0.0.1:46172: EOF
+2026-10-02T14:29:16.035305+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:16 http: TLS handshake error from 127.0.0.1:46176: EOF
+2026-10-02T14:29:17.858121+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:17 http: TLS handshake error from 127.0.0.1:32966: EOF
+2026-10-02T14:29:17.858121+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:17 http: TLS handshake error from 127.0.0.1:32958: EOF
+2026-10-02T14:29:17.858121+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:17 http: TLS handshake error from 127.0.0.1:32946: EOF
+2026-10-02T14:29:17.907422+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:17 http: TLS handshake error from 127.0.0.1:32974: EOF
+2026-10-02T14:29:19.942485+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:19 http: TLS handshake error from 127.0.0.1:32996: EOF
+2026-10-02T14:29:20.630836+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:20 http: TLS handshake error from 127.0.0.1:33020: EOF
+2026-10-02T14:29:20.631194+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:20 http: TLS handshake error from 127.0.0.1:33034: EOF
+2026-10-02T14:29:20.631475+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:20 http: TLS handshake error from 127.0.0.1:33016: EOF
+2026-10-02T14:29:20.658543+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:20 http: TLS handshake error from 127.0.0.1:33058: EOF
+2026-10-02T14:29:24.762480+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:24 http: TLS handshake error from 127.0.0.1:33080: EOF
+2026-10-02T14:29:24.763550+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:24 http: TLS handshake error from 127.0.0.1:33078: EOF
+2026-10-02T14:29:24.763550+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:24 http: TLS handshake error from 127.0.0.1:33092: EOF
+2026-10-02T14:29:24.785781+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:24 http: TLS handshake error from 127.0.0.1:33110: EOF
+2026-10-02T14:29:24.995793+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:24 http: TLS handshake error from 127.0.0.1:33116: EOF
+2026-10-02T14:29:29.952730+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:29 http: TLS handshake error from 127.0.0.1:48132: EOF
+2026-10-02T14:29:31.262315+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:31 http: TLS handshake error from 127.0.0.1:48158: EOF
+2026-10-02T14:29:31.262767+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:31 http: TLS handshake error from 127.0.0.1:48172: EOF
+2026-10-02T14:29:31.262911+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:31 http: TLS handshake error from 127.0.0.1:48164: EOF
+2026-10-02T14:29:31.294567+00:00 dns-debian13 panel[5140]: 2026/10/02 14:29:31 http: TLS handshake error from 127.0.0.1:48180: EOF
+2026-10-02T14:29:31.686259+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Sent signal SIGSTOP to main process 5140 (panel) on client request.
+2026-10-02T14:29:32.394664+00:00 dns-debian13 systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-02T14:29:32.404292+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Sent signal SIGKILL to main process 5140 (panel) on client request.
+2026-10-02T14:29:32.404392+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Killed unit cgroup with SIGKILL on client request.
+2026-10-02T14:29:32.407780+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-02T14:29:32.408016+00:00 dns-debian13 systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-02T14:29:32.408166+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Consumed 2.236s CPU time, 144.8M memory peak.
+-- Boot a0876072b68d417da84248b02c6a4c75 --
+2026-10-02T14:30:15.770283+00:00 dns-debian13 systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-02T14:30:15.876285+00:00 dns-debian13 release-transaction-start-guard[775]: celikpanel release start guard: held: a CelikPanel update or recovery is in progress; the unit starts when it finishes
+2026-10-02T14:30:15.878508+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Skipped due to 'exec-condition'.
+2026-10-02T14:30:15.882078+00:00 dns-debian13 systemd[1]: Condition check resulted in celikpanel-panel.service - CelikPanel web panel being skipped.
+2026-10-02T14:31:02.159685+00:00 dns-debian13 systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-02T14:31:02.226631+00:00 dns-debian13 systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-02T14:31:02.248754+00:00 dns-debian13 systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-02T14:31:02.250723+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-02T14:31:02.250962+00:00 dns-debian13 systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-02T14:31:02.307380+00:00 dns-debian13 systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-02T14:31:02.366007+00:00 dns-debian13 systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-02T14:31:02.546523+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:02 Starting CelikPanel Backend...
+2026-10-02T14:31:02.579870+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:02 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-02T14:31:02.580496+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:02 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-02T14:31:02.581063+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:02 Connected to Agent RPC; preparing normal management access
+2026-10-02T14:31:02.674065+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:02 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload
+2026-10-02T14:31:02.675601+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:02 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+2026-10-02T14:31:02.678250+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:02 milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+2026-10-02T14:31:02.680205+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:02 Panel ready on :2083 (HTTPS)
+2026-10-02T14:31:03.128338+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:03 http: TLS handshake error from 127.0.0.1:52456: EOF
+2026-10-02T14:31:07.489498+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:07 http: TLS handshake error from 127.0.0.1:52480: EOF
+2026-10-02T14:31:07.489498+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:07 http: TLS handshake error from 127.0.0.1:52490: EOF
+2026-10-02T14:31:07.489498+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:07 http: TLS handshake error from 127.0.0.1:52502: EOF
+2026-10-02T14:31:07.532472+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:07 http: TLS handshake error from 127.0.0.1:52520: EOF
+2026-10-02T14:31:08.140090+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:08 http: TLS handshake error from 127.0.0.1:52536: EOF
+2026-10-02T14:31:09.345002+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:09 http: TLS handshake error from 127.0.0.1:52584: EOF
+2026-10-02T14:31:09.345531+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:09 http: TLS handshake error from 127.0.0.1:52576: EOF
+2026-10-02T14:31:09.345723+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:09 http: TLS handshake error from 127.0.0.1:52600: EOF
+2026-10-02T14:31:09.377841+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:09 http: TLS handshake error from 127.0.0.1:52608: EOF
+2026-10-02T14:31:13.136376+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:13 http: TLS handshake error from 127.0.0.1:37640: EOF
+2026-10-02T14:31:15.142065+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:15 http: TLS handshake error from 127.0.0.1:37656: EOF
+2026-10-02T14:31:15.416027+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:15 http: TLS handshake error from 127.0.0.1:37660: EOF
+2026-10-02T14:31:15.723805+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:15 http: TLS handshake error from 127.0.0.1:37684: EOF
+2026-10-02T14:31:15.740931+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:15 http: TLS handshake error from 127.0.0.1:37698: EOF
+2026-10-02T14:31:15.759679+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:15 http: TLS handshake error from 127.0.0.1:37714: EOF
+2026-10-02T14:31:16.046410+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:16 http: TLS handshake error from 127.0.0.1:37736: EOF
+2026-10-02T14:31:16.079931+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:16 http: TLS handshake error from 127.0.0.1:37766: EOF
+2026-10-02T14:31:16.095865+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:16 http: TLS handshake error from 127.0.0.1:37784: EOF
+2026-10-02T14:31:16.111622+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:16 http: TLS handshake error from 127.0.0.1:37806: EOF
+2026-10-02T14:31:16.126650+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:16 http: TLS handshake error from 127.0.0.1:37812: EOF
+2026-10-02T14:31:16.147612+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:16 http: TLS handshake error from 127.0.0.1:37834: EOF
+2026-10-02T14:31:18.129348+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:18 http: TLS handshake error from 127.0.0.1:37844: EOF
+2026-10-02T14:31:23.121808+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:23 http: TLS handshake error from 127.0.0.1:37294: EOF
+2026-10-02T14:31:28.131074+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:28 http: TLS handshake error from 127.0.0.1:37316: EOF
+2026-10-02T14:31:33.131062+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:33 http: TLS handshake error from 127.0.0.1:52230: EOF
+2026-10-02T14:31:38.130535+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:38 http: TLS handshake error from 127.0.0.1:52250: EOF
+2026-10-02T14:31:41.629728+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:41 startup mail work, attempt 1 of 20: mail certificate publication completed (mail SNI from 0 active secure-mail certificates); mail filter wiring completed (milters="inet:localhost:11332" maps=hash)
+2026-10-02T14:31:43.128361+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:43 http: TLS handshake error from 127.0.0.1:59538: EOF
+2026-10-02T14:31:48.136172+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:48 http: TLS handshake error from 127.0.0.1:59558: EOF
+2026-10-02T14:31:53.130704+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:53 http: TLS handshake error from 127.0.0.1:60518: EOF
+2026-10-02T14:31:58.128716+00:00 dns-debian13 panel[4749]: 2026/10/02 14:31:58 http: TLS handshake error from 127.0.0.1:60558: EOF
+2026-10-02T14:32:03.127638+00:00 dns-debian13 panel[4749]: 2026/10/02 14:32:03 http: TLS handshake error from 127.0.0.1:43484: EOF
+2026-10-02T14:32:08.142512+00:00 dns-debian13 panel[4749]: 2026/10/02 14:32:08 http: TLS handshake error from 127.0.0.1:43520: EOF
+2026-10-02T14:32:13.140940+00:00 dns-debian13 panel[4749]: 2026/10/02 14:32:13 http: TLS handshake error from 127.0.0.1:35720: EOF
+2026-10-02T14:32:18.132771+00:00 dns-debian13 panel[4749]: 2026/10/02 14:32:18 http: TLS handshake error from 127.0.0.1:35732: EOF
+2026-10-02T14:32:23.136701+00:00 dns-debian13 panel[4749]: 2026/10/02 14:32:23 http: TLS handshake error from 127.0.0.1:48910: EOF
+2026-10-02T14:32:28.127006+00:00 dns-debian13 panel[4749]: 2026/10/02 14:32:28 http: TLS handshake error from 127.0.0.1:48932: EOF
+2026-10-02T14:32:33.131233+00:00 dns-debian13 panel[4749]: 2026/10/02 14:32:33 http: TLS handshake error from 127.0.0.1:43296: EOF

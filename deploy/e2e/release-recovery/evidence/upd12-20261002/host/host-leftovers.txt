@@ -1,0 +1,16 @@
+2026-10-02T14:54:24Z
+463M	/var/tmp/cp-upd12-run
+921M	/var/tmp/cp-release-drill-upd12-d13-def-a
+921M	/var/tmp/cp-release-drill-upd12-d13-good-a
+921M	/var/tmp/cp-release-drill-upd12-d13-oc-a
+800M	/var/tmp/cp-upd1-build/20261002t140055z
+778M	/var/tmp/cp-pair-accept/dist/1384690a365c9926157ef799f18b7597b66c717c-acceptance-license
+778M	/var/tmp/cp-pair-accept/dist/44b14a1bb99a717a058a059555c8c4feb7c4ad29-acceptance-license
+778M	/var/tmp/cp-pair-accept/dist/59bc22b9fe432215c5ca6379b67bcfcea41b8048-acceptance-license
+778M	/var/tmp/cp-pair-accept/dist/6be145014be68a875eb178c39597d9c6e1beae6c-acceptance-license
+778M	/var/tmp/cp-pair-accept/dist/bc7799284aa10841f2155ede002368d56dac1aef-acceptance-license
+overlay disks still present in upd12 labs:
+none
+no dry-run lab
+4363b888278fa3d86af32af8199c5bc0  -
+966061a2ed87a282f23603f7f1f564394d6b4dc2

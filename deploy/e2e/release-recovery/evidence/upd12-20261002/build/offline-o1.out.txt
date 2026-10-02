@@ -1,0 +1,7 @@
+test_owner_update_trial rc=0 OK
+test_recovery_candidate_archive rc=0 OK
+test_lab rc=0 OK
+test_current_worker_baseline rc=0 OK
+test_worker_fixture_origin rc=0 OK
+test_bound_worker_reboot rc=0 OK
+test_guest_bound_worker rc=0 OK
