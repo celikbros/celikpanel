@@ -64,6 +64,19 @@ longer counted. A real package task still is: setup or the update then stops
 with the message that the server's package manager is busy and to wait for it
 to finish.
 
+**Mail settings are re-applied after an update finishes.** If the new Panel
+starts while the update still holds the server, it cannot re-publish the mail
+certificates to the mail services or re-connect the mail filters at that moment.
+It now retries by itself every 30 seconds, for up to 10 minutes after it starts,
+and acts as soon as the server is free; it writes a line to the Panel's log
+(`sudo journalctl -u celikpanel-panel`) when an attempt does something. Usually
+nothing visible depends on this. It matters if a certificate activation was
+interrupted by the update, or if mail delivery was being refused until the mail
+filters were re-connected. If the server stays busy for the whole 10 minutes,
+nothing is changed and mail keeps running: once the other task has finished,
+restart the Panel with `sudo systemctl restart celikpanel-panel`, or use "Retry
+activation" on the domain's SSL page.
+
 **The customer archive carries no test material.** The release archive no longer
 contains the acceptance harness, test scripts or retained evidence, and the
 signing step refuses an archive that does.
@@ -103,8 +116,11 @@ These are known and deliberate. They are not hidden defects.
 - **No panel removal path** is offered and no claim is made about removing
   CelikPanel. Only "management disabled" was measured.
 - **Evidence scope:** disposable virtual machines on one laptop host, a test
-  signing key, a loopback release origin and a test-only license; few repetitions
-  per case; no power-loss test; no browser took part in the update runs. The
+  signing key, a loopback release origin and a test-only license; every update
+  case ran once on one build of this candidate (Debian 13, Arch, Ubuntu 24.04;
+  the "Panel starts but fails later" case on Debian only; three cases needed a
+  second run), and the mail re-apply change came after that run; no power-loss test; no
+  browser took part in the update runs. The
   production signing path, the real release origin and the license service were
   not exercised by these runs.
 - **Untested messages:** four safety messages did not occur in any test run, so

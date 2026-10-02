@@ -2235,3 +2235,52 @@ after startup (a renewal whose own mail step is refused as busy) is not retried
 by this loop and keeps the domain's Retry; the renewal pass at Panel start is not
 deferred while the host is busy; no screen shows the deferral (journal only); a
 secure-mail certificate across an update is not measured.
+
+### One candidate through the whole update matrix (P0.1/P0.2/P0.3/P0.5, 2026-10-02)
+
+D-025 invariants 1 to 6; D-022, D-024. Evidence only; no product change in this
+entry. P0.1, P0.2, P0.3 and P0.5 stay partial.
+
+[upd11](../deploy/e2e/release-recovery/evidence/upd11-20261002/README.md) ran
+every kind of the owner-started update matrix on one build, `48e54657` (the
+alpha.80 cells use a second build of the same commit for their baseline),
+instead of the successive builds the earlier runs used: 20 cells, 23 runs, three
+cells run twice.
+
+- **From the candidate's own baseline.** Debian 13: good, defective with a VM
+  reset at `payload_restored`, start check, real start, owner continuation,
+  management-off reboot. Arch: the same without real start, the second fault a
+  SIGKILL at `runtime_verified`. Ubuntu 24.04: good, defective, owner
+  continuation, start check, management-off reboot. Every good update was verified,
+  every defective and start-check candidate returned automatically, every forward
+  pause showed `pause_pending` and the restored renewal (Arch: "already in its
+  state"), every owner retry ran once and ended `succeeded/update_verified`, and
+  all three management-off reboots served. Setup on Ubuntu reached the `access_dns`
+  wait in one attempt in all six runs.
+- **From the alpha.80 source** (rebuilt with the license test seam): Debian 13
+  good, defective and owner continuation; Ubuntu 24.04 good. All as in upd7 and
+  upd8; the alpha.80 limits repeat (raw failure line, no recovery reader and the
+  same version offered again after a return; no recovery CLI for about 10 s; seven
+  setup attempts on Ubuntu).
+- **Not clean.** Ubuntu start check: the rollback was recorded twice, but the
+  first run failed on a harness race and the host slept during the second, so its
+  workload checks are invalid; Arch management-off needed a second run after a
+  harness cron-window defect; Debian real start needed a second run after one
+  setup refusal (next bullet).
+- **Recorded.** (1) The Panel starting inside an update or rollback on a server
+  with mail skipped the mail SNI publication and milter wiring because the server
+  was held, and they stayed undone until its next start; corrected in `6b6f8a0c`
+  (next entry), not yet measured natively. (2) One Debian setup refusal
+  (`HOST_MUTATION_BUSY`) about 10 s after the webmail package install, the busy
+  process not named; the same step passed in nine other Debian runs. (3) The
+  Agent never answered `package_manager_active` inside an update.
+- **Changed paths exercised:** the initial status record for an alpha.80 worker
+  (by inference, four cells), `pause_pending` (five runs), renewal restore at the
+  forward pause, the curl preflight's passing branch only. **Not exercised:** the
+  curl refusal, the no-marker end after a failed recovery child, host-name or
+  leading-zero listen addresses, an update started while `packagekitd` idles, real
+  start on Arch or Ubuntu.
+- **Not proven.** Repeatability (one run per cell); the signed alpha.80 archive;
+  production signing, the real origin, the license service, DNS, renewal itself,
+  a browser, power loss; the effect of the skipped mail steps for an owner with
+  mail certificates (the fixtures had none).

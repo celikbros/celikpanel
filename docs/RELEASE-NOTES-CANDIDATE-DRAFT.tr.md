@@ -64,6 +64,20 @@ hizmet artık sayılmaz. Gerçek bir paket işi hâlâ sayılır: kurulum ya da 
 o zaman, sunucunun paket yöneticisinin meşgul olduğunu ve bitmesini beklemek
 gerektiğini söyleyen iletiyle durur.
 
+**Posta ayarları, güncelleme bittikten sonra yeniden uygulanır.** Yeni Panel,
+güncelleme sunucuyu hâlâ tutarken başlarsa, o anda posta sertifikalarını posta
+hizmetlerine yeniden yayımlayamaz ve posta süzgeçlerini yeniden bağlayamaz. Artık
+bunu kendiliğinden, başladıktan sonra en çok 10 dakika boyunca her 30 saniyede bir
+yeniden dener ve sunucu boşalır boşalmaz işlemi yapar; bir deneme bir şey
+yaptığında Panel günlüğüne (`sudo journalctl -u celikpanel-panel`) bir satır
+yazar. Genellikle görünür hiçbir şey buna bağlı değildir. Bir sertifika
+etkinleştirmesi güncelleme yüzünden yarıda kaldıysa ya da posta süzgeçleri yeniden
+bağlanana kadar posta teslimi reddediliyorsa önemlidir. Sunucu 10 dakikanın
+tamamında meşgul kalırsa hiçbir şey değişmez ve posta çalışmaya devam eder: diğer
+işlem bittikten sonra Paneli `sudo systemctl restart celikpanel-panel` ile yeniden
+başlatın ya da alan adının SSL sayfasında "Etkinleştirmeyi yeniden dene"yi
+kullanın.
+
 **Müşteri arşivi test malzemesi taşımaz.** Sürüm arşivi artık kabul düzeneğini, test
 betiklerini ya da saklanan kanıtı içermez; imzalama adımı içeren bir arşivi
 reddeder.
@@ -104,9 +118,12 @@ Bunlar bilinen ve bilinçli sınırlardır. Gizli kusur değildir.
   yoktur. Yalnız "yönetim kapalı" ölçüldü.
 - **Kanıt kapsamı:** tek bir dizüstü ana makinedeki geçici sanal makineler, bir
   deneme imzalama anahtarı, bir loopback sürüm kaynağı ve yalnız test için lisans;
-  durum başına az tekrar; güç kaybı denemesi yok; güncelleme koşularında hiçbir
-  tarayıcı yer almadı. Üretim imzalama yolu, gerçek sürüm kaynağı ve lisans hizmeti
-  bu koşularda denenmedi.
+  her güncelleme durumu bu adayın tek bir yapısında bir kez koşuldu (Debian 13,
+  Arch, Ubuntu 24.04; "Panel başlıyor ama sonra başarısız oluyor" durumu yalnız
+  Debian'da; üç durum ikinci bir koşu gerektirdi) ve posta yeniden uygulama
+  değişikliği o koşudan sonra geldi; güç kaybı denemesi yok; güncelleme
+  koşularında hiçbir tarayıcı yer almadı. Üretim imzalama yolu, gerçek sürüm
+  kaynağı ve lisans hizmeti bu koşularda denenmedi.
 - **Denenmemiş iletiler:** dört güvenlik iletisi hiçbir deneme koşusunda ortaya
   çıkmadı; bu yüzden ekrandaki ifadeleri denenmedi: güncellemeden önce Panel'in meşgul
   olup olmadığının kısa ikinci denetimi, "güncelleme denetimi reddedildi" iletisi,

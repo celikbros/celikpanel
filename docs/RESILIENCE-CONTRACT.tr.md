@@ -1471,3 +1471,54 @@ meşgul diye reddedilen bir yenileme) bu döngüyle yeniden denenmez ve alan ad�
 yeniden denemesini korur; Panel başlangıcındaki yenileme turu ana makine meşgulken
 ertelenmez; ertelemeyi hiçbir ekran göstermez (yalnız günlük); bir güncelleme
 boyunca güvenli posta sertifikası ölçülmedi.
+
+### Tek bir aday, bütün güncelleme matrisi boyunca (P0.1/P0.2/P0.3/P0.5, 2026-10-02)
+
+D-025 ilkeleri 1 ila 6; D-022, D-024. Yalnız kanıt; bu kayıtta ürün değişikliği
+yok. P0.1, P0.2, P0.3 ve P0.5 kısmi kalır.
+
+[upd11](../deploy/e2e/release-recovery/evidence/upd11-20261002/README.md), sahip
+tarafından başlatılan güncelleme matrisinin her türünü, önceki koşuların kullandığı
+art arda gelen yapılar yerine tek bir yapıda, `48e54657` üzerinde koştu (alpha.80
+hücreleri başlangıç sürümleri için aynı işlemenin ikinci bir yapısını kullanır): 20
+hücre, 23 koşu, üç hücre iki kez koşuldu.
+
+- **Adayın kendi başlangıç sürümünden.** Debian 13: iyi, `payload_restored`
+  noktasında sanal makine sıfırlamasıyla kusurlu, başlangıç denetimi, gerçek
+  başlatma, sahibin devamı, yönetim kapalı yeniden başlatma. Arch: gerçek başlatma
+  olmadan aynısı; ikinci hata `runtime_verified` noktasında bir SIGKILL. Ubuntu
+  24.04: iyi, kusurlu, sahibin devamı, başlangıç denetimi, yönetim kapalı yeniden
+  başlatma. Her iyi güncelleme doğrulandı, kusurlu ve başlangıç denetimi adaylarının
+  hepsi kendiliğinden geri döndü, her ileri duraklama `pause_pending` ve
+  geri yüklenen yenilemeyi gösterdi (Arch: "zaten kendi durumunda"), sahibin her
+  yeniden denemesi bir kez çalıştı ve `succeeded/update_verified` ile bitti, üç
+  yönetim kapalı yeniden başlatmanın üçü de hizmet verdi. Ubuntu'da kurulum,
+  altı koşunun hepsinde `access_dns` beklemesine tek denemede ulaştı.
+- **alpha.80 kaynağından** (lisans test bağlantısıyla yeniden derlendi): Debian 13
+  iyi, kusurlu ve sahibin devamı; Ubuntu 24.04 iyi. Hepsi upd7 ve upd8'deki gibi;
+  alpha.80 sınırları yinelenir (ham hata satırı, kurtarma okuyucusu yok ve geri
+  dönüşten sonra aynı sürümün yeniden önerilmesi; yaklaşık 10 sn kurtarma komut
+  satırı yok; Ubuntu'da yedi kurulum denemesi).
+- **Temiz değil.** Ubuntu başlangıç denetimi: geri alma iki kez kaydedildi, ancak
+  ilk koşu bir düzenek yarışında başarısız oldu ve ikincide ana makine uykuya
+  girdi, bu yüzden iş yükü denetimleri geçersiz; Arch yönetim kapalı, bir düzenek
+  cron penceresi kusurundan sonra ikinci bir koşu gerektirdi; Debian gerçek
+  başlatma, bir kurulum reddinden sonra ikinci bir koşu gerektirdi (sonraki madde).
+- **Kaydedilen.** (1) Posta bulunan bir sunucuda bir güncelleme ya da geri alma
+  içinde başlayan Panel, sunucu tutulduğu için posta SNI yayımını ve milter
+  bağlamasını atladı ve bunlar bir sonraki başlangıcına kadar yapılmadan kaldı;
+  `6b6f8a0c` ile düzeltildi (sonraki kayıt), gerçek sistemde henüz ölçülmedi. (2)
+  Bir Debian kurulum reddi (`HOST_MUTATION_BUSY`), webmail paket kurulumundan
+  yaklaşık 10 sn sonra, meşgul işlem adlandırılmadı; aynı adım dokuz başka Debian
+  koşusunda geçti. (3) Agent bir güncelleme içinde hiç `package_manager_active`
+  yanıtı vermedi.
+- **Çalıştırılan değişen yollar:** bir alpha.80 çalışanı için ilk durum kaydı
+  (çıkarımla, dört hücre), `pause_pending` (beş koşu), ileri duraklamada yenileme
+  geri yükleme, curl ön denetiminin yalnız geçen dalı. **Çalıştırılmayan:** curl
+  reddi, başarısız kurtarma alt işleminden sonra işaretçisiz bitiş, ana makine adı
+  ya da başında sıfır olan dinleme adresleri, `packagekitd` boştayken başlatılan bir
+  güncelleme, Arch ya da Ubuntu'da gerçek başlatma.
+- **Kanıtlanmayan.** Tekrarlanabilirlik (hücre başına bir koşu); imzalı alpha.80
+  arşivi; üretim imzalaması, gerçek sürüm kaynağı, lisans hizmeti, DNS, yenilemenin
+  kendisi, bir tarayıcı, güç kaybı; posta sertifikası olan bir sahip için atlanan
+  posta adımlarının etkisi (düzeneklerde yoktu).
