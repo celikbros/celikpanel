@@ -631,3 +631,34 @@ for the wrong PackageKit backend file name; it now recognises Ubuntu's.
 - Not done: the browser's catalogue sentence for `HOST_MUTATION_BUSY` /
   `package_manager_active` (EN and TR) still says "outside CelikPanel" and "a
   minute"; it needs the same rewording in `web/`.
+
+### Mail startup work while an update holds the server (upd11 F2, 2026-10-02)
+
+Source state with component tests; the native run is pending. See the resilience
+contract entry of the same date. Journal only (English, like every Panel journal
+line); no screen changes.
+
+- **Current reason.** A Panel started inside an update or rollback cannot publish
+  the mail certificate (SNI) set or compose the Postfix mail filters, because the
+  update still holds the server. The startup lines `certificate startup
+  reconcile: certificate dependents: … still running; …` and `milter wiring at
+  startup: … still running` now end with "the Panel retries this by itself every
+  30 seconds for up to 10 minutes once no other server change is running;
+  nothing needs to be done now". Mail keeps running with its current
+  configuration meanwhile.
+- **Who acts.** Nobody while the update finishes.
+- **How it resumes.** Automatically: one line `startup mail work, attempt N of
+  20: mail certificate publication completed (…)` / `mail filter wiring
+  completed (…)`. A verified failure is named once in that line ("failed: …; it
+  is not retried now and runs again at the next Panel start (sudo systemctl
+  restart celikpanel-panel)") and is not repeated.
+- **If it gives up.** After 10 minutes without a free server the line says the
+  work is still not done, that these attempts changed nothing and that mail keeps
+  running; the server administrator runs `sudo systemctl restart
+  celikpanel-panel` once the other task has finished, and a domain whose SSL
+  page says "mail TLS synchronization did not finish" can use "Retry
+  activation" there.
+
+Not done: no screen shows the deferral; a certificate renewal at Panel start
+whose own mail step is refused still waits for the domain's "Retry activation"
+or the next Panel start.

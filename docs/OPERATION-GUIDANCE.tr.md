@@ -554,3 +554,34 @@ Ubuntu'nunkini tanır.
 - Yapılmayan: tarayıcının `HOST_MUTATION_BUSY` / `package_manager_active` katalog
   cümlesi (EN ve TR) hâlâ "CelikPanel dışında" ve "bir dakika" der; `web/`
   içinde aynı yeniden yazım gerekir.
+
+### Güncelleme sunucuyu tutarken posta başlangıç işi (upd11 F2, 2026-10-02)
+
+Bileşen testleriyle kaynak durumu; gerçek sistem denemesi bekliyor. Aynı tarihli
+dayanıklılık sözleşmesi girdisine bakın. Yalnız günlük (her Panel günlük satırı
+gibi İngilizce); hiçbir ekran değişmedi.
+
+- **Mevcut neden.** Bir güncelleme ya da geri alma içinde başlayan Panel, posta
+  sertifikası (SNI) kümesini yayımlayamaz ve Postfix posta filtrelerini
+  besteleyemez, çünkü güncelleme sunucuyu hâlâ tutar. `certificate startup
+  reconcile: certificate dependents: … still running; …` ve `milter wiring at
+  startup: … still running` başlangıç satırları artık "the Panel retries this by
+  itself every 30 seconds for up to 10 minutes once no other server change is
+  running; nothing needs to be done now" ile biter. Posta bu arada mevcut
+  yapılandırmasıyla çalışmayı sürdürür.
+- **Kim işlem yapar.** Güncelleme biterken kimse.
+- **Nasıl devam eder.** Kendiliğinden: tek satır `startup mail work, attempt N of
+  20: mail certificate publication completed (…)` / `mail filter wiring
+  completed (…)`. Doğrulanmış bir hata o satırda bir kez adlandırılır ("failed: …;
+  it is not retried now and runs again at the next Panel start (sudo systemctl
+  restart celikpanel-panel)") ve yinelenmez.
+- **Vazgeçerse.** Sunucu 10 dakika boyunca serbest kalmazsa satır, işin hâlâ
+  yapılmadığını, bu denemelerin hiçbir şeyi değiştirmediğini ve postanın
+  çalışmayı sürdürdüğünü söyler; diğer iş bittikten sonra sunucu yöneticisi
+  `sudo systemctl restart celikpanel-panel` çalıştırır; SSL sayfası "posta TLS
+  eşitlemesi tamamlanmadı" diyen bir alan adı orada "Etkinleştirmeyi yeniden
+  dene"yi de kullanabilir.
+
+Yapılmayan: hiçbir ekran ertelemeyi göstermez; Panel başlangıcında kendi posta
+adımı reddedilen bir sertifika yenilemesi hâlâ alan adının "Etkinleştirmeyi
+yeniden dene" işlemini ya da bir sonraki Panel başlangıcını bekler.

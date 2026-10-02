@@ -1396,3 +1396,78 @@ sürüm geçişi yok. P0.1, P0.2 ve P0.3 kısmi kalır.
   güncelleme içinde başlarken sertifika başlangıç uzlaştırması ve milter bağlama
   için meşgul reddi günlüğe yazar, bunların sonra yeniden denenip denenmediği
   belirlenmedi.
+
+### Güncelleme içinde reddedilen posta başlangıç işi sunucu boşalınca yeniden denenir (P0.1/P0.2, 2026-10-02)
+
+D-025 ilkeleri 2 (meşgul, boş ve bilinmeyen ayrı kalır) ve 3 (gerçek sınırda,
+Agent'ın ana makine kirası altındaki kabulünde dur); D-022 (yerel posta
+yapılandırması değişmeden çalışmayı sürdürür), D-024.
+[upd11](../deploy/e2e/release-recovery/evidence/upd11-20261002/README.md) F2'den:
+posta kurulu Debian 13 ve Ubuntu 24.04'te bir güncelleme ya da geri alma içindeki
+her Panel başlangıcında iki başlangıç adımı kabulde reddedildi ("another server
+change or package-manager task is still running") ve yalnız bir sonraki Panel
+başlangıcında çalıştı.
+
+- **Kaynağa göre atlanan.** Sertifika başlangıç uzlaştırmasının yalnız posta
+  bağımlıları adımı (`cert_startup_reconcile.go`; soy temizliği, bekleyen
+  etkinleştirme ve vhost toplu işi çalıştı): tam posta SNI yayımı (kira altında
+  `Agent.SyncMailTLSV2`), TLSA (bu sürümde işlem yapmaz) ve bekleyen sertifika
+  giden kutusunun temizlenmesi; ve `Agent.WireMailFilters` (Postfix sanal/arama
+  tablosu onarımı, takma ad veritabanı, milter zinciri). Meşgul reddi herhangi bir
+  kalıcı iş ya da ana makine değişikliğinden önce gelir.
+- **Sahibin kaybettiği.** Kararlı durumda hiçbir şey: ikisi de güncellemenin
+  dokunmadığı yerel dosyaları yeniden doğrular. Şu durumlarda önemlidir: (a) o
+  başlangıçta bir sertifika giden kutusu satırı (`activation_pending`/
+  `dependents_pending`) varsa - güncellemenin yarıda kestiği bir kurulum ya da
+  yenileme veya Panel'in başlangıçta çalıştırdığı yenileme turu (yenileme ve vhost
+  çağrıları kira almaz, posta adımı alır): nginx yeni sertifikayı sunarken
+  Postfix/Dovecot o alan adı için önceki anlık görüntüyü korur ve alan adının
+  yeniden denemesine ya da bir sonraki Panel başlangıcına dek giden kutusunu başka
+  hiçbir şey tüketmez (yenileme turu yalnız bitimine 30 gün kalan sertifikaları
+  seçer); (b) ana makine Berkeley DB'siz bir Postfix'te `hash:` tablolar taşıyorsa,
+  bağlamanın "yükseltmede" onardığı durum (o çalışana dek gelen her ileti 451 ile
+  reddedilir); (c) bir sürüm ikisinden birinin yazdığını değiştirirse. Kaynak
+  okuması; ölçülmedi (upd11 düzeneklerinde güvenli posta sertifikası yoktu).
+- **Değişen.** Başlangıç, iki adımdan hangisinin meşgul ana makine nedeniyle
+  reddedildiğini bildirir (`hostMutationBusyError`, sonucu belirsiz değil) ve aynı
+  günlük satırında Panel'in onu yeniden deneyeceğini söyler. HTTP kabulünden sonra
+  tek bir arka plan döngüsü 30 sn'de bir, en fazla 20 deneme (10 dakika) boyunca
+  var olan danışma niteliğindeki hazırlık bilgisini (`Agent.ServiceMutationReadiness`
+  ve Panel'in işlem denetimi, sessiz) okur ve yalnız boş dediğinde tam olarak
+  reddedilen adımı yineler: tam SNI yayımı bir kez, ardından başlangıçtaki her giden
+  kutusu alan adı, satır hâlâ bekliyorsa, o alan adının SSL kilidi altında sahibin
+  yeniden deneme yolundan; ve bağlama bir kez, bir HTTP işlemi gibi
+  `serviceMutationMu` altında. Tamamlanan adım bir daha çalışmaz; meşgul reddi
+  yeniden denenir; doğrulanmış hata bir kez günlüğe yazılır ve bir sonraki
+  başlangıca bırakılır. Deneme başına en fazla bir günlük satırı: tamamlanma, hata
+  ya da sınırda `sudo systemctl restart celikpanel-panel` komutunu (ve alan adının
+  SSL sayfasındaki "Etkinleştirmeyi yeniden dene"yi) adlandıran vazgeçme satırı.
+  Başlangıç meşgul diye reddedilmediyse hiçbir şey yeniden denenmez.
+- **Şema veya sürüm geçişi: yok.** Kalıcı değer, iletişim alanı, kapalı değer ya da
+  metin anahtarı yok; Panel ikili baytları değişir, Agent değişmez.
+- **Kurtarma davranışı.** Agent'ın ana makine kirası altındaki kabulü belirleyici
+  kalır: bir güncelleyici, geri alma ya da başka bir değişiklik ana makineyi
+  tutarken adım iş oluşturmadan yeniden reddedilir; hazırlık okuması yalnız
+  danışma niteliğindedir. Panel yeniden başlatması aynı adımları başlangıçta yine
+  çalıştırır. Giden kutusu baştan sona kalıcı ve sahip tarafından yeniden
+  denenebilir kalır.
+- **Kanıt.** Yalnız bileşen testleri, gerçek sistem denemesi bekliyor:
+  `TestStartupDeferredRetryDecisionRetriesOnlyABusyRefusal`,
+  `TestStartupDeferredRetryNoteMatchesThePolicy`,
+  `TestStartupDeferredRetryStopsWithTheProcess`,
+  `TestStartupDeferredRetryRunsOnceTheHostIsIdle`,
+  `TestStartupDeferredRetryNothingDeferredStartsNothing`,
+  `TestStartupDeferredRetryGivesUpWithTheOwnerLine`,
+  `TestStartupDeferredRetryNeverRepeatsACompletedTask`,
+  `TestStartupDeferredRetryDoesNotRepeatAVerifiedFailure`,
+  `TestStartupCertificateDependentsRefusedAsBusyCompleteOnceIdle`,
+  `TestStartupCertificateDependentsVerifiedFailureIsNotDeferred`,
+  `TestStartupMilterWiringRefusedAsBusyIsWiredOnceIdle`.
+
+Açık: gerçek sistemde koşulmadı; bir güncellemenin ya da geri almanın Panel'i
+başladıktan sonra ana makineyi ne kadar tuttuğu 10 dakikalık pencereye karşı
+ölçülmedi; başlangıçtan sonra oluşan bir giden kutusu satırı (kendi posta adımı
+meşgul diye reddedilen bir yenileme) bu döngüyle yeniden denenmez ve alan adının
+yeniden denemesini korur; Panel başlangıcındaki yenileme turu ana makine meşgulken
+ertelenmez; ertelemeyi hiçbir ekran göstermez (yalnız günlük); bir güncelleme
+boyunca güvenli posta sertifikası ölçülmedi.

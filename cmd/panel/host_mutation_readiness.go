@@ -53,13 +53,22 @@ func verifiedAgentMutationReadiness(
 // lock is released before the RPC so a slow read cannot block a real mutation;
 // every mutating endpoint must still perform authoritative admission.
 func (p *Panel) readHostMutationReadiness(ctx context.Context) transport.HostMutationReadinessResponse {
+	return p.readHostMutationReadinessLogged(ctx, log.Printf)
+}
+
+// readHostMutationReadinessLogged is the same advisory read with the caller's
+// logger, so a bounded background poll can stay within its own line budget.
+func (p *Panel) readHostMutationReadinessLogged(
+	ctx context.Context,
+	logf func(string, ...any),
+) transport.HostMutationReadinessResponse {
 	if !p.serviceMutationMu.TryLock() {
 		return hostMutationBusy(transport.HostMutationReasonPanelOperation)
 	}
 	operation, err := p.activeServiceOperation(ctx)
 	p.serviceMutationMu.Unlock()
 	if err != nil {
-		log.Printf("[host-mutation-readiness] inspect panel operation: %v", err)
+		logf("[host-mutation-readiness] inspect panel operation: %v", err)
 		return hostMutationUnavailable()
 	}
 	if operation != nil {
@@ -73,7 +82,7 @@ func (p *Panel) readHostMutationReadiness(ctx context.Context) transport.HostMut
 		&transport.Empty{},
 		&response,
 	); err != nil {
-		log.Printf("[host-mutation-readiness] inspect agent state: %v", err)
+		logf("[host-mutation-readiness] inspect agent state: %v", err)
 		return hostMutationUnavailable()
 	}
 	return verifiedAgentMutationReadiness(response)

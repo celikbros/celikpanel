@@ -2162,3 +2162,76 @@ no schema or version transition. P0.1, P0.2 and P0.3 stay partial.
   wizard picks its headline from the Panel's sentence); when the new Panel starts
   inside an update it logs a busy refusal for certificate startup reconcile and
   milter wiring, and whether those are retried later is not established.
+
+### Startup mail work refused inside an update is retried once the host is idle (P0.1/P0.2, 2026-10-02)
+
+D-025 invariants 2 (busy, idle and unknown stay distinct) and 3 (stop at the
+actual boundary, the Agent's admission under the host lease); D-022 (native mail
+configuration keeps running unchanged), D-024. From
+[upd11](../deploy/e2e/release-recovery/evidence/upd11-20261002/README.md) F2:
+every Panel start inside an update or rollback on Debian 13 and Ubuntu 24.04
+with mail installed had two startup steps refused at admission ("another server
+change or package-manager task is still running"), and they ran only at the next
+Panel start.
+
+- **What was skipped, from source.** Only the mail dependents step of the
+  certificate startup reconcile (`cert_startup_reconcile.go`; lineage cleanup,
+  pending activation and the vhost batch ran): the full mail SNI publication
+  (`Agent.SyncMailTLSV2` under a lease), TLSA (a no-op in this release) and the
+  clearing of the pending certificate outbox; and `Agent.WireMailFilters`
+  (Postfix virtual/lookup-table repair, alias database, milter chain). A busy
+  refusal happens before any durable job or host change.
+- **What an owner lost.** In the steady state nothing: both re-assert native
+  files the update does not touch. It matters when (a) a certificate outbox row
+  (`activation_pending`/`dependents_pending`) exists at that start - an
+  installation or renewal the update interrupted, or the renewal pass the Panel
+  runs at start (its renew and vhost calls take no lease, its mail step does):
+  nginx serves the new certificate while Postfix/Dovecot keep the previous
+  snapshot for that domain, and nothing else consumes the outbox (the renewal
+  pass only selects certificates within 30 days of expiry) until the domain's
+  Retry or the next Panel start; (b) the host carries `hash:` maps on a Postfix
+  without Berkeley DB, the case the wiring repairs "on upgrade" (every incoming
+  message rejected with 451 until it runs); (c) a release changes what either
+  writes. Source reading; not measured (the upd11 fixtures had no secure-mail
+  certificate).
+- **Changed.** Startup reports which of the two steps was refused for a busy
+  host (`hostMutationBusyError`, not terminal-uncertain) and says in the same
+  journal line that the Panel retries it. After HTTP admission one background
+  loop then, every 30 s for at most 20 attempts (10 minutes), reads the existing
+  advisory readiness (`Agent.ServiceMutationReadiness` plus the Panel's
+  operation check, quiet) and only when it says idle repeats exactly the refused
+  step: the full SNI publication once, then each startup outbox domain through
+  the owner's Retry path under that domain's SSL lock, only if the row is still
+  pending; and the wiring once, under `serviceMutationMu` like an HTTP
+  operation. A completed step never runs again; a busy refusal is retried; a
+  verified failure is logged once and left for the next start. At most one
+  journal line per attempt: completion, failure, or at the cap the give-up line
+  naming `sudo systemctl restart celikpanel-panel` (and "Retry activation" on
+  the domain's SSL page). Nothing is retried when startup was not refused as
+  busy.
+- **Schema or version transition: none.** No persisted value, wire field,
+  closed value or text key; Panel binary bytes change, the Agent is unchanged.
+- **Recovery behaviour.** The Agent's admission under the host lease stays
+  authoritative: while an updater, rollback or other change holds the host the
+  step is refused again with no job, and the readiness read is advisory only. A
+  Panel restart still runs the same steps at start. The outbox stays durable and
+  owner-retryable throughout.
+- **Evidence.** Component tests only, native run pending:
+  `TestStartupDeferredRetryDecisionRetriesOnlyABusyRefusal`,
+  `TestStartupDeferredRetryNoteMatchesThePolicy`,
+  `TestStartupDeferredRetryStopsWithTheProcess`,
+  `TestStartupDeferredRetryRunsOnceTheHostIsIdle`,
+  `TestStartupDeferredRetryNothingDeferredStartsNothing`,
+  `TestStartupDeferredRetryGivesUpWithTheOwnerLine`,
+  `TestStartupDeferredRetryNeverRepeatsACompletedTask`,
+  `TestStartupDeferredRetryDoesNotRepeatAVerifiedFailure`,
+  `TestStartupCertificateDependentsRefusedAsBusyCompleteOnceIdle`,
+  `TestStartupCertificateDependentsVerifiedFailureIsNotDeferred`,
+  `TestStartupMilterWiringRefusedAsBusyIsWiredOnceIdle`.
+
+Open: not run natively; how long an update or rollback keeps the host after its
+Panel starts is not measured against the 10-minute window; an outbox row created
+after startup (a renewal whose own mail step is refused as busy) is not retried
+by this loop and keeps the domain's Retry; the renewal pass at Panel start is not
+deferred while the host is busy; no screen shows the deferral (journal only); a
+secure-mail certificate across an update is not measured.

@@ -1050,6 +1050,8 @@ func main() {
 	// may legitimately acquire serviceMutationMu themselves.
 	panel.serviceMutationMu.Lock()
 	panel.serviceMutationMu.Unlock()
+	var certificateDeferral startupCertificateDeferral
+	milterWiringDeferred := false
 	activationCtx, activationCancel := context.WithTimeout(
 		context.Background(),
 		panelMutationRecoveryTimeout,
@@ -1067,7 +1069,7 @@ func main() {
 		)
 	} else {
 		activationCancel()
-		panel.reconcileCertificateRuntimeAtStartup()
+		certificateDeferral = panel.reconcileCertificateRuntimeAtStartup()
 	}
 
 	// Fail closed before accepting HTTP: a peer whose one-time private config
@@ -1128,7 +1130,7 @@ func main() {
 		)
 	} else {
 		activationCancel()
-		panel.wireMailFiltersSynchronouslyAtStartup()
+		milterWiringDeferred = panel.wireMailFiltersSynchronouslyAtStartup()
 	}
 
 	// Purge expired sessions on startup and then hourly.
@@ -1377,6 +1379,9 @@ func main() {
 	panel.startBackupScheduler()
 	panel.startCertRenewalScheduler()
 	panel.startVPNEntitlementReconciler()
+	// upd11 F2: startup mail work refused only because an update or rollback
+	// still held the host is retried, bounded, once the host is idle.
+	panel.startDeferredStartupMailWork(certificateDeferral, milterWiringDeferred)
 	protocol := "HTTP"
 	if tlsOn {
 		protocol = "HTTPS"
@@ -1411,10 +1416,36 @@ func (p *Panel) countUsers() (int, error) {
 // Onarim Postfix'in milter zincirini besteler; uzerinde posta sunucusu olmayan
 // bir makinede onarilacak bir sey yoktur. Bicim R-054'un guvenlik duvarina
 // verdigi bicimdir: kalici niyet var olmadan once yokla.
-func (p *Panel) wireMailFiltersSynchronouslyAtStartup() {
+//
+// It reports true only when the host refused the wiring as busy (a Panel
+// started inside an update or rollback, upd11 F2); the caller then hands it to
+// the bounded deferred retry. Every other outcome keeps the next-start
+// behaviour.
+func (p *Panel) wireMailFiltersSynchronouslyAtStartup() bool {
 	if !p.mailFilterWiringHasSubject() {
-		return
+		return false
 	}
+	response, err := p.wireMailFiltersOnce()
+	if err != nil {
+		if startupWorkDeferredForBusyHost(err) {
+			log.Printf("milter wiring at startup: %v; %s", err, startupDeferredRetryNote)
+			return true
+		}
+		log.Printf("milter wiring at startup: %v", err)
+		return false
+	}
+	if response.Detail != "" {
+		log.Printf("milter chain: %s", response.Detail)
+	}
+	return false
+}
+
+// wireMailFiltersOnce is one durable, lease-bound Agent.WireMailFilters call.
+// A busy host refuses it at admission, before any durable job or host change.
+// wireMailFiltersOnce, kalici ve kiraya bagli tek bir Agent.WireMailFilters
+// cagrisidir. Mesgul makine onu kabulde, hicbir is ya da degisiklikten once
+// reddeder.
+func (p *Panel) wireMailFiltersOnce() (transport.WireMailFiltersResponse, error) {
 	var response transport.WireMailFiltersResponse
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
@@ -1450,13 +1481,7 @@ func (p *Panel) wireMailFiltersSynchronouslyAtStartup() {
 			return nil
 		},
 	)
-	if err != nil {
-		log.Printf("milter wiring at startup: %v", err)
-		return
-	}
-	if response.Detail != "" {
-		log.Printf("milter chain: %s", response.Detail)
-	}
+	return response, err
 }
 
 // mailFilterWiringHasSubject asks the host whether there is a mail server here
@@ -1468,21 +1493,30 @@ func (p *Panel) wireMailFiltersSynchronouslyAtStartup() {
 // bir posta sunucusu olup olmadigini sorar. Sorulamayan bir makine bos
 // varsayilmaz.
 func (p *Panel) mailFilterWiringHasSubject() bool {
+	present, detail := p.mailFilterWiringSubject()
+	if !present {
+		log.Printf("milter chain: nothing to wire at startup: %s", detail)
+	}
+	return present
+}
+
+// mailFilterWiringSubject is the same read-only question without a log line,
+// so the deferred retry writes at most one line per attempt.
+func (p *Panel) mailFilterWiringSubject() (bool, string) {
 	var state transport.MailFilterWiringStateResponse
 	if err := p.callAgent(
 		"Agent.MailFilterWiringState", &transport.Empty{}, &state,
 	); err != nil {
-		return true
+		return true, ""
 	}
 	if state.MailServerInstalled {
-		return true
+		return true, ""
 	}
 	detail := state.Detail
 	if detail == "" {
 		detail = "no mail server is installed on this server"
 	}
-	log.Printf("milter chain: nothing to wire at startup: %s", detail)
-	return false
+	return false, detail
 }
 
 // mailFilterWiringFailureSentence names what was attempted and what stopped
