@@ -1522,3 +1522,21 @@ hücre, 23 koşu, üç hücre iki kez koşuldu.
   arşivi; üretim imzalaması, gerçek sürüm kaynağı, lisans hizmeti, DNS, yenilemenin
   kendisi, bir tarayıcı, güç kaybı; posta sertifikası olan bir sahip için atlanan
   posta adımlarının etkisi (düzeneklerde yoktu).
+
+#### Debian 13'te ölçüldü (aynı tarih)
+
+[upd12](../deploy/e2e/release-recovery/evidence/upd12-20261002/README.md),
+`6b6f8a0c` ile derlendi: iyi aday, `payload_restored` anında sıfırlamalı kusurlu
+aday ve sahibin devamı; `web_mail` profili, her biri bir koşu. Her hücrede
+işlemin içinde başlayan Panel, yeni cümleyle iki başlangıç satırını yazdı ve
+başlangıcından 38 ila 39 sn sonra tek bir deneme iki adımı da tek bir günlük
+satırıyla tamamladı; ikinci deneme olmadı, 45 sn sonra da başka yazma olmadı.
+Doğrulama bozulmadı: her işlem, ilk yazmadan 17 ila 25 sn önce son durumunu
+kaydetmişti ve süreler upd11 ile örtüşüyor. Kaydedilen: her posta SNI yayımı,
+bu değişiklikten önce de sonra da, adım tamamlanmasına rağmen `postfix/postmap …
+fatal: unsupported map type: lmdb` satırını günlüğe yazıyor (günlüğü okuyan sahip,
+hiçbir şeyi değiştirmeyen bir "fatal" satırı görür; açık); yeniden deneme, yerel posta
+dosyalarını aynı içerikle yeniden yazıyor (sözleşmede yazdığı gibi onları yeniden
+öne sürüyor). Ulaşılmayan: ikinci deneme, vazgeçme satırı, doğrulanmış bir başarısızlık,
+bekleyen sertifika yeniden denemesi; düzenekte güvenli posta sertifikası yok;
+Ubuntu ve Arch koşulmadı.

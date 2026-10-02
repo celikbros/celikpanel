@@ -119,7 +119,8 @@ These are known and deliberate. They are not hidden defects.
   signing key, a loopback release origin and a test-only license; every update
   case ran once on one build of this candidate (Debian 13, Arch, Ubuntu 24.04;
   the "Panel starts but fails later" case on Debian only; three cases needed a
-  second run), and the mail re-apply change came after that run; no power-loss test; no
+  second run), and the mail re-apply change came after that run and was then measured on
+  Debian 13 only, in three cases, with no mail certificate present; no power-loss test; no
   browser took part in the update runs. The
   production signing path, the real release origin and the license service were
   not exercised by these runs.
@@ -127,6 +128,10 @@ These are known and deliberate. They are not hidden defects.
   their on-screen wording is untested: the short second check of whether the
   Panel is busy before an update, the "update check refused" message, the cause
   of a failed pre-update snapshot, and the service start-limit message.
+- **A misleading log line:** on Debian 13 without the `postfix-lmdb` package,
+  whenever the Panel re-publishes the mail certificates, Postfix logs "fatal:
+  unsupported map type: lmdb". The step still completes and mail keeps working
+  with the hash map type; the line is noise.
 - **Interface debts:** the Components page shows catalogue names in English; the
   cron Uninstall button is shown and refuses after confirmation; a visual browser
   pass over the changed screens is outstanding.

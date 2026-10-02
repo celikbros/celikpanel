@@ -121,7 +121,8 @@ Bunlar bilinen ve bilinçli sınırlardır. Gizli kusur değildir.
   her güncelleme durumu bu adayın tek bir yapısında bir kez koşuldu (Debian 13,
   Arch, Ubuntu 24.04; "Panel başlıyor ama sonra başarısız oluyor" durumu yalnız
   Debian'da; üç durum ikinci bir koşu gerektirdi) ve posta yeniden uygulama
-  değişikliği o koşudan sonra geldi; güç kaybı denemesi yok; güncelleme
+  değişikliği o koşudan sonra geldi ve ardından yalnız Debian 13'te, üç durumda,
+  posta sertifikası olmadan ölçüldü; güç kaybı denemesi yok; güncelleme
   koşularında hiçbir tarayıcı yer almadı. Üretim imzalama yolu, gerçek sürüm
   kaynağı ve lisans hizmeti bu koşularda denenmedi.
 - **Denenmemiş iletiler:** dört güvenlik iletisi hiçbir deneme koşusunda ortaya
@@ -129,6 +130,10 @@ Bunlar bilinen ve bilinçli sınırlardır. Gizli kusur değildir.
   olup olmadığının kısa ikinci denetimi, "güncelleme denetimi reddedildi" iletisi,
   başarısız bir güncelleme öncesi anlık görüntünün nedeni ve servis başlatma sınırı
   iletisi.
+- **Yanıltıcı bir günlük satırı:** `postfix-lmdb` paketi olmayan Debian 13'te Panel
+  posta sertifikalarını her yeniden yayımladığında Postfix "fatal: unsupported map
+  type: lmdb" yazar. Adım yine de tamamlanır ve posta hash harita tipiyle
+  çalışmaya devam eder; satır gürültüdür.
 - **Arayüz borçları:** Bileşenler sayfası katalog adlarını İngilizce gösterir; cron
   Kaldır düğmesi gösterilir ve onaydan sonra reddeder; değişen ekranların görsel
   tarayıcı incelemesi bekliyor.

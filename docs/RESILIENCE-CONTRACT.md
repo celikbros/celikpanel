@@ -2284,3 +2284,20 @@ cells run twice.
   production signing, the real origin, the license service, DNS, renewal itself,
   a browser, power loss; the effect of the skipped mail steps for an owner with
   mail certificates (the fixtures had none).
+
+#### Measured on Debian 13 (same date)
+
+[upd12](../deploy/e2e/release-recovery/evidence/upd12-20261002/README.md), built
+from `6b6f8a0c`: good, defective with a reset at `payload_restored`, and owner
+continuation, `web_mail` profile, one run each. In every cell the Panel that
+started inside the operation wrote the two startup lines with the new sentence,
+and 38 to 39 s after its start one attempt completed both steps with one journal
+line; no second attempt and no further write 45 s later. Verification was not
+disturbed: every operation had recorded its final state 17 to 25 s before the
+first write, and timings match upd11. Recorded: every mail SNI publication,
+before and after this change, logs `postfix/postmap … fatal: unsupported map
+type: lmdb` although the step completes (an owner reading the journal sees a
+"fatal" line that changes nothing; open); the retry rewrites the native mail
+files with identical content (it re-asserts them, as the contract says). Not reached: a
+second attempt, the give-up line, a verified failure, the pending-certificate
+retry; the fixture has no secure-mail certificate; Ubuntu and Arch not run.
