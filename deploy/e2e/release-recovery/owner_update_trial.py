@@ -453,6 +453,25 @@ RENEWAL_ON_ACTIVE = ("active", "activating", "reloading", "refreshing")
 START_CHECK_FIXTURE_REASON = "tls_pair_invalid"
 # O5 (upd2): at the start instant the Panel API may still say accepted while the root CLI says running.
 START_LAG_PAIR = ("accepted", "running")
+# upd12: the Panel's bounded retry of startup mail work refused as busy (product 6b6f8a0c,
+# cmd/panel/startup_deferred_mail.go). Read-only: the Panel journal and native mail file facts only.
+DEFERRED_MAIL_NOTE = ("the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server "
+                      "change is running; nothing needs to be done now")
+DEFERRED_MAIL_TASKS = {"certificate startup reconcile: certificate dependents:": "mail certificate publication",
+                       "milter wiring at startup:": "mail filter wiring"}
+DEFERRED_MAIL_ATTEMPT = re.compile(r"startup mail work, attempt (\d+) of (\d+): (.*)$")
+DEFERRED_MAIL_GIVE_UP = "still not done after"
+# 20 attempts x 30 s, plus each attempt's probe (<= 15 s) and step timeouts; the watch is bounded independently.
+DEFERRED_MAIL_WATCH_S = 900.0
+DEFERRED_MAIL_POLL_S = 10.0
+# After the loop resolved, one more read past more than one retry interval shows that nothing ran again.
+DEFERRED_MAIL_SETTLE_S = 45.0
+DEFERRED_MAIL_FILES = ("/etc/postfix/main.cf", "/etc/postfix/master.cf", "/etc/postfix/celikpanel_sni",
+                       "/etc/postfix/celikpanel_sni.db", "/etc/postfix/celikpanel_sni.lmdb", "/etc/postfix/virtual",
+                       "/etc/postfix/virtual.db", "/etc/postfix/vmailbox", "/etc/postfix/vmailbox.db",
+                       "/etc/postfix/vmailbox_domains", "/etc/postfix/vmailbox_domains.db", "/etc/aliases.db",
+                       "/etc/dovecot/conf.d/98-celikpanel-tls.conf")
+PANEL_JOURNAL_LINE = re.compile(r"^(\S+) \S+ panel\[(\d+)\]: (?:\d{4}/\d\d/\d\d \d\d:\d\d:\d\d )?(.*)$")
 
 
 def provenance_for(variant: str) -> dict:
@@ -1755,6 +1774,70 @@ def journal_groups(request_id: str | None) -> dict:
                     f"celikpanel-lab-recovery-fault-{request_id}.service"]
     return {"product": product, "setup-services": list(SETUP_SERVICE_UNITS),
             "lab": [ORIGIN_UNIT, SAMPLER_UNIT, BASELINE_INSTALL_UNIT]}
+
+
+def deferred_mail_watched(cell: Cell) -> bool:
+    """upd12: cells whose update ends with a running Panel on a mail stack (the real-start Panel never listens;
+    management-off restarts the Panel by its own reboot)."""
+    return cell.mail_required and cell.scenario is None and cell.variant not in ("real-start", "mgmt-off-reboot")
+
+
+def deferred_mail_view(text: str) -> dict:
+    """upd12: per Panel process (journal PID, from its "Starting CelikPanel Backend..." line): which startup step was
+    refused as busy with the retry note, every "startup mail work" line of the bounded retry, and whether the retry
+    resolved (each deferred step completed or failed once, or the give-up line). Lines are kept verbatim."""
+    processes: list[dict] = []
+    by_pid: dict[str, dict] = {}
+    for line in text.splitlines():
+        match = PANEL_JOURNAL_LINE.match(line)
+        if not match:
+            continue
+        at, pid, message = match.groups()
+        if message.startswith("Starting CelikPanel Backend..."):
+            process = {"pid": pid, "started_at": at, "ready_at": None, "startup_lines": [], "deferred": [],
+                       "attempts": [], "resolved": {}, "gave_up": False, "other_mail_lines": []}
+            processes.append(process)
+            by_pid[pid] = process
+            continue
+        process = by_pid.get(pid)
+        if process is None:
+            continue
+        prefix = next((p for p in DEFERRED_MAIL_TASKS if message.startswith(p)), None)
+        attempt = DEFERRED_MAIL_ATTEMPT.match(message)
+        if prefix:
+            process["startup_lines"].append({"at": at, "text": message})
+            if DEFERRED_MAIL_NOTE in message and DEFERRED_MAIL_TASKS[prefix] not in process["deferred"]:
+                process["deferred"].append(DEFERRED_MAIL_TASKS[prefix])
+        elif message.startswith("Panel ready on") and process["ready_at"] is None:
+            process["ready_at"] = at
+        elif attempt:
+            entry = {"at": at, "attempt": int(attempt[1]), "of": int(attempt[2]), "text": message}
+            process["attempts"].append(entry)
+            for task in process["deferred"]:
+                for outcome in ("completed", "failed"):
+                    if f"{task} {outcome}" in message:
+                        process["resolved"].setdefault(task, []).append(
+                            {"outcome": outcome, "attempt": entry["attempt"], "at": at})
+            if DEFERRED_MAIL_GIVE_UP in message:
+                process["gave_up"] = True
+        elif "mail SNI reconciled" in message or message.startswith("milter chain:"):
+            process["other_mail_lines"].append({"at": at, "text": message})
+    for process in processes:
+        process["finished"] = (not process["deferred"] or process["gave_up"]
+                               or all(task in process["resolved"] for task in process["deferred"]))
+        process["repeated"] = sorted(task for task, seen in process["resolved"].items() if len(seen) > 1)
+    return {"processes": processes, "last": processes[-1] if processes else None}
+
+
+def mail_file_facts_script() -> str:
+    """upd12: read-only size, mtime and SHA-256 of the native mail files the deferred steps may write."""
+    lines = ["for f in " + " ".join(shlex.quote(p) for p in DEFERRED_MAIL_FILES) + "; do",
+             '  if [ -f "$f" ]; then printf \'%s|%s|%s\\n\' "$f" "$(stat -c \'%s|%y\' "$f")" '
+             '"$(sha256sum < "$f" | cut -c1-64)"; else printf \'%s|absent\\n\' "$f"; fi',
+             "done",
+             "for k in smtpd_milters non_smtpd_milters tls_server_sni_maps; do "
+             "printf 'postconf|%s|%s\\n' \"$k\" \"$(postconf -h \"$k\" 2>/dev/null || echo unavailable)\"; done"]
+    return "\n".join(lines) + "\n"
 
 
 def observation_records_script(request_id: str | None) -> str:
@@ -3061,6 +3144,13 @@ def build_plan(cell: Cell, artifacts: dict, work_root: str, local_port: int,
             "mailbox, cron, timers, firewall, Panel login and update card (rendered from the served build's "
             "systemUpdateOutcome.ts rules and catalogues, judged only on a real mismatch)")),
     ]
+    if deferred_mail_watched(cell):
+        steps.append(("deferred-mail-watch", (
+            "upd12, read-only: the Panel journal every "
+            f"{int(DEFERRED_MAIL_POLL_S)} s until the last Panel process's bounded startup mail retry resolved "
+            f"(each deferred step completed or failed, or the give-up line) or {int(DEFERRED_MAIL_WATCH_S)} s; then "
+            f"once more after {int(DEFERRED_MAIL_SETTLE_S)} s (nothing runs again); native mail file facts (size, "
+            "mtime, SHA-256, postconf milters/SNI map) at the start and the end; the sampler keeps running")))
     if management_off:
         steps += [
             ("management-off", "owner Panel state read once; sudo systemctl disable --now celikpanel-panel.service "
@@ -5062,6 +5152,81 @@ class Trial:
             raise StepFailed("; ".join(failures))
         return "passed"
 
+    # -- upd12: the Panel's bounded retry of startup mail work -------------------------------------
+
+    def panel_journal(self) -> str:
+        return self.workload("journal", "--since=-12h", "--lines", "20000", "--unit", "celikpanel-panel.service",
+                             timeout=120).get("stdout", "")
+
+    def mail_file_facts(self, label: str) -> dict:
+        try:
+            raw = self.guest(mail_file_facts_script(), timeout=60).stdout
+        except Exception as exc:  # noqa: BLE001 - recorded; a missing reading never stops the watch
+            return {"label": label, "at": utc_now(), "unavailable": self.redactor.text(f"{type(exc).__name__}: {exc}")[:300]}
+        return {"label": label, "at": utc_now(), "lines": raw.splitlines()}
+
+    def deferred_mail_watch(self, checks: dict) -> str:
+        """Read-only: follow the last Panel process's deferred startup mail retry until it resolved or the bound."""
+        started = time.monotonic()
+        facts = [self.mail_file_facts("watch-start")]
+        polls: list[dict] = []
+        text, view = "", {"processes": [], "last": None}
+        while True:
+            try:
+                text = self.panel_journal()
+                view = deferred_mail_view(text)
+            except Exception as exc:  # noqa: BLE001 - one lost read is recorded; the next poll reads again
+                polls.append({"at": utc_now(), "error": self.redactor.text(f"{type(exc).__name__}: {exc}")[:200]})
+            last = view["last"] or {}
+            polls.append({"at": utc_now(), "pid": last.get("pid"), "deferred": last.get("deferred"),
+                          "attempts": len(last.get("attempts") or []), "finished": last.get("finished")})
+            if last.get("finished") or time.monotonic() - started >= DEFERRED_MAIL_WATCH_S:
+                break
+            time.sleep(DEFERRED_MAIL_POLL_S)
+        resolved_view = view
+        settle = None
+        last = view["last"] or {}
+        if last.get("finished") and last.get("deferred"):
+            time.sleep(DEFERRED_MAIL_SETTLE_S)
+            try:
+                text = self.panel_journal()
+                after = deferred_mail_view(text)
+                again = after["last"] or {}
+                settle = {"at": utc_now(), "seconds_after_resolution": DEFERRED_MAIL_SETTLE_S,
+                          "same_process": again.get("pid") == last.get("pid"),
+                          "attempt_lines_before": len(last.get("attempts") or []),
+                          "attempt_lines_after": len(again.get("attempts") or []),
+                          "repeated_after": again.get("repeated")}
+                view = after
+            except Exception as exc:  # noqa: BLE001
+                settle = {"at": utc_now(), "unavailable": self.redactor.text(f"{type(exc).__name__}: {exc}")[:200]}
+        facts.append(self.mail_file_facts("watch-end"))
+        self.ev.write_text(f"{self.step_dir}/journal-panel.txt", text)
+        summary = {"processes": view["processes"], "polls": polls, "settle": settle, "mail_file_facts": facts,
+                   "watch_seconds": round(time.monotonic() - started, 1),
+                   "bound_seconds": DEFERRED_MAIL_WATCH_S}
+        self.record_json("deferred-mail.json", summary)
+        final = view["last"] or {}
+        self.state["deferred_mail"] = {
+            "panel_processes": [{k: p.get(k) for k in ("pid", "started_at", "ready_at", "deferred", "finished",
+                                                        "gave_up", "repeated")} | {"attempt_lines": len(p["attempts"])}
+                                for p in view["processes"]],
+            "last": {k: final.get(k) for k in ("pid", "started_at", "ready_at", "deferred", "resolved", "finished",
+                                               "gave_up", "repeated")},
+            "settle": settle, "watch_seconds": summary["watch_seconds"]}
+        checks.update(deferred_mail=self.state["deferred_mail"], polls=len(polls))
+        if not resolved_view["last"]:
+            raise StepInconclusive("no Panel start line in the Panel journal")
+        if not (resolved_view["last"] or {}).get("finished"):
+            raise StepInconclusive(f"the last Panel process's deferred startup mail work neither completed nor gave "
+                                   f"up within {int(DEFERRED_MAIL_WATCH_S)} s of this watch")
+        if final.get("repeated") or (settle and settle.get("attempt_lines_after", 0) > settle.get("attempt_lines_before", 0)):
+            self.finding("deferred startup mail work: a resolved step ran again or another attempt line followed "
+                         f"(repeated={final.get('repeated')}, settle={settle})")
+        if final.get("gave_up"):
+            self.finding("deferred startup mail work: the Panel gave up (the give-up line is in deferred-mail.json)")
+        return "observed"
+
     # -- upd4: management off, one orderly reboot, management back ---------------------------------
 
     def panel_truth(self, label: str) -> dict:
@@ -5562,6 +5727,8 @@ class Trial:
             self.step("track-after-owner-continuation", lambda checks: self.track(checks, label="after-owner"),
                       needs=("owner-continuation (required)",))
         self.step("terminal", self.terminal, needs=("owner-start",))
+        if deferred_mail_watched(self.cell):
+            self.step("deferred-mail-watch", self.deferred_mail_watch, needs=("owner-start",))
         if self.cell.variant == "mgmt-off-reboot":
             # upd4: only after the verified good update (terminal passed); management returns even when the
             # measurement found something, as long as it was switched off.
@@ -5614,6 +5781,8 @@ class Trial:
         if self.pk_on():
             # upd11: every cell with the probe on summarises its observations (busy-start included, as before).
             result["packagekit"] = pk_summary(self.state.get("pk_observations", []))
+        if deferred_mail_watched(self.cell):
+            result["deferred_mail"] = self.state.get("deferred_mail")
         self.step_dir = "result"
         return self.ev.finalize_upd1(result)
 

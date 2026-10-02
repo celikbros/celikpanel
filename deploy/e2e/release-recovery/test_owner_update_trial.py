@@ -3804,5 +3804,102 @@ class Upd5CardAndScreenTests(unittest.TestCase):
         self.assertNotIn(t.RECOVERY_LOG_COMMAND, card["texts"]["en"])
 
 
+# ---------------------------------------------------------------------------
+# upd12: the Panel's bounded retry of startup mail work refused as busy (read-only watch)
+# ---------------------------------------------------------------------------
+
+def panel_line(at, pid, message):
+    return f"2026-10-02T{at}+00:00 dns-debian13 panel[{pid}]: 2026/10/02 {at[:8]} {message}"
+
+
+BUSY = "another server change or package-manager task is still running"
+
+
+class DeferredMailWatchTests(unittest.TestCase):
+    def plan(self, cell):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "a.json"
+            path.write_text(json.dumps(artifacts(upd3=True)))
+            out = io.StringIO()
+            with redirect_stdout(out):
+                self.assertEqual(t.main(["plan", "--cell", cell, "--artifacts", str(path),
+                                         "--work-root", "/var/tmp/cp-release-drill-upd12-x", "--dry-run"]), 0)
+            return json.loads(out.getvalue())
+
+    def test_the_note_is_the_product_sentence(self):
+        source = (HERE.parents[2] / "cmd" / "panel" / "startup_deferred_mail.go")
+        if not source.is_file():
+            self.skipTest("cmd/panel/startup_deferred_mail.go is not in this tree")
+        block = re.search(r"const startupDeferredRetryNote = ((?:\"[^\"]*\"\s*\+?\s*)+)", source.read_text())
+        self.assertIsNotNone(block)
+        self.assertEqual("".join(re.findall(r"\"([^\"]*)\"", block[1])), t.DEFERRED_MAIL_NOTE)
+
+    def test_the_last_process_resolves_once_both_steps_completed(self):
+        journal = "\n".join([
+            panel_line("13:20:26.402648", 100, "Starting CelikPanel Backend..."),
+            panel_line("13:20:26.502648", 100, "milter chain: nothing to wire at startup: no mail server is installed"),
+            "2026-10-02T13:29:56.809716+00:00 dns-debian13 systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...",
+            panel_line("13:29:57.090763", 200, "Starting CelikPanel Backend..."),
+            panel_line("13:29:57.194391", 200, "certificate startup reconcile: certificate dependents: publish full mail "
+                       f"SNI snapshot: {BUSY}; preserve pending outbox: <nil>; {t.DEFERRED_MAIL_NOTE}"),
+            panel_line("13:29:57.198522", 200, f"milter wiring at startup: {BUSY}; {t.DEFERRED_MAIL_NOTE}"),
+            panel_line("13:29:57.300000", 200, "Panel ready on :2083 (HTTPS)"),
+            panel_line("13:30:27.900000", 200, "startup mail work, attempt 1 of 20: mail certificate publication "
+                       "completed (mail SNI from 0 active secure-mail certificates); mail filter wiring completed "
+                       "(milters=\"inet:localhost:11332\" maps=hash)"),
+        ])
+        view = t.deferred_mail_view(journal)
+        self.assertEqual([p["pid"] for p in view["processes"]], ["100", "200"])
+        first, last = view["processes"]
+        self.assertEqual((first["deferred"], first["finished"]), ([], True))
+        self.assertEqual(first["other_mail_lines"][0]["text"][:13], "milter chain:")
+        self.assertEqual(last["deferred"], ["mail certificate publication", "mail filter wiring"])
+        self.assertEqual(last["ready_at"], "2026-10-02T13:29:57.300000+00:00")
+        self.assertEqual(sorted(last["resolved"]), ["mail certificate publication", "mail filter wiring"])
+        self.assertEqual((last["finished"], last["gave_up"], last["repeated"]), (True, False, []))
+        self.assertEqual(last["attempts"][0]["attempt"], 1)
+        # Before the attempt line the same process is not finished.
+        self.assertFalse(t.deferred_mail_view("\n".join(journal.splitlines()[:-1]))["last"]["finished"])
+
+    def test_give_up_failure_and_repetition(self):
+        start = [panel_line("13:29:57.090763", 7, "Starting CelikPanel Backend..."),
+                 panel_line("13:29:57.198522", 7, f"milter wiring at startup: {BUSY}; {t.DEFERRED_MAIL_NOTE}")]
+        give_up = start + [panel_line("13:40:00.000000", 7, "startup mail work, attempt 20 of 20: mail filter wiring "
+                                      "still not done after 10 minutes: the server did not become free")]
+        view = t.deferred_mail_view("\n".join(give_up))["last"]
+        self.assertEqual((view["finished"], view["gave_up"], view["resolved"]), (True, True, {}))
+        failed = start + [panel_line("13:31:00.000000", 7, "startup mail work, attempt 2 of 20: mail filter wiring "
+                                     "failed: x; it is not retried now")]
+        self.assertEqual(t.deferred_mail_view("\n".join(failed))["last"]["resolved"]["mail filter wiring"][0]["outcome"],
+                         "failed")
+        twice = failed + [panel_line("13:32:00.000000", 7, "startup mail work, attempt 3 of 20: mail filter wiring "
+                                     "completed (x)")]
+        self.assertEqual(t.deferred_mail_view("\n".join(twice))["last"]["repeated"], ["mail filter wiring"])
+        # A busy line without the note (an older build) defers nothing.
+        old = [start[0], panel_line("13:29:57.198522", 7, f"milter wiring at startup: {BUSY}")]
+        self.assertEqual(t.deferred_mail_view("\n".join(old))["last"]["deferred"], [])
+        self.assertIsNone(t.deferred_mail_view("no panel lines")["last"])
+
+    def test_the_watch_runs_only_where_a_mail_panel_ends_running(self):
+        for cell in ("upd1-debian13-good", "upd1-debian13-defective", "upd1-debian13-owner-continuation",
+                     "upd1-debian13-startcheck", "upd1-ubuntu-good"):
+            with self.subTest(cell=cell):
+                names = [s["name"] for s in self.plan(cell)["steps"]]
+                self.assertEqual(names[names.index("terminal") + 1], "deferred-mail-watch")
+                self.assertEqual(names[names.index("deferred-mail-watch") + 1], "collect")
+        for cell in ("upd1-arch-good", "upd1-debian13-realstart", "upd1-debian13-mgmt-off-reboot",
+                     "upd1-ubuntu-setuponce"):
+            with self.subTest(cell=cell):
+                self.assertNotIn("deferred-mail-watch", [s["name"] for s in self.plan(cell)["steps"]])
+
+    def test_the_file_facts_script_only_reads(self):
+        script = t.mail_file_facts_script()
+        for path in t.DEFERRED_MAIL_FILES:
+            self.assertIn(path, script)
+        self.assertIn("postconf -h", script)
+        for word in ("rm ", "mv ", " > /", "postmap", "postconf -e", "systemctl", "tee "):
+            self.assertNotIn(word, script)
+
+
 if __name__ == "__main__":
     unittest.main()
