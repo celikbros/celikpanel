@@ -1,0 +1,268 @@
+[
+  {
+    "at": "2026-10-01T23:10:14.050583+00:00",
+    "event": "armed",
+    "identity": {
+      "cell_id": "release-recovery__b07bcbd3b5b21adc",
+      "node": "debian13",
+      "nonce": "b07bcbd3b5b21adc83974c29e260351d529a478e83c48eec64b961c02d315f71",
+      "vm_uuid": "09b0ff78-e9e3-5d6b-a2e1-38440404c1ea"
+    },
+    "mode": "watch",
+    "operation_id": "c76bec3d5b4a879a84cc1edb2cc02637",
+    "recovery_fault": null,
+    "schema": "celikpanel/owner-update-observer/v1",
+    "timeout_seconds": 3600.0
+  },
+  {
+    "at": "2026-10-01T23:10:14.071478+00:00",
+    "event": "timeline",
+    "identity": {
+      "cell_id": "release-recovery__b07bcbd3b5b21adc",
+      "node": "debian13",
+      "nonce": "b07bcbd3b5b21adc83974c29e260351d529a478e83c48eec64b961c02d315f71",
+      "vm_uuid": "09b0ff78-e9e3-5d6b-a2e1-38440404c1ea"
+    },
+    "operation_id": "c76bec3d5b4a879a84cc1edb2cc02637",
+    "recovery": "inactive",
+    "schema": "celikpanel/owner-update-observer/v1",
+    "snapshot": null,
+    "transaction_operation": null,
+    "transaction_phase": null,
+    "worker": "inactive",
+    "worker_freezer": "running"
+  },
+  {
+    "at": "2026-10-01T23:10:14.340049+00:00",
+    "event": "timeline",
+    "identity": {
+      "cell_id": "release-recovery__b07bcbd3b5b21adc",
+      "node": "debian13",
+      "nonce": "b07bcbd3b5b21adc83974c29e260351d529a478e83c48eec64b961c02d315f71",
+      "vm_uuid": "09b0ff78-e9e3-5d6b-a2e1-38440404c1ea"
+    },
+    "operation_id": "c76bec3d5b4a879a84cc1edb2cc02637",
+    "recovery": "inactive",
+    "schema": "celikpanel/owner-update-observer/v1",
+    "snapshot": null,
+    "transaction_operation": null,
+    "transaction_phase": null,
+    "worker": "active",
+    "worker_freezer": "running"
+  },
+  {
+    "at": "2026-10-01T23:10:21.282987+00:00",
+    "event": "timeline",
+    "identity": {
+      "cell_id": "release-recovery__b07bcbd3b5b21adc",
+      "node": "debian13",
+      "nonce": "b07bcbd3b5b21adc83974c29e260351d529a478e83c48eec64b961c02d315f71",
+      "vm_uuid": "09b0ff78-e9e3-5d6b-a2e1-38440404c1ea"
+    },
+    "operation_id": "c76bec3d5b4a879a84cc1edb2cc02637",
+    "recovery": "activating",
+    "schema": "celikpanel/owner-update-observer/v1",
+    "snapshot": null,
+    "transaction_operation": null,
+    "transaction_phase": null,
+    "worker": "active",
+    "worker_freezer": "running"
+  },
+  {
+    "at": "2026-10-01T23:10:21.668865+00:00",
+    "event": "timeline",
+    "identity": {
+      "cell_id": "release-recovery__b07bcbd3b5b21adc",
+      "node": "debian13",
+      "nonce": "b07bcbd3b5b21adc83974c29e260351d529a478e83c48eec64b961c02d315f71",
+      "vm_uuid": "09b0ff78-e9e3-5d6b-a2e1-38440404c1ea"
+    },
+    "operation_id": "c76bec3d5b4a879a84cc1edb2cc02637",
+    "recovery": "inactive",
+    "schema": "celikpanel/owner-update-observer/v1",
+    "snapshot": null,
+    "transaction_operation": null,
+    "transaction_phase": null,
+    "worker": "active",
+    "worker_freezer": "running"
+  },
+  {
+    "at": "2026-10-01T23:10:28.637821+00:00",
+    "event": "timeline",
+    "identity": {
+      "cell_id": "release-recovery__b07bcbd3b5b21adc",
+      "node": "debian13",
+      "nonce": "b07bcbd3b5b21adc83974c29e260351d529a478e83c48eec64b961c02d315f71",
+      "vm_uuid": "09b0ff78-e9e3-5d6b-a2e1-38440404c1ea"
+    },
+    "operation_id": "c76bec3d5b4a879a84cc1edb2cc02637",
+    "recovery": "activating",
+    "schema": "celikpanel/owner-update-observer/v1",
+    "snapshot": null,
+    "transaction_operation": null,
+    "transaction_phase": null,
+    "worker": "active",
+    "worker_freezer": "running"
+  },
+  {
+    "at": "2026-10-01T23:10:29.081415+00:00",
+    "event": "timeline",
+    "identity": {
+      "cell_id": "release-recovery__b07bcbd3b5b21adc",
+      "node": "debian13",
+      "nonce": "b07bcbd3b5b21adc83974c29e260351d529a478e83c48eec64b961c02d315f71",
+      "vm_uuid": "09b0ff78-e9e3-5d6b-a2e1-38440404c1ea"
+    },
+    "operation_id": "c76bec3d5b4a879a84cc1edb2cc02637",
+    "recovery": "inactive",
+    "schema": "celikpanel/owner-update-observer/v1",
+    "snapshot": null,
+    "transaction_operation": null,
+    "transaction_phase": null,
+    "worker": "active",
+    "worker_freezer": "running"
+  },
+  {
+    "at": "2026-10-01T23:10:32.268237+00:00",
+    "event": "timeline",
+    "identity": {
+      "cell_id": "release-recovery__b07bcbd3b5b21adc",
+      "node": "debian13",
+      "nonce": "b07bcbd3b5b21adc83974c29e260351d529a478e83c48eec64b961c02d315f71",
+      "vm_uuid": "09b0ff78-e9e3-5d6b-a2e1-38440404c1ea"
+    },
+    "operation_id": "c76bec3d5b4a879a84cc1edb2cc02637",
+    "recovery": "inactive",
+    "schema": "celikpanel/owner-update-observer/v1",
+    "snapshot": "20261001T231030Z-from-unknown-to-235198ff900dbb851a5fdcc966c94db7857f556d-e8d76e391ba6c2105d0aaa34fc1375c1",
+    "transaction_operation": "update",
+    "transaction_phase": "active",
+    "worker": "active",
+    "worker_freezer": "running"
+  },
+  {
+    "at": "2026-10-01T23:10:53.977647+00:00",
+    "event": "timeline",
+    "identity": {
+      "cell_id": "release-recovery__b07bcbd3b5b21adc",
+      "node": "debian13",
+      "nonce": "b07bcbd3b5b21adc83974c29e260351d529a478e83c48eec64b961c02d315f71",
+      "vm_uuid": "09b0ff78-e9e3-5d6b-a2e1-38440404c1ea"
+    },
+    "operation_id": "c76bec3d5b4a879a84cc1edb2cc02637",
+    "recovery": "inactive",
+    "schema": "celikpanel/owner-update-observer/v1",
+    "snapshot": "20261001T231030Z-from-unknown-to-235198ff900dbb851a5fdcc966c94db7857f556d-e8d76e391ba6c2105d0aaa34fc1375c1",
+    "transaction_operation": "update",
+    "transaction_phase": "completion.pending",
+    "worker": "active",
+    "worker_freezer": "running"
+  },
+  {
+    "at": "2026-10-01T23:10:59.072073+00:00",
+    "event": "timeline",
+    "identity": {
+      "cell_id": "release-recovery__b07bcbd3b5b21adc",
+      "node": "debian13",
+      "nonce": "b07bcbd3b5b21adc83974c29e260351d529a478e83c48eec64b961c02d315f71",
+      "vm_uuid": "09b0ff78-e9e3-5d6b-a2e1-38440404c1ea"
+    },
+    "operation_id": "c76bec3d5b4a879a84cc1edb2cc02637",
+    "recovery": "activating",
+    "schema": "celikpanel/owner-update-observer/v1",
+    "snapshot": "20261001T231030Z-from-unknown-to-235198ff900dbb851a5fdcc966c94db7857f556d-e8d76e391ba6c2105d0aaa34fc1375c1",
+    "transaction_operation": "update",
+    "transaction_phase": "completion.pending",
+    "worker": "active",
+    "worker_freezer": "running"
+  },
+  {
+    "at": "2026-10-01T23:10:59.510225+00:00",
+    "event": "timeline",
+    "identity": {
+      "cell_id": "release-recovery__b07bcbd3b5b21adc",
+      "node": "debian13",
+      "nonce": "b07bcbd3b5b21adc83974c29e260351d529a478e83c48eec64b961c02d315f71",
+      "vm_uuid": "09b0ff78-e9e3-5d6b-a2e1-38440404c1ea"
+    },
+    "operation_id": "c76bec3d5b4a879a84cc1edb2cc02637",
+    "recovery": "inactive",
+    "schema": "celikpanel/owner-update-observer/v1",
+    "snapshot": "20261001T231030Z-from-unknown-to-235198ff900dbb851a5fdcc966c94db7857f556d-e8d76e391ba6c2105d0aaa34fc1375c1",
+    "transaction_operation": "update",
+    "transaction_phase": "completion.pending",
+    "worker": "active",
+    "worker_freezer": "running"
+  },
+  {
+    "at": "2026-10-01T23:11:29.537312+00:00",
+    "event": "timeline",
+    "identity": {
+      "cell_id": "release-recovery__b07bcbd3b5b21adc",
+      "node": "debian13",
+      "nonce": "b07bcbd3b5b21adc83974c29e260351d529a478e83c48eec64b961c02d315f71",
+      "vm_uuid": "09b0ff78-e9e3-5d6b-a2e1-38440404c1ea"
+    },
+    "operation_id": "c76bec3d5b4a879a84cc1edb2cc02637",
+    "recovery": "activating",
+    "schema": "celikpanel/owner-update-observer/v1",
+    "snapshot": "20261001T231030Z-from-unknown-to-235198ff900dbb851a5fdcc966c94db7857f556d-e8d76e391ba6c2105d0aaa34fc1375c1",
+    "transaction_operation": "update",
+    "transaction_phase": "completion.pending",
+    "worker": "active",
+    "worker_freezer": "running"
+  },
+  {
+    "at": "2026-10-01T23:11:29.964724+00:00",
+    "event": "timeline",
+    "identity": {
+      "cell_id": "release-recovery__b07bcbd3b5b21adc",
+      "node": "debian13",
+      "nonce": "b07bcbd3b5b21adc83974c29e260351d529a478e83c48eec64b961c02d315f71",
+      "vm_uuid": "09b0ff78-e9e3-5d6b-a2e1-38440404c1ea"
+    },
+    "operation_id": "c76bec3d5b4a879a84cc1edb2cc02637",
+    "recovery": "inactive",
+    "schema": "celikpanel/owner-update-observer/v1",
+    "snapshot": "20261001T231030Z-from-unknown-to-235198ff900dbb851a5fdcc966c94db7857f556d-e8d76e391ba6c2105d0aaa34fc1375c1",
+    "transaction_operation": "update",
+    "transaction_phase": "completion.pending",
+    "worker": "active",
+    "worker_freezer": "running"
+  },
+  {
+    "at": "2026-10-01T23:11:56.810331+00:00",
+    "event": "timeline",
+    "identity": {
+      "cell_id": "release-recovery__b07bcbd3b5b21adc",
+      "node": "debian13",
+      "nonce": "b07bcbd3b5b21adc83974c29e260351d529a478e83c48eec64b961c02d315f71",
+      "vm_uuid": "09b0ff78-e9e3-5d6b-a2e1-38440404c1ea"
+    },
+    "operation_id": "c76bec3d5b4a879a84cc1edb2cc02637",
+    "recovery": "activating",
+    "schema": "celikpanel/owner-update-observer/v1",
+    "snapshot": "20261001T231030Z-from-unknown-to-235198ff900dbb851a5fdcc966c94db7857f556d-e8d76e391ba6c2105d0aaa34fc1375c1",
+    "transaction_operation": "update",
+    "transaction_phase": "completion.pending",
+    "worker": "failed",
+    "worker_freezer": "running"
+  },
+  {
+    "at": "2026-10-01T23:11:56.814180+00:00",
+    "checkpoint_verified": false,
+    "event": "released",
+    "identity": {
+      "cell_id": "release-recovery__b07bcbd3b5b21adc",
+      "node": "debian13",
+      "nonce": "b07bcbd3b5b21adc83974c29e260351d529a478e83c48eec64b961c02d315f71",
+      "vm_uuid": "09b0ff78-e9e3-5d6b-a2e1-38440404c1ea"
+    },
+    "kill_sent": false,
+    "operation_id": "c76bec3d5b4a879a84cc1edb2cc02637",
+    "reason": "worker-exited",
+    "recovery_fault_armed": false,
+    "schema": "celikpanel/owner-update-observer/v1",
+    "thaw_exit": null
+  }
+]

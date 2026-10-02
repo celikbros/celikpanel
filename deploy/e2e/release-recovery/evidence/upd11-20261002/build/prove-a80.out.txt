@@ -1,0 +1,18 @@
+source_head 48e5465712c3ef94f10fa8f91cc952289902ec2d baseline_ref {"patched_files": ["cmd/panel/license.go", "internal/licensing/acceptance_fixture.go", "internal/licensing/acceptance_off.go", "internal/licensing/acceptance_owner_linux.go", "internal/licensing/acceptance_owner_other.go", "internal/licensing/license.go"], "proof": "/var/tmp/cp-upd1-build/20261001t221533z/baseline-ref-proof.txt", "ref": "v0.1.0-alpha.80", "tag_commit": "bd14d97efc5cfd19acd70ddf0edb9c6343317e2b"}
+baseline v0.1.0-alpha.80 80 b9fe1037c6b5580fed97fa0382ec576d5f041045 ee6d75f688fac425179ee646a647a0ceb68283bc e00ea2267aa9fc2231d0ce52e165855098c88b7d748d5a5df7c34bff3bb1dcb4 acceptance-fixture bd14d97efc5cfd19acd70ddf0edb9c6343317e2b
+good v0.1.0-alpha.81 81 9656dabad6d85b9a3b1a9360a7ff6e984fe4b4d3 9ce07b820c7fd4b358609f7fd3381d04f530e505 71d191cee0c91448e462d652674671d4250548623823bb0484dbd8bd9dbe0955 acceptance-fixture b9fe1037c6b5580fed97fa0382ec576d5f041045
+defective v0.1.0-alpha.81 81 ca9c11d17a76b98aaccb3512ee87a94c80b44b04 1e084fa2b949e0fdd717c93215c6df6937b0fdc1 bed12c10d6554031b5867c1b73ce82715740038ea3643f47747cbfa09407e4ab acceptance-fixture 9656dabad6d85b9a3b1a9360a7ff6e984fe4b4d3
+prove rc=0
+dry upd1-debian13-good rc=0
+upd1-debian13-good native_evidence= False v0.1.0-alpha.80 v0.1.0-alpha.81 ['preflight', 'origin', 'baseline-install', 'owner-login', 'license', 'setup', 'seed', 'pre-state', 'arm', 'owner-start', 'track', 'owner-continuation (required)', 'terminal', 'collect', 'verdicts']
+ expected: succeeded (update_verified)
+dry upd1-debian13-defective rc=0
+upd1-debian13-defective native_evidence= False v0.1.0-alpha.80 v0.1.0-alpha.81 ['preflight', 'origin', 'baseline-install', 'owner-login', 'license', 'setup', 'seed', 'pre-state', 'arm', 'owner-start', 'track', 'owner-continuation (required)', 'terminal', 'collect', 'verdicts']
+ expected: recovered (rollback_verified, previous_failure=update_failed), automatically or after the owner's one-time retry
+dry upd1-ubuntu-good rc=0
+upd1-ubuntu-good native_evidence= False v0.1.0-alpha.80 v0.1.0-alpha.81 ['preflight', 'origin', 'baseline-install', 'owner-login', 'license', 'setup', 'seed', 'pre-state', 'arm', 'owner-start', 'track', 'owner-continuation (required)', 'terminal', 'collect', 'verdicts']
+ expected: succeeded (update_verified)
+dry upd1-debian13-owner-continuation rc=0
+upd1-debian13-owner-continuation native_evidence= False v0.1.0-alpha.80 v0.1.0-alpha.81 ['preflight', 'origin', 'baseline-install', 'owner-login', 'license', 'setup', 'seed', 'pre-state', 'arm', 'owner-start', 'track', 'owner-continuation (required)', 'terminal', 'collect', 'verdicts', 'kind-expectation']
+ expected: the good candidate passes the start check; the held port makes its real start fail (panel_start_unverified); forward completion is retried three times (dispatch
+no dry-run lab created

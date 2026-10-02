@@ -1,0 +1,27 @@
+evidence /var/tmp/cp-release-drill-upd11-d13-mr-a/evidence/debian13/upd1/upd1-debian13-mgmt-off-reboot-20261001t233731z/
+## initial-record (updater wrote it): 0 hits (0 in .txt)
+## curl preflight refusal: 0 hits (0 in .txt)
+## no-marker after child failure: 0 hits (0 in .txt)
+## pause_pending journal: 0 hits (0 in .txt)
+## renewal restore at pause: 0 hits (0 in .txt)
+## pause recorded: 0 hits (0 in .txt)
+## start check failure: 0 hits (0 in .txt)
+## package-activity refusal (startup reconcile): 4 hits (4 in .txt)
+   steps/14-management-off/journal-product-before-reboot.txt:422: 2026-10-01T23:46:53.972753+00:00 dns-debian13 panel[37094]: 2026/10/01 23:46:53 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>
+   steps/14-management-off/journal-product-before-reboot.txt:423: 2026-10-01T23:46:53.980342+00:00 dns-debian13 panel[37094]: 2026/10/01 23:46:53 milter wiring at startup: another server change or package-manager task is still running
+## package_manager_active / HOST_MUTATION_BUSY: 0 hits (0 in .txt)
+## startup reconcile success: 4 hits (4 in .txt)
+   steps/14-management-off/journal-product-before-reboot.txt:421: 2026-10-01T23:46:53.966498+00:00 dns-debian13 panel[37094]: 2026/10/01 23:46:53 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload
+   steps/18-collect/journal-product.txt:539: 2026-10-01T23:50:57.173187+00:00 dns-debian13 panel[2180]: 2026/10/01 23:50:57 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload
+   steps/18-collect/journal-product.txt:544: 2026-10-01T23:51:00.536356+00:00 dns-debian13 panel[2180]: 2026/10/01 23:51:00 certificate startup reconcile: mail SNI reconciled from 0 active secure-mail certificates; TLSA left unchanged: automatic DANE/TLSA updates are disabled: safe TTL-aware certificate rollover and explicit panel record ownership are not available in this
+## milter chain/wiring: 7 hits (7 in .txt)
+   steps/14-management-off/journal-product-before-reboot.txt:16: 2026-10-01T23:38:19.337164+00:00 dns-debian13 panel[5089]: 2026/10/01 23:38:19 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-management-off/journal-product-before-reboot.txt:29: 2026-10-01T23:38:20.560804+00:00 dns-debian13 panel[5157]: 2026/10/01 23:38:20 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-management-off/journal-product-before-reboot.txt:423: 2026-10-01T23:46:53.980342+00:00 dns-debian13 panel[37094]: 2026/10/01 23:46:53 milter wiring at startup: another server change or package-manager task is still running
+   steps/18-collect/journal-product.txt:549: 2026-10-01T23:51:05.398592+00:00 dns-debian13 panel[2180]: 2026/10/01 23:51:05 milter chain: milters="inet:localhost:11332" maps=hash
+## root CLI states (first seen)
+   2026-10-01T23:46:11Z ('running', 'update_running', None, None, None)
+   2026-10-01T23:47:08Z ('succeeded', 'update_verified', None, None, None)
+## CELIKPANEL_LISTEN mentions
+   steps/14-management-off/journal-product-before-reboot.txt 2026-10-01T23:46:52.000788+00:00 dns-debian13 sudo[36616]:     root : PWD=/var/backups/celikpanel/releases/73eef2862644-8d4e1447a31be52539f27b31 ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/l
+   steps/18-collect/journal-product.txt 2026-10-01T23:46:52.000788+00:00 dns-debian13 sudo[36616]:     root : PWD=/var/backups/celikpanel/releases/73eef2862644-8d4e1447a31be52539f27b31 ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/l

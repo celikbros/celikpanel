@@ -1,0 +1,103 @@
+{
+  "checks": {
+    "cron_availability": {
+      "available": true,
+      "crontab": "/usr/bin/crontab",
+      "daemon_active": true,
+      "daemon_units": {
+        "cron.service": {
+          "ActiveState": "active",
+          "LoadState": "loaded",
+          "UnitFileState": "enabled"
+        }
+      },
+      "verdict": "available"
+    },
+    "owner_waited_for_idle": {
+      "at": "2026-10-02T02:47:58Z",
+      "busy_seen": [
+        {
+          "locks": [],
+          "processes": [
+            "packagekitd"
+          ]
+        }
+      ],
+      "idle": true,
+      "polls": 18,
+      "waited_s": 175.0
+    },
+    "seeded": {
+      "cron": {
+        "available": true,
+        "command": "/bin/date -u -Iseconds > \"$HOME/upd1-cron-stamp.txt\"",
+        "create_http": 200,
+        "crontab": "/usr/bin/crontab",
+        "daemon_active": true,
+        "daemon_units": {
+          "cron.service": {
+            "ActiveState": "active",
+            "LoadState": "loaded",
+            "UnitFileState": "enabled"
+          }
+        },
+        "list_sha256": "99569101ac78f8330598fe1e8f993454221f75add380d25e0b7f12c7cb813032",
+        "listed": true,
+        "seeded": true,
+        "verdict": "available"
+      },
+      "database": {
+        "create_http": 200,
+        "list_http": 200,
+        "listed": true,
+        "name": "upd1_owner_test_upd1db",
+        "seeded": true,
+        "table": {
+          "client": "mariadb",
+          "database": "upd1_owner_test_upd1db",
+          "query": {
+            "client": "mariadb",
+            "error": null,
+            "ok": true,
+            "returncode": 0,
+            "row_matches": true,
+            "status": "ok"
+          },
+          "returncode": 0,
+          "status": "ok",
+          "stderr": "",
+          "table": "upd1_owner"
+        },
+        "type": "mysql"
+      },
+      "domain": "upd1-owner.test",
+      "domain_id": 1,
+      "firewall": {
+        "http": 200,
+        "sha256": "0da71220eee9b3b488535b16e3884c9b94b2bc452c845e9224b9e2f5722503f4"
+      },
+      "index_sha256": "fc6c4b0b80434fc539c51a14d85bbaaaac08268dc027a2a1db08704db29b729e",
+      "mail": {
+        "address": "owner@upd1-owner.test",
+        "attempted": true,
+        "create_http": 200,
+        "listed": true,
+        "setup_http": 200
+      },
+      "marker": "upd1-marker-ceb523e27db6fb3c44f0c503acc78360",
+      "records_http": 200,
+      "records_sha256": "ca87e97c42c30d75fff1e03572121e19b62c85d02a23cb7ed35b9e3355ba3b5e",
+      "zone": {
+        "managed": false,
+        "management": "external",
+        "name": "upd1-owner.test",
+        "type": "EXTERNAL"
+      },
+      "zone_http": 200
+    }
+  },
+  "finished_at": "2026-10-02T02:48:02Z",
+  "name": "seed",
+  "started_at": "2026-10-02T02:45:03Z",
+  "verdict": "passed"
+}

@@ -1,0 +1,24 @@
+Formatting '/var/tmp/cp-release-drill-upd11-ub-oc-a/cells/bfb6974d181ac029b3b3367b/ubuntu/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-upd11-ub-oc-a/images/ubuntu-24.04-server-cloudimg-amd64-20260826.img backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-upd11-ub-oc-a", "cell_id": "release-recovery__f407867b8d492885", "ssh_ports": [3341, 3342]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-upd11-ub-oc-a", "nodes": {"ubuntu": "verified-disposable-systemd-guest"}}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-upd11-ub-oc-a", "nodes": {"ubuntu": "verified-disposable-systemd-guest"}}
+{"step": "preflight", "verdict": "passed", "reason": null}
+{"step": "origin", "verdict": "passed", "reason": null}
+{"step": "baseline-install", "verdict": "passed", "reason": null}
+{"step": "owner-login", "verdict": "passed", "reason": null}
+{"step": "license", "verdict": "passed", "reason": null}
+{"step": "setup", "verdict": "observed", "reason": null}
+{"step": "seed", "verdict": "passed", "reason": null}
+{"step": "pre-state", "verdict": "passed", "reason": null}
+{"step": "arm", "verdict": "passed", "reason": null}
+{"step": "owner-start", "verdict": "passed", "reason": null}
+{"step": "track", "verdict": "observed", "reason": null}
+{"step": "owner-continuation (required)", "verdict": "observed", "reason": null}
+{"step": "track-after-owner-continuation", "verdict": "passed", "reason": null}
+{"step": "terminal", "verdict": "passed", "reason": null}
+{"step": "collect", "verdict": "passed", "reason": null}
+{"step": "verdicts", "verdict": "passed", "reason": null}
+{"step": "kind-expectation", "verdict": "passed", "reason": null}
+{"kind_measured": true, "outcome": "recovered-after-owner-continuation", "overall": "complete-for-review", "request_id": "9ed260511f1c36cc39fd2a54f691bd02"}
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-upd11-ub-oc-a", "evidence_retained": true}
+UPD1 cell=upd1-ubuntu-owner-continuation dns_mode=external lab=/var/tmp/cp-release-drill-upd11-ub-oc-a driver_exit=0 evidence=/var/tmp/cp-release-drill-upd11-ub-oc-a/evidence/*/upd1

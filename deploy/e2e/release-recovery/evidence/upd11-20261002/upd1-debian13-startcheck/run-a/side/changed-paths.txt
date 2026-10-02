@@ -1,0 +1,25 @@
+evidence /var/tmp/cp-release-drill-upd11-d13-sc-a/evidence/debian13/upd1/upd1-debian13-startcheck-20261001t224353z/
+## initial-record (updater wrote it): 0 hits (0 in .txt)
+## curl preflight refusal: 0 hits (0 in .txt)
+## no-marker after child failure: 0 hits (0 in .txt)
+## pause_pending journal: 0 hits (0 in .txt)
+## renewal restore at pause: 0 hits (0 in .txt)
+## pause recorded: 0 hits (0 in .txt)
+## start check failure: 2 hits (1 in .txt)
+   steps/14-collect/journal-product.txt:430: 2026-10-01T22:53:59.570866+00:00 dns-debian13 agent[26760]: 2026/10/01 22:53:59 System update worker failed: reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=candidate_panel_startup_check_failed state=recovery_required reason=new panel start check failed before completion: panel startup check failed: tls
+## package-activity refusal (startup reconcile): 2 hits (2 in .txt)
+   steps/14-collect/journal-product.txt:485: 2026-10-01T22:55:14.060434+00:00 dns-debian13 panel[4726]: 2026/10/01 22:55:14 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>
+   steps/14-collect/journal-product.txt:486: 2026-10-01T22:55:14.065612+00:00 dns-debian13 panel[4726]: 2026/10/01 22:55:14 milter wiring at startup: another server change or package-manager task is still running
+## package_manager_active / HOST_MUTATION_BUSY: 0 hits (0 in .txt)
+## startup reconcile success: 1 hits (1 in .txt)
+   steps/14-collect/journal-product.txt:484: 2026-10-01T22:55:14.058933+00:00 dns-debian13 panel[4726]: 2026/10/01 22:55:14 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload
+## milter chain/wiring: 3 hits (3 in .txt)
+   steps/14-collect/journal-product.txt:16: 2026-10-01T22:44:30.274892+00:00 dns-debian13 panel[5082]: 2026/10/01 22:44:30 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-collect/journal-product.txt:29: 2026-10-01T22:44:31.468218+00:00 dns-debian13 panel[5147]: 2026/10/01 22:44:31 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-collect/journal-product.txt:486: 2026-10-01T22:55:14.065612+00:00 dns-debian13 panel[4726]: 2026/10/01 22:55:14 milter wiring at startup: another server change or package-manager task is still running
+## root CLI states (first seen)
+   2026-10-01T22:53:15Z ('running', 'update_running', None, None, None)
+   2026-10-01T22:54:08Z ('recovering', 'recovery_running', None, 'candidate_panel_startup_check_failed', None)
+   2026-10-01T22:55:18Z ('recovered', 'rollback_verified', None, 'candidate_panel_startup_check_failed', None)
+## CELIKPANEL_LISTEN mentions
+   steps/14-collect/journal-product.txt 2026-10-01T22:53:58.976248+00:00 dns-debian13 sudo[37704]:     root : PWD=/var/backups/celikpanel/releases/f91732bae9a0-b00a8726b3284c089379dcce ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/l

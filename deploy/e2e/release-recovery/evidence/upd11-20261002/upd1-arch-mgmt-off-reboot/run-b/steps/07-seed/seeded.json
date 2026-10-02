@@ -1,0 +1,64 @@
+{
+  "cron": {
+    "available": true,
+    "command": "/bin/date -u -Iseconds > \"$HOME/upd1-cron-stamp.txt\"",
+    "create_http": 200,
+    "crontab": "/usr/sbin/crontab",
+    "daemon_active": true,
+    "daemon_units": {
+      "cronie.service": {
+        "ActiveState": "active",
+        "LoadState": "loaded",
+        "UnitFileState": "enabled"
+      }
+    },
+    "list_sha256": "99569101ac78f8330598fe1e8f993454221f75add380d25e0b7f12c7cb813032",
+    "listed": true,
+    "seeded": true,
+    "verdict": "available"
+  },
+  "database": {
+    "create_http": 200,
+    "list_http": 200,
+    "listed": true,
+    "name": "upd1_owner_test_upd1db",
+    "seeded": true,
+    "table": {
+      "client": "mariadb",
+      "database": "upd1_owner_test_upd1db",
+      "query": {
+        "client": "mariadb",
+        "error": null,
+        "ok": true,
+        "returncode": 0,
+        "row_matches": true,
+        "status": "ok"
+      },
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "table": "upd1_owner"
+    },
+    "type": "mysql"
+  },
+  "domain": "upd1-owner.test",
+  "domain_id": 1,
+  "firewall": {
+    "http": 200,
+    "sha256": "bfa8956c8cf8943ced99dcc8febaa1b43fc0a63b8afbd5fd913de3dbd734434b"
+  },
+  "index_sha256": "7304349e96e0867f1ef3cda46c358372d6028a7b9a78a26dd88d66e00056a776",
+  "mail": {
+    "attempted": false
+  },
+  "marker": "upd1-marker-d72b0beee8a28f6adcbbef45de9c0c03",
+  "records_http": 200,
+  "records_sha256": "55d3aefce67f324e81a31183a77e802049a016a55081d7d703fcf1afe5b2b815",
+  "zone": {
+    "managed": false,
+    "management": "external",
+    "name": "upd1-owner.test",
+    "type": "EXTERNAL"
+  },
+  "zone_http": 200
+}

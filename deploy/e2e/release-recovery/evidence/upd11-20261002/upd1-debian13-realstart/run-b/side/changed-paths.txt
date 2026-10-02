@@ -1,0 +1,26 @@
+evidence /var/tmp/cp-release-drill-upd11-d13-rs-b/evidence/debian13/upd1/upd1-debian13-realstart-20261001t230207z/
+## initial-record (updater wrote it): 0 hits (0 in .txt)
+## curl preflight refusal: 0 hits (0 in .txt)
+## no-marker after child failure: 0 hits (0 in .txt)
+## pause_pending journal: 1 hits (1 in .txt)
+   steps/14-collect/journal-product.txt:661: 2026-10-01T23:16:36.052276+00:00 dns-debian13 release-recovery[46123]: The last admitted recovery attempt did not finish. The next run of the recovery timer records the pause and prints the one-time retry command for this operation.
+## renewal restore at pause: 1 hits (1 in .txt)
+   steps/14-collect/journal-product.txt:659: 2026-10-01T23:16:36.051761+00:00 dns-debian13 release-recovery[46123]: Automatic certificate renewal (Certbot) was returned to its state from before the update while this operation waits; the retry pauses it again before it continues.
+## pause recorded: 1 hits (1 in .txt)
+   steps/14-collect/journal-product.txt:669: 2026-10-01T23:17:08.851262+00:00 dns-debian13 release-recovery[49401]: Automatic recovery paused after three admitted attempts. No recovery child was started. Preserve evidence and inspect the recovery service journal.
+## start check failure: 0 hits (0 in .txt)
+## package-activity refusal (startup reconcile): 0 hits (0 in .txt)
+## package_manager_active / HOST_MUTATION_BUSY: 0 hits (0 in .txt)
+## startup reconcile success: 0 hits (0 in .txt)
+## milter chain/wiring: 2 hits (2 in .txt)
+   steps/14-collect/journal-product.txt:16: 2026-10-01T23:02:43.338738+00:00 dns-debian13 panel[5080]: 2026/10/01 23:02:43 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-collect/journal-product.txt:29: 2026-10-01T23:02:44.509254+00:00 dns-debian13 panel[5144]: 2026/10/01 23:02:44 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+## root CLI states (first seen)
+   2026-10-01T23:10:13Z ('running', 'update_running', None, None, None)
+   2026-10-01T23:12:06Z ('recovering', 'recovery_running', None, 'panel_start_unverified', None)
+   2026-10-01T23:13:17Z ('recovery_required', 'recovery_failed', 'retry_scheduled', None, 'panel_start_unverified')
+   2026-10-01T23:13:43Z ('recovering', 'recovery_running', None, None, 'panel_start_unverified')
+   2026-10-01T23:16:45Z ('recovery_required', 'recovery_failed', 'pause_pending', None, 'panel_start_unverified')
+   2026-10-01T23:17:17Z ('recovery_required', 'recovery_incomplete', 'paused_retry_limit', None, 'panel_start_unverified')
+## CELIKPANEL_LISTEN mentions
+   steps/14-collect/journal-product.txt 2026-10-01T23:10:53.641682+00:00 dns-debian13 sudo[36540]:     root : PWD=/var/backups/celikpanel/releases/235198ff900d-e8fbc6d7db4ed6ee82ddcac8 ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/l

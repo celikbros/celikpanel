@@ -1,0 +1,27 @@
+{
+  "checks": {
+    "agreement": {
+      "agreed_samples": 13,
+      "lag_samples": 1,
+      "samples": 22,
+      "verdict": "passed"
+    },
+    "final": {
+      "failure_code": "candidate_panel_startup_check_failed",
+      "observation": "known",
+      "observed_at": "2026-10-02T00:22:48Z",
+      "phase": "recovered",
+      "previous_failure": "update_failed",
+      "reason": "rollback_verified",
+      "request_id": "8dc47449d595b2074daa0282720c1d56",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "rollback_verified"
+    },
+    "reboot": null,
+    "samples": 22
+  },
+  "finished_at": "2026-10-02T00:22:49Z",
+  "name": "track",
+  "started_at": "2026-10-02T00:21:09Z",
+  "verdict": "passed"
+}

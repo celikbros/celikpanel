@@ -1,0 +1,15 @@
+2026-10-02T02:12:41.419520+00:00 dns-ubuntu systemd[1]: Started cp-lab-upd1-origin.service - Disposable upd1 celikpanel.net fixture origin (guest loopback only; lab, no product authority).
+2026-10-02T02:12:47.018656+00:00 dns-ubuntu systemd[1]: Starting celikpanel-lab-current-worker-baseline.service - /usr/bin/python3 -I /root/celikpanel-release-recovery-lab/current-worker-baseline-driver.py...
+2026-10-02T02:13:17.501016+00:00 dns-ubuntu groupadd[5269]: group added to /etc/group: name=celikpanel, GID=988
+2026-10-02T02:13:17.514869+00:00 dns-ubuntu groupadd[5269]: group added to /etc/gshadow: name=celikpanel
+2026-10-02T02:13:17.517191+00:00 dns-ubuntu groupadd[5269]: new group: name=celikpanel, GID=988
+2026-10-02T02:13:17.552262+00:00 dns-ubuntu useradd[5276]: new user: name=celikpanel, UID=999, GID=988, home=/var/lib/celikpanel, shell=/usr/sbin/nologin, from=none
+2026-10-02T02:13:31.865976+00:00 dns-ubuntu systemd[1]: celikpanel-lab-current-worker-baseline.service: Deactivated successfully.
+2026-10-02T02:13:31.866300+00:00 dns-ubuntu systemd[1]: Finished celikpanel-lab-current-worker-baseline.service - /usr/bin/python3 -I /root/celikpanel-release-recovery-lab/current-worker-baseline-driver.py.
+2026-10-02T02:13:31.866761+00:00 dns-ubuntu systemd[1]: celikpanel-lab-current-worker-baseline.service: Consumed 31.034s CPU time, 806.0M memory peak, 0B memory swap peak.
+2026-10-02T02:13:35.578039+00:00 dns-ubuntu systemd[1]: celikpanel-lab-current-worker-baseline.service: Failed to open /run/systemd/transient/celikpanel-lab-current-worker-baseline.service: No such file or directory
+2026-10-02T02:13:35.879224+00:00 dns-ubuntu systemd[1]: celikpanel-lab-current-worker-baseline.service: Failed to open /run/systemd/transient/celikpanel-lab-current-worker-baseline.service: No such file or directory
+2026-10-02T02:27:52.551192+00:00 dns-ubuntu systemd[1]: Started cp-lab-upd1-sampler.service - Disposable upd1 workload sampler (lab only; no product authority).
+-- Boot 65fcf7c259344724ab7235ab198ca62b --
+2026-10-02T02:31:05.386391+00:00 dns-ubuntu systemd[1]: Started cp-lab-upd1-origin.service - Disposable upd1 celikpanel.net fixture origin (guest loopback only; lab, no product authority).
+2026-10-02T02:31:05.413404+00:00 dns-ubuntu systemd[1]: Started cp-lab-upd1-sampler.service - Disposable upd1 workload sampler (lab only; no product authority).

@@ -1,0 +1,76 @@
+{
+  "agreement": {
+    "known_sources": [],
+    "phase": {},
+    "reasons": [],
+    "sources": [
+      "shell"
+    ],
+    "verdict": "no-known-source"
+  },
+  "cli": {
+    "boot_id": "478ea4ee-d338-4ab4-b6c0-a231738320d7",
+    "captured_at": "2026-10-02T11:52:57.843760Z",
+    "en": {
+      "returncode": null,
+      "status": "unavailable",
+      "stderr": null,
+      "stdout": null
+    },
+    "json": {
+      "returncode": null,
+      "status": "unavailable",
+      "stderr": null,
+      "stdout": null
+    },
+    "tr": {
+      "returncode": null,
+      "status": "unavailable",
+      "stderr": null,
+      "stdout": null
+    }
+  },
+  "guidance_api": null,
+  "guidance_cli": null,
+  "index": 1,
+  "observed": null,
+  "recovery_api": {
+    "body": null,
+    "http": 404
+  },
+  "t": 1790941977.5037763,
+  "update_card": {
+    "keys": [],
+    "missing_keys": [],
+    "observation_error": null,
+    "role": "baseline",
+    "server_message": null,
+    "source": null,
+    "state": null,
+    "texts": {
+      "en": [],
+      "tr": []
+    },
+    "unavailable": "lib/systemUpdateOutcome.ts: FileNotFoundError"
+  },
+  "update_status": {
+    "body": {
+      "created_at": "2026-10-02T11:52:55.480004179Z",
+      "found": true,
+      "request_id": "16b9825a634a19df5f33f7c64a4a1cf4",
+      "status": "running",
+      "target": {
+        "arch": "amd64",
+        "archive_sha256": "bed12c10d6554031b5867c1b73ce82715740038ea3643f47747cbfa09407e4ab",
+        "archive_size": "65647312",
+        "commit": "ca9c11d17a76b98aaccb3512ee87a94c80b44b04",
+        "os": "linux",
+        "sequence": "81",
+        "version": "v0.1.0-alpha.81"
+      },
+      "updated_at": "2026-10-02T11:52:55.611011551Z"
+    },
+    "http": 200
+  },
+  "utc": "2026-10-02T11:52:57Z"
+}

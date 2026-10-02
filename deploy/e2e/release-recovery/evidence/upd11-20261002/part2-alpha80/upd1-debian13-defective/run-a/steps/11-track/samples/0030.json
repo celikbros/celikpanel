@@ -1,0 +1,101 @@
+{
+  "agreement": {
+    "known_sources": [
+      "cli"
+    ],
+    "phase": {
+      "cli": "recovered"
+    },
+    "reasons": [],
+    "sources": [
+      "cli",
+      "shell"
+    ],
+    "verdict": "single-source"
+  },
+  "cli": {
+    "boot_id": "6d80eed7-5d1b-44f6-aa65-7af66f8d5f72",
+    "captured_at": "2026-10-02T11:55:29.826126Z",
+    "en": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "The update did not complete, and the server was returned automatically to the version it ran before; that restoration was verified. Nothing needs to be done on the server. Do not start the same version again until a corrected version is published; the panel's update page shows what is known about the cause.\nRequest: 16b9825a634a19df5f33f7c64a4a1cf4\nRecorded at: 2026-10-02T11:55:25Z\nThis is a recorded observation; current service health was not checked.\nRecorded state (for support): phase=recovered reason=rollback_verified proof=rollback_verified previous_failure=update_failed\n"
+    },
+    "json": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "{\"schema\":\"celikpanel-recovery-status/v1\",\"request_id\":\"16b9825a634a19df5f33f7c64a4a1cf4\",\"observation\":\"known\",\"phase\":\"recovered\",\"terminal_proof\":\"rollback_verified\",\"reason\":\"rollback_verified\",\"observed_at\":\"2026-10-02T11:55:25Z\",\"previous_failure\":\"update_failed\"}\n"
+    },
+    "tr": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "Güncelleme tamamlanmadı ve sunucu otomatik olarak güncellemeden önce çalıştırdığı sürüme döndürüldü; bu geri dönüş doğrulandı. Sunucuda yapmanız gereken bir şey yok. Düzeltilmiş bir sürüm yayımlanana kadar aynı sürümü yeniden başlatmayın; nedenle ilgili bilinenler panelin güncelleme sayfasında gösterilir.\nİşlem: 16b9825a634a19df5f33f7c64a4a1cf4\nKayıt zamanı: 2026-10-02T11:55:25Z\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\nKayıtlı durum (destek için): phase=recovered reason=rollback_verified proof=rollback_verified previous_failure=update_failed\n"
+    }
+  },
+  "guidance_api": null,
+  "guidance_cli": {
+    "actionable": null,
+    "keys": [],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "texts": {
+      "en": [],
+      "tr": []
+    },
+    "unavailable": "lib/systemUpdateOutcome.ts: FileNotFoundError"
+  },
+  "index": 29,
+  "observed": {
+    "observation": "known",
+    "observed_at": "2026-10-02T11:55:25Z",
+    "phase": "recovered",
+    "previous_failure": "update_failed",
+    "reason": "rollback_verified",
+    "request_id": "16b9825a634a19df5f33f7c64a4a1cf4",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "rollback_verified"
+  },
+  "recovery_api": {
+    "body": null,
+    "http": 404
+  },
+  "t": 1790942129.5856376,
+  "update_card": {
+    "keys": [],
+    "missing_keys": [],
+    "observation_error": null,
+    "role": "baseline",
+    "server_message": null,
+    "source": null,
+    "state": null,
+    "texts": {
+      "en": [],
+      "tr": []
+    },
+    "unavailable": "lib/systemUpdateOutcome.ts: FileNotFoundError"
+  },
+  "update_status": {
+    "body": {
+      "created_at": "2026-10-02T11:52:55.480004179Z",
+      "found": true,
+      "request_id": "16b9825a634a19df5f33f7c64a4a1cf4",
+      "status": "failed",
+      "summary": "reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason=offline panel database migration failed; its original database and work evidence are preserved detail=",
+      "target": {
+        "arch": "amd64",
+        "archive_sha256": "bed12c10d6554031b5867c1b73ce82715740038ea3643f47747cbfa09407e4ab",
+        "archive_size": "65647312",
+        "commit": "ca9c11d17a76b98aaccb3512ee87a94c80b44b04",
+        "os": "linux",
+        "sequence": "81",
+        "version": "v0.1.0-alpha.81"
+      },
+      "updated_at": "2026-10-02T11:53:50.662060557Z"
+    },
+    "http": 200
+  },
+  "utc": "2026-10-02T11:55:29Z"
+}

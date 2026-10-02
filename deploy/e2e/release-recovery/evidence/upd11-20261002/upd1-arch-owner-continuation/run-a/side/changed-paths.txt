@@ -1,0 +1,33 @@
+evidence /var/tmp/cp-release-drill-upd11-arch-oc-a/evidence/arch/upd1/upd1-arch-owner-continuation-20261002t002430z/
+## initial-record (updater wrote it): 0 hits (0 in .txt)
+## curl preflight refusal: 0 hits (0 in .txt)
+## no-marker after child failure: 0 hits (0 in .txt)
+## pause_pending journal: 2 hits (2 in .txt)
+   steps/12-owner-continuation-required/recovery-journal-at-pause.txt:37: Oct 02 00:38:17 dns-arch release-recovery[25762]: The last admitted recovery attempt did not finish. The next run of the recovery timer records the pause and prints the one-time retry command for this operation.
+   steps/15-collect/journal-product.txt:485: 2026-10-02T00:38:17.813053+00:00 dns-arch release-recovery[25762]: The last admitted recovery attempt did not finish. The next run of the recovery timer records the pause and prints the one-time retry command for this operation.
+## renewal restore at pause: 2 hits (2 in .txt)
+   steps/12-owner-continuation-required/recovery-journal-at-pause.txt:35: Oct 02 00:38:17 dns-arch release-recovery[25762]: Automatic certificate renewal (Certbot) is already in its state from before the update.
+   steps/15-collect/journal-product.txt:483: 2026-10-02T00:38:17.813053+00:00 dns-arch release-recovery[25762]: Automatic certificate renewal (Certbot) is already in its state from before the update.
+## pause recorded: 2 hits (2 in .txt)
+   steps/12-owner-continuation-required/recovery-journal-at-pause.txt:45: Oct 02 00:38:49 dns-arch release-recovery[29798]: Automatic recovery paused after three admitted attempts. No recovery child was started. Preserve evidence and inspect the recovery service journal.
+   steps/15-collect/journal-product.txt:493: 2026-10-02T00:38:49.110568+00:00 dns-arch release-recovery[29798]: Automatic recovery paused after three admitted attempts. No recovery child was started. Preserve evidence and inspect the recovery service journal.
+## start check failure: 0 hits (0 in .txt)
+## package-activity refusal (startup reconcile): 0 hits (0 in .txt)
+## package_manager_active / HOST_MUTATION_BUSY: 0 hits (0 in .txt)
+## startup reconcile success: 1 hits (1 in .txt)
+   steps/15-collect/journal-product.txt:512: 2026-10-02T00:39:25.600757+00:00 dns-arch panel[32550]: 2026/10/02 00:39:25 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload
+## milter chain/wiring: 4 hits (4 in .txt)
+   steps/15-collect/journal-product.txt:16: 2026-10-02T00:25:54.580076+00:00 dns-arch panel[7904]: 2026/10/02 00:25:54 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/15-collect/journal-product.txt:29: 2026-10-02T00:25:55.713410+00:00 dns-arch panel[7970]: 2026/10/02 00:25:55 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/15-collect/journal-product.txt:54: 2026-10-02T00:26:21.253558+00:00 dns-arch panel[418]: 2026/10/02 00:26:21 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/15-collect/journal-product.txt:514: 2026-10-02T00:39:25.603641+00:00 dns-arch panel[32550]: 2026/10/02 00:39:25 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+## root CLI states (first seen)
+   2026-10-02T00:32:09Z ('running', 'update_running', None, None, None)
+   2026-10-02T00:33:42Z ('recovering', 'recovery_running', None, 'panel_start_unverified', None)
+   2026-10-02T00:34:57Z ('recovery_required', 'recovery_failed', 'retry_scheduled', None, 'panel_start_unverified')
+   2026-10-02T00:35:14Z ('recovering', 'recovery_running', None, None, 'panel_start_unverified')
+   2026-10-02T00:38:19Z ('recovery_required', 'recovery_failed', 'pause_pending', None, 'panel_start_unverified')
+   2026-10-02T00:38:36Z ('recovery_required', 'recovery_incomplete', 'paused_retry_limit', None, 'panel_start_unverified')
+   2026-10-02T00:39:38Z ('succeeded', 'update_verified', None, None, None)
+## CELIKPANEL_LISTEN mentions
+   steps/15-collect/journal-product.txt 2026-10-02T00:32:44.754719+00:00 dns-arch sudo[13300]:     root : PWD=/var/backups/celikpanel/releases/73eef2862644-738ea76c35db80e84bbcae2c ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/local

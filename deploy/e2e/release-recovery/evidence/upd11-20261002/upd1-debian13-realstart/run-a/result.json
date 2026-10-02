@@ -1,0 +1,210 @@
+{
+  "artifacts": {
+    "baseline": {
+      "commit": "df01e72f0a04767c7ceb0c07a148228cd71837c7",
+      "sha256": "825b2385181104967c3b1eca877b6c61ee0b56bca36bb76e44e25b1a4faf40bc",
+      "version": "v0.1.0-alpha.81"
+    },
+    "defective": {
+      "commit": "f37e1cccf6ba16bf2a648c343e6defc45dc8cefe",
+      "sha256": "3997b6bd8b73bb74a21ff211d15c8c855dfd0d14168a03f59c547254fdccd98c",
+      "version": "v0.1.0-alpha.82"
+    },
+    "good": {
+      "commit": "73eef2862644ccf48290073d3eeeb6bb461c1330",
+      "sha256": "4a00f28d2a73c5646110a1cbc44b7e12fc379ef3b5467adeb9cca335cfa2d7fa",
+      "version": "v0.1.0-alpha.82"
+    },
+    "realstart": {
+      "commit": "235198ff900dbb851a5fdcc966c94db7857f556d",
+      "sha256": "abd9cb3a144d25264cedbf391b6bb1a5473d62769d37b32182790f0e507a7031",
+      "version": "v0.1.0-alpha.82"
+    }
+  },
+  "cell": {
+    "h19": true,
+    "mail_required": true,
+    "name": "upd1-debian13-realstart",
+    "node": "debian13",
+    "pk_observe": false,
+    "recovery_fault": null,
+    "scenario": null,
+    "variant": "real-start"
+  },
+  "findings": [],
+  "identity": {
+    "cell_id": "release-recovery__2260425957f4a320",
+    "node": "debian13",
+    "vm_uuid": "8d9c6c00-b520-5503-ad20-9b6128c71708"
+  },
+  "kind": {
+    "expected": "the start check passes; completion.pending exists; the stability wait fails with panel_start_unverified; forward completion is retried to its limit (N and timestamps recorded) and pauses (paused_retry_limit); no rollback; the owner retry is printed but not run; texts name the panel log command and say there is no supported return; site, mail and cron keep running while the Panel stays down",
+    "judged": null,
+    "measured": null,
+    "printed_retry_command": null,
+    "variant": "real-start"
+  },
+  "native_evidence": false,
+  "note": "Observations for the owner's review; the P0 rows are judged separately.",
+  "outcome": {
+    "attempts": {
+      "automatic": [],
+      "automatic_count": 0,
+      "journal_admissions": [],
+      "owner": [],
+      "owner_count": 0
+    },
+    "classification": "not-terminal",
+    "final_status": null,
+    "owner_continuation": false,
+    "owner_reboot": null,
+    "pin_changes": [],
+    "port_hold": null,
+    "reboot": null,
+    "track_stop": null
+  },
+  "overall": "failed",
+  "provenance": {
+    "baseline": "unpublished-local-fixture-commit-over-HEAD-labelled-v0.1.0-alpha.81; acceptance-license panel build (D-027 fixture); installed by the real installer; fixture trust root enrolled; not-production-release-admission",
+    "candidate": "unpublished-local-fixture-commit-labelled-v0.1.0-alpha.82; signed with the disposable fixture key; served by the guest-loopback celikpanel.net fixture origin; not a release",
+    "defect": "fixture source patch: cmd/panel main() exits (log.Fatalf) just before its listener starts; the read-only start check exits before flag parsing and never reaches that line, so the check passes and the real start fails after completion.pending (simulated by a committed fixture change)"
+  },
+  "request_id": null,
+  "schema": "celikpanel/upd1-owner-update-result/v1",
+  "scope": {
+    "cron": {
+      "verdict": "not checked (the cell stopped before seeding)"
+    },
+    "dns": {
+      "mode": "external",
+      "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+      "verdict": "not-provided-external-dns"
+    },
+    "origin": {
+      "after-provision": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      }
+    },
+    "setup": {
+      "verdict": "not waiting"
+    }
+  },
+  "steps": [
+    {
+      "finished_at": "2026-10-01T22:56:59Z",
+      "name": "preflight",
+      "reason": null,
+      "started_at": "2026-10-01T22:56:55Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T22:57:09Z",
+      "name": "origin",
+      "reason": null,
+      "started_at": "2026-10-01T22:56:59Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T22:57:43Z",
+      "name": "baseline-install",
+      "reason": null,
+      "started_at": "2026-10-01T22:57:09Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T22:57:44Z",
+      "name": "owner-login",
+      "reason": null,
+      "started_at": "2026-10-01T22:57:43Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T22:57:44Z",
+      "name": "license",
+      "reason": null,
+      "started_at": "2026-10-01T22:57:44Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T23:00:03Z",
+      "name": "setup",
+      "reason": "server setup did not succeed: {'status': 'failed', 'phase': '05-mail_profile', 'error': {'code': 'HOST_MUTATION_BUSY', 'message': \"This server's package manager is busy — a package task is still running on this server. Wait for it to finish, then try again.\"}}",
+      "started_at": "2026-10-01T22:57:44Z",
+      "verdict": "failed"
+    },
+    {
+      "finished_at": null,
+      "name": "seed",
+      "reason": "a required earlier step did not pass: setup",
+      "started_at": "2026-10-01T23:00:03Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "pre-state",
+      "reason": "a required earlier step did not pass: seed",
+      "started_at": "2026-10-01T23:00:03Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "arm",
+      "reason": "a required earlier step did not pass: pre-state",
+      "started_at": "2026-10-01T23:00:03Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "owner-start",
+      "reason": "a required earlier step did not pass: arm",
+      "started_at": "2026-10-01T23:00:03Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "track",
+      "reason": "a required earlier step did not pass: owner-start",
+      "started_at": "2026-10-01T23:00:03Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "owner-continuation (required)",
+      "reason": "a required earlier step did not pass: track",
+      "started_at": "2026-10-01T23:00:03Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "terminal",
+      "reason": "a required earlier step did not pass: owner-start",
+      "started_at": "2026-10-01T23:00:03Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": "2026-10-01T23:00:05Z",
+      "name": "collect",
+      "reason": null,
+      "started_at": "2026-10-01T23:00:03Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": null,
+      "name": "verdicts",
+      "reason": "a required earlier step did not pass: owner-start",
+      "started_at": "2026-10-01T23:00:05Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "kind-expectation",
+      "reason": "a required earlier step did not pass: owner-start",
+      "started_at": "2026-10-01T23:00:05Z",
+      "verdict": "not-run"
+    }
+  ]
+}

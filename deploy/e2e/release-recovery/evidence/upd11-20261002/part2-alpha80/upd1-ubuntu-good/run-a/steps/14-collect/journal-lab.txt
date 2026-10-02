@@ -1,0 +1,12 @@
+2026-10-02T11:56:45.797134+00:00 dns-ubuntu systemd[1]: Started cp-lab-upd1-origin.service - Disposable upd1 celikpanel.net fixture origin (guest loopback only; lab, no product authority).
+2026-10-02T11:56:51.544208+00:00 dns-ubuntu systemd[1]: Starting celikpanel-lab-current-worker-baseline.service - /usr/bin/python3 -I /root/celikpanel-release-recovery-lab/current-worker-baseline-driver.py...
+2026-10-02T11:57:36.223197+00:00 dns-ubuntu groupadd[5484]: group added to /etc/group: name=celikpanel, GID=988
+2026-10-02T11:57:36.253397+00:00 dns-ubuntu groupadd[5484]: group added to /etc/gshadow: name=celikpanel
+2026-10-02T11:57:36.256450+00:00 dns-ubuntu groupadd[5484]: new group: name=celikpanel, GID=988
+2026-10-02T11:57:36.323100+00:00 dns-ubuntu useradd[5491]: new user: name=celikpanel, UID=999, GID=988, home=/var/lib/celikpanel, shell=/usr/sbin/nologin, from=none
+2026-10-02T11:57:56.674978+00:00 dns-ubuntu systemd[1]: celikpanel-lab-current-worker-baseline.service: Deactivated successfully.
+2026-10-02T11:57:56.675280+00:00 dns-ubuntu systemd[1]: Finished celikpanel-lab-current-worker-baseline.service - /usr/bin/python3 -I /root/celikpanel-release-recovery-lab/current-worker-baseline-driver.py.
+2026-10-02T11:57:56.675477+00:00 dns-ubuntu systemd[1]: celikpanel-lab-current-worker-baseline.service: Consumed 45.684s CPU time, 634.8M memory peak, 0B memory swap peak.
+2026-10-02T11:58:10.986525+00:00 dns-ubuntu systemd[1]: celikpanel-lab-current-worker-baseline.service: Failed to open /run/systemd/transient/celikpanel-lab-current-worker-baseline.service: No such file or directory
+2026-10-02T11:58:11.345271+00:00 dns-ubuntu systemd[1]: celikpanel-lab-current-worker-baseline.service: Failed to open /run/systemd/transient/celikpanel-lab-current-worker-baseline.service: No such file or directory
+2026-10-02T12:43:22.682121+00:00 dns-ubuntu systemd[1]: Started cp-lab-upd1-sampler.service - Disposable upd1 workload sampler (lab only; no product authority).

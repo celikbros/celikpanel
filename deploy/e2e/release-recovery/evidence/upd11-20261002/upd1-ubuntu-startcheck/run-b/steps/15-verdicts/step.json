@@ -1,0 +1,211 @@
+{
+  "checks": {
+    "agreement": {
+      "agreed_samples": 8,
+      "lag_samples": 0,
+      "samples": 25,
+      "verdict": "passed"
+    },
+    "attempts": {
+      "automatic": [
+        {
+          "at": "2026-10-02T05:50:35.036556Z",
+          "attempt": "1",
+          "direction": "rollback",
+          "operation": "update",
+          "phase": "active"
+        },
+        {
+          "at": "2026-10-02T05:51:41.060220Z",
+          "attempt": "2",
+          "direction": "rollback",
+          "operation": "rollback",
+          "phase": "active"
+        }
+      ],
+      "automatic_count": 2,
+      "journal_admissions": [
+        {
+          "at": "2026-10-02T05:50:35.115511+00:00",
+          "attempt": "1",
+          "snapshot": "20261002T055001Z-from-unknown-to-f91732bae9a03c42a0e63e2f166794e3d76bd6aa-4fd41df77249e1c4cb7e03e4156c87fb"
+        },
+        {
+          "at": "2026-10-02T05:51:41.128645+00:00",
+          "attempt": "2",
+          "snapshot": "20261002T055001Z-from-unknown-to-f91732bae9a03c42a0e63e2f166794e3d76bd6aa-4fd41df77249e1c4cb7e03e4156c87fb"
+        }
+      ],
+      "owner": [],
+      "owner_count": 0
+    },
+    "clock_skew_seconds": -9385.688,
+    "host_panel_windows": [
+      {
+        "failed": true,
+        "first_bad": 1790920207.6024182,
+        "from": 1790920202.6022263,
+        "kind": "failed",
+        "last_bad": 1790920313.1294634,
+        "lower_bound_s": 105.527,
+        "to": 1790920318.129642,
+        "unobserved": false,
+        "upper_bound_s": 115.527
+      }
+    ],
+    "host_ssh_windows": [
+      {
+        "failed": true,
+        "first_bad": 1790920252.6039279,
+        "from": 1790920247.6037736,
+        "kind": "failed",
+        "last_bad": 1790920263.1273518,
+        "lower_bound_s": 10.523,
+        "to": 1790920268.1275768,
+        "unobserved": false,
+        "upper_bound_s": 20.524
+      }
+    ],
+    "outcome": "recovered-automatically",
+    "workloads": {
+      "cron": {
+        "verdict": "interrupted-only-by-host-reset",
+        "windows": [
+          {
+            "cause": "host-reset",
+            "failed": true,
+            "from": 1790910781.4265993,
+            "kind": "not-advancing",
+            "lower_bound_s": 9385.677,
+            "to": 1790920227.103716,
+            "unobserved": false,
+            "upper_bound_s": 9445.677
+          }
+        ]
+      },
+      "dns": {
+        "mode": "external",
+        "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+        "verdict": "not-provided-external-dns"
+      },
+      "panel": {
+        "outside": [
+          {
+            "cause": "host-reset",
+            "failed": false,
+            "first_bad": null,
+            "from": 1790910796.629558,
+            "kind": "unobserved",
+            "last_bad": null,
+            "lower_bound_s": 0.0,
+            "to": 1790920187.2957084,
+            "unobserved": true,
+            "upper_bound_s": 9390.666
+          },
+          {
+            "cause": "unexplained",
+            "failed": true,
+            "first_bad": 1790920202.3010898,
+            "from": 1790920197.29928,
+            "kind": "failed+unobserved",
+            "last_bad": 1790920310.5157993,
+            "lower_bound_s": 108.215,
+            "to": 1790920315.5160053,
+            "unobserved": true,
+            "upper_bound_s": 118.217
+          }
+        ],
+        "verdict": "down-outside-transaction",
+        "windows": [
+          {
+            "cause": "host-reset",
+            "failed": false,
+            "first_bad": null,
+            "from": 1790910796.629558,
+            "kind": "unobserved",
+            "last_bad": null,
+            "lower_bound_s": 0.0,
+            "to": 1790920187.2957084,
+            "unobserved": true,
+            "upper_bound_s": 9390.666
+          },
+          {
+            "cause": "unexplained",
+            "failed": true,
+            "first_bad": 1790920202.3010898,
+            "from": 1790920197.29928,
+            "kind": "failed+unobserved",
+            "last_bad": 1790920310.5157993,
+            "lower_bound_s": 108.215,
+            "to": 1790920315.5160053,
+            "unobserved": true,
+            "upper_bound_s": 118.217
+          }
+        ]
+      },
+      "smtp": {
+        "verdict": "interrupted",
+        "windows": [
+          {
+            "cause": "host-reset",
+            "failed": false,
+            "first_bad": null,
+            "from": 1790910796.629558,
+            "kind": "unobserved",
+            "last_bad": null,
+            "lower_bound_s": 0.0,
+            "to": 1790920187.2957084,
+            "unobserved": true,
+            "upper_bound_s": 9390.666
+          },
+          {
+            "cause": "unexplained",
+            "failed": false,
+            "first_bad": null,
+            "from": 1790920247.4321663,
+            "kind": "unobserved",
+            "last_bad": null,
+            "lower_bound_s": 0.0,
+            "to": 1790920264.9295633,
+            "unobserved": true,
+            "upper_bound_s": 17.497
+          }
+        ]
+      },
+      "web": {
+        "verdict": "interrupted",
+        "windows": [
+          {
+            "cause": "host-reset",
+            "failed": false,
+            "first_bad": null,
+            "from": 1790910796.629558,
+            "kind": "unobserved",
+            "last_bad": null,
+            "lower_bound_s": 0.0,
+            "to": 1790920187.2957084,
+            "unobserved": true,
+            "upper_bound_s": 9390.666
+          },
+          {
+            "cause": "unexplained",
+            "failed": true,
+            "first_bad": 1790920264.9295633,
+            "from": 1790920247.4321663,
+            "kind": "failed+unobserved",
+            "last_bad": 1790920264.9295633,
+            "lower_bound_s": 0.0,
+            "to": 1790920269.929783,
+            "unobserved": true,
+            "upper_bound_s": 22.498
+          }
+        ]
+      }
+    }
+  },
+  "finished_at": "2026-10-02T05:52:11Z",
+  "name": "verdicts",
+  "reason": "workload interruption outside the expected windows: web, smtp, panel",
+  "started_at": "2026-10-02T05:52:11Z",
+  "verdict": "failed"
+}

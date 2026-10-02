@@ -1,0 +1,50 @@
+2026-10-02T00:36:14.664481+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-02T00:36:14.664835+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 186ms CPU time over 19.128s wall clock time, 73.7M memory peak.
+2026-10-02T00:36:37.257688+00:00 dns-arch systemd[1]: Stopped CelikPanel web panel.
+2026-10-02T00:36:37.257837+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 186ms CPU time over 22.592s wall clock time, 73.7M memory peak.
+2026-10-02T00:37:16.324715+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-02T00:37:16.376054+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-02T00:37:16.462035+00:00 dns-arch panel[27736]: 2026/10/02 00:37:16 Starting CelikPanel Backend...
+2026-10-02T00:37:16.468848+00:00 dns-arch panel[27736]: 2026/10/02 00:37:16 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-02T00:37:16.469296+00:00 dns-arch panel[27736]: 2026/10/02 00:37:16 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-02T00:37:16.470863+00:00 dns-arch systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-02T00:37:16.471063+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-02T00:37:16.471437+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 185ms CPU time over 146ms wall clock time, 73.6M memory peak.
+2026-10-02T00:37:19.614052+00:00 dns-arch systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 1.
+2026-10-02T00:37:19.616190+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-02T00:37:19.671029+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-02T00:37:19.753580+00:00 dns-arch panel[27825]: 2026/10/02 00:37:19 Starting CelikPanel Backend...
+2026-10-02T00:37:19.760311+00:00 dns-arch panel[27825]: 2026/10/02 00:37:19 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-02T00:37:19.760735+00:00 dns-arch panel[27825]: 2026/10/02 00:37:19 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-02T00:37:19.762425+00:00 dns-arch systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-02T00:37:19.762684+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-02T00:37:19.763041+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 185ms CPU time over 3.291s wall clock time, 73.5M memory peak.
+2026-10-02T00:37:25.383720+00:00 dns-arch systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 2.
+2026-10-02T00:37:25.387743+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-02T00:37:25.439575+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-02T00:37:25.523505+00:00 dns-arch panel[27990]: 2026/10/02 00:37:25 Starting CelikPanel Backend...
+2026-10-02T00:37:25.531871+00:00 dns-arch panel[27990]: 2026/10/02 00:37:25 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-02T00:37:25.532022+00:00 dns-arch panel[27990]: 2026/10/02 00:37:25 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-02T00:37:25.533784+00:00 dns-arch systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-02T00:37:25.534021+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-02T00:37:25.534467+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 186ms CPU time over 5.770s wall clock time, 73.7M memory peak.
+2026-10-02T00:37:35.844688+00:00 dns-arch systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 3.
+2026-10-02T00:37:35.846711+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-02T00:37:35.896305+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-02T00:37:35.982124+00:00 dns-arch panel[28211]: 2026/10/02 00:37:35 Starting CelikPanel Backend...
+2026-10-02T00:37:35.987990+00:00 dns-arch panel[28211]: 2026/10/02 00:37:35 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-02T00:37:35.988427+00:00 dns-arch panel[28211]: 2026/10/02 00:37:35 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-02T00:37:35.990044+00:00 dns-arch systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-02T00:37:35.990259+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-02T00:37:35.990576+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 184ms CPU time over 10.455s wall clock time, 73.6M memory peak.
+2026-10-02T00:37:55.006552+00:00 dns-arch systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 4.
+2026-10-02T00:37:55.008404+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-02T00:37:55.060991+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-02T00:37:55.141705+00:00 dns-arch panel[28627]: 2026/10/02 00:37:55 Starting CelikPanel Backend...
+2026-10-02T00:37:55.147803+00:00 dns-arch panel[28627]: 2026/10/02 00:37:55 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-02T00:37:55.148311+00:00 dns-arch panel[28627]: 2026/10/02 00:37:55 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-02T00:37:55.150183+00:00 dns-arch systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-02T00:37:55.150461+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-02T00:37:55.150970+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 182ms CPU time over 19.159s wall clock time, 73.6M memory peak.
+2026-10-02T00:38:17.480489+00:00 dns-arch systemd[1]: Stopped CelikPanel web panel.
+2026-10-02T00:38:17.480856+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 182ms CPU time over 22.329s wall clock time, 73.6M memory peak.

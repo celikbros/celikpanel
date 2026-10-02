@@ -1,0 +1,34 @@
+evidence /var/tmp/cp-release-drill-upd11-a80-ub-good-a/evidence/ubuntu/upd1/upd1-ubuntu-good-20261002t115630z/
+## initial-record (updater wrote it): 0 hits (0 in .txt)
+## curl preflight refusal: 0 hits (0 in .txt)
+## no-marker after child failure: 0 hits (0 in .txt)
+## pause_pending journal: 0 hits (0 in .txt)
+## renewal restore at pause: 0 hits (0 in .txt)
+## pause recorded: 0 hits (0 in .txt)
+## start check failure: 0 hits (0 in .txt)
+## package-activity refusal (startup reconcile): 35 hits (11 in .txt)
+   steps/14-collect/journal-product.txt:76: 2026-10-02T12:02:50.801863+00:00 dns-ubuntu panel[7521]: 2026/10/02 12:02:50 service operation a98ca680d2a1e39cb813660bc4278a75 could not acquire the agent lease: another server change or package-manager task is still running
+   steps/14-collect/journal-product.txt:78: 2026-10-02T12:02:52.812539+00:00 dns-ubuntu panel[7521]: 2026/10/02 12:02:52 server setup step 03-service failed: HOST_MUTATION_BUSY: another server change or package-manager task is still running; wait and try again
+   steps/14-collect/journal-product.txt:201: 2026-10-02T12:08:45.967586+00:00 dns-ubuntu panel[7521]: 2026/10/02 12:08:45 service operation 922fb2a5e757eddb2d59502a8267a1d9 could not acquire the agent lease: another server change or package-manager task is still running
+   steps/14-collect/journal-product.txt:202: 2026-10-02T12:08:47.976879+00:00 dns-ubuntu panel[7521]: 2026/10/02 12:08:47 server setup step 03-service failed: HOST_MUTATION_BUSY: another server change or package-manager task is still running; wait and try again
+   steps/14-collect/journal-product.txt:271: 2026-10-02T12:14:15.650520+00:00 dns-ubuntu panel[7521]: 2026/10/02 12:14:15 service operation c36ce8607e7a3110978915ea9c85de76 could not acquire the agent lease: another server change or package-manager task is still running
+   steps/14-collect/journal-product.txt:272: 2026-10-02T12:14:17.663247+00:00 dns-ubuntu panel[7521]: 2026/10/02 12:14:17 server setup step 03-mail_profile failed: HOST_MUTATION_BUSY: another server change or package-manager task is still running; wait and try again
+   steps/14-collect/journal-product.txt:411: 2026-10-02T12:20:53.720694+00:00 dns-ubuntu panel[7521]: 2026/10/02 12:20:53 service operation cd137f11cf68f1ded0712eeebad8bf62 (webmail) failed in profile/webmail/mail-tls: mail TLS synchronization: another server change or package-manager task is still running
+   steps/14-collect/journal-product.txt:500: 2026-10-02T12:27:30.726826+00:00 dns-ubuntu panel[7521]: 2026/10/02 12:27:30 service operation 6378a898129d4c91c41293e498bc28a4 (protected-mail) failed in profile/protected-mail/mail-tls: mail TLS synchronization: another server change or package-manager task is still running
+## package_manager_active / HOST_MUTATION_BUSY: 154 hits (3 in .txt)
+   steps/14-collect/journal-product.txt:78: 2026-10-02T12:02:52.812539+00:00 dns-ubuntu panel[7521]: 2026/10/02 12:02:52 server setup step 03-service failed: HOST_MUTATION_BUSY: another server change or package-manager task is still running; wait and try again
+   steps/14-collect/journal-product.txt:202: 2026-10-02T12:08:47.976879+00:00 dns-ubuntu panel[7521]: 2026/10/02 12:08:47 server setup step 03-service failed: HOST_MUTATION_BUSY: another server change or package-manager task is still running; wait and try again
+   steps/14-collect/journal-product.txt:272: 2026-10-02T12:14:17.663247+00:00 dns-ubuntu panel[7521]: 2026/10/02 12:14:17 server setup step 03-mail_profile failed: HOST_MUTATION_BUSY: another server change or package-manager task is still running; wait and try again
+## startup reconcile success: 1 hits (1 in .txt)
+   steps/14-collect/journal-product.txt:820: 2026-10-02T12:45:49.397840+00:00 dns-ubuntu panel[82149]: 2026/10/02 12:45:49 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload
+## milter chain/wiring: 3 hits (3 in .txt)
+   steps/14-collect/journal-product.txt:16: 2026-10-02T11:57:53.402869+00:00 dns-ubuntu panel[7457]: 2026/10/02 11:57:53 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-collect/journal-product.txt:28: 2026-10-02T11:57:54.595305+00:00 dns-ubuntu panel[7521]: 2026/10/02 11:57:54 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-collect/journal-product.txt:822: 2026-10-02T12:45:49.403276+00:00 dns-ubuntu panel[82149]: 2026/10/02 12:45:49 milter wiring at startup: another server change or package-manager task is still running
+## root CLI states (first seen)
+   2026-10-02T12:45:10Z (None, None, None, None, None)
+   2026-10-02T12:45:19Z (None, 'observation_unavailable', None, None, None)
+   2026-10-02T12:45:26Z ('running', 'update_running', None, None, None)
+   2026-10-02T12:46:01Z ('succeeded', 'update_verified', None, None, None)
+## CELIKPANEL_LISTEN mentions
+   steps/14-collect/journal-product.txt 2026-10-02T12:45:47.571761+00:00 dns-ubuntu sudo[81622]:     root : PWD=/var/backups/celikpanel/releases/9656dabad6d8-d10037c8454957698f2be09c ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/loc

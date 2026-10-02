@@ -1,0 +1,98 @@
+{
+  "agreement": {
+    "known_sources": [
+      "cli"
+    ],
+    "phase": {
+      "cli": "recovering"
+    },
+    "reasons": [],
+    "sources": [
+      "cli",
+      "shell"
+    ],
+    "verdict": "single-source"
+  },
+  "cli": {
+    "boot_id": "67dbd773-1adf-439a-a86e-d1967e7ec038",
+    "captured_at": "2026-10-01T23:12:16.747559Z",
+    "en": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "The update was applied, but the new version's panel did not come up. The server owner should read the panel log on the server: sudo journalctl -u celikpanel-panel -n 50. The update's completion is retried automatically up to its limit; after that, sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50 shows a one-time retry command for this operation. There is no supported return to the previous version from this point.\nRequest: c76bec3d5b4a879a84cc1edb2cc02637\nRecorded at: 2026-10-01T23:11:58Z\nThis is a recorded observation; current service health was not checked.\nRecorded state (for support): phase=recovering reason=recovery_running proof=none previous_failure=update_failed failure_code=panel_start_unverified\n"
+    },
+    "json": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "{\"schema\":\"celikpanel-recovery-status/v1\",\"request_id\":\"c76bec3d5b4a879a84cc1edb2cc02637\",\"observation\":\"known\",\"phase\":\"recovering\",\"terminal_proof\":\"none\",\"reason\":\"recovery_running\",\"observed_at\":\"2026-10-01T23:11:58Z\",\"previous_failure\":\"update_failed\",\"failure_code\":\"panel_start_unverified\"}\n"
+    },
+    "tr": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "Güncelleme uygulandı, ancak yeni sürümün paneli açılmadı. Sunucu sahibi sunucudaki panel günlüğünü okumalı: sudo journalctl -u celikpanel-panel -n 50. Güncellemenin tamamlanması sınırına kadar otomatik olarak yeniden denenir; sonrasında sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50 bu işlem için tek seferlik yeniden deneme komutunu gösterir. Bu noktadan önceki sürüme desteklenen bir dönüş yok.\nİşlem: c76bec3d5b4a879a84cc1edb2cc02637\nKayıt zamanı: 2026-10-01T23:11:58Z\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\nKayıtlı durum (destek için): phase=recovering reason=recovery_running proof=none previous_failure=update_failed failure_code=panel_start_unverified\n"
+    }
+  },
+  "guidance_api": null,
+  "guidance_cli": {
+    "actionable": true,
+    "keys": [
+      "recovery.phase.recovering",
+      "recovery.failure.panel_start_unverified.pending",
+      "recovery.previousFailure",
+      "recovery.reason.panel_start_unverified"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "observation": {
+      "automatic_recovery": null,
+      "failure_code": "panel_start_unverified",
+      "first_failure_code": null,
+      "observation": "known",
+      "observed_at": "2026-10-01T23:11:58Z",
+      "panel_state": "ready",
+      "phase": "recovering",
+      "previous_failure": "update_failed",
+      "reason": "recovery_running",
+      "renewal_before_update": null,
+      "request_id": "c76bec3d5b4a879a84cc1edb2cc02637",
+      "terminal_proof": "none",
+      "waiting_for": null
+    },
+    "observation_unavailable": false,
+    "texts": {
+      "en": [
+        "Last recorded step: recovery in progress",
+        "The update was applied, but the new version's panel did not come up. The server owner should read the panel log on the server with sudo journalctl -u celikpanel-panel -n 50. Completion is retried automatically up to its limit; after that, the recovery log shows a one-time retry command. There is no supported return to the previous version from this point.",
+        "Previously recorded failure: The new version's panel did not start after the update"
+      ],
+      "tr": [
+        "Kaydedilmiş son adım: kurtarma sürüyor",
+        "Güncelleme uygulandı, ancak yeni sürümün paneli açılmadı. Sunucu sahibi sunucudaki panel günlüğünü sudo journalctl -u celikpanel-panel -n 50 ile okumalıdır. Tamamlama sınırına kadar otomatik olarak yeniden denenir; sonrasında kurtarma günlüğü tek seferlik bir yeniden deneme komutu gösterir. Bu noktadan önceki sürüme desteklenen bir dönüş yok.",
+        "Önceden kaydedilmiş hata: Yeni sürümün paneli güncellemeden sonra açılmadı"
+      ]
+    }
+  },
+  "index": 18,
+  "observed": {
+    "failure_code": "panel_start_unverified",
+    "observation": "known",
+    "observed_at": "2026-10-01T23:11:58Z",
+    "phase": "recovering",
+    "previous_failure": "update_failed",
+    "reason": "recovery_running",
+    "request_id": "c76bec3d5b4a879a84cc1edb2cc02637",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "none"
+  },
+  "panel_error": "PanelError",
+  "shell_fetch": {
+    "error": "ConnectionResetError",
+    "note": "only a browser-saved copy of the shell can show while the Panel is down"
+  },
+  "t": 1790896335.519435,
+  "update_card": null,
+  "utc": "2026-10-01T23:12:15Z"
+}

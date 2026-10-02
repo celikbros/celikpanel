@@ -1,0 +1,298 @@
+{
+  "artifacts": {
+    "baseline": {
+      "commit": "df01e72f0a04767c7ceb0c07a148228cd71837c7",
+      "sha256": "825b2385181104967c3b1eca877b6c61ee0b56bca36bb76e44e25b1a4faf40bc",
+      "version": "v0.1.0-alpha.81"
+    },
+    "defective": {
+      "commit": "f37e1cccf6ba16bf2a648c343e6defc45dc8cefe",
+      "sha256": "3997b6bd8b73bb74a21ff211d15c8c855dfd0d14168a03f59c547254fdccd98c",
+      "version": "v0.1.0-alpha.82"
+    },
+    "good": {
+      "commit": "73eef2862644ccf48290073d3eeeb6bb461c1330",
+      "sha256": "4a00f28d2a73c5646110a1cbc44b7e12fc379ef3b5467adeb9cca335cfa2d7fa",
+      "version": "v0.1.0-alpha.82"
+    },
+    "startcheck": {
+      "commit": "f91732bae9a03c42a0e63e2f166794e3d76bd6aa",
+      "sha256": "c8c449a2bc4edbe83f4a75875ec6bb1a0d58f8d9650215b5b519a397dcad77ba",
+      "version": "v0.1.0-alpha.82"
+    }
+  },
+  "cell": {
+    "h19": true,
+    "mail_required": true,
+    "name": "upd1-debian13-startcheck",
+    "node": "debian13",
+    "pk_observe": false,
+    "recovery_fault": {
+      "action": "reboot",
+      "checkpoint": "payload_restored"
+    },
+    "scenario": null,
+    "variant": "start-check"
+  },
+  "findings": [
+    "debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']"
+  ],
+  "identity": {
+    "cell_id": "release-recovery__97e9e2b3e4e1e358",
+    "node": "debian13",
+    "vm_uuid": "7cfb192d-4372-5e26-835d-d37bdca1af3c"
+  },
+  "kind": {
+    "expected": "the update fails in phase active after the database publication with candidate_panel_startup_check_failed (failure line and <request>.failure sidecar; check reason tls_pair_invalid); completion.pending is never created; automatic rollback (dispatch phase=active, inverse database exchange) to recovered/rollback_verified; old release running; database equal to the pre-update digests (listed exclusions); CLI EN/TR 'returned to the previous version'",
+    "judged": {
+      "expected": [
+        "rolled-back",
+        "status-failure-code",
+        "update-failure-line",
+        "fixture-reason",
+        "sidecar",
+        "no-completion-marker",
+        "rollback-dispatch",
+        "update-card",
+        "old-release-running",
+        "database-equal",
+        "cli-returned-text",
+        "web-catalogue"
+      ],
+      "findings": [],
+      "kind": "start-check",
+      "native_evidence": false,
+      "unknown": [],
+      "verdict": "as-expected"
+    },
+    "measured": true,
+    "printed_retry_command": null,
+    "variant": "start-check"
+  },
+  "native_evidence": false,
+  "note": "Observations for the owner's review; the P0 rows are judged separately.",
+  "outcome": {
+    "attempts": {
+      "automatic": [
+        {
+          "at": "2026-10-01T22:54:00.753712Z",
+          "attempt": "1",
+          "direction": "rollback",
+          "operation": "update",
+          "phase": "active"
+        },
+        {
+          "at": "2026-10-01T22:55:00.762314Z",
+          "attempt": "2",
+          "direction": "rollback",
+          "operation": "rollback",
+          "phase": "active"
+        }
+      ],
+      "automatic_count": 2,
+      "journal_admissions": [
+        {
+          "at": "2026-10-01T22:54:00.837625+00:00",
+          "attempt": "1",
+          "snapshot": "20261001T225332Z-from-unknown-to-f91732bae9a03c42a0e63e2f166794e3d76bd6aa-ab599a731ce0e91a90f9ac15f1f0930f"
+        },
+        {
+          "at": "2026-10-01T22:55:00.826660+00:00",
+          "attempt": "2",
+          "snapshot": "20261001T225332Z-from-unknown-to-f91732bae9a03c42a0e63e2f166794e3d76bd6aa-ab599a731ce0e91a90f9ac15f1f0930f"
+        }
+      ],
+      "owner": [],
+      "owner_count": 0
+    },
+    "classification": "recovered-automatically",
+    "final_status": {
+      "failure_code": "candidate_panel_startup_check_failed",
+      "observation": "known",
+      "observed_at": "2026-10-01T22:55:19Z",
+      "phase": "recovered",
+      "previous_failure": "update_failed",
+      "reason": "rollback_verified",
+      "request_id": "52722582a4956f96ce31cb7572316072",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "rollback_verified"
+    },
+    "owner_continuation": false,
+    "owner_reboot": null,
+    "pin_changes": [],
+    "port_hold": null,
+    "reboot": {
+      "after_boot_id": "ccea1fab-e73a-440c-99b3-0e598fbee67e",
+      "before_boot_id": "6216abe5-528f-46f4-936c-e4738e07517d",
+      "new_boot": true,
+      "reset_at": 1790895255.8660154,
+      "ssh_return_seconds": 8.3056267879997,
+      "status": "reset-submitted-once"
+    },
+    "track_stop": null
+  },
+  "overall": "complete-for-review",
+  "provenance": {
+    "baseline": "unpublished-local-fixture-commit-over-HEAD-labelled-v0.1.0-alpha.81; acceptance-license panel build (D-027 fixture); installed by the real installer; fixture trust root enrolled; not-production-release-admission",
+    "candidate": "unpublished-local-fixture-commit-labelled-v0.1.0-alpha.82; signed with the disposable fixture key; served by the guest-loopback celikpanel.net fixture origin; not a release",
+    "defect": "fixture source patch: cmd/panel configurePanelHTTPTLS (shared by the read-only --check-startup-readiness and the real start) always fails; --migrate-only and --inspect-build-identity are untouched, so the update reaches the start check after the database publication (simulated by a committed fixture change)"
+  },
+  "request_id": "52722582a4956f96ce31cb7572316072",
+  "schema": "celikpanel/upd1-owner-update-result/v1",
+  "scope": {
+    "cron": {
+      "crontab": "/usr/bin/crontab",
+      "verdict": "available"
+    },
+    "dns": {
+      "mode": "external",
+      "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+      "verdict": "not-provided-external-dns"
+    },
+    "origin": {
+      "after-provision": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      },
+      "before-arm": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      }
+    },
+    "setup": {
+      "code": "server_setup_access_dns_required",
+      "not_run": [
+        "11-panel_certificate",
+        "12-access_dns",
+        "13-mail_certificate",
+        "14-mail_enrollment",
+        "15-verify"
+      ],
+      "phase": "access_dns",
+      "verdict": "observed isolated-host wait",
+      "volatile_tables_added": [
+        "server_setup_executions"
+      ]
+    }
+  },
+  "steps": [
+    {
+      "finished_at": "2026-10-01T22:43:57Z",
+      "name": "preflight",
+      "reason": null,
+      "started_at": "2026-10-01T22:43:53Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T22:44:05Z",
+      "name": "origin",
+      "reason": null,
+      "started_at": "2026-10-01T22:43:57Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T22:44:39Z",
+      "name": "baseline-install",
+      "reason": null,
+      "started_at": "2026-10-01T22:44:05Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T22:44:40Z",
+      "name": "owner-login",
+      "reason": null,
+      "started_at": "2026-10-01T22:44:39Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T22:44:40Z",
+      "name": "license",
+      "reason": null,
+      "started_at": "2026-10-01T22:44:40Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T22:51:13Z",
+      "name": "setup",
+      "reason": null,
+      "started_at": "2026-10-01T22:44:40Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-01T22:51:15Z",
+      "name": "seed",
+      "reason": null,
+      "started_at": "2026-10-01T22:51:13Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T22:53:13Z",
+      "name": "pre-state",
+      "reason": null,
+      "started_at": "2026-10-01T22:51:15Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T22:53:15Z",
+      "name": "arm",
+      "reason": null,
+      "started_at": "2026-10-01T22:53:13Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T22:53:15Z",
+      "name": "owner-start",
+      "reason": null,
+      "started_at": "2026-10-01T22:53:15Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T22:55:19Z",
+      "name": "track",
+      "reason": null,
+      "started_at": "2026-10-01T22:53:15Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T22:55:19Z",
+      "name": "owner-continuation (required)",
+      "reason": null,
+      "started_at": "2026-10-01T22:55:19Z",
+      "verdict": "skipped"
+    },
+    {
+      "finished_at": "2026-10-01T22:55:25Z",
+      "name": "terminal",
+      "reason": null,
+      "started_at": "2026-10-01T22:55:19Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T22:55:27Z",
+      "name": "collect",
+      "reason": null,
+      "started_at": "2026-10-01T22:55:25Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T22:55:27Z",
+      "name": "verdicts",
+      "reason": null,
+      "started_at": "2026-10-01T22:55:27Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T22:55:27Z",
+      "name": "kind-expectation",
+      "reason": null,
+      "started_at": "2026-10-01T22:55:27Z",
+      "verdict": "passed"
+    }
+  ]
+}

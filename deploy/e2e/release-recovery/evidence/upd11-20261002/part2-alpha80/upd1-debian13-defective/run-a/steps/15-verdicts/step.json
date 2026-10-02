@@ -1,0 +1,138 @@
+{
+  "checks": {
+    "agreement": {
+      "agreed_samples": 0,
+      "lag_samples": 0,
+      "samples": 30,
+      "verdict": "inconclusive"
+    },
+    "attempts": {
+      "automatic": [
+        {
+          "at": "2026-10-02T11:53:52.333873Z",
+          "attempt": "1",
+          "direction": "rollback",
+          "operation": "update",
+          "phase": "active"
+        },
+        {
+          "at": "2026-10-02T11:55:01.864372Z",
+          "attempt": "2",
+          "direction": "rollback",
+          "operation": "rollback",
+          "phase": "active"
+        }
+      ],
+      "automatic_count": 2,
+      "journal_admissions": [
+        {
+          "at": "2026-10-02T11:53:52.475735+00:00",
+          "attempt": "1",
+          "snapshot": "20261002T115314Z-from-unknown-to-ca9c11d17a76b98aaccb3512ee87a94c80b44b04-29c5a067f7d684d6c829258162d934ff"
+        },
+        {
+          "at": "2026-10-02T11:55:01.958649+00:00",
+          "attempt": "2",
+          "snapshot": "20261002T115314Z-from-unknown-to-ca9c11d17a76b98aaccb3512ee87a94c80b44b04-29c5a067f7d684d6c829258162d934ff"
+        }
+      ],
+      "owner": [],
+      "owner_count": 0
+    },
+    "clock_skew_seconds": 0.063,
+    "host_panel_windows": [
+      {
+        "failed": true,
+        "first_bad": 1790942002.46693,
+        "from": 1790941997.4667528,
+        "kind": "failed",
+        "last_bad": 1790942116.400879,
+        "lower_bound_s": 113.934,
+        "to": 1790942121.401014,
+        "unobserved": false,
+        "upper_bound_s": 123.934
+      }
+    ],
+    "host_ssh_windows": [
+      {
+        "failed": true,
+        "first_bad": 1790942057.4687467,
+        "from": 1790942052.468576,
+        "kind": "failed",
+        "last_bad": 1790942066.3993928,
+        "lower_bound_s": 8.931,
+        "to": 1790942071.3995397,
+        "unobserved": false,
+        "upper_bound_s": 18.931
+      }
+    ],
+    "outcome": "recovered-automatically",
+    "workloads": {
+      "cron": {
+        "note": "cron: not available on this baseline",
+        "verdict": "not-available-on-baseline"
+      },
+      "dns": {
+        "mode": "external",
+        "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+        "verdict": "not-provided-external-dns"
+      },
+      "panel": {
+        "outside": [],
+        "verdict": "down-only-during-transaction",
+        "windows": [
+          {
+            "cause": "host-reset",
+            "failed": true,
+            "first_bad": 1790941997.2962596,
+            "from": 1790941992.2943006,
+            "kind": "failed+unobserved",
+            "last_bad": 1790942112.177003,
+            "lower_bound_s": 114.881,
+            "to": 1790942117.177167,
+            "unobserved": true,
+            "upper_bound_s": 124.883
+          }
+        ]
+      },
+      "smtp": {
+        "verdict": "interrupted-only-by-host-reset",
+        "windows": [
+          {
+            "cause": "host-reset",
+            "failed": false,
+            "first_bad": null,
+            "from": 1790942047.3110228,
+            "kind": "unobserved",
+            "last_bad": null,
+            "lower_bound_s": 0.0,
+            "to": 1790942066.4186711,
+            "unobserved": true,
+            "upper_bound_s": 19.108
+          }
+        ]
+      },
+      "web": {
+        "verdict": "interrupted-only-by-host-reset",
+        "windows": [
+          {
+            "cause": "host-reset",
+            "failed": true,
+            "first_bad": 1790942066.4186711,
+            "from": 1790942047.3110228,
+            "kind": "failed+unobserved",
+            "last_bad": 1790942066.4186711,
+            "lower_bound_s": 0.0,
+            "to": 1790942071.4161391,
+            "unobserved": true,
+            "upper_bound_s": 24.105
+          }
+        ]
+      }
+    }
+  },
+  "finished_at": "2026-10-02T11:55:39Z",
+  "name": "verdicts",
+  "started_at": "2026-10-02T11:55:39Z",
+  "verdict": "passed"
+}

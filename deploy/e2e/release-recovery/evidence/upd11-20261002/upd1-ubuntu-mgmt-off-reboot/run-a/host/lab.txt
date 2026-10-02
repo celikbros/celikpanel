@@ -1,0 +1,2 @@
+lab=/var/tmp/cp-release-drill-upd11-ub-mr-a
+upd1-ubuntu-mgmt-off-reboot-20261002t023306z

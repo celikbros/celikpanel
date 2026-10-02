@@ -1,0 +1,2 @@
+lab=/var/tmp/cp-release-drill-upd11-a80-ub-good-a
+upd1-ubuntu-good-20261002t115630z

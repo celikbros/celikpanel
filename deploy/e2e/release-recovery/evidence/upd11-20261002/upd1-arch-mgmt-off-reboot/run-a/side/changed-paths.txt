@@ -1,0 +1,25 @@
+evidence /var/tmp/cp-release-drill-upd11-arch-mr-a/evidence/arch/upd1/upd1-arch-mgmt-off-reboot-20261002t004115z/
+## initial-record (updater wrote it): 0 hits (0 in .txt)
+## curl preflight refusal: 0 hits (0 in .txt)
+## no-marker after child failure: 0 hits (0 in .txt)
+## pause_pending journal: 0 hits (0 in .txt)
+## renewal restore at pause: 0 hits (0 in .txt)
+## pause recorded: 0 hits (0 in .txt)
+## start check failure: 0 hits (0 in .txt)
+## package-activity refusal (startup reconcile): 0 hits (0 in .txt)
+## package_manager_active / HOST_MUTATION_BUSY: 0 hits (0 in .txt)
+## startup reconcile success: 3 hits (3 in .txt)
+   steps/14-management-off/journal-product-before-reboot.txt:247: 2026-10-02T00:49:53.069409+00:00 dns-arch panel[13734]: 2026/10/02 00:49:53 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload
+   steps/18-collect/journal-product.txt:360: 2026-10-02T00:54:06.670425+00:00 dns-arch panel[1284]: 2026/10/02 00:54:06 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload
+## milter chain/wiring: 9 hits (9 in .txt)
+   steps/14-management-off/journal-product-before-reboot.txt:16: 2026-10-02T00:42:35.283031+00:00 dns-arch panel[7900]: 2026/10/02 00:42:35 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-management-off/journal-product-before-reboot.txt:29: 2026-10-02T00:42:36.412588+00:00 dns-arch panel[7964]: 2026/10/02 00:42:36 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-management-off/journal-product-before-reboot.txt:54: 2026-10-02T00:43:07.268225+00:00 dns-arch panel[420]: 2026/10/02 00:43:07 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-management-off/journal-product-before-reboot.txt:249: 2026-10-02T00:49:53.075810+00:00 dns-arch panel[13734]: 2026/10/02 00:49:53 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/18-collect/journal-product.txt:362: 2026-10-02T00:54:06.679405+00:00 dns-arch panel[1284]: 2026/10/02 00:54:06 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+## root CLI states (first seen)
+   2026-10-02T00:49:08Z ('running', 'update_running', None, None, None)
+   2026-10-02T00:50:08Z ('succeeded', 'update_verified', None, None, None)
+## CELIKPANEL_LISTEN mentions
+   steps/14-management-off/journal-product-before-reboot.txt 2026-10-02T00:49:51.185293+00:00 dns-arch sudo[13254]:     root : PWD=/var/backups/celikpanel/releases/73eef2862644-ce0d06774e5eb533c8ec8034 ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/local
+   steps/18-collect/journal-product.txt 2026-10-02T00:49:51.185293+00:00 dns-arch sudo[13254]:     root : PWD=/var/backups/celikpanel/releases/73eef2862644-ce0d06774e5eb533c8ec8034 ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/local

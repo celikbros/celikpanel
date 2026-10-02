@@ -1,0 +1,433 @@
+[
+  {
+    "attempt": 1,
+    "error": null,
+    "phase": "02-service",
+    "status": "running",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-service": "running",
+      "03-service": "pending",
+      "04-service": "pending",
+      "05-mail_profile": "pending",
+      "06-mail_profile": "pending",
+      "07-service": "pending",
+      "08-firewall": "pending",
+      "09-access_dns": "pending",
+      "10-panel_certificate": "pending",
+      "11-access_dns": "pending",
+      "12-mail_certificate": "pending",
+      "13-verify": "pending"
+    },
+    "utc": "2026-10-02T12:02:39Z"
+  },
+  {
+    "attempt": 1,
+    "error": null,
+    "phase": "03-service",
+    "status": "running",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-service": "succeeded",
+      "03-service": "running",
+      "04-service": "pending",
+      "05-mail_profile": "pending",
+      "06-mail_profile": "pending",
+      "07-service": "pending",
+      "08-firewall": "pending",
+      "09-access_dns": "pending",
+      "10-panel_certificate": "pending",
+      "11-access_dns": "pending",
+      "12-mail_certificate": "pending",
+      "13-verify": "pending"
+    },
+    "utc": "2026-10-02T12:02:50Z"
+  },
+  {
+    "attempt": 1,
+    "error": {
+      "code": "HOST_MUTATION_BUSY",
+      "message": "another server change or package-manager task is still running; wait and try again"
+    },
+    "phase": "03-service",
+    "status": "failed",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-service": "succeeded",
+      "03-service": "failed",
+      "04-service": "pending",
+      "05-mail_profile": "pending",
+      "06-mail_profile": "pending",
+      "07-service": "pending",
+      "08-firewall": "pending",
+      "09-access_dns": "pending",
+      "10-panel_certificate": "pending",
+      "11-access_dns": "pending",
+      "12-mail_certificate": "pending",
+      "13-verify": "pending"
+    },
+    "utc": "2026-10-02T12:02:55Z"
+  },
+  {
+    "attempt": 2,
+    "error": null,
+    "phase": "02-service",
+    "status": "running",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-service": "running",
+      "03-service": "pending",
+      "04-mail_profile": "pending",
+      "05-mail_profile": "pending",
+      "06-service": "pending",
+      "07-firewall": "pending",
+      "08-access_dns": "pending",
+      "09-panel_certificate": "pending",
+      "10-access_dns": "pending",
+      "11-mail_certificate": "pending",
+      "12-verify": "pending"
+    },
+    "utc": "2026-10-02T12:08:07Z"
+  },
+  {
+    "attempt": 2,
+    "error": {
+      "code": "HOST_MUTATION_BUSY",
+      "message": "another server change or package-manager task is still running; wait and try again"
+    },
+    "phase": "03-service",
+    "status": "failed",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-service": "succeeded",
+      "03-service": "failed",
+      "04-mail_profile": "pending",
+      "05-mail_profile": "pending",
+      "06-service": "pending",
+      "07-firewall": "pending",
+      "08-access_dns": "pending",
+      "09-panel_certificate": "pending",
+      "10-access_dns": "pending",
+      "11-mail_certificate": "pending",
+      "12-verify": "pending"
+    },
+    "utc": "2026-10-02T12:08:49Z"
+  },
+  {
+    "attempt": 3,
+    "error": null,
+    "phase": "02-service",
+    "status": "running",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-service": "running",
+      "03-mail_profile": "pending",
+      "04-mail_profile": "pending",
+      "05-service": "pending",
+      "06-firewall": "pending",
+      "07-access_dns": "pending",
+      "08-panel_certificate": "pending",
+      "09-access_dns": "pending",
+      "10-mail_certificate": "pending",
+      "11-verify": "pending"
+    },
+    "utc": "2026-10-02T12:13:51Z"
+  },
+  {
+    "attempt": 3,
+    "error": {
+      "code": "HOST_MUTATION_BUSY",
+      "message": "another server change or package-manager task is still running; wait and try again"
+    },
+    "phase": "03-mail_profile",
+    "status": "failed",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-service": "succeeded",
+      "03-mail_profile": "failed",
+      "04-mail_profile": "pending",
+      "05-service": "pending",
+      "06-firewall": "pending",
+      "07-access_dns": "pending",
+      "08-panel_certificate": "pending",
+      "09-access_dns": "pending",
+      "10-mail_certificate": "pending",
+      "11-verify": "pending"
+    },
+    "utc": "2026-10-02T12:14:20Z"
+  },
+  {
+    "attempt": 4,
+    "error": null,
+    "phase": "02-mail_profile",
+    "status": "running",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-mail_profile": "running",
+      "03-mail_profile": "pending",
+      "04-service": "pending",
+      "05-firewall": "pending",
+      "06-access_dns": "pending",
+      "07-panel_certificate": "pending",
+      "08-access_dns": "pending",
+      "09-mail_certificate": "pending",
+      "10-verify": "pending"
+    },
+    "utc": "2026-10-02T12:19:28Z"
+  },
+  {
+    "attempt": 4,
+    "error": {
+      "code": "mail_profile_install_failed",
+      "message": "The mail profile could not be installed and verified."
+    },
+    "phase": "02-mail_profile",
+    "status": "failed",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-mail_profile": "failed",
+      "03-mail_profile": "pending",
+      "04-service": "pending",
+      "05-firewall": "pending",
+      "06-access_dns": "pending",
+      "07-panel_certificate": "pending",
+      "08-access_dns": "pending",
+      "09-mail_certificate": "pending",
+      "10-verify": "pending"
+    },
+    "utc": "2026-10-02T12:20:57Z"
+  },
+  {
+    "attempt": 5,
+    "error": null,
+    "phase": "02-mail_profile",
+    "status": "running",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-mail_profile": "running",
+      "03-mail_profile": "pending",
+      "04-service": "pending",
+      "05-firewall": "pending",
+      "06-access_dns": "pending",
+      "07-panel_certificate": "pending",
+      "08-access_dns": "pending",
+      "09-mail_certificate": "pending",
+      "10-verify": "pending"
+    },
+    "utc": "2026-10-02T12:25:52Z"
+  },
+  {
+    "attempt": 5,
+    "error": null,
+    "phase": "03-mail_profile",
+    "status": "running",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-mail_profile": "succeeded",
+      "03-mail_profile": "running",
+      "04-service": "pending",
+      "05-firewall": "pending",
+      "06-access_dns": "pending",
+      "07-panel_certificate": "pending",
+      "08-access_dns": "pending",
+      "09-mail_certificate": "pending",
+      "10-verify": "pending"
+    },
+    "utc": "2026-10-02T12:26:44Z"
+  },
+  {
+    "attempt": 5,
+    "error": {
+      "code": "mail_profile_install_failed",
+      "message": "The mail profile could not be installed and verified."
+    },
+    "phase": "03-mail_profile",
+    "status": "failed",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-mail_profile": "succeeded",
+      "03-mail_profile": "failed",
+      "04-service": "pending",
+      "05-firewall": "pending",
+      "06-access_dns": "pending",
+      "07-panel_certificate": "pending",
+      "08-access_dns": "pending",
+      "09-mail_certificate": "pending",
+      "10-verify": "pending"
+    },
+    "utc": "2026-10-02T12:27:34Z"
+  },
+  {
+    "attempt": 6,
+    "error": null,
+    "phase": "02-mail_profile",
+    "status": "running",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-mail_profile": "running",
+      "03-mail_profile": "pending",
+      "04-service": "pending",
+      "05-firewall": "pending",
+      "06-access_dns": "pending",
+      "07-panel_certificate": "pending",
+      "08-access_dns": "pending",
+      "09-mail_certificate": "pending",
+      "10-verify": "pending"
+    },
+    "utc": "2026-10-02T12:32:28Z"
+  },
+  {
+    "attempt": 6,
+    "error": null,
+    "phase": "03-mail_profile",
+    "status": "running",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-mail_profile": "succeeded",
+      "03-mail_profile": "running",
+      "04-service": "pending",
+      "05-firewall": "pending",
+      "06-access_dns": "pending",
+      "07-panel_certificate": "pending",
+      "08-access_dns": "pending",
+      "09-mail_certificate": "pending",
+      "10-verify": "pending"
+    },
+    "utc": "2026-10-02T12:33:21Z"
+  },
+  {
+    "attempt": 6,
+    "error": null,
+    "phase": "04-service",
+    "status": "running",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-mail_profile": "succeeded",
+      "03-mail_profile": "succeeded",
+      "04-service": "running",
+      "05-firewall": "pending",
+      "06-access_dns": "pending",
+      "07-panel_certificate": "pending",
+      "08-access_dns": "pending",
+      "09-mail_certificate": "pending",
+      "10-verify": "pending"
+    },
+    "utc": "2026-10-02T12:34:05Z"
+  },
+  {
+    "attempt": 6,
+    "error": null,
+    "phase": "05-firewall",
+    "status": "running",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-mail_profile": "succeeded",
+      "03-mail_profile": "succeeded",
+      "04-service": "succeeded",
+      "05-firewall": "running",
+      "06-access_dns": "pending",
+      "07-panel_certificate": "pending",
+      "08-access_dns": "pending",
+      "09-mail_certificate": "pending",
+      "10-verify": "pending"
+    },
+    "utc": "2026-10-02T12:34:16Z"
+  },
+  {
+    "attempt": 6,
+    "error": {
+      "code": "server_setup_firewall_failed",
+      "message": "Firewall requirements changed or application could not be verified. Review management access and the current service ports before retrying."
+    },
+    "phase": "05-firewall",
+    "status": "failed",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-mail_profile": "succeeded",
+      "03-mail_profile": "succeeded",
+      "04-service": "succeeded",
+      "05-firewall": "failed",
+      "06-access_dns": "pending",
+      "07-panel_certificate": "pending",
+      "08-access_dns": "pending",
+      "09-mail_certificate": "pending",
+      "10-verify": "pending"
+    },
+    "utc": "2026-10-02T12:34:22Z"
+  },
+  {
+    "attempt": 7,
+    "error": null,
+    "phase": "02-mail_profile",
+    "status": "running",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-mail_profile": "running",
+      "03-mail_profile": "pending",
+      "04-firewall": "pending",
+      "05-access_dns": "pending",
+      "06-panel_certificate": "pending",
+      "07-access_dns": "pending",
+      "08-mail_certificate": "pending",
+      "09-verify": "pending"
+    },
+    "utc": "2026-10-02T12:39:27Z"
+  },
+  {
+    "attempt": 7,
+    "error": null,
+    "phase": "03-mail_profile",
+    "status": "running",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-mail_profile": "succeeded",
+      "03-mail_profile": "running",
+      "04-firewall": "pending",
+      "05-access_dns": "pending",
+      "06-panel_certificate": "pending",
+      "07-access_dns": "pending",
+      "08-mail_certificate": "pending",
+      "09-verify": "pending"
+    },
+    "utc": "2026-10-02T12:40:18Z"
+  },
+  {
+    "attempt": 7,
+    "error": null,
+    "phase": "04-firewall",
+    "status": "running",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-mail_profile": "succeeded",
+      "03-mail_profile": "succeeded",
+      "04-firewall": "running",
+      "05-access_dns": "pending",
+      "06-panel_certificate": "pending",
+      "07-access_dns": "pending",
+      "08-mail_certificate": "pending",
+      "09-verify": "pending"
+    },
+    "utc": "2026-10-02T12:41:04Z"
+  },
+  {
+    "attempt": 7,
+    "error": {
+      "code": "server_setup_access_dns_required",
+      "message": "Public DNS must resolve panel-ubuntu.upd1-infra.test to 192.0.2.12 before a certificate is requested. Check this hostname's A/AAAA records and its zone delegation. For DNS managed here, review the infrastructure DNS records in this wizard; otherwise correct them at the primary DNS server or provider. This check resumes automatically when DNS is verified."
+    },
+    "phase": "access_dns",
+    "status": "waiting",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-mail_profile": "succeeded",
+      "03-mail_profile": "succeeded",
+      "04-firewall": "succeeded",
+      "05-access_dns": "running",
+      "06-panel_certificate": "pending",
+      "07-access_dns": "pending",
+      "08-mail_certificate": "pending",
+      "09-verify": "pending"
+    },
+    "utc": "2026-10-02T12:41:09Z"
+  }
+]

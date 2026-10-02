@@ -1,0 +1,18 @@
+evidence /var/tmp/cp-release-drill-upd11-d13-rs-a/evidence/debian13/upd1/upd1-debian13-realstart-20261001t225655z/
+## initial-record (updater wrote it): 0 hits (0 in .txt)
+## curl preflight refusal: 0 hits (0 in .txt)
+## no-marker after child failure: 0 hits (0 in .txt)
+## pause_pending journal: 0 hits (0 in .txt)
+## renewal restore at pause: 0 hits (0 in .txt)
+## pause recorded: 0 hits (0 in .txt)
+## start check failure: 0 hits (0 in .txt)
+## package-activity refusal (startup reconcile): 1 hits (1 in .txt)
+   steps/14-collect/journal-product.txt:235: 2026-10-01T23:00:01.031646+00:00 dns-debian13 panel[5145]: 2026/10/01 23:00:01 service operation e25e3ab7f478059610f694209bc19ec0 (webmail) failed in profile/webmail/mail-tls: mail TLS synchronization: another server change or package-manager task is still running
+## package_manager_active / HOST_MUTATION_BUSY: 9 hits (1 in .txt)
+   steps/14-collect/journal-product.txt:236: 2026-10-01T23:00:01.452919+00:00 dns-debian13 panel[5145]: 2026/10/01 23:00:01 server setup step 05-mail_profile failed: HOST_MUTATION_BUSY: This server's package manager is busy — a package task is still running on this server. Wait for it to finish, then try again.
+## startup reconcile success: 0 hits (0 in .txt)
+## milter chain/wiring: 2 hits (2 in .txt)
+   steps/14-collect/journal-product.txt:16: 2026-10-01T22:57:37.277895+00:00 dns-debian13 panel[5080]: 2026/10/01 22:57:37 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-collect/journal-product.txt:29: 2026-10-01T22:57:38.418674+00:00 dns-debian13 panel[5145]: 2026/10/01 22:57:38 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+## root CLI states (first seen)
+## CELIKPANEL_LISTEN mentions
