@@ -1,12 +1,8 @@
-# Sonraki sürüm adayı: taslak notlar
+# v0.1.0-alpha.81
 
-[English](RELEASE-NOTES-CANDIDATE-DRAFT.md)
+[English](RELEASE-NOTES-v0.1.0-alpha.81.md)
 
-*Taslak, 2026-10-01. Sürüm numarası atanmadı ve hiçbir şey yayımlanmadı. Sürümü,
-yayımlamayı ve kurulu her panelin güncellemesini sunucu sahibi belirler. Sürüm
-seçildiğinde bu dosyanın adını `RELEASE-NOTES-<version>.tr.md` olarak değiştirin.*
-
-Bu aday v0.1.0-alpha.80 sürümünü izler. DNS motoru değişikliklerinin, eşli DNS
+Bu sürüm v0.1.0-alpha.80 sürümünü izler. DNS motoru değişikliklerinin, eşli DNS
 sunucularının ve panel güncellemelerinin kesintiden nasıl kurtulduğunu değiştirir;
 neyin ölçüldüğünü, neyin ölçülmediğini de açıkça belirtir.
 
@@ -144,15 +140,19 @@ Bunlar bilinen ve bilinçli sınırlardır. Gizli kusur değildir.
 
 ## Yayımlamadan önce (sahip kararları ve kalan denetimler)
 
-1. Sürüm numarasını seçin.
-2. root gerektiren paketleme sözleşmesi testlerini (18 betik) geçici bir makinede ya
-   da CI'da çalıştırın; derleme ana makinesinde root olarak çalıştırılmadılar.
-3. Üretim süreciyle derleyip imzalayın; imzalı arşivi ve v0.1.0-alpha.80 ile kurtarma
-   uyumluluğunu doğrulayın.
-4. Satıcı yayımlama araçlarının (indirme portalı ve üyelik betikleri) müşteri
-   arşivinde kalıp kalmayacağına karar verin.
+1. Sürüm: v0.1.0-alpha.81 (sahibin kararı).
+2. root gerektiren paketleme sözleşmesi testleri (18 betik), bakımcı tarafından
+   geçici bir makinede çalıştırılıyor; derleme ana makinesinde root olarak
+   çalıştırılmadılar. Sonuç: bekleniyor (pending).
+3. Üretim imzalaması, [imzalı sürüm sözleşmesinde](release-signing.tr.md)
+   anlatıldığı gibi, sürüm etiketinde CI içinde yapılır; imzalama anahtarı CI
+   dışında kullanılmaz. Ardından sahip, yayımlanan altı dosyayı o belgede
+   anlatıldığı gibi doğrular; imzalı arşivin v0.1.0-alpha.80 ile kurtarma
+   uyumluluğunu da doğrular.
+4. Satıcı yayımlama araçları (indirme portalı ve üyelik betikleri) bu sürümün
+   müşteri arşivinde kalır (sahibin kararı, 2026-10-03).
 5. Kurulu herhangi bir panel güncellenmeden önce geçici bir sunucuda sahip denemesi
-   yapın.
+   yapılır.
 
 Bu sürümü yalnız CelikPanel'in güncelleme arayüzünden kurun. Yayımlamak kurulu
 sunucuları güncellemez.

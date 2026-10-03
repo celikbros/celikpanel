@@ -1,12 +1,8 @@
-# Next release candidate — draft notes
+# v0.1.0-alpha.81
 
-[Türkçe](RELEASE-NOTES-CANDIDATE-DRAFT.tr.md)
+[Türkçe](RELEASE-NOTES-v0.1.0-alpha.81.tr.md)
 
-*Draft, 2026-10-01. No version number is assigned and nothing is published. The owner
-decides the version, the publication and every installed-panel update. Rename this
-file to `RELEASE-NOTES-<version>.md` when the version is chosen.*
-
-This candidate follows v0.1.0-alpha.80. It changes how DNS engine changes, paired
+This release follows v0.1.0-alpha.80. It changes how DNS engine changes, paired
 DNS servers and panel updates recover from interruption, and it states what was
 measured and what was not.
 
@@ -143,13 +139,17 @@ These are known and deliberate. They are not hidden defects.
 
 ## Before publication (owner decisions and remaining checks)
 
-1. Choose the version number.
-2. Run the packaging contract tests that need root (18 scripts) on a disposable
-   machine or in CI; they were not run as root on the build host.
-3. Build and sign with the production process and verify the signed archive and
-   its recovery compatibility with v0.1.0-alpha.80.
-4. Decide whether the vendor publishing tools (download-portal and membership
-   scripts) stay in the customer archive.
+1. Version: v0.1.0-alpha.81 (owner decision).
+2. The packaging contract tests that need root (18 scripts) are being run by the
+   maintainer on a disposable machine; they were not run as root on the build
+   host. Result: pending.
+3. Production signing happens in CI on the release tag, as the
+   [signed release contract](release-signing.md) describes; no signing key is
+   used outside CI. The owner then verifies the six published assets as that
+   document says, and the signed archive's recovery compatibility with
+   v0.1.0-alpha.80.
+4. The vendor publishing tools (download-portal and membership scripts) stay in
+   this release's customer archive (owner decision, 2026-10-03).
 5. Owner test on a disposable server before any installed panel is updated.
 
 Install this release only through CelikPanel's update interface. Publishing it
