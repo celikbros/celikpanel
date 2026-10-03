@@ -2301,3 +2301,46 @@ type: lmdb` although the step completes (an owner reading the journal sees a
 files with identical content (it re-asserts them, as the contract says). Not reached: a
 second attempt, the give-up line, a verified failure, the pending-certificate
 retry; the fixture has no secure-mail certificate; Ubuntu and Arch not run.
+
+### The release candidate's exact code through the whole update matrix (P0.1/P0.2/P0.3/P0.5, 2026-10-03)
+
+D-025 invariants 1 to 6; D-022, D-024. Evidence only; no product change. P0.1,
+P0.2, P0.3 and P0.5 stay partial.
+
+[upd13](../deploy/e2e/release-recovery/evidence/upd13-20261002/README.md) ran
+the matrix of the entry above once more on `f6cdd5a0`, the commit that carries
+every product change of this candidate (the alpha.80 cells start from the
+`v0.1.0-alpha.80` source with the test-license seam and update to a second build
+of the same commit): 20 cells, 21 runs, one Arch baseline install stopped by a
+harness status-read race and re-run. Every complete run (20 of 21) ended as in
+upd11:
+every good update verified, every defective and start-check candidate returned
+automatically after the platform's second fault, the real-start pause on Debian
+with `pause_pending` and the restored renewal, every owner retry run once to
+`succeeded/update_verified`, all three management-off reboots served, the
+Ubuntu start check with its first clean run, setup on Ubuntu in one attempt in
+all five runs. No candidate product defect.
+
+- **The deferred mail steps (`6b6f8a0c`), now on three platforms' mail cells.**
+  Thirteen Panels that started inside an operation logged both refusals with the
+  retry sentence; the eleven that lived past 30 s completed both steps in one
+  attempt between 38 and 40 s with one journal line each and no repeat; the two
+  that the owner stopped before the first attempt (management off) did the work
+  at their next start after the reboot. No operation's verification was
+  disturbed. The retry beyond its first attempt (busy again, a verified failure,
+  the give-up line, the pending-certificate retry) was not reached.
+- **Changed paths not exercised** (same as upd11): the curl refusal, the
+  no-marker end after a failed recovery child, host-name or leading-zero listen
+  addresses, package activity reported inside an update. The initial status
+  record for an alpha.80 worker is again inferred from the status sequence.
+- **Repeat limits.** The alpha.80 Panel after a return shows the raw failure
+  line, has no recovery reader, offers the same version again and skips its mail
+  steps with no retry; about 17 s with no or unavailable status after the start;
+  seven setup attempts on Ubuntu. The CLI read `failed/update_failed` once for
+  18 s in one owner-continuation run before the recovery record appeared (seen
+  once in upd11 too). The postmap lmdb "fatal" line is now seen on Ubuntu as
+  well as Debian.
+- **Not proven.** Repeatability (one run per cell); real start on Arch or
+  Ubuntu; secure-mail certificates; the signed alpha.80 archive; production
+  signing, the real origin, the license service, DNS, renewal itself, a
+  browser, power loss; panel removal.

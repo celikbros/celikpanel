@@ -117,11 +117,13 @@ These are known and deliberate. They are not hidden defects.
   CelikPanel. Only "management disabled" was measured.
 - **Evidence scope:** disposable virtual machines on one laptop host, a test
   signing key, a loopback release origin and a test-only license; every update
-  case ran once on one build of this candidate (Debian 13, Arch, Ubuntu 24.04;
-  the "Panel starts but fails later" case on Debian only; three cases needed a
-  second run), and the mail re-apply change came after that run and was then measured on
-  Debian 13 only, in three cases, with no mail certificate present; no power-loss test; no
-  browser took part in the update runs. The
+  case ran once on the exact code of this candidate (Debian 13, Arch, Ubuntu
+  24.04; the "Panel starts but fails later" case on Debian only; one case needed
+  a second run after a test-harness fault); the mail re-apply was reached in 11
+  Panels on Debian and Ubuntu (not in the paused case, the management-off cases
+  or after a return to alpha.80), but only its first attempt, and no mail
+  certificate was present; no power-loss test; no browser took part in the
+  update runs. The
   production signing path, the real release origin and the license service were
   not exercised by these runs.
 - **Untested messages:** four safety messages did not occur in any test run, so

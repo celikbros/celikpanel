@@ -118,12 +118,13 @@ Bunlar bilinen ve bilinçli sınırlardır. Gizli kusur değildir.
   yoktur. Yalnız "yönetim kapalı" ölçüldü.
 - **Kanıt kapsamı:** tek bir dizüstü ana makinedeki geçici sanal makineler, bir
   deneme imzalama anahtarı, bir loopback sürüm kaynağı ve yalnız test için lisans;
-  her güncelleme durumu bu adayın tek bir yapısında bir kez koşuldu (Debian 13,
+  her güncelleme durumu bu adayın kesin kodunda bir kez koşuldu (Debian 13,
   Arch, Ubuntu 24.04; "Panel başlıyor ama sonra başarısız oluyor" durumu yalnız
-  Debian'da; üç durum ikinci bir koşu gerektirdi) ve posta yeniden uygulama
-  değişikliği o koşudan sonra geldi ve ardından yalnız Debian 13'te, üç durumda,
-  posta sertifikası olmadan ölçüldü; güç kaybı denemesi yok; güncelleme
-  koşularında hiçbir tarayıcı yer almadı. Üretim imzalama yolu, gerçek sürüm
+  Debian'da; bir durum bir düzenek hatasından sonra ikinci bir koşu gerektirdi);
+  posta yeniden uygulamasına Debian ve Ubuntu'da 11 Panel'de ulaşıldı (duraklayan
+  durumda, yönetimin kapalı olduğu durumlarda ve alpha.80'e dönüşten sonra
+  ulaşılmadı), ancak yalnız ilk denemesine ulaşıldı ve posta sertifikası yoktu; güç kaybı denemesi
+  yok; güncelleme koşularında hiçbir tarayıcı yer almadı. Üretim imzalama yolu, gerçek sürüm
   kaynağı ve lisans hizmeti bu koşularda denenmedi.
 - **Denenmemiş iletiler:** dört güvenlik iletisi hiçbir deneme koşusunda ortaya
   çıkmadı; bu yüzden ekrandaki ifadeleri denenmedi: güncellemeden önce Panel'in meşgul

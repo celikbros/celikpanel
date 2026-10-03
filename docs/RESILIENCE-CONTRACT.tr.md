@@ -1540,3 +1540,50 @@ dosyalarını aynı içerikle yeniden yazıyor (sözleşmede yazdığı gibi onl
 öne sürüyor). Ulaşılmayan: ikinci deneme, vazgeçme satırı, doğrulanmış bir başarısızlık,
 bekleyen sertifika yeniden denemesi; düzenekte güvenli posta sertifikası yok;
 Ubuntu ve Arch koşulmadı.
+
+### Sürüm adayının kesin kodu, güncelleme matrisinin tamamında (P0.1/P0.2/P0.3/P0.5, 3 Ekim 2026)
+
+D-025 ilkeleri 1 ila 6; D-022, D-024. Yalnız kanıt; ürün değişikliği yok. P0.1,
+P0.2, P0.3 ve P0.5 kısmi kalır.
+
+[upd13](../deploy/e2e/release-recovery/evidence/upd13-20261002/README.md),
+önceki girişin matrisini bir kez daha `f6cdd5a0` üzerinde koştu; bu, bu adayın
+bütün ürün değişikliklerini taşıyan işlemedir (alpha.80 hücreleri
+`v0.1.0-alpha.80` kaynağından, test lisansı bağlantı noktasıyla başlar ve aynı
+işlemenin ikinci bir yapısına güncellenir): 20 hücre, 21 koşu; bir Arch temel
+kurulumu bir düzenek durum okuma yarışıyla durdu ve yeniden koşuldu. Her tam
+koşu (21'den 20'si) upd11'deki gibi bitti: her iyi güncelleme doğrulandı, her
+kusurlu ve başlangıç denetimi adayı platformun ikinci arızasından sonra
+otomatik olarak geri döndü, Debian'da gerçek başlatma duraklaması
+`pause_pending` ve geri yüklenen yenilemeyle, her sahip yeniden denemesi bir kez
+`succeeded/update_verified` durumuna koşuldu, yönetim kapalıyken üç yeniden
+başlatmanın üçünde de hizmet sürdü, Ubuntu başlangıç denetimi ilk temiz
+koşusuyla, Ubuntu'da kurulum beş koşunun hepsinde tek denemede. Aday ürün
+kusuru yok.
+
+- **Ertelenen posta adımları (`6b6f8a0c`), şimdi üç platformun posta
+  hücrelerinde.** Bir işlemin içinde başlayan on üç Panel, yeniden deneme
+  cümlesiyle iki reddi de günlüğe yazdı; 30 sn'den uzun yaşayan on bir tanesi
+  her iki adımı 38 ila 40 sn arasında tek denemede, her biri tek günlük
+  satırıyla ve tekrar olmadan tamamladı; sahibin ilk denemeden önce durdurduğu
+  iki Panel (yönetim kapalı) işi yeniden başlatmadan sonraki bir sonraki
+  başlangıcında yaptı. Hiçbir işlemin doğrulaması bozulmadı. İlk denemenin
+  ötesindeki yeniden deneme (yine meşgul, doğrulanmış başarısızlık, vazgeçme
+  satırı, bekleyen sertifika yeniden denemesi) ulaşılmadı.
+- **Çalıştırılmayan değişen yollar** (upd11 ile aynı): curl reddi, başarısız
+  kurtarma alt işleminden sonra işaretçisiz bitiş, ana makine adı ya da başında
+  sıfır olan dinleme adresleri, bir güncelleme içinde bildirilen paket
+  etkinliği. Bir alpha.80 çalışanı için ilk durum kaydı yine durum dizisinden
+  çıkarılmıştır.
+- **Tekrarlanan sınırlar.** Dönüşten sonraki alpha.80 Panel ham başarısızlık
+  satırını gösterir, kurtarma okuyucusu yoktur, aynı sürümü yeniden sunar ve
+  posta adımlarını yeniden deneme olmadan atlar; başlangıçtan sonra durum
+  olmadan ya da durum okunamaz hâlde yaklaşık 17 sn; Ubuntu'da yedi kurulum
+  denemesi. CLI, bir sahip devam ettirme koşusunda, kurtarma kaydı görünmeden
+  önce 18 sn boyunca bir kez `failed/update_failed` okudu (upd11'de de bir kez
+  görüldü). postmap lmdb "fatal" satırı artık Debian'ın yanında Ubuntu'da da
+  görülüyor.
+- **Kanıtlanmayan.** Tekrarlanabilirlik (hücre başına bir koşu); Arch ya da
+  Ubuntu'da gerçek başlatma; güvenli posta sertifikaları; imzalı alpha.80
+  arşivi; üretim imzalaması, gerçek sürüm kaynağı, lisans hizmeti, DNS,
+  yenilemenin kendisi, bir tarayıcı, güç kaybı; panel kaldırma.
