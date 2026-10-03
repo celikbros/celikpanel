@@ -1,0 +1,2 @@
+!! retained recovery release executables are unsafe
+rollback recovery handoff: real rollback entrypoint rejected the runner handoff

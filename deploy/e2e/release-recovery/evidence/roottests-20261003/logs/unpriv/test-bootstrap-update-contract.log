@@ -1,0 +1,19 @@
+SKIP: apply-only snapshot fixture needs root metadata
+PASS: clean
+PASS: transient
+PASS: persistent
+PASS: unreadable
+PASS: empty
+PASS: pid-changed
+PASS: start-changed
+PASS: state-changed
+PASS: frozen
+PASS: traced
+PASS: vanished
+PASS: inactive
+PASS: strict matcher rejects extra and residual processes
+update quiesce capture: ok
+SKIP: recovery lock test requires root
+PASS: exact resource CLI tuples, dynamic FD9 mapping and refusal propagation
+PASS: candidate/baseline compatibility uses verified readers, stops on uncertainty, and precedes publication
+bootstrap update contract: ok

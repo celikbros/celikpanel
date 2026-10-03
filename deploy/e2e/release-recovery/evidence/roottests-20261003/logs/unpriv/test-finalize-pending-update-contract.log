@@ -1,0 +1,7 @@
+!! Certbot scheduler restoration completed; durable marker removal is uncertain. Runtime was left intact and finalization did not claim success.
+!! Runtime completion is durable; exact Certbot scheduler restoration remains safely retryable.
+!! Runtime completion is durable; exact Certbot scheduler restoration remains safely retryable.
+!! Finalization failed closed; completion.pending was preserved and both coordinators were stopped.
+!! Finalization failed closed and both coordinators were stopped, but completion.pending is unexpectedly absent.
+!! Finalization failed closed and both coordinators were stopped, but completion.pending is unexpectedly absent.
+pending-update finalizer contract: PASS

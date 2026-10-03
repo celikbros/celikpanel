@@ -1,0 +1,2 @@
+celikpanel-release-recovery.service: Command /usr/libexec/celikpanel/release-recovery is not executable: Permission denied
+release recovery contract: systemd-analyze rejected recovery units

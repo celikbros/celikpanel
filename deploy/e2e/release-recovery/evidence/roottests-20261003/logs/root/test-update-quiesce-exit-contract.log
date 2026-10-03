@@ -1,0 +1,13 @@
+!! Quiesce abort verification failed; recovery state was preserved and both coordinators were stopped.
+!! Quiesce abort verification failed; recovery state was preserved and both coordinators were stopped.
+FAIL: frozen panel could not be terminated
+!! Runtime completion is durable; exact Certbot scheduler restoration is safely retryable.
+!! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason=updater command failed; inspect the update worker log detail=
+!! Runtime completion is durable; exact Certbot scheduler restoration is safely retryable.
+!! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason=updater command failed; inspect the update worker log detail=
+!! Certbot scheduler restoration was verified, but durable marker cleanup reported an error.
+!! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason=updater command failed; inspect the update worker log detail=
+!! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason=updater command failed; inspect the update worker log detail=
+!! Durable update marker is ambiguous or changed; recovery state was preserved.
+!! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason=updater command failed; inspect the update worker log detail=
+PASS: update quiesce/EXIT durable identity contract

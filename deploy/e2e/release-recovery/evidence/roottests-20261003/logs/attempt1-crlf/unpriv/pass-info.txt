@@ -1,0 +1,5 @@
+pass=unpriv user=rtuser uid=1002 home=/home/rtuser
+started=2026-10-03T20:31:57Z tests=54
+go version go1.26.5 linux/amd64
+env: GOTOOLCHAIN=local GOPROXY=off LANG=C.UTF-8
+finished=2026-10-03T20:38:48Z

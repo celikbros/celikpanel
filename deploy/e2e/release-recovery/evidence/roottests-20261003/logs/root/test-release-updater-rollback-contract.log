@@ -1,0 +1,13 @@
+PASS: exact normal ledger retains inode and metadata across repeated restore
+PASS: historical deletion gap remains rejected, not silently repaired
+PASS: SIGKILL during normal preservation leaves exact ledger and permits retry
+PASS: valid idle terminal history after snapshot is refused and preserved
+PASS: normal preservation refuses missing and preserves evidence
+PASS: normal preservation refuses corrupt and preserves evidence
+PASS: normal preservation refuses mode and preserves evidence
+PASS: normal preservation refuses hardlink and preserves evidence
+PASS: normal preservation refuses symlink and preserves evidence
+PASS: normal preservation refuses wrong-token and preserves evidence
+PASS: normal preservation refuses missing-lock and preserves evidence
+rollback ledger preservation: ok
+release updater rollback contract passed

@@ -1,0 +1,14 @@
+membership service: 66 checks passed
+test_authentication_rejection_has_no_delivery_or_diagnostics (__main__.SMTPTests.test_authentication_rejection_has_no_delivery_or_diagnostics) ... ok
+test_untrusted_certificate_fails_before_authentication (__main__.SMTPTests.test_untrusted_certificate_fails_before_authentication) ... ok
+test_vendored_files_match_pinned_upstream (__main__.SMTPTests.test_vendored_files_match_pinned_upstream) ... ok
+test_verified_tls_authentication_and_message (__main__.SMTPTests.test_verified_tls_authentication_and_message) ... ok
+test_wrong_certificate_hostname_fails_before_authentication (__main__.SMTPTests.test_wrong_certificate_hostname_fails_before_authentication) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.717s
+
+OK
+ok  	github.com/alicelik/celikpanel/internal/licensing	0.072s
+Local membership fixture prepared (no email delivery).
+membership HTTP: 31 checks passed

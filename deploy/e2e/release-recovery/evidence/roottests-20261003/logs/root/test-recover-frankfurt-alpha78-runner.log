@@ -1,0 +1,5 @@
+PASS: unlocked active transaction reaches real release validation
+PASS: real transaction flock prevents watchdog dispatch
+PASS: start guard blocks ordinary starts while active remains
+PASS: after exact abort and unlock, watchdog exits without dispatch
+PASS: marker-free start guard permits ordinary service starts

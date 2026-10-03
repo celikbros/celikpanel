@@ -1,0 +1,16 @@
+## prerequisite: git clone of a bundle (candidate history + refs/tags/v0.1.0-alpha.79), detached at 48d264d5
+hint: Using 'master' as the name for the initial branch. This default branch name
+hint: is subject to change. To configure the initial branch name to use in all
+hint: of your new repositories, which will suppress this warning, call:
+hint:
+hint: 	git config --global init.defaultBranch <name>
+hint:
+hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+hint: 'development'. The just-created branch can be renamed via this command:
+hint:
+hint: 	git branch -m <name>
+HEAD=48d264d5669099292deb64e7f90d267ac352b1ec tree=9456cd27f642ada3a98feb49d73a7681d679cdbe
+tags: v0.1.0-alpha.79 
+git-archive-in-guest sha256=dec4e366ad6e38081f66d20f5fced961e1a96122ce21a3b951942f6bbaa17547  -
+archive-under-test sha256=dec4e366ad6e38081f66d20f5fced961e1a96122ce21a3b951942f6bbaa17547  -
+release sequence policy contract passed: 79 -> 80; historical bootstrap sequence 79

@@ -140,9 +140,11 @@ These are known and deliberate. They are not hidden defects.
 ## Before publication (owner decisions and remaining checks)
 
 1. Version: v0.1.0-alpha.81 (owner decision).
-2. The packaging contract tests that need root (18 scripts) are being run by the
-   maintainer on a disposable machine; they were not run as root on the build
-   host. Result: pending.
+2. All 54 packaging contract tests were run as root in a disposable Debian 13
+   machine with no outbound network (2026-10-03): 49 passed at once; the other 5
+   failed only for a missing prerequisite of the test machine (a `/run` mounted
+   without execute permission, a build step CI runs first, missing git history)
+   and passed once that was supplied. No product defect was found.
 3. Production signing happens in CI on the release tag, as the
    [signed release contract](release-signing.md) describes; no signing key is
    used outside CI. The owner then verifies the six published assets as that

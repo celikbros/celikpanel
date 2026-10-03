@@ -1,0 +1,41 @@
+bootstrap update contract failed: apply-only complete snapshot checksum verification failed
+bootstrap update contract failed: apply-only complete snapshot checksum verification failed
+bootstrap update contract failed: apply-only snapshot manifest changed after admission
+bootstrap update contract failed: apply-only snapshot target tree differs from the verified release
+release unit transition: installed unit differs from both verified states; preserve owner changes: celikpanel-agent.service
+bootstrap update contract failed: apply-only unit files are outside the verified old/candidate transition
+release transaction guard: transaction marker fields mismatch: active
+bootstrap update contract failed: apply-only snapshot does not belong to the active update
+PASS: clean
+PASS: transient
+PASS: persistent
+PASS: unreadable
+PASS: empty
+PASS: pid-changed
+PASS: start-changed
+PASS: state-changed
+PASS: frozen
+PASS: traced
+PASS: vanished
+PASS: inactive
+PASS: strict matcher rejects extra and residual processes
+update quiesce capture: ok
+PASS: update.sh recovery lock exclusive
+PASS: update.sh recovery lock shared
+PASS: update.sh recovery lock unlocked
+PASS: update.sh recovery lock closed
+PASS: update.sh recovery lock wrong-identity
+PASS: update.sh recovery lock foreign-owner
+PASS: update.sh recovery lock owner-start
+PASS: update.sh recovery lock owner-start-busy
+PASS: rollback.sh recovery lock exclusive
+PASS: rollback.sh recovery lock shared
+PASS: rollback.sh recovery lock unlocked
+PASS: rollback.sh recovery lock closed
+PASS: rollback.sh recovery lock wrong-identity
+PASS: rollback.sh recovery lock foreign-owner
+PASS: rollback.sh recovery lock owner-start
+PASS: rollback.sh recovery lock owner-start-busy
+PASS: exact resource CLI tuples, dynamic FD9 mapping and refusal propagation
+PASS: candidate/baseline compatibility uses verified readers, stops on uncertainty, and precedes publication
+bootstrap update contract: ok

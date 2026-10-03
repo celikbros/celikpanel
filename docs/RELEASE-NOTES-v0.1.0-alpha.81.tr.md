@@ -141,9 +141,11 @@ Bunlar bilinen ve bilinçli sınırlardır. Gizli kusur değildir.
 ## Yayımlamadan önce (sahip kararları ve kalan denetimler)
 
 1. Sürüm: v0.1.0-alpha.81 (sahibin kararı).
-2. root gerektiren paketleme sözleşmesi testleri (18 betik), bakımcı tarafından
-   geçici bir makinede çalıştırılıyor; derleme ana makinesinde root olarak
-   çalıştırılmadılar. Sonuç: bekleniyor (pending).
+2. 54 paketleme sözleşmesi testinin tümü, dış ağa kapalı tek kullanımlık bir
+   Debian 13 makinesinde root olarak çalıştırıldı (3 Ekim 2026): 49'u ilk seferde
+   geçti; kalan 5'i yalnız test makinesinde eksik bir önkoşul yüzünden düştü
+   (çalıştırma izni olmadan bağlanmış `/run`, CI'ın önce koştuğu bir derleme
+   adımı, eksik git geçmişi) ve önkoşul sağlanınca geçti. Ürün kusuru bulunmadı.
 3. Üretim imzalaması, [imzalı sürüm sözleşmesinde](release-signing.tr.md)
    anlatıldığı gibi, sürüm etiketinde CI içinde yapılır; imzalama anahtarı CI
    dışında kullanılmaz. Ardından sahip, yayımlanan altı dosyayı o belgede

@@ -1,0 +1,5 @@
+pass=root user=root uid=0 home=/root
+started=2026-10-03T21:08:48Z tests=54
+go version go1.26.5 linux/amd64
+env: GOTOOLCHAIN=local GOPROXY=off LANG=C.UTF-8
+finished=2026-10-03T21:17:32Z

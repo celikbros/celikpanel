@@ -1,0 +1,7 @@
+# blob-id comparison of each archive against 'git ls-tree -r 48d264d5' (the one LF mismatch is 'docs/CelikPanel Pano.html', a parsing artefact of the space in its name; verified separately: blob 6a37de1f... equals the archived content)
+archive=src-48d264d5-lf.tar files=47448 tree_blobs=47448 mismatches=1
+MISMATCH docs/CelikPanel Pano.html
+archive=src-48d264d5.tar files=47448 tree_blobs=47448 mismatches=1077
+1077 files of the first archive differ: Windows git (core.autocrlf=true) converted text=auto files without an eol=lf rule to CRLF
+dec4e366ad6e38081f66d20f5fced961e1a96122ce21a3b951942f6bbaa17547 *src-48d264d5-lf.tar
+91b9e90eef45d71f2405d47efa21a1b3b482011992662dbb775fbeb4533dc954 *src-48d264d5.tar

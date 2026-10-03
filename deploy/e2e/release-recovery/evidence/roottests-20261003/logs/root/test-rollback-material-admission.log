@@ -1,0 +1,3 @@
+deploy/test-rollback-material-admission.sh: line 95: /run/celikpanel-material-admission-test.1SEYGBP8/33-existing-missing-absent/usr/libexec/celikpanel/recovery: Permission denied
+legacy recovery material absence could not be proved; use sudo /run/celikpanel-material-admission-test.1SEYGBP8/33-existing-missing-absent/usr/libexec/celikpanel/recovery recover
+FAIL: case 33 rejected supported admission

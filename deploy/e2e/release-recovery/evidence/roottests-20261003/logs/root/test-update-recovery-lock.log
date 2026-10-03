@@ -1,0 +1,16 @@
+PASS: update.sh recovery lock exclusive
+PASS: update.sh recovery lock shared
+PASS: update.sh recovery lock unlocked
+PASS: update.sh recovery lock closed
+PASS: update.sh recovery lock wrong-identity
+PASS: update.sh recovery lock foreign-owner
+PASS: update.sh recovery lock owner-start
+PASS: update.sh recovery lock owner-start-busy
+PASS: rollback.sh recovery lock exclusive
+PASS: rollback.sh recovery lock shared
+PASS: rollback.sh recovery lock unlocked
+PASS: rollback.sh recovery lock closed
+PASS: rollback.sh recovery lock wrong-identity
+PASS: rollback.sh recovery lock foreign-owner
+PASS: rollback.sh recovery lock owner-start
+PASS: rollback.sh recovery lock owner-start-busy

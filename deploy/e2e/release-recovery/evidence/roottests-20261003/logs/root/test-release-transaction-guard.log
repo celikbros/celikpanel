@@ -1,0 +1,131 @@
+trusted release root cannot be resolved while sourcing release guard
+release transaction guard: transaction lock must be an empty root:root mode 0600 file with one link
+release transaction guard: transaction lock must be an empty root:root mode 0600 file with one link
+release transaction guard: inherited descriptor does not name the fixed transaction lock
+release transaction guard: inherited descriptor has no exact single flock record
+release transaction guard: inherited descriptor has no exact single flock record
+release transaction guard: unsafe secure parent directory: /tmp/tmp.GUzCgGPmCT/unsafe-helper-parent
+release transaction guard: secure parent directory is group/other writable: /tmp/tmp.GUzCgGPmCT/unsafe-helper-parent
+release transaction guard: secure parent directory must be owned by root:root
+release transaction guard: unsafe secure parent directory: /tmp/tmp.GUzCgGPmCT/missing-grandparent
+release transaction guard: root-owned directory metadata mismatch: /tmp/tmp.GUzCgGPmCT/systemd
+release transaction guard: systemd unit root must be root:root mode 0755
+release transaction guard: runtime-directory preserve drop-in argument differs from installed identity
+release transaction guard: celikpanel-agent.service has unconsumed guard changes
+release transaction guard: guard directory contains unrecognized entries: celikpanel-panel.service
+release transaction guard: guard directory contains unrecognized entries: celikpanel-agent.service
+release transaction guard: guard directory contains unrecognized entries: celikpanel-agent.service
+release transaction guard: guard directory contains unrecognized entries: celikpanel-agent.service
+release transaction guard: installed release start guard metadata is invalid
+release transaction guard: installed release start guard bytes differ from the verified release
+release transaction guard: installed release start guard metadata is invalid
+release transaction guard: release transaction systemd drop-in metadata is invalid: /tmp/tmp.GUzCgGPmCT/systemd/celikpanel-agent.service.d/10-release-transaction-guard.conf
+release transaction guard: release transaction systemd drop-in content is invalid: /tmp/tmp.GUzCgGPmCT/systemd/celikpanel-agent.service.d/10-release-transaction-guard.conf
+release transaction guard: runtime-directory preserve drop-in content is invalid
+release transaction guard: guard directory contains unrecognized entries: celikpanel-panel.service
+release transaction guard: pending unit reload requires stopped coordinators: celikpanel-agent.service
+release transaction guard: pending unit reload requires stopped coordinators: celikpanel-agent.service
+release transaction guard: pending unit reload requires stopped coordinators: celikpanel-agent.service
+release transaction guard: pending unit reload requires stopped coordinators: celikpanel-agent.service
+release transaction guard: pending unit reload requires stopped coordinators: celikpanel-agent.service
+release transaction guard: pending unit reload requires stopped coordinators: celikpanel-agent.service
+release transaction guard: loaded unit fragment differs from the fixed transition target: celikpanel-agent.service
+release transaction guard: loaded start condition differs from the persistent guard: celikpanel-agent.service
+release transaction guard: loaded start condition differs from the persistent guard: celikpanel-agent.service
+release transaction guard: loaded start condition differs from the persistent guard: celikpanel-agent.service
+release transaction guard: loaded start condition contains additional commands: celikpanel-agent.service
+release transaction guard: loaded start condition contains additional commands: celikpanel-agent.service
+release transaction guard: loaded start condition differs from the persistent guard: celikpanel-agent.service
+release transaction guard: pending unit reload requires stopped coordinators: celikpanel-panel.service
+release transaction guard: pending unit reload requires stopped coordinators: celikpanel-panel.service
+release transaction guard: pending unit reload requires stopped coordinators: celikpanel-panel.service
+release transaction guard: pending unit reload requires stopped coordinators: celikpanel-panel.service
+release transaction guard: pending unit reload requires stopped coordinators: celikpanel-panel.service
+release transaction guard: pending unit reload requires stopped coordinators: celikpanel-panel.service
+release transaction guard: loaded unit fragment differs from the fixed transition target: celikpanel-panel.service
+release transaction guard: loaded start condition differs from the persistent guard: celikpanel-panel.service
+release transaction guard: loaded start condition differs from the persistent guard: celikpanel-panel.service
+release transaction guard: loaded start condition differs from the persistent guard: celikpanel-panel.service
+release transaction guard: loaded start condition contains additional commands: celikpanel-panel.service
+release transaction guard: loaded start condition contains additional commands: celikpanel-panel.service
+release transaction guard: loaded start condition differs from the persistent guard: celikpanel-panel.service
+release transaction guard: unrecognized manager reload state: celikpanel-agent.service
+release transaction guard: unrecognized manager reload state: celikpanel-agent.service
+release transaction guard: systemd did not load only the exact transaction guard for celikpanel-agent.service
+release transaction guard: systemd did not load only the exact transaction guard for celikpanel-agent.service
+release transaction guard: guard directory contains unrecognized entries: celikpanel-panel.service
+release transaction guard: systemd did not load only the exact transaction guard for celikpanel-agent.service
+release transaction guard: systemd did not load only the exact transaction guard for celikpanel-agent.service
+release transaction guard: guard directory contains unrecognized entries: celikpanel-agent.service
+release transaction guard: celikpanel-agent.service has unconsumed guard changes
+release transaction guard: celikpanel-agent.service has unconsumed guard changes
+release transaction guard: requested runtime-directory preserve drop-in is absent
+release transaction guard: unit snapshot contains an unexpected number of entries
+release transaction guard: snapshot systemd unit is missing or unsafe: /tmp/tmp.GUzCgGPmCT/snapshot-units/celikpanel-panel.service
+release transaction guard: existing release start guard metadata is unsafe
+release transaction guard: existing release transaction drop-in metadata is unsafe: /tmp/tmp.GUzCgGPmCT/systemd/celikpanel-agent.service.d/10-release-transaction-guard.conf
+release transaction guard: systemd did not load only the exact transaction guard set for celikpanel-agent.service
+release transaction guard: service-state ledger metadata is invalid
+release transaction guard: service-state ledger metadata is invalid
+release transaction guard: service-state ledger is malformed or out of order
+release transaction guard: service-state ledger is malformed or out of order
+release transaction guard: unsupported saved enable state: celikpanel-agent.service: unsupported
+release transaction guard: unsupported saved active state: celikpanel-agent.service: unknown
+release transaction guard: service-state ledger is inconsistent: an active panel requires an active agent
+release transaction guard: service-state ledger must contain exactly three or five rows
+release transaction guard: service-state ledger must contain exactly three or five rows
+release transaction guard: snapshot staging transition state is not canonical
+release transaction guard: quiesce coordinator ledger is missing or unsafe
+release transaction guard: quiesce coordinator ledger metadata is invalid
+release transaction guard: quiesce coordinator ledger metadata is invalid
+release transaction guard: quiesce coordinator ledger is malformed or out of order
+release transaction guard: quiesce coordinator ledger is malformed or out of order
+release transaction guard: active quiesce coordinator identity is invalid: celikpanel-agent.service
+release transaction guard: quiesce coordinator ledger is malformed or out of order
+celikpanel release start guard: scheduler restore cannot coexist with quiesce or active
+celikpanel release start guard: quiesce phase blocks every service start
+release transaction guard: start authorization requires exactly one active or completion marker
+release transaction guard: quiesce transaction marker already exists
+release transaction guard: transaction marker fields mismatch: quiesce.pending
+release transaction guard: transaction marker fields mismatch: quiesce.pending
+release transaction guard: quiesce coordinator ledger is missing or unsafe
+release transaction guard: transaction marker fields mismatch: active
+release transaction guard: transaction marker fields mismatch: active
+release transaction guard: transaction marker fields mismatch: active
+release transaction guard: transaction marker fields mismatch: active
+celikpanel release start guard: held: a CelikPanel update or recovery is in progress; the unit starts when it finishes
+celikpanel release start guard: scheduler restore cannot coexist with quiesce or active
+celikpanel release start guard: start authorization does not exactly match the release marker
+celikpanel release start guard: authorized release transaction holder identity changed
+celikpanel release start guard: file metadata mismatch: /tmp/tmp.GUzCgGPmCT/run/celikpanel-release-transaction/start.authorization/holder
+celikpanel release start guard: authorized holder descriptor does not own exactly one exclusive flock
+celikpanel release start guard: authorized holder descriptor does not own exactly one exclusive flock
+release transaction guard: transaction marker fields mismatch: active
+celikpanel release start guard: scheduler restore marker does not exactly match completion
+release transaction guard: transaction marker fields mismatch: completion.pending
+celikpanel release start guard: held: a CelikPanel update or recovery is in progress; the unit starts when it finishes
+celikpanel release start guard: scheduler restore marker is not canonical
+celikpanel release start guard: multiple release transaction markers exist
+celikpanel release start guard: authorized release transaction holder is no longer alive
+celikpanel release start guard: held: a CelikPanel update or recovery is in progress; the unit starts when it finishes
+celikpanel release start guard: held: a CelikPanel update or recovery is in progress; the unit starts when it finishes
+release transaction guard: no active transaction is available for rollback takeover
+release transaction guard: rollback snapshot differs from the active transaction
+release transaction guard: completion.pending must be finalized before rollback takeover
+release transaction guard: root-owned directory metadata mismatch: /tmp/tmp.GUzCgGPmCT/update-snapshots/.release-snapshot.incomplete.202.22222222222222222222222222222222
+release transaction guard: unmarked snapshot staging metadata is unsafe; manual repair is required
+release transaction guard: unmarked snapshot staging entry is not a safe directory; manual repair is required
+release transaction guard: service-state ledger is missing or unsafe
+release transaction guard: unmarked snapshot staging failed canonical validation; manual repair is required
+deploy/test-release-transaction-guard.sh: line 1206: 234067 Killed                  ( mkdir -m 0700 -- "$orphan_stage" "$orphan_child"; printf '%s\t%s\t%s\n' celikpanel-agent.service enabled active celikpanel-panel.service enabled active celikpanel-firewall-restore.service disabled inactive > "$orphan_child/service-states.tsv"; write_quiesce_coordinator_ledger "$orphan_child"; printf 'normal\n' > "$orphan_child/snapshot-transition.state"; chmod 0600 -- "$orphan_child/service-states.tsv" "$orphan_child/snapshot-transition.state"; sync -f -- "$orphan_child/service-states.tsv" "$orphan_child/quiesce-coordinators.tsv" "$orphan_child/snapshot-transition.state" "$orphan_child" "$orphan_stage" "$snapshot_root"; release_txn_validate_update_snapshot_stage "$snapshot_root" "$orphan_snapshot" "$orphan_stage"; kill -KILL "$BASHPID" )
+release transaction guard: multiple unmarked snapshot staging entries require manual repair
+release transaction guard: unmarked snapshot staging basename is not canonical; manual repair is required
+deploy/test-release-transaction-guard.sh: line 1270: 234219 Killed                  ( release_txn_create_active_marker "$transaction_root" "$lock_fd" "$recovery_token" update "$recovery_snapshot"; kill -KILL "$BASHPID" )
+release transaction guard: final snapshot already exists; explicit rollback is required
+release transaction guard: pre-mutation active abort is defined only for update
+release transaction guard: transaction marker fields mismatch: active
+release transaction guard: pre-mutation active abort stage does not match the canonical stage
+release transaction guard: final snapshot already exists; explicit rollback is required
+release transaction guard: quiesce marker cannot coexist with pre-mutation active abort
+release transaction guard: completion marker cannot coexist with pre-mutation active abort
+PASS: release transaction guard fixture

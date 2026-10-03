@@ -1,0 +1,1 @@
+PASS: candidate start check precedes completion and fails in active; start wait is bounded and typed; final hint matches rollback admission; curl checked before any change

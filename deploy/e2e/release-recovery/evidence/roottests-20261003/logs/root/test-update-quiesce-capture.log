@@ -1,0 +1,14 @@
+PASS: clean
+PASS: transient
+PASS: persistent
+PASS: unreadable
+PASS: empty
+PASS: pid-changed
+PASS: start-changed
+PASS: state-changed
+PASS: frozen
+PASS: traced
+PASS: vanished
+PASS: inactive
+PASS: strict matcher rejects extra and residual processes
+update quiesce capture: ok

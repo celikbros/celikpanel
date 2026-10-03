@@ -1,0 +1,19 @@
+host=Linux 6.18.33.2-microsoft-standard-WSL2 x86_64 qemu=QEMU emulator version 11.1.1
+lab_root=/var/tmp/cp-release-drill-roottests-20261003
+rt-lab.json:
+{
+  "schema": "celikpanel-release-recovery-lab/v1",
+  "nonce": "46b6f9fda2076a0f83f5466b75bae25c023e4bdec5d34b40cd6a6784f8c5b9d1",
+  "cell_id": "release-recovery__46b6f9fda2076a0f"
+}
+cell_id release-recovery__46b6f9fda2076a0f
+base {"bytes": 340262912, "digest": {"algorithm": "sha512", "value": "184761b0dad0f9ace02f9298050ca96ce3caa39a461a47706d47ff9698b59933918b91b40177fbd4d392f6446af8b4d18ecb94caca988169b19641606bf34003"}, "path": "/var/tmp/cp-release-drill-roottests-20261003/images/debian-13-genericcloud-amd64-20260826-2582.qcow2"}
+overlay_command qemu-img create -f qcow2 -F qcow2 -b /var/tmp/cp-release-drill-roottests-20261003/images/debian-13-genericcloud-amd64-20260826-2582.qcow2 /var/tmp/cp-release-drill-roottests-20261003/cells/e197fda7425de2d4079df7d7/debian13/overlay.qcow2 20G
+qemu_command qemu-system-x86_64 -name dns-kill-debian13 -uuid b47d7928-e14c-513d-a965-77d5e4377672 -accel kvm -cpu host -smp 8 -m 8192 -drive file=/var/tmp/cp-release-drill-roottests-20261003/cells/e197fda7425de2d4079df7d7/debian13/overlay.qcow2,if=virtio,format=qcow2,cache=none,discard=unmap -drive file=/var/tmp/cp-release-drill-roottests-20261003/cells/e197fda7425de2d4079df7d7/debian13/seed.iso,if=virtio,format=raw,media=cdrom,readonly=on -netdev user,id=mgmt,restrict=on,hostfwd=tcp:127.0.0.1:2271-:22 -device virtio-net-pci,netdev=mgmt,id=mgmt-link,mac=52:54:00:13:00:10 -netdev socket,id=peer,listen=127.0.0.1:2273 -device virtio-net-pci,netdev=peer,id=peer-link,mac=52:54:00:53:00:10 -qmp unix:/var/tmp/cp-release-drill-roottests-20261003/cells/e197fda7425de2d4079df7d7/debian13/qmp.sock,server=on,wait=off -pidfile /var/tmp/cp-release-drill-roottests-20261003/cells/e197fda7425de2d4079df7d7/debian13/qemu.pid -serial file:/var/tmp/cp-release-drill-roottests-20261003/cells/e197fda7425de2d4079df7d7/debian13/serial.log -display none -monitor none -daemonize
+virtual size: 20 GiB (21474836480 bytes)
+disk size: 4.12 GiB
+backing file: /var/tmp/cp-release-drill-roottests-20261003/images/debian-13-genericcloud-amd64-20260826-2582.qcow2
+    disk size: 4.12 GiB
+host go1.26.5 tarball sha256: 7ff79274d9a391474e1478ca949ed83a40e3f9589bf83b0b7a260b7d9b3ffaa9  -
+host toolchain: go version go1.26.5 linux/amd64
+guest stopped: 2026-10-03T21:23:18Z

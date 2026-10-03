@@ -1,0 +1,1 @@
+PASS: rollback journal names the restored commit only from a matching Agent build record

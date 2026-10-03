@@ -1,0 +1,1 @@
+PASS: live probe re-read only for a concurrent write; typed unchanged preflight refusal; snapshot cause kept; renewal state recorded
