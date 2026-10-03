@@ -3901,5 +3901,69 @@ class DeferredMailWatchTests(unittest.TestCase):
             self.assertNotIn(word, script)
 
 
+class H22BaselineStatusReadTests(unittest.TestCase):
+    """upd13 H22: a failed read of the installer status (Arch: pacman -Syu replaces PAM, sudo cannot load it for a
+    moment) is recorded and read again; a failure that persists still stops the step."""
+
+    PAM = ("sudo: error in /etc/sudo.conf, line 0 while loading plugin \"sudoers_policy\"\n"
+           "sudo: unable to load /usr/lib/sudo/sudoers.so: libpam.so.0: cannot open shared object file: No such file "
+           "or directory\nsudo: fatal error, unable to load plugins\n")
+
+    def trial(self, failures, directory):
+        log = Path(directory) / "install.log"
+        log.write_text("installed\n")
+        calls = {"status": 0}
+
+        def status(*_args):
+            calls["status"] += 1
+            if calls["status"] <= failures:
+                raise subprocess.CalledProcessError(1, ["ssh", "sudo /bin/bash -s"], output="", stderr=self.PAM)
+            return {"installation": {"verified": True}}
+
+        baseline = SimpleNamespace(
+            COMMIT="x", LOG="log", archive_tools=SimpleNamespace(verify_committed_source=lambda *a, **k: None),
+            start=lambda *a, **k: {"action": "started"}, status=status,
+            collect=lambda *a: {"artifacts": {"log": {"path": str(log)}}})
+        trial = object.__new__(t.Trial)
+        trial.m = {"baseline": baseline}
+        trial.artifacts = {"baseline": {"archive": "/x.tar.gz", "commit": "c", "sha256": "s"}, "clone": "/repo"}
+        trial.root = trial.record = trial.plan = None
+        trial.node_name = "arch"
+        trial.state = {"public_key_sha256": "k"}
+        trial.p = {"install_steps": SimpleNamespace(installer_restart_notice=lambda _log: {"state": "not-required"})}
+        return trial, calls
+
+    def run_install(self, failures):
+        with tempfile.TemporaryDirectory() as directory:
+            trial, calls = self.trial(failures, directory)
+            checks: dict = {}
+            with mock.patch.object(t, "acceptance_source_proof", lambda verify, *_: verify), \
+                    mock.patch.object(t.time, "sleep", lambda _s: None):
+                try:
+                    verdict = trial.baseline_install(checks)
+                except subprocess.CalledProcessError:
+                    verdict = "raised"
+            return verdict, checks, calls
+
+    def test_h22_a_failed_status_read_is_read_again(self):
+        verdict, checks, calls = self.run_install(2)
+        self.assertEqual(verdict, "passed")
+        self.assertEqual(calls["status"], 3)
+        self.assertEqual(len(checks["h22_failed_status_reads"]), 2)
+        self.assertIn("libpam.so.0", checks["h22_failed_status_reads"][0]["stderr_tail"][1])
+        self.assertEqual(checks["h22_failed_status_reads"][0]["returncode"], 1)
+
+    def test_h22_a_persisting_failure_still_stops_the_step(self):
+        verdict, checks, calls = self.run_install(100)
+        self.assertEqual(verdict, "raised")
+        self.assertEqual(calls["status"], t.BASELINE_STATUS_READ_FAILURES_MAX)
+        self.assertEqual(len(checks["h22_failed_status_reads"]), t.BASELINE_STATUS_READ_FAILURES_MAX)
+
+    def test_h22_no_failure_records_nothing(self):
+        verdict, checks, _ = self.run_install(0)
+        self.assertEqual(verdict, "passed")
+        self.assertNotIn("h22_failed_status_reads", checks)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -474,6 +474,18 @@ DEFERRED_MAIL_FILES = ("/etc/postfix/main.cf", "/etc/postfix/master.cf", "/etc/p
 PANEL_JOURNAL_LINE = re.compile(r"^(\S+) \S+ panel\[(\d+)\]: (?:\d{4}/\d\d/\d\d \d\d:\d\d:\d\d )?(.*)$")
 
 
+# upd13 H22: failed baseline status reads tolerated while the installer runs (at the 15 s poll: about two minutes).
+BASELINE_STATUS_READ_FAILURES_MAX = 8
+
+
+def baseline_status_read_failure(exc: subprocess.CalledProcessError) -> dict:
+    """upd13 H22: one failed read of the baseline installer's status, as recorded (exit code and the guest's last
+    stderr line; the command line holds no secret but is not kept)."""
+    stderr = exc.stderr if isinstance(exc.stderr, str) else (exc.stderr or b"").decode("utf-8", "replace")
+    lines = [line for line in stderr.strip().splitlines() if line.strip()]
+    return {"at": utc_now(), "returncode": exc.returncode, "stderr_tail": lines[-3:]}
+
+
 def provenance_for(variant: str) -> dict:
     """The good and migrate-only cells keep their provenance unchanged; the start kinds name their own defect."""
     if LABEL_REF is None and variant not in KIND_PROVENANCE:
@@ -3670,8 +3682,20 @@ class Trial:
         checks["start"] = started
         deadline = time.monotonic() + 3000
         status = None
+        failed_reads: list[dict] = []
         while time.monotonic() < deadline:
-            status = baseline.status(self.root, self.record, self.plan, self.node_name)
+            try:
+                status = baseline.status(self.root, self.record, self.plan, self.node_name)
+            except subprocess.CalledProcessError as exc:
+                # upd13 H22: the Arch installer's own full upgrade (pacman -Syu) replaces PAM, and for a moment the
+                # guest's sudo cannot load it; that read is recorded and repeated at the next poll. A failure that
+                # persists still stops the step.
+                failed_reads.append(baseline_status_read_failure(exc))
+                checks["h22_failed_status_reads"] = failed_reads
+                if len(failed_reads) >= BASELINE_STATUS_READ_FAILURES_MAX:
+                    raise
+                time.sleep(15)
+                continue
             if status.get("installation") is not None:
                 break
             time.sleep(15)
