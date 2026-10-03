@@ -220,6 +220,11 @@ jobs:
     name: Download portal publisher - Windows PowerShell 5.1
     runs-on: windows-latest
     steps:
+      # Retained e2e evidence paths exceed the Windows 260-character limit
+      # under the runner workspace; this job only needs deploy/ scripts.
+      - name: Allow long paths in the Windows checkout
+        shell: powershell
+        run: git config --system core.longpaths true
       - uses: actions/checkout@v7
       - name: Verify bounded stdin and LF-only SSH wire input
         shell: powershell

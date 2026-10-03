@@ -545,8 +545,7 @@ func TestServerSetupInfrastructureDNSBlocksUnpreparedPowerDNSPrimary(t *testing.
 	agent := newDNSEngineTestAgent()
 	attachDNSEngineTestAgent(t, p, agent)
 	t.Setenv("CELIKPANEL_SERVER_IP", d.LocalIP)
-	if err := p.startServerSetupDNS(context.Background(), d, strings.Repeat("a", 32), serviceOperationActor{UserID: 1});
-		err == nil || !strings.Contains(err.Error(), "pdns_primary_switch_paused") {
+	if err := p.startServerSetupDNS(context.Background(), d, strings.Repeat("a", 32), serviceOperationActor{UserID: 1}); err == nil || !strings.Contains(err.Error(), "pdns_primary_switch_paused") {
 		t.Fatalf("PowerDNS paired primary first install was not blocked: %v", err)
 	}
 	agent.mu.Lock()
