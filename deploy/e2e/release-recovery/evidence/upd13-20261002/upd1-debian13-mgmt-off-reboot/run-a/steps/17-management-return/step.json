@@ -1,0 +1,44 @@
+{
+  "checks": {
+    "command": "sudo systemctl enable --now celikpanel-agent.service celikpanel-panel.service",
+    "management_return": {
+      "differences": [],
+      "login_ok": true,
+      "management": {
+        "disabled_and_stopped": false,
+        "enabled_and_active": true,
+        "units": {
+          "celikpanel-agent.service": {
+            "ActiveState": "active",
+            "UnitFileState": "enabled"
+          },
+          "celikpanel-panel.service": {
+            "ActiveState": "active",
+            "UnitFileState": "enabled"
+          }
+        }
+      },
+      "readiness_wait": {
+        "bound_seconds": 180.0,
+        "first": {
+          "at": "2026-10-02T22:09:57Z",
+          "http": 200,
+          "panel_state": "starting"
+        },
+        "last": {
+          "at": "2026-10-02T22:10:09Z",
+          "http": 200,
+          "panel_state": "ready"
+        },
+        "reads": 5,
+        "ready": true
+      },
+      "tls_leaf": "46657680a6dba6c6c673e494db2164c1128951e9130fa287274ee2631b481d3a"
+    },
+    "returncode": 0
+  },
+  "finished_at": "2026-10-02T22:10:14Z",
+  "name": "management-return",
+  "started_at": "2026-10-02T22:09:56Z",
+  "verdict": "passed"
+}

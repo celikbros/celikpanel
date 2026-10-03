@@ -1,0 +1,236 @@
+2026-10-02T23:13:40.389715+00:00 dns-ubuntu systemd[1]: Started cron.service - Regular background program processing daemon.
+2026-10-02T23:13:40.393986+00:00 dns-ubuntu (cron)[800]: cron.service: Referenced but unset environment variable evaluates to an empty string: EXTRA_OPTS
+2026-10-02T23:13:40.399484+00:00 dns-ubuntu cron[800]: (CRON) INFO (pidfile fd = 3)
+2026-10-02T23:13:40.403933+00:00 dns-ubuntu cron[800]: (CRON) INFO (Running @reboot jobs)
+2026-10-02T23:15:02.486576+00:00 dns-ubuntu CRON[8129]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)
+2026-10-02T23:15:02.487106+00:00 dns-ubuntu CRON[8130]: (root) CMD (command -v debian-sa1 > /dev/null && debian-sa1 1 1)
+2026-10-02T23:15:02.490352+00:00 dns-ubuntu CRON[8129]: pam_unix(cron:session): session closed for user root
+2026-10-02T23:17:01.494192+00:00 dns-ubuntu CRON[8906]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)
+2026-10-02T23:17:01.494680+00:00 dns-ubuntu CRON[8907]: (root) CMD (cd / && run-parts --report /etc/cron.hourly)
+2026-10-02T23:17:01.497459+00:00 dns-ubuntu CRON[8906]: pam_unix(cron:session): session closed for user root
+2026-10-02T23:19:38.219711+00:00 dns-ubuntu systemd[1]: Starting nginx.service - A high performance web server and a reverse proxy server...
+2026-10-02T23:19:38.232407+00:00 dns-ubuntu systemd[1]: Started nginx.service - A high performance web server and a reverse proxy server.
+2026-10-02T23:19:58.808616+00:00 dns-ubuntu systemd[1]: Starting php8.3-fpm.service - The PHP 8.3 FastCGI Process Manager...
+2026-10-02T23:19:58.870963+00:00 dns-ubuntu systemd[1]: Started php8.3-fpm.service - The PHP 8.3 FastCGI Process Manager.
+2026-10-02T23:19:59.471337+00:00 dns-ubuntu systemd[1]: Stopping php8.3-fpm.service - The PHP 8.3 FastCGI Process Manager...
+2026-10-02T23:19:59.486537+00:00 dns-ubuntu systemd[1]: php8.3-fpm.service: Deactivated successfully.
+2026-10-02T23:19:59.486731+00:00 dns-ubuntu systemd[1]: Stopped php8.3-fpm.service - The PHP 8.3 FastCGI Process Manager.
+2026-10-02T23:19:59.488540+00:00 dns-ubuntu systemd[1]: Starting php8.3-fpm.service - The PHP 8.3 FastCGI Process Manager...
+2026-10-02T23:19:59.539701+00:00 dns-ubuntu systemd[1]: Started php8.3-fpm.service - The PHP 8.3 FastCGI Process Manager.
+2026-10-02T23:20:17.499550+00:00 dns-ubuntu systemd[1]: Starting mariadb.service - MariaDB 10.11.14 database server...
+2026-10-02T23:20:17.570926+00:00 dns-ubuntu (mariadbd)[19009]: mariadb.service: Referenced but unset environment variable evaluates to an empty string: MYSQLD_OPTS, _WSREP_NEW_CLUSTER
+2026-10-02T23:20:17.593088+00:00 dns-ubuntu mariadbd[19009]: 2026-10-02 23:20:17 0 [Note] Starting MariaDB 10.11.14-MariaDB-0ubuntu0.24.04.1 source revision 053f9bcb5b147bf00edb99e1310bae9125b7f125 server_uid W4SCr1TT1XkuiEEx9TvPKXjj4bk= as process 19009
+2026-10-02T23:20:17.621110+00:00 dns-ubuntu mariadbd[19009]: 2026-10-02 23:20:17 0 [Note] InnoDB: Compressed tables use zlib 1.3
+2026-10-02T23:20:17.623233+00:00 dns-ubuntu mariadbd[19009]: 2026-10-02 23:20:17 0 [Note] InnoDB: Number of transaction pools: 1
+2026-10-02T23:20:17.623342+00:00 dns-ubuntu mariadbd[19009]: 2026-10-02 23:20:17 0 [Note] InnoDB: Using crc32 + pclmulqdq instructions
+2026-10-02T23:20:17.623466+00:00 dns-ubuntu mariadbd[19009]: 2026-10-02 23:20:17 0 [Note] InnoDB: Using io_uring
+2026-10-02T23:20:17.623937+00:00 dns-ubuntu mariadbd[19009]: 2026-10-02 23:20:17 0 [Note] InnoDB: innodb_buffer_pool_size_max=128m, innodb_buffer_pool_size=128m
+2026-10-02T23:20:17.624808+00:00 dns-ubuntu mariadbd[19009]: 2026-10-02 23:20:17 0 [Note] InnoDB: Initialized memory pressure event listener
+2026-10-02T23:20:17.624808+00:00 dns-ubuntu mariadbd[19009]: 2026-10-02 23:20:17 0 [Note] InnoDB: Completed initialization of buffer pool
+2026-10-02T23:20:17.625548+00:00 dns-ubuntu mariadbd[19009]: 2026-10-02 23:20:17 0 [Note] InnoDB: File system buffers for log disabled (block size=512 bytes)
+2026-10-02T23:20:17.639143+00:00 dns-ubuntu mariadbd[19009]: 2026-10-02 23:20:17 0 [Note] InnoDB: End of log at LSN=46980
+2026-10-02T23:20:17.688879+00:00 dns-ubuntu mariadbd[19009]: 2026-10-02 23:20:17 0 [Note] InnoDB: 128 rollback segments are active.
+2026-10-02T23:20:17.689189+00:00 dns-ubuntu mariadbd[19009]: 2026-10-02 23:20:17 0 [Note] InnoDB: Setting file './ibtmp1' size to 12.000MiB. Physically writing the file full; Please wait ...
+2026-10-02T23:20:17.689252+00:00 dns-ubuntu mariadbd[19009]: 2026-10-02 23:20:17 0 [Note] InnoDB: File './ibtmp1' size is now 12.000MiB.
+2026-10-02T23:20:17.690486+00:00 dns-ubuntu mariadbd[19009]: 2026-10-02 23:20:17 0 [Note] InnoDB: log sequence number 46980; transaction id 14
+2026-10-02T23:20:17.690550+00:00 dns-ubuntu mariadbd[19009]: 2026-10-02 23:20:17 0 [Note] InnoDB: Loading buffer pool(s) from /var/lib/mysql/ib_buffer_pool
+2026-10-02T23:20:17.690802+00:00 dns-ubuntu mariadbd[19009]: 2026-10-02 23:20:17 0 [Note] Plugin 'FEEDBACK' is disabled.
+2026-10-02T23:20:17.692433+00:00 dns-ubuntu mariadbd[19009]: 2026-10-02 23:20:17 0 [Warning] You need to use --log-bin to make --expire-logs-days or --binlog-expire-logs-seconds work.
+2026-10-02T23:20:17.693736+00:00 dns-ubuntu mariadbd[19009]: 2026-10-02 23:20:17 0 [Note] Server socket created on IP: '127.0.0.1', port: '3306'.
+2026-10-02T23:20:17.696513+00:00 dns-ubuntu mariadbd[19009]: 2026-10-02 23:20:17 0 [Note] InnoDB: Buffer pool(s) load completed at 261002 23:20:17
+2026-10-02T23:20:17.701015+00:00 dns-ubuntu mariadbd[19009]: 2026-10-02 23:20:17 0 [Note] /usr/sbin/mariadbd: ready for connections.
+2026-10-02T23:20:17.701108+00:00 dns-ubuntu mariadbd[19009]: Version: '10.11.14-MariaDB-0ubuntu0.24.04.1'  socket: '/run/mysqld/mysqld.sock'  port: 3306  Ubuntu 24.04
+2026-10-02T23:20:17.723379+00:00 dns-ubuntu systemd[1]: Started mariadb.service - MariaDB 10.11.14 database server.
+2026-10-02T23:20:17.759643+00:00 dns-ubuntu /etc/mysql/debian-start[19043]: Triggering myisam-recover for all MyISAM tables and aria-recover for all Aria tables
+2026-10-02T23:20:41.825928+00:00 dns-ubuntu systemd[1]: Starting postfix.service - Postfix Mail Transport Agent...
+2026-10-02T23:20:41.827517+00:00 dns-ubuntu systemd[1]: Finished postfix.service - Postfix Mail Transport Agent.
+2026-10-02T23:20:50.412635+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-02T23:20:50.414956+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-02T23:20:50.486748+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-02T23:20:50.488564+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-02T23:21:05.270693+00:00 dns-ubuntu systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-02T23:21:05.285912+00:00 dns-ubuntu dovecot[24880]: master: Dovecot v2.3.21 (47349e2482) starting up without any protocols (core dumps disabled)
+2026-10-02T23:21:05.292548+00:00 dns-ubuntu systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-02T23:21:07.076519+00:00 dns-ubuntu systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-02T23:21:07.087704+00:00 dns-ubuntu dovecot[24880]: master: Warning: Killed with signal 15 (by pid=25335 uid=0 code=kill)
+2026-10-02T23:21:08.294093+00:00 dns-ubuntu systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-02T23:21:08.294353+00:00 dns-ubuntu systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-02T23:21:08.301571+00:00 dns-ubuntu systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-02T23:21:08.317249+00:00 dns-ubuntu dovecot[25341]: master: Dovecot v2.3.21 (47349e2482) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-02T23:21:08.322861+00:00 dns-ubuntu systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-02T23:21:14.463944+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-02T23:21:14.465238+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-02T23:21:14.530577+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-02T23:21:14.533088+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-02T23:21:14.556534+00:00 dns-ubuntu systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-02T23:21:14.566660+00:00 dns-ubuntu dovecot[25341]: master: Warning: Killed with signal 15 (by pid=25780 uid=0 code=kill)
+2026-10-02T23:21:15.772114+00:00 dns-ubuntu systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-02T23:21:15.772362+00:00 dns-ubuntu systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-02T23:21:15.780605+00:00 dns-ubuntu systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-02T23:21:15.796395+00:00 dns-ubuntu dovecot[25786]: master: Dovecot v2.3.21 (47349e2482) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-02T23:21:15.802337+00:00 dns-ubuntu systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-02T23:21:36.213159+00:00 dns-ubuntu systemd[1]: Stopping php8.3-fpm.service - The PHP 8.3 FastCGI Process Manager...
+2026-10-02T23:21:36.237461+00:00 dns-ubuntu systemd[1]: php8.3-fpm.service: Deactivated successfully.
+2026-10-02T23:21:36.237683+00:00 dns-ubuntu systemd[1]: Stopped php8.3-fpm.service - The PHP 8.3 FastCGI Process Manager.
+2026-10-02T23:21:36.239447+00:00 dns-ubuntu systemd[1]: Starting php8.3-fpm.service - The PHP 8.3 FastCGI Process Manager...
+2026-10-02T23:21:36.301556+00:00 dns-ubuntu systemd[1]: Started php8.3-fpm.service - The PHP 8.3 FastCGI Process Manager.
+2026-10-02T23:21:37.970550+00:00 dns-ubuntu systemd[1]: Reloading php8.3-fpm.service - The PHP 8.3 FastCGI Process Manager...
+2026-10-02T23:21:37.974333+00:00 dns-ubuntu systemd[1]: Reloaded php8.3-fpm.service - The PHP 8.3 FastCGI Process Manager.
+2026-10-02T23:21:38.016787+00:00 dns-ubuntu php-fpm8.3[29630]: [02-Oct-2026 23:21:38] NOTICE: using inherited socket fd=8, "/run/php/php8.3-fpm.sock"
+2026-10-02T23:21:39.316636+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+2026-10-02T23:21:39.320203+00:00 dns-ubuntu nginx[29739]: 2026/10/02 23:21:39 [notice] 29739#29739: signal process started
+2026-10-02T23:21:39.321587+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+2026-10-02T23:21:45.460114+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-02T23:21:45.464192+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-02T23:21:45.523582+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-02T23:21:45.527360+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-02T23:21:45.559578+00:00 dns-ubuntu systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-02T23:21:45.569660+00:00 dns-ubuntu dovecot[25786]: master: Warning: Killed with signal 15 (by pid=30040 uid=0 code=kill)
+2026-10-02T23:21:46.775029+00:00 dns-ubuntu systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-02T23:21:46.775269+00:00 dns-ubuntu systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-02T23:21:46.783758+00:00 dns-ubuntu systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-02T23:21:46.798821+00:00 dns-ubuntu dovecot[30102]: master: Dovecot v2.3.21 (47349e2482) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-02T23:21:46.804473+00:00 dns-ubuntu systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-02T23:21:47.296724+00:00 dns-ubuntu systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-02T23:21:47.306325+00:00 dns-ubuntu dovecot[30102]: master: Warning: Killed with signal 15 (by pid=30238 uid=0 code=kill)
+2026-10-02T23:21:48.511477+00:00 dns-ubuntu dovecot[30104]: log(30104): Warning: Killed with signal 15 (by pid=1 uid=0 code=kill)
+2026-10-02T23:21:48.513404+00:00 dns-ubuntu systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-02T23:21:48.513588+00:00 dns-ubuntu systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-02T23:21:48.520660+00:00 dns-ubuntu systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-02T23:21:48.536881+00:00 dns-ubuntu dovecot[30244]: master: Dovecot v2.3.21 (47349e2482) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-02T23:21:48.542231+00:00 dns-ubuntu systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-02T23:21:48.565080+00:00 dns-ubuntu systemd[1]: postfix.service: Deactivated successfully.
+2026-10-02T23:21:48.565237+00:00 dns-ubuntu systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent.
+2026-10-02T23:21:48.565283+00:00 dns-ubuntu systemd[1]: Stopping postfix.service - Postfix Mail Transport Agent...
+2026-10-02T23:21:49.062605+00:00 dns-ubuntu systemd[1]: Starting postfix.service - Postfix Mail Transport Agent...
+2026-10-02T23:21:49.063948+00:00 dns-ubuntu systemd[1]: Finished postfix.service - Postfix Mail Transport Agent.
+2026-10-02T23:21:53.816090+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-02T23:21:53.816579+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-02T23:21:53.844887+00:00 dns-ubuntu systemd[1]: Reloading dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-02T23:21:53.854708+00:00 dns-ubuntu dovecot[30244]: master: Warning: SIGHUP received - reloading configuration
+2026-10-02T23:21:53.862263+00:00 dns-ubuntu systemd[1]: Reloaded dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-02T23:22:05.594643+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-02T23:22:05.597003+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-02T23:22:05.657514+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-02T23:22:05.661154+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-02T23:22:05.685580+00:00 dns-ubuntu systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-02T23:22:05.699701+00:00 dns-ubuntu dovecot[30244]: master: Warning: Killed with signal 15 (by pid=31954 uid=0 code=kill)
+2026-10-02T23:22:06.905873+00:00 dns-ubuntu systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-02T23:22:06.906477+00:00 dns-ubuntu systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-02T23:22:06.917077+00:00 dns-ubuntu systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-02T23:22:06.933792+00:00 dns-ubuntu dovecot[31978]: master: Dovecot v2.3.21 (47349e2482) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-02T23:22:06.939068+00:00 dns-ubuntu systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-02T23:22:16.557548+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-02T23:22:16.561397+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-02T23:22:16.620549+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-02T23:22:16.625362+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-02T23:22:16.648520+00:00 dns-ubuntu systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-02T23:22:16.659123+00:00 dns-ubuntu dovecot[31978]: master: Warning: Killed with signal 15 (by pid=32561 uid=0 code=kill)
+2026-10-02T23:22:17.865477+00:00 dns-ubuntu systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-02T23:22:17.865708+00:00 dns-ubuntu systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-02T23:22:17.873728+00:00 dns-ubuntu systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-02T23:22:17.890057+00:00 dns-ubuntu dovecot[32567]: master: Dovecot v2.3.21 (47349e2482) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-02T23:22:17.895276+00:00 dns-ubuntu systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-02T23:22:27.890794+00:00 dns-ubuntu systemd[1]: Started rspamd.service - rapid spam filtering system.
+2026-10-02T23:22:27.918405+00:00 dns-ubuntu rspamd[33558]: 2026-10-02 23:22:27 #33558(main) <9e5b03>; main; main: rspamd 3.8.1 is loading configuration, build id: release
+2026-10-02T23:22:35.604537+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-02T23:22:35.617878+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-02T23:22:41.389612+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-02T23:22:41.391599+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-02T23:22:41.454513+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-02T23:22:41.457609+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-02T23:22:41.482519+00:00 dns-ubuntu systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-02T23:22:41.492723+00:00 dns-ubuntu dovecot[32567]: master: Warning: Killed with signal 15 (by pid=34244 uid=0 code=kill)
+2026-10-02T23:22:42.699151+00:00 dns-ubuntu systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-02T23:22:42.699447+00:00 dns-ubuntu systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-02T23:22:42.709809+00:00 dns-ubuntu systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-02T23:22:42.725887+00:00 dns-ubuntu dovecot[34250]: master: Dovecot v2.3.21 (47349e2482) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-02T23:22:42.732406+00:00 dns-ubuntu systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-02T23:22:43.279844+00:00 dns-ubuntu systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-02T23:22:43.292008+00:00 dns-ubuntu dovecot[34250]: master: Warning: Killed with signal 15 (by pid=34387 uid=0 code=kill)
+2026-10-02T23:22:44.497612+00:00 dns-ubuntu systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-02T23:22:44.497824+00:00 dns-ubuntu systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-02T23:22:44.506626+00:00 dns-ubuntu systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-02T23:22:44.523160+00:00 dns-ubuntu dovecot[34393]: master: Dovecot v2.3.21 (47349e2482) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-02T23:22:44.530359+00:00 dns-ubuntu systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-02T23:22:44.552029+00:00 dns-ubuntu systemd[1]: postfix.service: Deactivated successfully.
+2026-10-02T23:22:44.552383+00:00 dns-ubuntu systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent.
+2026-10-02T23:22:44.552432+00:00 dns-ubuntu systemd[1]: Stopping postfix.service - Postfix Mail Transport Agent...
+2026-10-02T23:22:45.051068+00:00 dns-ubuntu systemd[1]: Starting postfix.service - Postfix Mail Transport Agent...
+2026-10-02T23:22:45.053268+00:00 dns-ubuntu systemd[1]: Finished postfix.service - Postfix Mail Transport Agent.
+2026-10-02T23:22:49.896454+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-02T23:22:49.914977+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-02T23:22:49.939820+00:00 dns-ubuntu systemd[1]: Reloading dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-02T23:22:49.950771+00:00 dns-ubuntu dovecot[34393]: master: Warning: SIGHUP received - reloading configuration
+2026-10-02T23:22:49.957641+00:00 dns-ubuntu systemd[1]: Reloaded dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-02T23:25:01.503956+00:00 dns-ubuntu CRON[38076]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)
+2026-10-02T23:25:01.504423+00:00 dns-ubuntu CRON[38077]: (root) CMD (command -v debian-sa1 > /dev/null && debian-sa1 1 1)
+2026-10-02T23:25:01.506686+00:00 dns-ubuntu CRON[38076]: pam_unix(cron:session): session closed for user root
+2026-10-02T23:28:14.565608+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+2026-10-02T23:28:14.572039+00:00 dns-ubuntu nginx[39658]: 2026/10/02 23:28:14 [notice] 39658#39658: signal process started
+2026-10-02T23:28:14.571836+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+2026-10-02T23:29:01.511428+00:00 dns-ubuntu CRON[40805]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-02T23:29:01.511911+00:00 dns-ubuntu CRON[40806]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-02T23:29:01.515241+00:00 dns-ubuntu CRON[40805]: pam_unix(cron:session): session closed for user upd1_owner_test
+2026-10-02T23:30:01.519581+00:00 dns-ubuntu CRON[41784]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-02T23:30:01.520453+00:00 dns-ubuntu CRON[41786]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-02T23:30:01.533012+00:00 dns-ubuntu CRON[41784]: pam_unix(cron:session): session closed for user upd1_owner_test
+-- Boot 2a1026ac963846859284d1601afc7839 --
+2026-10-02T23:31:12.975696+00:00 dns-ubuntu systemd[1]: Started cron.service - Regular background program processing daemon.
+2026-10-02T23:31:12.998047+00:00 dns-ubuntu (cron)[712]: cron.service: Referenced but unset environment variable evaluates to an empty string: EXTRA_OPTS
+2026-10-02T23:31:13.004159+00:00 dns-ubuntu cron[712]: (CRON) INFO (pidfile fd = 3)
+2026-10-02T23:31:13.010529+00:00 dns-ubuntu cron[712]: (CRON) INFO (Running @reboot jobs)
+2026-10-02T23:31:13.052273+00:00 dns-ubuntu systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-02T23:31:13.141021+00:00 dns-ubuntu systemd[1]: Starting mariadb.service - MariaDB 10.11.14 database server...
+2026-10-02T23:31:13.215305+00:00 dns-ubuntu systemd[1]: Starting nginx.service - A high performance web server and a reverse proxy server...
+2026-10-02T23:31:13.229756+00:00 dns-ubuntu dovecot[722]: master: Dovecot v2.3.21 (47349e2482) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-02T23:31:13.245297+00:00 dns-ubuntu systemd[1]: Starting php8.3-fpm.service - The PHP 8.3 FastCGI Process Manager...
+2026-10-02T23:31:13.347473+00:00 dns-ubuntu systemd[1]: Started rspamd.service - rapid spam filtering system.
+2026-10-02T23:31:13.646329+00:00 dns-ubuntu systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-02T23:31:13.801068+00:00 dns-ubuntu systemd[1]: Started php8.3-fpm.service - The PHP 8.3 FastCGI Process Manager.
+2026-10-02T23:31:13.834774+00:00 dns-ubuntu systemd[1]: Started nginx.service - A high performance web server and a reverse proxy server.
+2026-10-02T23:31:13.948148+00:00 dns-ubuntu rspamd[736]: 2026-10-02 23:31:13 #736(main) <d2963d>; main; main: rspamd 3.8.1 is loading configuration, build id: release
+2026-10-02T23:31:14.564949+00:00 dns-ubuntu (mariadbd)[1031]: mariadb.service: Referenced but unset environment variable evaluates to an empty string: MYSQLD_OPTS, _WSREP_NEW_CLUSTER
+2026-10-02T23:31:14.671602+00:00 dns-ubuntu mariadbd[1031]: 2026-10-02 23:31:14 0 [Note] Starting MariaDB 10.11.14-MariaDB-0ubuntu0.24.04.1 source revision 053f9bcb5b147bf00edb99e1310bae9125b7f125 server_uid W4SCr1TT1XkuiEEx9TvPKXjj4bk= as process 1031
+2026-10-02T23:31:14.747313+00:00 dns-ubuntu mariadbd[1031]: 2026-10-02 23:31:14 0 [Note] InnoDB: Compressed tables use zlib 1.3
+2026-10-02T23:31:14.751670+00:00 dns-ubuntu mariadbd[1031]: 2026-10-02 23:31:14 0 [Note] InnoDB: Number of transaction pools: 1
+2026-10-02T23:31:14.751814+00:00 dns-ubuntu mariadbd[1031]: 2026-10-02 23:31:14 0 [Note] InnoDB: Using crc32 + pclmulqdq instructions
+2026-10-02T23:31:14.752221+00:00 dns-ubuntu mariadbd[1031]: 2026-10-02 23:31:14 0 [Note] InnoDB: Using io_uring
+2026-10-02T23:31:14.753661+00:00 dns-ubuntu mariadbd[1031]: 2026-10-02 23:31:14 0 [Note] InnoDB: innodb_buffer_pool_size_max=128m, innodb_buffer_pool_size=128m
+2026-10-02T23:31:14.756266+00:00 dns-ubuntu mariadbd[1031]: 2026-10-02 23:31:14 0 [Note] InnoDB: Initialized memory pressure event listener
+2026-10-02T23:31:14.756424+00:00 dns-ubuntu mariadbd[1031]: 2026-10-02 23:31:14 0 [Note] InnoDB: Completed initialization of buffer pool
+2026-10-02T23:31:14.759058+00:00 dns-ubuntu mariadbd[1031]: 2026-10-02 23:31:14 0 [Note] InnoDB: File system buffers for log disabled (block size=512 bytes)
+2026-10-02T23:31:14.783446+00:00 dns-ubuntu mariadbd[1031]: 2026-10-02 23:31:14 0 [Note] InnoDB: End of log at LSN=46980
+2026-10-02T23:31:14.852882+00:00 dns-ubuntu mariadbd[1031]: 2026-10-02 23:31:14 0 [Note] InnoDB: 128 rollback segments are active.
+2026-10-02T23:31:14.856019+00:00 dns-ubuntu mariadbd[1031]: 2026-10-02 23:31:14 0 [Note] InnoDB: Removed temporary tablespace data file: "./ibtmp1"
+2026-10-02T23:31:14.856106+00:00 dns-ubuntu mariadbd[1031]: 2026-10-02 23:31:14 0 [Note] InnoDB: Setting file './ibtmp1' size to 12.000MiB. Physically writing the file full; Please wait ...
+2026-10-02T23:31:14.856452+00:00 dns-ubuntu mariadbd[1031]: 2026-10-02 23:31:14 0 [Note] InnoDB: File './ibtmp1' size is now 12.000MiB.
+2026-10-02T23:31:14.861296+00:00 dns-ubuntu mariadbd[1031]: 2026-10-02 23:31:14 0 [Note] InnoDB: log sequence number 46980; transaction id 14
+2026-10-02T23:31:14.862025+00:00 dns-ubuntu mariadbd[1031]: 2026-10-02 23:31:14 0 [Note] InnoDB: Loading buffer pool(s) from /var/lib/mysql/ib_buffer_pool
+2026-10-02T23:31:14.863353+00:00 dns-ubuntu mariadbd[1031]: 2026-10-02 23:31:14 0 [Note] Plugin 'FEEDBACK' is disabled.
+2026-10-02T23:31:14.873545+00:00 dns-ubuntu mariadbd[1031]: 2026-10-02 23:31:14 0 [Note] InnoDB: Buffer pool(s) load completed at 261002 23:31:14
+2026-10-02T23:31:14.874137+00:00 dns-ubuntu mariadbd[1031]: 2026-10-02 23:31:14 0 [Warning] You need to use --log-bin to make --expire-logs-days or --binlog-expire-logs-seconds work.
+2026-10-02T23:31:14.882767+00:00 dns-ubuntu mariadbd[1031]: 2026-10-02 23:31:14 0 [Note] Server socket created on IP: '127.0.0.1', port: '3306'.
+2026-10-02T23:31:14.931184+00:00 dns-ubuntu mariadbd[1031]: 2026-10-02 23:31:14 0 [Note] /usr/sbin/mariadbd: ready for connections.
+2026-10-02T23:31:14.931354+00:00 dns-ubuntu mariadbd[1031]: Version: '10.11.14-MariaDB-0ubuntu0.24.04.1'  socket: '/run/mysqld/mysqld.sock'  port: 3306  Ubuntu 24.04
+2026-10-02T23:31:15.018323+00:00 dns-ubuntu systemd[1]: Started mariadb.service - MariaDB 10.11.14 database server.
+2026-10-02T23:31:15.028590+00:00 dns-ubuntu /etc/mysql/debian-start[1198]: Upgrading MariaDB tables if necessary.
+2026-10-02T23:31:15.172063+00:00 dns-ubuntu /etc/mysql/debian-start[1284]: Triggering myisam-recover for all MyISAM tables and aria-recover for all Aria tables
+2026-10-02T23:31:15.336483+00:00 dns-ubuntu systemd[1]: Starting postfix.service - Postfix Mail Transport Agent...
+2026-10-02T23:31:15.360416+00:00 dns-ubuntu systemd[1]: Finished postfix.service - Postfix Mail Transport Agent.
+2026-10-02T23:32:00.014762+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+2026-10-02T23:32:00.019824+00:00 dns-ubuntu nginx[6100]: 2026/10/02 23:32:00 [notice] 6100#6100: signal process started
+2026-10-02T23:32:00.022292+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+2026-10-02T23:32:01.014952+00:00 dns-ubuntu CRON[6177]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-02T23:32:01.015819+00:00 dns-ubuntu CRON[6179]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-02T23:32:01.021451+00:00 dns-ubuntu CRON[6177]: pam_unix(cron:session): session closed for user upd1_owner_test
+2026-10-02T23:32:32.801983+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-02T23:32:32.802448+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-02T23:32:32.829404+00:00 dns-ubuntu systemd[1]: Reloading dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-02T23:32:32.837071+00:00 dns-ubuntu dovecot[722]: master: Warning: SIGHUP received - reloading configuration
+2026-10-02T23:32:32.845269+00:00 dns-ubuntu systemd[1]: Reloaded dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-02T23:32:38.422304+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-02T23:32:38.425257+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-02T23:33:01.025328+00:00 dns-ubuntu CRON[9274]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-02T23:33:01.025767+00:00 dns-ubuntu CRON[9275]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-02T23:33:01.029188+00:00 dns-ubuntu CRON[9274]: pam_unix(cron:session): session closed for user upd1_owner_test

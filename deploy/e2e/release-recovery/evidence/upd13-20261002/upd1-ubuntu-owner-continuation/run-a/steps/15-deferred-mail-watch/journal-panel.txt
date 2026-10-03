@@ -1,0 +1,420 @@
+2026-10-02T23:54:42.514504+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-02T23:54:42.760583+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-02T23:54:43.061873+00:00 dns-ubuntu panel[7183]: 2026/10/02 23:54:43 Starting CelikPanel Backend...
+2026-10-02T23:54:43.069998+00:00 dns-ubuntu panel[7183]: 2026/10/02 23:54:43 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-02T23:54:43.072183+00:00 dns-ubuntu panel[7183]: 2026/10/02 23:54:43 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-02T23:54:43.073964+00:00 dns-ubuntu panel[7183]: 2026/10/02 23:54:43 Connected to Agent RPC; preparing normal management access
+2026-10-02T23:54:43.097642+00:00 dns-ubuntu panel[7183]: 2026/10/02 23:54:43 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-ubuntu": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-10-02T23:54:43.099594+00:00 dns-ubuntu panel[7183]: 2026/10/02 23:54:43 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-10-02T23:54:43.100990+00:00 dns-ubuntu panel[7183]: 2026/10/02 23:54:43 Panel ready on :2083 (HTTPS)
+2026-10-02T23:54:43.874126+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-02T23:54:43.888323+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-02T23:54:43.888747+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-02T23:54:43.989446+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-02T23:54:44.005366+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-02T23:54:44.190311+00:00 dns-ubuntu panel[7246]: 2026/10/02 23:54:44 Starting CelikPanel Backend...
+2026-10-02T23:54:44.197463+00:00 dns-ubuntu panel[7246]: 2026/10/02 23:54:44 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-02T23:54:44.198250+00:00 dns-ubuntu panel[7246]: 2026/10/02 23:54:44 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-02T23:54:44.199274+00:00 dns-ubuntu panel[7246]: 2026/10/02 23:54:44 Connected to Agent RPC; preparing normal management access
+2026-10-02T23:54:44.209279+00:00 dns-ubuntu panel[7246]: 2026/10/02 23:54:44 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-ubuntu": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-10-02T23:54:44.211368+00:00 dns-ubuntu panel[7246]: 2026/10/02 23:54:44 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-10-02T23:54:44.212788+00:00 dns-ubuntu panel[7246]: 2026/10/02 23:54:44 Panel ready on :2083 (HTTPS)
+2026-10-02T23:54:47.110110+00:00 dns-ubuntu panel[7246]: 2026/10/02 23:54:47 http: TLS handshake error from 127.0.0.1:54008: EOF
+2026-10-02T23:54:47.369351+00:00 dns-ubuntu panel[7246]: 2026/10/02 23:54:47 http: TLS handshake error from 127.0.0.1:54032: EOF
+2026-10-02T23:54:47.578264+00:00 dns-ubuntu panel[7246]: 2026/10/02 23:54:47 http: TLS handshake error from 127.0.0.1:54046: EOF
+2026-10-02T23:54:47.589364+00:00 dns-ubuntu panel[7246]: 2026/10/02 23:54:47 http: TLS handshake error from 127.0.0.1:54078: EOF
+2026-10-02T23:54:47.599687+00:00 dns-ubuntu panel[7246]: 2026/10/02 23:54:47 http: TLS handshake error from 127.0.0.1:54098: EOF
+2026-10-02T23:54:47.608369+00:00 dns-ubuntu panel[7246]: 2026/10/02 23:54:47 http: TLS handshake error from 127.0.0.1:54124: EOF
+2026-10-02T23:54:47.625628+00:00 dns-ubuntu panel[7246]: 2026/10/02 23:54:47 http: TLS handshake error from 127.0.0.1:54146: EOF
+2026-10-02T23:54:47.634917+00:00 dns-ubuntu panel[7246]: 2026/10/02 23:54:47 http: TLS handshake error from 127.0.0.1:54176: EOF
+2026-10-02T23:54:47.647085+00:00 dns-ubuntu panel[7246]: 2026/10/02 23:54:47 http: TLS handshake error from 127.0.0.1:54186: EOF
+2026-10-02T23:54:47.657876+00:00 dns-ubuntu panel[7246]: 2026/10/02 23:54:47 http: TLS handshake error from 127.0.0.1:54208: EOF
+2026-10-02T23:59:45.562959+00:00 dns-ubuntu panel[7246]: 2026/10/02 23:59:45 http: TLS handshake error from 127.0.0.1:40226: EOF
+2026-10-02T23:59:45.811542+00:00 dns-ubuntu panel[7246]: 2026/10/02 23:59:45 http: TLS handshake error from 127.0.0.1:40248: EOF
+2026-10-02T23:59:45.830851+00:00 dns-ubuntu panel[7246]: 2026/10/02 23:59:45 http: TLS handshake error from 127.0.0.1:40266: EOF
+2026-10-02T23:59:46.803317+00:00 dns-ubuntu panel[7246]: 2026/10/02 23:59:46 http: TLS handshake error from 127.0.0.1:40284: EOF
+2026-10-02T23:59:47.688761+00:00 dns-ubuntu panel[7246]: 2026/10/02 23:59:47 http: TLS handshake error from 127.0.0.1:40296: EOF
+2026-10-02T23:59:50.401307+00:00 dns-ubuntu panel[7246]: 2026/10/02 23:59:50 http: TLS handshake error from 127.0.0.1:37196: EOF
+2026-10-02T23:59:50.702110+00:00 dns-ubuntu panel[7246]: 2026/10/02 23:59:50 http: TLS handshake error from 127.0.0.1:37226: EOF
+2026-10-02T23:59:55.718037+00:00 dns-ubuntu panel[7246]: 2026/10/02 23:59:55 http: TLS handshake error from 127.0.0.1:37230: EOF
+2026-10-03T00:00:02.805299+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:00:02 http: TLS handshake error from 127.0.0.1:52382: EOF
+2026-10-03T00:00:03.075847+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:00:03 http: TLS handshake error from 127.0.0.1:52388: EOF
+2026-10-03T00:00:08.094866+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:00:08 http: TLS handshake error from 127.0.0.1:52408: EOF
+2026-10-03T00:00:13.359710+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:00:13 http: TLS handshake error from 127.0.0.1:38762: EOF
+2026-10-03T00:00:13.609166+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:00:13 http: TLS handshake error from 127.0.0.1:38786: EOF
+2026-10-03T00:00:18.621502+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:00:18 http: TLS handshake error from 127.0.0.1:47572: EOF
+2026-10-03T00:00:25.119894+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:00:25 http: TLS handshake error from 127.0.0.1:47592: EOF
+2026-10-03T00:00:25.403463+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:00:25 http: TLS handshake error from 127.0.0.1:47606: EOF
+2026-10-03T00:00:30.417891+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:00:30 http: TLS handshake error from 127.0.0.1:50404: EOF
+2026-10-03T00:00:35.683416+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:00:35 http: TLS handshake error from 127.0.0.1:50422: EOF
+2026-10-03T00:00:35.936111+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:00:35 http: TLS handshake error from 127.0.0.1:50450: EOF
+2026-10-03T00:00:40.946847+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:00:40 http: TLS handshake error from 127.0.0.1:52610: EOF
+2026-10-03T00:00:46.296341+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:00:46 http: TLS handshake error from 127.0.0.1:52628: EOF
+2026-10-03T00:00:46.542208+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:00:46 http: TLS handshake error from 127.0.0.1:52656: EOF
+2026-10-03T00:00:51.554769+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:00:51 http: TLS handshake error from 127.0.0.1:40584: EOF
+2026-10-03T00:00:57.044620+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:00:57 http: TLS handshake error from 127.0.0.1:40600: EOF
+2026-10-03T00:00:57.278975+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:00:57 http: TLS handshake error from 127.0.0.1:40624: EOF
+2026-10-03T00:01:02.291243+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:01:02 http: TLS handshake error from 127.0.0.1:41208: EOF
+2026-10-03T00:01:07.558961+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:01:07 http: TLS handshake error from 127.0.0.1:41218: EOF
+2026-10-03T00:01:08.371407+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:01:08 http: TLS handshake error from 127.0.0.1:41234: EOF
+2026-10-03T00:01:13.384259+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:01:13 http: TLS handshake error from 127.0.0.1:41222: EOF
+2026-10-03T00:01:18.635733+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:01:18 http: TLS handshake error from 127.0.0.1:43166: EOF
+2026-10-03T00:01:18.904850+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:01:18 http: TLS handshake error from 127.0.0.1:43198: EOF
+2026-10-03T00:01:23.918042+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:01:23 http: TLS handshake error from 127.0.0.1:43214: EOF
+2026-10-03T00:01:29.651718+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:01:29 http: TLS handshake error from 127.0.0.1:35896: EOF
+2026-10-03T00:01:29.890075+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:01:29 http: TLS handshake error from 127.0.0.1:35904: EOF
+2026-10-03T00:01:34.901452+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:01:34 http: TLS handshake error from 127.0.0.1:35928: EOF
+2026-10-03T00:01:41.611121+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:01:41 http: TLS handshake error from 127.0.0.1:57448: EOF
+2026-10-03T00:01:42.823982+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:01:42 http: TLS handshake error from 127.0.0.1:57464: EOF
+2026-10-03T00:01:47.833300+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:01:47 http: TLS handshake error from 127.0.0.1:57472: EOF
+2026-10-03T00:01:53.088525+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:01:53 http: TLS handshake error from 127.0.0.1:50114: EOF
+2026-10-03T00:01:53.335101+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:01:53 http: TLS handshake error from 127.0.0.1:50128: EOF
+2026-10-03T00:01:58.347369+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:01:58 http: TLS handshake error from 127.0.0.1:50144: EOF
+2026-10-03T00:02:03.847642+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:02:03 http: TLS handshake error from 127.0.0.1:58156: EOF
+2026-10-03T00:02:04.096835+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:02:04 http: TLS handshake error from 127.0.0.1:58174: EOF
+2026-10-03T00:02:09.109419+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:02:09 http: TLS handshake error from 127.0.0.1:45738: EOF
+2026-10-03T00:02:15.673145+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:02:15 http: TLS handshake error from 127.0.0.1:45756: EOF
+2026-10-03T00:02:17.382875+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:02:17 http: TLS handshake error from 127.0.0.1:45766: EOF
+2026-10-03T00:02:22.394329+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:02:22 http: TLS handshake error from 127.0.0.1:60762: EOF
+2026-10-03T00:02:27.982387+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:02:27 http: TLS handshake error from 127.0.0.1:60770: EOF
+2026-10-03T00:02:28.221786+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:02:28 http: TLS handshake error from 127.0.0.1:60786: EOF
+2026-10-03T00:02:33.234384+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:02:33 http: TLS handshake error from 127.0.0.1:54936: EOF
+2026-10-03T00:02:39.034424+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:02:39 http: TLS handshake error from 127.0.0.1:46872: EOF
+2026-10-03T00:02:39.297421+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:02:39 http: TLS handshake error from 127.0.0.1:46904: EOF
+2026-10-03T00:02:44.310839+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:02:44 http: TLS handshake error from 127.0.0.1:46920: EOF
+2026-10-03T00:02:49.556379+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:02:49 http: TLS handshake error from 127.0.0.1:58836: EOF
+2026-10-03T00:02:49.823499+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:02:49 http: TLS handshake error from 127.0.0.1:58852: EOF
+2026-10-03T00:02:54.834864+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:02:54 http: TLS handshake error from 127.0.0.1:58872: EOF
+2026-10-03T00:03:00.114115+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:03:00 http: TLS handshake error from 127.0.0.1:44932: EOF
+2026-10-03T00:03:00.380272+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:03:00 http: TLS handshake error from 127.0.0.1:44958: EOF
+2026-10-03T00:03:05.392452+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:03:05 http: TLS handshake error from 127.0.0.1:44984: EOF
+2026-10-03T00:03:11.533547+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:03:11 http: TLS handshake error from 127.0.0.1:46586: EOF
+2026-10-03T00:03:11.826313+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:03:11 http: TLS handshake error from 127.0.0.1:46606: EOF
+2026-10-03T00:03:16.839318+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:03:16 http: TLS handshake error from 127.0.0.1:46634: EOF
+2026-10-03T00:03:22.084046+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:03:22 http: TLS handshake error from 127.0.0.1:46978: EOF
+2026-10-03T00:03:22.338805+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:03:22 http: TLS handshake error from 127.0.0.1:46996: EOF
+2026-10-03T00:03:27.350526+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:03:27 http: TLS handshake error from 127.0.0.1:47010: EOF
+2026-10-03T00:03:32.599763+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:03:32 http: TLS handshake error from 127.0.0.1:37434: EOF
+2026-10-03T00:03:32.855010+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:03:32 http: TLS handshake error from 127.0.0.1:37448: EOF
+2026-10-03T00:03:37.867791+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:03:37 http: TLS handshake error from 127.0.0.1:37480: EOF
+2026-10-03T00:03:43.593336+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:03:43 http: TLS handshake error from 127.0.0.1:37750: EOF
+2026-10-03T00:03:43.866305+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:03:43 http: TLS handshake error from 127.0.0.1:37768: EOF
+2026-10-03T00:03:48.878903+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:03:48 http: TLS handshake error from 127.0.0.1:40776: EOF
+2026-10-03T00:03:54.125606+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:03:54 http: TLS handshake error from 127.0.0.1:40784: EOF
+2026-10-03T00:03:54.376923+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:03:54 http: TLS handshake error from 127.0.0.1:40808: EOF
+2026-10-03T00:03:59.388585+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:03:59 http: TLS handshake error from 127.0.0.1:59564: EOF
+2026-10-03T00:04:04.631425+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:04:04 http: TLS handshake error from 127.0.0.1:59578: EOF
+2026-10-03T00:04:04.885051+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:04:04 http: TLS handshake error from 127.0.0.1:59602: EOF
+2026-10-03T00:04:09.899838+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:04:09 http: TLS handshake error from 127.0.0.1:46996: EOF
+2026-10-03T00:04:15.400985+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:04:15 http: TLS handshake error from 127.0.0.1:47028: EOF
+2026-10-03T00:04:15.661285+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:04:15 http: TLS handshake error from 127.0.0.1:47050: EOF
+2026-10-03T00:04:20.672964+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:04:20 http: TLS handshake error from 127.0.0.1:51838: EOF
+2026-10-03T00:04:25.920193+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:04:25 http: TLS handshake error from 127.0.0.1:51854: EOF
+2026-10-03T00:04:26.175943+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:04:26 http: TLS handshake error from 127.0.0.1:51876: EOF
+2026-10-03T00:04:31.188006+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:04:31 http: TLS handshake error from 127.0.0.1:49588: EOF
+2026-10-03T00:04:36.516411+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:04:36 http: TLS handshake error from 127.0.0.1:49598: EOF
+2026-10-03T00:04:36.769414+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:04:36 http: TLS handshake error from 127.0.0.1:49630: EOF
+2026-10-03T00:04:41.782977+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:04:41 http: TLS handshake error from 127.0.0.1:46450: EOF
+2026-10-03T00:04:47.527408+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:04:47 http: TLS handshake error from 127.0.0.1:46476: EOF
+2026-10-03T00:04:47.775494+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:04:47 http: TLS handshake error from 127.0.0.1:46488: EOF
+2026-10-03T00:04:52.790090+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:04:52 http: TLS handshake error from 127.0.0.1:40810: EOF
+2026-10-03T00:04:58.038139+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:04:58 http: TLS handshake error from 127.0.0.1:40834: EOF
+2026-10-03T00:04:58.299656+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:04:58 http: TLS handshake error from 127.0.0.1:40846: EOF
+2026-10-03T00:05:03.313446+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:05:03 http: TLS handshake error from 127.0.0.1:55832: EOF
+2026-10-03T00:05:08.571265+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:05:08 http: TLS handshake error from 127.0.0.1:56994: EOF
+2026-10-03T00:05:08.829765+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:05:08 http: TLS handshake error from 127.0.0.1:57022: EOF
+2026-10-03T00:05:13.842341+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:05:13 http: TLS handshake error from 127.0.0.1:57030: EOF
+2026-10-03T00:05:19.353064+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:05:19 http: TLS handshake error from 127.0.0.1:51192: EOF
+2026-10-03T00:05:19.601902+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:05:19 http: TLS handshake error from 127.0.0.1:51204: EOF
+2026-10-03T00:05:24.613624+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:05:24 http: TLS handshake error from 127.0.0.1:51228: EOF
+2026-10-03T00:05:29.855023+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:05:29 http: TLS handshake error from 127.0.0.1:49394: EOF
+2026-10-03T00:05:30.116790+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:05:30 http: TLS handshake error from 127.0.0.1:49400: EOF
+2026-10-03T00:05:30.354889+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:05:30 http: TLS handshake error from 127.0.0.1:49414: EOF
+2026-10-03T00:08:26.351179+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:08:26 http: TLS handshake error from 127.0.0.1:47628: EOF
+2026-10-03T00:08:27.815585+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:08:27 http: TLS handshake error from 127.0.0.1:47634: EOF
+2026-10-03T00:08:27.830847+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:08:27 http: TLS handshake error from 127.0.0.1:47658: EOF
+2026-10-03T00:08:27.840773+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:08:27 http: TLS handshake error from 127.0.0.1:47676: EOF
+2026-10-03T00:08:27.849744+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:08:27 http: TLS handshake error from 127.0.0.1:47700: EOF
+2026-10-03T00:08:27.872487+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:08:27 http: TLS handshake error from 127.0.0.1:47710: EOF
+2026-10-03T00:08:27.937155+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:08:27 http: TLS handshake error from 127.0.0.1:47722: EOF
+2026-10-03T00:08:27.946145+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:08:27 http: TLS handshake error from 127.0.0.1:47730: EOF
+2026-10-03T00:08:27.964204+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:08:27 http: TLS handshake error from 127.0.0.1:47748: EOF
+2026-10-03T00:08:27.975424+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:08:27 http: TLS handshake error from 127.0.0.1:47772: EOF
+2026-10-03T00:08:33.716952+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:08:33 http: TLS handshake error from 127.0.0.1:57192: EOF
+2026-10-03T00:08:34.802593+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:08:34 http: TLS handshake error from 127.0.0.1:57206: EOF
+2026-10-03T00:08:39.801376+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:08:39 http: TLS handshake error from 127.0.0.1:43544: EOF
+2026-10-03T00:08:44.793197+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:08:44 http: TLS handshake error from 127.0.0.1:43572: EOF
+2026-10-03T00:08:49.790865+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:08:49 http: TLS handshake error from 127.0.0.1:58182: EOF
+2026-10-03T00:08:54.793293+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:08:54 http: TLS handshake error from 127.0.0.1:58216: EOF
+2026-10-03T00:09:00.028716+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:09:00 http: TLS handshake error from 127.0.0.1:37020: EOF
+2026-10-03T00:09:04.795061+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:09:04 http: TLS handshake error from 127.0.0.1:37034: EOF
+2026-10-03T00:09:09.796212+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:09:09 http: TLS handshake error from 127.0.0.1:51620: EOF
+2026-10-03T00:09:14.794817+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:09:14 http: TLS handshake error from 127.0.0.1:51660: EOF
+2026-10-03T00:09:19.791195+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:09:19 http: TLS handshake error from 127.0.0.1:50238: EOF
+2026-10-03T00:09:24.794821+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:09:24 http: TLS handshake error from 127.0.0.1:50260: EOF
+2026-10-03T00:09:29.798284+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:09:29 http: TLS handshake error from 127.0.0.1:35556: EOF
+2026-10-03T00:09:34.805551+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:09:34 http: TLS handshake error from 127.0.0.1:35582: EOF
+2026-10-03T00:09:39.802904+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:09:39 http: TLS handshake error from 127.0.0.1:42196: EOF
+2026-10-03T00:09:44.794506+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:09:44 http: TLS handshake error from 127.0.0.1:42228: EOF
+2026-10-03T00:09:49.797482+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:09:49 http: TLS handshake error from 127.0.0.1:54356: EOF
+2026-10-03T00:09:54.799978+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:09:54 http: TLS handshake error from 127.0.0.1:54384: EOF
+2026-10-03T00:09:59.799665+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:09:59 http: TLS handshake error from 127.0.0.1:46498: EOF
+2026-10-03T00:10:05.034856+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:05 http: TLS handshake error from 127.0.0.1:46532: EOF
+2026-10-03T00:10:07.515468+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:07 http: TLS handshake error from 127.0.0.1:46550: EOF
+2026-10-03T00:10:08.996800+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:08 http: TLS handshake error from 127.0.0.1:38962: EOF
+2026-10-03T00:10:09.812696+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:09 http: TLS handshake error from 127.0.0.1:38966: EOF
+2026-10-03T00:10:10.082932+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:10 http: TLS handshake error from 127.0.0.1:38986: EOF
+2026-10-03T00:10:10.348857+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:10 http: TLS handshake error from 127.0.0.1:39016: EOF
+2026-10-03T00:10:10.698378+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:10 http: TLS handshake error from 127.0.0.1:39048: EOF
+2026-10-03T00:10:10.698378+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:10 http: TLS handshake error from 127.0.0.1:39040: EOF
+2026-10-03T00:10:10.698378+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:10 http: TLS handshake error from 127.0.0.1:39044: EOF
+2026-10-03T00:10:10.716648+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:10 http: TLS handshake error from 127.0.0.1:39066: EOF
+2026-10-03T00:10:12.600058+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:12 http: TLS handshake error from 127.0.0.1:39094: EOF
+2026-10-03T00:10:12.600461+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:12 http: TLS handshake error from 127.0.0.1:39080: EOF
+2026-10-03T00:10:12.600461+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:12 http: TLS handshake error from 127.0.0.1:39100: EOF
+2026-10-03T00:10:12.626193+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:12 http: TLS handshake error from 127.0.0.1:39114: EOF
+2026-10-03T00:10:14.829075+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:14 http: TLS handshake error from 127.0.0.1:39146: EOF
+2026-10-03T00:10:15.341792+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:15 http: TLS handshake error from 127.0.0.1:39164: EOF
+2026-10-03T00:10:15.342458+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:15 http: TLS handshake error from 127.0.0.1:39178: EOF
+2026-10-03T00:10:15.342458+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:15 http: TLS handshake error from 127.0.0.1:39168: EOF
+2026-10-03T00:10:15.360306+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:15 http: TLS handshake error from 127.0.0.1:39202: EOF
+2026-10-03T00:10:19.576483+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:19 http: TLS handshake error from 127.0.0.1:59092: EOF
+2026-10-03T00:10:19.577142+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:19 http: TLS handshake error from 127.0.0.1:59098: EOF
+2026-10-03T00:10:19.577142+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:19 http: TLS handshake error from 127.0.0.1:59102: EOF
+2026-10-03T00:10:19.596603+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:19 http: TLS handshake error from 127.0.0.1:59116: EOF
+2026-10-03T00:10:19.970954+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:19 http: TLS handshake error from 127.0.0.1:59126: EOF
+2026-10-03T00:10:24.824575+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:24 http: TLS handshake error from 127.0.0.1:59146: EOF
+2026-10-03T00:10:26.151301+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:26 http: TLS handshake error from 127.0.0.1:59164: EOF
+2026-10-03T00:10:26.151989+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:26 http: TLS handshake error from 127.0.0.1:59184: EOF
+2026-10-03T00:10:26.151989+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:26 http: TLS handshake error from 127.0.0.1:59178: EOF
+2026-10-03T00:10:26.171199+00:00 dns-ubuntu panel[7246]: 2026/10/03 00:10:26 http: TLS handshake error from 127.0.0.1:59196: EOF
+2026-10-03T00:10:27.038365+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Sent signal SIGSTOP to main process 7246 (panel) on client request.
+2026-10-03T00:10:27.675981+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-03T00:10:27.683848+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Sent signal SIGKILL to main process 7246 (panel) on client request.
+2026-10-03T00:10:27.683937+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed to send signal SIGKILL to auxiliary processes on client request: Invalid argument
+2026-10-03T00:10:27.689087+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Main process exited, code=killed, status=9/KILL
+2026-10-03T00:10:27.689159+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'signal'.
+2026-10-03T00:10:27.689384+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-03T00:10:27.689473+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Consumed 1.823s CPU time, 141.2M memory peak, 0B memory swap peak.
+2026-10-03T00:10:48.174552+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-03T00:10:48.225545+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-03T00:10:48.402206+00:00 dns-ubuntu panel[54200]: 2026/10/03 00:10:48 Starting CelikPanel Backend...
+2026-10-03T00:10:48.418815+00:00 dns-ubuntu panel[54200]: 2026/10/03 00:10:48 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-03T00:10:48.419780+00:00 dns-ubuntu panel[54200]: 2026/10/03 00:10:48 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-03T00:10:48.426501+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-03T00:10:48.426662+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-03T00:10:51.441778+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 1.
+2026-10-03T00:10:51.448537+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-03T00:10:51.510439+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-03T00:10:51.766253+00:00 dns-ubuntu panel[54468]: 2026/10/03 00:10:51 Starting CelikPanel Backend...
+2026-10-03T00:10:51.776056+00:00 dns-ubuntu panel[54468]: 2026/10/03 00:10:51 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-03T00:10:51.778490+00:00 dns-ubuntu panel[54468]: 2026/10/03 00:10:51 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-03T00:10:51.787658+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-03T00:10:51.787882+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-03T00:10:57.358569+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 2.
+2026-10-03T00:10:57.374549+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-03T00:10:57.425447+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-03T00:10:57.642596+00:00 dns-ubuntu panel[54991]: 2026/10/03 00:10:57 Starting CelikPanel Backend...
+2026-10-03T00:10:57.652341+00:00 dns-ubuntu panel[54991]: 2026/10/03 00:10:57 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-03T00:10:57.653007+00:00 dns-ubuntu panel[54991]: 2026/10/03 00:10:57 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-03T00:10:57.661743+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-03T00:10:57.661952+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-03T00:11:07.935540+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 3.
+2026-10-03T00:11:07.940622+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-03T00:11:07.991449+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-03T00:11:08.172577+00:00 dns-ubuntu panel[55824]: 2026/10/03 00:11:08 Starting CelikPanel Backend...
+2026-10-03T00:11:08.178805+00:00 dns-ubuntu panel[55824]: 2026/10/03 00:11:08 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-03T00:11:08.179386+00:00 dns-ubuntu panel[55824]: 2026/10/03 00:11:08 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-03T00:11:08.185048+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-03T00:11:08.185192+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-03T00:11:27.185791+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 4.
+2026-10-03T00:11:27.196535+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-03T00:11:27.243440+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-03T00:11:27.402283+00:00 dns-ubuntu panel[57490]: 2026/10/03 00:11:27 Starting CelikPanel Backend...
+2026-10-03T00:11:27.409500+00:00 dns-ubuntu panel[57490]: 2026/10/03 00:11:27 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-03T00:11:27.410079+00:00 dns-ubuntu panel[57490]: 2026/10/03 00:11:27 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-03T00:11:27.415452+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-03T00:11:27.415608+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-03T00:11:49.143933+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-03T00:11:57.643466+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-03T00:11:57.690404+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-03T00:11:57.867649+00:00 dns-ubuntu panel[61313]: 2026/10/03 00:11:57 Starting CelikPanel Backend...
+2026-10-03T00:11:57.873732+00:00 dns-ubuntu panel[61313]: 2026/10/03 00:11:57 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-03T00:11:57.874316+00:00 dns-ubuntu panel[61313]: 2026/10/03 00:11:57 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-03T00:11:57.880938+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-03T00:11:57.881104+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-03T00:12:01.016088+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 1.
+2026-10-03T00:12:01.021470+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-03T00:12:01.082476+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-03T00:12:01.281285+00:00 dns-ubuntu panel[61453]: 2026/10/03 00:12:01 Starting CelikPanel Backend...
+2026-10-03T00:12:01.287352+00:00 dns-ubuntu panel[61453]: 2026/10/03 00:12:01 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-03T00:12:01.287841+00:00 dns-ubuntu panel[61453]: 2026/10/03 00:12:01 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-03T00:12:01.294667+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-03T00:12:01.294831+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-03T00:12:06.859202+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 2.
+2026-10-03T00:12:06.867450+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-03T00:12:06.927449+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-03T00:12:07.117952+00:00 dns-ubuntu panel[61667]: 2026/10/03 00:12:07 Starting CelikPanel Backend...
+2026-10-03T00:12:07.125506+00:00 dns-ubuntu panel[61667]: 2026/10/03 00:12:07 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-03T00:12:07.126089+00:00 dns-ubuntu panel[61667]: 2026/10/03 00:12:07 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-03T00:12:07.133424+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-03T00:12:07.133619+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-03T00:12:17.486832+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 3.
+2026-10-03T00:12:17.498545+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-03T00:12:17.550454+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-03T00:12:17.743594+00:00 dns-ubuntu panel[61978]: 2026/10/03 00:12:17 Starting CelikPanel Backend...
+2026-10-03T00:12:17.750795+00:00 dns-ubuntu panel[61978]: 2026/10/03 00:12:17 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-03T00:12:17.751366+00:00 dns-ubuntu panel[61978]: 2026/10/03 00:12:17 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-03T00:12:17.758414+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-03T00:12:17.758668+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-03T00:12:36.765997+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 4.
+2026-10-03T00:12:36.771570+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-03T00:12:36.825412+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-03T00:12:37.011197+00:00 dns-ubuntu panel[62620]: 2026/10/03 00:12:37 Starting CelikPanel Backend...
+2026-10-03T00:12:37.017958+00:00 dns-ubuntu panel[62620]: 2026/10/03 00:12:37 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-03T00:12:37.017958+00:00 dns-ubuntu panel[62620]: 2026/10/03 00:12:37 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-03T00:12:37.024505+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-03T00:12:37.024710+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-03T00:12:58.141069+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-03T00:13:36.782442+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-03T00:13:36.836427+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-03T00:13:37.013197+00:00 dns-ubuntu panel[66222]: 2026/10/03 00:13:37 Starting CelikPanel Backend...
+2026-10-03T00:13:37.020904+00:00 dns-ubuntu panel[66222]: 2026/10/03 00:13:37 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-03T00:13:37.021543+00:00 dns-ubuntu panel[66222]: 2026/10/03 00:13:37 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-03T00:13:37.027644+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-03T00:13:37.027783+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-03T00:13:40.120385+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 1.
+2026-10-03T00:13:40.136555+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-03T00:13:40.189396+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-03T00:13:40.377012+00:00 dns-ubuntu panel[66360]: 2026/10/03 00:13:40 Starting CelikPanel Backend...
+2026-10-03T00:13:40.385134+00:00 dns-ubuntu panel[66360]: 2026/10/03 00:13:40 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-03T00:13:40.386350+00:00 dns-ubuntu panel[66360]: 2026/10/03 00:13:40 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-03T00:13:40.392620+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-03T00:13:40.392824+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-03T00:13:45.947361+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 2.
+2026-10-03T00:13:45.959568+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-03T00:13:46.006394+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-03T00:13:46.192541+00:00 dns-ubuntu panel[66537]: 2026/10/03 00:13:46 Starting CelikPanel Backend...
+2026-10-03T00:13:46.199972+00:00 dns-ubuntu panel[66537]: 2026/10/03 00:13:46 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-03T00:13:46.200521+00:00 dns-ubuntu panel[66537]: 2026/10/03 00:13:46 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-03T00:13:46.207141+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-03T00:13:46.207335+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-03T00:13:56.516116+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 3.
+2026-10-03T00:13:56.521528+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-03T00:13:56.576494+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-03T00:13:56.751408+00:00 dns-ubuntu panel[66925]: 2026/10/03 00:13:56 Starting CelikPanel Backend...
+2026-10-03T00:13:56.757760+00:00 dns-ubuntu panel[66925]: 2026/10/03 00:13:56 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-03T00:13:56.758475+00:00 dns-ubuntu panel[66925]: 2026/10/03 00:13:56 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-03T00:13:56.764131+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-03T00:13:56.764328+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-03T00:14:15.766106+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 4.
+2026-10-03T00:14:15.771543+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-03T00:14:15.824651+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-03T00:14:16.001182+00:00 dns-ubuntu panel[67511]: 2026/10/03 00:14:16 Starting CelikPanel Backend...
+2026-10-03T00:14:16.007034+00:00 dns-ubuntu panel[67511]: 2026/10/03 00:14:16 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-03T00:14:16.007574+00:00 dns-ubuntu panel[67511]: 2026/10/03 00:14:16 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-03T00:14:16.014145+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-03T00:14:16.014363+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-03T00:14:37.243069+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-03T00:15:15.711561+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-03T00:15:15.762408+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-03T00:15:15.958641+00:00 dns-ubuntu panel[71114]: 2026/10/03 00:15:15 Starting CelikPanel Backend...
+2026-10-03T00:15:15.964737+00:00 dns-ubuntu panel[71114]: 2026/10/03 00:15:15 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-03T00:15:15.965312+00:00 dns-ubuntu panel[71114]: 2026/10/03 00:15:15 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-03T00:15:15.971502+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-03T00:15:15.971669+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-03T00:15:19.016374+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 1.
+2026-10-03T00:15:19.021516+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-03T00:15:19.067411+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-03T00:15:19.239517+00:00 dns-ubuntu panel[71199]: 2026/10/03 00:15:19 Starting CelikPanel Backend...
+2026-10-03T00:15:19.246291+00:00 dns-ubuntu panel[71199]: 2026/10/03 00:15:19 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-03T00:15:19.246875+00:00 dns-ubuntu panel[71199]: 2026/10/03 00:15:19 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-03T00:15:19.253520+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-03T00:15:19.253686+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-03T00:15:24.804149+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 2.
+2026-10-03T00:15:24.809566+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-03T00:15:24.861425+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-03T00:15:25.036510+00:00 dns-ubuntu panel[71461]: 2026/10/03 00:15:25 Starting CelikPanel Backend...
+2026-10-03T00:15:25.045097+00:00 dns-ubuntu panel[71461]: 2026/10/03 00:15:25 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-03T00:15:25.045575+00:00 dns-ubuntu panel[71461]: 2026/10/03 00:15:25 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-03T00:15:25.051807+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-03T00:15:25.051938+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-03T00:15:35.430721+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 3.
+2026-10-03T00:15:35.436512+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-03T00:15:35.484379+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-03T00:15:35.683327+00:00 dns-ubuntu panel[71775]: 2026/10/03 00:15:35 Starting CelikPanel Backend...
+2026-10-03T00:15:35.690882+00:00 dns-ubuntu panel[71775]: 2026/10/03 00:15:35 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-03T00:15:35.692254+00:00 dns-ubuntu panel[71775]: 2026/10/03 00:15:35 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-03T00:15:35.697975+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-03T00:15:35.698256+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-03T00:15:54.712978+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 4.
+2026-10-03T00:15:54.718534+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-03T00:15:54.778453+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-03T00:15:54.969048+00:00 dns-ubuntu panel[72407]: 2026/10/03 00:15:54 Starting CelikPanel Backend...
+2026-10-03T00:15:54.975047+00:00 dns-ubuntu panel[72407]: 2026/10/03 00:15:54 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-03T00:15:54.975664+00:00 dns-ubuntu panel[72407]: 2026/10/03 00:15:54 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-03T00:15:54.980919+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-03T00:15:54.981117+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-03T00:16:16.159394+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-03T00:17:24.854581+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-03T00:17:24.899436+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-03T00:17:25.086630+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:25 Starting CelikPanel Backend...
+2026-10-03T00:17:25.094268+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:25 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-03T00:17:25.094757+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:25 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-03T00:17:25.095475+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:25 Connected to Agent RPC; preparing normal management access
+2026-10-03T00:17:25.138951+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:25 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload
+2026-10-03T00:17:25.139489+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:25 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+2026-10-03T00:17:25.142025+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:25 milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+2026-10-03T00:17:25.145148+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:25 Panel ready on :2083 (HTTPS)
+2026-10-03T00:17:26.601591+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:26 http: TLS handshake error from 127.0.0.1:58354: EOF
+2026-10-03T00:17:26.602286+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:26 http: TLS handshake error from 127.0.0.1:58364: EOF
+2026-10-03T00:17:28.138137+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:28 http: TLS handshake error from 127.0.0.1:40616: EOF
+2026-10-03T00:17:28.138137+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:28 http: TLS handshake error from 127.0.0.1:40600: EOF
+2026-10-03T00:17:28.138137+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:28 http: TLS handshake error from 127.0.0.1:40594: EOF
+2026-10-03T00:17:28.138137+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:28 http: TLS handshake error from 127.0.0.1:40632: EOF
+2026-10-03T00:17:28.536853+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:28 http: TLS handshake error from 127.0.0.1:59308: EOF
+2026-10-03T00:17:29.673671+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:29 http: TLS handshake error from 127.0.0.1:58378: EOF
+2026-10-03T00:17:29.674324+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:29 http: TLS handshake error from 127.0.0.1:58384: EOF
+2026-10-03T00:17:30.697782+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:30 http: TLS handshake error from 127.0.0.1:40660: EOF
+2026-10-03T00:17:30.698635+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:30 http: TLS handshake error from 127.0.0.1:40644: EOF
+2026-10-03T00:17:33.551481+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:33 http: TLS handshake error from 127.0.0.1:33002: EOF
+2026-10-03T00:17:36.330062+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:36 http: TLS handshake error from 127.0.0.1:40684: EOF
+2026-10-03T00:17:36.330573+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:36 http: TLS handshake error from 127.0.0.1:40690: EOF
+2026-10-03T00:17:37.865998+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:37 http: TLS handshake error from 127.0.0.1:44094: EOF
+2026-10-03T00:17:38.539000+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:38 http: TLS handshake error from 127.0.0.1:50412: EOF
+2026-10-03T00:17:38.602632+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:38 http: TLS handshake error from 127.0.0.1:50438: EOF
+2026-10-03T00:17:38.602632+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:38 http: TLS handshake error from 127.0.0.1:50440: EOF
+2026-10-03T00:17:38.602632+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:38 http: TLS handshake error from 127.0.0.1:50426: EOF
+2026-10-03T00:17:39.140053+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:39 http: TLS handshake error from 127.0.0.1:50456: EOF
+2026-10-03T00:17:41.961947+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:41 http: TLS handshake error from 127.0.0.1:44110: EOF
+2026-10-03T00:17:41.961947+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:41 http: TLS handshake error from 127.0.0.1:44104: EOF
+2026-10-03T00:17:43.533277+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:43 http: TLS handshake error from 127.0.0.1:50488: EOF
+2026-10-03T00:17:45.094103+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:45 http: TLS handshake error from 127.0.0.1:50500: EOF
+2026-10-03T00:17:45.355915+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:45 http: TLS handshake error from 127.0.0.1:50520: EOF
+2026-10-03T00:17:45.544967+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:45 http: TLS handshake error from 127.0.0.1:44132: EOF
+2026-10-03T00:17:45.545769+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:45 http: TLS handshake error from 127.0.0.1:44148: EOF
+2026-10-03T00:17:45.545769+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:45 http: TLS handshake error from 127.0.0.1:44144: EOF
+2026-10-03T00:17:45.545769+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:45 http: TLS handshake error from 127.0.0.1:44156: EOF
+2026-10-03T00:17:45.553156+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:45 http: TLS handshake error from 127.0.0.1:50538: EOF
+2026-10-03T00:17:45.561747+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:45 http: TLS handshake error from 127.0.0.1:50550: EOF
+2026-10-03T00:17:45.571738+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:45 http: TLS handshake error from 127.0.0.1:50576: EOF
+2026-10-03T00:17:45.602793+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:45 http: TLS handshake error from 127.0.0.1:50600: EOF
+2026-10-03T00:17:46.130340+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:46 http: TLS handshake error from 127.0.0.1:50624: EOF
+2026-10-03T00:17:46.139395+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:46 http: TLS handshake error from 127.0.0.1:50646: EOF
+2026-10-03T00:17:46.148378+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:46 http: TLS handshake error from 127.0.0.1:50658: EOF
+2026-10-03T00:17:46.158414+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:46 http: TLS handshake error from 127.0.0.1:50672: EOF
+2026-10-03T00:17:46.171566+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:46 http: TLS handshake error from 127.0.0.1:50686: EOF
+2026-10-03T00:17:48.528101+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:48 http: TLS handshake error from 127.0.0.1:50700: EOF
+2026-10-03T00:17:53.533442+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:53 http: TLS handshake error from 127.0.0.1:59158: EOF
+2026-10-03T00:17:58.535378+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:17:58 http: TLS handshake error from 127.0.0.1:59186: EOF
+2026-10-03T00:18:03.531927+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:18:03 http: TLS handshake error from 127.0.0.1:43004: EOF
+2026-10-03T00:18:03.577005+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:18:03 startup mail work, attempt 1 of 20: mail certificate publication completed (mail SNI from 0 active secure-mail certificates); mail filter wiring completed (milters="inet:localhost:11332" maps=hash)
+2026-10-03T00:18:08.532607+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:18:08 http: TLS handshake error from 127.0.0.1:43034: EOF
+2026-10-03T00:18:13.532894+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:18:13 http: TLS handshake error from 127.0.0.1:41970: EOF
+2026-10-03T00:18:18.541720+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:18:18 http: TLS handshake error from 127.0.0.1:44950: EOF
+2026-10-03T00:18:23.536208+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:18:23 http: TLS handshake error from 127.0.0.1:44976: EOF
+2026-10-03T00:18:28.768569+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:18:28 http: TLS handshake error from 127.0.0.1:57654: EOF
+2026-10-03T00:18:33.547773+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:18:33 http: TLS handshake error from 127.0.0.1:57684: EOF
+2026-10-03T00:18:38.539488+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:18:38 http: TLS handshake error from 127.0.0.1:47200: EOF
+2026-10-03T00:18:43.544928+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:18:43 http: TLS handshake error from 127.0.0.1:47226: EOF
+2026-10-03T00:18:48.536804+00:00 dns-ubuntu panel[77975]: 2026/10/03 00:18:48 http: TLS handshake error from 127.0.0.1:40466: EOF

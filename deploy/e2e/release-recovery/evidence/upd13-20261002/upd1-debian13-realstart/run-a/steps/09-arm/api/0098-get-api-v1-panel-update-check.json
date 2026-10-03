@@ -1,0 +1,83 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "PanelUpdateCard check",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/panel/update/check"
+  },
+  "response": {
+    "elapsed_seconds": 0.021,
+    "headers": [
+      [
+        "Cache-Control",
+        "no-store"
+      ],
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 02 Oct 2026 21:28:14 GMT"
+      ],
+      [
+        "Content-Length",
+        "415"
+      ]
+    ],
+    "json": {
+      "available": true,
+      "current_commit": "4a379faed756b87070a7f621787e9cbe0eef7d04",
+      "current_version": "v0.1.0-alpha.81",
+      "supported": true,
+      "target": {
+        "arch": "amd64",
+        "archive_sha256": "f8ac1437cf30ef574a579cdd099cc592c1e39898a04e81b5482e948f6759c886",
+        "archive_size": "65660278",
+        "commit": "b139dbf3946e5c1042ed61e6f26290b8a944325f",
+        "os": "linux",
+        "published_at": "2026-10-02T21:19:56Z",
+        "sequence": "82",
+        "version": "v0.1.0-alpha.82"
+      }
+    },
+    "status": 200,
+    "text": null
+  }
+}

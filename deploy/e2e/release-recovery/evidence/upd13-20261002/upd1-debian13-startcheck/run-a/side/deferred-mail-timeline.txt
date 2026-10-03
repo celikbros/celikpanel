@@ -1,0 +1,91 @@
+run /mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/release-recovery/evidence/upd13-20261002/upd1-debian13-startcheck/run-a/
+overall complete-for-review outcome recovered-automatically
+steps [('preflight', 'passed', '21:05:58', '21:06:02'), ('origin', 'passed', '21:06:02', '21:06:10'), ('baseline-install', 'passed', '21:06:10', '21:07:15'), ('owner-login', 'passed', '21:07:15', '21:07:16'), ('license', 'passed', '21:07:16', '21:07:16'), ('setup', 'observed', '21:07:16', '21:13:29'), ('seed', 'passed', '21:13:29', '21:13:31'), ('pre-state', 'passed', '21:13:31', '21:15:09'), ('arm', 'passed', '21:15:09', '21:15:10'), ('owner-start', 'passed', '21:15:10', '21:15:10'), ('track', 'passed', '21:15:10', '21:17:20'), ('owner-continuation (required)', 'skipped', '21:17:20', '21:17:20'), ('terminal', 'passed', '21:17:20', '21:17:26'), ('deferred-mail-watch', 'observed', '21:17:26', '21:18:43'), ('collect', 'passed', '21:18:43', '21:18:44'), ('verdicts', 'passed', '21:18:44', '21:18:44'), ('kind-expectation', 'passed', '21:18:44', '21:18:44')]
+
+== Panel processes (journal-product of collect)
+-- panel[5137] start 2026-10-02T21:07:03.657206+00:00
+   +   0.01s 21:07:03.667149 Connected to Agent RPC; preparing normal management access
+   +   0.04s 21:07:03.694507 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-debian13": a fully qualified DNS name is required; preserve pending outbox: <nil>
+   +   0.04s 21:07:03.698102 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   +   0.04s 21:07:03.698102 Panel ready on :2083 (HTTPS)
+-- panel[5202] start 2026-10-02T21:07:04.803782+00:00
+   +   0.01s 21:07:04.810972 Connected to Agent RPC; preparing normal management access
+   +   0.02s 21:07:04.822950 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-debian13": a fully qualified DNS name is required; preserve pending outbox: <nil>
+   +   0.02s 21:07:04.826068 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   +   0.02s 21:07:04.828318 Panel ready on :2083 (HTTPS)
+-- panel[4741] start 2026-10-02T21:17:14.222671+00:00
+   +   0.02s 21:17:14.242623 Connected to Agent RPC; preparing normal management access
+   +   0.10s 21:17:14.324508 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload
+   +   0.10s 21:17:14.325962 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+   +   0.11s 21:17:14.328297 milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+   +   0.11s 21:17:14.329487 Panel ready on :2083 (HTTPS)
+   +  38.23s 21:17:52.448937 startup mail work, attempt 1 of 20: mail certificate publication completed (mail SNI from 0 active secure-mail certificates); mail filter wiring completed (milters="inet:localhost:11332" maps=hash)
+
+== update / recovery units and mail side effects from 2026-10-02T21:17:14.222671+00:00
+     -84.95s 21:15:49.274550 systemd[1] celikpanel-self-update-b2af2f023748d5468b65f21a78aa06c8.service: Unit now frozen.
+     -84.48s 21:15:49.744582 systemd[1] Starting celikpanel-lab-recovery-fault-b2af2f023748d5468b65f21a78aa06c8.service - [systemd-run] /usr/bin/python3 -I /root/celikpanel-release-recovery-lab/guest_recovery_fault.py --execute --lab-nonce b60e55e80fa34cece806309721e2199c8c98e45d5a3bae8d14d63ce0fa873966 --vm-uuid fd37af07-493b-58b7-a0af-3
+     -84.46s 21:15:49.764366 systemd[1] Started celikpanel-lab-recovery-fault-b2af2f023748d5468b65f21a78aa06c8.service - [systemd-run] /usr/bin/python3 -I /root/celikpanel-release-recovery-lab/guest_recovery_fault.py --execute --lab-nonce b60e55e80fa34cece806309721e2199c8c98e45d5a3bae8d14d63ce0fa873966 --vm-uuid fd37af07-493b-58b7-a0af-36
+     -84.30s 21:15:49.924796 systemd[1] celikpanel-self-update-b2af2f023748d5468b65f21a78aa06c8.service: Unit now thawed.
+     -74.54s 21:15:59.682709 agent[26703] System update worker failed: reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=candidate_panel_startup_check_failed state=recovery_required reason=new panel start check failed before completion: panel startup check failed: tls_pair_invalid: the panel TLS certificate and priva
+     -74.54s 21:15:59.687181 systemd[1] celikpanel-self-update-b2af2f023748d5468b65f21a78aa06c8.service: Main process exited, code=exited, status=1/FAILURE
+     -74.54s 21:15:59.687298 systemd[1] celikpanel-self-update-b2af2f023748d5468b65f21a78aa06c8.service: Failed with result 'exit-code'.
+     -74.54s 21:15:59.687636 systemd[1] celikpanel-self-update-b2af2f023748d5468b65f21a78aa06c8.service: Consumed 39.340s CPU time, 487.4M memory peak.
+     -74.54s 21:15:59.687643 systemd[1] celikpanel-self-update-b2af2f023748d5468b65f21a78aa06c8.service: Triggering OnFailure= dependencies.
+     -74.53s 21:15:59.690854 systemd[1] Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+     -73.83s 21:16:00.393580 systemctl[37985] Failed to thaw unit celikpanel-self-update-b2af2f023748d5468b65f21a78aa06c8.service: Unit is not active
+     -73.83s 21:16:00.395675 systemd[1] celikpanel-lab-owner-update-observer-b2af2f023748d5468b65f21a78aa06c8.service: Deactivated successfully.
+     -73.83s 21:16:00.396041 systemd[1] celikpanel-lab-owner-update-observer-b2af2f023748d5468b65f21a78aa06c8.service: Consumed 12.722s CPU time, 19.5M memory peak.
+     -47.38s 21:16:26.842689 systemd[1] Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+     -44.98s 21:16:29.241654 systemd[1] celikpanel-release-recovery.service: Deactivated successfully.
+     -44.98s 21:16:29.241896 systemd[1] Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+     -44.98s 21:16:29.243973 systemd[1] celikpanel-release-recovery.service: Consumed 1.081s CPU time, 116.5M memory peak.
+     -14.69s 21:16:59.533569 systemd[1] Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+      +5.10s 21:17:19.321595 systemd[1] celikpanel-release-recovery.service: Deactivated successfully.
+      +5.10s 21:17:19.321815 systemd[1] Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+      +5.10s 21:17:19.322002 systemd[1] celikpanel-release-recovery.service: Consumed 17.030s CPU time, 137.4M memory peak.
+     +33.27s 21:17:47.496677 postfix/postfix-script[6468] warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+     +33.36s 21:17:47.580170 postfix/postmap[6498] warning: unsupported dictionary type: lmdb. Is the postfix-lmdb package installed?
+     +33.36s 21:17:47.580185 postfix/postmap[6498] fatal: unsupported map type: lmdb
+     +35.31s 21:17:49.535129 systemd[1] Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+     +35.70s 21:17:49.921477 systemd[1] celikpanel-release-recovery.service: Deactivated successfully.
+     +35.70s 21:17:49.921752 systemd[1] Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+     +66.31s 21:18:20.534115 systemd[1] Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+     +66.70s 21:18:20.925404 systemd[1] celikpanel-release-recovery.service: Deactivated successfully.
+     +66.70s 21:18:20.925625 systemd[1] Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+
+== status timeline (track samples, first time each CLI state was seen)
+   2026-10-02T21:15:10Z 11-track/samples/0001.json ('known', 'running', 'none', None) panel_api= queued
+   2026-10-02T21:16:05Z 11-track/samples/0012.json ('known', 'recovering', 'none', None) panel_api= None
+   2026-10-02T21:16:25Z 11-track/samples/0016.json (None, None, None, None) panel_api= None
+   2026-10-02T21:17:19Z 11-track/samples/0028.json ('known', 'recovered', 'rollback_verified', None) panel_api= failed
+
+== deferred-mail-watch steps/14-deferred-mail-watch/deferred-mail.json
+watch_seconds 76.6 polls 4 settle {"at": "2026-10-02T21:18:42Z", "attempt_lines_after": 1, "attempt_lines_before": 1, "repeated_after": [], "same_process": true, "seconds_after_resolution": 45.0}
+  pid 5137 start 2026-10-02T21:07:03.657206+00:00 ready 2026-10-02T21:07:03.698102+00:00 deferred [] finished True gave_up False repeated []
+  pid 5202 start 2026-10-02T21:07:04.803782+00:00 ready 2026-10-02T21:07:04.828318+00:00 deferred [] finished True gave_up False repeated []
+  pid 4741 start 2026-10-02T21:17:14.222671+00:00 ready 2026-10-02T21:17:14.329487+00:00 deferred ['mail certificate publication', 'mail filter wiring'] finished True gave_up False repeated []
+     attempt 1 of 20 2026-10-02T21:17:52.448937+00:00 | startup mail work, attempt 1 of 20: mail certificate publication completed (mail SNI from 0 active secure-mail certificates); mail filter wiring completed (milters="inet:localhost:11332" maps=hash)
+  mail file facts at watch start:
+     /etc/postfix/main.cf|3369|2026-10-02 21:11:02.034329860 +0000|ff24ef31f8e663e7fde8d327e4780d91a2f6fe1aad3ed1ff8094a5e17ba6f840
+     /etc/postfix/master.cf|8351|2026-10-02 21:10:59.430334342 +0000|cfe125b8a778f45acdcaa044932b3b912dc59d955364d36a2f9b9830cc3e2671
+     /etc/postfix/celikpanel_sni|absent
+     /etc/postfix/celikpanel_sni.db|absent
+     /etc/postfix/celikpanel_sni.lmdb|absent
+     /etc/postfix/virtual|0|2026-10-02 21:08:57.242563209 +0000|e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+     /etc/postfix/virtual.db|12288|2026-10-02 21:10:53.942343799 +0000|0eeacd12c827b441960800962ab8eeb9cc3b77fdae6ead4aaaa305dd96970718
+     /etc/postfix/vmailbox|45|2026-10-02 21:13:31.050074953 +0000|f6c71b2591448ed14d00271d2936b43dad94bf3451752800db32fc74d20eeaa7
+     /etc/postfix/vmailbox.db|12288|2026-10-02 21:13:31.066074926 +0000|b143110861a7f57d6c242ff34c60e6a292d160a7586c6b96245484452caaf04c
+     /etc/postfix/vmailbox_domains|19|2026-10-02 21:13:31.054074946 +0000|732ff498e7ae804a27c2f76cee4316f0d59e7ca60e9a8bcc667e704f8b7edb66
+     /etc/postfix/vmailbox_domains.db|12288|2026-10-02 21:13:31.078074905 +0000|50a9a01088b37afa06b3e68adaa3416478b7bb51ccc6ed0568368928e26d29e6
+     /etc/aliases.db|12288|2026-10-02 21:08:52.498574657 +0000|f22fc2c9c7c08a012e4575c086c207cf2f0697275483592b8d2e38e60526cef6
+     /etc/dovecot/conf.d/98-celikpanel-tls.conf|226|2026-10-02 21:11:02.046329839 +0000|34401efb739a363ac335c8efff78af940a831683f19f407c7c3065d5e1c3312f
+     postconf|smtpd_milters|inet:localhost:11332
+     postconf|non_smtpd_milters|
+     postconf|tls_server_sni_maps|
+  changed by watch end:
+     /etc/postfix/main.cf|3369|2026-10-02 21:17:50.775886361 +0000|ff24ef31f8e663e7fde8d327e4780d91a2f6fe1aad3ed1ff8094a5e17ba6f840
+     /etc/postfix/virtual.db|12288|2026-10-02 21:17:50.607838045 +0000|e5b0cb043020497f5ee29a7a969131b251e7ccbed18f899cf7d10aaa2fcd6267
+     /etc/postfix/vmailbox.db|12288|2026-10-02 21:17:50.587832294 +0000|9564e80622d4ad9813a8b5bde58983f1a8838f9b1aa3aa021ab90df249d9bf50
+     /etc/postfix/vmailbox_domains.db|12288|2026-10-02 21:17:50.635846098 +0000|8dd96d3876702357c9b59ecada2c01f37bf5bf0726230d6b94da2577f4b8ba46
+     /etc/dovecot/conf.d/98-celikpanel-tls.conf|226|2026-10-02 21:17:44.905972738 +0000|34401efb739a363ac335c8efff78af940a831683f19f407c7c3065d5e1c3312f
+  polls: [('21:17:26', 0, False), ('21:17:37', 0, False), ('21:17:47', 0, False), ('21:17:57', 1, True)]

@@ -1,0 +1,283 @@
+{
+  "checks": {
+    "deferred_mail": {
+      "last": {
+        "deferred": [
+          "mail certificate publication",
+          "mail filter wiring"
+        ],
+        "finished": true,
+        "gave_up": false,
+        "pid": "56605",
+        "ready_at": "2026-10-03T01:24:41.734091+00:00",
+        "repeated": [],
+        "resolved": {
+          "mail certificate publication": [
+            {
+              "at": "2026-10-03T01:25:20.374646+00:00",
+              "attempt": 1,
+              "outcome": "completed"
+            }
+          ],
+          "mail filter wiring": [
+            {
+              "at": "2026-10-03T01:25:20.374646+00:00",
+              "attempt": 1,
+              "outcome": "completed"
+            }
+          ]
+        },
+        "started_at": "2026-10-03T01:24:41.661057+00:00"
+      },
+      "panel_processes": [
+        {
+          "attempt_lines": 0,
+          "deferred": [],
+          "finished": true,
+          "gave_up": false,
+          "pid": "4999",
+          "ready_at": "2026-10-03T01:07:51.758050+00:00",
+          "repeated": [],
+          "started_at": "2026-10-03T01:07:51.726106+00:00"
+        },
+        {
+          "attempt_lines": 0,
+          "deferred": [],
+          "finished": true,
+          "gave_up": false,
+          "pid": "5090",
+          "ready_at": "2026-10-03T01:07:52.897838+00:00",
+          "repeated": [],
+          "started_at": "2026-10-03T01:07:52.875419+00:00"
+        },
+        {
+          "attempt_lines": 0,
+          "deferred": [],
+          "finished": true,
+          "gave_up": false,
+          "pid": "37014",
+          "ready_at": null,
+          "repeated": [],
+          "started_at": "2026-10-03T01:17:55.556683+00:00"
+        },
+        {
+          "attempt_lines": 0,
+          "deferred": [],
+          "finished": true,
+          "gave_up": false,
+          "pid": "37236",
+          "ready_at": null,
+          "repeated": [],
+          "started_at": "2026-10-03T01:17:58.855143+00:00"
+        },
+        {
+          "attempt_lines": 0,
+          "deferred": [],
+          "finished": true,
+          "gave_up": false,
+          "pid": "37650",
+          "ready_at": null,
+          "repeated": [],
+          "started_at": "2026-10-03T01:18:04.678076+00:00"
+        },
+        {
+          "attempt_lines": 0,
+          "deferred": [],
+          "finished": true,
+          "gave_up": false,
+          "pid": "38356",
+          "ready_at": null,
+          "repeated": [],
+          "started_at": "2026-10-03T01:18:15.220752+00:00"
+        },
+        {
+          "attempt_lines": 0,
+          "deferred": [],
+          "finished": true,
+          "gave_up": false,
+          "pid": "39626",
+          "ready_at": null,
+          "repeated": [],
+          "started_at": "2026-10-03T01:18:34.472108+00:00"
+        },
+        {
+          "attempt_lines": 0,
+          "deferred": [],
+          "finished": true,
+          "gave_up": false,
+          "pid": "43101",
+          "ready_at": null,
+          "repeated": [],
+          "started_at": "2026-10-03T01:19:04.964567+00:00"
+        },
+        {
+          "attempt_lines": 0,
+          "deferred": [],
+          "finished": true,
+          "gave_up": false,
+          "pid": "43198",
+          "ready_at": null,
+          "repeated": [],
+          "started_at": "2026-10-03T01:19:08.253155+00:00"
+        },
+        {
+          "attempt_lines": 0,
+          "deferred": [],
+          "finished": true,
+          "gave_up": false,
+          "pid": "43350",
+          "ready_at": null,
+          "repeated": [],
+          "started_at": "2026-10-03T01:19:14.224006+00:00"
+        },
+        {
+          "attempt_lines": 0,
+          "deferred": [],
+          "finished": true,
+          "gave_up": false,
+          "pid": "43616",
+          "ready_at": null,
+          "repeated": [],
+          "started_at": "2026-10-03T01:19:24.804310+00:00"
+        },
+        {
+          "attempt_lines": 0,
+          "deferred": [],
+          "finished": true,
+          "gave_up": false,
+          "pid": "44038",
+          "ready_at": null,
+          "repeated": [],
+          "started_at": "2026-10-03T01:19:44.047386+00:00"
+        },
+        {
+          "attempt_lines": 0,
+          "deferred": [],
+          "finished": true,
+          "gave_up": false,
+          "pid": "47041",
+          "ready_at": null,
+          "repeated": [],
+          "started_at": "2026-10-03T01:20:43.543886+00:00"
+        },
+        {
+          "attempt_lines": 0,
+          "deferred": [],
+          "finished": true,
+          "gave_up": false,
+          "pid": "47130",
+          "ready_at": null,
+          "repeated": [],
+          "started_at": "2026-10-03T01:20:46.971947+00:00"
+        },
+        {
+          "attempt_lines": 0,
+          "deferred": [],
+          "finished": true,
+          "gave_up": false,
+          "pid": "47269",
+          "ready_at": null,
+          "repeated": [],
+          "started_at": "2026-10-03T01:20:52.786902+00:00"
+        },
+        {
+          "attempt_lines": 0,
+          "deferred": [],
+          "finished": true,
+          "gave_up": false,
+          "pid": "47535",
+          "ready_at": null,
+          "repeated": [],
+          "started_at": "2026-10-03T01:21:03.367356+00:00"
+        },
+        {
+          "attempt_lines": 0,
+          "deferred": [],
+          "finished": true,
+          "gave_up": false,
+          "pid": "47955",
+          "ready_at": null,
+          "repeated": [],
+          "started_at": "2026-10-03T01:21:22.616188+00:00"
+        },
+        {
+          "attempt_lines": 0,
+          "deferred": [],
+          "finished": true,
+          "gave_up": false,
+          "pid": "51016",
+          "ready_at": null,
+          "repeated": [],
+          "started_at": "2026-10-03T01:22:23.578990+00:00"
+        },
+        {
+          "attempt_lines": 0,
+          "deferred": [],
+          "finished": true,
+          "gave_up": false,
+          "pid": "51115",
+          "ready_at": null,
+          "repeated": [],
+          "started_at": "2026-10-03T01:22:26.962975+00:00"
+        },
+        {
+          "attempt_lines": 0,
+          "deferred": [],
+          "finished": true,
+          "gave_up": false,
+          "pid": "51255",
+          "ready_at": null,
+          "repeated": [],
+          "started_at": "2026-10-03T01:22:32.822352+00:00"
+        },
+        {
+          "attempt_lines": 0,
+          "deferred": [],
+          "finished": true,
+          "gave_up": false,
+          "pid": "51523",
+          "ready_at": null,
+          "repeated": [],
+          "started_at": "2026-10-03T01:22:43.466989+00:00"
+        },
+        {
+          "attempt_lines": 0,
+          "deferred": [],
+          "finished": true,
+          "gave_up": false,
+          "pid": "51955",
+          "ready_at": null,
+          "repeated": [],
+          "started_at": "2026-10-03T01:23:02.745612+00:00"
+        },
+        {
+          "attempt_lines": 1,
+          "deferred": [
+            "mail certificate publication",
+            "mail filter wiring"
+          ],
+          "finished": true,
+          "gave_up": false,
+          "pid": "56605",
+          "ready_at": "2026-10-03T01:24:41.734091+00:00",
+          "repeated": [],
+          "started_at": "2026-10-03T01:24:41.661057+00:00"
+        }
+      ],
+      "settle": {
+        "at": "2026-10-03T01:26:08Z",
+        "attempt_lines_after": 1,
+        "attempt_lines_before": 1,
+        "repeated_after": [],
+        "same_process": true,
+        "seconds_after_resolution": 45.0
+      },
+      "watch_seconds": 66.3
+    },
+    "polls": 3
+  },
+  "finished_at": "2026-10-03T01:26:08Z",
+  "name": "deferred-mail-watch",
+  "started_at": "2026-10-03T01:25:02Z",
+  "verdict": "observed"
+}

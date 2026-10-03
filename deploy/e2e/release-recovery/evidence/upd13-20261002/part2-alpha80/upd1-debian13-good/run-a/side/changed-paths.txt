@@ -1,0 +1,33 @@
+evidence /var/tmp/cp-release-drill-upd13-a80-d13-good-a/evidence/debian13/upd1/upd1-debian13-good-20261003t004107z/
+## initial-record (updater wrote it): 0 hits (0 in .txt)
+## curl preflight refusal: 0 hits (0 in .txt)
+## no-marker after child failure: 0 hits (0 in .txt)
+## pause_pending journal: 0 hits (0 in .txt)
+## renewal restore at pause: 0 hits (0 in .txt)
+## pause recorded: 0 hits (0 in .txt)
+## start check failure: 0 hits (0 in .txt)
+## package-activity refusal (startup reconcile): 6 hits (4 in .txt)
+   steps/14-deferred-mail-watch/journal-panel.txt:192: 2026-10-03T00:51:51.827972+00:00 dns-debian13 panel[36585]: 2026/10/03 00:51:51 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minu
+   steps/14-deferred-mail-watch/journal-panel.txt:193: 2026-10-03T00:51:51.829620+00:00 dns-debian13 panel[36585]: 2026/10/03 00:51:51 milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+## package_manager_active / HOST_MUTATION_BUSY: 0 hits (0 in .txt)
+## startup reconcile success: 2 hits (2 in .txt)
+   steps/14-deferred-mail-watch/journal-panel.txt:191: 2026-10-03T00:51:51.825729+00:00 dns-debian13 panel[36585]: 2026/10/03 00:51:51 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload
+## milter chain/wiring: 9 hits (6 in .txt)
+   steps/14-deferred-mail-watch/journal-panel.txt:8: 2026-10-03T00:42:04.586688+00:00 dns-debian13 panel[5064]: 2026/10/03 00:42:04 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-deferred-mail-watch/journal-panel.txt:21: 2026-10-03T00:42:05.700703+00:00 dns-debian13 panel[5157]: 2026/10/03 00:42:05 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-deferred-mail-watch/journal-panel.txt:193: 2026-10-03T00:51:51.829620+00:00 dns-debian13 panel[36585]: 2026/10/03 00:51:51 milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+## deferred retry note on a startup refusal: 6 hits (4 in .txt)
+   steps/14-deferred-mail-watch/journal-panel.txt:192: 2026-10-03T00:51:51.827972+00:00 dns-debian13 panel[36585]: 2026/10/03 00:51:51 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minu
+   steps/14-deferred-mail-watch/journal-panel.txt:193: 2026-10-03T00:51:51.829620+00:00 dns-debian13 panel[36585]: 2026/10/03 00:51:51 milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+## deferred retry attempt line: 3 hits (2 in .txt)
+   steps/14-deferred-mail-watch/journal-panel.txt:227: 2026-10-03T00:52:30.577501+00:00 dns-debian13 panel[36585]: 2026/10/03 00:52:30 startup mail work, attempt 1 of 20: mail certificate publication completed (mail SNI from 0 active secure-mail certificates); mail filter wiring completed (milters="inet:localhost:11332" maps=hash)
+## deferred retry: busy again (attempt > 1): 0 hits (0 in .txt)
+## deferred retry: verified failure: 0 hits (0 in .txt)
+## deferred retry: give-up: 0 hits (0 in .txt)
+## root CLI states (first seen)
+   2026-10-03T00:51:14Z (None, None, None, None, None)
+   2026-10-03T00:51:25Z (None, 'observation_unavailable', None, None, None)
+   2026-10-03T00:51:32Z ('running', 'update_running', None, None, None)
+   2026-10-03T00:52:01Z ('succeeded', 'update_verified', None, None, None)
+## CELIKPANEL_LISTEN mentions
+   steps/15-collect/journal-product.txt 2026-10-03T00:51:49.986227+00:00 dns-debian13 sudo[36101]:     root : PWD=/var/backups/celikpanel/releases/56bc29094bc3-82022b0c6a95f2468a78873e ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/l

@@ -1,0 +1,206 @@
+{
+  "checks": {
+    "cli_text_source": {
+      "commit": "4a379faed756b87070a7f621787e9cbe0eef7d04",
+      "path": "cmd/recovery/main.go",
+      "role": "baseline",
+      "sha256": "689e2f1066c9fac77bade6d3844903412987420fc59dd73f4c1edd0de91a766d"
+    },
+    "judged": {
+      "expected": [
+        "rolled-back",
+        "status-failure-code",
+        "update-failure-line",
+        "fixture-reason",
+        "sidecar",
+        "no-completion-marker",
+        "rollback-dispatch",
+        "update-card",
+        "old-release-running",
+        "database-equal",
+        "cli-returned-text",
+        "web-catalogue"
+      ],
+      "findings": [],
+      "kind": "start-check",
+      "native_evidence": false,
+      "unknown": [],
+      "verdict": "as-expected"
+    },
+    "observations": {
+      "attempts": {
+        "automatic": [
+          {
+            "at": "2026-10-02T21:16:01.316498Z",
+            "attempt": "1",
+            "direction": "rollback",
+            "operation": "update",
+            "phase": "active"
+          },
+          {
+            "at": "2026-10-02T21:17:00.443572Z",
+            "attempt": "2",
+            "direction": "rollback",
+            "operation": "rollback",
+            "phase": "active"
+          }
+        ],
+        "automatic_count": 2,
+        "journal_admissions": [
+          {
+            "at": "2026-10-02T21:16:01.402016+00:00",
+            "attempt": "1",
+            "snapshot": "20261002T211531Z-from-unknown-to-993149f75c883c1c62bdfef536c2b5d42c85d059-bbffe17b8afe1a6f31fc58093b6d3890"
+          },
+          {
+            "at": "2026-10-02T21:17:00.508146+00:00",
+            "attempt": "2",
+            "snapshot": "20261002T211531Z-from-unknown-to-993149f75c883c1c62bdfef536c2b5d42c85d059-bbffe17b8afe1a6f31fc58093b6d3890"
+          }
+        ],
+        "owner": [],
+        "owner_count": 0
+      },
+      "check_reasons": [
+        "tls_pair_invalid"
+      ],
+      "cli": {
+        "by_key": {
+          "candidate_panel_startup_check_failed.pending": {
+            "en": 9,
+            "first_utc": "2026-10-02T21:16:05Z",
+            "last_utc": "2026-10-02T21:17:16Z",
+            "samples": 9,
+            "tr": 9
+          },
+          "candidate_panel_startup_check_failed.recovered": {
+            "en": 1,
+            "first_utc": "2026-10-02T21:17:19Z",
+            "last_utc": "2026-10-02T21:17:19Z",
+            "samples": 1,
+            "tr": 1
+          }
+        },
+        "mismatches": [],
+        "panel_log_command": "sudo journalctl -u celikpanel-panel -n 50",
+        "panel_log_command_seen": {
+          "en": false,
+          "tr": false
+        },
+        "recorded_cause_lines": {
+          "en": 16,
+          "tr": 16
+        }
+      },
+      "completion_marker_seen": false,
+      "database": "equal-except-volatile",
+      "final": {
+        "failure_code": "candidate_panel_startup_check_failed",
+        "observation": "known",
+        "observed_at": "2026-10-02T21:17:19Z",
+        "phase": "recovered",
+        "previous_failure": "update_failed",
+        "reason": "rollback_verified",
+        "request_id": "b2af2f023748d5468b65f21a78aa06c8",
+        "schema": "celikpanel-recovery-status/v1",
+        "terminal_proof": "rollback_verified"
+      },
+      "installed": "baseline",
+      "outcome": "recovered-automatically",
+      "owner_retry_run": false,
+      "panel_verdict": "down-only-during-transaction",
+      "printed_retry_command": null,
+      "receipt_dispatches": [
+        {
+          "attempt": "1",
+          "direction": "rollback",
+          "operation": "update",
+          "phase": "active"
+        },
+        {
+          "attempt": "2",
+          "direction": "rollback",
+          "operation": "rollback",
+          "phase": "active"
+        }
+      ],
+      "receipt_phases": [
+        "active",
+        "active"
+      ],
+      "renewal_sidecar": {
+        "present": true,
+        "valid": true,
+        "value": "on"
+      },
+      "sidecar": {
+        "code": "candidate_panel_startup_check_failed",
+        "present": true,
+        "valid": true
+      },
+      "track_stop": null,
+      "update_card": {
+        "findings": [],
+        "server_message_line": null,
+        "verdict": "as-expected"
+      },
+      "update_failure_codes": [
+        "candidate_panel_startup_check_failed"
+      ],
+      "update_failure_lines": [
+        {
+          "code": "candidate_panel_startup_check_failed",
+          "reason": "new panel start check failed before completion: panel startup check failed: tls_pair_invalid: the panel TLS certificate and private key cannot be loaded as a matching pair",
+          "state": "recovery_required"
+        }
+      ],
+      "views": {
+        "last": {
+          "offline_page_served": "panel-reachable",
+          "panel_recovery_status": true,
+          "panel_update_status": true,
+          "root_cli": true
+        },
+        "ssh_owner_view": "not attempted (recovery view needs an interactive SSH terminal and a one-time code)",
+        "summary": {
+          "panel_recovery_status": {
+            "reachable": 9,
+            "samples": 28
+          },
+          "panel_update_status": {
+            "reachable": 9,
+            "samples": 28
+          },
+          "root_cli": {
+            "reachable": 27,
+            "samples": 28
+          }
+        }
+      },
+      "web_keys": [
+        "recovery.failure.candidate_panel_startup_check_failed.recovered",
+        "recovery.failure.candidate_panel_startup_check_failed.returning",
+        "recovery.next.running",
+        "recovery.phase.recovered",
+        "recovery.phase.recovering",
+        "recovery.phase.running",
+        "recovery.previousFailure",
+        "recovery.reason.candidate_panel_startup_check_failed",
+        "recovery.wait.next",
+        "recovery.wait.starting"
+      ],
+      "web_keys_missing": [],
+      "web_screen_unavailable": null,
+      "workloads": {
+        "cron": "never-interrupted",
+        "dns": "not-provided-external-dns",
+        "smtp": "interrupted-only-by-host-reset",
+        "web": "interrupted-only-by-host-reset"
+      }
+    }
+  },
+  "finished_at": "2026-10-02T21:18:44Z",
+  "name": "kind-expectation",
+  "started_at": "2026-10-02T21:18:44Z",
+  "verdict": "passed"
+}

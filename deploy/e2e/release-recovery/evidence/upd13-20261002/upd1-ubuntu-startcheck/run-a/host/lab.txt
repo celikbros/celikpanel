@@ -1,0 +1,2 @@
+lab=/var/tmp/cp-release-drill-upd13-ub-sc-a
+upd1-ubuntu-startcheck-20261002t233357z

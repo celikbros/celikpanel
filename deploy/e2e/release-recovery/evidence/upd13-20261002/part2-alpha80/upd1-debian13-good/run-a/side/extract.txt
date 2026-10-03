@@ -1,0 +1,34 @@
+evidence /var/tmp/cp-release-drill-upd13-a80-d13-good-a/evidence/debian13/upd1/upd1-debian13-good-20261003t004107z/
+== 11-track/samples
+2026-10-03T00:51:14Z panel= queued api= 404 None None cli= None|None|None|None|None|None|None cli_status= unavailable
+2026-10-03T00:51:16Z panel= running api= 404 None None cli= None|None|None|None|None|None|None cli_status= unavailable
+2026-10-03T00:51:18Z panel= running api= 404 None None cli= None|None|None|None|None|None|None cli_status= unavailable
+2026-10-03T00:51:21Z panel= running api= 404 None None cli= None|None|None|None|None|None|None cli_status= unavailable
+2026-10-03T00:51:25Z panel= running api= 404 None None cli= unavailable|None|none|observation_unavailable|None|None|None cli_status= ok
+2026-10-03T00:51:32Z panel= PanelError api= None None None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-03T00:51:33Z panel= PanelError api= None None None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-03T00:51:36Z panel= PanelError api= None None None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-03T00:51:40Z panel= PanelError api= None None None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-03T00:51:47Z panel= PanelError api= None None None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-03T00:51:57Z panel= running api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-03T00:51:58Z panel= running api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-03T00:52:01Z panel= succeeded api= 200 succeeded None cli= known|succeeded|update_verified|update_verified|None|None|None cli_status= ok
+== distinct CLI texts
+# None|None|None|None|None|None|None first 2026-10-03T00:51:14Z
+  EN : 
+  TR : 
+# unavailable|None|none|observation_unavailable|None|None|None first 2026-10-03T00:51:25Z
+  EN : The result of this update could not be read, so it is unknown. Nothing is known yet about which version the server runs. Check this same request again in a minute; keep the server as it is and do not start another update meanwhile. If it stays unknown, the recovery journal shows whether automatic recovery is running or paused and, at a pause, the one-time retry command: sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50 / Request: 01aff38911fd25b388aa1b690f4dab3a / This is a recorded observation; current service health was not checked. / Recorded state (for support): observation=unavailable reason=observation_unavailable proof=none
+  TR : Bu güncellemenin sonucu okunamadı; sonuç bilinmiyor. Sunucunun hangi sürümü çalıştırdığı henüz bilinmiyor. Bir dakika sonra aynı işlemi yeniden sorgulayın; bu arada sunucuya dokunmayın ve başka güncelleme başlatmayın. Bilinmiyor olarak kalırsa kurtarma günlüğü otomatik kurtarmanın çalışıp çalışmadığını ya da durduğunu ve duraklamada tek seferlik yeniden deneme komutunu gösterir: sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50 / İşlem: 01aff38911fd25b388aa1b690f4dab3a / Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi. / Kayıtlı durum (destek için): observation=unavailable reason=observation_unavailable proof=none
+# known|running|none|update_running|None|None|None first 2026-10-03T00:51:32Z
+  EN : The update is being applied; the panel may be unavailable for a short time. Nothing to do now: check this same request again in a minute. Checking does not restart the update. / Request: 01aff38911fd25b388aa1b690f4dab3a / Recorded at: 2026-10-03T00:51:28Z / This is a recorded observation; current service health was not checked. / Recorded state (for support): phase=running reason=update_running proof=none
+  TR : Güncelleme uygulanıyor; panel kısa bir süre erişilemeyebilir. Şimdi yapmanız gereken bir şey yok: bir dakika sonra aynı işlemi yeniden sorgulayın. Sorgulamak güncellemeyi yeniden başlatmaz. / İşlem: 01aff38911fd25b388aa1b690f4dab3a / Kayıt zamanı: 2026-10-03T00:51:28Z / Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi. / Kayıtlı durum (destek için): phase=running reason=update_running proof=none
+# known|succeeded|update_verified|update_verified|None|None|None first 2026-10-03T00:52:01Z
+  EN : The update completed and the new version was verified when it finished. Nothing else is needed on the server. Open the panel to check that everything works now. / Request: 01aff38911fd25b388aa1b690f4dab3a / Recorded at: 2026-10-03T00:52:02Z / This is a recorded observation; current service health was not checked. / Recorded state (for support): phase=succeeded reason=update_verified proof=update_verified
+  TR : Güncelleme tamamlandı ve yeni sürüm bittiği anda doğrulandı. Sunucuda başka bir işlem gerekmiyor. Her şeyin şu an çalıştığını görmek için paneli açın. / İşlem: 01aff38911fd25b388aa1b690f4dab3a / Kayıt zamanı: 2026-10-03T00:52:02Z / Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi. / Kayıtlı durum (destek için): phase=succeeded reason=update_verified proof=update_verified
+== journal lines
+-- steps/15-collect/journal-setup-services.txt 2
+    2026-10-03T00:43:27.744604+00:00 dns-debian13 mariadbd[13062]: 2026-10-03  0:43:27 0 [Note] InnoDB: 128 rollback segments in 3 undo tablespaces are active.
+    2026-10-03T00:43:28.439065+00:00 dns-debian13 /etc/mysql/debian-start[13096]: Triggering myisam-recover for all MyISAM tables and aria-recover for all Aria tables
+== result {"overall": "complete-for-review", "native_evidence": false, "request_id": "01aff38911fd25b388aa1b690f4dab3a"} {"attempts": {"automatic": [], "automatic_count": 0, "journal_admissions": [], "owner": [], "owner_count": 0}, "classification": "update-verified", "final_status": {"observation": "known", "observed_at": "2026-10-03T00:52:02Z", "phase": "succeeded", "reason": "update_verified", "request_id": "01aff38911fd25b388aa1b690f4dab3a", "schema": "celikpanel-recovery-status/v1", "terminal_proof": "update_verified"}, "owner_continuation": false, "owner_reboot": null, "pin_changes": [], "port_hold": null, "reboot": null, "track_stop": null}
+findings ["debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['10-panel_certificate', '11-access_dns', '12-mail_certificate', '13-verify']", "debian13: cron: not available on this baseline (crontab absent before seeding); the owner cron job was not created and cron continuity is not measured"]

@@ -1,0 +1,38 @@
+2026-10-03T02:32:38Z
+947M	/var/tmp/cp-upd13-run
+921M	/var/tmp/cp-release-drill-upd13-a80-d13-def-a
+921M	/var/tmp/cp-release-drill-upd13-a80-d13-good-a
+921M	/var/tmp/cp-release-drill-upd13-a80-d13-oc-a
+662M	/var/tmp/cp-release-drill-upd13-a80-ub-good-a
+921M	/var/tmp/cp-release-drill-upd13-arch-def-a
+921M	/var/tmp/cp-release-drill-upd13-arch-good-a
+921M	/var/tmp/cp-release-drill-upd13-arch-mr-a
+920M	/var/tmp/cp-release-drill-upd13-arch-oc-a
+921M	/var/tmp/cp-release-drill-upd13-arch-oc-b
+921M	/var/tmp/cp-release-drill-upd13-arch-sc-a
+921M	/var/tmp/cp-release-drill-upd13-d13-def-a
+921M	/var/tmp/cp-release-drill-upd13-d13-good-a
+921M	/var/tmp/cp-release-drill-upd13-d13-mr-a
+921M	/var/tmp/cp-release-drill-upd13-d13-oc-a
+922M	/var/tmp/cp-release-drill-upd13-d13-rs-a
+921M	/var/tmp/cp-release-drill-upd13-d13-sc-a
+662M	/var/tmp/cp-release-drill-upd13-ub-def-a
+661M	/var/tmp/cp-release-drill-upd13-ub-good-a
+662M	/var/tmp/cp-release-drill-upd13-ub-mr-a
+662M	/var/tmp/cp-release-drill-upd13-ub-oc-a
+662M	/var/tmp/cp-release-drill-upd13-ub-sc-a
+816M	/var/tmp/cp-upd1-build/20261002t203047z
+821M	/var/tmp/cp-upd1-build/20261002t203514z
+792M	/var/tmp/cp-pair-accept/dist/47c0b4c2d68ae75258a36dad469c2a41758e1e1c-acceptance-license
+792M	/var/tmp/cp-pair-accept/dist/4a379faed756b87070a7f621787e9cbe0eef7d04-acceptance-license
+792M	/var/tmp/cp-pair-accept/dist/56bc29094bc37d3c74e3cee66677958ce38d4d27-acceptance-license
+792M	/var/tmp/cp-pair-accept/dist/681efd709b56ad114d752967feac2d66bb99894c-acceptance-license
+792M	/var/tmp/cp-pair-accept/dist/6acb22f6d5ce471d57131ed5ecff24c85b9d8844-acceptance-license
+133M	/var/tmp/cp-pair-accept/dist/82958d4a730a50b07fc0983a3947e1fa7b9528e4-acceptance-license
+792M	/var/tmp/cp-pair-accept/dist/993149f75c883c1c62bdfef536c2b5d42c85d059-acceptance-license
+792M	/var/tmp/cp-pair-accept/dist/b139dbf3946e5c1042ed61e6f26290b8a944325f-acceptance-license
+overlay disks still present in upd13 labs:
+none
+no dry-run lab
+git local config key list fingerprint: 4363b888278fa3d86af32af8199c5bc0  -
+HEAD f6cdd5a0c27ca865a2dc50239b106046e13739b7

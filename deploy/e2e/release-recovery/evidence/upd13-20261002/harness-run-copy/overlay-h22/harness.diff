@@ -1,0 +1,115 @@
+--- a/deploy/e2e/release-recovery/owner_update_trial.py
++++ b/deploy/e2e/release-recovery/owner_update_trial.py
+@@ -474,6 +474,18 @@
+ PANEL_JOURNAL_LINE = re.compile(r"^(\S+) \S+ panel\[(\d+)\]: (?:\d{4}/\d\d/\d\d \d\d:\d\d:\d\d )?(.*)$")
+ 
+ 
++# upd13 H22: failed baseline status reads tolerated while the installer runs (at the 15 s poll: about two minutes).
++BASELINE_STATUS_READ_FAILURES_MAX = 8
++
++
++def baseline_status_read_failure(exc: subprocess.CalledProcessError) -> dict:
++    """upd13 H22: one failed read of the baseline installer's status, as recorded (exit code and the guest's last
++    stderr line; the command line holds no secret but is not kept)."""
++    stderr = exc.stderr if isinstance(exc.stderr, str) else (exc.stderr or b"").decode("utf-8", "replace")
++    lines = [line for line in stderr.strip().splitlines() if line.strip()]
++    return {"at": utc_now(), "returncode": exc.returncode, "stderr_tail": lines[-3:]}
++
++
+ def provenance_for(variant: str) -> dict:
+     """The good and migrate-only cells keep their provenance unchanged; the start kinds name their own defect."""
+     if LABEL_REF is None and variant not in KIND_PROVENANCE:
+@@ -3670,8 +3682,20 @@
+         checks["start"] = started
+         deadline = time.monotonic() + 3000
+         status = None
++        failed_reads: list[dict] = []
+         while time.monotonic() < deadline:
+-            status = baseline.status(self.root, self.record, self.plan, self.node_name)
++            try:
++                status = baseline.status(self.root, self.record, self.plan, self.node_name)
++            except subprocess.CalledProcessError as exc:
++                # upd13 H22: the Arch installer's own full upgrade (pacman -Syu) replaces PAM, and for a moment the
++                # guest's sudo cannot load it; that read is recorded and repeated at the next poll. A failure that
++                # persists still stops the step.
++                failed_reads.append(baseline_status_read_failure(exc))
++                checks["h22_failed_status_reads"] = failed_reads
++                if len(failed_reads) >= BASELINE_STATUS_READ_FAILURES_MAX:
++                    raise
++                time.sleep(15)
++                continue
+             if status.get("installation") is not None:
+                 break
+             time.sleep(15)
+--- a/deploy/e2e/release-recovery/test_owner_update_trial.py
++++ b/deploy/e2e/release-recovery/test_owner_update_trial.py
+@@ -3901,5 +3901,69 @@
+             self.assertNotIn(word, script)
+ 
+ 
++class H22BaselineStatusReadTests(unittest.TestCase):
++    """upd13 H22: a failed read of the installer status (Arch: pacman -Syu replaces PAM, sudo cannot load it for a
++    moment) is recorded and read again; a failure that persists still stops the step."""
++
++    PAM = ("sudo: error in /etc/sudo.conf, line 0 while loading plugin \"sudoers_policy\"\n"
++           "sudo: unable to load /usr/lib/sudo/sudoers.so: libpam.so.0: cannot open shared object file: No such file "
++           "or directory\nsudo: fatal error, unable to load plugins\n")
++
++    def trial(self, failures, directory):
++        log = Path(directory) / "install.log"
++        log.write_text("installed\n")
++        calls = {"status": 0}
++
++        def status(*_args):
++            calls["status"] += 1
++            if calls["status"] <= failures:
++                raise subprocess.CalledProcessError(1, ["ssh", "sudo /bin/bash -s"], output="", stderr=self.PAM)
++            return {"installation": {"verified": True}}
++
++        baseline = SimpleNamespace(
++            COMMIT="x", LOG="log", archive_tools=SimpleNamespace(verify_committed_source=lambda *a, **k: None),
++            start=lambda *a, **k: {"action": "started"}, status=status,
++            collect=lambda *a: {"artifacts": {"log": {"path": str(log)}}})
++        trial = object.__new__(t.Trial)
++        trial.m = {"baseline": baseline}
++        trial.artifacts = {"baseline": {"archive": "/x.tar.gz", "commit": "c", "sha256": "s"}, "clone": "/repo"}
++        trial.root = trial.record = trial.plan = None
++        trial.node_name = "arch"
++        trial.state = {"public_key_sha256": "k"}
++        trial.p = {"install_steps": SimpleNamespace(installer_restart_notice=lambda _log: {"state": "not-required"})}
++        return trial, calls
++
++    def run_install(self, failures):
++        with tempfile.TemporaryDirectory() as directory:
++            trial, calls = self.trial(failures, directory)
++            checks: dict = {}
++            with mock.patch.object(t, "acceptance_source_proof", lambda verify, *_: verify), \
++                    mock.patch.object(t.time, "sleep", lambda _s: None):
++                try:
++                    verdict = trial.baseline_install(checks)
++                except subprocess.CalledProcessError:
++                    verdict = "raised"
++            return verdict, checks, calls
++
++    def test_h22_a_failed_status_read_is_read_again(self):
++        verdict, checks, calls = self.run_install(2)
++        self.assertEqual(verdict, "passed")
++        self.assertEqual(calls["status"], 3)
++        self.assertEqual(len(checks["h22_failed_status_reads"]), 2)
++        self.assertIn("libpam.so.0", checks["h22_failed_status_reads"][0]["stderr_tail"][1])
++        self.assertEqual(checks["h22_failed_status_reads"][0]["returncode"], 1)
++
++    def test_h22_a_persisting_failure_still_stops_the_step(self):
++        verdict, checks, calls = self.run_install(100)
++        self.assertEqual(verdict, "raised")
++        self.assertEqual(calls["status"], t.BASELINE_STATUS_READ_FAILURES_MAX)
++        self.assertEqual(len(checks["h22_failed_status_reads"]), t.BASELINE_STATUS_READ_FAILURES_MAX)
++
++    def test_h22_no_failure_records_nothing(self):
++        verdict, checks, _ = self.run_install(0)
++        self.assertEqual(verdict, "passed")
++        self.assertNotIn("h22_failed_status_reads", checks)
++
++
+ if __name__ == "__main__":
+     unittest.main()

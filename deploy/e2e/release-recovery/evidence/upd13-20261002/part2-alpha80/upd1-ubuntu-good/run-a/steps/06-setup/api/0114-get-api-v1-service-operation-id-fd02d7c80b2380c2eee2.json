@@ -1,0 +1,102 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "ServerSetup failed step component operation",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/service/operation?id=fd02d7c80b2380c2eee29d26511b3b2d"
+  },
+  "response": {
+    "elapsed_seconds": 0.003,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Sat, 03 Oct 2026 01:56:40 GMT"
+      ],
+      [
+        "Content-Length",
+        "755"
+      ]
+    ],
+    "json": {
+      "operation": {
+        "error": {
+          "code": "mail_profile_install_failed",
+          "message": "The mail profile could not be installed and verified."
+        },
+        "finished_at": "2026-10-03T01:56:33.34315499Z",
+        "id": "fd02d7c80b2380c2eee29d26511b3b2d",
+        "kind": "mail_profile_install",
+        "phase": "profile/protected-mail/mail-tls",
+        "request_id": "2993c9418fb8b3851938b5d21625b510",
+        "result": {
+          "completed_services": [
+            "postfix",
+            "dovecot",
+            "rspamd"
+          ],
+          "mail_hostname": "mail-ubuntu.upd1-infra.test",
+          "mail_tls": {
+            "configured": false,
+            "fallback_only": false,
+            "sni_count": 0
+          },
+          "profile_id": "protected-mail",
+          "proof_version": 1,
+          "services": [
+            "postfix",
+            "dovecot",
+            "rspamd"
+          ],
+          "submission_configured": true,
+          "success": false,
+          "warnings": []
+        },
+        "service_id": "protected-mail",
+        "started_at": "2026-10-03T01:55:44.854378313Z",
+        "status": "failed"
+      }
+    },
+    "status": 200,
+    "text": null
+  }
+}

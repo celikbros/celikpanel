@@ -1,0 +1,202 @@
+{
+  "allowed": true,
+  "at": "2026-10-03T02:31:32Z",
+  "label": "after-track",
+  "light": false,
+  "result": {
+    "boot_id": "6c094f6b-1f27-4175-8d2b-56b0f288ec3e",
+    "captured_at": "2026-10-03T02:31:32.515855Z",
+    "cron_stamp": {
+      "content": "2026-10-03T02:31:00+00:00",
+      "mtime": 1790994660.2731347,
+      "ok": true,
+      "path": "/var/www/celikpanel/subscriptions/2/sites/1/upd1-cron-stamp.txt"
+    },
+    "cron_units": {
+      "cron.service": {
+        "ActiveState": "inactive",
+        "LoadState": "not-found",
+        "NRestarts": "0",
+        "SubState": "dead",
+        "UnitFileState": ""
+      },
+      "cronie.service": {
+        "ActiveState": "active",
+        "LoadState": "loaded",
+        "NRestarts": "0",
+        "SubState": "running",
+        "UnitFileState": "enabled"
+      }
+    },
+    "hosting_log_lines": [
+      "2026-10-03T02:22:32.542610+00:00 dns-arch agent[414]: 2026/10/03 02:22:32 hosting root: created /var/www at 0755 0:0",
+      "2026-10-03T02:22:32.542610+00:00 dns-arch agent[414]: 2026/10/03 02:22:32 hosting root: created /var/www/celikpanel at 0755 0:0"
+    ],
+    "hosting_parents": [
+      {
+        "gid": 0,
+        "mode": "0755",
+        "path": "/var",
+        "present": true,
+        "type": "dir",
+        "uid": 0
+      },
+      {
+        "gid": 0,
+        "mode": "0755",
+        "path": "/var/www",
+        "present": true,
+        "type": "dir",
+        "uid": 0
+      },
+      {
+        "gid": 0,
+        "mode": "0755",
+        "path": "/var/www/celikpanel",
+        "present": true,
+        "type": "dir",
+        "uid": 0
+      },
+      {
+        "gid": 969,
+        "mode": "0755",
+        "path": "/var/www/celikpanel/subscriptions",
+        "present": true,
+        "type": "dir",
+        "uid": 0
+      }
+    ],
+    "hosting_receipt": {
+      "gid": 0,
+      "mode": "0600",
+      "path": "/var/lib/celikpanel-agent-private/hosting-root-v1.json",
+      "present": true,
+      "sha256": "4a52c60f7ea290b1bb1eb64f8f9f701e7766e4bb55add75641381d84f28241cc",
+      "text": "{\n  \"schema\": \"celikpanel/hosting-root-directories/v1\",\n  \"directories\": [\n    {\n      \"path\": \"/var/www\",\n      \"mode\": \"0755\",\n      \"uid\": 0,\n      \"gid\": 0,\n      \"created_at\": \"2026-10-03T02:22:32Z\"\n    },\n    {\n      \"path\": \"/var/www/celikpanel\",\n      \"mode\": \"0755\",\n      \"uid\": 0,\n      \"gid\": 0,\n      \"created_at\": \"2026-10-03T02:22:32Z\"\n    }\n  ]\n}\n",
+      "type": "file",
+      "uid": 0
+    },
+    "hosts_origin_lines": [
+      "127.0.0.1 celikpanel.net # disposable CelikPanel worker fixture"
+    ],
+    "light": false,
+    "listeners": [
+      "127.0.0.54:53 0.0.0.0:* users:((\"systemd-resolve\",pid=260,fd=25))",
+      "127.0.0.1:443 0.0.0.0:* users:((\"python3\",pid=402,fd=3))",
+      "0.0.0.0:80 0.0.0.0:* users:((\"nginx\",pid=32668,fd=4),(\"nginx\",pid=882,fd=4))",
+      "127.0.0.53%lo:53 0.0.0.0:* users:((\"systemd-resolve\",pid=260,fd=23))",
+      "*:2083 *:* users:((\"panel\",pid=32647,fd=8))",
+      "[::]:80 [::]:* users:((\"nginx\",pid=32668,fd=10),(\"nginx\",pid=882,fd=10))"
+    ],
+    "observation_record_names": [
+      ".publish.lock",
+      "61415f8f5d0ea76f8ca475dddf610e37.automatic",
+      "61415f8f5d0ea76f8ca475dddf610e37.failure",
+      "61415f8f5d0ea76f8ca475dddf610e37.renewal",
+      "61415f8f5d0ea76f8ca475dddf610e37.status"
+    ],
+    "origin_lookup": {
+      "outcome": "found",
+      "stdout": "127.0.0.1       localhost\n"
+    },
+    "origin_unit": {
+      "ActiveState": "active",
+      "NRestarts": "0",
+      "SubState": "running",
+      "UnitFileState": "enabled"
+    },
+    "os": {
+      "ID": "arch"
+    },
+    "product_units": {
+      "celikpanel-agent.service": {
+        "ActiveEnterTimestamp": "Sat 2026-10-03 02:31:17 UTC",
+        "ActiveState": "active",
+        "ExecMainStatus": "0",
+        "InactiveEnterTimestamp": "Sat 2026-10-03 02:30:11 UTC",
+        "LoadState": "loaded",
+        "NRestarts": "0",
+        "Result": "success",
+        "SubState": "running",
+        "UnitFileState": "enabled"
+      },
+      "celikpanel-firewall-restore.service": {
+        "ActiveEnterTimestamp": "",
+        "ActiveState": "inactive",
+        "ExecMainStatus": "0",
+        "InactiveEnterTimestamp": "",
+        "LoadState": "loaded",
+        "NRestarts": "0",
+        "Result": "success",
+        "SubState": "dead",
+        "UnitFileState": "enabled"
+      },
+      "celikpanel-panel.service": {
+        "ActiveEnterTimestamp": "Sat 2026-10-03 02:31:18 UTC",
+        "ActiveState": "active",
+        "ExecMainStatus": "0",
+        "InactiveEnterTimestamp": "Sat 2026-10-03 02:30:11 UTC",
+        "LoadState": "loaded",
+        "NRestarts": "0",
+        "Result": "success",
+        "SubState": "running",
+        "UnitFileState": "enabled"
+      },
+      "celikpanel-release-recovery.service": {
+        "ActiveEnterTimestamp": "",
+        "ActiveState": "inactive",
+        "ExecMainStatus": "0",
+        "InactiveEnterTimestamp": "Sat 2026-10-03 02:31:13 UTC",
+        "LoadState": "loaded",
+        "NRestarts": "0",
+        "Result": "success",
+        "SubState": "dead",
+        "UnitFileState": "enabled"
+      },
+      "celikpanel-release-recovery.timer": {
+        "ActiveEnterTimestamp": "Sat 2026-10-03 02:18:26 UTC",
+        "ActiveState": "active",
+        "InactiveEnterTimestamp": "",
+        "LoadState": "loaded",
+        "Result": "success",
+        "SubState": "waiting",
+        "UnitFileState": "enabled"
+      }
+    },
+    "site_paths": {
+      "/var/www/celikpanel/subscriptions/2/sites/1": "f: /var/www/celikpanel/subscriptions/2/sites/1/public_html\ndr-xr-xr-x root            root       /\ndrwxr-xr-x root            root       var\ndrwxr-xr-x root            root       www\ndrwxr-xr-x root            root       celikpanel\ndrwxr-xr-x root            celikpanel subscriptions\ndrwxr-x--x root            celikpanel 2\ndrwxr-x--x root            celikpanel sites\ndrwxr-x--- upd1_owner_test http       1\ndrwxr-s--- upd1_owner_test http       public_html\n"
+    },
+    "timers": {
+      "celikpanel-release-recovery.timer": {
+        "ActiveState": "active",
+        "LoadState": "loaded",
+        "SubState": "waiting",
+        "UnitFileState": "enabled"
+      },
+      "certbot-renew.timer": {
+        "ActiveState": "inactive",
+        "LoadState": "loaded",
+        "SubState": "dead",
+        "UnitFileState": "disabled"
+      }
+    },
+    "web_accounts": {
+      "http": {
+        "entry": "http:x:33:33::/srv/http:/usr/bin/nologin",
+        "outcome": "found",
+        "returncode": 0
+      },
+      "nginx": {
+        "entry": "",
+        "outcome": "not-found",
+        "returncode": 2
+      },
+      "www-data": {
+        "entry": "",
+        "outcome": "not-found",
+        "returncode": 2
+      }
+    }
+  },
+  "why": "after a terminal, paused or settled state"
+}

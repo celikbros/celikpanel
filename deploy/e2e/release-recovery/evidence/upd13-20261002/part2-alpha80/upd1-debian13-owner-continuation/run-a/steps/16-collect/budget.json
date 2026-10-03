@@ -1,0 +1,37 @@
+{
+  "present": true,
+  "receipts": [
+    {
+      "mtime": 1790990337.479132,
+      "mtime_utc": "2026-10-03T01:18:57.479132Z",
+      "name": "1",
+      "sha256": "37afb04421ac28ce3536e30ae30e39e695cc9d4749a48eeb6f80b69b6def995c",
+      "snapshot": "20261003T011731Z-from-unknown-to-56bc29094bc37d3c74e3cee66677958ce38d4d27-859cb18934ee084c6d7106dbf5e799c2",
+      "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20261003T011731Z-from-unknown-to-56bc29094bc37d3c74e3cee66677958ce38d4d27-859cb18934ee084c6d7106dbf5e799c2\nattempt=1\ntoken_sha256=[REDACTED]\noperation=update\nphase=completion\n"
+    },
+    {
+      "mtime": 1790990436.2912683,
+      "mtime_utc": "2026-10-03T01:20:36.291268Z",
+      "name": "2",
+      "sha256": "a1b243d935fd01678d069239d881ed20f3d92828938e07634bec9aa06bc055b3",
+      "snapshot": "20261003T011731Z-from-unknown-to-56bc29094bc37d3c74e3cee66677958ce38d4d27-859cb18934ee084c6d7106dbf5e799c2",
+      "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20261003T011731Z-from-unknown-to-56bc29094bc37d3c74e3cee66677958ce38d4d27-859cb18934ee084c6d7106dbf5e799c2\nattempt=2\ntoken_sha256=[REDACTED]\noperation=update\nphase=completion\n"
+    },
+    {
+      "mtime": 1790990535.7314055,
+      "mtime_utc": "2026-10-03T01:22:15.731405Z",
+      "name": "3",
+      "sha256": "69a35fd9101657c07a92c6fcdce9be5e168555a86574a8d8b544dacacfd490e1",
+      "snapshot": "20261003T011731Z-from-unknown-to-56bc29094bc37d3c74e3cee66677958ce38d4d27-859cb18934ee084c6d7106dbf5e799c2",
+      "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20261003T011731Z-from-unknown-to-56bc29094bc37d3c74e3cee66677958ce38d4d27-859cb18934ee084c6d7106dbf5e799c2\nattempt=3\ntoken_sha256=[REDACTED]\noperation=update\nphase=completion\n"
+    },
+    {
+      "mtime": 1790990674.4842994,
+      "mtime_utc": "2026-10-03T01:24:34.484299Z",
+      "name": "owner.ooRr8QNc",
+      "sha256": "99a3e048f277296c51cbb946ca1b51e15aa3e76906c955e141ffbf5935ace665",
+      "snapshot": "20261003T011731Z-from-unknown-to-56bc29094bc37d3c74e3cee66677958ce38d4d27-859cb18934ee084c6d7106dbf5e799c2",
+      "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20261003T011731Z-from-unknown-to-56bc29094bc37d3c74e3cee66677958ce38d4d27-859cb18934ee084c6d7106dbf5e799c2\nattempt=owner\ntoken_sha256=[REDACTED]\noperation=update\nphase=completion\n"
+    }
+  ]
+}

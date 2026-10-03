@@ -1,0 +1,68 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "terminal cron",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/domains/1/cron"
+  },
+  "response": {
+    "elapsed_seconds": 0.003,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Sat, 03 Oct 2026 01:25:01 GMT"
+      ],
+      [
+        "Content-Length",
+        "454"
+      ]
+    ],
+    "json": {
+      "code": "CRON_NOT_INSTALLED",
+      "error": "Scheduled tasks cannot be shown because this server's cron service is not installed, and no scheduled task runs until it is. The server owner installs it once: in CelikPanel open Components and install \"Scheduled tasks (cron)\", or on the server run sudo apt-get install cron (Debian/Ubuntu), or sudo pacman -S cronie and then sudo systemctl enable --now cronie (Arch). Then open this page again.",
+      "reason": "read"
+    },
+    "status": 409,
+    "text": null
+  }
+}

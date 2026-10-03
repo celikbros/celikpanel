@@ -1,0 +1,61 @@
+{
+  "allowed": true,
+  "at": "2026-10-02T21:12:22Z",
+  "label": "before-site",
+  "light": true,
+  "result": {
+    "boot_id": "531c13a2-8700-4105-9e99-dee8ddcb5776",
+    "captured_at": "2026-10-02T21:12:23.237291Z",
+    "hosting_log_lines": [],
+    "hosting_parents": [
+      {
+        "gid": 0,
+        "mode": "0755",
+        "path": "/var",
+        "present": true,
+        "type": "dir",
+        "uid": 0
+      },
+      {
+        "gid": 0,
+        "mode": "0755",
+        "path": "/var/www",
+        "present": true,
+        "type": "dir",
+        "uid": 0
+      },
+      {
+        "path": "/var/www/celikpanel",
+        "present": false
+      },
+      {
+        "path": "/var/www/celikpanel/subscriptions",
+        "present": false
+      }
+    ],
+    "hosting_receipt": {
+      "path": "/var/lib/celikpanel-agent-private/hosting-root-v1.json",
+      "present": false
+    },
+    "light": true,
+    "site_paths": {},
+    "web_accounts": {
+      "http": {
+        "entry": "",
+        "outcome": "not-found",
+        "returncode": 2
+      },
+      "nginx": {
+        "entry": "",
+        "outcome": "not-found",
+        "returncode": 2
+      },
+      "www-data": {
+        "entry": "www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin",
+        "outcome": "found",
+        "returncode": 0
+      }
+    }
+  },
+  "why": "before the update check"
+}

@@ -1,0 +1,205 @@
+{
+  "artifacts": {
+    "baseline": {
+      "commit": "4a379faed756b87070a7f621787e9cbe0eef7d04",
+      "sha256": "056c58dcbc5a3f0fbbb8291543bfd0bce7c3f2d6b7ed872cd67c9e29c5690e31",
+      "version": "v0.1.0-alpha.81"
+    },
+    "defective": {
+      "commit": "6acb22f6d5ce471d57131ed5ecff24c85b9d8844",
+      "sha256": "42021ef5402c9666b128344fc58f0c2989bfd06ad8af8cea32d7128508cf54b9",
+      "version": "v0.1.0-alpha.82"
+    },
+    "good": {
+      "commit": "47c0b4c2d68ae75258a36dad469c2a41758e1e1c",
+      "sha256": "9238b386ed0ff6eee055efe4a32c698327bbf7fe5eaa6bce452e0087ee0e4c90",
+      "version": "v0.1.0-alpha.82"
+    }
+  },
+  "cell": {
+    "h19": true,
+    "mail_required": false,
+    "name": "upd1-arch-owner-continuation",
+    "node": "arch",
+    "pk_observe": false,
+    "recovery_fault": null,
+    "scenario": null,
+    "variant": "owner-continuation"
+  },
+  "findings": [],
+  "identity": {
+    "cell_id": "release-recovery__14ba8530ab6ea75c",
+    "node": "arch",
+    "vm_uuid": "e806d128-cfed-565f-8937-3207c431d6df"
+  },
+  "kind": {
+    "expected": "the good candidate passes the start check; the held port makes its real start fail (panel_start_unverified); forward completion is retried three times (dispatch update/completion) and pauses (paused_retry_limit, first_failure_code panel_start_unverified) while the port is still held; the panel log the product names shows the port conflict; the owner releases the port and runs the printed one-time retry exactly once; the same request completes forward to update_verified (recovered-after-owner-continuation); the candidate runs; certbot.timer and every other timer end in their pre-update state; site, mail and cron never interrupted; the Panel is back; every owner text at the pause and after the retry recorded in EN and TR",
+    "judged": null,
+    "measured": null,
+    "printed_retry_command": null,
+    "variant": "owner-continuation"
+  },
+  "native_evidence": false,
+  "note": "Observations for the owner's review; the P0 rows are judged separately.",
+  "outcome": {
+    "attempts": {
+      "automatic": [],
+      "automatic_count": 0,
+      "journal_admissions": [],
+      "owner": [],
+      "owner_count": 0
+    },
+    "classification": "not-terminal",
+    "final_status": null,
+    "owner_continuation": false,
+    "owner_reboot": null,
+    "pin_changes": [],
+    "port_hold": null,
+    "reboot": null,
+    "track_stop": null
+  },
+  "overall": "incomplete",
+  "provenance": {
+    "baseline": "unpublished-local-fixture-commit-over-HEAD-labelled-v0.1.0-alpha.81; acceptance-license panel build (D-027 fixture); installed by the real installer; fixture trust root enrolled; not-production-release-admission",
+    "candidate": "unpublished-local-fixture-commit-labelled-v0.1.0-alpha.82; signed with the disposable fixture key; served by the guest-loopback celikpanel.net fixture origin; not a release",
+    "defect": "no candidate defect (good candidate G); owner-fixable host cause: guest_owner_port_hold.py holds 127.0.0.1:2083 from the moment the updater stops the old Panel, so the new Panel cannot bind, its stability wait fails (panel_start_unverified) and forward completion pauses; the harness then does what the product text tells the owner (release the port, run the printed one-time retry once) (simulated host condition, never a product change)"
+  },
+  "request_id": null,
+  "schema": "celikpanel/upd1-owner-update-result/v1",
+  "scope": {
+    "cron": {
+      "verdict": "not checked (the cell stopped before seeding)"
+    },
+    "dns": {
+      "mode": "external",
+      "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+      "verdict": "not-provided-external-dns"
+    },
+    "origin": {
+      "after-provision": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      }
+    },
+    "setup": {
+      "verdict": "not waiting"
+    }
+  },
+  "steps": [
+    {
+      "finished_at": "2026-10-02T22:41:06Z",
+      "name": "preflight",
+      "reason": null,
+      "started_at": "2026-10-02T22:41:02Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-02T22:41:15Z",
+      "name": "origin",
+      "reason": null,
+      "started_at": "2026-10-02T22:41:06Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-02T22:41:33Z",
+      "name": "baseline-install",
+      "reason": "CalledProcessError: Command '['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5', '-o', 'StrictHostKeyChecking=yes', '-o', 'HashKnownHosts=no', '-o', 'UserKnownHostsFile=/var/tmp/cp-release-drill-upd13-arch-oc-a/cells/30b325b60b41bceacb867866/ssh-known-hosts', '-i', '/var/tmp/cp-release-drill-upd13-arch-oc-a/key', '-p', '3802', 'celik@127.0.0.1', 'sudo /bin/bash -s']' returned non-zero exit status 1. | guest stderr: sudo: error in /etc/sudo.conf, line 0 while loading plugin \"sudoers_policy\"\nsudo: unable to load /usr/lib/sudo/sudoers.so: libpam.so.0: cannot open shared object file: No such file or directory\nsudo: fatal error, unable to load plugins\n",
+      "started_at": "2026-10-02T22:41:15Z",
+      "verdict": "inconclusive"
+    },
+    {
+      "finished_at": null,
+      "name": "owner-login",
+      "reason": "a required earlier step did not pass: baseline-install",
+      "started_at": "2026-10-02T22:41:33Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "license",
+      "reason": "a required earlier step did not pass: owner-login",
+      "started_at": "2026-10-02T22:41:33Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "setup",
+      "reason": "a required earlier step did not pass: license",
+      "started_at": "2026-10-02T22:41:33Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "seed",
+      "reason": "a required earlier step did not pass: setup",
+      "started_at": "2026-10-02T22:41:33Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "pre-state",
+      "reason": "a required earlier step did not pass: seed",
+      "started_at": "2026-10-02T22:41:33Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "arm",
+      "reason": "a required earlier step did not pass: pre-state",
+      "started_at": "2026-10-02T22:41:33Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "owner-start",
+      "reason": "a required earlier step did not pass: arm",
+      "started_at": "2026-10-02T22:41:33Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "track",
+      "reason": "a required earlier step did not pass: owner-start",
+      "started_at": "2026-10-02T22:41:33Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "owner-continuation (required)",
+      "reason": "a required earlier step did not pass: track",
+      "started_at": "2026-10-02T22:41:33Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "terminal",
+      "reason": "a required earlier step did not pass: owner-start",
+      "started_at": "2026-10-02T22:41:33Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": "2026-10-02T22:41:36Z",
+      "name": "collect",
+      "reason": null,
+      "started_at": "2026-10-02T22:41:33Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": null,
+      "name": "verdicts",
+      "reason": "a required earlier step did not pass: owner-start",
+      "started_at": "2026-10-02T22:41:36Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "kind-expectation",
+      "reason": "a required earlier step did not pass: owner-start",
+      "started_at": "2026-10-02T22:41:36Z",
+      "verdict": "not-run"
+    }
+  ]
+}

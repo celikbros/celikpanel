@@ -1,0 +1,224 @@
+{
+  "checks": {
+    "build_identity_ok": true,
+    "builds": {
+      "agent": {
+        "identity": "version=v0.1.0-alpha.80\ncommit=82958d4a730a50b07fc0983a3947e1fa7b9528e4\n",
+        "returncode": 0,
+        "sha256": "f0e3dd3d1c236c078be762ede54f15a5bd15f36cfa63941becb55af221476382"
+      },
+      "panel": {
+        "identity": "version=v0.1.0-alpha.80\ncommit=82958d4a730a50b07fc0983a3947e1fa7b9528e4\n",
+        "returncode": 0,
+        "sha256": "c41fec5ba090e5d41ef541f39228c7e98a0f646934a7f9c9df4d0fead327927e"
+      }
+    },
+    "database": {
+      "differing": [
+        "metrics_samples",
+        "server_setup_executions"
+      ],
+      "post_sha256": "d717841e111c090725c447122e76654e9df7254045a96d7636419a842f18515f",
+      "pre_sha256": "5018d950f67218f918df4885eefada30d8a9a21b562197547c9417a80b68ae01",
+      "schema_equal": true,
+      "tables_compared": 65,
+      "unexpected": [],
+      "verdict": "equal-except-volatile",
+      "volatile_excluded": [
+        "audit_logs",
+        "metrics_samples",
+        "server_setup_executions",
+        "sessions",
+        "sqlite_sequence"
+      ],
+      "volatile_reasons": {
+        "audit_logs": "authentication or background writer (BOUND-WORKER AJ)",
+        "metrics_samples": "authentication or background writer (BOUND-WORKER AJ)",
+        "server_setup_executions": "the waiting setup runner rewrites its execution row on every retry (about every 25 s: cmd/panel/server_setup_dns_retry.go claimServerSetupDNSRetry and server_setup_operations.go execution update)",
+        "sessions": "authentication or background writer (BOUND-WORKER AJ)",
+        "sqlite_sequence": "authentication or background writer (BOUND-WORKER AJ)"
+      }
+    },
+    "dns": false,
+    "dns_scope": {
+      "mode": "external",
+      "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+      "verdict": "not-provided-external-dns"
+    },
+    "final": {
+      "observation": "known",
+      "observed_at": "2026-10-03T01:06:09Z",
+      "phase": "recovered",
+      "previous_failure": "update_failed",
+      "reason": "rollback_verified",
+      "request_id": "c812e4376bb35a707e73d4002c5efdb1",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "rollback_verified"
+    },
+    "firewall_equal": true,
+    "floor": {
+      "present": true,
+      "sha256": "6903b4d1c3570faee8afdb177bd9bb33572803b0c5de6aceb913675b183f8b66",
+      "text": "format=celikpanel-release-sequence-floor-v1\nsequence=81\nversion=v0.1.0-alpha.81\n"
+    },
+    "foundation": {
+      "present": true,
+      "sha256": "287fcd4834a63d79b94c24c85958a9d0e064ae58cac6088db237e6bfbc5f8e06",
+      "text": "format=celikpanel-release-recovery-foundation-v1\nprotocol=1\nsequence=81\nrelease-version=v0.1.0-alpha.81\nrelease-commit=681efd709b56ad114d752967feac2d66bb99894c\nrunner-sha256=659a2f6e6f14d2255ea6fe0de1e391b06e579c3b18ecec13d29ebc35aa79e7b5\nservice-sha256=c570e53138a416a6faf531c2f53e9502ca7aa5cc1131a1f6f6ae870b940fe530\ntimer-sha256=33148e5b0fbc209ff6fd725aaaff2c569bd7470751341d4b83b301d0fa54cd86\nstart-guard-sha256=6abd30be38302b4ad09bd5c7db893aa49b97db779514b3236a2f0a4afb60cc12\nagent-dropin-sha256=82e0fe894b3fa676c1b64e65ac964b74b27dcfe5a83ddf91761f44ad5971359f\npanel-dropin-sha256=82e0fe894b3fa676c1b64e65ac964b74b27dcfe5a83ddf91761f44ad5971359f\nprotocol-sha256=a29874f40088f2b5e960b4ce63651657b1ff2622334dcc5cc11c8f338215034c\n"
+    },
+    "login_ok": true,
+    "mailbox": {
+      "checked": true,
+      "present": true,
+      "returncode": 0,
+      "status": "ok"
+    },
+    "outcome": "recovered-automatically",
+    "running_matches_installed": {
+      "celikpanel-agent.service": true,
+      "celikpanel-panel.service": true
+    },
+    "seeded_rows": {
+      "cron": false,
+      "domain": true,
+      "mail": true
+    },
+    "site_marker": true,
+    "smtp": true,
+    "timers": {
+      "changed": {},
+      "compared": 2,
+      "equal": true
+    },
+    "transaction": {
+      "fields": {},
+      "present": false,
+      "status": "ok"
+    },
+    "update_card": {
+      "availability": {
+        "body": null,
+        "http": 404
+      },
+      "check": {
+        "body": {
+          "available": true,
+          "current_commit": "82958d4a730a50b07fc0983a3947e1fa7b9528e4",
+          "current_version": "v0.1.0-alpha.80",
+          "supported": true,
+          "target": {
+            "arch": "amd64",
+            "archive_sha256": "bbadbe3c47fe8e0316163275166efcd9f80d5c4382efc8db2b52809e29d0d48d",
+            "archive_size": "65660355",
+            "commit": "681efd709b56ad114d752967feac2d66bb99894c",
+            "os": "linux",
+            "published_at": "2026-10-03T00:54:33Z",
+            "sequence": "81",
+            "version": "v0.1.0-alpha.81"
+          }
+        },
+        "http": 200
+      },
+      "cron": {
+        "body": {
+          "jobs": null
+        },
+        "http": 200
+      },
+      "domains": {
+        "body": [
+          {
+            "bandwidth": 0,
+            "created_at": "2026-10-03T01:01:05Z",
+            "disk_usage": 0,
+            "domain_name": "upd1-owner.test",
+            "id": 1,
+            "php_version": "",
+            "project_type": "static",
+            "ssl_enabled": false,
+            "status": "active"
+          }
+        ],
+        "http": 200
+      },
+      "license": {
+        "body": {
+          "can_use_panel": true,
+          "valid_until": 1790989624
+        },
+        "http": 200
+      },
+      "mail_listed": true,
+      "recovery": {
+        "body": null,
+        "http": 404
+      },
+      "recovery_guidance": {
+        "actionable": null,
+        "keys": [],
+        "missing_keys": [],
+        "no_actor_or_action": false,
+        "texts": {
+          "en": [],
+          "tr": []
+        },
+        "unavailable": "lib/systemUpdateOutcome.ts: FileNotFoundError"
+      },
+      "status": {
+        "body": {
+          "created_at": "2026-10-03T01:04:17.057879195Z",
+          "found": true,
+          "request_id": "c812e4376bb35a707e73d4002c5efdb1",
+          "status": "failed",
+          "summary": "reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason=offline panel database migration failed; its original database and work evidence are preserved detail=",
+          "target": {
+            "arch": "amd64",
+            "archive_sha256": "bbadbe3c47fe8e0316163275166efcd9f80d5c4382efc8db2b52809e29d0d48d",
+            "archive_size": "65660355",
+            "commit": "681efd709b56ad114d752967feac2d66bb99894c",
+            "os": "linux",
+            "sequence": "81",
+            "version": "v0.1.0-alpha.81"
+          },
+          "updated_at": "2026-10-03T01:04:53.547848424Z"
+        },
+        "http": 200
+      },
+      "update_card": {
+        "keys": [],
+        "missing_keys": [],
+        "observation_error": null,
+        "role": "baseline",
+        "server_message": null,
+        "source": null,
+        "state": null,
+        "texts": {
+          "en": [],
+          "tr": []
+        },
+        "unavailable": "lib/systemUpdateOutcome.ts: FileNotFoundError"
+      },
+      "update_card_judged": {
+        "findings": [],
+        "reason": "lib/systemUpdateOutcome.ts: FileNotFoundError",
+        "verdict": "unknown"
+      },
+      "version": {
+        "body": {
+          "agent_commit": "82958d4a730a50b07fc0983a3947e1fa7b9528e4",
+          "agent_matches": true,
+          "commit": "82958d4a730a50b07fc0983a3947e1fa7b9528e4",
+          "hostname": "dns-debian13",
+          "ipv4": "192.0.2.10",
+          "schema_version": 42,
+          "version": "v0.1.0-alpha.80"
+        },
+        "http": 200
+      }
+    }
+  },
+  "finished_at": "2026-10-03T01:06:19Z",
+  "name": "terminal",
+  "started_at": "2026-10-03T01:06:13Z",
+  "verdict": "passed"
+}

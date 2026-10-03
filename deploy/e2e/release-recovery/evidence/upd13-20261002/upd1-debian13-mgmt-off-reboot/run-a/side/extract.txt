@@ -1,0 +1,31 @@
+evidence /var/tmp/cp-release-drill-upd13-d13-mr-a/evidence/debian13/upd1/upd1-debian13-mgmt-off-reboot-20261002t215628z/
+== 11-track/samples
+2026-10-02T22:05:13Z panel= queued api= 200 accepted None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T22:05:14Z panel= running api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T22:05:16Z panel= running api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T22:05:19Z panel= running api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T22:05:23Z panel= running api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T22:05:30Z panel= running api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T22:05:40Z panel= PanelError api= None None None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T22:05:42Z panel= PanelError api= None None None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T22:05:45Z panel= PanelError api= None None None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T22:05:49Z panel= PanelError api= None None None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T22:05:55Z panel= running api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T22:05:57Z panel= running api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T22:06:00Z panel= running api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T22:06:04Z panel= running api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T22:06:10Z panel= succeeded api= 200 succeeded None cli= known|succeeded|update_verified|update_verified|None|None|None cli_status= ok
+== distinct CLI texts
+# known|running|none|update_running|None|None|None first 2026-10-02T22:05:13Z
+  EN : The update is being applied; the panel may be unavailable for a short time. Nothing to do now: check this same request again in a minute. Checking does not restart the update. / Request: 412fa00942062e95073dd579c3b60bde / Recorded at: 2026-10-02T22:05:13Z / This is a recorded observation; current service health was not checked. / Recorded state (for support): phase=running reason=update_running proof=none
+  TR : Güncelleme uygulanıyor; panel kısa bir süre erişilemeyebilir. Şimdi yapmanız gereken bir şey yok: bir dakika sonra aynı işlemi yeniden sorgulayın. Sorgulamak güncellemeyi yeniden başlatmaz. / İşlem: 412fa00942062e95073dd579c3b60bde / Kayıt zamanı: 2026-10-02T22:05:13Z / Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi. / Kayıtlı durum (destek için): phase=running reason=update_running proof=none
+# known|succeeded|update_verified|update_verified|None|None|None first 2026-10-02T22:06:10Z
+  EN : The update completed and the new version was verified when it finished. Nothing else is needed on the server. Open the panel to check that everything works now. / Request: 412fa00942062e95073dd579c3b60bde / Recorded at: 2026-10-02T22:06:05Z / This is a recorded observation; current service health was not checked. / Recorded state (for support): phase=succeeded reason=update_verified proof=update_verified
+  TR : Güncelleme tamamlandı ve yeni sürüm bittiği anda doğrulandı. Sunucuda başka bir işlem gerekmiyor. Her şeyin şu an çalıştığını görmek için paneli açın. / İşlem: 412fa00942062e95073dd579c3b60bde / Kayıt zamanı: 2026-10-02T22:06:05Z / Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi. / Kayıtlı durum (destek için): phase=succeeded reason=update_verified proof=update_verified
+== journal lines
+-- steps/18-collect/journal-setup-services.txt 3
+    2026-10-02T21:58:21.086494+00:00 dns-debian13 mariadbd[13120]: 2026-10-02 21:58:21 0 [Note] InnoDB: 128 rollback segments in 3 undo tablespaces are active.
+    2026-10-02T21:58:21.568089+00:00 dns-debian13 /etc/mysql/debian-start[13154]: Triggering myisam-recover for all MyISAM tables and aria-recover for all Aria tables
+    2026-10-02T22:06:41.402225+00:00 dns-debian13 mariadbd[745]: 2026-10-02 22:06:41 0 [Note] InnoDB: 128 rollback segments in 3 undo tablespaces are active.
+== result {"overall": "complete-for-review", "native_evidence": false, "request_id": "412fa00942062e95073dd579c3b60bde"} {"attempts": {"automatic": [], "automatic_count": 0, "journal_admissions": [], "owner": [], "owner_count": 0}, "classification": "update-verified", "final_status": {"observation": "known", "observed_at": "2026-10-02T22:06:05Z", "phase": "succeeded", "reason": "update_verified", "request_id": "412fa00942062e95073dd579c3b60bde", "schema": "celikpanel-recovery-status/v1", "terminal_proof": "update_verified"}, "owner_continuation": false, "owner_reboot": {"after_boot_id": "12b13787-4889-475e-b9bf-72267d5f1ae4", "before_boot_id": "18731288-b23e-4ff7-b384-4771a0bb1649", "command": "sudo systemctl re
+findings ["debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']"]

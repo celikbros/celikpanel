@@ -1,0 +1,125 @@
+run /mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/release-recovery/evidence/upd13-20261002/upd1-ubuntu-owner-continuation/run-a/
+overall complete-for-review outcome recovered-after-owner-continuation
+steps [('preflight', 'passed', '23:54:01', '23:54:04'), ('origin', 'passed', '23:54:04', '23:54:12'), ('baseline-install', 'passed', '23:54:12', '23:54:46'), ('owner-login', 'passed', '23:54:46', '23:54:47'), ('license', 'passed', '23:54:47', '23:54:47'), ('setup', 'observed', '23:54:47', '00:05:31'), ('seed', 'passed', '00:05:31', '00:08:28'), ('pre-state', 'passed', '00:08:28', '00:10:06'), ('arm', 'passed', '00:10:06', '00:10:09'), ('owner-start', 'passed', '00:10:09', '00:10:10'), ('track', 'observed', '00:10:10', '00:16:53'), ('owner-continuation (required)', 'observed', '00:16:53', '00:17:38'), ('track-after-owner-continuation', 'passed', '00:17:38', '00:17:40'), ('terminal', 'passed', '00:17:40', '00:17:46'), ('deferred-mail-watch', 'observed', '00:17:46', '00:18:53'), ('collect', 'passed', '00:18:53', '00:18:55'), ('verdicts', 'passed', '00:18:55', '00:18:55'), ('kind-expectation', 'passed', '00:18:55', '00:18:55')]
+
+== Panel processes (journal-product of collect)
+-- panel[7183] start 2026-10-02T23:54:43.061873+00:00
+   +   0.01s 23:54:43.073964 Connected to Agent RPC; preparing normal management access
+   +   0.04s 23:54:43.097642 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-ubuntu": a fully qualified DNS name is required; preserve pending outbox: <nil>
+   +   0.04s 23:54:43.099594 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   +   0.04s 23:54:43.100990 Panel ready on :2083 (HTTPS)
+-- panel[7246] start 2026-10-02T23:54:44.190311+00:00
+   +   0.01s 23:54:44.199274 Connected to Agent RPC; preparing normal management access
+   +   0.02s 23:54:44.209279 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-ubuntu": a fully qualified DNS name is required; preserve pending outbox: <nil>
+   +   0.02s 23:54:44.211368 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   +   0.02s 23:54:44.212788 Panel ready on :2083 (HTTPS)
+-- panel[54200] start 2026-10-03T00:10:48.402206+00:00
+-- panel[54468] start 2026-10-03T00:10:51.766253+00:00
+-- panel[54991] start 2026-10-03T00:10:57.642596+00:00
+-- panel[55824] start 2026-10-03T00:11:08.172577+00:00
+-- panel[57490] start 2026-10-03T00:11:27.402283+00:00
+-- panel[61313] start 2026-10-03T00:11:57.867649+00:00
+-- panel[61453] start 2026-10-03T00:12:01.281285+00:00
+-- panel[61667] start 2026-10-03T00:12:07.117952+00:00
+-- panel[61978] start 2026-10-03T00:12:17.743594+00:00
+-- panel[62620] start 2026-10-03T00:12:37.011197+00:00
+-- panel[66222] start 2026-10-03T00:13:37.013197+00:00
+-- panel[66360] start 2026-10-03T00:13:40.377012+00:00
+-- panel[66537] start 2026-10-03T00:13:46.192541+00:00
+-- panel[66925] start 2026-10-03T00:13:56.751408+00:00
+-- panel[67511] start 2026-10-03T00:14:16.001182+00:00
+-- panel[71114] start 2026-10-03T00:15:15.958641+00:00
+-- panel[71199] start 2026-10-03T00:15:19.239517+00:00
+-- panel[71461] start 2026-10-03T00:15:25.036510+00:00
+-- panel[71775] start 2026-10-03T00:15:35.683327+00:00
+-- panel[72407] start 2026-10-03T00:15:54.969048+00:00
+-- panel[77975] start 2026-10-03T00:17:25.086630+00:00
+   +   0.01s 00:17:25.095475 Connected to Agent RPC; preparing normal management access
+   +   0.05s 00:17:25.138951 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload
+   +   0.05s 00:17:25.139489 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+   +   0.06s 00:17:25.142025 milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+   +   0.06s 00:17:25.145148 Panel ready on :2083 (HTTPS)
+   +  38.49s 00:18:03.577005 startup mail work, attempt 1 of 20: mail certificate publication completed (mail SNI from 0 active secure-mail certificates); mail filter wiring completed (milters="inet:localhost:11332" maps=hash)
+
+== update / recovery units and mail side effects from 2026-10-03T00:17:25.086630+00:00
+     -67.95s 00:16:17.135410 systemd[1] celikpanel-release-recovery.service: Main process exited, code=exited, status=1/FAILURE
+     -67.95s 00:16:17.135526 systemd[1] celikpanel-release-recovery.service: Failed with result 'exit-code'.
+     -67.95s 00:16:17.135705 systemd[1] Failed to start celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+     -67.95s 00:16:17.135821 systemd[1] celikpanel-release-recovery.service: Consumed 9.241s CPU time, 23.8M memory peak, 0B memory swap peak.
+     -37.89s 00:16:47.197561 systemd[1] Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+     -36.82s 00:16:48.269452 systemd[1] celikpanel-release-recovery.service: Deactivated successfully.
+     -36.82s 00:16:48.269642 systemd[1] Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+     -36.82s 00:16:48.269774 systemd[1] celikpanel-release-recovery.service: Consumed 1.092s CPU time, 9.6M memory peak, 0B memory swap peak.
+      -6.63s 00:17:18.458115 systemd[1] Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+      -6.23s 00:17:18.857257 systemd[1] celikpanel-release-recovery.service: Deactivated successfully.
+      -6.23s 00:17:18.857436 systemd[1] Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+     +24.19s 00:17:49.276471 systemd[1] Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+     +24.56s 00:17:49.646942 systemd[1] celikpanel-release-recovery.service: Deactivated successfully.
+     +24.56s 00:17:49.647273 systemd[1] Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+     +33.41s 00:17:58.499743 postfix/postmap[81198] warning: unsupported dictionary type: lmdb. Is the postfix-lmdb package installed?
+     +33.41s 00:17:58.499752 postfix/postmap[81198] fatal: unsupported map type: lmdb
+     +55.19s 00:18:20.275586 systemd[1] Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+     +55.57s 00:18:20.655757 systemd[1] celikpanel-release-recovery.service: Deactivated successfully.
+     +55.57s 00:18:20.655951 systemd[1] Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+     +86.19s 00:18:51.276516 systemd[1] Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+     +86.56s 00:18:51.649367 systemd[1] celikpanel-release-recovery.service: Deactivated successfully.
+     +86.56s 00:18:51.649538 systemd[1] Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+
+== status timeline (track samples, first time each CLI state was seen)
+   2026-10-03T00:10:10Z 11-track/samples/0001.json ('known', 'running', 'none', None) panel_api= running
+   2026-10-03T00:11:51Z 11-track/samples/0010.json ('known', 'recovering', 'none', None) panel_api= None
+   2026-10-03T00:12:45Z 11-track/samples/0013.json ('known', 'recovery_required', 'none', 'retry_scheduled') panel_api= None
+   2026-10-03T00:16:02Z 11-track/samples/0024.json ('known', 'recovery_required', 'none', 'pause_pending') panel_api= None
+   2026-10-03T00:16:37Z 11-track/samples/0026.json ('known', 'recovery_required', 'none', 'paused_retry_limit') panel_api= None
+   2026-10-03T00:17:38Z 13-track-after-owner-continu ('known', 'succeeded', 'update_verified', None) panel_api= succeeded
+
+== deferred-mail-watch steps/15-deferred-mail-watch/deferred-mail.json
+watch_seconds 66.5 polls 3 settle {"at": "2026-10-03T00:18:53Z", "attempt_lines_after": 1, "attempt_lines_before": 1, "repeated_after": [], "same_process": true, "seconds_after_resolution": 45.0}
+  pid 7183 start 2026-10-02T23:54:43.061873+00:00 ready 2026-10-02T23:54:43.100990+00:00 deferred [] finished True gave_up False repeated []
+  pid 7246 start 2026-10-02T23:54:44.190311+00:00 ready 2026-10-02T23:54:44.212788+00:00 deferred [] finished True gave_up False repeated []
+  pid 54200 start 2026-10-03T00:10:48.402206+00:00 ready None deferred [] finished True gave_up False repeated []
+  pid 54468 start 2026-10-03T00:10:51.766253+00:00 ready None deferred [] finished True gave_up False repeated []
+  pid 54991 start 2026-10-03T00:10:57.642596+00:00 ready None deferred [] finished True gave_up False repeated []
+  pid 55824 start 2026-10-03T00:11:08.172577+00:00 ready None deferred [] finished True gave_up False repeated []
+  pid 57490 start 2026-10-03T00:11:27.402283+00:00 ready None deferred [] finished True gave_up False repeated []
+  pid 61313 start 2026-10-03T00:11:57.867649+00:00 ready None deferred [] finished True gave_up False repeated []
+  pid 61453 start 2026-10-03T00:12:01.281285+00:00 ready None deferred [] finished True gave_up False repeated []
+  pid 61667 start 2026-10-03T00:12:07.117952+00:00 ready None deferred [] finished True gave_up False repeated []
+  pid 61978 start 2026-10-03T00:12:17.743594+00:00 ready None deferred [] finished True gave_up False repeated []
+  pid 62620 start 2026-10-03T00:12:37.011197+00:00 ready None deferred [] finished True gave_up False repeated []
+  pid 66222 start 2026-10-03T00:13:37.013197+00:00 ready None deferred [] finished True gave_up False repeated []
+  pid 66360 start 2026-10-03T00:13:40.377012+00:00 ready None deferred [] finished True gave_up False repeated []
+  pid 66537 start 2026-10-03T00:13:46.192541+00:00 ready None deferred [] finished True gave_up False repeated []
+  pid 66925 start 2026-10-03T00:13:56.751408+00:00 ready None deferred [] finished True gave_up False repeated []
+  pid 67511 start 2026-10-03T00:14:16.001182+00:00 ready None deferred [] finished True gave_up False repeated []
+  pid 71114 start 2026-10-03T00:15:15.958641+00:00 ready None deferred [] finished True gave_up False repeated []
+  pid 71199 start 2026-10-03T00:15:19.239517+00:00 ready None deferred [] finished True gave_up False repeated []
+  pid 71461 start 2026-10-03T00:15:25.036510+00:00 ready None deferred [] finished True gave_up False repeated []
+  pid 71775 start 2026-10-03T00:15:35.683327+00:00 ready None deferred [] finished True gave_up False repeated []
+  pid 72407 start 2026-10-03T00:15:54.969048+00:00 ready None deferred [] finished True gave_up False repeated []
+  pid 77975 start 2026-10-03T00:17:25.086630+00:00 ready 2026-10-03T00:17:25.145148+00:00 deferred ['mail certificate publication', 'mail filter wiring'] finished True gave_up False repeated []
+     attempt 1 of 20 2026-10-03T00:18:03.577005+00:00 | startup mail work, attempt 1 of 20: mail certificate publication completed (mail SNI from 0 active secure-mail certificates); mail filter wiring completed (milters="inet:localhost:11332" maps=hash)
+  mail file facts at watch start:
+     /etc/postfix/main.cf|1898|2026-10-03 00:03:04.257830642 +0000|f78b1d0bc43ffb2c210581208c26b0b76995360e1c8d4f7a96f10b95e34ebd56
+     /etc/postfix/master.cf|8064|2026-10-03 00:03:00.394830228 +0000|f5ad69a0abfd22c0fc6032c6292b5c8843dd14230edd126a9d7939f4578e35ad
+     /etc/postfix/celikpanel_sni|absent
+     /etc/postfix/celikpanel_sni.db|absent
+     /etc/postfix/celikpanel_sni.lmdb|absent
+     /etc/postfix/virtual|0|2026-10-03 00:01:03.176817671 +0000|e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+     /etc/postfix/virtual.db|12288|2026-10-03 00:02:54.125829557 +0000|df8943e2b590d03aef9b8c0299e47bf9349bd6591f6039a84e1364d6c6c90195
+     /etc/postfix/vmailbox|45|2026-10-03 00:08:27.897865305 +0000|f6c71b2591448ed14d00271d2936b43dad94bf3451752800db32fc74d20eeaa7
+     /etc/postfix/vmailbox.db|12288|2026-10-03 00:08:27.913865307 +0000|3796e8b156d04a2de3607c31344a1ce7feab259e78fb65959261bd8ddba2fd5c
+     /etc/postfix/vmailbox_domains|19|2026-10-03 00:08:27.901865306 +0000|732ff498e7ae804a27c2f76cee4316f0d59e7ca60e9a8bcc667e704f8b7edb66
+     /etc/postfix/vmailbox_domains.db|12288|2026-10-03 00:08:27.921865308 +0000|682807603675baa36f369973c9e6112d5aea8ce82bae1efda1a7d3b68a8e7d21
+     /etc/aliases.db|12288|2026-10-03 00:00:57.549817069 +0000|9efa8eec20a9c3629a8dafbf8da2408cd5e3535511a400d5842a57df79a35ce6
+     /etc/dovecot/conf.d/98-celikpanel-tls.conf|204|2026-10-03 00:03:04.267830643 +0000|930f493f131700f08741c688bae48ce13f18a46d10e6314907e0171826d6540d
+     postconf|smtpd_milters|inet:localhost:11332
+     postconf|non_smtpd_milters|
+     postconf|tls_server_sni_maps|
+  changed by watch end:
+     /etc/postfix/main.cf|1898|2026-10-03 00:18:01.674979807 +0000|f78b1d0bc43ffb2c210581208c26b0b76995360e1c8d4f7a96f10b95e34ebd56
+     /etc/postfix/virtual.db|12288|2026-10-03 00:18:01.530978901 +0000|f69c4c6970ec6df9418bc1ea652d6088f75f1eeb2cf96b63b9bb81f3a3070158
+     /etc/postfix/vmailbox.db|12288|2026-10-03 00:18:01.512978787 +0000|d3ff9a934fd47e90569db3e88f66cb509b676f5546aea9227c510f1e9b1d073c
+     /etc/postfix/vmailbox_domains.db|12288|2026-10-03 00:18:01.555979059 +0000|d9bc166b6de7e3a99b016fb01626c715f98947e0b195ca2ff2114cc9f2a34060
+     /etc/dovecot/conf.d/98-celikpanel-tls.conf|204|2026-10-03 00:17:55.715942103 +0000|930f493f131700f08741c688bae48ce13f18a46d10e6314907e0171826d6540d
+  polls: [('00:17:47', 0, False), ('00:17:57', 0, False), ('00:18:07', 1, True)]

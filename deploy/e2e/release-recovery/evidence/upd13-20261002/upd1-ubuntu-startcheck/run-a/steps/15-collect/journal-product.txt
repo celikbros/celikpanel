@@ -1,0 +1,618 @@
+2026-10-02T23:34:38.164092+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:34:38.437738+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:34:38.437995+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:34:40.008118+00:00 dns-ubuntu systemd[1]: Starting celikpanel-agent.service - CelikPanel privileged agent...
+2026-10-02T23:34:40.023066+00:00 dns-ubuntu systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-10-02T23:34:40.030077+00:00 dns-ubuntu agent[7070]: 2026/10/02 23:34:40 Starting CelikPanel Agent...
+2026-10-02T23:34:40.031929+00:00 dns-ubuntu agent[7070]: 2026/10/02 23:34:40 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-10-02T23:34:40.032155+00:00 dns-ubuntu agent[7070]: 2026/10/02 23:34:40 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-10-02T23:34:41.236180+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-02T23:34:41.254028+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-02T23:34:41.436725+00:00 dns-ubuntu panel[7204]: 2026/10/02 23:34:41 Starting CelikPanel Backend...
+2026-10-02T23:34:41.442582+00:00 dns-ubuntu panel[7204]: 2026/10/02 23:34:41 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-02T23:34:41.443810+00:00 dns-ubuntu panel[7204]: 2026/10/02 23:34:41 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-02T23:34:41.444368+00:00 dns-ubuntu panel[7204]: 2026/10/02 23:34:41 Connected to Agent RPC; preparing normal management access
+2026-10-02T23:34:41.464390+00:00 dns-ubuntu panel[7204]: 2026/10/02 23:34:41 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-ubuntu": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-10-02T23:34:41.466202+00:00 dns-ubuntu panel[7204]: 2026/10/02 23:34:41 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-10-02T23:34:41.467534+00:00 dns-ubuntu panel[7204]: 2026/10/02 23:34:41 Panel ready on :2083 (HTTPS)
+2026-10-02T23:34:42.272509+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-02T23:34:42.281974+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-02T23:34:42.282163+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-02T23:34:42.381223+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-02T23:34:42.397014+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-02T23:34:42.586133+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:34:42 Starting CelikPanel Backend...
+2026-10-02T23:34:42.592893+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:34:42 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-02T23:34:42.593736+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:34:42 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-02T23:34:42.594521+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:34:42 Connected to Agent RPC; preparing normal management access
+2026-10-02T23:34:42.604935+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:34:42 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-ubuntu": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-10-02T23:34:42.607716+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:34:42 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-10-02T23:34:42.608900+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:34:42 Panel ready on :2083 (HTTPS)
+2026-10-02T23:34:59.925077+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:34:59 http: TLS handshake error from 127.0.0.1:43818: EOF
+2026-10-02T23:35:00.179099+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:35:00 http: TLS handshake error from 127.0.0.1:43842: EOF
+2026-10-02T23:35:00.395490+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:35:00 http: TLS handshake error from 127.0.0.1:43856: EOF
+2026-10-02T23:35:00.406486+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:35:00 http: TLS handshake error from 127.0.0.1:43884: EOF
+2026-10-02T23:35:00.416104+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:35:00 http: TLS handshake error from 127.0.0.1:43902: EOF
+2026-10-02T23:35:00.424965+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:35:00 http: TLS handshake error from 127.0.0.1:43914: EOF
+2026-10-02T23:35:00.441570+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:35:00 http: TLS handshake error from 127.0.0.1:43930: EOF
+2026-10-02T23:35:00.450999+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:35:00 http: TLS handshake error from 127.0.0.1:43938: EOF
+2026-10-02T23:35:00.461655+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:35:00 http: TLS handshake error from 127.0.0.1:43952: EOF
+2026-10-02T23:35:00.471981+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:35:00 http: TLS handshake error from 127.0.0.1:43972: EOF
+2026-10-02T23:35:09.238205+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:35:09.514513+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:35:09.514693+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:35:40.232110+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:35:40.508064+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:35:40.508346+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:36:11.242178+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:36:11.519661+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:36:11.519850+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:36:42.232224+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:36:42.506144+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:36:42.506541+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:37:13.237090+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:37:13.513329+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:37:13.513559+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:37:44.232075+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:37:44.520820+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:37:44.521219+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:38:15.234167+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:38:15.513852+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:38:15.514133+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:38:45.850158+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:38:46.168221+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:38:46.168483+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:39:16.240548+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:39:16.517313+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:39:16.517492+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:39:47.238142+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:39:47.527016+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:39:47.527217+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:39:47.716267+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:39:47 http: TLS handshake error from 127.0.0.1:49128: EOF
+2026-10-02T23:39:47.954743+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:39:47 http: TLS handshake error from 127.0.0.1:49150: EOF
+2026-10-02T23:39:47.973537+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:39:47 http: TLS handshake error from 127.0.0.1:49154: EOF
+2026-10-02T23:39:48.977665+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:39:48 http: TLS handshake error from 127.0.0.1:49178: EOF
+2026-10-02T23:39:49.801646+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:39:49 http: TLS handshake error from 127.0.0.1:49204: EOF
+2026-10-02T23:39:52.500510+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:39:52 http: TLS handshake error from 127.0.0.1:49208: EOF
+2026-10-02T23:39:52.781825+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:39:52 http: TLS handshake error from 127.0.0.1:49226: EOF
+2026-10-02T23:39:57.795261+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:39:57 http: TLS handshake error from 127.0.0.1:55522: EOF
+2026-10-02T23:40:03.032136+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:40:03 http: TLS handshake error from 127.0.0.1:55538: EOF
+2026-10-02T23:40:03.273417+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:40:03 http: TLS handshake error from 127.0.0.1:55556: EOF
+2026-10-02T23:40:03.916171+00:00 dns-ubuntu cron[11095]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 801: Resource temporarily unavailable)
+2026-10-02T23:40:08.285551+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:40:08 http: TLS handshake error from 127.0.0.1:51790: EOF
+2026-10-02T23:40:12.259160+00:00 dns-ubuntu php8.3-common[11851]: php_invoke calendar: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:40:12.289434+00:00 dns-ubuntu php8.3-common[11883]: php_invoke calendar: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:12.556903+00:00 dns-ubuntu php8.3-common[12081]: php_invoke ctype: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:40:12.584677+00:00 dns-ubuntu php8.3-common[12113]: php_invoke ctype: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:12.860261+00:00 dns-ubuntu php8.3-common[12311]: php_invoke exif: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:40:12.888549+00:00 dns-ubuntu php8.3-common[12343]: php_invoke exif: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:13.184119+00:00 dns-ubuntu php8.3-common[12573]: php_invoke fileinfo: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:13.766246+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:40:13 http: TLS handshake error from 127.0.0.1:51812: EOF
+2026-10-02T23:40:13.793696+00:00 dns-ubuntu php8.3-common[13097]: php_invoke ftp: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:14.027399+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:40:14 http: TLS handshake error from 127.0.0.1:51824: EOF
+2026-10-02T23:40:14.122970+00:00 dns-ubuntu php8.3-common[13378]: php_invoke gettext: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:14.487658+00:00 dns-ubuntu php8.3-common[13576]: php_invoke iconv: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:40:14.516443+00:00 dns-ubuntu php8.3-common[13608]: php_invoke iconv: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:14.835267+00:00 dns-ubuntu php8.3-common[13838]: php_invoke pdo: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:15.104396+00:00 dns-ubuntu php8.3-common[14036]: php_invoke phar: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:40:15.131732+00:00 dns-ubuntu php8.3-common[14068]: php_invoke phar: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:15.402261+00:00 dns-ubuntu php8.3-common[14266]: php_invoke posix: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:40:15.430571+00:00 dns-ubuntu php8.3-common[14298]: php_invoke posix: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:15.698902+00:00 dns-ubuntu php8.3-common[14496]: php_invoke shmop: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:40:15.726585+00:00 dns-ubuntu php8.3-common[14528]: php_invoke shmop: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:15.994111+00:00 dns-ubuntu php8.3-common[14726]: php_invoke sockets: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:40:16.021631+00:00 dns-ubuntu php8.3-common[14758]: php_invoke sockets: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:16.326077+00:00 dns-ubuntu php8.3-common[14988]: php_invoke sysvmsg: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:16.602252+00:00 dns-ubuntu php8.3-common[15186]: php_invoke sysvsem: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:40:16.629193+00:00 dns-ubuntu php8.3-common[15218]: php_invoke sysvsem: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:16.895788+00:00 dns-ubuntu php8.3-common[15416]: php_invoke sysvshm: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:40:16.926460+00:00 dns-ubuntu php8.3-common[15448]: php_invoke sysvshm: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:17.197090+00:00 dns-ubuntu php8.3-common[15646]: php_invoke tokenizer: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:40:17.224959+00:00 dns-ubuntu php8.3-common[15678]: php_invoke tokenizer: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:17.516832+00:00 dns-ubuntu php8.3-readline[15877]: php_invoke readline: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:40:17.545467+00:00 dns-ubuntu php8.3-readline[15909]: php_invoke readline: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:17.861093+00:00 dns-ubuntu php8.3-opcache[16140]: php_invoke opcache: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:18.157831+00:00 dns-ubuntu php8.3-cli[16282]: php_invoke exif: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:40:18.185604+00:00 dns-ubuntu php8.3-cli[16315]: php_invoke phar: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:40:18.213675+00:00 dns-ubuntu php8.3-cli[16348]: php_invoke shmop: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:40:18.232089+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:40:18.241246+00:00 dns-ubuntu php8.3-cli[16385]: php_invoke fileinfo: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:40:18.294440+00:00 dns-ubuntu php8.3-cli[16451]: php_invoke sysvshm: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:40:18.324329+00:00 dns-ubuntu php8.3-cli[16484]: php_invoke sockets: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:40:18.413458+00:00 dns-ubuntu php8.3-cli[16583]: php_invoke sysvmsg: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:40:18.471224+00:00 dns-ubuntu php8.3-cli[16649]: php_invoke gettext: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:40:18.500000+00:00 dns-ubuntu php8.3-cli[16692]: php_invoke calendar: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:40:18.524971+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:40:18.525162+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:40:18.528212+00:00 dns-ubuntu php8.3-cli[16744]: php_invoke ffi: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:40:18.556961+00:00 dns-ubuntu php8.3-cli[16777]: php_invoke sysvsem: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:40:18.586589+00:00 dns-ubuntu php8.3-cli[16810]: php_invoke tokenizer: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:40:18.614228+00:00 dns-ubuntu php8.3-cli[16843]: php_invoke readline: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:40:18.642759+00:00 dns-ubuntu php8.3-cli[16876]: php_invoke ftp: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:40:18.670206+00:00 dns-ubuntu php8.3-cli[16909]: php_invoke pdo: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:40:18.964571+00:00 dns-ubuntu php8.3-fpm[17048]: php_invoke exif: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:18.992135+00:00 dns-ubuntu php8.3-fpm[17081]: php_invoke phar: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:19.019452+00:00 dns-ubuntu php8.3-fpm[17114]: php_invoke shmop: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:19.039098+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:40:19 http: TLS handshake error from 127.0.0.1:60064: EOF
+2026-10-02T23:40:19.047373+00:00 dns-ubuntu php8.3-fpm[17147]: php_invoke fileinfo: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:19.072522+00:00 dns-ubuntu php8.3-fpm[17180]: php_invoke iconv: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:19.099592+00:00 dns-ubuntu php8.3-fpm[17213]: php_invoke sysvshm: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:19.126821+00:00 dns-ubuntu php8.3-fpm[17246]: php_invoke sockets: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:19.154380+00:00 dns-ubuntu php8.3-fpm[17279]: php_invoke ctype: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:19.179630+00:00 dns-ubuntu php8.3-fpm[17312]: php_invoke posix: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:19.232882+00:00 dns-ubuntu php8.3-fpm[17378]: php_invoke opcache: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:19.259805+00:00 dns-ubuntu php8.3-fpm[17411]: php_invoke gettext: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:19.284480+00:00 dns-ubuntu php8.3-fpm[17444]: php_invoke calendar: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:19.310823+00:00 dns-ubuntu php8.3-fpm[17477]: php_invoke ffi: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:19.337967+00:00 dns-ubuntu php8.3-fpm[17510]: php_invoke sysvsem: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:19.365226+00:00 dns-ubuntu php8.3-fpm[17543]: php_invoke tokenizer: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:19.389502+00:00 dns-ubuntu php8.3-fpm[17576]: php_invoke readline: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:19.416679+00:00 dns-ubuntu php8.3-fpm[17609]: php_invoke ftp: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:19.443270+00:00 dns-ubuntu php8.3-fpm[17642]: php_invoke pdo: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:40:23.268544+00:00 dns-ubuntu cron[17943]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 801: Resource temporarily unavailable)
+2026-10-02T23:40:25.249013+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:40:25 http: TLS handshake error from 127.0.0.1:60728: EOF
+2026-10-02T23:40:25.496120+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:40:25 http: TLS handshake error from 127.0.0.1:60750: EOF
+2026-10-02T23:40:26.005588+00:00 dns-ubuntu cron[18129]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 801: Resource temporarily unavailable)
+2026-10-02T23:40:30.507070+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:40:30 http: TLS handshake error from 127.0.0.1:60774: EOF
+2026-10-02T23:40:33.416366+00:00 dns-ubuntu adduser[18598]: The home dir /nonexistent you specified can't be accessed: No such file or directory
+2026-10-02T23:40:33.420267+00:00 dns-ubuntu adduser[18598]: Selecting UID from range 100 to 999 ...
+2026-10-02T23:40:33.422703+00:00 dns-ubuntu adduser[18598]: Adding system user `_galera' (UID 109) ...
+2026-10-02T23:40:33.424805+00:00 dns-ubuntu adduser[18598]: Adding new user `_galera' (UID 109) with group `nogroup' ...
+2026-10-02T23:40:33.441391+00:00 dns-ubuntu useradd[18603]: new user: name=_galera, UID=109, GID=65534, home=/nonexistent, shell=/usr/sbin/nologin, from=none
+2026-10-02T23:40:33.459528+00:00 dns-ubuntu adduser[18598]: Not creating `/nonexistent'.
+2026-10-02T23:40:34.951902+00:00 dns-ubuntu addgroup[18755]: Selecting GID from range 100 to 999 ...
+2026-10-02T23:40:34.954612+00:00 dns-ubuntu addgroup[18755]: Adding group `mysql' (GID 112) ...
+2026-10-02T23:40:34.971930+00:00 dns-ubuntu groupadd[18758]: group added to /etc/group: name=mysql, GID=112
+2026-10-02T23:40:34.978388+00:00 dns-ubuntu groupadd[18758]: group added to /etc/gshadow: name=mysql
+2026-10-02T23:40:34.979725+00:00 dns-ubuntu groupadd[18758]: new group: name=mysql, GID=112
+2026-10-02T23:40:35.013957+00:00 dns-ubuntu adduser[18765]: The home dir /nonexistent you specified can't be accessed: No such file or directory
+2026-10-02T23:40:35.017631+00:00 dns-ubuntu adduser[18765]: Selecting UID from range 100 to 999 ...
+2026-10-02T23:40:35.020238+00:00 dns-ubuntu adduser[18765]: Adding system user `mysql' (UID 110) ...
+2026-10-02T23:40:35.022309+00:00 dns-ubuntu adduser[18765]: Adding new user `mysql' (UID 110) with group `mysql' ...
+2026-10-02T23:40:35.039232+00:00 dns-ubuntu useradd[18770]: new user: name=mysql, UID=110, GID=112, home=/nonexistent, shell=/bin/false, from=none
+2026-10-02T23:40:35.072998+00:00 dns-ubuntu chfn[18777]: changed user 'mysql' information
+2026-10-02T23:40:35.076269+00:00 dns-ubuntu adduser[18765]: Not creating `/nonexistent'.
+2026-10-02T23:40:35.753405+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:40:35 http: TLS handshake error from 127.0.0.1:56298: EOF
+2026-10-02T23:40:35.971141+00:00 dns-ubuntu mariadb-server.postinst[18895]: 2026-10-02 23:40:35 0 [Warning] You need to use --log-bin to make --expire-logs-days or --binlog-expire-logs-seconds work.
+2026-10-02T23:40:36.008973+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:40:36 http: TLS handshake error from 127.0.0.1:56310: EOF
+2026-10-02T23:40:41.021394+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:40:41 http: TLS handshake error from 127.0.0.1:56322: EOF
+2026-10-02T23:40:42.216102+00:00 dns-ubuntu cron[19418]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 801: Resource temporarily unavailable)
+2026-10-02T23:40:44.081385+00:00 dns-ubuntu cron[19446]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 801: Resource temporarily unavailable)
+2026-10-02T23:40:45.373822+00:00 dns-ubuntu cron[19472]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 801: Resource temporarily unavailable)
+2026-10-02T23:40:48.004125+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:40:48 http: TLS handshake error from 127.0.0.1:55554: EOF
+2026-10-02T23:40:48.322455+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:40:48 http: TLS handshake error from 127.0.0.1:55570: EOF
+2026-10-02T23:40:48.685221+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:40:48.964398+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:40:48.964587+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:40:51.419363+00:00 dns-ubuntu addgroup[20094]: Selecting GID from range 100 to 999 ...
+2026-10-02T23:40:51.422519+00:00 dns-ubuntu addgroup[20094]: Adding group `ssl-cert' (GID 113) ...
+2026-10-02T23:40:51.441439+00:00 dns-ubuntu groupadd[20097]: group added to /etc/group: name=ssl-cert, GID=113
+2026-10-02T23:40:51.447949+00:00 dns-ubuntu groupadd[20097]: group added to /etc/gshadow: name=ssl-cert
+2026-10-02T23:40:51.449453+00:00 dns-ubuntu groupadd[20097]: new group: name=ssl-cert, GID=113
+2026-10-02T23:40:53.286923+00:00 dns-ubuntu addgroup[20213]: Selecting GID from range 100 to 999 ...
+2026-10-02T23:40:53.289574+00:00 dns-ubuntu addgroup[20213]: Adding group `postfix' (GID 114) ...
+2026-10-02T23:40:53.308328+00:00 dns-ubuntu groupadd[20216]: group added to /etc/group: name=postfix, GID=114
+2026-10-02T23:40:53.315274+00:00 dns-ubuntu groupadd[20216]: group added to /etc/gshadow: name=postfix
+2026-10-02T23:40:53.316770+00:00 dns-ubuntu groupadd[20216]: new group: name=postfix, GID=114
+2026-10-02T23:40:53.335197+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:40:53 http: TLS handshake error from 127.0.0.1:55590: EOF
+2026-10-02T23:40:53.354098+00:00 dns-ubuntu adduser[20223]: Selecting UID from range 100 to 999 ...
+2026-10-02T23:40:53.356910+00:00 dns-ubuntu adduser[20223]: Adding system user `postfix' (UID 111) ...
+2026-10-02T23:40:53.359010+00:00 dns-ubuntu adduser[20223]: Adding new user `postfix' (UID 111) with group `postfix' ...
+2026-10-02T23:40:53.375840+00:00 dns-ubuntu useradd[20227]: new user: name=postfix, UID=111, GID=114, home=/var/spool/postfix, shell=/usr/sbin/nologin, from=none
+2026-10-02T23:40:53.395647+00:00 dns-ubuntu adduser[20223]: Not creating home directory `/var/spool/postfix'.
+2026-10-02T23:40:53.483519+00:00 dns-ubuntu addgroup[20275]: Selecting GID from range 100 to 999 ...
+2026-10-02T23:40:53.486356+00:00 dns-ubuntu addgroup[20275]: Adding group `postdrop' (GID 115) ...
+2026-10-02T23:40:53.503282+00:00 dns-ubuntu groupadd[20278]: group added to /etc/group: name=postdrop, GID=115
+2026-10-02T23:40:53.509754+00:00 dns-ubuntu groupadd[20278]: group added to /etc/gshadow: name=postdrop
+2026-10-02T23:40:53.511203+00:00 dns-ubuntu groupadd[20278]: new group: name=postdrop, GID=115
+2026-10-02T23:40:58.825207+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:40:58 http: TLS handshake error from 127.0.0.1:37436: EOF
+2026-10-02T23:40:59.056017+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:40:59 http: TLS handshake error from 127.0.0.1:37444: EOF
+2026-10-02T23:41:03.937313+00:00 dns-ubuntu groupadd[21176]: group added to /etc/group: name=vmail, GID=5000
+2026-10-02T23:41:03.943235+00:00 dns-ubuntu groupadd[21176]: group added to /etc/gshadow: name=vmail
+2026-10-02T23:41:03.944799+00:00 dns-ubuntu groupadd[21176]: new group: name=vmail, GID=5000
+2026-10-02T23:41:03.974286+00:00 dns-ubuntu useradd[21187]: new user: name=vmail, UID=5000, GID=5000, home=/var/mail/vhosts, shell=/usr/sbin/nologin, from=none
+2026-10-02T23:41:04.013209+00:00 dns-ubuntu postfix/postmap[21199]: warning: unsupported dictionary type: lmdb. Is the postfix-lmdb package installed?
+2026-10-02T23:41:04.013219+00:00 dns-ubuntu postfix/postmap[21199]: fatal: unsupported map type: lmdb
+2026-10-02T23:41:04.067198+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:41:04 http: TLS handshake error from 127.0.0.1:37454: EOF
+2026-10-02T23:41:09.309905+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:41:09 http: TLS handshake error from 127.0.0.1:57828: EOF
+2026-10-02T23:41:09.577856+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:41:09 http: TLS handshake error from 127.0.0.1:57856: EOF
+2026-10-02T23:41:10.897846+00:00 dns-ubuntu cron[21505]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 801: Resource temporarily unavailable)
+2026-10-02T23:41:14.594021+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:41:14 http: TLS handshake error from 127.0.0.1:49936: EOF
+2026-10-02T23:41:17.337518+00:00 dns-ubuntu adduser[21987]: Selecting UID from range 100 to 999 ...
+2026-10-02T23:41:17.340215+00:00 dns-ubuntu adduser[21987]: Selecting GID from range 100 to 999 ...
+2026-10-02T23:41:17.343286+00:00 dns-ubuntu adduser[21987]: Adding system user `dovecot' (UID 112) ...
+2026-10-02T23:41:17.346131+00:00 dns-ubuntu adduser[21987]: Adding new group `dovecot' (GID 116) ...
+2026-10-02T23:41:17.365051+00:00 dns-ubuntu groupadd[21992]: group added to /etc/group: name=dovecot, GID=116
+2026-10-02T23:41:17.371523+00:00 dns-ubuntu groupadd[21992]: group added to /etc/gshadow: name=dovecot
+2026-10-02T23:41:17.373027+00:00 dns-ubuntu groupadd[21992]: new group: name=dovecot, GID=116
+2026-10-02T23:41:17.376165+00:00 dns-ubuntu adduser[21987]: Adding new user `dovecot' (UID 112) with group `dovecot' ...
+2026-10-02T23:41:17.392335+00:00 dns-ubuntu useradd[21999]: new user: name=dovecot, UID=112, GID=116, home=/usr/lib/dovecot, shell=/usr/sbin/nologin, from=none
+2026-10-02T23:41:17.422420+00:00 dns-ubuntu chfn[22006]: changed user 'dovecot' information
+2026-10-02T23:41:17.425556+00:00 dns-ubuntu adduser[21987]: Not creating home directory `/usr/lib/dovecot'.
+2026-10-02T23:41:17.459633+00:00 dns-ubuntu adduser[22013]: The home dir /nonexistent you specified can't be accessed: No such file or directory
+2026-10-02T23:41:17.464365+00:00 dns-ubuntu adduser[22013]: Selecting UID from range 100 to 999 ...
+2026-10-02T23:41:17.467590+00:00 dns-ubuntu adduser[22013]: Selecting GID from range 100 to 999 ...
+2026-10-02T23:41:17.470339+00:00 dns-ubuntu adduser[22013]: Adding system user `dovenull' (UID 113) ...
+2026-10-02T23:41:17.473071+00:00 dns-ubuntu adduser[22013]: Adding new group `dovenull' (GID 117) ...
+2026-10-02T23:41:17.490233+00:00 dns-ubuntu groupadd[22019]: group added to /etc/group: name=dovenull, GID=117
+2026-10-02T23:41:17.497276+00:00 dns-ubuntu groupadd[22019]: group added to /etc/gshadow: name=dovenull
+2026-10-02T23:41:17.498690+00:00 dns-ubuntu groupadd[22019]: new group: name=dovenull, GID=117
+2026-10-02T23:41:17.501942+00:00 dns-ubuntu adduser[22013]: Adding new user `dovenull' (UID 113) with group `dovenull' ...
+2026-10-02T23:41:17.518846+00:00 dns-ubuntu useradd[22026]: new user: name=dovenull, UID=113, GID=117, home=/nonexistent, shell=/usr/sbin/nologin, from=none
+2026-10-02T23:41:17.552516+00:00 dns-ubuntu chfn[22033]: changed user 'dovenull' information
+2026-10-02T23:41:17.555552+00:00 dns-ubuntu adduser[22013]: Not creating `/nonexistent'.
+2026-10-02T23:41:19.241187+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:41:19.530765+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:41:19.531977+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:41:20.107280+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:41:20 http: TLS handshake error from 127.0.0.1:49954: EOF
+2026-10-02T23:41:20.378159+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:41:20 http: TLS handshake error from 127.0.0.1:49976: EOF
+2026-10-02T23:41:25.392335+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:41:25 http: TLS handshake error from 127.0.0.1:38856: EOF
+2026-10-02T23:41:30.891764+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:41:30 http: TLS handshake error from 127.0.0.1:38868: EOF
+2026-10-02T23:41:31.120165+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:41:31 http: TLS handshake error from 127.0.0.1:38882: EOF
+2026-10-02T23:41:33.818096+00:00 dns-ubuntu cron[25932]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 801: Resource temporarily unavailable)
+2026-10-02T23:41:35.166133+00:00 dns-ubuntu cron[25964]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 801: Resource temporarily unavailable)
+2026-10-02T23:41:36.131546+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:41:36 http: TLS handshake error from 127.0.0.1:58412: EOF
+2026-10-02T23:41:38.626761+00:00 dns-ubuntu cron[26209]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 801: Resource temporarily unavailable)
+2026-10-02T23:41:39.987258+00:00 dns-ubuntu cron[26241]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 801: Resource temporarily unavailable)
+2026-10-02T23:41:42.570287+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:41:42 http: TLS handshake error from 127.0.0.1:58430: EOF
+2026-10-02T23:41:44.265283+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:41:44 http: TLS handshake error from 127.0.0.1:58460: EOF
+2026-10-02T23:41:46.099244+00:00 dns-ubuntu cron[26624]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 801: Resource temporarily unavailable)
+2026-10-02T23:41:49.278030+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:41:49 http: TLS handshake error from 127.0.0.1:56978: EOF
+2026-10-02T23:41:50.231121+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:41:50.513107+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:41:50.513268+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:41:51.761199+00:00 dns-ubuntu php8.3-intl[27297]: php_invoke intl: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:41:51.788002+00:00 dns-ubuntu php8.3-intl[27329]: php_invoke intl: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:41:52.092786+00:00 dns-ubuntu php8.3-sqlite3[27528]: php_invoke sqlite3: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:41:52.122202+00:00 dns-ubuntu php8.3-sqlite3[27560]: php_invoke sqlite3: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:41:52.401460+00:00 dns-ubuntu php8.3-sqlite3[27758]: php_invoke pdo_sqlite: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:41:52.429131+00:00 dns-ubuntu php8.3-sqlite3[27790]: php_invoke pdo_sqlite: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:41:52.726204+00:00 dns-ubuntu php8.3-mbstring[27989]: php_invoke mbstring: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:41:52.757029+00:00 dns-ubuntu php8.3-mbstring[28021]: php_invoke mbstring: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:41:53.047200+00:00 dns-ubuntu php8.3-xml[28220]: php_invoke dom: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:41:53.072975+00:00 dns-ubuntu php8.3-xml[28252]: php_invoke dom: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:41:53.352156+00:00 dns-ubuntu php8.3-xml[28450]: php_invoke simplexml: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:41:53.380245+00:00 dns-ubuntu php8.3-xml[28482]: php_invoke simplexml: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:41:53.648714+00:00 dns-ubuntu php8.3-xml[28680]: php_invoke xml: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:41:53.946048+00:00 dns-ubuntu php8.3-xml[28910]: php_invoke xmlreader: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:41:53.973298+00:00 dns-ubuntu php8.3-xml[28942]: php_invoke xmlreader: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:41:54.247213+00:00 dns-ubuntu php8.3-xml[29140]: php_invoke xmlwriter: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:41:54.276489+00:00 dns-ubuntu php8.3-xml[29172]: php_invoke xmlwriter: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:41:54.537327+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:41:54 http: TLS handshake error from 127.0.0.1:35596: EOF
+2026-10-02T23:41:54.577702+00:00 dns-ubuntu php8.3-xml[29425]: php_invoke xsl: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:41:54.603612+00:00 dns-ubuntu php8.3-xml[29457]: php_invoke xsl: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:41:54.781886+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:41:54 http: TLS handshake error from 127.0.0.1:35620: EOF
+2026-10-02T23:41:54.931072+00:00 dns-ubuntu php8.3-zip[29707]: php_invoke zip: already enabled for PHP 8.3 cli sapi
+2026-10-02T23:41:54.957236+00:00 dns-ubuntu php8.3-zip[29739]: php_invoke zip: already enabled for PHP 8.3 fpm sapi
+2026-10-02T23:41:58.022391+00:00 dns-ubuntu cron[29871]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 801: Resource temporarily unavailable)
+2026-10-02T23:41:59.795901+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:41:59 http: TLS handshake error from 127.0.0.1:35638: EOF
+2026-10-02T23:42:05.354143+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:42:05 http: TLS handshake error from 127.0.0.1:47198: EOF
+2026-10-02T23:42:05.588394+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:42:05 http: TLS handshake error from 127.0.0.1:47212: EOF
+2026-10-02T23:42:10.602218+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:42:10 http: TLS handshake error from 127.0.0.1:47242: EOF
+2026-10-02T23:42:15.766444+00:00 dns-ubuntu cron[31514]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 801: Resource temporarily unavailable)
+2026-10-02T23:42:16.437455+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:42:16 http: TLS handshake error from 127.0.0.1:56738: EOF
+2026-10-02T23:42:18.496504+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:42:18 http: TLS handshake error from 127.0.0.1:56752: EOF
+2026-10-02T23:42:21.231106+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:42:21.526018+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:42:21.526223+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:42:23.512409+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:42:23 http: TLS handshake error from 127.0.0.1:56762: EOF
+2026-10-02T23:42:26.250809+00:00 dns-ubuntu cron[32065]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 801: Resource temporarily unavailable)
+2026-10-02T23:42:29.650495+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:42:29 http: TLS handshake error from 127.0.0.1:33238: EOF
+2026-10-02T23:42:30.079224+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:42:30 http: TLS handshake error from 127.0.0.1:33254: EOF
+2026-10-02T23:42:35.094144+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:42:35 http: TLS handshake error from 127.0.0.1:50014: EOF
+2026-10-02T23:42:35.977262+00:00 dns-ubuntu cron[32606]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 801: Resource temporarily unavailable)
+2026-10-02T23:42:37.353559+00:00 dns-ubuntu cron[32638]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 801: Resource temporarily unavailable)
+2026-10-02T23:42:40.688057+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:42:40 http: TLS handshake error from 127.0.0.1:50032: EOF
+2026-10-02T23:42:40.942548+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:42:40 http: TLS handshake error from 127.0.0.1:50050: EOF
+2026-10-02T23:42:45.954695+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:42:45 http: TLS handshake error from 127.0.0.1:56528: EOF
+2026-10-02T23:42:46.104343+00:00 dns-ubuntu adduser[33412]: Selecting UID from range 100 to 999 ...
+2026-10-02T23:42:46.107345+00:00 dns-ubuntu adduser[33412]: Selecting GID from range 100 to 999 ...
+2026-10-02T23:42:46.110111+00:00 dns-ubuntu adduser[33412]: Adding system user `_rspamd' (UID 114) ...
+2026-10-02T23:42:46.112623+00:00 dns-ubuntu adduser[33412]: Adding new group `_rspamd' (GID 118) ...
+2026-10-02T23:42:46.129354+00:00 dns-ubuntu groupadd[33417]: group added to /etc/group: name=_rspamd, GID=118
+2026-10-02T23:42:46.135939+00:00 dns-ubuntu groupadd[33417]: group added to /etc/gshadow: name=_rspamd
+2026-10-02T23:42:46.137451+00:00 dns-ubuntu groupadd[33417]: new group: name=_rspamd, GID=118
+2026-10-02T23:42:46.140756+00:00 dns-ubuntu adduser[33412]: Adding new user `_rspamd' (UID 114) with group `_rspamd' ...
+2026-10-02T23:42:46.157897+00:00 dns-ubuntu useradd[33424]: new user: name=_rspamd, UID=114, GID=118, home=/var/lib/rspamd, shell=/usr/sbin/nologin, from=none
+2026-10-02T23:42:46.192286+00:00 dns-ubuntu chfn[33431]: changed user '_rspamd' information
+2026-10-02T23:42:46.195565+00:00 dns-ubuntu adduser[33412]: Not creating home directory `/var/lib/rspamd'.
+2026-10-02T23:42:51.209098+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:42:51 http: TLS handshake error from 127.0.0.1:56534: EOF
+2026-10-02T23:42:51.461998+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:42:51 http: TLS handshake error from 127.0.0.1:56556: EOF
+2026-10-02T23:42:52.236083+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:42:52.541849+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:42:52.542091+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:42:56.475510+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:42:56 http: TLS handshake error from 127.0.0.1:48662: EOF
+2026-10-02T23:43:01.723148+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:43:01 http: TLS handshake error from 127.0.0.1:48688: EOF
+2026-10-02T23:43:01.978479+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:43:01 http: TLS handshake error from 127.0.0.1:48710: EOF
+2026-10-02T23:43:04.190183+00:00 dns-ubuntu cron[34829]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 801: Resource temporarily unavailable)
+2026-10-02T23:43:06.992275+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:43:06 http: TLS handshake error from 127.0.0.1:45024: EOF
+2026-10-02T23:43:13.758098+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:43:13 http: TLS handshake error from 127.0.0.1:45042: EOF
+2026-10-02T23:43:14.025562+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:43:14 http: TLS handshake error from 127.0.0.1:45054: EOF
+2026-10-02T23:43:19.038642+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:43:19 http: TLS handshake error from 127.0.0.1:45468: EOF
+2026-10-02T23:43:22.577848+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:43:22.866288+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:43:22.866473+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:43:24.272997+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:43:24 http: TLS handshake error from 127.0.0.1:45480: EOF
+2026-10-02T23:43:24.516489+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:43:24 http: TLS handshake error from 127.0.0.1:47634: EOF
+2026-10-02T23:43:29.531719+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:43:29 http: TLS handshake error from 127.0.0.1:47656: EOF
+2026-10-02T23:43:34.996706+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:43:34 http: TLS handshake error from 127.0.0.1:60696: EOF
+2026-10-02T23:43:35.242077+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:43:35 http: TLS handshake error from 127.0.0.1:60702: EOF
+2026-10-02T23:43:40.254154+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:43:40 http: TLS handshake error from 127.0.0.1:60726: EOF
+2026-10-02T23:43:45.735196+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:43:45 http: TLS handshake error from 127.0.0.1:44178: EOF
+2026-10-02T23:43:45.979764+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:43:45 http: TLS handshake error from 127.0.0.1:44190: EOF
+2026-10-02T23:43:50.990079+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:43:50 http: TLS handshake error from 127.0.0.1:44214: EOF
+2026-10-02T23:43:53.235148+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:43:53.521794+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:43:53.522018+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:43:56.227130+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:43:56 http: TLS handshake error from 127.0.0.1:60194: EOF
+2026-10-02T23:43:56.469388+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:43:56 http: TLS handshake error from 127.0.0.1:60212: EOF
+2026-10-02T23:44:01.482114+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:44:01 http: TLS handshake error from 127.0.0.1:60218: EOF
+2026-10-02T23:44:06.716009+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:44:06 http: TLS handshake error from 127.0.0.1:55414: EOF
+2026-10-02T23:44:06.964187+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:44:06 http: TLS handshake error from 127.0.0.1:55432: EOF
+2026-10-02T23:44:11.976158+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:44:11 http: TLS handshake error from 127.0.0.1:55464: EOF
+2026-10-02T23:44:17.464033+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:44:17 http: TLS handshake error from 127.0.0.1:51024: EOF
+2026-10-02T23:44:17.721262+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:44:17 http: TLS handshake error from 127.0.0.1:51040: EOF
+2026-10-02T23:44:22.735311+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:44:22 http: TLS handshake error from 127.0.0.1:51062: EOF
+2026-10-02T23:44:24.238163+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:44:24.515485+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:44:24.515679+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:44:27.971541+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:44:27 http: TLS handshake error from 127.0.0.1:45790: EOF
+2026-10-02T23:44:28.218508+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:44:28 http: TLS handshake error from 127.0.0.1:45810: EOF
+2026-10-02T23:44:33.231083+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:44:33 http: TLS handshake error from 127.0.0.1:45828: EOF
+2026-10-02T23:44:38.692331+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:44:38 http: TLS handshake error from 127.0.0.1:58624: EOF
+2026-10-02T23:44:38.938792+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:44:38 http: TLS handshake error from 127.0.0.1:58640: EOF
+2026-10-02T23:44:43.951201+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:44:43 http: TLS handshake error from 127.0.0.1:58656: EOF
+2026-10-02T23:44:49.444078+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:44:49 http: TLS handshake error from 127.0.0.1:44482: EOF
+2026-10-02T23:44:49.691615+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:44:49 http: TLS handshake error from 127.0.0.1:44500: EOF
+2026-10-02T23:44:54.703479+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:44:54 http: TLS handshake error from 127.0.0.1:50980: EOF
+2026-10-02T23:44:55.231170+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:44:55.509540+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:44:55.509723+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:44:59.937635+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:44:59 http: TLS handshake error from 127.0.0.1:51000: EOF
+2026-10-02T23:45:00.188237+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:45:00 http: TLS handshake error from 127.0.0.1:51020: EOF
+2026-10-02T23:45:05.202287+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:45:05 http: TLS handshake error from 127.0.0.1:57336: EOF
+2026-10-02T23:45:10.438285+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:45:10 http: TLS handshake error from 127.0.0.1:57358: EOF
+2026-10-02T23:45:10.692442+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:45:10 http: TLS handshake error from 127.0.0.1:57370: EOF
+2026-10-02T23:45:15.705220+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:45:15 http: TLS handshake error from 127.0.0.1:59918: EOF
+2026-10-02T23:45:21.191706+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:45:21 http: TLS handshake error from 127.0.0.1:59928: EOF
+2026-10-02T23:45:21.433692+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:45:21 http: TLS handshake error from 127.0.0.1:59942: EOF
+2026-10-02T23:45:26.231224+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:45:26.447065+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:45:26 http: TLS handshake error from 127.0.0.1:39544: EOF
+2026-10-02T23:45:26.510936+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:45:26.511132+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:45:31.689744+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:45:31 http: TLS handshake error from 127.0.0.1:39566: EOF
+2026-10-02T23:45:31.934727+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:45:31 http: TLS handshake error from 127.0.0.1:39578: EOF
+2026-10-02T23:45:32.176999+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:45:32 http: TLS handshake error from 127.0.0.1:39588: EOF
+2026-10-02T23:45:56.722120+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:45:56.997558+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:45:56.997754+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:46:27.231111+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:46:27.508497+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:46:27.508702+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:46:58.231232+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:46:58.510474+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:46:58.510663+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:47:29.232204+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:47:29.512174+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:47:29.512560+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:48:00.231219+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:48:00.510031+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:48:00.510215+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:48:28.002172+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:48:28 http: TLS handshake error from 127.0.0.1:37552: EOF
+2026-10-02T23:48:29.308657+00:00 dns-ubuntu agent[7070]: 2026/10/02 23:48:29 hosting root: created /var/www/celikpanel at 0755 0:0
+2026-10-02T23:48:29.335693+00:00 dns-ubuntu useradd[39713]: new group: name=upd1_owner_test, GID=5001
+2026-10-02T23:48:29.335848+00:00 dns-ubuntu useradd[39713]: new user: name=upd1_owner_test, UID=5001, GID=5001, home=/var/www/celikpanel/subscriptions/2/sites/1, shell=/bin/bash, from=none
+2026-10-02T23:48:29.403805+00:00 dns-ubuntu chpasswd[39720]: pam_unix(chpasswd:chauthtok): password changed for upd1_owner_test
+2026-10-02T23:48:29.454021+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:48:29 http: TLS handshake error from 127.0.0.1:37564: EOF
+2026-10-02T23:48:29.468635+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:48:29 http: TLS handshake error from 127.0.0.1:37586: EOF
+2026-10-02T23:48:29.477771+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:48:29 http: TLS handshake error from 127.0.0.1:37606: EOF
+2026-10-02T23:48:29.486771+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:48:29 http: TLS handshake error from 127.0.0.1:37610: EOF
+2026-10-02T23:48:29.509757+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:48:29 http: TLS handshake error from 127.0.0.1:37614: EOF
+2026-10-02T23:48:29.576070+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:48:29 http: TLS handshake error from 127.0.0.1:37634: EOF
+2026-10-02T23:48:29.585342+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:48:29 http: TLS handshake error from 127.0.0.1:37652: EOF
+2026-10-02T23:48:29.598671+00:00 dns-ubuntu crontab[39739]: (root) REPLACE (upd1_owner_test)
+2026-10-02T23:48:29.603239+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:48:29 http: TLS handshake error from 127.0.0.1:37676: EOF
+2026-10-02T23:48:29.610351+00:00 dns-ubuntu crontab[39740]: (root) LIST (upd1_owner_test)
+2026-10-02T23:48:29.614927+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:48:29 http: TLS handshake error from 127.0.0.1:37694: EOF
+2026-10-02T23:48:30.570335+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:48:30.862273+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:48:30.862429+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:48:35.418501+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:48:35 http: TLS handshake error from 127.0.0.1:58442: EOF
+2026-10-02T23:48:36.495630+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:48:36 http: TLS handshake error from 127.0.0.1:58458: EOF
+2026-10-02T23:48:41.479392+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:48:41 http: TLS handshake error from 127.0.0.1:58484: EOF
+2026-10-02T23:48:46.486170+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:48:46 http: TLS handshake error from 127.0.0.1:38098: EOF
+2026-10-02T23:48:51.738095+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:48:51 http: TLS handshake error from 127.0.0.1:38136: EOF
+2026-10-02T23:48:56.487306+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:48:56 http: TLS handshake error from 127.0.0.1:41012: EOF
+2026-10-02T23:49:01.231164+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:49:01.498817+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:49:01 http: TLS handshake error from 127.0.0.1:41046: EOF
+2026-10-02T23:49:01.525549+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:49:01.525772+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:49:06.488644+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:49:06 http: TLS handshake error from 127.0.0.1:44182: EOF
+2026-10-02T23:49:11.487628+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:49:11 http: TLS handshake error from 127.0.0.1:44214: EOF
+2026-10-02T23:49:16.482921+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:49:16 http: TLS handshake error from 127.0.0.1:40904: EOF
+2026-10-02T23:49:21.481957+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:49:21 http: TLS handshake error from 127.0.0.1:40926: EOF
+2026-10-02T23:49:26.486499+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:49:26 http: TLS handshake error from 127.0.0.1:54774: EOF
+2026-10-02T23:49:31.486568+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:49:31 http: TLS handshake error from 127.0.0.1:54806: EOF
+2026-10-02T23:49:32.231318+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:49:32.513933+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:49:32.514130+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:49:36.488414+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:49:36 http: TLS handshake error from 127.0.0.1:41920: EOF
+2026-10-02T23:49:41.486450+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:49:41 http: TLS handshake error from 127.0.0.1:41950: EOF
+2026-10-02T23:49:46.484245+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:49:46 http: TLS handshake error from 127.0.0.1:50614: EOF
+2026-10-02T23:49:51.489453+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:49:51 http: TLS handshake error from 127.0.0.1:50644: EOF
+2026-10-02T23:49:56.724148+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:49:56 http: TLS handshake error from 127.0.0.1:48100: EOF
+2026-10-02T23:50:01.492906+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:01 http: TLS handshake error from 127.0.0.1:48120: EOF
+2026-10-02T23:50:03.231211+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:50:03.511538+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:50:03.511778+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:50:06.487534+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:06 http: TLS handshake error from 127.0.0.1:38192: EOF
+2026-10-02T23:50:09.164755+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:09 http: TLS handshake error from 127.0.0.1:38200: EOF
+2026-10-02T23:50:10.610739+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:10 http: TLS handshake error from 127.0.0.1:38232: EOF
+2026-10-02T23:50:11.015223+00:00 dns-ubuntu systemd[1]: Started celikpanel-lab-owner-update-observer-3bbbbd98e3efc73a6c87dec62fba2a5a.service - /usr/bin/python3 -I /root/celikpanel-release-recovery-lab/guest_owner_update_observer.py --lab-nonce 9f0cdcd97edc3091f5cdf104ef276d500c4d2bb52e8530d46d007a0d2efe3df6 --vm-uuid 551e996b-7181-52b3-b0ab-38e93ef9f669 --cell-id release-recovery__9f0cdcd97edc3091 --node ubuntu --operation-id 3bbbbd98e3efc73a6c87dec62fba2a5a --execute.
+2026-10-02T23:50:11.231411+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:11 http: TLS handshake error from 127.0.0.1:38256: EOF
+2026-10-02T23:50:11.504155+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:11 http: TLS handshake error from 127.0.0.1:38276: EOF
+2026-10-02T23:50:11.525225+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:11 http: TLS handshake error from 127.0.0.1:38290: EOF
+2026-10-02T23:50:11.577327+00:00 dns-ubuntu systemd[1]: Starting celikpanel-self-update-3bbbbd98e3efc73a6c87dec62fba2a5a.service - /opt/celikpanel/bin/agent --self-update-worker 3bbbbd98e3efc73a6c87dec62fba2a5a...
+2026-10-02T23:50:11.578088+00:00 dns-ubuntu systemd[1]: Started celikpanel-self-update-3bbbbd98e3efc73a6c87dec62fba2a5a.service - /opt/celikpanel/bin/agent --self-update-worker 3bbbbd98e3efc73a6c87dec62fba2a5a.
+2026-10-02T23:50:11.845172+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:11 http: TLS handshake error from 127.0.0.1:38344: EOF
+2026-10-02T23:50:11.845172+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:11 http: TLS handshake error from 127.0.0.1:38320: EOF
+2026-10-02T23:50:11.845172+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:11 http: TLS handshake error from 127.0.0.1:38334: EOF
+2026-10-02T23:50:11.866781+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:11 http: TLS handshake error from 127.0.0.1:38370: EOF
+2026-10-02T23:50:13.782374+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:13 http: TLS handshake error from 127.0.0.1:38412: EOF
+2026-10-02T23:50:13.782374+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:13 http: TLS handshake error from 127.0.0.1:38388: EOF
+2026-10-02T23:50:13.782374+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:13 http: TLS handshake error from 127.0.0.1:38400: EOF
+2026-10-02T23:50:13.803187+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:13 http: TLS handshake error from 127.0.0.1:38424: EOF
+2026-10-02T23:50:16.504537+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:16 http: TLS handshake error from 127.0.0.1:46258: EOF
+2026-10-02T23:50:16.504846+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:16 http: TLS handshake error from 127.0.0.1:46240: EOF
+2026-10-02T23:50:16.504846+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:16 http: TLS handshake error from 127.0.0.1:46252: EOF
+2026-10-02T23:50:16.528809+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:16 http: TLS handshake error from 127.0.0.1:46288: EOF
+2026-10-02T23:50:16.549833+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:16 http: TLS handshake error from 127.0.0.1:46310: EOF
+2026-10-02T23:50:20.735084+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:20 http: TLS handshake error from 127.0.0.1:46364: EOF
+2026-10-02T23:50:20.736002+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:20 http: TLS handshake error from 127.0.0.1:46342: EOF
+2026-10-02T23:50:20.736002+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:20 http: TLS handshake error from 127.0.0.1:46356: EOF
+2026-10-02T23:50:20.758655+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:20 http: TLS handshake error from 127.0.0.1:46390: EOF
+2026-10-02T23:50:21.517011+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:21 http: TLS handshake error from 127.0.0.1:46408: EOF
+2026-10-02T23:50:25.964233+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:50:26.364743+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:50:26.364971+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:50:26.517900+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:26 http: TLS handshake error from 127.0.0.1:39254: EOF
+2026-10-02T23:50:27.210098+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:27 http: TLS handshake error from 127.0.0.1:39274: EOF
+2026-10-02T23:50:27.210098+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:27 http: TLS handshake error from 127.0.0.1:39290: EOF
+2026-10-02T23:50:27.210098+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:27 http: TLS handshake error from 127.0.0.1:39282: EOF
+2026-10-02T23:50:27.227612+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:50:27 http: TLS handshake error from 127.0.0.1:39306: EOF
+2026-10-02T23:50:28.724017+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Sent signal SIGSTOP to main process 7267 (panel) on client request.
+2026-10-02T23:50:28.819550+00:00 dns-ubuntu systemd[1]: celikpanel-agent.service: Sent signal SIGSTOP to main process 7070 (agent) on client request.
+2026-10-02T23:50:29.382458+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-02T23:50:29.388366+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Sent signal SIGKILL to main process 7267 (panel) on client request.
+2026-10-02T23:50:29.388634+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed to send signal SIGKILL to auxiliary processes on client request: Invalid argument
+2026-10-02T23:50:29.394297+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Main process exited, code=killed, status=9/KILL
+2026-10-02T23:50:29.394398+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'signal'.
+2026-10-02T23:50:29.394639+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-02T23:50:29.394747+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Consumed 1.811s CPU time, 138.6M memory peak, 0B memory swap peak.
+2026-10-02T23:50:29.482425+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-agent.service - CelikPanel privileged agent...
+2026-10-02T23:50:29.486037+00:00 dns-ubuntu systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-10-02T23:50:29.486316+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-agent.service - CelikPanel privileged agent.
+2026-10-02T23:50:29.486434+00:00 dns-ubuntu systemd[1]: celikpanel-agent.service: Consumed 1min 10.664s CPU time, 762.2M memory peak, 0B memory swap peak.
+2026-10-02T23:50:42.711074+00:00 dns-ubuntu systemd[1]: Starting celikpanel-lab-recovery-fault-3bbbbd98e3efc73a6c87dec62fba2a5a.service - /usr/bin/python3 -I /root/celikpanel-release-recovery-lab/guest_recovery_fault.py --execute --lab-nonce 9f0cdcd97edc3091f5cdf104ef276d500c4d2bb52e8530d46d007a0d2efe3df6 --vm-uuid 551e996b-7181-52b3-b0ab-38e93ef9f669 --cell-id release-recovery__9f0cdcd97edc3091 --node ubuntu --operation-id 3bbbbd98e3efc73a6c87dec62fba2a5a...
+2026-10-02T23:50:42.711308+00:00 dns-ubuntu systemd[1]: Started celikpanel-lab-recovery-fault-3bbbbd98e3efc73a6c87dec62fba2a5a.service - /usr/bin/python3 -I /root/celikpanel-release-recovery-lab/guest_recovery_fault.py --execute --lab-nonce 9f0cdcd97edc3091f5cdf104ef276d500c4d2bb52e8530d46d007a0d2efe3df6 --vm-uuid 551e996b-7181-52b3-b0ab-38e93ef9f669 --cell-id release-recovery__9f0cdcd97edc3091 --node ubuntu --operation-id 3bbbbd98e3efc73a6c87dec62fba2a5a.
+2026-10-02T23:50:47.001373+00:00 dns-ubuntu sudo[55402]:     root : PWD=/var/backups/celikpanel/releases/993149f75c88-a3c2dec04887b801da3c7fa1 ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin HOME=/var/lib/celikpanel LC_ALL=C CELIKPANEL_DATA_DIR=/var/lib/celikpanel/.release-db-migrations/ac805874d6809e591edb0d263f01b8bac0c9b5cfc2fb437ce35a65d9b6c0b84f/work /opt/celikpanel/bin/panel --migrate-only
+2026-10-02T23:50:47.004196+00:00 dns-ubuntu sudo[55402]: pam_unix(sudo:session): session opened for user celikpanel(uid=999) by (uid=0)
+2026-10-02T23:50:47.182334+00:00 dns-ubuntu sudo[55402]: pam_unix(sudo:session): session closed for user celikpanel
+2026-10-02T23:50:51.216966+00:00 dns-ubuntu sudo[56331]:     root : PWD=/var/backups/celikpanel/releases/993149f75c88-a3c2dec04887b801da3c7fa1 ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin HOME=/var/lib/celikpanel LC_ALL=C CELIKPANEL_DATA_DIR=/var/lib/celikpanel CELIKPANEL_LISTEN=:2083 CELIKPANEL_TLS=1 CELIKPANEL_PANEL_DEMO_FLAG= CELIKPANEL_WEB_DIR=/opt/celikpanel/web CELIKPANEL_PANEL_INSECURE_COOKIES_FLAG= /opt/celikpanel/bin/panel --check-startup-readiness
+2026-10-02T23:50:51.218171+00:00 dns-ubuntu sudo[56331]: pam_unix(sudo:session): session opened for user celikpanel(uid=999) by (uid=0)
+2026-10-02T23:50:51.535053+00:00 dns-ubuntu sudo[56331]: pam_unix(sudo:session): session closed for user celikpanel
+2026-10-02T23:50:51.704619+00:00 dns-ubuntu agent[42393]: 2026/10/02 23:50:51 System update worker failed: reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=candidate_panel_startup_check_failed state=recovery_required reason=new panel start check failed before completion: panel startup check failed: tls_pair_invalid: the panel TLS certificate and private key cannot be loaded as a matching pair detail=
+2026-10-02T23:50:51.706183+00:00 dns-ubuntu systemd[1]: celikpanel-self-update-3bbbbd98e3efc73a6c87dec62fba2a5a.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-02T23:50:51.706301+00:00 dns-ubuntu systemd[1]: celikpanel-self-update-3bbbbd98e3efc73a6c87dec62fba2a5a.service: Failed with result 'exit-code'.
+2026-10-02T23:50:51.706488+00:00 dns-ubuntu systemd[1]: celikpanel-self-update-3bbbbd98e3efc73a6c87dec62fba2a5a.service: Triggering OnFailure= dependencies.
+2026-10-02T23:50:51.706819+00:00 dns-ubuntu systemd[1]: celikpanel-self-update-3bbbbd98e3efc73a6c87dec62fba2a5a.service: Consumed 33.728s CPU time, 474.7M memory peak, 0B memory swap peak.
+2026-10-02T23:50:51.713040+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:50:51.838238+00:00 dns-ubuntu systemctl[56517]: Failed to thaw unit celikpanel-self-update-3bbbbd98e3efc73a6c87dec62fba2a5a.service: Unit is inactive.
+2026-10-02T23:50:51.839594+00:00 dns-ubuntu systemd[1]: celikpanel-lab-owner-update-observer-3bbbbd98e3efc73a6c87dec62fba2a5a.service: Deactivated successfully.
+2026-10-02T23:50:51.840003+00:00 dns-ubuntu systemd[1]: celikpanel-lab-owner-update-observer-3bbbbd98e3efc73a6c87dec62fba2a5a.service: Consumed 9.489s CPU time, 18.1M memory peak, 0B memory swap peak.
+2026-10-02T23:50:52.885904+00:00 dns-ubuntu release-recovery[56504]: Recovery dispatch admitted: attempt=1 snapshot=20261002T235027Z-from-unknown-to-993149f75c883c1c62bdfef536c2b5d42c85d059-c6a447bb7592473c8cdd4f1c58795809
+2026-10-02T23:50:55.446377+00:00 dns-ubuntu release-recovery[57131]: ==> Verified snapshot / Doğrulanmış snapshot: /var/backups/celikpanel/update-snapshots/20261002T235027Z-from-unknown-to-993149f75c883c1c62bdfef536c2b5d42c85d059-c6a447bb7592473c8cdd4f1c58795809
+2026-10-02T23:50:55.446377+00:00 dns-ubuntu release-recovery[57131]: ==> Stopping CelikPanel services / CelikPanel servisleri durduruluyor
+2026-10-02T23:51:03.566753+00:00 dns-ubuntu release-recovery[61328]: Created symlink /etc/systemd/system/multi-user.target.wants/celikpanel-agent.service -> /etc/systemd/system/celikpanel-agent.service.
+2026-10-02T23:51:03.822776+00:00 dns-ubuntu release-recovery[61427]: Created symlink /etc/systemd/system/multi-user.target.wants/celikpanel-panel.service -> /etc/systemd/system/celikpanel-panel.service.
+2026-10-02T23:51:04.092985+00:00 dns-ubuntu release-recovery[61490]: Created symlink /etc/systemd/system/multi-user.target.wants/celikpanel-firewall-restore.service -> /etc/systemd/system/celikpanel-firewall-restore.service.
+2026-10-02T23:51:04.092985+00:00 dns-ubuntu release-recovery[61490]: Created symlink /etc/systemd/system/network-pre.target.requires/celikpanel-firewall-restore.service -> /etc/systemd/system/celikpanel-firewall-restore.service.
+-- Boot eab41e892b874b6f9b0c6e04d538b39b --
+2026-10-02T23:51:18.652721+00:00 dns-ubuntu systemd[1]: Starting celikpanel-agent.service - CelikPanel privileged agent...
+2026-10-02T23:51:18.656791+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:51:18.766922+00:00 dns-ubuntu release-transaction-start-guard[703]: celikpanel release start guard: held: a CelikPanel update or recovery is in progress; the unit starts when it finishes
+2026-10-02T23:51:19.435867+00:00 dns-ubuntu systemd[1]: celikpanel-agent.service: Skipped due to 'exec-condition'.
+2026-10-02T23:51:19.439064+00:00 dns-ubuntu systemd[1]: Condition check resulted in celikpanel-agent.service - CelikPanel privileged agent being skipped.
+2026-10-02T23:51:19.683076+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-02T23:51:20.006343+00:00 dns-ubuntu release-transaction-start-guard[857]: celikpanel release start guard: held: a CelikPanel update or recovery is in progress; the unit starts when it finishes
+2026-10-02T23:51:20.008247+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Skipped due to 'exec-condition'.
+2026-10-02T23:51:20.008414+00:00 dns-ubuntu systemd[1]: Condition check resulted in celikpanel-panel.service - CelikPanel web panel being skipped.
+2026-10-02T23:51:21.642862+00:00 dns-ubuntu release-recovery[704]: Recovery waiting for the operating system transition; no owner action is needed. The native recovery timer will retry this same operation. Recovery is not yet complete.
+2026-10-02T23:51:21.642862+00:00 dns-ubuntu release-recovery[704]: Kurtarma işletim sistemi geçişini bekliyor; kullanıcı işlemi gerekmiyor. Yerel kurtarma zamanlayıcısı aynı işlemi yeniden deneyecek. Kurtarma henüz tamamlanmadı.
+2026-10-02T23:51:21.643987+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:51:21.644188+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:51:21.646275+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Consumed 1.008s CPU time.
+2026-10-02T23:51:51.454439+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:51:52.371881+00:00 dns-ubuntu release-recovery[2567]: Recovery dispatch admitted: attempt=2 snapshot=20261002T235027Z-from-unknown-to-993149f75c883c1c62bdfef536c2b5d42c85d059-c6a447bb7592473c8cdd4f1c58795809
+2026-10-02T23:51:54.358278+00:00 dns-ubuntu release-recovery[2899]: ==> Verified snapshot / Doğrulanmış snapshot: /var/backups/celikpanel/update-snapshots/20261002T235027Z-from-unknown-to-993149f75c883c1c62bdfef536c2b5d42c85d059-c6a447bb7592473c8cdd4f1c58795809
+2026-10-02T23:51:54.358278+00:00 dns-ubuntu release-recovery[2899]: ==> Stopping CelikPanel services / CelikPanel servisleri durduruluyor
+2026-10-02T23:52:00.508320+00:00 dns-ubuntu release-recovery[5279]: Created symlink /etc/systemd/system/multi-user.target.wants/celikpanel-agent.service -> /etc/systemd/system/celikpanel-agent.service.
+2026-10-02T23:52:00.734021+00:00 dns-ubuntu release-recovery[5345]: Created symlink /etc/systemd/system/multi-user.target.wants/celikpanel-panel.service -> /etc/systemd/system/celikpanel-panel.service.
+2026-10-02T23:52:00.995834+00:00 dns-ubuntu release-recovery[5416]: Created symlink /etc/systemd/system/multi-user.target.wants/celikpanel-firewall-restore.service -> /etc/systemd/system/celikpanel-firewall-restore.service.
+2026-10-02T23:52:00.995834+00:00 dns-ubuntu release-recovery[5416]: Created symlink /etc/systemd/system/network-pre.target.requires/celikpanel-firewall-restore.service -> /etc/systemd/system/celikpanel-firewall-restore.service.
+2026-10-02T23:52:03.375459+00:00 dns-ubuntu systemd[1]: Starting celikpanel-agent.service - CelikPanel privileged agent...
+2026-10-02T23:52:03.424383+00:00 dns-ubuntu systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-10-02T23:52:03.432526+00:00 dns-ubuntu agent[5934]: 2026/10/02 23:52:03 Starting CelikPanel Agent...
+2026-10-02T23:52:03.452993+00:00 dns-ubuntu agent[5934]: 2026/10/02 23:52:03 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-10-02T23:52:03.806434+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-02T23:52:03.854378+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-02T23:52:03.869889+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-02T23:52:03.872062+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-02T23:52:03.872340+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-02T23:52:03.939512+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-02T23:52:03.989484+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-02T23:52:04.160301+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:04 Starting CelikPanel Backend...
+2026-10-02T23:52:04.180754+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:04 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-02T23:52:04.181548+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:04 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-02T23:52:04.182835+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:04 Connected to Agent RPC; preparing normal management access
+2026-10-02T23:52:04.228935+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:04 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload
+2026-10-02T23:52:04.231611+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:04 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+2026-10-02T23:52:04.235601+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:04 milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+2026-10-02T23:52:04.240205+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:04 Panel ready on :2083 (HTTPS)
+2026-10-02T23:52:04.728333+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:04 http: TLS handshake error from 127.0.0.1:44822: EOF
+2026-10-02T23:52:04.728476+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:04 http: TLS handshake error from 127.0.0.1:44816: EOF
+2026-10-02T23:52:04.728639+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:04 http: TLS handshake error from 127.0.0.1:44820: EOF
+2026-10-02T23:52:04.750728+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:04 http: TLS handshake error from 127.0.0.1:44848: EOF
+2026-10-02T23:52:05.659322+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:05 http: TLS handshake error from 127.0.0.1:44872: EOF
+2026-10-02T23:52:06.542828+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:06 http: TLS handshake error from 127.0.0.1:44926: EOF
+2026-10-02T23:52:06.542985+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:06 http: TLS handshake error from 127.0.0.1:44896: EOF
+2026-10-02T23:52:06.543137+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:06 http: TLS handshake error from 127.0.0.1:44910: EOF
+2026-10-02T23:52:06.576248+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:06 http: TLS handshake error from 127.0.0.1:44936: EOF
+2026-10-02T23:52:08.725732+00:00 dns-ubuntu release-recovery[2899]: ==> Rollback complete / Geri alma tamamlandı
+2026-10-02T23:52:08.725732+00:00 dns-ubuntu release-recovery[2899]:     Restored release source commit / Geri yüklenen sürümün kaynak commit'i: 4a379faed756b87070a7f621787e9cbe0eef7d04 (from the restored Agent's build record / geri yüklenen Agent'ın yapı kaydından)
+2026-10-02T23:52:08.725732+00:00 dns-ubuntu release-recovery[2899]:     Source checkout was not changed / Kaynak çalışma ağacı değiştirilmedi
+2026-10-02T23:52:08.731224+00:00 dns-ubuntu release-recovery[2899]:     Panel: active
+2026-10-02T23:52:08.736104+00:00 dns-ubuntu release-recovery[2899]:     Agent: active
+2026-10-02T23:52:09.000897+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:52:09.001589+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:52:09.001843+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Consumed 15.014s CPU time, 129.4M memory peak, 0B memory swap peak.
+2026-10-02T23:52:09.451316+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:09 http: TLS handshake error from 127.0.0.1:44958: EOF
+2026-10-02T23:52:09.451929+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:09 http: TLS handshake error from 127.0.0.1:44972: EOF
+2026-10-02T23:52:09.451929+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:09 http: TLS handshake error from 127.0.0.1:44966: EOF
+2026-10-02T23:52:09.474966+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:09 http: TLS handshake error from 127.0.0.1:44992: EOF
+2026-10-02T23:52:10.999584+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:10 http: TLS handshake error from 127.0.0.1:45010: EOF
+2026-10-02T23:52:15.537625+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:15 http: TLS handshake error from 127.0.0.1:56136: EOF
+2026-10-02T23:52:15.658796+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:15 http: TLS handshake error from 127.0.0.1:56142: EOF
+2026-10-02T23:52:15.795998+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:15 http: TLS handshake error from 127.0.0.1:56152: EOF
+2026-10-02T23:52:16.013709+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:16 http: TLS handshake error from 127.0.0.1:56174: EOF
+2026-10-02T23:52:16.022287+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:16 http: TLS handshake error from 127.0.0.1:56190: EOF
+2026-10-02T23:52:16.031999+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:16 http: TLS handshake error from 127.0.0.1:56208: EOF
+2026-10-02T23:52:16.067723+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:16 http: TLS handshake error from 127.0.0.1:56232: EOF
+2026-10-02T23:52:16.091448+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:16 http: TLS handshake error from 127.0.0.1:56252: EOF
+2026-10-02T23:52:16.100837+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:16 http: TLS handshake error from 127.0.0.1:56282: EOF
+2026-10-02T23:52:16.109976+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:16 http: TLS handshake error from 127.0.0.1:56300: EOF
+2026-10-02T23:52:16.119062+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:16 http: TLS handshake error from 127.0.0.1:56314: EOF
+2026-10-02T23:52:16.133377+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:16 http: TLS handshake error from 127.0.0.1:56336: EOF
+2026-10-02T23:52:20.651694+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:20 http: TLS handshake error from 127.0.0.1:56372: EOF
+2026-10-02T23:52:25.653017+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:25 http: TLS handshake error from 127.0.0.1:48244: EOF
+2026-10-02T23:52:30.653480+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:30 http: TLS handshake error from 127.0.0.1:48258: EOF
+2026-10-02T23:52:35.654081+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:35 http: TLS handshake error from 127.0.0.1:46798: EOF
+2026-10-02T23:52:37.233027+00:00 dns-ubuntu postfix/postmap[8720]: warning: unsupported dictionary type: lmdb. Is the postfix-lmdb package installed?
+2026-10-02T23:52:37.233046+00:00 dns-ubuntu postfix/postmap[8720]: fatal: unsupported map type: lmdb
+2026-10-02T23:52:39.453464+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:52:39.822992+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:52:39.823794+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:52:40.663418+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:40 http: TLS handshake error from 127.0.0.1:46812: EOF
+2026-10-02T23:52:42.621811+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:42 startup mail work, attempt 1 of 20: mail certificate publication completed (mail SNI from 0 active secure-mail certificates); mail filter wiring completed (milters="inet:localhost:11332" maps=hash)
+2026-10-02T23:52:45.648378+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:45 http: TLS handshake error from 127.0.0.1:33400: EOF
+2026-10-02T23:52:50.648260+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:50 http: TLS handshake error from 127.0.0.1:33442: EOF
+2026-10-02T23:52:55.651641+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:52:55 http: TLS handshake error from 127.0.0.1:59984: EOF
+2026-10-02T23:53:00.871531+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:53:00 http: TLS handshake error from 127.0.0.1:60028: EOF
+2026-10-02T23:53:05.652236+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:53:05 http: TLS handshake error from 127.0.0.1:58942: EOF
+2026-10-02T23:53:10.461463+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-02T23:53:10.655527+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:53:10 http: TLS handshake error from 127.0.0.1:58964: EOF
+2026-10-02T23:53:10.833758+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-02T23:53:10.833938+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-02T23:53:15.660791+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:53:15 http: TLS handshake error from 127.0.0.1:45138: EOF
+2026-10-02T23:53:20.653381+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:53:20 http: TLS handshake error from 127.0.0.1:45176: EOF
+2026-10-02T23:53:25.659410+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:53:25 http: TLS handshake error from 127.0.0.1:52430: EOF
+2026-10-02T23:53:30.652005+00:00 dns-ubuntu panel[6045]: 2026/10/02 23:53:30 http: TLS handshake error from 127.0.0.1:52454: EOF

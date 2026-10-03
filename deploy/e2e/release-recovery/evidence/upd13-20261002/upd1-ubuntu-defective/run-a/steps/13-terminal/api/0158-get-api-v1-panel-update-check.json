@@ -1,0 +1,88 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "terminal check",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/panel/update/check"
+  },
+  "response": {
+    "elapsed_seconds": 0.026,
+    "headers": [
+      [
+        "Cache-Control",
+        "no-store"
+      ],
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 02 Oct 2026 23:32:12 GMT"
+      ],
+      [
+        "Content-Length",
+        "541"
+      ]
+    ],
+    "json": {
+      "available": true,
+      "current_commit": "4a379faed756b87070a7f621787e9cbe0eef7d04",
+      "current_version": "v0.1.0-alpha.81",
+      "previous_attempt": {
+        "finished_at": "2026-10-02T23:32:05Z",
+        "phase": "recovered",
+        "request_id": "619e9e5e593ef142d168ad68953e8ccb"
+      },
+      "supported": true,
+      "target": {
+        "arch": "amd64",
+        "archive_sha256": "42021ef5402c9666b128344fc58f0c2989bfd06ad8af8cea32d7128508cf54b9",
+        "archive_size": "65660188",
+        "commit": "6acb22f6d5ce471d57131ed5ecff24c85b9d8844",
+        "os": "linux",
+        "published_at": "2026-10-02T23:13:50Z",
+        "sequence": "82",
+        "version": "v0.1.0-alpha.82"
+      }
+    },
+    "status": 200,
+    "text": null
+  }
+}

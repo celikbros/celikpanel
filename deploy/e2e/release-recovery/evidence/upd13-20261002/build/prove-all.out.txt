@@ -1,0 +1,76 @@
+source_head f6cdd5a0c27ca865a2dc50239b106046e13739b7 baseline_ref null
+baseline v0.1.0-alpha.81 81 4a379faed756b87070a7f621787e9cbe0eef7d04 d9dffd8de34e04fcaf6466c944403693efc3dd70 056c58dcbc5a3f0fbbb8291543bfd0bce7c3f2d6b7ed872cd67c9e29c5690e31 acceptance-fixture None
+good v0.1.0-alpha.82 82 47c0b4c2d68ae75258a36dad469c2a41758e1e1c ec151f24bf371ed4edec40997c35bc07c67d90a4 9238b386ed0ff6eee055efe4a32c698327bbf7fe5eaa6bce452e0087ee0e4c90 acceptance-fixture 4a379faed756b87070a7f621787e9cbe0eef7d04
+defective v0.1.0-alpha.82 82 6acb22f6d5ce471d57131ed5ecff24c85b9d8844 218733c25b6836e832e36bbd965310feb81effb6 42021ef5402c9666b128344fc58f0c2989bfd06ad8af8cea32d7128508cf54b9 acceptance-fixture 47c0b4c2d68ae75258a36dad469c2a41758e1e1c
+startcheck v0.1.0-alpha.82 82 993149f75c883c1c62bdfef536c2b5d42c85d059 224813c0e7e37711ae18a5a92c5a4ff54bc2bda7 1dbd333d6e9e0c34b973bf849acf39d888ee6699252fe635bfe188d03ad4439b acceptance-fixture 47c0b4c2d68ae75258a36dad469c2a41758e1e1c
+realstart v0.1.0-alpha.82 82 b139dbf3946e5c1042ed61e6f26290b8a944325f d671cb31e5a06241a9e9083ae970bbcc45213ee6 f8ac1437cf30ef574a579cdd099cc592c1e39898a04e81b5482e948f6759c886 acceptance-fixture 47c0b4c2d68ae75258a36dad469c2a41758e1e1c
+prove rc=0
+dry upd1-debian13-good rc=0
+upd1-debian13-good native_evidence= False v0.1.0-alpha.81 v0.1.0-alpha.82 ['preflight', 'origin', 'baseline-install', 'owner-login', 'license', 'setup', 'seed', 'pre-state', 'arm', 'owner-start', 'track', 'owner-continuation (required)', 'terminal', 'deferred-mail-watch', 'collect', 'verdicts']
+ expected: succeeded (update_verified)
+dry upd1-debian13-defective rc=0
+upd1-debian13-defective native_evidence= False v0.1.0-alpha.81 v0.1.0-alpha.82 ['preflight', 'origin', 'baseline-install', 'owner-login', 'license', 'setup', 'seed', 'pre-state', 'arm', 'owner-start', 'track', 'owner-continuation (required)', 'terminal', 'deferred-mail-watch', 'collect', 'verdicts']
+ expected: recovered (rollback_verified, previous_failure=update_failed), automatically or after the owner's one-time retry
+dry upd1-debian13-owner-continuation rc=0
+upd1-debian13-owner-continuation native_evidence= False v0.1.0-alpha.81 v0.1.0-alpha.82 ['preflight', 'origin', 'baseline-install', 'owner-login', 'license', 'setup', 'seed', 'pre-state', 'arm', 'owner-start', 'track', 'owner-continuation (required)', 'terminal', 'deferred-mail-watch', 'collect', 'verdicts', 'kind-expectation']
+ expected: the good candidate passes the start check; the held port makes its real start fail (panel_start_unverified); forward completion is retried three times (dispatch
+dry upd1-debian13-startcheck rc=0
+upd1-debian13-startcheck native_evidence= False v0.1.0-alpha.81 v0.1.0-alpha.82 ['preflight', 'origin', 'baseline-install', 'owner-login', 'license', 'setup', 'seed', 'pre-state', 'arm', 'owner-start', 'track', 'owner-continuation (required)', 'terminal', 'deferred-mail-watch', 'collect', 'verdicts', 'kind-expectation']
+ expected: the update fails in phase active after the database publication with candidate_panel_startup_check_failed (failure line and <request>.failure sidecar; check rea
+dry upd1-debian13-realstart rc=0
+upd1-debian13-realstart native_evidence= False v0.1.0-alpha.81 v0.1.0-alpha.82 ['preflight', 'origin', 'baseline-install', 'owner-login', 'license', 'setup', 'seed', 'pre-state', 'arm', 'owner-start', 'track', 'owner-continuation (required)', 'terminal', 'collect', 'verdicts', 'kind-expectation']
+ expected: the start check passes; completion.pending exists; the stability wait fails with panel_start_unverified; forward completion is retried to its limit (N and times
+dry upd1-debian13-mgmt-off-reboot rc=0
+upd1-debian13-mgmt-off-reboot native_evidence= False v0.1.0-alpha.81 v0.1.0-alpha.82 ['preflight', 'origin', 'baseline-install', 'owner-login', 'license', 'setup', 'seed', 'pre-state', 'arm', 'owner-start', 'track', 'owner-continuation (required)', 'terminal', 'management-off', 'owner-reboot', 'management-off-measure', 'management-return', 'collect', 'verdicts', 'kind-expectation']
+ expected: the good update is verified; the owner disables and stops the Panel and Agent, reboots once (orderly); for at least 180 s after the boot, with management off, t
+dry upd1-arch-good rc=0
+upd1-arch-good native_evidence= False v0.1.0-alpha.81 v0.1.0-alpha.82 ['preflight', 'origin', 'baseline-install', 'owner-login', 'license', 'setup', 'seed', 'pre-state', 'arm', 'owner-start', 'track', 'owner-continuation (required)', 'terminal', 'collect', 'verdicts']
+ expected: succeeded (update_verified)
+dry upd1-arch-defective rc=0
+upd1-arch-defective native_evidence= False v0.1.0-alpha.81 v0.1.0-alpha.82 ['preflight', 'origin', 'baseline-install', 'owner-login', 'license', 'setup', 'seed', 'pre-state', 'arm', 'owner-start', 'track', 'owner-continuation (required)', 'terminal', 'collect', 'verdicts']
+ expected: recovered (rollback_verified, previous_failure=update_failed), automatically or after the owner's one-time retry
+dry upd1-arch-startcheck rc=0
+upd1-arch-startcheck native_evidence= False v0.1.0-alpha.81 v0.1.0-alpha.82 ['preflight', 'origin', 'baseline-install', 'owner-login', 'license', 'setup', 'seed', 'pre-state', 'arm', 'owner-start', 'track', 'owner-continuation (required)', 'terminal', 'collect', 'verdicts', 'kind-expectation']
+ expected: the update fails in phase active after the database publication with candidate_panel_startup_check_failed (failure line and <request>.failure sidecar; check rea
+dry upd1-arch-owner-continuation rc=0
+upd1-arch-owner-continuation native_evidence= False v0.1.0-alpha.81 v0.1.0-alpha.82 ['preflight', 'origin', 'baseline-install', 'owner-login', 'license', 'setup', 'seed', 'pre-state', 'arm', 'owner-start', 'track', 'owner-continuation (required)', 'terminal', 'collect', 'verdicts', 'kind-expectation']
+ expected: the good candidate passes the start check; the held port makes its real start fail (panel_start_unverified); forward completion is retried three times (dispatch
+dry upd1-arch-mgmt-off-reboot rc=0
+upd1-arch-mgmt-off-reboot native_evidence= False v0.1.0-alpha.81 v0.1.0-alpha.82 ['preflight', 'origin', 'baseline-install', 'owner-login', 'license', 'setup', 'seed', 'pre-state', 'arm', 'owner-start', 'track', 'owner-continuation (required)', 'terminal', 'management-off', 'owner-reboot', 'management-off-measure', 'management-return', 'collect', 'verdicts', 'kind-expectation']
+ expected: the good update is verified; the owner disables and stops the Panel and Agent, reboots once (orderly); for at least 180 s after the boot, with management off, t
+dry upd1-ubuntu-good rc=0
+upd1-ubuntu-good native_evidence= False v0.1.0-alpha.81 v0.1.0-alpha.82 ['preflight', 'origin', 'baseline-install', 'owner-login', 'license', 'setup', 'seed', 'pre-state', 'arm', 'owner-start', 'track', 'owner-continuation (required)', 'terminal', 'deferred-mail-watch', 'collect', 'verdicts']
+ expected: succeeded (update_verified)
+dry upd1-ubuntu-defective rc=0
+upd1-ubuntu-defective native_evidence= False v0.1.0-alpha.81 v0.1.0-alpha.82 ['preflight', 'origin', 'baseline-install', 'owner-login', 'license', 'setup', 'seed', 'pre-state', 'arm', 'owner-start', 'track', 'owner-continuation (required)', 'terminal', 'deferred-mail-watch', 'collect', 'verdicts']
+ expected: recovered (rollback_verified, previous_failure=update_failed), automatically or after the owner's one-time retry
+dry upd1-ubuntu-owner-continuation rc=0
+upd1-ubuntu-owner-continuation native_evidence= False v0.1.0-alpha.81 v0.1.0-alpha.82 ['preflight', 'origin', 'baseline-install', 'owner-login', 'license', 'setup', 'seed', 'pre-state', 'arm', 'owner-start', 'track', 'owner-continuation (required)', 'terminal', 'deferred-mail-watch', 'collect', 'verdicts', 'kind-expectation']
+ expected: the good candidate passes the start check; the held port makes its real start fail (panel_start_unverified); forward completion is retried three times (dispatch
+dry upd1-ubuntu-startcheck rc=0
+upd1-ubuntu-startcheck native_evidence= False v0.1.0-alpha.81 v0.1.0-alpha.82 ['preflight', 'origin', 'baseline-install', 'owner-login', 'license', 'setup', 'seed', 'pre-state', 'arm', 'owner-start', 'track', 'owner-continuation (required)', 'terminal', 'deferred-mail-watch', 'collect', 'verdicts', 'kind-expectation']
+ expected: the update fails in phase active after the database publication with candidate_panel_startup_check_failed (failure line and <request>.failure sidecar; check rea
+dry upd1-ubuntu-mgmt-off-reboot rc=0
+upd1-ubuntu-mgmt-off-reboot native_evidence= False v0.1.0-alpha.81 v0.1.0-alpha.82 ['preflight', 'origin', 'baseline-install', 'owner-login', 'license', 'setup', 'seed', 'pre-state', 'arm', 'owner-start', 'track', 'owner-continuation (required)', 'terminal', 'management-off', 'owner-reboot', 'management-off-measure', 'management-return', 'collect', 'verdicts', 'kind-expectation']
+ expected: the good update is verified; the owner disables and stops the Panel and Agent, reboots once (orderly); for at least 180 s after the boot, with management off, t
+no dry-run lab created
+prove-cur done rc=0
+source_head f6cdd5a0c27ca865a2dc50239b106046e13739b7 baseline_ref {"patched_files": ["cmd/panel/license.go", "internal/licensing/acceptance_fixture.go", "internal/licensing/acceptance_off.go", "internal/licensing/acceptance_owner_linux.go", "internal/licensing/acceptance_owner_other.go", "internal/licensing/license.go"], "proof": "/var/tmp/cp-upd1-build/20261002t203514z/baseline-ref-proof.txt", "ref": "v0.1.0-alpha.80", "tag_commit": "bd14d97efc5cfd19acd70ddf0edb9c6343317e2b"}
+baseline v0.1.0-alpha.80 80 82958d4a730a50b07fc0983a3947e1fa7b9528e4 ee6d75f688fac425179ee646a647a0ceb68283bc 57219d269527c7491cc9192cd20bc3e5e5402e515e875849389f4fc0c08f39e9 acceptance-fixture bd14d97efc5cfd19acd70ddf0edb9c6343317e2b
+good v0.1.0-alpha.81 81 56bc29094bc37d3c74e3cee66677958ce38d4d27 eea2d39d811497db86c034f2770e8e2b53298aa6 1866a9b3f18c61e7f8080c531e9581bc467a9fc8a9a654e6e7ad91fd8b9d8970 acceptance-fixture 82958d4a730a50b07fc0983a3947e1fa7b9528e4
+defective v0.1.0-alpha.81 81 681efd709b56ad114d752967feac2d66bb99894c fcc151de4b3a4dd1fa67bd68043f560de53b6072 bbadbe3c47fe8e0316163275166efcd9f80d5c4382efc8db2b52809e29d0d48d acceptance-fixture 56bc29094bc37d3c74e3cee66677958ce38d4d27
+prove rc=0
+dry upd1-debian13-good rc=0
+upd1-debian13-good native_evidence= False v0.1.0-alpha.80 v0.1.0-alpha.81 ['preflight', 'origin', 'baseline-install', 'owner-login', 'license', 'setup', 'seed', 'pre-state', 'arm', 'owner-start', 'track', 'owner-continuation (required)', 'terminal', 'deferred-mail-watch', 'collect', 'verdicts']
+ expected: succeeded (update_verified)
+dry upd1-debian13-defective rc=0
+upd1-debian13-defective native_evidence= False v0.1.0-alpha.80 v0.1.0-alpha.81 ['preflight', 'origin', 'baseline-install', 'owner-login', 'license', 'setup', 'seed', 'pre-state', 'arm', 'owner-start', 'track', 'owner-continuation (required)', 'terminal', 'deferred-mail-watch', 'collect', 'verdicts']
+ expected: recovered (rollback_verified, previous_failure=update_failed), automatically or after the owner's one-time retry
+dry upd1-debian13-owner-continuation rc=0
+upd1-debian13-owner-continuation native_evidence= False v0.1.0-alpha.80 v0.1.0-alpha.81 ['preflight', 'origin', 'baseline-install', 'owner-login', 'license', 'setup', 'seed', 'pre-state', 'arm', 'owner-start', 'track', 'owner-continuation (required)', 'terminal', 'deferred-mail-watch', 'collect', 'verdicts', 'kind-expectation']
+ expected: the good candidate passes the start check; the held port makes its real start fail (panel_start_unverified); forward completion is retried three times (dispatch
+dry upd1-ubuntu-good rc=0
+upd1-ubuntu-good native_evidence= False v0.1.0-alpha.80 v0.1.0-alpha.81 ['preflight', 'origin', 'baseline-install', 'owner-login', 'license', 'setup', 'seed', 'pre-state', 'arm', 'owner-start', 'track', 'owner-continuation (required)', 'terminal', 'deferred-mail-watch', 'collect', 'verdicts']
+ expected: succeeded (update_verified)
+no dry-run lab created
+prove-a80 done rc=0

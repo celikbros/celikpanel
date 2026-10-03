@@ -1,0 +1,21 @@
+01 upd1-debian13-good cur upd13-d13-good-a 3711 upd1-debian13-good debian13
+02 upd1-debian13-defective cur upd13-d13-def-a 3721 upd1-debian13-defective debian13
+03 upd1-debian13-startcheck cur upd13-d13-sc-a 3731 upd1-debian13-startcheck debian13
+04 upd1-debian13-realstart cur upd13-d13-rs-a 3741 upd1-debian13-realstart debian13
+05 upd1-debian13-owner-continuation cur upd13-d13-oc-a 3751 upd1-debian13-owner-continuation debian13
+06 upd1-debian13-mgmt-off-reboot cur upd13-d13-mr-a 3761 upd1-debian13-mgmt-off-reboot debian13
+07 upd1-arch-good cur upd13-arch-good-a 3771 upd1-arch-good arch
+08 upd1-arch-defective cur upd13-arch-def-a 3781 upd1-arch-defective arch
+09 upd1-arch-startcheck cur upd13-arch-sc-a 3791 upd1-arch-startcheck arch
+10 upd1-arch-owner-continuation cur upd13-arch-oc-a 3801 upd1-arch-owner-continuation arch
+11 upd1-arch-mgmt-off-reboot cur upd13-arch-mr-a 3811 upd1-arch-mgmt-off-reboot arch
+12 upd1-ubuntu-good cur upd13-ub-good-a 3821 upd1-ubuntu-good ubuntu
+13 upd1-ubuntu-defective cur upd13-ub-def-a 3831 upd1-ubuntu-defective ubuntu
+14 upd1-ubuntu-startcheck cur upd13-ub-sc-a 3841 upd1-ubuntu-startcheck ubuntu
+15 upd1-ubuntu-owner-continuation cur upd13-ub-oc-a 3851 upd1-ubuntu-owner-continuation ubuntu
+16 upd1-ubuntu-mgmt-off-reboot cur upd13-ub-mr-a 3861 upd1-ubuntu-mgmt-off-reboot ubuntu
+17 upd1-debian13-good a80 upd13-a80-d13-good-a 3871 part2-alpha80/upd1-debian13-good debian13
+18 upd1-debian13-defective a80 upd13-a80-d13-def-a 3881 part2-alpha80/upd1-debian13-defective debian13
+19 upd1-debian13-owner-continuation a80 upd13-a80-d13-oc-a 3891 part2-alpha80/upd1-debian13-owner-continuation debian13
+20 upd1-ubuntu-good a80 upd13-a80-ub-good-a 3901 part2-alpha80/upd1-ubuntu-good ubuntu
+10b upd1-arch-owner-continuation cur upd13-arch-oc-b 3921 upd1-arch-owner-continuation arch run-b

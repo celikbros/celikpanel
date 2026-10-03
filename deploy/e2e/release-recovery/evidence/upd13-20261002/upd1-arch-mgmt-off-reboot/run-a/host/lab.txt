@@ -1,0 +1,2 @@
+lab=/var/tmp/cp-release-drill-upd13-arch-mr-a
+upd1-arch-mgmt-off-reboot-20261002t224238z

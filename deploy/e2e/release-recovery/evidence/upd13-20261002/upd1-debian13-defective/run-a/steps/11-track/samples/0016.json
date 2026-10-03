@@ -1,0 +1,98 @@
+{
+  "agreement": {
+    "known_sources": [
+      "cli"
+    ],
+    "phase": {
+      "cli": "recovering"
+    },
+    "reasons": [],
+    "sources": [
+      "cli",
+      "shell"
+    ],
+    "verdict": "single-source"
+  },
+  "cli": {
+    "boot_id": "8bd00a84-0f89-41c8-94f0-8857cb0d4f59",
+    "captured_at": "2026-10-02T21:02:34.314695Z",
+    "en": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "The update did not finish normally, and recovery is waiting for the server to finish starting or stopping. Nothing to do now: the server's recovery timer checks this same operation again by itself when the system is ready. Recovery is not yet complete.\nRequest: bdad11ee9d11619b064bca6d77049856\nRecorded at: 2026-10-02T21:02:32Z\nThis is a recorded observation; current service health was not checked.\nRecorded state (for support): phase=recovering reason=recovery_running proof=none previous_failure=update_failed waiting_for=starting\n"
+    },
+    "json": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "{\"schema\":\"celikpanel-recovery-status/v1\",\"request_id\":\"bdad11ee9d11619b064bca6d77049856\",\"observation\":\"known\",\"phase\":\"recovering\",\"terminal_proof\":\"none\",\"reason\":\"recovery_running\",\"observed_at\":\"2026-10-02T21:02:32Z\",\"previous_failure\":\"update_failed\",\"waiting_for\":\"starting\"}\n"
+    },
+    "tr": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "Güncelleme normal biçimde tamamlanmadı ve kurtarma, sunucunun açılmasını ya da kapanmasını bitirmesini bekliyor. Şimdi yapmanız gereken bir şey yok: sunucunun kurtarma zamanlayıcısı, sistem hazır olduğunda aynı işlemi kendiliğinden yeniden kontrol eder. Kurtarma henüz tamamlanmadı.\nİşlem: bdad11ee9d11619b064bca6d77049856\nKayıt zamanı: 2026-10-02T21:02:32Z\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\nKayıtlı durum (destek için): phase=recovering reason=recovery_running proof=none previous_failure=update_failed waiting_for=starting\n"
+    }
+  },
+  "guidance_api": null,
+  "guidance_cli": {
+    "actionable": true,
+    "keys": [
+      "recovery.wait.starting",
+      "recovery.wait.next",
+      "recovery.previousFailure",
+      "recovery.reason.update_failed"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "observation": {
+      "automatic_recovery": null,
+      "failure_code": null,
+      "first_failure_code": null,
+      "observation": "known",
+      "observed_at": "2026-10-02T21:02:32Z",
+      "panel_state": "ready",
+      "phase": "recovering",
+      "previous_failure": "update_failed",
+      "reason": "recovery_running",
+      "renewal_before_update": null,
+      "request_id": "bdad11ee9d11619b064bca6d77049856",
+      "terminal_proof": "none",
+      "waiting_for": "starting"
+    },
+    "observation_unavailable": false,
+    "texts": {
+      "en": [
+        "Last recorded step: waiting for the server to finish starting",
+        "No action is needed for this wait. The server's recovery timer will check the same operation again when the operating system is ready. Recovery is not yet complete; this page checks for its result automatically.",
+        "Previously recorded failure: Update failed"
+      ],
+      "tr": [
+        "Kaydedilmiş son adım: sunucunun açılması bekleniyor",
+        "Bu bekleme için işlem yapmanız gerekmiyor. Sunucunun kurtarma zamanlayıcısı, işletim sistemi hazır olduğunda aynı işlemi yeniden kontrol edecek. Kurtarma henüz tamamlanmadı; bu sayfa sonucunu otomatik kontrol eder.",
+        "Önceden kaydedilmiş hata: Güncelleme başarısız oldu"
+      ]
+    }
+  },
+  "index": 15,
+  "observed": {
+    "observation": "known",
+    "observed_at": "2026-10-02T21:02:32Z",
+    "phase": "recovering",
+    "previous_failure": "update_failed",
+    "reason": "recovery_running",
+    "request_id": "bdad11ee9d11619b064bca6d77049856",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "none",
+    "waiting_for": "starting"
+  },
+  "panel_error": "PanelError",
+  "shell_fetch": {
+    "error": "ConnectionResetError",
+    "note": "only a browser-saved copy of the shell can show while the Panel is down"
+  },
+  "t": 1790974948.4233036,
+  "update_card": null,
+  "utc": "2026-10-02T21:02:28Z"
+}

@@ -1,0 +1,55 @@
+{
+  "checks": {
+    "deferred_mail": {
+      "last": {
+        "deferred": [],
+        "finished": true,
+        "gave_up": false,
+        "pid": "4689",
+        "ready_at": "2026-10-03T01:06:04.262394+00:00",
+        "repeated": [],
+        "resolved": {},
+        "started_at": "2026-10-03T01:06:04.133463+00:00"
+      },
+      "panel_processes": [
+        {
+          "attempt_lines": 0,
+          "deferred": [],
+          "finished": true,
+          "gave_up": false,
+          "pid": "5022",
+          "ready_at": "2026-10-03T00:54:57.910123+00:00",
+          "repeated": [],
+          "started_at": "2026-10-03T00:54:57.874706+00:00"
+        },
+        {
+          "attempt_lines": 0,
+          "deferred": [],
+          "finished": true,
+          "gave_up": false,
+          "pid": "5086",
+          "ready_at": "2026-10-03T00:54:59.030881+00:00",
+          "repeated": [],
+          "started_at": "2026-10-03T00:54:59.007639+00:00"
+        },
+        {
+          "attempt_lines": 0,
+          "deferred": [],
+          "finished": true,
+          "gave_up": false,
+          "pid": "4689",
+          "ready_at": "2026-10-03T01:06:04.262394+00:00",
+          "repeated": [],
+          "started_at": "2026-10-03T01:06:04.133463+00:00"
+        }
+      ],
+      "settle": null,
+      "watch_seconds": 0.6
+    },
+    "polls": 1
+  },
+  "finished_at": "2026-10-03T01:06:20Z",
+  "name": "deferred-mail-watch",
+  "started_at": "2026-10-03T01:06:19Z",
+  "verdict": "observed"
+}

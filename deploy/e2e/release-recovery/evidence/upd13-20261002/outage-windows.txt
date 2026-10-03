@@ -1,0 +1,150 @@
+== upd1-arch-defective
+  cron   never-interrupted
+  dns    not-provided-external-dns
+  panel  down-only-during-transaction: 22:28:13-22:28:48 bound 25.001-35.001 s kind=failed cause=unexplained
+  panel  down-only-during-transaction: 22:29:18-22:29:28 bound 0.0-10.0 s kind=failed cause=unexplained
+  smtp   not-seeded
+  web    never-interrupted
+  host-panel: 22:28:13-22:28:48 bound 25.001-35.001 s
+  host-panel: 22:29:18-22:29:28 bound 0.0-10.0 s
+== upd1-arch-good
+  cron   never-interrupted
+  dns    not-provided-external-dns
+  panel  down-only-during-transaction: 22:18:26-22:18:51 bound 15.0-25.001 s kind=failed cause=unexplained
+  smtp   not-seeded
+  web    never-interrupted
+  host-panel: 22:18:26-22:18:51 bound 15.0-25.001 s
+== upd1-arch-mgmt-off-reboot
+  cron   never-interrupted
+  dns    not-provided-external-dns
+  panel  down-only-during-transaction: 22:50:13-22:50:33 bound 10.0-20.001 s kind=failed cause=unexplained
+  smtp   not-seeded
+  web    never-interrupted
+  host-panel: 22:50:13-22:50:38 bound 15.0-25.001 s
+== upd1-arch-owner-continuation
+== upd1-arch-owner-continuation (run-b)
+  cron   never-interrupted
+  dns    not-provided-external-dns
+  panel  down-only-during-transaction: 02:24:23-02:31:15 bound 401.976-411.977 s kind=failed cause=unexplained
+  smtp   not-seeded
+  web    never-interrupted
+  host-panel: 02:24:23-02:31:20 bound 407.121-417.121 s
+== upd1-arch-startcheck
+  cron   never-interrupted
+  dns    not-provided-external-dns
+  panel  down-only-during-transaction: 22:38:25-22:39:05 bound 30.001-40.001 s kind=failed cause=unexplained
+  panel  down-only-during-transaction: 22:39:30-22:39:40 bound 0.0-10.0 s kind=failed cause=unexplained
+  smtp   not-seeded
+  web    never-interrupted
+  host-panel: 22:38:30-22:39:05 bound 25.001-35.001 s
+  host-panel: 22:39:35-22:39:45 bound 0.0-10.0 s
+== upd1-debian13-defective
+  cron   never-interrupted
+  dns    not-provided-external-dns
+  panel  down-only-during-transaction: 21:01:35-21:03:16 bound 90.996-100.997 s kind=failed+unobserved cause=host-reset
+  smtp   interrupted-only-by-host-reset: 21:02:15-21:02:31 bound 0.0-15.988 s kind=unobserved cause=host-reset
+  web    interrupted-only-by-host-reset: 21:02:15-21:02:36 bound 0.0-20.993 s kind=failed+unobserved cause=host-reset
+  host-panel: 21:01:35-21:03:19 bound 94.175-104.175 s
+  host-ssh: 21:02:20-21:02:34 bound 0.0-14.172 s
+== upd1-debian13-good
+  cron   never-interrupted
+  dns    not-provided-external-dns
+  panel  down-only-during-transaction: 20:48:26-20:48:56 bound 20.0-30.002 s kind=failed cause=unexplained
+  smtp   never-interrupted
+  web    never-interrupted
+  host-panel: 20:48:31-20:49:01 bound 20.001-30.001 s
+== upd1-debian13-mgmt-off-reboot
+  cron   never-interrupted
+  dns    not-provided-external-dns
+  panel  down-only-during-transaction: 22:05:28-22:05:53 bound 15.001-25.001 s kind=failed cause=unexplained
+  smtp   never-interrupted
+  web    never-interrupted
+  host-panel: 22:05:28-22:05:58 bound 20.001-30.001 s
+== upd1-debian13-owner-continuation
+  cron   never-interrupted
+  dns    not-provided-external-dns
+  panel  down-only-during-transaction: 21:46:30-21:53:52 bound 432.582-442.582 s kind=failed cause=unexplained
+  smtp   never-interrupted
+  web    never-interrupted
+  host-panel: 21:46:35-21:53:56 bound 431.067-441.067 s
+== upd1-debian13-realstart
+  cron   never-interrupted
+  dns    not-provided-external-dns
+  panel  down-from-update-until-end: 21:28:31-None bound 400.018-None s kind=failed cause=unexplained
+  smtp   never-interrupted
+  web    never-interrupted
+  host-panel: 21:28:36-None bound 395.012-None s
+== upd1-debian13-startcheck
+  cron   never-interrupted
+  dns    not-provided-external-dns
+  panel  down-only-during-transaction: 21:15:27-21:17:12 bound 95.005-105.005 s kind=failed+unobserved cause=host-reset
+  smtp   interrupted-only-by-host-reset: 21:16:12-21:16:27 bound 0.0-14.993 s kind=unobserved cause=host-reset
+  web    interrupted-only-by-host-reset: 21:16:12-21:16:32 bound 0.0-19.994 s kind=failed+unobserved cause=host-reset
+  host-panel: 21:15:31-21:17:17 bound 95.769-105.77 s
+  host-ssh: 21:16:16-21:16:27 bound 0.0-10.767 s
+== upd1-ubuntu-defective
+  cron   never-interrupted
+  dns    not-provided-external-dns
+  panel  down-only-during-transaction: 23:30:21-23:31:58 bound 86.86-96.861 s kind=failed+unobserved cause=host-reset
+  smtp   interrupted-only-by-host-reset: 23:30:56-23:31:13 bound 0.0-16.858 s kind=unobserved cause=host-reset
+  web    interrupted-only-by-host-reset: 23:30:56-23:31:18 bound 0.0-21.858 s kind=failed+unobserved cause=host-reset
+  host-panel: 23:30:26-23:32:00 bound 83.852-93.852 s
+  host-ssh: 23:30:56-23:31:15 bound 0.0-18.85 s
+== upd1-ubuntu-good
+  cron   never-interrupted
+  dns    not-provided-external-dns
+  panel  down-only-during-transaction: 23:11:23-23:11:48 bound 15.002-25.001 s kind=failed cause=unexplained
+  smtp   never-interrupted
+  web    never-interrupted
+  host-panel: 23:11:28-23:11:53 bound 15.0-25.001 s
+== upd1-ubuntu-mgmt-off-reboot
+  cron   never-interrupted
+  dns    not-provided-external-dns
+  panel  down-only-during-transaction: 00:35:18-00:35:48 bound 20.001-30.002 s kind=failed cause=unexplained
+  smtp   never-interrupted
+  web    never-interrupted
+  host-panel: 00:35:23-00:35:48 bound 15.001-25.001 s
+== upd1-ubuntu-owner-continuation
+  cron   never-interrupted
+  dns    not-provided-external-dns
+  panel  down-only-during-transaction: 00:10:19-00:17:24 bound 414.847-424.848 s kind=failed cause=unexplained
+  smtp   never-interrupted
+  web    never-interrupted
+  host-panel: 00:10:24-00:17:28 bound 413.729-423.73 s
+== upd1-ubuntu-startcheck
+  cron   never-interrupted
+  dns    not-provided-external-dns
+  panel  down-only-during-transaction: 23:50:21-23:52:03 bound 92.14-102.14 s kind=failed+unobserved cause=host-reset
+  smtp   interrupted-only-by-host-reset: 23:51:01-23:51:18 bound 0.0-17.692 s kind=unobserved cause=host-reset
+  web    interrupted-only-by-host-reset: 23:51:01-23:51:23 bound 0.0-22.693 s kind=failed+unobserved cause=host-reset
+  host-panel: 23:50:26-23:52:05 bound 89.16-99.16 s
+  host-ssh: 23:51:06-23:51:20 bound 0.0-14.158 s
+== a80:upd1-debian13-defective
+  cron   not-available-on-baseline
+  dns    not-provided-external-dns
+  panel  down-only-during-transaction: 01:04:26-01:06:04 bound 87.801-97.801 s kind=failed+unobserved cause=host-reset
+  smtp   interrupted-only-by-host-reset: 01:05:06-01:05:19 bound 0.0-12.797 s kind=unobserved cause=host-reset
+  web    interrupted-only-by-host-reset: 01:05:06-01:05:24 bound 0.0-17.793 s kind=failed+unobserved cause=host-reset
+  host-panel: 01:04:31-01:06:05 bound 84.224-94.224 s
+  host-ssh: 01:05:06-01:05:20 bound 0.0-14.222 s
+== a80:upd1-debian13-good
+  cron   not-available-on-baseline
+  dns    not-provided-external-dns
+  panel  down-only-during-transaction: 00:51:25-00:51:50 bound 15.0-25.002 s kind=failed cause=unexplained
+  smtp   never-interrupted
+  web    never-interrupted
+  host-panel: 00:51:24-00:51:54 bound 20.001-30.001 s
+== a80:upd1-debian13-owner-continuation
+  cron   not-available-on-baseline
+  dns    not-provided-external-dns
+  panel  down-only-during-transaction: 01:17:26-01:24:40 bound 423.794-433.794 s kind=failed cause=unexplained
+  smtp   never-interrupted
+  web    never-interrupted
+  host-panel: 01:17:31-01:24:43 bound 421.597-431.597 s
+== a80:upd1-ubuntu-good
+  cron   never-interrupted
+  dns    not-provided-external-dns
+  panel  down-only-during-transaction: 02:14:14-02:14:39 bound 15.0-25.001 s kind=failed cause=unexplained
+  smtp   never-interrupted
+  web    never-interrupted
+  host-panel: 02:14:14-02:14:44 bound 20.001-30.001 s

@@ -1,0 +1,34 @@
+evidence /var/tmp/cp-release-drill-upd13-d13-mr-a/evidence/debian13/upd1/upd1-debian13-mgmt-off-reboot-20261002t215628z/
+## initial-record (updater wrote it): 0 hits (0 in .txt)
+## curl preflight refusal: 0 hits (0 in .txt)
+## no-marker after child failure: 0 hits (0 in .txt)
+## pause_pending journal: 0 hits (0 in .txt)
+## renewal restore at pause: 0 hits (0 in .txt)
+## pause recorded: 0 hits (0 in .txt)
+## start check failure: 0 hits (0 in .txt)
+## package-activity refusal (startup reconcile): 4 hits (4 in .txt)
+   steps/14-management-off/journal-product-before-reboot.txt:427: 2026-10-02T22:05:55.856616+00:00 dns-debian13 panel[37776]: 2026/10/02 22:05:55 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minu
+   steps/14-management-off/journal-product-before-reboot.txt:428: 2026-10-02T22:05:55.859542+00:00 dns-debian13 panel[37776]: 2026/10/02 22:05:55 milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+## package_manager_active / HOST_MUTATION_BUSY: 0 hits (0 in .txt)
+## startup reconcile success: 4 hits (4 in .txt)
+   steps/14-management-off/journal-product-before-reboot.txt:426: 2026-10-02T22:05:55.855263+00:00 dns-debian13 panel[37776]: 2026/10/02 22:05:55 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload
+   steps/18-collect/journal-product.txt:541: 2026-10-02T22:09:57.385026+00:00 dns-debian13 panel[2237]: 2026/10/02 22:09:57 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload
+   steps/18-collect/journal-product.txt:546: 2026-10-02T22:10:01.471886+00:00 dns-debian13 panel[2237]: 2026/10/02 22:10:01 certificate startup reconcile: mail SNI reconciled from 0 active secure-mail certificates; TLSA left unchanged: automatic DANE/TLSA updates are disabled: safe TTL-aware certificate rollover and explicit panel record ownership are not available in this
+## milter chain/wiring: 7 hits (7 in .txt)
+   steps/14-management-off/journal-product-before-reboot.txt:16: 2026-10-02T21:57:00.311891+00:00 dns-debian13 panel[5079]: 2026/10/02 21:57:00 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-management-off/journal-product-before-reboot.txt:29: 2026-10-02T21:57:01.428941+00:00 dns-debian13 panel[5143]: 2026/10/02 21:57:01 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-management-off/journal-product-before-reboot.txt:428: 2026-10-02T22:05:55.859542+00:00 dns-debian13 panel[37776]: 2026/10/02 22:05:55 milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+   steps/18-collect/journal-product.txt:552: 2026-10-02T22:10:06.474278+00:00 dns-debian13 panel[2237]: 2026/10/02 22:10:06 milter chain: milters="inet:localhost:11332" maps=hash
+## deferred retry note on a startup refusal: 4 hits (4 in .txt)
+   steps/14-management-off/journal-product-before-reboot.txt:427: 2026-10-02T22:05:55.856616+00:00 dns-debian13 panel[37776]: 2026/10/02 22:05:55 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minu
+   steps/14-management-off/journal-product-before-reboot.txt:428: 2026-10-02T22:05:55.859542+00:00 dns-debian13 panel[37776]: 2026/10/02 22:05:55 milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+## deferred retry attempt line: 0 hits (0 in .txt)
+## deferred retry: busy again (attempt > 1): 0 hits (0 in .txt)
+## deferred retry: verified failure: 0 hits (0 in .txt)
+## deferred retry: give-up: 0 hits (0 in .txt)
+## root CLI states (first seen)
+   2026-10-02T22:05:13Z ('running', 'update_running', None, None, None)
+   2026-10-02T22:06:10Z ('succeeded', 'update_verified', None, None, None)
+## CELIKPANEL_LISTEN mentions
+   steps/14-management-off/journal-product-before-reboot.txt 2026-10-02T22:05:54.006571+00:00 dns-debian13 sudo[37290]:     root : PWD=/var/backups/celikpanel/releases/47c0b4c2d68a-10c8e2d80da706189a3cb489 ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/l
+   steps/18-collect/journal-product.txt 2026-10-02T22:05:54.006571+00:00 dns-debian13 sudo[37290]:     root : PWD=/var/backups/celikpanel/releases/47c0b4c2d68a-10c8e2d80da706189a3cb489 ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/l

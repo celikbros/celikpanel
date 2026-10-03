@@ -1,0 +1,4 @@
+17 upd1-debian13-good a80 upd13-a80-d13-good-a 3871 part2-alpha80/upd1-debian13-good debian13
+18 upd1-debian13-defective a80 upd13-a80-d13-def-a 3881 part2-alpha80/upd1-debian13-defective debian13
+19 upd1-debian13-owner-continuation a80 upd13-a80-d13-oc-a 3891 part2-alpha80/upd1-debian13-owner-continuation debian13
+20 upd1-ubuntu-good a80 upd13-a80-ub-good-a 3901 part2-alpha80/upd1-ubuntu-good ubuntu

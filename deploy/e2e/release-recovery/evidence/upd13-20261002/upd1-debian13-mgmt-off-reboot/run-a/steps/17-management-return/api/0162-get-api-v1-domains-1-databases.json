@@ -1,0 +1,79 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "DomainDatabaseManager list",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/domains/1/databases"
+  },
+  "response": {
+    "elapsed_seconds": 0.005,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 02 Oct 2026 22:10:09 GMT"
+      ],
+      [
+        "Content-Length",
+        "218"
+      ]
+    ],
+    "json": {
+      "available_types": [
+        "mysql"
+      ],
+      "databases": [
+        {
+          "created_at": "2026-10-02 22:03:12",
+          "id": 1,
+          "name": "upd1_owner_test_upd1db",
+          "type": "mysql",
+          "user": "upd1_owner_test_upd1db_user"
+        }
+      ],
+      "domain_id": 1,
+      "domain_name": "upd1-owner.test"
+    },
+    "status": 200,
+    "text": null
+  }
+}
