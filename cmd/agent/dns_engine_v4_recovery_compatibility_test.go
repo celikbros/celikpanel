@@ -18,6 +18,14 @@ import (
 
 func testV4PDNSTargetJournal(t *testing.T) dnsEngineSwitchJournal {
 	t.Helper()
+	// The Alpha81 fixture froze a root:root state snapshot. Bind the Agent's
+	// managed-owner contract to that same identity so dnsJournalPolicy() agrees
+	// with the policy below regardless of the test process's own uid/gid.
+	previousUID, previousGID := serviceMutationRequiredOwnerUID, serviceMutationRequiredOwnerGID
+	serviceMutationRequiredOwnerUID, serviceMutationRequiredOwnerGID = 0, 0
+	t.Cleanup(func() {
+		serviceMutationRequiredOwnerUID, serviceMutationRequiredOwnerGID = previousUID, previousGID
+	})
 	root := t.TempDir()
 	t.Setenv("CELIKPANEL_AGENT_STATE_DIR", root)
 	statePath := filepath.Join(root, "dns-engine-state.json")

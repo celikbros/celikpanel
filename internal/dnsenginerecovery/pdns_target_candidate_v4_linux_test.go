@@ -10,6 +10,15 @@ import (
 	"testing"
 )
 
+// The candidate proof requires its private directory to be root-owned 0700;
+// an unprivileged process cannot create that fixture.
+func requireRootPDNSTargetFixture(t *testing.T) {
+	t.Helper()
+	if os.Geteuid() != 0 {
+		t.Skip("root-owned candidate fixture requires root")
+	}
+}
+
 func writePDNSTargetFixture(t *testing.T, name string) {
 	t.Helper()
 	if err := os.Chmod(filepath.Dir(name), 0o700); err != nil {
@@ -25,6 +34,7 @@ func writePDNSTargetFixture(t *testing.T, name string) {
 }
 
 func TestPDNSTargetCandidateProofFollowsOnlySameRenamedInode(t *testing.T) {
+	requireRootPDNSTargetFixture(t)
 	dir := t.TempDir()
 	candidate := filepath.Join(dir, ".celikpanel-switch-test.sqlite3")
 	live := filepath.Join(dir, "pdns.sqlite3")
@@ -109,6 +119,7 @@ func TestPDNSTargetCandidateProofRejectsSidecarsAndReplacement(t *testing.T) {
 }
 
 func TestPDNSTargetLiveProofRejectsOwnerEditsAndSidecars(t *testing.T) {
+	requireRootPDNSTargetFixture(t)
 	for _, edit := range []string{"bytes", "mode", "sidecar", "replacement"} {
 		t.Run(edit, func(t *testing.T) {
 			dir := t.TempDir()
@@ -156,6 +167,7 @@ func TestPDNSTargetLiveProofRejectsOwnerEditsAndSidecars(t *testing.T) {
 }
 
 func TestPDNSTargetProofProtectedCrossDirectoryRename(t *testing.T) {
+	requireRootPDNSTargetFixture(t)
 	root := t.TempDir()
 	private := filepath.Join(root, "agent-private")
 	liveDir := filepath.Join(root, "powerdns")
@@ -181,6 +193,7 @@ func TestPDNSTargetProofProtectedCrossDirectoryRename(t *testing.T) {
 }
 
 func TestPDNSTargetProofRejectsUnsafeDirectory(t *testing.T) {
+	requireRootPDNSTargetFixture(t)
 	for _, kind := range []string{"candidate-world-readable", "candidate-symlink", "live-group-writable", "live-symlink"} {
 		t.Run(kind, func(t *testing.T) {
 			root := t.TempDir()
@@ -262,6 +275,7 @@ func TestPDNSTargetProofRejectsSwappedPrivateDirectory(t *testing.T) {
 }
 
 func TestRemoveExactStagedPDNSTargetFileV4AndReplay(t *testing.T) {
+	requireRootPDNSTargetFixture(t)
 	root := t.TempDir()
 	private := filepath.Join(root, "agent-private")
 	liveDir := filepath.Join(root, "powerdns")
@@ -297,6 +311,7 @@ func TestRemoveExactStagedPDNSTargetFileV4AndReplay(t *testing.T) {
 }
 
 func TestRemoveExactStagedPDNSTargetFileV4RefusesOwnerChange(t *testing.T) {
+	requireRootPDNSTargetFixture(t)
 	for _, kind := range []string{"bytes", "replacement", "sidecar", "live", "guard"} {
 		t.Run(kind, func(t *testing.T) {
 			root := t.TempDir()

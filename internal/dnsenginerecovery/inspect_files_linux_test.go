@@ -12,6 +12,19 @@ import (
 	"github.com/alicelik/celikpanel/internal/servicemutationledger"
 )
 
+// processEvidenceOwner establishes the test process's own identity as the
+// evidence owner. ReadSwitchEvidence admits only files whose owner equals the
+// policy's established state owner; the journal's frozen state snapshot must
+// carry that same owner. As root this is the production root:root contract.
+func processEvidenceOwner(policy *dnsengineartifact.JournalPolicy, journal *dnsengineartifact.SwitchJournalV1) servicemutationledger.FileOwner {
+	owner := servicemutationledger.FileOwner{UID: uint32(os.Geteuid()), GID: uint32(os.Getegid())}
+	policy.StateUID, policy.StateGID = owner.UID, owner.GID
+	if journal.StateBefore.Exists && journal.StateBefore.OwnerKnown {
+		journal.StateBefore.UID, journal.StateBefore.GID = owner.UID, owner.GID
+	}
+	return owner
+}
+
 func TestInspectFilesUsesPrivateCanonicalEvidenceAndDistinguishesAbsence(t *testing.T) {
 	policy, journal, ledger, now := inspectionFixture(t)
 	root := t.TempDir()
@@ -20,6 +33,7 @@ func TestInspectFilesUsesPrivateCanonicalEvidenceAndDistinguishesAbsence(t *test
 	}
 	policy.StatePath = filepath.Join(root, "dns-engine-state.json")
 	journal.StateBefore.Path = policy.StatePath
+	owner := processEvidenceOwner(&policy, &journal)
 	journalRaw, err := policy.EncodeSwitchJournal(journal)
 	if err != nil {
 		t.Fatal(err)
@@ -28,7 +42,6 @@ func TestInspectFilesUsesPrivateCanonicalEvidenceAndDistinguishesAbsence(t *test
 	if err != nil {
 		t.Fatal(err)
 	}
-	owner := servicemutationledger.FileOwner{UID: 0, GID: 0}
 	journalPath := filepath.Join(root, "dns-engine-switch-journal.json")
 	ledgerPath := filepath.Join(root, "service-mutations.json")
 	if err := os.WriteFile(journalPath, journalRaw, 0o600); err != nil {
@@ -177,6 +190,7 @@ func TestInspectFilesDistinguishesFrozenSourceFromForeignReceipt(t *testing.T) {
 	}
 	policy.StatePath = filepath.Join(root, "dns-engine-state.json")
 	journal.StateBefore.Path = policy.StatePath
+	owner := processEvidenceOwner(&policy, &journal)
 	journalRaw, err := policy.EncodeSwitchJournal(journal)
 	if err != nil {
 		t.Fatal(err)
@@ -196,7 +210,6 @@ func TestInspectFilesDistinguishesFrozenSourceFromForeignReceipt(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	owner := servicemutationledger.FileOwner{UID: 0, GID: 0}
 	check := func(want SourceReceiptStatus, target TargetReceiptStatus, ownership SourceOwnershipStatus) {
 		t.Helper()
 		got, present, err := InspectFiles(root, owner, policy, now)

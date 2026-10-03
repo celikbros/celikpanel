@@ -10,6 +10,7 @@ import (
 )
 
 func renamedPDNSTargetFixtureV4(t *testing.T) (string, string, func() error) {
+	requireRootPDNSTargetFixture(t)
 	t.Helper()
 	root := t.TempDir()
 	privateDir := filepath.Join(root, "agent-private")

@@ -34,6 +34,9 @@ func TestDNSSwitchStatusRequiresOwnerAndExactCommand(t *testing.T) {
 	}
 }
 func TestLocalCelikPanelGroupIsBoundedAndUnambiguous(t *testing.T) {
+	if os.Geteuid() != 0 {
+		t.Skip("root-owned group fixture requires root")
+	}
 	dir := t.TempDir()
 	path := filepath.Join(dir, "group")
 	write := func(data string, mode os.FileMode) {
@@ -79,6 +82,10 @@ func TestLocalCelikPanelGroupIsBoundedAndUnambiguous(t *testing.T) {
 	}
 }
 func TestDNSObservationLocksKeepReleaseThenHostAndReleaseOnFailure(t *testing.T) {
+	// acquireDNSObservationLocks binds the release lock to root:root.
+	if os.Geteuid() != 0 || os.Getegid() != 0 {
+		t.Skip("root:root release lock fixture requires root")
+	}
 	root := t.TempDir()
 	makeLock := func(name string) string {
 		t.Helper()

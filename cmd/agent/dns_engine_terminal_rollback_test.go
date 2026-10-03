@@ -90,6 +90,7 @@ func TestTerminalDNSRollbackJournalCleanupRequiresDurableExactVerdict(t *testing
 }
 
 func TestBootReplaysRetainedTerminalDNSRollbackBeforeCleanup(t *testing.T) {
+	useTestServiceMutationOwner(t)
 	raw, err := os.ReadFile(filepath.Join("..", "..", "internal", "dnsengineartifact", "testdata", "switch-journal", "alpha81-bind.json"))
 	if err != nil {
 		t.Fatal(err)
