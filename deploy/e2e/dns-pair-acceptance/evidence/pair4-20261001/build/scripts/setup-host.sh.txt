@@ -1,0 +1,35 @@
+#!/bin/bash
+set -euo pipefail
+umask 022
+W=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/pair4
+B=/root/cp-pair4
+PC=96657d675efe05ed5083a1930382e551756544cb
+DC=92fc5eeee89fc21087489e528a0521142aad56ef
+date -u +%FT%TZ
+[[ ! -e $B ]] || { echo "exists $B"; exit 1; }
+mkdir -p $B/logs $B/driver $B/scripts-run
+git -c safe.directory='*' clone --no-checkout -q '/mnt/c/CELIKBROS PROJECTS/celikpanel' $B/repo
+git -C $B/repo rev-parse $PC^{commit} "$PC^{tree}" $DC^{commit} "$DC^{tree}"
+mkdir -p $B/repo/web/dist
+cp -a $W/webbuild/web/dist/. $B/repo/web/dist/
+( cd $B/repo/web/dist && find . -type f -print0 | sort -z | xargs -0 sha256sum ) > $B/logs/web-dist-host.sha256
+wc -l $B/logs/web-dist-host.sha256
+cmp $B/logs/web-dist-host.sha256 $W/web-dist-windows-build.sha256 && echo WEB-DIST-HOST-EQUALS-WINDOWS
+git -C $B/repo archive $DC deploy/e2e/dns-pair-acceptance deploy/e2e/dns-kill-matrix | tar -x -C $B/driver
+( cd $B/driver && find deploy -type f -print0 | sort -z | xargs -0 sha256sum ) > $B/logs/driver-files.sha256
+wc -l $B/logs/driver-files.sha256
+S=$B/driver/deploy/e2e/dns-pair-acceptance/scripts
+for f in build-dist.sh prepare-guests.sh run-topology.sh teardown.sh; do cp $S/$f $B/scripts-run/$f; done
+sed -i 's#out=/var/tmp/cp-pair-accept/dist/#out=/var/tmp/cp-pair4-dist/#' $B/scripts-run/build-dist.sh
+sed -i 's#^KEY=/var/tmp/cp-pair-accept/id_ed25519#KEY=/var/tmp/cp-pair4-key/id_ed25519#' $B/scripts-run/prepare-guests.sh $B/scripts-run/run-topology.sh
+for f in build-dist.sh prepare-guests.sh run-topology.sh teardown.sh; do diff -u --label a/scripts/$f --label b/scripts-run/$f $S/$f $B/scripts-run/$f || true; done > $B/logs/run-path-changes.diff
+cat $B/logs/run-path-changes.diff
+mkdir -p -m 0700 /var/tmp/cp-pair4-key /var/tmp/cp-pair4-evidence
+ssh-keygen -q -t ed25519 -N '' -C cp-pair4 -f /var/tmp/cp-pair4-key/id_ed25519
+F=$B/driver/deploy/e2e/dns-kill-matrix/fixture.py
+python3 $F init-root --work-root /var/tmp/cp-pair4-work --execute
+ln /var/tmp/cp-v3n28/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2 /var/tmp/cp-pair4-work/images/
+ln /var/tmp/cp-v3n28/images/debian-13-genericcloud-amd64-20260826-2582.qcow2 /var/tmp/cp-pair4-work/images/
+python3 $F verify-images --work-root /var/tmp/cp-pair4-work
+date -u +%FT%TZ
+echo SETUP-OK

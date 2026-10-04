@@ -1,0 +1,108 @@
+wall=2026-09-30T05:14:50.055688278Z boot_id=1851ed93-6ca8-4c99-9d78-fa8ed23e1078 uptime=332.02
+IDX BOOT ID                          FIRST ENTRY                 LAST ENTRY
+  0 1851ed936ca84c999d78fa8ed23e1078 Wed 2026-09-30 05:09:22 UTC Wed 2026-09-30 05:14:50 UTC
+== celikpanel-agent.service
+MainPID=6958
+NRestarts=0
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Wed 2026-09-30 05:12:52 UTC
+== celikpanel-panel.service
+MainPID=8071
+NRestarts=0
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Wed 2026-09-30 05:12:59 UTC
+== pdns.service
+MainPID=5832
+NRestarts=0
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Wed 2026-09-30 05:12:48 UTC
+== binaries
+395d59272d8c6222656e2189705585786f38b7c1ce98ac80979135d389158c5f  /opt/celikpanel/bin/agent
+a072d916f545d0dc4ca0c67638856cf18c96b392c70ab65839936c4501fe4e54  /opt/celikpanel/bin/agent.kill
+39a71a2832b6656c399a353f7487698d24edc687b099a28d6dff5d130257a3e4  /opt/celikpanel/bin/panel
+361014c041f99f40511437df770c2d42c4788fd2156e60d037f75d2f1cb89123  /opt/celikpanel/bin/dns-kill-trigger
+/opt/celikpanel/bin/dns-kill-trigger root:root 755 7996431 2026-09-30 05:10:18.468055400 +0000
+== zone-sync ledger jobs (full entries)
+version: 1
+{"request_id": "076c692ac1346f2b9c6a0df468b0e9aa", "kind": "dns_engine_switch", "target": "pdns", "status": "succeeded", "phase": "commit/dns-engine-switch/v2/finalized/076c692ac1346f2b9c6a0df468b0e9aa/dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "attempt": 1, "updated_at": "2026-09-30T05:12:58.617694744Z"}
+{"request_id": "fa261f2921ccb462f0ce8225b4987b33", "kind": "dns_zone_sync", "target": "s2.s1-kill.test", "status": "succeeded", "phase": "commit/dns-zone-sync/v3/published/fa261f2921ccb462f0ce8225b4987b33/s2.s1-kill.test/dns-zone-sync/v3:sha256:6ccf0b5599f9694e54f65d92a6d3550f13100491b834a76a160a9b74b05705b4", "attempt": 1, "updated_at": "2026-09-30T05:13:36.967516679Z"}
+{"request_id": "d8f6f5bc100f074257090175ba1ce139", "kind": "dns_zone_sync", "target": "s2.s1-kill.test", "status": "succeeded", "phase": "commit/dns-zone-sync/v3/published/d8f6f5bc100f074257090175ba1ce139/s2.s1-kill.test/dns-zone-sync/v3:sha256:98d9e99d187e86504a3c8e28d4054bc0506d2e447445e731c5ccf02ffba86c56", "attempt": 1, "updated_at": "2026-09-30T05:13:44.82839102Z"}
+{
+ "attempt": 2,
+ "deadline_at": "2026-09-30T05:59:45.596187482Z",
+ "error_code": "dns_peer_owner_edit_unknown",
+ "error_message": "The exact local DNS publication is waiting for paired propagation recovery.",
+ "finished_at": "2026-09-30T05:14:49.668766675Z",
+ "kind": "dns_zone_sync",
+ "lease_expires_at": "0001-01-01T00:00:00Z",
+ "owner_id": "92088666fcbb11382a33c4bccad7796e",
+ "package_name": "dns-zone-sync/v3:sha256:e90fb9845e27429320ea2b358a36431de04f7585481c0e935b01623592b4d3f1",
+ "phase": "commit/dns-zone-sync/v3/propagation-pending/7fb6a0df9a0df4c78fa75b362d0a2988/s2.s1-kill.test/dns-zone-sync/v3:sha256:e90fb9845e27429320ea2b358a36431de04f7585481c0e935b01623592b4d3f1",
+ "request_id": "7fb6a0df9a0df4c78fa75b362d0a2988",
+ "started_at": "2026-09-30T05:14:45.596187482Z",
+ "status": "pending",
+ "target": "s2.s1-kill.test",
+ "updated_at": "2026-09-30T05:14:49.668766675Z"
+}
+== agent-private (ls only; inspection keys are not read)
+/var/lib/celikpanel-agent-private/:
+total 92
+drwx------  3 root celikpanel  4096 2026-09-30 05:14:49.674452286 +0000 .
+drwxr-xr-x 29 root root        4096 2026-09-30 05:12:38.901618141 +0000 ..
+-rw-------  1 root celikpanel   735 2026-09-30 05:12:56.121919889 +0000 dns-engine-ownership-pdns.json
+-rw-------  1 root celikpanel   731 2026-09-30 05:12:50.957837160 +0000 dns-engine-state.json
+-rw-------  1 root celikpanel 63923 2026-09-30 05:12:56.177920752 +0000 dns-engine-switch-v3-archive-076c692ac1346f2b9c6a0df468b0e9aa-307bdc7c5ffa020d987b143672d907f18fcda37eee414ba8da4db4392426bdb4.json
+drwx------  2 root root        4096 2026-09-30 05:14:31.594423728 +0000 dns-peer-inspection-keys
+-rw-------  1 root root         487 2026-09-30 05:14:34.054425722 +0000 dns-peer-inspection-v1.json
+-rw-------  1 root celikpanel  3074 2026-09-30 05:14:49.662452257 +0000 service-mutations.json
+
+/var/lib/celikpanel-agent-private/dns-peer-inspection-keys:
+total 12
+drwx------ 2 root root       4096 2026-09-30 05:14:31.594423728 +0000 .
+drwx------ 3 root celikpanel 4096 2026-09-30 05:14:49.674452286 +0000 ..
+-rw------- 1 root root        119 2026-09-30 05:14:31.582423720 +0000 338da4608719f034c18831c0f059bb40.key
+f9af9c9ec65819ce622095088fa4ef33792e82da0b2fba7e9ba7d19a2c2a07ac  /var/lib/celikpanel-agent-private/service-mutations.json
+== dns-peer-enroll primary-status
+{"catalog_name":"catalog-c000020a.celikpanel.invalid","client_public_key_sha256":"765a62733b8215e782c5cac5fc5bf8aee0a4debf9d24194354259f814462917a","enrollment_id":"d2cb547cfec10362a624de2e3deb072f","host_key_sha256":"546535dd3a49ac4254c63b5725ac664a8bc70d5203a579257991a2c00ad38f2e","peer_ip":"192.0.2.11","primary_ip":"192.0.2.10","state":"configured"}
+== agent journal, this boot
+2026-09-30T05:10:21.710276+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-30T05:10:21.749571+00:00 dns-debian13 agent[1198]: 2026/09/30 05:10:21 Starting CelikPanel Agent...
+2026-09-30T05:10:21.751420+00:00 dns-debian13 agent[1198]: 2026/09/30 05:10:21 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-30T05:10:21.751763+00:00 dns-debian13 agent[1198]: 2026/09/30 05:10:21 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-09-30T05:10:31.757037+00:00 dns-debian13 agent[1198]: 2026/09/30 05:10:31 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:10:41.763740+00:00 dns-debian13 agent[1198]: 2026/09/30 05:10:41 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:10:51.763268+00:00 dns-debian13 agent[1198]: 2026/09/30 05:10:51 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:11:01.764557+00:00 dns-debian13 agent[1198]: 2026/09/30 05:11:01 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:11:11.754644+00:00 dns-debian13 agent[1198]: 2026/09/30 05:11:11 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:11:21.752796+00:00 dns-debian13 agent[1198]: 2026/09/30 05:11:21 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:11:30.139757+00:00 dns-debian13 systemd[1]: Stopping celikpanel-agent.service - CelikPanel privileged agent...
+2026-09-30T05:11:30.140660+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-30T05:11:30.140969+00:00 dns-debian13 systemd[1]: Stopped celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-30T05:12:52.531486+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-30T05:12:52.574139+00:00 dns-debian13 agent[6958]: 2026/09/30 05:12:52 Starting CelikPanel Agent...
+2026-09-30T05:12:58.657331+00:00 dns-debian13 agent[6958]: 2026/09/30 05:12:58 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-30T05:12:58.657331+00:00 dns-debian13 agent[6958]: 2026/09/30 05:12:58 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:13:08.704232+00:00 dns-debian13 agent[6958]: 2026/09/30 05:13:08 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:13:18.661884+00:00 dns-debian13 agent[6958]: 2026/09/30 05:13:18 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:13:28.658466+00:00 dns-debian13 agent[6958]: 2026/09/30 05:13:28 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:13:38.659046+00:00 dns-debian13 agent[6958]: 2026/09/30 05:13:38 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:13:48.658422+00:00 dns-debian13 agent[6958]: 2026/09/30 05:13:48 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:13:54.933929+00:00 dns-debian13 agent[6958]: 2026/09/30 05:13:54 pdns zone publication remains pending for s2.s1-kill.test at epoch 1: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T05:13:54.933929+00:00 dns-debian13 agent[6958]: dns_peer_enrollment_required
+2026-09-30T05:13:58.657953+00:00 dns-debian13 agent[6958]: 2026/09/30 05:13:58 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:14:08.666449+00:00 dns-debian13 agent[6958]: 2026/09/30 05:14:08 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:14:18.666613+00:00 dns-debian13 agent[6958]: 2026/09/30 05:14:18 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:14:28.658674+00:00 dns-debian13 agent[6958]: 2026/09/30 05:14:28 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:14:38.658490+00:00 dns-debian13 agent[6958]: 2026/09/30 05:14:38 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:14:48.661860+00:00 dns-debian13 agent[6958]: 2026/09/30 05:14:48 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:14:49.668779+00:00 dns-debian13 agent[6958]: 2026/09/30 05:14:49 DNS zone V3 recovery remains pending for s2.s1-kill.test: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T05:14:49.668779+00:00 dns-debian13 agent[6958]: dns_peer_owner_edit_unknown

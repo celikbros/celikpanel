@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/binddns"
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -29,6 +31,9 @@ type managedPDNSCatalog struct {
 	Serial        uint32
 	Members       []string
 	MemberSerials []uint32
+	// CatalogHash: the daemon's CATALOG-HASH row, read on a native V3
+	// producer only (see dnsPrimaryCatalogEvidence.CatalogHash).
+	CatalogHash string
 }
 
 func peerPDNSCatalog(
@@ -43,9 +48,10 @@ func peerPDNSCatalog(
 	if err != nil {
 		return dnsCatalogAXFRResult{}, "", err
 	}
-	catalog, err := probeDNSCatalogAXFR(ctx, manifest.PeerIP, domain)
+	catalog, err := queryDNSPeerCatalogAXFR(ctx, manifest.PeerIP, domain)
 	if err != nil || catalog.Serial == 0 {
-		return dnsCatalogAXFRResult{}, "", errors.New("paired primary catalog is unavailable")
+		return dnsCatalogAXFRResult{}, "",
+			dnsPeerCatalogReadError("paired primary catalog is unavailable", err)
 	}
 	return catalog, domain, nil
 }
@@ -158,10 +164,18 @@ func verifyPDNSPairSecondaryTx(
 		}
 		if (zoneType != "SLAVE" && zoneType != "SECONDARY") ||
 			master != manifest.PeerIP || memberCatalog != catalogDomain ||
-			(account != "" && account != pdnsPeerCatalogAccount) ||
-			options != "" {
+			(account != "" && account != pdnsPeerCatalogAccount) {
 			return 0, errors.New(
 				"PowerDNS secondary candidate contains foreign catalog authority",
+			)
+		}
+		// The consumer records the member's unique catalog label in options.
+		if err := verifyPDNSConsumedMemberOptions(
+			options, catalog.MemberLabels[name],
+		); err != nil {
+			return 0, fmt.Errorf(
+				"PowerDNS secondary candidate contains foreign catalog authority: member %s: %w",
+				name, err,
 			)
 		}
 		members = append(members, name)
@@ -466,6 +480,13 @@ func resolveManagedPDNSCatalogIdentityForState(
 	return managedPDNSCatalogIdentityForState(state)
 }
 
+func reconcilePDNSBINDCatalogFromSnapshotModeTx(
+	ctx context.Context, tx *sql.Tx, enabled bool, localIP string,
+	previous *managedPDNSCatalog, nativeV3 bool,
+) (managedPDNSCatalog, error) {
+	return reconcilePDNSBINDCatalogWithSeedModeTx(ctx, tx, enabled, localIP, previous, 0, nativeV3)
+}
+
 func reconcilePDNSBINDCatalogTx(
 	ctx context.Context,
 	tx *sql.Tx,
@@ -508,6 +529,18 @@ func reconcilePDNSBINDCatalogWithSeedTx(
 	localIP string,
 	previous *managedPDNSCatalog,
 	initialSerial uint32,
+) (managedPDNSCatalog, error) {
+	return reconcilePDNSBINDCatalogWithSeedModeTx(ctx, tx, enabled, localIP, previous, initialSerial, false)
+}
+
+func reconcilePDNSBINDCatalogWithSeedModeTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	enabled bool,
+	localIP string,
+	previous *managedPDNSCatalog,
+	initialSerial uint32,
+	nativeV3 bool,
 ) (managedPDNSCatalog, error) {
 	if tx == nil {
 		return managedPDNSCatalog{}, errors.New("PowerDNS catalog transaction is required")
@@ -638,6 +671,9 @@ func reconcilePDNSBINDCatalogWithSeedTx(
 		serial = initialSerial
 	}
 	if !exists {
+		if nativeV3 {
+			return managedPDNSCatalog{}, errors.New("native PowerDNS producer disappeared during zone publication")
+		}
 		if previous != nil {
 			return managedPDNSCatalog{}, errors.New("PowerDNS catalog membership snapshot has no producer")
 		}
@@ -668,7 +704,10 @@ func reconcilePDNSBINDCatalogWithSeedTx(
 		if recordErr != nil {
 			return managedPDNSCatalog{}, recordErr
 		}
-		if !reflect.DeepEqual(canonicalPDNSCatalogRecords(stored), expected) {
+		canonicalStored := canonicalPDNSCatalogRecords(stored)
+		if (nativeV3 && (reflect.DeepEqual(canonicalStored, expected) ||
+			!equalPDNSCatalogBaseRecordsWithNativeRDATA(stored, expected))) ||
+			(!nativeV3 && !reflect.DeepEqual(canonicalStored, expected)) {
 			return managedPDNSCatalog{}, errors.New("PowerDNS catalog base records are not canonical")
 		}
 		serial = currentSerial
@@ -711,6 +750,23 @@ func reconcilePDNSBINDCatalogWithSeedTx(
 				soa = record
 				break
 			}
+		}
+		if nativeV3 {
+			var priorSOA string
+			if err := tx.QueryRowContext(ctx, `
+				SELECT content FROM records
+				WHERE domain_id = ? AND name = ? COLLATE BINARY AND type = 'SOA'
+			`, domainID, domain).Scan(&priorSOA); err != nil {
+				return managedPDNSCatalog{}, err
+			}
+			fields := strings.Fields(priorSOA)
+			newFields := strings.Fields(soa.Content)
+			if len(fields) != 7 || len(newFields) != 7 ||
+				fields[0] != "invalid" || fields[1] != "invalid" {
+				return managedPDNSCatalog{}, errors.New("native PowerDNS catalog SOA form changed")
+			}
+			fields[2] = newFields[2]
+			soa.Content = strings.Join(fields, " ")
 		}
 		result, updateErr := tx.ExecContext(ctx, `
 			UPDATE records SET content = ?, ttl = ?, prio = ?, disabled = 0,
@@ -998,7 +1054,7 @@ func verifyManagedPDNSBINDCatalog(
 	if _, err := dnsClusterPurge(ctx, identity.Domain); err != nil {
 		return errors.New("PowerDNS catalog cache purge failed")
 	}
-	live, err := probeDNSCatalogAXFR(ctx, identity.LocalIP, identity.Domain)
+	live, err := probeDNSPDNSCatalogAXFR(ctx, identity.LocalIP, identity.Domain)
 	if err != nil || live.Serial != identity.Serial ||
 		!slices.Equal(live.Members, identity.Members) {
 		return errors.New("PowerDNS live catalog differs from its database")
@@ -1008,7 +1064,7 @@ func verifyManagedPDNSBINDCatalog(
 			LocalIP: identity.LocalIP, PeerIP: identity.PeerIP,
 			Domain: identity.Domain, Serial: identity.Serial,
 			Members: identity.Members, MemberSerials: identity.MemberSerials,
-		}, probeDNSZoneSOA, probeDNSCatalogAXFR, probeDNSBoundCatalogAXFR); err != nil {
+		}, probeDNSZoneSOA, probeDNSPDNSCatalogAXFR, probeDNSBoundPDNSCatalogAXFR); err != nil {
 			return errors.New("PowerDNS primary catalog did not converge on the paired peer")
 		}
 	}
@@ -1047,6 +1103,13 @@ func readManagedPDNSPrimaryCatalogForRole(
 func readManagedPDNSPrimaryCatalogWithIdentity(
 	ctx context.Context,
 	identity managedPDNSCatalog,
+) (managedPDNSCatalog, bool, error) {
+	return readManagedPDNSPrimaryCatalogWithIdentityMode(ctx, identity, false)
+}
+
+func readManagedPDNSPrimaryCatalogWithIdentityMode(
+	ctx context.Context,
+	identity managedPDNSCatalog, nativeV3 bool,
 ) (managedPDNSCatalog, bool, error) {
 	db, err := openPDNSEngineDB(pdnsDBPath(), true)
 	if err != nil {
@@ -1110,8 +1173,8 @@ func readManagedPDNSPrimaryCatalogWithIdentity(
 	if account != pdnsBINDCatalogAccount || zoneType != "PRODUCER" {
 		return managedPDNSCatalog{}, false, errors.New("PowerDNS live catalog is not panel owned")
 	}
-	serial, err := verifyPDNSProducerBaseTx(
-		ctx, tx, domainID, identity.Domain, identity.LocalIP,
+	serial, hash, err := verifyPDNSProducerBaseWithHashTxMode(
+		ctx, tx, domainID, identity.Domain, identity.LocalIP, nativeV3,
 	)
 	if err != nil {
 		return managedPDNSCatalog{}, false, err
@@ -1150,6 +1213,7 @@ func readManagedPDNSPrimaryCatalogWithIdentity(
 	identity.Serial = serial
 	identity.Members = members
 	identity.MemberSerials = memberSerials
+	identity.CatalogHash = hash
 	return identity, true, nil
 }
 
@@ -1168,7 +1232,7 @@ func readManagedPDNSPrimaryCatalogForState(
 	if err != nil || !enabled {
 		return managedPDNSCatalog{}, enabled, err
 	}
-	catalog, primary, err := readManagedPDNSPrimaryCatalogWithIdentity(ctx, identity)
+	catalog, primary, err := readManagedPDNSPrimaryCatalogWithIdentityMode(ctx, identity, state.NativeCatalogV3 == dnsengineartifact.NativeCatalogDebian49V3)
 	if err != nil || !primary {
 		return managedPDNSCatalog{}, primary, err
 	}
@@ -1185,6 +1249,12 @@ func readExactPDNSProducerSerialTx(
 	ctx context.Context,
 	tx *sql.Tx,
 	localIP string,
+) (uint32, error) {
+	return readExactPDNSProducerSerialModeTx(ctx, tx, localIP, false)
+}
+
+func readExactPDNSProducerSerialModeTx(
+	ctx context.Context, tx *sql.Tx, localIP string, nativeV3 bool,
 ) (uint32, error) {
 	if tx == nil {
 		return 0, errors.New("PowerDNS producer serial transaction is required")
@@ -1204,7 +1274,7 @@ func readExactPDNSProducerSerialTx(
 	if zoneType != "PRODUCER" || account != pdnsBINDCatalogAccount {
 		return 0, errors.New("PowerDNS producer row is not exact panel authority")
 	}
-	return verifyPDNSProducerBaseTx(ctx, tx, domainID, domain, localIP)
+	return verifyPDNSProducerBaseTxMode(ctx, tx, domainID, domain, localIP, nativeV3)
 }
 
 func verifyPDNSProducerBaseTx(
@@ -1214,18 +1284,46 @@ func verifyPDNSProducerBaseTx(
 	domain string,
 	localIP string,
 ) (uint32, error) {
+	return verifyPDNSProducerBaseTxMode(ctx, tx, domainID, domain, localIP, false)
+}
+
+func verifyPDNSProducerBaseTxMode(
+	ctx context.Context,
+	tx *sql.Tx,
+	domainID int64,
+	domain string,
+	localIP string, nativeV3 bool,
+) (uint32, error) {
+	serial, _, err := verifyPDNSProducerBaseWithHashTxMode(ctx, tx, domainID, domain, localIP, nativeV3)
+	return serial, err
+}
+
+// verifyPDNSProducerBaseWithHashTxMode also returns, on a native V3
+// producer, the daemon's CATALOG-HASH row content ("" when absent). On any
+// other producer the hash is not read and is always "".
+func verifyPDNSProducerBaseWithHashTxMode(
+	ctx context.Context,
+	tx *sql.Tx,
+	domainID int64,
+	domain string,
+	localIP string, nativeV3 bool,
+) (uint32, string, error) {
 	records, serial, err := readPDNSBINDCatalogRecordsTx(
 		ctx, tx, domainID, domain,
 	)
 	if err != nil {
-		return 0, err
+		return 0, "", err
 	}
 	expected, err := canonicalPDNSCatalogBaseRecords(localIP, serial, nil)
 	if err != nil {
-		return 0, err
+		return 0, "", err
 	}
-	if !reflect.DeepEqual(canonicalPDNSCatalogRecords(records), expected) {
-		return 0, errors.New("PowerDNS producer contains noncanonical base records")
+	if nativeV3 && reflect.DeepEqual(canonicalPDNSCatalogRecords(records), expected) {
+		return 0, "", errors.New("v3 PowerDNS producer reverted to staged RDATA")
+	}
+	if !(nativeV3 && equalPDNSCatalogBaseRecordsWithNativeRDATA(records, expected)) &&
+		!reflect.DeepEqual(canonicalPDNSCatalogRecords(records), expected) {
+		return 0, "", errors.New("PowerDNS producer contains noncanonical base records")
 	}
 	for _, table := range []string{"comments", "cryptokeys"} {
 		var count int
@@ -1235,10 +1333,120 @@ func verifyPDNSProducerBaseTx(
 			if err == nil {
 				err = errors.New("PowerDNS producer contains unexpected side data")
 			}
-			return 0, err
+			return 0, "", err
 		}
 	}
-	return serial, nil
+	hash := ""
+	if nativeV3 {
+		hash, err = readNativePDNSProducerDaemonStateTx(ctx, tx, domainID)
+		if err != nil {
+			return 0, "", err
+		}
+	}
+	return serial, hash, nil
+}
+
+// verifyNativePDNSProducerDaemonStateTx admits, on a native V3 producer, only
+// the producer fields the PowerDNS 4.9 daemon writes by itself: the
+// notified_serial column and one CATALOG-HASH metadata row (a base64 SHA-256
+// digest it recomputes after a membership change). The producer's master,
+// last_check, options and catalog columns stay as staged (NULL), and no other
+// metadata kind is admitted; such a change was not made by the daemon or by
+// this product and is refused rather than overwritten.
+func verifyNativePDNSProducerDaemonStateTx(ctx context.Context, tx *sql.Tx, domainID int64) error {
+	_, err := readNativePDNSProducerDaemonStateTx(ctx, tx, domainID)
+	return err
+}
+
+// readNativePDNSProducerDaemonStateTx is verifyNativePDNSProducerDaemonStateTx
+// returning the admitted CATALOG-HASH content ("" when the row is absent).
+func readNativePDNSProducerDaemonStateTx(ctx context.Context, tx *sql.Tx, domainID int64) (string, error) {
+	var foreign int
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM domains WHERE id = ? AND
+		 (COALESCE(master, '') <> '' OR last_check IS NOT NULL OR
+		  COALESCE(options, '') <> '' OR COALESCE(catalog, '') <> '')
+	`, domainID).Scan(&foreign); err != nil {
+		return "", err
+	}
+	if foreign != 0 {
+		return "", errors.New("native PowerDNS producer row has fields the daemon does not write")
+	}
+	rows, err := tx.QueryContext(ctx, `
+		SELECT kind, COALESCE(content, '') FROM domainmetadata WHERE domain_id = ?
+	`, domainID)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	count := 0
+	hash := ""
+	for rows.Next() {
+		var kind, content string
+		if err := rows.Scan(&kind, &content); err != nil {
+			return "", err
+		}
+		count++
+		decoded, decodeErr := base64.StdEncoding.DecodeString(content)
+		if count > 1 || kind != "CATALOG-HASH" || decodeErr != nil || len(decoded) != 32 {
+			return "", errors.New("native PowerDNS producer metadata is not only the daemon's catalog hash")
+		}
+		hash = content
+	}
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
+	return hash, nil
+}
+
+// PowerDNS 4.9 normalizes the built-in catalog SOA RDATA when the
+// producer first starts; its NS spelling has two observed exact forms.
+// member set, serial and every other record field remain byte-exact.
+func equalPDNSCatalogBaseRecordsWithNativeRDATA(actual, expected []transport.ZoneRecord) bool {
+	actual = canonicalPDNSCatalogRecords(actual)
+	if reflect.DeepEqual(actual, expected) {
+		return true
+	}
+	native := append([]transport.ZoneRecord(nil), expected...)
+	if len(native) != 2 {
+		return false
+	}
+	seenSOA, seenNS := false, false
+	for i := range native {
+		switch native[i].Type {
+		case "SOA":
+			fields := strings.Fields(native[i].Content)
+			if len(fields) != 7 || fields[0] != "invalid." || fields[1] != "invalid." {
+				return false
+			}
+			fields[0], fields[1] = "invalid", "invalid"
+			native[i].Content = strings.Join(fields, " ")
+			seenSOA = true
+		case "NS":
+			if native[i].Content != "invalid." {
+				return false
+			}
+			seenNS = true
+		default:
+			return false
+		}
+	}
+	if !seenSOA || !seenNS {
+		return false
+	}
+	// Debian PowerDNS 4.9.17 leaves the catalog NS spelling staged while
+	// normalizing SOA names. Accept that exact measured form first.
+	if reflect.DeepEqual(actual, canonicalPDNSCatalogRecords(native)) {
+		return true
+	}
+	// Older native measurements normalized the NS name too. The only
+	// additional accepted RDATA remains the same literal without its dot.
+	for i := range native {
+		if native[i].Type == "NS" {
+			native[i].Content = "invalid"
+		}
+	}
+	return reflect.DeepEqual(actual, canonicalPDNSCatalogRecords(native))
 }
 
 func verifyPDNSProducerMembershipTx(
@@ -1288,7 +1496,11 @@ func verifyPDNSProducerMembershipTx(
 	}
 	expected := append([]string(nil), expectedMembers...)
 	sort.Strings(expected)
-	if !reflect.DeepEqual(actual, expected) {
+	// Exact order, multiplicity and spelling; an empty member set equals an
+	// empty member set whether either side is nil (a fresh primary installed
+	// before any zone exists has none). reflect.DeepEqual treated
+	// []string{} and nil as different and refused every zero-zone install.
+	if !slices.Equal(actual, expected) {
 		return errors.New("PowerDNS producer membership differs from the switch manifest")
 	}
 	return nil

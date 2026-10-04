@@ -1,0 +1,52 @@
+=== start-check over good
+diff --git a/cmd/panel/server_lifecycle.go b/cmd/panel/server_lifecycle.go
+index 27c9dc77..d4351788 100644
+--- a/cmd/panel/server_lifecycle.go
++++ b/cmd/panel/server_lifecycle.go
+@@ -98,6 +98,12 @@ func configurePanelHTTPTLS(server *http.Server, certPath, keyPath string) (bool,
+ 	if server == nil {
+ 		return false, errors.New("panel HTTP server is nil")
+ 	}
++	// upd3 disposable fixture defect (start-check): never a release. The TLS
++	// preparation shared by the read-only start check and the real start fails,
++	// so the update stops at the start check, before completion.pending.
++	if server != nil {
++		return false, errors.New("upd3 fixture defect: this candidate cannot prepare its panel TLS listener")
++	}
+ 	tlsOn := certPath != "" || keyPath != ""
+ 	if tlsOn {
+ 		if certPath == "" || keyPath == "" {
+=== real-start over good
+diff --git a/cmd/panel/main.go b/cmd/panel/main.go
+index 370a0f6b..fdb57221 100644
+--- a/cmd/panel/main.go
++++ b/cmd/panel/main.go
+@@ -893,6 +893,10 @@ func main() {
+ 		log.Fatal("refusing to serve over plain HTTP with secure cookies: enable TLS (CELIKPANEL_TLS=1 or CELIKPANEL_TLS_CERT/KEY) or pass --insecure-cookies for development")
+ 	}
+ 	startupGate.recovery = panel.startupRecoveryHandler(webDir(), certPath, keyPath)
++	// upd3 disposable fixture defect (real-start): never a release. The read-only
++	// start check exits before flag parsing and never reaches this line; the real
++	// start exits here, before its listener, so the unit never stays up.
++	log.Fatalf("upd3 fixture defect: this candidate exits before its panel listener starts")
+ 	runningServer, err := startPanelHTTP(server, certPath, keyPath)
+ 	if err != nil {
+ 		log.Fatalf("Failed to start panel listener: %v", err)
+=== defective over good
+diff --git a/cmd/panel/main.go b/cmd/panel/main.go
+index 370a0f6b..9a3f493f 100644
+--- a/cmd/panel/main.go
++++ b/cmd/panel/main.go
+@@ -792,8 +792,10 @@ func main() {
+ 	// These bootstrap modes only touch the database, then exit — no agent.
+ 	// Bu önyükleme modları yalnızca veritabanına dokunup çıkar — agent yok.
+ 	if *migrateOnlyFlag {
+-		log.Println("Canonical panel database migrations completed")
+-		return
++		// upd1 disposable fixture defect: never a release. The isolated copy is
++		// migrated, then this candidate reports failure so the signed update fails
++		// after candidate-installed, while the transaction is still active.
++		log.Fatalf("upd1 fixture defect: this candidate cannot complete its offline database migration")
+ 	}
+ 	if *countUsersFlag {
+ 		p := &Panel{db: database}

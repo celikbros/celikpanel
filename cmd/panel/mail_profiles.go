@@ -421,6 +421,14 @@ func mailProfileInstallFailure(cause error) *serviceOperationFailure {
 	if failure := platformServiceOperationFailure(cause); failure != nil {
 		return failure
 	}
+	// A sub-step refused by the Agent because the host was busy keeps that
+	// typed cause and its reason sentence instead of the generic profile code
+	// (upd8 F1: the profile's mail TLS sub-step was refused while a package task
+	// ran, and the owner saw only mail_profile_install_failed).
+	// Ana makine meşgul olduğu için reddedilen alt adım tipli nedenini korur.
+	if classification, ok := classifyHostMutationError(cause); ok {
+		return operationFailure(classification.Code, classification.Message, cause)
+	}
 	return operationFailure(
 		"mail_profile_install_failed",
 		"The mail profile could not be installed and verified.",

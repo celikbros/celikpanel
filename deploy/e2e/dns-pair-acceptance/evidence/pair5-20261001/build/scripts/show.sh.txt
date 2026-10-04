@@ -1,0 +1,4 @@
+#!/bin/bash
+# usage: show.sh FILE [grep-pattern] : print lines of an obs file (cut)
+f=/root/cp-pair5/obs/$1
+if [[ -n ${2:-} ]]; then grep -E "$2" $f | cut -c1-${3:-400}; else cut -c1-${3:-400} $f; fi

@@ -1,0 +1,3 @@
+# Managed by CelikPanel — per-domain mail certificates (SNI).
+example.test /etc/ssl/celikpanel/example.test/sha256-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/privkey.pem /etc/ssl/celikpanel/example.test/sha256-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/fullchain.pem
+mail.example.test /etc/ssl/celikpanel/example.test/sha256-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/privkey.pem /etc/ssl/celikpanel/example.test/sha256-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/fullchain.pem

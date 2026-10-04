@@ -1,0 +1,6 @@
+2026-09-30T08:16:12+00:00 dns-debian13 agent[3518]: 2026/09/30 08:16:12 bind zone publication remains pending for pair-accept.test at epoch 1: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T08:16:12+00:00 dns-debian13 agent[3518]: dns_peer_enrollment_required
+2026-09-30T08:16:14+00:00 dns-debian13 agent[3518]: 2026/09/30 08:16:14 DNS zone V3 recovery remains pending for pair-accept.test: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T08:16:14+00:00 dns-debian13 agent[3518]: dns_peer_enrollment_required
+2026-09-30T08:16:41+00:00 dns-debian13 agent[3518]: 2026/09/30 08:16:41 DNS peer inspector answer for pair-accept.test (BIND secondary): catalog_state=transferred member_state=absent native_state=unloaded; accepted
+2026-09-30T08:16:42+00:00 dns-debian13 agent[3518]: 2026/09/30 08:16:42 DNS peer proof for pair-accept.test (BIND secondary) step times: prepare=1.64s challenge_write=6.654s exchange=572ms post_inspection=3.767s consume=8.283s; total 20.916s; outcome verified

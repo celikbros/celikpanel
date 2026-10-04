@@ -18,6 +18,7 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/hostname"
+	"github.com/alicelik/celikpanel/internal/licensing"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -62,10 +63,11 @@ type serverSetupPlan struct {
 
 type serverSetupExecutionStep struct {
 	serverSetupPlanStep
-	Status      string `json:"status"`
-	RequestID   string `json:"request_id"`
-	OwnerID     string `json:"owner_id"`
-	OperationID string `json:"operation_id,omitempty"`
+	Status                      string `json:"status"`
+	RequestID                   string `json:"request_id"`
+	OwnerID                     string `json:"owner_id"`
+	OperationID                 string `json:"operation_id,omitempty"`
+	EnrollmentDispatchAttempted bool   `json:"enrollment_dispatch_attempted,omitempty"`
 }
 
 type serverSetupExecution struct {
@@ -191,6 +193,22 @@ func serverSetupAdmin(w http.ResponseWriter, r *http.Request, method string) boo
 	return true
 }
 
+// setupPDNSPairedPrimaryBlocker applies pdnsPairedPrimaryBlocker to a setup
+// draft that would install PowerDNS as the paired primary on a server with no
+// active DNS engine. A server whose active engine differs from the draft is
+// already refused as a migration; one that matches installs nothing.
+func setupPDNSPairedPrimaryBlocker(draft serverSetupDraft, state dnsEngineDBState) string {
+	if draft.DNSMode != setupDNSModeLocal || draft.DNSRole != transport.DNSPairRolePrimary ||
+		state.ActiveEngine != "" {
+		return ""
+	}
+	code, _ := pdnsPairedPrimaryBlocker(dnsEngineSnapshot{
+		Topology: transport.DNSTopologyPaired, PairRole: transport.DNSPairRolePrimary,
+		EngineEpoch: state.EngineEpoch,
+	}, transport.DNSEngine(draft.DNSEngine), "install")
+	return code
+}
+
 func (p *Panel) buildServerSetupPlan(ctx context.Context, state serverSetupState, actor serviceOperationActor) (serverSetupPlan, error) {
 	draft := state.Draft
 	plan := serverSetupPlan{Version: serverSetupPlanVersion, Revision: state.Revision, Purpose: draft.Purpose, Draft: draft, Actor: actor,
@@ -249,6 +267,12 @@ func (p *Panel) buildServerSetupPlan(ctx context.Context, state serverSetupState
 			if state.ActiveEngine != "" && !setupDNSDraftMatchesState(draft, request, local, state) {
 				addBlocker("server_setup_existing_dns_requires_migration")
 			}
+			// Setup installs the first engine only. The paired PowerDNS
+			// primary is decided by the same policy as the DNS engine card,
+			// here at review time, before any DNS identity is saved.
+			if code := setupPDNSPairedPrimaryBlocker(draft, state); code != "" {
+				addBlocker(code)
+			}
 			if serverSetupSecondaryHosting(draft) {
 				endpoint, err := canonicalRemoteDNSEndpoint(draft.DNSPublisherEndpoint)
 				if err != nil || endpoint != draft.DNSPublisherEndpoint {
@@ -266,7 +290,11 @@ func (p *Panel) buildServerSetupPlan(ctx context.Context, state serverSetupState
 		return plan, err
 	}
 	if existingFirewall.Error != "" {
-		return plan, errors.New("firewall status could not be verified")
+		// A host condition the Agent reported is a plan blocker with a stable
+		// code and the next action, never an internal error (D-024).
+		blocker := setupFirewallStatusBlocker(existingFirewall)
+		log.Printf("setup plan blocked by firewall status %s: %s", blocker, boundedSetupHostReason(existingFirewall.Error))
+		addBlocker(blocker)
 	}
 	plan.TCPPorts = append(plan.TCPPorts, existingFirewall.TCPPorts...)
 	plan.TCPPorts = append(plan.TCPPorts, existingFirewall.SSHPorts...)
@@ -353,6 +381,9 @@ func (p *Panel) buildServerSetupPlan(ctx context.Context, state serverSetupState
 		for _, id := range serverSetupRequiredComponents {
 			plan.Components = append(plan.Components, serverSetupPlanComponent{ID: id, Required: true, Installed: installed[id]})
 		}
+		if serverSetupNeedsNativeCron(draft) {
+			plan.Components = append(plan.Components, serverSetupPlanComponent{ID: core.NativeCronServiceID, Required: true, Installed: installed[core.NativeCronServiceID]})
+		}
 	} else {
 		switch draft.Purpose {
 		case "web", "web_mail":
@@ -382,6 +413,11 @@ func (p *Panel) buildServerSetupPlan(ctx context.Context, state serverSetupState
 			addBlocker("server_setup_purpose_invalid")
 		}
 	}
+	if serverSetupHostsSites(draft) {
+		if code := serverSetupHostingRootBlockerCode(); code != "" {
+			addBlocker(code)
+		}
+	}
 	mailProfiles := serverSetupMailProfileIDs(draft)
 	if len(mailProfiles) > 0 {
 		if canonical, err := hostname.CanonicalFQDN(draft.MailHostname); err != nil || canonical != draft.MailHostname {
@@ -404,6 +440,9 @@ func (p *Panel) buildServerSetupPlan(ctx context.Context, state serverSetupState
 			}
 			addStep("mail_profile", profileID, "")
 		}
+	}
+	if serverSetupNeedsNativeCron(draft) {
+		addService(core.NativeCronServiceID)
 	}
 	addService("nftables")
 	addService("certbot")
@@ -472,6 +511,16 @@ func (p *Panel) buildServerSetupPlan(ctx context.Context, state serverSetupState
 		}
 		addStep("access_dns", draft.MailHostname, plan.ServerIP)
 		addStep("mail_certificate", draft.MailHostname, "")
+		var renewal transport.MailEnrollmentPreviewResponse
+		renewalErr := p.callAgentContext(ctx, "Agent.MailEnrollmentPreviewV1", &transport.MailEnrollmentSourceRequest{ExpectedBuildCommit: plan.BuildCommit}, &renewal)
+		generation, previewErr := setupMailEnrollmentPlanGeneration(renewal, plan.BuildCommit)
+		if renewalErr == nil && renewal.State == "waiting" && renewal.Reason == "mail_enrollment_native_busy" {
+			addBlocker("server_setup_mail_enrollment_busy")
+		} else if renewalErr != nil || previewErr != nil {
+			addBlocker("server_setup_mail_enrollment_unavailable")
+		} else if generation != "" {
+			addStep("mail_enrollment", "mail-renewal", generation)
+		}
 	}
 	addStep("verify", draft.Purpose, "")
 	plan.Steps = serverSetupDNSBootstrapSteps(draft, plan.Steps)
@@ -520,8 +569,8 @@ func (p *Panel) handleServerSetupStart(w http.ResponseWriter, r *http.Request) {
 		writeServerError(w, err)
 		return
 	}
-	if err := p.requireServerSetupAdmission(); err != nil {
-		writeCodedError(w, http.StatusForbidden, "license_required", "An active license is required to start setup.", "")
+	if err := p.requireServerSetupAdmission(r.Context()); err != nil {
+		writeServerSetupAdmissionError(w, err, "license_required", "An active license is required to start setup.", "")
 		return
 	}
 	plan, err := p.loadServerSetupPlan(r.Context(), request.PlanID)
@@ -736,9 +785,32 @@ func (p *Panel) advanceServerSetupExecution(plan serverSetupPlan, execution *ser
 		var err error
 		if step.Kind == "dns_publisher" {
 			done, err = p.runServerSetupDNSPublisher(ctx, plan, execution.ID)
+		} else if step.Kind == "mail_enrollment" {
+			done, err = p.runServerSetupMailEnrollment(ctx, plan, execution, index)
 		} else {
 			done, err = p.runServerSetupStep(ctx, plan, step)
 		}
+		var enrollmentWait *serverSetupMailEnrollmentWait
+		if errors.As(err, &enrollmentWait) {
+			execution.Status = "running"
+			execution.Error = &serviceOperationError{Code: enrollmentWait.Code, Message: enrollmentWait.Message}
+			return false, p.persistServerSetupExecution(ctx, *execution)
+		}
+
+		var enrollmentFailure *serverSetupChildFailure
+		if step.Kind == "mail_enrollment" && errors.As(err, &enrollmentFailure) && enrollmentFailure.Code == "mail_enrollment_restored" {
+			// Exact terminal inverse evidence is a known outcome. An unrelated service
+			// observation must not turn it back into an unknown/reconciling diagnosis.
+			step.Status = "failed"
+			execution.Status = "failed"
+			execution.Error = &serviceOperationError{Code: enrollmentFailure.Code, Message: enrollmentFailure.Message}
+			if persistErr := p.persistServerSetupExecution(ctx, *execution); persistErr != nil {
+				return false, persistErr
+			}
+			p.releaseFailedServerSetupDraft(ctx, plan)
+			return false, nil
+		}
+
 		if errors.Is(err, errServerSetupAccessDNSRequired) || errors.Is(err, errServerSetupPrimaryDNSRequired) || errors.Is(err, errServerSetupInfrastructureDNSWaiting) {
 			execution.Status = "waiting"
 			execution.Phase = step.Kind
@@ -765,9 +837,38 @@ func (p *Panel) advanceServerSetupExecution(plan serverSetupPlan, execution *ser
 			execution.Error = &serviceOperationError{Code: "license_required", Message: "Activate the license to continue the remaining setup steps. Existing services keep running."}
 			return false, p.persistServerSetupExecution(ctx, *execution)
 		}
+		if errors.Is(err, errServerSetupLicenseUnverified) {
+			// Unknown, not "license required": the step waits and the runner
+			// rechecks through the same refresh every 20 s.
+			execution.Status = "waiting"
+			execution.Error = serverSetupLicenseUnverifiedFailure(err)
+			return false, p.persistServerSetupExecution(ctx, *execution)
+		}
+		// The Agent's verified terminal or held result for the exact DNS
+		// request is shown as that result, not as an unknown (D-024). The
+		// step stays unreleased: the Panel has not recorded a rollback, so a
+		// new plan could not start anyway. The runner keeps rereading the
+		// same request every 20 s; reading never starts a mutation.
+		var agentFailed *serverSetupDNSAgentFailedError
+		if step.Kind == "dns" && errors.As(err, &agentFailed) {
+			execution.Status = "waiting"
+			execution.Error = serverSetupDNSAgentFailedMessage(agentFailed)
+			log.Printf("server setup step %s: %v", step.ID, err)
+			return false, p.persistServerSetupExecution(ctx, *execution)
+		}
+		if step.Kind == "dns" && errors.Is(err, errServerSetupDNSAgentRunning) {
+			execution.Status = "running"
+			execution.Error = nil
+			return false, p.persistServerSetupExecution(ctx, *execution)
+		}
 		if errors.Is(err, errServerSetupDNSReconciliationRequired) {
 			execution.Status = "running"
-			execution.Error = &serviceOperationError{Code: "server_setup_reconciling", Message: "The previous DNS operation is being reconciled. Its exact receipt must be verified before the setup plan can change."}
+			now := time.Now()
+			since := time.Time{}
+			if step.Kind == "dns" {
+				since = p.serverSetupDNSUnknownSince(ctx, execution.ID, step.RequestID, now)
+			}
+			execution.Error = serverSetupDNSReconcilingError(step.RequestID, since, now)
 			return false, p.persistServerSetupExecution(ctx, *execution)
 		}
 		if errors.Is(err, errServiceOperationBusy) {
@@ -845,7 +946,7 @@ func (p *Panel) runServerSetupStep(ctx context.Context, plan serverSetupPlan, st
 	case "infrastructure_dns":
 		return p.runServerSetupInfrastructureDNS(ctx, plan, *step)
 	case "dns_readiness":
-		if err := p.requireServerSetupAdmission(); err != nil {
+		if err := p.requireServerSetupAdmission(ctx); err != nil {
 			return false, err
 		}
 		if serverSetupManualSecondaryHosting(plan.Draft) {
@@ -861,14 +962,14 @@ func (p *Panel) runServerSetupStep(ctx context.Context, plan serverSetupPlan, st
 		return true, nil
 	case "dns":
 		if plan.Draft.DNSMode == "external" {
-			if err := p.requireServerSetupAdmission(); err != nil {
+			if err := p.requireServerSetupAdmission(ctx); err != nil {
 				return false, err
 			}
 			return true, p.saveSetupDNSManagementMode(ctx, "external")
 		}
 
 		if plan.Draft.DNSMode == setupDNSModeExisting {
-			if err := p.requireServerSetupAdmission(); err != nil {
+			if err := p.requireServerSetupAdmission(ctx); err != nil {
 				return false, err
 			}
 			if plan.RemoteDNSConnection == nil || plan.RemoteDNSConnection.ID != plan.Draft.RemoteDNSConnectionID {
@@ -894,7 +995,7 @@ func (p *Panel) runServerSetupStep(ctx context.Context, plan serverSetupPlan, st
 			return false, setupDNSReconciliationError(err)
 		}
 		if state == "missing" {
-			if err := p.requireServerSetupAdmission(); err != nil {
+			if err := p.requireServerSetupAdmission(ctx); err != nil {
 				return false, err
 			}
 		}
@@ -914,7 +1015,8 @@ func (p *Panel) runServerSetupStep(ctx context.Context, plan serverSetupPlan, st
 			return true, nil
 		case serviceOperationFailed:
 			if op.Error != nil {
-				return false, &serverSetupChildFailure{Code: op.Error.Code, Message: op.Error.Message}
+				return false, &serverSetupChildFailure{Code: op.Error.Code, Message: op.Error.Message,
+					Component: op.Error.Component, Step: op.Error.Step, Detail: op.Error.Detail}
 			}
 			return false, errors.New("setup child failed")
 		default:
@@ -949,7 +1051,7 @@ func (p *Panel) ensureServerSetupChild(ctx context.Context, plan serverSetupPlan
 	if err != nil || found {
 		return prior, err
 	}
-	if err := p.requireServerSetupAdmission(); err != nil {
+	if err := p.requireServerSetupAdmission(ctx); err != nil {
 		return serviceOperation{}, err
 	}
 	if plan.BuildCommit != "" && plan.BuildCommit != strings.TrimSpace(buildCommit) {
@@ -1094,6 +1196,9 @@ func (p *Panel) runServerSetupFirewall(ctx context.Context, plan serverSetupPlan
 		return false, err
 	}
 	if current.Error != "" {
+		if current.ErrorCode == transport.FirewallStatusHostRestartRequired {
+			return false, fmt.Errorf("%w: %s", errServerSetupHostRestartRequired, boundedSetupHostReason(current.Error))
+		}
 		return false, errors.New(current.Error)
 	}
 	if !current.EngineAvailable {
@@ -1120,7 +1225,7 @@ func (p *Panel) runServerSetupFirewall(ctx context.Context, plan serverSetupPlan
 		}
 	}
 
-	if err := p.requireServerSetupAdmission(); err != nil {
+	if err := p.requireServerSetupAdmission(ctx); err != nil {
 		return false, err
 	}
 	response, err := p.applyCanonicalFirewallV2Identity(ctx, "firewall_apply", commitment, step.RequestID, step.OwnerID)
@@ -1181,6 +1286,9 @@ func validateServerSetupExecution(plan serverSetupPlan, execution serverSetupExe
 		if step.serverSetupPlanStep != plan.Steps[index] || step.RequestID != serverSetupID(execution.ID, step.ID, "request") || step.OwnerID != serverSetupID(execution.ID, step.ID, "owner") {
 			return errors.New("saved setup child does not match its reviewed identity")
 		}
+		if step.EnrollmentDispatchAttempted && (step.Kind != "mail_enrollment" || step.Status == "pending") {
+			return errors.New("saved enrollment dispatch does not match its reviewed step")
+		}
 		if !slices.Contains([]string{"pending", "running", "succeeded", "failed"}, step.Status) {
 			return errors.New("saved setup child status is invalid")
 		}
@@ -1188,16 +1296,28 @@ func validateServerSetupExecution(plan serverSetupPlan, execution serverSetupExe
 	return nil
 }
 
-type serverSetupChildFailure struct{ Code, Message string }
+// serverSetupChildFailure carries a child's code and message and, for an
+// install failure, the component, install step and bounded host line that the
+// wizard shows as the cause and next action (D-024).
+type serverSetupChildFailure struct{ Code, Message, Component, Step, Detail string }
 
 func (e *serverSetupChildFailure) Error() string { return e.Code + ": " + e.Message }
 
 func serverSetupFailureForStep(step serverSetupExecutionStep, cause error) *serviceOperationError {
 	var child *serverSetupChildFailure
 	if errors.As(cause, &child) {
-		return &serviceOperationError{Code: child.Code, Message: child.Message}
+		return &serviceOperationError{Code: child.Code, Message: child.Message,
+			Component: child.Component, Step: child.Step, Detail: child.Detail}
 	}
 	switch {
+	case errors.Is(cause, errServerSetupHostRestartRequired):
+		return &serviceOperationError{Code: transport.FirewallStatusHostRestartRequired, Message: setupHostRestartRequiredMessage}
+	case errors.Is(cause, errServerSetupDNSRolledBack):
+		message := "The DNS engine installation did not complete and CelikPanel undid it: no DNS engine is running on this server, and the installed packages were kept stopped for the next attempt. Nothing else was changed. The server administrator can review a new plan and start this DNS step again; it runs as a new installation."
+		if sentence := namedHostOperationSentence(cause); sentence != "" {
+			message += " Reason: " + sentence
+		}
+		return &serviceOperationError{Code: "server_setup_dns_rolled_back", Message: message}
 	case errors.Is(cause, errServerSetupInfrastructureDNSChanged):
 		return &serviceOperationError{Code: "server_setup_infrastructure_dns_changed", Message: "The DNS zone or its ownership changed after review. Existing records were preserved. Review the infrastructure records again before continuing."}
 	case errors.Is(cause, errServerSetupBuildChanged):
@@ -1210,6 +1330,13 @@ func serverSetupFailureForStep(step serverSetupExecutionStep, cause error) *serv
 		return &serviceOperationError{Code: "firewall_ssh_unprovable", Message: "The SSH access port could not be verified. Review server access before retrying."}
 	case errors.Is(cause, errFirewallNoEngine):
 		return &serviceOperationError{Code: "firewall_no_engine", Message: "The firewall engine is unavailable. Review the component installation result."}
+	}
+	// The Agent refused the step's mutation because the host was busy: keep
+	// that typed cause and its reason sentence rather than the step's generic
+	// code (upd8 F1: 05-firewall showed only server_setup_firewall_failed).
+	// Ajan ana makine meşgul olduğu için reddettiyse tipli neden korunur.
+	if classification, ok := classifyHostMutationError(cause); ok {
+		return &serviceOperationError{Code: classification.Code, Message: classification.Message}
 	}
 	switch step.Kind {
 	case "infrastructure_dns":
@@ -1228,13 +1355,108 @@ func serverSetupFailureForStep(step serverSetupExecutionStep, cause error) *serv
 }
 
 var errServerSetupLicenseRequired = errors.New("setup requires an active license")
+
+// errServerSetupHostRestartRequired: the Agent proved the running kernel
+// cannot load netfilter until the server is restarted.
+var errServerSetupHostRestartRequired = errors.New("the server must be restarted before its firewall can be checked")
+
+const setupHostRestartRequiredMessage = "This server was updated and must be restarted before its firewall can be checked. " +
+	"Restart the server, then open setup again; your draft continues and nothing was changed."
+
+// setupFirewallStatusBlocker turns the Agent's firewall status error into a
+// plan blocker. The restart case is fully described by its code. The other
+// classified codes carry the Agent's reason, bounded and on one line, behind
+// the code (the wizard shows the part before ':' as text and the whole code
+// under Technical details). An older Agent without a code is unknown.
+func setupFirewallStatusBlocker(status FirewallStatusResp) string {
+	switch status.ErrorCode {
+	case transport.FirewallStatusHostRestartRequired:
+		return transport.FirewallStatusHostRestartRequired
+	case transport.FirewallStatusKernelUnavailable, transport.FirewallStatusEngineUnavailable,
+		transport.FirewallStatusBusy:
+		return status.ErrorCode + ":" + boundedSetupHostReason(status.Error)
+	default:
+		return transport.FirewallStatusUnknown + ":" + boundedSetupHostReason(status.Error)
+	}
+}
+
+// boundedSetupHostReason is the first line of a host-reported reason with
+// control characters removed and bounded, for logs and plan blockers.
+func boundedSetupHostReason(reason string) string {
+	line, _, _ := strings.Cut(strings.TrimSpace(reason), "\n")
+	line = strings.Join(strings.Fields(strings.Map(func(r rune) rune {
+		if r < 0x20 || r == 0x7f {
+			return ' '
+		}
+		return r
+	}, line)), " ")
+	if runes := []rune(line); len(runes) > 180 {
+		line = string(runes[:180]) + "..."
+	}
+	if line == "" {
+		return "no reason reported"
+	}
+	return line
+}
+
 var errServerSetupBuildChanged = errors.New("setup build changed; review the remaining plan")
 
-func (p *Panel) requireServerSetupAdmission() error {
-	if p.license == nil || !p.license.Status().CanProvision {
-		return errServerSetupLicenseRequired
+// requireServerSetupAdmission judges the license exactly as the HTTP access
+// gate does (panelLicenseStatus: licensing.Manager.AccessStatus, which runs
+// the same synchronous refresh under the same one-minute rule before reading
+// the status). The background setup runner has no browser request to refresh
+// the check for it; reading Status() alone let a stale but valid check look
+// like a missing license (pair2 finding P-C). License policy is unchanged:
+// the same function, verification, interval and failure semantics apply.
+// An unreadable or unverifiable status is not a missing or invalid license
+// (D-024, D-025): it is reported as unknown, not as license_required.
+//
+// Kurulum çalıştırıcısı lisansı HTTP erişim kapısıyla aynı biçimde (aynı
+// eşzamanlı yenileme ve aynı bir dakika kuralıyla) değerlendirir. Okunamayan
+// durum "lisans gerekli" değil, bilinmeyen durum olarak bildirilir.
+func (p *Panel) requireServerSetupAdmission(ctx context.Context) error {
+	status := p.panelLicenseStatus(ctx)
+	if status.CanProvision {
+		return nil
 	}
-	return nil
+	if status.Observation != licensing.ObservationKnown {
+		return &serverSetupLicenseUnverifiedError{State: status.State}
+	}
+	return errServerSetupLicenseRequired
+}
+
+// errServerSetupLicenseUnverified: the license status could not be read or
+// currently verified. It does not prove the license missing or invalid.
+var errServerSetupLicenseUnverified = errors.New("setup could not verify the license status")
+
+type serverSetupLicenseUnverifiedError struct{ State string }
+
+func (e *serverSetupLicenseUnverifiedError) Error() string {
+	return errServerSetupLicenseUnverified.Error() + ": " + e.State
+}
+
+func (e *serverSetupLicenseUnverifiedError) Unwrap() error { return errServerSetupLicenseUnverified }
+
+// serverSetupLicenseUnverifiedFailure keeps the access gate's stable codes.
+func serverSetupLicenseUnverifiedFailure(err error) *serviceOperationError {
+	var unverified *serverSetupLicenseUnverifiedError
+	if errors.As(err, &unverified) && unverified.State == "verification_unavailable" {
+		return &serviceOperationError{Code: errCodeLicenseVerificationUnavailable, Message: "The CelikPanel license could not be verified just now. This does not mean the license is missing or invalid. Setup continues by itself as soon as verification succeeds; if this persists, the server administrator can open License settings and check again. Existing services keep running."}
+	}
+	return &serviceOperationError{Code: errCodeLicenseStatusUnavailable, Message: "The CelikPanel license status could not be read just now. This does not mean the license is missing or invalid. Setup continues by itself as soon as the status can be read; if this persists, the server administrator can open License settings and check again. Existing services keep running."}
+}
+
+// writeServerSetupAdmissionError answers a setup request that was not
+// admitted: an unknown license status keeps the access gate's 503 codes, a
+// known inactive license keeps the caller's license_required response.
+func writeServerSetupAdmissionError(w http.ResponseWriter, err error, code, message, location string) {
+	if errors.Is(err, errServerSetupLicenseUnverified) {
+		failure := serverSetupLicenseUnverifiedFailure(err)
+		w.Header().Set("Cache-Control", "no-store")
+		writeCodedError(w, http.StatusServiceUnavailable, failure.Code, failure.Message, "")
+		return
+	}
+	writeCodedError(w, http.StatusForbidden, code, message, location)
 }
 
 // A new request may have committed between the old runner's terminal read and
@@ -1273,7 +1495,7 @@ func (p *Panel) runServerSetupMailCertificate(ctx context.Context, plan serverSe
 		}
 		return false, errors.New("mail host certificate operation failed; review a new attempt")
 	}
-	if err := p.requireServerSetupAdmission(); err != nil {
+	if err := p.requireServerSetupAdmission(ctx); err != nil {
 		return false, err
 	}
 	if plan.BuildCommit != strings.TrimSpace(buildCommit) {

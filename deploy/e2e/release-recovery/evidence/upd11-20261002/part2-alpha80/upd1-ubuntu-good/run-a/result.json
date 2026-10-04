@@ -1,0 +1,274 @@
+{
+  "artifacts": {
+    "baseline": {
+      "commit": "b9fe1037c6b5580fed97fa0382ec576d5f041045",
+      "sha256": "e00ea2267aa9fc2231d0ce52e165855098c88b7d748d5a5df7c34bff3bb1dcb4",
+      "version": "v0.1.0-alpha.80"
+    },
+    "defective": {
+      "commit": "ca9c11d17a76b98aaccb3512ee87a94c80b44b04",
+      "sha256": "bed12c10d6554031b5867c1b73ce82715740038ea3643f47747cbfa09407e4ab",
+      "version": "v0.1.0-alpha.81"
+    },
+    "good": {
+      "commit": "9656dabad6d85b9a3b1a9360a7ff6e984fe4b4d3",
+      "sha256": "71d191cee0c91448e462d652674671d4250548623823bb0484dbd8bd9dbe0955",
+      "version": "v0.1.0-alpha.81"
+    }
+  },
+  "cell": {
+    "h19": true,
+    "mail_required": true,
+    "name": "upd1-ubuntu-good",
+    "node": "ubuntu",
+    "pk_observe": true,
+    "recovery_fault": null,
+    "scenario": null,
+    "variant": "good"
+  },
+  "findings": [
+    "ubuntu: server setup attempt 1 stopped at 03-service with HOST_MUTATION_BUSY (cause: another server change or package-manager task is still running); the owner waits and starts a newly reviewed plan, as the product text says",
+    "ubuntu: server setup attempt 2 stopped at 03-service with HOST_MUTATION_BUSY (cause: another server change or package-manager task is still running); the owner waits and starts a newly reviewed plan, as the product text says",
+    "ubuntu: server setup attempt 3 stopped at 03-mail_profile with HOST_MUTATION_BUSY (cause: another server change or package-manager task is still running); the owner waits and starts a newly reviewed plan, as the product text says",
+    "ubuntu: server setup attempt 4 stopped at 02-mail_profile with mail_profile_install_failed (cause: another server change or package-manager task is still running); the owner waits and starts a newly reviewed plan, as the product text says",
+    "ubuntu: server setup attempt 5 stopped at 03-mail_profile with mail_profile_install_failed (cause: another server change or package-manager task is still running); the owner waits and starts a newly reviewed plan, as the product text says",
+    "ubuntu: server setup attempt 6 stopped at 05-firewall with server_setup_firewall_failed (cause: another server change or package-manager task is still running); the owner waits and starts a newly reviewed plan, as the product text says",
+    "ubuntu: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['06-panel_certificate', '07-access_dns', '08-mail_certificate', '09-verify']"
+  ],
+  "identity": {
+    "cell_id": "release-recovery__cbf2941dc6a70f37",
+    "node": "ubuntu",
+    "vm_uuid": "a3164253-aa04-5d6d-a856-26b7d13a7be3"
+  },
+  "native_evidence": false,
+  "note": "Observations for the owner's review; the P0 rows are judged separately.",
+  "outcome": {
+    "attempts": {
+      "automatic": [],
+      "automatic_count": 0,
+      "journal_admissions": [],
+      "owner": [],
+      "owner_count": 0
+    },
+    "classification": "update-verified",
+    "final_status": {
+      "observation": "known",
+      "observed_at": "2026-10-02T12:46:01Z",
+      "phase": "succeeded",
+      "reason": "update_verified",
+      "request_id": "83417969162ff7e22ef9661fbec68226",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "update_verified"
+    },
+    "owner_continuation": false,
+    "owner_reboot": null,
+    "pin_changes": [],
+    "port_hold": null,
+    "reboot": null,
+    "track_stop": null
+  },
+  "overall": "complete-for-review",
+  "packagekit": {
+    "apt_backend": [
+      true
+    ],
+    "backend_pathnames_seen": [
+      "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+    ],
+    "children_seen": [],
+    "context_processes_seen": [
+      "unattended-upgr",
+      "http",
+      "https",
+      "gpgv",
+      "apt-key",
+      "frontend"
+    ],
+    "grep_c_aptcc": [
+      0
+    ],
+    "lock_lines_seen": [
+      "/var/lib/apt/lists/lock owner=apt-get",
+      "/var/lib/dpkg/lock owner=dpkg",
+      "/var/cache/apt/archives/lock owner=apt-get",
+      "/var/lib/dpkg/lock-frontend owner=apt-get"
+    ],
+    "observations": 77,
+    "other_processes_seen": [
+      "apt-get",
+      "dpkg",
+      "dpkg-deb"
+    ],
+    "pk_alive_rule_idle_bracketed": {
+      "agent_other": 0,
+      "agent_package_manager_active": 10,
+      "agent_ready": 0,
+      "panel_answered": 7
+    },
+    "readiness": {
+      "HOST_MUTATION_BUSY/package_manager_active": 10,
+      "HOST_MUTATION_BUSY/panel_operation_active": 42,
+      "ready": 23
+    },
+    "rule": {
+      "busy": 22,
+      "idle": 130
+    },
+    "with_packagekitd": 25
+  },
+  "provenance": {
+    "baseline": "published-tag-v0.1.0-alpha.80-tree-plus-the-D-027-acceptance-license-seam-only (Panel license code: cmd/panel/license.go, internal/licensing/acceptance_fixture.go, internal/licensing/acceptance_off.go, internal/licensing/acceptance_owner_linux.go, internal/licensing/acceptance_owner_other.go, internal/licensing/license.go); its release policy, installer, update/rollback/recovery/bootstrap scripts, get.sh and Agent are byte-identical to the tag; installed by the real installer; fixture trust root enrolled; not-production-release-admission",
+    "candidate": "unpublished-local-fixture-commit-over-the-source-labelled-v0.1.0-alpha.81; signed with the disposable fixture key; served by the guest-loopback celikpanel.net fixture origin; not a release",
+    "defect": "fixture source patch: cmd/panel --migrate-only exits 1 after migrating the isolated copy (genuine candidate failure after candidate-installed, simulated by a committed fixture change)"
+  },
+  "request_id": "83417969162ff7e22ef9661fbec68226",
+  "schema": "celikpanel/upd1-owner-update-result/v1",
+  "scope": {
+    "cron": {
+      "crontab": "/usr/bin/crontab",
+      "verdict": "available"
+    },
+    "dns": {
+      "mode": "external",
+      "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+      "verdict": "not-provided-external-dns"
+    },
+    "origin": {
+      "after-provision": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      },
+      "before-arm": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      }
+    },
+    "setup": {
+      "code": "server_setup_access_dns_required",
+      "not_run": [
+        "06-panel_certificate",
+        "07-access_dns",
+        "08-mail_certificate",
+        "09-verify"
+      ],
+      "phase": "access_dns",
+      "verdict": "observed isolated-host wait",
+      "volatile_tables_added": [
+        "server_setup_executions"
+      ]
+    }
+  },
+  "steps": [
+    {
+      "finished_at": "2026-10-02T11:56:35Z",
+      "name": "preflight",
+      "reason": null,
+      "started_at": "2026-10-02T11:56:30Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-02T11:56:48Z",
+      "name": "origin",
+      "reason": null,
+      "started_at": "2026-10-02T11:56:35Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-02T11:58:12Z",
+      "name": "baseline-install",
+      "reason": null,
+      "started_at": "2026-10-02T11:56:48Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-02T11:58:13Z",
+      "name": "owner-login",
+      "reason": null,
+      "started_at": "2026-10-02T11:58:12Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-02T11:58:13Z",
+      "name": "license",
+      "reason": null,
+      "started_at": "2026-10-02T11:58:13Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-02T12:43:13Z",
+      "name": "setup",
+      "reason": null,
+      "started_at": "2026-10-02T11:58:13Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-02T12:43:17Z",
+      "name": "seed",
+      "reason": null,
+      "started_at": "2026-10-02T12:43:13Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-02T12:45:05Z",
+      "name": "pre-state",
+      "reason": null,
+      "started_at": "2026-10-02T12:43:17Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-02T12:45:09Z",
+      "name": "arm",
+      "reason": null,
+      "started_at": "2026-10-02T12:45:05Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-02T12:45:10Z",
+      "name": "owner-start",
+      "reason": null,
+      "started_at": "2026-10-02T12:45:09Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-02T12:46:03Z",
+      "name": "track",
+      "reason": null,
+      "started_at": "2026-10-02T12:45:10Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-02T12:46:03Z",
+      "name": "owner-continuation (required)",
+      "reason": null,
+      "started_at": "2026-10-02T12:46:03Z",
+      "verdict": "skipped"
+    },
+    {
+      "finished_at": "2026-10-02T12:46:10Z",
+      "name": "terminal",
+      "reason": null,
+      "started_at": "2026-10-02T12:46:03Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-02T12:46:12Z",
+      "name": "collect",
+      "reason": null,
+      "started_at": "2026-10-02T12:46:10Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-02T12:46:12Z",
+      "name": "verdicts",
+      "reason": null,
+      "started_at": "2026-10-02T12:46:12Z",
+      "verdict": "passed"
+    }
+  ]
+}

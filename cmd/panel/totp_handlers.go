@@ -126,6 +126,9 @@ func revokePendingLogins(userID int) {
 // userTOTP reads a user's 2FA secret and enabled flag.
 // userTOTP, bir kullanıcının 2FA anahtarını ve etkin bayrağını okur.
 func (p *Panel) userAuthState(ctx context.Context, userID int) (userAuthState, error) {
+	if p.db == nil {
+		return userAuthState{}, errCanonicalAuthUnavailable
+	}
 	state := userAuthState{userID: userID}
 	var stored *string
 	var enabled int
@@ -309,7 +312,7 @@ func (p *Panel) handleLoginTOTP(w http.ResponseWriter, r *http.Request) {
 	}
 	state, err := p.userAuthState(r.Context(), pending.userID)
 	if err != nil {
-		writeServerError(w, err)
+		writeSignInStateError(w, err)
 		return
 	}
 	if state.status == "suspended" {
@@ -323,7 +326,11 @@ func (p *Panel) handleLoginTOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	identity, err := p.canonicalAuthIdentity(r.Context(), pending.userID)
-	if err != nil || !state.matchesCanonical(identity) {
+	if err != nil {
+		writeSignInStateError(w, err)
+		return
+	}
+	if !state.matchesCanonical(identity) {
 		writeClientError(w, http.StatusUnauthorized, "sign-in expired, start again")
 		return
 	}
@@ -331,13 +338,13 @@ func (p *Panel) handleLoginTOTP(w http.ResponseWriter, r *http.Request) {
 		writeClientError(w, http.StatusUnauthorized, "invalid code")
 		return
 	}
+	if p.sessions == nil {
+		writeSignInStatusUnavailable(w)
+		return
+	}
 	token, err := p.sessions.CreateForAuthEpoch(r.Context(), pending.userID, pending.authEpoch, true)
 	if err != nil {
-		if errors.Is(err, auth.ErrAuthStateChanged) {
-			writeClientError(w, http.StatusUnauthorized, "sign-in expired, start again")
-			return
-		}
-		writeServerError(w, err)
+		writeSignInStateError(w, err)
 		return
 	}
 	http.SetCookie(w, p.sessionCookie(token, time.Now().Add(auth.SessionDuration)))

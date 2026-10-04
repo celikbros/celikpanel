@@ -1,0 +1,11 @@
+2026-09-29T23:12:06.528279246Z boot 1 b513fe66-5a33-4250-bd7d-c3b1c6c3786b (watcher /var/tmp/cp-b8r-watch)
+2026-09-29T23:12:06.529905903Z peerboot 1 be5d0f56-2777-41ac-a1fc-9e68e436fbf3 (sampler /var/tmp/cp-b8r-peerloop1)
+2026-09-29T23:14:35.855643226Z peerboot 2 36a366c5-ee0c-4390-b4c2-408a0765dfa9 (sampler /var/tmp/cp-b8r-peerloop2)
+Running as unit: cp-b8r-peerloop2.service; invocation ID: 218d542efe0b43c58bc4e4ebb9451d1c
+peerloop2 start rc=0
+sampler start rc=0
+2026-09-29T23:14:51.606367516Z boot 2 612ac048-995c-4cfe-90da-37daeae56990 (watcher /var/tmp/cp-b8r-watch-boot2)
+Running as unit: cp-b8r-watch-boot2.service; invocation ID: 2ddbbd4f258945dc9e55ceec77b87b2d
+watcher start rc=0
+Running as unit: cp-b8r-dbwatch-boot2.service; invocation ID: 137f2f279709478d9b2636a22b5741a3
+dbwatch start rc=0

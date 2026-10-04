@@ -1,0 +1,4 @@
+2026-09-29T16:19:17.832116425Z boot 1 553d3687-91c8-4256-b168-4700e234b729 (watcher /var/tmp/cp-b6b-watch)
+2026-09-29T16:20:48.751760843Z boot 2 093612d0-c3de-4f28-a81f-e8461369a137 (watcher /var/tmp/cp-b6b-watch-boot2)
+Running as unit: cp-b6b-watch-boot2.service; invocation ID: d0be7e5782184c4e9b300c01685ac704
+watcher start rc=0

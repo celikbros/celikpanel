@@ -1,0 +1,51 @@
+{
+  "schema": "celikpanel/native-mail-contract/v1",
+  "source_commit": "519db3486d383dff61536603a8e8cb6b0be62366",
+  "test_binary_sha256": "dedee37ea70601d993072e9fd8fb21d6dc9dfbc0fc9d8cce2f700865a9a02b58",
+  "lab": {
+    "cell_id": "release-recovery__a6bedf44c8afe6aa",
+    "node": "debian13",
+    "guard": "registered QEMU process, SSH identity, guest nonce, DMI and native systemd",
+    "platform": "Debian 13 amd64"
+  },
+  "scope": {
+    "real_daemons": true,
+    "real_host_readiness_and_package_probes": true,
+    "fixture_ca_and_certbot_source": true,
+    "external_acme_issuance": false,
+    "independent_renewal_helper": false,
+    "installed_owner_server": false,
+    "orderly_reboot": true,
+    "power_loss": false
+  },
+  "logs": {
+    "mail-convergence.log": {
+      "sha256": "1ad9c035e41b2a974b56cbabee6714784bf2373b53eaf4787c777946a8f67ff3",
+      "text": "Sep 22 09:40:39 dns-debian13 systemd[1]: Starting celikpanel-lab-mail-convergence.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-agent.test -test.v \"-test.run=^TestMailHostCertificateDisposableVMConvergenceAndRenewal\\$\" -test.timeout=180s...\nSep 22 09:40:39 dns-debian13 mail-agent.test[4457]: === RUN   TestMailHostCertificateDisposableVMConvergenceAndRenewal\nSep 22 09:40:43 dns-debian13 postfix/postfix-script[5854]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf\nSep 22 09:40:44 dns-debian13 postfix/postfix-script[6067]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf\nSep 22 09:40:47 dns-debian13 postfix/postfix-script[6396]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf\nSep 22 09:40:48 dns-debian13 postfix/postfix-script[6610]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf\nSep 22 09:40:48 dns-debian13 mail-agent.test[4457]:     mail_host_certificate_vm_test.go:204: initial host publication and SMTP/IMAP system-trusted TLS passed; request=d8e24892ed1766ea3029a72739578f6b leaf=bc9ced00e55d55da78e627d5407a5aa7e96c4c3b1253a1bd899c1dc0ec5a9897\nSep 22 09:40:52 dns-debian13 postfix/postfix-script[7161]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf\nSep 22 09:40:52 dns-debian13 mail-agent.test[4457]:     mail_host_certificate_vm_test.go:228: renewal exported/reloaded exact second generation without panel/license; leaf=4b208843c0eed835500874632037e26bf3f89074c2c4a451c78031deca2ee723\nSep 22 09:40:52 dns-debian13 mail-agent.test[4457]: --- PASS: TestMailHostCertificateDisposableVMConvergenceAndRenewal (13.15s)\nSep 22 09:40:52 dns-debian13 mail-agent.test[4457]: PASS\nSep 22 09:40:52 dns-debian13 systemd[1]: celikpanel-lab-mail-convergence.service: Deactivated successfully.\nSep 22 09:40:52 dns-debian13 systemd[1]: Finished celikpanel-lab-mail-convergence.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-agent.test -test.v \"-test.run=^TestMailHostCertificateDisposableVMConvergenceAndRenewal\\$\" -test.timeout=180s.\nSep 22 09:40:52 dns-debian13 systemd[1]: celikpanel-lab-mail-convergence.service: Consumed 5.733s CPU time, 25M memory peak.\nResult=success\nExecMainStatus=0\nActiveState=inactive\n"
+    },
+    "mail-receipt-before-boot.log": {
+      "sha256": "7319e71a13e4d78be184e1460be34d2baae86065d17678640e08aafede2766b3",
+      "text": "Sep 22 09:41:54 dns-debian13 systemd[1]: Starting celikpanel-lab-mail-receipt-before.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-agent.test -test.v \"-test.run=^TestMailHostCertificateDisposableVMRenewalReceipt\\$\" -test.timeout=90s...\nSep 22 09:41:54 dns-debian13 mail-agent.test[7264]: === RUN   TestMailHostCertificateDisposableVMRenewalReceipt\nSep 22 09:41:54 dns-debian13 mail-agent.test[7264]:     mail_host_certificate_vm_resume_test.go:154: exact durable renewal receipt verified; request=c3050e7110c10f4f2c436c1dab5eb085 phase=commit/mail-host-certificate/v1/published/c3050e7110c10f4f2c436c1dab5eb085/mail.setup.celikpanel.test/mhc1:76574396fb650f4f3b52f94f099968bb30c79daabbcf1ff0c71a9cd0e320610b\nSep 22 09:41:55 dns-debian13 mail-agent.test[7264]: --- PASS: TestMailHostCertificateDisposableVMRenewalReceipt (0.08s)\nSep 22 09:41:55 dns-debian13 mail-agent.test[7264]: PASS\nSep 22 09:41:55 dns-debian13 systemd[1]: celikpanel-lab-mail-receipt-before.service: Deactivated successfully.\nSep 22 09:41:55 dns-debian13 systemd[1]: Finished celikpanel-lab-mail-receipt-before.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-agent.test -test.v \"-test.run=^TestMailHostCertificateDisposableVMRenewalReceipt\\$\" -test.timeout=90s.\nResult=success\nExecMainStatus=0\nActiveState=inactive\n9725855b-7387-4486-93d4-09ed13e671d7\n"
+    },
+    "mail-native-boot.log": {
+      "sha256": "55371cc9e3283be66964488269a692d6a421b2156ae9ae023c592a260da19887",
+      "text": "754fef92-3a12-4dc7-aa26-651cc153b3ef\nactive\nactive\ninactive\n"
+    },
+    "mail-boot-native-handshakes.log": {
+      "sha256": "d403586e743a2093f40829159e852b71b658d373bcd8aebef165965e4e4dface",
+      "text": "sha256 Fingerprint=4B:20:88:43:C0:EE:D8:35:50:08:74:63:20:37:E2:6B:F3:F8:90:74:C2:C4:A4:51:C7:80:31:DE:CA:2E:E7:23\nsha256 Fingerprint=4B:20:88:43:C0:EE:D8:35:50:08:74:63:20:37:E2:6B:F3:F8:90:74:C2:C4:A4:51:C7:80:31:DE:CA:2E:E7:23\n"
+    },
+    "mail-receipt-after-boot.log": {
+      "sha256": "b38b92ecc02fe66f64189849b78774878314fd1509dcb000b0a93099d2ca674b",
+      "text": "Sep 22 09:43:43 dns-debian13 systemd[1]: Starting celikpanel-lab-mail-receipt-after.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-agent.test -test.v \"-test.run=^TestMailHostCertificateDisposableVMRenewalReceipt\\$\" -test.timeout=90s...\nSep 22 09:43:43 dns-debian13 mail-agent.test[892]: === RUN   TestMailHostCertificateDisposableVMRenewalReceipt\nSep 22 09:43:43 dns-debian13 mail-agent.test[892]:     mail_host_certificate_vm_resume_test.go:154: exact durable renewal receipt verified; request=c3050e7110c10f4f2c436c1dab5eb085 phase=commit/mail-host-certificate/v1/published/c3050e7110c10f4f2c436c1dab5eb085/mail.setup.celikpanel.test/mhc1:76574396fb650f4f3b52f94f099968bb30c79daabbcf1ff0c71a9cd0e320610b\nSep 22 09:43:43 dns-debian13 mail-agent.test[892]: --- PASS: TestMailHostCertificateDisposableVMRenewalReceipt (0.20s)\nSep 22 09:43:43 dns-debian13 mail-agent.test[892]: PASS\nSep 22 09:43:43 dns-debian13 systemd[1]: celikpanel-lab-mail-receipt-after.service: Deactivated successfully.\nSep 22 09:43:43 dns-debian13 systemd[1]: Finished celikpanel-lab-mail-receipt-after.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-agent.test -test.v \"-test.run=^TestMailHostCertificateDisposableVMRenewalReceipt\\$\" -test.timeout=90s.\nResult=success\nExecMainStatus=0\nActiveState=inactive\n754fef92-3a12-4dc7-aa26-651cc153b3ef\n"
+    },
+    "mail-owner-drift.log": {
+      "sha256": "4eb72682fd88f72b554a35dfc71616a52f10011198c31663d80025fb922a5798",
+      "text": "Sep 22 09:44:13 dns-debian13 systemd[1]: Starting celikpanel-lab-mail-owner-drift.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-agent.test -test.v \"-test.run=^TestMailHostCertificateDisposableVMCompletedRenewalOwnerDrift\\$\" -test.timeout=90s...\nSep 22 09:44:13 dns-debian13 mail-agent.test[955]: === RUN   TestMailHostCertificateDisposableVMCompletedRenewalOwnerDrift\nSep 22 09:44:13 dns-debian13 mail-agent.test[955]:     mail_host_certificate_vm_resume_test.go:173: exact durable renewal receipt verified; request=c3050e7110c10f4f2c436c1dab5eb085 phase=commit/mail-host-certificate/v1/published/c3050e7110c10f4f2c436c1dab5eb085/mail.setup.celikpanel.test/mhc1:76574396fb650f4f3b52f94f099968bb30c79daabbcf1ff0c71a9cd0e320610b\nSep 22 09:44:13 dns-debian13 mail-agent.test[955]:     mail_host_certificate_vm_resume_test.go:244: owner selection preserved; pending retained; historical completion preserved; selected=bc9ced00e55d55da78e627d5407a5aa7e96c4c3b1253a1bd899c1dc0ec5a9897 source=4b208843c0eed835500874632037e26bf3f89074c2c4a451c78031deca2ee723\nSep 22 09:44:13 dns-debian13 mail-agent.test[955]: --- PASS: TestMailHostCertificateDisposableVMCompletedRenewalOwnerDrift (0.30s)\nSep 22 09:44:13 dns-debian13 mail-agent.test[955]: PASS\nSep 22 09:44:13 dns-debian13 systemd[1]: celikpanel-lab-mail-owner-drift.service: Deactivated successfully.\nSep 22 09:44:13 dns-debian13 systemd[1]: Finished celikpanel-lab-mail-owner-drift.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-agent.test -test.v \"-test.run=^TestMailHostCertificateDisposableVMCompletedRenewalOwnerDrift\\$\" -test.timeout=90s.\nResult=success\nExecMainStatus=0\nActiveState=inactive\n"
+    },
+    "mail-fixture-metadata.log": {
+      "sha256": "447eedeb624ecfb1734cf71cf950bec6569786575df81f09b7ca58b1a5ada18f",
+      "text": "dedee37ea70601d993072e9fd8fb21d6dc9dfbc0fc9d8cce2f700865a9a02b58  /root/celikpanel-release-recovery-lab/mail-agent.test\ninstalled_agent_absent=yes\ninstalled_panel_absent=yes\ncertbot 4.0.0-2+deb13u1\ndovecot-core 1:2.4.1+dfsg1-6+deb13u6\npostfix 3.10.13-0+deb13u1\n"
+    }
+  }
+}

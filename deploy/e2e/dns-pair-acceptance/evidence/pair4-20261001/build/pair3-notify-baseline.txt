@@ -1,0 +1,21 @@
+pair3 baseline (t3 PowerDNS debian13 primary / BIND arch secondary; product d1f2ad87, before a6d93f06), one zone-add mutation reached.
+Sources: t3-pdns-bind/p3t3-20260930t000726z/guests/debian13/journal-pdns.service.txt (driver collect, 00:11:03Z) and t3-pdns-bind/obs/debian13-pdns-catalog-after.txt (00:13:36Z).
+operator notify-host requests (driver journal): 2, of which with ':53': 0
+'spurious notify answer' lines: driver journal 4; after-run read (lines from 00:10:59 on) 6; distinct over both (00:10:56, :59, 11:04, 11:13 x2 zones) = 8
+':0 failed after retries' lines: driver journal 0; after-run read 2
+BIND secondary 'received notify' (arch journal-named.service.txt): 5
+
+2026-09-30T00:10:55.328671+00:00 dns-debian13 pdns_server[4881]: Notification request to host 192.0.2.11 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T00:10:55.353236+00:00 dns-debian13 pdns_server[4881]: Notification request to host 192.0.2.11 for zone 'pair-accept.test' received from operator
+2026-09-30T00:10:56.585429+00:00 dns-debian13 pdns_server[4881]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-30T00:10:56.585429+00:00 dns-debian13 pdns_server[4881]: Received spurious notify answer for 'pair-accept.test' from 192.0.2.11:53
+2026-09-30T00:10:59+00:00 dns-debian13 pdns_server[4881]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-30T00:10:59+00:00 dns-debian13 pdns_server[4881]: Received spurious notify answer for 'pair-accept.test' from 192.0.2.11:53
+2026-09-30T00:10:59.586538+00:00 dns-debian13 pdns_server[4881]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-30T00:10:59.586538+00:00 dns-debian13 pdns_server[4881]: Received spurious notify answer for 'pair-accept.test' from 192.0.2.11:53
+2026-09-30T00:11:04+00:00 dns-debian13 pdns_server[4881]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-30T00:11:04+00:00 dns-debian13 pdns_server[4881]: Received spurious notify answer for 'pair-accept.test' from 192.0.2.11:53
+2026-09-30T00:11:13+00:00 dns-debian13 pdns_server[4881]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-30T00:11:13+00:00 dns-debian13 pdns_server[4881]: Received spurious notify answer for 'pair-accept.test' from 192.0.2.11:53
+2026-09-30T00:11:29+00:00 dns-debian13 pdns_server[4881]: Notification for catalog-c000020a.celikpanel.invalid to 192.0.2.11:0 failed after retries
+2026-09-30T00:11:29+00:00 dns-debian13 pdns_server[4881]: Notification for pair-accept.test to 192.0.2.11:0 failed after retries

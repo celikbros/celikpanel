@@ -1,0 +1,81 @@
+{
+  "agreement": {
+    "known_sources": [
+      "cli"
+    ],
+    "phase": {
+      "cli": "recovering"
+    },
+    "reasons": [],
+    "sources": [
+      "cli",
+      "shell"
+    ],
+    "verdict": "single-source"
+  },
+  "cli": {
+    "boot_id": "2d0e6498-0b73-4ea2-805c-4ee4c9db3726",
+    "captured_at": "2026-09-30T23:00:25.279301Z",
+    "en": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "The new version's panel failed its start check before anything was switched on. The server is being returned to the previous version automatically; nothing needs to be done on the server. Check this same request again for the verified result; do not start another update.\nRequest: 7a7b01ebeb24bf40a384437f6c2473c9\nRecorded at: 2026-09-30T23:00:11Z\nThis is a recorded observation; current service health was not checked.\nRecorded state (for support): phase=recovering reason=recovery_running proof=none previous_failure=update_failed failure_code=candidate_panel_startup_check_failed\n"
+    },
+    "json": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "{\"schema\":\"celikpanel-recovery-status/v1\",\"request_id\":\"7a7b01ebeb24bf40a384437f6c2473c9\",\"observation\":\"known\",\"phase\":\"recovering\",\"terminal_proof\":\"none\",\"reason\":\"recovery_running\",\"observed_at\":\"2026-09-30T23:00:11Z\",\"previous_failure\":\"update_failed\",\"failure_code\":\"candidate_panel_startup_check_failed\"}\n"
+    },
+    "tr": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "Yeni sürümün paneli, hiçbir şey devreye alınmadan önce başlangıç denetiminden geçemedi. Sunucu otomatik olarak önceki sürüme döndürülüyor; sunucuda yapmanız gereken bir şey yok. Doğrulanmış sonuç için aynı işlemi yeniden sorgulayın; başka güncelleme başlatmayın.\nİşlem: 7a7b01ebeb24bf40a384437f6c2473c9\nKayıt zamanı: 2026-09-30T23:00:11Z\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\nKayıtlı durum (destek için): phase=recovering reason=recovery_running proof=none previous_failure=update_failed failure_code=candidate_panel_startup_check_failed\n"
+    }
+  },
+  "guidance_api": null,
+  "guidance_cli": {
+    "actionable": true,
+    "keys": [
+      "recovery.phase.recovering",
+      "recovery.failure.candidate_panel_startup_check_failed.returning",
+      "recovery.reason.candidate_panel_startup_check_failed"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "texts": {
+      "en": [
+        "Last recorded step: recovery in progress",
+        "The new version's panel failed its start check before anything was switched on. The server is returning to the previous version automatically; nothing needs to be done on the server. This page checks the same operation for the verified result.",
+        "The new version's panel failed its start check"
+      ],
+      "tr": [
+        "Kaydedilmiş son adım: kurtarma sürüyor",
+        "Yeni sürümün paneli, hiçbir şey devreye alınmadan önce başlangıç denetiminden geçemedi. Sunucu önceki sürüme otomatik olarak dönüyor; sunucuda yapmanız gereken bir şey yok. Bu sayfa doğrulanmış sonuç için aynı işlemi kontrol eder.",
+        "Yeni sürümün paneli başlangıç denetiminden geçemedi"
+      ]
+    }
+  },
+  "index": 25,
+  "observed": {
+    "failure_code": "candidate_panel_startup_check_failed",
+    "observation": "known",
+    "observed_at": "2026-09-30T23:00:11Z",
+    "phase": "recovering",
+    "previous_failure": "update_failed",
+    "reason": "recovery_running",
+    "request_id": "7a7b01ebeb24bf40a384437f6c2473c9",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "none"
+  },
+  "panel_error": "PanelError",
+  "shell_fetch": {
+    "error": "ConnectionResetError",
+    "note": "only a browser-saved copy of the shell can show while the Panel is down"
+  },
+  "t": 1790809224.5928562,
+  "update_card": null,
+  "utc": "2026-09-30T23:00:24Z"
+}

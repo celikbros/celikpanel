@@ -1,0 +1,22 @@
+evidence /var/tmp/cp-release-drill-upd11-arch-good-a/evidence/arch/upd1/upd1-arch-good-20261001t235235z/
+## initial-record (updater wrote it): 0 hits (0 in .txt)
+## curl preflight refusal: 0 hits (0 in .txt)
+## no-marker after child failure: 0 hits (0 in .txt)
+## pause_pending journal: 0 hits (0 in .txt)
+## renewal restore at pause: 0 hits (0 in .txt)
+## pause recorded: 0 hits (0 in .txt)
+## start check failure: 0 hits (0 in .txt)
+## package-activity refusal (startup reconcile): 0 hits (0 in .txt)
+## package_manager_active / HOST_MUTATION_BUSY: 0 hits (0 in .txt)
+## startup reconcile success: 1 hits (1 in .txt)
+   steps/14-collect/journal-product.txt:243: 2026-10-02T00:00:55.291820+00:00 dns-arch panel[13751]: 2026/10/02 00:00:55 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload
+## milter chain/wiring: 4 hits (4 in .txt)
+   steps/14-collect/journal-product.txt:16: 2026-10-01T23:54:03.625799+00:00 dns-arch panel[7915]: 2026/10/01 23:54:03 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-collect/journal-product.txt:29: 2026-10-01T23:54:04.663691+00:00 dns-arch panel[7980]: 2026/10/01 23:54:04 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-collect/journal-product.txt:55: 2026-10-01T23:54:25.322171+00:00 dns-arch panel[422]: 2026/10/01 23:54:25 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-collect/journal-product.txt:245: 2026-10-02T00:00:55.296182+00:00 dns-arch panel[13751]: 2026/10/02 00:00:55 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+## root CLI states (first seen)
+   2026-10-02T00:00:04Z ('running', 'update_running', None, None, None)
+   2026-10-02T00:01:09Z ('succeeded', 'update_verified', None, None, None)
+## CELIKPANEL_LISTEN mentions
+   steps/14-collect/journal-product.txt 2026-10-02T00:00:53.134576+00:00 dns-arch sudo[13240]:     root : PWD=/var/backups/celikpanel/releases/73eef2862644-a8cf84ad978e6704913b6224 ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/local

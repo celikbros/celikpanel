@@ -1,0 +1,46 @@
+{
+  "body": {
+    "active_engine": "bind",
+    "dnssec_zone_count": 0,
+    "engine_epoch": 1,
+    "engines": [
+      {
+        "id": "pdns",
+        "installed": false,
+        "managed": false,
+        "running": false,
+        "status": "available"
+      },
+      {
+        "id": "bind",
+        "installed": true,
+        "managed": true,
+        "running": true,
+        "status": "active"
+      }
+    ],
+    "operation": {
+      "id": "5cab99a83590452f9946f68d5c3960cd",
+      "phase": "committed",
+      "request_id": "cf55b449d7a5f4ffa1d128fa40cc731a",
+      "started_at": "2026-09-29T17:22:46Z",
+      "status": "succeeded",
+      "target_engine": "bind",
+      "updated_at": "2026-09-29T17:23:02Z"
+    },
+    "pair_ready": true,
+    "pair_role": "primary",
+    "pending_zone_count": 0,
+    "revision": 3,
+    "state": "ready",
+    "topology": "paired",
+    "zone_count": 0
+  },
+  "method": "GET",
+  "note": "t1 r2: BIND primary (debian13), pair-ready poll",
+  "panel": "debian13",
+  "path": "/api/v1/dns/engine",
+  "request_body": null,
+  "source": "deploy/e2e/dns-pair-acceptance/evidence/pair1-20260930/t1-bind-bind/r2-20260929t171907z/steps/11-pair-ready/api/0041-get-api-v1-dns-engine.json",
+  "status": 200
+}

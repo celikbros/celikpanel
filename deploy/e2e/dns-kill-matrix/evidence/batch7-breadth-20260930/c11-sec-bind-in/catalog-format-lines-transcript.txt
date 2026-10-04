@@ -1,0 +1,1 @@
+serves catalog catalog-c000020b.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format

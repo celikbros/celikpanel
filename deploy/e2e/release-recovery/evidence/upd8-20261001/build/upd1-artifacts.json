@@ -1,0 +1,56 @@
+{
+  "baseline": {
+    "archive": "/var/tmp/cp-pair-accept/dist/57f4372c0485cc2e568b45d5b9c05785d3633320-acceptance-license/celikpanel-v0.1.0-alpha.80-acceptance-license.tar.gz",
+    "commit": "57f4372c0485cc2e568b45d5b9c05785d3633320",
+    "dist_json": "/var/tmp/cp-pair-accept/dist/57f4372c0485cc2e568b45d5b9c05785d3633320-acceptance-license/dist.json",
+    "license_mode": "acceptance-fixture",
+    "parent": "bd14d97efc5cfd19acd70ddf0edb9c6343317e2b",
+    "product_web_src": "/var/tmp/cp-pair-accept/dist/57f4372c0485cc2e568b45d5b9c05785d3633320-acceptance-license/product-web-src",
+    "sequence": 80,
+    "sha256": "7d95ab7a92639081b888bd8f3bfee08f9454ef380186a9a233f4b717add6abf7",
+    "tree": "ee6d75f688fac425179ee646a647a0ceb68283bc",
+    "version": "v0.1.0-alpha.80"
+  },
+  "baseline_ref": {
+    "patched_files": [
+      "cmd/panel/license.go",
+      "internal/licensing/acceptance_fixture.go",
+      "internal/licensing/acceptance_off.go",
+      "internal/licensing/acceptance_owner_linux.go",
+      "internal/licensing/acceptance_owner_other.go",
+      "internal/licensing/license.go"
+    ],
+    "proof": "/var/tmp/cp-upd1-build/20261001t125717z/baseline-ref-proof.txt",
+    "ref": "v0.1.0-alpha.80",
+    "tag_commit": "bd14d97efc5cfd19acd70ddf0edb9c6343317e2b"
+  },
+  "clone": "/var/tmp/cp-upd1-build/20261001t125717z/repo",
+  "defective": {
+    "archive": "/var/tmp/cp-pair-accept/dist/80d7a43fdd326d7155da9d671836ba1e054b07b3-acceptance-license/celikpanel-v0.1.0-alpha.81-acceptance-license.tar.gz",
+    "commit": "80d7a43fdd326d7155da9d671836ba1e054b07b3",
+    "defect": "cmd/panel --migrate-only exits 1 after migrating the isolated copy",
+    "dist_json": "/var/tmp/cp-pair-accept/dist/80d7a43fdd326d7155da9d671836ba1e054b07b3-acceptance-license/dist.json",
+    "license_mode": "acceptance-fixture",
+    "parent": "8c71415e56a2b9a13232377d501cf4bb8a23a9c8",
+    "product_web_src": "/var/tmp/cp-pair-accept/dist/80d7a43fdd326d7155da9d671836ba1e054b07b3-acceptance-license/product-web-src",
+    "sequence": 81,
+    "sha256": "5b7bea0946796a82c7e4bb88d4cdfa862c48316067fde58068274687a51bc5d4",
+    "tree": "67dcf9af537a3ab55b466c5f4751ba5dffbb10b9",
+    "version": "v0.1.0-alpha.81"
+  },
+  "good": {
+    "archive": "/var/tmp/cp-pair-accept/dist/8c71415e56a2b9a13232377d501cf4bb8a23a9c8-acceptance-license/celikpanel-v0.1.0-alpha.81-acceptance-license.tar.gz",
+    "commit": "8c71415e56a2b9a13232377d501cf4bb8a23a9c8",
+    "dist_json": "/var/tmp/cp-pair-accept/dist/8c71415e56a2b9a13232377d501cf4bb8a23a9c8-acceptance-license/dist.json",
+    "license_mode": "acceptance-fixture",
+    "parent": "57f4372c0485cc2e568b45d5b9c05785d3633320",
+    "product_web_src": "/var/tmp/cp-pair-accept/dist/8c71415e56a2b9a13232377d501cf4bb8a23a9c8-acceptance-license/product-web-src",
+    "sequence": 81,
+    "sha256": "8ccd0f25b8ccad2641b63ccfb9dad0ed54584f327947839f1bc9fde2eab86821",
+    "tree": "1485ffad8d3a0238a4e93cf0358dc351ecb7ae38",
+    "version": "v0.1.0-alpha.81"
+  },
+  "provenance": "baseline: the published v0.1.0-alpha.80 tree (bd14d97efc5cfd19acd70ddf0edb9c6343317e2b) plus the D-027 acceptance-license seam only; candidates: unpublished disposable fixture commits over the source labelled v0.1.0-alpha.81; acceptance-license panels; signed only by the per-lab fixture key at run time; not a release",
+  "schema": "celikpanel/upd1-artifacts/v1",
+  "source_head": "e9e2d3f39793001610e23f9fcabcd62018215ed3"
+}

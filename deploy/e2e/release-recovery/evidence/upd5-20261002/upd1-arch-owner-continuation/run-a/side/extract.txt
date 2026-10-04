@@ -1,0 +1,44 @@
+# extraction of /var/tmp/cp-release-drill-upd5-arch-oc-a/evidence/arch/upd1/upd1-arch-owner-continuation-20261001t042229z/
+native_evidence=False overall=incomplete request_id=None
+outcome.classification="not-terminal" owner_continuation=False
+## steps
+  preflight                          passed       2026-10-01T04:22:29Z -> 2026-10-01T04:22:34Z  
+  origin                             passed       2026-10-01T04:22:34Z -> 2026-10-01T04:22:43Z  
+  baseline-install                   inconclusive 2026-10-01T04:22:43Z -> 2026-10-01T04:23:48Z  CalledProcessError: Command '['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5', '-o', 'StrictHostKeyChecking=yes', '-o', 'HashKnownHosts=no', '-o', 'UserKnownHostsFile=/var/tmp/cp-release-drill-upd5-arch-oc-a/cells/f6680aa19072de9229a85851/ssh-known-hosts', '-i', '/var/tmp/cp-release-drill-upd5-arch-oc-a/key', '-p', '2592', 'celik@127.0.0.1', 'sudo /bin/bash -s']' returned non-zero exit status 1. | guest stderr: Traceback (most recent call last):
+  File "<stdin>", line 5, in <module>
+  File "/usr/lib/python3.14/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, proces
+  owner-login                        not-run      2026-10-01T04:23:48Z -> None  a required earlier step did not pass: baseline-install
+  license                            not-run      2026-10-01T04:23:48Z -> None  a required earlier step did not pass: owner-login
+  setup                              not-run      2026-10-01T04:23:48Z -> None  a required earlier step did not pass: license
+  seed                               not-run      2026-10-01T04:23:48Z -> None  a required earlier step did not pass: setup
+  pre-state                          not-run      2026-10-01T04:23:48Z -> None  a required earlier step did not pass: seed
+  arm                                not-run      2026-10-01T04:23:48Z -> None  a required earlier step did not pass: pre-state
+  owner-start                        not-run      2026-10-01T04:23:48Z -> None  a required earlier step did not pass: arm
+  track                              not-run      2026-10-01T04:23:48Z -> None  a required earlier step did not pass: owner-start
+  owner-continuation (required)      not-run      2026-10-01T04:23:48Z -> None  a required earlier step did not pass: track
+  terminal                           not-run      2026-10-01T04:23:48Z -> None  a required earlier step did not pass: owner-start
+  collect                            passed       2026-10-01T04:23:48Z -> 2026-10-01T04:23:52Z  
+  verdicts                           not-run      2026-10-01T04:23:52Z -> None  a required earlier step did not pass: owner-start
+  kind-expectation                   not-run      2026-10-01T04:23:52Z -> None  a required earlier step did not pass: owner-start
+## findings
+## outcome
+  final_status: null
+  attempts: {"automatic": [], "automatic_count": 0, "journal_admissions": [], "owner": [], "owner_count": 0}
+  reboot: null
+  track_stop: null
+  port_hold: null
+  owner_reboot: null
+  pin_changes: []
+## kind judged
+  {"expected": "the good candidate passes the start check; the held port makes its real start fail (panel_start_unverified); forward completion is retried three times (dispatch update/completion) and pauses (paused_retry_limit, first_failure_code panel_start_unverified) while the port is still held; the panel log the product names shows the port conflict; the owner releases the port and runs the printed one-time retry exactly once; the same request completes forward to update_verified (recovered-after-owner-continuation); the candidate runs; certbot.timer and every other timer end in their pre-update state; site, mail and cron never interrupted; the Panel is back; every owner text at the pause and after the retry recorded in EN and TR", "judged": null, "measured": null, "printed_retry_command": null, "variant": "owner-continuation"}
+## scope
+  {"cron": {"verdict": "not checked (the cell stopped before seeding)"}, "dns": {"mode": "external", "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2", "verdict": "not-provided-external-dns"}, "origin": {"after-provision": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}}, "setup": {"verdict": "not waiting"}}
+## status samples (0)
+## guidance texts seen (first time, per source)
+## collect checks: {"recovery_fault_events": null, "renewal_before_update": null, "stopped_after": ["baseline-install"], "unavailable": {}}
+## observer events
+## budget receipts
+## product journal key lines
+## label scan: 'Recovery failed' / 'Kurtarma başarısız' per file (steps after track-after / terminal)
+## live-probe re-read / preflight-refused lines in all collected journals

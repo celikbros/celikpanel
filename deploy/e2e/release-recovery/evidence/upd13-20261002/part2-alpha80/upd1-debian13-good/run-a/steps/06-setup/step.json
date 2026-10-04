@@ -1,0 +1,100 @@
+{
+  "checks": {
+    "before": {
+      "guidance": "undecided",
+      "required": true,
+      "revision": 0,
+      "status": "new"
+    },
+    "dns": {
+      "mode": "external",
+      "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+      "verdict": "not-provided-external-dns"
+    },
+    "draft_choices": {
+      "dns_mode": "external",
+      "peer_ip": "",
+      "peer_ns": ""
+    },
+    "execution": {
+      "error": {
+        "code": "server_setup_access_dns_required",
+        "message": "Public DNS must resolve panel-debian13.upd1-infra.test to 192.0.2.10 before a certificate is requested. Check this hostname's A/AAAA records and its zone delegation. For DNS managed here, review the infrastructure DNS records in this wizard; otherwise correct them at the primary DNS server or provider. This check resumes automatically when DNS is verified."
+      },
+      "phase": "access_dns",
+      "status": "waiting"
+    },
+    "isolated_host_wait": {
+      "code": "server_setup_access_dns_required",
+      "mail_steps_reached": true,
+      "not_run": [
+        "10-panel_certificate",
+        "11-access_dns",
+        "12-mail_certificate",
+        "13-verify"
+      ],
+      "phase": "access_dns",
+      "polls": 25,
+      "stable_wait_seconds": 121.9,
+      "steps": {
+        "01-dns": "succeeded",
+        "02-service": "succeeded",
+        "03-service": "succeeded",
+        "04-service": "succeeded",
+        "05-mail_profile": "succeeded",
+        "06-mail_profile": "succeeded",
+        "07-service": "succeeded",
+        "08-firewall": "succeeded",
+        "09-access_dns": "running",
+        "10-panel_certificate": "pending",
+        "11-access_dns": "pending",
+        "12-mail_certificate": "pending",
+        "13-verify": "pending"
+      }
+    },
+    "owner_attempts": [
+      {
+        "attempt": 1,
+        "error": {
+          "code": "server_setup_access_dns_required",
+          "message": "Public DNS must resolve panel-debian13.upd1-infra.test to 192.0.2.10 before a certificate is requested. Check this hostname's A/AAAA records and its zone delegation. For DNS managed here, review the infrastructure DNS records in this wizard; otherwise correct them at the primary DNS server or provider. This check resumes automatically when DNS is verified."
+        },
+        "owner_texts": {
+          "api_message": "Public DNS must resolve panel-debian13.upd1-infra.test to 192.0.2.10 before a certificate is requested. Check this hostname's A/AAAA records and its zone delegation. For DNS managed here, review the infrastructure DNS records in this wizard; otherwise correct them at the primary DNS server or provider. This check resumes automatically when DNS is verified.",
+          "code": "server_setup_access_dns_required"
+        },
+        "phase": "access_dns",
+        "purpose": "web_mail",
+        "request_id": "659a1d2edf76c6a8e157b9f30b8e720d",
+        "status": "waiting",
+        "steps": {
+          "01-dns": "succeeded",
+          "02-service": "succeeded",
+          "03-service": "succeeded",
+          "04-service": "succeeded",
+          "05-mail_profile": "succeeded",
+          "06-mail_profile": "succeeded",
+          "07-service": "succeeded",
+          "08-firewall": "succeeded",
+          "09-access_dns": "running",
+          "10-panel_certificate": "pending",
+          "11-access_dns": "pending",
+          "12-mail_certificate": "pending",
+          "13-verify": "pending"
+        }
+      }
+    ],
+    "owner_model": "ordinary owner: the reviewed setup plan is started once; no wait for the package manager and no newly reviewed plan after a stop (H19 off)",
+    "plan_web_mail": {
+      "blockers": [],
+      "can_start": true,
+      "http": 200,
+      "id": "6d625d44f23089c7edf5ccfc24e9a3d7"
+    },
+    "start_http": 202
+  },
+  "finished_at": "2026-10-03T00:48:02Z",
+  "name": "setup",
+  "started_at": "2026-10-03T00:42:21Z",
+  "verdict": "observed"
+}

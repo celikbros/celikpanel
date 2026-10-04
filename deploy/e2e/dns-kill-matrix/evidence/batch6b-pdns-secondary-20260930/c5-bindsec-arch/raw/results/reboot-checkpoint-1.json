@@ -1,0 +1,2680 @@
+{
+  "boot": {
+    "boot_id": "859ac82f-3c17-4e75-9982-906f87ff71cf",
+    "fixture_marker": {
+      "cell_id": "bind__target-staged__before-write__paired-secondary__peer-reachable",
+      "node": "arch",
+      "schema": "celikpanel/dns-kill-fixture-plan/v1"
+    },
+    "product_uuid": "93161804-66ca-53be-b2e9-fea2ee1e1dea"
+  },
+  "cell_id": "bind__target-staged__before-write__paired-secondary__peer-reachable",
+  "failures": {
+    "diagnostic": [],
+    "safety": [],
+    "verification": []
+  },
+  "kill_proven": true,
+  "nonce": "df15f07cbb5a4179c5c90536556260b6463d20363d2e169f625e40a32199e7f3",
+  "ordinal": 1,
+  "proof": {
+    "path": "/var/lib/celikpanel-dns-kill-matrix/results/bind__target-staged__before-write__paired-secondary__peer-reachable/kill-proof.json",
+    "sha256": "8bd6d6c5d5416aa57f3aa872612f2ea24f70c44180ad1f4818b64ee42d7431f4"
+  },
+  "recorded_at": "2026-09-29T16:35:29.456142Z",
+  "request_id": "d2f345432a323fbd9f5c5354f491a6cb",
+  "result": {
+    "boundary": {
+      "edge": "before-write",
+      "phase": "target-staged",
+      "point": "before_write"
+    },
+    "boundary_marker": {
+      "cell_id": "bind__target-staged__before-write__paired-secondary__peer-reachable",
+      "driver": "bind",
+      "marker": "/var/lib/celikpanel-dns-kill-matrix/results/bind__target-staged__before-write__paired-secondary__peer-reachable/boundary-marker.json",
+      "nonce": "df15f07cbb5a4179c5c90536556260b6463d20363d2e169f625e40a32199e7f3",
+      "observed_driver": "bind",
+      "observed_journal": {
+        "manifest_qualifier": "dns-engine-switch/v1:sha256:15ef03c450581f9b506f4f6827b8d2cd8c07cf8c3a0bccf659e03fbcd4ded5f2",
+        "mode": "switch",
+        "mutation_owner_id": "b5c9a8cb3393d0cc355c877bc730ac6b",
+        "mutation_request_id": "d2f345432a323fbd9f5c5354f491a6cb",
+        "pair_role": "secondary",
+        "path": "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json",
+        "phase": "target-staged",
+        "schema": "celikpanel-dns-engine-switch-journal/v1",
+        "source_epoch": 0,
+        "source_revision": 0,
+        "target_engine": "bind",
+        "target_epoch": 1,
+        "topology": "paired"
+      },
+      "phase": "target-staged",
+      "pid": 1620,
+      "point": "before_write",
+      "process_start_ticks": "8124",
+      "ready_fd": 5,
+      "recorded_at": "2026-09-29T16:34:43.639608885Z",
+      "request_id": "d2f345432a323fbd9f5c5354f491a6cb",
+      "schema": "celikpanel-dns-kill-matrix-boundary/v1"
+    },
+    "cell_id": "bind__target-staged__before-write__paired-secondary__peer-reachable",
+    "command_environment": {
+      "fault_selector_names": [
+        "CELIKPANEL_DNS_KILL_MATRIX_CELL_ID",
+        "CELIKPANEL_DNS_KILL_MATRIX_DRIVER",
+        "CELIKPANEL_DNS_KILL_MATRIX_POINT",
+        "CELIKPANEL_DNS_KILL_MATRIX_PHASE",
+        "CELIKPANEL_DNS_KILL_MATRIX_REQUEST_ID",
+        "CELIKPANEL_DNS_KILL_MATRIX_NONCE",
+        "CELIKPANEL_DNS_KILL_MATRIX_MARKER",
+        "CELIKPANEL_DNS_KILL_MATRIX_READY_FD"
+      ],
+      "inherited_caller_names": [
+        "LANG",
+        "PATH"
+      ],
+      "production": {
+        "CELIKPANEL_AGENT_SOCKET": "/run/celikpanel/agent.sock",
+        "CELIKPANEL_AGENT_STATE_DIR": "/var/lib/celikpanel-agent-private",
+        "CELIKPANEL_AGENT_TOKEN_FILE": "/etc/celikpanel/agent.token",
+        "CELIKPANEL_DKIM_DIR": "/etc/celikpanel/dkim",
+        "CELIKPANEL_MUTATION_LOCK": "/run/celikpanel/service-mutation.lock",
+        "CELIKPANEL_RUNTIMES_DIR": "/opt/celikpanel/runtimes",
+        "LANG": "C.UTF-8",
+        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+      }
+    },
+    "commands": {
+      "agent_restart": {
+        "argv": [
+          "/usr/bin/systemctl",
+          "restart",
+          "celikpanel-agent.service"
+        ],
+        "device": 34,
+        "inode": 27328,
+        "mode": "0755",
+        "path": "/usr/bin/systemctl",
+        "resolved_path": "/usr/bin/systemctl",
+        "sha256": "afe98ef3d55f504b37c6e7eb7da21a639ae7fb558f4c9024c89abb580a703255",
+        "uid": 0
+      },
+      "panel_restart": {
+        "argv": [
+          "/usr/bin/systemctl",
+          "restart",
+          "celikpanel-panel.service"
+        ],
+        "device": 34,
+        "inode": 27328,
+        "mode": "0755",
+        "path": "/usr/bin/systemctl",
+        "resolved_path": "/usr/bin/systemctl",
+        "sha256": "afe98ef3d55f504b37c6e7eb7da21a639ae7fb558f4c9024c89abb580a703255",
+        "uid": 0
+      },
+      "recovery": {
+        "argv": [
+          "/opt/celikpanel/bin/dns-kill-trigger",
+          "rpc-retry",
+          "--scenario",
+          "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+          "--identity-receipt",
+          "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+          "--timeout",
+          "45m"
+        ],
+        "device": 34,
+        "inode": 48945,
+        "mode": "0755",
+        "path": "/opt/celikpanel/bin/dns-kill-trigger",
+        "resolved_path": "/opt/celikpanel/bin/dns-kill-trigger",
+        "sha256": "5476eb9996a467322aefffb8c0665bbdb0143fbc04cdd92ee424ee061660a693",
+        "uid": 0
+      },
+      "recovery_probe": {
+        "argv": [
+          "/opt/celikpanel/libexec/dns-kill-recovery-probe.py",
+          "--cell-id",
+          "bind__target-staged__before-write__paired-secondary__peer-reachable",
+          "--scenario",
+          "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+          "--identity-receipt",
+          "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+          "--ledger",
+          "/var/lib/celikpanel-agent-private/service-mutations.json",
+          "--state",
+          "/var/lib/celikpanel-agent-private/dns-engine-state.json",
+          "--journal",
+          "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json"
+        ],
+        "device": 34,
+        "inode": 48946,
+        "mode": "0755",
+        "path": "/opt/celikpanel/libexec/dns-kill-recovery-probe.py",
+        "resolved_path": "/opt/celikpanel/libexec/dns-kill-recovery-probe.py",
+        "sha256": "366663ecc1ebe6926de3371740805e69753f5af0b5afc5eeda295fba4ec14066",
+        "uid": 0
+      },
+      "scenario_trigger": {
+        "argv": [
+          "/opt/celikpanel/bin/dns-kill-trigger",
+          "rpc-switch",
+          "--scenario",
+          "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+          "--identity-receipt",
+          "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+          "--timeout",
+          "45m"
+        ],
+        "device": 34,
+        "inode": 48945,
+        "mode": "0755",
+        "path": "/opt/celikpanel/bin/dns-kill-trigger",
+        "resolved_path": "/opt/celikpanel/bin/dns-kill-trigger",
+        "sha256": "5476eb9996a467322aefffb8c0665bbdb0143fbc04cdd92ee424ee061660a693",
+        "uid": 0
+      },
+      "socket_identity_contract": {
+        "identity_receipt_path": "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+        "operation_timeout": "45m",
+        "scenario_path": "/var/lib/celikpanel-dns-kill-matrix/scenario.json"
+      },
+      "tagged_agent": {
+        "argv": [
+          "/opt/celikpanel/bin/agent.kill"
+        ],
+        "device": 34,
+        "inode": 48943,
+        "mode": "0755",
+        "path": "/opt/celikpanel/bin/agent.kill",
+        "resolved_path": "/opt/celikpanel/bin/agent.kill",
+        "sha256": "d9b53961dcb45fd94c0c860b5a2b176b09e41b484ea4358705f63ded93eedcfb",
+        "uid": 0
+      }
+    },
+    "complete_verdict": {
+      "passed": true,
+      "reasons": [],
+      "required_classification": [
+        "target_converged"
+      ],
+      "safety_status": "passed",
+      "status": "passed"
+    },
+    "controller_identity": {
+      "effective_gid": 969,
+      "effective_group": "celikpanel",
+      "effective_uid": 0,
+      "expected_umask": "0027"
+    },
+    "diagnostic_failures": [],
+    "driver": "bind",
+    "failures": [],
+    "finished_at": "2026-09-29T16:35:29.441550Z",
+    "fixture_pass_definition": {
+      "definition": "paired-secondary",
+      "failures": [],
+      "peer_catalog_format_log": {
+        "expected_agent_name": "PowerDNS",
+        "expected_format": "pdns-native",
+        "failures": [],
+        "log": {
+          "catalog": "catalog-c000020a.celikpanel.invalid",
+          "formats": [
+            "PowerDNS",
+            "PowerDNS",
+            "PowerDNS"
+          ],
+          "lines": [
+            "2026/09/29 16:34:06 DNS engine change d2f345432a323fbd9f5c5354f491a6cb: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format",
+            "2026/09/29 16:34:46 DNS engine change d2f345432a323fbd9f5c5354f491a6cb: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format",
+            "2026/09/29 16:34:56 DNS engine change completion d2f345432a323fbd9f5c5354f491a6cb: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format"
+          ],
+          "peer_ip": "192.0.2.10",
+          "producer_changed_lines": [],
+          "sources": {
+            "agent_journal": [
+              "/usr/bin/journalctl",
+              "--no-pager",
+              "--quiet",
+              "--output=cat",
+              "--unit=celikpanel-agent.service",
+              "--since=@1790699644"
+            ],
+            "tagged_agent_transcript": "/var/lib/celikpanel-dns-kill-matrix/results/bind__target-staged__before-write__paired-secondary__peer-reachable/transcript.jsonl"
+          },
+          "unknown": []
+        },
+        "unknown": []
+      },
+      "secondary_serving": {
+        "failures": [],
+        "primary": {
+          "soa": {
+            "tcp": [
+              2026083101
+            ],
+            "udp": [
+              2026083101
+            ]
+          },
+          "www_a": {
+            "tcp": [
+              "192.0.2.10"
+            ],
+            "udp": [
+              "192.0.2.10"
+            ]
+          }
+        },
+        "secondary": {
+          "soa": {
+            "tcp": [
+              2026083101
+            ],
+            "udp": [
+              2026083101
+            ]
+          },
+          "www_a": {
+            "tcp": [
+              "192.0.2.10"
+            ],
+            "udp": [
+              "192.0.2.10"
+            ]
+          }
+        },
+        "unknown": []
+      },
+      "unknown": []
+    },
+    "initial_journal": {
+      "exists": false
+    },
+    "journal_at_boundary": {
+      "device": 34,
+      "exists": true,
+      "expected_phase": "intent",
+      "inode": 78941,
+      "mode": "0600",
+      "observed_phase": "intent",
+      "request_id": "d2f345432a323fbd9f5c5354f491a6cb",
+      "sha256": "7927dd723c934f1234c2226111b9b2111dcd833a95f4939c041bdab9e5250bb1"
+    },
+    "kill": {
+      "delivered_at": "2026-09-29T16:34:43.662617Z",
+      "exit_code": 137,
+      "pid": 1620,
+      "proc_entry_absent_after_reap": true,
+      "process_start_ticks": "8124",
+      "raw_returncode": -9,
+      "signal": "SIGKILL",
+      "signal_number": 9,
+      "state_before_signal": "T"
+    },
+    "kill_proven": true,
+    "management_disabled_before_reboot": {
+      "command": {
+        "argv": [
+          "/usr/bin/systemctl",
+          "disable",
+          "--now",
+          "celikpanel-panel.service",
+          "celikpanel-agent.service"
+        ],
+        "returncode": 0,
+        "stderr": "Removed '/etc/systemd/system/multi-user.target.wants/celikpanel-agent.service'.\nRemoved '/etc/systemd/system/multi-user.target.wants/celikpanel-panel.service'.\n"
+      },
+      "failures": [],
+      "units": {
+        "units": {
+          "celikpanel-agent.service": {
+            "ActiveState": "inactive",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "SubState": "dead",
+            "UnitFileState": "disabled"
+          },
+          "celikpanel-panel.service": {
+            "ActiveState": "inactive",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "SubState": "dead",
+            "UnitFileState": "disabled"
+          }
+        },
+        "unknown": []
+      },
+      "unknown": []
+    },
+    "native_versions": {
+      "after": {
+        "at": "2026-09-29T16:35:29.088819Z",
+        "daemons": {
+          "named": {
+            "output": "BIND 9.20.29 (Stable Release) <id:c3d4465>",
+            "returncode": 0
+          }
+        },
+        "package_manager": "pacman",
+        "packages": {
+          "bind": "9.20.29-1",
+          "powerdns": null
+        }
+      },
+      "before": {
+        "at": "2026-09-29T16:34:05.365961Z",
+        "daemons": {},
+        "package_manager": "pacman",
+        "packages": {
+          "bind": null,
+          "powerdns": null
+        }
+      }
+    },
+    "nonce": "df15f07cbb5a4179c5c90536556260b6463d20363d2e169f625e40a32199e7f3",
+    "paired_secondary_preflight": {
+      "authoritative_udp_tcp": true,
+      "catalog": "catalog-c000020a.celikpanel.invalid",
+      "catalog_soa_serial": 1790699611,
+      "peer_ip": "192.0.2.10"
+    },
+    "peer_after_kill": {
+      "expected": "reachable",
+      "samples": [
+        {
+          "address": "192.0.2.10",
+          "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+          "elapsed_seconds": 0.007550534000003495,
+          "ordinal": 1,
+          "port": 22,
+          "reachable": true
+        }
+      ]
+    },
+    "peer_before_tagged_agent": {
+      "applicable": true,
+      "expected": "reachable",
+      "observation": {
+        "address": "192.0.2.10",
+        "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+        "elapsed_seconds": 0.00826346899999919,
+        "port": 22
+      }
+    },
+    "peer_reachability": "reachable",
+    "post_restart": {
+      "agent": {
+        "detail": {
+          "device": 27,
+          "inode": 3357
+        },
+        "ok": true
+      },
+      "dns": {
+        "detail": {
+          "tcp": {
+            "additional": 2,
+            "answers": 1,
+            "authority": 2,
+            "bytes": 118,
+            "flags": 33792,
+            "questions": 1,
+            "transport": "tcp"
+          },
+          "udp": {
+            "additional": 2,
+            "answers": 1,
+            "authority": 2,
+            "bytes": 118,
+            "flags": 33792,
+            "questions": 1,
+            "transport": "udp"
+          }
+        },
+        "ok": true
+      },
+      "panel": {
+        "detail": {
+          "address": "127.0.0.1",
+          "port": 2083
+        },
+        "ok": true
+      }
+    },
+    "pre_reboot_verdict": {
+      "passed": true,
+      "reasons": [],
+      "required_classification": [
+        "target_converged"
+      ],
+      "safety_status": "passed",
+      "status": "passed"
+    },
+    "production_paths": {
+      "agent_token": {
+        "device": 34,
+        "gid": 969,
+        "inode": 49070,
+        "mode": "0640",
+        "path": "/etc/celikpanel/agent.token",
+        "size": 65,
+        "uid": 0
+      },
+      "dkim_directory": {
+        "device": 34,
+        "inode": 48939,
+        "path": "/etc/celikpanel/dkim"
+      },
+      "runtimes_directory": {
+        "device": 34,
+        "inode": 48935,
+        "path": "/opt/celikpanel/runtimes"
+      }
+    },
+    "proof": {
+      "path": "/var/lib/celikpanel-dns-kill-matrix/results/bind__target-staged__before-write__paired-secondary__peer-reachable/kill-proof.json",
+      "sha256": "8bd6d6c5d5416aa57f3aa872612f2ea24f70c44180ad1f4818b64ee42d7431f4"
+    },
+    "ready_pipe": {
+      "bytes": 65,
+      "fd": 5,
+      "payload_sha256": "59742457688735fe719ecfce8c22a07927be6fba9c364e73eb8c18841b976c30"
+    },
+    "recovery": {
+      "agent_ready": {
+        "detail": {
+          "device": 27,
+          "inode": 3357
+        },
+        "ok": true
+      },
+      "attempts": [
+        {
+          "command": {
+            "argv": [
+              "/opt/celikpanel/bin/dns-kill-trigger",
+              "rpc-retry",
+              "--scenario",
+              "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+              "--identity-receipt",
+              "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+              "--timeout",
+              "45m"
+            ],
+            "duration_seconds": 11.221366,
+            "output_bytes": 819,
+            "output_sha256": "31891c6c321d4fd4f58928412dec5bd330838f430f9ffae7220290d17b93b925",
+            "output_truncated": false,
+            "returncode": 0
+          },
+          "error": null,
+          "identity_receipt_after": {
+            "cell_id": "bind__target-staged__before-write__paired-secondary__peer-reachable",
+            "device": 34,
+            "driver": "bind",
+            "inode": 49109,
+            "manifest_qualifier": "dns-engine-switch/v1:sha256:15ef03c450581f9b506f4f6827b8d2cd8c07cf8c3a0bccf659e03fbcd4ded5f2",
+            "mode": "0600",
+            "owner_id": "b5c9a8cb3393d0cc355c877bc730ac6b",
+            "path": "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+            "request_id": "d2f345432a323fbd9f5c5354f491a6cb",
+            "schema": "celikpanel-dns-kill-matrix-trigger-identity/v1",
+            "sha256": "534d3e96c9588c6678f2fe5045043f4793ce7c8c3e03f8f70c36fd2597a7fd59",
+            "source_fixture": "uninitialized"
+          },
+          "ordinal": 1,
+          "peer_after_probe": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.01007580600000324,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "command": {
+            "argv": [
+              "/opt/celikpanel/bin/dns-kill-trigger",
+              "rpc-retry",
+              "--scenario",
+              "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+              "--identity-receipt",
+              "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+              "--timeout",
+              "45m"
+            ],
+            "duration_seconds": 0.016618,
+            "output_bytes": 799,
+            "output_sha256": "83c69288ba0daf35350fe127fc026b5046390149aa01c8068df0d42e98fdc350",
+            "output_truncated": false,
+            "returncode": 0
+          },
+          "error": null,
+          "identity_receipt_after": {
+            "cell_id": "bind__target-staged__before-write__paired-secondary__peer-reachable",
+            "device": 34,
+            "driver": "bind",
+            "inode": 49109,
+            "manifest_qualifier": "dns-engine-switch/v1:sha256:15ef03c450581f9b506f4f6827b8d2cd8c07cf8c3a0bccf659e03fbcd4ded5f2",
+            "mode": "0600",
+            "owner_id": "b5c9a8cb3393d0cc355c877bc730ac6b",
+            "path": "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+            "request_id": "d2f345432a323fbd9f5c5354f491a6cb",
+            "schema": "celikpanel-dns-kill-matrix-trigger-identity/v1",
+            "sha256": "534d3e96c9588c6678f2fe5045043f4793ce7c8c3e03f8f70c36fd2597a7fd59",
+            "source_fixture": "uninitialized"
+          },
+          "ordinal": 2,
+          "peer_after_probe": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.007599876999989874,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        }
+      ],
+      "identity": {
+        "cell_id": "bind__target-staged__before-write__paired-secondary__peer-reachable",
+        "driver": "bind",
+        "manifest_qualifier": "dns-engine-switch/v1:sha256:15ef03c450581f9b506f4f6827b8d2cd8c07cf8c3a0bccf659e03fbcd4ded5f2",
+        "owner_id": "b5c9a8cb3393d0cc355c877bc730ac6b",
+        "request_id": "d2f345432a323fbd9f5c5354f491a6cb"
+      },
+      "mode": "rpc-retry",
+      "native_pre_retry_status": {
+        "configured": false
+      },
+      "pre_retry_dns": {
+        "error": "[Errno 111] Connection refused",
+        "ok": false
+      },
+      "pre_retry_probe": {
+        "active_dns_engine": "",
+        "argv": [
+          "/opt/celikpanel/libexec/dns-kill-recovery-probe.py",
+          "--cell-id",
+          "bind__target-staged__before-write__paired-secondary__peer-reachable",
+          "--scenario",
+          "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+          "--identity-receipt",
+          "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+          "--ledger",
+          "/var/lib/celikpanel-agent-private/service-mutations.json",
+          "--state",
+          "/var/lib/celikpanel-agent-private/dns-engine-state.json",
+          "--journal",
+          "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json"
+        ],
+        "converged": false,
+        "detail": "BIND target/source unit state is not converged: {'bind9.service': 'inactive', 'named.service': 'inactive', 'pdns.service': 'inactive'}; DNS engine state receipt is unavailable: [Errno 2] No such file or directory: '/var/lib/celikpanel-agent-private/dns-engine-state.json'; cannot validate DNS ownership residue without scenario/active state; measured mutation job is not finalized: {'status': {'want': 'succeeded', 'got': 'failed'}, 'phase': {'want': 'commit/dns-engine-switch/v2/finalized/d2f345432a323fbd9f5c5354f491a6cb/dns-engine-switch/v1:sha256:15ef03c450581f9b506f4f6827b8d2cd8c07cf8c3a0bccf659e03fbcd4ded5f2', 'got': 'interrupted'}}",
+        "duration_seconds": 0.114485,
+        "fingerprint": "5cf8081da737afb030c0b4cea9d5bbffe6bd2ca56fe1dc8ded47884bd651548d",
+        "ordinal": 0,
+        "output_bytes": 860,
+        "output_sha256": "90411fff6bdb7408a3187c414020cc758738671bbd0ca5f3c4153c95028d623e",
+        "output_truncated": false,
+        "recovery_outcome": "indeterminate",
+        "returncode": 0,
+        "valid": true
+      },
+      "pre_retry_source_serving": false,
+      "timing": "after replacement agent socket, before panel restart and final liveness"
+    },
+    "recovery_outcome": {
+      "changed_or_racy": false,
+      "classification": "target_converged",
+      "dns_serving_after_restart": true,
+      "probe_pair_valid": true,
+      "repeated_nonconvergence": false,
+      "rolled_back_source_serving": false,
+      "same_fingerprint": true,
+      "target_converged": true
+    },
+    "recovery_probes": [
+      {
+        "active_dns_engine": "bind",
+        "argv": [
+          "/opt/celikpanel/libexec/dns-kill-recovery-probe.py",
+          "--cell-id",
+          "bind__target-staged__before-write__paired-secondary__peer-reachable",
+          "--scenario",
+          "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+          "--identity-receipt",
+          "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+          "--ledger",
+          "/var/lib/celikpanel-agent-private/service-mutations.json",
+          "--state",
+          "/var/lib/celikpanel-agent-private/dns-engine-state.json",
+          "--journal",
+          "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json"
+        ],
+        "converged": true,
+        "detail": "converged",
+        "duration_seconds": 2.167827,
+        "fingerprint": "34e616a5aa9ea00777f25d9a122f85cad25f10a5af013b11d0264593c06ae6c8",
+        "ordinal": 1,
+        "output_bytes": 235,
+        "output_sha256": "39f2ead9e84181af5c670f5580a98f06edaa1a34127de44aab6677673206810c",
+        "output_truncated": false,
+        "recovery_outcome": "target_converged",
+        "returncode": 0,
+        "valid": true
+      },
+      {
+        "active_dns_engine": "bind",
+        "argv": [
+          "/opt/celikpanel/libexec/dns-kill-recovery-probe.py",
+          "--cell-id",
+          "bind__target-staged__before-write__paired-secondary__peer-reachable",
+          "--scenario",
+          "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+          "--identity-receipt",
+          "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+          "--ledger",
+          "/var/lib/celikpanel-agent-private/service-mutations.json",
+          "--state",
+          "/var/lib/celikpanel-agent-private/dns-engine-state.json",
+          "--journal",
+          "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json"
+        ],
+        "converged": true,
+        "detail": "converged",
+        "duration_seconds": 0.114587,
+        "fingerprint": "34e616a5aa9ea00777f25d9a122f85cad25f10a5af013b11d0264593c06ae6c8",
+        "ordinal": 2,
+        "output_bytes": 235,
+        "output_sha256": "39f2ead9e84181af5c670f5580a98f06edaa1a34127de44aab6677673206810c",
+        "output_truncated": false,
+        "recovery_outcome": "target_converged",
+        "returncode": 0,
+        "valid": true
+      }
+    ],
+    "recovery_status_reads": {
+      "after-recovery": {
+        "available": false,
+        "judged": "made no mutation only",
+        "reason": "the recovery launcher is not enrolled; enroll it with guest_bootstrap.py enroll-recovery-runtime before prepare",
+        "stage": "after-recovery"
+      },
+      "before-recovery": {
+        "available": false,
+        "judged": "made no mutation only",
+        "reason": "the recovery launcher is not enrolled; enroll it with guest_bootstrap.py enroll-recovery-runtime before prepare",
+        "stage": "before-recovery"
+      }
+    },
+    "request_id": "d2f345432a323fbd9f5c5354f491a6cb",
+    "restarted_agent_process": {
+      "gids": [
+        969,
+        969,
+        969,
+        969
+      ],
+      "pid": 7359,
+      "uids": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "umask": "0027"
+    },
+    "restarts": {
+      "agent-restart": {
+        "argv": [
+          "/usr/bin/systemctl",
+          "restart",
+          "celikpanel-agent.service"
+        ],
+        "duration_seconds": 0.016439,
+        "output_bytes": 0,
+        "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "output_truncated": false,
+        "returncode": 0
+      },
+      "panel-restart": {
+        "argv": [
+          "/usr/bin/systemctl",
+          "restart",
+          "celikpanel-panel.service"
+        ],
+        "duration_seconds": 0.016064,
+        "output_bytes": 0,
+        "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "output_truncated": false,
+        "returncode": 0
+      }
+    },
+    "role": "paired-secondary",
+    "safety_assertions": {
+      "agent_stayed_running": true,
+      "dns_engine_serving": true,
+      "kill_proven": true,
+      "panel_started": true
+    },
+    "safety_failures": [],
+    "safety_status": "passed",
+    "scenario_trigger_returncode": 75,
+    "schema": "celikpanel/dns-kill-result/v1",
+    "source_dns_before_tagged_agent": {
+      "queried": false,
+      "reason": "exact uninitialized source; avoid querying an unrelated resolver"
+    },
+    "source_dns_units_before_tagged_agent": {
+      "bind9.service": "inactive",
+      "named.service": "inactive",
+      "pdns.service": "inactive"
+    },
+    "source_proof": {
+      "authoritative_preflight": {
+        "address": "10.0.2.15",
+        "claimed": false,
+        "name": "www.s1-kill.test",
+        "port": 53,
+        "tcp": false,
+        "type": "A",
+        "udp": false
+      },
+      "cell_id": "bind__target-staged__before-write__paired-secondary__peer-reachable",
+      "device": 34,
+      "engine": "",
+      "engine_epoch": 0,
+      "engine_state_receipt": {
+        "identity": null,
+        "path": "",
+        "sha256": ""
+      },
+      "external_pdns_preimage": {
+        "exists": false,
+        "path": "absent",
+        "sha256": "absent"
+      },
+      "identity_receipt_path": "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+      "identity_receipt_preexisting": false,
+      "inode": 49087,
+      "mode": "0600",
+      "owner_bind_native_source": null,
+      "path": "/var/lib/celikpanel-dns-kill-matrix/source-proof.json",
+      "peer_ip": "192.0.2.10",
+      "receipt_origin": "absent-by-proof",
+      "scenario": {
+        "device": 34,
+        "inode": 49084,
+        "mode": "0600",
+        "path": "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+        "sha256": "ad8b8100ee7a92bfe17594426fb352d71c05e5ad56b988f5d50adccea123363e"
+      },
+      "scenario_identity": {
+        "mode": "switch",
+        "pair_role": "secondary",
+        "source_engine": "",
+        "source_epoch": 0,
+        "source_revision": 0,
+        "target_engine": "bind",
+        "target_epoch": 1,
+        "topology": "paired"
+      },
+      "schema": "celikpanel/dns-kill-source-proof/v1",
+      "serving_before_tagged_agent": false,
+      "sha256": "53e23f134b52a6ed35e5cc36c8ac68c448a0a9eb41cc8db26269011c1442121d",
+      "source_adoption_proof": {
+        "exists": false,
+        "path": "absent",
+        "sha256": "absent"
+      },
+      "source_fixture": "uninitialized",
+      "source_normalization": {
+        "exists": false,
+        "path": "absent",
+        "sha256": "absent"
+      },
+      "source_ownership_receipts": {
+        "install_bind": {
+          "exists": false,
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-install-ownership-bind.json"
+        },
+        "install_pdns": {
+          "exists": false,
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-install-ownership-pdns.json"
+        },
+        "ownership_bind": {
+          "exists": false,
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-ownership-bind.json"
+        },
+        "ownership_pdns": {
+          "exists": false,
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-ownership-pdns.json"
+        }
+      },
+      "source_preinstall_proof": {
+        "exists": false,
+        "path": "absent",
+        "sha256": "absent"
+      },
+      "source_revision": 0,
+      "source_setup_identity_receipt_sha256": "absent",
+      "source_setup_scenario_sha256": "absent",
+      "topology": "paired",
+      "uninitialized_global_port53": {
+        "authoritative_answer_observed": false,
+        "tcp_bindable": true,
+        "udp_bindable": true
+      }
+    },
+    "stability": {
+      "dns_only": false,
+      "duration_seconds": 30.0,
+      "elapsed_seconds": 30.009766,
+      "interval_seconds": 1.0,
+      "sample_count": 31,
+      "samples": [
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:34:58.986498Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 1,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.008532207999991215,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:34:59.986662Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 2,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.007612526999992042,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:00.987383Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 3,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.010688342000008788,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:01.986615Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 4,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.007715501999996377,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:02.986639Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 5,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.041220825000010564,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:03.986671Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 6,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.00856973599999833,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:04.986830Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 7,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.04784045599998876,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:05.986620Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 8,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.023556756999994377,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:06.986716Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 9,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.012353267999998252,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:07.987583Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 10,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.010663276000002497,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:08.986663Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 11,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.007856367000016462,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:09.986714Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 12,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.008411808999994719,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:10.986692Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 13,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.011400715999997146,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:11.986665Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 14,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.0422965250000118,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:12.987297Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 15,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.008933866000006674,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:13.987218Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 16,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.030947185000002264,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:14.989234Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 17,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.12953644300000633,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:15.986689Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 18,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.009178650999984939,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:16.986673Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 19,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.008712370000012015,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:17.986623Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 20,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.007432929000003696,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:18.986650Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 21,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.04277724799999305,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:19.987686Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 22,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.01115713999999457,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:20.986627Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 23,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.007814260000003515,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:21.986707Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 24,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.007986275000007481,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:22.986694Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 25,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.008757137000003468,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:23.986654Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 26,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.007662741000018514,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:24.987327Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 27,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.009707141999996338,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:25.986645Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 28,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.042698414000000184,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:26.986653Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 29,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.007438218000004326,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:27.987170Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 30,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.009512296999986347,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        },
+        {
+          "agent": {
+            "detail": {
+              "device": 27,
+              "inode": 3357
+            },
+            "ok": true
+          },
+          "at": "2026-09-29T16:35:28.986671Z",
+          "dns": {
+            "detail": {
+              "tcp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "tcp"
+              },
+              "udp": {
+                "additional": 2,
+                "answers": 1,
+                "authority": 2,
+                "bytes": 118,
+                "flags": 33792,
+                "questions": 1,
+                "transport": "udp"
+              }
+            },
+            "ok": true
+          },
+          "ordinal": 31,
+          "panel": {
+            "detail": {
+              "address": "127.0.0.1",
+              "port": 2083
+            },
+            "ok": true
+          },
+          "peer": {
+            "address": "192.0.2.10",
+            "banner": "SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4",
+            "elapsed_seconds": 0.00820552100000782,
+            "expected": "reachable",
+            "port": 22,
+            "reachable": true
+          }
+        }
+      ]
+    },
+    "started_at": "2026-09-29T16:34:05.336731Z",
+    "status": "passed",
+    "tagged_agent": {
+      "pid": 1620,
+      "process_identity": {
+        "gids": [
+          969,
+          969,
+          969,
+          969
+        ],
+        "pid": 1620,
+        "uids": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "umask": "0027"
+      },
+      "process_start_ticks": "8124",
+      "socket_identity": {
+        "device": 27,
+        "inode": 2200
+      }
+    },
+    "timeouts_seconds": {
+      "boundary": 2700.0,
+      "command": 2700.0,
+      "dns": 5.0,
+      "endpoint": 60.0,
+      "kill": 15.0,
+      "recovery": 2700.0,
+      "stability": 30.0,
+      "stability_interval": 1.0,
+      "startup": 60.0,
+      "stop": 15.0
+    },
+    "transcript": {
+      "path": "/var/lib/celikpanel-dns-kill-matrix/results/bind__target-staged__before-write__paired-secondary__peer-reachable/transcript.jsonl",
+      "sha256": "6a3b589361e61c9fd991a977eb9da6820933603334714c51cf8f256737a587b1"
+    },
+    "trigger_identity_receipt": {
+      "cell_id": "bind__target-staged__before-write__paired-secondary__peer-reachable",
+      "device": 34,
+      "driver": "bind",
+      "inode": 49109,
+      "manifest_qualifier": "dns-engine-switch/v1:sha256:15ef03c450581f9b506f4f6827b8d2cd8c07cf8c3a0bccf659e03fbcd4ded5f2",
+      "mode": "0600",
+      "owner_id": "b5c9a8cb3393d0cc355c877bc730ac6b",
+      "path": "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+      "request_id": "d2f345432a323fbd9f5c5354f491a6cb",
+      "schema": "celikpanel-dns-kill-matrix-trigger-identity/v1",
+      "sha256": "534d3e96c9588c6678f2fe5045043f4793ce7c8c3e03f8f70c36fd2597a7fd59",
+      "source_fixture": "uninitialized"
+    },
+    "trigger_mode": "socket",
+    "uninitialized_global_port53_before_tagged_agent": {
+      "address": "10.0.2.15",
+      "authoritative_answer_observed": false,
+      "port": 53,
+      "tcp_bindable": true,
+      "udp_bindable": true
+    },
+    "verification_failures": []
+  },
+  "schema": "celikpanel/dns-kill-reboot-checkpoint/v1",
+  "settings_sha256": "b64cdbc1239b15958f435decc6c60c8b9c3cbcd2df762fb9292182171b5f1d18",
+  "stage": "after-recovery",
+  "state": {
+    "agent_identity": [
+      27,
+      3357
+    ],
+    "authority_before": {
+      "at": "2026-09-29T16:35:29.121578Z",
+      "authority": {
+        "answer_counts": {
+          "tcp": 1,
+          "udp": 1
+        },
+        "answered": true,
+        "engines": {
+          "tcp": [
+            "bind"
+          ],
+          "udp": [
+            "bind"
+          ]
+        }
+      },
+      "dns": {
+        "answered": true,
+        "at": "2026-09-29T16:35:29.155776Z",
+        "result": {
+          "tcp": {
+            "additional": 2,
+            "answers": 1,
+            "authority": 2,
+            "bytes": 118,
+            "flags": 33792,
+            "questions": 1,
+            "transport": "tcp"
+          },
+          "udp": {
+            "additional": 2,
+            "answers": 1,
+            "authority": 2,
+            "bytes": 118,
+            "flags": 33792,
+            "questions": 1,
+            "transport": "udp"
+          }
+        }
+      },
+      "evidence": {
+        "install_ownership_bind": {
+          "exists": false,
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-install-ownership-bind.json"
+        },
+        "install_ownership_pdns": {
+          "exists": false,
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-install-ownership-pdns.json"
+        },
+        "journal": {
+          "exists": false,
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json"
+        },
+        "ledger": {
+          "device": 34,
+          "exists": true,
+          "inode": 79291,
+          "mode": "0600",
+          "path": "/var/lib/celikpanel-agent-private/service-mutations.json",
+          "sha256": "eac27f64399780d8a9cb10102479c8ca6b1aa4b9a17bffb5cc548d1901f6b60f",
+          "size": 738
+        },
+        "ownership_bind": {
+          "device": 34,
+          "exists": true,
+          "inode": 79290,
+          "mode": "0600",
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-ownership-bind.json",
+          "sha256": "4a1ee6d3b3cd5816c5cde75a9988d8f6f013f540f2876190aedbadde54776248",
+          "size": 722
+        },
+        "ownership_pdns": {
+          "exists": false,
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-ownership-pdns.json"
+        },
+        "state": {
+          "device": 34,
+          "exists": true,
+          "inode": 79287,
+          "mode": "0600",
+          "path": "/var/lib/celikpanel-agent-private/dns-engine-state.json",
+          "sha256": "5bed495a195d0bd2e7ce6e41c088c9f3b2a4a19451dc3c08ecb3911c45db9bc6",
+          "size": 718
+        }
+      },
+      "named_processes": [
+        8851
+      ],
+      "port53_listeners": {
+        "tcp": [
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              8851
+            ],
+            "state": "LISTEN"
+          },
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              8851
+            ],
+            "state": "LISTEN"
+          }
+        ],
+        "udp": [
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              8851
+            ],
+            "state": "UNCONN"
+          },
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              8851
+            ],
+            "state": "UNCONN"
+          }
+        ]
+      },
+      "state": {
+        "semantic": {
+          "engine": "bind",
+          "engine_epoch": 1,
+          "generation": "f21a3e7ad2fd1cb7acd2fc96005d553d0833ea2a3cb59a6f9bba76b2d6f2b227",
+          "manifest_qualifier": "dns-engine-switch/v1:sha256:15ef03c450581f9b506f4f6827b8d2cd8c07cf8c3a0bccf659e03fbcd4ded5f2",
+          "mode": "switch",
+          "mutation_owner_id": "b5c9a8cb3393d0cc355c877bc730ac6b",
+          "mutation_request_id": "d2f345432a323fbd9f5c5354f491a6cb",
+          "pair_local_ip": "192.0.2.11",
+          "pair_peer_ip": "192.0.2.10",
+          "pair_role": "secondary",
+          "schema": "celikpanel-dns-engine-state/v1",
+          "source_revision": 0
+        },
+        "sha256": "5bed495a195d0bd2e7ce6e41c088c9f3b2a4a19451dc3c08ecb3911c45db9bc6"
+      },
+      "units": {
+        "bind9.service": {
+          "ActiveState": "inactive",
+          "LoadState": "not-found",
+          "MainPID": "0",
+          "SubState": "dead",
+          "UnitFileState": ""
+        },
+        "named.service": {
+          "ActiveState": "active",
+          "LoadState": "loaded",
+          "MainPID": "8851",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        },
+        "pdns.service": {
+          "ActiveState": "inactive",
+          "LoadState": "not-found",
+          "MainPID": "0",
+          "SubState": "dead",
+          "UnitFileState": ""
+        }
+      },
+      "unknown": []
+    },
+    "boot": {
+      "boot_id": "859ac82f-3c17-4e75-9982-906f87ff71cf",
+      "fixture_marker": {
+        "cell_id": "bind__target-staged__before-write__paired-secondary__peer-reachable",
+        "node": "arch",
+        "schema": "celikpanel/dns-kill-fixture-plan/v1"
+      },
+      "product_uuid": "93161804-66ca-53be-b2e9-fea2ee1e1dea"
+    },
+    "diagnostic_reboot": false,
+    "flow": "rpc-retry",
+    "management_before": {
+      "units": {
+        "celikpanel-agent.service": {
+          "ActiveState": "active",
+          "LoadState": "loaded",
+          "MainPID": "7359",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        },
+        "celikpanel-panel.service": {
+          "ActiveState": "active",
+          "LoadState": "loaded",
+          "MainPID": "9276",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        }
+      },
+      "unknown": []
+    },
+    "management_disabled": true,
+    "peer_ip": "192.0.2.10"
+  },
+  "transcripts": [
+    {
+      "path": "/var/lib/celikpanel-dns-kill-matrix/results/bind__target-staged__before-write__paired-secondary__peer-reachable/transcript.jsonl",
+      "sha256": "6a3b589361e61c9fd991a977eb9da6820933603334714c51cf8f256737a587b1"
+    }
+  ]
+}

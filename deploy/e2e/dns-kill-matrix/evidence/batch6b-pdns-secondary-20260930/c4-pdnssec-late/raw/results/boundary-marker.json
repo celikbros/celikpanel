@@ -1,0 +1,30 @@
+{
+  "schema": "celikpanel-dns-kill-matrix-boundary/v1",
+  "cell_id": "pdns-switch__target-verified__before-write__paired-secondary__peer-reachable",
+  "driver": "pdns-switch",
+  "observed_driver": "pdns-switch",
+  "point": "before_write",
+  "phase": "target-verified",
+  "request_id": "ff8a6f95e86a444b474385bd5018d3ab",
+  "nonce": "2e3ad4072d28467320f1251dceebe18bbf498fa67a5c04f31a14790f90e8b60f",
+  "marker": "/var/lib/celikpanel-dns-kill-matrix/results/pdns-switch__target-verified__before-write__paired-secondary__peer-reachable/boundary-marker.json",
+  "ready_fd": 5,
+  "pid": 1776,
+  "process_start_ticks": "20136",
+  "recorded_at": "2026-09-29T16:30:59.308571272Z",
+  "observed_journal": {
+    "path": "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json",
+    "schema": "celikpanel-dns-engine-switch-journal/v1",
+    "phase": "target-verified",
+    "mode": "switch",
+    "mutation_request_id": "ff8a6f95e86a444b474385bd5018d3ab",
+    "mutation_owner_id": "ea46d2776f7ce2c26db86d7a318bc4bb",
+    "manifest_qualifier": "dns-engine-switch/v1:sha256:5b4cce0a4c9c4a6b21dc2646f1f3356bf9af25fd65fc617b854ce6cce4b2481a",
+    "target_engine": "pdns",
+    "source_epoch": 0,
+    "target_epoch": 1,
+    "source_revision": 0,
+    "topology": "paired",
+    "pair_role": "secondary"
+  }
+}

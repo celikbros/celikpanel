@@ -1,0 +1,13 @@
+2026-09-30T02:33:35+00:00 dns-debian13 pdns_server[4922]: Unable to queue notification of domain 'catalog-c000020a.celikpanel.invalid' to nameserver 'invalid': nameserver does not resolve!
+2026-09-30T02:34:08+00:00 dns-debian13 pdns_server[4922]: Notification request to host 192.0.2.11:53 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T02:34:08+00:00 dns-debian13 pdns_server[4922]: Notification request to host 192.0.2.11:53 for zone 'pair-accept.test' received from operator
+2026-09-30T02:34:09+00:00 dns-debian13 pdns_server[4922]: Received unsuccessful notification report for 'pair-accept.test' from 192.0.2.11:53, error: Server Not Authoritative for zone / Not Authorized
+2026-09-30T02:34:18+00:00 dns-debian13 pdns_server[4922]: Notification request to host 192.0.2.11:53 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T02:34:18+00:00 dns-debian13 pdns_server[4922]: Notification request to host 192.0.2.11:53 for zone 'pair-accept.test' received from operator
+2026-09-30T02:34:24+00:00 dns-debian13 pdns_server[4922]: Notification request to host 192.0.2.11:53 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T02:34:24+00:00 dns-debian13 pdns_server[4922]: Notification request to host 192.0.2.11:53 for zone 'pair-accept.test' received from operator
+2026-09-30T02:34:28+00:00 dns-debian13 pdns_server[4922]: Notification request to host 192.0.2.11:53 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T02:34:28+00:00 dns-debian13 pdns_server[4922]: Notification request to host 192.0.2.11:53 for zone 'pair-accept.test' received from operator
+2026-09-30T02:34:34+00:00 dns-debian13 pdns_server[4922]: Notification request to host 192.0.2.11:53 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T02:34:37+00:00 dns-debian13 pdns_server[4922]: Notification request to host 192.0.2.11:53 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T02:34:44+00:00 dns-debian13 pdns_server[4922]: Notification request to host 192.0.2.11:53 for zone 'catalog-c000020a.celikpanel.invalid' received from operator

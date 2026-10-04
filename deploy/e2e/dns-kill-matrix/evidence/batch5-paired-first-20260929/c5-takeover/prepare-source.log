@@ -1,0 +1,80 @@
+Get:1 file:/etc/apt/mirrors/debian.list Mirrorlist [30 B]
+Get:2 file:/etc/apt/mirrors/debian-security.list Mirrorlist [39 B]
+Get:3 https://deb.debian.org/debian trixie InRelease [140 kB]
+Get:4 https://deb.debian.org/debian trixie-updates InRelease [47.3 kB]
+Get:5 https://deb.debian.org/debian trixie-backports InRelease [54.0 kB]
+Get:6 https://deb.debian.org/debian-security trixie-security InRelease [43.4 kB]
+Get:7 https://deb.debian.org/debian trixie/main Sources [10.5 MB]
+Get:8 https://deb.debian.org/debian trixie/main amd64 Packages [9678 kB]
+Get:9 https://deb.debian.org/debian trixie/main Translation-en [6486 kB]
+Get:10 https://deb.debian.org/debian trixie-updates/main Sources [1840 B]
+Get:11 https://deb.debian.org/debian trixie-updates/main amd64 Packages [4412 B]
+Get:12 https://deb.debian.org/debian trixie-updates/main Translation-en [2496 B]
+Get:13 https://deb.debian.org/debian trixie-backports/main Sources [312 kB]
+Get:14 https://deb.debian.org/debian trixie-backports/main amd64 Packages [329 kB]
+Get:15 https://deb.debian.org/debian trixie-backports/main Translation-en [241 kB]
+Get:16 https://deb.debian.org/debian-security trixie-security/main Sources [233 kB]
+Get:17 https://deb.debian.org/debian-security trixie-security/main amd64 Packages [262 kB]
+Get:18 https://deb.debian.org/debian-security trixie-security/main Translation-en [161 kB]
+Fetched 28.5 MB in 32s (887 kB/s)
+Reading package lists...
+Unit named.service does not exist, proceeding anyway.
+Unit bind9.service does not exist, proceeding anyway.
+Created symlink '/etc/systemd/system/named.service' → '/dev/null'.
+Created symlink '/etc/systemd/system/bind9.service' → '/dev/null'.
+Reading package lists...
+Building dependency tree...
+Reading state information...
+The following additional packages will be installed:
+  bind9-host bind9-libs bind9-utils dns-root-data
+Suggested packages:
+  bind9-doc bind9-dnsutils ufw
+The following NEW packages will be installed:
+  bind9 bind9-utils dns-root-data
+The following packages will be upgraded:
+  bind9-host bind9-libs
+2 upgraded, 3 newly installed, 0 to remove and 32 not upgraded.
+Need to get 1755 kB of archives.
+After this operation, 1679 kB of additional disk space will be used.
+Get:1 file:/etc/apt/mirrors/debian-security.list Mirrorlist [39 B]
+Get:2 file:/etc/apt/mirrors/debian.list Mirrorlist [30 B]
+Get:3 https://deb.debian.org/debian-security trixie-security/main amd64 bind9-host amd64 1:9.20.29-1~deb13u1 [56.5 kB]
+Get:4 https://deb.debian.org/debian-security trixie-security/main amd64 bind9-libs amd64 1:9.20.29-1~deb13u1 [1248 kB]
+Get:5 https://deb.debian.org/debian-security trixie-security/main amd64 bind9-utils amd64 1:9.20.29-1~deb13u1 [187 kB]
+Get:6 https://deb.debian.org/debian-security trixie-security/main amd64 bind9 amd64 1:9.20.29-1~deb13u1 [257 kB]
+Get:7 https://deb.debian.org/debian trixie/main amd64 dns-root-data all 2025080400~deb13u1 [5948 B]
+apt-listchanges: Reading changelogs...
+Fetched 1755 kB in 0s (3659 kB/s)
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 20625 files and directories currently installed.)
+Preparing to unpack .../bind9-host_1%3a9.20.29-1~deb13u1_amd64.deb ...
+Unpacking bind9-host (1:9.20.29-1~deb13u1) over (1:9.20.26-1~deb13u1) ...
+Preparing to unpack .../bind9-libs_1%3a9.20.29-1~deb13u1_amd64.deb ...
+Unpacking bind9-libs:amd64 (1:9.20.29-1~deb13u1) over (1:9.20.26-1~deb13u1) ...
+Selecting previously unselected package bind9-utils.
+Preparing to unpack .../bind9-utils_1%3a9.20.29-1~deb13u1_amd64.deb ...
+Unpacking bind9-utils (1:9.20.29-1~deb13u1) ...
+Selecting previously unselected package dns-root-data.
+Preparing to unpack .../dns-root-data_2025080400~deb13u1_all.deb ...
+Unpacking dns-root-data (2025080400~deb13u1) ...
+Selecting previously unselected package bind9.
+Preparing to unpack .../bind9_1%3a9.20.29-1~deb13u1_amd64.deb ...
+Unpacking bind9 (1:9.20.29-1~deb13u1) ...
+Setting up bind9-libs:amd64 (1:9.20.29-1~deb13u1) ...
+Setting up dns-root-data (2025080400~deb13u1) ...
+Setting up bind9-utils (1:9.20.29-1~deb13u1) ...
+Setting up bind9 (1:9.20.29-1~deb13u1) ...
+wrote key file "/etc/bind/rndc.key"
+named-resolvconf.service is a disabled or a static unit, not starting it.
+Failed to preset unit: Unit /etc/systemd/system/named.service is masked
+/usr/bin/deb-systemd-helper: error: systemctl preset failed on named.service: No such file or directory
+named.service is a disabled or a static unit, not starting it.
+Setting up bind9-host (1:9.20.29-1~deb13u1) ...
+Processing triggers for man-db (2.13.1-1) ...
+Processing triggers for libc-bin (2.41-12+deb13u3) ...
+Removed '/etc/systemd/system/named.service'.
+Removed '/etc/systemd/system/bind9.service'.
+Synchronizing state of named.service with SysV service script with /usr/lib/systemd/systemd-sysv-install.
+Executing: /usr/lib/systemd/systemd-sysv-install disable named
+guest bootstrap: agent socket cleanup decision=removed-verified-stale-socket: removed exact inactive root:celikpanel 0660 socket and proved absence
+{"scenario":"/var/lib/celikpanel-dns-kill-matrix/scenario.json","source_proof":"/var/lib/celikpanel-dns-kill-matrix/source-proof.json","source_preinstall_proof":"","source_preinstall_sha256":"absent","source_adoption_proof":"","source_adoption_sha256":"absent","source_normalization_identity_receipt":"","source_normalization_identity_receipt_sha256":"absent","coordinator_stop_proof":"/var/lib/celikpanel-dns-kill-matrix/coordinator-stop-proof.json","controller_argv":"/var/lib/celikpanel-dns-kill-matrix/controller-argv.json","dns_address":"10.0.2.15","dns_name":"www.s1-kill.test","controller_identity":"root:celikpanel"}
+{"action": "prepare-bind", "agent_socket": "/run/celikpanel/agent.sock", "agent_token": "/etc/celikpanel/agent.token", "boundary_phase": "target-staged", "cell_id": "bind__target-staged__after-write__standalone__peer-reachable", "controller_argv": "/var/lib/celikpanel-dns-kill-matrix/controller-argv.json", "controller_expected_uid_gid": "root:celikpanel", "external_pdns_preimage": null, "identity_receipt": "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json", "mutation_lock": "/run/celikpanel/service-mutation.lock", "native_primary_peer_engine": null, "node": "debian13", "production_agent_service_stopped": true, "recovery_command": ["/opt/celikpanel/bin/dns-kill-trigger", "rpc-retry", "--scenario", "/var/lib/celikpanel-dns-kill-matrix/scenario.json", "--identity-receipt", "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json", "--timeout", "45m"], "recovery_probe": "/opt/celikpanel/libexec/dns-kill-recovery-probe.py", "recovery_probe_command": ["/opt/celikpanel/libexec/dns-kill-recovery-probe.py", "--cell-id", "bind__target-staged__after-write__standalone__peer-reachable", "--scenario", "/var/lib/celikpanel-dns-kill-matrix/scenario.json", "--identity-receipt", "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json", "--ledger", "/var/lib/celikpanel-agent-private/service-mutations.json", "--state", "/var/lib/celikpanel-agent-private/dns-engine-state.json", "--journal", "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json"], "scenario": "/var/lib/celikpanel-dns-kill-matrix/scenario.json", "setup_adoption_rpc_used": false, "source_adoption_proof": null, "source_fixture": "unmanaged-bind-stopped", "source_fixture_policy": "driver-specific", "source_preinstall_proof": "/var/lib/celikpanel-dns-kill-matrix/source-preinstall-bind.json", "source_proof": "/var/lib/celikpanel-dns-kill-matrix/source-proof.json", "state_dir": "/var/lib/celikpanel-agent-private", "trigger_command": ["/opt/celikpanel/bin/dns-kill-trigger", "rpc-switch", "--scenario", "/var/lib/celikpanel-dns-kill-matrix/scenario.json", "--identity-receipt", "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json", "--timeout", "45m"], "uploaded": "scenario.json"}

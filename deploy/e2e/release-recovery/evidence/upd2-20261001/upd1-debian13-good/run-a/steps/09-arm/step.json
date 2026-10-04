@@ -1,0 +1,67 @@
+{
+  "checks": {
+    "check": {
+      "body": {
+        "available": true,
+        "current_commit": "e3a569d527ec88c01e14c1df015fa3010ea7f803",
+        "current_version": "v0.1.0-alpha.81",
+        "supported": true,
+        "target": {
+          "arch": "amd64",
+          "archive_sha256": "f9db4686a020dde085760df4c64016483ffd5a08ada3169f3a2db77aa800ba0e",
+          "archive_size": "66923174",
+          "commit": "74fe2fe6ed0dd06ba50a53ee92cbca4648ceb352",
+          "os": "linux",
+          "published_at": "2026-09-30T15:55:27Z",
+          "sequence": "82",
+          "version": "v0.1.0-alpha.82"
+        }
+      },
+      "http": 200
+    },
+    "observer_intent": {
+      "baseline": {
+        "agent_sha256": "1e6584aac93a1e0652f8d2a8af6c920f8cd2708a0fd95ad46d356294b1ef6cda",
+        "commit": "e3a569d527ec88c01e14c1df015fa3010ea7f803",
+        "panel_sha256": "a49021edfc52de2a8b985225a857635fd86783c446f432c92d3b8d911874cd9f",
+        "version": "v0.1.0-alpha.81"
+      },
+      "identity": {
+        "cell_id": "release-recovery__76ec2f5998a12517",
+        "node": "debian13",
+        "nonce": "76ec2f5998a125173d712910b2abe2f7522e37b4d2421df2bd19c8a7d169d97c",
+        "vm_uuid": "424e8131-25b5-54e7-b482-f2c6dace6387"
+      },
+      "mode": "watch",
+      "operation_id": "3cd54515b25bc73fe30a24525b849ca8",
+      "recovery_fault": null,
+      "schema": "celikpanel/owner-update-observer-intent/v1",
+      "target": {
+        "agent_sha256": "0bae11c27f5bce9df551286bdddcbaea6318ae1fa2603d8ba43e6c41cc17c600",
+        "commit": "74fe2fe6ed0dd06ba50a53ee92cbca4648ceb352",
+        "panel_sha256": "3cdb18e332aa0340142577be3aadfdf0c9c310cc6b42e95eab9064c86cc65006",
+        "version": "v0.1.0-alpha.82"
+      }
+    },
+    "observer_unit": "celikpanel-lab-owner-update-observer-3cd54515b25bc73fe30a24525b849ca8.service",
+    "origin_check": {
+      "addresses": [
+        "127.0.0.1"
+      ],
+      "boot_id": "745f12f0-881e-4039-a15b-0c90b2fd27b8",
+      "http": "200",
+      "loopback_only": true,
+      "ok": true,
+      "unit": {
+        "ActiveState": "active",
+        "NRestarts": "0",
+        "UnitFileState": "enabled"
+      }
+    },
+    "request_id": "3cd54515b25bc73fe30a24525b849ca8"
+  },
+  "finished_at": "2026-09-30T16:05:12Z",
+  "name": "arm",
+  "started_at": "2026-09-30T16:05:11Z",
+  "verdict": "passed"
+}

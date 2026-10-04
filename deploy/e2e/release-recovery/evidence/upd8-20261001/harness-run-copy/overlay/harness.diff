@@ -1,0 +1,709 @@
+--- a/deploy/e2e/release-recovery/lab.py
++++ b/deploy/e2e/release-recovery/lab.py
+@@ -18,6 +18,7 @@
+ import stat
+ import subprocess
+ import sys
++from urllib.parse import urlsplit
+ 
+ 
+ HERE = Path(__file__).resolve().parent
+@@ -27,6 +28,93 @@
+ SPEC.loader.exec_module(fixture)
+ SCHEMA = "celikpanel-release-recovery-lab/v1"
+ MARKER = "/etc/celikpanel-release-recovery-lab"
++# upd8: a one-node Ubuntu 24.04 lab beside the default Debian 13 + Arch pair. The image is the
++# official cloud image pinned by images-ubuntu.lock.json (SHA-256 from the same release's SHA256SUMS).
++PLATFORMS = ("debian13-arch", "ubuntu")
++UBUNTU_IMAGE_LOCK = HERE / "images-ubuntu.lock.json"
++UBUNTU_LOCK_SCHEMA = "celikpanel-release-recovery-ubuntu-image-lock/v1"
++UBUNTU_URL_RE = re.compile(r"/releases/noble/release-(?P<build>[0-9]{8}(?:\.[0-9]+)?)/ubuntu-24\.04-server-cloudimg-amd64\.img")
++UBUNTU_NODE = fixture.NodeSpec(name="ubuntu", hostname="dns-ubuntu", image="ubuntu", mgmt_mac="52:54:00:13:00:12",
++                               peer_mac="52:54:00:53:00:12", peer_address="192.0.2.12/24", ssh_service="ssh.service",
++                               admin_group="sudo")
++
++
++def load_ubuntu_pin(path=UBUNTU_IMAGE_LOCK):
++    raw = fixture.read_json_regular(Path(path), "Ubuntu image lock")
++    if not isinstance(raw, dict) or set(raw) != {"schema", "image"} or raw["schema"] != UBUNTU_LOCK_SCHEMA:
++        raise ValueError("Ubuntu image lock schema is unsupported")
++    item = raw["image"]
++    fields = {"distribution", "release", "architecture", "url", "filename", "digest", "bytes"}
++    if not isinstance(item, dict) or set(item) != fields:
++        raise ValueError("Ubuntu image pin fields are incomplete or unexpected")
++    if (item["distribution"], item["release"], item["architecture"]) != ("Ubuntu", "24.04", "x86_64"):
++        raise ValueError("Ubuntu image identity is not the pinned 24.04 amd64 cloud image")
++    url = urlsplit(item["url"])
++    match = UBUNTU_URL_RE.fullmatch(url.path)
++    if (url.scheme != "https" or url.hostname != "cloud-images.ubuntu.com" or url.port or url.query or url.fragment
++            or not match):
++        raise ValueError("Ubuntu image must be an immutable cloud-images.ubuntu.com release URL")
++    if item["filename"] != "ubuntu-24.04-server-cloudimg-amd64-" + match["build"] + ".img":
++        raise ValueError("Ubuntu cached image name must carry the release build")
++    digest = item["digest"]
++    if (not isinstance(digest, dict) or set(digest) != {"algorithm", "value"} or digest["algorithm"] != "sha256"
++            or not re.fullmatch(r"[0-9a-f]{64}", str(digest["value"]))):
++        raise ValueError("Ubuntu image digest must be the published SHA-256")
++    if type(item["bytes"]) is not int or item["bytes"] <= 0:
++        raise ValueError("Ubuntu image byte size must be a positive integer")
++    return fixture.ImagePin(name="ubuntu", distribution="Ubuntu", release="24.04", architecture="x86_64",
++                            url=item["url"], filename=item["filename"], digest_algorithm="sha256",
++                            digest=digest["value"], size=item["bytes"])
++
++
++def build_ubuntu_plan(root, pin, cell_id, ssh_public_key, *, ssh_port, memory_mb, cpus, disk_gb):
++    """The fixture's node layout for one Ubuntu guest; its peer NIC listens and stays unconnected."""
++    fixture.validate_cell_id(cell_id)
++    peer_port = ssh_port + 2
++    cell = fixture.cell_directory(root, cell_id, must_exist=False)
++    node = UBUNTU_NODE
++    paths = fixture._node_paths(cell, node)
++    if len(os.fsencode(paths["qmp"])) > 100:
++        raise ValueError("work root is too long for a Unix QMP socket")
++    base = fixture.image_path(root, pin)
++    qemu = fixture._qemu_command(cell_id, node, paths, ssh_port, peer_port, "kvm", memory_mb, cpus)
++    connect = f"socket,id=peer,connect=127.0.0.1:{peer_port}"
++    qemu[qemu.index(connect)] = f"socket,id=peer,listen=127.0.0.1:{peer_port}"
++    entry = {
++        "hostname": node.hostname,
++        "management": {"ssh_host": "127.0.0.1", "ssh_port": ssh_port, "mac": node.mgmt_mac, "mode": "qemu-user-nat"},
++        "peer": {"address": node.peer_address, "mac": node.peer_mac, "device_id": "peer-link",
++                 "transport": "loopback-socket", "transport_port": peer_port},
++        "paths": {key: str(value) for key, value in paths.items()},
++        "cloud_init": fixture.cloud_init_files(cell_id, node, ssh_public_key),
++        "overlay_command": ["qemu-img", "create", "-f", "qcow2", "-F", "qcow2", "-b", str(base),
++                            str(paths["overlay"]), f"{disk_gb}G"],
++        "seed_command": fixture._seed_command("genisoimage", paths),
++        "qemu_command": qemu,
++        "base": {"path": str(base), "digest": {"algorithm": pin.digest_algorithm, "value": pin.digest},
++                 "bytes": pin.size},
++    }
++    return {"schema": fixture.PLAN_SCHEMA, "cell_id": cell_id, "work_root": str(root), "cell_directory": str(cell),
++            "host_requirements": {"os": "linux", "qmp_transport": "unix", "daemonization": "qemu-daemonize",
++                                  "accelerator": "kvm"},
++            "start_order": ["ubuntu"], "peer_link_policy": {"initial": "up", "qmp_device": "peer-link"},
++            "nodes": {"ubuntu": entry}}
++
++
++def load_plan(root, cell_id):
++    try:
++        return fixture.load_cell_plan(root, cell_id)
++    except fixture.FixtureError:
++        cell = fixture.cell_directory(root, cell_id, must_exist=True)
++        plan = fixture.read_json_regular(cell / "fixture-plan.json", "fixture plan")
++        if not isinstance(plan, dict) or set(plan.get("nodes", {})) != {"ubuntu"}:
++            raise
++    if (plan.get("schema") != fixture.PLAN_SCHEMA or plan.get("cell_id") != cell_id
++            or plan.get("work_root") != str(root) or plan.get("cell_directory") != str(cell)
++            or plan.get("start_order") != ["ubuntu"]
++            or plan["nodes"]["ubuntu"].get("paths") != {k: str(v) for k, v in fixture._node_paths(cell, UBUNTU_NODE).items()}):
++        raise ValueError("Ubuntu lab plan identity is invalid")
++    return plan
+ 
+ 
+ def run(argv, **kwargs):
+@@ -55,8 +143,8 @@
+     record = read_private(root / "lab.json")
+     if record.get("schema") != SCHEMA or not re.fullmatch(r"[0-9a-f]{64}", record.get("nonce", "")):
+         raise ValueError("invalid lab identity")
+-    plan = fixture.load_cell_plan(root, record["cell_id"])
+-    data = (Path(plan["cell_directory"]) / "fixture-plan.json").read_bytes()
++    plan = load_plan(root, record["cell_id"])
++    data =(Path(plan["cell_directory"]) / "fixture-plan.json").read_bytes()
+     if hashlib.sha256(data).hexdigest() != record["plan_sha256"]:
+         raise ValueError("lab plan changed")
+     return record, plan
+@@ -189,7 +277,8 @@
+         raise ValueError("fresh lab root already exists; choose a new name")
+     nonce = secrets.token_hex(32)
+     cell_id = fixture.validate_cell_id("release-recovery__" + nonce[:16])
+-    pins = fixture.load_image_lock(fixture.DEFAULT_IMAGE_LOCK)
++    ubuntu = getattr(args, "platform", PLATFORMS[0]) == "ubuntu"
++    pins = {"ubuntu": load_ubuntu_pin()} if ubuntu else fixture.load_image_lock(fixture.DEFAULT_IMAGE_LOCK)
+     cache = Path(args.image_cache).resolve(strict=True)
+     for pin in pins.values():
+         source = cache / pin.filename
+@@ -197,18 +286,26 @@
+         if not stat.S_ISREG(info.st_mode) or info.st_size != pin.size or fixture.digest_file(source, pin.digest_algorithm) != pin.digest:
+             raise ValueError("cached base image does not match the reviewed image pin")
+     if not args.execute:
+-        print(json.dumps({"action": "prepare", "root": str(root), "nodes": ["debian13", "arch"], "execute": False}))
++        print(json.dumps({"action": "prepare", "root": str(root), "nodes": ["ubuntu"] if ubuntu else ["debian13", "arch"],
++                          "execute": False}))
+         return
+     fixture.initialize_work_root(root)
+     for pin in pins.values():
+         target = root / "images" / pin.filename
+         run(["cp", "--reflink=auto", "--", str(cache / pin.filename), str(target)])
+         target.chmod(0o444)
+-    fixture.verify_images(root, pins)
++    if ubuntu:
++        fixture.verify_image(fixture.validate_work_root(root), pins["ubuntu"])
++    else:
++        fixture.verify_images(root, pins)
+     run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-f", str(root / "key")])
+-    plan = fixture.build_cell_plan(root, pins, cell_id, fixture.read_ssh_public_key(root / "key.pub"),
+-                                   debian_ssh_port=args.ssh_port, arch_ssh_port=args.ssh_port + 1,
+-                                   peer_port=args.ssh_port + 2, memory_mb=3072, cpus=2, disk_gb=24)
++    if ubuntu:
++        plan = build_ubuntu_plan(root, pins["ubuntu"], cell_id, fixture.read_ssh_public_key(root / "key.pub"),
++                                 ssh_port=args.ssh_port, memory_mb=3072, cpus=2, disk_gb=24)
++    else:
++        plan = fixture.build_cell_plan(root, pins, cell_id, fixture.read_ssh_public_key(root / "key.pub"),
++                                       debian_ssh_port=args.ssh_port, arch_ssh_port=args.ssh_port + 1,
++                                       peer_port=args.ssh_port + 2, memory_mb=3072, cpus=2, disk_gb=24)
+     for name, node in plan["nodes"].items():
+         identity = {"schema": SCHEMA, "nonce": nonce, "vm_uuid": node["qemu_command"][node["qemu_command"].index("-uuid") + 1],
+                     "cell_id": cell_id, "node": name}
+@@ -229,6 +326,7 @@
+     parser.add_argument("--work-root", required=True)
+     parser.add_argument("--image-cache", default="/var/tmp/cp-install-vm/images")
+     parser.add_argument("--ssh-port", type=int, default=2261)
++    parser.add_argument("--platform", choices=PLATFORMS, default=PLATFORMS[0])
+     parser.add_argument("--execute", action="store_true")
+     args = parser.parse_args()
+     if args.command == "prepare":
+--- a/deploy/e2e/release-recovery/images-ubuntu.lock.json
++++ b/deploy/e2e/release-recovery/images-ubuntu.lock.json
+@@ -0,0 +1,15 @@
++{
++  "image": {
++    "architecture": "x86_64",
++    "bytes": 624829952,
++    "digest": {
++      "algorithm": "sha256",
++      "value": "d0fe84bb5f80853425fa6be28e2c106f30104c3cfe8611933f2e65c9b63f0e30"
++    },
++    "distribution": "Ubuntu",
++    "filename": "ubuntu-24.04-server-cloudimg-amd64-20260826.img",
++    "release": "24.04",
++    "url": "https://cloud-images.ubuntu.com/releases/noble/release-20260826/ubuntu-24.04-server-cloudimg-amd64.img"
++  },
++  "schema": "celikpanel-release-recovery-ubuntu-image-lock/v1"
++}
+--- a/deploy/e2e/release-recovery/run-upd1.sh
++++ b/deploy/e2e/release-recovery/run-upd1.sh
+@@ -18,6 +18,8 @@
+ #       (those four need an upd1-artifacts.json built with the startcheck/realstart roles)
+ #       upd1-debian13-owner-continuation | upd1-arch-owner-continuation
+ #       upd1-debian13-mgmt-off-reboot | upd1-arch-mgmt-off-reboot   (good candidate G; any document)
++#       upd1-ubuntu-good | upd1-ubuntu-owner-continuation | upd1-ubuntu-defective   (upd8: a one-node
++#       Ubuntu 24.04 lab from images-ubuntu.lock.json; the image must be in the image cache)
+ # One cell per new lab. Never reuse a lab, an intent or a guest.
+ # The image cache defaults to /var/tmp/cp-v3n28/images (UPD1_IMAGE_CACHE overrides).
+ # UPD1_DNS_MODE: external (default; DNS not provided by this run) | local (two-node variant only).
+@@ -32,7 +34,7 @@
+ CHOICES=(--dns-mode "$DNS_MODE")
+ [[ -z ${UPD1_SETUP_DRAFT_JSON:-} ]] || CHOICES+=(--setup-draft-json "$UPD1_SETUP_DRAFT_JSON")
+ 
+-usage() { sed -n '2,24p' "${BASH_SOURCE[0]}" >&2; exit 2; }
++usage() { sed -n '2,26p' "${BASH_SOURCE[0]}" >&2; exit 2; }
+ [[ $# -ge 1 ]] || usage
+ command=$1; shift
+ case $command in
+@@ -56,7 +58,9 @@
+         root=/var/tmp/cp-release-drill-$name
+         [[ ! -e $root ]] || { echo "lab $root exists; every cell needs a NEW lab" >&2; exit 2; }
+         "${DRIVER[@]}" plan --cell "$cell" --artifacts "$artifacts" --work-root "$root" "${CHOICES[@]}" > /dev/null
+-        "${LAB[@]}" prepare --work-root "$root" --image-cache "$IMAGES" --ssh-port "$port" --execute
++        platform=debian13-arch
++        [[ $cell != upd1-ubuntu-* ]] || platform=ubuntu
++        "${LAB[@]}" prepare --work-root "$root" --image-cache "$IMAGES" --ssh-port "$port" --platform "$platform" --execute
+         "${LAB[@]}" start --work-root "$root" --execute
+         "${LAB[@]}" status --work-root "$root"
+         status=0
+--- a/deploy/e2e/release-recovery/owner_update_trial.py
++++ b/deploy/e2e/release-recovery/owner_update_trial.py
+@@ -133,6 +133,49 @@
+ SETUP_STABLE_SECONDS = 120.0
+ SETUP_STABLE_POLLS = 3
+ CRON_NOT_AVAILABLE = "not available on this baseline"
++# H19 (upd8 Ubuntu run a): on Ubuntu the cloud image's PackageKit daemon (packagekitd) is started by apt's
++# DPkg::Post-Invoke hook after every package operation and exits about 300 s later; the agent counts it as a
++# package-manager task (cmd/agent/service_mutation_lock_linux.go linuxPackageProcessBusyAt) and v0.1.0-alpha.80's
++# setup step then fails with HOST_MUTATION_BUSY ("... wait and try again"). There the owner does exactly that.
++HOST_MUTATION_BUSY_CODE = "HOST_MUTATION_BUSY"
++# cmd/agent hostMutationBusyMessage (v0.1.0-alpha.80 and the source): the cause a component operation names.
++HOST_MUTATION_BUSY_TEXT = "another server change or package-manager task is still running"
++SETUP_OWNER_ATTEMPTS = 12
++HOST_IDLE_TIMEOUT_S = 900.0
++HOST_IDLE_NODES = ("ubuntu",)
++# The agent's own process names (linuxPackageProcessBusyAt) and apt/dpkg fcntl locks, read only (F_GETLK).
++HOST_IDLE_PROBE = r"""
++import fcntl,json,os,struct
++names={"apt","apt-get","dpkg","dpkg-deb","pacman","makepkg","dnf","dnf5","yum","microdnf","rpm","rpmdb","packagekitd",
++       "packagekit","pkcon","dnfdaemon-server","dnfdaemon-serve"}
++seen=set()
++for pid in os.listdir("/proc"):
++    if pid.isdigit():
++        try:
++            comm=open("/proc/"+pid+"/comm").read().strip()
++        except OSError:
++            continue
++        if comm in names:
++            seen.add(comm)
++locks=[]
++for path in ("/var/lib/dpkg/lock-frontend","/var/lib/dpkg/lock","/var/cache/apt/archives/lock"):
++    try:
++        fd=os.open(path,os.O_RDWR|os.O_NOFOLLOW)
++    except OSError:
++        continue
++    try:
++        got=fcntl.fcntl(fd,fcntl.F_GETLK,struct.pack("hhxxxxqqi4x",fcntl.F_WRLCK,0,0,0,0))
++        if struct.unpack("hhxxxxqqi4x",got)[0]!=fcntl.F_UNLCK:
++            locks.append(path)
++    finally:
++        os.close(fd)
++print(json.dumps({"processes":sorted(seen),"locks":locks}))
++"""
++
++
++def host_package_manager_waits(node: str) -> bool:
++    """H19: only the platform where the owner was observed to need the wait (upd8 Ubuntu run a)."""
++    return node in HOST_IDLE_NODES
+ ORIGIN_NAME = "celikpanel.net"
+ GUEST_HELPERS = ("guest_probe.py", "guest_port_fault.py", "guest_update_kill.py", "guest_bound_worker.py",
+                  "guest_recovery_fault.py", "guest_recovery_handoff.py", "guest_owner_update_observer.py",
+@@ -256,6 +299,12 @@
+     # upd4: after a verified good update, management disabled + one orderly reboot; workloads measured without it.
+     "upd1-debian13-mgmt-off-reboot": Cell("upd1-debian13-mgmt-off-reboot", "debian13", "mgmt-off-reboot", None, True),
+     "upd1-arch-mgmt-off-reboot": Cell("upd1-arch-mgmt-off-reboot", "arch", "mgmt-off-reboot", None, False),
++    # upd8: the same three cells on a one-node Ubuntu 24.04 lab (lab.py --platform ubuntu); mail is required
++    # as on Debian (same apt package family), the second fault is Debian's reset at payload_restored.
++    "upd1-ubuntu-good": Cell("upd1-ubuntu-good", "ubuntu", "good", None, True),
++    "upd1-ubuntu-owner-continuation": Cell("upd1-ubuntu-owner-continuation", "ubuntu", "owner-continuation", None, True),
++    "upd1-ubuntu-defective": Cell("upd1-ubuntu-defective", "ubuntu", "defective",
++                                  {"action": "reboot", "checkpoint": "payload_restored"}, True),
+ }
+ 
+ 
+@@ -3328,6 +3377,61 @@
+         draft["purpose"] = purpose
+         return draft
+ 
++    def wait_host_package_manager_idle(self, timeout: float = HOST_IDLE_TIMEOUT_S) -> dict:
++        """H19: read-only; returns when no package-manager process or apt/dpkg lock is seen, or at the limit."""
++        started, seen, polls = time.monotonic(), [], 0
++        while True:
++            polls += 1
++            value = json.loads(self.guest("python3 -I - <<'CP_IDLE'\n" + HOST_IDLE_PROBE + "\nCP_IDLE\n",
++                                          timeout=60).stdout)
++            if value["processes"] or value["locks"]:
++                if value not in seen:
++                    seen.append(value)
++            else:
++                return {"idle": True, "waited_s": round(time.monotonic() - started, 1), "polls": polls,
++                        "busy_seen": seen, "at": utc_now()}
++            if time.monotonic() - started >= timeout:
++                return {"idle": False, "waited_s": round(time.monotonic() - started, 1), "polls": polls,
++                        "busy_seen": seen, "at": utc_now()}
++            time.sleep(10)
++
++    def failed_setup_component(self, execution: dict) -> dict:
++        """H19: read the failed setup step's component operation (GET /api/v1/service/operation?id=...)."""
++        failed = [s for s in setup_steps(execution) if s.get("status") == "failed"]
++        if not failed:
++            return {"read": False, "reason": "no failed setup step"}
++        if not failed[0].get("operation_id"):
++            # A firewall/DNS step calls the Agent itself and has no component operation; its cause is in the
++            # panel log line "server setup step <id> failed: ..." (the log the product texts name).
++            step_id = str(failed[0].get("id") or "")
++            if not re.fullmatch(r"[0-9]{2}-[a-z_]{1,40}", step_id):
++                return {"read": False, "reason": "failed step id is not canonical"}
++            out = self.guest("journalctl -u celikpanel-panel.service --no-pager -o cat -n 2000 | grep -F "
++                             + shlex.quote(f"server setup step {step_id} failed:") + " | tail -n 1 || true",
++                             timeout=60).stdout.strip()
++            return {"read": True, "source": "panel journal", "step": step_id, "line": self.redactor.text(out[-600:]),
++                    "names_host_busy": HOST_MUTATION_BUSY_TEXT in out}
++        operation_id = str(failed[0]["operation_id"])
++        if not HEX32.fullmatch(operation_id):
++            return {"read": False, "reason": "component operation id is not canonical"}
++        response = self.api("GET", f"/api/v1/service/operation?id={operation_id}",
++                            purpose="ServerSetup failed step component operation")
++        body = response.json() or {}
++        operation = body.get("operation") if isinstance(body, dict) else None
++        text = json.dumps(operation or {})
++        found = {"read": True, "http": response.status, "step": failed[0].get("id"), "operation_id": operation_id,
++                 "status": (operation or {}).get("status"), "phase": (operation or {}).get("phase"),
++                 "error": (operation or {}).get("error"), "names_host_busy": HOST_MUTATION_BUSY_TEXT in text}
++        if not found["names_host_busy"]:
++            # H19 (upd8 Ubuntu run c): the mail profile operation shows only its generic code and the phase
++            # profile/webmail/mail-tls; the cause is in the panel log line naming this operation, which the owner
++            # reads (the product's texts name that log).
++            out = self.guest("journalctl -u celikpanel-panel.service --no-pager -o cat -n 3000 | grep -F "
++                             + shlex.quote(f"service operation {operation_id}") + " | tail -n 2 || true",
++                             timeout=60).stdout.strip()
++            found.update(log_line=self.redactor.text(out[-600:]), names_host_busy=HOST_MUTATION_BUSY_TEXT in out)
++        return found
++
+     def setup(self, checks: dict) -> str:
+         state = self.api("GET", "/api/v1/setup", purpose="ServerSetupGate").json() or {}
+         checks["before"] = {k: state.get(k) for k in ("status", "revision", "guidance", "required")}
+@@ -3349,53 +3453,87 @@
+                                                 "accepted but its 05-mail_profile step fails (upd7 run a); purpose web")
+             self.finding(f"{self.node_name}: web_mail was not attempted on the published {LABEL_REF} baseline (it accepts "
+                          "the plan but fails at 05-mail_profile); mail is recorded as not provided on this platform")
+-        for purpose in purposes:
+-            saved = self.api("PUT", "/api/v1/setup", {"revision": state.get("revision"), "draft": self.draft(purpose, local_ip)},
+-                             purpose=f"ServerSetup draft save ({purpose})")
+-            if saved.status != 200:
+-                raise StepFailed(f"draft save ({purpose}) returned HTTP {saved.status}: {saved.json()}")
+-            state = saved.json() or {}
+-            response = self.api("POST", "/api/v1/setup/plan", {"revision": state.get("revision")},
+-                                purpose=f"ServerSetup review ({purpose})")
+-            plan = response.json() or {}
+-            checks[f"plan_{purpose}"] = {"http": response.status, **{k: plan.get(k) for k in ("id", "can_start", "blockers")}}
+-            if response.status == 200 and plan.get("can_start"):
+-                break
+-            if purpose == "web_mail" and self.cell.mail_required:
+-                raise StepFailed(f"web_mail setup plan refused on {self.node_name}: {plan.get('blockers')}")
+-            self.finding(f"{self.node_name}: web_mail setup plan was refused ({plan.get('blockers')}); "
+-                         "mail is recorded as not provided on this platform")
+-            state = self.api("GET", "/api/v1/setup", purpose="ServerSetupGate").json() or {}
+-        if not plan or not plan.get("can_start"):
+-            raise StepFailed(f"setup plan cannot start: {plan}")
+-        self.state["purpose"] = purpose
+-        request_id = secrets.token_hex(16)
+-        try:
+-            response = self.api("POST", "/api/v1/setup/start", {"plan_id": plan["id"], "request_id": request_id,
+-                                                                 "confirmed": True},
+-                                purpose="ServerSetup start (once)", timeout=120)
+-            checks["start_http"] = response.status
+-        except self.p["panel_api"].UnknownOutcome as exc:
+-            checks["start_outcome"] = f"unknown, reconciling by reads: {exc}"
+-        deadline = time.monotonic() + 3600
+-        execution = None
+-        wait = SetupWait()
+-        decision = "continue"
+-        last_light = 0.0
+-        with self.panel_client().polling() as view:
+-            while time.monotonic() < deadline:
+-                if time.monotonic() - last_light >= 30:
+-                    # Sidecar v2: the before-first-site hosting-root series, every 30 s until setup settles.
+-                    self.inspect("before-site", light=True)
+-                    last_light = time.monotonic()
+-                try:
+-                    execution = self.api("GET", f"/api/v1/setup/operation?request_id={request_id}", view=view).json()
+-                except self.p["panel_api"].PanelError as exc:
+-                    execution = {"poll_error": str(exc)}
+-                decision = wait.observe(execution, time.monotonic())
+-                if decision in ("terminal", "settled"):
++        attempts: list[dict] = []
++        idle_waits: list[dict] = []
++        for attempt in range(1, SETUP_OWNER_ATTEMPTS + 1):
++            if host_package_manager_waits(self.node_name):
++                # H19 (upd8 Ubuntu run a): the owner follows the product text "wait and try again" -
++                # before each start the owner waits until no package-manager task runs (read-only check).
++                idle_waits.append(dict(self.wait_host_package_manager_idle(), before_attempt=attempt))
++            if attempt > 1:
++                state = self.api("GET", "/api/v1/setup", purpose="ServerSetupGate").json() or {}
++            for purpose in purposes:
++                saved = self.api("PUT", "/api/v1/setup", {"revision": state.get("revision"), "draft": self.draft(purpose, local_ip)},
++                                 purpose=f"ServerSetup draft save ({purpose})")
++                if saved.status != 200:
++                    raise StepFailed(f"draft save ({purpose}) returned HTTP {saved.status}: {saved.json()}")
++                state = saved.json() or {}
++                response = self.api("POST", "/api/v1/setup/plan", {"revision": state.get("revision")},
++                                    purpose=f"ServerSetup review ({purpose})")
++                plan = response.json() or {}
++                checks[f"plan_{purpose}"] = {"http": response.status, **{k: plan.get(k) for k in ("id", "can_start", "blockers")}}
++                if response.status == 200 and plan.get("can_start"):
+                     break
+-                time.sleep(5)
++                if purpose == "web_mail" and self.cell.mail_required:
++                    raise StepFailed(f"web_mail setup plan refused on {self.node_name}: {plan.get('blockers')}")
++                self.finding(f"{self.node_name}: web_mail setup plan was refused ({plan.get('blockers')}); "
++                             "mail is recorded as not provided on this platform")
++                state = self.api("GET", "/api/v1/setup", purpose="ServerSetupGate").json() or {}
++            if not plan or not plan.get("can_start"):
++                raise StepFailed(f"setup plan cannot start: {plan}")
++            self.state["purpose"] = purpose
++            request_id = secrets.token_hex(16)
++            try:
++                response = self.api("POST", "/api/v1/setup/start", {"plan_id": plan["id"], "request_id": request_id,
++                                                                     "confirmed": True},
++                                    purpose="ServerSetup start (once)", timeout=120)
++                checks["start_http"] = response.status
++            except self.p["panel_api"].UnknownOutcome as exc:
++                checks["start_outcome"] = f"unknown, reconciling by reads: {exc}"
++            deadline = time.monotonic() + 3600
++            execution = None
++            wait = SetupWait()
++            decision = "continue"
++            last_light = 0.0
++            with self.panel_client().polling() as view:
++                while time.monotonic() < deadline:
++                    if time.monotonic() - last_light >= 30:
++                        # Sidecar v2: the before-first-site hosting-root series, every 30 s until setup settles.
++                        self.inspect("before-site", light=True)
++                        last_light = time.monotonic()
++                    try:
++                        execution = self.api("GET", f"/api/v1/setup/operation?request_id={request_id}", view=view).json()
++                    except self.p["panel_api"].PanelError as exc:
++                        execution = {"poll_error": str(exc)}
++                    decision = wait.observe(execution, time.monotonic())
++                    if decision in ("terminal", "settled"):
++                        break
++                    time.sleep(5)
++            busy = (isinstance(execution, dict) and execution.get("status") == "failed"
++                    and (execution.get("error") or {}).get("code") == HOST_MUTATION_BUSY_CODE)
++            summary = {"attempt": attempt, "request_id": request_id, "purpose": purpose,
++                       "status": (execution or {}).get("status"), "phase": (execution or {}).get("phase"),
++                       "error": (execution or {}).get("error"),
++                       "steps": {x.get("id"): x.get("status") for x in setup_steps(execution)}}
++            if (not busy and host_package_manager_waits(self.node_name) and isinstance(execution, dict)
++                    and execution.get("status") == "failed"):
++                # H19 (upd8 Ubuntu run b): a mail profile step installs its packages (PackageKit starts) and its own
++                # next sub-step (mail TLS synchronization) is then refused as busy; the setup shows the generic
++                # mail_profile_install_failed. The owner opens the failed step's component operation (the setup
++                # screen links it) and reads its cause; only that named cause makes the owner wait and retry.
++                component = self.failed_setup_component(execution)
++                summary["component"] = component
++                busy = bool(component.get("names_host_busy"))
++            attempts.append(summary)
++            if not busy or not host_package_manager_waits(self.node_name) or attempt == SETUP_OWNER_ATTEMPTS:
++                break
++            self.record_json(f"setup-execution-attempt-{attempt:02d}.json", execution)
++            self.finding(f"{self.node_name}: server setup attempt {attempt} stopped at {summary['phase']} with "
++                         f"{(summary['error'] or {}).get('code')} (cause: {HOST_MUTATION_BUSY_TEXT}); the owner waits "
++                         "and starts a newly reviewed plan, as the product text says")
++        checks["owner_attempts"] = attempts
++        if idle_waits:
++            checks["owner_idle_waits"] = idle_waits
+         self.inspect("after-setup")
+         checks["execution"] = {k: (execution or {}).get(k) for k in ("status", "phase", "error")}
+         self.record_json("setup-execution.json", execution)
+@@ -3418,6 +3556,9 @@
+         return "passed"
+ 
+     def seed(self, checks: dict) -> str:
++        if host_package_manager_waits(self.node_name):
++            # H19: no agent mutation (seed) and no update (arm/start) while a package-manager task runs.
++            checks["owner_waited_for_idle"] = self.wait_host_package_manager_idle()
+         # Cron precondition, read-only and before any seeding (product finding P1: the
+         # product does not install cron on Debian and masks the Agent's reason as 500).
+         # Absence is recorded as "cron: not available on this baseline", not seeded.
+@@ -3657,6 +3798,9 @@
+         return self.state["samples"]
+ 
+     def arm(self, checks: dict) -> str:
++        if host_package_manager_waits(self.node_name):
++            # H19: no agent mutation (seed) and no update (arm/start) while a package-manager task runs.
++            checks["owner_waited_for_idle"] = self.wait_host_package_manager_idle()
+         # Sidecar v2: the last read-only inspection before the update check; none follows until a terminal,
+         # paused or settled state (upd3 cell 1's v1 inspection fell inside the update preflight).
+         self.inspect("before-check")
+--- a/deploy/e2e/release-recovery/current_worker_baseline.py
++++ b/deploy/e2e/release-recovery/current_worker_baseline.py
+@@ -82,7 +82,7 @@
+ 
+ 
+ def intent_path(root, node_name):
+-    if node_name not in ("debian13", "arch"):
++    if node_name not in ("debian13", "arch", "ubuntu"):
+         raise ValueError("unsupported registered guest")
+     return root / ("current-worker-baseline-" + node_name + "-intent.json")
+ 
+@@ -398,7 +398,7 @@
+     parser = argparse.ArgumentParser(description=__doc__)
+     parser.add_argument("command", choices=("start", "status", "collect"))
+     parser.add_argument("--work-root", required=True)
+-    parser.add_argument("--node", choices=("debian13", "arch"), default="debian13")
++    parser.add_argument("--node", choices=("debian13", "arch", "ubuntu"), default="debian13")
+     parser.add_argument("--archive")
+     parser.add_argument("--archive-sha256")
+     parser.add_argument("--public-key-sha256")
+--- a/deploy/e2e/release-recovery/worker_fixture_origin.py
++++ b/deploy/e2e/release-recovery/worker_fixture_origin.py
+@@ -292,6 +292,7 @@
+         raise ValueError('invalid fixture nonce')
+     choices = {
+         'debian13': ('/usr/local/share/ca-certificates', '/usr/sbin/update-ca-certificates'),
++        'ubuntu': ('/usr/local/share/ca-certificates', '/usr/sbin/update-ca-certificates'),
+         'arch': ('/etc/ca-certificates/trust-source/anchors', '/usr/bin/update-ca-trust'),
+     }
+     if node not in choices:
+--- a/deploy/e2e/release-recovery/guest_probe.py
++++ b/deploy/e2e/release-recovery/guest_probe.py
+@@ -135,7 +135,7 @@
+         "cell_id": cell_id, "node": node,
+     }:
+         raise ProbeError("lab marker does not match requested identity")
+-    if node not in {"debian13", "arch"} or actual_uuid != expected_uuid:
++    if node not in {"debian13", "arch", "ubuntu"} or actual_uuid != expected_uuid:
+         raise ProbeError("guest UUID or node differs")
+     if vendor.strip().lower() not in {"qemu", "kvm"}:
+         raise ProbeError("guest DMI vendor is not QEMU/KVM")
+@@ -831,7 +831,7 @@
+     parser.add_argument("--lab-nonce", required=True)
+     parser.add_argument("--vm-uuid", required=True)
+     parser.add_argument("--cell-id", required=True)
+-    parser.add_argument("--node", choices=("debian13", "arch"), required=True)
++    parser.add_argument("--node", choices=("debian13", "arch", "ubuntu"), required=True)
+     parser.add_argument("--zone", type=valid_dns_name, required=True)
+     parser.add_argument("--name", type=valid_dns_name, required=True)
+     parser.add_argument("--since", type=parse_since, required=True)
+--- a/deploy/e2e/release-recovery/guest_owner_port_hold.py
++++ b/deploy/e2e/release-recovery/guest_owner_port_hold.py
+@@ -151,7 +151,7 @@
+     parser.add_argument("--lab-nonce", required=True)
+     parser.add_argument("--vm-uuid", required=True)
+     parser.add_argument("--cell-id", required=True)
+-    parser.add_argument("--node", choices=("debian13", "arch"), required=True)
++    parser.add_argument("--node", choices=("debian13", "arch", "ubuntu"), required=True)
+     parser.add_argument("--operation-id", required=True)
+     parser.add_argument("--hold-seconds", type=int, required=True)
+     args = parser.parse_args(argv)
+--- a/deploy/e2e/release-recovery/test_lab.py
++++ b/deploy/e2e/release-recovery/test_lab.py
+@@ -178,5 +178,45 @@
+             load.assert_not_called()
+ 
+ 
++class UbuntuLabTests(unittest.TestCase):
++    """upd8: the one-node Ubuntu 24.04 lab."""
++
++    def test_committed_pin_is_the_official_release_image(self):
++        pin = lab.load_ubuntu_pin()
++        self.assertEqual((pin.name, pin.distribution, pin.release, pin.digest_algorithm), ("ubuntu", "Ubuntu", "24.04", "sha256"))
++        self.assertTrue(pin.url.startswith("https://cloud-images.ubuntu.com/releases/noble/release-"))
++
++    def test_pin_refuses_other_hosts_and_unversioned_urls(self):
++        raw = json.loads(lab.UBUNTU_IMAGE_LOCK.read_text())
++        for url in ("https://example.invalid/releases/noble/release-20260826/ubuntu-24.04-server-cloudimg-amd64.img",
++                    "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img",
++                    "http://cloud-images.ubuntu.com/releases/noble/release-20260826/ubuntu-24.04-server-cloudimg-amd64.img"):
++            with self.subTest(url=url), tempfile.TemporaryDirectory() as directory:
++                path = Path(directory) / "lock.json"
++                path.write_text(json.dumps(dict(raw, image=dict(raw["image"], url=url))))
++                with self.assertRaises(ValueError):
++                    lab.load_ubuntu_pin(path)
++
++    def test_plan_has_one_ubuntu_node_whose_peer_link_listens(self):
++        with tempfile.TemporaryDirectory() as directory:
++            root = lab.fixture.initialize_work_root(Path(directory) / "lab")
++            pin = lab.load_ubuntu_pin()
++            plan = lab.build_ubuntu_plan(root, pin, RECORD["cell_id"], "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB key",
++                                         ssh_port=2811, memory_mb=3072, cpus=2, disk_gb=24)
++            self.assertEqual(list(plan["nodes"]), ["ubuntu"])
++            self.assertEqual(plan["start_order"], ["ubuntu"])
++            command = plan["nodes"]["ubuntu"]["qemu_command"]
++            self.assertIn("socket,id=peer,listen=127.0.0.1:2813", command)
++            self.assertIn("user,id=mgmt,hostfwd=tcp:127.0.0.1:2811-:22", command)
++            self.assertIn("groups: [sudo]", plan["nodes"]["ubuntu"]["cloud_init"]["user-data"])
++            cell = Path(plan["cell_directory"])
++            cell.mkdir()
++            (cell / "fixture-plan.json").write_text(json.dumps(plan))
++            self.assertEqual(lab.load_plan(root, RECORD["cell_id"]), plan)
++            (cell / "fixture-plan.json").write_text(json.dumps(dict(plan, start_order=["ubuntu", "arch"])))
++            with self.assertRaises(ValueError):
++                lab.load_plan(root, RECORD["cell_id"])
++
++
+ if __name__ == "__main__":
+     unittest.main()
+--- a/deploy/e2e/release-recovery/test_owner_update_trial.py
++++ b/deploy/e2e/release-recovery/test_owner_update_trial.py
+@@ -1,6 +1,7 @@
+ """Offline tests for the upd1 owner-started update trial (no guest, no network)."""
+ import ast
+ import base64
++import dataclasses
+ import fnmatch
+ import hashlib
+ import importlib.util
+@@ -61,13 +62,72 @@
+     return document
+ 
+ 
++class HostIdleTests(unittest.TestCase):
++    """H19 (upd8): the owner waits for the package manager only where that was observed (Ubuntu)."""
++
++    def test_only_the_ubuntu_node_waits(self):
++        self.assertTrue(t.host_package_manager_waits("ubuntu"))
++        self.assertFalse(t.host_package_manager_waits("debian13"))
++        self.assertFalse(t.host_package_manager_waits("arch"))
++
++    def test_probe_names_are_the_agents_and_it_reports_json(self):
++        agent = (HERE.parents[2] / "cmd/agent/service_mutation_lock_linux.go").read_text()
++        for name in ("packagekitd", "apt-get", "dpkg", "pkcon"):
++            self.assertIn(f'"{name}"', agent)
++            self.assertIn(f'"{name}"', t.HOST_IDLE_PROBE)
++        compile(t.HOST_IDLE_PROBE, "host-idle-probe", "exec")
++        if sys.platform == "linux":
++            done = subprocess.run([sys.executable, "-I", "-c", t.HOST_IDLE_PROBE], capture_output=True, text=True,
++                                  timeout=30)
++            self.assertEqual(done.returncode, 0, done.stderr)
++            self.assertEqual(set(json.loads(done.stdout)), {"processes", "locks"})
++
++    def test_only_a_component_naming_the_busy_cause_makes_the_owner_retry(self):
++        trial = t.Trial.__new__(t.Trial)
++        op = "5e4e273f2bc11d7cb297a252ce86197d"
++        execution = {"status": "failed", "steps": [{"id": "02-mail_profile", "status": "failed", "operation_id": op}]}
++        body = {"operation": {"status": "failed", "error": {"message": "profile/webmail/mail-tls: mail TLS "
++                                                                     "synchronization: " + t.HOST_MUTATION_BUSY_TEXT}}}
++        calls = []
++        trial.api = lambda method, path, *a, **k: (calls.append((method, path)),
++                                                   SimpleNamespace(status=200, json=lambda: body))[1]
++        trial.redactor = SimpleNamespace(text=lambda value: value)
++        log = {"out": ""}
++        trial.guest = lambda body, timeout=0: SimpleNamespace(stdout=log["out"])
++        self.assertTrue(trial.failed_setup_component(execution)["names_host_busy"])
++        self.assertEqual(calls[-1], ("GET", "/api/v1/service/operation?id=" + op))
++        body["operation"]["error"] = {"message": "postfix main.cf validation failed"}
++        self.assertFalse(trial.failed_setup_component(execution)["names_host_busy"])
++        # The generic mail profile failure: the panel log line naming the operation carries the cause.
++        body["operation"]["error"] = {"code": "mail_profile_install_failed", "message": "The mail profile could not be "
++                                      "installed and verified."}
++        log["out"] = (f"service operation {op} (webmail) failed in profile/webmail/mail-tls: mail TLS synchronization: "
++                      + t.HOST_MUTATION_BUSY_TEXT + "\n")
++        got = trial.failed_setup_component(execution)
++        self.assertTrue(got["names_host_busy"])
++        self.assertIn("mail-tls", got["log_line"])
++        self.assertFalse(trial.failed_setup_component({"steps": [{"id": "03-service", "status": "pending"}]})["read"])
++        # A firewall step has no component operation: the panel log line names the cause.
++        line = "server setup step 07-firewall failed: firewall status: " + t.HOST_MUTATION_BUSY_TEXT
++        trial.guest = lambda body, timeout=0: SimpleNamespace(stdout=line + "\n")
++        got = trial.failed_setup_component({"steps": [{"id": "07-firewall", "status": "failed"}]})
++        self.assertEqual((got["source"], got["names_host_busy"]), ("panel journal", True))
++        self.assertFalse(trial.failed_setup_component({"steps": [{"id": "07-firewall;x", "status": "failed"}]})["read"])
++
++
+ class PlanTests(unittest.TestCase):
+     def test_twelve_cells_with_the_selected_second_faults(self):
+         self.assertEqual(sorted(t.CELLS), ["upd1-arch-defective", "upd1-arch-good", "upd1-arch-mgmt-off-reboot",
+                                            "upd1-arch-owner-continuation", "upd1-arch-realstart",
+                                            "upd1-arch-startcheck", "upd1-debian13-defective", "upd1-debian13-good",
+                                            "upd1-debian13-mgmt-off-reboot", "upd1-debian13-owner-continuation",
+-                                           "upd1-debian13-realstart", "upd1-debian13-startcheck"])
++                                           "upd1-debian13-realstart", "upd1-debian13-startcheck",
++                                           "upd1-ubuntu-defective", "upd1-ubuntu-good",
++                                           "upd1-ubuntu-owner-continuation"])
++        # upd8: the Ubuntu cells mirror Debian's (mail required, reset at payload_restored).
++        for name in ("upd1-ubuntu-defective", "upd1-ubuntu-good", "upd1-ubuntu-owner-continuation"):
++            debian = t.CELLS[name.replace("ubuntu", "debian13")]
++            self.assertEqual(dataclasses.replace(t.CELLS[name], name=debian.name, node="debian13"), debian)
+         self.assertEqual(t.CELLS["upd1-debian13-defective"].recovery_fault,
+                          {"action": "reboot", "checkpoint": "payload_restored"})
+         self.assertEqual(t.CELLS["upd1-arch-defective"].recovery_fault,
+--- a/deploy/e2e/release-recovery/test_worker_fixture_origin.py
++++ b/deploy/e2e/release-recovery/test_worker_fixture_origin.py
+@@ -109,7 +109,8 @@
+     def test_only_native_registered_platform_paths(self):
+         for node, directory, command in (
+             ('debian13','/usr/local/share/ca-certificates','/usr/sbin/update-ca-certificates'),
+-            ('arch','/etc/ca-certificates/trust-source/anchors','/usr/bin/update-ca-trust')):
++            ('arch','/etc/ca-certificates/trust-source/anchors','/usr/bin/update-ca-trust'),
++            ('ubuntu','/usr/local/share/ca-certificates','/usr/sbin/update-ca-certificates')):
+             with self.subTest(node=node):
+                 cert, argv=f.trust_paths(node,'a'*64)
+                 self.assertEqual(cert,Path(directory)/('celikpanel-worker-fixture-'+'a'*16+'.crt'))
+@@ -124,7 +125,7 @@
+                           (Path('/tmp/other'),info(0o700))]:
+             with self.subTest(path=path,item=item),self.assertRaises(ValueError):f.validate_origin_directory(path,item)
+     def test_unknown_platform_or_pathlike_nonce_refused(self):
+-        for node,nonce in [('ubuntu','a'*64),('../arch','a'*64),('arch','../owner'),('arch','A'*64),('debian13','a'*63)]:
++        for node,nonce in [('rhel9','a'*64),('../arch','a'*64),('../ubuntu','a'*64),('arch','../owner'),('arch','A'*64),('debian13','a'*63)]:
+             with self.subTest(node=node,nonce=nonce),self.assertRaises(ValueError):f.trust_paths(node,nonce)
+ 
+ 

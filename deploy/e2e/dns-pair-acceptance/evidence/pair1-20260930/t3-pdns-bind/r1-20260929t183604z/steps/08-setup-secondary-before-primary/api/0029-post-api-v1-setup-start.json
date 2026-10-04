@@ -1,0 +1,134 @@
+{
+  "outcome": "response",
+  "panel": "arch",
+  "purpose": "ServerSetup start (once)",
+  "request": {
+    "body": {
+      "confirmed": true,
+      "plan_id": "d1df767396cd7628eb3171d7ae2892e9",
+      "request_id": "1996b441877841d699d5fcfa430edb37"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:28444"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:28444"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/setup/start"
+  },
+  "response": {
+    "elapsed_seconds": 0.617,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Tue, 29 Sep 2026 18:41:01 GMT"
+      ],
+      [
+        "Content-Length",
+        "1333"
+      ]
+    ],
+    "json": {
+      "id": "1996b441877841d699d5fcfa430edb37",
+      "panel_url": "https://panel-arch.ns-accept.test:2083/",
+      "phase": "queued",
+      "plan_id": "d1df767396cd7628eb3171d7ae2892e9",
+      "request_id": "1996b441877841d699d5fcfa430edb37",
+      "status": "running",
+      "steps": [
+        {
+          "id": "01-dns",
+          "kind": "dns",
+          "owner_id": "4f7a6847300ad8273c278795495e89ee",
+          "request_id": "b2286680aecb17cfcecec55926f8d4e2",
+          "status": "pending",
+          "target": "local"
+        },
+        {
+          "id": "02-service",
+          "kind": "service",
+          "owner_id": "eee1192a518fa7d0a46ffd82ef4d47c3",
+          "request_id": "d001e1a1084f183d51a11076feaee392",
+          "status": "pending",
+          "target": "certbot"
+        },
+        {
+          "id": "03-firewall",
+          "kind": "firewall",
+          "owner_id": "de40626742db9a4de84f2ce0320f1243",
+          "request_id": "df44aa707ee57223df51d38c2a46e3c3",
+          "status": "pending",
+          "target": "enable_and_persist"
+        },
+        {
+          "id": "04-access_dns",
+          "kind": "access_dns",
+          "owner_id": "de54392715b7b90f3612c0df92867a01",
+          "qualifier": "192.0.2.11",
+          "request_id": "00713824301f1de6cfb8407480dfab4c",
+          "status": "pending",
+          "target": "panel-arch.ns-accept.test"
+        },
+        {
+          "id": "05-panel_certificate",
+          "kind": "panel_certificate",
+          "owner_id": "82ec96e54c70e59c78c5b68b596a9202",
+          "request_id": "f753d01cacf36deb9cbda9d45af81f8c",
+          "status": "pending",
+          "target": "panel-arch.ns-accept.test"
+        },
+        {
+          "id": "06-verify",
+          "kind": "verify",
+          "owner_id": "1ee397c11cb955a3f9a22f6adf8c8a33",
+          "request_id": "5b35b86649ac0350da59000f41bc7171",
+          "status": "pending",
+          "target": "dns"
+        }
+      ]
+    },
+    "status": 202,
+    "text": null
+  }
+}

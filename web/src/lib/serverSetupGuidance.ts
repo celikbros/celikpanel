@@ -9,11 +9,72 @@ export interface SetupExecutionGuidance {
 }
 const text = (key: TranslationKey, values?: Record<string, string>): SetupGuidanceText => ({ key, values });
 
+const componentNames: Record<string, string> = { nginx: 'Nginx', 'php-fpm': 'PHP-FPM', mariadb: 'MariaDB', postgresql: 'PostgreSQL', node: 'Node.js', nftables: 'nftables', certbot: 'Certbot', postfix: 'Postfix', dovecot: 'Dovecot', rspamd: 'Rspamd', roundcube: 'Roundcube', bind: 'BIND', pdns: 'PowerDNS', webmail: 'Webmail', 'core-mail': 'Core Mail', 'protected-mail': 'Spam-Protected Mail' };
+export const setupComponentName = (id: string): string => componentNames[id] || id;
+
+// Setup review blocker for an owner's directory above the hosting root that
+// the web server or the site users cannot pass (native finding P3):
+// "server_setup_hosting_root_not_traversable:<mode>:<owner>:<group>:<directory>".
+// The directory is last so it is read whole. Anything else yields null.
+// Barındırma kökünün üstünde, web sunucusunun ya da site kullanıcılarının
+// geçemediği sahip dizini için kurulum inceleme engeli (yerel bulgu P3).
+export function setupHostingRootBlockerValues(code: string): Record<string, string> | null {
+    const parts = code.split(':');
+    if (parts[0] !== 'server_setup_hosting_root_not_traversable' || parts.length < 5) return null;
+    const [, mode, owner, group] = parts;
+    const directory = parts.slice(4).join(':');
+    if (!/^[0-7]{4}$/.test(mode) || !owner || !group || !directory.startsWith('/')) return null;
+    return { directory, mode, owner: `${owner}:${group}`, command: `sudo chmod 755 ${directory}` };
+}
+// A setup step refused with HOST_MUTATION_BUSY carries the Panel's reason
+// sentence (cmd/panel/httperr.go hostMutationBusyMessages) but no reason field,
+// so the sentence's opening selects the headline. A sentence this list does not
+// know, including the Panel's generic one, gets the text that covers every
+// reason. tests/server-setup-host-busy.test.mjs pins the openings to the Panel.
+// HOST_MUTATION_BUSY ile reddedilen adim gerekce alanini tasimaz; Panel'in
+// gerekce cumlesinin basi basligi secer, taninmayan cumle genel metni alir.
+const hostBusyOpenings: [string, TranslationKey][] = [
+    ["This server's package manager is busy", 'setup.blocker.packageBusy'],
+    ['Another CelikPanel change is still running', 'setup.blocker.changeBusy'],
+    ['Another CelikPanel operation is still running', 'setup.blocker.changeBusy'],
+    ['A change that did not finish is still holding this server', 'setup.blocker.hostHeld'],
+];
+export const setupHostBusyKey = (message = ''): TranslationKey =>
+    hostBusyOpenings.find(([opening]) => message.startsWith(opening))?.[1] || 'setup.blocker.hostBusy';
+
+// A screen passes its localized names (mail profiles, cron) so the guidance
+// sentence names the component exactly as the step list above it does.
+// Ekran yerel adlari verir; yonlendirme bileseni adim listesiyle ayni adlandirir.
+export type SetupComponentNamer = (id: string) => string;
+
+const installSteps = ['preflight', 'package_install', 'configure', 'unit_start', 'verify'] as const;
+type InstallStep = typeof installSteps[number];
+const mailComponents = ['postfix', 'dovecot', 'rspamd', 'roundcube', 'webmail', 'core-mail', 'protected-mail'];
+
+// An install failure names the component, what stopped, the host's own line,
+// who acts and how setup continues, before the step list (D-024).
+// Kurulum hatasi bileseni, neyin durdugunu, makinenin kendi satirini, kimin
+// ne yapacagini ve kurulumun nasil surecegini adim listesinden once soyler.
+function installFailureMessages(execution: ServerSetupExecution, componentName: SetupComponentNamer): SetupGuidanceText[] | null {
+    const error = execution.error;
+    if (execution.status !== 'failed' || !error?.component || !installSteps.includes(error.step as InstallStep)) return null;
+    const step = error.step as InstallStep;
+    const component = componentName(error.component);
+    const messages = [text(`setup.guide.installFailed.${step}`, { component })];
+    if (error.detail) messages.push(text('setup.guide.installFailedDetail', { detail: error.detail }));
+    messages.push(text(step === 'package_install' ? 'setup.guide.installFailedAction.package'
+        : step === 'unit_start' ? 'setup.guide.installFailedAction.service' : 'setup.guide.installFailedAction.other'));
+    messages.push(text('setup.guide.installFailedResume'));
+    const failedStep = execution.steps.find(item => item.status === 'failed');
+    if (failedStep?.kind === 'mail_profile' || mailComponents.includes(error.component)) messages.push(text('setup.guide.installFailedWithoutMail'));
+    return messages;
+}
+
 // Present reviewed intent separately from observed results. A pending pair proof
 // does not establish that the peer is offline, and a lost response is not failure.
 // Incelenen amac ile gozlenen sonuc ayridir. Eksik es kaniti esin kapali oldugunu,
 // kayip cevap ise islemin basarisiz oldugunu gostermez.
-export function setupExecutionGuidance(execution: ServerSetupExecution): SetupExecutionGuidance | null {
+export function setupExecutionGuidance(execution: ServerSetupExecution, componentName: SetupComponentNamer = setupComponentName): SetupExecutionGuidance | null {
     if (execution.status === 'succeeded') return null;
     const context = execution.context;
     const current = execution.steps.find(step => step.status === 'failed')
@@ -34,6 +95,11 @@ export function setupExecutionGuidance(execution: ServerSetupExecution): SetupEx
     if (phase === 'license') {
         result.title = 'setup.licenseWaiting';
         result.messages.push(text('setup.guide.license'));
+        return result;
+    }
+    const installFailure = ['service', 'runtime', 'mail_profile'].includes(phase) ? installFailureMessages(execution, componentName) : null;
+    if (installFailure) {
+        result.messages.push(...installFailure);
         return result;
     }
     if (confirming) result.messages.push(text('setup.guide.confirm'));
@@ -80,6 +146,13 @@ export function setupExecutionGuidance(execution: ServerSetupExecution): SetupEx
         const domain = phase === 'mail_certificate' ? context?.mail_hostname : context?.panel_domain;
         if (domain) result.messages.push(text('setup.guide.certificateDNS', { domain }));
         result.details.push(text('setup.guide.certificateChecks'));
+    } else if (phase === 'mail_enrollment') {
+        const code = execution.error?.code;
+        const key = code === 'server_setup_mail_enrollment_not_recorded' ? 'setup.guide.mailEnrollmentUnrecorded'
+            : code === 'server_setup_mail_enrollment_rollback' ? 'setup.guide.mailEnrollmentRollback'
+            : code === 'server_setup_mail_enrollment_running' ? 'setup.guide.mailEnrollmentRecorded'
+                : execution.status === 'failed' ? 'setup.guide.mailEnrollmentFailed' : 'setup.guide.mailEnrollmentUnknown';
+        result.messages.push(text(key));
     } else if (['service', 'runtime', 'mail_profile'].includes(phase)) {
         result.messages.push(text('setup.guide.component'));
     } else if (phase === 'firewall') {

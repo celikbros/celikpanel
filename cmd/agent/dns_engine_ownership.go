@@ -13,6 +13,7 @@ import (
 	"sort"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
@@ -80,7 +81,7 @@ func readDNSEngineOwnership(
 	if err != nil {
 		return dnsEngineStateReceipt{}, false, err
 	}
-	state, err := decodeDNSEngineState(data)
+	state, _, err := dnsengineartifact.DecodeOwnershipDocument(data)
 	if err != nil {
 		return dnsEngineStateReceipt{}, false, err
 	}
@@ -92,15 +93,44 @@ func readDNSEngineOwnership(
 }
 
 func writeDNSEngineOwnership(state dnsEngineStateReceipt) error {
+	return writeDNSEngineOwnershipEncoded(state, dnsengineartifact.CanonicalOwnershipDocumentV2)
+}
+
+// Signed-update cleanup may finish an already committed historical journal.
+// It must not advance the retained DNS wire format beyond the rollback Agent's
+// capabilities merely because a new application binary is preparing to start.
+func writeDNSEngineOwnershipForSignedUpdate(state dnsEngineStateReceipt) error {
+	current, err := captureDNSEngineStateSnapshot(false)
+	if err != nil {
+		return err
+	}
+	observed, separated, err := dnsengineartifact.DecodeStateDocument(current.Data)
+	if err != nil {
+		return err
+	}
+	if observed != state {
+		return errors.New("DNS state changed before signed-update ownership publication")
+	}
+	if !separated {
+		return writeDNSEngineOwnershipEncoded(state, dnsengineartifact.CanonicalV1)
+	}
+	return writeDNSEngineOwnership(state)
+}
+
+func writeDNSEngineOwnershipEncoded(state dnsEngineStateReceipt, encode func(dnsEngineStateReceipt) ([]byte, error)) error {
 	path, err := dnsEngineOwnershipPath(state.Engine)
 	if err != nil {
 		return err
 	}
-	encoded, err := encodeDNSEngineState(state)
+	encoded, err := encode(state)
 	if err != nil {
 		return err
 	}
-	if err := secureWriteConfig(path, encoded, 0o600); err != nil {
+	before, err := captureDNSFileSnapshotForOwner(path, 0o600, true, serviceMutationRequiredOwnerUID, serviceMutationRequiredOwnerGID)
+	if err != nil {
+		return err
+	}
+	if err := secureWriteConfigReplacingSnapshotWithOwner(path, encoded, 0o600, &before, serviceMutationRequiredOwnerUID, serviceMutationRequiredOwnerGID); err != nil {
 		actual, exists, readErr := readDNSEngineOwnership(state.Engine)
 		if readErr == nil && exists && actual == state {
 			return nil
@@ -138,32 +168,11 @@ func publishDNSEngineSourceOwnership(
 func sourceStateFromDNSSwitchJournal(
 	journal dnsEngineSwitchJournal,
 ) (dnsEngineStateReceipt, bool, error) {
-	if journal.SourceEngine == "" {
-		if journal.StateBefore.Exists {
-			return dnsEngineStateReceipt{}, false,
-				errors.New("uninitialized DNS source journal unexpectedly snapshots active state")
-		}
-		return dnsEngineStateReceipt{}, false, nil
-	}
-	if !journal.StateBefore.Exists {
-		return dnsEngineStateReceipt{}, false,
-			errors.New("DNS switch journal is missing source engine state")
-	}
-	state, err := decodeDNSEngineState(journal.StateBefore.Data)
-	if err != nil {
-		return dnsEngineStateReceipt{}, false,
-			fmt.Errorf("decode DNS switch source state: %w", err)
-	}
-	if state.Engine != journal.SourceEngine ||
-		state.EngineEpoch != journal.SourceEpoch {
-		return dnsEngineStateReceipt{}, false,
-			errors.New("DNS switch journal source state identity differs from its manifest")
-	}
-	return state, true, nil
+	return dnsengineartifact.SourceStateFromSwitchJournal(journal)
 }
 
 func verifyDNSSwitchSourceOwnership(journal dnsEngineSwitchJournal) error {
-	expected, exists, err := sourceStateFromDNSSwitchJournal(journal)
+	_, exists, err := sourceStateFromDNSSwitchJournal(journal)
 	if err != nil || !exists {
 		return err
 	}
@@ -171,7 +180,11 @@ func verifyDNSSwitchSourceOwnership(journal dnsEngineSwitchJournal) error {
 	if err != nil {
 		return err
 	}
-	if !actualExists || !reflect.DeepEqual(actual, expected) {
+	matches, err := dnsengineartifact.ProveFrozenSwitchSourceOwnership(journal, actual, actualExists)
+	if err != nil {
+		return err
+	}
+	if !matches {
 		return errors.New("DNS source ownership receipt is absent or differs from the switch journal")
 	}
 	return nil
@@ -1030,10 +1043,23 @@ func exactFinalizedDNSEngineSwitchProvenanceWithBINDVerifier(
 			// Etkin motordaki BAŞKA bir işlemi adlandıran kurulum makbuzu bizim
 			// göz ardı edeceğimiz bir şey değildir ve kapalı arıza vermeyi
 			// sürdürür.
-			if state.Engine == target &&
-				install.ManifestQualifier == qualifier &&
-				install.MutationRequestID == binding.MutationRequestID &&
-				install.MutationOwnerID == binding.MutationOwnerID {
+			//
+			// The same holds for a receipt an EARLIER attempt at this exact
+			// manifest left behind (same qualifier, another request): a
+			// reinstall that failed after its package step and was aborted or
+			// rolled back keeps its receipt by design, authority never moved,
+			// and no journal exists. Without this, a retry that fails before
+			// its own receipt write (a refused package preflight, a busy port
+			// 53) poisoned the whole mutation manager (item 2, 2026-09-30).
+			//
+			// Aynı tam bildirgenin DAHA ÖNCEKİ bir denemesinin bıraktığı
+			// makbuz da aynıdır: yetki hiç değişmemiştir ve günlük yoktur.
+			// Bu olmadan, kendi makbuzunu yazmadan düşen bir yeniden deneme
+			// tüm mutasyon yöneticisini zehirliyordu.
+			// A receipt for a different manifest (the zones changed between
+			// the attempts) is not recognisable as this reinstall's residue
+			// and still fails closed.
+			if state.Engine == target && install.ManifestQualifier == qualifier {
 				return false, nil
 			}
 			return false, errors.New(

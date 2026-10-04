@@ -1,0 +1,67 @@
+wall=2026-09-29T20:19:34.298744604Z boot_id=b21ec36e-af08-45ca-8167-917417a840f6
+== pdns.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+== named.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+== bind9.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+== celikpanel-agent.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 20:17:55 UTC
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+== celikpanel-panel.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 20:17:55 UTC
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+== pdns.service mask symlinks
+/etc/systemd/system/pdns.service absent
+/run/systemd/system/pdns.service absent
+== pdns_server processes
+none
+== ss 53
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=366,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=366,fd=18))
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=366,fd=19))
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=366,fd=21))
+== /etc/powerdns
+ls: cannot access '/etc/powerdns': No such file or directory
+ls: cannot access '/etc/powerdns/pdns.d': No such file or directory
+sha256sum: /etc/powerdns/pdns.conf: No such file or directory
+sha256sum: '/etc/powerdns/pdns.d/*': No such file or directory
+== pdns.conf (non-comment lines; values of key/secret/password settings redacted)
+== /var/lib/powerdns
+ls: cannot access '/var/lib/powerdns': No such file or directory
+== state receipt
+ls: cannot access '/var/lib/celikpanel-agent-private/dns-engine-state.json': No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    import json;d=json.load(open("/var/lib/celikpanel-agent-private/dns-engine-state.json"));print(json.dumps({k:d.get(k) for k in ("schema","request_id")}));print("semantic:",json.dumps(d.get("semantic"),sort_keys=True)[:1500])
+                            ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/var/lib/celikpanel-agent-private/dns-engine-state.json'
+== pdns journal (notify/xfr/catalog/start lines, all boots)

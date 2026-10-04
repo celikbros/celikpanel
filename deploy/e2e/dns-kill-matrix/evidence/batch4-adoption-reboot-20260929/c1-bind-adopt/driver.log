@@ -1,0 +1,15 @@
+### 2026-09-29T12:59:08.652Z start-cell c1-bind-adopt bind__rolling-back__after-write__standalone__peer-reachable debian13 fixture=owner-bind prep=prepare-bind enroll=1 flags=--bind-rollback-after-target-started --owner-inverse-after-restart
+### 2026-09-29T12:59:08.653Z prepare
+### 2026-09-29T12:59:10.000Z start
+### 2026-09-29T12:59:10.296Z wait-ssh
+### 2026-09-29T13:00:13.104Z guest-identity
+### 2026-09-29T13:00:13.533Z install
+### 2026-09-29T13:00:23.210Z enroll-recovery-runtime
+### 2026-09-29T13:00:30.436Z prepare-bind
+### 2026-09-29T13:00:43.710Z pre-run-snapshot
+### 2026-09-29T13:00:44.655Z start-watcher
+Running as unit: cp-b4-watch.service; invocation ID: 807bf7c41aa94b99bc792fbea3b9a6a2
+### 2026-09-29T13:00:45.353Z run-prepared-dry-run
+### 2026-09-29T13:00:45.451Z run-prepared
+RUN_PREPARED_RC=0
+### 2026-09-29T13:01:35.617Z done-run rc=0

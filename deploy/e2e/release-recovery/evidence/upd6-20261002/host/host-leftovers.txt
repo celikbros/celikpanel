@@ -1,0 +1,33 @@
+# host paths created by upd6 (2026-10-01T09:48:14Z)
+--- /var/tmp top level: added since the start
+> cp-release-drill-upd6-arch-oc-a
+> cp-upd6-run
+--- /root top level: names before vs after
+13a14
+> cp-prune
+--- /var/tmp/cp-upd1-build: added
+> 20261001t092830z
+--- /var/tmp/cp-pair-accept/dist: added
+> 0dd5e73c80be18e7adc3b81c84a0d434fc0b0224-acceptance-license
+> 8b89ef29a9e931a6ff2b8e20f68a4fc3c4ac90be-acceptance-license
+> a1e3066c5eace35651ea2d01c2aaeca8eda08642-acceptance-license
+> a3e59bbfd25d8f8470212ed6e68875f5f1a5420c-acceptance-license
+> d0676ba398836721884c6d586be9ff86c14056ac-acceptance-license
+--- sizes
+337M	/var/tmp/cp-upd6-run
+2.5G	/var/tmp/cp-release-drill-upd6-arch-oc-a
+671M	/var/tmp/cp-upd1-build/20261001t092830z
+657M	/var/tmp/cp-pair-accept/dist/0dd5e73c80be18e7adc3b81c84a0d434fc0b0224-acceptance-license
+657M	/var/tmp/cp-pair-accept/dist/8b89ef29a9e931a6ff2b8e20f68a4fc3c4ac90be-acceptance-license
+657M	/var/tmp/cp-pair-accept/dist/a1e3066c5eace35651ea2d01c2aaeca8eda08642-acceptance-license
+657M	/var/tmp/cp-pair-accept/dist/a3e59bbfd25d8f8470212ed6e68875f5f1a5420c-acceptance-license
+657M	/var/tmp/cp-pair-accept/dist/d0676ba398836721884c6d586be9ff86c14056ac-acceptance-license
+--- repository git config (with origins) unchanged
+unchanged
+--- qemu
+no qemu process
+--- lab state
+lab refused: QEMU identity is unavailable
+
+--- WSL-internal disk
+/dev/sdd           1007G  143G      814G  15% /

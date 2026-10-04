@@ -1,0 +1,163 @@
+{
+  "agreement": {
+    "known_sources": [
+      "api",
+      "cli"
+    ],
+    "phase": {
+      "api": "running",
+      "cli": "running"
+    },
+    "reasons": [],
+    "sources": [
+      "api",
+      "cli",
+      "shell"
+    ],
+    "verdict": "agree"
+  },
+  "cli": {
+    "boot_id": "ef3369ce-9a3a-48b3-b25c-c74f4c3d83ab",
+    "captured_at": "2026-09-30T22:58:15.061680Z",
+    "en": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "The update is being applied; the panel may be unavailable for a short time. Nothing to do now: check this same request again in a minute. Checking does not restart the update.\nRequest: 7a7b01ebeb24bf40a384437f6c2473c9\nRecorded at: 2026-09-30T22:58:12Z\nThis is a recorded observation; current service health was not checked.\nRecorded state (for support): phase=running reason=update_running proof=none\n"
+    },
+    "json": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "{\"schema\":\"celikpanel-recovery-status/v1\",\"request_id\":\"7a7b01ebeb24bf40a384437f6c2473c9\",\"observation\":\"known\",\"phase\":\"running\",\"terminal_proof\":\"none\",\"reason\":\"update_running\",\"observed_at\":\"2026-09-30T22:58:12Z\"}\n"
+    },
+    "tr": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "Güncelleme uygulanıyor; panel kısa bir süre erişilemeyebilir. Şimdi yapmanız gereken bir şey yok: bir dakika sonra aynı işlemi yeniden sorgulayın. Sorgulamak güncellemeyi yeniden başlatmaz.\nİşlem: 7a7b01ebeb24bf40a384437f6c2473c9\nKayıt zamanı: 2026-09-30T22:58:12Z\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\nKayıtlı durum (destek için): phase=running reason=update_running proof=none\n"
+    }
+  },
+  "guidance_api": {
+    "actionable": true,
+    "keys": [
+      "recovery.phase.running",
+      "recovery.next.running"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "texts": {
+      "en": [
+        "Last recorded step: update in progress",
+        "The server last reported work on this update. Wait for the next recorded result; checking this page does not restart it."
+      ],
+      "tr": [
+        "Kaydedilmiş son adım: güncelleme sürüyor",
+        "Sunucu son olarak bu güncelleme üzerinde çalıştığını bildirdi. Sonraki kayıtlı sonucu bekleyin; bu sayfayı kontrol etmek işlemi yeniden başlatmaz."
+      ]
+    }
+  },
+  "guidance_cli": {
+    "actionable": true,
+    "keys": [
+      "recovery.phase.running",
+      "recovery.next.running"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "texts": {
+      "en": [
+        "Last recorded step: update in progress",
+        "The server last reported work on this update. Wait for the next recorded result; checking this page does not restart it."
+      ],
+      "tr": [
+        "Kaydedilmiş son adım: güncelleme sürüyor",
+        "Sunucu son olarak bu güncelleme üzerinde çalıştığını bildirdi. Sonraki kayıtlı sonucu bekleyin; bu sayfayı kontrol etmek işlemi yeniden başlatmaz."
+      ]
+    }
+  },
+  "index": 1,
+  "observed": {
+    "observation": "known",
+    "observed_at": "2026-09-30T22:58:12Z",
+    "phase": "running",
+    "reason": "update_running",
+    "request_id": "7a7b01ebeb24bf40a384437f6c2473c9",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "none"
+  },
+  "recovery_api": {
+    "body": {
+      "observation": "known",
+      "observed_at": "2026-09-30T22:58:12Z",
+      "panel_state": "ready",
+      "phase": "running",
+      "reason": "update_running",
+      "request_id": "7a7b01ebeb24bf40a384437f6c2473c9",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "none"
+    },
+    "http": 200
+  },
+  "t": 1790809094.29511,
+  "update_card": {
+    "keys": [
+      "panelUpdate.title",
+      "panelUpdate.running"
+    ],
+    "missing_keys": [],
+    "observation_error": null,
+    "role": "baseline",
+    "server_message": null,
+    "source": {
+      "observation": {
+        "path": "lib/recoveryObservation.ts",
+        "sha256": "96ca7d7d9bdffb4a2e3da60c8f1e90044ad057fd53e4721ff91090480868cfaa"
+      },
+      "outcome": {
+        "path": "lib/systemUpdateOutcome.ts",
+        "sha256": "375cdc01e87934903e7523972e8af4ae6fff771e5758080c2b9f1b5d077e10e5"
+      },
+      "screen": {
+        "path": "components/RecoveryAccess.tsx",
+        "sha256": "f3d60455af13e728b3eb7e933416651394a3a6c3aeb085507278bd88887b4456"
+      },
+      "typed": {
+        "path": "lib/systemUpdateFailure.ts",
+        "sha256": "df27fa82c8ab99a6864384b315f1336253031e2ee85fbcd230bdf8f6f9a33040"
+      }
+    },
+    "state": "in-progress",
+    "texts": {
+      "en": [
+        "CelikPanel updates",
+        "The update is being applied; the panel may be unavailable briefly."
+      ],
+      "tr": [
+        "CelikPanel güncellemeleri",
+        "Güncelleme uygulanıyor; panel kısa süre erişilemeyebilir."
+      ]
+    },
+    "unavailable": null
+  },
+  "update_status": {
+    "body": {
+      "created_at": "2026-09-30T22:58:12.79745075Z",
+      "found": true,
+      "request_id": "7a7b01ebeb24bf40a384437f6c2473c9",
+      "status": "running",
+      "target": {
+        "arch": "amd64",
+        "archive_sha256": "e510c85ef966cf4357a7a285824939f40830a4187d3c4a2854d87fa6ed5d105c",
+        "archive_size": "67067842",
+        "commit": "96de9cdb6b48a8e5fa2cd02bd6cd9845579255f5",
+        "os": "linux",
+        "sequence": "82",
+        "version": "v0.1.0-alpha.82"
+      },
+      "updated_at": "2026-09-30T22:58:12.948991925Z"
+    },
+    "http": 200
+  },
+  "utc": "2026-09-30T22:58:14Z"
+}

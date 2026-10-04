@@ -1,0 +1,260 @@
+{
+  "checks": {
+    "after_op": {
+      "after": {
+        "at": "2026-10-01T18:51:17.500641Z",
+        "general_lock_lines": [],
+        "lock_lines": [],
+        "other_package_processes": [],
+        "packagekit_unit": [
+          "ExecMainStartTimestamp=Thu 2026-10-01 18:51:14 UTC",
+          "ActiveState=active",
+          "SubState=running"
+        ],
+        "packagekitd": [
+          {
+            "aptcc_backend": false,
+            "children": [],
+            "etime_s": 3.1,
+            "grep_c_aptcc": 0,
+            "holds_or_waits": [],
+            "pid": 80508,
+            "rule_idle": false
+          }
+        ],
+        "rule": "busy",
+        "unparsed_lock_lines": []
+      },
+      "before": {
+        "at": "2026-10-01T18:51:17.224358Z",
+        "general_lock_lines": [],
+        "lock_lines": [],
+        "other_package_processes": [],
+        "packagekit_unit": [
+          "ExecMainStartTimestamp=Thu 2026-10-01 18:51:14 UTC",
+          "ActiveState=active",
+          "SubState=running"
+        ],
+        "packagekitd": [
+          {
+            "aptcc_backend": false,
+            "children": [],
+            "etime_s": 2.9,
+            "grep_c_aptcc": 0,
+            "holds_or_waits": [],
+            "pid": 80508,
+            "rule_idle": false
+          }
+        ],
+        "rule": "busy",
+        "unparsed_lock_lines": []
+      },
+      "host_utc": "2026-10-01T18:51:16Z",
+      "label": "busy-after-op",
+      "readiness": {
+        "answered_by": "agent",
+        "body": {
+          "code": "HOST_MUTATION_BUSY",
+          "ready": false,
+          "reason": "package_manager_active"
+        },
+        "http": 200,
+        "utc": "2026-10-01T18:51:16Z"
+      }
+    },
+    "before_op": {
+      "after": {
+        "at": "2026-10-01T18:47:09.751117Z",
+        "general_lock_lines": [],
+        "lock_lines": [],
+        "other_package_processes": [],
+        "packagekit_unit": [
+          "ExecMainStartTimestamp=",
+          "ActiveState=inactive",
+          "SubState=dead"
+        ],
+        "packagekitd": [],
+        "rule": "idle",
+        "unparsed_lock_lines": []
+      },
+      "before": {
+        "at": "2026-10-01T18:47:09.504698Z",
+        "general_lock_lines": [],
+        "lock_lines": [],
+        "other_package_processes": [],
+        "packagekit_unit": [
+          "ExecMainStartTimestamp=",
+          "ActiveState=inactive",
+          "SubState=dead"
+        ],
+        "packagekitd": [],
+        "rule": "idle",
+        "unparsed_lock_lines": []
+      },
+      "host_utc": "2026-10-01T18:47:08Z",
+      "label": "busy-before-op",
+      "readiness": {
+        "answered_by": "agent",
+        "body": {
+          "ready": true
+        },
+        "http": 200,
+        "utc": "2026-10-01T18:47:08Z"
+      }
+    },
+    "busy": {
+      "expectations": {
+        "packagekitd_alive_after_task": true,
+        "readiness_busy_package_manager_active": true,
+        "readiness_ready_after_task": false,
+        "release_unchanged": true,
+        "start_refused": true,
+        "status_not_running": true,
+        "task_finished": true,
+        "task_still_running_at_answer": true
+      },
+      "owner_texts": {
+        "catalogue": {
+          "err.HOST_MUTATION_BUSY.package_manager_active": {
+            "en": "This server's package manager is busy — something outside CelikPanel is installing or updating packages. Try again in a minute.",
+            "tr": "Bu sunucunun paket yöneticisi meşgul — CelikPanel dışında bir şey paket kuruyor ya da güncelliyor. Bir dakika sonra yeniden deneyin."
+          },
+          "err.PANEL_UPDATE_START_REFUSED": "no catalogue entry",
+          "panelUpdate.packageManagerBusy": {
+            "en": "The server was running a package operation. CelikPanel stopped before changing the installed version or its data. Wait for that operation to finish, then retry from Settings → CelikPanel updates.",
+            "tr": "Sunucuda bir paket işlemi çalışıyordu. CelikPanel, kurulu sürümü ve verilerini değiştirmeden durdu. Paket işlemi tamamlandıktan sonra Ayarlar → CelikPanel güncellemeleri bölümünden yeniden deneyin."
+          },
+          "services.mutationReadiness.package_manager_active": {
+            "en": "The operating system is installing or updating packages. Wait for it to finish.",
+            "tr": "İşletim sistemi paket kuruyor veya güncelliyor. Tamamlanmasını bekleyin."
+          },
+          "services.mutationReadiness.title": {
+            "en": "Server changes are temporarily unavailable.",
+            "tr": "Sunucu değişiklikleri geçici olarak kullanılamıyor."
+          }
+        },
+        "start_refusal": {
+          "api_message": "the update service did not accept this request",
+          "code": "PANEL_UPDATE_START_REFUSED"
+        }
+      },
+      "request_id": "b991f0a49b241257488dfdac0513b02d",
+      "start": {
+        "body": {
+          "code": "PANEL_UPDATE_START_REFUSED",
+          "error": "the update service did not accept this request"
+        },
+        "http": 409,
+        "utc": "2026-10-01T18:47:10Z"
+      },
+      "status": {
+        "body": {
+          "found": false,
+          "request_id": "b991f0a49b241257488dfdac0513b02d"
+        },
+        "http": 200
+      }
+    },
+    "guest_archives_free_bytes": "20724559872",
+    "operation": {
+      "command": "echo \"op-start $(date -u +%FT%T.%3NZ)\"; DEBIAN_FRONTEND=noninteractive apt-get install --download-only -y --no-install-recommends -o Acquire::http::Dl-Limit=80 -o Acquire::https::Dl-Limit=80 golang-1.22-src; echo \"download-only rc=$? $(date -u +%FT%T.%3NZ)\"; apt-get update; echo \"update rc=$? $(date -u +%FT%T.%3NZ)\"",
+      "dl_limit_kib_s": 80,
+      "duration_s": 246.4,
+      "ended_utc": "2026-10-01T18:51:15Z",
+      "holding": {
+        "at": "2026-10-01T18:47:10.786623Z",
+        "general_lock_lines": [
+          {
+            "line": "1: POSIX  ADVISORY  WRITE 71567 fd:01:84085 0 EOF",
+            "owner": 71567,
+            "owner_comm": "apt-get",
+            "path": "/var/lib/dpkg/lock",
+            "waiting": false
+          },
+          {
+            "line": "2: POSIX  ADVISORY  WRITE 71567 fd:01:84084 0 EOF",
+            "owner": 71567,
+            "owner_comm": "apt-get",
+            "path": "/var/lib/dpkg/lock-frontend",
+            "waiting": false
+          }
+        ],
+        "lock_lines": [
+          {
+            "line": "1: POSIX  ADVISORY  WRITE 71567 fd:01:84085 0 EOF",
+            "owner": 71567,
+            "owner_comm": "apt-get",
+            "path": "/var/lib/dpkg/lock",
+            "waiting": false
+          },
+          {
+            "line": "2: POSIX  ADVISORY  WRITE 71567 fd:01:84084 0 EOF",
+            "owner": 71567,
+            "owner_comm": "apt-get",
+            "path": "/var/lib/dpkg/lock-frontend",
+            "waiting": false
+          }
+        ],
+        "other_package_processes": [
+          {
+            "comm": "apt-get",
+            "pid": 71567
+          }
+        ],
+        "packagekit_unit": [
+          "ExecMainStartTimestamp=",
+          "ActiveState=inactive",
+          "SubState=dead"
+        ],
+        "packagekitd": [],
+        "rule": "busy",
+        "unparsed_lock_lines": []
+      },
+      "holding_after_s": 0.4,
+      "journal": "2026-10-01T18:47:10.579876+00:00 dns-ubuntu systemd[1]: Started cp-lab-upd9-owner-apt.service - /bin/bash -c \"echo \\\"op-start \\$(date -u +%FT%T.%3NZ)\\\"; DEBIAN_FRONTEND=noninteractive apt-get install --download-only -y --no-install-recommends -o Acquire::http::Dl-Limit=80 -o Acquire::https::Dl-Limit=80 golang-1.22-src; echo \\\"download-only rc=\\$? \\$(date -u +%FT%T.%3NZ)\\\"; apt-get update; echo \\\"update rc=\\$? \\$(date -u +%FT%T.%3NZ)\\\"\".\n2026-10-01T18:47:10.586124+00:00 dns-ubuntu bash[71564]: op-start 2026-10-01T18:47:10.585Z\n2026-10-01T18:47:10.603780+00:00 dns-ubuntu bash[71567]: Reading package lists...\n2026-10-01T18:47:10.815457+00:00 dns-ubuntu bash[71567]: Building dependency tree...\n2026-10-01T18:47:10.815457+00:00 dns-ubuntu bash[71567]: Reading state information...\n2026-10-01T18:47:11.081164+00:00 dns-ubuntu bash[71567]: The following NEW packages will be installed:\n2026-10-01T18:47:11.082223+00:00 dns-ubuntu bash[71567]:   golang-1.22-src\n2026-10-01T18:47:11.256466+00:00 dns-ubuntu bash[71567]: 0 upgraded, 1 newly installed, 0 to remove and 114 not upgraded.\n2026-10-01T18:47:11.256466+00:00 dns-ubuntu bash[71567]: Need to get 19.7 MB of archives.\n2026-10-01T18:47:11.256466+00:00 dns-ubuntu bash[71567]: After this operation, 125 MB of additional disk space will be used.\n2026-10-01T18:47:11.256466+00:00 dns-ubuntu bash[71567]: Get:1 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 golang-1.22-src all 1.22.2-2ubuntu0.4 [19.7 MB]\n2026-10-01T18:51:13.238389+00:00 dns-ubuntu bash[71567]: Fetched 19.7 MB in 4min 2s (81.5 kB/s)\n2026-10-01T18:51:13.238389+00:00 dns-ubuntu bash[71567]: Download complete and in download only mode\n2026-10-01T18:51:13.250166+00:00 dns-ubuntu bash[71564]: download-only rc=0 2026-10-01T18:51:13.249Z\n2026-10-01T18:51:13.495607+00:00 dns-ubuntu bash[80220]: Hit:1 http://security.ubuntu.com/ubuntu noble-security InRelease\n2026-10-01T18:51:14.094259+00:00 dns-ubuntu bash[80220]: Hit:2 http://archive.ubuntu.com/ubuntu noble InRelease\n2026-10-01T18:51:14.206897+00:00 dns-ubuntu bash[80220]: Hit:3 http://archive.ubuntu.com/ubuntu noble-updates InRelease\n2026-10-01T18:51:14.321740+00:00 dns-ubuntu bash[80220]: Hit:4 http://archive.ubuntu.com/ubuntu noble-backports InRelease\n2026-10-01T18:51:15.352351+00:00 dns-ubuntu bash[80220]: Reading package lists...\n2026-10-01T18:51:15.369425+00:00 dns-ubuntu bash[71564]: update rc=0 2026-10-01T18:51:15.369Z\n2026-10-01T18:51:15.370528+00:00 dns-ubuntu systemd[1]: cp-lab-upd9-owner-apt.service: Deactivated successfully.\n2026-10-01T18:51:15.370831+00:00 dns-ubuntu systemd[1]: cp-lab-upd9-owner-apt.service: Consumed 2.752s CPU time, 43.4M memory peak, 0B memory swap peak.\n",
+      "package": "golang-1.22-src",
+      "size_bytes": 19730376,
+      "started_utc": "2026-10-01T18:47:09Z",
+      "unit": {
+        "ActiveState": "inactive",
+        "ExecMainExitTimestamp": "",
+        "ExecMainStartTimestamp": "",
+        "ExecMainStatus": "0",
+        "Result": "success",
+        "SubState": "dead"
+      }
+    },
+    "packagekit": {
+      "children_seen": [],
+      "grep_c_aptcc": [
+        0
+      ],
+      "lock_lines_seen": [
+        "/var/cache/apt/archives/lock owner=apt-get"
+      ],
+      "observations": 19,
+      "other_processes_seen": [
+        "apt-get"
+      ],
+      "pk_alive_rule_idle_bracketed": {
+        "agent_other": 0,
+        "agent_package_manager_active": 0,
+        "agent_ready": 0,
+        "panel_answered": 0
+      },
+      "readiness": {
+        "HOST_MUTATION_BUSY/package_manager_active": 17,
+        "ready": 1
+      },
+      "rule": {
+        "busy": 35,
+        "idle": 2
+      },
+      "with_packagekitd": 1
+    }
+  },
+  "finished_at": "2026-10-01T18:51:16Z",
+  "name": "busy-start",
+  "started_at": "2026-10-01T18:47:08Z",
+  "verdict": "observed"
+}

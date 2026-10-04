@@ -1,0 +1,246 @@
+{
+  "checks": {
+    "cli_text_source": {
+      "commit": "235198ff900dbb851a5fdcc966c94db7857f556d",
+      "path": "cmd/recovery/main.go",
+      "role": "realstart",
+      "sha256": "689e2f1066c9fac77bade6d3844903412987420fc59dd73f4c1edd0de91a766d"
+    },
+    "judged": {
+      "expected": [
+        "check-passed",
+        "update-failure-line",
+        "sidecar",
+        "completion-marker",
+        "forward-dispatch",
+        "paused",
+        "no-rollback",
+        "candidate-installed",
+        "owner-retry-not-run",
+        "retry-command-printed",
+        "cli-real-start-text",
+        "cli-panel-log-command",
+        "cli-paused-text",
+        "web-catalogue",
+        "workloads-kept-running",
+        "panel-down-until-end"
+      ],
+      "findings": [],
+      "kind": "real-start",
+      "native_evidence": false,
+      "unknown": [],
+      "verdict": "as-expected"
+    },
+    "observations": {
+      "attempts": {
+        "automatic": [
+          {
+            "at": "2026-10-01T23:11:58.286648Z",
+            "attempt": "1",
+            "direction": "forward",
+            "operation": "update",
+            "phase": "completion"
+          },
+          {
+            "at": "2026-10-01T23:13:40.519320Z",
+            "attempt": "2",
+            "direction": "forward",
+            "operation": "update",
+            "phase": "completion"
+          },
+          {
+            "at": "2026-10-01T23:15:23.544039Z",
+            "attempt": "3",
+            "direction": "forward",
+            "operation": "update",
+            "phase": "completion"
+          }
+        ],
+        "automatic_count": 3,
+        "journal_admissions": [
+          {
+            "at": "2026-10-01T23:11:58.361195+00:00",
+            "attempt": "1",
+            "snapshot": "20261001T231030Z-from-unknown-to-235198ff900dbb851a5fdcc966c94db7857f556d-e8d76e391ba6c2105d0aaa34fc1375c1"
+          },
+          {
+            "at": "2026-10-01T23:13:40.603314+00:00",
+            "attempt": "2",
+            "snapshot": "20261001T231030Z-from-unknown-to-235198ff900dbb851a5fdcc966c94db7857f556d-e8d76e391ba6c2105d0aaa34fc1375c1"
+          },
+          {
+            "at": "2026-10-01T23:15:23.629218+00:00",
+            "attempt": "3",
+            "snapshot": "20261001T231030Z-from-unknown-to-235198ff900dbb851a5fdcc966c94db7857f556d-e8d76e391ba6c2105d0aaa34fc1375c1"
+          }
+        ],
+        "owner": [],
+        "owner_count": 0
+      },
+      "check_reasons": [],
+      "cli": {
+        "by_key": {
+          "panel_start_unverified.pending": {
+            "en": 8,
+            "first_utc": "2026-10-01T23:12:06Z",
+            "last_utc": "2026-10-01T23:13:02Z",
+            "samples": 8,
+            "tr": 8
+          },
+          "pause_pending": {
+            "en": 5,
+            "first_utc": "2026-10-01T23:16:45Z",
+            "last_utc": "2026-10-01T23:17:07Z",
+            "samples": 5,
+            "tr": 5
+          },
+          "paused": {
+            "en": 1,
+            "first_utc": "2026-10-01T23:17:17Z",
+            "last_utc": "2026-10-01T23:17:17Z",
+            "samples": 1,
+            "tr": 1
+          },
+          "paused.renewal.on": {
+            "en": 1,
+            "first_utc": "2026-10-01T23:17:17Z",
+            "last_utc": "2026-10-01T23:17:17Z",
+            "samples": 1,
+            "tr": 1
+          }
+        },
+        "mismatches": [],
+        "panel_log_command": "sudo journalctl -u celikpanel-panel -n 50",
+        "panel_log_command_seen": {
+          "en": true,
+          "tr": true
+        },
+        "recorded_cause_lines": {
+          "en": 8,
+          "tr": 8
+        }
+      },
+      "completion_marker_seen": true,
+      "database": "equal-except-volatile",
+      "final": {
+        "automatic_recovery": "paused_retry_limit",
+        "first_failure_code": "panel_start_unverified",
+        "observation": "known",
+        "observed_at": "2026-10-01T23:17:08Z",
+        "phase": "recovery_required",
+        "previous_failure": "recovery_failed",
+        "reason": "recovery_incomplete",
+        "renewal_before_update": "on",
+        "request_id": "c76bec3d5b4a879a84cc1edb2cc02637",
+        "schema": "celikpanel-recovery-status/v1",
+        "terminal_proof": "none"
+      },
+      "installed": "candidate",
+      "outcome": "paused-owner-action-required",
+      "owner_retry_run": false,
+      "panel_verdict": "down-from-update-until-end",
+      "printed_retry_command": "/usr/libexec/celikpanel/recovery recover --retry --snapshot 20261001T231030Z-from-unknown-to-235198ff900dbb851a5fdcc966c94db7857f556d-e8d76e391ba6c2105d0aaa34fc1375c1",
+      "receipt_dispatches": [
+        {
+          "attempt": "1",
+          "direction": "forward",
+          "operation": "update",
+          "phase": "completion"
+        },
+        {
+          "attempt": "2",
+          "direction": "forward",
+          "operation": "update",
+          "phase": "completion"
+        },
+        {
+          "attempt": "3",
+          "direction": "forward",
+          "operation": "update",
+          "phase": "completion"
+        }
+      ],
+      "receipt_phases": [
+        "completion",
+        "completion",
+        "completion"
+      ],
+      "renewal_sidecar": {
+        "present": true,
+        "valid": true,
+        "value": "on"
+      },
+      "sidecar": {
+        "code": "panel_start_unverified",
+        "present": true,
+        "valid": true
+      },
+      "track_stop": null,
+      "update_card": null,
+      "update_failure_codes": [
+        "panel_start_unverified"
+      ],
+      "update_failure_lines": [
+        {
+          "code": "panel_start_unverified",
+          "reason": "the new panel did not stay running and answer on its own address after the update was applied",
+          "state": "recovery_required"
+        }
+      ],
+      "views": {
+        "last": {
+          "offline_page_served": false,
+          "panel_recovery_status": false,
+          "panel_update_status": false,
+          "root_cli": true
+        },
+        "ssh_owner_view": "not attempted (recovery view needs an interactive SSH terminal and a one-time code)",
+        "summary": {
+          "panel_recovery_status": {
+            "reachable": 6,
+            "samples": 56
+          },
+          "panel_update_status": {
+            "reachable": 6,
+            "samples": 56
+          },
+          "root_cli": {
+            "reachable": 56,
+            "samples": 56
+          }
+        }
+      },
+      "web_keys": [
+        "recovery.automatic.cause.panel_start_unverified",
+        "recovery.automatic.inspect",
+        "recovery.automatic.pausedHelp",
+        "recovery.automatic.pausedTitle",
+        "recovery.automatic.pausingHelp",
+        "recovery.automatic.pausingTitle",
+        "recovery.automatic.renewal",
+        "recovery.automatic.resume",
+        "recovery.automatic.retryHelp",
+        "recovery.automatic.retryTitle",
+        "recovery.failure.panel_start_unverified.pending",
+        "recovery.next.running",
+        "recovery.phase.recovering",
+        "recovery.phase.running",
+        "recovery.previousFailure",
+        "recovery.reason.panel_start_unverified",
+        "recovery.reason.recovery_failed"
+      ],
+      "web_keys_missing": [],
+      "web_screen_unavailable": null,
+      "workloads": {
+        "cron": "never-interrupted",
+        "dns": "not-provided-external-dns",
+        "smtp": "never-interrupted",
+        "web": "never-interrupted"
+      }
+    }
+  },
+  "finished_at": "2026-10-01T23:17:28Z",
+  "name": "kind-expectation",
+  "started_at": "2026-10-01T23:17:28Z",
+  "verdict": "passed"
+}

@@ -1,0 +1,89 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "MailSettingsPanel setup",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/domains/1/mail/setup"
+  },
+  "response": {
+    "elapsed_seconds": 0.016,
+    "headers": [
+      [
+        "Cache-Control",
+        "no-store"
+      ],
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Thu, 01 Oct 2026 11:58:42 GMT"
+      ],
+      [
+        "Content-Length",
+        "353"
+      ]
+    ],
+    "json": {
+      "imap": {
+        "host": "mail.upd1-owner.test",
+        "port": 993,
+        "security": "SSL/TLS"
+      },
+      "mail_host": "mail.upd1-owner.test",
+      "pop3": {
+        "host": "mail.upd1-owner.test",
+        "port": 995,
+        "security": "SSL/TLS"
+      },
+      "smtp": {
+        "auth_required": true,
+        "host": "mail.upd1-owner.test",
+        "port": 587,
+        "security": "STARTTLS"
+      },
+      "username_is_full_email": true,
+      "webmail_available": true,
+      "webmail_url": "/webmail/"
+    },
+    "status": 200,
+    "text": null
+  }
+}

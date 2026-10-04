@@ -1,0 +1,159 @@
+2026-09-30T06:25:50+00:00 dns-arch sudo[3141]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:25:50+00:00 dns-arch sshd-session[3140]: Received disconnect from 10.0.2.2 port 50612:11: disconnected by user
+2026-09-30T06:25:50+00:00 dns-arch sudo[3149]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:25:50+00:00 dns-arch sshd-session[3148]: Received disconnect from 10.0.2.2 port 50626:11: disconnected by user
+2026-09-30T06:25:51+00:00 dns-arch sudo[3157]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:25:51+00:00 dns-arch sshd-session[3156]: Received disconnect from 10.0.2.2 port 50630:11: disconnected by user
+2026-09-30T06:25:52+00:00 dns-arch named[2077]: client @0x7f7222a83800 192.0.2.10#36289 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790749546)
+2026-09-30T06:25:52+00:00 dns-arch named[2077]: client @0x7f7222a83800 192.0.2.10#36289 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 230 bytes, 0.001 secs (230000 bytes/sec) (serial 1790749546)
+2026-09-30T06:25:52+00:00 dns-arch named[2077]: client @0x7f7222a83800 192.0.2.10#50119 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790749546)
+2026-09-30T06:25:52+00:00 dns-arch named[2077]: client @0x7f7222a83800 192.0.2.10#50119 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 230 bytes, 0.001 secs (230000 bytes/sec) (serial 1790749546)
+2026-09-30T06:25:54+00:00 dns-arch named[2077]: client @0x7f7222a80000 192.0.2.10#10983: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T06:25:54+00:00 dns-arch named[2077]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#10983: no serial
+2026-09-30T06:25:54+00:00 dns-arch named[2077]: zone catalog-c000020a.celikpanel.invalid/IN: Transfer started.
+2026-09-30T06:25:54+00:00 dns-arch named[2077]: 0x7f722563f000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: connected using 192.0.2.10#53
+2026-09-30T06:25:54+00:00 dns-arch named[2077]: zone catalog-c000020a.celikpanel.invalid/IN: transferred serial 1790749547
+2026-09-30T06:25:54+00:00 dns-arch named[2077]: 0x7f722563f000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer status: success
+2026-09-30T06:25:54+00:00 dns-arch named[2077]: 0x7f722563f000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer completed: 3 messages, 4 records, 300 bytes, 0.047 secs (6382 bytes/sec) (serial 1790749547)
+2026-09-30T06:25:54+00:00 dns-arch named[2077]: catz: catalog-c000020a.celikpanel.invalid: reload start
+2026-09-30T06:25:54+00:00 dns-arch named[2077]: catz: updating catalog zone 'catalog-c000020a.celikpanel.invalid' with serial 1790749547
+2026-09-30T06:25:54+00:00 dns-arch named[2077]: catz: deleting zone 'pair-accept.test' from catalog 'catalog-c000020a.celikpanel.invalid' - success
+2026-09-30T06:25:54+00:00 dns-arch named[2077]: catz: catz_delzone_cb: zone 'pair-accept.test' deleted
+2026-09-30T06:25:54+00:00 dns-arch named[2077]: catz: catalog-c000020a.celikpanel.invalid: reload done: success
+2026-09-30T06:25:55+00:00 dns-arch named[2077]: client @0x7f7222a83800 192.0.2.10#60613 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790749547)
+2026-09-30T06:25:55+00:00 dns-arch named[2077]: client @0x7f7222a83800 192.0.2.10#60613 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1790749547)
+2026-09-30T06:25:56+00:00 dns-arch named[2077]: client @0x7f7225697000 192.0.2.10#33847 (pair-accept.test): bad zone transfer request: 'pair-accept.test/IN': non-authoritative zone (NOTAUTH)
+2026-09-30T06:25:57+00:00 dns-arch named[2077]: client @0x7f7222a83800 192.0.2.10#48995 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790749547)
+2026-09-30T06:25:57+00:00 dns-arch named[2077]: client @0x7f7222a83800 192.0.2.10#48995 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1790749547)
+2026-09-30T06:25:57+00:00 dns-arch named[2077]: client @0x7f7222a81c00 192.0.2.10#10983: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T06:25:57+00:00 dns-arch named[2077]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#10983: no serial
+2026-09-30T06:25:58+00:00 dns-arch named[2077]: client @0x7f7222a83800 192.0.2.10#39925 (pair-accept.test): bad zone transfer request: 'pair-accept.test/IN': non-authoritative zone (NOTAUTH)
+2026-09-30T06:25:58+00:00 dns-arch named[2077]: received control channel command 'zonestatus pair-accept.test'
+2026-09-30T06:25:58+00:00 dns-arch named[2077]: received control channel command 'zonestatus catalog-c000020a.celikpanel.invalid'
+2026-09-30T06:25:58+00:00 dns-arch sudo[3165]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:25:58+00:00 dns-arch sshd-session[3164]: Received disconnect from 10.0.2.2 port 36420:11: disconnected by user
+2026-09-30T06:25:59+00:00 dns-arch sudo[3182]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:25:59+00:00 dns-arch sshd-session[3181]: Received disconnect from 10.0.2.2 port 36428:11: disconnected by user
+2026-09-30T06:25:59+00:00 dns-arch sudo[3193]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:25:59+00:00 dns-arch sshd-session[3192]: Received disconnect from 10.0.2.2 port 36444:11: disconnected by user
+2026-09-30T06:25:59+00:00 dns-arch sudo[3203]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:25:59+00:00 dns-arch sshd-session[3202]: Received disconnect from 10.0.2.2 port 36456:11: disconnected by user
+2026-09-30T06:26:00+00:00 dns-arch useradd[3232]: new group: name=celikpeer, GID=968
+2026-09-30T06:26:00+00:00 dns-arch useradd[3232]: new user: name=celikpeer, UID=968, GID=968, home=/var/lib/bind-peer-inspector, shell=/bin/sh, from=none
+2026-09-30T06:26:00+00:00 dns-arch sshd[561]: Received SIGHUP; restarting.
+2026-09-30T06:26:00+00:00 dns-arch sshd[561]: Server listening on 0.0.0.0 port 22.
+2026-09-30T06:26:00+00:00 dns-arch sshd[561]: Server listening on :: port 22.
+2026-09-30T06:26:00+00:00 dns-arch sudo[3214]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:26:00+00:00 dns-arch sshd-session[3213]: Received disconnect from 10.0.2.2 port 36472:11: disconnected by user
+2026-09-30T06:26:00+00:00 dns-arch sudo[3240]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:26:00+00:00 dns-arch sshd-session[3237]: Received disconnect from 10.0.2.2 port 36482:11: disconnected by user
+2026-09-30T06:26:00+00:00 dns-arch sudo[3257]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:26:00+00:00 dns-arch sshd-session[3256]: Received disconnect from 10.0.2.2 port 36494:11: disconnected by user
+2026-09-30T06:26:01+00:00 dns-arch sudo[3268]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:26:01+00:00 dns-arch sshd-session[3267]: Received disconnect from 10.0.2.2 port 36496:11: disconnected by user
+2026-09-30T06:26:01+00:00 dns-arch sshd-session[3278]: Received disconnect from 10.0.2.2 port 36508:11: disconnected by user
+2026-09-30T06:26:02+00:00 dns-arch sudo[3285]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:26:02+00:00 dns-arch sshd-session[3284]: Received disconnect from 10.0.2.2 port 36522:11: disconnected by user
+2026-09-30T06:26:02+00:00 dns-arch sudo[3296]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:26:02+00:00 dns-arch sshd-session[3295]: Received disconnect from 10.0.2.2 port 36534:11: disconnected by user
+2026-09-30T06:26:03+00:00 dns-arch named[2077]: client @0x7f7222a83800 192.0.2.10#58911 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790749547)
+2026-09-30T06:26:03+00:00 dns-arch named[2077]: client @0x7f7222a83800 192.0.2.10#58911 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1790749547)
+2026-09-30T06:26:04+00:00 dns-arch named[2077]: client @0x7f7222a83800 192.0.2.10#59411 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790749547)
+2026-09-30T06:26:04+00:00 dns-arch named[2077]: client @0x7f7222a83800 192.0.2.10#59411 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1790749547)
+2026-09-30T06:26:04+00:00 dns-arch named[2077]: client @0x7f7222a80000 192.0.2.10#10983: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T06:26:04+00:00 dns-arch named[2077]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#10983: no serial
+2026-09-30T06:26:04+00:00 dns-arch named[2077]: client @0x7f7225697000 192.0.2.10#43241 (pair-accept.test): bad zone transfer request: 'pair-accept.test/IN': non-authoritative zone (NOTAUTH)
+2026-09-30T06:26:11+00:00 dns-arch sudo[3319]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:26:11+00:00 dns-arch sshd-session[3318]: Received disconnect from 10.0.2.2 port 45718:11: disconnected by user
+2026-09-30T06:26:12+00:00 dns-arch sshd-session[3324]: Accepted publickey for celikpeer from 192.0.2.10 port 52966 ssh2: ED25519 SHA256:eHmZhdpfdTD6cmatlTZA4bx2z84MQmilKdlzg4u45fc
+2026-09-30T06:26:12+00:00 dns-arch sshd-session[3324]: pam_unix(sshd:session): session opened for user celikpeer(uid=968) by celikpeer(uid=0)
+2026-09-30T06:26:12+00:00 dns-arch systemd-logind[328]: New session '42' of user 'celikpeer' with class 'user' and type 'tty'.
+2026-09-30T06:26:12+00:00 dns-arch (systemd)[3329]: pam_warn(systemd-user:setcred): function=[pam_sm_setcred] flags=0x8002 service=[systemd-user] terminal=[] user=[celikpeer] ruser=[<unknown>] rhost=[<unknown>]
+2026-09-30T06:26:12+00:00 dns-arch (systemd)[3329]: pam_unix(systemd-user:session): session opened for user celikpeer(uid=968) by celikpeer(uid=0)
+2026-09-30T06:26:12+00:00 dns-arch systemd-logind[328]: New session '43' of user 'celikpeer' with class 'manager-early' and type 'unspecified'.
+2026-09-30T06:26:12+00:00 dns-arch systemd[1]: Started Session 42 of User celikpeer.
+2026-09-30T06:26:12+00:00 dns-arch sudo[3339]: celikpeer : PWD=/var/lib/bind-peer-inspector ; USER=root ; COMMAND=/usr/local/libexec/celikpanel-bind-peer-inspect
+2026-09-30T06:26:12+00:00 dns-arch sudo[3339]: pam_unix(sudo:session): session opened for user root(uid=0) by celikpeer(uid=968)
+2026-09-30T06:26:12+00:00 dns-arch named[2077]: received control channel command 'zonestatus catalog-c000020a.celikpanel.invalid'
+2026-09-30T06:26:12+00:00 dns-arch named[2077]: client @0x7f7225697000 127.0.0.1#38406 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790749547)
+2026-09-30T06:26:12+00:00 dns-arch named[2077]: client @0x7f7225697000 127.0.0.1#38406 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 200 bytes, 0.001 secs (200000 bytes/sec) (serial 1790749547)
+2026-09-30T06:26:12+00:00 dns-arch named[2077]: received control channel command 'zonestatus pair-accept.test'
+2026-09-30T06:26:12+00:00 dns-arch named[2077]: received control channel command 'zonestatus catalog-c000020a.celikpanel.invalid'
+2026-09-30T06:26:12+00:00 dns-arch named[2077]: client @0x7f7225697000 127.0.0.1#38410 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790749547)
+2026-09-30T06:26:12+00:00 dns-arch named[2077]: client @0x7f7225697000 127.0.0.1#38410 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 200 bytes, 0.001 secs (200000 bytes/sec) (serial 1790749547)
+2026-09-30T06:26:12+00:00 dns-arch named[2077]: received control channel command 'zonestatus pair-accept.test'
+2026-09-30T06:26:12+00:00 dns-arch sudo[3339]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:26:12+00:00 dns-arch sshd-session[3338]: Connection closed by 192.0.2.10 port 52966
+2026-09-30T06:26:12+00:00 dns-arch sshd-session[3324]: pam_unix(sshd:session): session closed for user celikpeer
+2026-09-30T06:26:14+00:00 dns-arch named[2077]: client @0x7f7225697000 192.0.2.10#35509 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790749547)
+2026-09-30T06:26:14+00:00 dns-arch named[2077]: client @0x7f7225697000 192.0.2.10#35509 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1790749547)
+2026-09-30T06:26:14+00:00 dns-arch named[2077]: client @0x7f7225697000 192.0.2.10#45277 (pair-accept.test): bad zone transfer request: 'pair-accept.test/IN': non-authoritative zone (NOTAUTH)
+2026-09-30T06:26:21+00:00 dns-arch sudo[3426]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:26:21+00:00 dns-arch sshd-session[3425]: Received disconnect from 10.0.2.2 port 39536:11: disconnected by user
+2026-09-30T06:26:23+00:00 dns-arch (sd-pam)[3331]: pam_unix(systemd-user:session): session closed for user celikpeer
+2026-09-30T06:26:32+00:00 dns-arch sudo[3456]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:26:32+00:00 dns-arch sshd-session[3455]: Received disconnect from 10.0.2.2 port 47004:11: disconnected by user
+2026-09-30T06:26:42+00:00 dns-arch sudo[3481]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:26:42+00:00 dns-arch sshd-session[3480]: Received disconnect from 10.0.2.2 port 34392:11: disconnected by user
+2026-09-30T06:26:46+00:00 dns-arch named[2077]: client @0x7f7222a80000 192.0.2.10#10983: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T06:26:46+00:00 dns-arch named[2077]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#10983: no serial
+2026-09-30T06:26:46+00:00 dns-arch named[2077]: zone catalog-c000020a.celikpanel.invalid/IN: Transfer started.
+2026-09-30T06:26:46+00:00 dns-arch named[2077]: 0x7f722563f000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: connected using 192.0.2.10#53
+2026-09-30T06:26:46+00:00 dns-arch named[2077]: zone catalog-c000020a.celikpanel.invalid/IN: transferred serial 1790749606
+2026-09-30T06:26:46+00:00 dns-arch named[2077]: 0x7f722563f000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer status: success
+2026-09-30T06:26:46+00:00 dns-arch named[2077]: 0x7f722563f000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer completed: 3 messages, 4 records, 300 bytes, 0.045 secs (6666 bytes/sec) (serial 1790749606)
+2026-09-30T06:26:46+00:00 dns-arch named[2077]: catz: catalog-c000020a.celikpanel.invalid: reload start
+2026-09-30T06:26:46+00:00 dns-arch named[2077]: catz: updating catalog zone 'catalog-c000020a.celikpanel.invalid' with serial 1790749606
+2026-09-30T06:26:46+00:00 dns-arch named[2077]: catz: catalog-c000020a.celikpanel.invalid: reload done: success
+2026-09-30T06:26:53+00:00 dns-arch sudo[3533]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:26:53+00:00 dns-arch sshd-session[3532]: Received disconnect from 10.0.2.2 port 36372:11: disconnected by user
+2026-09-30T06:27:04+00:00 dns-arch sudo[3558]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:27:04+00:00 dns-arch sshd-session[3557]: Received disconnect from 10.0.2.2 port 43184:11: disconnected by user
+2026-09-30T06:27:14+00:00 dns-arch sudo[3583]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:27:14+00:00 dns-arch sshd-session[3582]: Received disconnect from 10.0.2.2 port 43272:11: disconnected by user
+2026-09-30T06:27:25+00:00 dns-arch sudo[3641]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:27:25+00:00 dns-arch sshd-session[3640]: Received disconnect from 10.0.2.2 port 59562:11: disconnected by user
+2026-09-30T06:27:35+00:00 dns-arch sudo[3666]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:27:35+00:00 dns-arch sshd-session[3665]: Received disconnect from 10.0.2.2 port 53544:11: disconnected by user
+2026-09-30T06:27:46+00:00 dns-arch sudo[3691]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:27:46+00:00 dns-arch sshd-session[3690]: Received disconnect from 10.0.2.2 port 55382:11: disconnected by user
+2026-09-30T06:27:56+00:00 dns-arch sudo[3743]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:27:56+00:00 dns-arch sshd-session[3742]: Received disconnect from 10.0.2.2 port 42986:11: disconnected by user
+2026-09-30T06:28:07+00:00 dns-arch sudo[3762]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:28:07+00:00 dns-arch sshd-session[3761]: Received disconnect from 10.0.2.2 port 49546:11: disconnected by user
+2026-09-30T06:28:17+00:00 dns-arch sudo[3789]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:28:17+00:00 dns-arch sshd-session[3788]: Received disconnect from 10.0.2.2 port 37962:11: disconnected by user
+2026-09-30T06:28:28+00:00 dns-arch sudo[3847]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:28:28+00:00 dns-arch sshd-session[3846]: Received disconnect from 10.0.2.2 port 36326:11: disconnected by user
+2026-09-30T06:28:39+00:00 dns-arch sudo[3872]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:28:39+00:00 dns-arch sshd-session[3871]: Received disconnect from 10.0.2.2 port 39818:11: disconnected by user
+2026-09-30T06:28:49+00:00 dns-arch sudo[3898]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:28:49+00:00 dns-arch sshd-session[3897]: Received disconnect from 10.0.2.2 port 53146:11: disconnected by user
+2026-09-30T06:29:00+00:00 dns-arch sudo[3958]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:29:00+00:00 dns-arch sshd-session[3956]: Received disconnect from 10.0.2.2 port 38148:11: disconnected by user
+2026-09-30T06:29:11+00:00 dns-arch sudo[3977]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:29:11+00:00 dns-arch sshd-session[3976]: Received disconnect from 10.0.2.2 port 55634:11: disconnected by user
+2026-09-30T06:29:21+00:00 dns-arch sudo[4004]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:29:21+00:00 dns-arch sshd-session[4003]: Received disconnect from 10.0.2.2 port 36354:11: disconnected by user
+2026-09-30T06:29:32+00:00 dns-arch sudo[4063]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:29:32+00:00 dns-arch sshd-session[4062]: Received disconnect from 10.0.2.2 port 37388:11: disconnected by user
+2026-09-30T06:29:42+00:00 dns-arch sudo[4082]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:29:42+00:00 dns-arch sshd-session[4081]: Received disconnect from 10.0.2.2 port 58440:11: disconnected by user
+2026-09-30T06:29:53+00:00 dns-arch sudo[4111]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:29:53+00:00 dns-arch sshd-session[4110]: Received disconnect from 10.0.2.2 port 38788:11: disconnected by user
+2026-09-30T06:30:04+00:00 dns-arch sudo[4165]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:30:04+00:00 dns-arch sshd-session[4164]: Received disconnect from 10.0.2.2 port 33866:11: disconnected by user
+2026-09-30T06:30:14+00:00 dns-arch sudo[4185]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:30:14+00:00 dns-arch sshd-session[4184]: Received disconnect from 10.0.2.2 port 34662:11: disconnected by user
+2026-09-30T06:30:25+00:00 dns-arch sudo[4247]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:30:25+00:00 dns-arch sshd-session[4245]: Received disconnect from 10.0.2.2 port 58366:11: disconnected by user
+2026-09-30T06:30:36+00:00 dns-arch sudo[4266]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:30:36+00:00 dns-arch sshd-session[4265]: Received disconnect from 10.0.2.2 port 43706:11: disconnected by user
+2026-09-30T06:30:46+00:00 dns-arch sudo[4285]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:30:46+00:00 dns-arch sshd-session[4284]: Received disconnect from 10.0.2.2 port 39054:11: disconnected by user
+2026-09-30T06:30:57+00:00 dns-arch sudo[4343]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:30:57+00:00 dns-arch sshd-session[4342]: Received disconnect from 10.0.2.2 port 37198:11: disconnected by user
+2026-09-30T06:31:07+00:00 dns-arch sudo[4368]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:31:07+00:00 dns-arch sshd-session[4367]: Received disconnect from 10.0.2.2 port 39184:11: disconnected by user
+2026-09-30T06:31:18+00:00 dns-arch sudo[4393]: pam_unix(sudo:session): session closed for user root
+2026-09-30T06:31:18+00:00 dns-arch sshd-session[4392]: Received disconnect from 10.0.2.2 port 60912:11: disconnected by user

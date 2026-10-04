@@ -1,0 +1,72 @@
+#!/bin/bash
+# Read-only pair6 collection on one guest. usage: coll-extra.sh CELL LABEL NODE PORT ROLE ENGINE
+# Output: /root/cp-pair6/obs/LABEL/NODE-*.txt. Never prints key material: lines naming
+# secret/algorithm/key blocks are dropped; the challenge journal is reduced to named fields.
+CELL=$1; LABEL=$2; NODE=$3; PORT=$4; ROLE=$5; ENG=$6
+H=$(printf %s "$CELL" | sha256sum | cut -c1-24)
+KH=/var/tmp/cp-pair6-work/cells/$H/ssh-known-hosts
+O=/root/cp-pair6/obs/$LABEL; mkdir -p $O
+sshn() { timeout 180 ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$KH -i /var/tmp/cp-pair6-key/id_ed25519 -p $PORT celik@127.0.0.1 "$@"; }
+if [[ $ENG == bind ]]; then
+sshn "ROLE=$ROLE bash -s" > $O/$NODE-bind-catalog-stanzas.txt 2>&1 <<'R'
+C=/etc/named.conf; [ -f /etc/bind/named.conf ] && C=/etc/bind/named.conf
+echo "## $(date -u +%FT%TZ) role=$ROLE named-checkconf -p $C : options allow-transfer and every catalog-*/member zone stanza (secret/algorithm/key lines dropped)"
+NCP=$(sudo -n named-checkconf -p $C 2>&1 | grep -v -i -E 'secret|algorithm|^\s*key ')
+echo "### options-scope allow-transfer"
+awk '/^options \{/{p=1} p && /allow-transfer/{print} /^\};/{p=0}' <<< "$NCP"
+echo "### zone stanzas (catalog and pair-accept.test)"
+awk '/^zone "(catalog-[^"]*|pair-accept\.test)"/{p=1} p{print} p && /^\};/{p=0}' <<< "$NCP"
+echo "### generation receipts: pairing object only (id, path, role, secondary_config_version, catalogs)"
+for r in $(sudo -n find / -xdev -name receipt.json -path '*/generations/*' 2>/dev/null | sort); do
+  echo "#### $r $(sudo -n stat -c '%U:%G %a %y' $r)"
+  sudo -n cat $r | python3 -c 'import json,sys
+d=json.load(sys.stdin)
+def find(o, path=""):
+    if isinstance(o, dict):
+        for k,v in o.items():
+            if k in ("secondary_config_version","role","local_catalog","peer_catalog","catalog_serial","local_ip","peer_ip","generation_id","id","schema"):
+                print(" ", (path+"."+k).lstrip("."), "=", json.dumps(v))
+            find(v, path+"."+k)
+find(d)
+print("  (secondary_config_version key present:", "secondary_config_version" in json.dumps(d), ")")' 2>&1
+done
+echo "### current generation pointer(s)"
+for l in $(sudo -n find / -xdev -maxdepth 6 -type l -path '*celikpanel*' -name 'current' 2>/dev/null); do echo "$l -> $(sudo -n readlink $l)"; done
+echo "### named journal lines naming 127.0.0.1 or ::1 with denied/transfer (all boots)"
+sudo -n journalctl --no-pager -o short-iso _COMM=named | grep -E '127\.0\.0\.1|::1' | grep -i -E 'denied|transfer' | tail -40
+echo "### named journal lines with denied (any client, all boots)"
+sudo -n journalctl --no-pager -o short-iso _COMM=named | grep -i 'denied' | tail -40
+echo "### inspector sudo lines (all boots)"
+sudo -n journalctl --no-pager -o short-iso | grep -E 'sudo\[' | grep -i -E 'celikpeer|inspect' | tail -40
+echo "(end)"
+R
+fi
+if [[ $ENG == pdns ]]; then
+sshn "ROLE=$ROLE bash -s" > $O/$NODE-pdns-daemon-group.txt 2>&1 <<'R'
+echo "## $(date -u +%FT%TZ) role=$ROLE pdns daemon identity (read-only)"
+P=$(systemctl show -p MainPID --value pdns.service); echo "pdns.service MainPID=$P"
+sudo -n grep -E '^(Name|Uid|Gid|Groups):' /proc/$P/status
+echo "group names: $(getent group $(sudo -n awk '/^Gid:/{print $2}' /proc/$P/status) | cut -d: -f1)"
+sudo -n ls -la --time-style=full-iso /etc/powerdns /etc/powerdns/pdns.d 2>&1
+sudo -n sha256sum /etc/powerdns/pdns.conf /etc/powerdns/pdns.d/*.conf 2>&1
+echo "### active (non-comment) pdns.conf lines (secret/key/password lines dropped)"
+sudo -n grep -v -E '^\s*(#|$)' /etc/powerdns/pdns.conf | grep -v -i -E 'secret|key|password'
+for f in /etc/powerdns/pdns.d/*.conf; do echo "### $f"; sudo -n grep -v -E '^\s*(#|$)' $f | grep -v -i -E 'secret|key|password'; done
+echo "(end)"
+R
+fi
+sshn "ROLE=$ROLE bash -s" > $O/$NODE-agent-panel-deletion-journal.txt 2>&1 <<'R'
+echo "## $(date -u +%FT%TZ) role=$ROLE Agent journal lines naming peer/inspect/pending/deletion/generation (all boots; secret lines dropped)"
+sudo -n journalctl -u celikpanel-agent.service --no-pager -o short-iso | grep -i -E 'peer|inspect|pending|delet|generation|catalog|mail' | grep -v -i 'secret' | tail -120
+echo "## Panel journal lines naming deletion/mail (all boots)"
+sudo -n journalctl -u celikpanel-panel.service --no-pager -o short-iso | grep -i -E 'delet|mail runtime|mail' | grep -v -i 'secret' | tail -60
+echo "## PowerDNS peer challenge journal (agent-private), named fields only"
+J=/var/lib/celikpanel-agent-private/pdns-peer-challenge-v1.json
+if sudo -n test -e $J; then sudo -n stat -c '%n %U:%G %a %y' $J; sudo -n cat $J | python3 -c 'import json,sys
+d=json.load(sys.stdin); r=d.get("request") or {}
+print(json.dumps({"schema":d.get("schema"),"state":d.get("state"),"ledger_attempt":d.get("ledger_attempt"),"request":{k:r.get(k) for k in ("deleted_zone","primary_ip","peer_ip","catalog_name","catalog_serial","view","attempt")}}, sort_keys=True))'; else echo "absent: $J"; fi
+echo "## BIND peer challenge journal(s) (agent-private), named fields only"
+for J in $(sudo -n find /var/lib/celikpanel-agent-private -maxdepth 1 -name '*peer*challenge*' 2>/dev/null); do sudo -n stat -c '%n %U:%G %a %y' $J; done
+echo "(end)"
+R
+ls -la $O

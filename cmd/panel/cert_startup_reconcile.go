@@ -77,13 +77,18 @@ func referencedStagedCertificateLineages(
 // TLSA dependent for each active secure-mail certificate. Failures are visible
 // in logs but do not make an otherwise usable panel unavailable; the same
 // derived-state reconciliation runs next start. No user setting is changed.
-func (p *Panel) reconcileCertificateRuntimeAtStartup() {
+//
+// The result names only the one step that may be retried later in this
+// process: the mail dependents, when the host refused them as busy (a Panel
+// started inside an update or rollback). Every other outcome returns the zero
+// value and keeps the next-start behaviour.
+func (p *Panel) reconcileCertificateRuntimeAtStartup() startupCertificateDeferral {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
 	if err := p.requireMatchingAgentBuild(ctx); err != nil {
 		log.Printf("certificate startup reconcile: verify panel-agent build pair: %v", err)
-		return
+		return startupCertificateDeferral{}
 	}
 
 	referencedLineages, err := referencedStagedCertificateLineages(
@@ -92,7 +97,7 @@ func (p *Panel) reconcileCertificateRuntimeAtStartup() {
 	)
 	if err != nil {
 		log.Printf("certificate startup reconcile: list referenced lineages: %v", err)
-		return
+		return startupCertificateDeferral{}
 	}
 
 	var lineageResp transport.ReconcileSiteCertLineagesResponse
@@ -153,7 +158,7 @@ func (p *Panel) reconcileCertificateRuntimeAtStartup() {
 			err,
 			rollbackErr,
 		)
-		return
+		return startupCertificateDeferral{}
 	} else if hostedVhosts > 0 {
 		log.Printf(
 			"certificate startup reconcile: restored %d hosted vhosts with one nginx validation and reload",
@@ -174,12 +179,25 @@ func (p *Panel) reconcileCertificateRuntimeAtStartup() {
 			pending.eligible,
 		)
 		promoteCancel()
+		// upd11 F2: inside an update or rollback the host refuses the mail
+		// publication as busy, and nothing else repeats it in this process.
+		// Say so in the same line and hand the step to the deferred retry.
+		deferral := startupCertificateDeferral{}
+		retryNote := ""
+		if startupWorkDeferredForBusyHost(dependentErr) {
+			deferral = startupCertificateDeferral{
+				deferred:       true,
+				pendingDomains: append([]int(nil), pending.eligible...),
+			}
+			retryNote = "; " + startupDeferredRetryNote
+		}
 		log.Printf(
-			"certificate startup reconcile: certificate dependents: %v; preserve pending outbox: %v",
+			"certificate startup reconcile: certificate dependents: %v; preserve pending outbox: %v%s",
 			dependentErr,
 			promoteErr,
+			retryNote,
 		)
-		return
+		return deferral
 	}
 
 	clearCtx, clearCancel := sslCompensationContext()
@@ -193,7 +211,7 @@ func (p *Panel) reconcileCertificateRuntimeAtStartup() {
 			"certificate startup reconcile: clear completed pending certificate outbox: %v",
 			clearErr,
 		)
-		return
+		return startupCertificateDeferral{}
 	}
 
 	if daneState := currentDANEAutomationState(); !daneState.Enabled {
@@ -214,6 +232,7 @@ func (p *Panel) reconcileCertificateRuntimeAtStartup() {
 			len(pending.eligible),
 		)
 	}
+	return startupCertificateDeferral{}
 }
 
 func (p *Panel) preparePendingCertificatesAtStartup(

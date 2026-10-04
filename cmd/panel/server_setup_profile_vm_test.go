@@ -76,7 +76,9 @@ func runServerSetupDisposableProfileDaemon(t *testing.T, profile string) {
 		t.Fatal(err)
 	}
 	defer database.Close()
-	raw, _, err := connectAgentPatiently(context.Background(), dialAgentOnce, nil, nil)
+	dialCtx, dialCancel := context.WithTimeout(context.Background(), 90*time.Second)
+	raw, err := connectAgentPreservingRecovery(dialCtx, nil, dialAgentOnce, defaultRecoveryAgentDialPolicy)
+	dialCancel()
 	if err != nil {
 		t.Fatal(err)
 	}

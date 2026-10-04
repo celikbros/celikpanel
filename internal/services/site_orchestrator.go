@@ -243,7 +243,10 @@ func (so *SiteOrchestrator) CreateSite(ctx context.Context, req *CreateSiteReque
 	}
 
 	if !agentReply.Success {
-		cause := fmt.Errorf("site creation failed: %s", agentReply.ErrorMessage)
+		var cause error = fmt.Errorf("site creation failed: %s", agentReply.ErrorMessage)
+		if agentReply.ErrorCode == transport.HostingRootNotTraversable && agentReply.HostingRoot != nil {
+			cause = &HostingRootNotTraversableError{Block: *agentReply.HostingRoot}
+		}
 		return nil, errors.Join(cause, so.rollbackCreatedSite(agentReq, domain.ID, siteID))
 	}
 

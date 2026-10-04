@@ -1,0 +1,165 @@
+PASS: separated CODE/DATA roots retain source pinning
+PASS: normal preflights retained; independent completion never runs candidate migration
+PASS: capture handoff exact
+PASS: capture handoff not-recovery
+PASS: capture handoff not-resuming
+PASS: capture handoff wrong-token
+PASS: capture handoff wrong-snapshot
+PASS: capture handoff wrong-operation
+PASS: capture handoff missing-marker
+PASS: capture handoff normal-update
+recovery runtime shell contract: ok
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+PASS: fresh updater preparation and compatibility retain FD9; rejected promotion stops admission
+PASS: independent recovery data selection active/present
+PASS: independent recovery data selection active/absent
+PASS: independent recovery data selection active/invalid
+PASS: independent recovery data selection active/unsupported
+PASS: independent recovery data selection active/verified-v1
+PASS: independent recovery data selection active/absent-with-output
+PASS: independent recovery data selection active/v1-with-output
+PASS: independent recovery data selection active/foreign-path
+PASS: independent recovery data selection active/extra-output
+PASS: independent recovery data selection active/legacy
+PASS: independent recovery data selection active/update
+PASS: independent recovery data selection completion/present
+PASS: independent recovery data selection completion/absent
+PASS: independent recovery data selection completion/invalid
+PASS: independent recovery data selection completion/unsupported
+PASS: independent recovery data selection completion/verified-v1
+PASS: independent recovery data selection completion/absent-with-output
+PASS: independent recovery data selection completion/v1-with-output
+PASS: independent recovery data selection completion/foreign-path
+PASS: independent recovery data selection completion/extra-output
+PASS: independent recovery data selection completion/legacy
+PASS: independent recovery data selection completion/update
+PASS: independent recovery data selection completion-scheduler/present
+PASS: independent recovery data selection completion-scheduler/absent
+PASS: independent recovery data selection completion-scheduler/invalid
+PASS: independent recovery data selection completion-scheduler/unsupported
+PASS: independent recovery data selection completion-scheduler/verified-v1
+PASS: independent recovery data selection completion-scheduler/absent-with-output
+PASS: independent recovery data selection completion-scheduler/v1-with-output
+PASS: independent recovery data selection completion-scheduler/foreign-path
+PASS: independent recovery data selection completion-scheduler/extra-output
+PASS: independent recovery data selection completion-scheduler/legacy
+PASS: independent recovery data selection completion-scheduler/update
+PASS: independent recovery data selection scheduler/present
+PASS: independent recovery data selection scheduler/absent
+PASS: independent recovery data selection scheduler/invalid
+PASS: independent recovery data selection scheduler/unsupported
+PASS: independent recovery data selection scheduler/verified-v1
+PASS: independent recovery data selection scheduler/absent-with-output
+PASS: independent recovery data selection scheduler/v1-with-output
+PASS: independent recovery data selection scheduler/foreign-path
+PASS: independent recovery data selection scheduler/extra-output
+PASS: independent recovery data selection scheduler/legacy
+PASS: independent recovery data selection scheduler/update
+PASS: updater completion admission completion/material
+PASS: updater completion admission completion/absent
+PASS: updater completion admission completion/verified-v1
+PASS: updater completion admission completion/known-v2-direct
+PASS: updater completion admission completion/invalid-direct
+PASS: updater completion admission completion/absent-with-output
+PASS: updater completion admission completion/v1-with-output
+PASS: updater completion admission completion/changed-root
+PASS: updater completion admission completion/changed-trusted-root
+PASS: updater completion admission completion/disappeared-material
+PASS: updater completion admission completion/downgraded-material
+PASS: updater completion admission completion/extra-output
+PASS: updater completion admission completion-scheduler/material
+PASS: updater completion admission completion-scheduler/absent
+PASS: updater completion admission completion-scheduler/verified-v1
+PASS: updater completion admission completion-scheduler/known-v2-direct
+PASS: updater completion admission completion-scheduler/invalid-direct
+PASS: updater completion admission completion-scheduler/absent-with-output
+PASS: updater completion admission completion-scheduler/v1-with-output
+PASS: updater completion admission completion-scheduler/changed-root
+PASS: updater completion admission completion-scheduler/changed-trusted-root
+PASS: updater completion admission completion-scheduler/disappeared-material
+PASS: updater completion admission completion-scheduler/downgraded-material
+PASS: updater completion admission completion-scheduler/extra-output
+PASS: updater completion admission scheduler/material
+PASS: updater completion admission scheduler/absent
+PASS: updater completion admission scheduler/verified-v1
+PASS: updater completion admission scheduler/known-v2-direct
+PASS: updater completion admission scheduler/invalid-direct
+PASS: updater completion admission scheduler/absent-with-output
+PASS: updater completion admission scheduler/v1-with-output
+PASS: updater completion admission scheduler/changed-root
+PASS: updater completion admission scheduler/changed-trusted-root
+PASS: updater completion admission scheduler/disappeared-material
+PASS: updater completion admission scheduler/downgraded-material
+PASS: updater completion admission scheduler/extra-output
+PASS: material updater entry completion/exact
+PASS: material updater entry completion/wrong-operation
+PASS: material updater entry completion/wrong-phase
+PASS: material updater entry completion/not-recovery
+PASS: material updater entry completion/foreign-root
+PASS: material updater entry completion/changed-trusted-root
+PASS: material updater entry completion/invalid-material
+PASS: material updater entry completion-scheduler/exact
+PASS: material updater entry completion-scheduler/wrong-operation
+PASS: material updater entry completion-scheduler/wrong-phase
+PASS: material updater entry completion-scheduler/not-recovery
+PASS: material updater entry completion-scheduler/foreign-root
+PASS: material updater entry completion-scheduler/changed-trusted-root
+PASS: material updater entry completion-scheduler/invalid-material
+PASS: material updater entry scheduler/exact
+PASS: material updater entry scheduler/wrong-operation
+PASS: material updater entry scheduler/wrong-phase
+PASS: material updater entry scheduler/not-recovery
+PASS: material updater entry scheduler/foreign-root
+PASS: material updater entry scheduler/changed-trusted-root
+PASS: material updater entry scheduler/invalid-material
+PASS: material updater entry unsafe-checker
+PASS: material updater entry entry-changed
+PASS: independent completion payload exact
+PASS: independent completion payload payload-unproven
+PASS: independent completion payload material-changed
+PASS: independent completion payload data-changed
+PASS: independent completion payload unsafe-panel
+PASS: independent completion payload foundation-changed
+PASS: independent completion payload legacy
+PASS: independent completion payload legacy-panel-changed
+PASS: independent completion payload legacy-web-changed
+PASS: extracted terminal flow completion-panel-edit
+PASS: extracted terminal flow completion-authorization-edit
+PASS: extracted terminal flow completion-scheduler-edit
+PASS: extracted terminal flow scheduler-edit
+PASS: extracted terminal flow scheduler-service-edit
+PASS: extracted terminal flow scheduler-enablement-edit
+PASS: extracted terminal flow completion-db-edit
+PASS: extracted terminal flow scheduler-db-edit
+PASS: extracted terminal flow completion-clean
+PASS: extracted terminal flow scheduler-clean
+PASS: extracted terminal flow completion-legacy-clean
+PASS: extracted terminal flow scheduler-legacy-clean
+PASS: unconfirmed recovery preparation is never reported as unchanged
+PASS: unconfirmed firewall preparation retains its own truthful failure state
+PASS: unconfirmed mail preparation retains its failure state without native enrollment

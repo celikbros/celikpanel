@@ -473,8 +473,14 @@ func (p *Panel) publishDNSMutation(w http.ResponseWriter, ctx context.Context, d
 		var publicationErr *dnsAgentPublicationError
 		if errors.As(err, &publicationErr) {
 			log.Printf("[409][dns] publish zone %s: %v", domainName, err)
+			if guidance, ok := dnsPublicationGuidanceAPIError(err); ok {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusConflict)
+				_ = json.NewEncoder(w).Encode(guidance)
+				return false
+			}
 			writeCodedError(w, http.StatusConflict, errCodeDNSPublicationFailed,
-				"the DNS change is saved, but it could not be published; check the DNS service and retry", "")
+				"the DNS change is saved, but it could not be published or verified; check the exact DNS operation and retry the same publication", "")
 			return false
 		}
 		writeServerError(w, fmt.Errorf("publish DNS zone %s: %w", domainName, err))

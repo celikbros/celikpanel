@@ -1,0 +1,2 @@
+Only in /root/cp-b8-src/deploy/e2e/dns-kill-matrix: __pycache__
+diff rc=1 (web/dist excluded: built from the archive's web/ during this run, not tracked)

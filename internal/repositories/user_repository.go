@@ -3,11 +3,16 @@ package repositories
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/core"
 )
+
+// ErrUserNotFound identifies a completed lookup with no matching user.
+// ErrUserNotFound, tamamlanan sorguda kullanıcının bulunmadığını belirtir.
+var ErrUserNotFound = errors.New("user not found")
 
 type PostgresUserRepository struct {
 	db *sql.DB
@@ -109,10 +114,10 @@ func (r *PostgresUserRepository) GetByID(ctx context.Context, id int) (*core.Use
 	query := `SELECT ` + userColumns + ` FROM users WHERE id = ?`
 	err := scanUser(r.db.QueryRowContext(ctx, query, id), user)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("user not found")
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("%w: %w", ErrUserNotFound, err)
 		}
-		return nil, fmt.Errorf("user not found: %v", err)
+		return nil, fmt.Errorf("read user: %w", err)
 	}
 	return user, nil
 }
@@ -122,10 +127,10 @@ func (r *PostgresUserRepository) GetByUsername(ctx context.Context, username str
 	query := `SELECT ` + userColumns + ` FROM users WHERE username = ?`
 	err := scanUser(r.db.QueryRowContext(ctx, query, username), user)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("user not found")
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("%w: %w", ErrUserNotFound, err)
 		}
-		return nil, fmt.Errorf("user not found: %v", err)
+		return nil, fmt.Errorf("read user: %w", err)
 	}
 	return user, nil
 }
@@ -135,10 +140,10 @@ func (r *PostgresUserRepository) GetByEmail(ctx context.Context, email string) (
 	query := `SELECT ` + userColumns + ` FROM users WHERE email = ?`
 	err := scanUser(r.db.QueryRowContext(ctx, query, email), user)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("user not found")
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("%w: %w", ErrUserNotFound, err)
 		}
-		return nil, fmt.Errorf("user not found: %v", err)
+		return nil, fmt.Errorf("read user: %w", err)
 	}
 	return user, nil
 }

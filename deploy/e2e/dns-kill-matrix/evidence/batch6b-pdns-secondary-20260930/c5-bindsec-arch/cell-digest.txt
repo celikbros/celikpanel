@@ -1,0 +1,17 @@
+request d2f345432a323fbd9f5c5354f491a6cb controller 2026-09-29T16:34:05.336731Z -> 2026-09-29T16:37:32.434438Z
+status passed safety passed class target_converged fp 34e616a5
+kill pid 1620 state T at 2026-09-29T16:34:43.662617Z exit 137 reaped True
+marker 2026-09-29T16:34:43.639608885Z journal intent 7927dd72
+trigger rc 75
+ retry 1 rc 0 dur 11.221366 err None
+ retry 2 rc 0 dur 0.016618 err None
+ probe 1 target_converged 34e616a5 bind | 
+ probe 2 target_converged 34e616a5 bind | 
+stability 31 ok 31 2026-09-29T16:34:58.986498Z 2026-09-29T16:35:28.986671Z
+ reboot {"ordinal": 1, "point": null, "boot_id_before": "859ac82f-3c17-4e75-9982-906f87ff71cf", "boot_id_after": "2367c89a-1523-4631-8513-2fede3653047", "product_uuid": "93161804-66ca-53be-b2e9-fea2ee1e1dea"}
+reboot_after_recovery run True status passed failures [] unknown [] window 31 ok 31 dns_only True
+  authority_after_boot {"at": "2026-09-29T16:37:02.266435Z", "authority": {"answer_counts": {"tcp": 1, "udp": 1}, "answered": true, "engines": {"tcp": ["bind"], "udp": ["bind"]}}, "dns": {"answered": true, "at": "2026-09-29T16:37:02.297612Z", "result": {"tcp": {"additional": 2, "answers": 1, "authority": 2, "bytes": 118, "flags": 33792, "questions": 1, "transport": "tcp"}, "udp": {"additional": 2, "answers": 1, "authori
+  mgmt disabled true
+ status-read after-recovery: available=False rc=None mutated=None :: 
+ status-read before-recovery: available=False rc=None mutated=None :: 
+fixture_pass_definition {"definition": "paired-secondary", "failures": [], "peer_catalog_format_log": {"expected_agent_name": "PowerDNS", "expected_format": "pdns-native", "failures": [], "log": {"catalog": "catalog-c000020a.celikpanel.invalid", "formats": ["PowerDNS", "PowerDNS", "PowerDNS"], "lines": ["2026/09/29 16:34:06 DNS engine change d2f345432a323fbd9f5c5354f491a6cb: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format", "2026/09/29 16:34:46 DNS engine change d2f345432a323fbd9f5c5354f491a6cb: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format", "2026/09/29 16:34:56 DNS engine change completion d2f345432a323fbd9f5c5354f491a6cb: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format"], "peer_ip": "192.0.2.10", "producer_changed_lines": [], "sources": {"agent_journal": ["/usr/bin/journalctl", "--no-pager", "--quiet", "--output=cat", "--unit=celikpanel-agent.service", "--since=@1790699644"], "tagged_agent_transcript": "/var/lib/celikpanel-dns-kill-matrix/results/bind__target-staged__before-write__paired-secondary__peer-reachable/transcript.jsonl"}, "unknown": []}, "unknown": []}, "secondary_serving": {"failures": [], "primary": {"soa": {"tcp": [2026083101], "udp": [2026083101]}, "www_a": {"tcp":

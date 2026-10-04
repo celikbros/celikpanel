@@ -491,6 +491,10 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 			writeClientError(w, http.StatusConflict, "this hostname is already used by a domain, its www name, or an alias")
 			return
 		}
+		if refusal, ok := hostingRootNotTraversable(err); ok {
+			writeHostingRootNotTraversable(w, refusal)
+			return
+		}
 		writeServerError(w, err)
 		return
 	}
@@ -659,9 +663,10 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	// Every deletion now asks the privileged agent to converge the domain mail
-	// runtime, including DNS-only domains with no site row. Check the paired
-	// build before publishing any durable deletion marker or mail-TLS change.
+	// Deletion may ask the privileged agent to converge the domain mail
+	// runtime (when the panel's records show one) and to tear down the site.
+	// Check the paired build before publishing any durable deletion marker or
+	// mail-TLS change.
 	if err := p.requireMatchingAgentBuild(ctx); err != nil {
 		writeClientError(w, http.StatusServiceUnavailable, err.Error())
 		return
@@ -749,19 +754,26 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := p.removeDomainMailRuntimeLocked(ctx, domainID, domain.Name); err != nil {
+	// The mail stage runs only when the panel's own records show a mail
+	// runtime for this domain on this server (domain_delete_mail_stage.go).
+	mailRan, err := p.runDomainDeletionMailStageLocked(ctx, domainID, domain.Name)
+	if err != nil {
 		p.mailMutationMu.Unlock()
 		p.writeDomainDeletionPending(
 			w,
 			r,
 			domainID,
 			domain.Name,
-			"mail_runtime_cleanup",
+			domainDeletionStageMailRuntime,
 			err,
 		)
 		return
 	}
 	p.mailMutationMu.Unlock()
+	if !mailRan {
+		log.Printf("domain deletion for %s: mail runtime cleanup skipped: no mail runtime for this domain on this server", domain.Name)
+		p.audit(r, "domain.delete.mail_runtime_absent:"+domain.Name, "domain", domainID)
+	}
 
 	// Tear down the system side first — vhost, PHP pool, app unit, system
 	// user, files. If that fails the ledger row stays, the honest error goes
@@ -837,6 +849,9 @@ func (p *Panel) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := p.clearDomainDeletionFailure(ctx, domainID); err != nil {
+		log.Printf("domain deletion for %s completed; %v", domain.Name, err)
+	}
 	p.audit(r, "domain.delete:"+domain.Name, "domain", domainID)
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{

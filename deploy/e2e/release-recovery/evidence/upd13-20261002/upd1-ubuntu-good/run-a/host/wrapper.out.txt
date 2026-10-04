@@ -1,0 +1,23 @@
+Formatting '/var/tmp/cp-release-drill-upd13-ub-good-a/cells/6083c2497f7117302f884191/ubuntu/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-upd13-ub-good-a/images/ubuntu-24.04-server-cloudimg-amd64-20260826.img backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-upd13-ub-good-a", "cell_id": "release-recovery__01bb0cfb7e3f2afd", "ssh_ports": [3821, 3822]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-upd13-ub-good-a", "nodes": {"ubuntu": "verified-disposable-systemd-guest"}}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-upd13-ub-good-a", "nodes": {"ubuntu": "verified-disposable-systemd-guest"}}
+{"step": "preflight", "verdict": "passed", "reason": null}
+{"step": "origin", "verdict": "passed", "reason": null}
+{"step": "baseline-install", "verdict": "passed", "reason": null}
+{"step": "owner-login", "verdict": "passed", "reason": null}
+{"step": "license", "verdict": "passed", "reason": null}
+{"step": "setup", "verdict": "observed", "reason": null}
+{"step": "seed", "verdict": "passed", "reason": null}
+{"step": "pre-state", "verdict": "passed", "reason": null}
+{"step": "arm", "verdict": "passed", "reason": null}
+{"step": "owner-start", "verdict": "passed", "reason": null}
+{"step": "track", "verdict": "passed", "reason": null}
+{"step": "owner-continuation (required)", "verdict": "skipped", "reason": null}
+{"step": "terminal", "verdict": "passed", "reason": null}
+{"step": "deferred-mail-watch", "verdict": "observed", "reason": null}
+{"step": "collect", "verdict": "passed", "reason": null}
+{"step": "verdicts", "verdict": "passed", "reason": null}
+{"kind_measured": null, "outcome": "update-verified", "overall": "complete-for-review", "request_id": "c751463ec0371ca25d8e7b463dbf1ada"}
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-upd13-ub-good-a", "evidence_retained": true}
+UPD1 cell=upd1-ubuntu-good dns_mode=external lab=/var/tmp/cp-release-drill-upd13-ub-good-a driver_exit=0 evidence=/var/tmp/cp-release-drill-upd13-ub-good-a/evidence/*/upd1

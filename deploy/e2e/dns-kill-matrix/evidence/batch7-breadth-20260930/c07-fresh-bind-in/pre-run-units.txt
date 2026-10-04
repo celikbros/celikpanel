@@ -1,0 +1,116 @@
+wall=2026-09-29T19:21:44.010044452Z boot_id=1699c136-fee2-449a-97c4-0bf627f5b64e
+== pdns.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InvocationID=
+== named.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InvocationID=
+== bind9.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InvocationID=
+== celikpanel-agent.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 19:21:29 UTC
+ExecMainPID=1191
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 19:21:29 UTC
+InvocationID=98c9c8839e0a4b9e9bd5658d0d299637
+== celikpanel-panel.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 19:21:30 UTC
+ExecMainPID=1201
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 19:21:30 UTC
+InvocationID=1530efcc29464d2eb13a5d061166384c
+== named/pdns processes
+== boots
+IDX BOOT ID                          FIRST ENTRY                 LAST ENTRY
+  0 1699c136fee2449a97c40bf627f5b64e Tue 2026-09-29 19:20:37 UTC Tue 2026-09-29 19:21:44 UTC
+== packages
+dpkg-query: no packages found matching pdns-server
+dpkg-query: no packages found matching pdns-backend-sqlite3
+dpkg-query: no packages found matching bind9
+dpkg-query: no packages found matching bind9-utils
+bind9-host 1:9.20.26-1~deb13u1 ii 
+bind9-libs 1:9.20.26-1~deb13u1 ii 
+== pdns_server --version
+bash: line 6: /usr/sbin/pdns_server: No such file or directory
+== state dir
+total 12
+drwx------  2 root celikpanel 4096 2026-09-29 19:21:28.328042348 +0000 .
+drwxr-xr-x 28 root root       4096 2026-09-29 19:21:41.692042348 +0000 ..
+-rw-------  1 root celikpanel   23 2026-09-29 19:21:28.312042348 +0000 service-mutations.json
+177f61d12ed0bb85e6ea535b807b376e26bbe0871405a13867c0b3cb6ea4b211  service-mutations.json
+== fixture dir
+total 1412
+drwx------  4 root root    4096 2026-09-29 19:21:43.752042348 +0000 .
+drwxr-xr-x 28 root root    4096 2026-09-29 19:21:41.692042348 +0000 ..
+-rw-------  1 root root    3188 2026-09-29 19:21:43.588042348 +0000 controller-argv.json
+-rw-------  1 root root    1016 2026-09-29 19:21:43.736042348 +0000 coordinator-stop-proof.json
+-rw-------  1 root root     728 2026-09-29 19:21:35.740042348 +0000 installed-binaries.sha256
+-rw-------  1 root root 1406962 2026-09-29 19:21:28.264042348 +0000 manifest.json
+drwx------  2 root root    4096 2026-09-29 19:21:43.212042348 +0000 measured
+drwx------  3 root root    4096 2026-09-29 19:21:43.560042348 +0000 results
+-rw-------  1 root root    1315 2026-09-29 19:21:43.212042348 +0000 scenario.json
+-rw-------  1 root root    1432 2026-09-29 19:21:43.276042348 +0000 source-proof.json
+== recovery launcher
+total 18604
+drwx------ 3 root root     4096 2026-09-29 19:21:42.356042348 +0000 .
+drwxr-xr-x 9 root root     4096 2026-09-29 19:21:41.656042348 +0000 ..
+-rwxr-xr-x 1 root root 19035508 2026-09-29 19:21:42.284042348 +0000 recovery
+drwx------ 3 root root     4096 2026-09-29 19:21:41.676042348 +0000 recovery-runtimes
+dc131f4eee8361b01592e5b5b17d871b9cfd6c35799bc433d6f9be9bed25abe4  /usr/libexec/celikpanel/recovery
+== owner files
+ls: cannot access '/etc/powerdns': No such file or directory
+ls: cannot access '/etc/powerdns/pdns.d': No such file or directory
+ls: cannot access '/var/lib/powerdns': No such file or directory
+sha256sum: /etc/powerdns/pdns.conf: No such file or directory
+sha256sum: '/etc/powerdns/pdns.d/*': No such file or directory
+sha256sum: /var/lib/powerdns/pdns.sqlite3: No such file or directory
+== bind dirs
+ls: cannot access '/etc/bind': No such file or directory
+== /etc/bind file hashes
+== /etc/bind inodes
+== /var/cache/bind tree
+find: ‘/var/cache/bind’: No such file or directory
+== named-checkconf -l
+bash: line 16: named-checkconf: command not found
+== ss 53
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=369,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=369,fd=18))
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=369,fd=21))
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=369,fd=19))
+== pdns journal tail
+-- No entries --

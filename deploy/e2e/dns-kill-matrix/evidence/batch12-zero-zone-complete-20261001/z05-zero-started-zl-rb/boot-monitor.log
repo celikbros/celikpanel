@@ -1,0 +1,13 @@
+2026-09-30T08:50:04.861243979Z boot 1 199b45a8-40c7-4de8-8b82-b818494e333b (watcher /var/tmp/cp-b12-watch)
+2026-09-30T08:50:04.862882383Z peerboot 1 a6a17d73-20c3-42dd-a4cc-903d16efe41a (sampler /var/tmp/cp-b12-peerloop1)
+2026-09-30T08:54:35.698601338Z peerboot 2 84c566f4-52fa-4672-bf44-a0779f380795 (sampler /var/tmp/cp-b12-peerloop2)
+Running as unit: cp-b12-peerloop2.service; invocation ID: 4a7883dfabeb466c85ecc40089c61b54
+peerloop2 start rc=0
+sampler start rc=0
+2026-09-30T08:54:51.847372545Z boot 2 11dc2ac9-7645-421b-819c-3acb2be0366d (watcher /var/tmp/cp-b12-watch-boot2)
+Running as unit: cp-b12-watch-boot2.service; invocation ID: 685cf85c73714780968a6b01ed07eafe
+watcher start rc=0
+Running as unit: cp-b12-dbwatch-boot2.service; invocation ID: 2ad87d60c9724fd487283a058ad7e1f9
+dbwatch start rc=0
+Running as unit: cp-b12-ledwatch-boot2.service; invocation ID: 53a49e7b17f94da3b9d7661e008c80ea
+ledwatch start rc=0

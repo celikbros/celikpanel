@@ -72,7 +72,7 @@ tls_validate_line=$(line_of "$ROLLBACK" 'panel TLS compatibility snapshot is mis
     || fail 'rollback interprets TLS payload before the outer manifest is verified'
 quiesce_line=$(line_of "$ROLLBACK" 'panel_tls_quiesce_certbot_scheduler')
 restore_line=$(line_of "$ROLLBACK" 'panel_tls_restore_snapshot')
-first_install_line=$(line_of "$ROLLBACK" 'rm -rf -- "$BIN_DIR"')
+first_install_line=$(line_of "$ROLLBACK" '    restore_product_resources')
 [[ "$quiesce_line" -lt "$restore_line" && "$restore_line" -lt "$first_install_line" ]] \
     || fail 'TLS restore ordering is not fail-closed before release byte restore'
 
@@ -329,8 +329,15 @@ cp -a -- "$RECEIPT_SAVED" "$TLS_SNAPSHOT/managed/$ISSUE_VERSION/$RECEIPT_NAME"
 HOOK_META=$(stat -Lc '%u:%g:%a:%Y:%y' "$HOOK")
 PENDING_META=$(stat -Lc '%u:%g:%a:%Y:%y' "$PENDING")
 
+panel_tls_certbot_scheduler_matches_snapshot "$TLS_SNAPSHOT" || fail 'recorded Certbot scheduler state was not recognised'
 panel_tls_quiesce_certbot_scheduler "$TLS_SNAPSHOT" || fail 'Certbot scheduler quiesce failed'
 [[ "$TIMER_ACTIVE" == inactive ]] || fail 'Certbot timer remained active'
+# F2 (upd3): a paused scheduler is not its recorded state; the read-only check
+# changes nothing and the recovery runner restores only on this answer.
+if panel_tls_certbot_scheduler_matches_snapshot "$TLS_SNAPSHOT" 2>/dev/null; then
+    fail 'paused Certbot scheduler was reported as its recorded state'
+fi
+[[ "$TIMER_ACTIVE" == inactive ]] || fail 'read-only scheduler check changed the timer'
 expect_tls_success_without_stderr 'unchanged published TLS source proof' panel_tls_snapshot_assert_source_unchanged "$TLS_SNAPSHOT" "$TLS_DIR" "$PENDING" "$HOOK" quiesced
 
 fail_find_validation() {
@@ -376,6 +383,7 @@ panel_tls_restore_certbot_scheduler "$TLS_SNAPSHOT" \
     || fail 'Certbot scheduler restore failed'
 [[ "$TIMER_ACTIVE" == active && "$TIMER_ENABLED" == enabled ]] \
     || fail 'Certbot timer state differs after restore'
+panel_tls_certbot_scheduler_matches_snapshot "$TLS_SNAPSHOT" || fail 'restored Certbot scheduler was not recognised'
 
 TIMER_CONTENT='[Timer]\nOnCalendar=hourly\n'
 if panel_tls_quiesce_certbot_scheduler "$TLS_SNAPSHOT" 2>/dev/null; then

@@ -1,0 +1,91 @@
+{
+  "checks": {
+    "guest_fresh": true,
+    "helpers": {
+      "guest_bound_worker.py": "8f43c9c305225bd896b5d220820eb51304f15561597df065e07e99abb679c2cc",
+      "guest_owner_port_hold.py": "659353a4c39d665673d4330b71892dc95908d5b59bc1e8049a62fad0f30829f2",
+      "guest_owner_update_observer.py": "263ed14c59f24956aaf0e21ece5b74b9f81dbfe19ad652d89a87ea6e25f731af",
+      "guest_port_fault.py": "be8eb7008d50b343c1194bef8c32c14335fa750cd7be61c43a7c1e52b2d6efc6",
+      "guest_probe.py": "96e5ac2eb842d72af9707a70eceed56406031d16847199c46adabc16af1ec388",
+      "guest_recovery_fault.py": "4d9ae59bcbc2fdb4a6f42ade529c1b6b1f6366b726f92ba37058957b7696da50",
+      "guest_recovery_handoff.py": "21dfaa3bc76b56f463a706f50f8b6413a5325ebba978b113a0b4a59d2be4c0cf",
+      "guest_upd1_workload.py": "3d2f218f298b3ded3228b0089155b45e1e81c8dce9a8b8783e5face05287b8cf",
+      "guest_update_kill.py": "f996f1cedf3777ef12b1f44282dcb3208c61400f76f27c4ed3fe4e290f95cd26"
+    },
+    "origin_name_before": {
+      "hosts_mappings": [],
+      "nsswitch_hosts": "hosts: mymachines resolve [!UNAVAIL=return] files myhostname dns",
+      "resolver_queried": false
+    },
+    "proofs": {
+      "baseline": {
+        "agent_sha256": "fb68e57bbb7ff5756ceb72c25943fe270f63c8ca6dcdad1699563f8205572851",
+        "commit": "0e515e908fc7b3de5c4e74dc7535638cbe56d401",
+        "dns_owner_tools": [
+          "dns-owner-tools/README.md",
+          "dns-owner-tools/bind-peer-inspect",
+          "dns-owner-tools/dns-peer-enroll",
+          "dns-owner-tools/pdns-peer-inspect"
+        ],
+        "files": 618,
+        "panel_sha256": "bed928c464ef198dd91a1cfde31ddffb4e1736ea2baf5aaed43a65509d03c536",
+        "release_policy": {
+          "current": 81,
+          "format": "celikpanel-release-sequence-policy-v1",
+          "previous": 80,
+          "previous_commit": "bd14d97efc5cfd19acd70ddf0edb9c6343317e2b",
+          "previous_version": "v0.1.0-alpha.80",
+          "sha256": "c5305d7bec6540bcabbe1c4c11fb021cb314d00f9a4148e6273892cb53444731",
+          "version": "v0.1.0-alpha.81"
+        },
+        "source_proof": {
+          "acceptance_notice_sha256": "b29585cab8628ce353380743df86513f1e8e2e5e9a71943ce72e7c80e7879c25",
+          "commit": "0e515e908fc7b3de5c4e74dc7535638cbe56d401",
+          "exempted_from_git_proof": [
+            "ACCEPTANCE-LICENSE-BUILD.txt"
+          ],
+          "method": "real Git commit/tree and every packaged static source blob",
+          "tree": "28158bce8cc55465912aa07e44cb1018ec1041ff",
+          "verified_static_files": 485
+        },
+        "tree": "28158bce8cc55465912aa07e44cb1018ec1041ff"
+      },
+      "defective": {
+        "agent_sha256": "81848677483a70acdd5cc1e80b14dd042708f66d8f9b773a104eeb4b58a41a64",
+        "commit": "bd0e626ee8efae8bb11f3e4f8fa3cf0e7ff39df9",
+        "dns_owner_tools": [
+          "dns-owner-tools/README.md",
+          "dns-owner-tools/bind-peer-inspect",
+          "dns-owner-tools/dns-peer-enroll",
+          "dns-owner-tools/pdns-peer-inspect"
+        ],
+        "files": 618,
+        "panel_sha256": "b4bc0995012130fd71bccde356d123439c46010ebf704afe54b3b2f970c0f165",
+        "release_policy": {
+          "current": 82,
+          "format": "celikpanel-release-sequence-policy-v1",
+          "previous": 81,
+          "previous_commit": "0e515e908fc7b3de5c4e74dc7535638cbe56d401",
+          "previous_version": "v0.1.0-alpha.81",
+          "sha256": "0e6430e0489354e03e462f87f31479cc910b8082e36715de2ac130ddbcb9849f",
+          "version": "v0.1.0-alpha.82"
+        },
+        "source_proof": {
+          "acceptance_notice_sha256": "050d933d8e0842bea51ebeb4fe233f3273eb31334ae6ecea7271e903ca869646",
+          "commit": "bd0e626ee8efae8bb11f3e4f8fa3cf0e7ff39df9",
+          "exempted_from_git_proof": [
+            "ACCEPTANCE-LICENSE-BUILD.txt"
+          ],
+          "method": "real Git commit/tree and every packaged static source blob",
+          "tree": "80f6cf0b82971e321d4022fd93fdcc5a6235e738",
+          "verified_static_files": 485
+        },
+        "tree": "80f6cf0b82971e321d4022fd93fdcc5a6235e738"
+      }
+    }
+  },
+  "finished_at": "2026-10-01T00:21:38Z",
+  "name": "preflight",
+  "started_at": "2026-10-01T00:21:34Z",
+  "verdict": "passed"
+}

@@ -1,0 +1,96 @@
+{
+  "checks": {
+    "attempts": {
+      "automatic": [
+        {
+          "at": "2026-10-01T23:11:58.286648Z",
+          "attempt": "1",
+          "direction": "forward",
+          "operation": "update",
+          "phase": "completion"
+        },
+        {
+          "at": "2026-10-01T23:13:40.519320Z",
+          "attempt": "2",
+          "direction": "forward",
+          "operation": "update",
+          "phase": "completion"
+        },
+        {
+          "at": "2026-10-01T23:15:23.544039Z",
+          "attempt": "3",
+          "direction": "forward",
+          "operation": "update",
+          "phase": "completion"
+        }
+      ],
+      "automatic_count": 3,
+      "journal_admissions": [
+        {
+          "at": "2026-10-01T23:11:58.361195+00:00",
+          "attempt": "1",
+          "snapshot": "20261001T231030Z-from-unknown-to-235198ff900dbb851a5fdcc966c94db7857f556d-e8d76e391ba6c2105d0aaa34fc1375c1"
+        },
+        {
+          "at": "2026-10-01T23:13:40.603314+00:00",
+          "attempt": "2",
+          "snapshot": "20261001T231030Z-from-unknown-to-235198ff900dbb851a5fdcc966c94db7857f556d-e8d76e391ba6c2105d0aaa34fc1375c1"
+        },
+        {
+          "at": "2026-10-01T23:15:23.629218+00:00",
+          "attempt": "3",
+          "snapshot": "20261001T231030Z-from-unknown-to-235198ff900dbb851a5fdcc966c94db7857f556d-e8d76e391ba6c2105d0aaa34fc1375c1"
+        }
+      ],
+      "owner": [],
+      "owner_count": 0
+    },
+    "guest_samples": 101,
+    "host_samples": 102,
+    "journals": [
+      "lab",
+      "product",
+      "setup-services"
+    ],
+    "observer": [
+      "armed",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "released"
+    ],
+    "renewal_before_update": {
+      "expected_from_pre_update_timers": "on",
+      "findings": [],
+      "pre_update_timers": {
+        "certbot.timer": {
+          "ActiveState": "active",
+          "UnitFileState": "enabled"
+        }
+      },
+      "recorded": "on",
+      "sidecar": {
+        "present": true,
+        "valid": true,
+        "value": "on"
+      },
+      "verdict": "as-before"
+    },
+    "stopped_after": [],
+    "unavailable": {}
+  },
+  "finished_at": "2026-10-01T23:17:28Z",
+  "name": "collect",
+  "started_at": "2026-10-01T23:17:26Z",
+  "verdict": "passed"
+}

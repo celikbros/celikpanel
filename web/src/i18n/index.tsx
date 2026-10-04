@@ -82,11 +82,23 @@ async function loadShell(locale: Locale): Promise<Catalog> {
     return (await import('./en')).en;
 }
 
+// The screen part is itself stored in two files per locale: ./screens holds the
+// hosting, domain, mail and setup screens, ./screens/server the server-wide
+// administration screens. That is a size split only - one file had outgrown the
+// per-chunk bundle budget - so both halves are fetched in parallel and merged
+// before `screens` becomes true. No screen can render with only one of them.
+//
+// Ekran parçası da her dil için iki dosyadadır: ./screens barındırma, alan
+// adı, posta ve kurulum ekranlarını, ./screens/server sunucu geneli yönetim
+// ekranlarını tutar. Bu yalnızca boyut bölünmesidir; iki yarı paralel getirilir
+// ve `screens` doğru olmadan önce birleştirilir.
 async function loadScreens(locale: Locale): Promise<Catalog> {
     if (locale === 'tr') {
-        return (await import('./screens/tr')).trScreens;
+        const [screens, server] = await Promise.all([import('./screens/tr'), import('./screens/server/tr')]);
+        return { ...screens.trScreens, ...server.trServerScreens };
     }
-    return (await import('./screens/en')).enScreens;
+    const [screens, server] = await Promise.all([import('./screens/en'), import('./screens/server/en')]);
+    return { ...screens.enScreens, ...server.enServerScreens };
 }
 
 interface LoadedCatalog {

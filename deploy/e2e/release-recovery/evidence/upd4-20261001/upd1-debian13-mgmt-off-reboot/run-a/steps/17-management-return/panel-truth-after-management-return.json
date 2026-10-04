@@ -1,0 +1,19 @@
+{
+  "cron_listed": false,
+  "databases": [],
+  "domains": [],
+  "mailbox_listed": false,
+  "recovery": {
+    "phase": "succeeded",
+    "previous_failure": null,
+    "terminal_proof": "update_verified"
+  },
+  "update_status": null,
+  "version": {
+    "agent_commit": null,
+    "agent_matches": null,
+    "commit": null,
+    "schema_version": null,
+    "version": null
+  }
+}

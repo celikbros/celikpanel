@@ -1,0 +1,24 @@
+## 2026-09-30T08:28:19Z /var/lib/celikpanel-agent-private: names/metadata only (no content read)
+total 28
+drwx------ 1 root celikpanel  364 2026-09-30 08:25:53.395521006 +0000 .
+drwxr-xr-x 1 root root        494 2026-09-30 08:24:16.552272760 +0000 ..
+-rw------- 1 root celikpanel  410 2026-09-30 08:24:02.542534069 +0000 dns-engine-bind-rndc-key.json
+-rw------- 1 root celikpanel  747 2026-09-30 08:24:10.494018210 +0000 dns-engine-ownership-bind.json
+-rw------- 1 root celikpanel  743 2026-09-30 08:25:53.078518220 +0000 dns-engine-state.json
+-rw------- 1 root celikpanel  319 2026-09-30 08:24:21.318426963 +0000 firewall-apply-journal.json
+drwx------ 1 root root         72 2026-09-30 08:25:16.303207644 +0000 pdns-peer-inspection-keys
+-rw------- 1 root root        504 2026-09-30 08:25:18.163222493 +0000 pdns-peer-inspection-v1.json
+-rw------- 1 root celikpanel 6298 2026-09-30 08:25:53.379520864 +0000 service-mutations.json
+/var/lib root:root 755 ino=259 nlink=1 2026-09-30 08:24:16.552272760 +0000
+/var/lib/celikpanel-agent-private root:celikpanel 700 ino=78783 nlink=1 2026-09-30 08:25:53.395521006 +0000
+## hidden stage/retired names (any prefix)
+2026-09-30T08:28:19Z
+{
+  "action": "stop",
+  "cell_id": "pair-accept__bind-arch__pdns-debian13__p7t2",
+  "dry_run": false,
+  "method": "QMP quit; no fallback signal"
+}
+no qemu
+               total        used        free      shared  buff/cache   available
+Mem:           15697        1190        9786           4        4965       14507

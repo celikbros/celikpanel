@@ -1,0 +1,6 @@
+{
+  "action": "stop",
+  "cell_id": "bind__target-staged__before-write__paired-secondary__peer-reachable",
+  "dry_run": false,
+  "method": "QMP quit; no fallback signal"
+}

@@ -1,0 +1,208 @@
+{
+  "artifacts": {
+    "baseline": {
+      "commit": "58813f1d0b903cbbc645a4fbab724b8a84406b86",
+      "sha256": "28f27f5d95b7cb2eb1239693020664bae57fbd780db9a46fd84bea3d5ca33546",
+      "version": "v0.1.0-alpha.81"
+    },
+    "defective": {
+      "commit": "7d11ff6535c86a865add390062311db2fb1d6e50",
+      "sha256": "d4f96c107f4ee98c0685a6509a815999dc797737020a897995a0c722fa082f97",
+      "version": "v0.1.0-alpha.82"
+    },
+    "good": {
+      "commit": "901593abf12c90c91222d2c61a8bd7c0040523c3",
+      "sha256": "36766be1eb37359658ebdb53ddb431660812f620c22639a2097e6f7762066542",
+      "version": "v0.1.0-alpha.82"
+    }
+  },
+  "cell": {
+    "mail_required": true,
+    "name": "upd1-debian13-good",
+    "node": "debian13",
+    "recovery_fault": null,
+    "variant": "good"
+  },
+  "findings": [
+    "debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']",
+    "the update card shows the server summary verbatim in both languages: reviewed updater failed: exit status 1: !! selected recovery runtime cannot verify the current installation before update"
+  ],
+  "identity": {
+    "cell_id": "release-recovery__58e28417acf0d7c5",
+    "node": "debian13",
+    "vm_uuid": "fc5d73d7-40e1-5d66-96e5-8307e263b907"
+  },
+  "native_evidence": false,
+  "note": "Observations for the owner's review; the P0 rows are judged separately.",
+  "outcome": {
+    "attempts": {
+      "automatic": [],
+      "automatic_count": 0,
+      "journal_admissions": [],
+      "owner": [],
+      "owner_count": 0
+    },
+    "classification": "not-terminal",
+    "final_status": null,
+    "owner_continuation": false,
+    "pin_changes": [],
+    "reboot": null
+  },
+  "overall": "failed",
+  "provenance": {
+    "baseline": "unpublished-local-fixture-commit-over-HEAD-labelled-v0.1.0-alpha.81; acceptance-license panel build (D-027 fixture); installed by the real installer; fixture trust root enrolled; not-production-release-admission",
+    "candidate": "unpublished-local-fixture-commit-labelled-v0.1.0-alpha.82; signed with the disposable fixture key; served by the guest-loopback celikpanel.net fixture origin; not a release",
+    "defect": "fixture source patch: cmd/panel --migrate-only exits 1 after migrating the isolated copy (genuine candidate failure after candidate-installed, simulated by a committed fixture change)"
+  },
+  "request_id": "df01bec5190476fd66baf46177314f54",
+  "schema": "celikpanel/upd1-owner-update-result/v1",
+  "scope": {
+    "cron": {
+      "crontab": "/usr/bin/crontab",
+      "verdict": "available"
+    },
+    "dns": {
+      "mode": "external",
+      "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+      "verdict": "not-provided-external-dns"
+    },
+    "origin": {
+      "after-provision": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      },
+      "before-arm": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      }
+    },
+    "setup": {
+      "code": "server_setup_access_dns_required",
+      "not_run": [
+        "11-panel_certificate",
+        "12-access_dns",
+        "13-mail_certificate",
+        "14-mail_enrollment",
+        "15-verify"
+      ],
+      "phase": "access_dns",
+      "verdict": "observed isolated-host wait",
+      "volatile_tables_added": [
+        "server_setup_executions"
+      ]
+    }
+  },
+  "steps": [
+    {
+      "finished_at": "2026-09-30T17:44:59Z",
+      "name": "preflight",
+      "reason": null,
+      "started_at": "2026-09-30T17:44:56Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-09-30T17:45:07Z",
+      "name": "origin",
+      "reason": null,
+      "started_at": "2026-09-30T17:44:59Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-09-30T17:46:27Z",
+      "name": "baseline-install",
+      "reason": null,
+      "started_at": "2026-09-30T17:45:07Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-09-30T17:46:28Z",
+      "name": "owner-login",
+      "reason": null,
+      "started_at": "2026-09-30T17:46:27Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-09-30T17:46:28Z",
+      "name": "license",
+      "reason": null,
+      "started_at": "2026-09-30T17:46:28Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-09-30T17:52:35Z",
+      "name": "setup",
+      "reason": null,
+      "started_at": "2026-09-30T17:46:28Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-09-30T17:52:37Z",
+      "name": "seed",
+      "reason": null,
+      "started_at": "2026-09-30T17:52:35Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-09-30T17:54:14Z",
+      "name": "pre-state",
+      "reason": null,
+      "started_at": "2026-09-30T17:52:37Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-09-30T17:54:15Z",
+      "name": "arm",
+      "reason": null,
+      "started_at": "2026-09-30T17:54:14Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-09-30T17:54:15Z",
+      "name": "owner-start",
+      "reason": null,
+      "started_at": "2026-09-30T17:54:15Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-09-30T19:24:28Z",
+      "name": "track",
+      "reason": "no terminal or paused state was observed within 90 minutes",
+      "started_at": "2026-09-30T17:54:15Z",
+      "verdict": "inconclusive"
+    },
+    {
+      "finished_at": null,
+      "name": "owner-continuation (required)",
+      "reason": "a required earlier step did not pass: track",
+      "started_at": "2026-09-30T19:24:28Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": "2026-09-30T19:24:33Z",
+      "name": "terminal",
+      "reason": "installed build identity is not the expected release",
+      "started_at": "2026-09-30T19:24:28Z",
+      "verdict": "failed"
+    },
+    {
+      "finished_at": "2026-09-30T19:24:35Z",
+      "name": "collect",
+      "reason": null,
+      "started_at": "2026-09-30T19:24:33Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-09-30T19:24:35Z",
+      "name": "verdicts",
+      "reason": null,
+      "started_at": "2026-09-30T19:24:35Z",
+      "verdict": "passed"
+    }
+  ]
+}

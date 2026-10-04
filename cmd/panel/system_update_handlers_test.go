@@ -432,6 +432,67 @@ func TestPanelUpdateStartRejectsAuthoritativeFailedReceipt(t *testing.T) {
 	}
 }
 
+// upd9 F2: a start the agent refused because the host package manager is
+// active names that cause with the code, reason and sentence every other
+// server change gets for it; any other refusal keeps PANEL_UPDATE_START_REFUSED.
+func TestPanelUpdateStartRefusedForPackageActivityNamesThePackageManager(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		reply      transport.SystemUpdateStartResponse
+		wantCode   string
+		wantReason string
+		wantError  string
+	}{
+		{
+			name: "package manager active",
+			reply: transport.SystemUpdateStartResponse{
+				Error:  "global service mutation state is not idle: the host package manager is active",
+				Reason: transport.HostMutationReasonPackageManager,
+			},
+			wantCode:   errCodeHostMutationBusy,
+			wantReason: transport.HostMutationReasonPackageManager,
+			wantError:  hostMutationBusyMessages[transport.HostMutationReasonPackageManager],
+		},
+		{
+			name:      "older agent without a reason",
+			reply:     transport.SystemUpdateStartResponse{Error: "global service mutation state is not idle: the host package manager is active"},
+			wantCode:  "PANEL_UPDATE_START_REFUSED",
+			wantError: "the update service did not accept this request",
+		},
+		{
+			name: "another reason",
+			reply: transport.SystemUpdateStartResponse{
+				Error: "global service mutation state is not idle", Reason: transport.HostMutationReasonHostLock,
+			},
+			wantCode:  "PANEL_UPDATE_START_REFUSED",
+			wantError: "the update service did not accept this request",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			withSystemUpdateBuild(t)
+			fixture := newSystemUpdateTestFixture(t)
+			fixture.agent.start = tc.reply
+			recorder := httptest.NewRecorder()
+			fixture.panel.handlePanelUpdateStart(recorder, systemUpdateRequest(
+				http.MethodPost, panelUpdateStartPath, systemUpdateStartBody(updateTestTargetVersion), roleAdmin,
+			))
+			var body apiErrorBody
+			if err := json.Unmarshal(recorder.Body.Bytes(), &body); err != nil {
+				t.Fatalf("decode %q: %v", recorder.Body.String(), err)
+			}
+			if recorder.Code != http.StatusConflict || body.Code != tc.wantCode ||
+				body.Reason != tc.wantReason || body.Error != tc.wantError {
+				t.Fatalf("status=%d body=%+v", recorder.Code, body)
+			}
+			fixture.agent.mu.Lock()
+			defer fixture.agent.mu.Unlock()
+			if fixture.agent.startCalls != 1 {
+				t.Fatalf("refused start reached the agent %d times", fixture.agent.startCalls)
+			}
+		})
+	}
+}
+
 func TestPanelUpdateStartReplayUsesExactStatusWithoutSecondStart(t *testing.T) {
 	withSystemUpdateBuild(t)
 	fixture := newSystemUpdateTestFixture(t)

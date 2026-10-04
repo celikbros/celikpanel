@@ -8,6 +8,7 @@ import (
 	"sort"
 
 	"github.com/alicelik/celikpanel/internal/binddns"
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
@@ -16,24 +17,14 @@ import (
 func requiresPrimaryCatalogSerial(
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 ) bool {
-	return manifest.Topology == transport.DNSTopologyPaired &&
-		manifest.PairRole == transport.DNSPairRolePrimary
+	return dnsengineartifact.RequiresPrimaryCatalogSerial(manifest)
 }
 
 func validatePrimaryCatalogSerialContract(
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 	serial uint32,
 ) error {
-	if requiresPrimaryCatalogSerial(manifest) {
-		if serial == 0 {
-			return errors.New("paired primary DNS engine state is missing its catalog serial")
-		}
-		return nil
-	}
-	if serial != 0 {
-		return errors.New("non-primary DNS engine state unexpectedly binds a catalog serial")
-	}
-	return nil
+	return dnsengineartifact.ValidatePrimaryCatalogSerial(manifest, serial)
 }
 
 func pairRoleForEngineState(
@@ -387,14 +378,23 @@ func primaryCatalogSerialFromSource(
 	}
 	var verifyErr error
 	if state.PairRole == `` && state.PrimaryCatalogSerial == 0 {
+		// The peer re-serves the catalog the local source engine produced.
+		peerAXFR, peerErr := peerReservedCatalogAXFRForLocalEngine(manifest.SourceEngine)
+		if peerErr != nil {
+			return 0, peerErr
+		}
 		verifyErr = verifyLegacyPrimaryCatalogHandoffEvidenceAt(
 			ctx, evidence, manifest, serial,
-			probeDNSZoneSOA, probeDNSBoundCatalogAXFR,
+			probeDNSZoneSOA, peerAXFR,
 		)
 	} else {
+		producerAXFR := probeDNSCatalogAXFR
+		if manifest.SourceEngine == transport.DNSEnginePowerDNS {
+			producerAXFR = probeDNSPDNSCatalogAXFR
+		}
 		verifyErr = verifyPrimaryCatalogHandoffEvidenceAt(
 			ctx, evidence, manifest, serial,
-			probeDNSZoneSOA, probeDNSCatalogAXFR,
+			probeDNSZoneSOA, producerAXFR,
 		)
 	}
 	if verifyErr != nil {
@@ -421,9 +421,13 @@ func verifyCompletedPrimaryCatalogTarget(
 	if err != nil {
 		return err
 	}
+	producerAXFR := probeDNSCatalogAXFR
+	if manifest.TargetEngine == transport.DNSEnginePowerDNS {
+		producerAXFR = probeDNSPDNSCatalogAXFR
+	}
 	return verifyPrimaryCatalogHandoffEvidenceAt(
 		ctx, evidence, manifest, state.PrimaryCatalogSerial,
-		probeDNSZoneSOA, probeDNSCatalogAXFR,
+		probeDNSZoneSOA, producerAXFR,
 	)
 }
 
@@ -446,9 +450,14 @@ func verifyLegacyCompletedPrimaryCatalogTarget(
 	if err != nil {
 		return err
 	}
+	// The peer re-serves the catalog the local target engine produced.
+	peerAXFR, err := peerReservedCatalogAXFRForLocalEngine(manifest.TargetEngine)
+	if err != nil {
+		return err
+	}
 	return verifyLegacyPrimaryCatalogHandoffEvidenceAt(
 		ctx, evidence, manifest, serial,
-		probeDNSZoneSOA, probeDNSBoundCatalogAXFR,
+		probeDNSZoneSOA, peerAXFR,
 	)
 }
 
@@ -459,6 +468,11 @@ func verifyRestoredDNSSwitchSource(
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 	journal dnsEngineSwitchJournal,
 ) error {
+	// A reinstall's source is the recorded engine that was not running; its
+	// rollback restores exactly that, never a running BIND (item 2, D-026).
+	if dnsSwitchJournalReinstallsAbsentEngine(journal) {
+		return verifyRestoredReinstallSource(ctx, systemctl, journal)
+	}
 	switch journal.SourceEngine {
 	case transport.DNSEnginePowerDNS:
 		if err := verifyOnlyPDNSActive(ctx, systemctl); err != nil {

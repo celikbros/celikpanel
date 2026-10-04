@@ -1,0 +1,41 @@
+--- /var/tmp/cp-upd1-run/owner_update_trial.v4.py	2026-09-30 15:35:49.128553375 +0300
++++ /var/tmp/cp-upd1-run/harness/deploy/e2e/release-recovery/owner_update_trial.py	2026-09-30 15:35:49.163598348 +0300
+@@ -1061,6 +1061,9 @@
+     def setup(self, checks: dict) -> str:
+         state = self.api("GET", "/api/v1/setup", purpose="ServerSetupGate").json() or {}
+         checks["before"] = {k: state.get(k) for k in ("status", "revision", "guidance", "required")}
++        # upd1 run copy v5 (not committed): owner chose DNS hosted elsewhere (single isolated node).
++        self.state["dns_external"] = (self.setup_draft_override or {}).get("dns_mode") == "external"
++        checks["dns_external"] = self.state["dns_external"]
+         if state.get("guidance") not in ("guided", "manual"):
+             state = self.api("PUT", "/api/v1/setup/guidance", {"revision": state.get("revision"), "guidance": "guided"},
+                              purpose="ServerSetupChoice guided").json() or {}
+@@ -1282,7 +1285,8 @@
+                                                                          if s.get("cron", {}).get("ok")}) >= 2,
+                       firewall_tables=pre["firewall"].get("tables"), timers=sorted(pre["timers"]),
+                       database=self.state["pre_observation"].get("database", {}).get("status"))
+-        failing = [k for k in ("web_ok", "dns_ok") if not checks[k]]
++        failing = [k for k in ("web_ok", "dns_ok") if not checks[k]
++                   and not (k == "dns_ok" and self.state.get("dns_external"))]  # upd1 run copy v5
+         if seed["mail"].get("listed") and not checks["smtp_ok"]:
+             failing.append("smtp_ok")
+         self.state["cron_precondition"] = checks["cron_advancing"]
+@@ -1657,7 +1661,7 @@
+             failures.append(f"timers changed: {sorted(timers['changed'])}")
+         if not firewall_equal:
+             failures.append("firewall ruleset changed")
+-        if not checks["site_marker"] or not checks["dns"]:
++        if not checks["site_marker"] or (not checks["dns"] and not self.state.get("dns_external")):  # upd1 run copy v5
+             failures.append("site marker or DNS SOA not served")
+         if self.state["seed"]["mail"].get("listed") and not (post_work.get("mailbox", {}).get("present") and checks["smtp"]):
+             failures.append("mailbox or submission service missing")
+@@ -1733,6 +1737,9 @@
+             if key == "smtp" and not self.state.get("seed", {}).get("mail", {}).get("listed"):
+                 per[key] = {"verdict": "not-seeded"}
+                 continue
++            if key == "dns" and self.state.get("dns_external"):  # upd1 run copy v5
++                per[key] = {"verdict": "not-provided-external-dns"}
++                continue
+             if key == "cron" and not self.state.get("cron_precondition"):
+                 per[key] = {"verdict": "not-running-before-update"}
+                 continue

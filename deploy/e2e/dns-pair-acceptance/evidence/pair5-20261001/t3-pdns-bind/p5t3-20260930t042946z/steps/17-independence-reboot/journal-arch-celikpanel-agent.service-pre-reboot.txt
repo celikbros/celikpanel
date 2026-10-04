@@ -1,0 +1,13 @@
+2026-09-30T04:31:13.102465+00:00 dns-arch systemd[1]: Starting CelikPanel privileged agent...
+2026-09-30T04:31:13.139327+00:00 dns-arch systemd[1]: Started CelikPanel privileged agent.
+2026-09-30T04:31:13.204643+00:00 dns-arch agent[409]: 2026/09/30 04:31:13 Starting CelikPanel Agent...
+2026-09-30T04:31:13.214277+00:00 dns-arch agent[409]: 2026/09/30 04:31:13 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-30T04:32:46.963256+00:00 dns-arch agent[409]: 2026/09/30 04:32:46 DNS engine change 857e1b06395f7e2803f9fe3445f346d5: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format
+2026-09-30T04:32:50.531918+00:00 dns-arch agent[409]: 2026/09/30 04:32:50 DNS switch (request 857e1b06395f7e2803f9fe3445f346d5): BIND rndc key /etc/rndc.key is product_created
+2026-09-30T04:32:55.291336+00:00 dns-arch agent[409]: 2026/09/30 04:32:55 DNS engine change completion 857e1b06395f7e2803f9fe3445f346d5: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format
+2026-09-30T04:32:55.779897+00:00 dns-arch agent[409]: 2026/09/30 04:32:55 DNS readiness check: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format
+2026-09-30T04:33:00.214492+00:00 dns-arch agent[409]: 2026/09/30 04:33:00 DNS readiness check: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format
+2026-09-30T04:33:15.015334+00:00 dns-arch agent[409]: 2026/09/30 04:33:15 DNS readiness check: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format
+2026-09-30T04:33:55.755641+00:00 dns-arch agent[409]: 2026/09/30 04:33:55 DNS readiness check: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format
+2026-09-30T04:34:04.696545+00:00 dns-arch agent[409]: 2026/09/30 04:34:04 DNS readiness check: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format
+2026-09-30T04:34:07.100208+00:00 dns-arch agent[409]: 2026/09/30 04:34:07 DNS readiness check: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format

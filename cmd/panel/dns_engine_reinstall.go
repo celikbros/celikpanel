@@ -154,7 +154,7 @@ func (p *Panel) executeDNSEngineReinstall(
 				return err
 			}
 			if response.Error != "" {
-				return newDNSEngineAgentRejectedError(response.Error)
+				return dnsEngineAgentRejection(response.Error)
 			}
 			if !response.Applied ||
 				response.ActiveEngine != manifest.TargetEngine ||

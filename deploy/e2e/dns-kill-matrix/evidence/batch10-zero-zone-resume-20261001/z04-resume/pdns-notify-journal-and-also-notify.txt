@@ -1,0 +1,78 @@
+wall=2026-09-30T03:00:33.125694412Z boot_id=e5177a51-35db-4b04-89a5-424e288fbe6e
+== journalctl --list-boots
+IDX BOOT ID                          FIRST ENTRY                 LAST ENTRY
+ -1 eaafb81312304c698dc5dfa463683b32 Wed 2026-09-30 01:24:01 UTC Wed 2026-09-30 01:37:03 UTC
+  0 e5177a5135db4b0489a5424e288fbe6e Wed 2026-09-30 02:55:42 UTC Wed 2026-09-30 03:00:33 UTC
+== pdns.service journal, all boots, lines matching notify|spurious|failed after retries|does not resolve (case-insensitive)
+2026-09-30T01:26:58.957128+00:00 dns-debian13 pdns_server[4116]: Unable to queue notification of domain 'catalog-c000020a.celikpanel.invalid' to nameserver 'invalid': nameserver does not resolve!
+2026-09-30T01:27:39.360966+00:00 dns-debian13 pdns_server[4116]: Notification request to host 192.0.2.11 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T01:27:39.388877+00:00 dns-debian13 pdns_server[4116]: Notification request to host 192.0.2.11 for zone 's2.s1-kill.test' received from operator
+2026-09-30T01:27:41.033113+00:00 dns-debian13 pdns_server[4116]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-30T01:27:41.033113+00:00 dns-debian13 pdns_server[4116]: Received unsuccessful notification report for 's2.s1-kill.test' from 192.0.2.11:53, error: Server Not Authoritative for zone / Not Authorized
+2026-09-30T01:27:41.033113+00:00 dns-debian13 pdns_server[4116]: Received spurious notify answer for 's2.s1-kill.test' from 192.0.2.11:53
+2026-09-30T01:27:44.035296+00:00 dns-debian13 pdns_server[4116]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-30T01:27:44.035296+00:00 dns-debian13 pdns_server[4116]: Received spurious notify answer for 's2.s1-kill.test' from 192.0.2.11:53
+2026-09-30T01:27:45.657519+00:00 dns-debian13 pdns_server[4116]: Notification request to host 192.0.2.11 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T01:27:45.677564+00:00 dns-debian13 pdns_server[4116]: Notification request to host 192.0.2.11 for zone 's2.s1-kill.test' received from operator
+2026-09-30T01:27:47.036293+00:00 dns-debian13 pdns_server[4116]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-30T01:27:47.036293+00:00 dns-debian13 pdns_server[4116]: Received spurious notify answer for 's2.s1-kill.test' from 192.0.2.11:53
+2026-09-30T01:27:49.037170+00:00 dns-debian13 pdns_server[4116]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-30T01:27:49.037170+00:00 dns-debian13 pdns_server[4116]: Received spurious notify answer for 's2.s1-kill.test' from 192.0.2.11:53
+2026-09-30T01:27:50.038438+00:00 dns-debian13 pdns_server[4116]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-30T01:27:50.038438+00:00 dns-debian13 pdns_server[4116]: Received spurious notify answer for 's2.s1-kill.test' from 192.0.2.11:53
+2026-09-30T01:27:51.670307+00:00 dns-debian13 pdns_server[4116]: Notification request to host 192.0.2.11 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T01:27:53.039996+00:00 dns-debian13 pdns_server[4116]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-30T01:27:55.041012+00:00 dns-debian13 pdns_server[4116]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-30T01:27:55.041012+00:00 dns-debian13 pdns_server[4116]: Received unsuccessful notification report for 's2.s1-kill.test' from 192.0.2.11:53, error: Server Not Authoritative for zone / Not Authorized
+2026-09-30T01:27:55.041012+00:00 dns-debian13 pdns_server[4116]: Received spurious notify answer for 's2.s1-kill.test' from 192.0.2.11:53
+2026-09-30T01:27:56.041515+00:00 dns-debian13 pdns_server[4116]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-30T01:27:58.053821+00:00 dns-debian13 pdns_server[4116]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-30T01:27:58.053821+00:00 dns-debian13 pdns_server[4116]: Received unsuccessful notification report for 's2.s1-kill.test' from 192.0.2.11:53, error: Server Not Authoritative for zone / Not Authorized
+2026-09-30T01:27:58.053821+00:00 dns-debian13 pdns_server[4116]: Received spurious notify answer for 's2.s1-kill.test' from 192.0.2.11:53
+2026-09-30T01:28:01.093433+00:00 dns-debian13 pdns_server[4116]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-30T01:28:04.094874+00:00 dns-debian13 pdns_server[4116]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-30T01:28:04.094874+00:00 dns-debian13 pdns_server[4116]: Received unsuccessful notification report for 's2.s1-kill.test' from 192.0.2.11:53, error: Server Not Authoritative for zone / Not Authorized
+2026-09-30T01:28:04.094874+00:00 dns-debian13 pdns_server[4116]: Received spurious notify answer for 's2.s1-kill.test' from 192.0.2.11:53
+2026-09-30T01:28:10.098450+00:00 dns-debian13 pdns_server[4116]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-30T01:28:14.100336+00:00 dns-debian13 pdns_server[4116]: Notification for catalog-c000020a.celikpanel.invalid to 192.0.2.11:0 failed after retries
+2026-09-30T01:28:14.100336+00:00 dns-debian13 pdns_server[4116]: Notification for s2.s1-kill.test to 192.0.2.11:0 failed after retries
+2026-09-30T01:28:20.102763+00:00 dns-debian13 pdns_server[4116]: Notification for catalog-c000020a.celikpanel.invalid to 192.0.2.11:0 failed after retries
+2026-09-30T01:28:20.102763+00:00 dns-debian13 pdns_server[4116]: Notification for s2.s1-kill.test to 192.0.2.11:0 failed after retries
+2026-09-30T01:28:26.104538+00:00 dns-debian13 pdns_server[4116]: Notification for catalog-c000020a.celikpanel.invalid to 192.0.2.11:0 failed after retries
+2026-09-30T02:57:01.984836+00:00 dns-debian13 pdns_server[652]: Notification request to host 192.0.2.11 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T02:57:03.615275+00:00 dns-debian13 pdns_server[652]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-30T02:57:06.616049+00:00 dns-debian13 pdns_server[652]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-30T02:57:11.617256+00:00 dns-debian13 pdns_server[652]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-30T02:57:20.618744+00:00 dns-debian13 pdns_server[652]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-30T02:57:36.621273+00:00 dns-debian13 pdns_server[652]: Notification for catalog-c000020a.celikpanel.invalid to 192.0.2.11:0 failed after retries
+matching lines: 41
+== pdns.service journal line count (all boots): 130
+== also-notify in /etc/powerdns/pdns.conf and /etc/powerdns/pdns.d/* (case-insensitive, with file and line)
+total 16
+drwxr-xr-x 2 root root 4096 2026-09-30 01:26:56.474954262 +0000 .
+drwxr-xr-x 3 root root 4096 2026-09-30 01:26:53.342923748 +0000 ..
+-rw-r--r-- 1 root root  310 2026-09-30 01:26:56.450954036 +0000 celikpanel-cluster.conf
+-rw-r--r-- 1 root root  216 2026-09-30 01:26:56.462954149 +0000 celikpanel.conf
+/etc/powerdns/pdns.conf:24:# allow-notify-from	Allow AXFR NOTIFY from these IP ranges. If empty, drop all incoming notifies.
+/etc/powerdns/pdns.conf:26:# allow-notify-from=0.0.0.0/0,::/0
+/etc/powerdns/pdns.conf:29:# allow-unsigned-autoprimary	Allow autoprimaries to create zones without TSIG signed NOTIFY
+/etc/powerdns/pdns.conf:34:# allow-unsigned-notify	Allow unsigned notifications for TSIG secured zones
+/etc/powerdns/pdns.conf:36:# allow-unsigned-notify=yes
+/etc/powerdns/pdns.conf:39:# also-notify	When notifying a zone, also notify these nameservers
+/etc/powerdns/pdns.conf:41:# also-notify=
+/etc/powerdns/pdns.conf:274:# forward-notify	IP addresses to forward received notifications to regardless of primary or secondary settings
+/etc/powerdns/pdns.conf:276:# forward-notify=
+/etc/powerdns/pdns.conf:471:# only-notify	Only send AXFR NOTIFY to these IP addresses or netmasks
+/etc/powerdns/pdns.conf:473:# only-notify=0.0.0.0/0,::/0
+/etc/powerdns/pdns.conf:561:# secondary-do-renotify	If this secondary should send out notifications after receiving zone transfers from a primary
+/etc/powerdns/pdns.conf:563:# secondary-do-renotify=no
+/etc/powerdns/pdns.conf:572:# send-signed-notify	Send TSIG secured NOTIFY if TSIG key is configured for a zone
+/etc/powerdns/pdns.conf:574:# send-signed-notify=yes
+/etc/powerdns/pdns.d/celikpanel-cluster.conf:7:also-notify=192.0.2.11
+== domainmetadata (private copy of the database)
+(copy includes the WAL)
+ALSO-NOTIFY rows: []
+all domainmetadata rows:
+   ["catalog-c000020a.celikpanel.invalid", "CATALOG-HASH", "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="]
+domains:
+   [1, "catalog-c000020a.celikpanel.invalid", "PRODUCER", null, "celikpanel-bind-catalog-v1", null, null, 1, null]

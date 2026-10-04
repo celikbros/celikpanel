@@ -1,0 +1,36 @@
+{
+  "catalog_status": {
+    "rndc": {
+      "argv": [
+        "/usr/sbin/rndc",
+        "zonestatus",
+        "catalog-c000020a.celikpanel.invalid"
+      ],
+      "output": "name: catalog-c000020a.celikpanel.invalid\ntype: primary\nfiles: /var/cache/bind/celikpanel/generations/515e30af52aff507b6d6517e25cf2863b33efd6f8b26445ec1faca7347a8ef28/zones/60d6a3773f88bbeb6c3e8d58aee4a38c20e57e9074ec06dfd8605d6f8d791299.zone\nserial: 3\nnodes: 2\nlast loaded: Wed, 30 Sep 2026 05:57:09 GMT\nsecure: no\ndynamic: no\nreconfigurable via modzone: no",
+      "returncode": 0
+    },
+    "serial": "3",
+    "state": "loaded",
+    "type": "primary"
+  },
+  "command": "native",
+  "engine": "bind",
+  "native_state": "absent",
+  "returncode": 0,
+  "zone": "pair-accept.test",
+  "zone_files": [],
+  "zone_status": {
+    "rndc": {
+      "argv": [
+        "/usr/sbin/rndc",
+        "zonestatus",
+        "pair-accept.test"
+      ],
+      "output": "rndc: 'zonestatus' failed: not found\nno matching zone 'pair-accept.test' in any view",
+      "returncode": 1
+    },
+    "serial": null,
+    "state": "unloaded",
+    "type": null
+  }
+}

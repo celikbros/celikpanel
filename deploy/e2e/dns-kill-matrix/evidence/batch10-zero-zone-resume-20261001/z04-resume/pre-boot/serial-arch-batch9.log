@@ -1,0 +1,399 @@
+[H[J[1;1H[?25l[m[H[J[1;1H[2;28HGNU GRUB  version 2:2.14-1
+
+[m[4;2H+----------------------------------------------------------------------------+[5;2H|[5;79H|[6;2H|[6;79H|[7;2H|[7;79H|[8;2H|[8;79H|[9;2H|[9;79H|[10;2H|[10;79H|[11;2H|[11;79H|[12;2H|[12;79H|[13;2H|[13;79H|[14;2H|[14;79H|[15;2H|[15;79H|[16;2H|[16;79H|[17;2H+----------------------------------------------------------------------------+[m[18;2H[19;2H[m     Use the ^ and v keys to select which entry is highlighted.          
+      Press enter to boot the selected OS, `e' to edit the commands       
+      before booting or `c' for a command-line.                           [5;80H [7m[5;3H*Arch Linux                                                                 [m[5;78H[m[m[6;3H Advanced options for Arch Linux                                            [m[6;78H[m[m[7;3H                                                                            [m[7;78H[m[m[8;3H                                                                            [m[8;78H[m[m[9;3H                                                                            [m[9;78H[m[m[10;3H                                                                            [m[10;78H[m[m[11;3H                                                                            [m[11;78H[m[m[12;3H                                                                            [m[12;78H[m[m[13;3H                                                                            [m[13;78H[m[m[14;3H                                                                            [m[14;78H[m[m[15;3H                                                                            [m[15;78H[m[m[16;3H                                                                            [m[16;78H[m[16;80H [5;78H[22;1H   The highlighted entry will be executed automatically in 1s.                 [5;78H[22;1H   The highlighted entry will be executed automatically in 0s.                 [5;78H[?25h[H[J[1;1H  Booting `Arch Linux'
+
+Loading Linux linux ...
+Loading initial ramdisk ...
+[    0.166723] virt/tdx: TDX not supported by the host platform
+P+q6E616D65\[18t7[32766;32766H[6n8[!p]104\[0m[?7h[1G[0J[0;1;39mBooting initrd of [0m[38;2;23;147;209mArch Linux[0m[0;1;39m.[0m
+]3008;start=251bc954b99741edba51ecde8dcefeb9;user=root;hostname=archlinux;machineid=dda9208611425f5d84b7345f148b9c9b;bootid=ba512f5a42ca4920a336b0569b5386d0;pid=1;pidfdid=1;comm=systemd;type=boot\         Expecting device [0;1;39m/dev/disk/by-uuid…79c3-24af-4bcc-8525-ad14a289d144[0m...
+[[0;32m  OK  [0m] Reached target [0;1;39mPath Units[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mSlice Units[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mSwaps[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mTimer Units[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mJournal Socket (/dev/log)[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mJournal Sockets[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mudev Control Socket[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mudev Kernel Socket[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mSocket Units[0m.
+         Starting [0;1;39mCreate List of Static Device Nodes[0m...
+         Starting [0;1;39mJournal Service[0m...
+         Starting [0;1;39mLoad Kernel Modules[0m...
+         Starting [0;1;39mCreate Static Device Nodes in /dev[0m...
+         Starting [0;1;39mColdplug All udev Devices[0m...
+[[0;32m  OK  [0m] Finished [0;1;39mCreate List of Static Device Nodes[0m.
+[[0;32m  OK  [0m] Finished [0;1;39mCreate Static Device Nodes in /dev[0m.
+[[0;32m  OK  [0m] Finished [0;1;39mLoad Kernel Modules[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mPreparation for Local File Systems[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mLocal File Systems[0m.
+         Starting [0;1;39mRule-based Manager for Device Events and Files[0m...
+[[0;32m  OK  [0m] Started [0;1;39mJournal Service[0m.
+         Starting [0;1;39mCreate System Files and Directories[0m...
+[[0;32m  OK  [0m] Finished [0;1;39mCreate System Files and Directories[0m.
+[[0;32m  OK  [0m] Started [0;1;39mRule-based Manager for Device Events and Files[0m.
+[[0;32m  OK  [0m] Finished [0;1;39mColdplug All udev Devices[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mSystem Initialization[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mBasic System[0m.
+[[0;32m  OK  [0m] Found device [0;1;39m/dev/disk/by-uuid/7ab979c3-24af-4bcc-8525-ad14a289d144[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mInitrd Root Device[0m.
+         Starting [0;1;39mFile System Check on /dev…79c3-24af-4bcc-8525-ad14a289d144[0m...
+[[0;32m  OK  [0m] Finished [0;1;39mFile System Check on /dev…b979c3-24af-4bcc-8525-ad14a289d144[0m.
+         Starting [0;1;39mVirtual Console Setup[0m...
+[[0;32m  OK  [0m] Stopped [0;1;39mVirtual Console Setup[0m.
+         Starting [0;1;39mVirtual Console Setup[0m...
+[[0;32m  OK  [0m] Stopped [0;1;39mVirtual Console Setup[0m.
+         Starting [0;1;39mVirtual Console Setup[0m...
+[[0;32m  OK  [0m] Finished [0;1;39mVirtual Console Setup[0m.
+         Mounting [0;1;39m/sysroot[0m...
+[[0;32m  OK  [0m] Mounted [0;1;39m/sysroot[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mInitrd Root File System[0m.
+         Starting [0;1;39mMountpoints Configured in the Real Root[0m...
+[[0;32m  OK  [0m] Finished [0;1;39mMountpoints Configured in the Real Root[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mInitrd File Systems[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mInitrd Default Target[0m.
+         Starting [0;1;39mCleaning Up and Shutting Down Daemons[0m...
+[[0;32m  OK  [0m] Stopped target [0;1;39mInitrd Default Target[0m.
+[[0;32m  OK  [0m] Stopped target [0;1;39mBasic System[0m.
+[[0;32m  OK  [0m] Stopped target [0;1;39mInitrd Root Device[0m.
+[[0;32m  OK  [0m] Stopped target [0;1;39mPath Units[0m.
+[[0;32m  OK  [0m] Stopped target [0;1;39mSlice Units[0m.
+[[0;32m  OK  [0m] Stopped target [0;1;39mSocket Units[0m.
+[[0;32m  OK  [0m] Stopped target [0;1;39mSystem Initialization[0m.
+[[0;32m  OK  [0m] Stopped target [0;1;39mSwaps[0m.
+[[0;32m  OK  [0m] Stopped target [0;1;39mTimer Units[0m.
+[[0;32m  OK  [0m] Stopped [0;1;39mCreate List of Static Device Nodes[0m.
+[[0;32m  OK  [0m] Stopped [0;1;39mLoad Kernel Modules[0m.
+[[0;32m  OK  [0m] Stopped [0;1;39mCreate System Files and Directories[0m.
+[[0;32m  OK  [0m] Stopped target [0;1;39mLocal File Systems[0m.
+[[0;32m  OK  [0m] Stopped target [0;1;39mPreparation for Local File Systems[0m.
+[[0;32m  OK  [0m] Stopped [0;1;39mColdplug All udev Devices[0m.
+         Stopping [0;1;39mRule-based Manager for Device Events and Files[0m...
+[[0;32m  OK  [0m] Stopped [0;1;39mVirtual Console Setup[0m.
+[[0;32m  OK  [0m] Finished [0;1;39mCleaning Up and Shutting Down Daemons[0m.
+[[0;32m  OK  [0m] Stopped [0;1;39mRule-based Manager for Device Events and Files[0m.
+[[0;32m  OK  [0m] Closed [0;1;39mudev Control Socket[0m.
+         Starting [0;1;39mCleanup udev Database[0m...
+[[0;32m  OK  [0m] Stopped [0;1;39mCreate Static Device Nodes in /dev[0m.
+[[0;32m  OK  [0m] Finished [0;1;39mCleanup udev Database[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mSwitch Root[0m.
+         Starting [0;1;39mSwitch Root[0m...
+P+q6E616D65\[18t7[32766;32766H[6n8[!p]104\[0m[?7h[1G[0J
+[0;1;39mWelcome to [0m[38;2;23;147;209mArch Linux[0m[0;1;39m![0m
+
+]3008;start=2228e9e9d8a943d392a7b7fb3eb3d335;user=root;hostname=archlinux;machineid=dda9208611425f5d84b7345f148b9c9b;bootid=ba512f5a42ca4920a336b0569b5386d0;pid=1;pidfdid=1;comm=systemd;type=boot\[    4.662245] I/O error, dev fd0, sector 0 op 0x0:(READ) flags 0x0 phys_seg 1 prio class 2
+[[0;32m  OK  [0m] Stopped [0;1;39mSwitch Root[0m.
+[[0;32m  OK  [0m] Created slice [0;1;39mSlice /system/dirmngr[0m.
+[[0;32m  OK  [0m] Created slice [0;1;39mSlice /system/getty[0m.
+[[0;32m  OK  [0m] Created slice [0;1;39mSlice /system/gpg-agent[0m.
+[[0;32m  OK  [0m] Created slice [0;1;39mSlice /system/gpg-agent-browser[0m.
+[[0;32m  OK  [0m] Created slice [0;1;39mSlice /system/gpg-agent-extra[0m.
+[[0;32m  OK  [0m] Created slice [0;1;39mSlice /system/gpg-agent-ssh[0m.
+[[0;32m  OK  [0m] Created slice [0;1;39mSlice /system/keyboxd[0m.
+[[0;32m  OK  [0m] Created slice [0;1;39mSlice /system/modprobe[0m.
+[[0;32m  OK  [0m] Created slice [0;1;39mSlice /system/serial-getty[0m.
+[[0;32m  OK  [0m] Created slice [0;1;39mUser and Session Slice[0m.
+[[0;32m  OK  [0m] Started [0;1;39mDispatch Password Requests to Console Directory Watch[0m.
+[[0;32m  OK  [0m] Started [0;1;39mForward Password Requests to Wall Directory Watch[0m.
+[[0;32m  OK  [0m] Set up automount [0;1;39mArbitrary Executa…ormats File System Automount Point[0m.
+         Expecting device [0;1;39m/dev/ttyS0[0m...
+[[0;32m  OK  [0m] Reached target [0;1;39mImage Downloads[0m.
+[[0;32m  OK  [0m] Stopped target [0;1;39mSwitch Root[0m.
+[[0;32m  OK  [0m] Stopped target [0;1;39mInitrd File Systems[0m.
+[[0;32m  OK  [0m] Stopped target [0;1;39mInitrd Root File System[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mLocal Integrity Protected Volumes[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mPath Units[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mRemote Encrypted Volumes[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mRemote File Systems[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mRemote Integrity Protected Volumes[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mRemote Verity Protected Volumes[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mSlice Units[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mLocal Verity Protected Volumes[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mDevice-mapper event daemon FIFOs[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mQuery the User Interactively for a Password[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mProcess Core Dump Socket[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mCredential Encryption/Decryption[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mFactory Reset Management[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mHostname Service Socket[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mJournal Audit Socket[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mDDI File System Mounter Socket[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mConsole Output Muting Service Socket[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mNetwork Management Metrics Varlink Socket[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mNetwork Management Varlink Socket[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mNetwork Management Netlink Socket[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mNamespace Resource Manager Socket[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mDisk Repartitioning Service Socket[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mReport System Basic Metrics Socket[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mCGroup Report Varlink Socket[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mResolve Monitor Varlink Socket[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mResolve Service Varlink Socket[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mSimple Block Device Backed Storage Provider[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mSimple File System Backed Storage Provider[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mudev Control Socket[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mudev Varlink Socket[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mUser Database Manager Socket[0m.
+         Mounting [0;1;39mHuge Pages File System[0m...
+         Mounting [0;1;39mPOSIX Message Queue File System[0m...
+         Mounting [0;1;39mKernel Debug File System[0m...
+         Mounting [0;1;39mKernel Trace File System[0m...
+         Starting [0;1;39mCreate List of Static Device Nodes[0m...
+         Mounting [0;1;39mKernel Configuration File System[0m...
+         Mounting [0;1;39mFUSE Control File System[0m...
+[[0;32m  OK  [0m] Stopped [0;1;39mFile System Check on Root Device[0m.
+         Starting [0;1;39mJournal Service[0m...
+         Starting [0;1;39mGenerate Network Units from Kernel Command Line[0m...
+         Starting [0;1;39mRemount Root and Kernel File Systems[0m...
+         Starting [0;1;39mApply Kernel Variables[0m...
+         Starting [0;1;39mWait Until Kernel Time Synchronized[0m...
+[[0;32m  OK  [0m] Reached target [0;1;39mLocal Encrypted Volumes[0m.
+         Starting [0;1;39mLoad udev Rules from Credentials[0m...
+         Starting [0;1;39mColdplug All udev Devices[0m...
+[[0;32m  OK  [0m] Mounted [0;1;39mHuge Pages File System[0m.
+[[0;32m  OK  [0m] Mounted [0;1;39mPOSIX Message Queue File System[0m.
+[[0;32m  OK  [0m] Mounted [0;1;39mKernel Debug File System[0m.
+[[0;32m  OK  [0m] Started [0;1;39mJournal Service[0m.
+[[0;32m  OK  [0m] Mounted [0;1;39mKernel Trace File System[0m.
+[[0;32m  OK  [0m] Finished [0;1;39mCreate List of Static Device Nodes[0m.
+[[0;32m  OK  [0m] Mounted [0;1;39mKernel Configuration File System[0m.
+[[0;32m  OK  [0m] Mounted [0;1;39mFUSE Control File System[0m.
+[[0;32m  OK  [0m] Finished [0;1;39mGenerate Network Units from Kernel Command Line[0m.
+[[0;32m  OK  [0m] Finished [0;1;39mRemount Root and Kernel File Systems[0m.
+[[0;32m  OK  [0m] Finished [0;1;39mApply Kernel Variables[0m.
+[[0;32m  OK  [0m] Finished [0;1;39mLoad udev Rules from Credentials[0m.
+         Activating swap [0;1;39m/swap/swapfile[0m...
+         Starting [0;1;39mFlush Journal to Persistent Storage[0m...
+         Starting [0;1;39mLoad/Save OS Random Seed[0m...
+         Starting [0;1;39mCreate Static Device Nodes in /dev gracefully[0m...
+[[0;32m  OK  [0m] Activated swap [0;1;39m/swap/swapfile[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mSwaps[0m.
+[[0;32m  OK  [0m] Finished [0;1;39mLoad/Save OS Random Seed[0m.
+         Starting [0;1;39mUser Database Manager[0m...
+         Starting [0;1;39mLoad Kernel Module tun[0m...
+[[0;32m  OK  [0m] Finished [0;1;39mFlush Journal to Persistent Storage[0m.
+[[0;32m  OK  [0m] Finished [0;1;39mLoad Kernel Module tun[0m.
+         Starting [0;1;39mNamespace Resource Manager[0m...
+[[0;32m  OK  [0m] Finished [0;1;39mColdplug All udev Devices[0m.
+         Mounting [0;1;39mArbitrary Executable File Formats File System[0m...
+         Mounting [0;1;39mTemporary Directory /tmp[0m...
+[[0;32m  OK  [0m] Mounted [0;1;39mArbitrary Executable File Formats File System[0m.
+[[0;32m  OK  [0m] Mounted [0;1;39mTemporary Directory /tmp[0m.
+[[0;32m  OK  [0m] Started [0;1;39mUser Database Manager[0m.
+[[0;32m  OK  [0m] Started [0;1;39mNamespace Resource Manager[0m.
+[[0;32m  OK  [0m] Finished [0;1;39mCreate Static Device Nodes in /dev gracefully[0m.
+         Starting [0;1;39mCreate System Users[0m...
+[[0;32m  OK  [0m] Finished [0;1;39mCreate System Users[0m.
+         Starting [0;1;39mJournal Log Access Socket[0m...
+         Starting [0;1;39mNetwork Name Resolution[0m...
+         Starting [0;1;39mNetwork Time Synchronization[0m...
+         Starting [0;1;39mCreate Static Device Nodes in /dev[0m...
+[[0;32m  OK  [0m] Listening on [0;1;39mJournal Log Access Socket[0m.
+[[0;32m  OK  [0m] Finished [0;1;39mCreate Static Device Nodes in /dev[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mPreparation for Local File Systems[0m.
+[[0;32m  OK  [0m] Set up automount [0;1;39mEFI System Partition Automount[0m.
+         Starting [0;1;39mRule-based Manager for Device Events and Files[0m...
+[[0;32m  OK  [0m] Started [0;1;39mNetwork Time Synchronization[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mSystem Time Set[0m.
+[[0;32m  OK  [0m] Started [0;1;39mNetwork Name Resolution[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mHost and Network Name Lookups[0m.
+[[0;32m  OK  [0m] Started [0;1;39mRule-based Manager for Device Events and Files[0m.
+         Starting [0;1;39mVirtual Console Setup[0m...
+[[0;32m  OK  [0m] Stopped [0;1;39mVirtual Console Setup[0m.
+         Starting [0;1;39mVirtual Console Setup[0m...
+[[0;32m  OK  [0m] Finished [0;1;39mVirtual Console Setup[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mLocal File Systems[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mVirtual Machines and Containers[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mBoot Loader Control Service Socket[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mDisk Image Download Service Socket[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mSystem Extension Image Management[0m.
+         Starting [0;1;39mAutomatic Boot Loader Update[0m...
+         Starting [0;1;39mCreate System Files and Directories[0m...
+         Starting [0;1;39mLoad JSON user/group Records from Credentials[0m...
+[[0;32m  OK  [0m] Created slice [0;1;39mSlice /system/systemd-fsck[0m.
+         Starting [0;1;39mFile System Check on /dev/disk/by-diskseq/1-part2[0m...
+[[0;32m  OK  [0m] Finished [0;1;39mLoad JSON user/group Records from Credentials[0m.
+[[0;32m  OK  [0m] Finished [0;1;39mFile System Check on /dev/disk/by-diskseq/1-part2[0m.
+[[0;32m  OK  [0m] Finished [0;1;39mCreate System Files and Directories[0m.
+         Starting [0;1;39mRebuild Dynamic Linker Cache[0m...
+         Starting [0;1;39mInitial Setup[0m...
+[!p]104\[0m[?7h[1G[0J7[32766;32766H[6n8         Starting [0;1;39mRebuild Journal Catalog[0m...
+         Starting [0;1;39mRecord System Boot/Shutdown in UTMP[0m...
+[[0;32m  OK  [0m] Finished [0;1;39mRecord System Boot/Shutdown in UTMP[0m.
+[[0;32m  OK  [0m] Finished [0;1;39mRebuild Journal Catalog[0m.
+[!p]104\[0m[?7h[1G[0J7[32766;32766H[6n8[[0;32m  OK  [0m] Finished [0;1;39mRebuild Dynamic Linker Cache[0m.
+]3008;start=25441a46ec094b249dfe64442380d2ec;user=root;hostname=archlinux;machineid=dda9208611425f5d84b7345f148b9c9b;bootid=ba512f5a42ca4920a336b0569b5386d0;pid=317;pidfdid=4225;comm=(systemd-firstboot);servicename=systemd-firstboot.service;invocationid=7e29548142c341b6b6ecaed6829c5ab1;type=service\[[0;32m  OK  [0m] Finished [0;1;39mInitial Setup[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mFirst Boot Complete[0m.
+         Starting [0;1;39mSave Transient machine-id to Disk[0m...
+[[0;32m  OK  [0m] Finished [0;1;39mSave Transient machine-id to Disk[0m.
+         Mounting [0;1;39mEFI System Partition Automount[0m...
+[[0;32m  OK  [0m] Mounted [0;1;39mEFI System Partition Automount[0m.
+[[0;32m  OK  [0m] Finished [0;1;39mAutomatic Boot Loader Update[0m.
+         Starting [0;1;39mUpdate is Completed[0m...
+[[0;32m  OK  [0m] Finished [0;1;39mUpdate is Completed[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mSystem Initialization[0m.
+[[0;32m  OK  [0m] Started [0;1;39mDaily Cleanup of Temporary Directories[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mD-Bus System Message Bus Socket[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mOpenSSH Server Socket…temd-ssh-generator, AF_UNIX Local)[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mUser Login Management Varlink Socket[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mVirtual Machine and C…tainer Registration Service Socket[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mSocket Units[0m.
+         Starting [0;1;39mD-Bus System Message Bus[0m...
+[[0;32m  OK  [0m] Started [0;1;39mD-Bus System Message Bus[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mBasic System[0m.
+         Starting [0;1;39mCloud-init: Single Process[0m...
+         Starting [0;1;39mSSH Key Generation[0m...
+         Starting [0;1;39mHome Area Manager[0m...
+         Starting [0;1;39mUser Login Management[0m...
+[[0;32m  OK  [0m] Started [0;1;39mHome Area Manager[0m.
+[[0;32m  OK  [0m] Finished [0;1;39mHome Area Activation[0m.
+[[0;32m  OK  [0m] Started [0;1;39mUser Login Management[0m.
+[[0;32m  OK  [0m] Finished [0;1;39mSSH Key Generation[0m.
+[[0;32m  OK  [0m] Started [0;1;39mCloud-init: Single Process[0m.
+         Starting [0;1;39mCloud-init: Local Stage (pre-network)[0m...
+[    9.359772] cloud-init[353]: Cloud-init v. 26.2 running 'init-local' at Wed, 30 Sep 2026 01:24:10 +0000. Up 9.34 seconds.
+[    9.477097] I/O error, dev fd0, sector 0 op 0x0:(READ) flags 0x0 phys_seg 1 prio class 2
+[    9.555281] I/O error, dev fd0, sector 0 op 0x0:(READ) flags 0x0 phys_seg 1 prio class 2
+[    9.624266] I/O error, dev fd0, sector 0 op 0x0:(READ) flags 0x0 phys_seg 1 prio class 2
+[    9.688115] I/O error, dev fd0, sector 0 op 0x0:(READ) flags 0x0 phys_seg 1 prio class 2
+[    9.760130] I/O error, dev fd0, sector 0 op 0x0:(READ) flags 0x0 phys_seg 1 prio class 2
+         Starting [0;1;39mHostname Service[0m...
+[[0;32m  OK  [0m] Started [0;1;39mHostname Service[0m.
+[[0;32m  OK  [0m] Finished [0;1;39mCloud-init: Local Stage (pre-network)[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mPreparation for Network[0m.
+[[0;32m  OK  [0m] Listening on [0;1;39mNetwork Management Resolve Hook Socket[0m.
+         Starting [0;1;39mNetwork Management[0m...
+[[0;32m  OK  [0m] Listening on [0;1;39mLoad/Save RF Kill Switch Status /dev/rfkill Watch[0m.
+[[0;32m  OK  [0m] Started [0;1;39mNetwork Management[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mNetwork[0m.
+         Starting [0;1;39mEnable Persistent Storage in systemd-networkd[0m...
+         Starting [0;1;39mWait for Network to be Online[0m...
+[[0;32m  OK  [0m] Finished [0;1;39mEnable Persistent Storage in systemd-networkd[0m.
+[[0;32m  OK  [0m] Finished [0;1;39mWait for Network to be Online[0m.
+         Starting [0;1;39mCloud-init: Network Stage[0m...
+[   11.928678] cloud-init[353]: Cloud-init v. 26.2 running 'init' at Wed, 30 Sep 2026 01:24:13 +0000. Up 11.92 seconds.
+[   11.938474] cloud-init[353]: ci-info: +++++++++++++++++++++++++++++++++++++Net device info+++++++++++++++++++++++++++++++++++++
+[   11.940716] cloud-init[353]: ci-info: +--------+------+--------------------------+---------------+--------+-------------------+
+[   11.942957] cloud-init[353]: ci-info: | Device |  Up  |         Address          |      Mask     | Scope  |     Hw-Address    |
+[   11.945168] cloud-init[353]: ci-info: +--------+------+--------------------------+---------------+--------+-------------------+
+[   11.947588] cloud-init[353]: ci-info: |   lo   | True |        127.0.0.1         |   255.0.0.0   |  host  |         .         |
+[   11.950082] cloud-init[353]: ci-info: |   lo   | True |         ::1/128          |       .       |  host  |         .         |
+[   11.952376] cloud-init[353]: ci-info: | mgmt0  | True |        10.0.2.15         | 255.255.255.0 | global | 52:54:00:13:00:11 |
+[   11.954930] cloud-init[353]: ci-info: | mgmt0  | True | fe80::5054:ff:fe13:11/64 |       .       |  link  | 52:54:00:13:00:11 |
+[   11.957883] cloud-init[353]: ci-info: | peer0  | True |        192.0.2.11        | 255.255.255.0 | global | 52:54:00:53:00:11 |
+[   11.960334] cloud-init[353]: ci-info: | peer0  | True | fe80::5054:ff:fe53:11/64 |       .       |  link  | 52:54:00:53:00:11 |
+[   11.962828] cloud-init[353]: ci-info: +--------+------+--------------------------+---------------+--------+-------------------+
+[   11.965079] cloud-init[353]: ci-info: ++++++++++++++++++++++++++++Route IPv4 info+++++++++++++++++++++++++++++
+[   11.967231] cloud-init[353]: ci-info: +-------+-------------+----------+-----------------+-----------+-------+
+[   11.969161] cloud-init[353]: ci-info: | Route | Destination | Gateway  |     Genmask     | Interface | Flags |
+[   11.971110] cloud-init[353]: ci-info: +-------+-------------+----------+-----------------+-----------+-------+
+[   11.973258] cloud-init[353]: ci-info: |   0   |   0.0.0.0   | 10.0.2.2 |     0.0.0.0     |   mgmt0   |   UG  |
+[   11.975591] cloud-init[353]: ci-info: |   1   |   10.0.2.0  | 0.0.0.0  |  255.255.255.0  |   mgmt0   |   U   |
+[   11.977783] cloud-init[353]: ci-info: |   2   |   10.0.2.2  | 0.0.0.0  | 255.255.255.255 |   mgmt0   |   UH  |
+[   11.980269] cloud-init[353]: ci-info: |   3   |   10.0.2.3  | 0.0.0.0  | 255.255.255.255 |   mgmt0   |   UH  |
+[   11.982307] cloud-init[353]: ci-info: |   4   |  192.0.2.0  | 0.0.0.0  |  255.255.255.0  |   peer0   |   U   |
+[   11.984293] cloud-init[353]: ci-info: +-------+-------------+----------+-----------------+-----------+-------+
+[   11.986776] cloud-init[353]: ci-info: +++++++++++++++++++Route IPv6 info+++++++++++++++++++
+[   11.989277] cloud-init[353]: ci-info: +-------+-------------+---------+-----------+-------+
+[   11.991524] cloud-init[353]: ci-info: | Route | Destination | Gateway | Interface | Flags |
+[   11.993311] cloud-init[353]: ci-info: +-------+-------------+---------+-----------+-------+
+[   11.995241] cloud-init[353]: ci-info: |   0   |  fe80::/64  |    ::   |   mgmt0   |   U   |
+[   11.997501] cloud-init[353]: ci-info: |   1   |  fe80::/64  |    ::   |   peer0   |   U   |
+[   12.000335] cloud-init[353]: ci-info: |   3   |    local    |    ::   |   mgmt0   |   U   |
+[   12.002286] cloud-init[353]: ci-info: |   4   |    local    |    ::   |   peer0   |   U   |
+[   12.004151] cloud-init[353]: ci-info: |   5   |  multicast  |    ::   |   mgmt0   |   U   |
+[   12.006800] cloud-init[353]: ci-info: |   6   |  multicast  |    ::   |   peer0   |   U   |
+[   12.008721] cloud-init[353]: ci-info: +-------+-------------+---------+-----------+-------+
+[[0;32m  OK  [0m] Finished [0;1;39mCloud-init: Network Stage[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mCloud-config availability[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mNetwork is Online[0m.
+         Starting [0;1;39mCloud-init: Config Stage[0m...
+         Starting [0;1;39mPermit User Sessions[0m...
+[[0;32m  OK  [0m] Finished [0;1;39mPermit User Sessions[0m.
+[[0;32m  OK  [0m] Started [0;1;39mGetty on tty1[0m.
+[[0;32m  OK  [0m] Started [0;1;39mSerial Getty on ttyS0[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mLogin Prompts[0m.
+[   13.768761] cloud-init[353]: Cloud-init v. 26.2 running 'modules:config' at Wed, 30 Sep 2026 01:24:14 +0000. Up 13.75 seconds.
+[   13.781884] cloud-init[353]: Generating locales...
+[   14.876402] cloud-init[353]:   en_US.UTF-8... done
+[   14.877759] cloud-init[353]: Generation complete.
+         Starting [0;1;39mLocale Service[0m...
+[[0;32m  OK  [0m] Started [0;1;39mLocale Service[0m.
+[[0;32m  OK  [0m] Finished [0;1;39mCloud-init: Config Stage[0m.
+[!p]104\[0m[?7h[1G[0J7[32766;32766H[6n8[!p]104\[0m[?7h[1G[0J7[32766;32766H[6n8]3008;start=61b42e717de94d98b68f5fec56259693;user=root;hostname=dns-arch;machineid=dda9208611425f5d84b7345f148b9c9b;bootid=ba512f5a42ca4920a336b0569b5386d0;pid=474;pidfdid=4310;comm=(agetty);servicename=serial-getty@ttyS0.service;invocationid=f7215a4bb69e4a1792c47b6ac9759bda;type=service\P+q6E616D65\
+Arch Linux 7.1.8-arch1-3 (ttyS0)
+
+dns-arch login: [   48.223700] cloud-init[353]: Cloud-init v. 26.2 running 'modules:final' at Wed, 30 Sep 2026 01:24:50 +0000. Up 48.20 seconds.
+ci-info: ++++++++++++++++++++++++++++++++++Authorized keys from /home/celik/.ssh/authorized_keys for user celik++++++++++++++++++++++++++++++++++
+ci-info: +-------------+-------------------------------------------------------------------------------------------------+---------+------------+
+ci-info: |   Keytype   |                                       Fingerprint (sha256)                                      | Options |  Comment   |
+ci-info: +-------------+-------------------------------------------------------------------------------------------------+---------+------------+
+ci-info: | ssh-ed25519 | ec:cc:e6:ea:c5:cf:a8:ed:10:67:5b:7a:15:1f:0f:1f:91:b1:90:c0:74:55:d5:4f:36:b8:c6:2d:ed:db:60:cd |    -    | cp-b9-1001 |
+ci-info: +-------------+-------------------------------------------------------------------------------------------------+---------+------------+
+ci-info: no authorized SSH keys fingerprints found for user arch.
+<14>Sep 30 01:24:50 cloud-init: #############################################################
+<14>Sep 30 01:24:50 cloud-init: -----BEGIN SSH HOST KEY FINGERPRINTS-----
+<14>Sep 30 01:24:50 cloud-init: 256 SHA256:Tcio18bYMgA7olmWvkJy5hBPSeVuFL9Jhix7lJO676s root@dns-arch (ECDSA)
+<14>Sep 30 01:24:50 cloud-init: 256 SHA256:eTX1IlKuvvuJO6hb54wTcD0Nk4lwfB8L5slS+sl0enM root@dns-arch (ED25519)
+<14>Sep 30 01:24:50 cloud-init: 3072 SHA256:wIAfwdsEHaskdJDLDrhRcrwUvKwbUjitleIlN3rxRcU root@dns-arch (RSA)
+<14>Sep 30 01:24:50 cloud-init: -----END SSH HOST KEY FINGERPRINTS-----
+<14>Sep 30 01:24:50 cloud-init: #############################################################
+-----BEGIN SSH HOST KEY KEYS-----
+ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBDmp5rBJk61xqqC8KXGWtCM5Ho8YA2ZPPRU2qDVAcbuV+BmZTH4SGrRmi+VoPEFnxviU/yMzLAEZRm/v03HbXJs= root@dns-arch
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE5fV2qbKDMxbI301hZ6bVIGustWBO4iTaPucghqBtiu root@dns-arch
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCfxClfsJq0lDr5w1FqEn4uBWHN91eQLFLTvqvKWOGxz09FoRH4DfQUViHzX1kMef+WUxLRFMYX+G5kvjoYI/yiqALhJDKWB6Akm0m0e8LTpx7nX98ysJG2z8slTtqErVwVJCKg8ApvynjkN7NeeZmrFxfHd1pdWEGIv612KPkdf66uUu180q0IYl+w9yyGWlVxCv0lzx7Jz1HMsxkLFtvDoSUkhFjgFQ8M2QB4NpM14+8c/4mLAdIObfEc9CKNENcnc12G8ylZwyQoGb9HvYq6B7QmcDAa4WnceDwYjoo74CS7hx8CDsIzyUgA3QORuYpjuxLQNUqk5ZS//WQkk8klrcixkuo6FIqIXmJ4dVngQV2rp0YJkrARYg2or/eDRsEKCKrwsQVic4IsW4HJgS5xLDLZuMzaKKfE0OdfdjPCIBQ97RJRMDn43a6rZn1Rjij2mNUcr7BvbpHRxRvk7xd4aGDSiuyfn8RgGt74PYh1x/Psfi32riBBlYvG2f6RoDM= root@dns-arch
+-----END SSH HOST KEY KEYS-----
+[   48.566170] cloud-init[353]: CelikPanel DNS kill fixture ready
+[   48.567622] cloud-init[353]: Generating public/private rsa key pair.
+[   48.569605] cloud-init[353]: Your identification has been saved in /etc/ssh/ssh_host_rsa_key
+[   48.571242] cloud-init[353]: Your public key has been saved in /etc/ssh/ssh_host_rsa_key.pub
+[[0;32m  OK  [0m] Finished [0;1;39mCloud-init: Final Stage[0m.
+[[0;32m  OK  [0m] Reached target [0;1;39mCloud-init target[0m.
+[   48.576335] cloud-init[353]: The key fingerprint is:
+[   48.577397] cloud-init[353]: SHA256:wIAfwdsEHaskdJDLDrhRcrwUvKwbUjitleIlN3rxRcU root@dns-arch
+[   48.579053] cloud-init[353]: The key's randomart image is:
+[   48.580256] cloud-init[353]: +---[RSA 3072]----+
+[   48.581184] cloud-init[353]: | o+*=+..o.       |
+[   48.582539] cloud-init[353]: |..O.oooo E       |
+[   48.583823] cloud-init[353]: |.X.*.==          |
+[   48.584857] cloud-init[353]: |B.@Bo..o         |
+[   48.586031] cloud-init[353]: |.%= = . S        |
+[   48.587092] cloud-init[353]: |*o.. .           |
+[   48.588044] cloud-init[353]: |.o.              |
+[   48.588960] cloud-init[353]: |.                |
+[   48.590049] cloud-init[353]: |                 |
+[   48.590970] cloud-init[353]: +----[SHA256]-----+
+[   48.591962] cloud-init[353]: Generating public/private ecdsa key pair.
+[   48.593229] cloud-init[353]: Your identification has been saved in /etc/ssh/ssh_host_ecdsa_key
+[   48.594858] cloud-init[353]: Your public key has been saved in /etc/ssh/ssh_host_ecdsa_key.pub
+[   48.596679] cloud-init[353]: The key fingerprint is:
+[   48.597912] cloud-init[353]: SHA256:Tcio18bYMgA7olmWvkJy5hBPSeVuFL9Jhix7lJO676s root@dns-arch
+[   48.599620] cloud-init[353]: The key's randomart image is:
+[   48.600704] cloud-init[353]: +---[ECDSA 256]---+
+[   48.601731] cloud-init[353]: |  o.o            |
+[   48.602714] cloud-init[353]: | . B * o .       |
+[   48.603667] cloud-init[353]: |o X @ = o .      |
+[   48.604661] cloud-init[353]: |.X O * B o       |
+[   48.605635] cloud-init[353]: |=.B = B S .      |
+[   48.606618] cloud-init[353]: |o= = . +         |
+[   48.607560] cloud-init[353]: |. +              |
+[   48.609797] cloud-init[353]: | . .             |
+[   48.610802] cloud-init[353]: |  Eo+.           |
+[   48.611762] cloud-init[353]: +----[SHA256]-----+
+[   48.613157] cloud-init[353]: Generating public/private ed25519 key pair.
+[   48.613230] cloud-init[353]: Your identification has been saved in /etc/ssh/ssh_host_ed25519_key
+[   48.613559] cloud-init[353]: Your public key has been saved in /etc/ssh/ssh_host_ed25519_key.pub
+[   48.613759] cloud-init[353]: The key fingerprint is:
+[   48.613967] cloud-init[353]: SHA256:eTX1IlKuvvuJO6hb54wTcD0Nk4lwfB8L5slS+sl0enM root@dns-arch
+[   48.614434] cloud-init[353]: The key's randomart image is:
+[   48.614679] cloud-init[353]: +--[ED25519 256]--+
+[   48.614897] cloud-init[353]: |      .o.. o. .  |
+[   48.615426] cloud-init[353]: |       .o Xo.. . |
+[   48.615876] cloud-init[353]: |         O.B=o. .|
+[   48.616377] cloud-init[353]: |      . +.B+=o . |
+[   48.616958] cloud-init[353]: |       oS=o=     |
+[   48.617527] cloud-init[353]: |        .o= o E  |
+[   48.617793] cloud-init[353]: |        .oo. o   |
+[   48.617810] cloud-init[353]: |       .o=.o .   |
+[   48.618342] cloud-init[353]: |      oo..B=o    |
+[   48.618603] cloud-init[353]: +----[SHA256]-----+
+P+q6E616D65\

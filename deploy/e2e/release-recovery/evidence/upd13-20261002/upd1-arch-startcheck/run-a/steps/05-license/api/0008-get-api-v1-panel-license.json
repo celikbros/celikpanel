@@ -1,0 +1,83 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "LicensePanel status",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/panel/license"
+  },
+  "response": {
+    "elapsed_seconds": 0.002,
+    "headers": [
+      [
+        "Cache-Control",
+        "no-store"
+      ],
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 02 Oct 2026 22:33:36 GMT"
+      ],
+      [
+        "Content-Length",
+        "518"
+      ]
+    ],
+    "json": {
+      "acceptance_cell": "release-recovery__e78d09223bf0949f",
+      "acceptance_guest": "verified",
+      "acceptance_node": "arch",
+      "acceptance_smbios_uuid": "not readable by the panel service user",
+      "can_provision": true,
+      "expires_at": 1791585215,
+      "license_id": "acceptance-fixture",
+      "license_kind": "acceptance_fixture",
+      "license_label": "ACCEPTANCE FIXTURE — NOT FOR PRODUCTION",
+      "license_service": "not contacted: acceptance test build",
+      "observation": "known",
+      "offline_until": 1790980475,
+      "product": "celikpanel-acceptance-fixture",
+      "state": "active"
+    },
+    "status": 200,
+    "text": null
+  }
+}

@@ -1,0 +1,151 @@
+package main
+import ("os"; "path/filepath"; "sort"; "strings"; "testing"; "github.com/alicelik/celikpanel/internal/mutationpayload"; "github.com/alicelik/celikpanel/internal/transport")
+func exportSharedJournalFixture(t *testing.T, name string, j dnsEngineSwitchJournal) {
+ t.Helper()
+ t.Setenv("CELIKPANEL_AGENT_STATE_DIR", "/var/lib/celikpanel-agent-private")
+ t.Setenv("CELIKPANEL_PDNS_DB", "/var/lib/powerdns/pdns.sqlite3")
+ dnsMainConf="/etc/powerdns/pdns.conf"
+ dnsManagedConf="/etc/powerdns/pdns.d/celikpanel.conf"
+ dnsClusterConf="/etc/powerdns/pdns.d/celikpanel-cluster.conf"
+ j.StateBefore.Path=dnsEngineStatePath()
+ if j.TargetEngine==transport.DNSEnginePowerDNS {
+  for i:=range j.ConfigBefore {
+   switch filepath.Base(j.ConfigBefore[i].Path) {
+   case "pdns.conf": j.ConfigBefore[i].Path=dnsMainConf
+   case "celikpanel.conf": j.ConfigBefore[i].Path=dnsManagedConf
+   case "celikpanel-cluster.conf": j.ConfigBefore[i].Path=dnsClusterConf
+   default: t.Fatal("unrecognized fixture path")
+   }
+  }
+  sort.Slice(j.ConfigBefore,func(a,b int)bool{return j.ConfigBefore[a].Path<j.ConfigBefore[b].Path})
+  if j.Mode==transport.DNSEngineSwitchModeSwitch {
+   j.PDNSCandidatePath=pdnsSwitchCandidatePath(j.MutationRequestID)
+   j.PDNSBackupPath=pdnsSwitchBackupPath(j.MutationRequestID)
+  }
+ }
+ raw,err:=encodeDNSEngineSwitchJournal(j); if err!=nil { t.Fatal(err) }
+ if err=os.WriteFile(filepath.Join(os.Getenv("DNS_JOURNAL_EXPORT"),name+".json"),raw,0600); err!=nil {t.Fatal(err)}
+}
+func TestExportSharedJournalBIND(t *testing.T) {
+ j:=testBINDSwitchJournal(t)
+ exportSharedJournalFixture(t,"alpha81-bind",j)
+}
+
+func TestExportSharedJournalPdnsswitch(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("CELIKPANEL_AGENT_STATE_DIR", root)
+	t.Setenv("CELIKPANEL_PDNS_DB", filepath.Join(root, "pdns.sqlite3"))
+	previousMain, previousManaged, previousCluster := dnsMainConf, dnsManagedConf, dnsClusterConf
+	dnsMainConf = filepath.Join(root, "pdns.conf")
+	dnsManagedConf = filepath.Join(root, "pdns.d", "celikpanel.conf")
+	dnsClusterConf = filepath.Join(root, "pdns.d", "celikpanel-cluster.conf")
+	t.Cleanup(func() {
+		dnsMainConf, dnsManagedConf, dnsClusterConf = previousMain, previousManaged, previousCluster
+	})
+	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifest(
+		transport.DNSEngineSwitchModeSwitch,
+		transport.DNSEngineBIND, transport.DNSEnginePowerDNS, 2, 3, 8,
+		transport.DNSTopologyStandalone, nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	configs := []dnsFileSnapshot{
+		{
+			Path: filepath.Clean(dnsMainConf), Exists: true, Mode: 0o640,
+			OwnerKnown: true, SHA256: digestDNSBytes([]byte("main\n")), Data: []byte("main\n"),
+		},
+		{Path: filepath.Clean(dnsManagedConf)},
+		{Path: filepath.Clean(dnsClusterConf)},
+	}
+	sort.Slice(configs, func(left, right int) bool { return configs[left].Path < configs[right].Path })
+	sourceState := legacyDurableDNSState(transport.DNSEngineBIND)
+	sourceState.EngineEpoch = manifest.SourceEpoch
+	sourceStateBytes, err := encodeDNSEngineState(sourceState)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stateBefore := testDNSEngineStateSnapshot(
+		filepath.Join(root, "dns-engine-state.json"), sourceStateBytes,
+	)
+	journal := dnsEngineSwitchJournal{
+		Schema: dnsEngineSwitchJournalSchema, Phase: dnsSwitchPhaseIntent,
+		Mode:              transport.DNSEngineSwitchModeSwitch,
+		MutationRequestID: strings.Repeat("a", 32), MutationOwnerID: strings.Repeat("b", 32),
+		ManifestQualifier: manifest.Qualifier, SourceEngine: manifest.SourceEngine,
+		TargetEngine: manifest.TargetEngine, SourceEpoch: manifest.SourceEpoch,
+		TargetEpoch: manifest.TargetEpoch, SourceRevision: manifest.SourceRevision,
+		Topology: manifest.Topology, SnapshotBytes: manifest.SnapshotBytes, Zones: manifest.Zones,
+		StateBefore:       stateBefore,
+		ConfigBefore:      configs,
+		TargetUnitsBefore: []dnsUnitSnapshot{{Name: "pdns.service", LoadState: "not-found", ActiveState: "inactive"}},
+		SourceUnitsBefore: []dnsUnitSnapshot{
+			{Name: "bind9.service", LoadState: "loaded", ActiveState: "active", UnitFileState: "enabled"},
+			{Name: "named.service", LoadState: "loaded", ActiveState: "active", UnitFileState: "enabled"},
+		},
+		PDNSCandidatePath: pdnsSwitchCandidatePath(strings.Repeat("a", 32)),
+		PDNSBackupPath:    pdnsSwitchBackupPath(strings.Repeat("a", 32)),
+	}
+ exportSharedJournalFixture(t,"alpha81-pdns-switch",journal)
+}
+
+func TestExportSharedJournalPdnsadopt(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("CELIKPANEL_AGENT_STATE_DIR", root)
+	t.Setenv("CELIKPANEL_PDNS_DB", filepath.Join(root, "pdns.sqlite3"))
+	previousMain, previousManaged, previousCluster := dnsMainConf, dnsManagedConf, dnsClusterConf
+	dnsMainConf = filepath.Join(root, "pdns.conf")
+	dnsManagedConf = filepath.Join(root, "pdns.d", "celikpanel.conf")
+	dnsClusterConf = filepath.Join(root, "pdns.d", "celikpanel-cluster.conf")
+	t.Cleanup(func() {
+		dnsMainConf, dnsManagedConf, dnsClusterConf = previousMain, previousManaged, previousCluster
+	})
+	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifestWithPeer(
+		transport.DNSEngineSwitchModeAdopt,
+		"", transport.DNSEnginePowerDNS, 0, 1, 12,
+		transport.DNSTopologyPaired,
+		testPDNSAdoptionPeerIP, testPDNSAdoptionPeerNS, nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	configs := []dnsFileSnapshot{
+		{
+			Path: filepath.Clean(dnsMainConf), Exists: true, Mode: 0o640,
+			OwnerKnown: true, UID: 0, GID: 109,
+			SHA256: digestDNSBytes([]byte("main")), Data: []byte("main"),
+		},
+		{
+			Path: filepath.Clean(dnsManagedConf), Exists: true, Mode: 0o644,
+			OwnerKnown: true, UID: 0, GID: 0,
+			SHA256: digestDNSBytes([]byte("managed")), Data: []byte("managed"),
+		},
+		{
+			Path: filepath.Clean(dnsClusterConf), Exists: true, Mode: 0o644,
+			OwnerKnown: true, UID: 0, GID: 0,
+			SHA256: digestDNSBytes([]byte("paired")), Data: []byte("paired"),
+		},
+	}
+	sort.Slice(configs, func(left, right int) bool { return configs[left].Path < configs[right].Path })
+	journal := dnsEngineSwitchJournal{
+		Schema: dnsEngineSwitchJournalSchema, Phase: dnsSwitchPhaseIntent,
+		Mode:              transport.DNSEngineSwitchModeAdopt,
+		MutationRequestID: strings.Repeat("a", 32),
+		MutationOwnerID:   strings.Repeat("b", 32),
+		ManifestQualifier: manifest.Qualifier,
+		TargetEngine:      manifest.TargetEngine, TargetEpoch: manifest.TargetEpoch,
+		SourceRevision: manifest.SourceRevision, Topology: manifest.Topology,
+		PeerIP: manifest.PeerIP, PeerNS: manifest.PeerNS,
+		SnapshotBytes: manifest.SnapshotBytes, Zones: manifest.Zones,
+		StateBefore:  dnsFileSnapshot{Path: filepath.Join(root, "dns-engine-state.json")},
+		ConfigBefore: configs,
+		TargetUnitsBefore: []dnsUnitSnapshot{
+			{Name: "bind9.service", LoadState: "loaded", ActiveState: "inactive", UnitFileState: "disabled"},
+			{Name: "named.service", LoadState: "loaded", ActiveState: "inactive", UnitFileState: "disabled"},
+			{Name: "pdns.service", LoadState: "loaded", ActiveState: "active", UnitFileState: "enabled"},
+		},
+		SourceUnitsBefore: []dnsUnitSnapshot{},
+		PDNSLiveSHA256:    strings.Repeat("c", 64), PDNSLiveSize: 4096,
+	}
+ exportSharedJournalFixture(t,"alpha81-pdns-adopt",journal)
+}

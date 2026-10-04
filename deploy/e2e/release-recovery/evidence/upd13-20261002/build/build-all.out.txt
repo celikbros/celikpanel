@@ -1,0 +1,2 @@
+build-cur rc=0
+build-a80 rc=0

@@ -1,0 +1,56 @@
+{
+  "agent_sha256": "eea3d17d904da68933876459f9c723c844ae438d5ed09f14bac0672d26dcb690",
+  "at": "2026-09-22T00:22:35.167214+00:00",
+  "boot_id": "ad5dbb9e-24a1-4ce3-95aa-1f1ea788048a",
+  "boot_sha256": "a9637ab4ff236b9199585e88dd58b537613414fee503f192937003ff92e978af",
+  "evidence_sha256": "469ca3d559453f9bae50151c847c4a2289331305588b3c2cea4bd5d7bb5803d5",
+  "held_lock_refusals": [
+    {
+      "candidate": "agent",
+      "exit_code": 1,
+      "flag": "--check-firewall-restore",
+      "state_unchanged": true
+    },
+    {
+      "candidate": "agent",
+      "exit_code": 1,
+      "flag": "--restore-firewall",
+      "state_unchanged": true
+    },
+    {
+      "candidate": "boot",
+      "exit_code": 1,
+      "flag": "--check",
+      "state_unchanged": true
+    },
+    {
+      "candidate": "boot",
+      "exit_code": 1,
+      "flag": "--restore",
+      "state_unchanged": true
+    }
+  ],
+  "limitations": [
+    "Candidate CLI contention against native OS lock, not simultaneous full Agent RPC and consumer execution",
+    "No installed boot-unit migration or update/rollback retention acceptance",
+    "Independent consumer reboot acceptance belongs to the earlier separately recorded binary"
+  ],
+  "ordinary_management_absent": true,
+  "rules_and_saved_policy_unchanged": true,
+  "schema": "celikpanel/native-firewall-exclusion-acceptance/v1",
+  "source_sha256": {
+    "cmd/agent/firewall_apply_commit.go": "60e6aecd59940db6baf63da09e5ee94747bd869ea0132ded1cb07e04e4a26d14",
+    "cmd/agent/firewall_exclusion.go": "05053288ea62f36d32072e3655449773f6f956c4bdec13efa1491f59d7334b3e",
+    "cmd/agent/firewall_rpc.go": "f161821d7546dacd3cf604241f133bff4827167e2da23762ecb24d0492a94f78",
+    "cmd/agent/security_audit_linux.go": "00c64007f4cb9985e07d58a28fef1558cc4a38bba4d2799e5be981bc6edeedd1",
+    "internal/firewallboot/native_linux.go": "35aa172f57f9d097892b75e98672225f753f991be34f414ff05a98dc9ee10edf",
+    "internal/firewalllock/lock.go": "faa6db441a48b61dffc8ce9d57492fc95a6a48ac1f64fc09b9bdc468a84c009e",
+    "internal/firewalllock/lock_linux.go": "2d362b1a6dfcd709a97eeb15fbc8de4db11c3afce01653fc7f209f8b4ea4a90e",
+    "internal/firewalllock/lock_other.go": "58e23cf4ece97357192aced7d17d08c94ef6239c4a7270b85f57d7e8554406f4"
+  },
+  "unlocked_preflight_succeeded": [
+    "agent",
+    "boot"
+  ],
+  "vm_uuid": "c6b28f46-c2f3-5024-897b-8d153ee7fe13"
+}

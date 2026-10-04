@@ -1,0 +1,53 @@
+# read-only diagnosis (journalctl, systemctl, ls, find); no mutation
+2026-09-29T22:37:09Z
+active active inactive
+masked
+2026-09-29T21:47:57+00:00 dns-debian13 systemd[1]: Starting celikpanel-agent.service - CelikPanel privileged agent...
+2026-09-29T21:47:57+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T21:47:57+00:00 dns-debian13 agent[3526]: 2026/09/29 21:47:57 Starting CelikPanel Agent...
+2026-09-29T21:47:57+00:00 dns-debian13 agent[3526]: 2026/09/29 21:47:57 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-29T21:47:57+00:00 dns-debian13 agent[3526]: 2026/09/29 21:47:57 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-09-29T21:51:17+00:00 dns-debian13 addgroup[4333]: Selecting GID from range 100 to 999 ...
+2026-09-29T21:51:17+00:00 dns-debian13 addgroup[4333]: Adding group `pdns' (GID 104) ...
+2026-09-29T21:51:17+00:00 dns-debian13 groupadd[4336]: group added to /etc/group: name=pdns, GID=104
+2026-09-29T21:51:17+00:00 dns-debian13 groupadd[4336]: group added to /etc/gshadow: name=pdns
+2026-09-29T21:51:17+00:00 dns-debian13 groupadd[4336]: new group: name=pdns, GID=104
+2026-09-29T21:51:17+00:00 dns-debian13 adduser[4341]: Selecting UID from range 100 to 999 ...
+2026-09-29T21:51:17+00:00 dns-debian13 adduser[4341]: Adding system user `pdns' (UID 103) ...
+2026-09-29T21:51:17+00:00 dns-debian13 adduser[4341]: Adding new user `pdns' (UID 103) with group `pdns' ...
+2026-09-29T21:51:18+00:00 dns-debian13 useradd[4345]: new user: name=pdns, UID=103, GID=104, home=/var/spool/powerdns, shell=/bin/false, from=none
+2026-09-29T21:51:18+00:00 dns-debian13 adduser[4341]: Creating home directory `/var/spool/powerdns' ...
+2026-09-29T21:51:25+00:00 dns-debian13 agent[3526]: 2026/09/29 21:51:25 DNS engine switch to pdns at epoch 1 failed: fresh PowerDNS primary remains pending in its durable V3 journal; reconcile the exact operation: verify PowerDNS pair catalog: PowerDNS producer membership differs from the switch manifest
+ii  pdns-backend-sqlite3 4.9.17-0+deb13u1 amd64        sqlite 3 backend for PowerDNS
+ii  pdns-server          4.9.17-0+deb13u1 amd64        extremely powerful and versatile nameserver
+/etc/powerdns:
+total 36
+drwxr-xr-x  3 root root  4096 Sep 29 21:51 .
+drwxr-xr-x 68 root root  4096 Sep 29 21:51 ..
+-rw-r-----  1 root pdns 20579 Aug  6 19:04 pdns.conf
+drwxr-xr-x  2 root root  4096 Aug  6 19:04 pdns.d
+
+/etc/powerdns/pdns.d:
+total 8
+drwxr-xr-x 2 root root 4096 Aug  6 19:04 .
+drwxr-xr-x 3 root root 4096 Sep 29 21:51 ..
+
+/var/lib/powerdns:
+total 8
+drwxr-xr-x  2 pdns pdns 4096 Aug  6 19:04 .
+drwxr-xr-x 29 root root 4096 Sep 29 21:51 ..
+/var/backups/celikpanel/pair-accept/celikpanel-v0.0.0-pairaccept-acceptance-license.916e1577933f/deploy/e2e/dns-kill-matrix/evidence/batch6b-pdns-secondary-20260930/c3-pdnssec-prestart/raw/watch/cp-b6b-watch/copies/162545.708-8ef8f9bcd7cf.sqlite3
+/var/backups/celikpanel/pair-accept/celikpanel-v0.0.0-pairaccept-acceptance-license.916e1577933f/deploy/e2e/dns-kill-matrix/evidence/batch6b-pdns-secondary-20260930/c3-pdnssec-prestart/raw/watch/cp-b6b-watch/copies/162548.870-180dd206c0dc.sqlite3
+/var/backups/celikpanel/pair-accept/celikpanel-v0.0.0-pairaccept-acceptance-license.916e1577933f/deploy/e2e/dns-kill-matrix/evidence/batch6b-pdns-secondary-20260930/c3-pdnssec-prestart/raw/watch/cp-b6b-watch/copies/162549.207-9c3adce0b2ce.sqlite3
+/var/backups/celikpanel/pair-accept/celikpanel-v0.0.0-pairaccept-acceptance-license.916e1577933f/deploy/e2e/dns-kill-matrix/evidence/batch6b-pdns-secondary-20260930/c3-pdnssec-prestart/raw/watch/cp-b6b-watch/pdns-at-at-result.sqlite3
+/var/backups/celikpanel/pair-accept/celikpanel-v0.0.0-pairaccept-acceptance-license.916e1577933f/deploy/e2e/dns-kill-matrix/evidence/batch6b-pdns-secondary-20260930/c4-pdnssec-late/raw/watch/cp-b6b-watch/copies/163054.812-da3811af3dc6.sqlite3
+/var/backups/celikpanel/pair-accept/celikpanel-v0.0.0-pairaccept-acceptance-license.916e1577933f/deploy/e2e/dns-kill-matrix/evidence/batch6b-pdns-secondary-20260930/c4-pdnssec-late/raw/watch/cp-b6b-watch/copies/163055.111-00372edf1731.sqlite3
+/var/backups/celikpanel/pair-accept/celikpanel-v0.0.0-pairaccept-acceptance-license.916e1577933f/deploy/e2e/dns-kill-matrix/evidence/batch6b-pdns-secondary-20260930/c4-pdnssec-late/raw/watch/cp-b6b-watch/copies/163052.055-2fd22dc9af1d.sqlite3
+/var/backups/celikpanel/pair-accept/celikpanel-v0.0.0-pairaccept-acceptance-license.916e1577933f/deploy/e2e/dns-kill-matrix/evidence/batch6b-pdns-secondary-20260930/c4-pdnssec-late/raw/watch/cp-b6b-watch/pdns-at-at-result.sqlite3
+/var/backups/celikpanel/pair-accept/celikpanel-v0.0.0-pairaccept-acceptance-license.916e1577933f/deploy/e2e/dns-kill-matrix/evidence/batch6b-pdns-secondary-20260930/c4-pdnssec-late/raw/watch/cp-b6b-watch/pdns-at-at-kill-proof.sqlite3
+/var/backups/celikpanel/pair-accept/celikpanel-v0.0.0-pairaccept-acceptance-license.916e1577933f/deploy/e2e/dns-kill-matrix/evidence/batch6b-pdns-secondary-20260930/c1-pdnssec-bindpri/raw/watch/cp-b6b-watch/copies/161226.143-35d61d45539d.sqlite3
+total 16
+drwx------  2 root celikpanel 4096 Sep 29 21:51 .
+drwxr-xr-x 29 root root       4096 Sep 29 21:51 ..
+-rw-------  1 root celikpanel  430 Sep 29 21:51 dns-engine-install-ownership-pdns.json
+-rw-------  1 root celikpanel  685 Sep 29 21:51 service-mutations.json

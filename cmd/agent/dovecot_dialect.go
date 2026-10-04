@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
+
+	"github.com/alicelik/celikpanel/internal/mailtlsconfig"
 )
 
 // Dovecot config comes in two dialects. 2.3 (Ubuntu 24.04) uses mail_location,
@@ -27,33 +28,10 @@ import (
 // ayrıştırıcısıyla doğrular (nginx -t deseni): yanlış yapılandırma dürüst bir
 // hataya dönüşür, asla ölü bir posta sunucusuna değil.
 
-// dovecotIs24 reports whether the installed Dovecot speaks the 2.4+ config
-// dialect. Unknown/unparsable versions count as 2.4: every distro we target
-// ships 2.4+ going forward, and on 2.3 the validation step still catches a
-// wrong guess with a clear error instead of a dead service.
-// dovecotIs24, kurulu Dovecot'un 2.4+ lehçesini konuşup konuşmadığını
-// bildirir. Bilinmeyen sürümler 2.4 sayılır: hedeflediğimiz dağıtımlar artık
-// 2.4+ taşıyor ve 2.3'te doğrulama adımı yanlış tahmini yine açık bir hatayla
-// yakalar.
-func dovecotIs24() bool {
-	out, err := runMailTLSCommand("dovecot", "--version")
-	if err != nil {
-		return true
-	}
-	ver := strings.Fields(strings.TrimSpace(string(out)))
-	if len(ver) == 0 {
-		return true
-	}
-	parts := strings.SplitN(ver[0], ".", 3)
-	if len(parts) < 2 {
-		return true
-	}
-	major, err1 := strconv.Atoi(parts[0])
-	minor, err2 := strconv.Atoi(parts[1])
-	if err1 != nil || err2 != nil {
-		return true
-	}
-	return major > 2 || (major == 2 && minor >= 4)
+// dovecotIs24 requires a successful observation of an implemented dialect.
+// Unknown does not establish 2.4 compatibility or permission to change files.
+func dovecotIs24() (bool, error) {
+	return dovecotIs24WithRunner(runMailTLSCommand)
 }
 
 // buildDovecotVirtualConf renders the virtual-mailbox override (auth against
@@ -61,6 +39,12 @@ func dovecotIs24() bool {
 // buildDovecotVirtualConf, sanal-posta-kutusu ekini (auth /etc/dovecot/users'a
 // karşı, maildir'ler mailRootDir altında) istenen lehçede üretir.
 func buildDovecotVirtualConf(is24 bool) string {
+	return buildDovecotVirtualConfAt(is24, mailRootDir)
+}
+
+// buildDovecotVirtualConfAt renders the override for an explicit, already
+// resolved mail root (see managedMailRootPath).
+func buildDovecotVirtualConfAt(is24 bool, root string) string {
 	if !is24 {
 		return fmt.Sprintf(`# Managed by CelikPanel — do not edit by hand / elle düzenlemeyin
 mail_location = maildir:%s/%%d/%%n
@@ -76,8 +60,8 @@ userdb {
   args = username_format=%%u %s
   default_fields = uid=%s gid=%s home=%s/%%d/%%n
 }
-`, mailRootDir, vmailUID, vmailGID, vmailUID,
-			dovecotUsersPath, dovecotUsersPath, vmailUID, vmailGID, mailRootDir)
+`, root, vmailUID, vmailGID, vmailUID,
+			dovecotUsersPath, dovecotUsersPath, vmailUID, vmailGID, root)
 	}
 	// 2.4: mail_location → mail_driver+mail_path, %d/%n → %{user | domain} /
 	// %{user | username}, args → explicit settings, default_fields → fields
@@ -106,8 +90,8 @@ userdb passwd-file {
     home:default = %s/%s
   }
 }
-`, mailRootDir, userDir, vmailUID, vmailGID, vmailUID,
-		dovecotUsersPath, dovecotUsersPath, vmailUID, vmailGID, mailRootDir, userDir)
+`, root, userDir, vmailUID, vmailGID, vmailUID,
+		dovecotUsersPath, dovecotUsersPath, vmailUID, vmailGID, root, userDir)
 }
 
 // buildDovecotTLSConf renders the TLS drop-in (default certificate + one
@@ -115,27 +99,7 @@ userdb passwd-file {
 // buildDovecotTLSConf, TLS ekini (varsayılan sertifika + SNI adı başına bir
 // local_name bloğu) istenen lehçede üretir.
 func buildDovecotTLSConf(is24 bool, certPath, keyPath string, sni []MailSNIEntry) string {
-	cert, key := "ssl_cert = <", "ssl_key = <"
-	if is24 {
-		cert, key = "ssl_server_cert_file = ", "ssl_server_key_file = "
-	}
-	var b strings.Builder
-	b.WriteString("# Managed by CelikPanel — mail TLS. Do not edit by hand.\n")
-	b.WriteString("ssl = yes\n")
-	b.WriteString("ssl_min_protocol = TLSv1.2\n")
-	fmt.Fprintf(&b, "%s%s\n", cert, certPath)
-	fmt.Fprintf(&b, "%s%s\n", key, keyPath)
-	for _, e := range sni {
-		for _, name := range e.Names {
-			name = strings.ToLower(strings.TrimSpace(name))
-			if name == "" {
-				continue
-			}
-			fmt.Fprintf(&b, "\nlocal_name %s {\n  %s%s\n  %s%s\n}\n",
-				name, cert, e.CertPath, key, e.KeyPath)
-		}
-	}
-	return b.String()
+	return mailtlsconfig.Dovecot(is24, certPath, keyPath, sni)
 }
 
 // applyDovecotConf writes a drop-in, then validates the WHOLE resulting config

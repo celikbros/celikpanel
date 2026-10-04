@@ -1,0 +1,557 @@
+2026-10-01T00:52:50.532475+00:00 dns-arch systemd[1]: Starting CelikPanel verified release transaction recovery...
+2026-10-01T00:52:50.832996+00:00 dns-arch systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-01T00:52:50.833238+00:00 dns-arch systemd[1]: Finished CelikPanel verified release transaction recovery.
+2026-10-01T00:52:52.441323+00:00 dns-arch systemd[1]: Starting CelikPanel privileged agent...
+2026-10-01T00:52:52.471441+00:00 dns-arch systemd[1]: Started CelikPanel privileged agent.
+2026-10-01T00:52:52.489127+00:00 dns-arch agent[7762]: 2026/10/01 00:52:52 Starting CelikPanel Agent...
+2026-10-01T00:52:52.496029+00:00 dns-arch agent[7762]: 2026/10/01 00:52:52 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-10-01T00:52:52.496578+00:00 dns-arch agent[7762]: 2026/10/01 00:52:52 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-10-01T00:52:54.035976+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-01T00:52:54.068587+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-01T00:52:54.151381+00:00 dns-arch panel[7900]: 2026/10/01 00:52:54 Starting CelikPanel Backend...
+2026-10-01T00:52:54.159182+00:00 dns-arch panel[7900]: 2026/10/01 00:52:54 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T00:52:54.160238+00:00 dns-arch panel[7900]: 2026/10/01 00:52:54 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-01T00:52:54.161220+00:00 dns-arch panel[7900]: 2026/10/01 00:52:54 Connected to Agent RPC; preparing normal management access
+2026-10-01T00:52:54.205497+00:00 dns-arch panel[7900]: 2026/10/01 00:52:54 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-arch": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-10-01T00:52:54.208766+00:00 dns-arch panel[7900]: 2026/10/01 00:52:54 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-10-01T00:52:54.209998+00:00 dns-arch panel[7900]: 2026/10/01 00:52:54 Panel ready on :2083 (HTTPS)
+2026-10-01T00:52:55.086929+00:00 dns-arch systemd[1]: Stopping CelikPanel web panel...
+2026-10-01T00:52:55.102679+00:00 dns-arch systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-01T00:52:55.103028+00:00 dns-arch systemd[1]: Stopped CelikPanel web panel.
+2026-10-01T00:52:55.103398+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 196ms CPU time over 1.066s wall clock time, 80.3M memory peak.
+2026-10-01T00:52:55.249944+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-01T00:52:55.283075+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-01T00:52:55.409644+00:00 dns-arch panel[7978]: 2026/10/01 00:52:55 Starting CelikPanel Backend...
+2026-10-01T00:52:55.417224+00:00 dns-arch panel[7978]: 2026/10/01 00:52:55 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T00:52:55.417828+00:00 dns-arch panel[7978]: 2026/10/01 00:52:55 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-01T00:52:55.418519+00:00 dns-arch panel[7978]: 2026/10/01 00:52:55 Connected to Agent RPC; preparing normal management access
+2026-10-01T00:52:55.432048+00:00 dns-arch panel[7978]: 2026/10/01 00:52:55 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-arch": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-10-01T00:52:55.436997+00:00 dns-arch panel[7978]: 2026/10/01 00:52:55 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-10-01T00:52:55.439644+00:00 dns-arch panel[7978]: 2026/10/01 00:52:55 Panel ready on :2083 (HTTPS)
+2026-10-01T00:53:11.834971+00:00 dns-arch systemd[1]: Stopping CelikPanel web panel...
+2026-10-01T00:53:12.264383+00:00 dns-arch systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-01T00:53:12.264785+00:00 dns-arch systemd[1]: Stopped CelikPanel web panel.
+2026-10-01T00:53:12.266521+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 169ms CPU time over 17.014s wall clock time, 86M memory peak.
+2026-10-01T00:53:12.349795+00:00 dns-arch systemd[1]: Stopping CelikPanel privileged agent...
+2026-10-01T00:53:12.360762+00:00 dns-arch systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-10-01T00:53:12.360963+00:00 dns-arch systemd[1]: Stopped CelikPanel privileged agent.
+-- Boot 33aabc6344ec467e9bbeac369f08fded --
+2026-10-01T00:53:24.488509+00:00 dns-arch systemd[1]: Starting CelikPanel verified release transaction recovery...
+2026-10-01T00:53:24.921907+00:00 dns-arch systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-01T00:53:24.922127+00:00 dns-arch systemd[1]: Finished CelikPanel verified release transaction recovery.
+2026-10-01T00:53:26.059996+00:00 dns-arch systemd[1]: Starting CelikPanel privileged agent...
+2026-10-01T00:53:26.114961+00:00 dns-arch systemd[1]: Started CelikPanel privileged agent.
+2026-10-01T00:53:26.118999+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-01T00:53:26.170612+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-01T00:53:26.204556+00:00 dns-arch agent[419]: 2026/10/01 00:53:26 Starting CelikPanel Agent...
+2026-10-01T00:53:26.224483+00:00 dns-arch agent[419]: 2026/10/01 00:53:26 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-10-01T00:53:26.323983+00:00 dns-arch panel[429]: 2026/10/01 00:53:26 Starting CelikPanel Backend...
+2026-10-01T00:53:26.339681+00:00 dns-arch panel[429]: 2026/10/01 00:53:26 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T00:53:26.340995+00:00 dns-arch panel[429]: 2026/10/01 00:53:26 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-01T00:53:26.341578+00:00 dns-arch panel[429]: 2026/10/01 00:53:26 Connected to Agent RPC; preparing normal management access
+2026-10-01T00:53:26.351040+00:00 dns-arch panel[429]: 2026/10/01 00:53:26 certificate startup reconcile: staged lineages: agent RPC platform identity is unavailable: Agent.ReconcileSiteCertLineages: read HostPlatform: detect host platform: systemd is not ready: systemd state "starting" exited with status 1
+2026-10-01T00:53:26.357116+00:00 dns-arch panel[429]: 2026/10/01 00:53:26 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: agent RPC platform identity is unavailable: Agent.SyncMailTLSV2: read HostPlatform: detect host platform: systemd is not ready: systemd state "starting" exited with status 1; preserve pending outbox: <nil>
+2026-10-01T00:53:26.359953+00:00 dns-arch panel[429]: 2026/10/01 00:53:26 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-10-01T00:53:26.362237+00:00 dns-arch panel[429]: 2026/10/01 00:53:26 Panel ready on :2083 (HTTPS)
+2026-10-01T00:53:55.342207+00:00 dns-arch systemd[1]: Starting CelikPanel verified release transaction recovery...
+2026-10-01T00:53:55.640233+00:00 dns-arch systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-01T00:53:55.640538+00:00 dns-arch systemd[1]: Finished CelikPanel verified release transaction recovery.
+2026-10-01T00:54:25.648244+00:00 dns-arch systemd[1]: Starting CelikPanel verified release transaction recovery...
+2026-10-01T00:54:25.958716+00:00 dns-arch systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-01T00:54:25.959117+00:00 dns-arch systemd[1]: Finished CelikPanel verified release transaction recovery.
+2026-10-01T00:54:43.546428+00:00 dns-arch panel[429]: 2026/10/01 00:54:43 http: TLS handshake error from 127.0.0.1:53252: EOF
+2026-10-01T00:54:43.858846+00:00 dns-arch panel[429]: 2026/10/01 00:54:43 http: TLS handshake error from 127.0.0.1:53276: EOF
+2026-10-01T00:54:43.977389+00:00 dns-arch panel[429]: 2026/10/01 00:54:43 http: TLS handshake error from 127.0.0.1:53316: EOF
+2026-10-01T00:54:43.995630+00:00 dns-arch panel[429]: 2026/10/01 00:54:43 http: TLS handshake error from 127.0.0.1:53330: EOF
+2026-10-01T00:54:44.010838+00:00 dns-arch panel[429]: 2026/10/01 00:54:44 http: TLS handshake error from 127.0.0.1:53344: EOF
+2026-10-01T00:54:44.024270+00:00 dns-arch panel[429]: 2026/10/01 00:54:44 http: TLS handshake error from 127.0.0.1:53358: EOF
+2026-10-01T00:54:44.056097+00:00 dns-arch panel[429]: 2026/10/01 00:54:44 http: TLS handshake error from 127.0.0.1:53372: EOF
+2026-10-01T00:54:44.068930+00:00 dns-arch panel[429]: 2026/10/01 00:54:44 http: TLS handshake error from 127.0.0.1:53396: EOF
+2026-10-01T00:54:44.087358+00:00 dns-arch panel[429]: 2026/10/01 00:54:44 http: TLS handshake error from 127.0.0.1:53416: EOF
+2026-10-01T00:54:44.101327+00:00 dns-arch panel[429]: 2026/10/01 00:54:44 http: TLS handshake error from 127.0.0.1:53426: EOF
+2026-10-01T00:54:44.335675+00:00 dns-arch panel[429]: 2026/10/01 00:54:44 http: TLS handshake error from 127.0.0.1:53440: EOF
+2026-10-01T00:54:44.360856+00:00 dns-arch panel[429]: 2026/10/01 00:54:44 http: TLS handshake error from 127.0.0.1:53458: EOF
+2026-10-01T00:54:45.269511+00:00 dns-arch panel[429]: 2026/10/01 00:54:45 http: TLS handshake error from 127.0.0.1:53486: EOF
+2026-10-01T00:54:45.282153+00:00 dns-arch panel[429]: 2026/10/01 00:54:45 http: TLS handshake error from 127.0.0.1:53504: EOF
+2026-10-01T00:54:45.307363+00:00 dns-arch panel[429]: 2026/10/01 00:54:45 http: TLS handshake error from 127.0.0.1:53534: EOF
+2026-10-01T00:54:45.859486+00:00 dns-arch panel[429]: 2026/10/01 00:54:45 http: TLS handshake error from 127.0.0.1:53554: EOF
+2026-10-01T00:54:46.428474+00:00 dns-arch panel[429]: 2026/10/01 00:54:46 http: TLS handshake error from 127.0.0.1:53564: EOF
+2026-10-01T00:54:48.064365+00:00 dns-arch panel[429]: 2026/10/01 00:54:48 http: TLS handshake error from 127.0.0.1:53570: EOF
+2026-10-01T00:54:53.079116+00:00 dns-arch panel[429]: 2026/10/01 00:54:53 http: TLS handshake error from 127.0.0.1:60644: EOF
+2026-10-01T00:54:57.551385+00:00 dns-arch systemd[1]: Starting CelikPanel verified release transaction recovery...
+2026-10-01T00:54:57.893398+00:00 dns-arch systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-01T00:54:57.895531+00:00 dns-arch systemd[1]: Finished CelikPanel verified release transaction recovery.
+2026-10-01T00:54:58.103068+00:00 dns-arch panel[429]: 2026/10/01 00:54:58 http: TLS handshake error from 127.0.0.1:60656: EOF
+2026-10-01T00:55:03.116146+00:00 dns-arch panel[429]: 2026/10/01 00:55:03 http: TLS handshake error from 127.0.0.1:43652: EOF
+2026-10-01T00:55:08.133893+00:00 dns-arch panel[429]: 2026/10/01 00:55:08 http: TLS handshake error from 127.0.0.1:43678: EOF
+2026-10-01T00:55:13.152961+00:00 dns-arch panel[429]: 2026/10/01 00:55:13 http: TLS handshake error from 127.0.0.1:37426: EOF
+2026-10-01T00:55:18.483495+00:00 dns-arch panel[429]: 2026/10/01 00:55:18 http: TLS handshake error from 127.0.0.1:37434: EOF
+2026-10-01T00:55:23.497883+00:00 dns-arch panel[429]: 2026/10/01 00:55:23 http: TLS handshake error from 127.0.0.1:41598: EOF
+2026-10-01T00:55:27.999874+00:00 dns-arch systemd[1]: Starting CelikPanel verified release transaction recovery...
+2026-10-01T00:55:28.512927+00:00 dns-arch panel[429]: 2026/10/01 00:55:28 http: TLS handshake error from 127.0.0.1:41616: EOF
+2026-10-01T00:55:28.611241+00:00 dns-arch systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-01T00:55:28.611488+00:00 dns-arch systemd[1]: Finished CelikPanel verified release transaction recovery.
+2026-10-01T00:55:33.528499+00:00 dns-arch panel[429]: 2026/10/01 00:55:33 http: TLS handshake error from 127.0.0.1:57100: EOF
+2026-10-01T00:55:38.544956+00:00 dns-arch panel[429]: 2026/10/01 00:55:38 http: TLS handshake error from 127.0.0.1:57108: EOF
+2026-10-01T00:55:43.571915+00:00 dns-arch panel[429]: 2026/10/01 00:55:43 http: TLS handshake error from 127.0.0.1:42438: EOF
+2026-10-01T00:55:48.899508+00:00 dns-arch panel[429]: 2026/10/01 00:55:48 http: TLS handshake error from 127.0.0.1:42446: EOF
+2026-10-01T00:55:53.914744+00:00 dns-arch panel[429]: 2026/10/01 00:55:53 http: TLS handshake error from 127.0.0.1:33922: EOF
+2026-10-01T00:55:58.702857+00:00 dns-arch systemd[1]: Starting CelikPanel verified release transaction recovery...
+2026-10-01T00:55:58.929527+00:00 dns-arch panel[429]: 2026/10/01 00:55:58 http: TLS handshake error from 127.0.0.1:33940: EOF
+2026-10-01T00:55:59.005167+00:00 dns-arch systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-01T00:55:59.005444+00:00 dns-arch systemd[1]: Finished CelikPanel verified release transaction recovery.
+2026-10-01T00:56:03.947939+00:00 dns-arch panel[429]: 2026/10/01 00:56:03 http: TLS handshake error from 127.0.0.1:50180: EOF
+2026-10-01T00:56:08.963938+00:00 dns-arch panel[429]: 2026/10/01 00:56:08 http: TLS handshake error from 127.0.0.1:50192: EOF
+2026-10-01T00:56:13.980700+00:00 dns-arch panel[429]: 2026/10/01 00:56:13 http: TLS handshake error from 127.0.0.1:40144: EOF
+2026-10-01T00:56:19.305446+00:00 dns-arch panel[429]: 2026/10/01 00:56:19 http: TLS handshake error from 127.0.0.1:40152: EOF
+2026-10-01T00:56:24.320211+00:00 dns-arch panel[429]: 2026/10/01 00:56:24 http: TLS handshake error from 127.0.0.1:54834: EOF
+2026-10-01T00:56:29.340272+00:00 dns-arch panel[429]: 2026/10/01 00:56:29 http: TLS handshake error from 127.0.0.1:54852: EOF
+2026-10-01T00:56:29.702865+00:00 dns-arch systemd[1]: Starting CelikPanel verified release transaction recovery...
+2026-10-01T00:56:30.005827+00:00 dns-arch systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-01T00:56:30.006134+00:00 dns-arch systemd[1]: Finished CelikPanel verified release transaction recovery.
+2026-10-01T00:56:34.361177+00:00 dns-arch panel[429]: 2026/10/01 00:56:34 http: TLS handshake error from 127.0.0.1:34496: EOF
+2026-10-01T00:56:39.379660+00:00 dns-arch panel[429]: 2026/10/01 00:56:39 http: TLS handshake error from 127.0.0.1:34508: EOF
+2026-10-01T00:56:44.402150+00:00 dns-arch panel[429]: 2026/10/01 00:56:44 http: TLS handshake error from 127.0.0.1:45014: EOF
+2026-10-01T00:56:49.738799+00:00 dns-arch panel[429]: 2026/10/01 00:56:49 http: TLS handshake error from 127.0.0.1:45038: EOF
+2026-10-01T00:56:54.754894+00:00 dns-arch panel[429]: 2026/10/01 00:56:54 http: TLS handshake error from 127.0.0.1:59502: EOF
+2026-10-01T00:56:59.769915+00:00 dns-arch panel[429]: 2026/10/01 00:56:59 http: TLS handshake error from 127.0.0.1:59520: EOF
+2026-10-01T00:57:00.702714+00:00 dns-arch systemd[1]: Starting CelikPanel verified release transaction recovery...
+2026-10-01T00:57:01.006597+00:00 dns-arch systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-01T00:57:01.006956+00:00 dns-arch systemd[1]: Finished CelikPanel verified release transaction recovery.
+2026-10-01T00:57:04.789384+00:00 dns-arch panel[429]: 2026/10/01 00:57:04 http: TLS handshake error from 127.0.0.1:41510: EOF
+2026-10-01T00:57:09.809143+00:00 dns-arch panel[429]: 2026/10/01 00:57:09 http: TLS handshake error from 127.0.0.1:41534: EOF
+2026-10-01T00:57:14.826153+00:00 dns-arch panel[429]: 2026/10/01 00:57:14 http: TLS handshake error from 127.0.0.1:54776: EOF
+2026-10-01T00:57:20.157433+00:00 dns-arch panel[429]: 2026/10/01 00:57:20 http: TLS handshake error from 127.0.0.1:46044: EOF
+2026-10-01T00:57:25.172021+00:00 dns-arch panel[429]: 2026/10/01 00:57:25 http: TLS handshake error from 127.0.0.1:46058: EOF
+2026-10-01T00:57:30.189051+00:00 dns-arch panel[429]: 2026/10/01 00:57:30 http: TLS handshake error from 127.0.0.1:57532: EOF
+2026-10-01T00:57:31.702401+00:00 dns-arch systemd[1]: Starting CelikPanel verified release transaction recovery...
+2026-10-01T00:57:32.006684+00:00 dns-arch systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-01T00:57:32.007085+00:00 dns-arch systemd[1]: Finished CelikPanel verified release transaction recovery.
+2026-10-01T00:57:35.211852+00:00 dns-arch panel[429]: 2026/10/01 00:57:35 http: TLS handshake error from 127.0.0.1:57550: EOF
+2026-10-01T00:57:40.234635+00:00 dns-arch panel[429]: 2026/10/01 00:57:40 http: TLS handshake error from 127.0.0.1:57430: EOF
+2026-10-01T00:57:41.497004+00:00 dns-arch panel[429]: 2026/10/01 00:57:41 http: TLS handshake error from 127.0.0.1:57448: EOF
+2026-10-01T00:57:42.652611+00:00 dns-arch agent[419]: 2026/10/01 00:57:42 hosting root: created /var/www at 0755 0:0
+2026-10-01T00:57:42.652611+00:00 dns-arch agent[419]: 2026/10/01 00:57:42 hosting root: created /var/www/celikpanel at 0755 0:0
+2026-10-01T00:57:42.701041+00:00 dns-arch useradd[2449]: new group: name=upd1_owner_test, GID=1002
+2026-10-01T00:57:42.701142+00:00 dns-arch useradd[2449]: new user: name=upd1_owner_test, UID=1002, GID=1002, home=/var/www/celikpanel/subscriptions/2/sites/1, shell=/bin/bash, from=none
+2026-10-01T00:57:42.802090+00:00 dns-arch chpasswd[2450]: pam_unix(chpasswd:chauthtok): password changed for upd1_owner_test
+2026-10-01T00:57:42.899499+00:00 dns-arch panel[429]: 2026/10/01 00:57:42 http: TLS handshake error from 127.0.0.1:57468: EOF
+2026-10-01T00:57:42.923393+00:00 dns-arch panel[429]: 2026/10/01 00:57:42 http: TLS handshake error from 127.0.0.1:57490: EOF
+2026-10-01T00:57:42.936848+00:00 dns-arch panel[429]: 2026/10/01 00:57:42 http: TLS handshake error from 127.0.0.1:57510: EOF
+2026-10-01T00:57:42.950483+00:00 dns-arch panel[429]: 2026/10/01 00:57:42 http: TLS handshake error from 127.0.0.1:57524: EOF
+2026-10-01T00:57:42.965132+00:00 dns-arch crontab[2464]: (root) REPLACE (upd1_owner_test)
+2026-10-01T00:57:42.972683+00:00 dns-arch panel[429]: 2026/10/01 00:57:42 http: TLS handshake error from 127.0.0.1:57548: EOF
+2026-10-01T00:57:42.988257+00:00 dns-arch panel[429]: 2026/10/01 00:57:42 http: TLS handshake error from 127.0.0.1:57574: EOF
+2026-10-01T00:57:48.501255+00:00 dns-arch panel[429]: 2026/10/01 00:57:48 http: TLS handshake error from 127.0.0.1:57604: EOF
+2026-10-01T00:57:49.673812+00:00 dns-arch panel[429]: 2026/10/01 00:57:49 http: TLS handshake error from 127.0.0.1:57638: EOF
+2026-10-01T00:57:54.641786+00:00 dns-arch panel[429]: 2026/10/01 00:57:54 http: TLS handshake error from 127.0.0.1:52938: EOF
+2026-10-01T00:57:59.626480+00:00 dns-arch panel[429]: 2026/10/01 00:57:59 http: TLS handshake error from 127.0.0.1:52982: EOF
+2026-10-01T00:58:02.702870+00:00 dns-arch systemd[1]: Starting CelikPanel verified release transaction recovery...
+2026-10-01T00:58:03.007034+00:00 dns-arch systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-01T00:58:03.007305+00:00 dns-arch systemd[1]: Finished CelikPanel verified release transaction recovery.
+2026-10-01T00:58:04.636673+00:00 dns-arch panel[429]: 2026/10/01 00:58:04 http: TLS handshake error from 127.0.0.1:48400: EOF
+2026-10-01T00:58:09.598536+00:00 dns-arch panel[429]: 2026/10/01 00:58:09 http: TLS handshake error from 127.0.0.1:48408: EOF
+2026-10-01T00:58:14.636978+00:00 dns-arch panel[429]: 2026/10/01 00:58:14 http: TLS handshake error from 127.0.0.1:35158: EOF
+2026-10-01T00:58:19.630258+00:00 dns-arch panel[429]: 2026/10/01 00:58:19 http: TLS handshake error from 127.0.0.1:35194: EOF
+2026-10-01T00:58:24.650035+00:00 dns-arch panel[429]: 2026/10/01 00:58:24 http: TLS handshake error from 127.0.0.1:34532: EOF
+2026-10-01T00:58:29.635145+00:00 dns-arch panel[429]: 2026/10/01 00:58:29 http: TLS handshake error from 127.0.0.1:34562: EOF
+2026-10-01T00:58:33.703011+00:00 dns-arch systemd[1]: Starting CelikPanel verified release transaction recovery...
+2026-10-01T00:58:34.006263+00:00 dns-arch systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-01T00:58:34.006631+00:00 dns-arch systemd[1]: Finished CelikPanel verified release transaction recovery.
+2026-10-01T00:58:34.635022+00:00 dns-arch panel[429]: 2026/10/01 00:58:34 http: TLS handshake error from 127.0.0.1:36608: EOF
+2026-10-01T00:58:39.638225+00:00 dns-arch panel[429]: 2026/10/01 00:58:39 http: TLS handshake error from 127.0.0.1:36632: EOF
+2026-10-01T00:58:44.635267+00:00 dns-arch panel[429]: 2026/10/01 00:58:44 http: TLS handshake error from 127.0.0.1:35902: EOF
+2026-10-01T00:58:49.636025+00:00 dns-arch panel[429]: 2026/10/01 00:58:49 http: TLS handshake error from 127.0.0.1:35926: EOF
+2026-10-01T00:58:54.627991+00:00 dns-arch panel[429]: 2026/10/01 00:58:54 http: TLS handshake error from 127.0.0.1:42968: EOF
+2026-10-01T00:58:59.639571+00:00 dns-arch panel[429]: 2026/10/01 00:58:59 http: TLS handshake error from 127.0.0.1:42990: EOF
+2026-10-01T00:59:04.576087+00:00 dns-arch systemd[1]: Starting CelikPanel verified release transaction recovery...
+2026-10-01T00:59:04.651222+00:00 dns-arch panel[429]: 2026/10/01 00:59:04 http: TLS handshake error from 127.0.0.1:47194: EOF
+2026-10-01T00:59:04.898945+00:00 dns-arch systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-01T00:59:04.899277+00:00 dns-arch systemd[1]: Finished CelikPanel verified release transaction recovery.
+2026-10-01T00:59:09.658297+00:00 dns-arch panel[429]: 2026/10/01 00:59:09 http: TLS handshake error from 127.0.0.1:47224: EOF
+2026-10-01T00:59:13.478302+00:00 dns-arch panel[429]: 2026/10/01 00:59:13 http: TLS handshake error from 127.0.0.1:60974: EOF
+2026-10-01T00:59:14.012574+00:00 dns-arch systemd[1]: Started [systemd-run] /usr/bin/python3 -I /root/celikpanel-release-recovery-lab/guest_owner_update_observer.py --lab-nonce 66aaa519d829c8e0e77addf145765461fc52851efe7b51f2786a87a8531cc4e1 --vm-uuid 11defc50-db81-5800-a76c-8f48a81280d7 --cell-id release-recovery__66aaa519d829c8e0 --node arch --operation-id 8ef5d6865ecf44e4fd74500e743cc253 --execute.
+2026-10-01T00:59:14.653586+00:00 dns-arch panel[429]: 2026/10/01 00:59:14 http: TLS handshake error from 127.0.0.1:60998: EOF
+2026-10-01T00:59:14.757090+00:00 dns-arch panel[429]: 2026/10/01 00:59:14 http: TLS handshake error from 127.0.0.1:32778: EOF
+2026-10-01T00:59:14.780348+00:00 dns-arch panel[429]: 2026/10/01 00:59:14 http: TLS handshake error from 127.0.0.1:32806: EOF
+2026-10-01T00:59:14.886620+00:00 dns-arch systemd[1]: Starting [systemd-run] /opt/celikpanel/bin/agent --self-update-worker 8ef5d6865ecf44e4fd74500e743cc253...
+2026-10-01T00:59:14.898018+00:00 dns-arch systemd[1]: Started [systemd-run] /opt/celikpanel/bin/agent --self-update-worker 8ef5d6865ecf44e4fd74500e743cc253.
+2026-10-01T00:59:14.901325+00:00 dns-arch panel[429]: 2026/10/01 00:59:14 http: TLS handshake error from 127.0.0.1:32858: EOF
+2026-10-01T00:59:14.901325+00:00 dns-arch panel[429]: 2026/10/01 00:59:14 http: TLS handshake error from 127.0.0.1:32838: EOF
+2026-10-01T00:59:14.901325+00:00 dns-arch panel[429]: 2026/10/01 00:59:14 http: TLS handshake error from 127.0.0.1:32852: EOF
+2026-10-01T00:59:14.928397+00:00 dns-arch panel[429]: 2026/10/01 00:59:14 http: TLS handshake error from 127.0.0.1:32868: EOF
+2026-10-01T00:59:16.895388+00:00 dns-arch panel[429]: 2026/10/01 00:59:16 http: TLS handshake error from 127.0.0.1:32886: EOF
+2026-10-01T00:59:16.895917+00:00 dns-arch panel[429]: 2026/10/01 00:59:16 http: TLS handshake error from 127.0.0.1:32912: EOF
+2026-10-01T00:59:16.895917+00:00 dns-arch panel[429]: 2026/10/01 00:59:16 http: TLS handshake error from 127.0.0.1:32896: EOF
+2026-10-01T00:59:16.937652+00:00 dns-arch panel[429]: 2026/10/01 00:59:16 http: TLS handshake error from 127.0.0.1:32924: EOF
+2026-10-01T00:59:18.888096+00:00 dns-arch panel[429]: 2026/10/01 00:59:18 http: TLS handshake error from 127.0.0.1:32964: EOF
+2026-10-01T00:59:18.888601+00:00 dns-arch panel[429]: 2026/10/01 00:59:18 http: TLS handshake error from 127.0.0.1:32950: EOF
+2026-10-01T00:59:18.888601+00:00 dns-arch panel[429]: 2026/10/01 00:59:18 http: TLS handshake error from 127.0.0.1:32960: EOF
+2026-10-01T00:59:18.918474+00:00 dns-arch panel[429]: 2026/10/01 00:59:18 http: TLS handshake error from 127.0.0.1:32986: EOF
+2026-10-01T00:59:19.653138+00:00 dns-arch panel[429]: 2026/10/01 00:59:19 http: TLS handshake error from 127.0.0.1:33008: EOF
+2026-10-01T00:59:21.706980+00:00 dns-arch panel[429]: 2026/10/01 00:59:21 http: TLS handshake error from 127.0.0.1:35602: EOF
+2026-10-01T00:59:21.706980+00:00 dns-arch panel[429]: 2026/10/01 00:59:21 http: TLS handshake error from 127.0.0.1:35584: EOF
+2026-10-01T00:59:21.706980+00:00 dns-arch panel[429]: 2026/10/01 00:59:21 http: TLS handshake error from 127.0.0.1:35590: EOF
+2026-10-01T00:59:21.737343+00:00 dns-arch panel[429]: 2026/10/01 00:59:21 http: TLS handshake error from 127.0.0.1:35630: EOF
+2026-10-01T00:59:24.650548+00:00 dns-arch panel[429]: 2026/10/01 00:59:24 http: TLS handshake error from 127.0.0.1:35664: EOF
+2026-10-01T00:59:26.006274+00:00 dns-arch panel[429]: 2026/10/01 00:59:26 http: TLS handshake error from 127.0.0.1:35686: EOF
+2026-10-01T00:59:26.007383+00:00 dns-arch panel[429]: 2026/10/01 00:59:26 http: TLS handshake error from 127.0.0.1:35716: EOF
+2026-10-01T00:59:26.007383+00:00 dns-arch panel[429]: 2026/10/01 00:59:26 http: TLS handshake error from 127.0.0.1:35700: EOF
+2026-10-01T00:59:26.037283+00:00 dns-arch panel[429]: 2026/10/01 00:59:26 http: TLS handshake error from 127.0.0.1:35740: EOF
+2026-10-01T00:59:29.650771+00:00 dns-arch panel[429]: 2026/10/01 00:59:29 http: TLS handshake error from 127.0.0.1:35770: EOF
+2026-10-01T00:59:31.359246+00:00 dns-arch systemd[1]: Starting CelikPanel verified release transaction recovery...
+2026-10-01T00:59:31.754931+00:00 dns-arch systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-01T00:59:31.755168+00:00 dns-arch systemd[1]: Finished CelikPanel verified release transaction recovery.
+2026-10-01T00:59:32.574778+00:00 dns-arch panel[429]: 2026/10/01 00:59:32 http: TLS handshake error from 127.0.0.1:39274: EOF
+2026-10-01T00:59:32.574778+00:00 dns-arch panel[429]: 2026/10/01 00:59:32 http: TLS handshake error from 127.0.0.1:39286: EOF
+2026-10-01T00:59:32.574778+00:00 dns-arch panel[429]: 2026/10/01 00:59:32 http: TLS handshake error from 127.0.0.1:39270: EOF
+2026-10-01T00:59:32.597927+00:00 dns-arch panel[429]: 2026/10/01 00:59:32 http: TLS handshake error from 127.0.0.1:39314: EOF
+2026-10-01T00:59:33.807942+00:00 dns-arch systemd[1]: celikpanel-panel.service: Sent signal SIGSTOP to main process 429 (panel) on client request.
+2026-10-01T00:59:33.917222+00:00 dns-arch systemd[1]: celikpanel-agent.service: Sent signal SIGSTOP to main process 419 (agent) on client request.
+2026-10-01T00:59:34.310504+00:00 dns-arch systemd[1]: Stopping CelikPanel web panel...
+2026-10-01T00:59:34.329485+00:00 dns-arch systemd[1]: celikpanel-panel.service: Sent signal SIGKILL to main process 429 (panel) on client request.
+2026-10-01T00:59:34.329690+00:00 dns-arch systemd[1]: celikpanel-panel.service: Killed unit cgroup '/system.slice/celikpanel-panel.service' with SIGKILL on client request.
+2026-10-01T00:59:34.339665+00:00 dns-arch systemd[1]: celikpanel-panel.service: Main process exited, code=killed, status=9/KILL
+2026-10-01T00:59:34.340005+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'signal'.
+2026-10-01T00:59:34.340835+00:00 dns-arch systemd[1]: Stopped CelikPanel web panel.
+2026-10-01T00:59:34.341084+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 848ms CPU time over 6min 7.166s wall clock time, 168.1M memory peak.
+2026-10-01T00:59:34.421462+00:00 dns-arch systemd[1]: Stopping CelikPanel privileged agent...
+2026-10-01T00:59:34.425121+00:00 dns-arch systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-10-01T00:59:34.425352+00:00 dns-arch systemd[1]: Stopped CelikPanel privileged agent.
+2026-10-01T00:59:34.425501+00:00 dns-arch systemd[1]: celikpanel-agent.service: Consumed 9.811s CPU time over 6min 7.310s wall clock time, 806.2M memory peak.
+2026-10-01T00:59:50.283285+00:00 dns-arch sudo[16194]:     root : PWD=/var/backups/celikpanel/releases/e1fdca3898d9-a27a0ea21a332ab92e0dfefc ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin HOME=/var/lib/celikpanel LC_ALL=C CELIKPANEL_DATA_DIR=/var/lib/celikpanel/.release-db-migrations/ec0baceaebe92012f643315932bfd042717de367679d5e7992284f510c7fe4f0/work /opt/celikpanel/bin/panel --migrate-only
+2026-10-01T00:59:50.284141+00:00 dns-arch sudo[16194]: pam_unix(sudo:session): session opened for user celikpanel(uid=969) by (uid=0)
+2026-10-01T00:59:50.396599+00:00 dns-arch sudo[16194]: pam_unix(sudo:session): session closed for user celikpanel
+2026-10-01T00:59:54.182289+00:00 dns-arch sudo[16593]:     root : PWD=/var/backups/celikpanel/releases/e1fdca3898d9-a27a0ea21a332ab92e0dfefc ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin HOME=/var/lib/celikpanel LC_ALL=C CELIKPANEL_DATA_DIR=/var/lib/celikpanel CELIKPANEL_LISTEN=:2083 CELIKPANEL_TLS=1 CELIKPANEL_PANEL_DEMO_FLAG= CELIKPANEL_WEB_DIR=/opt/celikpanel/web CELIKPANEL_PANEL_INSECURE_COOKIES_FLAG= /opt/celikpanel/bin/panel --check-startup-readiness
+2026-10-01T00:59:54.182955+00:00 dns-arch sudo[16593]: pam_unix(sudo:session): session opened for user celikpanel(uid=969) by (uid=0)
+2026-10-01T00:59:54.367469+00:00 dns-arch sudo[16593]: pam_unix(sudo:session): session closed for user celikpanel
+2026-10-01T00:59:54.776381+00:00 dns-arch systemd[1]: Starting CelikPanel privileged agent...
+2026-10-01T00:59:54.833850+00:00 dns-arch systemd[1]: Started CelikPanel privileged agent.
+2026-10-01T00:59:54.859773+00:00 dns-arch agent[16856]: 2026/10/01 00:59:54 Starting CelikPanel Agent...
+2026-10-01T00:59:54.868850+00:00 dns-arch agent[16856]: 2026/10/01 00:59:54 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-10-01T00:59:55.476330+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-01T00:59:55.533115+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-01T00:59:55.637708+00:00 dns-arch panel[17080]: 2026/10/01 00:59:55 Starting CelikPanel Backend...
+2026-10-01T00:59:55.669692+00:00 dns-arch panel[17080]: 2026/10/01 00:59:55 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T00:59:55.670157+00:00 dns-arch panel[17080]: 2026/10/01 00:59:55 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T00:59:55.671799+00:00 dns-arch systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T00:59:55.671973+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T00:59:55.672332+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 197ms CPU time over 195ms wall clock time, 73.5M memory peak.
+2026-10-01T00:59:58.688871+00:00 dns-arch systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 1.
+2026-10-01T00:59:58.691333+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-01T00:59:58.747407+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-01T00:59:58.847680+00:00 dns-arch panel[17327]: 2026/10/01 00:59:58 Starting CelikPanel Backend...
+2026-10-01T00:59:58.855003+00:00 dns-arch panel[17327]: 2026/10/01 00:59:58 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T00:59:58.855460+00:00 dns-arch panel[17327]: 2026/10/01 00:59:58 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T00:59:58.856332+00:00 dns-arch systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T00:59:58.856505+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T00:59:58.856874+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 189ms CPU time over 3.184s wall clock time, 73.5M memory peak.
+2026-10-01T01:00:01.762097+00:00 dns-arch systemd[1]: Starting CelikPanel verified release transaction recovery...
+2026-10-01T01:00:02.163900+00:00 dns-arch systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-01T01:00:02.164227+00:00 dns-arch systemd[1]: Finished CelikPanel verified release transaction recovery.
+2026-10-01T01:00:04.433006+00:00 dns-arch systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 2.
+2026-10-01T01:00:04.436468+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-01T01:00:04.500642+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-01T01:00:04.610405+00:00 dns-arch panel[17728]: 2026/10/01 01:00:04 Starting CelikPanel Backend...
+2026-10-01T01:00:04.617418+00:00 dns-arch panel[17728]: 2026/10/01 01:00:04 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T01:00:04.618166+00:00 dns-arch panel[17728]: 2026/10/01 01:00:04 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T01:00:04.619813+00:00 dns-arch systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T01:00:04.619995+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T01:00:04.620430+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 202ms CPU time over 5.763s wall clock time, 73.7M memory peak.
+2026-10-01T01:00:14.883252+00:00 dns-arch systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 3.
+2026-10-01T01:00:14.885595+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-01T01:00:14.963287+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-01T01:00:15.104802+00:00 dns-arch panel[18420]: 2026/10/01 01:00:15 Starting CelikPanel Backend...
+2026-10-01T01:00:15.112593+00:00 dns-arch panel[18420]: 2026/10/01 01:00:15 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T01:00:15.113145+00:00 dns-arch panel[18420]: 2026/10/01 01:00:15 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T01:00:15.114937+00:00 dns-arch systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T01:00:15.115163+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T01:00:15.115546+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 188ms CPU time over 10.494s wall clock time, 73.4M memory peak.
+2026-10-01T01:00:32.167827+00:00 dns-arch systemd[1]: Starting CelikPanel verified release transaction recovery...
+2026-10-01T01:00:32.585377+00:00 dns-arch systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-01T01:00:32.585657+00:00 dns-arch systemd[1]: Finished CelikPanel verified release transaction recovery.
+2026-10-01T01:00:34.122871+00:00 dns-arch systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 4.
+2026-10-01T01:00:34.124456+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-01T01:00:34.177277+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-01T01:00:34.303024+00:00 dns-arch panel[19700]: 2026/10/01 01:00:34 Starting CelikPanel Backend...
+2026-10-01T01:00:34.309438+00:00 dns-arch panel[19700]: 2026/10/01 01:00:34 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T01:00:34.309894+00:00 dns-arch panel[19700]: 2026/10/01 01:00:34 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T01:00:34.311351+00:00 dns-arch systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T01:00:34.311556+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T01:00:34.312793+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 193ms CPU time over 19.195s wall clock time, 73.4M memory peak.
+2026-10-01T01:00:56.168683+00:00 dns-arch systemd[1]: Stopped CelikPanel web panel.
+2026-10-01T01:00:56.169062+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 193ms CPU time over 21.855s wall clock time, 73.4M memory peak.
+2026-10-01T01:00:56.185373+00:00 dns-arch systemd[1]: Stopping CelikPanel privileged agent...
+2026-10-01T01:00:56.186512+00:00 dns-arch systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-10-01T01:00:56.186811+00:00 dns-arch systemd[1]: Stopped CelikPanel privileged agent.
+2026-10-01T01:00:56.345744+00:00 dns-arch agent[3147]: 2026/10/01 01:00:56 System update worker failed: reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=panel_start_unverified state=recovery_required reason=the new panel did not stay running and answer on its own address after the update was applied detail=
+2026-10-01T01:00:56.347901+00:00 dns-arch systemd[1]: celikpanel-self-update-8ef5d6865ecf44e4fd74500e743cc253.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T01:00:56.348041+00:00 dns-arch systemd[1]: celikpanel-self-update-8ef5d6865ecf44e4fd74500e743cc253.service: Failed with result 'exit-code'.
+2026-10-01T01:00:56.348418+00:00 dns-arch systemd[1]: celikpanel-self-update-8ef5d6865ecf44e4fd74500e743cc253.service: Consumed 35.702s CPU time over 1min 41.461s wall clock time, 488.3M memory peak.
+2026-10-01T01:00:56.348446+00:00 dns-arch systemd[1]: celikpanel-self-update-8ef5d6865ecf44e4fd74500e743cc253.service: Triggering OnFailure= dependencies.
+2026-10-01T01:00:56.350508+00:00 dns-arch systemd[1]: Starting CelikPanel verified release transaction recovery...
+2026-10-01T01:00:56.413581+00:00 dns-arch systemctl[21126]: Failed to thaw unit celikpanel-self-update-8ef5d6865ecf44e4fd74500e743cc253.service: Unit is not active
+2026-10-01T01:00:56.414904+00:00 dns-arch systemd[1]: celikpanel-lab-owner-update-observer-8ef5d6865ecf44e4fd74500e743cc253.service: Deactivated successfully.
+2026-10-01T01:00:56.415191+00:00 dns-arch systemd[1]: celikpanel-lab-owner-update-observer-8ef5d6865ecf44e4fd74500e743cc253.service: Consumed 16.335s CPU time over 1min 42.402s wall clock time, 14.7M memory peak.
+2026-10-01T01:00:57.635559+00:00 dns-arch release-recovery[21119]: Recovery dispatch admitted: attempt=1 snapshot=20261001T005932Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-c0330bbe5baad02c2df5efe451b8d128
+2026-10-01T01:01:03.319167+00:00 dns-arch release-recovery[21547]: CELIKPANEL_UPDATE_CHECKPOINT database_verified_before_start
+2026-10-01T01:01:03.429841+00:00 dns-arch systemd[1]: Starting CelikPanel privileged agent...
+2026-10-01T01:01:03.478629+00:00 dns-arch systemd[1]: Started CelikPanel privileged agent.
+2026-10-01T01:01:03.495265+00:00 dns-arch agent[22934]: 2026/10/01 01:01:03 Starting CelikPanel Agent...
+2026-10-01T01:01:03.790351+00:00 dns-arch agent[22934]: 2026/10/01 01:01:03 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-10-01T01:01:04.819712+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-01T01:01:04.874841+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-01T01:01:04.966794+00:00 dns-arch panel[23140]: 2026/10/01 01:01:04 Starting CelikPanel Backend...
+2026-10-01T01:01:04.972530+00:00 dns-arch panel[23140]: 2026/10/01 01:01:04 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T01:01:04.972981+00:00 dns-arch panel[23140]: 2026/10/01 01:01:04 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T01:01:04.974471+00:00 dns-arch systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T01:01:04.974745+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T01:01:04.975162+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 193ms CPU time over 155ms wall clock time, 73.7M memory peak.
+2026-10-01T01:01:08.123456+00:00 dns-arch systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 1.
+2026-10-01T01:01:08.125139+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-01T01:01:08.179402+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-01T01:01:08.263468+00:00 dns-arch panel[23235]: 2026/10/01 01:01:08 Starting CelikPanel Backend...
+2026-10-01T01:01:08.269667+00:00 dns-arch panel[23235]: 2026/10/01 01:01:08 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T01:01:08.270141+00:00 dns-arch panel[23235]: 2026/10/01 01:01:08 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T01:01:08.271879+00:00 dns-arch systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T01:01:08.272082+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T01:01:08.273885+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 188ms CPU time over 3.296s wall clock time, 73.7M memory peak.
+2026-10-01T01:01:13.876055+00:00 dns-arch systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 2.
+2026-10-01T01:01:13.877889+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-01T01:01:13.938412+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-01T01:01:14.024627+00:00 dns-arch panel[23400]: 2026/10/01 01:01:14 Starting CelikPanel Backend...
+2026-10-01T01:01:14.031058+00:00 dns-arch panel[23400]: 2026/10/01 01:01:14 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T01:01:14.031566+00:00 dns-arch panel[23400]: 2026/10/01 01:01:14 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T01:01:14.033355+00:00 dns-arch systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T01:01:14.033554+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T01:01:14.034231+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 192ms CPU time over 5.759s wall clock time, 73.7M memory peak.
+2026-10-01T01:01:24.430584+00:00 dns-arch systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 3.
+2026-10-01T01:01:24.432804+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-01T01:01:24.483806+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-01T01:01:24.576795+00:00 dns-arch panel[23621]: 2026/10/01 01:01:24 Starting CelikPanel Backend...
+2026-10-01T01:01:24.582685+00:00 dns-arch panel[23621]: 2026/10/01 01:01:24 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T01:01:24.583128+00:00 dns-arch panel[23621]: 2026/10/01 01:01:24 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T01:01:24.584647+00:00 dns-arch systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T01:01:24.584878+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T01:01:24.585252+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 191ms CPU time over 10.550s wall clock time, 73.5M memory peak.
+2026-10-01T01:01:43.566250+00:00 dns-arch systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 4.
+2026-10-01T01:01:43.567809+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-01T01:01:43.617543+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-01T01:01:43.697259+00:00 dns-arch panel[24029]: 2026/10/01 01:01:43 Starting CelikPanel Backend...
+2026-10-01T01:01:43.703353+00:00 dns-arch panel[24029]: 2026/10/01 01:01:43 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T01:01:43.703818+00:00 dns-arch panel[24029]: 2026/10/01 01:01:43 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T01:01:43.705247+00:00 dns-arch systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T01:01:43.705464+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T01:01:43.705870+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 185ms CPU time over 19.120s wall clock time, 73.6M memory peak.
+2026-10-01T01:02:05.500831+00:00 dns-arch release-recovery[21547]: !! pending update panel did not stay running and answer on its own address
+2026-10-01T01:02:05.506781+00:00 dns-arch systemd[1]: Stopped CelikPanel web panel.
+2026-10-01T01:02:05.507633+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 185ms CPU time over 21.800s wall clock time, 73.6M memory peak.
+2026-10-01T01:02:05.523503+00:00 dns-arch systemd[1]: Stopping CelikPanel privileged agent...
+2026-10-01T01:02:05.524616+00:00 dns-arch systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-10-01T01:02:05.524976+00:00 dns-arch systemd[1]: Stopped CelikPanel privileged agent.
+2026-10-01T01:02:05.537029+00:00 dns-arch release-recovery[21547]: !! Pending update finalization failed; marker preserved and both coordinators stopped.
+2026-10-01T01:02:05.537029+00:00 dns-arch release-recovery[21547]: !! Bekleyen güncelleme sonuçlandırması başarısız; marker korundu ve iki koordinatör durduruldu.
+2026-10-01T01:02:05.576826+00:00 dns-arch release-recovery[21119]: Automatic recovery attempt 1 of 3 did not finish; the native timer admits the next attempt for this same operation. No owner action is needed yet.
+2026-10-01T01:02:05.576826+00:00 dns-arch release-recovery[21119]: Otomatik kurtarma denemesi 1/3 tamamlanmadı; yerel zamanlayıcı aynı işlem için sonraki denemeyi başlatır. Henüz kullanıcı işlemi gerekmiyor.
+2026-10-01T01:02:05.578062+00:00 dns-arch release-recovery[21119]: !! release recovery child failed with status 1
+2026-10-01T01:02:05.695622+00:00 dns-arch systemd[1]: celikpanel-release-recovery.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T01:02:05.695864+00:00 dns-arch systemd[1]: celikpanel-release-recovery.service: Failed with result 'exit-code'.
+2026-10-01T01:02:05.696889+00:00 dns-arch systemd[1]: Failed to start CelikPanel verified release transaction recovery.
+2026-10-01T01:02:05.698281+00:00 dns-arch systemd[1]: celikpanel-release-recovery.service: Consumed 8.812s CPU time over 1min 9.345s wall clock time, 20.3M memory peak.
+2026-10-01T01:02:35.702607+00:00 dns-arch systemd[1]: Starting CelikPanel verified release transaction recovery...
+2026-10-01T01:02:36.880650+00:00 dns-arch release-recovery[25041]: Recovery dispatch admitted: attempt=2 snapshot=20261001T005932Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-c0330bbe5baad02c2df5efe451b8d128
+2026-10-01T01:02:42.617792+00:00 dns-arch release-recovery[25419]: CELIKPANEL_UPDATE_CHECKPOINT database_verified_before_start
+2026-10-01T01:02:42.727164+00:00 dns-arch systemd[1]: Starting CelikPanel privileged agent...
+2026-10-01T01:02:42.775209+00:00 dns-arch systemd[1]: Started CelikPanel privileged agent.
+2026-10-01T01:02:42.792925+00:00 dns-arch agent[26817]: 2026/10/01 01:02:42 Starting CelikPanel Agent...
+2026-10-01T01:02:43.087769+00:00 dns-arch agent[26817]: 2026/10/01 01:02:43 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-10-01T01:02:44.109547+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-01T01:02:44.158819+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-01T01:02:44.253320+00:00 dns-arch panel[27026]: 2026/10/01 01:02:44 Starting CelikPanel Backend...
+2026-10-01T01:02:44.259461+00:00 dns-arch panel[27026]: 2026/10/01 01:02:44 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T01:02:44.259977+00:00 dns-arch panel[27026]: 2026/10/01 01:02:44 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T01:02:44.261666+00:00 dns-arch systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T01:02:44.261893+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T01:02:44.262295+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 184ms CPU time over 152ms wall clock time, 73.6M memory peak.
+2026-10-01T01:02:47.308947+00:00 dns-arch systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 1.
+2026-10-01T01:02:47.310644+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-01T01:02:47.361813+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-01T01:02:47.443020+00:00 dns-arch panel[27113]: 2026/10/01 01:02:47 Starting CelikPanel Backend...
+2026-10-01T01:02:47.449830+00:00 dns-arch panel[27113]: 2026/10/01 01:02:47 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T01:02:47.450341+00:00 dns-arch panel[27113]: 2026/10/01 01:02:47 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T01:02:47.451953+00:00 dns-arch systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T01:02:47.452150+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T01:02:47.452514+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 183ms CPU time over 3.189s wall clock time, 71.6M memory peak.
+2026-10-01T01:02:53.086836+00:00 dns-arch systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 2.
+2026-10-01T01:02:53.088790+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-01T01:02:53.144495+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-01T01:02:53.228237+00:00 dns-arch panel[27255]: 2026/10/01 01:02:53 Starting CelikPanel Backend...
+2026-10-01T01:02:53.234373+00:00 dns-arch panel[27255]: 2026/10/01 01:02:53 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T01:02:53.234812+00:00 dns-arch panel[27255]: 2026/10/01 01:02:53 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T01:02:53.236289+00:00 dns-arch systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T01:02:53.236487+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T01:02:53.236876+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 186ms CPU time over 5.783s wall clock time, 73.5M memory peak.
+2026-10-01T01:03:03.498324+00:00 dns-arch systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 3.
+2026-10-01T01:03:03.499956+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-01T01:03:03.552995+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-01T01:03:03.635688+00:00 dns-arch panel[27512]: 2026/10/01 01:03:03 Starting CelikPanel Backend...
+2026-10-01T01:03:03.642327+00:00 dns-arch panel[27512]: 2026/10/01 01:03:03 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T01:03:03.642972+00:00 dns-arch panel[27512]: 2026/10/01 01:03:03 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T01:03:03.644572+00:00 dns-arch systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T01:03:03.644834+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T01:03:03.645197+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 184ms CPU time over 10.407s wall clock time, 73.5M memory peak.
+2026-10-01T01:03:22.639746+00:00 dns-arch systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 4.
+2026-10-01T01:03:22.641796+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-01T01:03:22.694381+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-01T01:03:22.780189+00:00 dns-arch panel[27929]: 2026/10/01 01:03:22 Starting CelikPanel Backend...
+2026-10-01T01:03:22.786542+00:00 dns-arch panel[27929]: 2026/10/01 01:03:22 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T01:03:22.787021+00:00 dns-arch panel[27929]: 2026/10/01 01:03:22 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T01:03:22.788777+00:00 dns-arch systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T01:03:22.788956+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T01:03:22.789343+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 193ms CPU time over 19.143s wall clock time, 73.6M memory peak.
+2026-10-01T01:03:45.350443+00:00 dns-arch release-recovery[25419]: !! pending update panel did not stay running and answer on its own address
+2026-10-01T01:03:45.356648+00:00 dns-arch systemd[1]: Stopped CelikPanel web panel.
+2026-10-01T01:03:45.357107+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 193ms CPU time over 22.567s wall clock time, 73.6M memory peak.
+2026-10-01T01:03:45.376205+00:00 dns-arch systemd[1]: Stopping CelikPanel privileged agent...
+2026-10-01T01:03:45.377115+00:00 dns-arch systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-10-01T01:03:45.377414+00:00 dns-arch systemd[1]: Stopped CelikPanel privileged agent.
+2026-10-01T01:03:45.390522+00:00 dns-arch release-recovery[25419]: !! Pending update finalization failed; marker preserved and both coordinators stopped.
+2026-10-01T01:03:45.390522+00:00 dns-arch release-recovery[25419]: !! Bekleyen güncelleme sonuçlandırması başarısız; marker korundu ve iki koordinatör durduruldu.
+2026-10-01T01:03:45.429522+00:00 dns-arch release-recovery[25041]: Automatic recovery attempt 2 of 3 did not finish; the native timer admits the next attempt for this same operation. No owner action is needed yet.
+2026-10-01T01:03:45.429522+00:00 dns-arch release-recovery[25041]: Otomatik kurtarma denemesi 2/3 tamamlanmadı; yerel zamanlayıcı aynı işlem için sonraki denemeyi başlatır. Henüz kullanıcı işlemi gerekmiyor.
+2026-10-01T01:03:45.430701+00:00 dns-arch release-recovery[25041]: !! release recovery child failed with status 1
+2026-10-01T01:03:45.560607+00:00 dns-arch systemd[1]: celikpanel-release-recovery.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T01:03:45.560801+00:00 dns-arch systemd[1]: celikpanel-release-recovery.service: Failed with result 'exit-code'.
+2026-10-01T01:03:45.561178+00:00 dns-arch systemd[1]: Failed to start CelikPanel verified release transaction recovery.
+2026-10-01T01:03:45.561509+00:00 dns-arch systemd[1]: celikpanel-release-recovery.service: Consumed 8.776s CPU time over 1min 9.858s wall clock time, 21.9M memory peak.
+2026-10-01T01:04:15.637134+00:00 dns-arch systemd[1]: Starting CelikPanel verified release transaction recovery...
+2026-10-01T01:04:16.821803+00:00 dns-arch release-recovery[28959]: Recovery dispatch admitted: attempt=3 snapshot=20261001T005932Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-c0330bbe5baad02c2df5efe451b8d128
+2026-10-01T01:04:22.445705+00:00 dns-arch release-recovery[29339]: CELIKPANEL_UPDATE_CHECKPOINT database_verified_before_start
+2026-10-01T01:04:22.552534+00:00 dns-arch systemd[1]: Starting CelikPanel privileged agent...
+2026-10-01T01:04:22.602647+00:00 dns-arch systemd[1]: Started CelikPanel privileged agent.
+2026-10-01T01:04:22.624733+00:00 dns-arch agent[30712]: 2026/10/01 01:04:22 Starting CelikPanel Agent...
+2026-10-01T01:04:22.918862+00:00 dns-arch agent[30712]: 2026/10/01 01:04:22 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-10-01T01:04:23.925941+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-01T01:04:23.978421+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-01T01:04:24.066914+00:00 dns-arch panel[30917]: 2026/10/01 01:04:24 Starting CelikPanel Backend...
+2026-10-01T01:04:24.073049+00:00 dns-arch panel[30917]: 2026/10/01 01:04:24 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T01:04:24.073685+00:00 dns-arch panel[30917]: 2026/10/01 01:04:24 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T01:04:24.075376+00:00 dns-arch systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T01:04:24.075548+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T01:04:24.075941+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 189ms CPU time over 149ms wall clock time, 73.6M memory peak.
+2026-10-01T01:04:27.201378+00:00 dns-arch systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 1.
+2026-10-01T01:04:27.203457+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-01T01:04:27.259795+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-01T01:04:27.346596+00:00 dns-arch panel[31012]: 2026/10/01 01:04:27 Starting CelikPanel Backend...
+2026-10-01T01:04:27.352492+00:00 dns-arch panel[31012]: 2026/10/01 01:04:27 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T01:04:27.352912+00:00 dns-arch panel[31012]: 2026/10/01 01:04:27 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T01:04:27.354491+00:00 dns-arch systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T01:04:27.354757+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T01:04:27.355087+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 185ms CPU time over 3.278s wall clock time, 73.8M memory peak.
+2026-10-01T01:04:32.950578+00:00 dns-arch systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 2.
+2026-10-01T01:04:32.952073+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-01T01:04:33.003266+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-01T01:04:33.092779+00:00 dns-arch panel[31173]: 2026/10/01 01:04:33 Starting CelikPanel Backend...
+2026-10-01T01:04:33.098707+00:00 dns-arch panel[31173]: 2026/10/01 01:04:33 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T01:04:33.099138+00:00 dns-arch panel[31173]: 2026/10/01 01:04:33 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T01:04:33.101145+00:00 dns-arch systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T01:04:33.101582+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T01:04:33.101991+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 188ms CPU time over 5.746s wall clock time, 71.6M memory peak.
+2026-10-01T01:04:43.450791+00:00 dns-arch systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 3.
+2026-10-01T01:04:43.452754+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-01T01:04:43.509379+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-01T01:04:43.589659+00:00 dns-arch panel[31407]: 2026/10/01 01:04:43 Starting CelikPanel Backend...
+2026-10-01T01:04:43.596205+00:00 dns-arch panel[31407]: 2026/10/01 01:04:43 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T01:04:43.596598+00:00 dns-arch panel[31407]: 2026/10/01 01:04:43 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T01:04:43.598460+00:00 dns-arch systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T01:04:43.598741+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T01:04:43.599065+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 186ms CPU time over 10.496s wall clock time, 73.6M memory peak.
+2026-10-01T01:05:02.665511+00:00 dns-arch systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 4.
+2026-10-01T01:05:02.667748+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-01T01:05:02.722223+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-01T01:05:02.805388+00:00 dns-arch panel[31822]: 2026/10/01 01:05:02 Starting CelikPanel Backend...
+2026-10-01T01:05:02.811967+00:00 dns-arch panel[31822]: 2026/10/01 01:05:02 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T01:05:02.812458+00:00 dns-arch panel[31822]: 2026/10/01 01:05:02 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T01:05:02.814463+00:00 dns-arch systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T01:05:02.814710+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T01:05:02.815095+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 185ms CPU time over 19.215s wall clock time, 73.6M memory peak.
+2026-10-01T01:05:24.137464+00:00 dns-arch release-recovery[29339]: !! pending update panel did not stay running and answer on its own address
+2026-10-01T01:05:24.143348+00:00 dns-arch systemd[1]: Stopped CelikPanel web panel.
+2026-10-01T01:05:24.143903+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 185ms CPU time over 21.328s wall clock time, 73.6M memory peak.
+2026-10-01T01:05:24.169521+00:00 dns-arch systemd[1]: Stopping CelikPanel privileged agent...
+2026-10-01T01:05:24.171843+00:00 dns-arch systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-10-01T01:05:24.172151+00:00 dns-arch systemd[1]: Stopped CelikPanel privileged agent.
+2026-10-01T01:05:24.184235+00:00 dns-arch release-recovery[29339]: !! Pending update finalization failed; marker preserved and both coordinators stopped.
+2026-10-01T01:05:24.184235+00:00 dns-arch release-recovery[29339]: !! Bekleyen güncelleme sonuçlandırması başarısız; marker korundu ve iki koordinatör durduruldu.
+2026-10-01T01:05:24.465866+00:00 dns-arch release-recovery[28959]: Automatic certificate renewal (Certbot) is already in its state from before the update.
+2026-10-01T01:05:24.465866+00:00 dns-arch release-recovery[28959]: Otomatik sertifika yenileme (Certbot) zaten güncellemeden önceki durumunda.
+2026-10-01T01:05:24.467039+00:00 dns-arch release-recovery[28959]: !! release recovery child failed with status 1
+2026-10-01T01:05:24.562745+00:00 dns-arch systemd[1]: celikpanel-release-recovery.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T01:05:24.562889+00:00 dns-arch systemd[1]: celikpanel-release-recovery.service: Failed with result 'exit-code'.
+2026-10-01T01:05:24.563201+00:00 dns-arch systemd[1]: Failed to start CelikPanel verified release transaction recovery.
+2026-10-01T01:05:24.563450+00:00 dns-arch systemd[1]: celikpanel-release-recovery.service: Consumed 8.883s CPU time over 1min 8.925s wall clock time, 22M memory peak.
+2026-10-01T01:05:54.650042+00:00 dns-arch systemd[1]: Starting CelikPanel verified release transaction recovery...
+2026-10-01T01:05:55.771849+00:00 dns-arch release-recovery[32955]: Automatic recovery paused after three admitted attempts. No recovery child was started. Preserve evidence and inspect the recovery service journal.
+2026-10-01T01:05:55.771849+00:00 dns-arch release-recovery[32955]: Otomatik kurtarma, izin verilen üç denemeden sonra durdu. Kurtarma alt işlemi başlatılmadı. Kanıtları koruyun ve kurtarma servisi günlüğünü inceleyin.
+2026-10-01T01:05:55.771849+00:00 dns-arch release-recovery[32955]: After resolving the cause, the owner may authorize one same-snapshot retry: sudo /usr/libexec/celikpanel/recovery recover --retry --snapshot 20261001T005932Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-c0330bbe5baad02c2df5efe451b8d128
+2026-10-01T01:05:55.774103+00:00 dns-arch systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-01T01:05:55.775824+00:00 dns-arch systemd[1]: Finished CelikPanel verified release transaction recovery.
+2026-10-01T01:05:55.775992+00:00 dns-arch systemd[1]: celikpanel-release-recovery.service: Consumed 1.093s CPU time over 1.124s wall clock time, 12.7M memory peak.
+2026-10-01T01:06:26.702570+00:00 dns-arch systemd[1]: Starting CelikPanel verified release transaction recovery...
+2026-10-01T01:06:27.112505+00:00 dns-arch systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-01T01:06:27.112776+00:00 dns-arch systemd[1]: Finished CelikPanel verified release transaction recovery.
+2026-10-01T01:06:31.264837+00:00 dns-arch systemd[1]: Starting CelikPanel privileged agent...
+2026-10-01T01:06:31.323870+00:00 dns-arch systemd[1]: Started CelikPanel privileged agent.
+2026-10-01T01:06:31.343369+00:00 dns-arch agent[35516]: 2026/10/01 01:06:31 Starting CelikPanel Agent...
+2026-10-01T01:06:31.637516+00:00 dns-arch agent[35516]: 2026/10/01 01:06:31 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-10-01T01:06:32.647119+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-01T01:06:32.701162+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-01T01:06:32.798552+00:00 dns-arch panel[35706]: 2026/10/01 01:06:32 Starting CelikPanel Backend...
+2026-10-01T01:06:32.804955+00:00 dns-arch panel[35706]: 2026/10/01 01:06:32 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T01:06:32.805437+00:00 dns-arch panel[35706]: 2026/10/01 01:06:32 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-01T01:06:32.806050+00:00 dns-arch panel[35706]: 2026/10/01 01:06:32 Connected to Agent RPC; preparing normal management access
+2026-10-01T01:06:32.890148+00:00 dns-arch panel[35706]: 2026/10/01 01:06:32 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload
+2026-10-01T01:06:32.891012+00:00 dns-arch panel[35706]: 2026/10/01 01:06:32 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-arch": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-10-01T01:06:32.894344+00:00 dns-arch panel[35706]: 2026/10/01 01:06:32 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-10-01T01:06:32.897215+00:00 dns-arch panel[35706]: 2026/10/01 01:06:32 Panel ready on :2083 (HTTPS)
+2026-10-01T01:06:33.810415+00:00 dns-arch panel[35706]: 2026/10/01 01:06:33 http: TLS handshake error from 127.0.0.1:44556: EOF
+2026-10-01T01:06:35.526513+00:00 dns-arch panel[35706]: 2026/10/01 01:06:35 http: TLS handshake error from 127.0.0.1:52058: EOF
+2026-10-01T01:06:35.526513+00:00 dns-arch panel[35706]: 2026/10/01 01:06:35 http: TLS handshake error from 127.0.0.1:52030: EOF
+2026-10-01T01:06:35.526513+00:00 dns-arch panel[35706]: 2026/10/01 01:06:35 http: TLS handshake error from 127.0.0.1:52014: EOF
+2026-10-01T01:06:35.526513+00:00 dns-arch panel[35706]: 2026/10/01 01:06:35 http: TLS handshake error from 127.0.0.1:52044: EOF
+2026-10-01T01:06:35.527448+00:00 dns-arch panel[35706]: 2026/10/01 01:06:35 http: TLS handshake error from 127.0.0.1:52074: EOF
+2026-10-01T01:06:35.527998+00:00 dns-arch panel[35706]: 2026/10/01 01:06:35 http: TLS handshake error from 127.0.0.1:52028: EOF
+2026-10-01T01:06:37.575566+00:00 dns-arch panel[35706]: 2026/10/01 01:06:37 http: TLS handshake error from 127.0.0.1:35006: EOF
+2026-10-01T01:06:37.575566+00:00 dns-arch panel[35706]: 2026/10/01 01:06:37 http: TLS handshake error from 127.0.0.1:34990: EOF
+2026-10-01T01:06:37.575566+00:00 dns-arch panel[35706]: 2026/10/01 01:06:37 http: TLS handshake error from 127.0.0.1:35020: EOF
+2026-10-01T01:06:37.576331+00:00 dns-arch panel[35706]: 2026/10/01 01:06:37 http: TLS handshake error from 127.0.0.1:34996: EOF
+2026-10-01T01:06:38.813754+00:00 dns-arch panel[35706]: 2026/10/01 01:06:38 http: TLS handshake error from 127.0.0.1:44568: EOF
+2026-10-01T01:06:41.158601+00:00 dns-arch panel[35706]: 2026/10/01 01:06:41 http: TLS handshake error from 127.0.0.1:42990: EOF
+2026-10-01T01:06:41.158601+00:00 dns-arch panel[35706]: 2026/10/01 01:06:41 http: TLS handshake error from 127.0.0.1:42988: EOF
+2026-10-01T01:06:43.851878+00:00 dns-arch panel[35706]: 2026/10/01 01:06:43 http: TLS handshake error from 127.0.0.1:57052: EOF
+2026-10-01T01:06:45.766065+00:00 dns-arch panel[35706]: 2026/10/01 01:06:45 http: TLS handshake error from 127.0.0.1:43004: EOF
+2026-10-01T01:06:46.672159+00:00 dns-arch panel[35706]: 2026/10/01 01:06:46 http: TLS handshake error from 127.0.0.1:57082: EOF
+2026-10-01T01:06:46.672159+00:00 dns-arch panel[35706]: 2026/10/01 01:06:46 http: TLS handshake error from 127.0.0.1:57070: EOF
+2026-10-01T01:06:46.672159+00:00 dns-arch panel[35706]: 2026/10/01 01:06:46 http: TLS handshake error from 127.0.0.1:57094: EOF
+2026-10-01T01:06:46.790381+00:00 dns-arch panel[35706]: 2026/10/01 01:06:46 http: TLS handshake error from 127.0.0.1:43038: EOF
+2026-10-01T01:06:46.790381+00:00 dns-arch panel[35706]: 2026/10/01 01:06:46 http: TLS handshake error from 127.0.0.1:43022: EOF
+2026-10-01T01:06:47.232145+00:00 dns-arch panel[35706]: 2026/10/01 01:06:47 http: TLS handshake error from 127.0.0.1:57124: EOF
+2026-10-01T01:06:48.805009+00:00 dns-arch panel[35706]: 2026/10/01 01:06:48 http: TLS handshake error from 127.0.0.1:57152: EOF
+2026-10-01T01:06:52.421750+00:00 dns-arch panel[35706]: 2026/10/01 01:06:52 http: TLS handshake error from 127.0.0.1:54900: EOF
+2026-10-01T01:06:52.422870+00:00 dns-arch panel[35706]: 2026/10/01 01:06:52 http: TLS handshake error from 127.0.0.1:54910: EOF
+2026-10-01T01:06:53.078184+00:00 dns-arch panel[35706]: 2026/10/01 01:06:53 http: TLS handshake error from 127.0.0.1:58318: EOF
+2026-10-01T01:06:53.387047+00:00 dns-arch panel[35706]: 2026/10/01 01:06:53 http: TLS handshake error from 127.0.0.1:58330: EOF
+2026-10-01T01:06:53.450655+00:00 dns-arch panel[35706]: 2026/10/01 01:06:53 http: TLS handshake error from 127.0.0.1:54944: EOF
+2026-10-01T01:06:53.450655+00:00 dns-arch panel[35706]: 2026/10/01 01:06:53 http: TLS handshake error from 127.0.0.1:54916: EOF
+2026-10-01T01:06:53.450655+00:00 dns-arch panel[35706]: 2026/10/01 01:06:53 http: TLS handshake error from 127.0.0.1:54918: EOF
+2026-10-01T01:06:53.450655+00:00 dns-arch panel[35706]: 2026/10/01 01:06:53 http: TLS handshake error from 127.0.0.1:54928: EOF
+2026-10-01T01:06:53.488212+00:00 dns-arch panel[35706]: 2026/10/01 01:06:53 http: TLS handshake error from 127.0.0.1:58364: EOF
+2026-10-01T01:06:53.500375+00:00 dns-arch panel[35706]: 2026/10/01 01:06:53 http: TLS handshake error from 127.0.0.1:58390: EOF
+2026-10-01T01:06:53.514021+00:00 dns-arch panel[35706]: 2026/10/01 01:06:53 http: TLS handshake error from 127.0.0.1:58406: EOF
+2026-10-01T01:06:53.560283+00:00 dns-arch panel[35706]: 2026/10/01 01:06:53 http: TLS handshake error from 127.0.0.1:58416: EOF
+2026-10-01T01:06:53.812273+00:00 dns-arch panel[35706]: 2026/10/01 01:06:53 http: TLS handshake error from 127.0.0.1:58436: EOF
+2026-10-01T01:06:54.130983+00:00 dns-arch panel[35706]: 2026/10/01 01:06:54 http: TLS handshake error from 127.0.0.1:58462: EOF
+2026-10-01T01:06:54.143889+00:00 dns-arch panel[35706]: 2026/10/01 01:06:54 http: TLS handshake error from 127.0.0.1:58478: EOF
+2026-10-01T01:06:54.156229+00:00 dns-arch panel[35706]: 2026/10/01 01:06:54 http: TLS handshake error from 127.0.0.1:58488: EOF
+2026-10-01T01:06:54.169758+00:00 dns-arch panel[35706]: 2026/10/01 01:06:54 http: TLS handshake error from 127.0.0.1:58508: EOF
+2026-10-01T01:06:54.177273+00:00 dns-arch crontab[37371]: (root) LIST (upd1_owner_test)

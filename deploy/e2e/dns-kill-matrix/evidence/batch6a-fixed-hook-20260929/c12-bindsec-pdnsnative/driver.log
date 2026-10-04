@@ -1,0 +1,19 @@
+### 2026-09-29T15:35:33.194Z start-cell c12-bindsec-pdnsnative bind__target-verified__after-write__paired-secondary__peer-reachable node=debian13 other=arch fixture=uninitialized prep=prepare-bind enroll=0 root=/var/tmp/cp-b6a-0929/r2 peer=pdns format=pdns-native flags=--reboot-after-recovery --disable-management-before-reboot
+### 2026-09-29T15:35:33.196Z prepare
+### 2026-09-29T15:35:34.127Z early-admission-dry-run
+### 2026-09-29T15:35:34.242Z start
+### 2026-09-29T15:35:34.495Z wait-ssh
+### 2026-09-29T15:36:31.002Z guest-identity
+### 2026-09-29T15:36:31.681Z install
+### 2026-09-29T15:36:40.357Z prepare-bind
+### 2026-09-29T15:38:06.545Z pre-run-snapshot
+### 2026-09-29T15:38:36.355Z start-peer-dns-sampler
+Running as unit: cp-b6a-peerloop.service; invocation ID: 42cc5f72f0464503a90b3746b7df18a9
+peerloop start rc=0
+### 2026-09-29T15:38:36.911Z start-watcher
+Running as unit: cp-b6a-watch.service; invocation ID: 81da6bdf7da3439cb366a42fae9fd40e
+### 2026-09-29T15:38:37.668Z prepared-ok
+### 2026-09-29T15:38:37.673Z run-prepared-dry-run flags=--reboot-after-recovery --disable-management-before-reboot
+### 2026-09-29T15:38:37.780Z run-prepared
+RUN_PREPARED_RC=0
+### 2026-09-29T15:40:29.279Z done-run rc=0

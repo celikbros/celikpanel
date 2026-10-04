@@ -1,0 +1,25 @@
+{
+  "bytes": 1317,
+  "command": "ledger",
+  "jobs": [
+    {
+      "attempt": 1,
+      "kind": "dns_engine_switch",
+      "phase": "commit/dns-engine-switch/v2/finalized/4e15212db024e555f55647f7da204025/dns-engine-switch/v1:sha256:d12877277569dfa61e998aed604f1b1b1dbf8ab7291aedda9401630a64608693",
+      "request_id": "4e15212db024e555f55647f7da204025",
+      "status": "succeeded",
+      "updated_at": "2026-09-29T17:15:47.040594972Z"
+    },
+    {
+      "attempt": 1,
+      "kind": "service_install",
+      "phase": "leased",
+      "request_id": "a154bf6ba5ef3145abb7119863a1b6ef",
+      "status": "running",
+      "updated_at": "2026-09-29T17:15:50.596425509Z"
+    }
+  ],
+  "present": true,
+  "returncode": 0,
+  "sha256": "5a54656934082531fdc20fbf8dcab87897c7168198ae58735dcf40e3538b0932"
+}

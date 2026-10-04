@@ -1,0 +1,33 @@
+{
+  "bytes": 1902,
+  "command": "ledger",
+  "jobs": [
+    {
+      "attempt": 1,
+      "kind": "service_install",
+      "phase": "completed",
+      "request_id": "09ae41a5709209cc474ecf721f05fca5",
+      "status": "succeeded",
+      "updated_at": "2026-09-29T17:23:22.628841083Z"
+    },
+    {
+      "attempt": 1,
+      "kind": "firewall_apply",
+      "phase": "commit/firewall-apply/v1/published/2ad79607e1d3917ed7c62f399d48b35f/firewall-apply/v1:sha256:ab0550f02ed8669a88665e8a04538438de5556b7caa64e1571f5f6c90d23cdc5",
+      "request_id": "2ad79607e1d3917ed7c62f399d48b35f",
+      "status": "succeeded",
+      "updated_at": "2026-09-29T17:23:24.050409987Z"
+    },
+    {
+      "attempt": 1,
+      "kind": "dns_engine_switch",
+      "phase": "commit/dns-engine-switch/v2/finalized/d0bb30072e0772ca57b2f7d8b8877856/dns-engine-switch/v1:sha256:3cdfb49e631af48de70e27606c5f1d718fe3bdcd37b8e867182b09bdc097a452",
+      "request_id": "d0bb30072e0772ca57b2f7d8b8877856",
+      "status": "succeeded",
+      "updated_at": "2026-09-29T17:23:15.429923Z"
+    }
+  ],
+  "present": true,
+  "returncode": 0,
+  "sha256": "6fc3adcee99c390d68d6034ae1eb26ef388ef98fdc0e94c4a5b1b9064dd9c9e5"
+}

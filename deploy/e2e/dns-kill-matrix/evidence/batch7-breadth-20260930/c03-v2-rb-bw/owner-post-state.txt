@@ -1,0 +1,190 @@
+wall=2026-09-29T19:05:37.099871143Z boot_id=476d65ab-32c8-4915-ad87-4681096cf97e request_id=235973ea78aa13613cb0fdb45edc1030
+== systemctl show pdns.service
+MainPID=3084
+ControlPID=0
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 19:04:07 UTC
+ExecMainPID=3084
+Id=pdns.service
+LoadState=loaded
+ActiveState=active
+SubState=running
+FragmentPath=/usr/lib/systemd/system/pdns.service
+UnitFileState=enabled
+UnitFilePreset=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 19:04:07 UTC
+InactiveEnterTimestamp=Tue 2026-09-29 19:04:07 UTC
+NeedDaemonReload=no
+LoadError=
+InvocationID=11aa856a09ca4fbfbcb73092031a1b89
+== systemctl is-enabled pdns.service
+enabled
+rc=0
+== systemctl is-active pdns.service
+active
+rc=0
+== systemctl show named.service
+MainPID=0
+ControlPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+Id=named.service
+LoadState=masked
+ActiveState=inactive
+SubState=dead
+FragmentPath=/etc/systemd/system/named.service
+UnitFileState=masked
+UnitFilePreset=enabled
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+NeedDaemonReload=no
+LoadError=org.freedesktop.systemd1.UnitMasked "Unit named.service is masked."
+InvocationID=
+== systemctl is-enabled named.service
+masked
+rc=1
+== systemctl is-active named.service
+inactive
+rc=3
+== systemctl show bind9.service
+MainPID=0
+ControlPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+Id=bind9.service
+LoadState=masked
+ActiveState=inactive
+SubState=dead
+FragmentPath=/etc/systemd/system/bind9.service
+UnitFileState=masked
+UnitFilePreset=enabled
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+NeedDaemonReload=no
+LoadError=org.freedesktop.systemd1.UnitMasked "Unit bind9.service is masked."
+InvocationID=
+== systemctl is-enabled bind9.service
+masked
+rc=1
+== systemctl is-active bind9.service
+inactive
+rc=3
+== mask symlinks (persistent and runtime)
+'/etc/systemd/system/named.service' -> '/dev/null' owner=root:root mode=777 mtime=2026-09-29 19:04:37.356220321 +0000
+'/etc/systemd/system/bind9.service' -> '/dev/null' owner=root:root mode=777 mtime=2026-09-29 19:04:37.104243920 +0000
+/run/systemd/system/named.service absent
+/run/systemd/system/bind9.service absent
+== named processes
+no named process
+== pdns_server processes
+3084 /usr/sbin/pdns_server --guardian=no --daemon=no --disable-syslog --log-timestamp=no --write-pid=no
+== journal entry counts
+named.service 0
+bind9.service 0
+== dpkg -l bind9*
+Desired=Unknown/Install/Remove/Purge/Hold
+| Status=Not/Inst/Conf-files/Unpacked/halF-conf/Half-inst/trig-aWait/Trig-pend
+|/ Err?=(none)/Reinst-required (Status,Err: uppercase=bad)
+||/ Name             Version             Architecture Description
++++-================-===================-============-=================================
+ii  bind9            1:9.20.29-1~deb13u1 amd64        Internet Domain Name Server
+un  bind9-dnsutils   <none>              <none>       (no description available)
+un  bind9-doc        <none>              <none>       (no description available)
+ii  bind9-host       1:9.20.29-1~deb13u1 amd64        DNS Lookup Utility
+ii  bind9-libs:amd64 1:9.20.29-1~deb13u1 amd64        Shared Libraries used by BIND 9
+ii  bind9-utils      1:9.20.29-1~deb13u1 amd64        Utilities for BIND 9
+un  bind9utils       <none>              <none>       (no description available)
+== dpkg -l pdns*
+Desired=Unknown/Install/Remove/Purge/Hold
+| Status=Not/Inst/Conf-files/Unpacked/halF-conf/Half-inst/trig-aWait/Trig-pend
+|/ Err?=(none)/Reinst-required (Status,Err: uppercase=bad)
+||/ Name                 Version          Architecture Description
++++-====================-================-============-===========================================
+un  pdns-backend         <none>           <none>       (no description available)
+un  pdns-backend-bind    <none>           <none>       (no description available)
+ii  pdns-backend-sqlite3 4.9.17-0+deb13u1 amd64        sqlite 3 backend for PowerDNS
+ii  pdns-server          4.9.17-0+deb13u1 amd64        extremely powerful and versatile nameserver
+== dpkg --verify bind9 bind9-utils bind9-libs bind9-host bind9-dnsutils (read-only; no output = unchanged)
+dpkg: package 'bind9-dnsutils' is not installed
+rc=1
+== install-ownership receipt
+-rw------- 1 root celikpanel 372 2026-09-29 19:04:37.004253284 +0000 /var/lib/celikpanel-agent-private/dns-engine-install-ownership-bind.json
+== /var/cache/bind tree (managed BIND root parent)
+drwxrwxr-t root:bind 4096 2026-09-29T19:04:44.8395792830 /var/cache/bind
+drwxr-xr-x root:root 4096 2026-09-29T19:04:55.5588422320 /var/cache/bind/celikpanel
+drwxr-xr-x root:root 4096 2026-09-29T19:04:55.5508427160 /var/cache/bind/celikpanel/generations
+== /var/cache/bind file hashes
+== /var/lib/bind tree
+drwxrwxr-x root:bind 4096 2026-09-29T19:04:40.7879113520 /var/lib/bind 
+== /etc/bind tree
+drwxr-sr-x root:bind 4096 2026-09-29T19:04:49.3072493890 /etc/bind 
+-rw-r--r-- root:bind 455 2026-09-16T13:42:29.0000000000 /etc/bind/named.conf 
+-rw-r--r-- root:bind 42 2026-09-29T19:04:49.2952502250 /etc/bind/named.conf.local 
+-rw-r--r-- root:bind 43 2026-09-29T19:04:49.2792513390 /etc/bind/named.conf.options 
+-rw-r--r-- root:bind 116 2026-09-16T13:42:29.0000000000 /etc/bind/named.conf.root-hints 
+-rw-r----- bind:bind 100 2026-09-29T19:04:40.8119092690 /etc/bind/rndc.key 
+== /etc/bind file hashes
+50c296bb3ae376b6fdde1f092ebf228056d38e525b53dc3415b7945136af14b7  /etc/bind/named.conf
+63963de797ff06ede5645c4169084128f1a6a11e1aa43ec9b4971751ceedc18e  /etc/bind/named.conf.local
+f1c37414f29088ef439527a855356c888e83fec06dcc762f878a4c24d45c59e4  /etc/bind/named.conf.options
+7f4afbc7ea88cc94fe849d622a2d8e2a7b8863089cc7909e75cb77ba8e682d87  /etc/bind/named.conf.root-hints
+ccff303177601142c4f98c642b2a2cb6eb3fda3f57fba19e4a8350c30247b616  /etc/bind/rndc.key
+== /etc/bind package ownership
+/etc/bind/named.conf bind9
+/etc/bind/named.conf.local bind9
+/etc/bind/named.conf.options bind9
+/etc/bind/named.conf.root-hints bind9
+/etc/bind/rndc.key not-owned-by-a-package
+== bind9 conffiles (package md5)
+ /etc/apparmor.d/usr.sbin.named 4f63a3becd1eac38cb4e7fa1c6f40a04
+ /etc/bind/named.conf 83ebcd317c7e2a655abdcd8f0ca04510
+ /etc/bind/named.conf.local b62a117a9a33936136d15ad779172b87
+ /etc/bind/named.conf.options c67cf0a5b3f35d68f375a3e1b0b56196
+ /etc/bind/named.conf.root-hints 3c81e33624b530d76e4fc21912a98ed6
+ /etc/default/named 0fcf4e70d1d3811d13a1f7b52fd5e384
+ /etc/init.d/named 902d90a167adda11df93db44f1fb3f3d
+ /etc/insserv.conf.d/bind9 2f36010c32cff9acc445bb9b577aecf7
+ /etc/network/if-down.d/bind9 dd11845d860cd2e30dce8556aa478eb2
+ /etc/network/if-up.d/bind9 dd11845d860cd2e30dce8556aa478eb2
+ /etc/ppp/ip-down.d/bind9 dd11845d860cd2e30dce8556aa478eb2
+ /etc/ppp/ip-up.d/bind9 dd11845d860cd2e30dce8556aa478eb2
+ /etc/ufw/applications.d/bind9 ac2316819866611a68b976db9125c9a7
+== md5 of /etc/bind files
+83ebcd317c7e2a655abdcd8f0ca04510  /etc/bind/named.conf
+b62a117a9a33936136d15ad779172b87  /etc/bind/named.conf.local
+c67cf0a5b3f35d68f375a3e1b0b56196  /etc/bind/named.conf.options
+3c81e33624b530d76e4fc21912a98ed6  /etc/bind/named.conf.root-hints
+181c6aad5ad835e4ce0a5ce516874bdb  /etc/bind/rndc.key
+== apt history (bind9 transactions)
+8-Start-Date: 2026-09-29  19:04:39
+9:Commandline: /usr/bin/apt-get install -y --no-install-recommends bind9
+10:Install: bind9:amd64 (1:9.20.29-1~deb13u1), bind9-utils:amd64 (1:9.20.29-1~deb13u1, automatic), dns-root-data:amd64 (2025080400~deb13u1, automatic)
+11:Upgrade: bind9-host:amd64 (1:9.20.26-1~deb13u1, 1:9.20.29-1~deb13u1), bind9-libs:amd64 (1:9.20.26-1~deb13u1, 1:9.20.29-1~deb13u1)
+12-End-Date: 2026-09-29  19:04:43
+== ss 53
+udp UNCONN 0      0         192.0.2.10:53 0.0.0.0:* users:(("pdns_server",pid=3084,fd=6))    
+udp UNCONN 0      0          10.0.2.15:53 0.0.0.0:* users:(("pdns_server",pid=3084,fd=5))    
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=369,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=369,fd=18))
+tcp LISTEN 0      128        10.0.2.15:53 0.0.0.0:* users:(("pdns_server",pid=3084,fd=7))    
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=369,fd=21))
+tcp LISTEN 0      128       192.0.2.10:53 0.0.0.0:* users:(("pdns_server",pid=3084,fd=8))    
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=369,fd=19))
+== recovery dns-switch-status --quiesced (after owner command and re-run)
+DNS switch request 235973ea78aa13613cb0fdb45edc1030 was interrupted and the Agent could not recover it automatically when it restarted, so it released the lease. The switch has since been reconciled and its journal is retired, either by the owner recovery command or by a later Agent start; this evidence cannot tell which. This request no longer blocks DNS changes. The current DNS engine and its health are shown by the panel's DNS engine status, not by this record. This status check started nothing.
+STATUS_RC=0
+e68489374e4dffe418d9157bb08ea9b61418391ca582a246ea0b064b2715a232  /tmp/b7-status.out
+== private evidence after status
+total 24
+drwx------  2 root celikpanel 4096 2026-09-29 19:05:00.342567104 +0000 .
+drwxr-xr-x 30 root root       4096 2026-09-29 19:04:40.787911352 +0000 ..
+-rw-------  1 root celikpanel  372 2026-09-29 19:04:37.004253284 +0000 dns-engine-install-ownership-bind.json
+-rw-------  1 root celikpanel  560 2026-09-29 19:04:36.988254818 +0000 dns-engine-ownership-pdns.json
+-rw-------  1 root celikpanel  556 2026-09-29 19:04:49.311249110 +0000 dns-engine-state.json
+-rw-------  1 root celikpanel 2938 2026-09-29 19:04:51.775081581 +0000 service-mutations.json
+4bd507ee681038bbf6766d91a7c4466d79ab5b2ee9602edd651814bc685e9e48  dns-engine-install-ownership-bind.json
+69d3bd891dd126269777a8d854f7c115844a08d2298e6a7d20ee5808c3ebd3aa  dns-engine-ownership-pdns.json
+25f48fe7583490fb112f826423117dffbea4e3882eaca73e56bbd63c5c1b0b90  dns-engine-state.json
+036c35e39cbe69d20072af8e158456375b6dc7ef8324e3683a528724c9e03a9c  service-mutations.json

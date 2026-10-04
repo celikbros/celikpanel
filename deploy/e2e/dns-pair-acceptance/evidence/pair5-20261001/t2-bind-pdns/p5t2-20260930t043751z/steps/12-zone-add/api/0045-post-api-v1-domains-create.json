@@ -1,0 +1,86 @@
+{
+  "outcome": "response",
+  "panel": "arch",
+  "purpose": "AddDomainModal create (dnsonly)",
+  "request": {
+    "body": {
+      "domain": "pair-accept.test",
+      "project_type": "dnsonly",
+      "ssl_type": "none"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:28444"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:28444"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/domains/create"
+  },
+  "response": {
+    "elapsed_seconds": 3.385,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Wed, 30 Sep 2026 04:41:13 GMT"
+      ],
+      [
+        "Content-Length",
+        "158"
+      ]
+    ],
+    "json": {
+      "DocumentRoot": "",
+      "Domain": "pair-accept.test",
+      "DomainID": 1,
+      "FTPPassword": "",
+      "FTPUser": "",
+      "PHPVersion": "",
+      "ProjectType": "dnsonly",
+      "SiteID": 1,
+      "TempDomain": ""
+    },
+    "status": 200,
+    "text": null
+  }
+}

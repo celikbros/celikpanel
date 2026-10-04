@@ -1,0 +1,31 @@
+2026-09-29T23:51:13Z
+no qemu process
+== /var/tmp/cp-b8r-1001/cells
+e05b4787635364e83414f682
+/var/tmp/cp-b8r-1001/cells/e05b4787635364e83414f682/:  arch debian13 fixture-plan.json fresh-primary-peer ssh-known-hosts 
+== /var/tmp/cp-b8r-1001/r2/cells
+== /var/tmp/cp-b8r-1001/r3/cells
+3.0G	/var/tmp/cp-b8r-1001
+139M	/root/cp-b8r-src
+222M	/root/cp-b8r-artifacts
+6.7M	/root/cp-b8r-tools
+-rw-r--r-- 1 root root  6144 Sep 30 01:48 /var/tmp/cp-b8r-build.log
+-rw-r--r-- 1 root root  6355 Sep 30 01:51 /var/tmp/cp-b8r-setup.log
+-rw-r--r-- 1 root root  9047 Sep 30 01:49 /var/tmp/cp-b8r-webbuild.log
+-rw-r--r-- 1 root root 10135 Sep 30 01:49 /var/tmp/cp-b8r-webdist.sha256
+/root/cp-b8-artifacts
+/root/cp-b8r-artifacts
+/root/cp-b8r-src
+/root/cp-b8r-tools
+/root/cp-b8-src
+/root/cp-b8-tools
+/var/tmp/cp-b8-0930
+/var/tmp/cp-b8-build.log
+/var/tmp/cp-b8r-1001
+/var/tmp/cp-b8r-build.log
+/var/tmp/cp-b8r-setup.log
+/var/tmp/cp-b8r-webbuild.log
+/var/tmp/cp-b8r-webdist.sha256
+/var/tmp/cp-b8-setup.log
+/var/tmp/cp-b8-webbuild.log
+/var/tmp/cp-b8-webdist.sha256

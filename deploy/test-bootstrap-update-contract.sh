@@ -1260,9 +1260,10 @@ require_sequence "$INSTALL" \
     'restore_celikpanel_selinux_labels' \
     '"$SYSTEMCTL_BIN" daemon-reload'
 require_sequence "$ROLLBACK" \
-    'cp -a "$snap/bin" "$BIN_DIR"' \
-    'cp -a "$snap/web" "$WEB_DIR"' \
-    'release_txn_restore_celikpanel_unit_files \' \
+    '    restore_product_resources' \
+    'active rollback marker changed before unit restoration' \
+    'release_unit_validate_transition \' \
+    'release_unit_restore_transition \' \
     'release_txn_verify_systemd_unit_root_identity \' \
     'restore_celikpanel_selinux_labels' \
     'systemctl daemon-reload' \
@@ -2134,11 +2135,39 @@ trap - EXIT
 
 # The Makefile artifact contains the complete offline initial-install payload.
 # Updates and rollbacks still use the immutable bootstrap transaction path.
-require_literal "$MAKEFILE" 'build: panel agent schema17-bridge web'
+require_literal "$MAKEFILE" 'build: panel agent-native-contract schema17-bridge recovery-runtime firewall-runtime mail-renewal-runtime dns-owner-tools web'
+require_literal "$MAKEFILE" 'cp -r bin/firewall-runtime dist/$(DIST)/firewall-runtime'
+require_literal "$MAKEFILE" 'chmod 0755 dist/$(DIST)/firewall-runtime/restore'
+require_literal "$MAKEFILE" 'cp bin/firewall-runtime/celikpanel-firewall-restore.service dist/$(DIST)/deploy/systemd/celikpanel-firewall-restore.service'
+require_literal "$BOOTSTRAP" 'cp -- firewall-runtime/celikpanel-firewall-restore.service deploy/systemd/celikpanel-firewall-restore.service'
+require_literal "$BOOTSTRAP" 'run_clean "$go_bin" run ./deploy/firewall/bundle --binary bin/firewall-restore --output firewall-runtime'
+require_literal "$BOOTSTRAP" 'rm -- bin/firewall-restore'
+require_literal "$MAKEFILE" 'cp -r bin/mail-renewal-runtime dist/$(DIST)/mail-renewal-runtime'
+require_literal "$MAKEFILE" 'chmod 0755 dist/$(DIST)/mail-renewal-runtime/renew dist/$(DIST)/mail-renewal-runtime/celikpanel-mail-host-cert'
+require_literal "$BOOTSTRAP" 'run_clean "$go_bin" run ./deploy/mail-renewal/bundle --binary bin/mail-renewal --output mail-renewal-runtime'
+require_literal "$BOOTSTRAP" 'rm -- bin/mail-renewal'
+
+
 require_literal "$MAKEFILE" '$(NPM) ci --no-audit --no-fund'
 reject_literal "$MAKEFILE" '$(NPM) install --no-audit --no-fund'
-require_literal "$MAKEFILE" 'cp bin/panel bin/agent bin/schema17-bridge dist/$(DIST)/bin/'
+require_literal "$MAKEFILE" 'cp bin/panel bin/agent bin/agent-native-contract.json bin/schema17-bridge dist/$(DIST)/bin/'
 require_literal "$MAKEFILE" 'cp -r deploy/. dist/$(DIST)/deploy/'
+require_literal "$MAKEFILE" 'bash deploy/prune-release-harness.sh dist/$(DIST)'
+# Development and test material is pruned from the COMPLETE staged tree: after
+# the last payload copy and before modes, the manifest and the archive.
+dist_recipe=$(awk '/^dist: /{inside=1; next} inside && /^[^\t]/{exit} inside' "$MAKEFILE")
+dist_line() {
+    local found
+    found=$(grep -nF -- "$1" <<< "$dist_recipe" | head -n 1 | cut -d: -f1)
+    [[ -n "$found" ]] || die "dist recipe lacks: $1"
+    printf '%s\n' "$found"
+}
+prune_line=$(dist_line 'bash deploy/prune-release-harness.sh dist/$(DIST)')
+last_copy_line=$(grep -nE '^\s*(cp|echo) ' <<< "$dist_recipe" | tail -n 1 | cut -d: -f1)
+(( prune_line > last_copy_line )) || die 'dist prunes before the last payload copy'
+(( prune_line < $(dist_line 'find dist/$(DIST) -type f -exec chmod 0644 {} +') )) || die 'dist prunes after normalising modes'
+(( prune_line < $(dist_line 'bash dist/$(DIST)/deploy/write-release-manifest.sh dist/$(DIST)') )) || die 'dist prunes after writing the manifest'
+[[ $(grep -cF -- 'prune-release-harness.sh' <<< "$dist_recipe") == 1 ]] || die 'dist must prune exactly once'
 require_literal "$MAKEFILE" 'cp install.sh bootstrap-update.sh bootstrap-prebuilt-update.sh update.sh rollback.sh Makefile README.md SECURITY.md NOTICE dist/$(DIST)/'
 require_literal "$MAKEFILE" 'sha256sum "$(DIST).tar.gz" > "$(DIST).tar.gz.sha256"'
 require_literal "$MAKEFILE" 'dist-sign: dist'
@@ -2219,7 +2248,7 @@ require_literal "$UPDATE" '--bootstrap-pre-ledger)'
 require_literal "$UPDATE" '--bootstrap-schema17)'
 require_literal "$UPDATE" '--normal) ;;'
 require_literal "$UPDATE" '[[ "$relative" =~ ^[0-9a-f]{12}-[0-9a-f]{24}$ ]]'
-require_literal "$UPDATE" '[[ "$updater" == "$root/update.sh" ]]'
+require_literal "$UPDATE" '[[ "$updater" == "$CODE_ROOT/update.sh" ]]'
 require_literal "$UPDATE" '! -path '\''./SHA256SUMS'\'' -print0'
 require_count "$UPDATE" 'preflight_staged_installer_runtime' 2
 reject_literal "$UPDATE" 'grep hostname id install'
@@ -2511,9 +2540,100 @@ require_sequence "$UPDATE" \
 # Kanonik panel kontrolleri sağlıklı dolu WAL'ı kabul eder. Kanonik DB'de yalnız
 # aşağıdaki iki cold postcondition immutable checker kullanabilir.
 require_literal "$UPDATE" 'healthy coordinator may retain a non-empty SQLite WAL'
+# Independent forward completion needs the whole target schema/history proof,
+# while the eight ordinary idle probes retain their WAL-aware queue contract.
+# Bağımsız tamamlama bütün hedef şema/geçmiş kanıtını ister; sekiz olağan boşluk
+# kontrolünün WAL-aware kuyruk sözleşmesi ayrı kalır.
 require_count "$UPDATE" '--check-service-operations-idle-wal-aware' 8
+require_count "$UPDATE" '--check-completed-update-database-wal-aware' 1
+require_function_sequence "$UPDATE" run_panel_migrations_offline \
+    'if [[ -n ${RECOVERY_RUNTIME_ROOT:-} ]]; then' \
+    '"$PREFLIGHT_PANEL" --check-completed-update-database-wal-aware' \
+    'return 0' \
+    '"$BIN_DIR/panel" --migrate-only'
+# V3 normal updates must bind the DB beforeimage before product apply, migrate
+# only the prepared private workspace, and publish/verify before changing the
+# active marker into completion.pending. Legacy remains an explicit policy.
+require_function_sequence "$UPDATE" prepare_independent_recovery_runtime \
+    'prepare-runtime \' \
+    'verify-compatibility \' \
+    'verify-material-support --layout snapshot-name-sha256-v1' \
+    '--schema celikpanel/recovery-material/v3' \
+    'verify-database-support --schema celikpanel/database-migration-admission/v1' \
+    'if [[ $BOOTSTRAP_PRE_LEDGER -eq 0 && $BOOTSTRAP_SCHEMA17 -eq 0 ]]; then' \
+    'probe-update-database 9<&"$RELEASE_TRANSACTION_FD"'
+for database_script in "$UPDATE" "$ROLLBACK"; do
+    require_function_sequence "$database_script" read_database_migration_policy \
+        'database-policy --snapshot "$snapshot"' \
+        'if [[ $status == 0 && $result == required ]]; then' \
+        'elif [[ $status == 6 && -z $result ]]; then' \
+        'database recovery policy is unverified'
+    reject_function_literal "$database_script" read_database_migration_policy '$status == 3'
+    require_function_sequence "$database_script" verify_database_publication_if_required \
+        'read_database_migration_policy "$snapshot"' \
+        '[[ $policy == required ]] || return 0' \
+        'verify-update-database --snapshot "$snapshot"'
+    require_function_literal "$database_script" run_database_recovery_command \
+        '/usr/libexec/celikpanel/recovery "$@" 9<&"$RELEASE_TRANSACTION_FD"'
+done
+require_sequence "$UPDATE" \
+    '/usr/libexec/celikpanel/recovery prepare-recovery-material' \
+    'isolated_database_policy=$(read_database_migration_policy "$snapshot_name")' \
+    'if [[ $isolated_database_policy == required ]]; then' \
+    'prepare-update-database --snapshot "$snapshot_name"' \
+    'isolated database preparation returned an invalid workspace' \
+    '/bin/bash "$TRUSTED_RELEASE_ROOT/install.sh"'
+require_function_sequence "$UPDATE" run_panel_migrations_offline \
+    'if [[ -n ${isolated_database_work:-} ]]; then' \
+    'migration_directory=$isolated_database_work' \
+    'CELIKPANEL_DATA_DIR="$migration_directory"' \
+    '"$BIN_DIR/panel" --migrate-only' \
+    'publish-update-database --snapshot "$snapshot_name"' \
+    '"${RECOVERY_PANEL_CHECKER:-$BIN_DIR/panel}" --check-service-operations-idle'
+require_function_sequence "$UPDATE" verify_independent_completion_terminal \
+    'verify_saved_enablement' \
+    'verify_saved_runtime_states' \
+    'verify_installed_release_artifacts' \
+    'verify_database_publication_if_required "$RECOVERY_EXPECTED_SNAPSHOT"'
+require_sequence "$UPDATE" \
+    'installed release directories could not be made durable' \
+    'if [[ -n ${isolated_database_work:-} ]]; then' \
+    'run_panel_migrations_offline' \
+    'verify_installed_release_artifacts' \
+    'verify_database_publication_if_required "$snapshot_name"' \
+    'run_panel_startup_readiness_check' \
+    'release_txn_mark_completion_pending \' \
+    'if [[ -z ${isolated_database_work:-} ]]; then' \
+    'run_panel_migrations_offline'
+# The candidate start check is read-only, runs as the panel account and is a
+# typed failure in phase active. Its behaviour is in
+# deploy/test-update-panel-start-readiness.sh.
+# The owner's environment is parsed before the typed candidate code is set: a
+# refused entry is not a verdict on the candidate (candidate review N2).
+require_function_sequence "$UPDATE" run_panel_startup_readiness_check \
+    'if ! panel_startup_environment; then' \
+    'die "new panel start check could not read the panel unit environment or panel.env"' \
+    'update_failure_code=candidate_panel_startup_check_failed' \
+    'sudo -u celikpanel -- env -i' \
+    '"$BIN_DIR/panel" --check-startup-readiness 2>&1) || status=$?' \
+    'die "new panel start check failed before completion:' \
+    'update_failure_code='
+reject_function_literal "$UPDATE" run_panel_startup_readiness_check 'release_txn_'
+require_function_sequence "$UPDATE" wait_for_stable_panel_start \
+    'target=$(panel_probe_target "$listen") || return 1' \
+    'systemctl show --property=ActiveState --property=MainPID' \
+    'panel_http_probe "$scheme" "$target" "$pins"' \
+    'sleep 0.5'
+require_function_literal "$UPDATE" panel_http_probe '[[ -z $pins ]] || tls_args+=(--pinnedpubkey "$pins")'
+require_sequence "$ROLLBACK" \
+    'database_restore_policy=$(read_database_migration_policy "$snapshot_name")' \
+    'if [[ $database_restore_policy == required ]]; then' \
+    'restore-update-database --snapshot "$snapshot_name"' \
+    'elif [[ "$transition_state" == schema17 ]]; then' \
+    '"$PREFLIGHT_SCHEMA17_BRIDGE" restore \' \
+    '--restore-service-operation-snapshot="$snap/$(basename "$PANEL_DB")"'
 require_count "$UPDATE" '--check-pre-ledger-service-operations-idle-wal-aware' 6
-require_regex_count "$UPDATE" '^[[:space:]]*"\$BIN_DIR/panel" --check-service-operations-idle[[:space:]]*\\$' 1
+require_regex_count "$UPDATE" '^[[:space:]]*"\$\{RECOVERY_PANEL_CHECKER:-\$BIN_DIR/panel\}" --check-service-operations-idle[[:space:]]*\\$' 1
 require_regex_count "$UPDATE" '^[[:space:]]*"\$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle[[:space:]]*\\$' 1
 require_regex_count "$UPDATE" '^[[:space:]]*"\$TRUSTED_RELEASE_ROOT/bin/panel" --check-(pre-ledger-)?service-operations-idle([[:space:]]*\\|; then)$' 0
 
@@ -2532,8 +2652,8 @@ require_sequence "$UPDATE" \
 require_sequence "$UPDATE" \
     'freeze_release_service_cgroup celikpanel-panel.service panel panel_frozen' \
     'freeze_release_service_cgroup celikpanel-agent.service agent agent_frozen' \
-    '"$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware; then' \
-    '"$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware; then' \
+    '"$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle-wal-aware; then' \
+    '"$PREFLIGHT_PANEL" --check-service-operations-idle-wal-aware; then' \
     'final frozen panel idle proof failed' \
     'final frozen agent idle proof failed' \
     'verify_quiesce_coordinator_identity celikpanel-panel.service frozen' \
@@ -2547,8 +2667,8 @@ require_sequence "$UPDATE" \
     'release_release_mutation_lock || die "cannot release stale mutation lock after coordinator stop"' \
     'prepare_runtime_mutation_lock_dir' \
     'acquire_release_mutation_lock' \
-    '"$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware \' \
-    '"$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware \' \
+    '"$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle-wal-aware \' \
+    '"$PREFLIGHT_PANEL" --check-service-operations-idle-wal-aware \' \
     'stopped panel idle proof failed' \
     'stopped agent idle proof failed'
 
@@ -2611,8 +2731,8 @@ require_literal "$UPDATE" 'systemctl stop celikpanel-agent.service >/dev/null 2>
 require_literal "$UPDATE" 'sudo /bin/bash '\''$TRUSTED_RELEASE_ROOT/rollback.sh'\'' '\''$verified_snapshot'\'''
 require_literal "$UPDATE" 'cmp -s "$TRUSTED_RELEASE_ROOT/bin/panel" "$BIN_DIR/panel"'
 require_literal "$UPDATE" 'installed web tree does not match the trusted release'
-require_literal "$UPDATE" '"$BIN_DIR/panel" --check-service-operations-idle'
-require_literal "$UPDATE" '"$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock'
+require_literal "$UPDATE" '"${RECOVERY_PANEL_CHECKER:-$BIN_DIR/panel}" --check-service-operations-idle'
+require_literal "$UPDATE" '"${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock'
 reject_literal "$UPDATE" 'systemctl restart celikpanel-panel.service'
 reject_literal "$UPDATE" 'systemctl restart celikpanel-agent.service'
 
@@ -2626,11 +2746,11 @@ require_sequence "$UPDATE" \
     'for unit in celikpanel-agent.service celikpanel-panel.service; do' \
     'inactive|failed) ;;' \
     'reject_extra_service_cgroup_processes "$unit" 0' \
-    '"$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock' \
+    '"${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock' \
     '"$BIN_DIR/panel" --migrate-only' \
-    '"$BIN_DIR/panel" --check-service-operations-idle' \
+    '"${RECOVERY_PANEL_CHECKER:-$BIN_DIR/panel}" --check-service-operations-idle' \
     'sync -f -- "$PANEL_DB" "$(dirname "$PANEL_DB")"' \
-    '"$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock'
+    '"${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock'
 
 require_sequence "$UPDATE" \
     '"$SCHEMA17_BRIDGE" migrate \' \
@@ -2643,10 +2763,10 @@ require_sequence "$UPDATE" \
 # migration durumunu kabul eder; iki başarılı elif gövdesi de açık no-op olmalıdır.
 require_sequence "$UPDATE" \
     'elif CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \' \
-    '"$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware; then' \
+    '"$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle-wal-aware; then' \
     '        :' \
     'elif CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \' \
-    '"$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware; then' \
+    '"$PREFLIGHT_PANEL" --check-service-operations-idle-wal-aware; then' \
     '        :'
 
 # Controlled agent starts require a proven-absent socket and both a fresh socket
@@ -2671,7 +2791,7 @@ require_sequence "$UPDATE" \
     'for unit in celikpanel-agent.service celikpanel-panel.service; do' \
     'inactive|failed) ;;' \
     'for attempt in $(seq 1 60); do' \
-    '"$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock; then' \
+    '"${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock; then' \
     '[ "$attempt" -lt 60 ]' \
     'sleep 0.5' \
     'return 1'
@@ -2705,11 +2825,11 @@ require_sequence "$UPDATE" \
     'pending update marker changed during the startup lock handoff' \
     'systemctl start celikpanel-panel.service \' \
     'verify_saved_runtime_states' \
-    '"$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock' \
+    '"${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock' \
     'verify_saved_enablement' \
     'release_txn_remove_start_authorization \' \
     'verify_saved_runtime_states' \
-    '"$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock' \
+    '"${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock' \
     'verify_saved_enablement' \
     'release_txn_validate_pending_token \' \
     'pending_completion_verified=1' \
@@ -2738,7 +2858,7 @@ require_sequence "$UPDATE" \
     'apply-only unexpectedly left $unit active' \
     'verify_saved_enablement' \
     'verify_installed_release_artifacts' \
-    '"$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware' \
+    '"$PREFLIGHT_PANEL" --check-service-operations-idle-wal-aware' \
     'wait_for_post_apply_mutation_idle' \
     'env -i \' \
     '"$BIN_DIR/agent" --prepare-bind-generation-root-under-external-lock' \
@@ -2757,13 +2877,15 @@ require_sequence "$UPDATE" \
     'verify_installed_release_artifacts' \
     'verify_saved_enablement' \
     'update completion marker changed during the startup lock handoff' \
+    'update_failure_code=panel_start_unverified' \
     'systemctl start celikpanel-panel.service || die "verified panel could not be started"' \
+    'wait_for_stable_panel_start "$panel_startup_pins" \' \
     'verify_saved_runtime_states' \
-    '"$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock' \
+    '"${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock' \
     'verify_saved_enablement' \
     'release_txn_remove_start_authorization \' \
     'verify_saved_runtime_states' \
-    '"$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock' \
+    '"${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock' \
     'verify_saved_enablement' \
     'release_txn_validate_pending_token \' \
     'transaction_completion_verified=1' \
@@ -2835,10 +2957,10 @@ require_literal "$ROLLBACK" 'panel database snapshot must be standalone without 
 require_literal "$ROLLBACK" 'CELIKPANEL_DATA_DIR="$snap"'
 require_literal "$ROLLBACK" '"$PREFLIGHT_PANEL" --check-service-operations-idle'
 require_literal "$ROLLBACK" '"$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle'
-require_count "$ROLLBACK" '--check-service-operations-idle-wal-aware' 1
-require_count "$ROLLBACK" '--check-pre-ledger-service-operations-idle-wal-aware' 1
-require_regex_count "$ROLLBACK" '^[[:space:]]*"\$PREFLIGHT_PANEL" --check-service-operations-idle[[:space:]]*\\$' 2
-require_regex_count "$ROLLBACK" '^[[:space:]]*"\$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle[[:space:]]*\\$' 2
+require_count "$ROLLBACK" '--check-service-operations-idle-wal-aware' 2
+require_count "$ROLLBACK" '--check-pre-ledger-service-operations-idle-wal-aware' 2
+require_regex_count "$ROLLBACK" '^[[:space:]]*"\$PREFLIGHT_PANEL" --check-service-operations-idle[[:space:]]*\\$' 1
+require_regex_count "$ROLLBACK" '^[[:space:]]*"\$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle[[:space:]]*\\$' 1
 reject_literal "$ROLLBACK" 'cp -a "$snap/$(basename "$PANEL_DB")-wal"'
 reject_literal "$ROLLBACK" 'cp -a "$snap/$(basename "$PANEL_DB")-shm"'
 reject_literal "$ROLLBACK" 'cp -a "$snap/$(basename "$PANEL_DB")-journal"'
@@ -2854,14 +2976,18 @@ require_sequence "$ROLLBACK" \
 
 require_sequence "$ROLLBACK" \
     'cmp -s "$snap/bin/panel" "$BIN_DIR/panel"' \
-    '"$PREFLIGHT_PANEL" --check-service-operations-idle \' \
+    'restored_panel_idle_flag=--check-service-operations-idle' \
+    '[[ $rollback_pending_resume -ne 1 ]] || restored_panel_idle_flag=--check-service-operations-idle-wal-aware' \
+    '"$PREFLIGHT_PANEL" "$restored_panel_idle_flag" \' \
     'release_txn_create_start_authorization \' \
     'systemctl start celikpanel-panel.service || die "restored panel did not start"' \
     'systemctl stop celikpanel-panel.service \' \
     '"$PREFLIGHT_PANEL" --check-service-operations-idle-wal-aware \'
 require_sequence "$ROLLBACK" \
     'cmp -s "$snap/bin/panel" "$BIN_DIR/panel"' \
-    '"$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle \' \
+    'restored_panel_idle_flag=--check-pre-ledger-service-operations-idle' \
+    '[[ $rollback_pending_resume -ne 1 ]] || restored_panel_idle_flag=--check-pre-ledger-service-operations-idle-wal-aware' \
+    '"$PREFLIGHT_PANEL" "$restored_panel_idle_flag" \' \
     'release_txn_create_start_authorization \' \
     'systemctl start celikpanel-panel.service || die "restored panel did not start"' \
     'systemctl stop celikpanel-panel.service \' \
@@ -3056,7 +3182,7 @@ require_sequence "$ROLLBACK" \
     'rollback_service_state_recorded=1' \
     'systemctl stop celikpanel-panel.service' \
     'rollback_mutation_started=1' \
-    'rm -rf -- "$BIN_DIR"' \
+    '    restore_product_resources' \
     'trap - EXIT'
 
 # Exercise the privileged rollback EXIT state machine itself with injected
@@ -3073,6 +3199,7 @@ set +e
     eval "$(extract_function_source "$ROLLBACK" unfreeze_legacy_agent)"
     eval "$(extract_function_source "$ROLLBACK" terminate_frozen_legacy_agent_fail_closed)"
     eval "$(extract_function_source "$ROLLBACK" freeze_and_stop_legacy_agent)"
+    eval "$(extract_function_source "$ROLLBACK" print_rollback_retry)"
     eval "$(extract_function_source "$ROLLBACK" rollback_on_exit)"
 
     TRACE="$legacy_trace"
@@ -3188,7 +3315,8 @@ run_rollback_completion_exit_case() {
         set -euo pipefail
         eval "$(extract_function_source "$ROLLBACK" unfreeze_legacy_agent)"
         eval "$(extract_function_source "$ROLLBACK" terminate_frozen_legacy_agent_fail_closed)"
-        eval "$(extract_function_source "$ROLLBACK" rollback_on_exit)"
+        eval "$(extract_function_source "$ROLLBACK" print_rollback_retry)"
+    eval "$(extract_function_source "$ROLLBACK" rollback_on_exit)"
 
         TRACE="$case_trace"
         VALIDATOR_OK="$validator_ok"
@@ -3280,7 +3408,137 @@ run_rollback_completion_exit_case \
 rm -rf -- "$rollback_contract_tmp"
 trap - EXIT
 
+# Exercise the installer's snapshot-to-unit admission with real files, complete
+# checksum inventory, active marker and inherited flock. Only the fixed storage
+# prefix is relocated into a private local fixture; no installed service runs.
+# These payload placeholders test the immutable envelope and unit boundary, not
+# DB/TLS semantics or whole native upgrade/rollback acceptance.
+run_apply_only_unit_snapshot_contract() (
+    [[ $EUID -eq 0 ]] || { printf 'SKIP: apply-only snapshot fixture needs root metadata\n'; exit 0; }
+    fixture_root=$(mktemp -d /var/lib/celikpanel-unit-admission.XXXXXXXX)
+    trap 'rm -rf -- "$fixture_root"' EXIT
+    TRUSTED_RELEASE_ROOT=$ROOT
+    source "$ROOT/deploy/release-transaction-guard.sh"
+    source "$ROOT/deploy/release-recovery-foundation.sh"
+    source "$ROOT/deploy/release-unit-transition.sh"
+    definitions=$(extract_function_source "$INSTALL" validate_apply_only_snapshot)
+    definitions=${definitions//\/var\/backups\/celikpanel\/update-snapshots\//$fixture_root\/snapshots\/}
+    eval "$definitions"
+    eval "$(extract_function_source "$INSTALL" publish_apply_only_units)"
+    APPLY_ONLY=1
+    SRC=$fixture_root/release
+    UNIT_DIR=$fixture_root/systemd
+    RELEASE_TRANSACTION_ROOT=$fixture_root/transaction
+    mkdir -m 0700 -- "$SRC" "$fixture_root/snapshots" "$RELEASE_TRANSACTION_ROOT"
+    mkdir -m 0755 -- "$UNIT_DIR" "$SRC/deploy" "$SRC/deploy/systemd"
+    : > "$RELEASE_TRANSACTION_ROOT/transaction.lock"
+    chmod 0600 -- "$RELEASE_TRANSACTION_ROOT/transaction.lock"
+    exec {CELIKPANEL_RELEASE_TRANSACTION_FD}<>"$RELEASE_TRANSACTION_ROOT/transaction.lock"
+    flock -n -x "$CELIKPANEL_RELEASE_TRANSACTION_FD" || die 'apply-only fixture lock unavailable'
+    CELIKPANEL_RELEASE_TRANSACTION_TOKEN=$(release_txn_generate_token)
+    commit=$(printf 'a%.0s' {1..40})
+    tree=$(printf 'b%.0s' {1..40})
+    stamp=20260914T120000Z
+    CELIKPANEL_RELEASE_TRANSACTION_SNAPSHOT=$stamp-from-unknown-to-$commit-0123456789abcdef0123456789abcdef
+    release_txn_create_active_marker "$RELEASE_TRANSACTION_ROOT" "$CELIKPANEL_RELEASE_TRANSACTION_FD" \
+        "$CELIKPANEL_RELEASE_TRANSACTION_TOKEN" update "$CELIKPANEL_RELEASE_TRANSACTION_SNAPSHOT"
+    snapshot=$fixture_root/snapshots/$CELIKPANEL_RELEASE_TRANSACTION_SNAPSHOT
+    mkdir -m 0700 -- "$snapshot" "$snapshot/units" "$snapshot/bin" "$snapshot/web" \
+        "$snapshot/agent-state" "$snapshot/panel-tls"
+    printf '%s\n' "$commit" > "$SRC/release.commit"
+    printf '%s\n' "$tree" > "$SRC/release.tree"
+    printf '6\n' > "$snapshot/snapshot.version"
+    printf 'unknown\n' > "$snapshot/commit"
+    printf '%s\n' "$commit" > "$snapshot/target-release.commit"
+    printf '%s\n' "$tree" > "$snapshot/target-release.tree"
+    printf '%s\n' "$stamp" > "$snapshot/created-at-utc"
+    printf 'present\n' > "$snapshot/firewall-unit.state"
+    for file in celikpanel.db bin/panel bin/agent web/index.html agent-ledger.state \
+        agent-state-root service-states.tsv quiesce-coordinators.tsv snapshot-transition.state release-updater.state; do
+        printf 'opaque payload for envelope validation\n' > "$snapshot/$file"
+    done
+    for unit in celikpanel-agent.service celikpanel-panel.service celikpanel-firewall-restore.service; do
+        printf '[Unit]\nDescription=old %s\n' "$unit" > "$snapshot/units/$unit"
+        printf '[Unit]\nDescription=candidate %s\n' "$unit" > "$SRC/deploy/systemd/$unit"
+        chmod 0644 -- "$snapshot/units/$unit" "$SRC/deploy/systemd/$unit"
+        cp -- "$snapshot/units/$unit" "$UNIT_DIR/$unit"
+    done
+    SYSTEMCTL_BIN=$fixture_root/systemctl
+    cat > "$SYSTEMCTL_BIN" <<'APPLY_SNAPSHOT_SYSTEMCTL'
+#!/bin/bash
+[[ $# -eq 4 && $1 == show && $2 == --property=ActiveState && $3 == --value &&
+   ( $4 == celikpanel-agent.service || $4 == celikpanel-panel.service ) ]] || exit 71
+printf '%s\n' inactive
+APPLY_SNAPSHOT_SYSTEMCTL
+    chmod 0755 -- "$SYSTEMCTL_BIN"
+    hash_snapshot() {
+        (cd "$snapshot" && LC_ALL=C find . -type f ! -path './SHA256SUMS' -print0 |
+            LC_ALL=C sort -z | xargs -0 sha256sum > SHA256SUMS)
+        chmod 0600 -- "$snapshot/SHA256SUMS"
+    }
+    reset_admission() {
+        unset APPLY_ONLY_SNAPSHOT APPLY_ONLY_FIREWALL_STATE APPLY_ONLY_UNIT_ROOT_IDENTITY \
+            APPLY_ONLY_SNAPSHOT_ROOT_IDENTITY APPLY_ONLY_SNAPSHOT_MANIFEST_SHA
+    }
+    expect_snapshot_rejection() {
+        local reason=$1
+        shift
+        if ( "$@" ); then die "$reason"; fi
+    }
+    hash_snapshot
+    reset_admission
+    validate_apply_only_snapshot
+    [[ $APPLY_ONLY_SNAPSHOT == "$snapshot" && $APPLY_ONLY_FIREWALL_STATE == present ]] \
+        || die 'apply-only snapshot admission did not bind exact inputs'
+    publish_apply_only_units
+    for unit in celikpanel-agent.service celikpanel-panel.service celikpanel-firewall-restore.service; do
+        cmp -s "$SRC/deploy/systemd/$unit" "$UNIT_DIR/$unit" || die 'apply-only did not publish exact candidate unit'
+    done
+    before=$(stat -Lc '%d:%i:%Y:%Z' "$UNIT_DIR/celikpanel-agent.service")
+    publish_apply_only_units
+    [[ $(stat -Lc '%d:%i:%Y:%Z' "$UNIT_DIR/celikpanel-agent.service") == "$before" ]] \
+        || die 'apply-only candidate retry rewrote an unchanged unit'
+    cp -- "$snapshot/units/celikpanel-panel.service" "$UNIT_DIR/celikpanel-panel.service"
+    publish_apply_only_units
+    cmp -s "$SRC/deploy/systemd/celikpanel-panel.service" "$UNIT_DIR/celikpanel-panel.service" \
+        || die 'apply-only did not reconcile a legitimate mixed unit set'
+    cp -- "$snapshot/SHA256SUMS" "$fixture_root/manifest.before"
+    head -n 1 "$fixture_root/manifest.before" > "$snapshot/SHA256SUMS"
+    expect_snapshot_rejection 'apply-only accepted a partial checksum manifest' validate_apply_only_snapshot
+    cp -- "$fixture_root/manifest.before" "$snapshot/SHA256SUMS"
+    printf 'not in manifest\n' > "$snapshot/unlisted"
+    expect_snapshot_rejection 'apply-only accepted an unlisted snapshot file' validate_apply_only_snapshot
+    rm -- "$snapshot/unlisted"
+    printf 'owner changed prior payload\n' > "$snapshot/celikpanel.db"
+    hash_snapshot
+    expect_snapshot_rejection 'apply-only adopted a changed snapshot after admission' publish_apply_only_units
+    reset_admission
+    printf '%s\n' "$(printf 'c%.0s' {1..40})" > "$snapshot/target-release.tree"
+    hash_snapshot
+    expect_snapshot_rejection 'apply-only accepted a different target tree' validate_apply_only_snapshot
+    printf '%s\n' "$tree" > "$snapshot/target-release.tree"
+    hash_snapshot
+    validate_apply_only_snapshot
+    printf 'owner unit edit\n' > "$UNIT_DIR/celikpanel-agent.service"
+    expect_snapshot_rejection 'apply-only publication overwrote owner unit bytes' publish_apply_only_units
+    grep -Fx 'owner unit edit' "$UNIT_DIR/celikpanel-agent.service" >/dev/null \
+        || die 'apply-only lost owner unit bytes'
+    cp -- "$SRC/deploy/systemd/celikpanel-agent.service" "$UNIT_DIR/celikpanel-agent.service"
+    CELIKPANEL_RELEASE_TRANSACTION_TOKEN=$(release_txn_generate_token)
+    expect_snapshot_rejection 'apply-only accepted another transaction token' validate_apply_only_snapshot
+)
+require_function_sequence "$INSTALL" validate_apply_only_transaction \
+    'apply-only trusted release checksum verification failed' \
+    'source "$root/deploy/release-unit-transition.sh"' \
+    'apply-only active transaction marker proof failed' \
+    'validate_apply_only_snapshot'
+require_function_sequence "$INSTALL" publish_apply_only_units \
+    'validate_apply_only_snapshot' 'release_unit_publish_transition'
+run_apply_only_unit_snapshot_contract
 bash "$ROOT/deploy/test-update-quiesce-capture.sh"
 bash "$ROOT/deploy/test-update-recovery-lock.sh"
+
+bash "$ROOT/deploy/test-recovery-resource-shell-contract.sh"
+bash "$ROOT/deploy/test-agent-native-contract.sh"
 
 echo "bootstrap update contract: ok"

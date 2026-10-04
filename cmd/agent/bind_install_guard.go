@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
+	"github.com/alicelik/celikpanel/internal/dnsunitrestore"
 )
 
 const bindInstallRollbackTimeout = 30 * time.Second
@@ -171,59 +174,18 @@ func sealSuccessfulBINDPackageInstall(ctx context.Context, guard *bindPackageIns
 }
 
 func (g *bindPackageInstallGuard) restore(ctx context.Context) error {
-	if err := g.verifyMaskParentBeforeSystemdMutation(); err != nil {
-		return err
-	}
-	var restoreErrors []error
-	// A failed package transaction may still have unpacked and started a unit.
-	// Quiesce units which were not running before removing our masks.
-	for _, state := range g.before {
-		if !state.active() {
-			if err := g.ensureStopped(ctx, state.name); err != nil {
-				restoreErrors = append(restoreErrors, fmt.Errorf("stop %s: %w", state.name, err))
-			}
+	snapshots := make([]dnsengineartifact.UnitSnapshot, len(g.before))
+	for i, before := range g.before {
+		snapshots[i] = dnsengineartifact.UnitSnapshot{
+			Name: before.name, LoadState: before.loadState,
+			ActiveState: before.activeState, UnitFileState: before.unitFileState,
 		}
 	}
-	for i := len(g.before) - 1; i >= 0; i-- {
-		state := g.before[i]
-		if !g.ownedMask[state.name] {
-			continue
-		}
-		if err := g.ensureUnmasked(ctx, state.name); err != nil {
-			restoreErrors = append(restoreErrors, fmt.Errorf("unmask %s: %w", state.name, err))
-		}
-	}
-	// Package hooks may have changed enablement underneath the temporary mask.
-	// Reconcile only unit-file states for which systemd exposes an exact inverse.
-	for _, state := range g.before {
-		if state.masked() {
-			continue
-		}
-		if err := g.restoreUnitFileState(ctx, state); err != nil {
-			restoreErrors = append(restoreErrors, err)
-		}
-	}
-	// Preexisting masks are not owned by the guard. Reassert their exact
-	// persistent-vs-runtime class in case a package hook replaced it.
-	for _, state := range g.before {
-		if !state.masked() {
-			continue
-		}
-		if err := g.restoreExactMaskState(ctx, state); err != nil {
-			restoreErrors = append(restoreErrors, err)
-		}
-	}
-	for _, state := range g.before {
-		if err := g.restoreActiveState(ctx, state); err != nil {
-			restoreErrors = append(restoreErrors, err)
-		}
-	}
-	for _, state := range g.before {
-		if err := g.verifyRestoredState(ctx, state); err != nil {
-			restoreErrors = append(restoreErrors, err)
-		}
-	}
-	return errors.Join(restoreErrors...)
+	return dnsunitrestore.Restore(ctx, snapshots, g.ownedMask, dnsunitrestore.Ops{
+		Systemctl:        g.systemctl,
+		VerifyMaskParent: g.ops.verifyMaskParent,
+		RunSystemd:       g.ops.runSystemd,
+	})
 }
 
 func (g *bindPackageInstallGuard) sealSuccessfulInstall(ctx context.Context) error {

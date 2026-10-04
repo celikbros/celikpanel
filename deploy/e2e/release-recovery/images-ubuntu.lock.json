@@ -1,0 +1,15 @@
+{
+  "image": {
+    "architecture": "x86_64",
+    "bytes": 624829952,
+    "digest": {
+      "algorithm": "sha256",
+      "value": "d0fe84bb5f80853425fa6be28e2c106f30104c3cfe8611933f2e65c9b63f0e30"
+    },
+    "distribution": "Ubuntu",
+    "filename": "ubuntu-24.04-server-cloudimg-amd64-20260826.img",
+    "release": "24.04",
+    "url": "https://cloud-images.ubuntu.com/releases/noble/release-20260826/ubuntu-24.04-server-cloudimg-amd64.img"
+  },
+  "schema": "celikpanel-release-recovery-ubuntu-image-lock/v1"
+}

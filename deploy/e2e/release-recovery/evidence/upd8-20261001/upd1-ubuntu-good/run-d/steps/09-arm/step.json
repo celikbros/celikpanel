@@ -1,0 +1,78 @@
+{
+  "checks": {
+    "check": {
+      "body": {
+        "available": true,
+        "current_commit": "57f4372c0485cc2e568b45d5b9c05785d3633320",
+        "current_version": "v0.1.0-alpha.80",
+        "supported": true,
+        "target": {
+          "arch": "amd64",
+          "archive_sha256": "8ccd0f25b8ccad2641b63ccfb9dad0ed54584f327947839f1bc9fde2eab86821",
+          "archive_size": "65629408",
+          "commit": "8c71415e56a2b9a13232377d501cf4bb8a23a9c8",
+          "os": "linux",
+          "published_at": "2026-10-01T14:12:00Z",
+          "sequence": "81",
+          "version": "v0.1.0-alpha.81"
+        }
+      },
+      "http": 200
+    },
+    "observer_intent": {
+      "baseline": {
+        "agent_sha256": "cc6c25ef186764024472a59b82b382f69cf66e265bb09dd3b5047c06e76d646b",
+        "commit": "57f4372c0485cc2e568b45d5b9c05785d3633320",
+        "panel_sha256": "8f12665d87588bc50d3c10a72b0f3b00f8aa5de1ff699d074a57f3aab7fdd477",
+        "version": "v0.1.0-alpha.80"
+      },
+      "identity": {
+        "cell_id": "release-recovery__01f3b8c93957b816",
+        "node": "ubuntu",
+        "nonce": "01f3b8c93957b81699ec033c4f9eb9665cccaffb4f31601371484187112d2832",
+        "vm_uuid": "dfc1f1f4-b0c7-5629-b786-9568cd78410f"
+      },
+      "mode": "watch",
+      "operation_id": "ff796a0375e7d1cceb0e3e462f69da1a",
+      "recovery_fault": null,
+      "schema": "celikpanel/owner-update-observer-intent/v1",
+      "target": {
+        "agent_sha256": "4cafc5fed273732ff4aa186b81feea2f0530387e44f8954a05c37cc5443b8a1f",
+        "commit": "8c71415e56a2b9a13232377d501cf4bb8a23a9c8",
+        "panel_sha256": "09f3119a379400e502d5430f2f7bbb7f23ca21fedaa142ec306f3a77f5cb0b34",
+        "version": "v0.1.0-alpha.81"
+      }
+    },
+    "observer_unit": "celikpanel-lab-owner-update-observer-ff796a0375e7d1cceb0e3e462f69da1a.service",
+    "origin_check": {
+      "addresses": [
+        "127.0.0.1"
+      ],
+      "boot_id": "c625bcc0-cdd5-4a32-95e6-481850c87a29",
+      "getent_outcome": "found",
+      "getent_returncode": 0,
+      "getent_status": "ok",
+      "getent_stdout": "127.0.0.1       celikpanel.net\n",
+      "http": "200",
+      "loopback_only": true,
+      "ok": true,
+      "unit": {
+        "ActiveState": "active",
+        "NRestarts": "0",
+        "UnitFileState": "enabled"
+      }
+    },
+    "owner_waited_for_idle": {
+      "at": "2026-10-01T15:00:11Z",
+      "busy_seen": [],
+      "idle": true,
+      "polls": 1,
+      "waited_s": 0.2
+    },
+    "request_id": "ff796a0375e7d1cceb0e3e462f69da1a"
+  },
+  "finished_at": "2026-10-01T15:00:13Z",
+  "name": "arm",
+  "started_at": "2026-10-01T15:00:11Z",
+  "verdict": "passed"
+}

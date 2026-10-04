@@ -1,0 +1,14 @@
+upd1-arch-defective/run-a                     samples= 22 api= 15 cli= 22 both= 15 agreement={"agree": 15, "single-source": 7}
+upd1-arch-good/run-a                          samples= 14 api= 10 cli= 14 both= 10 agreement={"agree": 10, "single-source": 4}
+upd1-arch-mgmt-off-reboot/run-a               samples= 14 api= 10 cli= 14 both= 10 agreement={"agree": 10, "single-source": 4}
+upd1-arch-mgmt-off-reboot/run-b               samples= 14 api= 10 cli= 14 both= 10 agreement={"agree": 10, "single-source": 4}
+upd1-arch-owner-continuation/run-a            samples= 28 api=  7 cli= 28 both=  7 agreement={"start-instant-lag": 1, "agree": 6, "single-source": 21}
+upd1-arch-realstart/run-a                     samples= 11 api=  7 cli= 11 both=  7 agreement={"agree": 7, "single-source": 4}
+upd1-arch-startcheck/run-a                    samples= 21 api= 13 cli= 21 both= 13 agreement={"agree": 13, "single-source": 8}
+upd1-debian13-defective/run-a                 samples= 27 api=  9 cli= 27 both=  9 agreement={"agree": 9, "single-source": 18}
+upd1-debian13-good/run-a                      samples= 15 api= 10 cli= 15 both= 10 agreement={"start-instant-lag": 1, "agree": 9, "single-source": 5}
+upd1-debian13-mgmt-off-reboot/run-a           samples= 14 api=  9 cli= 14 both=  9 agreement={"agree": 9, "single-source": 5}
+upd1-debian13-mgmt-off-reboot/run-b           samples= 15 api= 10 cli= 15 both= 10 agreement={"agree": 10, "single-source": 5}
+upd1-debian13-owner-continuation/run-a        samples= 29 api=  7 cli= 29 both=  7 agreement={"agree": 7, "single-source": 22}
+upd1-debian13-realstart/run-a                 samples= 50 api= 50 cli= 50 both= 50 agreement={"agree": 50}
+upd1-debian13-startcheck/run-a                samples= 29 api=  9 cli= 28 both=  9 agreement={"agree": 9, "single-source": 19, "no-known-source": 1}

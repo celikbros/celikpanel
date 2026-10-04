@@ -1,0 +1,46 @@
+--- head/acceptance_fixture.go
++++ alpha80-fixture/acceptance_fixture.go
+@@ -281,7 +281,7 @@
+ 	id, err := a.guest.verify()
+ 	if err != nil {
+ 		label.AcceptanceGuest = "refused: " + err.Error()
+-		return Status{State: "invalid", Observation: ObservationKnown, acceptanceStatus: label}
++		return Status{State: "invalid", acceptanceStatus: label}
+ 	}
+ 	label.AcceptanceGuest = "verified"
+ 	label.AcceptanceCell, label.AcceptanceNode, label.AcceptanceSMBIOSUUID = id.cell, id.node, id.smbios
+@@ -289,21 +289,21 @@
+ 	r, err := a.readReceipt(id, now)
+ 	if err != nil {
+ 		if errors.Is(err, errInvalidState) {
+-			return Status{State: "invalid", Observation: ObservationKnown, acceptanceStatus: label}
++			return Status{State: "invalid", acceptanceStatus: label}
+ 		}
+ 		if errors.Is(err, fs.ErrNotExist) {
+-			return Status{State: "missing", Observation: ObservationKnown, acceptanceStatus: label}
++			return Status{State: "missing", acceptanceStatus: label}
+ 		}
+-		return Status{State: "status_unavailable", Observation: ObservationUnavailable, acceptanceStatus: label}
++		return Status{State: "status_unavailable", acceptanceStatus: label}
+ 	}
+ 	verified := a.verifiedAt.Load()
+-	s := Status{State: "active", Observation: ObservationKnown, Product: AcceptanceFixtureProduct, LicenseID: AcceptanceFixtureLicenseID,
++	s := Status{State: "active", Product: AcceptanceFixtureProduct, LicenseID: AcceptanceFixtureLicenseID,
+ 		ExpiresAt: r.ExpiresAt, OfflineUntil: min(r.ExpiresAt, verified+int64(CheckInterval/time.Second)), CanProvision: true, acceptanceStatus: label}
+ 	switch unix := now.Unix(); {
+ 	case unix >= r.ExpiresAt:
+ 		s.State, s.CanProvision = "expired", false
+ 	case verified == 0 || unix >= s.OfflineUntil || unix < verified:
+-		s.State, s.Observation, s.CanProvision = "verification_unavailable", ObservationUnavailable, false
++		s.State, s.CanProvision = "verification_unavailable", false
+ 	}
+ 	return s
+ }
+@@ -390,3 +390,7 @@
+ 	defer d.Close()
+ 	return d.Sync()
+ }
++
++// upd7 fixture adaptation for the v0.1.0-alpha.80 tree: that tree's licensing package has no
++// errInvalidState sentinel; this tag-only file defines it for its own receipt checks.
++var errInvalidState = errors.New("invalid license state")

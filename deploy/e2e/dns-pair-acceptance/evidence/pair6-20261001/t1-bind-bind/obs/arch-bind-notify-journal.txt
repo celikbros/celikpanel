@@ -1,0 +1,41 @@
+2026-09-30T05:56:37+00:00 dns-arch named[2058]: client @0x7ffaa197d000 192.0.2.10#50042: received notify for zone 'pair-accept.test': NOTAUTH
+2026-09-30T05:56:37+00:00 dns-arch named[2058]: client @0x7ffaa4730000 192.0.2.10#59108: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T05:56:37+00:00 dns-arch named[2058]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#59108: serial 2
+2026-09-30T05:56:38+00:00 dns-arch named[2058]: zone pair-accept.test/IN: sending notifies (serial 2026093001)
+2026-09-30T05:56:42+00:00 dns-arch named[2058]: client @0x7ffaa4730000 192.0.2.10#54127: received notify for zone 'pair-accept.test'
+2026-09-30T05:56:42+00:00 dns-arch named[2058]: zone pair-accept.test/IN: notify from 192.0.2.10#54127: zone is up to date
+2026-09-30T05:56:42+00:00 dns-arch named[2058]: client @0x7ffaa4730000 192.0.2.10#39222: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T05:56:42+00:00 dns-arch named[2058]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#39222: zone is up to date
+2026-09-30T05:56:50+00:00 dns-arch named[2058]: client @0x7ffaa4730000 192.0.2.10#38642: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T05:56:50+00:00 dns-arch named[2058]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#38642: zone is up to date
+2026-09-30T05:56:50+00:00 dns-arch named[2058]: client @0x7ffaa197d000 192.0.2.10#39078: received notify for zone 'pair-accept.test'
+2026-09-30T05:56:50+00:00 dns-arch named[2058]: zone pair-accept.test/IN: notify from 192.0.2.10#39078: serial 2026093002
+2026-09-30T05:56:50+00:00 dns-arch named[2058]: zone pair-accept.test/IN: sending notifies (serial 2026093002)
+2026-09-30T05:56:55+00:00 dns-arch named[2058]: client @0x7ffaa4730000 192.0.2.10#48933: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T05:56:55+00:00 dns-arch named[2058]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#48933: zone is up to date
+2026-09-30T05:56:55+00:00 dns-arch named[2058]: client @0x7ffaa197d000 192.0.2.10#44556: received notify for zone 'pair-accept.test'
+2026-09-30T05:56:55+00:00 dns-arch named[2058]: zone pair-accept.test/IN: notify from 192.0.2.10#44556: zone is up to date
+2026-09-30T05:56:57+00:00 dns-arch named[2058]: client @0x7ffaa4730000 192.0.2.10#44732: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T05:56:57+00:00 dns-arch named[2058]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#44732: zone is up to date
+2026-09-30T05:56:57+00:00 dns-arch named[2058]: client @0x7ffaa4730000 192.0.2.10#47897: received notify for zone 'pair-accept.test'
+2026-09-30T05:56:57+00:00 dns-arch named[2058]: zone pair-accept.test/IN: notify from 192.0.2.10#47897: serial 2026093003
+2026-09-30T05:56:57+00:00 dns-arch named[2058]: zone pair-accept.test/IN: sending notifies (serial 2026093003)
+2026-09-30T05:57:02+00:00 dns-arch named[2058]: client @0x7ffaa197d000 192.0.2.10#51386: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T05:57:02+00:00 dns-arch named[2058]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#51386: zone is up to date
+2026-09-30T05:57:02+00:00 dns-arch named[2058]: client @0x7ffaa198b000 192.0.2.10#47857: received notify for zone 'pair-accept.test'
+2026-09-30T05:57:02+00:00 dns-arch named[2058]: zone pair-accept.test/IN: notify from 192.0.2.10#47857: zone is up to date
+2026-09-30T05:57:03+00:00 dns-arch named[2058]: client @0x7ffaa197d000 192.0.2.10#60350: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T05:57:03+00:00 dns-arch named[2058]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#60350: zone is up to date
+2026-09-30T05:57:03+00:00 dns-arch named[2058]: client @0x7ffaa198b000 192.0.2.10#35461: received notify for zone 'pair-accept.test'
+2026-09-30T05:57:03+00:00 dns-arch named[2058]: zone pair-accept.test/IN: notify from 192.0.2.10#35461: serial 2026093004
+2026-09-30T05:57:03+00:00 dns-arch named[2058]: zone pair-accept.test/IN: sending notifies (serial 2026093004)
+2026-09-30T05:57:08+00:00 dns-arch named[2058]: client @0x7ffaa197d000 192.0.2.10#58663: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T05:57:08+00:00 dns-arch named[2058]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#58663: zone is up to date
+2026-09-30T05:57:08+00:00 dns-arch named[2058]: client @0x7ffaa198b000 192.0.2.10#59149: received notify for zone 'pair-accept.test'
+2026-09-30T05:57:08+00:00 dns-arch named[2058]: zone pair-accept.test/IN: notify from 192.0.2.10#59149: zone is up to date
+2026-09-30T05:57:10+00:00 dns-arch named[2058]: client @0x7ffaa198b000 192.0.2.10#34299: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T05:57:10+00:00 dns-arch named[2058]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#34299: serial 3
+2026-09-30T05:57:15+00:00 dns-arch named[2058]: client @0x7ffaa197d000 192.0.2.10#52679: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T05:57:15+00:00 dns-arch named[2058]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#52679: zone is up to date
+2026-09-30T05:57:22+00:00 dns-arch named[2058]: client @0x7ffaa197d000 192.0.2.10#37844: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T05:57:22+00:00 dns-arch named[2058]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#37844: zone is up to date

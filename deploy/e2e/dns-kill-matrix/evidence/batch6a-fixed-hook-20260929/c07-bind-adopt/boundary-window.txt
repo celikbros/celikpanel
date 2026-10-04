@@ -1,0 +1,5 @@
+marker 2026-09-29T15:12:48.117740+00:00 kill 2026-09-29T15:12:48.215622+00:00 window_ms 97.9
+timestamped lines parsed: {'journal': 551, 'mtime': 45}
+native entries inside [marker, SIGKILL]: 2
+  journal named.service.txt 2026-09-29T15:12:48.170799+00:00 dns-debian13 named[2042]: managed-keys-zone: Key 20326 for zone . is now trusted (acceptance timer complete)
+  journal named.service.txt 2026-09-29T15:12:48.171001+00:00 dns-debian13 named[2042]: managed-keys-zone: Key 38696 for zone . is now trusted (acceptance timer complete)

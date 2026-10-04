@@ -1,0 +1,19 @@
+2026-09-30T08:14:00.818502+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-09-30T08:14:00.878892+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-09-30T08:14:01.143094+00:00 dns-arch panel[417]: 2026/09/30 08:14:01 Starting CelikPanel Backend...
+2026-09-30T08:14:01.169729+00:00 dns-arch panel[417]: 2026/09/30 08:14:01 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-09-30T08:14:01.171837+00:00 dns-arch panel[417]: 2026/09/30 08:14:01 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-09-30T08:14:01.172905+00:00 dns-arch panel[417]: 2026/09/30 08:14:01 Connected to Agent RPC; preparing normal management access
+2026-09-30T08:14:01.195638+00:00 dns-arch panel[417]: 2026/09/30 08:14:01 certificate startup reconcile: staged lineages: agent RPC platform identity is unavailable: Agent.ReconcileSiteCertLineages: read HostPlatform: detect host platform: systemd is not ready: systemd state "starting" exited with status 1
+2026-09-30T08:14:01.207093+00:00 dns-arch panel[417]: 2026/09/30 08:14:01 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: agent RPC platform identity is unavailable: Agent.SyncMailTLSV2: read HostPlatform: detect host platform: systemd is not ready: systemd state "starting" exited with status 1; preserve pending outbox: <nil>
+2026-09-30T08:14:01.210791+00:00 dns-arch panel[417]: 2026/09/30 08:14:01 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-09-30T08:14:01.214917+00:00 dns-arch panel[417]: 2026/09/30 08:14:01 Panel ready on :2083 (HTTPS)
+2026-09-30T08:14:39.258302+00:00 dns-arch panel[417]: 2026/09/30 08:14:39 http: TLS handshake error from 127.0.0.1:50644: EOF
+2026-09-30T08:14:40.066419+00:00 dns-arch panel[417]: 2026/09/30 08:14:40 http: TLS handshake error from 127.0.0.1:50670: EOF
+2026-09-30T08:15:09.517462+00:00 dns-arch panel[417]: 2026/09/30 08:15:09 http: TLS handshake error from 127.0.0.1:38044: EOF
+2026-09-30T08:15:10.755009+00:00 dns-arch panel[417]: 2026/09/30 08:15:10 http: TLS handshake error from 127.0.0.1:42250: EOF
+2026-09-30T08:15:31.131764+00:00 dns-arch panel[417]: 2026/09/30 08:15:31 http: TLS handshake error from 127.0.0.1:60320: EOF
+2026-09-30T08:15:48.109173+00:00 dns-arch panel[417]: 2026/09/30 08:15:48 http: TLS handshake error from 127.0.0.1:33584: EOF
+2026-09-30T08:16:46.484675+00:00 dns-arch panel[417]: 2026/09/30 08:16:46 http: TLS handshake error from 127.0.0.1:57504: EOF
+2026-09-30T08:16:56.667000+00:00 dns-arch panel[417]: 2026/09/30 08:16:56 http: TLS handshake error from 127.0.0.1:55178: EOF
+2026-09-30T08:16:59.376135+00:00 dns-arch panel[417]: 2026/09/30 08:16:59 http: TLS handshake error from 127.0.0.1:55192: EOF

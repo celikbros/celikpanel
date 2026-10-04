@@ -1,0 +1,2 @@
+#!/bin/bash
+pgrep -a qemu || echo no-qemu; pgrep -af watch-catalog || echo no-watcher; ls -d /var/tmp/cp-pair7* /root/cp-pair7*; ls /tmp | grep -i pair7 || echo no-tmp-pair7

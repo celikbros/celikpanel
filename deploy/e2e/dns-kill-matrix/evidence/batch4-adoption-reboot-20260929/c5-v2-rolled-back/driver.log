@@ -1,0 +1,15 @@
+### 2026-09-29T13:19:40.608Z start-cell c5-v2-rolled-back bind__rolled-back__after-write__standalone__peer-reachable debian13 fixture=managed-pdns prep=prepare-bind enroll=1 flags=--owner-inverse-after-restart
+### 2026-09-29T13:19:40.609Z prepare
+### 2026-09-29T13:19:41.573Z start
+### 2026-09-29T13:19:41.861Z wait-ssh
+### 2026-09-29T13:20:40.103Z guest-identity
+### 2026-09-29T13:20:40.545Z install
+### 2026-09-29T13:20:49.852Z enroll-recovery-runtime
+### 2026-09-29T13:21:01.013Z prepare-bind
+### 2026-09-29T13:21:24.188Z pre-run-snapshot
+### 2026-09-29T13:21:47.019Z start-watcher
+Running as unit: cp-b4-watch.service; invocation ID: 7e2e6903470a45bfb27221c0cb81ba41
+### 2026-09-29T13:21:47.819Z run-prepared-dry-run
+### 2026-09-29T13:21:47.922Z run-prepared
+RUN_PREPARED_RC=0
+### 2026-09-29T13:22:40.240Z done-run rc=0

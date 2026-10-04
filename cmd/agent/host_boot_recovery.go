@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 )
 
@@ -97,10 +98,10 @@ func probeHostRecoveryReadiness() (hostRecoveryReadiness, error) {
 const (
 	// hostRecoveryReleasedUnsupportedCode: the host itself is the obstacle, and
 	// waiting was pointless.
-	hostRecoveryReleasedUnsupportedCode = "host_unsupported_after_restart"
+	hostRecoveryReleasedUnsupportedCode = dnsengineartifact.ReleasedUnsupportedHostCode
 	// hostRecoveryReleasedWindowCode: the host never finished starting inside
 	// the window the recovery is allowed to wait.
-	hostRecoveryReleasedWindowCode = "host_not_ready_within_recovery_window"
+	hostRecoveryReleasedWindowCode = dnsengineartifact.ReleasedHostWindowCode
 )
 
 // What releasing the ledger does NOT mean, said out loud. The ledger's lease is
@@ -119,13 +120,6 @@ const hostRecoveryUnsupportedMessage = "The agent restarted after an interrupted
 const hostRecoveryWindowMessage = "The agent restarted after an interrupted mutation and the host had not finished starting when the recovery window closed, " +
 	"so the mutation could not be decided. The ledger was released so the rest of the host stays usable. " +
 	hostRecoveryResidueSentence
-
-// releasedUndecidedHostRecoveryCode reports whether a ledger error code is one
-// of the two this file writes when it releases an undecided lease.
-func releasedUndecidedHostRecoveryCode(code string) bool {
-	return code == hostRecoveryReleasedUnsupportedCode ||
-		code == hostRecoveryReleasedWindowCode
-}
 
 // startupRecoveryNeedsTheHostLocked reports whether this reconciliation is
 // going to read the host at all. A ledger with nothing active and no durable
@@ -390,15 +384,17 @@ func (m *serviceMutationManager) recoverReleasedUndecidedDNSEngineSwitchLocked(
 	journal, exists, err := readDNSEngineSwitchJournalAt(
 		filepath.Join(filepath.Dir(m.ledgerPath), dnsEngineSwitchJournalFile),
 	)
-	if err != nil || !exists {
+	if err != nil {
+		log.Printf("DNS switch journal could not be read during idle boot recovery; preserve it for owner review: %v", err)
+		return true, lock.Close()
+	}
+	if !exists {
 		return false, nil
 	}
 	job := m.ledger.Jobs[journal.MutationRequestID]
-	if job == nil || job.Kind != "dns_engine_switch" ||
-		job.RequestID != journal.MutationRequestID ||
-		job.OwnerID != journal.MutationOwnerID ||
-		job.Status != serviceMutationStatusFailed ||
-		!releasedUndecidedHostRecoveryCode(job.ErrorCode) {
+	id := dnsengineartifact.SwitchIdentity{RequestID: journal.MutationRequestID, OwnerID: journal.MutationOwnerID, Target: journal.TargetEngine, Qualifier: journal.ManifestQualifier}
+	terminalRollback := journal.Phase == dnsengineartifact.SwitchPhaseRolledBack && id.TerminalRolledBackJob(m.ledger)
+	if job == nil || !(id.ReleasedUndecidedJob(m.ledger) || terminalRollback) {
 		return false, nil
 	}
 	// The host was already proved readable by the probe that let this
@@ -423,6 +419,12 @@ func (m *serviceMutationManager) recoverReleasedUndecidedDNSEngineSwitchLocked(
 		)
 		return true, lock.Close()
 	}
+	if outcome != dnsEngineSwitchRecoveryRolledBack &&
+		outcome != dnsEngineSwitchRecoveryCommitted &&
+		outcome != dnsEngineSwitchRecoveryFinalized {
+		log.Printf("Released DNS switch recovery returned unsupported outcome %q; journal retained for owner review", outcome)
+		return true, lock.Close()
+	}
 	if outcome == dnsEngineSwitchRecoveryCommitted ||
 		outcome == dnsEngineSwitchRecoveryFinalized {
 		finalizeCtx, finalizeCancel := context.WithTimeout(
@@ -439,6 +441,12 @@ func (m *serviceMutationManager) recoverReleasedUndecidedDNSEngineSwitchLocked(
 				"A DNS engine transaction released after an undecidable boot reached its target but could not be finalized yet: %v",
 				finalizeErr,
 			)
+			return true, lock.Close()
+		}
+	}
+	if outcome == dnsEngineSwitchRecoveryRolledBack {
+		if err := m.removeTerminalRolledBackDNSEngineSwitchJournalLocked(journal.MutationRequestID); err != nil {
+			log.Printf("Terminal DNS switch rollback journal could not be retired; preserve it for owner review: %v", err)
 			return true, lock.Close()
 		}
 	}

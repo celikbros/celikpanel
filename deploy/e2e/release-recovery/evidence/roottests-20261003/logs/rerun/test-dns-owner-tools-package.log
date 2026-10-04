@@ -1,0 +1,8 @@
+## prerequisite: make dns-owner-tools
+mkdir -p bin/dns-owner-tools
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "go" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/dns-owner-tools/dns-peer-enroll ./cmd/dns-peer-enroll
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "go" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/dns-owner-tools/bind-peer-inspect ./cmd/bind-peer-inspect
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "go" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/dns-owner-tools/pdns-peer-inspect ./cmd/pdns-peer-inspect
+cp cmd/dns-peer-enroll/README.md bin/dns-owner-tools/README.md
+## make exit=0
+DNS owner tools: real dist payload, executable modes, umask reproducibility and tamper detection passed

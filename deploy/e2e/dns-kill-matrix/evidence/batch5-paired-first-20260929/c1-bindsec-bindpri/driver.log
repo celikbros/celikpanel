@@ -1,0 +1,17 @@
+### 2026-09-29T13:54:46.675Z start-cell c1-bindsec-bindpri bind__target-verified__after-write__paired-secondary__peer-reachable debian13 fixture=uninitialized prep=prepare-bind enroll=0 root=/var/tmp/cp-b5-0929 peer=bind flags=--reboot-after-recovery --disable-management-before-reboot
+### 2026-09-29T13:54:46.676Z prepare
+### 2026-09-29T13:54:47.846Z start
+### 2026-09-29T13:54:48.128Z wait-ssh
+### 2026-09-29T13:55:40.729Z guest-identity
+### 2026-09-29T13:55:41.386Z install
+### 2026-09-29T13:55:49.801Z prepare-bind
+### 2026-09-29T13:56:24.428Z pre-run-snapshot
+### 2026-09-29T13:56:54.334Z start-peer-dns-sampler
+Running as unit: cp-b5-peerloop.service; invocation ID: 276ab528a85b4ce78c113178683131d3
+peerloop start rc=0
+### 2026-09-29T13:56:54.894Z start-watcher
+Running as unit: cp-b5-watch.service; invocation ID: 51fa2033f00a470186e785cb3c5039eb
+### 2026-09-29T13:56:55.602Z run-prepared-dry-run
+### 2026-09-29T13:56:55.694Z run-prepared
+RUN_PREPARED_RC=1
+### 2026-09-29T13:57:45.694Z done-run rc=1

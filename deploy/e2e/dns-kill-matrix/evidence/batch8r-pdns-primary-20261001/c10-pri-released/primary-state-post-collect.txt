@@ -1,0 +1,81 @@
+wall=2026-09-29T23:47:05.475500366Z boot_id=a45e3075-349e-49b6-a0ab-beb0fbc28008
+== pdns.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+LoadState=masked
+ActiveState=inactive
+SubState=dead
+UnitFileState=masked
+== named.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+== bind9.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+== celikpanel-agent.service
+MainPID=3736
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 23:46:14 UTC
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+== celikpanel-panel.service
+MainPID=4207
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 23:46:17 UTC
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+== pdns.service mask symlinks
+'/etc/systemd/system/pdns.service' -> '/dev/null' mtime=2026-09-29 23:46:05.881164969 +0000
+/run/systemd/system/pdns.service absent
+== pdns_server processes
+none
+== ss 53
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=371,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=371,fd=18))
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=371,fd=21))
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=371,fd=19))
+== /etc/powerdns
+/etc/powerdns:
+total 36
+drwxr-xr-x  3 root root  4096 2026-09-29 23:46:11.321379420 +0000 .
+drwxr-xr-x 68 root root  4096 2026-09-29 23:46:12.713430904 +0000 ..
+-rw-r-----  1 root pdns 20579 2026-09-29 23:46:14.801505773 +0000 pdns.conf
+drwxr-xr-x  2 root root  4096 2026-08-06 19:04:06.000000000 +0000 pdns.d
+
+/etc/powerdns/pdns.d:
+total 8
+drwxr-xr-x 2 root root 4096 2026-08-06 19:04:06.000000000 +0000 .
+drwxr-xr-x 3 root root 4096 2026-09-29 23:46:11.321379420 +0000 ..
+8b46927e48be83b2f0afc38efabdc2e2237daa5281b1a07ea44989ffa41f262a  /etc/powerdns/pdns.conf
+sha256sum: '/etc/powerdns/pdns.d/*': No such file or directory
+== pdns.conf (non-comment lines; values of key/secret/password settings redacted)
+include-dir=/etc/powerdns/pdns.d
+launch=
+security-poll-suffix=
+== /var/lib/powerdns
+total 8
+drwxr-xr-x  2 pdns pdns 4096 2026-08-06 19:04:06.000000000 +0000 .
+drwxr-xr-x 29 root root 4096 2026-09-29 23:46:11.173373895 +0000 ..
+== state receipt
+ls: cannot access '/var/lib/celikpanel-agent-private/dns-engine-state.json': No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    import json;d=json.load(open("/var/lib/celikpanel-agent-private/dns-engine-state.json"));print(json.dumps({k:d.get(k) for k in ("schema","request_id")}));print("semantic:",json.dumps(d.get("semantic"),sort_keys=True)[:1500])
+                            ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/var/lib/celikpanel-agent-private/dns-engine-state.json'
+== pdns journal (notify/xfr/catalog/start lines, all boots)

@@ -1,0 +1,1 @@
+bash /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/b9/runcell.sh z01-zero-staged pdns-switch__target-staged__after-write__paired-primary__peer-reachable /var/tmp/cp-b9-1001/r1 0 --zero-zones

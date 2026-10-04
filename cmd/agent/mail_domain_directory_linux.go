@@ -125,11 +125,21 @@ func secureEnsureMailRoot(root string) error {
 	return nil
 }
 
+// openManagedMailRoot opens the product's mail root as resolved by
+// managedMailRootPath: the stock /var/mail link is the only symbolic link it
+// may cross, and the resolved path itself is opened with no symbolic link.
 func openManagedMailRoot() (int, error) {
-	if filepath.Clean(mailRootDir) == "/" {
+	root, err := managedMailRootPath()
+	if err != nil {
+		return -1, err
+	}
+	if filepath.Clean(root) == "/" {
 		return -1, fmt.Errorf("refusing root as mail root")
 	}
-	fd, err := openMailAbsoluteDirectory(mailRootDir)
+	fd, err := openMailAbsoluteDirectory(root)
+	if err != nil && mailOpenCrossesLink(root, err) {
+		return -1, fmt.Errorf("%w (%s): %w", errMailPathSymlinkRefused, root, err)
+	}
 	if err != nil {
 		return -1, err
 	}
@@ -196,6 +206,9 @@ func quarantineMailDomainDirectory(domain string, domainID int) (func() error, b
 	defer unix.Close(rootFD)
 
 	sourceExists, err := mailDirectoryExistsAt(rootFD, domain)
+	if err != nil && mailEntryIsLinkAt(rootFD, domain, err) {
+		return nil, false, fmt.Errorf("inspect mail domain source: %w (%s): %w", errMailPathSymlinkRefused, domain, err)
+	}
 	if err != nil {
 		return nil, false, fmt.Errorf("inspect mail domain source: %w", err)
 	}

@@ -1,0 +1,2 @@
+2026-09-30T08:36:49.518859+00:00 dns-debian13 agent[1060]: 2026/09/30 08:36:49 DNS peer inspector answer for extra-accept.test (BIND secondary): catalog_state=transferred member_state=absent native_state=unloaded; accepted
+2026-09-30T08:36:50.812128+00:00 dns-debian13 agent[1060]: 2026/09/30 08:36:50 DNS peer proof for extra-accept.test (BIND secondary) step times: prepare=1.275s challenge_write=6.156s exchange=545ms post_inspection=3.41s consume=7.485s; total 18.871s; outcome verified

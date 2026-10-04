@@ -1,0 +1,4 @@
+## 2026-09-30T08:37:20Z read-only, after the extra experiment: primary pdns.service CATALOG-HASH lines (all boots) and served catalog
+2026-09-30T08:32:03.626431+00:00 dns-debian13 pdns_server[4888]: new CATALOG-HASH '47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T08:33:03.714065+00:00 dns-debian13 pdns_server[4888]: new CATALOG-HASH 'n6L34LeIr9zlcH/7CcW04T4BhE5GuvXjRFRo31n4dKY=' for zone 'catalog-c000020a.celikpanel.invalid'
+{"catalog": "catalog-c000020a.celikpanel.invalid", "command": "catalog", "members": ["pair-accept.test."], "serial": 1790757187, "server": "192.0.2.10", "transferred": true}

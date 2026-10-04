@@ -392,7 +392,7 @@ The summary states that a license lasts one year from creation. Each row offers 
 
 The application rail stays navy in light and dark themes; its active item is light with navy text. The shared input uses a strong border, surface background, compact padding and a primary-colour focus border.
 
-License access uses the existing navy and white panel controls in a focused page without management navigation. The installer creates the local administrator in the terminal without requiring a license. After authentication, every role waits for a positive server access decision before management pages mount. Missing, expired, invalid or unverifiable licenses show activation and renewal for the server administrator; reseller, customer and additional-user accounts see a message to contact their administrator. Password change and sign-out remain accessible. Pasted keys, show/hide, localized errors and successful activation reuse the License panel. There is no Explore bypass. Authenticated management API requests are denied while locked; existing services and scheduled jobs continue independently. Every management request checks a shared verification valid for at most 60 seconds. Renewal is attempted after 45 seconds during authenticated use, with no idle polling. Explicit central rejection is persisted and locks access immediately; an outage cannot extend the 60-second deadline. The browser refreshes before that deadline to preserve the current page during successful renewals. The activation page offers a collapsed “Update CelikPanel” section only to administrators, reusing the signed update card and its existing operation tracker. Its exact update, version and readiness endpoints remain available to administrators while locked. The tracker continues through disconnects and reloads without granting management access or changing the license; other roles cannot access updates.
+License access uses the existing navy and white panel controls in a focused page without management navigation. The installer creates the local administrator in the terminal without requiring a license. After authentication, every role waits for a positive server access decision before management pages mount. Only known missing, expired or invalid licenses show activation and renewal for the server administrator; reseller, customer and additional-user accounts see a message to contact their administrator. Unavailable session, readiness or license observations use the focused recovery page and never imply an activation requirement. Password change and sign-out remain accessible. Pasted keys, show/hide, localized errors and successful activation reuse the License panel. There is no Explore bypass. Authenticated management API requests are denied while locked; existing services and scheduled jobs continue independently. Every management request checks a shared verification valid for at most 60 seconds. Renewal is attempted after 45 seconds during authenticated use, with no idle polling. Explicit central rejection is persisted and locks access immediately; an outage cannot extend the 60-second deadline. The browser refreshes before that deadline to preserve the current page during successful renewals. The activation page offers a collapsed “Update CelikPanel” section only to administrators, reusing the signed update card and its existing operation tracker. Its exact update, version and readiness endpoints remain available to administrators while locked. The tracker continues through disconnects and reloads without granting management access or changing the license; other roles cannot access updates.
 
 UsageBar stays navy until the recorded danger threshold, with no yellow range; print the value beside it. SecurityAuditCard gives a tinted field to failure while pass and warning share neutral surfaces and distinct symbols. Dashboard attention items rank failures above warnings with a divider and gap at the severity boundary. These panel-specific implementations retain the No-Adjacency Rule without imposing the public site's composition on operating screens.
 
@@ -419,3 +419,21 @@ UsageBar stays navy until the recorded danger threshold, with no yellow range; p
 - **Don't** invent testimonials, customers, metrics or a production-readiness claim.
 - **Don't** add shadows to the current homepage's command or release surfaces.
 - **Don't** import competitor-skin fonts or colours into CelikPanel's own identity.
+
+
+### Recovery access during unavailable observations
+
+The initial shell contains its own focused recovery page, outside the lazy update
+tracker and screen catalogue. Preserve the navy/white typography and a readable
+single column on desktop and mobile. Show the current reason and the access-check
+and reload actions first. An authenticated administrator can then inspect the
+exact saved operation ID, last verified observation and retained previous failure.
+The saved browser record supplies identity only; it cannot assert a server outcome.
+A failed read keeps the last verified result visibly historical. A verified terminal
+result cannot be replaced by an older or contradictory observation. Missing records
+remain unknown. These controls only read status; they never retry an update.
+
+The early server mux permits existing authentication and bounded status reads while
+Agent connection is unavailable. Ordinary management remains gated. This scope does
+not provide a separate frontend binary or recovery authentication database; see
+[the acceptance limits](docs/RECOVERY-ACCESS.md).

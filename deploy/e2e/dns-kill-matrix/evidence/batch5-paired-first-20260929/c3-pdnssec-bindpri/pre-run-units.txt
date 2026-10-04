@@ -1,0 +1,113 @@
+wall=2026-09-29T14:06:23.058380734Z boot_id=a79fbe77-c687-4c31-8205-a68bddab456d
+== pdns.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InvocationID=
+== named.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InvocationID=
+== bind9.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InvocationID=
+== celikpanel-agent.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 14:05:41 UTC
+ExecMainPID=1193
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 14:05:41 UTC
+InvocationID=af31bf60bb4d4be1b7004b922b651fc5
+== celikpanel-panel.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 14:05:41 UTC
+ExecMainPID=1204
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 14:05:41 UTC
+InvocationID=3e1cd23486e842b1b90494a9cd8dde97
+== named/pdns processes
+== boots
+IDX BOOT ID                          FIRST ENTRY                 LAST ENTRY
+  0 a79fbe77c6874c318205a68bddab456d Tue 2026-09-29 14:04:46 UTC Tue 2026-09-29 14:06:23 UTC
+== packages
+dpkg-query: no packages found matching pdns-server
+dpkg-query: no packages found matching pdns-backend-sqlite3
+dpkg-query: no packages found matching bind9
+dpkg-query: no packages found matching bind9-utils
+bind9-host 1:9.20.26-1~deb13u1 ii 
+bind9-libs 1:9.20.26-1~deb13u1 ii 
+== pdns_server --version
+bash: line 6: /usr/sbin/pdns_server: No such file or directory
+== state dir
+total 12
+drwx------  2 root celikpanel 4096 2026-09-29 14:05:39.368500935 +0000 .
+drwxr-xr-x 27 root root       4096 2026-09-29 14:05:39.188500935 +0000 ..
+-rw-------  1 root celikpanel   23 2026-09-29 14:05:39.364500935 +0000 service-mutations.json
+177f61d12ed0bb85e6ea535b807b376e26bbe0871405a13867c0b3cb6ea4b211  service-mutations.json
+== fixture dir
+total 1416
+drwx------  4 root root    4096 2026-09-29 14:06:22.781273559 +0000 .
+drwxr-xr-x 27 root root    4096 2026-09-29 14:05:39.188500935 +0000 ..
+-rw-------  1 root root    3314 2026-09-29 14:06:22.613351104 +0000 controller-argv.json
+-rw-------  1 root root    1016 2026-09-29 14:06:22.761282791 +0000 coordinator-stop-proof.json
+-rw-------  1 root root     728 2026-09-29 14:05:46.868500935 +0000 installed-binaries.sha256
+-rw-------  1 root root 1406962 2026-09-29 14:05:39.304500935 +0000 manifest.json
+drwx------  2 root root    4096 2026-09-29 14:06:22.369463729 +0000 measured
+-rw-------  1 root root     267 2026-09-29 14:06:22.485410186 +0000 peer-primary-preflight.json
+drwx------  3 root root    4096 2026-09-29 14:06:22.585364028 +0000 results
+-rw-------  1 root root     445 2026-09-29 14:06:22.349472961 +0000 scenario.json
+-rw-------  1 root root    1453 2026-09-29 14:06:22.561375106 +0000 source-proof.json
+== recovery launcher
+ls: cannot access '/usr/libexec/celikpanel/': No such file or directory
+sha256sum: /usr/libexec/celikpanel/recovery: No such file or directory
+== owner files
+ls: cannot access '/etc/powerdns': No such file or directory
+ls: cannot access '/etc/powerdns/pdns.d': No such file or directory
+ls: cannot access '/var/lib/powerdns': No such file or directory
+sha256sum: /etc/powerdns/pdns.conf: No such file or directory
+sha256sum: '/etc/powerdns/pdns.d/*': No such file or directory
+sha256sum: /var/lib/powerdns/pdns.sqlite3: No such file or directory
+== bind dirs
+ls: cannot access '/etc/bind': No such file or directory
+== /etc/bind file hashes
+== /etc/bind inodes
+== /var/cache/bind tree
+find: ‘/var/cache/bind’: No such file or directory
+== named-checkconf -l
+bash: line 16: named-checkconf: command not found
+== ss 53
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=18))
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=21))
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=19))
+== pdns journal tail
+-- No entries --

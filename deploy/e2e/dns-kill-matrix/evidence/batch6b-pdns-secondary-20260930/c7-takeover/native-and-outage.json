@@ -1,0 +1,163 @@
+{
+  "agent_startup_rollback": null,
+  "boundary_marker": {
+    "cell_id": "bind__target-staged__after-write__standalone__peer-reachable",
+    "driver": "bind",
+    "marker": "/var/lib/celikpanel-dns-kill-matrix/results/bind__target-staged__after-write__standalone__peer-reachable/boundary-marker.json",
+    "nonce": "e45719a35061f363739b952e0d548c7cf3ae5bacbe3def26dc2702807f966cb6",
+    "observed_driver": "bind",
+    "observed_journal": {
+      "manifest_qualifier": "dns-engine-switch/v1:sha256:59e76ab0efd1ad52eaa5e17b2448a8a022172f2b13f54a4bc3b787463092e965",
+      "mode": "switch",
+      "mutation_owner_id": "9e83eec8b6a4a0b03f5b3f5f0859a4b9",
+      "mutation_request_id": "b66cbdc5c51b25639364f76a7113a214",
+      "path": "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json",
+      "phase": "target-staged",
+      "schema": "celikpanel-dns-engine-switch-journal/v1",
+      "source_epoch": 0,
+      "source_revision": 0,
+      "target_engine": "bind",
+      "target_epoch": 1,
+      "topology": "standalone"
+    },
+    "phase": "target-staged",
+    "pid": 2412,
+    "point": "after_write",
+    "process_start_ticks": "17864",
+    "ready_fd": 5,
+    "recorded_at": "2026-09-29T16:47:56.655979582Z",
+    "request_id": "b66cbdc5c51b25639364f76a7113a214",
+    "schema": "celikpanel-dns-kill-matrix-boundary/v1"
+  },
+  "complete_verdict": {
+    "passed": true,
+    "reasons": [],
+    "required_classification": [
+      "target_converged"
+    ],
+    "safety_status": "passed",
+    "status": "passed"
+  },
+  "diagnostic_failures": [],
+  "dns_outage": null,
+  "expectation": null,
+  "failures": [],
+  "flow_ambiguities": null,
+  "flow_failures": null,
+  "flow_status": null,
+  "journal_at_boundary": {
+    "device": 65025,
+    "exists": true,
+    "expected_phase": "target-staged",
+    "inode": 131542,
+    "mode": "0600",
+    "observed_phase": "target-staged",
+    "request_id": "b66cbdc5c51b25639364f76a7113a214",
+    "sha256": "8d2ef8770c01545856bbfc1e178db40fa6f8b720629ea99efba83dd1d45c1d47"
+  },
+  "kill": {
+    "delivered_at": "2026-09-29T16:47:56.673824Z",
+    "exit_code": 137,
+    "pid": 2412,
+    "proc_entry_absent_after_reap": true,
+    "process_start_ticks": "17864",
+    "raw_returncode": -9,
+    "signal": "SIGKILL",
+    "signal_number": 9,
+    "state_before_signal": "T"
+  },
+  "kill_proven": true,
+  "management_disabled_before_reboot": null,
+  "owner_inverse_failures": null,
+  "owner_inverse_native_at_boundary": null,
+  "pre_reboot_verdict": null,
+  "provenance_boundary": {
+    "failures": [],
+    "path": "/var/lib/celikpanel-agent-private/dns-engine-install-ownership-bind.json",
+    "receipt": {
+      "adopted_present": true,
+      "engine": "bind",
+      "manifest_qualifier": "dns-engine-switch/v1:sha256:59e76ab0efd1ad52eaa5e17b2448a8a022172f2b13f54a4bc3b787463092e965",
+      "missing_before": [],
+      "mutation_owner_id": "9e83eec8b6a4a0b03f5b3f5f0859a4b9",
+      "mutation_request_id": "b66cbdc5c51b25639364f76a7113a214",
+      "package_manager": "apt",
+      "packages": [
+        "bind9"
+      ],
+      "schema": "celikpanel-dns-engine-install-ownership/v1"
+    },
+    "sha256": "f2d3f83b0d858824fb8ffc25597f1fb722e879f89c231aad5d4f72bb52268317",
+    "source_fixture": "unmanaged-bind-stopped",
+    "unknown": []
+  },
+  "reboot_after_recovery": null,
+  "recovery_outcome": {
+    "changed_or_racy": false,
+    "classification": "target_converged",
+    "dns_serving_after_restart": true,
+    "probe_pair_valid": true,
+    "repeated_nonconvergence": false,
+    "rolled_back_source_serving": false,
+    "same_fingerprint": true,
+    "target_converged": true
+  },
+  "recovery_status_read_failures": null,
+  "recovery_status_reads": {
+    "after-recovery": {
+      "available": true,
+      "changed_evidence": [],
+      "command": {
+        "argv": [
+          "/usr/libexec/celikpanel/recovery",
+          "dns-switch-status",
+          "--quiesced",
+          "--request-id",
+          "b66cbdc5c51b25639364f76a7113a214"
+        ],
+        "duration_seconds": 0.007799,
+        "output": "No DNS switch journal was observed for request b66cbdc5c51b25639364f76a7113a214. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.\n",
+        "output_bytes": 315,
+        "output_sha256": "d2091fca34aca0409432047cb8948cbf50cd0bde924032a650f944d2dde9e1a8",
+        "output_truncated": false,
+        "ran": true,
+        "returncode": 0
+      },
+      "judged": "made no mutation only",
+      "mutated": false,
+      "stage": "after-recovery"
+    },
+    "before-recovery": {
+      "available": true,
+      "changed_evidence": [],
+      "command": {
+        "argv": [
+          "/usr/libexec/celikpanel/recovery",
+          "dns-switch-status",
+          "--quiesced",
+          "--request-id",
+          "b66cbdc5c51b25639364f76a7113a214"
+        ],
+        "duration_seconds": 0.164607,
+        "output": "DNS switch request b66cbdc5c51b25639364f76a7113a214: accepted-active (journal phase target-staged).\nNo owner recovery command applies to this journal's recorded shape and ledger status. Keep the journal and ledger. If this operation does not resume through CelikPanel or an Agent restart, contact support with request id b66cbdc5c51b25639364f76a7113a214. This status check does not start recovery.\nQuiesced worker observation: no-recorded-worker. This is only a point-in-time process check; it does not authorize a DNS inverse.\nThe accepted operation is recorded. The server owner should follow its CelikPanel status and check native DNS health if progress stops. This read-only observation does not prove worker liveness or authorize another switch; recovery must recheck the same operation under the host lock.\nManaged BIND root directory and package ownership matched on two read-only walks. This does not prove the selected generation, DNS answers, owner edits or recovery authority.\nNative BIND vendor files or loaded systemd unit identity are unknown. The server owner should inspect the named service unit, its package ownership and startup options before the same operation resumes; no inverse was started. parse named.service identity: systemctl returned incomplete DNS unit identity\n",
+        "output_bytes": 1293,
+        "output_sha256": "d1c9b306a2f4344398c47a95014030bab566896ac48798e848ca42b3048199c7",
+        "output_truncated": false,
+        "ran": true,
+        "returncode": 3
+      },
+      "judged": "made no mutation only",
+      "mutated": false,
+      "stage": "before-recovery"
+    }
+  },
+  "request_id": "b66cbdc5c51b25639364f76a7113a214",
+  "retry_switch_after_rollback": null,
+  "safety_failures": [],
+  "safety_status": "passed",
+  "source": "result.json (verbatim sub-objects)",
+  "status": "passed",
+  "step_records": {},
+  "variant": null,
+  "verification_failures": []
+}

@@ -30,6 +30,10 @@ type dnsEngineRollbackTargetHost struct {
 	PackageManager hostplatform.PackageManager
 	Packages       []string
 	Systemctl      string
+	// RefuseRestoredTakeover is set for a paired-secondary first install:
+	// no takeover shares its manifest, so a running unmanaged BIND is never
+	// its rolled-back state.
+	RefuseRestoredTakeover bool
 }
 
 func canonicalDNSEngineRollbackEvidence(
@@ -63,9 +67,9 @@ func canonicalDNSEngineRollbackEvidence(
 		return mutationpayload.DNSEngineSwitchManifestCommitment{},
 			errors.New("DNS engine rollback evidence manifest is not canonical")
 	}
-	if !initialBINDInstallRollbackEvidenceScope(manifest) {
+	if !initialDNSEngineInstallRollbackEvidenceScope(manifest) {
 		return mutationpayload.DNSEngineSwitchManifestCommitment{},
-			errors.New("DNS engine rollback evidence is outside the supported initial BIND install scope")
+			errors.New("DNS engine rollback evidence is outside the supported initial DNS engine install scope")
 	}
 	return manifest, nil
 }
@@ -88,6 +92,71 @@ func initialBINDInstallRollbackEvidenceScope(
 		manifest.TargetEngine == transport.DNSEngineBIND &&
 		manifest.TargetEpoch == 1 &&
 		frozenTopology
+}
+
+// initialDNSEngineInstallRollbackEvidenceScope widens the initial BIND scope
+// (Decision B, 2026-09-30) to every first install the setup wizard and the
+// engine card can start whose rollback ends with the target stopped as
+// rollback standby: BIND as paired secondary, and PowerDNS standalone or as
+// paired secondary. The fresh paired PowerDNS primary (V3) keeps its own
+// recovery and is inside only while its product gate is open
+// (freshPairedPDNSPrimaryRollbackEvidenceScope); with the gate closed, as
+// shipped, it stays outside.
+//
+// İlk BIND kapsamını, geri alınması hedefi durmuş yedek olarak bırakan her ilk
+// kuruluma genişletir: eşli ikincil BIND, tek başına ya da eşli ikincil
+// PowerDNS. Eşli PowerDNS birincili (V3) yalnız ürün kapısı açıkken kapsama
+// girer; kapı kapalıyken dışarıda kalır.
+func initialDNSEngineInstallRollbackEvidenceScope(
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) bool {
+	if initialBINDInstallRollbackEvidenceScope(manifest) {
+		return true
+	}
+	if manifest.Mode != transport.DNSEngineSwitchModeSwitch ||
+		manifest.SourceEngine != "" || manifest.SourceEpoch != 0 ||
+		manifest.TargetEpoch != 1 {
+		return false
+	}
+	standalone := manifest.Topology == transport.DNSTopologyStandalone &&
+		manifest.PairRole == "" && manifest.LocalIP == "" &&
+		manifest.LocalNS == "" && manifest.PeerIP == "" &&
+		manifest.PeerNS == ""
+	secondary := manifest.Topology == transport.DNSTopologyPaired &&
+		manifest.PairRole == transport.DNSPairRoleSecondary &&
+		manifest.LocalIP != "" && manifest.LocalNS != "" &&
+		manifest.PeerIP != "" && manifest.PeerNS != ""
+	switch manifest.TargetEngine {
+	case transport.DNSEngineBIND:
+		return secondary
+	case transport.DNSEnginePowerDNS:
+		return standalone || secondary ||
+			freshPairedPDNSPrimaryRollbackEvidenceScope(manifest, pdnsFreshPairedPrimaryGateOpen)
+	}
+	return false
+}
+
+// freshPairedPDNSPrimaryRollbackEvidenceScope admits the fresh paired
+// PowerDNS primary (V3) only while its product gate is open, so a build that
+// cannot start that install never proves its rollback either. Its evidence
+// is the same as every other first install: no switch journal (the V3
+// pre-start inverse retires it only after the rolled-back checkpoint; a
+// started target keeps it, forward only), no engine state, the exact
+// install-ownership receipt, and the target stopped as rollback standby.
+//
+// Eşli PowerDNS birincilinin ilk kurulumu, yalnız ürün kapısı açıkken geri
+// alma kanıtı kapsamındadır; kanıt diğer ilk kurulumlarla aynıdır.
+func freshPairedPDNSPrimaryRollbackEvidenceScope(
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	gateOpen bool,
+) bool {
+	return gateOpen &&
+		manifest.Topology == transport.DNSTopologyPaired &&
+		manifest.PairRole == transport.DNSPairRolePrimary &&
+		manifest.LocalIP != "" && manifest.LocalNS != "" &&
+		manifest.PeerIP != "" && manifest.PeerNS != "" &&
+		!pdnsPairedPrimarySwitchPausedWithGate(manifest, gateOpen) &&
+		!bindSourcePDNSSwitchUnsupported(manifest)
 }
 
 func exactFailedDNSEngineEvidenceJob(
@@ -198,6 +267,7 @@ func classifyDNSEngineRollbackHostEvidence(
 	if err != nil {
 		return transport.DNSEngineRollbackUnverified, err
 	}
+	host.RefuseRestoredTakeover = manifest.PairRole == transport.DNSPairRoleSecondary
 	if installExists &&
 		(validateDNSEngineInstallOwnership(install) != nil ||
 			!exactDNSEngineInstallEvidence(install, request, manifest) ||
@@ -234,9 +304,12 @@ func classifyDNSEngineRollbackHostEvidenceWithin(
 func verifiedDNSEngineRollbackTargetHost(
 	target transport.DNSEngine,
 ) (dnsEngineRollbackTargetHost, error) {
+	if target == transport.DNSEnginePowerDNS {
+		return verifiedPowerDNSRollbackTargetHost()
+	}
 	if target != transport.DNSEngineBIND {
 		return dnsEngineRollbackTargetHost{},
-			errors.New("rollback evidence is supported only for sealed BIND targets")
+			errors.New("rollback evidence is supported only for sealed BIND or stopped PowerDNS targets")
 	}
 	profile, err := verifiedHostProfileForAnyFamily()
 	if err != nil {
@@ -322,11 +395,53 @@ func verifyDNSEngineRollbackTargetSealWithOps(
 	return nil
 }
 
+func verifiedPowerDNSRollbackTargetHost() (dnsEngineRollbackTargetHost, error) {
+	profile, err := verifiedHostProfileForAnyFamily()
+	if err != nil {
+		return dnsEngineRollbackTargetHost{}, err
+	}
+	if profile.PackageManager != hostplatform.PackageManagerAPT {
+		return dnsEngineRollbackTargetHost{},
+			errors.New("PowerDNS rollback evidence host profile is unsupported")
+	}
+	packages, err := managedDNSEnginePackagesForProfile(profile, transport.DNSEnginePowerDNS)
+	if err != nil {
+		return dnsEngineRollbackTargetHost{}, err
+	}
+	systemctl, err := executableForProfile(
+		profile, string(profile.PackageManager), "systemctl",
+	)
+	if err != nil {
+		return dnsEngineRollbackTargetHost{}, err
+	}
+	return dnsEngineRollbackTargetHost{
+		PackageManager: profile.PackageManager,
+		Packages:       packages,
+		Systemctl:      systemctl,
+	}, nil
+}
+
+// verifyPowerDNSRollbackTargetStopped is the first-install stopped-target
+// proof the PowerDNS rollback itself runs before it restores the database:
+// pdns.service absent, under the package guard's persistent mask, or loaded;
+// inactive/dead with zero main and control PIDs and an empty cgroup; no public
+// port-53 listener and only the resolver stub locally; read twice.
+func verifyPowerDNSRollbackTargetStopped(ctx context.Context, systemctl string) error {
+	proof := hostPDNSRollbackStoppedProofOps(systemctl)
+	proof.freshSource = true
+	proofCtx, cancel := context.WithTimeout(ctx, dnsRuntimeInspectionTimeout)
+	defer cancel()
+	return verifyPDNSStoppedBeforeDatabaseRestoreWithOps(proofCtx, proof)
+}
+
 func verifyDNSEngineRollbackTargetSeal(
 	ctx context.Context,
 	target transport.DNSEngine,
 	host dnsEngineRollbackTargetHost,
 ) error {
+	if target == transport.DNSEnginePowerDNS && host.Systemctl != "" && len(host.Packages) != 0 {
+		return verifyPowerDNSRollbackTargetStopped(ctx, host.Systemctl)
+	}
 	if target != transport.DNSEngineBIND ||
 		host.Systemctl == "" || len(host.Packages) == 0 {
 		return errors.New("rollback evidence target host identity is invalid")
@@ -338,6 +453,9 @@ func verifyDNSEngineRollbackTargetSeal(
 			)
 		},
 		restored: func() error {
+			if host.RefuseRestoredTakeover {
+				return errors.New("a paired-secondary first install has no running restored state")
+			}
 			return verifyRestoredUnmanagedRunningBINDTarget(ctx, host.Systemctl)
 		},
 	})

@@ -1,0 +1,43 @@
+2026-09-30T04:15:29.625940+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-09-30T04:15:29.652100+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-09-30T04:15:29.738109+00:00 dns-arch panel[7264]: 2026/09/30 04:15:29 Starting CelikPanel Backend...
+2026-09-30T04:15:29.746981+00:00 dns-arch panel[7264]: 2026/09/30 04:15:29 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-09-30T04:15:29.748118+00:00 dns-arch panel[7264]: 2026/09/30 04:15:29 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-09-30T04:15:29.748701+00:00 dns-arch panel[7264]: 2026/09/30 04:15:29 Connected to Agent RPC; preparing normal management access
+2026-09-30T04:15:29.772239+00:00 dns-arch panel[7264]: 2026/09/30 04:15:29 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-arch": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-09-30T04:15:29.774515+00:00 dns-arch panel[7264]: 2026/09/30 04:15:29 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-09-30T04:15:29.775833+00:00 dns-arch panel[7264]: 2026/09/30 04:15:29 Panel ready on :2083 (HTTPS)
+2026-09-30T04:15:30.667688+00:00 dns-arch systemd[1]: Stopping CelikPanel web panel...
+2026-09-30T04:15:30.680119+00:00 dns-arch systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-09-30T04:15:30.680500+00:00 dns-arch systemd[1]: Stopped CelikPanel web panel.
+2026-09-30T04:15:30.680900+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 181ms CPU time over 1.054s wall clock time, 76M memory peak.
+2026-09-30T04:15:30.763082+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-09-30T04:15:30.792267+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-09-30T04:15:30.881802+00:00 dns-arch panel[7329]: 2026/09/30 04:15:30 Starting CelikPanel Backend...
+2026-09-30T04:15:30.888787+00:00 dns-arch panel[7329]: 2026/09/30 04:15:30 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-09-30T04:15:30.889430+00:00 dns-arch panel[7329]: 2026/09/30 04:15:30 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-09-30T04:15:30.890024+00:00 dns-arch panel[7329]: 2026/09/30 04:15:30 Connected to Agent RPC; preparing normal management access
+2026-09-30T04:15:30.899323+00:00 dns-arch panel[7329]: 2026/09/30 04:15:30 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-arch": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-09-30T04:15:30.902942+00:00 dns-arch panel[7329]: 2026/09/30 04:15:30 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-09-30T04:15:30.903384+00:00 dns-arch panel[7329]: 2026/09/30 04:15:30 Panel ready on :2083 (HTTPS)
+2026-09-30T04:15:32.446771+00:00 dns-arch systemd[1]: Stopping CelikPanel web panel...
+2026-09-30T04:15:32.873558+00:00 dns-arch systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-09-30T04:15:32.873826+00:00 dns-arch systemd[1]: Stopped CelikPanel web panel.
+2026-09-30T04:15:32.875172+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 211ms CPU time over 2.110s wall clock time, 80.2M memory peak.
+-- Boot d4b011b1c4674ce9a0d43fddfd07e19f --
+2026-09-30T04:15:49.205030+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-09-30T04:15:49.236844+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-09-30T04:15:49.362480+00:00 dns-arch panel[420]: 2026/09/30 04:15:49 Starting CelikPanel Backend...
+2026-09-30T04:15:49.378876+00:00 dns-arch panel[420]: 2026/09/30 04:15:49 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-09-30T04:15:49.379871+00:00 dns-arch panel[420]: 2026/09/30 04:15:49 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-09-30T04:15:49.380555+00:00 dns-arch panel[420]: 2026/09/30 04:15:49 Connected to Agent RPC; preparing normal management access
+2026-09-30T04:15:49.391111+00:00 dns-arch panel[420]: 2026/09/30 04:15:49 certificate startup reconcile: staged lineages: agent RPC platform identity is unavailable: Agent.ReconcileSiteCertLineages: read HostPlatform: detect host platform: systemd is not ready: systemd state "starting" exited with status 1
+2026-09-30T04:15:49.398228+00:00 dns-arch panel[420]: 2026/09/30 04:15:49 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: agent RPC platform identity is unavailable: Agent.SyncMailTLSV2: read HostPlatform: detect host platform: systemd is not ready: systemd state "starting" exited with status 1; preserve pending outbox: <nil>
+2026-09-30T04:15:49.400312+00:00 dns-arch panel[420]: 2026/09/30 04:15:49 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-09-30T04:15:49.402287+00:00 dns-arch panel[420]: 2026/09/30 04:15:49 Panel ready on :2083 (HTTPS)
+2026-09-30T04:17:05.919934+00:00 dns-arch panel[420]: 2026/09/30 04:17:05 http: TLS handshake error from 127.0.0.1:46282: EOF
+2026-09-30T04:17:06.587653+00:00 dns-arch panel[420]: 2026/09/30 04:17:06 http: TLS handshake error from 127.0.0.1:46320: EOF
+2026-09-30T04:17:24.527259+00:00 dns-arch panel[420]: 2026/09/30 04:17:24 http: TLS handshake error from 127.0.0.1:51014: EOF
+2026-09-30T04:17:25.633198+00:00 dns-arch panel[420]: 2026/09/30 04:17:25 http: TLS handshake error from 127.0.0.1:51076: EOF
+2026-09-30T04:17:39.848026+00:00 dns-arch panel[420]: 2026/09/30 04:17:39 http: TLS handshake error from 127.0.0.1:33140: EOF
+2026-09-30T04:17:55.194176+00:00 dns-arch panel[420]: 2026/09/30 04:17:55 http: TLS handshake error from 127.0.0.1:55952: EOF

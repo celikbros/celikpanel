@@ -1,0 +1,19 @@
+### 2026-09-29T15:30:00.679Z start-cell c11-bindsec-bindpri bind__target-verified__after-write__paired-secondary__peer-reachable node=debian13 other=arch fixture=uninitialized prep=prepare-bind enroll=0 root=/var/tmp/cp-b6a-0929 peer=bind format=bind flags=--reboot-after-recovery --disable-management-before-reboot
+### 2026-09-29T15:30:00.681Z prepare
+### 2026-09-29T15:30:02.060Z early-admission-dry-run
+### 2026-09-29T15:30:02.329Z start
+### 2026-09-29T15:30:02.606Z wait-ssh
+### 2026-09-29T15:31:01.424Z guest-identity
+### 2026-09-29T15:31:02.124Z install
+### 2026-09-29T15:31:11.405Z prepare-bind
+### 2026-09-29T15:32:08.712Z pre-run-snapshot
+### 2026-09-29T15:32:38.517Z start-peer-dns-sampler
+Running as unit: cp-b6a-peerloop.service; invocation ID: a0289da4408a4fbba4f462db901daf53
+peerloop start rc=0
+### 2026-09-29T15:32:39.065Z start-watcher
+Running as unit: cp-b6a-watch.service; invocation ID: 3c9029ccaeb34f5e89172d5d75001125
+### 2026-09-29T15:32:39.786Z prepared-ok
+### 2026-09-29T15:32:39.791Z run-prepared-dry-run flags=--reboot-after-recovery --disable-management-before-reboot
+### 2026-09-29T15:32:39.910Z run-prepared
+RUN_PREPARED_RC=0
+### 2026-09-29T15:34:56.005Z done-run rc=0

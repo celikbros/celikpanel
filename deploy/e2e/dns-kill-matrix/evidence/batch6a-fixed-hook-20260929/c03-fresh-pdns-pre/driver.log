@@ -1,0 +1,17 @@
+### 2026-09-29T14:49:35.110Z start-cell c03-fresh-pdns-pre pdns-switch__target-staged__after-write__standalone__peer-reachable node=debian13 other=arch fixture=uninitialized prep=prepare-pdns-switch enroll=1 root=/var/tmp/cp-b6a-0929 peer=none format=none flags=--reboot-after-recovery
+### 2026-09-29T14:49:35.112Z prepare
+### 2026-09-29T14:49:36.016Z early-admission-dry-run
+### 2026-09-29T14:49:36.126Z start
+### 2026-09-29T14:49:36.354Z wait-ssh
+### 2026-09-29T14:50:33.031Z guest-identity
+### 2026-09-29T14:50:33.755Z install
+### 2026-09-29T14:50:44.556Z enroll-recovery-runtime
+### 2026-09-29T14:50:51.283Z prepare-pdns-switch
+### 2026-09-29T14:50:52.212Z pre-run-snapshot
+### 2026-09-29T14:51:54.075Z start-watcher
+Running as unit: cp-b6a-watch.service; invocation ID: 0c6a59b32f054f02814b92115ef82f4c
+### 2026-09-29T14:51:54.851Z prepared-ok
+### 2026-09-29T14:51:54.857Z run-prepared-dry-run flags=--reboot-after-recovery
+### 2026-09-29T14:51:54.958Z run-prepared
+RUN_PREPARED_RC=0
+### 2026-09-29T14:53:32.609Z done-run rc=0

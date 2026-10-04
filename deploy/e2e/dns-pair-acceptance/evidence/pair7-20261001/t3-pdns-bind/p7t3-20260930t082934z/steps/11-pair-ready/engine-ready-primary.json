@@ -1,0 +1,37 @@
+{
+  "active_engine": "pdns",
+  "dnssec_zone_count": 0,
+  "engine_epoch": 1,
+  "engines": [
+    {
+      "id": "pdns",
+      "installed": true,
+      "managed": true,
+      "running": true,
+      "status": "active"
+    },
+    {
+      "id": "bind",
+      "installed": false,
+      "managed": false,
+      "running": false,
+      "status": "available"
+    }
+  ],
+  "operation": {
+    "id": "dcd384f760d231fa2ffd5212e708e3d7",
+    "phase": "committed",
+    "request_id": "39c024b54145014b02b79bc53b59217c",
+    "started_at": "2026-09-30T08:31:52Z",
+    "status": "succeeded",
+    "target_engine": "pdns",
+    "updated_at": "2026-09-30T08:32:07Z"
+  },
+  "pair_ready": true,
+  "pair_role": "primary",
+  "pending_zone_count": 0,
+  "revision": 3,
+  "state": "ready",
+  "topology": "paired",
+  "zone_count": 0
+}

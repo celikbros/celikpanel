@@ -1,0 +1,24 @@
+85fe7a6214b489135f03c4278d6f426eae7a3a927b588b531293daea78d0b81e  /root/oi-smstatus
+{
+  "observed_at": "2026-09-29T21:04:27.200316296Z",
+  "request_id": "c59b537aac13c590e71b4682a88ed7b1",
+  "response": {
+    "job": {
+      "request_id": "c59b537aac13c590e71b4682a88ed7b1",
+      "owner_id": "2496117f5d511eeb130aeb15040de678",
+      "kind": "dns_engine_switch",
+      "target": "pdns",
+      "package_name": "dns-engine-switch/v1:sha256:8c27f70fec9a59c5a3a0dcdc3c7ab32355ab11fc4ebfe3028e3a74ff4e55e5c5",
+      "status": "failed",
+      "phase": "interrupted",
+      "attempt": 1,
+      "started_at": "2026-09-29T21:03:36.950187196Z",
+      "updated_at": "2026-09-29T21:03:50.861557194Z",
+      "lease_expires_at": "0001-01-01T00:00:00Z",
+      "deadline_at": "2026-09-29T21:48:36.950187196Z",
+      "finished_at": "2026-09-29T21:03:50.861557194Z",
+      "error_code": "dns_native_recovery_unknown_after_restart",
+      "error_message": "The first install of PowerDNS as the paired primary found that the PowerDNS database is not as this install wrote it (an administrator edit, PowerDNS behaviour CelikPanel has not measured, or a file it could not read). CelikPanel kept that change and neither continued nor undid the install. The PowerDNS service is running on this server now (systemd); that alone does not prove it answers correctly. The operation's journal and the PowerDNS database are kept and block new DNS changes; other server changes can continue. Next step: the server administrator reviews that change and runs /usr/libexec/celikpanel/recovery dns-switch-status --quiesced --request-id c59b537aac13c590e71b4682a88ed7b1. Restarting the Agent retries the same operation only when the change is back as the install wrote it; otherwise contact support with request id c59b537aac13c590e71b4682a88ed7b1."
+    }
+  }
+}

@@ -1,0 +1,11 @@
+2026-10-01T21:14:05.995960+00:00 dns-ubuntu systemd[1]: Starting packagekit.service - PackageKit Daemon...
+2026-10-01T21:14:06.011923+00:00 dns-ubuntu PackageKit[4920]: daemon start
+2026-10-01T21:14:06.068537+00:00 dns-ubuntu systemd[1]: Started packagekit.service - PackageKit Daemon.
+2026-10-01T21:14:32.113145+00:00 dns-ubuntu systemd[1]: Stopping packagekit.service - PackageKit Daemon...
+2026-10-01T21:14:32.122039+00:00 dns-ubuntu systemd[1]: packagekit.service: Deactivated successfully.
+2026-10-01T21:14:32.122389+00:00 dns-ubuntu systemd[1]: Stopped packagekit.service - PackageKit Daemon.
+2026-10-01T21:14:32.130767+00:00 dns-ubuntu systemd[1]: Starting packagekit.service - PackageKit Daemon...
+2026-10-01T21:14:32.141714+00:00 dns-ubuntu PackageKit[5168]: daemon start
+2026-10-01T21:14:32.180878+00:00 dns-ubuntu systemd[1]: Started packagekit.service - PackageKit Daemon.
+2026-10-01T21:25:57.468857+00:00 dns-ubuntu PackageKit[5168]: daemon quit
+2026-10-01T21:25:57.474226+00:00 dns-ubuntu systemd[1]: packagekit.service: Deactivated successfully.

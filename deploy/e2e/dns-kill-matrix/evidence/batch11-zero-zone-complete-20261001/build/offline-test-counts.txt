@@ -1,0 +1,6 @@
+Offline harness and trigger tests, run from git archive 542ccc8e (/root/cp-b11-src) before any guest started (build/build.log, build/test-counts-per-module.log).
+Python, each test file run directly: 471 (the build loop printed 463 plus "ran=?" for test_native_pdns_peer.py, whose last output line is its own JSON; run directly it reports "Ran 8 tests ... OK").
+Python, unittest discover: 472 OK; per module (python3 -m unittest MODULE): 472. Difference: test_guest_recovery_probe.py (16 direct, 17 as a module), as in batches 9 and 10.
+test_zone_lifecycle_recover.py: 13; test_native_pdns_bind_peer.py: 8.
+Trigger (go test -count=1 -v ./cmd/dns-kill-matrix-trigger): 60 top-level PASS, 0 FAIL, 0 SKIP.
+Web: npm ci + npm run build exit 0; 105 files in web-dist.sha256.

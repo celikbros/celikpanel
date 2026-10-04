@@ -1,0 +1,50 @@
+Oct 02 21:48:04 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+Oct 02 21:48:04 dns-debian13 systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+Oct 02 21:48:08 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+Oct 02 21:48:11 dns-debian13 release-recovery[41563]: Recovery dispatch admitted: attempt=1 snapshot=20261002T214634Z-from-unknown-to-47c0b4c2d68ae75258a36dad469c2a41758e1e1c-bdfb0ae70a07c2aa995131904ff003f4
+Oct 02 21:48:20 dns-debian13 release-recovery[42043]: CELIKPANEL_UPDATE_CHECKPOINT database_verified_before_start
+Oct 02 21:49:26 dns-debian13 release-recovery[42043]: !! pending update panel did not stay running and answer on its own address
+Oct 02 21:49:26 dns-debian13 release-recovery[42043]: !! Pending update finalization failed; marker preserved and both coordinators stopped.
+Oct 02 21:49:26 dns-debian13 release-recovery[42043]: !! Bekleyen güncelleme sonuçlandırması başarısız; marker korundu ve iki koordinatör durduruldu.
+Oct 02 21:49:26 dns-debian13 release-recovery[41563]: Automatic recovery attempt 1 of 3 did not finish; the native timer admits the next attempt for this same operation. No owner action is needed yet.
+Oct 02 21:49:26 dns-debian13 release-recovery[41563]: Otomatik kurtarma denemesi 1/3 tamamlanmadı; yerel zamanlayıcı aynı işlem için sonraki denemeyi başlatır. Henüz kullanıcı işlemi gerekmiyor.
+Oct 02 21:49:26 dns-debian13 release-recovery[41563]: !! release recovery child failed with status 1
+Oct 02 21:49:26 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Main process exited, code=exited, status=1/FAILURE
+Oct 02 21:49:26 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Failed with result 'exit-code'.
+Oct 02 21:49:26 dns-debian13 systemd[1]: Failed to start celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+Oct 02 21:49:26 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Consumed 17.422s CPU time, 29.4M memory peak.
+Oct 02 21:49:56 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+Oct 02 21:49:57 dns-debian13 release-recovery[45567]: Recovery dispatch admitted: attempt=2 snapshot=20261002T214634Z-from-unknown-to-47c0b4c2d68ae75258a36dad469c2a41758e1e1c-bdfb0ae70a07c2aa995131904ff003f4
+Oct 02 21:50:04 dns-debian13 release-recovery[45943]: CELIKPANEL_UPDATE_CHECKPOINT database_verified_before_start
+Oct 02 21:51:07 dns-debian13 release-recovery[45943]: !! pending update panel did not stay running and answer on its own address
+Oct 02 21:51:07 dns-debian13 release-recovery[45943]: !! Pending update finalization failed; marker preserved and both coordinators stopped.
+Oct 02 21:51:07 dns-debian13 release-recovery[45943]: !! Bekleyen güncelleme sonuçlandırması başarısız; marker korundu ve iki koordinatör durduruldu.
+Oct 02 21:51:07 dns-debian13 release-recovery[45567]: Automatic recovery attempt 2 of 3 did not finish; the native timer admits the next attempt for this same operation. No owner action is needed yet.
+Oct 02 21:51:07 dns-debian13 release-recovery[45567]: Otomatik kurtarma denemesi 2/3 tamamlanmadı; yerel zamanlayıcı aynı işlem için sonraki denemeyi başlatır. Henüz kullanıcı işlemi gerekmiyor.
+Oct 02 21:51:07 dns-debian13 release-recovery[45567]: !! release recovery child failed with status 1
+Oct 02 21:51:07 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Main process exited, code=exited, status=1/FAILURE
+Oct 02 21:51:07 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Failed with result 'exit-code'.
+Oct 02 21:51:07 dns-debian13 systemd[1]: Failed to start celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+Oct 02 21:51:07 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Consumed 10.743s CPU time, 28.6M memory peak.
+Oct 02 21:51:37 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+Oct 02 21:51:39 dns-debian13 release-recovery[49517]: Recovery dispatch admitted: attempt=3 snapshot=20261002T214634Z-from-unknown-to-47c0b4c2d68ae75258a36dad469c2a41758e1e1c-bdfb0ae70a07c2aa995131904ff003f4
+Oct 02 21:51:45 dns-debian13 release-recovery[49900]: CELIKPANEL_UPDATE_CHECKPOINT database_verified_before_start
+Oct 02 21:52:49 dns-debian13 release-recovery[49900]: !! pending update panel did not stay running and answer on its own address
+Oct 02 21:52:49 dns-debian13 release-recovery[49900]: !! Pending update finalization failed; marker preserved and both coordinators stopped.
+Oct 02 21:52:49 dns-debian13 release-recovery[49900]: !! Bekleyen güncelleme sonuçlandırması başarısız; marker korundu ve iki koordinatör durduruldu.
+Oct 02 21:52:50 dns-debian13 release-recovery[49517]: Automatic certificate renewal (Certbot) was returned to its state from before the update while this operation waits; the retry pauses it again before it continues.
+Oct 02 21:52:50 dns-debian13 release-recovery[49517]: Otomatik sertifika yenileme (Certbot) bu işlem beklerken güncellemeden önceki durumuna döndürüldü; yeniden deneme devam etmeden önce onu yeniden duraklatır.
+Oct 02 21:52:50 dns-debian13 release-recovery[49517]: The last admitted recovery attempt did not finish. The next run of the recovery timer records the pause and prints the one-time retry command for this operation.
+Oct 02 21:52:50 dns-debian13 release-recovery[49517]: İzin verilen son kurtarma denemesi tamamlanmadı. Kurtarma zamanlayıcısının sonraki çalışması duraklamayı kaydeder ve bu işlem için tek seferlik yeniden deneme komutunu yazdırır.
+Oct 02 21:52:50 dns-debian13 release-recovery[49517]: !! release recovery child failed with status 1
+Oct 02 21:52:50 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Main process exited, code=exited, status=1/FAILURE
+Oct 02 21:52:50 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Failed with result 'exit-code'.
+Oct 02 21:52:50 dns-debian13 systemd[1]: Failed to start celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+Oct 02 21:52:50 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Consumed 12.161s CPU time, 26.7M memory peak.
+Oct 02 21:53:20 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+Oct 02 21:53:21 dns-debian13 release-recovery[53815]: Automatic recovery paused after three admitted attempts. No recovery child was started. Preserve evidence and inspect the recovery service journal.
+Oct 02 21:53:21 dns-debian13 release-recovery[53815]: Otomatik kurtarma, izin verilen üç denemeden sonra durdu. Kurtarma alt işlemi başlatılmadı. Kanıtları koruyun ve kurtarma servisi günlüğünü inceleyin.
+Oct 02 21:53:21 dns-debian13 release-recovery[53815]: After resolving the cause, the owner may authorize one same-snapshot retry: sudo /usr/libexec/celikpanel/recovery recover --retry --snapshot 20261002T214634Z-from-unknown-to-47c0b4c2d68ae75258a36dad469c2a41758e1e1c-bdfb0ae70a07c2aa995131904ff003f4
+Oct 02 21:53:21 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+Oct 02 21:53:21 dns-debian13 systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+Oct 02 21:53:21 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Consumed 1.212s CPU time, 13.1M memory peak.

@@ -1,0 +1,235 @@
+2026-09-29T16:34:52.890797+00:00 dns-arch systemd[1]: Started Internet domain name server.
+2026-09-29T16:34:52.908504+00:00 dns-arch named[8851]: starting BIND 9.20.29 (Stable Release) <id:c3d4465>
+2026-09-29T16:34:52.908545+00:00 dns-arch named[8851]: running on Linux x86_64 7.1.8-arch1-3 #1 SMP PREEMPT_DYNAMIC Tue, 11 Aug 2026 09:16:08 +0000 (Arch Linux)
+2026-09-29T16:34:52.908549+00:00 dns-arch named[8851]: built with  '--prefix=/usr' '--sysconfdir=/etc' '--sbindir=/usr/bin' '--localstatedir=/var' '--disable-static' '--enable-fixed-rrset' '--enable-full-report' '--with-maxminddb' '--with-openssl' '--with-libidn2' '--with-json-c' '--with-libxml2' '--with-lmdb' 'CFLAGS=-march=x86-64 -mtune=generic -O2 -pipe -fno-plt -fexceptions         -Wp,-D_FORTIFY_SOURCE=3 -Wformat -Werror=format-security         -fstack-clash-protection -fcf-protection         -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -g -ffile-prefix-map=/build/bind/src=/usr/src/debug/bind -flto=auto -DDIG_SIGCHASE' 'LDFLAGS=-Wl,-O1 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now          -Wl,-z,pack-relative-relocs -flto=auto'
+2026-09-29T16:34:52.908552+00:00 dns-arch named[8851]: running as: named -f -u named
+2026-09-29T16:34:52.908554+00:00 dns-arch named[8851]: compiled by GCC 16.2.1 20260810
+2026-09-29T16:34:52.908556+00:00 dns-arch named[8851]: compiled with OpenSSL version: OpenSSL 3.6.4 25 Aug 2026
+2026-09-29T16:34:52.908559+00:00 dns-arch named[8851]: linked to OpenSSL version: OpenSSL 3.6.4 25 Aug 2026
+2026-09-29T16:34:52.908562+00:00 dns-arch named[8851]: compiled with libuv version: 1.52.1
+2026-09-29T16:34:52.908569+00:00 dns-arch named[8851]: linked to libuv version: 1.52.1
+2026-09-29T16:34:52.908571+00:00 dns-arch named[8851]: compiled with liburcu version: 0.15.7
+2026-09-29T16:34:52.908573+00:00 dns-arch named[8851]: compiled with jemalloc version: 5.3.1
+2026-09-29T16:34:52.908576+00:00 dns-arch named[8851]: compiled with libnghttp2 version: 1.70.0
+2026-09-29T16:34:52.908583+00:00 dns-arch named[8851]: linked to libnghttp2 version: 1.70.0
+2026-09-29T16:34:52.908585+00:00 dns-arch named[8851]: compiled with libxml2 version: 2.15.4
+2026-09-29T16:34:52.908588+00:00 dns-arch named[8851]: linked to libxml2 version: 21504-GITv2.15.4
+2026-09-29T16:34:52.908590+00:00 dns-arch named[8851]: compiled with json-c version: 0.19
+2026-09-29T16:34:52.908595+00:00 dns-arch named[8851]: linked to json-c version: 0.19
+2026-09-29T16:34:52.908597+00:00 dns-arch named[8851]: compiled with zlib version: 1.3.2
+2026-09-29T16:34:52.908600+00:00 dns-arch named[8851]: linked to zlib version: 1.3.2
+2026-09-29T16:34:52.908602+00:00 dns-arch named[8851]: linked to maxminddb version: 1.14.1
+2026-09-29T16:34:52.908605+00:00 dns-arch named[8851]: ----------------------------------------------------
+2026-09-29T16:34:52.908607+00:00 dns-arch named[8851]: BIND 9 is maintained by Internet Systems Consortium,
+2026-09-29T16:34:52.908609+00:00 dns-arch named[8851]: Inc. (ISC), a non-profit 501(c)(3) public-benefit
+2026-09-29T16:34:52.908611+00:00 dns-arch named[8851]: corporation.  Support and training for BIND 9 are
+2026-09-29T16:34:52.908613+00:00 dns-arch named[8851]: available at https://www.isc.org/support
+2026-09-29T16:34:52.908615+00:00 dns-arch named[8851]: ----------------------------------------------------
+2026-09-29T16:34:52.908619+00:00 dns-arch named[8851]: adjusted limit on open files from 1024 to 524288
+2026-09-29T16:34:52.908622+00:00 dns-arch named[8851]: found 2 CPUs, using 2 worker threads
+2026-09-29T16:34:52.910356+00:00 dns-arch named[8851]: DNSSEC algorithms: RSASHA1 NSEC3RSASHA1 RSASHA256 RSASHA512 ECDSAP256SHA256 ECDSAP384SHA384 ED25519 ED448
+2026-09-29T16:34:52.910387+00:00 dns-arch named[8851]: DS algorithms: SHA-1 SHA-256 SHA-384
+2026-09-29T16:34:52.910392+00:00 dns-arch named[8851]: HMAC algorithms: HMAC-MD5 HMAC-SHA1 HMAC-SHA224 HMAC-SHA256 HMAC-SHA384 HMAC-SHA512
+2026-09-29T16:34:52.910419+00:00 dns-arch named[8851]: TKEY mode 2 support (Diffie-Hellman): no
+2026-09-29T16:34:52.910445+00:00 dns-arch named[8851]: TKEY mode 3 support (GSS-API): yes
+2026-09-29T16:34:52.914052+00:00 dns-arch named[8851]: the initial working directory is '/'
+2026-09-29T16:34:52.914081+00:00 dns-arch named[8851]: loading configuration from '/etc/named.conf'
+2026-09-29T16:34:52.914114+00:00 dns-arch named[8851]: the working directory is now '/var/named'
+2026-09-29T16:34:52.914240+00:00 dns-arch named[8851]: looking for GeoIP2 databases in '/usr/share/GeoIP'
+2026-09-29T16:34:52.914333+00:00 dns-arch named[8851]: using default UDP/IPv4 port range: [32768, 60999]
+2026-09-29T16:34:52.914390+00:00 dns-arch named[8851]: using default UDP/IPv6 port range: [32768, 60999]
+2026-09-29T16:34:52.914802+00:00 dns-arch named[8851]: listening on IPv4 interface lo, 127.0.0.1#53
+2026-09-29T16:34:52.914949+00:00 dns-arch named[8851]: listening on IPv4 interface mgmt0, 10.0.2.15#53
+2026-09-29T16:34:52.915087+00:00 dns-arch named[8851]: listening on IPv4 interface peer0, 192.0.2.11#53
+2026-09-29T16:34:52.915164+00:00 dns-arch named[8851]: IPv6 socket API is incomplete; explicitly binding to each IPv6 address separately
+2026-09-29T16:34:52.915174+00:00 dns-arch named[8851]: listening on IPv6 interface lo, ::1#53
+2026-09-29T16:34:52.915276+00:00 dns-arch named[8851]: listening on IPv6 interface mgmt0, fec0::5054:ff:fe13:11#53
+2026-09-29T16:34:52.915355+00:00 dns-arch named[8851]: listening on IPv6 interface mgmt0, fe80::5054:ff:fe13:11%2#53
+2026-09-29T16:34:52.915457+00:00 dns-arch named[8851]: listening on IPv6 interface peer0, fe80::5054:ff:fe53:11%3#53
+2026-09-29T16:34:52.915647+00:00 dns-arch named[8851]: Disabling periodic interface re-scans timer
+2026-09-29T16:34:52.915707+00:00 dns-arch named[8851]: generating session key for dynamic DNS
+2026-09-29T16:34:52.916807+00:00 dns-arch named[8851]: loading NZD configs from '_default.nzd' for view '_default'
+2026-09-29T16:34:52.917154+00:00 dns-arch named[8851]: using built-in root key for view _default
+2026-09-29T16:34:52.917222+00:00 dns-arch named[8851]: set up managed keys zone for view _default, file 'managed-keys.bind'
+2026-09-29T16:34:52.918609+00:00 dns-arch named[8851]: configuring command channel from '/etc/rndc.key'
+2026-09-29T16:34:52.918669+00:00 dns-arch named[8851]: command channel listening on 127.0.0.1#953
+2026-09-29T16:34:52.918674+00:00 dns-arch named[8851]: configuring command channel from '/etc/rndc.key'
+2026-09-29T16:34:52.918695+00:00 dns-arch named[8851]: command channel listening on ::1#953
+2026-09-29T16:34:52.918920+00:00 dns-arch named[8851]: managed-keys-zone: loaded serial 0
+2026-09-29T16:34:52.919080+00:00 dns-arch named[8851]: zone 0.0.127.in-addr.arpa/IN: loaded serial 42
+2026-09-29T16:34:52.919131+00:00 dns-arch named[8851]: zone 1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa/IN: loaded serial 42
+2026-09-29T16:34:52.919185+00:00 dns-arch named[8851]: zone localhost/IN: loaded serial 42
+2026-09-29T16:34:52.919240+00:00 dns-arch named[8851]: all zones loaded
+2026-09-29T16:34:52.959420+00:00 dns-arch named[8851]: FIPS mode is disabled
+2026-09-29T16:34:52.959430+00:00 dns-arch named[8851]: running
+2026-09-29T16:34:52.960166+00:00 dns-arch named[8851]: network unreachable resolving './DNSKEY/IN': 2801:1b8:10::b#53
+2026-09-29T16:34:52.960243+00:00 dns-arch named[8851]: network unreachable resolving './NS/IN': 2801:1b8:10::b#53
+2026-09-29T16:34:52.960482+00:00 dns-arch named[8851]: network unreachable resolving './DNSKEY/IN': 2001:500:2::c#53
+2026-09-29T16:34:52.960543+00:00 dns-arch named[8851]: network unreachable resolving './NS/IN': 2001:500:2::c#53
+2026-09-29T16:34:52.960738+00:00 dns-arch named[8851]: network unreachable resolving './DNSKEY/IN': 2001:503:c27::2:30#53
+2026-09-29T16:34:52.960789+00:00 dns-arch named[8851]: network unreachable resolving './NS/IN': 2001:500:2f::f#53
+2026-09-29T16:34:52.961076+00:00 dns-arch named[8851]: network unreachable resolving './DNSKEY/IN': 2001:500:2f::f#53
+2026-09-29T16:34:52.961157+00:00 dns-arch named[8851]: network unreachable resolving './NS/IN': 2001:503:c27::2:30#53
+2026-09-29T16:34:52.961383+00:00 dns-arch named[8851]: network unreachable resolving './DNSKEY/IN': 2001:500:12::d0d#53
+2026-09-29T16:34:52.961454+00:00 dns-arch named[8851]: network unreachable resolving './NS/IN': 2001:500:12::d0d#53
+2026-09-29T16:34:52.961557+00:00 dns-arch named[8851]: network unreachable resolving './DNSKEY/IN': 2001:500:1::53#53
+2026-09-29T16:34:52.961592+00:00 dns-arch named[8851]: network unreachable resolving './NS/IN': 2001:500:1::53#53
+2026-09-29T16:34:52.961704+00:00 dns-arch named[8851]: network unreachable resolving './DNSKEY/IN': 2001:503:ba3e::2:30#53
+2026-09-29T16:34:52.961756+00:00 dns-arch named[8851]: network unreachable resolving './NS/IN': 2001:503:ba3e::2:30#53
+2026-09-29T16:34:52.961839+00:00 dns-arch named[8851]: zone catalog-c000020a.celikpanel.invalid/IN: Transfer started.
+2026-09-29T16:34:52.961915+00:00 dns-arch named[8851]: network unreachable resolving './DNSKEY/IN': 2001:7fd::1#53
+2026-09-29T16:34:52.961946+00:00 dns-arch named[8851]: network unreachable resolving './NS/IN': 2001:7fd::1#53
+2026-09-29T16:34:52.962052+00:00 dns-arch named[8851]: network unreachable resolving './DNSKEY/IN': 2001:7fe::53#53
+2026-09-29T16:34:52.962138+00:00 dns-arch named[8851]: network unreachable resolving './NS/IN': 2001:7fe::53#53
+2026-09-29T16:34:52.962332+00:00 dns-arch named[8851]: 0x7fc293915a00: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: connected using 192.0.2.10#53
+2026-09-29T16:34:52.962372+00:00 dns-arch named[8851]: network unreachable resolving './DNSKEY/IN': 2001:dc3::35#53
+2026-09-29T16:34:52.962487+00:00 dns-arch named[8851]: network unreachable resolving './NS/IN': 2001:dc3::35#53
+2026-09-29T16:34:52.962571+00:00 dns-arch named[8851]: network unreachable resolving './DNSKEY/IN': 2001:500:a8::e#53
+2026-09-29T16:34:52.962662+00:00 dns-arch named[8851]: network unreachable resolving './NS/IN': 2001:500:a8::e#53
+2026-09-29T16:34:52.962772+00:00 dns-arch named[8851]: network unreachable resolving './DNSKEY/IN': 2001:500:2d::d#53
+2026-09-29T16:34:52.962883+00:00 dns-arch named[8851]: network unreachable resolving './NS/IN': 2001:500:2d::d#53
+2026-09-29T16:34:52.962985+00:00 dns-arch named[8851]: network unreachable resolving './DNSKEY/IN': 2001:500:9f::42#53
+2026-09-29T16:34:52.963066+00:00 dns-arch named[8851]: network unreachable resolving './NS/IN': 2001:500:9f::42#53
+2026-09-29T16:34:53.005027+00:00 dns-arch named[8851]: zone catalog-c000020a.celikpanel.invalid/IN: transferred serial 1790699611
+2026-09-29T16:34:53.005040+00:00 dns-arch named[8851]: 0x7fc293915a00: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer status: success
+2026-09-29T16:34:53.005045+00:00 dns-arch named[8851]: 0x7fc293915a00: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer completed: 3 messages, 5 records, 365 bytes, 0.042 secs (8690 bytes/sec) (serial 1790699611)
+2026-09-29T16:34:53.005050+00:00 dns-arch named[8851]: catz: catalog-c000020a.celikpanel.invalid: reload start
+2026-09-29T16:34:53.005098+00:00 dns-arch named[8851]: catz: updating catalog zone 'catalog-c000020a.celikpanel.invalid' with serial 1790699611
+2026-09-29T16:34:53.005125+00:00 dns-arch named[8851]: catz: adding zone 's1-kill.test' from catalog 'catalog-c000020a.celikpanel.invalid' - success
+2026-09-29T16:34:53.005251+00:00 dns-arch named[8851]: network unreachable resolving './DNSKEY/IN': 2001:7fd::1#53
+2026-09-29T16:34:53.007266+00:00 dns-arch named[8851]: catz: catalog-c000020a.celikpanel.invalid: reload done: success
+2026-09-29T16:34:53.007463+00:00 dns-arch named[8851]: network unreachable resolving './DNSKEY/IN': 2001:500:2f::f#53
+2026-09-29T16:34:53.007678+00:00 dns-arch named[8851]: network unreachable resolving './DNSKEY/IN': 2001:dc3::35#53
+2026-09-29T16:34:53.007851+00:00 dns-arch named[8851]: network unreachable resolving './DNSKEY/IN': 2001:500:2::c#53
+2026-09-29T16:34:53.008089+00:00 dns-arch named[8851]: zone s1-kill.test/IN: Transfer started.
+2026-09-29T16:34:53.008514+00:00 dns-arch named[8851]: 0x7fc293915a00: transfer of 's1-kill.test/IN' from 192.0.2.10#53: connected using 192.0.2.10#53
+2026-09-29T16:34:53.053009+00:00 dns-arch named[8851]: zone s1-kill.test/IN: transferred serial 2026083101
+2026-09-29T16:34:53.053020+00:00 dns-arch named[8851]: 0x7fc293915a00: transfer of 's1-kill.test/IN' from 192.0.2.10#53: Transfer status: success
+2026-09-29T16:34:53.053025+00:00 dns-arch named[8851]: 0x7fc293915a00: transfer of 's1-kill.test/IN' from 192.0.2.10#53: Transfer completed: 3 messages, 7 records, 313 bytes, 0.044 secs (7113 bytes/sec) (serial 2026083101)
+2026-09-29T16:34:53.053044+00:00 dns-arch named[8851]: zone s1-kill.test/IN: sending notifies (serial 2026083101)
+2026-09-29T16:34:53.083847+00:00 dns-arch named[8851]: managed-keys-zone: Initializing automatic trust anchor management for zone '.'; DNSKEY ID 20326 is now trusted, waiving the normal 30-day waiting period.
+2026-09-29T16:34:53.083896+00:00 dns-arch named[8851]: managed-keys-zone: Initializing automatic trust anchor management for zone '.'; DNSKEY ID 38696 is now trusted, waiving the normal 30-day waiting period.
+2026-09-29T16:35:29.945363+00:00 dns-arch named[8851]: no longer listening on 127.0.0.1#53
+2026-09-29T16:35:29.951283+00:00 dns-arch named[8851]: no longer listening on 10.0.2.15#53
+2026-09-29T16:35:29.951332+00:00 dns-arch named[8851]: no longer listening on 192.0.2.11#53
+2026-09-29T16:35:29.951977+00:00 dns-arch named[8851]: no longer listening on ::1#53
+2026-09-29T16:35:29.952653+00:00 dns-arch named[8851]: no longer listening on fec0::5054:ff:fe13:11#53
+2026-09-29T16:35:29.952697+00:00 dns-arch named[8851]: no longer listening on fe80::5054:ff:fe13:11%2#53
+2026-09-29T16:35:29.952740+00:00 dns-arch named[8851]: no longer listening on fe80::5054:ff:fe53:11%3#53
+2026-09-29T16:35:29.952780+00:00 dns-arch named[8851]: stopping command channel on 127.0.0.1#953
+2026-09-29T16:35:29.952794+00:00 dns-arch named[8851]: stopping command channel on ::1#953
+2026-09-29T16:35:29.952811+00:00 dns-arch named[8851]: shutting down
+2026-09-29T16:35:29.941198+00:00 dns-arch systemd[1]: Stopping Internet domain name server...
+2026-09-29T16:35:29.985310+00:00 dns-arch named[8851]: exiting
+2026-09-29T16:35:30.361586+00:00 dns-arch systemd[1]: named.service: Deactivated successfully.
+2026-09-29T16:35:30.361808+00:00 dns-arch systemd[1]: Stopped Internet domain name server.
+-- Boot 2367c89a1523463185132fede3653047 --
+2026-09-29T16:35:45.930894+00:00 dns-arch systemd[1]: Started Internet domain name server.
+2026-09-29T16:35:46.003708+00:00 dns-arch named[365]: starting BIND 9.20.29 (Stable Release) <id:c3d4465>
+2026-09-29T16:35:46.004040+00:00 dns-arch named[365]: running on Linux x86_64 7.2.7-arch1-1 #1 SMP PREEMPT_DYNAMIC Mon, 21 Sep 2026 18:51:14 +0000 (Arch Linux)
+2026-09-29T16:35:46.004073+00:00 dns-arch named[365]: built with  '--prefix=/usr' '--sysconfdir=/etc' '--sbindir=/usr/bin' '--localstatedir=/var' '--disable-static' '--enable-fixed-rrset' '--enable-full-report' '--with-maxminddb' '--with-openssl' '--with-libidn2' '--with-json-c' '--with-libxml2' '--with-lmdb' 'CFLAGS=-march=x86-64 -mtune=generic -O2 -pipe -fno-plt -fexceptions         -Wp,-D_FORTIFY_SOURCE=3 -Wformat -Werror=format-security         -fstack-clash-protection -fcf-protection         -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -g -ffile-prefix-map=/build/bind/src=/usr/src/debug/bind -flto=auto -DDIG_SIGCHASE' 'LDFLAGS=-Wl,-O1 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now          -Wl,-z,pack-relative-relocs -flto=auto'
+2026-09-29T16:35:46.004076+00:00 dns-arch named[365]: running as: named -f -u named
+2026-09-29T16:35:46.004078+00:00 dns-arch named[365]: compiled by GCC 16.2.1 20260810
+2026-09-29T16:35:46.004080+00:00 dns-arch named[365]: compiled with OpenSSL version: OpenSSL 3.6.4 25 Aug 2026
+2026-09-29T16:35:46.004083+00:00 dns-arch named[365]: linked to OpenSSL version: OpenSSL 3.6.4 25 Aug 2026
+2026-09-29T16:35:46.004086+00:00 dns-arch named[365]: compiled with libuv version: 1.52.1
+2026-09-29T16:35:46.004092+00:00 dns-arch named[365]: linked to libuv version: 1.52.1
+2026-09-29T16:35:46.004094+00:00 dns-arch named[365]: compiled with liburcu version: 0.15.7
+2026-09-29T16:35:46.004119+00:00 dns-arch named[365]: compiled with jemalloc version: 5.3.1
+2026-09-29T16:35:46.004123+00:00 dns-arch named[365]: compiled with libnghttp2 version: 1.70.0
+2026-09-29T16:35:46.004130+00:00 dns-arch named[365]: linked to libnghttp2 version: 1.70.0
+2026-09-29T16:35:46.004133+00:00 dns-arch named[365]: compiled with libxml2 version: 2.15.4
+2026-09-29T16:35:46.004135+00:00 dns-arch named[365]: linked to libxml2 version: 21504-GITv2.15.4
+2026-09-29T16:35:46.004138+00:00 dns-arch named[365]: compiled with json-c version: 0.19
+2026-09-29T16:35:46.004142+00:00 dns-arch named[365]: linked to json-c version: 0.19
+2026-09-29T16:35:46.004145+00:00 dns-arch named[365]: compiled with zlib version: 1.3.2
+2026-09-29T16:35:46.004147+00:00 dns-arch named[365]: linked to zlib version: 1.3.2
+2026-09-29T16:35:46.004150+00:00 dns-arch named[365]: linked to maxminddb version: 1.14.1
+2026-09-29T16:35:46.004152+00:00 dns-arch named[365]: ----------------------------------------------------
+2026-09-29T16:35:46.004154+00:00 dns-arch named[365]: BIND 9 is maintained by Internet Systems Consortium,
+2026-09-29T16:35:46.004156+00:00 dns-arch named[365]: Inc. (ISC), a non-profit 501(c)(3) public-benefit
+2026-09-29T16:35:46.004159+00:00 dns-arch named[365]: corporation.  Support and training for BIND 9 are
+2026-09-29T16:35:46.004161+00:00 dns-arch named[365]: available at https://www.isc.org/support
+2026-09-29T16:35:46.004163+00:00 dns-arch named[365]: ----------------------------------------------------
+2026-09-29T16:35:46.004167+00:00 dns-arch named[365]: adjusted limit on open files from 1024 to 524288
+2026-09-29T16:35:46.004169+00:00 dns-arch named[365]: found 2 CPUs, using 2 worker threads
+2026-09-29T16:35:46.005540+00:00 dns-arch named[365]: DNSSEC algorithms: RSASHA1 NSEC3RSASHA1 RSASHA256 RSASHA512 ECDSAP256SHA256 ECDSAP384SHA384 ED25519 ED448
+2026-09-29T16:35:46.005564+00:00 dns-arch named[365]: DS algorithms: SHA-1 SHA-256 SHA-384
+2026-09-29T16:35:46.005568+00:00 dns-arch named[365]: HMAC algorithms: HMAC-MD5 HMAC-SHA1 HMAC-SHA224 HMAC-SHA256 HMAC-SHA384 HMAC-SHA512
+2026-09-29T16:35:46.005571+00:00 dns-arch named[365]: TKEY mode 2 support (Diffie-Hellman): no
+2026-09-29T16:35:46.005573+00:00 dns-arch named[365]: TKEY mode 3 support (GSS-API): yes
+2026-09-29T16:35:46.008919+00:00 dns-arch named[365]: the initial working directory is '/'
+2026-09-29T16:35:46.008945+00:00 dns-arch named[365]: loading configuration from '/etc/named.conf'
+2026-09-29T16:35:46.009997+00:00 dns-arch named[365]: the working directory is now '/var/named'
+2026-09-29T16:35:46.010319+00:00 dns-arch named[365]: looking for GeoIP2 databases in '/usr/share/GeoIP'
+2026-09-29T16:35:46.010457+00:00 dns-arch named[365]: using default UDP/IPv4 port range: [32768, 60999]
+2026-09-29T16:35:46.010528+00:00 dns-arch named[365]: using default UDP/IPv6 port range: [32768, 60999]
+2026-09-29T16:35:46.010902+00:00 dns-arch named[365]: listening on IPv4 interface lo, 127.0.0.1#53
+2026-09-29T16:35:46.011021+00:00 dns-arch named[365]: listening on IPv4 interface mgmt0, 10.0.2.15#53
+2026-09-29T16:35:46.011086+00:00 dns-arch named[365]: listening on IPv4 interface peer0, 192.0.2.11#53
+2026-09-29T16:35:46.011191+00:00 dns-arch named[365]: IPv6 socket API is incomplete; explicitly binding to each IPv6 address separately
+2026-09-29T16:35:46.011201+00:00 dns-arch named[365]: listening on IPv6 interface lo, ::1#53
+2026-09-29T16:35:46.011269+00:00 dns-arch named[365]: listening on IPv6 interface mgmt0, fe80::5054:ff:fe13:11%2#53
+2026-09-29T16:35:46.011352+00:00 dns-arch named[365]: listening on IPv6 interface peer0, fe80::5054:ff:fe53:11%3#53
+2026-09-29T16:35:46.011471+00:00 dns-arch named[365]: Disabling periodic interface re-scans timer
+2026-09-29T16:35:46.011532+00:00 dns-arch named[365]: generating session key for dynamic DNS
+2026-09-29T16:35:46.012525+00:00 dns-arch named[365]: loading NZD configs from '_default.nzd' for view '_default'
+2026-09-29T16:35:46.012828+00:00 dns-arch named[365]: using built-in root key for view _default
+2026-09-29T16:35:46.012897+00:00 dns-arch named[365]: set up managed keys zone for view _default, file 'managed-keys.bind'
+2026-09-29T16:35:46.014161+00:00 dns-arch named[365]: configuring command channel from '/etc/rndc.key'
+2026-09-29T16:35:46.014209+00:00 dns-arch named[365]: command channel listening on 127.0.0.1#953
+2026-09-29T16:35:46.014214+00:00 dns-arch named[365]: configuring command channel from '/etc/rndc.key'
+2026-09-29T16:35:46.014230+00:00 dns-arch named[365]: command channel listening on ::1#953
+2026-09-29T16:35:46.014524+00:00 dns-arch named[365]: managed-keys-zone: loaded serial 2
+2026-09-29T16:35:46.014693+00:00 dns-arch named[365]: zone 0.0.127.in-addr.arpa/IN: loaded serial 42
+2026-09-29T16:35:46.014814+00:00 dns-arch named[365]: zone 1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa/IN: loaded serial 42
+2026-09-29T16:35:46.014905+00:00 dns-arch named[365]: zone localhost/IN: loaded serial 42
+2026-09-29T16:35:46.015075+00:00 dns-arch named[365]: all zones loaded
+2026-09-29T16:35:46.015151+00:00 dns-arch named[365]: FIPS mode is disabled
+2026-09-29T16:35:46.015159+00:00 dns-arch named[365]: running
+2026-09-29T16:35:46.015457+00:00 dns-arch named[365]: network unreachable resolving './DNSKEY/IN': 2001:500:2::c#53
+2026-09-29T16:35:46.015644+00:00 dns-arch named[365]: network unreachable resolving './DNSKEY/IN': 2001:7fd::1#53
+2026-09-29T16:35:46.015687+00:00 dns-arch named[365]: network unreachable resolving './NS/IN': 2001:7fd::1#53
+2026-09-29T16:35:46.015733+00:00 dns-arch named[365]: network unreachable resolving './DNSKEY/IN': 2001:503:ba3e::2:30#53
+2026-09-29T16:35:46.015759+00:00 dns-arch named[365]: network unreachable resolving './NS/IN': 2001:503:ba3e::2:30#53
+2026-09-29T16:35:46.015777+00:00 dns-arch named[365]: network unreachable resolving './DNSKEY/IN': 2001:500:1::53#53
+2026-09-29T16:35:46.015794+00:00 dns-arch named[365]: network unreachable resolving './NS/IN': 2001:500:1::53#53
+2026-09-29T16:35:46.015809+00:00 dns-arch named[365]: network unreachable resolving './DNSKEY/IN': 2001:500:2d::d#53
+2026-09-29T16:35:46.015824+00:00 dns-arch named[365]: network unreachable resolving './NS/IN': 2001:500:2d::d#53
+2026-09-29T16:35:46.015840+00:00 dns-arch named[365]: network unreachable resolving './DNSKEY/IN': 2001:500:a8::e#53
+2026-09-29T16:35:46.015855+00:00 dns-arch named[365]: network unreachable resolving './NS/IN': 2001:500:a8::e#53
+2026-09-29T16:35:46.015870+00:00 dns-arch named[365]: network unreachable resolving './DNSKEY/IN': 2001:7fe::53#53
+2026-09-29T16:35:46.015885+00:00 dns-arch named[365]: network unreachable resolving './NS/IN': 2001:500:12::d0d#53
+2026-09-29T16:35:46.015900+00:00 dns-arch named[365]: network unreachable resolving './DNSKEY/IN': 2001:500:12::d0d#53
+2026-09-29T16:35:46.015915+00:00 dns-arch named[365]: network unreachable resolving './NS/IN': 2001:7fe::53#53
+2026-09-29T16:35:46.015931+00:00 dns-arch named[365]: network unreachable resolving './DNSKEY/IN': 2001:503:c27::2:30#53
+2026-09-29T16:35:46.015951+00:00 dns-arch named[365]: network unreachable resolving './NS/IN': 2001:503:c27::2:30#53
+2026-09-29T16:35:46.015967+00:00 dns-arch named[365]: network unreachable resolving './DNSKEY/IN': 2001:500:2f::f#53
+2026-09-29T16:35:46.015981+00:00 dns-arch named[365]: network unreachable resolving './NS/IN': 2001:500:2f::f#53
+2026-09-29T16:35:46.016026+00:00 dns-arch named[365]: network unreachable resolving './DNSKEY/IN': 2001:dc3::35#53
+2026-09-29T16:35:46.016060+00:00 dns-arch named[365]: network unreachable resolving './NS/IN': 2001:dc3::35#53
+2026-09-29T16:35:46.016078+00:00 dns-arch named[365]: network unreachable resolving './DNSKEY/IN': 2001:500:9f::42#53
+2026-09-29T16:35:46.016093+00:00 dns-arch named[365]: network unreachable resolving './NS/IN': 2001:500:9f::42#53
+2026-09-29T16:35:46.016154+00:00 dns-arch named[365]: network unreachable resolving './DNSKEY/IN': 2801:1b8:10::b#53
+2026-09-29T16:35:46.016172+00:00 dns-arch named[365]: network unreachable resolving './NS/IN': 2801:1b8:10::b#53
+2026-09-29T16:35:46.017479+00:00 dns-arch named[365]: zone catalog-c000020a.celikpanel.invalid/IN: Transfer started.
+2026-09-29T16:35:46.018420+00:00 dns-arch named[365]: 0x7fa9fdd15a00: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: connected using 192.0.2.10#53
+2026-09-29T16:35:46.062205+00:00 dns-arch named[365]: zone catalog-c000020a.celikpanel.invalid/IN: transferred serial 1790699611
+2026-09-29T16:35:46.062245+00:00 dns-arch named[365]: 0x7fa9fdd15a00: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer status: success
+2026-09-29T16:35:46.062252+00:00 dns-arch named[365]: 0x7fa9fdd15a00: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer completed: 3 messages, 5 records, 365 bytes, 0.044 secs (8295 bytes/sec) (serial 1790699611)
+2026-09-29T16:35:46.062260+00:00 dns-arch named[365]: catz: catalog-c000020a.celikpanel.invalid: reload start
+2026-09-29T16:35:46.062313+00:00 dns-arch named[365]: catz: updating catalog zone 'catalog-c000020a.celikpanel.invalid' with serial 1790699611
+2026-09-29T16:35:46.062354+00:00 dns-arch named[365]: catz: adding zone 's1-kill.test' from catalog 'catalog-c000020a.celikpanel.invalid' - success
+2026-09-29T16:35:46.062601+00:00 dns-arch named[365]: catz: catalog-c000020a.celikpanel.invalid: reload done: success
+2026-09-29T16:35:46.063809+00:00 dns-arch named[365]: zone s1-kill.test/IN: Transfer started.
+2026-09-29T16:35:46.064351+00:00 dns-arch named[365]: 0x7fa9fdd15a00: transfer of 's1-kill.test/IN' from 192.0.2.10#53: connected using 192.0.2.10#53
+2026-09-29T16:35:46.106481+00:00 dns-arch named[365]: zone s1-kill.test/IN: transferred serial 2026083101
+2026-09-29T16:35:46.106523+00:00 dns-arch named[365]: 0x7fa9fdd15a00: transfer of 's1-kill.test/IN' from 192.0.2.10#53: Transfer status: success
+2026-09-29T16:35:46.106528+00:00 dns-arch named[365]: 0x7fa9fdd15a00: transfer of 's1-kill.test/IN' from 192.0.2.10#53: Transfer completed: 3 messages, 7 records, 313 bytes, 0.042 secs (7452 bytes/sec) (serial 2026083101)
+2026-09-29T16:35:46.106548+00:00 dns-arch named[365]: zone s1-kill.test/IN: sending notifies (serial 2026083101)
+2026-09-29T16:35:46.201565+00:00 dns-arch named[365]: network unreachable resolving './DNSKEY/IN': 2001:7fd::1#53
+2026-09-29T16:35:46.201620+00:00 dns-arch named[365]: network unreachable resolving './DNSKEY/IN': 2001:7fe::53#53
+2026-09-29T16:35:46.201639+00:00 dns-arch named[365]: network unreachable resolving './DNSKEY/IN': 2801:1b8:10::b#53
+2026-09-29T16:35:46.567687+00:00 dns-arch named[365]: managed-keys-zone: Key 20326 for zone . is now trusted (acceptance timer complete)
+2026-09-29T16:35:46.567737+00:00 dns-arch named[365]: managed-keys-zone: Key 38696 for zone . is now trusted (acceptance timer complete)
+2026-09-29T16:35:47.821659+00:00 dns-arch named[365]: listening on IPv6 interface mgmt0, fec0::5054:ff:fe13:11#53

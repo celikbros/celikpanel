@@ -1,0 +1,69 @@
+{
+  "outcome": "response",
+  "panel": "arch",
+  "purpose": null,
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:28444"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/domains/1/deletion-status"
+  },
+  "response": {
+    "elapsed_seconds": 0.016,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Wed, 30 Sep 2026 06:15:09 GMT"
+      ],
+      [
+        "Content-Length",
+        "308"
+      ]
+    ],
+    "json": {
+      "message": "The DNS change is saved, but its private peer challenge cannot be reconciled. This server's administrator must review the retained challenge and exact operation record; only then retry this same publication.",
+      "reason": "dns_peer_journal_unknown",
+      "stage": "dns_cleanup",
+      "status": "deletion_pending"
+    },
+    "status": 200,
+    "text": null
+  }
+}

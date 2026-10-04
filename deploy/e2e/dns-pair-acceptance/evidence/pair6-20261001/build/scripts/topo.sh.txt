@@ -1,0 +1,17 @@
+#!/bin/bash
+# usage: topo.sh TOPOLOGY PRIMARY LABEL [extra flags]
+set -uo pipefail
+topology=$1; primary=$2; label=$3; shift 3
+B=/root/cp-pair6
+export CELIKPANEL_REPO=$B/driver CELIKPANEL_PAIR_ROOT=/var/tmp/cp-pair6-work CELIKPANEL_PAIR_EVIDENCE=/var/tmp/cp-pair6-evidence
+D=/var/tmp/cp-pair6-dist/e50fe50a07746ee6f9cd7dea80b95ccd8999256c-acceptance-license/dist.json
+echo "prepare start $(date -u +%FT%TZ)"
+bash $B/scripts-run/prepare-guests.sh "$topology" "$primary" "$label" > $B/logs/$label-prepare.log 2>&1
+rc=$?
+echo "prepare end $(date -u +%FT%TZ) rc=$rc"
+[[ $rc -eq 0 ]] || exit $rc
+echo "run start $(date -u +%FT%TZ)"
+bash $B/scripts-run/run-topology.sh "$topology" "$primary" "$label" "$D" --license-mode acceptance-fixture "$@" > $B/logs/$label-run.log 2>&1
+rc=$?
+echo "run end $(date -u +%FT%TZ) rc=$rc"
+echo DONE

@@ -1,0 +1,154 @@
+wall=2026-09-29T16:37:45.415730572Z boot_id=2367c89a-1523-4631-8513-2fede3653047
+== named.service
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+MainPID=365
+ExecMainStartTimestamp=Tue 2026-09-29 16:35:45 UTC
+== bind9.service
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+MainPID=0
+ExecMainStartTimestamp=
+== pdns.service
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+MainPID=0
+ExecMainStartTimestamp=
+== celikpanel-agent.service
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=disabled
+MainPID=0
+ExecMainStartTimestamp=
+== celikpanel-panel.service
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=disabled
+MainPID=0
+ExecMainStartTimestamp=
+== ss 53
+udp UNCONN 0      0                         192.0.2.11:53 0.0.0.0:* users:(("named",pid=365,fd=28))
+udp UNCONN 0      0                         192.0.2.11:53 0.0.0.0:* users:(("named",pid=365,fd=27))
+udp UNCONN 0      0                          10.0.2.15:53 0.0.0.0:* users:(("named",pid=365,fd=24))
+udp UNCONN 0      0                          10.0.2.15:53 0.0.0.0:* users:(("named",pid=365,fd=23))
+udp UNCONN 0      0                          127.0.0.1:53 0.0.0.0:* users:(("named",pid=365,fd=18))
+udp UNCONN 0      0                          127.0.0.1:53 0.0.0.0:* users:(("named",pid=365,fd=17))
+udp UNCONN 0      0                         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=261,fd=24))
+udp UNCONN 0      0                      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=261,fd=22))
+udp UNCONN 0      0                              [::1]:53    [::]:* users:(("named",pid=365,fd=31))
+udp UNCONN 0      0                              [::1]:53    [::]:* users:(("named",pid=365,fd=32))
+udp UNCONN 0      0      [fe80::5054:ff:fe13:11]%mgmt0:53    [::]:* users:(("named",pid=365,fd=35))
+udp UNCONN 0      0      [fe80::5054:ff:fe13:11]%mgmt0:53    [::]:* users:(("named",pid=365,fd=36))
+udp UNCONN 0      0      [fe80::5054:ff:fe53:11]%peer0:53    [::]:* users:(("named",pid=365,fd=39))
+udp UNCONN 0      0      [fe80::5054:ff:fe53:11]%peer0:53    [::]:* users:(("named",pid=365,fd=40))
+udp UNCONN 0      0            [fec0::5054:ff:fe13:11]:53    [::]:* users:(("named",pid=365,fd=49))
+udp UNCONN 0      0            [fec0::5054:ff:fe13:11]:53    [::]:* users:(("named",pid=365,fd=50))
+tcp LISTEN 0      10                        192.0.2.11:53 0.0.0.0:* users:(("named",pid=365,fd=30))
+tcp LISTEN 0      10                        192.0.2.11:53 0.0.0.0:* users:(("named",pid=365,fd=29))
+tcp LISTEN 0      4096                      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=261,fd=25))
+tcp LISTEN 0      10                         127.0.0.1:53 0.0.0.0:* users:(("named",pid=365,fd=21))
+tcp LISTEN 0      10                         127.0.0.1:53 0.0.0.0:* users:(("named",pid=365,fd=19))
+tcp LISTEN 0      10                         10.0.2.15:53 0.0.0.0:* users:(("named",pid=365,fd=26))
+tcp LISTEN 0      10                         10.0.2.15:53 0.0.0.0:* users:(("named",pid=365,fd=25))
+tcp LISTEN 0      4096                   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=261,fd=23))
+tcp LISTEN 0      10     [fe80::5054:ff:fe13:11]%mgmt0:53    [::]:* users:(("named",pid=365,fd=37))
+tcp LISTEN 0      10     [fe80::5054:ff:fe13:11]%mgmt0:53    [::]:* users:(("named",pid=365,fd=38))
+tcp LISTEN 0      10           [fec0::5054:ff:fe13:11]:53    [::]:* users:(("named",pid=365,fd=54))
+tcp LISTEN 0      10           [fec0::5054:ff:fe13:11]:53    [::]:* users:(("named",pid=365,fd=55))
+tcp LISTEN 0      10                             [::1]:53    [::]:* users:(("named",pid=365,fd=33))
+tcp LISTEN 0      10                             [::1]:53    [::]:* users:(("named",pid=365,fd=34))
+tcp LISTEN 0      10     [fe80::5054:ff:fe53:11]%peer0:53    [::]:* users:(("named",pid=365,fd=41))
+tcp LISTEN 0      10     [fe80::5054:ff:fe53:11]%peer0:53    [::]:* users:(("named",pid=365,fd=42))
+== rndc status
+rndc: neither /etc/rndc.conf nor /etc/rndc.key was found
+== rndc zonestatus catalog-c000020b.celikpanel.invalid
+rndc: neither /etc/rndc.conf nor /etc/rndc.key was found
+== rndc showzone catalog-c000020b.celikpanel.invalid
+rndc: neither /etc/rndc.conf nor /etc/rndc.key was found
+== rndc zonestatus s1-kill.test
+rndc: neither /etc/rndc.conf nor /etc/rndc.key was found
+== rndc showzone s1-kill.test
+rndc: neither /etc/rndc.conf nor /etc/rndc.key was found
+== named-checkconf -l
+localhost IN _default master
+0.0.127.in-addr.arpa IN _default master
+1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa IN _default master
+catalog-c000020a.celikpanel.invalid IN _default secondary
+== managed BIND files (/var/cache/bind, no follow)
+find: '/var/cache/bind': No such file or directory
+== managed BIND files (/var/named, Arch, no follow)
+drwxrwx--T root:named 208 2026-09-29T16:36:12.6130000000 /var/named -> 
+-rw-r----- root:named 466 2026-09-16T14:52:07.0000000000 /var/named/127.0.0.zone -> 
+-rw------- named:named 8192 2026-09-29T16:34:52.9157385660 /var/named/_default.nzd -> 
+drwxr-xr-x root:root 36 2026-09-29T16:34:49.7975538580 /var/named/celikpanel -> 
+lrwxrwxrwx root:root 76 2026-09-29T16:34:49.7845525260 /var/named/celikpanel/current -> generations/f21a3e7ad2fd1cb7acd2fc96005d553d0833ea2a3cb59a6f9bba76b2d6f2b227
+drwxr-xr-x root:root 128 2026-09-29T16:34:43.1217854660 /var/named/celikpanel/generations -> 
+dr-xr-xr-x root:root 54 2026-09-29T16:34:43.0807801810 /var/named/celikpanel/generations/f21a3e7ad2fd1cb7acd2fc96005d553d0833ea2a3cb59a6f9bba76b2d6f2b227 -> 
+-r--r--r-- root:root 652 2026-09-29T16:34:43.0807801810 /var/named/celikpanel/generations/f21a3e7ad2fd1cb7acd2fc96005d553d0833ea2a3cb59a6f9bba76b2d6f2b227/receipt.json -> 
+dr-xr-xr-x root:root 0 2026-09-29T16:34:42.9967693280 /var/named/celikpanel/generations/f21a3e7ad2fd1cb7acd2fc96005d553d0833ea2a3cb59a6f9bba76b2d6f2b227/zones -> 
+-r--r--r-- root:root 239 2026-09-29T16:34:43.0077707720 /var/named/celikpanel/generations/f21a3e7ad2fd1cb7acd2fc96005d553d0833ea2a3cb59a6f9bba76b2d6f2b227/zones.conf -> 
+-rw-r----- root:named 506 2026-09-16T14:52:07.0000000000 /var/named/localhost.ip6.zone -> 
+-rw-r----- root:named 517 2026-09-16T14:52:07.0000000000 /var/named/localhost.zone -> 
+-rw-r--r-- named:named 1411 2026-09-29T16:36:12.5860448660 /var/named/managed-keys.bind -> 
+-rw-r--r-- named:named 2590 2026-09-29T16:35:46.5790000000 /var/named/managed-keys.bind.jnl -> 
+== secondary zone files (regular files under /var/cache/bind), metadata, hash, text
+== PowerDNS database absent
+== pdns journal (transfer/notify/catalog lines, all boots)
+== named journal (transfer/notify/catalog/zone lines, all boots)
+2026-09-29T16:34:52.917222+00:00 dns-arch named[8851]: set up managed keys zone for view _default, file 'managed-keys.bind'
+2026-09-29T16:34:52.918920+00:00 dns-arch named[8851]: managed-keys-zone: loaded serial 0
+2026-09-29T16:34:52.919080+00:00 dns-arch named[8851]: zone 0.0.127.in-addr.arpa/IN: loaded serial 42
+2026-09-29T16:34:52.919131+00:00 dns-arch named[8851]: zone 1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa/IN: loaded serial 42
+2026-09-29T16:34:52.919185+00:00 dns-arch named[8851]: zone localhost/IN: loaded serial 42
+2026-09-29T16:34:52.919240+00:00 dns-arch named[8851]: all zones loaded
+2026-09-29T16:34:52.961839+00:00 dns-arch named[8851]: zone catalog-c000020a.celikpanel.invalid/IN: Transfer started.
+2026-09-29T16:34:52.962332+00:00 dns-arch named[8851]: 0x7fc293915a00: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: connected using 192.0.2.10#53
+2026-09-29T16:34:53.005027+00:00 dns-arch named[8851]: zone catalog-c000020a.celikpanel.invalid/IN: transferred serial 1790699611
+2026-09-29T16:34:53.005040+00:00 dns-arch named[8851]: 0x7fc293915a00: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer status: success
+2026-09-29T16:34:53.005045+00:00 dns-arch named[8851]: 0x7fc293915a00: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer completed: 3 messages, 5 records, 365 bytes, 0.042 secs (8690 bytes/sec) (serial 1790699611)
+2026-09-29T16:34:53.005050+00:00 dns-arch named[8851]: catz: catalog-c000020a.celikpanel.invalid: reload start
+2026-09-29T16:34:53.005098+00:00 dns-arch named[8851]: catz: updating catalog zone 'catalog-c000020a.celikpanel.invalid' with serial 1790699611
+2026-09-29T16:34:53.005125+00:00 dns-arch named[8851]: catz: adding zone 's1-kill.test' from catalog 'catalog-c000020a.celikpanel.invalid' - success
+2026-09-29T16:34:53.007266+00:00 dns-arch named[8851]: catz: catalog-c000020a.celikpanel.invalid: reload done: success
+2026-09-29T16:34:53.008089+00:00 dns-arch named[8851]: zone s1-kill.test/IN: Transfer started.
+2026-09-29T16:34:53.008514+00:00 dns-arch named[8851]: 0x7fc293915a00: transfer of 's1-kill.test/IN' from 192.0.2.10#53: connected using 192.0.2.10#53
+2026-09-29T16:34:53.053009+00:00 dns-arch named[8851]: zone s1-kill.test/IN: transferred serial 2026083101
+2026-09-29T16:34:53.053020+00:00 dns-arch named[8851]: 0x7fc293915a00: transfer of 's1-kill.test/IN' from 192.0.2.10#53: Transfer status: success
+2026-09-29T16:34:53.053025+00:00 dns-arch named[8851]: 0x7fc293915a00: transfer of 's1-kill.test/IN' from 192.0.2.10#53: Transfer completed: 3 messages, 7 records, 313 bytes, 0.044 secs (7113 bytes/sec) (serial 2026083101)
+2026-09-29T16:34:53.053044+00:00 dns-arch named[8851]: zone s1-kill.test/IN: sending notifies (serial 2026083101)
+2026-09-29T16:34:53.083847+00:00 dns-arch named[8851]: managed-keys-zone: Initializing automatic trust anchor management for zone '.'; DNSKEY ID 20326 is now trusted, waiving the normal 30-day waiting period.
+2026-09-29T16:34:53.083896+00:00 dns-arch named[8851]: managed-keys-zone: Initializing automatic trust anchor management for zone '.'; DNSKEY ID 38696 is now trusted, waiving the normal 30-day waiting period.
+2026-09-29T16:35:46.012897+00:00 dns-arch named[365]: set up managed keys zone for view _default, file 'managed-keys.bind'
+2026-09-29T16:35:46.014524+00:00 dns-arch named[365]: managed-keys-zone: loaded serial 2
+2026-09-29T16:35:46.014693+00:00 dns-arch named[365]: zone 0.0.127.in-addr.arpa/IN: loaded serial 42
+2026-09-29T16:35:46.014814+00:00 dns-arch named[365]: zone 1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa/IN: loaded serial 42
+2026-09-29T16:35:46.014905+00:00 dns-arch named[365]: zone localhost/IN: loaded serial 42
+2026-09-29T16:35:46.015075+00:00 dns-arch named[365]: all zones loaded
+2026-09-29T16:35:46.017479+00:00 dns-arch named[365]: zone catalog-c000020a.celikpanel.invalid/IN: Transfer started.
+2026-09-29T16:35:46.018420+00:00 dns-arch named[365]: 0x7fa9fdd15a00: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: connected using 192.0.2.10#53
+2026-09-29T16:35:46.062205+00:00 dns-arch named[365]: zone catalog-c000020a.celikpanel.invalid/IN: transferred serial 1790699611
+2026-09-29T16:35:46.062245+00:00 dns-arch named[365]: 0x7fa9fdd15a00: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer status: success
+2026-09-29T16:35:46.062252+00:00 dns-arch named[365]: 0x7fa9fdd15a00: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer completed: 3 messages, 5 records, 365 bytes, 0.044 secs (8295 bytes/sec) (serial 1790699611)
+2026-09-29T16:35:46.062260+00:00 dns-arch named[365]: catz: catalog-c000020a.celikpanel.invalid: reload start
+2026-09-29T16:35:46.062313+00:00 dns-arch named[365]: catz: updating catalog zone 'catalog-c000020a.celikpanel.invalid' with serial 1790699611
+2026-09-29T16:35:46.062354+00:00 dns-arch named[365]: catz: adding zone 's1-kill.test' from catalog 'catalog-c000020a.celikpanel.invalid' - success
+2026-09-29T16:35:46.062601+00:00 dns-arch named[365]: catz: catalog-c000020a.celikpanel.invalid: reload done: success
+2026-09-29T16:35:46.063809+00:00 dns-arch named[365]: zone s1-kill.test/IN: Transfer started.
+2026-09-29T16:35:46.064351+00:00 dns-arch named[365]: 0x7fa9fdd15a00: transfer of 's1-kill.test/IN' from 192.0.2.10#53: connected using 192.0.2.10#53
+2026-09-29T16:35:46.106481+00:00 dns-arch named[365]: zone s1-kill.test/IN: transferred serial 2026083101
+2026-09-29T16:35:46.106523+00:00 dns-arch named[365]: 0x7fa9fdd15a00: transfer of 's1-kill.test/IN' from 192.0.2.10#53: Transfer status: success
+2026-09-29T16:35:46.106528+00:00 dns-arch named[365]: 0x7fa9fdd15a00: transfer of 's1-kill.test/IN' from 192.0.2.10#53: Transfer completed: 3 messages, 7 records, 313 bytes, 0.042 secs (7452 bytes/sec) (serial 2026083101)
+2026-09-29T16:35:46.106548+00:00 dns-arch named[365]: zone s1-kill.test/IN: sending notifies (serial 2026083101)
+2026-09-29T16:35:46.567687+00:00 dns-arch named[365]: managed-keys-zone: Key 20326 for zone . is now trusted (acceptance timer complete)
+2026-09-29T16:35:46.567737+00:00 dns-arch named[365]: managed-keys-zone: Key 38696 for zone . is now trusted (acceptance timer complete)
+== agent journal: catalog/producer lines (all boots)
+2026-09-29T16:34:46.248657+00:00 dns-arch agent[7359]: 2026/09/29 16:34:46 DNS engine change d2f345432a323fbd9f5c5354f491a6cb: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format
+2026-09-29T16:34:56.229388+00:00 dns-arch agent[7359]: 2026/09/29 16:34:56 DNS engine change completion d2f345432a323fbd9f5c5354f491a6cb: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format

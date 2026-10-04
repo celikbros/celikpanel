@@ -1,0 +1,17 @@
+request 2228e0de67c2e95ae9675187f214d1b5 controller 2026-09-29T15:32:40.997349Z -> 2026-09-29T15:34:54.590434Z
+status passed safety passed class target_converged fp 8d7a0cd6
+kill pid 1742 state T at 2026-09-29T15:33:34.273720Z exit 137 reaped True
+marker 2026-09-29T15:33:34.256279154Z journal target-verified d30ac941
+trigger rc 75
+ retry 1 rc 0 dur 0.007925 err None
+ retry 2 rc 0 dur 0.008036 err None
+ probe 1 target_converged 8d7a0cd6 bind | 
+ probe 2 target_converged 8d7a0cd6 bind | 
+stability 31 ok 31 2026-09-29T15:33:37.721421Z 2026-09-29T15:34:07.721545Z
+ reboot {"ordinal": 1, "point": null, "boot_id_before": "a2f2ea33-cce5-45e2-b689-8605673daed0", "boot_id_after": "c3743cfa-d038-41ee-a986-74ff25eb2e87", "product_uuid": "4030e2f9-2fb9-5e6b-a287-21bf6b805777"}
+reboot_after_recovery run True status passed failures [] unknown [] window 31 ok 31 dns_only True
+  authority_after_boot {"at": "2026-09-29T15:34:24.242904Z", "authority": {"answer_counts": {"tcp": 1, "udp": 1}, "answered": true, "engines": {"tcp": ["bind"], "udp": ["bind"]}}, "dns": {"answered": true, "at": "2026-09-29T15:34:24.283527Z", "result": {"tcp": {"additional": 2, "answers": 1, "authority": 2, "bytes": 118, "flags": 33792, "questions": 1, "transport": "tcp"}, "udp": {"additional": 2, "answers": 1, "authori
+  mgmt disabled true
+ status-read after-recovery: available=False rc=None mutated=None :: 
+ status-read before-recovery: available=False rc=None mutated=None :: 
+fixture_pass_definition {"definition": "paired-secondary", "failures": [], "peer_catalog_format_log": {"expected_agent_name": "BIND", "expected_format": "bind", "failures": [], "log": {"catalog": "catalog-c000020b.celikpanel.invalid", "formats": ["BIND", "BIND", "BIND"], "lines": ["2026/09/29 15:32:41 DNS engine change 2228e0de67c2e95ae9675187f214d1b5: the paired primary at 192.0.2.11 serves catalog catalog-c000020b.celikpanel.invalid in the BIND catalog format; this operation reads it in that format", "2026/09/29 15:33:35 DNS engine change recovery 2228e0de67c2e95ae9675187f214d1b5: the paired primary at 192.0.2.11 serves catalog catalog-c000020b.celikpanel.invalid in the BIND catalog format; this operation reads it in that format", "2026/09/29 15:33:36 DNS engine change completion 2228e0de67c2e95ae9675187f214d1b5: the paired primary at 192.0.2.11 serves catalog catalog-c000020b.celikpanel.invalid in the BIND catalog format; this operation reads it in that format"], "peer_ip": "192.0.2.11", "producer_changed_lines": [], "sources": {"agent_journal": ["/usr/bin/journalctl", "--no-pager", "--quiet", "--output=cat", "--unit=celikpanel-agent.service", "--since=@1790695959"], "tagged_agent_transcript": "/var/lib/celikpanel-dns-kill-matrix/results/bind__target-verified__after-write__paired-secondary__peer-reachable/transcript.jsonl"}, "unknown": []}, "unknown": []}, "secondary_serving": {"failures": [], "primary": {"soa": {"tcp": [2026083101], "udp": [2026083101]}, "www_a": {"tcp": ["192.0.2.11"], "udp": [

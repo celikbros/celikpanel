@@ -29,6 +29,14 @@ import (
 // It installs no panel and does not contact an ACME provider. A temporary CA
 // proves the production file/commit/reload/renewal path against real daemons.
 func TestMailHostCertificateDisposableVMConvergenceAndRenewal(t *testing.T) {
+	exerciseMailHostCertificateVM(t, false)
+}
+
+func TestMailHostCertificateDisposableVMPrepareIndependentRenewal(t *testing.T) {
+	exerciseMailHostCertificateVM(t, true)
+}
+
+func exerciseMailHostCertificateVM(t *testing.T, prepareIndependent bool) {
 	if os.Getenv("CELIKPANEL_DISPOSABLE_MAIL_VM") != "debian13-20260911" {
 		t.Skip("disposable Debian13 VM acceptance only")
 	}
@@ -91,6 +99,13 @@ func TestMailHostCertificateDisposableVMConvergenceAndRenewal(t *testing.T) {
 		if err = os.MkdirAll(dir, 0755); err != nil {
 			t.Fatal(err)
 		}
+		// The Agent fixture runs with its socket-sharing group. Native Certbot
+		// runs as root:root; model that producer rather than weakening reads.
+		for _, owned := range []string{filepath.Dir(dir), dir} {
+			if err = os.Chown(owned, 0, 0); err != nil {
+				t.Fatal(err)
+			}
+		}
 	}
 	issueFixtureSource := func(generation int64) string {
 		t.Helper()
@@ -116,8 +131,14 @@ func TestMailHostCertificateDisposableVMConvergenceAndRenewal(t *testing.T) {
 			if err = os.WriteFile(filepath.Join(archive, name+number+".pem"), data, mode); err != nil {
 				t.Fatal(err)
 			}
+			if err = os.Chown(filepath.Join(archive, name+number+".pem"), 0, 0); err != nil {
+				t.Fatal(err)
+			}
 			temp := filepath.Join(live, "."+name+"-next")
 			if err = os.Symlink("../../archive/"+lineage+"/"+name+number+".pem", temp); err != nil {
+				t.Fatal(err)
+			}
+			if err = os.Lchown(temp, 0, 0); err != nil {
 				t.Fatal(err)
 			}
 			if err = os.Rename(temp, filepath.Join(live, name+".pem")); err != nil {
@@ -194,13 +215,46 @@ func TestMailHostCertificateDisposableVMConvergenceAndRenewal(t *testing.T) {
 		t.Fatal(err)
 	}
 	secondLeaf := issueFixtureSource(2)
+	if prepareIndependent {
+		if _, err := os.Stat(mailHostRenewalPendingPath()); !os.IsNotExist(err) {
+			t.Fatal("fresh independent fixture already has pending work")
+		}
+		t.Logf("independent renewal source prepared; lineage=%s selected=%s source=%s", lineage, firstLeaf, secondLeaf)
+		return
+	}
 	if err = queueMailHostCertificateRenewal(lineage); err != nil {
 		t.Fatal(err)
+	}
+	// Renewal must not re-render accepted native configuration. Content and
+	// mtime both distinguish reload-only activation from a same-byte rewrite.
+	configBefore := make(map[string][]byte)
+	configTimes := make(map[string]time.Time)
+	for _, path := range []string{"/etc/postfix/main.cf", dovecotTLSConf} {
+		raw, e := os.ReadFile(path)
+		if e != nil {
+			t.Fatal(e)
+		}
+		info, e := os.Stat(path)
+		if e != nil {
+			t.Fatal(e)
+		}
+		configBefore[path], configTimes[path] = raw, info.ModTime()
 	}
 	// No panel or license manager participates in unattended renewal.
 	if err = deployPendingMailHostCertificate(); err != nil {
 		t.Fatal(err)
 	}
+	for path, want := range configBefore {
+		raw, e := os.ReadFile(path)
+		if e != nil || string(raw) != string(want) {
+			t.Fatalf("renewal rewrote native configuration %s: %v", path, e)
+		}
+		info, e := os.Stat(path)
+		if e != nil || !info.ModTime().Equal(configTimes[path]) {
+			t.Fatalf("renewal rewrote native file metadata %s: %v", path, e)
+		}
+	}
+	t.Log("renewal preserved native configuration bytes and modification times")
 	assertMailVMListeners(t, domain, secondLeaf)
 	if _, err = os.Stat(mailHostRenewalPendingPath()); !os.IsNotExist(err) {
 		t.Fatalf("completed renewal queue remains: %v", err)
@@ -215,8 +269,16 @@ func TestMailHostCertificateDisposableVMConvergenceAndRenewal(t *testing.T) {
 	t.Logf("renewal exported/reloaded exact second generation without panel/license; leaf=%s", secondLeaf)
 }
 
-func assertMailVMListeners(t *testing.T, domain, leafSHA string) {
+func assertMailVMListeners(t *testing.T, domain string, leafSHAs ...string) {
 	t.Helper()
+	accepted := func(actual string) bool {
+		for _, leaf := range leafSHAs {
+			if actual == leaf {
+				return true
+			}
+		}
+		return false
+	}
 	deadline := time.Now().Add(10 * time.Second)
 	var lastErr error
 	for time.Now().Before(deadline) {
@@ -228,7 +290,7 @@ func assertMailVMListeners(t *testing.T, domain, leafSHA string) {
 		}
 		actual := panelCertificateLeafSHA256(conn.ConnectionState().PeerCertificates[0].Raw)
 		conn.Close()
-		if actual != leafSHA {
+		if !accepted(actual) {
 			lastErr = errMailVMWrongLeaf{}
 			time.Sleep(200 * time.Millisecond)
 			continue
@@ -248,7 +310,8 @@ func assertMailVMListeners(t *testing.T, domain, leafSHA string) {
 		err = client.StartTLS(&tls.Config{ServerName: domain, MinVersion: tls.VersionTLS12})
 		state, ok := client.TLSConnectionState()
 		client.Close()
-		if err == nil && ok && len(state.PeerCertificates) > 0 && panelCertificateLeafSHA256(state.PeerCertificates[0].Raw) == leafSHA {
+		if err == nil && ok && len(state.PeerCertificates) > 0 && accepted(panelCertificateLeafSHA256(state.PeerCertificates[0].Raw)) {
+			t.Logf("native trusted listeners: imap=%s smtp=%s", actual, panelCertificateLeafSHA256(state.PeerCertificates[0].Raw))
 			return
 		}
 		lastErr = err

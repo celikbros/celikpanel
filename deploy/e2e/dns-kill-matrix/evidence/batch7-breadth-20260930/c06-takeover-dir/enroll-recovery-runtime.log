@@ -1,0 +1,3 @@
+dc131f4eee8361b01592e5b5b17d871b9cfd6c35799bc433d6f9be9bed25abe4  /usr/libexec/celikpanel/recovery
+3694af9c4b532126a0743a5aaca4bac1f90ebaf31ba7ffbe65c5ded5e016c22d  /root/celikpanel-recovery-kit-b3637e4a40acbd78/recovery-runtime/runtime.manifest
+{"action": "enroll-recovery-runtime", "cell_id": "bind__target-staged__after-write__standalone__peer-reachable", "launcher": "/usr/libexec/celikpanel/recovery", "node": "debian13", "recovery_kit_sha256": "b3637e4a40acbd78436690f3c0432250ce54cd062da45aaa0ec2510c0a6c9c6c", "required_capability": "celikpanel-bind-source-inverse/v1", "stage": "/var/tmp/celikpanel-dns-kill-bootstrap-e3224bede2eda2ee"}

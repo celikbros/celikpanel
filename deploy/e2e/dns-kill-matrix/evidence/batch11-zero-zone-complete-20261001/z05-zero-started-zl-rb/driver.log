@@ -1,0 +1,39 @@
+### 2026-09-30T05:20:38.649Z start-cell z05-zero-started-zl-rb pdns-switch__target-started__after-write__paired-primary__peer-reachable node=debian13 peer=arch fixture=uninitialized root=/var/tmp/cp-b11-1001/r2 gateprobe=0 flags=--zero-zones --zone-lifecycle --reboot-after-recovery --disable-management-before-reboot
+### 2026-09-30T05:20:38.651Z prepare
+### 2026-09-30T05:20:39.709Z early-admission-dry-run
+### 2026-09-30T05:20:39.819Z start
+### 2026-09-30T05:20:40.124Z wait-ssh
+### 2026-09-30T05:21:46.454Z guest-identity
+### 2026-09-30T05:21:47.389Z install
+### 2026-09-30T05:22:00.581Z enroll-recovery-runtime
+### 2026-09-30T05:22:12.054Z native-bind-secondary-prepare
+### 2026-09-30T05:22:57.101Z secondary-rndc-prerequisite-after-prepare (batch 11 addition: read-only; ls of the key file, :953 listener, named lines; no rndc command, no key content)
+### 2026-09-30T05:22:57.502Z prepare-pdns-switch zero_zones_flag=--zero-zones
+### 2026-09-30T05:22:58.590Z pre-run-snapshot
+### 2026-09-30T05:23:48.294Z start-peer-dns-sampler
+Running as unit: cp-b11-peerloop1.service; invocation ID: 53f7d2c49d0d444c875ccdf7102a7047
+peerloop1 start rc=0
+### 2026-09-30T05:23:49.002Z start-watcher
+Running as unit: cp-b11-watch.service; invocation ID: 44066d16e3ed42aa8d6420394789a908
+### 2026-09-30T05:23:49.709Z start-dbwatch
+Running as unit: cp-b11-dbwatch.service; invocation ID: c8c9fda749bc4c33900defd9e673eba6
+### 2026-09-30T05:23:50.262Z start-ledwatch (batch 10 addition: read-only ledger sampler)
+Running as unit: cp-b11-ledwatch.service; invocation ID: 6615edf2ae4d43f18547b05a88a1d76d
+### 2026-09-30T05:23:51.422Z prepared-ok
+### 2026-09-30T05:23:51.428Z run-prepared-dry-run flags=--zero-zones --zone-lifecycle --reboot-after-recovery --disable-management-before-reboot
+### 2026-09-30T05:23:51.562Z run-prepared
+RUN_PREPARED_RC=2
+### 2026-09-30T05:25:34.057Z done-run rc=2
+### 2026-09-30T05:31:45.102Z resume-dry-run flags=--zero-zones --zone-lifecycle --reboot-after-recovery --disable-management-before-reboot --resume-held-zone-lifecycle
+resume dry rc=0
+boot monitor continues: primary boots 1 (1d18ca8b-91a2-4fcb-b807-cb544b17bb9e ), secondary boots 1 (09b1f948-f96b-4242-a092-2c5f42a3c559 )
+### 2026-09-30T05:31:45.271Z run-prepared-resume python3 deploy/e2e/dns-kill-matrix/guest_bootstrap.py run-prepared --work-root /var/tmp/cp-b11-1001/r2 --cell-id pdns-switch__target-started__after-write__paired-primary__peer-reachable --node debian13 --identity-file /var/tmp/cp-b11-1001/r2/id_ed25519 --source-fixture uninitialized --zero-zones --zone-lifecycle --reboot-after-recovery --disable-management-before-reboot --resume-held-zone-lifecycle --execute
+RESUME_RC=2 elapsed=17.28s start=2026-09-30T05:31:45.273Z end=2026-09-30T05:32:02.555Z
+### 2026-09-30T05:32:04.465Z done-resume rc=2
+### 2026-09-30T05:33:13.801Z extra read-only observations after the pending resume
+### 2026-09-30T05:33:36.059Z capture hold 150s before collect (read-only; samplers running)
+### 2026-09-30T05:36:06.067Z stop ledwatch; collect
+05:32:02.911534258 CHANGE ledger 585816a8d438 -> 787069b26852 agent=5573/active/ :: 88a85ce2 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T05:25:09.137250525Z | bd76b7b0 su
+done
+### 2026-09-30T05:37:51.997Z collect done
+### 2026-09-30T05:38:05.970Z stop guests (fixture.py stop: QMP quit, overlays kept)

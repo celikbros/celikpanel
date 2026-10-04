@@ -123,6 +123,7 @@ func RenderDistroMatrix(lang string) string {
 		"cache":      "Cache",
 		"ftp":        "FTP",
 		"monitoring": "Monitoring",
+		"system":     "System",
 	}
 	if tr {
 		catLabel = map[string]string{
@@ -134,6 +135,7 @@ func RenderDistroMatrix(lang string) string {
 			"cache":      "Önbellek",
 			"ftp":        "FTP",
 			"monitoring": "İzleme",
+			"system":     "Sistem",
 		}
 	}
 	cat := func(c string) string {

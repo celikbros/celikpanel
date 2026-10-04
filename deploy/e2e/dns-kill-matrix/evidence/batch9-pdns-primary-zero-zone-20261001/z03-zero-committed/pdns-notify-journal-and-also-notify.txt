@@ -1,0 +1,37 @@
+wall=2026-09-30T01:12:47.581094638Z boot_id=6d14ac9b-542b-4939-93bf-445e35729758
+== journalctl --list-boots
+IDX BOOT ID                          FIRST ENTRY                 LAST ENTRY
+  0 6d14ac9b542b493993bf445e35729758 Wed 2026-09-30 01:06:32 UTC Wed 2026-09-30 01:12:47 UTC
+== pdns.service journal, all boots, lines matching notify|spurious|failed after retries|does not resolve (case-insensitive)
+2026-09-30T01:09:30.899480+00:00 dns-debian13 pdns_server[3998]: Unable to queue notification of domain 'catalog-c000020a.celikpanel.invalid' to nameserver 'invalid': nameserver does not resolve!
+matching lines: 1
+== pdns.service journal line count (all boots): 44
+== also-notify in /etc/powerdns/pdns.conf and /etc/powerdns/pdns.d/* (case-insensitive, with file and line)
+total 16
+drwxr-xr-x 2 root root 4096 2026-09-30 01:09:28.678845928 +0000 .
+drwxr-xr-x 3 root root 4096 2026-09-30 01:09:25.998813285 +0000 ..
+-rw-r--r-- 1 root root  310 2026-09-30 01:09:28.666845785 +0000 celikpanel-cluster.conf
+-rw-r--r-- 1 root root  216 2026-09-30 01:09:28.670845833 +0000 celikpanel.conf
+/etc/powerdns/pdns.conf:24:# allow-notify-from	Allow AXFR NOTIFY from these IP ranges. If empty, drop all incoming notifies.
+/etc/powerdns/pdns.conf:26:# allow-notify-from=0.0.0.0/0,::/0
+/etc/powerdns/pdns.conf:29:# allow-unsigned-autoprimary	Allow autoprimaries to create zones without TSIG signed NOTIFY
+/etc/powerdns/pdns.conf:34:# allow-unsigned-notify	Allow unsigned notifications for TSIG secured zones
+/etc/powerdns/pdns.conf:36:# allow-unsigned-notify=yes
+/etc/powerdns/pdns.conf:39:# also-notify	When notifying a zone, also notify these nameservers
+/etc/powerdns/pdns.conf:41:# also-notify=
+/etc/powerdns/pdns.conf:274:# forward-notify	IP addresses to forward received notifications to regardless of primary or secondary settings
+/etc/powerdns/pdns.conf:276:# forward-notify=
+/etc/powerdns/pdns.conf:471:# only-notify	Only send AXFR NOTIFY to these IP addresses or netmasks
+/etc/powerdns/pdns.conf:473:# only-notify=0.0.0.0/0,::/0
+/etc/powerdns/pdns.conf:561:# secondary-do-renotify	If this secondary should send out notifications after receiving zone transfers from a primary
+/etc/powerdns/pdns.conf:563:# secondary-do-renotify=no
+/etc/powerdns/pdns.conf:572:# send-signed-notify	Send TSIG secured NOTIFY if TSIG key is configured for a zone
+/etc/powerdns/pdns.conf:574:# send-signed-notify=yes
+/etc/powerdns/pdns.d/celikpanel-cluster.conf:7:also-notify=192.0.2.11
+== domainmetadata (private copy of the database)
+(copy includes the WAL)
+ALSO-NOTIFY rows: []
+all domainmetadata rows:
+   ["catalog-c000020a.celikpanel.invalid", "CATALOG-HASH", "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="]
+domains:
+   [1, "catalog-c000020a.celikpanel.invalid", "PRODUCER", null, "celikpanel-bind-catalog-v1", null, null, 1, null]

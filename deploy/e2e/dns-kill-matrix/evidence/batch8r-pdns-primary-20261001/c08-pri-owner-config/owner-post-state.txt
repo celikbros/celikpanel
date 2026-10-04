@@ -1,0 +1,152 @@
+wall=2026-09-29T23:37:19.866851583Z boot_id=e568c9bb-719d-491f-8eea-6e7f4ecf4924 request_id=dbf9982f7d79645b1cc9ddfa99573f41
+== systemctl show pdns.service
+MainPID=0
+ControlPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+Id=pdns.service
+LoadState=masked
+ActiveState=inactive
+SubState=dead
+FragmentPath=/etc/systemd/system/pdns.service
+UnitFileState=masked
+UnitFilePreset=enabled
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+NeedDaemonReload=no
+LoadError=org.freedesktop.systemd1.UnitMasked "Unit pdns.service is masked."
+InvocationID=
+== systemctl is-enabled pdns.service
+masked
+rc=1
+== systemctl is-active pdns.service
+inactive
+rc=3
+== systemctl show named.service
+MainPID=0
+ControlPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+Id=named.service
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+FragmentPath=
+UnitFileState=
+UnitFilePreset=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+NeedDaemonReload=no
+LoadError=org.freedesktop.systemd1.NoSuchUnit "Unit named.service not found."
+InvocationID=
+== systemctl is-enabled named.service
+not-found
+rc=4
+== systemctl is-active named.service
+inactive
+rc=4
+== systemctl show bind9.service
+MainPID=0
+ControlPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+Id=bind9.service
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+FragmentPath=
+UnitFileState=
+UnitFilePreset=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+NeedDaemonReload=no
+LoadError=org.freedesktop.systemd1.NoSuchUnit "Unit bind9.service not found."
+InvocationID=
+== systemctl is-enabled bind9.service
+not-found
+rc=4
+== systemctl is-active bind9.service
+inactive
+rc=4
+== mask symlinks (persistent and runtime)
+/etc/systemd/system/named.service absent
+/etc/systemd/system/bind9.service absent
+/run/systemd/system/named.service absent
+/run/systemd/system/bind9.service absent
+== named processes
+no named process
+== pdns_server processes
+no pdns_server process
+== journal entry counts
+named.service 0
+bind9.service 0
+== dpkg -l bind9*
+Desired=Unknown/Install/Remove/Purge/Hold
+| Status=Not/Inst/Conf-files/Unpacked/halF-conf/Half-inst/trig-aWait/Trig-pend
+|/ Err?=(none)/Reinst-required (Status,Err: uppercase=bad)
+||/ Name             Version             Architecture Description
++++-================-===================-============-=================================
+ii  bind9-host       1:9.20.26-1~deb13u1 amd64        DNS Lookup Utility
+ii  bind9-libs:amd64 1:9.20.26-1~deb13u1 amd64        Shared Libraries used by BIND 9
+== dpkg -l pdns*
+Desired=Unknown/Install/Remove/Purge/Hold
+| Status=Not/Inst/Conf-files/Unpacked/halF-conf/Half-inst/trig-aWait/Trig-pend
+|/ Err?=(none)/Reinst-required (Status,Err: uppercase=bad)
+||/ Name                 Version          Architecture Description
++++-====================-================-============-===========================================
+un  pdns-backend         <none>           <none>       (no description available)
+un  pdns-backend-bind    <none>           <none>       (no description available)
+ii  pdns-backend-sqlite3 4.9.17-0+deb13u1 amd64        sqlite 3 backend for PowerDNS
+ii  pdns-server          4.9.17-0+deb13u1 amd64        extremely powerful and versatile nameserver
+== dpkg --verify bind9 bind9-utils bind9-libs bind9-host bind9-dnsutils (read-only; no output = unchanged)
+dpkg: package 'bind9' is not installed
+dpkg: package 'bind9-utils' is not installed
+dpkg: package 'bind9-dnsutils' is not installed
+rc=1
+== install-ownership receipt
+ls: cannot access '/var/lib/celikpanel-agent-private/dns-engine-install-ownership-bind.json': No such file or directory
+== /var/cache/bind tree (managed BIND root parent)
+find: ‘/var/cache/bind’: No such file or directory
+== /var/cache/bind file hashes
+== /var/lib/bind tree
+find: ‘/var/lib/bind’: No such file or directory
+== /etc/bind tree
+find: ‘/etc/bind’: No such file or directory
+== /etc/bind file hashes
+== /etc/bind package ownership
+find: ‘/etc/bind’: No such file or directory
+== bind9 conffiles (package md5)
+dpkg-query: no packages found matching bind9
+== md5 of /etc/bind files
+== apt history (bind9 transactions)
+== ss 53
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=366,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=366,fd=18))
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=366,fd=19))
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=366,fd=21))
+== recovery dns-switch-status --quiesced (after owner command and re-run)
+DNS switch request dbf9982f7d79645b1cc9ddfa99573f41: released-undecided-with-journal (journal phase target-staged).
+The Agent held the first install of PowerDNS as the paired primary (journal phase target-staged; the journal records no PowerDNS start) because the PowerDNS configuration was not as the install wrote it. This check finds now: the PowerDNS configuration file /etc/powerdns/pdns.conf is not as the install wrote it. CelikPanel kept that change and neither continued nor undid the install; the journal and the PowerDNS files are kept and block new DNS changes, and other server changes can continue. Next step, for the server owner: either undo that change so it is again exactly as the install wrote it, rerun /usr/libexec/celikpanel/recovery dns-switch-status --quiesced --request-id dbf9982f7d79645b1cc9ddfa99573f41 to confirm that no difference remains, and restart the Agent (systemctl restart celikpanel-agent), which then re-checks this install and undoes it by itself when it proves that PowerDNS never started; or keep the change, keep the journal and contact support with request id dbf9982f7d79645b1cc9ddfa99573f41, because CelikPanel will not overwrite it. This status check changed nothing.
+Frozen native inverse shape: pdns-switch. This classification does not prove worker exclusion, owner authority or safe recovery execution.
+The current DNS state receipt is absent. This alone does not prove that an inverse is safe; preserve the journal and inspect native DNS before recovery.
+The journal and current state both have no source receipt. This is not proof that DNS was rolled back or is healthy; the server owner must inspect native DNS before resuming this operation.
+The switch has no previous DNS engine, so no frozen source ownership receipt is required. Native DNS still needs verification before the operation resumes.
+Native unit pdns.service: load=masked active=inactive unit-file=masked.
+These systemd properties were observed at one instant; they do not prove DNS answers, zone content, owner edits or recovery authority.
+Release and host mutation locks were held; the same evidence bytes and native unit properties matched again after native checks, and the accepted worker was rechecked. Future worker liveness, unobserved DNS answers, owner edits and recovery authority remain unproved.
+STATUS_RC=0
+ac710a863a2f6864eb452fb30f325960ed205397bf1ea899ecccfa8c81c547ef  /tmp/b8-status.out
+== private evidence after status
+total 180
+drwx------  2 root celikpanel  4096 2026-09-29 23:36:44.030640800 +0000 .
+drwxr-xr-x 29 root root        4096 2026-09-29 23:36:40.634583547 +0000 ..
+-rw-r-----  1 pdns pdns       98304 2026-09-29 23:36:43.650634528 +0000 .celikpanel-switch-dbf9982f7d79645b1cc9ddfa99573f41.sqlite3
+-rw-------  1 root celikpanel   430 2026-09-29 23:36:37.494527618 +0000 dns-engine-install-ownership-pdns.json
+-rw-------  1 root celikpanel 65238 2026-09-29 23:36:43.674634924 +0000 dns-engine-switch-journal.json
+-rw-------  1 root celikpanel  2202 2026-09-29 23:36:44.022640671 +0000 service-mutations.json
+0c677041a39ff01d56cf4059df6c3b53a5ee6ffa5337fc04e6936fa7c3a38bf4  dns-engine-install-ownership-pdns.json
+4ae64e889d32138580f735b32f0159b260d47e71c94e97f36d0c009c902a2f71  dns-engine-switch-journal.json
+deca8de20e5f5e0423043f3c6a73fc38c4932ecbfefdbbc031c38dad906e7e53  service-mutations.json

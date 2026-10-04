@@ -1,0 +1,5 @@
+0290fa95e10d13076bb19d0addfaa812dfb09c22dbaf9c0e1d05634eaaffa5e0  /var/tmp/cp-b9-1001/r2/cells/7392457812ac089a866de6ec/fixture-plan.json
+2eb848dc863f9ac2606c93e77a421ce9ec1c60ad3018528b42dea41f5b1a0e09  /var/tmp/cp-b9-1001/r2/cells/7392457812ac089a866de6ec/ssh-known-hosts
+bf503ede1e779982d187f8bdbc2c64cb0b1d9a051c549c7512e3caaf42bc1101  /var/tmp/cp-b9-1001/r2/cells/7392457812ac089a866de6ec/fresh-primary-peer/peer-verdict.json
+6f70ec7bc48ccb0d3b22d31304649f1ec047983e9fb2d06b6393e5e5aafcfbf6  /var/tmp/cp-b9-1001/r2/cells/7392457812ac089a866de6ec/fresh-primary-peer/zone-lifecycle.json
+ccf740ed80abd0ce67981c143ba58cdfd7aed55ba27b4208a0bd9a1bdd1d8ced  /var/tmp/cp-b9-1001/r2/cells/7392457812ac089a866de6ec/fresh-primary-peer/zone-lifecycle-recover.json

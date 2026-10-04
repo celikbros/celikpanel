@@ -1,0 +1,9 @@
+# Native PowerDNS adoption target-verified/before-write trial — 2026-09-25
+
+P0.4; constitutional invariants 1, 2 and 3. Commit `99d586f6` was built as ordinary and DNS-kill-tagged Agent binaries and tested in a fresh disposable Debian 13/Arch QEMU pair using pinned official cloud images. Debian began with a real, unreceipted external PowerDNS/SQLite authority and one authoritative zone. Arch was only the isolated fixture peer. No installed server was changed.
+
+The new runnable cell was `pdns-adopt__target-verified__before-write__standalone__peer-reachable`, request `6cec62016ec913dadf67f3621e105723`. Tagged Agent reached the `target-verified` journal write's before-write hook; the retained journal was still at `intent`. The controller proved SIGKILL exit 137 and process reaping. Ordinary Agent retried the same request and reached `target_converged` with the same fingerprint. The overall and safety results passed, all four failure lists were empty, and 31/31 stability samples found Agent, Panel and authoritative UDP/TCP DNS healthy.
+
+This adds one `pdns-adopt` matrix cell. It confirms Agent-mediated forward convergence at this boundary after the reply parser change. It does not prove uninterrupted DNS through the interruption, deleted-zone absence, an Agent-independent inverse, reboot or power loss, paired DNS, or owner-edit safety. The persisted v1 DNS state, journal and ledger schemas are unchanged; P0.4 remains open.
+
+Evidence archive: `/var/tmp/cp-dns-parser-native-20260925/evidence.tar.gz` (root-accessible fixture host), SHA-256 `5093811fdd4b5be05f49db01b3ccc0e19dcd1d2fcea3aa3c1b643a0cc81a30c3`. It contains the sealed source and preinstall proofs, kill and boundary proofs, result, transcript, scenario, coordinator stop proof and installed binary hashes. Both guests were stopped and the validated cell was torn down. Temporary binaries, image links, SSH key and logs were removed.

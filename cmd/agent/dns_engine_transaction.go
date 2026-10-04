@@ -3,38 +3,35 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
-	pathpkg "path"
 	"path/filepath"
 	"reflect"
 	"sort"
-	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
+	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
+	"github.com/alicelik/celikpanel/internal/dnsunitrestore"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 const (
-	dnsEngineSwitchJournalSchema = "celikpanel-dns-engine-switch-journal/v1"
+	dnsEngineSwitchJournalSchema = dnsengineartifact.SwitchJournalSchemaV1
 	dnsEngineSwitchJournalFile   = "dns-engine-switch-journal.json"
 	dnsEngineSwitchRecoveryLimit = 45 * time.Second
-	dnsEngineSwitchJournalLimit  = 96 << 20
+	dnsEngineSwitchJournalLimit  = dnsengineartifact.SwitchJournalLimit
 
-	dnsSwitchPhaseIntent         = "intent"
-	dnsSwitchPhaseTargetStaged   = "target-staged"
-	dnsSwitchPhaseSourceStopped  = "source-stopped"
-	dnsSwitchPhaseTargetStarted  = "target-started"
-	dnsSwitchPhaseTargetVerified = "target-verified"
-	dnsSwitchPhaseCommitted      = "committed"
-	dnsSwitchPhaseRollingBack    = "rolling-back"
-	dnsSwitchPhaseRolledBack     = "rolled-back"
+	dnsSwitchPhaseIntent         = dnsengineartifact.SwitchPhaseIntent
+	dnsSwitchPhaseTargetStaged   = dnsengineartifact.SwitchPhaseTargetStaged
+	dnsSwitchPhaseSourceStopped  = dnsengineartifact.SwitchPhaseSourceStopped
+	dnsSwitchPhaseTargetStarted  = dnsengineartifact.SwitchPhaseTargetStarted
+	dnsSwitchPhaseTargetVerified = dnsengineartifact.SwitchPhaseTargetVerified
+	dnsSwitchPhaseCommitted      = dnsengineartifact.SwitchPhaseCommitted
+	dnsSwitchPhaseRollingBack    = dnsengineartifact.SwitchPhaseRollingBack
+	dnsSwitchPhaseRolledBack     = dnsengineartifact.SwitchPhaseRolledBack
 
 	dnsEngineSwitchJournalFaultPreIntent   = "pre_intent"
 	dnsEngineSwitchJournalFaultBeforeWrite = "before_write"
@@ -120,124 +117,37 @@ func newDNSEngineRollbackContext(
 	return recoveryCtx, cancel, nil
 }
 
-type dnsFileSnapshot struct {
-	Path       string `json:"path"`
-	Exists     bool   `json:"exists"`
-	Mode       uint32 `json:"mode"`
-	OwnerKnown bool   `json:"owner_known,omitempty"`
-	UID        uint32 `json:"uid,omitempty"`
-	GID        uint32 `json:"gid,omitempty"`
-	SHA256     string `json:"sha256,omitempty"`
-	Data       []byte `json:"data,omitempty"`
-}
+type dnsFileSnapshot = dnsengineartifact.FileSnapshot
 
-type dnsUnitSnapshot struct {
-	Name          string `json:"name"`
-	LoadState     string `json:"load_state"`
-	ActiveState   string `json:"active_state"`
-	UnitFileState string `json:"unit_file_state"`
-}
+type dnsUnitSnapshot = dnsengineartifact.UnitSnapshot
 
-type dnsEngineSwitchJournal struct {
-	Schema               string                                  `json:"schema"`
-	Phase                string                                  `json:"phase"`
-	Mode                 string                                  `json:"mode"`
-	MutationRequestID    string                                  `json:"mutation_request_id"`
-	MutationOwnerID      string                                  `json:"mutation_owner_id"`
-	ManifestQualifier    string                                  `json:"manifest_qualifier"`
-	SourceEngine         transport.DNSEngine                     `json:"source_engine,omitempty"`
-	TargetEngine         transport.DNSEngine                     `json:"target_engine"`
-	SourceEpoch          int64                                   `json:"source_epoch"`
-	TargetEpoch          int64                                   `json:"target_epoch"`
-	SourceRevision       int64                                   `json:"source_revision"`
-	Topology             string                                  `json:"topology"`
-	PairRole             string                                  `json:"pair_role,omitempty"`
-	LocalIP              string                                  `json:"local_ip,omitempty"`
-	LocalNS              string                                  `json:"local_ns,omitempty"`
-	PeerIP               string                                  `json:"peer_ip,omitempty"`
-	PeerNS               string                                  `json:"peer_ns,omitempty"`
-	PrimaryCatalogSerial uint32                                  `json:"primary_catalog_serial,omitempty"`
-	SnapshotBytes        int64                                   `json:"snapshot_bytes"`
-	Zones                []transport.DNSEngineSwitchZoneSnapshot `json:"zones"`
-	TargetGeneration     string                                  `json:"target_generation,omitempty"`
-	PreviousGeneration   string                                  `json:"previous_generation,omitempty"`
-	HadPrevious          bool                                    `json:"had_previous_generation"`
-	StateBefore          dnsFileSnapshot                         `json:"state_before"`
-	ConfigBefore         []dnsFileSnapshot                       `json:"config_before"`
-	TargetUnitsBefore    []dnsUnitSnapshot                       `json:"target_units_before"`
-	SourceUnitsBefore    []dnsUnitSnapshot                       `json:"source_units_before"`
-	PDNSCandidatePath    string                                  `json:"pdns_candidate_path,omitempty"`
-	PDNSBackupPath       string                                  `json:"pdns_backup_path,omitempty"`
-	PDNSBackupSHA256     string                                  `json:"pdns_backup_sha256,omitempty"`
-	PDNSBackupSize       int64                                   `json:"pdns_backup_size,omitempty"`
-	PDNSLiveSHA256       string                                  `json:"pdns_live_sha256,omitempty"`
-	PDNSLiveSize         int64                                   `json:"pdns_live_size,omitempty"`
-}
+type dnsEngineSwitchJournal = dnsengineartifact.SwitchJournalV1
 
 func dnsEngineSwitchJournalPath() string {
 	return filepath.Join(serviceMutationStateDirectory(), dnsEngineSwitchJournalFile)
 }
 
 func validDNSSwitchPhase(value string) bool {
-	switch value {
-	case dnsSwitchPhaseIntent, dnsSwitchPhaseTargetStaged,
-		dnsSwitchPhaseSourceStopped, dnsSwitchPhaseTargetStarted,
-		dnsSwitchPhaseTargetVerified, dnsSwitchPhaseCommitted,
-		dnsSwitchPhaseRollingBack, dnsSwitchPhaseRolledBack:
-		return true
-	default:
-		return false
-	}
+	return dnsengineartifact.ValidSwitchPhase(value)
 }
 
 func digestDNSBytes(data []byte) string {
-	digest := sha256.Sum256(data)
-	return hex.EncodeToString(digest[:])
+	return dnsengineartifact.DigestBytes(data)
 }
 
 func validateDNSFileSnapshotIntegrity(snapshot dnsFileSnapshot) error {
-	clean := filepath.Clean(snapshot.Path)
-	posixClean := pathpkg.Clean(snapshot.Path)
-	canonicalAbsolute := filepath.IsAbs(clean) && clean == snapshot.Path
-	if strings.HasPrefix(snapshot.Path, "/") && posixClean == snapshot.Path && snapshot.Path != "/" {
-		canonicalAbsolute = true
-	}
-	if snapshot.Path == "" || !canonicalAbsolute ||
-		snapshot.Mode&^0o777 != 0 {
-		return errors.New("DNS switch file snapshot has an unsafe path or mode")
-	}
-	if !snapshot.Exists {
-		if snapshot.Mode != 0 || snapshot.OwnerKnown || snapshot.UID != 0 || snapshot.GID != 0 ||
-			snapshot.SHA256 != "" || len(snapshot.Data) != 0 {
-			return errors.New("absent DNS switch file snapshot contains hidden state")
-		}
-		return nil
-	}
-	if snapshot.Mode == 0 || len(snapshot.Data) > dnsEngineSwitchJournalLimit ||
-		snapshot.SHA256 != digestDNSBytes(snapshot.Data) {
-		return errors.New("DNS switch file snapshot digest is invalid")
-	}
-	if !snapshot.OwnerKnown && (snapshot.UID != 0 || snapshot.GID != 0) {
-		return errors.New("DNS switch file snapshot has hidden ownership metadata")
-	}
-	return nil
+	return dnsengineartifact.ValidateFileSnapshotIntegrity(snapshot)
 }
 
 func validateDNSFileSnapshot(snapshot dnsFileSnapshot) error {
-	return validateDNSFileSnapshotForOwnerContract(
-		snapshot, 0, 0,
-		"DNS switch file snapshot is not root-owned",
-	)
+	return dnsJournalPolicy().ValidateFileSnapshot(snapshot)
 }
 
 func validateDNSFileSnapshotForOwner(
 	snapshot dnsFileSnapshot,
 	requiredUID, requiredGID uint32,
 ) error {
-	return validateDNSFileSnapshotForOwnerContract(
-		snapshot, requiredUID, requiredGID,
-		"DNS switch file snapshot ownership differs from the managed contract",
-	)
+	return dnsJournalPolicy().ValidateFileSnapshotForOwner(snapshot, requiredUID, requiredGID)
 }
 
 func validateDNSFileSnapshotForOwnerContract(
@@ -245,354 +155,39 @@ func validateDNSFileSnapshotForOwnerContract(
 	requiredUID, requiredGID uint32,
 	ownerError string,
 ) error {
-	if err := validateDNSFileSnapshotIntegrity(snapshot); err != nil {
-		return err
-	}
-	if !snapshot.Exists {
-		return nil
-	}
-	if dnsSnapshotOwnerRequired() && !snapshot.OwnerKnown {
-		return errors.New("DNS switch file snapshot is missing required ownership metadata")
-	}
-	if (snapshot.OwnerKnown &&
-		(snapshot.UID != requiredUID || snapshot.GID != requiredGID)) ||
-		(!snapshot.OwnerKnown && (snapshot.UID != 0 || snapshot.GID != 0)) {
-		return errors.New(ownerError)
-	}
-	return nil
+	return dnsJournalPolicy().ValidateFileSnapshotForOwnerContract(snapshot, requiredUID, requiredGID, ownerError)
 }
 
 func validateDNSEngineStateSnapshot(snapshot dnsFileSnapshot) error {
-	if err := validateDNSFileSnapshotForOwner(
-		snapshot,
-		serviceMutationRequiredOwnerUID,
-		serviceMutationRequiredOwnerGID,
-	); err != nil {
-		return err
-	}
-	if snapshot.Path != filepath.Clean(dnsEngineStatePath()) ||
-		(snapshot.Exists && snapshot.Mode != 0o600) {
-		return errors.New("DNS engine switch journal state snapshot path is invalid")
-	}
-	return nil
+	return dnsJournalPolicy().ValidateStateSnapshot(snapshot)
 }
 
 func validateDNSUnitSnapshot(snapshot dnsUnitSnapshot) error {
-	if strings.TrimSpace(snapshot.Name) != snapshot.Name || snapshot.Name == "" ||
-		strings.ContainsAny(snapshot.Name, "/\\\x00\r\n") {
-		return errors.New("DNS switch unit snapshot has an unsafe name")
-	}
-	state := bindInstallUnitState{
-		name: snapshot.Name, loadState: snapshot.LoadState,
-		activeState: snapshot.ActiveState, unitFileState: snapshot.UnitFileState,
-	}
-	if !validBINDInstallLoadState(state.loadState) ||
-		!validBINDInstallActiveState(state.activeState) ||
-		!validBINDInstallUnitFileState(state.loadState, state.unitFileState) {
-		return errors.New("DNS switch unit snapshot contains an unsupported systemd state")
-	}
-	if state.activeState == "failed" || (state.masked() && state.active()) {
-		return errors.New("DNS switch unit snapshot cannot be restored deterministically")
-	}
-	if state.loadState == "not-found" && state.unitFileState == "" {
-		return nil
-	}
-	switch state.unitFileState {
-	case "enabled", "enabled-runtime", "disabled", "masked", "masked-runtime":
-		return nil
-	default:
-		return errors.New("DNS switch unit-file state has no exact inverse")
-	}
+	return dnsengineartifact.ValidateUnitSnapshot(snapshot)
 }
 
 func validateDNSEngineSwitchJournal(journal dnsEngineSwitchJournal) error {
-	if journal.Schema != dnsEngineSwitchJournalSchema || !validDNSSwitchPhase(journal.Phase) ||
-		(journal.Mode != transport.DNSEngineSwitchModeSwitch &&
-			journal.Mode != transport.DNSEngineSwitchModeAdopt &&
-			journal.Mode != transport.DNSEngineSwitchModeReinstall) ||
-		!validMutationIdentity(journal.MutationRequestID) ||
-		!validMutationIdentity(journal.MutationOwnerID) ||
-		!mutationpayload.ValidDNSEngineSwitchQualifier(journal.ManifestQualifier) {
-		return errors.New("DNS engine switch journal identity is invalid")
-	}
-	commitment, err := mutationpayload.CanonicalDNSEngineSwitchManifestWithPairIdentity(
-		journal.Mode,
-		journal.SourceEngine, journal.TargetEngine,
-		journal.SourceEpoch, journal.TargetEpoch, journal.SourceRevision,
-		journal.Topology, journal.PairRole, journal.LocalIP, journal.LocalNS,
-		journal.PeerIP, journal.PeerNS, journal.Zones,
-	)
-	if err != nil || commitment.Qualifier != journal.ManifestQualifier ||
-		commitment.SnapshotBytes != journal.SnapshotBytes ||
-		!reflect.DeepEqual(commitment.Zones, journal.Zones) {
-		return errors.New("DNS engine switch journal manifest is not canonical")
-	}
-	if err := validatePrimaryCatalogSerialContract(commitment, journal.PrimaryCatalogSerial); err != nil {
-		return err
-	}
-	if err := validateDNSEngineStateSnapshot(journal.StateBefore); err != nil {
-		return err
-	}
-	sourceState, sourceExists, err := sourceStateFromDNSSwitchJournal(journal)
-	if err != nil {
-		return err
-	}
-	if requiresPrimaryCatalogSerial(commitment) {
-		if journal.SourceEngine == "" {
-			if sourceExists || journal.PrimaryCatalogSerial != 1 {
-				return errors.New("initial primary catalog journal is not fresh")
-			}
-		} else {
-			legacySource := sourceExists &&
-				sourceState.Mode == transport.DNSEngineSwitchModeSwitch &&
-				sourceState.PairRole == "" &&
-				sourceState.PrimaryCatalogSerial == 0
-			boundSource := sourceExists &&
-				sourceState.Mode == transport.DNSEngineSwitchModeSwitch &&
-				sourceState.PairRole == transport.DNSPairRolePrimary &&
-				sourceState.PrimaryCatalogSerial != 0 &&
-				sourceState.PrimaryCatalogSerial <= journal.PrimaryCatalogSerial
-			if !legacySource && !boundSource {
-				return errors.New("primary catalog journal differs from its source receipt")
-			}
-		}
-	}
-	previous := ""
-	for _, snapshot := range journal.ConfigBefore {
-		validate := validateDNSFileSnapshot
-		if ((journal.Mode == transport.DNSEngineSwitchModeSwitch ||
-			journal.Mode == transport.DNSEngineSwitchModeReinstall) &&
-			(journal.TargetEngine == transport.DNSEngineBIND ||
-				journal.TargetEngine == transport.DNSEnginePowerDNS)) ||
-			(journal.Mode == transport.DNSEngineSwitchModeAdopt &&
-				journal.TargetEngine == transport.DNSEnginePowerDNS) {
-			validate = validateDNSFileSnapshotIntegrity
-		}
-		if err := validate(snapshot); err != nil {
-			return err
-		}
-		if previous != "" && snapshot.Path <= previous {
-			return errors.New("DNS switch file snapshots are unsorted or duplicated")
-		}
-		previous = snapshot.Path
-	}
-	for _, snapshots := range [][]dnsUnitSnapshot{journal.TargetUnitsBefore, journal.SourceUnitsBefore} {
-		previous := ""
-		for _, snapshot := range snapshots {
-			if err := validateDNSUnitSnapshot(snapshot); err != nil {
-				return err
-			}
-			if previous != "" && snapshot.Name <= previous {
-				return errors.New("DNS switch unit snapshots are unsorted or duplicated")
-			}
-			previous = snapshot.Name
-		}
-	}
-	if journal.Mode == transport.DNSEngineSwitchModeAdopt {
-		if err := validatePDNSAdoptionJournal(journal); err != nil {
-			return err
-		}
-		return nil
-	}
-	if journal.TargetEngine == transport.DNSEngineBIND {
-		if !validDNSGeneration(journal.TargetGeneration) ||
-			(journal.HadPrevious && !validDNSGeneration(journal.PreviousGeneration)) ||
-			(!journal.HadPrevious && journal.PreviousGeneration != "") ||
-			journal.PDNSCandidatePath != "" || journal.PDNSBackupPath != "" ||
-			journal.PDNSBackupSHA256 != "" || journal.PDNSBackupSize != 0 ||
-			journal.PDNSLiveSHA256 != "" || journal.PDNSLiveSize != 0 {
-			return errors.New("BIND switch journal generation or PowerDNS fields are invalid")
-		}
-		if !validBINDConfigSnapshotSet(journal.ConfigBefore) {
-			return errors.New("BIND switch journal config snapshot set is incomplete")
-		}
-	} else {
-		if journal.TargetGeneration != "" || journal.HadPrevious || journal.PreviousGeneration != "" {
-			return errors.New("PowerDNS switch journal contains BIND generation state")
-		}
-		if journal.PDNSCandidatePath != filepath.Clean(pdnsSwitchCandidatePath(journal.MutationRequestID)) ||
-			journal.PDNSBackupPath != filepath.Clean(pdnsSwitchBackupPath(journal.MutationRequestID)) {
-			return errors.New("PowerDNS switch journal staging paths are invalid")
-		}
-		if (journal.PDNSBackupSHA256 == "" && journal.PDNSBackupSize != 0) ||
-			(journal.PDNSBackupSHA256 != "" && (!validDNSGeneration(journal.PDNSBackupSHA256) || journal.PDNSBackupSize <= 0)) {
-			return errors.New("PowerDNS switch journal backup receipt is invalid")
-		}
-		if journal.PDNSLiveSHA256 != "" || journal.PDNSLiveSize != 0 {
-			return errors.New("PowerDNS switch journal contains adoption-only live database state")
-		}
-		if err := validatePDNSConfigSnapshotSetStructure(
-			journal.ConfigBefore,
-		); err != nil {
-			return err
-		}
-	}
-	wantTarget := []string{"bind9.service", "named.service"}
-	if journal.TargetEngine == transport.DNSEnginePowerDNS {
-		wantTarget = []string{"pdns.service"}
-	}
-	wantSource := []string{}
-	// A reinstall's source and target are one engine, so they are one unit set.
-	// The target snapshot already froze it; demanding a second copy under the
-	// source name asked the journal to record the same units twice and refused
-	// the operation after its packages were already on the host.
-	//
-	// Yeniden kurulumun kaynağı ile hedefi tek motordur; dolayısıyla tek birim
-	// kümesidir. Hedef anlık görüntüsü onu zaten dondurdu; kaynak adı altında
-	// ikinci bir kopya istemek, günlükten aynı birimleri iki kez kaydetmesini
-	// istiyor ve işlemi paketleri sunucuya çoktan indikten sonra reddediyordu.
-	if journal.Mode != transport.DNSEngineSwitchModeReinstall {
-		if journal.SourceEngine == transport.DNSEnginePowerDNS {
-			wantSource = []string{"pdns.service"}
-		} else if journal.SourceEngine == transport.DNSEngineBIND {
-			wantSource = []string{"bind9.service", "named.service"}
-		}
-	}
-	if !dnsUnitSnapshotNamesEqual(journal.TargetUnitsBefore, wantTarget) ||
-		!dnsUnitSnapshotNamesEqual(journal.SourceUnitsBefore, wantSource) {
-		return errors.New("DNS engine switch journal unit snapshot set is incomplete")
-	}
-	return nil
+	return dnsJournalPolicy().ValidateSwitchJournal(journal)
 }
 
 func validatePDNSAdoptionJournal(journal dnsEngineSwitchJournal) error {
-	if journal.SourceEngine != "" || journal.TargetEngine != transport.DNSEnginePowerDNS ||
-		journal.TargetGeneration != "" || journal.PreviousGeneration != "" || journal.HadPrevious ||
-		journal.PDNSCandidatePath != "" || journal.PDNSBackupPath != "" ||
-		journal.PDNSBackupSHA256 != "" || journal.PDNSBackupSize != 0 ||
-		!validDNSGeneration(journal.PDNSLiveSHA256) || journal.PDNSLiveSize <= 0 {
-		return errors.New("PowerDNS adoption journal contains switch mutation state")
-	}
-	if err := validatePDNSConfigSnapshotSetStructure(journal.ConfigBefore); err != nil {
-		return err
-	}
-	for _, snapshot := range journal.ConfigBefore {
-		switch snapshot.Path {
-		case filepath.Clean(dnsMainConf), filepath.Clean(dnsManagedConf):
-			if !snapshot.Exists {
-				return errors.New("PowerDNS adoption journal is missing managed config evidence")
-			}
-		case filepath.Clean(dnsClusterConf):
-			wantExists := journal.Topology == transport.DNSTopologyPaired
-			if snapshot.Exists != wantExists {
-				return errors.New("PowerDNS adoption journal topology evidence differs from its manifest")
-			}
-		}
-	}
-	if !dnsUnitSnapshotNamesEqual(
-		journal.TargetUnitsBefore,
-		[]string{"bind9.service", "named.service", "pdns.service"},
-	) || len(journal.SourceUnitsBefore) != 0 {
-		return errors.New("PowerDNS adoption journal unit evidence is incomplete")
-	}
-	if err := validatePDNSAdoptionUnitEvidence(journal.TargetUnitsBefore); err != nil {
-		return err
-	}
-	return nil
+	return dnsJournalPolicy().ValidatePDNSAdoptionJournal(journal)
 }
 
 func validBINDConfigSnapshotSet(snapshots []dnsFileSnapshot) bool {
-	apt := []string{"/etc/bind/named.conf.local", "/etc/bind/named.conf.options"}
-	pacman := []string{"/etc/named.conf"}
-	matches := func(want []string, aptLayout bool) bool {
-		if len(snapshots) != len(want) {
-			return false
-		}
-		// The vendor file mode follows the layout: Debian ships its BIND
-		// configuration 0644 root:bind, Arch ships /etc/named.conf 0640
-		// root:named (register R-018). The exact group is proven by the
-		// owner policy at capture time; here the shape must merely be the
-		// layout's, with one common bounded group across the set.
-		// Satıcı dosya kipi yerleşimi izler: Debian BIND yapılandırmasını
-		// 0644 root:bind, Arch /etc/named.conf'u 0640 root:named gönderir
-		// (defter R-018). Tam grup, yakalama anında sahiplik politikasıyla
-		// kanıtlanır; burada biçim yalnız yerleşimin biçimi olmalı ve küme
-		// boyunca tek, sınırlı bir ortak grup taşımalıdır.
-		wantMode := uint32(0o640)
-		if aptLayout {
-			wantMode = 0o644
-		}
-		var commonGID uint32
-		for index, snapshot := range snapshots {
-			if snapshot.Path != want[index] || !snapshot.Exists || snapshot.Mode != wantMode ||
-				(dnsSnapshotOwnerRequired() && !snapshot.OwnerKnown) ||
-				(snapshot.OwnerKnown && (snapshot.UID != 0 || snapshot.GID > uint32(1<<31-1))) ||
-				(index > 0 && snapshot.OwnerKnown != snapshots[0].OwnerKnown) {
-				return false
-			}
-			if snapshot.OwnerKnown {
-				if index == 0 {
-					commonGID = snapshot.GID
-				} else if snapshot.GID != commonGID {
-					return false
-				}
-			}
-		}
-		return true
-	}
-	return matches(apt, true) || matches(pacman, false)
+	return dnsJournalPolicy().ValidBINDConfigSnapshotSet(snapshots)
 }
 
 func dnsUnitSnapshotNamesEqual(snapshots []dnsUnitSnapshot, want []string) bool {
-	if len(snapshots) != len(want) {
-		return false
-	}
-	for index := range snapshots {
-		if snapshots[index].Name != want[index] {
-			return false
-		}
-	}
-	return true
+	return dnsengineartifact.UnitSnapshotNamesEqual(snapshots, want)
 }
 
 func encodeDNSEngineSwitchJournal(journal dnsEngineSwitchJournal) ([]byte, error) {
-	if journal.Zones == nil {
-		journal.Zones = []transport.DNSEngineSwitchZoneSnapshot{}
-	}
-	if journal.ConfigBefore == nil {
-		journal.ConfigBefore = []dnsFileSnapshot{}
-	}
-	if journal.TargetUnitsBefore == nil {
-		journal.TargetUnitsBefore = []dnsUnitSnapshot{}
-	}
-	if journal.SourceUnitsBefore == nil {
-		journal.SourceUnitsBefore = []dnsUnitSnapshot{}
-	}
-	if err := validateDNSEngineSwitchJournal(journal); err != nil {
-		return nil, err
-	}
-	encoded, err := json.Marshal(journal)
-	if err != nil {
-		return nil, fmt.Errorf("encode DNS engine switch journal: %w", err)
-	}
-	if len(encoded) > dnsEngineSwitchJournalLimit {
-		return nil, errors.New("DNS engine switch journal exceeds the size limit")
-	}
-	return append(encoded, '\n'), nil
+	return dnsJournalPolicy().EncodeSwitchJournal(journal)
 }
 
 func decodeDNSEngineSwitchJournal(data []byte) (dnsEngineSwitchJournal, error) {
-	if len(data) == 0 || len(data) > dnsEngineSwitchJournalLimit {
-		return dnsEngineSwitchJournal{}, errors.New("DNS engine switch journal has an invalid size")
-	}
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.DisallowUnknownFields()
-	var journal dnsEngineSwitchJournal
-	if err := decoder.Decode(&journal); err != nil {
-		return dnsEngineSwitchJournal{}, fmt.Errorf("decode DNS engine switch journal: %w", err)
-	}
-	var trailing any
-	if err := decoder.Decode(&trailing); err != io.EOF {
-		return dnsEngineSwitchJournal{}, errors.New("DNS engine switch journal contains trailing JSON")
-	}
-	canonical, err := encodeDNSEngineSwitchJournal(journal)
-	if err != nil {
-		return dnsEngineSwitchJournal{}, err
-	}
-	if !bytes.Equal(data, canonical) {
-		return dnsEngineSwitchJournal{}, errors.New("DNS engine switch journal is not canonical JSON")
-	}
-	return journal, nil
+	return dnsJournalPolicy().DecodeSwitchJournal(data)
 }
 
 func readDNSEngineSwitchJournal() (dnsEngineSwitchJournal, bool, error) {
@@ -617,52 +212,66 @@ func writeDNSEngineSwitchJournalWithOps(
 	read func() (dnsEngineSwitchJournal, bool, error),
 	faultHook func(string, dnsEngineSwitchJournal) error,
 ) error {
-	if persist == nil || read == nil {
-		return errors.New("DNS engine switch journal writer is incomplete")
+	if read == nil || persist == nil {
+		return errors.New("DNS engine switch journal checkpoint operations are incomplete")
 	}
-	encoded, err := encodeDNSEngineSwitchJournal(journal)
-	if err != nil {
-		return err
-	}
-	if faultHook != nil {
-		if err := faultHook(dnsEngineSwitchJournalFaultBeforeWrite, journal); err != nil {
-			return fmt.Errorf(
-				"injected failure before DNS engine switch journal write for phase %q: %w",
-				journal.Phase, err,
-			)
+	// The read runs after the before-write fault boundary but before the first
+	// filesystem effect. This prevents v1 from replacing an unresolved v2
+	// inverse plan even if a higher-level admission check was bypassed.
+	guardedPersist := func(encoded []byte) error {
+		current, exists, err := read()
+		if err != nil {
+			return fmt.Errorf("inspect DNS switch journal before checkpoint: %w", err)
 		}
+		if exists && (current.Schema == dnsengineartifact.SwitchJournalSchemaV3 ||
+			journal.Schema == dnsengineartifact.SwitchJournalSchemaV3) {
+			if !dnsengineartifact.SameImmutablePDNSFreshPrimaryPlanV3(current, journal) {
+				return errors.New("v3 PowerDNS fresh-primary evidence changed before checkpoint; preserve the journal for owner recovery")
+			}
+			if !dnsengineartifact.ValidPDNSFreshPrimaryForwardPhaseTransitionV3(current, journal) {
+				return errors.New("v3 PowerDNS fresh-primary phase skipped or reversed a durable checkpoint; preserve the journal for owner recovery")
+			}
+		} else if exists && (current.Schema == dnsengineartifact.SwitchJournalSchemaV4 ||
+			journal.Schema == dnsengineartifact.SwitchJournalSchemaV4) {
+			if !dnsengineartifact.SameImmutablePDNSTargetInversePlanV4(current, journal) {
+				return errors.New("v4 PowerDNS inverse plan changed before checkpoint; preserve the journal for owner recovery")
+			}
+			if !dnsengineartifact.ValidPDNSTargetForwardPhaseTransitionV4(current, journal) {
+				return errors.New("v4 PowerDNS forward phase skipped or reversed a durable checkpoint; preserve the journal for owner recovery")
+			}
+		} else if exists && (current.Schema == dnsengineartifact.SwitchJournalSchemaV2 ||
+			journal.Schema == dnsengineartifact.SwitchJournalSchemaV2) {
+			if !dnsengineartifact.SameImmutableBINDSwitchInversePlanV2(current, journal) {
+				return errors.New("v2 DNS switch inverse plan changed before checkpoint; preserve the journal for owner recovery")
+			}
+		} else if !exists && journal.Schema == dnsengineartifact.SwitchJournalSchemaV2 &&
+			journal.Phase != dnsSwitchPhaseIntent {
+			return errors.New("v2 DNS switch journal requires a fresh intent checkpoint")
+		}
+		if !exists && journal.Schema == dnsengineartifact.SwitchJournalSchemaV3 && journal.Phase != dnsSwitchPhaseIntent {
+			return errors.New("v3 DNS switch journal requires an empty durable intent checkpoint")
+		}
+		if !exists && journal.Schema == dnsengineartifact.SwitchJournalSchemaV4 && journal.Phase != dnsSwitchPhaseIntent {
+			return errors.New("v4 DNS switch journal requires a fresh frozen-candidate intent checkpoint")
+		}
+		return persist(encoded)
 	}
-	if err := persist(encoded); err != nil {
-		verified, exists, readErr := read()
-		if readErr == nil && exists && reflect.DeepEqual(verified, journal) {
-			if faultHook != nil {
-				if hookErr := faultHook(dnsEngineSwitchJournalFaultAfterWrite, journal); hookErr != nil {
-					return fmt.Errorf(
-						"injected failure after DNS engine switch journal write for phase %q: %w",
-						journal.Phase, hookErr,
-					)
-				}
+	ops := dnsenginerecovery.JournalCheckpointOps{Persist: guardedPersist, Read: read}
+	if faultHook != nil {
+		ops.BeforeWrite = func(j dnsengineartifact.SwitchJournalV1) error {
+			if err := faultHook(dnsEngineSwitchJournalFaultBeforeWrite, j); err != nil {
+				return fmt.Errorf("injected failure before DNS engine switch journal write for phase %q: %w", j.Phase, err)
 			}
 			return nil
 		}
-		return errors.Join(err, readErr)
-	}
-	if faultHook != nil {
-		if err := faultHook(dnsEngineSwitchJournalFaultAfterWrite, journal); err != nil {
-			return fmt.Errorf(
-				"injected failure after DNS engine switch journal write for phase %q: %w",
-				journal.Phase, err,
-			)
+		ops.AfterWrite = func(j dnsengineartifact.SwitchJournalV1) error {
+			if err := faultHook(dnsEngineSwitchJournalFaultAfterWrite, j); err != nil {
+				return fmt.Errorf("injected failure after DNS engine switch journal write for phase %q: %w", j.Phase, err)
+			}
+			return nil
 		}
 	}
-	verified, exists, err := read()
-	if err != nil || !exists || !reflect.DeepEqual(verified, journal) {
-		if err == nil {
-			err = errors.New("DNS engine switch journal readback mismatch")
-		}
-		return err
-	}
-	return nil
+	return dnsenginerecovery.WriteJournalCheckpoint(dnsJournalPolicy(), journal, ops)
 }
 
 func writeDNSEngineSwitchJournal(journal dnsEngineSwitchJournal) error {
@@ -688,6 +297,15 @@ func writeDNSEngineSwitchJournalForFaultDriver(
 		readDNSEngineSwitchJournal,
 		faultHook,
 	)
+}
+
+func removeDNSEngineSwitchJournalIfExactAt(path string, expected dnsEngineSwitchJournal) error {
+	return dnsenginerecovery.RemoveJournalCheckpoint(dnsJournalPolicy(), expected, dnsenginerecovery.JournalRemovalOps{
+		Read: func() (dnsEngineSwitchJournal, bool, error) {
+			return readDNSEngineSwitchJournalAt(path)
+		},
+		Remove: func() error { return secureRemoveConfig(path) },
+	})
 }
 
 func removeDNSEngineSwitchJournal() error {
@@ -990,19 +608,8 @@ func restoreDNSUnitSnapshots(ctx context.Context, systemctl string, snapshots []
 // bind9.service" koşturup "Unit bind9.service does not exist" ile düştü (S-8
 // T5, defter R-031). Önce gerçek birimi geri yüklemek takma adı yeniden
 // yaratır; sonra takma adı etkinleştirmek tam bir no-op okumadır.
-func dnsUnitRestoreRank(name string) int {
-	if name == "bind9.service" {
-		return 1
-	}
-	return 0
-}
-
 func orderDNSUnitSnapshotsForRestore(snapshots []dnsUnitSnapshot) []dnsUnitSnapshot {
-	ordered := append([]dnsUnitSnapshot(nil), snapshots...)
-	sort.SliceStable(ordered, func(i, j int) bool {
-		return dnsUnitRestoreRank(ordered[i].Name) < dnsUnitRestoreRank(ordered[j].Name)
-	})
-	return ordered
+	return dnsunitrestore.Order(snapshots)
 }
 
 func restoreDNSUnitSnapshotsWithGuard(
@@ -1013,18 +620,30 @@ func restoreDNSUnitSnapshotsWithGuard(
 	if guard == nil {
 		return errors.New("DNS unit snapshot restore requires a systemd guard")
 	}
-	for _, snapshot := range orderDNSUnitSnapshotsForRestore(snapshots) {
+	owned := make(map[string]bool, len(snapshots))
+	for _, snapshot := range snapshots {
 		if err := validateDNSUnitSnapshot(snapshot); err != nil {
 			return err
 		}
-		state := bindInstallUnitState{
-			name: snapshot.Name, loadState: snapshot.LoadState,
-			activeState: snapshot.ActiveState, unitFileState: snapshot.UnitFileState,
-		}
-		guard.before = append(guard.before, state)
-		if !state.masked() {
-			guard.ownedMask[state.name] = true
+		if snapshot.LoadState != "masked" {
+			owned[snapshot.Name] = true
 		}
 	}
-	return guard.restore(ctx)
+	return dnsunitrestore.Restore(ctx, snapshots, owned, dnsunitrestore.Ops{
+		Systemctl:        guard.systemctl,
+		VerifyMaskParent: guard.ops.verifyMaskParent,
+		RunSystemd:       guard.ops.runSystemd,
+	})
+}
+
+// Host paths and ownership come from the installed adapter, never from the
+// incoming journal. The shared package does not read the host or grant authority.
+func dnsJournalPolicy() dnsengineartifact.JournalPolicy {
+	return dnsengineartifact.JournalPolicy{
+		StatePath: filepath.Clean(dnsEngineStatePath()),
+		StateUID:  serviceMutationRequiredOwnerUID, StateGID: serviceMutationRequiredOwnerGID,
+		RequireOwner: dnsSnapshotOwnerRequired(),
+		PDNSMainPath: filepath.Clean(dnsMainConf), PDNSManagedPath: filepath.Clean(dnsManagedConf),
+		PDNSClusterPath: filepath.Clean(dnsClusterConf), PDNSDatabasePath: filepath.Clean(pdnsDBPath()),
+	}
 }

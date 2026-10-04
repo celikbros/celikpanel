@@ -1,0 +1,51 @@
+[
+  {
+    "attempt": 1,
+    "error": null,
+    "phase": "02-service",
+    "status": "running",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-service": "running",
+      "03-service": "pending",
+      "04-service": "pending",
+      "05-mail_profile": "pending",
+      "06-mail_profile": "pending",
+      "07-service": "pending",
+      "08-firewall": "pending",
+      "09-access_dns": "pending",
+      "10-panel_certificate": "pending",
+      "11-access_dns": "pending",
+      "12-mail_certificate": "pending",
+      "13-mail_enrollment": "pending",
+      "14-verify": "pending"
+    },
+    "utc": "2026-10-01T17:50:05Z"
+  },
+  {
+    "attempt": 1,
+    "error": {
+      "code": "HOST_MUTATION_BUSY",
+      "message": "This server's package manager is busy — something outside CelikPanel is installing or updating packages. Try again in a minute."
+    },
+    "phase": "02-service",
+    "status": "failed",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-service": "failed",
+      "03-service": "pending",
+      "04-service": "pending",
+      "05-mail_profile": "pending",
+      "06-mail_profile": "pending",
+      "07-service": "pending",
+      "08-firewall": "pending",
+      "09-access_dns": "pending",
+      "10-panel_certificate": "pending",
+      "11-access_dns": "pending",
+      "12-mail_certificate": "pending",
+      "13-mail_enrollment": "pending",
+      "14-verify": "pending"
+    },
+    "utc": "2026-10-01T17:50:10Z"
+  }
+]

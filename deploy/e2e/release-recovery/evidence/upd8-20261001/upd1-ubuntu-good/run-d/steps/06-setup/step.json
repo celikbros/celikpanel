@@ -1,0 +1,373 @@
+{
+  "checks": {
+    "before": {
+      "guidance": "undecided",
+      "required": true,
+      "revision": 0,
+      "status": "new"
+    },
+    "dns": {
+      "mode": "external",
+      "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+      "verdict": "not-provided-external-dns"
+    },
+    "draft_choices": {
+      "dns_mode": "external",
+      "peer_ip": "",
+      "peer_ns": ""
+    },
+    "execution": {
+      "error": {
+        "code": "server_setup_access_dns_required",
+        "message": "Public DNS must resolve panel-ubuntu.upd1-infra.test to 192.0.2.12 before a certificate is requested. Check this hostname's A/AAAA records and its zone delegation. For DNS managed here, review the infrastructure DNS records in this wizard; otherwise correct them at the primary DNS server or provider. This check resumes automatically when DNS is verified."
+      },
+      "phase": "access_dns",
+      "status": "waiting"
+    },
+    "isolated_host_wait": {
+      "code": "server_setup_access_dns_required",
+      "mail_steps_reached": true,
+      "not_run": [
+        "06-panel_certificate",
+        "07-access_dns",
+        "08-mail_certificate",
+        "09-verify"
+      ],
+      "phase": "access_dns",
+      "polls": 25,
+      "stable_wait_seconds": 123.2,
+      "steps": {
+        "01-dns": "succeeded",
+        "02-mail_profile": "succeeded",
+        "03-mail_profile": "succeeded",
+        "04-firewall": "succeeded",
+        "05-access_dns": "running",
+        "06-panel_certificate": "pending",
+        "07-access_dns": "pending",
+        "08-mail_certificate": "pending",
+        "09-verify": "pending"
+      }
+    },
+    "owner_attempts": [
+      {
+        "attempt": 1,
+        "error": {
+          "code": "HOST_MUTATION_BUSY",
+          "message": "another server change or package-manager task is still running; wait and try again"
+        },
+        "phase": "03-service",
+        "purpose": "web_mail",
+        "request_id": "59e1493b4e3390dde3d9d7324b5b6d6f",
+        "status": "failed",
+        "steps": {
+          "01-dns": "succeeded",
+          "02-service": "succeeded",
+          "03-service": "failed",
+          "04-service": "pending",
+          "05-mail_profile": "pending",
+          "06-mail_profile": "pending",
+          "07-service": "pending",
+          "08-firewall": "pending",
+          "09-access_dns": "pending",
+          "10-panel_certificate": "pending",
+          "11-access_dns": "pending",
+          "12-mail_certificate": "pending",
+          "13-verify": "pending"
+        }
+      },
+      {
+        "attempt": 2,
+        "error": {
+          "code": "HOST_MUTATION_BUSY",
+          "message": "another server change or package-manager task is still running; wait and try again"
+        },
+        "phase": "03-service",
+        "purpose": "web_mail",
+        "request_id": "f71250094e24ec26c90a3220848b5e3c",
+        "status": "failed",
+        "steps": {
+          "01-dns": "succeeded",
+          "02-service": "succeeded",
+          "03-service": "failed",
+          "04-mail_profile": "pending",
+          "05-mail_profile": "pending",
+          "06-service": "pending",
+          "07-firewall": "pending",
+          "08-access_dns": "pending",
+          "09-panel_certificate": "pending",
+          "10-access_dns": "pending",
+          "11-mail_certificate": "pending",
+          "12-verify": "pending"
+        }
+      },
+      {
+        "attempt": 3,
+        "error": {
+          "code": "HOST_MUTATION_BUSY",
+          "message": "another server change or package-manager task is still running; wait and try again"
+        },
+        "phase": "03-mail_profile",
+        "purpose": "web_mail",
+        "request_id": "f773f10c3dd47da2a3bdfa9a9fa952f4",
+        "status": "failed",
+        "steps": {
+          "01-dns": "succeeded",
+          "02-service": "succeeded",
+          "03-mail_profile": "failed",
+          "04-mail_profile": "pending",
+          "05-service": "pending",
+          "06-firewall": "pending",
+          "07-access_dns": "pending",
+          "08-panel_certificate": "pending",
+          "09-access_dns": "pending",
+          "10-mail_certificate": "pending",
+          "11-verify": "pending"
+        }
+      },
+      {
+        "attempt": 4,
+        "component": {
+          "error": {
+            "code": "mail_profile_install_failed",
+            "message": "The mail profile could not be installed and verified."
+          },
+          "http": 200,
+          "log_line": "2026/10/01 14:36:02 service operation 123ed9e2dfd4940284a431cbe1c6eca9 (webmail) failed in profile/webmail/mail-tls: mail TLS synchronization: another server change or package-manager task is still running",
+          "names_host_busy": true,
+          "operation_id": "123ed9e2dfd4940284a431cbe1c6eca9",
+          "phase": "profile/webmail/mail-tls",
+          "read": true,
+          "status": "failed",
+          "step": "02-mail_profile"
+        },
+        "error": {
+          "code": "mail_profile_install_failed",
+          "message": "The mail profile could not be installed and verified."
+        },
+        "phase": "02-mail_profile",
+        "purpose": "web_mail",
+        "request_id": "744c3545a9cc96a037dfd739c8137cba",
+        "status": "failed",
+        "steps": {
+          "01-dns": "succeeded",
+          "02-mail_profile": "failed",
+          "03-mail_profile": "pending",
+          "04-service": "pending",
+          "05-firewall": "pending",
+          "06-access_dns": "pending",
+          "07-panel_certificate": "pending",
+          "08-access_dns": "pending",
+          "09-mail_certificate": "pending",
+          "10-verify": "pending"
+        }
+      },
+      {
+        "attempt": 5,
+        "component": {
+          "error": {
+            "code": "mail_profile_install_failed",
+            "message": "The mail profile could not be installed and verified."
+          },
+          "http": 200,
+          "log_line": "2026/10/01 14:42:54 service operation d914544cdc89630259d0f148b08712f9 (protected-mail) failed in profile/protected-mail/mail-tls: mail TLS synchronization: another server change or package-manager task is still running",
+          "names_host_busy": true,
+          "operation_id": "d914544cdc89630259d0f148b08712f9",
+          "phase": "profile/protected-mail/mail-tls",
+          "read": true,
+          "status": "failed",
+          "step": "03-mail_profile"
+        },
+        "error": {
+          "code": "mail_profile_install_failed",
+          "message": "The mail profile could not be installed and verified."
+        },
+        "phase": "03-mail_profile",
+        "purpose": "web_mail",
+        "request_id": "0f066bc40272a0341dcbd47c7f3445b3",
+        "status": "failed",
+        "steps": {
+          "01-dns": "succeeded",
+          "02-mail_profile": "succeeded",
+          "03-mail_profile": "failed",
+          "04-service": "pending",
+          "05-firewall": "pending",
+          "06-access_dns": "pending",
+          "07-panel_certificate": "pending",
+          "08-access_dns": "pending",
+          "09-mail_certificate": "pending",
+          "10-verify": "pending"
+        }
+      },
+      {
+        "attempt": 6,
+        "component": {
+          "line": "2026/10/01 14:49:40 server setup step 05-firewall failed: another server change or package-manager task is still running",
+          "names_host_busy": true,
+          "read": true,
+          "source": "panel journal",
+          "step": "05-firewall"
+        },
+        "error": {
+          "code": "server_setup_firewall_failed",
+          "message": "Firewall requirements changed or application could not be verified. Review management access and the current service ports before retrying."
+        },
+        "phase": "05-firewall",
+        "purpose": "web_mail",
+        "request_id": "b5382b7d9a90ff171787f4c1a0991faf",
+        "status": "failed",
+        "steps": {
+          "01-dns": "succeeded",
+          "02-mail_profile": "succeeded",
+          "03-mail_profile": "succeeded",
+          "04-service": "succeeded",
+          "05-firewall": "failed",
+          "06-access_dns": "pending",
+          "07-panel_certificate": "pending",
+          "08-access_dns": "pending",
+          "09-mail_certificate": "pending",
+          "10-verify": "pending"
+        }
+      },
+      {
+        "attempt": 7,
+        "error": {
+          "code": "server_setup_access_dns_required",
+          "message": "Public DNS must resolve panel-ubuntu.upd1-infra.test to 192.0.2.12 before a certificate is requested. Check this hostname's A/AAAA records and its zone delegation. For DNS managed here, review the infrastructure DNS records in this wizard; otherwise correct them at the primary DNS server or provider. This check resumes automatically when DNS is verified."
+        },
+        "phase": "access_dns",
+        "purpose": "web_mail",
+        "request_id": "ecc3839556c87889fa7caa766798feb9",
+        "status": "waiting",
+        "steps": {
+          "01-dns": "succeeded",
+          "02-mail_profile": "succeeded",
+          "03-mail_profile": "succeeded",
+          "04-firewall": "succeeded",
+          "05-access_dns": "running",
+          "06-panel_certificate": "pending",
+          "07-access_dns": "pending",
+          "08-mail_certificate": "pending",
+          "09-verify": "pending"
+        }
+      }
+    ],
+    "owner_idle_waits": [
+      {
+        "at": "2026-10-01T14:17:45Z",
+        "before_attempt": 1,
+        "busy_seen": [
+          {
+            "locks": [],
+            "processes": [
+              "packagekitd"
+            ]
+          }
+        ],
+        "idle": true,
+        "polls": 29,
+        "waited_s": 287.3
+      },
+      {
+        "at": "2026-10-01T14:23:04Z",
+        "before_attempt": 2,
+        "busy_seen": [
+          {
+            "locks": [],
+            "processes": [
+              "packagekitd"
+            ]
+          }
+        ],
+        "idle": true,
+        "polls": 30,
+        "waited_s": 299.6
+      },
+      {
+        "at": "2026-10-01T14:28:38Z",
+        "before_attempt": 3,
+        "busy_seen": [
+          {
+            "locks": [],
+            "processes": [
+              "packagekitd"
+            ]
+          }
+        ],
+        "idle": true,
+        "polls": 30,
+        "waited_s": 299.4
+      },
+      {
+        "at": "2026-10-01T14:34:12Z",
+        "before_attempt": 4,
+        "busy_seen": [
+          {
+            "locks": [],
+            "processes": [
+              "packagekitd"
+            ]
+          }
+        ],
+        "idle": true,
+        "polls": 30,
+        "waited_s": 298.7
+      },
+      {
+        "at": "2026-10-01T14:40:53Z",
+        "before_attempt": 5,
+        "busy_seen": [
+          {
+            "locks": [],
+            "processes": [
+              "packagekitd"
+            ]
+          }
+        ],
+        "idle": true,
+        "polls": 29,
+        "waited_s": 289.2
+      },
+      {
+        "at": "2026-10-01T14:47:43Z",
+        "before_attempt": 6,
+        "busy_seen": [
+          {
+            "locks": [],
+            "processes": [
+              "packagekitd"
+            ]
+          }
+        ],
+        "idle": true,
+        "polls": 29,
+        "waited_s": 288.6
+      },
+      {
+        "at": "2026-10-01T14:54:43Z",
+        "before_attempt": 7,
+        "busy_seen": [
+          {
+            "locks": [],
+            "processes": [
+              "packagekitd"
+            ]
+          }
+        ],
+        "idle": true,
+        "polls": 30,
+        "waited_s": 299.1
+      }
+    ],
+    "plan_web_mail": {
+      "blockers": [],
+      "can_start": true,
+      "http": 200,
+      "id": "aa4ee2260038b47b2a9486cdcd37c2dc"
+    },
+    "start_http": 202
+  },
+  "finished_at": "2026-10-01T14:58:38Z",
+  "name": "setup",
+  "started_at": "2026-10-01T14:12:58Z",
+  "verdict": "observed"
+}

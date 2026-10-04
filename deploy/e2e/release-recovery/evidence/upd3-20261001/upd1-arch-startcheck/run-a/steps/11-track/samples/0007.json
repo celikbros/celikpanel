@@ -1,0 +1,84 @@
+{
+  "agreement": {
+    "known_sources": [
+      "cli"
+    ],
+    "phase": {
+      "cli": "running"
+    },
+    "reasons": [],
+    "sources": [
+      "cli",
+      "shell"
+    ],
+    "verdict": "single-source"
+  },
+  "cli": {
+    "boot_id": "ad87aa38-f9db-450a-99da-30d4c9139a33",
+    "captured_at": "2026-09-30T20:33:34.116826Z",
+    "en": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "The update is being applied; the panel may be unavailable for a short time. Nothing to do now: check this same request again in a minute. Checking does not restart the update.\nRequest: 89575bbb00157b7327a066ccabfa298a\nRecorded at: 2026-09-30T20:33:14Z\nThis is a recorded observation; current service health was not checked.\nRecorded state (for support): phase=running reason=update_running proof=none\n"
+    },
+    "json": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "{\"schema\":\"celikpanel-recovery-status/v1\",\"request_id\":\"89575bbb00157b7327a066ccabfa298a\",\"observation\":\"known\",\"phase\":\"running\",\"terminal_proof\":\"none\",\"reason\":\"update_running\",\"observed_at\":\"2026-09-30T20:33:14Z\"}\n"
+    },
+    "tr": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "Güncelleme uygulanıyor; panel kısa bir süre erişilemeyebilir. Şimdi yapmanız gereken bir şey yok: bir dakika sonra aynı işlemi yeniden sorgulayın. Sorgulamak güncellemeyi yeniden başlatmaz.\nİşlem: 89575bbb00157b7327a066ccabfa298a\nKayıt zamanı: 2026-09-30T20:33:14Z\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\nKayıtlı durum (destek için): phase=running reason=update_running proof=none\n"
+    }
+  },
+  "guidance_api": null,
+  "guidance_cli": {
+    "actionable": true,
+    "keys": [
+      "recovery.phase.running",
+      "recovery.next.running"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "texts": {
+      "en": [
+        "Last recorded step: update in progress",
+        "The server last reported work on this update. Wait for the next recorded result; checking this page does not restart it."
+      ],
+      "tr": [
+        "Kaydedilmiş son adım: güncelleme sürüyor",
+        "Sunucu son olarak bu güncelleme üzerinde çalıştığını bildirdi. Sonraki kayıtlı sonucu bekleyin; bu sayfayı kontrol etmek işlemi yeniden başlatmaz."
+      ]
+    }
+  },
+  "index": 6,
+  "observed": {
+    "observation": "known",
+    "observed_at": "2026-09-30T20:33:14Z",
+    "phase": "running",
+    "reason": "update_running",
+    "request_id": "89575bbb00157b7327a066ccabfa298a",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "none"
+  },
+  "panel_error": "PanelError",
+  "shell_fetch": {
+    "error": "ConnectionResetError",
+    "note": "only a browser-saved copy of the shell can show while the Panel is down"
+  },
+  "t": 1790800413.3552053,
+  "update_card": {
+    "keys": [],
+    "summary": null,
+    "texts": {
+      "en": [],
+      "tr": []
+    },
+    "untranslated_summary": false
+  },
+  "utc": "2026-09-30T20:33:33Z"
+}

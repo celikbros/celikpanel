@@ -1,0 +1,80 @@
+{
+  "checks": {
+    "agreement": {
+      "agreed_samples": 9,
+      "lag_samples": 0,
+      "samples": 13,
+      "verdict": "passed"
+    },
+    "attempts": {
+      "automatic": [],
+      "automatic_count": 0,
+      "journal_admissions": [],
+      "owner": [],
+      "owner_count": 0
+    },
+    "clock_skew_seconds": 0.315,
+    "host_panel_windows": [
+      {
+        "failed": true,
+        "first_bad": 1790987728.0012906,
+        "from": 1790987723.0011272,
+        "kind": "failed",
+        "last_bad": 1790987743.0017922,
+        "lower_bound_s": 15.001,
+        "to": 1790987748.001961,
+        "unobserved": false,
+        "upper_bound_s": 25.001
+      }
+    ],
+    "host_ssh_windows": [],
+    "management_off_cut": {
+      "guest_clock": 1790987767.9564364,
+      "margin_seconds": 5.0,
+      "requested_at_host": 1790987772.6414363
+    },
+    "outcome": "update-verified",
+    "samples_until_management_off": 27,
+    "workloads": {
+      "cron": {
+        "verdict": "never-interrupted",
+        "windows": []
+      },
+      "dns": {
+        "mode": "external",
+        "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+        "verdict": "not-provided-external-dns"
+      },
+      "panel": {
+        "outside": [],
+        "verdict": "down-only-during-transaction",
+        "windows": [
+          {
+            "cause": "unexplained",
+            "failed": true,
+            "first_bad": 1790987723.0618892,
+            "from": 1790987718.0613189,
+            "kind": "failed",
+            "last_bad": 1790987743.062988,
+            "lower_bound_s": 20.001,
+            "to": 1790987748.0630898,
+            "unobserved": false,
+            "upper_bound_s": 30.002
+          }
+        ]
+      },
+      "smtp": {
+        "verdict": "never-interrupted",
+        "windows": []
+      },
+      "web": {
+        "verdict": "never-interrupted",
+        "windows": []
+      }
+    }
+  },
+  "finished_at": "2026-10-03T00:40:05Z",
+  "name": "verdicts",
+  "started_at": "2026-10-03T00:40:05Z",
+  "verdict": "passed"
+}

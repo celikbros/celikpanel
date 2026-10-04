@@ -1,0 +1,38 @@
+/var/lib/celikpanel-dns-kill-matrix:
+total 1432
+drwx------  4 root root    4096 2026-09-29 19:04:11.238752152 +0000 .
+drwxr-xr-x 30 root root    4096 2026-09-29 19:04:40.787911352 +0000 ..
+-rw-------  1 root root    3224 2026-09-29 19:04:11.074751781 +0000 controller-argv.json
+-rw-------  1 root root    1016 2026-09-29 19:04:11.222752116 +0000 coordinator-stop-proof.json
+-rw-------  1 root root     728 2026-09-29 19:03:06.505254495 +0000 installed-binaries.sha256
+-rw-------  1 root root 1406962 2026-09-29 19:02:56.865254495 +0000 manifest.json
+drwx------  2 root root    4096 2026-09-29 19:04:34.996448788 +0000 measured
+drwx------  3 root root    4096 2026-09-29 19:04:11.042751709 +0000 results
+-rw-------  1 root root    1318 2026-09-29 19:03:14.661409035 +0000 scenario.json
+-rw-------  1 root root    3179 2026-09-29 19:04:05.362735696 +0000 source-adoption-pdns.json
+-rw-------  1 root root    1222 2026-09-29 19:04:10.810751154 +0000 source-normalization-pdns-identity.json
+-rw-------  1 root root    1170 2026-09-29 19:03:57.226699707 +0000 source-preinstall-pdns.json
+-rw-------  1 root root    2708 2026-09-29 19:04:11.002751619 +0000 source-proof.json
+-rw-------  1 root root    1329 2026-09-29 19:03:14.669409752 +0000 source-setup-pdns.json
+-rw-------  1 root root     406 2026-09-29 19:03:58.586707099 +0000 source-setup-trigger-identity.json
+
+/var/lib/celikpanel-dns-kill-matrix/measured:
+total 12
+drwx------ 2 root root       4096 2026-09-29 19:04:34.996448788 +0000 .
+drwx------ 4 root root       4096 2026-09-29 19:04:11.238752152 +0000 ..
+-rw------- 1 root celikpanel  390 2026-09-29 19:04:34.988449598 +0000 trigger-identity.json
+
+/var/lib/celikpanel-dns-kill-matrix/results:
+total 12
+drwx------ 3 root root 4096 2026-09-29 19:04:11.042751709 +0000 .
+drwx------ 4 root root 4096 2026-09-29 19:04:11.238752152 +0000 ..
+drwx------ 2 root root 4096 2026-09-29 19:05:31.513283319 +0000 bind__rolled-back__before-write__standalone__peer-reachable
+
+/var/lib/celikpanel-dns-kill-matrix/results/bind__rolled-back__before-write__standalone__peer-reachable:
+total 180
+drwx------ 2 root root         4096 2026-09-29 19:05:31.513283319 +0000 .
+drwx------ 3 root root         4096 2026-09-29 19:04:11.042751709 +0000 ..
+-rw------- 1 root celikpanel   2198 2026-09-29 19:04:51.635090884 +0000 boundary-marker.json
+-rw------- 1 root celikpanel   1862 2026-09-29 19:04:51.703086365 +0000 kill-proof.json
+-rw------- 1 root celikpanel 110325 2026-09-29 19:05:31.501283697 +0000 result.json
+-rw------- 1 root celikpanel  55060 2026-09-29 19:05:31.485284201 +0000 transcript.jsonl

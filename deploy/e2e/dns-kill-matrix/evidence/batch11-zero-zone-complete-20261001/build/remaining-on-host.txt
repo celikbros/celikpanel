@@ -1,0 +1,40 @@
+2026-09-30T05:38:54Z
+== QEMU processes
+== /var/tmp/cp-b11-1001/r1/cells
+total 12
+drwx------ 3 root root 4096 Sep 30 08:09 .
+drwx------ 5 root root 4096 Sep 30 08:09 ..
+drwx------ 5 root root 4096 Sep 30 08:13 7392457812ac089a866de6ec
+/var/tmp/cp-b11-1001/r1/cells/7392457812ac089a866de6ec/: arch debian13 fixture-plan.json fresh-primary-peer ssh-known-hosts  overlay.qcow2 seed seed.iso serial.log 
+== /var/tmp/cp-b11-1001/r2/cells
+total 12
+drwx------ 3 root root 4096 Sep 30 08:20 .
+drwx------ 5 root root 4096 Sep 30 08:20 ..
+drwx------ 5 root root 4096 Sep 30 08:25 e05b4787635364e83414f682
+/var/tmp/cp-b11-1001/r2/cells/e05b4787635364e83414f682/: arch debian13 fixture-plan.json fresh-primary-peer ssh-known-hosts  overlay.qcow2 seed seed.iso serial.log 
+4.3G	/var/tmp/cp-b11-1001
+214M	/root/cp-b11-src
+222M	/root/cp-b11-artifacts
+6.7M	/root/cp-b11-tools
+-rw-r--r-- 1 root root 10572 Sep 30 08:06 /var/tmp/cp-b11-build.log
+-rw-r--r-- 1 root root  4246 Sep 30 08:20 /var/tmp/cp-b11-setup.log
+-rw-r--r-- 1 root root  1117 Sep 30 08:08 /var/tmp/cp-b11-tcount.log
+-rw-r--r-- 1 root root 25812 Sep 30 08:06 /var/tmp/cp-b11-triggertest.log
+-rw-r--r-- 1 root root 27171 Sep 30 08:09 /var/tmp/cp-b11-webbuild.log
+-rw-r--r-- 1 root root 10315 Sep 30 08:09 /var/tmp/cp-b11-webdist.sha256
+/root/cp-b11-artifacts
+/root/cp-b11-src
+/root/cp-b11-tools
+/var/tmp/cp-b11-1001
+/var/tmp/cp-b11-build.log
+/var/tmp/cp-b11-setup.log
+/var/tmp/cp-b11-tcount.log
+/var/tmp/cp-b11-triggertest.log
+/var/tmp/cp-b11-webbuild.log
+/var/tmp/cp-b11-webdist.sha256
+== other roots untouched (listing only)
+/var/tmp/cp-b10-1001
+/var/tmp/cp-b9-1001
+/var/tmp/cp-pair5-work
+               total        used        free      shared  buff/cache   available
+Mem:           15697        1387       10084           4        4471       14310

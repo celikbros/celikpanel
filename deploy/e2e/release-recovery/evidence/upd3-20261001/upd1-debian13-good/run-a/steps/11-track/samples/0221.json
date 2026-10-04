@@ -1,0 +1,146 @@
+{
+  "agreement": {
+    "known_sources": [
+      "api",
+      "cli"
+    ],
+    "phase": {
+      "api": "failed",
+      "cli": "failed"
+    },
+    "reasons": [],
+    "sources": [
+      "api",
+      "cli",
+      "shell"
+    ],
+    "verdict": "agree"
+  },
+  "cli": {
+    "boot_id": "6bc7c2ef-4374-4eb4-a597-a8c8a1b25db8",
+    "captured_at": "2026-09-30T18:48:22.918048Z",
+    "en": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "The update failed. If it stopped before anything was changed, the server keeps running the version it had; otherwise automatic recovery takes over and this status changes to recovery. Nothing to do on the server now: check this same request again in a few minutes and do not start another update. The panel's update page shows the reason when the panel is reachable.\nRequest: df01bec5190476fd66baf46177314f54\nRecorded at: 2026-09-30T17:54:30Z\nThis is a recorded observation; current service health was not checked.\nRecorded state (for support): phase=failed reason=update_failed proof=none previous_failure=update_failed\n"
+    },
+    "json": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "{\"schema\":\"celikpanel-recovery-status/v1\",\"request_id\":\"df01bec5190476fd66baf46177314f54\",\"observation\":\"known\",\"phase\":\"failed\",\"terminal_proof\":\"none\",\"reason\":\"update_failed\",\"observed_at\":\"2026-09-30T17:54:30Z\",\"previous_failure\":\"update_failed\"}\n"
+    },
+    "tr": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "Güncelleme başarısız oldu. Hiçbir şey değişmeden durduysa sunucu önceki sürümünü çalıştırmaya devam eder; aksi hâlde otomatik kurtarma devreye girer ve bu durum kurtarmaya geçer. Şimdi sunucuda yapmanız gereken bir şey yok: birkaç dakika sonra aynı işlemi yeniden sorgulayın ve başka güncelleme başlatmayın. Panel erişilebilir olduğunda güncelleme sayfası nedeni gösterir.\nİşlem: df01bec5190476fd66baf46177314f54\nKayıt zamanı: 2026-09-30T17:54:30Z\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\nKayıtlı durum (destek için): phase=failed reason=update_failed proof=none previous_failure=update_failed\n"
+    }
+  },
+  "guidance_api": {
+    "actionable": true,
+    "keys": [
+      "recovery.phase.failed",
+      "recovery.next.failed",
+      "recovery.reason.update_failed"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "texts": {
+      "en": [
+        "The update failed",
+        "The server owner must inspect the update log using this operation ID. Keep the ID and check the recovery result before retrying an update.",
+        "Update failed"
+      ],
+      "tr": [
+        "Güncelleme başarısız oldu",
+        "Sunucu sahibi bu işlem kimliğiyle güncelleme günlüğünü incelemelidir. Kimliği saklayın ve güncellemeyi yeniden denemeden önce kurtarma sonucunu kontrol edin.",
+        "Güncelleme başarısız oldu"
+      ]
+    }
+  },
+  "guidance_cli": {
+    "actionable": true,
+    "keys": [
+      "recovery.phase.failed",
+      "recovery.next.failed",
+      "recovery.reason.update_failed"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "texts": {
+      "en": [
+        "The update failed",
+        "The server owner must inspect the update log using this operation ID. Keep the ID and check the recovery result before retrying an update.",
+        "Update failed"
+      ],
+      "tr": [
+        "Güncelleme başarısız oldu",
+        "Sunucu sahibi bu işlem kimliğiyle güncelleme günlüğünü incelemelidir. Kimliği saklayın ve güncellemeyi yeniden denemeden önce kurtarma sonucunu kontrol edin.",
+        "Güncelleme başarısız oldu"
+      ]
+    }
+  },
+  "index": 220,
+  "observed": {
+    "observation": "known",
+    "observed_at": "2026-09-30T17:54:30Z",
+    "phase": "failed",
+    "previous_failure": "update_failed",
+    "reason": "update_failed",
+    "request_id": "df01bec5190476fd66baf46177314f54",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "none"
+  },
+  "recovery_api": {
+    "body": {
+      "observation": "known",
+      "observed_at": "2026-09-30T17:54:30Z",
+      "panel_state": "ready",
+      "phase": "failed",
+      "previous_failure": "update_failed",
+      "reason": "update_failed",
+      "request_id": "df01bec5190476fd66baf46177314f54",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "none"
+    },
+    "http": 200
+  },
+  "t": 1790794102.2994776,
+  "update_card": {
+    "keys": [],
+    "missing_keys": [],
+    "summary": "reviewed updater failed: exit status 1: !! selected recovery runtime cannot verify the current installation before update",
+    "texts": {
+      "en": [
+        "reviewed updater failed: exit status 1: !! selected recovery runtime cannot verify the current installation before update"
+      ],
+      "tr": [
+        "reviewed updater failed: exit status 1: !! selected recovery runtime cannot verify the current installation before update"
+      ]
+    },
+    "untranslated_summary": true
+  },
+  "update_status": {
+    "body": {
+      "created_at": "2026-09-30T17:54:15.842765001Z",
+      "found": true,
+      "request_id": "df01bec5190476fd66baf46177314f54",
+      "status": "failed",
+      "summary": "reviewed updater failed: exit status 1: !! selected recovery runtime cannot verify the current installation before update",
+      "target": {
+        "arch": "amd64",
+        "archive_sha256": "36766be1eb37359658ebdb53ddb431660812f620c22639a2097e6f7762066542",
+        "archive_size": "67005596",
+        "commit": "901593abf12c90c91222d2c61a8bd7c0040523c3",
+        "os": "linux",
+        "sequence": "82",
+        "version": "v0.1.0-alpha.82"
+      },
+      "updated_at": "2026-09-30T17:54:29.961469358Z"
+    },
+    "http": 200
+  },
+  "utc": "2026-09-30T18:48:22Z"
+}

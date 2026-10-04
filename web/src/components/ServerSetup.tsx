@@ -6,7 +6,7 @@ import { setupDNSTranslation } from '../i18n/setupDNS';
 import type { TranslationKey } from '../i18n/en';
 import { Link, Navigate } from '../router';
 import { decodeSetupEditorCheckpoint, setupInfrastructureZoneCandidate, changeSetupDNSRole, setupDNSNames, setupDetectedIPv4, chooseSetupPurpose, decodeServerSetup, setupNextPath, setupPurposes, type ServerSetupCheck, type ServerSetupDraft, type ServerSetupSnapshot } from '../lib/serverSetup';
-import { decodeSetupExecution, decodeSetupMarker, decodeSetupPlan, newSetupRequestID, safeSetupPanelURL, type ServerSetupExecution, type SetupInfrastructureDNSPlan, type ServerSetupPlan, type SetupStartMarker } from '../lib/serverSetupOperation';
+import { retryableMailEnrollmentHandoff, continuableMailEnrollment, decodeSetupExecution, decodeSetupMarker, decodeSetupPlan, newSetupRequestID, safeSetupPanelURL, type ServerSetupExecution, type SetupInfrastructureDNSPlan, type ServerSetupPlan, type SetupStartMarker } from '../lib/serverSetupOperation';
 import { ServerSetupShell, useServerSetup } from './ServerSetupGate';
 import { ServerSetupSteps } from './ServerSetupSteps';
 import { ServerSetupDNSConnection } from './ServerSetupDNSConnections';
@@ -14,7 +14,7 @@ import { remoteDNSEndpoint } from '../lib/remoteDNS';
 import { ServerSetupChoice, ServerSetupManualAction } from './ServerSetupChoice';
 import { Button, inputClass, Spinner } from './ui';
 import { ServerSetupComponents, useSetupComponentCatalog } from './ServerSetupComponents';
-import { setupExecutionGuidance } from '../lib/serverSetupGuidance';
+import { setupComponentName, setupExecutionGuidance, setupHostBusyKey, setupHostingRootBlockerValues } from '../lib/serverSetupGuidance';
 import { setupEffectiveComponents, setupPresetComponents } from '../lib/serverSetupComponents';
 
 function useSetupI18n() {
@@ -32,8 +32,14 @@ async function setupFetch(url: string, options?: RequestInit) {
 }
 const editorKey = (username: string) => `celikpanel.setup.editor.${username}`;
 const markerKey = (username: string) => `celikpanel.setup.start.${username}`;
+// A mail component this distribution cannot install gets the mail-specific
+// refusal: what is missing, who acts and the two ways forward (upd1 P2).
+const mailServiceUnsupported = (code: string) => /^server_setup_service_unsupported:(postfix|dovecot|rspamd|roundcube)$/.test(code);
 const codeKey: Record<string, TranslationKey> = {
     license_required: 'license.restricted',
+    service_install_failed: 'setup.failure.install',
+    mail_profile_install_failed: 'setup.failure.install',
+    node_runtime_install_failed: 'setup.failure.install',
     server_setup_build_changed: 'setup.guide.buildChanged',
     server_setup_reconciling: 'setup.confirmingPrevious',
     REMOTE_DNS_UNAVAILABLE: 'setup.blocker.remote',
@@ -44,6 +50,8 @@ const codeKey: Record<string, TranslationKey> = {
     mail_delivery_required: 'setup.blocker.mailDelivery',
     mail_delivery_unavailable: 'setup.blocker.mailDelivery',
     server_setup_mail_certificate_failed: 'setup.blocker.mailDNS',
+    server_setup_mail_enrollment_unavailable: 'setup.blocker.mailEnrollment',
+    server_setup_mail_enrollment_busy: 'setup.blocker.mailEnrollmentBusy',
     server_setup_dns_identity_required: 'setup.blocker.dnsIdentity',
     server_setup_hosting_requires_dns_publisher: 'setup.publisher.endpointRequired',
     server_setup_dns_publisher_endpoint_required: 'setup.publisher.endpointRequired',
@@ -51,7 +59,14 @@ const codeKey: Record<string, TranslationKey> = {
     server_setup_dns_readiness_required: 'setup.publisher.pairWaiting',
     server_setup_dns_engine_unsupported: 'setup.blocker.profile',
     server_setup_existing_dns_requires_migration: 'setup.blocker.migration',
+    pdns_primary_switch_paused: 'setup.pdnsPrimaryPaused',
     server_setup_dns_failed: 'setup.blocker.dnsIdentity',
+    server_setup_dns_rolled_back: 'setup.guide.dnsRolledBack',
+    server_setup_dns_agent_failed: 'setup.guide.dnsAgentFailed',
+    server_setup_dns_recovery_held: 'setup.guide.dnsRecoveryHeld',
+    server_setup_dns_result_unknown: 'setup.guide.dnsResultUnknown',
+    LICENSE_VERIFICATION_UNAVAILABLE: 'setup.guide.licenseUnverified',
+    LICENSE_STATUS_UNAVAILABLE: 'setup.guide.licenseUnverified',
     server_setup_access_dns_required: 'setup.infrastructure.accessRequired',
     server_setup_access_dns_mismatch: 'setup.infrastructure.accessMismatch',
     server_setup_primary_dns_required: 'setup.infrastructure.primaryRequired',
@@ -63,6 +78,11 @@ const codeKey: Record<string, TranslationKey> = {
     server_setup_access_dns_failed: 'setup.infrastructure.accessRequired',
     server_setup_panel_certificate_failed: 'setup.blocker.panelTLS',
     server_setup_firewall_failed: 'setup.blocker.firewall',
+    host_restart_required: 'setup.blocker.hostRestart',
+    firewall_kernel_unavailable: 'setup.blocker.firewallKernel',
+    firewall_engine_unavailable: 'setup.blocker.firewallEngine',
+    firewall_busy: 'setup.blocker.firewallBusy',
+    firewall_status_unknown: 'setup.blocker.firewallUnknown',
     server_setup_step_failed: 'setup.blocker.services',
     firewall_no_ssh_service: 'setup.blocker.ssh',
     firewall_ssh_not_listening: 'setup.blocker.ssh',
@@ -164,6 +184,7 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
     const [remoteVerified, setRemoteVerified] = useState(false);
     const [error, setError] = useState('');
     const [reconnecting, setReconnecting] = useState(false);
+    const [enrollmentNotice, setEnrollmentNotice] = useState<'checking' | 'unknown' | null>(null);
     const [completionFailed, setCompletionFailed] = useState(false);
     const [verificationResult, setVerificationResult] = useState<{ checks: ServerSetupCheck[]; failed: boolean } | null>(null);
     const [verifyingRequirements, setVerifyingRequirements] = useState(false);
@@ -176,12 +197,24 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
     const markerRef = useRef(marker);
     markerRef.current = marker;
     const accept = useCallback((value: ServerSetupSnapshot) => { setSnapshot(value); setup.accept(value); }, [setup.accept]);
-    const failureText = (code: string) => t(codeKey[code.split(':')[0]] || 'setup.blocker.unknown');
+    const failureText = (code: string, message?: string) => {
+        const hostingRoot = setupHostingRootBlockerValues(code);
+        if (hostingRoot) return t('setup.blocker.hostingRoot', hostingRoot);
+        if (code === 'HOST_MUTATION_BUSY') return t(setupHostBusyKey(message));
+        return t(code === 'mail_enrollment_restored' ? 'setup.guide.mailEnrollmentFailed' : mailServiceUnsupported(code) ? 'setup.blocker.mailUnsupported' : codeKey[code.split(':')[0]] || 'setup.blocker.unknown');
+    };
+    // One localized name per component, shared by the step list and the
+    // install-failure guidance so both sentences name the same thing.
+    // Adım listesi ve kurulum hatası yönlendirmesi aynı yerel adı kullanır.
+    const componentLabel = (target: string) => {
+        if (['webmail', 'core-mail', 'protected-mail'].includes(target)) return t(target === 'protected-mail' ? 'dashboard.audit.profile.protectedMail' : target === 'core-mail' ? 'dashboard.audit.profile.coreMail' : 'dashboard.audit.profile.webmail');
+        if (target === 'cron') return t('setup.component.cron');
+        return setupComponentName(target);
+    };
     const stepTarget = (kind: string, target: string) => {
         if (kind === 'dns' && ['local', 'external', 'existing'].includes(target)) return t(`setup.dns.${target}` as TranslationKey);
         if (kind === 'mail_profile') return t(target === 'protected-mail' ? 'dashboard.audit.profile.protectedMail' : target === 'core-mail' ? 'dashboard.audit.profile.coreMail' : 'dashboard.audit.profile.webmail');
-        const names: Record<string, string> = { nginx: 'Nginx', 'php-fpm': 'PHP-FPM', mariadb: 'MariaDB', postgresql: 'PostgreSQL', node: 'Node.js', nftables: 'nftables', certbot: 'Certbot', postfix: 'Postfix', dovecot: 'Dovecot', rspamd: 'Rspamd', roundcube: 'Roundcube', bind: 'BIND', pdns: 'PowerDNS' };
-        return names[target] || target;
+        return componentLabel(target);
     };
 
     useEffect(() => {
@@ -359,6 +392,22 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
         } catch { if (alive.current) setReconnecting(true); }
         finally { pendingRef.current = false; if (alive.current) setBusy(false); }
     }
+    async function continueMailEnrollment(initialRetry = false) {
+        const current = initialRetry ? retryableMailEnrollmentHandoff(execution) : continuableMailEnrollment(execution);
+        if (!current || !execution || reconnecting || pendingRef.current) return;
+        pendingRef.current = true; setBusy(true); setError(''); setEnrollmentNotice(null);
+        try {
+            const response = await setupFetch(`/api/v1/setup/mail-enrollment/${initialRetry ? 'retry' : 'continue'}`, requestOptions({ execution_id: execution.id, step_id: current.id }));
+            const result: unknown = response.ok ? await response.json() : null;
+            const accepted = !!result && typeof result === 'object' && 'handoff' in result && result.handoff === 'accepted';
+            if (alive.current) setEnrollmentNotice(accepted ? 'checking' : 'unknown');
+        } catch { if (alive.current) setEnrollmentNotice('unknown'); }
+        finally {
+            // A lost POST reply only triggers a read of the same setup execution.
+            await reconcile();
+            pendingRef.current = false; if (alive.current) setBusy(false);
+        }
+    }
     function editPlan() {
         if (execution && execution.status !== 'failed') return;
         resetForReview();
@@ -403,6 +452,8 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
     const hostingDNSManagement = draft.dns_hosting_management || (draft.dns_publisher_endpoint ? 'panel' : 'manual');
     const automaticPublisher = secondaryHosting && hostingDNSManagement === 'panel';
     const publisherEndpoint = remoteDNSEndpoint(draft.dns_publisher_endpoint || '');
+    // Whether PowerDNS may be the paired primary is the server's product
+    // gate; the review shows its pdns_primary_switch_paused blocker.
     const dnsSelectionError: TranslationKey | null = isDNS && draft.dns_mode !== 'local'
         ? 'setup.components.localDNSRequired'
         : automaticPublisher && !publisherEndpoint
@@ -412,7 +463,10 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
     const nextPath = setupNextPath(snapshot.draft.purpose, customized ? selectedComponents : undefined);
     const nextLabel = nextPath === '/settings?section=dns' ? 'setup.nextDNS' : nextPath === '/services' ? 'setup.nextComponents' : isNode ? 'setup.nextApplication' : 'setup.nextWebsite';
     const progressCurrentStep = execution?.steps.find(item => ['running', 'failed'].includes(item.status));
-    const guidance = execution && !reconnecting ? setupExecutionGuidance(execution) : null;
+    const observingMailEnrollment = progressCurrentStep?.kind === 'mail_enrollment' && execution?.status === 'running' && ['running', 'rollback', 'unknown', 'not_recorded', 'handoff'].some(reason => execution.error?.code === `server_setup_mail_enrollment_${reason}`);
+    const mailEnrollmentToRetry = !reconnecting && retryableMailEnrollmentHandoff(execution);
+    const mailEnrollmentToContinue = !reconnecting && continuableMailEnrollment(execution);
+    const guidance = execution && !reconnecting ? setupExecutionGuidance(execution, componentLabel) : null;
     const progressChecks = (verificationResult && !verificationResult.failed ? verificationResult.checks : execution?.checks || snapshot.checks).filter(check => check.state !== 'ready');
     const verifiedBlockers = verificationResult?.checks.filter(check => check.state !== 'ready') || [];
     const verificationMessage = verifyingRequirements ? 'setup.verifyChecking'
@@ -444,10 +498,13 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
                         {progressCurrentStep && !waitingLicense && <p className="mt-2 break-words text-sm font-medium">{t(`setup.kind.${progressCurrentStep.kind}`, { target: stepTarget(progressCurrentStep.kind, progressCurrentStep.target) })}</p>}
                         <div role={execution?.status === 'failed' ? 'alert' : 'status'} className="mt-2 space-y-2 text-sm leading-6 text-fg-muted">{guidance.messages.map((message, index) => <p key={index} className="break-words">{t(message.key, message.values)}</p>)}</div>
                         {canReviseWaiting && <Button variant="secondary" disabled={busy} className="mt-3" onClick={() => void reviseWaiting()}>{t('setup.editPlan')}</Button>}
+                        {mailEnrollmentToContinue && <Button variant="secondary" disabled={busy} className="mt-3" onClick={() => void continueMailEnrollment()}>{t('setup.mailEnrollment.continue')}</Button>}
+                        {mailEnrollmentToRetry && <Button variant="secondary" disabled={busy} className="mt-3" onClick={() => void continueMailEnrollment(true)}>{t('setup.mailEnrollment.retry')}</Button>}
+                        {enrollmentNotice && progressCurrentStep?.kind === 'mail_enrollment' && <p role="status" className="mt-3 text-sm">{t(`setup.mailEnrollment.${enrollmentNotice}`)}</p>}
                         {execution?.context?.infrastructure_dns && ['infrastructure_dns', 'access_dns'].includes(progressCurrentStep?.kind || execution?.phase || '') && <details className="mt-3 text-sm"><summary className="cursor-pointer font-medium text-primary">{t('setup.infrastructure.reviewTitle')}</summary><SetupInfrastructureDNSReview value={execution.context.infrastructure_dns} compact /></details>}
                         {guidance.details.length > 0 && <details className="mt-3 text-sm leading-6"><summary className="cursor-pointer font-medium text-primary">{t('setup.guide.more')}</summary><ul className="mt-2 list-disc space-y-2 pl-5 text-fg-muted">{guidance.details.map((message, index) => <li key={index}>{t(message.key, message.values)}</li>)}</ul></details>}
                     </aside>}
-                    {execution?.error && !['dns_publisher', 'dns_readiness'].includes(execution.phase) && <div role={confirmingPrevious || waitingDNSPrerequisite ? 'status' : 'alert'} className="mt-5 space-y-2 text-sm">{(!confirmingPrevious || !guidance) && <p className={confirmingPrevious || waitingDNSPrerequisite ? 'text-fg-muted' : 'text-danger'}>{failureText(execution.error.code)}</p>}<details><summary className="cursor-pointer text-primary">{t('setup.details')}</summary><p className="mt-2 break-words text-fg-muted">{execution.error.message}</p></details></div>}
+                    {execution?.error && !['dns_publisher', 'dns_readiness'].includes(execution.phase) && <div role={confirmingPrevious || waitingDNSPrerequisite || observingMailEnrollment ? 'status' : 'alert'} className="mt-5 space-y-2 text-sm">{(!(confirmingPrevious || observingMailEnrollment) || !guidance) && <p className={confirmingPrevious || waitingDNSPrerequisite ? 'text-fg-muted' : 'text-danger'}>{failureText(execution.error.code, execution.error.message)}</p>}<details><summary className="cursor-pointer text-primary">{t('setup.details')}</summary><p className="mt-2 break-words text-fg-muted">{execution.error.message}</p></details></div>}
                     {progressChecks.length > 0 && waitingVerification && <ul className="mt-5 list-disc space-y-2 pl-5 text-sm text-fg-muted">{progressChecks.map(check => <li key={check.id}>{failureText(check.code)}</li>)}</ul>}
                     <ol className="mt-6 divide-y divide-border" aria-live="polite">
                         {execution?.steps.map(item => {
@@ -455,7 +512,7 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
                                 ? !waitingVerification && (execution.phase === 'verification' || execution.status === 'succeeded') ? 'running' : 'pending'
                                 : item.status;
                             const label = item.kind === 'verify' && waitingVerification ? 'setup.verifyWaiting' : `setup.operation.${status}` as TranslationKey;
-                            return <li key={item.id} className="flex flex-col items-start justify-between gap-2 py-4 sm:flex-row sm:items-center sm:gap-4"><div className="min-w-0"><p className="font-medium">{t(`setup.kind.${item.kind}`, { target: stepTarget(item.kind, item.target) })}</p>{item.qualifier && <p className="mt-1 break-words text-sm text-fg-muted">{item.qualifier}</p>}</div><span className="flex shrink-0 items-center gap-2 text-sm text-fg-muted">{status === 'succeeded' ? <Check className="h-4 w-4 text-success" aria-hidden="true" /> : status === 'running' ? <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" /> : <Circle className="h-3 w-3" aria-hidden="true" />}{t(label)}</span></li>; })}
+                            return <li key={item.id} className="flex flex-col items-start justify-between gap-2 py-4 sm:flex-row sm:items-center sm:gap-4"><div className="min-w-0"><p className="font-medium">{t(`setup.kind.${item.kind}`, { target: stepTarget(item.kind, item.target) })}</p>{item.qualifier && item.kind !== 'mail_enrollment' && <p className="mt-1 break-words text-sm text-fg-muted">{item.qualifier}</p>}</div><span className="flex shrink-0 items-center gap-2 text-sm text-fg-muted">{status === 'succeeded' ? <Check className="h-4 w-4 text-success" aria-hidden="true" /> : status === 'running' ? <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" /> : <Circle className="h-3 w-3" aria-hidden="true" />}{t(label)}</span></li>; })}
                     </ol>
                     {waitingVerification && <p className="mt-5 text-sm text-fg-muted">{t('setup.reviseHelp')}</p>}
                     {completionFailed && <p role="alert" className="mt-5 text-sm text-danger">{t('setup.verificationFailed')}</p>}
@@ -518,7 +575,7 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
                                 </fieldset>
                             </div>
                             {dnsNames.mismatch && <div role="alert" className="space-y-2 rounded-lg border border-warning-mark/40 bg-warning-mark/10 p-4 text-sm"><p>{t('setup.dnsMappingMismatch')}</p><p className="break-all">{t('setup.savedPeerName')}: {draft.peer_ns || '—'}</p><Button type="button" disabled={!draft[dnsNames.peerKey].trim()} onClick={() => change('peer_ns', draft[dnsNames.peerKey])}>{t('setup.useDisplayedPeer')}</Button></div>}
-                            <div className="max-w-sm"><SetupSelect name="dns_engine" label={t('setup.engine')} value={draft.dns_engine} onChange={value => change('dns_engine', value as 'bind' | 'pdns')}><option value="pdns">PowerDNS</option><option value="bind">BIND</option></SetupSelect></div>
+                            <div className="max-w-sm"><SetupSelect name="dns_engine" label={t('setup.engine')} value={draft.dns_engine} onChange={value => change('dns_engine', value as 'bind' | 'pdns')}><option value="bind">BIND</option><option value="pdns">PowerDNS</option></SetupSelect></div>
                             <p className="text-sm leading-6 text-fg-muted">{t('setup.dnsStartPrimary')}</p>
                             <details className="text-sm text-fg-muted"><summary className="cursor-pointer font-medium text-primary">{t('setup.dnsPairDetails')}</summary><p className="mt-3 leading-6">{t('setup.dnsPairOrder')}</p><p className="mt-3 leading-6">{t('setup.dnsNativePeerHelp')}</p></details>
                         </div>}
@@ -552,7 +609,7 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
                         <h2 id="setup-plan-title" className="text-xl font-semibold">{t('setup.reviewTitle')}</h2><p className="mt-3 text-sm leading-6 text-fg-muted">{t('setup.reviewHelp')}</p>
                         {plan.infrastructure_dns && <SetupInfrastructureDNSReview value={plan.infrastructure_dns} />}
                         {plan.components && <div className="mt-5"><h3 className="font-semibold">{t('setup.components.reviewTitle')}</h3><ul className="mt-2 divide-y divide-border">{plan.components.map(item => <li key={item.id} className="flex flex-wrap items-baseline justify-between gap-2 py-2 text-sm"><span>{catalog?.components.find(row => row.id === item.id)?.name || stepTarget('service', item.id)}</span><span className="text-fg-muted">{t(item.installed ? 'setup.components.keep' : item.required ? 'setup.components.dependency' : 'setup.components.toInstall')}</span></li>)}</ul><p className="mt-3 text-sm text-fg-muted">{t('setup.components.preserve')}</p></div>}
-                        <ol className="mt-5 divide-y divide-border">{plan.steps.map(item => <li key={item.id} className="py-4"><p className="font-medium">{t(`setup.kind.${item.kind}`, { target: stepTarget(item.kind, item.target) })}</p>{item.qualifier && <p className="mt-1 text-sm text-fg-muted">{item.qualifier}</p>}</li>)}</ol>
+                        <ol className="mt-5 divide-y divide-border">{plan.steps.map(item => <li key={item.id} className="py-4"><p className="font-medium">{t(`setup.kind.${item.kind}`, { target: stepTarget(item.kind, item.target) })}</p>{item.qualifier && item.kind !== 'mail_enrollment' && <p className="mt-1 text-sm text-fg-muted">{item.qualifier}</p>}</li>)}</ol>
                         <dl className="mt-5 space-y-3 rounded-lg bg-surface-2 p-4 text-sm"><div><dt className="font-semibold">{t('setup.firewallReview')}</dt><dd className="mt-1 leading-6 text-fg-muted">{t('setup.firewallHelp')}</dd></div><div><dt className="font-semibold">TCP</dt><dd className="mt-1 break-words tabular-nums">{plan.tcp_ports.join(', ') || t('setup.noPorts')}</dd></div><div><dt className="font-semibold">UDP</dt><dd className="mt-1 break-words tabular-nums">{plan.udp_ports.join(', ') || t('setup.noPorts')}</dd></div><div><dt className="font-semibold">{t('setup.certificateContact')}</dt><dd className="mt-1 break-all">{plan.contact_email}</dd></div>{plan.hostname_change && <div><dt className="font-semibold">{t('setup.hostnameChange')}</dt><dd className="mt-1 break-all">{plan.hostname_change}</dd></div>}</dl>
                         {automaticPublisher && publisherEndpoint && <div className="mt-5 space-y-2 border-t border-border pt-4 text-sm"><p className="font-semibold">{t('setup.publisher.reviewTitle')}</p><p className="break-all">{publisherEndpoint}</p><p className="leading-6 text-fg-muted">{t('setup.publisher.setupHelp')}</p></div>}
                         {plan.remote_dns_connection && <div className="mt-5 rounded-lg border border-border p-4 text-sm"><p className="font-semibold">{t('setup.remote.reviewTitle')}</p><p className="mt-2 break-all">{plan.remote_dns_connection.endpoint}</p><p className="mt-1 break-words text-fg-muted">{plan.remote_dns_connection.nameservers.join(', ')}</p><p className="mt-2 leading-6 text-fg-muted">{t('setup.remote.reviewHelp')}</p></div>}

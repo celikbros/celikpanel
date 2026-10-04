@@ -1,0 +1,23 @@
+request 8b14693eaf9461f13a415d5e637b6d91 controller 2026-09-29T15:12:41.272401Z -> 2026-09-29T15:15:38.596594Z
+status passed safety passed class rolled_back_source_serving fp fa671515
+kill pid 2408 state T at 2026-09-29T15:12:48.215622Z exit 137 reaped True
+marker 2026-09-29T15:12:48.117740177Z journal rolling-back d71d8395
+trigger rc 75
+ probe 1 rolled_back_source_active fa671515 bind | 
+ probe 2 rolled_back_source_active fa671515 bind | 
+stability 31 ok 31 2026-09-29T15:14:20.833660Z 2026-09-29T15:14:50.833779Z
+ reboot {"ordinal": 1, "point": null, "boot_id_before": "53efc75d-f29a-42ee-97e7-570985fd0e73", "boot_id_after": "92d8d7a6-e6d7-4692-b286-f19a9a461c39", "product_uuid": "0aad1005-2e54-5e63-bb6b-4be2ffcdaf52"}
+ reboot {"ordinal": 2, "point": null, "boot_id_before": "92d8d7a6-e6d7-4692-b286-f19a9a461c39", "boot_id_after": "1d4af10d-1bc1-4708-9043-d9e147e0a834", "product_uuid": "0aad1005-2e54-5e63-bb6b-4be2ffcdaf52"}
+reboot_after_recovery run True status passed failures [] unknown [] window 31 ok 31 dns_only False
+  authority_after_boot {"at": "2026-09-29T15:15:08.440262Z", "authority": {"answer_counts": {"tcp": 1, "udp": 1}, "answered": true, "engines": {"tcp": ["bind"], "udp": ["bind"]}}, "dns": {"answered": true, "at": "2026-09-29T15:15:08.487805Z", "result": {"tcp": {"additional": 1, "answers": 1, "authority": 1, "bytes": 82, "flags": 33792, "questions": 1, "transport": "tcp"}, "udp": {"additional": 1, "answers": 1, "authorit
+OI variant pre-start status passed failures [] ambig []
+ release {"status": "failed", "phase": "interrupted", "error_code": "dns_native_recovery_unknown_after_restart"} journal {"device": 65025, "exists": true, "expected_phase": "rolling-back", "inode": 131592, "mode": "0600", "observed_phase": "rolling-back", "request_id": "8b14693eaf9461f13a415d5e637b6d91", "sha256": "d71d
+ refusal: 2026/09/29 15:12:48 Interrupted DNS switch native recovery is unknown; retain exact journal and release only its ledger lease (request 8b14693eaf9461f13a415d5e637b6d91): running BIND adoption needs independent no-stop recovery; the owner recovery command for this rollback is /usr/libexec/celikpanel/recovery recover-dns-bind-adoption --request-id 8b14693eaf9461f13a415d5e637b6d91, which the server owner runs when recovery dns-switch-status --quiesced --request-id 8b14693eaf9461f13a415d5e637b6d91 names it; preserve the journal, ledger and native DNS until that exact request is reconciled
+ status rc 0 names True changed [] :: DNS switch request 8b14693eaf9461f13a415d5e637b6d91: released-undecided-with-journal (journal phase rolling-back). / This running BIND adoption retains a rollback decision. The server owner can continue that exact no-stop inverse with: /usr/libexec/celikpanel/recovery recover-dns-bind-adoption --request-id 8b14693eaf9461f13a415d5e637b6d91. The command rechecks locks, worker exclusion and owner changes; this status check does not start recovery.
+ owner cmd rc 0 dur 10.631162
+  The accepted running BIND adoption rollback reached its terminal verdict for request 8b14693eaf9461f13a415d5e637b6d91. The original owner BIND zones were verified without stopping named. Check current authoritative DNS health before another DNS change.
+  
+ after: ledger_unchanged True state_bytes_unchanged True owner_files_unchanged True pdns pid null
+ rerun rc 0 changed [] :: Request 8b14693eaf9461f13a415d5e637b6d91 is already reconciled: the Agent released this interrupted DNS switch and its journal has since been retired, by this command or by a later Agent start; the evidence cannot tell which. Nothing was changed now. This request no longer blocks DNS changes. This c
+ status after cmd :: DNS switch request 8b14693eaf9461f13a415d5e637b6d91 was interrupted and the Agent could not recover it automatically when it restarted, so it released the lease. The switch has since been reconciled and its journal is retired, either by the owner recovery command or by a later Agent start; this evid
+ after_reboot(before owner cmd): changed_evidence [] ledger_unchanged True journal {"device": 65025, "exists": true, "expected_phase": "rolling-back", "inode": 131592, "mode": "0600", "observed_phase": "rolling-back", "request_id": "8b14693eaf

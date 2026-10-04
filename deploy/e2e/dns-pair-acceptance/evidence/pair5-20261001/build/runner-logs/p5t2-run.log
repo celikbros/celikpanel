@@ -1,0 +1,145 @@
+{
+  "cell_id": "pair-accept__bind-arch__pdns-debian13__p5t2",
+  "dry_run": true,
+  "edit_method": "ui-replace",
+  "expected_outcome_note": "pdns-primary/bind-secondary is expected to end refused-by-product-gate (server plan blocker pdns_primary_switch_paused) while its gate is closed; --license-mode none is expected to end blocked-product at license; acceptance-fixture runs do not evidence license behaviour; D1 needs secondary_ready on the secondary's GET /api/v1/dns/engine and none on the primary's; a build that does not report it (pair1, aa6b9380) ends pair-ready blocked-product; a listed unknown setup state (server_setup_reconciling) lasting longer than 300s fails the step with cause product (D-024 open-ended unknown)",
+  "fixture_commands": [
+    [
+      "python3",
+      "deploy/e2e/dns-kill-matrix/fixture.py",
+      "prepare",
+      "--work-root",
+      "/var/tmp/cp-pair5-work",
+      "--cell-id",
+      "pair-accept__bind-arch__pdns-debian13__p5t2",
+      "--ssh-public-key",
+      "<identity>.pub",
+      "--execute"
+    ],
+    [
+      "python3",
+      "deploy/e2e/dns-kill-matrix/fixture.py",
+      "start",
+      "--work-root",
+      "/var/tmp/cp-pair5-work",
+      "--cell-id",
+      "pair-accept__bind-arch__pdns-debian13__p5t2",
+      "--execute"
+    ],
+    [
+      "python3",
+      "deploy/e2e/dns-kill-matrix/fixture.py",
+      "wait-ssh",
+      "--work-root",
+      "/var/tmp/cp-pair5-work",
+      "--cell-id",
+      "pair-accept__bind-arch__pdns-debian13__p5t2",
+      "--identity-file",
+      "<identity>",
+      "--execute"
+    ]
+  ],
+  "license_mode": "acceptance-fixture",
+  "native_evidence_scope": "License behaviour is NOT evidenced by this run. Both panels were built with the acceptance_license test tag and ran on the acceptance fixture license, which exists only in that build: no customer license, no license service contact, and no activation, renewal, expiry or rejection path of the product. Only the DNS pair product flow after licensing is in scope for review.",
+  "safety": [
+    "guests are reached only through the fixture plan's loopback SSH ports",
+    "every mutating guest command re-checks the SMBIOS UUID and fixture marker",
+    "the Panel is reached through a loopback SSH tunnel with a pinned TLS leaf",
+    "status polls cannot issue unsafe HTTP methods",
+    "secrets are redacted before capture and a surviving registered secret aborts the write"
+  ],
+  "schema": "celikpanel/dns-pair-acceptance-driver/v1",
+  "steps": [
+    {
+      "api": "POST /api/v1/auth/login, GET /api/v1/auth/me, GET /api/v1/panel/availability",
+      "step": "login"
+    },
+    {
+      "api": "GET /api/v1/license/access; locked: GET /api/v1/setup -> 403 license_required; owner-key: POST /api/v1/panel/license {action:activate}; acceptance-fixture: GET /api/v1/panel/license (label), POST {action:activate, fixture key} once, GET both again",
+      "step": "license"
+    },
+    {
+      "api": "GET /api/v1/setup, PUT /api/v1/setup/guidance, PUT /api/v1/setup, POST /api/v1/setup/plan",
+      "step": "setup-review"
+    },
+    {
+      "api": "POST /api/v1/setup/start (once, fixed request_id), poll GET /api/v1/setup/operation?request_id=",
+      "step": "setup-start"
+    },
+    {
+      "api": "poll GET /api/v1/dns/engine on both Panels until D1 holds (primary: pair_ready true, secondary_ready absent; secondary: secondary_ready true, pair_ready false); a stable snapshot that does not satisfy it stops early; a secondary without secondary_ready is blocked-product (this build does not report secondary readiness); poll setup operation until settled",
+      "step": "pair-ready"
+    },
+    {
+      "api": "POST /api/v1/domains/create {project_type:dnsonly}, GET /api/v1/domains, GET .../dns/zone, GET .../dns/records",
+      "step": "zone-add"
+    },
+    {
+      "api": "POST /api/v1/domains/{id}/dns/records",
+      "step": "record-add"
+    },
+    {
+      "api": "ui-replace: DELETE .../dns/records?id= then POST; api-put: PUT .../dns/records",
+      "step": "record-edit"
+    },
+    {
+      "api": "DELETE /api/v1/domains/{id}; 202 -> GET .../deletion-status (read-only); owner enrollment (dns-peer-enroll, --engine pdns for a PowerDNS secondary) then the same DELETE once",
+      "step": "zone-delete"
+    },
+    {
+      "api": "POST /api/v1/domains/create",
+      "step": "zone-readd"
+    },
+    {
+      "api": "systemctl disable --now panel+agent; fixture reboot of both; native serving checks",
+      "step": "independence-reboot"
+    },
+    {
+      "api": "systemctl enable --now agent+panel; login; read-only GETs (D1 again); ledger digest unchanged",
+      "step": "management-return"
+    }
+  ],
+  "topology": {
+    "control": false,
+    "infra_zone": "ns-accept.test",
+    "name": "bind-primary/pdns-secondary",
+    "primary": {
+      "address": "192.0.2.11",
+      "engine": "bind",
+      "nameserver": "ns1.ns-accept.test",
+      "node": "arch",
+      "os": "arch",
+      "peer_address": "192.0.2.10",
+      "peer_nameserver": "ns2.ns-accept.test",
+      "peer_node": "debian13",
+      "role": "primary"
+    },
+    "secondary": {
+      "address": "192.0.2.10",
+      "engine": "pdns",
+      "nameserver": "ns2.ns-accept.test",
+      "node": "debian13",
+      "os": "debian-13",
+      "peer_address": "192.0.2.11",
+      "peer_nameserver": "ns1.ns-accept.test",
+      "peer_node": "arch",
+      "role": "secondary"
+    },
+    "zone": "pair-accept.test"
+  },
+  "unknown_state_codes": [
+    "server_setup_reconciling"
+  ],
+  "unknown_state_limit_seconds": 300.0,
+  "web_src": {
+    "commit": "b1e322756736f1a074bfca3f25cf6d7c3c28619b",
+    "marker": "PRODUCT-COMMIT",
+    "source": "--product-web-src",
+    "web_src": "/var/tmp/cp-pair5-dist/b1e322756736f1a074bfca3f25cf6d7c3c28619b-acceptance-license/product-web-src"
+  }
+}
+{
+  "run_id": "p5t2-20260930t043751z",
+  "overall": "failed",
+  "evidence": "/var/tmp/cp-pair5-evidence/p5t2-20260930t043751z"
+}

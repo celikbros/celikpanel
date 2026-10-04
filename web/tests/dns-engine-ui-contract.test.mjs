@@ -314,6 +314,30 @@ test('DNS engine decoder rejects impossible authority tuples', async () => {
 		pair_ready: true,
 	})), null);
 	assert.equal(decodeDNSEngineSnapshot(readySnapshot({ pair_ready: false })), null);
+	// Decision D (2026-09-30): secondary_ready, only on an active paired
+	// secondary; optional on read so an older Panel still parses.
+	const activeSecondary = (extra) => readySnapshot({
+		active_engine: 'bind',
+		topology: 'paired',
+		pair_role: 'secondary',
+		pair_ready: false,
+		engines: [
+			{ id: 'pdns', installed: true, running: false, managed: true, status: 'installed_standby' },
+			{ id: 'bind', installed: true, running: true, managed: true, status: 'active' },
+		],
+		...extra,
+	});
+	assert.equal(decodeDNSEngineSnapshot(activeSecondary({ secondary_ready: true })).secondary_ready, true);
+	assert.equal(decodeDNSEngineSnapshot(activeSecondary({ secondary_ready: false })).secondary_ready, false);
+	const olderPanel = decodeDNSEngineSnapshot(activeSecondary({}));
+	assert.ok(olderPanel);
+	assert.equal(olderPanel.secondary_ready, undefined);
+	assert.equal(decodeDNSEngineSnapshot(activeSecondary({ secondary_ready: 'yes' })), null);
+	assert.equal(decodeDNSEngineSnapshot(activeSecondary({ secondary_ready: true, pair_ready: true })), null);
+	assert.equal(decodeDNSEngineSnapshot(readySnapshot({
+		topology: 'paired', pair_role: 'primary', pair_ready: true, secondary_ready: false,
+	})), null);
+	assert.equal(decodeDNSEngineSnapshot(readySnapshot({ secondary_ready: false })), null);
   assert.equal(decodeDNSEngineSnapshot(readySnapshot({
     engines: [
       { id: 'pdns', installed: true, running: true, managed: true, status: 'active' },
@@ -417,6 +441,7 @@ test('DNS engine decoder accepts only exact staged paired authority tuples', asy
   delete standalone.pair_role;
   assert.ok(decodeDNSEngineSnapshot(standalone));
   assert.equal(decodeDNSEngineSnapshot({ ...standalone, pair_ready: false }), null);
+  assert.equal(decodeDNSEngineSnapshot(stagedPairSnapshot({ secondary_ready: false })), null);
 });
 
 test('DNS identity review unlocks only for the exact saved plan', async () => {
@@ -1149,6 +1174,23 @@ test('backend blocker text is discarded and paired or DNSSEC support is never in
   assert.match(settings, /engine\?\.state === 'switching'/);
 });
 
+// A serving BIND source cannot be switched to PowerDNS in this release. The
+// panel's refusal code must map to copy that says BIND keeps serving and names
+// the supported alternative, in both locales.
+test('the BIND-to-PowerDNS switch refusal is the panel code with actionable copy in both locales', () => {
+  const panelSource = readFileSync(
+    new URL('../../cmd/panel/dns_engine.go', import.meta.url),
+    'utf8',
+  );
+  assert.ok(panelSource.includes('"bind_source_pdns_switch_unsupported"'));
+  assert.match(card,
+    /bind_source_pdns_switch_unsupported: 'dnsEngine\.blocker\.bindSourcePdnsSwitchUnsupported'/);
+  const key = 'dnsEngine.blocker.bindSourcePdnsSwitchUnsupported';
+  assert.equal(copy.split(`'${key}'`).length - 1, 2, `${key} must exist in both locales`);
+  assert.match(copy, /BIND keeps serving; nothing was changed\. To run PowerDNS, install it on a server that has no DNS engine yet/);
+  assert.match(copy, /BIND hizmet vermeye devam ediyor; hiçbir şey değiştirilmedi\./);
+});
+
 test('fresh servers stage an exact DNS identity before the first engine install', () => {
   assert.match(settings, /const \[engineRefreshKey, setEngineRefreshKey\] = useState\(0\)/);
   assert.match(settings, /const settingsFlow = dnsEngineSettingsFlow\(engine\)/);
@@ -1219,6 +1261,16 @@ test('paired engines expose exact peer readiness without granting secondary writ
   assert.match(card, /dnsEngine\.pair\.primaryWaiting/);
   assert.match(card, /dnsEngine\.pair\.primaryReady/);
   assert.match(card, /dnsEngine\.pair\.secondaryReadOnly/);
+  // Three secondary states: proven (success), waiting (warning), not
+  // reported by an older Panel (today's neutral chip); text differs per state.
+  assert.match(contract, /secondary_ready\?: boolean/);
+  assert.match(card, /snapshot\.pair_role === 'secondary' && snapshot\.secondary_ready === true\)\s*\?\s*'border-success\/30 bg-success\/10 text-success'/);
+  assert.match(card, /snapshot\.pair_role === 'secondary' && snapshot\.secondary_ready === undefined\s*\?\s*'border-primary\/25 bg-primary\/5 text-primary'\s*:\s*'border-warning-mark\/60 bg-warning-mark\/20 text-warning'/);
+  assert.match(card, /snapshot\.secondary_ready === true\s*\?\s*et\('dnsEngine\.pair\.secondaryReady'\)\s*:\s*snapshot\.secondary_ready === false\s*\?\s*et\('dnsEngine\.pair\.secondaryWaiting'\)\s*:\s*et\('dnsEngine\.pair\.secondaryReadOnly'\)/);
+  assert.match(copy, /'dnsEngine\.pair\.secondaryReady': 'Secondary verified · zones come from the primary'/);
+  assert.match(copy, /'dnsEngine\.pair\.secondaryWaiting': 'Secondary · waiting for the primary’s catalog'/);
+  assert.match(copy, /'dnsEngine\.pair\.secondaryReady': 'İkincil doğrulandı · bölgeler birincilden gelir'/);
+  assert.match(copy, /'dnsEngine\.pair\.secondaryWaiting': 'İkincil · birincilin kataloğu bekleniyor'/);
   assert.match(copy, /waiting for the secondary to prove the exact catalog/);
   assert.match(copy, /ikincilin kesin kataloğu kanıtlaması bekleniyor/);
 });

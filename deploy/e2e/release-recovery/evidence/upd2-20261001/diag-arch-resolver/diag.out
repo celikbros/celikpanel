@@ -1,0 +1,59 @@
+Formatting '/var/tmp/cp-release-drill-upd2-diag-arch/cells/a15826468529ed1bc945ec63/debian13/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-upd2-diag-arch/images/debian-13-genericcloud-amd64-20260826-2582.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+Formatting '/var/tmp/cp-release-drill-upd2-diag-arch/cells/a15826468529ed1bc945ec63/arch/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-upd2-diag-arch/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-upd2-diag-arch", "cell_id": "release-recovery__4e1d76c2310288b8", "ssh_ports": [2401, 2402]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-upd2-diag-arch", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+diag rc=0
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-upd2-diag-arch", "evidence_retained": true}
+== os
+arch 
+7.1.8-arch1-3
+== nsswitch
+hosts: mymachines resolve [!UNAVAIL=return] files myhostname dns
+== resolved
+active
+-rw-r--r-- 1 root root 119 Oct 12  2025 /etc/hosts
+lrwxrwxrwx 1 root root  37 Aug 15 12:04 /etc/resolv.conf -> /run/systemd/resolve/stub-resolv.conf
+# Static table lookup for hostnames.
+# See hosts(5) for details.
+127.0.0.1        localhost
+::1              localhost
+== add test entry
+
+127.0.0.1 upd2-diag.example.net # upd2 resolver diagnosis
+== getent hosts upd2-diag.example.net
+127.0.0.1       localhost
+rc=0 elapsed=0.01
+== getent ahostsv4 upd2-diag.example.net
+127.0.0.1       STREAM localhost
+127.0.0.1       DGRAM  
+127.0.0.1       RAW    
+rc=0 elapsed=0.0
+== getent ahosts upd2-diag.example.net
+::1             STREAM localhost
+::1             DGRAM  
+::1             RAW    
+127.0.0.1       STREAM 
+127.0.0.1       DGRAM  
+127.0.0.1       RAW    
+rc=0 elapsed=0.01
+== getent ahostsv6 upd2-diag.example.net
+::ffff:127.0.0.1 STREAM localhost
+::ffff:127.0.0.1 DGRAM  
+::ffff:127.0.0.1 RAW    
+rc=0 elapsed=0.0
+== resolvectl query upd2-diag.example.net
+upd2-diag.example.net: 127.0.0.1                            -- link: lo
+                       ::1                                  -- link: lo
+                       (localhost)
+
+-- Information acquired via protocol DNS in 573us.
+-- Data is authenticated: yes; Data was acquired via local or encrypted transport: yes
+-- Data from: synthetic
+rc=0 elapsed=0.01
+== python3 -c 'import socket;print(socket.getaddrinfo("upd2-diag.example.net",443,0,socket.SOCK_STREAM))'
+[(<AddressFamily.AF_INET6: 10>, <SocketKind.SOCK_STREAM: 1>, 6, '', ('::1', 443, 0, 0)), (<AddressFamily.AF_INET: 2>, <SocketKind.SOCK_STREAM: 1>, 6, '', ('127.0.0.1', 443))]
+rc=0 elapsed=0.02
+== same via the helper environment (PATH only, LC_ALL=C)
+127.0.0.1       localhost
+rc=0 elapsed=0.0
+

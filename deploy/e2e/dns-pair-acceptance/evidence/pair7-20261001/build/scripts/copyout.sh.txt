@@ -1,0 +1,11 @@
+#!/bin/bash
+set -euo pipefail
+P=/root/cp-pair7/pack
+DEST='/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/evidence/pair7-20261001'
+[[ ! -e $DEST ]] || { echo "exists: $DEST"; exit 1; }
+mkdir -p "$DEST"
+( cd $P && tar -cf - . ) | ( cd "$DEST" && tar --no-same-owner --no-same-permissions -xf - )
+find "$DEST" -type f | wc -l
+ls -d /var/tmp/cp-pair7* /root/cp-pair7*
+ls /var/tmp/cp-pair7-work/cells/
+pgrep -a qemu || echo "no qemu"; pgrep -af watch-catalog || echo "no watcher"

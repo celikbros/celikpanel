@@ -1,0 +1,12 @@
+### collect 2026-09-29T14:20:39.311991823Z
+last watcher dir: /var/tmp/cp-b5-watch
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    import json;print(json.load(open("/var/lib/celikpanel-dns-kill-matrix/results/bind__target-staged__after-write__standalone__peer-reachable/result.json"))["request_id"])
+                                ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/var/lib/celikpanel-dns-kill-matrix/results/bind__target-staged__after-write__standalone__peer-reachable/result.json'
+request id: 
+ownerpost rc=0
+smstatus rc=2
+probe rc=0
+tar rc=0 size=122880

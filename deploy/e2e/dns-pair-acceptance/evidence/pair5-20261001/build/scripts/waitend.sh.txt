@@ -1,0 +1,11 @@
+#!/bin/bash
+# usage: waitend.sh LABEL MAXSECONDS : returns when the run ends or on timeout; prints step dirs
+label=$1; max=${2:-570}; t0=$(date +%s)
+while (( $(date +%s) - t0 < max )); do
+  grep -q 'run end' /root/cp-pair5/logs/$label-runner.log 2>/dev/null && break
+  sleep 10
+done
+date -u +%FT%TZ
+for d in /var/tmp/cp-pair5-evidence/$label-*/steps; do [[ -d $d ]] && ls $d | tr '\n' ' '; done; echo
+grep -h 'end' /root/cp-pair5/logs/$label-runner.log
+tail -3 /root/cp-pair5/logs/$label-catalog-watch.jsonl 2>/dev/null | cut -c1-400

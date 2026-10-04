@@ -532,8 +532,16 @@ func ensureDovecotSSLCert(ctx context.Context) error {
 // ensureVmailUser, her maildir'in sahibi olan ayrılmış posta kutusu sahibini
 // (uid/gid 5000) oluşturur; tek, girişsiz bir sistem kullanıcısı.
 func ensureVmailUser(ctx context.Context) error {
+	// The vmail home, Postfix base and Dovecot paths all record the resolved
+	// root, so a host whose /var/mail is the distribution's link records the
+	// real directory (for example /var/spool/mail/vhosts) rather than a path
+	// the symlink-free open refuses.
+	root, err := managedMailRootPath()
+	if err != nil {
+		return err
+	}
 	if _, err := user.Lookup(vmailUser); err == nil {
-		return ensureMailRoot()
+		return secureEnsureMailRoot(root)
 	}
 	if _, err := user.LookupGroup(vmailUser); err != nil {
 		if out, err := serviceMutationCommand(ctx, "groupadd", "-g", vmailGID, vmailUser).CombinedOutput(); err != nil {
@@ -541,14 +549,10 @@ func ensureVmailUser(ctx context.Context) error {
 		}
 	}
 	if out, err := serviceMutationCommand(ctx, "useradd", "-r", "-g", vmailGID, "-u", vmailUID,
-		"-d", mailRootDir, "-s", "/usr/sbin/nologin", vmailUser).CombinedOutput(); err != nil {
+		"-d", root, "-s", "/usr/sbin/nologin", vmailUser).CombinedOutput(); err != nil {
 		return fmt.Errorf("useradd: %s", strings.TrimSpace(string(out)))
 	}
-	return ensureMailRoot()
-}
-
-func ensureMailRoot() error {
-	return secureEnsureMailRoot(mailRootDir)
+	return secureEnsureMailRoot(root)
 }
 
 // configurePostfixVirtual points Postfix at our maps and delivers unmatched-
@@ -559,8 +563,12 @@ func configurePostfixVirtual(ctx context.Context) error {
 	// The table type is DISCOVERED, never assumed — see postfixMapType.
 	// Tablo tipi VARSAYILMAZ, keşfedilir — bkz. postfixMapType.
 	mt := postfixMapTypeContext(ctx) + ":"
+	root, err := managedMailRootPath()
+	if err != nil {
+		return err
+	}
 	settings := [][2]string{
-		{"virtual_mailbox_base", mailRootDir},
+		{"virtual_mailbox_base", root},
 		{"virtual_mailbox_domains", mt + postfixDomainsPath},
 		{"virtual_mailbox_maps", mt + postfixVBoxPath},
 		{"virtual_alias_maps", mt + postfixVirtualPath},
@@ -577,6 +585,10 @@ func configurePostfixVirtual(ctx context.Context) error {
 	return nil
 }
 
+// dovecotConfDirMissingReason is the operator line for a Dovecot whose native
+// configuration has no conf.d directory. dovecot.conf itself is left untouched.
+const dovecotConfDirMissingReason = "Dovecot has no /etc/dovecot/conf.d directory (a single-file configuration, as the Arch Linux package ships); CelikPanel configures Dovecot only through conf.d files and left dovecot.conf unchanged"
+
 // configureDovecotVirtual drops a single override file that makes Dovecot
 // authenticate against /etc/dovecot/users and read the maildirs — loaded last
 // (99-) so it wins over the distro's default mail_location and system auth.
@@ -589,11 +601,24 @@ func configureDovecotVirtual() error {
 	// (mail_driver/mail_path) — see dovecot_dialect.go for the why.
 	// Lehçe kurulu Dovecot'u izler: 2.3 (mail_location) vs 2.4
 	// (mail_driver/mail_path) — nedeni için dovecot_dialect.go.
-	conf := buildDovecotVirtualConf(dovecotIs24())
+	modern, err := dovecotIs24()
+	if err != nil {
+		return err
+	}
+	root, err := managedMailRootPath()
+	if err != nil {
+		return err
+	}
+	conf := buildDovecotVirtualConfAt(modern, root)
 
 	confDir := "/etc/dovecot/conf.d"
 	if !fileExistsAgent(confDir) {
-		return fmt.Errorf("dovecot is not installed")
+		// Dovecot is installed; its layout is the problem (Arch's 2.4 package
+		// ships a single dovecot.conf and no conf.d, upd1 finding P2). Say so
+		// instead of the former, false "dovecot is not installed".
+		// Dovecot kurulu; sorun yerleşimidir. Eski, yanlış "kurulu değil"
+		// yerine bunu söyle.
+		return errors.New(dovecotConfDirMissingReason)
 	}
 	managedConf := confDir + "/99-celikpanel.conf"
 	authConf := confDir + "/10-auth.conf"

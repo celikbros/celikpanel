@@ -104,3 +104,28 @@ kapsamı önce açıkla. Canlı durumu kullanıcıdan gizli biçimde SSH, script
 veritabanı düzenlemesiyle düzeltme. Kodun salt-okur incelenmesi ve hazırlık
 serbesttir. Panel güncellemesini her durumda kullanıcı panelin kendi güncelleme
 arayüzünden başlatır; bu kurtarma tercihi o kuralı değiştirmez.
+
+## Constitutional resilience audit — user direction, 2026-09-14
+
+Before changing lifecycle, persisted evidence, access gates, recovery or native
+service ownership, read the constitution in ROADMAP.md, D-025 and
+docs/RESILIENCE-CONTRACT.md. Name the affected invariant/P0 item, schema or
+version transition, recovery behavior and evidence in the PR. Keep unresolved
+acceptance items open; component tests alone do not establish complete native
+update/automatic-rollback resilience. Incident corrections must record their
+scope and remaining gaps rather than claim the foundation finished.
+
+The owner asked for structural correction rather than continuing isolated
+patches. This direction does not authorize live configuration, panel removal,
+license-policy changes or assistant-initiated installed-panel updates. Preserve
+the owner-operated recovery and installed-update rules above.
+
+Yaşam döngüsü, kalıcı kanıt, erişim kapıları, kurtarma veya yerel hizmet sahipliği
+değiştirilmeden önce ROADMAP.tr.md anayasası, D-025 ve
+docs/RESILIENCE-CONTRACT.tr.md okunur. PR'da etkilenen ilke/P0 işi, şema veya
+sürüm geçişi, kurtarma davranışı ve kanıt belirtilir. Açık kabul işleri açık kalır;
+bileşen testleri tam gerçek sistem güncelleme/otomatik geri alma dayanıklılığını
+kanıtlamaz. Olay düzeltmesi kapsamını ve kalan açığı kaydeder; temeli bitmiş saymaz.
+Bu yön canlı yapılandırma, panel kaldırma, lisans politikası değişikliği veya
+asistanın kurulu paneli güncellemesi izni değildir. Yukarıdaki kullanıcı kurtarma
+ve kurulu panel güncelleme kuralları korunur.

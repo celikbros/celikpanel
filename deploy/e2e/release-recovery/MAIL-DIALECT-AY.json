@@ -1,0 +1,29 @@
+{
+  "schema": "celikpanel/native-mail-dialect/v1",
+  "source_commit": "b3b89ce19d18116737c3f06720945d0eeeabd52e",
+  "test_binary_sha256": "d3485fee86c6baeb9ffcae47e5324aaa04e4850d5fab06822f741b303409eb52",
+  "lab": {
+    "cell_id": "release-recovery__33fdf23ab0fbe25f",
+    "node": "debian13"
+  },
+  "base_record_sha256": "d815d123afb93d0e3a55af3529f5eed3e1376f906b62fea54a1b6a96312c7ce7",
+  "scope": {
+    "real_native_config_readback": true,
+    "real_executable_version_failure": true,
+    "shared_host_mutation_lock": true,
+    "configuration_and_pending_preserved": true,
+    "native_daemon_failure": false,
+    "independent_renewal": false,
+    "crash_recovery": false
+  },
+  "logs": {
+    "mail-native-dialect-start.log": {
+      "sha256": "2ebde5b10adc59c846c9959f11479d926abadd416d086ed9f708ec2610422619",
+      "text": "d3485fee86c6baeb9ffcae47e5324aaa04e4850d5fab06822f741b303409eb52  /root/celikpanel-release-recovery-lab/mail-dialect.test\n7a3fbe8a-98b5-4b50-857e-f238ad4b22dc\n"
+    },
+    "mail-native-dialect-result.log": {
+      "sha256": "245ce32eb987ba5aeac9f2f783a5aa71cfe0469e1872a8a8e2658aea3264291f",
+      "text": "Sep 22 06:32:11 dns-debian13 systemd[1]: Starting celikpanel-lab-mail-native-dialect.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-dialect.test -test.v \"-test.run=^TestMailHostCertificateDisposableVMNativeDialectReadback\\$\" -test.timeout=90s...\nSep 22 06:32:11 dns-debian13 mail-dialect.test[915]: === RUN   TestMailHostCertificateDisposableVMNativeDialectReadback\nSep 22 06:32:12 dns-debian13 postfix/postfix-script[1030]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf\nSep 22 06:32:12 dns-debian13 mail-dialect.test[915]:     mail_tls_dialect_vm_test.go:102: native version failure refused before configuration; native 2.4 retained-plan readback passed; configuration, ledger, pending renewal and trusted SMTP/IMAP leaf unchanged: 7713abe26e69887a166cd5c6efc39bb96be0f19cf6ec55428af1673924466a11\nSep 22 06:32:12 dns-debian13 mail-dialect.test[915]: --- PASS: TestMailHostCertificateDisposableVMNativeDialectReadback (0.70s)\nSep 22 06:32:12 dns-debian13 mail-dialect.test[915]: PASS\nSep 22 06:32:12 dns-debian13 systemd[1]: celikpanel-lab-mail-native-dialect.service: Deactivated successfully.\nSep 22 06:32:12 dns-debian13 systemd[1]: Finished celikpanel-lab-mail-native-dialect.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-dialect.test -test.v \"-test.run=^TestMailHostCertificateDisposableVMNativeDialectReadback\\$\" -test.timeout=90s.\nResult=success\nExecMainStatus=0\nActiveState=inactive\n7a3fbe8a-98b5-4b50-857e-f238ad4b22dc\n"
+    }
+  }
+}

@@ -17,6 +17,21 @@ type buildGateOperation struct {
 func protectedBuildGateOperations() []buildGateOperation {
 	agent := &Agent{}
 	return []buildGateOperation{
+		{name: "StartMailEnrollmentV1", run: func(expected string) string {
+			var response transport.MailEnrollmentStartResponse
+			err := agent.StartMailEnrollmentV1(&transport.MailEnrollmentStartRequest{MailEnrollmentRequest: transport.MailEnrollmentRequest{RequestID: strings.Repeat("a", 32), OwnerID: strings.Repeat("b", 32), Generation: strings.Repeat("c", 64)}, ExpectedBuildCommit: expected}, &response)
+			if err == nil {
+				return ""
+			}
+			return err.Error()
+		}}, {name: "ContinueMailEnrollmentV1", run: func(expected string) string {
+			var response transport.MailEnrollmentStartResponse
+			err := agent.ContinueMailEnrollmentV1(&transport.MailEnrollmentStartRequest{MailEnrollmentRequest: transport.MailEnrollmentRequest{RequestID: strings.Repeat("a", 32), OwnerID: strings.Repeat("b", 32), Generation: strings.Repeat("c", 64)}, ExpectedBuildCommit: expected}, &response)
+			if err == nil {
+				return ""
+			}
+			return err.Error()
+		}},
 		{
 			name: "ApplyVhost",
 			run: func(expected string) string {
@@ -230,9 +245,13 @@ func agentRPCMethodsWithBuildCommitField(t *testing.T) []string {
 		method := agentType.Method(index)
 		// V1 is a stable zero-touch mixed-version stub. It deliberately keeps
 		// the old wire request shape but never reaches the build gate or host.
+		// Mail enrollment source and preview are read-only inspections with
+		// separate build-identity tests, not protected host mutations.
 		if method.Name == "IssuePanelCertificate" ||
 			method.Name == "ReconcileMailTLSMutation" ||
-			method.Name == "SecureMailTLS" {
+			method.Name == "SecureMailTLS" ||
+			method.Name == "MailEnrollmentSourceV1" ||
+			method.Name == "MailEnrollmentPreviewV1" {
 			continue
 		}
 		if method.Type.NumIn() != 3 {

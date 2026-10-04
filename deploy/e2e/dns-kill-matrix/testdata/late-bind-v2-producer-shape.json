@@ -1,0 +1,43 @@
+{
+  "config_after_paths": [
+    "/etc/bind/named.conf.local",
+    "/etc/bind/named.conf.options"
+  ],
+  "database_keys": [
+    "device",
+    "gid",
+    "inode",
+    "logical_sha256",
+    "mode",
+    "path",
+    "uid"
+  ],
+  "database_path": "/var/lib/powerdns/pdns.sqlite3",
+  "phase": "rolling-back",
+  "plan_keys": [
+    "bind_unchanged_config",
+    "config_after",
+    "digest",
+    "host_layout",
+    "kind",
+    "source_pdns"
+  ],
+  "plan_kind": "bind-switch-config/v1",
+  "plan_layout": "apt",
+  "schema": "celikpanel-dns-engine-switch-journal/v2",
+  "source_keys": [
+    "config_before",
+    "database",
+    "kind"
+  ],
+  "source_kind": "pdns-source/v1",
+  "source_paths": [
+    "/etc/powerdns/pdns.conf",
+    "/etc/powerdns/pdns.d/celikpanel-cluster.conf",
+    "/etc/powerdns/pdns.d/celikpanel.conf"
+  ],
+  "unchanged_paths": [
+    "/etc/bind/named.conf",
+    "/etc/bind/named.conf.root-hints"
+  ]
+}

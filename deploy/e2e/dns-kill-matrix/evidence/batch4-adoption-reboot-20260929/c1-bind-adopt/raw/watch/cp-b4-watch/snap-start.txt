@@ -1,0 +1,100 @@
+tag=start wall=2026-09-29T13:00:45.106160982Z mono=91.96 143.48 boot_id=510e917a-4a6e-4b07-94cd-63660b5609a1
+== pdns.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainStartTimestampMonotonic=0
+ExecMainPID=0
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+InvocationID=
+== named.service
+MainPID=2405
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 13:00:43 UTC
+ExecMainStartTimestampMonotonic=89948162
+ExecMainPID=2405
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 13:00:43 UTC
+InactiveEnterTimestamp=
+InvocationID=7af60630eccb4baba02e00771e806550
+== bind9.service
+MainPID=2405
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 13:00:43 UTC
+ExecMainStartTimestampMonotonic=89948162
+ExecMainPID=2405
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 13:00:43 UTC
+InactiveEnterTimestamp=
+InvocationID=7af60630eccb4baba02e00771e806550
+== celikpanel-agent.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 13:00:17 UTC
+ExecMainStartTimestampMonotonic=63897566
+ExecMainPID=1561
+ExecMainCode=2
+ExecMainStatus=15
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 13:00:17 UTC
+InactiveEnterTimestamp=Tue 2026-09-29 13:00:43 UTC
+InvocationID=5095b9fbeb6e4fad81417fa913773a00
+== celikpanel-panel.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 13:00:17 UTC
+ExecMainStartTimestampMonotonic=64046589
+ExecMainPID=1572
+ExecMainCode=1
+ExecMainStatus=0
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 13:00:17 UTC
+InactiveEnterTimestamp=Tue 2026-09-29 13:00:43 UTC
+InvocationID=9e30cda346524d2ea4ecccec70cf4f45
+== processes
+2405 /usr/sbin/named -f -u bind
+== journal file
+total 12
+drwx------  2 root celikpanel 4096 2026-09-29 13:00:15.304028459 +0000 .
+drwxr-xr-x 29 root root       4096 2026-09-29 13:00:38.456058197 +0000 ..
+-rw-------  1 root celikpanel   23 2026-09-29 13:00:15.292028459 +0000 service-mutations.json
+== ss 53
+udp UNCONN 0      0         192.0.2.10:53 0.0.0.0:* users:(("named",pid=2405,fd=29))         
+udp UNCONN 0      0         192.0.2.10:53 0.0.0.0:* users:(("named",pid=2405,fd=28))         
+udp UNCONN 0      0          10.0.2.15:53 0.0.0.0:* users:(("named",pid=2405,fd=25))         
+udp UNCONN 0      0          10.0.2.15:53 0.0.0.0:* users:(("named",pid=2405,fd=24))         
+udp UNCONN 0      0          127.0.0.1:53 0.0.0.0:* users:(("named",pid=2405,fd=19))         
+udp UNCONN 0      0          127.0.0.1:53 0.0.0.0:* users:(("named",pid=2405,fd=18))         
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=18))
+tcp LISTEN 0      10         127.0.0.1:53 0.0.0.0:* users:(("named",pid=2405,fd=22))         
+tcp LISTEN 0      10         127.0.0.1:53 0.0.0.0:* users:(("named",pid=2405,fd=20))         
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=21))
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=19))
+tcp LISTEN 0      10         10.0.2.15:53 0.0.0.0:* users:(("named",pid=2405,fd=27))         
+tcp LISTEN 0      10         10.0.2.15:53 0.0.0.0:* users:(("named",pid=2405,fd=26))         
+tcp LISTEN 0      10        192.0.2.10:53 0.0.0.0:* users:(("named",pid=2405,fd=31))         
+tcp LISTEN 0      10        192.0.2.10:53 0.0.0.0:* users:(("named",pid=2405,fd=30))         

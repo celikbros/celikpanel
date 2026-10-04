@@ -1,0 +1,851 @@
+--- a/deploy/e2e/dns-pair-acceptance/scripts/build-dist.sh
++++ b/deploy/e2e/dns-pair-acceptance/scripts/build-dist.sh
+@@ -87,6 +87,15 @@
+     [[ -f $src/internal/licensing/acceptance_fixture.go ]] \
+         || { echo "commit $full has no acceptance license seam" >&2; exit 2; }
+     guard=$src/deploy/release-acceptance-license-guard.sh
++    # upd7: a published tag that predates the guard (v0.1.0-alpha.80) is checked with the
++    # guard named by CELIKPANEL_ACCEPTANCE_GUARD (the harness commit's own copy); the tag's
++    # make dist does not run it, and the tag's deploy/ tree is not changed to add it.
++    if [[ ! -f $guard && -n ${CELIKPANEL_ACCEPTANCE_GUARD:-} ]]; then
++        [[ -f $CELIKPANEL_ACCEPTANCE_GUARD ]] || { echo "CELIKPANEL_ACCEPTANCE_GUARD is not a file" >&2; exit 2; }
++        guard=$CELIKPANEL_ACCEPTANCE_GUARD
++        echo "acceptance guard: $guard (the commit has none)" >> "$out/build.log"
++    fi
++    [[ -f $guard ]] || { echo "commit $full has no acceptance license guard" >&2; exit 2; }
+     # The ordinary archive passed make dist's guard; check it once more.
+     bash "$guard" "$archive" || { echo "ordinary archive unexpectedly refused" >&2; exit 1; }
+     work=$out/acceptance
+--- a/deploy/e2e/release-recovery/build-upd1-artifacts.sh
++++ b/deploy/e2e/release-recovery/build-upd1-artifacts.sh
+@@ -1,7 +1,7 @@
+ #!/usr/bin/env bash
+ # Build the five upd1/upd3 archives from one exact source commit, in a disposable clone.
+ #
+-# usage: build-upd1-artifacts.sh [SOURCE_COMMIT]      (default: the repository HEAD)
++# usage: build-upd1-artifacts.sh [--baseline-ref TAG] [SOURCE_COMMIT]   (default: the repository HEAD)
+ #
+ # Runs on the Linux QEMU host (archlinux), as the pair driver's build does.
+ # Nothing is committed to the working repository: the fixture commits exist
+@@ -18,6 +18,18 @@
+ #   R  realstart   G + fixture defect: main() exits just before the listener;
+ #                  the start check never reaches it (apply_kind_patch real-start)
+ #
++# --baseline-ref TAG (upd7; only v0.1.0-alpha.80): the baseline is the PUBLISHED
++# tag's own tree plus the D-027 acceptance-license seam (Panel license code
++# only: owner_update_trial.BASELINE_REF_PATCHED), labelled by the tag's own
++# unchanged release policy. The build refuses unless `git diff TAG B` names
++# exactly those files, and writes baseline-ref-proof.txt (blob and SHA-256 of
++# every update/rollback/recovery/bootstrap/get.sh/deploy/release-*/finalize-*
++# file at TAG and at B, the cmd/agent, deploy/, download-portal/ and web/
++# trees, and the Agent's package closure, which never includes the seam).
++# The candidates are SOURCE labelled as the next release (v0.1.0-alpha.81 / 81,
++# previous = B): G, and D over G. S and R are not built in this mode. B's web/
++# is built from the tag, G's and D's from SOURCE.
++#
+ # The source commit must carry the candidate start check (product 8ffc5e06 or
+ # later); the fixture patches refuse any other source text.
+ #
+@@ -31,9 +43,17 @@
+ 
+ HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+ REPO=${CELIKPANEL_REPO:-'/mnt/c/CELIKBROS PROJECTS/celikpanel'}
++BASELINE_REF=
++if [[ ${1:-} == --baseline-ref ]]; then
++    BASELINE_REF=${2:?usage: build-upd1-artifacts.sh [--baseline-ref TAG] [SOURCE_COMMIT]}
++    shift 2
++    [[ $BASELINE_REF == v0.1.0-alpha.80 ]] || { echo "only --baseline-ref v0.1.0-alpha.80 is supported" >&2; exit 2; }
++fi
+ SOURCE=${1:-HEAD}
+ BUILD_DIST="$HERE/../dns-pair-acceptance/scripts/build-dist.sh"
+ DRIVER="$HERE/owner_update_trial.py"
++GUARD="$HERE/../../../deploy/release-acceptance-license-guard.sh"
++GO=${CELIKPANEL_GO:-/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go}
+ [[ -f $BUILD_DIST && -f $DRIVER ]] || { echo "harness files missing" >&2; exit 2; }
+ command -v git >/dev/null && command -v python3 >/dev/null || { echo "git and python3 are required" >&2; exit 2; }
+ 
+@@ -50,13 +70,86 @@
+ 
+ commit_fixture() {
+     local kind=$1 message=$2 previous=${3:-} commit
+-    python3 "$DRIVER" fixture-source --repo "$clone" --kind "$kind" ${previous:+--previous-commit "$previous"} >&2
++    python3 "$DRIVER" fixture-source --repo "$clone" --kind "$kind" ${previous:+--previous-commit "$previous"} \
++        ${BASELINE_REF:+--baseline-ref "$BASELINE_REF"} >&2
+     git -C "$clone" commit --quiet -am "$message"
+     commit=$(git -C "$clone" rev-parse HEAD)
+     # Sibling fixture commits leave HEAD; a ref keeps each one reachable in this clone.
+     git -C "$clone" update-ref "refs/upd1/$kind" "$commit"
+     echo "$commit"
+ }
++
++build_web() {   # build web/ of the checked-out tree into $1
++    ( cd "$clone/web" && rm -rf dist && npm ci --no-audit --no-fund && npm run build ) >&2
++    [[ -f $clone/web/dist/index.html ]] || { echo "web build produced no index.html" >&2; exit 1; }
++    rm -rf -- "$1"
++    cp -a "$clone/web/dist" "$1"
++}
++
++use_web() {     # place one saved web/dist into the clone for build-dist.sh
++    rm -rf -- "$clone/web/dist"
++    cp -a "$1" "$clone/web/dist"
++}
++
++build() {
++    local commit=$1 version=$2
++    CELIKPANEL_REPO=$clone CELIKPANEL_DIST_VERSION=$version CELIKPANEL_ACCEPTANCE_GUARD=$GUARD \
++        bash "$BUILD_DIST" --acceptance-license "$commit" >&2
++    echo "/var/tmp/cp-pair-accept/dist/$commit-acceptance-license/dist.json"
++}
++
++if [[ -n $BASELINE_REF ]]; then
++    tag_commit=$(git -C "$clone" rev-parse "${BASELINE_REF}^{commit}")
++    git -C "$clone" checkout --quiet --detach "$tag_commit"
++    python3 "$DRIVER" fixture-source --repo "$clone" --kind baseline-ref --baseline-ref "$BASELINE_REF" \
++        --source-commit "$source_commit" >&2
++    git -C "$clone" add -A -- internal/licensing cmd/panel/license.go
++    git -C "$clone" commit --quiet -m "test(fixture): upd7 baseline = published $BASELINE_REF + the D-027 acceptance-license seam only (disposable)"
++    baseline=$(git -C "$clone" rev-parse HEAD)
++    git -C "$clone" update-ref refs/upd1/baseline "$baseline"
++    expected=$(python3 -c 'import importlib.util,sys;s=importlib.util.spec_from_file_location("o",sys.argv[1]);m=importlib.util.module_from_spec(s);sys.modules["o"]=m;s.loader.exec_module(m);print("\n".join(m.BASELINE_REF_PATCHED))' "$DRIVER")
++    actual=$(git -C "$clone" diff --name-only "$tag_commit" "$baseline" | LC_ALL=C sort)
++    [[ $actual == "$expected" ]] || { echo "baseline fixture changed other files than the seam: $actual" >&2; exit 1; }
++    proof=$work/baseline-ref-proof.txt
++    {
++        echo "baseline-ref $BASELINE_REF tag_commit=$tag_commit baseline_fixture=$baseline seam_source=$source_commit"
++        echo "== git diff --name-status tag..baseline"
++        git -C "$clone" diff --name-status "$tag_commit" "$baseline"
++        echo "== trees (tag, baseline)"
++        for t in cmd/agent deploy download-portal web internal/transport; do
++            a=$(git -C "$clone" rev-parse "$tag_commit:$t") b=$(git -C "$clone" rev-parse "$baseline:$t")
++            echo "$t $a $b $([[ $a == "$b" ]] && echo identical || echo DIFFERENT)"
++        done
++        echo "== files (path, tag blob, baseline blob, sha256 at tag, sha256 at baseline)"
++        git -C "$clone" ls-tree -r --name-only "$tag_commit" -- update.sh rollback.sh install.sh rebuild.sh \
++            bootstrap-update.sh bootstrap-prebuilt-update.sh download-portal/get.sh deploy \
++            | grep -E '^(update\.sh|rollback\.sh|install\.sh|rebuild\.sh|bootstrap-[^/]*\.sh|download-portal/get\.sh|deploy/release-[^/]*|deploy/finalize-[^/]*|deploy/systemd/.*|deploy/enroll-signed-release-trust\.sh)$' \
++            | while read -r path; do
++                a=$(git -C "$clone" rev-parse "$tag_commit:$path") b=$(git -C "$clone" rev-parse "$baseline:$path")
++                sa=$(git -C "$clone" cat-file blob "$a" | sha256sum | cut -d' ' -f1)
++                sb=$(git -C "$clone" cat-file blob "$b" | sha256sum | cut -d' ' -f1)
++                echo "$path $a $b $sa $sb $([[ $a == "$b" && $sa == "$sb" ]] && echo identical || echo DIFFERENT)"
++            done
++        ( cd "$clone" && GOTOOLCHAIN=local GOFLAGS=-mod=readonly "$GO" list -deps ./cmd/agent ) > "$work/agent-deps.txt"
++        echo "== Agent package closure at the baseline (go list -deps ./cmd/agent, $(wc -l < "$work/agent-deps.txt") packages): licensing packages"
++        grep -c '/internal/licensing' "$work/agent-deps.txt" || true
++    } > "$proof"
++    ! grep -q DIFFERENT "$proof" || { echo "a byte-identical baseline file differs from the tag; see $proof" >&2; exit 1; }
++    [[ $(tail -n 1 "$proof") == 0 ]] || { echo "the Agent package closure includes the licensing seam; see $proof" >&2; exit 1; }
++    build_web "$work/web-dist-baseline"
++    git -C "$clone" checkout --quiet --detach "$source_commit"
++    good=$(commit_fixture good "test(fixture): upd7 good candidate labelled v0.1.0-alpha.81 after the published $BASELINE_REF (unpublished, disposable)" "$baseline")
++    defective=$(commit_fixture defective "test(fixture): upd7 defective candidate - migrate-only fails (unpublished, disposable)")
++    build_web "$work/web-dist-candidate"
++    [[ -z $(git -C "$clone" diff --stat "$source_commit" "$defective" -- web) ]] || { echo "fixture commit changed web/" >&2; exit 1; }
++    use_web "$work/web-dist-baseline"
++    b_json=$(build "$baseline" "$BASELINE_REF")
++    use_web "$work/web-dist-candidate"
++    g_json=$(build "$good" v0.1.0-alpha.81)
++    d_json=$(build "$defective" v0.1.0-alpha.81)
++    s_json= r_json= startcheck= realstart=
++    b_seq=80 c_seq=81 b_parent=$tag_commit
++else
+ baseline=$(commit_fixture baseline "test(fixture): upd1 baseline labelled v0.1.0-alpha.81 (unpublished, disposable)")
+ good=$(commit_fixture good "test(fixture): upd1 good candidate labelled v0.1.0-alpha.82 (unpublished, disposable)" "$baseline")
+ defective=$(commit_fixture defective "test(fixture): upd1 defective candidate - migrate-only fails (unpublished, disposable)")
+@@ -87,21 +180,20 @@
+ [[ $(git -C "$clone" diff --name-only "$good" "$realstart") == cmd/panel/main.go ]] \
+     || { echo "real-start fixture changed more than cmd/panel/main.go" >&2; exit 1; }
+ 
+-build() {
+-    local commit=$1 version=$2
+-    CELIKPANEL_REPO=$clone CELIKPANEL_DIST_VERSION=$version bash "$BUILD_DIST" --acceptance-license "$commit" >&2
+-    echo "/var/tmp/cp-pair-accept/dist/$commit-acceptance-license/dist.json"
+-}
+ b_json=$(build "$baseline" v0.1.0-alpha.81)
+ g_json=$(build "$good" v0.1.0-alpha.82)
+ d_json=$(build "$defective" v0.1.0-alpha.82)
+ s_json=$(build "$startcheck" v0.1.0-alpha.82)
+ r_json=$(build "$realstart" v0.1.0-alpha.82)
++b_seq=81 c_seq=82 b_parent= tag_commit=
++fi
+ 
+ python3 - "$work/upd1-artifacts.json" "$source_commit" "$clone" "$b_json" "$g_json" "$d_json" \
+-    "$baseline" "$good" "$s_json" "$r_json" <<'PY'
+-import json, sys
+-out, head, clone, b, g, d, baseline, good, s, r = sys.argv[1:]
++    "$baseline" "$good" "$s_json" "$r_json" "$b_seq" "$c_seq" "$b_parent" "$BASELINE_REF" "$tag_commit" "$DRIVER" \
++    "$work/baseline-ref-proof.txt" <<'PY'
++import importlib.util, json, sys
++out, head, clone, b, g, d, baseline, good, s, r, b_seq, c_seq, b_parent, ref, tag, driver, proof = sys.argv[1:]
++b_seq, c_seq = int(b_seq), int(c_seq)
+ def item(path, sequence, parent=None):
+     value = json.load(open(path))
+     entry = {k: value[k] for k in ("archive", "sha256", "commit", "tree", "version", "product_web_src")}
+@@ -110,14 +202,27 @@
+         entry["parent"] = parent
+     return entry
+ document = {"schema": "celikpanel/upd1-artifacts/v1", "source_head": head, "clone": clone,
+-            "baseline": item(b, 81), "good": item(g, 82, baseline), "defective": item(d, 82, good),
+-            "startcheck": item(s, 82, good), "realstart": item(r, 82, good),
++            "baseline": item(b, b_seq, b_parent or None), "good": item(g, c_seq, baseline),
++            "defective": item(d, c_seq, good),
+             "provenance": "unpublished disposable fixture commits over the source HEAD; acceptance-license panel "
+                           "(D-027 fixture); signed only by the per-lab fixture key at run time; not a release"}
++if s:
++    document["startcheck"] = item(s, c_seq, good)
++    document["startcheck"]["defect"] = ("cmd/panel configurePanelHTTPTLS (shared by --check-startup-readiness and "
++                                        "the real start) always fails")
++if r:
++    document["realstart"] = item(r, c_seq, good)
++    document["realstart"]["defect"] = "cmd/panel main() exits before its listener; the start check never reaches it"
+ document["defective"]["defect"] = "cmd/panel --migrate-only exits 1 after migrating the isolated copy"
+-document["startcheck"]["defect"] = ("cmd/panel configurePanelHTTPTLS (shared by --check-startup-readiness and the "
+-                                    "real start) always fails")
+-document["realstart"]["defect"] = "cmd/panel main() exits before its listener; the start check never reaches it"
++if ref:
++    spec = importlib.util.spec_from_file_location("upd7_driver", driver)
++    module = importlib.util.module_from_spec(spec); sys.modules["upd7_driver"] = module; spec.loader.exec_module(module)
++    document["baseline_ref"] = {"ref": ref, "tag_commit": tag, "patched_files": list(module.BASELINE_REF_PATCHED),
++                                "proof": proof}
++    document["provenance"] = (f"baseline: the published {ref} tree ({tag}) plus the D-027 acceptance-license seam only; "
++                              "candidates: unpublished disposable fixture commits over the source labelled "
++                              "v0.1.0-alpha.81; acceptance-license panels; signed only by the per-lab fixture key at "
++                              "run time; not a release")
+ with open(out, "x") as handle:
+     json.dump(document, handle, indent=2, sort_keys=True)
+     handle.write("\n")
+--- a/deploy/e2e/release-recovery/current_worker_baseline.py
++++ b/deploy/e2e/release-recovery/current_worker_baseline.py
+@@ -162,9 +162,22 @@
+     return {"version":version,"sequence":sequence,"commit":commit,"sha256":hashlib.sha256(raw).hexdigest()}
+ 
+ 
++def floor_bytes(version, sequence):
++    return ("format=celikpanel-release-sequence-floor-v1\nsequence=" + str(sequence) + "\nversion=" + version + "\n").encode()
++
++
+ def guest_driver(record, node_name, node, intent_sha256):
++    # upd7: the baseline identity is rendered from this module's VERSION/SEQUENCE/RELEASE_POLICY (the
++    # defaults keep the Alpha81 fixture; owner_update_trial sets the published v0.1.0-alpha.80 baseline).
++    if type(SEQUENCE) is not int or not 0 < SEQUENCE < 2**31 or RELEASE_POLICY.get("version") != VERSION \
++            or RELEASE_POLICY.get("current") != SEQUENCE:
++        raise ValueError("baseline identity is inconsistent")
+     return lab.guest_guard(record, node_name, node) + "\n" + inspect.getsource(extract_current_archive) + "\n" + inspect.getsource(verify_foundation_identity) + "\n" + GUEST_DRIVER.replace(
+-        "INTENT_SHA256_LITERAL", repr(intent_sha256)).replace("FRESH_PATHS_LITERAL", repr(FRESH_PATHS))
++        "INTENT_SHA256_LITERAL", repr(intent_sha256)).replace("FRESH_PATHS_LITERAL", repr(FRESH_PATHS)).replace(
++        "BASELINE_VERSION_LITERAL", repr(VERSION)).replace("BASELINE_SEQUENCE_LITERAL", repr(SEQUENCE)).replace(
++        "BASELINE_SEQUENCE_TEXT_LITERAL", repr(str(SEQUENCE))).replace(
++        "BASELINE_POLICY_LITERAL", repr(dict(RELEASE_POLICY))).replace(
++        "BASELINE_FLOOR_LITERAL", repr(floor_bytes(VERSION, SEQUENCE)))
+ 
+ 
+ GUEST_DRIVER = r'''import datetime,fcntl,hashlib,importlib.util,secrets,subprocess,sys,tarfile,time
+@@ -209,7 +222,7 @@
+ raw=private_read(ROOT/"current-worker-baseline-intent.json")
+ if hashlib.sha256(raw).hexdigest()!=EXPECTED_INTENT:raise ValueError("baseline intent changed")
+ intent=json.loads(raw)
+-if intent.get("schema")!="celikpanel/current-worker-baseline-intent/v1" or intent.get("identity")!=expected or intent.get("version")!="v0.1.0-alpha.81" or intent.get("sequence")!=81:
++if intent.get("schema")!="celikpanel/current-worker-baseline-intent/v1" or intent.get("identity")!=expected or intent.get("version")!=BASELINE_VERSION_LITERAL or intent.get("sequence")!=BASELINE_SEQUENCE_LITERAL:
+     raise ValueError("baseline intent is not for this guest")
+ key=ROOT/"worker-origin-public.pem"
+ if intent.get("public_key_path")!=str(key) or hashlib.sha256(private_read(key,16384,(0o600,0o644))).hexdigest()!=intent["public_key_sha256"]:
+@@ -233,7 +246,7 @@
+         spec=importlib.util.spec_from_file_location("current_baseline_archive",helper_path)
+         archive=importlib.util.module_from_spec(spec);sys.modules[spec.name]=archive;spec.loader.exec_module(archive)
+         packed=ROOT/"current-worker-baseline.tar.gz"
+-        candidate=archive.inspect_archive(packed,intent["candidate"]["archive_sha256"],release_policy={"version":"v0.1.0-alpha.81","current":81,"previous":80,"previous_version":"v0.1.0-alpha.80"})
++        candidate=archive.inspect_archive(packed,intent["candidate"]["archive_sha256"],release_policy=BASELINE_POLICY_LITERAL)
+         if candidate!=intent["candidate"]:raise ValueError("baseline archive identity differs")
+         source=ROOT/"current-worker-baseline-source"
+         extract_current_archive(source,packed,candidate,archive)
+@@ -248,11 +261,11 @@
+         if completed.returncode:raise ValueError("native baseline installer failed")
+         if (ROOT/"admin-install.json").exists():raise ValueError("installer did not consume credential input")
+         environment.pop("CELIKPANEL_ADMIN_CREDENTIALS_FILE")
+-        enrolled=subprocess.run(["/bin/bash",str(source/"deploy/enroll-signed-release-trust.sh"),"--sequence","81","--version",intent["version"],"--commit",candidate["commit"],"--public-key-file",str(key)],cwd=source,env=environment,stdin=subprocess.DEVNULL,stdout=output,stderr=subprocess.STDOUT,timeout=120)
++        enrolled=subprocess.run(["/bin/bash",str(source/"deploy/enroll-signed-release-trust.sh"),"--sequence",BASELINE_SEQUENCE_TEXT_LITERAL,"--version",intent["version"],"--commit",candidate["commit"],"--public-key-file",str(key)],cwd=source,env=environment,stdin=subprocess.DEVNULL,stdout=output,stderr=subprocess.STDOUT,timeout=120)
+         proof["enrollment_exit"]=enrolled.returncode
+         if enrolled.returncode:raise ValueError("native baseline trust enrollment failed")
+         floor=private_read(Path("/var/lib/celikpanel-release-state/sequence.floor"),512)
+-        if floor!=b"format=celikpanel-release-sequence-floor-v1\nsequence=81\nversion=v0.1.0-alpha.81\n":raise ValueError("enrolled release floor differs")
++        if floor!=BASELINE_FLOOR_LITERAL:raise ValueError("enrolled release floor differs")
+         trusted_key=private_read(Path("/etc/celikpanel/release-signing-ed25519.pem"),16384,(0o644,))
+         if hashlib.sha256(trusted_key).hexdigest()!=intent["public_key_sha256"]:raise ValueError("enrolled fixture key differs")
+         proof["sequence_floor_sha256"]=hashlib.sha256(floor).hexdigest();proof["public_key_sha256"]=hashlib.sha256(trusted_key).hexdigest()
+--- a/deploy/e2e/release-recovery/guest_bound_worker.py
++++ b/deploy/e2e/release-recovery/guest_bound_worker.py
+@@ -48,7 +48,14 @@
+             or value['schema'] != SCHEMA or value['identity'] != identity
+             or value['operation_id'] != operation or not files.HEX32.fullmatch(operation)):
+         raise probe.ProbeError('bound-worker intent identity differs')
+-    for role, version in (('baseline', 'v0.1.0-alpha.81'), ('target', 'v0.1.0-alpha.82')):
++    # upd7: the closed set of (baseline, target) labels; the second pair is the first update from the
++    # published v0.1.0-alpha.80 to a candidate labelled v0.1.0-alpha.81.
++    pairs = (('v0.1.0-alpha.81', 'v0.1.0-alpha.82'), ('v0.1.0-alpha.80', 'v0.1.0-alpha.81'))
++    labels = tuple((value.get(role) or {}).get('version') if isinstance(value.get(role), dict) else None
++                   for role in ('baseline', 'target'))
++    if labels not in pairs:
++        raise probe.ProbeError('unsupported current-producer artifact identity')
++    for role, version in zip(('baseline', 'target'), labels):
+         item = value[role]
+         if (not isinstance(item, dict) or set(item) != {'version', 'commit', 'agent_sha256', 'panel_sha256'}
+                 or item['version'] != version or not HEX40.fullmatch(item.get('commit', ''))
+--- a/deploy/e2e/release-recovery/owner_update_trial.py
++++ b/deploy/e2e/release-recovery/owner_update_trial.py
+@@ -90,6 +90,8 @@
+ OBSERVER_EVENT_SCHEMA = "celikpanel/owner-update-observer/v1"
+ BASELINE_VERSION, BASELINE_SEQUENCE = "v0.1.0-alpha.81", 81
+ CANDIDATE_VERSION, CANDIDATE_SEQUENCE = "v0.1.0-alpha.82", 82
++# upd7: the published baseline tag of the current artifacts document (configure_labels), or None.
++LABEL_REF: str | None = None
+ # The real Alpha80 release commit named as the baseline policy's predecessor
+ # (the same value the unpublished Alpha81 fixture 45dfc265 used).
+ ALPHA80_COMMIT = "bd14d97efc5cfd19acd70ddf0edb9c6343317e2b"
+@@ -203,9 +205,21 @@
+ 
+ def provenance_for(variant: str) -> dict:
+     """The good and migrate-only cells keep their provenance unchanged; the start kinds name their own defect."""
++    if LABEL_REF is None and variant not in KIND_PROVENANCE:
++        return PROVENANCE
++    base = dict(PROVENANCE)
++    if LABEL_REF is not None:
++        # upd7: the baseline is the published tag's tree with only the acceptance-license seam added.
++        base["baseline"] = (f"published-tag-{LABEL_REF}-tree-plus-the-D-027-acceptance-license-seam-only (Panel license "
++                            f"code: {', '.join(BASELINE_REF_PATCHED)}); its release policy, installer, update/rollback/"
++                            "recovery/bootstrap scripts, get.sh and Agent are byte-identical to the tag; installed by "
++                            "the real installer; fixture trust root enrolled; not-production-release-admission")
++        base["candidate"] = (f"unpublished-local-fixture-commit-over-the-source-labelled-{CANDIDATE_VERSION}; signed "
++                             "with the disposable fixture key; served by the guest-loopback celikpanel.net fixture "
++                             "origin; not a release")
+     if variant in KIND_PROVENANCE:
+-        return dict({k: v for k, v in PROVENANCE.items() if k != "defect"}, defect=KIND_PROVENANCE[variant])
+-    return PROVENANCE
++        return dict({k: v for k, v in base.items() if k != "defect"}, defect=KIND_PROVENANCE[variant])
++    return base
+ 
+ 
+ @dataclasses.dataclass(frozen=True)
+@@ -331,20 +345,182 @@
+     return text.replace(original, replacement)
+ 
+ 
+-def fixture_source(repo: Path, kind: str, previous_commit: str | None) -> dict:
++# ---------------------------------------------------------------------------
++# upd7: a genuine published baseline (build-upd1-artifacts.sh --baseline-ref)
++# ---------------------------------------------------------------------------
++# Every earlier run (upd1-upd6) installed a build of the current source labelled as the
++# baseline. With --baseline-ref the baseline is the PUBLISHED tag's own tree. The only change
++# to that tree is the D-027 acceptance-license seam (Panel license code only), because the
++# tag predates it and its Panel refuses every owner API with license_required otherwise
++# (README "Why not the 45dfc265 Alpha81 build"). Its release policy, installer, update,
++# rollback, recovery, bootstrap and get.sh files and the whole Agent stay byte-identical to the
++# tag (build-upd1-artifacts.sh proves this). The candidates are the source labelled as the next
++# release after the tag.
++DEFAULT_LABELS = {"baseline": (BASELINE_VERSION, BASELINE_SEQUENCE), "candidate": (CANDIDATE_VERSION, CANDIDATE_SEQUENCE)}
++BASELINE_REFS = {
++    "v0.1.0-alpha.80": {"commit": ALPHA80_COMMIT, "baseline": ("v0.1.0-alpha.80", 80),
++                        "candidate": ("v0.1.0-alpha.81", 81),
++                        "baseline_policy": {"version": "v0.1.0-alpha.80", "current": 80, "previous": 79,
++                                            "previous_version": "v0.1.0-alpha.79"}},
++}
++SEAM_COPIED = ("internal/licensing/acceptance_off.go", "internal/licensing/acceptance_owner_linux.go",
++               "internal/licensing/acceptance_owner_other.go")
++SEAM_ADAPTED = "internal/licensing/acceptance_fixture.go"
++SEAM_LICENSE = "internal/licensing/license.go"
++SEAM_PANEL = "cmd/panel/license.go"
++BASELINE_REF_PATCHED = tuple(sorted(SEAM_COPIED + (SEAM_ADAPTED, SEAM_LICENSE, SEAM_PANEL)))
++# Paths that must stay byte-identical to the tag in the baseline fixture commit (prefixes end with "/").
++BASELINE_REF_UNCHANGED = ("install.sh", "update.sh", "rollback.sh", "rebuild.sh", "bootstrap-update.sh",
++                          "bootstrap-prebuilt-update.sh", "download-portal/", "deploy/", "cmd/agent/", "web/",
++                          "Makefile", "go.mod", "go.sum")
++# The seam commit 01a450e6's hooks, re-applied to the tag's license.go (each anchor occurs once there).
++SEAM_LICENSE_HOOKS = (
++    ("\tCanProvision bool   `json:\"can_provision\"`\n}\n",
++     "\tCanProvision bool   `json:\"can_provision\"`\n"
++     "\t// Empty in every ordinary build (acceptance_off.go), so the JSON is unchanged.\n"
++     "\t// Only the acceptance_license test build labels its fixture license here.\n"
++     "\tacceptanceStatus\n}\n"),
++    ("\trejected   atomic.Bool\n}\n",
++     "\trejected   atomic.Bool\n"
++     "\t// seam is assigned only by NewServer in the acceptance_license test build\n"
++     "\t// (acceptance_fixture.go). Ordinary builds have no implementation and no\n"
++     "\t// assignment, so it is always nil there.\n"
++     "\tseam acceptanceSeam\n}\n\n"
++     "// acceptanceSeam replaces license verification only in the acceptance_license\n"
++     "// test build. It is an interface with no implementation in ordinary builds.\n"
++     "type acceptanceSeam interface {\n\tstatus() Status\n\tactivate(ctx context.Context, key, hostname string) error\n"
++     "\trefresh(ctx context.Context, force bool) error\n}\n"),
++    ("func (m *Manager) Status() Status {\n",
++     "func (m *Manager) Status() Status {\n\tif m.seam != nil {\n\t\treturn m.seam.status()\n\t}\n"),
++    ("func (m *Manager) request(ctx context.Context, action string, input map[string]string) error {\n",
++     "func (m *Manager) request(ctx context.Context, action string, input map[string]string) error {\n"
++     "\tif m.seam != nil {\n\t\treturn errors.New(\"license service is never contacted by this build\")\n\t}\n"),
++    ("func (m *Manager) Activate(ctx context.Context, key, hostname string) error {\n",
++     "func (m *Manager) Activate(ctx context.Context, key, hostname string) error {\n"
++     "\tif m.seam != nil {\n\t\treturn m.seam.activate(ctx, key, hostname)\n\t}\n"),
++    ("func (m *Manager) Refresh(ctx context.Context, force bool) error {\n",
++     "func (m *Manager) Refresh(ctx context.Context, force bool) error {\n"
++     "\tif m.seam != nil {\n\t\treturn m.seam.refresh(ctx, force)\n\t}\n"),
++)
++SEAM_PANEL_HOOK = ("\treturn licensing.New(file, key, id)\n",
++                   "\t// NewServer is exactly licensing.New in every ordinary build. Only the\n"
++                   "\t// acceptance_license test build, which release packaging refuses, installs\n"
++                   "\t// the acceptance fixture seam there.\n"
++                   "\treturn licensing.NewServer(file, key, id)\n")
++# The tag's licensing package has no Status.Observation field and no errInvalidState sentinel
++# (both arrived later, 0aae716f). The tag-only fixture file drops the field and defines the sentinel.
++SEAM_ADAPT = (
++    ("s.State, s.Observation, s.CanProvision = \"verification_unavailable\", ObservationUnavailable, false",
++     "s.State, s.CanProvision = \"verification_unavailable\", false", 1),
++    (", Observation: ObservationKnown", "", 4),
++    (", Observation: ObservationUnavailable", "", 1),
++)
++SEAM_ADAPT_TRAILER = ("\n// upd7 fixture adaptation for the v0.1.0-alpha.80 tree: that tree's licensing package has no\n"
++                      "// errInvalidState sentinel; this tag-only file defines it for its own receipt checks.\n"
++                      "var errInvalidState = errors.New(\"invalid license state\")\n")
++
++
++def baseline_ref_profile(ref: str) -> dict:
++    if ref not in BASELINE_REFS:
++        raise ValueError(f"unsupported baseline ref {ref!r}; choose one of {sorted(BASELINE_REFS)}")
++    return BASELINE_REFS[ref]
++
++
++def replace_once(text: str, original: str, replacement: str, path: str, count: int = 1) -> str:
++    if text.count(original) != count:
++        raise ValueError(f"{path} differs from the reviewed source; the fixture change cannot be applied exactly")
++    return text.replace(original, replacement)
++
++
++def adapt_seam_fixture(text: str) -> str:
++    """HEAD's acceptance_fixture.go, adapted to the tag's licensing package (exact edits or refusal)."""
++    for original, replacement, count in SEAM_ADAPT:
++        text = replace_once(text, original, replacement, SEAM_ADAPTED, count)
++    if "Observation" in text or "errInvalidState = " in text or "upd7 fixture adaptation" in text:
++        raise ValueError(f"{SEAM_ADAPTED} still names a field the tag does not have")
++    return text + SEAM_ADAPT_TRAILER
++
++
++def seam_baseline_source(repo: Path, source_commit: str, ref: str) -> dict:
++    """Apply the acceptance-license seam to a checkout of the published tag (Panel license code only)."""
++    profile = baseline_ref_profile(ref)
++    head = subprocess.run(["git", "-C", str(repo), "rev-parse", "HEAD"], capture_output=True, text=True,
++                          check=True).stdout.strip()
++    if head != profile["commit"]:
++        raise ValueError(f"the clone is not at {ref} ({profile['commit']}); refusing to patch {head}")
++    if not HEX40.fullmatch(source_commit or ""):
++        raise ValueError("the seam is copied from the exact source commit")
++
++    def source(path: str) -> str:
++        return subprocess.run(["git", "-C", str(repo), "show", f"{source_commit}:{path}"], capture_output=True,
++                              check=True).stdout.decode("utf-8")
++    for path in SEAM_COPIED + (SEAM_ADAPTED,):
++        if (repo / path).exists():
++            raise ValueError(f"{path} already exists in {ref}; the seam is not applied twice")
++    for path in SEAM_COPIED:
++        (repo / path).write_text(source(path), encoding="utf-8")
++    (repo / SEAM_ADAPTED).write_text(adapt_seam_fixture(source(SEAM_ADAPTED)), encoding="utf-8")
++    license_go = (repo / SEAM_LICENSE).read_text(encoding="utf-8")
++    for original, replacement in SEAM_LICENSE_HOOKS:
++        license_go = replace_once(license_go, original, replacement, SEAM_LICENSE)
++    (repo / SEAM_LICENSE).write_text(license_go, encoding="utf-8")
++    panel = (repo / SEAM_PANEL).read_text(encoding="utf-8")
++    (repo / SEAM_PANEL).write_text(replace_once(panel, *SEAM_PANEL_HOOK, SEAM_PANEL), encoding="utf-8")
++    return {"kind": "baseline-ref", "ref": ref, "tag_commit": profile["commit"], "seam_source": source_commit,
++            "changed": list(BASELINE_REF_PATCHED)}
++
++
++def labels_of(document: dict | None) -> dict:
++    """Release labels of an artifacts document: the upd1 defaults, or the published baseline ref's profile."""
++    ref = (document or {}).get("baseline_ref")
++    if ref is None:
++        return {"ref": None, **DEFAULT_LABELS, "baseline_policy": {"version": DEFAULT_LABELS["baseline"][0],
++                "current": DEFAULT_LABELS["baseline"][1], "previous": 80, "previous_version": "v0.1.0-alpha.80"}}
++    if not isinstance(ref, dict):
++        raise ValueError("baseline_ref must be an object")
++    profile = baseline_ref_profile(ref.get("ref"))
++    if ref.get("tag_commit") != profile["commit"]:
++        raise ValueError("baseline_ref names a different tag commit")
++    return {"ref": ref["ref"], "baseline": profile["baseline"], "candidate": profile["candidate"],
++            "baseline_policy": dict(profile["baseline_policy"])}
++
++
++def configure_labels(document: dict | None) -> dict:
++    """Set this module's and the helper modules' release labels for one artifacts document (idempotent)."""
++    global BASELINE_VERSION, BASELINE_SEQUENCE, CANDIDATE_VERSION, CANDIDATE_SEQUENCE, LABEL_REF
++    labels = labels_of(document)
++    (BASELINE_VERSION, BASELINE_SEQUENCE), (CANDIDATE_VERSION, CANDIDATE_SEQUENCE) = labels["baseline"], labels["candidate"]
++    LABEL_REF = labels["ref"]
++    if labels["ref"] is None and "upd1_current_worker_baseline" not in _MODULES:
++        return labels   # the helper modules load later with exactly these default labels
++    m = lab_modules()
++    m["baseline"].VERSION, m["baseline"].SEQUENCE = labels["baseline"]
++    m["baseline"].RELEASE_POLICY = dict(labels["baseline_policy"])
++    m["origin"].RELEASE_POLICY = {"version": CANDIDATE_VERSION, "current": CANDIDATE_SEQUENCE,
++                                  "previous": BASELINE_SEQUENCE, "previous_version": BASELINE_VERSION}
++    if not m["origin"].allowed_policy(m["origin"].RELEASE_POLICY):
++        raise ValueError("the candidate transition is not one the fixture origin serves")
++    return labels
++
++
++def fixture_source(repo: Path, kind: str, previous_commit: str | None, *, baseline_ref: str | None = None,
++                   source_commit: str | None = None) -> dict:
+     """Edit one disposable clone; the build script commits the result."""
+     repo = Path(repo)
+     if not (repo / ".git").exists() or "cp-upd1-build" not in str(repo):
+         raise ValueError("fixture edits are allowed only in a disposable /var/tmp/cp-upd1-build clone")
+     policy = repo / "deploy" / "release-sequence-policy"
++    if kind == "baseline-ref":
++        return seam_baseline_source(repo, source_commit or "", baseline_ref or "")
+     if kind == "baseline":
+         policy.write_text(policy_text(BASELINE_VERSION, BASELINE_SEQUENCE, 80, "v0.1.0-alpha.80", ALPHA80_COMMIT))
+         return {"kind": kind, "changed": [str(policy.relative_to(repo))]}
+     if kind == "good":
+         if not previous_commit or not HEX40.fullmatch(previous_commit):
+             raise ValueError("the candidate policy names the exact baseline commit")
+-        policy.write_text(policy_text(CANDIDATE_VERSION, CANDIDATE_SEQUENCE, BASELINE_SEQUENCE,
+-                                      BASELINE_VERSION, previous_commit))
++        profile = baseline_ref_profile(baseline_ref) if baseline_ref else DEFAULT_LABELS
++        (base_version, base_sequence), (version, sequence) = profile["baseline"], profile["candidate"]
++        policy.write_text(policy_text(version, sequence, base_sequence, base_version, previous_commit))
+         return {"kind": kind, "changed": [str(policy.relative_to(repo))]}
+     if kind == "defective":
+         main = repo / "cmd" / "panel" / "main.go"
+@@ -420,6 +596,15 @@
+             raise ValueError(f"fixture lineage must be good <- {role} (one fixture commit over the good candidate)")
+     if not HEX40.fullmatch(str(document.get("source_head", ""))):
+         raise ValueError("source HEAD is not exact")
++    if document.get("baseline_ref") is not None:
++        # upd7: the baseline is one fixture commit over the published tag, patching only the seam files.
++        ref = document["baseline_ref"]
++        profile = baseline_ref_profile(ref.get("ref"))
++        if (ref.get("tag_commit") != profile["commit"] or document["baseline"].get("parent") != profile["commit"]
++                or ref.get("patched_files") != list(BASELINE_REF_PATCHED)
++                or (BASELINE_VERSION, BASELINE_SEQUENCE) != profile["baseline"]):
++            raise ValueError("the published-baseline fixture is not the seam-only commit over the tag "
++                             "(or configure_labels was not applied)")
+     if check_files and not (Path(str(document.get("clone", ""))) / ".git").exists():
+         raise ValueError("the disposable fixture clone is missing")
+     return document
+@@ -826,6 +1011,44 @@
+     return any(line.get("code") == code and line.get("state") == "unchanged" for line in lines)
+ 
+ 
++RUNNING_AFTER_SUCCESS_RULE = "record-running-after-panel-success"
++RUNNING_AFTER_SUCCESS_SECONDS = 900.0
++
++
++class RunningAfterSuccess:
++    """H17 (upd7): after an update started by a historical Agent (v0.1.0-alpha.80) the updater writes the initial
++    running record itself, and the record may stay ``running`` after success until the new Agent reconciles the
++    request (48d21d58, open point). When the Panel's own update status says ``succeeded`` while the recovery record
++    stays known ``running``/``none`` for 900 s without change, ``track`` stops with this named rule (verdict
++    observed, never passed) and records when each side was first seen; it does not wait 90 minutes."""
++
++    def __init__(self, seconds: float = RUNNING_AFTER_SUCCESS_SECONDS) -> None:
++        self.limit = seconds
++        self.since: float | None = None
++        self.first: dict | None = None
++        self.count = 0
++
++    def observe(self, sample: dict, observed: dict | None, now: float) -> dict | None:
++        body = ((sample.get("update_status") or {}).get("body")) if isinstance(sample.get("update_status"), dict) else None
++        panel_ok = (sample.get("update_status") or {}).get("http") == 200 and isinstance(body, dict) \
++            and body.get("status") == "succeeded"
++        running = isinstance(observed, dict) and observed.get("observation") == "known" \
++            and observed.get("phase") == "running" and observed.get("terminal_proof") == "none"
++        if not (panel_ok and running):
++            self.since, self.first, self.count = None, None, 0
++            return None
++        if self.since is None:
++            self.since, self.first = now, {"utc": sample.get("utc"), "index": sample.get("index")}
++        self.count += 1
++        if now - self.since < self.limit:
++            return None
++        return {"rule": RUNNING_AFTER_SUCCESS_RULE, "seconds": round(now - self.since, 1), "samples": self.count,
++                "first": self.first, "last": {"utc": sample.get("utc"), "index": sample.get("index")},
++                "panel_status": {k: body.get(k) for k in ("status", "updated_at", "summary")},
++                "record": {k: observed.get(k) for k in ("phase", "terminal_proof", "reason", "observed_at",
++                                                        "previous_failure", "automatic_recovery")}}
++
++
+ SETTLED_FAILED_RULE = "settled-failed-before-change"
+ SETTLED_FAILED_SECONDS = 600.0
+ SETTLED_FAILED_SAMPLES = 3
+@@ -3115,7 +3338,18 @@
+                              purpose="ServerSetupChoice guided").json() or {}
+         local_ip = self.local_ip()
+         plan = None
+-        for purpose in ("web_mail", "web"):
++        purposes = ("web_mail", "web")
++        if LABEL_REF is not None and not self.cell.mail_required:
++            # H18 (upd7 run a, Arch): the published v0.1.0-alpha.80 accepts the web_mail plan on Arch (the source
++            # refuses it: server_setup_service_unsupported:dovecot) and then fails at 05-mail_profile
++            # (service_install_failed: "vmail user: open mail root parent"). A failed setup cannot be retried on the
++            # same guest, so where mail is not required the owner chooses web only; recorded, never counted as mail.
++            purposes = ("web",)
++            checks["web_mail_not_attempted"] = (f"published baseline {LABEL_REF} on {self.node_name}: web_mail plan is "
++                                                "accepted but its 05-mail_profile step fails (upd7 run a); purpose web")
++            self.finding(f"{self.node_name}: web_mail was not attempted on the published {LABEL_REF} baseline (it accepts "
++                         "the plan but fails at 05-mail_profile); mail is recorded as not provided on this platform")
++        for purpose in purposes:
+             saved = self.api("PUT", "/api/v1/setup", {"revision": state.get("revision"), "draft": self.draft(purpose, local_ip)},
+                              purpose=f"ServerSetup draft save ({purpose})")
+             if saved.status != 200:
+@@ -3605,6 +3839,7 @@
+         deadline = time.monotonic() + 5400
+         final = None
+         settled = SettledFailure()
++        running_after_success = RunningAfterSuccess()
+         stop = None
+         while time.monotonic() < deadline:
+             with self.panel_client().polling() as view:
+@@ -3623,6 +3858,12 @@
+                 stop = dict(settled.record(time.monotonic()),
+                             update_status=(sample.get("update_status") or {}).get("body"))
+                 break
++            stale = running_after_success.observe(sample, observed, time.monotonic())
++            if stale is not None:
++                # H17 (upd7): named rule; the known open point is measured, not waited on for 90 minutes.
++                self.state["record_running_after_success"] = stale
++                final = None
++                break
+             key = json.dumps([sample.get("update_status"), observed], sort_keys=True, default=str)
+             delay = next_delay_ms(delay, key != previous)
+             previous = key
+@@ -3644,6 +3885,13 @@
+                 f"{stop['status'].get('terminal_proof')} (previous_failure={stop['status'].get('previous_failure')}) "
+                 f"without automatic recovery or a wait for {stop['seconds']} s over {stop['samples']} reads; "
+                 "no terminal or paused state follows a failure the product keeps unchanged")
++        if final is None and self.state.get("record_running_after_success"):
++            checks["record_running_after_success"] = self.state["record_running_after_success"]
++            self.state["awaiting_terminal"] = False
++            self.inspect("after-track")
++            self.finding(f"{RUNNING_AFTER_SUCCESS_RULE}: the Panel reported the update succeeded while the recovery "
++                         f"record stayed running for {self.state['record_running_after_success']['seconds']} s")
++            return "observed"
+         if final is None:
+             raise StepInconclusive("no terminal or paused state was observed within 90 minutes")
+         if classify_status(final) == "paused":
+@@ -4602,8 +4850,12 @@
+     sub = parser.add_subparsers(dest="command", required=True)
+     fix = sub.add_parser("fixture-source", help="edit a disposable clone (used by build-upd1-artifacts.sh)")
+     fix.add_argument("--repo", required=True, type=Path)
+-    fix.add_argument("--kind", required=True, choices=("baseline", "good", "defective") + tuple(KIND_PATCHES))
++    fix.add_argument("--kind", required=True,
++                     choices=("baseline", "baseline-ref", "good", "defective") + tuple(KIND_PATCHES))
+     fix.add_argument("--previous-commit")
++    fix.add_argument("--baseline-ref", choices=sorted(BASELINE_REFS),
++                     help="upd7: the published baseline tag (kind baseline-ref; kind good labels the next release)")
++    fix.add_argument("--source-commit", help="upd7: the exact source commit the acceptance-license seam is copied from")
+     prove = sub.add_parser("prove", help="read-only host proof of every archive in the document (no guest)")
+     prove.add_argument("--artifacts", required=True, type=Path)
+     for name in ("plan", "run"):
+@@ -4623,10 +4875,13 @@
+             cmd.add_argument("--execute", action="store_true")
+     args = parser.parse_args(argv)
+     if args.command == "fixture-source":
+-        print(json.dumps(fixture_source(args.repo, args.kind, args.previous_commit)))
++        print(json.dumps(fixture_source(args.repo, args.kind, args.previous_commit, baseline_ref=args.baseline_ref,
++                                        source_commit=args.source_commit)))
+         return 0
+     if args.command == "prove":
+-        document = validate_artifacts(json.loads(args.artifacts.read_text()))
++        raw = json.loads(args.artifacts.read_text())
++        configure_labels(raw)
++        document = validate_artifacts(raw)
+         roles = BASE_ROLES + tuple(role for role in EXTRA_ROLES if role in document)
+         print(json.dumps({"schema": "celikpanel/upd1-artifact-proof/v1", "native_evidence": False,
+                           "proofs": prove_artifacts(document, roles)},
+@@ -4637,6 +4892,7 @@
+     if not 1024 < args.local_port < 65536:
+         parser.error("--local-port must be an unprivileged loopback port")
+     document = json.loads(args.artifacts.read_text())
++    configure_labels(document)
+     draft = json.loads(args.setup_draft_json.read_text()) if args.setup_draft_json else None
+     if draft is not None and not isinstance(draft, dict):
+         parser.error("--setup-draft-json must be a JSON object of draft fields")
+--- a/deploy/e2e/release-recovery/worker_fixture_origin.py
++++ b/deploy/e2e/release-recovery/worker_fixture_origin.py
+@@ -28,6 +28,19 @@
+ PREFIX = 'worker-origin-'
+ MAX_ARCHIVE = 100 * 1024 * 1024
+ RELEASE_POLICY = {'version': 'v0.1.0-alpha.82', 'current': 82, 'previous': 81, 'previous_version': 'v0.1.0-alpha.81'}
++# upd7: the closed set of target transitions this origin may serve. The first is the upd1-upd6 fixture
++# transition; the second is the first update from the published v0.1.0-alpha.80 (a candidate labelled
++# v0.1.0-alpha.81). The host may select only one of these (owner_update_trial sets RELEASE_POLICY).
++RELEASE_POLICIES = (
++    dict(RELEASE_POLICY),
++    {'version': 'v0.1.0-alpha.81', 'current': 81, 'previous': 80, 'previous_version': 'v0.1.0-alpha.80'},
++)
++
++
++def allowed_policy(policy):
++    """True when every transition field equals one closed transition exactly (value and type)."""
++    return any(all(policy.get(key) == wanted and type(policy.get(key)) is type(wanted) for key, wanted in allowed.items())
++               for allowed in RELEASE_POLICIES)
+ 
+ 
+ def module(name):
+@@ -135,6 +148,8 @@
+             or not re.fullmatch(r'[0-9a-f]{40}', commit) or type(sequence) is not int
+             or not 0 < sequence < 2**63):
+         raise ValueError('invalid fixture release identity')
++    if not allowed_policy(RELEASE_POLICY) or set(RELEASE_POLICY) != set(RELEASE_POLICIES[0]):
++        raise ValueError('origin target transition is not one of the closed fixture transitions')
+     archive = Path(archive)
+     source = module('candidate_archive')
+     candidate = source.inspect_archive(archive, digest(archive), release_policy=RELEASE_POLICY)
+@@ -259,7 +274,7 @@
+     policy = intent['source_proof']['release_policy']
+     if (set(policy) != {'format', 'version', 'current', 'previous', 'previous_version', 'previous_commit', 'sha256'}
+             or policy['format'] != 'celikpanel-release-sequence-policy-v1'
+-            or any(policy[key] != wanted or type(policy[key]) is not type(wanted) for key, wanted in RELEASE_POLICY.items())
++            or not allowed_policy(policy)
+             or target.get('sequence') != str(policy['current']) or target['version'] != policy['version']
+             or not re.fullmatch('[0-9a-f]{40}', policy['previous_commit']) or policy['previous_commit'] == target['commit']):
+         raise ValueError('origin release policy differs from the target transition')
+--- a/deploy/e2e/release-recovery/test_owner_update_trial.py
++++ b/deploy/e2e/release-recovery/test_owner_update_trial.py
+@@ -158,6 +158,100 @@
+             with self.assertRaisesRegex(ValueError, "disposable"):
+                 t.fixture_source(Path(directory), "baseline", None)
+ 
++    def test_upd7_seam_hooks_are_the_seam_commits_own_lines(self):
++        # Each hook replacement is present verbatim in the source's license files (seam commit 01a450e6).
++        license_go = (REPO / t.SEAM_LICENSE).read_text()
++        for original, replacement in t.SEAM_LICENSE_HOOKS:
++            self.assertIn(replacement, license_go)
++            self.assertNotEqual(original, replacement)
++        self.assertIn(t.SEAM_PANEL_HOOK[1], (REPO / t.SEAM_PANEL).read_text())
++        self.assertEqual(list(t.BASELINE_REF_PATCHED), sorted(t.BASELINE_REF_PATCHED))
++        for path in t.BASELINE_REF_PATCHED:
++            self.assertTrue(path.startswith(("internal/licensing/", "cmd/panel/license.go")), path)
++            self.assertFalse(any(path.startswith(p) for p in t.BASELINE_REF_UNCHANGED), path)
++
++    def test_upd7_seam_fixture_adaptation_is_exact(self):
++        source = (REPO / t.SEAM_ADAPTED).read_text()
++        adapted = t.adapt_seam_fixture(source)
++        self.assertNotIn("Observation", adapted)
++        self.assertTrue(adapted.startswith("//go:build acceptance_license\n"))
++        self.assertEqual(adapted.count("var errInvalidState = errors.New("), 1)
++        self.assertEqual(len(adapted.splitlines()) - len(source.splitlines()), 4)
++        with self.assertRaises(ValueError):
++            t.adapt_seam_fixture(adapted)
++        with self.assertRaises(ValueError):
++            t.adapt_seam_fixture(source.replace(", Observation: ObservationKnown", "", 1))
++
++    def test_upd7_labels_and_published_baseline_document(self):
++        document = artifacts()
++        for role, version, sequence in (("baseline", "v0.1.0-alpha.80", 80), ("good", "v0.1.0-alpha.81", 81),
++                                        ("defective", "v0.1.0-alpha.81", 81)):
++            document[role].update(version=version, sequence=sequence)
++        document["baseline"]["parent"] = t.ALPHA80_COMMIT
++        document["baseline_ref"] = {"ref": "v0.1.0-alpha.80", "tag_commit": t.ALPHA80_COMMIT,
++                                    "patched_files": list(t.BASELINE_REF_PATCHED), "proof": "/x"}
++        try:
++            labels = t.configure_labels(document)
++            self.assertEqual((labels["baseline"], labels["candidate"]),
++                             (("v0.1.0-alpha.80", 80), ("v0.1.0-alpha.81", 81)))
++            self.assertIs(t.validate_artifacts(document, check_files=False), document)
++            m = t.lab_modules()
++            self.assertEqual(m["baseline"].RELEASE_POLICY, {"version": "v0.1.0-alpha.80", "current": 80, "previous": 79,
++                                                            "previous_version": "v0.1.0-alpha.79"})
++            self.assertEqual(m["origin"].RELEASE_POLICY["version"], "v0.1.0-alpha.81")
++            self.assertIn("published-tag-v0.1.0-alpha.80", t.provenance_for("good")["baseline"])
++            for mutate in (lambda d: d["baseline_ref"].update(patched_files=["update.sh"]),
++                           lambda d: d["baseline"].update(parent="1" * 40),
++                           lambda d: d["baseline_ref"].update(tag_commit="1" * 40)):
++                broken = json.loads(json.dumps(document))
++                mutate(broken)
++                with self.assertRaises(ValueError):
++                    t.configure_labels(broken)
++                    t.validate_artifacts(broken, check_files=False)
++            with self.assertRaises(ValueError):
++                t.configure_labels(dict(document, baseline_ref={"ref": "v0.1.0-alpha.79", "tag_commit": "1" * 40}))
++        finally:
++            t.configure_labels(artifacts())
++        self.assertEqual((t.BASELINE_VERSION, t.CANDIDATE_VERSION, t.LABEL_REF), ("v0.1.0-alpha.81", "v0.1.0-alpha.82", None))
++        m = t.lab_modules()
++        self.assertEqual(m["baseline"].RELEASE_POLICY["version"], "v0.1.0-alpha.81")
++        self.assertEqual(m["origin"].RELEASE_POLICY, {"version": "v0.1.0-alpha.82", "current": 82, "previous": 81,
++                                                      "previous_version": "v0.1.0-alpha.81"})
++
++    def test_upd7_record_running_after_panel_success_rule(self):
++        rule = t.RunningAfterSuccess(seconds=100)
++        running = {"observation": "known", "phase": "running", "terminal_proof": "none", "reason": "update_running"}
++        ok = {"update_status": {"http": 200, "body": {"status": "succeeded"}}, "utc": "u", "index": 1}
++        self.assertIsNone(rule.observe(ok, running, 0))
++        self.assertIsNone(rule.observe(ok, running, 99))
++        # Any other state restarts the window.
++        self.assertIsNone(rule.observe({"update_status": {"http": 200, "body": {"status": "running"}}}, running, 100))
++        self.assertIsNone(rule.observe(ok, dict(running, phase="succeeded"), 101))
++        self.assertIsNone(rule.observe(ok, running, 200))
++        record = rule.observe(ok, running, 300)
++        self.assertEqual((record["rule"], record["seconds"], record["samples"]), (t.RUNNING_AFTER_SUCCESS_RULE, 100, 2))
++        self.assertIsNone(t.RunningAfterSuccess(seconds=1).observe(ok, None, 0))
++
++    def test_upd7_origin_and_observer_accept_only_the_closed_transitions(self):
++        origin = load("tested_upd7_origin", "worker_fixture_origin.py")
++        self.assertTrue(origin.allowed_policy({"version": "v0.1.0-alpha.81", "current": 81, "previous": 80,
++                                               "previous_version": "v0.1.0-alpha.80", "previous_commit": "1" * 40}))
++        for wrong in ({"version": "v0.1.0-alpha.81", "current": 82, "previous": 80, "previous_version": "v0.1.0-alpha.80"},
++                      {"version": "v0.1.0-alpha.81", "current": "81", "previous": 80, "previous_version": "v0.1.0-alpha.80"},
++                      {"version": "v0.1.0-alpha.80", "current": 80, "previous": 79, "previous_version": "v0.1.0-alpha.79"}):
++            self.assertFalse(origin.allowed_policy(wrong))
++        bound = o.bound
++        identity = {"nonce": "n"}
++        def intent(base, target):
++            return {"schema": bound.SCHEMA, "identity": identity, "operation_id": RID, "recovery_fault": None,
++                    "baseline": {"version": base, "commit": "1" * 40, "agent_sha256": "a" * 64, "panel_sha256": "b" * 64},
++                    "target": {"version": target, "commit": "2" * 40, "agent_sha256": "c" * 64, "panel_sha256": "d" * 64}}
++        for pair in (("v0.1.0-alpha.81", "v0.1.0-alpha.82"), ("v0.1.0-alpha.80", "v0.1.0-alpha.81")):
++            self.assertEqual(bound.validate_intent(intent(*pair), identity, RID)["target"]["version"], pair[1])
++        for pair in (("v0.1.0-alpha.80", "v0.1.0-alpha.82"), ("v0.1.0-alpha.81", "v0.1.0-alpha.81")):
++            with self.assertRaises(bound.probe.ProbeError):
++                bound.validate_intent(intent(*pair), identity, RID)
++
+     def test_acceptance_notice_is_the_only_exemption(self):
+         with tempfile.TemporaryDirectory() as directory:
+             archive = Path(directory) / "a.tar.gz"
+@@ -1252,7 +1346,15 @@
+         self.assertIn('update-ref "refs/upd1/$kind"', text)
+         self.assertIn('s_json=$(build "$startcheck" v0.1.0-alpha.82)', text)
+         self.assertIn('r_json=$(build "$realstart" v0.1.0-alpha.82)', text)
+-        self.assertIn('"startcheck": item(s, 82, good), "realstart": item(r, 82, good)', text)
++        self.assertIn('document["startcheck"] = item(s, c_seq, good)', text)
++        self.assertIn('document["realstart"] = item(r, c_seq, good)', text)
++        self.assertIn("b_seq=81 c_seq=82", text)
++        # upd7: the published-baseline mode builds B from the tag (seam only), then G and D over the source.
++        self.assertIn("--kind baseline-ref --baseline-ref", text)
++        self.assertIn('b_json=$(build "$baseline" "$BASELINE_REF")', text)
++        self.assertIn('g_json=$(build "$good" v0.1.0-alpha.81)', text)
++        self.assertIn("b_seq=80 c_seq=81 b_parent=$tag_commit", text)
++        self.assertIn("grep -q DIFFERENT", text)
+         wrapper = (HERE / "run-upd1.sh").read_text().splitlines()
+         last = int(re.search(r"sed -n '2,(\d+)p'", "\n".join(wrapper)).group(1))
+         self.assertTrue(all(line.startswith("#") for line in wrapper[1:last]))
+--- a/deploy/e2e/release-recovery/run-upd1.sh
++++ b/deploy/e2e/release-recovery/run-upd1.sh
+@@ -1,9 +1,10 @@
+ #!/usr/bin/env bash
+ # upd1 wrapper for the Linux QEMU host (archlinux), run as root from the repository root.
+ #
+-#   run-upd1.sh build [SOURCE_COMMIT]
++#   run-upd1.sh build [--baseline-ref v0.1.0-alpha.80] [SOURCE_COMMIT]
+ #       Disposable clone + fixture commits B/G/D/S/R + five acceptance-license
+-#       archives; prints the upd1-artifacts.json path.
++#       archives; prints the upd1-artifacts.json path. --baseline-ref (upd7):
++#       B is the published tag + the D-027 license seam only; G/D are labelled alpha.81.
+ #   run-upd1.sh prove ARTIFACTS_JSON
+ #       Read-only host proof of every archive in it (inventory, policy, source).
+ #   run-upd1.sh dry-run CELL ARTIFACTS_JSON LAB_NAME
+@@ -31,7 +32,7 @@
+ CHOICES=(--dns-mode "$DNS_MODE")
+ [[ -z ${UPD1_SETUP_DRAFT_JSON:-} ]] || CHOICES+=(--setup-draft-json "$UPD1_SETUP_DRAFT_JSON")
+ 
+-usage() { sed -n '2,23p' "${BASH_SOURCE[0]}" >&2; exit 2; }
++usage() { sed -n '2,24p' "${BASH_SOURCE[0]}" >&2; exit 2; }
+ [[ $# -ge 1 ]] || usage
+ command=$1; shift
+ case $command in

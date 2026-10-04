@@ -223,3 +223,14 @@ Bu tarihsel başlangıç kaydı geçerli çalışma ağacını anlatmaz;
 `web/src/components/AddDomainModal.tsx`, `cmd/panel/mail_profiles.go`,
 `cmd/panel/dns_engine.go`, `cmd/panel/domain_connection.go`,
 `cmd/panel/panel_cert_handler.go`, `internal/hostname/hostname.go`.
+
+## Not, 2026-09-30: Arch'ta e-posta ve bileşen kurulum hataları (upd1 P2)
+
+`web_mail` amacı (ve e-posta bileşeni içeren her plan) Arch Linux'ta inceleme
+aşamasında `server_setup_service_unsupported:dovecot` ile reddedilir: Arch'ın
+Dovecot 2.4 paketi posta, giriş ve TLS ayarlarını panelin yönetmediği tek bir
+`dovecot.conf` içinde tutar; kabul edilen plan önceden kurulumun ortasında e-posta
+adımında duruyordu. Bileşen kurulum hatası artık bileşeni, başarısız adımı ve
+makinenin kendi satırını adlandırır; sihirbaz kimin ne yapacağını ve kurulumun
+nasıl süreceğini söyler. Ayrıntı ve kalan iş: [işlem yönlendirmesi](OPERATION-GUIDANCE.tr.md).
+Yalnız bileşen testleri; gerçek sistem kanıtı bekliyor.

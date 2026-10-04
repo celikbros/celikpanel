@@ -1,0 +1,567 @@
+2026-09-30T02:13:59.386902+00:00 dns-debian13 systemd[1]: Starting named.service - BIND Domain Name Server...
+2026-09-30T02:13:59.415023+00:00 dns-debian13 named[5608]: starting BIND 9.20.29-1~deb13u1-Debian (Stable Release) <id:>
+2026-09-30T02:13:59.415438+00:00 dns-debian13 named[5608]: running on Linux x86_64 6.12.105+deb13-cloud-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.12.105-1 (2026-08-24) (Debian GNU/Linux 13 (trixie))
+2026-09-30T02:13:59.415502+00:00 dns-debian13 named[5608]: built with  '--build=x86_64-linux-gnu' '--prefix=/usr' '--includedir=${prefix}/include' '--mandir=${prefix}/share/man' '--infodir=${prefix}/share/info' '--sysconfdir=/etc' '--localstatedir=/var' '--disable-option-checking' '--disable-silent-rules' '--libdir=${prefix}/lib/x86_64-linux-gnu' '--runstatedir=/run' '--disable-maintainer-mode' '--disable-dependency-tracking' '--libdir=/usr/lib/x86_64-linux-gnu' '--sysconfdir=/etc/bind' '--with-python=python3' '--localstatedir=/' '--enable-threads' '--enable-largefile' '--with-libtool' '--enable-shared' '--disable-static' '--with-gost=no' '--with-openssl=/usr' '--with-gssapi=yes' '--with-libidn2' '--with-json-c' '--with-lmdb=/usr' '--with-gnu-ld' '--with-maxminddb' '--with-atf=no' '--enable-ipv6' '--enable-rrl' '--enable-filter-aaaa' '--disable-native-pkcs11' '--enable-dnstap' 'build_alias=x86_64-linux-gnu' 'CFLAGS=-g -O2 -Werror=implicit-function-declaration -ffile-prefix-map=/build/reproducible-path/bind9-9.20.29=. -fstack-protector-strong -fstack-clash-protection -Wformat -Werror=format-security -fcf-protection -fno-strict-aliasing -fno-delete-null-pointer-checks -DNO_VERSION_DATE -DDIG_SIGCHASE' 'LDFLAGS=-Wl,-z,relro -Wl,-z,now' 'CPPFLAGS=-Wdate-time -D_FORTIFY_SOURCE=2'
+2026-09-30T02:13:59.415602+00:00 dns-debian13 named[5608]: running as: named -f -u bind
+2026-09-30T02:13:59.415648+00:00 dns-debian13 named[5608]: compiled by GCC 14.2.0
+2026-09-30T02:13:59.415685+00:00 dns-debian13 named[5608]: compiled with OpenSSL version: OpenSSL 3.5.7 9 Jun 2026
+2026-09-30T02:13:59.415733+00:00 dns-debian13 named[5608]: linked to OpenSSL version: OpenSSL 3.5.7 9 Jun 2026
+2026-09-30T02:13:59.415773+00:00 dns-debian13 named[5608]: compiled with libuv version: 1.50.0
+2026-09-30T02:13:59.415816+00:00 dns-debian13 named[5608]: linked to libuv version: 1.50.0
+2026-09-30T02:13:59.415857+00:00 dns-debian13 named[5608]: compiled with liburcu version: 0.15.2
+2026-09-30T02:13:59.415893+00:00 dns-debian13 named[5608]: compiled with jemalloc version: 5.3.0
+2026-09-30T02:13:59.415931+00:00 dns-debian13 named[5608]: compiled with libnghttp2 version: 1.64.0
+2026-09-30T02:13:59.415981+00:00 dns-debian13 named[5608]: linked to libnghttp2 version: 1.64.0
+2026-09-30T02:13:59.416018+00:00 dns-debian13 named[5608]: compiled with libxml2 version: 2.9.14
+2026-09-30T02:13:59.416061+00:00 dns-debian13 named[5608]: linked to libxml2 version: 20914
+2026-09-30T02:13:59.416101+00:00 dns-debian13 named[5608]: compiled with json-c version: 0.18
+2026-09-30T02:13:59.416140+00:00 dns-debian13 named[5608]: linked to json-c version: 0.18
+2026-09-30T02:13:59.416173+00:00 dns-debian13 named[5608]: compiled with zlib version: 1.3.1
+2026-09-30T02:13:59.416218+00:00 dns-debian13 named[5608]: linked to zlib version: 1.3.1
+2026-09-30T02:13:59.416258+00:00 dns-debian13 named[5608]: linked to maxminddb version: 1.12.2
+2026-09-30T02:13:59.416295+00:00 dns-debian13 named[5608]: compiled with protobuf-c version: 1.5.1
+2026-09-30T02:13:59.416330+00:00 dns-debian13 named[5608]: linked to protobuf-c version: 1.5.1
+2026-09-30T02:13:59.416365+00:00 dns-debian13 named[5608]: ----------------------------------------------------
+2026-09-30T02:13:59.416398+00:00 dns-debian13 named[5608]: BIND 9 is maintained by Internet Systems Consortium,
+2026-09-30T02:13:59.416432+00:00 dns-debian13 named[5608]: Inc. (ISC), a non-profit 501(c)(3) public-benefit
+2026-09-30T02:13:59.416465+00:00 dns-debian13 named[5608]: corporation.  Support and training for BIND 9 are
+2026-09-30T02:13:59.416502+00:00 dns-debian13 named[5608]: available at https://www.isc.org/support
+2026-09-30T02:13:59.416542+00:00 dns-debian13 named[5608]: ----------------------------------------------------
+2026-09-30T02:13:59.416592+00:00 dns-debian13 named[5608]: adjusted limit on open files from 1024 to 524288
+2026-09-30T02:13:59.416625+00:00 dns-debian13 named[5608]: found 2 CPUs, using 2 worker threads
+2026-09-30T02:13:59.418439+00:00 dns-debian13 named[5608]: DNSSEC algorithms: RSASHA1 NSEC3RSASHA1 RSASHA256 RSASHA512 ECDSAP256SHA256 ECDSAP384SHA384 ED25519 ED448
+2026-09-30T02:13:59.418640+00:00 dns-debian13 named[5608]: DS algorithms: SHA-1 SHA-256 SHA-384
+2026-09-30T02:13:59.418705+00:00 dns-debian13 named[5608]: HMAC algorithms: HMAC-MD5 HMAC-SHA1 HMAC-SHA224 HMAC-SHA256 HMAC-SHA384 HMAC-SHA512
+2026-09-30T02:13:59.418750+00:00 dns-debian13 named[5608]: TKEY mode 2 support (Diffie-Hellman): no
+2026-09-30T02:13:59.418790+00:00 dns-debian13 named[5608]: TKEY mode 3 support (GSS-API): yes
+2026-09-30T02:13:59.425004+00:00 dns-debian13 named[5608]: the initial working directory is '/'
+2026-09-30T02:13:59.425148+00:00 dns-debian13 named[5608]: loading configuration from '/etc/bind/named.conf'
+2026-09-30T02:13:59.425260+00:00 dns-debian13 named[5608]: the working directory is now '/var/cache/bind'
+2026-09-30T02:13:59.425458+00:00 dns-debian13 named[5608]: looking for GeoIP2 databases in '/usr/share/GeoIP'
+2026-09-30T02:13:59.425783+00:00 dns-debian13 named[5608]: using default UDP/IPv4 port range: [32768, 60999]
+2026-09-30T02:13:59.425908+00:00 dns-debian13 named[5608]: using default UDP/IPv6 port range: [32768, 60999]
+2026-09-30T02:13:59.426370+00:00 dns-debian13 named[5608]: listening on IPv4 interface lo, 127.0.0.1#53
+2026-09-30T02:13:59.426776+00:00 dns-debian13 named[5608]: listening on IPv4 interface mgmt0, 10.0.2.15#53
+2026-09-30T02:13:59.427061+00:00 dns-debian13 named[5608]: listening on IPv4 interface peer0, 192.0.2.10#53
+2026-09-30T02:13:59.427276+00:00 dns-debian13 named[5608]: IPv6 socket API is incomplete; explicitly binding to each IPv6 address separately
+2026-09-30T02:13:59.427329+00:00 dns-debian13 named[5608]: listening on IPv6 interface lo, ::1#53
+2026-09-30T02:13:59.427533+00:00 dns-debian13 named[5608]: listening on IPv6 interface mgmt0, fec0::5054:ff:fe13:10#53
+2026-09-30T02:13:59.427726+00:00 dns-debian13 named[5608]: listening on IPv6 interface mgmt0, fe80::5054:ff:fe13:10%2#53
+2026-09-30T02:13:59.427908+00:00 dns-debian13 named[5608]: listening on IPv6 interface peer0, fe80::5054:ff:fe53:10%3#53
+2026-09-30T02:13:59.428157+00:00 dns-debian13 named[5608]: Disabling periodic interface re-scans timer
+2026-09-30T02:13:59.428226+00:00 dns-debian13 named[5608]: generating session key for dynamic DNS
+2026-09-30T02:13:59.428657+00:00 dns-debian13 named[5608]: using built-in root key for view _default
+2026-09-30T02:13:59.428697+00:00 dns-debian13 named[5608]: set up managed keys zone for view _default, file 'managed-keys.bind'
+2026-09-30T02:13:59.429040+00:00 dns-debian13 named[5608]: configuring command channel from '/etc/bind/rndc.key'
+2026-09-30T02:13:59.429097+00:00 dns-debian13 named[5608]: command channel listening on 127.0.0.1#953
+2026-09-30T02:13:59.429102+00:00 dns-debian13 named[5608]: configuring command channel from '/etc/bind/rndc.key'
+2026-09-30T02:13:59.429141+00:00 dns-debian13 named[5608]: command channel listening on ::1#953
+2026-09-30T02:13:59.429312+00:00 dns-debian13 named[5608]: managed-keys-zone: loaded serial 0
+2026-09-30T02:13:59.429443+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: loaded serial 1
+2026-09-30T02:13:59.429512+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: sending notifies (serial 1)
+2026-09-30T02:13:59.429751+00:00 dns-debian13 named[5608]: all zones loaded
+2026-09-30T02:13:59.437736+00:00 dns-debian13 named[5608]: FIPS mode is disabled
+2026-09-30T02:13:59.437929+00:00 dns-debian13 systemd[1]: Started named.service - BIND Domain Name Server.
+2026-09-30T02:13:59.437776+00:00 dns-debian13 named[5608]: running
+2026-09-30T02:13:59.438142+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: sending notify to 192.0.2.11#53
+2026-09-30T02:13:59.438884+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: notify to 192.0.2.11#53 failed: connection refused: retrying over TCP
+2026-09-30T02:13:59.439379+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: sending notify to 192.0.2.11#53
+2026-09-30T02:13:59.440218+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: notify to 192.0.2.11#53 failed: connection refused
+2026-09-30T02:13:59.440346+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:a8::e#53
+2026-09-30T02:13:59.440458+00:00 dns-debian13 named[5608]: network unreachable resolving './NS/IN': 2001:500:a8::e#53
+2026-09-30T02:13:59.440802+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:7fe::53#53
+2026-09-30T02:13:59.440978+00:00 dns-debian13 named[5608]: network unreachable resolving './NS/IN': 2001:7fe::53#53
+2026-09-30T02:13:59.441291+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:7fd::1#53
+2026-09-30T02:13:59.441395+00:00 dns-debian13 named[5608]: network unreachable resolving './NS/IN': 2001:7fd::1#53
+2026-09-30T02:13:59.441642+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:503:c27::2:30#53
+2026-09-30T02:13:59.441763+00:00 dns-debian13 named[5608]: network unreachable resolving './NS/IN': 2001:503:c27::2:30#53
+2026-09-30T02:13:59.442037+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:9f::42#53
+2026-09-30T02:13:59.442136+00:00 dns-debian13 named[5608]: network unreachable resolving './NS/IN': 2001:500:9f::42#53
+2026-09-30T02:13:59.442374+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:dc3::35#53
+2026-09-30T02:13:59.442464+00:00 dns-debian13 named[5608]: network unreachable resolving './NS/IN': 2001:dc3::35#53
+2026-09-30T02:13:59.442573+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:2f::f#53
+2026-09-30T02:13:59.442829+00:00 dns-debian13 named[5608]: network unreachable resolving './NS/IN': 2001:500:2f::f#53
+2026-09-30T02:13:59.442944+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:2::c#53
+2026-09-30T02:13:59.443054+00:00 dns-debian13 named[5608]: network unreachable resolving './NS/IN': 2001:500:2::c#53
+2026-09-30T02:13:59.443180+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:2d::d#53
+2026-09-30T02:13:59.443257+00:00 dns-debian13 named[5608]: network unreachable resolving './NS/IN': 2001:500:2d::d#53
+2026-09-30T02:13:59.443439+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:12::d0d#53
+2026-09-30T02:13:59.443480+00:00 dns-debian13 named[5608]: network unreachable resolving './NS/IN': 2001:503:ba3e::2:30#53
+2026-09-30T02:13:59.443840+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:1::53#53
+2026-09-30T02:13:59.443888+00:00 dns-debian13 named[5608]: network unreachable resolving './NS/IN': 2001:500:1::53#53
+2026-09-30T02:13:59.444145+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:503:ba3e::2:30#53
+2026-09-30T02:13:59.444211+00:00 dns-debian13 named[5608]: network unreachable resolving './NS/IN': 2001:500:12::d0d#53
+2026-09-30T02:13:59.444368+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2801:1b8:10::b#53
+2026-09-30T02:13:59.444417+00:00 dns-debian13 named[5608]: network unreachable resolving './NS/IN': 2801:1b8:10::b#53
+2026-09-30T02:13:59.485447+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:7fe::53#53
+2026-09-30T02:13:59.485678+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:7fd::1#53
+2026-09-30T02:13:59.485901+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:2::c#53
+2026-09-30T02:13:59.565930+00:00 dns-debian13 named[5608]: managed-keys-zone: Initializing automatic trust anchor management for zone '.'; DNSKEY ID 20326 is now trusted, waiving the normal 30-day waiting period.
+2026-09-30T02:13:59.565974+00:00 dns-debian13 named[5608]: managed-keys-zone: Initializing automatic trust anchor management for zone '.'; DNSKEY ID 38696 is now trusted, waiving the normal 30-day waiting period.
+2026-09-30T02:14:02.244480+00:00 dns-debian13 named[5608]: client @0x7f9433d26000 192.0.2.10#32882 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T02:14:02.245087+00:00 dns-debian13 named[5608]: client @0x7f9433d26000 192.0.2.10#32882 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T02:14:02.364744+00:00 dns-debian13 named[5608]: client @0x7f9430e19000 192.0.2.10#32900 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T02:14:02.365363+00:00 dns-debian13 named[5608]: client @0x7f9430e19000 192.0.2.10#32900 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T02:14:02.968475+00:00 dns-debian13 named[5608]: client @0x7f9430e19000 192.0.2.10#32912 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T02:14:02.968681+00:00 dns-debian13 named[5608]: client @0x7f9430e19000 192.0.2.10#32912 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T02:14:03.011865+00:00 dns-debian13 named[5608]: client @0x7f9430e19000 192.0.2.10#32928 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T02:14:03.012416+00:00 dns-debian13 named[5608]: client @0x7f9430e19000 192.0.2.10#32928 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T02:14:03.858237+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.10#32944 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T02:14:03.858470+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.10#32944 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T02:14:06.921425+00:00 dns-debian13 named[5608]: client @0x7f9430e19000 192.0.2.11#47288 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T02:14:06.921613+00:00 dns-debian13 named[5608]: client @0x7f9430e19000 192.0.2.11#47288 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.004 secs (40250 bytes/sec) (serial 1)
+2026-09-30T02:14:09.660810+00:00 dns-debian13 named[5608]: client @0x7f9430e19000 192.0.2.11#47304 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T02:14:09.661192+00:00 dns-debian13 named[5608]: client @0x7f9430e19000 192.0.2.11#47304 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T02:14:16.443159+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#38567 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T02:14:16.443715+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#38567 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 172 bytes, 0.001 secs (172000 bytes/sec) (serial 1)
+2026-09-30T02:14:17.255821+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#38568 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T02:14:17.256082+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#38568 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T02:14:17.644181+00:00 dns-debian13 named[5608]: client @0x7f9430e19000 192.0.2.11#38574 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T02:14:17.644408+00:00 dns-debian13 named[5608]: client @0x7f9430e19000 192.0.2.11#38574 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T02:14:18.004406+00:00 dns-debian13 named[5608]: client @0x7f9430e19000 192.0.2.11#38588 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T02:14:18.004616+00:00 dns-debian13 named[5608]: client @0x7f9430e19000 192.0.2.11#38588 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T02:14:18.452531+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#41691 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T02:14:18.453659+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#41691 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.004 secs (40250 bytes/sec) (serial 1)
+2026-09-30T02:14:18.538224+00:00 dns-debian13 named[5608]: client @0x7f9430e19000 192.0.2.11#34603 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T02:14:18.538535+00:00 dns-debian13 named[5608]: client @0x7f9430e19000 192.0.2.11#34603 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T02:14:22.338301+00:00 dns-debian13 named[5608]: client @0x7f9430e19000 192.0.2.10#48666 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T02:14:22.338493+00:00 dns-debian13 named[5608]: client @0x7f9430e19000 192.0.2.10#48666 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T02:14:23.199039+00:00 dns-debian13 named[5608]: client @0x7f9430e19000 192.0.2.11#40945 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T02:14:23.199224+00:00 dns-debian13 named[5608]: client @0x7f9430e19000 192.0.2.11#40945 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T02:14:23.286427+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#50063 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T02:14:23.286607+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#50063 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T02:14:27.563934+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#34530 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T02:14:27.564176+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#34530 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T02:14:30.972649+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.10#46880 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T02:14:30.972871+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.10#46880 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T02:14:31.965997+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.10#46888 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T02:14:31.966234+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.10#46888 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T02:14:32.509823+00:00 dns-debian13 systemd[1]: Reloading named.service - BIND Domain Name Server...
+2026-09-30T02:14:32.543371+00:00 dns-debian13 named[5608]: received control channel command 'reload'
+2026-09-30T02:14:32.544356+00:00 dns-debian13 named[5608]: loading configuration from '/etc/bind/named.conf'
+2026-09-30T02:14:32.544415+00:00 dns-debian13 named[5608]: the working directory is now '/var/cache/bind'
+2026-09-30T02:14:32.544613+00:00 dns-debian13 named[5608]: looking for GeoIP2 databases in '/usr/share/GeoIP'
+2026-09-30T02:14:32.544705+00:00 dns-debian13 named[5608]: using default UDP/IPv4 port range: [32768, 60999]
+2026-09-30T02:14:32.544760+00:00 dns-debian13 named[5608]: using default UDP/IPv6 port range: [32768, 60999]
+2026-09-30T02:14:32.545132+00:00 dns-debian13 named[5608]: Disabling periodic interface re-scans timer
+2026-09-30T02:14:32.545689+00:00 dns-debian13 named[5608]: using built-in root key for view _default
+2026-09-30T02:14:32.545984+00:00 dns-debian13 named[5608]: configuring command channel from '/etc/bind/rndc.key'
+2026-09-30T02:14:32.546287+00:00 dns-debian13 named[5608]: configuring command channel from '/etc/bind/rndc.key'
+2026-09-30T02:14:32.546438+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: (primary) removed
+2026-09-30T02:14:32.546925+00:00 dns-debian13 named[5608]: reloading configuration succeeded
+2026-09-30T02:14:32.547153+00:00 dns-debian13 named[5608]: reloading zones succeeded
+2026-09-30T02:14:32.547397+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: loaded serial 2
+2026-09-30T02:14:32.547483+00:00 dns-debian13 named[5608]: zone pair-accept.test/IN: loaded serial 2026093001
+2026-09-30T02:14:32.547488+00:00 dns-debian13 named[5608]: all zones loaded
+2026-09-30T02:14:32.547514+00:00 dns-debian13 named[5608]: FIPS mode is disabled
+2026-09-30T02:14:32.547536+00:00 dns-debian13 named[5608]: running
+2026-09-30T02:14:32.547564+00:00 dns-debian13 named[5608]: zone pair-accept.test/IN: sending notifies (serial 2026093001)
+2026-09-30T02:14:32.547599+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: sending notifies (serial 2)
+2026-09-30T02:14:32.548306+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: sending notify to 192.0.2.11#53
+2026-09-30T02:14:32.548410+00:00 dns-debian13 named[5608]: zone pair-accept.test/IN: sending notify to 192.0.2.11#53
+2026-09-30T02:14:32.548574+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:503:ba3e::2:30#53
+2026-09-30T02:14:32.548670+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:503:ba3e::2:30#53
+2026-09-30T02:14:32.548777+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:a8::e#53
+2026-09-30T02:14:32.552115+00:00 dns-debian13 rndc[7157]: server reload successful
+2026-09-30T02:14:32.548918+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:500:a8::e#53
+2026-09-30T02:14:32.549732+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:2d::d#53
+2026-09-30T02:14:32.549827+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:500:2d::d#53
+2026-09-30T02:14:32.550416+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:9f::42#53
+2026-09-30T02:14:32.550458+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:500:9f::42#53
+2026-09-30T02:14:32.550719+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:7fd::1#53
+2026-09-30T02:14:32.550759+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:7fd::1#53
+2026-09-30T02:14:32.550924+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:7fe::53#53
+2026-09-30T02:14:32.550996+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:7fe::53#53
+2026-09-30T02:14:32.551212+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#51639 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': IXFR version not in journal, falling back to AXFR (serial 1)
+2026-09-30T02:14:32.551225+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#51639 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR-style IXFR started (serial 2)
+2026-09-30T02:14:32.551388+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#51639 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR-style IXFR ended: 1 messages, 5 records, 265 bytes, 0.001 secs (265000 bytes/sec) (serial 2)
+2026-09-30T02:14:32.551414+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:dc3::35#53
+2026-09-30T02:14:32.551453+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:dc3::35#53
+2026-09-30T02:14:32.551616+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:1::53#53
+2026-09-30T02:14:32.551654+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:500:1::53#53
+2026-09-30T02:14:32.551823+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2801:1b8:10::b#53
+2026-09-30T02:14:32.551862+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2801:1b8:10::b#53
+2026-09-30T02:14:32.552021+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:2::c#53
+2026-09-30T02:14:32.552058+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:500:2::c#53
+2026-09-30T02:14:32.552216+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:2f::f#53
+2026-09-30T02:14:32.552252+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:500:2f::f#53
+2026-09-30T02:14:32.552396+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:503:c27::2:30#53
+2026-09-30T02:14:32.552433+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:503:c27::2:30#53
+2026-09-30T02:14:32.552567+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:12::d0d#53
+2026-09-30T02:14:32.552604+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:500:12::d0d#53
+2026-09-30T02:14:32.553445+00:00 dns-debian13 systemd[1]: Reloaded named.service - BIND Domain Name Server.
+2026-09-30T02:14:32.598002+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#51644 (pair-accept.test): transfer of 'pair-accept.test/IN': AXFR started (serial 2026093001)
+2026-09-30T02:14:32.598341+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#51644 (pair-accept.test): transfer of 'pair-accept.test/IN': AXFR ended: 1 messages, 12 records, 401 bytes, 0.001 secs (401000 bytes/sec) (serial 2026093001)
+2026-09-30T02:14:32.598437+00:00 dns-debian13 named[5608]: network unreachable resolving 'ns2.ns-accept.test/A/IN': 2001:500:a8::e#53
+2026-09-30T02:14:32.598484+00:00 dns-debian13 named[5608]: network unreachable resolving 'ns2.ns-accept.test/AAAA/IN': 2001:500:a8::e#53
+2026-09-30T02:14:32.598720+00:00 dns-debian13 named[5608]: network unreachable resolving 'ns2.ns-accept.test/A/IN': 2001:500:2d::d#53
+2026-09-30T02:14:32.598769+00:00 dns-debian13 named[5608]: network unreachable resolving 'ns2.ns-accept.test/AAAA/IN': 2001:500:2d::d#53
+2026-09-30T02:14:32.677889+00:00 dns-debian13 named[5608]: managed-keys-zone: Key 20326 for zone . is now trusted (acceptance timer complete)
+2026-09-30T02:14:32.677937+00:00 dns-debian13 named[5608]: managed-keys-zone: Key 38696 for zone . is now trusted (acceptance timer complete)
+2026-09-30T02:14:33.613217+00:00 dns-debian13 named[5608]: received control channel command 'notify catalog-c000020a.celikpanel.invalid'
+2026-09-30T02:14:33.639290+00:00 dns-debian13 named[5608]: received control channel command 'notify pair-accept.test'
+2026-09-30T02:14:33.647563+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.10#46906 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T02:14:33.647801+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.10#46906 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T02:14:36.055822+00:00 dns-debian13 named[5608]: received control channel command 'zonestatus pair-accept.test'
+2026-09-30T02:14:36.066874+00:00 dns-debian13 named[5608]: received control channel command 'zonestatus catalog-c000020a.celikpanel.invalid'
+2026-09-30T02:14:36.591756+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#51708 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T02:14:36.592009+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#51708 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T02:14:37.549697+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: sending notifies (serial 2)
+2026-09-30T02:14:37.549756+00:00 dns-debian13 named[5608]: zone pair-accept.test/IN: sending notifies (serial 2026093001)
+2026-09-30T02:14:37.549935+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: sending notify to 192.0.2.11#53
+2026-09-30T02:14:37.550314+00:00 dns-debian13 named[5608]: zone pair-accept.test/IN: sending notify to 192.0.2.11#53
+2026-09-30T02:14:37.676729+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.10#47002 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T02:14:37.677002+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.10#47002 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T02:14:37.875163+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#51720 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T02:14:37.875389+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#51720 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T02:14:38.555021+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#33739 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T02:14:38.555271+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#33739 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T02:14:38.686373+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#45539 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T02:14:38.686571+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#45539 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T02:14:39.978285+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.10#47846 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T02:14:39.978667+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.10#47846 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T02:14:41.184425+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.10#47860 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T02:14:41.184658+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.10#47860 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T02:14:41.878560+00:00 dns-debian13 systemd[1]: Reloading named.service - BIND Domain Name Server...
+2026-09-30T02:14:41.912181+00:00 dns-debian13 named[5608]: received control channel command 'reload'
+2026-09-30T02:14:41.912518+00:00 dns-debian13 named[5608]: loading configuration from '/etc/bind/named.conf'
+2026-09-30T02:14:41.912588+00:00 dns-debian13 named[5608]: the working directory is now '/var/cache/bind'
+2026-09-30T02:14:41.913143+00:00 dns-debian13 named[5608]: looking for GeoIP2 databases in '/usr/share/GeoIP'
+2026-09-30T02:14:41.913285+00:00 dns-debian13 named[5608]: using default UDP/IPv4 port range: [32768, 60999]
+2026-09-30T02:14:41.913383+00:00 dns-debian13 named[5608]: using default UDP/IPv6 port range: [32768, 60999]
+2026-09-30T02:14:41.913750+00:00 dns-debian13 named[5608]: Disabling periodic interface re-scans timer
+2026-09-30T02:14:41.914294+00:00 dns-debian13 named[5608]: using built-in root key for view _default
+2026-09-30T02:14:41.914639+00:00 dns-debian13 named[5608]: configuring command channel from '/etc/bind/rndc.key'
+2026-09-30T02:14:41.914674+00:00 dns-debian13 named[5608]: configuring command channel from '/etc/bind/rndc.key'
+2026-09-30T02:14:41.914787+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: (primary) removed
+2026-09-30T02:14:41.914790+00:00 dns-debian13 named[5608]: zone pair-accept.test/IN: (primary) removed
+2026-09-30T02:14:41.915322+00:00 dns-debian13 named[5608]: reloading configuration succeeded
+2026-09-30T02:14:41.915624+00:00 dns-debian13 named[5608]: reloading zones succeeded
+2026-09-30T02:14:41.915869+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: loaded serial 2
+2026-09-30T02:14:41.916071+00:00 dns-debian13 named[5608]: zone pair-accept.test/IN: loaded serial 2026093002
+2026-09-30T02:14:41.916380+00:00 dns-debian13 named[5608]: all zones loaded
+2026-09-30T02:14:41.916487+00:00 dns-debian13 named[5608]: FIPS mode is disabled
+2026-09-30T02:14:41.916588+00:00 dns-debian13 named[5608]: running
+2026-09-30T02:14:41.916709+00:00 dns-debian13 named[5608]: zone pair-accept.test/IN: sending notifies (serial 2026093002)
+2026-09-30T02:14:41.917045+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: sending notifies (serial 2)
+2026-09-30T02:14:41.917446+00:00 dns-debian13 rndc[7811]: server reload successful
+2026-09-30T02:14:41.918047+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: sending notify to 192.0.2.11#53
+2026-09-30T02:14:41.918162+00:00 dns-debian13 named[5608]: zone pair-accept.test/IN: sending notify to 192.0.2.11#53
+2026-09-30T02:14:41.918252+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2801:1b8:10::b#53
+2026-09-30T02:14:41.918796+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2801:1b8:10::b#53
+2026-09-30T02:14:41.918884+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:2d::d#53
+2026-09-30T02:14:41.919154+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:500:2d::d#53
+2026-09-30T02:14:41.919189+00:00 dns-debian13 systemd[1]: Reloaded named.service - BIND Domain Name Server.
+2026-09-30T02:14:41.919285+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:7fd::1#53
+2026-09-30T02:14:41.919932+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:7fd::1#53
+2026-09-30T02:14:41.920348+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:a8::e#53
+2026-09-30T02:14:41.933238+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:500:a8::e#53
+2026-09-30T02:14:41.933382+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:2::c#53
+2026-09-30T02:14:41.933783+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:500:2::c#53
+2026-09-30T02:14:41.933849+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:7fe::53#53
+2026-09-30T02:14:41.934147+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:7fe::53#53
+2026-09-30T02:14:41.934256+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:9f::42#53
+2026-09-30T02:14:41.934363+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:500:9f::42#53
+2026-09-30T02:14:41.934456+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:dc3::35#53
+2026-09-30T02:14:41.934620+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:500:1::53#53
+2026-09-30T02:14:41.934760+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:1::53#53
+2026-09-30T02:14:41.934904+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#51749 (pair-accept.test): transfer of 'pair-accept.test/IN': IXFR version not in journal, falling back to AXFR (serial 2026093001)
+2026-09-30T02:14:41.934923+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#51749 (pair-accept.test): transfer of 'pair-accept.test/IN': AXFR-style IXFR started (serial 2026093002)
+2026-09-30T02:14:41.935141+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#51749 (pair-accept.test): transfer of 'pair-accept.test/IN': AXFR-style IXFR ended: 1 messages, 13 records, 424 bytes, 0.001 secs (424000 bytes/sec) (serial 2026093002)
+2026-09-30T02:14:41.935174+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:dc3::35#53
+2026-09-30T02:14:41.935286+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:503:ba3e::2:30#53
+2026-09-30T02:14:41.935458+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:503:ba3e::2:30#53
+2026-09-30T02:14:41.935606+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:12::d0d#53
+2026-09-30T02:14:41.935734+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:500:12::d0d#53
+2026-09-30T02:14:41.935874+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:2f::f#53
+2026-09-30T02:14:41.936019+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:500:2f::f#53
+2026-09-30T02:14:41.936155+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:503:c27::2:30#53
+2026-09-30T02:14:41.936275+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:503:c27::2:30#53
+2026-09-30T02:14:41.974680+00:00 dns-debian13 named[5608]: network unreachable resolving 'ns2.ns-accept.test/A/IN': 2001:500:2f::f#53
+2026-09-30T02:14:41.974748+00:00 dns-debian13 named[5608]: network unreachable resolving 'ns2.ns-accept.test/AAAA/IN': 2001:500:2f::f#53
+2026-09-30T02:14:41.974981+00:00 dns-debian13 named[5608]: network unreachable resolving 'ns2.ns-accept.test/A/IN': 2001:7fd::1#53
+2026-09-30T02:14:41.975033+00:00 dns-debian13 named[5608]: network unreachable resolving 'ns2.ns-accept.test/AAAA/IN': 2001:7fd::1#53
+2026-09-30T02:14:41.975240+00:00 dns-debian13 named[5608]: network unreachable resolving 'ns2.ns-accept.test/A/IN': 2001:500:9f::42#53
+2026-09-30T02:14:41.975293+00:00 dns-debian13 named[5608]: network unreachable resolving 'ns2.ns-accept.test/AAAA/IN': 2001:500:9f::42#53
+2026-09-30T02:14:41.975486+00:00 dns-debian13 named[5608]: network unreachable resolving 'ns2.ns-accept.test/A/IN': 2001:7fe::53#53
+2026-09-30T02:14:41.975529+00:00 dns-debian13 named[5608]: network unreachable resolving 'ns2.ns-accept.test/AAAA/IN': 2001:7fe::53#53
+2026-09-30T02:14:42.052807+00:00 dns-debian13 named[5608]: managed-keys-zone: Key 20326 for zone . is now trusted (acceptance timer complete)
+2026-09-30T02:14:42.052875+00:00 dns-debian13 named[5608]: managed-keys-zone: Key 38696 for zone . is now trusted (acceptance timer complete)
+2026-09-30T02:14:43.099021+00:00 dns-debian13 named[5608]: received control channel command 'notify catalog-c000020a.celikpanel.invalid'
+2026-09-30T02:14:43.124332+00:00 dns-debian13 named[5608]: received control channel command 'notify pair-accept.test'
+2026-09-30T02:14:43.133214+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.10#47896 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T02:14:43.133439+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.10#47896 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T02:14:45.911121+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.10#47948 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T02:14:45.911300+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.10#47948 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T02:14:46.917689+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: sending notifies (serial 2)
+2026-09-30T02:14:46.917705+00:00 dns-debian13 named[5608]: zone pair-accept.test/IN: sending notifies (serial 2026093002)
+2026-09-30T02:14:46.918004+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: sending notify to 192.0.2.11#53
+2026-09-30T02:14:46.918280+00:00 dns-debian13 named[5608]: zone pair-accept.test/IN: sending notify to 192.0.2.11#53
+2026-09-30T02:14:47.057712+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.10#47970 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T02:14:47.057922+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.10#47970 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T02:14:47.737736+00:00 dns-debian13 systemd[1]: Reloading named.service - BIND Domain Name Server...
+2026-09-30T02:14:47.767434+00:00 dns-debian13 named[5608]: received control channel command 'reload'
+2026-09-30T02:14:47.768027+00:00 dns-debian13 named[5608]: loading configuration from '/etc/bind/named.conf'
+2026-09-30T02:14:47.768125+00:00 dns-debian13 named[5608]: the working directory is now '/var/cache/bind'
+2026-09-30T02:14:47.768355+00:00 dns-debian13 named[5608]: looking for GeoIP2 databases in '/usr/share/GeoIP'
+2026-09-30T02:14:47.768504+00:00 dns-debian13 named[5608]: using default UDP/IPv4 port range: [32768, 60999]
+2026-09-30T02:14:47.768609+00:00 dns-debian13 named[5608]: using default UDP/IPv6 port range: [32768, 60999]
+2026-09-30T02:14:47.769029+00:00 dns-debian13 named[5608]: Disabling periodic interface re-scans timer
+2026-09-30T02:14:47.769530+00:00 dns-debian13 named[5608]: using built-in root key for view _default
+2026-09-30T02:14:47.770082+00:00 dns-debian13 named[5608]: configuring command channel from '/etc/bind/rndc.key'
+2026-09-30T02:14:47.770120+00:00 dns-debian13 named[5608]: configuring command channel from '/etc/bind/rndc.key'
+2026-09-30T02:14:47.770234+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: (primary) removed
+2026-09-30T02:14:47.770267+00:00 dns-debian13 named[5608]: zone pair-accept.test/IN: (primary) removed
+2026-09-30T02:14:47.770822+00:00 dns-debian13 named[5608]: reloading configuration succeeded
+2026-09-30T02:14:47.771002+00:00 dns-debian13 named[5608]: reloading zones succeeded
+2026-09-30T02:14:47.771180+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: loaded serial 2
+2026-09-30T02:14:47.771195+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: sending notifies (serial 2)
+2026-09-30T02:14:47.771206+00:00 dns-debian13 named[5608]: zone pair-accept.test/IN: loaded serial 2026093003
+2026-09-30T02:14:47.771211+00:00 dns-debian13 named[5608]: all zones loaded
+2026-09-30T02:14:47.771237+00:00 dns-debian13 named[5608]: FIPS mode is disabled
+2026-09-30T02:14:47.771243+00:00 dns-debian13 named[5608]: running
+2026-09-30T02:14:47.771270+00:00 dns-debian13 named[5608]: zone pair-accept.test/IN: sending notifies (serial 2026093003)
+2026-09-30T02:14:47.771902+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: sending notify to 192.0.2.11#53
+2026-09-30T02:14:47.772359+00:00 dns-debian13 rndc[8359]: server reload successful
+2026-09-30T02:14:47.773992+00:00 dns-debian13 systemd[1]: Reloaded named.service - BIND Domain Name Server.
+2026-09-30T02:14:47.773659+00:00 dns-debian13 named[5608]: zone pair-accept.test/IN: sending notify to 192.0.2.11#53
+2026-09-30T02:14:47.773908+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:dc3::35#53
+2026-09-30T02:14:47.774022+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:dc3::35#53
+2026-09-30T02:14:47.774145+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:2d::d#53
+2026-09-30T02:14:47.774258+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:500:2d::d#53
+2026-09-30T02:14:47.774382+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2801:1b8:10::b#53
+2026-09-30T02:14:47.775033+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:500:a8::e#53
+2026-09-30T02:14:47.775210+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:a8::e#53
+2026-09-30T02:14:47.775392+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2801:1b8:10::b#53
+2026-09-30T02:14:47.775570+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:9f::42#53
+2026-09-30T02:14:47.775729+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:500:9f::42#53
+2026-09-30T02:14:47.775960+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:7fe::53#53
+2026-09-30T02:14:47.776246+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:7fe::53#53
+2026-09-30T02:14:47.776470+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#33794 (pair-accept.test): transfer of 'pair-accept.test/IN': IXFR version not in journal, falling back to AXFR (serial 2026093002)
+2026-09-30T02:14:47.776494+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#33794 (pair-accept.test): transfer of 'pair-accept.test/IN': AXFR-style IXFR started (serial 2026093003)
+2026-09-30T02:14:47.776724+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#33794 (pair-accept.test): transfer of 'pair-accept.test/IN': AXFR-style IXFR ended: 1 messages, 12 records, 401 bytes, 0.001 secs (401000 bytes/sec) (serial 2026093003)
+2026-09-30T02:14:47.777404+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:7fd::1#53
+2026-09-30T02:14:47.777798+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:7fd::1#53
+2026-09-30T02:14:47.777921+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:503:ba3e::2:30#53
+2026-09-30T02:14:47.778046+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:503:ba3e::2:30#53
+2026-09-30T02:14:47.778172+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:12::d0d#53
+2026-09-30T02:14:47.778280+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:500:12::d0d#53
+2026-09-30T02:14:47.778392+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:2f::f#53
+2026-09-30T02:14:47.778500+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:500:2f::f#53
+2026-09-30T02:14:47.778608+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:503:c27::2:30#53
+2026-09-30T02:14:47.778715+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:503:c27::2:30#53
+2026-09-30T02:14:47.778821+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:2::c#53
+2026-09-30T02:14:47.778933+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:500:1::53#53
+2026-09-30T02:14:47.779605+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:1::53#53
+2026-09-30T02:14:47.779807+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:500:2::c#53
+2026-09-30T02:14:47.822394+00:00 dns-debian13 named[5608]: network unreachable resolving 'ns2.ns-accept.test/A/IN': 2001:503:c27::2:30#53
+2026-09-30T02:14:47.822475+00:00 dns-debian13 named[5608]: network unreachable resolving 'ns2.ns-accept.test/AAAA/IN': 2001:503:c27::2:30#53
+2026-09-30T02:14:47.822664+00:00 dns-debian13 named[5608]: network unreachable resolving 'ns2.ns-accept.test/A/IN': 2001:500:1::53#53
+2026-09-30T02:14:47.822800+00:00 dns-debian13 named[5608]: network unreachable resolving 'ns2.ns-accept.test/AAAA/IN': 2001:500:1::53#53
+2026-09-30T02:14:47.896664+00:00 dns-debian13 named[5608]: managed-keys-zone: Key 20326 for zone . is now trusted (acceptance timer complete)
+2026-09-30T02:14:47.896711+00:00 dns-debian13 named[5608]: managed-keys-zone: Key 38696 for zone . is now trusted (acceptance timer complete)
+2026-09-30T02:14:48.193533+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#33800 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T02:14:48.194246+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#33800 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.003 secs (84666 bytes/sec) (serial 2)
+2026-09-30T02:14:48.886705+00:00 dns-debian13 named[5608]: received control channel command 'notify catalog-c000020a.celikpanel.invalid'
+2026-09-30T02:14:48.910487+00:00 dns-debian13 named[5608]: received control channel command 'notify pair-accept.test'
+2026-09-30T02:14:48.919837+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.10#48980 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T02:14:48.920059+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.10#48980 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T02:14:50.112730+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.10#48998 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T02:14:50.112910+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.10#48998 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T02:14:51.261956+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.10#49010 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T02:14:51.262201+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.10#49010 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T02:14:51.945867+00:00 dns-debian13 systemd[1]: Reloading named.service - BIND Domain Name Server...
+2026-09-30T02:14:51.971648+00:00 dns-debian13 named[5608]: received control channel command 'reload'
+2026-09-30T02:14:51.972352+00:00 dns-debian13 named[5608]: loading configuration from '/etc/bind/named.conf'
+2026-09-30T02:14:51.972416+00:00 dns-debian13 named[5608]: the working directory is now '/var/cache/bind'
+2026-09-30T02:14:51.972620+00:00 dns-debian13 named[5608]: looking for GeoIP2 databases in '/usr/share/GeoIP'
+2026-09-30T02:14:51.972715+00:00 dns-debian13 named[5608]: using default UDP/IPv4 port range: [32768, 60999]
+2026-09-30T02:14:51.972832+00:00 dns-debian13 named[5608]: using default UDP/IPv6 port range: [32768, 60999]
+2026-09-30T02:14:51.973169+00:00 dns-debian13 named[5608]: Disabling periodic interface re-scans timer
+2026-09-30T02:14:51.973810+00:00 dns-debian13 named[5608]: using built-in root key for view _default
+2026-09-30T02:14:51.974429+00:00 dns-debian13 named[5608]: configuring command channel from '/etc/bind/rndc.key'
+2026-09-30T02:14:51.974512+00:00 dns-debian13 named[5608]: configuring command channel from '/etc/bind/rndc.key'
+2026-09-30T02:14:51.974678+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: (primary) removed
+2026-09-30T02:14:51.974724+00:00 dns-debian13 named[5608]: zone pair-accept.test/IN: (primary) removed
+2026-09-30T02:14:51.975420+00:00 dns-debian13 named[5608]: reloading configuration succeeded
+2026-09-30T02:14:51.975729+00:00 dns-debian13 named[5608]: reloading zones succeeded
+2026-09-30T02:14:51.975946+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: loaded serial 2
+2026-09-30T02:14:51.980342+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:503:c27::2:30#53
+2026-09-30T02:14:51.980797+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:9f::42#53
+2026-09-30T02:14:51.980894+00:00 dns-debian13 rndc[8872]: server reload successful
+2026-09-30T02:14:51.981423+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:503:ba3e::2:30#53
+2026-09-30T02:14:51.981698+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:2d::d#53
+2026-09-30T02:14:51.981970+00:00 dns-debian13 named[5608]: zone pair-accept.test/IN: loaded serial 2026093004
+2026-09-30T02:14:51.982054+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:7fd::1#53
+2026-09-30T02:14:51.982163+00:00 dns-debian13 named[5608]: all zones loaded
+2026-09-30T02:14:51.982240+00:00 dns-debian13 named[5608]: FIPS mode is disabled
+2026-09-30T02:14:51.982248+00:00 dns-debian13 named[5608]: running
+2026-09-30T02:14:51.982267+00:00 dns-debian13 named[5608]: zone pair-accept.test/IN: sending notifies (serial 2026093004)
+2026-09-30T02:14:51.982321+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: sending notifies (serial 2)
+2026-09-30T02:14:51.982719+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:7fe::53#53
+2026-09-30T02:14:51.982934+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2801:1b8:10::b#53
+2026-09-30T02:14:51.983109+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:7fe::53#53
+2026-09-30T02:14:51.983228+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: sending notify to 192.0.2.11#53
+2026-09-30T02:14:51.983316+00:00 dns-debian13 named[5608]: zone pair-accept.test/IN: sending notify to 192.0.2.11#53
+2026-09-30T02:14:51.983468+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:a8::e#53
+2026-09-30T02:14:51.983690+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2801:1b8:10::b#53
+2026-09-30T02:14:51.983783+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:12::d0d#53
+2026-09-30T02:14:51.984077+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:2f::f#53
+2026-09-30T02:14:51.984183+00:00 dns-debian13 systemd[1]: Reloaded named.service - BIND Domain Name Server.
+2026-09-30T02:14:51.984322+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:500:a8::e#53
+2026-09-30T02:14:51.984675+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:500:12::d0d#53
+2026-09-30T02:14:51.984990+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:1::53#53
+2026-09-30T02:14:51.985540+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:2::c#53
+2026-09-30T02:14:51.985805+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:dc3::35#53
+2026-09-30T02:14:51.985975+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:500:2f::f#53
+2026-09-30T02:14:51.986333+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#32866 (pair-accept.test): transfer of 'pair-accept.test/IN': IXFR version not in journal, falling back to AXFR (serial 2026093003)
+2026-09-30T02:14:51.986405+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#32866 (pair-accept.test): transfer of 'pair-accept.test/IN': AXFR-style IXFR started (serial 2026093004)
+2026-09-30T02:14:51.986620+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#32866 (pair-accept.test): transfer of 'pair-accept.test/IN': AXFR-style IXFR ended: 1 messages, 13 records, 424 bytes, 0.001 secs (424000 bytes/sec) (serial 2026093004)
+2026-09-30T02:14:51.986698+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:500:1::53#53
+2026-09-30T02:14:51.986966+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:500:2::c#53
+2026-09-30T02:14:51.987222+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:dc3::35#53
+2026-09-30T02:14:51.987431+00:00 dns-debian13 named[5608]: network unreachable resolving 'test/NS/IN': 2001:503:ba3e::2:30#53
+2026-09-30T02:14:52.064849+00:00 dns-debian13 named[5608]: network unreachable resolving 'ns2.ns-accept.test/A/IN': 2801:1b8:10::b#53
+2026-09-30T02:14:52.064951+00:00 dns-debian13 named[5608]: network unreachable resolving 'ns2.ns-accept.test/AAAA/IN': 2801:1b8:10::b#53
+2026-09-30T02:14:52.065398+00:00 dns-debian13 named[5608]: network unreachable resolving 'ns2.ns-accept.test/A/IN': 2001:dc3::35#53
+2026-09-30T02:14:52.065550+00:00 dns-debian13 named[5608]: network unreachable resolving 'ns2.ns-accept.test/AAAA/IN': 2001:dc3::35#53
+2026-09-30T02:14:52.101116+00:00 dns-debian13 named[5608]: managed-keys-zone: Key 20326 for zone . is now trusted (acceptance timer complete)
+2026-09-30T02:14:52.101154+00:00 dns-debian13 named[5608]: managed-keys-zone: Key 38696 for zone . is now trusted (acceptance timer complete)
+2026-09-30T02:14:53.135661+00:00 dns-debian13 named[5608]: received control channel command 'notify catalog-c000020a.celikpanel.invalid'
+2026-09-30T02:14:53.162260+00:00 dns-debian13 named[5608]: received control channel command 'notify pair-accept.test'
+2026-09-30T02:14:53.172113+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.10#49044 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T02:14:53.172655+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.10#49044 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T02:14:56.039767+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.10#49098 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T02:14:56.040360+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.10#49098 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T02:14:56.985684+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: sending notifies (serial 2)
+2026-09-30T02:14:56.985701+00:00 dns-debian13 named[5608]: zone pair-accept.test/IN: sending notifies (serial 2026093004)
+2026-09-30T02:14:56.985825+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: sending notify to 192.0.2.11#53
+2026-09-30T02:14:56.985976+00:00 dns-debian13 named[5608]: zone pair-accept.test/IN: sending notify to 192.0.2.11#53
+2026-09-30T02:14:57.193951+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.10#49112 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T02:14:57.194173+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.10#49112 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T02:14:57.819218+00:00 dns-debian13 systemd[1]: Reloading named.service - BIND Domain Name Server...
+2026-09-30T02:14:57.860517+00:00 dns-debian13 named[5608]: received control channel command 'reload'
+2026-09-30T02:14:57.861145+00:00 dns-debian13 named[5608]: loading configuration from '/etc/bind/named.conf'
+2026-09-30T02:14:57.861216+00:00 dns-debian13 named[5608]: the working directory is now '/var/cache/bind'
+2026-09-30T02:14:57.861423+00:00 dns-debian13 named[5608]: looking for GeoIP2 databases in '/usr/share/GeoIP'
+2026-09-30T02:14:57.861526+00:00 dns-debian13 named[5608]: using default UDP/IPv4 port range: [32768, 60999]
+2026-09-30T02:14:57.861632+00:00 dns-debian13 named[5608]: using default UDP/IPv6 port range: [32768, 60999]
+2026-09-30T02:14:57.861952+00:00 dns-debian13 named[5608]: Disabling periodic interface re-scans timer
+2026-09-30T02:14:57.862485+00:00 dns-debian13 named[5608]: using built-in root key for view _default
+2026-09-30T02:14:57.862909+00:00 dns-debian13 named[5608]: configuring command channel from '/etc/bind/rndc.key'
+2026-09-30T02:14:57.862952+00:00 dns-debian13 named[5608]: configuring command channel from '/etc/bind/rndc.key'
+2026-09-30T02:14:57.863075+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: (primary) removed
+2026-09-30T02:14:57.863107+00:00 dns-debian13 named[5608]: zone pair-accept.test/IN: (primary) removed
+2026-09-30T02:14:57.864199+00:00 dns-debian13 named[5608]: reloading configuration succeeded
+2026-09-30T02:14:57.864350+00:00 dns-debian13 named[5608]: reloading zones succeeded
+2026-09-30T02:14:57.864560+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: loaded serial 3
+2026-09-30T02:14:57.864593+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: sending notifies (serial 3)
+2026-09-30T02:14:57.864966+00:00 dns-debian13 named[5608]: all zones loaded
+2026-09-30T02:14:57.865082+00:00 dns-debian13 named[5608]: FIPS mode is disabled
+2026-09-30T02:14:57.865494+00:00 dns-debian13 named[5608]: running
+2026-09-30T02:14:57.865967+00:00 dns-debian13 rndc[9448]: server reload successful
+2026-09-30T02:14:57.866623+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: sending notify to 192.0.2.11#53
+2026-09-30T02:14:57.866885+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:2d::d#53
+2026-09-30T02:14:57.867286+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:2::c#53
+2026-09-30T02:14:57.867543+00:00 dns-debian13 systemd[1]: Reloaded named.service - BIND Domain Name Server.
+2026-09-30T02:14:57.867550+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2801:1b8:10::b#53
+2026-09-30T02:14:57.868021+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:12::d0d#53
+2026-09-30T02:14:57.868332+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:9f::42#53
+2026-09-30T02:14:57.868657+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:1::53#53
+2026-09-30T02:14:57.868940+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:503:ba3e::2:30#53
+2026-09-30T02:14:57.869280+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:7fe::53#53
+2026-09-30T02:14:57.869519+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:a8::e#53
+2026-09-30T02:14:57.869824+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:7fd::1#53
+2026-09-30T02:14:57.870083+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:503:c27::2:30#53
+2026-09-30T02:14:57.870462+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:dc3::35#53
+2026-09-30T02:14:57.870708+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#32909 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': IXFR version not in journal, falling back to AXFR (serial 2)
+2026-09-30T02:14:57.870730+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#32909 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR-style IXFR started (serial 3)
+2026-09-30T02:14:57.870965+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#32909 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR-style IXFR ended: 1 messages, 4 records, 172 bytes, 0.001 secs (172000 bytes/sec) (serial 3)
+2026-09-30T02:14:57.870985+00:00 dns-debian13 named[5608]: network unreachable resolving './DNSKEY/IN': 2001:500:2f::f#53
+2026-09-30T02:14:57.930614+00:00 dns-debian13 named[5608]: managed-keys-zone: Key 20326 for zone . is now trusted (acceptance timer complete)
+2026-09-30T02:14:57.930849+00:00 dns-debian13 named[5608]: managed-keys-zone: Key 38696 for zone . is now trusted (acceptance timer complete)
+2026-09-30T02:14:58.515208+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#32914 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:14:58.515604+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#32914 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:14:58.972189+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.10#39130 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:14:58.972430+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.10#39130 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:14:59.006442+00:00 dns-debian13 named[5608]: received control channel command 'notify catalog-c000020a.celikpanel.invalid'
+2026-09-30T02:14:59.015295+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.10#39136 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:14:59.015475+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.10#39136 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:15:00.713300+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.10#39148 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:15:00.713765+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.10#39148 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.003 secs (53666 bytes/sec) (serial 3)
+2026-09-30T02:15:00.732604+00:00 dns-debian13 named[5608]: received control channel command 'notify catalog-c000020a.celikpanel.invalid'
+2026-09-30T02:15:00.743361+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.10#39164 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:15:00.743550+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.10#39164 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:15:01.378578+00:00 dns-debian13 named[5608]: received control channel command 'zonestatus pair-accept.test'
+2026-09-30T02:15:01.390710+00:00 dns-debian13 named[5608]: received control channel command 'zonestatus catalog-c000020a.celikpanel.invalid'
+2026-09-30T02:15:02.867497+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: sending notifies (serial 3)
+2026-09-30T02:15:02.868158+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: sending notify to 192.0.2.11#53
+2026-09-30T02:15:05.768057+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.10#39172 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:15:05.768459+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.10#39172 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:15:07.207769+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.10#39178 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:15:07.208005+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.10#39178 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:15:07.226953+00:00 dns-debian13 named[5608]: received control channel command 'notify catalog-c000020a.celikpanel.invalid'
+2026-09-30T02:15:07.235382+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.10#39204 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:15:07.235632+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.10#39204 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:15:07.869668+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: sending notifies (serial 3)
+2026-09-30T02:15:07.869867+00:00 dns-debian13 named[5608]: zone catalog-c000020a.celikpanel.invalid/IN: sending notify to 192.0.2.11#53
+2026-09-30T02:15:08.841211+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#33376 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:15:08.841463+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#33376 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:15:19.296007+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#53654 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:15:19.296336+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#53654 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:15:29.795088+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#56496 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:15:29.795895+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#56496 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:15:40.291455+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#34308 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:15:40.291766+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#34308 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:15:50.806430+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#42046 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:15:50.807095+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#42046 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:16:01.289190+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#42150 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:16:01.289647+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#42150 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:16:11.775937+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#52950 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:16:11.776433+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#52950 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:16:22.294782+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#41982 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:16:22.295141+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#41982 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:16:32.811176+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#40282 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:16:32.811638+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#40282 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:16:43.359932+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#47066 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:16:43.360486+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#47066 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:16:53.835372+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#33936 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:16:53.835620+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#33936 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:17:04.310284+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#52368 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:17:04.310551+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#52368 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:17:14.866644+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#38556 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:17:14.866892+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#38556 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:17:25.315929+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#36966 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:17:25.316262+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#36966 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:17:35.872359+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#52588 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:17:35.872698+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#52588 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:17:46.325467+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#41624 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:17:46.325861+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#41624 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:17:56.821405+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#48578 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:17:56.821765+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#48578 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:18:07.322912+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#36508 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:18:07.323635+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#36508 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:18:17.817881+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#40400 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:18:17.818231+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#40400 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:18:28.363710+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#51916 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:18:28.364024+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#51916 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:18:38.837145+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#47178 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:18:38.837806+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#47178 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:18:49.344543+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#46766 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:18:49.344903+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#46766 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:18:59.821753+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#58634 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:18:59.821992+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#58634 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:19:10.327680+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#54636 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:19:10.328397+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#54636 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:19:20.817989+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#35986 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:19:20.818287+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#35986 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:19:31.380764+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#33138 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:19:31.381084+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#33138 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:19:41.838741+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#33846 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:19:41.838995+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#33846 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:19:52.309266+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#54198 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:19:52.309674+00:00 dns-debian13 named[5608]: client @0x7f9433d27c00 192.0.2.11#54198 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:20:02.802537+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#56014 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:20:02.802837+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#56014 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T02:20:13.268667+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#39746 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T02:20:13.269013+00:00 dns-debian13 named[5608]: client @0x7f9430e1ac00 192.0.2.11#39746 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)

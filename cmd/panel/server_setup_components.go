@@ -164,6 +164,24 @@ func serverSetupHasComponent(draft serverSetupDraft, id string) bool {
 	return err == nil && slices.Contains(resolved, id)
 }
 
+// serverSetupNeedsNativeCron reports whether the reviewed profile hosts sites,
+// whose Scheduled tasks screen writes native user crontabs. Those profiles
+// prepare the platform's own cron (cron on Debian/Ubuntu, cronie on Arch)
+// through the ordinary component step; the Agent installs it only when no
+// cron implementation is present and otherwise leaves the owner's untouched
+// (D-022). A DNS-only profile hosts no site and gets no cron change.
+//
+// serverSetupNeedsNativeCron, incelenen profilin site barındırıp
+// barındırmadığını bildirir; site Zamanlanmış görevler ekranı yerel kullanıcı
+// crontab'larına yazar. Bu profiller platformun kendi cron'unu olağan bileşen
+// adımıyla hazırlar; Agent onu yalnız hiçbir cron yokken kurar (D-022).
+func serverSetupNeedsNativeCron(draft serverSetupDraft) bool {
+	if draft.Customization == nil {
+		return stringIn(draft.Purpose, "web", "web_mail", "application")
+	}
+	return serverSetupHasComponent(draft, "nginx")
+}
+
 func serverSetupMailProfileIDs(draft serverSetupDraft) []string {
 	if draft.Customization == nil {
 		if draft.Purpose == "web_mail" {

@@ -1,0 +1,562 @@
+{
+  "schema": "celikpanel-dns-document-native-evidence/v1",
+  "date": "2026-09-23",
+  "disposable_qemu_only": true,
+  "historical_source": "45dfc265bfd7997e9a0e0d39b0ebf60a57f58c00",
+  "current_build": "working tree based on 44d4c77; exact executables below, not a signed release",
+  "artifacts": {
+    "historical_agent": "cffdff2ab35ef5a86d97664bbf5049da32733c141bed56b4f1950aacfbb13c4f",
+    "current_agent": "e25eef10ffdabee7033817c8ee5d4edcae5959e070cc0397372f630a485f0fde",
+    "independent_reader": "4c6b7eb9e6747f39998fc30190448ce231a90f6b91f85581b06fc1bb5d57fff0",
+    "rpc_driver": "694deb236e3d3f779d2981f9495a2cd8a9041bac29184be9716f60031f29865e"
+  },
+  "dns_sources": {
+    "internal/dnsengineartifact/documents.go": "cb4609283a3440b385c55435912e06b7bf9acad606b102c0988b91773a07ab46",
+    "cmd/agent/dns_engine_host.go": "08a1fb672a2f261cc8ad9e3109ff8de9a542d783296ce8f7d33085af162ef8f7",
+    "cmd/agent/dns_engine_ownership.go": "d2d0fe40ea265338737c26bb30188db1eb1008be0b5c1fbdc5d5f14884d12cdc",
+    "cmd/agent/dns_engine_bind_update.go": "631497666f460bee08ec295bf60a8eff13b196a2ab454854e55f4781d2cb5eb4",
+    "internal/recoveryruntime/dns_application_compatibility_linux.go": "bd39432ecd11e4ad2e48dff5afda6c678248ac6c3676b7e61277cf69f23bc3a2"
+  },
+  "trials": [
+    {
+      "platform": "debian13",
+      "old_state": {
+        "document": {
+          "engine": "bind",
+          "engine_epoch": 1,
+          "generation": "32f4ef5a9e2be04320a25ffa5cacd23a68d1f4392cc65df0e9d3c40487a372ab",
+          "manifest_qualifier": "dns-engine-switch/v1:sha256:2944ab8ec9a59d7adb43644b7f71b00ee52a05386ac764a27ee9b2f2003f0f38",
+          "mode": "switch",
+          "mutation_owner_id": "0f6266b188d709120c3ba98a23f41450",
+          "mutation_request_id": "328755bfb4335823cdfa7580d920aa78",
+          "schema": "celikpanel-dns-engine-state/v1",
+          "source_revision": 1
+        },
+        "gid": 989,
+        "mode": "0o600",
+        "sha256": "ab88e4129145fe1181a423ed0263ae68e1f7936e22d54c4f902f9b4a87f45043",
+        "uid": 0
+      },
+      "new_state": {
+        "document": {
+          "acquisition": {
+            "engine": "bind",
+            "engine_epoch": 1,
+            "manifest_qualifier": "dns-engine-switch/v1:sha256:2944ab8ec9a59d7adb43644b7f71b00ee52a05386ac764a27ee9b2f2003f0f38",
+            "mode": "switch",
+            "mutation_owner_id": "0f6266b188d709120c3ba98a23f41450",
+            "mutation_request_id": "328755bfb4335823cdfa7580d920aa78",
+            "schema": "celikpanel-dns-engine-acquisition/v1",
+            "source_revision": 1
+          },
+          "publication": {
+            "acquisition_sha256": "55b728febb96a5d6812deb1e70bd2694636bf6c5bddce9adda55f82366512cf0",
+            "generation": "7beb16402ccebfee93318c215b004d4d35fc6dbb2cbe7ed6043d3ea1b03d36ef",
+            "schema": "celikpanel-dns-engine-publication/v1"
+          },
+          "schema": "celikpanel-dns-engine-state/v2"
+        },
+        "gid": 989,
+        "mode": "0o600",
+        "sha256": "a5c5f52947d5219695a51fa99d64f591cbaf2a974b46f0d793eebdd68d066bae",
+        "uid": 0
+      },
+      "ownership": {
+        "document": {
+          "engine": "bind",
+          "engine_epoch": 1,
+          "generation": "a3c571f76f1899d26fe740701e26a9f41cd05c6ced1fa038fb27b52887c3c16b",
+          "manifest_qualifier": "dns-engine-switch/v1:sha256:2944ab8ec9a59d7adb43644b7f71b00ee52a05386ac764a27ee9b2f2003f0f38",
+          "mode": "switch",
+          "mutation_owner_id": "0f6266b188d709120c3ba98a23f41450",
+          "mutation_request_id": "328755bfb4335823cdfa7580d920aa78",
+          "schema": "celikpanel-dns-engine-state/v1",
+          "source_revision": 1
+        },
+        "gid": 989,
+        "mode": "0o600",
+        "sha256": "ec1b752e751bb2889718dc8135c0e39ab1fa1c487f123b8639248d29a2639d84",
+        "uid": 0
+      },
+      "ownership_unchanged": true,
+      "ledger_sha256_before_and_after_boot": "bc273474b79189f8057affff81dade275c51ab2657ecbc7bd70abf4696326cee",
+      "boot_ids": [
+        "893fd166-30a8-4490-bf07-a01850de5b9d",
+        "d577e9c9-cb68-45c9-9b39-9be44cad462a"
+      ],
+      "management_binaries_absent": [
+        "/opt/celikpanel/bin/agent",
+        "/opt/celikpanel/bin/panel"
+      ],
+      "native_dns_unit": "MainPID=648\nActiveState=active\n",
+      "tcp": {
+        "answer": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 52844\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 2\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: 3a50efc4774a7155010000006ab41f27d2c9c5c81d51f54e (good)\n;; ANSWER SECTION:\nrecovery-fixture.test.\t300\tIN\tA\t192.0.2.11\n\n",
+        "returncode": 0
+      },
+      "udp": {
+        "answer": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 31593\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 2\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: e193d4d528f8d897010000006ab41f27de471d586b865f46 (good)\n;; ANSWER SECTION:\nrecovery-fixture.test.\t300\tIN\tA\t192.0.2.11\n\n",
+        "returncode": 0
+      },
+      "historical_target_refused_exit": 3,
+      "rpc_events": [
+        {
+          "schema": "celikpanel-release-recovery-seed/v1",
+          "event": "switch_start",
+          "cell_id": "release-recovery__ee958d5b86aa3953",
+          "node": "debian13",
+          "zone": "recovery-fixture.test",
+          "request_id": "328755bfb4335823cdfa7580d920aa78",
+          "owner_id": "0f6266b188d709120c3ba98a23f41450",
+          "catalog_serial": 0,
+          "ownership_unchanged": false
+        },
+        {
+          "schema": "celikpanel-release-recovery-seed/v1",
+          "event": "switch_complete",
+          "cell_id": "release-recovery__ee958d5b86aa3953",
+          "node": "debian13",
+          "zone": "recovery-fixture.test",
+          "request_id": "328755bfb4335823cdfa7580d920aa78",
+          "owner_id": "0f6266b188d709120c3ba98a23f41450",
+          "phase": "commit/dns-engine-switch/v2/finalized/328755bfb4335823cdfa7580d920aa78/dns-engine-switch/v1:sha256:2944ab8ec9a59d7adb43644b7f71b00ee52a05386ac764a27ee9b2f2003f0f38",
+          "generation": "a3c571f76f1899d26fe740701e26a9f41cd05c6ced1fa038fb27b52887c3c16b",
+          "catalog_serial": 0,
+          "ownership_sha256": "ec1b752e751bb2889718dc8135c0e39ab1fa1c487f123b8639248d29a2639d84",
+          "ownership_unchanged": true
+        },
+        {
+          "schema": "celikpanel-release-recovery-seed/v1",
+          "event": "publication_start",
+          "cell_id": "release-recovery__ee958d5b86aa3953",
+          "node": "debian13",
+          "zone": "recovery-fixture.test",
+          "request_id": "d1554baf23f89a627703c3600bfa7879",
+          "owner_id": "cad451dda6b1c1158344622f49eafebc",
+          "catalog_serial": 0,
+          "ownership_unchanged": false
+        },
+        {
+          "schema": "celikpanel-release-recovery-seed/v1",
+          "event": "publication_complete",
+          "cell_id": "release-recovery__ee958d5b86aa3953",
+          "node": "debian13",
+          "zone": "recovery-fixture.test",
+          "request_id": "d1554baf23f89a627703c3600bfa7879",
+          "owner_id": "cad451dda6b1c1158344622f49eafebc",
+          "phase": "commit/dns-zone-sync/v3/published/d1554baf23f89a627703c3600bfa7879/recovery-fixture.test/dns-zone-sync/v3:sha256:2710c6052683bad331439b78fe3a03c3a323acc0724519a902716465ae567c35",
+          "generation": "26a56fe425ad4e971a48c116239cbd0fe2e529654d65d0a8e45a3072056a53d0",
+          "catalog_serial": 0,
+          "ownership_sha256": "ec1b752e751bb2889718dc8135c0e39ab1fa1c487f123b8639248d29a2639d84",
+          "ownership_unchanged": true
+        },
+        {
+          "schema": "celikpanel-release-recovery-seed/v1",
+          "event": "publication_start",
+          "cell_id": "release-recovery__ee958d5b86aa3953",
+          "node": "debian13",
+          "zone": "recovery-fixture.test",
+          "request_id": "9b8eca266f155190a514b7bf851c63da",
+          "owner_id": "dd936b6f5e14c466ef95bcf4420c0f0b",
+          "catalog_serial": 0,
+          "ownership_unchanged": false
+        },
+        {
+          "schema": "celikpanel-release-recovery-seed/v1",
+          "event": "publication_complete",
+          "cell_id": "release-recovery__ee958d5b86aa3953",
+          "node": "debian13",
+          "zone": "recovery-fixture.test",
+          "request_id": "9b8eca266f155190a514b7bf851c63da",
+          "owner_id": "dd936b6f5e14c466ef95bcf4420c0f0b",
+          "phase": "commit/dns-zone-sync/v3/published/9b8eca266f155190a514b7bf851c63da/recovery-fixture.test/dns-zone-sync/v3:sha256:7fc8d2a615756eadad86953c2ea6759007cf853fca19fedaea05c70e5a79de8d",
+          "generation": "32f4ef5a9e2be04320a25ffa5cacd23a68d1f4392cc65df0e9d3c40487a372ab",
+          "catalog_serial": 0,
+          "ownership_sha256": "ec1b752e751bb2889718dc8135c0e39ab1fa1c487f123b8639248d29a2639d84",
+          "ownership_unchanged": true
+        },
+        {
+          "schema": "celikpanel-release-recovery-seed/v1",
+          "event": "seed_complete",
+          "cell_id": "release-recovery__ee958d5b86aa3953",
+          "node": "debian13",
+          "zone": "recovery-fixture.test",
+          "generation": "32f4ef5a9e2be04320a25ffa5cacd23a68d1f4392cc65df0e9d3c40487a372ab",
+          "catalog_serial": 0,
+          "ownership_sha256": "ec1b752e751bb2889718dc8135c0e39ab1fa1c487f123b8639248d29a2639d84",
+          "ownership_unchanged": true,
+          "detail": "standalone BIND only; native DNS answers and update/rollback must be independently verified"
+        },
+        {
+          "schema": "celikpanel-release-recovery-seed/v1",
+          "event": "publication_start",
+          "cell_id": "release-recovery__ee958d5b86aa3953",
+          "node": "debian13",
+          "zone": "recovery-fixture.test",
+          "request_id": "a654633e04075113c577823474d0823c",
+          "owner_id": "aa1afdca0f073156f6dbc7fd2d40d2dc",
+          "catalog_serial": 0,
+          "ownership_unchanged": false
+        },
+        {
+          "schema": "celikpanel-release-recovery-seed/v1",
+          "event": "publication_complete",
+          "cell_id": "release-recovery__ee958d5b86aa3953",
+          "node": "debian13",
+          "zone": "recovery-fixture.test",
+          "request_id": "a654633e04075113c577823474d0823c",
+          "owner_id": "aa1afdca0f073156f6dbc7fd2d40d2dc",
+          "phase": "commit/dns-zone-sync/v3/published/a654633e04075113c577823474d0823c/recovery-fixture.test/dns-zone-sync/v3:sha256:7612e930c6868d57348e3107290b9ba11364f9d6e1c2179d4d4c6a8748c06a45",
+          "generation": "4730edb8f6850194a667f91b414ca338850e10f675453a9ae48693b3eb96df4b",
+          "catalog_serial": 0,
+          "ownership_sha256": "ec1b752e751bb2889718dc8135c0e39ab1fa1c487f123b8639248d29a2639d84",
+          "ownership_unchanged": true
+        },
+        {
+          "schema": "celikpanel-release-recovery-seed/v1",
+          "event": "publication_start",
+          "cell_id": "release-recovery__ee958d5b86aa3953",
+          "node": "debian13",
+          "zone": "recovery-fixture.test",
+          "request_id": "56ed67ba43605b947751cab2ddd00ada",
+          "owner_id": "5fdc4bf6bb212585769e8807afb3a583",
+          "catalog_serial": 0,
+          "ownership_unchanged": false
+        },
+        {
+          "schema": "celikpanel-release-recovery-seed/v1",
+          "event": "publication_complete",
+          "cell_id": "release-recovery__ee958d5b86aa3953",
+          "node": "debian13",
+          "zone": "recovery-fixture.test",
+          "request_id": "56ed67ba43605b947751cab2ddd00ada",
+          "owner_id": "5fdc4bf6bb212585769e8807afb3a583",
+          "phase": "commit/dns-zone-sync/v3/published/56ed67ba43605b947751cab2ddd00ada/recovery-fixture.test/dns-zone-sync/v3:sha256:3c67fa06d58870d1f447289de276ed3ac64e9120a3e9dbb0ca5ba1ff6082f391",
+          "generation": "7beb16402ccebfee93318c215b004d4d35fc6dbb2cbe7ed6043d3ea1b03d36ef",
+          "catalog_serial": 0,
+          "ownership_sha256": "ec1b752e751bb2889718dc8135c0e39ab1fa1c487f123b8639248d29a2639d84",
+          "ownership_unchanged": true
+        },
+        {
+          "schema": "celikpanel-release-recovery-seed/v1",
+          "event": "seed_complete",
+          "cell_id": "release-recovery__ee958d5b86aa3953",
+          "node": "debian13",
+          "zone": "recovery-fixture.test",
+          "generation": "7beb16402ccebfee93318c215b004d4d35fc6dbb2cbe7ed6043d3ea1b03d36ef",
+          "catalog_serial": 0,
+          "ownership_sha256": "ec1b752e751bb2889718dc8135c0e39ab1fa1c487f123b8639248d29a2639d84",
+          "ownership_unchanged": true,
+          "detail": "standalone BIND only; native DNS answers and update/rollback must be independently verified"
+        }
+      ],
+      "evidence_hashes": {
+        "dns-doc-advance-rpc.json": "f3c45e501f4bb2fd7f037f1502fd27a32be9064f01271e4c868849cfe0ba1921",
+        "dns-doc-after.json": "61f6bcae1760c5b95895aa94f1e1548ca4eacde5d24ee2bed28749cfb081b9d7",
+        "dns-doc-after-boot.json": "60c9eee06d29dd35caf07c3b043970a7c8e6214ceb1f023600be3c7c7bb4475f",
+        "dns-doc-management-absent-observation.json": "1be5dbb99af07e7123fa0c41db19c26398a0b7aa0c78208e290bd7583923caba",
+        "dns-doc-prepare.json": "2aae3aef48b95284a6551bb362b4d8027fcb5be6ddaf318890438d918aed3a20",
+        "dns-doc-management-absent.json": "04d3b8bc3f4f017f25fcd5f15615064513d5a27a08651c83a688b3889b96b215",
+        "dns-doc-prepare-rpc.json": "d684fcc0c6e121f5a5adc3583e9c7e544c93884efe81c0dc5cf62edf94273c00",
+        "dns-doc-before.json": "224e1a834d7daae1a8817fb4e0b1b7e7c824e58641c40028a0d40c45cd3ed15c",
+        "dns-doc-before-reset.json": "de7b3e43da58fe367d2cb1ede2ae5fb59d98a6a8a9f34e970180be87baeaf325",
+        "dns-doc-historical-refusal.json": "0fb7c46cb2af49d803c4112dce4d933a7d9e11102f8e12afe9a4c52799f19f10",
+        "dns-doc-handoff.json": "04d3b8bc3f4f017f25fcd5f15615064513d5a27a08651c83a688b3889b96b215"
+      }
+    },
+    {
+      "platform": "arch",
+      "old_state": {
+        "document": {
+          "engine": "bind",
+          "engine_epoch": 1,
+          "generation": "32f4ef5a9e2be04320a25ffa5cacd23a68d1f4392cc65df0e9d3c40487a372ab",
+          "manifest_qualifier": "dns-engine-switch/v1:sha256:2944ab8ec9a59d7adb43644b7f71b00ee52a05386ac764a27ee9b2f2003f0f38",
+          "mode": "switch",
+          "mutation_owner_id": "0f6266b188d709120c3ba98a23f41450",
+          "mutation_request_id": "328755bfb4335823cdfa7580d920aa78",
+          "schema": "celikpanel-dns-engine-state/v1",
+          "source_revision": 1
+        },
+        "gid": 969,
+        "mode": "0o600",
+        "sha256": "ab88e4129145fe1181a423ed0263ae68e1f7936e22d54c4f902f9b4a87f45043",
+        "uid": 0
+      },
+      "new_state": {
+        "document": {
+          "acquisition": {
+            "engine": "bind",
+            "engine_epoch": 1,
+            "manifest_qualifier": "dns-engine-switch/v1:sha256:2944ab8ec9a59d7adb43644b7f71b00ee52a05386ac764a27ee9b2f2003f0f38",
+            "mode": "switch",
+            "mutation_owner_id": "0f6266b188d709120c3ba98a23f41450",
+            "mutation_request_id": "328755bfb4335823cdfa7580d920aa78",
+            "schema": "celikpanel-dns-engine-acquisition/v1",
+            "source_revision": 1
+          },
+          "publication": {
+            "acquisition_sha256": "55b728febb96a5d6812deb1e70bd2694636bf6c5bddce9adda55f82366512cf0",
+            "generation": "7beb16402ccebfee93318c215b004d4d35fc6dbb2cbe7ed6043d3ea1b03d36ef",
+            "schema": "celikpanel-dns-engine-publication/v1"
+          },
+          "schema": "celikpanel-dns-engine-state/v2"
+        },
+        "gid": 969,
+        "mode": "0o600",
+        "sha256": "a5c5f52947d5219695a51fa99d64f591cbaf2a974b46f0d793eebdd68d066bae",
+        "uid": 0
+      },
+      "ownership": {
+        "document": {
+          "engine": "bind",
+          "engine_epoch": 1,
+          "generation": "a3c571f76f1899d26fe740701e26a9f41cd05c6ced1fa038fb27b52887c3c16b",
+          "manifest_qualifier": "dns-engine-switch/v1:sha256:2944ab8ec9a59d7adb43644b7f71b00ee52a05386ac764a27ee9b2f2003f0f38",
+          "mode": "switch",
+          "mutation_owner_id": "0f6266b188d709120c3ba98a23f41450",
+          "mutation_request_id": "328755bfb4335823cdfa7580d920aa78",
+          "schema": "celikpanel-dns-engine-state/v1",
+          "source_revision": 1
+        },
+        "gid": 969,
+        "mode": "0o600",
+        "sha256": "ec1b752e751bb2889718dc8135c0e39ab1fa1c487f123b8639248d29a2639d84",
+        "uid": 0
+      },
+      "ownership_unchanged": true,
+      "ledger_sha256_before_and_after_boot": "c443be696f591dae927e5b1ede96bd196964cba05c06beed62cd3ccb5f054a57",
+      "boot_ids": [
+        "7803d952-4340-452b-8c90-9c34611062f8",
+        "8c5d9e6f-6ac7-4816-8141-2775f9e2030d"
+      ],
+      "management_binaries_absent": [
+        "/opt/celikpanel/bin/agent",
+        "/opt/celikpanel/bin/panel"
+      ],
+      "native_dns_unit": "ActiveState=active\nMainPID=363\n",
+      "tcp": {
+        "answer": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 22976\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 2\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: cf46c1f1c20dfb62010000006ab41f2820c06a8ae5955dd7 (good)\n;; ANSWER SECTION:\nrecovery-fixture.test.\t300\tIN\tA\t192.0.2.11\n\n",
+        "returncode": 0
+      },
+      "udp": {
+        "answer": ";; Got answer:\n;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 64150\n;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 2\n\n;; OPT PSEUDOSECTION:\n; EDNS: version: 0, flags:; udp: 1232\n; COOKIE: 326718fb92f45554010000006ab41f28accf7cf3665c14c7 (good)\n;; ANSWER SECTION:\nrecovery-fixture.test.\t300\tIN\tA\t192.0.2.11\n\n",
+        "returncode": 0
+      },
+      "historical_target_refused_exit": 3,
+      "rpc_events": [
+        {
+          "schema": "celikpanel-release-recovery-seed/v1",
+          "event": "switch_start",
+          "cell_id": "release-recovery__ee958d5b86aa3953",
+          "node": "arch",
+          "zone": "recovery-fixture.test",
+          "request_id": "328755bfb4335823cdfa7580d920aa78",
+          "owner_id": "0f6266b188d709120c3ba98a23f41450",
+          "catalog_serial": 0,
+          "ownership_unchanged": false
+        },
+        {
+          "schema": "celikpanel-release-recovery-seed/v1",
+          "event": "switch_complete",
+          "cell_id": "release-recovery__ee958d5b86aa3953",
+          "node": "arch",
+          "zone": "recovery-fixture.test",
+          "request_id": "328755bfb4335823cdfa7580d920aa78",
+          "owner_id": "0f6266b188d709120c3ba98a23f41450",
+          "phase": "commit/dns-engine-switch/v2/finalized/328755bfb4335823cdfa7580d920aa78/dns-engine-switch/v1:sha256:2944ab8ec9a59d7adb43644b7f71b00ee52a05386ac764a27ee9b2f2003f0f38",
+          "generation": "a3c571f76f1899d26fe740701e26a9f41cd05c6ced1fa038fb27b52887c3c16b",
+          "catalog_serial": 0,
+          "ownership_sha256": "ec1b752e751bb2889718dc8135c0e39ab1fa1c487f123b8639248d29a2639d84",
+          "ownership_unchanged": true
+        },
+        {
+          "schema": "celikpanel-release-recovery-seed/v1",
+          "event": "publication_start",
+          "cell_id": "release-recovery__ee958d5b86aa3953",
+          "node": "arch",
+          "zone": "recovery-fixture.test",
+          "request_id": "d1554baf23f89a627703c3600bfa7879",
+          "owner_id": "cad451dda6b1c1158344622f49eafebc",
+          "catalog_serial": 0,
+          "ownership_unchanged": false
+        },
+        {
+          "schema": "celikpanel-release-recovery-seed/v1",
+          "event": "publication_complete",
+          "cell_id": "release-recovery__ee958d5b86aa3953",
+          "node": "arch",
+          "zone": "recovery-fixture.test",
+          "request_id": "d1554baf23f89a627703c3600bfa7879",
+          "owner_id": "cad451dda6b1c1158344622f49eafebc",
+          "phase": "commit/dns-zone-sync/v3/published/d1554baf23f89a627703c3600bfa7879/recovery-fixture.test/dns-zone-sync/v3:sha256:2710c6052683bad331439b78fe3a03c3a323acc0724519a902716465ae567c35",
+          "generation": "26a56fe425ad4e971a48c116239cbd0fe2e529654d65d0a8e45a3072056a53d0",
+          "catalog_serial": 0,
+          "ownership_sha256": "ec1b752e751bb2889718dc8135c0e39ab1fa1c487f123b8639248d29a2639d84",
+          "ownership_unchanged": true
+        },
+        {
+          "schema": "celikpanel-release-recovery-seed/v1",
+          "event": "publication_start",
+          "cell_id": "release-recovery__ee958d5b86aa3953",
+          "node": "arch",
+          "zone": "recovery-fixture.test",
+          "request_id": "9b8eca266f155190a514b7bf851c63da",
+          "owner_id": "dd936b6f5e14c466ef95bcf4420c0f0b",
+          "catalog_serial": 0,
+          "ownership_unchanged": false
+        },
+        {
+          "schema": "celikpanel-release-recovery-seed/v1",
+          "event": "publication_complete",
+          "cell_id": "release-recovery__ee958d5b86aa3953",
+          "node": "arch",
+          "zone": "recovery-fixture.test",
+          "request_id": "9b8eca266f155190a514b7bf851c63da",
+          "owner_id": "dd936b6f5e14c466ef95bcf4420c0f0b",
+          "phase": "commit/dns-zone-sync/v3/published/9b8eca266f155190a514b7bf851c63da/recovery-fixture.test/dns-zone-sync/v3:sha256:7fc8d2a615756eadad86953c2ea6759007cf853fca19fedaea05c70e5a79de8d",
+          "generation": "32f4ef5a9e2be04320a25ffa5cacd23a68d1f4392cc65df0e9d3c40487a372ab",
+          "catalog_serial": 0,
+          "ownership_sha256": "ec1b752e751bb2889718dc8135c0e39ab1fa1c487f123b8639248d29a2639d84",
+          "ownership_unchanged": true
+        },
+        {
+          "schema": "celikpanel-release-recovery-seed/v1",
+          "event": "seed_complete",
+          "cell_id": "release-recovery__ee958d5b86aa3953",
+          "node": "arch",
+          "zone": "recovery-fixture.test",
+          "generation": "32f4ef5a9e2be04320a25ffa5cacd23a68d1f4392cc65df0e9d3c40487a372ab",
+          "catalog_serial": 0,
+          "ownership_sha256": "ec1b752e751bb2889718dc8135c0e39ab1fa1c487f123b8639248d29a2639d84",
+          "ownership_unchanged": true,
+          "detail": "standalone BIND only; native DNS answers and update/rollback must be independently verified"
+        },
+        {
+          "schema": "celikpanel-release-recovery-seed/v1",
+          "event": "publication_start",
+          "cell_id": "release-recovery__ee958d5b86aa3953",
+          "node": "arch",
+          "zone": "recovery-fixture.test",
+          "request_id": "a654633e04075113c577823474d0823c",
+          "owner_id": "aa1afdca0f073156f6dbc7fd2d40d2dc",
+          "catalog_serial": 0,
+          "ownership_unchanged": false
+        },
+        {
+          "schema": "celikpanel-release-recovery-seed/v1",
+          "event": "publication_complete",
+          "cell_id": "release-recovery__ee958d5b86aa3953",
+          "node": "arch",
+          "zone": "recovery-fixture.test",
+          "request_id": "a654633e04075113c577823474d0823c",
+          "owner_id": "aa1afdca0f073156f6dbc7fd2d40d2dc",
+          "phase": "commit/dns-zone-sync/v3/published/a654633e04075113c577823474d0823c/recovery-fixture.test/dns-zone-sync/v3:sha256:7612e930c6868d57348e3107290b9ba11364f9d6e1c2179d4d4c6a8748c06a45",
+          "generation": "4730edb8f6850194a667f91b414ca338850e10f675453a9ae48693b3eb96df4b",
+          "catalog_serial": 0,
+          "ownership_sha256": "ec1b752e751bb2889718dc8135c0e39ab1fa1c487f123b8639248d29a2639d84",
+          "ownership_unchanged": true
+        },
+        {
+          "schema": "celikpanel-release-recovery-seed/v1",
+          "event": "publication_start",
+          "cell_id": "release-recovery__ee958d5b86aa3953",
+          "node": "arch",
+          "zone": "recovery-fixture.test",
+          "request_id": "56ed67ba43605b947751cab2ddd00ada",
+          "owner_id": "5fdc4bf6bb212585769e8807afb3a583",
+          "catalog_serial": 0,
+          "ownership_unchanged": false
+        },
+        {
+          "schema": "celikpanel-release-recovery-seed/v1",
+          "event": "publication_complete",
+          "cell_id": "release-recovery__ee958d5b86aa3953",
+          "node": "arch",
+          "zone": "recovery-fixture.test",
+          "request_id": "56ed67ba43605b947751cab2ddd00ada",
+          "owner_id": "5fdc4bf6bb212585769e8807afb3a583",
+          "phase": "commit/dns-zone-sync/v3/published/56ed67ba43605b947751cab2ddd00ada/recovery-fixture.test/dns-zone-sync/v3:sha256:3c67fa06d58870d1f447289de276ed3ac64e9120a3e9dbb0ca5ba1ff6082f391",
+          "generation": "7beb16402ccebfee93318c215b004d4d35fc6dbb2cbe7ed6043d3ea1b03d36ef",
+          "catalog_serial": 0,
+          "ownership_sha256": "ec1b752e751bb2889718dc8135c0e39ab1fa1c487f123b8639248d29a2639d84",
+          "ownership_unchanged": true
+        },
+        {
+          "schema": "celikpanel-release-recovery-seed/v1",
+          "event": "seed_complete",
+          "cell_id": "release-recovery__ee958d5b86aa3953",
+          "node": "arch",
+          "zone": "recovery-fixture.test",
+          "generation": "7beb16402ccebfee93318c215b004d4d35fc6dbb2cbe7ed6043d3ea1b03d36ef",
+          "catalog_serial": 0,
+          "ownership_sha256": "ec1b752e751bb2889718dc8135c0e39ab1fa1c487f123b8639248d29a2639d84",
+          "ownership_unchanged": true,
+          "detail": "standalone BIND only; native DNS answers and update/rollback must be independently verified"
+        }
+      ],
+      "evidence_hashes": {
+        "dns-doc-advance-rpc.json": "87272ac2ea747b2c56f6fc7228806bfc0f5d2f57e65d35abc5e2dbff758a3fc6",
+        "dns-doc-after.json": "068572cdc1a4909a9e444876bbbeb2ffdc7dfbcc8505d62ff7ce7da664df01fa",
+        "dns-doc-after-boot.json": "0c06230afdec9ce9088d6a339948495aadde197b7be0dd1a7df4f7176d125770",
+        "dns-doc-management-absent-observation.json": "d106f44474b38098b2456f1f902f3208714b804bceb0792341d3b7aa346a0b4d",
+        "dns-doc-prepare.json": "1b2b31d25b182c389fa3d6ce427a58bd9887160f08aba72a91f6e5b9f513e43b",
+        "dns-doc-management-absent.json": "04d3b8bc3f4f017f25fcd5f15615064513d5a27a08651c83a688b3889b96b215",
+        "dns-doc-prepare-rpc.json": "cb69f97d1bbabd4623082cf1114616ae4dec0c8e1e4214da105eaf058027a5df",
+        "dns-doc-before.json": "33e128f665e4cc06922cfa8266788e0a7b7a85dc9bcaa8d4f70bf86e755f6e89",
+        "dns-doc-before-reset.json": "29018d88b7666af92b8f04751011c08319ff6cde1dad2f8defe4d3cb9cbf00d1",
+        "dns-doc-historical-refusal.json": "0fb7c46cb2af49d803c4112dce4d933a7d9e11102f8e12afe9a4c52799f19f10",
+        "dns-doc-handoff.json": "04d3b8bc3f4f017f25fcd5f15615064513d5a27a08651c83a688b3889b96b215"
+      }
+    }
+  ],
+  "limits": [
+    "Standalone BIND only; no secondary transfer in this trial.",
+    "Direct fixture Agent handoff, not signed UI update or automatic application rollback.",
+    "SIGKILL publication/inverse is separately covered by real-process component tests, not a native DNS recovery boot executor.",
+    "Native DNS executor independence remains open.",
+    "Historical target refusal preserves live DNS; it does not implement historical application downgrade."
+  ],
+  "fixture_corrections": [
+    "Upload mode argument corrected before guest provisioning.",
+    "Debian lacked dig; bind9-dnsutils installed only for lab observation.",
+    "Historical rejection assertion corrected to the actual CLI exitUnavailable code 3; no DNS change occurred."
+  ],
+  "supported_current_target_admission": {
+    "source_commit": "fddd5955b96dc8b6fe604fb5d31c4a7021d4a18b",
+    "scope": "independent compatibility admission only; no service start or installed update",
+    "platforms": {
+      "debian13": {
+        "exit_code": 0,
+        "native_dns_files_unchanged": true,
+        "bind_active": true,
+        "panel_and_agent_absent": true,
+        "artifacts": {
+          "agent": "afce04dbb18fbc120259366e1bce75f83c48b87a0e9f5557d53d2662ad64542d",
+          "recovery": "f953805f550fa29b9c96e952553e4c45e103346d8ba8f686052cbaf2ff282831",
+          "agent-native-contract.json": "ff97f17317e447d677f95ddd2d7aa9513be280ee7c0b73ccae343698c284e9ed"
+        },
+        "before_after_sha256sum": [
+          "ec1b752e751bb2889718dc8135c0e39ab1fa1c487f123b8639248d29a2639d84  /var/lib/celikpanel-agent-private/dns-engine-ownership-bind.json",
+          "a5c5f52947d5219695a51fa99d64f591cbaf2a974b46f0d793eebdd68d066bae  /var/lib/celikpanel-agent-private/dns-engine-state.json",
+          "bc273474b79189f8057affff81dade275c51ab2657ecbc7bd70abf4696326cee  /var/lib/celikpanel-agent-private/service-mutations.json"
+        ]
+      },
+      "arch": {
+        "exit_code": 0,
+        "native_dns_files_unchanged": true,
+        "bind_active": true,
+        "panel_and_agent_absent": true,
+        "artifacts": {
+          "agent": "afce04dbb18fbc120259366e1bce75f83c48b87a0e9f5557d53d2662ad64542d",
+          "recovery": "f953805f550fa29b9c96e952553e4c45e103346d8ba8f686052cbaf2ff282831",
+          "agent-native-contract.json": "ff97f17317e447d677f95ddd2d7aa9513be280ee7c0b73ccae343698c284e9ed"
+        },
+        "before_after_sha256sum": [
+          "ec1b752e751bb2889718dc8135c0e39ab1fa1c487f123b8639248d29a2639d84  /var/lib/celikpanel-agent-private/dns-engine-ownership-bind.json",
+          "a5c5f52947d5219695a51fa99d64f591cbaf2a974b46f0d793eebdd68d066bae  /var/lib/celikpanel-agent-private/dns-engine-state.json",
+          "c443be696f591dae927e5b1ede96bd196964cba05c06beed62cd3ccb5f054a57  /var/lib/celikpanel-agent-private/service-mutations.json"
+        ]
+      }
+    }
+  }
+}

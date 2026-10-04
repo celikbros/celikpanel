@@ -1,0 +1,15 @@
+{
+  "body": {
+    "acceptance_cell": "pair-accept__bind-debian13__bind-arch__r2",
+    "acceptance_guest": "verified",
+    "acceptance_node": "arch",
+    "acceptance_smbios_uuid": "not readable by the panel service user",
+    "can_provision": false,
+    "license_kind": "acceptance_fixture",
+    "license_label": "ACCEPTANCE FIXTURE — NOT FOR PRODUCTION",
+    "license_service": "not contacted: acceptance test build",
+    "observation": "known",
+    "state": "missing"
+  },
+  "http_status": 200
+}

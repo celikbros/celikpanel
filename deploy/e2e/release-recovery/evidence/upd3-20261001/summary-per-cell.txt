@@ -1,0 +1,157 @@
+==================== upd3-d13-good-a upd1-debian13-good-20260930t174456z
+  workload cron: never-interrupted windows=[]
+  workload dns: not-provided-external-dns windows=[]
+  workload panel: down-only-during-transaction windows=[]
+  workload smtp: never-interrupted windows=[]
+  workload web: never-interrupted windows=[]
+  host_panel_windows []
+  host_ssh_windows []
+  agreement {"agreed_samples": 361, "lag_samples": 1, "samples": 362, "verdict": "passed"} skew 0.434
+  terminal {"outcome": "not-terminal", "build_identity_ok": false, "floor": {"present": true, "sha256": "fb2c2ef4d514862e2d1e9e08d4d756d697b63e1e8508d27aae418f184f1ebc9c", "text": "format=celikpanel-release-sequence-floor-v1\nsequence=82\nversion=v0.1.0-alpha.82\n"}, "foundation": {"present": true, "sha256": "153e7861b2575fe0f3907b3c212ac0f70cd2b034b269fe939890bc580addf013", "text": "format=celikpanel-release-recovery-foundation-v1\nprotocol=1\nsequence=81\nrelease-version=v0.1.0-alpha.81\nrelease-commit=58813f1d0b903cbbc645a4fbab724b8a84406b86\nrunner-sha256=391eba13d077e0f8016cdfc8e95ce5fb67711b1e9b4a91ed7446ebdbb4ccf004\nservice-sha256=c570e53138a416a6faf531c2f53e9502ca7aa5cc1131a1f6f6ae870b940fe530\ntimer-sha256=33148e5b0fbc209ff6fd725aaaff2c569bd7470751341d4b83b301d0fa54cd86\nstart-guard-sha256=6abd30be38302b4ad09bd5c7db893aa49b97db779514b3236a2f0a4afb60cc12\nagent-dropin-sha256=82e0fe894b3fa6
+  database equal-except-volatile differing ['metrics_samples', 'server_setup_executions'] unexpected [] excluded ['audit_logs', 'metrics_samples', 'server_setup_executions', 'sessions', 'sqlite_sequence']
+  timers {"changed": {}, "compared": 2, "equal": true}
+  track {"samples": 362, "agreement": {"agreed_samples": 361, "lag_samples": 1, "samples": 362, "verdict": "passed"}, "h8_settled_failed": null}
+  guest samples total=1102 after-start=1083 ok/fail web=(1083, 0) smtp=(1083, 0) panel=(1083, 0) cron distinct stamps after start=91 first=['2026-09-30T17:54:01+00:00'] last=['2026-09-30T19:24:01+00:00']
+  sample keys ['boot_id', 'cron', 'dns', 'monotonic', 'panel', 'schema', 'smtp', 't', 'utc', 'web']
+==================== upd3-d13-def-a upd1-debian13-defective-20260930t192542z
+  workload cron: never-interrupted windows=[]
+  workload dns: not-provided-external-dns windows=[]
+  workload panel: down-only-during-transaction windows=[[null, null, null, null, null]]
+  workload smtp: interrupted-only-by-host-reset windows=[[null, null, null, null, null]]
+  workload web: interrupted-only-by-host-reset windows=[[null, null, null, null, null]]
+  host_panel_windows [{"failed": true, "first_bad": 1790796871.3790474, "from": 1790796866.3789275, "kind": "failed", "last_bad": 1790796953.6121225, "lower_bound_s": 82.233, "to": 1790796958.6122448, "unobserved": false, "upper_bound_s": 92.233}]
+  host_ssh_windows [{"failed": true, "first_bad": 1790796906.3800385, "from": 1790796901.379897, "kind": "failed", "last_bad": 1790796906.3800385, "lower_bound_s": 0.0, "to": 1790796913.611101, "unobserved": false, "upper_bound_s": 12.231}]
+  agreement {"agreed_samples": 7, "lag_samples": 0, "samples": 25, "verdict": "passed"} skew 0.469
+  terminal {"outcome": "recovered-automatically", "build_identity_ok": true, "floor": {"present": true, "sha256": "fb2c2ef4d514862e2d1e9e08d4d756d697b63e1e8508d27aae418f184f1ebc9c", "text": "format=celikpanel-release-sequence-floor-v1\nsequence=82\nversion=v0.1.0-alpha.82\n"}, "foundation": {"present": true, "sha256": "07e602a8a3dd9f76dfdcb67c34b539b3340e45c83aa166f450d61c8153711cae", "text": "format=celikpanel-release-recovery-foundation-v1\nprotocol=1\nsequence=82\nrelease-version=v0.1.0-alpha.82\nrelease-commit=7d11ff6535c86a865add390062311db2fb1d6e50\nrunner-sha256=391eba13d077e0f8016cdfc8e95ce5fb67711b1e9b4a91ed7446ebdbb4ccf004\nservice-sha256=c570e53138a416a6faf531c2f53e9502ca7aa5cc1131a1f6f6ae870b940fe530\ntimer-sha256=33148e5b0fbc209ff6fd725aaaff2c569bd7470751341d4b83b301d0fa54cd86\nstart-guard-sha256=6abd30be38302b4ad09bd5c7db893aa49b97db779514b3236a2f0a4afb60cc12\nagent-dropin-sha256=82e0
+  database equal-except-volatile differing ['metrics_samples', 'server_setup_executions'] unexpected [] excluded ['audit_logs', 'metrics_samples', 'server_setup_executions', 'sessions', 'sqlite_sequence']
+  timers {"changed": {}, "compared": 2, "equal": true}
+  continuation {"required": false, "printed_retry": null, "owner_retry": null}
+  views_at_pause api null
+  views_at_pause offline null
+  track {"samples": 25, "agreement": {"agreed_samples": 7, "lag_samples": 0, "samples": 25, "verdict": "passed"}, "h8_settled_failed": null}
+  guest samples total=44 after-start=21 ok/fail web=(20, 1) smtp=(21, 0) panel=(5, 16) cron distinct stamps after start=3 first=['2026-09-30T19:34:01+00:00'] last=['2026-09-30T19:36:01+00:00']
+  sample keys ['boot_id', 'cron', 'dns', 'monotonic', 'panel', 'schema', 'smtp', 't', 'utc', 'web']
+==================== upd3-d13-sc-a upd1-debian13-startcheck-20260930t193716z
+  workload cron: never-interrupted windows=[]
+  workload dns: not-provided-external-dns windows=[]
+  workload panel: down-only-during-transaction windows=[[null, null, null, null, null]]
+  workload smtp: interrupted-only-by-host-reset windows=[[null, null, null, null, null]]
+  workload web: interrupted-only-by-host-reset windows=[[null, null, null, null, null]]
+  host_panel_windows [{"failed": true, "first_bad": 1790797592.2235398, "from": 1790797587.2234309, "kind": "failed", "last_bad": 1790797683.0450163, "lower_bound_s": 90.821, "to": 1790797688.0451362, "unobserved": false, "upper_bound_s": 100.822}]
+  host_ssh_windows [{"failed": true, "first_bad": 1790797632.2245917, "from": 1790797627.2244732, "kind": "failed", "last_bad": 1790797638.0438402, "lower_bound_s": 5.819, "to": 1790797643.0439599, "unobserved": false, "upper_bound_s": 15.819}]
+  agreement {"agreed_samples": 8, "lag_samples": 1, "samples": 27, "verdict": "passed"} skew 0.454
+  terminal {"outcome": "recovered-automatically", "build_identity_ok": true, "floor": {"present": true, "sha256": "fb2c2ef4d514862e2d1e9e08d4d756d697b63e1e8508d27aae418f184f1ebc9c", "text": "format=celikpanel-release-sequence-floor-v1\nsequence=82\nversion=v0.1.0-alpha.82\n"}, "foundation": {"present": true, "sha256": "f047aa613d7b73a58ef0995d661cd37346d149ecb5a86792e5f14976b60d8aed", "text": "format=celikpanel-release-recovery-foundation-v1\nprotocol=1\nsequence=82\nrelease-version=v0.1.0-alpha.82\nrelease-commit=592fc7baf38536821450388d44bca18e195b06ef\nrunner-sha256=391eba13d077e0f8016cdfc8e95ce5fb67711b1e9b4a91ed7446ebdbb4ccf004\nservice-sha256=c570e53138a416a6faf531c2f53e9502ca7aa5cc1131a1f6f6ae870b940fe530\ntimer-sha256=33148e5b0fbc209ff6fd725aaaff2c569bd7470751341d4b83b301d0fa54cd86\nstart-guard-sha256=6abd30be38302b4ad09bd5c7db893aa49b97db779514b3236a2f0a4afb60cc12\nagent-dropin-sha256=82e0
+  database equal-except-volatile differing ['metrics_samples', 'server_setup_executions'] unexpected [] excluded ['audit_logs', 'metrics_samples', 'server_setup_executions', 'sessions', 'sqlite_sequence']
+  timers {"changed": {}, "compared": 2, "equal": true}
+  views {"last": {"offline_page_served": "panel-reachable", "panel_recovery_status": true, "panel_update_status": true, "root_cli": true}, "ssh_owner_view": "not attempted (recovery view needs an interactive SSH terminal and a one-time code)", "summary": {"panel_recovery_status": {"reachable": 9, "samples": 27}, "panel_update_status": {"reachable": 9, "samples": 27}, "root_cli": {"reachable": 26, "samples": 27}}}
+  check_reasons ['tls_pair_invalid'] update_failure_codes ['candidate_panel_startup_check_failed'] sidecar {'code': 'candidate_panel_startup_check_failed', 'present': True, 'valid': True} completion_marker_seen False
+  cli by_key {"candidate_panel_startup_check_failed.pending": {"en": 8, "first_utc": "2026-09-30T19:47:03Z", "last_utc": "2026-09-30T19:48:08Z", "samples": 8, "tr": 8}, "candidate_panel_startup_check_failed.recovered": {"en": 1, "first_utc": "2026-09-30T19:48:10Z", "last_utc": "2026-09-30T19:48:10Z", "samples": 1, "tr": 1}} mismatches 0 panel_log_seen {'en': False, 'tr': False}
+  cli_text_source {"commit": "58813f1d0b903cbbc645a4fbab724b8a84406b86", "path": "cmd/recovery/main.go", "role": "baseline", "sha256": "89ac3ba7fff70344c63d6a85069e34abd84a06b62cf4b256c39a7e091e0c55d8"}
+  continuation {"required": false, "printed_retry": null, "owner_retry": null}
+  views_at_pause api null
+  views_at_pause offline null
+  track {"samples": 27, "agreement": {"agreed_samples": 8, "lag_samples": 1, "samples": 27, "verdict": "passed"}, "h8_settled_failed": null}
+  guest samples total=37 after-start=22 ok/fail web=(21, 1) smtp=(22, 0) panel=(6, 16) cron distinct stamps after start=3 first=['2026-09-30T19:46:01+00:00'] last=['2026-09-30T19:48:01+00:00']
+  sample keys ['boot_id', 'cron', 'dns', 'monotonic', 'panel', 'schema', 'smtp', 't', 'utc', 'web']
+==================== upd3-d13-rs-a upd1-debian13-realstart-20260930t194921z
+  workload cron: never-interrupted windows=[]
+  workload dns: not-provided-external-dns windows=[]
+  workload panel: down-from-update-until-end windows=[[null, null, null, null, null]]
+  workload smtp: never-interrupted windows=[]
+  workload web: never-interrupted windows=[]
+  host_panel_windows [{"failed": true, "first_bad": 1790798256.4333818, "from": 1790798251.4332535, "kind": "failed", "last_bad": 1790798651.444814, "lower_bound_s": 395.011, "to": null, "unobserved": false, "upper_bound_s": null}]
+  host_ssh_windows []
+  agreement {"agreed_samples": 6, "lag_samples": 0, "samples": 56, "verdict": "passed"} skew 0.514
+  terminal {"outcome": "paused-owner-action-required", "installed": "candidate", "transaction": {"fields": {}, "present": false, "status": "ok"}, "firewall_equal": true, "site_marker": true, "smtp": true, "login": {"attempted": true, "error": "CalledProcessError", "ok": false}}
+  database equal-except-volatile differing ['metrics_samples', 'server_setup_executions'] unexpected [] excluded ['audit_logs', 'metrics_samples', 'server_setup_executions', 'sessions', 'sqlite_sequence']
+  timers {"changed": {"certbot.timer": {"after": {"ActiveState": "inactive", "UnitFileState": "enabled"}, "before": {"ActiveState": "active", "UnitFileState": "enabled"}}}, "compared": 2, "equal": false}
+  views {"last": {"offline_page_served": false, "panel_recovery_status": false, "panel_update_status": false, "root_cli": true}, "ssh_owner_view": "not attempted (recovery view needs an interactive SSH terminal and a one-time code)", "summary": {"panel_recovery_status": {"reachable": 6, "samples": 56}, "panel_update_status": {"reachable": 6, "samples": 56}, "root_cli": {"reachable": 56, "samples": 56}}}
+  check_reasons [] update_failure_codes ['panel_start_unverified'] sidecar {'code': 'panel_start_unverified', 'present': True, 'valid': True} completion_marker_seen True
+  cli by_key {"panel_start_unverified.pending": {"en": 8, "first_utc": "2026-09-30T19:59:08Z", "last_utc": "2026-09-30T20:00:03Z", "samples": 8, "tr": 8}, "paused": {"en": 1, "first_utc": "2026-09-30T20:04:10Z", "last_utc": "2026-09-30T20:04:10Z", "samples": 1, "tr": 1}} mismatches 0 panel_log_seen {'en': True, 'tr': True}
+  cli_text_source {"commit": "36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb", "path": "cmd/recovery/main.go", "role": "realstart", "sha256": "89ac3ba7fff70344c63d6a85069e34abd84a06b62cf4b256c39a7e091e0c55d8"}
+  continuation {"required": null, "printed_retry": {"action": "validated-not-executed", "argv": ["/usr/libexec/celikpanel/recovery", "recover", "--retry", "--snapshot", "20260930T195734Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-14d3b140f0e9ad7b3b44f254594d61ca"], "attempted_at": "2026-09-30T20:04:11.362994Z", "error": null, "journal_sha256": "233f29cdce9a3c8359cf4bb5152ae489acfcc86fdba068194cd1a14492a959fd", "snapshot": "20260930T195734Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-14d3b140f0e9ad7b3b44f254594d61ca"}, "owner_retry": "not run by design (real-start): it would retry the same candidate"}
+  views_at_pause api {"unavailable": "PanelError"}
+  views_at_pause offline {"en": "sudo /usr/libexec/celikpanel/recovery status --request-id ded53ec59a2d64864e45c34d5a675bbd --lang en", "tr": "sudo /usr/libexec/celikpanel/recovery status --request-id ded53ec59a2d64864e45c34d5a675bbd --lang tr"}
+  track {"samples": 56, "agreement": {"agreed_samples": 6, "lag_samples": 0, "samples": 56, "verdict": "passed"}, "h8_settled_failed": null}
+  guest samples total=99 after-start=84 ok/fail web=(84, 0) smtp=(84, 0) panel=(4, 80) cron distinct stamps after start=8 first=['2026-09-30T19:57:01+00:00'] last=['2026-09-30T20:04:01+00:00']
+  sample keys ['boot_id', 'cron', 'dns', 'monotonic', 'panel', 'schema', 'smtp', 't', 'utc', 'web']
+==================== upd3-arch-good-a upd1-arch-good-20260930t200525z
+  workload cron: never-interrupted windows=[]
+  workload dns: not-provided-external-dns windows=[]
+  workload panel: down-only-during-transaction windows=[[null, null, null, null, null]]
+  workload smtp: not-seeded windows=[]
+  workload web: never-interrupted windows=[]
+  host_panel_windows [{"failed": true, "first_bad": 1790799210.471792, "from": 1790799205.471642, "kind": "failed", "last_bad": 1790799225.472265, "lower_bound_s": 15.0, "to": 1790799230.4724517, "unobserved": false, "upper_bound_s": 25.001}]
+  host_ssh_windows []
+  agreement {"agreed_samples": 8, "lag_samples": 0, "samples": 13, "verdict": "passed"} skew 0.507
+  terminal {"outcome": "update-verified", "build_identity_ok": true, "floor": {"present": true, "sha256": "fb2c2ef4d514862e2d1e9e08d4d756d697b63e1e8508d27aae418f184f1ebc9c", "text": "format=celikpanel-release-sequence-floor-v1\nsequence=82\nversion=v0.1.0-alpha.82\n"}, "foundation": {"present": true, "sha256": "9c4beb0369e166c873e8dc4be77ccff6cee4f0393a54cbecd558a43cfca5921e", "text": "format=celikpanel-release-recovery-foundation-v1\nprotocol=1\nsequence=82\nrelease-version=v0.1.0-alpha.82\nrelease-commit=901593abf12c90c91222d2c61a8bd7c0040523c3\nrunner-sha256=391eba13d077e0f8016cdfc8e95ce5fb67711b1e9b4a91ed7446ebdbb4ccf004\nservice-sha256=c570e53138a416a6faf531c2f53e9502ca7aa5cc1131a1f6f6ae870b940fe530\ntimer-sha256=33148e5b0fbc209ff6fd725aaaff2c569bd7470751341d4b83b301d0fa54cd86\nstart-guard-sha256=6abd30be38302b4ad09bd5c7db893aa49b97db779514b3236a2f0a4afb60cc12\nagent-dropin-sha256=82e0fe894b3f
+  database equal-except-volatile differing ['metrics_samples', 'server_setup_executions'] unexpected [] excluded ['audit_logs', 'metrics_samples', 'server_setup_executions', 'sessions', 'sqlite_sequence']
+  timers {"changed": {}, "compared": 2, "equal": true}
+  continuation {"required": false, "printed_retry": null, "owner_retry": null}
+  views_at_pause api null
+  views_at_pause offline null
+  track {"samples": 13, "agreement": {"agreed_samples": 8, "lag_samples": 0, "samples": 13, "verdict": "passed"}, "h8_settled_failed": null}
+  guest samples total=36 after-start=10 ok/fail web=(10, 0) smtp=(0, 0) panel=(5, 5) cron distinct stamps after start=2 first=['2026-09-30T20:13:00+00:00'] last=['2026-09-30T20:14:00+00:00']
+  sample keys ['boot_id', 'cron', 'dns', 'monotonic', 'panel', 'schema', 'smtp', 't', 'utc', 'web']
+==================== upd3-arch-def-a upd1-arch-defective-20260930t201516z
+  workload cron: never-interrupted windows=[]
+  workload dns: not-provided-external-dns windows=[]
+  workload panel: down-only-during-transaction windows=[[null, null, null, null, null], [null, null, null, null, null]]
+  workload smtp: not-seeded windows=[]
+  workload web: never-interrupted windows=[]
+  host_panel_windows [{"failed": true, "first_bad": 1790799743.5289567, "from": 1790799738.528779, "kind": "failed", "last_bad": 1790799768.5296118, "lower_bound_s": 25.001, "to": 1790799773.5297348, "unobserved": false, "upper_bound_s": 35.001}, {"failed": true, "first_bad": 1790799808.5309312, "from": 1790799803.5307734, "kind": "failed", "last_bad": 1790799808.5309312, "lower_bound_s": 0.0, "to": 1790799813.5310593
+  host_ssh_windows []
+  agreement {"agreed_samples": 12, "lag_samples": 0, "samples": 21, "verdict": "passed"} skew 0.508
+  terminal {"outcome": "recovered-automatically", "build_identity_ok": true, "floor": {"present": true, "sha256": "fb2c2ef4d514862e2d1e9e08d4d756d697b63e1e8508d27aae418f184f1ebc9c", "text": "format=celikpanel-release-sequence-floor-v1\nsequence=82\nversion=v0.1.0-alpha.82\n"}, "foundation": {"present": true, "sha256": "07e602a8a3dd9f76dfdcb67c34b539b3340e45c83aa166f450d61c8153711cae", "text": "format=celikpanel-release-recovery-foundation-v1\nprotocol=1\nsequence=82\nrelease-version=v0.1.0-alpha.82\nrelease-commit=7d11ff6535c86a865add390062311db2fb1d6e50\nrunner-sha256=391eba13d077e0f8016cdfc8e95ce5fb67711b1e9b4a91ed7446ebdbb4ccf004\nservice-sha256=c570e53138a416a6faf531c2f53e9502ca7aa5cc1131a1f6f6ae870b940fe530\ntimer-sha256=33148e5b0fbc209ff6fd725aaaff2c569bd7470751341d4b83b301d0fa54cd86\nstart-guard-sha256=6abd30be38302b4ad09bd5c7db893aa49b97db779514b3236a2f0a4afb60cc12\nagent-dropin-sha256=82e0
+  database equal-except-volatile differing ['metrics_samples', 'server_setup_executions'] unexpected [] excluded ['audit_logs', 'metrics_samples', 'server_setup_executions', 'sessions', 'sqlite_sequence']
+  timers {"changed": {}, "compared": 2, "equal": true}
+  continuation {"required": false, "printed_retry": null, "owner_retry": null}
+  views_at_pause api null
+  views_at_pause offline null
+  track {"samples": 21, "agreement": {"agreed_samples": 12, "lag_samples": 0, "samples": 21, "verdict": "passed"}, "h8_settled_failed": null}
+  guest samples total=32 after-start=19 ok/fail web=(19, 0) smtp=(0, 0) panel=(12, 7) cron distinct stamps after start=2 first=['2026-09-30T20:22:00+00:00'] last=['2026-09-30T20:23:00+00:00']
+  sample keys ['boot_id', 'cron', 'dns', 'monotonic', 'panel', 'schema', 'smtp', 't', 'utc', 'web']
+==================== upd3-arch-sc-a upd1-arch-startcheck-20260930t202457z
+  workload cron: never-interrupted windows=[]
+  workload dns: not-provided-external-dns windows=[]
+  workload panel: down-only-during-transaction windows=[[null, null, null, null, null], [null, null, null, null, null]]
+  workload smtp: not-seeded windows=[]
+  workload web: never-interrupted windows=[]
+  host_panel_windows [{"failed": true, "first_bad": 1790800414.2651336, "from": 1790800409.2649727, "kind": "failed", "last_bad": 1790800444.2660172, "lower_bound_s": 30.001, "to": 1790800449.2661436, "unobserved": false, "upper_bound_s": 40.001}, {"failed": true, "first_bad": 1790800484.267088, "from": 1790800479.266957, "kind": "failed", "last_bad": 1790800484.267088, "lower_bound_s": 0.0, "to": 1790800489.267222, "
+  host_ssh_windows []
+  agreement {"agreed_samples": 14, "lag_samples": 0, "samples": 22, "verdict": "passed"} skew 0.524
+  terminal {"outcome": "recovered-automatically", "build_identity_ok": true, "floor": {"present": true, "sha256": "fb2c2ef4d514862e2d1e9e08d4d756d697b63e1e8508d27aae418f184f1ebc9c", "text": "format=celikpanel-release-sequence-floor-v1\nsequence=82\nversion=v0.1.0-alpha.82\n"}, "foundation": {"present": true, "sha256": "f047aa613d7b73a58ef0995d661cd37346d149ecb5a86792e5f14976b60d8aed", "text": "format=celikpanel-release-recovery-foundation-v1\nprotocol=1\nsequence=82\nrelease-version=v0.1.0-alpha.82\nrelease-commit=592fc7baf38536821450388d44bca18e195b06ef\nrunner-sha256=391eba13d077e0f8016cdfc8e95ce5fb67711b1e9b4a91ed7446ebdbb4ccf004\nservice-sha256=c570e53138a416a6faf531c2f53e9502ca7aa5cc1131a1f6f6ae870b940fe530\ntimer-sha256=33148e5b0fbc209ff6fd725aaaff2c569bd7470751341d4b83b301d0fa54cd86\nstart-guard-sha256=6abd30be38302b4ad09bd5c7db893aa49b97db779514b3236a2f0a4afb60cc12\nagent-dropin-sha256=82e0
+  database equal-except-volatile differing ['metrics_samples', 'server_setup_executions'] unexpected [] excluded ['audit_logs', 'metrics_samples', 'server_setup_executions', 'sessions', 'sqlite_sequence']
+  timers {"changed": {}, "compared": 2, "equal": true}
+  views {"last": {"offline_page_served": "panel-reachable", "panel_recovery_status": true, "panel_update_status": true, "root_cli": true}, "ssh_owner_view": "not attempted (recovery view needs an interactive SSH terminal and a one-time code)", "summary": {"panel_recovery_status": {"reachable": 14, "samples": 22}, "panel_update_status": {"reachable": 14, "samples": 22}, "root_cli": {"reachable": 22, "samples": 22}}}
+  check_reasons ['tls_pair_invalid'] update_failure_codes ['candidate_panel_startup_check_failed'] sidecar {'code': 'candidate_panel_startup_check_failed', 'present': True, 'valid': True} completion_marker_seen False
+  cli by_key {"candidate_panel_startup_check_failed.pending": {"en": 11, "first_utc": "2026-09-30T20:33:57Z", "last_utc": "2026-09-30T20:34:49Z", "samples": 11, "tr": 11}, "candidate_panel_startup_check_failed.recovered": {"en": 1, "first_utc": "2026-09-30T20:34:52Z", "last_utc": "2026-09-30T20:34:52Z", "samples": 1, "tr": 1}} mismatches 0 panel_log_seen {'en': False, 'tr': False}
+  cli_text_source {"commit": "58813f1d0b903cbbc645a4fbab724b8a84406b86", "path": "cmd/recovery/main.go", "role": "baseline", "sha256": "89ac3ba7fff70344c63d6a85069e34abd84a06b62cf4b256c39a7e091e0c55d8"}
+  continuation {"required": false, "printed_retry": null, "owner_retry": null}
+  views_at_pause api null
+  views_at_pause offline null
+  track {"samples": 22, "agreement": {"agreed_samples": 14, "lag_samples": 0, "samples": 22, "verdict": "passed"}, "h8_settled_failed": null}
+  guest samples total=40 after-start=21 ok/fail web=(21, 0) smtp=(0, 0) panel=(13, 8) cron distinct stamps after start=2 first=['2026-09-30T20:33:00+00:00'] last=['2026-09-30T20:34:00+00:00']
+  sample keys ['boot_id', 'cron', 'dns', 'monotonic', 'panel', 'schema', 'smtp', 't', 'utc', 'web']
+==================== upd3-arch-rs-a upd1-arch-realstart-20260930t203614z
+  workload cron: never-interrupted windows=[]
+  workload dns: not-provided-external-dns windows=[]
+  workload panel: down-from-update-until-end windows=[[null, null, null, null, null]]
+  workload smtp: not-seeded windows=[]
+  workload web: never-interrupted windows=[]
+  host_panel_windows [{"failed": true, "first_bad": 1790801072.1971521, "from": 1790801067.1969895, "kind": "failed", "last_bad": 1790801467.208599, "lower_bound_s": 395.011, "to": null, "unobserved": false, "upper_bound_s": null}]
+  host_ssh_windows []
+  agreement {"agreed_samples": 5, "lag_samples": 0, "samples": 55, "verdict": "passed"} skew 0.512
+  terminal {"outcome": "paused-owner-action-required", "installed": "candidate", "transaction": {"fields": {}, "present": false, "status": "ok"}, "firewall_equal": true, "site_marker": true, "smtp": null, "login": {"attempted": true, "error": "CalledProcessError", "ok": false}}
+  database equal-except-volatile differing ['metrics_samples', 'server_setup_executions'] unexpected [] excluded ['audit_logs', 'metrics_samples', 'server_setup_executions', 'sessions', 'sqlite_sequence']
+  timers {"changed": {}, "compared": 2, "equal": true}
+  views {"last": {"offline_page_served": false, "panel_recovery_status": false, "panel_update_status": false, "root_cli": true}, "ssh_owner_view": "not attempted (recovery view needs an interactive SSH terminal and a one-time code)", "summary": {"panel_recovery_status": {"reachable": 5, "samples": 55}, "panel_update_status": {"reachable": 5, "samples": 55}, "root_cli": {"reachable": 55, "samples": 55}}}
+  check_reasons [] update_failure_codes ['panel_start_unverified'] sidecar {'code': 'panel_start_unverified', 'present': True, 'valid': True} completion_marker_seen True
+  cli by_key {"panel_start_unverified.pending": {"en": 8, "first_utc": "2026-09-30T20:46:00Z", "last_utc": "2026-09-30T20:46:56Z", "samples": 8, "tr": 8}, "paused": {"en": 1, "first_utc": "2026-09-30T20:51:04Z", "last_utc": "2026-09-30T20:51:04Z", "samples": 1, "tr": 1}} mismatches 0 panel_log_seen {'en': True, 'tr': True}
+  cli_text_source {"commit": "36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb", "path": "cmd/recovery/main.go", "role": "realstart", "sha256": "89ac3ba7fff70344c63d6a85069e34abd84a06b62cf4b256c39a7e091e0c55d8"}
+  continuation {"required": null, "printed_retry": {"action": "validated-not-executed", "argv": ["/usr/libexec/celikpanel/recovery", "recover", "--retry", "--snapshot", "20260930T204431Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-45483c2cc4439aa4098f44a8977b2bef"], "attempted_at": "2026-09-30T20:51:06.078605Z", "error": null, "journal_sha256": "1a906f5c2841fc954bcd51da8862f33d2c352844c2490daa15811879d7c2a6e0", "snapshot": "20260930T204431Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-45483c2cc4439aa4098f44a8977b2bef"}, "owner_retry": "not run by design (real-start): it would retry the same candidate"}
+  views_at_pause api {"unavailable": "PanelError"}
+  views_at_pause offline {"en": "sudo /usr/libexec/celikpanel/recovery status --request-id 08ddb2f7396874f11eb0f344839b3365 --lang en", "tr": "sudo /usr/libexec/celikpanel/recovery status --request-id 08ddb2f7396874f11eb0f344839b3365 --lang tr"}
+  track {"samples": 55, "agreement": {"agreed_samples": 5, "lag_samples": 0, "samples": 55, "verdict": "passed"}, "h8_settled_failed": null}
+  guest samples total=98 after-start=83 ok/fail web=(83, 0) smtp=(0, 0) panel=(3, 80) cron distinct stamps after start=8 first=['2026-09-30T20:44:00+00:00'] last=['2026-09-30T20:51:00+00:00']
+  sample keys ['boot_id', 'cron', 'dns', 'monotonic', 'panel', 'schema', 'smtp', 't', 'utc', 'web']

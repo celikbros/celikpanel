@@ -1,0 +1,180 @@
+wall=2026-09-30T08:46:41.597147259Z boot_id=308808b7-c63c-4dcf-bd8c-463ed3c870e3
+== pdns.service
+MainPID=5426
+NRestarts=0
+ExecMainStartTimestamp=Wed 2026-09-30 08:41:06 UTC
+ExecMainPID=5426
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Wed 2026-09-30 08:41:06 UTC
+InvocationID=44b4212f768d48a18c553ed30099f4fb
+== named.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InvocationID=
+== bind9.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InvocationID=
+== celikpanel-agent.service
+MainPID=6423
+NRestarts=0
+ExecMainStartTimestamp=Wed 2026-09-30 08:41:09 UTC
+ExecMainPID=6423
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Wed 2026-09-30 08:41:09 UTC
+InvocationID=e557170bd12b4f199b5bf5a5e45dadf7
+== celikpanel-panel.service
+MainPID=7272
+NRestarts=0
+ExecMainStartTimestamp=Wed 2026-09-30 08:41:12 UTC
+ExecMainPID=7272
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Wed 2026-09-30 08:41:12 UTC
+InvocationID=2f80a7449aa2488eaf8d411f9b1f7cec
+== named/pdns processes
+5426 /usr/sbin/pdns_server --guardian=no --daemon=no --disable-syslog --log-timestamp=no --write-pid=no
+== boots
+IDX BOOT ID                          FIRST ENTRY                 LAST ENTRY
+  0 308808b7c63c4dcfbd8c463ed3c870e3 Wed 2026-09-30 08:38:09 UTC Wed 2026-09-30 08:46:41 UTC
+== packages
+dpkg-query: no packages found matching bind9
+dpkg-query: no packages found matching bind9-utils
+bind9-host 1:9.20.26-1~deb13u1 ii 
+bind9-libs 1:9.20.26-1~deb13u1 ii 
+pdns-backend-sqlite3 4.9.17-0+deb13u1 ii 
+pdns-server 4.9.17-0+deb13u1 ii 
+== pdns_server --version
+Sep 30 08:46:41 PowerDNS Authoritative Server 4.9.17 (C) PowerDNS.COM BV
+Sep 30 08:46:41 Using 64-bits mode. Built using gcc 14.2.0.
+Sep 30 08:46:41 PowerDNS comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it according to the terms of the GPL version 2.
+== state dir
+total 92
+drwx------  3 root celikpanel  4096 2026-09-30 08:43:01.662796474 +0000 .
+drwxr-xr-x 29 root root        4096 2026-09-30 08:40:59.478520274 +0000 ..
+-rw-------  1 root celikpanel   735 2026-09-30 08:41:11.310302990 +0000 dns-engine-ownership-pdns.json
+-rw-------  1 root celikpanel   731 2026-09-30 08:41:08.374346722 +0000 dns-engine-state.json
+-rw-------  1 root celikpanel 63923 2026-09-30 08:41:11.346302495 +0000 dns-engine-switch-v3-archive-076c692ac1346f2b9c6a0df468b0e9aa-163a13295b48e3c1ab1f3b90c3f0fb21599cc6d71da3caf29956f15354d67c0f.json
+drwx------  2 root root        4096 2026-09-30 08:42:33.458294550 +0000 dns-peer-inspection-keys
+-rw-------  1 root root         487 2026-09-30 08:42:35.378332644 +0000 dns-peer-inspection-v1.json
+-rw-------  1 root celikpanel  3657 2026-09-30 08:43:01.658796410 +0000 service-mutations.json
+77ce3f873df3a04cd08ebc153215ecaef07ac92a7448a1b7e584b8e473b28481  dns-engine-ownership-pdns.json
+163a13295b48e3c1ab1f3b90c3f0fb21599cc6d71da3caf29956f15354d67c0f  dns-engine-state.json
+119064f7becc36975fadb8e45e5dc2f8625407340a383ae1f92cf3273b2a3886  dns-engine-switch-v3-archive-076c692ac1346f2b9c6a0df468b0e9aa-163a13295b48e3c1ab1f3b90c3f0fb21599cc6d71da3caf29956f15354d67c0f.json
+7720859f1e6bd5c3ea5a79ed9d47c04368d892e408dc5e84ea94f8461575b4bc  dns-peer-inspection-v1.json
+64b473a40142878f033e190b98da69660fab982572e4b5b994c47b436d29a697  service-mutations.json
+== fixture dir
+total 1412
+drwx------  4 root root    4096 2026-09-30 08:39:57.239705291 +0000 .
+drwxr-xr-x 29 root root    4096 2026-09-30 08:40:59.478520274 +0000 ..
+-rw-------  1 root root    3293 2026-09-30 08:39:57.067699768 +0000 controller-argv.json
+-rw-------  1 root root    1016 2026-09-30 08:39:57.223704777 +0000 coordinator-stop-proof.json
+-rw-------  1 root root     728 2026-09-30 08:39:13.987296191 +0000 installed-binaries.sha256
+-rw-------  1 root root 1406962 2026-09-30 08:39:02.709055048 +0000 manifest.json
+drwx------  2 root root    4096 2026-09-30 08:40:52.394712527 +0000 measured
+drwx------  3 root root    4096 2026-09-30 08:39:57.039698870 +0000 results
+-rw-------  1 root root     443 2026-09-30 08:39:56.879693623 +0000 scenario.json
+-rw-------  1 root root    1467 2026-09-30 08:39:56.979696921 +0000 source-proof.json
+== recovery launcher
+total 18744
+drwx------ 3 root root     4096 2026-09-30 08:39:20.837045578 +0000 .
+drwxr-xr-x 9 root root     4096 2026-09-30 08:39:20.112928570 +0000 ..
+-rwxr-xr-x 1 root root 19177932 2026-09-30 08:39:20.765033943 +0000 recovery
+drwx------ 3 root root     4096 2026-09-30 08:39:20.136932448 +0000 recovery-runtimes
+77375e189af22f2236862ebf878af200da583feed4c72fc83dda6f24204bfafd  /usr/libexec/celikpanel/recovery
+== owner files
+/etc/powerdns:
+total 36
+drwxr-xr-x  3 root root  4096 2026-09-30 08:40:59.770513438 +0000 .
+drwxr-xr-x 68 root root  4096 2026-09-30 08:41:01.386477276 +0000 ..
+-rw-r-----  1 root pdns 20579 2026-08-06 19:04:06.000000000 +0000 pdns.conf
+drwxr-xr-x  2 root root  4096 2026-09-30 08:41:03.718429207 +0000 pdns.d
+
+/etc/powerdns/pdns.d:
+total 16
+drwxr-xr-x 2 root root 4096 2026-09-30 08:41:03.718429207 +0000 .
+drwxr-xr-x 3 root root 4096 2026-09-30 08:40:59.770513438 +0000 ..
+-rw-r--r-- 1 root root  310 2026-09-30 08:41:03.686429840 +0000 celikpanel-cluster.conf
+-rw-r--r-- 1 root root  216 2026-09-30 08:41:03.706429445 +0000 celikpanel.conf
+
+/var/lib/powerdns:
+total 340
+drwxr-xr-x  2 pdns pdns   4096 2026-09-30 08:41:06.426379175 +0000 .
+drwxr-xr-x 29 root root   4096 2026-09-30 08:40:59.478520274 +0000 ..
+-rw-r-----  1 pdns pdns  98304 2026-09-30 08:41:06.426379175 +0000 pdns.sqlite3
+-rw-r-----  1 pdns pdns  32768 2026-09-30 08:43:06.574873158 +0000 pdns.sqlite3-shm
+-rw-r-----  1 pdns pdns 201912 2026-09-30 08:43:06.590873404 +0000 pdns.sqlite3-wal
+8b46927e48be83b2f0afc38efabdc2e2237daa5281b1a07ea44989ffa41f262a  /etc/powerdns/pdns.conf
+31ee619ba2589b241c484ed4081b329f22742b8a85ef76555c96352a60882a21  /etc/powerdns/pdns.d/celikpanel-cluster.conf
+0485300f3503e60e09a5ec29a43483c29faf4506c91dd3ee44935367307bde69  /etc/powerdns/pdns.d/celikpanel.conf
+65ce5e5d25cd62f269e8ecf92b64e3ccd8fbd62044171aa69de97911f2782f48  /var/lib/powerdns/pdns.sqlite3
+== bind dirs
+ls: cannot access '/etc/bind': No such file or directory
+== /etc/bind file hashes
+== /etc/bind inodes
+== /var/cache/bind tree
+find: ‘/var/cache/bind’: No such file or directory
+== named-checkconf -l
+bash: line 16: named-checkconf: command not found
+== ss 53
+udp UNCONN 0      0         192.0.2.10:53 0.0.0.0:* users:(("pdns_server",pid=5426,fd=6))    
+udp UNCONN 0      0          10.0.2.15:53 0.0.0.0:* users:(("pdns_server",pid=5426,fd=5))    
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=18))
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=19))
+tcp LISTEN 0      128        10.0.2.15:53 0.0.0.0:* users:(("pdns_server",pid=5426,fd=7))    
+tcp LISTEN 0      128       192.0.2.10:53 0.0.0.0:* users:(("pdns_server",pid=5426,fd=8))    
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=21))
+== pdns journal tail
+2026-09-30T08:42:02.708826+00:00 dns-debian13 pdns_server[5426]: Notification request to host 192.0.2.11:53 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T08:42:03.536028+00:00 dns-debian13 pdns_server[5426]: IXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:52203', transfer initiated with serial 1790757667
+2026-09-30T08:42:03.536028+00:00 dns-debian13 pdns_server[5426]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:52203', transfer initiated
+2026-09-30T08:42:03.536028+00:00 dns-debian13 pdns_server[5426]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:52203', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T08:42:03.933700+00:00 dns-debian13 pdns_server[5426]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:42884', transfer initiated
+2026-09-30T08:42:03.933700+00:00 dns-debian13 pdns_server[5426]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:42884', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T08:42:38.997881+00:00 dns-debian13 pdns_server[5426]: Cache clear request for 's2.s1-kill.test$' received from operator
+2026-09-30T08:42:39.031437+00:00 dns-debian13 pdns_server[5426]: Cache clear request for 'catalog-c000020a.celikpanel.invalid$' received from operator
+2026-09-30T08:42:39.062540+00:00 dns-debian13 pdns_server[5426]: Notification request to host 192.0.2.11:53 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T08:42:39.086222+00:00 dns-debian13 pdns_server[5426]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:57716', transfer initiated
+2026-09-30T08:42:39.087041+00:00 dns-debian13 pdns_server[5426]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:57716', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T08:42:48.627177+00:00 dns-debian13 pdns_server[5426]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:58288', transfer initiated
+2026-09-30T08:42:48.627966+00:00 dns-debian13 pdns_server[5426]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:58288', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T08:42:57.644876+00:00 dns-debian13 pdns_server[5426]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:57372', transfer initiated
+2026-09-30T08:42:57.644876+00:00 dns-debian13 pdns_server[5426]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:57372', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T08:43:00.041459+00:00 dns-debian13 pdns_server[5426]: Cache clear request for 's2.s1-kill.test$' received from operator
+2026-09-30T08:43:00.067321+00:00 dns-debian13 pdns_server[5426]: Cache clear request for 'catalog-c000020a.celikpanel.invalid$' received from operator
+2026-09-30T08:43:00.095993+00:00 dns-debian13 pdns_server[5426]: Notification request to host 192.0.2.11:53 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T08:43:00.122016+00:00 dns-debian13 pdns_server[5426]: Notification request to host 192.0.2.11:53 for zone 's2.s1-kill.test' received from operator
+2026-09-30T08:43:00.556074+00:00 dns-debian13 pdns_server[5426]: IXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:56796', transfer initiated with serial 1790757668
+2026-09-30T08:43:00.556074+00:00 dns-debian13 pdns_server[5426]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:56796', transfer initiated
+2026-09-30T08:43:00.612355+00:00 dns-debian13 pdns_server[5426]: AXFR-out zone 's2.s1-kill.test', client '192.0.2.11:56800', transfer initiated
+2026-09-30T08:43:01.346273+00:00 dns-debian13 pdns_server[5426]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:41928', transfer initiated
+2026-09-30T08:43:01.553163+00:00 dns-debian13 pdns_server[5426]: Received unsuccessful notification report for 's2.s1-kill.test' from 192.0.2.11:53, error: Server Not Authoritative for zone / Not Authorized
+2026-09-30T08:43:02.416526+00:00 dns-debian13 pdns_server[5426]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:56808', transfer initiated
+2026-09-30T08:43:06.554208+00:00 dns-debian13 pdns_server[5426]: new CATALOG-HASH '1Rf5KuuzsJMQRGXVLYxlmzvq+Z93Mwk4oSSCrR9KFCA=' for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T08:43:06.589622+00:00 dns-debian13 pdns_server[5426]: Unable to queue notification of domain 's2.s1-kill.test' to nameserver 'ns1.s1-kill.test': nameserver does not resolve!
+2026-09-30T08:43:06.596061+00:00 dns-debian13 pdns_server[5426]: Unable to queue notification of domain 'catalog-c000020a.celikpanel.invalid' to nameserver 'invalid': nameserver does not resolve!
+2026-09-30T08:43:06.647886+00:00 dns-debian13 pdns_server[5426]: IXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:56893', transfer initiated with serial 1790757669
+2026-09-30T08:43:06.648039+00:00 dns-debian13 pdns_server[5426]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:56893', transfer initiated

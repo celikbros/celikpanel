@@ -1,0 +1,5 @@
+#!/bin/bash
+W=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/pair6
+cp $W/watch-catalog.sh $W/pdnsdb.py /root/cp-pair6/
+setsid nohup bash /root/cp-pair6/watch-catalog.sh "$@" > /root/cp-pair6/logs/$6-watch.err 2>&1 < /dev/null &
+sleep 2; pgrep -af watch-catalog; echo watch launched

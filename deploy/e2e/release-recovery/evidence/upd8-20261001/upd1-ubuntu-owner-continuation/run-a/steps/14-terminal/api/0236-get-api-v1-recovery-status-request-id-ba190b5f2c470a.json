@@ -1,0 +1,78 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "terminal recovery",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/recovery/status?request_id=ba190b5f2c470a93945ecd4b22b24f35"
+  },
+  "response": {
+    "elapsed_seconds": 0.003,
+    "headers": [
+      [
+        "Cache-Control",
+        "no-store"
+      ],
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Thu, 01 Oct 2026 15:59:53 GMT"
+      ],
+      [
+        "Content-Length",
+        "291"
+      ]
+    ],
+    "json": {
+      "observation": "known",
+      "observed_at": "2026-10-01T15:59:45Z",
+      "panel_state": "ready",
+      "phase": "succeeded",
+      "previous_failure": "recovery_failed",
+      "reason": "update_verified",
+      "request_id": "ba190b5f2c470a93945ecd4b22b24f35",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "update_verified"
+    },
+    "status": 200,
+    "text": null
+  }
+}

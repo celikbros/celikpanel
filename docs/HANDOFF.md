@@ -1,5 +1,7 @@
 # Engineering Handoff
 
+> Current handoff: [28 September 2026 technical status and remaining work (Turkish)](HANDOFF-2026-09-28.tr.md). The August 30 baseline below is historical, not the current release or live-server status.
+
 *Baseline updated: August 30, 2026 · [Türkçe](HANDOFF.tr.md)*
 
 This is the entry point for an engineering team taking over CelikPanel. It

@@ -1,0 +1,8 @@
+evidence /var/tmp/cp-release-drill-upd11-d13-rs-a/evidence/debian13/upd1/upd1-debian13-realstart-20261001t225655z/
+== distinct CLI texts
+== journal lines
+-- steps/14-collect/journal-setup-services.txt 2
+    2026-10-01T22:58:54.800583+00:00 dns-debian13 mariadbd[13122]: 2026-10-01 22:58:54 0 [Note] InnoDB: 128 rollback segments in 3 undo tablespaces are active.
+    2026-10-01T22:58:55.279264+00:00 dns-debian13 /etc/mysql/debian-start[13157]: Triggering myisam-recover for all MyISAM tables and aria-recover for all Aria tables
+== result {"overall": "failed", "native_evidence": false, "request_id": null} {"attempts": {"automatic": [], "automatic_count": 0, "journal_admissions": [], "owner": [], "owner_count": 0}, "classification": "not-terminal", "final_status": null, "owner_continuation": false, "owner_reboot": null, "pin_changes": [], "port_hold": null, "reboot": null, "track_stop": null}
+findings []

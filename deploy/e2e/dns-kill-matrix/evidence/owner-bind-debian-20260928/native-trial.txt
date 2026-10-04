@@ -1,0 +1,7 @@
+=== RUN   TestNativeOwnerEnrollmentResume
+    secondary_resume_native_linux_test.go:76: backup-only checkpoint resumed; SSH publication verified before account creation
+    secondary_resume_native_linux_test.go:98: published-SSH checkpoint completed with a new restricted account; completed repeat preserved key
+    secondary_resume_native_linux_test.go:105: explicit resume reused the locked account after revocation
+    secondary_resume_native_linux_test.go:134: owner edit refused and preserved; key revoked; native BIND remains active
+--- PASS: TestNativeOwnerEnrollmentResume (0.50s)
+PASS

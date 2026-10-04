@@ -1,0 +1,6 @@
+## guest prerequisite: /run remounted exec (rw,nosuid,nodev,relatime,size=813756k,mode=755,inode64)
+PASS: recovery runner -> rollback entrypoint valid
+PASS: recovery runner -> rollback entrypoint shared
+PASS: recovery runner -> rollback entrypoint closed
+PASS: recovery runner -> rollback entrypoint wrong-identity
+PASS: recovery runner -> rollback entrypoint wrong-tuple

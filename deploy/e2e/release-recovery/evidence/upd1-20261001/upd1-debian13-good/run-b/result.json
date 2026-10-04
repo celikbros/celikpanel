@@ -1,0 +1,159 @@
+{
+  "artifacts": {
+    "baseline": {
+      "commit": "864ae9a92111a604dd1f3ea2ff8f65173a39e6cc",
+      "sha256": "7a891e232b4dffee8d5c96f8b60f2a6ef950a0bdd34c9d3991665ce07f6e0d3a",
+      "version": "v0.1.0-alpha.81"
+    },
+    "defective": {
+      "commit": "9532109705775d1c827f6a65a9c90f5e543d04f2",
+      "sha256": "8ef24da3a5cbc083772624b04e9fa6bff08791595c678a640a733fb394a726ef",
+      "version": "v0.1.0-alpha.82"
+    },
+    "good": {
+      "commit": "69688983d89cfbf94a6d003db6ebc22c85b4341e",
+      "sha256": "94f85797fffca033a4751e910c2bd2bb7cc863c1ecad614b9f273edf78cc75cb",
+      "version": "v0.1.0-alpha.82"
+    }
+  },
+  "cell": {
+    "mail_required": true,
+    "name": "upd1-debian13-good",
+    "node": "debian13",
+    "recovery_fault": null,
+    "variant": "good"
+  },
+  "findings": [
+    "debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['06-panel_certificate', '07-dns_readiness', '08-service', '09-service', '10-mail_profile', '11-mail_profile', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']"
+  ],
+  "identity": {
+    "cell_id": "release-recovery__7aab794c0f348ffd",
+    "node": "debian13",
+    "vm_uuid": "640c95c8-db38-5c0d-818b-e4682c49b01d"
+  },
+  "native_evidence": false,
+  "note": "Observations for the owner's review; the P0 rows are judged separately.",
+  "outcome": {
+    "attempts": null,
+    "classification": "not-terminal",
+    "final_status": null,
+    "owner_continuation": false,
+    "pin_changes": [],
+    "reboot": null
+  },
+  "overall": "failed",
+  "provenance": {
+    "baseline": "unpublished-local-fixture-commit-over-HEAD-labelled-v0.1.0-alpha.81; acceptance-license panel build (D-027 fixture); installed by the real installer; fixture trust root enrolled; not-production-release-admission",
+    "candidate": "unpublished-local-fixture-commit-labelled-v0.1.0-alpha.82; signed with the disposable fixture key; served by the guest-loopback celikpanel.net fixture origin; not a release",
+    "defect": "fixture source patch: cmd/panel --migrate-only exits 1 after migrating the isolated copy (genuine candidate failure after candidate-installed, simulated by a committed fixture change)"
+  },
+  "request_id": null,
+  "schema": "celikpanel/upd1-owner-update-result/v1",
+  "steps": [
+    {
+      "finished_at": "2026-09-30T12:30:02Z",
+      "name": "preflight",
+      "reason": null,
+      "started_at": "2026-09-30T12:29:58Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-09-30T12:30:10Z",
+      "name": "origin",
+      "reason": null,
+      "started_at": "2026-09-30T12:30:02Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-09-30T12:30:45Z",
+      "name": "baseline-install",
+      "reason": null,
+      "started_at": "2026-09-30T12:30:10Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-09-30T12:30:46Z",
+      "name": "owner-login",
+      "reason": null,
+      "started_at": "2026-09-30T12:30:45Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-09-30T12:30:46Z",
+      "name": "license",
+      "reason": null,
+      "started_at": "2026-09-30T12:30:46Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-09-30T12:33:28Z",
+      "name": "setup",
+      "reason": null,
+      "started_at": "2026-09-30T12:30:46Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-09-30T12:33:29Z",
+      "name": "seed",
+      "reason": "domain create returned HTTP 409: {'error': 'no managed authoritative DNS engine is active; choose and activate BIND or PowerDNS first', 'code': 'DNS_SERVER_REQUIRED', 'action': '/settings?section=dns'}",
+      "started_at": "2026-09-30T12:33:28Z",
+      "verdict": "failed"
+    },
+    {
+      "finished_at": null,
+      "name": "pre-state",
+      "reason": "a required earlier step did not pass: seed",
+      "started_at": "2026-09-30T12:33:29Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "arm",
+      "reason": "a required earlier step did not pass: pre-state",
+      "started_at": "2026-09-30T12:33:29Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "owner-start",
+      "reason": "a required earlier step did not pass: arm",
+      "started_at": "2026-09-30T12:33:29Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "track",
+      "reason": "a required earlier step did not pass: owner-start",
+      "started_at": "2026-09-30T12:33:29Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "owner-continuation (required)",
+      "reason": "a required earlier step did not pass: track",
+      "started_at": "2026-09-30T12:33:29Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "terminal",
+      "reason": "a required earlier step did not pass: owner-start",
+      "started_at": "2026-09-30T12:33:29Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "collect",
+      "reason": "a required earlier step did not pass: seed",
+      "started_at": "2026-09-30T12:33:29Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "verdicts",
+      "reason": "a required earlier step did not pass: collect, owner-start",
+      "started_at": "2026-09-30T12:33:29Z",
+      "verdict": "not-run"
+    }
+  ]
+}

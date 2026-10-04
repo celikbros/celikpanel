@@ -1,0 +1,11 @@
+#!/bin/bash
+C=pair-accept__bind-arch__pdns-debian13__p5t2
+H=$(printf %s "$C" | sha256sum | cut -c1-24)
+KH=/var/tmp/cp-pair5-work/cells/$H/ssh-known-hosts
+O=/root/cp-pair5/obs/p5t2
+sshn() { port=$1; shift; timeout 120 ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$KH -i /var/tmp/cp-pair5-key/id_ed25519 -p $port celik@127.0.0.1 "$@"; }
+PROBE=/root/cp-pair5/driver/deploy/e2e/dns-pair-acceptance/guest_probe.py
+sshn 2202 sudo -n /usr/bin/python3 - native --engine bind --zone pair-accept.test --catalog catalog-c000020b.celikpanel.invalid < $PROBE > $O/arch-native-after-run.json 2>&1
+sshn 2201 sudo -n /usr/bin/python3 - native --engine pdns --zone pair-accept.test --catalog catalog-c000020b.celikpanel.invalid < $PROBE > $O/debian13-native-after-run.json 2>&1
+sshn 2201 sudo -n /usr/bin/python3 - catalog --server 192.0.2.11 --catalog catalog-c000020b.celikpanel.invalid < $PROBE > $O/catalog-after-run.json 2>&1
+for f in $O/*-native-after-run.json $O/catalog-after-run.json; do echo "== $f"; python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d.get("native_state"), json.dumps({k:d.get(k) for k in ("members","serial","transferred","zone_files","rndc","database")})[:700])' $f; done

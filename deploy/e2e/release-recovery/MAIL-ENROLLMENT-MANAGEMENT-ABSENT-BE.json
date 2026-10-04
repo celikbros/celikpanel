@@ -1,0 +1,314 @@
+{
+  "schema": "celikpanel-native-mail-enrollment-evidence/v1",
+  "date": "2026-09-23",
+  "disposable_vm_only": true,
+  "production_source": "efe3f53ef7a2dc17603cbc805333fdc9b4acc064",
+  "production_files": {
+    "bin/agent": "9e0a729df2e0e025c272d2c80df497fb1efd65cfd939abc354dd8c88874d09d6",
+    "bin/agent-native-contract.json": "c8a097e951ac29d99f5a9bd71e6fdcd3d1b3c6c492c8444db1e972b04334d23e",
+    "bin/recovery": "be05ac0c1dccc4fd1e56467e8b48084da1ce6f45520e8ca6ff17650deaf69892",
+    "bin/mail-renewal-runtime/celikpanel-mail-renewal.service": "67b18a0fce0fe599b7a6b4bed0402e54df7b088874bcdc53f11e85ccccea6a13",
+    "bin/mail-renewal-runtime/renew": "bf1ba117b83f0e5fac64b2feb2a4f0c8bbe48d496a65e57c9fb4f19a317bc364",
+    "bin/mail-renewal-runtime/runtime.manifest": "2512b14616a53b53a6431ce5b2b47fbecfccf3265ee00072283ba882132ef46f",
+    "bin/mail-renewal-runtime/celikpanel-mail-renewal.timer": "8f4a40a06ace0a4ea845c214504fb5ee2e77e020e0b377828a59d78e948bf8df",
+    "bin/mail-renewal-runtime/celikpanel-mail-host-cert": "248aa1ab613da1650889071048ac5d80194a99d3627ecf15065290181c1c1e58"
+  },
+  "generation": "7cc2bc4524a3b96d13e0c5ed4e7776055dc4594ecf4e117bb53fc1e3a7d218f9",
+  "fixture": {
+    "source": "cmd/agent/mail_enrollment_boot_vm_test.go",
+    "source_sha256": "8a01f303835f391d8ee2bfe92ec33d30798830916d4af7b24ca5fbb44cfeabe3",
+    "binary_sha256": "af793632475105e00a4a4f8def369f058bfe8ccfcae378480514d4d31fbf9759",
+    "injection": "test-only wrapper SIGKILL after actual systemd timer start/stop, before receipt; QMP reset with admission Agent and declaration absent",
+    "baseline": "explicit disposable baseline of exact recognized legacy hook; prior independent files and all ledger history retained",
+    "continuation": "unmodified production helper and its native boot unit; no postboot repair script"
+  },
+  "trials": [
+    {
+      "platform": "arch",
+      "direction": "forward",
+      "operation": "4ee936eb55a6015e1e8e9f7361f39fdd",
+      "cut": "native_timer_start_returned",
+      "cut_exit": -9,
+      "before_boot": "71b7013a-0f2b-454a-a7fd-217499453c88",
+      "after_boot": "cc9370d9-7cc6-4ee7-9288-6c71da1590ef",
+      "terminal": "published",
+      "automatic_boot_dispatch": true,
+      "manual_postboot_continuation_needed": false,
+      "management_files_absent": [
+        "/opt/celikpanel/bin/agent",
+        "/opt/celikpanel/bin/panel",
+        "/opt/celikpanel/bin/agent-native-contract.json"
+      ],
+      "volatile_locks_restored": true,
+      "old_history_unchanged": true,
+      "immutable_before_evidence_unchanged": true,
+      "fresh_start_without_agent_refused": true,
+      "explicit_terminal_continuation_without_agent_verified": true,
+      "terminal_retry_bytes_unchanged": true,
+      "ledger_sha256": "609c97825ce6db36c3c8554c860af3b6b2e88bbd8911fd8f7ca8c59f4eacfc77",
+      "receipts": {
+        "4ee936eb55a6015e1e8e9f7361f39fdd.boot-armed.json": "238cd6dbc71f55aea3c94064ce0b91dae0e0b70995ea04db3c81b37de81bd37d",
+        "4ee936eb55a6015e1e8e9f7361f39fdd.boot-attempt-1.json": "a65b65cb3e70ecdd42585f56c17c8797c60d1fbec3d781f8de06bce22055ac04",
+        "4ee936eb55a6015e1e8e9f7361f39fdd.boot-plan.json": "fbd9b3c1eaef656d9e203865892c5494515cc88842b31b27eb2acdf691117629",
+        "4ee936eb55a6015e1e8e9f7361f39fdd.enrollment-forward.json": "c58739d9707d14ebb94faa61db6b5a4de9594207ceac93eb3de23d51694c3788",
+        "4ee936eb55a6015e1e8e9f7361f39fdd.enrollment.json": "4702922271c1845271761844c76e68bedf61f943da9f10fef5ffe034af216dea",
+        "4ee936eb55a6015e1e8e9f7361f39fdd.files-forward.json": "441b9f4b7c0cc308e820ec5c610657f37e74b5c3b8d8e673fb51b9cad19ca8cc",
+        "4ee936eb55a6015e1e8e9f7361f39fdd.files.json": "3c050e6285586d46a291736ca699a45b30de338750ad1dc553dc033affd636f1",
+        "4ee936eb55a6015e1e8e9f7361f39fdd.json": "11600f6b64948e3ee4d457980afb33a5698c706dd32f54227ac763b82dee2f8e",
+        "4ee936eb55a6015e1e8e9f7361f39fdd.loaded-forward-intent.json": "f5d37018b1aba3185108e2578162bf4d82a41e1341e75be02baa0ca147dfd21d",
+        "4ee936eb55a6015e1e8e9f7361f39fdd.loaded-forward.json": "f5d37018b1aba3185108e2578162bf4d82a41e1341e75be02baa0ca147dfd21d",
+        "4ee936eb55a6015e1e8e9f7361f39fdd.timer-activity-forward-attempt-1.json": "a98427129c74dd0ae5bfa0ee3e4908478b2ba777e68e62bd15a7898ab76daeef",
+        "4ee936eb55a6015e1e8e9f7361f39fdd.timer-activity-forward-intent.json": "0a40e6eeffc93459664c4c70acd356bc577e735b9bfb4a2f9634f29d75ead95a",
+        "4ee936eb55a6015e1e8e9f7361f39fdd.timer-activity-forward.json": "0a40e6eeffc93459664c4c70acd356bc577e735b9bfb4a2f9634f29d75ead95a",
+        "4ee936eb55a6015e1e8e9f7361f39fdd.timer-enable-forward.json": "86ad7922c5ae0f00a19fd67687ffa90b561d7170f85546ee3d23fea0afa5ba78",
+        "4ee936eb55a6015e1e8e9f7361f39fdd.timer-enable.json": "69a682f918d8b2bea4c1f31fd94ba495187c755f0251aad24bcb882c2f2f2f29",
+        "4ee936eb55a6015e1e8e9f7361f39fdd.timer-parent-ready.json": "00113047254602ccc72964828f107873e0872fd11aaac9f28f205d3181ba6f8c",
+        "4ee936eb55a6015e1e8e9f7361f39fdd.timer-parent.json": "a78f10e66a9c227e85da81b49a87a22c1f5be217969e2bc9ca0d60254984bc0f"
+      },
+      "timer_enabled": true,
+      "timer_active": true
+    },
+    {
+      "platform": "arch",
+      "direction": "rollback",
+      "operation": "945598fd820c6dfcc4b6c71d7f4a3d89",
+      "cut": "native_timer_stop_returned",
+      "cut_exit": -9,
+      "before_boot": "cc9370d9-7cc6-4ee7-9288-6c71da1590ef",
+      "after_boot": "996c44a1-af87-47e1-a42b-9cf57eaf8f4d",
+      "terminal": "restored",
+      "automatic_boot_dispatch": true,
+      "manual_postboot_continuation_needed": false,
+      "management_files_absent": [
+        "/opt/celikpanel/bin/agent",
+        "/opt/celikpanel/bin/panel",
+        "/opt/celikpanel/bin/agent-native-contract.json"
+      ],
+      "volatile_locks_restored": true,
+      "old_history_unchanged": true,
+      "immutable_before_evidence_unchanged": true,
+      "fresh_start_without_agent_refused": true,
+      "explicit_terminal_continuation_without_agent_verified": true,
+      "terminal_retry_bytes_unchanged": true,
+      "ledger_sha256": "3796cac78f6764bc17270d86cd7467bb8ed4aad9ffad07f3f0ab985faf00e470",
+      "receipts": {
+        "945598fd820c6dfcc4b6c71d7f4a3d89.boot-armed.json": "9b77f6412488cf483b3f52fd287a95b167b04db6e431bb92c723d0a3ae077db3",
+        "945598fd820c6dfcc4b6c71d7f4a3d89.boot-attempt-1.json": "c884c063f58999c093a14dfa500dd66e1147649c493e7f8473c183f27869c801",
+        "945598fd820c6dfcc4b6c71d7f4a3d89.boot-plan.json": "6a50289fa44a0628b4ae2633623220519594bd4638fffed6e58045610ec279ab",
+        "945598fd820c6dfcc4b6c71d7f4a3d89.enrollment-enable-rollback-attempt-1.json": "0d841a43453c9fc4c5f48a2f71ff065696cedbc670e6bbc13da32c110827e6ca",
+        "945598fd820c6dfcc4b6c71d7f4a3d89.enrollment-rollback-intent.json": "9b8948d2424106a26e2b51ee3b5b8844a3127c4694ae447c11a69ecd112e4ebd",
+        "945598fd820c6dfcc4b6c71d7f4a3d89.enrollment-rollback.json": "9b8948d2424106a26e2b51ee3b5b8844a3127c4694ae447c11a69ecd112e4ebd",
+        "945598fd820c6dfcc4b6c71d7f4a3d89.enrollment.json": "fd58a70062493c90abcaea55aca41d98672b99ed7474ccf9831cd70a643c514a",
+        "945598fd820c6dfcc4b6c71d7f4a3d89.files-forward.json": "c1dbbb163ff18a2a79a0bb1a29f49244ae8f3a7a5d47514e409438bd943b2f5b",
+        "945598fd820c6dfcc4b6c71d7f4a3d89.files-rollback-intent.json": "8d74806cfa0f47a795228ef705a4e35a6d0e81e88f187d176c40c63b02ff03b5",
+        "945598fd820c6dfcc4b6c71d7f4a3d89.files-rollback.json": "8d74806cfa0f47a795228ef705a4e35a6d0e81e88f187d176c40c63b02ff03b5",
+        "945598fd820c6dfcc4b6c71d7f4a3d89.files.json": "ec13ca274b81c0dacbfe68adf94e5b08a48ba5522d64611b423f470da56555ca",
+        "945598fd820c6dfcc4b6c71d7f4a3d89.json": "a9678021b0113048aa9e17c954e76d6d7df593036bfa1515bf2b529e42bab730",
+        "945598fd820c6dfcc4b6c71d7f4a3d89.loaded-forward-intent.json": "d7833ab2b3a248324dd1c37351d05090528ea76fd722211af6d4bee848ef379f",
+        "945598fd820c6dfcc4b6c71d7f4a3d89.loaded-forward.json": "d7833ab2b3a248324dd1c37351d05090528ea76fd722211af6d4bee848ef379f",
+        "945598fd820c6dfcc4b6c71d7f4a3d89.loaded-rollback-intent.json": "5720e3b0d15559cee143951fbd0832b932cac66c2e0ec9dd43bf496374327525",
+        "945598fd820c6dfcc4b6c71d7f4a3d89.loaded-rollback.json": "5720e3b0d15559cee143951fbd0832b932cac66c2e0ec9dd43bf496374327525",
+        "945598fd820c6dfcc4b6c71d7f4a3d89.timer-activity-forward-attempt-1-failed.json": "f30d0928eaf4eccff8f3e46ba6abdb947d855bc4ee8c30e1fafaf2706e96fdaa",
+        "945598fd820c6dfcc4b6c71d7f4a3d89.timer-activity-forward-attempt-1.json": "fcb1c8f1c090f45e382816b90e4aaa16cb19adde89f89bb9ca0eb956e0b6c618",
+        "945598fd820c6dfcc4b6c71d7f4a3d89.timer-activity-forward-intent.json": "d43d994205c9d3cdcdae595d1896332f3a6b8e408623a6e5e2a30420f2d20f01",
+        "945598fd820c6dfcc4b6c71d7f4a3d89.timer-activity-rollback-attempt-1.json": "c18b8da9e46c8b8d023d00802e38f8e1b7f49cb3066bcf9a2e3de2fb41c7c311",
+        "945598fd820c6dfcc4b6c71d7f4a3d89.timer-activity-rollback-attempt-2.json": "6389a41ff7ab2b6e1bf610f25a287f77db4466bd0b7e580373a55e4002ac284c",
+        "945598fd820c6dfcc4b6c71d7f4a3d89.timer-activity-rollback-intent.json": "56221c06a35809a52d9a403f7418ac49c11cfab4b5e4cd955bb85af83de4bf3d",
+        "945598fd820c6dfcc4b6c71d7f4a3d89.timer-activity-rollback.json": "56221c06a35809a52d9a403f7418ac49c11cfab4b5e4cd955bb85af83de4bf3d",
+        "945598fd820c6dfcc4b6c71d7f4a3d89.timer-enable-forward.json": "89da9f9e0ef76f9c154e10333247c63b08888886bc90c40ead43793df67073b6",
+        "945598fd820c6dfcc4b6c71d7f4a3d89.timer-enable-rollback-intent.json": "606b86cc0821c98765981ae586f9f1176d3f52335fc9bcbbd8af898dfd0966cb",
+        "945598fd820c6dfcc4b6c71d7f4a3d89.timer-enable-rollback.json": "606b86cc0821c98765981ae586f9f1176d3f52335fc9bcbbd8af898dfd0966cb",
+        "945598fd820c6dfcc4b6c71d7f4a3d89.timer-enable.json": "21c43bd146c2b350411f3a23bf752b62de435ad710719dff15816c136c077a5d",
+        "945598fd820c6dfcc4b6c71d7f4a3d89.timer-parent-ready.json": "9484b324378970eddb8376fb1c23b7aea260df0ede8171edf3fa68dca42d2882",
+        "945598fd820c6dfcc4b6c71d7f4a3d89.timer-parent.json": "f82efdf3544709cabd8c9e99a3cbd9ee419ee56f8aa58aa5836e08187a2571c1"
+      },
+      "timer_units_absent": true,
+      "legacy_hook_restored": true
+    },
+    {
+      "platform": "debian13",
+      "direction": "forward",
+      "operation": "b3f385ccc13ad4e357fcf86a4cb58398",
+      "cut": "native_timer_start_returned",
+      "cut_exit": -9,
+      "before_boot": "bf6d6172-996e-4b70-8326-d3163c05bbcb",
+      "after_boot": "aec96540-feed-4b7d-bfe4-018c05eaf70a",
+      "terminal": "published",
+      "automatic_boot_dispatch": true,
+      "manual_postboot_continuation_needed": false,
+      "management_files_absent": [
+        "/opt/celikpanel/bin/agent",
+        "/opt/celikpanel/bin/panel",
+        "/opt/celikpanel/bin/agent-native-contract.json"
+      ],
+      "volatile_locks_restored": true,
+      "old_history_unchanged": true,
+      "immutable_before_evidence_unchanged": true,
+      "fresh_start_without_agent_refused": true,
+      "explicit_terminal_continuation_without_agent_verified": true,
+      "terminal_retry_bytes_unchanged": true,
+      "ledger_sha256": "2c760ec98ec550362a198eafb82c10bea81b9f0c1d58367571d85aec9fb8cedf",
+      "receipts": {
+        "b3f385ccc13ad4e357fcf86a4cb58398.boot-armed.json": "623460c6a26e85c8cba4a1f9687150076afb21d9b5b1d98a46b2d14ae8c3eb98",
+        "b3f385ccc13ad4e357fcf86a4cb58398.boot-attempt-1.json": "fb50df9d8b386f9da5559ad1afb278f2471f81f9cc58a6e349eae0d6af49efab",
+        "b3f385ccc13ad4e357fcf86a4cb58398.boot-plan.json": "c76720015fa4d5d1311474d7afa56b60def9e5bf17db43a00f3432ce28366ad5",
+        "b3f385ccc13ad4e357fcf86a4cb58398.enrollment-forward.json": "a57c6591b1bdff9dadb114d0fa7fad2ea3a066993579b30dd80c6dffef668014",
+        "b3f385ccc13ad4e357fcf86a4cb58398.enrollment.json": "86080e1d8adee310a72772a0134d5acf9df2a61817d186b818cf76bd9603bc24",
+        "b3f385ccc13ad4e357fcf86a4cb58398.files-forward.json": "a926941edcff666b6d83984f1bad7f7df5c73c1fa803e565ecd72f19d73f25aa",
+        "b3f385ccc13ad4e357fcf86a4cb58398.files.json": "b16cf7eafe1e2e556ebe61757997030d72a7d4331d0cfa927bd6b8b2ba8b0807",
+        "b3f385ccc13ad4e357fcf86a4cb58398.json": "7a6e5294995350a87b52f1d5b53e31552b2db2f0afb1d5e7da68c45e6f959252",
+        "b3f385ccc13ad4e357fcf86a4cb58398.loaded-forward-intent.json": "a898b3fcf4d58cf0c492e3e51941fa2100c2463440d67d0166dd957fd30f5bbc",
+        "b3f385ccc13ad4e357fcf86a4cb58398.loaded-forward.json": "a898b3fcf4d58cf0c492e3e51941fa2100c2463440d67d0166dd957fd30f5bbc",
+        "b3f385ccc13ad4e357fcf86a4cb58398.timer-activity-forward-attempt-1.json": "eed6b27c7fe67d44441e45fcca4e669bc5ff02e0e0d89ad8cdb0e7b21c76d60d",
+        "b3f385ccc13ad4e357fcf86a4cb58398.timer-activity-forward-intent.json": "0ee0cd7e45b87c2a40523ed648f8be5b8c19461d8ff4482e90473544d372b48d",
+        "b3f385ccc13ad4e357fcf86a4cb58398.timer-activity-forward.json": "0ee0cd7e45b87c2a40523ed648f8be5b8c19461d8ff4482e90473544d372b48d",
+        "b3f385ccc13ad4e357fcf86a4cb58398.timer-enable-forward.json": "9ce7e2190f7bd756a43e5f4fd3f0cd49071851c3ee35e19f45b7ccb8cd7560e2",
+        "b3f385ccc13ad4e357fcf86a4cb58398.timer-enable.json": "65a57fd3c875e4b9ee6e5de27869b3c9ac43c54b48d374c2a2193909fb7ac989",
+        "b3f385ccc13ad4e357fcf86a4cb58398.timer-parent-ready.json": "b4c823fc6860004b9a2ac1ea950e3c5bf3efac27bed8fbdf0095c57f255a60a5",
+        "b3f385ccc13ad4e357fcf86a4cb58398.timer-parent.json": "8b995ad66c7553f83b384b36d6ef65e72496803a63b673e505d27c5ab207013b"
+      },
+      "timer_enabled": true,
+      "timer_active": true,
+      "workload_file_count": 61,
+      "workload_files_unchanged": true,
+      "smtp_starttls_verified": true,
+      "imap_tls_verified": true,
+      "leaf_sha256": "2de247fc73a06d582bb53c9cc90a1439d7da22da05f1491a381eeb8b20d6f5f7"
+    }
+  ],
+  "preserved_failed_observations": [
+    {
+      "file": "mail-retained-forward-observe.log",
+      "reason": "SSH reset during VM startup; no guest execution or terminal claim"
+    },
+    {
+      "file": "mail-retained-forward-observe-retry1.log",
+      "reason": "SSH reset during VM startup; no guest execution or terminal claim"
+    }
+  ],
+  "local_evidence_root": "/var/tmp/cp-release-drill-20260922-be",
+  "evidence": {
+    "mail-retained-debian-forward-native-result.json": {
+      "sha256": "aaaf094d0d54ce655525febc9eb8b2ce3abe2e4b5d16d9365d55f5dfe58d6621",
+      "bytes": 27124
+    },
+    "mail-retained-debian-forward-native.intent": {
+      "sha256": "aa3473b2148855fc1b699837443979b18468114bf26548249c356d22b1f6a547",
+      "bytes": 1731
+    },
+    "mail-retained-debian-forward-native.log": {
+      "sha256": "c7c5528fffffe063582633d76cbf135d711006a43799832b69ceb6626ff6deb7",
+      "bytes": 27124
+    },
+    "mail-retained-debian-forward-native.script": {
+      "sha256": "853bf17a6505026eb85c03275d649036cc08e30b9b05aa58c636bfcfc1f3d493",
+      "bytes": 10969
+    },
+    "mail-retained-debian-forward-observe.json": {
+      "sha256": "7de220b09e79469b80cb429a31b49485d38fce0c80830c5e7c2eefc3e7e91c4c",
+      "bytes": 4910
+    },
+    "mail-retained-debian-forward-observe.log": {
+      "sha256": "29a8757305de040a59136b1f9e5c0a86c1dc328ffa44a40092fd3dc73d3d238c",
+      "bytes": 5565
+    },
+    "mail-retained-debian-forward-observe.script": {
+      "sha256": "55685b123e16ed1368de6450a625e452390bd197ae584fc870d33fe2a279c4f3",
+      "bytes": 32143
+    },
+    "mail-retained-debian-forward-qmp-reset.intent": {
+      "sha256": "66b990580c4c95be7acc766f8a70fb56de1cb3d9ef069b20f661ce494f4c79e8",
+      "bytes": 196
+    },
+    "mail-retained-forward-native-result.json": {
+      "sha256": "3b8311286e8c7b57622a4197417ecd22a4147bbb2e25ebd903cb25ce193bed6c",
+      "bytes": 11197
+    },
+    "mail-retained-forward-native.intent": {
+      "sha256": "c0850bdb30d7603116c64794ea98a0adc070477a17601bdc08cb1bdeaf304ab7",
+      "bytes": 1731
+    },
+    "mail-retained-forward-native.log": {
+      "sha256": "0f8611fa73382a76e7612f75788c9e2c224e40ad9353b2ad2f171b7e4cabdcdd",
+      "bytes": 11197
+    },
+    "mail-retained-forward-native.script": {
+      "sha256": "59410c4417db79e5bd450905a9b744695a7ece64d082f4fbc122c057c6bef9a8",
+      "bytes": 10288
+    },
+    "mail-retained-forward-observe-retry1.log": {
+      "sha256": "c59cfdcb381dc6fa99becb8c55a16e58ffd1615fa07b098aac22540ba1c3cd37",
+      "bytes": 100
+    },
+    "mail-retained-forward-observe-retry1.script": {
+      "sha256": "fb1931a13d27a6feebd552f8a5fd244d205ef82505b1d3273f91f3505da974fe",
+      "bytes": 15173
+    },
+    "mail-retained-forward-observe-retry2.log": {
+      "sha256": "d6e116a414a3a0174dfe6ce84cfb74f1d1f0c4bf18a5de68cb84598fd40760da",
+      "bytes": 4942
+    },
+    "mail-retained-forward-observe-retry2.script": {
+      "sha256": "fb1931a13d27a6feebd552f8a5fd244d205ef82505b1d3273f91f3505da974fe",
+      "bytes": 15173
+    },
+    "mail-retained-forward-observe.json": {
+      "sha256": "2ce61af879b9d943c999b91129dd6400ab9e0ebaaafff7d3f12523c6e733f4d6",
+      "bytes": 4431
+    },
+    "mail-retained-forward-observe.log": {
+      "sha256": "c59cfdcb381dc6fa99becb8c55a16e58ffd1615fa07b098aac22540ba1c3cd37",
+      "bytes": 100
+    },
+    "mail-retained-forward-observe.script": {
+      "sha256": "fb1931a13d27a6feebd552f8a5fd244d205ef82505b1d3273f91f3505da974fe",
+      "bytes": 15173
+    },
+    "mail-retained-forward-qmp-reset.intent": {
+      "sha256": "32689d773cdc97740f604dfce2501edd783082539a348f8b8e3a23ed7bcfe5ec",
+      "bytes": 177
+    },
+    "mail-retained-inverse-native-result.json": {
+      "sha256": "0aaeb5a6f81a895ec1afe404a53f4450ae814964bf2ade1f0ef8da4b5746aaff",
+      "bytes": 12534
+    },
+    "mail-retained-inverse-native.intent": {
+      "sha256": "e5b6578467b76121d32e0b9c805db3a1b7262b847cadb839432be7f166a08706",
+      "bytes": 1731
+    },
+    "mail-retained-inverse-native.log": {
+      "sha256": "a1fee6fd94b5d1f0f51e5c4739e2331cf735c7fb0c577a11b003450a7c355cdd",
+      "bytes": 12534
+    },
+    "mail-retained-inverse-native.script": {
+      "sha256": "885a4a89818bb10d85a5acfc8c88c298229dad78db58ed5b7bfbf31fe897f80c",
+      "bytes": 9299
+    },
+    "mail-retained-inverse-observe.json": {
+      "sha256": "29ef186c86bebdf2e39d52f2509b98bf5b75c0afe21c27f46e79a147e1e6ba9e",
+      "bytes": 6085
+    },
+    "mail-retained-inverse-observe.log": {
+      "sha256": "a132c2097c703e8a2775f6549a01c31ca8b6d11820c6e4886a6f63cc78a6e9e8",
+      "bytes": 6598
+    },
+    "mail-retained-inverse-observe.script": {
+      "sha256": "ae8c6090e8717277bbfcf05075538c2bf87417e8dadb94a45979841b6cf54bf8",
+      "bytes": 16510
+    },
+    "mail-retained-inverse-qmp-reset.intent": {
+      "sha256": "492ea7a0aefacc2a100fa5c4a07f45ae0d632f94db1575124f7f1e6c4ef192fc",
+      "bytes": 178
+    }
+  },
+  "limits": [
+    "No installed owner server changed and no release published.",
+    "Only newly admitted operations bound to this helper generation; old helpers are not retroactively repaired.",
+    "Arch forward and inverse; Debian forward. Not every fault/checkpoint/platform combination.",
+    "Root test fixture admits the native operation; this is not full UI setup or signed installed-update acceptance.",
+    "Inverse proves exact accepted legacy restoration; the legacy hook still depends on its Agent and is not claimed independent.",
+    "Debian proves existing SMTP STARTTLS/IMAP TLS and 61 configuration/certificate files, not fresh ACME renewal, mail delivery, or mailbox authentication.",
+    "Retained group identity, common ledger, journals, helper kit, systemd, and host locks remain required.",
+    "P0.1-P0.5 remain partial; full fault/workload matrix and old application rollback compatibility are not closed."
+  ]
+}

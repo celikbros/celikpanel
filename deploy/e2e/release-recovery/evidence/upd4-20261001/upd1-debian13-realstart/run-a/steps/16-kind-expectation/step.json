@@ -1,0 +1,127 @@
+{
+  "checks": {
+    "cli_text_source": {
+      "commit": "dd4adede7c24bd1ad92118612fd379beb7874b0b",
+      "path": "cmd/recovery/main.go",
+      "role": "realstart",
+      "sha256": "5da9f0e4744a7e958b4043dae9204098dfa5e1b0675ce9c836042f8864a7e31e"
+    },
+    "judged": {
+      "expected": [
+        "check-passed",
+        "owner-retry-not-run",
+        "web-catalogue",
+        "workloads-kept-running"
+      ],
+      "findings": [
+        "the update's failure line does not carry panel_start_unverified: ['update_failed']",
+        "failure sidecar: {'present': False, 'valid': False, 'code': None}",
+        "completion.pending was never observed",
+        "installed release: baseline",
+        "the root CLI never printed the product's panel_start_unverified text (panel log command, no supported return) in EN and TR; it may be shown only while previous_failure=update_failed and the phase is failed/recovering",
+        "no CLI sample named the panel log command in both languages: {'en': False, 'tr': False}",
+        "the root CLI did not print the product's paused text in EN and TR",
+        "Panel window 'never-down', expected down-from-update-until-end for this fixture"
+      ],
+      "kind": "real-start",
+      "native_evidence": false,
+      "unknown": [
+        "forward-dispatch",
+        "paused",
+        "no-rollback",
+        "retry-command-printed"
+      ],
+      "verdict": "finding"
+    },
+    "observations": {
+      "attempts": {
+        "automatic": [],
+        "automatic_count": 0,
+        "journal_admissions": [],
+        "owner": [],
+        "owner_count": 0
+      },
+      "check_reasons": [],
+      "cli": {
+        "by_key": {},
+        "mismatches": [],
+        "panel_log_command": "sudo journalctl -u celikpanel-panel -n 50",
+        "panel_log_command_seen": {
+          "en": false,
+          "tr": false
+        },
+        "recorded_cause_lines": {
+          "en": 0,
+          "tr": 0
+        }
+      },
+      "completion_marker_seen": false,
+      "database": "equal-except-volatile",
+      "final": null,
+      "installed": "baseline",
+      "outcome": "not-terminal",
+      "owner_retry_run": false,
+      "panel_verdict": "never-down",
+      "printed_retry_command": null,
+      "receipt_dispatches": null,
+      "receipt_phases": null,
+      "sidecar": {
+        "code": null,
+        "present": false,
+        "valid": false
+      },
+      "update_card": null,
+      "update_failure_codes": [
+        "update_failed"
+      ],
+      "update_failure_lines": [
+        {
+          "code": "update_failed",
+          "reason": "panel service operations are not idle; update refused; quiesce was safely aborted, rerun the exact trusted update",
+          "state": "unchanged"
+        }
+      ],
+      "views": {
+        "last": {
+          "offline_page_served": "panel-reachable",
+          "panel_recovery_status": true,
+          "panel_update_status": true,
+          "root_cli": true
+        },
+        "ssh_owner_view": "not attempted (recovery view needs an interactive SSH terminal and a one-time code)",
+        "summary": {
+          "panel_recovery_status": {
+            "reachable": 50,
+            "samples": 50
+          },
+          "panel_update_status": {
+            "reachable": 50,
+            "samples": 50
+          },
+          "root_cli": {
+            "reachable": 50,
+            "samples": 50
+          }
+        }
+      },
+      "web_keys": [
+        "recovery.next.failed",
+        "recovery.next.running",
+        "recovery.phase.failed",
+        "recovery.phase.running",
+        "recovery.reason.update_failed"
+      ],
+      "web_keys_missing": [],
+      "workloads": {
+        "cron": "never-interrupted",
+        "dns": "not-provided-external-dns",
+        "smtp": "never-interrupted",
+        "web": "never-interrupted"
+      }
+    }
+  },
+  "finished_at": "2026-09-30T23:21:49Z",
+  "name": "kind-expectation",
+  "started_at": "2026-09-30T23:21:49Z",
+  "verdict": "failed"
+}

@@ -1,0 +1,11 @@
+wall=2026-09-29T16:44:27.472834478Z
+== dpkg-statoverride --list (read-only)
+root bind 1775 /var/cache/bind
+root messagebus 4754 /usr/lib/dbus-1.0/dbus-daemon-launch-helper
+rc=0
+== dpkg-statoverride --list /var/cache/bind (read-only)
+root bind 1775 /var/cache/bind
+rc=0
+== dpkg-query -S /var/cache/bind
+dpkg-query: no path found matching pattern /var/cache/bind
+rc=1

@@ -1,0 +1,28 @@
+{
+  "schema": "celikpanel/native-mail-observation/v1",
+  "source_commit": "32b3b548d4fca64b27638a8ac380aa63e4fcbade",
+  "test_binary_sha256": "c3816e91d7c695f7bfbfaccefb06d5e1f7d68e972fccbeb7eaf451cd91308d5d",
+  "lab": {
+    "cell_id": "release-recovery__33fdf23ab0fbe25f",
+    "node": "debian13"
+  },
+  "base_record_sha256": "d815d123afb93d0e3a55af3529f5eed3e1376f906b62fea54a1b6a96312c7ce7",
+  "scope": {
+    "actual_publication_preflight": true,
+    "owner_edit_and_explicit_resolution": true,
+    "pending_and_selection_preserved": true,
+    "installed_management_absent": true,
+    "independent_renewal": false,
+    "post_publication_recovery": false
+  },
+  "logs": {
+    "mail-native-observation-result.log": {
+      "sha256": "2cfcc8677a0f50dba141dbc5d6e8c728875e3d0621b2298ac45ed6bcd06132cb",
+      "text": "c3816e91d7c695f7bfbfaccefb06d5e1f7d68e972fccbeb7eaf451cd91308d5d  /root/celikpanel-release-recovery-lab/mail-observation.test\nfbd1f0a7-141d-4fb7-b01a-d23dbd941f83\nSep 22 07:46:08 dns-debian13 systemd[1]: Starting celikpanel-lab-mail-native-observation.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-observation.test -test.v \"-test.run=^TestMailHostCertificateDisposableVMOwnerConfigurationBarrier\\$\" -test.timeout=90s...\nSep 22 07:46:08 dns-debian13 mail-observation.test[922]: === RUN   TestMailHostCertificateDisposableVMOwnerConfigurationBarrier\nSep 22 07:46:09 dns-debian13 mail-observation.test[922]:     mail_host_configuration_vm_test.go:134: owner edit preserved before certificate staging; pending renewal and selected trusted SMTP/IMAP leaf unchanged; explicit fixture owner resolution reverified; failed request=e479793f9d8ae3a36e0353e25ee18260 leaf=7713abe26e69887a166cd5c6efc39bb96be0f19cf6ec55428af1673924466a11\nSep 22 07:46:09 dns-debian13 mail-observation.test[922]: --- PASS: TestMailHostCertificateDisposableVMOwnerConfigurationBarrier (0.91s)\nSep 22 07:46:09 dns-debian13 mail-observation.test[922]: PASS\nSep 22 07:46:09 dns-debian13 systemd[1]: celikpanel-lab-mail-native-observation.service: Deactivated successfully.\nSep 22 07:46:09 dns-debian13 systemd[1]: Finished celikpanel-lab-mail-native-observation.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-observation.test -test.v \"-test.run=^TestMailHostCertificateDisposableVMOwnerConfigurationBarrier\\$\" -test.timeout=90s.\nResult=success\nExecMainStatus=0\nActiveState=inactive\nactive\nactive\n"
+    },
+    "mail-native-observation-witness.log": {
+      "sha256": "025ad58fe31d30626aca8630fb50dd7325ab61bc519cca0f9d61654f4e62361f",
+      "text": "fbd1f0a7-141d-4fb7-b01a-d23dbd941f83\ninstalled_agent_absent=yes\ninstalled_panel_absent=yes\n10fa437fd483fab44965602d2ed5ff2284057290dbbb46225ddbbfb595439beb  /var/lib/celikpanel-agent-private/mail-host-certificate-renewal.pending\n23ecc439da677841d319bb07baefffcd654384bc2ed565f5c97f01b5faa622e9  /etc/postfix/main.cf\n4a23ff8f467c7f369f2d973e58f184a2932235c3be3947cff93563c3391c6696  /etc/dovecot/conf.d/98-celikpanel-tls.conf\nsha256 Fingerprint=77:13:AB:E2:6E:69:88:7A:16:6C:D5:C6:EF:C3:9B:B9:6B:E0:F1:9C:F6:EC:55:42:8A:F1:67:39:24:46:6A:11\nsha256 Fingerprint=77:13:AB:E2:6E:69:88:7A:16:6C:D5:C6:EF:C3:9B:B9:6B:E0:F1:9C:F6:EC:55:42:8A:F1:67:39:24:46:6A:11\n"
+    }
+  }
+}

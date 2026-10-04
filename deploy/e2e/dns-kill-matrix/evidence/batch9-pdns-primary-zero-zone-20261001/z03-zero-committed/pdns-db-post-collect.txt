@@ -1,0 +1,22 @@
+== /var/lib/powerdns/pdns.sqlite3 size=98304 mtime_ns=1790730570858871160 sha256=65ce5e5d25cd62f269e8ecf92b64e3ccd8fbd62044171aa69de97911f2782f48
+   sibling /var/lib/powerdns/pdns.sqlite3-wal size=28872
+   sibling /var/lib/powerdns/pdns.sqlite3-shm size=32768
+tables: ['celikpanel_dns_engine_manifest_receipt', 'celikpanel_dns_zone_sync_receipts', 'celikpanel_dns_zone_sync_v3_receipts', 'comments', 'cryptokeys', 'domainmetadata', 'domains', 'records', 'supermasters', 'tsigkeys']
+-- table celikpanel_dns_engine_manifest_receipt rows=1 columns=['singleton', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'source_revision', 'zone_count', 'snapshot_bytes', 'schema']
+   celikpanel_dns_engine_manifest_receipt: {"singleton": 1, "engine": "pdns", "engine_epoch": 1, "request_id": "076c692ac1346f2b9c6a0df468b0e9aa", "owner_id": "53a2bef6b3bc78738ff1abfe9e2a30fb", "qualifier": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "source_revision": 0, "zone_count": 0, "snapshot_bytes": 0, "schema": "dns-engine-switch/v1"}
+-- table celikpanel_dns_zone_sync_receipts rows=0 columns=['domain', 'request_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table celikpanel_dns_zone_sync_v3_receipts rows=0 columns=['domain', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table comments rows=0 columns=['id', 'domain_id', 'name', 'type', 'modified_at', 'account', 'comment']
+-- table cryptokeys rows=0 columns=['id', 'domain_id', 'flags', 'active', 'published', 'content']
+-- table domainmetadata rows=1 columns=['id', 'domain_id', 'kind', 'content']
+   domainmetadata: {"id": 1, "domain_id": 1, "kind": "CATALOG-HASH", "content": "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="}
+-- table domains rows=1 columns=['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+   domains: {"id": 1, "name": "catalog-c000020a.celikpanel.invalid", "master": null, "last_check": null, "type": "PRODUCER", "notified_serial": 1, "account": "celikpanel-bind-catalog-v1", "options": null, "catalog": null}
+-- table records rows=2 columns=['id', 'domain_id', 'name', 'type', 'content', 'ttl', 'prio', 'disabled', 'ordername', 'auth']
+   records per domain: ["catalog-c000020a.celikpanel.invalid", 2]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "NS", 1]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "SOA", 1]
+   records: {"id": 1, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "NS", "content": "invalid.", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 2, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "SOA", "content": "invalid invalid 1790730570 60 30 3600 30", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+-- table supermasters rows=0 columns=['ip', 'nameserver', 'account']
+-- table tsigkeys rows=0 columns=['id', 'name', 'algorithm', 'secret']

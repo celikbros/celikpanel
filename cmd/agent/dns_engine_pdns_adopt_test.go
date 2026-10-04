@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -607,26 +606,6 @@ func TestPDNSAdoptionJournalEvidenceUsesRuntimeOwnerPolicy(t *testing.T) {
 	}
 }
 
-func TestPDNSAdoptionRollbackProvesConfigBeforeStateRestoration(t *testing.T) {
-	var order []string
-	err := rollbackPDNSAdoptionAfterConfigProof(
-		func() error { order = append(order, "proof"); return nil },
-		func() error { order = append(order, "rollback"); return nil },
-	)
-	if err != nil || !reflect.DeepEqual(order, []string{"proof", "rollback"}) {
-		t.Fatalf("rollback order=%v err=%v", order, err)
-	}
-	order = nil
-	proofErr := errors.New("unsafe config")
-	err = rollbackPDNSAdoptionAfterConfigProof(
-		func() error { order = append(order, "proof"); return proofErr },
-		func() error { order = append(order, "rollback"); return nil },
-	)
-	if !errors.Is(err, proofErr) || !reflect.DeepEqual(order, []string{"proof"}) {
-		t.Fatalf("rollback ran without config proof: order=%v err=%v", order, err)
-	}
-}
-
 func TestPDNSAdoptionTransactionBindingAcceptsOnlyExactSelfJournal(t *testing.T) {
 	manifest := testPDNSAdoptionManifest(
 		t, transport.DNSTopologyStandalone, "example.test",
@@ -711,7 +690,7 @@ func TestPDNSAdoptionRollbackNeverOverwritesDifferentJournal(t *testing.T) {
 	if _, err := transitionPDNSAdoptionJournalToRollback(
 		expected,
 		func() (dnsEngineSwitchJournal, bool, error) { return foreign, true, nil },
-		write,
+		write, errors.New("test rollback cause"),
 	); err == nil {
 		t.Fatal("rollback accepted a different current adoption journal")
 	}
@@ -729,6 +708,7 @@ func TestPDNSAdoptionRollbackNeverOverwritesDifferentJournal(t *testing.T) {
 			}
 			return nil
 		},
+		errors.New("test rollback cause"),
 	)
 	if err != nil || next.Phase != dnsSwitchPhaseRollingBack || writes != 1 {
 		t.Fatalf("exact rollback transition failed: next=%+v writes=%d err=%v", next, writes, err)

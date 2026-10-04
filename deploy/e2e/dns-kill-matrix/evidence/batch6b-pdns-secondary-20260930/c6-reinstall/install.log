@@ -1,0 +1,69 @@
+agent: OK
+agent.kill: OK
+celikpanel-agent.service: OK
+celikpanel-panel.service: OK
+dns-kill-run-cell.py: OK
+dns-kill-trigger: OK
+guest_bootstrap.sh: OK
+guest_recovery_probe.py: OK
+manifest.json: OK
+panel: OK
+web.tar: OK
+2026/09/29 16:39:32 Starting CelikPanel Agent...
+2026/09/29 16:39:32 Service mutation ledger initialized
+2026/09/29 16:39:32 Starting CelikPanel Backend...
+2026/09/29 16:39:32 Applied migration: 001_full_schema.sql
+2026/09/29 16:39:32 Applied migration: 002_auth.sql
+2026/09/29 16:39:32 Applied migration: 003_authz.sql
+2026/09/29 16:39:32 Applied migration: 004_accounts.sql
+2026/09/29 16:39:32 Applied migration: 005_projects.sql
+2026/09/29 16:39:32 Applied migration: 006_drop_placeholder_admin.sql
+2026/09/29 16:39:32 Applied migration: 007_service_scan_cache.sql
+2026/09/29 16:39:32 Applied migration: 008_site_usage.sql
+2026/09/29 16:39:32 Applied migration: 009_mail_catch_all.sql
+2026/09/29 16:39:32 Applied migration: 010_subdomains.sql
+2026/09/29 16:39:32 Applied migration: 011_entitlements.sql
+2026/09/29 16:39:32 Applied migration: 012_totp.sql
+2026/09/29 16:39:32 Applied migration: 013_backup_schedules.sql
+2026/09/29 16:39:32 Applied migration: 014_vpn_peers.sql
+2026/09/29 16:39:32 Applied migration: 015_ssl_secure_mail.sql
+2026/09/29 16:39:32 Applied migration: 016_metrics.sql
+2026/09/29 16:39:32 Applied migration: 017_panel_settings.sql
+2026/09/29 16:39:33 Applied migration: 018_hostname_namespace.sql
+2026/09/29 16:39:33 Applied migration: 019_hsts_retirement.sql
+2026/09/29 16:39:33 Applied migration: 020_ssl_lineage_identity.sql
+2026/09/29 16:39:33 Applied migration: 021_service_operations.sql
+2026/09/29 16:39:33 Applied migration: 022_service_operation_request_id.sql
+2026/09/29 16:39:33 Applied migration: 023_store_offerings.sql
+2026/09/29 16:39:33 Applied migration: 024_vpn_peer_state.sql
+2026/09/29 16:39:33 Applied migration: 025_auth_epoch.sql
+2026/09/29 16:39:33 Applied migration: 026_backup_schedule_status.sql
+2026/09/29 16:39:33 Applied migration: 027_backup_schedule_job_key.sql
+2026/09/29 16:39:33 Applied migration: 028_application_install_operations.sql
+2026/09/29 16:39:33 Applied migration: 029_additional_users.sql
+2026/09/29 16:39:33 Applied migration: 030_domain_deletion_operations.sql
+2026/09/29 16:39:33 Applied migration: 031_service_operation_data.sql
+2026/09/29 16:39:33 Applied migration: 032_dns_zone_sync_state.sql
+2026/09/29 16:39:33 Applied migration: 033_dns_engine_state.sql
+2026/09/29 16:39:33 Applied migration: 034_dns_engine_publication_switch_guard.sql
+2026/09/29 16:39:33 Applied migration: 035_dns_zone_generation_high_water.sql
+2026/09/29 16:39:33 Applied migration: 036_bind_paired_engine.sql
+2026/09/29 16:39:33 Applied migration: 037_dns_pair_identity_immutable.sql
+2026/09/29 16:39:33 Applied migration: 038_database_admin_account.sql
+2026/09/29 16:39:33 Applied migration: 039_server_setup_state.sql
+2026/09/29 16:39:33 Applied migration: 040_dns_management.sql
+2026/09/29 16:39:33 Applied migration: 041_server_setup_execution.sql
+2026/09/29 16:39:33 Applied migration: 042_remote_dns_publish.sql
+2026/09/29 16:39:33 Successfully applied 42 migrations
+2026/09/29 16:39:33 Starting CelikPanel Backend...
+Created symlink '/etc/systemd/system/multi-user.target.wants/celikpanel-agent.service' → '/etc/systemd/system/celikpanel-agent.service'.
+Created symlink '/etc/systemd/system/multi-user.target.wants/celikpanel-panel.service' → '/etc/systemd/system/celikpanel-panel.service'.
+Traceback (most recent call last):
+  File "<stdin>", line 2, in <module>
+  File "/usr/lib/python3.13/socket.py", line 864, in create_connection
+    raise exceptions[0]
+  File "/usr/lib/python3.13/socket.py", line 849, in create_connection
+    sock.connect(sa)
+    ~~~~~~~~~~~~^^^^
+ConnectionRefusedError: [Errno 111] Connection refused
+{"action": "install", "bundle_manifest_sha256": "054a7e469a4395666d18b9ea54d33d840b064b2e220dff91959b06d487d5c046", "cell_id": "bind__target-staged__after-write__standalone__peer-reachable", "controller": "/opt/celikpanel/libexec/dns-kill-run-cell.py", "guest_manifest": "/var/lib/celikpanel-dns-kill-matrix/manifest.json", "node": "debian13", "panel": "/opt/celikpanel/bin/panel", "stage": "/var/tmp/celikpanel-dns-kill-bootstrap-e3224bede2eda2ee", "systemd_agent_exec_is_untagged": true, "tagged_agent": "/opt/celikpanel/bin/agent.kill", "tagged_agent_expected_uid_gid": "root:celikpanel", "trigger": "/opt/celikpanel/bin/dns-kill-trigger", "untagged_agent": "/opt/celikpanel/bin/agent"}

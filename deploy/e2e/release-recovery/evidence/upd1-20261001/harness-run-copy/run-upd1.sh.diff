@@ -1,0 +1,50 @@
+--- /var/tmp/cp-upd1-run/run-upd1.orig.sh	2026-09-30 14:14:35.195271412 +0300
++++ /var/tmp/cp-upd1-run/run-upd1.v3.sh	2026-09-30 14:25:56.091483896 +0300
+@@ -14,12 +14,12 @@
+ # One cell per new lab. Never reuse a lab, an intent or a guest.
+ # The image cache defaults to /var/tmp/cp-v3n28/images (UPD1_IMAGE_CACHE overrides).
+ set -euo pipefail
+-HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
++HERE="/var/tmp/cp-upd1-run/harness/deploy/e2e/release-recovery"  # upd1 run copy: harness dir pinned (script lives outside the repo)
+ IMAGES=${UPD1_IMAGE_CACHE:-/var/tmp/cp-v3n28/images}
+-LAB="python3 $HERE/lab.py"
+-DRIVER="python3 $HERE/owner_update_trial.py"
++LAB=(python3 "$HERE/lab.py")  # upd1 run copy: array, the path contains a space
++DRIVER=(python3 "$HERE/owner_update_trial.py")  # upd1 run copy: array
+ 
+-usage() { sed -n '2,17p' "$0" >&2; exit 2; }
++usage() { sed -n '2,17p' "$HERE/run-upd1.sh" >&2; exit 2; }
+ [[ $# -ge 1 ]] || usage
+ command=$1; shift
+ case $command in
+@@ -29,7 +29,7 @@
+     dry-run)
+         [[ $# -eq 3 ]] || usage
+         cell=$1 artifacts=$2 name=$3
+-        exec $DRIVER plan --cell "$cell" --artifacts "$artifacts" --work-root "/var/tmp/cp-release-drill-$name" --dry-run
++        exec "${DRIVER[@]}" plan --cell "$cell" --artifacts "$artifacts" --work-root "/var/tmp/cp-release-drill-$name" --dry-run
+         ;;
+     cell)
+         [[ $# -ge 4 && $# -le 5 ]] || usage
+@@ -37,15 +37,15 @@
+         [[ $EUID -eq 0 ]] || { echo "run as root (fixture signing keys are root-only)" >&2; exit 2; }
+         root=/var/tmp/cp-release-drill-$name
+         [[ ! -e $root ]] || { echo "lab $root exists; every cell needs a NEW lab" >&2; exit 2; }
+-        $DRIVER plan --cell "$cell" --artifacts "$artifacts" --work-root "$root" > /dev/null
+-        $LAB prepare --work-root "$root" --image-cache "$IMAGES" --ssh-port "$port" --execute
+-        $LAB start --work-root "$root" --execute
+-        $LAB status --work-root "$root"
++        "${DRIVER[@]}" plan --cell "$cell" --artifacts "$artifacts" --work-root "$root" ${UPD1_SETUP_DRAFT_JSON:+--setup-draft-json "$UPD1_SETUP_DRAFT_JSON"} > /dev/null  # upd1 run copy v3: owner DNS pair choices
++        "${LAB[@]}" prepare --work-root "$root" --image-cache "$IMAGES" --ssh-port "$port" --execute
++        "${LAB[@]}" start --work-root "$root" --execute
++        "${LAB[@]}" status --work-root "$root"
+         status=0
+-        $DRIVER run --cell "$cell" --artifacts "$artifacts" --work-root "$root" --local-port "$local_port" --execute \
++        "${DRIVER[@]}" run --cell "$cell" --artifacts "$artifacts" --work-root "$root" --local-port "$local_port" ${UPD1_SETUP_DRAFT_JSON:+--setup-draft-json "$UPD1_SETUP_DRAFT_JSON"} --execute \
+             || status=$?
+         # Stop both guests; overlays, logs and evidence stay under $root.
+-        $LAB stop --work-root "$root" --execute || true
++        "${LAB[@]}" stop --work-root "$root" --execute || true
+         echo "UPD1 cell=$cell lab=$root driver_exit=$status evidence=$root/evidence/*/upd1"
+         exit "$status"
+         ;;

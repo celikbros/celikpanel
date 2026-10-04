@@ -1,0 +1,73 @@
+{
+  "outcome": "response",
+  "panel": "arch",
+  "purpose": "Domains handleDelete",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:28444"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:28444"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "DELETE",
+    "path": "/api/v1/domains/1"
+  },
+  "response": {
+    "elapsed_seconds": 0.6,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Wed, 30 Sep 2026 02:27:43 GMT"
+      ],
+      [
+        "Content-Length",
+        "160"
+      ]
+    ],
+    "json": {
+      "domain": "pair-accept.test",
+      "message": "Deletion is incomplete but retryable. Retry this deletion.",
+      "stage": "mail_runtime_cleanup",
+      "status": "deletion_pending"
+    },
+    "status": 202,
+    "text": null
+  }
+}

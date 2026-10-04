@@ -1,0 +1,86 @@
+{
+  "checks": {
+    "guest_fresh": true,
+    "helpers": {
+      "guest_bound_worker.py": "1ebff5e14d87761e72dbb3ca30c6f1aaad5a2aa5df7971f23ab81ae305bc3ea1",
+      "guest_owner_port_hold.py": "659353a4c39d665673d4330b71892dc95908d5b59bc1e8049a62fad0f30829f2",
+      "guest_owner_update_observer.py": "263ed14c59f24956aaf0e21ece5b74b9f81dbfe19ad652d89a87ea6e25f731af",
+      "guest_port_fault.py": "be8eb7008d50b343c1194bef8c32c14335fa750cd7be61c43a7c1e52b2d6efc6",
+      "guest_probe.py": "96e5ac2eb842d72af9707a70eceed56406031d16847199c46adabc16af1ec388",
+      "guest_recovery_fault.py": "4d9ae59bcbc2fdb4a6f42ade529c1b6b1f6366b726f92ba37058957b7696da50",
+      "guest_recovery_handoff.py": "21dfaa3bc76b56f463a706f50f8b6413a5325ebba978b113a0b4a59d2be4c0cf",
+      "guest_upd1_workload.py": "3d2f218f298b3ded3228b0089155b45e1e81c8dce9a8b8783e5face05287b8cf",
+      "guest_update_kill.py": "f996f1cedf3777ef12b1f44282dcb3208c61400f76f27c4ed3fe4e290f95cd26"
+    },
+    "origin_name_before": {
+      "hosts_mappings": [],
+      "nsswitch_hosts": "hosts:          files myhostname resolve [!UNAVAIL=return] dns",
+      "resolver_queried": false
+    },
+    "proofs": {
+      "baseline": {
+        "agent_sha256": "dc73a7cfd1fbaa32d478c3ff6749600059482f00587e864e0e74a2485f5fe0ca",
+        "commit": "f650e8c12d1d0c91764d201802008332f49b8d57",
+        "dns_owner_tools": [],
+        "files": 214,
+        "panel_sha256": "2e4523047636e8da7381e74659006a48f4c7980d79cc6648cf7096f16974afe7",
+        "release_policy": {
+          "current": 80,
+          "format": "celikpanel-release-sequence-policy-v1",
+          "previous": 79,
+          "previous_commit": "f3390addc85bbe92a0cc865448d9bb366e6b980a",
+          "previous_version": "v0.1.0-alpha.79",
+          "sha256": "a96fd08ef679ef714ce199052f035ad5e31e768a3c9510a0b93d31692001103d",
+          "version": "v0.1.0-alpha.80"
+        },
+        "source_proof": {
+          "acceptance_notice_sha256": "d87d2fc230340e59cdc870bf9042bb8093ea9780c32fe942e34ae6e8c97ce9cd",
+          "commit": "f650e8c12d1d0c91764d201802008332f49b8d57",
+          "exempted_from_git_proof": [
+            "ACCEPTANCE-LICENSE-BUILD.txt"
+          ],
+          "method": "real Git commit/tree and every packaged static source blob",
+          "tree": "ee6d75f688fac425179ee646a647a0ceb68283bc",
+          "verified_static_files": 107
+        },
+        "tree": "ee6d75f688fac425179ee646a647a0ceb68283bc"
+      },
+      "defective": {
+        "agent_sha256": "0ef0c5b3518b886ebe8937dc58d8c460cacd9a3f992448661366de8a7da0bc27",
+        "commit": "205abc6463d0bbc047a1c38765e102d2fcf3c05b",
+        "dns_owner_tools": [
+          "dns-owner-tools/README.md",
+          "dns-owner-tools/bind-peer-inspect",
+          "dns-owner-tools/dns-peer-enroll",
+          "dns-owner-tools/pdns-peer-inspect"
+        ],
+        "files": 195,
+        "panel_sha256": "b41f5823d26251949e7d16a1997b68a8aaa8651633e8d24747e7afa698213df8",
+        "release_policy": {
+          "current": 81,
+          "format": "celikpanel-release-sequence-policy-v1",
+          "previous": 80,
+          "previous_commit": "f650e8c12d1d0c91764d201802008332f49b8d57",
+          "previous_version": "v0.1.0-alpha.80",
+          "sha256": "6481645185a6cfedadd615fbca8f054379f543c005b26ec39b8fbfd4f423759c",
+          "version": "v0.1.0-alpha.81"
+        },
+        "source_proof": {
+          "acceptance_notice_sha256": "b39f78765f7c4a94c76a014738e6dcf17d7748c94739b2bd49af968d792ce59c",
+          "commit": "205abc6463d0bbc047a1c38765e102d2fcf3c05b",
+          "exempted_from_git_proof": [
+            "ACCEPTANCE-LICENSE-BUILD.txt"
+          ],
+          "method": "real Git commit/tree and every packaged static source blob",
+          "tree": "44585f688314296ef6ed1d553ec46e585b38abae",
+          "verified_static_files": 62
+        },
+        "tree": "44585f688314296ef6ed1d553ec46e585b38abae"
+      }
+    }
+  },
+  "finished_at": "2026-10-01T11:50:58Z",
+  "name": "preflight",
+  "started_at": "2026-10-01T11:50:54Z",
+  "verdict": "passed"
+}

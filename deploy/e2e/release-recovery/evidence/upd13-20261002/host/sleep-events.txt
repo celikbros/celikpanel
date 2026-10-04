@@ -1,0 +1,3 @@
+﻿# Windows System log, power events since 2026-10-02T20:29:00Z (read-only, Get-WinEvent)
+2026-10-02T21:28:18Z Microsoft-Windows-Kernel-Power id=506 Sistem modern bekleme konumuna giriyor
+2026-10-02T21:28:18Z Microsoft-Windows-Kernel-Power id=566 Sistem oturumu bootId:136 için 137.

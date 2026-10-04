@@ -1,0 +1,135 @@
+{
+  "checks": {
+    "boot_id": "b53684ac-db43-43a6-bd39-84a4016cc041",
+    "firewall": {
+      "equal_to_before": true,
+      "present": true,
+      "tables": [
+        "table inet celikpanel_fw"
+      ]
+    },
+    "first_sample_seconds_after_boot": 8.745891031,
+    "h20_cron_at_180_s": {
+      "stalls": [],
+      "stamps_in_boot": 3,
+      "verdict": "served"
+    },
+    "h20_window_past_180_s": 5.0,
+    "management_after_reboot": {
+      "disabled_and_stopped": true,
+      "enabled_and_active": false,
+      "units": {
+        "celikpanel-agent.service": {
+          "ActiveState": "inactive",
+          "UnitFileState": "disabled"
+        },
+        "celikpanel-panel.service": {
+          "ActiveState": "inactive",
+          "UnitFileState": "disabled"
+        }
+      }
+    },
+    "needed_panel": [],
+    "renewal_timer": {
+      "enabled_and_active": true,
+      "timers": {
+        "certbot.timer": {
+          "after": {
+            "ActiveState": "active",
+            "UnitFileState": "enabled"
+          },
+          "before": {
+            "ActiveState": "active",
+            "UnitFileState": "enabled"
+          },
+          "kept": true
+        }
+      },
+      "verdict": "as-before"
+    },
+    "samples": 38,
+    "served": {
+      "cron": {
+        "stalls": [],
+        "stamps_in_boot": 3,
+        "verdict": "served"
+      },
+      "db": {
+        "failing_after_first_ok": 0,
+        "failing_before_first_ok": 0,
+        "first_ok_seconds_after_boot": 8.745891031,
+        "samples": 38,
+        "verdict": "served"
+      },
+      "smtp": {
+        "failing_after_first_ok": 0,
+        "failing_before_first_ok": 0,
+        "first_ok_seconds_after_boot": 8.745891031,
+        "samples": 38,
+        "verdict": "served"
+      },
+      "web": {
+        "failing_after_first_ok": 0,
+        "failing_before_first_ok": 1,
+        "first_ok_seconds_after_boot": 13.74598233,
+        "samples": 38,
+        "verdict": "served"
+      }
+    },
+    "services": {
+      "celikpanel-agent.service": {
+        "ActiveState": "inactive",
+        "LoadState": "loaded",
+        "SubState": "dead",
+        "UnitFileState": "disabled"
+      },
+      "celikpanel-firewall-restore.service": {
+        "ActiveState": "active",
+        "LoadState": "loaded",
+        "SubState": "exited",
+        "UnitFileState": "enabled"
+      },
+      "celikpanel-panel.service": {
+        "ActiveState": "inactive",
+        "LoadState": "loaded",
+        "SubState": "dead",
+        "UnitFileState": "disabled"
+      },
+      "cron.service": {
+        "ActiveState": "active",
+        "LoadState": "loaded",
+        "SubState": "running",
+        "UnitFileState": "enabled"
+      },
+      "dovecot.service": {
+        "ActiveState": "active",
+        "LoadState": "loaded",
+        "SubState": "running",
+        "UnitFileState": "enabled"
+      },
+      "nftables.service": {
+        "ActiveState": "inactive",
+        "LoadState": "loaded",
+        "SubState": "dead",
+        "UnitFileState": "disabled"
+      },
+      "nginx.service": {
+        "ActiveState": "active",
+        "LoadState": "loaded",
+        "SubState": "running",
+        "UnitFileState": "enabled"
+      },
+      "postfix.service": {
+        "ActiveState": "active",
+        "LoadState": "loaded",
+        "SubState": "exited",
+        "UnitFileState": "enabled"
+      }
+    },
+    "window_seconds": 185.0
+  },
+  "finished_at": "2026-10-03T00:39:46Z",
+  "name": "management-off-measure",
+  "started_at": "2026-10-03T00:36:37Z",
+  "verdict": "passed"
+}

@@ -389,8 +389,8 @@ class API {
 
     // me returns the current user, or null when unauthenticated (401).
     // me, mevcut kullanıcıyı döndürür; kimlik doğrulanmamışsa (401) null.
-    async me(): Promise<CurrentUser | null> {
-        const res = await fetch(`${API_BASE}/auth/me`);
+    async me(signal?: AbortSignal): Promise<CurrentUser | null> {
+        const res = await fetch(`${API_BASE}/auth/me`, { signal, cache: 'no-store' });
         if (res.status === 401) return null;
         if (!res.ok) throw new Error('Failed to fetch current user');
         return parseCurrentUser(await res.json());

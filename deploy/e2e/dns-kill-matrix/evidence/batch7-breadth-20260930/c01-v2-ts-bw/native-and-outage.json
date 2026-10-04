@@ -1,0 +1,487 @@
+{
+  "agent_startup_rollback": null,
+  "boundary_marker": {
+    "cell_id": "bind__target-started__before-write__standalone__peer-reachable",
+    "driver": "bind",
+    "marker": "/var/lib/celikpanel-dns-kill-matrix/results/bind__target-started__before-write__standalone__peer-reachable/boundary-marker.json",
+    "nonce": "f862e8c78a22cbe6230d2716225cb337487410d02226003306195b2f66b6aae1",
+    "observed_driver": "bind",
+    "observed_journal": {
+      "manifest_qualifier": "dns-engine-switch/v1:sha256:4ce298c0d60f8607928a929fb1060a48e78cdc86e63845d6798807c230ffa6c5",
+      "mode": "switch",
+      "mutation_owner_id": "64f13e819633fd0c84d766f595d4111a",
+      "mutation_request_id": "0d027e7f512bf1f802be54309b3b7609",
+      "path": "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json",
+      "phase": "target-started",
+      "schema": "celikpanel-dns-engine-switch-journal/v2",
+      "source_engine": "pdns",
+      "source_epoch": 1,
+      "source_revision": 0,
+      "target_engine": "bind",
+      "target_epoch": 2,
+      "topology": "standalone"
+    },
+    "phase": "target-started",
+    "pid": 4037,
+    "point": "before_write",
+    "process_start_ticks": "17285",
+    "ready_fd": 5,
+    "recorded_at": "2026-09-29T18:56:02.682585443Z",
+    "request_id": "0d027e7f512bf1f802be54309b3b7609",
+    "schema": "celikpanel-dns-kill-matrix-boundary/v1"
+  },
+  "complete_verdict": {
+    "passed": true,
+    "reasons": [],
+    "required_classification": [
+      "rolled_back_source_serving"
+    ],
+    "safety_status": "passed",
+    "status": "passed"
+  },
+  "diagnostic_failures": [],
+  "dns_outage": {
+    "judged": false,
+    "last_source_answer_before_cut_at": "2026-09-29T18:55:35.112121Z",
+    "measured_from": {
+      "seconds": "source_serving_again_at minus source_stopped_at",
+      "source_serving_again_at": "first authoritative UDP+TCP answer observed by the controller after the owner command returned; an upper bound, the command may restore service earlier",
+      "source_stopped_at": "pdns.service unit journal: first systemd stopping entry since the pre-cut observation"
+    },
+    "pdns_started_after_stop_at": "2026-09-29T18:56:13.758253Z",
+    "seconds": 27.24445,
+    "source_serving_again_at": "2026-09-29T18:56:20.458379Z",
+    "source_stopped_at": "2026-09-29T18:55:53.213929Z"
+  },
+  "expectation": {
+    "bind_active_after_restart": true,
+    "native_checks_after_owner_command": true,
+    "pdns_inactive_after_restart": true,
+    "pdns_pid_continuity_from_cut": false,
+    "source_serving_after_restart": false
+  },
+  "failures": [],
+  "flow_ambiguities": [],
+  "flow_failures": [],
+  "flow_status": "passed",
+  "journal_at_boundary": {
+    "device": 65025,
+    "exists": true,
+    "expected_phase": "source-stopped",
+    "inode": 131599,
+    "mode": "0600",
+    "observed_phase": "source-stopped",
+    "request_id": "0d027e7f512bf1f802be54309b3b7609",
+    "sha256": "38692bd1eb40d41d56b25037ac27229ed4d9e53cfb1a1cf2b2583b92525f953e"
+  },
+  "kill": {
+    "delivered_at": "2026-09-29T18:56:02.750388Z",
+    "exit_code": 137,
+    "pid": 4037,
+    "proc_entry_absent_after_reap": true,
+    "process_start_ticks": "17285",
+    "raw_returncode": -9,
+    "signal": "SIGKILL",
+    "signal_number": 9,
+    "state_before_signal": "T"
+  },
+  "kill_proven": true,
+  "management_disabled_before_reboot": null,
+  "owner_inverse_failures": [],
+  "owner_inverse_native_at_boundary": {
+    "at": "2026-09-29T18:56:02.691613Z",
+    "dns": {
+      "answered": true,
+      "at": "2026-09-29T18:56:02.749988Z",
+      "result": {
+        "tcp": {
+          "additional": 1,
+          "answers": 1,
+          "authority": 1,
+          "bytes": 84,
+          "flags": 33792,
+          "questions": 1,
+          "transport": "tcp"
+        },
+        "udp": {
+          "additional": 1,
+          "answers": 1,
+          "authority": 1,
+          "bytes": 84,
+          "flags": 33792,
+          "questions": 1,
+          "transport": "udp"
+        }
+      }
+    },
+    "named_processes": [
+      8237
+    ],
+    "port53_listeners": {
+      "tcp": [
+        {
+          "local": "10.0.2.15:53",
+          "pids": [
+            8237
+          ],
+          "state": "LISTEN"
+        },
+        {
+          "local": "10.0.2.15:53",
+          "pids": [
+            8237
+          ],
+          "state": "LISTEN"
+        }
+      ],
+      "udp": [
+        {
+          "local": "10.0.2.15:53",
+          "pids": [
+            8237
+          ],
+          "state": "UNCONN"
+        },
+        {
+          "local": "10.0.2.15:53",
+          "pids": [
+            8237
+          ],
+          "state": "UNCONN"
+        }
+      ]
+    },
+    "units": {
+      "bind9.service": {
+        "ActiveState": "active",
+        "LoadState": "loaded",
+        "MainPID": "8237",
+        "SubState": "running",
+        "UnitFileState": "enabled"
+      },
+      "named.service": {
+        "ActiveState": "active",
+        "LoadState": "loaded",
+        "MainPID": "8237",
+        "SubState": "running",
+        "UnitFileState": "enabled"
+      },
+      "pdns.service": {
+        "ActiveState": "inactive",
+        "LoadState": "loaded",
+        "MainPID": "0",
+        "SubState": "dead",
+        "UnitFileState": "disabled"
+      }
+    },
+    "unknown": []
+  },
+  "pre_reboot_verdict": null,
+  "provenance_boundary": null,
+  "reboot_after_recovery": null,
+  "recovery_outcome": {
+    "changed_or_racy": false,
+    "classification": "rolled_back_source_serving",
+    "dns_serving_after_restart": true,
+    "probe_pair_valid": true,
+    "repeated_nonconvergence": false,
+    "rolled_back_source_serving": true,
+    "same_fingerprint": true,
+    "target_converged": false
+  },
+  "recovery_status_read_failures": null,
+  "recovery_status_reads": null,
+  "request_id": "0d027e7f512bf1f802be54309b3b7609",
+  "retry_switch_after_rollback": null,
+  "safety_failures": [],
+  "safety_status": "passed",
+  "source": "result.json (verbatim sub-objects)",
+  "status": "passed",
+  "step_records": {
+    "steps.after_owner_command.native": {
+      "at": "2026-09-29T18:56:20.458503Z",
+      "dns": {
+        "answered": true,
+        "at": "2026-09-29T18:56:20.492665Z",
+        "result": {
+          "tcp": {
+            "additional": 0,
+            "answers": 1,
+            "authority": 0,
+            "bytes": 50,
+            "flags": 33792,
+            "questions": 1,
+            "transport": "tcp"
+          },
+          "udp": {
+            "additional": 0,
+            "answers": 1,
+            "authority": 0,
+            "bytes": 50,
+            "flags": 33792,
+            "questions": 1,
+            "transport": "udp"
+          }
+        }
+      },
+      "named_processes": [],
+      "port53_listeners": {
+        "tcp": [
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              10135
+            ],
+            "state": "LISTEN"
+          }
+        ],
+        "udp": [
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              10135
+            ],
+            "state": "UNCONN"
+          }
+        ]
+      },
+      "units": {
+        "bind9.service": {
+          "ActiveState": "inactive",
+          "LoadState": "masked",
+          "MainPID": "0",
+          "SubState": "dead",
+          "UnitFileState": "masked"
+        },
+        "named.service": {
+          "ActiveState": "inactive",
+          "LoadState": "masked",
+          "MainPID": "0",
+          "SubState": "dead",
+          "UnitFileState": "masked"
+        },
+        "pdns.service": {
+          "ActiveState": "active",
+          "LoadState": "loaded",
+          "MainPID": "10135",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        }
+      },
+      "unknown": []
+    },
+    "steps.after_owner_command.pdns_main_pid": {
+      "after_owner_command": 10135,
+      "changed": true,
+      "judged": false,
+      "pre_cut": 3084,
+      "reason": "the source was stopped before the cut; the inverse starts it again"
+    },
+    "steps.after_owner_command.rollback_end_state": {
+      "accepted_stub_listener_lines": [
+        "Local port-53 listeners accepted as the systemd-resolved stub resolver (unit cgroup and address proved; not DNS authority): tcp|127.0.0.53|systemd-resolve|366|systemd-resolved.service, tcp|127.0.0.54|systemd-resolve|366|systemd-resolved.service, udp|127.0.0.53|systemd-resolve|366|systemd-resolved.service, udp|127.0.0.54|systemd-resolve|366|systemd-resolved.service."
+      ],
+      "facts": {
+        "generation_tree": "/var/cache/bind/celikpanel/generations/7ee0a09613ae1fccbc4825dd2525fd7060e9f1e98bf4c2e898fdc20fa2dabc98",
+        "generation_tree_present_at_step2": true,
+        "sealed_end_state_expected": true,
+        "target_generation": "7ee0a09613ae1fccbc4825dd2525fd7060e9f1e98bf4c2e898fdc20fa2dabc98",
+        "target_units_before": [
+          {
+            "active_state": "inactive",
+            "load_state": "not-found",
+            "name": "bind9.service",
+            "unit_file_state": ""
+          },
+          {
+            "active_state": "inactive",
+            "load_state": "not-found",
+            "name": "named.service",
+            "unit_file_state": ""
+          }
+        ]
+      },
+      "failures": [],
+      "generation_tree_present_after": false,
+      "leftovers": {
+        "judged": false,
+        "packages": {
+          "returncode": 0,
+          "rows": [
+            "bind9 1:9.20.29-1~deb13u1 ii ",
+            "bind9-host 1:9.20.29-1~deb13u1 ii ",
+            "bind9-libs 1:9.20.29-1~deb13u1 ii ",
+            "bind9-utils 1:9.20.29-1~deb13u1 ii "
+          ]
+        },
+        "working_directory": [
+          "managed-keys.bind.jnl"
+        ]
+      },
+      "masks": {
+        "units": {
+          "bind9.service": {
+            "persistent_link": {
+              "exists": true,
+              "path": "/etc/systemd/system/bind9.service",
+              "symlink": true,
+              "target": "/dev/null",
+              "uid": 0
+            },
+            "properties": {
+              "ActiveState": "inactive",
+              "LoadState": "masked",
+              "MainPID": "0",
+              "SubState": "dead",
+              "UnitFileState": "masked"
+            },
+            "runtime_link": {
+              "exists": false,
+              "path": "/run/systemd/system/bind9.service"
+            }
+          },
+          "named.service": {
+            "persistent_link": {
+              "exists": true,
+              "path": "/etc/systemd/system/named.service",
+              "symlink": true,
+              "target": "/dev/null",
+              "uid": 0
+            },
+            "properties": {
+              "ActiveState": "inactive",
+              "LoadState": "masked",
+              "MainPID": "0",
+              "SubState": "dead",
+              "UnitFileState": "masked"
+            },
+            "runtime_link": {
+              "exists": false,
+              "path": "/run/systemd/system/named.service"
+            }
+          }
+        },
+        "unknown": []
+      },
+      "removed_line_required": true,
+      "summary": {
+        "accepted_stub_listeners": [
+          "Local port-53 listeners accepted as the systemd-resolved stub resolver (unit cgroup and address proved; not DNS authority): tcp|127.0.0.53|systemd-resolve|366|systemd-resolved.service, tcp|127.0.0.54|systemd-resolve|366|systemd-resolved.service, udp|127.0.0.53|systemd-resolve|366|systemd-resolved.service, udp|127.0.0.54|systemd-resolve|366|systemd-resolved.service."
+        ],
+        "bind_units": [
+          "BIND units: named.service and bind9.service are under the package guard's persistent mask, inactive and not enabled, so BIND cannot start by accident. A later switch lifts this mask itself."
+        ],
+        "intentionally_kept": [
+          "Intentionally kept as rollback standby: the installed bind9 packages, the rndc key and the BIND install-ownership record. This command does not remove packages."
+        ],
+        "not_removed": [],
+        "removed": [
+          "Removed: the staged BIND generation 7ee0a09613ae1fccbc4825dd2525fd7060e9f1e98bf4c2e898fdc20fa2dabc98 that this switch created."
+        ],
+        "restored": [
+          "Restored: the PowerDNS service, its DNS state receipt, the BIND configuration files this switch changed and the managed BIND pointer."
+        ],
+        "working_directory": [
+          "Left in BIND's working directory /var/cache/bind, which is outside the managed BIND root, so they were not removed: /var/cache/bind/managed-keys.bind.jnl (1336 bytes, owner 104:105)."
+        ]
+      },
+      "unknown": []
+    },
+    "steps.after_owner_command.rollback_end_state.summary.bind_units": [
+      "BIND units: named.service and bind9.service are under the package guard's persistent mask, inactive and not enabled, so BIND cannot start by accident. A later switch lifts this mask itself."
+    ],
+    "steps.after_owner_command.source.pdns_main_pid": 10135,
+    "steps.after_stability.source.pdns_main_pid": 10135,
+    "steps.agent_restarted.native": {
+      "at": "2026-09-29T18:56:02.909513Z",
+      "dns": {
+        "answered": true,
+        "at": "2026-09-29T18:56:02.962877Z",
+        "result": {
+          "tcp": {
+            "additional": 1,
+            "answers": 1,
+            "authority": 1,
+            "bytes": 84,
+            "flags": 33792,
+            "questions": 1,
+            "transport": "tcp"
+          },
+          "udp": {
+            "additional": 1,
+            "answers": 1,
+            "authority": 1,
+            "bytes": 84,
+            "flags": 33792,
+            "questions": 1,
+            "transport": "udp"
+          }
+        }
+      },
+      "named_processes": [
+        8237
+      ],
+      "port53_listeners": {
+        "tcp": [
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              8237
+            ],
+            "state": "LISTEN"
+          },
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              8237
+            ],
+            "state": "LISTEN"
+          }
+        ],
+        "udp": [
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              8237
+            ],
+            "state": "UNCONN"
+          },
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              8237
+            ],
+            "state": "UNCONN"
+          }
+        ]
+      },
+      "units": {
+        "bind9.service": {
+          "ActiveState": "active",
+          "LoadState": "loaded",
+          "MainPID": "8237",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        },
+        "named.service": {
+          "ActiveState": "active",
+          "LoadState": "loaded",
+          "MainPID": "8237",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        },
+        "pdns.service": {
+          "ActiveState": "inactive",
+          "LoadState": "loaded",
+          "MainPID": "0",
+          "SubState": "dead",
+          "UnitFileState": "disabled"
+        }
+      },
+      "unknown": []
+    },
+    "steps.rerun.source.pdns_main_pid": 10135
+  },
+  "variant": "critical",
+  "verification_failures": []
+}

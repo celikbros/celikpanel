@@ -2,13 +2,9 @@ package main
 
 import (
 	"context"
-	"crypto/sha256"
 	"database/sql"
-	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
-	"net"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -19,10 +15,103 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/binddns"
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
+	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
+	"github.com/alicelik/celikpanel/internal/pdnsmanagedconf"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
+
+const pdnsPairedPrimarySwitchPausedReason = "PowerDNS paired-primary switch is paused pending native catalog and rollback support; leave any current DNS engine serving and review another DNS plan"
+
+// freshPairedPDNSPrimaryAdmitted is the Agent's single product gate for the
+// first install of PowerDNS as the paired primary on a host with no DNS engine
+// (the V3 journal). Opened on the main line on 2026-10-01 (D-028) after the
+// native evidence of row 6 of the DNS recovery acceptance register passed
+// (kill-matrix batches 8r, 9, 12; pair runs 5 and 7). The Panel carries the
+// matching constant (freshPairedPDNSPrimaryOffered). Open, it admits only the
+// empty-source manifest on a host with no DNS engine
+// (Debian 13 amd64, measured PowerDNS package version, enforced by the V3
+// host-profile and package-version preflights): every other PowerDNS
+// paired-primary manifest stays refused, and a serving BIND source keeps its
+// D-026 refusal (bind_source_pdns_switch_unsupported).
+//
+// freshPairedPDNSPrimaryAdmitted, DNS motoru olmayan bir sunucuya PowerDNS'in
+// eşli birincil olarak ilk kurulumunun (V3 günlüğü) Agent tarafındaki tek ürün
+// kapısıdır. 6. satırın gerçek sistem kanıtı geçtikten sonra 1 Ekim 2026'da
+// ana hatta açıldı (D-028). Açıkken yalnız DNS motoru olmayan sunucudaki boş
+// kaynaklı bildirimi kabul eder (Debian 13 amd64, ölçülmüş PowerDNS paket
+// sürümü); hizmet veren BIND kaynağı bind_source_pdns_switch_unsupported
+// reddini korur.
+const freshPairedPDNSPrimaryAdmitted = true
+
+// pdnsFreshPairedPrimaryGateOpen carries the constant above. Only tests
+// assign it, to exercise the open policy; production never changes it.
+var pdnsFreshPairedPrimaryGateOpen = freshPairedPDNSPrimaryAdmitted
+
+// pdnsPairedPrimarySwitchPaused is the Agent's one policy for a PowerDNS
+// target on a paired primary. It is applied by the RPC before the mutation
+// step claim and again by the host backend before journal reconciliation.
+func pdnsPairedPrimarySwitchPaused(
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) bool {
+	return pdnsPairedPrimarySwitchPausedWithGate(manifest, pdnsFreshPairedPrimaryGateOpen)
+}
+
+// pdnsPairedPrimarySwitchPausedWithGate is that policy for an explicit gate
+// value. Closed, it refuses every PowerDNS paired-primary switch, whatever the
+// source. Open, it admits only the empty-source (fresh) manifest and leaves a
+// BIND source to bindSourcePDNSSwitchUnsupported, which every caller applies
+// next; any other source (an active PowerDNS or an unknown engine) stays
+// refused here.
+func pdnsPairedPrimarySwitchPausedWithGate(
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	open bool,
+) bool {
+	if manifest.Mode != transport.DNSEngineSwitchModeSwitch ||
+		manifest.TargetEngine != transport.DNSEnginePowerDNS ||
+		manifest.Topology != transport.DNSTopologyPaired ||
+		manifest.PairRole != transport.DNSPairRolePrimary {
+		return false
+	}
+	if !open {
+		return true
+	}
+	if manifest.SourceEngine == transport.DNSEngineBIND {
+		return false
+	}
+	return manifest.SourceEngine != "" || manifest.SourceEpoch != 0
+}
+
+// pdnsPairedPrimaryHostAdmission is the host backend's half of the gate:
+// the only PowerDNS paired-primary switch it runs is the V3 first install on
+// a host with no DNS engine and no state receipt. Any other paired-primary
+// shape would take the legacy V1 path, which has no recovery contract for it.
+func pdnsPairedPrimaryHostAdmission(
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+	stateExists bool,
+) error {
+	if manifest.Topology == transport.DNSTopologyPaired &&
+		manifest.PairRole == transport.DNSPairRolePrimary &&
+		(manifest.SourceEngine != "" || manifest.SourceEpoch != 0 || stateExists) {
+		return errors.New(pdnsPairedPrimarySwitchPausedReason)
+	}
+	return nil
+}
+
+const bindSourcePDNSSwitchUnsupportedReason = "switching a serving BIND source to PowerDNS is unsupported in this release: an interrupted switch has no Agent-independent recovery; BIND keeps serving and nothing was changed; install PowerDNS on a host without a DNS engine instead"
+
+// bindSourcePDNSSwitchUnsupported refuses BIND-to-PowerDNS switches for every
+// topology: that path writes a legacy V1 journal whose only recovery is the
+// Agent's own inverse. Fresh PowerDNS installs carry no source engine.
+func bindSourcePDNSSwitchUnsupported(
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) bool {
+	return manifest.Mode == transport.DNSEngineSwitchModeSwitch &&
+		manifest.SourceEngine == transport.DNSEngineBIND &&
+		manifest.TargetEngine == transport.DNSEnginePowerDNS
+}
 
 func isPDNSPairSecondaryReconfigureManifest(
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
@@ -112,16 +201,12 @@ func validatePDNSSwitchSourceProofCAS(
 func finishDNSSwitchRollbackJournal(
 	journal *dnsEngineSwitchJournal,
 	write func(dnsEngineSwitchJournal) error,
-	remove func() error,
 ) error {
-	if journal == nil || write == nil || remove == nil {
+	if journal == nil || write == nil {
 		return errors.New("invalid DNS switch rollback journal operations")
 	}
 	journal.Phase = dnsSwitchPhaseRolledBack
-	if err := write(*journal); err != nil {
-		return err
-	}
-	return remove()
+	return write(*journal)
 }
 
 var pdnsReconfigureDataTables = []string{
@@ -415,31 +500,10 @@ func managedPowerDNSStandaloneConfig(ctx context.Context) ([]byte, error) {
 	return managedPowerDNSStandaloneConfigForAddresses(addresses)
 }
 
+// managedPowerDNSStandaloneConfigForAddresses renders the managed backend
+// drop-in through the shared renderer the owner's pdns-peer-inspect also uses.
 func managedPowerDNSStandaloneConfigForAddresses(addresses []string) ([]byte, error) {
-	if len(addresses) == 0 {
-		return nil, errors.New("managed PowerDNS requires at least one listen address")
-	}
-	seen := make(map[string]struct{}, len(addresses))
-	for _, address := range addresses {
-		parsed := net.ParseIP(address)
-		if parsed == nil || parsed.String() != address || !parsed.IsGlobalUnicast() ||
-			parsed.IsUnspecified() || parsed.IsLoopback() || parsed.IsLinkLocalUnicast() {
-			return nil, errors.New("managed PowerDNS listen address is not canonical global unicast")
-		}
-		if _, duplicate := seen[address]; duplicate {
-			return nil, errors.New("managed PowerDNS listen addresses contain a duplicate")
-		}
-		seen[address] = struct{}{}
-	}
-	return []byte(fmt.Sprintf(`# Managed by CelikPanel; do not edit by hand.
-launch=gsqlite3
-gsqlite3-dnssec=yes
-gsqlite3-database=%s
-local-address=%s
-zone-cache-refresh-interval=0
-webserver=no
-api=no
-`, pdnsDBPath(), strings.Join(addresses, ","))), nil
+	return pdnsmanagedconf.Standalone(pdnsDBPath(), addresses)
 }
 
 func preparePDNSConfigMutation(
@@ -916,9 +980,15 @@ func verifyLegacyPDNSConsumerSourceTx(
 			continue
 		}
 		if (zoneType != "SLAVE" && zoneType != "SECONDARY") ||
-			master != manifest.PeerIP || catalog != peerDomain || options != "" ||
+			master != manifest.PeerIP || catalog != peerDomain ||
 			(account != "" && account != pdnsPeerCatalogAccount) {
 			return errors.New("legacy PowerDNS consumer contains foreign member authority")
+		}
+		// The consumer records the member's unique catalog label in options.
+		if err := verifyPDNSConsumedMemberOptions(
+			options, peerCatalog.MemberLabels[name],
+		); err != nil {
+			return fmt.Errorf("legacy PowerDNS consumer contains foreign member authority: member %s: %w", name, err)
 		}
 		members = append(members, name)
 	}
@@ -963,12 +1033,14 @@ func readLegacyPDNSPeerCatalogAuthority(
 	}
 	proofCtx, cancel := context.WithTimeout(ctx, dnsPairProofLimit)
 	defer cancel()
-	peerCatalog, err := probeDNSBoundCatalogAXFR(
+	peerCatalog, err := queryDNSBoundPeerCatalogAXFR(
 		proofCtx, manifest.LocalIP, manifest.PeerIP, peerDomain,
 	)
 	if err != nil || peerCatalog.Serial == 0 ||
 		!sort.StringsAreSorted(peerCatalog.Members) {
-		return dnsCatalogAXFRResult{}, errors.New("legacy PowerDNS peer producer catalog is not exact")
+		return dnsCatalogAXFRResult{}, dnsPeerCatalogReadError(
+			"legacy PowerDNS peer producer catalog is not exact", err,
+		)
 	}
 	for index, member := range peerCatalog.Members {
 		if !serviceMutationCanonicalFQDN(member) || member == peerDomain ||
@@ -1038,30 +1110,7 @@ func pdnsSwitchBackupPath(requestID string) string {
 }
 
 func inspectPDNSDatabaseFile(path string, allowAbsent bool) (bool, int64, string, error) {
-	info, err := os.Lstat(path)
-	if errors.Is(err, os.ErrNotExist) && allowAbsent {
-		return false, 0, "", nil
-	}
-	if err != nil {
-		return false, 0, "", err
-	}
-	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 || info.Size() <= 0 {
-		return false, 0, "", errors.New("PowerDNS database path is not a safe regular file")
-	}
-	file, err := os.Open(path)
-	if err != nil {
-		return false, 0, "", err
-	}
-	defer file.Close()
-	digest := sha256.New()
-	written, err := io.Copy(digest, file)
-	if err != nil || written != info.Size() {
-		if err == nil {
-			err = errors.New("PowerDNS database changed while it was hashed")
-		}
-		return false, 0, "", err
-	}
-	return true, written, hex.EncodeToString(digest.Sum(nil)), nil
+	return dnsenginerecovery.InspectPDNSDatabaseFile(context.Background(), path, allowAbsent)
 }
 
 func setPDNSDatabaseOwnership(path string) error {
@@ -1164,7 +1213,18 @@ func restorePDNSDatabase(journal dnsEngineSwitchJournal) error {
 		binding := transport.ServiceMutationBinding{
 			MutationRequestID: journal.MutationRequestID, MutationOwnerID: journal.MutationOwnerID,
 		}
-		if canonicalErr != nil || verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
+		if canonicalErr != nil {
+			return errors.New("PowerDNS rollback live database is not the staged target")
+		}
+		if freshPDNSPairSecondaryRollbackJournal(journal) {
+			// A fresh secondary's daemon writes consumer state into the
+			// candidate; admit exactly that, read-only and offline.
+			if err := verifyFreshPDNSSecondaryRollbackDatabase(
+				context.Background(), live, manifest, binding,
+			); err != nil {
+				return fmt.Errorf("PowerDNS rollback kept the live database %s, because it holds more than the staged catalog consumer and what that consumer transferred: %w; the owner's data is never deleted - inspect the database and contact support with request id %s", live, err, journal.MutationRequestID)
+			}
+		} else if verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
 			context.Background(), live, manifest, binding,
 			journal.PrimaryCatalogSerial,
 		) != nil {
@@ -1350,6 +1410,116 @@ func startPDNSTargetWithOps(
 	})
 }
 
+type pdnsRollbackStoppedProofOps struct {
+	inspectUnit      func(context.Context) (bindInstallUnitState, error)
+	inspectProcesses func(context.Context) (dnsUnitProcesses, error)
+	inspectCgroup    func(context.Context) error
+	// freshSource selects the first-install proof class for a journal with no
+	// source engine; only that class reads inspectPublicDNSListeners.
+	freshSource               bool
+	inspectPublicDNSListeners func(context.Context) error
+}
+
+func verifyPDNSStoppedBeforeDatabaseRestoreWithOps(
+	ctx context.Context,
+	ops pdnsRollbackStoppedProofOps,
+) error {
+	if ops.inspectUnit == nil || ops.inspectProcesses == nil || ops.inspectCgroup == nil ||
+		(ops.freshSource && ops.inspectPublicDNSListeners == nil) {
+		return errors.New("PowerDNS stopped proof requires native unit, process, cgroup and listener observers")
+	}
+	verify := func(observe func(context.Context) (dnsenginerecovery.StoppedUnitObservation, error)) error {
+		if ops.freshSource {
+			return dnsenginerecovery.VerifyStoppedFreshSourceTarget(
+				ctx, "pdns.service", observe, ops.inspectPublicDNSListeners,
+			)
+		}
+		return dnsenginerecovery.VerifyStoppedUnit(ctx, "pdns.service", observe)
+	}
+	return verify(
+		func(proofCtx context.Context) (dnsenginerecovery.StoppedUnitObservation, error) {
+			unit, err := ops.inspectUnit(proofCtx)
+			if err != nil {
+				return dnsenginerecovery.StoppedUnitObservation{}, err
+			}
+			processes, err := ops.inspectProcesses(proofCtx)
+			if err != nil {
+				return dnsenginerecovery.StoppedUnitObservation{}, err
+			}
+			if err := ops.inspectCgroup(proofCtx); err != nil {
+				return dnsenginerecovery.StoppedUnitObservation{}, err
+			}
+			return dnsenginerecovery.StoppedUnitObservation{
+				Name: unit.name, LoadState: unit.loadState,
+				ActiveState: unit.activeState, UnitFileState: unit.unitFileState,
+				MainPID: processes.MainPID, ControlPID: processes.ControlPID,
+				SubState: processes.SubState,
+			}, nil
+		})
+}
+
+// hostPDNSRollbackStoppedProofOps binds the fixed native observers. The
+// listener observer is the same public port-53 inventory the fresh-install
+// package guard uses; the class is chosen from the journal by
+// pdnsSwitchRollbackTargetOps.
+func hostPDNSRollbackStoppedProofOps(systemctl string) pdnsRollbackStoppedProofOps {
+	guard := dnsSystemdStateGuard(systemctl)
+	return pdnsRollbackStoppedProofOps{
+		inspectUnit: func(proofCtx context.Context) (bindInstallUnitState, error) {
+			return guard.inspect(proofCtx, "pdns.service")
+		},
+		inspectProcesses: func(proofCtx context.Context) (dnsUnitProcesses, error) {
+			return inspectDNSUnitProcesses(proofCtx, systemctl, "pdns.service")
+		},
+		inspectCgroup: func(proofCtx context.Context) error {
+			return dnsenginerecovery.ProbeEmptyUnitCgroup(proofCtx, "pdns.service", dnsenginerecovery.SystemdCgroupUnitRunner, dnsenginerecovery.NativeCgroupEvents)
+		},
+		inspectPublicDNSListeners: proveNoPublicDNSPort53Listener,
+	}
+}
+
+// pdnsSwitchRollbackTargetOps derives the target stop and stopped proof from
+// the journal. A first install (no source engine) accepts the never-started
+// unit states: not-found, the package guard's persistent mask, or loaded,
+// each without a public port-53 listener. A journal with a source keeps the
+// loaded-unit proof unchanged.
+func pdnsSwitchRollbackTargetOps(
+	journal dnsEngineSwitchJournal,
+	proof pdnsRollbackStoppedProofOps,
+	stop func(context.Context) error,
+) (func(context.Context) error, func(context.Context) error) {
+	proof.freshSource = dnsSwitchJournalHasEmptySource(journal)
+	return func(ctx context.Context) error {
+			return stopPDNSRollbackTargetWithOps(ctx, proof, stop)
+		}, func(ctx context.Context) error {
+			return verifyPDNSStoppedBeforeDatabaseRestoreWithOps(ctx, proof)
+		}
+}
+
+// stopPDNSRollbackTargetWithOps does not ask systemd to stop a first-install
+// target that does not exist: systemctl refuses to stop a not-found unit
+// ("not loaded"), and such a unit has nothing to stop. The stopped proof that
+// follows still double-reads the unit, processes, cgroup and listeners.
+func stopPDNSRollbackTargetWithOps(
+	ctx context.Context,
+	proof pdnsRollbackStoppedProofOps,
+	stop func(context.Context) error,
+) error {
+	if ctx == nil || stop == nil || proof.inspectUnit == nil {
+		return errors.New("PowerDNS rollback stop requires a unit observer and stop operation")
+	}
+	if proof.freshSource {
+		state, err := proof.inspectUnit(ctx)
+		if err != nil {
+			return err
+		}
+		if state.name == "pdns.service" && state.loadState == "not-found" &&
+			state.unitFileState == "" && state.activeState == "inactive" {
+			return nil
+		}
+	}
+	return stop(ctx)
+}
 func rollbackPDNSSwitch(
 	ctx context.Context,
 	systemctl string,
@@ -1367,8 +1537,9 @@ func rollbackPDNSSwitch(
 			return err
 		},
 		func() error {
-			return rollbackPDNSSwitchWithOps(ctx, pdnsSwitchRollbackOps{
-				stopTarget: func(commandCtx context.Context) error {
+			stopTarget, verifyStopped := pdnsSwitchRollbackTargetOps(
+				journal, hostPDNSRollbackStoppedProofOps(systemctl),
+				func(commandCtx context.Context) error {
 					return runDNSMutationWithSystemdParentProof(
 						verifyBINDMaskParentMetadata,
 						func() error {
@@ -1379,6 +1550,10 @@ func rollbackPDNSSwitch(
 						},
 					)
 				},
+			)
+			return rollbackPDNSSwitchWithOps(ctx, pdnsSwitchRollbackOps{
+				stopTarget:    stopTarget,
+				verifyStopped: verifyStopped,
 				restorePDNSDatabaseSnapshot: func() error {
 					return restorePDNSDatabase(journal)
 				},
@@ -1418,6 +1593,7 @@ func rollbackPDNSSwitchAfterConfigProof(
 
 type pdnsSwitchRollbackOps struct {
 	stopTarget                  func(context.Context) error
+	verifyStopped               func(context.Context) error
 	restorePDNSDatabaseSnapshot func() error
 	restoreConfigs              func() error
 	restoreState                func() error
@@ -1429,20 +1605,15 @@ func rollbackPDNSSwitchWithOps(
 	ctx context.Context,
 	ops pdnsSwitchRollbackOps,
 ) error {
-	if ctx == nil || ops.stopTarget == nil ||
-		ops.restorePDNSDatabaseSnapshot == nil || ops.restoreConfigs == nil ||
-		ops.restoreState == nil || ops.restoreTarget == nil ||
-		ops.restoreSource == nil {
-		return errors.New("invalid PowerDNS switch rollback operations")
-	}
-	return errors.Join(
-		ops.stopTarget(ctx),
-		ops.restorePDNSDatabaseSnapshot(),
-		ops.restoreConfigs(),
-		ops.restoreState(),
-		ops.restoreTarget(ctx),
-		ops.restoreSource(ctx),
-	)
+	return dnsenginerecovery.RollbackPDNSSwitch(ctx, dnsenginerecovery.PDNSSwitchRollbackOps{
+		StopTarget:      ops.stopTarget,
+		VerifyStopped:   ops.verifyStopped,
+		RestoreDatabase: ops.restorePDNSDatabaseSnapshot,
+		RestoreConfigs:  ops.restoreConfigs,
+		RestoreState:    ops.restoreState,
+		RestoreTarget:   ops.restoreTarget,
+		RestoreSource:   ops.restoreSource,
+	})
 }
 
 func switchToPDNS(
@@ -1490,7 +1661,14 @@ func switchToPDNSOnCertifiedProfile(
 		if err := validateEngineStateCatalogContract(manifest, state); err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err
 		}
-		if err := verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
+		if state.NativeCatalogV3 == dnsengineartifact.NativeCatalogDebian49V3 {
+			if err := verifyFreshPDNSNativeVersionV3(ctx, profile); err != nil {
+				return transport.SwitchDNSEngineV1Response{}, err
+			}
+			if err := verifyPDNSStateManifestReceipt(ctx, state); err != nil {
+				return transport.SwitchDNSEngineV1Response{}, err
+			}
+		} else if err := verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
 			ctx, pdnsDBPath(), manifest, binding, state.PrimaryCatalogSerial,
 		); err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err
@@ -1515,6 +1693,9 @@ func switchToPDNSOnCertifiedProfile(
 		if err == nil {
 			err = errors.New("a DNS engine switch recovery journal requires reconciliation")
 		}
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	if err := pdnsPairedPrimaryHostAdmission(manifest, stateExists); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	sourceProof, err := proveDNSEngineSwitchSource(
@@ -1566,6 +1747,45 @@ func switchToPDNSOnCertifiedProfile(
 		}
 		if !installed {
 			missing = append(missing, packageName)
+		}
+	}
+	// Before any receipt, mask or package effect (see the BIND path).
+	if len(missing) != 0 && profile.PackageManager == hostplatform.PackageManagerAPT {
+		if err := packageStatOverridePreflight(ctx); err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
+	}
+	freshPairedPrimaryV3 := manifest.SourceEngine == "" && !stateExists &&
+		manifest.Topology == transport.DNSTopologyPaired &&
+		manifest.PairRole == transport.DNSPairRolePrimary
+	var freshTargetBeforePackages dnsUnitSnapshot
+	freshTargetOwnGuardMask := false
+	if freshPairedPrimaryV3 {
+		// Refuse an unmeasured host before any package, unit or file effect.
+		if err := validateFreshPDNSPrimaryHostProfileV3(profile); err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
+		// The measured-version pin, read before any receipt, mask, package
+		// or journal effect (item 4a); the post-install identity check stays.
+		if err := preflightFreshPDNSPackageVersionsV3(ctx, profile, packages, missing); err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
+		beforePackages, captureErr := captureDNSUnitSnapshots(ctx, systemctl, []string{"pdns.service"})
+		if captureErr != nil {
+			return transport.SwitchDNSEngineV1Response{}, captureErr
+		}
+		freshTargetBeforePackages = beforePackages[0]
+		ownGuardMask, maskErr := freshPDNSTargetOwnGuardMaskV3(
+			freshTargetBeforePackages, len(missing) == 0, packages, profile, manifest,
+		)
+		if maskErr != nil {
+			return transport.SwitchDNSEngineV1Response{}, maskErr
+		}
+		freshTargetOwnGuardMask = ownGuardMask
+		if !ownGuardMask {
+			if err := validateFreshPDNSTargetBeforePackagesV3(freshTargetBeforePackages); err != nil {
+				return transport.SwitchDNSEngineV1Response{}, err
+			}
 		}
 	}
 	if err := verifyBINDMaskParentMetadata(); err != nil {
@@ -1631,11 +1851,22 @@ func switchToPDNSOnCertifiedProfile(
 			ctx, !stateExists && manifest.SourceEngine == "",
 			func() error {
 				return installOwnedDNSEnginePackages(installReceipt, func() error {
-					_, installErr := installPDNSPackagesWithGuard(ctx, systemctl, func() (string, error) {
+					install := func() (string, error) {
+						if freshPairedPrimaryV3 {
+							return installFreshPDNSPackagesV3(ctx, missing)
+						}
 						return installPackagesWithCandidateContext(
 							ctx, string(profile.PackageManager), missing, "",
 						)
-					})
+					}
+					var installErr error
+					if freshPairedPrimaryV3 {
+						_, installErr = installPDNSPackagesWithGuard(
+							ctx, systemctl, install, freshTargetBeforePackages,
+						)
+					} else {
+						_, installErr = installPDNSPackagesWithGuard(ctx, systemctl, install)
+					}
 					return installErr
 				})
 			},
@@ -1663,6 +1894,17 @@ func switchToPDNSOnCertifiedProfile(
 	targetBefore, err := captureDNSUnitSnapshots(ctx, systemctl, []string{"pdns.service"})
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	if freshPairedPrimaryV3 {
+		validateAfter := validateFreshPDNSTargetAfterPackagesV3
+		if freshTargetOwnGuardMask {
+			validateAfter = validateFreshPDNSTargetAfterOwnGuardMaskV3
+		}
+		if err := validateAfter(
+			freshTargetBeforePackages, targetBefore[0], len(missing) != 0,
+		); err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
 	}
 	sourceUnits := []string{}
 	if manifest.SourceEngine == transport.DNSEngineBIND {
@@ -1709,6 +1951,15 @@ func switchToPDNSOnCertifiedProfile(
 	}
 	if liveExists {
 		journal.PDNSBackupSHA256, journal.PDNSBackupSize = liveHash, liveSize
+	}
+	if freshPairedPrimaryV3 {
+		if err := verifyFreshPDNSNativeVersionV3(ctx, profile); err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
+		journal, err = prepareFreshPDNSPrimaryIntentV3(profile, journal, configs)
+		if err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
 	}
 	writeIntent := func() error {
 		actualState, actualExists, err := readDNSEngineState()
@@ -1768,38 +2019,47 @@ func switchToPDNSOnCertifiedProfile(
 	} else if err := writeIntent(); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
+	if freshPairedPrimaryV3 {
+		return continueFreshPDNSPrimaryV3(
+			ctx, profile, systemctl, manifest, binding, configs, journal, writeJournal,
+		)
+	}
+	// The inverse runs only after the rollback decision is durable; a journal
+	// already durably at target-verified goes forward instead, and an
+	// undecided rollback starts no inverse effect (decideDNSSwitchInProcessRollback).
 	rollback := func(cause error) (transport.SwitchDNSEngineV1Response, error) {
-		journal.Phase = dnsSwitchPhaseRollingBack
-		journalErr := writeJournal(journal)
-		recoveryCtx, cancel, contextErr := newDNSEngineRollbackContext(ctx)
-		rollbackErr := contextErr
-		if contextErr == nil {
-			defer cancel()
-			rollbackErr = runDNSMutationWithSystemdParentProof(
-				verifyBINDMaskParentMetadata,
-				func() error {
-					return rollbackPDNSSwitch(
-						recoveryCtx, systemctl, journal, configs,
+		return transport.SwitchDNSEngineV1Response{}, runGatedDNSSwitchRollback(
+			&journal, cause, gatedDNSSwitchRollbackOps{
+				decide: func(current dnsEngineSwitchJournal, cause error) (dnsEngineSwitchJournal, error) {
+					return decideDNSSwitchInProcessRollback(
+						current,
+						dnsSwitchInProcessJournalOps{read: readDNSEngineSwitchJournal, write: writeJournal},
+						cause,
 					)
 				},
-			)
-			if rollbackErr == nil {
-				rollbackErr = verifyRestoredDNSSwitchSource(
-					recoveryCtx, profile, systemctl, manifest, journal,
-				)
-			}
-		}
-		if rollbackErr == nil {
-			journalErr = errors.Join(
-				journalErr,
-				finishDNSSwitchRollbackJournal(
-					&journal,
-					writeJournal,
-					removeDNSEngineSwitchJournal,
-				),
-			)
-		}
-		return transport.SwitchDNSEngineV1Response{}, errors.Join(cause, journalErr, rollbackErr)
+				inverse: func(decided dnsEngineSwitchJournal) error {
+					recoveryCtx, cancel, contextErr := newDNSEngineRollbackContext(ctx)
+					if contextErr != nil {
+						return contextErr
+					}
+					defer cancel()
+					if err := runDNSMutationWithSystemdParentProof(
+						verifyBINDMaskParentMetadata,
+						func() error {
+							return rollbackPDNSSwitch(
+								recoveryCtx, systemctl, decided, configs,
+							)
+						},
+					); err != nil {
+						return err
+					}
+					return verifyRestoredDNSSwitchSource(
+						recoveryCtx, profile, systemctl, manifest, decided,
+					)
+				},
+				write: writeJournal,
+			},
+		)
 	}
 	if err := configs.verifyOwnerAwarePreimage(ctx); err != nil {
 		return rollback(err)
@@ -1919,7 +2179,11 @@ func switchToPDNSOnCertifiedProfile(
 	}
 	journal.Phase = dnsSwitchPhaseTargetVerified
 	if err := writeJournal(journal); err != nil {
-		return transport.SwitchDNSEngineV1Response{}, err
+		// The write may be durable although it reported failure. The
+		// rollback gate reads the journal back: a durable target-verified
+		// goes forward through same-request recovery, an earlier phase takes
+		// the rollback decision.
+		return rollback(err)
 	}
 	journal.Phase = dnsSwitchPhaseCommitted
 	if err := writeJournal(journal); err != nil {

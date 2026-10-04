@@ -1,0 +1,16 @@
+{
+  "page": {
+    "bytes": 946,
+    "sha256": "6df198f092a31db96d39c8a82faf47649b0819a587d4f3afc7474837902f8ca7",
+    "status": 200
+  },
+  "scripts": [
+    {
+      "carries_status_command": false,
+      "path": "/assets/index-CXTdR9vU.js",
+      "sha256": "001e4534676e2056c1d18a9bba26865999edae84e91703890f1a4808e74da4c9",
+      "status": 200
+    }
+  ],
+  "texts_error": "[Errno 2] No such file or directory: '/var/tmp/cp-pair-accept/dist/f650e8c12d1d0c91764d201802008332f49b8d57-acceptance-license/product-web-src/offline/copy.ts'"
+}

@@ -1,0 +1,1 @@
+PASS: causal failure survives cleanup; legacy worker bound; busy/unsafe outcomes; typed preflight stop; initial record for a historical worker; no retry or host mutation

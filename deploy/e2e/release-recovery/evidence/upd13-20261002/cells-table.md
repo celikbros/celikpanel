@@ -1,0 +1,23 @@
+| Cell (folder) | Lab | Harness | Wrapper (UTC) | Owner start | Outcome | Attempts (automatic / owner) | Kind | Overall |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| upd1-arch-defective/run-a | upd13-arch-def-a, 3781 | base | 22:19:14-22:29:42 | 22:28:03 | `recovered-automatically` | 2: update/active 22:28:34, rollback/completion 22:29:20 / 0 | - | complete-for-review |
+| upd1-arch-good/run-a | upd13-arch-good-a, 3771 | base | 22:10:20-22:19:11 | 22:18:16 | `update-verified` | 0: - / 0 | - | complete-for-review |
+| upd1-arch-mgmt-off-reboot/run-a | upd13-arch-mr-a, 3811 | base | 22:41:38-22:54:45 | 22:50:03 | `update-verified` | 0: - / 0 | as-expected | complete-for-review |
+| upd1-arch-owner-continuation/run-a | upd13-arch-oc-a, 3801 | base | 22:40:02-22:41:37 | 22:41:33 | `not-terminal` | 0: - / 0 | - | incomplete |
+| upd1-arch-owner-continuation/run-b | upd13-arch-oc-b, 3921 | h22 | 02:16:14-02:31:41 | 02:24:13 | `recovered-after-owner-continuation` | 3: update/completion 02:25:47, update/completion 02:27:26, update/completion 02:29:04 / 1: update/completion 02:31:12 | as-expected | complete-for-review |
+| upd1-arch-startcheck/run-a | upd13-arch-sc-a, 3791 | base | 22:29:46-22:39:58 | 22:38:15 | `recovered-automatically` | 2: update/active 22:38:51, rollback/completion 22:39:37 / 0 | as-expected | complete-for-review |
+| upd1-debian13-defective/run-a | upd13-d13-def-a, 3721 | base | 20:50:35-21:04:52 | 21:01:10 | `recovered-automatically` + QMP reset | 2: update/active 21:02:04, rollback/active 21:03:03 / 0 | - | complete-for-review |
+| upd1-debian13-good/run-a | upd13-d13-good-a, 3711 | base | 20:38:24-20:50:30 | 20:48:10 | `update-verified` | 0: - / 0 | - | complete-for-review |
+| upd1-debian13-mgmt-off-reboot/run-a | upd13-d13-mr-a, 3761 | base | 21:55:30-22:10:16 | 22:05:12 | `update-verified` | 0: - / 0 | as-expected | complete-for-review |
+| upd1-debian13-owner-continuation/run-a | upd13-d13-oc-a, 3751 | base | 21:35:28-21:55:25 | 21:46:10 | `recovered-after-owner-continuation` | 3: update/completion 21:48:11, update/completion 21:49:57, update/completion 21:51:38 / 1: update/completion 21:53:47 | as-expected | complete-for-review |
+| upd1-debian13-realstart/run-a | upd13-d13-rs-a, 3741 | base | 21:18:51-21:35:22 | 21:28:14 | `paused-owner-action-required` | 3: update/completion 21:30:03, update/completion 21:31:42, update/completion 21:33:22 / 0 | as-expected | complete-for-review |
+| upd1-debian13-startcheck/run-a | upd13-d13-sc-a, 3731 | base | 21:04:57-21:18:45 | 21:15:10 | `recovered-automatically` + QMP reset | 2: update/active 21:16:01, rollback/active 21:17:00 / 0 | as-expected | complete-for-review |
+| upd1-ubuntu-defective/run-a | upd13-ub-def-a, 3831 | h22 | 23:13:24-23:33:32 | 23:30:06 | `recovered-automatically` + QMP reset | 2: update/active 23:30:46, rollback/active 23:31:47 / 0 | - | complete-for-review |
+| upd1-ubuntu-good/run-a | upd13-ub-good-a, 3821 | h22 | 22:54:49-23:13:20 | 23:11:12 | `update-verified` | 0: - / 0 | - | complete-for-review |
+| upd1-ubuntu-mgmt-off-reboot/run-a | upd13-ub-mr-a, 3861 | h22 | 00:19:00-00:40:05 | 00:35:07 | `update-verified` | 0: - / 0 | as-expected | complete-for-review |
+| upd1-ubuntu-owner-continuation/run-a | upd13-ub-oc-a, 3851 | h22 | 23:53:40-00:18:55 | 00:10:09 | `recovered-after-owner-continuation` | 3: update/completion 00:11:50, update/completion 00:13:29, update/completion 00:15:08 / 1: update/completion 00:17:17 | as-expected | complete-for-review |
+| upd1-ubuntu-startcheck/run-a | upd13-ub-sc-a, 3841 | h22 | 23:33:36-23:53:35 | 23:50:11 | `recovered-automatically` + QMP reset | 2: update/active 23:50:52, rollback/active 23:51:52 / 0 | as-expected | complete-for-review |
+| part2-alpha80/upd1-debian13-defective/run-a | upd13-a80-d13-def-a, 3881 | h22 | 00:53:31-01:06:22 | 01:04:16 | `recovered-automatically` + QMP reset | 2: update/active 01:04:54, rollback/active 01:05:52 / 0 | - | complete-for-review |
+| part2-alpha80/upd1-debian13-good/run-a | upd13-a80-d13-good-a, 3871 | h22 | 00:40:10-00:53:27 | 00:51:14 | `update-verified` | 0: - / 0 | - | complete-for-review |
+| part2-alpha80/upd1-debian13-owner-continuation/run-a | upd13-a80-d13-oc-a, 3891 | h22 | 01:06:26-01:26:10 | 01:17:16 | `recovered-after-owner-continuation` | 3: update/completion 01:18:57, update/completion 01:20:36, update/completion 01:22:15 / 1: update/completion 01:24:34 | as-expected | complete-for-review |
+| part2-alpha80/upd1-ubuntu-good/run-a | upd13-a80-ub-good-a, 3901 | h22 | 01:26:14-02:16:08 | 02:14:05 | `update-verified` | 0: - / 0 | - | complete-for-review |

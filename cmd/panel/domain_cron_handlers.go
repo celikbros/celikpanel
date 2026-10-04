@@ -92,7 +92,7 @@ func (p *Panel) handleListCronJobs(w http.ResponseWriter, tenant transport.CronT
 
 	err := p.callAgent("Agent.ListCronJobs", &transport.ListCronJobsRequest{CronTenant: tenant}, &resp)
 	if err != nil {
-		writeServerError(w, err)
+		writeCronAgentError(w, err, cronReasonRead)
 		return
 	}
 
@@ -120,7 +120,7 @@ func (p *Panel) handleAddCronJob(w http.ResponseWriter, r *http.Request, tenant 
 	}, &success)
 
 	if err != nil {
-		writeServerError(w, err)
+		writeCronAgentError(w, err, cronReasonWrite)
 		return
 	}
 	if !success {
@@ -156,7 +156,7 @@ func (p *Panel) handleUpdateCronJob(w http.ResponseWriter, r *http.Request, tena
 	}, &success)
 
 	if err != nil {
-		writeServerError(w, err)
+		writeCronAgentError(w, err, cronReasonWrite)
 		return
 	}
 	if !success {
@@ -181,7 +181,7 @@ func (p *Panel) handleDeleteCronJob(w http.ResponseWriter, r *http.Request, tena
 	}, &success)
 
 	if err != nil {
-		writeServerError(w, err)
+		writeCronAgentError(w, err, cronReasonWrite)
 		return
 	}
 	if !success {

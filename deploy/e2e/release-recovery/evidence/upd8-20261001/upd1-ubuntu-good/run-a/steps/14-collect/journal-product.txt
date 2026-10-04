@@ -1,0 +1,50 @@
+2026-10-01T13:00:52.246921+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-01T13:00:52.288390+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-01T13:00:52.288886+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-01T13:00:54.099951+00:00 dns-ubuntu systemd[1]: Starting celikpanel-agent.service - CelikPanel privileged agent...
+2026-10-01T13:00:54.122756+00:00 dns-ubuntu systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-10-01T13:00:54.132943+00:00 dns-ubuntu agent[7004]: 2026/10/01 13:00:54 Starting CelikPanel Agent...
+2026-10-01T13:00:54.145099+00:00 dns-ubuntu agent[7004]: 2026/10/01 13:00:54 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-10-01T13:00:54.145289+00:00 dns-ubuntu agent[7004]: 2026/10/01 13:00:54 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-10-01T13:00:55.771821+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-01T13:00:55.791766+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-01T13:00:56.001913+00:00 dns-ubuntu panel[7140]: 2026/10/01 13:00:56 Starting CelikPanel Backend...
+2026-10-01T13:00:56.013641+00:00 dns-ubuntu panel[7140]: 2026/10/01 13:00:56 Connected to Agent RPC
+2026-10-01T13:00:56.013845+00:00 dns-ubuntu panel[7140]: 2026/10/01 13:00:56 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T13:00:56.014688+00:00 dns-ubuntu panel[7140]: 2026/10/01 13:00:56 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-01T13:00:56.042163+00:00 dns-ubuntu panel[7140]: 2026/10/01 13:00:56 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-ubuntu": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-10-01T13:00:56.044559+00:00 dns-ubuntu panel[7140]: 2026/10/01 13:00:56 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-10-01T13:00:56.045522+00:00 dns-ubuntu panel[7140]: 2026/10/01 13:00:56 Panel ready on :2083 (HTTPS)
+2026-10-01T13:00:56.813099+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-01T13:00:56.823849+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-01T13:00:56.824096+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-01T13:00:56.931933+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-01T13:00:56.955818+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-01T13:00:57.184577+00:00 dns-ubuntu panel[7202]: 2026/10/01 13:00:57 Starting CelikPanel Backend...
+2026-10-01T13:00:57.187518+00:00 dns-ubuntu panel[7202]: 2026/10/01 13:00:57 Connected to Agent RPC
+2026-10-01T13:00:57.187711+00:00 dns-ubuntu panel[7202]: 2026/10/01 13:00:57 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T13:00:57.188603+00:00 dns-ubuntu panel[7202]: 2026/10/01 13:00:57 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-01T13:00:57.203495+00:00 dns-ubuntu panel[7202]: 2026/10/01 13:00:57 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-ubuntu": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-10-01T13:00:57.206589+00:00 dns-ubuntu panel[7202]: 2026/10/01 13:00:57 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-10-01T13:00:57.208661+00:00 dns-ubuntu panel[7202]: 2026/10/01 13:00:57 Panel ready on :2083 (HTTPS)
+2026-10-01T13:01:14.531704+00:00 dns-ubuntu panel[7202]: 2026/10/01 13:01:14 http: TLS handshake error from 127.0.0.1:60136: EOF
+2026-10-01T13:01:14.852340+00:00 dns-ubuntu panel[7202]: 2026/10/01 13:01:14 http: TLS handshake error from 127.0.0.1:60154: EOF
+2026-10-01T13:01:15.112740+00:00 dns-ubuntu panel[7202]: 2026/10/01 13:01:15 http: TLS handshake error from 127.0.0.1:60190: EOF
+2026-10-01T13:01:15.135502+00:00 dns-ubuntu panel[7202]: 2026/10/01 13:01:15 http: TLS handshake error from 127.0.0.1:60206: EOF
+2026-10-01T13:01:15.155574+00:00 dns-ubuntu panel[7202]: 2026/10/01 13:01:15 http: TLS handshake error from 127.0.0.1:60228: EOF
+2026-10-01T13:01:15.171703+00:00 dns-ubuntu panel[7202]: 2026/10/01 13:01:15 http: TLS handshake error from 127.0.0.1:60242: EOF
+2026-10-01T13:01:15.194734+00:00 dns-ubuntu panel[7202]: 2026/10/01 13:01:15 http: TLS handshake error from 127.0.0.1:60262: EOF
+2026-10-01T13:01:15.205404+00:00 dns-ubuntu panel[7202]: 2026/10/01 13:01:15 http: TLS handshake error from 127.0.0.1:60274: EOF
+2026-10-01T13:01:15.218101+00:00 dns-ubuntu panel[7202]: 2026/10/01 13:01:15 http: TLS handshake error from 127.0.0.1:60294: EOF
+2026-10-01T13:01:15.229723+00:00 dns-ubuntu panel[7202]: 2026/10/01 13:01:15 http: TLS handshake error from 127.0.0.1:60306: EOF
+2026-10-01T13:01:15.455519+00:00 dns-ubuntu panel[7202]: 2026/10/01 13:01:15 http: TLS handshake error from 127.0.0.1:60322: EOF
+2026-10-01T13:01:15.477867+00:00 dns-ubuntu panel[7202]: 2026/10/01 13:01:15 http: TLS handshake error from 127.0.0.1:60344: EOF
+2026-10-01T13:01:16.317071+00:00 dns-ubuntu panel[7202]: 2026/10/01 13:01:16 http: TLS handshake error from 127.0.0.1:60356: EOF
+2026-10-01T13:01:17.051297+00:00 dns-ubuntu panel[7202]: 2026/10/01 13:01:17 http: TLS handshake error from 127.0.0.1:60378: EOF
+2026-10-01T13:01:17.086612+00:00 dns-ubuntu panel[7202]: 2026/10/01 13:01:17 service operation bf0f607c505431bdb1f766a544a9bb18 could not acquire the agent lease: another server change or package-manager task is still running
+2026-10-01T13:01:17.368105+00:00 dns-ubuntu panel[7202]: 2026/10/01 13:01:17 http: TLS handshake error from 127.0.0.1:60392: EOF
+2026-10-01T13:01:19.095162+00:00 dns-ubuntu panel[7202]: 2026/10/01 13:01:19 server setup step 02-service failed: HOST_MUTATION_BUSY: another server change or package-manager task is still running; wait and try again
+2026-10-01T13:01:22.381131+00:00 dns-ubuntu panel[7202]: 2026/10/01 13:01:22 http: TLS handshake error from 127.0.0.1:33458: EOF
+2026-10-01T13:01:22.487861+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-01T13:01:22.547769+00:00 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-01T13:01:22.548170+00:00 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.

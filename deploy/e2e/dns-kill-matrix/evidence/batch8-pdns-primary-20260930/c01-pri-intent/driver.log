@@ -1,0 +1,28 @@
+### 2026-09-29T20:16:43.566Z start-cell c01-pri-intent pdns-switch__intent__after-write__paired-primary__peer-reachable node=debian13 peer=arch fixture=uninitialized root=/var/tmp/cp-b8-0930 gateprobe=1 flags=--reboot-after-recovery --disable-management-before-reboot
+### 2026-09-29T20:16:43.568Z prepare
+### 2026-09-29T20:16:44.704Z early-admission-dry-run
+### 2026-09-29T20:16:44.874Z start
+### 2026-09-29T20:16:45.187Z wait-ssh
+### 2026-09-29T20:17:51.227Z guest-identity
+### 2026-09-29T20:17:52.024Z install
+### 2026-09-29T20:18:01.795Z enroll-recovery-runtime
+### 2026-09-29T20:18:09.852Z native-bind-secondary-prepare
+### 2026-09-29T20:19:31.139Z prepare-pdns-switch
+### 2026-09-29T20:19:32.440Z pre-run-snapshot
+### 2026-09-29T20:20:03.923Z gate-probe-on-prepared-guest
+{"schema":"celikpanel/dns-kill-matrix-gate-probe/v1","cell_id":"pdns-switch__intent__after-write__paired-primary__peer-reachable","manifest_qualifier":"dns-engine-switch/v1:sha256:8c27f70fec9a59c5a3a0dcdc3c7ab32355ab11fc4ebfe3028e3a74ff4e55e5c5","gate":"unknown","detail":"the gate probe RPC failed: cannot reach agent socket: dial unix /run/celikpanel/agent.sock: connect: no such file or directory"}
+GATE_PROBE_RC=75
+### GATE NOT ESTABLISHED: stop
+NO-COLLECT (setup failed or stopped before the run)
+ALLDONE 2026-09-29T20:20:04Z
+### 2026-09-29T20:21:15.256Z continue-after-standalone-gate-probe-attempt
+### 2026-09-29T20:21:15.258Z start-peer-dns-sampler
+Running as unit: cp-b8-peerloop1.service; invocation ID: 2bb4a7a28a584a3ca60bb7ab8ba6e2e0
+peerloop1 start rc=0
+### 2026-09-29T20:21:16.276Z start-watcher
+Running as unit: cp-b8-watch.service; invocation ID: f1b16099fdd04f24a500acc06df7fcec
+### 2026-09-29T20:21:17.810Z prepared-ok
+### 2026-09-29T20:21:17.824Z run-prepared-dry-run flags=--reboot-after-recovery --disable-management-before-reboot
+### 2026-09-29T20:21:17.969Z run-prepared
+RUN_PREPARED_RC=1
+### 2026-09-29T20:22:20.068Z done-run rc=1

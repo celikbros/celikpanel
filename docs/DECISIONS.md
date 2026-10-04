@@ -8,6 +8,170 @@ Code decisions live in git; this file is for strategy. Newest first.
 
 ---
 
+## D-028 · The fresh paired PowerDNS primary is offered, within the measured envelope
+
+*October 1, 2026 · Planner decision on the owner's standing direction (D-026 addendum: open the gate when row 6 has native evidence)*
+
+Until today the Panel and the Agent refused the first install of PowerDNS
+as the paired primary on a server with no DNS engine
+(`pdns_primary_switch_paused`), because its V3 journal had no native
+recovery evidence. Every acceptance run since 2026-09-30 was made on a
+branch that flipped the two gate constants; the main line stayed closed.
+
+**Evidence.** Kill-matrix batches 8r, 9 and 12 (cuts before and after the
+first start, with one zone and with zero zones, forward recovery, pre-start
+rollback, owner edits held, a parentless deletion resumed after the owner
+enrollment, management-disabled reboots) and pair runs 5 and 7 (the whole
+product flow on two CelikPanel servers: setup, zone add, record edit, zone
+delete with the product's proof after the owner enrollment, re-add, reboot
+with the panel off, management return) passed on the acceptance branch with
+no harness workaround. The same runs found and closed eleven product defects
+along the way; each is in the acceptance register with its evidence.
+
+**Decision.** The two gate constants are `true` on the main line. What is
+offered is exactly what was measured: PowerDNS as the paired primary on a
+server with no DNS engine, Debian 13 amd64, the measured PowerDNS package
+version, enforced by the Agent's host-profile and package-version
+preflights. Every other PowerDNS paired-primary manifest stays refused; a
+serving BIND source keeps the D-026 refusal
+(`bind_source_pdns_switch_unsupported`); nothing changes for BIND or for a
+PowerDNS secondary.
+
+**Limits stated.** One run per cell or topology, disposable guests, orderly
+reboots, a test-only license build (D-027), a laptop host. The daemon
+re-stamp admission, the proof time-out code and the composite owner-edit
+code are in source with component tests and did not occur natively. The
+step-time bounds of the native proof are single samples. Installed servers
+were not touched; the decision does not authorise updating them (the owner
+starts every panel update from the panel's own update screen).
+
+---
+
+## D-027 · Acceptance runs use a test-only fixture license; license policy is unchanged
+
+*September 30, 2026 · Owner decision*
+
+Product-flow acceptance on disposable guests must drive the real Panel: setup
+wizard, domain screens, both servers running CelikPanel. The Panel refuses
+almost every authenticated route until a license is active and re-verifies an
+active license against the license service about every minute; the
+disposable guests are offline. The owner chose a test-only build over using a
+real key on the experiments or skipping the product flow.
+
+**Decision.** A build tag, `acceptance_license`, compiles a seam that accepts
+exactly one fixture license labelled "ACCEPTANCE FIXTURE — NOT FOR
+PRODUCTION", only on a guest that carries the e2e fixture marker, verified
+locally, with every connection attempt to the license service refused and
+counted. Ordinary builds compile a stub with no fixture, no alternate
+verifier and no environment or file lookup, so an ordinary binary cannot be
+switched into acceptance mode at run time; tests prove this from the sources
+and from the built binaries. Release packaging refuses any artifact built
+with the tag or containing the fixture text. The acceptance archive is
+produced only by an explicitly named script and is marked not a release.
+
+This does not change license policy, the verification window, or any
+behaviour of a customer build. A run made with the fixture never counts as
+evidence about license behaviour. Known limit: the License screen shows state
+and expiry only, so on screen the fixture is not distinguishable without a
+web change; the API payload, the logs, the evidence and the panel version
+are.
+
+---
+
+## D-026 · DNS engine recovery: refuse the unrecoverable switch, accept same-operation recovery for first installs
+
+*September 29, 2026 · Owner decision on the handoff's item 1 (DNS recovery contract)*
+
+A read-only audit of the source at `e9d1019d` bound every DNS engine mutation
+the product can start to one of three states: passed with native evidence,
+named gap, or unsupported. One path fell into a fourth, unacceptable state:
+switching a **serving BIND** source to a **PowerDNS** target on a standalone
+host or a paired secondary was still reachable from the engine card. It wrote
+the legacy V1 journal, its only recovery was the Agent's own inverse, the V4
+pre-start inverse and its owner CLI had no producer wired to them, and no
+native interruption trial existed. The existing gate covered only the paired
+primary.
+
+**Decision 1.** The BIND→PowerDNS engine switch is unsupported in this
+release, for every topology. Panel preview/commit, server setup and the Agent
+RPC refuse it before any mutation with the blocker
+`bind_source_pdns_switch_unsupported`, and the screen states the reason, that
+BIND keeps serving, and the next action (install PowerDNS on a host without a
+DNS engine, or wait for a release that names the switch as supported).
+Fresh PowerDNS installs, PowerDNS→BIND switches, PowerDNS adoption and
+reconfiguration, BIND reinstall and every installed server are unchanged.
+Reopening the gate requires a wired producer, a pre-start and post-start
+Agent-independent inverse, and native interruption evidence — not removing the
+check.
+
+**Decision 2.** For a first engine install (BIND or PowerDNS, any role) the
+prior state is "no DNS engine"; there is no owner data to restore. Recovery
+through the Agent on the same operation identity at the next start, with the
+read-only status command and the screen naming the owner's next action, is the
+accepted contract for this release. An Agent-independent owner CLI is not
+required for first installs. What remains for item 1 is evidence, not code:
+native interruption cells for fresh standalone PowerDNS, fresh paired
+secondary (BIND and PowerDNS), and the post-start cut on fresh BIND.
+
+**Addendum, same day.** Native cells found two product defects that
+component tests had not (a first-install rollback and the V2 BIND switch
+inverse both rejected a target that had never started) and one recovery dead
+end (owner inverse commands refused the Agent's own deliberate release).
+All three were fixed and re-run natively. The owner chose to run the
+post-stop PowerDNS→BIND cells before closing; they passed, and roadmap item 1
+is closed with the limits named in the
+[acceptance register](DNS-RECOVERY-ACCEPTANCE.md). For a released job the
+owner command does not rewrite the finished ledger entry; what the owner is
+shown is computed at read time. Closing item 1 does not close P0.4.
+
+Decision 1 narrows promised scope and is stated in release notes as an
+explicit unsupported operation, not silently. Neither decision changes an
+installed server, the license policy, owner-operated recovery or user-only
+installed-panel updates.
+
+---
+
+## D-025 · Resilience is a core contract, not an incident patch
+
+*September 14, 2026 · Owner-requested constitutional audit; required direction, implementation open*
+
+The owner requested examination of the system's constitution after repeated
+Frankfurt failures. The source audit found coupled failure boundaries, ambiguous
+evidence roles, incompatible artifact readers and recovery dependent on the
+candidate it must recover. Similar failures had already been documented on
+August 26. A passing reproducer did not establish whole-lifecycle reliability.
+
+**Direction.** Preserve the Panel/Agent privilege split, while separating normal
+mutation authority, state observation and recovery availability. Stop unsafe
+actions at their affected boundary; preserve working native services and a narrow
+authenticated recovery path within the supported host fault model. Unknown status
+must not become false license expiry, missing service or completed work.
+
+Every durable artifact needs one versioned producer/reader/restore contract.
+Every mutation, including metadata normalization, needs read-only discovery,
+explicit durable checkpoints, bounded continuation/compensation and terminal
+proof. Recovery must be able to outlive ordinary Agent and candidate startup.
+A separately versioned minimal executor and manifest protocol are proposed;
+existing exact retained-release rollback rules continue until that replacement
+is implemented and verified. No unrestricted shell or AI-based evidence repair.
+
+The [resilience contract](RESILIENCE-CONTRACT.md) contains source evidence,
+invariants, the open P0 acceptance register and implementation sequence. The
+[constitution](../ROADMAP.md) now makes survival, truthful state and fault evidence
+mandatory. PR review must name affected contracts, migration/recovery behavior
+and exact test evidence. Full support requires disposable native upgrade and
+automatic-restore drills, including failure during recovery itself. An emergency
+incident correction may ship with explicit scope and limitations; it does not
+close the architectural work or justify unrelated feature expansion.
+
+This decision changes no installed server and does not implement the new
+executor, recovery UI, schema split or independent workload renewal. Alpha80 is a
+scoped BIND/recovery correction. D-021, D-022, D-024, owner-operated recovery and
+user-only installed-panel updates remain binding. Older one-binary, only-panel
+and historical bootstrap wording cannot override these boundaries.
+
+---
+
 ## D-024 · Every operation explains the current state and next action
 
 *September 13, 2026 · User-approved requirement; product-wide implementation and audit incomplete*
@@ -1068,6 +1232,15 @@ which daemon owns authority.
 
 *July 9, 2026*
 
+**September 14 clarification.** The panel-first rule is a product acceptance
+discipline, not a restriction on the owner's native administration (D-022).
+For installed-server recovery, the September 13 user-operated recovery rule
+applies: prefer the panel, then short verified owner-run commands when the panel
+cannot recover. This does not authorize silent assistant-side configuration or
+installed-panel updates. Manual recovery is not evidence that the corresponding
+product flow is complete. Read the original decision below in that historical
+context and subject to this clarification.
+
 **Decision.** From the Debian 13 reinstall onward, the operator uses CelikPanel
 exactly like a real customer: every install, every setting, every domain goes
 through the panel, by their hand. The developer never configures the server —
@@ -1390,6 +1563,14 @@ cPanel/Plesk (they compile PHP themselves, leave the rest to the distro).
 ## D-001 · Update & rollback: never re-image the server
 
 *July 8, 2026 · amended July 28, 2026*
+
+**Current installed-panel boundary — September 14 clarification.** The
+bootstrap commands below document internal/historical release mechanics; they
+do not authorize updating an installed panel through SSH. Since September 10,
+the user initiates every installed-panel update through CelikPanel's update UI.
+Publishing and installing are separate. Exact retained-release rollback remains
+the supported owner-operated recovery path until D-025's replacement executor
+is implemented and verified; another release's rollback must not be substituted.
 
 **Decision.** Production updates start only with
 `sudo /bin/bash ./bootstrap-update.sh --normal`, or the one-time

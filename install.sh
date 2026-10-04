@@ -174,6 +174,12 @@ source "$SRC/deploy/release-transaction-guard.sh"
 # shellcheck source=deploy/release-recovery-foundation.sh
 source "$SRC/deploy/release-recovery-foundation.sh"
 INSTALL_RELEASE_TRANSACTION_FD=
+APPLY_ONLY_SNAPSHOT=
+APPLY_ONLY_FIREWALL_STATE=
+APPLY_ONLY_UNIT_ROOT_IDENTITY=
+APPLY_ONLY_SNAPSHOT_ROOT_IDENTITY=
+APPLY_ONLY_SNAPSHOT_MANIFEST_SHA=
+APPLY_ONLY_CANDIDATE_MANIFEST_SHA=
 
 # Fresh self-signed certificates are created by the unprivileged panel process.
 # Normalize their metadata once, after the service is stopped, so the public
@@ -559,6 +565,34 @@ prepare_fresh_release_transaction_foundation() {
         "$RELEASE_TRANSACTION_ROOT" "$INSTALL_RELEASE_TRANSACTION_FD" \
         || die "fresh release transaction lock ownership proof failed"
     TRUSTED_RELEASE_ROOT=$SRC
+    # The root-only kit lives below a shared executable directory. Establish
+    # that directory's exact contract before enrollment creates private paths.
+    # Ozel runtime dizinlerinden once ortak calistirilabilir dizini dogrula.
+    _release_txn_prepare_start_helper_directory "$LIBEXEC_DIR" \
+        || die "fresh recovery executable directory is unsafe; preserve its existing owner configuration"
+    [[ -x "$SRC/recovery-runtime/bin/recovery" &&
+       ! -L "$SRC/recovery-runtime/bin/recovery" ]] \
+        || die "fresh install independent recovery runtime is missing"
+    "$SRC/recovery-runtime/bin/recovery" enroll-runtime \
+        --source "$SRC/recovery-runtime" \
+        --transaction-fd 9 9<&"$INSTALL_RELEASE_TRANSACTION_FD" \
+        || die "fresh install independent recovery runtime could not be enrolled"
+    if [[ -e "$SRC/firewall-runtime" || -L "$SRC/firewall-runtime" ]]; then
+        "$SRC/recovery-runtime/bin/recovery" prepare-firewall-runtime \
+            --source "$SRC/firewall-runtime" \
+            --transaction-fd 9 9<&"$INSTALL_RELEASE_TRANSACTION_FD" \
+            || die "fresh independent firewall preparation could not be verified; preserve its files"
+        "$SRC/recovery-runtime/bin/recovery" verify-firewall-unit \
+            --unit "$SRC/deploy/systemd/celikpanel-firewall-restore.service" \
+            || die "fresh firewall unit and prepared helper do not agree; preserve their files"
+
+    fi
+    if [[ -e "$SRC/mail-renewal-runtime" || -L "$SRC/mail-renewal-runtime" ]]; then
+        "$SRC/recovery-runtime/bin/recovery" prepare-mail-renewal-runtime \
+            --source "$SRC/mail-renewal-runtime" \
+            --transaction-fd 9 9<&"$INSTALL_RELEASE_TRANSACTION_FD" \
+            || die "fresh independent mail renewal preparation could not be verified; preserve its files"
+    fi
     preflight_reviewed_release_recovery_foundation
     publish_reviewed_release_recovery_intent
     install_release_transaction_guards_with_label_barrier \
@@ -1949,6 +1983,147 @@ preflight_first_administrator_admission
 # while the inherited persistent lock and exact active update marker are live.
 # Apply-only yalnız tamamen doğrulanmış değişmez sürümden, miras kalıcı kilit ve
 # tam active update işaretçisi canlıyken kabul edilir.
+# Re-establish the installer's own snapshot admission. The updater's earlier
+# proof is not transferable across a child process or a later publication.
+# This verifies the whole immutable envelope before interpreting the unit
+# before-image; DB/TLS semantic admission remains the updater's responsibility.
+validate_apply_only_snapshot() {
+    [[ "$APPLY_ONLY" -eq 1 ]] || return 0
+    local snapshot_name snapshot parsed stamp target_commit nonce release_commit release_tree
+    local manifest_owner manifest_group manifest_mode manifest_links manifest_size permissions
+    local unexpected required firewall_state snapshot_identity manifest_sha
+    snapshot_name=${CELIKPANEL_RELEASE_TRANSACTION_SNAPSHOT:-}
+    parsed=$(release_txn_parse_update_snapshot_name "$snapshot_name") \
+        || die "apply-only snapshot name is not canonical"
+    IFS=$'\t' read -r stamp target_commit nonce <<< "$parsed"
+    release_txn_verify_inherited_lock "$RELEASE_TRANSACTION_ROOT" "$CELIKPANEL_RELEASE_TRANSACTION_FD" \
+        || die "apply-only snapshot transaction lock proof failed"
+    release_txn_validate_active_token "$RELEASE_TRANSACTION_ROOT" \
+        "${CELIKPANEL_RELEASE_TRANSACTION_TOKEN:-}" update "$snapshot_name" \
+        || die "apply-only snapshot does not belong to the active update"
+    snapshot=/var/backups/celikpanel/update-snapshots/$snapshot_name
+    release_recovery_validate_root_chain "$snapshot" \
+        || die "apply-only snapshot directory chain is unsafe"
+    snapshot_identity=$(stat -Lc '%d:%i' -- "$snapshot") \
+        || die "apply-only snapshot directory identity is unavailable"
+    [[ -z ${APPLY_ONLY_SNAPSHOT_ROOT_IDENTITY:-} ||
+       $snapshot_identity == "$APPLY_ONLY_SNAPSHOT_ROOT_IDENTITY" ]] \
+        || die "apply-only snapshot directory changed after admission"
+    unexpected=$(find "$snapshot" -type l -print -quit) \
+        || die "apply-only snapshot symbolic-link inspection failed"
+    [[ -z $unexpected ]] || die "apply-only snapshot contains a symbolic link"
+    unexpected=$(find "$snapshot" ! -type d ! -type f -print -quit) \
+        || die "apply-only snapshot object inspection failed"
+    [[ -z $unexpected ]] || die "apply-only snapshot contains a special object"
+    [[ -f "$snapshot/SHA256SUMS" && ! -L "$snapshot/SHA256SUMS" ]] \
+        || die "apply-only snapshot checksum manifest is missing or unsafe"
+    read -r manifest_owner manifest_group manifest_mode manifest_links manifest_size \
+        < <(stat -Lc '%u %g %a %h %s' -- "$snapshot/SHA256SUMS") \
+        || die "cannot inspect apply-only snapshot checksum manifest"
+    permissions=$((8#$manifest_mode))
+    [[ "$manifest_owner" == 0 && "$manifest_group" == 0 && "$manifest_links" == 1 &&
+       "$manifest_size" -gt 0 && "$manifest_size" -le 16777216 ]] &&
+        (( (permissions & 0022) == 0 )) \
+        || die "apply-only snapshot checksum manifest metadata is unsafe"
+    (
+        cd "$snapshot" || exit 1
+        LC_ALL=C find . -type f ! -path './SHA256SUMS' -print0 \
+            | LC_ALL=C sort -z | xargs -0 sha256sum | cmp -s - SHA256SUMS || exit 1
+        sha256sum -c SHA256SUMS >/dev/null
+    ) || die "apply-only complete snapshot checksum verification failed"
+    manifest_sha=$(sha256sum -- "$snapshot/SHA256SUMS") \
+        || die "apply-only snapshot manifest identity is unavailable"
+    manifest_sha=${manifest_sha%% *}
+    [[ -z ${APPLY_ONLY_SNAPSHOT_MANIFEST_SHA:-} ||
+       $manifest_sha == "$APPLY_ONLY_SNAPSHOT_MANIFEST_SHA" ]] \
+        || die "apply-only snapshot manifest changed after admission"
+    for required in snapshot.version commit target-release.commit target-release.tree \
+        created-at-utc celikpanel.db bin/panel bin/agent web/index.html \
+        firewall-unit.state agent-ledger.state agent-state-root service-states.tsv \
+        quiesce-coordinators.tsv snapshot-transition.state release-updater.state; do
+        [[ -f "$snapshot/$required" && ! -L "$snapshot/$required" ]] \
+            || die "apply-only v6 snapshot payload is incomplete: $required"
+    done
+    for required in units bin web agent-state panel-tls; do
+        [[ -d "$snapshot/$required" && ! -L "$snapshot/$required" ]] \
+            || die "apply-only v6 snapshot directory is missing: $required"
+    done
+    printf '6\n' | cmp -s - "$snapshot/snapshot.version" \
+        || die "apply-only requires an exact version 6 snapshot"
+    printf 'unknown\n' | cmp -s - "$snapshot/commit" \
+        || die "apply-only snapshot source provenance is not canonical"
+    release_commit=$(cat "$SRC/release.commit") || die "apply-only target commit is missing"
+    release_tree=$(cat "$SRC/release.tree") || die "apply-only target tree is missing"
+    [[ $release_commit =~ ^[0-9a-f]{40}$ && $release_tree =~ ^[0-9a-f]{40,64}$ &&
+       $target_commit == "$release_commit" ]] \
+        || die "apply-only snapshot name does not match the verified target release"
+    printf '%s\n' "$release_commit" | cmp -s - "$SRC/release.commit" \
+        || die "apply-only target commit is noncanonical"
+    printf '%s\n' "$release_tree" | cmp -s - "$SRC/release.tree" \
+        || die "apply-only target tree is noncanonical"
+    printf '%s\n' "$release_commit" | cmp -s - "$snapshot/target-release.commit" \
+        || die "apply-only snapshot target commit differs from the verified release"
+    printf '%s\n' "$release_tree" | cmp -s - "$snapshot/target-release.tree" \
+        || die "apply-only snapshot target tree differs from the verified release"
+    printf '%s\n' "$stamp" | cmp -s - "$snapshot/created-at-utc" \
+        || die "apply-only snapshot creation time differs from its name"
+    firewall_state=$(cat "$snapshot/firewall-unit.state") \
+        || die "apply-only snapshot firewall-unit state is missing"
+    [[ $firewall_state == present || $firewall_state == absent ]] \
+        || die "apply-only snapshot firewall-unit state is invalid"
+    printf '%s\n' "$firewall_state" | cmp -s - "$snapshot/firewall-unit.state" \
+        || die "apply-only snapshot firewall-unit state is noncanonical"
+    if [[ -z ${APPLY_ONLY_UNIT_ROOT_IDENTITY:-} ]]; then
+        APPLY_ONLY_UNIT_ROOT_IDENTITY=$(release_txn_systemd_unit_root_identity "$UNIT_DIR") \
+            || die "apply-only systemd unit root identity is unsafe"
+    fi
+    release_unit_validate_transition "$RELEASE_TRANSACTION_ROOT" "$CELIKPANEL_RELEASE_TRANSACTION_FD" \
+        "$snapshot/units" "$SRC/deploy/systemd" "$UNIT_DIR" "$firewall_state" \
+        "$APPLY_ONLY_UNIT_ROOT_IDENTITY" \
+        || die "apply-only unit files are outside the verified old/candidate transition"
+    release_txn_validate_active_token "$RELEASE_TRANSACTION_ROOT" \
+        "${CELIKPANEL_RELEASE_TRANSACTION_TOKEN:-}" update "$snapshot_name" \
+        || die "apply-only active transaction changed during snapshot verification"
+    [[ $(stat -Lc '%d:%i' -- "$snapshot") == "$snapshot_identity" ]] \
+        || die "apply-only snapshot directory changed during verification"
+    APPLY_ONLY_SNAPSHOT=$snapshot
+    APPLY_ONLY_FIREWALL_STATE=$firewall_state
+    APPLY_ONLY_SNAPSHOT_ROOT_IDENTITY=$snapshot_identity
+    APPLY_ONLY_SNAPSHOT_MANIFEST_SHA=$manifest_sha
+}
+
+publish_apply_only_units() {
+    local unit state
+    [[ "$APPLY_ONLY" -eq 1 ]] || die "transactional unit publication requires apply-only mode"
+    validate_apply_only_snapshot
+    for unit in celikpanel-agent.service celikpanel-panel.service; do
+        state=$("$SYSTEMCTL_BIN" show --property=ActiveState --value "$unit") \
+            || die "cannot inspect $unit before apply-only unit publication"
+        [[ $state == inactive || $state == failed ]] \
+            || die "apply-only unit publication requires $unit stopped"
+    done
+    release_unit_publish_transition "$RELEASE_TRANSACTION_ROOT" "$CELIKPANEL_RELEASE_TRANSACTION_FD" \
+        "$APPLY_ONLY_SNAPSHOT/units" "$SRC/deploy/systemd" "$UNIT_DIR" \
+        "$APPLY_ONLY_FIREWALL_STATE" "$APPLY_ONLY_UNIT_ROOT_IDENTITY" \
+        || die "apply-only atomic unit publication was not confirmed"
+}
+# Forward publication and rollback use the same durable resource protocol.
+# There is no deletion window or unjournaled partial web copy in apply-only.
+publish_apply_only_resources() {
+    local resource
+    [[ "$APPLY_ONLY" -eq 1 ]] || die "transactional resources require apply-only mode"
+    validate_apply_only_transaction
+    for resource in bin web; do
+        /usr/libexec/celikpanel/recovery publish-resource --resource "$resource" \
+            --snapshot "$CELIKPANEL_RELEASE_TRANSACTION_SNAPSHOT" \
+            --snapshot-manifest "$APPLY_ONLY_SNAPSHOT_MANIFEST_SHA" \
+            --candidate-root "$TRUSTED_RELEASE_ROOT" \
+            --candidate-manifest "$APPLY_ONLY_CANDIDATE_MANIFEST_SHA" \
+            9<&"$CELIKPANEL_RELEASE_TRANSACTION_FD" \
+            || die "exact transactional $resource publication could not be verified; preserve resource evidence"
+    done
+}
+
 validate_apply_only_transaction() {
     local root canonical relative entry owner mode permissions state
     [[ "$APPLY_ONLY" -eq 1 ]] || return 0
@@ -1975,8 +2150,17 @@ validate_apply_only_transaction() {
         permissions=$((8#$mode)); (( (permissions & 0022) == 0 )) || die "apply-only release entry is writable"
     done < <(find "$root" -mindepth 1 -print0)
     [[ -f "$root/SHA256SUMS" && ! -L "$root/SHA256SUMS" ]] || die "apply-only checksum manifest is missing"
+    local candidate_manifest_sha
+    candidate_manifest_sha=$(sha256sum -- "$root/SHA256SUMS") \
+        || die "apply-only candidate manifest identity is unavailable"
+    candidate_manifest_sha=${candidate_manifest_sha%% *}
+    [[ -z ${APPLY_ONLY_CANDIDATE_MANIFEST_SHA:-} || $APPLY_ONLY_CANDIDATE_MANIFEST_SHA == "$candidate_manifest_sha" ]] \
+        || die "apply-only candidate changed after admission"
     (cd "$root"; LC_ALL=C find . -type f ! -path './SHA256SUMS' -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | cmp -s - SHA256SUMS; sha256sum -c SHA256SUMS >/dev/null) \
         || die "apply-only trusted release checksum verification failed"
+    [[ $(sha256sum -- "$root/SHA256SUMS" | awk '{print $1}') == "$candidate_manifest_sha" ]] \
+        || die "apply-only candidate manifest changed during admission"
+    APPLY_ONLY_CANDIDATE_MANIFEST_SHA=$candidate_manifest_sha
     [[ -x "$root/bin/panel" && -x "$root/bin/agent" && -f "$root/web/dist/index.html" ]] \
         || die "apply-only release artifacts are incomplete"
     [[ "${CELIKPANEL_RELEASE_TRANSACTION_FD:-}" =~ ^[0-9]+$ ]] || die "apply-only transaction FD is missing"
@@ -1984,12 +2168,15 @@ validate_apply_only_transaction() {
     TRUSTED_RELEASE_ROOT=$root
     # shellcheck source=deploy/release-transaction-guard.sh
     source "$root/deploy/release-transaction-guard.sh"
+    # shellcheck source=deploy/release-unit-transition.sh
+    source "$root/deploy/release-unit-transition.sh"
     release_txn_verify_inherited_lock "$RELEASE_TRANSACTION_ROOT" "$CELIKPANEL_RELEASE_TRANSACTION_FD" \
         || die "apply-only inherited transaction lock proof failed"
     release_txn_validate_active_token "$RELEASE_TRANSACTION_ROOT" \
         "${CELIKPANEL_RELEASE_TRANSACTION_TOKEN:-}" update \
         "${CELIKPANEL_RELEASE_TRANSACTION_SNAPSHOT:-}" \
         || die "apply-only active transaction marker proof failed"
+    validate_apply_only_snapshot
     for unit in celikpanel-agent.service celikpanel-panel.service; do
         state=$("$SYSTEMCTL_BIN" show --property=ActiveState --value "$unit") || die "cannot inspect $unit for apply-only"
         [[ "$state" == inactive || "$state" == failed ]] || die "apply-only requires $unit stopped"
@@ -2844,6 +3031,12 @@ if [ -d "$SRC/.git" ] || [ ! -x "$SRC/bin/panel" ] || [ ! -x "$SRC/bin/agent" ] 
     NODE_BIN=$(bootstrap_node)
     ( cd "$SRC" && run_go_clean "$GO_BIN" build -trimpath -buildvcs=false -ldflags "-s -w $VER_FLAGS" -o bin/panel ./cmd/panel ) || die "Panel build failed" "Panel derlenemedi"
     ( cd "$SRC" && run_go_clean "$GO_BIN" build -trimpath -buildvcs=false -ldflags "-s -w $VER_FLAGS" -o bin/agent ./cmd/agent ) || die "Agent build failed" "Agent derlenemedi"
+    # The declaration is produced only for the freshly built reviewed Agent.
+    # Historical binaries never acquire compatibility by version-label inference.
+    native_contract_commit=$(cd "$SRC" && git rev-parse HEAD 2>/dev/null || cat release.commit 2>/dev/null) \
+        || die "Exact Agent source identity is unavailable" "Agent kaynak kimliği doğrulanamadı"
+    ( cd "$SRC" && run_go_clean "$GO_BIN" run ./deploy/agent-native-contract --agent bin/agent --commit "$native_contract_commit" --output bin/agent-native-contract.json ) \
+        || die "Agent native compatibility artifact failed" "Agent yerel uyumluluk kaydı hazırlanamadı"
     ( cd "$SRC/web" && run_node_clean "$NODE_BIN" "$NODE_BIN/npm" ci --no-audit --no-fund >/dev/null 2>&1 ) || die "npm installation failed" "npm kurulumu başarısız"
     ( cd "$SRC/web" && run_node_clean "$NODE_BIN" "$NODE_BIN/npm" run build >/dev/null ) || die "Frontend build failed" "Frontend derlenemedi"
     ok "built ($CP_VERSION · $CP_COMMIT)" "derlendi ($CP_VERSION · $CP_COMMIT)"
@@ -2854,9 +3047,16 @@ fi
 
 # 4. Install files -----------------------------------------------------------
 step "Installing files under $PREFIX" "Dosyalar $PREFIX altına kuruluyor"
-install -d -m 0755 "$PREFIX/bin" "$PREFIX/web" "$PREFIX/runtimes"
+install -d -m 0755 "$PREFIX/runtimes"
+if [[ "$APPLY_ONLY" -eq 1 ]]; then
+    publish_apply_only_resources
+else
+# Fresh installation has no existing update snapshot and remains a separate
+# admission path. It must not create an artificial restoration intent.
+install -d -m 0755 "$PREFIX/bin" "$PREFIX/web"
 install -m 0755 "$SRC/bin/panel" "$PREFIX/bin/panel"
 install -m 0755 "$SRC/bin/agent" "$PREFIX/bin/agent"
+install -m 0644 "$SRC/bin/agent-native-contract.json" "$PREFIX/bin/agent-native-contract.json"
 
 # Replace the exact fixed web root, including hidden entries and empty stale
 # directories. Canonical root-owned boundaries are proven before -delete runs.
@@ -2911,6 +3111,7 @@ if find "$installed_web_root" -xdev -type f ! -perm 0644 -print -quit | grep -q 
 fi
 [[ -f "$installed_web_root/index.html" && ! -L "$installed_web_root/index.html" ]] \
     || die "kurulu web index ürünü eksik veya güvensiz"
+fi
 # Runtimes dir is where the agent installs Node versions; group-owned so the
 # root agent writes and the panel can stat.
 # Runtimes dizini agent'ın Node sürümlerini kurduğu yerdir; grup-sahipli.
@@ -2937,9 +3138,13 @@ ok "ready" "hazır"
 
 # 6. systemd units -----------------------------------------------------------
 step "systemd services" "systemd servisleri"
-install -m 0644 "$SRC/deploy/systemd/celikpanel-agent.service" /etc/systemd/system/
-install -m 0644 "$SRC/deploy/systemd/celikpanel-firewall-restore.service" /etc/systemd/system/
-install -m 0644 "$SRC/deploy/systemd/celikpanel-panel.service" /etc/systemd/system/
+if [[ $APPLY_ONLY -eq 1 ]]; then
+    publish_apply_only_units
+else
+    install -m 0644 "$SRC/deploy/systemd/celikpanel-agent.service" /etc/systemd/system/
+    install -m 0644 "$SRC/deploy/systemd/celikpanel-firewall-restore.service" /etc/systemd/system/
+    install -m 0644 "$SRC/deploy/systemd/celikpanel-panel.service" /etc/systemd/system/
+fi
 if [[ $APPLY_ONLY -eq 0 ]]; then
     # Publish the monotonic recovery/start-guard foundation before any durable
     # transaction marker can exist. Apply-only must remain verify-only.
@@ -2983,7 +3188,7 @@ if [[ $APPLY_ONLY -eq 1 ]]; then
     [[ -f "$AGENT_LEDGER" && ! -L "$AGENT_LEDGER" ]] || die "apply-only durable agent ledger is missing"
     read -r ledger_owner ledger_group ledger_mode < <(stat -Lc '%u %g %a' -- "$AGENT_LEDGER") || die "apply-only cannot inspect agent ledger"
     [[ "$ledger_owner" == 0 && "$ledger_group" == "$SVC_GROUP_ID" && "$ledger_mode" == 600 ]] || die "apply-only agent ledger metadata mismatch"
-    sync -f -- "$PREFIX/bin/panel" "$PREFIX/bin/agent" "$PREFIX/bin" "$PREFIX/web" \
+    sync -f -- "$PREFIX/bin/panel" "$PREFIX/bin/agent" "$PREFIX/bin/agent-native-contract.json" "$PREFIX/bin" "$PREFIX/web" \
         "$PANEL_ENV" "$CONF_DIR" /etc/systemd/system \
         || die "apply-only installed layout could not be made durable"
     ok "apply-only layout completed; services were left stopped" \

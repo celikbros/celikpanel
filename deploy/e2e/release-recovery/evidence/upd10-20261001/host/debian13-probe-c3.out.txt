@@ -1,0 +1,129 @@
+Formatting '/var/tmp/cp-release-drill-upd10-deb-probe-c3/cells/85983c34f5eadf6017fa06be/debian13/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-upd10-deb-probe-c3/images/debian-13-genericcloud-amd64-20260826-2582.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+Formatting '/var/tmp/cp-release-drill-upd10-deb-probe-c3/cells/85983c34f5eadf6017fa06be/arch/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-upd10-deb-probe-c3/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-upd10-deb-probe-c3", "cell_id": "release-recovery__fddcbe06777ce970", "ssh_ports": [3037, 3038]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-upd10-deb-probe-c3", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+2026-10-01T21:10:56.749Z
+--- os
+PRETTY_NAME="Debian GNU/Linux 13 (trixie)"
+VERSION_ID="13"
+VERSION_CODENAME=trixie
+6.12.105+deb13-cloud-amd64
+--- packages
+dpkg-query: no packages found matching packagekit
+dpkg-query: no packages found matching packagekit-tools
+dpkg-query: no packages found matching libpackagekit-glib2-18
+apt 3.0.3 ii 
+needrestart  un 
+unattended-upgrades 2.12 ii 
+--- packagekit files
+ls: cannot access '/usr/lib/x86_64-linux-gnu/packagekit-backend/': No such file or directory
+ls: cannot access '/etc/PackageKit': No such file or directory
+total 32
+drwxr-xr-x  2 root root 4096 Aug 26 05:08 .
+drwxr-xr-x 10 root root 4096 Aug 26 05:08 ..
+-rw-r--r--  1 root root  399 Jun 24  2025 01autoremove
+-rw-r--r--  1 root root   80 Jan  1  2025 20auto-upgrades
+-rw-r--r--  1 root root  307 Oct  6  2024 20listchanges
+-rw-r--r--  1 root root 7407 Jan  1  2025 50unattended-upgrades
+-rw-r--r--  1 root root  182 Mar 10  2025 70debconf
+--- packagekit units
+UNIT FILE STATE PRESET
+
+0 unit files listed.
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+--- dbus activation
+no PackageKit D-Bus activation file
+--- before
+utc=2026-10-01T21:10:56.812Z
+packagekitd_pids=none
+package-manager processes:
+      PID    PPID ELAPSED COMMAND         COMMAND
+      788       1      31 unattended-upgr /usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal
+lock lines:
+
+--- apt-get update
+rc=0 2026-10-01T21:11:05.490Z
+Get:17 https://deb.debian.org/debian-security trixie-security/main amd64 Packages [263 kB]
+Get:18 https://deb.debian.org/debian-security trixie-security/main Translation-en [161 kB]
+Fetched 28.5 MB in 7s (4001 kB/s)
+Reading package lists...
+utc=2026-10-01T21:11:13.508Z
+packagekitd_pids=none
+package-manager processes:
+      PID    PPID ELAPSED COMMAND         COMMAND
+      788       1      48 unattended-upgr /usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal
+lock lines:
+
+--- apt-get install -y --no-install-recommends tree (one small package; dpkg runs)
+rc=0 2026-10-01T21:11:18.776Z
+Selecting previously unselected package tree.
+(Reading database ... 
+(Reading database ... 5%
+(Reading database ... 10%
+(Reading database ... 15%
+(Reading database ... 20%
+(Reading database ... 25%
+(Reading database ... 30%
+(Reading database ... 35%
+(Reading database ... 40%
+(Reading database ... 45%
+(Reading database ... 50%
+(Reading database ... 55%
+(Reading database ... 60%
+(Reading database ... 65%
+(Reading database ... 70%
+(Reading database ... 75%
+(Reading database ... 80%
+(Reading database ... 85%
+(Reading database ... 90%
+(Reading database ... 95%
+(Reading database ... 100%
+(Reading database ... 20625 files and directories currently installed.)
+Preparing to unpack .../tree_2.2.1-1_amd64.deb ...
+Unpacking tree (2.2.1-1) ...
+Setting up tree (2.2.1-1) ...
+Processing triggers for man-db (2.13.1-1) ...
+utc=2026-10-01T21:11:26.786Z
+packagekitd_pids=none
+package-manager processes:
+      PID    PPID ELAPSED COMMAND         COMMAND
+      788       1      61 unattended-upgr /usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal
+lock lines:
+
+--- +38 s after the install
+utc=2026-10-01T21:11:57.339Z
+packagekitd_pids=none
+package-manager processes:
+      PID    PPID ELAPSED COMMAND         COMMAND
+      788       1      92 unattended-upgr /usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal
+lock lines:
+
+--- packagekit journal (all boots of this guest)
+-- No entries --
+
+--- what Debian 13 would install as PackageKit's backend (packagekit .deb downloaded to /tmp, NOT installed)
+packagekit:
+  Installed: (none)
+  Candidate: 1.3.1-1+deb13u1
+  Version table:
+     1.3.1-1+deb13u1 500
+        500 mirror+file:/etc/apt/mirrors/debian.list trixie/main amd64 Packages
+        500 mirror+file:/etc/apt/mirrors/debian-security.list trixie-security/main amd64 Packages
+download rc=0
+deb=packagekit_1.3.1-1+deb13u1_amd64.deb sha256=15c450dfb327ec86615894eb678c61fec0507949b02631422b35e8280bee9163
+  drwxr-xr-x root/root         0 2026-04-21 14:45 ./etc/apt/apt.conf.d/
+  -rw-r--r-- root/root      1119 2025-04-22 20:02 ./etc/apt/apt.conf.d/20packagekit
+  drwxr-xr-x root/root         0 2026-04-21 14:45 ./usr/lib/x86_64-linux-gnu/packagekit-backend/
+  -rw-r--r-- root/root    540640 2026-04-21 14:45 ./usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so
+  -rw-r--r-- root/root     14280 2026-04-21 14:45 ./usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_test_fail.so
+  -rw-r--r-- root/root     14184 2026-04-21 14:45 ./usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_test_nop.so
+  -rw-r--r-- root/root     14352 2026-04-21 14:45 ./usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_test_spawn.so
+  -rw-r--r-- root/root     14392 2026-04-21 14:45 ./usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_test_succeed.so
+  -rw-r--r-- root/root     14520 2026-04-21 14:45 ./usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_test_thread.so
+  -rwxr-xr-x root/root    300808 2026-04-21 14:45 ./usr/libexec/packagekitd
+dpkg-query: no packages found matching packagekit
+no packagekitd after the download
+
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-upd10-deb-probe-c3", "evidence_retained": true}

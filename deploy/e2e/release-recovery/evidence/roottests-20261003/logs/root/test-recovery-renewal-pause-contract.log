@@ -1,0 +1,1 @@
+PASS: renewal restored once after a failed final forward attempt, kept paused for rollbacks, re-paused by the retry; pause_pending recorded until the pause; early owner retry keeps the normal retry; a failed child without a marker ends without retry hints

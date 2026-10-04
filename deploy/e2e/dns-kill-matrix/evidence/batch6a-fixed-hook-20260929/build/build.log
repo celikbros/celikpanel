@@ -1,0 +1,131 @@
+2026-09-29T14:35:41Z
+repository HEAD at run time: 94cd124be572f72d88b04bc5c85a9c308c791eac
+94cd124be572f72d88b04bc5c85a9c308c791eac
+go version go1.26.5 linux/amd64
+go1.26.5
+
+https://proxy.golang.org,direct
+/root/go/pkg/mod
+3b6955c553c54295e2c27f51ecc2394366c209dd8862aa4d26208b4f8d44ce0e
+== artifacts
+3421f44518c9e75374e69c725ba3e7ed4d50f1282990b45fc2cec5ec91c253fc  /root/cp-b6a-artifacts/agent
+43b000fce1e8e65d602f54562a5c10566b4b24df93bcb96ab5a60cb7b955e793  /root/cp-b6a-artifacts/agent.kill
+5b5289ab3d3b5522830b5a7871cdfb1a6fffc1b2bacb9e31c0d7869a5b527033  /root/cp-b6a-artifacts/panel
+5476eb9996a467322aefffb8c0665bbdb0143fbc04cdd92ee424ee061660a693  /root/cp-b6a-artifacts/dns-kill-trigger
+c494c3025c051ceea9b382e26de7da29a66c5ba6a3332de86294b57eb06cb324  /root/cp-b6a-artifacts/recovery
+82f2772fe0257dde9139d0f85a34be58e89c98d6a9d1775090f2ecf4cc3b8975  /root/cp-b6a-artifacts/agent-checker
+82f23b48908e152e55ad76598ec8be0f780805f463fe7e48ed402d87bc5984e0  /root/cp-b6a-artifacts/panel-checker
+fe277c46ea8b50f00a80e71976198f28db89667789a737e0a78c0f4a83e9cb87  /root/cp-b6a-artifacts/schema17-bridge
+== recovery-runtime
+82f2772fe0257dde9139d0f85a34be58e89c98d6a9d1775090f2ecf4cc3b8975  ./bin/agent-checker
+82f23b48908e152e55ad76598ec8be0f780805f463fe7e48ed402d87bc5984e0  ./bin/panel-checker
+c494c3025c051ceea9b382e26de7da29a66c5ba6a3332de86294b57eb06cb324  ./bin/recovery
+fe277c46ea8b50f00a80e71976198f28db89667789a737e0a78c0f4a83e9cb87  ./bin/schema17-bridge
+6645927653114b4d59fbf6e29147f12920ceaec058d0ecc7b92faa71fd1bf6c3  ./deploy/panel-tls-snapshot.sh
+391eba13d077e0f8016cdfc8e95ce5fb67711b1e9b4a91ed7446ebdbb4ccf004  ./deploy/recovery/runtime-entry.sh
+f499446812b90aee362112743f4e491d5ecfa40511a510d08cbb006babdd48b0  ./deploy/release-recovery-foundation.sh
+db3e2dd23d4b81d9e533354e5d345d26eb43b7943ba20cf7b4ba19fac20cea1e  ./deploy/release-recovery-observation.sh
+4543920d5cc7a4d76c5c3ff91e8a03f4f02bd0e005577b40dc5c740af32c8257  ./deploy/release-transaction-guard.sh
+f163b496a8f48ae55a12658f34125f666c45672eccc4b27c03d58b7367848fc2  ./deploy/release-unit-transition.sh
+cbe3841aef57c62d0242a2957f728100fceca84a7a23135d51156562006ac822  ./rollback.sh
+3b6955c553c54295e2c27f51ecc2394366c209dd8862aa4d26208b4f8d44ce0e  ./runtime.manifest
+dea6eafb9608e1b956e8fee7ddc85908e649056fa6727be9c373cec233154db8  ./update.sh
+ff9abfa1db719155d83024a1840c2782f4f5dce7868547d648b352db98fd7890  /root/cp-b6a-tools/oi-smstatus
+503ca578570c780a8d0af53c105a58a8f8397e6b558e66933f6aa20ae291886d  /root/cp-b6a-tools/overlay.json
+57823885e8778d4fa5f67b3458042fc1f0cab7cb3a0603af00ec2bd202d85077  /root/cp-b6a-tools/smstatus.go
+/root/cp-b6a-artifacts/agent: go1.26.5
+	path	github.com/alicelik/celikpanel/cmd/agent
+	mod	github.com/alicelik/celikpanel	(devel)	
+== comparison with the 65b86621 batch-5 build (/root/cp-b5-artifacts)
+DIFFERENT agent
+DIFFERENT agent.kill
+DIFFERENT panel
+DIFFERENT dns-kill-trigger
+DIFFERENT recovery
+IDENTICAL agent-checker
+IDENTICAL panel-checker
+IDENTICAL schema17-bridge
+DIFFERENT recovery-runtime/runtime.manifest
+3c3
+< 6922104723c03c2ccc653f3a62d1312ecd9b6d859460bc32aa628c55c0d43480  ./bin/recovery
+---
+> c494c3025c051ceea9b382e26de7da29a66c5ba6a3332de86294b57eb06cb324  ./bin/recovery
+12c12
+< 47934c4ea03c8bedb10fdcff64c2224cc0923e2db0b75140a6e9c588853a1b10  ./runtime.manifest
+---
+> 3b6955c553c54295e2c27f51ecc2394366c209dd8862aa4d26208b4f8d44ce0e  ./runtime.manifest
+recovery-runtime tree DIFFERENT
+IDENTICAL oi-smstatus
+web-dist IDENTICAL
+== changed paths 65b86621..94cd124b (non-test Go and harness)
+ .../c6-reinstall/guest-identity.txt                |   15 +
+ .../guest-recovery-probe-post-collect.json         |    1 +
+ .../c6-reinstall/install.log                       |   69 +
+ .../c6-reinstall/owner-post-state.txt              |  162 +
+ .../c6-reinstall/peer-identity.txt                 |   19 +
+ .../c6-reinstall/post-state.txt                    |  129 +
+ .../c6-reinstall/pre-run-units.txt                 |  129 +
+ .../c6-reinstall/prepare-source.log                |   26 +
+ .../c6-reinstall/prepare.json                      |  233 ++
+ .../c6-reinstall/probe-argv.json                   |    1 +
+ .../c6-reinstall/raw/fixture/controller-argv.json  |   79 +
+ .../raw/fixture/coordinator-stop-proof.json        |   42 +
+ .../raw/fixture/installed-binaries.sha256          |    7 +
+ .../c6-reinstall/raw/fixture/ls.txt                |   32 +
+ .../c6-reinstall/raw/fixture/scenario.json         |   56 +
+ .../raw/fixture/source-preinstall-bind.json        |   40 +
+ .../c6-reinstall/raw/fixture/source-proof.json     |   57 +
+ .../raw/fixture/source-setup-bind-identity.json    |    1 +
+ .../raw/fixture/source-setup-bind.json             |   56 +
+ .../c6-reinstall/raw/journald/bind9.service.txt    |    1 +
+ .../raw/journald/celikpanel-agent.service.txt      |   20 +
+ .../raw/journald/celikpanel-panel.service.txt      |   31 +
+ .../c6-reinstall/raw/journald/list-boots.txt       |    2 +
+ .../c6-reinstall/raw/journald/named.service.txt    |  110 +
+ .../c6-reinstall/raw/journald/pdns.service.txt     |    1 +
+ .../c6-reinstall/raw/results/transcript.jsonl      |    1 +
+ .../raw/state/dns-engine-ownership-bind.json       |    1 +
+ .../c6-reinstall/raw/state/dns-engine-state.json   |    1 +
+ .../c6-reinstall/raw/state/ls.txt                  |    7 +
+ .../c6-reinstall/raw/state/service-mutations.json  |    1 +
+ .../copies/142035.786-ledger-707af258580f.json     |    1 +
+ .../copies/142035.796-state-4992553da814.json      |    1 +
+ .../raw/watch/cp-b5-watch/snap-start.txt           |   89 +
+ .../raw/watch/cp-b5-watch/timeline.log             |  524 +++
+ .../c6-reinstall/run-prepared-dryrun.log           |    1 +
+ .../c6-reinstall/run-prepared.log                  |   20 +
+ .../c6-reinstall/run-prepared.rc                   |    1 +
+ .../service-mutation-status-post-collect.json      |    1 +
+ .../c6-reinstall/smstatus.stderr                   |    1 +
+ .../c6-reinstall/soa-post-collect.txt              |   13 +
+ .../c6-reinstall/soa-pre-run.txt                   |   13 +
+ .../c6-reinstall/start.json                        |   83 +
+ .../c6-reinstall/stop.json                         |    6 +
+ .../c6-reinstall/wait-ssh.json                     |   45 +
+ .../c6-reinstall/work-root.txt                     |    1 +
+ deploy/e2e/dns-kill-matrix/guest_bootstrap.py      |  263 +-
+ deploy/e2e/dns-kill-matrix/guest_recovery_probe.py |  176 +-
+ deploy/e2e/dns-kill-matrix/native_primary_peer.py  |  191 +-
+ .../dns-kill-matrix/native_primary_peer_probe.py   |  213 +-
+ deploy/e2e/dns-kill-matrix/run_cell.py             | 1182 +++++-
+ deploy/e2e/dns-kill-matrix/test_guest_bootstrap.py |  169 +-
+ .../dns-kill-matrix/test_guest_recovery_probe.py   |   92 +
+ .../dns-kill-matrix/test_native_primary_peer.py    |  258 +-
+ .../test_paired_secondary_provenance.py            |  200 +-
+ deploy/e2e/dns-kill-matrix/test_run_cell.py        |  859 +++-
+ internal/binddns/publisher.go                      |   93 +-
+ internal/binddns/publisher_test.go                 |  180 +-
+ internal/dnsenginerecovery/reconcile.go            |   24 +-
+ internal/dnsenginerecovery/reconcile_test.go       |   87 +
+ 690 files changed, 37336 insertions(+), 434 deletions(-)
+== harness file hashes
+a0ae7f57f58304688a085e94a14845b5f49f5dbaaa698f5bba3343b2912be168  fixture.py
+c457863118acb5bc57ea1053ba91dc66a43fbd61ff0df1dd69edbad667a072af  guest_bootstrap.py
+461f29a6993a81d6aabe18493263ad392fe6ce5c66193b02cc7d35a3c7648544  guest_bootstrap.sh
+9cd9e1a6444cb1c27aa7f8ad479647dc3869cc1ef5c751e833a280f5f50b5dc4  run_cell.py
+366663ecc1ebe6926de3371740805e69753f5af0b5afc5eeda295fba4ec14066  guest_recovery_probe.py
+99d87fbe604bbbe202ad7cbe36348b7aab7d23652396bc6a2e14d4880f05bbf2  native_primary_peer.py
+7429e71fe75c404ac990db71d842f0f411d9e5464198ecb157077c35f7182bfc  native_primary_peer_probe.py
+dcf6e09c026864ee15566a03b3c4aa30d6e1805333d548753b58d070e7fd1229  manifest.json
+2026-09-29T14:36:02Z
+BUILD-OK

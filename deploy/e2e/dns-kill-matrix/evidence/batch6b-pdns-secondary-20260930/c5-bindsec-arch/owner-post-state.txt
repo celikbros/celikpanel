@@ -1,0 +1,192 @@
+wall=2026-09-29T16:37:40.655739192Z boot_id=2367c89a-1523-4631-8513-2fede3653047 request_id=d2f345432a323fbd9f5c5354f491a6cb
+== systemctl show pdns.service
+Id=pdns.service
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+FragmentPath=
+UnitFileState=
+UnitFilePreset=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+NeedDaemonReload=no
+LoadError=org.freedesktop.systemd1.NoSuchUnit "Unit pdns.service not found."
+InvocationID=
+MainPID=0
+ControlPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+== systemctl is-enabled pdns.service
+not-found
+rc=4
+== systemctl is-active pdns.service
+inactive
+rc=4
+== systemctl show named.service
+Id=named.service
+LoadState=loaded
+ActiveState=active
+SubState=running
+FragmentPath=/usr/lib/systemd/system/named.service
+UnitFileState=enabled
+UnitFilePreset=disabled
+ActiveEnterTimestamp=Tue 2026-09-29 16:35:45 UTC
+InactiveEnterTimestamp=
+NeedDaemonReload=no
+LoadError=
+InvocationID=42ab9f4f6e2a428583bfd099892dd1ce
+MainPID=365
+ControlPID=0
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 16:35:45 UTC
+ExecMainPID=365
+== systemctl is-enabled named.service
+enabled
+rc=0
+== systemctl is-active named.service
+active
+rc=0
+== systemctl show bind9.service
+Id=bind9.service
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+FragmentPath=
+UnitFileState=
+UnitFilePreset=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+NeedDaemonReload=no
+LoadError=org.freedesktop.systemd1.NoSuchUnit "Unit bind9.service not found."
+InvocationID=
+MainPID=0
+ControlPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+== systemctl is-enabled bind9.service
+not-found
+rc=4
+== systemctl is-active bind9.service
+inactive
+rc=4
+== mask symlinks (persistent and runtime)
+/etc/systemd/system/named.service absent
+/etc/systemd/system/bind9.service absent
+/run/systemd/system/named.service absent
+/run/systemd/system/bind9.service absent
+== named processes
+365 /usr/bin/named -f -u named
+== pdns_server processes
+no pdns_server process
+== journal entry counts
+named.service 234
+bind9.service 0
+== dpkg -l bind9*
+bash: line 18: dpkg: command not found
+== dpkg -l pdns*
+bash: line 19: dpkg: command not found
+== dpkg --verify bind9 bind9-utils bind9-libs bind9-host bind9-dnsutils (read-only; no output = unchanged)
+bash: line 20: dpkg: command not found
+rc=127
+== install-ownership receipt
+ls: cannot access '/var/lib/celikpanel-agent-private/dns-engine-install-ownership-bind.json': No such file or directory
+== /var/cache/bind tree (managed BIND root parent)
+find: '/var/cache/bind': No such file or directory
+== /var/cache/bind file hashes
+== /var/lib/bind tree
+find: '/var/lib/bind': No such file or directory
+== /etc/bind tree
+find: '/etc/bind': No such file or directory
+== /etc/bind file hashes
+== /etc/bind package ownership
+find: '/etc/bind': No such file or directory
+== bind9 conffiles (package md5)
+bash: line 31: dpkg-query: command not found
+== md5 of /etc/bind files
+== apt history (bind9 transactions)
+grep: /var/log/apt/history.log: No such file or directory
+== ss 53
+udp UNCONN 0      0                         192.0.2.11:53 0.0.0.0:* users:(("named",pid=365,fd=28))
+udp UNCONN 0      0                         192.0.2.11:53 0.0.0.0:* users:(("named",pid=365,fd=27))
+udp UNCONN 0      0                          10.0.2.15:53 0.0.0.0:* users:(("named",pid=365,fd=24))
+udp UNCONN 0      0                          10.0.2.15:53 0.0.0.0:* users:(("named",pid=365,fd=23))
+udp UNCONN 0      0                          127.0.0.1:53 0.0.0.0:* users:(("named",pid=365,fd=18))
+udp UNCONN 0      0                          127.0.0.1:53 0.0.0.0:* users:(("named",pid=365,fd=17))
+udp UNCONN 0      0                         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=261,fd=24))
+udp UNCONN 0      0                      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=261,fd=22))
+udp UNCONN 0      0                              [::1]:53    [::]:* users:(("named",pid=365,fd=31))
+udp UNCONN 0      0                              [::1]:53    [::]:* users:(("named",pid=365,fd=32))
+udp UNCONN 0      0      [fe80::5054:ff:fe13:11]%mgmt0:53    [::]:* users:(("named",pid=365,fd=35))
+udp UNCONN 0      0      [fe80::5054:ff:fe13:11]%mgmt0:53    [::]:* users:(("named",pid=365,fd=36))
+udp UNCONN 0      0      [fe80::5054:ff:fe53:11]%peer0:53    [::]:* users:(("named",pid=365,fd=39))
+udp UNCONN 0      0      [fe80::5054:ff:fe53:11]%peer0:53    [::]:* users:(("named",pid=365,fd=40))
+udp UNCONN 0      0            [fec0::5054:ff:fe13:11]:53    [::]:* users:(("named",pid=365,fd=49))
+udp UNCONN 0      0            [fec0::5054:ff:fe13:11]:53    [::]:* users:(("named",pid=365,fd=50))
+tcp LISTEN 0      10                        192.0.2.11:53 0.0.0.0:* users:(("named",pid=365,fd=30))
+tcp LISTEN 0      10                        192.0.2.11:53 0.0.0.0:* users:(("named",pid=365,fd=29))
+tcp LISTEN 0      4096                      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=261,fd=25))
+tcp LISTEN 0      10                         127.0.0.1:53 0.0.0.0:* users:(("named",pid=365,fd=21))
+tcp LISTEN 0      10                         127.0.0.1:53 0.0.0.0:* users:(("named",pid=365,fd=19))
+tcp LISTEN 0      10                         10.0.2.15:53 0.0.0.0:* users:(("named",pid=365,fd=26))
+tcp LISTEN 0      10                         10.0.2.15:53 0.0.0.0:* users:(("named",pid=365,fd=25))
+tcp LISTEN 0      4096                   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=261,fd=23))
+tcp LISTEN 0      10     [fe80::5054:ff:fe13:11]%mgmt0:53    [::]:* users:(("named",pid=365,fd=37))
+tcp LISTEN 0      10     [fe80::5054:ff:fe13:11]%mgmt0:53    [::]:* users:(("named",pid=365,fd=38))
+tcp LISTEN 0      10           [fec0::5054:ff:fe13:11]:53    [::]:* users:(("named",pid=365,fd=54))
+tcp LISTEN 0      10           [fec0::5054:ff:fe13:11]:53    [::]:* users:(("named",pid=365,fd=55))
+tcp LISTEN 0      10                             [::1]:53    [::]:* users:(("named",pid=365,fd=33))
+tcp LISTEN 0      10                             [::1]:53    [::]:* users:(("named",pid=365,fd=34))
+tcp LISTEN 0      10     [fe80::5054:ff:fe53:11]%peer0:53    [::]:* users:(("named",pid=365,fd=41))
+tcp LISTEN 0      10     [fe80::5054:ff:fe53:11]%peer0:53    [::]:* users:(("named",pid=365,fd=42))
+== recovery dns-switch-status --quiesced (after owner command and re-run)
+env: '/usr/libexec/celikpanel/recovery': No such file or directory
+STATUS_RC=127
+165fe0989fffaa8097e2f872fc1ec667fc5a0d298a421512831fb2dad65b0c61  /tmp/b6b-status.out
+== private evidence after status
+total 12
+drwx------ 1 root celikpanel 146 2026-09-29 16:34:56.399156222 +0000 .
+drwxr-xr-x 1 root root       390 2026-09-29 16:33:09.789870943 +0000 ..
+-rw------- 1 root celikpanel 722 2026-09-29 16:34:56.273145865 +0000 dns-engine-ownership-bind.json
+-rw------- 1 root celikpanel 718 2026-09-29 16:34:55.809107274 +0000 dns-engine-state.json
+-rw------- 1 root celikpanel 738 2026-09-29 16:34:56.374154167 +0000 service-mutations.json
+4a1ee6d3b3cd5816c5cde75a9988d8f6f013f540f2876190aedbadde54776248  dns-engine-ownership-bind.json
+5bed495a195d0bd2e7ce6e41c088c9f3b2a4a19451dc3c08ecb3911c45db9bc6  dns-engine-state.json
+eac27f64399780d8a9cb10102479c8ca6b1aa4b9a17bffb5cc548d1901f6b60f  service-mutations.json
+== pacman -Q (Arch)
+error: package 'powerdns' was not found
+bind 9.20.29-1
+== pacman -Qkk bind (read-only file check)
+warning: bind: /var/named (Permissions mismatch)
+backup file: bind: /etc/named.conf (Modification time mismatch)
+backup file: bind: /etc/named.conf (Size mismatch)
+backup file: bind: /etc/named.conf (SHA256 checksum mismatch)
+bind: 339 total files, 1 altered file
+== /etc/named.conf
+-rw-r----- 1 root named 1589 2026-09-29 16:34:49.850559290 +0000 /etc/named.conf
+4f51b7ce4453142a36bb039c6e1deedc67c04c9d73ad5f8734cff5ff1b76c41a  /etc/named.conf
+== /var/named tree (managed BIND root parent on Arch)
+drwxrwx--T root:named 208 2026-09-29T16:36:12.6130000000 /var/named -> 
+-rw-r----- root:named 466 2026-09-16T14:52:07.0000000000 /var/named/127.0.0.zone -> 
+-rw------- named:named 8192 2026-09-29T16:34:52.9157385660 /var/named/_default.nzd -> 
+drwxr-xr-x root:root 36 2026-09-29T16:34:49.7975538580 /var/named/celikpanel -> 
+lrwxrwxrwx root:root 76 2026-09-29T16:34:49.7845525260 /var/named/celikpanel/current -> generations/f21a3e7ad2fd1cb7acd2fc96005d553d0833ea2a3cb59a6f9bba76b2d6f2b227
+drwxr-xr-x root:root 128 2026-09-29T16:34:43.1217854660 /var/named/celikpanel/generations -> 
+dr-xr-xr-x root:root 54 2026-09-29T16:34:43.0807801810 /var/named/celikpanel/generations/f21a3e7ad2fd1cb7acd2fc96005d553d0833ea2a3cb59a6f9bba76b2d6f2b227 -> 
+-r--r--r-- root:root 652 2026-09-29T16:34:43.0807801810 /var/named/celikpanel/generations/f21a3e7ad2fd1cb7acd2fc96005d553d0833ea2a3cb59a6f9bba76b2d6f2b227/receipt.json -> 
+dr-xr-xr-x root:root 0 2026-09-29T16:34:42.9967693280 /var/named/celikpanel/generations/f21a3e7ad2fd1cb7acd2fc96005d553d0833ea2a3cb59a6f9bba76b2d6f2b227/zones -> 
+-r--r--r-- root:root 239 2026-09-29T16:34:43.0077707720 /var/named/celikpanel/generations/f21a3e7ad2fd1cb7acd2fc96005d553d0833ea2a3cb59a6f9bba76b2d6f2b227/zones.conf -> 
+-rw-r----- root:named 506 2026-09-16T14:52:07.0000000000 /var/named/localhost.ip6.zone -> 
+-rw-r----- root:named 517 2026-09-16T14:52:07.0000000000 /var/named/localhost.zone -> 
+-rw-r--r-- named:named 1411 2026-09-29T16:36:12.5860448660 /var/named/managed-keys.bind -> 
+-rw-r--r-- named:named 2590 2026-09-29T16:35:46.5790000000 /var/named/managed-keys.bind.jnl -> 
+== /var/named file hashes
+b88fd2b99e7d42d414b329b814b9ff3304fa0ef9c67df81bde235bbfa0f3a3b8  /var/named/127.0.0.zone
+e01847f8afdf44e574920f3f79a05dc514e5dc0627f6f27dddd0520bde4d6797  /var/named/_default.nzd
+777b862582f9127e07459ab9967a2dc5f52c20bd8856032116551b1481efe603  /var/named/celikpanel/generations/f21a3e7ad2fd1cb7acd2fc96005d553d0833ea2a3cb59a6f9bba76b2d6f2b227/receipt.json
+3f544fb9542c407d3d7c1e8fab3cad51260b4bb1661ce03f46d23a8c28f02377  /var/named/celikpanel/generations/f21a3e7ad2fd1cb7acd2fc96005d553d0833ea2a3cb59a6f9bba76b2d6f2b227/zones.conf
+c06fc270e32a843c8b6d86335a2ec607d405dfba6875de8d8a9abde39a9e2c17  /var/named/localhost.ip6.zone
+0011708e516128647dd25b59b6ebc465f36e85bbe0a8fbdc3eb04b7f28c2197f  /var/named/localhost.zone
+ccdd44f010cefcd2ba1268a72190e985b4030512ae21a6b375b6c5b54a27706d  /var/named/managed-keys.bind
+8aab7d6098c13ed0ffa22f4db536391edde28a78e9a8ecbb2faf16baaf241cd3  /var/named/managed-keys.bind.jnl

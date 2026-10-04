@@ -1,0 +1,168 @@
+import copy
+import hashlib
+import importlib.util
+import json
+from pathlib import Path
+import unittest
+HERE = Path(__file__).resolve().parent
+spec = importlib.util.spec_from_file_location('verify_mail_contract', HERE / 'verify_mail_contract.py')
+s = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(s)
+
+class MailContractTests(unittest.TestCase):
+    def setUp(self): self.record = json.loads((HERE / 'MAIL-CONTRACT-AX.json').read_text())
+    def test_recorded_native_evidence(self):
+        self.assertEqual(s.verify(self.record)['owner_drift_preserved'], 'verified')
+        ay = json.loads((HERE / 'MAIL-CONTRACT-AY.json').read_text())
+        self.assertEqual(s.verify(ay)['retained_after_orderly_boot'], 'verified')
+        ba = json.loads((HERE / 'MAIL-CONTRACT-BA.json').read_text())
+        self.assertEqual(s.verify(ba)['renewal'], 'verified')
+        az = json.loads((HERE / 'MAIL-CONTRACT-AZ.json').read_text())
+        self.assertEqual(s.verify(az)['renewal'], 'verified')
+    def test_false_scope_claim(self):
+        for key in ('external_acme_issuance', 'independent_renewal_helper', 'installed_owner_server', 'power_loss'):
+            value = copy.deepcopy(self.record); value['scope'][key] = True
+            with self.subTest(key=key), self.assertRaises(ValueError): s.verify(value)
+    def test_rehashed_but_semantically_wrong_logs(self):
+        edits = [
+          ('mail-convergence.log', '--- PASS:', '--- FAIL:'),
+          ('mail-receipt-after-boot.log', 'f451e282864eb1147cde1e0f66d546cd', '0'*32),
+          ('mail-receipt-after-boot.log', 'a43077db-2632-4e34-bb21-026df39f45e3', '610448ff-be9d-4812-ab52-19664469b0f0'),
+          ('mail-receipt-after-boot.log', 'ExecMainStatus=0', 'ExecMainStatus=1'),
+          ('mail-native-boot.log', 'active\nactive', 'failed\nactive'),
+          ('mail-owner-drift.log', 'pending retained', 'pending removed'),
+          ('mail-boot-native-handshakes.log', '0D:D7', 'FF:FF'),
+          ('mail-fixture-metadata.log', 'installed_agent_absent=yes', 'installed_agent_absent=no'),
+        ]
+        for name, old, new in edits:
+            value = copy.deepcopy(self.record); item = value['logs'][name]
+            self.assertIn(old, item['text']); item['text'] = item['text'].replace(old, new)
+            item['sha256'] = hashlib.sha256(item['text'].encode()).hexdigest()
+            with self.subTest(name=name, old=old), self.assertRaises(ValueError): s.verify(value)
+    def test_unhashed_edit(self):
+        self.record['logs']['mail-owner-drift.log']['text'] += 'changed'
+        with self.assertRaises(ValueError): s.verify(self.record)
+
+class MailCleanupTests(unittest.TestCase):
+    def setUp(self):
+        self.record=json.loads((HERE/'MAIL-CLEANUP-AY.json').read_text())
+        self.base=(HERE/'MAIL-CONTRACT-AY.json').read_bytes()
+    def test_native_cleanup_evidence(self):
+        self.assertEqual(s.verify_cleanup(self.record,self.base)['owner_reviewed_native_cleanup'],'verified')
+    def test_wrong_scope_binary_or_retained_fixture(self):
+        for key,value in [('test_binary_sha256','0'*64),('base_record_sha256','0'*64),('scope',{})]:
+            record=copy.deepcopy(self.record);record[key]=value
+            with self.subTest(key=key),self.assertRaises(ValueError):s.verify_cleanup(record,self.base)
+    def test_rehashed_failure_or_changed_workload(self):
+        for old,new in [('--- PASS:','--- FAIL:'),('retained failed status','reported success'),('7713abe26e69887a166cd5c6efc39bb96be0f19cf6ec55428af1673924466a11','0'*64)]:
+            record=copy.deepcopy(self.record);item=record['logs']['mail-recovery-cleanup.log']
+            self.assertIn(old,item['text']);item['text']=item['text'].replace(old,new)
+            item['sha256']=hashlib.sha256(item['text'].encode()).hexdigest()
+            with self.subTest(old=old),self.assertRaises(ValueError):s.verify_cleanup(record,self.base)
+
+class MailDialectTests(unittest.TestCase):
+    def setUp(self):
+        self.record=json.loads((HERE/'MAIL-DIALECT-AY.json').read_text())
+        self.base=(HERE/'MAIL-CONTRACT-AY.json').read_bytes()
+    def test_native_dialect_evidence(self):
+        self.assertEqual(s.verify_record(self.record,self.base)['unknown_dialect_preserves_native_state'],'verified')
+    def test_wrong_scope_binary_or_fixture(self):
+        for key,value in [('test_binary_sha256','0'*64),('base_record_sha256','0'*64),('source_commit',''),('scope',{}),('lab',{}),('schema','unrecognized')]:
+            record=copy.deepcopy(self.record);record[key]=value
+            with self.subTest(key=key),self.assertRaises(ValueError):s.verify_record(record,self.base)
+    def test_rehashed_failure_or_changed_workload(self):
+        for old,new in [('--- PASS:','--- FAIL:'),('ExecMainStatus=0','ExecMainStatus=1'),('pending renewal','discarded renewal'),('7a3fbe8a-98b5-4b50-857e-f238ad4b22dc','00000000-0000-0000-0000-000000000000'),('7713abe26e69887a166cd5c6efc39bb96be0f19cf6ec55428af1673924466a11','0'*64)]:
+            record=copy.deepcopy(self.record);item=record['logs']['mail-native-dialect-result.log']
+            self.assertIn(old,item['text']);item['text']=item['text'].replace(old,new)
+            item['sha256']=hashlib.sha256(item['text'].encode()).hexdigest()
+            with self.subTest(old=old),self.assertRaises(ValueError):s.verify_record(record,self.base)
+    def test_unhashed_edit(self):
+        self.record['logs']['mail-native-dialect-result.log']['text']+='changed'
+        with self.assertRaises(ValueError):s.verify_record(self.record,self.base)
+
+class MailLedgerTests(unittest.TestCase):
+    def setUp(self):
+        self.record=json.loads((HERE/'MAIL-LEDGER-AY.json').read_text())
+        self.base=(HERE/'MAIL-CONTRACT-AY.json').read_bytes()
+    def test_native_ledger_evidence(self):
+        self.assertEqual(s.verify_record(self.record,self.base)['host_lock_exclusion'],'verified')
+    def test_native_strict_reader_evidence(self):
+        record=json.loads((HERE/'MAIL-READER-AY.json').read_text())
+        self.assertEqual(s.verify_record(record,self.base)['host_lock_exclusion'],'verified')
+    def test_wrong_binary_scope_or_base(self):
+        for key,value in [('test_binary_sha256','0'*64),('base_record_sha256','0'*64),('scope',{})]:
+            record=copy.deepcopy(self.record);record[key]=value
+            with self.subTest(key=key),self.assertRaises(ValueError):s.verify_record(record,self.base)
+    def test_rehashed_missing_exclusion_or_changed_state(self):
+        for old,new in [('held-lock-refused=verified','held-lock-accepted=verified'),('native-ledger-check=passed','native-ledger-check=failed'),('51e1704bc9a5d460678b0458e068e16614076ed9547309487f5a6b6051857bde','0'*64),('689a6c54-3150-43bd-b95b-277adf11d5e1','00000000-0000-0000-0000-000000000000'),('Fingerprint=77:13','Fingerprint=00:00')]:
+            record=copy.deepcopy(self.record);item=record['logs']['mail-native-ledger-result.log']
+            self.assertIn(old,item['text']);item['text']=item['text'].replace(old,new);item['sha256']=hashlib.sha256(item['text'].encode()).hexdigest()
+            with self.subTest(old=old),self.assertRaises(ValueError):s.verify_record(record,self.base)
+
+class MailObservationTests(unittest.TestCase):
+    def setUp(self):
+        self.record=json.loads((HERE/'MAIL-OBSERVATION-AY.json').read_text())
+        self.base=(HERE/'MAIL-CONTRACT-AY.json').read_bytes()
+    def test_native_owner_observation(self):
+        self.assertEqual(s.verify_record(self.record,self.base)['owner_configuration_preserved'],'verified')
+    def test_invalid_scope_or_identity(self):
+        for key,value in [('test_binary_sha256','0'*64),('base_record_sha256','0'*64),('scope',{}),('lab',{})]:
+            record=copy.deepcopy(self.record);record[key]=value
+            with self.subTest(key=key),self.assertRaises(ValueError):s.verify_record(record,self.base)
+    def test_rehashed_false_result(self):
+        for name,old,new in [('result','--- PASS:','--- FAIL:'),('result','failed request=','succeeded request='),('result','owner edit preserved','owner edit erased'),('witness','installed_agent_absent=yes','installed_agent_absent=no'),('witness','Fingerprint=77:13','Fingerprint=00:00')]:
+            record=copy.deepcopy(self.record);item=record['logs']['mail-native-observation-'+name+'.log'];self.assertIn(old,item['text']);item['text']=item['text'].replace(old,new);item['sha256']=hashlib.sha256(item['text'].encode()).hexdigest()
+            with self.subTest(old=old),self.assertRaises(ValueError):s.verify_record(record,self.base)
+
+if __name__ == '__main__': unittest.main()
+
+
+class MailReloadRecoveryTests(unittest.TestCase):
+    def setUp(self):
+        self.record=json.loads((HERE/'MAIL-RELOAD-BB.json').read_text())
+        self.base=(HERE/'MAIL-CONTRACT-BB.json').read_bytes()
+    def test_native_reload_recovery(self):
+        self.assertEqual(s.verify_record(self.record,self.base)['same_operation_reload_recovery'],'verified')
+    def test_scope_and_identity(self):
+        for key,value in [('schema','unknown'),('source_commit','0'*40),('test_binary_sha256','0'*64),('base_record_sha256','0'*64),('lab',{}),('scope',{})]:
+            record=copy.deepcopy(self.record);record[key]=value
+            with self.subTest(key=key),self.assertRaises(ValueError):s.verify_record(record,self.base)
+        for key in ('power_loss','independent_renewal','installed_owner_server'):
+            record=copy.deepcopy(self.record);record['scope'][key]=True
+            with self.subTest(key=key),self.assertRaises(ValueError):s.verify_record(record,self.base)
+    def test_rehashed_false_results(self):
+        edits=[
+          ('mail-reload-fault.log','--- PASS:','--- FAIL:'),
+          ('mail-reload-refuses.log','ExecMainStatus=0','ExecMainStatus=1'),
+          ('mail-reload-refuses.log','84608456-e725-4862-bcee-60991cd0bab4','00000000-0000-0000-0000-000000000000'),
+          ('mail-reload-refuses.log','1a2b299bf64c88f4b321512b7d4a5a4f','0'*32),
+          ('mail-reload-refuses.log','preserved owner edit','overwrote owner edit'),
+          ('mail-reload-resolution.log','imap=423d547f79d2e5601c4b14fc14ecf9e8a6f7c332950c902095b0ac55b042527f','imap=8616c53e89b9dd3a4c87c3d0b9a2236cdaa00364e8a55b06f39dfd6c8152b571'),
+          ('mail-reload-resolution.log','mail-agent.test[1377]','mail-agent.test[1236]'),
+          ('mail-reload-resolution.log','ActiveState=inactive','ActiveState=failed'),
+        ]
+        for name,old,new in edits:
+            record=copy.deepcopy(self.record);item=record['logs'][name];self.assertIn(old,item['text']);item['text']=item['text'].replace(old,new);item['sha256']=hashlib.sha256(item['text'].encode()).hexdigest()
+            with self.subTest(name=name,old=old),self.assertRaises(ValueError):s.verify_record(record,self.base)
+    def test_unhashed_or_extra_evidence(self):
+        self.record['logs']['mail-reload-fault.log']['text']+='changed'
+        with self.assertRaises(ValueError):s.verify_record(self.record,self.base)
+        self.setUp();self.record['logs']['unexpected']={}
+        with self.assertRaises(ValueError):s.verify_record(self.record,self.base)
+
+
+class MailAcknowledgementTests(unittest.TestCase):
+    def setUp(self):
+        self.record=json.loads((HERE/'MAIL-ACK-BC.json').read_text())
+        self.base=(HERE/'MAIL-CONTRACT-BC.json').read_bytes()
+    def test_native_acknowledgement(self):
+        self.assertEqual(s.verify_record(self.record,self.base)['same_leaf_unresolved_queue_preserved'],'verified')
+    def test_scope_and_binding(self):
+        for key,value in [('schema','unknown'),('source_commit','0'*40),('base_record_sha256','0'*64),('scope',{}),('lab',{})]:
+            record=copy.deepcopy(self.record);record[key]=value
+            with self.subTest(key=key),self.assertRaises(ValueError):s.verify_record(record,self.base)
+    def test_rehashed_false_acknowledgement(self):
+        edits=[('mail-ack-refuses.log','--- PASS:','--- FAIL:'),('mail-ack-refuses.log','1bf47bd647da500d893f203ee9277cbf','0'*32),('mail-ack-refuses.log','713fe42c-d881-4031-b295-c9565acaa4db','00000000-0000-0000-0000-000000000000'),('mail-ack-refuses.log','mail-agent.test[1179]','mail-agent.test[1036]'),('mail-ack-refuses.log','ExecMainStatus=0','ExecMainStatus=1'),('mail-reload-resolution.log','same-leaf pending renewal acknowledged after exact recovered completion','pending renewal discarded before completion')]
+        for name,old,new in edits:
+            record=copy.deepcopy(self.record);item=record['logs'][name];self.assertIn(old,item['text']);item['text']=item['text'].replace(old,new);item['sha256']=hashlib.sha256(item['text'].encode()).hexdigest()
+            with self.subTest(name=name,old=old),self.assertRaises(ValueError):s.verify_record(record,self.base)

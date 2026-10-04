@@ -1,0 +1,23 @@
+release unit transition: installed unit differs from both verified states; preserve owner changes: celikpanel-agent.service
+release unit transition: installed unit differs from both verified states; preserve owner changes: celikpanel-agent.service
+release unit transition: installed unit is unexpectedly absent: celikpanel-agent.service
+release transaction guard: installed systemd unit is missing or unsafe: /tmp/tmp.OFkyvXhJSN/systemd/celikpanel-agent.service
+release transaction guard: installed systemd unit metadata must be root:root mode 0644 and single-link: /tmp/tmp.OFkyvXhJSN/systemd/celikpanel-agent.service
+release transaction guard: installed systemd unit metadata must be root:root mode 0644 and single-link: /tmp/tmp.OFkyvXhJSN/systemd/celikpanel-agent.service
+release transaction guard: installed systemd unit metadata must be root:root mode 0644 and single-link: /tmp/tmp.OFkyvXhJSN/systemd/celikpanel-agent.service
+release transaction guard: candidate systemd unit metadata must be root:root mode 0644 and single-link: /tmp/tmp.OFkyvXhJSN/candidate-units/celikpanel-agent.service
+release transaction guard: unit snapshot contains an unexpected number of entries
+release transaction guard: inherited transaction lock descriptor is closed
+release transaction guard: systemd unit root identity changed during restore
+release unit transition: installed unit differs from both verified states; preserve owner changes: celikpanel-agent.service
+release unit transition: cannot publish unit atomically: celikpanel-panel.service
+release unit transition: cannot publish unit atomically: celikpanel-panel.service
+release unit transition: candidate unit changed before publication completed: celikpanel-agent.service
+release unit transition: restored unit changed before restoration completed: celikpanel-agent.service
+release unit transition: required independent firewall helper is unverified; preserve its retained generation
+release unit transition: required independent firewall helper is unverified; preserve its retained generation
+release unit transition: required independent firewall helper is unverified; preserve its retained generation
+grep: /tmp/tmp.OFkyvXhJSN/missing-unit: No such file or directory
+release unit transition: cannot classify firewall unit; preserve its evidence
+release unit transition: installed unit differs from both verified states; preserve owner changes: celikpanel-firewall-restore.service
+PASS: verified old/candidate unit transitions, atomic publication/restoration and owner-change refusal

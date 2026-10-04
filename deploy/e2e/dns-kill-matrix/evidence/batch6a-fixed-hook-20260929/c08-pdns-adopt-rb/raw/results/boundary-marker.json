@@ -1,0 +1,52 @@
+{
+  "schema": "celikpanel-dns-kill-matrix-boundary/v1",
+  "cell_id": "pdns-adopt__rolled-back__after-write__standalone__peer-reachable",
+  "driver": "pdns-adopt",
+  "observed_driver": "pdns-adopt",
+  "point": "after_write",
+  "phase": "rolled-back",
+  "request_id": "18400bad79662787153c9583ba87bc0e",
+  "nonce": "2645839d41d569417974e4c43fa9f47bf58b180654e3e00770cd817a7211c52d",
+  "marker": "/var/lib/celikpanel-dns-kill-matrix/results/pdns-adopt__rolled-back__after-write__standalone__peer-reachable/boundary-marker.json",
+  "ready_fd": 5,
+  "pid": 2180,
+  "process_start_ticks": "13224",
+  "recorded_at": "2026-09-29T15:18:45.844658423Z",
+  "observed_journal": {
+    "path": "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json",
+    "schema": "celikpanel-dns-engine-switch-journal/v1",
+    "phase": "rolled-back",
+    "mode": "adopt",
+    "mutation_request_id": "18400bad79662787153c9583ba87bc0e",
+    "mutation_owner_id": "faaa2a6517c83092da5df2821b998983",
+    "manifest_qualifier": "dns-engine-switch/v1:sha256:98c8cf65c8e88de929b531ceb433b47b9ebd67b541110e1d78922bbdbce686fc",
+    "target_engine": "pdns",
+    "source_epoch": 0,
+    "target_epoch": 1,
+    "source_revision": 0,
+    "topology": "standalone"
+  },
+  "rollback_precursor": {
+    "schema": "celikpanel-dns-kill-matrix-rollback-precursor/v1",
+    "driver": "pdns-adopt",
+    "observed_driver": "pdns-adopt",
+    "point": "after_write",
+    "phase": "intent",
+    "request_id": "18400bad79662787153c9583ba87bc0e",
+    "action": "returned-injected-error",
+    "observed_journal": {
+      "path": "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json",
+      "schema": "celikpanel-dns-engine-switch-journal/v1",
+      "phase": "intent",
+      "mode": "adopt",
+      "mutation_request_id": "18400bad79662787153c9583ba87bc0e",
+      "mutation_owner_id": "faaa2a6517c83092da5df2821b998983",
+      "manifest_qualifier": "dns-engine-switch/v1:sha256:98c8cf65c8e88de929b531ceb433b47b9ebd67b541110e1d78922bbdbce686fc",
+      "target_engine": "pdns",
+      "source_epoch": 0,
+      "target_epoch": 1,
+      "source_revision": 0,
+      "topology": "standalone"
+    }
+  }
+}

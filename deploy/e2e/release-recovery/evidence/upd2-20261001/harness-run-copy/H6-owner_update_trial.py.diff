@@ -1,0 +1,13 @@
+--- src-a81da45d/deploy/e2e/release-recovery/owner_update_trial.py	2026-09-30 18:21:34.000000000 +0300
++++ harness/deploy/e2e/release-recovery/owner_update_trial.py	2026-09-30 18:41:11.428347756 +0300
+@@ -1716,7 +1716,9 @@
+             response = self.api("POST", "/api/v1/panel/update/start", body, purpose="SystemUpdateOperation start (once)",
+                                 timeout=START_REQUEST_TIMEOUT_S)
+             checks["start"] = {"http": response.status, "body": response.json()}
+-            if response.status != 200:
++            # H6 (upd2 run copy): the product answers 202 Accepted for a queued/running start
++            # (cmd/panel/system_update_handlers.go:354,413); the web UI checks response.ok.
++            if response.status not in (200, 202) or (response.json() or {}).get("accepted") is not True:
+                 raise StepFailed(f"update start refused: HTTP {response.status} {response.json()}")
+         except self.p["panel_api"].UnknownOutcome as exc:
+             checks["start"] = {"outcome": "unknown; reconciled only by status reads", "note": str(exc)}

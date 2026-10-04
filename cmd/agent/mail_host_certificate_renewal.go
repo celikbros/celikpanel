@@ -1,17 +1,14 @@
 package main
 
 import (
-	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"log"
 	"path/filepath"
-	"strings"
+	"sync"
 	"time"
 
-	"github.com/alicelik/celikpanel/internal/mutationpayload"
+	"github.com/alicelik/celikpanel/internal/mailhostartifact"
+	"github.com/alicelik/celikpanel/internal/mailrenewalintent"
 )
 
 func mailHostRenewalPendingPath() string {
@@ -27,9 +24,39 @@ func runMailHostCertificateRenewalWorker() {
 	}
 }
 
+// Keep a poisoned manager (and any still-active worker lease) reachable. A new
+// polling iteration must not discard fail-closed state and create another owner.
+var mailRenewalExecution struct {
+	sync.Mutex
+	retained *serviceMutationManager
+}
+
 func deployPendingMailHostCertificate() error {
+	return deployPendingMailHostCertificateWithRetry("")
+}
+
+func deployPendingMailHostCertificateWithRetry(ownerRequest string) error {
+	mailRenewalExecution.Lock()
+	defer mailRenewalExecution.Unlock()
+	if held := mailRenewalExecution.retained; held != nil {
+		held.mu.Lock()
+		err := held.healthErrorLocked()
+		active := held.active != nil
+		held.mu.Unlock()
+		if err != nil {
+			return err
+		}
+		if active {
+			return errServiceMutationBusy
+		}
+		mailRenewalExecution.retained = nil
+	}
+
 	raw, found, err := readSecureServiceMutationLedger(mailHostRenewalPendingPath(), 512)
 	if err != nil || !found {
+		if err == nil && ownerRequest != "" {
+			return errors.New("explicit failed renewal retry has no pending operation")
+		}
 		return err
 	}
 	pending, err := decodeMailHostRenewal(raw)
@@ -38,16 +65,12 @@ func deployPendingMailHostCertificate() error {
 	}
 	lineage := pending.Lineage
 
-	manager, err := agentServiceMutationManager()
-	if err != nil {
-		return err
-	}
 	domain, currentLeaf, err := currentMailHostCertificateIdentity()
 	if err != nil {
 		return err
 	}
 	if mailHostCertLineageName(domain) != lineage {
-		return clearMailHostCertificateRenewal(pending)
+		return errors.New("queued mail renewal belongs to another selected hostname; the server owner must review the retained queue and accepted mail identity")
 	}
 	_, _, leaf, _, err := readMailHostCertificateSource(domain)
 	if err != nil {
@@ -56,30 +79,42 @@ func deployPendingMailHostCertificate() error {
 	if panelCertificateLeafSHA256(leaf) != pending.LeafSHA256 {
 		return errors.New("queued renewal source generation changed")
 	}
-	if panelCertificateLeafSHA256(leaf) == currentLeaf {
+	if ownerRequest == "" && panelCertificateLeafSHA256(leaf) == currentLeaf {
 		return clearMailHostCertificateRenewal(pending)
 	}
-	commitment, err := mutationpayload.CanonicalMailHostCertificate(domain, "renewal@celikpanel.invalid", buildCommit)
+	requestID, ownerID, qualifier, err := mailrenewalintent.Identity(domain, buildCommit, leaf)
 	if err != nil {
 		return err
 	}
-	// The unattended operation is bound to this precise source generation;
-	// another Certbot generation gets another durable request identity.
-	digest := sha256.Sum256(append([]byte("mail-host-renewal/v1/"+domain+"/"+buildCommit+"/"), leaf...))
-	requestID := hex.EncodeToString(digest[:16])
-	ownerID := hex.EncodeToString(digest[16:])
+	// The shared v1 identity retains the exact source generation and build.
+	if ownerRequest != "" && (!validMutationIdentity(ownerRequest) || ownerRequest != requestID || panelCertificateLeafSHA256(leaf) == currentLeaf) {
+		return errors.New("explicit failed renewal retry does not match an unpublished pending operation")
+	}
+	request := &ServiceMutationBeginRequest{RequestID: requestID, OwnerID: ownerID, Kind: "mail_host_certificate", Target: domain, PackageName: qualifier}
+	manager, err := newMailRenewalMutationManager("", "", request)
+	if manager != nil {
+		mailRenewalExecution.retained = manager
+	}
+	if err != nil {
+		return err
+	}
+	manager.mailRenewalFailedOwnerRequest = ownerRequest
 	resume := false
 	if previous := manager.status(requestID); previous != nil {
 		resume = previous.Status == serviceMutationStatusFailed
 	}
-	job, err := manager.begin(&ServiceMutationBeginRequest{RequestID: requestID, OwnerID: ownerID, Kind: "mail_host_certificate", Target: domain, PackageName: commitment.Qualifier, Resume: resume})
+	request.Resume = resume
+	job, err := manager.begin(request)
 	if err != nil {
 		return err
 	}
 	if job.Status == serviceMutationStatusSucceeded {
-		return clearMailHostCertificateRenewal(pending)
+		// A matching current leaf already returned above. Historical execution
+		// success cannot erase a queue after the owner changes current selection.
+		// Keep both facts and require review rather than rewriting owner state.
+		return errors.New("mail host renewal previously completed, but the selected certificate differs; the server owner must review the current mail certificate before retrying")
 	}
-	ctx, finish, err := manager.acquireStep(ServiceMutationBinding{MutationRequestID: requestID, MutationOwnerID: ownerID}, newServiceMutationStepClaim(serviceMutationStepIssueMailHostCertificate, domain, commitment.Qualifier, "issue"))
+	ctx, finish, err := manager.acquireStep(ServiceMutationBinding{MutationRequestID: requestID, MutationOwnerID: ownerID}, newServiceMutationStepClaim(serviceMutationStepIssueMailHostCertificate, domain, qualifier, "issue"))
 	if err != nil {
 		return err
 	}
@@ -102,7 +137,7 @@ func deployPendingMailHostCertificate() error {
 		err = errors.New("renewed source changed after mutation admission")
 	}
 	if err == nil {
-		_, err = publishMailHostCertificateSource(ctx, domain, requestID, commitment.Qualifier, panelCertificateLeafSHA256(leaf))
+		_, err = publishMailHostCertificateSource(ctx, domain, requestID, qualifier, panelCertificateLeafSHA256(leaf))
 	}
 	finish()
 	if err != nil {
@@ -112,30 +147,8 @@ func deployPendingMailHostCertificate() error {
 	return clearMailHostCertificateRenewal(pending)
 }
 
-type mailHostRenewal struct {
-	Lineage    string `json:"lineage"`
-	LeafSHA256 string `json:"leaf_sha256"`
-}
+type mailHostRenewal = mailhostartifact.Pending
 
 func decodeMailHostRenewal(raw []byte) (mailHostRenewal, error) {
-	var value mailHostRenewal
-	if len(raw) > 512 || json.Unmarshal(raw, &value) != nil {
-		return value, errors.New("invalid host renewal queue")
-	}
-	canonical, _ := json.Marshal(value)
-	if !bytes.Equal(raw, canonical) {
-		return value, errors.New("noncanonical host renewal queue")
-	}
-	suffix := strings.TrimPrefix(value.Lineage, "celikpanel-mail-")
-	if suffix == value.Lineage || len(suffix) != 24 {
-		return value, errors.New("invalid host renewal lineage")
-	}
-	decoded, err := hex.DecodeString(suffix)
-	if err != nil || hex.EncodeToString(decoded) != suffix {
-		return value, errors.New("invalid host renewal lineage")
-	}
-	if err := validatePanelCertificateLeafSHA256(value.LeafSHA256); err != nil {
-		return value, err
-	}
-	return value, nil
+	return mailhostartifact.DecodePending(raw)
 }

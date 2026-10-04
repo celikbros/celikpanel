@@ -6,6 +6,7 @@ import (
 	"net"
 	"strings"
 
+	"github.com/alicelik/celikpanel/internal/bindconfig"
 	"github.com/alicelik/celikpanel/internal/binddns"
 )
 
@@ -16,51 +17,10 @@ const (
 	bindOptionsMarkerEnd   = "// END CELIKPANEL MANAGED BIND OPTIONS"
 )
 
+var errManagedBINDOptionsModified = errors.New("existing CelikPanel BIND options were modified")
+
 func managedBINDZoneInclude(config, includePath string) (string, error) {
-	if includePath == "" || !strings.HasPrefix(includePath, "/") ||
-		strings.ContainsAny(includePath, "\x00\n\"\\") {
-		return "", errors.New("invalid managed BIND zone include path")
-	}
-	block := bindZonesMarkerBegin + "\ninclude \"" + includePath + "\";\n" +
-		bindZonesMarkerEnd + "\n"
-	beginCount := strings.Count(config, bindZonesMarkerBegin)
-	endCount := strings.Count(config, bindZonesMarkerEnd)
-	if beginCount != endCount || beginCount > 1 {
-		return "", errors.New("BIND zone include markers are incomplete or duplicated")
-	}
-	if beginCount == 1 {
-		start := strings.Index(config, bindZonesMarkerBegin)
-		endStart := strings.Index(config[start:], bindZonesMarkerEnd)
-		if endStart < 0 {
-			return "", errors.New("BIND zone include marker is incomplete")
-		}
-		endStart += start
-		if !bindMarkerStartsActiveComment(config, start) ||
-			!bindMarkerStartsActiveComment(config, endStart) {
-			return "", errors.New("BIND zone include markers are not active configuration comments")
-		}
-		end := endStart + len(bindZonesMarkerEnd)
-		if end < len(config) && config[end] == '\r' {
-			end++
-		}
-		if end < len(config) && config[end] == '\n' {
-			end++
-		}
-		if config[start:end] != block {
-			return "", errors.New("existing CelikPanel BIND zone include was modified")
-		}
-		return config, nil
-	}
-	if strings.Contains(config, includePath) {
-		return "", errors.New("managed BIND zone include exists outside its ownership markers")
-	}
-	if config != "" && !strings.HasSuffix(config, "\n") {
-		config += "\n"
-	}
-	if config != "" {
-		config += "\n"
-	}
-	return config + block, nil
+	return bindconfig.ManagedZoneInclude(config, includePath)
 }
 
 // canonicalBINDTransferACL is the one place a transfer peer becomes an address
@@ -129,7 +89,7 @@ func managedBINDOptions(config, transferPeer string, pairing ...*binddns.Pairing
 		actual := config[start:actualEnd]
 		base := strings.TrimSuffix(strings.TrimPrefix(baseBlock, "\n\t"), "\n")
 		if actual != canonical && actual != legacy && !(catalog != "" && actual == base) {
-			return "", errors.New("existing CelikPanel BIND options were modified")
+			return "", errManagedBINDOptionsModified
 		}
 		body := bindOptionsBodyWithoutManagedSpan(
 			config, open, close, start, actualEnd,
@@ -252,62 +212,8 @@ func bindOptionsBodyWithoutManagedSpan(
 // an exact marker wrapped in a block comment, line comment, or quoted string is
 // inert even though its bytes are otherwise unchanged.
 func bindMarkerStartsActiveComment(config string, markerStart int) bool {
-	if markerStart < 0 || markerStart+1 >= len(config) ||
-		config[markerStart] != '/' || config[markerStart+1] != '/' {
-		return false
-	}
-	const (
-		bindLexCode = iota
-		bindLexString
-		bindLexLineComment
-		bindLexBlockComment
-	)
-	state := bindLexCode
-	for index := 0; index < markerStart; {
-		switch state {
-		case bindLexCode:
-			switch {
-			case config[index] == '"':
-				state = bindLexString
-				index++
-			case config[index] == '#':
-				state = bindLexLineComment
-				index++
-			case config[index] == '/' && index+1 < markerStart && config[index+1] == '/':
-				state = bindLexLineComment
-				index += 2
-			case config[index] == '/' && index+1 < markerStart && config[index+1] == '*':
-				state = bindLexBlockComment
-				index += 2
-			default:
-				index++
-			}
-		case bindLexString:
-			if config[index] == '\\' && index+1 < markerStart {
-				index += 2
-				continue
-			}
-			if config[index] == '"' {
-				state = bindLexCode
-			}
-			index++
-		case bindLexLineComment:
-			if config[index] == '\n' {
-				state = bindLexCode
-			}
-			index++
-		case bindLexBlockComment:
-			if config[index] == '*' && index+1 < markerStart && config[index+1] == '/' {
-				state = bindLexCode
-				index += 2
-				continue
-			}
-			index++
-		}
-	}
-	return state == bindLexCode
+	return bindconfig.MarkerStartsActiveComment(config, markerStart)
 }
-
 func bindOptionsBlock(config string) (int, int, error) {
 	clean := stripBINDCommentsAndStrings(config)
 	foundOpen, foundClose := -1, -1

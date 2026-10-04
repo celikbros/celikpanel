@@ -1,0 +1,147 @@
+wall=2026-09-29T19:34:51.882065871Z boot_id=d37b3537-c24b-431d-8b6a-739a393edfd4 request_id=d2d7c9948be9fce42cc18598b8187e7d
+== systemctl show pdns.service
+MainPID=659
+ControlPID=0
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 19:34:12 UTC
+ExecMainPID=659
+Id=pdns.service
+LoadState=loaded
+ActiveState=active
+SubState=running
+FragmentPath=/usr/lib/systemd/system/pdns.service
+UnitFileState=enabled
+UnitFilePreset=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 19:34:12 UTC
+InactiveEnterTimestamp=
+NeedDaemonReload=no
+LoadError=
+InvocationID=00416409bc7842069ca79aad1762094d
+== systemctl is-enabled pdns.service
+enabled
+rc=0
+== systemctl is-active pdns.service
+active
+rc=0
+== systemctl show named.service
+MainPID=0
+ControlPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+Id=named.service
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+FragmentPath=
+UnitFileState=
+UnitFilePreset=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+NeedDaemonReload=no
+LoadError=org.freedesktop.systemd1.NoSuchUnit "Unit named.service not found."
+InvocationID=
+== systemctl is-enabled named.service
+not-found
+rc=4
+== systemctl is-active named.service
+inactive
+rc=4
+== systemctl show bind9.service
+MainPID=0
+ControlPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+Id=bind9.service
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+FragmentPath=
+UnitFileState=
+UnitFilePreset=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+NeedDaemonReload=no
+LoadError=org.freedesktop.systemd1.NoSuchUnit "Unit bind9.service not found."
+InvocationID=
+== systemctl is-enabled bind9.service
+not-found
+rc=4
+== systemctl is-active bind9.service
+inactive
+rc=4
+== mask symlinks (persistent and runtime)
+/etc/systemd/system/named.service absent
+/etc/systemd/system/bind9.service absent
+/run/systemd/system/named.service absent
+/run/systemd/system/bind9.service absent
+== named processes
+no named process
+== pdns_server processes
+659 /usr/sbin/pdns_server --guardian=no --daemon=no --disable-syslog --log-timestamp=no --write-pid=no
+== journal entry counts
+named.service 0
+bind9.service 0
+== dpkg -l bind9*
+Desired=Unknown/Install/Remove/Purge/Hold
+| Status=Not/Inst/Conf-files/Unpacked/halF-conf/Half-inst/trig-aWait/Trig-pend
+|/ Err?=(none)/Reinst-required (Status,Err: uppercase=bad)
+||/ Name             Version             Architecture Description
++++-================-===================-============-=================================
+ii  bind9-host       1:9.20.26-1~deb13u1 amd64        DNS Lookup Utility
+ii  bind9-libs:amd64 1:9.20.26-1~deb13u1 amd64        Shared Libraries used by BIND 9
+== dpkg -l pdns*
+Desired=Unknown/Install/Remove/Purge/Hold
+| Status=Not/Inst/Conf-files/Unpacked/halF-conf/Half-inst/trig-aWait/Trig-pend
+|/ Err?=(none)/Reinst-required (Status,Err: uppercase=bad)
+||/ Name                 Version          Architecture Description
++++-====================-================-============-===========================================
+un  pdns-backend         <none>           <none>       (no description available)
+un  pdns-backend-bind    <none>           <none>       (no description available)
+ii  pdns-backend-sqlite3 4.9.17-0+deb13u1 amd64        sqlite 3 backend for PowerDNS
+ii  pdns-server          4.9.17-0+deb13u1 amd64        extremely powerful and versatile nameserver
+== dpkg --verify bind9 bind9-utils bind9-libs bind9-host bind9-dnsutils (read-only; no output = unchanged)
+dpkg: package 'bind9' is not installed
+dpkg: package 'bind9-utils' is not installed
+dpkg: package 'bind9-dnsutils' is not installed
+rc=1
+== install-ownership receipt
+ls: cannot access '/var/lib/celikpanel-agent-private/dns-engine-install-ownership-bind.json': No such file or directory
+== /var/cache/bind tree (managed BIND root parent)
+find: ‘/var/cache/bind’: No such file or directory
+== /var/cache/bind file hashes
+== /var/lib/bind tree
+find: ‘/var/lib/bind’: No such file or directory
+== /etc/bind tree
+find: ‘/etc/bind’: No such file or directory
+== /etc/bind file hashes
+== /etc/bind package ownership
+find: ‘/etc/bind’: No such file or directory
+== bind9 conffiles (package md5)
+dpkg-query: no packages found matching bind9
+== md5 of /etc/bind files
+== apt history (bind9 transactions)
+== ss 53
+udp UNCONN 0      0         192.0.2.10:53 0.0.0.0:* users:(("pdns_server",pid=659,fd=6))     
+udp UNCONN 0      0          10.0.2.15:53 0.0.0.0:* users:(("pdns_server",pid=659,fd=5))     
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=333,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=333,fd=18))
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=333,fd=19))
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=333,fd=21))
+tcp LISTEN 0      128        10.0.2.15:53 0.0.0.0:* users:(("pdns_server",pid=659,fd=7))     
+tcp LISTEN 0      128       192.0.2.10:53 0.0.0.0:* users:(("pdns_server",pid=659,fd=8))     
+== recovery dns-switch-status --quiesced (after owner command and re-run)
+No DNS switch journal was observed for request d2d7c9948be9fce42cc18598b8187e7d. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+STATUS_RC=0
+ca5a8aba9367c28409fa7cbf567792d113b35ffbbe5d006dedf595bdc5f69ff3  /tmp/b7-status.out
+== private evidence after status
+total 20
+drwx------  2 root celikpanel 4096 2026-09-29 19:33:23.912470014 +0000 .
+drwxr-xr-x 29 root root       4096 2026-09-29 19:33:11.017022153 +0000 ..
+-rw-------  1 root celikpanel  561 2026-09-29 19:33:23.836474197 +0000 dns-engine-ownership-pdns.json
+-rw-------  1 root celikpanel  557 2026-09-29 19:33:21.504605618 +0000 dns-engine-state.json
+-rw-------  1 root celikpanel  741 2026-09-29 19:33:23.896470895 +0000 service-mutations.json
+f11eb480e0b4dafb77fffd0f9bdd835e178a6b03005ff7f6c0d7cff96e5bdd03  dns-engine-ownership-pdns.json
+20c214b4cafc5f5631b730f633e222175e1f033fefe1c8e487a886336df69b81  dns-engine-state.json
+9fcc73fa9b0189573f5e1dc717b8235e1d3e27b534ac7d95ef002f5ea4aafd69  service-mutations.json

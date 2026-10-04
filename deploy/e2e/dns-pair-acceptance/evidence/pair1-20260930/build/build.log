@@ -1,0 +1,71 @@
+make: Entering directory '/var/tmp/cp-pair-accept/dist/aa6b93808e57c5586e513601953b4db07ef6328f-acceptance-license/src'
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" build -trimpath -buildvcs=false -ldflags "-s -w -X main.buildVersion=v0.0.0-pairaccept-acceptance-license.aa6b93808e57 -X main.buildCommit=aa6b93808e57c5586e513601953b4db07ef6328f" -o bin/panel ./cmd/panel
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" build -trimpath -buildvcs=false -ldflags "-s -w -X main.buildVersion=v0.0.0-pairaccept-acceptance-license.aa6b93808e57 -X main.buildCommit=aa6b93808e57c5586e513601953b4db07ef6328f" -o bin/agent ./cmd/agent
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" build -tags celikpanel_mail_renewal -trimpath -buildvcs=false -ldflags "-s -w -X main.buildVersion=v0.0.0-pairaccept-acceptance-license.aa6b93808e57 -X main.buildCommit=aa6b93808e57c5586e513601953b4db07ef6328f" -o bin/mail-renewal ./cmd/agent
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" run ./deploy/mail-renewal/bundle --binary bin/mail-renewal --output bin/mail-renewal-runtime
+adf92d4e8e4b3a13676633a6f00e07aaf2195c2bff4def027cab6d81de596c0f
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" run ./deploy/agent-native-contract --agent bin/agent --commit "aa6b93808e57c5586e513601953b4db07ef6328f" --output bin/agent-native-contract.json --mail-runtime bin/mail-renewal-runtime
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" build -trimpath -buildvcs=false -o bin/schema17-bridge ./deploy/schema17bridge
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" build -trimpath -buildvcs=false -ldflags "-s -w -X main.buildVersion=v0.0.0-pairaccept-acceptance-license.aa6b93808e57 -X main.buildCommit=aa6b93808e57c5586e513601953b4db07ef6328f" -o bin/recovery ./cmd/recovery
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" build -trimpath -buildvcs=false -o bin/agent-checker $(cat deploy/recovery/agent-checker.sources)
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" build -trimpath -buildvcs=false -o bin/panel-checker $(cat deploy/recovery/panel-checker.sources)
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" run ./deploy/recovery/bundle --source-root . --binary-root bin --output bin/recovery-runtime
+3e15f562568f0f74c8894a62179e60409a6e89c525f4ced2ab0e170836a2fdab
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/firewall-restore ./cmd/firewall-restore
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" run ./deploy/firewall/bundle --binary bin/firewall-restore --output bin/firewall-runtime
+2a255340de0cef05addfdd4e8dd36a1197bec2c370c69eda512c3d250c4c8de2
+mkdir -p bin/dns-owner-tools
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/dns-owner-tools/dns-peer-enroll ./cmd/dns-peer-enroll
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/dns-owner-tools/bind-peer-inspect ./cmd/bind-peer-inspect
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/dns-owner-tools/pdns-peer-inspect ./cmd/pdns-peer-inspect
+cp cmd/dns-peer-enroll/README.md bin/dns-owner-tools/README.md
+cd web && PATH="/mnt/c/CELIKBROS PROJECTS/celikpanel/.bin/node/bin:$PATH" true ci --no-audit --no-fund
+cd web && PATH="/mnt/c/CELIKBROS PROJECTS/celikpanel/.bin/node/bin:$PATH" true run build
+# Mirror the operational release layout so initial installation has all
+# reviewed helpers. Privileged updates still enter through bootstrap-update.sh,
+# which publishes and verifies an immutable release before changing /opt.
+# İlk kurulum için incelenmiş yardımcıların tamamını taşı. Yetkili güncellemeler
+# yine değişmez sürümü yayımlayıp doğrulayan bootstrap-update.sh yolunu kullanır.
+rm -rf dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57
+mkdir -p dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/bin dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/web/dist dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/deploy dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/libexec
+cp bin/panel bin/agent bin/agent-native-contract.json bin/schema17-bridge dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/bin/
+cp -r web/dist/. dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/web/dist/
+cp -r deploy/. dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/deploy/
+cp -r bin/recovery-runtime dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/recovery-runtime
+cp -r bin/firewall-runtime dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/firewall-runtime
+cp -r bin/mail-renewal-runtime dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/mail-renewal-runtime
+cp -r bin/dns-owner-tools dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/dns-owner-tools
+cp bin/firewall-runtime/celikpanel-firewall-restore.service dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/deploy/systemd/celikpanel-firewall-restore.service
+cp install.sh bootstrap-update.sh bootstrap-prebuilt-update.sh update.sh rollback.sh Makefile README.md SECURITY.md NOTICE dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/
+cp download-portal/get.sh dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/libexec/get.sh
+echo 1 > dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/release.version
+echo aa6b93808e57c5586e513601953b4db07ef6328f > dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/release.commit
+echo 9fba2e53bc58572daa6a68b1e8122b4921550a92 > dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/release.tree
+find dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57 -type d -exec chmod 0755 {} +
+find dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57 -type f -exec chmod 0644 {} +
+chmod 0755 dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/bin/panel dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/bin/agent dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/bin/schema17-bridge
+chmod 0755 dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/install.sh dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/bootstrap-update.sh dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/bootstrap-prebuilt-update.sh
+chmod 0755 dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/update.sh dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/rollback.sh
+chmod 0755 dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/libexec/get.sh
+chmod 0755 dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/firewall-runtime/restore
+chmod 0755 dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/dns-owner-tools/dns-peer-enroll dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/dns-owner-tools/bind-peer-inspect dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/dns-owner-tools/pdns-peer-inspect
+chmod 0755 dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/mail-renewal-runtime/renew dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/mail-renewal-runtime/celikpanel-mail-host-cert
+chmod 0755 dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/deploy/write-release-manifest.sh
+chmod 0755 dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/recovery-runtime/bin/recovery dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/recovery-runtime/bin/agent-checker dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/recovery-runtime/bin/panel-checker dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/recovery-runtime/bin/schema17-bridge
+chmod 0755 dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/recovery-runtime/update.sh dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/recovery-runtime/rollback.sh dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/recovery-runtime/deploy/recovery/runtime-entry.sh
+chmod 0755 dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/deploy/release-recovery-runner.sh
+chmod 0644 dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/deploy/release-recovery-foundation.sh
+chmod 0644 dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/deploy/release-recovery.protocol
+chmod 0644 dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/deploy/systemd/celikpanel-release-recovery.service
+chmod 0644 dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/deploy/systemd/celikpanel-release-recovery.timer
+bash dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/deploy/write-release-manifest.sh dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57
+# Normalize archive modes as well as time/order/ownership. Plain cp applies
+# the caller's umask, so the same source must not package differently on
+# hosts using 022 and 077.
+tar --sort=name --mtime="@1790699928" --owner=0 --group=0 --numeric-owner --mode='u=rwX,go=rX' --format=gnu -cf dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57.tar -C dist celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57
+gzip -n -f dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57.tar
+rm -rf dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57
+cd dist && sha256sum "celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57.tar.gz" > "celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57.tar.gz.sha256"
+→ dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57.tar.gz
+→ dist/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57.tar.gz.sha256
+make: Leaving directory '/var/tmp/cp-pair-accept/dist/aa6b93808e57c5586e513601953b4db07ef6328f-acceptance-license/src'

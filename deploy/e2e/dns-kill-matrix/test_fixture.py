@@ -7,6 +7,7 @@ import io
 import json
 import os
 import stat
+import subprocess
 import tempfile
 import unittest
 from unittest import mock
@@ -251,6 +252,102 @@ class FixtureGenerationTest(unittest.TestCase):
         self.assertIn("StrictHostKeyChecking=accept-new", joined)
         self.assertIn("cloud-init status --wait", joined)
         self.assertIn("boot-finished", joined)
+
+
+class GuestRebootTest(unittest.TestCase):
+    """Orderly reboot of the cell's own guest, with a scripted SSH runner."""
+
+    BEFORE = "11111111-1111-1111-1111-111111111111"
+    AFTER = "22222222-2222-2222-2222-222222222222"
+
+    def setUp(self) -> None:
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        root = Path(self.temporary.name)
+        self.pidfile = root / "qemu.pid"
+        self.pidfile.write_text(f"{os.getpid()}\n", encoding="ascii")
+        self.identity = root / "id_ed25519"
+        self.identity.write_text("key\n", encoding="ascii")
+        self.uuid = str(fixture.uuid.uuid5(fixture.NAMESPACE, f"{CELL_ID}\0debian13"))
+        self.plan = {
+            "cell_id": CELL_ID,
+            "start_order": ["debian13", "arch"],
+            "nodes": {
+                "debian13": {
+                    "qemu_command": ["qemu-system-x86_64", "-uuid", self.uuid],
+                    "paths": {"pid": str(self.pidfile), "directory": str(root / "debian13")},
+                    "management": {"ssh_host": "127.0.0.1", "ssh_port": 2201},
+                },
+            },
+        }
+
+    def runner(self, *, uuid: str | None = None, cell: str = CELL_ID, comes_back=True):
+        state = {"rebooted": False, "calls": []}
+
+        def run(command, **kwargs):
+            state["calls"].append(command[-1])
+            if command[-1] == fixture.GUEST_REBOOT_COMMAND:
+                state["rebooted"] = True
+                return subprocess.CompletedProcess(command, 255)
+            boot = self.AFTER if state["rebooted"] and comes_back else self.BEFORE
+            text = (
+                f"product_uuid={(uuid or self.uuid).upper()}\n"
+                f"schema={fixture.PLAN_SCHEMA}\ncell_id={cell}\nnode=debian13\n"
+                f"boot_id={boot}\n"
+            )
+            return subprocess.CompletedProcess(command, 0, stdout=text.encode())
+
+        return run, state
+
+    def reboot(self, run, timeout: int = 60):
+        clock = iter(range(0, 10_000))
+        return fixture.reboot_guest(
+            self.plan, "debian13", self.identity, timeout, runner=run,
+            clock=lambda: next(clock), sleep=lambda _: None, ready=mock.Mock(),
+        )
+
+    def test_reboot_records_boot_ids_of_the_cells_own_guest(self) -> None:
+        run, state = self.runner()
+        receipt = self.reboot(run)
+        self.assertEqual((receipt["boot_id_before"], receipt["boot_id_after"]),
+                         (self.BEFORE, self.AFTER))
+        self.assertEqual(receipt["product_uuid"], self.uuid)
+        self.assertEqual(receipt["reboot_command_returncode"], 255)
+        self.assertEqual(state["calls"].count(fixture.GUEST_REBOOT_COMMAND), 1)
+        self.assertEqual(state["calls"][0], fixture.GUEST_IDENTITY_COMMAND)
+
+    def test_reboot_refuses_any_other_guest_before_rebooting(self) -> None:
+        for kwargs in ({"uuid": "33333333-3333-3333-3333-333333333333"},
+                       {"cell": "bind__other"}):
+            run, state = self.runner(**kwargs)
+            with self.subTest(kwargs=kwargs), self.assertRaisesRegex(
+                fixture.FixtureError, "refusing reboot"
+            ):
+                self.reboot(run)
+            self.assertNotIn(fixture.GUEST_REBOOT_COMMAND, state["calls"])
+        self.pidfile.write_text("999999999\n", encoding="ascii")
+        run, state = self.runner()
+        with self.assertRaisesRegex(fixture.FixtureError, "not alive"):
+            self.reboot(run)
+        self.assertEqual(state["calls"], [])
+
+    def test_reboot_times_out_when_the_boot_id_never_changes(self) -> None:
+        run, _ = self.runner(comes_back=False)
+        with self.assertRaisesRegex(fixture.FixtureError, "new boot ID"):
+            self.reboot(run, timeout=30)
+        with self.assertRaises(fixture.FixtureError):
+            fixture.parse_guest_identity("product_uuid=x\n")
+
+    def test_reboot_cli_is_a_dry_run_by_default(self) -> None:
+        self.assertIn("reboot", fixture.parse_args([
+            "reboot", "--work-root", "/tmp/r", "--cell-id", CELL_ID,
+            "--node", "debian13", "--identity-file", "/tmp/k",
+        ]).action)
+        self.assertEqual(fixture.plan_vm_uuid(self.plan, "debian13"), self.uuid)
+        bad = json.loads(json.dumps(self.plan))
+        bad["nodes"]["debian13"]["qemu_command"][-1] = "0" * 8 + "-0000-0000-0000-" + "0" * 12
+        with self.assertRaises(fixture.FixtureError):
+            fixture.plan_vm_uuid(bad, "debian13")
 
 
 if __name__ == "__main__":

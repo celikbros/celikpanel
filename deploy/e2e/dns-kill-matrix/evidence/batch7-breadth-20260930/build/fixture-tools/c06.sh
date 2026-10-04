@@ -1,0 +1,1 @@
+bash /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch7/runcell.sh c06-takeover-dir bind__target-staged__after-write__standalone__peer-reachable unmanaged-bind-stopped 'prepare-bind --owner-directives' 1 /var/tmp/cp-b7-0930 debian13 none none --owner-directives --reboot-after-recovery

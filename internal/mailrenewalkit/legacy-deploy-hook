@@ -1,0 +1,12 @@
+#!/bin/sh
+set -eu
+# Managed by CelikPanel. Only the currently approved host lineage is queued.
+lineage=${RENEWED_LINEAGE:-}
+case "$lineage" in
+ /etc/letsencrypt/live/celikpanel-mail-*)
+  lineage_name=${lineage#/etc/letsencrypt/live/}
+  case "$lineage_name" in ""|*/*) exit 0 ;; esac
+  exec /opt/celikpanel/bin/agent --deploy-mail-host-certificate "$lineage_name"
+  ;;
+esac
+exit 0

@@ -1,0 +1,27 @@
+evidence /var/tmp/cp-release-drill-upd13-arch-good-a/evidence/arch/upd1/upd1-arch-good-20261002t221119z/
+## initial-record (updater wrote it): 0 hits (0 in .txt)
+## curl preflight refusal: 0 hits (0 in .txt)
+## no-marker after child failure: 0 hits (0 in .txt)
+## pause_pending journal: 0 hits (0 in .txt)
+## renewal restore at pause: 0 hits (0 in .txt)
+## pause recorded: 0 hits (0 in .txt)
+## start check failure: 0 hits (0 in .txt)
+## package-activity refusal (startup reconcile): 0 hits (0 in .txt)
+## package_manager_active / HOST_MUTATION_BUSY: 0 hits (0 in .txt)
+## startup reconcile success: 1 hits (1 in .txt)
+   steps/14-collect/journal-product.txt:232: 2026-10-02T22:18:50.776366+00:00 dns-arch panel[13398]: 2026/10/02 22:18:50 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload
+## milter chain/wiring: 4 hits (4 in .txt)
+   steps/14-collect/journal-product.txt:16: 2026-10-02T22:12:14.976949+00:00 dns-arch panel[7873]: 2026/10/02 22:12:14 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-collect/journal-product.txt:29: 2026-10-02T22:12:16.148940+00:00 dns-arch panel[7944]: 2026/10/02 22:12:16 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-collect/journal-product.txt:55: 2026-10-02T22:12:37.855936+00:00 dns-arch panel[420]: 2026/10/02 22:12:37 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-collect/journal-product.txt:234: 2026-10-02T22:18:50.780080+00:00 dns-arch panel[13398]: 2026/10/02 22:18:50 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+## deferred retry note on a startup refusal: 0 hits (0 in .txt)
+## deferred retry attempt line: 0 hits (0 in .txt)
+## deferred retry: busy again (attempt > 1): 0 hits (0 in .txt)
+## deferred retry: verified failure: 0 hits (0 in .txt)
+## deferred retry: give-up: 0 hits (0 in .txt)
+## root CLI states (first seen)
+   2026-10-02T22:18:16Z ('running', 'update_running', None, None, None)
+   2026-10-02T22:19:01Z ('succeeded', 'update_verified', None, None, None)
+## CELIKPANEL_LISTEN mentions
+   steps/14-collect/journal-product.txt 2026-10-02T22:18:49.229141+00:00 dns-arch sudo[12908]:     root : PWD=/var/backups/celikpanel/releases/47c0b4c2d68a-6e2f58ca66b35109de525607 ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/local

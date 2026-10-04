@@ -325,6 +325,7 @@ def host_placement(
     critical_bind_source = driver == "bind" and boundary["phase"] in {
         "source-stopped",
         "target-started",
+        "rolled-back",
     }
     if critical_bind_source:
         kill_host = "debian-13"
@@ -509,7 +510,7 @@ def validate_manifest(manifest: dict[str, Any]) -> None:
             cell.get("driver") == "bind"
             and cell.get("status") == "runnable"
             and cell.get("boundary", {}).get("phase")
-            in {"source-stopped", "target-started"}
+            in {"source-stopped", "target-started", "rolled-back"}
         ):
             placement = cell.get("placement", {})
             if (
@@ -583,8 +584,8 @@ def build_manifest() -> dict[str, Any]:
             "platform_dimension": (
                 "Operating system is a placement constraint, not an extra matrix dimension. "
                 "Certified PowerDNS and signed-update rollback cells run on Debian 13; "
-                "BIND cells are otherwise spread across Debian 13 and Arch, but every "
-                "source-stopped and target-started BIND cell runs on Debian with a genuine "
+                "BIND cells are otherwise spread across Debian 13 and Arch, but each "
+                "source-stopped, target-started, and rolled-back BIND cell runs on Debian with a genuine "
                 "managed PowerDNS source. Early Arch BIND cells may use an explicitly proven "
                 "uninitialized source and do not claim stopped-source coverage."
             ),

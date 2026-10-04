@@ -1,0 +1,78 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "DomainCronManager create",
+  "request": {
+    "body": {
+      "command": "/bin/date -u -Iseconds > \"$HOME/upd1-cron-stamp.txt\"",
+      "comment": "upd1 owner cron",
+      "schedule": "* * * * *"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/domains/1/cron"
+  },
+  "response": {
+    "elapsed_seconds": 0.018,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Thu, 01 Oct 2026 22:51:15 GMT"
+      ],
+      [
+        "Content-Length",
+        "17"
+      ]
+    ],
+    "json": {
+      "success": true
+    },
+    "status": 200,
+    "text": null
+  }
+}

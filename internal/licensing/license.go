@@ -54,13 +54,27 @@ type Claims struct {
 	RefreshAfter int64  `json:"refresh_after"`
 	OfflineUntil int64  `json:"offline_until"`
 }
+
+// Observation separates entitlement evidence from unavailable observations.
+// Observation, lisans kanıtını gözlemin yapılamamasından ayırır.
+const (
+	ObservationKnown       = "known"
+	ObservationUnavailable = "unavailable"
+)
+
+var errInvalidState = errors.New("invalid license state")
+
 type Status struct {
 	State        string `json:"state"`
+	Observation  string `json:"observation"`
 	Product      string `json:"product,omitempty"`
 	LicenseID    string `json:"license_id,omitempty"`
 	ExpiresAt    int64  `json:"expires_at,omitempty"`
 	OfflineUntil int64  `json:"offline_until,omitempty"`
 	CanProvision bool   `json:"can_provision"`
+	// Empty in every ordinary build (acceptance_off.go), so the JSON is unchanged.
+	// Only the acceptance_license test build labels its fixture license here.
+	acceptanceStatus
 }
 
 func ServerID(machineID []byte) (string, error) {
@@ -115,6 +129,18 @@ type Manager struct {
 	clock      func() time.Time
 	retryAfter time.Time
 	rejected   atomic.Bool
+	// seam is assigned only by NewServer in the acceptance_license test build
+	// (acceptance_fixture.go). Ordinary builds have no implementation and no
+	// assignment, so it is always nil there.
+	seam acceptanceSeam
+}
+
+// acceptanceSeam replaces license verification only in the acceptance_license
+// test build. It is an interface with no implementation in ordinary builds.
+type acceptanceSeam interface {
+	status() Status
+	activate(ctx context.Context, key, hostname string) error
+	refresh(ctx context.Context, force bool) error
 }
 
 func New(file string, key ed25519.PublicKey, server string) (*Manager, error) {
@@ -132,28 +158,43 @@ func (m *Manager) read() (Envelope, Claims, error) {
 	}
 	defer f.Close()
 	st, err := f.Stat()
-	if err != nil || !st.Mode().IsRegular() || st.Size() > 8192 {
-		return e, Claims{}, errors.New("invalid license state file")
+	if err != nil {
+		return e, Claims{}, err
+	}
+	if !st.Mode().IsRegular() || st.Size() > 8192 {
+		return e, Claims{}, errInvalidState
 	}
 	b, err := io.ReadAll(io.LimitReader(f, 8193))
 	if err != nil {
 		return e, Claims{}, err
 	}
+	if len(b) > 8192 {
+		return e, Claims{}, errInvalidState
+	}
 	if err = json.Unmarshal(b, &e); err != nil {
-		return e, Claims{}, err
+		return e, Claims{}, fmt.Errorf("%w: malformed envelope", errInvalidState)
 	}
 	c, err := Verify(e, m.key, m.server, m.clock())
-	return e, c, err
+	if err != nil {
+		return e, c, fmt.Errorf("%w: %v", errInvalidState, err)
+	}
+	return e, c, nil
 }
 func (m *Manager) Status() Status {
+	if m.seam != nil {
+		return m.seam.status()
+	}
 	e, c, err := m.read()
 	if err != nil {
-		if os.IsNotExist(err) {
-			return Status{State: "missing"}
+		if m.rejected.Load() || errors.Is(err, errInvalidState) {
+			return Status{State: "invalid", Observation: ObservationKnown}
 		}
-		return Status{State: "invalid"}
+		if os.IsNotExist(err) {
+			return Status{State: "missing", Observation: ObservationKnown}
+		}
+		return Status{State: "status_unavailable", Observation: ObservationUnavailable}
 	}
-	s := Status{State: "active", Product: c.Product, LicenseID: c.LicenseID, ExpiresAt: c.ExpiresAt, OfflineUntil: min(c.OfflineUntil, c.IssuedAt+int64(CheckInterval/time.Second)), CanProvision: true}
+	s := Status{State: "active", Observation: ObservationKnown, Product: c.Product, LicenseID: c.LicenseID, ExpiresAt: c.ExpiresAt, OfflineUntil: min(c.OfflineUntil, c.IssuedAt+int64(CheckInterval/time.Second)), CanProvision: true}
 	now := m.clock().Unix()
 	if now >= c.ExpiresAt {
 		s.State = "expired"
@@ -163,6 +204,7 @@ func (m *Manager) Status() Status {
 		s.CanProvision = false
 	} else if now >= s.OfflineUntil || now < c.IssuedAt {
 		s.State = "verification_unavailable"
+		s.Observation = ObservationUnavailable
 		s.CanProvision = false
 	}
 	return s
@@ -205,6 +247,9 @@ func (m *Manager) save(e Envelope) error {
 	return dir.Sync()
 }
 func (m *Manager) request(ctx context.Context, action string, input map[string]string) error {
+	if m.seam != nil {
+		return errors.New("license service is never contacted by this build")
+	}
 	body, err := json.Marshal(input)
 	if err != nil {
 		return err
@@ -264,6 +309,9 @@ func (m *Manager) request(ctx context.Context, action string, input map[string]s
 	return nil
 }
 func (m *Manager) Activate(ctx context.Context, key, hostname string) error {
+	if m.seam != nil {
+		return m.seam.activate(ctx, key, hostname)
+	}
 	if !keyPattern.MatchString(key) {
 		return errors.New("invalid license key")
 	}
@@ -272,6 +320,9 @@ func (m *Manager) Activate(ctx context.Context, key, hostname string) error {
 	return m.request(ctx, "activate", map[string]string{"key": key, "server_id": m.server, "hostname": hostname})
 }
 func (m *Manager) Refresh(ctx context.Context, force bool) error {
+	if m.seam != nil {
+		return m.seam.refresh(ctx, force)
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.refreshLocked(ctx, force)
@@ -302,6 +353,12 @@ func (m *Manager) refreshLocked(ctx context.Context, force bool) error {
 // Concurrent requests wait for and share the same result; there is no background
 // admission window while a refresh is pending.
 func (m *Manager) CanProvision(ctx context.Context) bool {
+	return m.AccessStatus(ctx).CanProvision
+}
+
+// AccessStatus applies the existing synchronous refresh policy and retains its reason.
+// AccessStatus, mevcut eşzamanlı doğrulama politikasını uygular ve gerekçeyi korur.
+func (m *Manager) AccessStatus(ctx context.Context) Status {
 	_ = m.Refresh(ctx, false)
-	return m.Status().CanProvision
+	return m.Status()
 }

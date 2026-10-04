@@ -1,0 +1,112 @@
+2026-09-29T17:15:43.962030+00:00 dns-debian13 systemd[1]: Starting named.service - BIND Domain Name Server...
+2026-09-29T17:15:43.986779+00:00 dns-debian13 named[5497]: starting BIND 9.20.29-1~deb13u1-Debian (Stable Release) <id:>
+2026-09-29T17:15:43.987156+00:00 dns-debian13 named[5497]: running on Linux x86_64 6.12.105+deb13-cloud-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.12.105-1 (2026-08-24) (Debian GNU/Linux 13 (trixie))
+2026-09-29T17:15:43.987212+00:00 dns-debian13 named[5497]: built with  '--build=x86_64-linux-gnu' '--prefix=/usr' '--includedir=${prefix}/include' '--mandir=${prefix}/share/man' '--infodir=${prefix}/share/info' '--sysconfdir=/etc' '--localstatedir=/var' '--disable-option-checking' '--disable-silent-rules' '--libdir=${prefix}/lib/x86_64-linux-gnu' '--runstatedir=/run' '--disable-maintainer-mode' '--disable-dependency-tracking' '--libdir=/usr/lib/x86_64-linux-gnu' '--sysconfdir=/etc/bind' '--with-python=python3' '--localstatedir=/' '--enable-threads' '--enable-largefile' '--with-libtool' '--enable-shared' '--disable-static' '--with-gost=no' '--with-openssl=/usr' '--with-gssapi=yes' '--with-libidn2' '--with-json-c' '--with-lmdb=/usr' '--with-gnu-ld' '--with-maxminddb' '--with-atf=no' '--enable-ipv6' '--enable-rrl' '--enable-filter-aaaa' '--disable-native-pkcs11' '--enable-dnstap' 'build_alias=x86_64-linux-gnu' 'CFLAGS=-g -O2 -Werror=implicit-function-declaration -ffile-prefix-map=/build/reproducible-path/bind9-9.20.29=. -fstack-protector-strong -fstack-clash-protection -Wformat -Werror=format-security -fcf-protection -fno-strict-aliasing -fno-delete-null-pointer-checks -DNO_VERSION_DATE -DDIG_SIGCHASE' 'LDFLAGS=-Wl,-z,relro -Wl,-z,now' 'CPPFLAGS=-Wdate-time -D_FORTIFY_SOURCE=2'
+2026-09-29T17:15:43.987308+00:00 dns-debian13 named[5497]: running as: named -f -u bind
+2026-09-29T17:15:43.987345+00:00 dns-debian13 named[5497]: compiled by GCC 14.2.0
+2026-09-29T17:15:43.987380+00:00 dns-debian13 named[5497]: compiled with OpenSSL version: OpenSSL 3.5.7 9 Jun 2026
+2026-09-29T17:15:43.987445+00:00 dns-debian13 named[5497]: linked to OpenSSL version: OpenSSL 3.5.7 9 Jun 2026
+2026-09-29T17:15:43.987488+00:00 dns-debian13 named[5497]: compiled with libuv version: 1.50.0
+2026-09-29T17:15:43.987572+00:00 dns-debian13 named[5497]: linked to libuv version: 1.50.0
+2026-09-29T17:15:43.987623+00:00 dns-debian13 named[5497]: compiled with liburcu version: 0.15.2
+2026-09-29T17:15:43.987656+00:00 dns-debian13 named[5497]: compiled with jemalloc version: 5.3.0
+2026-09-29T17:15:43.987690+00:00 dns-debian13 named[5497]: compiled with libnghttp2 version: 1.64.0
+2026-09-29T17:15:43.987729+00:00 dns-debian13 named[5497]: linked to libnghttp2 version: 1.64.0
+2026-09-29T17:15:43.987765+00:00 dns-debian13 named[5497]: compiled with libxml2 version: 2.9.14
+2026-09-29T17:15:43.987805+00:00 dns-debian13 named[5497]: linked to libxml2 version: 20914
+2026-09-29T17:15:43.987840+00:00 dns-debian13 named[5497]: compiled with json-c version: 0.18
+2026-09-29T17:15:43.987877+00:00 dns-debian13 named[5497]: linked to json-c version: 0.18
+2026-09-29T17:15:43.987926+00:00 dns-debian13 named[5497]: compiled with zlib version: 1.3.1
+2026-09-29T17:15:43.987970+00:00 dns-debian13 named[5497]: linked to zlib version: 1.3.1
+2026-09-29T17:15:43.988013+00:00 dns-debian13 named[5497]: linked to maxminddb version: 1.12.2
+2026-09-29T17:15:43.988051+00:00 dns-debian13 named[5497]: compiled with protobuf-c version: 1.5.1
+2026-09-29T17:15:43.988087+00:00 dns-debian13 named[5497]: linked to protobuf-c version: 1.5.1
+2026-09-29T17:15:43.988122+00:00 dns-debian13 named[5497]: ----------------------------------------------------
+2026-09-29T17:15:43.988156+00:00 dns-debian13 named[5497]: BIND 9 is maintained by Internet Systems Consortium,
+2026-09-29T17:15:43.988190+00:00 dns-debian13 named[5497]: Inc. (ISC), a non-profit 501(c)(3) public-benefit
+2026-09-29T17:15:43.988225+00:00 dns-debian13 named[5497]: corporation.  Support and training for BIND 9 are
+2026-09-29T17:15:43.988266+00:00 dns-debian13 named[5497]: available at https://www.isc.org/support
+2026-09-29T17:15:43.988296+00:00 dns-debian13 named[5497]: ----------------------------------------------------
+2026-09-29T17:15:43.988327+00:00 dns-debian13 named[5497]: adjusted limit on open files from 1024 to 524288
+2026-09-29T17:15:43.988363+00:00 dns-debian13 named[5497]: found 2 CPUs, using 2 worker threads
+2026-09-29T17:15:43.990023+00:00 dns-debian13 named[5497]: DNSSEC algorithms: RSASHA1 NSEC3RSASHA1 RSASHA256 RSASHA512 ECDSAP256SHA256 ECDSAP384SHA384 ED25519 ED448
+2026-09-29T17:15:43.990119+00:00 dns-debian13 named[5497]: DS algorithms: SHA-1 SHA-256 SHA-384
+2026-09-29T17:15:43.990163+00:00 dns-debian13 named[5497]: HMAC algorithms: HMAC-MD5 HMAC-SHA1 HMAC-SHA224 HMAC-SHA256 HMAC-SHA384 HMAC-SHA512
+2026-09-29T17:15:43.990200+00:00 dns-debian13 named[5497]: TKEY mode 2 support (Diffie-Hellman): no
+2026-09-29T17:15:43.990236+00:00 dns-debian13 named[5497]: TKEY mode 3 support (GSS-API): yes
+2026-09-29T17:15:43.994601+00:00 dns-debian13 named[5497]: the initial working directory is '/'
+2026-09-29T17:15:43.994762+00:00 dns-debian13 named[5497]: loading configuration from '/etc/bind/named.conf'
+2026-09-29T17:15:43.994860+00:00 dns-debian13 named[5497]: the working directory is now '/var/cache/bind'
+2026-09-29T17:15:43.995033+00:00 dns-debian13 named[5497]: looking for GeoIP2 databases in '/usr/share/GeoIP'
+2026-09-29T17:15:43.995190+00:00 dns-debian13 named[5497]: using default UDP/IPv4 port range: [32768, 60999]
+2026-09-29T17:15:43.995332+00:00 dns-debian13 named[5497]: using default UDP/IPv6 port range: [32768, 60999]
+2026-09-29T17:15:43.995777+00:00 dns-debian13 named[5497]: listening on IPv4 interface lo, 127.0.0.1#53
+2026-09-29T17:15:43.996134+00:00 dns-debian13 named[5497]: listening on IPv4 interface mgmt0, 10.0.2.15#53
+2026-09-29T17:15:43.996362+00:00 dns-debian13 named[5497]: listening on IPv4 interface peer0, 192.0.2.10#53
+2026-09-29T17:15:43.996574+00:00 dns-debian13 named[5497]: IPv6 socket API is incomplete; explicitly binding to each IPv6 address separately
+2026-09-29T17:15:43.996625+00:00 dns-debian13 named[5497]: listening on IPv6 interface lo, ::1#53
+2026-09-29T17:15:43.996819+00:00 dns-debian13 named[5497]: listening on IPv6 interface mgmt0, fec0::5054:ff:fe13:10#53
+2026-09-29T17:15:43.997024+00:00 dns-debian13 named[5497]: listening on IPv6 interface mgmt0, fe80::5054:ff:fe13:10%2#53
+2026-09-29T17:15:43.997179+00:00 dns-debian13 named[5497]: listening on IPv6 interface peer0, fe80::5054:ff:fe53:10%3#53
+2026-09-29T17:15:43.997732+00:00 dns-debian13 named[5497]: Disabling periodic interface re-scans timer
+2026-09-29T17:15:43.997974+00:00 dns-debian13 named[5497]: generating session key for dynamic DNS
+2026-09-29T17:15:43.998608+00:00 dns-debian13 named[5497]: using built-in root key for view _default
+2026-09-29T17:15:43.998737+00:00 dns-debian13 named[5497]: set up managed keys zone for view _default, file 'managed-keys.bind'
+2026-09-29T17:15:43.999161+00:00 dns-debian13 named[5497]: configuring command channel from '/etc/bind/rndc.key'
+2026-09-29T17:15:43.999286+00:00 dns-debian13 named[5497]: command channel listening on 127.0.0.1#953
+2026-09-29T17:15:43.999333+00:00 dns-debian13 named[5497]: configuring command channel from '/etc/bind/rndc.key'
+2026-09-29T17:15:43.999413+00:00 dns-debian13 named[5497]: command channel listening on ::1#953
+2026-09-29T17:15:43.999702+00:00 dns-debian13 named[5497]: managed-keys-zone: loaded serial 0
+2026-09-29T17:15:43.999981+00:00 dns-debian13 named[5497]: zone catalog-c000020a.celikpanel.invalid/IN: loaded serial 1
+2026-09-29T17:15:44.000086+00:00 dns-debian13 named[5497]: all zones loaded
+2026-09-29T17:15:44.007777+00:00 dns-debian13 named[5497]: FIPS mode is disabled
+2026-09-29T17:15:44.007952+00:00 dns-debian13 named[5497]: running
+2026-09-29T17:15:44.008033+00:00 dns-debian13 named[5497]: zone catalog-c000020a.celikpanel.invalid/IN: sending notifies (serial 1)
+2026-09-29T17:15:44.008099+00:00 dns-debian13 systemd[1]: Started named.service - BIND Domain Name Server.
+2026-09-29T17:15:44.008697+00:00 dns-debian13 named[5497]: zone catalog-c000020a.celikpanel.invalid/IN: sending notify to 192.0.2.11#53
+2026-09-29T17:15:44.009267+00:00 dns-debian13 named[5497]: network unreachable resolving './DNSKEY/IN': 2001:503:c27::2:30#53
+2026-09-29T17:15:44.009327+00:00 dns-debian13 named[5497]: network unreachable resolving './NS/IN': 2001:503:c27::2:30#53
+2026-09-29T17:15:44.009626+00:00 dns-debian13 named[5497]: network unreachable resolving './DNSKEY/IN': 2001:500:1::53#53
+2026-09-29T17:15:44.009666+00:00 dns-debian13 named[5497]: network unreachable resolving './NS/IN': 2001:500:1::53#53
+2026-09-29T17:15:44.009872+00:00 dns-debian13 named[5497]: network unreachable resolving './DNSKEY/IN': 2001:500:12::d0d#53
+2026-09-29T17:15:44.009950+00:00 dns-debian13 named[5497]: network unreachable resolving './NS/IN': 2001:500:12::d0d#53
+2026-09-29T17:15:44.010111+00:00 dns-debian13 named[5497]: zone catalog-c000020a.celikpanel.invalid/IN: notify to 192.0.2.11#53 failed: connection refused: retrying over TCP
+2026-09-29T17:15:44.010208+00:00 dns-debian13 named[5497]: network unreachable resolving './DNSKEY/IN': 2001:7fe::53#53
+2026-09-29T17:15:44.010287+00:00 dns-debian13 named[5497]: network unreachable resolving './NS/IN': 2001:7fe::53#53
+2026-09-29T17:15:44.010848+00:00 dns-debian13 named[5497]: zone catalog-c000020a.celikpanel.invalid/IN: sending notify to 192.0.2.11#53
+2026-09-29T17:15:44.010991+00:00 dns-debian13 named[5497]: network unreachable resolving './DNSKEY/IN': 2001:dc3::35#53
+2026-09-29T17:15:44.011048+00:00 dns-debian13 named[5497]: network unreachable resolving './NS/IN': 2001:500:2d::d#53
+2026-09-29T17:15:44.011557+00:00 dns-debian13 named[5497]: network unreachable resolving './DNSKEY/IN': 2001:500:2d::d#53
+2026-09-29T17:15:44.011653+00:00 dns-debian13 named[5497]: network unreachable resolving './NS/IN': 2001:dc3::35#53
+2026-09-29T17:15:44.011811+00:00 dns-debian13 named[5497]: zone catalog-c000020a.celikpanel.invalid/IN: notify to 192.0.2.11#53 failed: connection refused
+2026-09-29T17:15:44.011998+00:00 dns-debian13 named[5497]: network unreachable resolving './DNSKEY/IN': 2001:500:2::c#53
+2026-09-29T17:15:44.017737+00:00 dns-debian13 named[5497]: network unreachable resolving './NS/IN': 2001:500:2::c#53
+2026-09-29T17:15:44.017853+00:00 dns-debian13 named[5497]: network unreachable resolving './DNSKEY/IN': 2001:500:a8::e#53
+2026-09-29T17:15:44.018183+00:00 dns-debian13 named[5497]: network unreachable resolving './NS/IN': 2001:500:a8::e#53
+2026-09-29T17:15:44.018234+00:00 dns-debian13 named[5497]: network unreachable resolving './DNSKEY/IN': 2001:500:9f::42#53
+2026-09-29T17:15:44.018397+00:00 dns-debian13 named[5497]: network unreachable resolving './NS/IN': 2001:500:9f::42#53
+2026-09-29T17:15:44.018441+00:00 dns-debian13 named[5497]: network unreachable resolving './DNSKEY/IN': 2001:7fd::1#53
+2026-09-29T17:15:44.018642+00:00 dns-debian13 named[5497]: network unreachable resolving './NS/IN': 2001:7fd::1#53
+2026-09-29T17:15:44.018695+00:00 dns-debian13 named[5497]: network unreachable resolving './DNSKEY/IN': 2801:1b8:10::b#53
+2026-09-29T17:15:44.018849+00:00 dns-debian13 named[5497]: network unreachable resolving './NS/IN': 2801:1b8:10::b#53
+2026-09-29T17:15:44.018939+00:00 dns-debian13 named[5497]: network unreachable resolving './DNSKEY/IN': 2001:503:ba3e::2:30#53
+2026-09-29T17:15:44.019044+00:00 dns-debian13 named[5497]: network unreachable resolving './NS/IN': 2001:500:2f::f#53
+2026-09-29T17:15:44.019144+00:00 dns-debian13 named[5497]: network unreachable resolving './DNSKEY/IN': 2001:500:2f::f#53
+2026-09-29T17:15:44.019265+00:00 dns-debian13 named[5497]: network unreachable resolving './NS/IN': 2001:503:ba3e::2:30#53
+2026-09-29T17:15:44.065553+00:00 dns-debian13 named[5497]: network unreachable resolving './DNSKEY/IN': 2001:503:ba3e::2:30#53
+2026-09-29T17:15:44.065801+00:00 dns-debian13 named[5497]: network unreachable resolving './DNSKEY/IN': 2801:1b8:10::b#53
+2026-09-29T17:15:44.066026+00:00 dns-debian13 named[5497]: network unreachable resolving './DNSKEY/IN': 2001:500:1::53#53
+2026-09-29T17:15:44.066206+00:00 dns-debian13 named[5497]: network unreachable resolving './DNSKEY/IN': 2001:7fe::53#53
+2026-09-29T17:15:44.066381+00:00 dns-debian13 named[5497]: network unreachable resolving './DNSKEY/IN': 2001:500:2f::f#53
+2026-09-29T17:15:44.148036+00:00 dns-debian13 named[5497]: managed-keys-zone: Initializing automatic trust anchor management for zone '.'; DNSKEY ID 20326 is now trusted, waiving the normal 30-day waiting period.
+2026-09-29T17:15:44.148075+00:00 dns-debian13 named[5497]: managed-keys-zone: Initializing automatic trust anchor management for zone '.'; DNSKEY ID 38696 is now trusted, waiving the normal 30-day waiting period.
+2026-09-29T17:15:46.235121+00:00 dns-debian13 named[5497]: client @0x7f4c02326000 192.0.2.10#33232 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-29T17:15:46.235611+00:00 dns-debian13 named[5497]: client @0x7f4c02326000 192.0.2.10#33232 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-29T17:15:46.343268+00:00 dns-debian13 named[5497]: client @0x7f4c02326000 192.0.2.10#33252 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-29T17:15:46.343416+00:00 dns-debian13 named[5497]: client @0x7f4c02326000 192.0.2.10#33252 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-29T17:15:46.994350+00:00 dns-debian13 named[5497]: client @0x7f4bff42dc00 192.0.2.10#33266 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-29T17:15:46.994802+00:00 dns-debian13 named[5497]: client @0x7f4bff42dc00 192.0.2.10#33266 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-29T17:15:47.030768+00:00 dns-debian13 named[5497]: client @0x7f4c02326000 192.0.2.10#33280 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-29T17:15:47.030901+00:00 dns-debian13 named[5497]: client @0x7f4c02326000 192.0.2.10#33280 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-29T17:15:47.858120+00:00 dns-debian13 named[5497]: client @0x7f4bff42dc00 192.0.2.10#33282 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-29T17:15:47.858285+00:00 dns-debian13 named[5497]: client @0x7f4bff42dc00 192.0.2.10#33282 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)

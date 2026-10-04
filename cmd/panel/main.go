@@ -21,6 +21,7 @@ import (
 	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/db"
 	"github.com/alicelik/celikpanel/internal/licensing"
+	"github.com/alicelik/celikpanel/internal/recoveryobs"
 	"github.com/alicelik/celikpanel/internal/repositories"
 	"github.com/alicelik/celikpanel/internal/secrets"
 	"github.com/alicelik/celikpanel/internal/services"
@@ -64,10 +65,14 @@ type Panel struct {
 	secureCookies bool
 	loginLimiter  *rateLimiter
 	demoMode      bool
+	startupGate   *panelHTTPStartupGate
 	// webmailReadinessProbe is injectable only so handler tests never need a
 	// real Roundcube process. Production leaves it nil and uses the fixed,
 	// Unix-socket-backed probe.
 	webmailReadinessProbe func(context.Context) bool
+	// lastUpdateAttempt is injectable only for handler tests. Production leaves
+	// it nil and reads the native recovery observations directly.
+	lastUpdateAttempt func(commit string) (recoveryobs.Attempt, bool)
 	// pkgFamily caches the host's package-manager family ("apt", "pacman").
 	// It is a property of the machine and never changes while the panel runs,
 	// so it is asked once instead of being persisted with the service scan —
@@ -193,6 +198,8 @@ func matchDomainSubroute(r *http.Request) (domainSubroute, bool) {
 	switch key {
 	case "":
 		match.kind, match.methods = "delete", []string{http.MethodDelete}
+	case "deletion-status":
+		match.kind, match.methods = "deletion-status", []string{http.MethodGet}
 	case "hosting":
 		match.kind, match.methods = "hosting", []string{http.MethodGet, http.MethodPut}
 	case "app/status", "app/logs":
@@ -296,6 +303,8 @@ func (p *Panel) handleDomainSubroute(w http.ResponseWriter, r *http.Request) {
 	switch match.kind {
 	case "delete":
 		p.handleDeleteDomain(w, r)
+	case "deletion-status":
+		p.handleDomainDeletionStatus(w, r, match.domainID)
 	case "hosting":
 		p.handleDomainHosting(w, r, match.domainID)
 	case "app":
@@ -485,6 +494,13 @@ func main() {
 	// prove the installed panel and agent are the exact same trusted build.
 	if emitPanelBuildIdentity(os.Args[1:], os.Stdout) {
 		return
+	}
+	// The updater's read-only startup readiness proof is a closed one-argument
+	// mode. It exits before flag parsing, migrations, the listener and Agent.
+	// Güncelleyicinin salt-okur açılış hazırlık kanıtı kapalı, tek bağımsız
+	// değişkenli bir kiptir; migration, dinleyici ve Agent'tan önce çıkar.
+	if handled, status := runStartupReadinessEntry(os.Args[1:], os.Stdout, os.Stderr); handled {
+		os.Exit(status)
 	}
 	checkWALAwareServiceOperationsIdleFlag := flag.Bool("check-service-operations-idle-wal-aware", false, "Prove that the service operation queue is idle in a running database or a stopped database with a WAL, then exit")
 	checkWALAwarePreLedgerServiceOperationsIdleFlag := flag.Bool("check-pre-ledger-service-operations-idle-wal-aware", false, "Prove that a running pre-ledger database or a stopped pre-ledger database with a WAL is safe to migrate, then exit")
@@ -733,14 +749,18 @@ func main() {
 	}
 	if *checkWALAwarePreLedgerServiceOperationsIdleFlag {
 		if err := checkWALAwarePreLedgerServiceOperationsIdle(databaseFile()); err != nil {
-			log.Fatalf("WAL-aware pre-ledger service operation check failed: %v", err)
+			log.Printf("WAL-aware pre-ledger service operation check failed: %v", err)
+			os.Exit(serviceOperationIdleExitCode(err))
 		}
 		log.Println("WAL-aware pre-ledger service operation state is idle")
 		return
 	}
 	if *checkWALAwareServiceOperationsIdleFlag {
 		if err := checkWALAwareServiceOperationsIdle(databaseFile()); err != nil {
-			log.Fatalf("WAL-aware service operation idle check failed: %v", err)
+			// Exit 75 only when the sole reason is a concurrent write; see
+			// serviceOperationIdleExitCode. The message is unchanged.
+			log.Printf("WAL-aware service operation idle check failed: %v", err)
+			os.Exit(serviceOperationIdleExitCode(err))
 		}
 		log.Println("WAL-aware service operation state is idle")
 		return
@@ -801,25 +821,6 @@ func main() {
 		return
 	}
 
-	// Connect to Agent. The reconnecting wrapper survives agent restarts and
-	// poisoned RPC streams without needing a panel restart.
-	// Agent'a bağlan. Yeniden bağlanan sarmalayıcı, panel yeniden başlatılmadan
-	// agent yeniden başlamalarını ve bozulmuş RPC akışlarını atlatır.
-	rawClient, waited, err := connectAgentPatiently(
-		context.Background(), dialAgentOnce, nil, nil,
-	)
-	if err != nil {
-		log.Fatalf(
-			"Failed to connect to Agent after waiting %s: %v", waited.Round(time.Second), err,
-		)
-	}
-	client := transport.NewReconnectingClient(rawClient)
-	if waited > time.Second {
-		log.Printf("Connected to Agent RPC after waiting %s", waited.Round(time.Second))
-	} else {
-		log.Println("Connected to Agent RPC")
-	}
-
 	sessions := auth.NewSessionStore(database.GetDB())
 
 	// Load (or on first boot, create) the key that seals stored credentials
@@ -836,7 +837,6 @@ func main() {
 	}
 
 	panel := &Panel{
-		agentClient:   client,
 		db:            database,
 		sessions:      sessions,
 		users:         repositories.NewPostgresUserRepository(database.GetDB()),
@@ -877,12 +877,13 @@ func main() {
 
 	// Bind and serve TLS before durable mutation recovery. Certificate
 	// activation restarts the panel and then verifies the published leaf over
-	// this listener; an atomic gate returns 503 for every application request
-	// until all startup recovery and route registration is complete.
+	// this listener. The closed gate serves a fixed recovery surface while
+	// ordinary application requests remain blocked until startup completes.
 	applicationHandler := panel.requireRemoteDNSMachineAuth(csrfProtect(
 		panel.requireAuth(http.DefaultServeMux),
 	))
 	startupGate := newPanelHTTPStartupGate(applicationHandler)
+	panel.startupGate = startupGate
 	handler := securityHeaders(panel.secureCookies, startupGate)
 	addr := listenAddr()
 	server := newPanelHTTPServer(addr, handler)
@@ -895,6 +896,7 @@ func main() {
 	if !tlsOn && panel.secureCookies {
 		log.Fatal("refusing to serve over plain HTTP with secure cookies: enable TLS (CELIKPANEL_TLS=1 or CELIKPANEL_TLS_CERT/KEY) or pass --insecure-cookies for development")
 	}
+	startupGate.recovery = panel.startupRecoveryHandler(webDir(), certPath, keyPath)
 	runningServer, err := startPanelHTTP(server, certPath, keyPath)
 	if err != nil {
 		log.Fatalf("Failed to start panel listener: %v", err)
@@ -904,6 +906,23 @@ func main() {
 	} else {
 		log.Printf("Panel startup listener active on %s (HTTP; application gated)", addr)
 	}
+
+	// Authentication and read-only recovery are already served while the Agent
+	// is unavailable. Only a connected Agent may begin normal startup recovery.
+	// Agent yokken kimlik ve salt-okur kurtarma erişimi açıktır. Olağan açılış
+	// kurtarması yalnız Agent bağlantısı kurulduktan sonra başlayabilir.
+	rawClient, err := connectAgentWithRecovery(runningServer, dialAgentOnce)
+	if err != nil {
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), panelHTTPShutdownTimeout)
+		_ = server.Shutdown(shutdownCtx)
+		shutdownCancel()
+		if errors.Is(err, context.Canceled) {
+			return
+		}
+		log.Fatalf("Panel startup stopped while waiting for Agent: %v", err)
+	}
+	panel.agentClient = transport.NewReconnectingClient(rawClient)
+	log.Println("Connected to Agent RPC; preparing normal management access")
 
 	// A failed reconcile degrades its subsystem; it does not end the process.
 	// The durable markers stay for the next replay, the listener stays bound,
@@ -1031,6 +1050,8 @@ func main() {
 	// may legitimately acquire serviceMutationMu themselves.
 	panel.serviceMutationMu.Lock()
 	panel.serviceMutationMu.Unlock()
+	var certificateDeferral startupCertificateDeferral
+	milterWiringDeferred := false
 	activationCtx, activationCancel := context.WithTimeout(
 		context.Background(),
 		panelMutationRecoveryTimeout,
@@ -1048,7 +1069,7 @@ func main() {
 		)
 	} else {
 		activationCancel()
-		panel.reconcileCertificateRuntimeAtStartup()
+		certificateDeferral = panel.reconcileCertificateRuntimeAtStartup()
 	}
 
 	// Fail closed before accepting HTTP: a peer whose one-time private config
@@ -1109,7 +1130,7 @@ func main() {
 		)
 	} else {
 		activationCancel()
-		panel.wireMailFiltersSynchronouslyAtStartup()
+		milterWiringDeferred = panel.wireMailFiltersSynchronouslyAtStartup()
 	}
 
 	// Purge expired sessions on startup and then hourly.
@@ -1128,6 +1149,7 @@ func main() {
 	http.HandleFunc("/api/v1/auth/logout", panel.handleLogout)
 	http.HandleFunc("/api/v1/auth/me", panel.handleMe)
 	http.HandleFunc(panelLicenseAccessPath, panel.handleLicenseAccess)
+	panel.registerRecoveryRoutes(http.DefaultServeMux)
 
 	// Demo credentials (public, but empty unless --demo is set).
 	// Demo kimlik bilgileri (herkese açık, ama --demo yoksa boş).
@@ -1162,6 +1184,8 @@ func main() {
 	http.HandleFunc(serverSetupPath+"/components", panel.handleServerSetupComponents)
 	http.HandleFunc(serverSetupPath+"/complete", panel.handleServerSetupComplete)
 	http.HandleFunc(serverSetupPath+"/revise", panel.handleServerSetupRevise)
+	http.HandleFunc(serverSetupPath+"/mail-enrollment/continue", panel.handleServerSetupMailEnrollmentContinue)
+	http.HandleFunc(serverSetupPath+"/mail-enrollment/retry", panel.handleServerSetupMailEnrollmentRetry)
 	http.HandleFunc(serverSetupPath+"/publisher", panel.handleServerSetupPublisher)
 	http.HandleFunc(serverSetupPath+"/plan", panel.handleServerSetupPlan)
 	http.HandleFunc(serverSetupPath+"/start", panel.handleServerSetupStart)
@@ -1355,6 +1379,9 @@ func main() {
 	panel.startBackupScheduler()
 	panel.startCertRenewalScheduler()
 	panel.startVPNEntitlementReconciler()
+	// upd11 F2: startup mail work refused only because an update or rollback
+	// still held the host is retried, bounded, once the host is idle.
+	panel.startDeferredStartupMailWork(certificateDeferral, milterWiringDeferred)
 	protocol := "HTTP"
 	if tlsOn {
 		protocol = "HTTPS"
@@ -1389,10 +1416,36 @@ func (p *Panel) countUsers() (int, error) {
 // Onarim Postfix'in milter zincirini besteler; uzerinde posta sunucusu olmayan
 // bir makinede onarilacak bir sey yoktur. Bicim R-054'un guvenlik duvarina
 // verdigi bicimdir: kalici niyet var olmadan once yokla.
-func (p *Panel) wireMailFiltersSynchronouslyAtStartup() {
+//
+// It reports true only when the host refused the wiring as busy (a Panel
+// started inside an update or rollback, upd11 F2); the caller then hands it to
+// the bounded deferred retry. Every other outcome keeps the next-start
+// behaviour.
+func (p *Panel) wireMailFiltersSynchronouslyAtStartup() bool {
 	if !p.mailFilterWiringHasSubject() {
-		return
+		return false
 	}
+	response, err := p.wireMailFiltersOnce()
+	if err != nil {
+		if startupWorkDeferredForBusyHost(err) {
+			log.Printf("milter wiring at startup: %v; %s", err, startupDeferredRetryNote)
+			return true
+		}
+		log.Printf("milter wiring at startup: %v", err)
+		return false
+	}
+	if response.Detail != "" {
+		log.Printf("milter chain: %s", response.Detail)
+	}
+	return false
+}
+
+// wireMailFiltersOnce is one durable, lease-bound Agent.WireMailFilters call.
+// A busy host refuses it at admission, before any durable job or host change.
+// wireMailFiltersOnce, kalici ve kiraya bagli tek bir Agent.WireMailFilters
+// cagrisidir. Mesgul makine onu kabulde, hicbir is ya da degisiklikten once
+// reddeder.
+func (p *Panel) wireMailFiltersOnce() (transport.WireMailFiltersResponse, error) {
 	var response transport.WireMailFiltersResponse
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
@@ -1428,13 +1481,7 @@ func (p *Panel) wireMailFiltersSynchronouslyAtStartup() {
 			return nil
 		},
 	)
-	if err != nil {
-		log.Printf("milter wiring at startup: %v", err)
-		return
-	}
-	if response.Detail != "" {
-		log.Printf("milter chain: %s", response.Detail)
-	}
+	return response, err
 }
 
 // mailFilterWiringHasSubject asks the host whether there is a mail server here
@@ -1446,21 +1493,30 @@ func (p *Panel) wireMailFiltersSynchronouslyAtStartup() {
 // bir posta sunucusu olup olmadigini sorar. Sorulamayan bir makine bos
 // varsayilmaz.
 func (p *Panel) mailFilterWiringHasSubject() bool {
+	present, detail := p.mailFilterWiringSubject()
+	if !present {
+		log.Printf("milter chain: nothing to wire at startup: %s", detail)
+	}
+	return present
+}
+
+// mailFilterWiringSubject is the same read-only question without a log line,
+// so the deferred retry writes at most one line per attempt.
+func (p *Panel) mailFilterWiringSubject() (bool, string) {
 	var state transport.MailFilterWiringStateResponse
 	if err := p.callAgent(
 		"Agent.MailFilterWiringState", &transport.Empty{}, &state,
 	); err != nil {
-		return true
+		return true, ""
 	}
 	if state.MailServerInstalled {
-		return true
+		return true, ""
 	}
 	detail := state.Detail
 	if detail == "" {
 		detail = "no mail server is installed on this server"
 	}
-	log.Printf("milter chain: nothing to wire at startup: %s", detail)
-	return false
+	return false, detail
 }
 
 // mailFilterWiringFailureSentence names what was attempted and what stopped

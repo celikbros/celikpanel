@@ -1,0 +1,4 @@
+digest files (host-only, not in the evidence): p5t1-arch.txt p5t1-debian13.txt p5t2-arch.txt p5t3-arch.txt 
+digests per file: p5t1-arch.txt=1 p5t1-debian13.txt=1 p5t2-arch.txt=1 p5t3-arch.txt=1 
+{"root": "/root/cp-pair5/pack", "digests_compared": 4, "files_scanned": 628, "tokens_hashed": 4003, "matches": 0}
+exit=0

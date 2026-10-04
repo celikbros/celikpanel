@@ -1,0 +1,283 @@
+######## c04-pri-started-zl-rb pdns-switch__target-started__after-write__paired-primary__peer-reachable
+--- result.json recovery_status_reads.after-recovery.command (rc 0):
+No DNS switch journal was observed for request c59b537aac13c590e71b4682a88ed7b1. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+
+--- result.json recovery_status_reads.before-recovery.command (rc 0):
+DNS switch request c59b537aac13c590e71b4682a88ed7b1: accepted-active (journal phase target-started).
+No owner recovery command applies to this journal's recorded shape and ledger status. Keep the journal and ledger. If this operation does not resume through CelikPanel or an Agent restart, contact support with request id c59b537aac13c590e71b4682a88ed7b1. This status check does not start recovery.
+Quiesced worker observation: no-recorded-worker. This is only a point-in-time process check; it does not authorize a DNS inverse.
+The accepted operation is recorded. The server owner should follow its CelikPanel status and check native DNS health if progress stops. This read-only observation does not prove worker liveness or authorize another switch; recovery must recheck the same operation under the host lock.
+Frozen native inverse shape: pdns-switch. This classification does not prove worker exclusion, owner authority or safe recovery execution.
+The current DNS state receipt is absent. This alone does not prove that an inverse is safe; preserve the journal and inspect native DNS before recovery.
+The journal and current state both have no source receipt. This is not proof that DNS was rolled back or is healthy; the server owner must inspect native DNS before resuming this operation.
+The switch has no previous DNS engine, so no frozen source ownership receipt is required. Native DNS still needs verification before the operation resumes.
+Native unit pdns.service: load=loaded active=active unit-file=enabled.
+These systemd properties were observed at one instant; they do not prove DNS answers, zone content, owner edits or recovery authority.
+Release and host mutation locks were held; the same evidence bytes and native unit properties matched again after native checks, and the accepted worker was rechecked. Future worker liveness, unobserved DNS answers, owner edits and recovery authority remain unproved.
+
+--- owner-post-state.txt (post-collect, rc 3):
+A quiesced DNS observation cannot acquire the release and host locks. The server owner should follow the existing update or mutation, then retry this observation; no DNS operation was started. host lock: open host mutation lock directory: no such file or directory
+
+--- service-mutation-status-post-collect.json:
+85fe7a6214b489135f03c4278d6f426eae7a3a927b588b531293daea78d0b81e  /root/oi-smstatus
+
+######## z01-zero-staged pdns-switch__target-staged__after-write__paired-primary__peer-reachable
+--- result.json recovery_status_reads.after-recovery.command (rc 0):
+No DNS switch journal was observed for request dbf9982f7d79645b1cc9ddfa99573f41. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+
+--- result.json recovery_status_reads.before-recovery.command (rc 0):
+DNS switch request dbf9982f7d79645b1cc9ddfa99573f41: accepted-active (journal phase target-staged).
+If PowerDNS never started for this fresh paired primary, the server owner can restore the pre-start state with: /usr/libexec/celikpanel/recovery recover-dns-pdns-fresh-prestart --request-id dbf9982f7d79645b1cc9ddfa99573f41. The command checks locks, the accepted worker, native units, configuration and the staged candidate; a started or changed target is refused and its evidence is preserved. This status check does not start recovery.
+Quiesced worker observation: no-recorded-worker. This is only a point-in-time process check; it does not authorize a DNS inverse.
+The accepted operation is recorded. The server owner should follow its CelikPanel status and check native DNS health if progress stops. This read-only observation does not prove worker liveness or authorize another switch; recovery must recheck the same operation under the host lock.
+Frozen native inverse shape: pdns-switch. This classification does not prove worker exclusion, owner authority or safe recovery execution.
+The current DNS state receipt is absent. This alone does not prove that an inverse is safe; preserve the journal and inspect native DNS before recovery.
+The journal and current state both have no source receipt. This is not proof that DNS was rolled back or is healthy; the server owner must inspect native DNS before resuming this operation.
+The switch has no previous DNS engine, so no frozen source ownership receipt is required. Native DNS still needs verification before the operation resumes.
+Native unit pdns.service: load=masked active=inactive unit-file=masked.
+These systemd properties were observed at one instant; they do not prove DNS answers, zone content, owner edits or recovery authority.
+Release and host mutation locks were held; the same evidence bytes and native unit properties matched again after native checks, and the accepted worker was rechecked. Future worker liveness, unobserved DNS answers, owner edits and recovery authority remain unproved.
+
+--- owner-post-state.txt (post-collect, rc 0):
+No DNS switch journal was observed for request dbf9982f7d79645b1cc9ddfa99573f41. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+
+--- service-mutation-status-post-collect.json:
+85fe7a6214b489135f03c4278d6f426eae7a3a927b588b531293daea78d0b81e  /root/oi-smstatus
+{
+  "observed_at": "2026-09-30T00:58:33.558981611Z",
+  "request_id": "dbf9982f7d79645b1cc9ddfa99573f41",
+  "response": {
+    "job": {
+      "request_id": "dbf9982f7d79645b1cc9ddfa99573f41",
+      "owner_id": "8701708c97e8713aa8f6121242121ae0",
+      "kind": "dns_engine_switch",
+      "target": "pdns",
+      "package_name": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0",
+      "status": "succeeded",
+      "phase": "commit/dns-engine-switch/v2/finalized/dbf9982f7d79645b1cc9ddfa99573f41/dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0",
+      "attempt": 2,
+      "started_at": "2026-09-30T00:55:03.957936207Z",
+      "updated_at": "2026-09-30T00:55:25.113181595Z",
+      "lease_expires_at": "0001-01-01T00:00:00Z",
+      "deadline_at": "2026-09-30T01:40:18.37132905Z",
+      "finished_at": "2026-09-30T00:55:25.113181595Z"
+    }
+  }
+}
+
+######## z02-zero-started pdns-switch__target-started__after-write__paired-primary__peer-reachable
+--- result.json recovery_status_reads.after-recovery.command (rc 0):
+No DNS switch journal was observed for request c59b537aac13c590e71b4682a88ed7b1. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+
+--- result.json recovery_status_reads.before-recovery.command (rc 0):
+DNS switch request c59b537aac13c590e71b4682a88ed7b1: accepted-active (journal phase target-started).
+No owner recovery command applies to this journal's recorded shape and ledger status. Keep the journal and ledger. If this operation does not resume through CelikPanel or an Agent restart, contact support with request id c59b537aac13c590e71b4682a88ed7b1. This status check does not start recovery.
+Quiesced worker observation: no-recorded-worker. This is only a point-in-time process check; it does not authorize a DNS inverse.
+The accepted operation is recorded. The server owner should follow its CelikPanel status and check native DNS health if progress stops. This read-only observation does not prove worker liveness or authorize another switch; recovery must recheck the same operation under the host lock.
+Frozen native inverse shape: pdns-switch. This classification does not prove worker exclusion, owner authority or safe recovery execution.
+The current DNS state receipt is absent. This alone does not prove that an inverse is safe; preserve the journal and inspect native DNS before recovery.
+The journal and current state both have no source receipt. This is not proof that DNS was rolled back or is healthy; the server owner must inspect native DNS before resuming this operation.
+The switch has no previous DNS engine, so no frozen source ownership receipt is required. Native DNS still needs verification before the operation resumes.
+Native unit pdns.service: load=loaded active=active unit-file=enabled.
+These systemd properties were observed at one instant; they do not prove DNS answers, zone content, owner edits or recovery authority.
+Release and host mutation locks were held; the same evidence bytes and native unit properties matched again after native checks, and the accepted worker was rechecked. Future worker liveness, unobserved DNS answers, owner edits and recovery authority remain unproved.
+
+--- owner-post-state.txt (post-collect, rc 0):
+No DNS switch journal was observed for request c59b537aac13c590e71b4682a88ed7b1. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+
+--- service-mutation-status-post-collect.json:
+85fe7a6214b489135f03c4278d6f426eae7a3a927b588b531293daea78d0b81e  /root/oi-smstatus
+{
+  "observed_at": "2026-09-30T01:06:00.434803858Z",
+  "request_id": "c59b537aac13c590e71b4682a88ed7b1",
+  "response": {
+    "job": {
+      "request_id": "c59b537aac13c590e71b4682a88ed7b1",
+      "owner_id": "2496117f5d511eeb130aeb15040de678",
+      "kind": "dns_engine_switch",
+      "target": "pdns",
+      "package_name": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0",
+      "status": "succeeded",
+      "phase": "commit/dns-engine-switch/v2/finalized/c59b537aac13c590e71b4682a88ed7b1/dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0",
+      "attempt": 1,
+      "started_at": "2026-09-30T01:01:52.323602011Z",
+      "updated_at": "2026-09-30T01:02:52.1776786Z",
+      "lease_expires_at": "0001-01-01T00:00:00Z",
+      "deadline_at": "2026-09-30T01:46:52.323602011Z",
+      "finished_at": "2026-09-30T01:02:52.1776786Z"
+    }
+  }
+}
+
+######## z03-zero-committed pdns-switch__committed__after-write__paired-primary__peer-reachable
+--- result.json recovery_status_reads.after-recovery.command (rc 0):
+No DNS switch journal was observed for request 076c692ac1346f2b9c6a0df468b0e9aa. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+
+--- result.json recovery_status_reads.before-recovery.command (rc 0):
+DNS switch request 076c692ac1346f2b9c6a0df468b0e9aa: accepted-active (journal phase committed).
+No owner recovery command applies to this journal's recorded shape and ledger status. Keep the journal and ledger. If this operation does not resume through CelikPanel or an Agent restart, contact support with request id 076c692ac1346f2b9c6a0df468b0e9aa. This status check does not start recovery.
+Quiesced worker observation: no-recorded-worker. This is only a point-in-time process check; it does not authorize a DNS inverse.
+The accepted operation is recorded. The server owner should follow its CelikPanel status and check native DNS health if progress stops. This read-only observation does not prove worker liveness or authorize another switch; recovery must recheck the same operation under the host lock.
+The selected PowerDNS vendor unit identity and native process matched across read-only observations; both public DNS transports belonged to its MainPID. This process/socket observation does not establish database content, zone answers, loaded config or recovery authority.
+Frozen native inverse shape: pdns-switch. This classification does not prove worker exclusion, owner authority or safe recovery execution.
+The current DNS state receipt matched the frozen journal target at inspection time. The server owner must still verify native DNS service before recovery; this observation does not authorize a mutation.
+The current DNS state receipt does not match the frozen journal source. Preserve the evidence and inspect native DNS and owner changes before the original operation resumes.
+The switch has no previous DNS engine, so no frozen source ownership receipt is required. Native DNS still needs verification before the operation resumes.
+Native unit pdns.service: load=loaded active=active unit-file=enabled.
+These systemd properties were observed at one instant; they do not prove DNS answers, zone content, owner edits or recovery authority.
+Release and host mutation locks were held; the same evidence bytes and native unit properties matched again after native checks, and the accepted worker was rechecked. Future worker liveness, unobserved DNS answers, owner edits and recovery authority remain unproved.
+
+--- owner-post-state.txt (post-collect, rc 0):
+No DNS switch journal was observed for request 076c692ac1346f2b9c6a0df468b0e9aa. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+
+--- service-mutation-status-post-collect.json:
+85fe7a6214b489135f03c4278d6f426eae7a3a927b588b531293daea78d0b81e  /root/oi-smstatus
+{
+  "observed_at": "2026-09-30T01:12:46.094628698Z",
+  "request_id": "076c692ac1346f2b9c6a0df468b0e9aa",
+  "response": {
+    "job": {
+      "request_id": "076c692ac1346f2b9c6a0df468b0e9aa",
+      "owner_id": "53a2bef6b3bc78738ff1abfe9e2a30fb",
+      "kind": "dns_engine_switch",
+      "target": "pdns",
+      "package_name": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0",
+      "status": "succeeded",
+      "phase": "commit/dns-engine-switch/v2/finalized/076c692ac1346f2b9c6a0df468b0e9aa/dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0",
+      "attempt": 1,
+      "started_at": "2026-09-30T01:09:19.661868679Z",
+      "updated_at": "2026-09-30T01:09:35.759317291Z",
+      "lease_expires_at": "0001-01-01T00:00:00Z",
+      "deadline_at": "2026-09-30T01:54:19.661868679Z",
+      "finished_at": "2026-09-30T01:09:35.759317291Z"
+    }
+  }
+}
+
+######## z04-zero-committed-zl pdns-switch__committed__after-write__paired-primary__peer-reachable
+--- result.json recovery_status_reads.after-recovery.command (rc 0):
+No DNS switch journal was observed for request 076c692ac1346f2b9c6a0df468b0e9aa. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+
+--- result.json recovery_status_reads.before-recovery.command (rc 0):
+DNS switch request 076c692ac1346f2b9c6a0df468b0e9aa: accepted-active (journal phase committed).
+No owner recovery command applies to this journal's recorded shape and ledger status. Keep the journal and ledger. If this operation does not resume through CelikPanel or an Agent restart, contact support with request id 076c692ac1346f2b9c6a0df468b0e9aa. This status check does not start recovery.
+Quiesced worker observation: no-recorded-worker. This is only a point-in-time process check; it does not authorize a DNS inverse.
+The accepted operation is recorded. The server owner should follow its CelikPanel status and check native DNS health if progress stops. This read-only observation does not prove worker liveness or authorize another switch; recovery must recheck the same operation under the host lock.
+The selected PowerDNS vendor unit identity and native process matched across read-only observations; both public DNS transports belonged to its MainPID. This process/socket observation does not establish database content, zone answers, loaded config or recovery authority.
+Frozen native inverse shape: pdns-switch. This classification does not prove worker exclusion, owner authority or safe recovery execution.
+The current DNS state receipt matched the frozen journal target at inspection time. The server owner must still verify native DNS service before recovery; this observation does not authorize a mutation.
+The current DNS state receipt does not match the frozen journal source. Preserve the evidence and inspect native DNS and owner changes before the original operation resumes.
+The switch has no previous DNS engine, so no frozen source ownership receipt is required. Native DNS still needs verification before the operation resumes.
+Native unit pdns.service: load=loaded active=active unit-file=enabled.
+These systemd properties were observed at one instant; they do not prove DNS answers, zone content, owner edits or recovery authority.
+Release and host mutation locks were held; the same evidence bytes and native unit properties matched again after native checks, and the accepted worker was rechecked. Future worker liveness, unobserved DNS answers, owner edits and recovery authority remain unproved.
+
+--- owner-post-state.txt (post-collect, rc 0):
+No DNS switch journal was observed for request 076c692ac1346f2b9c6a0df468b0e9aa. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+
+--- service-mutation-status-post-collect.json:
+85fe7a6214b489135f03c4278d6f426eae7a3a927b588b531293daea78d0b81e  /root/oi-smstatus
+{
+  "observed_at": "2026-09-30T01:30:28.686033724Z",
+  "request_id": "076c692ac1346f2b9c6a0df468b0e9aa",
+  "response": {
+    "job": {
+      "request_id": "076c692ac1346f2b9c6a0df468b0e9aa",
+      "owner_id": "53a2bef6b3bc78738ff1abfe9e2a30fb",
+      "kind": "dns_engine_switch",
+      "target": "pdns",
+      "package_name": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0",
+      "status": "succeeded",
+      "phase": "commit/dns-engine-switch/v2/finalized/076c692ac1346f2b9c6a0df468b0e9aa/dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0",
+      "attempt": 1,
+      "started_at": "2026-09-30T01:26:43.226607232Z",
+      "updated_at": "2026-09-30T01:27:05.074087582Z",
+      "lease_expires_at": "0001-01-01T00:00:00Z",
+      "deadline_at": "2026-09-30T02:11:43.226607232Z",
+      "finished_at": "2026-09-30T01:27:05.074087582Z"
+    }
+  }
+}
+
+######## z05-zero-started-zl-rb pdns-switch__target-started__after-write__paired-primary__peer-reachable
+--- result.json recovery_status_reads.after-recovery.command (rc 0):
+No DNS switch journal was observed for request c59b537aac13c590e71b4682a88ed7b1. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+
+--- result.json recovery_status_reads.before-recovery.command (rc 0):
+DNS switch request c59b537aac13c590e71b4682a88ed7b1: accepted-active (journal phase target-started).
+No owner recovery command applies to this journal's recorded shape and ledger status. Keep the journal and ledger. If this operation does not resume through CelikPanel or an Agent restart, contact support with request id c59b537aac13c590e71b4682a88ed7b1. This status check does not start recovery.
+Quiesced worker observation: no-recorded-worker. This is only a point-in-time process check; it does not authorize a DNS inverse.
+The accepted operation is recorded. The server owner should follow its CelikPanel status and check native DNS health if progress stops. This read-only observation does not prove worker liveness or authorize another switch; recovery must recheck the same operation under the host lock.
+Frozen native inverse shape: pdns-switch. This classification does not prove worker exclusion, owner authority or safe recovery execution.
+The current DNS state receipt is absent. This alone does not prove that an inverse is safe; preserve the journal and inspect native DNS before recovery.
+The journal and current state both have no source receipt. This is not proof that DNS was rolled back or is healthy; the server owner must inspect native DNS before resuming this operation.
+The switch has no previous DNS engine, so no frozen source ownership receipt is required. Native DNS still needs verification before the operation resumes.
+Native unit pdns.service: load=loaded active=active unit-file=enabled.
+These systemd properties were observed at one instant; they do not prove DNS answers, zone content, owner edits or recovery authority.
+Release and host mutation locks were held; the same evidence bytes and native unit properties matched again after native checks, and the accepted worker was rechecked. Future worker liveness, unobserved DNS answers, owner edits and recovery authority remain unproved.
+
+--- owner-post-state.txt (post-collect, rc 0):
+No DNS switch journal was observed for request c59b537aac13c590e71b4682a88ed7b1. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+
+--- service-mutation-status-post-collect.json:
+85fe7a6214b489135f03c4278d6f426eae7a3a927b588b531293daea78d0b81e  /root/oi-smstatus
+{
+  "observed_at": "2026-09-30T01:44:45.598052435Z",
+  "request_id": "c59b537aac13c590e71b4682a88ed7b1",
+  "response": {
+    "job": {
+      "request_id": "c59b537aac13c590e71b4682a88ed7b1",
+      "owner_id": "2496117f5d511eeb130aeb15040de678",
+      "kind": "dns_engine_switch",
+      "target": "pdns",
+      "package_name": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0",
+      "status": "succeeded",
+      "phase": "commit/dns-engine-switch/v2/finalized/c59b537aac13c590e71b4682a88ed7b1/dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0",
+      "attempt": 1,
+      "started_at": "2026-09-30T01:40:29.205472815Z",
+      "updated_at": "2026-09-30T01:41:22.457524681Z",
+      "lease_expires_at": "0001-01-01T00:00:00Z",
+      "deadline_at": "2026-09-30T02:25:29.205472815Z",
+      "finished_at": "2026-09-30T01:41:22.457524681Z"
+    }
+  }
+}
+
+######## z06-zero-owner-sql pdns-switch__target-started__after-write__paired-primary__peer-reachable
+--- owner-post-state.txt (post-collect, rc 0):
+DNS switch request c59b537aac13c590e71b4682a88ed7b1: released-undecided-with-journal (journal phase target-started).
+The Agent held the first install of PowerDNS as the paired primary (journal phase target-started; PowerDNS may have started, so CelikPanel only completes this install and never removes it) because the PowerDNS database was not as the install wrote it. This check finds now: the PowerDNS database /var/lib/powerdns/pdns.sqlite3 holds content that neither the install nor PowerDNS's own start-up wrote (it is not shown here). CelikPanel kept that change and neither continued nor undid the install; the journal and the PowerDNS files are kept and block new DNS changes, and other server changes can continue. Next step, for the server owner: either undo that change so it is again exactly as the install wrote it, rerun /usr/libexec/celikpanel/recovery dns-switch-status --quiesced --request-id c59b537aac13c590e71b4682a88ed7b1 to confirm that no difference remains, and restart the Agent (systemctl restart celikpanel-agent), which then re-checks PowerDNS and continues this same install forward; or keep the change, keep the journal and contact support with request id c59b537aac13c590e71b4682a88ed7b1, because CelikPanel will not overwrite it. This status check changed nothing.
+Frozen native inverse shape: pdns-switch. This classification does not prove worker exclusion, owner authority or safe recovery execution.
+The current DNS state receipt is absent. This alone does not prove that an inverse is safe; preserve the journal and inspect native DNS before recovery.
+The journal and current state both have no source receipt. This is not proof that DNS was rolled back or is healthy; the server owner must inspect native DNS before resuming this operation.
+The switch has no previous DNS engine, so no frozen source ownership receipt is required. Native DNS still needs verification before the operation resumes.
+Native unit pdns.service: load=loaded active=active unit-file=enabled.
+These systemd properties were observed at one instant; they do not prove DNS answers, zone content, owner edits or recovery authority.
+Release and host mutation locks were held; the same evidence bytes and native unit properties matched again after native checks, and the accepted worker was rechecked. Future worker liveness, unobserved DNS answers, owner edits and recovery authority remain unproved.
+
+--- service-mutation-status-post-collect.json:
+85fe7a6214b489135f03c4278d6f426eae7a3a927b588b531293daea78d0b81e  /root/oi-smstatus
+{
+  "observed_at": "2026-09-30T01:53:31.645723882Z",
+  "request_id": "c59b537aac13c590e71b4682a88ed7b1",
+  "response": {
+    "job": {
+      "request_id": "c59b537aac13c590e71b4682a88ed7b1",
+      "owner_id": "2496117f5d511eeb130aeb15040de678",
+      "kind": "dns_engine_switch",
+      "target": "pdns",
+      "package_name": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0",
+      "status": "failed",
+      "phase": "interrupted",
+      "attempt": 1,
+      "started_at": "2026-09-30T01:50:14.977021605Z",
+      "updated_at": "2026-09-30T01:50:26.933406135Z",
+      "lease_expires_at": "0001-01-01T00:00:00Z",
+      "deadline_at": "2026-09-30T02:35:14.977021605Z",
+      "finished_at": "2026-09-30T01:50:26.933406135Z",
+      "error_code": "dns_native_recovery_unknown_after_restart",
+      "error_message": "The first install of PowerDNS as the paired primary found that the PowerDNS database is not as this install wrote it (an administrator edit, PowerDNS behaviour CelikPanel has not measured, or a file it could not read). CelikPanel kept that change and neither continued nor undid the install. The PowerDNS service is running on this server now (systemd); that alone does not prove it answers correctly. The operation's journal and the PowerDNS database are kept and block new DNS changes; other server changes can continue. Next step: the server administrator reviews that change and runs /usr/libexec/celikpanel/recovery dns-switch-status --quiesced --request-id c59b537aac13c590e71b4682a88ed7b1. Restarting the Agent retries the same operation only when the change is back as the install wrote it; otherwise contact support with request id c59b537aac13c590e71b4682a88ed7b1."
+    }
+  }
+}
+

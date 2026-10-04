@@ -203,7 +203,11 @@ func TestDNSSetupStagesFreshPairedIdentityWithoutHostMutation(t *testing.T) {
 	}
 }
 
+// Closed paired-primary gate: the PowerDNS primary cell expects the paused
+// blocker. The open-gate first install is
+// TestPDNSPairedPrimaryOpenGateCardOffersFreshInstall.
 func TestStagedPairedIdentityBuildsExactFirstInstallManifest(t *testing.T) {
+	closePDNSPairedPrimaryGateForTest(t)
 	for directionIndex, direction := range []struct {
 		name, localIP, peerIP, peerNS, pairRole, localNS string
 	}{
@@ -236,6 +240,22 @@ func TestStagedPairedIdentityBuildsExactFirstInstallManifest(t *testing.T) {
 					t.Fatalf("stage status=%d body=%s", stage.Code, stage.Body.String())
 				}
 				preview, recorder := requestDNSEnginePreview(t, p, target, nil, 1)
+				if direction.pairRole == transport.DNSPairRolePrimary &&
+					target == transport.DNSEnginePowerDNS {
+					if recorder.Code != http.StatusOK ||
+						!hasDNSEngineBlocker(preview, "pdns_primary_switch_paused") ||
+						preview.PreviewToken != "" {
+						t.Fatalf("unsupported first install preview=%+v status=%d body=%s",
+							preview, recorder.Code, recorder.Body.String())
+					}
+					agent.mu.Lock()
+					switchCalls := agent.switchCalls
+					agent.mu.Unlock()
+					if switchCalls != 0 {
+						t.Fatalf("unsupported first install reached Agent: calls=%d", switchCalls)
+					}
+					return
+				}
 				if recorder.Code != http.StatusOK || len(preview.Blockers) != 0 ||
 					preview.Topology != transport.DNSTopologyPaired {
 					t.Fatalf("preview=%+v status=%d body=%s",

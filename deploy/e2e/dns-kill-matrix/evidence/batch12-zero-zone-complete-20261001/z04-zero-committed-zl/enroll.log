@@ -1,0 +1,82 @@
+
+### 2026-09-30T08:42:30.814Z owner-enrollment start cell=pdns-switch__committed__after-write__paired-primary__peer-reachable root=/var/tmp/cp-b12-1001/r1
+2ce8ff82c577424ddc885d544013b4704b24fd1a677ab82280dbf4ce28af25ec  /var/tmp/cp-b12-1001/r1/artifacts/dns-owner-tools/dns-peer-enroll
+bacb58d851fc7bf974e4431389f5268f505912392d1c7365d8ce0415d850a248  /var/tmp/cp-b12-1001/r1/artifacts/dns-owner-tools/bind-peer-inspect
+
+### 2026-09-30T08:42:30.826Z boot ids before enrollment
+$ [primary] cat /proc/sys/kernel/random/boot_id
+308808b7-c63c-4dcf-bd8c-463ed3c870e3
+[rc=0]
+$ [secondary] cat /proc/sys/kernel/random/boot_id
+5b4b4ce0-caff-4ab4-9e2b-efea920a28ea
+[rc=0]
+
+### 2026-09-30T08:42:31.341Z copy the packaged owner tools to the guests (root-owned, 0755, under /root/dns-owner-tools)
+scp primary rc=0
+scp secondary rc=0
+$ [primary] sudo install -d -o root -g root -m 0700 /root/dns-owner-tools && sudo install -o root -g root -m 0755 /tmp/dns-peer-enroll /root/dns-owner-tools/dns-peer-enroll && sudo sha256sum /root/dns-owner-tools/dns-peer-enroll
+2ce8ff82c577424ddc885d544013b4704b24fd1a677ab82280dbf4ce28af25ec  /root/dns-owner-tools/dns-peer-enroll
+[rc=0]
+$ [secondary] sudo install -d -o root -g root -m 0700 /root/dns-owner-tools && sudo install -o root -g root -m 0755 /tmp/dns-peer-enroll /root/dns-owner-tools/dns-peer-enroll && sudo install -o root -g root -m 0755 /tmp/bind-peer-inspect /root/dns-owner-tools/bind-peer-inspect && sudo sh -c 'sha256sum /root/dns-owner-tools/*'
+bacb58d851fc7bf974e4431389f5268f505912392d1c7365d8ce0415d850a248  /root/dns-owner-tools/bind-peer-inspect
+2ce8ff82c577424ddc885d544013b4704b24fd1a677ab82280dbf4ce28af25ec  /root/dns-owner-tools/dns-peer-enroll
+[rc=0]
+
+### 2026-09-30T08:42:32.397Z status before
+$ [primary] sudo /root/dns-owner-tools/dns-peer-enroll primary-status
+{"next_action":"Prepare an owner enrollment only if parentless deletion proof is required.","state":"disabled"}
+[rc=0]
+$ [secondary] sudo /root/dns-owner-tools/dns-peer-enroll secondary-status
+{"state":"disabled","reason":"reviewed BIND inspector policy is absent","next_action":"Run secondary-install locally with reviewed pair and key"}
+[rc=0]
+
+### 2026-09-30T08:42:32.920Z primary-prepare (primary owner)
+$ [primary] sudo /root/dns-owner-tools/dns-peer-enroll primary-prepare
+{"state":"prepared","credential_id":"d440d77cee6d68ffbc2cc21267c948c7","public_key":"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEOFanHO8bAwFim30sUnHlv7WB/3AorgnEm1hvcMem5v","public_key_sha256":"d91100126f9ad1f14614d1f5332a74a2e8572e843c3f0c5acbf55a2042bb1fc1","next_action":"Give only the displayed public key to the secondary owner; ask them to run secondary-install locally and return their independently reviewed Ed25519 SSH host-key SHA-256."}
+[rc=0]
+credential_id=d440d77cee6d68ffbc2cc21267c948c7
+
+### 2026-09-30T08:42:33.209Z secondary owner saves the reviewed public key (root-owned 0600 regular file /root/celikpanel-primary-inspector.pub)
+$ [secondary] (stdin: the displayed public key) sudo bash -c 'umask 077; test ! -e P; cat > P; chown root:root P; chmod 0600 P'
+-rw------- 1 root root 81 Sep 30 08:42 /root/celikpanel-primary-inspector.pub
+d1e5025e27f8398becba779e7541e1e84b29f135e746db71b38f14643949ca8d  /root/celikpanel-primary-inspector.pub
+[rc=0]
+
+### 2026-09-30T08:42:33.534Z secondary-install (secondary owner, BIND)
+$ [secondary] sudo /root/dns-owner-tools/dns-peer-enroll secondary-install --primary-ip 192.0.2.10 --peer-ip 192.0.2.11 --catalog catalog-c000020a.celikpanel.invalid --primary-public-key /root/celikpanel-primary-inspector.pub --inspector /root/dns-owner-tools/bind-peer-inspect
+{"next_action":"Run secondary-host-key and give its Ed25519 SSH host-key SHA-256 to the primary owner through a trusted channel for primary-activate. No owner command tests live authentication; the primary Agent makes the first authenticated read-only inspector exchange only while reconciling an admitted pending deletion, and reports its result on that operation.","state":"configured"}
+[rc=0]
+
+### 2026-09-30T08:42:34.258Z secondary-host-key
+$ [secondary] sudo /root/dns-owner-tools/dns-peer-enroll secondary-host-key
+{"host_key_sha256":"2f4972d4fd53717ffdfc642a9e1d42aa98ff64bd0af2518507852021a0890452","next_action":"Compare this digest through a trusted channel before primary-activate; the primary must not learn it from an unauthenticated SSH connection."}
+[rc=0]
+
+### 2026-09-30T08:42:34.570Z primary owner checks the digest independently (SHA-256 of the decoded Ed25519 public key blob read from /etc/ssh/ssh_host_ed25519_key.pub; same SSH management channel, so this is a consistency check, not an out-of-band trust anchor)
+tool digest:        2f4972d4fd53717ffdfc642a9e1d42aa98ff64bd0af2518507852021a0890452
+independent digest: 2f4972d4fd53717ffdfc642a9e1d42aa98ff64bd0af2518507852021a0890452
+DIGEST MATCH
+
+### 2026-09-30T08:42:34.847Z primary-activate (primary owner)
+$ [primary] sudo /root/dns-owner-tools/dns-peer-enroll primary-activate --credential-id d440d77cee6d68ffbc2cc21267c948c7 --primary-ip 192.0.2.10 --peer-ip 192.0.2.11 --catalog catalog-c000020a.celikpanel.invalid --host-key-sha256 2f4972d4fd53717ffdfc642a9e1d42aa98ff64bd0af2518507852021a0890452
+{"state":"configured","enrollment_id":"78cfcbe0856606d04689419bef09d5a7","next_action":"For an admitted pending DNS deletion, use that exact operation's recovery action; enrollment alone does not enable a blocked DNS topology, and status polling does not retry the mutation."}
+[rc=0]
+
+### 2026-09-30T08:42:35.096Z status after
+$ [primary] sudo /root/dns-owner-tools/dns-peer-enroll primary-status
+{"catalog_name":"catalog-c000020a.celikpanel.invalid","client_public_key_sha256":"d91100126f9ad1f14614d1f5332a74a2e8572e843c3f0c5acbf55a2042bb1fc1","enrollment_id":"78cfcbe0856606d04689419bef09d5a7","host_key_sha256":"2f4972d4fd53717ffdfc642a9e1d42aa98ff64bd0af2518507852021a0890452","peer_ip":"192.0.2.11","primary_ip":"192.0.2.10","state":"configured"}
+[rc=0]
+$ [secondary] sudo /root/dns-owner-tools/dns-peer-enroll secondary-status
+{"state":"configured","reason":"local policy and SSH configuration verified; live authentication is unproven","next_action":"No owner action is needed now. No status command tests live authentication: the primary Agent makes the first authenticated read-only inspector exchange only while reconciling an admitted pending deletion, and reports its result on that operation","primary_ip":"192.0.2.10","peer_ip":"192.0.2.11","catalog_name":"catalog-c000020a.celikpanel.invalid","primary_key_sha256":"d91100126f9ad1f14614d1f5332a74a2e8572e843c3f0c5acbf55a2042bb1fc1"}
+[rc=0]
+
+### 2026-09-30T08:42:35.664Z boot ids after enrollment
+$ [primary] cat /proc/sys/kernel/random/boot_id
+308808b7-c63c-4dcf-bd8c-463ed3c870e3
+[rc=0]
+$ [secondary] cat /proc/sys/kernel/random/boot_id
+5b4b4ce0-caff-4ab4-9e2b-efea920a28ea
+[rc=0]
+
+### 2026-09-30T08:42:36.158Z owner-enrollment done
+ENROLL-DONE

@@ -16,13 +16,14 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/hostname"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
+
+	"github.com/alicelik/celikpanel/internal/mailtlsconfig"
 )
 
 // Mail TLS — the equivalent of Plesk's "assign the certificate to the mail
@@ -117,6 +118,7 @@ type mailTLSDirectoryOwner struct {
 type mailTLSCommandPreflight struct {
 	run        mailTLSCommandRunner
 	sniMapType string
+	dovecot24  bool
 }
 
 type mailTLSFileSnapshot struct {
@@ -300,7 +302,7 @@ func reconcileMailTLSHost(
 	if err := configurePostfixTLS(myhostname, valid, preflight.sniMapType, run); err != nil {
 		return setMailTLSFailure(resp, "postfix configuration", err, previous, run), nil
 	}
-	if err := configureDovecotTLSForHost(myhostname, valid, run); err != nil {
+	if err := configureDovecotTLSForDialect(myhostname, valid, preflight.dovecot24, run); err != nil {
 		return setMailTLSFailure(resp, "dovecot configuration", err, previous, run), nil
 	}
 	if err := validatePostfixTLSConfig(run); err != nil {
@@ -371,7 +373,11 @@ func preflightMailTLSCommands(needsSNIMap bool, execute mailTLSCommandRunner) (m
 		}
 		return execute(commandPath, args...)
 	}
-	preflight := mailTLSCommandPreflight{run: pinned}
+	modern, err := dovecotIs24WithRunner(pinned)
+	if err != nil {
+		return mailTLSCommandPreflight{}, err
+	}
+	preflight := mailTLSCommandPreflight{run: pinned, dovecot24: modern}
 	if needsSNIMap {
 		mapType, err := probePostfixTLSMapType(pinned)
 		if err != nil {
@@ -1083,22 +1089,11 @@ func configurePostfixTLS(
 	if err != nil {
 		return err
 	}
-	settings := [][2]string{
-		{"smtpd_tls_cert_file", certPath},
-		{"smtpd_tls_key_file", keyPath},
-		// "may" = offer TLS, accept plaintext — mandatory TLS on port 25
-		// violates RFC and loses mail from old senders.
-		// "may" = TLS öner, düz metni kabul et — 25'te zorunlu TLS RFC'ye
-		// aykırıdır ve eski göndericilerden postayı kaybettirir.
-		{"smtpd_tls_security_level", "may"},
-		{"smtp_tls_security_level", "may"},
-		{"smtpd_tls_protocols", ">=TLSv1.2"},
-		{"smtp_tls_protocols", ">=TLSv1.2"},
-		{"smtpd_tls_loglevel", "1"},
+	settings := mailtlsconfig.PostfixSettings(myhostname, certPath, keyPath)
+	if myhostname == "" {
+		settings = settings[:len(settings)-1]
 	}
-	if myhostname != "" {
-		settings = append(settings, [2]string{"myhostname", myhostname})
-	}
+
 	if len(sni) > 0 {
 		if sniMapType == "" {
 			return fmt.Errorf("Postfix SNI map type was not selected during preflight")
@@ -1130,20 +1125,10 @@ func writePostfixSNIMap(
 	if mapType != "lmdb" && mapType != "hash" && mapType != "btree" {
 		return fmt.Errorf("invalid preflighted Postfix SNI map type %q", mapType)
 	}
-	var b strings.Builder
-	b.WriteString("# Managed by CelikPanel — per-domain mail certificates (SNI).\n")
-	for _, e := range sni {
-		for _, name := range e.Names {
-			name = strings.ToLower(strings.TrimSpace(name))
-			if name == "" {
-				continue
-			}
-			fmt.Fprintf(&b, "%s %s %s\n", name, e.KeyPath, e.CertPath)
-		}
-	}
-	if err := secureWriteConfig(postfixSNIPath, []byte(b.String()), 0o600); err != nil {
+	if err := secureWriteConfig(postfixSNIPath, mailtlsconfig.PostfixSNI(sni), 0600); err != nil {
 		return err
 	}
+
 	// Same portability trap as the virtual maps: `hash:` is unusable on distros
 	// that build postfix without Berkeley DB (Arch), and per-domain mail
 	// certificates would silently never load. An SNI map MUST be indexed —
@@ -1169,6 +1154,13 @@ func configureDovecotTLS(sni []MailSNIEntry, run mailTLSCommandRunner) error {
 	return configureDovecotTLSForHost("", sni, run)
 }
 func configureDovecotTLSForHost(myhostname string, sni []MailSNIEntry, run mailTLSCommandRunner) error {
+	modern, err := dovecotIs24WithRunner(run)
+	if err != nil {
+		return err
+	}
+	return configureDovecotTLSForDialect(myhostname, sni, modern, run)
+}
+func configureDovecotTLSForDialect(myhostname string, sni []MailSNIEntry, modern bool, run mailTLSCommandRunner) error {
 	certPath, keyPath, err := selectedMailHostCertificate(myhostname)
 	if err != nil {
 		return err
@@ -1180,29 +1172,19 @@ func configureDovecotTLSForHost(myhostname string, sni []MailSNIEntry, run mailT
 	// validated by dovecot's parser before any restart — see dovecot_dialect.go.
 	// Lehçe-farkında (2.3 ssl_cert=< vs 2.4 ssl_server_cert_file=) ve yeniden
 	// başlatmadan önce dovecot ayrıştırıcısıyla doğrulanır.
-	conf := buildDovecotTLSConf(dovecotIs24WithRunner(run), certPath, keyPath, sni)
+	conf := buildDovecotTLSConf(modern, certPath, keyPath, sni)
 	return applyDovecotTLSConf(dovecotTLSConf, conf, run)
 }
 
-func dovecotIs24WithRunner(run mailTLSCommandRunner) bool {
+func dovecotIs24WithRunner(run mailTLSCommandRunner) (bool, error) {
+	if run == nil {
+		return false, mailtlsconfig.ErrDovecotVersionUnknown
+	}
 	out, err := run("dovecot", "--version")
 	if err != nil {
-		return true
+		return false, mailtlsconfig.ErrDovecotVersionUnknown
 	}
-	fields := strings.Fields(strings.TrimSpace(string(out)))
-	if len(fields) == 0 {
-		return true
-	}
-	parts := strings.SplitN(fields[0], ".", 3)
-	if len(parts) < 2 {
-		return true
-	}
-	major, majorErr := strconv.Atoi(parts[0])
-	minor, minorErr := strconv.Atoi(parts[1])
-	if majorErr != nil || minorErr != nil {
-		return true
-	}
-	return major > 2 || (major == 2 && minor >= 4)
+	return mailtlsconfig.DovecotIs24(out)
 }
 
 func applyDovecotTLSConf(

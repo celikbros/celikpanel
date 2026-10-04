@@ -19,6 +19,16 @@ const (
 	bindV3PropagationTestOwnerID   = "ffeeddccbbaa99887766554433221100"
 )
 
+// testBINDV3SourceState is the active BIND engine state receipt a managed
+// BIND primary's propagation plan carries (pair5 P5-1).
+func testBINDV3SourceState() dnsEngineStateReceipt {
+	return dnsEngineStateReceipt{
+		Mode: transport.DNSEngineSwitchModeSwitch, Engine: transport.DNSEngineBIND,
+		EngineEpoch: 1, PairRole: transport.DNSPairRolePrimary,
+		PairLocalIP: "192.0.2.10", PairPeerIP: "192.0.2.20",
+	}
+}
+
 func testBINDV3Snapshot(
 	t *testing.T,
 	domain string,
@@ -152,14 +162,18 @@ func TestBINDV3PrimaryPropagationPlanCoversAddUpdateAndDelete(t *testing.T) {
 				t, "example.test", test.generation, test.zoneSerial, test.deleted,
 			)
 			tree, _ := testBINDV3PrimaryTree(t, test.catalogSerial, zone)
-			plan, primary, err := bindV3PrimaryPropagationPlan(tree, zone.Domain)
+			plan, primary, err := bindV3PrimaryPropagationPlan(tree, zone.Domain, testBINDV3SourceState())
 			if err != nil || !primary {
 				t.Fatalf("primary=%v plan=%+v err=%v", primary, plan, err)
 			}
 			if plan.Changed.Delete != test.deleted ||
 				plan.Changed.Serial != test.zoneSerial ||
-				plan.Evidence.Serial != test.catalogSerial {
-				t.Fatalf("unexpected plan=%+v", plan)
+				plan.Evidence.Serial != test.catalogSerial ||
+				plan.Operation.RequestID != zone.MutationRequestID ||
+				plan.Operation.OwnerID != zone.MutationOwnerID ||
+				plan.Operation.Generation != zone.DesiredGeneration ||
+				plan.Operation.Qualifier != zone.Qualifier {
+				t.Fatalf("unexpected plan or lost exact mutation=%+v", plan)
 			}
 			if test.deleted {
 				if len(plan.Evidence.Members) != 0 || len(plan.Evidence.MemberSerials) != 0 {
@@ -177,7 +191,7 @@ func TestBINDV3PrimaryProofRequiresSourceBoundExactPeerCatalog(t *testing.T) {
 	tree, _ := testBINDV3PrimaryTree(
 		t, 7, testBINDV3Snapshot(t, "example.test", 2, 42, false),
 	)
-	plan, primary, err := bindV3PrimaryPropagationPlan(tree, "example.test")
+	plan, primary, err := bindV3PrimaryPropagationPlan(tree, "example.test", testBINDV3SourceState())
 	if err != nil || !primary {
 		t.Fatal(err)
 	}
@@ -223,11 +237,11 @@ func TestBINDV3LastMemberDeleteProofIsNonVacuous(t *testing.T) {
 	tree, _ := testBINDV3PrimaryTree(
 		t, 8, testBINDV3Snapshot(t, "gone.example.test", 3, 0, true),
 	)
-	plan, primary, err := bindV3PrimaryPropagationPlan(tree, "gone.example.test")
+	plan, primary, err := bindV3PrimaryPropagationPlan(tree, "gone.example.test", testBINDV3SourceState())
 	if err != nil || !primary || len(plan.Evidence.Members) != 0 {
 		t.Fatalf("primary=%v plan=%+v err=%v", primary, plan, err)
 	}
-	localCalls, peerCatalogCalls, catalogSOACalls, zoneCalls := 0, 0, 0, 0
+	localCalls, peerCatalogCalls, catalogSOACalls, deletedSOACalls, zoneCalls := 0, 0, 0, 0, 0
 	localCatalog := func(
 		ctx context.Context, address, domain string,
 	) (dnsCatalogAXFRResult, error) {
@@ -247,14 +261,26 @@ func TestBINDV3LastMemberDeleteProofIsNonVacuous(t *testing.T) {
 	soa := func(
 		_ context.Context, network, address, domain string,
 	) (dnsSOAProbeResult, error) {
-		catalogSOACalls++
-		if address != plan.Evidence.PeerIP || domain != plan.Evidence.Domain ||
+		if address != plan.Evidence.PeerIP ||
 			(network != "udp" && network != "tcp") {
-			return dnsSOAProbeResult{}, errors.New("unexpected catalog SOA identity")
+			return dnsSOAProbeResult{}, errors.New("unexpected SOA identity")
 		}
+		if domain == plan.Evidence.Domain {
+			catalogSOACalls++
+			return dnsSOAProbeResult{
+				Authoritative: true, RCode: dnsRCodeNoError,
+				SOASerials: []uint32{8},
+			}, nil
+		}
+		if domain != plan.Changed.Domain {
+			return dnsSOAProbeResult{}, errors.New("unexpected deleted-zone SOA identity")
+		}
+		deletedSOACalls++
 		return dnsSOAProbeResult{
-			Authoritative: true, RCode: dnsRCodeNoError,
-			SOASerials: []uint32{8},
+			LocalIP:          plan.Evidence.LocalIP,
+			ExactDeletedZone: true, Authoritative: true,
+			RCode:              dnsRCodeNameError,
+			AuthoritySOAOwners: []string{"example.test"},
 		}, nil
 	}
 	zoneAXFR := func(
@@ -265,18 +291,56 @@ func TestBINDV3LastMemberDeleteProofIsNonVacuous(t *testing.T) {
 			domain != plan.Changed.Domain {
 			return dnsZoneAXFRIndeterminate, errors.New("unexpected deleted-zone identity")
 		}
-		return dnsZoneAXFRAbsent, nil
+		return dnsZoneAXFRNoTransfer, nil
 	}
 	if err := verifyDNSV3PrimaryPropagationAt(
 		context.Background(), plan, soa, localCatalog, peerCatalog, zoneAXFR,
 	); err != nil {
 		t.Fatal(err)
 	}
-	if localCalls != 1 || peerCatalogCalls != 1 || catalogSOACalls != 2 || zoneCalls != 1 {
+	if localCalls != 1 || peerCatalogCalls != 1 || catalogSOACalls != 2 ||
+		deletedSOACalls != 2 || zoneCalls != 1 {
 		t.Fatalf(
-			"local=%d peer=%d soa=%d zone=%d",
-			localCalls, peerCatalogCalls, catalogSOACalls, zoneCalls,
+			"local=%d peer=%d catalogSOA=%d deletedSOA=%d zone=%d",
+			localCalls, peerCatalogCalls, catalogSOACalls, deletedSOACalls, zoneCalls,
 		)
+	}
+	if err := verifyDNSV3PrimaryPropagationAt(
+		context.Background(), plan,
+		func(ctx context.Context, network, address, domain string) (dnsSOAProbeResult, error) {
+			if domain == plan.Changed.Domain {
+				return dnsSOAProbeResult{RCode: dnsRCodeRefused}, nil
+			}
+			return soa(ctx, network, address, domain)
+		},
+		localCatalog, peerCatalog, zoneAXFR,
+	); err == nil {
+		t.Fatal("AXFR refusal with a refused SOA query falsely proved peer deletion")
+	}
+	if err := verifyDNSV3PrimaryPropagationAt(
+		context.Background(), plan,
+		func(ctx context.Context, network, address, domain string) (dnsSOAProbeResult, error) {
+			if domain == plan.Changed.Domain && network == "tcp" {
+				return dnsSOAProbeResult{RCode: dnsRCodeRefused}, nil
+			}
+			return soa(ctx, network, address, domain)
+		},
+		localCatalog, peerCatalog, zoneAXFR,
+	); err == nil {
+		t.Fatal("UDP-only negative SOA falsely proved peer deletion")
+	}
+	if err := verifyDNSV3PrimaryPropagationAt(
+		context.Background(), plan,
+		func(ctx context.Context, network, address, domain string) (dnsSOAProbeResult, error) {
+			result, err := soa(ctx, network, address, domain)
+			if domain == plan.Changed.Domain {
+				result.LocalIP = "192.0.2.99"
+			}
+			return result, err
+		},
+		localCatalog, peerCatalog, zoneAXFR,
+	); err == nil {
+		t.Fatal("negative SOA from a different local source falsely proved peer deletion")
 	}
 	if err := verifyDNSV3PrimaryPropagationAt(
 		context.Background(), plan, soa, localCatalog, peerCatalog,
@@ -310,7 +374,7 @@ func TestPrepareBINDV3NotificationsAreBoundedOrderedAndIdempotent(t *testing.T) 
 			tree, _ := testBINDV3PrimaryTree(
 				t, 8, testBINDV3Snapshot(t, "example.test", 3, serial, deleted),
 			)
-			plan, _, err := bindV3PrimaryPropagationPlan(tree, "example.test")
+			plan, _, err := bindV3PrimaryPropagationPlan(tree, "example.test", testBINDV3SourceState())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -375,7 +439,7 @@ func TestBINDV3PeerProofFailureKeepsTargetForRecoverZoneRetry(t *testing.T) {
 		return nil
 	}
 	if err := completeManagedBINDV3PropagationAt(
-		context.Background(), targetTree, "example.test", run, complete,
+		context.Background(), targetTree, "example.test", testBINDV3SourceState(), run, complete,
 	); err == nil {
 		t.Fatal("stale peer unexpectedly completed the initial publication")
 	}
@@ -383,7 +447,7 @@ func TestBINDV3PeerProofFailureKeepsTargetForRecoverZoneRetry(t *testing.T) {
 		t.Fatalf("peer failure rolled back target pointer/state: %s/%s", pointerGeneration, stateGeneration)
 	}
 	if err := completeManagedBINDV3PropagationAt(
-		context.Background(), targetTree, "example.test", run, complete,
+		context.Background(), targetTree, "example.test", testBINDV3SourceState(), run, complete,
 	); err != nil {
 		t.Fatalf("RecoverZone retry did not converge: %v", err)
 	}
@@ -481,5 +545,33 @@ func TestBINDV3LocalApplyRollbackUsesOnlyExactPriorTreeAndState(t *testing.T) {
 		},
 	); err == nil {
 		t.Fatal("rollback claimed exact prior authority after peer advanced")
+	}
+}
+func TestBINDV3NativePairProofCanCompleteWithoutRNDC(t *testing.T) {
+	tree, _ := testBINDV3PrimaryTree(
+		t, 8, testBINDV3Snapshot(t, "example.test", 3, 42, false),
+	)
+	calls := 0
+	err := completeManagedBINDV3PropagationAt(
+		context.Background(), tree, "example.test", testBINDV3SourceState(),
+		func(context.Context, ...string) error { return errors.New("rndc key not configured") },
+		func(context.Context, dnsV3PrimaryPropagationPlan) error {
+			calls++
+			return nil
+		},
+	)
+	if err != nil || calls != 1 {
+		t.Fatalf("native pair proof err=%v calls=%d", err, calls)
+	}
+	err = completeManagedBINDV3PropagationAt(
+		context.Background(), tree, "example.test", testBINDV3SourceState(),
+		func(context.Context, ...string) error { return errors.New("rndc key not configured") },
+		func(context.Context, dnsV3PrimaryPropagationPlan) error {
+			return errors.New("peer catalog is stale")
+		},
+	)
+	var pending *dnsZoneV3RecoveryPendingError
+	if !errors.As(err, &pending) {
+		t.Fatalf("unverified peer did not remain pending: %v", err)
 	}
 }

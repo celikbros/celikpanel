@@ -1,0 +1,85 @@
+{
+  "outcome": "response",
+  "panel": "arch",
+  "purpose": "login (Login.tsx)",
+  "request": {
+    "body": {
+      "password": "[REDACTED]",
+      "username": "owner"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:28444"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:28444"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/auth/login"
+  },
+  "response": {
+    "elapsed_seconds": 0.691,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Set-Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Tue, 29 Sep 2026 21:51:06 GMT"
+      ],
+      [
+        "Content-Length",
+        "173"
+      ]
+    ],
+    "json": {
+      "account_type": "account",
+      "effective_role": "admin",
+      "email": "owner@ns-accept.test",
+      "features": {
+        "team_members": false
+      },
+      "impersonating": false,
+      "role": "admin",
+      "username": "owner"
+    },
+    "status": 200,
+    "text": null
+  }
+}

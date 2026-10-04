@@ -1,0 +1,1 @@
+{"active_dns_engine":"bind","converged":false,"detail":"owner BIND rollback is not target convergence; controller must prove DNS serving","fingerprint":"fa67151537153b90750976234546d2439631be1398bf98b23bfeed99ebf32a52","recovery_outcome":"rolled_back_source_active","schema":"celikpanel/dns-kill-recovery-probe/v1"}

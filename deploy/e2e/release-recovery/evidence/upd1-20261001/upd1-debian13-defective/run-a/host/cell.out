@@ -1,0 +1,9 @@
+Formatting '/var/tmp/cp-release-drill-upd1-d13-def-a/cells/e402907939053d78789f1106/debian13/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-upd1-d13-def-a/images/debian-13-genericcloud-amd64-20260826-2582.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+Formatting '/var/tmp/cp-release-drill-upd1-d13-def-a/cells/e402907939053d78789f1106/arch/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-upd1-d13-def-a/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-upd1-d13-def-a", "cell_id": "release-recovery__7476799888182e84", "ssh_ports": [2361, 2362]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-upd1-d13-def-a", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-upd1-d13-def-a", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+{"step": "preflight", "verdict": "inconclusive", "reason": "ValueError: candidate contains uncommitted source: dns-owner-tools/README.md"}
+{"outcome": "not-terminal", "overall": "incomplete", "request_id": null}
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-upd1-d13-def-a", "evidence_retained": true}
+UPD1 cell=upd1-debian13-defective lab=/var/tmp/cp-release-drill-upd1-d13-def-a driver_exit=0 evidence=/var/tmp/cp-release-drill-upd1-d13-def-a/evidence/*/upd1

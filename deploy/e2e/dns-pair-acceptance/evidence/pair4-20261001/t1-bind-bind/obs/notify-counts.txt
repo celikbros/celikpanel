@@ -1,0 +1,8 @@
+== /root/cp-pair4/obs/p4t1/arch-bind-notify-journal.txt
+received notify : 17
+     10 catalog-c000020a.celikpanel.invalid
+      7 pair-accept.test
+sending notifies : 4
+== /root/cp-pair4/obs/p4t1/debian13-bind-notify-journal.txt
+received notify : 0
+sending notifies : 18

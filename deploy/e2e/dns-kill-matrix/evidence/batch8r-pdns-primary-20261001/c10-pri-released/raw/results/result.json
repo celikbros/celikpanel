@@ -1,0 +1,1850 @@
+{
+  "boundary": {
+    "edge": "after-write",
+    "journal_phase": "target-staged",
+    "phase": "target-staged",
+    "point": "after_write"
+  },
+  "boundary_marker": {
+    "cell_id": "pdns-switch__target-staged__after-write__paired-primary__peer-reachable",
+    "driver": "pdns-switch",
+    "marker": "/var/lib/celikpanel-dns-kill-matrix/results/pdns-switch__target-staged__after-write__paired-primary__peer-reachable/boundary-marker.json",
+    "nonce": "c430537440a2eaac8b368b9a6ecdfcd27e6dae55f5a3ab695f5fb08cccff3a69",
+    "observed_driver": "pdns-switch",
+    "observed_journal": {
+      "manifest_qualifier": "dns-engine-switch/v1:sha256:8c27f70fec9a59c5a3a0dcdc3c7ab32355ab11fc4ebfe3028e3a74ff4e55e5c5",
+      "mode": "switch",
+      "mutation_owner_id": "8701708c97e8713aa8f6121242121ae0",
+      "mutation_request_id": "dbf9982f7d79645b1cc9ddfa99573f41",
+      "pair_role": "primary",
+      "path": "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json",
+      "phase": "target-staged",
+      "schema": "celikpanel-dns-engine-switch-journal/v3",
+      "source_epoch": 0,
+      "source_revision": 0,
+      "target_engine": "pdns",
+      "target_epoch": 1,
+      "topology": "paired"
+    },
+    "phase": "target-staged",
+    "pid": 1897,
+    "point": "after_write",
+    "process_start_ticks": "18038",
+    "ready_fd": 5,
+    "recorded_at": "2026-09-29T23:46:14.286435187Z",
+    "request_id": "dbf9982f7d79645b1cc9ddfa99573f41",
+    "schema": "celikpanel-dns-kill-matrix-boundary/v1"
+  },
+  "cell_id": "pdns-switch__target-staged__after-write__paired-primary__peer-reachable",
+  "command_environment": {
+    "fault_selector_names": [
+      "CELIKPANEL_DNS_KILL_MATRIX_CELL_ID",
+      "CELIKPANEL_DNS_KILL_MATRIX_DRIVER",
+      "CELIKPANEL_DNS_KILL_MATRIX_POINT",
+      "CELIKPANEL_DNS_KILL_MATRIX_PHASE",
+      "CELIKPANEL_DNS_KILL_MATRIX_REQUEST_ID",
+      "CELIKPANEL_DNS_KILL_MATRIX_NONCE",
+      "CELIKPANEL_DNS_KILL_MATRIX_MARKER",
+      "CELIKPANEL_DNS_KILL_MATRIX_READY_FD"
+    ],
+    "inherited_caller_names": [
+      "LANG",
+      "PATH"
+    ],
+    "production": {
+      "CELIKPANEL_AGENT_SOCKET": "/run/celikpanel/agent.sock",
+      "CELIKPANEL_AGENT_STATE_DIR": "/var/lib/celikpanel-agent-private",
+      "CELIKPANEL_AGENT_TOKEN_FILE": "/etc/celikpanel/agent.token",
+      "CELIKPANEL_DKIM_DIR": "/etc/celikpanel/dkim",
+      "CELIKPANEL_MUTATION_LOCK": "/run/celikpanel/service-mutation.lock",
+      "CELIKPANEL_RUNTIMES_DIR": "/opt/celikpanel/runtimes",
+      "LANG": "C.UTF-8",
+      "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    }
+  },
+  "commands": {
+    "agent_restart": {
+      "argv": [
+        "/usr/bin/systemctl",
+        "restart",
+        "celikpanel-agent.service"
+      ],
+      "device": 65025,
+      "inode": 4848,
+      "mode": "0755",
+      "path": "/usr/bin/systemctl",
+      "resolved_path": "/usr/bin/systemctl",
+      "sha256": "848c70d7e2c2f43f4f93287897ac8946e8eda45e7daa5f2975d9728071856b1a",
+      "uid": 0
+    },
+    "gate_probe": [
+      "/opt/celikpanel/bin/dns-kill-trigger",
+      "rpc-gate-probe",
+      "--scenario",
+      "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+      "--timeout",
+      "60s"
+    ],
+    "host_readiness": [
+      "/opt/celikpanel/bin/dns-kill-trigger",
+      "rpc-host-readiness",
+      "--timeout",
+      "15s"
+    ],
+    "journalctl": {
+      "argv": [
+        "/usr/bin/journalctl"
+      ],
+      "device": 65025,
+      "inode": 4843,
+      "mode": "0755",
+      "path": "/usr/bin/journalctl",
+      "resolved_path": "/usr/bin/journalctl",
+      "sha256": "6ad392fc8f1a10ac892fdb328e67761944c32707db5e97602cb84eed502e47f1",
+      "uid": 0
+    },
+    "owner_recovery": {
+      "argv": [
+        "/usr/libexec/celikpanel/recovery"
+      ],
+      "device": 65025,
+      "inode": 131476,
+      "mode": "0755",
+      "path": "/usr/libexec/celikpanel/recovery",
+      "resolved_path": "/usr/libexec/celikpanel/recovery",
+      "sha256": "74eac1173dde06be433c269f7d366a71227a6c02f1fc26614c47e88fe96b9e5f",
+      "uid": 0
+    },
+    "panel_restart": {
+      "argv": [
+        "/usr/bin/systemctl",
+        "restart",
+        "celikpanel-panel.service"
+      ],
+      "device": 65025,
+      "inode": 4848,
+      "mode": "0755",
+      "path": "/usr/bin/systemctl",
+      "resolved_path": "/usr/bin/systemctl",
+      "sha256": "848c70d7e2c2f43f4f93287897ac8946e8eda45e7daa5f2975d9728071856b1a",
+      "uid": 0
+    },
+    "recovery": {
+      "argv": [
+        "/opt/celikpanel/bin/dns-kill-trigger",
+        "rpc-retry",
+        "--scenario",
+        "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+        "--identity-receipt",
+        "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+        "--timeout",
+        "45m"
+      ],
+      "device": 65025,
+      "inode": 131312,
+      "mode": "0755",
+      "path": "/opt/celikpanel/bin/dns-kill-trigger",
+      "resolved_path": "/opt/celikpanel/bin/dns-kill-trigger",
+      "sha256": "1b6ea384abf96eff424effec93fd8b0e4c61e069af28a74883c863f8f82690fc",
+      "uid": 0
+    },
+    "recovery_probe": {
+      "argv": [
+        "/opt/celikpanel/libexec/dns-kill-recovery-probe.py",
+        "--cell-id",
+        "pdns-switch__target-staged__after-write__paired-primary__peer-reachable",
+        "--scenario",
+        "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+        "--identity-receipt",
+        "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+        "--ledger",
+        "/var/lib/celikpanel-agent-private/service-mutations.json",
+        "--state",
+        "/var/lib/celikpanel-agent-private/dns-engine-state.json",
+        "--journal",
+        "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json"
+      ],
+      "device": 65025,
+      "inode": 131313,
+      "mode": "0755",
+      "path": "/opt/celikpanel/libexec/dns-kill-recovery-probe.py",
+      "resolved_path": "/opt/celikpanel/libexec/dns-kill-recovery-probe.py",
+      "sha256": "ef5a749a1f7d9015261d54a75c266aa7a6be5d68bb29c9d08d36e5a93a3b54ed",
+      "uid": 0
+    },
+    "scenario_trigger": {
+      "argv": [
+        "/opt/celikpanel/bin/dns-kill-trigger",
+        "rpc-switch",
+        "--scenario",
+        "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+        "--identity-receipt",
+        "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+        "--timeout",
+        "45m"
+      ],
+      "device": 65025,
+      "inode": 131312,
+      "mode": "0755",
+      "path": "/opt/celikpanel/bin/dns-kill-trigger",
+      "resolved_path": "/opt/celikpanel/bin/dns-kill-trigger",
+      "sha256": "1b6ea384abf96eff424effec93fd8b0e4c61e069af28a74883c863f8f82690fc",
+      "uid": 0
+    },
+    "socket_identity_contract": {
+      "identity_receipt_path": "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+      "operation_timeout": "45m",
+      "scenario_path": "/var/lib/celikpanel-dns-kill-matrix/scenario.json"
+    },
+    "socket_statistics": {
+      "argv": [
+        "/usr/bin/ss"
+      ],
+      "device": 65025,
+      "inode": 12850,
+      "mode": "0755",
+      "path": "/usr/bin/ss",
+      "resolved_path": "/usr/bin/ss",
+      "sha256": "772cf51fcd75313f9d1f16dbe45ac456904bb79a75367f79f0fedfec04e1e5fc",
+      "uid": 0
+    },
+    "tagged_agent": {
+      "argv": [
+        "/opt/celikpanel/bin/agent.kill"
+      ],
+      "device": 65025,
+      "inode": 131310,
+      "mode": "0755",
+      "path": "/opt/celikpanel/bin/agent.kill",
+      "resolved_path": "/opt/celikpanel/bin/agent.kill",
+      "sha256": "3dc4ab3b6e897de9a0f56d6fd0f8884cdd301c19a8ea62ad27c8cedad1b24d37",
+      "uid": 0
+    }
+  },
+  "controller_identity": {
+    "effective_gid": 989,
+    "effective_group": "celikpanel",
+    "effective_uid": 0,
+    "expected_umask": "0027"
+  },
+  "diagnostic_failures": [],
+  "driver": "pdns-switch",
+  "failures": [],
+  "finished_at": "2026-09-29T23:46:48.176690Z",
+  "fresh_primary_v3_cut": {
+    "files": {
+      "candidate": {
+        "exists": true,
+        "gid": 104,
+        "mode": "0640",
+        "path": "/var/lib/celikpanel-agent-private/.celikpanel-switch-dbf9982f7d79645b1cc9ddfa99573f41.sqlite3",
+        "regular": true,
+        "sha256": "de8c61e70d43174763408c29912356bc61b593460b2525427b85e8390932b66c",
+        "size": 98304,
+        "uid": 103
+      },
+      "database": {
+        "exists": false,
+        "path": "/var/lib/powerdns/pdns.sqlite3"
+      },
+      "state": {
+        "exists": false,
+        "path": "/var/lib/celikpanel-agent-private/dns-engine-state.json"
+      }
+    },
+    "journal": {
+      "candidate_path": "/var/lib/celikpanel-agent-private/.celikpanel-switch-dbf9982f7d79645b1cc9ddfa99573f41.sqlite3",
+      "candidate_sealed": true,
+      "config_before": [
+        {
+          "exists": true,
+          "path": "/etc/powerdns/pdns.conf",
+          "sha256": "8b46927e48be83b2f0afc38efabdc2e2237daa5281b1a07ea44989ffa41f262a"
+        },
+        {
+          "exists": false,
+          "path": "/etc/powerdns/pdns.d/celikpanel-cluster.conf",
+          "sha256": null
+        },
+        {
+          "exists": false,
+          "path": "/etc/powerdns/pdns.d/celikpanel.conf",
+          "sha256": null
+        }
+      ],
+      "native_serial": null,
+      "native_source_serial": null,
+      "phase": "target-staged",
+      "primary_catalog_serial": 1,
+      "schema": "celikpanel-dns-engine-switch-journal/v3",
+      "target_unit_before": {
+        "active_state": "inactive",
+        "load_state": "masked",
+        "name": "pdns.service",
+        "unit_file_state": "masked"
+      }
+    },
+    "journal_at_boundary": {
+      "device": 65025,
+      "exists": true,
+      "expected_phase": "target-staged",
+      "inode": 131616,
+      "mode": "0600",
+      "observed_phase": "target-staged",
+      "request_id": "dbf9982f7d79645b1cc9ddfa99573f41",
+      "sha256": "61cf5359aca61cad37651af9c101a00cfb80c3bf5daf3ab48e241218ab230cc0"
+    },
+    "journal_phase_selected": "target-staged",
+    "pdns_main_pid": 0,
+    "pdns_unit": {
+      "ActiveState": "inactive",
+      "LoadState": "masked",
+      "MainPID": "0",
+      "SubState": "dead",
+      "UnitFileState": "masked"
+    },
+    "unknown": [],
+    "variant": "pre-start"
+  },
+  "fresh_primary_v3_hold": {
+    "agent_ready": {
+      "detail": {
+        "device": 25,
+        "inode": 2394
+      },
+      "ok": true
+    },
+    "agent_restart": {
+      "argv": [
+        "/usr/bin/systemctl",
+        "restart",
+        "celikpanel-agent.service"
+      ],
+      "duration_seconds": 0.064735,
+      "output_bytes": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "output_truncated": false,
+      "returncode": 0
+    },
+    "dns_judged": false,
+    "dns_not_judged_reason": "PowerDNS never started and the install was not completed: this host has no DNS engine by design at a held or rolled-back first install",
+    "edit": {
+      "after_sha256": "7fa6c159fc3fae7052939d65a63a50ae665f004cf5ab555e7dec80b420957789",
+      "after_size": 20701,
+      "appended": "# owner note: edited by the server owner during an interrupted install (dns-kill-matrix dbf9982f7d79645b1cc9ddfa99573f41)\n",
+      "before_sha256": "8b46927e48be83b2f0afc38efabdc2e2237daa5281b1a07ea44989ffa41f262a",
+      "before_size": 20579,
+      "gid": 104,
+      "kind": "config",
+      "mode": "0640",
+      "path": "/etc/powerdns/pdns.conf",
+      "uid": 0
+    },
+    "failures": [],
+    "files_after_release": {
+      "candidate": {
+        "exists": true,
+        "gid": 104,
+        "mode": "0640",
+        "path": "/var/lib/celikpanel-agent-private/.celikpanel-switch-dbf9982f7d79645b1cc9ddfa99573f41.sqlite3",
+        "regular": true,
+        "sha256": "de8c61e70d43174763408c29912356bc61b593460b2525427b85e8390932b66c",
+        "size": 98304,
+        "uid": 103
+      },
+      "database": {
+        "exists": false,
+        "path": "/var/lib/powerdns/pdns.sqlite3"
+      },
+      "state": {
+        "exists": false,
+        "path": "/var/lib/celikpanel-agent-private/dns-engine-state.json"
+      }
+    },
+    "journal_after_release": {
+      "exists": true,
+      "gid": 989,
+      "mode": "0600",
+      "path": "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json",
+      "regular": true,
+      "sha256": "61cf5359aca61cad37651af9c101a00cfb80c3bf5daf3ab48e241218ab230cc0",
+      "size": 65238,
+      "uid": 0
+    },
+    "owner_edit": "config",
+    "owner_release_recovery": {
+      "command": {
+        "argv": [
+          "/usr/libexec/celikpanel/recovery",
+          "recover-dns-pdns-fresh-prestart",
+          "--request-id",
+          "dbf9982f7d79645b1cc9ddfa99573f41"
+        ],
+        "duration_seconds": 2.027471,
+        "output": "The exact fresh PowerDNS prestart operation was restored and its rollback verdict recorded.\n",
+        "output_bytes": 92,
+        "output_sha256": "b10c1f07b1ce327d562fabcfd2015f708abe6dc30383b3711eea772aa5667d4e",
+        "output_truncated": false,
+        "ran": true,
+        "returncode": 0
+      },
+      "ledger": {
+        "after": {
+          "exists": true,
+          "gid": 989,
+          "mode": "0600",
+          "path": "/var/lib/celikpanel-agent-private/service-mutations.json",
+          "regular": true,
+          "sha256": "c46a9fdebe50837c8aea01445bcf9100080e5a053ef4e6301ec9fb4cfbad8c60",
+          "size": 2202,
+          "uid": 0
+        },
+        "before": {
+          "exists": true,
+          "gid": 989,
+          "mode": "0600",
+          "path": "/var/lib/celikpanel-agent-private/service-mutations.json",
+          "regular": true,
+          "sha256": "c46a9fdebe50837c8aea01445bcf9100080e5a053ef4e6301ec9fb4cfbad8c60",
+          "size": 2202,
+          "uid": 0
+        }
+      },
+      "pre_install": {
+        "config_before": [
+          {
+            "exists": true,
+            "path": "/etc/powerdns/pdns.conf",
+            "sha256": "8b46927e48be83b2f0afc38efabdc2e2237daa5281b1a07ea44989ffa41f262a",
+            "want_exists": true,
+            "want_sha256": "8b46927e48be83b2f0afc38efabdc2e2237daa5281b1a07ea44989ffa41f262a"
+          },
+          {
+            "exists": false,
+            "path": "/etc/powerdns/pdns.d/celikpanel-cluster.conf",
+            "sha256": null,
+            "want_exists": false,
+            "want_sha256": null
+          },
+          {
+            "exists": false,
+            "path": "/etc/powerdns/pdns.d/celikpanel.conf",
+            "sha256": null,
+            "want_exists": false,
+            "want_sha256": null
+          }
+        ],
+        "database_paths_present": [],
+        "dns_units": {
+          "bind9.service": "inactive",
+          "named.service": "inactive",
+          "pdns.service": "inactive"
+        },
+        "failures": [],
+        "pdns_unit": {
+          "ActiveState": "inactive",
+          "LoadState": "masked",
+          "MainPID": "0",
+          "SubState": "dead",
+          "UnitFileState": "masked"
+        },
+        "port53_listeners": {
+          "tcp": [],
+          "udp": []
+        },
+        "unknown": []
+      },
+      "released_job": {
+        "attempt": 1,
+        "deadline_at": "2026-09-30T00:30:58.858533481Z",
+        "error_code": "dns_native_recovery_unknown_after_restart",
+        "error_message": "The first install of PowerDNS as the paired primary found that the PowerDNS configuration is not as this install wrote it (an administrator edit, PowerDNS behaviour CelikPanel has not measured, or a file it could not read). CelikPanel kept that change and neither continued nor undid the install. The PowerDNS service is not running on this server now, so this server does not answer DNS. The operation's journal and the PowerDNS database are kept and block new DNS changes; other server changes can continue. Next step: the server administrator reviews that change and runs /usr/libexec/celikpanel/recovery dns-switch-status --quiesced --request-id dbf9982f7d79645b1cc9ddfa99573f41. Restarting the Agent retries the same operation only when the change is back as the install wrote it; otherwise contact support with request id dbf9982f7d79645b1cc9ddfa99573f41.",
+        "finished_at": "2026-09-29T23:46:14.658156975Z",
+        "kind": "dns_engine_switch",
+        "lease_expires_at": "0001-01-01T00:00:00Z",
+        "owner_id": "8701708c97e8713aa8f6121242121ae0",
+        "package_name": "dns-engine-switch/v1:sha256:8c27f70fec9a59c5a3a0dcdc3c7ab32355ab11fc4ebfe3028e3a74ff4e55e5c5",
+        "phase": "interrupted",
+        "request_id": "dbf9982f7d79645b1cc9ddfa99573f41",
+        "started_at": "2026-09-29T23:45:58.858533481Z",
+        "status": "failed",
+        "target": "pdns",
+        "updated_at": "2026-09-29T23:46:14.658156975Z"
+      },
+      "rerun": {
+        "argv": [
+          "/usr/libexec/celikpanel/recovery",
+          "recover-dns-pdns-fresh-prestart",
+          "--request-id",
+          "dbf9982f7d79645b1cc9ddfa99573f41"
+        ],
+        "duration_seconds": 0.52021,
+        "output": "Request dbf9982f7d79645b1cc9ddfa99573f41 is already reconciled: the Agent released this interrupted DNS switch and its journal has since been retired, by this command or by a later Agent start; the evidence cannot tell which. Nothing was changed now. This request no longer blocks DNS changes. This command does not check current DNS health. Before another switch, check the current DNS engine and authoritative DNS answers in the panel.\n",
+        "output_bytes": 438,
+        "output_sha256": "8b1c6a32349df6914f57c30e6e107c98c1a69e1863fde5cabdd10d8368957b56",
+        "output_truncated": false,
+        "ran": true,
+        "returncode": 0
+      },
+      "revert": {
+        "path": "/etc/powerdns/pdns.conf",
+        "sha256": "8b46927e48be83b2f0afc38efabdc2e2237daa5281b1a07ea44989ffa41f262a",
+        "size": 20579
+      },
+      "status": {
+        "available": true,
+        "changed_evidence": [],
+        "command": {
+          "argv": [
+            "/usr/libexec/celikpanel/recovery",
+            "dns-switch-status",
+            "--quiesced",
+            "--request-id",
+            "dbf9982f7d79645b1cc9ddfa99573f41"
+          ],
+          "duration_seconds": 0.114846,
+          "output": "DNS switch request dbf9982f7d79645b1cc9ddfa99573f41: released-undecided-with-journal (journal phase target-staged).\nThe Agent held the first install of PowerDNS as the paired primary (journal phase target-staged; the journal records no PowerDNS start) because the PowerDNS configuration was not as the install wrote it. This check now finds the PowerDNS configuration, the database and CelikPanel's DNS records as the install wrote them, so that change is no longer present. The install has not continued or been undone yet; its journal still blocks new DNS changes. Next step, for the server owner: restart the Agent (systemctl restart celikpanel-agent), which then re-checks this install and undoes it by itself when it proves that PowerDNS never started. Without the Agent, /usr/libexec/celikpanel/recovery recover-dns-pdns-fresh-prestart --request-id dbf9982f7d79645b1cc9ddfa99573f41 restores the state before the install; it proves again that PowerDNS never started and refuses a started or changed target. If the Agent holds the install again, rerun /usr/libexec/celikpanel/recovery dns-switch-status --quiesced --request-id dbf9982f7d79645b1cc9ddfa99573f41. This status check changed nothing.\nFrozen native inverse shape: pdns-switch. This classification does not prove worker exclusion, owner authority or safe recovery execution.\nThe current DNS state receipt is absent. This alone does not prove that an inverse is safe; preserve the journal and inspect native DNS before recovery.\nThe journal and current state both have no source receipt. This is not proof that DNS was rolled back or is healthy; the server owner must inspect native DNS before resuming this operation.\nThe switch has no previous DNS engine, so no frozen source ownership receipt is required. Native DNS still needs verification before the operation resumes.\nNative unit pdns.service: load=masked active=inactive unit-file=masked.\nThese systemd properties were observed at one instant; they do not prove DNS answers, zone content, owner edits or recovery authority.\nRelease and host mutation locks were held; the same evidence bytes and native unit properties matched again after native checks, and the accepted worker was rechecked. Future worker liveness, unobserved DNS answers, owner edits and recovery authority remain unproved.\n",
+          "output_bytes": 2313,
+          "output_sha256": "b335db5165215bde5847fc52688bece704f6b7d10671341cd0b1e98f4df0e1e1",
+          "output_truncated": false,
+          "ran": true,
+          "returncode": 0
+        },
+        "judged": "made no mutation only",
+        "mutated": false,
+        "stage": "owner-release"
+      }
+    },
+    "panel": {
+      "detail": {
+        "address": "127.0.0.1",
+        "port": 2083
+      },
+      "ok": true
+    },
+    "panel_restart": {
+      "argv": [
+        "/usr/bin/systemctl",
+        "restart",
+        "celikpanel-panel.service"
+      ],
+      "duration_seconds": 0.032301,
+      "output_bytes": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "output_truncated": false,
+      "returncode": 0
+    },
+    "release": {
+      "job": {
+        "attempt": 1,
+        "deadline_at": "2026-09-30T00:30:58.858533481Z",
+        "error_code": "dns_native_recovery_unknown_after_restart",
+        "error_message": "The first install of PowerDNS as the paired primary found that the PowerDNS configuration is not as this install wrote it (an administrator edit, PowerDNS behaviour CelikPanel has not measured, or a file it could not read). CelikPanel kept that change and neither continued nor undid the install. The PowerDNS service is not running on this server now, so this server does not answer DNS. The operation's journal and the PowerDNS database are kept and block new DNS changes; other server changes can continue. Next step: the server administrator reviews that change and runs /usr/libexec/celikpanel/recovery dns-switch-status --quiesced --request-id dbf9982f7d79645b1cc9ddfa99573f41. Restarting the Agent retries the same operation only when the change is back as the install wrote it; otherwise contact support with request id dbf9982f7d79645b1cc9ddfa99573f41.",
+        "finished_at": "2026-09-29T23:46:14.658156975Z",
+        "kind": "dns_engine_switch",
+        "lease_expires_at": "0001-01-01T00:00:00Z",
+        "owner_id": "8701708c97e8713aa8f6121242121ae0",
+        "package_name": "dns-engine-switch/v1:sha256:8c27f70fec9a59c5a3a0dcdc3c7ab32355ab11fc4ebfe3028e3a74ff4e55e5c5",
+        "phase": "interrupted",
+        "request_id": "dbf9982f7d79645b1cc9ddfa99573f41",
+        "started_at": "2026-09-29T23:45:58.858533481Z",
+        "status": "failed",
+        "target": "pdns",
+        "updated_at": "2026-09-29T23:46:14.658156975Z"
+      },
+      "ledger": {
+        "active_request_id": "",
+        "sha256": "eed3f3b62bbf722d02b17eda1c1090dcd992160baaacbdf4f38e3ea4abbd7748"
+      },
+      "reads": 1,
+      "released": true
+    },
+    "release_message": "The first install of PowerDNS as the paired primary found that the PowerDNS configuration is not as this install wrote it (an administrator edit, PowerDNS behaviour CelikPanel has not measured, or a file it could not read). CelikPanel kept that change and neither continued nor undid the install. The PowerDNS service is not running on this server now, so this server does not answer DNS. The operation's journal and the PowerDNS database are kept and block new DNS changes; other server changes can continue. Next step: the server administrator reviews that change and runs /usr/libexec/celikpanel/recovery dns-switch-status --quiesced --request-id dbf9982f7d79645b1cc9ddfa99573f41. Restarting the Agent retries the same operation only when the change is back as the install wrote it; otherwise contact support with request id dbf9982f7d79645b1cc9ddfa99573f41.",
+    "status": "passed",
+    "unknown": [],
+    "unrelated_begin": {
+      "command": {
+        "argv": [
+          "/opt/celikpanel/bin/dns-kill-trigger",
+          "rpc-unrelated-begin",
+          "--timeout",
+          "30s"
+        ],
+        "duration_seconds": 0.11802,
+        "output_bytes": 248,
+        "output_sha256": "93bd6f6dbb179d5dcaa7cb7048d7a0c1d083331a08ed861417f5191898912be9",
+        "output_truncated": false,
+        "returncode": 0
+      },
+      "result": {
+        "begun": true,
+        "final_status": "failed",
+        "finished": true,
+        "kind": "service_install",
+        "owner_id": "987bb697f82915c8bed3f035e9a6a28d",
+        "request_id": "171031c342d3eb33ec5f3d9de3e92fe6",
+        "schema": "celikpanel/dns-kill-matrix-unrelated-begin/v1",
+        "target": "nginx"
+      },
+      "verdict": "dns-only"
+    },
+    "variant": "pre-start"
+  },
+  "gate_probe": {
+    "agent_error": "a valid durable service mutation lease is required",
+    "command": {
+      "argv": [
+        "/opt/celikpanel/bin/dns-kill-trigger",
+        "rpc-gate-probe",
+        "--scenario",
+        "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+        "--timeout",
+        "60s"
+      ],
+      "duration_seconds": 0.008161,
+      "output_bytes": 456,
+      "output_sha256": "451e209e43c8c4f1289a94ad339864c821e0a62adc18ceb1702e63946b59d73b",
+      "output_truncated": false,
+      "returncode": 0
+    },
+    "detail": "the Agent admitted the manifest past its product gate and refused only the missing lease; nothing was changed",
+    "gate": "open",
+    "manifest_qualifier": "dns-engine-switch/v1:sha256:8c27f70fec9a59c5a3a0dcdc3c7ab32355ab11fc4ebfe3028e3a74ff4e55e5c5"
+  },
+  "host_idle_before_trigger": {
+    "busy": [],
+    "idle": true,
+    "polls": 2,
+    "settle_answers": 2,
+    "source": "Agent.ServiceMutationReadiness (read-only) and /proc, ledger reads",
+    "timeout_seconds": 120.0,
+    "waited_seconds": 1.017
+  },
+  "initial_journal": {
+    "exists": false
+  },
+  "journal_at_boundary": {
+    "device": 65025,
+    "exists": true,
+    "expected_phase": "target-staged",
+    "inode": 131616,
+    "mode": "0600",
+    "observed_phase": "target-staged",
+    "request_id": "dbf9982f7d79645b1cc9ddfa99573f41",
+    "sha256": "61cf5359aca61cad37651af9c101a00cfb80c3bf5daf3ab48e241218ab230cc0"
+  },
+  "kill": {
+    "delivered_at": "2026-09-29T23:46:14.296921Z",
+    "exit_code": 137,
+    "pid": 1897,
+    "proc_entry_absent_after_reap": true,
+    "process_start_ticks": "18038",
+    "raw_returncode": -9,
+    "signal": "SIGKILL",
+    "signal_number": 9,
+    "state_before_signal": "T"
+  },
+  "kill_proven": true,
+  "native_versions": {
+    "after": {
+      "at": "2026-09-29T23:46:47.928136Z",
+      "daemons": {
+        "pdns_server": {
+          "output": "Sep 29 23:46:48 PowerDNS Authoritative Server 4.9.17 (C) PowerDNS.COM BV\nSep 29 23:46:48 Using 64-bits mode. Built using gcc 14.2.0.\nSep 29 23:46:48 PowerDNS comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it according to the terms of the GPL version 2.\nSep 29 23:46:48 Features: libcrypto-ecdsa libcrypto-ed25519 libcrypto-ed448 libcrypto-eddsa libgeoip libmaxminddb lua lua-records PKCS#11 protobuf sodium curl scrypt \nSep 29 23:46:48 Built-in modules: \nSep 29 23:",
+          "returncode": 0
+        }
+      },
+      "package_manager": "dpkg",
+      "packages": {
+        "bind9": null,
+        "bind9-host": "1:9.20.26-1~deb13u1",
+        "bind9-libs": "1:9.20.26-1~deb13u1",
+        "pdns-backend-sqlite3": "4.9.17-0+deb13u1",
+        "pdns-server": "4.9.17-0+deb13u1"
+      }
+    },
+    "before": {
+      "at": "2026-09-29T23:45:57.748651Z",
+      "daemons": {},
+      "package_manager": "dpkg",
+      "packages": {
+        "bind9": null,
+        "bind9-host": "1:9.20.26-1~deb13u1",
+        "bind9-libs": "1:9.20.26-1~deb13u1",
+        "pdns-backend-sqlite3": null,
+        "pdns-server": null
+      }
+    }
+  },
+  "nonce": "c430537440a2eaac8b368b9a6ecdfcd27e6dae55f5a3ab695f5fb08cccff3a69",
+  "peer_after_kill": {
+    "expected": "reachable",
+    "samples": [
+      {
+        "address": "192.0.2.11",
+        "banner": "SSH-2.0-OpenSSH_10.5",
+        "elapsed_seconds": 0.014380407000004425,
+        "ordinal": 1,
+        "port": 22,
+        "reachable": true
+      }
+    ]
+  },
+  "peer_before_tagged_agent": {
+    "applicable": true,
+    "expected": "reachable",
+    "observation": {
+      "address": "192.0.2.11",
+      "banner": "SSH-2.0-OpenSSH_10.5",
+      "elapsed_seconds": 0.010760033999986263,
+      "port": 22
+    }
+  },
+  "peer_reachability": "reachable",
+  "production_paths": {
+    "agent_token": {
+      "device": 65025,
+      "gid": 989,
+      "inode": 131426,
+      "mode": "0640",
+      "path": "/etc/celikpanel/agent.token",
+      "size": 65,
+      "uid": 0
+    },
+    "dkim_directory": {
+      "device": 65025,
+      "inode": 131306,
+      "path": "/etc/celikpanel/dkim"
+    },
+    "runtimes_directory": {
+      "device": 65025,
+      "inode": 131302,
+      "path": "/opt/celikpanel/runtimes"
+    }
+  },
+  "proof": {
+    "path": "/var/lib/celikpanel-dns-kill-matrix/results/pdns-switch__target-staged__after-write__paired-primary__peer-reachable/kill-proof.json",
+    "sha256": "54861b378689378629b304d6dd6aaf4601cafe555c061c0ac471fd2fb0c29f92"
+  },
+  "ready_pipe": {
+    "bytes": 65,
+    "fd": 5,
+    "payload_sha256": "bb9f02209901da99f61ebeb0d24d2a3d8747626cd35897741d31218c74ff9504"
+  },
+  "request_id": "dbf9982f7d79645b1cc9ddfa99573f41",
+  "role": "paired-primary",
+  "safety_failures": [],
+  "safety_status": "passed",
+  "scenario_trigger_returncode": 75,
+  "schema": "celikpanel/dns-kill-result/v1",
+  "source_dns_before_tagged_agent": {
+    "queried": false,
+    "reason": "exact uninitialized source; avoid querying an unrelated resolver"
+  },
+  "source_dns_units_before_tagged_agent": {
+    "bind9.service": "inactive",
+    "named.service": "inactive",
+    "pdns.service": "inactive"
+  },
+  "source_proof": {
+    "authoritative_preflight": {
+      "address": "10.0.2.15",
+      "claimed": false,
+      "name": "www.s1-kill.test",
+      "port": 53,
+      "tcp": false,
+      "type": "A",
+      "udp": false
+    },
+    "cell_id": "pdns-switch__target-staged__after-write__paired-primary__peer-reachable",
+    "device": 65025,
+    "engine": "",
+    "engine_epoch": 0,
+    "engine_state_receipt": {
+      "identity": null,
+      "path": "",
+      "sha256": ""
+    },
+    "external_pdns_preimage": {
+      "exists": false,
+      "path": "absent",
+      "sha256": "absent"
+    },
+    "identity_receipt_path": "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+    "identity_receipt_preexisting": false,
+    "inode": 131481,
+    "mode": "0600",
+    "owner_bind_native_source": null,
+    "path": "/var/lib/celikpanel-dns-kill-matrix/source-proof.json",
+    "peer_ip": "192.0.2.11",
+    "receipt_origin": "absent-by-proof",
+    "scenario": {
+      "device": 65025,
+      "inode": 131479,
+      "mode": "0600",
+      "path": "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+      "sha256": "e38a7dbe188d4a15f3e76478894dfc0d6cdebbf42c8f365fe0c947d12bc1cd26"
+    },
+    "scenario_identity": {
+      "mode": "switch",
+      "pair_role": "primary",
+      "source_engine": "",
+      "source_epoch": 0,
+      "source_revision": 0,
+      "target_engine": "pdns",
+      "target_epoch": 1,
+      "topology": "paired"
+    },
+    "schema": "celikpanel/dns-kill-source-proof/v1",
+    "serving_before_tagged_agent": false,
+    "sha256": "cf49f6689fd7ef61cf1a525001d23732e98b362cfde2f46d77270110635404ad",
+    "source_adoption_proof": {
+      "exists": false,
+      "path": "absent",
+      "sha256": "absent"
+    },
+    "source_fixture": "uninitialized",
+    "source_normalization": {
+      "exists": false,
+      "path": "absent",
+      "sha256": "absent"
+    },
+    "source_ownership_receipts": {
+      "install_bind": {
+        "exists": false,
+        "path": "/var/lib/celikpanel-agent-private/dns-engine-install-ownership-bind.json"
+      },
+      "install_pdns": {
+        "exists": false,
+        "path": "/var/lib/celikpanel-agent-private/dns-engine-install-ownership-pdns.json"
+      },
+      "ownership_bind": {
+        "exists": false,
+        "path": "/var/lib/celikpanel-agent-private/dns-engine-ownership-bind.json"
+      },
+      "ownership_pdns": {
+        "exists": false,
+        "path": "/var/lib/celikpanel-agent-private/dns-engine-ownership-pdns.json"
+      }
+    },
+    "source_preinstall_proof": {
+      "exists": false,
+      "path": "absent",
+      "sha256": "absent"
+    },
+    "source_revision": 0,
+    "source_setup_identity_receipt_sha256": "absent",
+    "source_setup_scenario_sha256": "absent",
+    "topology": "paired",
+    "uninitialized_global_port53": {
+      "authoritative_answer_observed": false,
+      "tcp_bindable": true,
+      "udp_bindable": true
+    }
+  },
+  "stability": {
+    "dns_judged": false,
+    "dns_only": false,
+    "duration_seconds": 30.0,
+    "elapsed_seconds": 30.100159,
+    "interval_seconds": 1.0,
+    "sample_count": 31,
+    "samples": [
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:17.827915Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 1,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.018696064000010892,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:18.828214Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 2,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.014566629999990255,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:19.828277Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 3,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.015728281999997762,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:20.830787Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 4,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.098653325000015,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:21.828153Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 5,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.013466270000009217,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:22.829328Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 6,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.10404061399998454,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:23.835563Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 7,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.09696448900001542,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:24.843219Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 8,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.1366716409999924,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:25.830129Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 9,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.033132378999994216,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:26.828597Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 10,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.07046602400001234,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:27.830379Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 11,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.19058295799999314,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:28.828261Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 12,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.04062818299999549,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:29.830612Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 13,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.07305652199997326,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:30.833924Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 14,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.9786883310000007,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:32.547281Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 15,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.22371730099999354,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:32.829545Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 16,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.19381446700000993,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:33.900029Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 17,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.22806138600000736,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:34.835058Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 18,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.13640362600000344,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:35.830724Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 19,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.04922578200000771,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:36.828190Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 20,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.02327866400000289,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:37.828706Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 21,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.04122793700000216,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:38.858645Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 22,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.07297530099998539,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:39.831542Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 23,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.10379111699998589,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:40.828081Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 24,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.02973394599999324,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:41.838925Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 25,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.061107792999990806,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:42.828971Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 26,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.029052035000006526,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:43.828628Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 27,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.026274634000003516,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:44.828227Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 28,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.01777268500001128,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:45.828858Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 29,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.04624936600001206,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:46.828427Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 30,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.023444675000007464,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      },
+      {
+        "agent": {
+          "detail": {
+            "device": 25,
+            "inode": 2394
+          },
+          "ok": true
+        },
+        "at": "2026-09-29T23:46:47.828370Z",
+        "dns": {
+          "error": "[Errno 111] Connection refused",
+          "ok": false
+        },
+        "ordinal": 31,
+        "panel": {
+          "detail": {
+            "address": "127.0.0.1",
+            "port": 2083
+          },
+          "ok": true
+        },
+        "peer": {
+          "address": "192.0.2.11",
+          "banner": "SSH-2.0-OpenSSH_10.5",
+          "elapsed_seconds": 0.09833019900000295,
+          "expected": "reachable",
+          "port": 22,
+          "reachable": true
+        }
+      }
+    ]
+  },
+  "started_at": "2026-09-29T23:45:57.723999Z",
+  "status": "passed",
+  "tagged_agent": {
+    "pid": 1897,
+    "process_identity": {
+      "gids": [
+        989,
+        989,
+        989,
+        989
+      ],
+      "pid": 1897,
+      "uids": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "umask": "0027"
+    },
+    "process_start_ticks": "18038",
+    "socket_identity": {
+      "device": 25,
+      "inode": 2226
+    }
+  },
+  "timeouts_seconds": {
+    "boundary": 2700.0,
+    "command": 2700.0,
+    "dns": 5.0,
+    "endpoint": 60.0,
+    "kill": 15.0,
+    "recovery": 2700.0,
+    "stability": 30.0,
+    "stability_interval": 1.0,
+    "startup": 60.0,
+    "stop": 15.0
+  },
+  "transcript": {
+    "path": "/var/lib/celikpanel-dns-kill-matrix/results/pdns-switch__target-staged__after-write__paired-primary__peer-reachable/transcript.jsonl",
+    "sha256": "bea161bd08174a45bbe2721ba4a9e54f3f7f6d0dceed9eea183a72ad0120bcd1"
+  },
+  "trigger_identity_receipt": {
+    "cell_id": "pdns-switch__target-staged__after-write__paired-primary__peer-reachable",
+    "device": 65025,
+    "driver": "pdns-switch",
+    "inode": 131491,
+    "manifest_qualifier": "dns-engine-switch/v1:sha256:8c27f70fec9a59c5a3a0dcdc3c7ab32355ab11fc4ebfe3028e3a74ff4e55e5c5",
+    "mode": "0600",
+    "owner_id": "8701708c97e8713aa8f6121242121ae0",
+    "path": "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+    "request_id": "dbf9982f7d79645b1cc9ddfa99573f41",
+    "schema": "celikpanel-dns-kill-matrix-trigger-identity/v1",
+    "sha256": "301e29131093e190b5f32bc469f23262de9f4036741f39fe5f3e680bd13a0aea",
+    "source_fixture": "uninitialized"
+  },
+  "trigger_mode": "socket",
+  "uninitialized_global_port53_before_tagged_agent": {
+    "address": "10.0.2.15",
+    "authoritative_answer_observed": false,
+    "port": 53,
+    "tcp_bindable": true,
+    "udp_bindable": true
+  },
+  "verification_failures": []
+}

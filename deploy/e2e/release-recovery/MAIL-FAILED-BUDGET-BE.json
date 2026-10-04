@@ -1,0 +1,24 @@
+{
+  "schema": "celikpanel/native-mail-failed-budget/v1",
+  "source_commit": "bbd81cc2d108fd0d79fd7fba6b144571bc6800e3",
+  "binary_sha256": "a99cb644dd235e2dfe477768994167f1ea0f99ac4db050f95c973f06e56d2102",
+  "lab": {
+    "cell_id": "release-recovery__3688d130a0721786",
+    "node": "debian13"
+  },
+  "scope": {
+    "terminal_failed_retry": true,
+    "fresh_processes": true,
+    "native_owner_config_conflict": true,
+    "same_operation_owner_retry": true,
+    "management_absent": true,
+    "automatic_timer_dispatch": false,
+    "preselection_interruption": false,
+    "production_enrollment": false,
+    "power_loss": false
+  },
+  "log": {
+    "text": "Started celikpanel-lab-mail-failed-attempt1.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-failed-budget-renew --process-pending.\nmail renewal remains pending; the server owner must review the retained operation and native mail service status before retrying; no general recovery was started\ncelikpanel-lab-mail-failed-attempt1.service: Main process exited, code=exited, status=1/FAILURE\ncelikpanel-lab-mail-failed-attempt1.service: Failed with result 'exit-code'.\n\nfailed_attempt=1 request=79066f5075f0b92fe8ce964819030c60 selected=unchanged owner_conflict=preserved queue=preserved\nStarted celikpanel-lab-mail-failed-attempt2.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-failed-budget-renew --process-pending.\nmail renewal remains pending; the server owner must review the retained operation and native mail service status before retrying; no general recovery was started\ncelikpanel-lab-mail-failed-attempt2.service: Main process exited, code=exited, status=1/FAILURE\ncelikpanel-lab-mail-failed-attempt2.service: Failed with result 'exit-code'.\n\nfailed_attempt=2 request=79066f5075f0b92fe8ce964819030c60 selected=unchanged owner_conflict=preserved queue=preserved\nStarted celikpanel-lab-mail-failed-attempt3.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-failed-budget-renew --process-pending.\nmail renewal remains pending; the server owner must review the retained operation and native mail service status before retrying; no general recovery was started\ncelikpanel-lab-mail-failed-attempt3.service: Main process exited, code=exited, status=1/FAILURE\ncelikpanel-lab-mail-failed-attempt3.service: Failed with result 'exit-code'.\n\nfailed_attempt=3 request=79066f5075f0b92fe8ce964819030c60 selected=unchanged owner_conflict=preserved queue=preserved\nStarted celikpanel-lab-mail-failed-exhausted.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-failed-budget-renew --process-pending.\nmail renewal automatic execution is paused after three recorded attempts for operation 79066f5075f0b92fe8ce964819030c60; the server owner must inspect the retained failure and accepted mail configuration, resolve the cause, then run the installed renewal helper with --retry-failed 79066f5075f0b92fe8ce964819030c60 for one explicit attempt; the current certificate and pending work are preserved\ncelikpanel-lab-mail-failed-exhausted.service: Main process exited, code=exited, status=1/FAILURE\ncelikpanel-lab-mail-failed-exhausted.service: Failed with result 'exit-code'.\n\nStarted celikpanel-lab-mail-failed-wrong-owner.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-failed-budget-renew --retry-failed 00000000000000000000000000000000.\nmail renewal remains pending; the server owner must review the retained operation and native mail service status before retrying; no general recovery was started\ncelikpanel-lab-mail-failed-wrong-owner.service: Main process exited, code=exited, status=1/FAILURE\ncelikpanel-lab-mail-failed-wrong-owner.service: Failed with result 'exit-code'.\n\nautomatic_budget=exhausted wrong_owner=refused ledger=unchanged trusted_old_listeners=verified\nStarted celikpanel-lab-mail-failed-owner.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-failed-budget-renew --retry-failed 79066f5075f0b92fe8ce964819030c60.\ncelikpanel-lab-mail-failed-owner.service: Deactivated successfully.\n\nexplicit_failed_retry=verified request=79066f5075f0b92fe8ce964819030c60 attempt=4 leaf=65a3ae295898b4339f99f4c1b7afeb1f72a8277983b70e4fc098cabc79e6347d trusted_listeners={\"587\": \"65a3ae295898b4339f99f4c1b7afeb1f72a8277983b70e4fc098cabc79e6347d\", \"993\": \"65a3ae295898b4339f99f4c1b7afeb1f72a8277983b70e4fc098cabc79e6347d\"} original_native_inodes=restored foreign_history=preserved queue=acknowledged management=absent timer=restored\n",
+    "sha256": "b83ecfd8d21c4230a6609870bb32b270fae54ec44f456800b8daf4cd8a1db037"
+  }
+}

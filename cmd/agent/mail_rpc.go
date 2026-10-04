@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -35,6 +36,9 @@ var (
 )
 
 func init() {
+	if mailRenewalOnlyBuild {
+		return
+	}
 	if d := os.Getenv("CELIKPANEL_MAIL_DIR"); d != "" {
 		postfixVBoxPath = filepath.Join(d, "vmailbox")
 		postfixVirtualPath = filepath.Join(d, "virtual")
@@ -308,7 +312,7 @@ func (a *Agent) UpdateMailPassword(req *transport.UpdateMailPasswordRequest, res
 	}
 
 	if !mailMutex.TryLock() {
-		return fmt.Errorf("mail configuration is busy; retry the mailbox password update")
+		return errors.New(transport.MailConfigurationBusy)
 	}
 	defer mailMutex.Unlock()
 	if err := validateDovecotUsersFileMetadata(dovecotUsersPath, true); err != nil {

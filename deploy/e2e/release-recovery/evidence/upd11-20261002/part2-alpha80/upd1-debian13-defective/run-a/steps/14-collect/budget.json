@@ -1,0 +1,21 @@
+{
+  "present": true,
+  "receipts": [
+    {
+      "mtime": 1790942032.3338726,
+      "mtime_utc": "2026-10-02T11:53:52.333873Z",
+      "name": "1",
+      "sha256": "b9d3246047a41fb4b478ee2c82040a86e14fb01c602c20c461b7fe7dbc16240d",
+      "snapshot": "20261002T115314Z-from-unknown-to-ca9c11d17a76b98aaccb3512ee87a94c80b44b04-29c5a067f7d684d6c829258162d934ff",
+      "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20261002T115314Z-from-unknown-to-ca9c11d17a76b98aaccb3512ee87a94c80b44b04-29c5a067f7d684d6c829258162d934ff\nattempt=1\ntoken_sha256=[REDACTED]\noperation=update\nphase=active\n"
+    },
+    {
+      "mtime": 1790942101.8643723,
+      "mtime_utc": "2026-10-02T11:55:01.864372Z",
+      "name": "2",
+      "sha256": "3a8c05ca5386a8189b0541991bc966caae438b53408afb521bce9bc5019a1dcf",
+      "snapshot": "20261002T115314Z-from-unknown-to-ca9c11d17a76b98aaccb3512ee87a94c80b44b04-29c5a067f7d684d6c829258162d934ff",
+      "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20261002T115314Z-from-unknown-to-ca9c11d17a76b98aaccb3512ee87a94c80b44b04-29c5a067f7d684d6c829258162d934ff\nattempt=2\ntoken_sha256=[REDACTED]\noperation=rollback\nphase=active\n"
+    }
+  ]
+}

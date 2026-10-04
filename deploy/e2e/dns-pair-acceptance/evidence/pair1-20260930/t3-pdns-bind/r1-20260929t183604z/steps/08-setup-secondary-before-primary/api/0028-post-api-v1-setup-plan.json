@@ -1,0 +1,149 @@
+{
+  "outcome": "response",
+  "panel": "arch",
+  "purpose": "ServerSetup review",
+  "request": {
+    "body": {
+      "revision": 2
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:28444"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:28444"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/setup/plan"
+  },
+  "response": {
+    "elapsed_seconds": 0.62,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Tue, 29 Sep 2026 18:41:00 GMT"
+      ],
+      [
+        "Content-Length",
+        "1152"
+      ]
+    ],
+    "json": {
+      "actor": {
+        "IP": "127.0.0.1",
+        "UserAgent": "",
+        "UserID": 2
+      },
+      "blockers": [],
+      "build_commit": "aa6b93808e57c5586e513601953b4db07ef6328f",
+      "can_start": true,
+      "contact_email": "owner@ns-accept.test",
+      "draft": {
+        "database": "",
+        "dns_engine": "bind",
+        "dns_mode": "local",
+        "dns_role": "secondary",
+        "local_ip": "192.0.2.11",
+        "mail_hostname": "",
+        "node_version": "",
+        "ns1": "ns1.ns-accept.test",
+        "ns2": "ns2.ns-accept.test",
+        "panel_domain": "panel-arch.ns-accept.test",
+        "peer_ip": "192.0.2.10",
+        "peer_ns": "ns1.ns-accept.test",
+        "purpose": "dns",
+        "remote_dns_connection_id": ""
+      },
+      "id": "d1df767396cd7628eb3171d7ae2892e9",
+      "persist_firewall": true,
+      "preserve_ssh": true,
+      "purpose": "dns",
+      "revision": 2,
+      "server_ip": "192.0.2.11",
+      "steps": [
+        {
+          "id": "01-dns",
+          "kind": "dns",
+          "target": "local"
+        },
+        {
+          "id": "02-service",
+          "kind": "service",
+          "target": "certbot"
+        },
+        {
+          "id": "03-firewall",
+          "kind": "firewall",
+          "target": "enable_and_persist"
+        },
+        {
+          "id": "04-access_dns",
+          "kind": "access_dns",
+          "qualifier": "192.0.2.11",
+          "target": "panel-arch.ns-accept.test"
+        },
+        {
+          "id": "05-panel_certificate",
+          "kind": "panel_certificate",
+          "target": "panel-arch.ns-accept.test"
+        },
+        {
+          "id": "06-verify",
+          "kind": "verify",
+          "target": "dns"
+        }
+      ],
+      "tcp_ports": [
+        22,
+        53,
+        80,
+        2083
+      ],
+      "udp_ports": [
+        53
+      ],
+      "version": 1
+    },
+    "status": 200,
+    "text": null
+  }
+}

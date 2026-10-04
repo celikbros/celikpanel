@@ -1,0 +1,206 @@
+wall=2026-09-29T16:44:05.517969604Z boot_id=e39a73d5-b1af-4fcc-9991-aa8df3e14b3f
+== /var/lib/dpkg/statoverride
+-rw-r--r-- 1 root celikpanel 96 2026-09-29 16:40:29.262635543 +0000 /var/lib/dpkg/statoverride
+-rw-r--r-- 1 root root       65 2026-08-26 05:07:47.584577683 +0000 /var/lib/dpkg/statoverride-old
+root bind 1775 /var/cache/bind
+root messagebus 4754 /usr/lib/dbus-1.0/dbus-daemon-launch-helper
+== getent group bind
+rc=2
+== getent passwd bind
+rc=2
+== /var/cache/bind
+total 20
+drwxrwxr-t  3 root  104 4096 2026-09-29 16:40:38.898686208 +0000 .
+drwxr-xr-x 10 root root 4096 2026-09-29 16:40:24.058591937 +0000 ..
+drwxr-xr-x  3 root root 4096 2026-09-29 16:40:30.062641078 +0000 celikpanel
+-rw-r--r--  1  103  104 1336 2026-09-29 16:40:34.058664687 +0000 managed-keys.bind.jnl
+-rw-r--r--  1  103  104 1411 2026-09-29 16:40:38.902686224 +0000 tmp-fdwQ4HcX4R
+/var/cache/bind 1775 root:UNKNOWN 0:104
+== dpkg -l bind9*
+bind9-host 1:9.20.29-1~deb13u1 ii 
+bind9-libs 1:9.20.29-1~deb13u1 ii 
+bind9-utils 1:9.20.29-1~deb13u1 ii 
+bind9utils  un 
+== dpkg --audit (read-only)
+rc=0
+== apt history (last 60 lines)
+
+Start-Date: 2026-09-29  16:40:22
+Commandline: /usr/bin/apt-get install -y --no-install-recommends bind9
+Install: bind9:amd64 (1:9.20.29-1~deb13u1), bind9-utils:amd64 (1:9.20.29-1~deb13u1, automatic), dns-root-data:amd64 (2025080400~deb13u1, automatic)
+Upgrade: bind9-host:amd64 (1:9.20.26-1~deb13u1, 1:9.20.29-1~deb13u1), bind9-libs:amd64 (1:9.20.26-1~deb13u1, 1:9.20.29-1~deb13u1)
+End-Date: 2026-09-29  16:40:27
+
+Start-Date: 2026-09-29  16:40:39
+Commandline: /usr/bin/apt-get purge -y bind9
+Requested-By: celik (1000)
+Purge: bind9:amd64 (1:9.20.29-1~deb13u1)
+End-Date: 2026-09-29  16:40:42
+
+Start-Date: 2026-09-29  16:41:48
+Commandline: /usr/bin/apt-get install -y --no-install-recommends bind9
+Install: bind9:amd64 (1:9.20.29-1~deb13u1)
+Error: Sub-process /usr/bin/dpkg returned an error code (2)
+End-Date: 2026-09-29  16:41:48
+== dpkg.log bind lines
+2:2026-09-29 16:40:23 upgrade bind9-host:amd64 1:9.20.26-1~deb13u1 1:9.20.29-1~deb13u1
+3:2026-09-29 16:40:23 status half-configured bind9-host:amd64 1:9.20.26-1~deb13u1
+4:2026-09-29 16:40:23 status unpacked bind9-host:amd64 1:9.20.26-1~deb13u1
+5:2026-09-29 16:40:23 status half-installed bind9-host:amd64 1:9.20.26-1~deb13u1
+7:2026-09-29 16:40:23 status unpacked bind9-host:amd64 1:9.20.29-1~deb13u1
+8:2026-09-29 16:40:23 upgrade bind9-libs:amd64 1:9.20.26-1~deb13u1 1:9.20.29-1~deb13u1
+10:2026-09-29 16:40:23 status half-configured bind9-libs:amd64 1:9.20.26-1~deb13u1
+11:2026-09-29 16:40:23 status unpacked bind9-libs:amd64 1:9.20.26-1~deb13u1
+12:2026-09-29 16:40:23 status half-installed bind9-libs:amd64 1:9.20.26-1~deb13u1
+13:2026-09-29 16:40:23 status unpacked bind9-libs:amd64 1:9.20.29-1~deb13u1
+14:2026-09-29 16:40:23 install bind9-utils:amd64 <none> 1:9.20.29-1~deb13u1
+15:2026-09-29 16:40:23 status half-installed bind9-utils:amd64 1:9.20.29-1~deb13u1
+16:2026-09-29 16:40:23 status unpacked bind9-utils:amd64 1:9.20.29-1~deb13u1
+20:2026-09-29 16:40:23 install bind9:amd64 <none> 1:9.20.29-1~deb13u1
+21:2026-09-29 16:40:23 status half-installed bind9:amd64 1:9.20.29-1~deb13u1
+22:2026-09-29 16:40:24 status unpacked bind9:amd64 1:9.20.29-1~deb13u1
+24:2026-09-29 16:40:24 configure bind9-libs:amd64 1:9.20.29-1~deb13u1 <none>
+25:2026-09-29 16:40:24 status unpacked bind9-libs:amd64 1:9.20.29-1~deb13u1
+26:2026-09-29 16:40:24 status half-configured bind9-libs:amd64 1:9.20.29-1~deb13u1
+27:2026-09-29 16:40:24 status installed bind9-libs:amd64 1:9.20.29-1~deb13u1
+32:2026-09-29 16:40:24 configure bind9-utils:amd64 1:9.20.29-1~deb13u1 <none>
+33:2026-09-29 16:40:24 status unpacked bind9-utils:amd64 1:9.20.29-1~deb13u1
+34:2026-09-29 16:40:24 status half-configured bind9-utils:amd64 1:9.20.29-1~deb13u1
+35:2026-09-29 16:40:24 status installed bind9-utils:amd64 1:9.20.29-1~deb13u1
+36:2026-09-29 16:40:24 configure bind9:amd64 1:9.20.29-1~deb13u1 <none>
+37:2026-09-29 16:40:24 status unpacked bind9:amd64 1:9.20.29-1~deb13u1
+38:2026-09-29 16:40:24 status half-configured bind9:amd64 1:9.20.29-1~deb13u1
+39:2026-09-29 16:40:25 status installed bind9:amd64 1:9.20.29-1~deb13u1
+40:2026-09-29 16:40:25 configure bind9-host:amd64 1:9.20.29-1~deb13u1 <none>
+41:2026-09-29 16:40:25 status unpacked bind9-host:amd64 1:9.20.29-1~deb13u1
+42:2026-09-29 16:40:25 status half-configured bind9-host:amd64 1:9.20.29-1~deb13u1
+43:2026-09-29 16:40:25 status installed bind9-host:amd64 1:9.20.29-1~deb13u1
+51:2026-09-29 16:40:39 status installed bind9:amd64 1:9.20.29-1~deb13u1
+52:2026-09-29 16:40:39 remove bind9:amd64 1:9.20.29-1~deb13u1 <none>
+53:2026-09-29 16:40:39 status half-configured bind9:amd64 1:9.20.29-1~deb13u1
+54:2026-09-29 16:40:40 status half-installed bind9:amd64 1:9.20.29-1~deb13u1
+56:2026-09-29 16:40:40 status config-files bind9:amd64 1:9.20.29-1~deb13u1
+62:2026-09-29 16:40:41 purge bind9:amd64 1:9.20.29-1~deb13u1 <none>
+63:2026-09-29 16:40:41 status config-files bind9:amd64 1:9.20.29-1~deb13u1
+64:2026-09-29 16:40:41 status not-installed bind9:amd64 <none>
+== private evidence
+total 24
+drwx------  2 root celikpanel 4096 2026-09-29 16:41:49.829644526 +0000 .
+drwxr-xr-x 28 root root       4096 2026-09-29 16:40:41.702695916 +0000 ..
+-rw-------  1 root celikpanel  372 2026-09-29 16:41:46.985670160 +0000 dns-engine-install-ownership-bind.json
+-rw-------  1 root celikpanel  641 2026-09-29 16:41:46.945670533 +0000 dns-engine-ownership-bind.json
+-rw-------  1 root celikpanel  637 2026-09-29 16:40:37.566680916 +0000 dns-engine-state.json
+-rw-------  1 root celikpanel 1432 2026-09-29 16:41:49.817644632 +0000 service-mutations.json
+565985a05a7dc2beddc0928a5a1fa7b3859a4746f9586147a413b22ad669b5a7  dns-engine-install-ownership-bind.json
+b5eef3763cdb12a4bcd029ed1da3d0979e621c3788ba079aada98a07bf1c6793  dns-engine-ownership-bind.json
+4992553da814068112774ebe8206feffb8621fbae8399d2e5c0dfdcdddad0b1f  dns-engine-state.json
+936aed0584c7bee5d02eda8c818c9d56fde0f3a48e25c0ca713f6b36f2d2f29c  service-mutations.json
+== journal absent
+== ledger jobs
+{
+ "67beea28f7bb2d005105c97169966302": {
+  "request_id": "67beea28f7bb2d005105c97169966302",
+  "owner_id": "9b53e61cc6549ab6cc59c768a252db02",
+  "kind": "dns_engine_switch",
+  "target": "bind",
+  "package_name": "dns-engine-switch/v1:sha256:59e76ab0efd1ad52eaa5e17b2448a8a022172f2b13f54a4bc3b787463092e965",
+  "status": "succeeded",
+  "phase": "commit/dns-engine-switch/v2/finalized/67beea28f7bb2d005105c97169966302/dns-engine-switch/v1:sha256:59e76ab0efd1ad52eaa5e17b2448a8a022172f2b13f54a4bc3b787463092e965",
+  "attempt": 1,
+  "started_at": "2026-09-29T16:39:47.452126236Z",
+  "updated_at": "2026-09-29T16:40:38.201726345Z",
+  "lease_expires_at": "0001-01-01T00:00:00Z",
+  "deadline_at": "2026-09-29T17:24:47.452126236Z",
+  "finished_at": "2026-09-29T16:40:38.201726345Z"
+ },
+ "b66cbdc5c51b25639364f76a7113a214": {
+  "request_id": "b66cbdc5c51b25639364f76a7113a214",
+  "owner_id": "9e83eec8b6a4a0b03f5b3f5f0859a4b9",
+  "kind": "dns_engine_switch",
+  "target": "bind",
+  "package_name": "dns-engine-switch/v1:sha256:41bd8da70c8a5c7930b325c9a956deae6877ed407fd58f11d475d8b4ffd0fb95",
+  "status": "failed",
+  "phase": "failed",
+  "attempt": 1,
+  "started_at": "2026-09-29T16:41:46.276846621Z",
+  "updated_at": "2026-09-29T16:41:49.819254302Z",
+  "lease_expires_at": "0001-01-01T00:00:00Z",
+  "deadline_at": "2026-09-29T17:26:46.276846621Z",
+  "finished_at": "2026-09-29T16:41:49.819254302Z",
+  "error_code": "dns_kill_matrix_trigger_failed",
+  "error_message": "The DNS kill-matrix trigger ended before a verified target receipt."
+ }
+}
+== install-ownership receipts
+-- /var/lib/celikpanel-agent-private/dns-engine-install-ownership-bind.json
+{"schema":"celikpanel-dns-engine-install-ownership/v1","engine":"bind","package_manager":"apt","packages":["bind9"],"missing_before":["bind9"],"manifest_qualifier":"dns-engine-switch/v1:sha256:41bd8da70c8a5c7930b325c9a956deae6877ed407fd58f11d475d8b4ffd0fb95","mutation_request_id":"b66cbdc5c51b25639364f76a7113a214","mutation_owner_id":"9e83eec8b6a4a0b03f5b3f5f0859a4b9"}
+
+-- /var/lib/celikpanel-agent-private/dns-engine-ownership-bind.json
+{"schema":"celikpanel-dns-engine-ownership/v2","acquisition":{"schema":"celikpanel-dns-engine-acquisition/v1","mode":"switch","engine":"bind","engine_epoch":1,"source_revision":0,"manifest_qualifier":"dns-engine-switch/v1:sha256:59e76ab0efd1ad52eaa5e17b2448a8a022172f2b13f54a4bc3b787463092e965","mutation_request_id":"67beea28f7bb2d005105c97169966302","mutation_owner_id":"9b53e61cc6549ab6cc59c768a252db02"},"publication":{"schema":"celikpanel-dns-engine-publication/v1","acquisition_sha256":"1ad0357494b41674269a0691c9d8a718edc8c0d1d1518d8f6fb6762e2743411f","generation":"ca01138ac9c5744e49e0b1cab86a1df0526651563422aaece40fd06313fabe1c"}}
+
+== units
+-- named.service
+MainPID=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+-- bind9.service
+MainPID=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+-- pdns.service
+MainPID=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+-- celikpanel-agent.service
+MainPID=0
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+-- celikpanel-panel.service
+MainPID=0
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+== mask links
+ls: cannot access '/etc/systemd/system/named.service': No such file or directory
+ls: cannot access '/etc/systemd/system/bind9.service': No such file or directory
+ls: cannot access '/run/systemd/system/named.service': No such file or directory
+ls: cannot access '/run/systemd/system/bind9.service': No such file or directory
+== ss 53
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=369,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=369,fd=18))
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=369,fd=19))
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=369,fd=21))
+== agent journal (all)
+2026-09-29T16:39:34.230585+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T16:39:34.260871+00:00 dns-debian13 agent[1191]: 2026/09/29 16:39:34 Starting CelikPanel Agent...
+2026-09-29T16:39:34.262679+00:00 dns-debian13 agent[1191]: 2026/09/29 16:39:34 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-29T16:39:34.262679+00:00 dns-debian13 agent[1191]: 2026/09/29 16:39:34 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-09-29T16:39:44.269328+00:00 dns-debian13 agent[1191]: 2026/09/29 16:39:44 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T16:39:54.263017+00:00 dns-debian13 agent[1191]: 2026/09/29 16:39:54 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T16:40:04.263798+00:00 dns-debian13 agent[1191]: 2026/09/29 16:40:04 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T16:40:14.263010+00:00 dns-debian13 agent[1191]: 2026/09/29 16:40:14 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T16:40:24.262969+00:00 dns-debian13 agent[1191]: 2026/09/29 16:40:24 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T16:40:24.618310+00:00 dns-debian13 addgroup[1819]: Selecting GID from range 100 to 999 ...
+2026-09-29T16:40:24.621091+00:00 dns-debian13 addgroup[1819]: Adding group `bind' (GID 104) ...
+2026-09-29T16:40:24.665580+00:00 dns-debian13 groupadd[1822]: group added to /etc/group: name=bind, GID=104
+2026-09-29T16:40:24.681979+00:00 dns-debian13 groupadd[1822]: group added to /etc/gshadow: name=bind
+2026-09-29T16:40:24.682990+00:00 dns-debian13 groupadd[1822]: new group: name=bind, GID=104
+2026-09-29T16:40:24.713287+00:00 dns-debian13 adduser[1827]: Selecting UID from range 100 to 999 ...
+2026-09-29T16:40:24.715579+00:00 dns-debian13 adduser[1827]: Adding system user `bind' (UID 103) ...
+2026-09-29T16:40:24.717335+00:00 dns-debian13 adduser[1827]: Adding new user `bind' (UID 103) with group `bind' ...
+2026-09-29T16:40:24.759470+00:00 dns-debian13 useradd[1831]: new user: name=bind, UID=103, GID=104, home=/var/cache/bind, shell=/usr/sbin/nologin, from=none
+2026-09-29T16:40:24.796287+00:00 dns-debian13 adduser[1827]: Not creating home directory `/var/cache/bind' as requested.
+2026-09-29T16:40:34.263795+00:00 dns-debian13 agent[1191]: 2026/09/29 16:40:34 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T16:40:42.890450+00:00 dns-debian13 systemd[1]: Stopping celikpanel-agent.service - CelikPanel privileged agent...
+2026-09-29T16:40:42.891285+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-29T16:40:42.891565+00:00 dns-debian13 systemd[1]: Stopped celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T16:40:42.891773+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Consumed 8.737s CPU time, 436.6M memory peak.

@@ -1,0 +1,184 @@
+{
+  "boot_id": "562b0003-4e1a-4db7-a84b-bb954773aa5d",
+  "budget": {
+    "present": true,
+    "receipts": [
+      {
+        "mtime": 1790976603.4149957,
+        "mtime_utc": "2026-10-02T21:30:03.414996Z",
+        "name": "1",
+        "sha256": "4cee967e0618f0c2db73a098912894b3443e1bb6a8b4f0dc2013597583504197",
+        "snapshot": "20261002T212835Z-from-unknown-to-b139dbf3946e5c1042ed61e6f26290b8a944325f-ab83afec3385872aee3a51b5870f71fe",
+        "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20261002T212835Z-from-unknown-to-b139dbf3946e5c1042ed61e6f26290b8a944325f-ab83afec3385872aee3a51b5870f71fe\nattempt=1\ntoken_sha256=[REDACTED]\noperation=update\nphase=completion\n"
+      },
+      {
+        "mtime": 1790976702.7279482,
+        "mtime_utc": "2026-10-02T21:31:42.727948Z",
+        "name": "2",
+        "sha256": "8fc75ab03d0168f28b1566205b47d49087180b31b4259ee607d3daf7a052ce69",
+        "snapshot": "20261002T212835Z-from-unknown-to-b139dbf3946e5c1042ed61e6f26290b8a944325f-ab83afec3385872aee3a51b5870f71fe",
+        "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20261002T212835Z-from-unknown-to-b139dbf3946e5c1042ed61e6f26290b8a944325f-ab83afec3385872aee3a51b5870f71fe\nattempt=2\ntoken_sha256=[REDACTED]\noperation=update\nphase=completion\n"
+      },
+      {
+        "mtime": 1790976802.7374263,
+        "mtime_utc": "2026-10-02T21:33:22.737426Z",
+        "name": "3",
+        "sha256": "116e04e2e187f694fd320e418b6e1bfe9fe308ef95f291501361af6999be223a",
+        "snapshot": "20261002T212835Z-from-unknown-to-b139dbf3946e5c1042ed61e6f26290b8a944325f-ab83afec3385872aee3a51b5870f71fe",
+        "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20261002T212835Z-from-unknown-to-b139dbf3946e5c1042ed61e6f26290b8a944325f-ab83afec3385872aee3a51b5870f71fe\nattempt=3\ntoken_sha256=[REDACTED]\noperation=update\nphase=completion\n"
+      }
+    ]
+  },
+  "build": {
+    "agent": {
+      "identity": "version=v0.1.0-alpha.82\ncommit=b139dbf3946e5c1042ed61e6f26290b8a944325f\n",
+      "returncode": 0,
+      "sha256": "720a82f0ebc3a770c7ddd83ce2e90f1aa457f74e72da154e3f63d7a7028b2809"
+    },
+    "panel": {
+      "identity": "version=v0.1.0-alpha.82\ncommit=b139dbf3946e5c1042ed61e6f26290b8a944325f\n",
+      "returncode": 0,
+      "sha256": "14b0eedbdc1f189a7c25b3612a2eaf5a5129cf1cb80e2c592c55829f060ffe6a"
+    }
+  },
+  "captured_at": "2026-10-02T21:35:15.651126Z",
+  "cron": {
+    "content": "2026-10-02T21:35:01+00:00",
+    "mtime": 1790976901.659123,
+    "ok": true,
+    "path": "/var/www/celikpanel/subscriptions/2/sites/1/upd1-cron-stamp.txt"
+  },
+  "db": {
+    "ok": null,
+    "skipped": "no-owner-database"
+  },
+  "dns_server": "127.0.0.1",
+  "dns_tcp": {
+    "error": "ConnectionRefusedError",
+    "ok": false
+  },
+  "dns_udp": {
+    "error": "TimeoutError",
+    "ok": false
+  },
+  "firewall": {
+    "bytes": 316,
+    "returncode": 0,
+    "sha256": "62da8f9f1843193d5cc776589fc2cb0232478dab1ed164a868ce658a491dc2a2",
+    "status": "ok",
+    "tables": [
+      "table inet celikpanel_fw"
+    ]
+  },
+  "floor": {
+    "present": true,
+    "sha256": "fb2c2ef4d514862e2d1e9e08d4d756d697b63e1e8508d27aae418f184f1ebc9c",
+    "text": "format=celikpanel-release-sequence-floor-v1\nsequence=82\nversion=v0.1.0-alpha.82\n"
+  },
+  "foundation": {
+    "present": true,
+    "sha256": "8af0aeaf74eb53a1f942ad9f3dd4a72a538a44d884998c15dc43550b798e0e60",
+    "text": "format=celikpanel-release-recovery-foundation-v1\nprotocol=1\nsequence=82\nrelease-version=v0.1.0-alpha.82\nrelease-commit=b139dbf3946e5c1042ed61e6f26290b8a944325f\nrunner-sha256=659a2f6e6f14d2255ea6fe0de1e391b06e579c3b18ecec13d29ebc35aa79e7b5\nservice-sha256=c570e53138a416a6faf531c2f53e9502ca7aa5cc1131a1f6f6ae870b940fe530\ntimer-sha256=33148e5b0fbc209ff6fd725aaaff2c569bd7470751341d4b83b301d0fa54cd86\nstart-guard-sha256=6abd30be38302b4ad09bd5c7db893aa49b97db779514b3236a2f0a4afb60cc12\nagent-dropin-sha256=82e0fe894b3fa676c1b64e65ac964b74b27dcfe5a83ddf91761f44ad5971359f\npanel-dropin-sha256=82e0fe894b3fa676c1b64e65ac964b74b27dcfe5a83ddf91761f44ad5971359f\nprotocol-sha256=a29874f40088f2b5e960b4ce63651657b1ff2622334dcc5cc11c8f338215034c\n"
+  },
+  "mailbox": {
+    "checked": true,
+    "present": true,
+    "returncode": 0,
+    "status": "ok"
+  },
+  "sampler": {
+    "argv": [
+      "/usr/bin/systemctl",
+      "show",
+      "cp-lab-upd1-sampler.service",
+      "-p",
+      "ActiveState",
+      "-p",
+      "UnitFileState"
+    ],
+    "returncode": 0,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "ActiveState=active\nUnitFileState=enabled\n"
+  },
+  "schema": "celikpanel/upd1-workload-snapshot/v1",
+  "services": {
+    "celikpanel-agent.service": {
+      "ActiveState": "inactive",
+      "LoadState": "loaded",
+      "SubState": "dead",
+      "UnitFileState": "enabled"
+    },
+    "celikpanel-firewall-restore.service": {
+      "ActiveState": "inactive",
+      "LoadState": "loaded",
+      "SubState": "dead",
+      "UnitFileState": "enabled"
+    },
+    "celikpanel-panel.service": {
+      "ActiveState": "inactive",
+      "LoadState": "loaded",
+      "SubState": "dead",
+      "UnitFileState": "enabled"
+    },
+    "cron.service": {
+      "ActiveState": "active",
+      "LoadState": "loaded",
+      "SubState": "running",
+      "UnitFileState": "enabled"
+    },
+    "dovecot.service": {
+      "ActiveState": "active",
+      "LoadState": "loaded",
+      "SubState": "running",
+      "UnitFileState": "enabled"
+    },
+    "nftables.service": {
+      "ActiveState": "inactive",
+      "LoadState": "loaded",
+      "SubState": "dead",
+      "UnitFileState": "disabled"
+    },
+    "nginx.service": {
+      "ActiveState": "active",
+      "LoadState": "loaded",
+      "SubState": "running",
+      "UnitFileState": "enabled"
+    },
+    "postfix.service": {
+      "ActiveState": "active",
+      "LoadState": "loaded",
+      "SubState": "running",
+      "UnitFileState": "enabled"
+    }
+  },
+  "smtp": {
+    "banner_code": "220",
+    "ok": true
+  },
+  "timers": {
+    "celikpanel-release-recovery.timer": {
+      "ActiveState": "active",
+      "LoadState": "loaded",
+      "SubState": "waiting",
+      "UnitFileState": "enabled"
+    },
+    "certbot.timer": {
+      "ActiveState": "active",
+      "LoadState": "loaded",
+      "SubState": "waiting",
+      "UnitFileState": "enabled"
+    }
+  },
+  "transaction": {
+    "fields": {},
+    "present": false,
+    "status": "ok"
+  },
+  "web": {
+    "marker": true,
+    "ms": 2,
+    "ok": true,
+    "status": 200
+  }
+}

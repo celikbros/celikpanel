@@ -1,0 +1,334 @@
+{
+  "artifacts": {
+    "baseline": {
+      "commit": "df01e72f0a04767c7ceb0c07a148228cd71837c7",
+      "sha256": "825b2385181104967c3b1eca877b6c61ee0b56bca36bb76e44e25b1a4faf40bc",
+      "version": "v0.1.0-alpha.81"
+    },
+    "defective": {
+      "commit": "f37e1cccf6ba16bf2a648c343e6defc45dc8cefe",
+      "sha256": "3997b6bd8b73bb74a21ff211d15c8c855dfd0d14168a03f59c547254fdccd98c",
+      "version": "v0.1.0-alpha.82"
+    },
+    "good": {
+      "commit": "73eef2862644ccf48290073d3eeeb6bb461c1330",
+      "sha256": "4a00f28d2a73c5646110a1cbc44b7e12fc379ef3b5467adeb9cca335cfa2d7fa",
+      "version": "v0.1.0-alpha.82"
+    }
+  },
+  "cell": {
+    "h19": true,
+    "mail_required": false,
+    "name": "upd1-arch-owner-continuation",
+    "node": "arch",
+    "pk_observe": false,
+    "recovery_fault": null,
+    "scenario": null,
+    "variant": "owner-continuation"
+  },
+  "findings": [
+    "arch: web_mail setup plan was refused (['server_setup_service_unsupported:dovecot']); mail is recorded as not provided on this platform",
+    "arch: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['09-panel_certificate', '10-verify']",
+    "while the recovery budget was exhausted the Panel recovery-status API was unavailable; only the root CLI showed the exhausted state"
+  ],
+  "identity": {
+    "cell_id": "release-recovery__1ba6d4cd2bbcf111",
+    "node": "arch",
+    "vm_uuid": "da81bd25-c895-516f-a8a8-db069233de3f"
+  },
+  "kind": {
+    "expected": "the good candidate passes the start check; the held port makes its real start fail (panel_start_unverified); forward completion is retried three times (dispatch update/completion) and pauses (paused_retry_limit, first_failure_code panel_start_unverified) while the port is still held; the panel log the product names shows the port conflict; the owner releases the port and runs the printed one-time retry exactly once; the same request completes forward to update_verified (recovered-after-owner-continuation); the candidate runs; certbot.timer and every other timer end in their pre-update state; site, mail and cron never interrupted; the Panel is back; every owner text at the pause and after the retry recorded in EN and TR",
+    "judged": {
+      "expected": [
+        "update-failure-line",
+        "hold-through-pause",
+        "paused-on-cause",
+        "forward-dispatch-budget",
+        "panel-log-names-cause",
+        "retry-command-printed",
+        "port-released-by-owner",
+        "owner-retry-once",
+        "completed-forward",
+        "outcome-class",
+        "candidate-installed",
+        "timers-restored",
+        "workloads-kept-running",
+        "panel-back",
+        "cli-paused-text",
+        "web-catalogue",
+        "update-card"
+      ],
+      "findings": [],
+      "kind": "owner-continuation",
+      "native_evidence": false,
+      "unknown": [],
+      "verdict": "as-expected"
+    },
+    "measured": true,
+    "printed_retry_command": "/usr/libexec/celikpanel/recovery recover --retry --snapshot 20261002T003224Z-from-unknown-to-73eef2862644ccf48290073d3eeeb6bb461c1330-1f682baa49e0e0fbd8e51df369fb92ea",
+    "variant": "owner-continuation"
+  },
+  "native_evidence": false,
+  "note": "Observations for the owner's review; the P0 rows are judged separately.",
+  "outcome": {
+    "attempts": {
+      "automatic": [
+        {
+          "at": "2026-10-02T00:33:48.651914Z",
+          "attempt": "1",
+          "direction": "forward",
+          "operation": "update",
+          "phase": "completion"
+        },
+        {
+          "at": "2026-10-02T00:35:28.690086Z",
+          "attempt": "2",
+          "direction": "forward",
+          "operation": "update",
+          "phase": "completion"
+        },
+        {
+          "at": "2026-10-02T00:37:08.672514Z",
+          "attempt": "3",
+          "direction": "forward",
+          "operation": "update",
+          "phase": "completion"
+        }
+      ],
+      "automatic_count": 3,
+      "journal_admissions": [
+        {
+          "at": "2026-10-02T00:33:48.707103+00:00",
+          "attempt": "1",
+          "snapshot": "20261002T003224Z-from-unknown-to-73eef2862644ccf48290073d3eeeb6bb461c1330-1f682baa49e0e0fbd8e51df369fb92ea"
+        },
+        {
+          "at": "2026-10-02T00:35:28.764748+00:00",
+          "attempt": "2",
+          "snapshot": "20261002T003224Z-from-unknown-to-73eef2862644ccf48290073d3eeeb6bb461c1330-1f682baa49e0e0fbd8e51df369fb92ea"
+        },
+        {
+          "at": "2026-10-02T00:37:08.735685+00:00",
+          "attempt": "3",
+          "snapshot": "20261002T003224Z-from-unknown-to-73eef2862644ccf48290073d3eeeb6bb461c1330-1f682baa49e0e0fbd8e51df369fb92ea"
+        }
+      ],
+      "owner": [
+        {
+          "at": "2026-10-02T00:39:18.002772Z",
+          "direction": "forward",
+          "name": "owner.7jqpVqcw",
+          "operation": "update",
+          "phase": "completion"
+        }
+      ],
+      "owner_count": 1
+    },
+    "classification": "recovered-after-owner-continuation",
+    "final_status": {
+      "observation": "known",
+      "observed_at": "2026-10-02T00:39:39Z",
+      "phase": "succeeded",
+      "previous_failure": "recovery_failed",
+      "reason": "update_verified",
+      "request_id": "b183cc936475bc0e5976c78caea37259",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "update_verified"
+    },
+    "owner_continuation": true,
+    "owner_reboot": null,
+    "pin_changes": [],
+    "port_hold": {
+      "armed": true,
+      "held": true,
+      "held_at": "2026-10-02T00:32:26.488748+00:00",
+      "held_at_pause": true,
+      "held_seconds": 408.3,
+      "phases_seen": [
+        "active",
+        "completion.pending"
+      ],
+      "release_reason": "owner-released",
+      "released": true,
+      "released_at": "2026-10-02T00:39:14.761662+00:00",
+      "released_before_retry": true
+    },
+    "reboot": null,
+    "track_stop": null
+  },
+  "overall": "complete-for-review",
+  "provenance": {
+    "baseline": "unpublished-local-fixture-commit-over-HEAD-labelled-v0.1.0-alpha.81; acceptance-license panel build (D-027 fixture); installed by the real installer; fixture trust root enrolled; not-production-release-admission",
+    "candidate": "unpublished-local-fixture-commit-labelled-v0.1.0-alpha.82; signed with the disposable fixture key; served by the guest-loopback celikpanel.net fixture origin; not a release",
+    "defect": "no candidate defect (good candidate G); owner-fixable host cause: guest_owner_port_hold.py holds 127.0.0.1:2083 from the moment the updater stops the old Panel, so the new Panel cannot bind, its stability wait fails (panel_start_unverified) and forward completion pauses; the harness then does what the product text tells the owner (release the port, run the printed one-time retry once) (simulated host condition, never a product change)"
+  },
+  "request_id": "b183cc936475bc0e5976c78caea37259",
+  "schema": "celikpanel/upd1-owner-update-result/v1",
+  "scope": {
+    "cron": {
+      "crontab": "/usr/sbin/crontab",
+      "verdict": "available"
+    },
+    "dns": {
+      "mode": "external",
+      "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+      "verdict": "not-provided-external-dns"
+    },
+    "origin": {
+      "after-owner-restart": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      },
+      "after-provision": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      },
+      "before-arm": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      }
+    },
+    "setup": {
+      "code": "server_setup_access_dns_required",
+      "not_run": [
+        "09-panel_certificate",
+        "10-verify"
+      ],
+      "phase": "access_dns",
+      "verdict": "observed isolated-host wait",
+      "volatile_tables_added": [
+        "server_setup_executions"
+      ]
+    }
+  },
+  "steps": [
+    {
+      "finished_at": "2026-10-02T00:24:34Z",
+      "name": "preflight",
+      "reason": null,
+      "started_at": "2026-10-02T00:24:30Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-02T00:24:43Z",
+      "name": "origin",
+      "reason": null,
+      "started_at": "2026-10-02T00:24:34Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-02T00:27:38Z",
+      "name": "baseline-install",
+      "reason": null,
+      "started_at": "2026-10-02T00:24:43Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-02T00:27:38Z",
+      "name": "owner-login",
+      "reason": null,
+      "started_at": "2026-10-02T00:27:38Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-02T00:27:39Z",
+      "name": "license",
+      "reason": null,
+      "started_at": "2026-10-02T00:27:38Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-02T00:30:36Z",
+      "name": "setup",
+      "reason": null,
+      "started_at": "2026-10-02T00:27:39Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-02T00:30:38Z",
+      "name": "seed",
+      "reason": null,
+      "started_at": "2026-10-02T00:30:36Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-02T00:32:07Z",
+      "name": "pre-state",
+      "reason": null,
+      "started_at": "2026-10-02T00:30:38Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-02T00:32:09Z",
+      "name": "arm",
+      "reason": null,
+      "started_at": "2026-10-02T00:32:07Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-02T00:32:09Z",
+      "name": "owner-start",
+      "reason": null,
+      "started_at": "2026-10-02T00:32:09Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-02T00:38:52Z",
+      "name": "track",
+      "reason": null,
+      "started_at": "2026-10-02T00:32:09Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-02T00:39:38Z",
+      "name": "owner-continuation (required)",
+      "reason": null,
+      "started_at": "2026-10-02T00:38:52Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-02T00:39:40Z",
+      "name": "track-after-owner-continuation",
+      "reason": null,
+      "started_at": "2026-10-02T00:39:38Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-02T00:39:46Z",
+      "name": "terminal",
+      "reason": null,
+      "started_at": "2026-10-02T00:39:40Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-02T00:39:49Z",
+      "name": "collect",
+      "reason": null,
+      "started_at": "2026-10-02T00:39:46Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-02T00:39:49Z",
+      "name": "verdicts",
+      "reason": null,
+      "started_at": "2026-10-02T00:39:49Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-02T00:39:49Z",
+      "name": "kind-expectation",
+      "reason": null,
+      "started_at": "2026-10-02T00:39:49Z",
+      "verdict": "passed"
+    }
+  ]
+}

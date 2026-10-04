@@ -33,13 +33,12 @@ func TestMailHostRenewalQueueUsesServiceGroupForWriteReadAndRemoval(t *testing.T
 		t.Fatal(err)
 	}
 	os.NewFile(uintptr(fd), filepath.Dir(path)).Close()
-	// clearMailHostCertificateRenewal includes the exact-content compare and
-	// the cross-process certificate publication lock. Its directory proof
-	// must permit precisely the service group used above.
+	// Exercise the final exact-content removal primitive after its caller has
+	// established completion. Its directory proof permits this service group.
 	oldLock := panelCertWithPublishLock
 	panelCertWithPublishLock = func(action func() error) error { return action() }
 	t.Cleanup(func() { panelCertWithPublishLock = oldLock })
-	if err := clearMailHostCertificateRenewal(pending); err != nil {
+	if err := removeMailHostRenewalUnderPublicationLock(pending); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(path); !os.IsNotExist(err) {

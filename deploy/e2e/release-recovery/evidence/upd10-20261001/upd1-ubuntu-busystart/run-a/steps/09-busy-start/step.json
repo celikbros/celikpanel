@@ -1,0 +1,327 @@
+{
+  "checks": {
+    "after_op": {
+      "after": {
+        "at": "2026-10-01T21:49:17.184550Z",
+        "context_processes": [
+          {
+            "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+            "comm": "unattended-upgr",
+            "pid": 873,
+            "ppid": "1"
+          }
+        ],
+        "general_lock_lines": [],
+        "lock_lines": [],
+        "other_package_processes": [],
+        "packagekit_unit": [
+          "ExecMainStartTimestamp=Thu 2026-10-01 21:49:15 UTC",
+          "ActiveState=active",
+          "SubState=running"
+        ],
+        "packagekitd": [
+          {
+            "apt_backend": true,
+            "aptcc_backend": false,
+            "backend_pathnames": [
+              "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+            ],
+            "children": [],
+            "etime_s": 2.0,
+            "grep_c_aptcc": 0,
+            "holds_or_waits": [],
+            "maps_read": true,
+            "pid": 51688,
+            "rule_idle": true
+          }
+        ],
+        "rule": "idle",
+        "unparsed_lock_lines": []
+      },
+      "before": {
+        "at": "2026-10-01T21:49:16.881801Z",
+        "context_processes": [
+          {
+            "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+            "comm": "unattended-upgr",
+            "pid": 873,
+            "ppid": "1"
+          }
+        ],
+        "general_lock_lines": [],
+        "lock_lines": [],
+        "other_package_processes": [],
+        "packagekit_unit": [
+          "ExecMainStartTimestamp=Thu 2026-10-01 21:49:15 UTC",
+          "ActiveState=active",
+          "SubState=running"
+        ],
+        "packagekitd": [
+          {
+            "apt_backend": true,
+            "aptcc_backend": false,
+            "backend_pathnames": [
+              "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+            ],
+            "children": [],
+            "etime_s": 1.7,
+            "grep_c_aptcc": 0,
+            "holds_or_waits": [],
+            "maps_read": true,
+            "pid": 51688,
+            "rule_idle": true
+          }
+        ],
+        "rule": "idle",
+        "unparsed_lock_lines": []
+      },
+      "host_utc": "2026-10-01T21:49:15Z",
+      "label": "busy-after-op",
+      "readiness": {
+        "answered_by": "agent",
+        "body": {
+          "ready": true
+        },
+        "http": 200,
+        "utc": "2026-10-01T21:49:15Z"
+      }
+    },
+    "before_op": {
+      "after": {
+        "at": "2026-10-01T21:45:10.891094Z",
+        "context_processes": [
+          {
+            "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+            "comm": "unattended-upgr",
+            "pid": 873,
+            "ppid": "1"
+          }
+        ],
+        "general_lock_lines": [],
+        "lock_lines": [],
+        "other_package_processes": [],
+        "packagekit_unit": [
+          "ExecMainStartTimestamp=",
+          "ActiveState=inactive",
+          "SubState=dead"
+        ],
+        "packagekitd": [],
+        "rule": "idle",
+        "unparsed_lock_lines": []
+      },
+      "before": {
+        "at": "2026-10-01T21:45:10.612427Z",
+        "context_processes": [
+          {
+            "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+            "comm": "unattended-upgr",
+            "pid": 873,
+            "ppid": "1"
+          }
+        ],
+        "general_lock_lines": [],
+        "lock_lines": [],
+        "other_package_processes": [],
+        "packagekit_unit": [
+          "ExecMainStartTimestamp=",
+          "ActiveState=inactive",
+          "SubState=dead"
+        ],
+        "packagekitd": [],
+        "rule": "idle",
+        "unparsed_lock_lines": []
+      },
+      "host_utc": "2026-10-01T21:45:09Z",
+      "label": "busy-before-op",
+      "readiness": {
+        "answered_by": "agent",
+        "body": {
+          "ready": true
+        },
+        "http": 200,
+        "utc": "2026-10-01T21:45:09Z"
+      }
+    },
+    "busy": {
+      "expectations": {
+        "packagekitd_alive_after_task": true,
+        "readiness_busy_package_manager_active": true,
+        "readiness_ready_after_task": true,
+        "release_unchanged": true,
+        "start_refused": true,
+        "status_not_running": true,
+        "task_finished": true,
+        "task_still_running_at_answer": true
+      },
+      "owner_texts": {
+        "catalogue": {
+          "err.HOST_MUTATION_BUSY.package_manager_active": {
+            "en": "This server's package manager is busy — a package task is still running on this server. Wait for it to finish, then try again.",
+            "tr": "Bu sunucunun paket yöneticisi meşgul — bu sunucuda bir paket işlemi hâlâ sürüyor. Tamamlanmasını bekleyip yeniden deneyin."
+          },
+          "err.PANEL_UPDATE_START_REFUSED": "no catalogue entry",
+          "panelUpdate.packageManagerBusy": {
+            "en": "The server was running a package operation. CelikPanel stopped before changing the installed version or its data. Wait for that operation to finish, then retry from Settings → CelikPanel updates.",
+            "tr": "Sunucuda bir paket işlemi çalışıyordu. CelikPanel, kurulu sürümü ve verilerini değiştirmeden durdu. Paket işlemi tamamlandıktan sonra Ayarlar → CelikPanel güncellemeleri bölümünden yeniden deneyin."
+          },
+          "services.mutationReadiness.package_manager_active": {
+            "en": "The operating system is installing or updating packages. Wait for it to finish.",
+            "tr": "İşletim sistemi paket kuruyor veya güncelliyor. Tamamlanmasını bekleyin."
+          },
+          "services.mutationReadiness.title": {
+            "en": "Server changes are temporarily unavailable.",
+            "tr": "Sunucu değişiklikleri geçici olarak kullanılamıyor."
+          }
+        },
+        "start_refusal": {
+          "api_message": "This server's package manager is busy — a package task is still running on this server. Wait for it to finish, then try again.",
+          "code": "HOST_MUTATION_BUSY",
+          "err.HOST_MUTATION_BUSY": {
+            "en": "Another server change or operating-system package task is still running. Wait for it to finish, then try again.",
+            "tr": "Başka bir sunucu değişikliği veya işletim sistemi paket işlemi hâlâ sürüyor. Tamamlanmasını bekleyip yeniden deneyin."
+          },
+          "err.HOST_MUTATION_BUSY.package_manager_active": {
+            "en": "This server's package manager is busy — a package task is still running on this server. Wait for it to finish, then try again.",
+            "tr": "Bu sunucunun paket yöneticisi meşgul — bu sunucuda bir paket işlemi hâlâ sürüyor. Tamamlanmasını bekleyip yeniden deneyin."
+          }
+        }
+      },
+      "request_id": "435669941ed19f9cd64de676173081ab",
+      "start": {
+        "body": {
+          "code": "HOST_MUTATION_BUSY",
+          "error": "This server's package manager is busy — a package task is still running on this server. Wait for it to finish, then try again.",
+          "reason": "package_manager_active"
+        },
+        "http": 409,
+        "utc": "2026-10-01T21:45:12Z"
+      },
+      "status": {
+        "body": {
+          "found": false,
+          "request_id": "435669941ed19f9cd64de676173081ab"
+        },
+        "http": 200
+      }
+    },
+    "guest_archives_free_bytes": "20872822784",
+    "operation": {
+      "command": "echo \"op-start $(date -u +%FT%T.%3NZ)\"; DEBIAN_FRONTEND=noninteractive apt-get install --download-only -y --no-install-recommends -o Acquire::http::Dl-Limit=80 -o Acquire::https::Dl-Limit=80 golang-1.22-src; echo \"download-only rc=$? $(date -u +%FT%T.%3NZ)\"; apt-get update; echo \"update rc=$? $(date -u +%FT%T.%3NZ)\"",
+      "dl_limit_kib_s": 80,
+      "duration_s": 244.9,
+      "ended_utc": "2026-10-01T21:49:15Z",
+      "holding": {
+        "at": "2026-10-01T21:45:12.108080Z",
+        "context_processes": [
+          {
+            "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+            "comm": "unattended-upgr",
+            "pid": 873,
+            "ppid": "1"
+          }
+        ],
+        "general_lock_lines": [
+          {
+            "line": "8: POSIX  ADVISORY  WRITE 43010 fd:01:84085 0 EOF",
+            "owner": 43010,
+            "owner_comm": "apt-get",
+            "path": "/var/lib/dpkg/lock",
+            "waiting": false
+          },
+          {
+            "line": "9: POSIX  ADVISORY  WRITE 43010 fd:01:84084 0 EOF",
+            "owner": 43010,
+            "owner_comm": "apt-get",
+            "path": "/var/lib/dpkg/lock-frontend",
+            "waiting": false
+          }
+        ],
+        "lock_lines": [
+          {
+            "line": "8: POSIX  ADVISORY  WRITE 43010 fd:01:84085 0 EOF",
+            "owner": 43010,
+            "owner_comm": "apt-get",
+            "path": "/var/lib/dpkg/lock",
+            "waiting": false
+          },
+          {
+            "line": "9: POSIX  ADVISORY  WRITE 43010 fd:01:84084 0 EOF",
+            "owner": 43010,
+            "owner_comm": "apt-get",
+            "path": "/var/lib/dpkg/lock-frontend",
+            "waiting": false
+          }
+        ],
+        "other_package_processes": [
+          {
+            "comm": "apt-get",
+            "pid": 43010
+          }
+        ],
+        "packagekit_unit": [
+          "ExecMainStartTimestamp=",
+          "ActiveState=inactive",
+          "SubState=dead"
+        ],
+        "packagekitd": [],
+        "rule": "busy",
+        "unparsed_lock_lines": []
+      },
+      "holding_after_s": 0.6,
+      "journal": "2026-10-01T21:45:11.794109+00:00 dns-ubuntu systemd[1]: Started cp-lab-upd9-owner-apt.service - /bin/bash -c \"echo \\\"op-start \\$(date -u +%FT%T.%3NZ)\\\"; DEBIAN_FRONTEND=noninteractive apt-get install --download-only -y --no-install-recommends -o Acquire::http::Dl-Limit=80 -o Acquire::https::Dl-Limit=80 golang-1.22-src; echo \\\"download-only rc=\\$? \\$(date -u +%FT%T.%3NZ)\\\"; apt-get update; echo \\\"update rc=\\$? \\$(date -u +%FT%T.%3NZ)\\\"\".\n2026-10-01T21:45:11.800172+00:00 dns-ubuntu bash[43008]: op-start 2026-10-01T21:45:11.799Z\n2026-10-01T21:45:11.818529+00:00 dns-ubuntu bash[43010]: Reading package lists...\n2026-10-01T21:45:12.187261+00:00 dns-ubuntu bash[43010]: Building dependency tree...\n2026-10-01T21:45:12.188552+00:00 dns-ubuntu bash[43010]: Reading state information...\n2026-10-01T21:45:12.509706+00:00 dns-ubuntu bash[43010]: The following NEW packages will be installed:\n2026-10-01T21:45:12.511899+00:00 dns-ubuntu bash[43010]:   golang-1.22-src\n2026-10-01T21:45:12.677495+00:00 dns-ubuntu bash[43010]: 0 upgraded, 1 newly installed, 0 to remove and 114 not upgraded.\n2026-10-01T21:45:12.677495+00:00 dns-ubuntu bash[43010]: Need to get 19.7 MB of archives.\n2026-10-01T21:45:12.677495+00:00 dns-ubuntu bash[43010]: After this operation, 125 MB of additional disk space will be used.\n2026-10-01T21:45:12.677495+00:00 dns-ubuntu bash[43010]: Get:1 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 golang-1.22-src all 1.22.2-2ubuntu0.4 [19.7 MB]\n2026-10-01T21:49:14.482691+00:00 dns-ubuntu bash[43010]: Fetched 19.7 MB in 4min 2s (81.5 kB/s)\n2026-10-01T21:49:14.482691+00:00 dns-ubuntu bash[43010]: Download complete and in download only mode\n2026-10-01T21:49:14.491215+00:00 dns-ubuntu bash[43008]: download-only rc=0 2026-10-01T21:49:14.490Z\n2026-10-01T21:49:14.721893+00:00 dns-ubuntu bash[51514]: Hit:1 http://security.ubuntu.com/ubuntu noble-security InRelease\n2026-10-01T21:49:14.857905+00:00 dns-ubuntu bash[51514]: Hit:2 http://archive.ubuntu.com/ubuntu noble InRelease\n2026-10-01T21:49:14.987921+00:00 dns-ubuntu bash[51514]: Hit:3 http://archive.ubuntu.com/ubuntu noble-updates InRelease\n2026-10-01T21:49:15.118338+00:00 dns-ubuntu bash[51514]: Hit:4 http://archive.ubuntu.com/ubuntu noble-backports InRelease\n2026-10-01T21:49:16.164319+00:00 dns-ubuntu bash[51514]: Reading package lists...\n2026-10-01T21:49:16.181487+00:00 dns-ubuntu bash[43008]: update rc=0 2026-10-01T21:49:16.181Z\n2026-10-01T21:49:16.182164+00:00 dns-ubuntu systemd[1]: cp-lab-upd9-owner-apt.service: Deactivated successfully.\n2026-10-01T21:49:16.182421+00:00 dns-ubuntu systemd[1]: cp-lab-upd9-owner-apt.service: Consumed 2.706s CPU time, 43.3M memory peak, 0B memory swap peak.\n",
+      "package": "golang-1.22-src",
+      "size_bytes": 19730376,
+      "started_utc": "2026-10-01T21:45:10Z",
+      "unit": {
+        "ActiveState": "inactive",
+        "ExecMainExitTimestamp": "",
+        "ExecMainStartTimestamp": "",
+        "ExecMainStatus": "0",
+        "Result": "success",
+        "SubState": "dead"
+      }
+    },
+    "packagekit": {
+      "apt_backend": [
+        true
+      ],
+      "backend_pathnames_seen": [
+        "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+      ],
+      "children_seen": [],
+      "context_processes_seen": [
+        "unattended-upgr",
+        "http"
+      ],
+      "grep_c_aptcc": [
+        0
+      ],
+      "lock_lines_seen": [
+        "/var/cache/apt/archives/lock owner=apt-get"
+      ],
+      "observations": 19,
+      "other_processes_seen": [
+        "apt-get"
+      ],
+      "pk_alive_rule_idle_bracketed": {
+        "agent_other": 0,
+        "agent_package_manager_active": 0,
+        "agent_ready": 1,
+        "panel_answered": 0
+      },
+      "readiness": {
+        "HOST_MUTATION_BUSY/package_manager_active": 16,
+        "ready": 2
+      },
+      "rule": {
+        "busy": 33,
+        "idle": 4
+      },
+      "with_packagekitd": 1
+    }
+  },
+  "finished_at": "2026-10-01T21:49:16Z",
+  "name": "busy-start",
+  "started_at": "2026-10-01T21:45:09Z",
+  "verdict": "passed"
+}

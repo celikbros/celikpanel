@@ -1,0 +1,763 @@
+2026-09-30T08:24:07.263343+00:00 dns-arch systemd[1]: Started Internet domain name server.
+2026-09-30T08:24:07.302499+00:00 dns-arch named[2061]: starting BIND 9.20.29 (Stable Release) <id:c3d4465>
+2026-09-30T08:24:07.302532+00:00 dns-arch named[2061]: running on Linux x86_64 7.2.7-arch1-1 #1 SMP PREEMPT_DYNAMIC Mon, 21 Sep 2026 18:51:14 +0000 (Arch Linux)
+2026-09-30T08:24:07.302545+00:00 dns-arch named[2061]: built with  '--prefix=/usr' '--sysconfdir=/etc' '--sbindir=/usr/bin' '--localstatedir=/var' '--disable-static' '--enable-fixed-rrset' '--enable-full-report' '--with-maxminddb' '--with-openssl' '--with-libidn2' '--with-json-c' '--with-libxml2' '--with-lmdb' 'CFLAGS=-march=x86-64 -mtune=generic -O2 -pipe -fno-plt -fexceptions         -Wp,-D_FORTIFY_SOURCE=3 -Wformat -Werror=format-security         -fstack-clash-protection -fcf-protection         -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -g -ffile-prefix-map=/build/bind/src=/usr/src/debug/bind -flto=auto -DDIG_SIGCHASE' 'LDFLAGS=-Wl,-O1 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now          -Wl,-z,pack-relative-relocs -flto=auto'
+2026-09-30T08:24:07.302551+00:00 dns-arch named[2061]: running as: named -f -u named
+2026-09-30T08:24:07.302556+00:00 dns-arch named[2061]: compiled by GCC 16.2.1 20260810
+2026-09-30T08:24:07.302560+00:00 dns-arch named[2061]: compiled with OpenSSL version: OpenSSL 3.6.4 25 Aug 2026
+2026-09-30T08:24:07.302566+00:00 dns-arch named[2061]: linked to OpenSSL version: OpenSSL 3.6.4 25 Aug 2026
+2026-09-30T08:24:07.302570+00:00 dns-arch named[2061]: compiled with libuv version: 1.52.1
+2026-09-30T08:24:07.302575+00:00 dns-arch named[2061]: linked to libuv version: 1.52.1
+2026-09-30T08:24:07.302580+00:00 dns-arch named[2061]: compiled with liburcu version: 0.15.7
+2026-09-30T08:24:07.302585+00:00 dns-arch named[2061]: compiled with jemalloc version: 5.3.1
+2026-09-30T08:24:07.302589+00:00 dns-arch named[2061]: compiled with libnghttp2 version: 1.70.0
+2026-09-30T08:24:07.302633+00:00 dns-arch named[2061]: linked to libnghttp2 version: 1.70.0
+2026-09-30T08:24:07.302639+00:00 dns-arch named[2061]: compiled with libxml2 version: 2.15.4
+2026-09-30T08:24:07.302645+00:00 dns-arch named[2061]: linked to libxml2 version: 21504-GITv2.15.4
+2026-09-30T08:24:07.302649+00:00 dns-arch named[2061]: compiled with json-c version: 0.19
+2026-09-30T08:24:07.302655+00:00 dns-arch named[2061]: linked to json-c version: 0.19
+2026-09-30T08:24:07.302660+00:00 dns-arch named[2061]: compiled with zlib version: 1.3.2
+2026-09-30T08:24:07.302670+00:00 dns-arch named[2061]: linked to zlib version: 1.3.2
+2026-09-30T08:24:07.302675+00:00 dns-arch named[2061]: linked to maxminddb version: 1.14.1
+2026-09-30T08:24:07.302680+00:00 dns-arch named[2061]: ----------------------------------------------------
+2026-09-30T08:24:07.302684+00:00 dns-arch named[2061]: BIND 9 is maintained by Internet Systems Consortium,
+2026-09-30T08:24:07.302689+00:00 dns-arch named[2061]: Inc. (ISC), a non-profit 501(c)(3) public-benefit
+2026-09-30T08:24:07.302693+00:00 dns-arch named[2061]: corporation.  Support and training for BIND 9 are
+2026-09-30T08:24:07.302698+00:00 dns-arch named[2061]: available at https://www.isc.org/support
+2026-09-30T08:24:07.302702+00:00 dns-arch named[2061]: ----------------------------------------------------
+2026-09-30T08:24:07.302709+00:00 dns-arch named[2061]: adjusted limit on open files from 1024 to 524288
+2026-09-30T08:24:07.302715+00:00 dns-arch named[2061]: found 2 CPUs, using 2 worker threads
+2026-09-30T08:24:07.310198+00:00 dns-arch named[2061]: DNSSEC algorithms: RSASHA1 NSEC3RSASHA1 RSASHA256 RSASHA512 ECDSAP256SHA256 ECDSAP384SHA384 ED25519 ED448
+2026-09-30T08:24:07.310216+00:00 dns-arch named[2061]: DS algorithms: SHA-1 SHA-256 SHA-384
+2026-09-30T08:24:07.310224+00:00 dns-arch named[2061]: HMAC algorithms: HMAC-MD5 HMAC-SHA1 HMAC-SHA224 HMAC-SHA256 HMAC-SHA384 HMAC-SHA512
+2026-09-30T08:24:07.310231+00:00 dns-arch named[2061]: TKEY mode 2 support (Diffie-Hellman): no
+2026-09-30T08:24:07.310236+00:00 dns-arch named[2061]: TKEY mode 3 support (GSS-API): yes
+2026-09-30T08:24:07.322177+00:00 dns-arch named[2061]: the initial working directory is '/'
+2026-09-30T08:24:07.322333+00:00 dns-arch named[2061]: loading configuration from '/etc/named.conf'
+2026-09-30T08:24:07.322698+00:00 dns-arch named[2061]: the working directory is now '/var/named'
+2026-09-30T08:24:07.324318+00:00 dns-arch named[2061]: looking for GeoIP2 databases in '/usr/share/GeoIP'
+2026-09-30T08:24:07.324674+00:00 dns-arch named[2061]: using default UDP/IPv4 port range: [32768, 60999]
+2026-09-30T08:24:07.324843+00:00 dns-arch named[2061]: using default UDP/IPv6 port range: [32768, 60999]
+2026-09-30T08:24:07.326500+00:00 dns-arch named[2061]: listening on IPv4 interface lo, 127.0.0.1#53
+2026-09-30T08:24:07.327162+00:00 dns-arch named[2061]: listening on IPv4 interface mgmt0, 10.0.2.15#53
+2026-09-30T08:24:07.327410+00:00 dns-arch named[2061]: listening on IPv4 interface peer0, 192.0.2.11#53
+2026-09-30T08:24:07.327542+00:00 dns-arch named[2061]: IPv6 socket API is incomplete; explicitly binding to each IPv6 address separately
+2026-09-30T08:24:07.327549+00:00 dns-arch named[2061]: listening on IPv6 interface lo, ::1#53
+2026-09-30T08:24:07.328182+00:00 dns-arch named[2061]: listening on IPv6 interface mgmt0, fec0::5054:ff:fe13:11#53
+2026-09-30T08:24:07.328344+00:00 dns-arch named[2061]: listening on IPv6 interface mgmt0, fe80::5054:ff:fe13:11%2#53
+2026-09-30T08:24:07.328454+00:00 dns-arch named[2061]: listening on IPv6 interface peer0, fe80::5054:ff:fe53:11%3#53
+2026-09-30T08:24:07.329668+00:00 dns-arch named[2061]: Disabling periodic interface re-scans timer
+2026-09-30T08:24:07.329801+00:00 dns-arch named[2061]: generating session key for dynamic DNS
+2026-09-30T08:24:07.330510+00:00 dns-arch named[2061]: using built-in root key for view _default
+2026-09-30T08:24:07.331942+00:00 dns-arch named[2061]: set up managed keys zone for view _default, file 'managed-keys.bind'
+2026-09-30T08:24:07.333026+00:00 dns-arch named[2061]: configuring command channel from '/etc/rndc.key'
+2026-09-30T08:24:07.333233+00:00 dns-arch named[2061]: command channel listening on 127.0.0.1#953
+2026-09-30T08:24:07.333245+00:00 dns-arch named[2061]: configuring command channel from '/etc/rndc.key'
+2026-09-30T08:24:07.333375+00:00 dns-arch named[2061]: command channel listening on ::1#953
+2026-09-30T08:24:07.334106+00:00 dns-arch named[2061]: managed-keys-zone: loaded serial 0
+2026-09-30T08:24:07.334581+00:00 dns-arch named[2061]: zone 0.0.127.in-addr.arpa/IN: loaded serial 42
+2026-09-30T08:24:07.334667+00:00 dns-arch named[2061]: zone 1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa/IN: loaded serial 42
+2026-09-30T08:24:07.334919+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: loaded serial 1
+2026-09-30T08:24:07.335017+00:00 dns-arch named[2061]: zone localhost/IN: loaded serial 42
+2026-09-30T08:24:07.335265+00:00 dns-arch named[2061]: all zones loaded
+2026-09-30T08:24:07.369319+00:00 dns-arch named[2061]: FIPS mode is disabled
+2026-09-30T08:24:07.369649+00:00 dns-arch named[2061]: running
+2026-09-30T08:24:07.370040+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notifies (serial 1)
+2026-09-30T08:24:07.371548+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:503:ba3e::2:30#53
+2026-09-30T08:24:07.372011+00:00 dns-arch named[2061]: network unreachable resolving './NS/IN': 2001:503:ba3e::2:30#53
+2026-09-30T08:24:07.372954+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notify to 192.0.2.10#53
+2026-09-30T08:24:07.375572+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:a8::e#53
+2026-09-30T08:24:07.375906+00:00 dns-arch named[2061]: network unreachable resolving './NS/IN': 2001:500:a8::e#53
+2026-09-30T08:24:07.376204+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: notify to 192.0.2.10#53 failed: connection refused: retrying over TCP
+2026-09-30T08:24:07.376833+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notify to 192.0.2.10#53
+2026-09-30T08:24:07.378976+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:2d::d#53
+2026-09-30T08:24:07.379502+00:00 dns-arch named[2061]: network unreachable resolving './NS/IN': 2001:7fe::53#53
+2026-09-30T08:24:07.380815+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:7fe::53#53
+2026-09-30T08:24:07.381125+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: notify to 192.0.2.10#53 failed: connection refused
+2026-09-30T08:24:07.382165+00:00 dns-arch named[2061]: network unreachable resolving './NS/IN': 2001:500:2d::d#53
+2026-09-30T08:24:07.382598+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:1::53#53
+2026-09-30T08:24:07.386907+00:00 dns-arch named[2061]: network unreachable resolving './NS/IN': 2001:500:1::53#53
+2026-09-30T08:24:07.387042+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2801:1b8:10::b#53
+2026-09-30T08:24:07.387831+00:00 dns-arch named[2061]: network unreachable resolving './NS/IN': 2801:1b8:10::b#53
+2026-09-30T08:24:07.387973+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:9f::42#53
+2026-09-30T08:24:07.389678+00:00 dns-arch named[2061]: network unreachable resolving './NS/IN': 2001:500:9f::42#53
+2026-09-30T08:24:07.389993+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:503:c27::2:30#53
+2026-09-30T08:24:07.390583+00:00 dns-arch named[2061]: network unreachable resolving './NS/IN': 2001:503:c27::2:30#53
+2026-09-30T08:24:07.390731+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:2::c#53
+2026-09-30T08:24:07.391097+00:00 dns-arch named[2061]: network unreachable resolving './NS/IN': 2001:500:2::c#53
+2026-09-30T08:24:07.391154+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:dc3::35#53
+2026-09-30T08:24:07.391408+00:00 dns-arch named[2061]: network unreachable resolving './NS/IN': 2001:dc3::35#53
+2026-09-30T08:24:07.391466+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:7fd::1#53
+2026-09-30T08:24:07.391936+00:00 dns-arch named[2061]: network unreachable resolving './NS/IN': 2001:7fd::1#53
+2026-09-30T08:24:07.392047+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:12::d0d#53
+2026-09-30T08:24:07.392451+00:00 dns-arch named[2061]: network unreachable resolving './NS/IN': 2001:500:2f::f#53
+2026-09-30T08:24:07.392605+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:2f::f#53
+2026-09-30T08:24:07.392976+00:00 dns-arch named[2061]: network unreachable resolving './NS/IN': 2001:500:12::d0d#53
+2026-09-30T08:24:07.435181+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2801:1b8:10::b#53
+2026-09-30T08:24:07.442499+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:dc3::35#53
+2026-09-30T08:24:07.443261+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:12::d0d#53
+2026-09-30T08:24:07.544569+00:00 dns-arch named[2061]: managed-keys-zone: Initializing automatic trust anchor management for zone '.'; DNSKEY ID 20326 is now trusted, waiving the normal 30-day waiting period.
+2026-09-30T08:24:07.544611+00:00 dns-arch named[2061]: managed-keys-zone: Initializing automatic trust anchor management for zone '.'; DNSKEY ID 38696 is now trusted, waiving the normal 30-day waiting period.
+2026-09-30T08:24:09.830736+00:00 dns-arch named[2061]: client @0x7ff07d761000 192.0.2.11#43726 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T08:24:09.831484+00:00 dns-arch named[2061]: client @0x7ff07d761000 192.0.2.11#43726 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T08:24:10.038895+00:00 dns-arch named[2061]: client @0x7ff080680000 192.0.2.11#43740 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T08:24:10.039444+00:00 dns-arch named[2061]: client @0x7ff080680000 192.0.2.11#43740 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T08:24:10.446804+00:00 dns-arch named[2061]: client @0x7ff080680000 192.0.2.11#43748 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T08:24:10.447101+00:00 dns-arch named[2061]: client @0x7ff080680000 192.0.2.11#43748 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T08:24:10.494596+00:00 dns-arch named[2061]: client @0x7ff080681c00 192.0.2.11#43776 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T08:24:10.494795+00:00 dns-arch named[2061]: client @0x7ff080681c00 192.0.2.11#43776 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T08:24:10.995059+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.11#43788 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T08:24:10.995220+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.11#43788 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T08:24:11.250816+00:00 dns-arch named[2061]: client @0x7ff080681c00 192.0.2.10#49402 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T08:24:11.250995+00:00 dns-arch named[2061]: client @0x7ff080681c00 192.0.2.10#49402 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T08:24:14.891015+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.10#49420 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T08:24:14.891325+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.10#49420 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T08:24:21.515433+00:00 dns-arch named[2061]: client @0x7ff080681c00 192.0.2.10#33908 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T08:24:21.515796+00:00 dns-arch named[2061]: client @0x7ff080681c00 192.0.2.10#33908 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T08:24:22.335363+00:00 dns-arch named[2061]: client @0x7ff080681c00 192.0.2.10#33910 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T08:24:22.335786+00:00 dns-arch named[2061]: client @0x7ff080681c00 192.0.2.10#33910 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T08:24:22.423524+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.10#33920 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T08:24:22.424249+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.10#33920 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T08:24:22.511466+00:00 dns-arch named[2061]: client @0x7ff080681c00 192.0.2.10#33932 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T08:24:22.511843+00:00 dns-arch named[2061]: client @0x7ff080681c00 192.0.2.10#33932 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T08:24:25.807499+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.10#40707 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T08:24:25.807912+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.10#40707 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T08:24:25.851460+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.10#33944 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T08:24:25.851648+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.10#33944 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T08:24:25.939732+00:00 dns-arch named[2061]: client @0x7ff080681c00 192.0.2.10#36111 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T08:24:25.940229+00:00 dns-arch named[2061]: client @0x7ff080681c00 192.0.2.10#36111 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T08:24:26.027429+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.10#33956 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T08:24:26.027605+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.10#33956 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T08:24:27.864051+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.10#33966 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T08:24:27.864881+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.10#33966 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T08:24:28.015457+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.10#33972 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T08:24:28.015866+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.10#33972 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T08:24:28.487478+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.10#33980 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T08:24:28.488027+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.10#33980 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T08:24:29.131558+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.10#53163 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T08:24:29.131805+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.10#53163 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T08:24:29.359538+00:00 dns-arch named[2061]: client @0x7ff080681c00 192.0.2.10#59175 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T08:24:29.359934+00:00 dns-arch named[2061]: client @0x7ff080681c00 192.0.2.10#59175 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T08:24:32.967550+00:00 dns-arch named[2061]: client @0x7ff080681c00 192.0.2.10#40182 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T08:24:32.968025+00:00 dns-arch named[2061]: client @0x7ff080681c00 192.0.2.10#40182 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T08:24:33.491152+00:00 dns-arch named[2061]: client @0x7ff080681c00 192.0.2.11#35284 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T08:24:33.491439+00:00 dns-arch named[2061]: client @0x7ff080681c00 192.0.2.11#35284 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T08:24:34.515669+00:00 dns-arch named[2061]: client @0x7ff080681c00 192.0.2.10#58445 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T08:24:34.515863+00:00 dns-arch named[2061]: client @0x7ff080681c00 192.0.2.10#58445 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T08:24:34.735609+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.10#48891 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T08:24:34.735884+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.10#48891 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T08:24:43.195887+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.10#40684 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T08:24:43.196462+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.10#40684 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T08:24:45.223771+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.11#40900 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T08:24:45.223977+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.11#40900 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T08:24:45.765492+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.11#40902 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-30T08:24:45.765671+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.11#40902 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 1)
+2026-09-30T08:24:46.511680+00:00 dns-arch systemd[1]: Reloading Internet domain name server...
+2026-09-30T08:24:46.523594+00:00 dns-arch named[2061]: received SIGHUP signal to reload zones
+2026-09-30T08:24:46.524007+00:00 dns-arch named[2061]: loading configuration from '/etc/named.conf'
+2026-09-30T08:24:46.524412+00:00 dns-arch systemd[1]: Reloaded Internet domain name server.
+2026-09-30T08:24:46.524055+00:00 dns-arch named[2061]: the working directory is now '/var/named'
+2026-09-30T08:24:46.524249+00:00 dns-arch named[2061]: looking for GeoIP2 databases in '/usr/share/GeoIP'
+2026-09-30T08:24:46.524367+00:00 dns-arch named[2061]: using default UDP/IPv4 port range: [32768, 60999]
+2026-09-30T08:24:46.524421+00:00 dns-arch named[2061]: using default UDP/IPv6 port range: [32768, 60999]
+2026-09-30T08:24:46.524649+00:00 dns-arch named[2061]: Disabling periodic interface re-scans timer
+2026-09-30T08:24:46.525070+00:00 dns-arch named[2061]: using built-in root key for view _default
+2026-09-30T08:24:46.526224+00:00 dns-arch named[2061]: configuring command channel from '/etc/rndc.key'
+2026-09-30T08:24:46.526362+00:00 dns-arch named[2061]: configuring command channel from '/etc/rndc.key'
+2026-09-30T08:24:46.526528+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: (primary) removed
+2026-09-30T08:24:46.526580+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:1::53#53
+2026-09-30T08:24:46.527119+00:00 dns-arch named[2061]: reloading configuration succeeded
+2026-09-30T08:24:46.527141+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:12::d0d#53
+2026-09-30T08:24:46.527523+00:00 dns-arch named[2061]: zone pair-accept.test/IN: loaded serial 2026093001
+2026-09-30T08:24:46.527652+00:00 dns-arch named[2061]: zone pair-accept.test/IN: sending notifies (serial 2026093001)
+2026-09-30T08:24:46.527791+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:dc3::35#53
+2026-09-30T08:24:46.527966+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2801:1b8:10::b#53
+2026-09-30T08:24:46.528054+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2801:1b8:10::b#53
+2026-09-30T08:24:46.528121+00:00 dns-arch named[2061]: reloading zones succeeded
+2026-09-30T08:24:46.528204+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: loaded serial 2
+2026-09-30T08:24:46.528208+00:00 dns-arch named[2061]: all zones loaded
+2026-09-30T08:24:46.528237+00:00 dns-arch named[2061]: FIPS mode is disabled
+2026-09-30T08:24:46.528240+00:00 dns-arch named[2061]: running
+2026-09-30T08:24:46.528252+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notifies (serial 2)
+2026-09-30T08:24:46.528689+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notify to 192.0.2.10#53
+2026-09-30T08:24:46.528944+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:a8::e#53
+2026-09-30T08:24:46.529095+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:500:a8::e#53
+2026-09-30T08:24:46.529273+00:00 dns-arch named[2061]: zone pair-accept.test/IN: sending notify to 192.0.2.10#53
+2026-09-30T08:24:46.529813+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:9f::42#53
+2026-09-30T08:24:46.529945+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:500:9f::42#53
+2026-09-30T08:24:46.530256+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:7fe::53#53
+2026-09-30T08:24:46.530465+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:7fe::53#53
+2026-09-30T08:24:46.530697+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:2d::d#53
+2026-09-30T08:24:46.530759+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:500:2d::d#53
+2026-09-30T08:24:46.531004+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:7fd::1#53
+2026-09-30T08:24:46.531043+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:7fd::1#53
+2026-09-30T08:24:46.531207+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:2f::f#53
+2026-09-30T08:24:46.531242+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:500:2f::f#53
+2026-09-30T08:24:46.531492+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:503:ba3e::2:30#53
+2026-09-30T08:24:46.531532+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:503:ba3e::2:30#53
+2026-09-30T08:24:46.531672+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:2::c#53
+2026-09-30T08:24:46.531716+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:500:2::c#53
+2026-09-30T08:24:46.531926+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:503:c27::2:30#53
+2026-09-30T08:24:46.531979+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:503:c27::2:30#53
+2026-09-30T08:24:46.532165+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:500:1::53#53
+2026-09-30T08:24:46.591425+00:00 dns-arch named[2061]: network unreachable resolving 'ns2.ns-accept.test/A/IN': 2001:500:2::c#53
+2026-09-30T08:24:46.591493+00:00 dns-arch named[2061]: network unreachable resolving 'ns2.ns-accept.test/AAAA/IN': 2001:500:2::c#53
+2026-09-30T08:24:46.591705+00:00 dns-arch named[2061]: network unreachable resolving 'ns2.ns-accept.test/A/IN': 2001:500:9f::42#53
+2026-09-30T08:24:46.591747+00:00 dns-arch named[2061]: network unreachable resolving 'ns2.ns-accept.test/AAAA/IN': 2001:500:9f::42#53
+2026-09-30T08:24:46.591977+00:00 dns-arch named[2061]: network unreachable resolving 'ns2.ns-accept.test/A/IN': 2001:500:1::53#53
+2026-09-30T08:24:46.592033+00:00 dns-arch named[2061]: network unreachable resolving 'ns2.ns-accept.test/AAAA/IN': 2001:500:1::53#53
+2026-09-30T08:24:46.707425+00:00 dns-arch named[2061]: managed-keys-zone: Key 20326 for zone . is now trusted (acceptance timer complete)
+2026-09-30T08:24:46.707475+00:00 dns-arch named[2061]: managed-keys-zone: Key 38696 for zone . is now trusted (acceptance timer complete)
+2026-09-30T08:24:46.816020+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.10#38999 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T08:24:46.816427+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.10#38999 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T08:24:46.907672+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.10#39989 (pair-accept.test): transfer of 'pair-accept.test/IN': AXFR started (serial 2026093001)
+2026-09-30T08:24:46.907889+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.10#39989 (pair-accept.test): transfer of 'pair-accept.test/IN': AXFR ended: 1 messages, 12 records, 390 bytes, 0.001 secs (390000 bytes/sec) (serial 2026093001)
+2026-09-30T08:24:47.933476+00:00 dns-arch named[2061]: received control channel command 'notify catalog-c000020b.celikpanel.invalid'
+2026-09-30T08:24:47.974040+00:00 dns-arch named[2061]: received control channel command 'notify pair-accept.test'
+2026-09-30T08:24:48.003128+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.11#40920 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T08:24:48.003459+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.11#40920 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T08:24:50.566483+00:00 dns-arch named[2061]: received control channel command 'zonestatus pair-accept.test'
+2026-09-30T08:24:50.577976+00:00 dns-arch named[2061]: received control channel command 'zonestatus catalog-c000020b.celikpanel.invalid'
+2026-09-30T08:24:50.999808+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.10#41814 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T08:24:51.000027+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.10#41814 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T08:24:51.527353+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notifies (serial 2)
+2026-09-30T08:24:51.527611+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notify to 192.0.2.10#53
+2026-09-30T08:24:51.527864+00:00 dns-arch named[2061]: zone pair-accept.test/IN: sending notifies (serial 2026093001)
+2026-09-30T08:24:51.528055+00:00 dns-arch named[2061]: zone pair-accept.test/IN: sending notify to 192.0.2.10#53
+2026-09-30T08:24:51.654528+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.11#40986 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T08:24:51.654696+00:00 dns-arch named[2061]: client @0x7ff07d762c00 192.0.2.11#40986 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T08:24:52.619835+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#43821 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T08:24:52.620086+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#43821 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T08:24:52.983805+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#53375 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T08:24:52.984088+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#53375 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T08:24:53.436507+00:00 dns-arch named[2061]: client @0x7ff080681c00 192.0.2.10#41844 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T08:24:53.436788+00:00 dns-arch named[2061]: client @0x7ff080681c00 192.0.2.10#41844 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T08:24:53.660049+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.11#54116 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T08:24:53.660360+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.11#54116 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T08:24:54.210065+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.11#54138 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T08:24:54.210255+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.11#54138 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T08:24:55.039705+00:00 dns-arch systemd[1]: Reloading Internet domain name server...
+2026-09-30T08:24:55.051103+00:00 dns-arch named[2061]: received SIGHUP signal to reload zones
+2026-09-30T08:24:55.051310+00:00 dns-arch systemd[1]: Reloaded Internet domain name server.
+2026-09-30T08:24:55.051597+00:00 dns-arch named[2061]: loading configuration from '/etc/named.conf'
+2026-09-30T08:24:55.052369+00:00 dns-arch named[2061]: the working directory is now '/var/named'
+2026-09-30T08:24:55.052572+00:00 dns-arch named[2061]: looking for GeoIP2 databases in '/usr/share/GeoIP'
+2026-09-30T08:24:55.052659+00:00 dns-arch named[2061]: using default UDP/IPv4 port range: [32768, 60999]
+2026-09-30T08:24:55.052711+00:00 dns-arch named[2061]: using default UDP/IPv6 port range: [32768, 60999]
+2026-09-30T08:24:55.052937+00:00 dns-arch named[2061]: Disabling periodic interface re-scans timer
+2026-09-30T08:24:55.053253+00:00 dns-arch named[2061]: using built-in root key for view _default
+2026-09-30T08:24:55.053584+00:00 dns-arch named[2061]: configuring command channel from '/etc/rndc.key'
+2026-09-30T08:24:55.053612+00:00 dns-arch named[2061]: configuring command channel from '/etc/rndc.key'
+2026-09-30T08:24:55.054424+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:12::d0d#53
+2026-09-30T08:24:55.054737+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: (primary) removed
+2026-09-30T08:24:55.054901+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:2::c#53
+2026-09-30T08:24:55.055085+00:00 dns-arch named[2061]: zone pair-accept.test/IN: (primary) removed
+2026-09-30T08:24:55.055584+00:00 dns-arch named[2061]: reloading configuration succeeded
+2026-09-30T08:24:55.056070+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: loaded serial 2
+2026-09-30T08:24:55.056169+00:00 dns-arch named[2061]: reloading zones succeeded
+2026-09-30T08:24:55.056356+00:00 dns-arch named[2061]: zone pair-accept.test/IN: loaded serial 2026093002
+2026-09-30T08:24:55.056419+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notifies (serial 2)
+2026-09-30T08:24:55.056459+00:00 dns-arch named[2061]: all zones loaded
+2026-09-30T08:24:55.056624+00:00 dns-arch named[2061]: FIPS mode is disabled
+2026-09-30T08:24:55.056657+00:00 dns-arch named[2061]: running
+2026-09-30T08:24:55.056733+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notify to 192.0.2.10#53
+2026-09-30T08:24:55.056773+00:00 dns-arch named[2061]: zone pair-accept.test/IN: sending notifies (serial 2026093002)
+2026-09-30T08:24:55.056999+00:00 dns-arch named[2061]: zone pair-accept.test/IN: sending notify to 192.0.2.10#53
+2026-09-30T08:24:55.075787+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:7fd::1#53
+2026-09-30T08:24:55.075926+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:7fd::1#53
+2026-09-30T08:24:55.076580+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:500:2d::d#53
+2026-09-30T08:24:55.076690+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:2d::d#53
+2026-09-30T08:24:55.077116+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2801:1b8:10::b#53
+2026-09-30T08:24:55.077419+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:2f::f#53
+2026-09-30T08:24:55.077538+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2801:1b8:10::b#53
+2026-09-30T08:24:55.077662+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:1::53#53
+2026-09-30T08:24:55.077731+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:500:2f::f#53
+2026-09-30T08:24:55.077883+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:500:1::53#53
+2026-09-30T08:24:55.077941+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:9f::42#53
+2026-09-30T08:24:55.078150+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:503:c27::2:30#53
+2026-09-30T08:24:55.078241+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:500:9f::42#53
+2026-09-30T08:24:55.078397+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:503:c27::2:30#53
+2026-09-30T08:24:55.078456+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:a8::e#53
+2026-09-30T08:24:55.078611+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:503:ba3e::2:30#53
+2026-09-30T08:24:55.078681+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:dc3::35#53
+2026-09-30T08:24:55.078790+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:dc3::35#53
+2026-09-30T08:24:55.078850+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:500:a8::e#53
+2026-09-30T08:24:55.078964+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:7fe::53#53
+2026-09-30T08:24:55.079026+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:503:ba3e::2:30#53
+2026-09-30T08:24:55.079153+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:7fe::53#53
+2026-09-30T08:24:55.255452+00:00 dns-arch named[2061]: managed-keys-zone: Key 20326 for zone . is now trusted (acceptance timer complete)
+2026-09-30T08:24:55.255508+00:00 dns-arch named[2061]: managed-keys-zone: Key 38696 for zone . is now trusted (acceptance timer complete)
+2026-09-30T08:24:55.273941+00:00 dns-arch named[2061]: network unreachable resolving 'ns2.ns-accept.test/A/IN': 2001:503:ba3e::2:30#53
+2026-09-30T08:24:55.274016+00:00 dns-arch named[2061]: network unreachable resolving 'ns2.ns-accept.test/AAAA/IN': 2001:503:ba3e::2:30#53
+2026-09-30T08:24:55.274232+00:00 dns-arch named[2061]: network unreachable resolving 'ns2.ns-accept.test/A/IN': 2001:dc3::35#53
+2026-09-30T08:24:55.274360+00:00 dns-arch named[2061]: network unreachable resolving 'ns2.ns-accept.test/AAAA/IN': 2001:dc3::35#53
+2026-09-30T08:24:55.879820+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#42893 (pair-accept.test): transfer of 'pair-accept.test/IN': AXFR started (serial 2026093002)
+2026-09-30T08:24:55.880055+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#42893 (pair-accept.test): transfer of 'pair-accept.test/IN': AXFR ended: 1 messages, 13 records, 413 bytes, 0.001 secs (413000 bytes/sec) (serial 2026093002)
+2026-09-30T08:24:56.455342+00:00 dns-arch named[2061]: received control channel command 'notify catalog-c000020b.celikpanel.invalid'
+2026-09-30T08:24:56.500842+00:00 dns-arch named[2061]: received control channel command 'notify pair-accept.test'
+2026-09-30T08:24:56.530620+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.11#54168 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T08:24:56.530968+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.11#54168 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T08:24:58.842018+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.11#54224 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T08:24:58.842362+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.11#54224 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T08:24:59.433007+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.11#54244 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T08:24:59.433420+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.11#54244 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T08:25:00.056346+00:00 dns-arch named[2061]: zone pair-accept.test/IN: sending notifies (serial 2026093002)
+2026-09-30T08:25:00.056462+00:00 dns-arch named[2061]: zone pair-accept.test/IN: sending notify to 192.0.2.10#53
+2026-09-30T08:25:00.056846+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notifies (serial 2)
+2026-09-30T08:25:00.056920+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notify to 192.0.2.10#53
+2026-09-30T08:25:00.390763+00:00 dns-arch systemd[1]: Reloading Internet domain name server...
+2026-09-30T08:25:00.407695+00:00 dns-arch named[2061]: received SIGHUP signal to reload zones
+2026-09-30T08:25:00.408753+00:00 dns-arch named[2061]: loading configuration from '/etc/named.conf'
+2026-09-30T08:25:00.408999+00:00 dns-arch systemd[1]: Reloaded Internet domain name server.
+2026-09-30T08:25:00.408820+00:00 dns-arch named[2061]: the working directory is now '/var/named'
+2026-09-30T08:25:00.409118+00:00 dns-arch named[2061]: looking for GeoIP2 databases in '/usr/share/GeoIP'
+2026-09-30T08:25:00.409248+00:00 dns-arch named[2061]: using default UDP/IPv4 port range: [32768, 60999]
+2026-09-30T08:25:00.409409+00:00 dns-arch named[2061]: using default UDP/IPv6 port range: [32768, 60999]
+2026-09-30T08:25:00.409857+00:00 dns-arch named[2061]: Disabling periodic interface re-scans timer
+2026-09-30T08:25:00.411435+00:00 dns-arch named[2061]: using built-in root key for view _default
+2026-09-30T08:25:00.412992+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:2d::d#53
+2026-09-30T08:25:00.414102+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:7fe::53#53
+2026-09-30T08:25:00.414247+00:00 dns-arch named[2061]: configuring command channel from '/etc/rndc.key'
+2026-09-30T08:25:00.414414+00:00 dns-arch named[2061]: configuring command channel from '/etc/rndc.key'
+2026-09-30T08:25:00.414641+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2801:1b8:10::b#53
+2026-09-30T08:25:00.414718+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: (primary) removed
+2026-09-30T08:25:00.414725+00:00 dns-arch named[2061]: zone pair-accept.test/IN: (primary) removed
+2026-09-30T08:25:00.415091+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:503:c27::2:30#53
+2026-09-30T08:25:00.416055+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:2::c#53
+2026-09-30T08:25:00.416939+00:00 dns-arch named[2061]: reloading configuration succeeded
+2026-09-30T08:25:00.417009+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:7fd::1#53
+2026-09-30T08:25:00.417467+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: loaded serial 2
+2026-09-30T08:25:00.417696+00:00 dns-arch named[2061]: zone pair-accept.test/IN: loaded serial 2026093003
+2026-09-30T08:25:00.417884+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notifies (serial 2)
+2026-09-30T08:25:00.417901+00:00 dns-arch named[2061]: zone pair-accept.test/IN: sending notifies (serial 2026093003)
+2026-09-30T08:25:00.418210+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:dc3::35#53
+2026-09-30T08:25:00.418576+00:00 dns-arch named[2061]: reloading zones succeeded
+2026-09-30T08:25:00.418616+00:00 dns-arch named[2061]: all zones loaded
+2026-09-30T08:25:00.418703+00:00 dns-arch named[2061]: FIPS mode is disabled
+2026-09-30T08:25:00.418709+00:00 dns-arch named[2061]: running
+2026-09-30T08:25:00.418887+00:00 dns-arch named[2061]: zone pair-accept.test/IN: sending notify to 192.0.2.10#53
+2026-09-30T08:25:00.419067+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notify to 192.0.2.10#53
+2026-09-30T08:25:00.419357+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:500:1::53#53
+2026-09-30T08:25:00.419527+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:1::53#53
+2026-09-30T08:25:00.419956+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:dc3::35#53
+2026-09-30T08:25:00.420072+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:503:ba3e::2:30#53
+2026-09-30T08:25:00.420533+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:503:ba3e::2:30#53
+2026-09-30T08:25:00.420601+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:9f::42#53
+2026-09-30T08:25:00.420970+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:500:9f::42#53
+2026-09-30T08:25:00.421195+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:a8::e#53
+2026-09-30T08:25:00.421731+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:500:a8::e#53
+2026-09-30T08:25:00.421814+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:2f::f#53
+2026-09-30T08:25:00.422190+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:500:2f::f#53
+2026-09-30T08:25:00.422390+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:12::d0d#53
+2026-09-30T08:25:00.422820+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:500:12::d0d#53
+2026-09-30T08:25:00.423916+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:7fd::1#53
+2026-09-30T08:25:00.470084+00:00 dns-arch named[2061]: network unreachable resolving 'ns2.ns-accept.test/A/IN': 2001:500:9f::42#53
+2026-09-30T08:25:00.470181+00:00 dns-arch named[2061]: network unreachable resolving 'ns2.ns-accept.test/AAAA/IN': 2001:500:9f::42#53
+2026-09-30T08:25:00.568192+00:00 dns-arch named[2061]: managed-keys-zone: Key 20326 for zone . is now trusted (acceptance timer complete)
+2026-09-30T08:25:00.568356+00:00 dns-arch named[2061]: managed-keys-zone: Key 38696 for zone . is now trusted (acceptance timer complete)
+2026-09-30T08:25:00.900015+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#60747 (pair-accept.test): transfer of 'pair-accept.test/IN': AXFR started (serial 2026093003)
+2026-09-30T08:25:00.902035+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#60747 (pair-accept.test): transfer of 'pair-accept.test/IN': AXFR ended: 1 messages, 12 records, 390 bytes, 0.002 secs (195000 bytes/sec) (serial 2026093003)
+2026-09-30T08:25:02.244510+00:00 dns-arch named[2061]: received control channel command 'notify catalog-c000020b.celikpanel.invalid'
+2026-09-30T08:25:02.301378+00:00 dns-arch named[2061]: received control channel command 'notify pair-accept.test'
+2026-09-30T08:25:02.339154+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.11#54272 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T08:25:02.339375+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.11#54272 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T08:25:03.116840+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#54214 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T08:25:03.117177+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#54214 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T08:25:03.695921+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.10#60122 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T08:25:03.696538+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.10#60122 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T08:25:03.736686+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.11#54218 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T08:25:03.736952+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.11#54218 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T08:25:04.655454+00:00 dns-arch systemd[1]: Reloading Internet domain name server...
+2026-09-30T08:25:04.667724+00:00 dns-arch named[2061]: received SIGHUP signal to reload zones
+2026-09-30T08:25:04.667936+00:00 dns-arch named[2061]: loading configuration from '/etc/named.conf'
+2026-09-30T08:25:04.668664+00:00 dns-arch systemd[1]: Reloaded Internet domain name server.
+2026-09-30T08:25:04.667976+00:00 dns-arch named[2061]: the working directory is now '/var/named'
+2026-09-30T08:25:04.668169+00:00 dns-arch named[2061]: looking for GeoIP2 databases in '/usr/share/GeoIP'
+2026-09-30T08:25:04.668259+00:00 dns-arch named[2061]: using default UDP/IPv4 port range: [32768, 60999]
+2026-09-30T08:25:04.668345+00:00 dns-arch named[2061]: using default UDP/IPv6 port range: [32768, 60999]
+2026-09-30T08:25:04.668597+00:00 dns-arch named[2061]: Disabling periodic interface re-scans timer
+2026-09-30T08:25:04.668958+00:00 dns-arch named[2061]: using built-in root key for view _default
+2026-09-30T08:25:04.670517+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:a8::e#53
+2026-09-30T08:25:04.670656+00:00 dns-arch named[2061]: configuring command channel from '/etc/rndc.key'
+2026-09-30T08:25:04.670725+00:00 dns-arch named[2061]: configuring command channel from '/etc/rndc.key'
+2026-09-30T08:25:04.670806+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:2::c#53
+2026-09-30T08:25:04.671002+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: (primary) removed
+2026-09-30T08:25:04.671006+00:00 dns-arch named[2061]: zone pair-accept.test/IN: (primary) removed
+2026-09-30T08:25:04.671376+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:2d::d#53
+2026-09-30T08:25:04.671672+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:1::53#53
+2026-09-30T08:25:04.671834+00:00 dns-arch named[2061]: reloading configuration succeeded
+2026-09-30T08:25:04.672208+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: loaded serial 2
+2026-09-30T08:25:04.672245+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:12::d0d#53
+2026-09-30T08:25:04.672349+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notifies (serial 2)
+2026-09-30T08:25:04.672449+00:00 dns-arch named[2061]: reloading zones succeeded
+2026-09-30T08:25:04.672701+00:00 dns-arch named[2061]: zone pair-accept.test/IN: loaded serial 2026093004
+2026-09-30T08:25:04.672716+00:00 dns-arch named[2061]: all zones loaded
+2026-09-30T08:25:04.672759+00:00 dns-arch named[2061]: FIPS mode is disabled
+2026-09-30T08:25:04.672764+00:00 dns-arch named[2061]: running
+2026-09-30T08:25:04.672784+00:00 dns-arch named[2061]: zone pair-accept.test/IN: sending notifies (serial 2026093004)
+2026-09-30T08:25:04.672931+00:00 dns-arch named[2061]: zone pair-accept.test/IN: sending notify to 192.0.2.10#53
+2026-09-30T08:25:04.673162+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:503:c27::2:30#53
+2026-09-30T08:25:04.673379+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notify to 192.0.2.10#53
+2026-09-30T08:25:04.673615+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:503:c27::2:30#53
+2026-09-30T08:25:04.673923+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:dc3::35#53
+2026-09-30T08:25:04.674073+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:dc3::35#53
+2026-09-30T08:25:04.674318+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:2f::f#53
+2026-09-30T08:25:04.674413+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:500:2f::f#53
+2026-09-30T08:25:04.674574+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:7fd::1#53
+2026-09-30T08:25:04.674790+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:9f::42#53
+2026-09-30T08:25:04.674852+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:7fd::1#53
+2026-09-30T08:25:04.675225+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:500:9f::42#53
+2026-09-30T08:25:04.675403+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:7fe::53#53
+2026-09-30T08:25:04.675615+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:7fe::53#53
+2026-09-30T08:25:04.675701+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2801:1b8:10::b#53
+2026-09-30T08:25:04.675984+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2801:1b8:10::b#53
+2026-09-30T08:25:04.676084+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:503:ba3e::2:30#53
+2026-09-30T08:25:04.676344+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:503:ba3e::2:30#53
+2026-09-30T08:25:04.676584+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:500:2d::d#53
+2026-09-30T08:25:04.720593+00:00 dns-arch named[2061]: network unreachable resolving 'ns2.ns-accept.test/A/IN': 2001:503:c27::2:30#53
+2026-09-30T08:25:04.720706+00:00 dns-arch named[2061]: network unreachable resolving 'ns2.ns-accept.test/AAAA/IN': 2001:503:c27::2:30#53
+2026-09-30T08:25:04.723480+00:00 dns-arch named[2061]: network unreachable resolving 'ns2.ns-accept.test/A/IN': 2001:500:2f::f#53
+2026-09-30T08:25:04.723694+00:00 dns-arch named[2061]: network unreachable resolving 'ns2.ns-accept.test/AAAA/IN': 2001:500:2f::f#53
+2026-09-30T08:25:04.769249+00:00 dns-arch named[2061]: managed-keys-zone: Key 20326 for zone . is now trusted (acceptance timer complete)
+2026-09-30T08:25:04.769363+00:00 dns-arch named[2061]: managed-keys-zone: Key 38696 for zone . is now trusted (acceptance timer complete)
+2026-09-30T08:25:04.911901+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#38523 (pair-accept.test): transfer of 'pair-accept.test/IN': AXFR started (serial 2026093004)
+2026-09-30T08:25:04.912165+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#38523 (pair-accept.test): transfer of 'pair-accept.test/IN': AXFR ended: 1 messages, 13 records, 413 bytes, 0.001 secs (413000 bytes/sec) (serial 2026093004)
+2026-09-30T08:25:06.233786+00:00 dns-arch named[2061]: received control channel command 'notify catalog-c000020b.celikpanel.invalid'
+2026-09-30T08:25:06.285342+00:00 dns-arch named[2061]: received control channel command 'notify pair-accept.test'
+2026-09-30T08:25:06.312259+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#54256 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T08:25:06.312508+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#54256 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T08:25:08.560831+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#54310 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T08:25:08.561137+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#54310 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T08:25:09.134354+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.11#54320 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 2)
+2026-09-30T08:25:09.134566+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.11#54320 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 2)
+2026-09-30T08:25:09.672396+00:00 dns-arch named[2061]: zone pair-accept.test/IN: sending notifies (serial 2026093004)
+2026-09-30T08:25:09.672443+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notifies (serial 2)
+2026-09-30T08:25:09.672504+00:00 dns-arch named[2061]: zone pair-accept.test/IN: sending notify to 192.0.2.10#53
+2026-09-30T08:25:09.672835+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notify to 192.0.2.10#53
+2026-09-30T08:25:09.847457+00:00 dns-arch systemd[1]: Reloading Internet domain name server...
+2026-09-30T08:25:09.860119+00:00 dns-arch named[2061]: received SIGHUP signal to reload zones
+2026-09-30T08:25:09.860191+00:00 dns-arch named[2061]: loading configuration from '/etc/named.conf'
+2026-09-30T08:25:09.860252+00:00 dns-arch named[2061]: the working directory is now '/var/named'
+2026-09-30T08:25:09.860463+00:00 dns-arch named[2061]: looking for GeoIP2 databases in '/usr/share/GeoIP'
+2026-09-30T08:25:09.860551+00:00 dns-arch named[2061]: using default UDP/IPv4 port range: [32768, 60999]
+2026-09-30T08:25:09.860605+00:00 dns-arch named[2061]: using default UDP/IPv6 port range: [32768, 60999]
+2026-09-30T08:25:09.860829+00:00 dns-arch named[2061]: Disabling periodic interface re-scans timer
+2026-09-30T08:25:09.861138+00:00 dns-arch named[2061]: using built-in root key for view _default
+2026-09-30T08:25:09.861342+00:00 dns-arch systemd[1]: Reloaded Internet domain name server.
+2026-09-30T08:25:09.861745+00:00 dns-arch named[2061]: configuring command channel from '/etc/rndc.key'
+2026-09-30T08:25:09.861787+00:00 dns-arch named[2061]: configuring command channel from '/etc/rndc.key'
+2026-09-30T08:25:09.862363+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: (primary) removed
+2026-09-30T08:25:09.862366+00:00 dns-arch named[2061]: zone pair-accept.test/IN: (primary) removed
+2026-09-30T08:25:09.862783+00:00 dns-arch named[2061]: reloading configuration succeeded
+2026-09-30T08:25:09.862812+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:2::c#53
+2026-09-30T08:25:09.863046+00:00 dns-arch named[2061]: reloading zones succeeded
+2026-09-30T08:25:09.863167+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: loaded serial 3
+2026-09-30T08:25:09.863170+00:00 dns-arch named[2061]: all zones loaded
+2026-09-30T08:25:09.863201+00:00 dns-arch named[2061]: FIPS mode is disabled
+2026-09-30T08:25:09.863205+00:00 dns-arch named[2061]: running
+2026-09-30T08:25:09.863218+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notifies (serial 3)
+2026-09-30T08:25:09.863264+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notify to 192.0.2.10#53
+2026-09-30T08:25:09.863418+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:2d::d#53
+2026-09-30T08:25:09.863672+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:7fd::1#53
+2026-09-30T08:25:09.863894+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:503:ba3e::2:30#53
+2026-09-30T08:25:09.864177+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:dc3::35#53
+2026-09-30T08:25:09.864736+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:1::53#53
+2026-09-30T08:25:09.864949+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:9f::42#53
+2026-09-30T08:25:09.865156+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2801:1b8:10::b#53
+2026-09-30T08:25:09.865386+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:2f::f#53
+2026-09-30T08:25:09.865512+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:a8::e#53
+2026-09-30T08:25:09.865668+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:7fe::53#53
+2026-09-30T08:25:09.865800+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:503:c27::2:30#53
+2026-09-30T08:25:09.865931+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:12::d0d#53
+2026-09-30T08:25:10.134840+00:00 dns-arch named[2061]: managed-keys-zone: Key 20326 for zone . is now trusted (acceptance timer complete)
+2026-09-30T08:25:10.134873+00:00 dns-arch named[2061]: managed-keys-zone: Key 38696 for zone . is now trusted (acceptance timer complete)
+2026-09-30T08:25:11.243019+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.11#54340 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T08:25:11.243392+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.11#54340 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T08:25:11.309528+00:00 dns-arch named[2061]: received control channel command 'notify catalog-c000020b.celikpanel.invalid'
+2026-09-30T08:25:11.344680+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#54362 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T08:25:11.344903+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#54362 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T08:25:11.639353+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#54374 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T08:25:11.639557+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#54374 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T08:25:11.935353+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#54382 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T08:25:11.935666+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#54382 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T08:25:12.231406+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#54384 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T08:25:12.231613+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#54384 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T08:25:12.531872+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#54392 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T08:25:12.532038+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#54392 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T08:25:12.827472+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#54400 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T08:25:12.827672+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#54400 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T08:25:12.932003+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#38219 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T08:25:12.932188+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#38219 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T08:25:13.123389+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.11#44338 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T08:25:13.123671+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.11#44338 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T08:25:13.956053+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.10#40396 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T08:25:13.956325+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.10#40396 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T08:25:14.862422+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notifies (serial 3)
+2026-09-30T08:25:14.862585+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notify to 192.0.2.10#53
+2026-09-30T08:25:15.005542+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#44350 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T08:25:15.005756+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#44350 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T08:25:15.030898+00:00 dns-arch named[2061]: received control channel command 'notify catalog-c000020b.celikpanel.invalid'
+2026-09-30T08:25:15.062662+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.11#44372 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T08:25:15.062851+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.11#44372 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T08:25:15.605718+00:00 dns-arch named[2061]: received control channel command 'zonestatus pair-accept.test'
+2026-09-30T08:25:15.617984+00:00 dns-arch named[2061]: received control channel command 'zonestatus catalog-c000020b.celikpanel.invalid'
+2026-09-30T08:25:19.592454+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#44388 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T08:25:19.592718+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#44388 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T08:25:19.862342+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notifies (serial 3)
+2026-09-30T08:25:19.862543+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notify to 192.0.2.10#53
+2026-09-30T08:25:21.260252+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#44392 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T08:25:21.260782+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#44392 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T08:25:21.280066+00:00 dns-arch named[2061]: received control channel command 'notify catalog-c000020b.celikpanel.invalid'
+2026-09-30T08:25:21.317427+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#44420 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T08:25:21.317801+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#44420 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T08:25:24.204379+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#41190 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T08:25:24.205153+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#41190 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T08:25:24.865416+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notifies (serial 3)
+2026-09-30T08:25:24.865590+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notify to 192.0.2.10#53
+2026-09-30T08:25:32.766785+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#37374 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T08:25:32.767127+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#37374 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T08:25:34.436144+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.10#56488 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T08:25:34.436505+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.10#56488 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T08:25:44.888336+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.10#57736 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T08:25:44.888632+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.10#57736 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T08:25:46.362626+00:00 dns-arch named[2061]: received control channel command 'zonestatus pair-accept.test'
+2026-09-30T08:25:46.373771+00:00 dns-arch named[2061]: received control channel command 'zonestatus catalog-c000020b.celikpanel.invalid'
+2026-09-30T08:25:46.808395+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#57746 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T08:25:46.808700+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#57746 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T08:25:47.523494+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.11#36696 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T08:25:47.524041+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.11#36696 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T08:25:48.412508+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#40975 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T08:25:48.413233+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#40975 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T08:25:48.632441+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#41527 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T08:25:48.632639+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#41527 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T08:25:49.837592+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#36704 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T08:25:49.837823+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#36704 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T08:25:50.412831+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.11#36716 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 3)
+2026-09-30T08:25:50.413098+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.11#36716 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 4 records, 161 bytes, 0.001 secs (161000 bytes/sec) (serial 3)
+2026-09-30T08:25:51.308909+00:00 dns-arch systemd[1]: Reloading Internet domain name server...
+2026-09-30T08:25:51.323616+00:00 dns-arch named[2061]: received SIGHUP signal to reload zones
+2026-09-30T08:25:51.323700+00:00 dns-arch systemd[1]: Reloaded Internet domain name server.
+2026-09-30T08:25:51.324039+00:00 dns-arch named[2061]: loading configuration from '/etc/named.conf'
+2026-09-30T08:25:51.324087+00:00 dns-arch named[2061]: the working directory is now '/var/named'
+2026-09-30T08:25:51.324263+00:00 dns-arch named[2061]: looking for GeoIP2 databases in '/usr/share/GeoIP'
+2026-09-30T08:25:51.324514+00:00 dns-arch named[2061]: using default UDP/IPv4 port range: [32768, 60999]
+2026-09-30T08:25:51.324568+00:00 dns-arch named[2061]: using default UDP/IPv6 port range: [32768, 60999]
+2026-09-30T08:25:51.324839+00:00 dns-arch named[2061]: Disabling periodic interface re-scans timer
+2026-09-30T08:25:51.325156+00:00 dns-arch named[2061]: using built-in root key for view _default
+2026-09-30T08:25:51.325434+00:00 dns-arch named[2061]: configuring command channel from '/etc/rndc.key'
+2026-09-30T08:25:51.325459+00:00 dns-arch named[2061]: configuring command channel from '/etc/rndc.key'
+2026-09-30T08:25:51.326675+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2801:1b8:10::b#53
+2026-09-30T08:25:51.326830+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: (primary) removed
+2026-09-30T08:25:51.327380+00:00 dns-arch named[2061]: reloading configuration succeeded
+2026-09-30T08:25:51.327440+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:7fe::53#53
+2026-09-30T08:25:51.327695+00:00 dns-arch named[2061]: reloading zones succeeded
+2026-09-30T08:25:51.327876+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: loaded serial 4
+2026-09-30T08:25:51.327963+00:00 dns-arch named[2061]: zone pair-accept.test/IN: loaded serial 2026093001
+2026-09-30T08:25:51.327969+00:00 dns-arch named[2061]: all zones loaded
+2026-09-30T08:25:51.328003+00:00 dns-arch named[2061]: FIPS mode is disabled
+2026-09-30T08:25:51.328007+00:00 dns-arch named[2061]: running
+2026-09-30T08:25:51.328022+00:00 dns-arch named[2061]: zone pair-accept.test/IN: sending notifies (serial 2026093001)
+2026-09-30T08:25:51.328062+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notifies (serial 4)
+2026-09-30T08:25:51.328344+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notify to 192.0.2.10#53
+2026-09-30T08:25:51.328414+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:2f::f#53
+2026-09-30T08:25:51.328717+00:00 dns-arch named[2061]: zone pair-accept.test/IN: sending notify to 192.0.2.10#53
+2026-09-30T08:25:51.328822+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:dc3::35#53
+2026-09-30T08:25:51.329083+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:2::c#53
+2026-09-30T08:25:51.329153+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:dc3::35#53
+2026-09-30T08:25:51.329321+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:12::d0d#53
+2026-09-30T08:25:51.329392+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:500:2::c#53
+2026-09-30T08:25:51.329591+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:503:c27::2:30#53
+2026-09-30T08:25:51.329703+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:500:12::d0d#53
+2026-09-30T08:25:51.329794+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:9f::42#53
+2026-09-30T08:25:51.329931+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:a8::e#53
+2026-09-30T08:25:51.330106+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:503:c27::2:30#53
+2026-09-30T08:25:51.330214+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:2d::d#53
+2026-09-30T08:25:51.330568+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:7fd::1#53
+2026-09-30T08:25:51.330631+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:500:9f::42#53
+2026-09-30T08:25:51.330872+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:500:a8::e#53
+2026-09-30T08:25:51.330973+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:500:1::53#53
+2026-09-30T08:25:51.331229+00:00 dns-arch named[2061]: network unreachable resolving './DNSKEY/IN': 2001:503:ba3e::2:30#53
+2026-09-30T08:25:51.331433+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:500:2d::d#53
+2026-09-30T08:25:51.331755+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:7fd::1#53
+2026-09-30T08:25:51.332023+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:500:1::53#53
+2026-09-30T08:25:51.332320+00:00 dns-arch named[2061]: network unreachable resolving 'test/NS/IN': 2001:503:ba3e::2:30#53
+2026-09-30T08:25:51.391693+00:00 dns-arch named[2061]: network unreachable resolving 'ns2.ns-accept.test/A/IN': 2001:500:1::53#53
+2026-09-30T08:25:51.391869+00:00 dns-arch named[2061]: network unreachable resolving 'ns2.ns-accept.test/AAAA/IN': 2001:500:1::53#53
+2026-09-30T08:25:51.392112+00:00 dns-arch named[2061]: network unreachable resolving 'ns2.ns-accept.test/A/IN': 2001:503:ba3e::2:30#53
+2026-09-30T08:25:51.392185+00:00 dns-arch named[2061]: network unreachable resolving 'ns2.ns-accept.test/AAAA/IN': 2001:503:ba3e::2:30#53
+2026-09-30T08:25:51.512451+00:00 dns-arch named[2061]: managed-keys-zone: Key 20326 for zone . is now trusted (acceptance timer complete)
+2026-09-30T08:25:51.512519+00:00 dns-arch named[2061]: managed-keys-zone: Key 38696 for zone . is now trusted (acceptance timer complete)
+2026-09-30T08:25:52.000449+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.10#50893 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 4)
+2026-09-30T08:25:52.000832+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.10#50893 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 4)
+2026-09-30T08:25:52.088428+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#39959 (pair-accept.test): transfer of 'pair-accept.test/IN': AXFR started (serial 2026093001)
+2026-09-30T08:25:52.088626+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#39959 (pair-accept.test): transfer of 'pair-accept.test/IN': AXFR ended: 1 messages, 12 records, 390 bytes, 0.001 secs (390000 bytes/sec) (serial 2026093001)
+2026-09-30T08:25:53.147993+00:00 dns-arch named[2061]: received control channel command 'notify catalog-c000020b.celikpanel.invalid'
+2026-09-30T08:25:53.203106+00:00 dns-arch named[2061]: received control channel command 'notify pair-accept.test'
+2026-09-30T08:25:53.246880+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#56704 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 4)
+2026-09-30T08:25:53.247095+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#56704 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 4)
+2026-09-30T08:25:55.168552+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#46624 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 4)
+2026-09-30T08:25:55.169948+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#46624 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 4)
+2026-09-30T08:25:55.816419+00:00 dns-arch named[2061]: received control channel command 'zonestatus pair-accept.test'
+2026-09-30T08:25:55.829435+00:00 dns-arch named[2061]: received control channel command 'zonestatus catalog-c000020b.celikpanel.invalid'
+2026-09-30T08:25:56.300463+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#46660 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 4)
+2026-09-30T08:25:56.300817+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#46660 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 4)
+2026-09-30T08:25:56.327360+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notifies (serial 4)
+2026-09-30T08:25:56.328822+00:00 dns-arch named[2061]: zone pair-accept.test/IN: sending notifies (serial 2026093001)
+2026-09-30T08:25:56.329022+00:00 dns-arch named[2061]: zone pair-accept.test/IN: sending notify to 192.0.2.10#53
+2026-09-30T08:25:56.329086+00:00 dns-arch named[2061]: zone catalog-c000020b.celikpanel.invalid/IN: sending notify to 192.0.2.10#53
+2026-09-30T08:25:56.991942+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#56794 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 4)
+2026-09-30T08:25:56.992390+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#56794 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 4)
+2026-09-30T08:25:57.944447+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.10#47945 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 4)
+2026-09-30T08:25:57.944655+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.10#47945 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 4)
+2026-09-30T08:25:58.308540+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#60637 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 4)
+2026-09-30T08:25:58.309413+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#60637 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 4)
+2026-09-30T08:25:59.502776+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#56816 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 4)
+2026-09-30T08:25:59.502996+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.11#56816 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 4)
+2026-09-30T08:26:00.560478+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#44811 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 4)
+2026-09-30T08:26:00.560817+00:00 dns-arch named[2061]: client @0x7ff07d764800 192.0.2.10#44811 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 4)
+2026-09-30T08:26:00.922883+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.10#44481 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 4)
+2026-09-30T08:26:00.979381+00:00 dns-arch named[2061]: client @0x7ff080683800 192.0.2.10#44481 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.052 secs (4884 bytes/sec) (serial 4)
+2026-09-30T08:26:04.032146+00:00 dns-arch systemd[1]: Stopping Internet domain name server...
+2026-09-30T08:26:04.044618+00:00 dns-arch named[2061]: no longer listening on 127.0.0.1#53
+2026-09-30T08:26:04.062531+00:00 dns-arch named[2061]: no longer listening on 10.0.2.15#53
+2026-09-30T08:26:04.063396+00:00 dns-arch named[2061]: no longer listening on 192.0.2.11#53
+2026-09-30T08:26:04.063853+00:00 dns-arch named[2061]: no longer listening on ::1#53
+2026-09-30T08:26:04.063937+00:00 dns-arch named[2061]: no longer listening on fec0::5054:ff:fe13:11#53
+2026-09-30T08:26:04.065036+00:00 dns-arch named[2061]: no longer listening on fe80::5054:ff:fe13:11%2#53
+2026-09-30T08:26:04.065117+00:00 dns-arch named[2061]: no longer listening on fe80::5054:ff:fe53:11%3#53
+2026-09-30T08:26:04.065199+00:00 dns-arch named[2061]: stopping command channel on 127.0.0.1#953
+2026-09-30T08:26:04.065252+00:00 dns-arch named[2061]: stopping command channel on ::1#953
+2026-09-30T08:26:04.065458+00:00 dns-arch named[2061]: shutting down
+2026-09-30T08:26:04.088043+00:00 dns-arch named[2061]: exiting
+2026-09-30T08:26:04.443930+00:00 dns-arch systemd[1]: named.service: Deactivated successfully.
+2026-09-30T08:26:04.444448+00:00 dns-arch systemd[1]: Stopped Internet domain name server.
+-- Boot 4e5d44f5a8f9428e99ff26f747d3fa46 --
+2026-09-30T08:26:21.763134+00:00 dns-arch systemd[1]: Started Internet domain name server.
+2026-09-30T08:26:21.863044+00:00 dns-arch named[435]: starting BIND 9.20.29 (Stable Release) <id:c3d4465>
+2026-09-30T08:26:21.863091+00:00 dns-arch named[435]: running on Linux x86_64 7.2.7-arch1-1 #1 SMP PREEMPT_DYNAMIC Mon, 21 Sep 2026 18:51:14 +0000 (Arch Linux)
+2026-09-30T08:26:21.863097+00:00 dns-arch named[435]: built with  '--prefix=/usr' '--sysconfdir=/etc' '--sbindir=/usr/bin' '--localstatedir=/var' '--disable-static' '--enable-fixed-rrset' '--enable-full-report' '--with-maxminddb' '--with-openssl' '--with-libidn2' '--with-json-c' '--with-libxml2' '--with-lmdb' 'CFLAGS=-march=x86-64 -mtune=generic -O2 -pipe -fno-plt -fexceptions         -Wp,-D_FORTIFY_SOURCE=3 -Wformat -Werror=format-security         -fstack-clash-protection -fcf-protection         -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -g -ffile-prefix-map=/build/bind/src=/usr/src/debug/bind -flto=auto -DDIG_SIGCHASE' 'LDFLAGS=-Wl,-O1 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now          -Wl,-z,pack-relative-relocs -flto=auto'
+2026-09-30T08:26:21.863100+00:00 dns-arch named[435]: running as: named -f -u named
+2026-09-30T08:26:21.863102+00:00 dns-arch named[435]: compiled by GCC 16.2.1 20260810
+2026-09-30T08:26:21.863105+00:00 dns-arch named[435]: compiled with OpenSSL version: OpenSSL 3.6.4 25 Aug 2026
+2026-09-30T08:26:21.863108+00:00 dns-arch named[435]: linked to OpenSSL version: OpenSSL 3.6.4 25 Aug 2026
+2026-09-30T08:26:21.863111+00:00 dns-arch named[435]: compiled with libuv version: 1.52.1
+2026-09-30T08:26:21.863118+00:00 dns-arch named[435]: linked to libuv version: 1.52.1
+2026-09-30T08:26:21.863121+00:00 dns-arch named[435]: compiled with liburcu version: 0.15.7
+2026-09-30T08:26:21.863123+00:00 dns-arch named[435]: compiled with jemalloc version: 5.3.1
+2026-09-30T08:26:21.863126+00:00 dns-arch named[435]: compiled with libnghttp2 version: 1.70.0
+2026-09-30T08:26:21.863133+00:00 dns-arch named[435]: linked to libnghttp2 version: 1.70.0
+2026-09-30T08:26:21.863136+00:00 dns-arch named[435]: compiled with libxml2 version: 2.15.4
+2026-09-30T08:26:21.863139+00:00 dns-arch named[435]: linked to libxml2 version: 21504-GITv2.15.4
+2026-09-30T08:26:21.863141+00:00 dns-arch named[435]: compiled with json-c version: 0.19
+2026-09-30T08:26:21.863145+00:00 dns-arch named[435]: linked to json-c version: 0.19
+2026-09-30T08:26:21.863149+00:00 dns-arch named[435]: compiled with zlib version: 1.3.2
+2026-09-30T08:26:21.863153+00:00 dns-arch named[435]: linked to zlib version: 1.3.2
+2026-09-30T08:26:21.863156+00:00 dns-arch named[435]: linked to maxminddb version: 1.14.1
+2026-09-30T08:26:21.863159+00:00 dns-arch named[435]: ----------------------------------------------------
+2026-09-30T08:26:21.863161+00:00 dns-arch named[435]: BIND 9 is maintained by Internet Systems Consortium,
+2026-09-30T08:26:21.863163+00:00 dns-arch named[435]: Inc. (ISC), a non-profit 501(c)(3) public-benefit
+2026-09-30T08:26:21.863165+00:00 dns-arch named[435]: corporation.  Support and training for BIND 9 are
+2026-09-30T08:26:21.863168+00:00 dns-arch named[435]: available at https://www.isc.org/support
+2026-09-30T08:26:21.863170+00:00 dns-arch named[435]: ----------------------------------------------------
+2026-09-30T08:26:21.863174+00:00 dns-arch named[435]: adjusted limit on open files from 1024 to 524288
+2026-09-30T08:26:21.863178+00:00 dns-arch named[435]: found 2 CPUs, using 2 worker threads
+2026-09-30T08:26:21.864553+00:00 dns-arch named[435]: DNSSEC algorithms: RSASHA1 NSEC3RSASHA1 RSASHA256 RSASHA512 ECDSAP256SHA256 ECDSAP384SHA384 ED25519 ED448
+2026-09-30T08:26:21.864568+00:00 dns-arch named[435]: DS algorithms: SHA-1 SHA-256 SHA-384
+2026-09-30T08:26:21.864572+00:00 dns-arch named[435]: HMAC algorithms: HMAC-MD5 HMAC-SHA1 HMAC-SHA224 HMAC-SHA256 HMAC-SHA384 HMAC-SHA512
+2026-09-30T08:26:21.864576+00:00 dns-arch named[435]: TKEY mode 2 support (Diffie-Hellman): no
+2026-09-30T08:26:21.864589+00:00 dns-arch named[435]: TKEY mode 3 support (GSS-API): yes
+2026-09-30T08:26:21.876572+00:00 dns-arch named[435]: the initial working directory is '/'
+2026-09-30T08:26:21.876606+00:00 dns-arch named[435]: loading configuration from '/etc/named.conf'
+2026-09-30T08:26:21.876759+00:00 dns-arch named[435]: the working directory is now '/var/named'
+2026-09-30T08:26:21.877048+00:00 dns-arch named[435]: looking for GeoIP2 databases in '/usr/share/GeoIP'
+2026-09-30T08:26:21.877222+00:00 dns-arch named[435]: using default UDP/IPv4 port range: [32768, 60999]
+2026-09-30T08:26:21.877307+00:00 dns-arch named[435]: using default UDP/IPv6 port range: [32768, 60999]
+2026-09-30T08:26:21.877813+00:00 dns-arch named[435]: listening on IPv4 interface lo, 127.0.0.1#53
+2026-09-30T08:26:21.878059+00:00 dns-arch named[435]: listening on IPv4 interface mgmt0, 10.0.2.15#53
+2026-09-30T08:26:21.878222+00:00 dns-arch named[435]: listening on IPv4 interface peer0, 192.0.2.11#53
+2026-09-30T08:26:21.878335+00:00 dns-arch named[435]: IPv6 socket API is incomplete; explicitly binding to each IPv6 address separately
+2026-09-30T08:26:21.878349+00:00 dns-arch named[435]: listening on IPv6 interface lo, ::1#53
+2026-09-30T08:26:21.878455+00:00 dns-arch named[435]: listening on IPv6 interface mgmt0, fe80::5054:ff:fe13:11%2#53
+2026-09-30T08:26:21.878562+00:00 dns-arch named[435]: listening on IPv6 interface peer0, fe80::5054:ff:fe53:11%3#53
+2026-09-30T08:26:21.878726+00:00 dns-arch named[435]: Disabling periodic interface re-scans timer
+2026-09-30T08:26:21.878795+00:00 dns-arch named[435]: generating session key for dynamic DNS
+2026-09-30T08:26:21.879209+00:00 dns-arch named[435]: using built-in root key for view _default
+2026-09-30T08:26:21.879259+00:00 dns-arch named[435]: set up managed keys zone for view _default, file 'managed-keys.bind'
+2026-09-30T08:26:21.879522+00:00 dns-arch named[435]: configuring command channel from '/etc/rndc.key'
+2026-09-30T08:26:21.879612+00:00 dns-arch named[435]: command channel listening on 127.0.0.1#953
+2026-09-30T08:26:21.879624+00:00 dns-arch named[435]: configuring command channel from '/etc/rndc.key'
+2026-09-30T08:26:21.879655+00:00 dns-arch named[435]: command channel listening on ::1#953
+2026-09-30T08:26:21.880060+00:00 dns-arch named[435]: managed-keys-zone: loaded serial 8
+2026-09-30T08:26:21.880229+00:00 dns-arch named[435]: zone 0.0.127.in-addr.arpa/IN: loaded serial 42
+2026-09-30T08:26:21.880341+00:00 dns-arch named[435]: zone catalog-c000020b.celikpanel.invalid/IN: loaded serial 4
+2026-09-30T08:26:21.880458+00:00 dns-arch named[435]: zone localhost/IN: loaded serial 42
+2026-09-30T08:26:21.880575+00:00 dns-arch named[435]: zone pair-accept.test/IN: loaded serial 2026093001
+2026-09-30T08:26:21.880649+00:00 dns-arch named[435]: zone catalog-c000020b.celikpanel.invalid/IN: sending notifies (serial 4)
+2026-09-30T08:26:21.880661+00:00 dns-arch named[435]: zone pair-accept.test/IN: sending notifies (serial 2026093001)
+2026-09-30T08:26:21.881180+00:00 dns-arch named[435]: zone 1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa/IN: loaded serial 42
+2026-09-30T08:26:21.881233+00:00 dns-arch named[435]: network unreachable resolving './NS/IN': 2001:7fd::1#53
+2026-09-30T08:26:21.881267+00:00 dns-arch named[435]: network unreachable resolving 'test/NS/IN': 2001:7fd::1#53
+2026-09-30T08:26:21.881287+00:00 dns-arch named[435]: network unreachable resolving './NS/IN': 2001:500:a8::e#53
+2026-09-30T08:26:21.881303+00:00 dns-arch named[435]: network unreachable resolving 'test/NS/IN': 2001:500:a8::e#53
+2026-09-30T08:26:21.881320+00:00 dns-arch named[435]: network unreachable resolving './NS/IN': 2001:503:ba3e::2:30#53
+2026-09-30T08:26:21.881339+00:00 dns-arch named[435]: network unreachable resolving 'test/NS/IN': 2001:503:ba3e::2:30#53
+2026-09-30T08:26:21.881356+00:00 dns-arch named[435]: network unreachable resolving './NS/IN': 2001:500:1::53#53
+2026-09-30T08:26:21.881372+00:00 dns-arch named[435]: network unreachable resolving 'test/NS/IN': 2001:500:1::53#53
+2026-09-30T08:26:21.881389+00:00 dns-arch named[435]: network unreachable resolving './NS/IN': 2801:1b8:10::b#53
+2026-09-30T08:26:21.881405+00:00 dns-arch named[435]: network unreachable resolving 'test/NS/IN': 2801:1b8:10::b#53
+2026-09-30T08:26:21.881422+00:00 dns-arch named[435]: network unreachable resolving './NS/IN': 2001:500:12::d0d#53
+2026-09-30T08:26:21.881484+00:00 dns-arch named[435]: network unreachable resolving 'test/NS/IN': 2001:500:12::d0d#53
+2026-09-30T08:26:21.881516+00:00 dns-arch named[435]: network unreachable resolving './NS/IN': 2001:500:2f::f#53
+2026-09-30T08:26:21.881567+00:00 dns-arch named[435]: all zones loaded
+2026-09-30T08:26:21.881577+00:00 dns-arch named[435]: network unreachable resolving 'test/NS/IN': 2001:500:2f::f#53
+2026-09-30T08:26:21.881627+00:00 dns-arch named[435]: FIPS mode is disabled
+2026-09-30T08:26:21.881630+00:00 dns-arch named[435]: running
+2026-09-30T08:26:21.881643+00:00 dns-arch named[435]: network unreachable resolving './NS/IN': 2001:500:2::c#53
+2026-09-30T08:26:21.881689+00:00 dns-arch named[435]: network unreachable resolving 'test/NS/IN': 2001:500:2::c#53
+2026-09-30T08:26:21.881756+00:00 dns-arch named[435]: zone pair-accept.test/IN: sending notify to 192.0.2.10#53
+2026-09-30T08:26:21.881850+00:00 dns-arch named[435]: zone catalog-c000020b.celikpanel.invalid/IN: sending notify to 192.0.2.10#53
+2026-09-30T08:26:21.881912+00:00 dns-arch named[435]: network unreachable resolving './NS/IN': 2001:7fe::53#53
+2026-09-30T08:26:21.881989+00:00 dns-arch named[435]: network unreachable resolving 'test/NS/IN': 2001:500:2d::d#53
+2026-09-30T08:26:21.882161+00:00 dns-arch named[435]: network unreachable resolving './NS/IN': 2001:500:2d::d#53
+2026-09-30T08:26:21.882214+00:00 dns-arch named[435]: network unreachable resolving 'test/NS/IN': 2001:7fe::53#53
+2026-09-30T08:26:21.882232+00:00 dns-arch named[435]: network unreachable resolving './DNSKEY/IN': 2001:dc3::35#53
+2026-09-30T08:26:21.882253+00:00 dns-arch named[435]: network unreachable resolving './NS/IN': 2001:dc3::35#53
+2026-09-30T08:26:21.882270+00:00 dns-arch named[435]: network unreachable resolving 'test/NS/IN': 2001:dc3::35#53
+2026-09-30T08:26:21.882286+00:00 dns-arch named[435]: network unreachable resolving './DNSKEY/IN': 2001:500:9f::42#53
+2026-09-30T08:26:21.882303+00:00 dns-arch named[435]: network unreachable resolving './NS/IN': 2001:500:9f::42#53
+2026-09-30T08:26:21.882319+00:00 dns-arch named[435]: network unreachable resolving 'test/NS/IN': 2001:500:9f::42#53
+2026-09-30T08:26:21.882335+00:00 dns-arch named[435]: network unreachable resolving './DNSKEY/IN': 2001:503:c27::2:30#53
+2026-09-30T08:26:21.882351+00:00 dns-arch named[435]: network unreachable resolving './NS/IN': 2001:503:c27::2:30#53
+2026-09-30T08:26:21.882370+00:00 dns-arch named[435]: network unreachable resolving 'test/NS/IN': 2001:503:c27::2:30#53
+2026-09-30T08:26:21.882386+00:00 dns-arch named[435]: network unreachable resolving './DNSKEY/IN': 2001:7fe::53#53
+2026-09-30T08:26:21.916490+00:00 dns-arch named[435]: network unreachable resolving 'ns2.ns-accept.test/A/IN': 2001:7fe::53#53
+2026-09-30T08:26:21.916555+00:00 dns-arch named[435]: network unreachable resolving 'ns2.ns-accept.test/AAAA/IN': 2001:7fe::53#53
+2026-09-30T08:26:21.980851+00:00 dns-arch named[435]: managed-keys-zone: Key 20326 for zone . is now trusted (acceptance timer complete)
+2026-09-30T08:26:21.980909+00:00 dns-arch named[435]: managed-keys-zone: Key 38696 for zone . is now trusted (acceptance timer complete)
+2026-09-30T08:26:23.019581+00:00 dns-arch named[435]: client @0x7f8938e4d000 192.0.2.10#58098 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 4)
+2026-09-30T08:26:23.020486+00:00 dns-arch named[435]: client @0x7f8938e4d000 192.0.2.10#58098 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 4)
+2026-09-30T08:26:24.037801+00:00 dns-arch named[435]: listening on IPv6 interface mgmt0, fec0::5054:ff:fe13:11#53
+2026-09-30T08:26:33.367433+00:00 dns-arch named[435]: client @0x7f893bc80800 192.0.2.10#45878 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 4)
+2026-09-30T08:26:33.368515+00:00 dns-arch named[435]: client @0x7f893bc80800 192.0.2.10#45878 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 4)
+2026-09-30T08:26:43.603427+00:00 dns-arch named[435]: client @0x7f893bc80800 192.0.2.10#45758 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 4)
+2026-09-30T08:26:43.603758+00:00 dns-arch named[435]: client @0x7f893bc80800 192.0.2.10#45758 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 4)
+2026-09-30T08:26:53.839451+00:00 dns-arch named[435]: client @0x7f893bc80800 192.0.2.10#51006 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 4)
+2026-09-30T08:26:53.839860+00:00 dns-arch named[435]: client @0x7f893bc80800 192.0.2.10#51006 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 4)
+2026-09-30T08:27:16.378206+00:00 dns-arch named[435]: received control channel command 'zonestatus pair-accept.test'
+2026-09-30T08:27:16.390276+00:00 dns-arch named[435]: received control channel command 'zonestatus catalog-c000020b.celikpanel.invalid'
+2026-09-30T08:27:16.815119+00:00 dns-arch named[435]: client @0x7f893bc80800 192.0.2.10#35412 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 4)
+2026-09-30T08:27:16.815603+00:00 dns-arch named[435]: client @0x7f893bc80800 192.0.2.10#35412 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 4)
+2026-09-30T08:27:19.013381+00:00 dns-arch named[435]: client @0x7f893bc80800 192.0.2.10#35422 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 4)
+2026-09-30T08:27:19.013717+00:00 dns-arch named[435]: client @0x7f893bc80800 192.0.2.10#35422 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 4)
+2026-09-30T08:27:19.918503+00:00 dns-arch named[435]: client @0x7f893bc80800 192.0.2.11#57906 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 4)
+2026-09-30T08:27:19.918881+00:00 dns-arch named[435]: client @0x7f893bc80800 192.0.2.11#57906 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 4)
+2026-09-30T08:27:21.416516+00:00 dns-arch named[435]: client @0x7f8938e4ec00 192.0.2.10#41033 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 4)
+2026-09-30T08:27:21.417101+00:00 dns-arch named[435]: client @0x7f8938e4ec00 192.0.2.10#41033 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 4)
+2026-09-30T08:27:21.773639+00:00 dns-arch named[435]: client @0x7f8938e4ec00 192.0.2.10#52429 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 4)
+2026-09-30T08:27:21.773992+00:00 dns-arch named[435]: client @0x7f8938e4ec00 192.0.2.10#52429 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 4)
+2026-09-30T08:27:22.427347+00:00 dns-arch named[435]: client @0x7f8938e4ec00 192.0.2.11#57930 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 4)
+2026-09-30T08:27:22.427520+00:00 dns-arch named[435]: client @0x7f8938e4ec00 192.0.2.11#57930 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 4)
+2026-09-30T08:27:23.407684+00:00 dns-arch named[435]: client @0x7f893bc80800 192.0.2.10#46445 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 4)
+2026-09-30T08:27:23.407958+00:00 dns-arch named[435]: client @0x7f893bc80800 192.0.2.10#46445 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 4)
+2026-09-30T08:27:23.771665+00:00 dns-arch named[435]: client @0x7f8938e4ec00 192.0.2.10#36593 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 4)
+2026-09-30T08:27:23.771849+00:00 dns-arch named[435]: client @0x7f8938e4ec00 192.0.2.10#36593 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 254 bytes, 0.001 secs (254000 bytes/sec) (serial 4)

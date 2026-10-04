@@ -1,0 +1,6 @@
+celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/ACCEPTANCE-LICENSE-BUILD.txt
+celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/dns-owner-tools/
+celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/dns-owner-tools/README.md
+celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/dns-owner-tools/bind-peer-inspect
+celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/dns-owner-tools/dns-peer-enroll
+celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57/dns-owner-tools/pdns-peer-inspect

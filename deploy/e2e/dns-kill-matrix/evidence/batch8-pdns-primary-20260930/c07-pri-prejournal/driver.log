@@ -1,0 +1,21 @@
+### 2026-09-29T20:53:07.772Z start-cell c07-pri-prejournal pdns-switch__intent__before-write__paired-primary__peer-reachable node=debian13 peer=arch fixture=uninitialized root=/var/tmp/cp-b8-0930 gateprobe=0 flags=
+### 2026-09-29T20:53:07.774Z prepare
+### 2026-09-29T20:53:08.634Z early-admission-dry-run
+### 2026-09-29T20:53:08.733Z start
+### 2026-09-29T20:53:08.945Z wait-ssh
+### 2026-09-29T20:54:05.546Z guest-identity
+### 2026-09-29T20:54:06.224Z install
+### 2026-09-29T20:54:15.013Z enroll-recovery-runtime
+### 2026-09-29T20:54:22.134Z native-bind-secondary-prepare
+### 2026-09-29T20:55:29.691Z prepare-pdns-switch
+### 2026-09-29T20:55:30.726Z pre-run-snapshot
+### 2026-09-29T20:56:01.633Z start-peer-dns-sampler
+Running as unit: cp-b8-peerloop1.service; invocation ID: 4e9f200c498945dab349ab3a2c3bc71b
+peerloop1 start rc=0
+### 2026-09-29T20:56:02.192Z start-watcher
+Running as unit: cp-b8-watch.service; invocation ID: d4ee09e35d5645458ded9ccbde4f9ccc
+### 2026-09-29T20:56:03.298Z prepared-ok
+### 2026-09-29T20:56:03.303Z run-prepared-dry-run flags=
+### 2026-09-29T20:56:03.408Z run-prepared
+RUN_PREPARED_RC=1
+### 2026-09-29T20:56:56.272Z done-run rc=1

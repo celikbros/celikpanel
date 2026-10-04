@@ -1,0 +1,91 @@
+2026-09-29T20:49:08Z start c06 c06-pri-committed pdns-switch__committed__after-write__paired-primary__peer-reachable /var/tmp/cp-b8-0930
+2026-09-29T20:53:07Z done c06 RUN_PREPARED_RC=1
+stop rc=0
+{
+  "action": "stop",
+  "cell_id": "pdns-switch__committed__after-write__paired-primary__peer-reachable",
+  "dry_run": false,
+  "method": "QMP quit; no fallback signal"
+}
+no qemu
+total 32
+drwx------ 8 root root 4096 Sep 29 23:49 .
+drwx------ 9 root root 4096 Sep 29 23:22 ..
+drwx------ 5 root root 4096 Sep 29 23:22 1f47ba1a0988aba3ee45275a
+drwx------ 5 root root 4096 Sep 29 23:52 7392457812ac089a866de6ec
+drwx------ 5 root root 4096 Sep 29 23:39 7e6184f4f9c6471937dd5a30
+drwx------ 5 root root 4096 Sep 29 23:34 7fc4eccb599d2ce9b7d2a44c
+drwx------ 5 root root 4096 Sep 29 23:48 84bcc45c139d3ac2881c54cc
+drwx------ 5 root root 4096 Sep 29 23:44 e05b4787635364e83414f682
+2026-09-29T20:53:07Z start c07 c07-pri-prejournal pdns-switch__intent__before-write__paired-primary__peer-reachable /var/tmp/cp-b8-0930
+2026-09-29T20:57:13Z done c07 RUN_PREPARED_RC=1
+stop rc=0
+{
+  "action": "stop",
+  "cell_id": "pdns-switch__intent__before-write__paired-primary__peer-reachable",
+  "dry_run": false,
+  "method": "QMP quit; no fallback signal"
+}
+no qemu
+total 36
+drwx------ 9 root root 4096 Sep 29 23:53 .
+drwx------ 9 root root 4096 Sep 29 23:22 ..
+drwx------ 5 root root 4096 Sep 29 23:22 1f47ba1a0988aba3ee45275a
+drwx------ 5 root root 4096 Sep 29 23:52 7392457812ac089a866de6ec
+drwx------ 5 root root 4096 Sep 29 23:39 7e6184f4f9c6471937dd5a30
+drwx------ 5 root root 4096 Sep 29 23:34 7fc4eccb599d2ce9b7d2a44c
+drwx------ 5 root root 4096 Sep 29 23:48 84bcc45c139d3ac2881c54cc
+drwx------ 5 root root 4096 Sep 29 23:56 dbab6f7643e03d40c2ac4a82
+drwx------ 5 root root 4096 Sep 29 23:44 e05b4787635364e83414f682
+2026-09-29T20:57:13Z start c08 c08-pri-owner-config pdns-switch__target-staged__after-write__paired-primary__peer-reachable /var/tmp/cp-b8-0930/r2
+2026-09-29T21:00:49Z done c08 RUN_PREPARED_RC=2
+stop rc=0
+{
+  "action": "stop",
+  "cell_id": "pdns-switch__target-staged__after-write__paired-primary__peer-reachable",
+  "dry_run": false,
+  "method": "QMP quit; no fallback signal"
+}
+no qemu
+total 12
+drwx------ 3 root root 4096 Sep 29 23:57 .
+drwx------ 5 root root 4096 Sep 29 23:16 ..
+drwx------ 4 root root 4096 Sep 29 23:57 7fc4eccb599d2ce9b7d2a44c
+2026-09-29T21:00:49Z start c09 c09-pri-owner-sql pdns-switch__target-started__after-write__paired-primary__peer-reachable /var/tmp/cp-b8-0930/r2
+2026-09-29T21:04:41Z done c09 RUN_PREPARED_RC=0
+stop rc=0
+teardown rc=0
+{
+  "action": "stop",
+  "cell_id": "pdns-switch__target-started__after-write__paired-primary__peer-reachable",
+  "dry_run": false,
+  "method": "QMP quit; no fallback signal"
+}
+{
+  "action": "teardown",
+  "cell_id": "pdns-switch__target-started__after-write__paired-primary__peer-reachable",
+  "dry_run": false,
+  "target": "/var/tmp/cp-b8-0930/r2/cells/e05b4787635364e83414f682",
+  "warning": "recursive deletion is confined to this validated cell directory"
+}
+no qemu
+7fc4eccb599d2ce9b7d2a44c
+2026-09-29T21:04:42Z start c10 c10-pri-released pdns-switch__target-staged__after-write__paired-primary__peer-reachable /var/tmp/cp-b8-0930/r3
+2026-09-29T21:08:53Z done c10 RUN_PREPARED_RC=0
+stop rc=0
+teardown rc=0
+{
+  "action": "stop",
+  "cell_id": "pdns-switch__target-staged__after-write__paired-primary__peer-reachable",
+  "dry_run": false,
+  "method": "QMP quit; no fallback signal"
+}
+{
+  "action": "teardown",
+  "cell_id": "pdns-switch__target-staged__after-write__paired-primary__peer-reachable",
+  "dry_run": false,
+  "target": "/var/tmp/cp-b8-0930/r3/cells/7fc4eccb599d2ce9b7d2a44c",
+  "warning": "recursive deletion is confined to this validated cell directory"
+}
+no qemu
+2026-09-29T21:08:53Z CHAIN-DONE

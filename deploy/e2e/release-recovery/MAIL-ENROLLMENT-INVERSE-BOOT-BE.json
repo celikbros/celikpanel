@@ -1,0 +1,70 @@
+{
+  "schema": "celikpanel-mail-enrollment-inverse-boot-evidence/v1",
+  "production_helper_source_commit": "d3aab13bc22b085433c94b77fd47a2d56f182d3e",
+  "test_fixture_base_commit": "b0d8865",
+  "test_fixture_source_sha256": "26b91a49806ca9493ef29c493a9ed4aed0c6a2946db4d142b56f80500800cceb",
+  "test_binary_sha256": "216925a6466294a2c5608f5e52a3d665129eea2de216f5659b473165113da945",
+  "native_artifacts": {
+    "bin/agent": "09e7ad2a479d071c38377e7449185fb44edb080c349c22cec9b9baa165bd968a",
+    "bin/agent-native-contract.json": "05dbd26414ed50e70fba0c063b055565efe37bcbdd1a982f43da04eae73a5fea",
+    "bin/mail-renewal-runtime/celikpanel-mail-host-cert": "a06b84da331826cfc9a8385ce3d9a60a32a92a84f3c800d99d2a198d57c21b87",
+    "bin/mail-renewal-runtime/celikpanel-mail-renewal.service": "60aacb4c610b7290671e53b4ecd49bfe1adf97ba2c9c4c85fee3dbb7116aa95f",
+    "bin/mail-renewal-runtime/celikpanel-mail-renewal.timer": "8f4a40a06ace0a4ea845c214504fb5ee2e77e020e0b377828a59d78e948bf8df",
+    "bin/mail-renewal-runtime/renew": "a68dd12b1b3b57173d99d33087fac7b8098c2f2683831caf56e9afd29408d39e",
+    "bin/mail-renewal-runtime/runtime.manifest": "4b822629d8da9fdede2ac5699a234a46e5284fb12c88b621c876da3044c312e7",
+    "bin/recovery": "1dd64093e5084b820ef129d056c4a58a6d7fd84584296a36646bec6be8ee28f6"
+  },
+  "platform": "guarded disposable Arch/systemd QEMU BE",
+  "operation": "e4e5f42aa03057c658dbf512357b01f0",
+  "generation": "179a6301fa2aa64091f01ae1fe237e15dccdcdd84b3a2fb4a96f4cdfbe655935",
+  "cut": "native_timer_stop_returned",
+  "cut_exit": -9,
+  "before_boot": "d4dcbf83-5ca1-448f-83b5-08e9a658460c",
+  "after_boot": "99b275d3-87fd-419c-9cf9-06a4c77d6bf3",
+  "automatic_boot_dispatch": true,
+  "manual_postboot_continuation": false,
+  "same_request_restored": true,
+  "result": {
+    "status": "failed",
+    "phase": "commit/mail-renewal-enrollment/v1/restored/e4e5f42aa03057c658dbf512357b01f0/169e4ae056be2274dfe4194de99d804e2042e7c02aa53a3c4320a2f591cae839",
+    "error_code": "mail_enrollment_restored"
+  },
+  "original_native_absence_restored": true,
+  "prior_history_and_precut_immutable_evidence_unchanged": true,
+  "attempts": 1,
+  "management_daemons_started": false,
+  "compatible_agent_files_retained": true,
+  "real_certificate_renewal": false,
+  "production_ui_admission": false,
+  "boot_journal": "Sep 23 13:53:29 dns-arch systemd[1]: Starting Continue recorded CelikPanel mail enrollment...\nSep 23 13:53:35 dns-arch systemd[1]: celikpanel-mail-enrollment-resume-e4e5f42aa03057c658dbf512357b01f0.service: Deactivated successfully.\nSep 23 13:53:35 dns-arch systemd[1]: Finished Continue recorded CelikPanel mail enrollment.\nSep 23 13:53:35 dns-arch systemd[1]: celikpanel-mail-enrollment-resume-e4e5f42aa03057c658dbf512357b01f0.service: Consumed 4.832s CPU time over 5.480s wall clock time, 248.2M memory peak.\n",
+  "fixture_limitations": [
+    "Inverse was explicitly selected by the guarded test producer before reset; this does not claim production automatic failure-to-inverse selection.",
+    "First fixture run reached actual timer start but asserted its deliberately injected error identity after the adapter normalized it to a schedule observation. It is retained as an incomplete fixture trial.",
+    "The corrected producer consumed the same accepted scope and saved inverse intent, then SIGKILLed after actual native timer stop before its receipt. No new enrollment request was introduced.",
+    "Previous owner-disabled fixture workload files were moved to a protected before-directory by explicit lab preparation; this is not production migration or owner recovery."
+  ],
+  "unresolved": [
+    "early admission boot cuts",
+    "Debian enrollment boot",
+    "production setup admission",
+    "previous-release migration",
+    "unfinished continuation with management files absent",
+    "complete P0 fault/workload matrix"
+  ],
+  "evidence_root": "/var/tmp/cp-release-drill-20260922-be",
+  "evidence_files_sha256": {
+    "mail-rollback-boot-native.intent": "f7bb25aba40b4853e6140294b9bd4a05070b9cbe62390b3f37e114676a63fbfb",
+    "mail-rollback-boot-native.script": "934ca5bf57d5f9fec29bde2f89dbfbc01797058bcd08cd0355d641dc3559a8b1",
+    "mail-rollback-boot-native.log": "e78b301cbce6918136f9eb450559ba234d0d02717a5a7e2b87f83056937720ee",
+    "mail-rollback-boot-after-fixture-error.json": "67347041b69c34373fc964a1fe9ec2dc6b555a7ee3d1a04569c9da4effebee34",
+    "mail-rollback-boot-resume-cut.intent": "4ba5be456359b3b73bf533537a5d948efb23ddd3c54b10972571a81b37dbcf2a",
+    "mail-rollback-boot-resume-cut.script": "5643d5a41188a3a2038af91c97d4dfcfefbb23edda69212ad2be47d7ac2985be",
+    "mail-rollback-boot-resume-cut.log": "d716dc79ed45d140a129aacd6b73ab26a0422846f41fe24d3ef90121ab7c7049",
+    "mail-rollback-boot-resume-cut.json": "b7b6347644dd1e91b234c0e706443c4c95bd3ad93c7711c65850068408bdf714",
+    "mail-rollback-boot-reset.intent": "cda32b29e759e7b5aba4a86643d59b0cbbc241edb79d0ea5d4140183a1a1d418",
+    "mail-rollback-boot-reset.result": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+    "mail-rollback-boot-observe.script": "8549a1e0be299ef3f1ede2dc93448ec3ecd24c407534948e883ba853252b1c98",
+    "mail-rollback-boot-observe.log": "2e82ad1afd351cab96f88ec1677a9971bab61369071bfa549181196eb1377ea1",
+    "mail-rollback-boot-observe.json": "70ba35e0467f2af2c0c02b4ac14b7e2ef0685dd9c9738be706795dd2dbe53e98"
+  }
+}

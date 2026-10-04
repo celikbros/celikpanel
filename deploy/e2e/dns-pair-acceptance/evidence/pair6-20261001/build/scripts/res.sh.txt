@@ -1,0 +1,17 @@
+#!/bin/bash
+label=$1
+R=$(ls -d /var/tmp/cp-pair6-evidence/$label-* | tail -1)
+echo $R
+tail -8 /root/cp-pair6/logs/$label-run.log | cut -c1-2000
+python3 - "$R/result.json" <<'PY'
+import json,sys,datetime
+r=json.load(open(sys.argv[1]))
+def p(t): return datetime.datetime.fromisoformat(t.replace("Z","+00:00")) if t else None
+print("overall",r.get("overall"),r.get("overall_cause"),r.get("failure_causes"))
+for s in r["steps"]:
+    a,b=p(s.get("started_at")),p(s.get("finished_at"))
+    d=round((b-a).total_seconds(),1) if a and b else None
+    print(f'{s["index"]:02d} {s["id"]:22s} {s["verdict"]:12s} {s.get("cause")} {s.get("started_at")} {d} | {(s.get("reason") or "")[:1500]}')
+print("findings:", json.dumps(r.get("findings"),indent=1)[:5000])
+print("owner_steps:", json.dumps(r.get("owner_steps"),indent=1)[:3000])
+PY

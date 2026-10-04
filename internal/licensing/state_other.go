@@ -3,7 +3,6 @@
 package licensing
 
 import (
-	"errors"
 	"os"
 )
 
@@ -13,7 +12,7 @@ func openState(path string) (*os.File, error) {
 		return nil, err
 	}
 	if !info.Mode().IsRegular() {
-		return nil, errors.New("invalid license state file")
+		return nil, errInvalidState
 	}
 	return os.Open(path)
 }

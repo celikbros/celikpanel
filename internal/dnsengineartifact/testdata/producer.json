@@ -1,0 +1,14 @@
+{
+  "source_commit": "45dfc265bfd7997e9a0e0d39b0ebf60a57f58c00",
+  "export_test_sha256": "6cbb8f934afe9fd8ef15bcdd3d111ec4182d96067efe2af18776da51feca61fc",
+  "producer_file_sha256": "12be6d9c37d641f7c4b2a1adfe2150e46175745d5dce4f7b6797f38f24bd093a",
+  "files": {
+    "alpha81-bind-acquisition.json": "caed9928952c96c81243a6e595a1e3ff3e1f945d353816a1d550e6483a8f97c5",
+    "alpha81-bind-standalone.json": "c69c1855aa87781af9a6d5d91d53483dd7575e9d087d5e0ebfd6e64b7665170d",
+    "alpha81-bind-zone-add.json": "13f613ecef74e1168e5007fdafeda0c7336f9621a39d907041e7d713d14dc157",
+    "alpha81-bind-zone-delete.json": "0cb7849ad43468bc22b184274ecd6216fdc1f97c30beb9c148eac6fb594a289d",
+    "alpha81-bind-zone-edit.json": "760fc5c821b0932e78e0e37b063c2abbbc1b28917af7044079546fc71fd38bab",
+    "alpha81-pdns-adopted.json": "4e5a2bb824e6e53e05b39cbffd7b2f3216eafb6bf59784b9d02b9c3f7de23a4a",
+    "alpha81-pdns-standalone.json": "737642a27be3c9872650d2545132f42da432bba127114df73b350cb6e71c64a0"
+  }
+}

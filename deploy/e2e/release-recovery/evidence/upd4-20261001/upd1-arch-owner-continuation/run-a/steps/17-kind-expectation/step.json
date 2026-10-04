@@ -1,0 +1,283 @@
+{
+  "checks": {
+    "cli_text_source": {
+      "commit": "e1fdca3898d950a6408bb5161f5b25ac32440d28",
+      "path": "cmd/recovery/main.go",
+      "role": "good",
+      "sha256": "5da9f0e4744a7e958b4043dae9204098dfa5e1b0675ce9c836042f8864a7e31e"
+    },
+    "judged": {
+      "expected": [
+        "update-failure-line",
+        "hold-through-pause",
+        "paused-on-cause",
+        "forward-dispatch-budget",
+        "panel-log-names-cause",
+        "retry-command-printed",
+        "port-released-by-owner",
+        "owner-retry-once",
+        "completed-forward",
+        "outcome-class",
+        "candidate-installed",
+        "timers-restored",
+        "workloads-kept-running",
+        "panel-back",
+        "cli-paused-text",
+        "web-catalogue",
+        "update-card"
+      ],
+      "findings": [],
+      "kind": "owner-continuation",
+      "native_evidence": false,
+      "unknown": [],
+      "verdict": "as-expected"
+    },
+    "observations": {
+      "attempts": {
+        "automatic": [
+          {
+            "at": "2026-10-01T01:00:57.580178Z",
+            "attempt": "1",
+            "direction": "forward",
+            "operation": "update",
+            "phase": "completion"
+          },
+          {
+            "at": "2026-10-01T01:02:36.808651Z",
+            "attempt": "2",
+            "direction": "forward",
+            "operation": "update",
+            "phase": "completion"
+          },
+          {
+            "at": "2026-10-01T01:04:16.744158Z",
+            "attempt": "3",
+            "direction": "forward",
+            "operation": "update",
+            "phase": "completion"
+          }
+        ],
+        "automatic_count": 3,
+        "journal_admissions": [
+          {
+            "at": "2026-10-01T01:00:57.635559+00:00",
+            "attempt": "1",
+            "snapshot": "20261001T005932Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-c0330bbe5baad02c2df5efe451b8d128"
+          },
+          {
+            "at": "2026-10-01T01:02:36.880650+00:00",
+            "attempt": "2",
+            "snapshot": "20261001T005932Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-c0330bbe5baad02c2df5efe451b8d128"
+          },
+          {
+            "at": "2026-10-01T01:04:16.821803+00:00",
+            "attempt": "3",
+            "snapshot": "20261001T005932Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-c0330bbe5baad02c2df5efe451b8d128"
+          }
+        ],
+        "owner": [
+          {
+            "at": "2026-10-01T01:06:25.386157Z",
+            "direction": "forward",
+            "name": "owner.B2lnxA2p",
+            "operation": "update",
+            "phase": "completion"
+          }
+        ],
+        "owner_count": 1
+      },
+      "check_reasons": [],
+      "cli": {
+        "by_key": {
+          "panel_start_unverified.pending": {
+            "en": 3,
+            "first_utc": "2026-10-01T01:00:58Z",
+            "last_utc": "2026-10-01T01:01:32Z",
+            "samples": 3,
+            "tr": 3
+          },
+          "paused": {
+            "en": 1,
+            "first_utc": "2026-10-01T01:05:44Z",
+            "last_utc": "2026-10-01T01:05:44Z",
+            "samples": 1,
+            "tr": 1
+          }
+        },
+        "mismatches": [],
+        "panel_log_command": "sudo journalctl -u celikpanel-panel -n 50",
+        "panel_log_command_seen": {
+          "en": true,
+          "tr": true
+        },
+        "recorded_cause_lines": {
+          "en": 3,
+          "tr": 3
+        }
+      },
+      "completion_marker_seen": true,
+      "database": "equal-except-volatile",
+      "final": {
+        "observation": "known",
+        "observed_at": "2026-10-01T01:06:46Z",
+        "phase": "succeeded",
+        "previous_failure": "recovery_failed",
+        "reason": "update_verified",
+        "request_id": "8ef5d6865ecf44e4fd74500e743cc253",
+        "schema": "celikpanel-recovery-status/v1",
+        "terminal_proof": "update_verified"
+      },
+      "hold": {
+        "armed": true,
+        "held": true,
+        "held_at": "2026-10-01T00:59:34.359072+00:00",
+        "held_at_pause": true,
+        "held_seconds": 408.0,
+        "phases_seen": [
+          "active",
+          "completion.pending"
+        ],
+        "release_reason": "owner-released",
+        "released": true,
+        "released_at": "2026-10-01T01:06:22.376185+00:00",
+        "released_before_retry": true
+      },
+      "installed": "candidate",
+      "login_ok": true,
+      "outcome": "recovered-after-owner-continuation",
+      "owner_receipts": 1,
+      "owner_retry": {
+        "action": "executed-once",
+        "returncode": 0
+      },
+      "owner_retry_run": true,
+      "panel_log": {
+        "command": "sudo journalctl -u celikpanel-panel -n 50",
+        "lines": 50,
+        "matching_lines": [
+          "2026-10-01T01:04:24.073685+00:00 dns-arch panel[30917]: 2026/10/01 01:04:24 Failed to start panel listener: listen tcp :2083: bind: address already in use",
+          "2026-10-01T01:04:27.352912+00:00 dns-arch panel[31012]: 2026/10/01 01:04:27 Failed to start panel listener: listen tcp :2083: bind: address already in use",
+          "2026-10-01T01:04:33.099138+00:00 dns-arch panel[31173]: 2026/10/01 01:04:33 Failed to start panel listener: listen tcp :2083: bind: address already in use",
+          "2026-10-01T01:04:43.596598+00:00 dns-arch panel[31407]: 2026/10/01 01:04:43 Failed to start panel listener: listen tcp :2083: bind: address already in use",
+          "2026-10-01T01:05:02.812458+00:00 dns-arch panel[31822]: 2026/10/01 01:05:02 Failed to start panel listener: listen tcp :2083: bind: address already in use"
+        ],
+        "names_cause": true
+      },
+      "panel_verdict": "down-only-during-transaction",
+      "paused": {
+        "automatic_recovery": "paused_retry_limit",
+        "first_failure_code": "panel_start_unverified",
+        "observation": "known",
+        "observed_at": "2026-10-01T01:05:55Z",
+        "phase": "recovery_required",
+        "previous_failure": "recovery_failed",
+        "reason": "recovery_incomplete",
+        "request_id": "8ef5d6865ecf44e4fd74500e743cc253",
+        "schema": "celikpanel-recovery-status/v1",
+        "terminal_proof": "none"
+      },
+      "printed_retry_command": "/usr/libexec/celikpanel/recovery recover --retry --snapshot 20261001T005932Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-c0330bbe5baad02c2df5efe451b8d128",
+      "receipt_dispatches": [
+        {
+          "attempt": "1",
+          "direction": "forward",
+          "operation": "update",
+          "phase": "completion"
+        },
+        {
+          "attempt": "2",
+          "direction": "forward",
+          "operation": "update",
+          "phase": "completion"
+        },
+        {
+          "attempt": "3",
+          "direction": "forward",
+          "operation": "update",
+          "phase": "completion"
+        }
+      ],
+      "receipt_phases": [
+        "completion",
+        "completion",
+        "completion"
+      ],
+      "sidecar": {
+        "code": "panel_start_unverified",
+        "present": true,
+        "valid": true
+      },
+      "timers": {
+        "changed": {},
+        "compared": 2,
+        "equal": true
+      },
+      "update_card": {
+        "findings": [],
+        "server_message_line": null,
+        "verdict": "as-expected"
+      },
+      "update_failure_codes": [
+        "panel_start_unverified"
+      ],
+      "update_failure_lines": [
+        {
+          "code": "panel_start_unverified",
+          "reason": "the new panel did not stay running and answer on its own address after the update was applied",
+          "state": "recovery_required"
+        }
+      ],
+      "views": {
+        "last": {
+          "offline_page_served": "panel-reachable",
+          "panel_recovery_status": true,
+          "panel_update_status": true,
+          "root_cli": true
+        },
+        "ssh_owner_view": "not attempted (recovery view needs an interactive SSH terminal and a one-time code)",
+        "summary": {
+          "panel_recovery_status": {
+            "reachable": 7,
+            "samples": 28
+          },
+          "panel_update_status": {
+            "reachable": 7,
+            "samples": 28
+          },
+          "root_cli": {
+            "reachable": 28,
+            "samples": 28
+          }
+        }
+      },
+      "web_keys": [
+        "recovery.automatic.cause.panel_start_unverified",
+        "recovery.automatic.inspect",
+        "recovery.automatic.pausedHelp",
+        "recovery.automatic.pausedTitle",
+        "recovery.automatic.resume",
+        "recovery.failure.panel_start_unverified.pending",
+        "recovery.next.recovery_required",
+        "recovery.next.running",
+        "recovery.next.succeeded",
+        "recovery.phase.recovering",
+        "recovery.phase.recovery_required",
+        "recovery.phase.running",
+        "recovery.phase.succeeded",
+        "recovery.reason.panel_start_unverified",
+        "recovery.reason.recovery_failed"
+      ],
+      "web_keys_missing": [],
+      "workloads": {
+        "cron": "never-interrupted",
+        "dns": "not-provided-external-dns",
+        "smtp": "not-seeded",
+        "web": "never-interrupted"
+      }
+    }
+  },
+  "finished_at": "2026-10-01T01:06:56Z",
+  "name": "kind-expectation",
+  "started_at": "2026-10-01T01:06:56Z",
+  "verdict": "passed"
+}

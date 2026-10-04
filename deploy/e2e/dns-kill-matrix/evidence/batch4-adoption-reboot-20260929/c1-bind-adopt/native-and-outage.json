@@ -1,0 +1,31 @@
+{
+  "dns_outage": null,
+  "expectation": {
+    "bind_active_after_restart": false,
+    "native_checks_after_owner_command": false,
+    "pdns_inactive_after_restart": false,
+    "pdns_pid_continuity_from_cut": true,
+    "source_serving_after_restart": true
+  },
+  "flow_ambiguities": [],
+  "flow_failures": [],
+  "flow_status": "passed",
+  "owner_inverse_failures": [],
+  "owner_inverse_native_at_boundary": null,
+  "recovery_outcome": {
+    "changed_or_racy": false,
+    "classification": "rolled_back_source_serving",
+    "dns_serving_after_restart": true,
+    "probe_pair_valid": true,
+    "repeated_nonconvergence": false,
+    "rolled_back_source_serving": true,
+    "same_fingerprint": true,
+    "target_converged": false
+  },
+  "request_id": "8b14693eaf9461f13a415d5e637b6d91",
+  "safety_status": "passed",
+  "source": "result.json (verbatim sub-objects)",
+  "status": "passed",
+  "step_records": {},
+  "variant": "pre-start"
+}

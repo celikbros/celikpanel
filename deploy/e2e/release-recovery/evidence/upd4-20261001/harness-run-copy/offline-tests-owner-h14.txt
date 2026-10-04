@@ -1,0 +1,14 @@
+.........................................F..................................................................................
+======================================================================
+FAIL: test_verdicts_judge_the_update_part_only (deploy.e2e.release-recovery.test_owner_update_trial.ManagementOffRuleTests.test_verdicts_judge_the_update_part_only)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/var/tmp/cp-upd4-run/harness-h14/deploy/e2e/release-recovery/test_owner_update_trial.py", line 2375, in test_verdicts_judge_the_update_part_only
+    self.assertEqual(checks["samples_until_management_off"], 20)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 19 != 20
+
+----------------------------------------------------------------------
+Ran 124 tests in 2.837s
+
+FAILED (failures=1)

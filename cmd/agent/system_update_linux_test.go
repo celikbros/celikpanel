@@ -1050,3 +1050,43 @@ func TestSystemUpdateWorkerPersistsInstallerFailure(t *testing.T) {
 		t.Fatalf("worker failure state = %#v", loaded)
 	}
 }
+
+func TestSystemUpdatePlatformObservationIsRecheckedWithoutRestart(t *testing.T) {
+	oldDetector := detectHostPlatform
+	t.Cleanup(func() { detectHostPlatform = oldDetector })
+	observation := error(hostplatform.ErrStillStarting)
+	probes := 0
+	detectHostPlatform = func() (hostplatform.Profile, error) {
+		probes++
+		return hostplatform.Profile{PackageManager: hostplatform.PackageManagerPacman}, observation
+	}
+	withSystemUpdateBuild(t, "v1.2.3-alpha.9", strings.Repeat("c", 40))
+	service, err := newPlatformSystemUpdateService()
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest := testSystemUpdateManifest()
+	fetcher := &fakeSystemUpdateFetcher{version: manifest.Version, manifest: manifest}
+	backend := &fakeSystemUpdateBackend{floor: &systemUpdateFloor{Sequence: "41", Version: "v1.2.3-alpha.9"}}
+	service.fetcher, service.backend = fetcher, backend
+	response, err := service.check(context.Background())
+	if !errors.Is(err, hostplatform.ErrStillStarting) || response.Supported || probes != 1 || fetcher.fetchCalls != 0 {
+		t.Fatalf("boot observation: %+v %v probes=%d", response, err, probes)
+	}
+	observation = nil
+	response, err = service.check(context.Background())
+	if err != nil || !response.Supported || !response.Available || probes != 2 {
+		t.Fatalf("same-process readiness: %+v %v probes=%d", response, err, probes)
+	}
+	request := testSystemUpdateStartRequest(manifest, buildVersion, buildCommit)
+	observation = errors.New("fixed pacman executable changed")
+	started, err := service.start(context.Background(), &request)
+	if err == nil || !strings.Contains(err.Error(), "fixed pacman executable changed") || started.Accepted || backend.queued != nil || probes != 3 || fetcher.fetchCalls != 1 {
+		t.Fatalf("stale success authorized mutation: %+v %v probes=%d", started, err, probes)
+	}
+	observation = nil
+	started, err = service.start(context.Background(), &request)
+	if err != nil || !started.Accepted || backend.queued == nil || probes != 4 || fetcher.fetchCalls != 2 {
+		t.Fatalf("explicit retry failed: %+v %v probes=%d", started, err, probes)
+	}
+}

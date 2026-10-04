@@ -1,0 +1,2 @@
+﻿rndc: 'zonestatus' failed: not found
+no matching zone 's1-kill.test' in any view

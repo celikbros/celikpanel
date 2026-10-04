@@ -105,6 +105,7 @@ type dnsEngineSnapshot struct {
 	Topology         string                      `json:"topology"`
 	PairRole         string                      `json:"pair_role,omitempty"`
 	PairReady        *bool                       `json:"pair_ready,omitempty"`
+	SecondaryReady   *bool                       `json:"secondary_ready,omitempty"`
 	DNSSECZoneCount  int                         `json:"dnssec_zone_count"`
 	ZoneCount        int                         `json:"zone_count"`
 	PendingZoneCount int                         `json:"pending_zone_count"`
@@ -633,10 +634,19 @@ func (p *Panel) dnsEngineSnapshot(ctx context.Context) (dnsEngineSnapshot, error
 	if state.ActiveEngine == "" && topology == transport.DNSTopologyPaired {
 		pairRole, pairIdentityErr = p.unresolvedDNSPairRole(ctx)
 	}
-	var pairReady *bool
+	var pairReady, secondaryReady *bool
 	if state.ActiveEngine != "" && state.Topology == transport.DNSTopologyPaired {
 		ready := runtimes[state.ActiveEngine].PairReady
 		pairReady = &ready
+		// secondary_ready is the Agent's proof that this active paired
+		// SECONDARY consumes the primary's catalog (Decision D,
+		// 2026-09-30): present exactly for an active paired secondary, false
+		// when unproven; pair_ready stays false on a secondary.
+		if state.PairRole == transport.DNSPairRoleSecondary {
+			// An unknown runtime (runtimeErr) leaves the zero value: false.
+			consumes := runtimes[state.ActiveEngine].SecondaryReady && !ready
+			secondaryReady = &consumes
+		}
 	}
 	if operation != nil && state.CurrentSwitchID != "" {
 		p.enrichAttachedDNSEngineOperation(ctx, operation, state.CurrentSwitchID)
@@ -654,7 +664,7 @@ func (p *Panel) dnsEngineSnapshot(ctx context.Context) (dnsEngineSnapshot, error
 		Revision: state.Revision, EngineEpoch: state.EngineEpoch,
 		ActiveEngine: enginePointer(state.ActiveEngine),
 		State:        presentationState, Topology: topology, PairRole: pairRole,
-		PairReady:       pairReady,
+		PairReady: pairReady, SecondaryReady: secondaryReady,
 		DNSSECZoneCount: dnssecCount, ZoneCount: zoneCount,
 		PendingZoneCount: pendingCount, OperationID: state.CurrentSwitchID,
 		Operation: operation,
@@ -776,21 +786,31 @@ func (p *Panel) callSyncDNSZoneV3(
 	}
 	if response.Error != "" {
 		if response.Synced || response.RecoveryPending ||
-			response.Engine != "" || response.EngineEpoch != 0 ||
+			response.PendingCode != "" || response.Engine != "" || response.EngineEpoch != 0 ||
 			response.AppliedGeneration != 0 {
 			return errors.New("agent returned a mixed DNS publication failure response")
 		}
+		if response.FailureReason != "" {
+			if !transport.ValidDNSPublicationFailureReason(response.FailureReason) {
+				return errors.New("agent returned an unreviewed DNS publication failure reason")
+			}
+			return &dnsPublicationFailureReasonError{Reason: response.FailureReason}
+		}
 		return errors.New("agent did not confirm the exact DNS publication")
+	}
+	if response.FailureReason != "" {
+		return errors.New("agent returned a DNS publication failure reason without a failure")
 	}
 	if response.RecoveryPending {
 		if response.Synced || response.Engine != request.Engine ||
 			response.EngineEpoch != request.EngineEpoch ||
-			response.AppliedGeneration != request.DesiredGeneration {
+			response.AppliedGeneration != request.DesiredGeneration ||
+			(response.PendingCode != "" && !transport.ValidDNSPeerPendingCode(response.PendingCode)) {
 			return errors.New("agent returned an invalid pending DNS publication receipt")
 		}
-		return &dnsZoneV3PropagationPendingError{}
+		return &dnsZoneV3PropagationPendingError{Code: response.PendingCode}
 	}
-	if !response.Synced ||
+	if response.PendingCode != "" || !response.Synced ||
 		response.Engine != request.Engine ||
 		response.EngineEpoch != request.EngineEpoch ||
 		response.AppliedGeneration != request.DesiredGeneration {
@@ -821,18 +841,19 @@ func (p *Panel) callRecoverDNSZoneV3(
 		return err
 	}
 	if response.Error != "" {
-		if response.Recovered || response.RecoveryPending {
+		if response.Recovered || response.RecoveryPending || response.PendingCode != "" {
 			return errors.New("agent returned a mixed DNS zone recovery failure response")
 		}
 		return errors.New("agent could not verify the exact DNS zone recovery")
 	}
 	if response.RecoveryPending {
-		if response.Recovered {
+		if response.Recovered || (response.PendingCode != "" &&
+			!transport.ValidDNSPeerPendingCode(response.PendingCode)) {
 			return errors.New("agent returned a mixed DNS zone recovery response")
 		}
-		return &dnsZoneV3PropagationPendingError{}
+		return &dnsZoneV3PropagationPendingError{Code: response.PendingCode}
 	}
-	if !response.Recovered {
+	if response.PendingCode != "" || !response.Recovered {
 		return errors.New("agent did not confirm the exact DNS zone recovery")
 	}
 	return nil
@@ -1002,7 +1023,7 @@ func adoptableUnmanagedDNSEngine(
 	// stands this host is the panel's and busy, which is what the engine
 	// card's mutations_held blocker already says.
 	//
-	// R-050. Panelin kurduğu bir BIND, onu sahiplenecek işlem tutulurken
+	// R-050. Panelin kurduÄŸu bir BIND, onu sahiplenecek iÅŸlem tutulurken
 	// Managed=false okunur; bu da tam olarak aşağıdaki biçimdir. O hâlde
 	// devralma, panelin kendi yarım işi için önerilirdi ve operatörün okuduğu
 	// cümle - "CelikPanel'in kurmadığı bir DNS sunucusu" - panelin kurduğu bir
@@ -1057,6 +1078,39 @@ func adoptableUnmanagedDNSEngine(
 	return true
 }
 
+// dnsEngineRollbackStandbyTarget is the one Panel-side rule for a rolled-back
+// first install (Decision B, 2026-09-30), engine-neutral: no active engine,
+// no recorded epoch, the presentation state unconfigured, the target's
+// packages installed and stopped, and the Agent reporting them as its own
+// rollback standby (transport RollbackStandby: installed by CelikPanel, not
+// adopted; unit inactive and guard-masked or disabled; no engine state or
+// ownership receipt). No other engine may be running. Retrying it is still
+// the first install. An owner-installed engine never carries the Agent's
+// standby signal, so it keeps the takeover or adoption decision.
+//
+// Geri alınmış bir ilk kurulumun tek Panel kuralı; motordan bağımsızdır.
+// Sahibin kurduğu bir motor Agent'ın yedek işaretini asla taşımaz.
+func dnsEngineRollbackStandbyTarget(
+	activeEngine *transport.DNSEngine,
+	state string,
+	engineEpoch int64,
+	runtimes map[transport.DNSEngine]transport.DNSBackendRuntimeState,
+	target transport.DNSEngine,
+) bool {
+	runtime, ok := runtimes[target]
+	if !ok || activeEngine != nil || engineEpoch != 0 ||
+		state != dnsEngineStateUnconfigured ||
+		!runtime.Installed || runtime.Running || !runtime.RollbackStandby {
+		return false
+	}
+	for engine, other := range runtimes {
+		if engine != target && other.Running {
+			return false
+		}
+	}
+	return true
+}
+
 func dnsEngineAction(
 	snapshot dnsEngineSnapshot,
 	target transport.DNSEngine,
@@ -1068,7 +1122,14 @@ func dnsEngineAction(
 	if !runtime.Installed {
 		return "install"
 	}
-	// A failed initial BIND install may leave an exact panel-managed package
+	if dnsEngineRollbackStandbyTarget(
+		snapshot.ActiveEngine, snapshot.State, snapshot.EngineEpoch,
+		snapshot.runtime, target,
+	) {
+		return "install"
+	}
+	// An older Agent does not report RollbackStandby. A failed initial BIND
+	// install may leave an exact panel-managed package
 	// stopped as a rollback standby. With no durable source and no running DNS
 	// backend, retrying is still the initial install/activation operation.
 	if snapshot.ActiveEngine == nil &&
@@ -1207,6 +1268,68 @@ func addDNSEngineBlocker(
 	return append(blockers, dnsEnginePreviewBlocker{Code: code})
 }
 
+// freshPairedPDNSPrimaryOffered is the Panel's single product gate for the
+// first install of PowerDNS as the paired primary on a server with no DNS
+// engine (the Agent's V3 journal). Opened on the main line on 2026-10-01
+// (D-028) after the native evidence of row 6 of the DNS recovery acceptance
+// register passed. The Agent carries the matching constant
+// (freshPairedPDNSPrimaryAdmitted). Open, it offers only a server with no DNS
+// engine (Debian 13 amd64, measured PowerDNS package version, enforced by the
+// Agent's host-profile and package-version preflights); a serving BIND keeps
+// bind_source_pdns_switch_unsupported and any other active engine stays
+// paused. Server setup and the DNS engine card both reach it through
+// dnsEnginePreviewBlockers.
+//
+// freshPairedPDNSPrimaryOffered, DNS motoru olmayan bir sunucuya PowerDNS'in
+// eşli birincil olarak ilk kurulumunun Panel tarafındaki tek ürün kapısıdır.
+// 6. satırın gerçek sistem kanıtı geçtikten sonra 1 Ekim 2026'da ana hatta
+// açıldı (D-028). Açıkken yalnız DNS motoru olmayan sunucuyu sunar (Debian 13 amd64,
+// ölçülmüş PowerDNS paket sürümü); hizmet veren BIND
+// bind_source_pdns_switch_unsupported reddini korur.
+const freshPairedPDNSPrimaryOffered = true
+
+// pdnsPairedPrimaryGateOpen carries the constant above. Only tests assign it,
+// to exercise the open policy; production never changes it.
+var pdnsPairedPrimaryGateOpen = freshPairedPDNSPrimaryOffered
+
+// pdnsPairedPrimaryBlocker is the Panel's one policy for a PowerDNS install or
+// switch on a paired primary. applies reports whether the transition is one;
+// code is its blocker, or "" when it is offered.
+func pdnsPairedPrimaryBlocker(
+	snapshot dnsEngineSnapshot,
+	target transport.DNSEngine,
+	action string,
+) (code string, applies bool) {
+	return pdnsPairedPrimaryBlockerWithGate(snapshot, target, action, pdnsPairedPrimaryGateOpen)
+}
+
+// pdnsPairedPrimaryBlockerWithGate is that policy for an explicit gate value.
+// Closed, every such transition is paused. Open, only a server without an
+// active DNS engine is offered; a serving BIND keeps its D-026 refusal and any
+// other active engine stays paused.
+func pdnsPairedPrimaryBlockerWithGate(
+	snapshot dnsEngineSnapshot,
+	target transport.DNSEngine,
+	action string,
+	open bool,
+) (string, bool) {
+	if (action != "switch" && action != "install") || target != transport.DNSEnginePowerDNS ||
+		snapshot.Topology != transport.DNSTopologyPaired ||
+		snapshot.PairRole != transport.DNSPairRolePrimary {
+		return "", false
+	}
+	switch {
+	case !open:
+		return "pdns_primary_switch_paused", true
+	case snapshot.ActiveEngine == nil && snapshot.EngineEpoch == 0:
+		return "", true
+	case snapshot.ActiveEngine != nil && *snapshot.ActiveEngine == transport.DNSEngineBIND:
+		return "bind_source_pdns_switch_unsupported", true
+	default:
+		return "pdns_primary_switch_paused", true
+	}
+}
+
 func dnsEnginePreviewBlockers(
 	snapshot dnsEngineSnapshot,
 	target, expectedSource transport.DNSEngine,
@@ -1214,6 +1337,21 @@ func dnsEnginePreviewBlockers(
 ) []dnsEnginePreviewBlocker {
 	blockers := make([]dnsEnginePreviewBlocker, 0, 8)
 	action := dnsEngineAction(snapshot, target)
+	if code, applies := pdnsPairedPrimaryBlocker(snapshot, target, action); applies {
+		if code != "" {
+			blockers = addDNSEngineBlocker(blockers, code)
+		}
+	} else if (action == "switch" || action == "install") &&
+		target == transport.DNSEnginePowerDNS &&
+		snapshot.ActiveEngine != nil &&
+		*snapshot.ActiveEngine == transport.DNSEngineBIND {
+		// Replacing a serving BIND source with PowerDNS is unsupported in this
+		// release for every topology: an interrupted switch has no
+		// Agent-independent recovery. Refuse before any token or mutation so
+		// BIND keeps serving. "install" is included because an absent PowerDNS
+		// runtime still makes this a switch away from the active BIND source.
+		blockers = addDNSEngineBlocker(blockers, "bind_source_pdns_switch_unsupported")
+	}
 	reinstall := action == dnsEngineActionReinstall
 	actualSource := transport.DNSEngine("")
 	if snapshot.ActiveEngine != nil {
@@ -1306,7 +1444,7 @@ func dnsEnginePreviewBlockers(
 	// agent still proves ownership at the active epoch before it touches
 	// anything, so nothing is taken on trust here.
 	//
-	// unmanaged_dns_detected, "buraya başka biri bir DNS sunucusu kurmuş"
+	// unmanaged_dns_detected, "buraya baÅŸka biri bir DNS sunucusu kurmuÅŸ"
 	// demektir. Hiçbir şey hizmet vermezken, panelin kendi defterinin bu
 	// sunucudaki yetki sahibi olarak kaydettiği motor hakkında bunu söyleyemez:
 	// paketler ya panelin kendi yarım kalmış kurulumudur ya da panelin zaten
@@ -1931,10 +2069,49 @@ func validateLegacyPDNSPairSecondaryReconfigureScope(
 	return nil
 }
 
-func validateSourceEmptyDNSEngineReconcileScope(
+// validateInitialDNSEngineInstallReconcileScope mirrors the Agent's widened
+// rollback-evidence scope (Decision B, 2026-09-30): a first install of BIND
+// as paired secondary, or of PowerDNS standalone or as paired secondary. The
+// Agent proves the rollback (terminal failed job, no journal, no state, the
+// exact install receipt, the target stopped); the Panel only records it.
+// The fresh paired PowerDNS primary is inside only while its gate is open.
+func validateInitialDNSEngineInstallReconcileScope(
 	persisted persistedDNSEngineSwitch,
 ) error {
 	if err := validateInitialBINDInstallReconcileScope(persisted); err == nil {
+		return nil
+	}
+	standalone := persisted.Topology == transport.DNSTopologyStandalone &&
+		persisted.PairRole == "" && persisted.LocalIP == "" &&
+		persisted.LocalNS == "" && persisted.PeerIP == "" &&
+		persisted.PeerNS == ""
+	secondary := persisted.Topology == transport.DNSTopologyPaired &&
+		persisted.PairRole == transport.DNSPairRoleSecondary &&
+		persisted.LocalIP != "" && persisted.LocalNS != "" &&
+		persisted.PeerIP != "" && persisted.PeerNS != ""
+	// The fresh paired PowerDNS primary is inside only while its product
+	// gate is open, matching the Agent's rollback-evidence scope; with the
+	// gate closed, as shipped, it stays outside and no such install exists.
+	freshPDNSPrimary := pdnsPairedPrimaryGateOpen &&
+		persisted.Topology == transport.DNSTopologyPaired &&
+		persisted.PairRole == transport.DNSPairRolePrimary &&
+		persisted.LocalIP != "" && persisted.LocalNS != "" &&
+		persisted.PeerIP != "" && persisted.PeerNS != ""
+	if persisted.Mode != transport.DNSEngineSwitchModeSwitch ||
+		persisted.Action != "install" ||
+		persisted.SourceEngine != "" || persisted.SourceEpoch != 0 ||
+		persisted.TargetEpoch != 1 ||
+		!(persisted.TargetEngine == transport.DNSEngineBIND && secondary ||
+			persisted.TargetEngine == transport.DNSEnginePowerDNS && (standalone || secondary || freshPDNSPrimary)) {
+		return errors.New("DNS engine reconciliation is limited to an initial failed DNS engine install")
+	}
+	return nil
+}
+
+func validateSourceEmptyDNSEngineReconcileScope(
+	persisted persistedDNSEngineSwitch,
+) error {
+	if err := validateInitialDNSEngineInstallReconcileScope(persisted); err == nil {
 		return nil
 	}
 	if err := validateLegacyPDNSPairSecondaryReconfigureScope(persisted); err == nil {
@@ -3444,7 +3621,7 @@ func (p *Panel) executeDNSEngineSwitch(
 				return err
 			}
 			if response.Error != "" {
-				return newDNSEngineAgentRejectedError(response.Error)
+				return dnsEngineAgentRejection(response.Error)
 			}
 			if !response.Applied ||
 				response.ActiveEngine != manifest.TargetEngine ||
@@ -3485,7 +3662,17 @@ func (err *dnsEngineMutationAppliedFollowupError) Unwrap() error {
 type dnsEngineAgentRejectedError struct {
 	diagnosticCode string
 	clientCode     string
+	// hostSentence is the Agent's operator sentence for a switch that ended
+	// before its target for a reason the server owner can act on (a package
+	// manager refusal, a broken dpkg statoverride). It was authored and
+	// sanitized by the Agent and is bounded again here; it is the only agent
+	// text that reaches the ledger job and the HTTP response.
+	hostSentence string
 }
+
+// dnsEngineSwitchIncompleteNamedPrefix is the Agent's wire prefix for such a
+// sentence (cmd/agent host_operator_sentence.go).
+const dnsEngineSwitchIncompleteNamedPrefix = "DNS engine switch did not complete: "
 
 func (err *dnsEngineAgentRejectedError) Error() string {
 	return "agent rejected DNS engine switch"
@@ -3514,6 +3701,13 @@ func newDNSEngineAgentRejectedError(detail string) *dnsEngineAgentRejectedError 
 		rejected.clientCode = errCodeDNSEnginePlanRejected
 	case "DNS engine switch did not complete; inspect the agent log":
 		rejected.diagnosticCode = "backend_switch_failed"
+	default:
+		if sentence, ok := strings.CutPrefix(detail, dnsEngineSwitchIncompleteNamedPrefix); ok {
+			if sentence = boundedOperatorSentence(sentence); sentence != "" {
+				rejected.diagnosticCode = "backend_switch_failed_named"
+				rejected.hostSentence = sentence
+			}
+		}
 	case "DNS engine switch did not return the exact verified target receipt":
 		rejected.diagnosticCode = "target_receipt_mismatch"
 	case "DNS engine switch finished but its durable receipt could not be verified":
@@ -3522,8 +3716,31 @@ func newDNSEngineAgentRejectedError(detail string) *dnsEngineAgentRejectedError 
 	return rejected
 }
 
+// dnsEngineAgentRejection returns the error a switch or reinstall worker ends
+// with for an Agent refusal. A refusal that carries the Agent's operator
+// sentence names it, so the ledger job records that sentence instead of the
+// generic one (R-056 rule, D-024).
+func dnsEngineAgentRejection(detail string) error {
+	rejected := newDNSEngineAgentRejectedError(detail)
+	if rejected.hostSentence == "" {
+		return rejected
+	}
+	return namedHostOperationFailure(rejected.hostSentence, rejected)
+}
+
 func writeDNSEngineChangeNotCommitted(w http.ResponseWriter, switchErr error) {
 	var rejected *dnsEngineAgentRejectedError
+	if errors.As(switchErr, &rejected) && rejected.hostSentence != "" {
+		writeCodedErrorDetails(
+			w,
+			http.StatusConflict,
+			errCodeDNSEngineChangeNotCommitted,
+			"The DNS engine change was not committed. The pre-operation serving state was verified; packages or setup files may still have changed. "+rejected.hostSentence,
+			"",
+			[]string{rejected.hostSentence},
+		)
+		return
+	}
 	if errors.As(switchErr, &rejected) &&
 		rejected.clientCode == errCodeDNSEnginePlanRejected {
 		writeCodedError(
@@ -3664,7 +3881,7 @@ func (p *Panel) handleDNSEngineSwitch(
 	// rather than starting a second transaction on top of an unresolved one.
 	// Açılış yarım kalmış servis işlemlerini uzlaştıramadıysa, bu geçişin
 	// üzerine kuracağı kalıcı durum bilinmiyor. Çözülmemiş bir işlemin üstüne
-	// ikincisini başlatmak yerine saklanan sebeple reddet.
+	// ikincisini baÅŸlatmak yerine saklanan sebeple reddet.
 	if !p.requireSubsystemOperational(w, degradedSubsystemServiceOperations) {
 		return
 	}

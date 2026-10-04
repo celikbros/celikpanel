@@ -1,0 +1,25 @@
+#!/bin/bash
+# Read-only: the Agent-private directory listing (names, owners, modes, times; no content),
+# the Agent unit's sandbox properties, and mount of the directory. usage: journaldiag.sh LABEL NODE PORT
+L=$1; NODE=$2; PORT=$3
+case $L in
+  p7t1) C=pair-accept__bind-debian13__bind-arch__p7t1 ;;
+  p7t2) C=pair-accept__bind-arch__pdns-debian13__p7t2 ;;
+  p7t3) C=pair-accept__pdns-debian13__bind-arch__p7t3 ;;
+esac
+H=$(printf %s "$C" | sha256sum | cut -c1-24)
+KH=/var/tmp/cp-pair7-work/cells/$H/ssh-known-hosts
+O=/root/cp-pair7/obs/$L; mkdir -p $O
+timeout 120 ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$KH -i /var/tmp/cp-pair7-key/id_ed25519 -p $PORT celik@127.0.0.1 'bash -s' > $O/$NODE-agent-private-dir.txt 2>&1 <<'R'
+echo "## $(date -u +%FT%TZ) /var/lib/celikpanel-agent-private: names/metadata only (no content read)"
+sudo -n ls -la --time-style=full-iso /var/lib/celikpanel-agent-private
+sudo -n stat -c '%n %U:%G %a ino=%i nlink=%h %y' /var/lib /var/lib/celikpanel-agent-private
+echo "## hidden stage/retired names (any prefix)"
+sudo -n find /var/lib/celikpanel-agent-private -maxdepth 1 -name '.*' -printf '%f %u:%g %m %TY-%Tm-%Td %TH:%TM:%TS\n'
+echo "## filesystem of the directory"
+findmnt -T /var/lib/celikpanel-agent-private -o TARGET,SOURCE,FSTYPE,OPTIONS
+echo "## Agent unit sandbox properties"
+systemctl show celikpanel-agent.service -p User -p Group -p ProtectSystem -p ReadWritePaths -p PrivateTmp -p UMask -p NoNewPrivileges -p ExecMainPID -p ActiveEnterTimestamp
+echo "(end)"
+R
+cat $O/$NODE-agent-private-dir.txt

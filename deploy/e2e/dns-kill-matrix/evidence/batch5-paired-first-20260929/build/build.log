@@ -1,0 +1,102 @@
+2026-09-29T13:50:14Z
+repository HEAD at run time: 1c001994d65d930b9c184a64d39ff8a9c0a00b11
+65b866211ffee85348fb3df2bfebf5fd86fbdff0
+go version go1.26.5 linux/amd64
+go1.26.5
+
+https://proxy.golang.org,direct
+/root/go/pkg/mod
+47934c4ea03c8bedb10fdcff64c2224cc0923e2db0b75140a6e9c588853a1b10
+== artifacts
+572678e1e7654c0b432a283a63381ac43d639f777465f0650489cf4f0d3e7a83  /root/cp-b5-artifacts/agent
+9b8b35721e651381903de20ac2c9ba2fbf68e876e97bd18cffaab699c9480856  /root/cp-b5-artifacts/agent.kill
+793fb81b95fa96f438a216831a146e0869934ce31318881857d3352ffb92e472  /root/cp-b5-artifacts/panel
+05866e6a477647caee637c577b0d1c4574aaa14ef71d964d8825bc748cc9feeb  /root/cp-b5-artifacts/dns-kill-trigger
+6922104723c03c2ccc653f3a62d1312ecd9b6d859460bc32aa628c55c0d43480  /root/cp-b5-artifacts/recovery
+82f2772fe0257dde9139d0f85a34be58e89c98d6a9d1775090f2ecf4cc3b8975  /root/cp-b5-artifacts/agent-checker
+82f23b48908e152e55ad76598ec8be0f780805f463fe7e48ed402d87bc5984e0  /root/cp-b5-artifacts/panel-checker
+fe277c46ea8b50f00a80e71976198f28db89667789a737e0a78c0f4a83e9cb87  /root/cp-b5-artifacts/schema17-bridge
+== recovery-runtime
+82f2772fe0257dde9139d0f85a34be58e89c98d6a9d1775090f2ecf4cc3b8975  ./bin/agent-checker
+82f23b48908e152e55ad76598ec8be0f780805f463fe7e48ed402d87bc5984e0  ./bin/panel-checker
+6922104723c03c2ccc653f3a62d1312ecd9b6d859460bc32aa628c55c0d43480  ./bin/recovery
+fe277c46ea8b50f00a80e71976198f28db89667789a737e0a78c0f4a83e9cb87  ./bin/schema17-bridge
+6645927653114b4d59fbf6e29147f12920ceaec058d0ecc7b92faa71fd1bf6c3  ./deploy/panel-tls-snapshot.sh
+391eba13d077e0f8016cdfc8e95ce5fb67711b1e9b4a91ed7446ebdbb4ccf004  ./deploy/recovery/runtime-entry.sh
+f499446812b90aee362112743f4e491d5ecfa40511a510d08cbb006babdd48b0  ./deploy/release-recovery-foundation.sh
+db3e2dd23d4b81d9e533354e5d345d26eb43b7943ba20cf7b4ba19fac20cea1e  ./deploy/release-recovery-observation.sh
+4543920d5cc7a4d76c5c3ff91e8a03f4f02bd0e005577b40dc5c740af32c8257  ./deploy/release-transaction-guard.sh
+f163b496a8f48ae55a12658f34125f666c45672eccc4b27c03d58b7367848fc2  ./deploy/release-unit-transition.sh
+cbe3841aef57c62d0242a2957f728100fceca84a7a23135d51156562006ac822  ./rollback.sh
+47934c4ea03c8bedb10fdcff64c2224cc0923e2db0b75140a6e9c588853a1b10  ./runtime.manifest
+dea6eafb9608e1b956e8fee7ddc85908e649056fa6727be9c373cec233154db8  ./update.sh
+ff9abfa1db719155d83024a1840c2782f4f5dce7868547d648b352db98fd7890  /root/cp-b5-tools/oi-smstatus
+ed1ddac98348a472249e5ae7f04fd99f7a9e19c95555f0052bac05f189af6c0e  /root/cp-b5-tools/overlay.json
+57823885e8778d4fa5f67b3458042fc1f0cab7cb3a0603af00ec2bd202d85077  /root/cp-b5-tools/smstatus.go
+/root/cp-b5-artifacts/agent: go1.26.5
+	path	github.com/alicelik/celikpanel/cmd/agent
+	mod	github.com/alicelik/celikpanel	(devel)	
+== comparison with the 8f86bdad batch-4 build (/root/cp-b4-artifacts)
+DIFFERENT agent
+DIFFERENT agent.kill
+IDENTICAL panel
+DIFFERENT dns-kill-trigger
+DIFFERENT recovery
+IDENTICAL agent-checker
+IDENTICAL panel-checker
+IDENTICAL schema17-bridge
+DIFFERENT recovery-runtime/runtime.manifest
+3c3
+< 5268ed0058dc8d7619df2cbeb16661ef71eab8cf75a488746194c4104e92dde6  ./bin/recovery
+---
+> 6922104723c03c2ccc653f3a62d1312ecd9b6d859460bc32aa628c55c0d43480  ./bin/recovery
+12c12
+< a682b35afd664df01436b6dfb25040afda352dff7e4557586665e90a93245646  ./runtime.manifest
+---
+> 47934c4ea03c8bedb10fdcff64c2224cc0923e2db0b75140a6e9c588853a1b10  ./runtime.manifest
+recovery-runtime tree DIFFERENT
+IDENTICAL oi-smstatus
+web-dist IDENTICAL
+== changed paths 8f86bdad..65b86621 (non-test Go and harness)
+ .../copies/133550.994-journal-a74392cfc473.json    |    1 +
+ .../copies/133551.005-ledger-e9dceabdbd35.json     |    1 +
+ .../copies/133551.292-ledger-fffeb93a8ef2.json     |    1 +
+ .../copies/133551.580-ledger-3b630ab21827.json     |    1 +
+ .../copies/133551.865-ledger-2cba6a011a21.json     |    1 +
+ .../copies/133551.876-state-44123b117590.json      |    1 +
+ .../copies/133552.162-journal-e20caa935109.json    |    1 +
+ .../copies/133552.462-ledger-0d656efe5849.json     |    1 +
+ .../cp-b4-watch/journal-at-at-kill-proof.json      |    1 +
+ .../raw/watch/cp-b4-watch/snap-at-kill-proof.txt   |   93 +
+ .../raw/watch/cp-b4-watch/snap-start.txt           |   87 +
+ .../raw/watch/cp-b4-watch/timeline.log             |  215 +
+ .../c7-fresh-pdns-reboot/run-prepared-dryrun.log   |    2 +
+ .../c7-fresh-pdns-reboot/run-prepared.log          |    3 +
+ .../c7-fresh-pdns-reboot/run-prepared.rc           |    1 +
+ .../service-mutation-status-post-collect.json      |   22 +
+ .../c7-fresh-pdns-reboot/smstatus.stderr           |    0
+ .../c7-fresh-pdns-reboot/soa-post-collect.txt      |   13 +
+ .../c7-fresh-pdns-reboot/soa-pre-run.txt           |   13 +
+ .../c7-fresh-pdns-reboot/start.json                |   83 +
+ .../c7-fresh-pdns-reboot/stop.json                 |    6 +
+ .../c7-fresh-pdns-reboot/teardown.json             |    7 +
+ .../c7-fresh-pdns-reboot/wait-ssh.json             |   45 +
+ deploy/e2e/dns-kill-matrix/guest_bootstrap.py      |  483 +-
+ deploy/e2e/dns-kill-matrix/guest_bootstrap.sh      |  502 +-
+ deploy/e2e/dns-kill-matrix/guest_recovery_probe.py |   16 +-
+ deploy/e2e/dns-kill-matrix/run_cell.py             | 1123 +++-
+ deploy/e2e/dns-kill-matrix/test_guest_bootstrap.py |   46 +-
+ .../test_paired_secondary_provenance.py            | 1139 ++++
+ .../dnsenginerecovery/bind_switch_standby_linux.go |  297 +
+ .../bind_switch_standby_linux_test.go              |  191 +
+ internal/dnsenginerecovery/listener_local.go       |  210 +
+ internal/dnsenginerecovery/listener_local_linux.go |   99 +
+ .../dnsenginerecovery/listener_local_linux_test.go |  187 +
+ internal/dnsenginerecovery/native_inverse.go       |   87 +-
+ internal/dnsenginerecovery/native_inverse_test.go  |   76 +
+ .../catalog_producer_linux_test.go                 |   93 +
+ internal/pdnspeerinspector/native_linux.go         |   43 +-
+ internal/pdnspeerinspector/native_linux_test.go    |    2 +-
+ 764 files changed, 69454 insertions(+), 351 deletions(-)
+2026-09-29T13:50:31Z
+BUILD-OK

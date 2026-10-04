@@ -1,0 +1,56 @@
+#!/bin/bash
+set -uo pipefail
+W=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/p7b12
+B=/root/cp-pair7
+P=$B/pack
+PC=2efc4de20038885294cef414178dfaf5f8235f27
+D=/var/tmp/cp-pair7-dist/$PC-acceptance-license
+rm -rf $P; mkdir -p $P/build/runner-logs $P/build/scripts
+cp $W/webbuild/web-build.log $P/build/web-build.log
+tr -d '\r' < $W/webbuild/web-build-start.txt | sed 's/^\xEF\xBB\xBF//' > $P/build/web-build-times.txt
+cp $W/web-dist-windows-build.sha256 $P/build/
+cp $D/web-dist.sha256 $D/dist.json $D/guard-refusal.txt $D/archive-evidence-entries.json $D/go-version.txt $P/build/
+cp $D/build.log $P/build/build-dist-make.log
+cp $B/logs/build-dist.log $P/build/build-dist.log
+cp $B/logs/offline-tests-product.log $P/build/offline-tests-run-composition.log
+cp $B/logs/offline-tests-pure.log $P/build/offline-tests-driver-commit-pure.log
+cp $B/logs/run-path-changes.diff $P/build/run-path-changes.diff
+grep -v '/evidence' $B/logs/driver-files.sha256 > $P/build/driver-files.sha256
+( cd $D/product-web-src && find . -type f -print0 | sort -z | xargs -0 sha256sum ) > $P/build/product-web-src.sha256
+bash $D/src/deploy/release-acceptance-license-guard.sh $D/celikpanel-v0.0.0-pairaccept-acceptance-license.2efc4de20038-acceptance-license.tar.gz > $P/build/guard-refusal-archive.txt 2>&1; echo "exit=$?" >> $P/build/guard-refusal-archive.txt
+{ echo "host: archlinux WSL2 $(uname -r)"; echo "checked at 2026-09-30T08:02:26Z before the run (hostcheck.sh, full output hostcheck.log):"; echo "memory MiB total 15697, available 15059; swap 4096"; echo "disk / 1007G, 784G free (19% used)"; echo "cpus 16; /dev/kvm present; no qemu process running; no listener on 2201/2202/23053/28443/28444"; echo "python $(python3 --version 2>&1 | cut -d' ' -f2); $(git --version); $(make --version | head -1)"; /opt/celikpanel-test-toolchains/go1.26.5/go/bin/go version; echo; echo "at pack time $(date -u +%FT%TZ):"; free -m | head -2; df -h / | tail -1; pgrep -a qemu || echo "no qemu process"; } > $P/build/host.txt
+for l in p7t1 p7t2 p7t3; do for k in prepare run runner; do cp $B/logs/$l-$k.log $P/build/runner-logs/$l-$k.log; done; done
+for f in hostcheck.sh setup-host.sh cmpweb.sh build.sh topo.sh launch.sh launch-watch.sh watch-catalog.sh pdnsdb.py waitline.sh waitstep.sh waitfor.sh waitend.sh res.sh guid.sh delinfo.sh apikeys.sh tcoll.sh ro-collect.sh coll-extra.sh diag-bind-transfer.sh diag-options.sh ledgerjob.sh counts.sh journaldiag.sh t1more.sh t2more.sh t3more.sh t3final.sh extra.sh extra_guest.py extra-launch.sh extra-wait.sh stopcell.sh mirror.sh pack.sh sums.sh copyout.sh final.sh secret-scan.py rndc-scan.py; do cp $W/$f $P/build/scripts/$f.txt; done
+tr -d "\r" < $W/hostcheck.log | grep -a -v -E "^(-|d|l|total|/root:|/var/tmp:)" > $P/build/hostcheck-summary.txt
+declare -A T=([p7t1]=t1-bind-bind [p7t2]=t2-bind-pdns [p7t3]=t3-pdns-bind)
+declare -A S=([p7t1]=t1 [p7t2]=t2 [p7t3]=t3)
+for l in p7t1 p7t2 p7t3; do
+  R=$(ls -d /var/tmp/cp-pair7-evidence/$l-* | tail -1)
+  mkdir -p $P/${T[$l]}/obs
+  cp -a $R $P/${T[$l]}/
+  cp -a $B/obs/$l/. $P/${T[$l]}/obs/
+  cp $B/logs/$l-guid.txt $P/${T[$l]}/obs/guidance-summary.txt
+  tr -d '\r' < $W/${S[$l]}-stop.log > $P/${T[$l]}/obs/cell-stop.log
+  python3 - $B/logs/$l-catalog-watch.jsonl > $P/${T[$l]}/obs/catalog-watch.jsonl <<'PY'
+import json, re, sys
+for line in open(sys.argv[1], encoding="utf-8"):
+    line = line.rstrip("\n")
+    try:
+        json.loads(line); print(line); continue
+    except ValueError:
+        pass
+    m = re.match(r'\{"t":"([^"]+)","([a-z_]+)":(.*)\}$', line)
+    if m:
+        print(json.dumps({"t": m.group(1), m.group(2): {"raw": m.group(3)}}, sort_keys=True))
+    else:
+        print(json.dumps({"raw": line}))
+PY
+  bash $W/counts.sh $l > $P/${T[$l]}/obs/notify-counts.txt 2>&1
+done
+mkdir -p $P/t3-pdns-bind/extra-experiment && cp -a $B/obs/p7t3-extra/. $P/t3-pdns-bind/extra-experiment/
+cp $W/t1coll.out $P/t1-bind-bind/obs/collect-console.txt; cp $W/t2coll.out $P/t2-bind-pdns/obs/collect-console.txt; cp $W/t3coll.out $P/t3-pdns-bind/obs/collect-console.txt
+cd $B/driver/deploy/e2e/dns-pair-acceptance
+for R in $(ls -d $P/t*/p7t*-*); do python3 -c 'import sys, evidence; from pathlib import Path; r=evidence.verify_sums(Path(sys.argv[1])); print(sys.argv[1].split("/")[-1], "verify_sums:", r)' $R; done
+find $P -type f | wc -l
+du -sh $P
+cd $P && find . -type f | awk '{ print length($0)-2+55, $0 }' | sort -n | tail -1

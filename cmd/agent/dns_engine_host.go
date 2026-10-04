@@ -3,30 +3,30 @@ package main
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
-	"net"
 	"os"
-	"path"
 	"path/filepath"
 	"reflect"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/bindconfig"
 	"github.com/alicelik/celikpanel/internal/binddns"
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
+	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
+	"github.com/alicelik/celikpanel/internal/dnslistener"
+	"github.com/alicelik/celikpanel/internal/dnsunitidentity"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 const (
-	dnsEngineStateSchema = "celikpanel-dns-engine-state/v1"
+	dnsEngineStateSchema = dnsengineartifact.StateSchemaV1
 
 	aptBINDGenerationRoot          = "/var/cache/bind/celikpanel"
 	aptBINDCacheParentPath         = "/var/cache/bind"
@@ -50,21 +50,7 @@ type bindHostLayout struct {
 	Packages       []string
 }
 
-type dnsEngineStateReceipt struct {
-	Schema               string              `json:"schema"`
-	Mode                 string              `json:"mode"`
-	Engine               transport.DNSEngine `json:"engine"`
-	EngineEpoch          int64               `json:"engine_epoch"`
-	Generation           string              `json:"generation,omitempty"`
-	PairRole             string              `json:"pair_role,omitempty"`
-	PairLocalIP          string              `json:"pair_local_ip,omitempty"`
-	PairPeerIP           string              `json:"pair_peer_ip,omitempty"`
-	PrimaryCatalogSerial uint32              `json:"primary_catalog_serial,omitempty"`
-	SourceRevision       int64               `json:"source_revision"`
-	ManifestQualifier    string              `json:"manifest_qualifier"`
-	MutationRequestID    string              `json:"mutation_request_id"`
-	MutationOwnerID      string              `json:"mutation_owner_id"`
-}
+type dnsEngineStateReceipt = dnsengineartifact.StateV1
 
 type dnsUnitState struct {
 	Name          string
@@ -75,16 +61,7 @@ type dnsUnitState struct {
 
 func (state dnsUnitState) active() bool { return state.ActiveState == "active" }
 
-type dnsUnitIdentity struct {
-	ID            string
-	Names         []string
-	FragmentPath  string
-	DropInPaths   []string
-	SourcePath    string
-	Transient     string
-	ExecStartPath string
-	ExecStartArgv string
-}
+type dnsUnitIdentity = dnsunitidentity.Identity
 
 type bindSecureFileIdentity struct {
 	Device uint64
@@ -149,32 +126,42 @@ type bindConfigSnapshotReader func(
 ) (dnsFileSnapshot, error)
 
 type bindSwitchRollbackJournalOps struct {
+	read     func() (dnsEngineSwitchJournal, bool, error)
 	write    func(dnsEngineSwitchJournal) error
 	rollback func() error
 	verify   func() error
-	remove   func() error
 }
 
+// runBINDRollbackWithJournal runs the in-process BIND inverse only after the
+// rollback decision is durable (decideDNSSwitchInProcessRollback): a journal
+// already at target-verified or committed is never rolled back, and a
+// rolling-back write that cannot be proved durable starts no inverse effect.
 func runBINDRollbackWithJournal(
 	journal *dnsEngineSwitchJournal,
 	ops bindSwitchRollbackJournalOps,
 ) error {
-	if journal == nil || ops.write == nil || ops.rollback == nil ||
-		ops.verify == nil || ops.remove == nil {
+	if journal == nil || ops.read == nil || ops.write == nil ||
+		ops.rollback == nil || ops.verify == nil {
 		return errors.New("invalid BIND rollback journal operations")
 	}
-	journal.Phase = dnsSwitchPhaseRollingBack
-	journalErr := ops.write(*journal)
+	decided, err := decideDNSSwitchInProcessRollback(
+		*journal, dnsSwitchInProcessJournalOps{read: ops.read, write: ops.write},
+		errors.New("BIND switch rollback was requested"),
+	)
+	if err != nil {
+		return err
+	}
+	*journal = decided
 	rollbackErr := ops.rollback()
 	if rollbackErr == nil {
 		rollbackErr = ops.verify()
 	}
-	if rollbackErr == nil {
-		journal.Phase = dnsSwitchPhaseRolledBack
-		finalWriteErr := ops.write(*journal)
-		journalErr = errors.Join(journalErr, finalWriteErr)
-		if finalWriteErr == nil {
-			journalErr = errors.Join(journalErr, ops.remove())
+	var journalErr error
+	if rollbackErr == nil && journal.Phase != dnsSwitchPhaseRolledBack {
+		next := *journal
+		next.Phase = dnsSwitchPhaseRolledBack
+		if journalErr = ops.write(next); journalErr == nil {
+			*journal = next
 		}
 	}
 	return errors.Join(journalErr, rollbackErr)
@@ -268,98 +255,16 @@ func dnsEngineStatePath() string {
 }
 
 func encodeDNSEngineState(state dnsEngineStateReceipt) ([]byte, error) {
-	if err := validateDNSEngineState(state); err != nil {
-		return nil, err
-	}
-	encoded, err := json.Marshal(state)
-	if err != nil {
-		return nil, fmt.Errorf("encode DNS engine state: %w", err)
-	}
-	return append(encoded, '\n'), nil
+	return dnsengineartifact.CanonicalV1(state)
 }
 
 func decodeDNSEngineState(data []byte) (dnsEngineStateReceipt, error) {
-	if len(data) == 0 || len(data) > 64<<10 {
-		return dnsEngineStateReceipt{}, errors.New("DNS engine state has an invalid size")
-	}
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.DisallowUnknownFields()
-	var state dnsEngineStateReceipt
-	if err := decoder.Decode(&state); err != nil {
-		return dnsEngineStateReceipt{}, fmt.Errorf("decode DNS engine state: %w", err)
-	}
-	var trailing any
-	if err := decoder.Decode(&trailing); err != io.EOF {
-		return dnsEngineStateReceipt{}, errors.New("DNS engine state contains trailing JSON")
-	}
-	canonical, err := encodeDNSEngineState(state)
-	if err != nil {
-		return dnsEngineStateReceipt{}, err
-	}
-	if !bytes.Equal(data, canonical) {
-		return dnsEngineStateReceipt{}, errors.New("DNS engine state is not canonical JSON")
-	}
-	return state, nil
+	state, _, err := dnsengineartifact.DecodeStateDocument(data)
+	return state, err
 }
 
 func validateDNSEngineState(state dnsEngineStateReceipt) error {
-	if state.Schema != dnsEngineStateSchema || !transport.ValidDNSEngine(state.Engine) ||
-		(state.Mode != transport.DNSEngineSwitchModeSwitch &&
-			state.Mode != transport.DNSEngineSwitchModeAdopt) ||
-		state.EngineEpoch < 1 || state.SourceRevision < 0 ||
-		!mutationpayload.ValidDNSEngineSwitchQualifier(state.ManifestQualifier) ||
-		!validMutationIdentity(state.MutationRequestID) ||
-		!validMutationIdentity(state.MutationOwnerID) {
-		return errors.New("DNS engine state has an unsupported identity")
-	}
-	if state.Mode == transport.DNSEngineSwitchModeAdopt &&
-		state.Engine != transport.DNSEnginePowerDNS {
-		return errors.New("DNS engine adoption state must name PowerDNS")
-	}
-	if state.Mode == transport.DNSEngineSwitchModeAdopt &&
-		(state.PairRole != "" || state.PairLocalIP != "" ||
-			state.PairPeerIP != "" || state.PrimaryCatalogSerial != 0) {
-		return errors.New("legacy PowerDNS adoption state cannot claim directional primary identity")
-	}
-	if (state.PairLocalIP == "") != (state.PairPeerIP == "") {
-		return errors.New("DNS engine state contains a partial pair address identity")
-	}
-	hasPairAddresses := state.PairLocalIP != ""
-	if hasPairAddresses {
-		localIP := net.ParseIP(state.PairLocalIP)
-		peerIP := net.ParseIP(state.PairPeerIP)
-		if localIP == nil || localIP.To4() == nil ||
-			localIP.String() != state.PairLocalIP || !localIP.IsGlobalUnicast() ||
-			peerIP == nil || peerIP.To4() == nil ||
-			peerIP.String() != state.PairPeerIP || !peerIP.IsGlobalUnicast() ||
-			localIP.Equal(peerIP) {
-			return errors.New("DNS engine state pair addresses are not canonical and distinct")
-		}
-	}
-	switch state.PairRole {
-	case transport.DNSPairRolePrimary:
-		if !hasPairAddresses || state.PrimaryCatalogSerial == 0 {
-			return errors.New("paired primary DNS engine state is missing its catalog serial")
-		}
-	case transport.DNSPairRoleSecondary:
-		if !hasPairAddresses || state.PrimaryCatalogSerial != 0 {
-			return errors.New("paired secondary DNS engine state contains a primary catalog serial")
-		}
-	case "":
-		if state.PrimaryCatalogSerial != 0 || hasPairAddresses {
-			return errors.New("standalone DNS engine state contains directional pair identity")
-		}
-	default:
-		return errors.New("DNS engine state has an unsupported pair role")
-	}
-	if state.Engine == transport.DNSEngineBIND {
-		if !validDNSGeneration(state.Generation) {
-			return errors.New("BIND engine state has an invalid generation")
-		}
-	} else if state.Generation != "" {
-		return errors.New("PowerDNS engine state unexpectedly names a BIND generation")
-	}
-	return nil
+	return dnsengineartifact.ValidateV1(state)
 }
 
 func isLegacyDNSEngineState(state dnsEngineStateReceipt) bool {
@@ -368,15 +273,7 @@ func isLegacyDNSEngineState(state dnsEngineStateReceipt) bool {
 }
 
 func validDNSGeneration(value string) bool {
-	if len(value) != 64 {
-		return false
-	}
-	for _, character := range value {
-		if (character < '0' || character > '9') && (character < 'a' || character > 'f') {
-			return false
-		}
-	}
-	return true
+	return dnsengineartifact.ValidGeneration(value)
 }
 
 func readDNSEngineState() (dnsEngineStateReceipt, bool, error) {
@@ -404,7 +301,7 @@ func readExactDNSEngineState() (dnsEngineStateReceipt, bool, error) {
 }
 
 func writeDNSEngineState(state dnsEngineStateReceipt) error {
-	data, err := encodeDNSEngineState(state)
+	data, err := dnsengineartifact.CanonicalStateDocumentV2(state)
 	if err != nil {
 		return err
 	}
@@ -479,6 +376,7 @@ func newHostBINDPublisher(
 func (hostDNSEngineBackend) Readiness(
 	ctx context.Context,
 ) (transport.DNSBackendReadinessResponse, error) {
+	ctx = withDNSPeerCatalogSession(ctx, "DNS readiness check")
 	profile, err := verifiedHostProfileForAnyFamily()
 	if err != nil {
 		return transport.DNSBackendReadinessResponse{}, err
@@ -518,11 +416,13 @@ func (hostDNSEngineBackend) Readiness(
 	); err != nil {
 		return transport.DNSBackendReadinessResponse{}, err
 	}
+	units := make([]dnsUnitState, len(states))
 	for index := range states {
 		unit, captureErr := captureDNSUnitState(ctx, systemctl, states[index].Unit)
 		if captureErr != nil {
 			return transport.DNSBackendReadinessResponse{}, captureErr
 		}
+		units[index] = unit
 		states[index].Running = unit.active()
 	}
 	state, exists, stateErr := readDNSEngineState()
@@ -639,6 +539,16 @@ func (hostDNSEngineBackend) Readiness(
 					return powerDNSSecondaryPairReady(proofCtx, state)
 				},
 			}
+		}
+	}
+	if !exists {
+		for index, packages := range [][]string{layout.Packages, pdnsPackages} {
+			if index == 0 && layoutErr != nil {
+				continue
+			}
+			states[index].RollbackStandby = hostRollbackStandbyForBackendReadiness(
+				states[index], units[index], profile.PackageManager, packages,
+			)
 		}
 	}
 	// What a takeover of this BIND would replace, reported as facts so the
@@ -925,6 +835,57 @@ func installOwnedStandbyManagedForBackendReadiness(
 		)
 }
 
+// rollbackStandbyForBackendReadiness is the one definition of a rolled-back
+// first install's standby (transport.DNSBackendRuntimeState.RollbackStandby).
+// stateExists is whether any DNS engine state receipt exists.
+func rollbackStandbyForBackendReadiness(
+	runtimeState transport.DNSBackendRuntimeState,
+	unit dnsUnitState,
+	stateExists bool,
+	ownershipExists bool,
+	ownershipErr error,
+	receipt dnsEngineInstallOwnershipReceipt,
+	receiptExists bool,
+	receiptErr error,
+	manager hostplatform.PackageManager,
+	packages []string,
+) bool {
+	if stateExists || ownershipErr != nil || ownershipExists || receiptErr != nil ||
+		!runtimeState.Installed || runtimeState.Running ||
+		unit.Name != runtimeState.Unit || unit.ActiveState != "inactive" {
+		return false
+	}
+	guardMasked := unit.LoadState == "masked" && unit.UnitFileState == "masked"
+	loadedDisabled := unit.LoadState == "loaded" && unit.UnitFileState == "disabled"
+	if !guardMasked && !loadedDisabled {
+		return false
+	}
+	return exactDNSEngineInstallOwnership(
+		receipt, receiptExists, runtimeState.Engine, manager, packages,
+	) && !receipt.AdoptedPresent && len(receipt.MissingBefore) != 0 &&
+		validateDNSEngineInstallOwnership(receipt) == nil
+}
+
+func hostRollbackStandbyForBackendReadiness(
+	runtimeState transport.DNSBackendRuntimeState,
+	unit dnsUnitState,
+	manager hostplatform.PackageManager,
+	packages []string,
+) bool {
+	if !runtimeState.Installed || runtimeState.Running || len(packages) == 0 {
+		return false
+	}
+	_, ownershipExists, ownershipErr := readDNSEngineOwnership(runtimeState.Engine)
+	receipt, receiptExists, receiptErr := readDNSEngineInstallOwnership(runtimeState.Engine)
+	if ownershipErr != nil || receiptErr != nil {
+		log.Printf("%s rollback standby proof failed: %v", runtimeState.Engine, errors.Join(ownershipErr, receiptErr))
+	}
+	return rollbackStandbyForBackendReadiness(
+		runtimeState, unit, false, ownershipExists, ownershipErr,
+		receipt, receiptExists, receiptErr, manager, packages,
+	)
+}
+
 func installOwnershipFallbackAllowed(
 	engineOwnershipExists bool,
 	engineOwnershipErr error,
@@ -959,6 +920,7 @@ func (hostDNSEngineBackend) Sync(
 	commitment mutationpayload.DNSZoneSyncV3Commitment,
 	binding transport.ServiceMutationBinding,
 ) (string, error) {
+	ctx = withDNSPeerCatalogSession(ctx, "DNS zone change "+binding.MutationRequestID)
 	engine := transport.DNSEngine(commitment.Engine)
 	if engine != transport.DNSEngineBIND && engine != transport.DNSEnginePowerDNS {
 		return "", errors.New("DNS V3 publication engine is unsupported")
@@ -1016,8 +978,8 @@ func (hostDNSEngineBackend) Sync(
 			}
 			return "", evidenceErr
 		}
-		if _, proofErr := verifyDNSLegacyPrimaryPairReadyAuthorityAt(
-			ctx, evidence, probeDNSZoneSOA, probeDNSBoundCatalogAXFR,
+		if _, proofErr := verifyLegacyPrimaryPeerCatalogAuthorityForLocalEngine(
+			ctx, evidence, transport.DNSEngineBIND,
 		); proofErr != nil {
 			return "", proofErr
 		}
@@ -1083,7 +1045,7 @@ func (hostDNSEngineBackend) Sync(
 		return applyVerifiedBINDV3GenerationAt(
 			applyCtx, attempt, currentTree, receipt, generation.ReceiptValue,
 			func(verifyCtx context.Context) error {
-				return verifyDNSZoneManifestAuthority(verifyCtx, []transport.DNSEngineSwitchZoneSnapshot{{
+				return verifyBINDV3ZoneManifestAuthorityForTree(verifyCtx, currentTree, []transport.DNSEngineSwitchZoneSnapshot{{
 					Domain: commitment.Domain, DesiredGeneration: commitment.DesiredGeneration,
 					Delete: commitment.Delete, ZoneType: commitment.ZoneType,
 					Records: commitment.Records, ZoneQualifier: commitment.Qualifier,
@@ -1160,11 +1122,40 @@ func (hostDNSEngineBackend) Sync(
 	return generation.ID, nil
 }
 
+// pendingExactBINDV3OwnerEdit never repairs an owner-modified managed span.
+// A pending result is allowed only for the exact durable deletion tombstone;
+// unrelated configuration failures retain the fail-closed recovery path.
+func pendingExactBINDV3OwnerEdit(
+	state dnsEngineStateReceipt,
+	receipt binddns.Receipt,
+	tree binddns.VerifiedTree,
+	domain, qualifier string,
+	binding transport.ServiceMutationBinding,
+	configErr error,
+) error {
+	if !errors.Is(configErr, bindconfig.ErrManagedZoneIncludeModified) &&
+		!errors.Is(configErr, errManagedBINDOptionsModified) {
+		return nil
+	}
+	if state.Generation == "" || state.Generation != receipt.Generation ||
+		receipt.Pairing == nil || receipt.Pairing.Role != binddns.PairRolePrimary ||
+		binding.MutationRequestID == "" || binding.MutationOwnerID == "" {
+		return nil
+	}
+	zone, _, found := tree.Zone(domain)
+	if !found || !zone.Delete || zone.Qualifier != qualifier ||
+		zone.MutationRequestID != binding.MutationRequestID ||
+		zone.MutationOwnerID != binding.MutationOwnerID {
+		return nil
+	}
+	return dnsZoneV3RecoveryPending(pendingBINDPeer(transport.DNSPeerPendingOwnerEditUnknown))
+}
 func (hostDNSEngineBackend) RecoverZone(
 	ctx context.Context,
 	domain, qualifier string,
 	binding transport.ServiceMutationBinding,
 ) (bool, error) {
+	ctx = withDNSPeerCatalogSession(ctx, "DNS zone recovery "+binding.MutationRequestID)
 	state, exists, err := readDNSEngineState()
 	if err != nil || !exists {
 		return false, err
@@ -1241,6 +1232,11 @@ func (hostDNSEngineBackend) RecoverZone(
 	} else if err := verifyManagedBINDRuntimeConfigExact(
 		ctx, layout, receipt, false,
 	); err != nil {
+		if pending := pendingExactBINDV3OwnerEdit(
+			state, receipt, tree, domain, qualifier, binding, err,
+		); pending != nil {
+			return false, pending
+		}
 		return false, err
 	}
 	systemctl, err := executableForProfile(profile, string(profile.PackageManager), "systemctl")
@@ -1315,7 +1311,7 @@ func (hostDNSEngineBackend) RecoverZone(
 	if err := verifyOnlyBINDActive(ctx, profile, systemctl); err != nil {
 		return false, err
 	}
-	if err := verifyDNSZoneAuthorities(ctx, []expectedDNSZoneAuthority{expected}); err != nil {
+	if err := verifyBINDV3AuthoritiesForTree(ctx, tree, []expectedDNSZoneAuthority{expected}); err != nil {
 		return false, err
 	}
 	if state != nextState {
@@ -1337,6 +1333,15 @@ func (hostDNSEngineBackend) Switch(
 	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
 	binding transport.ServiceMutationBinding,
 ) (transport.SwitchDNSEngineV1Response, error) {
+	ctx = withDNSPeerCatalogSession(ctx, "DNS engine change "+binding.MutationRequestID)
+	if pdnsPairedPrimarySwitchPaused(manifest) {
+		return transport.SwitchDNSEngineV1Response{},
+			errors.New(pdnsPairedPrimarySwitchPausedReason)
+	}
+	if bindSourcePDNSSwitchUnsupported(manifest) {
+		return transport.SwitchDNSEngineV1Response{},
+			errors.New(bindSourcePDNSSwitchUnsupportedReason)
+	}
 	if err := reconcileExistingDNSEngineSwitchJournal(ctx); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
@@ -1387,7 +1392,9 @@ func (hostDNSEngineBackend) Switch(
 		if err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err
 		}
-		expected, err := binddns.RenderTree(layout.GenerationRoot, plan)
+		expected, err := bindExpectedGenerationForTarget(
+			layout.GenerationRoot, plan, state.Generation,
+		)
 		if err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err
 		}
@@ -1442,7 +1449,7 @@ func (hostDNSEngineBackend) Switch(
 	// istediği tek şey, operatörün kendi seçenek direktiflerini değiştirdiğinin
 	// parçası olarak okuma izniydir; buna, soruyu karıştıracak hiçbir makbuzumuz
 	// daha yokken burada karar verilir.
-	optionsAuthority, err := bindSwitchOptionsAuthority(manifest, stateExists)
+	optionsAuthority, err := bindSwitchOptionsAuthority(manifest, stateExists, binding)
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
@@ -1480,13 +1487,8 @@ func (hostDNSEngineBackend) Switch(
 	}
 	if manifest.Topology == transport.DNSTopologyPaired &&
 		manifest.PairRole == transport.DNSPairRoleSecondary {
-		catalogDomain, err := binddns.CatalogDomain(manifest.PeerIP)
-		if err != nil {
+		if err := requireBINDSecondaryPeerCatalog(ctx, manifest); err != nil {
 			return transport.SwitchDNSEngineV1Response{}, err
-		}
-		if _, err := probeDNSCatalogAXFR(ctx, manifest.PeerIP, catalogDomain); err != nil {
-			return transport.SwitchDNSEngineV1Response{},
-				errors.New("paired primary catalog is unavailable")
 		}
 	}
 	targetBefore, err := captureDNSUnitStates(
@@ -1503,6 +1505,15 @@ func (hostDNSEngineBackend) Switch(
 	if err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
+	verifyRecoveryRuntime, closeRecoveryRuntime, err := prepareBINDIndependentRuntime(ctx, profile, dnsEngineSwitchJournal{
+		Mode: manifest.Mode, SourceEngine: manifest.SourceEngine, TargetEngine: manifest.TargetEngine,
+		Topology: manifest.Topology, StateBefore: dnsFileSnapshot{Exists: stateExists},
+		TargetUnitsBefore: dnsUnitStateMapSnapshots(targetBefore), SourceUnitsBefore: dnsUnitStateMapSnapshots(sourceBefore),
+	})
+	if err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	defer closeRecoveryRuntime()
 	missing := make([]string, 0, len(layout.Packages))
 	for _, packageName := range layout.Packages {
 		installed, packageErr := exactDNSEnginePackageInstalled(
@@ -1515,6 +1526,15 @@ func (hostDNSEngineBackend) Switch(
 			missing = append(missing, packageName)
 		}
 	}
+	// Before any receipt, mask or package effect: dpkg would refuse the
+	// install while its statoverride database names a removed user or group.
+	// Repair only the product's own legacy entry; refuse anything else with
+	// the owner's command (D-022, D-024).
+	if len(missing) != 0 && profile.PackageManager == hostplatform.PackageManagerAPT {
+		if err := packageStatOverridePreflight(ctx); err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
+	}
 	// systemctl mask creates persistent links below /etc/systemd/system. Prove
 	// that exact root-owned 0755 parent before publishing install ownership or
 	// allowing any package/config mutation. This is deliberately read-only:
@@ -1524,10 +1544,46 @@ func (hostDNSEngineBackend) Switch(
 			"preflight BIND mask parent: %w", err,
 		)
 	}
+	// A takeover-shaped request that is refused the operator's options (the
+	// exclusive mode) must be refused before it rebinds a surviving install
+	// receipt to itself below; otherwise its own retry would find that
+	// receipt and decide differently. This read-only check is the same one the
+	// configuration step repeats later.
+	//
+	// Operatörün seçeneklerini reddeden (dışlayıcı kipteki) devralma biçimli
+	// bir istek, aşağıda hayatta kalan bir kurulum makbuzunu kendine yeniden
+	// bağlamadan önce reddedilmelidir; yoksa kendi yeniden denemesi o makbuzu
+	// bulur ve farklı karar verir. Bu salt-okur denetim, yapılandırma adımının
+	// sonra tekrarladığı denetimin aynısıdır.
+	if len(missing) == 0 && optionsAuthority == bindOptionsExclusive &&
+		adoptableRunningBINDManifest(manifest, stateExists) {
+		if _, err := prepareBINDConfigMutationWithAuthority(
+			ctx, layout, "", bindOptionsExclusive,
+		); err != nil {
+			return transport.SwitchDNSEngineV1Response{}, err
+		}
+	}
 	if err := publishDNSEngineSourceOwnership(
 		manifest, state, stateExists,
 	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	// The install receipt as it stood before this transaction writes or
+	// rebinds it below: the rndc key rule recognises only its own
+	// never-committed residue through it. An unreadable receipt proves
+	// nothing and leaves any present key the owner's.
+	//
+	// Bu işlemin aşağıda yazmasından ya da yeniden bağlamasından önceki kurulum
+	// makbuzu: rndc anahtar kuralı yalnız kendi tamamlanmamış kalıntısını onunla
+	// tanır. Okunamayan makbuz hiçbir şey kanıtlamaz.
+	priorBINDInstall := bindRNDCKeyPriorInstall{}
+	if prior, priorExists, priorErr := readDNSEngineInstallOwnership(
+		transport.DNSEngineBIND,
+	); priorErr == nil && priorExists {
+		priorBINDInstall = bindRNDCKeyPriorInstall{Exists: true, bindRNDCKeyIdentity: bindRNDCKeyIdentity{
+			Qualifier: prior.ManifestQualifier,
+			RequestID: prior.MutationRequestID, OwnerID: prior.MutationOwnerID,
+		}}
 	}
 	// Nothing to install: BIND's packages are already on this host. That is
 	// still an event with provenance - this mutation takes them under
@@ -1597,6 +1653,21 @@ func (hostDNSEngineBackend) Switch(
 		},
 	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	// The package is installed and named has never started from it (the
+	// install guard's mask holds it). An rndc key must exist before that
+	// first start, or named cannot be asked about zone state (deletion
+	// proofs, peer inspection). See dns_engine_bind_rndc_key.go.
+	//
+	// Paket kuruldu ve named ondan hiç başlamadı. İlk başlatmadan önce rndc
+	// anahtarı bulunmalıdır; yoksa named'e bölge durumu sorulamaz.
+	if _, err := prepareBINDRNDCKeyBeforeFirstStart(ctx, layout, bindRNDCKeyIdentity{
+		Qualifier: manifest.Qualifier,
+		RequestID: binding.MutationRequestID, OwnerID: binding.MutationOwnerID,
+	}, priorBINDInstall); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, fmt.Errorf(
+			"prepare the BIND rndc key before named first starts: %w", err,
+		)
 	}
 	var publisher *binddns.Publisher
 	var validator trackedBINDValidator
@@ -1704,18 +1775,49 @@ func (hostDNSEngineBackend) Switch(
 		TargetUnitsBefore: dnsUnitStateMapSnapshots(targetBefore),
 		SourceUnitsBefore: dnsUnitStateMapSnapshots(sourceBefore),
 	}
+	if err := verifyRecoveryRuntime(); err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	journal, err = prepareBINDIndependentInverseJournal(ctx, profile, journal, configs)
+	if err != nil {
+		return transport.SwitchDNSEngineV1Response{}, err
+	}
 	if err := verifyBINDConfigMutationPreimage(ctx, configs); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
-	if err := writeJournal(journal); err != nil {
+	if err := publishBINDIntentAfterIndependentSourceProof(
+		journal,
+		func() error { return verifyDNSEngineSwitchSource(ctx, profile, manifest, state, stateExists) },
+		func() error { return verifyBINDIndependentSourceProof(ctx, journal) },
+		func() error { return writeJournal(journal) },
+	); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
+	}
+	journalOps := dnsSwitchInProcessJournalOps{
+		read: readDNSEngineSwitchJournal, write: writeJournal,
 	}
 	rollbackAndJournal := func(rollbackCtx context.Context) error {
 		return runBINDRollbackWithJournal(&journal, bindSwitchRollbackJournalOps{
-			write: writeJournal,
+			read: journalOps.read, write: journalOps.write,
 			rollback: func() error {
+				proveSource := func(proofCtx context.Context) error {
+					return verifyBINDIndependentSourceProof(proofCtx, journal)
+				}
+				// A V2 journal that froze BIND absent or under the package
+				// guard's mask ends where recover-dns-bind-switch ends: the
+				// target under the guard's persistent mask and the exact
+				// staged generation removed. The removal waits until the
+				// publisher has taken the pointer down after this rollback
+				// (see removeStagedBINDGenerationAfterFailedSwitch below).
+				if dnsenginerecovery.BINDSwitchNeverStartedTargetJournal(journal) {
+					return rollbackBINDSwitchToStandby(
+						rollbackCtx, systemctl, configs, stateBefore, sourceBefore, proveSource,
+					)
+				}
 				return rollbackBINDActivation(
 					rollbackCtx, systemctl, configs, stateBefore, targetBefore, sourceBefore,
+					dnsSwitchJournalTargetDidNotServeBefore(journal),
+					proveSource,
 				)
 			},
 			verify: func() error {
@@ -1723,15 +1825,9 @@ func (hostDNSEngineBackend) Switch(
 					rollbackCtx, profile, systemctl, manifest, journal,
 				)
 			},
-			remove: removeDNSEngineSwitchJournal,
 		})
 	}
-	attempt := 0
-	apply := func(applyCtx context.Context) error {
-		attempt++
-		if attempt > 1 {
-			return rollbackAndJournal(applyCtx)
-		}
+	applyForward := func(applyCtx context.Context) error {
 		if err := runBINDMutationWithMaskParentProof(
 			verifyBINDMaskParentMetadata,
 			func() error { return configs.apply(applyCtx) },
@@ -1749,6 +1845,11 @@ func (hostDNSEngineBackend) Switch(
 			return err
 		}
 		if manifest.SourceEngine == transport.DNSEnginePowerDNS {
+			// The accepted projection was checked against this frozen source
+			// before intent. Recheck the exact frozen evidence before stopping it.
+			if err := verifyBINDIndependentSourceProof(applyCtx, journal); err != nil {
+				return err
+			}
 			var output []byte
 			if err := runBINDMutationWithMaskParentProof(
 				verifyBINDMaskParentMetadata,
@@ -1817,18 +1918,30 @@ func (hostDNSEngineBackend) Switch(
 		}
 		return nil
 	}
-	recoverEmpty := func(recoveryCtx context.Context) error {
-		return rollbackAndJournal(recoveryCtx)
-	}
 	if err := verifyBINDConfigMutationPreimage(ctx, configs); err != nil {
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
+	// A failed forward step reaches the publisher, whose failed-apply path
+	// restores the pointer and runs the inverse, only after the rollback
+	// decision is durable. A durable verified target, or a decision that could
+	// not be recorded, leaves the pointer and the target in place; the error
+	// is returned and the same-request recovery takes over.
 	if err := runBINDMutationWithMaskParentProof(
 		verifyBINDMaskParentMetadata,
 		func() error {
-			return publisher.Switch(ctx, generation.ID, apply, recoverEmpty)
+			return runBINDSwitchWithRollbackGate(
+				ctx,
+				func(switchCtx context.Context, apply, recoverEmpty func(context.Context) error) error {
+					return publisher.Switch(switchCtx, generation.ID, apply, recoverEmpty)
+				},
+				&journal, journalOps, applyForward, rollbackAndJournal,
+			)
 		},
 	); err != nil {
+		removeStagedBINDGenerationAfterFailedSwitch(ctx, journal)
+		if journal.Phase == dnsSwitchPhaseRolledBack {
+			retireBINDRNDCKeyAfterRollback(ctx, journal)
+		}
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	completed, exists, err := readDNSEngineState()
@@ -1848,6 +1961,23 @@ func (hostDNSEngineBackend) Switch(
 		ActiveEpoch: manifest.TargetEpoch, AppliedZones: len(manifest.Zones),
 		Detail: "BIND is the verified active authoritative DNS engine",
 	}, nil
+}
+
+// requireBINDSecondaryPeerCatalog is a BIND secondary's pre-intent proof that
+// its primary's catalog is readable. The primary may be BIND or PowerDNS, so
+// either known catalog format is accepted (see dns_peer_catalog.go).
+func requireBINDSecondaryPeerCatalog(
+	ctx context.Context,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) error {
+	catalogDomain, err := binddns.CatalogDomain(manifest.PeerIP)
+	if err != nil {
+		return err
+	}
+	if _, err := queryDNSPeerCatalogAXFR(ctx, manifest.PeerIP, catalogDomain); err != nil {
+		return dnsPeerCatalogReadError("paired primary catalog is unavailable", err)
+	}
+	return nil
 }
 
 func bindConfigMutationSnapshots(configs bindConfigMutation) []dnsFileSnapshot {
@@ -2235,12 +2365,14 @@ func verifyDNSEngineReinstallSource(
 	if err != nil {
 		return fmt.Errorf("read DNS engine reinstall ownership: %w", err)
 	}
-	if !ownershipExists || validateDNSEngineState(ownership) != nil ||
-		ownership.Engine != state.Engine ||
-		ownership.EngineEpoch != state.EngineEpoch {
-		return errors.New(
-			"DNS engine reinstall requires a panel ownership receipt at the active epoch",
-		)
+	if !ownershipExists {
+		return errors.New("DNS engine reinstall requires its recorded acquisition ownership")
+	}
+	// An absent-engine repair still needs the whole accepted tenure. Matching
+	// engine/epoch cannot reconcile another owner, manifest or pair authority.
+	// Ordinary publication within that tenure may have advanced independently.
+	if _, err := dnsengineartifact.CompareV1(ownership, state); err != nil {
+		return fmt.Errorf("DNS engine reinstall acquisition conflict: %w", err)
 	}
 	if bindUnit.active() || bindAliasUnit.active() || pdnsUnit.active() {
 		return errors.New("DNS engine reinstall requires no running authoritative DNS engine")
@@ -2671,16 +2803,61 @@ func rollbackBINDActivation(
 	configs bindConfigMutation,
 	stateBefore dnsFileSnapshot,
 	targetBefore, sourceBefore map[string]dnsUnitState,
+	freshSource bool,
+	verifySource ...func(context.Context) error,
 ) error {
-	if ctx == nil {
-		return errors.New("rollback BIND activation requires a bounded context")
-	}
-	return rollbackBINDActivationWithOps(ctx, bindRollbackActivationOps{
-		restoreTarget: func(commandCtx context.Context) error {
+	return rollbackBINDActivationWithTarget(ctx, systemctl, configs, stateBefore, sourceBefore,
+		func(commandCtx context.Context) error {
 			return restoreDNSUnitStates(
 				commandCtx, systemctl, targetBefore, true,
 			)
 		},
+		func(proofCtx context.Context) error {
+			before, ok := targetBefore["named.service"]
+			if !ok {
+				return errors.New("BIND target snapshot lacks named.service")
+			}
+			if before.ActiveState == "active" {
+				return nil
+			}
+			return verifyBINDTargetStoppedBeforeConfigRestore(proofCtx, systemctl, freshSource)
+		},
+		verifySource...,
+	)
+}
+
+// rollbackBINDActivationWithTarget is the shared BIND activation rollback
+// sequence with the caller's target restore and stopped proof: source proof,
+// target, stopped proof, configs, state receipt, then source units.
+func rollbackBINDActivationWithTarget(
+	ctx context.Context,
+	systemctl string,
+	configs bindConfigMutation,
+	stateBefore dnsFileSnapshot,
+	sourceBefore map[string]dnsUnitState,
+	restoreTarget, verifyTargetBeforeConfig func(context.Context) error,
+	verifySource ...func(context.Context) error,
+) error {
+	if ctx == nil {
+		return errors.New("rollback BIND activation requires a bounded context")
+	}
+	proveSource := func(proofCtx context.Context) error {
+		for _, verify := range verifySource {
+			if verify == nil {
+				return errors.New("rollback BIND source proof is missing")
+			}
+			if err := verify(proofCtx); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	if err := proveSource(ctx); err != nil {
+		return err
+	}
+	return rollbackBINDActivationWithOps(ctx, bindRollbackActivationOps{
+		restoreTarget:            restoreTarget,
+		verifyTargetBeforeConfig: verifyTargetBeforeConfig,
 		restoreConfigs: func() error {
 			return runBINDMutationWithMaskParentProof(
 				verifyBINDMaskParentMetadata,
@@ -2691,6 +2868,9 @@ func rollbackBINDActivation(
 			return restoreDNSEngineStateSnapshot(stateBefore)
 		},
 		restoreSource: func(commandCtx context.Context) error {
+			if err := proveSource(commandCtx); err != nil {
+				return err
+			}
 			return restoreDNSUnitStates(
 				commandCtx, systemctl, sourceBefore, false,
 			)
@@ -2699,29 +2879,25 @@ func rollbackBINDActivation(
 }
 
 type bindRollbackActivationOps struct {
-	restoreTarget  func(context.Context) error
-	restoreConfigs func() error
-	restoreState   func() error
-	restoreSource  func(context.Context) error
+	restoreTarget            func(context.Context) error
+	verifyTargetBeforeConfig func(context.Context) error
+	restoreConfigs           func() error
+	restoreState             func() error
+	restoreSource            func(context.Context) error
 }
 
 func rollbackBINDActivationWithOps(
 	ctx context.Context,
 	ops bindRollbackActivationOps,
 ) error {
-	if ctx == nil || ops.restoreTarget == nil ||
-		ops.restoreConfigs == nil || ops.restoreState == nil ||
-		ops.restoreSource == nil {
-		return errors.New("invalid BIND activation rollback operations")
-	}
-	return errors.Join(
-		ops.restoreTarget(ctx),
-		ops.restoreConfigs(),
-		ops.restoreState(),
-		ops.restoreSource(ctx),
-	)
+	return dnsenginerecovery.RollbackBINDActivation(ctx, dnsenginerecovery.BINDActivationRollbackOps{
+		RestoreTarget:            ops.restoreTarget,
+		VerifyTargetBeforeConfig: ops.verifyTargetBeforeConfig,
+		RestoreConfigs:           ops.restoreConfigs,
+		RestoreState:             ops.restoreState,
+		RestoreSource:            ops.restoreSource,
+	})
 }
-
 func verifyOnlyBINDActive(
 	ctx context.Context,
 	profile hostplatform.Profile,
@@ -2922,8 +3098,10 @@ func syncPDNSV3Zone(
 			return "", evidenceErr
 		}
 		if primary {
-			if _, proofErr := verifyDNSLegacyPrimaryPairReadyAuthorityAt(
-				ctx, evidence, probeDNSZoneSOA, probeDNSBoundCatalogAXFR,
+			// The peer re-serves the catalog this PowerDNS produced, so it
+			// is read with the PowerDNS producer policy.
+			if _, proofErr := verifyLegacyPrimaryPeerCatalogAuthorityForLocalEngine(
+				ctx, evidence, transport.DNSEnginePowerDNS,
 			); proofErr != nil {
 				return "", proofErr
 			}
@@ -2951,7 +3129,7 @@ func syncPDNSV3Zone(
 		Delete: commitment.Delete, ZoneType: commitment.ZoneType,
 		Records: commitment.Records, ZoneQualifier: commitment.Qualifier,
 	}
-	propagation, err := prepareManagedPDNSV3Propagation(ctx, zone, state)
+	propagation, err := prepareManagedPDNSV3Propagation(ctx, zone, state, binding)
 	if err != nil {
 		var pending *dnsZoneV3RecoveryPendingError
 		if errors.As(err, &pending) {
@@ -2962,9 +3140,7 @@ func syncPDNSV3Zone(
 	if err := verifyOnlyPDNSActive(ctx, systemctl); err != nil {
 		return "", dnsZoneV3RecoveryAmbiguous(err)
 	}
-	if err := verifyDNSZoneManifestAuthority(
-		ctx, []transport.DNSEngineSwitchZoneSnapshot{zone},
-	); err != nil {
+	if err := verifyPDNSV3PublishedZoneAuthority(ctx, state, zone, binding); err != nil {
 		return "", dnsZoneV3RecoveryAmbiguous(err)
 	}
 	if err := completePDNSV3Propagation(ctx, propagation); err != nil {
@@ -3002,11 +3178,11 @@ func recoverPDNSV3Zone(
 	if err := verifyOnlyPDNSActive(ctx, systemctl); err != nil {
 		return false, err
 	}
-	propagation, err := prepareManagedPDNSV3Propagation(ctx, snapshot, state)
+	propagation, err := prepareManagedPDNSV3Propagation(ctx, snapshot, state, binding)
 	if err != nil {
 		return false, err
 	}
-	if err := verifyDNSZoneManifestAuthority(ctx, []transport.DNSEngineSwitchZoneSnapshot{snapshot}); err != nil {
+	if err := verifyPDNSV3PublishedZoneAuthority(ctx, state, snapshot, binding); err != nil {
 		return false, err
 	}
 	if err := completePDNSV3Propagation(ctx, propagation); err != nil {
@@ -3361,109 +3537,10 @@ func inspectDNSUnitIdentityWithRunner(
 }
 
 func parseDNSUnitIdentity(output string) (dnsUnitIdentity, error) {
-	const expectedProperties = 7
-	values := map[string]string{}
-	for _, line := range strings.Split(output, "\n") {
-		if line == "" {
-			continue
-		}
-		key, value, found := strings.Cut(line, "=")
-		if !found {
-			return dnsUnitIdentity{}, errors.New("systemctl returned a malformed DNS unit identity")
-		}
-		switch key {
-		case "Id", "Names", "FragmentPath", "DropInPaths", "SourcePath", "Transient", "ExecStart":
-		default:
-			return dnsUnitIdentity{}, errors.New("systemctl returned an unexpected DNS unit identity property")
-		}
-		if _, duplicate := values[key]; duplicate {
-			return dnsUnitIdentity{}, errors.New("systemctl returned an ambiguous DNS unit identity")
-		}
-		values[key] = value
-	}
-	if len(values) != expectedProperties {
-		return dnsUnitIdentity{}, errors.New("systemctl returned incomplete DNS unit identity")
-	}
-	parseNames := func(property string, allowEmpty bool) ([]string, error) {
-		raw := values[property]
-		if raw == "" && allowEmpty {
-			return nil, nil
-		}
-		fields := strings.Fields(raw)
-		if len(fields) == 0 || strings.Join(fields, " ") != raw {
-			return nil, fmt.Errorf("systemctl returned non-canonical %s", property)
-		}
-		sort.Strings(fields)
-		for index := 1; index < len(fields); index++ {
-			if fields[index] == fields[index-1] {
-				return nil, fmt.Errorf("systemctl returned duplicate %s", property)
-			}
-		}
-		return fields, nil
-	}
-	names, err := parseNames("Names", false)
-	if err != nil {
-		return dnsUnitIdentity{}, err
-	}
-	dropIns, err := parseNames("DropInPaths", true)
-	if err != nil {
-		return dnsUnitIdentity{}, err
-	}
-	execPath, execArgv, err := parseSystemdExecStart(values["ExecStart"])
-	if err != nil {
-		return dnsUnitIdentity{}, err
-	}
-	if values["Id"] == "" || values["FragmentPath"] == "" ||
-		values["Transient"] == "" {
-		return dnsUnitIdentity{}, errors.New("systemctl returned an empty DNS unit identity field")
-	}
-	return dnsUnitIdentity{
-		ID: values["Id"], Names: names, FragmentPath: values["FragmentPath"],
-		DropInPaths: dropIns, SourcePath: values["SourcePath"],
-		Transient: values["Transient"], ExecStartPath: execPath,
-		ExecStartArgv: execArgv,
-	}, nil
+	return dnsunitidentity.Parse(output)
 }
 
-func parseSystemdExecStart(value string) (string, string, error) {
-	if value == "" || strings.ContainsAny(value, "\x00\r\n") ||
-		strings.Count(value, "{") != 1 || strings.Count(value, "}") != 1 ||
-		!strings.HasPrefix(value, "{ ") || !strings.HasSuffix(value, " }") {
-		return "", "", errors.New("systemctl returned a non-canonical ExecStart")
-	}
-	inner := strings.TrimSuffix(strings.TrimPrefix(value, "{ "), " }")
-	parts := strings.Split(inner, " ; ")
-	fields := map[string]string{}
-	for _, part := range parts {
-		key, candidate, found := strings.Cut(part, "=")
-		if !found || key == "" || candidate == "" {
-			return "", "", errors.New("systemctl returned a malformed ExecStart")
-		}
-		switch key {
-		case "path", "argv[]", "ignore_errors":
-			if _, duplicate := fields[key]; duplicate {
-				return "", "", errors.New("systemctl returned an ambiguous ExecStart")
-			}
-			fields[key] = candidate
-		}
-	}
-	if len(fields) != 3 || fields["ignore_errors"] != "no" {
-		return "", "", errors.New("systemctl returned an unsafe ExecStart")
-	}
-	executable := fields["path"]
-	if !path.IsAbs(executable) || path.Clean(executable) != executable ||
-		(fields["argv[]"] != executable &&
-			!strings.HasPrefix(fields["argv[]"], executable+" ")) {
-		return "", "", errors.New("systemctl returned a non-canonical ExecStart command")
-	}
-	return executable, fields["argv[]"], nil
-}
-
-type dnsUnitProcesses struct {
-	MainPID    uint64
-	ControlPID uint64
-	SubState   string
-}
+type dnsUnitProcesses = dnsunitidentity.Processes
 
 func inspectDNSUnitProcesses(ctx context.Context, systemctl, unit string) (dnsUnitProcesses, error) {
 	return inspectDNSUnitProcessesWithRunner(ctx, systemctl, unit, runDNSSystemctl)
@@ -3493,46 +3570,7 @@ func inspectDNSUnitProcessesWithRunner(
 }
 
 func parseDNSUnitProcesses(output string) (dnsUnitProcesses, error) {
-	values := map[string]string{}
-	for _, line := range strings.Split(output, "\n") {
-		if line == "" {
-			continue
-		}
-		key, candidate, found := strings.Cut(line, "=")
-		if !found || (key != "MainPID" && key != "ControlPID" && key != "SubState") {
-			return dnsUnitProcesses{},
-				errors.New("systemctl returned an unexpected DNS unit process row")
-		}
-		if _, exists := values[key]; exists || candidate == "" {
-			return dnsUnitProcesses{}, errors.New("systemctl returned an ambiguous DNS unit process")
-		}
-		values[key] = candidate
-	}
-	if len(values) != 3 {
-		return dnsUnitProcesses{}, errors.New("systemctl returned incomplete DNS unit processes")
-	}
-	if values["SubState"] == "" {
-		return dnsUnitProcesses{}, errors.New("systemctl returned an empty DNS unit substate")
-	}
-	parse := func(name string) (uint64, error) {
-		value := values[name]
-		pid, err := strconv.ParseUint(value, 10, 64)
-		if err != nil || strconv.FormatUint(pid, 10) != value {
-			return 0, fmt.Errorf("systemctl returned a non-canonical %s", name)
-		}
-		return pid, nil
-	}
-	mainPID, err := parse("MainPID")
-	if err != nil {
-		return dnsUnitProcesses{}, err
-	}
-	controlPID, err := parse("ControlPID")
-	if err != nil {
-		return dnsUnitProcesses{}, err
-	}
-	return dnsUnitProcesses{
-		MainPID: mainPID, ControlPID: controlPID, SubState: values["SubState"],
-	}, nil
+	return dnsunitidentity.ParseProcesses(output)
 }
 
 func verifyDNSUnitProcessesStopped(processes dnsUnitProcesses) error {
@@ -3542,46 +3580,16 @@ func verifyDNSUnitProcessesStopped(processes dnsUnitProcesses) error {
 	return nil
 }
 
-func validateAPTBINDVendorNamedIdentity(
-	named dnsUnitIdentity,
-	aliasEnabled bool,
-) error {
-	expectedNames := []string{"named.service"}
-	if aliasEnabled {
-		expectedNames = []string{"bind9.service", "named.service"}
-	}
-	if named.ID != "named.service" ||
-		!reflect.DeepEqual(named.Names, expectedNames) ||
-		named.FragmentPath != "/usr/lib/systemd/system/named.service" ||
-		len(named.DropInPaths) != 0 || named.SourcePath != "" ||
-		named.Transient != "no" || named.ExecStartPath != "/usr/sbin/named" ||
-		named.ExecStartArgv != "/usr/sbin/named -f $OPTIONS" {
-		return errors.New("named.service does not resolve to the exact APT vendor BIND identity")
-	}
-	return nil
+func validateAPTBINDVendorNamedIdentity(named dnsUnitIdentity, aliasEnabled bool) error {
+	return dnsunitidentity.ValidateAPTBINDVendorNamedIdentity(named, aliasEnabled)
 }
 
 func validateAPTBINDVendorAliasIdentity(named, alias dnsUnitIdentity) error {
-	if err := validateAPTBINDVendorNamedIdentity(named, true); err != nil {
-		return err
-	}
-	if err := validateAPTBINDVendorNamedIdentity(alias, true); err != nil ||
-		!reflect.DeepEqual(named, alias) {
-		return errors.New("BIND service aliases do not resolve to the exact vendor named.service identity")
-	}
-	return nil
+	return dnsunitidentity.ValidateAPTBINDVendorAliasIdentity(named, alias)
 }
 
 func validatePacmanBINDVendorIdentity(named dnsUnitIdentity) error {
-	if named.ID != "named.service" ||
-		!reflect.DeepEqual(named.Names, []string{"named.service"}) ||
-		named.FragmentPath != "/usr/lib/systemd/system/named.service" ||
-		len(named.DropInPaths) != 0 || named.SourcePath != "" ||
-		named.Transient != "no" || named.ExecStartPath != "/usr/bin/named" ||
-		named.ExecStartArgv != "/usr/bin/named -f -u named" {
-		return errors.New("named.service does not resolve to the exact vendor BIND identity")
-	}
-	return nil
+	return dnsunitidentity.ValidatePacmanBINDVendorIdentity(named)
 }
 
 func exactUnmaskedInactiveBINDUnit(state bindInstallUnitState) bool {
@@ -4641,51 +4649,6 @@ func canonicalBINDPublicListeners(
 	)
 }
 
-func canonicalDNSAuthorityPublicListeners(
-	output string,
-	expectedProcess string,
-	expectedMainPID uint64,
-) ([]string, error) {
-	if expectedProcess == "" ||
-		strings.ContainsAny(expectedProcess, "\x00\r\n\t ,()\"") ||
-		expectedMainPID == 0 {
-		return nil, errors.New("invalid DNS authority process identity")
-	}
-	foundTCP, foundUDP := false, false
-	identities := make(map[string]struct{})
-	for _, line := range strings.Split(output, "\n") {
-		if line == "" {
-			continue
-		}
-		row, err := parseCanonicalDNSPort53ListenerRow(line)
-		if err != nil {
-			return nil, err
-		}
-		if row.address.IsLoopback() || row.address.IsLinkLocalUnicast() {
-			continue
-		}
-		if row.process != expectedProcess {
-			return nil, errors.New("an unexpected process is holding a public DNS listener")
-		}
-		if row.pid != expectedMainPID {
-			return nil, errors.New("a DNS authority listener PID differs from its systemd MainPID")
-		}
-		identities[fmt.Sprintf(
-			"%s|%s|%d", row.protocol, row.address.String(), row.pid,
-		)] = struct{}{}
-		if row.protocol == "tcp" {
-			foundTCP = true
-		} else {
-			foundUDP = true
-		}
-	}
-	if !foundTCP || !foundUDP {
-		return nil, errors.New("the DNS authority does not own both public TCP and UDP port 53 listeners")
-	}
-	result := make([]string, 0, len(identities))
-	for identity := range identities {
-		result = append(result, identity)
-	}
-	sort.Strings(result)
-	return result, nil
+func canonicalDNSAuthorityPublicListeners(output, expectedProcess string, expectedMainPID uint64) ([]string, error) {
+	return dnslistener.CanonicalPublicListeners(output, expectedProcess, expectedMainPID)
 }

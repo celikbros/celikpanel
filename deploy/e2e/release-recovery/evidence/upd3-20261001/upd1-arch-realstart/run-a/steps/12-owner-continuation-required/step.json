@@ -1,0 +1,83 @@
+{
+  "checks": {
+    "owner_retry": "not run by design (real-start): it would retry the same candidate",
+    "printed_retry": {
+      "action": "validated-not-executed",
+      "argv": [
+        "/usr/libexec/celikpanel/recovery",
+        "recover",
+        "--retry",
+        "--snapshot",
+        "20260930T204431Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-45483c2cc4439aa4098f44a8977b2bef"
+      ],
+      "attempted_at": "2026-09-30T20:51:06.078605Z",
+      "error": null,
+      "journal_sha256": "1a906f5c2841fc954bcd51da8862f33d2c352844c2490daa15811879d7c2a6e0",
+      "snapshot": "20260930T204431Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-45483c2cc4439aa4098f44a8977b2bef"
+    },
+    "views": {
+      "api": {
+        "unavailable": "PanelError"
+      },
+      "cli": {
+        "automatic_recovery": "paused_retry_limit",
+        "names_journal_command": true,
+        "texts": {
+          "en": "The update was applied, but the new version's panel did not come up, and completing the update was retried to its limit. Read the panel log on the server: sudo journalctl -u celikpanel-panel -n 50. Retrying repeats the same start until that cause is fixed. There is no supported return to the previous version from this point. Automatic recovery used all three attempts without finishing, so the server may be between versions. The server owner must act: read sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50, fix the cause it names, then run the one-time same-operation retry command shown there. Checking status does not retry recovery.\nRequest: 08ddb2f7396874f11eb0f344839b3365\nRecorded at: 2026-09-30T20:50:50Z\nThis is a recorded observation; current service health was not checked.\nRecorded state (for support): phase=recovery_required reason=recovery_incomplete proof=none previous_failure=recovery_failed automatic_recovery=paused_retry_limit first_failure_code=panel_start_unverified\n",
+          "tr": "Güncelleme uygulandı, ancak yeni sürümün paneli açılmadı ve güncellemenin tamamlanması sınırına kadar yeniden denendi. Sunucudaki panel günlüğünü okuyun: sudo journalctl -u celikpanel-panel -n 50. Bu neden giderilene kadar yeniden deneme aynı başlatmayı tekrarlar. Bu noktadan önceki sürüme desteklenen bir dönüş yok. Otomatik kurtarma üç denemenin hepsini kullandı ve tamamlanamadı; sunucu iki sürüm arasında kalmış olabilir. Sunucu sahibinin işlem yapması gerekiyor: sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50 çıktısını okuyun, belirtilen nedeni giderin ve orada aynı işlem için gösterilen tek seferlik yeniden deneme komutunu çalıştırın. Durum sorgusu kurtarmayı yeniden başlatmaz.\nİşlem: 08ddb2f7396874f11eb0f344839b3365\nKayıt zamanı: 2026-09-30T20:50:50Z\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\nKayıtlı durum (destek için): phase=recovery_required reason=recovery_incomplete proof=none previous_failure=recovery_failed automatic_recovery=paused_retry_limit first_failure_code=panel_start_unverified\n"
+        }
+      },
+      "offline_shell": {
+        "note": "the saved page carries no exhaustion state by design; it names the read-only status command whose output does",
+        "status_command": {
+          "en": "sudo /usr/libexec/celikpanel/recovery status --request-id 08ddb2f7396874f11eb0f344839b3365 --lang en",
+          "tr": "sudo /usr/libexec/celikpanel/recovery status --request-id 08ddb2f7396874f11eb0f344839b3365 --lang tr"
+        },
+        "texts": {
+          "en": {
+            "check": "Check connection",
+            "checking": "Checking connection…",
+            "help": "This recovery page is saved in your browser. It cannot confirm the server’s current state. A lost connection does not prove that your update failed or your license expired.",
+            "journal": "Read the recovery journal",
+            "next": "Check your connection. This page checks again every 15 seconds while visible. When the panel responds, open it to continue tracking the same operation.",
+            "noReference": "No operation reference is saved in this browser. Ask the server administrator to inspect the recovery journal.",
+            "open": "Open panel",
+            "owner": "If the connection does not return",
+            "ownerHelp": "The server administrator can inspect recovery through an existing SSH connection. These commands only read status; they do not restart an update.",
+            "reachable": "The panel is responding. Open it to sign in or verify the existing operation.",
+            "reference": "Saved operation reference",
+            "referenceHelp": "This ID is a browser hint, not a verified result or permission to retry.",
+            "status": "Read this operation’s status",
+            "title": "The panel connection is unavailable",
+            "view": "Or view this operation in your browser. Run this on your own computer, replacing USER with your SSH account:",
+            "viewHelp": "Then open http://127.0.0.1:2084/ on that computer and enter the temporary code shown in the SSH terminal. The view only reads status. An older recovery tool refuses this command; use the status command above instead.",
+            "waiting": "No current panel response. This page has not started another operation."
+          },
+          "tr": {
+            "check": "Bağlantıyı kontrol et",
+            "checking": "Bağlantı kontrol ediliyor…",
+            "help": "Bu kurtarma sayfası tarayıcınızda kayıtlıdır. Sunucunun güncel durumunu doğrulayamaz. Bağlantının kesilmesi, güncellemenin başarısız olduğunu veya lisansın süresinin dolduğunu göstermez.",
+            "journal": "Kurtarma günlüğünü oku",
+            "next": "Bağlantınızı kontrol edin. Bu sayfa açıkken 15 saniyede bir yeniden kontrol eder. Panel yanıt verdiğinde aynı işlemi izlemek için paneli açın.",
+            "noReference": "Bu tarayıcıda kayıtlı işlem kimliği yok. Sunucu yöneticisinden kurtarma günlüğünü incelemesini isteyin.",
+            "open": "Paneli aç",
+            "owner": "Bağlantı geri gelmezse",
+            "ownerHelp": "Sunucu yöneticisi mevcut SSH bağlantısından kurtarma durumuna bakabilir. Bu komutlar yalnızca durumu okur; güncellemeyi yeniden başlatmaz.",
+            "reachable": "Panel yanıt veriyor. Giriş yapmak veya mevcut işlemi doğrulamak için paneli açın.",
+            "reference": "Kayıtlı işlem kimliği",
+            "referenceHelp": "Bu kimlik tarayıcıda kayıtlı bir ipucudur; doğrulanmış sonuç veya yeniden deneme yetkisi değildir.",
+            "status": "Bu işlemin durumunu oku",
+            "title": "Panel bağlantısına ulaşılamıyor",
+            "view": "Ya da bu işlemi tarayıcınızda görüntüleyin. Komutu kendi bilgisayarınızda çalıştırın; USER yerine SSH hesabınızı yazın:",
+            "viewHelp": "Sonra o bilgisayarda http://127.0.0.1:2084/ adresini açın ve SSH terminalinde gösterilen geçici kodu girin. Bu görünüm yalnızca durumu okur. Eski bir kurtarma aracı bu komutu reddeder; bu durumda yukarıdaki durum komutunu kullanın.",
+            "waiting": "Panelden güncel yanıt alınamadı. Bu sayfa yeni bir işlem başlatmadı."
+          }
+        }
+      }
+    }
+  },
+  "finished_at": "2026-09-30T20:51:05Z",
+  "name": "owner-continuation (required)",
+  "started_at": "2026-09-30T20:51:05Z",
+  "verdict": "observed"
+}

@@ -1,0 +1,35 @@
+/var/tmp/cp-b9-1001/r2/cells/7392457812ac089a866de6ec:
+total 36
+drwx------ 5 root root  4096 2026-09-30 04:27:37.655209283 +0300 .
+drwx------ 4 root root  4096 2026-09-30 04:37:45.455203370 +0300 ..
+drwx------ 3 root root  4096 2026-09-30 04:37:35.339203518 +0300 arch
+drwx------ 3 root root  4096 2026-09-30 04:37:35.443203517 +0300 debian13
+-rw------- 1 root root 10723 2026-09-30 04:23:54.811698054 +0300 fixture-plan.json
+drwx------ 2 root root  4096 2026-09-30 04:35:13.203206227 +0300 fresh-primary-peer
+-rw-r--r-- 1 root root   196 2026-09-30 04:24:51.135210567 +0300 ssh-known-hosts
+
+/var/tmp/cp-b9-1001/r2/cells/7392457812ac089a866de6ec/arch:
+total 755432
+drwx------ 3 root root      4096 2026-09-30 04:37:35.339203518 +0300 .
+drwx------ 5 root root      4096 2026-09-30 04:27:37.655209283 +0300 ..
+-rw-r--r-- 1 root root 773193728 2026-09-30 04:37:35.335203518 +0300 overlay.qcow2
+drwx------ 2 root root      4096 2026-09-30 04:23:54.840836402 +0300 seed
+-rw-r--r-- 1 root root    376832 2026-09-30 04:23:54.857148576 +0300 seed.iso
+-rw-r----- 1 root root     33699 2026-09-30 04:25:29.251214648 +0300 serial.log
+
+/var/tmp/cp-b9-1001/r2/cells/7392457812ac089a866de6ec/debian13:
+total 755848
+drwx------ 3 root root      4096 2026-09-30 04:37:35.443203517 +0300 .
+drwx------ 5 root root      4096 2026-09-30 04:27:37.655209283 +0300 ..
+-rw-r--r-- 1 root root 775618560 2026-09-30 04:37:35.443203517 +0300 overlay.qcow2
+drwx------ 2 root root      4096 2026-09-30 04:23:54.817742813 +0300 seed
+-rw-r--r-- 1 root root    376832 2026-09-30 04:23:54.835704607 +0300 seed.iso
+-rw-r----- 1 root root     68549 2026-09-30 04:27:21.163212140 +0300 serial.log
+
+/var/tmp/cp-b9-1001/r2/cells/7392457812ac089a866de6ec/fresh-primary-peer:
+total 24
+drwx------ 2 root root 4096 2026-09-30 04:35:13.203206227 +0300 .
+drwx------ 5 root root 4096 2026-09-30 04:27:37.655209283 +0300 ..
+-rw------- 1 root root 1396 2026-09-30 04:27:37.660557632 +0300 peer-verdict.json
+-rw------- 1 root root 6783 2026-09-30 04:27:52.931069673 +0300 zone-lifecycle.json
+-rw------- 1 root root 1091 2026-09-30 04:35:13.210241071 +0300 zone-lifecycle-recover.json

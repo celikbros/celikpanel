@@ -1,0 +1,47 @@
+evidence /var/tmp/cp-release-drill-upd11-arch-def-a/evidence/arch/upd1/upd1-arch-defective-20261002t000257z/
+== 11-track/samples
+2026-10-02T00:11:04Z panel= queued api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T00:11:05Z panel= running api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T00:11:07Z panel= running api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T00:11:10Z panel= running api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T00:11:14Z panel= running api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T00:11:21Z panel= PanelError api= None None None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T00:11:23Z panel= PanelError api= None None None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T00:11:26Z panel= PanelError api= None None None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T00:11:30Z panel= PanelError api= None None None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T00:11:37Z panel= PanelError api= None None None cli= known|recovering|none|recovery_running|None|None|None cli_status= ok
+2026-10-02T00:11:39Z panel= PanelError api= None None None cli= known|recovering|none|recovery_running|None|None|None cli_status= ok
+2026-10-02T00:11:41Z panel= PanelError api= None None None cli= known|recovering|none|recovery_running|None|None|None cli_status= ok
+2026-10-02T00:11:46Z panel= PanelError api= None None None cli= known|recovering|none|recovery_running|None|None|None cli_status= ok
+2026-10-02T00:11:53Z panel= failed api= 200 recovering None cli= known|recovering|none|recovery_running|None|None|None cli_status= ok
+2026-10-02T00:11:54Z panel= failed api= 200 recovering None cli= known|recovering|none|recovery_running|None|None|None cli_status= ok
+2026-10-02T00:11:57Z panel= failed api= 200 recovering None cli= known|recovering|none|recovery_running|None|None|None cli_status= ok
+2026-10-02T00:12:01Z panel= failed api= 200 recovering None cli= known|recovering|none|recovery_running|None|None|None cli_status= ok
+2026-10-02T00:12:08Z panel= failed api= 200 recovering None cli= known|recovering|none|recovery_running|None|None|None cli_status= ok
+2026-10-02T00:12:18Z panel= failed api= 200 recovering None cli= known|recovering|none|recovery_running|None|None|None cli_status= ok
+2026-10-02T00:12:33Z panel= failed api= 200 recovering None cli= known|recovering|none|recovery_running|None|None|None cli_status= ok
+2026-10-02T00:12:35Z panel= failed api= 200 recovering None cli= known|recovering|none|recovery_running|None|None|None cli_status= ok
+2026-10-02T00:12:38Z panel= failed api= 200 recovered None cli= known|recovered|rollback_verified|rollback_verified|None|None|None cli_status= ok
+== distinct CLI texts
+# known|running|none|update_running|None|None|None first 2026-10-02T00:11:04Z
+  EN : The update is being applied; the panel may be unavailable for a short time. Nothing to do now: check this same request again in a minute. Checking does not restart the update. / Request: b17cb021740b27ed70e8d15a49d95037 / Recorded at: 2026-10-02T00:11:05Z / This is a recorded observation; current service health was not checked. / Recorded state (for support): phase=running reason=update_running proof=none
+  TR : Güncelleme uygulanıyor; panel kısa bir süre erişilemeyebilir. Şimdi yapmanız gereken bir şey yok: bir dakika sonra aynı işlemi yeniden sorgulayın. Sorgulamak güncellemeyi yeniden başlatmaz. / İşlem: b17cb021740b27ed70e8d15a49d95037 / Kayıt zamanı: 2026-10-02T00:11:05Z / Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi. / Kayıtlı durum (destek için): phase=running reason=update_running proof=none
+# known|recovering|none|recovery_running|None|None|None first 2026-10-02T00:11:37Z
+  EN : The update did not finish normally, and automatic recovery is running: the server is either being returned to the previous version or the update is being completed safely. Nothing to do now: check this same request again in a minute and do not start another update. / Request: b17cb021740b27ed70e8d15a49d95037 / Recorded at: 2026-10-02T00:11:37Z / This is a recorded observation; current service health was not checked. / Recorded state (for support): phase=recovering reason=recovery_running proof=none previous_failure=update_failed
+  TR : Güncelleme normal biçimde tamamlanmadı ve otomatik kurtarma çalışıyor: sunucu ya önceki sürüme döndürülüyor ya da güncelleme güvenle tamamlanıyor. Şimdi yapmanız gereken bir şey yok: bir dakika sonra aynı işlemi yeniden sorgulayın ve başka güncelleme başlatmayın. / İşlem: b17cb021740b27ed70e8d15a49d95037 / Kayıt zamanı: 2026-10-02T00:11:37Z / Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi. / Kayıtlı durum (destek için): phase=recovering reason=recovery_running proof=none previous_failure=update_failed
+# known|recovered|rollback_verified|rollback_verified|None|None|None first 2026-10-02T00:12:38Z
+  EN : The update did not complete, and the server was returned automatically to the version it ran before; that restoration was verified. Nothing needs to be done on the server. Do not start the same version again until a corrected version is published; the panel's update page shows what is known about the cause. / Request: b17cb021740b27ed70e8d15a49d95037 / Recorded at: 2026-10-02T00:12:38Z / This is a recorded observation; current service health was not checked. / Recorded state (for support): phase=recovered reason=rollback_verified proof=rollback_verified previous_failure=update_failed
+  TR : Güncelleme tamamlanmadı ve sunucu otomatik olarak güncellemeden önce çalıştırdığı sürüme döndürüldü; bu geri dönüş doğrulandı. Sunucuda yapmanız gereken bir şey yok. Düzeltilmiş bir sürüm yayımlanana kadar aynı sürümü yeniden başlatmayın; nedenle ilgili bilinenler panelin güncelleme sayfasında gösterilir. / İşlem: b17cb021740b27ed70e8d15a49d95037 / Kayıt zamanı: 2026-10-02T00:12:38Z / Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi. / Kayıtlı durum (destek için): phase=recovered reason=rollback_verified proof=rollback_verified previous_failure=update_failed
+== journal lines
+-- steps/14-collect/journal-product.txt 7
+    2026-10-02T00:11:36.514269+00:00 dns-arch agent[3179]: 2026/10/02 00:11:36 System update worker failed: reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason=offline panel database migration failed; its original database and work evidence are preserved detail=
+    2026-10-02T00:11:36.516870+00:00 dns-arch systemd[1]: celikpanel-self-update-b17cb021740b27ed70e8d15a49d95037.service: Triggering OnFailure= dependencies.
+    2026-10-02T00:11:37.583957+00:00 dns-arch release-recovery[12515]: Recovery dispatch admitted: attempt=1 snapshot=20261002T001119Z-from-unknown-to-f37e1cccf6ba16bf2a648c343e6defc45dc8cefe-b33b1dae18896982b716b04dd369b6b8
+    2026-10-02T00:12:24.982451+00:00 dns-arch release-recovery[16797]: Recovery dispatch admitted: attempt=2 snapshot=20261002T001119Z-from-unknown-to-f37e1cccf6ba16bf2a648c343e6defc45dc8cefe-b33b1dae18896982b716b04dd369b6b8
+    2026-10-02T00:12:27.929014+00:00 dns-arch release-recovery[17135]: ==> Resuming verified pending rollback / Doğrulanmış bekleyen geri alma sürdürülüyor
+    2026-10-02T00:12:37.954638+00:00 dns-arch release-recovery[17135]: ==> Rollback complete / Geri alma tamamlandı
+    2026-10-02T00:12:37.954638+00:00 dns-arch release-recovery[17135]:     Restored release source commit / Geri yüklenen sürümün kaynak commit'i: df01e72f0a04767c7ceb0c07a148228cd71837c7 (from the restored Agent's build record / geri yüklenen Agent'ın yapı kaydından)
+-- steps/14-collect/journal-setup-services.txt 1
+    2026-10-02T00:06:50.150122+00:00 dns-arch mariadbd[1496]: 2026-10-02  0:06:50 0 [Note] InnoDB: 128 rollback segments in 3 undo tablespaces are active.
+== result {"overall": "complete-for-review", "native_evidence": false, "request_id": "b17cb021740b27ed70e8d15a49d95037"} {"attempts": {"automatic": [{"at": "2026-10-02T00:11:37.523918Z", "attempt": "1", "direction": "rollback", "operation": "update", "phase": "active"}, {"at": "2026-10-02T00:12:24.915015Z", "attempt": "2", "direction": "rollback", "operation": "rollback", "phase": "completion"}], "automatic_count": 2, "journal_admissions": [{"at": "2026-10-02T00:11:37.583957+00:00", "attempt": "1", "snapshot": "20261002T001119Z-from-unknown-to-f37e1cccf6ba16bf2a648c343e6defc45dc8cefe-b33b1dae18896982b716b04dd369b6b8"}, {"at": "2026-10-02T00:12:24.982451+00:00", "attempt": "2", "snapshot": "20261002T001119Z-from-
+findings ["arch: web_mail setup plan was refused (['server_setup_service_unsupported:dovecot']); mail is recorded as not provided on this platform", "arch: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['09-panel_certificate', '10-verify']"]

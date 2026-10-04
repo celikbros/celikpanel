@@ -1,0 +1,31 @@
+{
+  "schema": "celikpanel/native-mail-hook-preservation/v1",
+  "source_commit": "4277a1e32f338bf81b53e39c927f5c1aca6437f6",
+  "test_sha256": "c7484620dbb629f9dbd648e87acc680a6f2fb0ab63a3e94d323fa846f71fa91f",
+  "scope": {
+    "native_hook_preservation": true,
+    "owner_edit_refusal": true,
+    "legacy_parent_metadata_preserved": true,
+    "trusted_mail_listeners": true,
+    "production_enrollment": false,
+    "panel_rollback": false
+  },
+  "logs": {
+    "mail-hook-preserve.log": {
+      "text": "=== RUN   TestMailRenewalDisposableVMHookPreservation\n    mail_renewal_hook_vm_test.go:20: recovery runtime unavailable: runtime_unsafe_metadata\n--- FAIL: TestMailRenewalDisposableVMHookPreservation (0.00s)\nFAIL\n",
+      "sha256": "930773781fad80b9e6a8a80f458bdd3680f05508ac6c266b317f4dc3f815cab9"
+    },
+    "mail-hook-observation-metadata.log": {
+      "text": "f: /etc/letsencrypt/renewal-hooks/deploy/celikpanel-mail-host-cert\ndrwxr-xr-x root root       /\ndrwxr-xr-x root root       etc\ndrwxr-xr-x root root       letsencrypt\ndrwx------ root celikpanel renewal-hooks\ndrwx------ root celikpanel deploy\n-rwxr-xr-x root root       celikpanel-mail-host-cert\nf: /etc/systemd/system/celikpanel-mail-renewal.service\ndrwxr-xr-x root root /\ndrwxr-xr-x root root etc\ndrwxr-xr-x root root systemd\ndrwxr-xr-x root root system\n-rw-r--r-- root root celikpanel-mail-renewal.service\nf: /usr/libexec/celikpanel/mail-renewal/7f2c233fea569ca25f1207c3872cb18bbab74f06b21c8e2ca8fb827b287bdb1d/renew\ndrwxr-xr-x root root /\ndrwxr-xr-x root root usr\ndrwxr-xr-x root root libexec\ndrwxr-xr-x root root celikpanel\ndrwxr-xr-x root root mail-renewal\ndrwxr-xr-x root root 7f2c233fea569ca25f1207c3872cb18bbab74f06b21c8e2ca8fb827b287bdb1d\n-rwxr-xr-x root root renew\n755 0:0 1 443 /etc/letsencrypt/renewal-hooks/deploy/celikpanel-mail-host-cert\n644 0:0 1 483 /etc/systemd/system/celikpanel-mail-renewal.service\n644 0:0 1 219 /etc/systemd/system/celikpanel-mail-renewal.timer\n755 0:0 1 443 /usr/libexec/celikpanel/mail-renewal/7f2c233fea569ca25f1207c3872cb18bbab74f06b21c8e2ca8fb827b287bdb1d/celikpanel-mail-host-cert\n644 0:0 1 483 /usr/libexec/celikpanel/mail-renewal/7f2c233fea569ca25f1207c3872cb18bbab74f06b21c8e2ca8fb827b287bdb1d/celikpanel-mail-renewal.service\n644 0:0 1 219 /usr/libexec/celikpanel/mail-renewal/7f2c233fea569ca25f1207c3872cb18bbab74f06b21c8e2ca8fb827b287bdb1d/celikpanel-mail-renewal.timer\n755 0:0 1 23776664 /usr/libexec/celikpanel/mail-renewal/7f2c233fea569ca25f1207c3872cb18bbab74f06b21c8e2ca8fb827b287bdb1d/renew\n644 0:0 1 546 /usr/libexec/celikpanel/mail-renewal/7f2c233fea569ca25f1207c3872cb18bbab74f06b21c8e2ca8fb827b287bdb1d/runtime.manifest\nLoadState=loaded\nActiveState=inactive\nFragmentPath=/etc/systemd/system/celikpanel-mail-renewal.service\nDropInPaths=\nUnitFileState=static\nNeedDaemonReload=no\n\nLoadState=loaded\nActiveState=active\nFragmentPath=/etc/systemd/system/celikpanel-mail-renewal.timer\nDropInPaths=\nUnitFileState=enabled\nNeedDaemonReload=no\n",
+      "sha256": "003df9e1751165d0dff5b133ff0aac3925f0b342757af7becae3c1bb0c870d06"
+    },
+    "mail-hook-native-preserve.log": {
+      "text": "=== RUN   TestMailRenewalDisposableVMHookPreservation\n    mail_renewal_hook_vm_test.go:37: independent_hook_preserved generation=7f2c233fea569ca25f1207c3872cb18bbab74f06b21c8e2ca8fb827b287bdb1d loaded_schedule=verified\n--- PASS: TestMailRenewalDisposableVMHookPreservation (0.27s)\nPASS\nLoadState=loaded\nActiveState=inactive\nFragmentPath=/etc/systemd/system/celikpanel-mail-renewal.service\nDropInPaths=\nUnitFileState=static\nNeedDaemonReload=no\n\nLoadState=loaded\nActiveState=active\nFragmentPath=/etc/systemd/system/celikpanel-mail-renewal.timer\nDropInPaths=\nUnitFileState=enabled\nNeedDaemonReload=no\n",
+      "sha256": "7d07c8e1129a5719e9987bacb25881793f15b40827323fda9ed0b81625dbfbae"
+    },
+    "mail-hook-owner.log": {
+      "text": "fixture_owner_hook_edit=explicit before_image=retained\n=== RUN   TestMailRenewalDisposableVMOwnerHookRefusal\n    mail_renewal_hook_vm_test.go:64: owner_hook_refused bytes_inode_mtime=preserved\n--- PASS: TestMailRenewalDisposableVMOwnerHookRefusal (0.00s)\nPASS\n\n=== RUN   TestMailRenewalDisposableVMHookPreservation\n    mail_renewal_hook_vm_test.go:37: independent_hook_preserved generation=7f2c233fea569ca25f1207c3872cb18bbab74f06b21c8e2ca8fb827b287bdb1d loaded_schedule=verified\n--- PASS: TestMailRenewalDisposableVMHookPreservation (0.19s)\nPASS\n\nfixture_owner_resolution=explicit hook_bytes=restored native_config_units_ledger=unchanged trusted_listeners={\"587\": \"446d0a5c6f2edd7cd577057961914d03c9a21978a3a859730b51fb22a0c55d33\", \"993\": \"446d0a5c6f2edd7cd577057961914d03c9a21978a3a859730b51fb22a0c55d33\"} management=absent\n",
+      "sha256": "e6cd4ece8a0a2cc9554b4f4b2e21331f825ec008222035608d60809eeeae3a39"
+    }
+  }
+}

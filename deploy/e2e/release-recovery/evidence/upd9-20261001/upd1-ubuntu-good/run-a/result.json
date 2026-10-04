@@ -1,0 +1,226 @@
+{
+  "artifacts": {
+    "baseline": {
+      "commit": "0bf21ae6b59117ac8071f5612672a7731957e871",
+      "sha256": "007782b6cac14a416ba45482db6716a3efdbfca499c20de997eb5476264e6dd1",
+      "version": "v0.1.0-alpha.80"
+    },
+    "defective": {
+      "commit": "515edf778589cf5d9567d389ab9410fc6864067a",
+      "sha256": "8e1ab9e63316d767433ef20c736b6e9474bc62c8a937e5b5965c5cdfb48b84d4",
+      "version": "v0.1.0-alpha.81"
+    },
+    "good": {
+      "commit": "5a1d49a4d897edd2eac8b6f7e63b92cf16a2a190",
+      "sha256": "9568a4b92156804df487627e8695f497a7e1eaf0dcfff2f1f73ac6a8a042430a",
+      "version": "v0.1.0-alpha.81"
+    }
+  },
+  "cell": {
+    "h19": true,
+    "mail_required": true,
+    "name": "upd1-ubuntu-good",
+    "node": "ubuntu",
+    "pk_observe": false,
+    "recovery_fault": null,
+    "scenario": null,
+    "variant": "good"
+  },
+  "findings": [
+    "ubuntu: server setup attempt 1 stopped at 03-service with HOST_MUTATION_BUSY (cause: another server change or package-manager task is still running); the owner waits and starts a newly reviewed plan, as the product text says",
+    "ubuntu: server setup attempt 2 stopped at 03-service with HOST_MUTATION_BUSY (cause: another server change or package-manager task is still running); the owner waits and starts a newly reviewed plan, as the product text says",
+    "ubuntu: server setup attempt 3 stopped at 03-mail_profile with HOST_MUTATION_BUSY (cause: another server change or package-manager task is still running); the owner waits and starts a newly reviewed plan, as the product text says",
+    "ubuntu: server setup attempt 4 stopped at 02-mail_profile with mail_profile_install_failed (cause: another server change or package-manager task is still running); the owner waits and starts a newly reviewed plan, as the product text says",
+    "ubuntu: server setup attempt 5 stopped at 03-mail_profile with mail_profile_install_failed (cause: another server change or package-manager task is still running); the owner waits and starts a newly reviewed plan, as the product text says",
+    "ubuntu: server setup attempt 6 stopped at 05-firewall with server_setup_firewall_failed (cause: another server change or package-manager task is still running); the owner waits and starts a newly reviewed plan, as the product text says",
+    "ubuntu: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['06-panel_certificate', '07-access_dns', '08-mail_certificate', '09-verify']"
+  ],
+  "identity": {
+    "cell_id": "release-recovery__e83ee7eecbe3c6cf",
+    "node": "ubuntu",
+    "vm_uuid": "07ab5d87-6ecd-5dd0-a0b7-5cb5f40a7acc"
+  },
+  "native_evidence": false,
+  "note": "Observations for the owner's review; the P0 rows are judged separately.",
+  "outcome": {
+    "attempts": {
+      "automatic": [],
+      "automatic_count": 0,
+      "journal_admissions": [],
+      "owner": [],
+      "owner_count": 0
+    },
+    "classification": "update-verified",
+    "final_status": {
+      "observation": "known",
+      "observed_at": "2026-10-01T20:19:16Z",
+      "phase": "succeeded",
+      "reason": "update_verified",
+      "request_id": "81ead0a4283a21182fc0ce4453598bc7",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "update_verified"
+    },
+    "owner_continuation": false,
+    "owner_reboot": null,
+    "pin_changes": [],
+    "port_hold": null,
+    "reboot": null,
+    "track_stop": null
+  },
+  "overall": "complete-for-review",
+  "provenance": {
+    "baseline": "published-tag-v0.1.0-alpha.80-tree-plus-the-D-027-acceptance-license-seam-only (Panel license code: cmd/panel/license.go, internal/licensing/acceptance_fixture.go, internal/licensing/acceptance_off.go, internal/licensing/acceptance_owner_linux.go, internal/licensing/acceptance_owner_other.go, internal/licensing/license.go); its release policy, installer, update/rollback/recovery/bootstrap scripts, get.sh and Agent are byte-identical to the tag; installed by the real installer; fixture trust root enrolled; not-production-release-admission",
+    "candidate": "unpublished-local-fixture-commit-over-the-source-labelled-v0.1.0-alpha.81; signed with the disposable fixture key; served by the guest-loopback celikpanel.net fixture origin; not a release",
+    "defect": "fixture source patch: cmd/panel --migrate-only exits 1 after migrating the isolated copy (genuine candidate failure after candidate-installed, simulated by a committed fixture change)"
+  },
+  "request_id": "81ead0a4283a21182fc0ce4453598bc7",
+  "schema": "celikpanel/upd1-owner-update-result/v1",
+  "scope": {
+    "cron": {
+      "crontab": "/usr/bin/crontab",
+      "verdict": "available"
+    },
+    "dns": {
+      "mode": "external",
+      "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+      "verdict": "not-provided-external-dns"
+    },
+    "origin": {
+      "after-provision": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      },
+      "before-arm": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      }
+    },
+    "setup": {
+      "code": "server_setup_access_dns_required",
+      "not_run": [
+        "06-panel_certificate",
+        "07-access_dns",
+        "08-mail_certificate",
+        "09-verify"
+      ],
+      "phase": "access_dns",
+      "verdict": "observed isolated-host wait",
+      "volatile_tables_added": [
+        "server_setup_executions"
+      ]
+    }
+  },
+  "steps": [
+    {
+      "finished_at": "2026-10-01T18:58:15Z",
+      "name": "preflight",
+      "reason": null,
+      "started_at": "2026-10-01T18:58:11Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T18:58:24Z",
+      "name": "origin",
+      "reason": null,
+      "started_at": "2026-10-01T18:58:15Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T18:59:15Z",
+      "name": "baseline-install",
+      "reason": null,
+      "started_at": "2026-10-01T18:58:24Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T18:59:16Z",
+      "name": "owner-login",
+      "reason": null,
+      "started_at": "2026-10-01T18:59:15Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T18:59:16Z",
+      "name": "license",
+      "reason": null,
+      "started_at": "2026-10-01T18:59:16Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T20:16:14Z",
+      "name": "setup",
+      "reason": null,
+      "started_at": "2026-10-01T18:59:16Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-01T20:16:18Z",
+      "name": "seed",
+      "reason": null,
+      "started_at": "2026-10-01T20:16:14Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T20:18:08Z",
+      "name": "pre-state",
+      "reason": null,
+      "started_at": "2026-10-01T20:16:18Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T20:18:11Z",
+      "name": "arm",
+      "reason": null,
+      "started_at": "2026-10-01T20:18:08Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T20:18:11Z",
+      "name": "owner-start",
+      "reason": null,
+      "started_at": "2026-10-01T20:18:11Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T20:19:17Z",
+      "name": "track",
+      "reason": null,
+      "started_at": "2026-10-01T20:18:11Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T20:19:17Z",
+      "name": "owner-continuation (required)",
+      "reason": null,
+      "started_at": "2026-10-01T20:19:17Z",
+      "verdict": "skipped"
+    },
+    {
+      "finished_at": "2026-10-01T20:19:24Z",
+      "name": "terminal",
+      "reason": null,
+      "started_at": "2026-10-01T20:19:17Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T20:19:26Z",
+      "name": "collect",
+      "reason": null,
+      "started_at": "2026-10-01T20:19:24Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T20:19:26Z",
+      "name": "verdicts",
+      "reason": null,
+      "started_at": "2026-10-01T20:19:26Z",
+      "verdict": "passed"
+    }
+  ]
+}

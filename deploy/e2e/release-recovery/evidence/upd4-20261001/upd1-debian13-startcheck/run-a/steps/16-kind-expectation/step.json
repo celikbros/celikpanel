@@ -1,0 +1,198 @@
+{
+  "checks": {
+    "cli_text_source": {
+      "commit": "0e515e908fc7b3de5c4e74dc7535638cbe56d401",
+      "path": "cmd/recovery/main.go",
+      "role": "baseline",
+      "sha256": "5da9f0e4744a7e958b4043dae9204098dfa5e1b0675ce9c836042f8864a7e31e"
+    },
+    "judged": {
+      "expected": [
+        "rolled-back",
+        "status-failure-code",
+        "update-failure-line",
+        "fixture-reason",
+        "sidecar",
+        "no-completion-marker",
+        "rollback-dispatch",
+        "update-card",
+        "old-release-running",
+        "database-equal",
+        "cli-returned-text",
+        "web-catalogue"
+      ],
+      "findings": [],
+      "kind": "start-check",
+      "native_evidence": false,
+      "unknown": [],
+      "verdict": "as-expected"
+    },
+    "observations": {
+      "attempts": {
+        "automatic": [
+          {
+            "at": "2026-09-30T22:59:09.028062Z",
+            "attempt": "1",
+            "direction": "rollback",
+            "operation": "update",
+            "phase": "active"
+          },
+          {
+            "at": "2026-09-30T23:00:11.610208Z",
+            "attempt": "2",
+            "direction": "rollback",
+            "operation": "rollback",
+            "phase": "active"
+          }
+        ],
+        "automatic_count": 2,
+        "journal_admissions": [
+          {
+            "at": "2026-09-30T22:59:09.123185+00:00",
+            "attempt": "1",
+            "snapshot": "20260930T225836Z-from-unknown-to-96de9cdb6b48a8e5fa2cd02bd6cd9845579255f5-16f681bc9e9251bd4f19a75b612bcf60"
+          },
+          {
+            "at": "2026-09-30T23:00:11.706475+00:00",
+            "attempt": "2",
+            "snapshot": "20260930T225836Z-from-unknown-to-96de9cdb6b48a8e5fa2cd02bd6cd9845579255f5-16f681bc9e9251bd4f19a75b612bcf60"
+          }
+        ],
+        "owner": [],
+        "owner_count": 0
+      },
+      "check_reasons": [
+        "tls_pair_invalid"
+      ],
+      "cli": {
+        "by_key": {
+          "candidate_panel_startup_check_failed.pending": {
+            "en": 9,
+            "first_utc": "2026-09-30T22:59:20Z",
+            "last_utc": "2026-09-30T23:00:30Z",
+            "samples": 9,
+            "tr": 9
+          },
+          "candidate_panel_startup_check_failed.recovered": {
+            "en": 1,
+            "first_utc": "2026-09-30T23:00:33Z",
+            "last_utc": "2026-09-30T23:00:33Z",
+            "samples": 1,
+            "tr": 1
+          }
+        },
+        "mismatches": [],
+        "panel_log_command": "sudo journalctl -u celikpanel-panel -n 50",
+        "panel_log_command_seen": {
+          "en": false,
+          "tr": false
+        },
+        "recorded_cause_lines": {
+          "en": 16,
+          "tr": 16
+        }
+      },
+      "completion_marker_seen": false,
+      "database": "equal-except-volatile",
+      "final": {
+        "failure_code": "candidate_panel_startup_check_failed",
+        "observation": "known",
+        "observed_at": "2026-09-30T23:00:31Z",
+        "phase": "recovered",
+        "previous_failure": "update_failed",
+        "reason": "rollback_verified",
+        "request_id": "7a7b01ebeb24bf40a384437f6c2473c9",
+        "schema": "celikpanel-recovery-status/v1",
+        "terminal_proof": "rollback_verified"
+      },
+      "installed": "baseline",
+      "outcome": "recovered-automatically",
+      "owner_retry_run": false,
+      "panel_verdict": "down-only-during-transaction",
+      "printed_retry_command": null,
+      "receipt_dispatches": [
+        {
+          "attempt": "1",
+          "direction": "rollback",
+          "operation": "update",
+          "phase": "active"
+        },
+        {
+          "attempt": "2",
+          "direction": "rollback",
+          "operation": "rollback",
+          "phase": "active"
+        }
+      ],
+      "receipt_phases": [
+        "active",
+        "active"
+      ],
+      "sidecar": {
+        "code": "candidate_panel_startup_check_failed",
+        "present": true,
+        "valid": true
+      },
+      "update_card": {
+        "findings": [],
+        "server_message_line": null,
+        "verdict": "as-expected"
+      },
+      "update_failure_codes": [
+        "candidate_panel_startup_check_failed"
+      ],
+      "update_failure_lines": [
+        {
+          "code": "candidate_panel_startup_check_failed",
+          "reason": "new panel start check failed before completion: panel startup check failed: tls_pair_invalid: the panel TLS certificate and private key cannot be loaded as a matching pair",
+          "state": "recovery_required"
+        }
+      ],
+      "views": {
+        "last": {
+          "offline_page_served": "panel-reachable",
+          "panel_recovery_status": true,
+          "panel_update_status": true,
+          "root_cli": true
+        },
+        "ssh_owner_view": "not attempted (recovery view needs an interactive SSH terminal and a one-time code)",
+        "summary": {
+          "panel_recovery_status": {
+            "reachable": 9,
+            "samples": 29
+          },
+          "panel_update_status": {
+            "reachable": 9,
+            "samples": 29
+          },
+          "root_cli": {
+            "reachable": 28,
+            "samples": 29
+          }
+        }
+      },
+      "web_keys": [
+        "recovery.failure.candidate_panel_startup_check_failed.recovered",
+        "recovery.failure.candidate_panel_startup_check_failed.returning",
+        "recovery.next.running",
+        "recovery.phase.recovered",
+        "recovery.phase.recovering",
+        "recovery.phase.running",
+        "recovery.reason.candidate_panel_startup_check_failed",
+        "recovery.wait.next",
+        "recovery.wait.starting"
+      ],
+      "web_keys_missing": [],
+      "workloads": {
+        "cron": "never-interrupted",
+        "dns": "not-provided-external-dns",
+        "smtp": "interrupted-only-by-host-reset",
+        "web": "interrupted-only-by-host-reset"
+      }
+    }
+  },
+  "finished_at": "2026-09-30T23:00:42Z",
+  "name": "kind-expectation",
+  "started_at": "2026-09-30T23:00:42Z",
+  "verdict": "passed"
+}

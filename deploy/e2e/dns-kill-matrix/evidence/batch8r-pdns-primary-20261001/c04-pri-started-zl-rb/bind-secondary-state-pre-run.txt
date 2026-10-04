@@ -1,0 +1,78 @@
+wall=2026-09-29T23:12:03.006065307Z boot_id=be5d0f56-2777-41ac-a1fc-9e68e436fbf3
+== named.service
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+MainPID=4965
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 23:11:13 UTC
+== ss 53
+udp UNCONN 0      0      192.0.2.11:53 0.0.0.0:* users:(("named",pid=4965,fd=24))
+udp UNCONN 0      0      192.0.2.11:53 0.0.0.0:* users:(("named",pid=4965,fd=23))
+udp UNCONN 0      0       127.0.0.1:53 0.0.0.0:* users:(("named",pid=4965,fd=18))
+udp UNCONN 0      0       127.0.0.1:53 0.0.0.0:* users:(("named",pid=4965,fd=17))
+udp UNCONN 0      0      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=1482,fd=26))
+udp UNCONN 0      0      127.0.0.53:53 0.0.0.0:* users:(("systemd-resolve",pid=1482,fd=24))
+tcp LISTEN 0      0      192.0.2.11:53 0.0.0.0:* users:(("named",pid=4965,fd=26))
+tcp LISTEN 0      0      192.0.2.11:53 0.0.0.0:* users:(("named",pid=4965,fd=25))
+tcp LISTEN 0      0      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=1482,fd=27))
+tcp LISTEN 0      0       127.0.0.1:53 0.0.0.0:* users:(("named",pid=4965,fd=21))
+tcp LISTEN 0      0       127.0.0.1:53 0.0.0.0:* users:(("named",pid=4965,fd=19))
+tcp LISTEN 0      0      127.0.0.53:53 0.0.0.0:* users:(("systemd-resolve",pid=1482,fd=25))
+== management binaries (must be absent)
+ls: cannot access '/opt/celikpanel': No such file or directory
+== /etc/named.conf
+-rw-r----- 1 root named 510 2026-09-29 23:11:13.406628995 +0000 /etc/named.conf
+b0cb30473a30e3ccf11ba43cb44ed92112ffb48648c80559ec1b9bcf1b86e6c0  /etc/named.conf
+== rndc status
+rndc: neither /etc/rndc.conf nor /etc/rndc.key was found
+== rndc zonestatus catalog-c000020a.celikpanel.invalid
+rndc: neither /etc/rndc.conf nor /etc/rndc.key was found
+== rndc showzone catalog-c000020a.celikpanel.invalid
+rndc: neither /etc/rndc.conf nor /etc/rndc.key was found
+== rndc zonestatus s1-kill.test
+rndc: neither /etc/rndc.conf nor /etc/rndc.key was found
+== rndc showzone s1-kill.test
+rndc: neither /etc/rndc.conf nor /etc/rndc.key was found
+== rndc zonestatus s2.s1-kill.test
+rndc: neither /etc/rndc.conf nor /etc/rndc.key was found
+== rndc showzone s2.s1-kill.test
+rndc: neither /etc/rndc.conf nor /etc/rndc.key was found
+== loaded catalog (AXFR from 127.0.0.1, read-only)
+== catalog members (PTR rdata under zones.catalog-c000020a.celikpanel.invalid)
+== loaded s1-kill.test SOA (127.0.0.1)
+;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 29555
+;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1
+; EDNS: version: 0, flags:; udp: 1232
+;s1-kill.test.			IN	SOA
+== loaded s2.s1-kill.test SOA (127.0.0.1)
+;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 27204
+;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1
+; EDNS: version: 0, flags:; udp: 1232
+;s2.s1-kill.test.		IN	SOA
+== /var/named tree (no follow)
+drwxrwx--- root:named 188 2026-09-29T23:11:40.6964156830 /var/named -> 
+-rw-r----- root:named 466 2026-09-16T14:52:07.0000000000 /var/named/127.0.0.zone -> 
+-rw------- named:named 8192 2026-09-29T23:11:13.6718700030 /var/named/_default.nzd -> 
+-rw-r----- root:named 506 2026-09-16T14:52:07.0000000000 /var/named/localhost.ip6.zone -> 
+-rw-r----- root:named 517 2026-09-16T14:52:07.0000000000 /var/named/localhost.zone -> 
+-rw-r--r-- named:named 1411 2026-09-29T23:11:40.6914804860 /var/named/managed-keys.bind -> 
+-rw-r--r-- named:named 1336 2026-09-29T23:11:13.7783423080 /var/named/managed-keys.bind.jnl -> 
+== transferred zone files (newer than /etc/named.conf): metadata, hash, content
+-- /var/named/_default.nzd
+size=8192 mode=600 owner=named:named mtime=2026-09-29 23:11:13.671870003 +0000
+e01847f8afdf44e574920f3f79a05dc514e5dc0627f6f27dddd0520bde4d6797  /var/named/_default.nzd
+-- /var/named/managed-keys.bind
+size=1411 mode=644 owner=named:named mtime=2026-09-29 23:11:40.691480486 +0000
+258b2abbe58da425e46a5f2242fd6174314e1b5aaab09aa7b8f5c260d3a0817e  /var/named/managed-keys.bind
+-- /var/named/managed-keys.bind.jnl
+size=1336 mode=644 owner=named:named mtime=2026-09-29 23:11:13.778342308 +0000
+c323c4bb2bf825f0bde7b06b23df842060bbe34934d2253824dbf98d36f8f2cf  /var/named/managed-keys.bind.jnl
+== named journal (transfer/notify/catalog/zone lines, all boots)
+2026-09-29T23:11:13.672752+00:00 dns-arch named[4965]: set up managed keys zone for view _default, file 'managed-keys.bind'
+2026-09-29T23:11:13.674464+00:00 dns-arch named[4965]: managed-keys-zone: loaded serial 0
+2026-09-29T23:11:13.674606+00:00 dns-arch named[4965]: all zones loaded
+2026-09-29T23:11:13.684265+00:00 dns-arch named[4965]: zone catalog-c000020a.celikpanel.invalid/IN: refresh: failure trying primary 192.0.2.10#53 (source 0.0.0.0#0): connection refused
+2026-09-29T23:11:13.773968+00:00 dns-arch named[4965]: managed-keys-zone: Initializing automatic trust anchor management for zone '.'; DNSKEY ID 20326 is now trusted, waiving the normal 30-day waiting period.
+2026-09-29T23:11:13.774082+00:00 dns-arch named[4965]: managed-keys-zone: Initializing automatic trust anchor management for zone '.'; DNSKEY ID 38696 is now trusted, waiving the normal 30-day waiting period.

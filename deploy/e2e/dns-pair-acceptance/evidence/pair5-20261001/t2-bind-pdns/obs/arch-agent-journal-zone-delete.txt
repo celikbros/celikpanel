@@ -1,0 +1,6 @@
+2026-09-30T04:41:35+00:00 dns-arch agent[410]: 2026/09/30 04:41:35 bind zone publication remains pending for pair-accept.test at epoch 1: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T04:41:35+00:00 dns-arch agent[410]: dns_peer_enrollment_required
+2026-09-30T04:41:37+00:00 dns-arch agent[410]: 2026/09/30 04:41:37 DNS zone V3 recovery remains pending for pair-accept.test: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T04:41:37+00:00 dns-arch agent[410]: dns_peer_enrollment_required
+2026-09-30T04:41:53+00:00 dns-arch agent[410]: 2026/09/30 04:41:53 DNS zone V3 recovery remains pending for pair-accept.test: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T04:41:53+00:00 dns-arch agent[410]: dns_peer_owner_edit_unknown

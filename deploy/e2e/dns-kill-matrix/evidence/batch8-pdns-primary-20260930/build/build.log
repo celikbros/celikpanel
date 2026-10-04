@@ -1,0 +1,100 @@
+2026-09-29T20:11:02Z
+repository HEAD at build time (record only): 4deb194a3ac6bd1fb678082d32e02076a0190245
+tested commit: 916e1577933f37fb168818242befe02e01ce2122
+branch accept/pdns-primary-gate-open: 916e1577933f37fb168818242befe02e01ce2122
+web/dist absent in the archive (untracked build output)
+go version go1.26.5 linux/amd64
+go1.26.5
+
+https://proxy.golang.org,direct
+/root/go/pkg/mod
+96ed34ba7025393307669a7c4ce7bd6af102e5787513abd6c0f9e48840bc0c4f
+== artifacts
+6f7b61a53edf643e411d84c0dcc94189bcfdb151b87fc26300de8ea3bec5939c  /root/cp-b8-artifacts/agent
+52c130798377031ed9254d30d975e77d0e2b89b27eccaae27cbf5c0dfc4ffeeb  /root/cp-b8-artifacts/agent.kill
+779285bf770f932a2e8a08cad7fe55f238702c2896769db8b30a6ef0f1e5a141  /root/cp-b8-artifacts/panel
+5b0870b69824811a9f9a0285e0ac260d3f6086ec83bd2a4f0a1493c698dbc4ce  /root/cp-b8-artifacts/dns-kill-trigger
+156f2dd017aeb0e5f21961b8a3015a680134c042d4f686a57dbfa0b74cb26a27  /root/cp-b8-artifacts/recovery
+fff09f0983e01f9d3774b3e16c6441e5409658214eaf5e3c1ce67ac450f5c81e  /root/cp-b8-artifacts/agent-checker
+8ba2e0f6aee463f33d85ddc7dc2fa89f3496cf2793d63ded7c5d73148e549ebb  /root/cp-b8-artifacts/panel-checker
+fe277c46ea8b50f00a80e71976198f28db89667789a737e0a78c0f4a83e9cb87  /root/cp-b8-artifacts/schema17-bridge
+7b8167022da534f16e7d7f8c97d2ef5b1771d56243e0f3b12a55ac74dd4c474a  /root/cp-b8-artifacts/dns-owner-tools/bind-peer-inspect
+52add036ac2e75d9e22c00e5834c0247ef8c4b196605b791cfa162d08191bf88  /root/cp-b8-artifacts/dns-owner-tools/dns-peer-enroll
+202d1e7a10020f08ad109f070f4b91a7e1eb6911833ee9b48a947084585bd858  /root/cp-b8-artifacts/dns-owner-tools/pdns-peer-inspect
+c32204c42ac891ddd132ad49ba8abc67e55819f285a37eb8c86646d327eed5c7  /root/cp-b8-artifacts/dns-owner-tools/README.md
+== recovery-runtime
+fff09f0983e01f9d3774b3e16c6441e5409658214eaf5e3c1ce67ac450f5c81e  ./bin/agent-checker
+8ba2e0f6aee463f33d85ddc7dc2fa89f3496cf2793d63ded7c5d73148e549ebb  ./bin/panel-checker
+156f2dd017aeb0e5f21961b8a3015a680134c042d4f686a57dbfa0b74cb26a27  ./bin/recovery
+fe277c46ea8b50f00a80e71976198f28db89667789a737e0a78c0f4a83e9cb87  ./bin/schema17-bridge
+6645927653114b4d59fbf6e29147f12920ceaec058d0ecc7b92faa71fd1bf6c3  ./deploy/panel-tls-snapshot.sh
+391eba13d077e0f8016cdfc8e95ce5fb67711b1e9b4a91ed7446ebdbb4ccf004  ./deploy/recovery/runtime-entry.sh
+f499446812b90aee362112743f4e491d5ecfa40511a510d08cbb006babdd48b0  ./deploy/release-recovery-foundation.sh
+db3e2dd23d4b81d9e533354e5d345d26eb43b7943ba20cf7b4ba19fac20cea1e  ./deploy/release-recovery-observation.sh
+4543920d5cc7a4d76c5c3ff91e8a03f4f02bd0e005577b40dc5c740af32c8257  ./deploy/release-transaction-guard.sh
+f163b496a8f48ae55a12658f34125f666c45672eccc4b27c03d58b7367848fc2  ./deploy/release-unit-transition.sh
+cbe3841aef57c62d0242a2957f728100fceca84a7a23135d51156562006ac822  ./rollback.sh
+96ed34ba7025393307669a7c4ce7bd6af102e5787513abd6c0f9e48840bc0c4f  ./runtime.manifest
+dea6eafb9608e1b956e8fee7ddc85908e649056fa6727be9c373cec233154db8  ./update.sh
+85fe7a6214b489135f03c4278d6f426eae7a3a927b588b531293daea78d0b81e  /root/cp-b8-tools/oi-smstatus
+2d946062563ae996ee2abe2c99dc635daca115fa7d31f49c4039aca11b1c4c15  /root/cp-b8-tools/overlay.json
+57823885e8778d4fa5f67b3458042fc1f0cab7cb3a0603af00ec2bd202d85077  /root/cp-b8-tools/smstatus.go
+/root/cp-b8-artifacts/agent: go1.26.5
+	path	github.com/alicelik/celikpanel/cmd/agent
+	mod	github.com/alicelik/celikpanel	(devel)	
+== comparison with the dbd6a6b6 batch-7 build (/root/cp-b7-artifacts)
+DIFFERENT agent
+DIFFERENT agent.kill
+DIFFERENT panel
+DIFFERENT dns-kill-trigger
+DIFFERENT recovery
+DIFFERENT agent-checker
+DIFFERENT panel-checker
+IDENTICAL schema17-bridge
+DIFFERENT recovery-runtime/runtime.manifest
+1,3c1,3
+< 82f2772fe0257dde9139d0f85a34be58e89c98d6a9d1775090f2ecf4cc3b8975  ./bin/agent-checker
+< 82f23b48908e152e55ad76598ec8be0f780805f463fe7e48ed402d87bc5984e0  ./bin/panel-checker
+< dc131f4eee8361b01592e5b5b17d871b9cfd6c35799bc433d6f9be9bed25abe4  ./bin/recovery
+---
+> fff09f0983e01f9d3774b3e16c6441e5409658214eaf5e3c1ce67ac450f5c81e  ./bin/agent-checker
+> 8ba2e0f6aee463f33d85ddc7dc2fa89f3496cf2793d63ded7c5d73148e549ebb  ./bin/panel-checker
+> 156f2dd017aeb0e5f21961b8a3015a680134c042d4f686a57dbfa0b74cb26a27  ./bin/recovery
+12c12
+< 3694af9c4b532126a0743a5aaca4bac1f90ebaf31ba7ffbe65c5ded5e016c22d  ./runtime.manifest
+---
+> 96ed34ba7025393307669a7c4ce7bd6af102e5787513abd6c0f9e48840bc0c4f  ./runtime.manifest
+recovery-runtime tree DIFFERENT
+DIFFERENT oi-smstatus
+== gate constants in the tested source
+cmd/agent/dns_engine_pdns_switch.go:48:const freshPairedPDNSPrimaryAdmitted = true
+cmd/panel/dns_engine.go:1281:const freshPairedPDNSPrimaryOffered = true
+== changed paths 49a3f4b1..916e1577
+ ...dns_engine_pdns_primary_v3_policy_linux_test.go |  26 ++++-
+ cmd/agent/dns_engine_pdns_switch.go                |  24 +++--
+ cmd/agent/dns_engine_rpc_test.go                   |   7 ++
+ cmd/panel/dns_engine.go                            |  19 +++-
+ cmd/panel/dns_engine_pdns_primary_gate_test.go     |  30 ++++--
+ cmd/panel/dns_engine_rollback_standby_test.go      |   7 +-
+ cmd/panel/dns_engine_test.go                       |   9 +-
+ cmd/panel/dns_setup_test.go                        |   4 +
+ cmd/panel/server_setup_infrastructure_dns_test.go  |   5 +
+ cmd/panel/server_setup_profile_matrix_test.go      | 116 ++++++++++++---------
+ 10 files changed, 164 insertions(+), 83 deletions(-)
+== harness file hashes
+a0ae7f57f58304688a085e94a14845b5f49f5dbaaa698f5bba3343b2912be168  fixture.py
+016ee2039f5bf02d2a96fcbe7524681c56d9ff47220d7b355ec555a5824f482a  guest_bootstrap.py
+c734d19d6ebfce9c0cc955f81b44f02c9ef39c433d56a53b198c9c0cd097047c  guest_bootstrap.sh
+3c15b7d175ec6908367e141382e28ff00c1ab91d03edca5dddde25e5780d1ad8  run_cell.py
+ef5a749a1f7d9015261d54a75c266aa7a6be5d68bb29c9d08d36e5a93a3b54ed  guest_recovery_probe.py
+5cfdc0d003051cc183f930410ab406d97608073ebfdbc39c8e6e17fe06702905  native_pdns_bind_peer.py
+a6a9d464061bc63a08429b644668100d414467eb2dd9969b8d6c6515bc0ff80a  native_pdns_peer_probe.py
+dcf6e09c026864ee15566a03b3c4aa30d6e1805333d548753b58d070e7fd1229  manifest.json
+== offline harness tests of the fresh primary (from the archive)
+.....................................
+----------------------------------------------------------------------
+Ran 37 tests in 0.410s
+
+OK
+2026-09-29T20:11:29Z
+BUILD-OK

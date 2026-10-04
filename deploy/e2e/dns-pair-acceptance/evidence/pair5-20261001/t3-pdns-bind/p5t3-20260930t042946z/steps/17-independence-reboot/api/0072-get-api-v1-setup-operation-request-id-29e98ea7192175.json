@@ -1,0 +1,140 @@
+{
+  "outcome": "response",
+  "panel": "arch",
+  "purpose": null,
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:28444"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/setup/operation?request_id=29e98ea7192175b5bd569e18531d7309"
+  },
+  "response": {
+    "elapsed_seconds": 0.004,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Wed, 30 Sep 2026 04:34:07 GMT"
+      ],
+      [
+        "Transfer-Encoding",
+        "chunked"
+      ]
+    ],
+    "json": {
+      "context": {
+        "access_dns_ip": "192.0.2.11",
+        "dns_engine": "bind",
+        "dns_hosting_management": "",
+        "dns_mode": "local",
+        "dns_role": "secondary",
+        "local_ip": "192.0.2.11",
+        "local_nameserver": "ns2.ns-accept.test",
+        "mail_hostname": "",
+        "panel_domain": "panel-arch.ns-accept.test",
+        "peer_ip": "192.0.2.10",
+        "peer_nameserver": "ns1.ns-accept.test"
+      },
+      "error": {
+        "code": "server_setup_access_dns_required",
+        "message": "Public DNS must resolve panel-arch.ns-accept.test to 192.0.2.11 before a certificate is requested. Check this hostname's A/AAAA records and its zone delegation. For DNS managed here, review the infrastructure DNS records in this wizard; otherwise correct them at the primary DNS server or provider. This check resumes automatically when DNS is verified."
+      },
+      "id": "29e98ea7192175b5bd569e18531d7309",
+      "panel_url": "https://panel-arch.ns-accept.test:2083/",
+      "phase": "access_dns",
+      "plan_id": "5e76259cec3c927ae2ba37c4e26d18e6",
+      "request_id": "29e98ea7192175b5bd569e18531d7309",
+      "status": "waiting",
+      "steps": [
+        {
+          "id": "01-dns",
+          "kind": "dns",
+          "owner_id": "d78b824fc9936863a85245c5657560fc",
+          "request_id": "857e1b06395f7e2803f9fe3445f346d5",
+          "status": "succeeded",
+          "target": "local"
+        },
+        {
+          "id": "02-service",
+          "kind": "service",
+          "operation_id": "a34b88fcdb9533b3d20f41e8c45e3e31",
+          "owner_id": "a724dbda1fb0b80370b5ff42746155a7",
+          "request_id": "f14fcb338f7a65bd4781a80d3d856b27",
+          "status": "succeeded",
+          "target": "certbot"
+        },
+        {
+          "id": "03-firewall",
+          "kind": "firewall",
+          "owner_id": "ce62905019807245f1b36bbc4cd44bf0",
+          "request_id": "c1f081553e0ccd651dc9e42a86b8e485",
+          "status": "succeeded",
+          "target": "enable_and_persist"
+        },
+        {
+          "id": "04-access_dns",
+          "kind": "access_dns",
+          "owner_id": "67888838285476bbfc9392ca2ba0d8c6",
+          "qualifier": "192.0.2.11",
+          "request_id": "183ef829e68dd1999a0c8d929dfa87b4",
+          "status": "running",
+          "target": "panel-arch.ns-accept.test"
+        },
+        {
+          "id": "05-panel_certificate",
+          "kind": "panel_certificate",
+          "owner_id": "6cc8cdd4126874e6a95e2216b2930ff5",
+          "request_id": "220eb35b37a06d2ffa6c0d585e2b3875",
+          "status": "pending",
+          "target": "panel-arch.ns-accept.test"
+        },
+        {
+          "id": "06-verify",
+          "kind": "verify",
+          "owner_id": "9a6043751dec2d69ad95ca718991ca43",
+          "request_id": "88311d506d2b00f185866a0e2cc9df95",
+          "status": "pending",
+          "target": "dns"
+        }
+      ]
+    },
+    "status": 200,
+    "text": null
+  }
+}

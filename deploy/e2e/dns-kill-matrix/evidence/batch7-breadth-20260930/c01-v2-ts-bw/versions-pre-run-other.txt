@@ -1,0 +1,13 @@
+wall=2026-09-29T18:55:07.664120476Z boot_id=f20d4a4a-f311-4655-bb32-f40b67ebd183
+os=Arch Linux kernel=7.1.8-arch1-3
+== pacman -Q
+error: package 'bind' was not found
+error: package 'powerdns' was not found
+python 3.14.7-1
+systemd 261.2-1
+linux 7.1.8.arch1-3
+== named -v
+== pdns_server --version
+== management binaries
+sha256sum: '/opt/celikpanel/bin/*': No such file or directory
+sha256sum: /usr/libexec/celikpanel/recovery: No such file or directory

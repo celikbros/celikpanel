@@ -1,0 +1,39 @@
+{
+  "cron": {
+    "available": false,
+    "crontab": null,
+    "daemon_active": false,
+    "daemon_units": {},
+    "listed": false,
+    "seeded": false,
+    "verdict": "not available on this baseline"
+  },
+  "database": {
+    "reason": "only the management-off cell seeds an owner database",
+    "seeded": false
+  },
+  "domain": "upd1-owner.test",
+  "domain_id": 1,
+  "firewall": {
+    "http": 200,
+    "sha256": "0da71220eee9b3b488535b16e3884c9b94b2bc452c845e9224b9e2f5722503f4"
+  },
+  "index_sha256": "e77b42aa0ae9000facb31b3b62482fe9e0eab9ffd9174e78ebf9fbfedecc4c0c",
+  "mail": {
+    "address": "owner@upd1-owner.test",
+    "attempted": true,
+    "create_http": 200,
+    "listed": true,
+    "setup_http": 200
+  },
+  "marker": "upd1-marker-33a54aa7434aed9d297829e632ec8242",
+  "records_http": 200,
+  "records_sha256": "4aa7a3d2e337c222d321bac2b1ad5e0ea8c1f622b1692d284f0c900dd1357632",
+  "zone": {
+    "managed": false,
+    "management": "external",
+    "name": "upd1-owner.test",
+    "type": "EXTERNAL"
+  },
+  "zone_http": 200
+}

@@ -1,0 +1,50 @@
+2026-10-01T11:45:45.461017+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T11:45:45.461897+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Consumed 698ms CPU time, 71.4M memory peak.
+2026-10-01T11:46:06.252571+00:00 dns-debian13 systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-01T11:46:06.252752+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Consumed 698ms CPU time, 71.4M memory peak.
+2026-10-01T11:46:47.496241+00:00 dns-debian13 systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-01T11:46:47.581342+00:00 dns-debian13 systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-01T11:46:47.786600+00:00 dns-debian13 panel[50868]: 2026/10/01 11:46:47 Starting CelikPanel Backend...
+2026-10-01T11:46:47.795156+00:00 dns-debian13 panel[50868]: 2026/10/01 11:46:47 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T11:46:47.798187+00:00 dns-debian13 panel[50868]: 2026/10/01 11:46:47 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T11:46:47.805165+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T11:46:47.805307+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T11:46:47.806027+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Consumed 387ms CPU time, 72.6M memory peak.
+2026-10-01T11:46:50.813729+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 1.
+2026-10-01T11:46:50.815592+00:00 dns-debian13 systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-01T11:46:50.884776+00:00 dns-debian13 systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-01T11:46:51.133787+00:00 dns-debian13 panel[50979]: 2026/10/01 11:46:51 Starting CelikPanel Backend...
+2026-10-01T11:46:51.145031+00:00 dns-debian13 panel[50979]: 2026/10/01 11:46:51 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T11:46:51.145560+00:00 dns-debian13 panel[50979]: 2026/10/01 11:46:51 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T11:46:51.155228+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T11:46:51.155422+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T11:46:51.155787+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Consumed 468ms CPU time, 73.6M memory peak.
+2026-10-01T11:46:56.767090+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 2.
+2026-10-01T11:46:56.775161+00:00 dns-debian13 systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-01T11:46:56.863852+00:00 dns-debian13 systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-01T11:46:57.102858+00:00 dns-debian13 panel[51115]: 2026/10/01 11:46:57 Starting CelikPanel Backend...
+2026-10-01T11:46:57.109143+00:00 dns-debian13 panel[51115]: 2026/10/01 11:46:57 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T11:46:57.109697+00:00 dns-debian13 panel[51115]: 2026/10/01 11:46:57 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T11:46:57.115959+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T11:46:57.116141+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T11:46:57.116891+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Consumed 433ms CPU time, 73.4M memory peak.
+2026-10-01T11:47:07.391577+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 3.
+2026-10-01T11:47:07.393197+00:00 dns-debian13 systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-01T11:47:07.467203+00:00 dns-debian13 systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-01T11:47:07.717124+00:00 dns-debian13 panel[51375]: 2026/10/01 11:47:07 Starting CelikPanel Backend...
+2026-10-01T11:47:07.723589+00:00 dns-debian13 panel[51375]: 2026/10/01 11:47:07 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T11:47:07.724186+00:00 dns-debian13 panel[51375]: 2026/10/01 11:47:07 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T11:47:07.730505+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T11:47:07.730720+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T11:47:07.731108+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Consumed 387ms CPU time, 73.4M memory peak.
+2026-10-01T11:47:26.747220+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 4.
+2026-10-01T11:47:26.749497+00:00 dns-debian13 systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-01T11:47:26.819691+00:00 dns-debian13 systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-01T11:47:27.039103+00:00 dns-debian13 panel[51800]: 2026/10/01 11:47:27 Starting CelikPanel Backend...
+2026-10-01T11:47:27.045008+00:00 dns-debian13 panel[51800]: 2026/10/01 11:47:27 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T11:47:27.045555+00:00 dns-debian13 panel[51800]: 2026/10/01 11:47:27 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T11:47:27.051112+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T11:47:27.051255+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T11:47:27.051586+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Consumed 408ms CPU time, 73.4M memory peak.
+2026-10-01T11:47:48.249788+00:00 dns-debian13 systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-01T11:47:48.249943+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Consumed 408ms CPU time, 73.4M memory peak.

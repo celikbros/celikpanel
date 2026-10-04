@@ -1,0 +1,30 @@
+evidence /var/tmp/cp-release-drill-upd13-a80-d13-def-a/evidence/debian13/upd1/upd1-debian13-defective-20261003t005429z/
+## initial-record (updater wrote it): 0 hits (0 in .txt)
+## curl preflight refusal: 0 hits (0 in .txt)
+## no-marker after child failure: 0 hits (0 in .txt)
+## pause_pending journal: 0 hits (0 in .txt)
+## renewal restore at pause: 0 hits (0 in .txt)
+## pause recorded: 0 hits (0 in .txt)
+## start check failure: 0 hits (0 in .txt)
+## package-activity refusal (startup reconcile): 6 hits (4 in .txt)
+   steps/14-deferred-mail-watch/journal-panel.txt:204: 2026-10-03T01:06:04.259610+00:00 dns-debian13 panel[4689]: 2026/10/03 01:06:04 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>
+   steps/14-deferred-mail-watch/journal-panel.txt:205: 2026-10-03T01:06:04.261625+00:00 dns-debian13 panel[4689]: 2026/10/03 01:06:04 milter wiring at startup: another server change or package-manager task is still running
+## package_manager_active / HOST_MUTATION_BUSY: 0 hits (0 in .txt)
+## startup reconcile success: 2 hits (2 in .txt)
+   steps/14-deferred-mail-watch/journal-panel.txt:203: 2026-10-03T01:06:04.259118+00:00 dns-debian13 panel[4689]: 2026/10/03 01:06:04 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload
+## milter chain/wiring: 9 hits (6 in .txt)
+   steps/14-deferred-mail-watch/journal-panel.txt:8: 2026-10-03T00:54:57.909034+00:00 dns-debian13 panel[5022]: 2026/10/03 00:54:57 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-deferred-mail-watch/journal-panel.txt:21: 2026-10-03T00:54:59.029783+00:00 dns-debian13 panel[5086]: 2026/10/03 00:54:59 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-deferred-mail-watch/journal-panel.txt:205: 2026-10-03T01:06:04.261625+00:00 dns-debian13 panel[4689]: 2026/10/03 01:06:04 milter wiring at startup: another server change or package-manager task is still running
+## deferred retry note on a startup refusal: 0 hits (0 in .txt)
+## deferred retry attempt line: 0 hits (0 in .txt)
+## deferred retry: busy again (attempt > 1): 0 hits (0 in .txt)
+## deferred retry: verified failure: 0 hits (0 in .txt)
+## deferred retry: give-up: 0 hits (0 in .txt)
+## root CLI states (first seen)
+   2026-10-03T01:04:16Z (None, None, None, None, None)
+   2026-10-03T01:04:27Z (None, 'observation_unavailable', None, None, None)
+   2026-10-03T01:04:33Z ('running', 'update_running', None, None, None)
+   2026-10-03T01:04:59Z ('recovering', 'recovery_running', None, None, None)
+   2026-10-03T01:06:12Z ('recovered', 'rollback_verified', None, None, None)
+## CELIKPANEL_LISTEN mentions

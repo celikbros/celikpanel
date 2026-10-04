@@ -1,0 +1,2 @@
+IDX BOOT ID                          FIRST ENTRY                 LAST ENTRY
+  0 1d18ca8b91a24fcbb807cb544b17bb9e Wed 2026-09-30 05:20:47 UTC Wed 2026-09-30 05:37:50 UTC

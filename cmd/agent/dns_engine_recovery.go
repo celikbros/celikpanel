@@ -12,6 +12,8 @@ import (
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/binddns"
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
+	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -19,19 +21,7 @@ import (
 func switchJournalManifest(
 	journal dnsEngineSwitchJournal,
 ) (mutationpayload.DNSEngineSwitchManifestCommitment, error) {
-	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifestWithPairIdentity(
-		journal.Mode,
-		journal.SourceEngine, journal.TargetEngine,
-		journal.SourceEpoch, journal.TargetEpoch, journal.SourceRevision,
-		journal.Topology, journal.PairRole, journal.LocalIP, journal.LocalNS,
-		journal.PeerIP, journal.PeerNS, journal.Zones,
-	)
-	if err != nil || manifest.Qualifier != journal.ManifestQualifier ||
-		manifest.SnapshotBytes != journal.SnapshotBytes {
-		return mutationpayload.DNSEngineSwitchManifestCommitment{},
-			errors.New("DNS engine switch journal does not reconstruct its manifest")
-	}
-	return manifest, nil
+	return dnsengineartifact.SwitchJournalManifest(journal)
 }
 
 func switchJournalBinding(journal dnsEngineSwitchJournal) transport.ServiceMutationBinding {
@@ -52,83 +42,43 @@ func exactSwitchJournalIdentity(
 		journal.MutationOwnerID == binding.MutationOwnerID
 }
 
-func exactDNSEngineStateForJournal(
-	state dnsEngineStateReceipt,
-	journal dnsEngineSwitchJournal,
-) bool {
-	legacyTarget := isLegacyDNSEngineState(state) &&
-		(journal.Phase == dnsSwitchPhaseTargetVerified ||
-			journal.Phase == dnsSwitchPhaseCommitted) &&
-		(journal.PairRole == transport.DNSPairRolePrimary ||
-			journal.PairRole == transport.DNSPairRoleSecondary)
-	pairRoleMatches := state.PairRole == journal.PairRole ||
-		legacyTarget
-	pairAddressesMatch := state.PairLocalIP == journal.LocalIP &&
-		state.PairPeerIP == journal.PeerIP
-	if legacyTarget || (state.PairRole == "" && state.PrimaryCatalogSerial == 0) {
-		pairAddressesMatch = state.PairLocalIP == "" && state.PairPeerIP == ""
-	}
-	catalogSerialMatches := state.PrimaryCatalogSerial == journal.PrimaryCatalogSerial ||
-		(legacyTarget && state.PrimaryCatalogSerial == 0)
-	// The state receipt describes a tenure, not the operation that produced it.
-	// A reinstall produces the same tenure it repaired — same engine, same
-	// epoch, standalone — so its receipt reads "switch", exactly as the receipt
-	// the host lost did. Writing "reinstall" there would mark the tenure with
-	// the accident that interrupted it and force every later reader to learn a
-	// third mode for a state that is not different in any way.
-	//
-	// Durum makbuzu, onu üreten işlemi değil bir dönemi tarif eder. Yeniden
-	// kurulum, onardığı dönemin aynısını üretir — aynı motor, aynı çağ, tek
-	// sunucu — bu yüzden makbuzu, sunucunun kaybettiği makbuzla birebir aynı
-	// biçimde "switch" der. Oraya "reinstall" yazmak, dönemi onu kesintiye
-	// uğratan kazayla damgalar ve hiçbir bakımdan farklı olmayan bir durum
-	// için sonraki her okuyucuya üçüncü bir kip öğretmeye zorlardı.
-	journalTenureMode := journal.Mode
-	if journal.Mode == transport.DNSEngineSwitchModeReinstall {
-		journalTenureMode = transport.DNSEngineSwitchModeSwitch
-	}
-	if state.Schema != dnsEngineStateSchema || state.Engine != journal.TargetEngine ||
-		state.Mode != journalTenureMode ||
-		state.EngineEpoch != journal.TargetEpoch || state.SourceRevision != journal.SourceRevision ||
-		state.ManifestQualifier != journal.ManifestQualifier ||
-		!pairRoleMatches || !pairAddressesMatch ||
-		!catalogSerialMatches ||
-		state.MutationRequestID != journal.MutationRequestID ||
-		state.MutationOwnerID != journal.MutationOwnerID {
-		return false
-	}
-	if journal.TargetEngine == transport.DNSEngineBIND {
-		return state.Generation == journal.TargetGeneration
-	}
-	return state.Generation == ""
+func exactDNSEngineStateForJournal(state dnsEngineStateReceipt, journal dnsEngineSwitchJournal) bool {
+	return dnsengineartifact.ExactSwitchTargetStateV1(state, journal)
 }
 
-func exactBINDPairingForSwitchJournal(
-	receipt binddns.Receipt,
-	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+// proveDNSSwitchTargetAbsentForRecovery only admits a new inverse while the
+// authoritative state receipt still matches the journal's frozen source. A
+// failed runtime probe, a target receipt, or an unrelated owner's receipt is
+// not evidence that rollback is safe. One narrow exception: a V1 first BIND
+// install (no source to damage) whose unrecorded target receipt is present and
+// whose generation pointer is absent (admitUnrecordedBINDTargetWithoutPointer).
+func proveDNSSwitchTargetAbsentForRecovery(
+	ctx context.Context,
 	journal dnsEngineSwitchJournal,
-) bool {
-	if manifest.Topology != transport.DNSTopologyPaired {
-		return receipt.Pairing == nil && journal.PairRole == "" &&
-			journal.LocalIP == "" && journal.LocalNS == "" &&
-			journal.PeerIP == "" && journal.PeerNS == "" &&
-			journal.PrimaryCatalogSerial == 0
+) (bool, error) {
+	if err := ctx.Err(); err != nil {
+		return false, err
 	}
-	pairing := receipt.Pairing
-	if pairing == nil || pairing.Role != manifest.PairRole ||
-		pairing.LocalIP != manifest.LocalIP || pairing.LocalNS != manifest.LocalNS ||
-		pairing.PeerIP != manifest.PeerIP || pairing.PeerNS != manifest.PeerNS ||
-		journal.PairRole != manifest.PairRole ||
-		journal.LocalIP != manifest.LocalIP || journal.LocalNS != manifest.LocalNS ||
-		journal.PeerIP != manifest.PeerIP || journal.PeerNS != manifest.PeerNS {
-		return false
+	if _, err := switchJournalManifest(journal); err != nil {
+		return false, err
 	}
-	if pairing.Role == binddns.PairRolePrimary {
-		return journal.PrimaryCatalogSerial > 0 &&
-			pairing.CatalogSerial == journal.PrimaryCatalogSerial
+	if err := verifyDNSSwitchSourceOwnership(journal); err != nil {
+		return false, err
 	}
-	return pairing.Role == binddns.PairRoleSecondary &&
-		journal.PrimaryCatalogSerial == 0 && pairing.CatalogSerial == 1
+	current, currentExists, err := readDNSEngineState()
+	if err != nil {
+		return false, err
+	}
+	proved, err := dnsengineartifact.ProveFrozenSwitchSourceState(journal, current, currentExists)
+	if err != nil || proved {
+		return proved, err
+	}
+	// The only admission beyond the frozen source: a first BIND install whose
+	// unrecorded target lost its pointer (dns_engine_bind_unrecorded_target.go).
+	return admitUnrecordedBINDTargetWithoutPointer(
+		journal, current, currentExists,
+		func() (unrecordedBINDTargetOps, error) { return hostUnrecordedBINDTargetOps(ctx) },
+	)
 }
 
 func verifyDNSSwitchJournalTarget(
@@ -175,7 +125,7 @@ func verifyDNSSwitchJournalTarget(
 		receipt := tree.CurrentReceipt()
 		if receipt.Generation != journal.TargetGeneration ||
 			receipt.EngineEpoch != journal.TargetEpoch ||
-			!exactBINDPairingForSwitchJournal(receipt, manifest, journal) {
+			!dnsenginerecovery.ExactBINDPairingForSwitchJournal(receipt, manifest, journal) {
 			return errors.New("BIND recovery target pairing differs from the journal")
 		}
 		legacyPairedTarget := isLegacyDNSEngineState(state) &&
@@ -192,7 +142,9 @@ func verifyDNSSwitchJournalTarget(
 			if planErr != nil {
 				return planErr
 			}
-			expected, err = binddns.RenderTree(layout.GenerationRoot, plan)
+			expected, err = bindExpectedGenerationForTarget(
+				layout.GenerationRoot, plan, journal.TargetGeneration,
+			)
 			if err != nil || expected.ID != journal.TargetGeneration {
 				return errors.New("BIND recovery generation differs from the journal")
 			}
@@ -205,7 +157,9 @@ func verifyDNSSwitchJournalTarget(
 			if planErr != nil {
 				return planErr
 			}
-			expected, err = binddns.RenderTree(layout.GenerationRoot, plan)
+			expected, err = bindExpectedGenerationForTarget(
+				layout.GenerationRoot, plan, receipt.Generation,
+			)
 			if err != nil || expected.ID != receipt.Generation ||
 				expected.ReceiptValue.ConfigSHA256 != receipt.ConfigSHA256 {
 				return errors.New("legacy BIND secondary config differs from the journal")
@@ -245,7 +199,17 @@ func verifyDNSSwitchJournalTarget(
 				ctx, systemctl, manifest, journal, pdnsAdoptionEvidenceTarget,
 			)
 		}
-		if err := verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
+		if journal.Schema == dnsengineartifact.SwitchJournalSchemaV3 {
+			if err := verifyFreshPDNSNativeVersionV3(ctx, profile); err != nil {
+				return err
+			}
+			if err := dnsenginerecovery.VerifyRecordedFreshPrimaryNativeV3(ctx, dnsJournalPolicy(), journal); err != nil {
+				return err
+			}
+			if err := verifyPDNSStateManifestReceipt(ctx, state); err != nil {
+				return err
+			}
+		} else if err := verifyPDNSSwitchDatabaseWithPrimaryCatalogSerial(
 			ctx, pdnsDBPath(), manifest, binding, journal.PrimaryCatalogSerial,
 		); err != nil {
 			return err
@@ -351,6 +315,38 @@ func restoreBINDPointerAfterConfigProof(
 	return restorePointer()
 }
 
+// runBINDSwitchInverseInPointerOrder orders the Agent's BIND switch inverse
+// around the generation pointer. The owner-aware configuration proof always
+// comes first. A prior generation is selected again before the target unit is
+// restored, because the restored unit serves it. A first generation's pointer
+// (no prior generation) is removed only after the unit has been stopped and
+// returned to its preimage and the configuration no longer includes the
+// pointer: removing it first would leave an enabled BIND whose include is
+// missing if recovery stopped in between, and BIND would fail at the next boot.
+func runBINDSwitchInverseInPointerOrder(
+	hadPrevious bool,
+	proveCurrent func() error,
+	restorePointer func() error,
+	restoreActivation func() error,
+) error {
+	if proveCurrent == nil || restorePointer == nil || restoreActivation == nil {
+		return errors.New("BIND switch inverse requires config proof, pointer and activation operations")
+	}
+	if hadPrevious {
+		if err := restoreBINDPointerAfterConfigProof(proveCurrent, restorePointer); err != nil {
+			return err
+		}
+		return restoreActivation()
+	}
+	if err := proveCurrent(); err != nil {
+		return err
+	}
+	if err := restoreActivation(); err != nil {
+		return err
+	}
+	return restorePointer()
+}
+
 func runBINDMutationWithMaskParentProof(
 	verifyMaskParent func() error,
 	mutate func() error,
@@ -403,10 +399,69 @@ func runDNSSwitchRollbackWithMaskParentProof(
 	return rollback()
 }
 
+// The refusals below name the owner-run recovery command, if any, using the
+// journal-shape part of that command's own admission. The Agent then releases
+// its lease, which can change which command the ledger status admits, so the
+// BIND switch, running BIND adoption and PowerDNS adoption texts defer to
+// dns-switch-status for the final answer. None of this text starts or
+// authorizes a recovery.
+//
+// Aşağıdaki retler, varsa sunucu sahibinin çalıştıracağı kurtarma komutunu o
+// komutun kendi kabul koşulunun günlük biçimi kısmıyla adlandırır. Agent
+// ardından kiralamayı bırakır; bu, defter durumunun hangi komutu kabul
+// edeceğini değiştirebilir. Bu yüzden BIND geçişi, çalışan BIND devralma ve
+// PowerDNS devralma metinleri son sözü dns-switch-status'a bırakır. Metin
+// kurtarma başlatmaz.
+
+func freshPrimaryPrestartRefusalV3(journal dnsEngineSwitchJournal, reason string) error {
+	// The owner command admits only the Agent's own pre-start journal shape
+	// (exactly one target unit, no durable native receipt), so a degenerate
+	// V3 journal is never pointed at it.
+	if freshPrimaryPrestartJournalShapeV3(journal) {
+		return fmt.Errorf("%s; run /usr/libexec/celikpanel/recovery dns-switch-status --quiesced --request-id %s: when it names /usr/libexec/celikpanel/recovery recover-dns-pdns-fresh-prestart --request-id %s, the server owner can restore the pre-start state with that command, which proves PowerDNS never started and refuses a started or changed target; preserve the journal and target until that exact request is reconciled", reason, journal.MutationRequestID, journal.MutationRequestID)
+	}
+	return fmt.Errorf("%s; no owner recovery command applies at phase %s; preserve the journal and target, and contact support with request id %s", reason, journal.Phase, journal.MutationRequestID)
+}
+
+func bindSwitchOwnerRecoveryRefusal(journal dnsEngineSwitchJournal) error {
+	const reason = "v2 BIND switch journal requires its independent inverse adapter"
+	id := journal.MutationRequestID
+	if dnsenginerecovery.InactiveBINDSwitchInverseJournal(journal) == nil {
+		return fmt.Errorf("%s; the owner recovery command for this PowerDNS-to-BIND rollback is /usr/libexec/celikpanel/recovery recover-dns-bind-switch --request-id %s, which the server owner runs when recovery dns-switch-status --quiesced --request-id %s names it; preserve the journal, ledger and native DNS until that exact request is reconciled", reason, id, id)
+	}
+	return fmt.Errorf("%s; no owner recovery command applies to this journal's recorded shape at phase %s; preserve the journal, ledger and native DNS, and contact support with request id %s", reason, journal.Phase, id)
+}
+
+func withPDNSAdoptionOwnerRecovery(kind dnsenginerecovery.NativeInverseKind, journal dnsEngineSwitchJournal, err error) error {
+	if err == nil || kind != dnsenginerecovery.NativeInversePDNSAdoption {
+		return err
+	}
+	id := journal.MutationRequestID
+	if dnsenginerecovery.PDNSAdoptionInverseJournal(journal) == nil {
+		return fmt.Errorf("%w; the owner recovery command for this PowerDNS adoption rollback is /usr/libexec/celikpanel/recovery recover-dns-pdns-adoption --request-id %s, which the server owner runs when recovery dns-switch-status --quiesced --request-id %s names it; preserve the journal, ledger and native DNS until that exact request is reconciled", err, id, id)
+	}
+	return fmt.Errorf("%w; no owner recovery command applies to this PowerDNS adoption journal at phase %s; preserve the journal, ledger and native DNS, and contact support with request id %s", err, journal.Phase, id)
+}
+
 func rollbackDNSSwitchJournal(
 	ctx context.Context,
 	journal dnsEngineSwitchJournal,
 ) error {
+	if journal.Schema == dnsengineartifact.SwitchJournalSchemaV3 {
+		return freshPrimaryPrestartRefusalV3(journal, "v3 fresh PowerDNS primary requires independent native recovery")
+	}
+	if journal.Schema == dnsengineartifact.SwitchJournalSchemaV4 {
+		return errors.New("v4 PowerDNS target journal requires its independent inverse adapter; preserve the journal and native DNS for exact owner recovery")
+	}
+	if journal.Schema == dnsengineartifact.SwitchJournalSchemaV2 {
+		if journal.InversePlan != nil && journal.InversePlan.SourceBIND != nil {
+			if journal.Phase == dnsengineartifact.SwitchPhaseRollingBack || journal.Phase == dnsengineartifact.SwitchPhaseRolledBack {
+				return fmt.Errorf("running BIND adoption needs independent no-stop recovery; the owner recovery command for this rollback is /usr/libexec/celikpanel/recovery recover-dns-bind-adoption --request-id %s, which the server owner runs when recovery dns-switch-status --quiesced --request-id %s names it; preserve the journal, ledger and native DNS until that exact request is reconciled", journal.MutationRequestID, journal.MutationRequestID)
+			}
+			return fmt.Errorf("running BIND adoption has no durable rollback decision at phase %s; preserve the journal, ledger and native DNS, then inspect the exact DNS switch status for request %s before choosing recovery", journal.Phase, journal.MutationRequestID)
+		}
+		return bindSwitchOwnerRecoveryRefusal(journal)
+	}
 	manifest, err := switchJournalManifest(journal)
 	if err != nil {
 		return err
@@ -439,24 +494,22 @@ func rollbackDNSSwitchJournal(
 	// PowerDNS dalı her zaman böyle dallandı; bu, BIND için aynı dallanmadır -
 	// iki biçimi ayıran olgu, ayrı bir tel kipi değil, günlüğün dondurduğu
 	// hedef birim ön-görüntüsüdür.
-	if journal.TargetEngine == transport.DNSEngineBIND {
-		adoption, err := runningBINDAdoptionJournal(manifest, journal)
+	inverseKind, err := dnsenginerecovery.PlanNativeInverse(journal)
+	if err != nil {
+		return err
+	}
+	if inverseKind == dnsenginerecovery.NativeInverseBINDRunningAdoption {
+		layout, err := bindLayout(profile)
 		if err != nil {
 			return err
 		}
-		if adoption {
-			layout, err := bindLayout(profile)
-			if err != nil {
-				return err
-			}
-			return recoverRunningBINDAdoptionJournal(
-				ctx, profile, layout, systemctl, journal,
-			)
-		}
+		return recoverRunningBINDAdoptionJournal(
+			ctx, profile, layout, systemctl, journal,
+		)
 	}
 	rollback := func() error {
-		switch journal.TargetEngine {
-		case transport.DNSEngineBIND:
+		switch inverseKind {
+		case dnsenginerecovery.NativeInverseBINDSwitch:
 			layout, err := bindLayout(profile)
 			if err != nil {
 				return err
@@ -476,7 +529,8 @@ func rollbackDNSSwitchJournal(
 			if err != nil {
 				return err
 			}
-			if err := restoreBINDPointerAfterConfigProof(
+			return runBINDSwitchInverseInPointerOrder(
+				journal.HadPrevious,
 				func() error {
 					_, _, proofErr := configs.captureOwnerAwareCurrent(ctx, false)
 					return proofErr
@@ -492,18 +546,18 @@ func rollbackDNSSwitchJournal(
 						},
 					)
 				},
-			); err != nil {
-				return err
-			}
-			return rollbackBINDActivation(
-				ctx, systemctl, configs, journal.StateBefore,
-				dnsUnitSnapshotsMap(journal.TargetUnitsBefore),
-				dnsUnitSnapshotsMap(journal.SourceUnitsBefore),
+				func() error {
+					return rollbackBINDActivation(
+						ctx, systemctl, configs, journal.StateBefore,
+						dnsUnitSnapshotsMap(journal.TargetUnitsBefore),
+						dnsUnitSnapshotsMap(journal.SourceUnitsBefore),
+						dnsSwitchJournalTargetDidNotServeBefore(journal),
+					)
+				},
 			)
-		case transport.DNSEnginePowerDNS:
-			if journal.Mode == transport.DNSEngineSwitchModeAdopt {
-				return rollbackPDNSAdoption(ctx, systemctl, manifest, journal)
-			}
+		case dnsenginerecovery.NativeInversePDNSAdoption:
+			return rollbackPDNSAdoption(ctx, systemctl, manifest, journal)
+		case dnsenginerecovery.NativeInversePDNSSwitch:
 			configs, err := pdnsConfigMutationFromJournal(ctx, manifest, journal)
 			if err != nil {
 				return err
@@ -516,11 +570,19 @@ func rollbackDNSSwitchJournal(
 	if err := runDNSSwitchRollbackWithMaskParentProof(
 		journal, verifyBINDMaskParentMetadata, rollback,
 	); err != nil {
-		return err
+		return withPDNSAdoptionOwnerRecovery(inverseKind, journal, err)
 	}
-	return verifyRestoredDNSSwitchSource(
+	if err := verifyRestoredDNSSwitchSource(
 		ctx, profile, systemctl, manifest, journal,
-	)
+	); err != nil {
+		return withPDNSAdoptionOwnerRecovery(inverseKind, journal, err)
+	}
+	// The restored source is proven; a key this BIND transaction created and
+	// nobody changed goes with it (dns_engine_bind_rndc_key.go).
+	if inverseKind == dnsenginerecovery.NativeInverseBINDSwitch {
+		retireBINDRNDCKeyAfterRollback(ctx, journal)
+	}
+	return nil
 }
 
 func verifyNoManagedDNSAuthority(
@@ -798,6 +860,92 @@ func canonicalNoPublicDNSAuthorityListeners(
 	return result, nil
 }
 
+// dnsSwitchJournalHasEmptySource reports a first install: the journal froze no
+// source engine and no source epoch, so its target cannot have served before
+// this operation.
+func dnsSwitchJournalHasEmptySource(journal dnsEngineSwitchJournal) bool {
+	return journal.SourceEngine == "" && journal.SourceEpoch == 0
+}
+
+// dnsSwitchJournalReinstallsAbsentEngine reports a reinstall journal: the
+// recorded engine is its own target at the same epoch, and the reinstall's
+// entry proof (verifyDNSEngineReinstallSource) admitted it only while that
+// engine was not running and no public port-53 authority existed. Its source
+// is a recorded authority, not a serving process.
+func dnsSwitchJournalReinstallsAbsentEngine(journal dnsEngineSwitchJournal) bool {
+	return journal.Mode == transport.DNSEngineSwitchModeReinstall &&
+		journal.SourceEngine != "" &&
+		journal.SourceEngine == journal.TargetEngine &&
+		journal.SourceEpoch == journal.TargetEpoch &&
+		journal.SourceEpoch >= 1
+}
+
+// dnsSwitchJournalTargetDidNotServeBefore selects the stopped-target proof
+// class that accepts every never-started target state (absent, the package
+// guard's persistent mask, or loaded; each inactive with no public listener).
+// A first install and a reinstall both qualify: neither froze a serving
+// target. Everything else keeps the loaded-unit proof.
+func dnsSwitchJournalTargetDidNotServeBefore(journal dnsEngineSwitchJournal) bool {
+	return dnsSwitchJournalHasEmptySource(journal) ||
+		dnsSwitchJournalReinstallsAbsentEngine(journal)
+}
+
+type restoredReinstallSourceProofOps struct {
+	readState         func() (dnsEngineStateReceipt, bool, error)
+	verifyNoAuthority func() error
+}
+
+// verifyRestoredReinstallSourceWithOps is the terminal proof of an interrupted
+// reinstall's rollback. The restored state is exactly the pre-operation state:
+// the recorded authority still names the engine at its epoch - the receipt
+// equals the journal's frozen StateBefore byte for byte in content - and the
+// engine is not serving (every managed DNS unit inactive, no public port-53
+// listener, observed twice). That is what the owner retries from. It never
+// requires the engine to be active: the reinstall exists because it was not.
+//
+// Yarıda kalan bir yeniden kurulumun geri alınmasının son kanıtı: geri
+// yüklenen durum, işlem öncesi durumun tam kendisidir; kayıtlı yetki motoru
+// aynı çağda adlandırmaya devam eder ve motor hizmet vermez. Motorun etkin
+// olmasını asla istemez; yeniden kurulum tam da etkin olmadığı için vardır.
+func verifyRestoredReinstallSourceWithOps(
+	journal dnsEngineSwitchJournal,
+	ops restoredReinstallSourceProofOps,
+) error {
+	if !dnsSwitchJournalReinstallsAbsentEngine(journal) {
+		return errors.New("restored reinstall proof requires an exact reinstall journal")
+	}
+	if ops.readState == nil || ops.verifyNoAuthority == nil {
+		return errors.New("restored reinstall proof is incomplete")
+	}
+	state, exists, err := ops.readState()
+	if err != nil {
+		return fmt.Errorf("read restored reinstall engine state: %w", err)
+	}
+	same, err := dnsengineartifact.ProveFrozenSwitchSourceState(journal, state, exists)
+	if err != nil {
+		return err
+	}
+	if !same {
+		return errors.New(
+			"restored reinstall engine state differs from the recorded pre-operation authority",
+		)
+	}
+	return ops.verifyNoAuthority()
+}
+
+func verifyRestoredReinstallSource(
+	ctx context.Context,
+	systemctl string,
+	journal dnsEngineSwitchJournal,
+) error {
+	return verifyRestoredReinstallSourceWithOps(journal, restoredReinstallSourceProofOps{
+		readState: readDNSEngineState,
+		verifyNoAuthority: func() error {
+			return verifyNoManagedDNSAuthority(ctx, systemctl, journal)
+		},
+	})
+}
+
 func targetSnapshotWasActive(journal dnsEngineSwitchJournal, unit string) bool {
 	for _, snapshot := range journal.TargetUnitsBefore {
 		if snapshot.Name == unit {
@@ -810,102 +958,61 @@ func targetSnapshotWasActive(journal dnsEngineSwitchJournal, unit string) bool {
 type dnsSwitchRecoveryRollbackOps struct {
 	write    func(dnsEngineSwitchJournal) error
 	rollback func(dnsEngineSwitchJournal) error
-	remove   func() error
 }
 
-func runDNSSwitchRecoveryRollbackWithJournal(
-	journal *dnsEngineSwitchJournal,
-	ops dnsSwitchRecoveryRollbackOps,
-) error {
-	if journal == nil || ops.write == nil || ops.rollback == nil ||
-		ops.remove == nil {
+func runDNSSwitchRecoveryRollbackWithJournal(journal *dnsEngineSwitchJournal, ops dnsSwitchRecoveryRollbackOps) error {
+	if journal == nil || ops.write == nil || ops.rollback == nil {
 		return errors.New("invalid DNS switch recovery rollback operations")
 	}
-	journal.Phase = dnsSwitchPhaseRollingBack
-	if err := ops.write(*journal); err != nil {
-		return err
-	}
-	if err := ops.rollback(*journal); err != nil {
-		return err
-	}
-	journal.Phase = dnsSwitchPhaseRolledBack
-	if err := ops.write(*journal); err != nil {
-		return err
-	}
-	return ops.remove()
+	return dnsenginerecovery.Rollback(context.Background(), journal, dnsenginerecovery.Operations{
+		Write:   func(_ context.Context, _, j dnsengineartifact.SwitchJournalV1) error { return ops.write(j) },
+		Inverse: func(_ context.Context, j dnsengineartifact.SwitchJournalV1) error { return ops.rollback(j) },
+	})
 }
 
 func (hostDNSEngineBackend) RecoverSwitch(
-	ctx context.Context,
-	target transport.DNSEngine,
-	qualifier string,
+	ctx context.Context, target transport.DNSEngine, qualifier string,
 	binding transport.ServiceMutationBinding,
 ) (dnsEngineSwitchRecoveryOutcome, error) {
-	journal, exists, err := readDNSEngineSwitchJournal()
-	if err != nil {
-		return dnsEngineSwitchRecoveryAbsent, err
+	ctx = withDNSPeerCatalogSession(ctx, "DNS engine change recovery "+binding.MutationRequestID)
+	id := dnsengineartifact.SwitchIdentity{RequestID: binding.MutationRequestID, OwnerID: binding.MutationOwnerID, Target: target, Qualifier: qualifier}
+	if journal, exists, readErr := readDNSEngineSwitchJournal(); readErr != nil {
+		return dnsenginerecovery.OutcomeAbsent, readErr
+	} else if exists && journal.Schema == dnsengineartifact.SwitchJournalSchemaV3 {
+		// Pre-start journals roll back under the first-install proofs;
+		// started targets go forward only (recoverFreshPrimaryV3).
+		return recoverFreshPrimaryV3(ctx, id, journal)
 	}
-	if !exists {
-		finalized, finalizedErr := exactFinalizedDNSEngineSwitchProvenanceOnHost(
-			target, qualifier, binding,
-		)
-		if finalizedErr != nil {
-			return dnsEngineSwitchRecoveryAbsent, finalizedErr
-		}
-		if finalized {
-			return dnsEngineSwitchRecoveryFinalized, nil
-		}
-		return dnsEngineSwitchRecoveryAbsent, nil
-	}
-	if !exactSwitchJournalIdentity(journal, target, qualifier, binding) {
-		return dnsEngineSwitchRecoveryAbsent, errors.New("DNS engine switch journal belongs to another mutation")
-	}
-	if err := verifyDNSSwitchJournalTarget(ctx, journal); err == nil {
-		journal.Phase = dnsSwitchPhaseCommitted
-		if err := writeDNSEngineSwitchJournal(journal); err != nil {
-			return dnsEngineSwitchRecoveryAbsent, err
-		}
-		return dnsEngineSwitchRecoveryCommitted, nil
-	} else if journal.Phase == dnsSwitchPhaseTargetVerified || journal.Phase == dnsSwitchPhaseCommitted {
-		return dnsEngineSwitchRecoveryAbsent,
-			fmt.Errorf("verified DNS engine target no longer matches its journal: %w", err)
-	}
-	if err := runDNSSwitchRecoveryRollbackWithJournal(
-		&journal,
-		dnsSwitchRecoveryRollbackOps{
-			write: writeDNSEngineSwitchJournal,
-			rollback: func(current dnsEngineSwitchJournal) error {
-				return rollbackDNSSwitchJournal(ctx, current)
-			},
-			remove: removeDNSEngineSwitchJournal,
+	outcome, err := dnsenginerecovery.Reconcile(ctx, dnsJournalPolicy(), id, dnsenginerecovery.Operations{
+		Read: func(context.Context) (dnsengineartifact.SwitchJournalV1, bool, error) {
+			return readDNSEngineSwitchJournal()
 		},
-	); err != nil {
-		return dnsEngineSwitchRecoveryAbsent, err
-	}
-	return dnsEngineSwitchRecoveryRolledBack, nil
+		ProveFinalized: func(context.Context, dnsengineartifact.SwitchIdentity) (bool, error) {
+			if proven, v3, err := exactArchivedFreshPrimaryProvenanceV3(ctx, target, qualifier, binding); v3 || err != nil {
+				return proven, err
+			}
+			return exactFinalizedDNSEngineSwitchProvenanceOnHost(target, qualifier, binding)
+		},
+		VerifyTarget:      verifyDNSSwitchJournalTarget,
+		ProveTargetAbsent: proveDNSSwitchTargetAbsentForRecovery,
+		Write: func(_ context.Context, _, j dnsengineartifact.SwitchJournalV1) error {
+			return writeDNSEngineSwitchJournal(j)
+		},
+		Inverse:              rollbackDNSSwitchJournal,
+		RepairVerifiedTarget: repairMissingBINDTargetPointer,
+	})
+	return dnsEngineSwitchRecoveryOutcome(outcome), err
 }
 
-func reconcileExistingDNSEngineSwitchJournal(ctx context.Context) error {
+func reconcileExistingDNSEngineSwitchJournal(_ context.Context) error {
 	journal, exists, err := readDNSEngineSwitchJournal()
 	if err != nil || !exists {
 		return err
 	}
-	binding := switchJournalBinding(journal)
-	outcome, err := (hostDNSEngineBackend{}).RecoverSwitch(
-		ctx, journal.TargetEngine, journal.ManifestQualifier, binding,
-	)
-	if err != nil {
-		return err
-	}
-	if outcome == dnsEngineSwitchRecoveryCommitted {
-		return (hostDNSEngineBackend{}).FinalizeSwitch(
-			ctx, journal.TargetEngine, journal.ManifestQualifier, binding,
-		)
-	}
-	if outcome != dnsEngineSwitchRecoveryRolledBack {
-		return errors.New("DNS engine switch journal recovery made no progress")
-	}
-	return nil
+	// A new DNS mutation has no authority over the retained old operation.
+	// Startup recovery must bind the journal to that operation's ledger and
+	// reprove native state under its own host lock.
+	return fmt.Errorf("DNS engine switch request %s retains a %s journal; recover that exact operation before another DNS mutation", journal.MutationRequestID, journal.Phase)
 }
 
 var (
@@ -914,6 +1021,17 @@ var (
 )
 
 func finalizeCommittedDNSEngineSwitchArtifacts(journal dnsEngineSwitchJournal) error {
+	if journal.Schema == dnsengineartifact.SwitchJournalSchemaV3 {
+		if journal.Phase != dnsSwitchPhaseCommitted || journal.PDNSFreshPlan == nil || journal.PDNSFreshPlan.Native == nil {
+			return errors.New("v3 retirement requires a committed native receipt")
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), dnsRuntimeInspectionTimeout)
+		defer cancel()
+		if err := dnsenginerecovery.VerifyRecordedFreshPrimaryNativeV3(ctx, dnsJournalPolicy(), journal); err != nil {
+			return err
+		}
+		return verifyFreshPrimaryArtifactsAbsentV3(journal)
+	}
 	if journal.TargetEngine != transport.DNSEnginePowerDNS ||
 		journal.Mode != transport.DNSEngineSwitchModeSwitch {
 		return nil
@@ -932,14 +1050,16 @@ func (hostDNSEngineBackend) FinalizeSwitch(
 	qualifier string,
 	binding transport.ServiceMutationBinding,
 ) error {
+	ctx = withDNSPeerCatalogSession(ctx, "DNS engine change completion "+binding.MutationRequestID)
 	journal, exists, err := readDNSEngineSwitchJournal()
 	if err != nil {
 		return err
 	}
 	if !exists {
-		finalized, finalizedErr := exactFinalizedDNSEngineSwitchProvenanceOnHost(
-			target, qualifier, binding,
-		)
+		finalized, v3, finalizedErr := exactArchivedFreshPrimaryProvenanceV3(ctx, target, qualifier, binding)
+		if !v3 && finalizedErr == nil {
+			finalized, finalizedErr = exactFinalizedDNSEngineSwitchProvenanceOnHost(target, qualifier, binding)
+		}
 		if finalizedErr != nil {
 			return fmt.Errorf(
 				"prove journal-free finalized DNS engine switch: %w",
@@ -992,7 +1112,15 @@ func (hostDNSEngineBackend) FinalizeSwitch(
 	} else if installExists || !ownershipExists {
 		return errors.New("committed DNS engine ownership handoff is incomplete")
 	}
-	if err := removeDNSEngineSwitchJournal(); err != nil {
+	if journal.Schema == dnsengineartifact.SwitchJournalSchemaV3 {
+		state, stateExists, err := readDNSEngineState()
+		if err != nil || !stateExists {
+			return errors.Join(errors.New("v3 committed state is absent before archive"), err)
+		}
+		if err := archiveCommittedFreshPrimaryV3(ctx, journal, state); err != nil {
+			return err
+		}
+	} else if err := removeDNSEngineSwitchJournal(); err != nil {
 		return err
 	}
 	_, journalExists, err := readDNSEngineSwitchJournal()
@@ -1002,9 +1130,10 @@ func (hostDNSEngineBackend) FinalizeSwitch(
 	if journalExists {
 		return errors.New("DNS engine switch journal remains after finalization")
 	}
-	finalized, err := exactFinalizedDNSEngineSwitchProvenanceOnHost(
-		target, qualifier, binding,
-	)
+	finalized, v3, err := exactArchivedFreshPrimaryProvenanceV3(ctx, target, qualifier, binding)
+	if !v3 && err == nil {
+		finalized, err = exactFinalizedDNSEngineSwitchProvenanceOnHost(target, qualifier, binding)
+	}
 	if err != nil {
 		return fmt.Errorf("reprove finalized DNS engine host provenance: %w", err)
 	}

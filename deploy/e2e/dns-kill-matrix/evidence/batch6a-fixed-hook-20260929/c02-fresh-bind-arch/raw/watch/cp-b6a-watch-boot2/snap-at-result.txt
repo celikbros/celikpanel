@@ -1,0 +1,136 @@
+tag=at-result wall=2026-09-29T14:48:32.854096321Z mono=77.80 131.37 boot_id=b819bfc8-9e3c-4b2d-9252-69404972fbdf
+== pdns.service
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+InvocationID=
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainStartTimestampMonotonic=0
+ExecMainPID=0
+ExecMainCode=0
+ExecMainStatus=0
+== named.service
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 14:47:26 UTC
+InactiveEnterTimestamp=
+InvocationID=56940160c0ae409d88299c88f06f66ae
+MainPID=369
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 14:47:26 UTC
+ExecMainStartTimestampMonotonic=11000800
+ExecMainPID=369
+ExecMainCode=0
+ExecMainStatus=0
+== bind9.service
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+InvocationID=
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainStartTimestampMonotonic=0
+ExecMainPID=0
+ExecMainCode=0
+ExecMainStatus=0
+== celikpanel-agent.service
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 14:47:26 UTC
+InactiveEnterTimestamp=
+InvocationID=12e5e548548547a9ad2bf414d454acc2
+MainPID=367
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 14:47:26 UTC
+ExecMainStartTimestampMonotonic=10980304
+ExecMainPID=367
+ExecMainCode=0
+ExecMainStatus=0
+== celikpanel-panel.service
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 14:47:26 UTC
+InactiveEnterTimestamp=
+InvocationID=bd686d8aa8184b2baf4d4b68c353d59e
+MainPID=368
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 14:47:26 UTC
+ExecMainStartTimestampMonotonic=10993619
+ExecMainPID=368
+ExecMainCode=0
+ExecMainStatus=0
+== processes
+367 /opt/celikpanel/bin/agent
+369 /usr/bin/named -f -u named
+== journal file
+total 12
+drwx------ 1 root celikpanel 146 2026-09-29 14:46:37.982051530 +0000 .
+drwxr-xr-x 1 root root       438 2026-09-29 14:44:30.907615008 +0000 ..
+-rw------- 1 root celikpanel 641 2026-09-29 14:46:37.956969063 +0000 dns-engine-ownership-bind.json
+-rw------- 1 root celikpanel 637 2026-09-29 14:46:36.839229793 +0000 dns-engine-state.json
+-rw------- 1 root celikpanel 741 2026-09-29 14:46:37.977035037 +0000 service-mutations.json
+== ss 53
+udp UNCONN 0      0                         192.0.2.11:53 0.0.0.0:* users:(("named",pid=369,fd=28))
+udp UNCONN 0      0                         192.0.2.11:53 0.0.0.0:* users:(("named",pid=369,fd=27))
+udp UNCONN 0      0                          10.0.2.15:53 0.0.0.0:* users:(("named",pid=369,fd=24))
+udp UNCONN 0      0                          10.0.2.15:53 0.0.0.0:* users:(("named",pid=369,fd=23))
+udp UNCONN 0      0                          127.0.0.1:53 0.0.0.0:* users:(("named",pid=369,fd=18))
+udp UNCONN 0      0                          127.0.0.1:53 0.0.0.0:* users:(("named",pid=369,fd=17))
+udp UNCONN 0      0                         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=259,fd=24))
+udp UNCONN 0      0                      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=259,fd=22))
+udp UNCONN 0      0                              [::1]:53    [::]:* users:(("named",pid=369,fd=31))
+udp UNCONN 0      0                              [::1]:53    [::]:* users:(("named",pid=369,fd=32))
+udp UNCONN 0      0      [fe80::5054:ff:fe13:11]%mgmt0:53    [::]:* users:(("named",pid=369,fd=35))
+udp UNCONN 0      0      [fe80::5054:ff:fe13:11]%mgmt0:53    [::]:* users:(("named",pid=369,fd=36))
+udp UNCONN 0      0      [fe80::5054:ff:fe53:11]%peer0:53    [::]:* users:(("named",pid=369,fd=39))
+udp UNCONN 0      0      [fe80::5054:ff:fe53:11]%peer0:53    [::]:* users:(("named",pid=369,fd=40))
+udp UNCONN 0      0            [fec0::5054:ff:fe13:11]:53    [::]:* users:(("named",pid=369,fd=46))
+udp UNCONN 0      0            [fec0::5054:ff:fe13:11]:53    [::]:* users:(("named",pid=369,fd=49))
+tcp LISTEN 0      4096                      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=259,fd=25))
+tcp LISTEN 0      10                         10.0.2.15:53 0.0.0.0:* users:(("named",pid=369,fd=26))
+tcp LISTEN 0      10                         10.0.2.15:53 0.0.0.0:* users:(("named",pid=369,fd=25))
+tcp LISTEN 0      4096                   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=259,fd=23))
+tcp LISTEN 0      10                         127.0.0.1:53 0.0.0.0:* users:(("named",pid=369,fd=21))
+tcp LISTEN 0      10                         127.0.0.1:53 0.0.0.0:* users:(("named",pid=369,fd=19))
+tcp LISTEN 0      10                        192.0.2.11:53 0.0.0.0:* users:(("named",pid=369,fd=30))
+tcp LISTEN 0      10                        192.0.2.11:53 0.0.0.0:* users:(("named",pid=369,fd=29))
+tcp LISTEN 0      10                             [::1]:53    [::]:* users:(("named",pid=369,fd=33))
+tcp LISTEN 0      10                             [::1]:53    [::]:* users:(("named",pid=369,fd=34))
+tcp LISTEN 0      10     [fe80::5054:ff:fe53:11]%peer0:53    [::]:* users:(("named",pid=369,fd=41))
+tcp LISTEN 0      10     [fe80::5054:ff:fe53:11]%peer0:53    [::]:* users:(("named",pid=369,fd=42))
+tcp LISTEN 0      10     [fe80::5054:ff:fe13:11]%mgmt0:53    [::]:* users:(("named",pid=369,fd=37))
+tcp LISTEN 0      10     [fe80::5054:ff:fe13:11]%mgmt0:53    [::]:* users:(("named",pid=369,fd=38))
+tcp LISTEN 0      10           [fec0::5054:ff:fe13:11]:53    [::]:* users:(("named",pid=369,fd=50))
+tcp LISTEN 0      10           [fec0::5054:ff:fe13:11]:53    [::]:* users:(("named",pid=369,fd=51))
+== managed BIND roots (lstat, no follow)
+/var/named/celikpanel mtime=2026-09-29 14:46:33.113691515 +0000 ino=78974
+/var/named/celikpanel/current mtime=2026-09-29 14:46:33.109670417 +0000 ino=79008 -> /var/named/celikpanel/current -> generations/80caf1bc94ab1e58f034c4d03f32b80f588d9c264e4706acf32e5ed5316e4baa
+ls: cannot access '/var/cache/bind/celikpanel': No such file or directory
+ls: cannot access '/var/cache/bind/celikpanel/generations': No such file or directory
+/var/named/celikpanel:
+total 4
+drwxr-xr-x 1 root root   36 2026-09-29 14:46:33.113691515 +0000 .
+drwxrwx--T 1 root named 184 2026-09-29 14:47:54.479000000 +0000 ..
+lrwxrwxrwx 1 root root   76 2026-09-29 14:46:33.109670417 +0000 current -> generations/80caf1bc94ab1e58f034c4d03f32b80f588d9c264e4706acf32e5ed5316e4baa
+drwxr-xr-x 1 root root  128 2026-09-29 14:46:32.965892871 +0000 generations
+
+/var/named/celikpanel/generations:
+total 0
+drwxr-xr-x 1 root root 128 2026-09-29 14:46:32.965892871 +0000 .
+drwxr-xr-x 1 root root  36 2026-09-29 14:46:33.113691515 +0000 ..
+dr-xr-xr-x 1 root root  54 2026-09-29 14:46:32.950803524 +0000 80caf1bc94ab1e58f034c4d03f32b80f588d9c264e4706acf32e5ed5316e4baa

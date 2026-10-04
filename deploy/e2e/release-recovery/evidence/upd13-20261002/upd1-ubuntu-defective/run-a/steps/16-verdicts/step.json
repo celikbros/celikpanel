@@ -1,0 +1,138 @@
+{
+  "checks": {
+    "agreement": {
+      "agreed_samples": 8,
+      "lag_samples": 0,
+      "samples": 24,
+      "verdict": "passed"
+    },
+    "attempts": {
+      "automatic": [
+        {
+          "at": "2026-10-02T23:30:46.567293Z",
+          "attempt": "1",
+          "direction": "rollback",
+          "operation": "update",
+          "phase": "active"
+        },
+        {
+          "at": "2026-10-02T23:31:47.445590Z",
+          "attempt": "2",
+          "direction": "rollback",
+          "operation": "rollback",
+          "phase": "active"
+        }
+      ],
+      "automatic_count": 2,
+      "journal_admissions": [
+        {
+          "at": "2026-10-02T23:30:46.623908+00:00",
+          "attempt": "1",
+          "snapshot": "20261002T233023Z-from-unknown-to-6acb22f6d5ce471d57131ed5ecff24c85b9d8844-2c7ca2484463e9727854ad0e479b772d"
+        },
+        {
+          "at": "2026-10-02T23:31:47.498440+00:00",
+          "attempt": "2",
+          "snapshot": "20261002T233023Z-from-unknown-to-6acb22f6d5ce471d57131ed5ecff24c85b9d8844-2c7ca2484463e9727854ad0e479b772d"
+        }
+      ],
+      "owner": [],
+      "owner_count": 0
+    },
+    "clock_skew_seconds": 0.28,
+    "host_panel_windows": [
+      {
+        "failed": true,
+        "first_bad": 1790983831.328318,
+        "from": 1790983826.3281324,
+        "kind": "failed+unobserved",
+        "last_bad": 1790983915.1799338,
+        "lower_bound_s": 83.852,
+        "to": 1790983920.1800673,
+        "unobserved": true,
+        "upper_bound_s": 93.852
+      }
+    ],
+    "host_ssh_windows": [
+      {
+        "failed": true,
+        "first_bad": 1790983861.3292384,
+        "from": 1790983856.3290691,
+        "kind": "failed+unobserved",
+        "last_bad": 1790983861.3292384,
+        "lower_bound_s": 0.0,
+        "to": 1790983875.1788087,
+        "unobserved": true,
+        "upper_bound_s": 18.85
+      }
+    ],
+    "outcome": "recovered-automatically",
+    "workloads": {
+      "cron": {
+        "verdict": "never-interrupted",
+        "windows": []
+      },
+      "dns": {
+        "mode": "external",
+        "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+        "verdict": "not-provided-external-dns"
+      },
+      "panel": {
+        "outside": [],
+        "verdict": "down-only-during-transaction",
+        "windows": [
+          {
+            "cause": "host-reset",
+            "failed": true,
+            "first_bad": 1790983826.3945162,
+            "from": 1790983821.3930995,
+            "kind": "failed+unobserved",
+            "last_bad": 1790983913.254517,
+            "lower_bound_s": 86.86,
+            "to": 1790983918.2545865,
+            "unobserved": true,
+            "upper_bound_s": 96.861
+          }
+        ]
+      },
+      "smtp": {
+        "verdict": "interrupted-only-by-host-reset",
+        "windows": [
+          {
+            "cause": "host-reset",
+            "failed": false,
+            "first_bad": null,
+            "from": 1790983856.395546,
+            "kind": "unobserved",
+            "last_bad": null,
+            "lower_bound_s": 0.0,
+            "to": 1790983873.2530656,
+            "unobserved": true,
+            "upper_bound_s": 16.858
+          }
+        ]
+      },
+      "web": {
+        "verdict": "interrupted-only-by-host-reset",
+        "windows": [
+          {
+            "cause": "host-reset",
+            "failed": true,
+            "first_bad": 1790983873.2530656,
+            "from": 1790983856.395546,
+            "kind": "failed+unobserved",
+            "last_bad": 1790983873.2530656,
+            "lower_bound_s": 0.0,
+            "to": 1790983878.2532024,
+            "unobserved": true,
+            "upper_bound_s": 21.858
+          }
+        ]
+      }
+    }
+  },
+  "finished_at": "2026-10-02T23:33:31Z",
+  "name": "verdicts",
+  "started_at": "2026-10-02T23:33:31Z",
+  "verdict": "passed"
+}

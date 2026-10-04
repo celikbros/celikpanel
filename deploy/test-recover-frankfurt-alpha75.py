@@ -20,8 +20,28 @@ spec = importlib.util.spec_from_file_location('recovery', REPO / 'deploy/recover
 recovery = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(recovery)
 
+HISTORICAL_RELEASE_COMMIT = '9c55f235d569a91264304a74cf09b26c83123e68'
+
+
+def historical_guard_bytes():
+    # This incident pins published bytes, not the evolving worktree helper.
+    # Bu olay, değişen çalışma dosyasını değil yayımlanmış baytları sabitler.
+    try:
+        content = subprocess.check_output(
+            ['git', 'show', HISTORICAL_RELEASE_COMMIT + ':deploy/release-transaction-guard.sh'],
+            cwd=REPO, stderr=subprocess.PIPE, timeout=30)
+    except (OSError, subprocess.SubprocessError) as error:
+        raise RuntimeError('Historical guard object unavailable; fetch full repository history') from error
+    if hashlib.sha256(content).hexdigest() != recovery.GUARD_SHA:
+        raise RuntimeError('Historical guard object does not match the incident pin')
+    return content
+
 
 class RecoveryTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.historical_guard = historical_guard_bytes()
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix='celikpanel-incident-test.', dir='/var/lib')
         self.addCleanup(self.temp.cleanup)
@@ -74,12 +94,11 @@ class RecoveryTests(unittest.TestCase):
         recovery.DB.chmod(0o600)
         shutil.copyfile(recovery.DB, recovery.CHILD / 'celikpanel.db')
         (recovery.CHILD / 'celikpanel.db').chmod(0o600)
-        root = recovery.RELEASES / ('9c55f235d569-' + '0' * 24)
+        root = recovery.RELEASES / (HISTORICAL_RELEASE_COMMIT[:12] + '-' + '0' * 24)
         (root / 'deploy').mkdir(mode=0o700, parents=True)
         root.chmod(0o700)
-        shutil.copyfile(REPO / 'deploy/release-transaction-guard.sh', root / 'deploy/release-transaction-guard.sh')
-        (root / 'deploy/release-transaction-guard.sh').chmod(0o600)
-        self.write(root / 'release.commit', b'9c55f235d569a91264304a74cf09b26c83123e68\n')
+        self.write(root / 'deploy/release-transaction-guard.sh', self.historical_guard)
+        self.write(root / 'release.commit', HISTORICAL_RELEASE_COMMIT.encode() + b'\n')
         manifest = subprocess.check_output(['/bin/bash', '-c',
             "cd \"$1\"; find . -type f -print0 | sort -z | xargs -0 sha256sum", 'fixture', str(root)])
         self.write(root / 'SHA256SUMS', manifest)
@@ -102,6 +121,11 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual((recovery.TX / 'active').read_bytes(), self.marker)
         self.assertEqual(self.started, [])
         self.assertTrue(recovery.CHILD.exists())
+
+    def test_retained_guard_matches_the_historical_incident_pin(self):
+        root = recovery.find_guard()
+        self.assertEqual(recovery.sha(root / 'deploy/release-transaction-guard.sh'), recovery.GUARD_SHA)
+        self.assertEqual((root / 'release.commit').read_bytes(), HISTORICAL_RELEASE_COMMIT.encode() + b'\n')
 
     def test_check_is_read_only(self):
         recovery.run(False)
@@ -196,6 +220,18 @@ class RecoveryTests(unittest.TestCase):
         path.unlink()
         path.symlink_to(recovery.DB)
         self.rejected()
+
+
+class HistoricalGuardSourceTests(unittest.TestCase):
+    def test_changed_guard_cannot_replace_historical_pin(self):
+        with patch.object(subprocess, 'check_output', return_value=b'changed worktree guard\n'):
+            with self.assertRaisesRegex(RuntimeError, 'does not match the incident pin'):
+                historical_guard_bytes()
+
+    def test_missing_git_object_has_no_worktree_fallback(self):
+        with patch.object(subprocess, 'check_output', side_effect=subprocess.CalledProcessError(128, ['git', 'show'])):
+            with self.assertRaisesRegex(RuntimeError, 'fetch full repository history'):
+                historical_guard_bytes()
 
 
 class RealStartupTests(unittest.TestCase):

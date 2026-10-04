@@ -1,0 +1,40 @@
+{
+  "checks": {
+    "before": {
+      "guidance": "undecided",
+      "required": true,
+      "revision": 0,
+      "status": "new"
+    },
+    "dns": {
+      "mode": "external",
+      "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+      "verdict": "not-provided-external-dns"
+    },
+    "draft_choices": {
+      "dns_mode": "external",
+      "peer_ip": "",
+      "peer_ns": ""
+    },
+    "execution": {
+      "error": {
+        "code": "service_install_failed",
+        "message": "The service could not be installed and verified."
+      },
+      "phase": "05-mail_profile",
+      "status": "failed"
+    },
+    "plan_web_mail": {
+      "blockers": [],
+      "can_start": true,
+      "http": 200,
+      "id": "d5c512d1b4d06cfe29a830ce45c7f4b9"
+    },
+    "start_http": 202
+  },
+  "finished_at": "2026-10-01T12:09:39Z",
+  "name": "setup",
+  "reason": "server setup did not succeed: {'status': 'failed', 'phase': '05-mail_profile', 'error': {'code': 'service_install_failed', 'message': 'The service could not be installed and verified.'}}",
+  "started_at": "2026-10-01T12:08:55Z",
+  "verdict": "failed"
+}

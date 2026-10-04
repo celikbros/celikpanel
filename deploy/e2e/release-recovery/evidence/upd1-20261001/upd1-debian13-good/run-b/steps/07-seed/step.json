@@ -1,0 +1,8 @@
+{
+  "checks": {},
+  "finished_at": "2026-09-30T12:33:29Z",
+  "name": "seed",
+  "reason": "domain create returned HTTP 409: {'error': 'no managed authoritative DNS engine is active; choose and activate BIND or PowerDNS first', 'code': 'DNS_SERVER_REQUIRED', 'action': '/settings?section=dns'}",
+  "started_at": "2026-09-30T12:33:28Z",
+  "verdict": "failed"
+}

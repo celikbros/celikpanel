@@ -1,3 +1,4 @@
+import { prepareRecoveryShell } from './lib/recoveryShell'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import { RootErrorBoundary } from './components/RootErrorBoundary'
@@ -10,6 +11,8 @@ import './index.css'
 // route chunk. Refresh once to fetch the new HTML; if that same refresh also
 // fails, let the route error boundary show a visible recovery action instead
 // of entering a reload loop.
+if (import.meta.env.PROD) void prepareRecoveryShell()
+
 const CHUNK_RELOAD_KEY = 'celikpanel.chunk-reload-at'
 const CHUNK_RELOAD_WINDOW_MS = 30_000
 

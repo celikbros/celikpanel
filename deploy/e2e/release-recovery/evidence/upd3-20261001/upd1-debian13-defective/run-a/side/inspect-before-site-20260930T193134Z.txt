@@ -1,0 +1,15 @@
+# read-only side inspection lab=cp-release-drill-upd3-d13-def-a node=debian13 label=before-site rc=0 took=0.2s
+== utc
+2026-09-30T19:31:34Z
+6ecf56fe-4afc-435a-ad06-c74cb4ae0fd7
+== hosting root: stat of the parents
+drwxr-xr-x 755 root:root /var
+drwxr-xr-x 755 root:root /var/www
+absent /var/www/celikpanel
+absent /var/www/celikpanel/subscriptions
+== hosting root: site directories
+== hosting root: receipt /var/lib/celikpanel-agent-private/hosting-root-v1.json
+absent
+== hosting root: agent log lines
+== web server accounts
+www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin

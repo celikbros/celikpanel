@@ -10,6 +10,7 @@ import ts from 'typescript';
 const require = createRequire(import.meta.url);
 const dataModule = text => 'data:text/javascript;base64,' + Buffer.from(text).toString('base64');
 const reactURL = pathToFileURL(require.resolve('react')).href;
+const accessURL = dataModule(ts.transpileModule(readFileSync(new URL('../src/lib/accessObservation.ts',import.meta.url),'utf8'), {compilerOptions:{module:ts.ModuleKind.ES2022,target:ts.ScriptTarget.ES2020}}).outputText);
 const stub = dataModule(`
   import React from '${reactURL}';
   export const useAuth = () => globalThis.licenseTest.auth;
@@ -18,6 +19,8 @@ const stub = dataModule(`
   export const useSearchParams = () => [new URLSearchParams(globalThis.licenseTest.search)];
   export const useI18n = () => ({ t: key => key, locale: 'en', screensReady: true, screensFailed: false });
  export const PanelAddressHint = () => null;
+ export const RecoveryStatus = () => null;
+ export const RecoveryAccess = props => React.createElement('aside', {failed:true,onCheck:props.onRetry,cause:props.cause}, 'recovery');
  export const BrandMark = () => null, LanguageSwitcher = () => null, ThemeSwitcher = () => null, ChangePasswordModal = () => null, ToastContainer = () => null;
  export const LicensePanel = () => React.createElement('section', null, 'activation');
  export const PanelUpdateCard = props => React.createElement('article', props, 'signed-update');
@@ -33,7 +36,7 @@ async function component(name) {
   const source = readFileSync(new URL(`../src/components/${name}.tsx`, import.meta.url), 'utf8');
   const compiled = ts.transpileModule(source, { compilerOptions: {
     jsx: ts.JsxEmit.React, module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2020,
-  }}).outputText.replace(/import\('\.\/LicenseLockScreen'\)/g, `import('${stub}')`).replace(/from ['"]([^'"]+)['"]/g, (_, specifier) => `from '${specifier === 'react' ? reactURL : stub}'`);
+  }}).outputText.replace(/import\('\.\/LicenseLockScreen'\)/g, `import('${stub}')`).replace(/from ['"]([^'"]+)['"]/g, (_, specifier) => `from '${specifier === 'react' ? reactURL : specifier.endsWith('/accessObservation') ? accessURL : stub}'`);
   return (await import(dataModule(`import React from '${reactURL}';\n${compiled}`)))[name];
 }
 const LicenseOnboarding = await component('LicenseOnboarding');
@@ -52,7 +55,7 @@ function fixture(role = 'admin', state = 'missing') {
   };
   globalThis.fetch = async (url, options) => {
     calls.push({ url, options });
-    return Response.json(url.includes('/license/access') ? { can_use_panel: state === 'active', valid_until: state === 'active' ? Math.floor(Date.now()/1000)+3600 : 0 } : { state, can_provision: state === 'active' });
+    return Response.json(url.includes('/license/access') ? { state, observation: state.endsWith('unavailable') ? 'unavailable' : 'known', can_use_panel: state === 'active', valid_until: state === 'active' ? Math.floor(Date.now()/1000)+3600 : 0 } : { state, can_provision: state === 'active' });
   };
 }
 async function mount(Component) { await act(async () => { tree = Renderer.create(React.createElement(Component)); }); }
@@ -75,7 +78,8 @@ test('all roles are locked for missing, expired, invalid and unverifiable licens
     assert.equal(calls.length,1);
     assert.equal(tree.root.findAllByType('main').length,state==='active'?1:0);
     assert.equal(tree.root.findAllByType('aside').length,state==='active'?0:1);
-    if(state!=='active') assert.equal(navigations.at(-1)[0],'/activate','deep links return to activation');
+    if(['missing','expired','invalid'].includes(state)) assert.equal(navigations.at(-1)[0],'/activate','known license rejection returns to activation');
+    else assert.equal(navigations.length,0,'uncertainty does not imply activation');
    } finally {await cleanup()}
   }
  }
@@ -89,8 +93,10 @@ test('network errors, malformed status, and a license rejection close management
  fixture('admin','active');
  try {
   await act(async()=>{tree=Renderer.create(React.createElement(LicenseOnboarding,null,React.createElement('main',null,'management')))});
+  globalThis.fetch=async()=>Response.json({}, {status:503});
   await act(async()=>window.dispatchEvent(new Event('celikpanel:license-locked')));
   assert.equal(tree.root.findAllByType('main').length,0);
+  globalThis.fetch=async()=>Response.json({can_use_panel:true,valid_until:Math.floor(Date.now()/1000)+60});
   await act(async()=>tree.root.findByType('aside').props.onCheck());
   assert.equal(tree.root.findAllByType('main').length,1);
  } finally {await cleanup()}
@@ -151,10 +157,10 @@ test('an open session locks at the signed deadline and browser history cannot es
   globalThis.fetch=async()=>Response.json({can_use_panel:false,valid_until:0});
   await act(async()=>timers.at(-1)());
   assert.equal(tree.root.findAllByType('main').length,0);
-  assert.equal(navigations.at(-1)[0],'/activate');
+  assert.equal(navigations.length,0,'legacy false has no activation diagnosis');
   globalThis.licenseTest.pathname='/services';
   await act(async()=>tree.update(React.createElement(LicenseOnboarding,null,React.createElement('main',null,'management'))));
-  assert.equal(navigations.at(-1)[0],'/activate');
+  assert.equal(navigations.length,0);
   assert.equal(tree.root.findAllByType('main').length,0);
  }finally{window.setTimeout=previous;await cleanup()}
 });
@@ -271,10 +277,13 @@ test('focus checks share an in-flight access request and explicit rejection stil
   globalThis.fetch=()=>{requests++;return new Promise(done=>{resolve=done})};
   await act(async()=>{window.dispatchEvent(new Event('focus'));window.dispatchEvent(new Event('focus'))});
   assert.equal(requests,1);
+  const staleResolve=resolve;
   await act(async()=>window.dispatchEvent(new Event('celikpanel:license-locked')));
   assert.equal(tree.root.findAllByType('main').length,0);
-  await act(async()=>resolve(Response.json({can_use_panel:true,valid_until:Math.floor(Date.now()/1000)+3600})));
-  assert.equal(tree.root.findAllByType('main').length,0,'superseded response cannot undo rejection');
+  await act(async()=>staleResolve(Response.json({can_use_panel:true,valid_until:Math.floor(Date.now()/1000)+3600})));
+  assert.equal(tree.root.findAllByType('main').length,0,'superseded response cannot undo the gate');
+  assert.equal(navigations.length,0,'generic gate does not diagnose missing license');
+  await act(async()=>resolve(Response.json({can_use_panel:false,valid_until:0,state:'expired',observation:'known'})));
   assert.equal(navigations.at(-1)[0],'/activate');
  }finally{await cleanup()}
 });
@@ -313,6 +322,20 @@ test('panel address hint only links to safe server metadata and preserves the cu
    const links=tree.root.findAllByType('a');
    assert.equal(links.length,hostname==='panel.example.test'?1:0);
    if(links.length)assert.equal(links[0].props.href,'https://panel.example.test:2083/');
+  }finally{await cleanup()}
+ }
+});
+
+
+test('unavailable license observations never display an activation key form',async()=>{
+ for(const state of ['verification_unavailable','status_unavailable']) {
+  fixture('admin',state);
+  try {
+   await mount(LicensePanel);
+   assert.equal(tree.root.findAllByType('form').length,0);
+   assert.equal(tree.root.findAllByType('input').length,0);
+   assert.ok(JSON.stringify(tree.toJSON()).includes('recovery.licenseTitle'));
+   assert.ok(button('license.refresh'));
   }finally{await cleanup()}
  }
 });

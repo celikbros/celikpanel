@@ -1,0 +1,5 @@
+evidence /var/tmp/cp-release-drill-upd13-arch-oc-a/evidence/arch/upd1/upd1-arch-owner-continuation-20261002t224102z/
+== distinct CLI texts
+== journal lines
+== result {"overall": "incomplete", "native_evidence": false, "request_id": null} {"attempts": {"automatic": [], "automatic_count": 0, "journal_admissions": [], "owner": [], "owner_count": 0}, "classification": "not-terminal", "final_status": null, "owner_continuation": false, "owner_reboot": null, "pin_changes": [], "port_hold": null, "reboot": null, "track_stop": null}
+findings []

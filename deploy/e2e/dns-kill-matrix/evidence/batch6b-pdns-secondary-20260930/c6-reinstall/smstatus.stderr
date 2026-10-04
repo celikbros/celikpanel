@@ -1,0 +1,1 @@
+connect: cannot reach agent socket: dial unix /run/celikpanel/agent.sock: connect: connection refused

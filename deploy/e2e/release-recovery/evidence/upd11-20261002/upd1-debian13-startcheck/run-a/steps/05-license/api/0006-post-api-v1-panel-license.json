@@ -1,0 +1,94 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "LicensePanel activate (acceptance fixture key)",
+  "request": {
+    "body": {
+      "action": "activate",
+      "key": "[REDACTED]"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/panel/license"
+  },
+  "response": {
+    "elapsed_seconds": 0.011,
+    "headers": [
+      [
+        "Cache-Control",
+        "no-store"
+      ],
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Thu, 01 Oct 2026 22:44:41 GMT"
+      ],
+      [
+        "Content-Length",
+        "522"
+      ]
+    ],
+    "json": {
+      "acceptance_cell": "release-recovery__97e9e2b3e4e1e358",
+      "acceptance_guest": "verified",
+      "acceptance_node": "debian13",
+      "acceptance_smbios_uuid": "not readable by the panel service user",
+      "can_provision": true,
+      "expires_at": 1791499481,
+      "license_id": "acceptance-fixture",
+      "license_kind": "acceptance_fixture",
+      "license_label": "ACCEPTANCE FIXTURE — NOT FOR PRODUCTION",
+      "license_service": "not contacted: acceptance test build",
+      "observation": "known",
+      "offline_until": 1790894741,
+      "product": "celikpanel-acceptance-fixture",
+      "state": "active"
+    },
+    "status": 200,
+    "text": null
+  }
+}

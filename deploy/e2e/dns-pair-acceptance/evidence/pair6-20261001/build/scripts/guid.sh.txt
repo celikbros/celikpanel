@@ -1,0 +1,21 @@
+#!/bin/bash
+R=$(ls -d /var/tmp/cp-pair6-evidence/$1-* | tail -1)
+python3 - "$R/result.json" <<'PY'
+import json,sys
+r=json.load(open(sys.argv[1]))
+seen=set()
+for s in r["steps"]:
+    for g in s.get("guidance") or []:
+        key=(g.get("code"),g.get("reason"),json.dumps(g.get("shown"),sort_keys=True))
+        if key in seen: continue
+        seen.add(key)
+        print("---", s["id"], "|", g.get("context"), "| class:", g.get("state_class"), "| code:", g.get("code"), "| reason:", g.get("reason"), "| stage:", g.get("stage"), "| actionable:", g.get("actionable"), "| actor:", g.get("actor"), "| keys:", g.get("message_keys"))
+        sh=g.get("shown") or {}
+        print("  EN:", " | ".join(sh.get("en") or []))
+        print("  TR:", " | ".join(sh.get("tr") or []))
+    ch=s.get("checks") or {}
+    for k in ("peer_start_guidance_observations","license_required_observations","d024_observations","delete_first_outcome","delete_final_outcome","deletion_status_poll","owner_enrollment","host_key_review","pdns_catalog_consumer_account","dns_absent","boot_ids","setup_state_changes"):
+        if k in ch: print("  [check]", s["id"], k, json.dumps(ch[k])[:1500])
+print("license_required_observations:", json.dumps(r.get("license_required_observations"))[:800])
+print("license_service_journal_check:", json.dumps(r.get("license_service_journal_check"))[:800])
+PY

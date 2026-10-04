@@ -1,0 +1,2 @@
+fatal: not a git repository (or any of the parent directories): .git
+release sequence policy contract failed: historical tag is not available: v0.1.0-alpha.79

@@ -1,0 +1,40 @@
+{
+  "dns_outage": null,
+  "expectation": {
+    "bind_active_after_restart": false,
+    "native_checks_after_owner_command": false,
+    "pdns_inactive_after_restart": false,
+    "pdns_pid_continuity_from_cut": true,
+    "source_serving_after_restart": true
+  },
+  "flow_ambiguities": [],
+  "flow_failures": [
+    "post-command classification is repeated_nonconvergence, want rolled_back_source_serving"
+  ],
+  "flow_status": "failed",
+  "owner_inverse_failures": [
+    "post-command classification is repeated_nonconvergence, want rolled_back_source_serving"
+  ],
+  "owner_inverse_native_at_boundary": null,
+  "recovery_outcome": {
+    "changed_or_racy": false,
+    "classification": "repeated_nonconvergence",
+    "dns_serving_after_restart": true,
+    "probe_pair_valid": true,
+    "repeated_nonconvergence": true,
+    "rolled_back_source_serving": false,
+    "same_fingerprint": true,
+    "target_converged": false
+  },
+  "request_id": "18400bad79662787153c9583ba87bc0e",
+  "safety_status": "passed",
+  "source": "result.json (verbatim sub-objects)",
+  "status": "failed",
+  "step_records": {
+    "steps.after_owner_command.source.pdns_main_pid": 1764,
+    "steps.after_stability.source.pdns_main_pid": 1764,
+    "steps.agent_restarted.source.pdns_main_pid": 1764,
+    "steps.rerun.source.pdns_main_pid": 1764
+  },
+  "variant": "pre-start"
+}

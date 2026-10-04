@@ -1,0 +1,14 @@
+### 2026-09-29T13:07:00.901Z start-cell c3-pdns-adopt-agent pdns-adopt__intent__after-write__standalone__peer-reachable debian13 fixture=external-pdns-adoption prep=prepare-pdns-adopt enroll=0 flags=--expect-agent-startup-rollback --reboot-after-recovery
+### 2026-09-29T13:07:00.903Z prepare
+### 2026-09-29T13:07:02.447Z start
+### 2026-09-29T13:07:02.758Z wait-ssh
+### 2026-09-29T13:07:59.316Z guest-identity
+### 2026-09-29T13:07:59.712Z install
+### 2026-09-29T13:08:12.549Z prepare-pdns-adopt
+### 2026-09-29T13:08:53.241Z pre-run-snapshot
+### 2026-09-29T13:09:34.258Z start-watcher
+Running as unit: cp-b4-watch.service; invocation ID: bed0cf4dc1e04f12af9ad848100d9bba
+### 2026-09-29T13:09:35.091Z run-prepared-dry-run
+### 2026-09-29T13:09:35.215Z run-prepared
+RUN_PREPARED_RC=0
+### 2026-09-29T13:11:11.103Z done-run rc=0

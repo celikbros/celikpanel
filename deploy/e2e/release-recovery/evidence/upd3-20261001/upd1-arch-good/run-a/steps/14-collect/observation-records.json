@@ -1,0 +1,6 @@
+{
+  "directory_present": true,
+  "records": {
+    "cb09ad07e7c65acf103dd2e3b252b123.status": "schema=celikpanel-recovery-observation/v1\nrequest_id=cb09ad07e7c65acf103dd2e3b252b123\ntarget_commit=901593abf12c90c91222d2c61a8bd7c0040523c3\nphase=succeeded\nterminal_proof=update_verified\nreason=update_verified\nobserved_at=2026-09-30T20:13:59Z\nprevious_failure=none\n"
+  }
+}

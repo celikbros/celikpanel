@@ -1,0 +1,51 @@
+[
+  {
+    "command": "sudo -n /var/backups/celikpanel/pair-accept/celikpanel-v0.0.0-pairaccept-acceptance-license.b1e322756736/dns-owner-tools/dns-peer-enroll primary-prepare --engine pdns",
+    "node": "arch",
+    "returncode": 0,
+    "stderr": "",
+    "stdout": "{\"state\":\"prepared\",\"credential_id\":\"349a2b110d3d6544a67ae6ba652faaeb\",\"public_key\":\"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEZZmRZ+3ASG5Wf84ZqgrrV7TiqksFHMwlQJvV/2tWcm\",\"public_key_sha256\":\"283bbae460539f6c3ddd01fdd899833e6393bd737fc4f53470edd99b27ccb4eb\",\"next_action\":\"Give only the displayed public key to the secondary owner; ask them to run secondary-install --engine pdns locally and return their independently reviewed Ed25519 SSH host-key SHA-256.\"}\n"
+  },
+  {
+    "command": "sudo -n /bin/bash -c 'set -euo pipefail\numask 077\ntest ! -e /root/celikpanel-primary-inspector.pub\ncat > /root/celikpanel-primary-inspector.pub\nchown root:root /root/celikpanel-primary-inspector.pub\nchmod 0600 /root/celikpanel-primary-inspector.pub\n'",
+    "node": "debian13",
+    "returncode": 0,
+    "stderr": "",
+    "stdout": ""
+  },
+  {
+    "command": "sudo -n /var/backups/celikpanel/pair-accept/celikpanel-v0.0.0-pairaccept-acceptance-license.b1e322756736/dns-owner-tools/dns-peer-enroll secondary-install --engine pdns --primary-ip 192.0.2.11 --peer-ip 192.0.2.10 --catalog catalog-c000020b.celikpanel.invalid --catalog-account celikpanel-peer-catalog-v1 --primary-public-key /root/celikpanel-primary-inspector.pub --inspector /var/backups/celikpanel/pair-accept/celikpanel-v0.0.0-pairaccept-acceptance-license.b1e322756736/dns-owner-tools/pdns-peer-inspect",
+    "node": "debian13",
+    "returncode": 0,
+    "stderr": "",
+    "stdout": "{\"next_action\":\"Run secondary-host-key and give its Ed25519 SSH host-key SHA-256 to the primary owner through a trusted channel for primary-activate --engine pdns. No owner command tests live authentication; the primary Agent makes the first authenticated read-only inspector exchange only while reconciling an admitted pending deletion, and reports its result on that operation.\",\"state\":\"configured\"}\n"
+  },
+  {
+    "command": "sudo -n /var/backups/celikpanel/pair-accept/celikpanel-v0.0.0-pairaccept-acceptance-license.b1e322756736/dns-owner-tools/dns-peer-enroll secondary-host-key --engine pdns",
+    "node": "debian13",
+    "returncode": 0,
+    "stderr": "",
+    "stdout": "{\"host_key_sha256\":\"9a4f27d44ed09ecb7eeeecb6e804440487308697b98b0dc43d44882e5a755007\",\"next_action\":\"Compare this digest through a trusted channel before primary-activate; the primary must not learn it from an unauthenticated SSH connection.\"}\n"
+  },
+  {
+    "command": "sudo -n /var/backups/celikpanel/pair-accept/celikpanel-v0.0.0-pairaccept-acceptance-license.b1e322756736/dns-owner-tools/dns-peer-enroll primary-activate --engine pdns --credential-id 349a2b110d3d6544a67ae6ba652faaeb --primary-ip 192.0.2.11 --peer-ip 192.0.2.10 --catalog catalog-c000020b.celikpanel.invalid --host-key-sha256 9a4f27d44ed09ecb7eeeecb6e804440487308697b98b0dc43d44882e5a755007",
+    "node": "arch",
+    "returncode": 0,
+    "stderr": "",
+    "stdout": "{\"state\":\"configured\",\"enrollment_id\":\"56b7e9d85898dab2ef048e9dfde59f0e\",\"next_action\":\"For an admitted pending DNS deletion, use that exact operation's recovery action; enrollment alone does not enable a blocked DNS topology, and status polling does not retry the mutation.\"}\n"
+  },
+  {
+    "command": "sudo -n /var/backups/celikpanel/pair-accept/celikpanel-v0.0.0-pairaccept-acceptance-license.b1e322756736/dns-owner-tools/dns-peer-enroll primary-status --engine pdns",
+    "node": "arch",
+    "returncode": 0,
+    "stderr": "",
+    "stdout": "{\"catalog_name\":\"catalog-c000020b.celikpanel.invalid\",\"client_public_key_sha256\":\"283bbae460539f6c3ddd01fdd899833e6393bd737fc4f53470edd99b27ccb4eb\",\"enrollment_id\":\"56b7e9d85898dab2ef048e9dfde59f0e\",\"host_key_sha256\":\"9a4f27d44ed09ecb7eeeecb6e804440487308697b98b0dc43d44882e5a755007\",\"peer_ip\":\"192.0.2.10\",\"primary_ip\":\"192.0.2.11\",\"state\":\"configured\"}\n"
+  },
+  {
+    "command": "sudo -n /var/backups/celikpanel/pair-accept/celikpanel-v0.0.0-pairaccept-acceptance-license.b1e322756736/dns-owner-tools/dns-peer-enroll secondary-status --engine pdns",
+    "node": "debian13",
+    "returncode": 0,
+    "stderr": "",
+    "stdout": "{\"state\":\"configured\",\"reason\":\"local policy and SSH configuration verified; live authentication is unproven\",\"next_action\":\"No owner action is needed now. No status command tests live authentication: the primary Agent makes the first authenticated read-only inspector exchange only while reconciling an admitted pending deletion, and reports its result on that operation\",\"primary_ip\":\"192.0.2.11\",\"peer_ip\":\"192.0.2.10\",\"catalog_name\":\"catalog-c000020b.celikpanel.invalid\",\"catalog_account\":\"celikpanel-peer-catalog-v1\",\"primary_key_sha256\":\"283bbae460539f6c3ddd01fdd899833e6393bd737fc4f53470edd99b27ccb4eb\"}\n"
+  }
+]

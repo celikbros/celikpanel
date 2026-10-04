@@ -1,0 +1,12 @@
+2026-09-30T08:22:13.543182+00:00 dns-arch systemd[1]: Starting CelikPanel privileged agent...
+2026-09-30T08:22:13.583770+00:00 dns-arch systemd[1]: Started CelikPanel privileged agent.
+2026-09-30T08:22:13.683710+00:00 dns-arch agent[408]: 2026/09/30 08:22:13 Starting CelikPanel Agent...
+2026-09-30T08:22:13.696715+00:00 dns-arch agent[408]: 2026/09/30 08:22:13 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-30T08:24:02.587576+00:00 dns-arch agent[408]: 2026/09/30 08:24:02 DNS switch (request 420b2c48e1a7137ce39d880d63a6947b): BIND rndc key /etc/rndc.key is product_created
+2026-09-30T08:24:10.995955+00:00 dns-arch agent[408]: 2026/09/30 08:24:10 bind primary pair readiness proof failed: DNS peer catalog AXFR is unavailable
+2026-09-30T08:25:13.319541+00:00 dns-arch agent[408]: 2026/09/30 08:25:13 bind zone publication remains pending for pair-accept.test at epoch 1: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T08:25:13.319541+00:00 dns-arch agent[408]: dns_peer_enrollment_required
+2026-09-30T08:25:15.244113+00:00 dns-arch agent[408]: 2026/09/30 08:25:15 DNS zone V3 recovery remains pending for pair-accept.test: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T08:25:15.244113+00:00 dns-arch agent[408]: dns_peer_enrollment_required
+2026-09-30T08:25:42.839616+00:00 dns-arch agent[408]: 2026/09/30 08:25:42 DNS peer inspector answer for pair-accept.test (PowerDNS secondary): catalog_state=transferred member_state=absent native_state=unloaded; accepted
+2026-09-30T08:25:44.581596+00:00 dns-arch agent[408]: 2026/09/30 08:25:44 DNS peer proof for pair-accept.test (PowerDNS secondary) step times: prepare=1.581s challenge_write=7.415s exchange=414ms post_inspection=4.217s consume=9.458s; total 23.084s; outcome verified

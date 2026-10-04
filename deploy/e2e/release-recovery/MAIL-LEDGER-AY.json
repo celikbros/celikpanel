@@ -1,0 +1,29 @@
+{
+  "schema": "celikpanel/native-mail-ledger/v1",
+  "source_commit": "11a088fd621993235b02a144d3e4b0797480c4e1",
+  "test_binary_sha256": "e9c89faa86a7d1a9beb740b42628218f6550b6b1c9123261911ce81553de76a5",
+  "lab": {
+    "cell_id": "release-recovery__33fdf23ab0fbe25f",
+    "node": "debian13"
+  },
+  "base_record_sha256": "d815d123afb93d0e3a55af3529f5eed3e1376f906b62fea54a1b6a96312c7ce7",
+  "scope": {
+    "standalone_production_checker": true,
+    "retained_native_ledger": true,
+    "host_lock_contention_and_inheritance": true,
+    "managed_state_unchanged": true,
+    "installed_management_absent": true,
+    "independent_renewal": false,
+    "crash_recovery": false
+  },
+  "logs": {
+    "mail-native-ledger-before.log": {
+      "sha256": "4c8af0f989c38ff0d44877248bc1f82245f8dc2fafbec3dc047782d92063512c",
+      "text": "active\nactive\n689a6c54-3150-43bd-b95b-277adf11d5e1\n51e1704bc9a5d460678b0458e068e16614076ed9547309487f5a6b6051857bde  /var/lib/celikpanel-agent-private/service-mutations.json\n10fa437fd483fab44965602d2ed5ff2284057290dbbb46225ddbbfb595439beb  /var/lib/celikpanel-agent-private/mail-host-certificate-renewal.pending\n"
+    },
+    "mail-native-ledger-result.log": {
+      "sha256": "0e6b820655f8b563eebacc228d632248c9dd53abdffd154a221902b168b930d7",
+      "text": "e9c89faa86a7d1a9beb740b42628218f6550b6b1c9123261911ce81553de76a5  /root/celikpanel-release-recovery-lab/ledger-checker\n689a6c54-3150-43bd-b95b-277adf11d5e1\nretained-ledger-idle=verified\nRecovery agent check: service mutation state is not idle: the host package manager or mutation lock is busy\nheld-lock-refused=verified\ninherited-lock-idle=verified\nmanaged-state-unchanged=verified\n51e1704bc9a5d460678b0458e068e16614076ed9547309487f5a6b6051857bde  /var/lib/celikpanel-agent-private/service-mutations.json\n10fa437fd483fab44965602d2ed5ff2284057290dbbb46225ddbbfb595439beb  /var/lib/celikpanel-agent-private/mail-host-certificate-renewal.pending\n23ecc439da677841d319bb07baefffcd654384bc2ed565f5c97f01b5faa622e9  /etc/postfix/main.cf\n4a23ff8f467c7f369f2d973e58f184a2932235c3be3947cff93563c3391c6696  /etc/dovecot/conf.d/98-celikpanel-tls.conf\nactive\nactive\nsha256 Fingerprint=77:13:AB:E2:6E:69:88:7A:16:6C:D5:C6:EF:C3:9B:B9:6B:E0:F1:9C:F6:EC:55:42:8A:F1:67:39:24:46:6A:11\nsha256 Fingerprint=77:13:AB:E2:6E:69:88:7A:16:6C:D5:C6:EF:C3:9B:B9:6B:E0:F1:9C:F6:EC:55:42:8A:F1:67:39:24:46:6A:11\nnative-ledger-check=passed\n"
+    }
+  }
+}

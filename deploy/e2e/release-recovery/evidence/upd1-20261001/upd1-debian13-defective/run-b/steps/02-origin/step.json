@@ -1,0 +1,32 @@
+{
+  "checks": {
+    "origin_check": "127.0.0.1       celikpanel.net\n200",
+    "provenance": "unpublished-local-artifact-with-disposable-fixture-trust",
+    "provision": {
+      "bind": "127.0.0.1:443",
+      "origin": "https://celikpanel.net",
+      "provenance": "unpublished-local-artifact-with-disposable-fixture-trust",
+      "release_key_enrolled": false
+    },
+    "staged": {
+      "helper": "/root/celikpanel-release-recovery-lab/worker-fixture-origin.py",
+      "intent": "/root/celikpanel-release-recovery-lab/worker-origin-intent.json"
+    },
+    "target": {
+      "arch": "amd64",
+      "archive": "celikpanel-v0.1.0-alpha.82-linux-amd64.tar.gz",
+      "archive_sha256": "8ef24da3a5cbc083772624b04e9fa6bff08791595c678a640a733fb394a726ef",
+      "archive_size": "66901420",
+      "commit": "9532109705775d1c827f6a65a9c90f5e543d04f2",
+      "format": "celikpanel-release-manifest-v2",
+      "os": "linux",
+      "published_at": "2026-09-30T11:19:27Z",
+      "sequence": "82",
+      "version": "v0.1.0-alpha.82"
+    }
+  },
+  "finished_at": "2026-09-30T11:19:34Z",
+  "name": "origin",
+  "started_at": "2026-09-30T11:19:26Z",
+  "verdict": "passed"
+}

@@ -1,0 +1,73 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "terminal check",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/panel/update/check"
+  },
+  "response": {
+    "elapsed_seconds": 0.032,
+    "headers": [
+      [
+        "Cache-Control",
+        "no-store"
+      ],
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 02 Oct 2026 22:50:52 GMT"
+      ],
+      [
+        "Content-Length",
+        "133"
+      ]
+    ],
+    "json": {
+      "available": false,
+      "current_commit": "47c0b4c2d68ae75258a36dad469c2a41758e1e1c",
+      "current_version": "v0.1.0-alpha.82",
+      "supported": true
+    },
+    "status": 200,
+    "text": null
+  }
+}

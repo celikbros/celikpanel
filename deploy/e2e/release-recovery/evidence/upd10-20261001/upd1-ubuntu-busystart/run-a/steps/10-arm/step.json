@@ -1,0 +1,157 @@
+{
+  "checks": {
+    "check": {
+      "body": {
+        "available": true,
+        "current_commit": "2e583a9031ec50fb27d10305ef02b909f10b7674",
+        "current_version": "v0.1.0-alpha.81",
+        "supported": true,
+        "target": {
+          "arch": "amd64",
+          "archive_sha256": "e2de75c2013ed6095676129765bf8249832d996c87e83d7f623b223141e96eff",
+          "archive_size": "65647230",
+          "commit": "962e6f242b2dbcb0d42edae9e741d3822a92c8cc",
+          "os": "linux",
+          "published_at": "2026-10-01T21:27:16Z",
+          "sequence": "82",
+          "version": "v0.1.0-alpha.82"
+        }
+      },
+      "http": 200
+    },
+    "observer_intent": {
+      "baseline": {
+        "agent_sha256": "0474819cc259aa907ecaa6a34327d416c2fb3583de889285d559d34fa464c674",
+        "commit": "2e583a9031ec50fb27d10305ef02b909f10b7674",
+        "panel_sha256": "1139f69db65552e27ad4098972a5ebc4afb38e7277667a35c0343fa5f3c736a9",
+        "version": "v0.1.0-alpha.81"
+      },
+      "identity": {
+        "cell_id": "release-recovery__2bb6a7dc08f6b283",
+        "node": "ubuntu",
+        "nonce": "2bb6a7dc08f6b2837740bae0e8280213cc8adb8fae54407e8fed8455c9c13e9f",
+        "vm_uuid": "47694324-59d2-533d-ae13-1fda7dd5bc61"
+      },
+      "mode": "watch",
+      "operation_id": "8754390060ba490c8c04ea800790ec21",
+      "recovery_fault": null,
+      "schema": "celikpanel/owner-update-observer-intent/v1",
+      "target": {
+        "agent_sha256": "fa94abf960b7aa86351a18f075dcec5cd02f70cadc7f7c496b19116f8ff897de",
+        "commit": "962e6f242b2dbcb0d42edae9e741d3822a92c8cc",
+        "panel_sha256": "b26d4c65370446d738c1630c7f08bbe89b6c12aaa582ff23b4b1f1676bffe0cf",
+        "version": "v0.1.0-alpha.82"
+      }
+    },
+    "observer_unit": "celikpanel-lab-owner-update-observer-8754390060ba490c8c04ea800790ec21.service",
+    "origin_check": {
+      "addresses": [
+        "127.0.0.1"
+      ],
+      "boot_id": "95d8aeb6-491b-4a78-82f2-ab3dd2a13aa4",
+      "getent_outcome": "found",
+      "getent_returncode": 0,
+      "getent_status": "ok",
+      "getent_stdout": "127.0.0.1       celikpanel.net\n",
+      "http": "200",
+      "loopback_only": true,
+      "ok": true,
+      "unit": {
+        "ActiveState": "active",
+        "NRestarts": "0",
+        "UnitFileState": "enabled"
+      }
+    },
+    "packagekit_at_arm": {
+      "after": {
+        "at": "2026-10-01T21:49:17.740083Z",
+        "context_processes": [
+          {
+            "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+            "comm": "unattended-upgr",
+            "pid": 873,
+            "ppid": "1"
+          }
+        ],
+        "general_lock_lines": [],
+        "lock_lines": [],
+        "other_package_processes": [],
+        "packagekit_unit": [
+          "ExecMainStartTimestamp=Thu 2026-10-01 21:49:15 UTC",
+          "ActiveState=active",
+          "SubState=running"
+        ],
+        "packagekitd": [
+          {
+            "apt_backend": true,
+            "aptcc_backend": false,
+            "backend_pathnames": [
+              "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+            ],
+            "children": [],
+            "etime_s": 2.6,
+            "grep_c_aptcc": 0,
+            "holds_or_waits": [],
+            "maps_read": true,
+            "pid": 51688,
+            "rule_idle": true
+          }
+        ],
+        "rule": "idle",
+        "unparsed_lock_lines": []
+      },
+      "before": {
+        "at": "2026-10-01T21:49:17.451766Z",
+        "context_processes": [
+          {
+            "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+            "comm": "unattended-upgr",
+            "pid": 873,
+            "ppid": "1"
+          }
+        ],
+        "general_lock_lines": [],
+        "lock_lines": [],
+        "other_package_processes": [],
+        "packagekit_unit": [
+          "ExecMainStartTimestamp=Thu 2026-10-01 21:49:15 UTC",
+          "ActiveState=active",
+          "SubState=running"
+        ],
+        "packagekitd": [
+          {
+            "apt_backend": true,
+            "aptcc_backend": false,
+            "backend_pathnames": [
+              "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+            ],
+            "children": [],
+            "etime_s": 2.3,
+            "grep_c_aptcc": 0,
+            "holds_or_waits": [],
+            "maps_read": true,
+            "pid": 51688,
+            "rule_idle": true
+          }
+        ],
+        "rule": "idle",
+        "unparsed_lock_lines": []
+      },
+      "host_utc": "2026-10-01T21:49:16Z",
+      "label": "arm-before-check",
+      "readiness": {
+        "answered_by": "agent",
+        "body": {
+          "ready": true
+        },
+        "http": 200,
+        "utc": "2026-10-01T21:49:16Z"
+      }
+    },
+    "request_id": "8754390060ba490c8c04ea800790ec21"
+  },
+  "finished_at": "2026-10-01T21:49:18Z",
+  "name": "arm",
+  "started_at": "2026-10-01T21:49:16Z",
+  "verdict": "passed"
+}

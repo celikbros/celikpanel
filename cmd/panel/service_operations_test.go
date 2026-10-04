@@ -197,6 +197,8 @@ type serviceOperationTestAgent struct {
 	peerStartOnce               sync.Once
 	firewallEnabled             bool
 	firewallError               string
+	firewallStatusError         string
+	firewallStatusCode          string
 	firewallCalls               int
 	legacyFirewallCalls         int
 	firewallRequests            []transport.ApplyFirewallRequest
@@ -568,6 +570,7 @@ func (a *serviceOperationTestAgent) FirewallStatus(_ *transport.Empty, out *Fire
 	defer a.mu.Unlock()
 	out.Enabled = a.firewallEnabled
 	out.EngineAvailable = true
+	out.Error, out.ErrorCode = a.firewallStatusError, a.firewallStatusCode
 	return nil
 }
 
@@ -2718,4 +2721,9 @@ func TestServiceOperationRunnerFailureResultIsDurable(t *testing.T) {
 	if bytes.Contains(loaded.Result, []byte("raw command")) {
 		t.Fatalf("raw failure leaked into result: %s", loaded.Result)
 	}
+}
+
+func (a *serviceOperationTestAgent) MailEnrollmentPreviewV1(req *transport.MailEnrollmentSourceRequest, out *transport.MailEnrollmentPreviewResponse) error {
+	*out = transport.MailEnrollmentPreviewResponse{MailEnrollmentSourceResponse: transport.MailEnrollmentSourceResponse{State: "verified", Generation: strings.Repeat("a", 64), BuildCommit: buildCommit, ObservedAt: time.Now().UTC()}, NativeMode: "absent", TimerEnablement: "absent", TimerActivity: "inactive"}
+	return nil
 }

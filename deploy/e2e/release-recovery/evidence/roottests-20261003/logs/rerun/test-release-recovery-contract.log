@@ -1,0 +1,20 @@
+## guest prerequisite: /run remounted exec (rw,nosuid,nodev,relatime,size=813756k,mode=755,inode64)
+deploy/test-release-recovery-contract.sh: line 35: 265358 Killed                  ( release_recovery_publish_intent "$SOURCE_ROOT" "$RUNNER" "$SERVICE" "$TIMER" "$START_GUARD" "$AGENT_DROPIN" "$PANEL_DROPIN" "$MANIFEST" "$SYSTEMCTL"; : > "$TEST_ROOT/foundation-intent.ready"; while :; do
+    sleep 1;
+done )
+PASS: stale source sequence stops before recovery runtime promotion
+PASS: durable three-attempt budget, interrupted runner, preserved failure and explicit owner retry
+Recovery dispatch admitted: attempt=owner snapshot=20260828T120000Z-from-unknown-to-1111111111111111111111111111111111111111-0123456789abcdef0123456789abcdef
+Recovery dispatch admitted: attempt=owner snapshot=20260828T120000Z-from-unknown-to-1111111111111111111111111111111111111111-0123456789abcdef0123456789abcdef
+deploy/test-release-recovery-contract.sh: line 35: 281743 Killed                  ( exec 9<> "$FI_ROOT/transaction.lock"; flock -x 9; TRUSTED_RELEASE_ROOT=$SOURCE_ROOT; source "$SOURCE_ROOT/deploy/release-transaction-guard.sh"; _release_txn_stage_marker "$FI_ROOT" 9 active "$FI_TOKEN" update "$FI_SNAPSHOT"; : > "$TEST_ROOT/marker-stage.ready"; while :; do
+    sleep 1;
+done )
+deploy/test-release-recovery-contract.sh: line 35: 281831 Killed                  ( exec 9<> "$FI_ROOT/transaction.lock"; flock -x 9; TRUSTED_RELEASE_ROOT=$SOURCE_ROOT; source "$SOURCE_ROOT/deploy/release-transaction-guard.sh"; release_txn_create_start_authorization "$FI_ROOT" "$FI_RUNTIME" 9 "$FI_TOKEN" update "$FI_SNAPSHOT"; : > "$TEST_ROOT/authorization.ready"; while :; do
+    sleep 1;
+done )
+PASS: recovery runner -> rollback entrypoint valid
+PASS: recovery runner -> rollback entrypoint shared
+PASS: recovery runner -> rollback entrypoint closed
+PASS: recovery runner -> rollback entrypoint wrong-identity
+PASS: recovery runner -> rollback entrypoint wrong-tuple
+release recovery unit/foundation/final-proof contract: PASS

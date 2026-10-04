@@ -1,0 +1,70 @@
+2026-09-28T22:32:59.644003+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-09-28T22:32:59.748679+00:00 dns-arch panel[1095]: 2026/09/28 22:32:59 Starting CelikPanel Backend...
+2026-09-28T22:32:59.756343+00:00 dns-arch panel[1095]: 2026/09/28 22:32:59 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-09-28T22:32:59.756978+00:00 dns-arch panel[1095]: 2026/09/28 22:32:59 Connected to Agent RPC; preparing normal management access
+2026-09-28T22:32:59.784134+00:00 dns-arch panel[1095]: 2026/09/28 22:32:59 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-arch": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-09-28T22:32:59.785914+00:00 dns-arch panel[1095]: 2026/09/28 22:32:59 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-09-28T22:32:59.787216+00:00 dns-arch panel[1095]: 2026/09/28 22:32:59 Panel ready on :2083 (HTTPS)
+2026-09-28T22:32:59.981262+00:00 dns-arch panel[1095]: 2026/09/28 22:32:59 http: TLS handshake error from 127.0.0.1:43832: EOF
+2026-09-28T22:33:00.259134+00:00 dns-arch panel[1095]: 2026/09/28 22:33:00 http: TLS handshake error from 127.0.0.1:43838: EOF
+2026-09-28T22:33:00.539720+00:00 dns-arch panel[1095]: 2026/09/28 22:33:00 http: TLS handshake error from 127.0.0.1:43852: EOF
+2026-09-28T22:33:00.820986+00:00 dns-arch panel[1095]: 2026/09/28 22:33:00 http: TLS handshake error from 127.0.0.1:46092: EOF
+2026-09-28T22:33:01.101866+00:00 dns-arch panel[1095]: 2026/09/28 22:33:01 http: TLS handshake error from 127.0.0.1:46098: EOF
+2026-09-28T22:33:01.382686+00:00 dns-arch panel[1095]: 2026/09/28 22:33:01 http: TLS handshake error from 127.0.0.1:46102: EOF
+2026-09-28T22:33:01.663578+00:00 dns-arch panel[1095]: 2026/09/28 22:33:01 http: TLS handshake error from 127.0.0.1:46118: EOF
+2026-09-28T22:33:01.945469+00:00 dns-arch panel[1095]: 2026/09/28 22:33:01 http: TLS handshake error from 127.0.0.1:46130: EOF
+2026-09-28T22:33:02.226262+00:00 dns-arch panel[1095]: 2026/09/28 22:33:02 http: TLS handshake error from 127.0.0.1:46144: EOF
+2026-09-28T22:33:02.506058+00:00 dns-arch panel[1095]: 2026/09/28 22:33:02 http: TLS handshake error from 127.0.0.1:46150: EOF
+2026-09-28T22:33:02.786432+00:00 dns-arch panel[1095]: 2026/09/28 22:33:02 http: TLS handshake error from 127.0.0.1:46152: EOF
+2026-09-28T22:33:03.067037+00:00 dns-arch panel[1095]: 2026/09/28 22:33:03 http: TLS handshake error from 127.0.0.1:46164: EOF
+2026-09-28T22:33:03.345039+00:00 dns-arch panel[1095]: 2026/09/28 22:33:03 http: TLS handshake error from 127.0.0.1:46166: EOF
+2026-09-28T22:33:03.630866+00:00 dns-arch panel[1095]: 2026/09/28 22:33:03 http: TLS handshake error from 127.0.0.1:46168: EOF
+2026-09-28T22:33:03.908788+00:00 dns-arch panel[1095]: 2026/09/28 22:33:03 http: TLS handshake error from 127.0.0.1:46174: EOF
+2026-09-28T22:33:04.187797+00:00 dns-arch panel[1095]: 2026/09/28 22:33:04 http: TLS handshake error from 127.0.0.1:46176: EOF
+2026-09-28T22:33:04.469221+00:00 dns-arch panel[1095]: 2026/09/28 22:33:04 http: TLS handshake error from 127.0.0.1:46188: EOF
+2026-09-28T22:33:04.747705+00:00 dns-arch panel[1095]: 2026/09/28 22:33:04 http: TLS handshake error from 127.0.0.1:46202: EOF
+2026-09-28T22:33:05.030198+00:00 dns-arch panel[1095]: 2026/09/28 22:33:05 http: TLS handshake error from 127.0.0.1:46210: EOF
+2026-09-28T22:33:05.311217+00:00 dns-arch panel[1095]: 2026/09/28 22:33:05 http: TLS handshake error from 127.0.0.1:46220: EOF
+2026-09-28T22:33:07.078739+00:00 dns-arch systemd[1]: Stopping CelikPanel web panel...
+2026-09-28T22:33:07.089948+00:00 dns-arch systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-09-28T22:33:07.090225+00:00 dns-arch systemd[1]: Stopped CelikPanel web panel.
+2026-09-28T22:33:07.090451+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 164ms CPU time over 7.446s wall clock time, 74.3M memory peak.
+2026-09-28T22:34:10.497687+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-09-28T22:34:10.583721+00:00 dns-arch panel[9066]: 2026/09/28 22:34:10 Starting CelikPanel Backend...
+2026-09-28T22:34:10.590622+00:00 dns-arch panel[9066]: 2026/09/28 22:34:10 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-09-28T22:34:10.591138+00:00 dns-arch panel[9066]: 2026/09/28 22:34:10 http: TLS handshake error from 127.0.0.1:35698: EOF
+2026-09-28T22:34:10.591534+00:00 dns-arch panel[9066]: 2026/09/28 22:34:10 Connected to Agent RPC; preparing normal management access
+2026-09-28T22:34:10.592530+00:00 dns-arch panel[9066]: 2026/09/28 22:34:10 http: TLS handshake error from 127.0.0.1:35702: EOF
+2026-09-28T22:34:10.600986+00:00 dns-arch panel[9066]: 2026/09/28 22:34:10 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-arch": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-09-28T22:34:10.603073+00:00 dns-arch panel[9066]: 2026/09/28 22:34:10 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-09-28T22:34:10.605541+00:00 dns-arch panel[9066]: 2026/09/28 22:34:10 Panel ready on :2083 (HTTPS)
+2026-09-28T22:34:11.594024+00:00 dns-arch panel[9066]: 2026/09/28 22:34:11 http: TLS handshake error from 127.0.0.1:35708: EOF
+2026-09-28T22:34:12.595771+00:00 dns-arch panel[9066]: 2026/09/28 22:34:12 http: TLS handshake error from 127.0.0.1:35716: EOF
+2026-09-28T22:34:13.598151+00:00 dns-arch panel[9066]: 2026/09/28 22:34:13 http: TLS handshake error from 127.0.0.1:35726: EOF
+2026-09-28T22:34:14.599543+00:00 dns-arch panel[9066]: 2026/09/28 22:34:14 http: TLS handshake error from 127.0.0.1:35736: EOF
+2026-09-28T22:34:15.602911+00:00 dns-arch panel[9066]: 2026/09/28 22:34:15 http: TLS handshake error from 127.0.0.1:35742: EOF
+2026-09-28T22:34:16.604213+00:00 dns-arch panel[9066]: 2026/09/28 22:34:16 http: TLS handshake error from 127.0.0.1:35756: EOF
+2026-09-28T22:34:17.605632+00:00 dns-arch panel[9066]: 2026/09/28 22:34:17 http: TLS handshake error from 127.0.0.1:35772: EOF
+2026-09-28T22:34:18.607224+00:00 dns-arch panel[9066]: 2026/09/28 22:34:18 http: TLS handshake error from 127.0.0.1:35784: EOF
+2026-09-28T22:34:19.608812+00:00 dns-arch panel[9066]: 2026/09/28 22:34:19 http: TLS handshake error from 127.0.0.1:35798: EOF
+2026-09-28T22:34:20.610173+00:00 dns-arch panel[9066]: 2026/09/28 22:34:20 http: TLS handshake error from 127.0.0.1:40496: EOF
+2026-09-28T22:34:21.612017+00:00 dns-arch panel[9066]: 2026/09/28 22:34:21 http: TLS handshake error from 127.0.0.1:40500: EOF
+2026-09-28T22:34:22.613666+00:00 dns-arch panel[9066]: 2026/09/28 22:34:22 http: TLS handshake error from 127.0.0.1:40502: EOF
+2026-09-28T22:34:23.617575+00:00 dns-arch panel[9066]: 2026/09/28 22:34:23 http: TLS handshake error from 127.0.0.1:40514: EOF
+2026-09-28T22:34:24.619416+00:00 dns-arch panel[9066]: 2026/09/28 22:34:24 http: TLS handshake error from 127.0.0.1:40528: EOF
+2026-09-28T22:34:25.621797+00:00 dns-arch panel[9066]: 2026/09/28 22:34:25 http: TLS handshake error from 127.0.0.1:40544: EOF
+2026-09-28T22:34:26.623066+00:00 dns-arch panel[9066]: 2026/09/28 22:34:26 http: TLS handshake error from 127.0.0.1:40556: EOF
+2026-09-28T22:34:27.624360+00:00 dns-arch panel[9066]: 2026/09/28 22:34:27 http: TLS handshake error from 127.0.0.1:40572: EOF
+2026-09-28T22:34:28.627564+00:00 dns-arch panel[9066]: 2026/09/28 22:34:28 http: TLS handshake error from 127.0.0.1:40588: EOF
+2026-09-28T22:34:29.628883+00:00 dns-arch panel[9066]: 2026/09/28 22:34:29 http: TLS handshake error from 127.0.0.1:40600: EOF
+2026-09-28T22:34:30.630246+00:00 dns-arch panel[9066]: 2026/09/28 22:34:30 http: TLS handshake error from 127.0.0.1:33780: EOF
+2026-09-28T22:34:31.632474+00:00 dns-arch panel[9066]: 2026/09/28 22:34:31 http: TLS handshake error from 127.0.0.1:33788: EOF
+2026-09-28T22:34:32.635253+00:00 dns-arch panel[9066]: 2026/09/28 22:34:32 http: TLS handshake error from 127.0.0.1:33798: EOF
+2026-09-28T22:34:33.636919+00:00 dns-arch panel[9066]: 2026/09/28 22:34:33 http: TLS handshake error from 127.0.0.1:33814: EOF
+2026-09-28T22:34:34.638296+00:00 dns-arch panel[9066]: 2026/09/28 22:34:34 http: TLS handshake error from 127.0.0.1:33820: EOF
+2026-09-28T22:34:35.639922+00:00 dns-arch panel[9066]: 2026/09/28 22:34:35 http: TLS handshake error from 127.0.0.1:33826: EOF
+2026-09-28T22:34:36.641260+00:00 dns-arch panel[9066]: 2026/09/28 22:34:36 http: TLS handshake error from 127.0.0.1:33836: EOF
+2026-09-28T22:34:37.642955+00:00 dns-arch panel[9066]: 2026/09/28 22:34:37 http: TLS handshake error from 127.0.0.1:33852: EOF
+2026-09-28T22:34:38.644427+00:00 dns-arch panel[9066]: 2026/09/28 22:34:38 http: TLS handshake error from 127.0.0.1:33856: EOF
+2026-09-28T22:34:39.645747+00:00 dns-arch panel[9066]: 2026/09/28 22:34:39 http: TLS handshake error from 127.0.0.1:33870: EOF
+2026-09-28T22:34:40.592746+00:00 dns-arch panel[9066]: 2026/09/28 22:34:40 http: TLS handshake error from 127.0.0.1:45060: EOF

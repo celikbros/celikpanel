@@ -1,0 +1,35 @@
+######## raw/watch/cp-b8-watch/timeline.log
+21:07:27.718628593 CHANGE journal none -> absent
+21:07:27.730622065 CHANGE ledger none -> 177f61d12ed0bb85e6ea535b807b376e26bbe0871405a13867c0b3cb6ea4b211
+21:07:27.734363391 CHANGE state none -> absent
+21:07:27.738438583 CHANGE pdnsdb none -> absent
+21:07:27.742065638 POINTER 
+21:07:27.743389584 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=absent killpid=
+21:07:28.858455954 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=absent killpid=1806,1851,
+21:07:29.151447391 CHANGE ledger 177f61d12ed0bb85e6ea535b807b376e26bbe0871405a13867c0b3cb6ea4b211 -> e0767c29944926b3c8b89562f54e31fbd1c51df060e4a99db4ac3afaa38e7553
+21:07:29.155182418 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=absent killpid=1806,1910,
+21:07:33.954088402 CHANGE ledger e0767c29944926b3c8b89562f54e31fbd1c51df060e4a99db4ac3afaa38e7553 -> 392b2ee05fd09e0a46f5d3d3eb994009a5701ed2620bc7acff0361e502fd850c
+21:07:36.932637827 CHANGE ledger 392b2ee05fd09e0a46f5d3d3eb994009a5701ed2620bc7acff0361e502fd850c -> 12a37e95418a7113b0d5cb7921c6e8d7f88ff7ed1e467345d83f1519e3706a1c
+21:07:36.937150927 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=absent killpid=1806,
+21:07:37.221969450 CHANGE ledger 12a37e95418a7113b0d5cb7921c6e8d7f88ff7ed1e467345d83f1519e3706a1c -> 89efccb7cca52e2ea8d9b462df04fb3dbdacac4b8936dbffb320f3b01bc9ba5e
+21:07:37.563824544 CHANGE ledger 89efccb7cca52e2ea8d9b462df04fb3dbdacac4b8936dbffb320f3b01bc9ba5e -> fcd67b7857f54c2cef81d3a93a13948a4e5d26d9c6887c6c0850c0e876059fdb
+21:07:37.567629329 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=absent killpid=1806,2740,
+21:07:38.974982029 CHANGE ledger fcd67b7857f54c2cef81d3a93a13948a4e5d26d9c6887c6c0850c0e876059fdb -> fc03df8d3340b36b1f68026b6408de3206a75dcfaa22b23306f380092d77be4e
+21:07:41.544452187 CHANGE ledger fc03df8d3340b36b1f68026b6408de3206a75dcfaa22b23306f380092d77be4e -> 85e203b549becb826f5d9a167e615e1556ebaa0b26f3b7503ea833f5db0846ec
+21:07:41.548196950 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=absent killpid=1806,3275,
+21:07:41.942169008 CHANGE ledger 85e203b549becb826f5d9a167e615e1556ebaa0b26f3b7503ea833f5db0846ec -> 461edf722f69c9bf4d53a3c6325035c1bd57ec51eebfe8da78f7d2de57f6f27b
+21:07:41.947641336 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=absent killpid=1806,3374,
+21:07:42.242980658 CHANGE journal absent -> df9e0818b79f4604475edc36b6e6e11ccacbef2af7ee2b7d681cf9428274b44c
+21:07:42.257978084 CHANGE ledger 461edf722f69c9bf4d53a3c6325035c1bd57ec51eebfe8da78f7d2de57f6f27b -> e8f105dbcf2c53211b3dc24b68014c68f8e138294712c02632f651a3f81122c8
+21:07:42.261852699 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=intent killpid=1806,
+21:07:42.541033336 CHANGE ledger e8f105dbcf2c53211b3dc24b68014c68f8e138294712c02632f651a3f81122c8 -> 8285655361f4af253d865126c26a7deeae883b552265454cc9f24045e92cb777
+21:07:42.545746652 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=0/inactive/ jphase=target-staged killpid=
+21:07:42.975108354 CHANGE journal df9e0818b79f4604475edc36b6e6e11ccacbef2af7ee2b7d681cf9428274b44c -> be5a83778d7db001313826468136e036fcb17063d7693dc8360e084346f7079e
+21:07:42.983514954 CHANGE ledger 8285655361f4af253d865126c26a7deeae883b552265454cc9f24045e92cb777 -> db7d1926f998586e75667cd79b745622f8a16526bed06474e9f68cc3eca8b22e
+21:07:42.987343153 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=3529/active/ jphase=target-staged killpid=
+21:07:43.548416423 CHANGE journal be5a83778d7db001313826468136e036fcb17063d7693dc8360e084346f7079e -> c662c753472ca866aa99a4e2b96dffcc39a545f3e8fe89cfe93ab98ee61a2586
+21:07:43.556876904 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=3529/active/ jphase=rolling-back killpid=
+21:07:44.445764853 CHANGE journal c662c753472ca866aa99a4e2b96dffcc39a545f3e8fe89cfe93ab98ee61a2586 -> 37769720b4d7ff78288f8c78eca5dfeb6ba5ef8c88cbbe253327d6902ee726a8
+21:07:44.453983527 pdns(MainPID/NRestarts/ActiveState/SubState)=0/0/inactive/dead/ agent(MainPID/ActiveState)=3529/active/ jphase=absent killpid=
+21:07:44.737504758 CHANGE journal 37769720b4d7ff78288f8c78eca5dfeb6ba5ef8c88cbbe253327d6902ee726a8 -> absent
+done

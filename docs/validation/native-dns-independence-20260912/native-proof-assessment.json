@@ -1,0 +1,16 @@
+{
+  "schema": "celikpanel/native-dns-evidence-assessment/v1",
+  "assessed_on": "2026-09-25",
+  "raw_file": "native-proof.json",
+  "raw_sha256": "a2b6e8131d7c9cbd92c392cef5f5e3b72f394fa2ee5f5f8c3d4cca37746390af",
+  "raw_passed_flag": true,
+  "acceptance_passed": false,
+  "valid_bounded_observations": [
+    "catalog zone addition and transfer",
+    "owner A-record and SOA-serial change",
+    "native DNS daemon restart"
+  ],
+  "unverified_observation": "secondary catalog-member zone removal",
+  "reason": "The only post-removal DNS response was REFUSED with zero answers and no authoritative flag; native secondary zone state was not recorded.",
+  "required_next_evidence": "Fresh management-absent pair trial with explicit native secondary zone-state proof after catalog removal and reboot."
+}

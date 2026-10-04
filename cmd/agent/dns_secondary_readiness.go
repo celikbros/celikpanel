@@ -20,11 +20,14 @@ func verifyDNSSecondaryPairReadyAt(ctx context.Context, localIP, peerIP string, 
 	if err != nil {
 		return err
 	}
+	// Both catalog reads below belong to this one check: the second must be
+	// accepted in the same producer format as the first.
+	ctx = withDNSPeerCatalogSession(ctx, "DNS pair readiness check")
 	ctx, cancel := context.WithTimeout(ctx, dnsPairProofLimit)
 	defer cancel()
 	catalog, err := axfr(ctx, localIP, peerIP, domain)
 	if err != nil || catalog.Serial == 0 {
-		return errors.New("DNS primary catalog cannot be read from the configured secondary")
+		return dnsPeerCatalogReadError("DNS primary catalog cannot be read from the configured secondary", err)
 	}
 	localSerial, localErr := exactDNSZoneSerialAtWithProbe(ctx, localIP, domain, soa)
 	peerSerial, peerErr := exactDNSZoneSerialAtWithProbe(ctx, peerIP, domain, soa)
@@ -39,6 +42,9 @@ func verifyDNSSecondaryPairReadyAt(ctx context.Context, localIP, peerIP string, 
 		}
 	}
 	current, err := axfr(ctx, localIP, peerIP, domain)
+	if errors.Is(err, errDNSPeerCatalogProducerChanged) {
+		return err
+	}
 	if err != nil || current.Serial != catalog.Serial || !slices.Equal(current.Members, catalog.Members) {
 		return errors.New("DNS primary catalog changed during secondary verification")
 	}
@@ -53,7 +59,7 @@ func bindSecondaryPairReadyForState(ctx context.Context, root string, tree bindd
 	if _, err := bindStateTreePairContract(root, state, tree, false, true, false); err != nil {
 		return false, err
 	}
-	if err := verifyDNSSecondaryPairReadyAt(ctx, pairing.LocalIP, pairing.PeerIP, probeDNSZoneSOA, probeDNSBoundCatalogAXFR); err != nil {
+	if err := verifyDNSSecondaryPairReadyAt(ctx, pairing.LocalIP, pairing.PeerIP, probeDNSZoneSOA, queryDNSBoundPeerCatalogAXFR); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -67,7 +73,7 @@ func powerDNSSecondaryPairReady(ctx context.Context, state dnsEngineStateReceipt
 	if err != nil || !enabled {
 		return false, err
 	}
-	if err := verifyDNSSecondaryPairReadyAt(ctx, identity.LocalIP, identity.PeerIP, probeDNSZoneSOA, probeDNSBoundCatalogAXFR); err != nil {
+	if err := verifyDNSSecondaryPairReadyAt(ctx, identity.LocalIP, identity.PeerIP, probeDNSZoneSOA, queryDNSBoundPeerCatalogAXFR); err != nil {
 		return false, err
 	}
 	return true, nil

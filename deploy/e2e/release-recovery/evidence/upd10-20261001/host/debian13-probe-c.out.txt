@@ -1,0 +1,5 @@
+Formatting '/var/tmp/cp-release-drill-upd10-deb-probe-c/cells/9ec095f5a8fba2c93ebf83cf/debian13/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-upd10-deb-probe-c/images/debian-13-genericcloud-amd64-20260826-2582.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+Formatting '/var/tmp/cp-release-drill-upd10-deb-probe-c/cells/9ec095f5a8fba2c93ebf83cf/arch/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-upd10-deb-probe-c/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-upd10-deb-probe-c", "cell_id": "release-recovery__d42c1c9fa761f061", "ssh_ports": [3017, 3018]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-upd10-deb-probe-c", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-upd10-deb-probe-c", "evidence_retained": true}

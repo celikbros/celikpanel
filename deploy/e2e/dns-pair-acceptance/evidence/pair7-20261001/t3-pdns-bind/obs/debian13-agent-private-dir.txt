@@ -1,0 +1,28 @@
+## 2026-09-30T08:35:57Z /var/lib/celikpanel-agent-private: names/metadata only (no content read)
+total 100
+drwx------  3 root celikpanel  4096 2026-09-30 08:33:45.587877844 +0000 .
+drwxr-xr-x 29 root root        4096 2026-09-30 08:31:56.055458836 +0000 ..
+-rw-------  1 root celikpanel   735 2026-09-30 08:32:06.443499126 +0000 dns-engine-ownership-pdns.json
+-rw-------  1 root celikpanel   731 2026-09-30 08:32:05.963497413 +0000 dns-engine-state.json
+-rw-------  1 root celikpanel 63927 2026-09-30 08:32:06.479499255 +0000 dns-engine-switch-v3-archive-39c024b54145014b02b79bc53b59217c-b5b181aafe910a0a940725e195e7cc40e856f74e4b7ef5088f243a7cab6aa08b.json
+drwx------  2 root root        4096 2026-09-30 08:33:12.819700786 +0000 dns-peer-inspection-keys
+-rw-------  1 root root         487 2026-09-30 08:33:15.095714842 +0000 dns-peer-inspection-v1.json
+-rw-------  1 root celikpanel   319 2026-09-30 08:32:21.331547150 +0000 firewall-apply-journal.json
+-rw-------  1 root celikpanel  6294 2026-09-30 08:33:45.579877806 +0000 service-mutations.json
+/var/lib root:root 755 ino=18 nlink=29 2026-09-30 08:31:56.055458836 +0000
+/var/lib/celikpanel-agent-private root:celikpanel 700 ino=132180 nlink=3 2026-09-30 08:33:45.587877844 +0000
+## hidden stage/retired names (any prefix)
+## filesystem of the directory
+TARGET SOURCE    FSTYPE OPTIONS
+/      /dev/vda1 ext4   rw,relatime,discard,errors=remount-ro
+## Agent unit sandbox properties
+ExecMainPID=1060
+UMask=0027
+User=root
+Group=celikpanel
+ReadWritePaths=
+PrivateTmp=no
+ProtectSystem=no
+NoNewPrivileges=no
+ActiveEnterTimestamp=Wed 2026-09-30 08:35:11 UTC
+(end)

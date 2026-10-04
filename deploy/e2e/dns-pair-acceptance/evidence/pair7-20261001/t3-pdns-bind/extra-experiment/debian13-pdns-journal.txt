@@ -1,0 +1,22 @@
+2026-09-30T08:36:21.670619+00:00 dns-debian13 pdns_server[690]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:35640', transfer initiated
+2026-09-30T08:36:22.547152+00:00 dns-debian13 pdns_server[690]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:41012', transfer initiated
+2026-09-30T08:36:24.115041+00:00 dns-debian13 pdns_server[690]: Cache clear request for 'extra-accept.test$' received from operator
+2026-09-30T08:36:24.141950+00:00 dns-debian13 pdns_server[690]: Cache clear request for 'catalog-c000020a.celikpanel.invalid$' received from operator
+2026-09-30T08:36:24.169095+00:00 dns-debian13 pdns_server[690]: Notification request to host 192.0.2.11:53 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T08:36:24.196652+00:00 dns-debian13 pdns_server[690]: Notification request to host 192.0.2.11:53 for zone 'extra-accept.test' received from operator
+2026-09-30T08:36:24.415089+00:00 dns-debian13 pdns_server[690]: IXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:44790', transfer initiated with serial 1790757185
+2026-09-30T08:36:24.415185+00:00 dns-debian13 pdns_server[690]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:44790', transfer initiated
+2026-09-30T08:36:24.460765+00:00 dns-debian13 pdns_server[690]: AXFR-out zone 'extra-accept.test', client '192.0.2.11:44795', transfer initiated
+2026-09-30T08:36:25.411494+00:00 dns-debian13 pdns_server[690]: Received unsuccessful notification report for 'extra-accept.test' from 192.0.2.11:53, error: Server Not Authoritative for zone / Not Authorized
+2026-09-30T08:36:25.460194+00:00 dns-debian13 pdns_server[690]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:41038', transfer initiated
+2026-09-30T08:36:26.254235+00:00 dns-debian13 pdns_server[690]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:44796', transfer initiated
+2026-09-30T08:36:27.492856+00:00 dns-debian13 pdns_server[690]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:41056', transfer initiated
+2026-09-30T08:36:28.434665+00:00 dns-debian13 pdns_server[690]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:41098', transfer initiated
+2026-09-30T08:36:30.215363+00:00 dns-debian13 pdns_server[690]: Cache clear request for 'extra-accept.test$' received from operator
+2026-09-30T08:36:30.244288+00:00 dns-debian13 pdns_server[690]: Cache clear request for 'catalog-c000020a.celikpanel.invalid$' received from operator
+2026-09-30T08:36:30.272387+00:00 dns-debian13 pdns_server[690]: Notification request to host 192.0.2.11:53 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T08:36:30.416582+00:00 dns-debian13 pdns_server[690]: IXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:44808', transfer initiated with serial 1790757186
+2026-09-30T08:36:30.416683+00:00 dns-debian13 pdns_server[690]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:44808', transfer initiated
+2026-09-30T08:36:31.410227+00:00 dns-debian13 pdns_server[690]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:41134', transfer initiated
+2026-09-30T08:36:41.333441+00:00 dns-debian13 pdns_server[690]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:45444', transfer initiated
+2026-09-30T08:36:52.086694+00:00 dns-debian13 pdns_server[690]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:35416', transfer initiated

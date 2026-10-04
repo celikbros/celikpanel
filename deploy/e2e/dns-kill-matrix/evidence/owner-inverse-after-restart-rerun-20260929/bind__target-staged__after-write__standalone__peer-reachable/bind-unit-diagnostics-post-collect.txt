@@ -1,0 +1,89 @@
+wall=2026-09-29T08:27:58.180038265Z
+== systemctl show named.service (full)
+MainPID=0
+ControlPID=0
+ExecMainPID=0
+Id=named.service
+Names=named.service
+LoadState=masked
+ActiveState=inactive
+SubState=dead
+FragmentPath=/etc/systemd/system/named.service
+UnitFileState=masked
+UnitFilePreset=enabled
+NeedDaemonReload=no
+LoadError=org.freedesktop.systemd1.UnitMasked "Unit named.service is masked."
+Transient=no
+== systemctl status named.service
+○ named.service
+     Loaded: masked (Reason: Unit named.service is masked.)
+     Active: inactive (dead)
+== systemctl show bind9.service (full)
+MainPID=0
+ControlPID=0
+ExecMainPID=0
+Id=bind9.service
+Names=bind9.service
+LoadState=masked
+ActiveState=inactive
+SubState=dead
+FragmentPath=/etc/systemd/system/bind9.service
+UnitFileState=masked
+UnitFilePreset=enabled
+NeedDaemonReload=no
+LoadError=org.freedesktop.systemd1.UnitMasked "Unit bind9.service is masked."
+Transient=no
+== systemctl status bind9.service
+○ bind9.service
+     Loaded: masked (Reason: Unit bind9.service is masked.)
+     Active: inactive (dead)
+== unit files
+ls: cannot access '/run/systemd/system/named.service': No such file or directory
+ls: cannot access '/run/systemd/system/bind9.service': No such file or directory
+ls: cannot access '/usr/lib/systemd/system/bind9.service': No such file or directory
+lrwxrwxrwx 1 root root   9 2026-09-29 08:25:34.054122144 +0000 /etc/systemd/system/bind9.service -> /dev/null
+lrwxrwxrwx 1 root root   9 2026-09-29 08:25:34.402124737 +0000 /etc/systemd/system/named.service -> /dev/null
+-rw-r--r-- 1 root root 376 2026-09-16 13:42:29.000000000 +0000 /lib/systemd/system/named.service
+-rw-r--r-- 1 root root 376 2026-09-16 13:42:29.000000000 +0000 /usr/lib/systemd/system/named.service
+/dev/null
+/dev/null
+== list-unit-files
+UNIT FILE                STATE    PRESET
+bind9.service            masked   enabled
+named-resolvconf.service disabled enabled
+named.service            masked   enabled
+
+3 unit files listed.
+== dpkg -S
+bind9: /usr/lib/systemd/system/named.service
+== /etc/bind
+total 28
+drwxr-sr-x  2 root bind 4096 2026-09-29 08:25:49.666215905 +0000 .
+drwxr-xr-x 71 root root 4096 2026-09-29 08:25:39.606160413 +0000 ..
+-rw-r--r--  1 root bind  455 2026-09-16 13:42:29.000000000 +0000 named.conf
+-rw-r--r--  1 root bind   42 2026-09-29 08:25:49.662215885 +0000 named.conf.local
+-rw-r--r--  1 root bind   43 2026-09-29 08:25:49.654215846 +0000 named.conf.options
+-rw-r--r--  1 root bind  116 2026-09-16 13:42:29.000000000 +0000 named.conf.root-hints
+-rw-r-----  1 bind bind  100 2026-09-29 08:25:37.246144996 +0000 rndc.key
+== ss 53
+udp UNCONN 0      0         192.0.2.10:53 0.0.0.0:* users:(("pdns_server",pid=3072,fd=6))    
+udp UNCONN 0      0          10.0.2.15:53 0.0.0.0:* users:(("pdns_server",pid=3072,fd=5))    
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=18))
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=19))
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=21))
+tcp LISTEN 0      128       192.0.2.10:53 0.0.0.0:* users:(("pdns_server",pid=3072,fd=8))    
+tcp LISTEN 0      128        10.0.2.15:53 0.0.0.0:* users:(("pdns_server",pid=3072,fd=7))    
+== apt history tail
+
+Start-Date: 2026-09-29  08:25:09
+Commandline: /usr/bin/apt-get install -y --no-install-recommends pdns-backend-sqlite3 pdns-server
+Requested-By: celik (1000)
+Install: pdns-server:amd64 (4.9.17-0+deb13u1), libluajit-5.1-2:amd64 (2.1.0+openresty20250117-2, automatic), pdns-backend-sqlite3:amd64 (4.9.17-0+deb13u1), libboost-program-options1.83.0:amd64 (1.83.0-4.2, automatic), libluajit-5.1-common:amd64 (2.1.0+openresty20250117-2, automatic)
+End-Date: 2026-09-29  08:25:12
+
+Start-Date: 2026-09-29  08:25:36
+Commandline: /usr/bin/apt-get install -y --no-install-recommends bind9
+Install: bind9:amd64 (1:9.20.29-1~deb13u1), bind9-utils:amd64 (1:9.20.29-1~deb13u1, automatic), dns-root-data:amd64 (2025080400~deb13u1, automatic)
+Upgrade: bind9-host:amd64 (1:9.20.26-1~deb13u1, 1:9.20.29-1~deb13u1), bind9-libs:amd64 (1:9.20.26-1~deb13u1, 1:9.20.29-1~deb13u1)
+End-Date: 2026-09-29  08:25:39

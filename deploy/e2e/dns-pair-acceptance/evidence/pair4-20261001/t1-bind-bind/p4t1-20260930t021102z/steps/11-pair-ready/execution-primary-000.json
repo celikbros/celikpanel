@@ -1,0 +1,77 @@
+{
+  "context": {
+    "access_dns_ip": "192.0.2.10",
+    "dns_engine": "bind",
+    "dns_hosting_management": "",
+    "dns_mode": "local",
+    "dns_role": "primary",
+    "local_ip": "192.0.2.10",
+    "local_nameserver": "ns1.ns-accept.test",
+    "mail_hostname": "",
+    "panel_domain": "panel-debian13.ns-accept.test",
+    "peer_ip": "192.0.2.11",
+    "peer_nameserver": "ns2.ns-accept.test"
+  },
+  "error": {
+    "code": "server_setup_access_dns_required",
+    "message": "Public DNS must resolve panel-debian13.ns-accept.test to 192.0.2.10 before a certificate is requested. Check this hostname's A/AAAA records and its zone delegation. For DNS managed here, review the infrastructure DNS records in this wizard; otherwise correct them at the primary DNS server or provider. This check resumes automatically when DNS is verified."
+  },
+  "id": "f4b5a387b3eff7fc1645779c550fab06",
+  "panel_url": "https://panel-debian13.ns-accept.test:2083/",
+  "phase": "access_dns",
+  "plan_id": "9220d3e009931851f78b0118880c197e",
+  "request_id": "f4b5a387b3eff7fc1645779c550fab06",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "01-dns",
+      "kind": "dns",
+      "owner_id": "b997438c8313775ba8bbee951e507e15",
+      "request_id": "5e0f8f8cc243a79c82f5113fd6246a54",
+      "status": "succeeded",
+      "target": "local"
+    },
+    {
+      "id": "02-service",
+      "kind": "service",
+      "operation_id": "ebfdb12bb97100573c070b1c0d30231d",
+      "owner_id": "de01ca5c5f6982a698671e731955c62e",
+      "request_id": "f525e78b6403429d41547cc658e63def",
+      "status": "succeeded",
+      "target": "certbot"
+    },
+    {
+      "id": "03-firewall",
+      "kind": "firewall",
+      "owner_id": "64a434b2b48b20a09b81352f6db74f4c",
+      "request_id": "fe60b555d3c4588d21df801af9694d61",
+      "status": "succeeded",
+      "target": "enable_and_persist"
+    },
+    {
+      "id": "04-access_dns",
+      "kind": "access_dns",
+      "owner_id": "8b20b6908dfa70375a5e6e450bf0036c",
+      "qualifier": "192.0.2.10",
+      "request_id": "a8c9fd6c40da47d52da1fee4fdf3df97",
+      "status": "running",
+      "target": "panel-debian13.ns-accept.test"
+    },
+    {
+      "id": "05-panel_certificate",
+      "kind": "panel_certificate",
+      "owner_id": "ef2026ea0af97c3847f13c09aecf0204",
+      "request_id": "9839aa4ef68249dba9eb86c85aaeb2e8",
+      "status": "pending",
+      "target": "panel-debian13.ns-accept.test"
+    },
+    {
+      "id": "06-verify",
+      "kind": "verify",
+      "owner_id": "fa9b5f8255c898b4e6581827212ba782",
+      "request_id": "60dfac0709fa719232d4e0390e8de2da",
+      "status": "pending",
+      "target": "dns"
+    }
+  ]
+}

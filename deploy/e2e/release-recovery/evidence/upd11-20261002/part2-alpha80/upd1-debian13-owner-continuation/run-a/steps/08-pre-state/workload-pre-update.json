@@ -1,0 +1,151 @@
+{
+  "boot_id": "9388319a-a847-477a-9238-ee033a94ba7d",
+  "budget": {
+    "present": false,
+    "receipts": []
+  },
+  "build": {
+    "agent": {
+      "identity": "version=v0.1.0-alpha.80\ncommit=b9fe1037c6b5580fed97fa0382ec576d5f041045\n",
+      "returncode": 0,
+      "sha256": "2387e8395694748c7bb779e20a190b2b763ad9b1397651b8b6170dd70b9f6fd3"
+    },
+    "panel": {
+      "identity": "version=v0.1.0-alpha.80\ncommit=b9fe1037c6b5580fed97fa0382ec576d5f041045\n",
+      "returncode": 0,
+      "sha256": "c7cf5ec8175d2f483272c9060c6fdabe06ede161cc9447edd38464f7a410d184"
+    }
+  },
+  "captured_at": "2026-10-02T12:54:18.623911Z",
+  "cron": {
+    "error": "crontab-entry-not-found",
+    "ok": false
+  },
+  "db": {
+    "ok": null,
+    "skipped": "no-owner-database"
+  },
+  "dns_server": "127.0.0.1",
+  "dns_tcp": {
+    "error": "ConnectionRefusedError",
+    "ok": false
+  },
+  "dns_udp": {
+    "error": "TimeoutError",
+    "ok": false
+  },
+  "firewall": {
+    "bytes": 316,
+    "returncode": 0,
+    "sha256": "62da8f9f1843193d5cc776589fc2cb0232478dab1ed164a868ce658a491dc2a2",
+    "status": "ok",
+    "tables": [
+      "table inet celikpanel_fw"
+    ]
+  },
+  "floor": {
+    "present": true,
+    "sha256": "44350e294531db72015a67ab1d5b9e18d1e7f45567cfc178b69608910f5aa923",
+    "text": "format=celikpanel-release-sequence-floor-v1\nsequence=80\nversion=v0.1.0-alpha.80\n"
+  },
+  "foundation": {
+    "present": true,
+    "sha256": "d2ecc5152627d38ad2da45cdbef1492945710f3ee0dd0e2e77446d459c51e84d",
+    "text": "format=celikpanel-release-recovery-foundation-v1\nprotocol=1\nsequence=80\nrelease-version=v0.1.0-alpha.80\nrelease-commit=b9fe1037c6b5580fed97fa0382ec576d5f041045\nrunner-sha256=b3c7cb18310c97e19445561fb6359c8ca9e2b729a7b0010b3391c3fccfaaacab\nservice-sha256=6d680d60f05388aa4fc7116564ed3105219e59a39d2d381e21bed82e437f775e\ntimer-sha256=33148e5b0fbc209ff6fd725aaaff2c569bd7470751341d4b83b301d0fa54cd86\nstart-guard-sha256=2e2e0d0d00a7f28059e2300a2f909466136725807b2608d8d7f0c72b1e31dfd4\nagent-dropin-sha256=82e0fe894b3fa676c1b64e65ac964b74b27dcfe5a83ddf91761f44ad5971359f\npanel-dropin-sha256=82e0fe894b3fa676c1b64e65ac964b74b27dcfe5a83ddf91761f44ad5971359f\nprotocol-sha256=a29874f40088f2b5e960b4ce63651657b1ff2622334dcc5cc11c8f338215034c\n"
+  },
+  "mailbox": {
+    "checked": true,
+    "present": true,
+    "returncode": 0,
+    "status": "ok"
+  },
+  "sampler": {
+    "argv": [
+      "/usr/bin/systemctl",
+      "show",
+      "cp-lab-upd1-sampler.service",
+      "-p",
+      "ActiveState",
+      "-p",
+      "UnitFileState"
+    ],
+    "returncode": 0,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "ActiveState=inactive\nUnitFileState=\n"
+  },
+  "schema": "celikpanel/upd1-workload-snapshot/v1",
+  "services": {
+    "celikpanel-agent.service": {
+      "ActiveState": "active",
+      "LoadState": "loaded",
+      "SubState": "running",
+      "UnitFileState": "enabled"
+    },
+    "celikpanel-firewall-restore.service": {
+      "ActiveState": "inactive",
+      "LoadState": "loaded",
+      "SubState": "dead",
+      "UnitFileState": "enabled"
+    },
+    "celikpanel-panel.service": {
+      "ActiveState": "active",
+      "LoadState": "loaded",
+      "SubState": "running",
+      "UnitFileState": "enabled"
+    },
+    "dovecot.service": {
+      "ActiveState": "active",
+      "LoadState": "loaded",
+      "SubState": "running",
+      "UnitFileState": "enabled"
+    },
+    "nftables.service": {
+      "ActiveState": "inactive",
+      "LoadState": "loaded",
+      "SubState": "dead",
+      "UnitFileState": "disabled"
+    },
+    "nginx.service": {
+      "ActiveState": "active",
+      "LoadState": "loaded",
+      "SubState": "running",
+      "UnitFileState": "enabled"
+    },
+    "postfix.service": {
+      "ActiveState": "active",
+      "LoadState": "loaded",
+      "SubState": "running",
+      "UnitFileState": "enabled"
+    }
+  },
+  "smtp": {
+    "banner_code": "220",
+    "ok": true
+  },
+  "timers": {
+    "celikpanel-release-recovery.timer": {
+      "ActiveState": "active",
+      "LoadState": "loaded",
+      "SubState": "waiting",
+      "UnitFileState": "enabled"
+    },
+    "certbot.timer": {
+      "ActiveState": "active",
+      "LoadState": "loaded",
+      "SubState": "waiting",
+      "UnitFileState": "enabled"
+    }
+  },
+  "transaction": {
+    "fields": {},
+    "present": false,
+    "status": "ok"
+  },
+  "web": {
+    "marker": true,
+    "ms": 2,
+    "ok": true,
+    "status": 200
+  }
+}

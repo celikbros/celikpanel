@@ -1,0 +1,26 @@
+--- harness-h12/deploy/e2e/release-recovery/owner_update_trial.py	2026-10-01 02:56:54.432305309 +0300
++++ harness-h14/deploy/e2e/release-recovery/owner_update_trial.py	2026-10-01 04:23:12.481974159 +0300
+@@ -4051,9 +4051,12 @@
+         if self.state.get("management_off_at"):
+             # mgmt-off-reboot: this step judges the update part; the management-off window is judged by
+             # management-off-measure (the Panel is down there by the owner's choice).
+-            cut = self.state["management_off_at"] + skew
++            # H14 (upd4 run copy): a cycle's "t" is its start; its Panel probe runs about 2 s later. Cycles that
++            # started within one interval of the owner's stop request are left out of the update-only window.
++            cut = self.state["management_off_at"] + skew - SAMPLE_INTERVAL_S
+             samples = [s for s in samples if float(s.get("t", 0)) <= cut]
+             checks["samples_until_management_off"] = len(samples)
++            checks["management_off_cut"] = {"guest_clock": cut, "margin_seconds": SAMPLE_INTERVAL_S}
+         # Host instants on the guest clock (the reset may also move the guest clock; recorded, not corrected).
+         resets = [reset + skew for reset in self.state["resets"]]
+         started = self.state["started_at"] + skew if self.state.get("started_at") else None
+@@ -4071,7 +4074,8 @@
+             panel_expected = "down-only-during-transaction"
+         host_samples = self.host_samples
+         if self.state.get("management_off_at"):
+-            host_samples = [s for s in host_samples if float(s.get("t", 0)) <= self.state["management_off_at"]]
++            host_samples = [s for s in host_samples
++                            if float(s.get("t", 0)) <= self.state["management_off_at"] - SAMPLE_INTERVAL_S]
+         host_panel = outage_windows(host_samples, "panel")
+         checks.update(workloads=per, host_panel_windows=host_panel, host_ssh_windows=outage_windows(host_samples, "ssh"),
+                       agreement=agreement_verdict([s["agreement"] for s in self.state.get("status_samples", [])]),

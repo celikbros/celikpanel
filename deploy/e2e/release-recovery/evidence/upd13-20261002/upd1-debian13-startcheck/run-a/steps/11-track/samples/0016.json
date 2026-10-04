@@ -1,0 +1,24 @@
+{
+  "agreement": {
+    "known_sources": [],
+    "phase": {},
+    "reasons": [],
+    "sources": [
+      "shell"
+    ],
+    "verdict": "no-known-source"
+  },
+  "cli_error": "CalledProcessError",
+  "guidance_api": null,
+  "guidance_cli": null,
+  "index": 15,
+  "observed": null,
+  "panel_error": "PanelError",
+  "shell_fetch": {
+    "error": "ConnectionRefusedError",
+    "note": "only a browser-saved copy of the shell can show while the Panel is down"
+  },
+  "t": 1790975785.909016,
+  "update_card": null,
+  "utc": "2026-10-02T21:16:25Z"
+}

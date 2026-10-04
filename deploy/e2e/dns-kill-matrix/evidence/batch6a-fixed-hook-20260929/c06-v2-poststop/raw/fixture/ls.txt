@@ -1,0 +1,45 @@
+/var/lib/celikpanel-dns-kill-matrix:
+total 1432
+drwx------  4 root root    4096 2026-09-29 15:06:15.660043317 +0000 .
+drwxr-xr-x 30 root root    4096 2026-09-29 15:06:43.628730313 +0000 ..
+-rw-------  1 root root    3236 2026-09-29 15:06:15.515971337 +0000 controller-argv.json
+-rw-------  1 root root    1016 2026-09-29 15:06:15.648037319 +0000 coordinator-stop-proof.json
+-rw-------  1 root root     728 2026-09-29 15:05:46.091655909 +0000 installed-binaries.sha256
+-rw-------  1 root root 1406962 2026-09-29 15:05:39.055150647 +0000 manifest.json
+drwx------  2 root root    4096 2026-09-29 15:09:46.521468293 +0000 measured
+drwx------  3 root root    4096 2026-09-29 15:06:15.487957341 +0000 results
+-rw-------  1 root root    1318 2026-09-29 15:05:53.133296212 +0000 scenario.json
+-rw-------  1 root root    3181 2026-09-29 15:06:12.286232342 +0000 source-adoption-pdns.json
+-rw-------  1 root root    1224 2026-09-29 15:06:15.287857370 +0000 source-normalization-pdns-identity.json
+-rw-------  1 root root    1172 2026-09-29 15:06:06.882639576 +0000 source-preinstall-pdns.json
+-rw-------  1 root root    2710 2026-09-29 15:06:15.467947344 +0000 source-proof.json
+-rw-------  1 root root    1329 2026-09-29 15:05:53.141302466 +0000 source-setup-pdns.json
+-rw-------  1 root root     408 2026-09-29 15:06:07.787310307 +0000 source-setup-trigger-identity.json
+
+/var/lib/celikpanel-dns-kill-matrix/measured:
+total 16
+drwx------ 2 root root       4096 2026-09-29 15:09:46.521468293 +0000 .
+drwx------ 4 root root       4096 2026-09-29 15:06:15.660043317 +0000 ..
+-rw------- 1 root celikpanel  392 2026-09-29 15:09:46.513598043 +0000 trigger-identity-retry-after-rollback.json
+-rw------- 1 root celikpanel  392 2026-09-29 15:06:39.091752448 +0000 trigger-identity.json
+
+/var/lib/celikpanel-dns-kill-matrix/results:
+total 12
+drwx------ 3 root root 4096 2026-09-29 15:06:15.487957341 +0000 .
+drwx------ 4 root root 4096 2026-09-29 15:06:15.660043317 +0000 ..
+drwx------ 2 root root 4096 2026-09-29 15:10:29.525361058 +0000 bind__target-started__after-write__standalone__peer-reachable
+
+/var/lib/celikpanel-dns-kill-matrix/results/bind__target-started__after-write__standalone__peer-reachable:
+total 572
+drwx------ 2 root root         4096 2026-09-29 15:10:29.525361058 +0000 .
+drwx------ 3 root root         4096 2026-09-29 15:06:15.487957341 +0000 ..
+-rw------- 1 root celikpanel   1253 2026-09-29 15:06:54.866864532 +0000 boundary-marker.json
+-rw------- 1 root celikpanel   1872 2026-09-29 15:06:54.918873769 +0000 kill-proof.json
+-rw------- 1 root celikpanel  47776 2026-09-29 15:06:55.214925971 +0000 reboot-checkpoint-1.json
+-rw------- 1 root celikpanel 154709 2026-09-29 15:08:58.231121923 +0000 reboot-checkpoint-2.json
+-rw------- 1 root celikpanel    581 2026-09-29 15:07:12.448000000 +0000 reboot-resumed-1.json
+-rw------- 1 root celikpanel    575 2026-09-29 15:09:16.264000000 +0000 reboot-resumed-2.json
+-rw------- 1 root celikpanel 227759 2026-09-29 15:10:29.521360407 +0000 result.json
+-rw------- 1 root celikpanel  47964 2026-09-29 15:08:58.219121892 +0000 transcript-after-reboot-1.jsonl
+-rw------- 1 root celikpanel  49932 2026-09-29 15:10:29.509358453 +0000 transcript-after-reboot-2.jsonl
+-rw------- 1 root celikpanel  14510 2026-09-29 15:06:55.202923861 +0000 transcript.jsonl

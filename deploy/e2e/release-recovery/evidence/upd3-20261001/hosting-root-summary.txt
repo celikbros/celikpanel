@@ -1,0 +1,113 @@
+== upd1-arch-good before-site probes=6 last=inspect-before-site-20260930T201041Z.txt
+# read-only side inspection lab=cp-release-drill-upd3-arch-good-a node=arch label=before-site rc=0 took=0.2s
+absent /var/www
+absent /var/www/celikpanel
+absent /var/www/celikpanel/subscriptions
+   after-seed inspect-after-seed-20260930T201103Z.txt:
+drwxr-xr-x 755 root:root /var/www
+drwxr-xr-x 755 root:root /var/www/celikpanel
+ "path": "/var/www",
+ "path": "/var/www/celikpanel",
+host-header / -> 200
+   after-track:
+* * * * * /bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt"
+/var/www/celikpanel/subscriptions/2/sites/1/upd1-cron-stamp.txt mtime=2026-09-30 20:14:00.377627704 +0000 content=2026-09-30T20:14:00+00:00
+2026-09-30T20:13:00+00:00 dns-arch CROND[3082]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+== upd1-arch-defective before-site probes=6 last=inspect-before-site-20260930T202033Z.txt
+# read-only side inspection lab=cp-release-drill-upd3-arch-def-a node=arch label=before-site rc=0 took=0.2s
+absent /var/www
+absent /var/www/celikpanel
+absent /var/www/celikpanel/subscriptions
+   after-seed inspect-after-seed-20260930T202101Z.txt:
+drwxr-xr-x 755 root:root /var/www
+drwxr-xr-x 755 root:root /var/www/celikpanel
+ "path": "/var/www",
+ "path": "/var/www/celikpanel",
+host-header / -> 200
+   after-track:
+* * * * * /bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt"
+/var/www/celikpanel/subscriptions/2/sites/1/upd1-cron-stamp.txt mtime=2026-09-30 20:23:00.874066965 +0000 content=2026-09-30T20:23:00+00:00
+2026-09-30T20:22:00+00:00 dns-arch CROND[2915]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+== upd1-arch-startcheck before-site probes=7 last=inspect-before-site-20260930T203122Z.txt
+# read-only side inspection lab=cp-release-drill-upd3-arch-sc-a node=arch label=before-site rc=0 took=0.2s
+absent /var/www
+absent /var/www/celikpanel
+absent /var/www/celikpanel/subscriptions
+   after-seed inspect-after-seed-20260930T203135Z.txt:
+drwxr-xr-x 755 root:root /var/www
+drwxr-xr-x 755 root:root /var/www/celikpanel
+ "path": "/var/www",
+ "path": "/var/www/celikpanel",
+host-header / -> 200
+   after-track:
+* * * * * /bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt"
+/var/www/celikpanel/subscriptions/2/sites/1/upd1-cron-stamp.txt mtime=2026-09-30 20:34:00.544564742 +0000 content=2026-09-30T20:34:00+00:00
+2026-09-30T20:33:00+00:00 dns-arch CROND[3053]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+== upd1-arch-realstart before-site probes=6 last=inspect-before-site-20260930T204230Z.txt
+# read-only side inspection lab=cp-release-drill-upd3-arch-rs-a node=arch label=before-site rc=0 took=0.2s
+absent /var/www
+absent /var/www/celikpanel
+absent /var/www/celikpanel/subscriptions
+   after-seed inspect-after-seed-20260930T204258Z.txt:
+drwxr-xr-x 755 root:root /var/www
+drwxr-xr-x 755 root:root /var/www/celikpanel
+ "path": "/var/www",
+ "path": "/var/www/celikpanel",
+host-header / -> 200
+   after-track:
+* * * * * /bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt"
+/var/www/celikpanel/subscriptions/2/sites/1/upd1-cron-stamp.txt mtime=2026-09-30 20:51:00.661393053 +0000 content=2026-09-30T20:51:00+00:00
+2026-09-30T20:50:00+00:00 dns-arch CROND[27294]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+== upd1-debian13-defective before-site probes=12 last=inspect-before-site-20260930T193204Z.txt
+# read-only side inspection lab=cp-release-drill-upd3-d13-def-a node=debian13 label=before-site rc=0 took=0.2s
+drwxr-xr-x 755 root:root /var/www
+absent /var/www/celikpanel
+absent /var/www/celikpanel/subscriptions
+   after-seed inspect-after-seed-20260930T193214Z.txt:
+drwxr-xr-x 755 root:root /var/www
+drwxr-xr-x 755 root:root /var/www/celikpanel
+ "path": "/var/www/celikpanel",
+host-header / -> 200
+   after-track:
+* * * * * /bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt"
+/var/www/celikpanel/subscriptions/2/sites/1/upd1-cron-stamp.txt mtime=2026-09-30 19:36:01.242967958 +0000 content=2026-09-30T19:36:01+00:00
+2026-09-30T19:34:01+00:00 dns-debian13 CRON[26560]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+== upd1-debian13-startcheck before-site probes=12 last=inspect-before-site-20260930T194424Z.txt
+# read-only side inspection lab=cp-release-drill-upd3-d13-sc-a node=debian13 label=before-site rc=0 took=0.2s
+drwxr-xr-x 755 root:root /var/www
+absent /var/www/celikpanel
+absent /var/www/celikpanel/subscriptions
+   after-seed inspect-after-seed-20260930T194452Z.txt:
+drwxr-xr-x 755 root:root /var/www
+drwxr-xr-x 755 root:root /var/www/celikpanel
+ "path": "/var/www/celikpanel",
+host-header / -> 200
+   after-track:
+* * * * * /bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt"
+/var/www/celikpanel/subscriptions/2/sites/1/upd1-cron-stamp.txt mtime=2026-09-30 19:48:01.526636335 +0000 content=2026-09-30T19:48:01+00:00
+2026-09-30T19:47:01+00:00 dns-debian13 CRON[43244]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+== upd1-debian13-realstart before-site probes=12 last=inspect-before-site-20260930T195542Z.txt
+# read-only side inspection lab=cp-release-drill-upd3-d13-rs-a node=debian13 label=before-site rc=0 took=0.2s
+drwxr-xr-x 755 root:root /var/www
+absent /var/www/celikpanel
+absent /var/www/celikpanel/subscriptions
+   after-seed inspect-after-seed-20260930T195559Z.txt:
+drwxr-xr-x 755 root:root /var/www
+drwxr-xr-x 755 root:root /var/www/celikpanel
+ "path": "/var/www/celikpanel",
+host-header / -> 200
+   after-track:
+* * * * * /bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt"
+/var/www/celikpanel/subscriptions/2/sites/1/upd1-cron-stamp.txt mtime=2026-09-30 20:04:01.125825447 +0000 content=2026-09-30T20:04:01+00:00
+2026-09-30T20:02:01+00:00 dns-debian13 CRON[49265]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+== upd1-debian13-good before-site probes=13 last=inspect-before-site-20260930T175233Z.txt
+# read-only side inspection lab=cp-release-drill-upd3-d13-good-a node=debian13 label=before-site rc=None took=0.2s
+   after-seed inspect-after-seed-20260930T175240Z.txt:
+drwxr-xr-x 755 root:root /var/www
+drwxr-xr-x 755 root:root /var/www/celikpanel
+ "path": "/var/www/celikpanel",
+host-header / -> 200
+   after-track:
+* * * * * /bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt"
+/var/www/celikpanel/subscriptions/2/sites/1/upd1-cron-stamp.txt mtime=2026-09-30 19:24:01.857450545 +0000 content=2026-09-30T19:24:01+00:00
+2026-09-30T19:22:01+00:00 dns-debian13 CRON[61990]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")

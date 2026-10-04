@@ -1,0 +1,32 @@
+{
+  "schema": "celikpanel/native-mail-loaded-transition/v1",
+  "source_commit": "e7c6623f8b1b188c3c0d0920c7ae418c85bbfd1a",
+  "test_sha256": "6c8ee4871caeb37d734a19fc11d53c4849e015a80543459d039ce2f2898790f5",
+  "agent_test_sha256": "9d5dbf7ea1d43b938b73131be5d6bcf143a48b670b4e566f38490c18a173da00",
+  "recovery_sha256": "87567574ff1a58f35eadfff53f3ba3a6a1a1de1ff0b569e99c8ede341be5d33c",
+  "runtime_manifest": {
+    "schema": "celikpanel-mail-renewal-runtime/v1",
+    "generation": "c854843a5a4d04ec8a1df8fb41805503a48e02e0cffdf2d696d2034b33563f9f",
+    "ledger_version": 1,
+    "plan_version": 1,
+    "receipt_schema": "mail-host-certificate-receipt/v1",
+    "binary_sha256": "717574bf84b2707ab6667accd80cda0e4f7fdf4c7f5bba096d42055647032a28",
+    "service_sha256": "49371f0b0400961327c0b01fe6aac24741ecd25dbab7f918549f84c6da8943eb",
+    "timer_sha256": "8f4a40a06ace0a4ea845c214504fb5ee2e77e020e0b377828a59d78e948bf8df",
+    "hook_sha256": "043a9df81b3265c7772b8a19ba8ec33fdd366ac5a34fb4c5d4948602993fe82c"
+  },
+  "scope": {
+    "existing_schedule_forward_inverse": true,
+    "actual_systemd_reload": true,
+    "interrupted_reload_recovery": true,
+    "owner_preference_preserved": true,
+    "bootstrap_enrollment": false,
+    "production_dispatch": false,
+    "whole_update_rollback": false,
+    "power_loss": false
+  },
+  "log": {
+    "text": "=== RUN   TestMailRenewalDisposableVMHookPreservation\n    mail_renewal_hook_vm_test.go:37: independent_hook_preserved generation=7f2c233fea569ca25f1207c3872cb18bbab74f06b21c8e2ca8fb827b287bdb1d loaded_schedule=verified\n--- PASS: TestMailRenewalDisposableVMHookPreservation (0.50s)\nPASS\n\nc854843a5a4d04ec8a1df8fb41805503a48e02e0cffdf2d696d2034b33563f9f\n\nphase=forward-cut returncode=-9\n=== RUN   TestMailLoadedDisposableVMTransition\n    mail_renewal_loaded_vm_test.go:108: native_loaded_cut=loaded_forward_reloaded operation=2dbbb7485fe846de98e972cf2fa654c1 previous=7f2c233fea569ca25f1207c3872cb18bbab74f06b21c8e2ca8fb827b287bdb1d target=c854843a5a4d04ec8a1df8fb41805503a48e02e0cffdf2d696d2034b33563f9f capture=11474819494718d07b8b2ed6b30c3a731ab809aa2eb8deb3386291cadbd27abd\n\nloaded_exec phase=forward-cut generation=c854843a5a4d04ec8a1df8fb41805503a48e02e0cffdf2d696d2034b33563f9f verified=yes\nphase=rollback-cut returncode=-9\n=== RUN   TestMailLoadedDisposableVMTransition\n    mail_renewal_loaded_vm_test.go:108: native_loaded_cut=loaded_rollback_reloaded operation=2dbbb7485fe846de98e972cf2fa654c1 previous=7f2c233fea569ca25f1207c3872cb18bbab74f06b21c8e2ca8fb827b287bdb1d target=c854843a5a4d04ec8a1df8fb41805503a48e02e0cffdf2d696d2034b33563f9f capture=11474819494718d07b8b2ed6b30c3a731ab809aa2eb8deb3386291cadbd27abd\n\nloaded_exec phase=rollback-cut generation=7f2c233fea569ca25f1207c3872cb18bbab74f06b21c8e2ca8fb827b287bdb1d verified=yes\nphase=recover returncode=0\n=== RUN   TestMailLoadedDisposableVMTransition\n    mail_renewal_loaded_vm_test.go:137: native_loaded_inverse=verified timer_preference=preserved original_inodes=restored operation=2dbbb7485fe846de98e972cf2fa654c1 previous=7f2c233fea569ca25f1207c3872cb18bbab74f06b21c8e2ca8fb827b287bdb1d target=c854843a5a4d04ec8a1df8fb41805503a48e02e0cffdf2d696d2034b33563f9f\n--- PASS: TestMailLoadedDisposableVMTransition (0.89s)\nPASS\n\nloaded_exec phase=recover generation=7f2c233fea569ca25f1207c3872cb18bbab74f06b21c8e2ca8fb827b287bdb1d verified=yes\nloaded_native_files=original_inodes_restored configuration_ledger=unchanged management=absent trusted_listeners={\"587\": \"446d0a5c6f2edd7cd577057961914d03c9a21978a3a859730b51fb22a0c55d33\", \"993\": \"446d0a5c6f2edd7cd577057961914d03c9a21978a3a859730b51fb22a0c55d33\"}\nLoadState=loaded\nActiveState=inactive\nFragmentPath=/etc/systemd/system/celikpanel-mail-renewal.service\nDropInPaths=\nUnitFileState=static\nNeedDaemonReload=no\n\nLoadState=loaded\nActiveState=active\nFragmentPath=/etc/systemd/system/celikpanel-mail-renewal.timer\nDropInPaths=\nUnitFileState=enabled\nNeedDaemonReload=no\n\n",
+    "sha256": "b21d05e465e14cf828e621cfd008ee6c939d629b96c644b24be7f973a287e6ee"
+  }
+}

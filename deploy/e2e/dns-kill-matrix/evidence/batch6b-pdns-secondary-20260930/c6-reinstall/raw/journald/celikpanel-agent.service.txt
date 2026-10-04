@@ -1,0 +1,24 @@
+2026-09-29T16:39:34.230585+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T16:39:34.260871+00:00 dns-debian13 agent[1191]: 2026/09/29 16:39:34 Starting CelikPanel Agent...
+2026-09-29T16:39:34.262679+00:00 dns-debian13 agent[1191]: 2026/09/29 16:39:34 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-29T16:39:34.262679+00:00 dns-debian13 agent[1191]: 2026/09/29 16:39:34 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-09-29T16:39:44.269328+00:00 dns-debian13 agent[1191]: 2026/09/29 16:39:44 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T16:39:54.263017+00:00 dns-debian13 agent[1191]: 2026/09/29 16:39:54 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T16:40:04.263798+00:00 dns-debian13 agent[1191]: 2026/09/29 16:40:04 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T16:40:14.263010+00:00 dns-debian13 agent[1191]: 2026/09/29 16:40:14 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T16:40:24.262969+00:00 dns-debian13 agent[1191]: 2026/09/29 16:40:24 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T16:40:24.618310+00:00 dns-debian13 addgroup[1819]: Selecting GID from range 100 to 999 ...
+2026-09-29T16:40:24.621091+00:00 dns-debian13 addgroup[1819]: Adding group `bind' (GID 104) ...
+2026-09-29T16:40:24.665580+00:00 dns-debian13 groupadd[1822]: group added to /etc/group: name=bind, GID=104
+2026-09-29T16:40:24.681979+00:00 dns-debian13 groupadd[1822]: group added to /etc/gshadow: name=bind
+2026-09-29T16:40:24.682990+00:00 dns-debian13 groupadd[1822]: new group: name=bind, GID=104
+2026-09-29T16:40:24.713287+00:00 dns-debian13 adduser[1827]: Selecting UID from range 100 to 999 ...
+2026-09-29T16:40:24.715579+00:00 dns-debian13 adduser[1827]: Adding system user `bind' (UID 103) ...
+2026-09-29T16:40:24.717335+00:00 dns-debian13 adduser[1827]: Adding new user `bind' (UID 103) with group `bind' ...
+2026-09-29T16:40:24.759470+00:00 dns-debian13 useradd[1831]: new user: name=bind, UID=103, GID=104, home=/var/cache/bind, shell=/usr/sbin/nologin, from=none
+2026-09-29T16:40:24.796287+00:00 dns-debian13 adduser[1827]: Not creating home directory `/var/cache/bind' as requested.
+2026-09-29T16:40:34.263795+00:00 dns-debian13 agent[1191]: 2026/09/29 16:40:34 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T16:40:42.890450+00:00 dns-debian13 systemd[1]: Stopping celikpanel-agent.service - CelikPanel privileged agent...
+2026-09-29T16:40:42.891285+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-29T16:40:42.891565+00:00 dns-debian13 systemd[1]: Stopped celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T16:40:42.891773+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Consumed 8.737s CPU time, 436.6M memory peak.

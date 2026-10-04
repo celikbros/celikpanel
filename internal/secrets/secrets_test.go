@@ -1,6 +1,7 @@
 package secrets
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -126,4 +127,36 @@ func newTestBox(t *testing.T) *Box {
 		t.Fatal(err)
 	}
 	return box
+}
+
+// Load is the read-only form used by the panel startup readiness check: it
+// never creates a key, keeps ErrNotExist for a missing file and opens the same
+// identity that LoadOrCreate persisted.
+// Load, panel açılış hazırlık denetiminin salt-okur biçimidir: anahtar üretmez.
+func TestLoadNeverCreatesAKey(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "secret.key")
+	if _, err := Load(path); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("Load(missing) error = %v, want ErrNotExist", err)
+	}
+	if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("Load created %s: %v", path, err)
+	}
+	created, err := LoadOrCreate(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.Fingerprint() != created.Fingerprint() {
+		t.Fatal("Load opened a different key identity")
+	}
+	if err := os.WriteFile(path, []byte("short"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Load(path); err == nil || errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("Load(short key) error = %v, want a size error", err)
+	}
 }

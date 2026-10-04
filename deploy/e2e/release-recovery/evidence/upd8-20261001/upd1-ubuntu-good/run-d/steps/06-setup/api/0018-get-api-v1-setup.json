@@ -1,0 +1,93 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "ServerSetupGate",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/setup"
+  },
+  "response": {
+    "elapsed_seconds": 0.004,
+    "headers": [
+      [
+        "Cache-Control",
+        "no-store"
+      ],
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Thu, 01 Oct 2026 14:23:04 GMT"
+      ],
+      [
+        "Content-Length",
+        "488"
+      ]
+    ],
+    "json": {
+      "checks": [],
+      "draft": {
+        "database": "",
+        "dns_engine": "bind",
+        "dns_mode": "external",
+        "dns_role": "primary",
+        "local_ip": "192.0.2.12",
+        "mail_hostname": "mail-ubuntu.upd1-infra.test",
+        "node_version": "",
+        "ns1": "ns1.upd1-infra.test",
+        "ns2": "ns2.upd1-infra.test",
+        "panel_domain": "panel-ubuntu.upd1-infra.test",
+        "peer_ip": "",
+        "peer_ns": "",
+        "purpose": "web_mail",
+        "remote_dns_connection_id": ""
+      },
+      "guidance": "guided",
+      "origin": "fresh",
+      "required": true,
+      "revision": 2,
+      "server_ip": "192.0.2.12",
+      "status": "draft",
+      "version": 1
+    },
+    "status": 200,
+    "text": null
+  }
+}

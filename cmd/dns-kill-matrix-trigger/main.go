@@ -52,6 +52,9 @@ const (
 	exitUsage       = 64
 	exitUncertain   = 75
 	exitDefiniteErr = 1
+	// No Agent listens on the socket (a prepared guest keeps it stopped by
+	// design); distinct from exitUncertain so a caller can tell the two apart.
+	exitAgentAbsent = 69
 )
 
 var errSwitchOutcomeUncertain = errors.New(
@@ -88,6 +91,22 @@ type triggerEvent struct {
 	TargetEngine      string `json:"target_engine,omitempty"`
 	HeartbeatCount    int    `json:"heartbeat_count,omitempty"`
 	Error             string `json:"error,omitempty"`
+	// The Agent's typed refusal, when the error is one: code, reason (one of
+	// the HostMutationReason* codes) and mutation hold, recorded verbatim.
+	AgentErrorCode string `json:"agent_error_code,omitempty"`
+	AgentReason    string `json:"agent_reason,omitempty"`
+	MutationHold   string `json:"mutation_hold,omitempty"`
+}
+
+// withAgentRefusal copies the Agent's typed refusal fields out of err.
+func (event triggerEvent) withAgentRefusal(err error) triggerEvent {
+	var refusal *agentResponseError
+	if errors.As(err, &refusal) {
+		event.AgentErrorCode = refusal.Code
+		event.AgentReason = refusal.Reason
+		event.MutationHold = refusal.Hold
+	}
+	return event
 }
 
 type identityReceipt struct {
@@ -157,6 +176,24 @@ func main() {
 		runRPCSwitchCommand(os.Args[2:], true)
 	case "rpc-normalize-pdns":
 		runRPCNormalizePDNSCommand(os.Args[2:])
+	case "rpc-delete-v3":
+		runRPCDeleteV3Command(os.Args[2:])
+	case "rpc-delete-v3-recover":
+		runRPCDeleteV3RecoverCommand(os.Args[2:])
+	case "rpc-pdns-peer-v3":
+		runRPCPDNSPeerV3Command(os.Args[2:])
+	case "rpc-pdns-peer-v3-recover":
+		runRPCPDNSPeerV3RecoverCommand(os.Args[2:])
+	case "rpc-gate-probe":
+		runRPCGateProbeCommand(os.Args[2:])
+	case "rpc-host-readiness":
+		runRPCHostReadinessCommand(os.Args[2:])
+	case "rpc-unrelated-begin":
+		runRPCUnrelatedBeginCommand(os.Args[2:])
+	case "rpc-pdns-primary-zone-v3":
+		runRPCFreshPrimaryZoneCommand(os.Args[2:], false)
+	case "rpc-pdns-primary-zone-v3-recover":
+		runRPCFreshPrimaryZoneCommand(os.Args[2:], true)
 	default:
 		usageError(fmt.Sprintf("unsupported subcommand %q", os.Args[1]))
 	}
@@ -166,7 +203,7 @@ func usageError(message string) {
 	_, _ = fmt.Fprintln(os.Stderr, message)
 	_, _ = fmt.Fprintln(
 		os.Stderr,
-		"usage: dns-kill-matrix-trigger {rpc-switch|rpc-retry} --scenario FILE --identity-receipt FILE [--timeout 45m] | rpc-normalize-pdns --scenario FILE --normalization-receipt FILE [--timeout 45m]",
+		"usage: dns-kill-matrix-trigger {rpc-switch|rpc-retry} --scenario FILE --identity-receipt FILE [--timeout 45m] | rpc-normalize-pdns --scenario FILE --normalization-receipt FILE [--timeout 45m] | rpc-delete-v3 --scenario FILE --identity-receipt FILE [--timeout 2m] | rpc-delete-v3-recover --scenario FILE --identity-receipt FILE [--timeout 2m] | rpc-pdns-peer-v3 --step {edit|delete|add} [--timeout 2m] | rpc-gate-probe --scenario FILE [--timeout 15s] | rpc-host-readiness [--timeout 15s] | rpc-unrelated-begin [--timeout 30s] | rpc-pdns-primary-zone-v3 --scenario FILE --identity-receipt FILE --step {add|edit|delete|re-add} [--timeout 2m] | rpc-pdns-primary-zone-v3-recover --scenario FILE --identity-receipt FILE --step delete [--timeout 2m]",
 	)
 	os.Exit(exitUsage)
 }
@@ -239,7 +276,7 @@ func runRPCSwitchCommand(arguments []string, retry bool) {
 			TargetEngine:      string(request.TargetEngine),
 			HeartbeatCount:    result.heartbeatCount,
 			Error:             err.Error(),
-		}, code)
+		}.withAgentRefusal(err), code)
 	}
 	emit(triggerEvent{
 		Event: commandName + "-complete", Driver: loaded.Driver,
@@ -960,17 +997,33 @@ func validateDriverManifest(
 	}
 	switch driver {
 	case "bind":
+		if sourceFixture == fixtureManagedBINDAbsent {
+			// Row 14: the reinstall keeps the BIND identity; its journal is
+			// written under the bind fault driver like every BIND switch.
+			if manifest.Mode != transport.DNSEngineSwitchModeReinstall ||
+				manifest.TargetEngine != transport.DNSEngineBIND {
+				return errors.New("bind driver requires a BIND reinstall manifest for managed-bind-absent")
+			}
+			break
+		}
 		if manifest.Mode != transport.DNSEngineSwitchModeSwitch ||
 			manifest.TargetEngine != transport.DNSEngineBIND ||
-			(sourceFixture != "uninitialized" && sourceFixture != "managed-pdns") {
+			(sourceFixture != "uninitialized" && sourceFixture != "managed-pdns" &&
+				sourceFixture != "owner-bind" && sourceFixture != fixtureUnmanagedBINDStopped) {
 			return errors.New("bind driver requires a BIND switch manifest")
 		}
 	case "pdns-switch":
 		if manifest.Mode != transport.DNSEngineSwitchModeSwitch ||
 			manifest.TargetEngine != transport.DNSEnginePowerDNS ||
-			pdnsSecondaryReconfigureManifest(manifest) ||
+			(pdnsSecondaryReconfigureManifest(manifest) &&
+				!freshPDNSPairSecondaryInstall(sourceFixture, manifest)) ||
 			(sourceFixture != "uninitialized" && sourceFixture != "managed-bind") {
 			return errors.New("pdns-switch requires a non-reconfiguration PowerDNS switch manifest")
+		}
+		if sourceFixture == "uninitialized" &&
+			manifest.PairRole == transport.DNSPairRoleSecondary &&
+			!freshPDNSPairSecondaryInstall(sourceFixture, manifest) {
+			return errors.New("a fresh paired-secondary PowerDNS install carries no zones and targets epoch 1")
 		}
 	case "pdns-adopt":
 		if manifest.Mode != transport.DNSEngineSwitchModeAdopt ||
@@ -1003,6 +1056,17 @@ func validateSourceFixture(
 			manifest.SourceRevision != 0 {
 			return errors.New("uninitialized source fixture requires an exact empty 0/0 source identity")
 		}
+	case "owner-bind":
+		if manifest.Mode != transport.DNSEngineSwitchModeSwitch ||
+			manifest.SourceEngine != "" || manifest.SourceEpoch != 0 ||
+			manifest.TargetEngine != transport.DNSEngineBIND ||
+			manifest.TargetEpoch != 1 || manifest.SourceRevision != 0 ||
+			manifest.Topology != transport.DNSTopologyStandalone ||
+			manifest.PairRole != "" || manifest.LocalIP != "" ||
+			manifest.LocalNS != "" || manifest.PeerIP != "" ||
+			manifest.PeerNS != "" || len(manifest.Zones) == 0 {
+			return errors.New("owner-bind fixture requires an exact initial standalone BIND adoption commitment")
+		}
 	case "managed-pdns":
 		if manifest.Mode != transport.DNSEngineSwitchModeSwitch ||
 			manifest.SourceEngine != transport.DNSEnginePowerDNS ||
@@ -1024,10 +1088,89 @@ func validateSourceFixture(
 		if !pdnsSecondaryReconfigureManifest(manifest) {
 			return errors.New("legacy-pdns-secondary fixture requires the exact reconfiguration manifest")
 		}
+	case fixtureUnmanagedBINDStopped:
+		if !freshStandaloneBINDInstallManifest(manifest) {
+			return errors.New(
+				"unmanaged-bind-stopped fixture requires the exact fresh standalone BIND install commitment",
+			)
+		}
+	case fixtureManagedBINDAbsent:
+		if !bindReinstallManifest(manifest) {
+			return errors.New(
+				"managed-bind-absent fixture requires a standalone BIND reinstall with equal source and target epochs >= 1",
+			)
+		}
 	default:
 		return fmt.Errorf("unsupported source fixture provenance %q", sourceFixture)
 	}
 	return nil
+}
+
+// Source provenance for register rows 12 and 14 (docs/DNS-RECOVERY-ACCEPTANCE.md).
+//
+// fixtureUnmanagedBINDStopped: bind9 installed by the owner or the image and
+// stopped, with no CelikPanel engine state or receipt. On the wire it is a
+// fresh standalone install (mode switch, empty source, epochs 0 -> 1); the
+// Agent selects the stopped-BIND takeover from host state
+// (cmd/agent/dns_engine_bind_adopt.go stoppedBINDTakeoverSelected) and records
+// an install-ownership receipt with adopted_present true and an empty
+// missing_before before the intent journal (dns_engine_ownership.go
+// assumeExistingDNSEnginePackageOwnership). FinalizeSwitch retires that receipt,
+// so the harness observes it at the proven cut, not after convergence.
+//
+// fixtureManagedBINDAbsent: a production-managed BIND whose engine packages
+// were removed while its state and ownership receipts were kept: the host
+// shape the Panel's reinstall_active action repairs (cmd/panel/dns_engine.go
+// reinstallableActiveDNSEngine, cmd/agent/dns_engine_host.go
+// verifyDNSEngineReinstallSource).
+const (
+	fixtureUnmanagedBINDStopped = "unmanaged-bind-stopped"
+	fixtureManagedBINDAbsent    = "managed-bind-absent"
+)
+
+func freshStandaloneBINDInstallManifest(
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) bool {
+	return manifest.Mode == transport.DNSEngineSwitchModeSwitch &&
+		manifest.SourceEngine == "" && manifest.SourceEpoch == 0 &&
+		manifest.TargetEngine == transport.DNSEngineBIND &&
+		manifest.TargetEpoch == 1 && manifest.SourceRevision == 0 &&
+		manifest.Topology == transport.DNSTopologyStandalone &&
+		manifest.PairRole == "" && manifest.LocalIP == "" &&
+		manifest.LocalNS == "" && manifest.PeerIP == "" && manifest.PeerNS == ""
+}
+
+func bindReinstallManifest(
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) bool {
+	return manifest.Mode == transport.DNSEngineSwitchModeReinstall &&
+		manifest.SourceEngine == transport.DNSEngineBIND &&
+		manifest.TargetEngine == transport.DNSEngineBIND &&
+		manifest.SourceEpoch >= 1 && manifest.SourceEpoch == manifest.TargetEpoch &&
+		manifest.Topology == transport.DNSTopologyStandalone &&
+		manifest.PairRole == "" && manifest.LocalIP == "" &&
+		manifest.LocalNS == "" && manifest.PeerIP == "" && manifest.PeerNS == ""
+}
+
+// freshPDNSPairSecondaryInstall names the fresh paired-secondary PowerDNS
+// install. Its manifest is byte-for-byte the legacy reconfiguration shape: the
+// Panel emits mode "switch" for both its "install" and "reconfigure" actions
+// (cmd/panel/dns_engine_post_commit.go dnsEngineMutationMode), and the Agent
+// tells them apart only from live host state, never from the manifest
+// (cmd/agent/dns_engine_pdns_switch.go classifyPDNSPairSecondarySource: no
+// state receipt, no BIND, pdns.service inactive means fresh and journals under
+// the pdns-switch fault driver; pdns.service active means reconfiguration and
+// journals under pdns-secondary-reconfigure). The harness therefore carries the
+// distinction as source provenance: "uninitialized" is the fresh install and
+// must be proved empty by the source proof, "legacy-pdns-secondary" is the
+// reconfiguration and stays exclusive to its own driver.
+func freshPDNSPairSecondaryInstall(
+	sourceFixture string,
+	manifest mutationpayload.DNSEngineSwitchManifestCommitment,
+) bool {
+	return sourceFixture == "uninitialized" &&
+		pdnsSecondaryReconfigureManifest(manifest) &&
+		manifest.SourceRevision == 0
 }
 
 func pdnsSecondaryReconfigureManifest(
@@ -1610,9 +1753,32 @@ func jobIdentityMatches(
 		job.PackageName == identity.PackageName
 }
 
+// agentResponseError is the Agent's typed refusal: code, the reason that
+// refines it (HOST_MUTATION_BUSY: panel_operation_active,
+// agent_mutation_active, host_lock_busy, package_manager_active or
+// state_unverified), the mutation hold and the message. Batch 8 c08 recorded
+// only code and message, so the cause of a busy refusal was not established.
+type agentResponseError struct {
+	Code    string
+	Reason  string
+	Hold    string
+	Message string
+}
+
+func (e *agentResponseError) Error() string {
+	text := fmt.Sprintf("agent response code=%q reason=%q", e.Code, e.Reason)
+	if e.Hold != "" {
+		text += fmt.Sprintf(" mutation_hold=%q", e.Hold)
+	}
+	return text + fmt.Sprintf(" error=%q", e.Message)
+}
+
 func responseError(response transport.ServiceMutationResponse) error {
 	if response.ErrorCode != "" || response.Error != "" {
-		return fmt.Errorf("agent response code=%q error=%q", response.ErrorCode, response.Error)
+		return &agentResponseError{
+			Code: response.ErrorCode, Reason: response.Reason,
+			Hold: response.MutationHold, Message: response.Error,
+		}
 	}
 	return nil
 }

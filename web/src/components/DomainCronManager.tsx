@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import {
     Clock, Plus, Trash2, Edit2, RefreshCw,
-    Play, Pause, Save, X, Info,
+    Play, Pause, Save, X, Info, AlertTriangle,
 } from 'lucide-react';
 import { showToast } from './Toast';
+import { apiErrorText, readApiError } from '../lib/apiError';
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
 import { Button, EmptyState, Spinner, inputClass } from './ui';
@@ -51,6 +52,23 @@ export function DomainCronManager({ domainId, readOnly = false }: DomainCronMana
     const [command, setCommand] = useState('');
     const [comment, setComment] = useState('');
     const [saving, setSaving] = useState(false);
+    // A known server condition that stops every scheduled task on this server
+    // (today: CRON_NOT_INSTALLED). It stays on screen with the owner's next
+    // action instead of a toast, and is cleared only by a successful read.
+    // Bu sunucudaki her zamanlanmış görevi durduran bilinen bir sunucu durumu;
+    // bir bildirim yerine sahibin sonraki adımıyla ekranda kalır ve yalnız
+    // başarılı bir okumayla temizlenir.
+    const [blocked, setBlocked] = useState('');
+
+    // failureText reads the coded API error once. The cron-missing answer also
+    // becomes the on-screen explanation.
+    // failureText kodlu API hatasını bir kez okur.
+    const failureText = async (res: Response) => {
+        const error = await readApiError(res);
+        const text = apiErrorText(error, t);
+        if (error.code === 'CRON_NOT_INSTALLED') setBlocked(text);
+        return text;
+    };
 
     useEffect(() => {
         loadJobs();
@@ -60,9 +78,15 @@ export function DomainCronManager({ domainId, readOnly = false }: DomainCronMana
         setLoading(true);
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/cron`);
-            if (!res.ok) throw new Error();
+            if (!res.ok) {
+                const text = await failureText(res);
+                setJobs([]);
+                if (res.status !== 409) showToast('error', text);
+                return;
+            }
             const data = await res.json();
             setJobs(data.jobs || []);
+            setBlocked('');
         } catch {
             showToast('error', t('common.error'));
         } finally {
@@ -95,6 +119,10 @@ export function DomainCronManager({ domainId, readOnly = false }: DomainCronMana
                         : { schedule, command, comment },
                 ),
             });
+            if (!res.ok) {
+                showToast('error', await failureText(res));
+                return;
+            }
             const data = await res.json();
             if (!data.success) throw new Error(data.error);
             showToast('success', editingJob ? t('cron.updated') : t('cron.added'));
@@ -115,6 +143,10 @@ export function DomainCronManager({ domainId, readOnly = false }: DomainCronMana
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ...job, enabled: !job.enabled }),
             });
+            if (!res.ok) {
+                showToast('error', await failureText(res));
+                return;
+            }
             const data = await res.json();
             if (!data.success) throw new Error(data.error);
             showToast('success', job.enabled ? t('cron.disabledMsg') : t('cron.enabledMsg'));
@@ -131,6 +163,10 @@ export function DomainCronManager({ domainId, readOnly = false }: DomainCronMana
             const res = await fetch(`/api/v1/domains/${domainId}/cron?id=${encodeURIComponent(job.id)}`, {
                 method: 'DELETE',
             });
+            if (!res.ok) {
+                showToast('error', await failureText(res));
+                return;
+            }
             const data = await res.json();
             if (!data.success) throw new Error();
             showToast('success', t('cron.deleted'));
@@ -235,7 +271,11 @@ export function DomainCronManager({ domainId, readOnly = false }: DomainCronMana
                 <div className="mb-3 flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-fg">{t('cron.title')}</h3>
                     <div className="flex items-center gap-2">
-                        {!readOnly && !showForm && (
+                        {/* A new task cannot be saved while cron is missing; the
+                            guidance below says who installs it. Refresh re-reads.
+                            Cron yokken yeni görev kaydedilemez; aşağıdaki
+                            yönlendirme onu kimin kuracağını söyler. */}
+                        {!readOnly && !showForm && !blocked && (
                             <Button variant="primary" icon={Plus} onClick={() => setShowForm(true)}>
                                 {t('cron.add')}
                             </Button>
@@ -243,18 +283,33 @@ export function DomainCronManager({ domainId, readOnly = false }: DomainCronMana
                         <button
                             onClick={loadJobs}
                             title={t('files.refresh')}
+                            aria-label={t('files.refresh')}
                             className="rounded-md p-1.5 text-fg-muted hover:bg-surface-2 hover:text-fg"
                         >
-                            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
                         </button>
                     </div>
+                </div>
+
+                {/* The live region stays mounted so a later refusal is
+                    announced; a condition found on load is polite, like the
+                    domain list's pending-deletion guidance.
+                    Canlı bölge hep takılı kalır; yüklemede bulunan durum,
+                    alan adı listesindeki bekleyen silme gibi nazikçe okunur. */}
+                <div role="status">
+                    {blocked && (
+                        <div className="mb-3 flex items-start gap-2 rounded-lg border border-warning-mark/50 bg-warning-mark/20 p-3 text-sm leading-relaxed text-fg">
+                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
+                            <p className="min-w-0 max-w-[75ch] break-words">{blocked}</p>
+                        </div>
+                    )}
                 </div>
 
                 {loading ? (
                     <div className="flex items-center justify-center py-12">
                         <Spinner />
                     </div>
-                ) : jobs.length === 0 ? (
+                ) : blocked && jobs.length === 0 ? null : jobs.length === 0 ? (
                     <EmptyState icon={Clock} title={t('cron.empty')} hint={t('cron.emptyHint')} />
                 ) : (
                     <div className="space-y-2">

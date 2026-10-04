@@ -1,0 +1,80 @@
+2026-09-30T02:19:31+00:00 dns-arch audit[4210]: SYSCALL arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7ffc6edfdf00 a2=4 a3=0 items=0 ppid=559 pid=4210 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=91 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T02:19:31+00:00 dns-arch sshd-session[4210]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T02:19:31+00:00 dns-arch sshd-session[4233]: Received disconnect from 10.0.2.2 port 53894:11: disconnected by user
+2026-09-30T02:19:31+00:00 dns-arch sshd-session[4233]: Disconnected from user celik 10.0.2.2 port 53894
+2026-09-30T02:19:31+00:00 dns-arch sshd-session[4210]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T02:19:41+00:00 dns-arch sshd-session[4272]: Accepted publickey for celik from 10.0.2.2 port 51714 ssh2: ED25519 SHA256:0keuHqyZyBqPnThPQgXbaqSSPNyFARmhGTToiCV1VJY
+2026-09-30T02:19:41+00:00 dns-arch audit[4272]: SYSCALL arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7fffd32cee90 a2=4 a3=0 items=0 ppid=559 pid=4272 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=93 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T02:19:41+00:00 dns-arch sshd-session[4272]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T02:19:41+00:00 dns-arch sshd-session[4292]: Received disconnect from 10.0.2.2 port 51714:11: disconnected by user
+2026-09-30T02:19:41+00:00 dns-arch sshd-session[4292]: Disconnected from user celik 10.0.2.2 port 51714
+2026-09-30T02:19:41+00:00 dns-arch sshd-session[4272]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T02:19:52+00:00 dns-arch sshd-session[4297]: Accepted publickey for celik from 10.0.2.2 port 54370 ssh2: ED25519 SHA256:0keuHqyZyBqPnThPQgXbaqSSPNyFARmhGTToiCV1VJY
+2026-09-30T02:19:52+00:00 dns-arch audit[4297]: SYSCALL arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7ffd3887afe0 a2=4 a3=0 items=0 ppid=559 pid=4297 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=95 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T02:19:52+00:00 dns-arch sshd-session[4297]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T02:19:52+00:00 dns-arch sshd-session[4317]: Received disconnect from 10.0.2.2 port 54370:11: disconnected by user
+2026-09-30T02:19:52+00:00 dns-arch sshd-session[4317]: Disconnected from user celik 10.0.2.2 port 54370
+2026-09-30T02:19:52+00:00 dns-arch sshd-session[4297]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T02:20:02+00:00 dns-arch sshd-session[4322]: Accepted publickey for celik from 10.0.2.2 port 47112 ssh2: ED25519 SHA256:0keuHqyZyBqPnThPQgXbaqSSPNyFARmhGTToiCV1VJY
+2026-09-30T02:20:02+00:00 dns-arch audit[4322]: SYSCALL arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7fffcfb476a0 a2=4 a3=0 items=0 ppid=559 pid=4322 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=97 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T02:20:02+00:00 dns-arch sshd-session[4322]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T02:20:02+00:00 dns-arch sshd-session[4342]: Received disconnect from 10.0.2.2 port 47112:11: disconnected by user
+2026-09-30T02:20:02+00:00 dns-arch sshd-session[4342]: Disconnected from user celik 10.0.2.2 port 47112
+2026-09-30T02:20:02+00:00 dns-arch sshd-session[4322]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T02:20:12+00:00 dns-arch sshd-session[4380]: Accepted publickey for celik from 10.0.2.2 port 56700 ssh2: ED25519 SHA256:0keuHqyZyBqPnThPQgXbaqSSPNyFARmhGTToiCV1VJY
+2026-09-30T02:20:12+00:00 dns-arch audit[4380]: SYSCALL arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7ffccd74d210 a2=4 a3=0 items=0 ppid=559 pid=4380 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=99 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T02:20:12+00:00 dns-arch sshd-session[4380]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T02:20:13+00:00 dns-arch sshd-session[4400]: Received disconnect from 10.0.2.2 port 56700:11: disconnected by user
+2026-09-30T02:20:13+00:00 dns-arch sshd-session[4400]: Disconnected from user celik 10.0.2.2 port 56700
+2026-09-30T02:20:13+00:00 dns-arch sshd-session[4380]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T02:20:16+00:00 dns-arch sshd-session[4405]: Accepted publickey for celik from 10.0.2.2 port 56716 ssh2: ED25519 SHA256:0keuHqyZyBqPnThPQgXbaqSSPNyFARmhGTToiCV1VJY
+2026-09-30T02:20:16+00:00 dns-arch audit[4405]: SYSCALL arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7ffe510fff60 a2=4 a3=0 items=0 ppid=559 pid=4405 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=101 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T02:20:16+00:00 dns-arch sshd-session[4405]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T02:20:16+00:00 dns-arch sshd-session[4409]: Received disconnect from 10.0.2.2 port 56716:11: disconnected by user
+2026-09-30T02:20:16+00:00 dns-arch sshd-session[4409]: Disconnected from user celik 10.0.2.2 port 56716
+2026-09-30T02:20:16+00:00 dns-arch sshd-session[4405]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T02:20:16+00:00 dns-arch sshd-session[4414]: Accepted publickey for celik from 10.0.2.2 port 56728 ssh2: ED25519 SHA256:0keuHqyZyBqPnThPQgXbaqSSPNyFARmhGTToiCV1VJY
+2026-09-30T02:20:16+00:00 dns-arch audit[4414]: SYSCALL arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7ffd7076ff40 a2=4 a3=0 items=0 ppid=559 pid=4414 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=102 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T02:20:16+00:00 dns-arch sshd-session[4414]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T02:20:16+00:00 dns-arch sshd-session[4417]: Received disconnect from 10.0.2.2 port 56728:11: disconnected by user
+2026-09-30T02:20:16+00:00 dns-arch sshd-session[4417]: Disconnected from user celik 10.0.2.2 port 56728
+2026-09-30T02:20:16+00:00 dns-arch sshd-session[4414]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T02:20:16+00:00 dns-arch sshd-session[4422]: Accepted publickey for celik from 10.0.2.2 port 56732 ssh2: ED25519 SHA256:0keuHqyZyBqPnThPQgXbaqSSPNyFARmhGTToiCV1VJY
+2026-09-30T02:20:16+00:00 dns-arch audit[4422]: SYSCALL arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7ffecaed2380 a2=4 a3=0 items=0 ppid=559 pid=4422 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=103 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T02:20:16+00:00 dns-arch sshd-session[4422]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T02:20:16+00:00 dns-arch sshd-session[4425]: Received disconnect from 10.0.2.2 port 56732:11: disconnected by user
+2026-09-30T02:20:16+00:00 dns-arch sshd-session[4425]: Disconnected from user celik 10.0.2.2 port 56732
+2026-09-30T02:20:16+00:00 dns-arch sshd-session[4422]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T02:20:16+00:00 dns-arch sshd-session[4430]: Accepted publickey for celik from 10.0.2.2 port 56742 ssh2: ED25519 SHA256:0keuHqyZyBqPnThPQgXbaqSSPNyFARmhGTToiCV1VJY
+2026-09-30T02:20:16+00:00 dns-arch audit[4430]: SYSCALL arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7fffccdc31b0 a2=4 a3=0 items=0 ppid=559 pid=4430 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=104 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T02:20:16+00:00 dns-arch sshd-session[4430]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T02:20:17+00:00 dns-arch sshd-session[4433]: Received disconnect from 10.0.2.2 port 56742:11: disconnected by user
+2026-09-30T02:20:17+00:00 dns-arch sshd-session[4433]: Disconnected from user celik 10.0.2.2 port 56742
+2026-09-30T02:20:17+00:00 dns-arch sshd-session[4430]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T02:20:17+00:00 dns-arch sshd-session[4439]: Accepted publickey for celik from 10.0.2.2 port 56746 ssh2: ED25519 SHA256:0keuHqyZyBqPnThPQgXbaqSSPNyFARmhGTToiCV1VJY
+2026-09-30T02:20:17+00:00 dns-arch audit[4439]: SYSCALL arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7ffeb79a2760 a2=4 a3=0 items=0 ppid=559 pid=4439 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=105 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T02:20:17+00:00 dns-arch sshd-session[4439]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T02:20:17+00:00 dns-arch sshd-session[4442]: Received disconnect from 10.0.2.2 port 56746:11: disconnected by user
+2026-09-30T02:20:17+00:00 dns-arch sshd-session[4442]: Disconnected from user celik 10.0.2.2 port 56746
+2026-09-30T02:20:17+00:00 dns-arch sshd-session[4439]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T02:20:17+00:00 dns-arch sshd-session[4448]: Accepted publickey for celik from 10.0.2.2 port 56758 ssh2: ED25519 SHA256:0keuHqyZyBqPnThPQgXbaqSSPNyFARmhGTToiCV1VJY
+2026-09-30T02:20:17+00:00 dns-arch audit[4448]: SYSCALL arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7fffd31bb780 a2=4 a3=0 items=0 ppid=559 pid=4448 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=106 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T02:20:17+00:00 dns-arch sshd-session[4448]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T02:20:17+00:00 dns-arch sshd-session[4451]: Received disconnect from 10.0.2.2 port 56758:11: disconnected by user
+2026-09-30T02:20:17+00:00 dns-arch sshd-session[4451]: Disconnected from user celik 10.0.2.2 port 56758
+2026-09-30T02:20:17+00:00 dns-arch sshd-session[4448]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T02:20:17+00:00 dns-arch sshd-session[4459]: Accepted publickey for celik from 10.0.2.2 port 56766 ssh2: ED25519 SHA256:0keuHqyZyBqPnThPQgXbaqSSPNyFARmhGTToiCV1VJY
+2026-09-30T02:20:17+00:00 dns-arch audit[4459]: SYSCALL arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7ffff26a25b0 a2=4 a3=0 items=0 ppid=559 pid=4459 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=107 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T02:20:17+00:00 dns-arch sshd-session[4459]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T02:20:17+00:00 dns-arch sshd-session[4462]: Received disconnect from 10.0.2.2 port 56766:11: disconnected by user
+2026-09-30T02:20:17+00:00 dns-arch sshd-session[4462]: Disconnected from user celik 10.0.2.2 port 56766
+2026-09-30T02:20:17+00:00 dns-arch sshd-session[4459]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T02:20:17+00:00 dns-arch sshd-session[4478]: Accepted publickey for celik from 10.0.2.2 port 56778 ssh2: ED25519 SHA256:0keuHqyZyBqPnThPQgXbaqSSPNyFARmhGTToiCV1VJY
+2026-09-30T02:20:17+00:00 dns-arch audit[4478]: SYSCALL arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7ffd9e4ee510 a2=4 a3=0 items=0 ppid=559 pid=4478 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=108 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T02:20:17+00:00 dns-arch sshd-session[4478]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)
+2026-09-30T02:20:18+00:00 dns-arch sshd-session[4481]: Received disconnect from 10.0.2.2 port 56778:11: disconnected by user
+2026-09-30T02:20:18+00:00 dns-arch sshd-session[4481]: Disconnected from user celik 10.0.2.2 port 56778
+2026-09-30T02:20:18+00:00 dns-arch sshd-session[4478]: pam_unix(sshd:session): session closed for user celik
+2026-09-30T02:20:59+00:00 dns-arch sshd-session[4524]: Accepted publickey for celik from 10.0.2.2 port 45294 ssh2: ED25519 SHA256:0keuHqyZyBqPnThPQgXbaqSSPNyFARmhGTToiCV1VJY
+2026-09-30T02:20:59+00:00 dns-arch audit[4524]: SYSCALL arch=c000003e syscall=1 success=yes exit=4 a0=6 a1=7ffe417a70f0 a2=4 a3=0 items=0 ppid=559 pid=4524 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=(none) ses=109 comm="sshd-session" exe="/usr/lib/ssh/sshd-session" key=(null)
+2026-09-30T02:20:59+00:00 dns-arch sshd-session[4524]: pam_unix(sshd:session): session opened for user celik(uid=1000) by celik(uid=0)

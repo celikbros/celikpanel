@@ -1,0 +1,13 @@
+2026-09-30T04:33:33+00:00 dns-debian13 agent[3522]: 2026/09/30 04:33:33 pdns zone publication remains pending for pair-accept.test at epoch 1: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T04:33:33+00:00 dns-debian13 agent[3522]: dns_peer_enrollment_required
+2026-09-30T04:33:34+00:00 dns-debian13 agent[3522]: 2026/09/30 04:33:34 DNS zone V3 recovery remains pending for pair-accept.test: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T04:33:34+00:00 dns-debian13 agent[3522]: dns_peer_enrollment_required
+2026-09-30T04:34:08+00:00 dns-debian13 systemd[1]: Stopping celikpanel-agent.service - CelikPanel privileged agent...
+2026-09-30T04:34:08+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-30T04:34:08+00:00 dns-debian13 systemd[1]: Stopped celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-30T04:34:08+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Consumed 34.490s CPU time, 231.9M memory peak.
+-- Boot b26f99cc46ae480382e50c3b98fce394 --
+2026-09-30T04:35:24+00:00 dns-debian13 systemd[1]: Starting celikpanel-agent.service - CelikPanel privileged agent...
+2026-09-30T04:35:24+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-30T04:35:24+00:00 dns-debian13 agent[1049]: 2026/09/30 04:35:24 Starting CelikPanel Agent...
+2026-09-30T04:35:24+00:00 dns-debian13 agent[1049]: 2026/09/30 04:35:24 Agent listening on unix socket /run/celikpanel/agent.sock

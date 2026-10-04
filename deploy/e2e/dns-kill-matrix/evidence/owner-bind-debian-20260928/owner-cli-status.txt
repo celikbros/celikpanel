@@ -1,0 +1,16 @@
+Before:
+549a13768a565d58c26bdc8b8790538b152643cf47812e7213a4838f4c0df0d7  /etc/ssh/sshd_config
+CLI refusal (exit 1):
+sshd_config differs from the recorded original and publication; preserve the owner edit
+After:
+549a13768a565d58c26bdc8b8790538b152643cf47812e7213a4838f4c0df0d7  /etc/ssh/sshd_config
+{"state":"disabled","reason":"primary key is not authorized","next_action":"Run secondary-resume with the reviewed pair, key and inspector to finish enrollment; leave it disabled if revocation was intentional","primary_ip":"192.0.2.11","peer_ip":"192.0.2.10","catalog_name":"catalog-c000020b.celikpanel.invalid"}
+active
+celikpeer:x:989:
+989
+be14e0871e032a2535098b21e82939fcfdf858e50fc634c2d49243834d9beb16  /root/owner-resume-debian.test
+acf93d15e80e2fa1788c32ec71b069c37b237cc235d03bdde14b23b0192d7e56  /root/dns-peer-enroll
+593f2746a1bad0e823a98f11f816f913793c2b9dce81cfe0b2aa7a1be6310daa  /root/bind-peer-inspect
+bind9	1:9.20.29-1~deb13u1
+openssh-server	1:10.0p1-7+deb13u4
+sudo	1.9.16p2-3+deb13u2

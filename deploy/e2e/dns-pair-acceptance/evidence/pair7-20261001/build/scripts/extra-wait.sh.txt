@@ -1,0 +1,3 @@
+end=$(( $(date +%s) + ${1:-400} ))
+while [ "$(date +%s)" -lt "$end" ]; do grep -q 'EXTRA-DONE\|^### .* stop' /root/cp-pair7/obs/p7t3-extra/extra-runner.log && break; sleep 5; done
+sed -n '/delete (first)/,$p' /root/cp-pair7/obs/p7t3-extra/extra-runner.log | cut -c1-900

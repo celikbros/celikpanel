@@ -1,0 +1,13 @@
+wall=2026-09-29T14:59:04.971777+00:00
+{"transport": "udp", "server": "10.0.2.15", "id_match": true, "aa": true, "tc": false, "rcode": 0, "answers": ["192.0.2.10"], "qname": "www.s1-kill.test"}
+{"transport": "tcp", "server": "10.0.2.15", "id_match": true, "aa": true, "tc": false, "rcode": 0, "answers": ["192.0.2.10"], "qname": "www.s1-kill.test"}
+{"transport": "udp", "server": "192.0.2.10", "id_match": true, "aa": true, "tc": false, "rcode": 0, "answers": ["192.0.2.10"], "qname": "www.s1-kill.test"}
+{"transport": "tcp", "server": "192.0.2.10", "id_match": true, "aa": true, "tc": false, "rcode": 0, "answers": ["192.0.2.10"], "qname": "www.s1-kill.test"}
+{"qname": "www.s1-kill.test", "transport": "udp", "server": "127.0.0.1", "error": "timed out"}
+{"qname": "www.s1-kill.test", "transport": "tcp", "server": "127.0.0.1", "error": "[Errno 111] Connection refused"}
+{"transport": "udp", "server": "10.0.2.15", "id_match": true, "aa": false, "tc": false, "rcode": 5, "answers": [], "qname": "www.owner.test"}
+{"transport": "tcp", "server": "10.0.2.15", "id_match": true, "aa": false, "tc": false, "rcode": 5, "answers": [], "qname": "www.owner.test"}
+{"transport": "udp", "server": "192.0.2.10", "id_match": true, "aa": false, "tc": false, "rcode": 5, "answers": [], "qname": "www.owner.test"}
+{"transport": "tcp", "server": "192.0.2.10", "id_match": true, "aa": false, "tc": false, "rcode": 5, "answers": [], "qname": "www.owner.test"}
+{"qname": "www.owner.test", "transport": "udp", "server": "127.0.0.1", "error": "timed out"}
+{"qname": "www.owner.test", "transport": "tcp", "server": "127.0.0.1", "error": "[Errno 111] Connection refused"}

@@ -1,0 +1,177 @@
+wall=2026-09-29T23:26:54.811404565Z boot_id=5cef51f7-07fd-4d25-9ee4-e1a136b5627e
+== pdns.service
+MainPID=4445
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 23:25:35 UTC
+ExecMainPID=4445
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 23:25:35 UTC
+InvocationID=aa653e5a88a44f1f84d2924d9971d863
+== named.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InvocationID=
+== bind9.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InvocationID=
+== celikpanel-agent.service
+MainPID=5117
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 23:25:41 UTC
+ExecMainPID=5117
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 23:25:41 UTC
+InvocationID=950273b06dd34a0bbe453e345d413442
+== celikpanel-panel.service
+MainPID=5915
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 23:25:45 UTC
+ExecMainPID=5915
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 23:25:45 UTC
+InvocationID=47e38765d9f84f51994a830532efaabf
+== named/pdns processes
+4445 /usr/sbin/pdns_server --guardian=no --daemon=no --disable-syslog --log-timestamp=no --write-pid=no
+== boots
+IDX BOOT ID                          FIRST ENTRY                 LAST ENTRY
+  0 5cef51f707fd4d259ee4e1a136b5627e Tue 2026-09-29 23:22:09 UTC Tue 2026-09-29 23:26:54 UTC
+== packages
+dpkg-query: no packages found matching bind9
+dpkg-query: no packages found matching bind9-utils
+bind9-host 1:9.20.26-1~deb13u1 ii 
+bind9-libs 1:9.20.26-1~deb13u1 ii 
+pdns-backend-sqlite3 4.9.17-0+deb13u1 ii 
+pdns-server 4.9.17-0+deb13u1 ii 
+== pdns_server --version
+Sep 29 23:26:54 PowerDNS Authoritative Server 4.9.17 (C) PowerDNS.COM BV
+Sep 29 23:26:54 Using 64-bits mode. Built using gcc 14.2.0.
+Sep 29 23:26:54 PowerDNS comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it according to the terms of the GPL version 2.
+== state dir
+total 84
+drwx------  2 root celikpanel  4096 2026-09-29 23:26:48.845710729 +0000 .
+drwxr-xr-x 29 root root        4096 2026-09-29 23:25:30.213951411 +0000 ..
+-rw-------  1 root celikpanel   735 2026-09-29 23:25:44.197927063 +0000 dns-engine-ownership-pdns.json
+-rw-------  1 root celikpanel   731 2026-09-29 23:25:37.213938636 +0000 dns-engine-state.json
+-rw-------  1 root celikpanel 65529 2026-09-29 23:25:44.225927019 +0000 dns-engine-switch-v3-archive-076c692ac1346f2b9c6a0df468b0e9aa-d9325a26bdacb21159a1168fd33be3b5b5f627a1e5952551853090fff7f9e4b8.json
+-rw-------  1 root celikpanel  3661 2026-09-29 23:26:48.841710762 +0000 service-mutations.json
+9f98f2d4f5ca2a54955ed38b9950b4944b891a0c37c0feb2b76e31172be7ce5e  dns-engine-ownership-pdns.json
+d9325a26bdacb21159a1168fd33be3b5b5f627a1e5952551853090fff7f9e4b8  dns-engine-state.json
+8f1a901701774831d6df0ca702a9409d926bd9bf3f6f0946eba19e330757d002  dns-engine-switch-v3-archive-076c692ac1346f2b9c6a0df468b0e9aa-d9325a26bdacb21159a1168fd33be3b5b5f627a1e5952551853090fff7f9e4b8.json
+73b4784f76b47d724d2da29f1717e37b56f436768069204d0d7da9fc621497e9  service-mutations.json
+== fixture dir
+total 1412
+drwx------  4 root root    4096 2026-09-29 23:24:24.726223939 +0000 .
+drwxr-xr-x 29 root root    4096 2026-09-29 23:25:30.213951411 +0000 ..
+-rw-------  1 root root    3272 2026-09-29 23:24:24.566225312 +0000 controller-argv.json
+-rw-------  1 root root    1016 2026-09-29 23:24:24.714224042 +0000 coordinator-stop-proof.json
+-rw-------  1 root root     728 2026-09-29 23:23:15.889328945 +0000 installed-binaries.sha256
+-rw-------  1 root root 1406962 2026-09-29 23:23:04.013328945 +0000 manifest.json
+drwx------  2 root root    4096 2026-09-29 23:25:19.201974628 +0000 measured
+drwx------  3 root root    4096 2026-09-29 23:24:24.534225587 +0000 results
+-rw-------  1 root root    1846 2026-09-29 23:24:24.402226720 +0000 scenario.json
+-rw-------  1 root root    1446 2026-09-29 23:24:24.494225930 +0000 source-proof.json
+== recovery launcher
+total 18708
+drwx------ 3 root root     4096 2026-09-29 23:23:24.893619371 +0000 .
+drwxr-xr-x 9 root root     4096 2026-09-29 23:23:24.337596174 +0000 ..
+-rwxr-xr-x 1 root root 19143731 2026-09-29 23:23:24.865618202 +0000 recovery
+drwx------ 3 root root     4096 2026-09-29 23:23:24.345596508 +0000 recovery-runtimes
+74eac1173dde06be433c269f7d366a71227a6c02f1fc26614c47e88fe96b9e5f  /usr/libexec/celikpanel/recovery
+== owner files
+/etc/powerdns:
+total 36
+drwxr-xr-x  3 root root  4096 2026-09-29 23:25:30.349951150 +0000 .
+drwxr-xr-x 68 root root  4096 2026-09-29 23:25:31.725948538 +0000 ..
+-rw-r-----  1 root pdns 20579 2026-08-06 19:04:06.000000000 +0000 pdns.conf
+drwxr-xr-x  2 root root  4096 2026-09-29 23:25:33.425945386 +0000 pdns.d
+
+/etc/powerdns/pdns.d:
+total 16
+drwxr-xr-x 2 root root 4096 2026-09-29 23:25:33.425945386 +0000 .
+drwxr-xr-x 3 root root 4096 2026-09-29 23:25:30.349951150 +0000 ..
+-rw-r--r-- 1 root root  310 2026-09-29 23:25:33.409945416 +0000 celikpanel-cluster.conf
+-rw-r--r-- 1 root root  216 2026-09-29 23:25:33.417945401 +0000 celikpanel.conf
+
+/var/lib/powerdns:
+total 344
+drwxr-xr-x  2 pdns pdns   4096 2026-09-29 23:25:35.941940860 +0000 .
+drwxr-xr-x 29 root root   4096 2026-09-29 23:25:30.213951411 +0000 ..
+-rw-r-----  1 pdns pdns  98304 2026-09-29 23:25:35.937940867 +0000 pdns.sqlite3
+-rw-r-----  1 pdns pdns  32768 2026-09-29 23:26:45.501738808 +0000 pdns.sqlite3-shm
+-rw-r-----  1 pdns pdns 206032 2026-09-29 23:26:45.497738842 +0000 pdns.sqlite3-wal
+8b46927e48be83b2f0afc38efabdc2e2237daa5281b1a07ea44989ffa41f262a  /etc/powerdns/pdns.conf
+31ee619ba2589b241c484ed4081b329f22742b8a85ef76555c96352a60882a21  /etc/powerdns/pdns.d/celikpanel-cluster.conf
+0485300f3503e60e09a5ec29a43483c29faf4506c91dd3ee44935367307bde69  /etc/powerdns/pdns.d/celikpanel.conf
+c037b61ed2d2081a6354b2b9ca3bb273a9c4a1a5ddf655306bb5d1d705c615ce  /var/lib/powerdns/pdns.sqlite3
+== bind dirs
+ls: cannot access '/etc/bind': No such file or directory
+== /etc/bind file hashes
+== /etc/bind inodes
+== /var/cache/bind tree
+find: ‘/var/cache/bind’: No such file or directory
+== named-checkconf -l
+bash: line 16: named-checkconf: command not found
+== ss 53
+udp UNCONN 0      0         192.0.2.10:53 0.0.0.0:* users:(("pdns_server",pid=4445,fd=6))    
+udp UNCONN 0      0          10.0.2.15:53 0.0.0.0:* users:(("pdns_server",pid=4445,fd=5))    
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=369,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=369,fd=18))
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=369,fd=19))
+tcp LISTEN 0      128        10.0.2.15:53 0.0.0.0:* users:(("pdns_server",pid=4445,fd=7))    
+tcp LISTEN 0      128       192.0.2.10:53 0.0.0.0:* users:(("pdns_server",pid=4445,fd=8))    
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=369,fd=21))
+== pdns journal tail
+2026-09-29T23:26:40.164655+00:00 dns-debian13 pdns_server[4445]: Received spurious notify answer for 's2.s1-kill.test' from 192.0.2.11:53
+2026-09-29T23:26:40.215072+00:00 dns-debian13 pdns_server[4445]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:49150', transfer initiated
+2026-09-29T23:26:40.906282+00:00 dns-debian13 pdns_server[4445]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:49168', transfer initiated
+2026-09-29T23:26:41.165428+00:00 dns-debian13 pdns_server[4445]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-29T23:26:41.485218+00:00 dns-debian13 pdns_server[4445]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:49194', transfer initiated
+2026-09-29T23:26:42.165885+00:00 dns-debian13 pdns_server[4445]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-29T23:26:42.165885+00:00 dns-debian13 pdns_server[4445]: Received spurious notify answer for 's2.s1-kill.test' from 192.0.2.11:53
+2026-09-29T23:26:42.209875+00:00 dns-debian13 pdns_server[4445]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:49212', transfer initiated
+2026-09-29T23:26:43.423193+00:00 dns-debian13 pdns_server[4445]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:58493', transfer initiated
+2026-09-29T23:26:45.529733+00:00 dns-debian13 pdns_server[4445]: Cache clear request for 's2.s1-kill.test$' received from operator
+2026-09-29T23:26:45.546929+00:00 dns-debian13 pdns_server[4445]: Cache clear request for 'catalog-c000020a.celikpanel.invalid$' received from operator
+2026-09-29T23:26:45.566448+00:00 dns-debian13 pdns_server[4445]: Notification request to host 192.0.2.11 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-29T23:26:45.584074+00:00 dns-debian13 pdns_server[4445]: Notification request to host 192.0.2.11 for zone 's2.s1-kill.test' received from operator
+2026-09-29T23:26:46.166988+00:00 dns-debian13 pdns_server[4445]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-29T23:26:46.170234+00:00 dns-debian13 pdns_server[4445]: IXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:58538', transfer initiated with serial 1790724397
+2026-09-29T23:26:46.170234+00:00 dns-debian13 pdns_server[4445]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:58538', transfer initiated
+2026-09-29T23:26:46.521784+00:00 dns-debian13 pdns_server[4445]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:40332', transfer initiated
+2026-09-29T23:26:47.138195+00:00 dns-debian13 pdns_server[4445]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:40354', transfer initiated
+2026-09-29T23:26:47.167298+00:00 dns-debian13 pdns_server[4445]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-29T23:26:47.167298+00:00 dns-debian13 pdns_server[4445]: Received unsuccessful notification report for 's2.s1-kill.test' from 192.0.2.11:53, error: Server Not Authoritative for zone / Not Authorized
+2026-09-29T23:26:47.167298+00:00 dns-debian13 pdns_server[4445]: Received spurious notify answer for 's2.s1-kill.test' from 192.0.2.11:53
+2026-09-29T23:26:47.769519+00:00 dns-debian13 pdns_server[4445]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:40362', transfer initiated
+2026-09-29T23:26:48.215936+00:00 dns-debian13 pdns_server[4445]: AXFR-out zone 's2.s1-kill.test', client '192.0.2.11:58600', transfer initiated
+2026-09-29T23:26:48.392082+00:00 dns-debian13 pdns_server[4445]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:40382', transfer initiated
+2026-09-29T23:26:49.167981+00:00 dns-debian13 pdns_server[4445]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-29T23:26:49.167981+00:00 dns-debian13 pdns_server[4445]: Received unsuccessful notification report for 's2.s1-kill.test' from 192.0.2.11:53, error: Server Not Authoritative for zone / Not Authorized
+2026-09-29T23:26:49.167981+00:00 dns-debian13 pdns_server[4445]: Received spurious notify answer for 's2.s1-kill.test' from 192.0.2.11:53
+2026-09-29T23:26:49.562593+00:00 dns-debian13 pdns_server[4445]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:58654', transfer initiated
+2026-09-29T23:26:50.168474+00:00 dns-debian13 pdns_server[4445]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-29T23:26:50.168474+00:00 dns-debian13 pdns_server[4445]: Received spurious notify answer for 's2.s1-kill.test' from 192.0.2.11:53

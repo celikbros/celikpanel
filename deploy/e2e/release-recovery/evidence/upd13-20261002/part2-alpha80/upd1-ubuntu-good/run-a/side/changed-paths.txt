@@ -1,0 +1,42 @@
+evidence /var/tmp/cp-release-drill-upd13-a80-ub-good-a/evidence/ubuntu/upd1/upd1-ubuntu-good-20261003t012635z/
+## initial-record (updater wrote it): 0 hits (0 in .txt)
+## curl preflight refusal: 0 hits (0 in .txt)
+## no-marker after child failure: 0 hits (0 in .txt)
+## pause_pending journal: 0 hits (0 in .txt)
+## renewal restore at pause: 0 hits (0 in .txt)
+## pause recorded: 0 hits (0 in .txt)
+## start check failure: 0 hits (0 in .txt)
+## package-activity refusal (startup reconcile): 48 hits (22 in .txt)
+   steps/14-deferred-mail-watch/journal-panel.txt:40: 2026-10-03T01:32:33.444453+00:00 dns-ubuntu panel[7214]: 2026/10/03 01:32:33 service operation 9f769cd65b10f27f3c1439769a8f1f37 could not acquire the agent lease: another server change or package-manager task is still running
+   steps/14-deferred-mail-watch/journal-panel.txt:43: 2026-10-03T01:32:35.449374+00:00 dns-ubuntu panel[7214]: 2026/10/03 01:32:35 server setup step 03-service failed: HOST_MUTATION_BUSY: another server change or package-manager task is still running; wait and try again
+   steps/14-deferred-mail-watch/journal-panel.txt:58: 2026-10-03T01:37:59.784256+00:00 dns-ubuntu panel[7214]: 2026/10/03 01:37:59 service operation acd3c023fc8218003caad9f4c808f66f could not acquire the agent lease: another server change or package-manager task is still running
+   steps/14-deferred-mail-watch/journal-panel.txt:59: 2026-10-03T01:38:01.790682+00:00 dns-ubuntu panel[7214]: 2026/10/03 01:38:01 server setup step 03-service failed: HOST_MUTATION_BUSY: another server change or package-manager task is still running; wait and try again
+   steps/14-deferred-mail-watch/journal-panel.txt:75: 2026-10-03T01:43:23.849122+00:00 dns-ubuntu panel[7214]: 2026/10/03 01:43:23 service operation fe09ad4f2ae2973103fa3236ee92510d could not acquire the agent lease: another server change or package-manager task is still running
+   steps/14-deferred-mail-watch/journal-panel.txt:76: 2026-10-03T01:43:25.854186+00:00 dns-ubuntu panel[7214]: 2026/10/03 01:43:25 server setup step 03-mail_profile failed: HOST_MUTATION_BUSY: another server change or package-manager task is still running; wait and try again
+   steps/14-deferred-mail-watch/journal-panel.txt:109: 2026-10-03T01:49:51.446683+00:00 dns-ubuntu panel[7214]: 2026/10/03 01:49:51 service operation e2a7b9cba0e47c9fc63cafe681980452 (webmail) failed in profile/webmail/mail-tls: mail TLS synchronization: another server change or package-manager task is still running
+   steps/14-deferred-mail-watch/journal-panel.txt:144: 2026-10-03T01:56:33.343158+00:00 dns-ubuntu panel[7214]: 2026/10/03 01:56:33 service operation fd02d7c80b2380c2eee29d26511b3b2d (protected-mail) failed in profile/protected-mail/mail-tls: mail TLS synchronization: another server change or package-manager task is still running
+## package_manager_active / HOST_MUTATION_BUSY: 153 hits (6 in .txt)
+   steps/14-deferred-mail-watch/journal-panel.txt:43: 2026-10-03T01:32:35.449374+00:00 dns-ubuntu panel[7214]: 2026/10/03 01:32:35 server setup step 03-service failed: HOST_MUTATION_BUSY: another server change or package-manager task is still running; wait and try again
+   steps/14-deferred-mail-watch/journal-panel.txt:59: 2026-10-03T01:38:01.790682+00:00 dns-ubuntu panel[7214]: 2026/10/03 01:38:01 server setup step 03-service failed: HOST_MUTATION_BUSY: another server change or package-manager task is still running; wait and try again
+   steps/14-deferred-mail-watch/journal-panel.txt:76: 2026-10-03T01:43:25.854186+00:00 dns-ubuntu panel[7214]: 2026/10/03 01:43:25 server setup step 03-mail_profile failed: HOST_MUTATION_BUSY: another server change or package-manager task is still running; wait and try again
+## startup reconcile success: 2 hits (2 in .txt)
+   steps/14-deferred-mail-watch/journal-panel.txt:328: 2026-10-03T02:14:41.427934+00:00 dns-ubuntu panel[81228]: 2026/10/03 02:14:41 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload
+## milter chain/wiring: 9 hits (6 in .txt)
+   steps/14-deferred-mail-watch/journal-panel.txt:8: 2026-10-03T01:27:13.193145+00:00 dns-ubuntu panel[7153]: 2026/10/03 01:27:13 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-deferred-mail-watch/journal-panel.txt:20: 2026-10-03T01:27:14.319583+00:00 dns-ubuntu panel[7214]: 2026/10/03 01:27:14 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-deferred-mail-watch/journal-panel.txt:330: 2026-10-03T02:14:41.432670+00:00 dns-ubuntu panel[81228]: 2026/10/03 02:14:41 milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+## deferred retry note on a startup refusal: 6 hits (4 in .txt)
+   steps/14-deferred-mail-watch/journal-panel.txt:329: 2026-10-03T02:14:41.429412+00:00 dns-ubuntu panel[81228]: 2026/10/03 02:14:41 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minute
+   steps/14-deferred-mail-watch/journal-panel.txt:330: 2026-10-03T02:14:41.432670+00:00 dns-ubuntu panel[81228]: 2026/10/03 02:14:41 milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+## deferred retry attempt line: 3 hits (2 in .txt)
+   steps/14-deferred-mail-watch/journal-panel.txt:362: 2026-10-03T02:15:19.542841+00:00 dns-ubuntu panel[81228]: 2026/10/03 02:15:19 startup mail work, attempt 1 of 20: mail certificate publication completed (mail SNI from 0 active secure-mail certificates); mail filter wiring completed (milters="inet:localhost:11332" maps=hash)
+## deferred retry: busy again (attempt > 1): 0 hits (0 in .txt)
+## deferred retry: verified failure: 0 hits (0 in .txt)
+## deferred retry: give-up: 0 hits (0 in .txt)
+## root CLI states (first seen)
+   2026-10-03T02:14:05Z (None, None, None, None, None)
+   2026-10-03T02:14:14Z (None, 'observation_unavailable', None, None, None)
+   2026-10-03T02:14:21Z ('running', 'update_running', None, None, None)
+   2026-10-03T02:14:51Z ('succeeded', 'update_verified', None, None, None)
+## CELIKPANEL_LISTEN mentions
+   steps/15-collect/journal-product.txt 2026-10-03T02:14:39.710088+00:00 dns-ubuntu sudo[80705]:     root : PWD=/var/backups/celikpanel/releases/56bc29094bc3-7eae187e81ea56728338c2d2 ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/loc

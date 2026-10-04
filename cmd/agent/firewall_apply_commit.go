@@ -20,14 +20,10 @@ import (
 )
 
 const (
-	firewallApplyCommitPhasePrefix = "commit/firewall-apply/v1/"
 	firewallApplyJournalFileName   = "firewall-apply-journal.json"
 	firewallApplyJournalVersion    = 1
 	firewallApplyJournalMaxSize    = 128 << 10
 	firewallApplyJournalStageLimit = 8
-
-	firewallApplyCommitIntent    = "intent"
-	firewallApplyCommitPublished = "published"
 
 	firewallApplyConvergenceTimeout = 45 * time.Second
 
@@ -139,18 +135,21 @@ var firewallApplyJournalFaultHook func(string) error
 
 // Replaceable only by focused startup-recovery tests. Production always uses
 // the fixed nft/systemctl runner and fixed root-owned snapshot path.
-var recoverFirewallApplyHost = func(
-	ctx context.Context,
-	journal *firewallApplyJournal,
-) (firewallHostOutcome, error) {
+var recoverFirewallApplyHost = func(ctx context.Context, journal *firewallApplyJournal) (firewallHostOutcome, error) {
+	return recoverFirewallApplyWithRunner(ctx, journal, hostFirewallCommandRunner{ctx: ctx}, fileFirewallStateStore{path: firewallSnapshotPath})
+}
+
+func recoverFirewallApplyWithRunner(ctx context.Context, journal *firewallApplyJournal, runner firewallCommandRunner, store firewallStateStore) (firewallHostOutcome, error) {
 	firewallMu.Lock()
 	defer firewallMu.Unlock()
-	return convergeFirewallApplyPlan(
-		ctx,
-		journal,
-		hostFirewallCommandRunner{ctx: ctx},
-		fileFirewallStateStore{path: firewallSnapshotPath},
-	)
+	lock, err := runner.AcquireFirewallLock()
+	if err != nil {
+		// A predecessor may have changed the host. Contention supplies no terminal
+		// proof and must never finish its committed recovery as an untouched failure.
+		return firewallHostAmbiguous, err
+	}
+	defer lock.Close()
+	return convergeFirewallApplyPlan(ctx, journal, runner, store)
 }
 
 type firewallApplyJournal struct {
@@ -185,38 +184,6 @@ type firewallApplyJournal struct {
 	// durumunu kaydeder. Kalicilastiran bir plan nftables'i yukleyemedigini
 	// anlarsa uniti geri koyabilmeli ve bunu kanitlayabilmelidir.
 	PriorRestoreUnit string `json:"prior_restore_unit,omitempty"`
-}
-
-func formatFirewallApplyCommitPhase(state, requestID, qualifier string) (string, error) {
-	if (state != firewallApplyCommitIntent && state != firewallApplyCommitPublished) ||
-		!validMutationIdentity(requestID) ||
-		!mutationpayload.ValidFirewallApplyQualifier(qualifier) {
-		return "", errors.New("invalid firewall apply commit phase identity")
-	}
-	return firewallApplyCommitPhasePrefix + state + "/" + requestID + "/" + qualifier, nil
-}
-
-func parseFirewallApplyCommitPhase(value string) (
-	state, requestID, qualifier string,
-	err error,
-) {
-	if !strings.HasPrefix(value, firewallApplyCommitPhasePrefix) {
-		return "", "", "", errors.New("not a firewall apply commit phase")
-	}
-	remainder := strings.TrimPrefix(value, firewallApplyCommitPhasePrefix)
-	state, remainder, found := strings.Cut(remainder, "/")
-	if !found {
-		return "", "", "", errors.New("invalid firewall apply commit phase")
-	}
-	requestID, qualifier, found = strings.Cut(remainder, "/")
-	if !found {
-		return "", "", "", errors.New("invalid firewall apply commit phase")
-	}
-	canonical, formatErr := formatFirewallApplyCommitPhase(state, requestID, qualifier)
-	if formatErr != nil || canonical != value {
-		return "", "", "", errors.New("invalid firewall apply commit phase")
-	}
-	return state, requestID, qualifier, nil
 }
 
 func equalFirewallPorts(left, right []int) bool {
@@ -857,6 +824,12 @@ func applyStandaloneFirewallV2(
 ) error {
 	firewallMu.Lock()
 	defer firewallMu.Unlock()
+	lock, lockErr := runner.AcquireFirewallLock()
+	if lockErr != nil {
+		reportFirewallExclusion(response, lockErr)
+		return nil
+	}
+	defer lock.Close()
 	response.EngineAvailable = false
 	prepared, err := prepareFirewallApplyJournal(ctx, commitment, runner, store)
 	if err != nil {

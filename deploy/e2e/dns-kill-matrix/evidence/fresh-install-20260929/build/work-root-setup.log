@@ -1,0 +1,32 @@
+{
+  "action": "init-root",
+  "dry_run": false,
+  "marker": "/var/tmp/cp-d026-0929/.celikpanel-dns-kill-matrix-root",
+  "work_root": "/var/tmp/cp-d026-0929"
+}
+total 875868
+drwx------ 2 root root      4096 Sep 29 01:23 .
+drwx------ 4 root root      4096 Sep 29 01:23 ..
+-r--r--r-- 5 root root 556609024 Sep 27 02:09 Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2
+-r--r--r-- 5 root root 340262912 Sep 27 02:09 debian-13-genericcloud-amd64-20260826-2582.qcow2
+{
+  "action": "verify-images",
+  "verified": {
+    "arch": "/var/tmp/cp-d026-0929/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2",
+    "debian13": "/var/tmp/cp-d026-0929/images/debian-13-genericcloud-amd64-20260826-2582.qcow2"
+  }
+}
+166eda4bbf380a23f57a2398b284f796029d34f9c6b3d84ba06cf7af42942a60  /var/tmp/cp-d026-0929/artifacts/agent
+d6ef322d2ea57cf81df9f4b969d41bf7f722ab18df28c9d7ad8c1d536050d5db  /var/tmp/cp-d026-0929/artifacts/agent.kill
+97aa0ce32546e9ba6ae56831e9f300b1f97133893449422811937e365bdfc274  /var/tmp/cp-d026-0929/artifacts/dns-kill-trigger
+793fb81b95fa96f438a216831a146e0869934ce31318881857d3352ffb92e472  /var/tmp/cp-d026-0929/artifacts/panel
+total 104
+drwx------   5 root root  4096 Sep 29 01:23 .
+drwxrwxrwt 361 root root 73728 Sep 29 01:23 ..
+drwxr-xr-x   2 root root  4096 Sep 29 01:22 artifacts
+-rw-------   1 root root    36 Sep 29 01:23 .celikpanel-dns-kill-matrix-root
+drwx------   2 root root  4096 Sep 29 01:23 cells
+-rw-------   1 root root   399 Sep 29 01:23 id_ed25519
+-rw-r--r--   1 root root    94 Sep 29 01:23 id_ed25519.pub
+drwx------   2 root root  4096 Sep 29 01:23 images
+SETUP-OK

@@ -1,0 +1,15 @@
+Formatting '/var/tmp/cp-release-drill-upd9-ub-once-a/cells/4ef60eeb9aade8bd4b5e9136/ubuntu/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-upd9-ub-once-a/images/ubuntu-24.04-server-cloudimg-amd64-20260826.img backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-upd9-ub-once-a", "cell_id": "release-recovery__1c0a01b4d2a57c2c", "ssh_ports": [2911, 2912]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-upd9-ub-once-a", "nodes": {"ubuntu": "verified-disposable-systemd-guest"}}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-upd9-ub-once-a", "nodes": {"ubuntu": "verified-disposable-systemd-guest"}}
+{"step": "preflight", "verdict": "passed", "reason": null}
+{"step": "origin", "verdict": "passed", "reason": null}
+{"step": "baseline-install", "verdict": "passed", "reason": null}
+{"step": "owner-login", "verdict": "passed", "reason": null}
+{"step": "license", "verdict": "passed", "reason": null}
+{"step": "setup", "verdict": "failed", "reason": "server setup did not succeed: {'status': 'failed', 'phase': '02-service', 'error': {'code': 'HOST_MUTATION_BUSY', 'message': \"This server's package manager is busy \u2014 something outside CelikPanel is installing or updating packages. Try again in a minute.\"}}"}
+{"step": "packagekit-after-setup", "verdict": "observed", "reason": null}
+{"step": "collect", "verdict": "passed", "reason": null}
+{"kind_measured": null, "outcome": "setup-stopped", "overall": "failed", "request_id": null}
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-upd9-ub-once-a", "evidence_retained": true}
+UPD1 cell=upd1-ubuntu-setuponce dns_mode=external lab=/var/tmp/cp-release-drill-upd9-ub-once-a driver_exit=1 evidence=/var/tmp/cp-release-drill-upd9-ub-once-a/evidence/*/upd1

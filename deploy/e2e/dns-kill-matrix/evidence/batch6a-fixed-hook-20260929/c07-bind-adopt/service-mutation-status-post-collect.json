@@ -1,0 +1,24 @@
+ff9abfa1db719155d83024a1840c2782f4f5dce7868547d648b352db98fd7890  /root/oi-smstatus
+{
+  "observed_at": "2026-09-29T15:15:45.62484805Z",
+  "request_id": "8b14693eaf9461f13a415d5e637b6d91",
+  "response": {
+    "job": {
+      "request_id": "8b14693eaf9461f13a415d5e637b6d91",
+      "owner_id": "5c95b5f9a011e3da58a54873fc3ef9d4",
+      "kind": "dns_engine_switch",
+      "target": "bind",
+      "package_name": "dns-engine-switch/v1:sha256:59e76ab0efd1ad52eaa5e17b2448a8a022172f2b13f54a4bc3b787463092e965",
+      "status": "failed",
+      "phase": "interrupted",
+      "attempt": 1,
+      "started_at": "2026-09-29T15:12:41.616108909Z",
+      "updated_at": "2026-09-29T15:12:48.287578821Z",
+      "lease_expires_at": "0001-01-01T00:00:00Z",
+      "deadline_at": "2026-09-29T15:57:41.616108909Z",
+      "finished_at": "2026-09-29T15:12:48.287578821Z",
+      "error_code": "dns_native_recovery_unknown_after_restart",
+      "error_message": "An interrupted DNS switch (request 8b14693eaf9461f13a415d5e637b6d91) could not be recovered automatically when the Agent restarted and was reconciled later. Its journal is retired and it no longer blocks DNS changes. Check the current DNS engine status before another switch."
+    }
+  }
+}

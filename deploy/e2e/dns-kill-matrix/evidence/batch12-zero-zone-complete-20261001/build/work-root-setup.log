@@ -1,0 +1,74 @@
+=== 2026-09-30T08:37:57Z work root /var/tmp/cp-b12-1001/r1
+{
+  "action": "init-root",
+  "dry_run": false,
+  "marker": "/var/tmp/cp-b12-1001/r1/.celikpanel-dns-kill-matrix-root",
+  "work_root": "/var/tmp/cp-b12-1001/r1"
+}
+total 875868
+drwx------  2 root root      4096 Sep 30 11:37 .
+drwx------  4 root root      4096 Sep 30 11:37 ..
+-r--r--r-- 37 root root 556609024 Sep 27 02:09 Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2
+-r--r--r-- 37 root root 340262912 Sep 27 02:09 debian-13-genericcloud-amd64-20260826-2582.qcow2
+{
+  "action": "verify-images",
+  "verified": {
+    "arch": "/var/tmp/cp-b12-1001/r1/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2",
+    "debian13": "/var/tmp/cp-b12-1001/r1/images/debian-13-genericcloud-amd64-20260826-2582.qcow2"
+  }
+}
+9d39e1b1dc0001548e34ffaa687737d8638c286230dca3c17a54b3504deab5af  /var/tmp/cp-b12-1001/r1/artifacts/agent
+7491ec1693736addcb322f9f4b76a55c33f141003d8a1c8802e5e43dd5a84316  /var/tmp/cp-b12-1001/r1/artifacts/agent.kill
+03c530a694680e60faee7af93289ecf24932416d07b868849a860be546d9e29d  /var/tmp/cp-b12-1001/r1/artifacts/panel
+cddab9210946c1897d18cf7edb6ea9b7d4a0445f912603cb3e819008ed857280  /var/tmp/cp-b12-1001/r1/artifacts/dns-kill-trigger
+77375e189af22f2236862ebf878af200da583feed4c72fc83dda6f24204bfafd  /var/tmp/cp-b12-1001/r1/artifacts/recovery
+77c354dd9996fb212da45a309baf301221b059204508c6184684f5e699ec167a  /var/tmp/cp-b12-1001/r1/artifacts/recovery-runtime/runtime.manifest
+7c2ca5263e127a2ce3d5ce3f58953264a1ae37c20f167b986bf8b20c19a630c5  /var/tmp/cp-b12-1001/r1/id_ed25519.pub
+dcf6e09c026864ee15566a03b3c4aa30d6e1805333d548753b58d070e7fd1229  deploy/e2e/dns-kill-matrix/manifest.json
+total 32
+drwx------ 5 root root 4096 Sep 30 11:37 .
+drwxr-xr-x 4 root root 4096 Sep 30 11:37 ..
+drwxr-xr-x 4 root root 4096 Sep 30 11:08 artifacts
+-rw------- 1 root root   36 Sep 30 11:37 .celikpanel-dns-kill-matrix-root
+drwx------ 2 root root 4096 Sep 30 11:37 cells
+-rw------- 1 root root  399 Sep 30 11:37 id_ed25519
+-rw-r--r-- 1 root root   93 Sep 30 11:37 id_ed25519.pub
+drwx------ 2 root root 4096 Sep 30 11:37 images
+SETUP-OK /var/tmp/cp-b12-1001/r1
+=== 2026-09-30T08:47:21Z work root /var/tmp/cp-b12-1001/r2
+{
+  "action": "init-root",
+  "dry_run": false,
+  "marker": "/var/tmp/cp-b12-1001/r2/.celikpanel-dns-kill-matrix-root",
+  "work_root": "/var/tmp/cp-b12-1001/r2"
+}
+total 875868
+drwx------  2 root root      4096 Sep 30 11:47 .
+drwx------  4 root root      4096 Sep 30 11:47 ..
+-r--r--r-- 38 root root 556609024 Sep 27 02:09 Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2
+-r--r--r-- 38 root root 340262912 Sep 27 02:09 debian-13-genericcloud-amd64-20260826-2582.qcow2
+{
+  "action": "verify-images",
+  "verified": {
+    "arch": "/var/tmp/cp-b12-1001/r2/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2",
+    "debian13": "/var/tmp/cp-b12-1001/r2/images/debian-13-genericcloud-amd64-20260826-2582.qcow2"
+  }
+}
+9d39e1b1dc0001548e34ffaa687737d8638c286230dca3c17a54b3504deab5af  /var/tmp/cp-b12-1001/r2/artifacts/agent
+7491ec1693736addcb322f9f4b76a55c33f141003d8a1c8802e5e43dd5a84316  /var/tmp/cp-b12-1001/r2/artifacts/agent.kill
+03c530a694680e60faee7af93289ecf24932416d07b868849a860be546d9e29d  /var/tmp/cp-b12-1001/r2/artifacts/panel
+cddab9210946c1897d18cf7edb6ea9b7d4a0445f912603cb3e819008ed857280  /var/tmp/cp-b12-1001/r2/artifacts/dns-kill-trigger
+77375e189af22f2236862ebf878af200da583feed4c72fc83dda6f24204bfafd  /var/tmp/cp-b12-1001/r2/artifacts/recovery
+77c354dd9996fb212da45a309baf301221b059204508c6184684f5e699ec167a  /var/tmp/cp-b12-1001/r2/artifacts/recovery-runtime/runtime.manifest
+7c2ca5263e127a2ce3d5ce3f58953264a1ae37c20f167b986bf8b20c19a630c5  /var/tmp/cp-b12-1001/r2/id_ed25519.pub
+dcf6e09c026864ee15566a03b3c4aa30d6e1805333d548753b58d070e7fd1229  deploy/e2e/dns-kill-matrix/manifest.json
+total 32
+drwx------ 5 root root 4096 Sep 30 11:47 .
+drwxr-xr-x 6 root root 4096 Sep 30 11:47 ..
+drwxr-xr-x 4 root root 4096 Sep 30 11:08 artifacts
+-rw------- 1 root root   36 Sep 30 11:47 .celikpanel-dns-kill-matrix-root
+drwx------ 2 root root 4096 Sep 30 11:47 cells
+-rw------- 1 root root  399 Sep 30 11:37 id_ed25519
+-rw-r--r-- 1 root root   93 Sep 30 11:37 id_ed25519.pub
+drwx------ 2 root root 4096 Sep 30 11:47 images
+SETUP-OK /var/tmp/cp-b12-1001/r2

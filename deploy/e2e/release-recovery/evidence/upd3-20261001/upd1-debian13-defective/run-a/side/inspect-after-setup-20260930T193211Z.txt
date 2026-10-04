@@ -1,0 +1,134 @@
+# read-only side inspection lab=cp-release-drill-upd3-d13-def-a node=debian13 label=after-setup rc=0 took=0.6s
+== utc
+2026-09-30T19:32:11Z
+6ecf56fe-4afc-435a-ad06-c74cb4ae0fd7
+== hosting root: stat of the parents
+drwxr-xr-x 755 root:root /var
+drwxr-xr-x 755 root:root /var/www
+drwxr-xr-x 755 root:root /var/www/celikpanel
+drwxr-x--- 750 root:celikpanel /var/www/celikpanel/subscriptions
+== hosting root: site directories
+f: /var/www/celikpanel/subscriptions/2/sites/1/public_html
+drwxr-xr-x root root       /
+drwxr-xr-x root root       var
+drwxr-xr-x root root       www
+drwxr-xr-x root root       celikpanel
+drwxr-x--- root celikpanel subscriptions
+drwxr-x--- root celikpanel 2
+drwxr-x--- root celikpanel sites
+drwxr-x--- root celikpanel 1
+drwxr-x--- root celikpanel public_html
+== hosting root: receipt /var/lib/celikpanel-agent-private/hosting-root-v1.json
+-rw------- 600 root:root /var/lib/celikpanel-agent-private/hosting-root-v1.json
+{
+  "schema": "celikpanel/hosting-root-directories/v1",
+  "directories": [
+    {
+      "path": "/var/www/celikpanel",
+      "mode": "0755",
+      "uid": 0,
+      "gid": 0,
+      "created_at": "2026-09-30T19:32:11Z"
+    }
+  ]
+}
+== hosting root: agent log lines
+2026-09-30T19:32:11.396568+00:00 dns-debian13 agent[4944]: 2026/09/30 19:32:11 hosting root: created /var/www/celikpanel at 0755 0:0
+== web server accounts
+www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin
+== os
+debian 13
+== cron units
+NRestarts=0
+Id=cron.service
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+
+NRestarts=0
+Id=cronie.service
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+
+== cron spool
+total 8
+drwx-wx--T 2 root crontab 4096 Jun 13  2025 .
+drwxr-xr-x 3 root root    4096 Sep 30 19:29 ..
+total 12
+drwxr-xr-x 3 root root    4096 Sep 30 19:29 .
+drwxr-xr-x 4 root root    4096 Sep 30 19:29 ..
+drwx-wx--T 2 root crontab 4096 Jun 13  2025 crontabs
+== stamp files
+== cron journal tail
+2026-09-30T19:29:57+00:00 dns-debian13 systemd[1]: Started cron.service - Regular background program processing daemon.
+2026-09-30T19:29:57+00:00 dns-debian13 cron[24726]: (CRON) INFO (pidfile fd = 3)
+2026-09-30T19:29:57+00:00 dns-debian13 cron[24726]: (CRON) INFO (Running @reboot jobs)
+== origin unit
+NRestarts=0
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+== hosts celikpanel.net
+7:127.0.0.1 celikpanel.net # disposable CelikPanel worker fixture
+127.0.0.1       celikpanel.net
+== listeners
+127.0.0.53%lo:53 users:(("systemd-resolve",pid=368,fd=19))
+127.0.0.54:53 users:(("systemd-resolve",pid=368,fd=21))
+0.0.0.0:25 users:(("master",pid=23873,fd=13))
+0.0.0.0:80 users:(("nginx",pid=20723,fd=5),("nginx",pid=20722,fd=5),("nginx",pid=5797,fd=5))
+0.0.0.0:587 users:(("master",pid=23873,fd=92))
+127.0.0.1:443 users:(("python3",pid=2470,fd=3))
+[::]:25 users:(("master",pid=23873,fd=14))
+*:2083 users:(("panel",pid=5135,fd=8))
+[::]:80 users:(("nginx",pid=20723,fd=6),("nginx",pid=20722,fd=6),("nginx",pid=5797,fd=6))
+[::]:587 users:(("master",pid=23873,fd=93))
+== celikpanel units
+  celikpanel-agent.service            loaded active   running CelikPanel privileged agent
+  celikpanel-firewall-restore.service loaded inactive dead    Restore CelikPanel firewall policy before networking
+  celikpanel-panel.service            loaded active   running CelikPanel web panel
+  celikpanel-release-recovery.service loaded inactive dead    CelikPanel verified release transaction recovery
+  celikpanel-release-recovery.timer   loaded active   waiting CelikPanel release transaction recovery watchdog
+== timers
+Wed 2026-09-30 19:32:25 UTC      14s Wed 2026-09-30 19:31:55 UTC 16s ago celikpanel-release-recovery.timer celikpanel-release-recovery.service
+Wed 2026-09-30 19:39:00 UTC     6min -                                 - phpsessionclean.timer             phpsessionclean.service
+Wed 2026-09-30 19:39:51 UTC     7min -                                 - systemd-tmpfiles-clean.timer      systemd-tmpfiles-clean.service
+Wed 2026-09-30 20:00:00 UTC    27min -                                 - apt-listchanges.timer             apt-listchanges.service
+Thu 2026-10-01 00:00:00 UTC 4h 27min -                                 - dpkg-db-backup.timer              dpkg-db-backup.service
+Thu 2026-10-01 06:02:59 UTC      10h -                                 - apt-daily-upgrade.timer           apt-daily-upgrade.service
+Thu 2026-10-01 08:19:55 UTC      12h -                                 - man-db.timer                      man-db.service
+Thu 2026-10-01 08:47:41 UTC      13h -                                 - certbot.timer                     certbot.service
+Thu 2026-10-01 17:42:16 UTC      22h -                                 - apt-daily.timer                   apt-daily.service
+Sun 2026-10-04 03:10:25 UTC   3 days -                                 - e2scrub_all.timer                 e2scrub_all.service
+Mon 2026-10-05 00:49:23 UTC   4 days -                                 - fstrim.timer                      fstrim.service
+== installed build identity
+== recovery observation records
+== site: vhost files naming the domain
+/etc/nginx/sites-available/upd1-owner.test.conf
+== site: local requests
+host-header / -> 200
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, the nginx web server is success
+== site: nginx error log tail
+-- /var/log/nginx/error.log
+2026/09/30 19:26:33 [notice] 5797#5797: using inherited sockets from "5;6;"
+== panel unit
+NRestarts=0
+ExecMainStatus=0
+ActiveState=active
+SubState=running
+ActiveEnterTimestamp=Wed 2026-09-30 19:26:20 UTC
+InactiveEnterTimestamp=Wed 2026-09-30 19:26:20 UTC

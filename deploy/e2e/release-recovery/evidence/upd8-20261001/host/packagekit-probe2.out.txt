@@ -1,0 +1,11 @@
+Formatting '/var/tmp/cp-release-drill-upd8-probe-b/cells/70fca437a872aed45f8713d8/ubuntu/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-upd8-probe-b/images/ubuntu-24.04-server-cloudimg-amd64-20260826.img backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-upd8-probe-b", "cell_id": "release-recovery__f72da6f562360776", "ssh_ports": [2895, 2896]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-upd8-probe-b", "nodes": {"ubuntu": "verified-disposable-systemd-guest"}}
+13:09:05
+apt rc=0
+13:09:05
+ExecMainStartTimestamp=
+ActiveState=inactive
+
+13:09:05 | inactive | none
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-upd8-probe-b", "evidence_retained": true}

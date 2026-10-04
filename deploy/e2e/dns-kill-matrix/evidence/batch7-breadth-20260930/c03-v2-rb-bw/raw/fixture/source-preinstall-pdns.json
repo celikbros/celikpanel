@@ -1,0 +1,41 @@
+{
+  "cell_id": "bind__rolled-back__before-write__standalone__peer-reachable",
+  "dns_journal_absent": true,
+  "dns_ownership_receipts_absent": true,
+  "dns_state_absent": true,
+  "global_udp_tcp_53_bindable": true,
+  "install_guard": {
+    "package_hooks_could_not_start": true,
+    "persistent_mask_target": "/dev/null",
+    "unit": "pdns.service"
+  },
+  "mask_removed_before_external_source_start": true,
+  "measured_target_packages": [
+    {
+      "name": "bind9",
+      "status": "absent"
+    }
+  ],
+  "package_install_origin": "harness-source-preinstall",
+  "production_pdns_adoption_pending": true,
+  "schema": "celikpanel/dns-kill-source-preinstall/v1",
+  "scope": "managed-pdns-source-preparation-for-bind-only",
+  "source_packages": [
+    {
+      "name": "pdns-backend-sqlite3",
+      "status": "install ok installed",
+      "version": "4.9.17-0+deb13u1"
+    },
+    {
+      "name": "pdns-server",
+      "status": "install ok installed",
+      "version": "4.9.17-0+deb13u1"
+    }
+  ],
+  "source_unit_before_external_configuration": {
+    "active_state": "inactive",
+    "load_state": "loaded",
+    "name": "pdns.service",
+    "unit_file_state": "disabled"
+  }
+}

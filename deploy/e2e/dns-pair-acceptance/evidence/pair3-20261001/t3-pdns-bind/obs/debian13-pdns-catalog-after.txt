@@ -1,0 +1,16 @@
+{"catalog_records": [["catalog-c000020a.celikpanel.invalid", "catalog-c000020a.celikpanel.invalid", "NS", "invalid."], ["catalog-c000020a.celikpanel.invalid", "catalog-c000020a.celikpanel.invalid", "SOA", "invalid invalid 1790727081 60 30 3600 30"]], "domains": [[1, "catalog-c000020a.celikpanel.invalid", "PRODUCER", 1790727022, "", "celikpanel-bind-catalog-v1"], [2, "pair-accept.test", "MASTER", 2026093001, "catalog-c000020a.celikpanel.invalid", ""]], "metadata": [[1, "CATALOG-HASH", "n6L34LeIr9zlcH/7CcW04T4BhE5GuvXjRFRo31n4dKY="]], "t": "2026-09-30T00:13:36Z"}
+2026-09-30T00:10:59+00:00 dns-debian13 pdns_server[4881]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-30T00:10:59+00:00 dns-debian13 pdns_server[4881]: Received spurious notify answer for 'pair-accept.test' from 192.0.2.11:53
+2026-09-30T00:10:59+00:00 dns-debian13 pdns_server[4881]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:54440', transfer initiated
+2026-09-30T00:11:04+00:00 dns-debian13 pdns_server[4881]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-30T00:11:04+00:00 dns-debian13 pdns_server[4881]: Received spurious notify answer for 'pair-accept.test' from 192.0.2.11:53
+2026-09-30T00:11:13+00:00 dns-debian13 pdns_server[4881]: Received spurious notify answer for 'catalog-c000020a.celikpanel.invalid' from 192.0.2.11:53
+2026-09-30T00:11:13+00:00 dns-debian13 pdns_server[4881]: Received spurious notify answer for 'pair-accept.test' from 192.0.2.11:53
+2026-09-30T00:11:21+00:00 dns-debian13 pdns_server[4881]: new CATALOG-HASH 'n6L34LeIr9zlcH/7CcW04T4BhE5GuvXjRFRo31n4dKY=' for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T00:11:21+00:00 dns-debian13 pdns_server[4881]: Unable to queue notification of domain 'pair-accept.test' to nameserver 'ns1.ns-accept.test': nameserver does not resolve!
+2026-09-30T00:11:21+00:00 dns-debian13 pdns_server[4881]: Unable to queue notification of domain 'pair-accept.test' to nameserver 'ns2.ns-accept.test': nameserver does not resolve!
+2026-09-30T00:11:21+00:00 dns-debian13 pdns_server[4881]: Unable to queue notification of domain 'catalog-c000020a.celikpanel.invalid' to nameserver 'invalid': nameserver does not resolve!
+2026-09-30T00:11:21+00:00 dns-debian13 pdns_server[4881]: IXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:47309', transfer initiated with serial 1790727022
+2026-09-30T00:11:21+00:00 dns-debian13 pdns_server[4881]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:47309', transfer initiated
+2026-09-30T00:11:29+00:00 dns-debian13 pdns_server[4881]: Notification for catalog-c000020a.celikpanel.invalid to 192.0.2.11:0 failed after retries
+2026-09-30T00:11:29+00:00 dns-debian13 pdns_server[4881]: Notification for pair-accept.test to 192.0.2.11:0 failed after retries

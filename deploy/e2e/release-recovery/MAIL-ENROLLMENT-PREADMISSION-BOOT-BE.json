@@ -1,0 +1,83 @@
+{
+  "schema": "celikpanel-mail-enrollment-preadmission-boot-evidence/v1",
+  "production_helper_source_commit": "d3aab13bc22b085433c94b77fd47a2d56f182d3e",
+  "test_fixture_base_commit": "11da4fa",
+  "test_fixture_source_sha256": "1ef61068b60c51666b3f3cb2c6ed8b4679e0fdbed5d716424de8c010813af54c",
+  "test_binary_sha256": "e56dff716cbd992062939745dac82750b7826c676cf513a5a70b89a9b9edbf4a",
+  "platform": "guarded disposable Debian 13/systemd QEMU BE",
+  "operation": "7cea80c83c856d6e308b8d30915b9599",
+  "generation": "179a6301fa2aa64091f01ae1fe237e15dccdcdd84b3a2fb4a96f4cdfbe655935",
+  "cut": "boot_armed_before_common_admission",
+  "cut_exit": -9,
+  "boot_observation": {
+    "after_boot": "6174a212-50c6-4935-8404-e7f17153eca3",
+    "before_boot": "008e0231-5519-4049-a1ac-3e7ee53f7a23",
+    "journal": "Sep 23 14:09:49 dns-debian13 systemd[1]: Starting celikpanel-mail-enrollment-resume-7cea80c83c856d6e308b8d30915b9599.service - Continue recorded CelikPanel mail enrollment...\nSep 23 14:09:49 dns-debian13 systemd[1]: celikpanel-mail-enrollment-resume-7cea80c83c856d6e308b8d30915b9599.service: Deactivated successfully.\nSep 23 14:09:49 dns-debian13 systemd[1]: Finished celikpanel-mail-enrollment-resume-7cea80c83c856d6e308b8d30915b9599.service - Continue recorded CelikPanel mail enrollment.",
+    "ledger_and_immutable_evidence_unchanged": true,
+    "native_boot_noop": true,
+    "no_automatic_attempt_spent": true,
+    "no_common_admission": true,
+    "no_runtime_creation": true,
+    "operation": "7cea80c83c856d6e308b8d30915b9599",
+    "postfix_dovecot_active": true
+  },
+  "owner_retry": {
+    "automatic_attempts_spent": 0,
+    "generation": "179a6301fa2aa64091f01ae1fe237e15dccdcdd84b3a2fb4a96f4cdfbe655935",
+    "handoff": "Mail enrollment worker accepted: 7cea80c83c856d6e308b8d30915b9599. Completion is not yet verified. Observe celikpanel-mail-enrollment-7cea80c83c856d6e308b8d30915b9599.service; after interruption, continue this same request.\n",
+    "job": {
+      "attempt": 1,
+      "deadline_at": "2026-09-23T14:11:30.576702135Z",
+      "finished_at": "2026-09-23T14:11:34.350045666Z",
+      "kind": "mail_renewal_enrollment",
+      "lease_expires_at": "0001-01-01T00:00:00Z",
+      "owner_id": "9b67304f3425e024b56931d21009f971",
+      "package_name": "mail-renewal-enrollment/v1:sha256:f9d5085cad765032fbf9a509bf41de9ddd3ff08b1816117191a25f17be5dc4ae",
+      "phase": "commit/mail-renewal-enrollment/v1/published/7cea80c83c856d6e308b8d30915b9599/f9d5085cad765032fbf9a509bf41de9ddd3ff08b1816117191a25f17be5dc4ae",
+      "request_id": "7cea80c83c856d6e308b8d30915b9599",
+      "started_at": "2026-09-23T14:11:30.576702135Z",
+      "status": "succeeded",
+      "target": "mail-renewal",
+      "updated_at": "2026-09-23T14:11:34.350045666Z"
+    },
+    "journal": "Sep 23 14:11:29 dns-debian13 systemd[1]: Starting celikpanel-mail-enrollment-7cea80c83c856d6e308b8d30915b9599.service - [systemd-run] /usr/libexec/celikpanel/mail-renewal/179a6301fa2aa64091f01ae1fe237e15dccdcdd84b3a2fb4a96f4cdfbe655935/renew --enrollment-worker 7cea80c83c856d6e308b8d30915b9599 9b67304f3425e024b56931d21009f971 179a6301fa2aa64091f01ae1fe237e15dccdcdd84b3a2fb4a96f4cdfbe655935...\nSep 23 14:11:29 dns-debian13 systemd[1]: Started celikpanel-mail-enrollment-7cea80c83c856d6e308b8d30915b9599.service - [systemd-run] /usr/libexec/celikpanel/mail-renewal/179a6301fa2aa64091f01ae1fe237e15dccdcdd84b3a2fb4a96f4cdfbe655935/renew --enrollment-worker 7cea80c83c856d6e308b8d30915b9599 9b67304f3425e024b56931d21009f971 179a6301fa2aa64091f01ae1fe237e15dccdcdd84b3a2fb4a96f4cdfbe655935.\nSep 23 14:11:35 dns-debian13 renew[901]: Mail enrollment result verified for request: 7cea80c83c856d6e308b8d30915b9599\nSep 23 14:11:35 dns-debian13 systemd[1]: celikpanel-mail-enrollment-7cea80c83c856d6e308b8d30915b9599.service: Deactivated successfully.\nSep 23 14:11:35 dns-debian13 systemd[1]: celikpanel-mail-enrollment-7cea80c83c856d6e308b8d30915b9599.service: Consumed 4.967s CPU time, 128.8M memory peak.\n",
+    "management_daemons_started": false,
+    "manual_postboot_owner_start": true,
+    "new_identity_allocated": false,
+    "old_jobs_and_precut_receipts_unchanged": true,
+    "operation": "7cea80c83c856d6e308b8d30915b9599",
+    "owner": "9b67304f3425e024b56931d21009f971",
+    "published": true,
+    "same_reviewed_start_tuple": true,
+    "volatile_runtime_prerequisite_supplied_by_fixture": true
+  },
+  "production_ui_admission": false,
+  "real_certificate_renewal": false,
+  "limitations": [
+    "Boot intentionally does not admit a missing common request even when its bootstrap unit was armed. Explicit owner admission remains required.",
+    "After boot the new-admission volatile lock prerequisite was provided explicitly by the test fixture. This does not prove automatic or management-absent new-admission provisioning.",
+    "The installed production helper received the original reviewed start tuple after that prerequisite. It reused capture/boot receipts and introduced only that exact accepted request into the common ledger."
+  ],
+  "unresolved": [
+    "production setup admission",
+    "UI retry of unrecorded initial handoff",
+    "other early registration boot cuts/platforms",
+    "previous-release migration",
+    "complete P0 fault/workload matrix"
+  ],
+  "evidence_root": "/var/tmp/cp-release-drill-20260922-be",
+  "evidence_files_sha256": {
+    "mail-preadmission-boot-native.intent": "a56e6d3406fa00bda483ebc1386f480aa344f9ca1ca94720bcacc29442a36aef",
+    "mail-preadmission-boot-native.script": "4f5f4229ec6b9647617176dc7a1b4855bd73476a095a7f487a1330f5618636de",
+    "mail-preadmission-boot-native.log": "add920627b2c1e5590ee34850efb3eabbbb597acec2f731f885ac72c52aeab3f",
+    "mail-preadmission-boot-native-result.json": "e01bbdc9992fc2fff03cbf8b5f31ff068de3042ae1d3d20f6ae0aac212f29a71",
+    "mail-preadmission-boot-reset.intent": "82c16d6c18fb3a2f11cc7d1c352eb63f870b071908f380a3aee1a21d6039a7e7",
+    "mail-preadmission-boot-reset.result": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+    "mail-preadmission-boot-observe.script": "279a3cad280575e4ffedca7139fe5f25c244cf1ddfc5ef3ab1ed1968276401ea",
+    "mail-preadmission-boot-observe.log": "da1e711dee5ab6187dcb0fb73009c3ef518014796d55f63b1df8953ba75310b7",
+    "mail-preadmission-boot-observe.json": "2895f0d80ef2e1debff5d79a66f6363e9445e8567ed939f3d987d0cd9f69e8e5",
+    "mail-preadmission-owner-retry.script": "f42d44960eb3afa83d45cfb7f0c63350e50860c4c2083d574008f0c936d37d58",
+    "mail-preadmission-owner-retry.log": "59fb50fc9cabfdce884e5e31d3f2999bda7617bb1452f058a2d6a626ed6b9321",
+    "mail-preadmission-owner-retry.json": "e50716681a085fe20d54dd54aae298f91ab8e730ee6b86188bc934deb11786ab"
+  }
+}

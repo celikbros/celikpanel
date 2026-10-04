@@ -480,7 +480,7 @@ func TestServiceMutationPrivilegedCallsitesCarryTypedClaims(t *testing.T) {
 
 	wantDirect := map[string][]string{
 		"panel_cert_reconcile.go":          {"reconcilePanelCertificateActivationOnce"},
-		"mail_host_certificate_renewal.go": {"deployPendingMailHostCertificate"},
+		"mail_host_certificate_renewal.go": {"deployPendingMailHostCertificateWithRetry"},
 		"service_mutation_rpc.go":          {"requiredServiceMutationStep"},
 	}
 	for file := range directAcquire {

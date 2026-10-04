@@ -1,0 +1,24 @@
+### 2026-09-30T00:58:58.938Z start-cell z02-zero-started pdns-switch__target-started__after-write__paired-primary__peer-reachable node=debian13 peer=arch fixture=uninitialized root=/var/tmp/cp-b9-1001/r1 gateprobe=0 flags=--zero-zones
+### 2026-09-30T00:58:58.940Z prepare
+### 2026-09-30T00:58:59.922Z early-admission-dry-run
+### 2026-09-30T00:59:00.086Z start
+### 2026-09-30T00:59:00.328Z wait-ssh
+### 2026-09-30T00:59:59.993Z guest-identity
+### 2026-09-30T01:00:00.858Z install
+### 2026-09-30T01:00:10.522Z enroll-recovery-runtime
+### 2026-09-30T01:00:18.168Z native-bind-secondary-prepare
+### 2026-09-30T01:00:57.301Z prepare-pdns-switch zero_zones_flag=--zero-zones
+### 2026-09-30T01:00:58.376Z pre-run-snapshot
+### 2026-09-30T01:01:47.825Z start-peer-dns-sampler
+Running as unit: cp-b9-peerloop1.service; invocation ID: 27bea648a3e3446284b32c4682b31b8d
+peerloop1 start rc=0
+### 2026-09-30T01:01:48.404Z start-watcher
+Running as unit: cp-b9-watch.service; invocation ID: 93227f7684dd48959c077d8f3bc470af
+### 2026-09-30T01:01:49.051Z start-dbwatch
+Running as unit: cp-b9-dbwatch.service; invocation ID: d31e02ba2e514bba8b7269e93251cfdc
+### 2026-09-30T01:01:50.209Z prepared-ok
+### 2026-09-30T01:01:50.214Z run-prepared-dry-run flags=--zero-zones
+### 2026-09-30T01:01:50.328Z run-prepared
+RUN_PREPARED_RC=0
+### 2026-09-30T01:03:27.122Z done-run rc=0
+### 2026-09-30T01:03:27.127Z capture hold 150s before collect (samplers keep running; read-only; batch 9 addition for the 60 s re-stamp question)

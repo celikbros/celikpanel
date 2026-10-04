@@ -1,0 +1,153 @@
+######## c01-pri-intent
+--- status read after-recovery rc=0
+No DNS switch journal was observed for request f7cf73e30b9546f05c8855ec680b1412. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+
+--- status read before-recovery rc=0
+DNS switch request f7cf73e30b9546f05c8855ec680b1412: accepted-active (journal phase intent).
+If PowerDNS never started for this fresh paired primary, the server owner can restore the pre-start state with: /usr/libexec/celikpanel/recovery recover-dns-pdns-fresh-prestart --request-id f7cf73e30b9546f05c8855ec680b1412. The command checks locks, the accepted worker, native units, configuration and the staged candidate; a started or changed target is refused and its evidence is preserved. This status check does not start recovery.
+Quiesced worker observation: no-recorded-worker. This is only a point-in-time process check; it does not authorize a DNS inverse.
+The accepted operation is recorded. The server owner should follow its CelikPanel status and check native DNS health if progress stops. This read-only observation does not prove worker liveness or authorize another switch; recovery must recheck the same operation under the host lock.
+Frozen native inverse shape: pdns-switch. This classification does not prove worker exclusion, owner authority or safe recovery execution.
+The current DNS state receipt is absent. This alone does not prove that an inverse is safe; preserve the journal and inspect native DNS before recovery.
+The journal and current state both have no source receipt. This is not proof that DNS was rolled back or is healthy; the server owner must inspect native DNS before resuming this operation.
+The switch has no previous DNS engine, so no frozen source ownership receipt is required. Native DNS still needs verification before the operation resumes.
+Native unit pdns.service: load=masked active=inactive unit-file=masked.
+These systemd properties were observed at one instant; they do not prove DNS answers, zone content, owner edits or recovery authority.
+Release and host mutation locks were held; the same evidence bytes and native unit properties matched again after native checks, and the accepted worker was rechecked. Future worker liveness, unobserved DNS answers, owner edits and recovery authority remain unproved.
+
+--- status read post-collect rc=0
+No DNS switch journal was observed for request f7cf73e30b9546f05c8855ec680b1412. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+
+######## c02-pri-staged
+--- status read after-recovery rc=0
+No DNS switch journal was observed for request dbf9982f7d79645b1cc9ddfa99573f41. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+
+--- status read before-recovery rc=0
+DNS switch request dbf9982f7d79645b1cc9ddfa99573f41: accepted-active (journal phase target-staged).
+If PowerDNS never started for this fresh paired primary, the server owner can restore the pre-start state with: /usr/libexec/celikpanel/recovery recover-dns-pdns-fresh-prestart --request-id dbf9982f7d79645b1cc9ddfa99573f41. The command checks locks, the accepted worker, native units, configuration and the staged candidate; a started or changed target is refused and its evidence is preserved. This status check does not start recovery.
+Quiesced worker observation: no-recorded-worker. This is only a point-in-time process check; it does not authorize a DNS inverse.
+The accepted operation is recorded. The server owner should follow its CelikPanel status and check native DNS health if progress stops. This read-only observation does not prove worker liveness or authorize another switch; recovery must recheck the same operation under the host lock.
+Frozen native inverse shape: pdns-switch. This classification does not prove worker exclusion, owner authority or safe recovery execution.
+The current DNS state receipt is absent. This alone does not prove that an inverse is safe; preserve the journal and inspect native DNS before recovery.
+The journal and current state both have no source receipt. This is not proof that DNS was rolled back or is healthy; the server owner must inspect native DNS before resuming this operation.
+The switch has no previous DNS engine, so no frozen source ownership receipt is required. Native DNS still needs verification before the operation resumes.
+Native unit pdns.service: load=masked active=inactive unit-file=masked.
+These systemd properties were observed at one instant; they do not prove DNS answers, zone content, owner edits or recovery authority.
+Release and host mutation locks were held; the same evidence bytes and native unit properties matched again after native checks, and the accepted worker was rechecked. Future worker liveness, unobserved DNS answers, owner edits and recovery authority remain unproved.
+
+--- status read post-collect rc=0
+No DNS switch journal was observed for request dbf9982f7d79645b1cc9ddfa99573f41. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+
+######## c03-pri-enable
+--- status read after-recovery rc=0
+No DNS switch journal was observed for request 4b3fdfacc972232747641c9d5b38ce1e. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+
+--- status read before-recovery rc=0
+DNS switch request 4b3fdfacc972232747641c9d5b38ce1e: accepted-active (journal phase target-enable-intent).
+If PowerDNS never started for this fresh paired primary, the server owner can restore the pre-start state with: /usr/libexec/celikpanel/recovery recover-dns-pdns-fresh-prestart --request-id 4b3fdfacc972232747641c9d5b38ce1e. The command checks locks, the accepted worker, native units, configuration and the staged candidate; a started or changed target is refused and its evidence is preserved. This status check does not start recovery.
+Quiesced worker observation: no-recorded-worker. This is only a point-in-time process check; it does not authorize a DNS inverse.
+The accepted operation is recorded. The server owner should follow its CelikPanel status and check native DNS health if progress stops. This read-only observation does not prove worker liveness or authorize another switch; recovery must recheck the same operation under the host lock.
+Frozen native inverse shape: pdns-switch. This classification does not prove worker exclusion, owner authority or safe recovery execution.
+The current DNS state receipt is absent. This alone does not prove that an inverse is safe; preserve the journal and inspect native DNS before recovery.
+The journal and current state both have no source receipt. This is not proof that DNS was rolled back or is healthy; the server owner must inspect native DNS before resuming this operation.
+The switch has no previous DNS engine, so no frozen source ownership receipt is required. Native DNS still needs verification before the operation resumes.
+Native unit pdns.service: load=masked active=inactive unit-file=masked.
+These systemd properties were observed at one instant; they do not prove DNS answers, zone content, owner edits or recovery authority.
+Release and host mutation locks were held; the same evidence bytes and native unit properties matched again after native checks, and the accepted worker was rechecked. Future worker liveness, unobserved DNS answers, owner edits and recovery authority remain unproved.
+
+--- status read post-collect rc=0
+No DNS switch journal was observed for request 4b3fdfacc972232747641c9d5b38ce1e. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+
+######## c04-pri-started-zl
+--- status read after-recovery rc=0
+No DNS switch journal was observed for request c59b537aac13c590e71b4682a88ed7b1. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+
+--- status read before-recovery rc=0
+DNS switch request c59b537aac13c590e71b4682a88ed7b1: accepted-active (journal phase target-started).
+No owner recovery command applies to this journal's recorded shape and ledger status. Keep the journal and ledger. If this operation does not resume through CelikPanel or an Agent restart, contact support with request id c59b537aac13c590e71b4682a88ed7b1. This status check does not start recovery.
+Quiesced worker observation: no-recorded-worker. This is only a point-in-time process check; it does not authorize a DNS inverse.
+The accepted operation is recorded. The server owner should follow its CelikPanel status and check native DNS health if progress stops. This read-only observation does not prove worker liveness or authorize another switch; recovery must recheck the same operation under the host lock.
+Frozen native inverse shape: pdns-switch. This classification does not prove worker exclusion, owner authority or safe recovery execution.
+The current DNS state receipt is absent. This alone does not prove that an inverse is safe; preserve the journal and inspect native DNS before recovery.
+The journal and current state both have no source receipt. This is not proof that DNS was rolled back or is healthy; the server owner must inspect native DNS before resuming this operation.
+The switch has no previous DNS engine, so no frozen source ownership receipt is required. Native DNS still needs verification before the operation resumes.
+Native unit pdns.service: load=loaded active=active unit-file=enabled.
+These systemd properties were observed at one instant; they do not prove DNS answers, zone content, owner edits or recovery authority.
+Release and host mutation locks were held; the same evidence bytes and native unit properties matched again after native checks, and the accepted worker was rechecked. Future worker liveness, unobserved DNS answers, owner edits and recovery authority remain unproved.
+
+--- status read post-collect rc=0
+No DNS switch journal was observed for request c59b537aac13c590e71b4682a88ed7b1. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+
+######## c05-pri-verified
+--- status read after-recovery rc=0
+No DNS switch journal was observed for request d16db23abded40a37a08a7c03f0bd35b. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+
+--- status read before-recovery rc=0
+DNS switch request d16db23abded40a37a08a7c03f0bd35b: accepted-active (journal phase target-verified).
+No owner recovery command applies to this journal's recorded shape and ledger status. Keep the journal and ledger. If this operation does not resume through CelikPanel or an Agent restart, contact support with request id d16db23abded40a37a08a7c03f0bd35b. This status check does not start recovery.
+Quiesced worker observation: no-recorded-worker. This is only a point-in-time process check; it does not authorize a DNS inverse.
+The accepted operation is recorded. The server owner should follow its CelikPanel status and check native DNS health if progress stops. This read-only observation does not prove worker liveness or authorize another switch; recovery must recheck the same operation under the host lock.
+The selected PowerDNS vendor unit identity and native process matched across read-only observations; both public DNS transports belonged to its MainPID. This process/socket observation does not establish database content, zone answers, loaded config or recovery authority.
+Frozen native inverse shape: pdns-switch. This classification does not prove worker exclusion, owner authority or safe recovery execution.
+The current DNS state receipt matched the frozen journal target at inspection time. The server owner must still verify native DNS service before recovery; this observation does not authorize a mutation.
+The current DNS state receipt does not match the frozen journal source. Preserve the evidence and inspect native DNS and owner changes before the original operation resumes.
+The switch has no previous DNS engine, so no frozen source ownership receipt is required. Native DNS still needs verification before the operation resumes.
+Native unit pdns.service: load=loaded active=active unit-file=enabled.
+These systemd properties were observed at one instant; they do not prove DNS answers, zone content, owner edits or recovery authority.
+Release and host mutation locks were held; the same evidence bytes and native unit properties matched again after native checks, and the accepted worker was rechecked. Future worker liveness, unobserved DNS answers, owner edits and recovery authority remain unproved.
+
+--- status read post-collect rc=0
+No DNS switch journal was observed for request d16db23abded40a37a08a7c03f0bd35b. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+
+######## c06-pri-committed
+--- status read after-recovery rc=0
+No DNS switch journal was observed for request 076c692ac1346f2b9c6a0df468b0e9aa. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+
+--- status read before-recovery rc=0
+DNS switch request 076c692ac1346f2b9c6a0df468b0e9aa: accepted-active (journal phase committed).
+No owner recovery command applies to this journal's recorded shape and ledger status. Keep the journal and ledger. If this operation does not resume through CelikPanel or an Agent restart, contact support with request id 076c692ac1346f2b9c6a0df468b0e9aa. This status check does not start recovery.
+Quiesced worker observation: no-recorded-worker. This is only a point-in-time process check; it does not authorize a DNS inverse.
+The accepted operation is recorded. The server owner should follow its CelikPanel status and check native DNS health if progress stops. This read-only observation does not prove worker liveness or authorize another switch; recovery must recheck the same operation under the host lock.
+The selected PowerDNS vendor unit identity and native process matched across read-only observations; both public DNS transports belonged to its MainPID. This process/socket observation does not establish database content, zone answers, loaded config or recovery authority.
+Frozen native inverse shape: pdns-switch. This classification does not prove worker exclusion, owner authority or safe recovery execution.
+The current DNS state receipt matched the frozen journal target at inspection time. The server owner must still verify native DNS service before recovery; this observation does not authorize a mutation.
+The current DNS state receipt does not match the frozen journal source. Preserve the evidence and inspect native DNS and owner changes before the original operation resumes.
+The switch has no previous DNS engine, so no frozen source ownership receipt is required. Native DNS still needs verification before the operation resumes.
+Native unit pdns.service: load=loaded active=active unit-file=enabled.
+These systemd properties were observed at one instant; they do not prove DNS answers, zone content, owner edits or recovery authority.
+Release and host mutation locks were held; the same evidence bytes and native unit properties matched again after native checks, and the accepted worker was rechecked. Future worker liveness, unobserved DNS answers, owner edits and recovery authority remain unproved.
+
+--- status read post-collect rc=0
+No DNS switch journal was observed for request 076c692ac1346f2b9c6a0df468b0e9aa. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+
+######## c07-pri-prejournal
+--- status read after-recovery rc=0
+No DNS switch journal was observed for request a322ca772f40325331c859e2525344ce. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+
+--- status read before-recovery rc=0
+No DNS switch journal was observed for request a322ca772f40325331c859e2525344ce. Its exact ledger job records status running. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+
+--- status read post-collect rc=0
+No DNS switch journal was observed for request a322ca772f40325331c859e2525344ce. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.
+
+######## c08-pri-owner-config
+--- status read post-collect rc=3
+The exact DNS request could not be verified without its journal. Preserve the private evidence and inspect the original operation and native DNS service; no DNS operation was started. exact DNS switch job is absent from the mutation ledger
+
+######## c09-pri-owner-sql
+--- status read post-collect rc=0
+DNS switch request c59b537aac13c590e71b4682a88ed7b1: released-undecided-with-journal (journal phase target-started).
+No owner recovery command applies to this journal's recorded shape and ledger status. Keep the journal and ledger. If this operation does not resume through CelikPanel or an Agent restart, contact support with request id c59b537aac13c590e71b4682a88ed7b1. This status check does not start recovery.
+The Agent could not verify this DNS switch's native result (during the operation or after a restart) and released only its lease. The server owner should inspect the DNS service and the original operation, resolve the reported native error, then restart the Agent to retry that same journal. The journal remains and blocks a new DNS switch; this read-only status does not authorize an inverse.
+Frozen native inverse shape: pdns-switch. This classification does not prove worker exclusion, owner authority or safe recovery execution.
+The current DNS state receipt is absent. This alone does not prove that an inverse is safe; preserve the journal and inspect native DNS before recovery.
+The journal and current state both have no source receipt. This is not proof that DNS was rolled back or is healthy; the server owner must inspect native DNS before resuming this operation.
+The switch has no previous DNS engine, so no frozen source ownership receipt is required. Native DNS still needs verification before the operation resumes.
+Native unit pdns.service: load=loaded active=active unit-file=enabled.
+These systemd properties were observed at one instant; they do not prove DNS answers, zone content, owner edits or recovery authority.
+Release and host mutation locks were held; the same evidence bytes and native unit properties matched again after native checks, and the accepted worker was rechecked. Future worker liveness, unobserved DNS answers, owner edits and recovery authority remain unproved.
+
+######## c10-pri-released
+--- status read post-collect rc=0
+DNS switch request dbf9982f7d79645b1cc9ddfa99573f41 was interrupted and the Agent could not recover it automatically when it restarted, so it released the lease. The switch has since been reconciled and its journal is retired, either by the owner recovery command or by a later Agent start; this evidence cannot tell which. This request no longer blocks DNS changes. The current DNS engine and its health are shown by the panel's DNS engine status, not by this record. This status check started nothing.
+

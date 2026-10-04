@@ -1,0 +1,100 @@
+{
+  "outcome": "response",
+  "panel": "debian13",
+  "purpose": "DNSEngineCard snapshot",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:28443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/dns/engine"
+  },
+  "response": {
+    "elapsed_seconds": 1.348,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Wed, 30 Sep 2026 08:33:39 GMT"
+      ],
+      [
+        "Content-Length",
+        "605"
+      ]
+    ],
+    "json": {
+      "active_engine": "pdns",
+      "dnssec_zone_count": 0,
+      "engine_epoch": 1,
+      "engines": [
+        {
+          "id": "pdns",
+          "installed": true,
+          "managed": true,
+          "running": true,
+          "status": "active"
+        },
+        {
+          "id": "bind",
+          "installed": false,
+          "managed": false,
+          "running": false,
+          "status": "available"
+        }
+      ],
+      "operation": {
+        "id": "dcd384f760d231fa2ffd5212e708e3d7",
+        "phase": "committed",
+        "request_id": "39c024b54145014b02b79bc53b59217c",
+        "started_at": "2026-09-30T08:31:52Z",
+        "status": "succeeded",
+        "target_engine": "pdns",
+        "updated_at": "2026-09-30T08:32:07Z"
+      },
+      "pair_ready": true,
+      "pair_role": "primary",
+      "pending_zone_count": 0,
+      "revision": 3,
+      "state": "ready",
+      "topology": "paired",
+      "zone_count": 0
+    },
+    "status": 200,
+    "text": null
+  }
+}

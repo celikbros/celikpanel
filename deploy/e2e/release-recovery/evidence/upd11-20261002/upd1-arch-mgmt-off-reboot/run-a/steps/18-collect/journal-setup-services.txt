@@ -1,0 +1,133 @@
+2026-10-02T00:44:28.506002+00:00 dns-arch systemd[1]: Starting nginx web server...
+2026-10-02T00:44:28.529318+00:00 dns-arch nginx[879]: 2026/10/02 00:44:28 [warn] 879#879: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-02T00:44:28.533465+00:00 dns-arch systemd[1]: Started nginx web server.
+2026-10-02T00:44:28.593880+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-02T00:44:28.616888+00:00 dns-arch nginx[895]: 2026/10/02 00:44:28 [warn] 895#895: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-02T00:44:28.619891+00:00 dns-arch nginx[895]: 2026/10/02 00:44:28 [notice] 895#895: signal process started
+2026-10-02T00:44:28.620847+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-02T00:44:36.190300+00:00 dns-arch systemd[1]: Starting The PHP FastCGI Process Manager...
+2026-10-02T00:44:36.263510+00:00 dns-arch php-fpm[1146]: [NOTICE] fpm is running, pid 1146
+2026-10-02T00:44:36.266162+00:00 dns-arch php-fpm[1146]: [NOTICE] ready to handle connections
+2026-10-02T00:44:36.266586+00:00 dns-arch php-fpm[1146]: [NOTICE] systemd monitor interval set to 10000ms
+2026-10-02T00:44:36.266671+00:00 dns-arch systemd[1]: Started The PHP FastCGI Process Manager.
+2026-10-02T00:44:52.213768+00:00 dns-arch systemd[1]: Starting MariaDB 13.0.2 database server...
+2026-10-02T00:44:52.312325+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:44:52 0 [Note] Starting MariaDB 13.0.2-MariaDB source revision 620a4b5624222048fece7fe1789978ae0675cae2 server_uid 84n076SGZKCVkhomPv3Lk5nb1PQ= as process 1487
+2026-10-02T00:44:52.324505+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:44:52 0 [Note] InnoDB: Compressed tables use zlib 1.3.2
+2026-10-02T00:44:52.325355+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:44:52 0 [Note] InnoDB: Number of transaction pools: 1
+2026-10-02T00:44:52.325937+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:44:52 0 [Note] InnoDB: Using crc32 + pclmulqdq instructions
+2026-10-02T00:44:52.325937+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:44:52 0 [Note] InnoDB: Using io_uring
+2026-10-02T00:44:52.325937+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:44:52 0 [Note] InnoDB: innodb_buffer_pool_size_max=8388608m, innodb_buffer_pool_size=128m
+2026-10-02T00:44:52.329298+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:44:52 0 [Note] InnoDB: Initialized memory pressure event listener
+2026-10-02T00:44:52.329467+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:44:52 0 [Note] InnoDB: Completed initialization of buffer pool
+2026-10-02T00:44:52.329822+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:44:52 0 [Note] InnoDB: Buffered log writes (block size=512 bytes)
+2026-10-02T00:44:52.345361+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:44:52 0 [Note] InnoDB: End of log at LSN=45418
+2026-10-02T00:44:52.407807+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:44:52 0 [Note] InnoDB: Opened 3 undo tablespaces
+2026-10-02T00:44:52.407807+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:44:52 0 [Note] InnoDB: 128 rollback segments in 3 undo tablespaces are active.
+2026-10-02T00:44:52.408561+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:44:52 0 [Note] InnoDB: Setting file './ibtmp1' size to 12.000MiB. Physically writing the file full; Please wait ...
+2026-10-02T00:44:52.408561+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:44:52 0 [Note] InnoDB: File './ibtmp1' size is now 12.000MiB.
+2026-10-02T00:44:52.408675+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:44:52 0 [Note] InnoDB: log sequence number 45418; transaction id 14
+2026-10-02T00:44:52.408743+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:44:52 0 [Note] InnoDB: Loading buffer pool(s) from /var/lib/mysql/ib_buffer_pool
+2026-10-02T00:44:52.409290+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:44:52 0 [Note] Plugin 'wsrep-provider' is disabled.
+2026-10-02T00:44:52.412131+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:44:52 0 [Note] InnoDB: Buffer pool(s) load completed at 261002  0:44:52
+2026-10-02T00:44:52.479422+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:44:52 0 [Note] Server socket created on IP: '0.0.0.0', port: '3306'.
+2026-10-02T00:44:52.479422+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:44:52 0 [Note] Server socket created on IP: '::', port: '3306'.
+2026-10-02T00:44:52.509120+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:44:52 0 [Note] mariadbd: Event Scheduler: Loaded 0 events
+2026-10-02T00:44:52.514573+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:44:52 0 [Note] /usr/bin/mariadbd: ready for connections.
+2026-10-02T00:44:52.514573+00:00 dns-arch mariadbd[1487]: Version: '13.0.2-MariaDB'  socket: '/run/mysqld/mysqld.sock'  port: 3306  Arch Linux
+2026-10-02T00:44:52.514716+00:00 dns-arch systemd[1]: Started MariaDB 13.0.2 database server.
+2026-10-02T00:44:58.216723+00:00 dns-arch systemd[1]: Started Command Scheduler.
+2026-10-02T00:44:58.229064+00:00 dns-arch crond[1789]: (CRON) STARTUP (1.7.2)
+2026-10-02T00:44:58.229086+00:00 dns-arch crond[1789]: (CRON) INFO (Syslog will be used instead of sendmail.)
+2026-10-02T00:44:58.229094+00:00 dns-arch crond[1789]: (CRON) INFO (RANDOM_DELAY will be scaled with factor 82% if used.)
+2026-10-02T00:44:58.229116+00:00 dns-arch crond[1789]: (CRON) INFO (running with inotify support)
+2026-10-02T00:47:16.079639+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-02T00:47:16.105753+00:00 dns-arch nginx[2468]: 2026/10/02 00:47:16 [warn] 2468#2468: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-02T00:47:16.109277+00:00 dns-arch nginx[2468]: 2026/10/02 00:47:16 [notice] 2468#2468: signal process started
+2026-10-02T00:47:16.112645+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-02T00:49:00.250136+00:00 dns-arch crond[3079]: pam_unix(crond:session): session opened for user upd1_owner_test(uid=1002) by upd1_owner_test(uid=0)
+2026-10-02T00:49:00.251711+00:00 dns-arch CROND[3081]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-02T00:49:00.255151+00:00 dns-arch CROND[3079]: (upd1_owner_test) CMDEND (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-02T00:49:00.255376+00:00 dns-arch CROND[3079]: pam_unix(crond:session): session closed for user upd1_owner_test
+2026-10-02T00:49:53.030549+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-02T00:49:53.057918+00:00 dns-arch nginx[13759]: 2026/10/02 00:49:53 [warn] 13759#13759: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-02T00:49:53.063105+00:00 dns-arch nginx[13759]: 2026/10/02 00:49:53 [notice] 13759#13759: signal process started
+2026-10-02T00:49:53.067080+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-02T00:50:00.261399+00:00 dns-arch crond[14362]: pam_unix(crond:session): session opened for user upd1_owner_test(uid=1002) by upd1_owner_test(uid=0)
+2026-10-02T00:50:00.263724+00:00 dns-arch CROND[14368]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-02T00:50:00.266878+00:00 dns-arch CROND[14362]: (upd1_owner_test) CMDEND (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-02T00:50:00.267006+00:00 dns-arch CROND[14362]: pam_unix(crond:session): session closed for user upd1_owner_test
+2026-10-02T00:50:30.256795+00:00 dns-arch systemd[1]: Stopping Command Scheduler...
+2026-10-02T00:50:30.259867+00:00 dns-arch systemd[1]: Stopping MariaDB 13.0.2 database server...
+2026-10-02T00:50:30.261649+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:50:30 0 [Note] /usr/bin/mariadbd (initiated by: unknown): Normal shutdown
+2026-10-02T00:50:30.262713+00:00 dns-arch crond[1789]: (CRON) INFO (Shutting down)
+2026-10-02T00:50:30.263254+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:50:30 0 [Note] InnoDB: FTS optimize thread exiting.
+2026-10-02T00:50:30.264632+00:00 dns-arch systemd[1]: Stopping nginx web server...
+2026-10-02T00:50:30.266560+00:00 dns-arch php-fpm[1146]: [NOTICE] Terminating ...
+2026-10-02T00:50:30.266924+00:00 dns-arch systemd[1]: Stopping The PHP FastCGI Process Manager...
+2026-10-02T00:50:30.277976+00:00 dns-arch php-fpm[1146]: [NOTICE] exiting, bye-bye!
+2026-10-02T00:50:30.339629+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:50:30 0 [Note] InnoDB: Starting shutdown...
+2026-10-02T00:50:30.346130+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:50:30 0 [Note] InnoDB: Dumping buffer pool(s) to /var/lib/mysql/ib_buffer_pool
+2026-10-02T00:50:30.346130+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:50:30 0 [Note] InnoDB: Buffer pool(s) dump completed at 261002  0:50:30
+2026-10-02T00:50:30.423899+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:50:30 0 [Note] InnoDB: Removed temporary tablespace data file: "./ibtmp1"
+2026-10-02T00:50:30.423899+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:50:30 0 [Note] Shutdown completed; log sequence number 48105; transaction id 21
+2026-10-02T00:50:30.449027+00:00 dns-arch mariadbd[1487]: 2026-10-02  0:50:30 0 [Note] /usr/bin/mariadbd: Shutdown complete
+2026-10-02T00:50:30.701882+00:00 dns-arch systemd[1]: nginx.service: Deactivated successfully.
+2026-10-02T00:50:30.702131+00:00 dns-arch systemd[1]: Stopped nginx web server.
+2026-10-02T00:50:30.706186+00:00 dns-arch systemd[1]: php-fpm.service: Deactivated successfully.
+2026-10-02T00:50:30.707041+00:00 dns-arch systemd[1]: Stopped The PHP FastCGI Process Manager.
+2026-10-02T00:50:30.710985+00:00 dns-arch systemd[1]: mariadb.service: Deactivated successfully.
+2026-10-02T00:50:30.711412+00:00 dns-arch systemd[1]: Stopped MariaDB 13.0.2 database server.
+2026-10-02T00:50:30.714035+00:00 dns-arch systemd[1]: mariadb.service: Consumed 633ms CPU time over 5min 38.497s wall clock time, 189.6M memory peak.
+2026-10-02T00:50:30.716785+00:00 dns-arch systemd[1]: cronie.service: Deactivated successfully.
+2026-10-02T00:50:30.717175+00:00 dns-arch systemd[1]: Stopped Command Scheduler.
+-- Boot 9170b57c94b4460ca969b8c56b41561f --
+2026-10-02T00:50:47.160475+00:00 dns-arch systemd[1]: Starting MariaDB 13.0.2 database server...
+2026-10-02T00:50:47.170443+00:00 dns-arch systemd[1]: Starting The PHP FastCGI Process Manager...
+2026-10-02T00:50:47.439132+00:00 dns-arch php-fpm[446]: [NOTICE] fpm is running, pid 446
+2026-10-02T00:50:47.441541+00:00 dns-arch php-fpm[446]: [NOTICE] ready to handle connections
+2026-10-02T00:50:47.441714+00:00 dns-arch systemd[1]: Started The PHP FastCGI Process Manager.
+2026-10-02T00:50:47.442589+00:00 dns-arch php-fpm[446]: [NOTICE] systemd monitor interval set to 10000ms
+2026-10-02T00:50:47.470732+00:00 dns-arch mariadbd[445]: 2026-10-02  0:50:47 0 [Note] Starting MariaDB 13.0.2-MariaDB source revision 620a4b5624222048fece7fe1789978ae0675cae2 server_uid 84n076SGZKCVkhomPv3Lk5nb1PQ= as process 445
+2026-10-02T00:50:47.491389+00:00 dns-arch mariadbd[445]: 2026-10-02  0:50:47 0 [Note] InnoDB: Compressed tables use zlib 1.3.2
+2026-10-02T00:50:47.492391+00:00 dns-arch mariadbd[445]: 2026-10-02  0:50:47 0 [Note] InnoDB: Number of transaction pools: 1
+2026-10-02T00:50:47.492449+00:00 dns-arch mariadbd[445]: 2026-10-02  0:50:47 0 [Note] InnoDB: Using crc32 + pclmulqdq instructions
+2026-10-02T00:50:47.492655+00:00 dns-arch mariadbd[445]: 2026-10-02  0:50:47 0 [Note] InnoDB: Using io_uring
+2026-10-02T00:50:47.493141+00:00 dns-arch mariadbd[445]: 2026-10-02  0:50:47 0 [Note] InnoDB: innodb_buffer_pool_size_max=8388612m, innodb_buffer_pool_size=128m
+2026-10-02T00:50:47.499122+00:00 dns-arch mariadbd[445]: 2026-10-02  0:50:47 0 [Note] InnoDB: Initialized memory pressure event listener
+2026-10-02T00:50:47.499122+00:00 dns-arch mariadbd[445]: 2026-10-02  0:50:47 0 [Note] InnoDB: Completed initialization of buffer pool
+2026-10-02T00:50:47.499949+00:00 dns-arch mariadbd[445]: 2026-10-02  0:50:47 0 [Note] InnoDB: Buffered log writes (block size=512 bytes)
+2026-10-02T00:50:47.519486+00:00 dns-arch mariadbd[445]: 2026-10-02  0:50:47 0 [Note] InnoDB: End of log at LSN=48105
+2026-10-02T00:50:47.596422+00:00 dns-arch mariadbd[445]: 2026-10-02  0:50:47 0 [Note] InnoDB: Opened 3 undo tablespaces
+2026-10-02T00:50:47.596422+00:00 dns-arch mariadbd[445]: 2026-10-02  0:50:47 0 [Note] InnoDB: 128 rollback segments in 3 undo tablespaces are active.
+2026-10-02T00:50:47.597262+00:00 dns-arch mariadbd[445]: 2026-10-02  0:50:47 0 [Note] InnoDB: Setting file './ibtmp1' size to 12.000MiB. Physically writing the file full; Please wait ...
+2026-10-02T00:50:47.597262+00:00 dns-arch mariadbd[445]: 2026-10-02  0:50:47 0 [Note] InnoDB: File './ibtmp1' size is now 12.000MiB.
+2026-10-02T00:50:47.597424+00:00 dns-arch mariadbd[445]: 2026-10-02  0:50:47 0 [Note] InnoDB: log sequence number 48105; transaction id 22
+2026-10-02T00:50:47.597505+00:00 dns-arch mariadbd[445]: 2026-10-02  0:50:47 0 [Note] Plugin 'wsrep-provider' is disabled.
+2026-10-02T00:50:47.597619+00:00 dns-arch mariadbd[445]: 2026-10-02  0:50:47 0 [Note] InnoDB: Loading buffer pool(s) from /var/lib/mysql/ib_buffer_pool
+2026-10-02T00:50:47.603393+00:00 dns-arch mariadbd[445]: 2026-10-02  0:50:47 0 [Note] InnoDB: Buffer pool(s) load completed at 261002  0:50:47
+2026-10-02T00:50:48.521662+00:00 dns-arch mariadbd[445]: 2026-10-02  0:50:48 0 [Note] Server socket created on IP: '0.0.0.0', port: '3306'.
+2026-10-02T00:50:48.521662+00:00 dns-arch mariadbd[445]: 2026-10-02  0:50:48 0 [Note] Server socket created on IP: '::', port: '3306'.
+2026-10-02T00:50:48.541271+00:00 dns-arch mariadbd[445]: 2026-10-02  0:50:48 0 [Note] mariadbd: Event Scheduler: Loaded 0 events
+2026-10-02T00:50:48.542198+00:00 dns-arch mariadbd[445]: 2026-10-02  0:50:48 0 [Note] /usr/bin/mariadbd: ready for connections.
+2026-10-02T00:50:48.542198+00:00 dns-arch mariadbd[445]: Version: '13.0.2-MariaDB'  socket: '/run/mysqld/mysqld.sock'  port: 3306  Arch Linux
+2026-10-02T00:50:48.542379+00:00 dns-arch systemd[1]: Started MariaDB 13.0.2 database server.
+2026-10-02T00:50:49.142292+00:00 dns-arch systemd[1]: Starting nginx web server...
+2026-10-02T00:50:49.202689+00:00 dns-arch nginx[534]: 2026/10/02 00:50:49 [warn] 534#534: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-02T00:50:49.218901+00:00 dns-arch systemd[1]: Started nginx web server.
+2026-10-02T00:52:01.352854+00:00 dns-arch systemd[1]: Started Command Scheduler.
+2026-10-02T00:52:01.370343+00:00 dns-arch crond[638]: (CRON) STARTUP (1.7.2)
+2026-10-02T00:52:01.370395+00:00 dns-arch crond[638]: (CRON) INFO (Syslog will be used instead of sendmail.)
+2026-10-02T00:52:01.370410+00:00 dns-arch crond[638]: (CRON) INFO (RANDOM_DELAY will be scaled with factor 4% if used.)
+2026-10-02T00:52:01.370469+00:00 dns-arch crond[638]: (CRON) INFO (running with inotify support)
+2026-10-02T00:53:00.377736+00:00 dns-arch crond[931]: pam_unix(crond:session): session opened for user upd1_owner_test(uid=1002) by upd1_owner_test(uid=0)
+2026-10-02T00:53:00.379754+00:00 dns-arch CROND[933]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-02T00:53:00.385928+00:00 dns-arch CROND[931]: (upd1_owner_test) CMDEND (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-02T00:53:00.386260+00:00 dns-arch CROND[931]: pam_unix(crond:session): session closed for user upd1_owner_test
+2026-10-02T00:54:00.394553+00:00 dns-arch crond[1161]: pam_unix(crond:session): session opened for user upd1_owner_test(uid=1002) by upd1_owner_test(uid=0)
+2026-10-02T00:54:00.397417+00:00 dns-arch CROND[1163]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-02T00:54:00.401053+00:00 dns-arch CROND[1161]: (upd1_owner_test) CMDEND (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-02T00:54:00.401579+00:00 dns-arch CROND[1161]: pam_unix(crond:session): session closed for user upd1_owner_test
+2026-10-02T00:54:06.630341+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-02T00:54:06.660577+00:00 dns-arch nginx[1498]: 2026/10/02 00:54:06 [warn] 1498#1498: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-02T00:54:06.666483+00:00 dns-arch nginx[1498]: 2026/10/02 00:54:06 [notice] 1498#1498: signal process started
+2026-10-02T00:54:06.668182+00:00 dns-arch systemd[1]: Reloaded nginx web server.

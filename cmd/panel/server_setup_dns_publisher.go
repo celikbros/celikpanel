@@ -125,7 +125,7 @@ func (p *Panel) serverSetupDNSPublisherProof(ctx context.Context, draft serverSe
 }
 
 func (p *Panel) runServerSetupDNSPublisher(ctx context.Context, plan serverSetupPlan, executionID string) (bool, error) {
-	if err := p.requireServerSetupAdmission(); err != nil {
+	if err := p.requireServerSetupAdmission(ctx); err != nil {
 		return false, err
 	}
 	binding, err := p.readServerSetupDNSPublisher(ctx, plan, executionID)
@@ -237,8 +237,8 @@ func (p *Panel) handleServerSetupPublisher(w http.ResponseWriter, r *http.Reques
 		writeClientError(w, http.StatusBadRequest, "confirm the setup execution and authorized DNS connection")
 		return
 	}
-	if err := p.requireServerSetupAdmission(); err != nil {
-		writeCodedError(w, http.StatusForbidden, "license_required", "Activate the license to continue setup.", "")
+	if err := p.requireServerSetupAdmission(r.Context()); err != nil {
+		writeServerSetupAdmissionError(w, err, "license_required", "Activate the license to continue setup.", "")
 		return
 	}
 	p.serverSetupMu.Lock()

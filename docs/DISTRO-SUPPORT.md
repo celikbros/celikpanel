@@ -50,7 +50,7 @@ Rules:
 | 📧 Postfix | Service | `postfix` | `postfix` | SMTP server | — |
 | 📮 Exim | Service | — | — | SMTP server | — |
 | 🧹 Rspamd | Service | `rspamd` | `rspamd` | spam filter | SMTP server |
-| 📬 Dovecot | Service | `dovecot-imapd` `dovecot-pop3d` `dovecot-lmtpd` | `dovecot` | IMAP server | — |
+| 📬 Dovecot | Service | `dovecot-imapd` `dovecot-pop3d` `dovecot-lmtpd` | — | IMAP server | — |
 | 🛡️ SpamAssassin | Service | `spamassassin` `spamd` `spamass-milter` | — | spam filter | SMTP server |
 
 ### Security
@@ -89,6 +89,12 @@ Rules:
 | Component | Kind | APT package mapping | pacman package mapping | Seat | Needs |
 |---|---|---|---|---|---|
 | 📈 Netdata | Service | `netdata` · version choice: Netdata (repository.netdata.cloud) | `netdata` | — | — |
+
+### System
+
+| Component | Kind | APT package mapping | pacman package mapping | Seat | Needs |
+|---|---|---|---|---|---|
+| ⏰ Scheduled tasks (cron) | Service | `cron` | `cronie` | — | — |
 
 ## Installed from the official release (identical on every distro)
 

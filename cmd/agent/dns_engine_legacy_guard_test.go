@@ -186,6 +186,39 @@ func TestDNSPort53PreMutationGuardRejectsBeforeAnyMutationCallback(t *testing.T)
 	}
 }
 
+// The fresh-source stopped proof now also checks loopback and link-local
+// port-53 sockets: only the systemd-resolved stub may hold them. The package
+// guard's pre-mutation conflict check itself is unchanged.
+func TestNoPublicDNSPort53ProofAlsoRequiresOnlyResolverStubLocally(t *testing.T) {
+	previousConflict, previousLocal := dnsPort53ConflictCheck, dnsLocalPort53ListenersCheck
+	t.Cleanup(func() { dnsPort53ConflictCheck, dnsLocalPort53ListenersCheck = previousConflict, previousLocal })
+	dnsPort53ConflictCheck = func(context.Context, bool, bool) (bool, error) { return false, nil }
+	localCalls := 0
+	dnsLocalPort53ListenersCheck = func(context.Context) ([]string, error) {
+		localCalls++
+		return []string{"udp|127.0.0.53|systemd-resolve|372|systemd-resolved.service"}, nil
+	}
+	if err := proveNoPublicDNSPort53Listener(context.Background()); err != nil || localCalls != 1 {
+		t.Fatalf("resolver-stub host refused: %v (local calls %d)", err, localCalls)
+	}
+	dnsLocalPort53ListenersCheck = func(context.Context) ([]string, error) {
+		localCalls++
+		return nil, errors.New("a named process (PID 7461) holds local port-53 listener 127.0.0.1 outside the verified DNS source")
+	}
+	if err := proveNoPublicDNSPort53Listener(context.Background()); err == nil || !strings.Contains(err.Error(), "named process (PID 7461)") {
+		t.Fatalf("named on loopback accepted beside a never-served target: %v", err)
+	}
+	dnsPort53ConflictCheck = func(context.Context, bool, bool) (bool, error) { return true, nil }
+	calls := localCalls
+	if err := proveNoPublicDNSPort53Listener(context.Background()); err == nil || localCalls != calls {
+		t.Fatalf("public conflict not refused first: %v", err)
+	}
+	// Both first-install rollback proofs are wired to this proof.
+	if hostPDNSRollbackStoppedProofOps("/usr/bin/systemctl").inspectPublicDNSListeners == nil {
+		t.Fatal("PowerDNS first-install rollback lost its listener proof")
+	}
+}
+
 func legacyDurableDNSState(engine transport.DNSEngine) dnsEngineStateReceipt {
 	state := dnsEngineStateReceipt{
 		Schema: dnsEngineStateSchema, Mode: transport.DNSEngineSwitchModeSwitch,

@@ -1,0 +1,2 @@
+2026-09-30T02:56:30.076898624Z boot 1 e5177a51-35db-4b04-89a5-424e288fbe6e (dbwatch /var/tmp/cp-b10-watch-db, ledwatch /var/tmp/cp-b10-watch-led)
+2026-09-30T02:56:30.078584760Z peerboot 1 31296a2f-3f25-4198-9d79-37af1bb927b4 (sampler /var/tmp/cp-b10-peerloop1)

@@ -1,0 +1,204 @@
+wall=2026-09-29T13:22:44.314350832Z boot_id=d9e82807-0949-421c-9108-932683d608af
+== pdns.service
+MainPID=3077
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 13:21:19 UTC
+ExecMainPID=3077
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 13:21:19 UTC
+InvocationID=4b66b31c98584c1585ee2ead3a1a1d1c
+== named.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=disabled
+ActiveEnterTimestamp=
+InvocationID=
+== bind9.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InvocationID=
+== celikpanel-agent.service
+MainPID=7778
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 13:22:04 UTC
+ExecMainPID=7778
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 13:22:04 UTC
+InvocationID=f3f5fe11815e4c809add26e7eb45fcef
+== celikpanel-panel.service
+MainPID=8571
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 13:22:09 UTC
+ExecMainPID=8571
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 13:22:09 UTC
+InvocationID=208ce73b66b94128bf84137e09848fe2
+== named/pdns processes
+3077 /usr/sbin/pdns_server --guardian=no --daemon=no --disable-syslog --log-timestamp=no --write-pid=no
+== boots
+IDX BOOT ID                          FIRST ENTRY                 LAST ENTRY
+  0 d9e828070949421c9108932683d608af Tue 2026-09-29 13:19:47 UTC Tue 2026-09-29 13:22:44 UTC
+== packages
+bind9 1:9.20.29-1~deb13u1 ii 
+bind9-host 1:9.20.29-1~deb13u1 ii 
+bind9-libs 1:9.20.29-1~deb13u1 ii 
+bind9-utils 1:9.20.29-1~deb13u1 ii 
+pdns-backend-sqlite3 4.9.17-0+deb13u1 ii 
+pdns-server 4.9.17-0+deb13u1 ii 
+== pdns_server --version
+Sep 29 13:22:44 PowerDNS Authoritative Server 4.9.17 (C) PowerDNS.COM BV
+Sep 29 13:22:44 Using 64-bits mode. Built using gcc 14.2.0.
+Sep 29 13:22:44 PowerDNS comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it according to the terms of the GPL version 2.
+== state dir
+total 24
+drwx------  2 root celikpanel 4096 2026-09-29 13:22:08.669927135 +0000 .
+drwxr-xr-x 30 root root       4096 2026-09-29 13:21:53.566132433 +0000 ..
+-rw-------  1 root celikpanel  372 2026-09-29 13:21:50.586127036 +0000 dns-engine-install-ownership-bind.json
+-rw-------  1 root celikpanel  560 2026-09-29 13:21:50.582127028 +0000 dns-engine-ownership-pdns.json
+-rw-------  1 root celikpanel  556 2026-09-29 13:22:02.890109263 +0000 dns-engine-state.json
+-rw-------  1 root celikpanel 2934 2026-09-29 13:22:04.814045354 +0000 service-mutations.json
+3bfe4fb763e1770ea654cd3d60d67cb242b72719a0dfa867f8b73123cf2f01db  dns-engine-install-ownership-bind.json
+79daef5cc596af6d8652f06351ee4190e0fb4038cbc18bafdefd7be21e0bf79b  dns-engine-ownership-pdns.json
+670c865079c7593fe0b9f8f73ce4f108bf4f6b70265a713b847b423b4650a206  dns-engine-state.json
+24d0424807620751edf23809e11cc495da3f5c46e320b6ac2690d11cbbb61579  service-mutations.json
+== fixture dir
+total 1432
+drwx------  4 root root    4096 2026-09-29 13:21:23.849984380 +0000 .
+drwxr-xr-x 30 root root    4096 2026-09-29 13:21:53.566132433 +0000 ..
+-rw-------  1 root root    3218 2026-09-29 13:21:23.225977250 +0000 controller-argv.json
+-rw-------  1 root root    1016 2026-09-29 13:21:23.801983832 +0000 coordinator-stop-proof.json
+-rw-------  1 root root     728 2026-09-29 13:20:49.789178261 +0000 installed-binaries.sha256
+-rw-------  1 root root 1406962 2026-09-29 13:20:42.209178261 +0000 manifest.json
+drwx------  2 root root    4096 2026-09-29 13:21:48.914123533 +0000 measured
+drwx------  3 root root    4096 2026-09-29 13:21:23.157976473 +0000 results
+-rw-------  1 root root    1318 2026-09-29 13:21:01.621430444 +0000 scenario.json
+-rw-------  1 root root    3178 2026-09-29 13:21:18.333910288 +0000 source-adoption-pdns.json
+-rw-------  1 root root    1221 2026-09-29 13:21:22.749971614 +0000 source-normalization-pdns-identity.json
+-rw-------  1 root root    1169 2026-09-29 13:21:12.529797917 +0000 source-preinstall-pdns.json
+-rw-------  1 root root    2707 2026-09-29 13:21:23.133976199 +0000 source-proof.json
+-rw-------  1 root root    1329 2026-09-29 13:21:01.633431012 +0000 source-setup-pdns.json
+-rw-------  1 root root     405 2026-09-29 13:21:13.565821178 +0000 source-setup-trigger-identity.json
+== recovery launcher
+total 18448
+drwx------ 3 root root     4096 2026-09-29 13:21:00.517376729 +0000 .
+drwxr-xr-x 9 root root     4096 2026-09-29 13:20:59.441320472 +0000 ..
+-rwxr-xr-x 1 root root 18877680 2026-09-29 13:21:00.461373905 +0000 recovery
+drwx------ 3 root root     4096 2026-09-29 13:20:59.489323052 +0000 recovery-runtimes
+5268ed0058dc8d7619df2cbeb16661ef71eab8cf75a488746194c4104e92dde6  /usr/libexec/celikpanel/recovery
+== owner files
+/etc/powerdns:
+total 36
+drwxr-xr-x  3 root root  4096 2026-09-29 13:21:09.957733161 +0000 .
+drwxr-xr-x 71 root root  4096 2026-09-29 13:21:55.818135879 +0000 ..
+-rw-r-----  1 root pdns 20579 2026-08-06 19:04:06.000000000 +0000 pdns.conf
+drwxr-xr-x  2 root root  4096 2026-09-29 13:21:12.753803122 +0000 pdns.d
+
+/etc/powerdns/pdns.d:
+total 12
+drwxr-xr-x 2 root root 4096 2026-09-29 13:21:12.753803122 +0000 .
+drwxr-xr-x 3 root root 4096 2026-09-29 13:21:09.957733161 +0000 ..
+-rw-r--r-- 1 root root  216 2026-09-29 13:21:19.633930179 +0000 celikpanel.conf
+
+/var/lib/powerdns:
+total 192
+drwxr-xr-x  2 pdns pdns  4096 2026-09-29 13:21:19.769932191 +0000 .
+drwxr-xr-x 30 root root  4096 2026-09-29 13:21:53.566132433 +0000 ..
+-rw-r-----  1 pdns pdns 94208 2026-09-29 13:21:19.753931954 +0000 pdns.sqlite3
+-rw-r-----  1 pdns pdns 32768 2026-09-29 13:21:21.013949651 +0000 pdns.sqlite3-shm
+-rw-r-----  1 pdns pdns 53592 2026-09-29 13:21:21.021949755 +0000 pdns.sqlite3-wal
+8b46927e48be83b2f0afc38efabdc2e2237daa5281b1a07ea44989ffa41f262a  /etc/powerdns/pdns.conf
+0485300f3503e60e09a5ec29a43483c29faf4506c91dd3ee44935367307bde69  /etc/powerdns/pdns.d/celikpanel.conf
+19d24ebdbad3cd5076d2338c562ebedc975edd4d8129490287fafa0f1fffcfe2  /var/lib/powerdns/pdns.sqlite3
+== bind dirs
+total 28
+drwxr-sr-x  2 root bind 4096 2026-09-29 13:22:02.886109400 +0000 .
+drwxr-xr-x 71 root root 4096 2026-09-29 13:21:55.818135879 +0000 ..
+-rw-r--r--  1 root bind  455 2026-09-16 13:42:29.000000000 +0000 named.conf
+-rw-r--r--  1 root bind   42 2026-09-29 13:22:02.882109539 +0000 named.conf.local
+-rw-r--r--  1 root bind   43 2026-09-29 13:22:02.878109676 +0000 named.conf.options
+-rw-r--r--  1 root bind  116 2026-09-16 13:42:29.000000000 +0000 named.conf.root-hints
+-rw-r-----  1 bind bind  100 2026-09-29 13:21:53.586132465 +0000 rndc.key
+== /etc/bind file hashes
+50c296bb3ae376b6fdde1f092ebf228056d38e525b53dc3415b7945136af14b7  /etc/bind/named.conf
+63963de797ff06ede5645c4169084128f1a6a11e1aa43ec9b4971751ceedc18e  /etc/bind/named.conf.local
+f1c37414f29088ef439527a855356c888e83fec06dcc762f878a4c24d45c59e4  /etc/bind/named.conf.options
+7f4afbc7ea88cc94fe849d622a2d8e2a7b8863089cc7909e75cb77ba8e682d87  /etc/bind/named.conf.root-hints
+91a05de322f2dc9e58a71f5269f6589351d31cdacb6743d65ab62d5484129a4f  /etc/bind/rndc.key
+== /etc/bind inodes
+131656 1 root:bind 644 455 2026-09-16T13:42:29.0000000000 /etc/bind/named.conf
+131657 1 root:bind 644 42 2026-09-29T13:22:02.8821095390 /etc/bind/named.conf.local
+131707 1 root:bind 644 43 2026-09-29T13:22:02.8781096760 /etc/bind/named.conf.options
+131659 1 root:bind 644 116 2026-09-16T13:42:29.0000000000 /etc/bind/named.conf.root-hints
+131649 1 bind:bind 640 100 2026-09-29T13:21:53.5861324650 /etc/bind/rndc.key
+== /var/cache/bind tree
+drwxrwxr-t root:bind 4096 2026-09-29T13:21:57.3901379980 /var/cache/bind
+drwxr-xr-x root:root 4096 2026-09-29T13:22:00.6661417860 /var/cache/bind/celikpanel
+drwxr-xr-x root:root 4096 2026-09-29T13:21:57.6821383700 /var/cache/bind/celikpanel/generations
+dr-xr-xr-x root:root 4096 2026-09-29T13:21:57.6741383590 /var/cache/bind/celikpanel/generations/75b9e1f22fb0d15a90d51e5a337ba5242869d5b477c91a47c268cc483721d6f0
+-r--r--r-- root:root 913 2026-09-29T13:21:57.6741383590 /var/cache/bind/celikpanel/generations/75b9e1f22fb0d15a90d51e5a337ba5242869d5b477c91a47c268cc483721d6f0/receipt.json
+dr-xr-xr-x root:root 4096 2026-09-29T13:21:57.5621382170 /var/cache/bind/celikpanel/generations/75b9e1f22fb0d15a90d51e5a337ba5242869d5b477c91a47c268cc483721d6f0/zones
+-r--r--r-- root:root 374 2026-09-29T13:21:57.6421383190 /var/cache/bind/celikpanel/generations/75b9e1f22fb0d15a90d51e5a337ba5242869d5b477c91a47c268cc483721d6f0/zones.conf
+-r--r--r-- root:root 282 2026-09-29T13:21:57.5621382170 /var/cache/bind/celikpanel/generations/75b9e1f22fb0d15a90d51e5a337ba5242869d5b477c91a47c268cc483721d6f0/zones/4b853b537823a50fa36969a0deee07ba6fb754cea71a7db8039e4b77ef7bf4d9.zone
+== named-checkconf -l
+. IN _default hint
+== ss 53
+udp UNCONN 0      0         192.0.2.10:53 0.0.0.0:* users:(("pdns_server",pid=3077,fd=6))    
+udp UNCONN 0      0          10.0.2.15:53 0.0.0.0:* users:(("pdns_server",pid=3077,fd=5))    
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=18))
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=21))
+tcp LISTEN 0      128        10.0.2.15:53 0.0.0.0:* users:(("pdns_server",pid=3077,fd=7))    
+tcp LISTEN 0      128       192.0.2.10:53 0.0.0.0:* users:(("pdns_server",pid=3077,fd=8))    
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=19))
+== pdns journal tail
+2026-09-29T13:21:13.351332+00:00 dns-debian13 pdns_server[1766]: This is a standalone pdns
+2026-09-29T13:21:13.351332+00:00 dns-debian13 pdns_server[1766]: Listening on controlsocket in '/run/pdns/pdns.controlsocket'
+2026-09-29T13:21:13.351595+00:00 dns-debian13 pdns_server[1766]: UDP server bound to 10.0.2.15:53
+2026-09-29T13:21:13.351645+00:00 dns-debian13 pdns_server[1766]: TCP server bound to 10.0.2.15:53
+2026-09-29T13:21:13.351786+00:00 dns-debian13 pdns_server[1766]: PowerDNS Authoritative Server 4.9.17 (C) PowerDNS.COM BV
+2026-09-29T13:21:13.351786+00:00 dns-debian13 pdns_server[1766]: Using 64-bits mode. Built using gcc 14.2.0.
+2026-09-29T13:21:13.351786+00:00 dns-debian13 pdns_server[1766]: PowerDNS comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it according to the terms of the GPL version 2.
+2026-09-29T13:21:13.380253+00:00 dns-debian13 pdns_server[1766]: Creating backend connection for TCP
+2026-09-29T13:21:13.380692+00:00 dns-debian13 pdns_server[1766]: About to create 3 backend threads for UDP
+2026-09-29T13:21:13.380806+00:00 dns-debian13 systemd[1]: Started pdns.service - PowerDNS Authoritative Server.
+2026-09-29T13:21:13.531655+00:00 dns-debian13 pdns_server[1766]: Done launching threads, ready to distribute questions
+2026-09-29T13:21:19.652644+00:00 dns-debian13 systemd[1]: Stopping pdns.service - PowerDNS Authoritative Server...
+2026-09-29T13:21:19.656598+00:00 dns-debian13 systemd[1]: pdns.service: Deactivated successfully.
+2026-09-29T13:21:19.656870+00:00 dns-debian13 systemd[1]: Stopped pdns.service - PowerDNS Authoritative Server.
+2026-09-29T13:21:19.660284+00:00 dns-debian13 systemd[1]: Starting pdns.service - PowerDNS Authoritative Server...
+2026-09-29T13:21:19.738339+00:00 dns-debian13 pdns_server[3077]: Loading '/usr/lib/x86_64-linux-gnu/pdns/libgsqlite3backend.so'
+2026-09-29T13:21:19.738659+00:00 dns-debian13 pdns_server[3077]: This is a standalone pdns
+2026-09-29T13:21:19.738659+00:00 dns-debian13 pdns_server[3077]: Listening on controlsocket in '/run/pdns/pdns.controlsocket'
+2026-09-29T13:21:19.738961+00:00 dns-debian13 pdns_server[3077]: UDP server bound to 10.0.2.15:53
+2026-09-29T13:21:19.738961+00:00 dns-debian13 pdns_server[3077]: UDP server bound to 192.0.2.10:53
+2026-09-29T13:21:19.739015+00:00 dns-debian13 pdns_server[3077]: TCP server bound to 10.0.2.15:53
+2026-09-29T13:21:19.739015+00:00 dns-debian13 pdns_server[3077]: TCP server bound to 192.0.2.10:53
+2026-09-29T13:21:19.739157+00:00 dns-debian13 pdns_server[3077]: PowerDNS Authoritative Server 4.9.17 (C) PowerDNS.COM BV
+2026-09-29T13:21:19.739157+00:00 dns-debian13 pdns_server[3077]: Using 64-bits mode. Built using gcc 14.2.0.
+2026-09-29T13:21:19.739157+00:00 dns-debian13 pdns_server[3077]: PowerDNS comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it according to the terms of the GPL version 2.
+2026-09-29T13:21:19.774449+00:00 dns-debian13 pdns_server[3077]: Creating backend connection for TCP
+2026-09-29T13:21:19.774928+00:00 dns-debian13 pdns_server[3077]: About to create 3 backend threads for UDP
+2026-09-29T13:21:19.774860+00:00 dns-debian13 systemd[1]: Started pdns.service - PowerDNS Authoritative Server.
+2026-09-29T13:21:19.925983+00:00 dns-debian13 pdns_server[3077]: Done launching threads, ready to distribute questions
+2026-09-29T13:21:21.054995+00:00 dns-debian13 pdns_server[3077]: Cache clear request for 's1-kill.test$' received from operator

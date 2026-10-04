@@ -1,0 +1,222 @@
+IDX BOOT ID                          FIRST ENTRY                 LAST ENTRY
+  0 2f6674cdcf8a41cda2b1f08b8397b7c8 Tue 2026-09-29 14:04:47 UTC Tue 2026-09-29 14:08:00 UTC
+== journalctl -u named.service
+2026-09-29T14:06:21.218528+00:00 dns-arch systemd[1]: Started Internet domain name server.
+2026-09-29T14:06:21.238512+00:00 dns-arch named[4969]: starting BIND 9.20.29 (Stable Release) <id:c3d4465>
+2026-09-29T14:06:21.238641+00:00 dns-arch named[4969]: running on Linux x86_64 7.1.8-arch1-3 #1 SMP PREEMPT_DYNAMIC Tue, 11 Aug 2026 09:16:08 +0000 (Arch Linux)
+2026-09-29T14:06:21.238647+00:00 dns-arch named[4969]: built with  '--prefix=/usr' '--sysconfdir=/etc' '--sbindir=/usr/bin' '--localstatedir=/var' '--disable-static' '--enable-fixed-rrset' '--enable-full-report' '--with-maxminddb' '--with-openssl' '--with-libidn2' '--with-json-c' '--with-libxml2' '--with-lmdb' 'CFLAGS=-march=x86-64 -mtune=generic -O2 -pipe -fno-plt -fexceptions         -Wp,-D_FORTIFY_SOURCE=3 -Wformat -Werror=format-security         -fstack-clash-protection -fcf-protection         -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -g -ffile-prefix-map=/build/bind/src=/usr/src/debug/bind -flto=auto -DDIG_SIGCHASE' 'LDFLAGS=-Wl,-O1 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now          -Wl,-z,pack-relative-relocs -flto=auto'
+2026-09-29T14:06:21.238651+00:00 dns-arch named[4969]: running as: named -f -u named
+2026-09-29T14:06:21.238654+00:00 dns-arch named[4969]: compiled by GCC 16.2.1 20260810
+2026-09-29T14:06:21.238658+00:00 dns-arch named[4969]: compiled with OpenSSL version: OpenSSL 3.6.4 25 Aug 2026
+2026-09-29T14:06:21.238662+00:00 dns-arch named[4969]: linked to OpenSSL version: OpenSSL 3.6.4 25 Aug 2026
+2026-09-29T14:06:21.238666+00:00 dns-arch named[4969]: compiled with libuv version: 1.52.1
+2026-09-29T14:06:21.238671+00:00 dns-arch named[4969]: linked to libuv version: 1.52.1
+2026-09-29T14:06:21.238676+00:00 dns-arch named[4969]: compiled with liburcu version: 0.15.7
+2026-09-29T14:06:21.238681+00:00 dns-arch named[4969]: compiled with jemalloc version: 5.3.1
+2026-09-29T14:06:21.238686+00:00 dns-arch named[4969]: compiled with libnghttp2 version: 1.70.0
+2026-09-29T14:06:21.238700+00:00 dns-arch named[4969]: linked to libnghttp2 version: 1.70.0
+2026-09-29T14:06:21.238704+00:00 dns-arch named[4969]: compiled with libxml2 version: 2.15.4
+2026-09-29T14:06:21.238708+00:00 dns-arch named[4969]: linked to libxml2 version: 21504-GITv2.15.4
+2026-09-29T14:06:21.238712+00:00 dns-arch named[4969]: compiled with json-c version: 0.19
+2026-09-29T14:06:21.238716+00:00 dns-arch named[4969]: linked to json-c version: 0.19
+2026-09-29T14:06:21.238719+00:00 dns-arch named[4969]: compiled with zlib version: 1.3.2
+2026-09-29T14:06:21.238723+00:00 dns-arch named[4969]: linked to zlib version: 1.3.2
+2026-09-29T14:06:21.238727+00:00 dns-arch named[4969]: linked to maxminddb version: 1.14.1
+2026-09-29T14:06:21.238731+00:00 dns-arch named[4969]: ----------------------------------------------------
+2026-09-29T14:06:21.238734+00:00 dns-arch named[4969]: BIND 9 is maintained by Internet Systems Consortium,
+2026-09-29T14:06:21.238737+00:00 dns-arch named[4969]: Inc. (ISC), a non-profit 501(c)(3) public-benefit
+2026-09-29T14:06:21.238740+00:00 dns-arch named[4969]: corporation.  Support and training for BIND 9 are
+2026-09-29T14:06:21.238744+00:00 dns-arch named[4969]: available at https://www.isc.org/support
+2026-09-29T14:06:21.238747+00:00 dns-arch named[4969]: ----------------------------------------------------
+2026-09-29T14:06:21.238754+00:00 dns-arch named[4969]: adjusted limit on open files from 1024 to 524288
+2026-09-29T14:06:21.238760+00:00 dns-arch named[4969]: found 2 CPUs, using 2 worker threads
+2026-09-29T14:06:21.240333+00:00 dns-arch named[4969]: DNSSEC algorithms: RSASHA1 NSEC3RSASHA1 RSASHA256 RSASHA512 ECDSAP256SHA256 ECDSAP384SHA384 ED25519 ED448
+2026-09-29T14:06:21.240340+00:00 dns-arch named[4969]: DS algorithms: SHA-1 SHA-256 SHA-384
+2026-09-29T14:06:21.240343+00:00 dns-arch named[4969]: HMAC algorithms: HMAC-MD5 HMAC-SHA1 HMAC-SHA224 HMAC-SHA256 HMAC-SHA384 HMAC-SHA512
+2026-09-29T14:06:21.240346+00:00 dns-arch named[4969]: TKEY mode 2 support (Diffie-Hellman): no
+2026-09-29T14:06:21.240348+00:00 dns-arch named[4969]: TKEY mode 3 support (GSS-API): yes
+2026-09-29T14:06:21.244475+00:00 dns-arch named[4969]: the initial working directory is '/'
+2026-09-29T14:06:21.244530+00:00 dns-arch named[4969]: loading configuration from '/etc/named.conf'
+2026-09-29T14:06:21.244603+00:00 dns-arch named[4969]: the working directory is now '/var/named'
+2026-09-29T14:06:21.244725+00:00 dns-arch named[4969]: looking for GeoIP2 databases in '/usr/share/GeoIP'
+2026-09-29T14:06:21.244867+00:00 dns-arch named[4969]: using default UDP/IPv4 port range: [32768, 60999]
+2026-09-29T14:06:21.244951+00:00 dns-arch named[4969]: using default UDP/IPv6 port range: [32768, 60999]
+2026-09-29T14:06:21.245364+00:00 dns-arch named[4969]: listening on IPv4 interface lo, 127.0.0.1#53
+2026-09-29T14:06:21.245550+00:00 dns-arch named[4969]: listening on IPv4 interface peer0, 192.0.2.11#53
+2026-09-29T14:06:21.245681+00:00 dns-arch named[4969]: Disabling periodic interface re-scans timer
+2026-09-29T14:06:21.245734+00:00 dns-arch named[4969]: generating session key for dynamic DNS
+2026-09-29T14:06:21.245985+00:00 dns-arch named[4969]: using built-in root key for view _default
+2026-09-29T14:06:21.246039+00:00 dns-arch named[4969]: set up managed keys zone for view _default, file 'managed-keys.bind'
+2026-09-29T14:06:21.246560+00:00 dns-arch named[4969]: configuring command channel from '/etc/rndc.key'
+2026-09-29T14:06:21.246619+00:00 dns-arch named[4969]: command channel listening on 127.0.0.1#953
+2026-09-29T14:06:21.246649+00:00 dns-arch named[4969]: configuring command channel from '/etc/rndc.key'
+2026-09-29T14:06:21.246689+00:00 dns-arch named[4969]: command channel listening on ::1#953
+2026-09-29T14:06:21.246891+00:00 dns-arch named[4969]: managed-keys-zone: loaded serial 0
+2026-09-29T14:06:21.247144+00:00 dns-arch named[4969]: zone catalog-c000020b.celikpanel.invalid/IN: loaded serial 1
+2026-09-29T14:06:21.247253+00:00 dns-arch named[4969]: zone s1-kill.test/IN: loaded serial 2026083101
+2026-09-29T14:06:21.247374+00:00 dns-arch named[4969]: all zones loaded
+2026-09-29T14:06:21.273801+00:00 dns-arch named[4969]: network unreachable resolving './DNSKEY/IN': 2001:500:2::c#53
+2026-09-29T14:06:21.273971+00:00 dns-arch named[4969]: FIPS mode is disabled
+2026-09-29T14:06:21.273977+00:00 dns-arch named[4969]: running
+2026-09-29T14:06:21.274007+00:00 dns-arch named[4969]: zone catalog-c000020b.celikpanel.invalid/IN: sending notifies (serial 1)
+2026-09-29T14:06:21.274015+00:00 dns-arch named[4969]: zone s1-kill.test/IN: sending notifies (serial 2026083101)
+2026-09-29T14:06:21.274194+00:00 dns-arch named[4969]: network unreachable resolving './NS/IN': 2001:500:2::c#53
+2026-09-29T14:06:21.274321+00:00 dns-arch named[4969]: network unreachable resolving './DNSKEY/IN': 2001:7fe::53#53
+2026-09-29T14:06:21.274396+00:00 dns-arch named[4969]: zone s1-kill.test/IN: sending notify to 192.0.2.10#53
+2026-09-29T14:06:21.274503+00:00 dns-arch named[4969]: network unreachable resolving './NS/IN': 2001:7fe::53#53
+2026-09-29T14:06:21.274570+00:00 dns-arch named[4969]: zone catalog-c000020b.celikpanel.invalid/IN: sending notify to 192.0.2.10#53
+2026-09-29T14:06:21.274679+00:00 dns-arch named[4969]: network unreachable resolving './DNSKEY/IN': 2001:7fd::1#53
+2026-09-29T14:06:21.274801+00:00 dns-arch named[4969]: network unreachable resolving './NS/IN': 2001:500:2f::f#53
+2026-09-29T14:06:21.289761+00:00 dns-arch named[4969]: network unreachable resolving './DNSKEY/IN': 2001:500:2f::f#53
+2026-09-29T14:06:21.290002+00:00 dns-arch named[4969]: network unreachable resolving './NS/IN': 2001:7fd::1#53
+2026-09-29T14:06:21.290211+00:00 dns-arch named[4969]: zone s1-kill.test/IN: notify to 192.0.2.10#53 failed: connection refused: retrying over TCP
+2026-09-29T14:06:21.290388+00:00 dns-arch named[4969]: network unreachable resolving './DNSKEY/IN': 2001:dc3::35#53
+2026-09-29T14:06:21.290577+00:00 dns-arch named[4969]: network unreachable resolving './NS/IN': 2001:dc3::35#53
+2026-09-29T14:06:21.290667+00:00 dns-arch named[4969]: zone s1-kill.test/IN: sending notify to 192.0.2.10#53
+2026-09-29T14:06:21.290797+00:00 dns-arch named[4969]: network unreachable resolving './DNSKEY/IN': 2001:500:1::53#53
+2026-09-29T14:06:21.290946+00:00 dns-arch named[4969]: zone catalog-c000020b.celikpanel.invalid/IN: notify to 192.0.2.10#53 failed: connection refused: retrying over TCP
+2026-09-29T14:06:21.291085+00:00 dns-arch named[4969]: network unreachable resolving './NS/IN': 2001:500:1::53#53
+2026-09-29T14:06:21.291227+00:00 dns-arch named[4969]: network unreachable resolving './DNSKEY/IN': 2001:503:c27::2:30#53
+2026-09-29T14:06:21.291322+00:00 dns-arch named[4969]: zone catalog-c000020b.celikpanel.invalid/IN: sending notify to 192.0.2.10#53
+2026-09-29T14:06:21.291452+00:00 dns-arch named[4969]: network unreachable resolving './NS/IN': 2001:503:c27::2:30#53
+2026-09-29T14:06:21.291586+00:00 dns-arch named[4969]: network unreachable resolving './DNSKEY/IN': 2001:500:12::d0d#53
+2026-09-29T14:06:21.291685+00:00 dns-arch named[4969]: network unreachable resolving './NS/IN': 2001:500:12::d0d#53
+2026-09-29T14:06:21.291800+00:00 dns-arch named[4969]: network unreachable resolving './DNSKEY/IN': 2001:500:9f::42#53
+2026-09-29T14:06:21.291890+00:00 dns-arch named[4969]: network unreachable resolving './NS/IN': 2001:500:9f::42#53
+2026-09-29T14:06:21.292001+00:00 dns-arch named[4969]: network unreachable resolving './DNSKEY/IN': 2001:503:ba3e::2:30#53
+2026-09-29T14:06:21.292117+00:00 dns-arch named[4969]: network unreachable resolving './NS/IN': 2001:503:ba3e::2:30#53
+2026-09-29T14:06:21.292206+00:00 dns-arch named[4969]: network unreachable resolving './DNSKEY/IN': 2001:500:2d::d#53
+2026-09-29T14:06:21.292293+00:00 dns-arch named[4969]: network unreachable resolving './NS/IN': 2001:500:2d::d#53
+2026-09-29T14:06:21.292381+00:00 dns-arch named[4969]: network unreachable resolving './DNSKEY/IN': 2001:500:a8::e#53
+2026-09-29T14:06:21.292473+00:00 dns-arch named[4969]: network unreachable resolving './NS/IN': 2001:500:a8::e#53
+2026-09-29T14:06:21.292560+00:00 dns-arch named[4969]: network unreachable resolving './DNSKEY/IN': 2801:1b8:10::b#53
+2026-09-29T14:06:21.292651+00:00 dns-arch named[4969]: network unreachable resolving './NS/IN': 2801:1b8:10::b#53
+2026-09-29T14:06:21.330897+00:00 dns-arch named[4969]: network unreachable resolving './DNSKEY/IN': 2001:500:2::c#53
+2026-09-29T14:06:21.333745+00:00 dns-arch named[4969]: zone s1-kill.test/IN: notify to 192.0.2.10#53 failed: connection refused
+2026-09-29T14:06:21.333777+00:00 dns-arch named[4969]: zone catalog-c000020b.celikpanel.invalid/IN: notify to 192.0.2.10#53 failed: connection refused
+2026-09-29T14:06:21.408251+00:00 dns-arch named[4969]: managed-keys-zone: Initializing automatic trust anchor management for zone '.'; DNSKEY ID 20326 is now trusted, waiving the normal 30-day waiting period.
+2026-09-29T14:06:21.408305+00:00 dns-arch named[4969]: managed-keys-zone: Initializing automatic trust anchor management for zone '.'; DNSKEY ID 38696 is now trusted, waiving the normal 30-day waiting period.
+2026-09-29T14:06:21.867650+00:00 dns-arch named[4969]: client @0x7fe8ffc73000 127.0.0.1#48538 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-29T14:06:21.867947+00:00 dns-arch named[4969]: client @0x7fe8ffc73000 127.0.0.1#48538 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)
+2026-09-29T14:06:54.242338+00:00 dns-arch named[4969]: client @0x7fe902de7800 127.0.0.1#35086 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-29T14:06:54.242770+00:00 dns-arch named[4969]: client @0x7fe902de7800 127.0.0.1#35086 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)
+2026-09-29T14:06:55.108316+00:00 dns-arch named[4969]: client @0x7fe8ffc74c00 192.0.2.10#36604 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-29T14:06:55.108593+00:00 dns-arch named[4969]: client @0x7fe8ffc74c00 192.0.2.10#36604 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)
+2026-09-29T14:07:06.037381+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#55182 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-29T14:07:06.037982+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#55182 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)
+2026-09-29T14:07:06.177233+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#55196 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-29T14:07:06.177503+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#55196 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)
+2026-09-29T14:07:06.269294+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#55210 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-29T14:07:06.269521+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#55210 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)
+2026-09-29T14:07:09.293760+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#47477 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-29T14:07:09.294455+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#47477 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)
+2026-09-29T14:07:09.294587+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#55216 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-29T14:07:09.294736+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#55216 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)
+2026-09-29T14:07:09.381640+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#47735 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:09.381858+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#47735 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:09.721630+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#54159 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:09.721791+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#54159 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:10.029791+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#46229 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:10.030267+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#46229 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:10.325684+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#55641 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:10.325912+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#55641 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:10.617719+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#39167 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:10.617943+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#39167 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:10.917747+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#42257 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:10.917986+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#42257 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:11.221981+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#49867 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:11.222384+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#49867 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:11.505833+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#60673 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:11.506443+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#60673 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:11.797778+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#58659 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:11.797972+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#58659 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:12.089876+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#45719 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:12.090106+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#45719 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:12.393828+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#52665 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:12.394088+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#52665 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:12.677935+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#39587 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:12.678122+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#39587 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:12.961933+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#40327 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:12.962118+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#40327 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:13.250404+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#41089 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:13.251653+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#41089 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:13.534138+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#60959 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:13.534296+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#60959 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:13.834099+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#58649 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:13.834551+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#58649 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:14.090664+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#54277 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:14.090835+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#54277 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:14.442097+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#35805 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:14.442265+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#35805 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:14.726114+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#45369 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:14.726262+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#45369 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:15.022154+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#50033 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:15.022321+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#50033 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:15.302401+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#50257 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:15.302733+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#50257 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:15.570482+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#39493 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:15.571535+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#39493 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:15.842368+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#53295 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:15.842631+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#53295 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:16.118230+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#40003 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:16.118520+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#40003 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:16.386321+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#47127 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:16.386540+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#47127 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:16.666337+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#50987 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:16.666528+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#50987 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:16.942353+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#59589 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:16.942678+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#59589 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:17.210342+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#40287 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:17.210633+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#40287 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:17.478900+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#45787 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:17.479707+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#45787 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:17.754377+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#49717 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:17.754738+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#49717 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:18.030472+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#39727 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:18.030683+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#39727 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:18.298469+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#59247 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:18.298748+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#59247 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:18.570462+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#44877 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:18.571116+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#44877 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:18.842472+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#59477 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:18.842653+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#59477 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:19.110435+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#43417 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:19.110623+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#43417 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:19.382382+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#47925 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:19.382561+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#47925 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:19.650430+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#36537 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:19.650643+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#36537 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:19.922417+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#59711 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:19.922651+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#59711 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:20.194515+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#42035 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:20.194785+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#42035 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:20.582345+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#49073 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:20.582558+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#49073 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:20.834791+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#41325 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:20.835023+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#41325 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:21.106268+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#34643 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:21.106442+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#34643 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:21.407644+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#55465 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:21.411196+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#55465 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.002 secs (100500 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:21.897709+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#60309 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:21.898956+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#60309 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:22.266790+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#45859 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:22.267142+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#45859 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:22.595205+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#49211 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:22.596979+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#49211 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:22.969505+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#41271 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:22.973938+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#41271 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.003 secs (67000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:23.282403+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#44427 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:23.283408+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#44427 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:23.598148+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#39989 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:23.598844+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#39989 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:23.878176+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#37919 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:23.878411+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#37919 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:24.150145+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#42073 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR started (serial 2026083101)
+2026-09-29T14:07:24.150370+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#42073 (s1-kill.test): transfer of 's1-kill.test/IN': AXFR ended: 1 messages, 7 records, 201 bytes, 0.001 secs (201000 bytes/sec) (serial 2026083101)
+2026-09-29T14:07:24.718108+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#59434 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-29T14:07:24.718321+00:00 dns-arch named[4969]: client @0x7fe8ffc98000 192.0.2.10#59434 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)
+2026-09-29T14:07:24.912613+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#59436 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-29T14:07:24.912809+00:00 dns-arch named[4969]: client @0x7fe902df2000 192.0.2.10#59436 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)
+2026-09-29T14:07:25.784780+00:00 dns-arch named[4969]: client @0x7fe902df2000 127.0.0.1#52906 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR started (serial 1)
+2026-09-29T14:07:25.784957+00:00 dns-arch named[4969]: client @0x7fe902df2000 127.0.0.1#52906 (catalog-c000020b.celikpanel.invalid): transfer of 'catalog-c000020b.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 250 bytes, 0.001 secs (250000 bytes/sec) (serial 1)

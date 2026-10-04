@@ -1,0 +1,14 @@
+{
+  "archive": "/var/tmp/cp-pair-accept/dist/aa6b93808e57c5586e513601953b4db07ef6328f-acceptance-license/celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57-acceptance-license.tar.gz",
+  "commit": "aa6b93808e57c5586e513601953b4db07ef6328f",
+  "license_mode": "acceptance-fixture",
+  "note": "not a release; use only with pair_acceptance.py --license-mode acceptance-fixture",
+  "panel_build_tags": "acceptance_license",
+  "release": false,
+  "root": "celikpanel-v0.0.0-pairaccept-acceptance-license.aa6b93808e57",
+  "sha256": "ab5f211ce42df68894ee667bd217cd7d05be08a9e2db1b7c45555bdf31621832",
+  "tree": "9fba2e53bc58572daa6a68b1e8122b4921550a92",
+  "version": "v0.0.0-pairaccept-acceptance-license.aa6b93808e57"
+}
+BUILD-OK
+build exit 0

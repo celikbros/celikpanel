@@ -1,0 +1,5 @@
+test-dns-owner-tools-package	0	2.9
+test-release-sequence-policy	0	0.1
+test-release-recovery-contract	0	47.0
+test-release-recovery-rollback-handoff	0	4.0
+test-rollback-material-admission	0	8.0

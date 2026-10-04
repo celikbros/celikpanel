@@ -1,6 +1,6 @@
 import { setupPurposes, type ServerSetupCheck, type SetupPurpose } from './serverSetup';
 
-export interface SetupPlanStep { id: string; kind: 'infrastructure_dns' | 'access_dns' | 'dns' | 'dns_publisher' | 'dns_readiness' | 'service' | 'runtime' | 'mail_profile' | 'firewall' | 'panel_certificate' | 'mail_certificate' | 'verify'; target: string; qualifier?: string }
+export interface SetupPlanStep { id: string; kind: 'infrastructure_dns' | 'access_dns' | 'dns' | 'dns_publisher' | 'dns_readiness' | 'service' | 'runtime' | 'mail_profile' | 'mail_enrollment' | 'firewall' | 'panel_certificate' | 'mail_certificate' | 'verify'; target: string; qualifier?: string }
 export interface SetupInfrastructureDNSPlan {
     zone: string; existing_zone_id?: number; expected_digest: string;
     records: { name: string; type: string; content: string; ttl: number; action: 'add' | 'keep' }[];
@@ -19,16 +19,19 @@ export interface ServerSetupExecution {
     id: string; request_id: string; plan_id: string;
     status: 'running' | 'waiting' | 'failed' | 'succeeded'; phase: string;
     steps: (SetupPlanStep & { status: 'pending' | 'running' | 'failed' | 'succeeded' })[];
-    error?: { code: string; message: string }; panel_url?: string; checks?: ServerSetupCheck[];
+    error?: SetupExecutionError; panel_url?: string; checks?: ServerSetupCheck[];
     context?: SetupExecutionContext;
 }
+// component/step/detail are optional install-failure guidance; detail is one
+// bounded, redacted host line.
+export interface SetupExecutionError { code: string; message: string; component?: string; step?: string; detail?: string }
 export interface SetupExecutionContext {
     dns_mode: 'local' | 'external' | 'existing'; dns_role: 'primary' | 'secondary' | '';
     dns_engine: string; local_nameserver: string; local_ip: string; peer_nameserver: string; peer_ip: string;
     panel_domain: string; mail_hostname: string; dns_hosting_management: string;
     access_dns_ip?: string; infrastructure_dns?: SetupInfrastructureDNSPlan;
 }
-const kinds = ['infrastructure_dns', 'access_dns', 'dns', 'dns_publisher', 'dns_readiness', 'service', 'runtime', 'mail_profile', 'firewall', 'panel_certificate', 'mail_certificate', 'verify'];
+const kinds = ['infrastructure_dns', 'access_dns', 'dns', 'dns_publisher', 'dns_readiness', 'service', 'runtime', 'mail_profile', 'mail_enrollment', 'firewall', 'panel_certificate', 'mail_certificate', 'verify'];
 const isRecord = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 const identity = (value: unknown): value is string => typeof value === 'string' && /^[a-f0-9]{32}$/.test(value);
 function isStep(value: unknown): value is SetupPlanStep {
@@ -75,6 +78,15 @@ export function decodeSetupExecution(value: unknown, marker?: SetupStartMarker |
         || (value.panel_url !== undefined && typeof value.panel_url !== 'string')) return null;
     // Invalid optional metadata must not hide the durable execution.
     // Gecersiz istege bagli bilgi kalici islemi gizlememelidir.
+    if (isRecord(value.error)) {
+        const error = value.error;
+        const optional = (key: string, limit: number) => error[key] === undefined || (typeof error[key] === 'string' && (error[key] as string).length <= limit);
+        if (!optional('component', 64) || !optional('step', 32) || !optional('detail', 400)) {
+            const { component: _component, step: _step, detail: _detail, ...kept } = error;
+            value = { ...value, error: kept };
+        }
+    }
+    if (!isRecord(value)) return null;
     const context = value.context;
     if (context !== undefined && (!isRecord(context)
         || !['local', 'external', 'existing'].includes(String(context.dns_mode))
@@ -106,4 +118,15 @@ export function safeSetupPanelURL(raw: string | undefined, hostname: string): st
         return url.protocol === 'https:' && url.hostname === hostname.toLowerCase().replace(/\.$/, '') && !url.username && !url.password
             ? url.href : null;
     } catch { return null; }
+}
+
+// A visible recorded wait permits an explicit owner action, never a polling POST.
+export function continuableMailEnrollment(execution: ServerSetupExecution | null): SetupPlanStep | null {
+    if (!execution || execution.status !== 'running' || !['server_setup_mail_enrollment_running', 'server_setup_mail_enrollment_rollback'].includes(execution.error?.code || '')) return null;
+    return execution.steps.find(step => step.kind === 'mail_enrollment' && step.status === 'running' && step.id === execution.phase) || null;
+}
+
+export function retryableMailEnrollmentHandoff(execution: ServerSetupExecution | null): SetupPlanStep | null {
+    if (!execution || execution.status !== 'running' || execution.error?.code !== 'server_setup_mail_enrollment_not_recorded') return null;
+    return execution.steps.find(step => step.kind === 'mail_enrollment' && step.status === 'running' && step.id === execution.phase) || null;
 }

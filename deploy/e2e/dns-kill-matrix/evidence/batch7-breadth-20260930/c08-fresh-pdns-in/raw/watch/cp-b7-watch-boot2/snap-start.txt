@@ -1,0 +1,107 @@
+tag=start wall=2026-09-29T19:29:12.979522254Z mono=8.36 8.13 boot_id=05eb15f5-be5a-48a2-b056-b798870c2889
+== pdns.service
+MainPID=649
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 19:29:11 UTC
+ExecMainStartTimestampMonotonic=7066654
+ExecMainPID=649
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 19:29:11 UTC
+InactiveEnterTimestamp=
+InvocationID=e7fb5ee1b5854d3bb56f530c6bab0644
+== named.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainStartTimestampMonotonic=0
+ExecMainPID=0
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+InvocationID=
+== bind9.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainStartTimestampMonotonic=0
+ExecMainPID=0
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+InvocationID=
+== celikpanel-agent.service
+MainPID=637
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 19:29:11 UTC
+ExecMainStartTimestampMonotonic=7016952
+ExecMainPID=637
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 19:29:11 UTC
+InactiveEnterTimestamp=
+InvocationID=ef5ec4deaa5149fa9593b676950aeb4f
+== celikpanel-panel.service
+MainPID=638
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 19:29:11 UTC
+ExecMainStartTimestampMonotonic=7021366
+ExecMainPID=638
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 19:29:11 UTC
+InactiveEnterTimestamp=
+InvocationID=97575290e6f14f768d2a60ba4090a6be
+== processes
+637 /opt/celikpanel/bin/agent
+649 /usr/sbin/pdns_server --guardian=no --daemon=no --disable-syslog --log-timestamp=no --write-pid=no
+== journal file
+total 20
+drwx------  2 root celikpanel 4096 2026-09-29 19:28:29.884447998 +0000 .
+drwxr-xr-x 29 root root       4096 2026-09-29 19:28:19.104356102 +0000 ..
+-rw-------  1 root celikpanel  561 2026-09-29 19:28:29.836447390 +0000 dns-engine-ownership-pdns.json
+-rw-------  1 root celikpanel  557 2026-09-29 19:28:29.404441910 +0000 dns-engine-state.json
+-rw-------  1 root celikpanel  741 2026-09-29 19:28:29.872447846 +0000 service-mutations.json
+== ss 53
+udp UNCONN 0      0         192.0.2.10:53 0.0.0.0:* users:(("pdns_server",pid=649,fd=6))     
+udp UNCONN 0      0          10.0.2.15:53 0.0.0.0:* users:(("pdns_server",pid=649,fd=5))     
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=331,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=331,fd=18))
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=331,fd=19))
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=331,fd=21))
+tcp LISTEN 0      128       192.0.2.10:53 0.0.0.0:* users:(("pdns_server",pid=649,fd=8))     
+tcp LISTEN 0      128        10.0.2.15:53 0.0.0.0:* users:(("pdns_server",pid=649,fd=7))     
+== managed BIND roots (lstat, no follow)
+== PowerDNS database (file copy, no lock)
+total 140
+drwxr-xr-x  2 pdns pdns  4096 2026-09-29 19:29:11.984000000 +0000 .
+drwxr-xr-x 29 root root  4096 2026-09-29 19:28:19.104356102 +0000 ..
+-rw-r-----  1 pdns pdns 98304 2026-09-29 19:28:27.728421824 +0000 pdns.sqlite3
+-rw-r-----  1 pdns pdns 32768 2026-09-29 19:29:11.984000000 +0000 pdns.sqlite3-shm
+-rw-r-----  1 pdns pdns     0 2026-09-29 19:29:11.984000000 +0000 pdns.sqlite3-wal
+ls: cannot access '/var/cache/bind/celikpanel': No such file or directory
+ls: cannot access '/var/named/celikpanel': No such file or directory
+ls: cannot access '/var/cache/bind/celikpanel/generations': No such file or directory
+ls: cannot access '/var/named/celikpanel/generations': No such file or directory

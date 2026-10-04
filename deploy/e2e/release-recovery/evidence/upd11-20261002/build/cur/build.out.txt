@@ -1,0 +1,2 @@
+/var/tmp/cp-upd1-build/20261001t221215z/upd1-artifacts.json
+UPD1-ARTIFACTS-OK

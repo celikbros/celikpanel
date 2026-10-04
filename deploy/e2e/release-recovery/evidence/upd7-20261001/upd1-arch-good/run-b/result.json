@@ -1,0 +1,209 @@
+{
+  "artifacts": {
+    "baseline": {
+      "commit": "f650e8c12d1d0c91764d201802008332f49b8d57",
+      "sha256": "4ecd3aa17f4bda8af847f22dce6a3e2b9d97cd48ace3a1496f6e58447f263521",
+      "version": "v0.1.0-alpha.80"
+    },
+    "defective": {
+      "commit": "205abc6463d0bbc047a1c38765e102d2fcf3c05b",
+      "sha256": "71f487e60d778061aef08b77b46e3ca86efc147de71793177163ca261201aca2",
+      "version": "v0.1.0-alpha.81"
+    },
+    "good": {
+      "commit": "622ddcb40568073d1407983bf78d0b8b8e24b0a5",
+      "sha256": "b82279714781d7e927be969921036e061c185eac8fce9f5da980a08cd03dd00d",
+      "version": "v0.1.0-alpha.81"
+    }
+  },
+  "cell": {
+    "mail_required": false,
+    "name": "upd1-arch-good",
+    "node": "arch",
+    "recovery_fault": null,
+    "variant": "good"
+  },
+  "findings": [
+    "arch: web_mail was not attempted on the published v0.1.0-alpha.80 baseline (it accepts the plan but fails at 05-mail_profile); mail is recorded as not provided on this platform",
+    "arch: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['08-panel_certificate', '09-verify']",
+    "arch: cron: not available on this baseline (crontab absent before seeding); the owner cron job was not created and cron continuity is not measured"
+  ],
+  "identity": {
+    "cell_id": "release-recovery__5cb971244d3c7342",
+    "node": "arch",
+    "vm_uuid": "1698f1ac-5833-5968-b5e3-12f2313c95d3"
+  },
+  "native_evidence": false,
+  "note": "Observations for the owner's review; the P0 rows are judged separately.",
+  "outcome": {
+    "attempts": {
+      "automatic": [],
+      "automatic_count": 0,
+      "journal_admissions": [],
+      "owner": [],
+      "owner_count": 0
+    },
+    "classification": "not-terminal",
+    "final_status": null,
+    "owner_continuation": false,
+    "owner_reboot": null,
+    "pin_changes": [],
+    "port_hold": null,
+    "reboot": null,
+    "track_stop": null
+  },
+  "overall": "failed",
+  "provenance": {
+    "baseline": "published-tag-v0.1.0-alpha.80-tree-plus-the-D-027-acceptance-license-seam-only (Panel license code: cmd/panel/license.go, internal/licensing/acceptance_fixture.go, internal/licensing/acceptance_off.go, internal/licensing/acceptance_owner_linux.go, internal/licensing/acceptance_owner_other.go, internal/licensing/license.go); its release policy, installer, update/rollback/recovery/bootstrap scripts, get.sh and Agent are byte-identical to the tag; installed by the real installer; fixture trust root enrolled; not-production-release-admission",
+    "candidate": "unpublished-local-fixture-commit-over-the-source-labelled-v0.1.0-alpha.81; signed with the disposable fixture key; served by the guest-loopback celikpanel.net fixture origin; not a release",
+    "defect": "fixture source patch: cmd/panel --migrate-only exits 1 after migrating the isolated copy (genuine candidate failure after candidate-installed, simulated by a committed fixture change)"
+  },
+  "request_id": null,
+  "schema": "celikpanel/upd1-owner-update-result/v1",
+  "scope": {
+    "cron": {
+      "crontab": null,
+      "verdict": "not available on this baseline"
+    },
+    "dns": {
+      "mode": "external",
+      "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+      "verdict": "not-provided-external-dns"
+    },
+    "origin": {
+      "after-owner-restart": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      },
+      "after-provision": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      }
+    },
+    "setup": {
+      "code": "server_setup_access_dns_required",
+      "not_run": [
+        "08-panel_certificate",
+        "09-verify"
+      ],
+      "phase": "access_dns",
+      "verdict": "observed isolated-host wait",
+      "volatile_tables_added": [
+        "server_setup_executions"
+      ]
+    }
+  },
+  "steps": [
+    {
+      "finished_at": "2026-10-01T12:12:03Z",
+      "name": "preflight",
+      "reason": null,
+      "started_at": "2026-10-01T12:12:00Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T12:12:12Z",
+      "name": "origin",
+      "reason": null,
+      "started_at": "2026-10-01T12:12:03Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T12:14:47Z",
+      "name": "baseline-install",
+      "reason": null,
+      "started_at": "2026-10-01T12:12:12Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T12:14:48Z",
+      "name": "owner-login",
+      "reason": null,
+      "started_at": "2026-10-01T12:14:47Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T12:14:48Z",
+      "name": "license",
+      "reason": null,
+      "started_at": "2026-10-01T12:14:48Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T12:17:40Z",
+      "name": "setup",
+      "reason": null,
+      "started_at": "2026-10-01T12:14:48Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-01T12:17:42Z",
+      "name": "seed",
+      "reason": null,
+      "started_at": "2026-10-01T12:17:40Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T12:20:53Z",
+      "name": "pre-state",
+      "reason": "workloads are not healthy before the update: web_ok",
+      "started_at": "2026-10-01T12:17:42Z",
+      "verdict": "failed"
+    },
+    {
+      "finished_at": null,
+      "name": "arm",
+      "reason": "a required earlier step did not pass: pre-state",
+      "started_at": "2026-10-01T12:20:53Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "owner-start",
+      "reason": "a required earlier step did not pass: arm",
+      "started_at": "2026-10-01T12:20:53Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "track",
+      "reason": "a required earlier step did not pass: owner-start",
+      "started_at": "2026-10-01T12:20:53Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "owner-continuation (required)",
+      "reason": "a required earlier step did not pass: track",
+      "started_at": "2026-10-01T12:20:53Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "terminal",
+      "reason": "a required earlier step did not pass: owner-start",
+      "started_at": "2026-10-01T12:20:53Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": "2026-10-01T12:20:55Z",
+      "name": "collect",
+      "reason": null,
+      "started_at": "2026-10-01T12:20:53Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": null,
+      "name": "verdicts",
+      "reason": "a required earlier step did not pass: owner-start",
+      "started_at": "2026-10-01T12:20:55Z",
+      "verdict": "not-run"
+    }
+  ]
+}

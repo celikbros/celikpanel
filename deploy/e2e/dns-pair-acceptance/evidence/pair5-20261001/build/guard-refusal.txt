@@ -1,0 +1,7 @@
+refused: bin/panel was built with -tags acceptance_license (embedded Go build settings)
+refused: bin/panel contains the acceptance fixture license
+refused: bin/panel was built with -tags acceptance_license (go version -m)
+Why: a program above was built with the acceptance_license test tag, which accepts an acceptance fixture license.
+Acceptance builds are never CelikPanel releases, so nothing was packaged or signed.
+Next: rebuild the release with the ordinary make dist from a clean tree, then package again.
+Acceptance archives come only from deploy/e2e/dns-pair-acceptance/scripts/build-dist.sh --acceptance-license.

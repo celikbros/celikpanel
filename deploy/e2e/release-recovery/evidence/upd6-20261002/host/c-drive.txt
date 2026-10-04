@@ -1,0 +1,6 @@
+# Windows C: free space (PowerShell Get-PSDrive C; GB = 2^30 bytes)
+2026-10-01T09:27:05Z before the run: 176.2 GB free (189157425152 bytes)
+2026-10-01T09:31:38Z before the cell: 172.4 GB free
+2026-10-01T09:38:40Z during the cell: 170.0 GB free
+2026-10-01T09:47:10Z after the cell: 166.7 GB free
+2026-10-01T09:48:36Z before staging: 165.8 GB free

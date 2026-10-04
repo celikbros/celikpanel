@@ -1,0 +1,81 @@
+{
+  "bytes": 6298,
+  "command": "ledger",
+  "jobs": [
+    {
+      "attempt": 1,
+      "kind": "dns_zone_sync",
+      "phase": "commit/dns-zone-sync/v3/published/092a39c88f0a7a514cc4ac524e032db6/pair-accept.test/dns-zone-sync/v3:sha256:b4b6b8bc2613ed511025b24d60204c0497d7253def661a76643310b137b04313",
+      "request_id": "092a39c88f0a7a514cc4ac524e032db6",
+      "status": "succeeded",
+      "updated_at": "2026-09-30T08:25:02.476067498Z"
+    },
+    {
+      "attempt": 1,
+      "kind": "firewall_apply",
+      "phase": "commit/firewall-apply/v1/published/258c35c00555838cc09d4562b4c55eb6/firewall-apply/v1:sha256:ab0550f02ed8669a88665e8a04538438de5556b7caa64e1571f5f6c90d23cdc5",
+      "request_id": "258c35c00555838cc09d4562b4c55eb6",
+      "status": "succeeded",
+      "updated_at": "2026-09-30T08:24:22.023327052Z"
+    },
+    {
+      "attempt": 1,
+      "kind": "dns_zone_sync",
+      "phase": "commit/dns-zone-sync/v3/published/284b9e19d3a81ea8ef656ef84bb9bbd3/pair-accept.test/dns-zone-sync/v3:sha256:0db23c71d968b5fda5c8b38d44c4e495252173db1c232fd4d2847a1fe3ebced0",
+      "request_id": "284b9e19d3a81ea8ef656ef84bb9bbd3",
+      "status": "succeeded",
+      "updated_at": "2026-09-30T08:24:56.667903194Z"
+    },
+    {
+      "attempt": 1,
+      "kind": "dns_zone_sync",
+      "phase": "commit/dns-zone-sync/v3/published/2f9ee5c36e8c241e05d81ce8c4b92bb7/pair-accept.test/dns-zone-sync/v3:sha256:2b9a0bc333f63a0ba5d78fb610eaac7f8f90a09c78c8184e559c4a80856746cc",
+      "request_id": "2f9ee5c36e8c241e05d81ce8c4b92bb7",
+      "status": "succeeded",
+      "updated_at": "2026-09-30T08:25:53.380464534Z"
+    },
+    {
+      "attempt": 1,
+      "kind": "dns_engine_switch",
+      "phase": "commit/dns-engine-switch/v2/finalized/420b2c48e1a7137ce39d880d63a6947b/dns-engine-switch/v1:sha256:df1d468990d5adb17abd34b9722a3cd072cfa557eb4c1b98850b0ea8bf8e63b9",
+      "request_id": "420b2c48e1a7137ce39d880d63a6947b",
+      "status": "succeeded",
+      "updated_at": "2026-09-30T08:24:10.546555537Z"
+    },
+    {
+      "attempt": 1,
+      "kind": "dns_zone_sync",
+      "phase": "commit/dns-zone-sync/v3/published/8d3e13ec0e75e26e379535c83e0b1630/pair-accept.test/dns-zone-sync/v3:sha256:1e870414d3fdff50a281332d492ac34a83ddaffdac4c73f6311fbc1d3b10778c",
+      "request_id": "8d3e13ec0e75e26e379535c83e0b1630",
+      "status": "succeeded",
+      "updated_at": "2026-09-30T08:25:06.452005697Z"
+    },
+    {
+      "attempt": 1,
+      "kind": "dns_zone_sync",
+      "phase": "commit/dns-zone-sync/v3/published/b526518b64fa0eb2c7f5d60ad51309e3/pair-accept.test/dns-zone-sync/v3:sha256:2f8288d1d492bade90e107bbb7e82f01d84d191eb724465775815aa6a7f416a4",
+      "request_id": "b526518b64fa0eb2c7f5d60ad51309e3",
+      "status": "succeeded",
+      "updated_at": "2026-09-30T08:24:48.14783169Z"
+    },
+    {
+      "attempt": 3,
+      "kind": "dns_zone_sync",
+      "phase": "commit/dns-zone-sync/v3/published/cd6e96a9ec6f7fb93d684fbe38d3778c/pair-accept.test/dns-zone-sync/v3:sha256:74c0e181055b44603fc5cfd66ca0acad0cb26fc935a44b4e89985cc8eb081172",
+      "request_id": "cd6e96a9ec6f7fb93d684fbe38d3778c",
+      "status": "succeeded",
+      "updated_at": "2026-09-30T08:25:44.581550639Z"
+    },
+    {
+      "attempt": 1,
+      "kind": "service_install",
+      "phase": "completed",
+      "request_id": "d0f6cf25bf8e39222cdbdf66841e4922",
+      "status": "succeeded",
+      "updated_at": "2026-09-30T08:24:18.387704766Z"
+    }
+  ],
+  "present": true,
+  "returncode": 0,
+  "sha256": "98f62a5d93de079877848e6d2e785287bf9f905f848dba8cd7043861156d4f57"
+}

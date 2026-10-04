@@ -1,0 +1,365 @@
+== dbwatch timeline
+05:12:22.642240067 start boot_id=1851ed93-6ca8-4c99-9d78-fa8ed23e1078
+05:12:22.650157796 CHANGE pdnsdb none -> absent pdns=0/inactive/
+05:12:45.082601180 CHANGE pdnsdb absent -> 91fe2fdb69b8a70792999e9306200aee214a73f5957518082c5fd7c0f5f4dcc4 pdns=0/inactive/
+05:12:48.801225123 CHANGE pdnsdb 91fe2fdb69b8a70792999e9306200aee214a73f5957518082c5fd7c0f5f4dcc4 -> f827a73bebe7a0c845e58802d56195802ac6d881fd593ba9d224f2abb02dd859 pdns=5832/active/
+05:13:34.808903132 CHANGE pdnsdb f827a73bebe7a0c845e58802d56195802ac6d881fd593ba9d224f2abb02dd859 -> 296c26d39451acb93287248d1e5718d13ad0b5483726827404d53c4c9f9d7fa0 pdns=5832/active/
+05:13:43.043404706 CHANGE pdnsdb 296c26d39451acb93287248d1e5718d13ad0b5483726827404d53c4c9f9d7fa0 -> 6ed61e5d41286caf02f0a52ada25a9b6dd3a3cd778bd9920452b1b0cbdc29e21 pdns=5832/active/
+05:13:48.704237602 CHANGE pdnsdb 6ed61e5d41286caf02f0a52ada25a9b6dd3a3cd778bd9920452b1b0cbdc29e21 -> bbb1c5ae6fa023c30b6ce47ff837a79aa9a540de339ba3c5955b2d0ef475df68 pdns=5832/active/
+05:13:50.778335126 CHANGE pdnsdb bbb1c5ae6fa023c30b6ce47ff837a79aa9a540de339ba3c5955b2d0ef475df68 -> b903c5da8f069366c62a2de9e88c02339ff8656c0a830b4d6681e16624858ade pdns=5832/active/
+05:14:48.824084701 CHANGE pdnsdb b903c5da8f069366c62a2de9e88c02339ff8656c0a830b4d6681e16624858ade -> 997dbe8c611f3bddf3271455a113bea382c6f5f734be43c0e8821d27894b9a3c pdns=5832/active/
+done
+== agent journal 00:00:00..23:59:59
+2026-09-30T05:10:21.710276+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-30T05:10:21.749571+00:00 dns-debian13 agent[1198]: 2026/09/30 05:10:21 Starting CelikPanel Agent...
+2026-09-30T05:10:21.751420+00:00 dns-debian13 agent[1198]: 2026/09/30 05:10:21 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-30T05:10:21.751763+00:00 dns-debian13 agent[1198]: 2026/09/30 05:10:21 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-09-30T05:10:31.757037+00:00 dns-debian13 agent[1198]: 2026/09/30 05:10:31 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:10:41.763740+00:00 dns-debian13 agent[1198]: 2026/09/30 05:10:41 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:10:51.763268+00:00 dns-debian13 agent[1198]: 2026/09/30 05:10:51 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:11:01.764557+00:00 dns-debian13 agent[1198]: 2026/09/30 05:11:01 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:11:11.754644+00:00 dns-debian13 agent[1198]: 2026/09/30 05:11:11 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:11:21.752796+00:00 dns-debian13 agent[1198]: 2026/09/30 05:11:21 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:11:30.139757+00:00 dns-debian13 systemd[1]: Stopping celikpanel-agent.service - CelikPanel privileged agent...
+2026-09-30T05:11:30.140660+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-30T05:11:30.140969+00:00 dns-debian13 systemd[1]: Stopped celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-30T05:12:52.531486+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-30T05:12:52.574139+00:00 dns-debian13 agent[6958]: 2026/09/30 05:12:52 Starting CelikPanel Agent...
+2026-09-30T05:12:58.657331+00:00 dns-debian13 agent[6958]: 2026/09/30 05:12:58 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-30T05:12:58.657331+00:00 dns-debian13 agent[6958]: 2026/09/30 05:12:58 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:13:08.704232+00:00 dns-debian13 agent[6958]: 2026/09/30 05:13:08 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:13:18.661884+00:00 dns-debian13 agent[6958]: 2026/09/30 05:13:18 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:13:28.658466+00:00 dns-debian13 agent[6958]: 2026/09/30 05:13:28 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:13:38.659046+00:00 dns-debian13 agent[6958]: 2026/09/30 05:13:38 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:13:48.658422+00:00 dns-debian13 agent[6958]: 2026/09/30 05:13:48 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:13:54.933929+00:00 dns-debian13 agent[6958]: 2026/09/30 05:13:54 pdns zone publication remains pending for s2.s1-kill.test at epoch 1: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T05:13:54.933929+00:00 dns-debian13 agent[6958]: dns_peer_enrollment_required
+2026-09-30T05:13:58.657953+00:00 dns-debian13 agent[6958]: 2026/09/30 05:13:58 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:14:08.666449+00:00 dns-debian13 agent[6958]: 2026/09/30 05:14:08 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:14:18.666613+00:00 dns-debian13 agent[6958]: 2026/09/30 05:14:18 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:14:28.658674+00:00 dns-debian13 agent[6958]: 2026/09/30 05:14:28 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:14:38.658490+00:00 dns-debian13 agent[6958]: 2026/09/30 05:14:38 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:14:48.661860+00:00 dns-debian13 agent[6958]: 2026/09/30 05:14:48 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:14:49.668779+00:00 dns-debian13 agent[6958]: 2026/09/30 05:14:49 DNS zone V3 recovery remains pending for s2.s1-kill.test: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T05:14:49.668779+00:00 dns-debian13 agent[6958]: dns_peer_owner_edit_unknown
+2026-09-30T05:14:58.658419+00:00 dns-debian13 agent[6958]: 2026/09/30 05:14:58 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:15:08.667007+00:00 dns-debian13 agent[6958]: 2026/09/30 05:15:08 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:15:18.669372+00:00 dns-debian13 agent[6958]: 2026/09/30 05:15:18 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:15:28.662676+00:00 dns-debian13 agent[6958]: 2026/09/30 05:15:28 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:15:38.666773+00:00 dns-debian13 agent[6958]: 2026/09/30 05:15:38 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:15:48.666398+00:00 dns-debian13 agent[6958]: 2026/09/30 05:15:48 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:15:58.660650+00:00 dns-debian13 agent[6958]: 2026/09/30 05:15:58 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:16:08.667514+00:00 dns-debian13 agent[6958]: 2026/09/30 05:16:08 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:16:18.658037+00:00 dns-debian13 agent[6958]: 2026/09/30 05:16:18 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:16:28.662643+00:00 dns-debian13 agent[6958]: 2026/09/30 05:16:28 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:16:38.658153+00:00 dns-debian13 agent[6958]: 2026/09/30 05:16:38 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:16:48.666406+00:00 dns-debian13 agent[6958]: 2026/09/30 05:16:48 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:16:58.658228+00:00 dns-debian13 agent[6958]: 2026/09/30 05:16:58 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:17:08.658397+00:00 dns-debian13 agent[6958]: 2026/09/30 05:17:08 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:17:18.662371+00:00 dns-debian13 agent[6958]: 2026/09/30 05:17:18 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:17:28.658180+00:00 dns-debian13 agent[6958]: 2026/09/30 05:17:28 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:17:38.657794+00:00 dns-debian13 agent[6958]: 2026/09/30 05:17:38 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:17:48.658443+00:00 dns-debian13 agent[6958]: 2026/09/30 05:17:48 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:17:58.658979+00:00 dns-debian13 agent[6958]: 2026/09/30 05:17:58 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:18:08.667412+00:00 dns-debian13 agent[6958]: 2026/09/30 05:18:08 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:18:18.658276+00:00 dns-debian13 agent[6958]: 2026/09/30 05:18:18 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:18:28.662308+00:00 dns-debian13 agent[6958]: 2026/09/30 05:18:28 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:18:38.658065+00:00 dns-debian13 agent[6958]: 2026/09/30 05:18:38 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:18:48.666517+00:00 dns-debian13 agent[6958]: 2026/09/30 05:18:48 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:18:58.658392+00:00 dns-debian13 agent[6958]: 2026/09/30 05:18:58 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:19:08.658912+00:00 dns-debian13 agent[6958]: 2026/09/30 05:19:08 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:19:18.658510+00:00 dns-debian13 agent[6958]: 2026/09/30 05:19:18 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:19:28.663109+00:00 dns-debian13 agent[6958]: 2026/09/30 05:19:28 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:19:38.666203+00:00 dns-debian13 agent[6958]: 2026/09/30 05:19:38 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:19:48.667249+00:00 dns-debian13 agent[6958]: 2026/09/30 05:19:48 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:19:58.662003+00:00 dns-debian13 agent[6958]: 2026/09/30 05:19:58 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+== pdns journal 00:00:00..23:59:59
+2026-09-30T05:12:48.133831+00:00 dns-debian13 systemd[1]: Starting pdns.service - PowerDNS Authoritative Server...
+2026-09-30T05:12:48.223050+00:00 dns-debian13 pdns_server[5832]: Loading '/usr/lib/x86_64-linux-gnu/pdns/libgsqlite3backend.so'
+2026-09-30T05:12:48.223050+00:00 dns-debian13 pdns_server[5832]: This is a standalone pdns
+2026-09-30T05:12:48.223050+00:00 dns-debian13 pdns_server[5832]: Listening on controlsocket in '/run/pdns/pdns.controlsocket'
+2026-09-30T05:12:48.223050+00:00 dns-debian13 pdns_server[5832]: UDP server bound to 10.0.2.15:53
+2026-09-30T05:12:48.223050+00:00 dns-debian13 pdns_server[5832]: UDP server bound to 192.0.2.10:53
+2026-09-30T05:12:48.223508+00:00 dns-debian13 pdns_server[5832]: TCP server bound to 10.0.2.15:53
+2026-09-30T05:12:48.223508+00:00 dns-debian13 pdns_server[5832]: TCP server bound to 192.0.2.10:53
+2026-09-30T05:12:48.223508+00:00 dns-debian13 pdns_server[5832]: PowerDNS Authoritative Server 4.9.17 (C) PowerDNS.COM BV
+2026-09-30T05:12:48.223508+00:00 dns-debian13 pdns_server[5832]: Using 64-bits mode. Built using gcc 14.2.0.
+2026-09-30T05:12:48.223508+00:00 dns-debian13 pdns_server[5832]: PowerDNS comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it according to the terms of the GPL version 2.
+2026-09-30T05:12:48.293909+00:00 dns-debian13 pdns_server[5832]: Creating backend connection for TCP
+2026-09-30T05:12:48.293909+00:00 dns-debian13 pdns_server[5832]: Primary/secondary communicator launching
+2026-09-30T05:12:48.293909+00:00 dns-debian13 pdns_server[5832]: new CATALOG-HASH '47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T05:12:48.293909+00:00 dns-debian13 pdns_server[5832]: About to create 3 backend threads for UDP
+2026-09-30T05:12:48.287714+00:00 dns-debian13 systemd[1]: Started pdns.service - PowerDNS Authoritative Server.
+2026-09-30T05:12:48.358784+00:00 dns-debian13 pdns_server[5832]: Unable to queue notification of domain 'catalog-c000020a.celikpanel.invalid' to nameserver 'invalid': nameserver does not resolve!
+2026-09-30T05:12:48.442592+00:00 dns-debian13 pdns_server[5832]: Done launching threads, ready to distribute questions
+2026-09-30T05:12:48.445317+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:42890', transfer initiated
+2026-09-30T05:12:48.446913+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:42890', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:12:50.939495+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54638', transfer initiated
+2026-09-30T05:12:50.942313+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54638', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:12:50.961819+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54654', transfer initiated
+2026-09-30T05:12:50.963655+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54654', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:12:53.694391+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54660', transfer initiated
+2026-09-30T05:12:53.695311+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54660', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:12:53.696473+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54662', transfer initiated
+2026-09-30T05:12:53.696473+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54662', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:12:55.354159+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54664', transfer initiated
+2026-09-30T05:12:55.354159+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54664', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:12:55.368035+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54682', transfer initiated
+2026-09-30T05:12:55.368814+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54682', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:12:56.108745+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54688', transfer initiated
+2026-09-30T05:12:56.110273+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54688', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:12:56.126351+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54694', transfer initiated
+2026-09-30T05:12:56.127614+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54694', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:12:58.603342+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54702', transfer initiated
+2026-09-30T05:12:58.604715+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54702', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:12:58.616019+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54726', transfer initiated
+2026-09-30T05:12:58.617277+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:54726', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:13:29.957794+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:50266', transfer initiated
+2026-09-30T05:13:29.958889+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:50266', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:13:31.242233+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:34678', transfer initiated
+2026-09-30T05:13:31.243498+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:34678', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:13:34.587212+00:00 dns-debian13 pdns_server[5832]: Cache clear request for 's2.s1-kill.test$' received from operator
+2026-09-30T05:13:34.627639+00:00 dns-debian13 pdns_server[5832]: Cache clear request for 'catalog-c000020a.celikpanel.invalid$' received from operator
+2026-09-30T05:13:34.672958+00:00 dns-debian13 pdns_server[5832]: Notification request to host 192.0.2.11:53 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T05:13:34.716393+00:00 dns-debian13 pdns_server[5832]: Notification request to host 192.0.2.11:53 for zone 's2.s1-kill.test' received from operator
+2026-09-30T05:13:35.429974+00:00 dns-debian13 pdns_server[5832]: IXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:35838', transfer initiated with serial 1790745168
+2026-09-30T05:13:35.433372+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:35838', transfer initiated
+2026-09-30T05:13:35.477354+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 's2.s1-kill.test', client '192.0.2.11:35845', transfer initiated
+2026-09-30T05:13:36.420721+00:00 dns-debian13 pdns_server[5832]: Received unsuccessful notification report for 's2.s1-kill.test' from 192.0.2.11:53, error: Server Not Authoritative for zone / Not Authorized
+2026-09-30T05:13:36.652633+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:50274', transfer initiated
+2026-09-30T05:13:37.809473+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:35896', transfer initiated
+2026-09-30T05:13:42.792099+00:00 dns-debian13 pdns_server[5832]: Cache clear request for 's2.s1-kill.test$' received from operator
+2026-09-30T05:13:42.846049+00:00 dns-debian13 pdns_server[5832]: Cache clear request for 'catalog-c000020a.celikpanel.invalid$' received from operator
+2026-09-30T05:13:42.900911+00:00 dns-debian13 pdns_server[5832]: Notification request to host 192.0.2.11:53 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T05:13:42.934286+00:00 dns-debian13 pdns_server[5832]: Notification request to host 192.0.2.11:53 for zone 's2.s1-kill.test' received from operator
+2026-09-30T05:13:43.475901+00:00 dns-debian13 pdns_server[5832]: IXFR-out zone 's2.s1-kill.test', client '192.0.2.11:35994', transfer initiated with serial 2026092801
+2026-09-30T05:13:43.477136+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 's2.s1-kill.test', client '192.0.2.11:35994', transfer initiated
+2026-09-30T05:13:44.510931+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:42062', transfer initiated
+2026-09-30T05:13:45.628423+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:46927', transfer initiated
+2026-09-30T05:13:48.424887+00:00 dns-debian13 pdns_server[5832]: new CATALOG-HASH '1Rf5KuuzsJMQRGXVLYxlmzvq+Z93Mwk4oSSCrR9KFCA=' for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T05:13:48.516528+00:00 dns-debian13 pdns_server[5832]: Unable to queue notification of domain 's2.s1-kill.test' to nameserver 'ns1.s1-kill.test': nameserver does not resolve!
+2026-09-30T05:13:48.525511+00:00 dns-debian13 pdns_server[5832]: Unable to queue notification of domain 'catalog-c000020a.celikpanel.invalid' to nameserver 'invalid': nameserver does not resolve!
+2026-09-30T05:13:48.576151+00:00 dns-debian13 pdns_server[5832]: IXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:46977', transfer initiated with serial 1790745169
+2026-09-30T05:13:48.576428+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:46977', transfer initiated
+2026-09-30T05:13:50.386533+00:00 dns-debian13 pdns_server[5832]: Cache clear request for 's2.s1-kill.test$' received from operator
+2026-09-30T05:13:50.418790+00:00 dns-debian13 pdns_server[5832]: Cache clear request for 'catalog-c000020a.celikpanel.invalid$' received from operator
+2026-09-30T05:13:50.478292+00:00 dns-debian13 pdns_server[5832]: Notification request to host 192.0.2.11:53 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T05:13:50.539842+00:00 dns-debian13 pdns_server[5832]: IXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:47022', transfer initiated with serial 1790745228
+2026-09-30T05:13:50.541393+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:47022', transfer initiated
+2026-09-30T05:13:50.544466+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:47022', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:13:53.941874+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:36710', transfer initiated
+2026-09-30T05:13:53.943912+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:36710', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:13:54.506369+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:36726', transfer initiated
+2026-09-30T05:13:54.507433+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:36726', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:14:47.384600+00:00 dns-debian13 pdns_server[5832]: Cache clear request for 's2.s1-kill.test$' received from operator
+2026-09-30T05:14:47.420151+00:00 dns-debian13 pdns_server[5832]: Cache clear request for 'catalog-c000020a.celikpanel.invalid$' received from operator
+2026-09-30T05:14:47.455483+00:00 dns-debian13 pdns_server[5832]: Notification request to host 192.0.2.11:53 for zone 'catalog-c000020a.celikpanel.invalid' received from operator
+2026-09-30T05:14:47.502413+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:39138', transfer initiated
+2026-09-30T05:14:47.502413+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:39138', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:14:48.563570+00:00 dns-debian13 pdns_server[5832]: new CATALOG-HASH '47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T05:14:48.600866+00:00 dns-debian13 pdns_server[5832]: Unable to queue notification of domain 'catalog-c000020a.celikpanel.invalid' to nameserver 'invalid': nameserver does not resolve!
+2026-09-30T05:14:48.622362+00:00 dns-debian13 pdns_server[5832]: IXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:47787', transfer initiated with serial 1790745229
+2026-09-30T05:14:48.622362+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:47787', transfer initiated
+2026-09-30T05:14:48.626380+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:47787', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:16:31.793181+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:46644', transfer initiated
+2026-09-30T05:16:31.794084+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:46644', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+2026-09-30T05:16:33.721365+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:46701', transfer initiated
+2026-09-30T05:16:33.722403+00:00 dns-debian13 pdns_server[5832]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:46701', catalog zone 'catalog-c000020a.celikpanel.invalid' has no members
+== peer sampler cat serial transitions
+######## 	2026-09-30T05:12:21.102905+00:00 	10:cat:udp=ERR(TimeoutError)
+11:cat:udp=noaa/rc2/	2026-09-30T05:12:28.206788+00:00 	10:cat:udp=ERR(TimeoutError)
+11:cat:udp=noaa/rc2/	2026-09-30T05:12:35.259172+00:00 	10:cat:udp=ERR(TimeoutError)
+11:cat:udp=noaa/rc2/	2026-09-30T05:12:42.315776+00:00 	10:cat:udp=ERR(TimeoutError)
+11:cat:udp=noaa/rc2/	2026-09-30T05:12:49.338633+00:00 	10:cat:udp=aa/rc0/1790745168
+11:cat:udp=aa/rc0/1790745168	2026-09-30T05:12:51.582386+00:00 	10:cat:udp=aa/rc0/1790745168
+11:cat:udp=aa/rc0/1790745168	2026-09-30T05:12:53.825291+00:00 	10:cat:udp=aa/rc0/1790745168
+11:cat:udp=aa/rc0/1790745168	2026-09-30T05:12:56.056937+00:00 	10:cat:udp=aa/rc0/1790745168
+11:cat:udp=aa/rc0/1790745168	2026-09-30T05:12:58.910096+00:00 	10:cat:udp=aa/rc0/1790745168
+11:cat:udp=aa/rc0/1790745168	2026-09-30T05:13:01.172329+00:00 	10:cat:udp=aa/rc0/1790745168
+11:cat:udp=aa/rc0/1790745168	2026-09-30T05:13:03.397644+00:00 	10:cat:udp=aa/rc0/1790745168
+11:cat:udp=aa/rc0/1790745168	2026-09-30T05:13:05.630450+00:00 	10:cat:udp=aa/rc0/1790745168
+11:cat:udp=aa/rc0/1790745168	2026-09-30T05:13:07.861764+00:00 	10:cat:udp=aa/rc0/1790745168
+11:cat:udp=aa/rc0/1790745168	2026-09-30T05:13:10.766635+00:00 	10:cat:udp=aa/rc0/1790745168
+11:cat:udp=aa/rc0/1790745168	2026-09-30T05:13:13.017621+00:00 	10:cat:udp=aa/rc0/1790745168
+11:cat:udp=aa/rc0/1790745168	2026-09-30T05:13:15.258215+00:00 	10:cat:udp=aa/rc0/1790745168
+11:cat:udp=aa/rc0/1790745168	2026-09-30T05:13:17.481077+00:00 	10:cat:udp=aa/rc0/1790745168
+11:cat:udp=aa/rc0/1790745168	2026-09-30T05:13:19.709914+00:00 	10:cat:udp=aa/rc0/1790745168
+11:cat:udp=aa/rc0/1790745168	2026-09-30T05:13:21.909258+00:00 	10:cat:udp=aa/rc0/1790745168
+11:cat:udp=aa/rc0/1790745168	2026-09-30T05:13:24.100301+00:00 	10:cat:udp=aa/rc0/1790745168
+11:cat:udp=aa/rc0/1790745168	2026-09-30T05:13:26.329073+00:00 	10:cat:udp=aa/rc0/1790745168
+11:cat:udp=aa/rc0/1790745168	2026-09-30T05:13:28.558022+00:00 	10:cat:udp=aa/rc0/1790745168
+11:cat:udp=aa/rc0/1790745168	2026-09-30T05:13:30.791214+00:00 	10:cat:udp=aa/rc0/1790745168
+11:cat:udp=aa/rc0/1790745168	2026-09-30T05:13:33.023508+00:00 	10:cat:udp=aa/rc0/1790745168
+11:cat:udp=aa/rc0/1790745168	2026-09-30T05:13:35.270172+00:00 	10:cat:udp=aa/rc0/1790745169
+11:cat:udp=aa/rc0/1790745169	2026-09-30T05:13:37.464734+00:00 	10:cat:udp=aa/rc0/1790745169
+11:cat:udp=aa/rc0/1790745169	2026-09-30T05:13:39.695704+00:00 	10:cat:udp=aa/rc0/1790745169
+11:cat:udp=aa/rc0/1790745169	2026-09-30T05:13:41.925323+00:00 	10:cat:udp=aa/rc0/1790745169
+11:cat:udp=aa/rc0/1790745169	2026-09-30T05:13:44.157852+00:00 	10:cat:udp=aa/rc0/1790745169
+11:cat:udp=aa/rc0/1790745169	2026-09-30T05:13:46.388634+00:00 	10:cat:udp=aa/rc0/1790745169
+11:cat:udp=aa/rc0/1790745169	2026-09-30T05:13:48.635810+00:00 	10:cat:udp=aa/rc0/1790745228
+11:cat:udp=aa/rc0/1790745228	2026-09-30T05:13:50.875736+00:00 	10:cat:udp=aa/rc0/1790745229
+11:cat:udp=aa/rc0/1790745229	2026-09-30T05:13:53.110862+00:00 	10:cat:udp=aa/rc0/1790745229
+11:cat:udp=aa/rc0/1790745229	2026-09-30T05:13:55.458855+00:00 	10:cat:udp=aa/rc0/1790745229
+11:cat:udp=aa/rc0/1790745229	2026-09-30T05:13:57.736528+00:00 	10:cat:udp=aa/rc0/1790745229
+11:cat:udp=aa/rc0/1790745229	2026-09-30T05:13:59.972017+00:00 	10:cat:udp=aa/rc0/1790745229
+11:cat:udp=aa/rc0/1790745229	2026-09-30T05:14:02.210519+00:00 	10:cat:udp=aa/rc0/1790745229
+11:cat:udp=aa/rc0/1790745229	2026-09-30T05:14:04.438852+00:00 	10:cat:udp=aa/rc0/1790745229
+11:cat:udp=aa/rc0/1790745229	2026-09-30T05:14:06.663729+00:00 	10:cat:udp=aa/rc0/1790745229
+11:cat:udp=aa/rc0/1790745229	2026-09-30T05:14:08.886780+00:00 	10:cat:udp=aa/rc0/1790745229
+11:cat:udp=aa/rc0/1790745229	2026-09-30T05:14:11.127618+00:00 	10:cat:udp=aa/rc0/1790745229
+11:cat:udp=aa/rc0/1790745229	2026-09-30T05:14:13.358193+00:00 	10:cat:udp=aa/rc0/1790745229
+11:cat:udp=aa/rc0/1790745229	2026-09-30T05:14:15.586321+00:00 	10:cat:udp=aa/rc0/1790745229
+11:cat:udp=aa/rc0/1790745229	2026-09-30T05:14:17.813381+00:00 	10:cat:udp=aa/rc0/1790745229
+11:cat:udp=aa/rc0/1790745229	2026-09-30T05:14:20.037719+00:00 	10:cat:udp=aa/rc0/1790745229
+11:cat:udp=aa/rc0/1790745229	2026-09-30T05:14:22.263017+00:00 	10:cat:udp=aa/rc0/1790745229
+11:cat:udp=aa/rc0/1790745229	2026-09-30T05:14:24.700825+00:00 	10:cat:udp=aa/rc0/1790745229
+11:cat:udp=aa/rc0/1790745229	2026-09-30T05:14:26.939903+00:00 	10:cat:udp=aa/rc0/1790745229
+11:cat:udp=aa/rc0/1790745229	2026-09-30T05:14:29.166831+00:00 	10:cat:udp=aa/rc0/1790745229
+11:cat:udp=aa/rc0/1790745229	2026-09-30T05:14:31.396055+00:00 	10:cat:udp=aa/rc0/1790745229
+11:cat:udp=aa/rc0/1790745229	2026-09-30T05:14:33.629832+00:00 	10:cat:udp=aa/rc0/1790745229
+11:cat:udp=aa/rc0/1790745229	2026-09-30T05:14:35.860374+00:00 	10:cat:udp=aa/rc0/1790745229
+11:cat:udp=aa/rc0/1790745229	2026-09-30T05:14:38.100466+00:00 	10:cat:udp=aa/rc0/1790745229
+11:cat:udp=aa/rc0/1790745229	2026-09-30T05:14:40.332856+00:00 	10:cat:udp=aa/rc0/1790745229
+11:cat:udp=aa/rc0/1790745229	2026-09-30T05:14:42.562953+00:00 	10:cat:udp=aa/rc0/1790745229
+11:cat:udp=aa/rc0/1790745229	2026-09-30T05:14:44.799659+00:00 	10:cat:udp=aa/rc0/1790745229
+11:cat:udp=aa/rc0/1790745229	2026-09-30T05:14:47.090200+00:00 	10:cat:udp=aa/rc0/1790745229
+11:cat:udp=aa/rc0/1790745229	2026-09-30T05:14:49.323049+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:14:51.546996+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:14:53.779063+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:14:56.010095+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:14:58.243066+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:15:00.484388+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:15:02.716585+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:15:04.943835+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:15:07.184992+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:15:09.418664+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:15:11.647558+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:15:13.875412+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:15:16.109204+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:15:18.358045+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:15:20.602783+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:15:22.836608+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:15:25.080925+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:15:27.311672+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:15:29.544165+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:15:31.771188+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:15:33.999018+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:15:36.233596+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:15:38.464511+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:15:40.692507+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:15:42.924709+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:15:45.161191+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:15:47.389378+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:15:49.619936+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:15:51.856499+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:15:54.079060+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:15:56.301973+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:15:58.538673+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:16:00.767428+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:16:02.994793+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:16:05.230937+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:16:07.463263+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:16:09.686918+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:16:11.914567+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:16:14.149977+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:16:16.382025+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:16:18.609581+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:16:20.833642+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:16:23.061740+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:16:25.289575+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:16:27.517475+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:16:29.751180+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:16:31.977714+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:16:34.209149+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:16:36.378047+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:16:38.608975+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:16:40.837415+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:16:43.065816+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:16:45.302749+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:16:47.528497+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:16:49.764236+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:16:51.993017+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:16:54.228269+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:16:56.455921+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:16:58.683963+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:17:00.911782+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:17:03.151752+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:17:05.375757+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:17:07.603601+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:17:09.827962+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:17:12.160219+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:17:14.387661+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:17:16.619530+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:17:18.850693+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:17:21.082475+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:17:23.314827+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:17:25.542369+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:17:27.774452+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:17:29.998359+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:17:32.234148+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:17:34.465937+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:17:36.694169+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:17:38.886075+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:17:41.113517+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:17:43.337652+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:17:45.567003+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:17:47.790037+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:17:50.018321+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:17:52.253684+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:17:54.491826+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:17:56.726984+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:17:58.953734+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:18:01.185879+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:18:03.409742+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:18:05.639696+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:18:07.865592+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:18:10.101949+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:18:12.329004+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:18:14.564651+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:18:16.801235+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:18:19.036603+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:18:21.263874+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:18:23.499968+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:18:25.727482+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:18:27.950412+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:18:30.174616+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:18:32.402955+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:18:34.634320+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:18:36.858170+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:18:39.081977+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:18:41.314172+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:18:43.546820+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:18:45.770584+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:18:48.002881+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:18:50.238197+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:18:52.472709+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:18:54.779172+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:18:57.014373+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:18:59.239157+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:19:01.464381+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:19:03.775485+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:19:06.000940+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:19:08.232257+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:19:10.456890+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:19:12.680893+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:19:14.909025+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:19:17.132925+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:19:19.357011+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:19:21.581646+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:19:23.805893+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:19:26.047976+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:19:28.282172+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:19:30.513973+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:19:32.737995+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:19:34.965217+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:19:37.507766+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:19:39.733682+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:19:41.962018+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:19:44.407491+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:19:46.633004+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:19:49.505067+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:19:51.739006+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:19:53.963172+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:19:56.191316+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288	2026-09-30T05:19:58.414461+00:00 	10:cat:udp=aa/rc0/1790745288
+11:cat:udp=aa/rc0/1790745288		

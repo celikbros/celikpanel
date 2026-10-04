@@ -1,0 +1,139 @@
+{
+  "agreement": {
+    "known_sources": [
+      "api",
+      "cli"
+    ],
+    "phase": {
+      "api": "running",
+      "cli": "running"
+    },
+    "reasons": [],
+    "sources": [
+      "api",
+      "cli",
+      "shell"
+    ],
+    "verdict": "agree"
+  },
+  "cli": {
+    "boot_id": "74a7b5cd-6de2-45fb-9b9f-a7be53e59a19",
+    "captured_at": "2026-09-30T19:57:15.509702Z",
+    "en": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "The update is being applied; the panel may be unavailable for a short time. Nothing to do now: check this same request again in a minute. Checking does not restart the update.\nRequest: ded53ec59a2d64864e45c34d5a675bbd\nRecorded at: 2026-09-30T19:57:15Z\nThis is a recorded observation; current service health was not checked.\nRecorded state (for support): phase=running reason=update_running proof=none\n"
+    },
+    "json": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "{\"schema\":\"celikpanel-recovery-status/v1\",\"request_id\":\"ded53ec59a2d64864e45c34d5a675bbd\",\"observation\":\"known\",\"phase\":\"running\",\"terminal_proof\":\"none\",\"reason\":\"update_running\",\"observed_at\":\"2026-09-30T19:57:15Z\"}\n"
+    },
+    "tr": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "Güncelleme uygulanıyor; panel kısa bir süre erişilemeyebilir. Şimdi yapmanız gereken bir şey yok: bir dakika sonra aynı işlemi yeniden sorgulayın. Sorgulamak güncellemeyi yeniden başlatmaz.\nİşlem: ded53ec59a2d64864e45c34d5a675bbd\nKayıt zamanı: 2026-09-30T19:57:15Z\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\nKayıtlı durum (destek için): phase=running reason=update_running proof=none\n"
+    }
+  },
+  "guidance_api": {
+    "actionable": true,
+    "keys": [
+      "recovery.phase.running",
+      "recovery.next.running"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "texts": {
+      "en": [
+        "Last recorded step: update in progress",
+        "The server last reported work on this update. Wait for the next recorded result; checking this page does not restart it."
+      ],
+      "tr": [
+        "Kaydedilmiş son adım: güncelleme sürüyor",
+        "Sunucu son olarak bu güncelleme üzerinde çalıştığını bildirdi. Sonraki kayıtlı sonucu bekleyin; bu sayfayı kontrol etmek işlemi yeniden başlatmaz."
+      ]
+    }
+  },
+  "guidance_cli": {
+    "actionable": true,
+    "keys": [
+      "recovery.phase.running",
+      "recovery.next.running"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "texts": {
+      "en": [
+        "Last recorded step: update in progress",
+        "The server last reported work on this update. Wait for the next recorded result; checking this page does not restart it."
+      ],
+      "tr": [
+        "Kaydedilmiş son adım: güncelleme sürüyor",
+        "Sunucu son olarak bu güncelleme üzerinde çalıştığını bildirdi. Sonraki kayıtlı sonucu bekleyin; bu sayfayı kontrol etmek işlemi yeniden başlatmaz."
+      ]
+    }
+  },
+  "index": 0,
+  "observed": {
+    "observation": "known",
+    "observed_at": "2026-09-30T19:57:15Z",
+    "phase": "running",
+    "reason": "update_running",
+    "request_id": "ded53ec59a2d64864e45c34d5a675bbd",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "none"
+  },
+  "recovery_api": {
+    "body": {
+      "observation": "known",
+      "observed_at": "2026-09-30T19:57:15Z",
+      "panel_state": "ready",
+      "phase": "running",
+      "reason": "update_running",
+      "request_id": "ded53ec59a2d64864e45c34d5a675bbd",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "none"
+    },
+    "http": 200
+  },
+  "t": 1790798234.7841692,
+  "update_card": {
+    "keys": [
+      "panelUpdate.queued"
+    ],
+    "missing_keys": [],
+    "summary": null,
+    "texts": {
+      "en": [
+        "The update is queued."
+      ],
+      "tr": [
+        "Güncelleme sırada."
+      ]
+    },
+    "untranslated_summary": false
+  },
+  "update_status": {
+    "body": {
+      "created_at": "2026-09-30T19:57:15.164789765Z",
+      "found": true,
+      "request_id": "ded53ec59a2d64864e45c34d5a675bbd",
+      "status": "queued",
+      "target": {
+        "arch": "amd64",
+        "archive_sha256": "4b95724bb8c84300ce0b600a86c6690461a2668158ffef7d63814ec00cc92c40",
+        "archive_size": "67006539",
+        "commit": "36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb",
+        "os": "linux",
+        "sequence": "82",
+        "version": "v0.1.0-alpha.82"
+      },
+      "updated_at": "2026-09-30T19:57:15.164789765Z"
+    },
+    "http": 200
+  },
+  "utc": "2026-09-30T19:57:14Z"
+}

@@ -1,0 +1,7 @@
+#!/bin/bash
+W=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/pair5
+C=pair-accept__bind-debian13__bind-arch__p5t1
+bash $W/coll-extra.sh $C p5t1 debian13 2201 primary bind > /dev/null
+bash $W/coll-extra.sh $C p5t1 arch 2202 secondary bind > /dev/null
+O=/root/cp-pair5/obs/p5t1
+for f in $O/arch-bind-catalog-stanzas.txt $O/debian13-bind-catalog-stanzas.txt $O/debian13-agent-panel-deletion-journal.txt $O/arch-agent-panel-deletion-journal.txt; do echo "=================== $f"; cut -c1-400 $f; done

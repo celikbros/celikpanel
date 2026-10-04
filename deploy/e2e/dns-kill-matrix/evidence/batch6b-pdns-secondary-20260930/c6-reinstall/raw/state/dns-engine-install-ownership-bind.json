@@ -1,0 +1,1 @@
+{"schema":"celikpanel-dns-engine-install-ownership/v1","engine":"bind","package_manager":"apt","packages":["bind9"],"missing_before":["bind9"],"manifest_qualifier":"dns-engine-switch/v1:sha256:41bd8da70c8a5c7930b325c9a956deae6877ed407fd58f11d475d8b4ffd0fb95","mutation_request_id":"b66cbdc5c51b25639364f76a7113a214","mutation_owner_id":"9e83eec8b6a4a0b03f5b3f5f0859a4b9"}

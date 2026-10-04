@@ -1,0 +1,32 @@
+2026-09-29T14:44:19.077375+00:00 dns-arch systemd[1]: Started CelikPanel privileged agent.
+2026-09-29T14:44:19.095784+00:00 dns-arch agent[1088]: 2026/09/29 14:44:19 Starting CelikPanel Agent...
+2026-09-29T14:44:19.100484+00:00 dns-arch agent[1088]: 2026/09/29 14:44:19 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-29T14:44:19.100606+00:00 dns-arch agent[1088]: 2026/09/29 14:44:19 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-09-29T14:44:29.110805+00:00 dns-arch agent[1088]: 2026/09/29 14:44:29 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T14:44:32.886313+00:00 dns-arch systemd[1]: Stopping CelikPanel privileged agent...
+2026-09-29T14:44:32.886717+00:00 dns-arch systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-29T14:44:32.887017+00:00 dns-arch systemd[1]: Stopped CelikPanel privileged agent.
+2026-09-29T14:46:37.342645+00:00 dns-arch systemd[1]: Started CelikPanel privileged agent.
+2026-09-29T14:46:37.362357+00:00 dns-arch agent[9518]: 2026/09/29 14:46:37 Starting CelikPanel Agent...
+2026-09-29T14:46:37.989445+00:00 dns-arch agent[9518]: 2026/09/29 14:46:37 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-29T14:46:37.989611+00:00 dns-arch agent[9518]: 2026/09/29 14:46:37 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T14:46:47.990109+00:00 dns-arch agent[9518]: 2026/09/29 14:46:47 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T14:46:57.990696+00:00 dns-arch agent[9518]: 2026/09/29 14:46:57 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T14:47:07.990492+00:00 dns-arch agent[9518]: 2026/09/29 14:47:07 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T14:47:09.481755+00:00 dns-arch systemd[1]: Stopping CelikPanel privileged agent...
+2026-09-29T14:47:09.488838+00:00 dns-arch systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-29T14:47:09.490351+00:00 dns-arch systemd[1]: Stopped CelikPanel privileged agent.
+-- Boot b819bfc89e3c4b2d925269404972fbdf --
+2026-09-29T14:47:26.027262+00:00 dns-arch systemd[1]: Started CelikPanel privileged agent.
+2026-09-29T14:47:26.234845+00:00 dns-arch agent[367]: 2026/09/29 14:47:26 Starting CelikPanel Agent...
+2026-09-29T14:47:26.264204+00:00 dns-arch agent[367]: 2026/09/29 14:47:26 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-29T14:47:26.268761+00:00 dns-arch agent[367]: 2026/09/29 14:47:26 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T14:47:36.270977+00:00 dns-arch agent[367]: 2026/09/29 14:47:36 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T14:47:46.274430+00:00 dns-arch agent[367]: 2026/09/29 14:47:46 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T14:47:56.269645+00:00 dns-arch agent[367]: 2026/09/29 14:47:56 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T14:48:06.270489+00:00 dns-arch agent[367]: 2026/09/29 14:48:06 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T14:48:16.269117+00:00 dns-arch agent[367]: 2026/09/29 14:48:16 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T14:48:26.269850+00:00 dns-arch agent[367]: 2026/09/29 14:48:26 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T14:48:36.269608+00:00 dns-arch agent[367]: 2026/09/29 14:48:36 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T14:48:46.279288+00:00 dns-arch agent[367]: 2026/09/29 14:48:46 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T14:48:56.270267+00:00 dns-arch agent[367]: 2026/09/29 14:48:56 Panel certificate activation remains pending: panel TLS directory is not root-authenticated

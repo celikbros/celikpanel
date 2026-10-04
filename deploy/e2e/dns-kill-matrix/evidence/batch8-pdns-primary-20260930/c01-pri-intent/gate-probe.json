@@ -1,0 +1,24 @@
+{
+  "gate_probe": {
+    "agent_error": "a valid durable service mutation lease is required",
+    "command": {
+      "argv": [
+        "/opt/celikpanel/bin/dns-kill-trigger",
+        "rpc-gate-probe",
+        "--scenario",
+        "/var/lib/celikpanel-dns-kill-matrix/scenario.json",
+        "--timeout",
+        "60s"
+      ],
+      "duration_seconds": 0.008159,
+      "output_bytes": 449,
+      "output_sha256": "09f29c6690b7613969c2d067042729449732b5d4d92b287a6b0991c63af1ea9d",
+      "output_truncated": false,
+      "returncode": 0
+    },
+    "detail": "the Agent admitted the manifest past its product gate and refused only the missing lease; nothing was changed",
+    "gate": "open",
+    "manifest_qualifier": "dns-engine-switch/v1:sha256:8c27f70fec9a59c5a3a0dcdc3c7ab32355ab11fc4ebfe3028e3a74ff4e55e5c5"
+  },
+  "source": "result.json gate_probe (verbatim)"
+}

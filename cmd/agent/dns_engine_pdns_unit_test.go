@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -89,6 +90,7 @@ func TestPDNSSwitchAndAdoptionRollbackPreserveCallerDeadline(t *testing.T) {
 				<-commandCtx.Done()
 				return commandCtx.Err()
 			},
+			verifyStopped:               func(context.Context) error { return nil },
 			restorePDNSDatabaseSnapshot: func() error { return nil },
 			restoreConfigs:              func() error { return nil },
 			restoreState:                func() error { return nil },
@@ -112,12 +114,14 @@ func TestPDNSSwitchAndAdoptionRollbackPreserveCallerDeadline(t *testing.T) {
 		)
 		defer cancel()
 		started := time.Now()
-		err := rollbackPDNSAdoptionWithOps(
-			ctx,
-			func() error { return nil },
-			func(commandCtx context.Context) error {
-				<-commandCtx.Done()
-				return commandCtx.Err()
+		err := dnsenginerecovery.RollbackPDNSAdoption(
+			ctx, dnsenginerecovery.PDNSAdoptionRollbackOps{
+				ProveConfigs: func(context.Context) error { return nil },
+				RestoreState: func(context.Context) error { return nil },
+				VerifyRestored: func(commandCtx context.Context) error {
+					<-commandCtx.Done()
+					return commandCtx.Err()
+				},
 			},
 		)
 		if !errors.Is(err, context.DeadlineExceeded) {

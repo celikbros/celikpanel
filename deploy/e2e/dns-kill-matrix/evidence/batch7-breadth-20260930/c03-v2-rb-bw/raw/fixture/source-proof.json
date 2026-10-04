@@ -1,0 +1,56 @@
+{
+  "authoritative_preflight": {
+    "address": "10.0.2.15",
+    "claimed": true,
+    "name": "www.s1-kill.test",
+    "port": 53,
+    "tcp": true,
+    "type": "A",
+    "udp": true
+  },
+  "cell_id": "bind__rolled-back__before-write__standalone__peer-reachable",
+  "engine": "pdns",
+  "engine_epoch": 1,
+  "engine_state_identity": {
+    "acquisition": {
+      "engine": "pdns",
+      "engine_epoch": 1,
+      "manifest_qualifier": "dns-engine-switch/v1:sha256:98c8cf65c8e88de929b531ceb433b47b9ebd67b541110e1d78922bbdbce686fc",
+      "mode": "adopt",
+      "mutation_owner_id": "ba3db53554e2881a5472fb4f43066ee6",
+      "mutation_request_id": "f0a27435905bbfe16626e66cdb0507f9",
+      "schema": "celikpanel-dns-engine-acquisition/v1",
+      "source_revision": 0
+    },
+    "publication": {
+      "acquisition_sha256": "58dd2819b1eea45209a3dee8ff91b66124b67a2e38be61c4e9362818df1cd716",
+      "schema": "celikpanel-dns-engine-publication/v1"
+    },
+    "schema": "celikpanel-dns-engine-state/v2"
+  },
+  "engine_state_receipt_path": "/var/lib/celikpanel-agent-private/dns-engine-state.json",
+  "engine_state_receipt_sha256": "25f48fe7583490fb112f826423117dffbea4e3882eaca73e56bbd63c5c1b0b90",
+  "external_pdns_preimage_path": "absent",
+  "external_pdns_preimage_sha256": "absent",
+  "identity_receipt_path": "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+  "identity_receipt_preexisting": false,
+  "receipt_origin": "production-pdns-adopt-normalized",
+  "scenario_sha256": "3bc1460074a57105ad1bb1ecdc56cec8ddbd6e37531443da0a7c18e2ce11dc26",
+  "schema": "celikpanel/dns-kill-source-proof/v1",
+  "serving_before_tagged_agent": true,
+  "source_adoption_proof_path": "/var/lib/celikpanel-dns-kill-matrix/source-adoption-pdns.json",
+  "source_adoption_proof_sha256": "3d3426917998b348f5ae7ad7bb10c41808db03010a97d28b747ed9c93c724b51",
+  "source_fixture": "managed-pdns",
+  "source_normalization_identity_receipt_path": "/var/lib/celikpanel-dns-kill-matrix/source-normalization-pdns-identity.json",
+  "source_normalization_identity_receipt_sha256": "3e2c1bc0bf85de819d6e8f42a24df40dcd3b251543d772b84e6137f8d6b0d214",
+  "source_preinstall_proof_path": "/var/lib/celikpanel-dns-kill-matrix/source-preinstall-pdns.json",
+  "source_preinstall_proof_sha256": "91e6bf0f4e047642a2f31dff3e36deba2945443f12bfd0ebb1b3edba3f0c82cb",
+  "source_revision": 0,
+  "source_setup_identity_receipt_sha256": "e29ad9f298bf7e6fc7fc9dfa872b7d4ba8e2e8564db5608a01e0b8c09f3bb2c5",
+  "source_setup_scenario_sha256": "254bf07e78085a6c9bc92785ad67e4f3759cb79e537aee08442da9a3ea0066a3",
+  "uninitialized_global_port53": {
+    "authoritative_answer_observed": false,
+    "tcp_bindable": false,
+    "udp_bindable": false
+  }
+}

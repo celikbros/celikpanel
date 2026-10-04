@@ -1,0 +1,15 @@
+PRETTY_NAME="Debian GNU/Linux 13 (trixie)"
+NAME="Debian GNU/Linux"
+VERSION_ID="13"
+VERSION="13 (trixie)"
+VERSION_CODENAME=trixie
+DEBIAN_VERSION_FULL=13.6
+ID=debian
+HOME_URL="https://www.debian.org/"
+SUPPORT_URL="https://www.debian.org/support"
+BUG_REPORT_URL="https://bugs.debian.org/"
+Linux dns-debian13 6.12.105+deb13-cloud-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.12.105-1 (2026-08-24) x86_64 GNU/Linux
+boot_id=d9e82807-0949-421c-9108-932683d608af
+machine_id=991d9a1e388f5000b970e9452bda128d
+product_uuid=991d9a1e-388f-5000-b970-e9452bda128d
+Tue Sep 29 13:20:40 UTC 2026

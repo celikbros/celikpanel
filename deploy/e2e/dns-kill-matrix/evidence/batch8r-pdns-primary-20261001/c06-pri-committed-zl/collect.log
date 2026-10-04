@@ -1,0 +1,20 @@
+### collect 2026-09-29T23:26:54.197862012Z
+last watcher dir: /var/tmp/cp-b8r-watch
+request id: 076c692ac1346f2b9c6a0df468b0e9aa
+ownerpost rc=0
+smstatus rc=0
+probe rc=0
+pdnsdb rc=0
+bindsec rc=0
+peer journal rc=0
+peerloop rc=0 lines=49
+cell directory: /var/tmp/cp-b8r-1001/cells/7392457812ac089a866de6ec
+total 24
+drwx------ 2 root root 4096 Sep 30 02:26 .
+drwxr-xr-x 3 root root 4096 Sep 30 02:27 ..
+-rw------- 1 root root 2231 Sep 30 02:26 peer-verdict.json
+-rw------- 1 root root 9452 Sep 30 02:26 zone-lifecycle.json
+23:26:37.403773434 CHANGE pdnsdb ca1ce5f3961ae5ac0a0e8676f7abc2c3ed0fe0f2d71f6ca219c121e3ddba7a26 -> aa2ba4ca30a25a7e4c924226f55beaea75f4fcf9c214826fab2691e29d54a766 pdns=4445/active/
+23:26:45.659286875 CHANGE pdnsdb aa2ba4ca30a25a7e4c924226f55beaea75f4fcf9c214826fab2691e29d54a766 -> dc07c4037a71893eaaa2dc6d1f76a4d7f5dd25069a362622f9e8ac30acb9d976 pdns=4445/active/
+done
+tar rc=0 size=2672640

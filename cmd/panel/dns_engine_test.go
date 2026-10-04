@@ -22,19 +22,22 @@ import (
 
 type dnsEngineTestAgent struct {
 	durableMutationRPCFixture
-	mu                         sync.Mutex
-	runtimes                   map[transport.DNSEngine]transport.DNSBackendRuntimeState
-	port53Conflict             bool
-	readinessCalls             int
-	onReadiness                func(int)
-	readinessAfterSwitchError  string
-	dnssec                     bool
-	dnssecUnavailable          bool
-	dnssecCalls                int
-	switchCalls                int
-	switchRequests             []transport.SwitchDNSEngineV1Request
-	switchError                string
-	switchErrorLeavesPackage   bool
+	mu                        sync.Mutex
+	runtimes                  map[transport.DNSEngine]transport.DNSBackendRuntimeState
+	port53Conflict            bool
+	readinessCalls            int
+	onReadiness               func(int)
+	readinessAfterSwitchError string
+	dnssec                    bool
+	dnssecUnavailable         bool
+	dnssecCalls               int
+	switchCalls               int
+	switchRequests            []transport.SwitchDNSEngineV1Request
+	switchError               string
+	switchErrorLeavesPackage  bool
+	// switchErrorLeavesStandby also reports the left package as the Agent's
+	// rollback standby (a rolled-back first install).
+	switchErrorLeavesStandby   bool
 	onSwitch                   func()
 	firewallEnabled            bool
 	firewallError              string
@@ -328,6 +331,7 @@ func (agent *dnsEngineTestAgent) Version(
 	_ *transport.Empty,
 	response *transport.AgentVersionResponse,
 ) error {
+	response.Commit = strings.TrimSpace(buildCommit)
 	if agent.omitDNSCapabilities {
 		response.Capabilities = []string{transport.AgentCapabilityFirewallApplyV2}
 		return nil
@@ -560,6 +564,7 @@ func (agent *dnsEngineTestAgent) SwitchDNSEngineV1(
 		if agent.switchErrorLeavesPackage {
 			target := agent.runtimes[request.TargetEngine]
 			target.Installed, target.Running, target.Managed = true, false, true
+			target.RollbackStandby = agent.switchErrorLeavesStandby
 			agent.runtimes[request.TargetEngine] = target
 		}
 		response.Error = agent.switchError
@@ -568,6 +573,7 @@ func (agent *dnsEngineTestAgent) SwitchDNSEngineV1(
 	for engine, runtime := range agent.runtimes {
 		if engine == request.TargetEngine {
 			runtime.Installed, runtime.Running, runtime.Managed = true, true, true
+			runtime.RollbackStandby = false
 			runtime.PairReady = request.Topology == transport.DNSTopologyPaired &&
 				request.PairRole == transport.DNSPairRolePrimary
 		} else {
@@ -1296,15 +1302,17 @@ func TestDNSEngineRequestReplayReturnsExactOlderOperation(t *testing.T) {
 	agent := newDNSEngineTestAgent()
 	attachDNSEngineTestAgent(t, panel, agent)
 
+	// PowerDNS first, then BIND: a BIND-to-PowerDNS switch is refused before
+	// any operation exists, and this test is about replaying an older request.
 	firstRequestID := strings.Repeat("1", 32)
 	firstPreview, recorder := requestDNSEnginePreview(
-		t, panel, transport.DNSEngineBIND, nil, 0,
+		t, panel, transport.DNSEnginePowerDNS, nil, 0,
 	)
 	if recorder.Code != http.StatusOK || len(firstPreview.Blockers) != 0 {
 		t.Fatalf("first preview status=%d body=%s", recorder.Code, recorder.Body.String())
 	}
 	firstCommit := commitDNSEngineSwitch(
-		t, panel, firstRequestID, transport.DNSEngineBIND,
+		t, panel, firstRequestID, transport.DNSEnginePowerDNS,
 		nil, 0, firstPreview.PreviewToken, false,
 	)
 	if firstCommit.Code != http.StatusOK {
@@ -1323,15 +1331,15 @@ func TestDNSEngineRequestReplayReturnsExactOlderOperation(t *testing.T) {
 	}
 	secondRequestID := strings.Repeat("2", 32)
 	secondPreview, recorder := requestDNSEnginePreview(
-		t, panel, transport.DNSEnginePowerDNS, transport.DNSEngineBIND,
+		t, panel, transport.DNSEngineBIND, transport.DNSEnginePowerDNS,
 		current.Revision,
 	)
 	if recorder.Code != http.StatusOK || len(secondPreview.Blockers) != 0 {
 		t.Fatalf("second preview status=%d body=%s", recorder.Code, recorder.Body.String())
 	}
 	secondCommit := commitDNSEngineSwitch(
-		t, panel, secondRequestID, transport.DNSEnginePowerDNS,
-		transport.DNSEngineBIND, current.Revision,
+		t, panel, secondRequestID, transport.DNSEngineBIND,
+		transport.DNSEnginePowerDNS, current.Revision,
 		secondPreview.PreviewToken, true,
 	)
 	if secondCommit.Code != http.StatusOK {
@@ -1339,7 +1347,7 @@ func TestDNSEngineRequestReplayReturnsExactOlderOperation(t *testing.T) {
 	}
 
 	replay := commitDNSEngineSwitch(
-		t, panel, firstRequestID, transport.DNSEngineBIND,
+		t, panel, firstRequestID, transport.DNSEnginePowerDNS,
 		nil, 0, firstPreview.PreviewToken, false,
 	)
 	if replay.Code != http.StatusOK {
@@ -1357,8 +1365,8 @@ func TestDNSEngineRequestReplayReturnsExactOlderOperation(t *testing.T) {
 			replaySnapshot.Operation, firstRequestID, firstSwitchID)
 	}
 	if replaySnapshot.ActiveEngine == nil ||
-		*replaySnapshot.ActiveEngine != transport.DNSEnginePowerDNS {
-		t.Fatalf("older replay current authority=%+v, want PowerDNS", replaySnapshot.ActiveEngine)
+		*replaySnapshot.ActiveEngine != transport.DNSEngineBIND {
+		t.Fatalf("older replay current authority=%+v, want BIND", replaySnapshot.ActiveEngine)
 	}
 }
 
@@ -1992,6 +2000,45 @@ func TestDNSEnginePairedBINDCommitPersistsDirectionalIdentity(t *testing.T) {
 				*snapshot.PairReady != (test.wantRole == transport.DNSPairRolePrimary) {
 				t.Fatalf("paired readiness snapshot=%+v err=%v", snapshot, err)
 			}
+			// Decision D (2026-09-30): secondary_ready exists exactly on an
+			// active paired secondary; the primary payload has no such key.
+			requirePairJSON := func(want string) {
+				t.Helper()
+				snapshot, err := panel.dnsEngineSnapshot(context.Background())
+				if err != nil {
+					t.Fatal(err)
+				}
+				raw, _ := json.Marshal(snapshot)
+				var fields map[string]json.RawMessage
+				if err := json.Unmarshal(raw, &fields); err != nil {
+					t.Fatal(err)
+				}
+				got, present := fields["secondary_ready"]
+				if want == "" {
+					if present {
+						t.Fatalf("secondary_ready present on %s: %s", test.wantRole, raw)
+					}
+					return
+				}
+				if !present || string(got) != want || string(fields["pair_ready"]) != "false" {
+					t.Fatalf("secondary JSON = %s, want secondary_ready=%s", raw, want)
+				}
+			}
+			if test.wantRole == transport.DNSPairRoleSecondary {
+				requirePairJSON("false")
+				agent.mu.Lock()
+				runtime := agent.runtimes[transport.DNSEngineBIND]
+				runtime.SecondaryReady = true
+				agent.runtimes[transport.DNSEngineBIND] = runtime
+				agent.mu.Unlock()
+				requirePairJSON("true")
+				agent.mu.Lock()
+				runtime.SecondaryReady = false
+				agent.runtimes[transport.DNSEngineBIND] = runtime
+				agent.mu.Unlock()
+			} else {
+				requirePairJSON("")
+			}
 			identity, ready, err := panel.activeDNSPublisher(context.Background())
 			if err != nil || identity.PairRole != test.wantRole ||
 				ready != (test.wantRole == transport.DNSPairRolePrimary) {
@@ -2028,7 +2075,10 @@ func TestDNSEnginePairedBINDCommitPersistsDirectionalIdentity(t *testing.T) {
 	}
 }
 
-func TestDNSEnginePairedIdentitySurvivesBINDToPowerDNS(t *testing.T) {
+// Closed gate: a paired primary serving BIND is paused. The open-gate
+// counterpart is TestPDNSPairedPrimaryOpenGateKeepsBINDSourceRefusal.
+func TestDNSEnginePairedPrimaryPowerDNSRefusalPreservesBIND(t *testing.T) {
+	closePDNSPairedPrimaryGateForTest(t)
 	t.Setenv("CELIKPANEL_SERVER_IP", "192.0.2.10")
 	panel := newDNSPanelForTest(t)
 	setDNSIdentityForTest(t, panel, "paired")
@@ -2056,84 +2106,256 @@ func TestDNSEnginePairedIdentitySurvivesBINDToPowerDNS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	agent.durableMutationRPCFixture.mu.Lock()
+	beforeJobs := len(agent.durableMutationRPCFixture.jobs)
+	agent.durableMutationRPCFixture.mu.Unlock()
 	pdnsPreview, recorder := requestDNSEnginePreview(
 		t, panel, transport.DNSEnginePowerDNS,
 		string(transport.DNSEngineBIND), bindState.Revision,
 	)
-	if recorder.Code != http.StatusOK || len(pdnsPreview.Blockers) != 0 ||
-		pdnsPreview.Topology != transport.DNSTopologyPaired {
-		t.Fatalf("PowerDNS preview=%+v status=%d body=%s",
+	if recorder.Code != http.StatusOK ||
+		!hasDNSEngineBlocker(pdnsPreview, "pdns_primary_switch_paused") ||
+		pdnsPreview.PreviewToken != "" {
+		t.Fatalf("PowerDNS paused preview=%+v status=%d body=%s",
 			pdnsPreview, recorder.Code, recorder.Body.String())
 	}
-	if commit := commitDNSEngineSwitch(
+	commit := commitDNSEngineSwitch(
 		t, panel, strings.Repeat("7", 32), transport.DNSEnginePowerDNS,
 		string(transport.DNSEngineBIND), bindState.Revision,
-		pdnsPreview.PreviewToken, true,
-	); commit.Code != http.StatusOK {
-		t.Fatalf("PowerDNS commit status=%d body=%s", commit.Code, commit.Body.String())
+		strings.Repeat("c", 32), true,
+	)
+	if commit.Code != http.StatusConflict ||
+		!strings.Contains(commit.Body.String(), "pdns_primary_switch_paused") {
+		t.Fatalf("PowerDNS paused commit status=%d body=%s",
+			commit.Code, commit.Body.String())
 	}
-	state, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
-	if err != nil {
+	after, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+	if err != nil || after != bindState {
+		t.Fatalf("BIND source state changed: before=%+v after=%+v err=%v",
+			bindState, after, err)
+	}
+	var switchCount int
+	if err := panel.db.GetDB().QueryRowContext(context.Background(),
+		"SELECT count(*) FROM dns_engine_switch_snapshots").Scan(&switchCount); err != nil {
 		t.Fatal(err)
 	}
-	if state.ActiveEngine != transport.DNSEnginePowerDNS ||
-		state.Topology != transport.DNSTopologyPaired ||
-		state.PairRole != transport.DNSPairRolePrimary ||
-		state.LocalIP != "192.0.2.10" || state.PeerIP != "192.0.2.20" ||
-		state.LocalNS != "ns1.celikhost.com" || state.PeerNS != "ns2.celikhost.com" {
-		t.Fatalf("reverse paired state=%+v", state)
+	if switchCount != 1 {
+		t.Fatalf("paused PowerDNS switch created a snapshot: count=%d", switchCount)
 	}
 	agent.mu.Lock()
-	last := agent.switchRequests[len(agent.switchRequests)-1]
-	agent.mu.Unlock()
-	if last.TargetEngine != transport.DNSEnginePowerDNS ||
-		last.Topology != transport.DNSTopologyPaired ||
-		last.PairRole != transport.DNSPairRolePrimary {
-		t.Fatalf("reverse paired request=%+v", last)
-	}
-	noop := httptest.NewRecorder()
-	panel.handleDNSSetup(noop, dnsSetupAdminRequest(
-		`{"ns1":"ns1.celikhost.com","ns2":"ns2.celikhost.com","role":"paired","peer_ip":"192.0.2.20","peer_ns":"ns2.celikhost.com"}`,
-	))
-	if noop.Code != http.StatusOK {
-		t.Fatalf("exact paired identity retry status=%d body=%s",
-			noop.Code, noop.Body.String())
-	}
-	afterNoop, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if afterNoop != state {
-		t.Fatalf("exact paired identity retry changed state: before=%+v after=%+v",
-			state, afterNoop)
-	}
-	locked := httptest.NewRecorder()
-	panel.handleDNSSetup(locked, dnsSetupAdminRequest(
-		`{"ns1":"ns3.example.net","ns2":"ns4.example.net","role":"paired","peer_ip":"192.0.2.30","peer_ns":"ns4.example.net"}`,
-	))
-	if locked.Code != http.StatusConflict {
-		t.Fatalf("paired identity mutation status=%d body=%s",
-			locked.Code, locked.Body.String())
-	}
-	var lockedBody apiErrorBody
-	if err := json.Unmarshal(locked.Body.Bytes(), &lockedBody); err != nil ||
-		lockedBody.Code != errCodeDNSPairIdentityLocked {
-		t.Fatalf("paired identity refusal=%+v err=%v body=%s",
-			lockedBody, err, locked.Body.String())
-	}
-	afterLocked, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if afterLocked != state {
-		t.Fatalf("paired identity refusal changed state: before=%+v after=%+v",
-			state, afterLocked)
-	}
-	agent.mu.Lock()
+	bind := agent.runtimes[transport.DNSEngineBIND]
+	pdns := agent.runtimes[transport.DNSEnginePowerDNS]
 	switchCalls := agent.switchCalls
 	agent.mu.Unlock()
-	if switchCalls != 2 {
-		t.Fatalf("paired identity refusal changed host: switch calls=%d", switchCalls)
+	agent.durableMutationRPCFixture.mu.Lock()
+	afterJobs := len(agent.durableMutationRPCFixture.jobs)
+	agent.durableMutationRPCFixture.mu.Unlock()
+	if switchCalls != 1 || afterJobs != beforeJobs || !bind.Running || pdns.Running {
+		t.Fatalf("paused PowerDNS switch changed serving authority: calls=%d jobs=%d/%d BIND=%+v PDNS=%+v",
+			switchCalls, afterJobs, beforeJobs, bind, pdns)
+	}
+}
+
+// A serving BIND source cannot be switched to PowerDNS in this release, in any
+// topology. The refusal is a preview blocker, so no token, snapshot, job or
+// Agent call exists and BIND keeps serving. With the paired-primary gate
+// closed, the paired primary keeps its own, older refusal code; the open-gate
+// paired primary is TestPDNSPairedPrimaryOpenGateKeepsBINDSourceRefusal.
+func TestDNSEngineStandaloneBINDToPowerDNSSwitchRefusedPreservesBIND(t *testing.T) {
+	closePDNSPairedPrimaryGateForTest(t)
+	for index, test := range []struct {
+		name, serverIP, peerIP, peerNS, role, pairRole string
+		wantBlocker, notBlocker                        string
+	}{
+		{
+			name: "standalone", serverIP: "192.0.2.10", role: "standalone",
+			wantBlocker: "bind_source_pdns_switch_unsupported",
+			notBlocker:  "pdns_primary_switch_paused",
+		},
+		{
+			name: "paired secondary", serverIP: "192.0.2.20",
+			peerIP: "192.0.2.10", peerNS: "ns1.celikhost.com", role: "paired",
+			pairRole:    transport.DNSPairRoleSecondary,
+			wantBlocker: "bind_source_pdns_switch_unsupported",
+			notBlocker:  "pdns_primary_switch_paused",
+		},
+		{
+			name: "paired primary", serverIP: "192.0.2.10",
+			peerIP: "192.0.2.20", peerNS: "ns2.celikhost.com", role: "paired",
+			pairRole:    transport.DNSPairRolePrimary,
+			wantBlocker: "pdns_primary_switch_paused",
+			notBlocker:  "bind_source_pdns_switch_unsupported",
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv("CELIKPANEL_SERVER_IP", test.serverIP)
+			panel := newDNSPanelForTest(t)
+			setDNSIdentityForTest(t, panel, test.role)
+			if test.role == "paired" {
+				for key, value := range map[string]string{
+					settingDNSPeerIP: test.peerIP, settingDNSPeerNS: test.peerNS,
+				} {
+					if err := panel.setSetting(context.Background(), key, value); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			agent := newDNSEngineTestAgent()
+			attachDNSEngineTestAgent(t, panel, agent)
+			bindPreview, recorder := requestDNSEnginePreview(
+				t, panel, transport.DNSEngineBIND, nil, 0,
+			)
+			if recorder.Code != http.StatusOK || len(bindPreview.Blockers) != 0 {
+				t.Fatalf("BIND preview=%+v status=%d", bindPreview, recorder.Code)
+			}
+			if commit := commitDNSEngineSwitch(
+				t, panel, strings.Repeat(string(rune('1'+index)), 32),
+				transport.DNSEngineBIND, nil, 0, bindPreview.PreviewToken, false,
+			); commit.Code != http.StatusOK {
+				t.Fatalf("BIND commit status=%d body=%s", commit.Code, commit.Body.String())
+			}
+			snapshot, err := panel.dnsEngineSnapshot(context.Background())
+			if err != nil || snapshot.PairRole != test.pairRole {
+				t.Fatalf("pair role=%q want %q err=%v", snapshot.PairRole, test.pairRole, err)
+			}
+			bindState, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+			if err != nil {
+				t.Fatal(err)
+			}
+			agent.durableMutationRPCFixture.mu.Lock()
+			beforeJobs := len(agent.durableMutationRPCFixture.jobs)
+			agent.durableMutationRPCFixture.mu.Unlock()
+			pdnsPreview, recorder := requestDNSEnginePreview(
+				t, panel, transport.DNSEnginePowerDNS,
+				string(transport.DNSEngineBIND), bindState.Revision,
+			)
+			if recorder.Code != http.StatusOK ||
+				!hasDNSEngineBlocker(pdnsPreview, test.wantBlocker) ||
+				hasDNSEngineBlocker(pdnsPreview, test.notBlocker) ||
+				pdnsPreview.PreviewToken != "" {
+				t.Fatalf("PowerDNS refused preview=%+v status=%d body=%s",
+					pdnsPreview, recorder.Code, recorder.Body.String())
+			}
+			commit := commitDNSEngineSwitch(
+				t, panel, strings.Repeat(string(rune('7'+index)), 32),
+				transport.DNSEnginePowerDNS,
+				string(transport.DNSEngineBIND), bindState.Revision,
+				strings.Repeat("c", 32), true,
+			)
+			if commit.Code != http.StatusConflict ||
+				!strings.Contains(commit.Body.String(), test.wantBlocker) {
+				t.Fatalf("PowerDNS refused commit status=%d body=%s",
+					commit.Code, commit.Body.String())
+			}
+			after, err := readDNSEngineDBState(context.Background(), panel.db.GetDB())
+			if err != nil || after != bindState {
+				t.Fatalf("BIND source state changed: before=%+v after=%+v err=%v",
+					bindState, after, err)
+			}
+			var switchCount int
+			if err := panel.db.GetDB().QueryRowContext(context.Background(),
+				"SELECT count(*) FROM dns_engine_switch_snapshots").Scan(&switchCount); err != nil {
+				t.Fatal(err)
+			}
+			if switchCount != 1 {
+				t.Fatalf("refused PowerDNS switch created a snapshot: count=%d", switchCount)
+			}
+			agent.mu.Lock()
+			bind := agent.runtimes[transport.DNSEngineBIND]
+			pdns := agent.runtimes[transport.DNSEnginePowerDNS]
+			switchCalls := agent.switchCalls
+			agent.mu.Unlock()
+			agent.durableMutationRPCFixture.mu.Lock()
+			afterJobs := len(agent.durableMutationRPCFixture.jobs)
+			agent.durableMutationRPCFixture.mu.Unlock()
+			if switchCalls != 1 || afterJobs != beforeJobs || !bind.Running || pdns.Running {
+				t.Fatalf("refused PowerDNS switch changed serving authority: calls=%d jobs=%d/%d BIND=%+v PDNS=%+v",
+					switchCalls, afterJobs, beforeJobs, bind, pdns)
+			}
+		})
+	}
+}
+
+// The BIND-source refusal must not spill onto the transitions that stay
+// supported: PowerDNS to BIND, a fresh PowerDNS install, PowerDNS adoption and
+// a BIND reinstall.
+func TestDNSEngineBINDSourcePowerDNSRefusalLeavesOtherTransitions(t *testing.T) {
+	bind, pdns := transport.DNSEngineBIND, transport.DNSEnginePowerDNS
+	runtimes := func(bindRunning, pdnsRunning bool) map[transport.DNSEngine]transport.DNSBackendRuntimeState {
+		return map[transport.DNSEngine]transport.DNSBackendRuntimeState{
+			bind: {Engine: bind, Installed: bindRunning, Running: bindRunning, Managed: bindRunning},
+			pdns: {Engine: pdns, Installed: pdnsRunning, Running: pdnsRunning, Managed: pdnsRunning},
+		}
+	}
+	snapshot := func(
+		topology, role string,
+		active *transport.DNSEngine,
+		state string,
+		runtime map[transport.DNSEngine]transport.DNSBackendRuntimeState,
+	) dnsEngineSnapshot {
+		value := dnsEngineSnapshot{
+			ActiveEngine: active, State: state, Topology: topology,
+			PairRole: role, Revision: 1, runtime: runtime,
+		}
+		if active != nil {
+			value.EngineEpoch = 1
+		}
+		return value
+	}
+	for _, test := range []struct {
+		name       string
+		snapshot   dnsEngineSnapshot
+		target     transport.DNSEngine
+		wantAction string
+	}{
+		{"PowerDNS to uninstalled BIND", snapshot(transport.DNSTopologyStandalone, "", &pdns,
+			dnsEngineStateReady, runtimes(false, true)), bind, "install"},
+		{"PowerDNS to BIND standby", func() dnsEngineSnapshot {
+			runtime := runtimes(false, true)
+			runtime[bind] = transport.DNSBackendRuntimeState{Engine: bind, Installed: true, Managed: true}
+			return snapshot(transport.DNSTopologyStandalone, "", &pdns, dnsEngineStateReady, runtime)
+		}(), bind, "switch"},
+		{"fresh standalone PowerDNS install", snapshot(transport.DNSTopologyStandalone, "", nil,
+			dnsEngineStateUnconfigured, runtimes(false, false)), pdns, "install"},
+		{"fresh paired secondary PowerDNS install", snapshot(transport.DNSTopologyPaired,
+			transport.DNSPairRoleSecondary, nil,
+			dnsEngineStateUnconfigured, runtimes(false, false)), pdns, "install"},
+		{"PowerDNS adoption", snapshot(transport.DNSTopologyStandalone, "", nil,
+			dnsEngineStateUnconfigured, runtimes(false, true)), pdns, "adopt"},
+		{"BIND reinstall", snapshot(transport.DNSTopologyStandalone, "", &bind,
+			dnsEngineStateReady, runtimes(false, false)), bind, dnsEngineActionReinstall},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if got := dnsEngineAction(test.snapshot, test.target); got != test.wantAction {
+				t.Fatalf("action=%s want=%s", got, test.wantAction)
+			}
+			source := transport.DNSEngine("")
+			if test.snapshot.ActiveEngine != nil {
+				source = *test.snapshot.ActiveEngine
+			}
+			preview := dnsEngineSwitchPreview{Blockers: dnsEnginePreviewBlockers(
+				test.snapshot, test.target, source, test.snapshot.Revision,
+			)}
+			if hasDNSEngineBlocker(preview, "bind_source_pdns_switch_unsupported") {
+				t.Fatalf("supported transition was refused: %+v", preview.Blockers)
+			}
+		})
+	}
+	// The same shape with BIND as the serving source is refused, including the
+	// "install" action when PowerDNS is not installed yet.
+	for _, pdnsInstalled := range []bool{false, true} {
+		runtime := runtimes(true, false)
+		if pdnsInstalled {
+			runtime[pdns] = transport.DNSBackendRuntimeState{Engine: pdns, Installed: true, Managed: true}
+		}
+		refused := snapshot(transport.DNSTopologyStandalone, "", &bind, dnsEngineStateReady, runtime)
+		preview := dnsEngineSwitchPreview{Blockers: dnsEnginePreviewBlockers(
+			refused, pdns, bind, refused.Revision,
+		)}
+		if !hasDNSEngineBlocker(preview, "bind_source_pdns_switch_unsupported") {
+			t.Fatalf("BIND source switch (PowerDNS installed=%v, action=%s) was not refused: %+v",
+				pdnsInstalled, dnsEngineAction(refused, pdns), preview.Blockers)
+		}
 	}
 }
 

@@ -1,0 +1,18 @@
+{
+  "checks": {
+    "agreement": {
+      "agreed_samples": 361,
+      "lag_samples": 1,
+      "samples": 362,
+      "verdict": "passed"
+    },
+    "final": null,
+    "reboot": null,
+    "samples": 362
+  },
+  "finished_at": "2026-09-30T19:24:28Z",
+  "name": "track",
+  "reason": "no terminal or paused state was observed within 90 minutes",
+  "started_at": "2026-09-30T17:54:15Z",
+  "verdict": "inconclusive"
+}

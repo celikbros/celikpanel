@@ -8,6 +8,167 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
 ---
 
+## D-028 · Boş çift PowerDNS birincili, ölçülen kapsam içinde sunuluyor
+
+*1 Ekim 2026 · Sahibin yürürlükteki yönü üzerine planlayıcı kararı (D-026 eki: 6. satırın gerçek sistem kanıtı gelince kapıyı aç)*
+
+Bugüne kadar Panel ve Agent, DNS motoru olmayan bir sunucuya PowerDNS'in
+çift birincili olarak ilk kurulumunu reddediyordu
+(`pdns_primary_switch_paused`); çünkü V3 günlüğünün gerçek sistem kurtarma
+kanıtı yoktu. 30 Eylül 2026'dan beri her kabul koşusu iki kapı sabitini
+çeviren bir dalda yapıldı; ana hat kapalı kaldı.
+
+**Kanıt.** Kesinti matrisinin 8r, 9 ve 12. grupları (ilk başlatmadan önce ve
+sonra kesintiler, tek bölgeyle ve sıfır bölgeyle, ileri kurtarma, başlangıç
+öncesi geri alma, tutulan sahip düzenlemeleri, sahip kaydından sonra
+sürdürülen ebeveynsiz silme, yönetim kapalıyken yeniden açılışlar) ve 5. ile
+7. çift koşuları (iki CelikPanel sunucusunda ürün akışının tamamı: kurulum,
+bölge ekleme, kayıt düzenleme, sahip kaydından sonra ürünün kanıtıyla bölge
+silme, yeniden ekleme, panel kapalıyken yeniden açılış, yönetimin dönüşü)
+kabul dalında düzenek geçici çözümü olmadan geçti. Aynı koşular yol boyunca
+on bir ürün kusuru bulup kapattı; her biri kanıtıyla kabul kütüğünde.
+
+**Karar.** İki kapı sabiti ana hatta `true`. Sunulan, tam olarak ölçülen
+şeydir: DNS motoru olmayan bir sunucuda çift birincil olarak PowerDNS,
+Debian 13 amd64, ölçülmüş PowerDNS paket sürümü; Agent'ın sunucu profili ve
+paket sürümü ön denetimleriyle zorlanır. Diğer her PowerDNS çift birincil
+bildirimi reddedilmeye devam eder; hizmet veren BIND kaynağı D-026 reddini
+(`bind_source_pdns_switch_unsupported`) korur; BIND için ve PowerDNS ikincili
+için hiçbir şey değişmez.
+
+**Belirtilen sınırlar.** Hücre ya da topoloji başına tek çalıştırma, geçici
+konuklar, düzenli yeniden açılışlar, yalnızca test amaçlı lisans derlemesi
+(D-027), dizüstü bir ana makine. Daemon yeniden damgalama kabulü, kanıt süre
+aşımı kodu ve bileşik sahip-düzenleme kodu kaynakta bileşen testleriyle var
+ve gerçek sistemde ortaya çıkmadı. Yerel kanıtın adım süresi sınırları tek
+örneklerdir. Kurulu sunuculara dokunulmadı; karar onların güncellenmesine
+yetki vermez (her panel güncellemesini sahibi panelin kendi güncelleme
+ekranından başlatır).
+
+---
+
+## D-027 · Kabul koşuları yalnız deneyde geçerli lisans kullanır; lisans politikası değişmez
+
+*30 Eylül 2026 · Kullanıcı kararı*
+
+Geçici deney sunucularında ürün akışının kabulü gerçek Panel'i kullanmak
+zorunda: kurulum sihirbazı, alan adı ekranları, iki sunucuda da CelikPanel.
+Panel, lisans etkin değilken neredeyse hiçbir işleme izin vermiyor ve etkin
+lisansı yaklaşık dakikada bir lisans hizmetinden doğruluyor; deney sunucuları
+ise internete kapalı. Kullanıcı, deneylerde gerçek anahtar kullanmak ya da
+ürün akışını atlamak yerine yalnız deneyde geçerli bir derlemeyi seçti.
+
+**Karar.** `acceptance_license` derleme etiketi, yalnız "ACCEPTANCE FIXTURE —
+NOT FOR PRODUCTION" etiketli tek bir deney lisansını kabul eden bir dikiş
+derler. Bu lisans yalnız deney düzeneğinin işaretini taşıyan sunucuda
+etkinleşir, yerelde doğrulanır; lisans hizmetine her bağlantı denemesi
+reddedilir ve sayılır. Sıradan derlemede deney lisansı, başka bir doğrulayıcı
+ya da ortam/dosya okuması bulunmayan boş bir gövde derlenir; sıradan bir
+ikili çalışma anında kabul kipine geçirilemez. Bu, kaynaklardan ve derlenmiş
+ikililerden testlerle kanıtlanır. Sürüm paketleme, etiketle derlenmiş ya da
+deney metnini içeren her dosyayı reddeder. Kabul arşivi yalnız adı açıkça
+belirtilmiş bir betikle üretilir ve sürüm değildir.
+
+Bu karar lisans politikasını, doğrulama süresini ya da müşteri derlemesinin
+herhangi bir davranışını değiştirmez. Deney lisansıyla yapılan koşu lisans
+davranışı için kanıt sayılmaz. Bilinen sınır: Lisans ekranı yalnız durum ve
+bitiş tarihini gösterdiği için deney lisansı ekranda ayırt edilemez; API
+yanıtı, günlükler, kanıt ve panel sürüm adı ayırt eder.
+
+---
+
+## D-026 · DNS motoru kurtarması: kurtarılamayan geçişi reddet, ilk kurulumda aynı işlemle kurtarmayı kabul et
+
+*29 Eylül 2026 · Devirdeki 1. madde (DNS kurtarma sözleşmesi) için kullanıcı kararı*
+
+`e9d1019d` kaynağının salt-okur denetimi, ürünün başlatabildiği her DNS motoru
+değişikliğini üç durumdan birine bağladı: gerçek sistem kanıtıyla geçti, adı
+belli eksik, desteklenmiyor. Bir yol kabul edilemez dördüncü duruma düştü:
+**çalışan BIND** kaynağını tek sunucuda veya çiftin ikincilinde **PowerDNS**
+hedefine çevirmek motor kartından hâlâ başlatılabiliyordu. Bu yol eski V1
+günlüğünü yazıyor, tek kurtarması Agent'ın kendi ters işlemi, V4 başlangıç
+öncesi ters işlem ve sahip komutu üreticiye bağlı değil ve gerçek sistemde
+kesinti denemesi yok. Mevcut kapı yalnız çiftli birinciyi kapatıyordu.
+
+**Karar 1.** BIND→PowerDNS motor geçişi bu sürümde her topolojide
+desteklenmiyor. Panel önizleme/onay, sunucu kurulumu ve Agent RPC'si bunu
+değişiklik başlamadan `bind_source_pdns_switch_unsupported` engeliyle reddeder;
+ekran nedeni, BIND'in hizmete devam ettiğini ve sonraki adımı (PowerDNS'i DNS
+motoru olmayan bir sunucuya kurmak ya da geçişi destekleyen sürümü beklemek)
+söyler. Boş sunucuya PowerDNS kurulumu, PowerDNS→BIND geçişi, PowerDNS
+devralma/yeniden yapılandırma, BIND yeniden kurulumu ve kurulu sunucular
+değişmez. Kapıyı yeniden açmak için üreticinin bağlanması, başlangıç öncesi ve
+sonrası Agent'tan bağımsız ters işlem ve gerçek kesinti kanıtı gerekir;
+denetimi kaldırmak çözüm değildir.
+
+**Karar 2.** İlk motor kurulumunda (BIND veya PowerDNS, her rol) önceki durum
+"DNS motoru yok"tur; geri yüklenecek sahip verisi yoktur. Sonraki açılışta
+Agent'ın aynı işlem kimliğiyle kurtarması, salt-okur durum komutu ve ekranın
+sahibe sonraki adımı söylemesi bu sürümün kabul edilen sözleşmesidir. İlk
+kurulumlar için Agent'tan bağımsız sahip komutu şart değildir. 1. madde için
+kalan iş kod değil kanıttır: boş tek sunucu PowerDNS, boş çift ikincil (BIND ve
+PowerDNS) ve boş BIND'de başlangıç sonrası kesinti hücreleri.
+
+**Ek, aynı gün.** Gerçek sistem hücreleri, bileşen testlerinin bulamadığı iki
+ürün kusurunu (ilk kurulum geri alması ve V2 BIND geçişi ters işlemi, hiç
+başlamamış hedefi reddediyordu) ve bir kurtarma çıkmazını (sahip komutları
+Agent'ın bilerek bıraktığı işi reddediyordu) ortaya çıkardı. Üçü de düzeltildi
+ve gerçek sistemde yeniden koşuldu. Sahip, kapatmadan önce kaynak durdurulduktan
+sonraki PowerDNS→BIND hücrelerinin koşulmasını seçti; geçtiler ve yol
+haritasının 1. maddesi [kabul kütüğünde](DNS-RECOVERY-ACCEPTANCE.tr.md) adı
+belli sınırlarla kapandı. Bırakılmış bir işte sahip komutu bitmiş defter
+kaydını yeniden yazmaz; sahibe gösterilen metin okuma anında hesaplanır.
+1. maddenin kapanması P0.4'ü kapatmaz.
+
+Karar 1 vaat edilen kapsamı daraltır ve sürüm notlarında açıkça desteklenmeyen
+işlem olarak yazılır; sessizce yapılmaz. İki karar da kurulu sunucuyu, lisans
+politikasını, sahibin kendi kurtarmasını ve panel güncellemesini yalnız
+kullanıcının başlatması kuralını değiştirmez.
+
+---
+
+## D-025 · Dayanıklılık, olay yaması değil temel çalışma sözleşmesidir
+
+*14 Eylül 2026 · Kullanıcının istediği anayasa incelemesi; bağlayıcı yön, uygulama açık*
+
+Kullanıcı, Frankfurt'ta tekrar eden hatalardan sonra sistemin anayasasının
+incelenmesini istedi. Kaynak incelemesi; birbirine bağlı arıza sınırları, anlamı
+karışmış kanıt rolleri, uyumsuz çıktı okuyucuları ve kurtaracağı aday sürüme
+bağımlı kurtarma mekanizması buldu. Benzer hatalar 26 Ağustos'ta da kaydedilmişti.
+Tek hatayı yeniden üreten testin geçmesi bütün yaşam döngüsünün güvenilirliğini
+kanıtlamamıştı.
+
+**Yön.** Panel/Agent yetki ayrımı korunur; normal değişiklik yetkisi, durum
+gözlemi ve kurtarma erişimi ayrılır. Güvensiz eylem etkilenen sınırda durdurulur;
+çalışan yerel hizmetler ve desteklenen sunucu arıza modeli içinde dar, kimlik
+doğrulamalı kurtarma yolu korunur. Bilinmeyen durum; lisans süresi doldu, hizmet
+yok veya iş tamamlandı şeklinde yanlış bir teşhise dönüştürülemez.
+
+Her kalıcı çıktının sürümlü tek bir üretim/okuma/geri yükleme sözleşmesi gerekir.
+Metadata normalleştirmesi dahil her değişiklik; salt-okur keşif, açık kalıcı
+kontrol noktaları, sınırlı devam/telafi ve sonuç kanıtı ister. Kurtarma, normal
+Agent ve aday uygulama başlayamadığında da çalışabilmelidir. Ayrı sürümlenen
+asgari yürütücü ve manifest protokolü önerilir; yerine geçecek mekanizma uygulanıp
+doğrulanana kadar mevcut tam eşleşen saklı sürüm geri alma kuralları sürer.
+Sınırsız kabuk veya yapay zekâyla kanıt düzeltme yolu açılmaz.
+
+[Dayanıklılık sözleşmesi](RESILIENCE-CONTRACT.tr.md); kaynak kanıtını, ilkeleri,
+açık P0 kabul kaydını ve uygulama sırasını içerir. [Anayasa](../ROADMAP.tr.md)
+artık sürekliliği, gerçeği yansıtan durumu ve arıza kanıtını zorunlu tutar. PR
+incelemesi etkilenen sözleşmeleri, taşıma/kurtarma davranışını ve tam test kanıtını
+adlandırmalıdır. Tam destek; kurtarmanın kendisindeki arızalar dahil, geçici gerçek
+sistem ortamında güncelleme ve otomatik geri yükleme denemeleri ister. Acil olay
+düzeltmesi kapsam ve sınırları belirtilerek yayımlanabilir; mimari işi kapatmaz
+ve ilgisiz özellik genişlemesini haklı çıkarmaz.
+
+Bu karar kurulu sunucuyu değiştirmez; yeni yürütücüyü, kurtarma arayüzünü, şema
+ayrımını veya bağımsız hizmet yenilemesini uygulamaz. Alpha80 dar kapsamlı BIND ve
+kurtarma düzeltmesidir. D-021, D-022, D-024, kullanıcının yürüttüğü kurtarma ve
+kurulu paneli yalnız kullanıcının güncellemesi kuralları geçerlidir. Eski tek
+binary, yalnız-panel ve tarihsel bootstrap ifadeleri bu sınırları geçersiz kılamaz.
+
+---
+
 ## D-024 · Her işlem mevcut durumu ve sonraki eylemi açıklar
 
 *13 Eylül 2026 · Kullanıcının onayladığı gereksinim; ürün genelindeki uygulama ve inceleme tamamlanmadı*
@@ -1022,6 +1183,14 @@ daemon'ın otorite olduğunu tahmin etmez.
 
 *9 Temmuz 2026*
 
+**14 Eylül açıklaması.** Panelden ilerleme kuralı ürün kabul disiplinidir;
+sunucu sahibinin kendi araçlarıyla yönetim yetkisini sınırlamaz (D-022). Kurulu
+sunucuda 13 Eylül kullanıcı kurtarma kuralı geçerlidir: önce panel, panel yeterli
+değilse kısa ve doğrulanmış kullanıcı komutları. Bu, gizli asistan müdahalesine
+veya kurulu paneli asistanın güncellemesine izin vermez. Elle kurtarma, ilgili
+ürün akışının tamamlandığının kanıtı değildir. Aşağıdaki ilk karar tarihsel
+bağlamıyla ve bu açıklamayla okunmalıdır.
+
 **Karar.** Debian 13 yeniden kurulumundan itibaren operatör, CelikPanel'i
 gerçek bir müşteri gibi kullanır: her kurulum, her ayar, her domain panelden
 ve kendi eliyle geçer. Geliştirici sunucuyu asla yapılandırmaz — izinle bile.
@@ -1343,6 +1512,14 @@ kendileri derler, gerisini dağıtıma bırakır).
 ## D-001 · Güncelleme ve geri alma: sunucuyu asla sıfırdan kurma
 
 *8 Temmuz 2026 · 28 Temmuz 2026'da değiştirildi*
+
+**Güncel kurulu panel sınırı — 14 Eylül açıklaması.** Aşağıdaki bootstrap
+komutları iç/tarihsel sürüm mekanizmasını belgeler; kurulu paneli SSH üzerinden
+güncelleme izni vermez. 10 Eylül'den beri bütün kurulu panel güncellemelerini
+kullanıcı CelikPanel'in güncelleme arayüzünden başlatır. Yayınlama ve kurma ayrı
+eylemlerdir. D-025'in yeni yürütücüsü uygulanıp doğrulanana kadar, tam eşleşen
+saklı sürümün geri alma yolu desteklenen kullanıcı kurtarması olarak kalır;
+başka sürümün rollback scripti yerine konulamaz.
 
 **Karar.** Üretim güncellemeleri yalnız
 `sudo /bin/bash ./bootstrap-update.sh --normal` ile veya bir kerelik

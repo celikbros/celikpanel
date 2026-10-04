@@ -1,0 +1,68 @@
+{
+  "guest_fresh": true,
+  "guest_hosts_before": "185.95.0.123    celikpanel.net",
+  "helpers": {
+    "guest_bound_worker.py": "8f43c9c305225bd896b5d220820eb51304f15561597df065e07e99abb679c2cc",
+    "guest_owner_update_observer.py": "263ed14c59f24956aaf0e21ece5b74b9f81dbfe19ad652d89a87ea6e25f731af",
+    "guest_port_fault.py": "be8eb7008d50b343c1194bef8c32c14335fa750cd7be61c43a7c1e52b2d6efc6",
+    "guest_probe.py": "96e5ac2eb842d72af9707a70eceed56406031d16847199c46adabc16af1ec388",
+    "guest_recovery_fault.py": "4d9ae59bcbc2fdb4a6f42ade529c1b6b1f6366b726f92ba37058957b7696da50",
+    "guest_recovery_handoff.py": "21dfaa3bc76b56f463a706f50f8b6413a5325ebba978b113a0b4a59d2be4c0cf",
+    "guest_upd1_workload.py": "64d90b0ae54801300661e00019182a9578181112e5777ff9b06857978a7f29a8",
+    "guest_update_kill.py": "f996f1cedf3777ef12b1f44282dcb3208c61400f76f27c4ed3fe4e290f95cd26"
+  },
+  "proofs": {
+    "baseline": {
+      "agent_sha256": "87991e019dab46a732cc3950809979fc4bf88b37632ecd77f442124164474876",
+      "commit": "864ae9a92111a604dd1f3ea2ff8f65173a39e6cc",
+      "files": 611,
+      "panel_sha256": "2e1575d244a4b7c70fa9ea1f8b16d84ad34ec93b76cd14b7f884d9baccb1e30a",
+      "release_policy": {
+        "current": 81,
+        "format": "celikpanel-release-sequence-policy-v1",
+        "previous": 80,
+        "previous_commit": "bd14d97efc5cfd19acd70ddf0edb9c6343317e2b",
+        "previous_version": "v0.1.0-alpha.80",
+        "sha256": "c5305d7bec6540bcabbe1c4c11fb021cb314d00f9a4148e6273892cb53444731",
+        "version": "v0.1.0-alpha.81"
+      },
+      "source_proof": {
+        "acceptance_notice_sha256": "b5522ff4bf4b2eaa7809f215511a74fd6df0b6c2b31d07d87d5fecdb2e358a47",
+        "commit": "864ae9a92111a604dd1f3ea2ff8f65173a39e6cc",
+        "exempted_from_git_proof": [
+          "ACCEPTANCE-LICENSE-BUILD.txt"
+        ],
+        "method": "real Git commit/tree and every packaged static source blob",
+        "tree": "15f300b2e8051b0f1c93ce52e5c3cf18ff39073a",
+        "verified_static_files": 479
+      },
+      "tree": "15f300b2e8051b0f1c93ce52e5c3cf18ff39073a"
+    },
+    "good": {
+      "agent_sha256": "64755ad1aa0e3b8b7985f1eeabff945b85ec6362958ba7437bc3d97690487691",
+      "commit": "69688983d89cfbf94a6d003db6ebc22c85b4341e",
+      "files": 611,
+      "panel_sha256": "e26c0332eecb7553146e3381784fe53374d5fcc049f6ee8f7093121812661f63",
+      "release_policy": {
+        "current": 82,
+        "format": "celikpanel-release-sequence-policy-v1",
+        "previous": 81,
+        "previous_commit": "864ae9a92111a604dd1f3ea2ff8f65173a39e6cc",
+        "previous_version": "v0.1.0-alpha.81",
+        "sha256": "30cb11951cbe462096a09f2103a10e1def976be4cce7841a7864d165b191cb13",
+        "version": "v0.1.0-alpha.82"
+      },
+      "source_proof": {
+        "acceptance_notice_sha256": "37f22572f38b0ee0752ededea60be273da2f3583169256712f9d147de78f6069",
+        "commit": "69688983d89cfbf94a6d003db6ebc22c85b4341e",
+        "exempted_from_git_proof": [
+          "ACCEPTANCE-LICENSE-BUILD.txt"
+        ],
+        "method": "real Git commit/tree and every packaged static source blob",
+        "tree": "d3d4c3fa30a375d1736715ae46d98eff9168fcaa",
+        "verified_static_files": 479
+      },
+      "tree": "d3d4c3fa30a375d1736715ae46d98eff9168fcaa"
+    }
+  }
+}

@@ -1,0 +1,13 @@
+request ff8a6f95e86a444b474385bd5018d3ab controller 2026-09-29T16:30:37.016020Z -> 2026-09-29T16:31:32.116413Z
+status passed safety passed class target_converged fp 4ab61ac8
+kill pid 1776 state T at 2026-09-29T16:30:59.340089Z exit 137 reaped True
+marker 2026-09-29T16:30:59.308571272Z journal target-started 7828412e
+trigger rc 75
+ retry 1 rc 0 dur 0.004413 err None
+ retry 2 rc 0 dur 0.008124 err None
+ probe 1 target_converged 4ab61ac8 pdns | 
+ probe 2 target_converged 4ab61ac8 pdns | 
+stability 31 ok 31 2026-09-29T16:31:01.865401Z 2026-09-29T16:31:31.865571Z
+ status-read after-recovery: available=False rc=None mutated=None :: 
+ status-read before-recovery: available=False rc=None mutated=None :: 
+fixture_pass_definition {"definition": "paired-secondary", "failures": [], "pdns_secondary_rows": {"domains": [["catalog-c000020b.celikpanel.invalid", "CONSUMER", "192.0.2.11", "celikpanel-peer-catalog-v1", "", ""], ["s1-kill.test", "SLAVE", "192.0.2.11", "", "catalog-c000020b.celikpanel.invalid", "{\"consumer\": {\"unique\": \"tlhnkturltuku63bhersj40lbi0vkdvt.\"}}"]], "failures": [], "member_options": {"expected_label": "tlhnkturltuku63bhersj40lbi0vkdvt", "shape": "consumer.unique", "unique": "tlhnkturltuku63bhersj40lbi0vkdvt.", "value": "{\"consumer\": {\"unique\": \"tlhnkturltuku63bhersj40lbi0vkdvt.\"}}"}, "member_soa_rows": 1, "unknown": []}, "peer_catalog_format_log": {"expected_agent_name": "PowerDNS", "expected_format": "pdns-native", "failures": [], "log": {"catalog": "catalog-c000020b.celikpanel.invalid", "formats": ["PowerDNS", "PowerDNS", "PowerDNS"], "lines": ["2026/09/29 16:30:37 DNS engine change ff8a6f95e86a444b474385bd5018d3ab: the paired primary at 192.0.2.11 serves catalog catalog-c000020b.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format", "2026/09/29 16:30:59 DNS engine change recovery ff8a6f95e86a444b474385bd5018d3ab: the paired primary at 192.0.2.11 serves catalog catalog-c000020b.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format", "2026/09/29 16:31:00 DNS engine change completion ff8a6f95e86a444b474385bd5018d3ab: the paired primary at 192.0.2.11 serves catalog catalog-c000020b.celikpanel.invalid in

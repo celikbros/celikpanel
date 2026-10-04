@@ -1,0 +1,29 @@
+2026-09-29T19:36:42.030070+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T19:36:42.064482+00:00 dns-debian13 agent[1198]: 2026/09/29 19:36:42 Starting CelikPanel Agent...
+2026-09-29T19:36:42.065956+00:00 dns-debian13 agent[1198]: 2026/09/29 19:36:42 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-29T19:36:42.066464+00:00 dns-debian13 agent[1198]: 2026/09/29 19:36:42 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-09-29T19:36:52.067622+00:00 dns-debian13 agent[1198]: 2026/09/29 19:36:52 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T19:36:55.834183+00:00 dns-debian13 systemd[1]: Stopping celikpanel-agent.service - CelikPanel privileged agent...
+2026-09-29T19:36:55.834482+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-29T19:36:55.834784+00:00 dns-debian13 systemd[1]: Stopped celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T19:38:23.535950+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T19:38:23.569212+00:00 dns-debian13 agent[4700]: 2026/09/29 19:38:23 Starting CelikPanel Agent...
+2026-09-29T19:38:24.494726+00:00 dns-debian13 agent[4700]: 2026/09/29 19:38:24 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-29T19:38:24.494939+00:00 dns-debian13 agent[4700]: 2026/09/29 19:38:24 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T19:38:34.495250+00:00 dns-debian13 agent[4700]: 2026/09/29 19:38:34 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T19:38:44.495672+00:00 dns-debian13 agent[4700]: 2026/09/29 19:38:44 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T19:38:54.495921+00:00 dns-debian13 agent[4700]: 2026/09/29 19:38:54 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T19:38:56.719649+00:00 dns-debian13 systemd[1]: Stopping celikpanel-agent.service - CelikPanel privileged agent...
+2026-09-29T19:38:56.730860+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-29T19:38:56.740959+00:00 dns-debian13 systemd[1]: Stopped celikpanel-agent.service - CelikPanel privileged agent.
+-- Boot 6350049665504b6d9679fbcd28507502 --
+2026-09-29T19:39:06.067454+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T19:39:06.265262+00:00 dns-debian13 agent[636]: 2026/09/29 19:39:06 Starting CelikPanel Agent...
+2026-09-29T19:39:06.322377+00:00 dns-debian13 agent[636]: 2026/09/29 19:39:06 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-29T19:39:06.328046+00:00 dns-debian13 agent[636]: 2026/09/29 19:39:06 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T19:39:16.329210+00:00 dns-debian13 agent[636]: 2026/09/29 19:39:16 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T19:39:26.328343+00:00 dns-debian13 agent[636]: 2026/09/29 19:39:26 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T19:39:36.329225+00:00 dns-debian13 agent[636]: 2026/09/29 19:39:36 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T19:39:46.330185+00:00 dns-debian13 agent[636]: 2026/09/29 19:39:46 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T19:39:56.329360+00:00 dns-debian13 agent[636]: 2026/09/29 19:39:56 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T19:40:06.329313+00:00 dns-debian13 agent[636]: 2026/09/29 19:40:06 Panel certificate activation remains pending: panel TLS directory is not root-authenticated

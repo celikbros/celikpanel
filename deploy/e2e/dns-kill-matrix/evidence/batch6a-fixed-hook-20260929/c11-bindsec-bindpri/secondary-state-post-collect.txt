@@ -1,0 +1,199 @@
+wall=2026-09-29T15:35:06.030693308Z boot_id=c3743cfa-d038-41ee-a986-74ff25eb2e87
+== named.service
+MainPID=646
+ExecMainStartTimestamp=Tue 2026-09-29 15:34:21 UTC
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+== bind9.service
+MainPID=646
+ExecMainStartTimestamp=Tue 2026-09-29 15:34:21 UTC
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+== pdns.service
+MainPID=0
+ExecMainStartTimestamp=
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+== celikpanel-agent.service
+MainPID=0
+ExecMainStartTimestamp=
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=disabled
+== celikpanel-panel.service
+MainPID=0
+ExecMainStartTimestamp=
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=disabled
+== ss 53
+udp UNCONN 0      0                         192.0.2.10:53 0.0.0.0:* users:(("named",pid=646,fd=29))          
+udp UNCONN 0      0                         192.0.2.10:53 0.0.0.0:* users:(("named",pid=646,fd=28))          
+udp UNCONN 0      0                          10.0.2.15:53 0.0.0.0:* users:(("named",pid=646,fd=25))          
+udp UNCONN 0      0                          10.0.2.15:53 0.0.0.0:* users:(("named",pid=646,fd=24))          
+udp UNCONN 0      0                          127.0.0.1:53 0.0.0.0:* users:(("named",pid=646,fd=19))          
+udp UNCONN 0      0                          127.0.0.1:53 0.0.0.0:* users:(("named",pid=646,fd=18))          
+udp UNCONN 0      0                         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=335,fd=20))
+udp UNCONN 0      0                      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=335,fd=18))
+udp UNCONN 0      0                              [::1]:53    [::]:* users:(("named",pid=646,fd=32))          
+udp UNCONN 0      0                              [::1]:53    [::]:* users:(("named",pid=646,fd=33))          
+udp UNCONN 0      0      [fe80::5054:ff:fe13:10]%mgmt0:53    [::]:* users:(("named",pid=646,fd=36))          
+udp UNCONN 0      0      [fe80::5054:ff:fe13:10]%mgmt0:53    [::]:* users:(("named",pid=646,fd=37))          
+udp UNCONN 0      0      [fe80::5054:ff:fe53:10]%peer0:53    [::]:* users:(("named",pid=646,fd=40))          
+udp UNCONN 0      0      [fe80::5054:ff:fe53:10]%peer0:53    [::]:* users:(("named",pid=646,fd=41))          
+udp UNCONN 0      0            [fec0::5054:ff:fe13:10]:53    [::]:* users:(("named",pid=646,fd=50))          
+udp UNCONN 0      0            [fec0::5054:ff:fe13:10]:53    [::]:* users:(("named",pid=646,fd=54))          
+tcp LISTEN 0      10                         127.0.0.1:53 0.0.0.0:* users:(("named",pid=646,fd=22))          
+tcp LISTEN 0      10                         127.0.0.1:53 0.0.0.0:* users:(("named",pid=646,fd=20))          
+tcp LISTEN 0      4096                   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=335,fd=19))
+tcp LISTEN 0      4096                      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=335,fd=21))
+tcp LISTEN 0      10                        192.0.2.10:53 0.0.0.0:* users:(("named",pid=646,fd=31))          
+tcp LISTEN 0      10                        192.0.2.10:53 0.0.0.0:* users:(("named",pid=646,fd=30))          
+tcp LISTEN 0      10                         10.0.2.15:53 0.0.0.0:* users:(("named",pid=646,fd=27))          
+tcp LISTEN 0      10                         10.0.2.15:53 0.0.0.0:* users:(("named",pid=646,fd=26))          
+tcp LISTEN 0      10     [fe80::5054:ff:fe53:10]%peer0:53    [::]:* users:(("named",pid=646,fd=42))          
+tcp LISTEN 0      10     [fe80::5054:ff:fe53:10]%peer0:53    [::]:* users:(("named",pid=646,fd=43))          
+tcp LISTEN 0      10                             [::1]:53    [::]:* users:(("named",pid=646,fd=34))          
+tcp LISTEN 0      10                             [::1]:53    [::]:* users:(("named",pid=646,fd=35))          
+tcp LISTEN 0      10           [fec0::5054:ff:fe13:10]:53    [::]:* users:(("named",pid=646,fd=55))          
+tcp LISTEN 0      10           [fec0::5054:ff:fe13:10]:53    [::]:* users:(("named",pid=646,fd=56))          
+tcp LISTEN 0      10     [fe80::5054:ff:fe13:10]%mgmt0:53    [::]:* users:(("named",pid=646,fd=38))          
+tcp LISTEN 0      10     [fe80::5054:ff:fe13:10]%mgmt0:53    [::]:* users:(("named",pid=646,fd=39))          
+== rndc status
+version: BIND 9.20.29-1~deb13u1-Debian (Stable Release) <id:>
+running on dns-debian13: Linux x86_64 6.12.105+deb13-cloud-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.12.105-1 (2026-08-24) (Debian GNU/Linux 13 (trixie))
+boot time: Tue, 29 Sep 2026 15:34:21 GMT
+last configured: Tue, 29 Sep 2026 15:34:21 GMT
+configuration file: /etc/bind/named.conf
+CPUs found: 2
+worker threads: 2
+number of zones: 3 (0 automatic)
+debug level: 0
+xfers running: 0
+xfers deferred: 0
+xfers first refresh: 0
+soa queries in progress: 0
+query logging is OFF
+response logging is OFF
+memory profiling is INACTIVE
+recursive clients: 0/900/1000
+recursive high-water: 0
+tcp clients: 0/150
+TCP high-water: 2
+server is up and running
+== rndc zonestatus catalog-c000020b.celikpanel.invalid
+name: catalog-c000020b.celikpanel.invalid
+type: secondary
+serial: 1
+nodes: 3
+last loaded: Tue, 29 Sep 2026 15:34:21 GMT
+next refresh: Tue, 29 Sep 2026 15:39:10 GMT
+expires: Tue, 29 Sep 2026 16:34:21 GMT
+secure: no
+dynamic: no
+reconfigurable via modzone: no
+== rndc showzone catalog-c000020b.celikpanel.invalid
+zone "catalog-c000020b.celikpanel.invalid" { type secondary; primaries { 192.0.2.11; }; };
+== rndc zonestatus s1-kill.test
+name: s1-kill.test
+type: secondary
+serial: 2026083101
+nodes: 4
+last loaded: Tue, 29 Sep 2026 15:34:21 GMT
+next refresh: Tue, 29 Sep 2026 18:30:07 GMT
+expires: Tue, 06 Oct 2026 15:34:21 GMT
+secure: no
+dynamic: no
+reconfigurable via modzone: yes
+== rndc showzone s1-kill.test
+rndc: 'showzone' failed: failure
+== named-checkconf -l
+catalog-c000020b.celikpanel.invalid IN _default secondary
+. IN _default hint
+== managed BIND files (/var/cache/bind, no follow)
+drwxrwxr-t root:bind 4096 2026-09-29T15:34:48.5280000000 /var/cache/bind -> 
+-rw------- bind:bind 8192 2026-09-29T15:33:31.4827510760 /var/cache/bind/_default.nzd -> 
+drwxr-xr-x root:root 4096 2026-09-29T15:33:28.0524825410 /var/cache/bind/celikpanel -> 
+lrwxrwxrwx root:root 76 2026-09-29T15:33:28.0444868470 /var/cache/bind/celikpanel/current -> generations/74c26315936f7313d3130d7a80a331fa18a426779477e4b49f6569c15b8d0e77
+drwxr-xr-x root:root 4096 2026-09-29T15:33:27.8685853280 /var/cache/bind/celikpanel/generations -> 
+dr-xr-xr-x root:root 4096 2026-09-29T15:33:27.8525943810 /var/cache/bind/celikpanel/generations/74c26315936f7313d3130d7a80a331fa18a426779477e4b49f6569c15b8d0e77 -> 
+-r--r--r-- root:root 652 2026-09-29T15:33:27.8525943810 /var/cache/bind/celikpanel/generations/74c26315936f7313d3130d7a80a331fa18a426779477e4b49f6569c15b8d0e77/receipt.json -> 
+dr-xr-xr-x root:root 4096 2026-09-29T15:33:27.6287211350 /var/cache/bind/celikpanel/generations/74c26315936f7313d3130d7a80a331fa18a426779477e4b49f6569c15b8d0e77/zones -> 
+-r--r--r-- root:root 239 2026-09-29T15:33:27.6407143460 /var/cache/bind/celikpanel/generations/74c26315936f7313d3130d7a80a331fa18a426779477e4b49f6569c15b8d0e77/zones.conf -> 
+-rw-r--r-- bind:bind 1411 2026-09-29T15:34:48.5200000000 /var/cache/bind/managed-keys.bind -> 
+-rw-r--r-- bind:bind 2590 2026-09-29T15:34:21.5200000000 /var/cache/bind/managed-keys.bind.jnl -> 
+== secondary zone files (regular files under /var/cache/bind), metadata, hash, text
+-- /var/cache/bind/_default.nzd
+size=8192 mode=600 owner=bind:bind mtime=2026-09-29 15:33:31.482751076 +0000
+e01847f8afdf44e574920f3f79a05dc514e5dc0627f6f27dddd0520bde4d6797  /var/cache/bind/_default.nzd
+-- /var/cache/bind/celikpanel/generations/74c26315936f7313d3130d7a80a331fa18a426779477e4b49f6569c15b8d0e77/receipt.json
+size=652 mode=444 owner=root:root mtime=2026-09-29 15:33:27.852594381 +0000
+acd4085dae6794516caa31704e0a3e3a7cfd5d73eeff3aa9bf41d39678d36d6e  /var/cache/bind/celikpanel/generations/74c26315936f7313d3130d7a80a331fa18a426779477e4b49f6569c15b8d0e77/receipt.json
+-- /var/cache/bind/celikpanel/generations/74c26315936f7313d3130d7a80a331fa18a426779477e4b49f6569c15b8d0e77/zones.conf
+size=239 mode=444 owner=root:root mtime=2026-09-29 15:33:27.640714346 +0000
+ab7ebfab43e8a52e8e5754622d21494e21f80fa9ddf4f8f6893480f38479cffd  /var/cache/bind/celikpanel/generations/74c26315936f7313d3130d7a80a331fa18a426779477e4b49f6569c15b8d0e77/zones.conf
+-- /var/cache/bind/managed-keys.bind
+size=1411 mode=644 owner=bind:bind mtime=2026-09-29 15:34:48.520000000 +0000
+c9602767a8282a2b4edb6ddd67d49869d5ea246746453af206473ea831978c3d  /var/cache/bind/managed-keys.bind
+-- /var/cache/bind/managed-keys.bind.jnl
+size=2590 mode=644 owner=bind:bind mtime=2026-09-29 15:34:21.520000000 +0000
+fa3fd3cafe12a9995636f3869d7dffb17e63ce6747c6d90aab3f41ce973cb6e9  /var/cache/bind/managed-keys.bind.jnl
+== PowerDNS database absent
+== pdns journal (transfer/notify/catalog lines, all boots)
+== named journal (transfer/notify/catalog/zone lines, all boots)
+2026-09-29T15:33:31.486475+00:00 dns-debian13 named[7258]: set up managed keys zone for view _default, file 'managed-keys.bind'
+2026-09-29T15:33:31.487423+00:00 dns-debian13 named[7258]: managed-keys-zone: loaded serial 0
+2026-09-29T15:33:31.487667+00:00 dns-debian13 named[7258]: all zones loaded
+2026-09-29T15:33:31.503457+00:00 dns-debian13 named[7258]: zone catalog-c000020b.celikpanel.invalid/IN: Transfer started.
+2026-09-29T15:33:31.520955+00:00 dns-debian13 named[7258]: 0x7efef4b23a00: transfer of 'catalog-c000020b.celikpanel.invalid/IN' from 192.0.2.11#53: connected using 192.0.2.11#53
+2026-09-29T15:33:31.568831+00:00 dns-debian13 named[7258]: zone catalog-c000020b.celikpanel.invalid/IN: transferred serial 1
+2026-09-29T15:33:31.568879+00:00 dns-debian13 named[7258]: 0x7efef4b23a00: transfer of 'catalog-c000020b.celikpanel.invalid/IN' from 192.0.2.11#53: Transfer status: success
+2026-09-29T15:33:31.568884+00:00 dns-debian13 named[7258]: 0x7efef4b23a00: transfer of 'catalog-c000020b.celikpanel.invalid/IN' from 192.0.2.11#53: Transfer completed: 1 messages, 5 records, 261 bytes, 0.047 secs (5553 bytes/sec) (serial 1)
+2026-09-29T15:33:31.568893+00:00 dns-debian13 named[7258]: catz: catalog-c000020b.celikpanel.invalid: reload start
+2026-09-29T15:33:31.568920+00:00 dns-debian13 named[7258]: catz: updating catalog zone 'catalog-c000020b.celikpanel.invalid' with serial 1
+2026-09-29T15:33:31.568956+00:00 dns-debian13 named[7258]: catz: adding zone 's1-kill.test' from catalog 'catalog-c000020b.celikpanel.invalid' - success
+2026-09-29T15:33:31.569132+00:00 dns-debian13 named[7258]: catz: catalog-c000020b.celikpanel.invalid: reload done: success
+2026-09-29T15:33:31.615858+00:00 dns-debian13 named[7258]: zone s1-kill.test/IN: Transfer started.
+2026-09-29T15:33:31.616428+00:00 dns-debian13 named[7258]: 0x7efef4b23a00: transfer of 's1-kill.test/IN' from 192.0.2.11#53: connected using 192.0.2.11#53
+2026-09-29T15:33:31.623140+00:00 dns-debian13 named[7258]: zone s1-kill.test/IN: transferred serial 2026083101
+2026-09-29T15:33:31.623208+00:00 dns-debian13 named[7258]: 0x7efef4b23a00: transfer of 's1-kill.test/IN' from 192.0.2.11#53: Transfer status: success
+2026-09-29T15:33:31.623215+00:00 dns-debian13 named[7258]: 0x7efef4b23a00: transfer of 's1-kill.test/IN' from 192.0.2.11#53: Transfer completed: 1 messages, 7 records, 212 bytes, 0.003 secs (70666 bytes/sec) (serial 2026083101)
+2026-09-29T15:33:31.623235+00:00 dns-debian13 named[7258]: zone s1-kill.test/IN: sending notifies (serial 2026083101)
+2026-09-29T15:33:31.649038+00:00 dns-debian13 named[7258]: managed-keys-zone: Initializing automatic trust anchor management for zone '.'; DNSKEY ID 20326 is now trusted, waiving the normal 30-day waiting period.
+2026-09-29T15:33:31.649228+00:00 dns-debian13 named[7258]: managed-keys-zone: Initializing automatic trust anchor management for zone '.'; DNSKEY ID 38696 is now trusted, waiving the normal 30-day waiting period.
+2026-09-29T15:34:21.348996+00:00 dns-debian13 named[646]: set up managed keys zone for view _default, file 'managed-keys.bind'
+2026-09-29T15:34:21.351069+00:00 dns-debian13 named[646]: managed-keys-zone: loaded serial 2
+2026-09-29T15:34:21.351318+00:00 dns-debian13 named[646]: all zones loaded
+2026-09-29T15:34:21.356591+00:00 dns-debian13 named[646]: zone catalog-c000020b.celikpanel.invalid/IN: Transfer started.
+2026-09-29T15:34:21.361676+00:00 dns-debian13 named[646]: 0x7fdb59f23a00: transfer of 'catalog-c000020b.celikpanel.invalid/IN' from 192.0.2.11#53: connected using 192.0.2.11#53
+2026-09-29T15:34:21.402173+00:00 dns-debian13 named[646]: zone catalog-c000020b.celikpanel.invalid/IN: transferred serial 1
+2026-09-29T15:34:21.402215+00:00 dns-debian13 named[646]: 0x7fdb59f23a00: transfer of 'catalog-c000020b.celikpanel.invalid/IN' from 192.0.2.11#53: Transfer status: success
+2026-09-29T15:34:21.402221+00:00 dns-debian13 named[646]: 0x7fdb59f23a00: transfer of 'catalog-c000020b.celikpanel.invalid/IN' from 192.0.2.11#53: Transfer completed: 1 messages, 5 records, 261 bytes, 0.040 secs (6525 bytes/sec) (serial 1)
+2026-09-29T15:34:21.402231+00:00 dns-debian13 named[646]: catz: catalog-c000020b.celikpanel.invalid: reload start
+2026-09-29T15:34:21.402292+00:00 dns-debian13 named[646]: catz: updating catalog zone 'catalog-c000020b.celikpanel.invalid' with serial 1
+2026-09-29T15:34:21.402409+00:00 dns-debian13 named[646]: catz: adding zone 's1-kill.test' from catalog 'catalog-c000020b.celikpanel.invalid' - success
+2026-09-29T15:34:21.402629+00:00 dns-debian13 named[646]: catz: catalog-c000020b.celikpanel.invalid: reload done: success
+2026-09-29T15:34:21.448863+00:00 dns-debian13 named[646]: zone s1-kill.test/IN: Transfer started.
+2026-09-29T15:34:21.449406+00:00 dns-debian13 named[646]: 0x7fdb59f23a00: transfer of 's1-kill.test/IN' from 192.0.2.11#53: connected using 192.0.2.11#53
+2026-09-29T15:34:21.493374+00:00 dns-debian13 named[646]: zone s1-kill.test/IN: transferred serial 2026083101
+2026-09-29T15:34:21.493389+00:00 dns-debian13 named[646]: 0x7fdb59f23a00: transfer of 's1-kill.test/IN' from 192.0.2.11#53: Transfer status: success
+2026-09-29T15:34:21.493394+00:00 dns-debian13 named[646]: 0x7fdb59f23a00: transfer of 's1-kill.test/IN' from 192.0.2.11#53: Transfer completed: 1 messages, 7 records, 212 bytes, 0.044 secs (4818 bytes/sec) (serial 2026083101)
+2026-09-29T15:34:21.493408+00:00 dns-debian13 named[646]: zone s1-kill.test/IN: sending notifies (serial 2026083101)
+2026-09-29T15:34:21.512873+00:00 dns-debian13 named[646]: managed-keys-zone: Key 20326 for zone . is now trusted (acceptance timer complete)
+2026-09-29T15:34:21.513758+00:00 dns-debian13 named[646]: managed-keys-zone: Key 38696 for zone . is now trusted (acceptance timer complete)
+2026-09-29T15:35:06.363810+00:00 dns-debian13 named[646]: received control channel command 'zonestatus catalog-c000020b.celikpanel.invalid'
+2026-09-29T15:35:06.407504+00:00 dns-debian13 named[646]: received control channel command 'showzone catalog-c000020b.celikpanel.invalid'
+2026-09-29T15:35:06.461863+00:00 dns-debian13 named[646]: received control channel command 'zonestatus s1-kill.test'
+2026-09-29T15:35:06.506021+00:00 dns-debian13 named[646]: received control channel command 'showzone s1-kill.test'
+2026-09-29T15:35:06.506811+00:00 dns-debian13 named[646]: loading NZD config from '_default.nzd' for zone 's1-kill.test'
+== agent journal: catalog/producer lines (all boots)
+2026-09-29T15:33:35.043036+00:00 dns-debian13 agent[8155]: 2026/09/29 15:33:35 DNS engine change recovery 2228e0de67c2e95ae9675187f214d1b5: the paired primary at 192.0.2.11 serves catalog catalog-c000020b.celikpanel.invalid in the BIND catalog format; this operation reads it in that format
+2026-09-29T15:33:36.919924+00:00 dns-debian13 agent[8155]: 2026/09/29 15:33:36 DNS engine change completion 2228e0de67c2e95ae9675187f214d1b5: the paired primary at 192.0.2.11 serves catalog catalog-c000020b.celikpanel.invalid in the BIND catalog format; this operation reads it in that format

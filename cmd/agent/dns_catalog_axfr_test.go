@@ -2,11 +2,13 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"strings"
 	"testing"
 
 	"github.com/alicelik/celikpanel/internal/binddns"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 type catalogAXFRTestRR struct {
@@ -309,6 +311,120 @@ func TestParseDNSCatalogAXFRRejectsNonAnswerSurface(t *testing.T) {
 			)
 			if _, _, err := parseDNSCatalogAXFRMessage(message, id, catalog); err == nil {
 				t.Fatal("non-answer transfer surface was accepted")
+			}
+		})
+	}
+}
+
+// The PTR label and TTLs were captured from a native PowerDNS 4.9.17
+// producer AXFR; only this explicitly selected producer policy admits them.
+func TestCatalogAXFRProbeSelectionUsesProducerEngine(t *testing.T) {
+	oldBIND, oldBoundBIND := probeDNSCatalogAXFR, probeDNSBoundCatalogAXFR
+	oldPDNS, oldBoundPDNS := probeDNSPDNSCatalogAXFR, probeDNSBoundPDNSCatalogAXFR
+	t.Cleanup(func() {
+		probeDNSCatalogAXFR, probeDNSBoundCatalogAXFR = oldBIND, oldBoundBIND
+		probeDNSPDNSCatalogAXFR, probeDNSBoundPDNSCatalogAXFR = oldPDNS, oldBoundPDNS
+	})
+	calls := make([]string, 0, 4)
+	probeDNSCatalogAXFR = func(context.Context, string, string) (dnsCatalogAXFRResult, error) {
+		calls = append(calls, "bind-local")
+		return dnsCatalogAXFRResult{}, nil
+	}
+	probeDNSBoundCatalogAXFR = func(context.Context, string, string, string) (dnsCatalogAXFRResult, error) {
+		calls = append(calls, "bind-peer")
+		return dnsCatalogAXFRResult{}, nil
+	}
+	probeDNSPDNSCatalogAXFR = func(context.Context, string, string) (dnsCatalogAXFRResult, error) {
+		calls = append(calls, "pdns-local")
+		return dnsCatalogAXFRResult{}, nil
+	}
+	probeDNSBoundPDNSCatalogAXFR = func(context.Context, string, string, string) (dnsCatalogAXFRResult, error) {
+		calls = append(calls, "pdns-peer")
+		return dnsCatalogAXFRResult{}, nil
+	}
+	for _, tc := range []struct {
+		engine transport.DNSEngine
+		want   string
+	}{
+		{transport.DNSEngineBIND, "bind"}, {transport.DNSEnginePowerDNS, "pdns"},
+	} {
+		local, peer, err := catalogAXFRProbesForSourceEngine(tc.engine)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, _ = local(context.Background(), "192.0.2.10", "catalog.example")
+		_, _ = peer(context.Background(), "192.0.2.10", "192.0.2.11", "catalog.example")
+		if got := calls[len(calls)-2:]; got[0] != tc.want+"-local" || got[1] != tc.want+"-peer" {
+			t.Fatalf("producer %s routed to %v", tc.engine, got)
+		}
+	}
+	if _, _, err := catalogAXFRProbesForSourceEngine(""); err == nil {
+		t.Fatal("unknown producer selected a catalog parser")
+	}
+}
+
+func TestPowerDNSCatalogAXFRProducerIsExplicitAndBounded(t *testing.T) {
+	const id = uint16(0x4260)
+	const catalog = "catalog-c000020a.celikpanel.invalid"
+	const member = "s1-kill.test"
+	records := exactCatalogAXFRTestRecords(t, catalog, member)
+	records[0] = catalogAXFRTestSOA(t, catalog, "invalid", "invalid", 1790542951, 60, 30, 3600, 30)
+	records[4] = records[0]
+	records[2].ttl = 0
+	records[3].ttl = 0
+	records[3].owner = "lf5eijnqp9ob8kmq5mv0vhjaevtcfuus.zones." + catalog
+	parse := func(records []catalogAXFRTestRR, producer dnsCatalogAXFRProducer) (dnsCatalogAXFRResult, error) {
+		msg := buildCatalogAXFRTestMessage(t, id, catalog, dnsResponseQR|dnsResponseAA, true, records, nil, nil)
+		return readDNSCatalogAXFRWithProducer(bytes.NewReader(frameCatalogAXFRTestMessages(msg)), id, catalog, producer)
+	}
+	got, err := parse(records, dnsCatalogAXFRPowerDNS)
+	if err != nil || got.Serial != 1790542951 || len(got.Members) != 1 || got.Members[0] != member {
+		t.Fatalf("PowerDNS result=%+v err=%v", got, err)
+	}
+	if _, err := parse(records, dnsCatalogAXFRBIND); err == nil {
+		t.Fatal("BIND producer policy accepted PowerDNS catalog")
+	}
+	for _, test := range []struct {
+		name   string
+		change func([]catalogAXFRTestRR) []catalogAXFRTestRR
+	}{
+		{"outside zones namespace", func(r []catalogAXFRTestRR) []catalogAXFRTestRR {
+			r[3].owner = "lf5eijnqp9ob8kmq5mv0vhjaevtcfuus.other." + catalog
+			return r
+		}},
+		{"foreign catalog", func(r []catalogAXFRTestRR) []catalogAXFRTestRR {
+			r[3].owner = "lf5eijnqp9ob8kmq5mv0vhjaevtcfuus.zones.foreign.invalid"
+			return r
+		}},
+		{"short label", func(r []catalogAXFRTestRR) []catalogAXFRTestRR {
+			r[3].owner = "lf5eijnqp9ob8kmq5mv0vhjaevtcfuu.zones." + catalog
+			return r
+		}},
+		{"non-base32hex label", func(r []catalogAXFRTestRR) []catalogAXFRTestRR {
+			r[3].owner = "wf5eijnqp9ob8kmq5mv0vhjaevtcfuus.zones." + catalog
+			return r
+		}},
+		{"duplicate owner", func(r []catalogAXFRTestRR) []catalogAXFRTestRR {
+			return append(r[:4], append([]catalogAXFRTestRR{r[3]}, r[4:]...)...)
+		}},
+		{"duplicate member different owner", func(r []catalogAXFRTestRR) []catalogAXFRTestRR {
+			extra := r[3]
+			extra.owner = "af5eijnqp9ob8kmq5mv0vhjaevtcfuus.zones." + catalog
+			return append(r[:4], append([]catalogAXFRTestRR{extra}, r[4:]...)...)
+		}},
+		{"wrong property TTL", func(r []catalogAXFRTestRR) []catalogAXFRTestRR {
+			r[3].ttl = 60
+			return r
+		}},
+		{"wrong serial", func(r []catalogAXFRTestRR) []catalogAXFRTestRR {
+			r[4] = catalogAXFRTestSOA(t, catalog, "invalid", "invalid", 1790542952, 60, 30, 3600, 30)
+			return r
+		}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			altered := append([]catalogAXFRTestRR(nil), records...)
+			if _, err := parse(test.change(altered), dnsCatalogAXFRPowerDNS); err == nil {
+				t.Fatal("noncanonical PowerDNS catalog accepted")
 			}
 		})
 	}

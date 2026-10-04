@@ -1,0 +1,5 @@
+== /var/lib/powerdns/pdns.sqlite3 size=98304 mtime_ns=1790698396204000000 sha256=5331040921ebea6a1870d041bff234b5698fd10ee2c6c218bd9db629302f10b5
+   sibling /var/lib/powerdns/pdns.sqlite3-wal size=0
+   sibling /var/lib/powerdns/pdns.sqlite3-shm size=32768
+tables: ['celikpanel_dns_engine_manifest_receipt', 'celikpanel_dns_zone_sync_receipts', 'celikpanel_dns_zone_sync_v3_receipts', 'comments', 'cryptokeys', 'domainmetadata', 'domains', 'records', 'supermasters', 'tsigkeys']
+sqlite error: no such column: rowid

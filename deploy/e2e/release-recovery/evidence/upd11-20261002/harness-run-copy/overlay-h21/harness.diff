@@ -1,0 +1,196 @@
+--- a/deploy/e2e/release-recovery/owner_update_trial.py
++++ b/deploy/e2e/release-recovery/owner_update_trial.py
+@@ -519,10 +519,18 @@
+     "upd1-arch-mgmt-off-reboot": Cell("upd1-arch-mgmt-off-reboot", "arch", "mgmt-off-reboot", None, False),
+     # upd8: the same three cells on a one-node Ubuntu 24.04 lab (lab.py --platform ubuntu); mail is required
+     # as on Debian (same apt package family), the second fault is Debian's reset at payload_restored.
+-    "upd1-ubuntu-good": Cell("upd1-ubuntu-good", "ubuntu", "good", None, True),
+-    "upd1-ubuntu-owner-continuation": Cell("upd1-ubuntu-owner-continuation", "ubuntu", "owner-continuation", None, True),
++    # upd11: every Ubuntu cell keeps the PackageKit probe on (read-only /proc facts and the Agent's readiness
++    # answer at setup, arm and the owner's start; PackageKit's journal at collect); the owner model (H19) is
++    # unchanged. The start-check and management-off kinds mirror Debian's definitions.
++    "upd1-ubuntu-good": Cell("upd1-ubuntu-good", "ubuntu", "good", None, True, pk_observe=True),
++    "upd1-ubuntu-owner-continuation": Cell("upd1-ubuntu-owner-continuation", "ubuntu", "owner-continuation", None, True,
++                                           pk_observe=True),
+     "upd1-ubuntu-defective": Cell("upd1-ubuntu-defective", "ubuntu", "defective",
+-                                  {"action": "reboot", "checkpoint": "payload_restored"}, True),
++                                  {"action": "reboot", "checkpoint": "payload_restored"}, True, pk_observe=True),
++    "upd1-ubuntu-startcheck": Cell("upd1-ubuntu-startcheck", "ubuntu", "start-check",
++                                   {"action": "reboot", "checkpoint": "payload_restored"}, True, pk_observe=True),
++    "upd1-ubuntu-mgmt-off-reboot": Cell("upd1-ubuntu-mgmt-off-reboot", "ubuntu", "mgmt-off-reboot", None, True,
++                                        pk_observe=True),
+     # upd9 (efcba145: an idle packagekitd is not package activity). setuponce: the candidate installed fresh, the
+     # web_mail setup started once by an ordinary owner, PackageKit observed; the cell ends after setup.
+     "upd1-ubuntu-setuponce": Cell("upd1-ubuntu-setuponce", "ubuntu", "good", None, True,
+@@ -972,6 +980,17 @@
+     return result
+ 
+ 
++# H21 (upd11): the track stopped on the first terminal root-CLI read while the Panel API, read a few hundred ms
++# earlier in the same sample, still showed the previous phase (upd11 ubuntu-startcheck run-a sample 28: api
++# recovering, cli recovered). One confirming sample is taken after this delay instead of judging that race.
++H21_CONFIRM_DELAY_S = 2.0
++
++
++def final_needs_confirmation(sample: dict) -> bool:
++    """The sample that ends the track disagrees between the known views: take one confirming sample (H21)."""
++    return (sample.get("agreement") or {}).get("verdict") == "disagree"
++
++
+ def agreement_verdict(samples: list[dict]) -> dict:
+     """Failed only when a disagreement persists over two consecutive samples or at the end.
+ 
+@@ -2640,6 +2659,24 @@
+             "failing_after_first_ok": failing_after}
+ 
+ 
++# H20 (upd11): the 180 s window starts with the sampler, which runs about 13 s after the boot; on a slow guest boot the
++# owner's cron daemon starts much later (Arch upd11: crond 85 s after the boot, first run 144 s after it), so the fixed
++# window can end between its first and second in-boot run. The measurement then continues, read-only, for at most one
++# cron period limit more; a cron that does not advance still fails, and the extension is recorded.
++CRON_LATE_START_EXTENSION_S = 130.0
++
++
++def management_off_window_complete(window: list[dict], cron_seeded: bool) -> bool:
++    """The management-off window may be judged: 180 s of new-boot samples, and either cron is not seeded, its
++    in-boot stamps already pass, or the bounded H20 extension is used up."""
++    seconds = window_seconds(window)
++    if seconds < MANAGEMENT_OFF_MEASURE_SECONDS:
++        return False
++    if not cron_seeded or cron_after_boot(window)["verdict"] == "served":
++        return True
++    return seconds >= MANAGEMENT_OFF_MEASURE_SECONDS + CRON_LATE_START_EXTENSION_S
++
++
+ def cron_after_boot(window: list[dict], period_limit: float = 130.0) -> dict:
+     """The owner's cron job ran in this boot: at least two new stamps, none more than ``period_limit`` apart."""
+     if not window:
+@@ -4557,6 +4594,21 @@
+             if state in ("terminal", "paused", "stopped"):
+                 # upd5: a typed stop before any change is final for the request; no H8 wait is needed.
+                 final = observed
++                if final_needs_confirmation(sample):
++                    # H21 (upd11): the Panel API was read just before the record turned final and the root CLI just
++                    # after; one confirming sample decides (a persisting disagreement still fails the rule).
++                    time.sleep(H21_CONFIRM_DELAY_S)
++                    with self.panel_client().polling() as view:
++                        confirm = self.status_sample(view, index)
++                    index += 1
++                    confirm["h21_confirming_sample"] = True
++                    self.state["status_samples"].append(confirm)
++                    self.ev.write_json(f"{self.step_dir}/samples/{index:04d}.json", confirm)
++                    self.state.setdefault("h21_confirmations", []).append(
++                        {"sample": index, "agreement": (confirm.get("agreement") or {}).get("verdict"),
++                         "class": classify_status(confirm.get("observed"))})
++                    if classify_status(confirm.get("observed")) == state:
++                        final = confirm.get("observed")
+                 break
+             if settled.observe(observed, time.monotonic()):
+                 # H8: named rule; the verdict stays inconclusive and says why.
+@@ -5099,13 +5151,21 @@
+         boot_id = self.state["owner_reboot"]["after_boot_id"]
+         deadline = time.monotonic() + 900
+         window: list[dict] = []
++        cron_seeded = bool(self.state["seed"]["cron"].get("seeded"))
+         while time.monotonic() < deadline:
+             window = boot_window(self.read_samples(), boot_id)
+-            if window_seconds(window) >= MANAGEMENT_OFF_MEASURE_SECONDS:
++            if management_off_window_complete(window, cron_seeded):
+                 break
+             time.sleep(10)
+         snapshot = self.workload_snapshot("management-off-after-reboot")
+         observed = self.management_off_observations(window, snapshot)
++        # H20: how far the judged window ran past 180 s (a few seconds from polling alone; more when the window was
++        # extended because cron had fewer than two in-boot stamps at 180 s).
++        observed["h20_window_past_180_s"] = round(max(0.0, observed["window_seconds"] - MANAGEMENT_OFF_MEASURE_SECONDS),
++                                                  1)
++        observed["h20_cron_at_180_s"] = cron_after_boot(
++            [s for s in window if float(s.get("monotonic", s["t"])) - float(window[0].get("monotonic", window[0]["t"]))
++             <= MANAGEMENT_OFF_MEASURE_SECONDS + 5.0]) if cron_seeded and window else None
+         self.state["management_off_measure"] = observed
+         checks.update(observed)
+         if observed["window_seconds"] < MANAGEMENT_OFF_MEASURE_SECONDS:
+@@ -5551,6 +5611,8 @@
+             result["busy_start"]["idle_alive_attempt"] = {
+                 k: (self.state.get("idle_alive_attempt") or {}).get(k)
+                 for k in ("request_id", "packagekitd_alive_before", "admitted", "start", "readiness")}
++        if self.pk_on():
++            # upd11: every cell with the probe on summarises its observations (busy-start included, as before).
+             result["packagekit"] = pk_summary(self.state.get("pk_observations", []))
+         self.step_dir = "result"
+         return self.ev.finalize_upd1(result)
+--- a/deploy/e2e/release-recovery/test_owner_update_trial.py
++++ b/deploy/e2e/release-recovery/test_owner_update_trial.py
+@@ -128,7 +128,8 @@
+             self.assertIn(cell.scenario, t.SCENARIOS)
+             if cell.scenario is None:
+                 self.assertTrue(cell.h19)
+-                self.assertFalse(cell.pk_observe)
++                # upd11: the probe is on for every Ubuntu cell and only there.
++                self.assertEqual(cell.pk_observe, cell.node == "ubuntu")
+         trial = t.Trial.__new__(t.Trial)
+         trial.node_name, trial.cell = "ubuntu", once
+         self.assertFalse(trial.owner_waits())
+@@ -225,11 +226,20 @@
+                                            "upd1-debian13-mgmt-off-reboot", "upd1-debian13-owner-continuation",
+                                            "upd1-debian13-realstart", "upd1-debian13-startcheck",
+                                            "upd1-ubuntu-busystart", "upd1-ubuntu-defective", "upd1-ubuntu-good",
+-                                           "upd1-ubuntu-owner-continuation", "upd1-ubuntu-setuponce"])
+-        # upd8: the Ubuntu cells mirror Debian's (mail required, reset at payload_restored).
+-        for name in ("upd1-ubuntu-defective", "upd1-ubuntu-good", "upd1-ubuntu-owner-continuation"):
++                                           "upd1-ubuntu-mgmt-off-reboot", "upd1-ubuntu-owner-continuation",
++                                           "upd1-ubuntu-setuponce", "upd1-ubuntu-startcheck"])
++        # upd8: the Ubuntu cells mirror Debian's (mail required, reset at payload_restored); upd11 adds the
++        # start-check and management-off kinds and the PackageKit probe (the only difference).
++        for name in ("upd1-ubuntu-defective", "upd1-ubuntu-good", "upd1-ubuntu-owner-continuation",
++                     "upd1-ubuntu-startcheck", "upd1-ubuntu-mgmt-off-reboot"):
+             debian = t.CELLS[name.replace("ubuntu", "debian13")]
+-            self.assertEqual(dataclasses.replace(t.CELLS[name], name=debian.name, node="debian13"), debian)
++            self.assertTrue(t.CELLS[name].pk_observe)
++            self.assertEqual(dataclasses.replace(t.CELLS[name], name=debian.name, node="debian13", pk_observe=False),
++                             debian)
++            plan = t.build_plan(t.CELLS[name], artifacts(upd3=True), "/var/tmp/cp-release-drill-x", 18443)
++            self.assertEqual([s["name"] for s in plan["steps"]],
++                             [s["name"] for s in t.build_plan(debian, artifacts(upd3=True),
++                                                                "/var/tmp/cp-release-drill-x", 18443)["steps"]])
+         self.assertEqual(t.CELLS["upd1-debian13-defective"].recovery_fault,
+                          {"action": "reboot", "checkpoint": "payload_restored"})
+         self.assertEqual(t.CELLS["upd1-arch-defective"].recovery_fault,
+@@ -2777,6 +2787,37 @@
+         self.assertEqual(t.cron_after_boot(stale)["verdict"], "not-advancing")      # a stamp from before the boot
+         self.assertEqual(t.boot_window(window + self.window(boot="B1", count=3), "B2"), window)
+ 
++    def test_h21_one_confirming_sample_after_a_final_race(self):
++        """upd11 H21: a disagreement only in the sample that ends the track is confirmed once; a persisting one fails."""
++        self.assertTrue(t.final_needs_confirmation({"agreement": {"verdict": "disagree"}}))
++        for verdict in ("agree", "single-source", "start-instant-lag", "no-known-source", None):
++            self.assertFalse(t.final_needs_confirmation({"agreement": {"verdict": verdict}}))
++        self.assertFalse(t.final_needs_confirmation({}))
++        race = [{"verdict": "agree"}, {"verdict": "single-source"}, {"verdict": "disagree"}]
++        self.assertEqual(t.agreement_verdict(race)["verdict"], "failed")                  # what run-a recorded
++        self.assertEqual(t.agreement_verdict(race + [{"verdict": "agree"}])["verdict"], "passed")
++        self.assertEqual(t.agreement_verdict(race + [{"verdict": "disagree"}])["verdict"], "failed")
++        self.assertGreater(t.H21_CONFIRM_DELAY_S, 0)
++
++    def test_h20_window_waits_for_a_late_cron_daemon(self):
++        """upd11 H20: a cron daemon that starts late in the boot gets at most one period limit more; a stuck one fails."""
++        def boot(count, stamps):
++            base = 1000.0
++            return [{"t": base + 5.0 * i, "monotonic": 13.0 + 5.0 * i, "boot_id": "B",
++                     "cron": {"ok": True, "mtime": max([900.0] + [base + s for s in stamps if s <= 5.0 * i])}}
++                    for i in range(count)]
++        late = boot(38, [131.0])                       # 185 s, first in-boot run at 131 s (upd11 arch-mr run-a)
++        self.assertEqual(t.cron_after_boot(late)["verdict"], "not-advancing")
++        self.assertFalse(t.management_off_window_complete(late, True))
++        self.assertTrue(t.management_off_window_complete(late, False))                    # cron not seeded: as before
++        later = boot(39, [131.0, 186.0])               # the next run 55 s later: judged at once, served
++        self.assertTrue(t.management_off_window_complete(later, True))
++        self.assertEqual(t.cron_after_boot(later)["verdict"], "served")
++        stuck = boot(64, [131.0])                      # 315 s, still one run: the extension ends, the verdict stays
++        self.assertTrue(t.management_off_window_complete(stuck, True))
++        self.assertEqual(t.cron_after_boot(stuck)["verdict"], "not-advancing")
++        self.assertFalse(t.management_off_window_complete(boot(30, []), False))           # fewer than 180 s
++
+     def test_management_state_renewal_timer_and_truth(self):
+         off = {u: {"ActiveState": "inactive", "UnitFileState": "disabled"} for u in t.MANAGEMENT_UNITS}
+         on = {u: {"ActiveState": "active", "UnitFileState": "enabled"} for u in t.MANAGEMENT_UNITS}

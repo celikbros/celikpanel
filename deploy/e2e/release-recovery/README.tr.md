@@ -1,0 +1,652 @@
+# Geçici sürüm ve kurtarma laboratuvarı
+
+*[English](README.md) · P0.1 kanıt araçları*
+
+Bu dizin temiz Debian 13 ve Arch QEMU konukları hazırlar, gerçek Alpha75 sürümünü
+kurar, kurulu Agent üzerinden sınırları belirli bir DNS test durumu oluşturur ve
+yerel gözlemler toplar. **Araçların bulunması, konukların açılması veya çevrimdışı
+testlerin geçmesi gerçek ortamda PASS sonucu oluşturmaz; P0.1'i kapatmaz.**
+[Dayanıklılık sözleşmesi](../../../docs/RESILIENCE-CONTRACT.tr.md), gerçek
+güncelleme/otomatik geri alma ve yerel iş yükü kabulünün tamamlanmasını gerektirir.
+
+## Kaydedilmiş gerçek ortam sonuçları
+
+Sonraki sınırlı kayıtlar [bağımsız veriyi](RECOVERY-MATERIAL.tr.md),
+[çalışma ortamı geçişini](RUNTIME-PROMOTION.tr.md) ve [ileri tamamlamayı](FORWARD-COMPLETION.tr.md)
+kapsar. Aşağıdaki önceki başarısızlıklar korunur; bütün matris tamamlanmış sayılmaz.
+
+[2026-09-14 sonuç kaydı](RESULTS.tr.md), gerçek QEMU denemelerinin tam işlem,
+ürün, yedek ve özel kanıt özetlerini içerir:
+
+| Deneme | Gözlenen sonuç | Eski sürüme tam geri alma |
+| --- | --- | --- |
+| Debian 13, Alpha75 → Alpha79 | Güncelleme BIND sahiplik uyumluluğunda durdu; otomatik kurtarma da devralınan kilit kontrolünde başarısız oldu. Aday dosyalar kurulu kaldı; panel/Agent durdu. | Geri yükleme gövdesi çalışmadı; kurtarma girişimi başarısız oldu. |
+| Arch, Alpha75 → Alpha80, geçici port çakışması | Gerçek kurtarma bekleyen güncellemeyi tamamladı. Kurulu ve çalışan programlar Alpha80 idi; DNS A/SOA yanıtları ve sunulan başlangıç TLS parmak izi korundu. | **INCONCLUSIVE:** güncelleme tamamlanarak erişim geri geldi; Alpha75 geri yüklenmedi. |
+| Arch, Alpha75 → Alpha80, etkin güncelleme sırasında kesinti | Tam güncelleme işçisi öldürülmeden önce aday ve tamamlanmış yedek doğrulandı. Gerçek kurtarma, değişmemiş üretici servis dosyalarının yayımlanması ile yeniden yükleme arasındaki `NeedDaemonReload=yes` durumunu reddetti. | **FAIL:** kurtarma tam geri yükleme gövdesinden önce durdu. |
+| Debian 13, Alpha75 → Alpha80, etkin güncelleme sırasında kesinti | Gerçek `OnFailure` kurtarması aynı yeniden yükleme durumu kontrolünde başarısız oldu. UDP/TCP DNS A/SOA yanıtları korundu; HTTPS bağlantısı reddedildi. | **FAIL:** kurtarma tam geri yükleme gövdesinden önce durdu. |
+
+Bekleyen güncellemeyi tamamlamak yararlı ve gözlenmiş bir kurtarma sonucudur.
+Eski programları, veriyi ve iş yüklerini geri yüklemekten farklı bir kabul
+ölçütüne sahiptir; tam geri alma PASS sonucu veya yeni bir işlev hatası değildir.
+İlk güncelleme hatası ayrıca kayıtlı kalır. **P0.1 hâlâ açıktır.** Etkin işçi
+kesintisi gerçek kurtarmaya ulaştı; ancak olağan çalışma durumunu arayan kontrol,
+kesilmiş geçişi geri yüklemeden önce reddetti. Bu, açık P0.3 hata kanıtıdır;
+düzeltilmiş bir kusur veya tamamlanmış geri alma kabulü değildir.
+
+Rapor kanıt sınırlarını da korur: ilk Debian denemesinde `dig` yoktu, canlı WAL tam veritabanı
+karşılaştırmasını engelledi; TLS edinimi/yenilemesi ve gerçek DNS eş sunucu
+aktarımı test edilmedi. Diğer bağımsız iş yükleri de henüz ölçülmedi.
+
+## Sınır ve önkoşullar
+
+- [DNS test düzeneğinde](../dns-kill-matrix/README.md) açıklanan bağımlılıkları ve
+  sabitlenmiş temel imaj önbelleğini içeren Linux QEMU sunucusunda çalıştırılır.
+  Başlatıcı her konuk için KVM, iki işlemci, 3 GiB RAM ve yeni 24 GiB yazılabilir
+  disk katmanı kullanır. Windows QEMU bu başlatıcının çalışma ortamı değildir.
+- Çalışma kökü yeni bir `/var/tmp/cp-release-drill-AD` olmalıdır. Mevcut sunucu
+  veya keyfi SSH hedefi parametresi yoktur. Her laboratuvar yeni anahtar, nonce,
+  özeti sabitlenmiş test planı ve cloud-init işaretçisi alır. Yönetim SSH
+  yönlendirmeleri yalnız `127.0.0.1` adresine bağlanır; sonraki işlemler öğrenilen
+  sunucu anahtarını zorunlu tutar.
+- Sunucu, kayıtlı QEMU komutunu ve PID'yi kontrol eder. Konuk yürütmesi; root
+  sahipli işaretçiyi, tam nonce/hücre/düğüm/UUID kimliğini, eşleşen DMI UUID'sini
+  ve gerçek systemd'yi doğrular. Hazırlama/güncelleme sürücüleri ve toplayıcı ayrıca
+  QEMU kimliğini kontrol eder. Bu kontroller geçici test ortamını tanımlar; hem
+  sunucuyu hem kanıtını denetleyen kötü niyetli yöneticiye karşı güvence değildir.
+- **Laboratuvarın internet bağlantısı vardır.** NAT yönetim ağı genel paket ve
+  imzalı sürüm indirmelerine, gerçek Agent'ın genel manifesto sorgusuna da izin
+  verir. Diğer ağ kartı yalıtılmış `192.0.2.0/24` test bağlantısını kullanır.
+  Loopback SSH'yi dış ağ erişiminin engellenmesi olarak tanımlamayın. Konuklara
+  üretim kimlik bilgisi, lisans, yapılandırma, veritabanı veya özel sertifika
+  kopyalanmaz.
+- Kurulu müşteri panellerinde güncellemeyi yalnız kullanıcı başlatır. Bu test
+  sürücüleri Boston, Frankfurt veya başka bir mevcut kurulum için yönetim ya da
+  dağıtım aracı değildir.
+
+## Mevcut komut satırı
+
+Depo kökünden çalıştırın. Yeni bir laboratuvar adı kullanın; imaj önbelleği tam
+olarak sabitlenmiş imajları önceden içermelidir. Değişiklik yapan başlatıcı
+komutları `--execute` gerektirir. `status` bu bayrak olmadan çalışan konukları okur.
+
+```sh
+LAB_ROOT=/var/tmp/cp-release-drill-example
+NODE=debian13
+python3 deploy/e2e/release-recovery/lab.py prepare --work-root "$LAB_ROOT" --ssh-port 2261
+python3 deploy/e2e/release-recovery/lab.py prepare --work-root "$LAB_ROOT" --ssh-port 2261 --execute
+python3 deploy/e2e/release-recovery/lab.py start --work-root "$LAB_ROOT" --execute
+python3 deploy/e2e/release-recovery/lab.py status --work-root "$LAB_ROOT"
+```
+
+`--image-cache`, varsayılan `/var/tmp/cp-install-vm/images` yolunu değiştirir.
+Örnekteki `2261`, `2262` ve `2263` portları iki SSH yönlendirmesi ve düğümler arası
+taşıma içindir; başlatıcı hazırlık sırasında dosya yazmadan önce aralığı doğrular.
+
+Başlangıcı kaydetmeden önce `/usr/bin/dig` dahil toplayıcı önkoşullarını kontrol
+edin. Eksik araç bilinmeyen kanıt üretir; arızadan sonra eklemek önceki başlangıç
+kanıtını düzeltmez. Özgün sürümü kurun ve sonucunu inceleyin:
+
+```sh
+python3 deploy/e2e/release-recovery/install_baseline.py start --work-root "$LAB_ROOT" --node all
+python3 deploy/e2e/release-recovery/install_baseline.py start --work-root "$LAB_ROOT" --node all --execute
+python3 deploy/e2e/release-recovery/install_baseline.py status --work-root "$LAB_ROOT" --node all
+python3 deploy/e2e/release-recovery/install_baseline.py collect --work-root "$LAB_ROOT" --node all
+```
+
+Burada `--node`, `debian13`, `arch` veya `all` kabul eder. Başlatma komutu konuğun
+`celikpanel-lab-alpha75-install.service` birimini başlattıktan sonra döner; sonucu
+status ile inceleyin. Yarım girişim incelenecek kanıttır; yeniden kurulum izni
+değildir. Konuk kendi yönetici kimlik bilgilerini üretir ve yalnız özel test
+dizininde saklar. Kurucu günlüğü özeldir; gizli bilgiler açısından incelemeden
+yayımlamayın. `collect`, kuruluma ait sonucun kaydedilmiş olmasını gerektirir;
+özel sonuç/günlük dosyalarını özetleriyle birlikte sunucuya kopyalar. Ayrı kimlik
+bilgisi dosyasını kopyalamaz.
+
+Başlangıç kurulumu, `5aa03fd5b6775b21834ff7b1ce0695d92f50ae93` commit'indeki
+değiştirilmemiş `download-portal/get.sh` dosyasını kullanır. SHA-256 özeti
+`82b2674c103e347df471ec7e3f2f091d50006c957c54ac946b7c021ed19e041d` ile sabittir.
+Yayımlanmış bu başlatıcı, 75 sıra numarasını / `v0.1.0-alpha.75` sürümünü ve genel
+`https://celikpanel.net` kaynağını seçer. Sabitlenmiş sürüm anahtarı, imzalı
+manifesto, arşiv denetimleri ve gerçek kurucu akışta kalır. Eski şema, servis
+birimleri, soket ve işlem defteri gerçek sürüm tarafından oluşturulur. Bu;
+güncel programları kopyalamaktan, üretim veritabanını içe aktarmaktan veya kanıt
+dosyalarını elle yazmaktan ayrıdır. Başlangıçtaki loopback `curl --insecure`
+kontrolü HTTP erişilebilirliğini gösterir; **güvenilir sertifika üretimini
+kanıtlamaz**.
+
+Yalnız test için olan durum üreticisini Linux'ta deponun desteklediği Go araç
+zinciriyle derleyin; seçilen konukta bir kez çalıştırın:
+
+```sh
+ARTIFACT_ROOT=/var/tmp/cp-release-drill-artifacts
+mkdir -p "$ARTIFACT_ROOT"
+GOTOOLCHAIN=go1.26.5 go build -o "$ARTIFACT_ROOT/release-recovery-seed" ./deploy/e2e/release-recovery/driver
+python3 deploy/e2e/release-recovery/exercise.py seed --work-root "$LAB_ROOT" --node "$NODE" --binary "$ARTIFACT_ROOT/release-recovery-seed"
+python3 deploy/e2e/release-recovery/exercise.py seed --work-root "$LAB_ROOT" --node "$NODE" --binary "$ARTIFACT_ROOT/release-recovery-seed" --execute
+```
+
+Hazırlama; eski Agent'ın kimlik doğrulamalı yerel soketini ve gerçek
+Begin/heartbeat/finish/status işlemlerini kullanır: önce DNS motoru yokken BIND
+yönetimi alınır, ardından `recovery-fixture.test` bölgesi oluşturulur ve değiştirilir.
+Yönetimi devralma kanıtının baytları korunurken yayın ilerlemesi doğrulanır. DNS
+sahipliği, motor durumu, yapılandırma veya lisans kanıtı elle yazılmaz. Kapsam
+**bağımsız çalışan Agent üreticisidir**; tarayıcı sihirbazı, panel veritabanı veya
+lisanslı kullanıcı kabul yolu değildir; birincil/ikincil çoğaltma testi de değildir.
+
+`seed-intent.json`, hazırlama komutundan önce saklanır. Dosya oluştuktan sonra
+denetleyici zaman aşımı sonrasında da ikinci hazırlama girişimini reddeder.
+Kısmi çıktıyı koruyup aynı girişimi inceleyin; yeniden denemek için niyet kaydını
+silmeyin. Kabul edilen son üretici olayı da bağımsız yerel DNS gözlemleri gerektirir.
+
+Benzersiz bir etiket ve son 24 saat içindeki UTC başlangıç zamanı ile gözlem alın:
+
+```sh
+SINCE_UTC=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+python3 deploy/e2e/release-recovery/exercise.py observe --work-root "$LAB_ROOT" --node "$NODE" --label before-update --since "$SINCE_UTC"
+```
+
+Güncelleme sonrası gözlemde daha önceki güncelleme başlangıç zamanını kullanın;
+isterseniz `--operation-id` ile tam 32 karakterli küçük harf onaltılık işlem
+kimliğini verin. `observe`, `--execute` istemez: toplayıcıyı özel test dizinine
+yükler ve sunucuda kanıt dosyası oluşturur. Toplayıcının kendisi yönetilen durumu
+okur ve yalnız loopback DNS/TLS sorgular; iş yüklerini onarmaz veya değiştirmez.
+Kanıt etiketlerinin üzerine yazılmaz.
+
+`driver-update`, konuk kontrolü olan ayrı bir gerçek güncelleme RPC test
+sürücüsüdür. Güncel bayrakları `--nonce`, `--manifest`, `--signature`, isteğe bağlı
+`--request-id` ve `--mode preview|start|status` biçimindedir; varsayılan mod
+`preview` olur. Değiştirilmemiş yayımlanmış manifesto/imzayı doğrular, istemci
+inceleme kimliğini kalıcı kaydeder ve kurulu Agent'ın imzalı güncelleme yolunu
+kullanır. Tek başına arıza/geri alma matrisini tamamlamaz; denetleyici tam aday
+sürüm, işlem, anlık görüntü, arıza ve kurtarma gözlemlerini korumalıdır. Mevcut
+müşteri panelini güncellemek için desteklenen bir komut değildir.
+
+### Tek bir imzalı güncelleme denemesi hazırlayın
+
+`update_trial.py`; denemeyi kaydedilmiş konuğa, toplanmış Alpha75 kurulum
+sonucuna ve hazırlama işlemlerinin tam sırasına bağlar. Yalnız `--sequence 79`
+veya `80` kabul eder. Değiştirilmemiş yayımlanmış manifesto/imza önceden
+`.tmp-release79/assets` veya `.tmp-release80/assets` içinde bulunmalıdır. Arıza
+testleri ayrıca sabitlenmiş Alpha80 arşivini gerektirir. Bunlar yayımlanmış
+ürünlerin yerel kopyalarıdır; test için yeniden imzalanmış manifestolar değildir.
+
+Test sürücüsünü derleyip yukarıda hazırlanan düğümde Alpha80 önizlemesini alın.
+`NODE=arch` seçeneğini ancak o düğümü kurup hazırladıktan sonra kullanın.
+
+```sh
+GOTOOLCHAIN=go1.26.5 go build -o "$ARTIFACT_ROOT/release-recovery-update" ./deploy/e2e/release-recovery/driver-update
+python3 deploy/e2e/release-recovery/update_trial.py --work-root "$LAB_ROOT" --node "$NODE" --sequence 80 --mode prepare --binary "$ARTIFACT_ROOT/release-recovery-update" --execute
+```
+
+`prepare`, `update-intent.json` kaydını saklar; `before-update.json` gözlemini
+alır veya kontrol eder ve gerçek Agent'tan önizleme ister. Güncellemeyi başlatmaz.
+İncelenen istek hâlâ mevcut sürüm olarak Alpha75'i ve tam imzalı hedefi göstermelidir.
+Var olan niyet kaydı sessizce değiştirilmez.
+
+Aşağıdaki başlatmadan önce arıza olmamasını veya alternatiflerden **birini** seçin.
+Aynı denemede ikisini birden kurmayın. Her yeni hedef/arıza denemesi temiz bir
+başlangıç konuğu ve kanıt dizini gerektirir; yeniden başlatmak için niyet kaydını
+silmeyin.
+
+### İsteğe bağlı arıza: geçici panel portu çakışması
+
+```sh
+python3 deploy/e2e/release-recovery/arm_port_fault.py --work-root "$LAB_ROOT" --node "$NODE" --mode arm --execute
+```
+
+Denetleyici, kayıtlı Alpha80 önizlemesini ve daha önce başlatma denenmemiş
+olmasını gerektirir. Kurmadan önce incelenen arşivi ve iki aday programın
+özetlerini doğrular. `guest_port_fault.py`, tam güncelleyicinin eski paneli
+durdurmasını bekler; sonra yalnız `127.0.0.1:2083` adresini tutar. Güncelleyici
+çıkınca, kurtarma başlayınca, işlem değişince, gözlem hata verince veya 600 saniye
+dolunca soketi bırakır. Ayrı systemd çalışma süresi sınırı da yardımcıyı sınırlar.
+Aday kontrol noktası, arıza sürerken kurulu aday özetlerini ve tamamlanmış yedeğin
+sağlama toplamı envanterini kaydeder. Bu, geri alma sonucu değildir.
+
+### Alternatif arıza: doğrulanmış etkin güncelleyiciyi kesme
+
+```sh
+python3 deploy/e2e/release-recovery/arm_update_kill.py --work-root "$LAB_ROOT" --node "$NODE" --mode arm --execute
+```
+
+Bu seçenek temiz ve önizlemesi hazırlanmış ayrı bir Alpha80 denemesi içindir.
+Konuk yardımcısı `guest_update_kill.py`, özgün Alpha75 işçi programını; tam istek,
+PID/başlangıç sayacı, systemd çalıştırma kimliği, cgroup ve komut satırıyla birlikte
+doğrular. Yalnız bu güncelleyici birimini dondurur; etkin işlemi, kurulu aday
+özetlerini ve yedeğin tam sağlama toplamı envanterini doğrular. İşçiyi yeniden
+kontrol ettikten sonra yalnız o birimin cgroup'una SIGKILL gönderir. Olağan
+panel/Agent servislerine sinyal göndermez; kurtarmayı kendisi başlatmaz. Kontrol
+noktası kaçırılırsa süreç öldürülmez. Yardımcının 600 saniyelik sınırı, donmuş
+kontrol noktası için 30 saniyelik bütçesi ve hem `finally` hem systemd
+`ExecStopPost` içinde çözme temizliği vardır. `kill_sent` yalnız uygulanan
+kesintiyi kanıtlar; gerçek otomatik kurtarma ayrıca gözlenmelidir.
+
+### Bir kez başlatın, sonra aynı isteği inceleyin
+
+İsteğe bağlı arıza hazır olduğunu bildirdikten sonra gecikmeden başlatın. Arıza
+seçilmediyse hazırlıktan sonra aynı başlatma komutunu kullanın:
+
+```sh
+python3 deploy/e2e/release-recovery/update_trial.py --work-root "$LAB_ROOT" --node "$NODE" --sequence 80 --mode start --execute
+python3 deploy/e2e/release-recovery/update_trial.py --work-root "$LAB_ROOT" --node "$NODE" --sequence 80 --mode status
+python3 deploy/e2e/release-recovery/update_trial.py --work-root "$LAB_ROOT" --node "$NODE" --sequence 80 --mode observe
+```
+
+Tek gerçek Start RPC çağrısından önce başlatma denemesi kalıcı kaydedilir.
+Bağlantı hatası veya zaman aşımı bu kimliği korur; ardından yalnız
+`status`/`observe` kullanılabilir. Bunlar güncellemeyi yeniden başlatmaz.
+Ham sürücü çıktısı ve sınırlı gerçek günlükler özel kanıt dosyalarında kalır;
+konsol özetleri durum bilgileri ve kanıt referansları içerir. Sürücü çağrısının
+sıfır koduyla bitmesi tek başına kurulumun veya kurtarmanın tamamlandığını
+kanıtlamaz.
+
+Yalnız yukarıda seçilen arızanın kanıtını toplayın; bunlar alternatiftir:
+
+```sh
+python3 deploy/e2e/release-recovery/arm_port_fault.py --work-root "$LAB_ROOT" --node "$NODE" --mode collect
+```
+
+```sh
+python3 deploy/e2e/release-recovery/arm_update_kill.py --work-root "$LAB_ROOT" --node "$NODE" --mode collect
+```
+
+Arıza kanıtı toplama, tam konuk/işlem olaylarını ve birim durumunu korur. Konuğu
+onarmaz, arızayı tekrar kurmaz veya geri alma kabulünün tamamlandığını ilan etmez.
+
+### Yayımlanmamış commit adayı: gerçek kurtarma regresyonu
+
+`local_candidate_trial.py`, yayımlanmamış yerel derlemeyi mevcut
+`bootstrap-prebuilt-update.sh` giriş noktası ve korunan sürümün gerçek kurtarma
+betiği üzerinden sınar. Yukarıdaki gerçek Alpha75 kurulumu ve hazırlama işlemleri
+bulunan yeni, kaydedilmiş bir VM gerektirir. Aynı konukta imzalı denemeyle
+birleştirmeyin. Arşivi temiz ve commit edilmiş kaynak dışa aktarımından `make dist`
+ile derleyin; tam SHA256 değerini verin. Denetleyici arşivin tüm envanterini ve
+paketlenmiş her sabit kaynak dosyasını o Git commit/ağaç kaydıyla doğrular.
+Bu yol açıkça **imzasız yerel derleme kanıtıdır**; imzalı Agent kabulünü sınamaz.
+Sürüm imzalamaz, anahtar tanıtmaz veya üretim güven politikasını değiştirmez.
+
+Varsayılan `require-unit-reload` kontrol noktası, koordinatör birimlerinde gerçek
+bir eski-yeni sürüm geçişi gerektirir. Örneğin başlangıç gözleminden önce eski
+test konuğunun koordinatör birimlerine zararsız bir sahip yorumu ekleyin,
+systemd yapılandırmasını yeniden yükleyip doğrulayın; yalnız test ortamındaki bu
+değişikliği `evidence/<node>/owner-unit-baseline.json` dosyasında saklayın.
+Hazırlık bu dosyanın özetini kaydeder. Hazırlıktan sonra yapay bir bekleyen yeniden
+yükleme durumu üretmeyin. Baytları aynı birimleri değiştirmemek doğru davranış
+olabilir; kontrol noktası oluşmazsa süreç öldürülmez. `--boundary candidate-installed`
+yalnız eski systemd görünümü regresyonunu kanıtladığı iddia edilmeyen, ayrıca
+açıklanmış bir denemede seçilmelidir.
+
+`CANDIDATE_ARCHIVE` ve `CANDIDATE_SHA256` değişkenlerini doğrulanmış yerel arşive
+ayarlayın. Her değişiklik komutunu bir kez çalıştırıp sonucunu inceleyin; tam arıza
+hazır olduğunu bildirdikten sonra gecikmeden başlatın:
+
+```sh
+python3 deploy/e2e/release-recovery/local_candidate_trial.py --work-root "$LAB_ROOT" --node "$NODE" --mode prepare --archive "$CANDIDATE_ARCHIVE" --archive-sha256 "$CANDIDATE_SHA256" --boundary require-unit-reload --execute
+python3 deploy/e2e/release-recovery/local_candidate_trial.py --work-root "$LAB_ROOT" --node "$NODE" --mode arm --execute
+python3 deploy/e2e/release-recovery/local_candidate_trial.py --work-root "$LAB_ROOT" --node "$NODE" --mode start --execute
+python3 deploy/e2e/release-recovery/local_candidate_trial.py --work-root "$LAB_ROOT" --node "$NODE" --mode collect
+```
+
+Hazırlık, dosyaları yerleştirmeden önce tam arşiv ve konuk niyetini kalıcı kaydeder.
+Arızayı kurmanın ve tek gerçek başlatmanın ayrı kalıcı deneme kayıtları vardır.
+Belirsiz yanıttan sonra yalnız aynı işlemin kanıtı toplanabilir; ikinci başlatma
+veya arızayı yeniden kurma yapılmaz. Toplama, yeni kanıt etiketleriyle tekrarlanabilir.
+Arıza; özgün Bash programını, tam bootstrap komutunu, PID/başlangıç sayacını,
+çalıştırma kimliğini ve cgroup'u doğrular. SIGKILL öncesinde o güncelleyiciyi
+dondurur; aday programları ve kurulu birim/yardımcıları kanıtlar; hem tam yedeği
+hem korunan aday envanterini doğrular. Gerçek systemd `OnFailure`, olağan kurtarmayı
+çağırır; test, geri alma betiğini taklitle değiştirmez veya olağan panel/Agent
+servislerine sinyal göndermez. Toplanan olaylar ve günlükler kanıttır; bunlardan
+otomatik olarak kurtarma PASS sonucu çıkarılmaz.
+
+Bu yol eklenirken `test_local_candidate_trial.py` içindeki 22 odaklı çevrimdışı
+test geçti. Bu sayı bütün CI kapsamını veya gerçek geri almayı kanıtlamaz;
+gerçek önce/kontrol noktası/kurtarma/sonra iş yükü kanıtları hâlâ gereklidir.
+
+Kanıtları koruyarak konukları durdurun:
+
+```sh
+python3 deploy/e2e/release-recovery/lab.py stop --work-root "$LAB_ROOT"
+python3 deploy/e2e/release-recovery/lab.py stop --work-root "$LAB_ROOT" --execute
+```
+
+Durduğu bilinen düğümler QMP durdurma kümesine alınmaz. Açıklanamayan bir soketle
+birlikte eksik kimlik veya başka süreç tarafından kullanılan PID reddedilir.
+Canlı düğümler kayıtlı QEMU süreçleriyle eşleşmelidir. Durdurma; yazılabilir disk
+katmanlarını, günlükleri ve kanıtları korur. Bu sarmalayıcıda özyinelemeli silme
+komutu yoktur.
+
+## Kurtarma süreci hata devri (henüz native kabul değil)
+
+`recovery_fault_trial.py`, **yeni** yayımlanmamış aday deneyine otomatik kurtarma
+sırasında ikinci bir hata ekler. Yukarıdaki gerçek Alpha75 tabanını ve commit'e
+bağlı yerel arşiv sınırını korur; imzalı Agent kabulünü test etmez. Her eylemde yeni
+bir düğüm kullanılır; tüketilmiş işlem niyeti değiştirilmez:
+
+```sh
+python3 deploy/e2e/release-recovery/recovery_fault_trial.py --work-root "$LAB_ROOT" --node "$NODE" --mode prepare --archive "$CANDIDATE_ARCHIVE" --archive-sha256 "$CANDIDATE_SHA256" --action kill --checkpoint payload_restored --execute
+python3 deploy/e2e/release-recovery/recovery_fault_trial.py --work-root "$LAB_ROOT" --node "$NODE" --mode arm --execute
+python3 deploy/e2e/release-recovery/recovery_fault_trial.py --work-root "$LAB_ROOT" --node "$NODE" --mode start --execute
+python3 deploy/e2e/release-recovery/recovery_fault_trial.py --work-root "$LAB_ROOT" --node "$NODE" --mode collect
+```
+
+Güncelleyici hata yardımcısı önce tam adayın kurulduğu noktayı dondurur ve kanıtlar.
+`guest_recovery_handoff.py` gerçek kanonik etkin işlemi ve seçili runtime'ı okur;
+root-only snapshot/token-özeti niyetini kalıcı kaydeder ve tam kurtarma hata
+birimini başlatır. Aynı işlem `armed` kaydı üretmeden ilk güncelleyiciye tek
+SIGKILL gönderilemez. Başlatma sonucu bilinmiyorsa cleanup; tam yardımcı komutunu,
+VM kimliğini ve süreç invocation kimliğini kanıtlamadan birimi durdurmaz. İkinci
+başlatma yoktur. Tahmini token, wildcard işlem veya gecikmeye dayalı kill
+yoktur. Varsayılan güncelleyici hata deneyleri bu devri etkinleştirmez.
+
+`guest_recovery_fault.py`; mevcut VM nonce/DMI kimliği, tam snapshot/runtime
+kanıtı ve açık `celikpanel/recovery-checkpoint/v1` kaydı ister. Dondurma ve yeniden
+kanıtlama öncesinde kurtarma servisinin MainPID/başlangıç tick'i, invocation,
+boot, cgroup ve çalıştırılabilir dosyası bağlanır. Eksik veya değişmiş kanıt
+bilinmeyen kalır. Dondurma öncesinde `freeze_requested` fsync edilir; yardımcı
+öldürülmesine karşı `freeze_observed`, gerçekten donan invocation kimliğini yalnız
+cleanup için kaydeder. Dondurmayla yarışan restart, eski checkpoint'in kill/reboot
+kabulünden geçemez; ancak donan yeni süreç çözülebilir. Yardımcı sonuç kaydından
+önce ölürse `ExecStopPost`, aynı boot'taki donmuş sabit birimin kimliğini yeniden
+kanıtlayıp yalnız çözebilir; bu gözlem kill/reboot yetkisi vermez.
+
+Ayrı ve yeni düğümde reboot deneyi için hazırlıkta `--action reboot` ve checkpoint
+seçilir; yukarıdaki arm/start sonrasında hemen şu komut çalıştırılır:
+
+```sh
+python3 deploy/e2e/release-recovery/recovery_fault_trial.py --work-root "$LAB_ROOT" --node "$NODE" --mode reboot --execute
+```
+
+Guest, `reboot_ready` yayımlayıp yalnız o kurtarma cgroup'unu en çok 30 saniye
+donmuş tutar; guest reboot komutu vermez. Host tam olayı en çok 600 saniye bekler,
+donmuş checkpoint'i tekrar kanıtlar; süreç/peer PID ve VM UUID doğrulanmış tek
+QMP bağlantısını kullanır. Tek `system_reset` öncesinde deneme kalıcı kaydedilir;
+bilinmeyen sonuç yeniden denemeyi başlatmaz. Reset gönderimi yeni boot veya
+başarılı kurtarma kanıtı değildir. Native servis, boot, tam snapshot/eski dosya,
+iş yükü ve veritabanı kanıtları ayrıca toplanır. Henüz native kurtarma süreci
+kill/reboot kabulü iddia edilmez.
+
+Üretici katı release marker dizini dışında,
+`/var/lib/celikpanel-recovery-checkpoints/<token-sha256>.json` yazar. API yalnız
+checkpoint adı alır; tutulan transaction fd9, doğrulanmış seçili runtime ve gerçek
+kurtarma birimi kimliği gerekir. Yayım atomik root-only gözlemdir; mutasyon yetkisi
+vermez. Yayın hatası kurtarmayı durdurmamalı veya tamamlanmış göstermemelidir.
+
+## Kanıt ve kalan kabul çalışmaları
+
+`guest_probe.py`, `celikpanel/release-recovery-observation/v1` üretir: kurulu ve
+çalışan program özetleri, web ağacı özeti, servis/zamanlayıcı durumu, veritabanı
+bütünlüğü ve geçiş sürümleri, kurulu/sunulan genel TLS özellikleri, loopback
+UDP/TCP DNS yanıtları, sınırlı işlem alanları ve izin verilen günlük olayları.
+Özel anahtar, parola veya belirteç içeriğini okumaz. Bir gözlem hatası diğer
+gözlemleri silmeden `unknown` kalır. Gerçek `Rollback complete` günlük satırı
+metin kanıtıdır; kurtarmanın başarılı olduğunu bildiren bir bayrak değildir.
+
+`evidence.py`, ayrı olarak birleştirilmiş
+`celikpanel/release-recovery-evidence/v1` kaydını okur. Gerekli başlangıç, aday,
+güncelleme, arıza, kurtarma, son durum ve iş yükü bölümleri için
+[şema örneğine](test_evidence.py) bakın. Çalıştırma:
+
+```sh
+python3 deploy/e2e/release-recovery/evidence.py /absolute/path/to/assembled-evidence.json
+```
+
+Çıkış kodları: 0 `PASS`, 1 `FAIL`, 2 `INCONCLUSIVE`. İsteğe bağlı
+`--expected-regression CODE`, hatanın yeniden üretilmesini ayrı raporlar; bilinen
+bir kurtarma hatasını üretmek kurtarma sonucunu PASS yapmaz. Sınıflandırıcı,
+verilen bilgilerin tutarlılığını ve tamlığını kontrol eder. Kaynaklarının
+gerçekliğini doğrulayamaz; elle hazırlanmış JSON'u gerçek çalışma kanıtına
+dönüştüremez. Denetleyici referansları, ürün imzaları ve gerçek yürütme izleri
+bu bilgileri desteklemelidir.
+
+Gerekli gerçek güncelleme/korunan sürüme otomatik geri alma ve iş yükü matrisi
+ölçülene kadar P0.1 açıktır. Güncel sınırlar:
+
+- Veritabanı toplayıcısı artık desteklenen tek bir SQLite salt-okur işlemiyle
+  commit edilmiş WAL verisini de okuyup tutarlı görünümden şema/tüm tablo
+  özetlerini üretir. Kaynakta checkpoint veya izin normalizasyonu yapmaz.
+  Önceden mevcut, güvenli ve veritabanıyla sahiplik/izinleri eşleşen WAL/SHM
+  gerekir; eksik/güvensiz yan dosya, kilit, desteklenmeyen şema veya sınır aşımı
+  `unknown` üretir. SQLite okuma koordinasyonu mevcut WAL/SHM metadata'sına
+  dokunabilir; gözlem farkı raporlar, sebebini veya metadata'nın bayt düzeyinde
+  değişmezliğini iddia etmez. Satır içerikleri ve ham şema SQL'i yayımlanmaz.
+- Korumalı guest probe'daki isteğe bağlı
+  `--snapshot-name AD --snapshot-manifest-sha256 SHA`, `--operation-id` de ister.
+  Tam v6 snapshot envanteri, dosya özetleri ve bağımsız veritabanı doğrulandıktan
+  sonra semantik okuma yapılır. `evidence.compare_verified_snapshot_database`
+  sabitlenmiş snapshot adı ve manifest özetiyle `EQUAL`, `DIFFERENT` veya
+  `INCONCLUSIVE` döndürür. Oturum ve işlem tabloları dahil bütün tablolar katılır;
+  değişken satırlar sessizce dışlanmaz. İşlem-snapshot bağı denetleyici kanıtıyla
+  desteklenmelidir. Eski native deneylerin bilinmeyen WAL sonucu, yeniden gerçek
+  ölçüm yapılana kadar bilinmeyen kalır; bu uygulama eski sonucu değiştirmez.
+
+- Başlangıç HTTPS'si ve genel sertifika özetleri; güvenilir üretimi, yenilemenin
+  çalışmasını, ACME/DNS doğrulamasını veya panel/Agent kaldırıldıktan sonra
+  bağımsız yenilemeyi kanıtlamaz. Zamanlayıcı durumu tek başına yeterli değildir.
+- Bağımsız loopback DNS; gerçek ikincil sunucuyu, katalog aktarımını, TSIG'yi,
+  eş düğümün kaybı/kurtarılmasını veya dış delegasyonu kanıtlamaz.
+- Yerel posta, barındırılan web trafiği, veritabanı uygulamaları, cron ve güvenlik
+  duvarının açılış/yenileme davranışı kendi canlı önce/sonra iş yüklerini
+  gerektirir. Panel erişiminden veya servis etiketlerinden çıkarılamaz.
+- Güncellemeyi başlatmak, değişim öncesinde eski özetleri görmek, bağlantı zaman
+  aşımı veya `recovery-required` görmek gerçek geri almayı kanıtlamaz. Adayın
+  uygulanmasını ve eşleşen gerçek kurtarma işlemini kaydedin; ardından geri
+  yüklenmiş eski çalışmayı, veriyi, DNS'yi ve bağımsız iş yüklerini doğrulayın.
+
+Çevrimdışı kontroller; gerçek no-follow dosya davranışı için Linux'ta çalıştırın:
+
+```sh
+python3 -m unittest discover -s deploy/e2e/release-recovery -p 'test_*.py' -v
+GOTOOLCHAIN=go1.26.5 go test ./deploy/e2e/release-recovery/driver ./deploy/e2e/release-recovery/driver-update -count=1
+```
+
+Bu kontroller iletişimi taklit eder veya geçici yerel dosyalar kullanır. Gerçek
+konuk yaşam döngüsünün sonucunu raporlamaz.
+
+Seçili kurtarma kitinin değiştirilmesi ayrı [geçiş kabul kaydında](RUNTIME-PROMOTION.tr.md) izlenir. Gerçek önceki kit kaydı, ara durumdaki salt-okur yürütme, açık sahip devamı ve geçiş sonrası gerçek otomatik geri alma ayrılır. Kaçırılmış hata deneyi sonuçsuz olarak korunur.
+
+## Sahibin başlattığı güncelleme kabulü (upd1)
+
+*Yol haritası 3. madde, ilk birleşik yerel deneme. Yalnız test düzeneği; ürün
+kodu değişmez. `result.json` her zaman `native_evidence: false` taşır; P0
+satırlarını sahibi değerlendirir.*
+
+`owner_update_trial.py`, her hücrede yeni bir kayıtlı konukta **tek** bir
+güncellemeyi sahibin yönetici oturumuyla Panel API üzerinden başlatır (web
+arayüzünün gönderdiği istekler, Origin başlığı, SSH tüneli üzerinden
+sabitlenmiş TLS). Temel sürüm, kaynak HEAD'in tek kullanımlık klon içinde
+`v0.1.0-alpha.81` olarak etiketlenmiş bir test commit'idir: 45dfc265 Alpha81
+derlemesinde D-027 kabul lisansı yoktur ve lisanssız Panel veri girişini
+reddeder. Aday `v0.1.0-alpha.82` olarak etiketlenir, test anahtarıyla
+imzalanır ve konuk içindeki `celikpanel.net` test kaynağından sunulur; gerçek
+`celikpanel.net` veya lisans hizmetine gidilmez. Hatalı aday, yalıtılmış veri
+tabanı kopyasını taşıdıktan sonra `--migrate-only` ile 1 döndürür; bu hata
+`active` aşamasında oluşur ve geri alma yoluna girer. Debian'da kurtarma
+`payload_restored` noktasında QMP ile yeniden başlatılır, Arch'ta
+`runtime_verified` noktasında kurtarma süreci öldürülür. Üç otomatik deneme
+biterse sürücü, ürünün günlükte gösterdiği tek seferlik yeniden deneme
+komutunu bir kez çalıştırır ve sonucu "sahip devamıyla kurtarıldı" olarak ayırır.
+
+upd1 tek ve yalıtılmış bir düğümde çalışır. Bu yüzden varsayılan
+`--dns-mode external` seçimidir: DNS başka yerde barındırılır. Her hücre DNS'i
+"bu denemede sağlanmadı; 2. maddenin DNS çifti denemeleri kapsar" diye
+kaydeder ve DNS hiçbir zaman geçti sayılmaz. `--dns-mode local`, ileride iki
+düğümlü bir sürüm için saklanır ve `peer_ip`/`peer_ns` ister.
+
+30 Eylül 2026 denemesinden sonra test düzeneğine şu düzeltmeler eklendi:
+
+- Betik, boşluk içeren depo yolunu tek argüman olarak taşır.
+- `dns-owner-tools/` dizini kaynak kanıtına eklendi (tam dört dosya).
+- Yalıtılmış konukta kurulum `access_dns` adımında 120 saniye kararlı
+  beklerse bu durum `observed` olarak kaydedilir.
+- Test kaynağı, yeniden başlatmadan sağ çıkan etkin bir laboratuvar birimidir
+  (`cp-lab-upd1-origin.service`).
+- Bekleyen kurulumun yeniden yazdığı `server_setup_executions` tablosu veri
+  tabanı karşılaştırmasının dışında tutulur ve gerekçesiyle listelenir.
+- `collect`, hücre erken dursa da günlükleri toplar.
+- Test kaynağı kurulmadan önce `celikpanel.net` adı hiç sorgulanmaz.
+- `crontab` yoksa zamanlanmış görev oluşturulmaz; durum "cron: not available
+  on this baseline" olarak kaydedilir.
+
+İkinci yerel denemeden (upd2) sonra şu düzeltmeler kalıcı hâle geldi:
+
+- Güncelleme başlatma isteği için ürün 202 döndürür. Gövdede
+  `accepted: true` varsa 200 ve 202 kabul sayılır; başka her yanıt ret olarak
+  kalır.
+- Arch'ta `getent`, loopback yanıtını `localhost` adıyla yazar. Artık her
+  yanıt satırı okunur. Yalnız 127.0.0.1 kuralı değişmedi ve ham çıktı
+  kaydedilir.
+- Başlatmadan hemen sonraki ilk yoklama aralığında, Panel API'nin `accepted`
+  ve kök CLI'nin `running` demesi doğal sıralamadır. Bu durum
+  `start-instant-lag` olarak kaydedilir. Başka her fark, aynı çift daha sonra
+  görülse bile, uyuşmazlık sayılır.
+
+**Aday panel başlangıç türleri (upd3).** Ürün `8ffc5e06` iki sınır ekledi.
+Bunlar şimdiye kadar yalnız bileşen testleriyle sınandı. Test düzeneği bu iki
+sınır için iki yeni aday ve dört yeni hücre ekler. İyi hücreler ve
+migrate-only hücreleri değişmedi.
+
+- **start-check (S aday):** `configurePanelHTTPTLS` her zaman hata verir. Bu
+  işlevi hem salt-okur başlangıç denetimi hem gerçek başlatma kullanır.
+  Beklenen gözlem:
+  - Güncelleme, veri tabanı yayımlandıktan sonra `active` aşamasında
+    `candidate_panel_startup_check_failed` koduyla durur. Kod hem hata
+    satırında hem `<request>.failure` dosyasında görünür.
+  - `completion.pending` hiç oluşmaz. Bütün dağıtımlar `phase=active` olur.
+  - Sunucu önceki sürüme otomatik döner. Veri tabanı güncelleme öncesiyle
+    aynıdır.
+  - CLI, ürünün "önceki sürüme döndürüldü" metnini İngilizce ve Türkçe yazar.
+
+  İkinci hata öncekiyle aynıdır (Debian: yeniden başlatma, Arch: kurtarma
+  sürecinin öldürülmesi). Denetimin nedeni `tls_pair_invalid` değilse bu bir
+  bulgudur: iyi bir aday da aynı biçimde reddedilebilir.
+- **real-start (R aday):** `main()` dinleyici başlamadan hemen önce çıkar;
+  denetim o satıra hiç ulaşmaz. Beklenen gözlem:
+  - Denetim geçer ve `completion.pending` oluşur.
+  - Kararlılık beklemesi `panel_start_unverified` koduyla başarısız olur.
+  - İleri tamamlama sınırına kadar yeniden denenir (sayı ve zamanlar
+    kaydedilir), sonra `paused_retry_limit` durumunda duraklar.
+  - Geri alma olmaz.
+  - Sahibin tek seferlik yeniden deneme komutu okunur ve kaydedilir, ama
+    **çalıştırılmaz**: aynı bozuk adayı yeniden dener.
+  - Site, posta ve cron Panel açılmazken kesintisiz çalışmalıdır.
+  - Hangi görünümlere ulaşılabildiği kaydedilir.
+
+  Bu hücrede ikinci hata yoktur.
+
+Bütün metinler ürün derlemesinden okunur, kopyalanmaz. Web metinleri
+derlemenin `web/src` kataloglarından, CLI metinleri derlenen commit'in
+`cmd/recovery/main.go` dosyasından alınır. CLI çıktısı birebir karşılaştırılır.
+Olası bulgu: ürün `failure_code` alanını yalnız son kayıtlı hata
+güncellemenin kendi hatası olduğu sürece gösterir. Bu yüzden duraklamada
+real-start'a özgü metin görünmeyebilir. Değerlendirici bunu varsaymaz;
+görmediyse bulgu olarak yazar.
+
+**upd3 denemesinden kalıcı düzeltmeler (upd4).** upd3'te kopya üzerinde
+yapılan veya yalnız kaydedilen düzeltmeler artık test düzeneğinin kendisidir:
+
+- **H8:** Durum 600 saniye boyunca ve en az 3 okumada hiç değişmeden
+  `failed`/`none` kalırsa, otomatik kurtarma ve bekleme de yoksa `track` durur.
+  Kuralın adı `settled-failed-before-change`; adım `inconclusive` olur ve
+  gerekçe kaydedilir. upd3'ün ilk hücresi 90 yerine 10 dakikada biterdi.
+- **H9:** Bir dağıtım kaydı `operation=rollback` ise (hangi aşamada olursa
+  olsun) ya da `operation=update phase=active` ise geri almadır.
+  `operation=update phase=completion` ileri denemedir ve start-check hücresinde
+  bulgudur.
+- **H10:** Güncelleme kartı ve kurtarma ekranı, ürün derlemesinin **bugünkü**
+  kodundan üretilir. `web_source_eval.py`, derlemenin `systemUpdateOutcome.ts`,
+  `recoveryObservation.ts` ve `systemUpdateFailure.ts` dosyalarındaki
+  işlevleri (kuralların kopyasını değil, kendilerini) değerlendirir. Ekranın
+  `recovery.automatic.cause.*` satırı da dahildir. Yargı yalnız gerçek bir
+  uyuşmazlıkta bulgu verir: katalogda olmayan anahtar, doldurulmamış yer
+  tutucu veya sunucu kaydıyla çelişen kart durumu. Okunamayan kaynak
+  "bilinmiyor" sayılır, bulgu sayılmaz.
+- **Gözlemci v2:** Salt-okur incelemeler artık sürücünün kendi adımlarıdır.
+  Güncelleme denetiminden sonraki ilk uç, duraklama veya "değişmeden
+  başarısız" durumuna kadar hiçbir inceleme yapılmaz. Böylece güncellemenin ön
+  denetimiyle çakışmaz. `getent` çıkış kodu 2 "bulunamadı" demektir, yoklama
+  hatası değildir.
+
+**Yeni hücreler (upd4, iyi aday G).**
+
+- **owner-continuation** (`upd1-debian13-owner-continuation`,
+  `upd1-arch-owner-continuation`): Güncelleyici eski paneli durdurunca
+  `guest_owner_port_hold.py` `127.0.0.1:2083` portunu tutar. Güncelleyici
+  çıksa ve kurtarma başlasa da portu bırakmaz. Yeni panel bağlanamaz;
+  kararlılık beklemesi `panel_start_unverified` ile başarısız olur. İleri
+  tamamlama üç kez denenir ve duraklar. Sürücü, sahibin gördüğü bütün metinleri
+  kaydeder (CLI İngilizce/Türkçe, Panel yanıt verirse kart ve ekran), ürünün
+  gösterdiği panel günlüğünü okur ve metnin söylediğini yapar: portu bırakır ve
+  basılan tek seferlik yeniden deneme komutunu **bir kez** çalıştırır.
+  Beklenen sınıf `recovered-after-owner-continuation`: aynı istek
+  `update_verified` ile biter, G çalışır, `certbot.timer` ve öteki zamanlayıcılar
+  güncelleme öncesi durumuna döner, site, posta ve cron hiç kesilmez, Panel
+  geri gelir. Başka her sonuç bulgudur.
+- **Port tutma sınırı:** Aday commit'in kendi dosyalarından hesaplanır:
+  `update.sh` kararlılık beklemesi (60 s), kurtarma zamanlayıcısı (30 s + 1 s)
+  ve üç otomatik deneme. Pay eklenince 1053 s çıkar; bir dakikaya yuvarlanır:
+  **1080 s**, `RuntimeMaxSec` 1140 s. upd3'te eski panelin durmasından
+  duraklamaya kadar 391 s (Debian) ve 383 s (Arch) ölçüldü.
+- **mgmt-off-reboot** (`upd1-debian13-mgmt-off-reboot`,
+  `upd1-arch-mgmt-off-reboot`): İyi güncelleme doğrulandıktan sonra Panel ve
+  Agent `systemctl disable --now` ile kapatılır ve konuk bir kez düzgünce
+  yeniden başlatılır. Açılıştan sonra en az 180 saniye boyunca 5 saniyelik
+  örneklerle ölçülür: işaretli site, SMTP (Debian), ilerleyen cron damgası,
+  yerel istemciyle okunan sahip veri tabanı satırı (veri tabanı Panel API ile,
+  tablo sahibin uygulaması gibi yerel istemciyle oluşturulur), sertifika
+  yenileme zamanlayıcısı ve güvenlik duvarı kuralları. Sonra yönetim yeniden
+  açılır ve Panel aynı sahip durumunu göstermelidir. Yönetim gerektiren her şey
+  `needed_panel` altında kaydedilir.
+
+Olası engeller de kaydedilir, varsayılmaz. Panel biriminde saatte 30
+başlatma sınırı vardır ve güncelleyici bu sınırı sıfırlamaz. Sahibin yeniden
+denemesinden önce sınıra ulaşılırsa yeniden deneme reddedilir ve bu bir bulgu
+olur. Arch'ta kurulum MariaDB'yi kurmadan beklerse veri tabanı ölçülmez; bu
+da bulgu olarak yazılır.
+
+**upd4 denemesinden kalıcı düzeltmeler (H11-H15).** upd4'te kopya üzerinde
+yapılan veya yalnız kaydedilen düzeltmeler artık test düzeneğinin kendisidir:
+
+- **H11:** Kurtarma ekranı artık sunulan derlemenin kendi `RecoveryAccess.tsx`
+  JSX kodundan üretilir; düzen kopyalanmaz. Durum, derlemenin kendi
+  işlevlerinden geçer ve `role="status"` bölgesi kaynaktaki sırayla okunur.
+  Böylece `retry_scheduled` duraklama ekranı gibi gösterilmez ve duraklamada
+  sertifika yenileme satırı da görünür. Metinler upd4'ün
+  `h11-product-screen-texts.txt` dosyasıyla aynıdır. Kaynak değişirse veya
+  okunamazsa ekran "bilinmiyor" sayılır, bulgu sayılmaz.
+- **H12:** Yönetim geri açıldıktan sonra sahip durumu okunmadan önce Panel'in
+  `panel_state=ready` demesi beklenir. Bu bekleme salt-okurdur ve en çok 180
+  saniye sürer. Panel hazır olmazsa adım `inconclusive` olur.
+- **H13, H14:** Yalnız güncellemeyi kapsayan değerlendirme penceresi, sahibin
+  durdurma komutu verilmeden önce alınan andan bir örnek aralığı (5 s) önce
+  biter. Bir örneğin zamanı, ölçüm döngüsünün başlangıcıdır. Panel yoklaması
+  döngünün sonunda, yaklaşık 2 saniye sonra yapılır.
+- **H15:** Port tutucunun ham olay dosyası, sahip portu bıraktığında ve
+  `collect` adımında kanıta kopyalanır.
+
+**Ölçülemeyen başlangıç türleri (upd4 F4, F5).** Güncelleme, adayın başlangıç
+denetimi veya gerçek başlatması hiç çalışmadan durabilir ya da geri alınabilir.
+Bunun kanıtı şunlardır: başka bir hata kodu, başlangıç denetimi nedeninin
+olmaması, `completion.pending` görülmemesi, önceki sürümün kurulu olması ve
+yalnız geri alma dağıtımları. Bu durumda tür yargısı `not-measured` der ve bulgu
+yazmaz. Hücrenin genel sonucu `inconclusive-kind-not-reached` olur. Başarısız bir
+adım varsa sonuç yine `failed` kalır. Adayın çalıştığına dair her iz, türü
+normal biçimde değerlendirtir. Bilinmeyen kayıtlar da aynı sonucu verir.
+
+**upd4 sonrası ürün durumları (upd5 sürücü bilgisi).** Sürücü artık
+`update_preflight_refused` kodunu tanır. `failed`/`none` durumunda bu kod ya da
+`recovery_runtime_preflight_failed`, istek için son yanıttır. İzleme H8'in
+600 saniyesini beklemeden durur. Güncelleyicinin hata satırı aynı kodu ve
+`state=unchanged` değerini gösterirse sonuç sınıfı `stopped-before-change`
+olur. Satır okunmadıysa sonuç `-unconfirmed`, satır başka bir şey diyorsa
+`-contradicted` ekini alır. Gerçek başlatma ve başlangıç denetimi hücrelerinde
+bu durum, F4 gibi olumlu kanıtla "tür ölçülmedi" sayılır. `pause_pending`
+duraklama değildir, sahipten işlem de istemez; kurtarma sürüyor sayılır.
+Duraklamada `renewal_before_update` kaydedilir ve güncelleme öncesi zamanlayıcı
+anlık görüntüsüyle karşılaştırılır. `<id>.renewal` dosyası yalnız okunur.
+Uyumsuzluk bulgudur. Güncelleme kartındaki `fallback` satırı ürünün kendi
+kaynağından değerlendirilir. Yedek anahtar katalogda yoksa bu bir bulgudur.
+
+Komutlar ve hücre ayrıntıları İngilizce bölümdedir
+([README.md](README.md#owner-started-update-acceptance-upd1)). Çevrimdışı
+testler (`test_owner_update_trial.py`, 161 test) yerel sonucu kanıtlamaz.

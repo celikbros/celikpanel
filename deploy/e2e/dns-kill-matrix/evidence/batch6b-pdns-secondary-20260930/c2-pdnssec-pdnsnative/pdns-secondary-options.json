@@ -1,0 +1,87 @@
+{
+  "records": [
+    {
+      "path": "fixture_pass_definition.pdns_secondary_rows",
+      "value": {
+        "domains": [
+          [
+            "catalog-c000020b.celikpanel.invalid",
+            "CONSUMER",
+            "192.0.2.11",
+            "celikpanel-peer-catalog-v1",
+            "",
+            ""
+          ],
+          [
+            "s1-kill.test",
+            "SLAVE",
+            "192.0.2.11",
+            "",
+            "catalog-c000020b.celikpanel.invalid",
+            "{\"consumer\": {\"unique\": \"tlhnkturltuku63bhersj40lbi0vkdvt.\"}}"
+          ]
+        ],
+        "failures": [],
+        "member_options": {
+          "expected_label": "tlhnkturltuku63bhersj40lbi0vkdvt",
+          "shape": "consumer.unique",
+          "unique": "tlhnkturltuku63bhersj40lbi0vkdvt.",
+          "value": "{\"consumer\": {\"unique\": \"tlhnkturltuku63bhersj40lbi0vkdvt.\"}}"
+        },
+        "member_soa_rows": 1,
+        "unknown": []
+      }
+    },
+    {
+      "path": "fixture_pass_definition.pdns_secondary_rows.member_options",
+      "value": {
+        "expected_label": "tlhnkturltuku63bhersj40lbi0vkdvt",
+        "shape": "consumer.unique",
+        "unique": "tlhnkturltuku63bhersj40lbi0vkdvt.",
+        "value": "{\"consumer\": {\"unique\": \"tlhnkturltuku63bhersj40lbi0vkdvt.\"}}"
+      }
+    },
+    {
+      "path": "reboot_after_recovery.pdns_secondary_rows",
+      "value": {
+        "domains": [
+          [
+            "catalog-c000020b.celikpanel.invalid",
+            "CONSUMER",
+            "192.0.2.11",
+            "celikpanel-peer-catalog-v1",
+            "",
+            ""
+          ],
+          [
+            "s1-kill.test",
+            "SLAVE",
+            "192.0.2.11",
+            "",
+            "catalog-c000020b.celikpanel.invalid",
+            "{\"consumer\": {\"unique\": \"tlhnkturltuku63bhersj40lbi0vkdvt.\"}}"
+          ]
+        ],
+        "failures": [],
+        "member_options": {
+          "expected_label": "tlhnkturltuku63bhersj40lbi0vkdvt",
+          "shape": "consumer.unique",
+          "unique": "tlhnkturltuku63bhersj40lbi0vkdvt.",
+          "value": "{\"consumer\": {\"unique\": \"tlhnkturltuku63bhersj40lbi0vkdvt.\"}}"
+        },
+        "member_soa_rows": 1,
+        "unknown": []
+      }
+    },
+    {
+      "path": "reboot_after_recovery.pdns_secondary_rows.member_options",
+      "value": {
+        "expected_label": "tlhnkturltuku63bhersj40lbi0vkdvt",
+        "shape": "consumer.unique",
+        "unique": "tlhnkturltuku63bhersj40lbi0vkdvt.",
+        "value": "{\"consumer\": {\"unique\": \"tlhnkturltuku63bhersj40lbi0vkdvt.\"}}"
+      }
+    }
+  ],
+  "source": "result.json (verbatim sub-objects)"
+}

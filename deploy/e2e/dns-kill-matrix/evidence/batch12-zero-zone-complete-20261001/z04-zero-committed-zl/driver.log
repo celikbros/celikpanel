@@ -1,0 +1,53 @@
+### 2026-09-30T08:37:58.832Z start-cell z04-zero-committed-zl pdns-switch__committed__after-write__paired-primary__peer-reachable node=debian13 peer=arch fixture=uninitialized root=/var/tmp/cp-b12-1001/r1 gateprobe=0 flags=--zero-zones --zone-lifecycle
+### 2026-09-30T08:37:58.834Z prepare
+### 2026-09-30T08:37:59.844Z early-admission-dry-run
+### 2026-09-30T08:37:59.984Z start
+### 2026-09-30T08:38:00.329Z wait-ssh
+### 2026-09-30T08:38:59.350Z guest-identity
+### 2026-09-30T08:39:00.380Z install
+### 2026-09-30T08:39:13.751Z enroll-recovery-runtime
+### 2026-09-30T08:39:20.920Z native-bind-secondary-prepare
+### 2026-09-30T08:39:55.510Z secondary-rndc-prerequisite-after-prepare (batch 11 addition: read-only; ls of the key file, :953 listener, named lines; no rndc command, no key content)
+### 2026-09-30T08:39:55.935Z prepare-pdns-switch zero_zones_flag=--zero-zones
+### 2026-09-30T08:39:57.012Z pre-run-snapshot
+### 2026-09-30T08:40:47.410Z start-peer-dns-sampler
+Running as unit: cp-b12-peerloop1.service; invocation ID: 1e5a6b97723d4c56912f73ee52c163f4
+peerloop1 start rc=0
+### 2026-09-30T08:40:48.019Z start-watcher
+Running as unit: cp-b12-watch.service; invocation ID: a816d441c3cf440d8702522c93fdf1e9
+### 2026-09-30T08:40:48.669Z start-dbwatch
+Running as unit: cp-b12-dbwatch.service; invocation ID: 3f0523871b294410a31a56598f00c142
+### 2026-09-30T08:40:49.162Z start-ledwatch (batch 10 addition: read-only ledger sampler)
+Running as unit: cp-b12-ledwatch.service; invocation ID: 322f936b1d234d109481f2ca5c5b52f7
+### 2026-09-30T08:40:50.221Z prepared-ok
+### 2026-09-30T08:40:50.235Z run-prepared-dry-run flags=--zero-zones --zone-lifecycle
+### 2026-09-30T08:40:50.342Z run-prepared
+RUN_PREPARED_RC=2
+### 2026-09-30T08:42:06.518Z done-run rc=2
+### 2026-09-30T08:42:29.535Z read-only state after run-prepared (pending delete), before enrollment
+### 2026-09-30T08:42:30.608Z enrollment start
+### 2026-09-30T08:42:36.232Z pending-job-just-before (read-only)
+total 20
+drwx------ 2 root root 4096 2026-09-30 11:42:04.037177535 +0300 .
+drwx------ 5 root root 4096 2026-09-30 11:41:44.393177899 +0300 ..
+-rw------- 1 root root 1424 2026-09-30 11:41:44.397177900 +0300 peer-verdict.json
+-rw------- 1 root root 6972 2026-09-30 11:42:04.041959075 +0300 zone-lifecycle.json
+### 2026-09-30T08:42:36.975Z zone-lifecycle-recover-dry-run
+dry rc=0
+### 2026-09-30T08:42:37.074Z zone-lifecycle-recover-execute python3 deploy/e2e/dns-kill-matrix/guest_bootstrap.py zone-lifecycle --work-root /var/tmp/cp-b12-1001/r1 --cell-id pdns-switch__committed__after-write__paired-primary__peer-reachable --node debian13 --identity-file /var/tmp/cp-b12-1001/r1/id_ed25519 --source-fixture uninitialized --zero-zones --recover-delete --execute
+ZONE_LIFECYCLE_RECOVER_RC=0 elapsed=27.63s start=2026-09-30T08:42:37.076Z end=2026-09-30T08:43:04.707Z
+total 28
+drwx------ 2 root root 4096 2026-09-30 11:43:04.685176206 +0300 .
+drwx------ 5 root root 4096 2026-09-30 11:41:44.393177899 +0300 ..
+-rw------- 1 root root 1424 2026-09-30 11:41:44.397177900 +0300 peer-verdict.json
+-rw------- 1 root root 6972 2026-09-30 11:42:04.041959075 +0300 zone-lifecycle.json
+-rw------- 1 root root 4553 2026-09-30 11:43:04.686964562 +0300 zone-lifecycle-recover.json
+### 2026-09-30T08:43:04.726Z after-recover (read-only)
+### 2026-09-30T08:43:05.096Z done
+RECOVER-DONE
+### 2026-09-30T08:44:09.454Z capture hold 150s before collect (read-only; samplers running)
+### 2026-09-30T08:46:39.459Z stop ledwatch; collect
+08:43:01.717627483 CHANGE ledger aaac583b9f2f -> 64b473a40142 agent=6423/active/ :: fa261f29 succeeded published att=1 lease=0001-01-01T00:00:00Z code= upd=2026-09-30T08:41:48.730583018Z | d8f6f5bc su
+done
+### 2026-09-30T08:47:07.025Z collect done
+### 2026-09-30T08:47:07.040Z stop guests (fixture.py stop: QMP quit, overlays kept)

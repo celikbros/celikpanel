@@ -3,11 +3,14 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/repositories"
 )
 
 var errInvalidCanonicalAuthIdentity = errors.New("invalid canonical authentication identity")
+var errCanonicalAuthUnavailable = errors.New("canonical authentication identity unavailable")
 
 type canonicalAuthIdentity struct {
 	user        *core.User
@@ -43,8 +46,17 @@ func normalizedStoredAccountType(user *core.User) core.AccountType {
 // additional users, stale parents and malformed legacy rows from becoming an
 // authorization identity.
 func (p *Panel) canonicalAuthIdentity(ctx context.Context, userID int) (canonicalAuthIdentity, error) {
+	if p.users == nil {
+		return canonicalAuthIdentity{}, errCanonicalAuthUnavailable
+	}
 	user, err := p.users.GetByID(ctx, userID)
-	if err != nil || user == nil || user.Status != "active" {
+	if errors.Is(err, repositories.ErrUserNotFound) {
+		return canonicalAuthIdentity{}, errInvalidCanonicalAuthIdentity
+	}
+	if err != nil || user == nil {
+		return canonicalAuthIdentity{}, fmt.Errorf("%w: %v", errCanonicalAuthUnavailable, err)
+	}
+	if user.ID != userID || user.Status != "active" {
 		return canonicalAuthIdentity{}, errInvalidCanonicalAuthIdentity
 	}
 
@@ -62,7 +74,13 @@ func (p *Panel) canonicalAuthIdentity(ctx context.Context, userID int) (canonica
 
 	if identity.Role == core.EffectiveRoleAdditionalUser {
 		parent, err := p.users.GetByID(ctx, identity.CustomerID)
-		if err != nil || parent == nil || parent.Status != "active" {
+		if errors.Is(err, repositories.ErrUserNotFound) {
+			return canonicalAuthIdentity{}, errInvalidCanonicalAuthIdentity
+		}
+		if err != nil || parent == nil {
+			return canonicalAuthIdentity{}, fmt.Errorf("%w: %v", errCanonicalAuthUnavailable, err)
+		}
+		if parent.ID != identity.CustomerID || parent.Status != "active" {
 			return canonicalAuthIdentity{}, errInvalidCanonicalAuthIdentity
 		}
 		parentIdentity, ok := parent.EffectiveIdentity()

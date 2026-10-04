@@ -1,0 +1,10 @@
+2026-09-30T00:24:54Z
+## rndc key files (metadata only)
+ls: cannot access '/etc/rndc.key': No such file or directory
+-rw-r----- 1 bind bind 100 Sep 30 00:23 /etc/bind/rndc.key
+## owning package
+dpkg-query: no path found matching pattern /etc/bind/rndc.key
+## rndc status first line
+version: BIND 9.20.29-1~deb13u1-Debian (Stable Release) <id:>
+running on dns-debian13: Linux x86_64 6.12.105+deb13-cloud-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.12.105-1 (2026-08-24) (Debian GNU/Linux 13 (trixie))
+bind9	1:9.20.29-1~deb13u1

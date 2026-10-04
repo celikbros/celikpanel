@@ -1,0 +1,112 @@
+{
+  "checks": {
+    "attempts": {
+      "automatic": [
+        {
+          "at": "2026-10-02T21:48:11.881719Z",
+          "attempt": "1",
+          "direction": "forward",
+          "operation": "update",
+          "phase": "completion"
+        },
+        {
+          "at": "2026-10-02T21:49:57.813773Z",
+          "attempt": "2",
+          "direction": "forward",
+          "operation": "update",
+          "phase": "completion"
+        },
+        {
+          "at": "2026-10-02T21:51:38.989735Z",
+          "attempt": "3",
+          "direction": "forward",
+          "operation": "update",
+          "phase": "completion"
+        }
+      ],
+      "automatic_count": 3,
+      "journal_admissions": [
+        {
+          "at": "2026-10-02T21:48:11.957918+00:00",
+          "attempt": "1",
+          "snapshot": "20261002T214634Z-from-unknown-to-47c0b4c2d68ae75258a36dad469c2a41758e1e1c-bdfb0ae70a07c2aa995131904ff003f4"
+        },
+        {
+          "at": "2026-10-02T21:49:57.896946+00:00",
+          "attempt": "2",
+          "snapshot": "20261002T214634Z-from-unknown-to-47c0b4c2d68ae75258a36dad469c2a41758e1e1c-bdfb0ae70a07c2aa995131904ff003f4"
+        },
+        {
+          "at": "2026-10-02T21:51:39.099904+00:00",
+          "attempt": "3",
+          "snapshot": "20261002T214634Z-from-unknown-to-47c0b4c2d68ae75258a36dad469c2a41758e1e1c-bdfb0ae70a07c2aa995131904ff003f4"
+        }
+      ],
+      "owner": [
+        {
+          "at": "2026-10-02T21:53:47.082416Z",
+          "direction": "forward",
+          "name": "owner.03Dgg38j",
+          "operation": "update",
+          "phase": "completion"
+        }
+      ],
+      "owner_count": 1
+    },
+    "guest_samples": 105,
+    "host_samples": 122,
+    "journals": [
+      "lab",
+      "product",
+      "setup-services"
+    ],
+    "observer": [
+      "armed",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "released"
+    ],
+    "port_hold_events": {
+      "events": 4,
+      "file": "steps/16-collect/owner-port-hold-82d3df311a57eecb8279b6eb7f22171a.jsonl",
+      "guest_path": "/root/celikpanel-release-recovery-lab/owner-port-hold-82d3df311a57eecb8279b6eb7f22171a.jsonl",
+      "guest_sha256": "e4de84cb8164ec488ff144f960384c38c5acfe73be4c89df63cd241c0b56260a"
+    },
+    "renewal_before_update": {
+      "expected_from_pre_update_timers": "on",
+      "findings": [],
+      "pre_update_timers": {
+        "certbot.timer": {
+          "ActiveState": "active",
+          "UnitFileState": "enabled"
+        }
+      },
+      "recorded": "on",
+      "sidecar": {
+        "present": true,
+        "valid": true,
+        "value": "on"
+      },
+      "verdict": "as-before"
+    },
+    "stopped_after": [],
+    "unavailable": {}
+  },
+  "finished_at": "2026-10-02T21:55:25Z",
+  "name": "collect",
+  "started_at": "2026-10-02T21:55:23Z",
+  "verdict": "passed"
+}

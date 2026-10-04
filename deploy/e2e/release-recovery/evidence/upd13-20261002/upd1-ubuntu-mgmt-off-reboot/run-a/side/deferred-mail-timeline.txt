@@ -1,0 +1,79 @@
+run /mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/release-recovery/evidence/upd13-20261002/upd1-ubuntu-mgmt-off-reboot/run-a/
+overall complete-for-review outcome update-verified
+steps [('preflight', 'passed', '00:19:21', '00:19:25'), ('origin', 'passed', '00:19:25', '00:19:33'), ('baseline-install', 'passed', '00:19:33', '00:20:23'), ('owner-login', 'passed', '00:20:23', '00:20:24'), ('license', 'passed', '00:20:24', '00:20:24'), ('setup', 'observed', '00:20:24', '00:30:39'), ('seed', 'passed', '00:30:39', '00:33:47'), ('pre-state', 'passed', '00:33:47', '00:35:05'), ('arm', 'passed', '00:35:05', '00:35:07'), ('owner-start', 'passed', '00:35:07', '00:35:08'), ('track', 'passed', '00:35:08', '00:36:00'), ('owner-continuation (required)', 'skipped', '00:36:00', '00:36:00'), ('terminal', 'passed', '00:36:00', '00:36:07'), ('management-off', 'passed', '00:36:07', '00:36:17'), ('owner-reboot', 'passed', '00:36:17', '00:36:37'), ('management-off-measure', 'passed', '00:36:37', '00:39:46'), ('management-return', 'passed', '00:39:46', '00:40:03'), ('collect', 'passed', '00:40:03', '00:40:05'), ('verdicts', 'passed', '00:40:05', '00:40:05'), ('kind-expectation', 'passed', '00:40:05', '00:40:05')]
+
+== Panel processes (journal-product of collect)
+-- panel[7210] start 2026-10-03T00:20:04.440212+00:00
+   +   0.01s 00:20:04.448420 Connected to Agent RPC; preparing normal management access
+   +   0.03s 00:20:04.470507 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-ubuntu": a fully qualified DNS name is required; preserve pending outbox: <nil>
+   +   0.03s 00:20:04.472990 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   +   0.03s 00:20:04.474362 Panel ready on :2083 (HTTPS)
+-- panel[7273] start 2026-10-03T00:20:05.572148+00:00
+   +   0.01s 00:20:05.579208 Connected to Agent RPC; preparing normal management access
+   +   0.02s 00:20:05.589318 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-ubuntu": a fully qualified DNS name is required; preserve pending outbox: <nil>
+   +   0.02s 00:20:05.591291 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   +   0.02s 00:20:05.592897 Panel ready on :2083 (HTTPS)
+-- panel[53351] start 2026-10-03T00:35:46.448144+00:00
+   +   0.02s 00:35:46.468665 Connected to Agent RPC; preparing normal management access
+   +   0.06s 00:35:46.513056 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload
+   +   0.07s 00:35:46.514929 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+   +   0.07s 00:35:46.517946 milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+   +   0.07s 00:35:46.519550 Panel ready on :2083 (HTTPS)
+-- panel[5135] start 2026-10-03T00:39:47.793318+00:00
+   +   0.03s 00:39:47.824169 Agent is unavailable; authenticated read-only recovery remains available while connection is retried
+   +   0.54s 00:39:48.333432 Connected to Agent RPC; preparing normal management access
+   +   0.64s 00:39:48.437978 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload
+   +   4.57s 00:39:52.361474 certificate startup reconcile: mail SNI reconciled from 0 active secure-mail certificates; TLSA left unchanged: automatic DANE/TLSA updates are disabled: safe TTL-aware certificate rollover and explicit panel record ownership are not available in this release
+   +   9.67s 00:39:57.460737 milter chain: milters="inet:localhost:11332" maps=hash
+   +   9.67s 00:39:57.462031 Panel ready on :2083 (HTTPS)
+
+== update / recovery units and mail side effects from 2026-10-03T00:35:46.448144+00:00
+     -83.16s 00:34:23.290125 systemd[1] Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+     -82.87s 00:34:23.578679 systemd[1] celikpanel-release-recovery.service: Deactivated successfully.
+     -82.87s 00:34:23.578896 systemd[1] Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+     -52.02s 00:34:54.431070 systemd[1] Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+     -51.74s 00:34:54.706165 systemd[1] celikpanel-release-recovery.service: Deactivated successfully.
+     -51.74s 00:34:54.706348 systemd[1] Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+     -38.69s 00:35:07.760225 systemd[1] Started celikpanel-lab-owner-update-observer-f79ef3c393d6975bb4e0e35133de144b.service - /usr/bin/python3 -I /root/celikpanel-release-recovery-lab/guest_owner_update_observer.py --lab-nonce 4dff748b348c3e0a2ad4ad1c187d87a8e45632e81ff285d10e0dd4ba1834ebe2 --vm-uuid 4609c74d-2b3a-58d2-8664-9c2c7129c242
+     -38.15s 00:35:08.298631 systemd[1] Starting celikpanel-self-update-f79ef3c393d6975bb4e0e35133de144b.service - /opt/celikpanel/bin/agent --self-update-worker f79ef3c393d6975bb4e0e35133de144b...
+     -38.15s 00:35:08.300240 systemd[1] Started celikpanel-self-update-f79ef3c393d6975bb4e0e35133de144b.service - /opt/celikpanel/bin/agent --self-update-worker f79ef3c393d6975bb4e0e35133de144b.
+     -24.41s 00:35:22.034361 systemd[1] Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+     -24.05s 00:35:22.402682 systemd[1] celikpanel-release-recovery.service: Deactivated successfully.
+     -24.05s 00:35:22.403034 systemd[1] Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+      +5.97s 00:35:52.423038 systemd[1] Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+      +6.40s 00:35:52.844039 systemd[1] celikpanel-release-recovery.service: Deactivated successfully.
+      +6.40s 00:35:52.844212 systemd[1] Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+      +9.90s 00:35:56.348695 systemd[1] celikpanel-self-update-f79ef3c393d6975bb4e0e35133de144b.service: Deactivated successfully.
+      +9.90s 00:35:56.348945 systemd[1] celikpanel-self-update-f79ef3c393d6975bb4e0e35133de144b.service: Consumed 39.464s CPU time, 480.7M memory peak, 0B memory swap peak.
+      +9.91s 00:35:56.359645 systemd[1] celikpanel-self-update-f79ef3c393d6975bb4e0e35133de144b.service: Failed to open /run/systemd/transient/celikpanel-self-update-f79ef3c393d6975bb4e0e35133de144b.service: No such file or directory
+      +9.94s 00:35:56.391809 systemd[1] celikpanel-self-update-f79ef3c393d6975bb4e0e35133de144b.service: Failed to open /run/systemd/transient/celikpanel-self-update-f79ef3c393d6975bb4e0e35133de144b.service: No such file or directory
+      +9.94s 00:35:56.392091 systemctl[54987] Failed to add reference to unit celikpanel-self-update-f79ef3c393d6975bb4e0e35133de144b.service: Unit celikpanel-self-update-f79ef3c393d6975bb4e0e35133de144b.service not found.
+      +9.94s 00:35:56.392622 systemd[1] celikpanel-lab-owner-update-observer-f79ef3c393d6975bb4e0e35133de144b.service: Deactivated successfully.
+      +9.94s 00:35:56.393065 systemd[1] celikpanel-lab-owner-update-observer-f79ef3c393d6975bb4e0e35133de144b.service: Consumed 8.291s CPU time, 12.3M memory peak, 0B memory swap peak.
+     +45.76s 00:36:32.205201 systemd[1] Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+     +47.56s 00:36:34.012827 systemd[1] celikpanel-release-recovery.service: Deactivated successfully.
+     +47.57s 00:36:34.013238 systemd[1] Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+     +77.37s 00:37:03.814850 systemd[1] Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+     +77.74s 00:37:04.191871 systemd[1] celikpanel-release-recovery.service: Deactivated successfully.
+     +77.74s 00:37:04.192136 systemd[1] Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+    +108.67s 00:37:35.122770 systemd[1] Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+    +109.05s 00:37:35.494655 systemd[1] celikpanel-release-recovery.service: Deactivated successfully.
+    +109.05s 00:37:35.494859 systemd[1] Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+    +139.67s 00:38:06.119797 systemd[1] Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+    +140.04s 00:38:06.489065 systemd[1] celikpanel-release-recovery.service: Deactivated successfully.
+    +140.04s 00:38:06.489243 systemd[1] Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+    +170.67s 00:38:37.114777 systemd[1] Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+    +171.03s 00:38:37.480017 systemd[1] celikpanel-release-recovery.service: Deactivated successfully.
+    +171.03s 00:38:37.480251 systemd[1] Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+    +201.67s 00:39:08.114790 systemd[1] Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+    +202.04s 00:39:08.487264 systemd[1] celikpanel-release-recovery.service: Deactivated successfully.
+    +202.04s 00:39:08.487462 systemd[1] Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+    +232.37s 00:39:38.820787 systemd[1] Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+    +232.75s 00:39:39.199929 systemd[1] celikpanel-release-recovery.service: Deactivated successfully.
+    +232.75s 00:39:39.200112 systemd[1] Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+    +245.93s 00:39:52.382506 postfix/postmap[6205] warning: unsupported dictionary type: lmdb. Is the postfix-lmdb package installed?
+    +245.93s 00:39:52.382585 postfix/postmap[6205] fatal: unsupported map type: lmdb
+
+== status timeline (track samples, first time each CLI state was seen)
+   2026-10-03T00:35:08Z 11-track/samples/0001.json ('known', 'running', 'none', None) panel_api= running
+   2026-10-03T00:35:58Z 11-track/samples/0013.json ('known', 'succeeded', 'update_verified', None) panel_api= succeeded

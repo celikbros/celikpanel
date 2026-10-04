@@ -1,0 +1,25 @@
+evidence /var/tmp/cp-release-drill-upd9-ub-once-a/evidence/ubuntu/upd1/upd1-ubuntu-setuponce-20261001t174859z/
+== distinct CLI texts
+== journal lines
+== result {"overall": "failed", "native_evidence": false, "request_id": null} {"classification": "setup-stopped", "final_status": null, "setup_attempts": [{"attempt": 1, "component": null, "error": {"code": "HOST_MUTATION_BUSY", "message": "This server's package manager is busy \u2014 something outside CelikPanel is installing or updating packages. Try again in a minute."}, "owner_texts": {"api_message": "This server's package manager is busy \u2014 something outside CelikPanel is installing or updating packages. Try again in a minute.", "code": "HOST_MUTATION_BUSY", "err.HOST_MUTATION_BUSY": {"en": "Another server change or operating-system package task is still runnin
+findings []
+== packagekit steps/06-setup/packagekit-observations.json
+setup-a01-before-start       17:50:03.832 rule=busy pk(pid,age,aptcc,children,locks,idle)=[(5072, 29.5, 0, [], 0, False)] others=[] locks=[] | readiness 17:50:03 ready=False HOST_MUTATION_BUSY/package_manager_active by=agent
+setup-a01-poll               17:50:06.496 rule=busy pk(pid,age,aptcc,children,locks,idle)=[(5072, 32.2, 0, [], 0, False)] others=[] locks=[] | readiness 17:50:05 ready=False HOST_MUTATION_BUSY/package_manager_active by=agent
+setup-a01-end                17:50:12.029 rule=busy pk(pid,age,aptcc,children,locks,idle)=[(5072, 37.7, 0, [], 0, False)] others=[] locks=[] | readiness 17:50:11 ready=False HOST_MUTATION_BUSY/package_manager_active by=agent
+== packagekit steps/07-packagekit-after-setup/packagekit-observations.json
+after-setup-poll             17:50:13.421 rule=busy pk(pid,age,aptcc,children,locks,idle)=[(5072, 39.1, 0, [], 0, False)] others=[] locks=[] | readiness 17:50:12 ready=False HOST_MUTATION_BUSY/package_manager_active by=agent
+after-setup-poll             17:50:33.893 rule=busy pk(pid,age,aptcc,children,locks,idle)=[(5072, 59.5, 0, [], 0, False)] others=[] locks=[] | readiness 17:50:33 ready=False HOST_MUTATION_BUSY/package_manager_active by=agent
+after-setup-poll             17:50:54.365 rule=busy pk(pid,age,aptcc,children,locks,idle)=[(5072, 80.0, 0, [], 0, False)] others=[] locks=[] | readiness 17:50:53 ready=False HOST_MUTATION_BUSY/package_manager_active by=agent
+after-setup-poll             17:51:15.074 rule=busy pk(pid,age,aptcc,children,locks,idle)=[(5072, 100.7, 0, [], 0, False)] others=[] locks=[] | readiness 17:51:14 ready=False HOST_MUTATION_BUSY/package_manager_active by=agent
+after-setup-poll             17:51:35.544 rule=busy pk(pid,age,aptcc,children,locks,idle)=[(5072, 121.2, 0, [], 0, False)] others=[] locks=[] | readiness 17:51:34 ready=False HOST_MUTATION_BUSY/package_manager_active by=agent
+after-setup-poll             17:51:56.011 rule=busy pk(pid,age,aptcc,children,locks,idle)=[(5072, 141.7, 0, [], 0, False)] others=[] locks=[] | readiness 17:51:55 ready=False HOST_MUTATION_BUSY/package_manager_active by=agent
+after-setup-poll             17:52:16.769 rule=busy pk(pid,age,aptcc,children,locks,idle)=[(5072, 162.4, 0, [], 0, False)] others=[] locks=[] | readiness 17:52:15 ready=False HOST_MUTATION_BUSY/package_manager_active by=agent
+after-setup-poll             17:52:37.298 rule=busy pk(pid,age,aptcc,children,locks,idle)=[(5072, 183.0, 0, [], 0, False)] others=[] locks=[] | readiness 17:52:36 ready=False HOST_MUTATION_BUSY/package_manager_active by=agent
+after-setup-poll             17:52:57.766 rule=busy pk(pid,age,aptcc,children,locks,idle)=[(5072, 203.4, 0, [], 0, False)] others=[] locks=[] | readiness 17:52:56 ready=False HOST_MUTATION_BUSY/package_manager_active by=agent
+after-setup-poll             17:53:18.493 rule=busy pk(pid,age,aptcc,children,locks,idle)=[(5072, 224.1, 0, [], 0, False)] others=[] locks=[] | readiness 17:53:17 ready=False HOST_MUTATION_BUSY/package_manager_active by=agent
+after-setup-poll             17:53:38.982 rule=busy pk(pid,age,aptcc,children,locks,idle)=[(5072, 244.6, 0, [], 0, False)] others=[] locks=[] | readiness 17:53:38 ready=False HOST_MUTATION_BUSY/package_manager_active by=agent
+after-setup-poll             17:53:59.447 rule=busy pk(pid,age,aptcc,children,locks,idle)=[(5072, 265.1, 0, [], 0, False)] others=[] locks=[] | readiness 17:53:58 ready=False HOST_MUTATION_BUSY/package_manager_active by=agent
+after-setup-poll             17:54:20.159 rule=busy pk(pid,age,aptcc,children,locks,idle)=[(5072, 285.8, 0, [], 0, False)] others=[] locks=[] | readiness 17:54:19 ready=False HOST_MUTATION_BUSY/package_manager_active by=agent
+after-setup-poll             17:54:40.629 rule=idle pk(pid,age,aptcc,children,locks,idle)=[] others=[] locks=[] | readiness 17:54:39 ready=True / by=agent
+after-setup-final            17:54:41.101 rule=idle pk(pid,age,aptcc,children,locks,idle)=[] others=[] locks=[] | readiness 17:54:40 ready=True / by=agent

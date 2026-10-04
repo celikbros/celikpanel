@@ -1,0 +1,166 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "ServerSetup start (once)",
+  "request": {
+    "body": {
+      "confirmed": true,
+      "plan_id": "4b0cdd56369c0d2535328a7c8bc7aab6",
+      "request_id": "91e9b6af717864d2e2560477ef00528e"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/setup/start"
+  },
+  "response": {
+    "elapsed_seconds": 0.545,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Thu, 01 Oct 2026 01:27:19 GMT"
+      ],
+      [
+        "Content-Length",
+        "2010"
+      ]
+    ],
+    "json": {
+      "id": "91e9b6af717864d2e2560477ef00528e",
+      "panel_url": "https://panel-arch.upd1-infra.test:2083/",
+      "phase": "queued",
+      "plan_id": "4b0cdd56369c0d2535328a7c8bc7aab6",
+      "request_id": "91e9b6af717864d2e2560477ef00528e",
+      "status": "running",
+      "steps": [
+        {
+          "id": "01-dns",
+          "kind": "dns",
+          "owner_id": "6b4f927d0f67e876ffc949281cbf1d7c",
+          "request_id": "b99efe2ff7196460cee5dac7cf739af7",
+          "status": "pending",
+          "target": "external"
+        },
+        {
+          "id": "02-service",
+          "kind": "service",
+          "owner_id": "5e0f07055e003b73bd6a93d1bd3fdd93",
+          "request_id": "d3b2c141ce327b3d6df27d3072a31171",
+          "status": "pending",
+          "target": "nginx"
+        },
+        {
+          "id": "03-service",
+          "kind": "service",
+          "owner_id": "0076298191780bf883295c539584da72",
+          "request_id": "f74d8c092ccb25a090981bbb382384af",
+          "status": "pending",
+          "target": "php-fpm"
+        },
+        {
+          "id": "04-service",
+          "kind": "service",
+          "owner_id": "307e0c6af1d87a1829701aa4ee4c7849",
+          "request_id": "5ba19d9e0c50a3b7ce447723b588dd57",
+          "status": "pending",
+          "target": "mariadb"
+        },
+        {
+          "id": "05-service",
+          "kind": "service",
+          "owner_id": "0d18d44b9b3f70b29b0cd8995b1905d2",
+          "request_id": "7b5d17766bde81b3f367b82471365473",
+          "status": "pending",
+          "target": "cron"
+        },
+        {
+          "id": "06-service",
+          "kind": "service",
+          "owner_id": "247b3830110b4818ae87776a9a48384a",
+          "request_id": "e42f2cda8ba04c5bd125e85a0956071d",
+          "status": "pending",
+          "target": "certbot"
+        },
+        {
+          "id": "07-firewall",
+          "kind": "firewall",
+          "owner_id": "8ba51f95f2699e034cb7b44c56dd73fe",
+          "request_id": "260c8df695258b01fb8251a8ed569eb7",
+          "status": "pending",
+          "target": "enable_and_persist"
+        },
+        {
+          "id": "08-access_dns",
+          "kind": "access_dns",
+          "owner_id": "93aaf9e9611d9a0a3d5ee7a9ef273b54",
+          "qualifier": "192.0.2.11",
+          "request_id": "e0154d65d5a0c423f3ba57392b999adf",
+          "status": "pending",
+          "target": "panel-arch.upd1-infra.test"
+        },
+        {
+          "id": "09-panel_certificate",
+          "kind": "panel_certificate",
+          "owner_id": "294e73e19de77a22d26c909f0abaf19c",
+          "request_id": "9816a964f6e4d4ef3e3acb1c4d3161bd",
+          "status": "pending",
+          "target": "panel-arch.upd1-infra.test"
+        },
+        {
+          "id": "10-verify",
+          "kind": "verify",
+          "owner_id": "5b83f1b02cccae3d7c7430426649bc13",
+          "request_id": "39f804efa0d7ba8853cb7e9abb346e87",
+          "status": "pending",
+          "target": "web"
+        }
+      ]
+    },
+    "status": 202,
+    "text": null
+  }
+}

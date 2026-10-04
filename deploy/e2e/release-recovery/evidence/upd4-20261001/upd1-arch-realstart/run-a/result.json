@@ -1,0 +1,294 @@
+{
+  "artifacts": {
+    "baseline": {
+      "commit": "0e515e908fc7b3de5c4e74dc7535638cbe56d401",
+      "sha256": "af263bd487cd3f4dc75cd7e28a7104fee76c9416c2887e3293a20754c37b03d6",
+      "version": "v0.1.0-alpha.81"
+    },
+    "defective": {
+      "commit": "bd0e626ee8efae8bb11f3e4f8fa3cf0e7ff39df9",
+      "sha256": "cdd55db8b3ab6b0011811303b6ed355dcb414edcded8bec51b70be59052e6899",
+      "version": "v0.1.0-alpha.82"
+    },
+    "good": {
+      "commit": "e1fdca3898d950a6408bb5161f5b25ac32440d28",
+      "sha256": "7adcd0dfb16eb437606c9597aa925fcb282e5576cbe330a5fe0d05e14e814892",
+      "version": "v0.1.0-alpha.82"
+    },
+    "realstart": {
+      "commit": "dd4adede7c24bd1ad92118612fd379beb7874b0b",
+      "sha256": "fc34970a51de54501bfc9baeea9909c7bec94029e52e4c8bcf440a3059a639fd",
+      "version": "v0.1.0-alpha.82"
+    }
+  },
+  "cell": {
+    "mail_required": false,
+    "name": "upd1-arch-realstart",
+    "node": "arch",
+    "recovery_fault": null,
+    "variant": "real-start"
+  },
+  "findings": [
+    "arch: web_mail setup plan was refused (['server_setup_service_unsupported:dovecot']); mail is recorded as not provided on this platform",
+    "arch: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['09-panel_certificate', '10-verify']",
+    "real-start: the owner could log in to the Panel after the pause; the fixture's panel was expected never to listen",
+    "real-start: the update's failure line does not carry panel_start_unverified: ['update_failed']",
+    "real-start: failure sidecar: {'present': False, 'valid': False, 'code': None}",
+    "real-start: completion.pending was never observed",
+    "real-start: automatic dispatches ['update/active'], expected only completion (forward)",
+    "real-start: forward completion did not pause at its limit: final recovered/None",
+    "real-start: the server was returned to the previous version",
+    "real-start: installed release: baseline",
+    "real-start: the root CLI never printed the product's panel_start_unverified text (panel log command, no supported return) in EN and TR; it may be shown only while previous_failure=update_failed and the phase is failed/recovering",
+    "real-start: no CLI sample named the panel log command in both languages: {'en': False, 'tr': False}",
+    "real-start: the root CLI did not print the product's paused text in EN and TR",
+    "real-start: Panel window 'came-back', expected down-from-update-until-end for this fixture"
+  ],
+  "identity": {
+    "cell_id": "release-recovery__17998ff523424a39",
+    "node": "arch",
+    "vm_uuid": "7ae9780c-865c-5454-ab95-a5716313b3d7"
+  },
+  "kind": {
+    "expected": "the start check passes; completion.pending exists; the stability wait fails with panel_start_unverified; forward completion is retried to its limit (N and timestamps recorded) and pauses (paused_retry_limit); no rollback; the owner retry is printed but not run; texts name the panel log command and say there is no supported return; site, mail and cron keep running while the Panel stays down",
+    "judged": {
+      "expected": [
+        "check-passed",
+        "owner-retry-not-run",
+        "web-catalogue",
+        "workloads-kept-running"
+      ],
+      "findings": [
+        "the update's failure line does not carry panel_start_unverified: ['update_failed']",
+        "failure sidecar: {'present': False, 'valid': False, 'code': None}",
+        "completion.pending was never observed",
+        "automatic dispatches ['update/active'], expected only completion (forward)",
+        "forward completion did not pause at its limit: final recovered/None",
+        "the server was returned to the previous version",
+        "installed release: baseline",
+        "the root CLI never printed the product's panel_start_unverified text (panel log command, no supported return) in EN and TR; it may be shown only while previous_failure=update_failed and the phase is failed/recovering",
+        "no CLI sample named the panel log command in both languages: {'en': False, 'tr': False}",
+        "the root CLI did not print the product's paused text in EN and TR",
+        "Panel window 'came-back', expected down-from-update-until-end for this fixture"
+      ],
+      "kind": "real-start",
+      "native_evidence": false,
+      "unknown": [
+        "retry-command-printed"
+      ],
+      "verdict": "finding"
+    },
+    "printed_retry_command": null,
+    "variant": "real-start"
+  },
+  "native_evidence": false,
+  "note": "Observations for the owner's review; the P0 rows are judged separately.",
+  "outcome": {
+    "attempts": {
+      "automatic": [
+        {
+          "at": "2026-10-01T00:49:33.877728Z",
+          "attempt": "1",
+          "direction": "rollback",
+          "operation": "update",
+          "phase": "active"
+        }
+      ],
+      "automatic_count": 1,
+      "journal_admissions": [
+        {
+          "at": "2026-10-01T00:49:33.932007+00:00",
+          "attempt": "1",
+          "snapshot": "20261001T004929Z-from-unknown-to-dd4adede7c24bd1ad92118612fd379beb7874b0b-fe2920b052e2bd380d1874d8c44974c0"
+        }
+      ],
+      "owner": [],
+      "owner_count": 0
+    },
+    "classification": "real-start-candidate-rolled-back",
+    "final_status": {
+      "observation": "known",
+      "observed_at": "2026-10-01T00:49:53Z",
+      "phase": "recovered",
+      "previous_failure": "update_failed",
+      "reason": "rollback_verified",
+      "request_id": "b29e0eb359bcd19027b7fe4aa28ae9c9",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "rollback_verified"
+    },
+    "owner_continuation": false,
+    "owner_reboot": null,
+    "pin_changes": [],
+    "port_hold": null,
+    "reboot": null,
+    "track_stop": null
+  },
+  "overall": "failed",
+  "provenance": {
+    "baseline": "unpublished-local-fixture-commit-over-HEAD-labelled-v0.1.0-alpha.81; acceptance-license panel build (D-027 fixture); installed by the real installer; fixture trust root enrolled; not-production-release-admission",
+    "candidate": "unpublished-local-fixture-commit-labelled-v0.1.0-alpha.82; signed with the disposable fixture key; served by the guest-loopback celikpanel.net fixture origin; not a release",
+    "defect": "fixture source patch: cmd/panel main() exits (log.Fatalf) just before its listener starts; the read-only start check exits before flag parsing and never reaches that line, so the check passes and the real start fails after completion.pending (simulated by a committed fixture change)"
+  },
+  "request_id": "b29e0eb359bcd19027b7fe4aa28ae9c9",
+  "schema": "celikpanel/upd1-owner-update-result/v1",
+  "scope": {
+    "cron": {
+      "crontab": "/usr/sbin/crontab",
+      "verdict": "available"
+    },
+    "dns": {
+      "mode": "external",
+      "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+      "verdict": "not-provided-external-dns"
+    },
+    "origin": {
+      "after-owner-restart": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      },
+      "after-provision": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      },
+      "before-arm": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      }
+    },
+    "setup": {
+      "code": "server_setup_access_dns_required",
+      "not_run": [
+        "09-panel_certificate",
+        "10-verify"
+      ],
+      "phase": "access_dns",
+      "verdict": "observed isolated-host wait",
+      "volatile_tables_added": [
+        "server_setup_executions"
+      ]
+    }
+  },
+  "steps": [
+    {
+      "finished_at": "2026-10-01T00:41:17Z",
+      "name": "preflight",
+      "reason": null,
+      "started_at": "2026-10-01T00:41:13Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T00:41:25Z",
+      "name": "origin",
+      "reason": null,
+      "started_at": "2026-10-01T00:41:17Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T00:44:19Z",
+      "name": "baseline-install",
+      "reason": null,
+      "started_at": "2026-10-01T00:41:25Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T00:44:20Z",
+      "name": "owner-login",
+      "reason": null,
+      "started_at": "2026-10-01T00:44:19Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T00:44:20Z",
+      "name": "license",
+      "reason": null,
+      "started_at": "2026-10-01T00:44:20Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T00:47:17Z",
+      "name": "setup",
+      "reason": null,
+      "started_at": "2026-10-01T00:44:20Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-01T00:47:20Z",
+      "name": "seed",
+      "reason": null,
+      "started_at": "2026-10-01T00:47:17Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T00:49:09Z",
+      "name": "pre-state",
+      "reason": null,
+      "started_at": "2026-10-01T00:47:20Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T00:49:11Z",
+      "name": "arm",
+      "reason": null,
+      "started_at": "2026-10-01T00:49:09Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T00:49:11Z",
+      "name": "owner-start",
+      "reason": null,
+      "started_at": "2026-10-01T00:49:11Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T00:49:56Z",
+      "name": "track",
+      "reason": null,
+      "started_at": "2026-10-01T00:49:11Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T00:49:56Z",
+      "name": "owner-continuation (required)",
+      "reason": null,
+      "started_at": "2026-10-01T00:49:56Z",
+      "verdict": "skipped"
+    },
+    {
+      "finished_at": "2026-10-01T00:50:02Z",
+      "name": "terminal",
+      "reason": null,
+      "started_at": "2026-10-01T00:49:56Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T00:50:04Z",
+      "name": "collect",
+      "reason": null,
+      "started_at": "2026-10-01T00:50:02Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T00:50:04Z",
+      "name": "verdicts",
+      "reason": "workload interruption outside the expected windows: panel",
+      "started_at": "2026-10-01T00:50:04Z",
+      "verdict": "failed"
+    },
+    {
+      "finished_at": "2026-10-01T00:50:04Z",
+      "name": "kind-expectation",
+      "reason": null,
+      "started_at": "2026-10-01T00:50:04Z",
+      "verdict": "failed"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{"t":"2026-09-30T08:11:53Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020a.celikpanel.invalid", "command": "catalog", "error": "ConnectionRefusedError: [Errno 111] Connection refused", "server": "192.0.2.10", "transferred": false}}
+{"raw": "{\"t\":\"2026-09-30T08:13:54Z\",\"catalog_axfr_from_secondary\":Connection to 127.0.0.1 port 2202 timed out"}
+{"raw": "}"}
+{"raw": "{\"t\":\"2026-09-30T08:14:04Z\",\"catalog_axfr_from_secondary\":Connection reset by 127.0.0.1 port 2202"}
+{"raw": "}"}
+{"t":"2026-09-30T08:14:35Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020a.celikpanel.invalid", "command": "catalog", "error": "ConnectionRefusedError: [Errno 111] Connection refused", "server": "192.0.2.10", "transferred": false}}
+{"t":"2026-09-30T08:15:06Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020a.celikpanel.invalid", "command": "catalog", "members": [], "serial": 1, "server": "192.0.2.10", "transferred": true}}
+{"t":"2026-09-30T08:15:50Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020a.celikpanel.invalid", "command": "catalog", "members": ["pair-accept.test."], "serial": 2, "server": "192.0.2.10", "transferred": true}}
+{"t":"2026-09-30T08:16:11Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020a.celikpanel.invalid", "command": "catalog", "members": [], "serial": 3, "server": "192.0.2.10", "transferred": true}}
+{"t":"2026-09-30T08:16:53Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020a.celikpanel.invalid", "command": "catalog", "members": ["pair-accept.test."], "serial": 4, "server": "192.0.2.10", "transferred": true}}
+{"t":"2026-09-30T08:17:13Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020a.celikpanel.invalid", "command": "catalog", "error": "ConnectionRefusedError: [Errno 111] Connection refused", "server": "192.0.2.10", "transferred": false}}
+{"raw": "{\"t\":\"2026-09-30T08:17:28Z\",\"catalog_axfr_from_secondary\":Connection to 127.0.0.1 port 2202 timed out"}
+{"raw": "}"}
+{"raw": "{\"t\":\"2026-09-30T08:17:38Z\",\"catalog_axfr_from_secondary\":Connection reset by 127.0.0.1 port 2202"}
+{"raw": "}"}
+{"t":"2026-09-30T08:18:19Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020a.celikpanel.invalid", "command": "catalog", "members": ["pair-accept.test."], "serial": 4, "server": "192.0.2.10", "transferred": true}}
+{"t":"2026-09-30T08:18:29Z","watch":"run ended"}

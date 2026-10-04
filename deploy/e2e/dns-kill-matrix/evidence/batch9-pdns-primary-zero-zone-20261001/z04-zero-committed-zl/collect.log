@@ -1,0 +1,21 @@
+### collect 2026-09-30T01:30:24.907038572Z
+last watcher dir: /var/tmp/cp-b9-watch
+request id: 076c692ac1346f2b9c6a0df468b0e9aa
+ownerpost rc=0
+smstatus rc=0
+probe rc=0
+pdnsdb rc=0
+notifycap rc=0
+bindsec rc=0
+peer journal rc=0
+peerloop rc=0 lines=105
+cell directory: /var/tmp/cp-b9-1001/r2/cells/7392457812ac089a866de6ec
+total 20
+drwx------ 2 root root 4096 Sep 30 04:27 .
+drwxr-xr-x 3 root root 4096 Sep 30 04:30 ..
+-rw------- 1 root root 1396 Sep 30 04:27 peer-verdict.json
+-rw------- 1 root root 6783 Sep 30 04:27 zone-lifecycle.json
+01:27:45.746522276 CHANGE pdnsdb 5571caa82e39f47f3b622b83e62ddc1abd12dce1414a10e2611915f9528bd607 -> d3f311d867cf32e2ad9abf901a35dd45132d4d69f6edddf5badbac758841d9f5 pdns=4116/active/
+01:27:51.887893945 CHANGE pdnsdb d3f311d867cf32e2ad9abf901a35dd45132d4d69f6edddf5badbac758841d9f5 -> e788d871978fa7280ae62a0092bf2ca7484d5bb5b8e55e019819a72bfc10bc6d pdns=4116/active/
+done
+tar rc=0 size=2140160

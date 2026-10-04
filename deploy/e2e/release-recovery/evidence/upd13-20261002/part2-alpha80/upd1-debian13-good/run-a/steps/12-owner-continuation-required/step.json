@@ -1,0 +1,9 @@
+{
+  "checks": {
+    "required": false
+  },
+  "finished_at": "2026-10-03T00:52:03Z",
+  "name": "owner-continuation (required)",
+  "started_at": "2026-10-03T00:52:03Z",
+  "verdict": "skipped"
+}

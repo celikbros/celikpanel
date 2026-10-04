@@ -1,0 +1,13 @@
+{
+  "acceptance_banner_count": 3,
+  "host": "celikpanel.net",
+  "host_line_count": 0,
+  "host_lines": [],
+  "journal_lines": 42,
+  "limit": "the in-process counter is not exposed; an unlogged attempt leaves no journal line",
+  "refusal_line_count": 0,
+  "refusal_lines": [],
+  "refusal_text": "the acceptance test build never contacts the license service",
+  "state": "no-line-found",
+  "why": "journal lines naming the license service host or the refusing transport's error"
+}

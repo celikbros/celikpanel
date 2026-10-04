@@ -1,0 +1,96 @@
+{
+  "checks": {
+    "attempts": {
+      "automatic": [
+        {
+          "at": "2026-10-01T04:15:57.723825Z",
+          "attempt": "1",
+          "direction": "forward",
+          "operation": "update",
+          "phase": "completion"
+        },
+        {
+          "at": "2026-10-01T04:17:37.897017Z",
+          "attempt": "2",
+          "direction": "forward",
+          "operation": "update",
+          "phase": "completion"
+        },
+        {
+          "at": "2026-10-01T04:19:18.677268Z",
+          "attempt": "3",
+          "direction": "forward",
+          "operation": "update",
+          "phase": "completion"
+        }
+      ],
+      "automatic_count": 3,
+      "journal_admissions": [
+        {
+          "at": "2026-10-01T04:15:57.783480+00:00",
+          "attempt": "1",
+          "snapshot": "20261001T041432Z-from-unknown-to-ed1f31e0ce0a2bff37ca0480f31d0442d4c82cc5-b89914be745d34b66fca32b1c1b7b63f"
+        },
+        {
+          "at": "2026-10-01T04:17:37.966001+00:00",
+          "attempt": "2",
+          "snapshot": "20261001T041432Z-from-unknown-to-ed1f31e0ce0a2bff37ca0480f31d0442d4c82cc5-b89914be745d34b66fca32b1c1b7b63f"
+        },
+        {
+          "at": "2026-10-01T04:19:18.742917+00:00",
+          "attempt": "3",
+          "snapshot": "20261001T041432Z-from-unknown-to-ed1f31e0ce0a2bff37ca0480f31d0442d4c82cc5-b89914be745d34b66fca32b1c1b7b63f"
+        }
+      ],
+      "owner": [],
+      "owner_count": 0
+    },
+    "guest_samples": 102,
+    "host_samples": 102,
+    "journals": [
+      "lab",
+      "product",
+      "setup-services"
+    ],
+    "observer": [
+      "armed",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "released"
+    ],
+    "renewal_before_update": {
+      "expected_from_pre_update_timers": "off",
+      "findings": [],
+      "pre_update_timers": {
+        "certbot-renew.timer": {
+          "ActiveState": "inactive",
+          "UnitFileState": "disabled"
+        }
+      },
+      "recorded": "off",
+      "sidecar": {
+        "present": true,
+        "valid": true,
+        "value": "off"
+      },
+      "verdict": "as-before"
+    },
+    "stopped_after": [],
+    "unavailable": {}
+  },
+  "finished_at": "2026-10-01T04:21:09Z",
+  "name": "collect",
+  "started_at": "2026-10-01T04:21:07Z",
+  "verdict": "passed"
+}

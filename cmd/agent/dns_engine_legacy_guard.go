@@ -3,11 +3,14 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
+	"log"
 	"net"
-	"strconv"
 	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
+	"github.com/alicelik/celikpanel/internal/dnslistener"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -18,6 +21,7 @@ var (
 	legacyPowerDNSMutationAuthorityCheck = inspectLegacyPowerDNSMutationAuthorityOnHost
 	legacyPowerDNSRuntimeSafetyCheck     = inspectLegacyPowerDNSRuntimeSafety
 	dnsPort53ConflictCheck               = inspectDNSPort53Conflict
+	dnsLocalPort53ListenersCheck         = inspectDNSLocalPort53Listeners
 )
 
 func validateLegacyPowerDNSDurableAuthority(
@@ -172,19 +176,36 @@ func inspectDNSPort53Conflict(
 ) (bool, error) {
 	ctx, cancel := context.WithTimeout(parent, legacyPowerDNSGuardTimeout)
 	defer cancel()
-	ss, err := firstTrustedExecutable([]string{"/usr/sbin/ss", "/usr/bin/ss"}, "ss")
-	if err != nil {
-		return false, err
-	}
-	output, err := serviceMutationCommand(
-		ctx, ss, "-H", "-lntup", "sport = :53",
-	).CombinedOutputLimited(64 << 10)
+	output, err := readDNSPort53ListenerInventory(ctx)
 	if err != nil {
 		return false, err
 	}
 	return hasUnrelatedPublicDNSListener(
 		string(output), allowBIND, allowPowerDNS,
 	), nil
+}
+
+// readDNSPort53ListenerInventory is the package guard's trusted ss read of
+// every TCP/UDP port-53 listener, public and local.
+func readDNSPort53ListenerInventory(ctx context.Context) ([]byte, error) {
+	ss, err := firstTrustedExecutable([]string{"/usr/sbin/ss", "/usr/bin/ss"}, "ss")
+	if err != nil {
+		return nil, err
+	}
+	return serviceMutationCommand(
+		ctx, ss, "-H", "-lntup", "sport = :53",
+	).CombinedOutputLimited(64 << 10)
+}
+
+// inspectDNSLocalPort53Listeners proves that no DNS daemon holds a loopback or
+// link-local port-53 socket: each must belong to the systemd-resolved stub,
+// identified by its PID's unit cgroup and its address. It returns the accepted
+// stub listeners for the caller to record.
+func inspectDNSLocalPort53Listeners(parent context.Context) ([]string, error) {
+	ctx, cancel := context.WithTimeout(parent, legacyPowerDNSGuardTimeout)
+	defer cancel()
+	return dnsenginerecovery.ProbeLocalDNSListeners(ctx, "", 0,
+		readDNSPort53ListenerInventory, dnsenginerecovery.NativeProcessUnifiedCgroup)
 }
 
 func hasUnrelatedPublicDNSListener(
@@ -220,152 +241,31 @@ type canonicalDNSPort53ListenerRow struct {
 	pid      uint64
 }
 
-func parseCanonicalDNSPort53ListenerRow(
-	line string,
-) (canonicalDNSPort53ListenerRow, error) {
-	fields := strings.Fields(line)
-	if len(fields) != 7 {
-		return canonicalDNSPort53ListenerRow{},
-			errors.New("ss returned a malformed public DNS listener row")
-	}
-	protocol := fields[0]
-	if (protocol != "tcp" && protocol != "udp") ||
-		(protocol == "tcp" && fields[1] != "LISTEN") ||
-		(protocol == "udp" && fields[1] != "UNCONN") {
-		return canonicalDNSPort53ListenerRow{},
-			errors.New("ss returned a non-canonical DNS listener protocol or state")
-	}
-	for _, queue := range fields[2:4] {
-		value, err := strconv.ParseUint(queue, 10, 64)
-		if err != nil || strconv.FormatUint(value, 10) != queue {
-			return canonicalDNSPort53ListenerRow{},
-				errors.New("ss returned a non-canonical DNS listener queue")
-		}
-	}
-	address, port, ok := parseCanonicalSSHostPort(fields[4], true)
-	if !ok || port != "53" {
-		return canonicalDNSPort53ListenerRow{},
-			errors.New("ss returned a non-canonical public DNS listener endpoint")
-	}
-	if !canonicalSSWildcardPeerEndpoint(fields[5]) {
-		return canonicalDNSPort53ListenerRow{},
-			errors.New("ss returned a non-canonical DNS listener peer endpoint")
-	}
-	process, pid, err := parseCanonicalSSProcessField(fields[6])
+func parseCanonicalDNSPort53ListenerRow(line string) (canonicalDNSPort53ListenerRow, error) {
+	row, err := dnslistener.ParseRow(line)
 	if err != nil {
 		return canonicalDNSPort53ListenerRow{}, err
 	}
 	return canonicalDNSPort53ListenerRow{
-		protocol: protocol, address: address, process: process, pid: pid,
+		protocol: row.Protocol, address: row.Address, process: row.Process, pid: row.PID,
 	}, nil
 }
 
-// canonicalSSWildcardPeerEndpoint reports whether ss rendered the peer column
-// of a listening socket, which is the only thing this proof accepts: a
-// listener has no peer, a connected socket does. iproute2 renders that empty
-// peer with the same formatter it uses for the local address, so its spelling
-// follows the socket family and the IPV6_V6ONLY flag the kernel reports
-// through INET_DIAG_SKV6ONLY. An IPv4 socket prints "0.0.0.0:*", an
-// IPv6-only socket prints "[::]:*", and an IPv6 socket that also accepts IPv4
-// - or one whose v6only flag the kernel does not report - prints "*:*". All
-// three mean "no peer" and are equally canonical; every other spelling,
-// including a real remote address such as "192.0.2.7:53535", is refused.
 func canonicalSSWildcardPeerEndpoint(endpoint string) bool {
-	switch endpoint {
-	case "*:*", "0.0.0.0:*", "[::]:*":
-		return true
-	default:
-		return false
-	}
+	return dnslistener.CanonicalWildcardPeerEndpoint(endpoint)
 }
 
-func parseCanonicalSSHostPort(
-	endpoint string,
-	allowScopedLocal bool,
-) (net.IP, string, bool) {
-	host, port, err := net.SplitHostPort(endpoint)
-	if err != nil {
-		var ok bool
-		host, port, ok = splitCanonicalSSScopedIPv6HostPort(endpoint)
-		if !ok {
-			return nil, "", false
-		}
-	}
-	if port == "" || strings.Count(host, "%") > 1 {
-		return nil, "", false
-	}
-	addressText := host
-	hasZone := false
-	if zoneAt := strings.IndexByte(host, '%'); zoneAt >= 0 {
-		hasZone = true
-		addressText = host[:zoneAt]
-		if !validLinuxInterfaceName(host[zoneAt+1:]) {
-			return nil, "", false
-		}
-	}
-	address := net.ParseIP(addressText)
-	if address == nil {
-		return nil, "", false
-	}
-	if hasZone && (!allowScopedLocal || (address.To4() != nil && !address.IsLoopback())) {
-		return nil, "", false
-	}
-	return address, port, true
+func parseCanonicalSSHostPort(endpoint string, allowScopedLocal bool) (net.IP, string, bool) {
+	return dnslistener.ParseCanonicalSSHostPort(endpoint, allowScopedLocal)
 }
 
-// iproute2 brackets a numeric IPv6 address before appending an interface name,
-// so a scoped listener is rendered as "[fe80::1]%eth0:53". That is canonical
-// ss output, but it is intentionally not RFC 3986 host:port syntax and is
-// therefore rejected by net.SplitHostPort. Accept only that exact fallback
-// grammar; ordinary endpoints continue through net.SplitHostPort above.
 func splitCanonicalSSScopedIPv6HostPort(endpoint string) (string, string, bool) {
-	const scopeMarker = "]%"
-	if !strings.HasPrefix(endpoint, "[") ||
-		strings.Count(endpoint, "[") != 1 || strings.Count(endpoint, "]") != 1 {
-		return "", "", false
-	}
-	closing := strings.Index(endpoint, scopeMarker)
-	if closing <= 1 {
-		return "", "", false
-	}
-	addressText := endpoint[1:closing]
-	address := net.ParseIP(addressText)
-	if address == nil || address.To4() != nil {
-		return "", "", false
-	}
-	scopeAndPort := endpoint[closing+len(scopeMarker):]
-	scope, port, found := strings.Cut(scopeAndPort, ":")
-	if !found || !validLinuxInterfaceName(scope) || port == "" {
-		return "", "", false
-	}
-	return addressText + "%" + scope, port, true
+	return dnslistener.SplitCanonicalSSScopedIPv6HostPort(endpoint)
 }
 
 func parseCanonicalSSProcessField(field string) (string, uint64, error) {
-	const prefix = `users:(("`
-	if !strings.HasPrefix(field, prefix) || !strings.HasSuffix(field, "))") ||
-		strings.Count(field, "pid=") != 1 || strings.Count(field, "fd=") != 1 {
-		return "", 0, errors.New("ss returned a non-canonical DNS listener process")
-	}
-	body := strings.TrimSuffix(strings.TrimPrefix(field, prefix), "))")
-	process, identity, found := strings.Cut(body, `",pid=`)
-	if !found || process == "" ||
-		strings.ContainsAny(process, "\x00\r\n\t ,()\"") {
-		return "", 0, errors.New("ss returned a non-canonical DNS listener process")
-	}
-	pidText, fdText, found := strings.Cut(identity, ",fd=")
-	if !found || pidText == "" || fdText == "" {
-		return "", 0, errors.New("ss returned a non-canonical DNS listener process")
-	}
-	pid, pidErr := strconv.ParseUint(pidText, 10, 64)
-	fd, fdErr := strconv.ParseUint(fdText, 10, 64)
-	if pidErr != nil || pid == 0 || strconv.FormatUint(pid, 10) != pidText ||
-		fdErr != nil || strconv.FormatUint(fd, 10) != fdText {
-		return "", 0, errors.New("ss returned a non-canonical DNS listener process")
-	}
-	return process, pid, nil
+	return dnslistener.ParseCanonicalSSProcessField(field)
 }
-
 func runDNSPort53PreMutationGuard(
 	ctx context.Context,
 	requireEmptyAuthority bool,
@@ -384,4 +284,28 @@ func runDNSPort53PreMutationGuard(
 		}
 	}
 	return mutation()
+}
+
+// proveNoPublicDNSPort53Listener is the fresh-install package guard's port-53
+// inventory as a proof: a stopped, never-served target must leave no public
+// listener. The public inventory skips loopback and link-local sockets, so
+// each of those must also belong to the systemd-resolved stub (unit cgroup and
+// address proved); a named, pdns_server or unknown local listener refuses.
+// Accepted stub listeners are logged. Malformed rows fail closed.
+func proveNoPublicDNSPort53Listener(ctx context.Context) error {
+	conflict, err := dnsPort53ConflictCheck(ctx, false, false)
+	if err != nil {
+		return err
+	}
+	if conflict {
+		return errors.New("a public port-53 listener is present")
+	}
+	stubs, err := dnsLocalPort53ListenersCheck(ctx)
+	if err != nil {
+		return fmt.Errorf("local port-53 listeners are not only the resolver stub: %w", err)
+	}
+	if note := dnsenginerecovery.LocalDNSListenerRecordText(stubs); note != "" {
+		log.Print(note)
+	}
+	return nil
 }

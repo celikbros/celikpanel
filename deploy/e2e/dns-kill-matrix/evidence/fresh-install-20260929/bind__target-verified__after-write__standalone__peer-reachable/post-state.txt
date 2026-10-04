@@ -1,0 +1,99 @@
+wall=2026-09-28T22:37:53.936722514Z boot_id=6c620f85-1aa9-4800-87d3-bc0f58aff46f
+== pdns.service
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InvocationID=
+== named.service
+NRestarts=0
+ExecMainStartTimestamp=Mon 2026-09-28 22:37:15 UTC
+ExecMainPID=4308
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Mon 2026-09-28 22:37:15 UTC
+InvocationID=50388f32c7634704b7cc6d9d82b956fd
+== bind9.service
+NRestarts=0
+ExecMainStartTimestamp=Mon 2026-09-28 22:37:15 UTC
+ExecMainPID=4308
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Mon 2026-09-28 22:37:15 UTC
+InvocationID=50388f32c7634704b7cc6d9d82b956fd
+== celikpanel-agent.service
+NRestarts=0
+ExecMainStartTimestamp=Mon 2026-09-28 22:37:17 UTC
+ExecMainPID=5019
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Mon 2026-09-28 22:37:17 UTC
+InvocationID=b518ad7972904cf899ef13821693168b
+== celikpanel-panel.service
+NRestarts=0
+ExecMainStartTimestamp=Mon 2026-09-28 22:37:19 UTC
+ExecMainPID=5275
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Mon 2026-09-28 22:37:19 UTC
+InvocationID=a9a188424f6a47b3a7a409f3fda47a2a
+== state dir
+total 20
+drwx------  2 root celikpanel 4096 2026-09-28 22:37:19.135773101 +0000 .
+drwxr-xr-x 28 root root       4096 2026-09-28 22:37:05.311522203 +0000 ..
+-rw-------  1 root celikpanel  641 2026-09-28 22:37:19.115772882 +0000 dns-engine-ownership-bind.json
+-rw-------  1 root celikpanel  637 2026-09-28 22:37:17.851758050 +0000 dns-engine-state.json
+-rw-------  1 root celikpanel  741 2026-09-28 22:37:19.131773058 +0000 service-mutations.json
+== results dir
+total 108
+drwx------ 2 root root        4096 2026-09-28 22:37:49.755923220 +0000 .
+drwx------ 3 root root        4096 2026-09-28 22:36:49.615221012 +0000 ..
+-rw------- 1 root celikpanel  1227 2026-09-28 22:37:17.867758250 +0000 boundary-marker.json
+-rw------- 1 root celikpanel  1872 2026-09-28 22:37:17.879758400 +0000 kill-proof.json
+-rw------- 1 root celikpanel 52500 2026-09-28 22:37:49.751923214 +0000 result.json
+-rw------- 1 root celikpanel 39163 2026-09-28 22:37:49.739923195 +0000 transcript.jsonl
+== ss 53
+udp UNCONN 0      0                         192.0.2.10:53 0.0.0.0:* users:(("named",pid=4308,fd=29))         
+udp UNCONN 0      0                         192.0.2.10:53 0.0.0.0:* users:(("named",pid=4308,fd=28))         
+udp UNCONN 0      0                          10.0.2.15:53 0.0.0.0:* users:(("named",pid=4308,fd=25))         
+udp UNCONN 0      0                          10.0.2.15:53 0.0.0.0:* users:(("named",pid=4308,fd=24))         
+udp UNCONN 0      0                          127.0.0.1:53 0.0.0.0:* users:(("named",pid=4308,fd=19))         
+udp UNCONN 0      0                          127.0.0.1:53 0.0.0.0:* users:(("named",pid=4308,fd=18))         
+udp UNCONN 0      0                         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=20))
+udp UNCONN 0      0                      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=18))
+udp UNCONN 0      0                              [::1]:53    [::]:* users:(("named",pid=4308,fd=32))         
+udp UNCONN 0      0                              [::1]:53    [::]:* users:(("named",pid=4308,fd=33))         
+udp UNCONN 0      0            [fec0::5054:ff:fe13:10]:53    [::]:* users:(("named",pid=4308,fd=36))         
+udp UNCONN 0      0            [fec0::5054:ff:fe13:10]:53    [::]:* users:(("named",pid=4308,fd=37))         
+udp UNCONN 0      0      [fe80::5054:ff:fe13:10]%mgmt0:53    [::]:* users:(("named",pid=4308,fd=40))         
+udp UNCONN 0      0      [fe80::5054:ff:fe13:10]%mgmt0:53    [::]:* users:(("named",pid=4308,fd=41))         
+udp UNCONN 0      0      [fe80::5054:ff:fe53:10]%peer0:53    [::]:* users:(("named",pid=4308,fd=44))         
+udp UNCONN 0      0      [fe80::5054:ff:fe53:10]%peer0:53    [::]:* users:(("named",pid=4308,fd=45))         
+tcp LISTEN 0      10                         10.0.2.15:53 0.0.0.0:* users:(("named",pid=4308,fd=27))         
+tcp LISTEN 0      10                         10.0.2.15:53 0.0.0.0:* users:(("named",pid=4308,fd=26))         
+tcp LISTEN 0      10                        192.0.2.10:53 0.0.0.0:* users:(("named",pid=4308,fd=31))         
+tcp LISTEN 0      10                        192.0.2.10:53 0.0.0.0:* users:(("named",pid=4308,fd=30))         
+tcp LISTEN 0      4096                      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=21))
+tcp LISTEN 0      4096                   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=19))
+tcp LISTEN 0      10                         127.0.0.1:53 0.0.0.0:* users:(("named",pid=4308,fd=22))         
+tcp LISTEN 0      10                         127.0.0.1:53 0.0.0.0:* users:(("named",pid=4308,fd=20))         
+tcp LISTEN 0      10           [fec0::5054:ff:fe13:10]:53    [::]:* users:(("named",pid=4308,fd=38))         
+tcp LISTEN 0      10           [fec0::5054:ff:fe13:10]:53    [::]:* users:(("named",pid=4308,fd=39))         
+tcp LISTEN 0      10                             [::1]:53    [::]:* users:(("named",pid=4308,fd=34))         
+tcp LISTEN 0      10                             [::1]:53    [::]:* users:(("named",pid=4308,fd=35))         
+tcp LISTEN 0      10     [fe80::5054:ff:fe53:10]%peer0:53    [::]:* users:(("named",pid=4308,fd=46))         
+tcp LISTEN 0      10     [fe80::5054:ff:fe53:10]%peer0:53    [::]:* users:(("named",pid=4308,fd=47))         
+tcp LISTEN 0      10     [fe80::5054:ff:fe13:10]%mgmt0:53    [::]:* users:(("named",pid=4308,fd=42))         
+tcp LISTEN 0      10     [fe80::5054:ff:fe13:10]%mgmt0:53    [::]:* users:(("named",pid=4308,fd=43))         

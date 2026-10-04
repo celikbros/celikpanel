@@ -1,0 +1,12 @@
+RESTART THIS SERVER NOW / BU SUNUCUYU SIMDI YENIDEN BASLATIN
+    This server is running kernel 7.1.8-arch1-3, whose modules are no longer on disk:
+    the prerequisite step upgraded the kernel and replaced them. Until this server
+    is restarted it cannot load nftables or WireGuard, so turning the firewall on
+    or installing the VPN will fail. Everything else is installed and running.
+        reboot
+
+    Bu sunucu, modulleri artik diskte olmayan 7.1.8-arch1-3 cekirdegiyle calisiyor:
+    on gereksinim adimi cekirdegi yukseltti ve modulleri degistirdi. Sunucu
+    yeniden baslatilana kadar nftables veya WireGuard yuklenemez; guvenlik
+    duvarini acmak veya VPN kurmak hata verir. Geri kalan her sey kurulu.
+        reboot

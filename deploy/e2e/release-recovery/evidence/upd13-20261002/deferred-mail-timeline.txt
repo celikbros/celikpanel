@@ -1,0 +1,294 @@
+# upd13 deferred startup mail retry per run (read-only; dmltable13.py)
+
+## upd1-arch-defective/run-a: overall=complete-for-review outcome=recovered-automatically
+owner start 2026-10-02T22:28:03Z; root CLI terminal/pause first seen {"rollback_verified": "2026-10-02T22:29:32Z"}; watch step not in this cell
+- panel[16332] start 2026-10-02T22:28:46.972644+00:00 ready +0.16s deferred=[] startup_lines=1 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=1
+    startup +0.16s certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-arch": a fully qualified DNS name is required; preserve pending outbox: <nil>
+    other +0.16s milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+- panel[19163] start 2026-10-02T22:29:26.918579+00:00 ready +0.11s deferred=[] startup_lines=1 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=1
+    startup +0.10s certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-arch": a fully qualified DNS name is required; preserve pending outbox: <nil>
+    other +0.10s milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+
+## upd1-arch-good/run-a: overall=complete-for-review outcome=update-verified
+owner start 2026-10-02T22:18:16Z; root CLI terminal/pause first seen {"update_verified": "2026-10-02T22:19:01Z"}; watch step not in this cell
+- panel[13398] start 2026-10-02T22:18:50.630772+00:00 ready +0.15s deferred=[] startup_lines=1 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=1
+    startup +0.15s certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-arch": a fully qualified DNS name is required; preserve pending outbox: <nil>
+    other +0.15s milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+
+## upd1-arch-mgmt-off-reboot/run-a: overall=complete-for-review outcome=update-verified
+owner start 2026-10-02T22:50:03Z; root CLI terminal/pause first seen {"update_verified": "2026-10-02T22:50:45Z"}; watch step not in this cell
+- panel[13415] start 2026-10-02T22:50:35.902608+00:00 ready +0.10s deferred=[] startup_lines=1 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=1
+    startup +0.09s certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-arch": a fully qualified DNS name is required; preserve pending outbox: <nil>
+    other +0.10s milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+- panel[1374] start 2026-10-02T22:54:34.937489+00:00 ready +0.60s deferred=[] startup_lines=1 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=1
+    startup +0.60s certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-arch": a fully qualified DNS name is required; preserve pending outbox: <nil>
+    other +0.60s milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+
+## upd1-arch-owner-continuation/run-a: overall=incomplete outcome=not-terminal
+owner start 2026-10-02T22:41:33Z; root CLI terminal/pause first seen {}; watch step not in this cell
+
+## upd1-arch-owner-continuation/run-b: overall=complete-for-review outcome=recovered-after-owner-continuation
+owner start 2026-10-03T02:24:13Z; root CLI terminal/pause first seen {"paused_retry_limit": "2026-10-03T02:30:32Z", "update_verified": "2026-10-03T02:31:31Z"}; watch step not in this cell
+- panel[13625] start 2026-10-03T02:24:45.175977+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[13887] start 2026-10-03T02:24:48.364174+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[14301] start 2026-10-03T02:24:54.060977+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[15069] start 2026-10-03T02:25:04.465587+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[16385] start 2026-10-03T02:25:23.608790+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[20006] start 2026-10-03T02:25:54.276520+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[20099] start 2026-10-03T02:25:57.458020+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[20267] start 2026-10-03T02:26:03.145160+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[20502] start 2026-10-03T02:26:13.585765+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[20915] start 2026-10-03T02:26:32.737509+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[23922] start 2026-10-03T02:27:32.883811+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[24012] start 2026-10-03T02:27:36.090461+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[24153] start 2026-10-03T02:27:41.777825+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[24405] start 2026-10-03T02:27:52.236637+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[24829] start 2026-10-03T02:28:11.372352+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[27799] start 2026-10-03T02:29:10.941447+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[27893] start 2026-10-03T02:29:14.123072+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[28057] start 2026-10-03T02:29:19.923070+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[28291] start 2026-10-03T02:29:30.403859+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[28707] start 2026-10-03T02:29:49.534984+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[32647] start 2026-10-03T02:31:18.707646+00:00 ready +0.08s deferred=[] startup_lines=1 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=1
+    startup +0.07s certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-arch": a fully qualified DNS name is required; preserve pending outbox: <nil>
+    other +0.08s milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+
+## upd1-arch-startcheck/run-a: overall=complete-for-review outcome=recovered-automatically
+owner start 2026-10-02T22:38:15Z; root CLI terminal/pause first seen {"rollback_verified": "2026-10-02T22:39:48Z"}; watch step not in this cell
+- panel[16632] start 2026-10-02T22:39:04.103972+00:00 ready +0.22s deferred=[] startup_lines=1 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=1
+    startup +0.20s certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-arch": a fully qualified DNS name is required; preserve pending outbox: <nil>
+    other +0.21s milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+- panel[19466] start 2026-10-02T22:39:43.440684+00:00 ready +0.11s deferred=[] startup_lines=1 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=1
+    startup +0.10s certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-arch": a fully qualified DNS name is required; preserve pending outbox: <nil>
+    other +0.11s milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+
+## upd1-debian13-defective/run-a: overall=complete-for-review outcome=recovered-automatically
+owner start 2026-10-02T21:01:10Z; root CLI terminal/pause first seen {"rollback_verified": "2026-10-02T21:03:26Z"}; watch step present
+- panel[4663] start 2026-10-02T21:03:17.456562+00:00 ready +0.14s deferred=['mail certificate publication', 'mail filter wiring'] startup_lines=2 attempts=1 finished=True gave_up=False repeated=[] other_mail_lines=0
+    startup +0.13s certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+    startup +0.14s milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+    attempt 1 of 20 2026-10-02T21:03:56.480303+00:00 (+39.02s): startup mail work, attempt 1 of 20: mail certificate publication completed (mail SNI from 0 active secure-mail certificates); mail filter wiring completed (milters="inet:localhost:11332" maps=hash)
+watch: 76.6 s, polls 4, settle {"at": "2026-10-02T21:04:50Z", "attempt_lines_after": 1, "attempt_lines_before": 1, "repeated_after": [], "same_process": true, "seconds_after_resolution": 45.0}
+native mail files changed during the watch: ['/etc/postfix/main.cf', '/etc/postfix/virtual.db', '/etc/postfix/vmailbox.db', '/etc/postfix/vmailbox_domains.db', '/etc/dovecot/conf.d/98-celikpanel-tls.conf']
+
+## upd1-debian13-good/run-a: overall=complete-for-review outcome=update-verified
+owner start 2026-10-02T20:48:10Z; root CLI terminal/pause first seen {"update_verified": "2026-10-02T20:49:13Z"}; watch step present
+- panel[37218] start 2026-10-02T20:48:59.269801+00:00 ready +0.13s deferred=['mail certificate publication', 'mail filter wiring'] startup_lines=2 attempts=1 finished=True gave_up=False repeated=[] other_mail_lines=0
+    startup +0.13s certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+    startup +0.13s milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+    attempt 1 of 20 2026-10-02T20:49:39.544887+00:00 (+40.28s): startup mail work, attempt 1 of 20: mail certificate publication completed (mail SNI from 0 active secure-mail certificates); mail filter wiring completed (milters="inet:localhost:11332" maps=hash)
+watch: 66.5 s, polls 3, settle {"at": "2026-10-02T20:50:27Z", "attempt_lines_after": 1, "attempt_lines_before": 1, "repeated_after": [], "same_process": true, "seconds_after_resolution": 45.0}
+native mail files changed during the watch: ['/etc/postfix/main.cf', '/etc/postfix/virtual.db', '/etc/postfix/vmailbox.db', '/etc/postfix/vmailbox_domains.db', '/etc/dovecot/conf.d/98-celikpanel-tls.conf']
+
+## upd1-debian13-mgmt-off-reboot/run-a: overall=complete-for-review outcome=update-verified
+owner start 2026-10-02T22:05:12Z; root CLI terminal/pause first seen {"update_verified": "2026-10-02T22:06:10Z"}; watch step not in this cell
+- panel[37776] start 2026-10-02T22:05:55.740661+00:00 ready +0.12s deferred=['mail certificate publication', 'mail filter wiring'] startup_lines=2 attempts=0 finished=False gave_up=False repeated=[] other_mail_lines=0
+    startup +0.12s certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+    startup +0.12s milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+- panel[2237] start 2026-10-02T22:09:56.777811+00:00 ready +9.70s deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=2
+    other +4.69s certificate startup reconcile: mail SNI reconciled from 0 active secure-mail certificates; TLSA left unchanged: automatic DANE/TLSA updates are disabled: safe TTL-aware certificate rollover and explicit panel record ownership are not available in this release
+    other +9.70s milter chain: milters="inet:localhost:11332" maps=hash
+
+## upd1-debian13-owner-continuation/run-a: overall=complete-for-review outcome=recovered-after-owner-continuation
+owner start 2026-10-02T21:46:10Z; root CLI terminal/pause first seen {"paused_retry_limit": "2026-10-02T21:53:07Z", "update_verified": "2026-10-02T21:54:09Z"}; watch step present
+- panel[38210] start 2026-10-02T21:47:07.508674+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[38428] start 2026-10-02T21:47:10.903317+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[38816] start 2026-10-02T21:47:16.810864+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[39436] start 2026-10-02T21:47:27.456665+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[40435] start 2026-10-02T21:47:46.918699+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[43682] start 2026-10-02T21:48:25.300496+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[43794] start 2026-10-02T21:48:28.715472+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[43912] start 2026-10-02T21:48:34.833548+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[44143] start 2026-10-02T21:48:46.006973+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[44576] start 2026-10-02T21:49:05.359091+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[47587] start 2026-10-02T21:50:07.045965+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[47672] start 2026-10-02T21:50:10.392730+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[47808] start 2026-10-02T21:50:16.258552+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[48069] start 2026-10-02T21:50:26.898922+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[48500] start 2026-10-02T21:50:46.324977+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[51516] start 2026-10-02T21:51:48.756670+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[51631] start 2026-10-02T21:51:52.181925+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[51770] start 2026-10-02T21:51:58.169379+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[52026] start 2026-10-02T21:52:08.890392+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[52460] start 2026-10-02T21:52:28.328666+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[56601] start 2026-10-02T21:53:55.330236+00:00 ready +0.09s deferred=['mail certificate publication', 'mail filter wiring'] startup_lines=2 attempts=1 finished=True gave_up=False repeated=[] other_mail_lines=0
+    startup +0.08s certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+    startup +0.09s milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+    attempt 1 of 20 2026-10-02T21:54:34.595381+00:00 (+39.27s): startup mail work, attempt 1 of 20: mail certificate publication completed (mail SNI from 0 active secure-mail certificates); mail filter wiring completed (milters="inet:localhost:11332" maps=hash)
+watch: 66.3 s, polls 3, settle {"at": "2026-10-02T21:55:23Z", "attempt_lines_after": 1, "attempt_lines_before": 1, "repeated_after": [], "same_process": true, "seconds_after_resolution": 45.0}
+native mail files changed during the watch: ['/etc/postfix/main.cf', '/etc/postfix/virtual.db', '/etc/postfix/vmailbox.db', '/etc/postfix/vmailbox_domains.db', '/etc/dovecot/conf.d/98-celikpanel-tls.conf']
+
+## upd1-debian13-realstart/run-a: overall=complete-for-review outcome=paused-owner-action-required
+owner start 2026-10-02T21:28:14Z; root CLI terminal/pause first seen {"paused_retry_limit": "2026-10-02T21:35:13Z"}; watch step not in this cell
+- panel[37122] start 2026-10-02T21:29:02.159594+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[37336] start 2026-10-02T21:29:05.480428+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[37665] start 2026-10-02T21:29:11.320896+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[38209] start 2026-10-02T21:29:21.851324+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[39223] start 2026-10-02T21:29:41.161511+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[42266] start 2026-10-02T21:30:11.102502+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[42361] start 2026-10-02T21:30:14.479246+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[42484] start 2026-10-02T21:30:20.451805+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[42610] start 2026-10-02T21:30:31.261247+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[42822] start 2026-10-02T21:30:50.629036+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[45188] start 2026-10-02T21:31:51.069281+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[45285] start 2026-10-02T21:31:55.534772+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[45385] start 2026-10-02T21:32:01.482207+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[45529] start 2026-10-02T21:32:12.068275+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[45728] start 2026-10-02T21:32:31.438909+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[48073] start 2026-10-02T21:33:30.599362+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[48139] start 2026-10-02T21:33:33.983896+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[48240] start 2026-10-02T21:33:39.903625+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[48416] start 2026-10-02T21:33:50.450846+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[48638] start 2026-10-02T21:34:09.758975+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+
+## upd1-debian13-startcheck/run-a: overall=complete-for-review outcome=recovered-automatically
+owner start 2026-10-02T21:15:10Z; root CLI terminal/pause first seen {"rollback_verified": "2026-10-02T21:17:19Z"}; watch step present
+- panel[4741] start 2026-10-02T21:17:14.222671+00:00 ready +0.11s deferred=['mail certificate publication', 'mail filter wiring'] startup_lines=2 attempts=1 finished=True gave_up=False repeated=[] other_mail_lines=0
+    startup +0.10s certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+    startup +0.11s milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+    attempt 1 of 20 2026-10-02T21:17:52.448937+00:00 (+38.23s): startup mail work, attempt 1 of 20: mail certificate publication completed (mail SNI from 0 active secure-mail certificates); mail filter wiring completed (milters="inet:localhost:11332" maps=hash)
+watch: 76.6 s, polls 4, settle {"at": "2026-10-02T21:18:42Z", "attempt_lines_after": 1, "attempt_lines_before": 1, "repeated_after": [], "same_process": true, "seconds_after_resolution": 45.0}
+native mail files changed during the watch: ['/etc/postfix/main.cf', '/etc/postfix/virtual.db', '/etc/postfix/vmailbox.db', '/etc/postfix/vmailbox_domains.db', '/etc/dovecot/conf.d/98-celikpanel-tls.conf']
+
+## upd1-ubuntu-defective/run-a: overall=complete-for-review outcome=recovered-automatically
+owner start 2026-10-02T23:30:06Z; root CLI terminal/pause first seen {"rollback_verified": "2026-10-02T23:32:05Z"}; watch step present
+- panel[6018] start 2026-10-02T23:31:59.956954+00:00 ready +0.08s deferred=['mail certificate publication', 'mail filter wiring'] startup_lines=2 attempts=1 finished=True gave_up=False repeated=[] other_mail_lines=0
+    startup +0.07s certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+    startup +0.08s milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+    attempt 1 of 20 2026-10-02T23:32:38.444532+00:00 (+38.49s): startup mail work, attempt 1 of 20: mail certificate publication completed (mail SNI from 0 active secure-mail certificates); mail filter wiring completed (milters="inet:localhost:11332" maps=hash)
+watch: 76.7 s, polls 4, settle {"at": "2026-10-02T23:33:29Z", "attempt_lines_after": 1, "attempt_lines_before": 1, "repeated_after": [], "same_process": true, "seconds_after_resolution": 45.0}
+native mail files changed during the watch: ['/etc/postfix/main.cf', '/etc/postfix/virtual.db', '/etc/postfix/vmailbox.db', '/etc/postfix/vmailbox_domains.db', '/etc/dovecot/conf.d/98-celikpanel-tls.conf']
+
+## upd1-ubuntu-good/run-a: overall=complete-for-review outcome=update-verified
+owner start 2026-10-02T23:11:12Z; root CLI terminal/pause first seen {"update_verified": "2026-10-02T23:12:03Z"}; watch step present
+- panel[53710] start 2026-10-02T23:11:50.668851+00:00 ready +0.07s deferred=['mail certificate publication', 'mail filter wiring'] startup_lines=2 attempts=1 finished=True gave_up=False repeated=[] other_mail_lines=0
+    startup +0.06s certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+    startup +0.06s milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+    attempt 1 of 20 2026-10-02T23:12:29.424167+00:00 (+38.76s): startup mail work, attempt 1 of 20: mail certificate publication completed (mail SNI from 0 active secure-mail certificates); mail filter wiring completed (milters="inet:localhost:11332" maps=hash)
+watch: 66.5 s, polls 3, settle {"at": "2026-10-02T23:13:18Z", "attempt_lines_after": 1, "attempt_lines_before": 1, "repeated_after": [], "same_process": true, "seconds_after_resolution": 45.0}
+native mail files changed during the watch: ['/etc/postfix/main.cf', '/etc/postfix/virtual.db', '/etc/postfix/vmailbox.db', '/etc/postfix/vmailbox_domains.db', '/etc/dovecot/conf.d/98-celikpanel-tls.conf']
+
+## upd1-ubuntu-mgmt-off-reboot/run-a: overall=complete-for-review outcome=update-verified
+owner start 2026-10-03T00:35:07Z; root CLI terminal/pause first seen {"update_verified": "2026-10-03T00:35:58Z"}; watch step not in this cell
+- panel[53351] start 2026-10-03T00:35:46.448144+00:00 ready +0.07s deferred=['mail certificate publication', 'mail filter wiring'] startup_lines=2 attempts=0 finished=False gave_up=False repeated=[] other_mail_lines=0
+    startup +0.07s certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+    startup +0.07s milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+- panel[5135] start 2026-10-03T00:39:47.793318+00:00 ready +9.67s deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=2
+    other +4.57s certificate startup reconcile: mail SNI reconciled from 0 active secure-mail certificates; TLSA left unchanged: automatic DANE/TLSA updates are disabled: safe TTL-aware certificate rollover and explicit panel record ownership are not available in this release
+    other +9.67s milter chain: milters="inet:localhost:11332" maps=hash
+
+## upd1-ubuntu-owner-continuation/run-a: overall=complete-for-review outcome=recovered-after-owner-continuation
+owner start 2026-10-03T00:10:09Z; root CLI terminal/pause first seen {"paused_retry_limit": "2026-10-03T00:16:37Z", "update_verified": "2026-10-03T00:17:38Z"}; watch step present
+- panel[54200] start 2026-10-03T00:10:48.402206+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[54468] start 2026-10-03T00:10:51.766253+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[54991] start 2026-10-03T00:10:57.642596+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[55824] start 2026-10-03T00:11:08.172577+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[57490] start 2026-10-03T00:11:27.402283+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[61313] start 2026-10-03T00:11:57.867649+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[61453] start 2026-10-03T00:12:01.281285+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[61667] start 2026-10-03T00:12:07.117952+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[61978] start 2026-10-03T00:12:17.743594+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[62620] start 2026-10-03T00:12:37.011197+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[66222] start 2026-10-03T00:13:37.013197+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[66360] start 2026-10-03T00:13:40.377012+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[66537] start 2026-10-03T00:13:46.192541+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[66925] start 2026-10-03T00:13:56.751408+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[67511] start 2026-10-03T00:14:16.001182+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[71114] start 2026-10-03T00:15:15.958641+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[71199] start 2026-10-03T00:15:19.239517+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[71461] start 2026-10-03T00:15:25.036510+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[71775] start 2026-10-03T00:15:35.683327+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[72407] start 2026-10-03T00:15:54.969048+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[77975] start 2026-10-03T00:17:25.086630+00:00 ready +0.06s deferred=['mail certificate publication', 'mail filter wiring'] startup_lines=2 attempts=1 finished=True gave_up=False repeated=[] other_mail_lines=0
+    startup +0.05s certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+    startup +0.06s milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+    attempt 1 of 20 2026-10-03T00:18:03.577005+00:00 (+38.49s): startup mail work, attempt 1 of 20: mail certificate publication completed (mail SNI from 0 active secure-mail certificates); mail filter wiring completed (milters="inet:localhost:11332" maps=hash)
+watch: 66.5 s, polls 3, settle {"at": "2026-10-03T00:18:53Z", "attempt_lines_after": 1, "attempt_lines_before": 1, "repeated_after": [], "same_process": true, "seconds_after_resolution": 45.0}
+native mail files changed during the watch: ['/etc/postfix/main.cf', '/etc/postfix/virtual.db', '/etc/postfix/vmailbox.db', '/etc/postfix/vmailbox_domains.db', '/etc/dovecot/conf.d/98-celikpanel-tls.conf']
+
+## upd1-ubuntu-startcheck/run-a: overall=complete-for-review outcome=recovered-automatically
+owner start 2026-10-02T23:50:11Z; root CLI terminal/pause first seen {"rollback_verified": "2026-10-02T23:52:09Z"}; watch step present
+- panel[6045] start 2026-10-02T23:52:04.160301+00:00 ready +0.08s deferred=['mail certificate publication', 'mail filter wiring'] startup_lines=2 attempts=1 finished=True gave_up=False repeated=[] other_mail_lines=0
+    startup +0.07s certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+    startup +0.08s milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+    attempt 1 of 20 2026-10-02T23:52:42.621811+00:00 (+38.46s): startup mail work, attempt 1 of 20: mail certificate publication completed (mail SNI from 0 active secure-mail certificates); mail filter wiring completed (milters="inet:localhost:11332" maps=hash)
+watch: 76.7 s, polls 4, settle {"at": "2026-10-02T23:53:33Z", "attempt_lines_after": 1, "attempt_lines_before": 1, "repeated_after": [], "same_process": true, "seconds_after_resolution": 45.0}
+native mail files changed during the watch: ['/etc/postfix/main.cf', '/etc/postfix/virtual.db', '/etc/postfix/vmailbox.db', '/etc/postfix/vmailbox_domains.db', '/etc/dovecot/conf.d/98-celikpanel-tls.conf']
+
+## a80:upd1-debian13-defective/run-a: overall=complete-for-review outcome=recovered-automatically
+owner start 2026-10-03T01:04:16Z; root CLI terminal/pause first seen {"rollback_verified": "2026-10-03T01:06:12Z"}; watch step present
+- panel[4689] start 2026-10-03T01:06:04.133463+00:00 ready +0.13s deferred=[] startup_lines=2 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+    startup +0.13s certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>
+    startup +0.13s milter wiring at startup: another server change or package-manager task is still running
+watch: 0.6 s, polls 1, settle null
+native mail files changed during the watch: []
+
+## a80:upd1-debian13-good/run-a: overall=complete-for-review outcome=update-verified
+owner start 2026-10-03T00:51:14Z; root CLI terminal/pause first seen {"update_verified": "2026-10-03T00:52:01Z"}; watch step present
+- panel[36585] start 2026-10-03T00:51:51.725939+00:00 ready +0.10s deferred=['mail certificate publication', 'mail filter wiring'] startup_lines=2 attempts=1 finished=True gave_up=False repeated=[] other_mail_lines=0
+    startup +0.10s certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+    startup +0.10s milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+    attempt 1 of 20 2026-10-03T00:52:30.577501+00:00 (+38.85s): startup mail work, attempt 1 of 20: mail certificate publication completed (mail SNI from 0 active secure-mail certificates); mail filter wiring completed (milters="inet:localhost:11332" maps=hash)
+watch: 76.4 s, polls 4, settle {"at": "2026-10-03T00:53:25Z", "attempt_lines_after": 1, "attempt_lines_before": 1, "repeated_after": [], "same_process": true, "seconds_after_resolution": 45.0}
+native mail files changed during the watch: ['/etc/postfix/main.cf', '/etc/postfix/virtual.db', '/etc/postfix/vmailbox.db', '/etc/postfix/vmailbox_domains.db', '/etc/dovecot/conf.d/98-celikpanel-tls.conf']
+
+## a80:upd1-debian13-owner-continuation/run-a: overall=complete-for-review outcome=recovered-after-owner-continuation
+owner start 2026-10-03T01:17:16Z; root CLI terminal/pause first seen {"paused_retry_limit": "2026-10-03T01:23:55Z", "update_verified": "2026-10-03T01:24:54Z"}; watch step present
+- panel[37014] start 2026-10-03T01:17:55.556683+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[37236] start 2026-10-03T01:17:58.855143+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[37650] start 2026-10-03T01:18:04.678076+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[38356] start 2026-10-03T01:18:15.220752+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[39626] start 2026-10-03T01:18:34.472108+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[43101] start 2026-10-03T01:19:04.964567+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[43198] start 2026-10-03T01:19:08.253155+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[43350] start 2026-10-03T01:19:14.224006+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[43616] start 2026-10-03T01:19:24.804310+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[44038] start 2026-10-03T01:19:44.047386+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[47041] start 2026-10-03T01:20:43.543886+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[47130] start 2026-10-03T01:20:46.971947+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[47269] start 2026-10-03T01:20:52.786902+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[47535] start 2026-10-03T01:21:03.367356+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[47955] start 2026-10-03T01:21:22.616188+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[51016] start 2026-10-03T01:22:23.578990+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[51115] start 2026-10-03T01:22:26.962975+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[51255] start 2026-10-03T01:22:32.822352+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[51523] start 2026-10-03T01:22:43.466989+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[51955] start 2026-10-03T01:23:02.745612+00:00 ready - deferred=[] startup_lines=0 attempts=0 finished=True gave_up=False repeated=[] other_mail_lines=0
+- panel[56605] start 2026-10-03T01:24:41.661057+00:00 ready +0.07s deferred=['mail certificate publication', 'mail filter wiring'] startup_lines=2 attempts=1 finished=True gave_up=False repeated=[] other_mail_lines=0
+    startup +0.07s certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+    startup +0.07s milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+    attempt 1 of 20 2026-10-03T01:25:20.374646+00:00 (+38.71s): startup mail work, attempt 1 of 20: mail certificate publication completed (mail SNI from 0 active secure-mail certificates); mail filter wiring completed (milters="inet:localhost:11332" maps=hash)
+watch: 66.3 s, polls 3, settle {"at": "2026-10-03T01:26:08Z", "attempt_lines_after": 1, "attempt_lines_before": 1, "repeated_after": [], "same_process": true, "seconds_after_resolution": 45.0}
+native mail files changed during the watch: ['/etc/postfix/main.cf', '/etc/postfix/virtual.db', '/etc/postfix/vmailbox.db', '/etc/postfix/vmailbox_domains.db', '/etc/dovecot/conf.d/98-celikpanel-tls.conf']
+
+## a80:upd1-ubuntu-good/run-a: overall=complete-for-review outcome=update-verified
+owner start 2026-10-03T02:14:05Z; root CLI terminal/pause first seen {"update_verified": "2026-10-03T02:14:51Z"}; watch step present
+- panel[81228] start 2026-10-03T02:14:41.365582+00:00 ready +0.07s deferred=['mail certificate publication', 'mail filter wiring'] startup_lines=2 attempts=1 finished=True gave_up=False repeated=[] other_mail_lines=0
+    startup +0.06s certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+    startup +0.07s milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+    attempt 1 of 20 2026-10-03T02:15:19.542841+00:00 (+38.18s): startup mail work, attempt 1 of 20: mail certificate publication completed (mail SNI from 0 active secure-mail certificates); mail filter wiring completed (milters="inet:localhost:11332" maps=hash)
+watch: 66.5 s, polls 3, settle {"at": "2026-10-03T02:16:06Z", "attempt_lines_after": 1, "attempt_lines_before": 1, "repeated_after": [], "same_process": true, "seconds_after_resolution": 45.0}
+native mail files changed during the watch: ['/etc/postfix/main.cf', '/etc/postfix/virtual.db', '/etc/postfix/vmailbox.db', '/etc/postfix/vmailbox_domains.db', '/etc/dovecot/conf.d/98-celikpanel-tls.conf']
+
+## table
+{"cell": "upd1-arch-defective/run-a", "panels_after_start": 2, "deferring": 0, "attempt_lines": 0, "max_attempt": 0, "gave_up": false, "repeated": false, "unresolved": [], "terminal": {"rollback_verified": "2026-10-02T22:29:32Z"}, "first_attempt": []}
+{"cell": "upd1-arch-good/run-a", "panels_after_start": 1, "deferring": 0, "attempt_lines": 0, "max_attempt": 0, "gave_up": false, "repeated": false, "unresolved": [], "terminal": {"update_verified": "2026-10-02T22:19:01Z"}, "first_attempt": []}
+{"cell": "upd1-arch-mgmt-off-reboot/run-a", "panels_after_start": 2, "deferring": 0, "attempt_lines": 0, "max_attempt": 0, "gave_up": false, "repeated": false, "unresolved": [], "terminal": {"update_verified": "2026-10-02T22:50:45Z"}, "first_attempt": []}
+{"cell": "upd1-arch-owner-continuation/run-a", "panels_after_start": 0, "deferring": 0, "attempt_lines": 0, "max_attempt": 0, "gave_up": false, "repeated": false, "unresolved": [], "terminal": {}, "first_attempt": []}
+{"cell": "upd1-arch-owner-continuation/run-b", "panels_after_start": 21, "deferring": 0, "attempt_lines": 0, "max_attempt": 0, "gave_up": false, "repeated": false, "unresolved": [], "terminal": {"paused_retry_limit": "2026-10-03T02:30:32Z", "update_verified": "2026-10-03T02:31:31Z"}, "first_attempt": []}
+{"cell": "upd1-arch-startcheck/run-a", "panels_after_start": 2, "deferring": 0, "attempt_lines": 0, "max_attempt": 0, "gave_up": false, "repeated": false, "unresolved": [], "terminal": {"rollback_verified": "2026-10-02T22:39:48Z"}, "first_attempt": []}
+{"cell": "upd1-debian13-defective/run-a", "panels_after_start": 1, "deferring": 1, "attempt_lines": 1, "max_attempt": 1, "gave_up": false, "repeated": false, "unresolved": [], "terminal": {"rollback_verified": "2026-10-02T21:03:26Z"}, "first_attempt": [["4663", "2026-10-02T21:03:17.456562+00:00", "2026-10-02T21:03:56.480303+00:00"]]}
+{"cell": "upd1-debian13-good/run-a", "panels_after_start": 1, "deferring": 1, "attempt_lines": 1, "max_attempt": 1, "gave_up": false, "repeated": false, "unresolved": [], "terminal": {"update_verified": "2026-10-02T20:49:13Z"}, "first_attempt": [["37218", "2026-10-02T20:48:59.269801+00:00", "2026-10-02T20:49:39.544887+00:00"]]}
+{"cell": "upd1-debian13-mgmt-off-reboot/run-a", "panels_after_start": 2, "deferring": 1, "attempt_lines": 0, "max_attempt": 0, "gave_up": false, "repeated": false, "unresolved": ["37776"], "terminal": {"update_verified": "2026-10-02T22:06:10Z"}, "first_attempt": [["37776", "2026-10-02T22:05:55.740661+00:00", null]]}
+{"cell": "upd1-debian13-owner-continuation/run-a", "panels_after_start": 21, "deferring": 1, "attempt_lines": 1, "max_attempt": 1, "gave_up": false, "repeated": false, "unresolved": [], "terminal": {"paused_retry_limit": "2026-10-02T21:53:07Z", "update_verified": "2026-10-02T21:54:09Z"}, "first_attempt": [["56601", "2026-10-02T21:53:55.330236+00:00", "2026-10-02T21:54:34.595381+00:00"]]}
+{"cell": "upd1-debian13-realstart/run-a", "panels_after_start": 20, "deferring": 0, "attempt_lines": 0, "max_attempt": 0, "gave_up": false, "repeated": false, "unresolved": [], "terminal": {"paused_retry_limit": "2026-10-02T21:35:13Z"}, "first_attempt": []}
+{"cell": "upd1-debian13-startcheck/run-a", "panels_after_start": 1, "deferring": 1, "attempt_lines": 1, "max_attempt": 1, "gave_up": false, "repeated": false, "unresolved": [], "terminal": {"rollback_verified": "2026-10-02T21:17:19Z"}, "first_attempt": [["4741", "2026-10-02T21:17:14.222671+00:00", "2026-10-02T21:17:52.448937+00:00"]]}
+{"cell": "upd1-ubuntu-defective/run-a", "panels_after_start": 1, "deferring": 1, "attempt_lines": 1, "max_attempt": 1, "gave_up": false, "repeated": false, "unresolved": [], "terminal": {"rollback_verified": "2026-10-02T23:32:05Z"}, "first_attempt": [["6018", "2026-10-02T23:31:59.956954+00:00", "2026-10-02T23:32:38.444532+00:00"]]}
+{"cell": "upd1-ubuntu-good/run-a", "panels_after_start": 1, "deferring": 1, "attempt_lines": 1, "max_attempt": 1, "gave_up": false, "repeated": false, "unresolved": [], "terminal": {"update_verified": "2026-10-02T23:12:03Z"}, "first_attempt": [["53710", "2026-10-02T23:11:50.668851+00:00", "2026-10-02T23:12:29.424167+00:00"]]}
+{"cell": "upd1-ubuntu-mgmt-off-reboot/run-a", "panels_after_start": 2, "deferring": 1, "attempt_lines": 0, "max_attempt": 0, "gave_up": false, "repeated": false, "unresolved": ["53351"], "terminal": {"update_verified": "2026-10-03T00:35:58Z"}, "first_attempt": [["53351", "2026-10-03T00:35:46.448144+00:00", null]]}
+{"cell": "upd1-ubuntu-owner-continuation/run-a", "panels_after_start": 21, "deferring": 1, "attempt_lines": 1, "max_attempt": 1, "gave_up": false, "repeated": false, "unresolved": [], "terminal": {"paused_retry_limit": "2026-10-03T00:16:37Z", "update_verified": "2026-10-03T00:17:38Z"}, "first_attempt": [["77975", "2026-10-03T00:17:25.086630+00:00", "2026-10-03T00:18:03.577005+00:00"]]}
+{"cell": "upd1-ubuntu-startcheck/run-a", "panels_after_start": 1, "deferring": 1, "attempt_lines": 1, "max_attempt": 1, "gave_up": false, "repeated": false, "unresolved": [], "terminal": {"rollback_verified": "2026-10-02T23:52:09Z"}, "first_attempt": [["6045", "2026-10-02T23:52:04.160301+00:00", "2026-10-02T23:52:42.621811+00:00"]]}
+{"cell": "a80:upd1-debian13-defective/run-a", "panels_after_start": 1, "deferring": 0, "attempt_lines": 0, "max_attempt": 0, "gave_up": false, "repeated": false, "unresolved": [], "terminal": {"rollback_verified": "2026-10-03T01:06:12Z"}, "first_attempt": []}
+{"cell": "a80:upd1-debian13-good/run-a", "panels_after_start": 1, "deferring": 1, "attempt_lines": 1, "max_attempt": 1, "gave_up": false, "repeated": false, "unresolved": [], "terminal": {"update_verified": "2026-10-03T00:52:01Z"}, "first_attempt": [["36585", "2026-10-03T00:51:51.725939+00:00", "2026-10-03T00:52:30.577501+00:00"]]}
+{"cell": "a80:upd1-debian13-owner-continuation/run-a", "panels_after_start": 21, "deferring": 1, "attempt_lines": 1, "max_attempt": 1, "gave_up": false, "repeated": false, "unresolved": [], "terminal": {"paused_retry_limit": "2026-10-03T01:23:55Z", "update_verified": "2026-10-03T01:24:54Z"}, "first_attempt": [["56605", "2026-10-03T01:24:41.661057+00:00", "2026-10-03T01:25:20.374646+00:00"]]}
+{"cell": "a80:upd1-ubuntu-good/run-a", "panels_after_start": 1, "deferring": 1, "attempt_lines": 1, "max_attempt": 1, "gave_up": false, "repeated": false, "unresolved": [], "terminal": {"update_verified": "2026-10-03T02:14:51Z"}, "first_attempt": [["81228", "2026-10-03T02:14:41.365582+00:00", "2026-10-03T02:15:19.542841+00:00"]]}

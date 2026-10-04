@@ -1,0 +1,76 @@
+{
+  "context": {
+    "access_dns_ip": "192.0.2.11",
+    "dns_engine": "bind",
+    "dns_hosting_management": "",
+    "dns_mode": "local",
+    "dns_role": "secondary",
+    "local_ip": "192.0.2.11",
+    "local_nameserver": "ns2.ns-accept.test",
+    "mail_hostname": "",
+    "panel_domain": "panel-arch.ns-accept.test",
+    "peer_ip": "192.0.2.10",
+    "peer_nameserver": "ns1.ns-accept.test"
+  },
+  "error": {
+    "code": "server_setup_primary_dns_required",
+    "message": "The primary DNS server ns1.ns-accept.test (192.0.2.10) has not provided its authoritative catalog yet. Start its DNS setup and check TCP port 53. This setup checks again automatically; no primary panel connection is required."
+  },
+  "id": "1996b441877841d699d5fcfa430edb37",
+  "panel_url": "https://panel-arch.ns-accept.test:2083/",
+  "phase": "primary_dns",
+  "plan_id": "d1df767396cd7628eb3171d7ae2892e9",
+  "request_id": "1996b441877841d699d5fcfa430edb37",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "01-dns",
+      "kind": "dns",
+      "owner_id": "4f7a6847300ad8273c278795495e89ee",
+      "request_id": "b2286680aecb17cfcecec55926f8d4e2",
+      "status": "running",
+      "target": "local"
+    },
+    {
+      "id": "02-service",
+      "kind": "service",
+      "owner_id": "eee1192a518fa7d0a46ffd82ef4d47c3",
+      "request_id": "d001e1a1084f183d51a11076feaee392",
+      "status": "pending",
+      "target": "certbot"
+    },
+    {
+      "id": "03-firewall",
+      "kind": "firewall",
+      "owner_id": "de40626742db9a4de84f2ce0320f1243",
+      "request_id": "df44aa707ee57223df51d38c2a46e3c3",
+      "status": "pending",
+      "target": "enable_and_persist"
+    },
+    {
+      "id": "04-access_dns",
+      "kind": "access_dns",
+      "owner_id": "de54392715b7b90f3612c0df92867a01",
+      "qualifier": "192.0.2.11",
+      "request_id": "00713824301f1de6cfb8407480dfab4c",
+      "status": "pending",
+      "target": "panel-arch.ns-accept.test"
+    },
+    {
+      "id": "05-panel_certificate",
+      "kind": "panel_certificate",
+      "owner_id": "82ec96e54c70e59c78c5b68b596a9202",
+      "request_id": "f753d01cacf36deb9cbda9d45af81f8c",
+      "status": "pending",
+      "target": "panel-arch.ns-accept.test"
+    },
+    {
+      "id": "06-verify",
+      "kind": "verify",
+      "owner_id": "1ee397c11cb955a3f9a22f6adf8c8a33",
+      "request_id": "5b35b86649ac0350da59000f41bc7171",
+      "status": "pending",
+      "target": "dns"
+    }
+  ]
+}

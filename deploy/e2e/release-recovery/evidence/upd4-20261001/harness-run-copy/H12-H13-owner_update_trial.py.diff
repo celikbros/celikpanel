@@ -1,0 +1,37 @@
+--- harness/deploy/e2e/release-recovery/owner_update_trial.py	2026-10-01 01:16:57.000000000 +0300
++++ harness-h12/deploy/e2e/release-recovery/owner_update_trial.py	2026-10-01 02:56:54.432305309 +0300
+@@ -3750,8 +3750,12 @@
+         before = self.workload_snapshot("before-management-off")
+         self.state["before_off_workload"] = before
+         command = "systemctl disable --now celikpanel-panel.service celikpanel-agent.service"
+-        done = self.guest(command, timeout=180)
++        # H13 (upd4 run copy): the owner's stop starts here; the update-only verdict window ends before it.
+         self.state["management_off_at"] = time.time()
++        done = self.guest(command, timeout=180)
++        self.state["management_off_done_at"] = time.time()
++        checks["management_off_window"] = {"requested_at": self.state["management_off_at"],
++                                           "done_at": self.state["management_off_done_at"]}
+         after = self.workload_snapshot("management-off")
+         state = management_state(after.get("services"))
+         checks.update(command=f"sudo {command}", returncode=done.returncode, management=state,
+@@ -3856,6 +3860,20 @@
+             except Exception as exc:  # noqa: BLE001
+                 back.update(login_ok=False, error=type(exc).__name__)
+         if back["login_ok"]:
++            # H12 (upd4 run copy): the Panel answers 503 PANEL_STARTING until its management is ready; the owner
++            # would reload until the screens load. Wait (read-only, bounded) for panel_state=ready first.
++            ready_deadline = time.monotonic() + 180
++            waits = []
++            while True:
++                probe = self.api("GET", f"/api/v1/recovery/status?request_id={self.state['request_id']}",
++                                 purpose="RecoveryStatus (management return readiness)")
++                state = ((probe.json() or {}) if probe.status == 200 else {}).get("panel_state")
++                waits.append({"at": utc_now(), "http": probe.status, "panel_state": state})
++                if state == "ready" or time.monotonic() >= ready_deadline:
++                    break
++                time.sleep(3)
++            back["readiness_wait"] = {"reads": len(waits), "first": waits[0], "last": waits[-1],
++                                      "ready": waits[-1].get("panel_state") == "ready"}
+             after = self.panel_truth("after-management-return")
+             back["differences"] = truth_differences(self.state.get("truth_before_off"), after)
+         back["management"] = management_state(self.workload_snapshot("after-management-return").get("services"))

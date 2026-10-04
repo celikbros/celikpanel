@@ -1,0 +1,105 @@
+{
+  "checks": {
+    "agreement": {
+      "agreed_samples": 5,
+      "lag_samples": 0,
+      "samples": 55,
+      "verdict": "passed"
+    },
+    "attempts": {
+      "automatic": [
+        {
+          "at": "2026-09-30T20:45:54.428709Z",
+          "attempt": "1",
+          "phase": "completion"
+        },
+        {
+          "at": "2026-09-30T20:47:32.664821Z",
+          "attempt": "2",
+          "phase": "completion"
+        },
+        {
+          "at": "2026-09-30T20:49:11.664707Z",
+          "attempt": "3",
+          "phase": "completion"
+        }
+      ],
+      "automatic_count": 3,
+      "journal_admissions": [
+        {
+          "at": "2026-09-30T20:45:54.485174+00:00",
+          "attempt": "1",
+          "snapshot": "20260930T204431Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-45483c2cc4439aa4098f44a8977b2bef"
+        },
+        {
+          "at": "2026-09-30T20:47:32.720830+00:00",
+          "attempt": "2",
+          "snapshot": "20260930T204431Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-45483c2cc4439aa4098f44a8977b2bef"
+        },
+        {
+          "at": "2026-09-30T20:49:11.720186+00:00",
+          "attempt": "3",
+          "snapshot": "20260930T204431Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-45483c2cc4439aa4098f44a8977b2bef"
+        }
+      ],
+      "owner": [],
+      "owner_count": 0
+    },
+    "clock_skew_seconds": 0.512,
+    "host_panel_windows": [
+      {
+        "failed": true,
+        "first_bad": 1790801072.1971521,
+        "from": 1790801067.1969895,
+        "kind": "failed",
+        "last_bad": 1790801467.208599,
+        "lower_bound_s": 395.011,
+        "to": null,
+        "unobserved": false,
+        "upper_bound_s": null
+      }
+    ],
+    "host_ssh_windows": [],
+    "outcome": "paused-owner-action-required",
+    "workloads": {
+      "cron": {
+        "verdict": "never-interrupted",
+        "windows": []
+      },
+      "dns": {
+        "mode": "external",
+        "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+        "verdict": "not-provided-external-dns"
+      },
+      "panel": {
+        "outside": [],
+        "verdict": "down-from-update-until-end",
+        "windows": [
+          {
+            "cause": "unexplained",
+            "failed": true,
+            "first_bad": 1790801072.4758615,
+            "from": 1790801067.475824,
+            "kind": "failed",
+            "last_bad": 1790801467.4972334,
+            "lower_bound_s": 395.021,
+            "to": null,
+            "unobserved": false,
+            "upper_bound_s": null
+          }
+        ]
+      },
+      "smtp": {
+        "verdict": "not-seeded"
+      },
+      "web": {
+        "verdict": "never-interrupted",
+        "windows": []
+      }
+    }
+  },
+  "finished_at": "2026-09-30T20:51:12Z",
+  "name": "verdicts",
+  "started_at": "2026-09-30T20:51:12Z",
+  "verdict": "passed"
+}

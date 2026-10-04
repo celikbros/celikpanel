@@ -1,0 +1,35 @@
+{
+  "action": "init-root",
+  "dry_run": false,
+  "marker": "/var/tmp/cp-oi3-0929/.celikpanel-dns-kill-matrix-root",
+  "work_root": "/var/tmp/cp-oi3-0929"
+}
+total 875868
+drwx------ 2 root root      4096 Sep 29 12:25 .
+drwx------ 4 root root      4096 Sep 29 12:25 ..
+-r--r--r-- 9 root root 556609024 Sep 27 02:09 Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2
+-r--r--r-- 9 root root 340262912 Sep 27 02:09 debian-13-genericcloud-amd64-20260826-2582.qcow2
+{
+  "action": "verify-images",
+  "verified": {
+    "arch": "/var/tmp/cp-oi3-0929/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2",
+    "debian13": "/var/tmp/cp-oi3-0929/images/debian-13-genericcloud-amd64-20260826-2582.qcow2"
+  }
+}
+4f8c628646b7efa2c143102f845b9e13b02d7c36a85e9a93d1e9f049e1bfa5b7  /var/tmp/cp-oi3-0929/artifacts/agent
+f1074078381976313e0833dcce7dd8b751e5a4b5e039f1388260792d1ee5c8ba  /var/tmp/cp-oi3-0929/artifacts/agent.kill
+793fb81b95fa96f438a216831a146e0869934ce31318881857d3352ffb92e472  /var/tmp/cp-oi3-0929/artifacts/panel
+97aa0ce32546e9ba6ae56831e9f300b1f97133893449422811937e365bdfc274  /var/tmp/cp-oi3-0929/artifacts/dns-kill-trigger
+5268ed0058dc8d7619df2cbeb16661ef71eab8cf75a488746194c4104e92dde6  /var/tmp/cp-oi3-0929/artifacts/recovery
+a682b35afd664df01436b6dfb25040afda352dff7e4557586665e90a93245646  /var/tmp/cp-oi3-0929/artifacts/recovery-runtime/runtime.manifest
+dcf6e09c026864ee15566a03b3c4aa30d6e1805333d548753b58d070e7fd1229  deploy/e2e/dns-kill-matrix/manifest.json
+total 104
+drwx------   5 root root  4096 Sep 29 12:25 .
+drwxrwxrwt 365 root root 73728 Sep 29 12:25 ..
+drwxr-xr-x   3 root root  4096 Sep 29 12:25 artifacts
+-rw-------   1 root root    36 Sep 29 12:25 .celikpanel-dns-kill-matrix-root
+drwx------   2 root root  4096 Sep 29 12:25 cells
+-rw-------   1 root root   399 Sep 29 12:25 id_ed25519
+-rw-r--r--   1 root root    93 Sep 29 12:25 id_ed25519.pub
+drwx------   2 root root  4096 Sep 29 12:25 images
+SETUP-OK

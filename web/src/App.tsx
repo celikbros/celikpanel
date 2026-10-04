@@ -15,7 +15,8 @@ import {
 } from 'react';
 import { Login } from './components/Login';
 import { LicenseOnboarding } from './components/LicenseOnboarding';
-import { api, type CurrentUser } from './lib/api';
+import { usePanelSession } from './auth/usePanelSession';
+import { RecoveryAccess } from './components/RecoveryAccess';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { navItems, canAccessPath, type NavAccessContext } from './nav';
 import { Layout } from './components/Layout';
@@ -462,26 +463,15 @@ function AppRoutes() {
 // oturumu çözer, oturum yoksa giriş ekranını gösterir ve kullanım
 // sırasında oturum düşerse (herhangi bir API 401) girişe geri döner.
 function AuthGate() {
-  const [user, setUser] = useState<CurrentUser | null>(null);
-  const [loading, setLoading] = useState(true);
-  const authGenerationRef = useRef(0);
-  const transitionAuthentication = useCallback((nextUser: CurrentUser | null) => {
-    authGenerationRef.current += 1;
-    setUser(nextUser);
-  }, []);
-
+  const { user, state, checking, generation: authGenerationRef, retry, transitionAuthentication, markUnavailable } = usePanelSession();
+  const [observationRecovery, setObservationRecovery] = useState(false);
+  const endSession = useCallback(() => transitionAuthentication(null), [transitionAuthentication]);
   useLayoutEffect(() => {
-    publishSystemUpdateAuthentication(!loading && user !== null && user.effective_role === 'admin');
-  }, [loading, user]);
-
+    // Pause the optional tracker while the independent status surface owns access.
+    // This preserves the exact saved operation; it does not end the session.
+    publishSystemUpdateAuthentication(state === 'ready' && !observationRecovery && user?.effective_role === 'admin');
+  }, [state, user, observationRecovery]);
   useEffect(() => () => publishSystemUpdateAuthentication(false), []);
-
-  useEffect(() => {
-    api.me()
-      .then(transitionAuthentication)
-      .catch(() => transitionAuthentication(null))
-      .finally(() => setLoading(false));
-  }, [transitionAuthentication]);
 
   // Watch every API response; a 401 means the session is gone, so return
   // to the login screen instead of showing broken pages.
@@ -499,56 +489,68 @@ function AuthGate() {
         && shouldApplyUnauthorizedResponse(requestGeneration, authGenerationRef.current)) {
         transitionAuthentication(null);
       }
-      if (res.status === 403 && url.includes('/api/')
+      if ((res.status === 403 || res.status === 503) && url.includes('/api/')
         && shouldApplyUnauthorizedResponse(requestGeneration, authGenerationRef.current)) {
         void res.clone().json().then(problem => {
-          if (problem.code === 'license_required'
-            && shouldApplyUnauthorizedResponse(requestGeneration, authGenerationRef.current)) {
+          if (!shouldApplyUnauthorizedResponse(requestGeneration, authGenerationRef.current)) return;
+          if (['license_required', 'LICENSE_VERIFICATION_UNAVAILABLE', 'LICENSE_STATUS_UNAVAILABLE'].includes(problem.code)) {
             window.dispatchEvent(new Event('celikpanel:license-locked'));
           }
+          if (problem.code === 'AUTH_STATUS_UNAVAILABLE') markUnavailable(true);
+          if (problem.code === 'panel_starting' || problem.code === 'PANEL_STARTING') markUnavailable();
         }).catch(() => {});
       }
       return res;
     };
     return () => { window.fetch = originalFetch; };
-  }, [transitionAuthentication]);
+  }, [transitionAuthentication, markUnavailable, authGenerationRef]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-bg">
-        <Spinner />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Login onSuccess={transitionAuthentication} />;
-  }
+  if (state === 'unauthenticated') return <Login onSuccess={transitionAuthentication} />;
+  if (state !== 'ready' || !user) return <RecoveryAccess
+    user={state === 'auth_unavailable' ? null : user}
+    cause={state === 'auth_unavailable' || !user ? 'auth' : state === 'starting' ? 'starting' : 'availability'}
+    checking={checking} onRetry={() => void retry()} onUnauthorized={endSession}
+  />;
 
   return (
     <AuthProvider user={user} onLogout={() => transitionAuthentication(null)}>
-      <RouteLoadBoundary>
-        <LicenseOnboarding>
+        <LicenseOnboarding onRecoveryChange={setObservationRecovery}>
         <Suspense fallback={<PageLoading />}>
           <ComponentOperationProvider>
             <ServerSetupGate><AppRoutes /></ServerSetupGate>
           </ComponentOperationProvider>
         </Suspense>
         </LicenseOnboarding>
-      </RouteLoadBoundary>
     </AuthProvider>
   );
 }
 
+function StandaloneRecovery() {
+  const { user, state, checking, retry, transitionAuthentication } = usePanelSession();
+  const endSession = useCallback(() => transitionAuthentication(null), [transitionAuthentication]);
+  if (state === 'unauthenticated') return <Login onSuccess={transitionAuthentication} />;
+  return <RecoveryAccess user={state === 'auth_unavailable' ? null : user}
+    cause={state === 'auth_unavailable' || !user ? 'auth' : 'bundle'} checking={checking}
+    onRetry={() => void retry()} onUnauthorized={endSession} />;
+}
+
+class RecoveryBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  render() { return this.state.failed ? <StandaloneRecovery /> : this.props.children; }
+}
+
 function App() {
   return (
-    <Suspense fallback={<PageLoading />}>
-      <SystemUpdateOperationProvider>
-        <BrowserRouter>
-          <AuthGate />
-        </BrowserRouter>
-      </SystemUpdateOperationProvider>
-    </Suspense>
+    <RecoveryBoundary>
+      <Suspense fallback={<StandaloneRecovery />}>
+        <SystemUpdateOperationProvider>
+          <BrowserRouter>
+            <AuthGate />
+          </BrowserRouter>
+        </SystemUpdateOperationProvider>
+      </Suspense>
+    </RecoveryBoundary>
   );
 }
 

@@ -1,0 +1,105 @@
+{
+  "anonymous_http": 401,
+  "authenticated_http": 200,
+  "automatic_receipts_preserved": {
+    "1": {
+      "bytes": 273,
+      "sha256": "2a6ed6d37cb7ab92099a448d5b79694cebc1ff94bfc0aadfd5fdb0ea871726f1"
+    },
+    "2": {
+      "bytes": 275,
+      "sha256": "fc2ef221c0b7fca0ec3a873e74f33f4adf775b039975afc397bc36655eb2a0df"
+    },
+    "3": {
+      "bytes": 275,
+      "sha256": "eb0a9ee2bff0829187888f4ce1b3a5ea2bc366e7b7fc87def9beff1ae7e5dcaf"
+    }
+  },
+  "baseline": {
+    "agent_sha256": "c2724448c8724c111e0331d2c33cd202abbef7df4e284bff0f5a4acea0f88d54",
+    "commit": "45dfc265bfd7997e9a0e0d39b0ebf60a57f58c00",
+    "panel_sha256": "ee402c43e9809e6ad40c2b3e9778aa1f2e30729182ee1ab45433374d8ea84cfd",
+    "version": "v0.1.0-alpha.81"
+  },
+  "coordinators_restored_to_baseline": true,
+  "cut_invocations": [
+    "f54545ed86c54d349d3901cc411a329d",
+    "16b471adf6d44f9da3d52e2bd5055ca5"
+  ],
+  "evidence_sha256": {
+    "bound-worker-af0de8c801a3d13c780e9b4089d60c98.json": "dc322dee6656ef00fbe10b0e0a70ae62db43e47073833acb07f2c93b720cee74",
+    "bound-worker-reboot-cut-af0de8c801a3d13c780e9b4089d60c98.jsonl": "7103773d3679ae1dea95b852a9ea86565d95d20ee1db25b416a77580996c20ff",
+    "bound-worker-reboot-result-af0de8c801a3d13c780e9b4089d60c98.json": "4b0bf0d0f7f283a13dcc6504e309b59736932d814ae7a9b207e905fd6b3415db",
+    "bound-worker-start-af0de8c801a3d13c780e9b4089d60c98.json": "951643e86566c9cb1a6d0b4c22a4e05c0af1d1779ba366a33b7756d1f1b88a0e",
+    "bound-worker-start-af0de8c801a3d13c780e9b4089d60c98.stdout.jsonl": "d86a3fcb827f4a89a6c4a28d84972ec3c23a48d163dd2e0e1f74b6ab5e4fb3d7",
+    "budget-candidate-build.json": "24276fe6f165944dfc58d9fc4f3a8ff9f0a5b2f877de0bb30ac5e7eb8101b731",
+    "budget-candidate-files.json": "45cbb5be57d1c283d920c227c37e55fc0c868f83afd5b5414156dace0be10a21",
+    "budget-collected/boot-wait-af0de8c801a3d13c780e9b4089d60c98.jsonl": "85e12b856dd213a4fd7143ad96a75379e48d5b80db75557336fc5c05c9cb912e",
+    "budget-collected/bound-reader-after-owner.jsonl": "bb87f5724fa64c3a619c8f372ddd46b45d9f7dbe69c8d05e223c2fdc048d5208",
+    "budget-collected/budget-cuts-af0de8c801a3d13c780e9b4089d60c98.json": "f7970703d8089f35b927af665fe3c97f00e8da83e5dbf51277281014b1d42bec",
+    "budget-collected/budget-cuts-af0de8c801a3d13c780e9b4089d60c98.jsonl": "92f28895e5850d7c7261eae7755d6ab139ad24dfdd5e36a2af7f4a62cb1153eb",
+    "budget-collected/budget-guidance-exhausted-af0de8c801a3d13c780e9b4089d60c98.json": "4b7c545263015b030d8a6604a847b5617cf7db1f34ac75b7a4fe9e6a4e884f94",
+    "budget-collected/budget-guidance-terminal-af0de8c801a3d13c780e9b4089d60c98.json": "e939d05390ce50fcb6d8bbb27d9a42a882c16cdaf242f4e1af192b0448d6b71b",
+    "budget-collected/budget-owner-retry-af0de8c801a3d13c780e9b4089d60c98.admitted.json": "8311832d3e78887a30fe3ce42f726d81bb0d76975d272142f88a9721c100bbcd",
+    "budget-collected/budget-owner-retry-af0de8c801a3d13c780e9b4089d60c98.result.json": "f4a7a0b43f893199708120d80246b4c07f8649e54e7af5fb57c85ce0543faa61",
+    "budget-collected/budget-owner-retry-af0de8c801a3d13c780e9b4089d60c98.stderr": "1568d40785fce2f111a7dae960c18e1695116a16dc11872f8ac3b96ddb5c05f8",
+    "budget-collected/budget-owner-retry-af0de8c801a3d13c780e9b4089d60c98.stdout": "d29be55432fed9bab6298d2366d30aeb3070d8c37a334738bd1b018475fdd96c",
+    "budget-collected/budget-terminal-af0de8c801a3d13c780e9b4089d60c98.json": "065a8be7584060141acd2096f60f55309e69c418ac34d26d927085dd4348e997",
+    "budget-final-native.json": "05c0080a13bf6bb9971e143f833abf98c65f6c249cf3f9eb09451f8b7cdde9de",
+    "budget-native-journal.jsonl": "8abcb76f1c0962ba2112496dea58a71b8d88596d14a7f4f44321e77767ec22a5",
+    "budget-selected-kit.json": "69499db9a6b1ed1b574b860cd23d39fca49a3dc632cbcf3d48c6a593c97c506b",
+    "recovery-fault-collection-1790029256321542557.json": "f31b64c355e19571bf59948c0a63aa8ee465e333da537f54bf454a23355271ab",
+    "recovery-fault-collection-1790029256321542557.jsonl": "4b39ed3da652a73cf2b656d53ccfe9db4e487c755b4bea823eca7e3f1ba9f485"
+  },
+  "exhausted_status": {
+    "automatic_recovery": "paused_retry_limit",
+    "observation": "known",
+    "observed_at": "2026-09-21T22:24:05Z",
+    "phase": "recovery_required",
+    "previous_failure": "recovery_incomplete",
+    "reason": "recovery_incomplete",
+    "request_id": "af0de8c801a3d13c780e9b4089d60c98",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "none"
+  },
+  "floor_and_foundation_sequence": 82,
+  "limitations": [
+    "Fixture signing; production signing/admission not proved",
+    "Only after-publication interruption; publication-edge power loss remains open",
+    "Interrupted attempts, not repeated deterministic child errors",
+    "No browser or HTTP access proof while exhausted",
+    "This single-platform case does not prove schema migration or workload continuity",
+    "Full P0.2/P0.3 remain open"
+  ],
+  "native_cli_languages": [
+    "en",
+    "tr"
+  ],
+  "native_hint_bound_to_status": true,
+  "native_pause_observations": 3,
+  "owner_receipt_count": 1,
+  "platform": "systemd 257 (257.13-1~deb13u1) / Debian 13 / amd64 / disposable QEMU",
+  "request_id": "af0de8c801a3d13c780e9b4089d60c98",
+  "result": "scoped-checks-passed",
+  "retained_pause_ignored_after_rollback": true,
+  "retained_wait_republished": false,
+  "schema": "celikpanel/native-budget-guidance-acceptance/v1",
+  "selected_runtime_sha256": "f68c1126a433974cba4f515814ca51958a5e88d16e19c18929a977307238ebda",
+  "target": {
+    "agent_sha256": "96b2247807b32843207cd7d684f43111735dee039736a3fcddacc1f07bfd8a35",
+    "commit": "3218e50bc26cbe1b1544e312e4636b8c794d7809",
+    "panel_sha256": "041bdd6d536db615280ca3c1a12606cb1d9e847ebf6cf88696ff63f57626612c",
+    "version": "v0.1.0-alpha.82"
+  },
+  "target_archive_sha256": "3c048febf58a940328d6573d93179e6682157103ff4d176368ca105cb153b170",
+  "terminal": {
+    "observation": "known",
+    "observed_at": "2026-09-21T22:24:36Z",
+    "phase": "recovered",
+    "previous_failure": "update_failed",
+    "reason": "rollback_verified",
+    "request_id": "af0de8c801a3d13c780e9b4089d60c98",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "rollback_verified"
+  }
+}

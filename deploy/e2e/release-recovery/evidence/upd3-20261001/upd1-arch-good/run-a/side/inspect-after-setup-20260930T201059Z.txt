@@ -1,0 +1,126 @@
+# read-only side inspection lab=cp-release-drill-upd3-arch-good-a node=arch label=after-setup rc=0 took=0.7s
+== utc
+2026-09-30T20:11:00Z
+9d36eb8b-c68a-4c96-a2b3-67332852e3ab
+== hosting root: stat of the parents
+drwxr-xr-x 755 root:root /var
+drwxr-xr-x 755 root:root /var/www
+drwxr-xr-x 755 root:root /var/www/celikpanel
+drwxr-x--- 750 root:celikpanel /var/www/celikpanel/subscriptions
+== hosting root: site directories
+f: /var/www/celikpanel/subscriptions/2/sites/1/public_html
+dr-xr-xr-x root            root            /
+drwxr-xr-x root            root            var
+drwxr-xr-x root            root            www
+drwxr-xr-x root            root            celikpanel
+drwxr-xr-x root            celikpanel      subscriptions
+drwxr-x--x root            celikpanel      2
+drwxr-x--x root            celikpanel      sites
+drwxr-x--- upd1_owner_test upd1_owner_test 1
+drwxr-x--- upd1_owner_test upd1_owner_test public_html
+== hosting root: receipt /var/lib/celikpanel-agent-private/hosting-root-v1.json
+-rw------- 600 root:root /var/lib/celikpanel-agent-private/hosting-root-v1.json
+{
+  "schema": "celikpanel/hosting-root-directories/v1",
+  "directories": [
+    {
+      "path": "/var/www",
+      "mode": "0755",
+      "uid": 0,
+      "gid": 0,
+      "created_at": "2026-09-30T20:10:59Z"
+    },
+    {
+      "path": "/var/www/celikpanel",
+      "mode": "0755",
+      "uid": 0,
+      "gid": 0,
+      "created_at": "2026-09-30T20:10:59Z"
+    }
+  ]
+}
+== hosting root: agent log lines
+2026-09-30T20:10:59.992470+00:00 dns-arch agent[414]: 2026/09/30 20:10:59 hosting root: created /var/www at 0755 0:0
+2026-09-30T20:10:59.992470+00:00 dns-arch agent[414]: 2026/09/30 20:10:59 hosting root: created /var/www/celikpanel at 0755 0:0
+== web server accounts
+http:x:33:33::/srv/http:/usr/bin/nologin
+== os
+arch 
+== cron units
+Id=cron.service
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+NRestarts=0
+
+Id=cronie.service
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+NRestarts=0
+
+== cron spool
+total 0
+drwxr-xr-x 1 root root  0 Sep 22  2025 .
+drwxr-xr-x 1 root root 30 Sep 30 20:08 ..
+== stamp files
+== cron journal tail
+2026-09-30T20:08:47+00:00 dns-arch systemd[1]: Started Command Scheduler.
+2026-09-30T20:08:47+00:00 dns-arch crond[1763]: (CRON) STARTUP (1.7.2)
+2026-09-30T20:08:47+00:00 dns-arch crond[1763]: (CRON) INFO (Syslog will be used instead of sendmail.)
+2026-09-30T20:08:47+00:00 dns-arch crond[1763]: (CRON) INFO (RANDOM_DELAY will be scaled with factor 31% if used.)
+2026-09-30T20:08:47+00:00 dns-arch crond[1763]: (CRON) INFO (running with inotify support)
+== origin unit
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+NRestarts=0
+== hosts celikpanel.net
+6:127.0.0.1 celikpanel.net # disposable CelikPanel worker fixture
+127.0.0.1       localhost
+== listeners
+0.0.0.0:80 users:(("nginx",pid=868,fd=4),("nginx",pid=850,fd=4))
+127.0.0.54:53 users:(("systemd-resolve",pid=261,fd=25))
+127.0.0.1:443 users:(("python3",pid=402,fd=3))
+127.0.0.53%lo:53 users:(("systemd-resolve",pid=261,fd=23))
+*:2083 users:(("panel",pid=423,fd=8))
+== celikpanel units
+  celikpanel-agent.service            loaded active   running CelikPanel privileged agent
+  celikpanel-firewall-restore.service loaded inactive dead    Restore CelikPanel firewall policy before networking
+  celikpanel-panel.service            loaded active   running CelikPanel web panel
+  celikpanel-release-recovery.service loaded inactive dead    CelikPanel verified release transaction recovery
+  celikpanel-release-recovery.timer   loaded active   waiting CelikPanel release transaction recovery watchdog
+== timers
+Wed 2026-09-30 20:11:02 UTC           2s Wed 2026-09-30 20:10:32 UTC 28s ago celikpanel-release-recovery.timer celikpanel-release-recovery.service
+Wed 2026-09-30 20:22:18 UTC        11min -                                 - systemd-tmpfiles-clean.timer      systemd-tmpfiles-clean.service
+Thu 2026-10-01 00:00:00 UTC     3h 48min Wed 2026-09-30 20:05:19 UTC       - shadow.timer                      shadow.service
+Thu 2026-10-08 23:09:48 UTC 1 week 1 day Wed 2026-09-30 20:05:19 UTC       - archlinux-keyring-wkd-sync.timer  archlinux-keyring-wkd-sync.service
+== installed build identity
+== recovery observation records
+== site: vhost files naming the domain
+/etc/nginx/sites-available/upd1-owner.test.conf
+== site: local requests
+host-header / -> 200
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, nginx is successfully installed
+== site: nginx error log tail
+== panel unit
+ActiveState=active
+SubState=running
+ActiveEnterTimestamp=Wed 2026-09-30 20:07:28 UTC
+InactiveEnterTimestamp=
+NRestarts=0
+ExecMainStatus=0

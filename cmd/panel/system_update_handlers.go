@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/recoveryobs"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -49,6 +50,31 @@ type panelUpdateCheckResponse struct {
 	CurrentVersion string             `json:"current_version"`
 	CurrentCommit  string             `json:"current_commit"`
 	Target         *panelUpdateTarget `json:"target,omitempty"`
+	// PreviousAttempt is additive and optional: the latest recorded attempt on
+	// this server to the offered target commit, when it failed or was rolled
+	// back. It is owner guidance only; Start stays available and unchanged.
+	PreviousAttempt *recoveryobs.Attempt `json:"previous_attempt,omitempty"`
+}
+
+// previousPanelUpdateAttempt reads the native recovery observations read-only.
+// Anything other than an exact failed/recovered attempt for this commit is
+// omitted, so older web clients and unknown evidence keep the previous shape.
+func (p *Panel) previousPanelUpdateAttempt(commit string) *recoveryobs.Attempt {
+	read := p.lastUpdateAttempt
+	if read == nil {
+		read = recoveryobs.LastAttemptForTarget
+	}
+	attempt, ok := read(commit)
+	if !ok || !recoveryobs.ValidRequestID(attempt.RequestID) ||
+		(attempt.Phase != "failed" && attempt.Phase != "recovered") ||
+		(attempt.FailureCode != "" && !recoveryobs.ValidFailureCode(attempt.FailureCode)) {
+		return nil
+	}
+	finished, err := time.Parse(time.RFC3339, attempt.FinishedAt)
+	if err != nil || finished.UTC().Format("2006-01-02T15:04:05Z") != attempt.FinishedAt {
+		return nil
+	}
+	return &attempt
 }
 
 type panelUpdateStartRequest struct {
@@ -210,17 +236,82 @@ func validPanelUpdateStatus(status string) bool {
 
 // sanitizePanelUpdateSummary treats agent text as untrusted. Paths, URLs,
 // controls and oversized detail remain in the agent journal, never the API.
+// A reviewed updater failure line that is too long or carries a path is not
+// dropped: the Panel rebuilds a bounded form from its closed tokens (code,
+// state, the preflight step and reason class) and keeps a free reason only
+// when it is itself short and plain. The agent journal keeps the full line
+// ("System update worker failed: …"); no agent text is copied beyond that.
+// Güncelleyicinin uzun ya da yol içeren hata satırı düşürülmez; Panel kapalı
+// belirteçlerden sınırlı bir biçim kurar. Tam satır agent günlüğünde kalır.
 func sanitizePanelUpdateSummary(raw string) string {
 	value := strings.TrimSpace(raw)
-	if value == "" || len(value) > 240 || strings.ContainsAny(value, "/\\\r\n\t") || strings.Contains(value, "://") {
-		return ""
+	if plainPanelUpdateSummary(value, 240) {
+		return value
+	}
+	return boundedPanelUpdateFailure(value)
+}
+
+func plainPanelUpdateSummary(value string, limit int) bool {
+	if value == "" || len(value) > limit || strings.ContainsAny(value, "/\\\r\n\t") || strings.Contains(value, "://") {
+		return false
 	}
 	for _, r := range value {
 		if r < 0x20 || r == 0x7f {
-			return ""
+			return false
 		}
 	}
-	return value
+	return true
+}
+
+// Updater failure codes whose meaning the product defines (update.sh).
+var panelUpdateFailureCodes = map[string]bool{
+	"update_failed": true, "update_preflight_refused": true, "recovery_runtime_preflight_failed": true,
+	"package_manager_busy": true, "candidate_panel_startup_check_failed": true, "panel_start_unverified": true,
+	"unit_start_limit_hit": true, "recovery_runtime_preparation_unconfirmed": true,
+	"firewall_runtime_preparation_unconfirmed": true, "mail_runtime_preparation_unconfirmed": true,
+}
+
+var (
+	panelUpdateFailureLine = regexp.MustCompile(`(?:^|: )!! CELIKPANEL_UPDATE_FAILURE code=([a-z_]{1,64}) state=(unchanged|recovery_required) reason=`)
+	// The step and reason class of a refused update preflight, and the step of
+	// a recovery runtime preflight stop: closed lowercase tokens only.
+	panelUpdatePreflightReason = regexp.MustCompile(`^update preflight step=([a-z_]{1,40}) class=([a-z_]{1,40})(?:[: ]|$)`)
+	panelUpdateRuntimeReason   = regexp.MustCompile(`^recovery runtime preflight step=([a-z_]{1,40})(?:[: ]|$)`)
+)
+
+const panelUpdateFailureMarker = "!! CELIKPANEL_UPDATE_FAILURE"
+
+func boundedPanelUpdateFailure(value string) string {
+	match := panelUpdateFailureLine.FindStringSubmatchIndex(value)
+	if match == nil {
+		return ""
+	}
+	code, state := value[match[2]:match[3]], value[match[4]:match[5]]
+	if !panelUpdateFailureCodes[code] {
+		return ""
+	}
+	reason := value[match[1]:]
+	if end := strings.LastIndex(reason, " detail="); end >= 0 {
+		reason = reason[:end]
+	}
+	reason = strings.TrimSpace(reason)
+	switch {
+	case code == "update_preflight_refused":
+		if parts := panelUpdatePreflightReason.FindStringSubmatch(reason); parts != nil {
+			reason = "update preflight step=" + parts[1] + " class=" + parts[2]
+		} else {
+			reason = ""
+		}
+	case code == "recovery_runtime_preflight_failed":
+		if parts := panelUpdateRuntimeReason.FindStringSubmatch(reason); parts != nil {
+			reason = "recovery runtime preflight step=" + parts[1]
+		} else {
+			reason = ""
+		}
+	case !plainPanelUpdateSummary(reason, 120):
+		reason = ""
+	}
+	return panelUpdateFailureMarker + " code=" + code + " state=" + state + " reason=" + reason + " detail="
 }
 
 func writePanelUpdateUnavailable(w http.ResponseWriter, err error) {
@@ -243,6 +334,31 @@ func writePanelUpdateAgentFailure(w http.ResponseWriter, err error) {
 		message = "the update service did not respond in time"
 	}
 	writeCodedError(w, status, code, message, "")
+}
+
+// writePanelUpdateStartHostBusy answers a start the agent refused because the
+// host package manager is active with the same refusal every other server
+// change gets for it: HOST_MUTATION_BUSY, reason package_manager_active and that
+// reason's sentence (the web catalogue has both languages for it). Only the
+// agent's typed reason selects it; any other refusal keeps
+// PANEL_UPDATE_START_REFUSED. No update record exists for either (upd9 F2).
+// Paket yöneticisi etkin diye reddedilen başlatma, diğer değişikliklerle aynı
+// kodu, nedeni ve cümleyi alır; yalnız agent'ın tipli nedeni bunu seçer.
+func writePanelUpdateStartHostBusy(w http.ResponseWriter, reply transport.SystemUpdateStartResponse) bool {
+	if reply.Accepted || reply.Reason != transport.HostMutationReasonPackageManager {
+		return false
+	}
+	classification, ok := classifyHostMutationError(&hostMutationBusyError{reason: reply.Reason})
+	if !ok {
+		return false
+	}
+	w.WriteHeader(classification.Status)
+	_ = json.NewEncoder(w).Encode(apiErrorBody{
+		Error:  classification.Message,
+		Code:   classification.Code,
+		Reason: classification.Reason,
+	})
+	return true
 }
 
 func (p *Panel) handlePanelUpdateCheck(w http.ResponseWriter, r *http.Request) {
@@ -295,6 +411,9 @@ func (p *Panel) handlePanelUpdateCheck(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		response.Target = &target
+		if target.Commit != buildCommit {
+			response.PreviousAttempt = p.previousPanelUpdateAttempt(target.Commit)
+		}
 	}
 	_ = json.NewEncoder(w).Encode(response)
 }
@@ -407,6 +526,9 @@ func (p *Panel) handlePanelUpdateStart(w http.ResponseWriter, r *http.Request) {
 	if !reply.Accepted || strings.TrimSpace(reply.Error) != "" ||
 		(reply.Status != "queued" && reply.Status != "running") {
 		log.Printf("[panel-update] agent refused start: %s", sanitizePanelUpdateSummary(reply.Error))
+		if writePanelUpdateStartHostBusy(w, reply) {
+			return
+		}
 		writeCodedError(w, http.StatusConflict, "PANEL_UPDATE_START_REFUSED", "the update service did not accept this request", "")
 		return
 	}

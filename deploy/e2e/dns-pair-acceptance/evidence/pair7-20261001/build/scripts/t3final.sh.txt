@@ -1,0 +1,9 @@
+C=pair-accept__pdns-debian13__bind-arch__p7t3
+H=$(printf %s "$C" | sha256sum | cut -c1-24)
+KH=/var/tmp/cp-pair7-work/cells/$H/ssh-known-hosts
+O=/root/cp-pair7/obs/p7t3-extra
+sshn() { port=$1; shift; timeout 120 ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$KH -i /var/tmp/cp-pair7-key/id_ed25519 -p $port celik@127.0.0.1 "$@"; }
+{ echo "## $(date -u +%FT%TZ) read-only, after the extra experiment: primary pdns.service CATALOG-HASH lines (all boots) and served catalog"; sshn 2201 "sudo -n journalctl -u pdns.service --no-pager -o short-iso-precise | grep 'CATALOG-HASH'" < /dev/null; sshn 2202 "sudo -n /usr/bin/python3 - catalog --server 192.0.2.10 --catalog catalog-c000020a.celikpanel.invalid" < /root/cp-pair7/driver/deploy/e2e/dns-pair-acceptance/guest_probe.py; } > $O/restamp-after-extra.txt 2>&1
+cat $O/restamp-after-extra.txt | cut -c1-300
+grep -c . $O/api.jsonl; cut -c1-300 $O/debian13-ledger-dns-jobs.txt | tail -4
+bash /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/p7b12/stopcell.sh $C

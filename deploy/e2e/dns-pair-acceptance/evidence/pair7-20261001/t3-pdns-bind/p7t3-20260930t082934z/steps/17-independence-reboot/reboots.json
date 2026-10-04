@@ -1,0 +1,62 @@
+{
+  "arch": {
+    "action": "reboot",
+    "boot_id_after": "6e10af22-d1d1-4d3b-bd86-db95cc479daa",
+    "boot_id_before": "e5ba62df-c7c6-4e6d-989e-0d45f523961b",
+    "cell_id": "pair-accept__pdns-debian13__bind-arch__p7t3",
+    "elapsed_seconds": 52.304,
+    "method": "guest systemctl reboot (orderly), then fixture SSH readiness",
+    "node": "arch",
+    "product_uuid": "245a6818-9568-598f-a3ed-67b2ba44b57a",
+    "reboot_command": [
+      "ssh",
+      "-o",
+      "BatchMode=yes",
+      "-o",
+      "ConnectTimeout=5",
+      "-o",
+      "StrictHostKeyChecking=accept-new",
+      "-o",
+      "HashKnownHosts=no",
+      "-o",
+      "UserKnownHostsFile=/var/tmp/cp-pair7-work/cells/2bc5bf644a4c57a45b802e6a/ssh-known-hosts",
+      "-i",
+      "/var/tmp/cp-pair7-key/id_ed25519",
+      "-p",
+      "2202",
+      "celik@127.0.0.1",
+      "sudo -n /usr/bin/systemctl reboot"
+    ],
+    "reboot_command_returncode": 0
+  },
+  "debian13": {
+    "action": "reboot",
+    "boot_id_after": "9161db33-8736-49c7-bae3-8e63f3c7d15e",
+    "boot_id_before": "f3247c3a-09a8-4c7b-a411-c144b95a4848",
+    "cell_id": "pair-accept__pdns-debian13__bind-arch__p7t3",
+    "elapsed_seconds": 18.959,
+    "method": "guest systemctl reboot (orderly), then fixture SSH readiness",
+    "node": "debian13",
+    "product_uuid": "50e76c2d-0830-5561-96c3-93a76b45a926",
+    "reboot_command": [
+      "ssh",
+      "-o",
+      "BatchMode=yes",
+      "-o",
+      "ConnectTimeout=5",
+      "-o",
+      "StrictHostKeyChecking=accept-new",
+      "-o",
+      "HashKnownHosts=no",
+      "-o",
+      "UserKnownHostsFile=/var/tmp/cp-pair7-work/cells/2bc5bf644a4c57a45b802e6a/ssh-known-hosts",
+      "-i",
+      "/var/tmp/cp-pair7-key/id_ed25519",
+      "-p",
+      "2201",
+      "celik@127.0.0.1",
+      "sudo -n /usr/bin/systemctl reboot"
+    ],
+    "reboot_command_returncode": 0
+  }
+}

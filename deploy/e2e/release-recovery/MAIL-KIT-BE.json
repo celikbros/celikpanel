@@ -1,0 +1,55 @@
+{
+  "schema": "celikpanel/native-mail-kit/v1",
+  "source_commit": "fbe05598bd8f7d4fa528546a25945e4df1bc8ccf",
+  "lab": {
+    "cell_id": "release-recovery__3688d130a0721786",
+    "node": "debian13"
+  },
+  "manifest": {
+    "schema": "celikpanel-mail-renewal-runtime/v1",
+    "generation": "a934256c2b3ec52a20498abd3b41ce3b38a3c13619d61712aab0b369e6f3b9f2",
+    "ledger_version": 1,
+    "plan_version": 1,
+    "receipt_schema": "mail-host-certificate-receipt/v1",
+    "binary_sha256": "c4d1eeb09db1223a04c0aa87faf7759107d7a674a305013170fe068340472ebe",
+    "service_sha256": "69eab464142b86f4eb8d9e6fb6ded69b3a16201d18d6ed09ed3f4eaa6a1e9618",
+    "timer_sha256": "8f4a40a06ace0a4ea845c214504fb5ee2e77e020e0b377828a59d78e948bf8df",
+    "hook_sha256": "a21050c2dedd261045d33c8518a10a3c151ffd839052b178f9807b4d0a80f44c"
+  },
+  "service": "[Unit]\nDescription=Deploy an already renewed mail host certificate\nAfter=local-fs.target postfix.service dovecot.service\n\n[Service]\nType=oneshot\nUser=root\nGroup=celikpanel\nUMask=0077\nExecStart=/usr/libexec/celikpanel/mail-renewal/a934256c2b3ec52a20498abd3b41ce3b38a3c13619d61712aab0b369e6f3b9f2/renew --process-pending\nTimeoutStartSec=180s\nKillMode=control-group\nNoNewPrivileges=true\nPrivateTmp=true\nProtectHome=true\nProtectSystem=full\nReadWritePaths=-/etc/ssl/celikpanel/_mail/host\n",
+  "timer": "[Unit]\nDescription=Check retained mail certificate renewal work\n\n[Timer]\nOnBootSec=30s\nOnUnitInactiveSec=5min\nRandomizedDelaySec=15s\nAccuracySec=1s\nUnit=celikpanel-mail-renewal.service\n\n[Install]\nWantedBy=timers.target\n",
+  "hook": "#!/bin/sh\nset -eu\n# Queue only the selected managed host lineage. Native timer handles deployment.\nlineage=${RENEWED_LINEAGE:-}\ncase \"$lineage\" in\n /etc/letsencrypt/live/celikpanel-mail-*)\n  lineage_name=${lineage#/etc/letsencrypt/live/}\n  case \"$lineage_name\" in \"\"|*/*) exit 0 ;; esac\n  exec /usr/libexec/celikpanel/mail-renewal/a934256c2b3ec52a20498abd3b41ce3b38a3c13619d61712aab0b369e6f3b9f2/renew --queue \"$lineage_name\"\n  ;;\nesac\nexit 0\n",
+  "scope": {
+    "native_hook_and_timer": true,
+    "automatic_boot_new_leaf": true,
+    "real_native_mail": true,
+    "installed_management_absent": true,
+    "fixture_ca": true,
+    "production_enrollment": false,
+    "public_acme": false,
+    "power_loss": false,
+    "independent_interrupted_recovery": false
+  },
+  "logs": {
+    "mail-kit-install.log": {
+      "text": "fixture_kit_installed generation=a934256c2b3ec52a20498abd3b41ce3b38a3c13619d61712aab0b369e6f3b9f2 previous_hook=retained; installed_management=absent\ncomponent=mail-renewal\nversion=dev\ncommit=fbe05598bd8f7d4fa528546a25945e4df1bc8ccf\nResult=success\nExecMainStatus=0\nActiveState=inactive\nSep 22 11:53:28 dns-debian13 systemd[1]: Starting celikpanel-mail-renewal.service - Deploy an already renewed mail host certificate...\nSep 22 11:53:28 dns-debian13 systemd[1]: celikpanel-mail-renewal.service: Deactivated successfully.\nSep 22 11:53:28 dns-debian13 systemd[1]: Finished celikpanel-mail-renewal.service - Deploy an already renewed mail host certificate.\nnative_sandbox_same_leaf_ack=verified; production_enrollment=not_exercised\n",
+      "sha256": "c415a5ab54f40670ce21d7bee0507756478443dcbc0cd0ae5e1129620411c5ae"
+    },
+    "mail-kit-source3.log": {
+      "text": "kit_fixture_source_prepared old=db2af9c1fd06d1ed5a219a2166cfb648e43fdba67badd2ecb2da144493b554e3 new=109c7bcfbac1205641e8261b208d6ec21e32de6b47290c098ce533b62dead0cb\nnative_hook=queued; helper_service_not_started_by_hook=yes\nenabled\nactive\n-----\nrehash: warning: skipping ca-certificates.crt, it does not contain exactly one certificate or CRL\n-----\nCertificate request self-signature ok\nsubject=CN=mail.setup.celikpanel.test\nCreated symlink '/etc/systemd/system/timers.target.wants/celikpanel-mail-renewal.timer' \u2192 '/etc/systemd/system/celikpanel-mail-renewal.timer'.\n",
+      "sha256": "8875375e8f91dce45aa9a9f5767d5f1fa343bab9475e785db24cb08916036773"
+    },
+    "mail-kit-timer3.log": {
+      "text": "7454d2bf-0685-464f-813f-8e62648f1872\nNextElapseUSecMonotonic=22min 36.015296s\nLastTriggerUSec=Tue 2026-09-22 11:55:18 UTC\nActiveState=active\nResult=success\nExecMainStatus=0\nActiveState=inactive\nSep 22 11:53:28 dns-debian13 systemd[1]: Starting celikpanel-mail-renewal.service - Deploy an already renewed mail host certificate...\nSep 22 11:53:28 dns-debian13 systemd[1]: celikpanel-mail-renewal.service: Deactivated successfully.\nSep 22 11:53:28 dns-debian13 systemd[1]: Finished celikpanel-mail-renewal.service - Deploy an already renewed mail host certificate.\nSep 22 11:55:18 dns-debian13 systemd[1]: Starting celikpanel-mail-renewal.service - Deploy an already renewed mail host certificate...\nSep 22 11:55:19 dns-debian13 systemd[1]: celikpanel-mail-renewal.service: Deactivated successfully.\nSep 22 11:55:19 dns-debian13 systemd[1]: Finished celikpanel-mail-renewal.service - Deploy an already renewed mail host certificate.\nnative_timer_new_leaf_completed request=47fe08466f82e88445ed63374470f8e6 leaf=109c7bcfbac1205641e8261b208d6ec21e32de6b47290c098ce533b62dead0cb queue=absent; config=unchanged\nsha256 Fingerprint=10:9C:7B:CF:BA:C1:20:56:41:E8:26:1B:20:8D:6E:C2:1E:32:DE:6B:47:29:0C:09:8C:E5:33:B6:2D:EA:D0:CB\nsha256 Fingerprint=10:9C:7B:CF:BA:C1:20:56:41:E8:26:1B:20:8D:6E:C2:1E:32:DE:6B:47:29:0C:09:8C:E5:33:B6:2D:EA:D0:CB\n",
+      "sha256": "ffaf226db3ae2ef73aeef22e17a69201d7e4902a0ded47bd7fd9d2c0bd04848e"
+    },
+    "mail-kit-boot-prepare.log": {
+      "text": "next_boot_source_prepared old=109c7bcfbac1205641e8261b208d6ec21e32de6b47290c098ce533b62dead0cb new=e547037bb03d6350c18bba7f68f6d0681f2748632253c4752fa810984b3533b9 before_boot=7454d2bf-0685-464f-813f-8e62648f1872\nenabled\nbefore_reboot=pending; timer=enabled_but_stopped; no_manual_renewal_start=yes\n-----\nCertificate request self-signature ok\nsubject=CN=mail.setup.celikpanel.test\nRunning timer as unit: celikpanel-lab-mail-kit-reboot.timer\nWill run service as unit: celikpanel-lab-mail-kit-reboot.service\n",
+      "sha256": "f96b00cf4ac44ae0ee62a12453a6de8a34f6968b9149387cf36ffe1b4bc17d4d"
+    },
+    "mail-kit-boot-result.log": {
+      "text": "be151cee-97ee-4d8c-b4b4-05abfa475e0f\ninstalled_management=absent\nenabled\nactive\nLastTriggerUSec=Tue 2026-09-22 11:57:47 UTC\nActiveState=active\nResult=success\nExecMainStatus=0\nActiveState=inactive\nSep 22 11:57:10 dns-debian13 systemd[1]: Started celikpanel-mail-renewal.timer - Check retained mail certificate renewal work.\nSep 22 11:57:47 dns-debian13 systemd[1]: Starting celikpanel-mail-renewal.service - Deploy an already renewed mail host certificate...\nSep 22 11:57:48 dns-debian13 systemd[1]: celikpanel-mail-renewal.service: Deactivated successfully.\nSep 22 11:57:48 dns-debian13 systemd[1]: Finished celikpanel-mail-renewal.service - Deploy an already renewed mail host certificate.\nautomatic_boot_renewal_completed request=d394d5e4b368e03ddc420af5269bd3b0 leaf=e547037bb03d6350c18bba7f68f6d0681f2748632253c4752fa810984b3533b9 queue=absent; config=unchanged; runtime=root:celikpanel:0750\nactive\nactive\nsha256 Fingerprint=E5:47:03:7B:B0:3D:63:50:C1:8B:BA:7F:68:F6:D0:68:1F:27:48:63:22:53:C4:75:2F:A8:10:98:4B:35:33:B9\nsha256 Fingerprint=E5:47:03:7B:B0:3D:63:50:C1:8B:BA:7F:68:F6:D0:68:1F:27:48:63:22:53:C4:75:2F:A8:10:98:4B:35:33:B9\n",
+      "sha256": "56d88411f083a4361b5b75da41955fa0ee00541fe40cf07ca56f486676f5a517"
+    }
+  }
+}

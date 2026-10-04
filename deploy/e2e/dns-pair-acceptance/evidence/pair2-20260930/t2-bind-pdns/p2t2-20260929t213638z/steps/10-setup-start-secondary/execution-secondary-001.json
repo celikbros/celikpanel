@@ -1,0 +1,73 @@
+{
+  "context": {
+    "access_dns_ip": "192.0.2.10",
+    "dns_engine": "pdns",
+    "dns_hosting_management": "",
+    "dns_mode": "local",
+    "dns_role": "secondary",
+    "local_ip": "192.0.2.10",
+    "local_nameserver": "ns2.ns-accept.test",
+    "mail_hostname": "",
+    "panel_domain": "panel-debian13.ns-accept.test",
+    "peer_ip": "192.0.2.11",
+    "peer_nameserver": "ns1.ns-accept.test"
+  },
+  "id": "32b966929aed716e15e17bda6e3ea42f",
+  "panel_url": "https://panel-debian13.ns-accept.test:2083/",
+  "phase": "02-service",
+  "plan_id": "be25d8c906f1b54d869f45897fd4e889",
+  "request_id": "32b966929aed716e15e17bda6e3ea42f",
+  "status": "running",
+  "steps": [
+    {
+      "id": "01-dns",
+      "kind": "dns",
+      "owner_id": "d785503f532a211ef7a82561f5e05c2b",
+      "request_id": "e2cf93295e1d9c6751b7240380598650",
+      "status": "succeeded",
+      "target": "local"
+    },
+    {
+      "id": "02-service",
+      "kind": "service",
+      "operation_id": "f1eb5a5fed74dfa00196d5c78d3ca894",
+      "owner_id": "ddc60574cc2d14cef20ae2af2038490b",
+      "request_id": "1ddb3bbe8d8ea4779433f6113fa2f8f4",
+      "status": "running",
+      "target": "certbot"
+    },
+    {
+      "id": "03-firewall",
+      "kind": "firewall",
+      "owner_id": "cc124177c8e9c5d152d63e6c24199cda",
+      "request_id": "503fdcee3f5cc2c804f7940d3adc2fb4",
+      "status": "pending",
+      "target": "enable_and_persist"
+    },
+    {
+      "id": "04-access_dns",
+      "kind": "access_dns",
+      "owner_id": "7c4d8d9011bc0a41a42a09bc2432be79",
+      "qualifier": "192.0.2.10",
+      "request_id": "43eae6894aa3b4090da9045f0752e864",
+      "status": "pending",
+      "target": "panel-debian13.ns-accept.test"
+    },
+    {
+      "id": "05-panel_certificate",
+      "kind": "panel_certificate",
+      "owner_id": "5a2582a57a9aa6dd943b4d5c778a062c",
+      "request_id": "a0dbef1beccd414ddebdf61745f72c79",
+      "status": "pending",
+      "target": "panel-debian13.ns-accept.test"
+    },
+    {
+      "id": "06-verify",
+      "kind": "verify",
+      "owner_id": "60da8e74e59377d1cb454d33c4fbe538",
+      "request_id": "9a9e70e3fe536d6a1ea33ea1eb07ee74",
+      "status": "pending",
+      "target": "dns"
+    }
+  ]
+}

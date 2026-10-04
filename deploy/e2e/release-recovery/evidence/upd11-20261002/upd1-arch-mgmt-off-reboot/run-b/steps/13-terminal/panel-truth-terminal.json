@@ -1,0 +1,25 @@
+{
+  "cron_listed": true,
+  "databases": [
+    "upd1_owner_test_upd1db"
+  ],
+  "domains": [
+    [
+      1,
+      "upd1-owner.test"
+    ]
+  ],
+  "recovery": {
+    "phase": "succeeded",
+    "previous_failure": null,
+    "terminal_proof": "update_verified"
+  },
+  "update_status": "succeeded",
+  "version": {
+    "agent_commit": "73eef2862644ccf48290073d3eeeb6bb461c1330",
+    "agent_matches": true,
+    "commit": "73eef2862644ccf48290073d3eeeb6bb461c1330",
+    "schema_version": 42,
+    "version": "v0.1.0-alpha.82"
+  }
+}

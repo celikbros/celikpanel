@@ -52,6 +52,9 @@ func TestMailTLSPreflightPinsAbsoluteCommandsAfterAllLookups(t *testing.T) {
 			t.Fatalf("runner called before all lookups completed: %s", got)
 		}
 		calls = append(calls, name)
+		if filepath.Base(name) == "dovecot" {
+			return []byte("2.4.1\n"), nil
+		}
 		if filepath.Base(name) == "postmap" {
 			if len(args) != 2 || args[0] != "-F" || !strings.HasPrefix(args[1], "lmdb:") {
 				t.Fatalf("unexpected probe command: %q %q", name, args)
@@ -155,18 +158,21 @@ func TestMailTLSPreflightDoesNotRequirePostmapWithoutSNI(t *testing.T) {
 	}
 	t.Cleanup(func() { lookupMailTLSCommand = previousLookup })
 
-	runnerCalled := false
-	if _, err := preflightMailTLSCommands(false, func(string, ...string) ([]byte, error) {
-		runnerCalled = true
-		return nil, nil
+	versionCalls := 0
+	if _, err := preflightMailTLSCommands(false, func(name string, args ...string) ([]byte, error) {
+		if filepath.Base(name) != "dovecot" || strings.Join(args, " ") != "--version" {
+			t.Fatalf("unexpected empty-SNI command: %s %v", name, args)
+		}
+		versionCalls++
+		return []byte("2.4.1\n"), nil
 	}); err != nil {
 		t.Fatal(err)
 	}
 	if postmapLookup {
 		t.Fatal("empty SNI preflight looked up postmap")
 	}
-	if runnerCalled {
-		t.Fatal("empty SNI preflight ran a command")
+	if versionCalls != 1 {
+		t.Fatalf("version observations = %d", versionCalls)
 	}
 }
 
@@ -182,6 +188,9 @@ func TestReconcileMailTLSRejectsUnsupportedSNIMapBeforeSnapshot(t *testing.T) {
 	var commands []string
 	runner := func(name string, _ ...string) ([]byte, error) {
 		commands = append(commands, filepath.Base(name))
+		if filepath.Base(name) == "dovecot" {
+			return []byte("2.4.1\n"), nil
+		}
 		return nil, nil
 	}
 	var response SecureMailTLSResponse
@@ -195,7 +204,7 @@ func TestReconcileMailTLSRejectsUnsupportedSNIMapBeforeSnapshot(t *testing.T) {
 	if !strings.Contains(response.Error, "no usable indexed table type") {
 		t.Fatalf("unsupported map response = %#v", response)
 	}
-	if got := strings.Join(commands, ","); got != "postmap,postmap,postmap" {
+	if got := strings.Join(commands, ","); got != "dovecot,postmap,postmap,postmap" {
 		t.Fatalf("commands before unsupported-map refusal = %q", got)
 	}
 }

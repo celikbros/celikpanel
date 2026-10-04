@@ -1,0 +1,81 @@
+wall=2026-09-30T05:25:46.854984268Z boot_id=1d18ca8b-91a2-4fcb-b807-cb544b17bb9e uptime=303.70
+== results directory
+total 172
+drwx------ 2 root root        4096 2026-09-30 05:24:57.897718339 +0000 .
+drwx------ 3 root root        4096 2026-09-30 05:22:58.522793985 +0000 ..
+-rw------- 1 root celikpanel  1284 2026-09-30 05:24:09.893940526 +0000 boundary-marker.json
+-rw------- 1 root celikpanel  1904 2026-09-30 05:24:09.929940302 +0000 kill-proof.json
+-rw------- 1 root celikpanel 91196 2026-09-30 05:24:57.881718398 +0000 reboot-checkpoint-1.json
+-rw------- 1 root celikpanel 61559 2026-09-30 05:24:57.865718457 +0000 transcript.jsonl
+== /var/lib/celikpanel-dns-kill-matrix/results/pdns-switch__target-started__after-write__paired-primary__peer-reachable/reboot-checkpoint-1.json sha256
+4ccd439e639816d8d4c025c9f03904c3e35952248ece7ddc3f79bb2f13f1f036  /var/lib/celikpanel-dns-kill-matrix/results/pdns-switch__target-started__after-write__paired-primary__peer-reachable/reboot-checkpoint-1.json
+{"schema": "celikpanel/dns-kill-reboot-checkpoint/v1", "stage": "zone-lifecycle-before-reboot", "ordinal": 1, "cell_id": "pdns-switch__target-started__after-write__paired-primary__peer-reachable", "request_id": "c59b537aac13c590e71b4682a88ed7b1"}
+result.json present: no
+== controller/trigger processes
+23093 pgrep -x agent.kill
+== celikpanel-agent.service 5573/active/enabled/
+== celikpanel-panel.service 9452/active/enabled/
+== pdns.service 5467/active/enabled/
+== zone-sync ledger jobs
+{"request_id": "c59b537aac13c590e71b4682a88ed7b1", "kind": "dns_engine_switch", "target": "pdns", "status": "succeeded", "phase": "commit/dns-engine-switch/v2/finalized/c59b537aac13c590e71b4682a88ed7b1/dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "attempt": 1, "error_code": null, "updated_at": "2026-09-30T05:24:26.777241049Z"}
+{"request_id": "88a85ce293b371ea72de8cd9cb5d9cfd", "kind": "dns_zone_sync", "target": "s2.s1-kill.test", "status": "succeeded", "phase": "commit/dns-zone-sync/v3/published/88a85ce293b371ea72de8cd9cb5d9cfd/s2.s1-kill.test/dns-zone-sync/v3:sha256:6ccf0b5599f9694e54f65d92a6d3550f13100491b834a76a160a9b74b05705b4", "attempt": 1, "error_code": null, "updated_at": "2026-09-30T05:25:09.137250525Z"}
+{"request_id": "bd76b7b04a3d905bb8f827ee479e09a7", "kind": "dns_zone_sync", "target": "s2.s1-kill.test", "status": "succeeded", "phase": "commit/dns-zone-sync/v3/published/bd76b7b04a3d905bb8f827ee479e09a7/s2.s1-kill.test/dns-zone-sync/v3:sha256:98d9e99d187e86504a3c8e28d4054bc0506d2e447445e731c5ccf02ffba86c56", "attempt": 1, "error_code": null, "updated_at": "2026-09-30T05:25:20.387560456Z"}
+{
+ "attempt": 1,
+ "deadline_at": "2026-09-30T06:10:26.564932807Z",
+ "error_code": "dns_peer_enrollment_required",
+ "error_message": "The exact local DNS publication is waiting for paired propagation recovery.",
+ "finished_at": "2026-09-30T05:25:33.91053209Z",
+ "kind": "dns_zone_sync",
+ "lease_expires_at": "0001-01-01T00:00:00Z",
+ "owner_id": "49023ad113740f2b5da939b35c76c2f7",
+ "package_name": "dns-zone-sync/v3:sha256:e90fb9845e27429320ea2b358a36431de04f7585481c0e935b01623592b4d3f1",
+ "phase": "commit/dns-zone-sync/v3/propagation-pending/192554344c6206934b16138c9cca14ca/s2.s1-kill.test/dns-zone-sync/v3:sha256:e90fb9845e27429320ea2b358a36431de04f7585481c0e935b01623592b4d3f1",
+ "request_id": "192554344c6206934b16138c9cca14ca",
+ "started_at": "2026-09-30T05:25:26.564932807Z",
+ "status": "pending",
+ "target": "s2.s1-kill.test",
+ "updated_at": "2026-09-30T05:25:33.91053209Z"
+}
+== agent journal this boot (zone/peer/pending lines)
+2026-09-30T05:21:52.284214+00:00 dns-debian13 agent[1199]: 2026/09/30 05:21:52 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-09-30T05:22:02.287568+00:00 dns-debian13 agent[1199]: 2026/09/30 05:22:02 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:22:12.294456+00:00 dns-debian13 agent[1199]: 2026/09/30 05:22:12 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:22:22.284961+00:00 dns-debian13 agent[1199]: 2026/09/30 05:22:22 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:22:32.310292+00:00 dns-debian13 agent[1199]: 2026/09/30 05:22:32 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:22:42.287413+00:00 dns-debian13 agent[1199]: 2026/09/30 05:22:42 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:22:52.293959+00:00 dns-debian13 agent[1199]: 2026/09/30 05:22:52 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:24:26.812512+00:00 dns-debian13 agent[5573]: 2026/09/30 05:24:26 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:24:36.813180+00:00 dns-debian13 agent[5573]: 2026/09/30 05:24:36 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:24:46.814399+00:00 dns-debian13 agent[5573]: 2026/09/30 05:24:46 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:24:56.813200+00:00 dns-debian13 agent[5573]: 2026/09/30 05:24:56 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:25:06.817899+00:00 dns-debian13 agent[5573]: 2026/09/30 05:25:06 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:25:16.813850+00:00 dns-debian13 agent[5573]: 2026/09/30 05:25:16 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:25:26.812575+00:00 dns-debian13 agent[5573]: 2026/09/30 05:25:26 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:25:33.932699+00:00 dns-debian13 agent[5573]: 2026/09/30 05:25:33 pdns zone publication remains pending for s2.s1-kill.test at epoch 1: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T05:25:33.932699+00:00 dns-debian13 agent[5573]: dns_peer_enrollment_required
+2026-09-30T05:25:36.819521+00:00 dns-debian13 agent[5573]: 2026/09/30 05:25:36 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-30T05:25:46.820445+00:00 dns-debian13 agent[5573]: 2026/09/30 05:25:46 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+wall=2026-09-30T05:25:48.180742236Z boot_id=09b1f948-f96b-4242-a092-2c5f42a3c559
+== host cell dir /var/tmp/cp-b11-1001/r2/cells/e05b4787635364e83414f682/fresh-primary-peer
+total 24
+drwx------ 2 root root 4096 2026-09-30 08:25:33.714582577 +0300 .
+drwx------ 5 root root 4096 2026-09-30 08:25:00.442583727 +0300 ..
+-rw------- 1 root root 1433 2026-09-30 08:25:00.451012683 +0300 peer-verdict.json
+-rw------- 1 root root  896 2026-09-30 08:25:33.720141766 +0300 zone-lifecycle-held.json
+-rw------- 1 root root 7055 2026-09-30 08:25:33.713301344 +0300 zone-lifecycle.json
+5b6b86824c90e85e28b266d88a171fa17d2cd539f830c7f7832fb3a5360b884e  /var/tmp/cp-b11-1001/r2/cells/e05b4787635364e83414f682/fresh-primary-peer/peer-verdict.json
+64cabc941cea7621b9c3d12c64c7b812d0381d6994b3543250155cd8ee8a172b  /var/tmp/cp-b11-1001/r2/cells/e05b4787635364e83414f682/fresh-primary-peer/zone-lifecycle-held.json
+fa4907cb1555afbcbb1831c3906cd3c97e4a81e6a57828be5a1d747053145f71  /var/tmp/cp-b11-1001/r2/cells/e05b4787635364e83414f682/fresh-primary-peer/zone-lifecycle.json
+== /var/tmp/cp-b11-1001/r2/cells/e05b4787635364e83414f682/fresh-primary-peer/zone-lifecycle-held.json
+{
+  "cell_id": "pdns-switch__target-started__after-write__paired-primary__peer-reachable",
+  "guest": "suspended for the zone lifecycle on the same boot; not continued",
+  "lifecycle_exit": 2,
+  "lifecycle_status": "pending",
+  "next_step": "the Agent kept the deletion of s2.s1-kill.test pending (dns_peer_enrollment_required): the server owner enrolls the native BIND secondary for inspection (dns-peer-enroll --engine bind on both guests, as the Agent's error code names), then runs guest_bootstrap.py run-prepared <same arguments and run flags> --zero-zones --resume-held-zone-lifecycle --execute (the guest run stays suspended on this boot until then; do not reboot or restart it); that resumes the same request (RecoverDNSZoneV3) and never requests a second deletion",
+  "peer_verdict_exit": 0,
+  "schema": "celikpanel/dns-kill-fresh-primary-zone-lifecycle-held/v1",
+  "zero_zones": true
+}
+

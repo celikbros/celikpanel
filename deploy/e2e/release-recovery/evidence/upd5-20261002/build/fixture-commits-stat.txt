@@ -1,0 +1,18 @@
+=== 6cda60b8..ad55cab84ce93627721040997870993cf91d81b2
+ deploy/release-sequence-policy | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+=== 6cda60b8..d1b562d6fbe9749767dbbbe1f86ff7fbe2e4fc7c
+ deploy/release-sequence-policy | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+=== 6cda60b8..9f7bd8292b881e192512d129c9039b240d538259
+ cmd/panel/main.go              |  6 ++++--
+ deploy/release-sequence-policy | 10 +++++-----
+ 2 files changed, 9 insertions(+), 7 deletions(-)
+=== 6cda60b8..cfa0cb33df89d29d02a00672bddc6c2d74e5204b
+ cmd/panel/server_lifecycle.go  |  6 ++++++
+ deploy/release-sequence-policy | 10 +++++-----
+ 2 files changed, 11 insertions(+), 5 deletions(-)
+=== 6cda60b8..ed1f31e0ce0a2bff37ca0480f31d0442d4c82cc5
+ cmd/panel/main.go              |  4 ++++
+ deploy/release-sequence-policy | 10 +++++-----
+ 2 files changed, 9 insertions(+), 5 deletions(-)

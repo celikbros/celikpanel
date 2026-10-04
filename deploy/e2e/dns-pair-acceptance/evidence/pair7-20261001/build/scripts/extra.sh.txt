@@ -1,0 +1,84 @@
+#!/bin/bash
+# pair7 t3 EXTRA experiment, outside the driver's verdicts (run only after the t3 driver run completed every step).
+# Second zone through the Panel API on the still-running t3 guests: create, delete; if the delete is pending,
+# wait 90 s after the pending answer (the PowerDNS daemon's ~60 s catalog re-stamp) and retry the same deletion once;
+# then read-only status polling. Output: /root/cp-pair7/obs/p7t3-extra/
+set -uo pipefail
+W=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/p7b12
+C=pair-accept__pdns-debian13__bind-arch__p7t3
+Z=extra-accept.test
+CAT=catalog-c000020a.celikpanel.invalid
+H=$(printf %s "$C" | sha256sum | cut -c1-24)
+KH=/var/tmp/cp-pair7-work/cells/$H/ssh-known-hosts
+O=/root/cp-pair7/obs/p7t3-extra
+test ! -e $O || { echo "exists: $O"; exit 1; }
+mkdir -p $O
+exec > $O/extra-runner.log 2>&1
+sshn() { port=$1; shift; timeout 900 ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$KH -i /var/tmp/cp-pair7-key/id_ed25519 -p $port celik@127.0.0.1 "$@"; }
+PROBE=/root/cp-pair7/driver/deploy/e2e/dns-pair-acceptance/guest_probe.py
+step() { echo "### $(date -u +%FT%T.%3NZ) $*"; }
+g() { sshn 2201 "sudo -n /usr/bin/python3 - $*" < $W/extra_guest.py | tee -a $O/api.jsonl; }
+T0="$(date -u '+%Y-%m-%d %H:%M:%S')"
+echo "$T0" > $O/start-utc.txt
+step start cell=$C zone=$Z
+step boot ids and units before
+sshn 2201 'echo "debian13 boot_id=$(cat /proc/sys/kernel/random/boot_id)"; systemctl is-active celikpanel-agent celikpanel-panel pdns' < /dev/null
+sshn 2202 'echo "arch boot_id=$(cat /proc/sys/kernel/random/boot_id)"; systemctl is-active named' < /dev/null
+step "owner step: separate administrator p7extra via the product CLI (panel --create-admin --admin-credentials-file=-)"
+g admin
+step create
+g create $Z
+ID=$(grep '"event": "create"' $O/api.jsonl | tail -1 | python3 -c 'import json,sys; b=json.loads(sys.stdin.read())["body"] or {}; print(b.get("DomainID") or b.get("domain_id") or "")')
+echo "domain id: $ID"
+[[ -n $ID ]] || { step "no domain id; stop"; exit 1; }
+step wait until the secondary serves the catalog member "(read-only, up to 120 s)"
+for i in $(seq 1 24); do
+  c=$(sshn 2202 "sudo -n /usr/bin/python3 - catalog --server 192.0.2.10 --catalog $CAT" < $PROBE 2>&1 | tail -1)
+  echo "$(date -u +%FT%TZ) $c" | cut -c1-400
+  [[ $c == *"\"$Z.\""* ]] && break
+  sleep 5
+done
+sshn 2202 "sudo -n /usr/bin/python3 - native --engine bind --zone $Z --catalog $CAT" < $PROBE > $O/arch-native-before-delete.json 2>&1
+sshn 2201 "sudo -n /usr/bin/python3 - native --engine pdns --zone $Z --catalog $CAT" < $PROBE > $O/debian13-native-before-delete.json 2>&1
+step delete "(first)"
+g delete $ID
+first=$(grep '"event": "delete"' $O/api.jsonl | tail -1 | python3 -c 'import json,sys; print(json.loads(sys.stdin.read())["http_status"])')
+echo "first delete http_status=$first"
+if [[ $first == 202 ]]; then
+  TP=$(date +%s)
+  step "pending: wait 90 s before the retry (read-only status reads at +30/+60 s)"
+  sleep 30; g status $ID > /dev/null
+  sleep 30; g status $ID > /dev/null
+  while (( $(date +%s) - TP < 90 )); do sleep 2; done
+  step "primary pdns CATALOG-HASH lines since the start (read-only)"
+  sshn 2201 "sudo -n journalctl -u pdns.service --no-pager -o short-iso-precise --since '$T0' | grep 'CATALOG-HASH'" < /dev/null
+  step retry "(the same deletion once, $(( $(date +%s) - TP )) s after the pending answer)"
+  g delete $ID
+  second=$(grep '"event": "delete"' $O/api.jsonl | tail -1 | python3 -c 'import json,sys; print(json.loads(sys.stdin.read())["http_status"])')
+  echo "retry http_status=$second"
+  if [[ $second == 202 ]]; then
+    step "still pending: read-only status polling up to 300 s"
+    for i in $(seq 1 30); do sleep 10; s=$(g status $ID | grep '"event": "deletion-status"' | python3 -c 'import json,sys; print(json.loads(sys.stdin.read())["http_status"])'); [[ $s == 404 || $s == 204 ]] && break; done
+  fi
+else
+  step "first delete not pending (http $first): no retry"
+fi
+g status $ID > /dev/null
+step "read-only after-state"
+sshn 2202 "sudo -n /usr/bin/python3 - native --engine bind --zone $Z --catalog $CAT" < $PROBE > $O/arch-native-after.json 2>&1
+sshn 2201 "sudo -n /usr/bin/python3 - native --engine pdns --zone $Z --catalog $CAT" < $PROBE > $O/debian13-native-after.json 2>&1
+sshn 2202 "sudo -n /usr/bin/python3 - catalog --server 192.0.2.10 --catalog $CAT" < $PROBE > $O/catalog-after.json 2>&1
+sshn 2201 "sudo -n journalctl -u celikpanel-agent.service --no-pager -o short-iso-precise --since '$T0' | grep -v -i secret" < /dev/null > $O/debian13-agent-journal.txt 2>&1
+sshn 2201 "sudo -n journalctl -u celikpanel-panel.service --no-pager -o short-iso-precise --since '$T0' | grep -v -i secret" < /dev/null > $O/debian13-panel-journal.txt 2>&1
+sshn 2201 "sudo -n journalctl -u pdns.service --no-pager -o short-iso-precise --since '$T0' | grep -v -i -E 'secret|tsig'" < /dev/null > $O/debian13-pdns-journal.txt 2>&1
+sshn 2202 "sudo -n journalctl --no-pager -o short-iso-precise --since '$T0' | grep -v audit | grep -i -E 'inspect|celikpeer|rndc|transfer|named|sshd|sudo' | grep -v -i -E 'secret|tsig' | grep -v -E 'celik : |for celik from|user celik\b|celik\(uid=1000\)'" < /dev/null > $O/arch-inspector-journal.txt 2>&1
+sshn 2201 sudo -n /usr/bin/python3 - < /root/cp-pair7/pdnsdb.py > $O/debian13-pdns-db-after.json 2>&1
+bash $W/ledgerjob.sh $C p7t3-extra debian13 2201 > /dev/null
+step "new Agent lines in the window"
+grep -E 'step times|inspector answer|stopped at step|admitted the PowerDNS daemon|observed different evidence|DNS peer proof|remains pending|dns_peer_' $O/debian13-agent-journal.txt | cut -c1-700
+step "pdns CATALOG-HASH lines in the window"
+grep 'CATALOG-HASH' $O/debian13-pdns-journal.txt
+step "remove the root-only password file of p7extra (the account stays; password never left the guest)"
+sshn 2201 'sudo -n rm -f /root/cp-pair7-extra/pw && sudo -n ls -la /root/cp-pair7-extra' < /dev/null
+step done
+echo EXTRA-DONE

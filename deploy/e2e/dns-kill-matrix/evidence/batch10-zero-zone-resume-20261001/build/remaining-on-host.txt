@@ -1,0 +1,41 @@
+2026-09-30T03:16:10Z
+== QEMU processes
+278 qemu-system-x86_64 -name dns-kill-debian13 -uuid 4e2e1f2c-a735-5ecf-b891-26d5cc0558ca -accel kvm -cpu host -smp 2 -m 4096 -drive file=/var/tmp/cp-b10-1001/r
+290 qemu-system-x86_64 -name dns-kill-arch -uuid a0bc8f96-b0e5-56da-9661-4e088507d2f5 -accel kvm -cpu host -smp 2 -m 4096 -drive file=/var/tmp/cp-b10-1001/r1/ce
+== /var/tmp/cp-b9-1001/r2/cells
+total 16
+drwx------ 4 root root 4096 Sep 30 04:37 .
+drwx------ 5 root root 4096 Sep 30 03:41 ..
+drwx------ 5 root root 4096 Sep 30 04:27 7392457812ac089a866de6ec
+drwx------ 5 root root 4096 Sep 30 04:41 e05b4787635364e83414f682
+/var/tmp/cp-b9-1001/r2/cells/7392457812ac089a866de6ec/: arch debian13 fixture-plan.json fresh-primary-peer ssh-known-hosts  overlay.qcow2 seed seed.iso serial.log 
+/var/tmp/cp-b9-1001/r2/cells/e05b4787635364e83414f682/: arch debian13 fixture-plan.json fresh-primary-peer ssh-known-hosts  overlay.qcow2 seed seed.iso serial.log 
+== /var/tmp/cp-b10-1001/r1/cells
+total 12
+drwx------ 3 root root 4096 Sep 30 06:02 .
+drwx------ 5 root root 4096 Sep 30 06:02 ..
+drwx------ 5 root root 4096 Sep 30 06:06 e05b4787635364e83414f682
+/var/tmp/cp-b10-1001/r1/cells/e05b4787635364e83414f682/: arch debian13 fixture-plan.json fresh-primary-peer ssh-known-hosts  overlay.qcow2 qemu.pid qmp.sock seed seed.iso serial.log 
+2.6G	/var/tmp/cp-b10-1001
+198M	/root/cp-b10-src
+222M	/root/cp-b10-artifacts
+6.7M	/root/cp-b10-tools
+-rw-r--r-- 1 root root 10102 Sep 30 05:53 /var/tmp/cp-b10-build.log
+-rw-r--r-- 1 root root  2123 Sep 30 06:02 /var/tmp/cp-b10-setup.log
+-rw-r--r-- 1 root root 25812 Sep 30 05:53 /var/tmp/cp-b10-triggertest.log
+-rw-r--r-- 1 root root 27171 Sep 30 05:54 /var/tmp/cp-b10-webbuild.log
+-rw-r--r-- 1 root root 10315 Sep 30 05:54 /var/tmp/cp-b10-webdist.sha256
+/root/cp-b10-artifacts
+/root/cp-b10-src
+/root/cp-b10-tools
+/var/tmp/cp-b10-1001
+/var/tmp/cp-b10-build.log
+/var/tmp/cp-b10-setup.log
+/var/tmp/cp-b10-triggertest.log
+/var/tmp/cp-b10-webbuild.log
+/var/tmp/cp-b10-webdist.sha256
+== other roots untouched (listing only)
+/var/tmp/cp-b9-1001
+/var/tmp/cp-pair4-work
+               total        used        free      shared  buff/cache   available
+Mem:           15697        4386        8716          36        2861       11311

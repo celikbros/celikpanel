@@ -1,0 +1,25 @@
+#!/bin/bash
+set -uo pipefail
+B=/root/cp-pair7
+PC=2efc4de20038885294cef414178dfaf5f8235f27
+DC=d3d65353042c97d59764041d1893693e3ae7eb86
+date -u +%FT%TZ
+CELIKPANEL_REPO=$B/repo bash $B/scripts-run/build-dist.sh --acceptance-license $PC > $B/logs/build-dist.log 2>&1
+echo "build-dist exit=$?"
+date -u +%FT%TZ
+tail -30 $B/logs/build-dist.log
+D=/var/tmp/cp-pair7-dist/$PC-acceptance-license
+ls -la $D
+cat $D/guard-refusal.txt
+LC_ALL=C sort -k2 $D/web-dist.sha256 | cmp - $B/logs/web-dist-host-sorted.sha256 && echo WEB-DIST-SAME
+for kind in product pure; do
+  T=$B/test-$kind
+  rm -rf $T; mkdir -p $T
+  cp -a $B/driver/. $T/
+  if [[ $kind == product ]]; then c=$PC; else c=$DC; fi
+  git -C $B/repo archive $c web/src | tar -x -C $T
+  ( cd $T/deploy/e2e/dns-pair-acceptance && bash scripts/offline-tests.sh ) > $B/logs/offline-tests-$kind.log 2>&1
+  echo "offline $kind exit=$?"
+  tail -5 $B/logs/offline-tests-$kind.log
+done
+date -u +%FT%TZ

@@ -1,5 +1,7 @@
-// DNS setup copy loads with the wizard route, outside the global screen catalogue.
+// Server setup copy loads with the wizard route, outside the global screen catalogue.
 export const enSetupDNS = {
+    "setup.blocker.mailEnrollmentBusy": "Mail renewal is running. Wait for it to finish, then review this setup plan again.",
+    "setup.blocker.mailEnrollment": "Independent mail renewal could not be verified. The administrator must check the renewal service, timer settings and Panel/Agent build match, then review the plan again.",
     "setup.infrastructure.title": "DNS for server addresses",
     "setup.infrastructure.prepare": "Prepare DNS records for these server addresses here",
     "setup.infrastructure.help": "Prepare the panel, selected mail and nameserver DNS records. You will review the exact changes before setup starts.",

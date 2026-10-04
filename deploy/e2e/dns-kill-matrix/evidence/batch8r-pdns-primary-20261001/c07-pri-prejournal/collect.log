@@ -1,0 +1,26 @@
+### collect 2026-09-29T23:32:49.781111606Z
+last watcher dir: /var/tmp/cp-b8r-watch
+request id: a322ca772f40325331c859e2525344ce
+ownerpost rc=0
+smstatus rc=0
+probe rc=0
+pdnsdb rc=0
+bindsec rc=0
+peer journal rc=0
+peerloop rc=0 lines=32
+cell directory: /var/tmp/cp-b8r-1001/cells/dbab6f7643e03d40c2ac4a82
+total 12
+drwx------ 2 root root 4096 Sep 30 02:32 .
+drwxr-xr-x 3 root root 4096 Sep 30 02:33 ..
+-rw------- 1 root root 2227 Sep 30 02:32 peer-verdict.json
+23:32:07.234191935 CHANGE pdnsdb 415ceb5a785618ed5788b124b1d57b38d33c50a322dbec01feb248234cc58844 -> 29134d483724790c9381f11647ffebea7f7c7a064550c6b07fa66580db98111b pdns=4480/active/
+23:32:07.778193089 CHANGE pdnsdb 29134d483724790c9381f11647ffebea7f7c7a064550c6b07fa66580db98111b -> fb023b23922729750d77029842e21b8ea2cc5c4efa07f956915663d0f30b87d8 pdns=4480/active/
+done
+tar rc=0 size=1320960
+tar: ./journald/celikpanel-panel.service.txt: time stamp 2026-09-30 02:33:15 is 0.007258923 s in the future
+tar: ./journald/celikpanel-agent.service.txt: time stamp 2026-09-30 02:33:15 is 0.007178703 s in the future
+tar: ./journald/bind9.service.txt: time stamp 2026-09-30 02:33:15 is 0.007135753 s in the future
+tar: ./journald/named.service.txt: time stamp 2026-09-30 02:33:15 is 0.006892159 s in the future
+tar: ./journald/pdns.service.txt: time stamp 2026-09-30 02:33:15 is 0.006836976 s in the future
+tar: ./journald/list-boots.txt: time stamp 2026-09-30 02:33:15 is 0.006796851 s in the future
+tar: ./journald: time stamp 2026-09-30 02:33:15 is 0.006778507 s in the future

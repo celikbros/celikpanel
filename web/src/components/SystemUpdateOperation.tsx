@@ -1,4 +1,7 @@
+import { prepareRecoveryShell } from '../lib/recoveryShell';
 import { systemUpdateFailureMessage } from '../lib/systemUpdateFailure';
+import { failedUpdateGuidance, type OutcomeText } from '../lib/systemUpdateOutcome';
+import { isPreflightStop, parseRecoveryObservation, reconcileRecoveryObservation, type RecoveryObservation } from '../lib/recoveryObservation';
 import {
     createContext,
     useCallback,
@@ -617,7 +620,7 @@ function terminalResultFromRecord(record: TerminalUpdateRecord): TerminalResult 
 }
 
 export function SystemUpdateOperationProvider({ children }: { children: ReactNode }) {
-    const { t } = useI18n();
+    const { t, screensReady } = useI18n();
     const [initialRecord] = useState<StoredUpdateRecord | null>(() => readStoredRecord());
     const [canonicalReady, setCanonicalReady] = useState(false);
     const canonicalReadyRef = useRef(false);
@@ -1787,6 +1790,7 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
         return (async () => {
             try {
                 if (!await guardCommit) return { kind: 'failed', message: t('panelUpdate.markerFailed') };
+                await prepareRecoveryShell();
                 const claim = await claimCanonicalRecord(exactMarker);
                 if (claim.kind === 'adopted') return { kind: 'adopted' };
                 if (claim.kind !== 'owned' || claim.record.phase !== 'active'
@@ -1821,18 +1825,108 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
         if (ready && pendingGuard) settlePendingCommit(pendingGuard.marker, true);
     }, [blocking, modalIdentity, settlePendingCommit]);
     const displayedTerminal = provisional || marker || pendingReload || requiredReloadMarker ? null : terminal;
-    const terminalKind = pendingReload || requiredReloadMarker ? 'succeeded' : displayedTerminal?.kind;
+    // A failed notice reads the same request's recovery observation (a GET that
+    // never starts or retries anything) so its primary text comes from typed
+    // data, not from the worker's raw summary.
+    const failedRequestID = displayedTerminal?.kind === 'failed' ? displayedTerminal.marker.request_id : null;
+    const [failedObservation, setFailedObservation] = useState<{
+        requestID: string; observation: RecoveryObservation | null; settled: boolean;
+    } | null>(null);
+    useEffect(() => {
+        if (!failedRequestID || authPaused) return undefined;
+        let cancelled = false;
+        let timer: number | null = null;
+        let controller: AbortController | null = null;
+        let delay = POLL_MIN_MS * 3;
+        let latest: RecoveryObservation | null = null;
+        const schedule = () => {
+            timer = window.setTimeout(() => { void read(); }, delay);
+            delay = Math.min(Math.round(delay * 1.6), POLL_MAX_MS);
+        };
+        const read = async () => {
+            if (document.visibilityState === 'hidden') {
+                schedule();
+                return;
+            }
+            const request = new AbortController();
+            controller = request;
+            const timeout = window.setTimeout(() => request.abort(), POLL_REQUEST_TIMEOUT_MS);
+            let stop = false;
+            try {
+                const response = await fetch(`/api/v1/recovery/status?request_id=${failedRequestID}`, {
+                    cache: 'no-store', credentials: 'same-origin', signal: request.signal,
+                });
+                if (response.status === 401 || response.status === 403 || response.status === 404) {
+                    stop = true;
+                } else if (response.ok) {
+                    latest = reconcileRecoveryObservation(latest, parseRecoveryObservation(await response.json(), failedRequestID)).record;
+                }
+            } catch {
+                // An unreadable or invalid answer keeps the last verified observation.
+            } finally {
+                window.clearTimeout(timeout);
+            }
+            if (cancelled) return;
+            setFailedObservation({ requestID: failedRequestID, observation: latest, settled: true });
+            // A preflight stop is final for its request: nothing follows it.
+            if (!stop && latest?.terminal_proof !== 'rollback_verified' && latest?.terminal_proof !== 'update_verified' && !isPreflightStop(latest)) schedule();
+        };
+        void read();
+        return () => {
+            cancelled = true;
+            controller?.abort();
+            if (timer !== null) window.clearTimeout(timer);
+        };
+    }, [authPaused, failedRequestID]);
+    const failureGuidance = displayedTerminal?.kind === 'failed'
+        ? (() => {
+            const observed = failedObservation?.requestID === displayedTerminal.marker.request_id ? failedObservation : null;
+            const typed = systemUpdateFailureMessage(displayedTerminal.message, t);
+            return failedUpdateGuidance(observed?.observation ?? null, {
+                targetVersion: displayedTerminal.marker.target.version,
+                previousVersion: displayedTerminal.marker.current_version,
+                // The generic fallback is not a server message; the title says it.
+                message: displayedTerminal.message === t('panelUpdate.failed') ? '' : displayedTerminal.message,
+                productMessages: [t('panelUpdate.notAccepted'), t('panelUpdate.identityMismatchCleared')],
+                typedMessage: typed !== displayedTerminal.message ? typed : undefined,
+                reading: !observed?.settled,
+            });
+        })()
+        : null;
+    // A line whose text lives in a screen catalogue shows its boot-catalogue
+    // fallback until that catalogue has arrived; a key never renders as its name.
+    const outcomeText = (value: OutcomeText) => ('text' in value ? value.text
+        : t(value.fallback && !screensReady ? value.fallback : value.key, value.vars));
+    const terminalKind = pendingReload || requiredReloadMarker ? 'succeeded'
+        : failureGuidance?.state === 'succeeded' ? 'succeeded' : displayedTerminal?.kind;
     const disconnected = !pendingReload && !requiredReloadMarker && marker !== null && view.disconnected;
-    const title = terminalKind === 'failed'
-        ? t('panelUpdate.failed')
+    const title = failureGuidance
+        ? outcomeText(failureGuidance.title)
         : terminalKind === 'succeeded'
             ? t('panelUpdate.succeeded')
             : t('panelUpdate.title');
     const message = pendingReload || requiredReloadMarker
         ? t('panelUpdate.reloading', { version: (pendingReload ?? requiredReloadMarker)!.target.version })
-        : displayedTerminal?.kind === 'failed'
-            ? systemUpdateFailureMessage(displayedTerminal.message, t)
+        : failureGuidance
+            ? outcomeText(failureGuidance.lines[0])
             : displayedTerminal?.message ?? view.message;
+    const failureDetails = failureGuidance && (
+        <>
+            {failureGuidance.lines.slice(1).map((line, index) => (
+                <p key={index} className="mt-2 text-sm text-fg-muted">{outcomeText(line)}</p>
+            ))}
+            {failureGuidance.command && (
+                <code className="mt-2 block break-words rounded-lg border border-border bg-surface-2 px-3 py-2 text-left font-mono text-xs text-fg">
+                    {failureGuidance.command}
+                </code>
+            )}
+            {failureGuidance.serverMessage && (
+                <p className="mt-2 break-words text-xs text-fg-subtle">
+                    {t('panelUpdate.outcome.serverMessage', { message: failureGuidance.serverMessage })}
+                </p>
+            )}
+        </>
+    );
     const backgroundVisible = navigationLease.released && !authPaused && !blocking && exactMarker !== null
         && (provisional !== null || marker !== null || pendingReload !== null
             || requiredReloadMarker !== null || terminalBlocks);
@@ -1858,7 +1952,8 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
                     >
                         {message}
                     </p>
-                    <p className={'mt-2 text-xs text-fg-subtle'}>{t(terminalKind === 'failed' ? 'panelUpdate.failureAcknowledgement' : 'panelUpdate.watch')}</p>
+                    {failureDetails}
+                    <p className={'mt-2 text-xs text-fg-subtle'}>{t(displayedTerminal?.kind === 'failed' ? 'panelUpdate.failureAcknowledgement' : 'panelUpdate.watch')}</p>
                     <p className={'mt-3 font-mono text-xs text-fg'}>
                         {exactMarker.target.version} · T+{formatElapsed(exactMarker.created_at, now)}
                     </p>
@@ -1922,8 +2017,9 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
                         >
                             {message}
                         </p>
+                        {failureDetails}
                         <p className="mt-4 rounded-lg border border-border bg-surface-2 px-4 py-3 text-xs leading-5 text-fg-subtle">
-                            {t(terminalKind === 'failed' ? 'panelUpdate.failureAcknowledgement' : 'panelUpdate.interactionLocked')}
+                            {t(displayedTerminal?.kind === 'failed' ? 'panelUpdate.failureAcknowledgement' : 'panelUpdate.interactionLocked')}
                         </p>
                         <dl className="mt-4 grid grid-cols-2 gap-3 rounded-lg border border-border bg-surface-subtle p-3 text-left text-xs">
                             <div>

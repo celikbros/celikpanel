@@ -1,0 +1,79 @@
+{
+  "checks": {
+    "agreement": {
+      "agreed_samples": 7,
+      "lag_samples": 1,
+      "samples": 13,
+      "verdict": "passed"
+    },
+    "attempts": {
+      "automatic": [],
+      "automatic_count": 0,
+      "journal_admissions": [],
+      "owner": [],
+      "owner_count": 0
+    },
+    "clock_skew_seconds": 1.131,
+    "host_panel_windows": [
+      {
+        "failed": true,
+        "first_bad": 1790904088.1497326,
+        "from": 1790904083.1496098,
+        "kind": "failed",
+        "last_bad": 1790904103.1501503,
+        "lower_bound_s": 15.0,
+        "to": 1790904108.1502795,
+        "unobserved": false,
+        "upper_bound_s": 25.001
+      }
+    ],
+    "host_ssh_windows": [],
+    "management_off_cut": {
+      "guest_clock": 1790904125.4744887,
+      "margin_seconds": 5.0,
+      "requested_at_host": 1790904129.3434887
+    },
+    "outcome": "update-verified",
+    "samples_until_management_off": 27,
+    "workloads": {
+      "cron": {
+        "verdict": "never-interrupted",
+        "windows": []
+      },
+      "dns": {
+        "mode": "external",
+        "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+        "verdict": "not-provided-external-dns"
+      },
+      "panel": {
+        "outside": [],
+        "verdict": "down-only-during-transaction",
+        "windows": [
+          {
+            "cause": "unexplained",
+            "failed": true,
+            "first_bad": 1790904084.0418777,
+            "from": 1790904079.0418208,
+            "kind": "failed",
+            "last_bad": 1790904099.044951,
+            "lower_bound_s": 15.003,
+            "to": 1790904104.0454712,
+            "unobserved": false,
+            "upper_bound_s": 25.004
+          }
+        ]
+      },
+      "smtp": {
+        "verdict": "not-seeded"
+      },
+      "web": {
+        "verdict": "never-interrupted",
+        "windows": []
+      }
+    }
+  },
+  "finished_at": "2026-10-02T01:25:57Z",
+  "name": "verdicts",
+  "started_at": "2026-10-02T01:25:57Z",
+  "verdict": "passed"
+}

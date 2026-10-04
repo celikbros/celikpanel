@@ -1,0 +1,156 @@
+wall=2026-09-29T15:24:21.060675059Z boot_id=f3d6f104-b8fb-44ab-b25c-076729514ee4
+== pdns.service
+MainPID=1766
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 15:22:51 UTC
+ExecMainPID=1766
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 15:22:51 UTC
+InvocationID=c5eb59c31ba14e6287a27de8be66b9f0
+== named.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InvocationID=
+== bind9.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InvocationID=
+== celikpanel-agent.service
+MainPID=3201
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 15:23:39 UTC
+ExecMainPID=3201
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 15:23:39 UTC
+InvocationID=fb66feb7715b40949d374d58518d9ca8
+== celikpanel-panel.service
+MainPID=4909
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 15:23:46 UTC
+ExecMainPID=4909
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 15:23:46 UTC
+InvocationID=34f61b6d69fd40b2b7b3568773aee902
+== named/pdns processes
+1766 /usr/sbin/pdns_server --guardian=no --daemon=no --disable-syslog --log-timestamp=no --write-pid=no
+== boots
+IDX BOOT ID                          FIRST ENTRY                 LAST ENTRY
+  0 f3d6f104b8fb44abb25c076729514ee4 Tue 2026-09-29 15:21:30 UTC Tue 2026-09-29 15:24:21 UTC
+== packages
+dpkg-query: no packages found matching bind9
+dpkg-query: no packages found matching bind9-utils
+bind9-host 1:9.20.26-1~deb13u1 ii 
+bind9-libs 1:9.20.26-1~deb13u1 ii 
+pdns-backend-sqlite3 4.9.17-0+deb13u1 ii 
+pdns-server 4.9.17-0+deb13u1 ii 
+== pdns_server --version
+Sep 29 15:24:21 PowerDNS Authoritative Server 4.9.17 (C) PowerDNS.COM BV
+Sep 29 15:24:21 Using 64-bits mode. Built using gcc 14.2.0.
+Sep 29 15:24:21 PowerDNS comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it according to the terms of the GPL version 2.
+== state dir
+total 20
+drwx------  2 root celikpanel 4096 2026-09-29 15:23:46.311917761 +0000 .
+drwxr-xr-x 29 root root       4096 2026-09-29 15:22:48.102701190 +0000 ..
+-rw-------  1 root celikpanel  560 2026-09-29 15:23:46.279917949 +0000 dns-engine-ownership-pdns.json
+-rw-------  1 root celikpanel  556 2026-09-29 15:23:44.159930851 +0000 dns-engine-state.json
+-rw-------  1 root celikpanel  740 2026-09-29 15:23:46.303917809 +0000 service-mutations.json
+95203b750f261bd901b511585d701a13fc9babed25f7b1df1de6785be8186b4a  dns-engine-ownership-pdns.json
+4f4f6b947a76e0887f83533a778187d2f122908fe9cc866b82b3e18239916ac5  dns-engine-state.json
+f5ab2d731074790dc8d12bb38a1a6d10da81d037904268a35a5a79cefa3e54a5  service-mutations.json
+== fixture dir
+total 1424
+drwx------  4 root root    4096 2026-09-29 15:22:52.146990695 +0000 .
+drwxr-xr-x 29 root root    4096 2026-09-29 15:22:48.102701190 +0000 ..
+-rw-------  1 root root    3224 2026-09-29 15:22:51.978980295 +0000 controller-argv.json
+-rw-------  1 root root    1016 2026-09-29 15:22:52.134989960 +0000 coordinator-stop-proof.json
+-rw-------  1 root root     728 2026-09-29 15:22:30.613836281 +0000 installed-binaries.sha256
+-rw-------  1 root root 1406962 2026-09-29 15:22:22.905836281 +0000 manifest.json
+drwx------  2 root root    4096 2026-09-29 15:23:35.915908672 +0000 measured
+drwx------  3 root root    4096 2026-09-29 15:22:51.950978466 +0000 results
+-rw-------  1 root root    1329 2026-09-29 15:22:38.581836281 +0000 scenario.json
+-rw-------  1 root root    4108 2026-09-29 15:22:51.814969583 +0000 source-external-pdns-preimage.json
+-rw-------  1 root root    1318 2026-09-29 15:22:50.654892294 +0000 source-preinstall-pdns.json
+-rw-------  1 root root    1701 2026-09-29 15:22:51.930977160 +0000 source-proof.json
+== recovery launcher
+total 18560
+drwx------ 3 root root     4096 2026-09-29 15:22:37.661836281 +0000 .
+drwxr-xr-x 9 root root     4096 2026-09-29 15:22:37.121836281 +0000 ..
+-rwxr-xr-x 1 root root 18990399 2026-09-29 15:22:37.621836281 +0000 recovery
+drwx------ 3 root root     4096 2026-09-29 15:22:37.133836281 +0000 recovery-runtimes
+c494c3025c051ceea9b382e26de7da29a66c5ba6a3332de86294b57eb06cb324  /usr/libexec/celikpanel/recovery
+== owner files
+/etc/powerdns:
+total 36
+drwxr-xr-x  3 root root  4096 2026-09-29 15:22:48.258713554 +0000 .
+drwxr-xr-x 68 root root  4096 2026-09-29 15:22:49.706824860 +0000 ..
+-rw-r-----  1 root pdns 20579 2026-08-06 19:04:06.000000000 +0000 pdns.conf
+drwxr-xr-x  2 root root  4096 2026-09-29 15:22:50.954913193 +0000 pdns.d
+
+/etc/powerdns/pdns.d:
+total 12
+drwxr-xr-x 2 root root 4096 2026-09-29 15:22:50.954913193 +0000 .
+drwxr-xr-x 3 root root 4096 2026-09-29 15:22:48.258713554 +0000 ..
+-rw-r--r-- 1 root root  205 2026-09-29 15:22:50.942912357 +0000 celikpanel.conf
+
+/var/lib/powerdns:
+total 120
+drwxr-xr-x  2 pdns pdns  4096 2026-09-29 15:22:51.562953126 +0000 .
+drwxr-xr-x 29 root root  4096 2026-09-29 15:22:48.102701190 +0000 ..
+-rw-r-----  1 pdns pdns 77824 2026-09-29 15:22:51.558952864 +0000 pdns.sqlite3
+-rw-r-----  1 pdns pdns 32768 2026-09-29 15:22:51.562953126 +0000 pdns.sqlite3-shm
+-rw-r-----  1 pdns pdns     0 2026-09-29 15:22:51.562953126 +0000 pdns.sqlite3-wal
+8b46927e48be83b2f0afc38efabdc2e2237daa5281b1a07ea44989ffa41f262a  /etc/powerdns/pdns.conf
+1d2fe25bde12a21bca513d8eefef617116601da8586e6a5ad2ffe4f3dd4914ca  /etc/powerdns/pdns.d/celikpanel.conf
+b676542b861caf916bfb37e59af21a55f2f456a756d7ba1f365ad7fc9fd56cba  /var/lib/powerdns/pdns.sqlite3
+== bind dirs
+ls: cannot access '/etc/bind': No such file or directory
+== /etc/bind file hashes
+== /etc/bind inodes
+== /var/cache/bind tree
+find: ‘/var/cache/bind’: No such file or directory
+== named-checkconf -l
+bash: line 16: named-checkconf: command not found
+== ss 53
+udp UNCONN 0      0          10.0.2.15:53 0.0.0.0:* users:(("pdns_server",pid=1766,fd=5))    
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=371,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=371,fd=18))
+tcp LISTEN 0      128        10.0.2.15:53 0.0.0.0:* users:(("pdns_server",pid=1766,fd=6))    
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=371,fd=19))
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=371,fd=21))
+== pdns journal tail
+2026-09-29T15:22:51.460815+00:00 dns-debian13 systemd[1]: Starting pdns.service - PowerDNS Authoritative Server...
+2026-09-29T15:22:51.541423+00:00 dns-debian13 pdns_server[1766]: Loading '/usr/lib/x86_64-linux-gnu/pdns/libgsqlite3backend.so'
+2026-09-29T15:22:51.541793+00:00 dns-debian13 pdns_server[1766]: This is a standalone pdns
+2026-09-29T15:22:51.541793+00:00 dns-debian13 pdns_server[1766]: Listening on controlsocket in '/run/pdns/pdns.controlsocket'
+2026-09-29T15:22:51.542113+00:00 dns-debian13 pdns_server[1766]: UDP server bound to 10.0.2.15:53
+2026-09-29T15:22:51.542150+00:00 dns-debian13 pdns_server[1766]: TCP server bound to 10.0.2.15:53
+2026-09-29T15:22:51.542304+00:00 dns-debian13 pdns_server[1766]: PowerDNS Authoritative Server 4.9.17 (C) PowerDNS.COM BV
+2026-09-29T15:22:51.542304+00:00 dns-debian13 pdns_server[1766]: Using 64-bits mode. Built using gcc 14.2.0.
+2026-09-29T15:22:51.542304+00:00 dns-debian13 pdns_server[1766]: PowerDNS comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it according to the terms of the GPL version 2.
+2026-09-29T15:22:51.568421+00:00 dns-debian13 pdns_server[1766]: Creating backend connection for TCP
+2026-09-29T15:22:51.569000+00:00 dns-debian13 pdns_server[1766]: About to create 3 backend threads for UDP
+2026-09-29T15:22:51.568882+00:00 dns-debian13 systemd[1]: Started pdns.service - PowerDNS Authoritative Server.
+2026-09-29T15:22:51.719516+00:00 dns-debian13 pdns_server[1766]: Done launching threads, ready to distribute questions

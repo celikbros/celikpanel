@@ -1,0 +1,44 @@
+Thu Oct  1 03:03:54 AM UTC 2026
+--- memory
+               total        used        free      shared  buff/cache   available
+Mem:           15697         664       14704           3         523       15032
+Swap:           4096           0        4096
+--- disk
+Filesystem     1G-blocks  Used Available Use% Mounted on
+/dev/sdd           1007G  283G      673G  30% /
+/dev/sdd           1007G  283G      673G  30% /
+--- qemu
+no qemu process
+--- kvm
+crw-rw-rw- 1 root kvm 10, 232 Oct  1 06:03 /dev/kvm
+--- go
+go version go1.26.5 linux/amd64
+--- node
+v26.8.1
+12.0.2
+--- python
+Python 3.14.7
+--- images
+total 875868
+drwx------  2 root root      4096 Sep 28 10:17 .
+drwx------  5 root root      4096 Sep 28 21:06 ..
+-r--r--r-- 38 root root 556609024 Sep 27 02:09 Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2
+-r--r--r-- 38 root root 340262912 Sep 27 02:09 debian-13-genericcloud-amd64-20260826-2582.qcow2
+--- existing cp-upd5*
+none
+--- cp-upd1-build
+total 96
+drwxr-xr-x   6 root root  4096 Oct  1 01:19 .
+drwxrwxrwt 440 root root 73728 Oct  1 06:03 ..
+drwxr-xr-x   3 root root  4096 Sep 30 14:13 20260930t111123z
+drwxr-xr-x   3 root root  4096 Sep 30 18:29 20260930t152731z
+drwxr-xr-x   3 root root  4096 Sep 30 20:43 20260930t174023z
+drwxr-xr-x   3 root root  4096 Oct  1 01:22 20260930t221920z
+--- pair dist
+18
+--- var/tmp entries
+556
+--- repo head
+6cda60b87e8144ae33aaa343d04a9c3923d8755e
+--- 6cda60b8
+6cda60b87e8144ae33aaa343d04a9c3923d8755e

@@ -1,0 +1,150 @@
+"""pair7 t3 EXTRA experiment (outside the driver's verdicts), run as root on the t3 PowerDNS primary.
+
+usage: sudo python3 - PHASE [ARG] < extra_guest.py
+  admin          owner step: create a separate administrator 'p7extra' with the product's own CLI
+                 (panel --create-admin --admin-credentials-file=- as the panel service user, as install.sh
+                 does); the random password is generated here, kept root-only in /root/cp-pair7-extra/pw
+                 and never printed.
+  create ZONE    POST /api/v1/domains/create {domain, project_type: dnsonly, ssl_type: none} (the driver's
+                 AddDomainModal call), then GET /api/v1/domains
+  delete ID      DELETE /api/v1/domains/ID once (Domains handleDelete), then the read-only
+                 GET /api/v1/domains/ID/deletion-status
+  status ID      read-only GET /api/v1/domains/ID/deletion-status and GET /api/v1/domains
+Every invocation logs in once; the session cookie stays in memory. Only status codes and JSON bodies of
+domain endpoints are printed (they carry no secret).
+"""
+import http.client
+import json
+import os
+import pwd
+import secrets
+import ssl
+import string
+import subprocess
+import sys
+import time
+
+BASE_HOST, BASE_PORT = "127.0.0.1", 2083
+ORIGIN = f"https://{BASE_HOST}:{BASE_PORT}"
+DIR = "/root/cp-pair7-extra"
+PW = DIR + "/pw"
+USER = "p7extra"
+
+
+def now():
+    return time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()) + ".%03dZ" % (int(time.time() * 1000) % 1000)
+
+
+def out(kind, **kw):
+    kw = {"t": now(), "event": kind, **kw}
+    print(json.dumps(kw, sort_keys=True), flush=True)
+
+
+class Client:
+    def __init__(self):
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE  # loopback on the guest itself; the leaf is the panel's self-signed one
+        self.ctx = ctx
+        self.cookie = None
+
+    def req(self, method, path, body=None, timeout=600):
+        conn = http.client.HTTPSConnection(BASE_HOST, BASE_PORT, context=self.ctx, timeout=timeout)
+        headers = {"Accept": "application/json"}
+        data = None
+        if body is not None:
+            data = json.dumps(body).encode()
+            headers["Content-Type"] = "application/json"
+        if method not in ("GET", "HEAD"):
+            headers["Origin"] = ORIGIN
+        if self.cookie:
+            headers["Cookie"] = "celikpanel_session=" + self.cookie
+        t0 = time.time()
+        conn.request(method, path, body=data, headers=headers)
+        resp = conn.getresponse()
+        raw = resp.read()
+        elapsed = round(time.time() - t0, 3)
+        for k, v in resp.getheaders():
+            if k.lower() == "set-cookie" and v.startswith("celikpanel_session="):
+                self.cookie = v.split(";", 1)[0].split("=", 1)[1]
+        try:
+            parsed = json.loads(raw) if raw else None
+        except ValueError:
+            parsed = {"non_json_bytes": len(raw)}
+        conn.close()
+        return resp.status, parsed, elapsed
+
+    def login(self):
+        with open(PW) as fh:
+            password = fh.read().strip()
+        status, body, elapsed = self.req("POST", "/api/v1/auth/login", {"username": USER, "password": password})
+        ok = status == 200 and bool(self.cookie) and not (isinstance(body, dict) and body.get("totp_required"))
+        me_status, me, _ = self.req("GET", "/api/v1/auth/me")
+        out("login", http_status=status, session_cookie_set=bool(self.cookie), me_status=me_status,
+            role=(me or {}).get("role") if isinstance(me, dict) else None, ok=ok)
+        if not ok or me_status != 200:
+            sys.exit(3)
+
+
+def phase_admin():
+    os.makedirs(DIR, mode=0o700, exist_ok=True)
+    if os.path.exists(PW):
+        out("admin", note="password file already exists; not re-created")
+        return
+    alphabet = string.ascii_letters + string.digits
+    password = "Px7!" + "".join(secrets.choice(alphabet) for _ in range(28))
+    fd = os.open(PW, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "w") as fh:
+        fh.write(password)
+    svc = pwd.getpwnam("celikpanel")
+    doc = json.dumps({"username": USER, "email": "p7extra@pair-accept.invalid", "password": password}).encode()
+    env = {"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LANG": "C.UTF-8", "CELIKPANEL_DATA_DIR": "/var/lib/celikpanel"}
+    cmd = ["setpriv", f"--reuid={svc.pw_uid}", f"--regid={svc.pw_gid}", "--clear-groups", "--",
+           "/bin/sh", "-c", 'umask 077; exec "$@"', "celikpanel-install",
+           "/opt/celikpanel/bin/panel", "--create-admin", "--admin-credentials-file=-"]
+    res = subprocess.run(cmd, input=doc, capture_output=True, env=env, timeout=120)
+    out("admin", command=" ".join(cmd[:-3] + ["/opt/celikpanel/bin/panel", "--create-admin", "--admin-credentials-file=-"]),
+        stdin="{username: p7extra, email: p7extra@pair-accept.invalid, password: <32 random chars, not printed>}",
+        rc=res.returncode, stdout=res.stdout.decode(errors="replace")[-600:],
+        stderr=res.stderr.decode(errors="replace").replace(password, "[REDACTED]")[-600:])
+
+
+def phase_create(zone):
+    c = Client(); c.login()
+    status, body, elapsed = c.req("POST", "/api/v1/domains/create",
+                                  {"domain": zone, "project_type": "dnsonly", "ssl_type": "none"}, timeout=300)
+    out("create", zone=zone, http_status=status, elapsed_seconds=elapsed, body=body)
+    ls, listing, _ = c.req("GET", "/api/v1/domains")
+    rows = [{k: v for k, v in r.items() if k in ("id", "status") or "name" in k.lower() or "domain" in k.lower()} for r in (listing or []) if isinstance(r, dict)]
+    out("list", http_status=ls, domains=rows)
+
+
+def phase_delete(domain_id):
+    c = Client(); c.login()
+    status, body, elapsed = c.req("DELETE", f"/api/v1/domains/{domain_id}", timeout=600)
+    out("delete", domain_id=domain_id, http_status=status, elapsed_seconds=elapsed, body=body)
+    ss, saved, _ = c.req("GET", f"/api/v1/domains/{domain_id}/deletion-status")
+    out("deletion-status", domain_id=domain_id, http_status=ss, body=saved)
+
+
+def phase_status(domain_id):
+    c = Client(); c.login()
+    ss, saved, _ = c.req("GET", f"/api/v1/domains/{domain_id}/deletion-status")
+    out("deletion-status", domain_id=domain_id, http_status=ss, body=saved)
+    ls, listing, _ = c.req("GET", "/api/v1/domains")
+    rows = [{k: v for k, v in r.items() if k in ("id", "status") or "name" in k.lower() or "domain" in k.lower()} for r in (listing or []) if isinstance(r, dict)]
+    out("list", http_status=ls, domains=rows)
+
+
+if __name__ == "__main__":
+    phase = sys.argv[1]
+    if phase == "admin":
+        phase_admin()
+    elif phase == "create":
+        phase_create(sys.argv[2])
+    elif phase == "delete":
+        phase_delete(int(sys.argv[2]))
+    elif phase == "status":
+        phase_status(int(sys.argv[2]))
+    else:
+        sys.exit(64)

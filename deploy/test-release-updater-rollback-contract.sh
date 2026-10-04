@@ -42,7 +42,7 @@ grep -Fq -- '--prepare-bind-generation-root-under-external-lock' "$update" \
 # Gerçek hedef kontrolü kalıcı engelden önce, ardından eldeki kilit altında çalışır.
 bind_preflight_line=$(line_of "$update" '    preflight_bind_before_quiesce')
 quiesce_line=$(line_of "$update" '    transaction_phase=quiesce-publishing')
-bind_recheck_line=$(line_of "$update" '    fail_before_active "managed BIND state changed before coordinator freeze"')
+bind_recheck_line=$(line_of "$update" '    fail_update_preflight bind_compatibility "managed BIND state changed before coordinator freeze"')
 freeze_line=$(line_of "$update" '    freeze_release_service_cgroup celikpanel-panel.service panel panel_frozen')
 [[ -n "$bind_preflight_line" && -n "$quiesce_line" && -n "$bind_recheck_line" && -n "$freeze_line" &&
    "$bind_preflight_line" -lt "$quiesce_line" && "$quiesce_line" -lt "$bind_recheck_line" &&
@@ -82,5 +82,7 @@ grep -Fq 'rm -f -- "$RELEASE_UPDATER"' "$rollback" \
     || fail 'rollback cannot restore an absent updater state'
 grep -Fq '[[ "$(stat -Lc '\''%u:%g:%a:%h'\'' -- "$RELEASE_UPDATER")" == 0:0:755:1 ]]' "$rollback" \
     || fail 'rollback does not prove restored updater metadata'
+
+bash "$repo_root/deploy/test-rollback-ledger-preservation.sh"
 
 printf 'release updater rollback contract passed\n'

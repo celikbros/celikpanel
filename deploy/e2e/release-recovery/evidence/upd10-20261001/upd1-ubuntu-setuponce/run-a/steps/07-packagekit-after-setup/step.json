@@ -1,0 +1,41 @@
+{
+  "checks": {
+    "packagekit": {
+      "apt_backend": [
+        true
+      ],
+      "backend_pathnames_seen": [
+        "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+      ],
+      "children_seen": [],
+      "context_processes_seen": [
+        "unattended-upgr"
+      ],
+      "grep_c_aptcc": [
+        0
+      ],
+      "lock_lines_seen": [],
+      "observations": 10,
+      "other_processes_seen": [],
+      "pk_alive_rule_idle_bracketed": {
+        "agent_other": 0,
+        "agent_package_manager_active": 0,
+        "agent_ready": 8,
+        "panel_answered": 0
+      },
+      "readiness": {
+        "ready": 10
+      },
+      "rule": {
+        "busy": 0,
+        "idle": 20
+      },
+      "with_packagekitd": 8
+    },
+    "seconds": 171.0
+  },
+  "finished_at": "2026-10-01T21:25:59Z",
+  "name": "packagekit-after-setup",
+  "started_at": "2026-10-01T21:23:08Z",
+  "verdict": "observed"
+}

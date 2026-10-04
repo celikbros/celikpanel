@@ -274,3 +274,37 @@ func TestActivePanelIdentityRejectsWritableMarker(t *testing.T) {
 		t.Fatal("group-writable identity marker was trusted")
 	}
 }
+
+func TestPublishMailHookAbsentPreservesConcurrentOwnerFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "celikpanel-mail-host-cert")
+	owner := []byte("owner hook inserted after preflight")
+	if err := os.WriteFile(path, owner, 0755); err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := publishPanelCertDeployHookMode(dir, filepath.Base(path), []byte("replacement"), os.Getuid(), os.Getgid(), true); err == nil {
+		t.Fatal("owner hook overwritten")
+	}
+	after, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil || string(raw) != string(owner) || !os.SameFile(before, after) {
+		t.Fatal("owner hook changed")
+	}
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	if err := publishPanelCertDeployHookMode(dir, filepath.Base(path), []byte("new managed hook"), os.Getuid(), os.Getgid(), true); err != nil {
+		t.Fatal(err)
+	}
+	raw, err = os.ReadFile(path)
+	if err != nil || string(raw) != "new managed hook" {
+		t.Fatal("initial publication missing")
+	}
+}

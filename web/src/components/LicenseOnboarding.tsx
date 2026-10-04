@@ -3,16 +3,18 @@ import { useLocation, useNavigate } from '../router';
 import { useAuth } from '../auth/AuthContext';
 import { useI18n } from '../i18n';
 import { Button, Spinner } from './ui';
+import { parseAccessObservation, type AccessObservation } from '../lib/accessObservation';
+import { RecoveryAccess } from './RecoveryAccess';
 
 const LicenseLockScreen = lazy(() => import('./LicenseLockScreen').then(module => ({ default: module.LicenseLockScreen })));
 
 /** Never mount management pages before a positive, server-verified decision. */
-export function LicenseOnboarding({ children, onAccessChange }: { children?: ReactNode; onAccessChange?: (allowed: boolean) => void }) {
+export function LicenseOnboarding({ children, onAccessChange, onRecoveryChange }: { children?: ReactNode; onAccessChange?: (allowed: boolean) => void; onRecoveryChange?: (recovering: boolean) => void }) {
     const { user } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     const { t, screensReady, screensFailed } = useI18n();
-    const [access, setAccess] = useState<{ owner: string; allowed: boolean | null; until: number } | null>(null);
+    const [access, setAccess] = useState<(AccessObservation & { owner: string }) | null>(null);
     const [failed, setFailed] = useState(false);
     const controller = useRef<AbortController | null>(null);
     const check = useCallback(async () => {
@@ -25,12 +27,10 @@ export function LicenseOnboarding({ children, onAccessChange }: { children?: Rea
         try {
             const response = await fetch('/api/v1/license/access', { cache: 'no-store', signal: request.signal });
             if (!response.ok) throw new Error('access unavailable');
-            const result = await response.json();
-            if (typeof result.can_use_panel !== 'boolean' || !Number.isSafeInteger(result.valid_until)
-                || (result.can_use_panel && result.valid_until <= Date.now() / 1000)) throw new Error('invalid access');
+            const result = parseAccessObservation(await response.json());
             if (!request.signal.aborted && controller.current === request) {
-                setAccess({ owner: user.username, allowed: result.can_use_panel, until: result.valid_until });
-                setFailed(false);
+                setAccess({ owner: user.username, ...result });
+                setFailed(result.allowed === null);
             }
         } catch {
             if (controller.current === request) {
@@ -40,7 +40,7 @@ export function LicenseOnboarding({ children, onAccessChange }: { children?: Rea
                 // yalnızca sunucunun belirlediği süre dolana kadar korunur.
                 setAccess(previous => previous?.owner === user.username
                     && (previous.allowed === false || (previous.allowed && previous.until * 1000 > Date.now()))
-                    ? previous : { owner: user.username, allowed: null, until: 0 });
+                    ? previous : { owner: user.username, allowed: null, until: 0, state: 'status_unavailable' });
                 setFailed(true);
             }
         } finally {
@@ -57,8 +57,10 @@ export function LicenseOnboarding({ children, onAccessChange }: { children?: Rea
         const locked = () => {
             controller.current?.abort();
             controller.current = null;
-            setFailed(false);
-            setAccess({ owner: user.username, allowed: false, until: 0 });
+            // A generic gate blocks management; only typed status can require activation.
+            setFailed(true);
+            setAccess({ owner: user.username, allowed: null, until: 0, state: 'status_unavailable' });
+            void check();
         };
         window.addEventListener('focus', focus);
         window.addEventListener('celikpanel:license-locked', locked);
@@ -91,6 +93,10 @@ export function LicenseOnboarding({ children, onAccessChange }: { children?: Rea
     // Pause the root update overlay while activation owns the screen. This
     // changes browser tracking only; the server's running operation continues.
     useLayoutEffect(() => { onAccessChange?.(!!allowed); }, [allowed, onAccessChange]);
+    useLayoutEffect(() => {
+        onRecoveryChange?.(!!screensFailed || (!!failed && !allowed));
+        return () => onRecoveryChange?.(false);
+    }, [screensFailed, failed, allowed, onRecoveryChange]);
     useEffect(() => {
         if (!access || access.owner !== user.username) return;
         if (access.allowed === false && location.pathname !== '/activate') navigate('/activate', { replace: true });
@@ -105,7 +111,8 @@ export function LicenseOnboarding({ children, onAccessChange }: { children?: Rea
         {children}
     </>;
     const loading = <div className="min-h-screen flex items-center justify-center bg-bg"><Spinner /></div>;
-    if (screensFailed) return <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-bg"><p>{t('app.pageLoadFailed')}</p><Button onClick={() => window.location.reload()}>{t('app.reload')}</Button></div>;
+    if (screensFailed) return <RecoveryAccess user={user} cause="bundle" onRetry={() => void check()} />;
+    if (failed && !allowed) return <RecoveryAccess user={user} cause="license" onRetry={() => void check()} />;
     if (!screensReady) return loading;
     return <Suspense fallback={loading}><LicenseLockScreen checking={!access || access.owner !== user.username || access.allowed === null} failed={failed} onCheck={() => void check()} /></Suspense>;
 }

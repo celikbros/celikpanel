@@ -1,0 +1,1 @@
+bash /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch7/runcell.sh c03-v2-rb-bw bind__rolled-back__before-write__standalone__peer-reachable managed-pdns prepare-bind 1 /var/tmp/cp-b7-0930 debian13 none none --owner-inverse-after-restart

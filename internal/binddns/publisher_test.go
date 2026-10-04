@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"path"
+	"reflect"
 	"sort"
 	"strings"
 	"testing"
@@ -599,9 +600,10 @@ func TestPublisherFirstSwitchFailureUsesExplicitEmptyRecovery(t *testing.T) {
 		if recoveryCtx.Err() != nil {
 			return recoveryCtx.Err()
 		}
+		// The pointer is removed only after empty recovery sealed BIND.
 		id, exists, currentErr := publisher.Current()
-		if currentErr != nil || exists || id != "" {
-			return fmt.Errorf("current after first rollback = %q, %v, %v", id, exists, currentErr)
+		if currentErr != nil || !exists || id != generation.ID {
+			return fmt.Errorf("current during first rollback = %q, %v, %v", id, exists, currentErr)
 		}
 		return nil
 	})
@@ -613,6 +615,96 @@ func TestPublisherFirstSwitchFailureUsesExplicitEmptyRecovery(t *testing.T) {
 	}
 	if _, exists, currentErr := publisher.Current(); currentErr != nil || exists {
 		t.Fatalf("first failed switch left current pointer: exists=%v err=%v", exists, currentErr)
+	}
+}
+
+// A failed first switch must not leave an enabled BIND whose include is
+// missing: the pointer stays while empty recovery runs, and stays when empty
+// recovery fails, so BIND can still start from the verified generation.
+func TestPublisherFirstSwitchKeepsPointerUntilEmptyRecoverySucceeds(t *testing.T) {
+	filesystem := newMemoryFS()
+	publisher := newTestPublisher(t, filesystem, &recordingRunner{})
+	generation := publisherGeneration(t, 1, "192.0.2.1")
+	if err := publisher.Stage(context.Background(), generation); err != nil {
+		t.Fatal(err)
+	}
+	var order []string
+	err := publisher.Switch(context.Background(), generation.ID, func(context.Context) error {
+		order = append(order, "apply")
+		return errors.New("verify failed")
+	}, func(context.Context) error {
+		id, exists, currentErr := publisher.Current()
+		order = append(order, fmt.Sprintf("empty(pointer=%v)", exists && id == generation.ID && currentErr == nil))
+		return errors.New("stop failed")
+	})
+	if err == nil || !strings.Contains(err.Error(), "pointer kept") ||
+		!strings.Contains(err.Error(), "stop failed") {
+		t.Fatalf("Switch error = %v", err)
+	}
+	if want := []string{"apply", "empty(pointer=true)"}; !reflect.DeepEqual(order, want) {
+		t.Fatalf("order = %v, want %v", order, want)
+	}
+	if id, exists, currentErr := publisher.Current(); currentErr != nil || !exists || id != generation.ID {
+		t.Fatalf("failed empty recovery removed the pointer: %q, %v, %v", id, exists, currentErr)
+	}
+}
+
+func TestPublisherFirstSwitchRemovesPointerOnlyAfterEmptyRecovery(t *testing.T) {
+	for _, test := range []struct {
+		name        string
+		during      func(*Publisher, Generation) error
+		wantErrText string
+		wantExists  bool
+	}{
+		{name: "pointer removed after sealing", wantErrText: "first BIND generation pointer removed"},
+		{
+			// Recovery itself (or an earlier attempt) already removed it.
+			name: "already absent pointer is the exact prior state",
+			during: func(publisher *Publisher, generation Generation) error {
+				publisher.mu.Lock()
+				defer publisher.mu.Unlock()
+				return publisher.restoreSwitchPointerLocked(generation.ID, "", false)
+			},
+			wantErrText: "first BIND generation pointer removed",
+		},
+		{
+			name: "pointer changed by someone else is kept",
+			during: func(publisher *Publisher, _ Generation) error {
+				other := publisherGeneration(t, 2, "192.0.2.2")
+				if err := publisher.Stage(context.Background(), other); err != nil {
+					return err
+				}
+				publisher.mu.Lock()
+				defer publisher.mu.Unlock()
+				return publisher.activateLocked(other.ID)
+			},
+			wantErrText: "changed during rollback",
+			wantExists:  true,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			filesystem := newMemoryFS()
+			publisher := newTestPublisher(t, filesystem, &recordingRunner{})
+			generation := publisherGeneration(t, 1, "192.0.2.1")
+			if err := publisher.Stage(context.Background(), generation); err != nil {
+				t.Fatal(err)
+			}
+			err := publisher.Switch(context.Background(), generation.ID, func(context.Context) error {
+				return errors.New("start failed")
+			}, func(context.Context) error {
+				if test.during == nil {
+					return nil
+				}
+				return test.during(publisher, generation)
+			})
+			if err == nil || !strings.Contains(err.Error(), test.wantErrText) {
+				t.Fatalf("Switch error = %v, want %q", err, test.wantErrText)
+			}
+			_, exists, currentErr := publisher.Current()
+			if currentErr != nil || exists != test.wantExists {
+				t.Fatalf("pointer exists=%v err=%v, want exists=%v", exists, currentErr, test.wantExists)
+			}
+		})
 	}
 }
 
@@ -772,4 +864,149 @@ func containsString(values []string, want string) bool {
 		}
 	}
 	return false
+}
+func TestPublisherKeepsVerifiedLocalRollbackServingWhenPeerIsUnverified(t *testing.T) {
+	filesystem := newMemoryFS()
+	publisher := newTestPublisher(t, filesystem, &recordingRunner{})
+	first := publisherGeneration(t, 1, "192.0.2.1")
+	second := publisherGeneration(t, 2, "192.0.2.2")
+	for _, generation := range []Generation{first, second} {
+		if err := publisher.Stage(context.Background(), generation); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := publisher.Activate(first.ID); err != nil {
+		t.Fatal(err)
+	}
+	applyCalls, emptyCalls := 0, 0
+	err := publisher.Switch(context.Background(), second.ID, func(context.Context) error {
+		applyCalls++
+		if applyCalls == 1 {
+			return errors.New("target verification failed")
+		}
+		return ErrRollbackPeerUnverified
+	}, func(context.Context) error {
+		emptyCalls++
+		return nil
+	})
+	if !errors.Is(err, ErrRollbackPeerUnverified) {
+		t.Fatalf("rollback did not preserve peer gap: %v", err)
+	}
+	if applyCalls != 2 || emptyCalls != 0 {
+		t.Fatalf("apply=%d empty=%d, want 2/0", applyCalls, emptyCalls)
+	}
+	if current, exists, currentErr := publisher.Current(); currentErr != nil || !exists || current != first.ID {
+		t.Fatalf("current=%q exists=%v err=%v", current, exists, currentErr)
+	}
+}
+
+func TestLoadGenerationVerifiesTargetIndependentOfCurrent(t *testing.T) {
+	filesystem := newMemoryFS()
+	publisher := newTestPublisher(t, filesystem, &recordingRunner{})
+	generation := publisherGeneration(t, 1, "192.0.2.1")
+	if err := publisher.Stage(context.Background(), generation); err != nil {
+		t.Fatal(err)
+	}
+	if _, exists, err := publisher.Current(); err != nil || exists {
+		t.Fatalf("unexpected selected generation: %v, %v", exists, err)
+	}
+	verified, err := publisher.LoadGeneration(generation.ID)
+	if err != nil || verified.CurrentReceipt().Generation != generation.ID {
+		t.Fatalf("independent generation proof: %v", err)
+	}
+	if _, exists, err := publisher.Current(); err != nil || exists {
+		t.Fatalf("load changed pointer: %v, %v", exists, err)
+	}
+	if _, err := publisher.LoadGeneration("../current"); err == nil {
+		t.Fatal("unsafe generation ID accepted")
+	}
+	base := "/var/lib/celikpanel/bind/generations/" + generation.ID
+	filesystem.nodes[base+"/zones.conf"].data = []byte("owner change")
+	if _, err := publisher.LoadGeneration(generation.ID); err == nil {
+		t.Fatal("modified immutable generation accepted")
+	}
+}
+
+// Forward recovery restores a missing pointer only to the exact verified
+// generation, never over another selection and never to a changed tree.
+func TestPublisherRestoreMissingPointerIsExactAndIdempotent(t *testing.T) {
+	root := "/var/lib/celikpanel/bind"
+	setup := func(t *testing.T) (*memoryFS, *Publisher, Generation) {
+		t.Helper()
+		filesystem := newMemoryFS()
+		publisher := newTestPublisher(t, filesystem, &recordingRunner{})
+		generation := publisherGeneration(t, 1, "192.0.2.1")
+		if err := publisher.Stage(context.Background(), generation); err != nil {
+			t.Fatal(err)
+		}
+		return filesystem, publisher, generation
+	}
+	t.Run("absent pointer restored then idempotent", func(t *testing.T) {
+		_, publisher, generation := setup(t)
+		for attempt := 0; attempt < 2; attempt++ {
+			if err := publisher.RestoreMissingPointer(generation.ID); err != nil {
+				t.Fatalf("attempt %d: %v", attempt, err)
+			}
+			if id, exists, err := publisher.Current(); err != nil || !exists || id != generation.ID {
+				t.Fatalf("attempt %d current = %q, %v, %v", attempt, id, exists, err)
+			}
+		}
+		if _, err := publisher.LoadCurrent(); err != nil {
+			t.Fatalf("restored pointer does not load: %v", err)
+		}
+	})
+	t.Run("another selected generation is left", func(t *testing.T) {
+		_, publisher, generation := setup(t)
+		other := publisherGeneration(t, 2, "192.0.2.2")
+		if err := publisher.Stage(context.Background(), other); err != nil {
+			t.Fatal(err)
+		}
+		if err := publisher.Activate(other.ID); err != nil {
+			t.Fatal(err)
+		}
+		err := publisher.RestoreMissingPointer(generation.ID)
+		if !errors.Is(err, ErrCurrentPointerSelectsOther) {
+			t.Fatalf("error = %v", err)
+		}
+		if id, exists, currentErr := publisher.Current(); currentErr != nil || !exists || id != other.ID {
+			t.Fatalf("pointer changed: %q, %v, %v", id, exists, currentErr)
+		}
+	})
+	t.Run("missing tree is refused", func(t *testing.T) {
+		filesystem, publisher, generation := setup(t)
+		prefix := path.Join(root, "generations", generation.ID)
+		for name := range filesystem.nodes {
+			if name == prefix || strings.HasPrefix(name, prefix+"/") {
+				delete(filesystem.nodes, name)
+			}
+		}
+		if err := publisher.RestoreMissingPointer(generation.ID); err == nil {
+			t.Fatal("missing generation accepted")
+		}
+		if _, exists, err := publisher.Current(); err != nil || exists {
+			t.Fatalf("pointer created for a missing tree: %v, %v", exists, err)
+		}
+	})
+	t.Run("modified tree is refused", func(t *testing.T) {
+		filesystem, publisher, generation := setup(t)
+		config := path.Join(root, "generations", generation.ID, "zones.conf")
+		node, ok := filesystem.nodes[config]
+		if !ok {
+			t.Fatal("staged zones.conf missing")
+		}
+		node.data = append(append([]byte(nil), node.data...), []byte("// owner edit\n")...)
+		if err := publisher.RestoreMissingPointer(generation.ID); err == nil {
+			t.Fatal("modified generation accepted")
+		}
+		if _, exists, err := publisher.Current(); err != nil || exists {
+			t.Fatalf("pointer created for a modified tree: %v, %v", exists, err)
+		}
+	})
+	t.Run("writable tree is refused", func(t *testing.T) {
+		filesystem, publisher, generation := setup(t)
+		filesystem.nodes[path.Join(root, "generations", generation.ID)].mode = fs.ModeDir | 0o755
+		if err := publisher.RestoreMissingPointer(generation.ID); err == nil {
+			t.Fatal("mutable generation accepted")
+		}
+	})
 }

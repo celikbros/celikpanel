@@ -16,7 +16,7 @@ var errServerSetupAccessDNSMismatch = fmt.Errorf("%w: public addresses differ fr
 // A prerequisite check never starts ACME or edits DNS. Unlike an OS resolver,
 // the fixed public resolvers cannot succeed from /etc/hosts or private DNS.
 func (p *Panel) runServerSetupAccessDNS(ctx context.Context, plan serverSetupPlan, step serverSetupExecutionStep) (bool, error) {
-	if err := p.requireServerSetupAdmission(); err != nil {
+	if err := p.requireServerSetupAdmission(ctx); err != nil {
 		return false, err
 	}
 	actual, valid := canonicalIPv4(serverPrimaryIP())

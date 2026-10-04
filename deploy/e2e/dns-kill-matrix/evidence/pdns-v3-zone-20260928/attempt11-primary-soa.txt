@@ -1,0 +1,6 @@
+Using domain server:
+Name: 192.0.2.10
+Address: 192.0.2.10#53
+Aliases: 
+
+s2.s1-kill.test has SOA record ns1.s1-kill.test. hostmaster.s1-kill.test. 2026092803 10800 3600 604800 3600

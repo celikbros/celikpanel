@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from '../router';
 import { Globe, Plus, Trash2, ExternalLink, Settings, Lock, HardDrive } from 'lucide-react';
 import { AddDomainModal } from './AddDomainModal';
@@ -7,6 +7,8 @@ import { useI18n } from '../i18n';
 import { Button, EmptyState, SearchInput, Spinner, StatusDot, UsageBar } from './ui';
 import { PageHeader } from './PageHeader';
 import { apiErrorText, readApiError } from '../lib/apiError';
+import { domainDeletionDetailKey, domainDeletionReasonKey, readDomainDeletionOutcome, readSavedDomainDeletionState } from '../lib/domainDeletionPending';
+import type { TranslationKey } from '../i18n/en';
 import { useAuth } from '../auth/AuthContext';
 import {
     hasAnyDomainAccess,
@@ -61,6 +63,8 @@ export function Domains() {
     const [query, setQuery] = useState('');
     const [selected, setSelected] = useState<number[]>([]);
     const [accessError, setAccessError] = useState('');
+    const [pendingDeletions, setPendingDeletions] = useState<{ id: number; name: string; message: string }[]>([]);
+    const pendingReadEpoch = useRef(0);
 
     // D-009 on the page itself, not only inside the dialog: with no DNS
     // server installed, the Add buttons are disabled and the empty state
@@ -123,6 +127,37 @@ export function Domains() {
         loadDomains();
     }, [isTeamMember]);
 
+    const pendingMessage = (reason: string, detail = '') => {
+        const key = domainDeletionReasonKey(reason) as TranslationKey | null;
+        const translated = key ? t(key) : '';
+        if (!key || translated === key) return t('domains.deletionPending');
+        // What the secondary's inspector reported, or which check of this
+        // server's proof differed, as its own sentence after the reason's
+        // guidance. Only reviewed tokens reach this point.
+        const detailKey = domainDeletionDetailKey(reason, detail) as TranslationKey | null;
+        const detailText = detailKey ? t(detailKey) : '';
+        return detailKey && detailText !== detailKey ? `${translated} ${detailText}` : translated;
+    };
+
+    const restorePendingDeletions = async (rows: Domain[]) => {
+        const epoch = ++pendingReadEpoch.current;
+        const pending = rows.filter((domain) => domain.status === 'pending');
+        const observed = await Promise.all(pending.map(async (domain) => {
+            try {
+                const response = await fetch(`${API_BASE}/domains/${domain.id}/deletion-status`);
+                const saved = await readSavedDomainDeletionState(response);
+                return saved === null ? null : {
+                    id: domain.id, name: domain.domain_name, message: pendingMessage(saved.reason, saved.detail),
+                };
+            } catch {
+                return null;
+            }
+        }));
+        if (epoch === pendingReadEpoch.current) {
+            setPendingDeletions(observed.filter((item): item is NonNullable<typeof item> => item !== null));
+        }
+    };
+
     const loadDomains = async () => {
         setLoading(true);
         setAccessError('');
@@ -132,7 +167,9 @@ export function Domains() {
             const payload: unknown = await res.json();
             if (!Array.isArray(payload)) throw new Error();
             if (!isTeamMember) {
-                setDomains(payload as Domain[]);
+                const rows = payload as Domain[];
+                setDomains(rows);
+                await restorePendingDeletions(rows);
                 return;
             }
 
@@ -152,11 +189,15 @@ export function Domains() {
                 allowed.push({ ...row, access });
             }
             setDomains(allowed);
+            pendingReadEpoch.current++;
+            setPendingDeletions([]);
             if (rejected) {
                 setAccessError('One or more domains were hidden because their access information was invalid. / Bir veya daha fazla alan adı, erişim bilgisi geçersiz olduğu için gizlendi.');
             }
         } catch {
             setDomains([]);
+            pendingReadEpoch.current++;
+            setPendingDeletions([]);
             setAccessError('Domains could not be loaded. Your existing access was not changed. / Alan adları yüklenemedi. Mevcut erişiminiz değiştirilmedi.');
             showToast('error', t('domains.loadFailed'));
         } finally {
@@ -168,11 +209,25 @@ export function Domains() {
         if (!confirm(t('domains.confirmDelete', { name }))) return;
         try {
             const res = await fetch(`${API_BASE}/domains/${id}`, { method: 'DELETE' });
-            if (!res.ok) {
+            const outcome = await readDomainDeletionOutcome(res);
+            if (outcome.state === 'pending') {
+                const message = pendingMessage(outcome.reason, outcome.detail);
+                pendingReadEpoch.current++;
+                setPendingDeletions((current) => [
+                    ...current.filter((item) => item.id !== id),
+                    { id, name, message },
+                ]);
+                showToast('warning', message);
+                loadDomains();
+                return;
+            }
+            if (outcome.state === 'error') {
                 const apiError = await readApiError(res);
                 showToast('error', apiErrorText(apiError, t));
                 return;
             }
+            pendingReadEpoch.current++;
+            setPendingDeletions((current) => current.filter((item) => item.id !== id));
             showToast('success', t('domains.deleted', { name }));
             setSelected((s) => s.filter((x) => x !== id));
             loadDomains();
@@ -201,6 +256,16 @@ export function Domains() {
                     </span>
                 )}
             />
+
+            {pendingDeletions.map((pending) => (
+                <div key={pending.id} role="status" className="mb-4 rounded-lg border border-warning bg-warning/10 p-4 text-sm text-fg">
+                    <p className="font-semibold">{t('domains.deletionWaiting', { name: pending.name })}</p>
+                    <p className="mt-1">{pending.message}</p>
+                    <Button variant="secondary" className="mt-3" onClick={() => loadDomains()}>
+                        {t('domains.checkDeletionStatus')}
+                    </Button>
+                </div>
+            ))}
 
             {loading ? (
                 <div className="flex items-center justify-center py-16">

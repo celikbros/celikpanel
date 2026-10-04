@@ -208,18 +208,21 @@ func TestVerifyBINDPrimaryProvesPowerDNSSecondaryMembers(t *testing.T) {
 func TestVerifyPDNSPairingAuthoritySupportsMixedPeers(t *testing.T) {
 	previousSOA := probeDNSZoneSOA
 	previousAXFR := probeDNSCatalogAXFR
+	previousPDNSAXFR := probeDNSPDNSCatalogAXFR
 	previousLocal := dnsPairLocalProofAddress
 	previousHostAddresses := dnsPairHostOwnedAddresses
 	dnsPairLocalProofAddress = func() (string, error) { return "192.0.2.10", nil }
 	dnsPairHostOwnedAddresses = func() ([]string, error) {
 		return []string{"192.0.2.10"}, nil
 	}
-	probeDNSCatalogAXFR = func(_ context.Context, address, _ string) (dnsCatalogAXFRResult, error) {
+	catalogProbe := func(_ context.Context, address, _ string) (dnsCatalogAXFRResult, error) {
 		if address != "192.0.2.10" && address != "192.0.2.20" {
 			t.Fatalf("catalog address=%q", address)
 		}
 		return dnsCatalogAXFRResult{Serial: 11, Members: []string{"example.test"}}, nil
 	}
+	probeDNSCatalogAXFR = catalogProbe
+	probeDNSPDNSCatalogAXFR = catalogProbe
 	probeDNSZoneSOA = func(_ context.Context, _, _, domain string) (dnsSOAProbeResult, error) {
 		serial := uint32(2026081601)
 		if strings.HasPrefix(domain, "catalog-") {
@@ -232,6 +235,7 @@ func TestVerifyPDNSPairingAuthoritySupportsMixedPeers(t *testing.T) {
 	t.Cleanup(func() {
 		probeDNSZoneSOA = previousSOA
 		probeDNSCatalogAXFR = previousAXFR
+		probeDNSPDNSCatalogAXFR = previousPDNSAXFR
 		dnsPairLocalProofAddress = previousLocal
 		dnsPairHostOwnedAddresses = previousHostAddresses
 	})
@@ -422,14 +426,14 @@ func testZoneAXFRMessage(
 	return message, id
 }
 
-func TestParseDNSZoneAXFRStateAcceptsOnlyExactNegativeAbsence(t *testing.T) {
+func TestParseDNSZoneAXFRStateClassifiesNegativeAsNoTransfer(t *testing.T) {
 	const domain = "gone.example.test"
 	for _, rcode := range []uint16{
 		dnsRCodeRefused, dnsRCodeNotAuth, dnsRCodeNameError,
 	} {
 		message, id := testZoneAXFRMessage(t, domain, rcode, false)
 		state, err := parseDNSZoneAXFRState(message, id, domain)
-		if err != nil || state != dnsZoneAXFRAbsent {
+		if err != nil || state != dnsZoneAXFRNoTransfer {
 			t.Fatalf("rcode=%d state=%d err=%v", rcode, state, err)
 		}
 	}
@@ -516,6 +520,14 @@ func TestParseDNSZoneSOAResponseRejectsWrongSerialShape(t *testing.T) {
 	if err != nil || !result.Authoritative || len(result.SOASerials) != 1 || result.SOASerials[0] != 2026081601 {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
+	withExtraAnswer := append([]byte(nil), response...)
+	binary.BigEndian.PutUint16(withExtraAnswer[6:8], 2)
+	withExtraAnswer = append(withExtraAnswer,
+		0xc0, 0x0c, 0, 1, 0, dnsClassIN, 0, 0, 0, 60, 0, 4, 192, 0, 2, 10,
+	)
+	if _, err := parseDNSZoneSOAResponse(withExtraAnswer, id, "example.test"); err == nil {
+		t.Fatal("exact SOA with an extra A answer was accepted")
+	}
 	response[len(response)-1] = 1 // numeric tail remains structurally valid; serial is unchanged.
 	if _, err := parseDNSZoneSOAResponse(response[:len(response)-1], id, "example.test"); err == nil {
 		t.Fatal("truncated SOA response was accepted")
@@ -578,6 +590,14 @@ func TestDeletedChildAcceptsAuthoritativeParentNegativeOverUDPAndTCP(t *testing.
 	}
 }
 
+func TestDeletedChildAcceptsSingleLabelParentNegative(t *testing.T) {
+	const domain = "s1-kill.test"
+	result := testNegativeSOAResponse(t, domain, "test", dnsRCodeNameError)
+	if !validDeletedDNSZoneProof(domain, result) {
+		t.Fatalf("valid authoritative parent proof rejected: %+v", result)
+	}
+}
+
 func TestDeletedChildRejectsChildApexAuthoritativeSOA(t *testing.T) {
 	domain := "mail.example.test"
 	for _, rcode := range []int{dnsRCodeNameError, dnsRCodeNoError} {
@@ -586,7 +606,58 @@ func TestDeletedChildRejectsChildApexAuthoritativeSOA(t *testing.T) {
 			t.Fatalf("rcode=%d child-apex negative authority was accepted", rcode)
 		}
 	}
-	if !validDeletedDNSZoneProof(domain, dnsSOAProbeResult{RCode: dnsRCodeRefused}) {
-		t.Fatal("non-authoritative REFUSED deletion proof regressed")
+	if validDeletedDNSZoneProof(domain, testNegativeSOAResponse(t, domain, "example.test", dnsRCodeRefused)) {
+		t.Fatal("authoritative REFUSED with a parent SOA passed deletion proof")
+	}
+	if validDeletedDNSZoneProof(domain, dnsSOAProbeResult{RCode: dnsRCodeRefused}) {
+		t.Fatal("non-authoritative REFUSED passed as deletion proof")
+	}
+}
+
+func TestSOAResponseBindsQuestionAndRejectsForeignAnswers(t *testing.T) {
+	const domain = "example.test"
+	query, id, err := buildDNSZoneSOAQuery(domain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := append([]byte(nil), query...)
+	binary.BigEndian.PutUint16(base[2:4], dnsResponseQR|dnsRCodeRefused)
+	result, err := parseDNSZoneSOAResponse(base, id, domain)
+	if err != nil || validDeletedDNSZoneProof(domain, result) {
+		t.Fatalf("REFUSED no-answer response passed deletion proof: %+v %v", result, err)
+	}
+
+	for _, tc := range []struct {
+		name   string
+		change func([]byte)
+	}{
+		{name: "wrong question name", change: func(b []byte) { b[13] = 'x' }},
+		{name: "wrong question type", change: func(b []byte) { b[len(b)-3] = dnsTypeSOA + 1 }},
+		{name: "wrong question class", change: func(b []byte) { b[len(b)-1] = dnsClassIN + 1 }},
+		{name: "missing question", change: func(b []byte) { binary.BigEndian.PutUint16(b[4:6], 0) }},
+		{name: "extra question", change: func(b []byte) { binary.BigEndian.PutUint16(b[4:6], 2) }},
+		{name: "wrong opcode", change: func(b []byte) { binary.BigEndian.PutUint16(b[2:4], dnsResponseQR|0x0800|dnsRCodeRefused) }},
+		{name: "excess record count", change: func(b []byte) { binary.BigEndian.PutUint16(b[6:8], 257) }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			message := append([]byte(nil), base...)
+			tc.change(message)
+			if _, err := parseDNSZoneSOAResponse(message, id, domain); err == nil {
+				t.Fatal("mismatched DNS response was accepted")
+			}
+		})
+	}
+
+	withAnswer := append([]byte(nil), base...)
+	binary.BigEndian.PutUint16(withAnswer[6:8], 1)
+	withAnswer = append(withAnswer,
+		0xc0, 0x0c, 0, 1, 0, dnsClassIN, 0, 0, 0, 60, 0, 4, 192, 0, 2, 10,
+	)
+	result, err = parseDNSZoneSOAResponse(withAnswer, id, domain)
+	if err != nil || result.AnswerCount != 1 {
+		t.Fatalf("bounded A answer was not parsed: %+v %v", result, err)
+	}
+	if validDeletedDNSZoneProof(domain, result) {
+		t.Fatal("deleted-zone proof accepted a non-SOA answer")
 	}
 }

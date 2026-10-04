@@ -1,0 +1,170 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": null,
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/setup/operation?request_id=2b70cc6f23c8ff70729eccae60080cc7"
+  },
+  "response": {
+    "elapsed_seconds": 0.003,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Wed, 30 Sep 2026 20:18:20 GMT"
+      ],
+      [
+        "Transfer-Encoding",
+        "chunked"
+      ]
+    ],
+    "json": {
+      "context": {
+        "access_dns_ip": "192.0.2.11",
+        "dns_engine": "",
+        "dns_hosting_management": "",
+        "dns_mode": "external",
+        "dns_role": "",
+        "local_ip": "",
+        "local_nameserver": "",
+        "mail_hostname": "",
+        "panel_domain": "panel-arch.upd1-infra.test",
+        "peer_ip": "",
+        "peer_nameserver": ""
+      },
+      "id": "2b70cc6f23c8ff70729eccae60080cc7",
+      "panel_url": "https://panel-arch.upd1-infra.test:2083/",
+      "phase": "04-service",
+      "plan_id": "c4d08e6ea4e04c449a2e8a82dc9068a0",
+      "request_id": "2b70cc6f23c8ff70729eccae60080cc7",
+      "status": "running",
+      "steps": [
+        {
+          "id": "01-dns",
+          "kind": "dns",
+          "owner_id": "4ca42c0b64d31b9275f80a20c47ba109",
+          "request_id": "a53d567966868e3255a381fdd3f6fac2",
+          "status": "succeeded",
+          "target": "external"
+        },
+        {
+          "id": "02-service",
+          "kind": "service",
+          "operation_id": "24e7a1ff847c9b86100eeee715e59831",
+          "owner_id": "d00fc96901757ec7f8f7bd2aa5751a83",
+          "request_id": "0ca26030beaefd45b22ebcf34ef4f055",
+          "status": "succeeded",
+          "target": "nginx"
+        },
+        {
+          "id": "03-service",
+          "kind": "service",
+          "operation_id": "e559ea4eb0defb7b1d4876f9c7afef23",
+          "owner_id": "c93487b79f5a2fe103c22e6d2a919542",
+          "request_id": "b0debcf0b981b6f9e7e4ddd94070c0e2",
+          "status": "succeeded",
+          "target": "php-fpm"
+        },
+        {
+          "id": "04-service",
+          "kind": "service",
+          "operation_id": "ceabab14238c533377c31d22aff5799d",
+          "owner_id": "ad88848589e0d4e2e97a1f222264cea1",
+          "request_id": "e3fcf32120a84cfd5c924102b040e84f",
+          "status": "running",
+          "target": "mariadb"
+        },
+        {
+          "id": "05-service",
+          "kind": "service",
+          "owner_id": "be7e6e5bf652ca896b27feac10a7e3b4",
+          "request_id": "01f5c7d992780339e4bb9148e439e515",
+          "status": "pending",
+          "target": "cron"
+        },
+        {
+          "id": "06-service",
+          "kind": "service",
+          "owner_id": "b844685078b8d752b9b77347c13e8a90",
+          "request_id": "9025a6dc697df13ccb3dd498522da256",
+          "status": "pending",
+          "target": "certbot"
+        },
+        {
+          "id": "07-firewall",
+          "kind": "firewall",
+          "owner_id": "45eb5b40d3935b62f64dd49ef1fb477a",
+          "request_id": "d44f1ebc916cda5b12c816b0260ccf1a",
+          "status": "pending",
+          "target": "enable_and_persist"
+        },
+        {
+          "id": "08-access_dns",
+          "kind": "access_dns",
+          "owner_id": "bda10b76939af45c0aa85b029535db9d",
+          "qualifier": "192.0.2.11",
+          "request_id": "36ff487772b7d536bc210bdac345e0af",
+          "status": "pending",
+          "target": "panel-arch.upd1-infra.test"
+        },
+        {
+          "id": "09-panel_certificate",
+          "kind": "panel_certificate",
+          "owner_id": "5b894110a4c186b459b7445eb12bb916",
+          "request_id": "47e1d45ae99fcced90f9a8bb56b32af8",
+          "status": "pending",
+          "target": "panel-arch.upd1-infra.test"
+        },
+        {
+          "id": "10-verify",
+          "kind": "verify",
+          "owner_id": "0867b72bfb557a9ba8ee1b3ddfbc8e1e",
+          "request_id": "11414c5ade660475d337cffec9898f91",
+          "status": "pending",
+          "target": "web"
+        }
+      ]
+    },
+    "status": 200,
+    "text": null
+  }
+}

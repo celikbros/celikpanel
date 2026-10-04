@@ -1,0 +1,332 @@
+=== RUN   TestFreshPDNSPairSecondaryInstallIsAcceptedOnlyWithUninitializedProvenance
+--- PASS: TestFreshPDNSPairSecondaryInstallIsAcceptedOnlyWithUninitializedProvenance (0.00s)
+=== RUN   TestFreshPDNSPairSecondaryKeepsExistingRejections
+=== RUN   TestFreshPDNSPairSecondaryKeepsExistingRejections/legacy_provenance_under_pdns-switch
+=== RUN   TestFreshPDNSPairSecondaryKeepsExistingRejections/uninitialized_provenance_under_reconfigure_driver
+=== RUN   TestFreshPDNSPairSecondaryKeepsExistingRejections/managed-bind_provenance_for_an_empty_source
+=== RUN   TestFreshPDNSPairSecondaryKeepsExistingRejections/nonzero_revision
+=== RUN   TestFreshPDNSPairSecondaryKeepsExistingRejections/target_epoch
+=== RUN   TestFreshPDNSPairSecondaryKeepsExistingRejections/source_epoch
+=== RUN   TestFreshPDNSPairSecondaryKeepsExistingRejections/source_engine
+=== RUN   TestFreshPDNSPairSecondaryKeepsExistingRejections/locally_owned_zone_on_a_secondary
+=== RUN   TestFreshPDNSPairSecondaryKeepsExistingRejections/BIND_target_under_pdns-switch
+=== RUN   TestFreshPDNSPairSecondaryKeepsExistingRejections/adopt_mode
+=== RUN   TestFreshPDNSPairSecondaryKeepsExistingRejections/bind_driver
+--- PASS: TestFreshPDNSPairSecondaryKeepsExistingRejections (0.00s)
+    --- PASS: TestFreshPDNSPairSecondaryKeepsExistingRejections/legacy_provenance_under_pdns-switch (0.00s)
+    --- PASS: TestFreshPDNSPairSecondaryKeepsExistingRejections/uninitialized_provenance_under_reconfigure_driver (0.00s)
+    --- PASS: TestFreshPDNSPairSecondaryKeepsExistingRejections/managed-bind_provenance_for_an_empty_source (0.00s)
+    --- PASS: TestFreshPDNSPairSecondaryKeepsExistingRejections/nonzero_revision (0.00s)
+    --- PASS: TestFreshPDNSPairSecondaryKeepsExistingRejections/target_epoch (0.00s)
+    --- PASS: TestFreshPDNSPairSecondaryKeepsExistingRejections/source_epoch (0.00s)
+    --- PASS: TestFreshPDNSPairSecondaryKeepsExistingRejections/source_engine (0.00s)
+    --- PASS: TestFreshPDNSPairSecondaryKeepsExistingRejections/locally_owned_zone_on_a_secondary (0.00s)
+    --- PASS: TestFreshPDNSPairSecondaryKeepsExistingRejections/BIND_target_under_pdns-switch (0.00s)
+    --- PASS: TestFreshPDNSPairSecondaryKeepsExistingRejections/adopt_mode (0.00s)
+    --- PASS: TestFreshPDNSPairSecondaryKeepsExistingRejections/bind_driver (0.00s)
+=== RUN   TestValidateDriverManifestNarrowsUninitializedPairSecondary
+=== RUN   TestValidateDriverManifestNarrowsUninitializedPairSecondary/zones
+=== RUN   TestValidateDriverManifestNarrowsUninitializedPairSecondary/snapshot_bytes
+=== RUN   TestValidateDriverManifestNarrowsUninitializedPairSecondary/target_epoch
+=== RUN   TestValidateDriverManifestNarrowsUninitializedPairSecondary/revision
+--- PASS: TestValidateDriverManifestNarrowsUninitializedPairSecondary (0.00s)
+    --- PASS: TestValidateDriverManifestNarrowsUninitializedPairSecondary/zones (0.00s)
+    --- PASS: TestValidateDriverManifestNarrowsUninitializedPairSecondary/snapshot_bytes (0.00s)
+    --- PASS: TestValidateDriverManifestNarrowsUninitializedPairSecondary/target_epoch (0.00s)
+    --- PASS: TestValidateDriverManifestNarrowsUninitializedPairSecondary/revision (0.00s)
+=== RUN   TestFreshPDNSPairedPrimaryIntentShapeIsUnchanged
+--- PASS: TestFreshPDNSPairedPrimaryIntentShapeIsUnchanged (0.00s)
+=== RUN   TestBusyBeginRecordsTheAgentReason
+--- PASS: TestBusyBeginRecordsTheAgentReason (0.00s)
+=== RUN   TestAgentRefusalWithoutReasonSaysSoAndKeepsTheHold
+--- PASS: TestAgentRefusalWithoutReasonSaysSoAndKeepsTheHold (0.00s)
+=== RUN   TestHostReadinessIsOneReadOnlyCall
+=== RUN   TestHostReadinessIsOneReadOnlyCall/idle
+=== RUN   TestHostReadinessIsOneReadOnlyCall/busy
+=== RUN   TestHostReadinessIsOneReadOnlyCall/ready_with_a_code
+=== RUN   TestHostReadinessIsOneReadOnlyCall/not_ready_without_a_code
+--- PASS: TestHostReadinessIsOneReadOnlyCall (0.00s)
+    --- PASS: TestHostReadinessIsOneReadOnlyCall/idle (0.00s)
+    --- PASS: TestHostReadinessIsOneReadOnlyCall/busy (0.00s)
+    --- PASS: TestHostReadinessIsOneReadOnlyCall/ready_with_a_code (0.00s)
+    --- PASS: TestHostReadinessIsOneReadOnlyCall/not_ready_without_a_code (0.00s)
+=== RUN   TestAgentSocketAbsentTellsStoppedAgentFromUncertainFailure
+--- PASS: TestAgentSocketAbsentTellsStoppedAgentFromUncertainFailure (0.00s)
+=== RUN   TestTriggerIdentityPersistsExactRetryAuthority
+--- PASS: TestTriggerIdentityPersistsExactRetryAuthority (0.00s)
+=== RUN   TestRequestForScenarioDriverRoutes
+=== RUN   TestRequestForScenarioDriverRoutes/bind
+=== RUN   TestRequestForScenarioDriverRoutes/bind-uninitialized
+=== RUN   TestRequestForScenarioDriverRoutes/bind-owner-adoption
+=== RUN   TestRequestForScenarioDriverRoutes/pdns-switch
+=== RUN   TestRequestForScenarioDriverRoutes/pdns-adopt
+=== RUN   TestRequestForScenarioDriverRoutes/pdns-secondary-reconfigure
+--- PASS: TestRequestForScenarioDriverRoutes (0.00s)
+    --- PASS: TestRequestForScenarioDriverRoutes/bind (0.00s)
+    --- PASS: TestRequestForScenarioDriverRoutes/bind-uninitialized (0.00s)
+    --- PASS: TestRequestForScenarioDriverRoutes/bind-owner-adoption (0.00s)
+    --- PASS: TestRequestForScenarioDriverRoutes/pdns-switch (0.00s)
+    --- PASS: TestRequestForScenarioDriverRoutes/pdns-adopt (0.00s)
+    --- PASS: TestRequestForScenarioDriverRoutes/pdns-secondary-reconfigure (0.00s)
+=== RUN   TestOwnerBINDTriggerRequiresExactStandaloneAdoptionManifest
+=== RUN   TestOwnerBINDTriggerRequiresExactStandaloneAdoptionManifest/source-engine
+=== RUN   TestOwnerBINDTriggerRequiresExactStandaloneAdoptionManifest/source-epoch
+=== RUN   TestOwnerBINDTriggerRequiresExactStandaloneAdoptionManifest/target-epoch
+=== RUN   TestOwnerBINDTriggerRequiresExactStandaloneAdoptionManifest/source-revision
+=== RUN   TestOwnerBINDTriggerRequiresExactStandaloneAdoptionManifest/mode
+=== RUN   TestOwnerBINDTriggerRequiresExactStandaloneAdoptionManifest/empty-target
+=== RUN   TestOwnerBINDTriggerRequiresExactStandaloneAdoptionManifest/paired
+=== RUN   TestOwnerBINDTriggerRequiresExactStandaloneAdoptionManifest/wrong-driver
+=== RUN   TestOwnerBINDTriggerRequiresExactStandaloneAdoptionManifest/wrong-target
+--- PASS: TestOwnerBINDTriggerRequiresExactStandaloneAdoptionManifest (0.00s)
+    --- PASS: TestOwnerBINDTriggerRequiresExactStandaloneAdoptionManifest/source-engine (0.00s)
+    --- PASS: TestOwnerBINDTriggerRequiresExactStandaloneAdoptionManifest/source-epoch (0.00s)
+    --- PASS: TestOwnerBINDTriggerRequiresExactStandaloneAdoptionManifest/target-epoch (0.00s)
+    --- PASS: TestOwnerBINDTriggerRequiresExactStandaloneAdoptionManifest/source-revision (0.00s)
+    --- PASS: TestOwnerBINDTriggerRequiresExactStandaloneAdoptionManifest/mode (0.00s)
+    --- PASS: TestOwnerBINDTriggerRequiresExactStandaloneAdoptionManifest/empty-target (0.00s)
+    --- PASS: TestOwnerBINDTriggerRequiresExactStandaloneAdoptionManifest/paired (0.00s)
+    --- PASS: TestOwnerBINDTriggerRequiresExactStandaloneAdoptionManifest/wrong-driver (0.00s)
+    --- PASS: TestOwnerBINDTriggerRequiresExactStandaloneAdoptionManifest/wrong-target (0.00s)
+=== RUN   TestRequestForScenarioRejectsDriverConfusion
+--- PASS: TestRequestForScenarioRejectsDriverConfusion (0.00s)
+=== RUN   TestLoadScenarioRejectsUnknownFields
+--- PASS: TestLoadScenarioRejectsUnknownFields (0.00s)
+=== RUN   TestRunRPCSwitchHeartbeatsAndLeavesKilledOutcomeForRecovery
+--- PASS: TestRunRPCSwitchHeartbeatsAndLeavesKilledOutcomeForRecovery (0.00s)
+=== RUN   TestRunRPCSwitchCompletesWithExactFinalizedReceipt
+--- PASS: TestRunRPCSwitchCompletesWithExactFinalizedReceipt (0.00s)
+=== RUN   TestBuildPDNSNormalizationIdentityBindsExactProductionOperations
+--- PASS: TestBuildPDNSNormalizationIdentityBindsExactProductionOperations (0.00s)
+=== RUN   TestRunPDNSNormalizationUsesExactConfigureAndV3Bindings
+--- PASS: TestRunPDNSNormalizationUsesExactConfigureAndV3Bindings (0.00s)
+=== RUN   TestRunRPCSwitchRetryResumesExactFailedJob
+--- PASS: TestRunRPCSwitchRetryResumesExactFailedJob (0.00s)
+=== RUN   TestValidateRetryableFailedJobAcceptsExactProductionReceipts
+=== RUN   TestValidateRetryableFailedJobAcceptsExactProductionReceipts/restart-before-switch-commit
+=== RUN   TestValidateRetryableFailedJobAcceptsExactProductionReceipts/verified-rollback-after-restart
+=== RUN   TestValidateRetryableFailedJobAcceptsExactProductionReceipts/explicit-trigger-rejection
+--- PASS: TestValidateRetryableFailedJobAcceptsExactProductionReceipts (0.00s)
+    --- PASS: TestValidateRetryableFailedJobAcceptsExactProductionReceipts/restart-before-switch-commit (0.00s)
+    --- PASS: TestValidateRetryableFailedJobAcceptsExactProductionReceipts/verified-rollback-after-restart (0.00s)
+    --- PASS: TestValidateRetryableFailedJobAcceptsExactProductionReceipts/explicit-trigger-rejection (0.00s)
+=== RUN   TestValidateRetryableFailedJobRejectsInexactReceipts
+=== RUN   TestValidateRetryableFailedJobRejectsInexactReceipts/request-id
+=== RUN   TestValidateRetryableFailedJobRejectsInexactReceipts/owner-id
+=== RUN   TestValidateRetryableFailedJobRejectsInexactReceipts/kind
+=== RUN   TestValidateRetryableFailedJobRejectsInexactReceipts/target
+=== RUN   TestValidateRetryableFailedJobRejectsInexactReceipts/package-name
+=== RUN   TestValidateRetryableFailedJobRejectsInexactReceipts/status
+=== RUN   TestValidateRetryableFailedJobRejectsInexactReceipts/phase
+=== RUN   TestValidateRetryableFailedJobRejectsInexactReceipts/unknown-interrupted-code
+=== RUN   TestValidateRetryableFailedJobRejectsInexactReceipts/inexact-interrupted-message
+=== RUN   TestValidateRetryableFailedJobRejectsInexactReceipts/crossed-interrupted-reason
+=== RUN   TestValidateRetryableFailedJobRejectsInexactReceipts/trigger-reason-in-interrupted-phase
+=== RUN   TestValidateRetryableFailedJobRejectsInexactReceipts/restart-reason-in-failed-phase
+=== RUN   TestValidateRetryableFailedJobRejectsInexactReceipts/inexact-trigger-rejection
+=== RUN   TestValidateRetryableFailedJobRejectsInexactReceipts/attempt
+=== RUN   TestValidateRetryableFailedJobRejectsInexactReceipts/started-at
+=== RUN   TestValidateRetryableFailedJobRejectsInexactReceipts/updated-at
+=== RUN   TestValidateRetryableFailedJobRejectsInexactReceipts/deadline-at
+=== RUN   TestValidateRetryableFailedJobRejectsInexactReceipts/finished-at
+=== RUN   TestValidateRetryableFailedJobRejectsInexactReceipts/updated-before-start
+=== RUN   TestValidateRetryableFailedJobRejectsInexactReceipts/deadline-before-start
+=== RUN   TestValidateRetryableFailedJobRejectsInexactReceipts/updated-differs-from-finished
+=== RUN   TestValidateRetryableFailedJobRejectsInexactReceipts/lease
+=== RUN   TestValidateRetryableFailedJobRejectsInexactReceipts/worker-pid
+=== RUN   TestValidateRetryableFailedJobRejectsInexactReceipts/worker-started
+=== RUN   TestValidateRetryableFailedJobRejectsInexactReceipts/worker-command
+--- PASS: TestValidateRetryableFailedJobRejectsInexactReceipts (0.00s)
+    --- PASS: TestValidateRetryableFailedJobRejectsInexactReceipts/request-id (0.00s)
+    --- PASS: TestValidateRetryableFailedJobRejectsInexactReceipts/owner-id (0.00s)
+    --- PASS: TestValidateRetryableFailedJobRejectsInexactReceipts/kind (0.00s)
+    --- PASS: TestValidateRetryableFailedJobRejectsInexactReceipts/target (0.00s)
+    --- PASS: TestValidateRetryableFailedJobRejectsInexactReceipts/package-name (0.00s)
+    --- PASS: TestValidateRetryableFailedJobRejectsInexactReceipts/status (0.00s)
+    --- PASS: TestValidateRetryableFailedJobRejectsInexactReceipts/phase (0.00s)
+    --- PASS: TestValidateRetryableFailedJobRejectsInexactReceipts/unknown-interrupted-code (0.00s)
+    --- PASS: TestValidateRetryableFailedJobRejectsInexactReceipts/inexact-interrupted-message (0.00s)
+    --- PASS: TestValidateRetryableFailedJobRejectsInexactReceipts/crossed-interrupted-reason (0.00s)
+    --- PASS: TestValidateRetryableFailedJobRejectsInexactReceipts/trigger-reason-in-interrupted-phase (0.00s)
+    --- PASS: TestValidateRetryableFailedJobRejectsInexactReceipts/restart-reason-in-failed-phase (0.00s)
+    --- PASS: TestValidateRetryableFailedJobRejectsInexactReceipts/inexact-trigger-rejection (0.00s)
+    --- PASS: TestValidateRetryableFailedJobRejectsInexactReceipts/attempt (0.00s)
+    --- PASS: TestValidateRetryableFailedJobRejectsInexactReceipts/started-at (0.00s)
+    --- PASS: TestValidateRetryableFailedJobRejectsInexactReceipts/updated-at (0.00s)
+    --- PASS: TestValidateRetryableFailedJobRejectsInexactReceipts/deadline-at (0.00s)
+    --- PASS: TestValidateRetryableFailedJobRejectsInexactReceipts/finished-at (0.00s)
+    --- PASS: TestValidateRetryableFailedJobRejectsInexactReceipts/updated-before-start (0.00s)
+    --- PASS: TestValidateRetryableFailedJobRejectsInexactReceipts/deadline-before-start (0.00s)
+    --- PASS: TestValidateRetryableFailedJobRejectsInexactReceipts/updated-differs-from-finished (0.00s)
+    --- PASS: TestValidateRetryableFailedJobRejectsInexactReceipts/lease (0.00s)
+    --- PASS: TestValidateRetryableFailedJobRejectsInexactReceipts/worker-pid (0.00s)
+    --- PASS: TestValidateRetryableFailedJobRejectsInexactReceipts/worker-started (0.00s)
+    --- PASS: TestValidateRetryableFailedJobRejectsInexactReceipts/worker-command (0.00s)
+=== RUN   TestRunRPCSwitchRetryAcceptsExactFinalizedReceiptIdempotently
+--- PASS: TestRunRPCSwitchRetryAcceptsExactFinalizedReceiptIdempotently (0.00s)
+=== RUN   TestRunRPCSwitchInitialRejectsPreexistingTerminalRequest
+--- PASS: TestRunRPCSwitchInitialRejectsPreexistingTerminalRequest (0.00s)
+=== RUN   TestRunRPCSwitchRejectsWorkerBackedDNSLease
+--- PASS: TestRunRPCSwitchRejectsWorkerBackedDNSLease (0.00s)
+=== RUN   TestGateProbeReasonsMatchAgentSource
+--- PASS: TestGateProbeReasonsMatchAgentSource (0.00s)
+=== RUN   TestClassifyGateProbe
+--- PASS: TestClassifyGateProbe (0.00s)
+=== RUN   TestFreshPairedPrimaryScenarioIsAnAcceptedPDNSSwitch
+--- PASS: TestFreshPairedPrimaryScenarioIsAnAcceptedPDNSSwitch (0.00s)
+=== RUN   TestFreshPairedPrimaryCellAdmitsOnlyV3JournalWrites
+--- PASS: TestFreshPairedPrimaryCellAdmitsOnlyV3JournalWrites (0.00s)
+=== RUN   TestGateProbeSendsNoLeaseAndMutatesNothing
+--- PASS: TestGateProbeSendsNoLeaseAndMutatesNothing (0.00s)
+=== RUN   TestUnrelatedBeginFinishesItsOwnLeaseFailed
+--- PASS: TestUnrelatedBeginFinishesItsOwnLeaseFailed (0.00s)
+=== RUN   TestUnrelatedBeginRefusalIsVerifiedAndNothingIsFinished
+--- PASS: TestUnrelatedBeginRefusalIsVerifiedAndNothingIsFinished (0.00s)
+=== RUN   TestFreshPrimaryZoneSourceIsBoundToTheMeasuredSwitch
+--- PASS: TestFreshPrimaryZoneSourceIsBoundToTheMeasuredSwitch (0.00s)
+=== RUN   TestFreshPrimaryZoneStepsAreTheFourDistinctRequests
+--- PASS: TestFreshPrimaryZoneStepsAreTheFourDistinctRequests (0.00s)
+=== RUN   TestFreshPrimaryZoneStepRefusesWithoutPublishedPredecessor
+--- PASS: TestFreshPrimaryZoneStepRefusesWithoutPublishedPredecessor (0.00s)
+=== RUN   TestFreshPrimaryZonePendingDeletionIsNotFinished
+--- PASS: TestFreshPrimaryZonePendingDeletionIsNotFinished (0.00s)
+=== RUN   TestFreshPrimaryZoneRecoveryResumesOnlyAPendingDeletion
+--- PASS: TestFreshPrimaryZoneRecoveryResumesOnlyAPendingDeletion (0.00s)
+=== RUN   TestFreshPairedPrimaryZeroZoneScenarioIsAccepted
+--- PASS: TestFreshPairedPrimaryZeroZoneScenarioIsAccepted (0.00s)
+=== RUN   TestFreshPairedPrimaryZeroZoneScenarioLoadsFromTheDocument
+--- PASS: TestFreshPairedPrimaryZeroZoneScenarioLoadsFromTheDocument (0.00s)
+=== RUN   TestFreshPrimaryZeroZoneLifecycleSourceAdmitsAnyPositiveSerial
+--- PASS: TestFreshPrimaryZeroZoneLifecycleSourceAdmitsAnyPositiveSerial (0.00s)
+=== RUN   TestPDNSPeerRecoverRejectsWrongIdentityBeforeRPC
+--- PASS: TestPDNSPeerRecoverRejectsWrongIdentityBeforeRPC (0.00s)
+=== RUN   TestPDNSPeerRecoverRejectsNonpendingBeforeBegin
+=== RUN   TestPDNSPeerRecoverRejectsNonpendingBeforeBegin/succeeded
+=== RUN   TestPDNSPeerRecoverRejectsNonpendingBeforeBegin/failed
+=== RUN   TestPDNSPeerRecoverRejectsNonpendingBeforeBegin/running
+--- PASS: TestPDNSPeerRecoverRejectsNonpendingBeforeBegin (0.00s)
+    --- PASS: TestPDNSPeerRecoverRejectsNonpendingBeforeBegin/succeeded (0.00s)
+    --- PASS: TestPDNSPeerRecoverRejectsNonpendingBeforeBegin/failed (0.00s)
+    --- PASS: TestPDNSPeerRecoverRejectsNonpendingBeforeBegin/running (0.00s)
+=== RUN   TestPDNSPeerRecoverRequiresTerminalAndRetiredJournal
+=== RUN   TestPDNSPeerRecoverRequiresTerminalAndRetiredJournal/journal-outstanding
+=== RUN   TestPDNSPeerRecoverRequiresTerminalAndRetiredJournal/journal-retired
+--- PASS: TestPDNSPeerRecoverRequiresTerminalAndRetiredJournal (0.00s)
+    --- PASS: TestPDNSPeerRecoverRequiresTerminalAndRetiredJournal/journal-outstanding (0.00s)
+    --- PASS: TestPDNSPeerRecoverRequiresTerminalAndRetiredJournal/journal-retired (0.00s)
+=== RUN   TestPDNSPeerV3ExactZoneCycleRequests
+--- PASS: TestPDNSPeerV3ExactZoneCycleRequests (0.00s)
+=== RUN   TestPDNSPeerV3MissingPredecessorCannotBeginDelete
+--- PASS: TestPDNSPeerV3MissingPredecessorCannotBeginDelete (0.00s)
+=== RUN   TestStoppedBINDTakeoverHasFreshInstallRPCWithOwnProvenance
+--- PASS: TestStoppedBINDTakeoverHasFreshInstallRPCWithOwnProvenance (0.00s)
+=== RUN   TestStoppedBINDTakeoverRefusesEveryOtherShape
+=== RUN   TestStoppedBINDTakeoverRefusesEveryOtherShape/source_engine
+=== RUN   TestStoppedBINDTakeoverRefusesEveryOtherShape/source_epoch
+=== RUN   TestStoppedBINDTakeoverRefusesEveryOtherShape/target_epoch
+=== RUN   TestStoppedBINDTakeoverRefusesEveryOtherShape/revision
+=== RUN   TestStoppedBINDTakeoverRefusesEveryOtherShape/reinstall_mode
+=== RUN   TestStoppedBINDTakeoverRefusesEveryOtherShape/adopt_mode
+=== RUN   TestStoppedBINDTakeoverRefusesEveryOtherShape/paired
+=== RUN   TestStoppedBINDTakeoverRefusesEveryOtherShape/PowerDNS_target
+=== RUN   TestStoppedBINDTakeoverRefusesEveryOtherShape/pdns-switch_driver
+--- PASS: TestStoppedBINDTakeoverRefusesEveryOtherShape (0.00s)
+    --- PASS: TestStoppedBINDTakeoverRefusesEveryOtherShape/source_engine (0.00s)
+    --- PASS: TestStoppedBINDTakeoverRefusesEveryOtherShape/source_epoch (0.00s)
+    --- PASS: TestStoppedBINDTakeoverRefusesEveryOtherShape/target_epoch (0.00s)
+    --- PASS: TestStoppedBINDTakeoverRefusesEveryOtherShape/revision (0.00s)
+    --- PASS: TestStoppedBINDTakeoverRefusesEveryOtherShape/reinstall_mode (0.00s)
+    --- PASS: TestStoppedBINDTakeoverRefusesEveryOtherShape/adopt_mode (0.00s)
+    --- PASS: TestStoppedBINDTakeoverRefusesEveryOtherShape/paired (0.00s)
+    --- PASS: TestStoppedBINDTakeoverRefusesEveryOtherShape/PowerDNS_target (0.00s)
+    --- PASS: TestStoppedBINDTakeoverRefusesEveryOtherShape/pdns-switch_driver (0.00s)
+=== RUN   TestBINDReinstallIsAdmittedOnlyWithRemovedEngineProvenance
+=== RUN   TestBINDReinstallIsAdmittedOnlyWithRemovedEngineProvenance/managed-bind_provenance
+=== RUN   TestBINDReinstallIsAdmittedOnlyWithRemovedEngineProvenance/uninitialized_provenance
+=== RUN   TestBINDReinstallIsAdmittedOnlyWithRemovedEngineProvenance/takeover_provenance
+=== RUN   TestBINDReinstallIsAdmittedOnlyWithRemovedEngineProvenance/switch_mode
+=== RUN   TestBINDReinstallIsAdmittedOnlyWithRemovedEngineProvenance/epoch_change
+=== RUN   TestBINDReinstallIsAdmittedOnlyWithRemovedEngineProvenance/zero_epoch
+=== RUN   TestBINDReinstallIsAdmittedOnlyWithRemovedEngineProvenance/PowerDNS_source
+=== RUN   TestBINDReinstallIsAdmittedOnlyWithRemovedEngineProvenance/PowerDNS_reinstall
+=== RUN   TestBINDReinstallIsAdmittedOnlyWithRemovedEngineProvenance/adoption_driver
+=== RUN   TestBINDReinstallIsAdmittedOnlyWithRemovedEngineProvenance/reconfigure_driver
+--- PASS: TestBINDReinstallIsAdmittedOnlyWithRemovedEngineProvenance (0.00s)
+    --- PASS: TestBINDReinstallIsAdmittedOnlyWithRemovedEngineProvenance/managed-bind_provenance (0.00s)
+    --- PASS: TestBINDReinstallIsAdmittedOnlyWithRemovedEngineProvenance/uninitialized_provenance (0.00s)
+    --- PASS: TestBINDReinstallIsAdmittedOnlyWithRemovedEngineProvenance/takeover_provenance (0.00s)
+    --- PASS: TestBINDReinstallIsAdmittedOnlyWithRemovedEngineProvenance/switch_mode (0.00s)
+    --- PASS: TestBINDReinstallIsAdmittedOnlyWithRemovedEngineProvenance/epoch_change (0.00s)
+    --- PASS: TestBINDReinstallIsAdmittedOnlyWithRemovedEngineProvenance/zero_epoch (0.00s)
+    --- PASS: TestBINDReinstallIsAdmittedOnlyWithRemovedEngineProvenance/PowerDNS_source (0.00s)
+    --- PASS: TestBINDReinstallIsAdmittedOnlyWithRemovedEngineProvenance/PowerDNS_reinstall (0.00s)
+    --- PASS: TestBINDReinstallIsAdmittedOnlyWithRemovedEngineProvenance/adoption_driver (0.00s)
+    --- PASS: TestBINDReinstallIsAdmittedOnlyWithRemovedEngineProvenance/reconfigure_driver (0.00s)
+=== RUN   TestProvenanceFixturesNarrowTheManifestOnTheirOwn
+=== RUN   TestProvenanceFixturesNarrowTheManifestOnTheirOwn/reinstall_paired
+=== RUN   TestProvenanceFixturesNarrowTheManifestOnTheirOwn/reinstall_peer_ip
+=== RUN   TestProvenanceFixturesNarrowTheManifestOnTheirOwn/reinstall_unequal_epoch
+=== RUN   TestProvenanceFixturesNarrowTheManifestOnTheirOwn/reinstall_switch_mode
+=== RUN   TestProvenanceFixturesNarrowTheManifestOnTheirOwn/takeover_revision
+=== RUN   TestProvenanceFixturesNarrowTheManifestOnTheirOwn/takeover_paired
+=== RUN   TestProvenanceFixturesNarrowTheManifestOnTheirOwn/takeover_local_ns
+=== RUN   TestProvenanceFixturesNarrowTheManifestOnTheirOwn/takeover_epoch
+--- PASS: TestProvenanceFixturesNarrowTheManifestOnTheirOwn (0.00s)
+    --- PASS: TestProvenanceFixturesNarrowTheManifestOnTheirOwn/reinstall_paired (0.00s)
+    --- PASS: TestProvenanceFixturesNarrowTheManifestOnTheirOwn/reinstall_peer_ip (0.00s)
+    --- PASS: TestProvenanceFixturesNarrowTheManifestOnTheirOwn/reinstall_unequal_epoch (0.00s)
+    --- PASS: TestProvenanceFixturesNarrowTheManifestOnTheirOwn/reinstall_switch_mode (0.00s)
+    --- PASS: TestProvenanceFixturesNarrowTheManifestOnTheirOwn/takeover_revision (0.00s)
+    --- PASS: TestProvenanceFixturesNarrowTheManifestOnTheirOwn/takeover_paired (0.00s)
+    --- PASS: TestProvenanceFixturesNarrowTheManifestOnTheirOwn/takeover_local_ns (0.00s)
+    --- PASS: TestProvenanceFixturesNarrowTheManifestOnTheirOwn/takeover_epoch (0.00s)
+=== RUN   TestIdentityReceiptBindsProvenanceFixture
+--- PASS: TestIdentityReceiptBindsProvenanceFixture (0.00s)
+=== RUN   TestHeartbeatAcceptsTheOwningJobsRegisteredWorker
+--- PASS: TestHeartbeatAcceptsTheOwningJobsRegisteredWorker (0.00s)
+=== RUN   TestHeartbeatStillRefusesEveryNoncanonicalWorker
+=== RUN   TestHeartbeatStillRefusesEveryNoncanonicalWorker/padded_command
+=== RUN   TestHeartbeatStillRefusesEveryNoncanonicalWorker/path-bearing
+=== RUN   TestHeartbeatStillRefusesEveryNoncanonicalWorker/oversized_command
+=== RUN   TestHeartbeatStillRefusesEveryNoncanonicalWorker/pid_without_token
+=== RUN   TestHeartbeatStillRefusesEveryNoncanonicalWorker/wrong_status
+=== RUN   TestHeartbeatStillRefusesEveryNoncanonicalWorker/foreign_request
+=== RUN   TestHeartbeatStillRefusesEveryNoncanonicalWorker/finished
+=== RUN   TestHeartbeatStillRefusesEveryNoncanonicalWorker/zero_lease
+=== RUN   TestHeartbeatStillRefusesEveryNoncanonicalWorker/padded_token
+=== RUN   TestHeartbeatStillRefusesEveryNoncanonicalWorker/pid_without_cmd
+--- PASS: TestHeartbeatStillRefusesEveryNoncanonicalWorker (0.00s)
+    --- PASS: TestHeartbeatStillRefusesEveryNoncanonicalWorker/padded_command (0.00s)
+    --- PASS: TestHeartbeatStillRefusesEveryNoncanonicalWorker/path-bearing (0.00s)
+    --- PASS: TestHeartbeatStillRefusesEveryNoncanonicalWorker/oversized_command (0.00s)
+    --- PASS: TestHeartbeatStillRefusesEveryNoncanonicalWorker/pid_without_token (0.00s)
+    --- PASS: TestHeartbeatStillRefusesEveryNoncanonicalWorker/wrong_status (0.00s)
+    --- PASS: TestHeartbeatStillRefusesEveryNoncanonicalWorker/foreign_request (0.00s)
+    --- PASS: TestHeartbeatStillRefusesEveryNoncanonicalWorker/finished (0.00s)
+    --- PASS: TestHeartbeatStillRefusesEveryNoncanonicalWorker/zero_lease (0.00s)
+    --- PASS: TestHeartbeatStillRefusesEveryNoncanonicalWorker/padded_token (0.00s)
+    --- PASS: TestHeartbeatStillRefusesEveryNoncanonicalWorker/pid_without_cmd (0.00s)
+=== RUN   TestRunRPCSwitchSurvivesAWorkerBackedHeartbeat
+--- PASS: TestRunRPCSwitchSurvivesAWorkerBackedHeartbeat (0.00s)
+=== RUN   TestNativeV3DeletePendingKeepsExactOperationWithoutFinish
+--- PASS: TestNativeV3DeletePendingKeepsExactOperationWithoutFinish (0.00s)
+=== RUN   TestNativeV3DeleteRejectsMismatchedPendingStatusWithoutFinish
+--- PASS: TestNativeV3DeleteRejectsMismatchedPendingStatusWithoutFinish (0.00s)
+=== RUN   TestNativeV3RecoverPendingKeepsSameOperationWithoutFinish
+--- PASS: TestNativeV3RecoverPendingKeepsSameOperationWithoutFinish (0.00s)
+=== RUN   TestNativeV3RecoverTerminalNeedsExactPublishedReceipt
+--- PASS: TestNativeV3RecoverTerminalNeedsExactPublishedReceipt (0.00s)
+=== RUN   TestNativeV3RecoverRejectsWrongPriorStatusBeforeMutation
+=== RUN   TestNativeV3RecoverRejectsWrongPriorStatusBeforeMutation/phase
+=== RUN   TestNativeV3RecoverRejectsWrongPriorStatusBeforeMutation/owner
+=== RUN   TestNativeV3RecoverRejectsWrongPriorStatusBeforeMutation/terminal
+--- PASS: TestNativeV3RecoverRejectsWrongPriorStatusBeforeMutation (0.00s)
+    --- PASS: TestNativeV3RecoverRejectsWrongPriorStatusBeforeMutation/phase (0.00s)
+    --- PASS: TestNativeV3RecoverRejectsWrongPriorStatusBeforeMutation/owner (0.00s)
+    --- PASS: TestNativeV3RecoverRejectsWrongPriorStatusBeforeMutation/terminal (0.00s)
+=== RUN   TestNativeV3RecoverUnknownDoesNotFinish
+--- PASS: TestNativeV3RecoverUnknownDoesNotFinish (0.00s)
+=== RUN   TestNativeV3RecoverRejectsWrongResumedPhaseBeforeRecovery
+--- PASS: TestNativeV3RecoverRejectsWrongResumedPhaseBeforeRecovery (0.00s)
+PASS
+ok  	github.com/alicelik/celikpanel/cmd/dns-kill-matrix-trigger	0.016s

@@ -1,0 +1,40 @@
+Thu Oct  1 11:01:59 AM UTC 2026
+--- memory
+               total        used        free      shared  buff/cache   available
+Mem:           15697         668       14805           3         419       15029
+Swap:           4096           0        4096
+--- disk (WSL-internal; C: is read with PowerShell)
+Filesystem     1G-blocks  Used Available Use% Mounted on
+/dev/sdd           1007G  138G      819G  15% /
+/dev/sdd           1007G  138G      819G  15% /
+--- qemu
+--- kvm
+crw-rw-rw- 1 root kvm 10, 232 Oct  1 14:01 /dev/kvm
+--- go
+go version go1.26.5 linux/amd64
+--- node
+v26.8.1
+12.0.2
+--- python
+Python 3.14.7
+--- images
+total 875868
+drwx------ 2 root root      4096 Sep 28 10:17 .
+drwx------ 5 root root      4096 Sep 28 21:06 ..
+-r--r--r-- 5 root root 556609024 Sep 27 02:09 Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2
+-r--r--r-- 5 root root 340262912 Sep 27 02:09 debian-13-genericcloud-amd64-20260826-2582.qcow2
+--- existing cp-upd7*
+none
+--- cp-upd1-build
+total 88
+drwxr-xr-x   4 root root  4096 Oct  1 12:28 .
+drwxrwxrwt 374 root root 73728 Oct  1 14:01 ..
+drwxr-xr-x   3 root root  4096 Oct  1 06:07 20261001t030434z
+drwxr-xr-x   3 root root  4096 Oct  1 12:31 20261001t092830z
+--- pair dist
+14
+--- other jobs
+--- repo head
+48d21d58605fe6b6a56d656dba566a2afc12f6b4
+--- alpha80
+bd14d97efc5cfd19acd70ddf0edb9c6343317e2b

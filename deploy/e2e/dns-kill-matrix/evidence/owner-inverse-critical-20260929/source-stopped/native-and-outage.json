@@ -1,0 +1,199 @@
+{
+  "dns_outage": {
+    "judged": false,
+    "last_source_answer_before_cut_at": "2026-09-29T09:33:12.048515Z",
+    "measured_from": {
+      "seconds": "source_serving_again_at minus source_stopped_at",
+      "source_serving_again_at": "first authoritative UDP+TCP answer observed by the controller after the owner command returned; an upper bound, the command may restore service earlier",
+      "source_stopped_at": "pdns.service unit journal: first systemd stopping entry since the pre-cut observation"
+    },
+    "pdns_started_after_stop_at": "2026-09-29T09:33:28.354144Z",
+    "seconds": 9.43062,
+    "source_serving_again_at": "2026-09-29T09:33:33.719654Z",
+    "source_stopped_at": "2026-09-29T09:33:24.289034Z"
+  },
+  "expectation": {
+    "bind_active_after_restart": false,
+    "native_checks_after_owner_command": true,
+    "pdns_inactive_after_restart": true,
+    "pdns_pid_continuity_from_cut": false,
+    "source_serving_after_restart": false
+  },
+  "flow_ambiguities": [],
+  "flow_failures": [],
+  "flow_status": "passed",
+  "owner_inverse_failures": [],
+  "owner_inverse_native_at_boundary": {
+    "at": "2026-09-29T09:33:24.348599Z",
+    "dns": {
+      "answered": false,
+      "at": "2026-09-29T09:33:24.406928Z",
+      "error": "[Errno 111] Connection refused"
+    },
+    "named_processes": [],
+    "port53_listeners": {
+      "tcp": [],
+      "udp": []
+    },
+    "units": {
+      "bind9.service": {
+        "ActiveState": "inactive",
+        "LoadState": "masked",
+        "MainPID": "0",
+        "SubState": "dead",
+        "UnitFileState": "masked"
+      },
+      "named.service": {
+        "ActiveState": "inactive",
+        "LoadState": "masked",
+        "MainPID": "0",
+        "SubState": "dead",
+        "UnitFileState": "masked"
+      },
+      "pdns.service": {
+        "ActiveState": "inactive",
+        "LoadState": "loaded",
+        "MainPID": "0",
+        "SubState": "dead",
+        "UnitFileState": "disabled"
+      }
+    },
+    "unknown": []
+  },
+  "recovery_outcome": {
+    "changed_or_racy": false,
+    "classification": "rolled_back_source_serving",
+    "dns_serving_after_restart": true,
+    "probe_pair_valid": true,
+    "repeated_nonconvergence": false,
+    "rolled_back_source_serving": true,
+    "same_fingerprint": true,
+    "target_converged": false
+  },
+  "request_id": "a86368918e6a7aa56a5677177c723e4a",
+  "safety_status": "passed",
+  "source": "result.json (verbatim sub-objects)",
+  "status": "passed",
+  "step_records": {
+    "steps.after_owner_command.native": {
+      "at": "2026-09-29T09:33:33.719732Z",
+      "dns": {
+        "answered": true,
+        "at": "2026-09-29T09:33:33.756710Z",
+        "result": {
+          "tcp": {
+            "additional": 0,
+            "answers": 1,
+            "authority": 0,
+            "bytes": 50,
+            "flags": 33792,
+            "questions": 1,
+            "transport": "tcp"
+          },
+          "udp": {
+            "additional": 0,
+            "answers": 1,
+            "authority": 0,
+            "bytes": 50,
+            "flags": 33792,
+            "questions": 1,
+            "transport": "udp"
+          }
+        }
+      },
+      "named_processes": [],
+      "port53_listeners": {
+        "tcp": [
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              7256
+            ],
+            "state": "LISTEN"
+          }
+        ],
+        "udp": [
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              7256
+            ],
+            "state": "UNCONN"
+          }
+        ]
+      },
+      "units": {
+        "bind9.service": {
+          "ActiveState": "inactive",
+          "LoadState": "masked",
+          "MainPID": "0",
+          "SubState": "dead",
+          "UnitFileState": "masked"
+        },
+        "named.service": {
+          "ActiveState": "inactive",
+          "LoadState": "masked",
+          "MainPID": "0",
+          "SubState": "dead",
+          "UnitFileState": "masked"
+        },
+        "pdns.service": {
+          "ActiveState": "active",
+          "LoadState": "loaded",
+          "MainPID": "7256",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        }
+      },
+      "unknown": []
+    },
+    "steps.after_owner_command.pdns_main_pid": {
+      "after_owner_command": 7256,
+      "changed": true,
+      "judged": false,
+      "pre_cut": 3074,
+      "reason": "the source was stopped before the cut; the inverse starts it again"
+    },
+    "steps.after_owner_command.source.pdns_main_pid": 7256,
+    "steps.after_stability.source.pdns_main_pid": 7256,
+    "steps.agent_restarted.native": {
+      "at": "2026-09-29T09:33:24.544903Z",
+      "dns": {
+        "answered": false,
+        "at": "2026-09-29T09:33:24.590606Z",
+        "error": "[Errno 111] Connection refused"
+      },
+      "named_processes": [],
+      "port53_listeners": {
+        "tcp": [],
+        "udp": []
+      },
+      "units": {
+        "bind9.service": {
+          "ActiveState": "inactive",
+          "LoadState": "masked",
+          "MainPID": "0",
+          "SubState": "dead",
+          "UnitFileState": "masked"
+        },
+        "named.service": {
+          "ActiveState": "inactive",
+          "LoadState": "masked",
+          "MainPID": "0",
+          "SubState": "dead",
+          "UnitFileState": "masked"
+        },
+        "pdns.service": {
+          "ActiveState": "inactive",
+          "LoadState": "loaded",
+          "MainPID": "0",
+          "SubState": "dead",
+          "UnitFileState": "disabled"
+        }
+      },
+      "unknown": []
+    },
+    "steps.rerun.source.pdns_main_pid": 7256
+  },
+  "variant": "critical"
+}

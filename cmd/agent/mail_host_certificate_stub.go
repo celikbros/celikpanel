@@ -37,3 +37,9 @@ func (a *Agent) MailHostCertificateStatus(_ *transport.MailHostCertificateStatus
 	*resp = transport.MailHostCertificateStatusResponse{Error: mailHostLinuxOnly().Error()}
 	return nil
 }
+
+func (m *serviceMutationManager) persistMailRenewalBeforeAdmissionLocked(*ServiceMutationBeginRequest) error {
+	return mailHostLinuxOnly()
+}
+
+func verifyMailRenewalBeforePublicationLocked(context.Context) error { return mailHostLinuxOnly() }

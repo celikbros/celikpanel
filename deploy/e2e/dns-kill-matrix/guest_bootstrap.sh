@@ -14,11 +14,20 @@ die() {
 STATE_DIR=/var/lib/celikpanel-agent-private
 FIXTURE_DIR=/var/lib/celikpanel-dns-kill-matrix
 MUTATION_LOCK=/run/celikpanel/service-mutation.lock
+RELEASE_TRANSACTION_ROOT=/var/lib/celikpanel-release-transaction
 AGENT_SOCKET=/run/celikpanel/agent.sock
 COORDINATOR_STOP_PROOF=$FIXTURE_DIR/coordinator-stop-proof.json
 TOKEN_FILE=/etc/celikpanel/agent.token
 SCENARIO_FILE=$FIXTURE_DIR/scenario.json
+# The name/type the controller samples and the source proof names. Empty: the
+# member www.s1-kill.test A. A zero-zone fresh paired PowerDNS primary serves
+# only its catalog, so prepare_fresh_pdns_source sets the catalog SOA.
+MEASURED_DNS_NAME=
+MEASURED_DNS_TYPE=
+ZERO_ZONE_PRIMARY_CATALOG=catalog-c000020a.celikpanel.invalid
 SOURCE_SETUP_FILE=$FIXTURE_DIR/source-setup-pdns.json
+SOURCE_SETUP_BIND_FILE=$FIXTURE_DIR/source-setup-bind.json
+SOURCE_SETUP_BIND_IDENTITY=$FIXTURE_DIR/source-setup-bind-identity.json
 SOURCE_PROOF_FILE=$FIXTURE_DIR/source-proof.json
 SOURCE_SETUP_IDENTITY=$FIXTURE_DIR/source-setup-trigger-identity.json
 SOURCE_PREINSTALL_PROOF=$FIXTURE_DIR/source-preinstall-pdns.json
@@ -41,7 +50,68 @@ readonly -a EARLY_UNINITIALIZED_PHASES=(
 readonly -a CRITICAL_MANAGED_PDNS_PHASES=(
     source-stopped
     target-started
+    rolled-back
 )
+# Standalone Debian intent/target-staged BIND cells are driver-specific in the
+# manifest; a genuine managed PowerDNS source is admitted there too, so the
+# measured switch writes its V2 frozen-source journal before the target starts.
+readonly -a EARLY_MANAGED_PDNS_BIND_PHASES=(
+    intent
+    target-staged
+)
+# Fresh installs (prior state: no DNS engine). BIND standalone adds only the
+# driver-specific post-start target-verified cut; critical BIND phases remain
+# managed-pdns-required. Fresh standalone PowerDNS writes every V1 phase.
+readonly -a FRESH_BIND_STANDALONE_PHASES=(
+    pre-intent
+    intent
+    target-staged
+    target-verified
+)
+readonly -a FRESH_PDNS_STANDALONE_PHASES=(
+    pre-intent
+    intent
+    target-staged
+    source-stopped
+    target-started
+    target-verified
+    committed
+    rolling-back
+    rolled-back
+)
+# Fresh paired SECONDARY installs against a panel-free native primary peer
+# (native_primary_peer.py). BIND: early cuts plus target-verified. PowerDNS:
+# every V1 phase of the shared switchToPDNSOnCertifiedProfile writer.
+readonly -a FRESH_BIND_SECONDARY_PHASES=(
+    pre-intent
+    intent
+    target-staged
+    target-verified
+)
+readonly -a FRESH_PDNS_SECONDARY_PHASES=(
+    pre-intent
+    intent
+    target-staged
+    source-stopped
+    target-started
+    target-verified
+    committed
+    rolling-back
+    rolled-back
+)
+# Fresh paired PowerDNS PRIMARY (journal V3): the phases whose V3 journal
+# write carries the kill hook (run_cell.py FRESH_PRIMARY_V3_BOUNDARIES;
+# source-stopped selects target-enable-intent). Peer-reachable only.
+readonly -a FRESH_PDNS_PRIMARY_PHASES=(
+    intent
+    target-staged
+    source-stopped
+    target-started
+    target-verified
+    committed
+)
+SOURCE_PREINSTALL_BIND_PROOF=/var/lib/celikpanel-dns-kill-matrix/source-preinstall-bind.json
+PEER_PRIMARY_PREFLIGHT=/var/lib/celikpanel-dns-kill-matrix/peer-primary-preflight.json
 
 array_contains() {
     local needle=$1
@@ -53,6 +123,31 @@ array_contains() {
     return 1
 }
 
+standalone_cell_matches_phase() {
+    local driver=$1 cell_id=$2 boundary_phase=$3
+    if [[ $boundary_phase == pre-intent ]]; then
+        [[ $cell_id =~ ^${driver}__pre-intent__standalone__peer-(reachable|unreachable)$ ]]
+    else
+        [[ $cell_id =~ ^${driver}__${boundary_phase}__(before|after)-write__standalone__peer-(reachable|unreachable)$ ]]
+    fi
+}
+
+secondary_cell_matches_phase() {
+    # Only peer-reachable paired-secondary cells have a pass definition.
+    local driver=$1 cell_id=$2 boundary_phase=$3
+    if [[ $boundary_phase == pre-intent ]]; then
+        [[ $cell_id == "${driver}__pre-intent__paired-secondary__peer-reachable" ]]
+    else
+        [[ $cell_id =~ ^${driver}__${boundary_phase}__(before|after)-write__paired-secondary__peer-reachable$ ]]
+    fi
+}
+
+primary_cell_matches_phase() {
+    # Only peer-reachable paired-primary cells have a pass definition.
+    local driver=$1 cell_id=$2 boundary_phase=$3
+    [[ $cell_id =~ ^${driver}__${boundary_phase}__(before|after)-write__paired-primary__peer-reachable$ ]]
+}
+
 require_simple_value() {
     local label=$1 value=$2 pattern=$3
     [[ $value =~ $pattern ]] || die "$label is not canonical: $value"
@@ -62,6 +157,74 @@ require_regular() {
     local path=$1
     [[ -f $path && ! -L $path ]] || die "expected a regular non-symlink file: $path"
     [[ $(stat -Lc '%h' -- "$path") == 1 ]] || die "expected a single-link file: $path"
+}
+
+prepare_release_transaction_lock() {
+    # Independent DNS recovery takes the durable native release lock. A fresh
+    # fixture has no updater to create it first.
+    python3 - "$RELEASE_TRANSACTION_ROOT" <<'PYRELEASELOCK'
+# FIXTURE_RELEASE_TRANSACTION_LOCK
+import os
+import stat
+import sys
+
+directory_path = sys.argv[1]
+if directory_path != "/var/lib/celikpanel-release-transaction":
+    raise SystemExit("release transaction fixture path differs from production")
+flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+try:
+    os.mkdir(directory_path, 0o700)
+except FileExistsError:
+    pass
+directory = os.open(directory_path, flags)
+try:
+    info = os.fstat(directory)
+    path_info = os.lstat(directory_path)
+    if (not stat.S_ISDIR(info.st_mode)
+            or (info.st_dev, info.st_ino) != (path_info.st_dev, path_info.st_ino)
+            or info.st_uid != 0 or info.st_gid != 0
+            or stat.S_IMODE(info.st_mode) != 0o700):
+        raise SystemExit("release transaction fixture directory has unsafe metadata")
+
+    lock_flags = os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC
+    try:
+        lock = os.open("transaction.lock", lock_flags | os.O_CREAT | os.O_EXCL,
+                       0o600, dir_fd=directory)
+        created = True
+    except FileExistsError:
+        lock = os.open("transaction.lock", lock_flags, dir_fd=directory)
+        created = False
+    try:
+        info = os.fstat(lock)
+        path_info = os.stat("transaction.lock", dir_fd=directory,
+                            follow_symlinks=False)
+        if (not stat.S_ISREG(info.st_mode)
+                or (info.st_dev, info.st_ino) != (path_info.st_dev, path_info.st_ino)
+                or info.st_uid != 0 or info.st_gid != 0
+                or stat.S_IMODE(info.st_mode) != 0o600
+                or info.st_size != 0 or info.st_nlink != 1):
+            raise SystemExit("release transaction fixture lock has unsafe metadata")
+        if created:
+            os.fsync(lock)
+            os.fsync(directory)
+    finally:
+        os.close(lock)
+finally:
+    os.close(directory)
+PYRELEASELOCK
+}
+
+# The role-specific v2 documents differ on the wire. Compare their strict
+# semantic projections; preserve each original digest in the fixture proof.
+verify_dns_receipt_pair() {
+    python3 - "$STATE_DIR/dns-engine-state.json" "$STATE_DIR/dns-engine-ownership-$1.json" <<'PYDNS'
+from pathlib import Path
+import json,runpy,sys
+reader=runpy.run_path('/opt/celikpanel/libexec/dns-kill-recovery-probe.py')['decode_dns_document']
+raw=[Path(p).read_bytes() for p in sys.argv[1:]]
+if reader(json.loads(raw[0]),raw[0]) != reader(json.loads(raw[1]),raw[1],'ownership'):
+    raise SystemExit('DNS source ownership differs from current state')
+PYDNS
 }
 
 inactive_unit_evidence() {
@@ -387,6 +550,7 @@ install_bundle() {
     verify_fixture_identity "$cell_id" "$node"
     verify_os "$node"
     ensure_service_identity
+    prepare_release_transaction_lock
 
     install -d -m 0755 -o root -g root /opt/celikpanel /opt/celikpanel/bin
     install -d -m 0755 -o root -g root /opt/celikpanel/libexec
@@ -454,15 +618,15 @@ install_bundle() {
 
     # The production panel refuses an empty user database. Create one
     # disposable administrator through the supported CLI. The password is
-    # derived in-memory from the fixture identity, sent only on stdin, and
-    # neither printed nor stored by this harness.
+    # derived in-memory from the fixture identity, sent only on the strict
+    # inherited-stdin JSON path, and neither printed nor stored by this harness.
     local admin_password
     admin_password="S1-$(printf '%s\0fixture-admin' "$cell_id" | sha256sum | cut -c1-32)x"
-    printf 's1-admin\ns1-admin@fixture.invalid\n%s\n' "$admin_password" | \
+    printf '{"username":"s1-admin","email":"s1-admin@fixture.invalid","password":"%s"}\n' "$admin_password" | \
         runuser -u celikpanel -- env \
             CELIKPANEL_DATA_DIR=/var/lib/celikpanel \
             CELIKPANEL_WEB_DIR=/opt/celikpanel/web \
-            /opt/celikpanel/bin/panel --create-admin >/dev/null
+            /opt/celikpanel/bin/panel --create-admin --admin-credentials-file=- >/dev/null
     unset admin_password
     [[ $(runuser -u celikpanel -- env CELIKPANEL_DATA_DIR=/var/lib/celikpanel \
         /opt/celikpanel/bin/panel --count-users) == 1 ]] \
@@ -829,8 +993,8 @@ for key, expected in expected_header.items():
 if set(scenario) != set(expected_header) | {"zones"}:
     raise SystemExit("external PowerDNS scenario fields differ")
 zones = scenario["zones"]
-if not isinstance(zones, list) or len(zones) != 1:
-    raise SystemExit("external PowerDNS scenario requires one exact zone")
+if not isinstance(zones, list) or len(zones) not in (1, 2):
+    raise SystemExit("external PowerDNS scenario requires one active zone and at most one deleted child")
 zone = zones[0]
 expected_zone = {
     "ordinal": 0,
@@ -864,6 +1028,16 @@ expected_zone = {
 }
 if zone != expected_zone:
     raise SystemExit("external PowerDNS zone differs from the exact adoption fixture")
+if len(zones) == 2 and zones[1] != {
+    "ordinal": 1,
+    "domain": "old.s1-kill.test",
+    "desired_generation": 1,
+    "delete": True,
+    "zone_type": "NATIVE",
+    "records": [],
+    "zone_qualifier": "",
+}:
+    raise SystemExit("external PowerDNS deleted child differs from the exact adoption fixture")
 fd = os.open(database_path, os.O_CREAT | os.O_EXCL | os.O_RDWR, 0o600)
 os.close(fd)
 with open(schema_path, encoding="utf-8") as handle:
@@ -1634,7 +1808,7 @@ validate_normalized_pdns_source() {
     [[ $(sha256sum "$STATE_DIR/dns-engine-state.json" | cut -d' ' -f1) == "$state_sha" ]] \
         || die "PowerDNS normalization changed the adopted engine state"
     require_regular "$STATE_DIR/dns-engine-ownership-pdns.json"
-    cmp -s "$STATE_DIR/dns-engine-state.json" "$STATE_DIR/dns-engine-ownership-pdns.json" \
+    verify_dns_receipt_pair pdns \
         || die "PowerDNS normalization changed active source ownership"
     [[ ! -e $STATE_DIR/dns-engine-install-ownership-pdns.json && ! -L $STATE_DIR/dns-engine-install-ownership-pdns.json ]] \
         || die "PowerDNS normalization created source install ownership"
@@ -1769,6 +1943,9 @@ write_source_proof() {
     local source_adoption_path=absent source_adoption_sha=absent
     local external_pdns_preimage_path=absent external_pdns_preimage_sha=absent
     local source_normalization_path=absent source_normalization_sha=absent
+    local authoritative_name=${MEASURED_DNS_NAME:-www.s1-kill.test}
+    local authoritative_type=${MEASURED_DNS_TYPE:-A}
+    [[ $source_fixture == owner-bind ]] && authoritative_name=www.owner.test
     local measured_scenario_sha
     measured_scenario_sha=$(sha256sum "$SCENARIO_FILE" | cut -d' ' -f1)
     if [[ $source_fixture == managed-pdns ]]; then
@@ -1793,6 +1970,48 @@ write_source_proof() {
         source_adoption_sha=$(sha256sum "$SOURCE_ADOPTION_PROOF" | cut -d' ' -f1)
         source_normalization_path=$SOURCE_NORMALIZATION_IDENTITY
         source_normalization_sha=$(sha256sum "$SOURCE_NORMALIZATION_IDENTITY" | cut -d' ' -f1)
+    elif [[ $source_fixture == managed-bind ]]; then
+        require_regular "$STATE_DIR/dns-engine-state.json"
+        require_regular "$SOURCE_SETUP_BIND_FILE"
+        require_regular "$SOURCE_SETUP_BIND_IDENTITY"
+        state_sha=$(sha256sum "$STATE_DIR/dns-engine-state.json" | cut -d' ' -f1)
+        state_path=$STATE_DIR/dns-engine-state.json
+        state_json=$(python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1])),separators=(",",":")))' \
+            "$STATE_DIR/dns-engine-state.json")
+        serving=true
+        engine=bind
+        epoch=1
+        setup_scenario_sha=$(sha256sum "$SOURCE_SETUP_BIND_FILE" | cut -d' ' -f1)
+        setup_identity_sha=$(sha256sum "$SOURCE_SETUP_BIND_IDENTITY" | cut -d' ' -f1)
+    elif [[ $source_fixture == owner-bind ]]; then
+        serving=true
+        engine=bind
+        epoch=0
+    elif [[ $source_fixture == unmanaged-bind-stopped ]]; then
+        # Owner-installed, stopped BIND; no CelikPanel engine state at all.
+        serving=false
+        engine=
+        epoch=0
+        require_regular "$SOURCE_PREINSTALL_BIND_PROOF"
+        source_preinstall_path=$SOURCE_PREINSTALL_BIND_PROOF
+        source_preinstall_sha=$(sha256sum "$SOURCE_PREINSTALL_BIND_PROOF" | cut -d' ' -f1)
+    elif [[ $source_fixture == managed-bind-absent ]]; then
+        # Managed BIND identity kept (state + ownership), engine removed.
+        require_regular "$STATE_DIR/dns-engine-state.json"
+        require_regular "$SOURCE_SETUP_BIND_FILE"
+        require_regular "$SOURCE_SETUP_BIND_IDENTITY"
+        require_regular "$SOURCE_PREINSTALL_BIND_PROOF"
+        state_sha=$(sha256sum "$STATE_DIR/dns-engine-state.json" | cut -d' ' -f1)
+        state_path=$STATE_DIR/dns-engine-state.json
+        state_json=$(python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1])),separators=(",",":")))' \
+            "$STATE_DIR/dns-engine-state.json")
+        serving=false
+        engine=bind
+        epoch=1
+        setup_scenario_sha=$(sha256sum "$SOURCE_SETUP_BIND_FILE" | cut -d' ' -f1)
+        setup_identity_sha=$(sha256sum "$SOURCE_SETUP_BIND_IDENTITY" | cut -d' ' -f1)
+        source_preinstall_path=$SOURCE_PREINSTALL_BIND_PROOF
+        source_preinstall_sha=$(sha256sum "$SOURCE_PREINSTALL_BIND_PROOF" | cut -d' ' -f1)
     elif [[ $source_fixture == external-pdns-adoption ]]; then
         serving=true
         engine=pdns
@@ -1807,7 +2026,8 @@ write_source_proof() {
     local temporary
     temporary=$(mktemp "$FIXTURE_DIR/.source-proof.XXXXXXXX")
     chmod 0600 "$temporary"
-    SOURCE_FIXTURE=$source_fixture CELL_ID=$cell_id ADDRESS=$address \
+    SOURCE_FIXTURE=$source_fixture CELL_ID=$cell_id ADDRESS=$address AUTH_NAME=$authoritative_name \
+    AUTH_TYPE=$authoritative_type \
     SOURCE_REVISION=$source_revision STATE_SHA=$state_sha STATE_JSON=$state_json \
     STATE_PATH=$state_path \
     SERVING=$serving ENGINE=$engine EPOCH=$epoch \
@@ -1838,21 +2058,29 @@ value = {
         "claimed": os.environ["SERVING"] == "true",
         "address": os.environ["ADDRESS"],
         "port": 53,
-        "name": "www.s1-kill.test",
-        "type": "A",
+        "name": os.environ["AUTH_NAME"],
+        "type": os.environ.get("AUTH_TYPE", "A"),
         "udp": os.environ["SERVING"] == "true",
         "tcp": os.environ["SERVING"] == "true",
     },
     "uninitialized_global_port53": {
-        "udp_bindable": os.environ["SOURCE_FIXTURE"] == "uninitialized",
-        "tcp_bindable": os.environ["SOURCE_FIXTURE"] == "uninitialized",
+        "udp_bindable": os.environ["SERVING"] != "true",
+        "tcp_bindable": os.environ["SERVING"] != "true",
         "authoritative_answer_observed": False,
     },
     "receipt_origin": (
         "production-pdns-adopt-normalized"
         if os.environ["SOURCE_FIXTURE"] == "managed-pdns"
+        else "production-bind-switch"
+        if os.environ["SOURCE_FIXTURE"] == "managed-bind"
         else "harness-external-pdns-preimage"
         if os.environ["SOURCE_FIXTURE"] == "external-pdns-adoption"
+        else "harness-native-bind"
+        if os.environ["SOURCE_FIXTURE"] == "owner-bind"
+        else "harness-owner-bind-installed-stopped"
+        if os.environ["SOURCE_FIXTURE"] == "unmanaged-bind-stopped"
+        else "production-bind-switch-engine-removed"
+        if os.environ["SOURCE_FIXTURE"] == "managed-bind-absent"
         else "absent-by-proof"
     ),
     "source_setup_scenario_sha256": os.environ["SETUP_SCENARIO_SHA"],
@@ -1878,7 +2106,7 @@ PY
 }
 
 write_controller_argv() {
-    local cell_id=$1 address=$2
+    local cell_id=$1 address=$2 source_fixture=${3:-uninitialized}
     local output=$FIXTURE_DIR/controller-argv.json
     local result_dir=$FIXTURE_DIR/results/$cell_id
     [[ ! -e $output && ! -L $output ]] \
@@ -1891,7 +2119,11 @@ write_controller_argv() {
     nonce=$(printf '%s\0fault-nonce' "$cell_id" | sha256sum | cut -c1-64)
     temporary=$(mktemp "$FIXTURE_DIR/.controller-argv.XXXXXXXX")
     chmod 0600 "$temporary"
-    CELL_ID=$cell_id DNS_ADDRESS=$address REQUEST_ID=$request_id NONCE=$nonce \
+    local measured_dns_name=${MEASURED_DNS_NAME:-www.s1-kill.test}
+    local measured_dns_type=${MEASURED_DNS_TYPE:-A}
+    [[ $source_fixture == owner-bind ]] && measured_dns_name=www.owner.test
+    CELL_ID=$cell_id DNS_ADDRESS=$address DNS_NAME=$measured_dns_name DNS_TYPE=$measured_dns_type \
+    REQUEST_ID=$request_id NONCE=$nonce \
     RESULT_DIR=$result_dir python3 - "$temporary" <<'PY'
 import json, os, sys
 
@@ -1946,8 +2178,8 @@ argv = [
     "--transcript", result + "/transcript.jsonl",
     "--dns-address", os.environ["DNS_ADDRESS"],
     "--dns-port", "53",
-    "--dns-name", "www.s1-kill.test",
-    "--dns-type", "A",
+    "--dns-name", os.environ.get("DNS_NAME", "www.s1-kill.test"),
+    "--dns-type", os.environ.get("DNS_TYPE", "A"),
     "--panel-address", "127.0.0.1",
     "--panel-port", "2083",
     "--startup-timeout", "60",
@@ -1961,6 +2193,12 @@ argv = [
     "--stability-seconds", "30",
     "--stability-interval", "1",
 ]
+native_observer = "/opt/celikpanel/bin/recovery"
+if os.path.isfile(native_observer):
+    argv.extend([
+        "--native-dns-status-command",
+        compact([native_observer, "dns-switch-status", "--quiesced"]),
+    ])
 with open(sys.argv[1], "w", encoding="utf-8") as handle:
     json.dump(argv, handle, indent=2)
     handle.write("\n")
@@ -1972,13 +2210,714 @@ PY
     sync -f "$output" "$result_dir" "$FIXTURE_DIR/results" "$FIXTURE_DIR"
 }
 
+verify_paired_secondary_scenario() {
+    # Exact fresh paired-secondary scenario: empty 0/0 source, epoch 1, the
+    # Panel's secondary identity and zero local zones.
+    local driver=$1 node=$2
+    SECONDARY_DRIVER=$driver SECONDARY_NODE=$node python3 - "$SCENARIO_FILE" <<'PYSECONDARY'
+import json, os, sys
+driver = os.environ["SECONDARY_DRIVER"]
+node = os.environ["SECONDARY_NODE"]
+if driver not in {"bind", "pdns-switch"} or node not in {"arch", "debian13"}:
+    raise SystemExit("paired-secondary driver or node is unsupported")
+if driver == "pdns-switch" and node != "debian13":
+    raise SystemExit("PowerDNS paired secondary requires certified Debian 13")
+local_ip, peer_ip = ("192.0.2.11", "192.0.2.10") if node == "arch" else ("192.0.2.10", "192.0.2.11")
+scenario = json.load(open(sys.argv[1], encoding="utf-8"))
+expected = {
+    "schema": "celikpanel-dns-kill-matrix-trigger/v1",
+    "driver": driver,
+    "source_fixture": "uninitialized",
+    "mode": "switch",
+    "source_engine": "",
+    "target_engine": "bind" if driver == "bind" else "pdns",
+    "source_epoch": 0,
+    "target_epoch": 1,
+    "source_revision": 0,
+    "topology": "paired",
+    "pair_role": "secondary",
+    "local_ip": local_ip,
+    "local_ns": "ns2.s1-kill.test",
+    "peer_ip": peer_ip,
+    "peer_ns": "ns1.s1-kill.test",
+    "zones": [],
+}
+if scenario != expected:
+    raise SystemExit("paired-secondary scenario differs from the exact fresh secondary identity")
+PYSECONDARY
+}
+
+prove_peer_primary_catalog() {
+    # Read only: the native primary peer answers its catalog SOA
+    # authoritatively over UDP and TCP from this guest before launch.
+    [[ ! -e $PEER_PRIMARY_PREFLIGHT && ! -L $PEER_PRIMARY_PREFLIGHT ]] ||
+        die "peer primary preflight already exists"
+    local temporary
+    temporary=$(mktemp "$FIXTURE_DIR/.peer-primary-preflight.XXXXXXXX")
+    chmod 0600 "$temporary"
+    python3 - "$SCENARIO_FILE" "$temporary" <<'PYPEERCATALOG'
+import ipaddress, json, os, random, socket, struct, sys
+
+scenario = json.load(open(sys.argv[1], encoding="utf-8"))
+peer = scenario["peer_ip"]
+catalog = "catalog-" + ipaddress.IPv4Address(peer).packed.hex() + ".celikpanel.invalid"
+
+def question(name, qtype):
+    labels = name.rstrip(".").split(".")
+    return b"".join(bytes([len(x)]) + x.encode("ascii") for x in labels) + b"\0" + struct.pack("!HH", qtype, 1)
+
+def skip_name(message, offset):
+    while True:
+        length = message[offset]
+        if length & 0xC0 == 0xC0:
+            return offset + 2
+        offset += 1
+        if length == 0:
+            return offset
+        offset += length
+
+def soa_serial(reply, identifier):
+    rid, flags, qd, an, _ns, _ar = struct.unpack("!HHHHHH", reply[:12])
+    if rid != identifier or flags & 0x8000 == 0 or flags & 0x0400 == 0 or flags & 0x020F or qd != 1 or an < 1:
+        raise SystemExit("peer catalog SOA reply is not a successful authoritative answer")
+    offset = skip_name(reply, 12) + 4
+    for _ in range(an):
+        offset = skip_name(reply, offset)
+        rtype, _cls, _ttl, length = struct.unpack("!HHIH", reply[offset:offset + 10])
+        offset += 10
+        if rtype == 6:
+            end = offset + length
+            cursor = skip_name(reply, skip_name(reply, offset))
+            return struct.unpack("!I", reply[cursor:cursor + 4])[0]
+        offset += length
+    raise SystemExit("peer catalog SOA reply carries no SOA record")
+
+results = {}
+for transport in ("udp", "tcp"):
+    identifier = random.SystemRandom().randrange(1, 65536)
+    packet = struct.pack("!HHHHHH", identifier, 0, 1, 0, 0, 0) + question(catalog, 6)
+    if transport == "udp":
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.settimeout(5)
+            sock.sendto(packet, (peer, 53))
+            reply = sock.recvfrom(65535)[0]
+    else:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.settimeout(5)
+            sock.connect((peer, 53))
+            sock.sendall(struct.pack("!H", len(packet)) + packet)
+            size = struct.unpack("!H", sock.recv(2))[0]
+            reply = b""
+            while len(reply) < size:
+                chunk = sock.recv(size - len(reply))
+                if not chunk:
+                    raise SystemExit("truncated TCP reply from the peer primary")
+                reply += chunk
+    results[transport] = soa_serial(reply, identifier)
+if results["udp"] != results["tcp"] or results["udp"] <= 0:
+    raise SystemExit("peer catalog SOA serial differs between UDP and TCP")
+value = {
+    "schema": "celikpanel/dns-kill-peer-primary-preflight/v1",
+    "peer_ip": peer,
+    "catalog": catalog,
+    "catalog_soa_serial": results["udp"],
+    "authoritative_udp": True,
+    "authoritative_tcp": True,
+    "observed_from": "guest-under-test",
+}
+with open(sys.argv[2], "w", encoding="utf-8") as handle:
+    json.dump(value, handle, indent=2, sort_keys=True)
+    handle.write("\n")
+    handle.flush()
+    os.fsync(handle.fileno())
+PYPEERCATALOG
+    mv -T --no-clobber "$temporary" "$PEER_PRIMARY_PREFLIGHT" ||
+        { rm -f "$temporary"; die "peer primary preflight already exists"; }
+    sync -f "$PEER_PRIMARY_PREFLIGHT" "$FIXTURE_DIR"
+}
+
+prepare_fresh_pdns_secondary() {
+    local cell_id=$1 node=$2 boundary_phase=$3 source_fixture_policy=$4 stage=$5
+    [[ $node == debian13 && $source_fixture_policy == driver-specific ]] ||
+        die "fresh PowerDNS secondary requires the certified Debian driver-specific placement"
+    array_contains "$boundary_phase" "${FRESH_PDNS_SECONDARY_PHASES[@]}" ||
+        die "fresh PowerDNS secondary has an unsupported boundary phase"
+    secondary_cell_matches_phase pdns-switch "$cell_id" "$boundary_phase" ||
+        die "fresh PowerDNS secondary cell must be an exact peer-reachable cell"
+    prepare_fresh_pdns_source "$cell_id" "$node" "$stage" secondary
+}
+
+prepare_fresh_pdns_primary() {
+    local cell_id=$1 node=$2 boundary_phase=$3 source_fixture_policy=$4 stage=$5
+    [[ $node == debian13 && $source_fixture_policy == driver-specific ]] ||
+        die "fresh PowerDNS primary requires the certified Debian driver-specific placement"
+    array_contains "$boundary_phase" "${FRESH_PDNS_PRIMARY_PHASES[@]}" ||
+        die "fresh PowerDNS primary has no hooked V3 journal write at this boundary phase"
+    primary_cell_matches_phase pdns-switch "$cell_id" "$boundary_phase" ||
+        die "fresh PowerDNS primary cell must be an exact peer-reachable cell"
+    prepare_fresh_pdns_source "$cell_id" "$node" "$stage" primary
+}
+
+prepare_fresh_pdns_standalone() {
+    local cell_id=$1 node=$2 boundary_phase=$3 source_fixture_policy=$4 stage=$5
+    [[ $node == debian13 && $source_fixture_policy == driver-specific ]] ||
+        die "fresh standalone PowerDNS requires the certified Debian driver-specific placement"
+    array_contains "$boundary_phase" "${FRESH_PDNS_STANDALONE_PHASES[@]}" ||
+        die "fresh standalone PowerDNS has an unsupported boundary phase"
+    standalone_cell_matches_phase pdns-switch "$cell_id" "$boundary_phase" ||
+        die "fresh standalone PowerDNS cell ID differs from its boundary phase"
+    prepare_fresh_pdns_source "$cell_id" "$node" "$stage" standalone
+}
+
+prepare_fresh_pdns_source() {
+    local cell_id=$1 node=$2 stage=$3 fresh_role=$4
+    [[ $fresh_role == primary || $fresh_role == standalone || $fresh_role == secondary ]] ||
+        die "fresh PowerDNS source role is unsupported"
+    verify_fixture_identity "$cell_id" "$node"
+    verify_os "$node"
+    require_regular "$stage/scenario.json"
+    [[ ! -e $stage/source-setup-bind.json && ! -L $stage/source-setup-bind.json ]] ||
+        die "fresh PowerDNS source must not include BIND setup"
+    install -m 0600 -o root -g root "$stage/scenario.json" "$SCENARIO_FILE"
+    FRESH_PDNS_ROLE=$fresh_role python3 - "$SCENARIO_FILE" <<'PYFRESHPDNS'
+import json, os, sys
+role = os.environ["FRESH_PDNS_ROLE"]
+scenario = json.load(open(sys.argv[1], encoding="utf-8"))
+expected = {
+    "schema": "celikpanel-dns-kill-matrix-trigger/v1",
+    "driver": "pdns-switch",
+    "source_fixture": "uninitialized",
+    "mode": "switch",
+    "source_engine": "",
+    "target_engine": "pdns",
+    "source_epoch": 0,
+    "target_epoch": 1,
+    "source_revision": 0,
+    "topology": "standalone" if role == "standalone" else "paired",
+}
+if role == "secondary":
+    expected.update({
+        "pair_role": "secondary",
+        "local_ip": "192.0.2.10",
+        "local_ns": "ns2.s1-kill.test",
+        "peer_ip": "192.0.2.11",
+        "peer_ns": "ns1.s1-kill.test",
+    })
+if role == "primary":
+    expected.update({
+        "pair_role": "primary",
+        "local_ip": "192.0.2.10",
+        "local_ns": "ns1.s1-kill.test",
+        "peer_ip": "192.0.2.11",
+        "peer_ns": "ns2.s1-kill.test",
+    })
+if set(scenario) != set(expected) | {"zones"} or any(
+    scenario.get(key) != value for key, value in expected.items()
+):
+    raise SystemExit(f"fresh PowerDNS {role} scenario identity differs")
+zones = scenario["zones"]
+if role == "secondary":
+    if zones != []:
+        raise SystemExit("a fresh PowerDNS secondary holds no local zones")
+    raise SystemExit(0)
+if role == "primary" and zones == []:
+    # Zero-zone fresh paired primary (guest_bootstrap.py --zero-zones).
+    raise SystemExit(0)
+zone_type = "MASTER" if role == "primary" else "NATIVE"
+if not isinstance(zones, list) or len(zones) != 1 or zones[0].get("domain") != "s1-kill.test" or zones[0].get("zone_type") != zone_type or zones[0].get("delete") is not False:
+    raise SystemExit(f"fresh PowerDNS {role} requires one {zone_type} member")
+PYFRESHPDNS
+    if [[ $fresh_role == primary ]] &&
+        python3 -c 'import json,sys; sys.exit(0 if json.load(open(sys.argv[1], encoding="utf-8"))["zones"] == [] else 1)' "$SCENARIO_FILE"; then
+        # Zero-zone primary: the only zone it will serve is its catalog.
+        MEASURED_DNS_NAME=$ZERO_ZONE_PRIMARY_CATALOG
+        MEASURED_DNS_TYPE=SOA
+    fi
+    install -d -m 0700 -o root -g root "$MEASURED_IDENTITY_DIR"
+    [[ ! -e $MEASURED_IDENTITY && ! -L $MEASURED_IDENTITY ]] ||
+        die "measured trigger identity receipt must not preexist"
+    local address agent_stop_evidence panel_stop_evidence
+    address=$(global_ipv4)
+    assert_no_source_engine "$address"
+    if [[ $fresh_role == secondary ]]; then
+        # Fresh install, not the legacy reconfiguration: pdns.service inactive
+        # (assert_no_source_engine) and no PowerDNS database, otherwise the
+        # Agent journals under pdns-secondary-reconfigure.
+        [[ ! -e /var/lib/powerdns/pdns.sqlite3 && ! -L /var/lib/powerdns/pdns.sqlite3 ]] ||
+            die "a fresh PowerDNS secondary must not have a PowerDNS database"
+        verify_paired_secondary_scenario pdns-switch "$node"
+        prove_peer_primary_catalog
+    fi
+    write_source_proof uninitialized "$cell_id" "$address" 0
+    write_controller_argv "$cell_id" "$address"
+    systemctl stop celikpanel-panel.service celikpanel-agent.service
+    agent_stop_evidence=$(inactive_unit_evidence celikpanel-agent.service)
+    panel_stop_evidence=$(inactive_unit_evidence celikpanel-panel.service)
+    remove_verified_stale_agent_socket "$agent_stop_evidence" "$panel_stop_evidence"
+    assert_no_source_engine "$address"
+    sync -f "$SCENARIO_FILE" "$SOURCE_PROOF_FILE" "$COORDINATOR_STOP_PROOF" "$FIXTURE_DIR" "$STATE_DIR"
+    printf '{"scenario":"%s","source_proof":"%s","coordinator_stop_proof":"%s","controller_argv":"%s","dns_address":"%s","dns_name":"%s","dns_type":"%s","controller_identity":"root:celikpanel"}\n' \
+        "$SCENARIO_FILE" "$SOURCE_PROOF_FILE" "$COORDINATOR_STOP_PROOF" \
+        "$FIXTURE_DIR/controller-argv.json" "$address" \
+        "${MEASURED_DNS_NAME:-www.s1-kill.test}" "${MEASURED_DNS_TYPE:-A}"
+}
+
+prepare_pdns_switch() {
+    local cell_id=$1 node=$2 boundary_phase=$3 source_fixture=$4
+    local source_fixture_policy=$5 stage=$6
+    require_simple_value "cell id" "$cell_id" '^[a-z0-9][a-z0-9_.-]{0,239}$'
+    if [[ $source_fixture == uninitialized ]]; then
+        if [[ $cell_id == pdns-switch__*__standalone__peer-* ]]; then
+            prepare_fresh_pdns_standalone "$cell_id" "$node" "$boundary_phase" "$source_fixture_policy" "$stage"
+        elif [[ $cell_id == pdns-switch__*__paired-secondary__peer-* ]]; then
+            prepare_fresh_pdns_secondary "$cell_id" "$node" "$boundary_phase" "$source_fixture_policy" "$stage"
+        else
+            prepare_fresh_pdns_primary "$cell_id" "$node" "$boundary_phase" "$source_fixture_policy" "$stage"
+        fi
+        return
+    fi
+    [[ $node == debian13 && $source_fixture == managed-bind &&
+       $source_fixture_policy == driver-specific ]] ||
+        die "managed BIND source requires Debian PowerDNS switch placement"
+    verify_fixture_identity "$cell_id" "$node"
+    verify_os "$node"
+    require_regular "$stage/scenario.json"
+    require_regular "$stage/source-setup-bind.json"
+    install -m 0600 -o root -g root "$stage/scenario.json" "$SCENARIO_FILE"
+    install -m 0600 -o root -g root "$stage/source-setup-bind.json" "$SOURCE_SETUP_BIND_FILE"
+    python3 - "$SCENARIO_FILE" "$SOURCE_SETUP_BIND_FILE" <<'PYBINDSETUP'
+import json, sys
+measured, source = (json.load(open(path, encoding="utf-8")) for path in sys.argv[1:])
+fixed = {
+    "schema": "celikpanel-dns-kill-matrix-trigger/v1",
+    "driver": "bind", "source_fixture": "uninitialized",
+    "mode": "switch", "source_engine": "", "target_engine": "bind",
+    "source_epoch": 0, "target_epoch": 1, "source_revision": 0,
+    "topology": measured.get("topology"),
+}
+role = measured.get("topology")
+if role not in {"standalone", "paired"}:
+    raise SystemExit("managed BIND source topology is unsupported")
+pair = {"pair_role": "primary", "local_ip": "192.0.2.10",
+        "local_ns": "ns1.s1-kill.test", "peer_ip": "192.0.2.11",
+        "peer_ns": "ns2.s1-kill.test"} if role == "paired" else {}
+if set(source) != set(fixed) | set(pair) | {"zones"} or any(source.get(k) != v for k, v in (fixed | pair).items()):
+    raise SystemExit("managed BIND source setup is not an exact empty-source switch")
+if measured.get("driver") != "pdns-switch" or measured.get("source_fixture") != "managed-bind" or measured.get("topology") != role or any(measured.get(k) != v for k, v in pair.items()) or measured.get("source_engine") != "bind" or measured.get("source_epoch") != 1 or measured.get("source_revision") != 0 or measured.get("target_engine") != "pdns" or measured.get("target_epoch") != 2 or measured.get("zones") != source["zones"]:
+    raise SystemExit("managed BIND source setup differs from the measured switch")
+PYBINDSETUP
+    install -d -m 0700 -o root -g root "$MEASURED_IDENTITY_DIR"
+    [[ ! -e $MEASURED_IDENTITY && ! -L $MEASURED_IDENTITY ]] ||
+        die "measured trigger identity receipt must not preexist"
+    local address setup_request
+    address=$(global_ipv4)
+    assert_no_source_engine "$address"
+    setup_request=$(printf '%s\0source-bind-switch' "$cell_id" | sha256sum | cut -c1-32)
+    CELIKPANEL_S1_DRIVER=bind CELIKPANEL_S1_CELL_ID=$cell_id \
+        CELIKPANEL_S1_REQUEST_ID=$setup_request CELIKPANEL_AGENT_SOCKET=$AGENT_SOCKET \
+        CELIKPANEL_AGENT_TOKEN_FILE=$TOKEN_FILE \
+        /opt/celikpanel/bin/dns-kill-trigger rpc-switch \
+        --scenario "$SOURCE_SETUP_BIND_FILE" \
+        --identity-receipt "$SOURCE_SETUP_BIND_IDENTITY" --timeout 45m
+    require_regular "$SOURCE_SETUP_BIND_IDENTITY"
+    require_regular "$STATE_DIR/dns-engine-state.json"
+    require_regular "$STATE_DIR/dns-engine-ownership-bind.json"
+    verify_dns_receipt_pair bind ||
+        die "production BIND source ownership differs from active source state"
+    [[ ! -e $STATE_DIR/dns-engine-switch-journal.json &&
+       ! -L $STATE_DIR/dns-engine-switch-journal.json ]] ||
+        die "production BIND source left an unreconciled switch journal"
+    [[ ! -e $STATE_DIR/dns-engine-install-ownership-bind.json &&
+       ! -L $STATE_DIR/dns-engine-install-ownership-bind.json ]] ||
+        die "production BIND source retained transitional install ownership"
+    [[ ! -e $STATE_DIR/dns-engine-ownership-pdns.json &&
+       ! -L $STATE_DIR/dns-engine-ownership-pdns.json ]] ||
+        die "production BIND source has PowerDNS ownership residue"
+    [[ ! -e $STATE_DIR/dns-engine-install-ownership-pdns.json &&
+       ! -L $STATE_DIR/dns-engine-install-ownership-pdns.json ]] ||
+        die "production BIND source has PowerDNS install ownership residue"
+    systemctl is-active --quiet named.service ||
+        die "production BIND source is not active"
+    dns_probe "$address" www.s1-kill.test
+    write_source_proof managed-bind "$cell_id" "$address" 0
+    write_controller_argv "$cell_id" "$address"
+    systemctl stop celikpanel-panel.service celikpanel-agent.service
+    local agent_stop_evidence panel_stop_evidence
+    agent_stop_evidence=$(inactive_unit_evidence celikpanel-agent.service)
+    panel_stop_evidence=$(inactive_unit_evidence celikpanel-panel.service)
+    remove_verified_stale_agent_socket "$agent_stop_evidence" "$panel_stop_evidence"
+    systemctl is-active --quiet named.service ||
+        die "BIND source stopped with coordinators"
+    dns_probe "$address" www.s1-kill.test
+    sync -f "$SCENARIO_FILE" "$SOURCE_SETUP_BIND_FILE" \
+        "$SOURCE_SETUP_BIND_IDENTITY" "$SOURCE_PROOF_FILE" \
+        "$COORDINATOR_STOP_PROOF" "$FIXTURE_DIR" "$STATE_DIR"
+    printf '{"scenario":"%s","source_proof":"%s","source_setup_bind":"%s","source_setup_bind_identity":"%s","coordinator_stop_proof":"%s","controller_argv":"%s","dns_address":"%s","dns_name":"www.s1-kill.test","controller_identity":"root:celikpanel"}\n'         "$SCENARIO_FILE" "$SOURCE_PROOF_FILE" "$SOURCE_SETUP_BIND_FILE"         "$SOURCE_SETUP_BIND_IDENTITY" "$COORDINATOR_STOP_PROOF"         "$FIXTURE_DIR/controller-argv.json" "$address"
+}
+
+prepare_owner_bind_source() {
+    local address=$1
+    [[ -x /usr/bin/apt-get && -x /usr/bin/dpkg-query ]] || die "owner BIND fixture requires Debian APT"
+    assert_no_source_engine "$address"
+    require_apt_package_absent bind9
+    require_apt_package_absent pdns-server
+    DEBIAN_FRONTEND=noninteractive LC_ALL=C /usr/bin/apt-get update
+    /usr/bin/systemctl mask named.service bind9.service
+    /usr/bin/systemctl daemon-reload
+    DEBIAN_FRONTEND=noninteractive LC_ALL=C /usr/bin/apt-get install -y --no-install-recommends bind9
+    [[ $(/usr/bin/systemctl show -p ActiveState --value named.service) == inactive ]] ||
+        die "owner BIND package hook started masked source"
+    /usr/bin/systemctl unmask named.service bind9.service
+    /usr/bin/systemctl daemon-reload
+    require_apt_package_installed bind9
+    [[ $(stat -Lc '%U:%G:%a' /etc/bind) == root:bind:2755 ]] ||
+        die "owner BIND config parent differs from protected Debian contract"
+    [[ $(stat -Lc '%U:%G:%a' /etc/bind/named.conf) == root:bind:644 ]] ||
+        die "owner BIND main config differs from protected Debian contract"
+    grep -Fxq 'include "/etc/bind/named.conf.options";' /etc/bind/named.conf ||
+        die "owner BIND main options include is absent"
+    grep -Fxq 'include "/etc/bind/named.conf.local";' /etc/bind/named.conf ||
+        die "owner BIND main local include is absent"
+    grep -Fxq 'include "/etc/bind/named.conf.root-hints";' /etc/bind/named.conf ||
+        die "owner BIND main root-hints leaf is absent"
+    [[ ! -e /etc/bind/db.owner.test && ! -L /etc/bind/db.owner.test ]] ||
+        die "owner BIND zone file already exists"
+    install -m 0644 -o root -g bind /dev/null /etc/bind/db.owner.test
+    cat > /etc/bind/db.owner.test <<'ZONE'
+$TTL 3600
+@ IN SOA ns1.owner.test. hostmaster.owner.test. ( 2026092701 10800 3600 604800 3600 )
+@ IN NS ns1.owner.test.
+ns1 IN A 192.0.2.10
+www IN A 192.0.2.10
+ZONE
+    install -m 0644 -o root -g bind /dev/null /etc/bind/named.conf.local
+    cat > /etc/bind/named.conf.local <<'LOCAL'
+zone "owner.test" IN { type master; file "/etc/bind/db.owner.test"; allow-update { none; }; };
+LOCAL
+    install -m 0644 -o root -g bind /dev/null /etc/bind/named.conf.options
+    cat > /etc/bind/named.conf.options <<'OPTIONS'
+options { directory "/var/cache/bind"; recursion no; listen-on { any; }; listen-on-v6 { none; }; };
+OPTIONS
+    /usr/bin/named-checkconf -z /etc/bind/named.conf >/dev/null ||
+        die "owner BIND static configuration or zone file failed native load check"
+    /usr/bin/systemctl enable --now named.service
+    [[ $(/usr/bin/systemctl show -p ActiveState --value named.service) == active ]] ||
+        die "owner BIND named unit is not active"
+    [[ $(/usr/bin/systemctl show -p UnitFileState --value named.service) == enabled ]] ||
+        die "owner BIND named unit is not enabled"
+    [[ $(/usr/bin/systemctl show -p LoadState --value bind9.service) == loaded &&
+       $(/usr/bin/systemctl show -p ActiveState --value bind9.service) == active &&
+       $(/usr/bin/systemctl show -p UnitFileState --value bind9.service) == enabled ]] ||
+        die "owner BIND vendor alias is not active and enabled with named.service"
+    dns_probe "$address" www.owner.test
+    [[ ! -e $STATE_DIR/dns-engine-state.json && ! -L $STATE_DIR/dns-engine-state.json &&
+       ! -e $STATE_DIR/dns-engine-switch-journal.json &&
+       ! -L $STATE_DIR/dns-engine-switch-journal.json ]] ||
+        die "owner BIND fixture acquired a panel DNS state or journal"
+    local engine receipt
+    for engine in bind pdns; do
+        for receipt in "$STATE_DIR/dns-engine-ownership-$engine.json" "$STATE_DIR/dns-engine-install-ownership-$engine.json"; do
+            [[ ! -e $receipt && ! -L $receipt ]] ||
+                die "owner BIND fixture acquired a panel ownership receipt"
+        done
+    done
+    sync -f /etc/bind/db.owner.test /etc/bind/named.conf.local         /etc/bind/named.conf.options /etc/bind "$STATE_DIR"
+}
+
+verify_provenance_bind_scenario() {
+    # Rows 12/14: the takeover is exactly a fresh standalone install on the
+    # wire; the reinstall keeps the managed BIND identity (mode reinstall,
+    # source = target = bind, equal epochs). Both carry the one fixture zone.
+    local source_fixture=$1
+    PROVENANCE_FIXTURE=$source_fixture python3 - "$SCENARIO_FILE" <<'PYPROVENANCE'
+import json, os, sys
+fixture = os.environ["PROVENANCE_FIXTURE"]
+scenario = json.load(open(sys.argv[1], encoding="utf-8"))
+reinstall = fixture == "managed-bind-absent"
+expected = {
+    "schema": "celikpanel-dns-kill-matrix-trigger/v1",
+    "driver": "bind",
+    "source_fixture": fixture,
+    "mode": "reinstall" if reinstall else "switch",
+    "source_engine": "bind" if reinstall else "",
+    "target_engine": "bind",
+    "source_epoch": 1 if reinstall else 0,
+    "target_epoch": 1,
+    "source_revision": 0,
+    "topology": "standalone",
+}
+if fixture not in {"unmanaged-bind-stopped", "managed-bind-absent"}:
+    raise SystemExit("provenance fixture is unsupported")
+if set(scenario) != set(expected) | {"zones"} or any(scenario.get(k) != v for k, v in expected.items()):
+    raise SystemExit(f"{fixture} scenario identity differs")
+zones = scenario["zones"]
+if not isinstance(zones, list) or len(zones) != 1 or zones[0].get("domain") != "s1-kill.test" or zones[0].get("zone_type") != "NATIVE" or zones[0].get("delete") is not False:
+    raise SystemExit(f"{fixture} requires the one NATIVE s1-kill.test zone")
+PYPROVENANCE
+}
+
+write_source_preinstall_bind_proof() {
+    # Canonical root-only record of the BIND preimage the measured operation
+    # starts from. Read only: it hashes files and inspects units/receipts.
+    local cell_id=$1 source_fixture=$2 preparation=$3
+    [[ ! -e $SOURCE_PREINSTALL_BIND_PROOF && ! -L $SOURCE_PREINSTALL_BIND_PROOF ]] ||
+        die "BIND source preinstall proof already exists"
+    local temporary
+    temporary=$(mktemp "$FIXTURE_DIR/.source-preinstall-bind.XXXXXXXX")
+    chmod 0600 "$temporary"
+    BIND_PROOF_CELL_ID=$cell_id BIND_PROOF_FIXTURE=$source_fixture \
+    BIND_PROOF_PREPARATION=$preparation BIND_PROOF_STATE_DIR=$STATE_DIR \
+        python3 - "$temporary" <<'PYBINDPREINSTALL'
+# SOURCE_PREINSTALL_BIND_PROOF_RENDERER
+import hashlib, json, os, stat, subprocess, sys
+
+fixture = os.environ["BIND_PROOF_FIXTURE"]
+state_dir = os.environ["BIND_PROOF_STATE_DIR"]
+takeover = fixture == "unmanaged-bind-stopped"
+env = {"PATH": "/usr/sbin:/usr/bin:/sbin:/bin", "LC_ALL": "C"}
+
+def package():
+    done = subprocess.run(["/usr/bin/dpkg-query", "-W", "-f=${Status}\t${Version}", "--", "bind9"],
+                          capture_output=True, text=True, env=env, check=False)
+    if done.returncode == 0:
+        status, _, version = done.stdout.partition("\t")
+        return {"name": "bind9", "status": status, "version": version}
+    if done.returncode == 1 and done.stderr.strip() == "dpkg-query: no packages found matching bind9":
+        return {"name": "bind9", "status": "absent", "version": ""}
+    raise SystemExit("bind9 package status is not canonical: " + done.stdout + done.stderr)
+
+def unit(name):
+    values = {}
+    for prop, key in (("LoadState", "load_state"), ("ActiveState", "active_state"), ("UnitFileState", "unit_file_state")):
+        done = subprocess.run(["/usr/bin/systemctl", "show", "--property=" + prop, "--value", name],
+                              capture_output=True, text=True, env=env, check=True)
+        values[key] = done.stdout.strip()
+    return values
+
+def digest(path):
+    with open(path, "rb") as handle:
+        return hashlib.sha256(handle.read()).hexdigest()
+
+def receipt(name):
+    path = os.path.join(state_dir, name)
+    if not os.path.lexists(path):
+        return {"exists": False}
+    return {"exists": True, "sha256": digest(path)}
+
+owner_files = {}
+if takeover:
+    paths = sorted(
+        os.path.join("/etc/bind", name) for name in os.listdir("/etc/bind")
+        if stat.S_ISREG(os.lstat(os.path.join("/etc/bind", name)).st_mode)
+    ) + ["/etc/default/named"]
+    for path in paths:
+        info = os.lstat(path)
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+            raise SystemExit(f"owner BIND file is not a single-link regular file: {path}")
+        owner_files[path] = {
+            "sha256": digest(path), "size": info.st_size,
+            "mode": f"{stat.S_IMODE(info.st_mode):04o}", "uid": info.st_uid, "gid": info.st_gid,
+        }
+value = {
+    "schema": "celikpanel/dns-kill-source-preinstall-bind/v1",
+    "cell_id": os.environ["BIND_PROOF_CELL_ID"],
+    "source_fixture": fixture,
+    "scope": "owner-installed-stopped-bind-for-takeover" if takeover else "managed-bind-engine-removed-for-reinstall",
+    "package": package(),
+    "units": {"named.service": unit("named.service"), "bind9.service": unit("bind9.service")},
+    "dns_state": receipt("dns-engine-state.json"),
+    "dns_ownership_bind": receipt("dns-engine-ownership-bind.json"),
+    "dns_install_ownership_bind": receipt("dns-engine-install-ownership-bind.json"),
+    "dns_journal_absent": not os.path.lexists(os.path.join(state_dir, "dns-engine-switch-journal.json")),
+    "pdns_receipts_absent": not any(os.path.lexists(os.path.join(state_dir, name)) for name in (
+        "dns-engine-ownership-pdns.json", "dns-engine-install-ownership-pdns.json")),
+    "global_udp_tcp_53_bindable": True,
+    "owner_files": owner_files,
+    "product_rewrites_on_takeover": ["/etc/bind/named.conf.local", "/etc/bind/named.conf.options"] if takeover else [],
+    "preparation": os.environ["BIND_PROOF_PREPARATION"],
+}
+with open(sys.argv[1], "w", encoding="utf-8", newline="\n") as handle:
+    json.dump(value, handle, indent=2, sort_keys=True)
+    handle.write("\n")
+    handle.flush()
+    os.fsync(handle.fileno())
+PYBINDPREINSTALL
+    mv -T --no-clobber "$temporary" "$SOURCE_PREINSTALL_BIND_PROOF" ||
+        { rm -f "$temporary"; die "BIND source preinstall proof already exists"; }
+    require_regular "$SOURCE_PREINSTALL_BIND_PROOF"
+    sync -f "$SOURCE_PREINSTALL_BIND_PROOF" "$FIXTURE_DIR"
+}
+
+require_bind_unit_state() {
+    local unit=$1 load=$2 active=$3 file_state=$4
+    [[ $(systemctl show -p LoadState --value "$unit") == "$load" &&
+       $(systemctl show -p ActiveState --value "$unit") == "$active" &&
+       $(systemctl show -p UnitFileState --value "$unit") == "$file_state" ]] ||
+        die "$unit is not $load/$active/$file_state"
+}
+
+add_owner_bind_directives() {
+    # The owner's own authoritative directives in the stopped BIND's options:
+    # exactly `recursion no;` and `allow-transfer { none; };`, one tab-indented
+    # line each, right after the single `options {` line of
+    # /etc/bind/named.conf.options (run_cell.py OWNER_BIND_DIRECTIVES). The
+    # takeover reads them as part of what it replaces (register R-042).
+    local options=/etc/bind/named.conf.options
+    python3 - "$options" <<'PYOWNERDIRECTIVES'
+import os, sys
+path = sys.argv[1]
+text = open(path, encoding="utf-8").read()
+lines = text.splitlines(keepends=True)
+anchors = [index for index, line in enumerate(lines) if line == "options {\n"]
+if len(anchors) != 1:
+    raise SystemExit("owner BIND options must carry exactly one `options {` line")
+if any(line.strip().startswith(("recursion", "allow-transfer")) for line in lines):
+    raise SystemExit("owner BIND options already carry a recursion or allow-transfer directive")
+lines[anchors[0] + 1:anchors[0] + 1] = ["\trecursion no;\n", "\tallow-transfer { none; };\n"]
+info = os.stat(path)
+with open(path, "w", encoding="utf-8", newline="\n") as handle:
+    handle.write("".join(lines))
+    handle.flush()
+    os.fsync(handle.fileno())
+os.chown(path, info.st_uid, info.st_gid)
+os.chmod(path, info.st_mode & 0o7777)
+PYOWNERDIRECTIVES
+    /usr/bin/named-checkconf /etc/bind/named.conf || die "owner BIND directives do not parse"
+}
+
+prepare_unmanaged_bind_stopped_source() {
+    # Row 12 preimage: BIND installed by the owner (or the image), then
+    # stopped and disabled by the owner; CelikPanel has never managed it.
+    local cell_id=$1 address=$2 stage=${3:-}
+    [[ -x /usr/bin/apt-get && -x /usr/bin/dpkg-query ]] || die "stopped BIND takeover fixture requires Debian APT"
+    assert_no_source_engine "$address"
+    require_apt_package_absent bind9
+    require_apt_package_absent pdns-server
+    DEBIAN_FRONTEND=noninteractive LC_ALL=C /usr/bin/apt-get update
+    /usr/bin/systemctl mask named.service bind9.service
+    /usr/bin/systemctl daemon-reload
+    DEBIAN_FRONTEND=noninteractive LC_ALL=C /usr/bin/apt-get install -y --no-install-recommends bind9
+    [[ $(/usr/bin/systemctl show -p ActiveState --value named.service) == inactive ]] ||
+        die "owner BIND package hook started the masked unit"
+    /usr/bin/systemctl unmask named.service bind9.service
+    /usr/bin/systemctl daemon-reload
+    /usr/bin/systemctl disable named.service
+    /usr/bin/systemctl daemon-reload
+    require_apt_package_installed bind9
+    require_bind_unit_state named.service loaded inactive disabled
+    [[ $(/usr/bin/systemctl show -p LoadState --value bind9.service) == not-found ]] ||
+        die "the disabled owner BIND still exposes the bind9.service alias"
+    require_regular /etc/default/named
+    require_regular /etc/bind/named.conf
+    require_regular /etc/bind/named.conf.options
+    require_regular /etc/bind/named.conf.local
+    local preparation="apt-get install bind9 under a guard mask, unmask, systemctl disable named.service; no CelikPanel receipt"
+    if [[ -n $stage && -e $stage/owner-bind-directives ]]; then
+        [[ -f $stage/owner-bind-directives && ! -L $stage/owner-bind-directives &&
+           ! -s $stage/owner-bind-directives ]] ||
+            die "owner directives request is not an empty regular file"
+        add_owner_bind_directives
+        preparation="$preparation; owner directives recursion no and allow-transfer none added to named.conf.options"
+    fi
+    assert_no_source_engine "$address"
+    write_source_preinstall_bind_proof "$cell_id" unmanaged-bind-stopped "$preparation"
+}
+
+prepare_managed_bind_absent_source() {
+    # Row 14 preimage: managed BIND produced by a real untagged production
+    # fresh BIND switch, then its engine removed with every receipt kept, the
+    # shape reinstall_active expects (cmd/panel/dns_engine.go:888-900,
+    # cmd/agent/dns_engine_host.go verifyDNSEngineReinstallSource). apt-get
+    # remove would leave "deinstall ok config-files", which the Agent refuses;
+    # only a purge gives the exact absent status.
+    local cell_id=$1 address=$2 stage=$3
+    [[ -x /usr/bin/apt-get && -x /usr/bin/dpkg-query ]] || die "BIND reinstall fixture requires Debian APT"
+    require_regular "$stage/source-setup-bind.json"
+    install -m 0600 -o root -g root "$stage/source-setup-bind.json" "$SOURCE_SETUP_BIND_FILE"
+    python3 - "$SCENARIO_FILE" "$SOURCE_SETUP_BIND_FILE" <<'PYREINSTALLSETUP'
+import json, sys
+measured, source = (json.load(open(path, encoding="utf-8")) for path in sys.argv[1:])
+fixed = {
+    "schema": "celikpanel-dns-kill-matrix-trigger/v1",
+    "driver": "bind", "source_fixture": "uninitialized",
+    "mode": "switch", "source_engine": "", "target_engine": "bind",
+    "source_epoch": 0, "target_epoch": 1, "source_revision": 0,
+    "topology": "standalone",
+}
+if set(source) != set(fixed) | {"zones"} or any(source.get(k) != v for k, v in fixed.items()):
+    raise SystemExit("managed BIND setup is not an exact fresh standalone BIND switch")
+if measured.get("zones") != source["zones"]:
+    raise SystemExit("reinstall zones differ from the managed BIND setup zones")
+PYREINSTALLSETUP
+    assert_no_source_engine "$address"
+    require_apt_package_absent bind9
+    require_apt_package_absent pdns-server
+    local setup_request
+    setup_request=$(printf '%s\0source-bind-switch' "$cell_id" | sha256sum | cut -c1-32)
+    CELIKPANEL_S1_DRIVER=bind CELIKPANEL_S1_CELL_ID=$cell_id \
+        CELIKPANEL_S1_REQUEST_ID=$setup_request CELIKPANEL_AGENT_SOCKET=$AGENT_SOCKET \
+        CELIKPANEL_AGENT_TOKEN_FILE=$TOKEN_FILE \
+        /opt/celikpanel/bin/dns-kill-trigger rpc-switch \
+        --scenario "$SOURCE_SETUP_BIND_FILE" \
+        --identity-receipt "$SOURCE_SETUP_BIND_IDENTITY" --timeout 45m
+    require_regular "$SOURCE_SETUP_BIND_IDENTITY"
+    require_regular "$STATE_DIR/dns-engine-state.json"
+    require_regular "$STATE_DIR/dns-engine-ownership-bind.json"
+    verify_dns_receipt_pair bind ||
+        die "production BIND source ownership differs from active source state"
+    [[ ! -e $STATE_DIR/dns-engine-switch-journal.json && ! -L $STATE_DIR/dns-engine-switch-journal.json &&
+       ! -e $STATE_DIR/dns-engine-install-ownership-bind.json && ! -L $STATE_DIR/dns-engine-install-ownership-bind.json ]] ||
+        die "production BIND source left a journal or install ownership"
+    systemctl is-active --quiet named.service || die "production BIND source is not active"
+    dns_probe "$address" www.s1-kill.test
+    local state_sha ownership_sha
+    state_sha=$(sha256sum "$STATE_DIR/dns-engine-state.json" | cut -d' ' -f1)
+    ownership_sha=$(sha256sum "$STATE_DIR/dns-engine-ownership-bind.json" | cut -d' ' -f1)
+    # The engine goes away; the managed identity (state, ownership) stays.
+    /usr/bin/systemctl disable --now named.service
+    /usr/bin/systemctl daemon-reload
+    DEBIAN_FRONTEND=noninteractive LC_ALL=C /usr/bin/apt-get purge -y bind9
+    /usr/bin/systemctl daemon-reload
+    require_apt_package_absent bind9
+    [[ $(/usr/bin/systemctl show -p LoadState --value named.service) == not-found &&
+       $(/usr/bin/systemctl show -p ActiveState --value named.service) == inactive &&
+       $(/usr/bin/systemctl show -p LoadState --value bind9.service) == not-found ]] ||
+        die "removed BIND left a loaded unit; the reinstall precondition is not met"
+    [[ $(sha256sum "$STATE_DIR/dns-engine-state.json" | cut -d' ' -f1) == "$state_sha" &&
+       $(sha256sum "$STATE_DIR/dns-engine-ownership-bind.json" | cut -d' ' -f1) == "$ownership_sha" ]] ||
+        die "engine removal changed the managed BIND receipts"
+    [[ ! -e $STATE_DIR/dns-engine-install-ownership-bind.json && ! -L $STATE_DIR/dns-engine-install-ownership-bind.json ]] ||
+        die "engine removal produced an install ownership receipt"
+    assert_no_global_dns_listener "$address" ||
+        die "removed BIND source global port 53 is not bindable"
+    write_source_preinstall_bind_proof "$cell_id" managed-bind-absent \
+        "production fresh BIND switch, then systemctl disable --now named.service and apt-get purge bind9; receipts kept"
+}
+
+managed_pdns_bind_boundary_allowed() {
+    local cell_id=$1 boundary_phase=$2 source_fixture_policy=$3
+    if array_contains "$boundary_phase" "${CRITICAL_MANAGED_PDNS_PHASES[@]}"; then
+        [[ $source_fixture_policy == managed-pdns-required ]]
+        return
+    fi
+    if array_contains "$boundary_phase" "${EARLY_MANAGED_PDNS_BIND_PHASES[@]}"; then
+        [[ $source_fixture_policy == driver-specific ]] &&
+            standalone_cell_matches_phase bind "$cell_id" "$boundary_phase"
+        return
+    fi
+    [[ $cell_id == bind__rolling-back__after-write__standalone__peer-reachable &&
+       $boundary_phase == rolling-back &&
+       $source_fixture_policy == driver-specific ]]
+}
+
 prepare_bind() {
     local cell_id=$1 node=$2 boundary_phase=$3 source_fixture=$4
     local source_fixture_policy=$5 stage=$6
     require_simple_value "cell id" "$cell_id" '^[a-z0-9][a-z0-9_.-]{0,239}$'
     require_simple_value "boundary phase" "$boundary_phase" \
         '^(pre-intent|intent|target-staged|source-stopped|target-started|target-verified|committed|rolling-back|rolled-back)$'
-    [[ $source_fixture == uninitialized || $source_fixture == managed-pdns ]] \
+    [[ $source_fixture == uninitialized || $source_fixture == managed-pdns || $source_fixture == owner-bind ||
+       $source_fixture == unmanaged-bind-stopped || $source_fixture == managed-bind-absent ]] \
         || die "unsupported BIND source fixture: $source_fixture"
     array_contains "$source_fixture_policy" "${SOURCE_FIXTURE_POLICIES[@]}" \
         || die "unsupported BIND source fixture policy: $source_fixture_policy"
@@ -1993,20 +2932,51 @@ prepare_bind() {
     local address
     address=$(global_ipv4)
     if [[ $source_fixture == uninitialized ]]; then
-        array_contains "$boundary_phase" "${EARLY_UNINITIALIZED_PHASES[@]}" \
-            || die "uninitialized source cannot claim a stopped-source-or-later boundary"
+        if [[ $cell_id == bind__*__paired-secondary__* ]]; then
+            { array_contains "$boundary_phase" "${FRESH_BIND_SECONDARY_PHASES[@]}" &&
+                secondary_cell_matches_phase bind "$cell_id" "$boundary_phase"; } ||
+                die "fresh BIND secondary requires an exact peer-reachable early or target-verified cell"
+        else
+            array_contains "$boundary_phase" "${EARLY_UNINITIALIZED_PHASES[@]}" || {
+                array_contains "$boundary_phase" "${FRESH_BIND_STANDALONE_PHASES[@]}" &&
+                    standalone_cell_matches_phase bind "$cell_id" "$boundary_phase"
+            } || die "uninitialized source cannot claim a stopped-source-or-later boundary outside standalone target-verified"
+        fi
         [[ $source_fixture_policy == driver-specific ||
            $source_fixture_policy == uninitialized-permitted-noncritical ]] \
             || die "uninitialized source fixture policy is incompatible"
         assert_no_source_engine "$address"
+        if [[ $cell_id == bind__*__paired-secondary__* ]]; then
+            # The native primary peer must already serve (native_primary_peer.py
+            # prepare runs first); a fresh secondary holds no local zones.
+            verify_paired_secondary_scenario bind "$node"
+            prove_peer_primary_catalog
+        fi
         write_source_proof uninitialized "$cell_id" "$address" 0
+    elif [[ $source_fixture == unmanaged-bind-stopped || $source_fixture == managed-bind-absent ]]; then
+        [[ $node == debian13 && $boundary_phase == target-staged &&
+           $source_fixture_policy == driver-specific &&
+           $cell_id == bind__target-staged__after-write__standalone__peer-reachable ]] \
+            || die "$source_fixture is prepared only for the Debian target-staged after-write standalone cell"
+        verify_provenance_bind_scenario "$source_fixture"
+        if [[ $source_fixture == unmanaged-bind-stopped ]]; then
+            prepare_unmanaged_bind_stopped_source "$cell_id" "$address" "$stage"
+        else
+            prepare_managed_bind_absent_source "$cell_id" "$address" "$stage"
+        fi
+        write_source_proof "$source_fixture" "$cell_id" "$address" 0
+    elif [[ $source_fixture == owner-bind ]]; then
+        [[ $node == debian13 && $boundary_phase == rolling-back &&
+           $source_fixture_policy == driver-specific &&
+           $cell_id == bind__rolling-back__after-write__standalone__peer-reachable ]] \
+            || die "owner BIND source requires the exact Debian rollback handoff cell"
+        prepare_owner_bind_source "$address"
+        write_source_proof owner-bind "$cell_id" "$address" 0
     else
         [[ $node == debian13 ]] \
             || die "managed PowerDNS source can only be established on certified Debian 13"
-        array_contains "$boundary_phase" "${CRITICAL_MANAGED_PDNS_PHASES[@]}" \
-            || die "managed PowerDNS source preinstall is restricted to critical BIND boundaries"
-        [[ $source_fixture_policy == managed-pdns-required ]] \
-            || die "managed PowerDNS source fixture policy is incompatible"
+        managed_pdns_bind_boundary_allowed "$cell_id" "$boundary_phase" "$source_fixture_policy" \
+            || die "managed PowerDNS source preinstall requires a supported critical or early standalone BIND boundary and its exact fixture policy"
         require_regular "$stage/source-setup-pdns.json"
         install -m 0600 -o root -g root "$stage/source-setup-pdns.json" "$SOURCE_SETUP_FILE"
         assert_no_source_engine "$address"
@@ -2033,7 +3003,10 @@ prepare_bind() {
         [[ $(stat -Lc '%U:%G:%a' "$SOURCE_SETUP_IDENTITY") == root:root:600 ]] || die "source setup trigger identity receipt metadata mismatch"
         python3 - "$SOURCE_SETUP_FILE" "$SOURCE_SETUP_IDENTITY" "$STATE_DIR/dns-engine-state.json" "$cell_id" <<'PY'
 import json, sys
-scenario, identity, state = (json.load(open(path, encoding="utf-8")) for path in sys.argv[1:4])
+scenario, identity = (json.load(open(path, encoding="utf-8")) for path in sys.argv[1:3])
+import runpy
+raw=open(sys.argv[3],'rb').read()
+state=runpy.run_path('/opt/celikpanel/libexec/dns-kill-recovery-probe.py')['decode_dns_document'](json.loads(raw),raw)
 cell_id = sys.argv[4]
 if identity.get("schema") != "celikpanel-dns-kill-matrix-trigger-identity/v1":
     raise SystemExit("source setup trigger identity schema mismatch")
@@ -2057,12 +3030,14 @@ PY
         require_regular "$STATE_DIR/dns-engine-state.json"
         python3 - "$STATE_DIR/dns-engine-state.json" <<'PY'
 import json, sys
-value = json.load(open(sys.argv[1], encoding='utf-8'))
+import runpy
+raw=open(sys.argv[1],'rb').read()
+value=runpy.run_path('/opt/celikpanel/libexec/dns-kill-recovery-probe.py')['decode_dns_document'](json.loads(raw),raw)
 if value.get('mode') != 'adopt' or value.get('engine') != 'pdns' or value.get('engine_epoch') != 1 or value.get('source_revision') != 0:
     raise SystemExit('managed PowerDNS state receipt has the wrong source identity')
 PY
         require_regular "$STATE_DIR/dns-engine-ownership-pdns.json"
-        cmp -s "$STATE_DIR/dns-engine-state.json" "$STATE_DIR/dns-engine-ownership-pdns.json" || die "adopted PowerDNS ownership differs from active source state"
+        verify_dns_receipt_pair pdns || die "adopted PowerDNS ownership differs from active source state"
         [[ ! -e $STATE_DIR/dns-engine-install-ownership-pdns.json && ! -L $STATE_DIR/dns-engine-install-ownership-pdns.json ]] || die "adopted PowerDNS source gained install ownership"
         [[ ! -e /etc/systemd/system/pdns.service && ! -L /etc/systemd/system/pdns.service ]] || die "adopted PowerDNS source retained the source-preinstall mask"
         require_apt_package_absent bind9
@@ -2089,7 +3064,7 @@ PY
         validate_normalized_pdns_source "$cell_id" "$address" "$state_sha"
         write_source_proof managed-pdns "$cell_id" "$address" 0
     fi
-    write_controller_argv "$cell_id" "$address"
+    write_controller_argv "$cell_id" "$address" "$source_fixture"
 
     # The measured child is launched manually by run_cell.py. Stop only the
     # CelikPanel coordinators; a genuine DNS source intentionally remains up.
@@ -2102,6 +3077,15 @@ PY
         systemctl is-active --quiet pdns.service \
             || die "PowerDNS source stopped with the coordinators"
         dns_probe "$address" www.s1-kill.test
+    elif [[ $source_fixture == owner-bind ]]; then
+        systemctl is-active --quiet named.service \
+            || die "owner BIND stopped with coordinators"
+        dns_probe "$address" www.owner.test
+    elif [[ $source_fixture == unmanaged-bind-stopped || $source_fixture == managed-bind-absent ]]; then
+        ! systemctl is-active --quiet named.service \
+            || die "$source_fixture source unexpectedly serves after the coordinator stop"
+        assert_no_global_dns_listener "$address" \
+            || die "$source_fixture source global port 53 is not bindable"
     fi
     sync -f "$SCENARIO_FILE" "$SOURCE_PROOF_FILE" "$COORDINATOR_STOP_PROOF" \
         "$FIXTURE_DIR" "$STATE_DIR"
@@ -2174,6 +3158,10 @@ case ${1:-} in
         [[ $# -eq 5 ]] || die "install expects STAGE MANIFEST_SHA CELL_ID NODE"
         install_bundle "$2" "$3" "$4" "$5"
         ;;
+    prepare-pdns-switch)
+        [[ $# -eq 7 ]] || die "prepare-pdns-switch expects CELL_ID NODE PHASE SOURCE_FIXTURE SOURCE_FIXTURE_POLICY STAGE"
+        prepare_pdns_switch "$2" "$3" "$4" "$5" "$6" "$7"
+        ;;
     prepare-bind)
         [[ $# -eq 7 ]] || die "prepare-bind expects CELL_ID NODE PHASE SOURCE_FIXTURE SOURCE_FIXTURE_POLICY STAGE"
         prepare_bind "$2" "$3" "$4" "$5" "$6" "$7"
@@ -2182,5 +3170,5 @@ case ${1:-} in
         [[ $# -eq 7 ]] || die "prepare-pdns-adopt expects CELL_ID NODE PHASE SOURCE_FIXTURE SOURCE_FIXTURE_POLICY STAGE"
         prepare_pdns_adopt "$2" "$3" "$4" "$5" "$6" "$7"
         ;;
-    *) die "usage: guest_bootstrap.sh {install|prepare-bind|prepare-pdns-adopt} ..." ;;
+    *) die "usage: guest_bootstrap.sh {install|prepare-bind|prepare-pdns-adopt|prepare-pdns-switch} ..." ;;
 esac

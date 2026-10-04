@@ -1,0 +1,2 @@
+IDX BOOT ID                          FIRST ENTRY                 LAST ENTRY
+  0 a79fbe77c6874c318205a68bddab456d Tue 2026-09-29 14:04:46 UTC Tue 2026-09-29 14:08:00 UTC

@@ -1,0 +1,18 @@
+wall=2026-09-29T16:33:33.912182396Z boot_id=08796219-8946-4faa-bd99-d7a1885c8db8
+os=Debian GNU/Linux 13 (trixie) kernel=6.12.105+deb13-cloud-amd64
+== dpkg-query
+bind9-host 1:9.20.26-1~deb13u1 ii 
+bind9-libs 1:9.20.26-1~deb13u1 ii 
+pdns-backend  un 
+pdns-backend-bind  un 
+pdns-backend-sqlite3 4.9.17-0+deb13u1 ii 
+pdns-server 4.9.17-0+deb13u1 ii 
+python3 3.13.5-1 ii 
+systemd 257.13-1~deb13u1 ii 
+== named -v
+== pdns_server --version
+Sep 29 16:33:33 PowerDNS Authoritative Server 4.9.17 (C) PowerDNS.COM BV
+Sep 29 16:33:33 Using 64-bits mode. Built using gcc 14.2.0.
+== management binaries
+sha256sum: '/opt/celikpanel/bin/*': No such file or directory
+sha256sum: /usr/libexec/celikpanel/recovery: No such file or directory

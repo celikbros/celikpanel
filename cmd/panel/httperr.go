@@ -41,7 +41,11 @@ type apiErrorBody struct {
 	// falls back to the sentence for the code, which is what every screen did
 	// before this existed.
 	// Reason, Code'u inceltir. Eklemelidir.
-	Reason          string `json:"reason,omitempty"`
+	Reason string `json:"reason,omitempty"`
+	// Detail refines Reason with one reviewed machine token (for a pending
+	// DNS deletion: what the secondary's inspector reported). Additive.
+	// Detail, Reason'ı gözden geçirilmiş tek bir makine belirteciyle inceltir.
+	Detail          string `json:"detail,omitempty"`
 	PartialSuccess  bool   `json:"partial_success,omitempty"`
 	MutationApplied bool   `json:"mutation_applied,omitempty"`
 	// Details: the refusal's evidence, one line per item — for
@@ -53,46 +57,54 @@ type apiErrorBody struct {
 	// tane daha" ekler. İsteğe bağlı ve eklemelidir: eski istemci yok
 	// sayar, sözleşme kırılmaz (B3d).
 	Details []string `json:"details,omitempty"`
+	// Vars: named values the screen's localized sentence for Code needs
+	// (for HOSTING_ROOT_NOT_TRAVERSABLE: directory, mode, owner, command).
+	// Optional and additive.
+	// Vars: Code için ekranın yerel cümlesinin ihtiyaç duyduğu adlı değerler.
+	Vars map[string]string `json:"vars,omitempty"`
 }
 
 // Stable refusal codes. Renaming one is an API break — don't.
 // Sabit ret kodları. Birini yeniden adlandırmak API kırılmasıdır — yapma.
 const (
-	errCodeInternal                      = "INTERNAL"
-	errCodeSubsystemDegraded             = "SUBSYSTEM_DEGRADED"
-	errCodeStartupRecoveryFailed         = "STARTUP_RECOVERY_FAILED"
-	errCodeSealedSecretUnreadable        = "SEALED_SECRET_UNREADABLE"
-	errCodeMutationsHeld                 = "MUTATIONS_HELD"
-	errCodeHostMutationBusy              = transport.HostMutationBusy
-	errCodePlatformCapabilityUnavailable = "PLATFORM_CAPABILITY_UNAVAILABLE"
-	errCodePlatformIdentityUnavailable   = "PLATFORM_IDENTITY_UNAVAILABLE"
-	errCodeAuthRequired                  = "AUTH_REQUIRED"
-	errCodeAdminOnly                     = "ADMIN_ONLY"
-	errCodeAdditionalUserScope           = "ADDITIONAL_USER_SCOPE"
-	errCodeAccountSuspended              = "ACCOUNT_SUSPENDED"
-	errCodeDomainDeletionPending         = "DOMAIN_DELETION_PENDING"
-	errCodeDNSServerRequired             = "DNS_SERVER_REQUIRED"
-	errCodeDNSSettingsRequired           = "DNS_SETTINGS_REQUIRED"
-	errCodeDNSSetupRequired              = "DNS_SETUP_REQUIRED"
-	errCodeDNSEngineWorkflowRequired     = "DNS_ENGINE_WORKFLOW_REQUIRED"
-	errCodeDNSTopologyUnsupported        = "DNS_TOPOLOGY_UNSUPPORTED"
-	errCodeDNSPairIdentityLocked         = "DNS_PAIR_IDENTITY_LOCKED"
-	errCodeDNSClusterPeerIsLocal         = "DNS_CLUSTER_PEER_IS_LOCAL"
-	errCodeDNSPublicationFailed          = "DNS_PUBLICATION_FAILED"
-	errCodeDNSEnginePlanRejected         = "DNS_ENGINE_PLAN_REJECTED"
-	errCodeDNSEngineChangeNotCommitted   = "DNS_ENGINE_CHANGE_NOT_COMMITTED"
-	errCodeDNSEngineStateUnverified      = "DNS_ENGINE_STATE_UNVERIFIED"
-	errCodeDNSEngineMutationsHeld        = "DNS_ENGINE_MUTATIONS_HELD"
-	errCodeDNSEngineChangeAppliedRefresh = "DNS_ENGINE_CHANGE_APPLIED_REFRESH_REQUIRED"
-	errCodeDNSSECEngineUnsupported       = "DNSSEC_ENGINE_UNSUPPORTED"
-	errCodeDNSSECStatusUnavailable       = "DNSSEC_STATUS_UNAVAILABLE"
-	errCodeWebServerRequired             = "WEB_SERVER_REQUIRED"
-	errCodePHPRequired                   = "PHP_REQUIRED"
-	errCodeNoSubscription                = "NO_SUBSCRIPTION"
-	errCodeQuotaDomains                  = "QUOTA_DOMAINS_EXCEEDED"
-	errCodeQuotaDisk                     = "QUOTA_DISK_EXCEEDED"
-	errCodeEntitlement                   = "ENTITLEMENT_REQUIRED"
-	errCodeFirewallNoEngine              = "FIREWALL_ENGINE_MISSING"
+	errCodeInternal                       = "INTERNAL"
+	errCodeSubsystemDegraded              = "SUBSYSTEM_DEGRADED"
+	errCodeStartupRecoveryFailed          = "STARTUP_RECOVERY_FAILED"
+	errCodeSealedSecretUnreadable         = "SEALED_SECRET_UNREADABLE"
+	errCodeMutationsHeld                  = "MUTATIONS_HELD"
+	errCodeHostMutationBusy               = transport.HostMutationBusy
+	errCodePlatformCapabilityUnavailable  = "PLATFORM_CAPABILITY_UNAVAILABLE"
+	errCodePlatformIdentityUnavailable    = "PLATFORM_IDENTITY_UNAVAILABLE"
+	errCodeAuthRequired                   = "AUTH_REQUIRED"
+	errCodeAuthStatusUnavailable          = "AUTH_STATUS_UNAVAILABLE"
+	errCodeLicenseStatusUnavailable       = "LICENSE_STATUS_UNAVAILABLE"
+	errCodeLicenseVerificationUnavailable = "LICENSE_VERIFICATION_UNAVAILABLE"
+	errCodeAdminOnly                      = "ADMIN_ONLY"
+	errCodeAdditionalUserScope            = "ADDITIONAL_USER_SCOPE"
+	errCodeAccountSuspended               = "ACCOUNT_SUSPENDED"
+	errCodeDomainDeletionPending          = "DOMAIN_DELETION_PENDING"
+	errCodeDNSServerRequired              = "DNS_SERVER_REQUIRED"
+	errCodeDNSSettingsRequired            = "DNS_SETTINGS_REQUIRED"
+	errCodeDNSSetupRequired               = "DNS_SETUP_REQUIRED"
+	errCodeDNSEngineWorkflowRequired      = "DNS_ENGINE_WORKFLOW_REQUIRED"
+	errCodeDNSTopologyUnsupported         = "DNS_TOPOLOGY_UNSUPPORTED"
+	errCodeDNSPairIdentityLocked          = "DNS_PAIR_IDENTITY_LOCKED"
+	errCodeDNSClusterPeerIsLocal          = "DNS_CLUSTER_PEER_IS_LOCAL"
+	errCodeDNSPublicationFailed           = "DNS_PUBLICATION_FAILED"
+	errCodeDNSEnginePlanRejected          = "DNS_ENGINE_PLAN_REJECTED"
+	errCodeDNSEngineChangeNotCommitted    = "DNS_ENGINE_CHANGE_NOT_COMMITTED"
+	errCodeDNSEngineStateUnverified       = "DNS_ENGINE_STATE_UNVERIFIED"
+	errCodeDNSEngineMutationsHeld         = "DNS_ENGINE_MUTATIONS_HELD"
+	errCodeDNSEngineChangeAppliedRefresh  = "DNS_ENGINE_CHANGE_APPLIED_REFRESH_REQUIRED"
+	errCodeDNSSECEngineUnsupported        = "DNSSEC_ENGINE_UNSUPPORTED"
+	errCodeDNSSECStatusUnavailable        = "DNSSEC_STATUS_UNAVAILABLE"
+	errCodeWebServerRequired              = "WEB_SERVER_REQUIRED"
+	errCodePHPRequired                    = "PHP_REQUIRED"
+	errCodeNoSubscription                 = "NO_SUBSCRIPTION"
+	errCodeQuotaDomains                   = "QUOTA_DOMAINS_EXCEEDED"
+	errCodeQuotaDisk                      = "QUOTA_DISK_EXCEEDED"
+	errCodeEntitlement                    = "ENTITLEMENT_REQUIRED"
+	errCodeFirewallNoEngine               = "FIREWALL_ENGINE_MISSING"
 	// R-055. This server is running a kernel whose module tree is gone, so it
 	// can load no kernel module - and therefore no WireGuard - until it is
 	// restarted. The agent proves that structurally; the panel names the one
@@ -108,6 +120,24 @@ const (
 	// istendi; agent bunu yapilandirmanin yoklugu ile kanitlar. Opak bir 500
 	// yerine neyin yanlis oldugu ve once ne yapilacagi soylenir.
 	errCodeVPNNotSetUp = "VPN_NOT_SET_UP"
+	// The Agent proved the server has no cron implementation (no `crontab`),
+	// so no scheduled task can be read or saved. A known host condition with
+	// one owner action, never an opaque 500 (upd1, 1 Oct 2026; D-024).
+	// Agent sunucuda hiçbir cron uygulaması olmadığını kanıtladı; hiçbir
+	// zamanlanmış görev okunamaz ya da kaydedilemez.
+	errCodeCronNotInstalled = "CRON_NOT_INSTALLED"
+	// Native cron runs every scheduled job on the server, including the
+	// owner's own, so the panel never removes it (D-022).
+	// Yerel cron, sahibinkiler dahil sunucudaki her görevi çalıştırır; panel
+	// onu asla kaldırmaz (D-022).
+	errCodeNativeCronRemovalRefused = "NATIVE_CRON_REMOVAL_REFUSED"
+	// A directory above the hosting base that CelikPanel did not create keeps
+	// the web server or the site users from reaching site files; the site was
+	// refused before any change (native finding P3; D-022, D-024).
+	// CelikPanel'in oluşturmadığı, barındırma kökünün üstündeki bir dizin web
+	// sunucusunu ya da site kullanıcılarını site dosyalarından uzak tutuyor;
+	// site hiçbir değişiklikten önce reddedildi.
+	errCodeHostingRootNotTraversable = "HOSTING_ROOT_NOT_TRAVERSABLE"
 	// R-053. A database engine this panel installed is running and reachable
 	// and will not take the credential the panel holds for it, because the
 	// panel never set one and the packaged engine has none. That is a fact
@@ -282,9 +312,11 @@ func classifyAgentRPCPlatformError(err error) (agentRPCPlatformErrorClassificati
 // hostMutationBusyMessages: uceun her biri icin cumle; cunku operatordan farkli
 // seyler isterler.
 var hostMutationBusyMessages = map[string]string{
+	// The task can be CelikPanel's own previous step finishing, and how long
+	// it runs is not known, so the sentence names neither (upd9 F3).
 	transport.HostMutationReasonPackageManager: "This server's package manager is busy — " +
-		"something outside CelikPanel is installing or updating packages. " +
-		"Try again in a minute.",
+		"a package task is still running on this server. " +
+		"Wait for it to finish, then try again.",
 	transport.HostMutationReasonAgentMutation: "Another CelikPanel change is still running " +
 		"on this server. Wait for it to finish, then try again.",
 	transport.HostMutationReasonPanelOperation: "Another CelikPanel operation is still running. " +

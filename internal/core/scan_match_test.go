@@ -99,10 +99,37 @@ func TestVersionedUnitsAreScannable(t *testing.T) {
 // onu atlar; böylece glob'un fazladan topladığı başıboş bir systemd unit'i
 // asla hayalet katalog satırı olmaz.
 func TestForeignUnitsBelongToNothing(t *testing.T) {
-	for _, u := range []string{"ssh", "systemd-journald", "cron", "phpsessionclean", "dbus"} {
+	for _, u := range []string{"ssh", "systemd-journald", "atd", "phpsessionclean", "dbus"} {
 		if owner := ServiceForUnit(u); owner != nil {
 			t.Errorf("%q wrongly claimed by %s", u, owner.ID)
 		}
+	}
+}
+
+// Native cron became a catalogue row (upd1, 1 Oct 2026): setup prepares it for
+// site-hosting profiles, so both distro unit names must fold into that row and
+// nothing else.
+// Yerel cron bir katalog satırı oldu: iki dağıtım unit adı da o satıra
+// katlanmalı.
+func TestNativeCronUnitsBelongToCron(t *testing.T) {
+	for _, u := range []string{"cron", "cronie"} {
+		owner := ServiceForUnit(u)
+		if owner == nil || owner.ID != NativeCronServiceID {
+			t.Errorf("%q must belong to %s, got %v", u, NativeCronServiceID, owner)
+		}
+	}
+	svc := GetManagedServiceByID(NativeCronServiceID)
+	if svc == nil || svc.Kind != KindService || svc.ConflictGroup != "" || len(svc.FirewallPorts) != 0 || svc.Repo != nil {
+		t.Fatalf("native cron must be a plain local daemon row without seat, ports or repository: %+v", svc)
+	}
+	if got := svc.Packages["apt"]; len(got) != 1 || got[0] != "cron" {
+		t.Errorf("apt package = %v, want [cron]", got)
+	}
+	if got := svc.Packages["pacman"]; len(got) != 1 || got[0] != "cronie" {
+		t.Errorf("pacman package = %v, want [cronie]", got)
+	}
+	if len(svc.Packages["dnf"]) != 0 {
+		t.Errorf("dnf must stay unsupported until its lifecycle is certified: %v", svc.Packages["dnf"])
 	}
 }
 

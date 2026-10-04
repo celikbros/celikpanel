@@ -1,0 +1,139 @@
+{
+  "outcome": "response",
+  "panel": "debian13",
+  "purpose": null,
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:28443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/setup/operation?request_id=ac18b06ff0f65324b2f51316e3f97bf6"
+  },
+  "response": {
+    "elapsed_seconds": 0.005,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Tue, 29 Sep 2026 21:57:31 GMT"
+      ],
+      [
+        "Content-Length",
+        "1839"
+      ]
+    ],
+    "json": {
+      "context": {
+        "access_dns_ip": "192.0.2.10",
+        "dns_engine": "pdns",
+        "dns_hosting_management": "",
+        "dns_mode": "local",
+        "dns_role": "primary",
+        "local_ip": "192.0.2.10",
+        "local_nameserver": "ns1.ns-accept.test",
+        "mail_hostname": "",
+        "panel_domain": "panel-debian13.ns-accept.test",
+        "peer_ip": "192.0.2.11",
+        "peer_nameserver": "ns2.ns-accept.test"
+      },
+      "error": {
+        "code": "server_setup_reconciling",
+        "message": "The previous DNS operation is being reconciled. Its exact receipt must be verified before the setup plan can change."
+      },
+      "id": "ac18b06ff0f65324b2f51316e3f97bf6",
+      "panel_url": "https://panel-debian13.ns-accept.test:2083/",
+      "phase": "01-dns",
+      "plan_id": "3393bede8637de3f492b1933a7d812ce",
+      "request_id": "ac18b06ff0f65324b2f51316e3f97bf6",
+      "status": "running",
+      "steps": [
+        {
+          "id": "01-dns",
+          "kind": "dns",
+          "owner_id": "f8d31fb2ef2a901d2828a91660bb4f6b",
+          "request_id": "e22a036c50b3f5279571c099de8f2400",
+          "status": "running",
+          "target": "local"
+        },
+        {
+          "id": "02-service",
+          "kind": "service",
+          "owner_id": "af371ff0e8020a0433140ba1272ed263",
+          "request_id": "983c1ca7c30fff33874c8fd2f87bf9d5",
+          "status": "pending",
+          "target": "certbot"
+        },
+        {
+          "id": "03-firewall",
+          "kind": "firewall",
+          "owner_id": "07ccf9f833af2db66b45431cad469748",
+          "request_id": "bbe3409e14e5cee21c6dc50f073902a1",
+          "status": "pending",
+          "target": "enable_and_persist"
+        },
+        {
+          "id": "04-access_dns",
+          "kind": "access_dns",
+          "owner_id": "9d94f88e0ae5271ee8aaeb30a829710b",
+          "qualifier": "192.0.2.10",
+          "request_id": "62646ed8b7528b407f5e161a38cca169",
+          "status": "pending",
+          "target": "panel-debian13.ns-accept.test"
+        },
+        {
+          "id": "05-panel_certificate",
+          "kind": "panel_certificate",
+          "owner_id": "35b90cd1a3240a5ea8c4b67aeffd0a69",
+          "request_id": "7509490805c6a63c4b22bba1b458ee04",
+          "status": "pending",
+          "target": "panel-debian13.ns-accept.test"
+        },
+        {
+          "id": "06-verify",
+          "kind": "verify",
+          "owner_id": "b675fde390c2f9989d0d90d3faf7103d",
+          "request_id": "14259a784fee87fcb01cd1289a773e8a",
+          "status": "pending",
+          "target": "dns"
+        }
+      ]
+    },
+    "status": 200,
+    "text": null
+  }
+}

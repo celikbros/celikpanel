@@ -1,0 +1,1 @@
+bash /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch6b/runcell.sh c5-bindsec-arch bind__target-staged__before-write__paired-secondary__peer-reachable uninitialized prepare-bind 0 /var/tmp/cp-b6b-0930 arch pdns pdns-native --reboot-after-recovery --disable-management-before-reboot

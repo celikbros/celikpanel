@@ -5,11 +5,15 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
+
+	"github.com/alicelik/celikpanel/internal/hostmutationlock"
 
 	"golang.org/x/sys/unix"
 )
@@ -25,65 +29,25 @@ type serviceMutationFileLock struct {
 	publication *serviceMutationFileLock
 }
 
+func serviceMutationLockOwner() hostmutationlock.Owner {
+	return hostmutationlock.Owner{UID: serviceMutationRequiredOwnerUID, GID: serviceMutationRequiredOwnerGID}
+}
+func serviceMutationLockObservationError(err error) error {
+	if errors.Is(err, hostmutationlock.ErrBusy) {
+		return errServiceMutationHostBusy
+	}
+	return err
+}
+
 // acquireExistingServiceMutationFileLock obtains the common host flock without
 // creating or repairing any filesystem object. Comparison-only RPCs use this
 // lease so a missing or non-canonical lock fails closed instead of turning a
 // read into host mutation.
 func acquireExistingServiceMutationFileLock(path string) (*serviceMutationFileLock, error) {
-	path = filepath.Clean(path)
-	if !filepath.IsAbs(path) {
-		return nil, errors.New("service mutation lock path must be absolute")
-	}
-	lockDir := filepath.Dir(path)
-	dirInfo, err := os.Lstat(lockDir)
+	file, err := hostmutationlock.AcquireExisting(path, serviceMutationLockOwner())
 	if err != nil {
-		return nil, fmt.Errorf("inspect service mutation lock directory: %w", err)
+		return nil, serviceMutationLockObservationError(err)
 	}
-	if err := secureServiceMutationStat(lockDir, dirInfo, true); err != nil {
-		return nil, err
-	}
-	fd, err := unix.Open(path, unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
-	if err != nil {
-		return nil, fmt.Errorf("open existing service mutation lock: %w", err)
-	}
-	file := os.NewFile(uintptr(fd), path)
-	if file == nil {
-		_ = unix.Close(fd)
-		return nil, errors.New("open existing service mutation lock handle")
-	}
-	keepFile := false
-	defer func() {
-		if !keepFile {
-			_ = file.Close()
-		}
-	}()
-	verify := func() error {
-		info, statErr := file.Stat()
-		if statErr != nil {
-			return fmt.Errorf("inspect existing service mutation lock: %w", statErr)
-		}
-		if statErr := secureServiceMutationStat(path, info, false); statErr != nil {
-			return statErr
-		}
-		if info.Size() != 0 {
-			return fmt.Errorf("%s service mutation lock must be empty", path)
-		}
-		return verifyServiceMutationLockPathIdentity(path, info)
-	}
-	if err := verify(); err != nil {
-		return nil, err
-	}
-	if err := unix.Flock(fd, unix.LOCK_EX|unix.LOCK_NB); err != nil {
-		if errors.Is(err, unix.EWOULDBLOCK) || errors.Is(err, unix.EAGAIN) {
-			return nil, errServiceMutationHostBusy
-		}
-		return nil, fmt.Errorf("lock existing service mutation file: %w", err)
-	}
-	if err := verify(); err != nil {
-		_ = unix.Flock(fd, unix.LOCK_UN)
-		return nil, err
-	}
-	keepFile = true
 	return &serviceMutationFileLock{file: file}, nil
 }
 
@@ -279,68 +243,7 @@ func verifyInheritedServiceMutationFileLock(path string) error {
 }
 
 func verifyInheritedServiceMutationFileLockFD(path string, fd int) error {
-	path = filepath.Clean(path)
-	if !filepath.IsAbs(path) || fd < 3 {
-		return errors.New("inherited service mutation lock proof is invalid")
-	}
-	if err := ensureSecureServiceMutationLockDirectory(filepath.Dir(path)); err != nil {
-		return err
-	}
-	dupFD, err := unix.FcntlInt(uintptr(fd), unix.F_DUPFD_CLOEXEC, 3)
-	if err != nil {
-		return fmt.Errorf("duplicate inherited service mutation lock descriptor: %w", err)
-	}
-	file := os.NewFile(uintptr(dupFD), path)
-	if file == nil {
-		_ = unix.Close(dupFD)
-		return errors.New("open inherited service mutation lock descriptor")
-	}
-	defer file.Close()
-	info, err := file.Stat()
-	if err != nil {
-		return fmt.Errorf("inspect inherited service mutation lock descriptor: %w", err)
-	}
-	if err := secureServiceMutationStat(path, info, false); err != nil {
-		return err
-	}
-	if info.Size() != 0 {
-		return fmt.Errorf("%s service mutation lock must be empty", path)
-	}
-	if err := verifyServiceMutationLockPathIdentity(path, info); err != nil {
-		return err
-	}
-	fdInfo, err := os.ReadFile(filepath.Join("/proc/self/fdinfo", strconv.Itoa(dupFD)))
-	if err != nil {
-		return fmt.Errorf("inspect inherited service mutation flock ownership: %w", err)
-	}
-	if !serviceMutationFDInfoHasExclusiveFlock(fdInfo) {
-		return errors.New("inherited service mutation lock descriptor does not already own the flock")
-	}
-	probeFD, err := unix.Open(path, unix.O_RDWR|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
-	if err != nil {
-		return fmt.Errorf("open independent service mutation lock proof: %w", err)
-	}
-	defer unix.Close(probeFD)
-	if err := unix.Flock(probeFD, unix.LOCK_EX|unix.LOCK_NB); err == nil {
-		_ = unix.Flock(probeFD, unix.LOCK_UN)
-		return errors.New("inherited service mutation descriptor does not exclude an independent opener")
-	} else if !errors.Is(err, unix.EWOULDBLOCK) && !errors.Is(err, unix.EAGAIN) {
-		return fmt.Errorf("prove inherited service mutation flock contention: %w", err)
-	}
-	return nil
-}
-
-func serviceMutationFDInfoHasExclusiveFlock(raw []byte) bool {
-	for _, line := range strings.Split(string(raw), "\n") {
-		fields := strings.Fields(line)
-		if len(fields) >= 9 && fields[0] == "lock:" &&
-			fields[2] == "FLOCK" && fields[3] == "ADVISORY" &&
-			fields[4] == "WRITE" && fields[len(fields)-2] == "0" &&
-			fields[len(fields)-1] == "EOF" {
-			return true
-		}
-	}
-	return false
+	return hostmutationlock.VerifyInherited(path, fd, serviceMutationLockOwner())
 }
 
 func syncServiceMutationLockDirectory(path string) error {
@@ -412,48 +315,7 @@ func (l *serviceMutationFileLock) Close() error {
 }
 
 func probeServiceMutationFileLockIdle(path string) error {
-	path = filepath.Clean(path)
-	if !filepath.IsAbs(path) {
-		return errors.New("service mutation lock path must be absolute")
-	}
-	lockDir := filepath.Dir(path)
-	info, err := os.Lstat(lockDir)
-	if err != nil {
-		return fmt.Errorf("inspect service mutation lock directory: %w", err)
-	}
-	if err := secureServiceMutationStat(lockDir, info, true); err != nil {
-		return err
-	}
-	fd, err := unix.Open(path, unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
-	if errors.Is(err, unix.ENOENT) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("open service mutation lock for idle check: %w", err)
-	}
-	file := os.NewFile(uintptr(fd), path)
-	if file == nil {
-		_ = unix.Close(fd)
-		return errors.New("open service mutation lock idle-check handle")
-	}
-	defer file.Close()
-	lockInfo, err := file.Stat()
-	if err != nil {
-		return fmt.Errorf("inspect service mutation lock: %w", err)
-	}
-	if err := secureServiceMutationStat(path, lockInfo, false); err != nil {
-		return err
-	}
-	if err := unix.Flock(fd, unix.LOCK_EX|unix.LOCK_NB); err != nil {
-		if errors.Is(err, unix.EWOULDBLOCK) || errors.Is(err, unix.EAGAIN) {
-			return errServiceMutationHostBusy
-		}
-		return fmt.Errorf("probe service mutation lock: %w", err)
-	}
-	if err := unix.Flock(fd, unix.LOCK_UN); err != nil {
-		return fmt.Errorf("release service mutation lock probe: %w", err)
-	}
-	return nil
+	return serviceMutationLockObservationError(hostmutationlock.ProbeIdle(path, serviceMutationLockOwner()))
 }
 
 func syncServiceMutationDirectory(path string) error {
@@ -574,6 +436,55 @@ func linuxPackageProcessBusy() (bool, error) {
 }
 
 func linuxPackageProcessBusyAt(procRoot string) (bool, error) {
+	return linuxPackageProcessBusyWith(procRoot, linuxPackageKitTransactionLockPaths())
+}
+
+// packageKitDaemonComm is PackageKit's daemon. Ubuntu's apt hook
+// (/etc/apt/apt.conf.d/20packagekit) starts it after every dpkg run and it then
+// idles for about 300 s; that idle daemon is not package-manager activity. Only
+// a daemon with evidence of a transaction (below) counts as busy.
+// packageKitDaemonComm PackageKit hizmetidir. Ubuntu'nun apt kancası onu her dpkg
+// çalışmasından sonra başlatır ve yaklaşık 300 sn boşta bekler; boştaki hizmet
+// paket yöneticisi etkinliği değildir. Yalnız işlem kanıtı olan hizmet meşguldür.
+const packageKitDaemonComm = "packagekitd"
+
+// packageKitAPTBackendModules are the file names of PackageKit's APT backend,
+// which the daemon maps from its packagekit-backend directory at start. Only for
+// that backend is the evidence below known to cover every phase that changes
+// packages: apt fetch methods and dpkg run as child processes, and the backend
+// takes the apt/dpkg locks for refresh, download and commit. Any other backend
+// (dnf, zypp, alpm, ...) keeps today's answer: busy.
+//
+// libpk_backend_apt.so is the name measured on stock Ubuntu 24.04 (PackageKit
+// 1.2.8-2ubuntu1.5, BackendName "apt"; upd9). libpk_backend_aptcc.so is the
+// same apt-pkg backend under its name before upstream renamed it to "apt"; it
+// is accepted for older releases and was not measured.
+// packageKitAPTBackendModules PackageKit APT arka ucunun dosya adlarıdır;
+// Ubuntu 24.04'te ölçülen ad libpk_backend_apt.so'dur, aptcc eski adıdır.
+var packageKitAPTBackendModules = map[string]struct{}{
+	"libpk_backend_apt.so":   {},
+	"libpk_backend_aptcc.so": {},
+}
+
+// packageKitBackendDirectory is the directory name PackageKit loads its
+// backends from (/usr/lib/<triplet>/packagekit-backend, /usr/lib64/...).
+const packageKitBackendDirectory = "packagekit-backend"
+
+const packageKitMapsReadLimit = 8 << 20
+
+// linuxPackageKitTransactionLockPaths are the apt/dpkg locks a PackageKit APT
+// transaction holds. The lists lock is included here although the general
+// fcntl probe does not use it, because a PackageKit cache refresh holds only it.
+func linuxPackageKitTransactionLockPaths() []string {
+	return []string{
+		"/var/lib/dpkg/lock-frontend",
+		"/var/lib/dpkg/lock",
+		"/var/cache/apt/archives/lock",
+		"/var/lib/apt/lists/lock",
+	}
+}
+
+func linuxPackageProcessBusyWith(procRoot string, packageKitLocks []string) (bool, error) {
 	entries, err := os.ReadDir(procRoot)
 	if err != nil {
 		return false, fmt.Errorf("read process table: %w", err)
@@ -583,11 +494,12 @@ func linuxPackageProcessBusyAt(procRoot string) (bool, error) {
 		"pacman": {}, "makepkg": {},
 		"dnf": {}, "dnf5": {}, "yum": {}, "microdnf": {},
 		"rpm": {}, "rpmdb": {},
-		"packagekitd": {}, "packagekit": {}, "pkcon": {},
+		"packagekit": {}, "pkcon": {},
 		// Linux comm names are limited to 15 bytes, so dnfdaemon-server may
 		// be observed in either its full or kernel-truncated spelling.
 		"dnfdaemon-server": {}, "dnfdaemon-serve": {},
 	}
+	var packageKitDaemons []int
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
@@ -608,6 +520,179 @@ func linuxPackageProcessBusyAt(procRoot string) (bool, error) {
 			process = process[:len(process)-1]
 		}
 		if _, found := packageProcesses[process]; found {
+			return true, nil
+		}
+		if process == packageKitDaemonComm {
+			pid, parseErr := strconv.Atoi(name)
+			if parseErr != nil || pid <= 0 || strconv.Itoa(pid) != name {
+				return true, nil
+			}
+			packageKitDaemons = append(packageKitDaemons, pid)
+		}
+	}
+	for _, pid := range packageKitDaemons {
+		if !packageKitDaemonProvablyIdle(procRoot, pid, packageKitLocks) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// packageKitDaemonProvablyIdle answers true only when every question has a
+// definite answer: the daemon runs the APT backend, has no child process and
+// holds or waits for none of the apt/dpkg locks. Any unreadable or unexpected
+// evidence answers false, which keeps the daemon counted as busy. It only reads
+// /proc; it never contacts, stops or signals PackageKit (the owner's service).
+// packageKitDaemonProvablyIdle yalnız her soru kesin yanıtlandığında true döner:
+// APT arka ucu, alt süreç yok, apt/dpkg kilidi tutulmuyor ve beklenmiyor. Okunamayan
+// ya da beklenmeyen kanıt false döner; hizmet meşgul sayılmaya devam eder.
+func packageKitDaemonProvablyIdle(procRoot string, pid int, lockPaths []string) bool {
+	if !packageKitDaemonUsesAPTBackend(procRoot, pid) {
+		return false
+	}
+	hasChild, err := linuxProcessHasChild(procRoot, pid)
+	if err != nil || hasChild {
+		return false
+	}
+	held, err := linuxProcessHoldsLock(procRoot, pid, lockPaths)
+	return err == nil && !held
+}
+
+func packageKitDaemonUsesAPTBackend(procRoot string, pid int) bool {
+	file, err := os.Open(filepath.Join(procRoot, strconv.Itoa(pid), "maps"))
+	if err != nil {
+		return false
+	}
+	defer file.Close()
+	raw, err := io.ReadAll(io.LimitReader(file, packageKitMapsReadLimit+1))
+	if err != nil || len(raw) > packageKitMapsReadLimit {
+		return false
+	}
+	return packageKitMapsShowOnlyAPTBackend(string(raw))
+}
+
+// packageKitMapsShowOnlyAPTBackend answers true only when the maps text maps at
+// least one file from a packagekit-backend directory and every such file is the
+// APT backend by its exact base name. Another backend, an unknown file there, a
+// non-absolute or unclean path, or a replaced file (" (deleted)") answers false.
+// A file of that name outside a packagekit-backend directory is not a backend.
+// Yalnız packagekit-backend dizininden eşlenen her dosya tam adıyla APT arka
+// ucuysa ve en az bir tane varsa true; diğer her durum false (meşgul kalır).
+func packageKitMapsShowOnlyAPTBackend(maps string) bool {
+	apt := false
+	for _, line := range strings.Split(maps, "\n") {
+		pathname := procMapsPathname(line)
+		if pathname == "" || path.Base(path.Dir(pathname)) != packageKitBackendDirectory {
+			continue
+		}
+		if !strings.HasPrefix(pathname, "/") || path.Clean(pathname) != pathname {
+			return false
+		}
+		if _, known := packageKitAPTBackendModules[path.Base(pathname)]; !known {
+			return false
+		}
+		apt = true
+	}
+	return apt
+}
+
+// procMapsPathname returns the pathname column of one /proc/<pid>/maps line
+// (everything after address, perms, offset, dev and inode, spaces kept), or ""
+// for an anonymous mapping or a line with fewer columns.
+func procMapsPathname(line string) string {
+	rest := line
+	for column := 0; column < 5; column++ {
+		rest = strings.TrimLeft(rest, " \t")
+		end := strings.IndexAny(rest, " \t")
+		if end <= 0 {
+			return ""
+		}
+		rest = rest[end:]
+	}
+	return strings.TrimSpace(rest)
+}
+
+// linuxProcessHasChild reports whether any process names pid as its parent.
+// A process that vanishes during the scan is skipped; any other read failure is
+// an error.
+func linuxProcessHasChild(procRoot string, pid int) (bool, error) {
+	entries, err := os.ReadDir(procRoot)
+	if err != nil {
+		return false, err
+	}
+	want := strconv.Itoa(pid)
+	for _, entry := range entries {
+		name := entry.Name()
+		if !entry.IsDir() || name == "" || name[0] < '0' || name[0] > '9' || name == want {
+			continue
+		}
+		raw, readErr := os.ReadFile(filepath.Join(procRoot, name, "status"))
+		if readErr != nil {
+			if os.IsNotExist(readErr) || errors.Is(readErr, unix.ESRCH) {
+				continue
+			}
+			return false, readErr
+		}
+		parent, found := "", false
+		for _, line := range strings.Split(string(raw), "\n") {
+			if value, ok := strings.CutPrefix(line, "PPid:"); ok {
+				parent, found = strings.TrimSpace(value), true
+				break
+			}
+		}
+		if !found {
+			return false, fmt.Errorf("process %s status has no parent", name)
+		}
+		if parent == want {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// linuxProcessHoldsLock reads <procRoot>/locks and reports whether pid holds
+// or waits for a lock on one of lockPaths. Inodes are compared without the
+// device: a collision can only report a lock, never hide one. A lock on one of
+// those inodes whose owner the kernel does not name (an OFD lock, pid -1) also
+// counts, as does any line that cannot be parsed.
+func linuxProcessHoldsLock(procRoot string, pid int, lockPaths []string) (bool, error) {
+	inodes := map[uint64]struct{}{}
+	for _, path := range lockPaths {
+		var stat unix.Stat_t
+		if err := unix.Stat(path, &stat); err != nil {
+			if errors.Is(err, unix.ENOENT) {
+				continue
+			}
+			return false, err
+		}
+		inodes[stat.Ino] = struct{}{}
+	}
+	raw, err := os.ReadFile(filepath.Join(procRoot, "locks"))
+	if err != nil {
+		return false, err
+	}
+	for _, line := range strings.Split(string(raw), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) == 0 {
+			continue
+		}
+		index := 1
+		if len(fields) > index && fields[index] == "->" {
+			index++
+		}
+		if len(fields) < index+5 {
+			return false, fmt.Errorf("unexpected lock table line %q", line)
+		}
+		owner, ownerErr := strconv.Atoi(fields[index+3])
+		identity := strings.Split(fields[index+4], ":")
+		inode, inodeErr := strconv.ParseUint(identity[len(identity)-1], 10, 64)
+		if ownerErr != nil || inodeErr != nil || len(identity) != 3 {
+			return false, fmt.Errorf("unexpected lock table line %q", line)
+		}
+		if _, watched := inodes[inode]; !watched {
+			continue
+		}
+		if owner == pid || owner <= 0 {
 			return true, nil
 		}
 	}

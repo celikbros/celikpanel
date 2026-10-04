@@ -1,0 +1,1100 @@
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/bc.sh" ./bc.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/bc.sh"	2026-09-30 02:50:38.111174500 +0300
++++ ./bc.sh	2026-09-30 04:57:04.697438400 +0300
+@@ -1 +1 @@
+-python3 /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch8r/boundcheck.py /var/tmp/cp-b8r-1001/evidence/$1 $2
++python3 /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/b9/boundcheck.py /var/tmp/cp-b9-1001/evidence/$1 $2
+Only in .: bg.sh
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/bindsec_remote.sh" ./bindsec_remote.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/bindsec_remote.sh"	2026-09-30 02:50:38.138814200 +0300
++++ ./bindsec_remote.sh	2026-09-30 04:57:04.734104000 +0300
+@@ -21,7 +21,7 @@
+   echo "-- $f"; stat -c 'size=%s mode=%a owner=%U:%G mtime=%y' "$f"; sha256sum "$f"
+   case "$f" in *catalog*) z=$CAT;; *) z=unknown;; esac
+   for fmt in raw text; do
+-    if named-compilezone -q -f $fmt -F text -o /tmp/cp-b8r-zone.txt $z "$f" >/dev/null 2>&1; then echo "(zone $z, format $fmt)"; head -40 /tmp/cp-b8r-zone.txt; rm -f /tmp/cp-b8r-zone.txt; break; fi
++    if named-compilezone -q -f $fmt -F text -o /tmp/cp-b9-zone.txt $z "$f" >/dev/null 2>&1; then echo "(zone $z, format $fmt)"; head -40 /tmp/cp-b9-zone.txt; rm -f /tmp/cp-b9-zone.txt; break; fi
+   done
+ done
+ echo "== named journal (transfer/notify/catalog/zone lines, all boots)"
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/brief.sh" ./brief.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/brief.sh"	2026-09-30 02:50:38.171107700 +0300
++++ ./brief.sh	2026-09-30 04:57:04.759070300 +0300
+@@ -1,9 +1,9 @@
+ # usage: brief.sh SHORT CELL -- compact read-only summary for the operator log
+ S=$1; C=$2
+-D=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch8r
+-E=/var/tmp/cp-b8r-1001/evidence/$S
+-grep -v '^/var/tmp' /var/tmp/cp-b8r-1001/logs/$S/collect.log | grep -E 'rc=|request id' | tr '\n' ' '; echo
+-cat /var/tmp/cp-b8r-1001/logs/$S/run-prepared.rc
++D=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/b9
++E=/var/tmp/cp-b9-1001/evidence/$S
++grep -v '^/var/tmp' /var/tmp/cp-b9-1001/logs/$S/collect.log | grep -E 'rc=|request id' | tr '\n' ' '; echo
++cat /var/tmp/cp-b9-1001/logs/$S/run-prepared.rc
+ python3 $D/boundcheck.py $E $C 2>&1 | head -6
+ python3 $D/digest.py $E $C 2>&1 | grep -vE '^  (Restored|BIND units|Removed|Intentionally|Left in|Local port)' | cut -c1-500
+ if [ -d $E/paired-secondary-peer ]; then bash $D/peerv.sh $S 2>&1 | cut -c1-500; fi
+Only in .: bsec.sh
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/build.sh" ./build.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/build.sh"	2026-09-30 02:50:38.195677700 +0300
++++ ./build.sh	2026-09-30 04:57:04.799347400 +0300
+@@ -1,15 +1,15 @@
+ set -euo pipefail
+-exec > /var/tmp/cp-b8r-build.log 2>&1
++exec > /var/tmp/cp-b9-build.log 2>&1
+ date -u +%FT%TZ
+ REPO='/mnt/c/CELIKBROS PROJECTS/celikpanel'
+-C=e3591875
+-SRC=/root/cp-b8r-src
+-A=/root/cp-b8r-artifacts
+-T=/root/cp-b8r-tools
+-test ! -e "$SRC"; test ! -e "$A"; test ! -e "$T"; test ! -e /var/tmp/cp-b8r-1001
++C=3cceb29a
++SRC=/root/cp-b9-src
++A=/root/cp-b9-artifacts
++T=/root/cp-b9-tools
++test ! -e "$SRC"; test ! -e "$A"; test ! -e "$T"; test ! -e /var/tmp/cp-b9-1001
+ echo "repository HEAD at build time (record only): $(git -c safe.directory='*' -C "$REPO" rev-parse HEAD)"
+ echo "tested commit: $(git -c safe.directory='*' -C "$REPO" rev-parse $C^{commit})"
+-echo "branch accept/pdns-primary-gate-open-2: $(git -c safe.directory='*' -C "$REPO" rev-parse accept/pdns-primary-gate-open-2)"
++echo "branch accept/pdns-primary-gate-open-4: $(git -c safe.directory='*' -C "$REPO" rev-parse accept/pdns-primary-gate-open-4)"
+ echo "parent of tested commit: $(git -c safe.directory='*' -C "$REPO" rev-parse $C^)"
+ mkdir -p "$SRC"
+ git -c safe.directory='*' -C "$REPO" archive $C | tar -x -C "$SRC"
+@@ -41,28 +41,36 @@
+ sha256sum "$A/agent" "$A/agent.kill" "$A/panel" "$A/dns-kill-trigger" "$A/recovery" "$A/agent-checker" "$A/panel-checker" "$A/schema17-bridge" "$A"/dns-owner-tools/*
+ echo "== recovery-runtime"
+ ( cd "$A/recovery-runtime" && find . -type f -print0 | sort -z | xargs -0 sha256sum )
+-cp /root/cp-b8-tools/smstatus.go "$T/smstatus.go"
++cp /root/cp-b8r-tools/smstatus.go "$T/smstatus.go"
+ printf '{"Replace":{"%s/cmd/oi-smstatus/main.go":"%s/smstatus.go"}}' "$SRC" "$T" > "$T/overlay.json"
+ $GO build -trimpath -buildvcs=false -overlay "$T/overlay.json" -o "$T/oi-smstatus" ./cmd/oi-smstatus
+ test ! -e "$SRC/cmd/oi-smstatus"
+ sha256sum "$T/oi-smstatus" "$T/overlay.json" "$T/smstatus.go"
+ $GO version -m "$A/agent" | head -3
+-echo "== comparison with the 916e1577 batch-8 build (/root/cp-b8-artifacts)"
+-for b in agent agent.kill panel dns-kill-trigger recovery agent-checker panel-checker schema17-bridge recovery-runtime/runtime.manifest; do
+-  if cmp -s "$A/$b" "/root/cp-b8-artifacts/$b"; then echo "IDENTICAL $b"; else echo "DIFFERENT $b"; fi
++echo "== comparison with the e3591875 batch-8r build (/root/cp-b8r-artifacts, read only)"
++for b in agent agent.kill panel dns-kill-trigger recovery agent-checker panel-checker schema17-bridge recovery-runtime/runtime.manifest dns-owner-tools/dns-peer-enroll dns-owner-tools/bind-peer-inspect dns-owner-tools/pdns-peer-inspect; do
++  if cmp -s "$A/$b" "/root/cp-b8r-artifacts/$b"; then echo "IDENTICAL $b"; else echo "DIFFERENT $b"; fi
+ done
+-diff <(cd /root/cp-b8-artifacts/recovery-runtime && find . -type f -print0 | sort -z | xargs -0 sha256sum) <(cd "$A/recovery-runtime" && find . -type f -print0 | sort -z | xargs -0 sha256sum) && echo "recovery-runtime tree IDENTICAL" || echo "recovery-runtime tree DIFFERENT"
+-cmp -s "$T/oi-smstatus" /root/cp-b8-tools/oi-smstatus && echo "IDENTICAL oi-smstatus" || echo "DIFFERENT oi-smstatus"
++diff <(cd /root/cp-b8r-artifacts/recovery-runtime && find . -type f -print0 | sort -z | xargs -0 sha256sum) <(cd "$A/recovery-runtime" && find . -type f -print0 | sort -z | xargs -0 sha256sum) && echo "recovery-runtime tree IDENTICAL" || echo "recovery-runtime tree DIFFERENT"
++cmp -s "$T/oi-smstatus" /root/cp-b8r-tools/oi-smstatus && echo "IDENTICAL oi-smstatus" || echo "DIFFERENT oi-smstatus"
+ echo "== gate constants in the tested source"
+ grep -n 'freshPairedPDNSPrimaryAdmitted\s*=' -r cmd/agent --include='*.go' | grep -v _test || true
+ grep -n 'freshPairedPDNSPrimaryOffered\s*=' -r cmd/panel --include='*.go' | grep -v _test || true
+-echo "== changed paths 1f1a7830..$C"
+-git -c safe.directory='*' -C "$REPO" diff --stat 1f1a7830 $C | tail -15
++echo "== changed paths e3591875..$C"
++git -c safe.directory='*' -C "$REPO" diff --stat e3591875 $C | tail -40
+ echo "== harness file hashes"
+ ( cd "$SRC/deploy/e2e/dns-kill-matrix" && sha256sum fixture.py guest_bootstrap.py guest_bootstrap.sh run_cell.py guest_recovery_probe.py native_pdns_bind_peer.py native_pdns_peer_probe.py manifest.json )
+-echo "== offline harness tests of the fresh primary (from the archive)"
+-( cd "$SRC" && python3 deploy/e2e/dns-kill-matrix/test_fresh_primary_v3.py 2>&1 | tail -5 ) || echo "offline test rc=$?"
+-( cd "$SRC" && python3 deploy/e2e/dns-kill-matrix/test_fresh_primary_batch8_fixes.py 2>&1 | tail -5 ) || echo "offline batch8-fixes test rc=$?"
++echo "== offline harness tests (from the archive): all kill-matrix Python tests"
++set +e
++( cd "$SRC" && python3 -m unittest discover -s deploy/e2e/dns-kill-matrix -p 'test_*.py' 2>&1 | tail -6 ); echo "python unittest discover rc=${PIPESTATUS[0]}"
++for t in test_fresh_primary_v3.py test_fresh_primary_batch8_fixes.py test_fresh_primary_serial_zero_zone.py; do
++  ( cd "$SRC" && python3 deploy/e2e/dns-kill-matrix/$t 2>&1 | tail -3 ); echo "$t done"
++done
++echo "== offline trigger tests (go test -v ./cmd/dns-kill-matrix-trigger)"
++( cd "$SRC" && $GO test -count=1 -v ./cmd/dns-kill-matrix-trigger > /var/tmp/cp-b9-triggertest.log 2>&1 ); echo "go test rc=$?"
++echo "top-level PASS: $(grep -cE '^--- PASS' /var/tmp/cp-b9-triggertest.log) FAIL: $(grep -cE '^--- FAIL' /var/tmp/cp-b9-triggertest.log) SKIP: $(grep -cE '^--- SKIP' /var/tmp/cp-b9-triggertest.log)"
++tail -3 /var/tmp/cp-b9-triggertest.log
++set -e
+ find "$SRC" -name __pycache__ -type d -prune -exec rm -rf {} +
+ date -u +%FT%TZ
+ echo BUILD-OK
+Only in '/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools': c01.sh
+Only in '/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools': c02.sh
+Only in '/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools': c03.sh
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/c04.sh" ./c04.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/c04.sh"	2026-09-30 02:50:38.312606200 +0300
++++ ./c04.sh	2026-09-30 04:57:04.824957400 +0300
+@@ -1 +1 @@
+-bash /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch8r/runcell.sh c04-pri-started-zl-rb pdns-switch__target-started__after-write__paired-primary__peer-reachable /var/tmp/cp-b8r-1001 0 --zone-lifecycle --reboot-after-recovery --disable-management-before-reboot
++bash /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/b9/runcell.sh c04-pri-started-zl-rb pdns-switch__target-started__after-write__paired-primary__peer-reachable /var/tmp/cp-b9-1001 0 --zone-lifecycle --reboot-after-recovery --disable-management-before-reboot
+Only in '/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools': c05.sh
+Only in '/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools': c06.sh
+Only in '/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools': c07.sh
+Only in '/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools': c08.sh
+Only in '/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools': c09.sh
+Only in '/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools': c10.sh
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/cell.sh" ./cell.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/cell.sh"	2026-09-30 02:50:38.516488000 +0300
++++ ./cell.sh	2026-09-30 04:57:04.844526000 +0300
+@@ -5,13 +5,13 @@
+ set -uo pipefail
+ SHORT=$1 CELL=$2 ROOT=$3 GATE=$4; shift 4; FLAGS=("$@")
+ NODE=debian13; ONODE=arch; FIX=uninitialized
+-LROOT=/var/tmp/cp-b8r-1001
+-SP=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch8r
++LROOT=/var/tmp/cp-b9-1001
++SP=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/b9
+ LOG=$LROOT/logs/$SHORT
+ test ! -e $LOG || { echo "log dir exists: $LOG"; exit 1; }
+ mkdir -p $LOG
+ exec >> $LOG/driver.log 2>&1
+-cd /root/cp-b8r-src
++cd /root/cp-b9-src
+ F=deploy/e2e/dns-kill-matrix/fixture.py
+ B=deploy/e2e/dns-kill-matrix/guest_bootstrap.py
+ PB=deploy/e2e/dns-kill-matrix/native_pdns_bind_peer.py
+@@ -33,13 +33,14 @@
+ $G 'cat /etc/os-release; uname -a; echo "boot_id=$(cat /proc/sys/kernel/random/boot_id)"; echo "machine_id=$(cat /etc/machine-id)"; echo "product_uuid=$(sudo cat /sys/class/dmi/id/product_uuid)"; cat /etc/cloud/build.info 2>/dev/null; cat /etc/celikpanel-dns-kill-matrix; date -u' > $LOG/guest-identity.txt 2>&1 < /dev/null
+ $O 'cat /etc/os-release; uname -a; echo "boot_id=$(cat /proc/sys/kernel/random/boot_id)"; echo "machine_id=$(cat /etc/machine-id)"; echo "product_uuid=$(sudo cat /sys/class/dmi/id/product_uuid)"; cat /etc/celikpanel-dns-kill-matrix; date -u' > $LOG/peer-identity.txt 2>&1 < /dev/null
+ step install
+-python3 $B install $COMMON --agent $A/agent --tagged-agent $A/agent.kill --panel $A/panel --trigger $A/dns-kill-trigger --web-dir /root/cp-b8r-src/web/dist --execute > $LOG/install.log 2>&1 < /dev/null || fail install
++python3 $B install $COMMON --agent $A/agent --tagged-agent $A/agent.kill --panel $A/panel --trigger $A/dns-kill-trigger --web-dir /root/cp-b9-src/web/dist --execute > $LOG/install.log 2>&1 < /dev/null || fail install
+ step enroll-recovery-runtime
+ python3 $B enroll-recovery-runtime $COMMON --recovery-runtime $A/recovery-runtime --execute > $LOG/enroll-recovery-runtime.log 2>&1 < /dev/null || fail enroll-recovery-runtime
+ step native-bind-secondary-prepare
+ python3 $PB prepare $PCOMMON --execute > $LOG/peer-prepare.log 2>&1 < /dev/null || fail native-bind-secondary-prepare
+-step prepare-pdns-switch
+-python3 $B prepare-pdns-switch $COMMON --execute > $LOG/prepare-source.log 2>&1 < /dev/null || fail prepare-pdns-switch
++ZZ=""; for f in "${FLAGS[@]}"; do [ "$f" = --zero-zones ] && ZZ=--zero-zones; done
++step prepare-pdns-switch zero_zones_flag="$ZZ"
++python3 $B prepare-pdns-switch $COMMON $ZZ --execute > $LOG/prepare-source.log 2>&1 < /dev/null || fail prepare-pdns-switch
+ step pre-run-snapshot
+ $G 'sudo bash -s' < $SP/unitfacts_remote.sh > $LOG/pre-run-units.txt 2>&1
+ $G 'sudo bash -s' < $SP/versions_remote.sh > $LOG/versions-pre-run-guest.txt 2>&1
+@@ -62,17 +63,17 @@
+   fi
+ fi
+ step start-peer-dns-sampler
+-$(python3 $SP/scpcmd.py $ROOT $CELL $ONODE) $SP/pairq.py celik@127.0.0.1:/tmp/cp-b8r-pairq.py < /dev/null || fail scp-pairq
++$(python3 $SP/scpcmd.py $ROOT $CELL $ONODE) $SP/pairq.py celik@127.0.0.1:/tmp/cp-b9-pairq.py < /dev/null || fail scp-pairq
+ $O 'sudo bash -s 1' < $SP/peerloop_start_remote.sh >> $LOG/driver.log 2>&1
+ step start-watcher
+-$(python3 $SP/scpcmd.py $ROOT $CELL $NODE) $SP/watcher.sh celik@127.0.0.1:/tmp/cp-b8r-watcher.sh < /dev/null || fail scp-watcher
+-$G "sudo install -m 0700 /tmp/cp-b8r-watcher.sh /root/cp-b8r-watcher.sh && sudo systemd-run --unit=cp-b8r-watch --collect /bin/bash /root/cp-b8r-watcher.sh $CELL /var/tmp/cp-b8r-watch" < /dev/null || fail start-watcher
++$(python3 $SP/scpcmd.py $ROOT $CELL $NODE) $SP/watcher.sh celik@127.0.0.1:/tmp/cp-b9-watcher.sh < /dev/null || fail scp-watcher
++$G "sudo install -m 0700 /tmp/cp-b9-watcher.sh /root/cp-b9-watcher.sh && sudo systemd-run --unit=cp-b9-watch --collect /bin/bash /root/cp-b9-watcher.sh $CELL /var/tmp/cp-b9-watch" < /dev/null || fail start-watcher
+ step start-dbwatch
+-$(python3 $SP/scpcmd.py $ROOT $CELL $NODE) $SP/dbwatch.sh celik@127.0.0.1:/tmp/cp-b8r-dbwatch.sh < /dev/null || fail scp-dbwatch
+-$G "sudo install -m 0700 /tmp/cp-b8r-dbwatch.sh /root/cp-b8r-dbwatch.sh && sudo systemd-run --unit=cp-b8r-dbwatch --collect /bin/bash /root/cp-b8r-dbwatch.sh /var/tmp/cp-b8r-watch-db" < /dev/null || fail start-dbwatch
++$(python3 $SP/scpcmd.py $ROOT $CELL $NODE) $SP/dbwatch.sh celik@127.0.0.1:/tmp/cp-b9-dbwatch.sh < /dev/null || fail scp-dbwatch
++$G "sudo install -m 0700 /tmp/cp-b9-dbwatch.sh /root/cp-b9-dbwatch.sh && sudo systemd-run --unit=cp-b9-dbwatch --collect /bin/bash /root/cp-b9-dbwatch.sh /var/tmp/cp-b9-watch-db" < /dev/null || fail start-dbwatch
+ B0=$($G 'cat /proc/sys/kernel/random/boot_id' < /dev/null | tr -d '\r\n')
+ P0=$($O 'cat /proc/sys/kernel/random/boot_id' < /dev/null | tr -d '\r\n')
+-echo "$(date -u +%FT%T.%NZ) boot 1 $B0 (watcher /var/tmp/cp-b8r-watch)" > $LOG/boot-monitor.log
+-echo "$(date -u +%FT%T.%NZ) peerboot 1 $P0 (sampler /var/tmp/cp-b8r-peerloop1)" >> $LOG/boot-monitor.log
++echo "$(date -u +%FT%T.%NZ) boot 1 $B0 (watcher /var/tmp/cp-b9-watch)" > $LOG/boot-monitor.log
++echo "$(date -u +%FT%T.%NZ) peerboot 1 $P0 (sampler /var/tmp/cp-b9-peerloop1)" >> $LOG/boot-monitor.log
+ step prepared-ok
+ bash $SP/runonly.sh "$SHORT" "$CELL" "$ROOT" "${FLAGS[@]}"
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/cells.txt" ./cells.txt
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/cells.txt"	2026-09-30 02:50:41.431245100 +0300
++++ ./cells.txt	2026-09-30 04:57:07.064929900 +0300
+@@ -1,10 +1,7 @@
+-c01-pri-intent pdns-switch__intent__after-write__paired-primary__peer-reachable
+-c02-pri-staged pdns-switch__target-staged__after-write__paired-primary__peer-reachable
+-c03-pri-enable pdns-switch__source-stopped__after-write__paired-primary__peer-reachable
+ c04-pri-started-zl-rb pdns-switch__target-started__after-write__paired-primary__peer-reachable
+-c05-pri-verified pdns-switch__target-verified__after-write__paired-primary__peer-reachable
+-c06-pri-committed-zl pdns-switch__committed__after-write__paired-primary__peer-reachable
+-c07-pri-prejournal pdns-switch__intent__before-write__paired-primary__peer-reachable
+-c08-pri-owner-config pdns-switch__target-staged__after-write__paired-primary__peer-reachable
+-c09-pri-owner-sql pdns-switch__target-started__after-write__paired-primary__peer-reachable
+-c10-pri-released pdns-switch__target-staged__after-write__paired-primary__peer-reachable
++z01-zero-staged pdns-switch__target-staged__after-write__paired-primary__peer-reachable
++z02-zero-started pdns-switch__target-started__after-write__paired-primary__peer-reachable
++z03-zero-committed pdns-switch__committed__after-write__paired-primary__peer-reachable
++z04-zero-committed-zl pdns-switch__committed__after-write__paired-primary__peer-reachable
++z05-zero-started-zl-rb pdns-switch__target-started__after-write__paired-primary__peer-reachable
++z06-zero-owner-sql pdns-switch__target-started__after-write__paired-primary__peer-reachable
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/chain.sh" ./chain.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/chain.sh"	2026-09-30 02:50:38.561875000 +0300
++++ ./chain.sh	2026-09-30 04:57:04.863622900 +0300
+@@ -1,6 +1,6 @@
+ # usage: chain.sh cNN... -- run the given cell launchers one at a time; after each: exit 0 -> stop + teardown; else stop only (overlays kept)
+-SP=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch8r
+-CL=/var/tmp/cp-b8r-1001/logs/chain.log
++SP=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/b9
++CL=/var/tmp/cp-b9-1001/logs/chain.log
+ for c in "$@"; do
+   line=$(cat $SP/$c.sh)
+   set -- $line
+@@ -8,7 +8,7 @@
+   echo "$(date -u +%FT%TZ) start $c $SHORT $CELL $ROOT" >> $CL
+   if pgrep -x qemu-system-x86_64 >/dev/null; then echo "$(date -u +%FT%TZ) QEMU still running before $c; chain stopped" >> $CL; exit 1; fi
+   bash $SP/$c.sh
+-  rc=$(cat /var/tmp/cp-b8r-1001/logs/$SHORT/run-prepared.rc 2>/dev/null)
++  rc=$(cat /var/tmp/cp-b9-1001/logs/$SHORT/run-prepared.rc 2>/dev/null)
+   echo "$(date -u +%FT%TZ) done $c $rc" >> $CL
+   if [ "$rc" = "RUN_PREPARED_RC=0" ]; then
+     bash $SP/down.sh $SHORT $CELL $ROOT >> $CL 2>&1
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/check.sh" ./check.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/check.sh"	2026-09-30 02:50:38.628126700 +0300
++++ ./check.sh	2026-09-30 04:57:04.889554600 +0300
+@@ -1,3 +1,3 @@
+-D=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch8r
++D=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/b9
+ bash $D/summ.sh $1 $2 2>&1 | grep -v '^/var/tmp' | cut -c1-1200
+ bash $D/bc.sh $1 $2 2>&1
+Only in .: chk.sh
+Only in .: collect2.sh
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/collect.sh" ./collect.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/collect.sh"	2026-09-30 02:50:38.696170300 +0300
++++ ./collect.sh	2026-09-30 04:57:04.949109500 +0300
+@@ -3,8 +3,8 @@
+ set -uo pipefail
+ SHORT=$1 CELL=$2 ROOT=$3
+ NODE=debian13; PNODE=arch
+-LROOT=/var/tmp/cp-b8r-1001
+-SP=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch8r
++LROOT=/var/tmp/cp-b9-1001
++SP=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/b9
+ LOG=$LROOT/logs/$SHORT
+ E=$LROOT/evidence/$SHORT
+ mkdir -p $E
+@@ -12,13 +12,13 @@
+ G="python3 $SP/gssh.py $ROOT $CELL $NODE"
+ P="python3 $SP/gssh.py $ROOT $CELL $PNODE"
+ echo "### collect $(date -u +%FT%T.%NZ)"
+-W=$(grep -o '/var/tmp/cp-b8r-watch[a-z0-9-]*' $LOG/boot-monitor.log | tail -n1)
++W=$(grep -o '/var/tmp/cp-b9-watch[a-z0-9-]*' $LOG/boot-monitor.log | tail -n1)
+ echo "last watcher dir: $W"
+ for i in $(seq 1 60); do $G "sudo grep -q '^done' $W/timeline.log" < /dev/null && break; sleep 1; done
+ $G 'sudo bash -s' < $SP/unitfacts_remote.sh > $LOG/post-state.txt 2>&1
+ $G 'sudo bash -s' < $SP/versions_remote.sh > $E/versions-post-collect-guest.txt 2>&1
+ $P 'sudo bash -s' < $SP/versions_remote.sh > $E/versions-post-collect-peer.txt 2>&1
+-$(python3 $SP/scpcmd.py $ROOT $CELL $NODE) /root/cp-b8r-tools/oi-smstatus celik@127.0.0.1:/tmp/oi-smstatus < /dev/null
++$(python3 $SP/scpcmd.py $ROOT $CELL $NODE) /root/cp-b9-tools/oi-smstatus celik@127.0.0.1:/tmp/oi-smstatus < /dev/null
+ RID=$($G "sudo python3 -c 'import json;print(json.load(open(\"/var/lib/celikpanel-dns-kill-matrix/results/$CELL/result.json\"))[\"request_id\"])'" < /dev/null)
+ echo "request id: $RID"
+ $G "sudo bash -s $RID" < $SP/ownerpost_remote.sh > $E/owner-post-state.txt 2>&1
+@@ -32,6 +32,8 @@
+ $G 'sudo python3 - /var/lib/powerdns/pdns.sqlite3' < $SP/pdnsdb.py > $E/pdns-db-post-collect.txt 2>&1
+ echo "pdnsdb rc=$?"
+ $G 'sudo bash -s' < $SP/primstate_remote.sh > $E/primary-state-post-collect.txt 2>&1
++$G 'sudo bash -s' < $SP/notifycap_remote.sh > $E/pdns-notify-journal-and-also-notify.txt 2>&1
++echo "notifycap rc=$?"
+ $G 'sudo python3 -' < $SP/pairq.py > $E/dns-post-collect-guest.txt 2>&1
+ $P 'sudo python3 -' < $SP/pairq.py > $E/dns-post-collect-peer.txt 2>&1
+ $P 'sudo bash -s' < $SP/bindsec_remote.sh > $E/bind-secondary-state-post-collect.txt 2>&1
+@@ -39,13 +41,13 @@
+ $P 'sudo bash -s bind' < $SP/peerfacts_remote.sh > $E/peer-facts-post-collect.txt 2>&1
+ $P 'sudo bash -s bind' < $SP/peerjournal_remote.sh > $E/peer-daemon-journal.txt 2>&1
+ echo "peer journal rc=$?"
+-$P 'for u in $(systemctl list-units --all --plain --no-legend "cp-b8r-peerloop*" | cut -d" " -f1); do sudo systemctl stop $u; done; for d in /var/tmp/cp-b8r-peerloop*; do echo "######## $d"; sudo cat $d/samples.log; done' > $E/peer-dns-sampler.log 2> $LOG/peerloop.stderr < /dev/null
++$P 'for u in $(systemctl list-units --all --plain --no-legend "cp-b9-peerloop*" | cut -d" " -f1); do sudo systemctl stop $u; done; for d in /var/tmp/cp-b9-peerloop*; do echo "######## $d"; sudo cat $d/samples.log; done' > $E/peer-dns-sampler.log 2> $LOG/peerloop.stderr < /dev/null
+ echo "peerloop rc=$? lines=$(wc -l < $E/peer-dns-sampler.log)"
+ $G "sudo journalctl -u celikpanel-agent.service --no-pager -o short-iso-precise | grep -iE 'catalog format|catalog producer|re-stamp|restamp'" > $E/catalog-lines-agent-journal.txt 2>&1 < /dev/null
+-CD=$(python3 -c 'import sys;sys.path.insert(0,"/root/cp-b8r-src/deploy/e2e/dns-kill-matrix");import fixture;from pathlib import Path;print(fixture.load_cell_plan(Path(sys.argv[1]).resolve(),sys.argv[2])["cell_directory"])' $ROOT $CELL)
++CD=$(python3 -c 'import sys;sys.path.insert(0,"/root/cp-b9-src/deploy/e2e/dns-kill-matrix");import fixture;from pathlib import Path;print(fixture.load_cell_plan(Path(sys.argv[1]).resolve(),sys.argv[2])["cell_directory"])' $ROOT $CELL)
+ echo "cell directory: $CD"
+ if [ -d $CD/fresh-primary-peer ]; then mkdir -p $E/fresh-primary-peer && cp -a $CD/fresh-primary-peer/. $E/fresh-primary-peer/; ls -la $E/fresh-primary-peer; else echo "no fresh-primary-peer directory"; fi
+-$G 'sudo touch /var/tmp/cp-b8r-dbwatch.stop; sleep 2; sudo tail -n 3 /var/tmp/cp-b8r-watch-db*/timeline.log' < /dev/null
++$G 'sudo touch /var/tmp/cp-b9-dbwatch.stop; sleep 2; sudo tail -n 3 /var/tmp/cp-b9-watch-db*/timeline.log' < /dev/null
+ $G 'sudo bash -s' < $SP/guesttar_remote.sh > $LOG/guest-evidence.tar 2> $LOG/guest-tar.stderr
+ echo "tar rc=$? size=$(stat -c %s $LOG/guest-evidence.tar)"
+ mkdir -p $E/raw && tar -C $E/raw -xf $LOG/guest-evidence.tar
+Only in '/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools': cont.sh
+Only in .: cpoll.sh
+Only in .: dbg.sh
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/dbsum.sh" ./dbsum.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/dbsum.sh"	2026-09-30 02:50:38.806292900 +0300
++++ ./dbsum.sh	2026-09-30 04:57:05.014870500 +0300
+@@ -1,6 +1,6 @@
+ # Read-only: PowerDNS database summary at the end, catalog serial history and secondary state per cell
+ while read s c; do
+-  E=/var/tmp/cp-b8r-1001/evidence/$s
++  E=/var/tmp/cp-b9-1001/evidence/$s
+   echo "==== $s"
+   grep -E '^== |-- table (domains|records|domainmetadata|comments|cryptokeys|tsigkeys|supermasters)|records per domain:|   domains:|   domainmetadata:' $E/pdns-db-post-collect.txt 2>/dev/null | cut -c1-330
+   echo "-- serial history"; grep -o '"catalog_soa_serial": "[0-9]*"[^}]*"catalog_metadata": [^]]*\]*\]' $E/catalog-serial-history.txt 2>/dev/null | cut -c1-200 | uniq
+@@ -8,4 +8,4 @@
+   echo "-- secondary"; grep -A2 'catalog members' $E/bind-secondary-state-post-collect.txt | tail -2 | cut -c1-200
+   grep -E 'Transfer completed' $E/bind-secondary-state-post-collect.txt | cut -c1-260 | tail -3
+   echo "-- sampler lines $(grep -vc '^####' $E/peer-dns-sampler.log)"; grep -v '^####' $E/peer-dns-sampler.log | tail -1 | cut -c1-400
+-done < /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch8r/cells.txt
++done < /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/b9/cells.txt
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/dbwatch.sh" ./dbwatch.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/dbwatch.sh"	2026-09-30 02:50:38.835581100 +0300
++++ ./dbwatch.sh	2026-09-30 04:57:05.040903000 +0300
+@@ -1,8 +1,8 @@
+ #!/bin/bash
+-# Read-only PowerDNS database sampler on the primary (batch 8r addition). Args: OUTDIR [SECONDS]
++# Read-only PowerDNS database sampler on the primary (batch 8r addition, reused in batch 9). Args: OUTDIR [SECONDS]
+ # Plain file copy of /var/lib/powerdns/pdns.sqlite3 and its WAL whenever their bytes change (no SQLite lock is taken).
+ # Unlike watcher.sh it does not stop at result.json, so it also covers the zone lifecycle after the controller finished.
+-# Stops when /var/tmp/cp-b8r-dbwatch.stop exists or after SECONDS (default 5400).
++# Stops when /var/tmp/cp-b9-dbwatch.stop exists or after SECONDS (default 5400).
+ OUT=$1; SECS=${2:-5400}
+ mkdir -p "$OUT/copies"
+ T=$OUT/timeline.log
+@@ -10,7 +10,7 @@
+ dsha=none
+ end=$(( $(date +%s) + SECS ))
+ echo "$(date -u +%T.%N) start boot_id=$(cat /proc/sys/kernel/random/boot_id)" >> "$T"
+-while [ "$(date +%s)" -lt "$end" ] && [ ! -e /var/tmp/cp-b8r-dbwatch.stop ]; do
++while [ "$(date +%s)" -lt "$end" ] && [ ! -e /var/tmp/cp-b9-dbwatch.stop ]; do
+   if [ -f "$src" ]; then cur=$(cat "$src" "$src-wal" 2>/dev/null | sha256sum | cut -c1-64); else cur=absent; fi
+   if [ "$cur" != "$dsha" ]; then
+     ts=$(date -u +%H%M%S.%N | cut -c1-10)
+Only in .: derall.sh
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/derive2.sh" ./derive2.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/derive2.sh"	2026-09-30 02:50:38.877720700 +0300
++++ ./derive2.sh	2026-09-30 04:57:05.081694000 +0300
+@@ -1,14 +1,21 @@
+-# Batch 8r derived, read-only files: status texts of all cells; zone lifecycle and catalog re-stamp timelines (c04, c06)
+-SP=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch8r
+-O=/var/tmp/cp-b8r-1001/status-texts-all-cells.txt
++# Batch 9 (from 8r) derived, read-only files: status texts of all cells; zone lifecycle and catalog re-stamp timelines (c04, z04, z05; restamp timeline for every cell)
++SP=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/b9
++O=/var/tmp/cp-b9-1001/status-texts-all-cells.txt
+ : > $O
+ while read s c; do echo "######## $s $c" >> $O; python3 $SP/stat8r.py $s $c >> $O 2>&1; done < $SP/cells.txt
+ wc -l $O
+-for s in c04-pri-started-zl-rb c06-pri-committed-zl; do
+-  E=/var/tmp/cp-b8r-1001/evidence/$s
++for s in c04-pri-started-zl-rb z04-zero-committed-zl z05-zero-started-zl-rb; do
++  E=/var/tmp/cp-b9-1001/evidence/$s
+   python3 $SP/zl.py $s > $E/zone-lifecycle-summary.txt 2>&1
+   python3 $SP/ledgerjobs.py $s >> $E/zone-lifecycle-summary.txt 2>&1
+   { echo "== pdns daemon CATALOG-HASH lines (all boots)"; grep -h "new CATALOG-HASH" $E/raw/journald/pdns.service.txt; } >> $E/zone-lifecycle-summary.txt
+-  bash $SP/restamp.sh $s 00:00:00 23:59:59 > $E/catalog-restamp-timeline.txt 2>&1
+-  wc -l $E/zone-lifecycle-summary.txt $E/catalog-restamp-timeline.txt
++  wc -l $E/zone-lifecycle-summary.txt
+ done
++while read s c; do
++  E=/var/tmp/cp-b9-1001/evidence/$s
++  bash $SP/restamp.sh $s 00:00:00 23:59:59 > $E/catalog-restamp-timeline.txt 2>&1
++  python3 $SP/samp.py $E/peer-dns-sampler.log > $E/peer-dns-sampler-changes.txt 2>&1
++done < $SP/cells.txt
++E=/var/tmp/cp-b9-1001/evidence/z04-zero-committed-zl/rec
++python3 $SP/samp.py $E/peer-dns-sampler.log > $E/peer-dns-sampler-changes.txt 2>&1
++python3 $SP/zl.py z04-zero-committed-zl/rec > $E/zone-lifecycle-summary.txt 2>&1
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/derive.sh" ./derive.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/derive.sh"	2026-09-30 02:50:38.937157500 +0300
++++ ./derive.sh	2026-09-30 04:57:05.108132500 +0300
+@@ -1,8 +1,8 @@
+-# Derived, read-only files per cell inside /var/tmp/cp-b8r-1001/evidence/<short>: boundary-window.txt, cell-digest.txt,
++# Derived, read-only files per cell inside /var/tmp/cp-b9-1001/evidence/<short>: boundary-window.txt, cell-digest.txt,
+ # gate-probe.json (verbatim result.json sub-object), timeline-summary.txt
+-SP=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch8r
++SP=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/b9
+ while read s c; do
+-  E=/var/tmp/cp-b8r-1001/evidence/$s
++  E=/var/tmp/cp-b9-1001/evidence/$s
+   [ -d $E ] || { echo "$s: no evidence"; continue; }
+   R=$E/raw/results/$c/result.json
+   if [ -f $R ]; then
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/dg.sh" ./dg.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/dg.sh"	2026-09-30 02:50:39.007612600 +0300
++++ ./dg.sh	2026-09-30 04:57:05.129370000 +0300
+@@ -1 +1 @@
+-python3 /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch8r/digest.py /var/tmp/cp-b8r-1001/evidence/$1 $2
++python3 /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/b9/digest.py /var/tmp/cp-b9-1001/evidence/$1 $2
+Only in .: direct.sh
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/down.sh" ./down.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/down.sh"	2026-09-30 02:50:39.065070900 +0300
++++ ./down.sh	2026-09-30 04:57:05.177130200 +0300
+@@ -1,12 +1,12 @@
+ set -u
+ # usage: down.sh SHORT CELL ROOT  (stop and teardown after a successful capture)
+-L=/var/tmp/cp-b8r-1001/logs/$1
++L=/var/tmp/cp-b9-1001/logs/$1
+ ROOT=$3
+-cd /root/cp-b8r-src
++cd /root/cp-b9-src
+ F=deploy/e2e/dns-kill-matrix/fixture.py
+ python3 $F stop --work-root $ROOT --cell-id $2 --execute > $L/stop.json 2>&1; echo "stop rc=$?"
+ python3 $F teardown --work-root $ROOT --cell-id $2 --execute > $L/teardown.json 2>&1; echo "teardown rc=$?"
+ cat $L/stop.json $L/teardown.json
+-mkdir -p /var/tmp/cp-b8r-1001/evidence/$1; cp $L/stop.json $L/teardown.json /var/tmp/cp-b8r-1001/evidence/$1/
++mkdir -p /var/tmp/cp-b9-1001/evidence/$1; cp $L/stop.json $L/teardown.json /var/tmp/cp-b9-1001/evidence/$1/
+ pgrep -a qemu || echo "no qemu"
+ ls $ROOT/cells
+Only in .: enroll.sh
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/export.sh" ./export.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/export.sh"	2026-09-30 02:50:39.128245600 +0300
++++ ./export.sh	2026-09-30 04:57:05.228315200 +0300
+@@ -1,9 +1,9 @@
+ set -euo pipefail
+ # Copies all retained cell evidence and build records into the repository evidence directory (untracked).
+ REPO='/mnt/c/CELIKBROS PROJECTS/celikpanel'
+-D="$REPO/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001"
+-SP=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch8r
+-ROOT=/var/tmp/cp-b8r-1001
++D="$REPO/deploy/e2e/dns-kill-matrix/evidence/batch9-pdns-primary-zero-zone-20261001"
++SP=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/b9
++ROOT=/var/tmp/cp-b9-1001
+ test ! -e "$D"
+ mkdir -p "$D/build/fixture-tools"
+ while read s c; do
+@@ -16,27 +16,39 @@
+   fi
+   echo "$s files: $(find "$D/$s" -type f | wc -l)"
+ done < $SP/cells.txt
+-cp /var/tmp/cp-b8r-build.log "$D/build/build.log"
+-cp /var/tmp/cp-b8r-webbuild.log "$D/build/web-build.log"
+-cp /var/tmp/cp-b8r-setup.log "$D/build/work-root-setup.log"
+-cp /var/tmp/cp-b8r-webdist.sha256 "$D/build/web-dist.sha256"
++# z04 second collect (after the owner enrollment and the refused recover): same flattening of raw/results
++s=z04-zero-committed-zl/rec; c=pdns-switch__committed__after-write__paired-primary__peer-reachable
++rm -rf "$D/$s"; mkdir -p "$D/$s"
++(cd $ROOT/evidence/$s && tar -cf - --exclude=./raw/results .) | tar -C "$D/$s" --no-same-owner --no-same-permissions -xf -
++mkdir -p "$D/$s/raw/results"
++(cd $ROOT/evidence/$s/raw/results/$c && tar -cf - .) | tar -C "$D/$s/raw/results" --no-same-owner --no-same-permissions -xf -
++echo "$s files: $(find "$D/$s" -type f | wc -l)"
++cp /var/tmp/cp-b9-build.log "$D/build/build.log"
++cp /var/tmp/cp-b9-webbuild.log "$D/build/web-build.log"
++cp /var/tmp/cp-b9-setup.log "$D/build/work-root-setup.log"
++cp /var/tmp/cp-b9-webdist.sha256 "$D/build/web-dist.sha256"
+ cp $ROOT/logs/chain.log "$D/build/chain.log"
+-cp /var/tmp/cp-b8r-1001/status-texts-all-cells.txt "$D/build/status-texts-all-cells.txt"
++cp /var/tmp/cp-b9-triggertest.log "$D/build/trigger-tests.log"
++cp $SP/offline-test-counts.txt "$D/build/offline-test-counts.txt"
++cp /var/tmp/cp-b9-1001/status-texts-all-cells.txt "$D/build/status-texts-all-cells.txt"
++cp /var/tmp/cp-b9-1001/remaining-on-host.txt "$D/build/remaining-on-host.txt"
+ cp $SP/repo-head-at-start.txt "$D/build/repo-head-at-start.txt"
+ /opt/celikpanel-test-toolchains/go1.26.5/go/bin/go version > "$D/build/go-version.txt"
+-(cd /root/cp-b8r-artifacts && sha256sum agent agent.kill panel dns-kill-trigger recovery agent-checker panel-checker schema17-bridge dns-owner-tools/* && find recovery-runtime -type f -print0 | sort -z | xargs -0 sha256sum) > "$D/build/artifacts.sha256"
++(cd /root/cp-b9-artifacts && sha256sum agent agent.kill panel dns-kill-trigger recovery agent-checker panel-checker schema17-bridge dns-owner-tools/* && find recovery-runtime -type f -print0 | sort -z | xargs -0 sha256sum) > "$D/build/artifacts.sha256"
+ for r in $(cat $SP/roots.txt); do
+-  n=$(echo $r | sed 's#^/var/tmp/cp-b8r-1001$#root1#; s#^/var/tmp/cp-b8r-1001/##')
++  n=$(echo $r | sed 's#^/var/tmp/cp-b9-1001$#root1#; s#^/var/tmp/cp-b9-1001/##')
+   (cd $r/artifacts && sha256sum agent agent.kill panel dns-kill-trigger recovery agent-checker panel-checker schema17-bridge dns-owner-tools/* && find recovery-runtime -type f -print0 | sort -z | xargs -0 sha256sum) > "$D/build/artifacts-$n.sha256"
+   cmp "$D/build/artifacts.sha256" "$D/build/artifacts-$n.sha256" && echo "artifact copy $n identical"
+ done
+-(cd /root/cp-b8r-src && sha256sum deploy/e2e/dns-kill-matrix/fixture.py deploy/e2e/dns-kill-matrix/guest_bootstrap.py deploy/e2e/dns-kill-matrix/guest_bootstrap.sh deploy/e2e/dns-kill-matrix/run_cell.py deploy/e2e/dns-kill-matrix/guest_recovery_probe.py deploy/e2e/dns-kill-matrix/native_pdns_bind_peer.py deploy/e2e/dns-kill-matrix/native_pdns_peer_probe.py deploy/e2e/dns-kill-matrix/manifest.json cmd/agent/dns_engine_kill_matrix_linux.go cmd/agent/dns_engine_pdns_switch.go cmd/panel/dns_engine.go) > "$D/build/harness-files.sha256"
+-(cd /root/cp-b8r-tools && sha256sum oi-smstatus overlay.json smstatus.go) > "$D/build/fixture-tools/oi-smstatus.sha256"
+-cp /root/cp-b8r-tools/overlay.json "$D/build/fixture-tools/overlay.json"
+-for f in $SP/*.sh $SP/*.py $SP/*.txt $SP/smstatus.go; do b=$(basename $f); [ "$b" = hostcheck.sh ] && continue; cp $f "$D/build/fixture-tools/$b"; done
+-mkdir -p /var/tmp/cp-b8r-verify && git -c safe.directory='*' -C "$REPO" archive e3591875 | tar -x -C /var/tmp/cp-b8r-verify
+-set +e; diff -r --exclude=dist /var/tmp/cp-b8r-verify /root/cp-b8r-src > "$D/build/source-tree-vs-archive.diff" ; echo "diff rc=$? (web/dist excluded: built from the archive's web/ during this run, not tracked)" | tee -a "$D/build/source-tree-vs-archive.diff"; set -e
+-rm -rf /var/tmp/cp-b8r-verify
++(cd /root/cp-b9-src && sha256sum deploy/e2e/dns-kill-matrix/fixture.py deploy/e2e/dns-kill-matrix/guest_bootstrap.py deploy/e2e/dns-kill-matrix/guest_bootstrap.sh deploy/e2e/dns-kill-matrix/run_cell.py deploy/e2e/dns-kill-matrix/guest_recovery_probe.py deploy/e2e/dns-kill-matrix/native_pdns_bind_peer.py deploy/e2e/dns-kill-matrix/native_pdns_peer_probe.py deploy/e2e/dns-kill-matrix/manifest.json cmd/agent/dns_engine_kill_matrix_linux.go cmd/agent/dns_engine_pdns_switch.go cmd/panel/dns_engine.go) > "$D/build/harness-files.sha256"
++(cd /root/cp-b9-tools && sha256sum oi-smstatus overlay.json smstatus.go) > "$D/build/fixture-tools/oi-smstatus.sha256"
++cp /root/cp-b9-tools/overlay.json "$D/build/fixture-tools/overlay.json"
++for f in $SP/*.sh $SP/*.py $SP/*.txt; do b=$(basename $f); cp $f "$D/build/fixture-tools/$b"; done
++cp /root/cp-b9-tools/smstatus.go "$D/build/fixture-tools/smstatus.go"
++set +e; ( cd "$D/build/fixture-tools" && diff -ru "$REPO/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools" . ) > "$D/build/fixture-tools-vs-batch8r.diff"; echo "fixture diff rc=$?"; set -e
++mkdir -p /var/tmp/cp-b9-verify && git -c safe.directory='*' -C "$REPO" archive 3cceb29a | tar -x -C /var/tmp/cp-b9-verify
++set +e; diff -r --exclude=dist /var/tmp/cp-b9-verify /root/cp-b9-src > "$D/build/source-tree-vs-archive.diff" ; echo "diff rc=$? (web/dist excluded: built from the archive's web/ during this run, not tracked)" | tee -a "$D/build/source-tree-vs-archive.diff"; set -e
++rm -rf /var/tmp/cp-b9-verify
+ echo "repository HEAD at export (record only): $(git -c safe.directory='*' -C "$REPO" rev-parse HEAD) $(date -u +%FT%TZ)" | tee "$D/build/repo-head-at-end.txt"
+-echo "longest path (repo-relative):"; (cd "$REPO" && find deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001 -type f | awk '{print length($0), $0}' | sort -n | tail -1)
++echo "longest path (repo-relative):"; (cd "$REPO" && find deploy/e2e/dns-kill-matrix/evidence/batch9-pdns-primary-zero-zone-20261001 -type f | awk '{print length($0), $0}' | sort -n | tail -1)
+ du -sh "$D"; find "$D" -type f | wc -l
+Only in .: findk.py
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/fp.py" ./fp.py
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/fp.py"	2026-09-30 02:50:40.668725500 +0300
++++ ./fp.py	2026-09-30 04:57:06.653426200 +0300
+@@ -1,7 +1,7 @@
+ # usage: fp.py SHORT CELL -- read-only summary of the fresh-primary parts of result.json
+ import json, sys
+ S, C = sys.argv[1], sys.argv[2]
+-E = f"/var/tmp/cp-b8r-1001/evidence/{S}"
++E = f"/var/tmp/cp-b9-1001/evidence/{S}"
+ r = json.load(open(f"{E}/raw/results/{C}/result.json"))
+ def d(k, v, n=3000): print(k, "=", json.dumps(v, sort_keys=True, default=str)[:n])
+ for k in ("status", "safety_status", "request_id", "kill_proven", "scenario_trigger_returncode"):
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/gateprobe_remote.sh" ./gateprobe_remote.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/gateprobe_remote.sh"	2026-09-30 02:50:39.179245600 +0300
++++ ./gateprobe_remote.sh	2026-09-30 04:57:05.248526300 +0300
+@@ -6,7 +6,7 @@
+ systemctl show celikpanel-agent.service -p ActiveState,MainPID --no-pager
+ sha256sum /opt/celikpanel/bin/agent /opt/celikpanel/bin/dns-kill-trigger 2>&1
+ echo "== private evidence before"; (cd /var/lib/celikpanel-agent-private && sha256sum -- * 2>/dev/null)
+-RID=$(printf 'batch8r-gate-probe-%s' "$CELL" | sha256sum | cut -c1-32)
++RID=$(printf 'batch9-gate-probe-%s' "$CELL" | sha256sum | cut -c1-32)
+ echo "probe request id (unused by the probe RPC, required by the trigger's environment check): $RID"
+ cd /
+ /usr/sbin/runuser -u root -g celikpanel -- /usr/bin/env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin LANG=C.UTF-8 \
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/g.sh" ./g.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/g.sh"	2026-09-30 02:50:39.221888500 +0300
++++ ./g.sh	2026-09-30 04:57:05.273820800 +0300
+@@ -1,4 +1,4 @@
+ # usage: g.sh ROOT CELL NODE SCRIPT [ARGS] -- run a local script on a guest via sudo bash -s
+-SP=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch8r
++SP=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/b9
+ ROOT=$1 CELL=$2 NODE=$3 S=$4; shift 4
+ python3 $SP/gssh.py $ROOT $CELL $NODE "sudo bash -s $*" < $S
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/gssh.py" ./gssh.py
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/gssh.py"	2026-09-30 02:50:40.711932100 +0300
++++ ./gssh.py	2026-09-30 04:57:06.671938600 +0300
+@@ -2,7 +2,7 @@
+ # usage: gssh.py ROOT CELL NODE REMOTE_COMMAND  (stdout/stderr passthrough)
+ import sys, subprocess
+ from pathlib import Path
+-sys.path.insert(0, "/root/cp-b8r-src/deploy/e2e/dns-kill-matrix")
++sys.path.insert(0, "/root/cp-b9-src/deploy/e2e/dns-kill-matrix")
+ import fixture, guest_bootstrap
+ root, cell, node, remote = sys.argv[1:5]
+ plan = fixture.load_cell_plan(Path(root).resolve(), cell)
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/guesttar_remote.sh" ./guesttar_remote.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/guesttar_remote.sh"	2026-09-30 02:50:39.272776000 +0300
++++ ./guesttar_remote.sh	2026-09-30 04:57:05.292848200 +0300
+@@ -9,7 +9,7 @@
+ cp -a /var/lib/celikpanel-agent-private/*ownership* $D/state/ 2>/dev/null || true
+ cp -a /var/lib/celikpanel-agent-private/*archive* $D/state/ 2>/dev/null || true
+ ls -laR --time-style=full-iso /var/lib/celikpanel-agent-private > $D/state/ls.txt
+-for w in /var/tmp/cp-b8r-watch*; do
++for w in /var/tmp/cp-b9-watch*; do
+   if [ -d "$w" ]; then mkdir -p $D/watch/$(basename $w); cp -a $w/. $D/watch/$(basename $w)/; fi
+ done
+ journalctl --list-boots --no-pager > $D/journald/list-boots.txt 2>&1 || true
+Only in .: hashes.sh
+Only in .: hostcheck.sh
+Only in .: insp.py
+Only in '/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools': keys.py
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/k.sh" ./k.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/k.sh"	2026-09-30 02:50:39.321765000 +0300
++++ ./k.sh	2026-09-30 04:57:05.357793600 +0300
+@@ -1 +1 @@
+-python3 /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch8r/keys8r.py /var/tmp/cp-b8r-1001/evidence/$1/raw/results/$2/result.json
++python3 /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/b9/keys8r.py /var/tmp/cp-b9-1001/evidence/$1/raw/results/$2/result.json
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/ledgerjobs.py" ./ledgerjobs.py
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/ledgerjobs.py"	2026-09-30 02:50:40.858924200 +0300
++++ ./ledgerjobs.py	2026-09-30 04:57:06.735754200 +0300
+@@ -1,6 +1,6 @@
+ # Read-only: zone-sync and switch jobs from the collected ledger. usage: ledgerjobs.py SHORT
+ import json, sys
+-E = f"/var/tmp/cp-b8r-1001/evidence/{sys.argv[1]}/raw/state/service-mutations.json"
++E = f"/var/tmp/cp-b9-1001/evidence/{sys.argv[1]}/raw/state/service-mutations.json"
+ d = json.load(open(E))
+ jobs = d.get("jobs") if isinstance(d, dict) else None
+ if jobs is None:
+Only in .: ledq_remote.sh
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/note.sh" ./note.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/note.sh"	2026-09-30 02:50:39.369293200 +0300
++++ ./note.sh	2026-09-30 04:57:05.402458100 +0300
+@@ -1,3 +1,3 @@
+ # usage: note.sh TEXT... -- append a timestamped line to the chain log
+-echo "$(date -u +%FT%TZ) $*" >> /var/tmp/cp-b8r-1001/logs/chain.log
+-tail -3 /var/tmp/cp-b8r-1001/logs/chain.log
++echo "$(date -u +%FT%TZ) $*" >> /var/tmp/cp-b9-1001/logs/chain.log
++tail -3 /var/tmp/cp-b9-1001/logs/chain.log
+Only in .: notifycap_remote.sh
+Only in .: offline-test-counts.txt
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/oi-smstatus.sha256" ./oi-smstatus.sha256
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/oi-smstatus.sha256"	2026-09-30 02:50:38.014403200 +0300
++++ ./oi-smstatus.sha256	2026-09-30 04:57:04.642685200 +0300
+@@ -1,3 +1,3 @@
+ 85fe7a6214b489135f03c4278d6f426eae7a3a927b588b531293daea78d0b81e  oi-smstatus
+-4f486a3a508f6a7683b3bab49222e8eabfe329be157bf6e365e306261eada9a4  overlay.json
++16a82e16747b1d09d7db3d0defe6317b86ee569ce1de1cec18d4013e10b2c4c4  overlay.json
+ 57823885e8778d4fa5f67b3458042fc1f0cab7cb3a0603af00ec2bd202d85077  smstatus.go
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/overlay.json" ./overlay.json
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/overlay.json"	2026-09-30 02:50:38.035280300 +0300
++++ ./overlay.json	2026-09-30 04:57:04.657321900 +0300
+@@ -1 +1 @@
+-{"Replace":{"/root/cp-b8r-src/cmd/oi-smstatus/main.go":"/root/cp-b8r-tools/smstatus.go"}}
+\ No newline at end of file
++{"Replace":{"/root/cp-b9-src/cmd/oi-smstatus/main.go":"/root/cp-b9-tools/smstatus.go"}}
+\ No newline at end of file
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/ownerpost_remote.sh" ./ownerpost_remote.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/ownerpost_remote.sh"	2026-09-30 02:50:39.414958800 +0300
++++ ./ownerpost_remote.sh	2026-09-30 04:57:05.449982300 +0300
+@@ -34,11 +34,11 @@
+ echo "== ss 53"; ss -H -lntup 'sport = :53'
+ echo "== recovery dns-switch-status --quiesced (after owner command and re-run)"
+ cd /
+-/usr/bin/env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin LANG=C.UTF-8 /usr/libexec/celikpanel/recovery dns-switch-status --quiesced --request-id "$RID" > /tmp/b8-status.out 2>&1
++/usr/bin/env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin LANG=C.UTF-8 /usr/libexec/celikpanel/recovery dns-switch-status --quiesced --request-id "$RID" > /tmp/b9-status.out 2>&1
+ rc=$?
+-cat /tmp/b8-status.out
++cat /tmp/b9-status.out
+ echo "STATUS_RC=$rc"
+-sha256sum /tmp/b8-status.out
++sha256sum /tmp/b9-status.out
+ echo "== private evidence after status"
+ ls -la --time-style=full-iso /var/lib/celikpanel-agent-private/
+ (cd /var/lib/celikpanel-agent-private && sha256sum -- * 2>/dev/null)
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/pairq.py" ./pairq.py
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/pairq.py"	2026-09-30 02:50:40.896941500 +0300
++++ ./pairq.py	2026-09-30 04:57:06.758248100 +0300
+@@ -2,7 +2,7 @@
+ # (catalog-c000020a), over UDP and TCP, to the PowerDNS primary (192.0.2.10), the native BIND secondary
+ # (192.0.2.11) and 127.0.0.1. With "loop OUTFILE SECONDS" it is a compact sampler (both pair addresses
+ # every ~2 s); default prints one JSON line per query.
+-# Batch 8r: also the zone-lifecycle child s2.s1-kill.test (SOA, www A); an absent child answers NXDOMAIN (rc3).
++# Batch 8r (reused in batch 9): also the zone-lifecycle child s2.s1-kill.test (SOA, www A); an absent child answers NXDOMAIN (rc3).
+ import socket, struct, random, json, datetime, sys, time
+ CATALOG = "catalog-c000020a.celikpanel.invalid"
+ 
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/peerfacts_remote.sh" ./peerfacts_remote.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/peerfacts_remote.sh"	2026-09-30 02:50:39.466183800 +0300
++++ ./peerfacts_remote.sh	2026-09-30 04:57:05.475160500 +0300
+@@ -21,4 +21,4 @@
+ c.close()
+ PY
+ fi
+-echo "== peer DNS sampler state"; systemctl show cp-b8r-peerloop1.service -p ActiveState,SubState,MainPID 2>&1; wc -l /var/tmp/cp-b8r-peerloop/samples.log 2>&1
++echo "== peer DNS sampler state"; systemctl show cp-b9-peerloop1.service -p ActiveState,SubState,MainPID 2>&1; wc -l /var/tmp/cp-b9-peerloop/samples.log 2>&1
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/peerloop_start_remote.sh" ./peerloop_start_remote.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/peerloop_start_remote.sh"	2026-09-30 02:50:39.551103100 +0300
++++ ./peerloop_start_remote.sh	2026-09-30 04:57:05.521006000 +0300
+@@ -1,7 +1,7 @@
+ # Starts a read-only continuous DNS sampler on the native BIND secondary (queries both guests every ~2 s). Arg: N (boot ordinal)
+ N=${1:-1}
+-if [ -f /tmp/cp-b8r-pairq.py ]; then install -m 0600 /tmp/cp-b8r-pairq.py /root/cp-b8r-pairq.py; fi
+-test -f /root/cp-b8r-pairq.py || { echo "sampler script absent"; exit 1; }
+-mkdir -p /var/tmp/cp-b8r-peerloop$N
+-systemd-run --unit=cp-b8r-peerloop$N --collect /usr/bin/python3 /root/cp-b8r-pairq.py loop /var/tmp/cp-b8r-peerloop$N/samples.log 5400
++if [ -f /tmp/cp-b9-pairq.py ]; then install -m 0600 /tmp/cp-b9-pairq.py /root/cp-b9-pairq.py; fi
++test -f /root/cp-b9-pairq.py || { echo "sampler script absent"; exit 1; }
++mkdir -p /var/tmp/cp-b9-peerloop$N
++systemd-run --unit=cp-b9-peerloop$N --collect /usr/bin/python3 /root/cp-b9-pairq.py loop /var/tmp/cp-b9-peerloop$N/samples.log 5400
+ echo "peerloop$N start rc=$?"
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/poll.sh" ./poll.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/poll.sh"	2026-09-30 02:50:39.594137200 +0300
++++ ./poll.sh	2026-09-30 04:57:05.548001900 +0300
+@@ -1,6 +1 @@
+-L=/var/tmp/cp-b8r-1001/logs/$1
+-date -u +%FT%TZ
+-tail -n ${2:-15} $L/driver.log
+-echo "--- run-prepared.log tail"; tail -n ${3:-8} $L/run-prepared.log 2>/dev/null | cut -c1-400
+-cat $L/run-prepared.rc 2>/dev/null
+-pgrep -a qemu | cut -c1-80
++tail -n ${2:-15} $1
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/rb.py" ./rb.py
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/rb.py"	2026-09-30 02:50:40.997223100 +0300
++++ ./rb.py	2026-09-30 04:57:06.801654800 +0300
+@@ -1,6 +1,6 @@
+ import json, sys
+ S, C = sys.argv[1:3]
+-r = json.load(open(f"/var/tmp/cp-b8r-1001/evidence/{S}/raw/results/{C}/result.json"))
++r = json.load(open(f"/var/tmp/cp-b9-1001/evidence/{S}/raw/results/{C}/result.json"))
+ rb = r.get("reboot_after_recovery") or {}
+ print("keys", list(rb.keys()))
+ for k in ("fresh_primary_child", "management_units", "window", "stability", "post_reboot_window", "dns_alone"):
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/redump.sh" ./redump.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/redump.sh"	2026-09-30 02:50:39.692692700 +0300
++++ ./redump.sh	2026-09-30 04:57:05.591273500 +0300
+@@ -1,6 +1,6 @@
+ S=$1; C=$2; ROOT=$3
+-SP=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch8r
+-E=/var/tmp/cp-b8r-1001/evidence/$S
++SP=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/b9
++E=/var/tmp/cp-b9-1001/evidence/$S
+ : > $E/pdns-db-timeline.txt
+ for f in $(find $E/raw/watch -name "*.sqlite3" | sort); do echo "######## $f" >> $E/pdns-db-timeline.txt; python3 $SP/pdnsdb.py $f copy >> $E/pdns-db-timeline.txt 2>&1; done
+ if [ -n "$ROOT" ]; then python3 $SP/gssh.py $ROOT $C debian13 "sudo python3 - /var/lib/powerdns/pdns.sqlite3" < $SP/pdnsdb.py > $E/pdns-db-post-collect-redump.txt 2>&1; echo redump rc=$?; fi
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/remain.sh" ./remain.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/remain.sh"	2026-09-30 02:50:39.743052700 +0300
++++ ./remain.sh	2026-09-30 04:57:05.620533500 +0300
+@@ -1,10 +1,10 @@
+ # Read-only: what this run left on the host
+ date -u +%FT%TZ
+ pgrep -a qemu || echo "no qemu process"
+-for r in /var/tmp/cp-b8r-1001 /var/tmp/cp-b8r-1001/r2 /var/tmp/cp-b8r-1001/r3; do
++for r in $(cat /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/b9/roots.txt); do
+   echo "== $r/cells"; ls $r/cells
+   for d in $r/cells/*/; do [ -d "$d" ] && echo "$d: $(cat $d/cell-id 2>/dev/null || grep -o '"cell_id": *"[^"]*"' $d/plan.json 2>/dev/null | head -1) $(ls $d | tr '\n' ' ')"; done
+ done
+-du -sh /var/tmp/cp-b8r-1001 /root/cp-b8r-src /root/cp-b8r-artifacts /root/cp-b8r-tools 2>&1
+-ls -la /var/tmp/cp-b8r-build.log /var/tmp/cp-b8r-webbuild.log /var/tmp/cp-b8r-setup.log /var/tmp/cp-b8r-webdist.sha256
+-ls -d /var/tmp/cp-b8* /root/cp-b8*
++du -sh /var/tmp/cp-b9-1001 /root/cp-b9-src /root/cp-b9-artifacts /root/cp-b9-tools 2>&1
++ls -la /var/tmp/cp-b9-build.log /var/tmp/cp-b9-webbuild.log /var/tmp/cp-b9-setup.log /var/tmp/cp-b9-webdist.sha256
++ls -d /var/tmp/cp-b9* /root/cp-b9*
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/repo-head-at-start.txt" ./repo-head-at-start.txt
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/repo-head-at-start.txt"	2026-09-30 02:50:41.473437900 +0300
++++ ./repo-head-at-start.txt	2026-09-30 04:57:07.103093800 +0300
+@@ -1 +1,2 @@
+-fa4efa8dbb6e293af31c4508ccb28c282cd5946c 2026-09-29T22:46:04Z
++515596b9108edf336915b415b47d457507d334ca
++2026-09-30T00:39:00Z
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/restamp.sh" ./restamp.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/restamp.sh"	2026-09-30 02:50:39.817567000 +0300
++++ ./restamp.sh	2026-09-30 04:57:05.646769300 +0300
+@@ -1,6 +1,6 @@
+ # Read-only: agent journal and ledger around the zone lifecycle; usage: restamp.sh SHORT FROM TO (HH:MM:SS)
+-E=/var/tmp/cp-b8r-1001/evidence/$1
+-echo "== dbwatch timeline"; cat $E/raw/watch/cp-b8r-watch-db/timeline.log | cut -c1-200
++E=/var/tmp/cp-b9-1001/evidence/$1
++echo "== dbwatch timeline"; cat $E/raw/watch/cp-b9-watch-db*/timeline.log | cut -c1-200
+ echo "== agent journal $2..$3"; awk -v a="$2" -v b="$3" '{t=substr($1,12,8); if (t>=a && t<=b) print}' $E/raw/journald/celikpanel-agent.service.txt | cut -c1-400
+ echo "== pdns journal $2..$3"; awk -v a="$2" -v b="$3" '{t=substr($1,12,8); if (t>=a && t<=b) print}' $E/raw/journald/pdns.service.txt | cut -c1-300
+ echo "== peer sampler cat serial transitions"; grep -o '^[^ ]* \|10:cat:udp=[^ ]*\|11:cat:udp=[^ ]*' $E/peer-dns-sampler.log | paste - - - | awk '{k=$2" "$3; if (k!=last) print; last=k}'
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/roots.txt" ./roots.txt
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/roots.txt"	2026-09-30 02:50:41.520496800 +0300
++++ ./roots.txt	2026-09-30 04:57:07.120790700 +0300
+@@ -1,3 +1,4 @@
+-/var/tmp/cp-b8r-1001
+-/var/tmp/cp-b8r-1001/r2
+-/var/tmp/cp-b8r-1001/r3
++/var/tmp/cp-b9-1001
++/var/tmp/cp-b9-1001/r1
++/var/tmp/cp-b9-1001/r2
++/var/tmp/cp-b9-1001/r3
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/runcell.sh" ./runcell.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/runcell.sh"	2026-09-30 02:50:39.862118800 +0300
++++ ./runcell.sh	2026-09-30 04:57:05.670390800 +0300
+@@ -1,11 +1,14 @@
+ #!/bin/bash
+ # usage: runcell.sh SHORT CELL ROOT GATEPROBE RUN_FLAGS...
+-SP=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch8r
+-L=/var/tmp/cp-b8r-1001/logs/$1
++SP=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/b9
++L=/var/tmp/cp-b9-1001/logs/$1
+ bash $SP/cell.sh "$@"
+ if grep -q 'not-run' $L/run-prepared.rc 2>/dev/null; then
+   echo "NO-COLLECT (setup failed or stopped before the run)" >> $L/driver.log
+ else
++  H=${HOLD:-150}
++  echo "### $(date -u +%FT%T.%3NZ) capture hold ${H}s before collect (samplers keep running; read-only; batch 9 addition for the 60 s re-stamp question)" >> $L/driver.log
++  sleep $H
+   bash $SP/collect.sh "$1" "$2" "$3"
+ fi
+ echo "ALLDONE $(date -u +%FT%TZ)" >> $L/driver.log
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/runonly.sh" ./runonly.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/runonly.sh"	2026-09-30 02:50:39.903629700 +0300
++++ ./runonly.sh	2026-09-30 04:57:05.692538500 +0300
+@@ -3,11 +3,11 @@
+ set -uo pipefail
+ SHORT=$1 CELL=$2 ROOT=$3; shift 3; FLAGS=("$@")
+ NODE=debian13; ONODE=arch; FIX=uninitialized
+-LROOT=/var/tmp/cp-b8r-1001
+-SP=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch8r
++LROOT=/var/tmp/cp-b9-1001
++SP=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/b9
+ LOG=$LROOT/logs/$SHORT
+ exec >> $LOG/driver.log 2>&1
+-cd /root/cp-b8r-src
++cd /root/cp-b9-src
+ B=deploy/e2e/dns-kill-matrix/guest_bootstrap.py
+ G="python3 $SP/gssh.py $ROOT $CELL $NODE"
+ O="python3 $SP/gssh.py $ROOT $CELL $ONODE"
+@@ -26,16 +26,16 @@
+     b=$(timeout 15 $G 'cat /proc/sys/kernel/random/boot_id' < /dev/null 2>/dev/null | tr -d '\r\n')
+     if [ ${#b} -eq 36 ] && [[ " $known " != *" $b "* ]]; then
+       known="$known $b"; n=$((n+1))
+-      echo "$(date -u +%FT%T.%NZ) boot $n $b (watcher /var/tmp/cp-b8r-watch-boot$n)" >> $LOG/boot-monitor.log
+-      timeout 30 $G "sudo systemd-run --unit=cp-b8r-watch-boot$n --collect /bin/bash /root/cp-b8r-watcher.sh $CELL /var/tmp/cp-b8r-watch-boot$n" < /dev/null >> $LOG/boot-monitor.log 2>&1
++      echo "$(date -u +%FT%T.%NZ) boot $n $b (watcher /var/tmp/cp-b9-watch-boot$n)" >> $LOG/boot-monitor.log
++      timeout 30 $G "sudo systemd-run --unit=cp-b9-watch-boot$n --collect /bin/bash /root/cp-b9-watcher.sh $CELL /var/tmp/cp-b9-watch-boot$n" < /dev/null >> $LOG/boot-monitor.log 2>&1
+       echo "watcher start rc=$?" >> $LOG/boot-monitor.log
+-      timeout 30 $G "sudo systemd-run --unit=cp-b8r-dbwatch-boot$n --collect /bin/bash /root/cp-b8r-dbwatch.sh /var/tmp/cp-b8r-watch-dbboot$n" < /dev/null >> $LOG/boot-monitor.log 2>&1
++      timeout 30 $G "sudo systemd-run --unit=cp-b9-dbwatch-boot$n --collect /bin/bash /root/cp-b9-dbwatch.sh /var/tmp/cp-b9-watch-dbboot$n" < /dev/null >> $LOG/boot-monitor.log 2>&1
+       echo "dbwatch start rc=$?" >> $LOG/boot-monitor.log
+     fi
+     p=$(timeout 15 $O 'cat /proc/sys/kernel/random/boot_id' < /dev/null 2>/dev/null | tr -d '\r\n')
+     if [ ${#p} -eq 36 ] && [[ " $pknown " != *" $p "* ]]; then
+       pknown="$pknown $p"; pn=$((pn+1))
+-      echo "$(date -u +%FT%T.%NZ) peerboot $pn $p (sampler /var/tmp/cp-b8r-peerloop$pn)" >> $LOG/boot-monitor.log
++      echo "$(date -u +%FT%T.%NZ) peerboot $pn $p (sampler /var/tmp/cp-b9-peerloop$pn)" >> $LOG/boot-monitor.log
+       timeout 30 $O "sudo bash -s $pn" < $SP/peerloop_start_remote.sh >> $LOG/boot-monitor.log 2>&1
+       echo "sampler start rc=$?" >> $LOG/boot-monitor.log
+     fi
+Only in .: samp.py
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/scpcmd.py" ./scpcmd.py
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/scpcmd.py"	2026-09-30 02:50:41.047155500 +0300
++++ ./scpcmd.py	2026-09-30 04:57:06.843309600 +0300
+@@ -2,7 +2,7 @@
+ # usage: scpcmd.py ROOT CELL NODE  -> prints the fixture's scp base command
+ import sys, shlex
+ from pathlib import Path
+-sys.path.insert(0, "/root/cp-b8r-src/deploy/e2e/dns-kill-matrix")
++sys.path.insert(0, "/root/cp-b9-src/deploy/e2e/dns-kill-matrix")
+ import fixture, guest_bootstrap
+ root, cell, node = sys.argv[1:4]
+ plan = fixture.load_cell_plan(Path(root).resolve(), cell)
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/setupall.sh" ./setupall.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/setupall.sh"	2026-09-30 02:50:39.950898500 +0300
++++ ./setupall.sh	2026-09-30 04:57:05.718313400 +0300
+@@ -1,5 +1,5 @@
+-SP=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch8r
+-for r in /var/tmp/cp-b8r-1001 /var/tmp/cp-b8r-1001/r2 /var/tmp/cp-b8r-1001/r3; do bash $SP/setup.sh $r; echo "setup $r rc=$?"; done
+-grep -E 'SETUP-OK|rc=|Error|error' /var/tmp/cp-b8r-setup.log | head -20
+-tail -5 /var/tmp/cp-b8r-setup.log
+-mkdir -p /var/tmp/cp-b8r-1001/logs
++SP=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/b9
++for r in $(cat $SP/roots.txt); do bash $SP/setup.sh $r; echo "setup $r rc=$?"; done
++grep -E 'SETUP-OK|rc=|Error|error' /var/tmp/cp-b9-setup.log | head -20
++tail -5 /var/tmp/cp-b9-setup.log
++mkdir -p /var/tmp/cp-b9-1001/logs
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/setup.sh" ./setup.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/setup.sh"	2026-09-30 02:50:39.978196800 +0300
++++ ./setup.sh	2026-09-30 04:57:05.739025700 +0300
+@@ -1,8 +1,8 @@
+ set -euo pipefail
+-# usage: setup.sh ROOT  -- initialise one work root (the first call also creates the SSH key); appends to /var/tmp/cp-b8r-setup.log
++# usage: setup.sh ROOT  -- initialise one work root (the first call also creates the SSH key); appends to /var/tmp/cp-b9-setup.log
+ ROOT=$1
+-exec >> /var/tmp/cp-b8r-setup.log 2>&1
+-cd /root/cp-b8r-src
++exec >> /var/tmp/cp-b9-setup.log 2>&1
++cd /root/cp-b9-src
+ F=deploy/e2e/dns-kill-matrix/fixture.py
+ echo "=== $(date -u +%FT%TZ) work root $ROOT"
+ test ! -e $ROOT/images
+@@ -13,13 +13,13 @@
+ ls -la $ROOT/images
+ python3 $F verify-images --work-root $ROOT
+ mkdir -m 0700 $ROOT/artifacts
+-cp -a /root/cp-b8r-artifacts/. $ROOT/artifacts/
++cp -a /root/cp-b9-artifacts/. $ROOT/artifacts/
+ sha256sum $ROOT/artifacts/agent $ROOT/artifacts/agent.kill $ROOT/artifacts/panel $ROOT/artifacts/dns-kill-trigger $ROOT/artifacts/recovery
+ sha256sum $ROOT/artifacts/recovery-runtime/runtime.manifest
+-if [ ! -e /var/tmp/cp-b8r-1001/id_ed25519 ]; then
+-  ssh-keygen -q -t ed25519 -N '' -C cp-b8r-1001 -f /var/tmp/cp-b8r-1001/id_ed25519
++if [ ! -e /var/tmp/cp-b9-1001/id_ed25519 ]; then
++  ssh-keygen -q -t ed25519 -N '' -C cp-b9-1001 -f /var/tmp/cp-b9-1001/id_ed25519
+ fi
+-if [ "$ROOT" != /var/tmp/cp-b8r-1001 ]; then cp -p /var/tmp/cp-b8r-1001/id_ed25519 /var/tmp/cp-b8r-1001/id_ed25519.pub $ROOT/; fi
++if [ "$ROOT" != /var/tmp/cp-b9-1001 ]; then cp -p /var/tmp/cp-b9-1001/id_ed25519 /var/tmp/cp-b9-1001/id_ed25519.pub $ROOT/; fi
+ sha256sum $ROOT/id_ed25519.pub
+ sha256sum deploy/e2e/dns-kill-matrix/manifest.json
+ ls -la $ROOT
+Only in .: shall.sh
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/shorten.sh" ./shorten.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/shorten.sh"	2026-09-30 02:50:40.023170800 +0300
++++ ./shorten.sh	2026-09-30 04:57:05.788826400 +0300
+@@ -1,7 +1,7 @@
+ # Renames the retained V3 journal archive copies (names over 200 characters as repository paths) to
+ # v3-archive-<request id>.json and records original name, new name and SHA-256 in raw/state/renamed-files.txt.
+-D='/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001'
+-for f in "$D"/*/raw/state/dns-engine-switch-v3-archive-*.json; do
++D='/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch9-pdns-primary-zero-zone-20261001'
++for f in "$D"/*/raw/state/dns-engine-switch-v3-archive-*.json "$D"/*/*/raw/state/dns-engine-switch-v3-archive-*.json; do
+   [ -e "$f" ] || continue
+   dir=$(dirname "$f"); base=$(basename "$f")
+   rid=$(echo "$base" | sed -E 's/^dns-engine-switch-v3-archive-([0-9a-f]{32})-[0-9a-f]{64}\.json$/\1/')
+@@ -13,5 +13,5 @@
+   echo "$dir/$new"
+ done
+ cd '/mnt/c/CELIKBROS PROJECTS/celikpanel'
+-echo "longest repo-relative path:"; find deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001 -type f | awk '{print length($0), $0}' | sort -n | tail -1
+-echo "longest Windows path length: $(( $(find deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001 -type f | awk '{print length($0)}' | sort -n | tail -1) + 33 ))"
++echo "longest repo-relative path:"; find deploy/e2e/dns-kill-matrix/evidence/batch9-pdns-primary-zero-zone-20261001 -type f | awk '{print length($0), $0}' | sort -n | tail -1
++echo "longest Windows path length: $(( $(find deploy/e2e/dns-kill-matrix/evidence/batch9-pdns-primary-zero-zone-20261001 -type f | awk '{print length($0)}' | sort -n | tail -1) + 33 ))"
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/showbuild.sh" ./showbuild.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/showbuild.sh"	2026-09-30 02:50:40.067177600 +0300
++++ ./showbuild.sh	2026-09-30 04:57:05.810379400 +0300
+@@ -1 +1 @@
+-cat /var/tmp/cp-b8r-build.log
++cat /var/tmp/cp-b9-build.log
+Only in .: showd.sh
+Only in .: shownotify.sh
+Only in .: showsamp.sh
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/showweb.sh" ./showweb.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/showweb.sh"	2026-09-30 02:50:40.097927000 +0300
++++ ./showweb.sh	2026-09-30 04:57:05.899476300 +0300
+@@ -1,3 +1,3 @@
+-tail -25 /var/tmp/cp-b8r-webbuild.log
+-wc -l /var/tmp/cp-b8r-webdist.sha256
+-ls /root/cp-b8r-src/web/dist | head
++tail -25 /var/tmp/cp-b9-webbuild.log
++wc -l /var/tmp/cp-b9-webdist.sha256
++ls /root/cp-b9-src/web/dist | head
+Only in .: sh.py
+Only in .: st6.sh
+Only in .: startbuild.sh
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/stat8r.py" ./stat8r.py
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/stat8r.py"	2026-09-30 02:50:41.130155600 +0300
++++ ./stat8r.py	2026-09-30 04:57:06.910802800 +0300
+@@ -1,7 +1,7 @@
+ # Read-only: every recovery status text in a cell's evidence. usage: stat8r.py SHORT CELL
+ import json, sys, re, os
+ S, C = sys.argv[1:3]
+-E = f"/var/tmp/cp-b8r-1001/evidence/{S}"
++E = f"/var/tmp/cp-b9-1001/evidence/{S}"
+ r = json.load(open(f"{E}/raw/results/{C}/result.json"))
+ def walk(o, p):
+     if isinstance(o, dict):
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/stoponly.sh" ./stoponly.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/stoponly.sh"	2026-09-30 02:50:40.122260100 +0300
++++ ./stoponly.sh	2026-09-30 04:57:05.956542600 +0300
+@@ -1,10 +1,10 @@
+ set -u
+ # usage: stoponly.sh SHORT CELL ROOT  (failure: stop both guests, keep their overlays)
+-L=/var/tmp/cp-b8r-1001/logs/$1
++L=/var/tmp/cp-b9-1001/logs/$1
+ ROOT=$3
+-cd /root/cp-b8r-src
++cd /root/cp-b9-src
+ python3 deploy/e2e/dns-kill-matrix/fixture.py stop --work-root $ROOT --cell-id $2 --execute > $L/stop.json 2>&1; echo "stop rc=$?"
+ cat $L/stop.json
+-mkdir -p /var/tmp/cp-b8r-1001/evidence/$1; cp $L/stop.json /var/tmp/cp-b8r-1001/evidence/$1/
++mkdir -p /var/tmp/cp-b9-1001/evidence/$1; cp $L/stop.json /var/tmp/cp-b9-1001/evidence/$1/
+ pgrep -a qemu || echo "no qemu"
+ ls -la $ROOT/cells
+Only in .: stopz04.sh
+Only in .: stopz05.sh
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/sum8r.py" ./sum8r.py
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/sum8r.py"	2026-09-30 02:50:41.160975300 +0300
++++ ./sum8r.py	2026-09-30 04:57:06.934543900 +0300
+@@ -1,7 +1,7 @@
+ # Read-only per-cell summary from the collected evidence. usage: sum8r.py SHORT CELL
+ import json, sys, os, glob
+ S, C = sys.argv[1:3]
+-E = f"/var/tmp/cp-b8r-1001/evidence/{S}"
++E = f"/var/tmp/cp-b9-1001/evidence/{S}"
+ def load(p):
+     try: return json.load(open(p))
+     except Exception as e: return {"_error": f"{type(e).__name__}: {e}"}
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/summ.sh" ./summ.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/summ.sh"	2026-09-30 02:50:40.160737600 +0300
++++ ./summ.sh	2026-09-30 04:57:06.018836000 +0300
+@@ -1,6 +1,6 @@
+ # usage: summ.sh SHORT CELL
+-E=/var/tmp/cp-b8r-1001/evidence/$1
+-L=/var/tmp/cp-b8r-1001/logs/$1
++E=/var/tmp/cp-b9-1001/evidence/$1
++L=/var/tmp/cp-b9-1001/logs/$1
+ echo "== collect.log"; cat $L/collect.log | grep -v '^/var/tmp' | head -40
+ R=$E/raw/results/$2/result.json
+ python3 - "$R" <<'PY'
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/table8.py" ./table8.py
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/table8.py"	2026-09-30 02:50:41.187677300 +0300
++++ ./table8.py	2026-09-30 04:57:06.954383600 +0300
+@@ -1,6 +1,6 @@
+ # Read-only per-cell summary over retained evidence (README drafting). usage: table8.py [SHORT...]
+ import json, os, sys, glob
+-ROOT = "/var/tmp/cp-b8r-1001/evidence"
++ROOT = "/var/tmp/cp-b9-1001/evidence"
+ cells = [l.split() for l in open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "cells.txt")) if l.strip()]
+ want = set(sys.argv[1:])
+ for s, c in cells:
+Only in .: tc2.sh
+Only in .: tcount.sh
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/texts.py" ./texts.py
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/texts.py"	2026-09-30 02:50:41.221272100 +0300
++++ ./texts.py	2026-09-30 04:57:06.978632000 +0300
+@@ -1,6 +1,6 @@
+ # Read-only: verbatim owner-facing texts per cell (status reads, release messages, owner command output)
+ import json, os, re
+-ROOT = "/var/tmp/cp-b8r-1001/evidence"
++ROOT = "/var/tmp/cp-b9-1001/evidence"
+ for line in open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "cells.txt")):
+     s, c = line.split()
+     E = f"{ROOT}/{s}"
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/trig.sh" ./trig.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/trig.sh"	2026-09-30 02:50:40.192628400 +0300
++++ ./trig.sh	2026-09-30 04:57:06.086684400 +0300
+@@ -1,5 +1,5 @@
+ # usage: trig.sh SHORT CELL -- read-only: trigger/transcript events of a cell that stopped early
+-E=/var/tmp/cp-b8r-1001/evidence/$1
++E=/var/tmp/cp-b9-1001/evidence/$1
+ R=$E/raw/results/$2
+ ls -la $R
+ python3 - $R <<'PY'
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/tx.py" ./tx.py
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/tx.py"	2026-09-30 02:50:41.323631500 +0300
++++ ./tx.py	2026-09-30 04:57:07.024414600 +0300
+@@ -2,6 +2,6 @@
+ import json, sys, glob
+ S, C = sys.argv[1], sys.argv[2]
+ n = int(sys.argv[3]) if len(sys.argv) > 3 else 400
+-for f in sorted(glob.glob(f"/var/tmp/cp-b8r-1001/evidence/{S}/raw/results/{C}/transcript*.jsonl")):
++for f in sorted(glob.glob(f"/var/tmp/cp-b9-1001/evidence/{S}/raw/results/{C}/transcript*.jsonl")):
+     for line in open(f):
+         print(line.strip()[:n])
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/vers.sh" ./vers.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/vers.sh"	2026-09-30 02:50:40.307450800 +0300
++++ ./vers.sh	2026-09-30 04:57:06.159433300 +0300
+@@ -1,2 +1,2 @@
+-cd /var/tmp/cp-b8r-1001/evidence
++cd /var/tmp/cp-b9-1001/evidence
+ for s in $(ls); do echo "== $s"; grep -hE '^os=|^(pdns-server|bind9|systemd) |^(bind|powerdns|linux|systemd) ' $s/versions-post-collect-guest.txt | tr '\n' ';'; echo; grep -hE '^os=|^(bind|powerdns) ' $s/versions-post-collect-other.txt | tr '\n' ';'; echo; done
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/waitchain.sh" ./waitchain.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/waitchain.sh"	2026-09-30 02:50:40.337757700 +0300
++++ ./waitchain.sh	2026-09-30 04:57:06.185680100 +0300
+@@ -1,7 +1,7 @@
+ # usage: waitchain.sh PATTERN MAXSEC -- wait until chain.log matches PATTERN, then print its start/done lines
+ end=$(( $(date +%s) + $2 ))
+ while [ "$(date +%s)" -lt "$end" ]; do
+-  grep -qE "$1|CHAIN-DONE|chain stopped" /var/tmp/cp-b8r-1001/logs/chain.log && break
+-  sleep 10
++  grep -qE "$1|CHAIN-DONE|chain stopped" /var/tmp/cp-b9-1001/logs/chain.log && break
++  sleep 5
+ done
+-grep -E 'start|done|rc=|QEMU' /var/tmp/cp-b8r-1001/logs/chain.log
++grep -E 'start|done|rc=|QEMU' /var/tmp/cp-b9-1001/logs/chain.log
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/waitfor.sh" ./waitfor.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/waitfor.sh"	2026-09-30 02:50:40.362669200 +0300
++++ ./waitfor.sh	2026-09-30 04:57:06.204181100 +0300
+@@ -1,8 +1,8 @@
+ # usage: waitfor.sh SHORT MAXSEC  -- returns when the cell's driver.log has ALLDONE/NO-COLLECT or after MAXSEC
+-L=/var/tmp/cp-b8r-1001/logs/$1/driver.log
++L=/var/tmp/cp-b9-1001/logs/$1/driver.log
+ end=$(( $(date +%s) + $2 ))
+ while [ "$(date +%s)" -lt "$end" ]; do
+   grep -qE 'ALLDONE|NO-COLLECT' "$L" 2>/dev/null && break
+-  sleep 10
++  sleep 5
+ done
+-bash /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch8r/poll.sh $1 12 6
++bash /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/b9/cpoll.sh $1 12 6
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/waitstep.sh" ./waitstep.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/waitstep.sh"	2026-09-30 02:50:40.389729700 +0300
++++ ./waitstep.sh	2026-09-30 04:57:06.223787100 +0300
+@@ -1,10 +1,10 @@
+ # usage: waitstep.sh SHORT PATTERN MAXSEC [SKIPLINES] -- returns when driver.log (after SKIPLINES lines) matches PATTERN
+ # (or ALLDONE/NO-COLLECT/FAILED) or after MAXSEC
+-L=/var/tmp/cp-b8r-1001/logs/$1/driver.log
++L=/var/tmp/cp-b9-1001/logs/$1/driver.log
+ K=$(( ${4:-0} + 1 ))
+ end=$(( $(date +%s) + $3 ))
+ while [ "$(date +%s)" -lt "$end" ]; do
+   tail -n +$K "$L" 2>/dev/null | grep -qE "$2|ALLDONE|NO-COLLECT|FAILED" && break
+-  sleep 10
++  sleep 5
+ done
+-bash /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch8r/poll.sh $1 25 10
++bash /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/b9/cpoll.sh $1 25 10
+Only in .: wbuild.sh
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/webbuild.sh" ./webbuild.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/webbuild.sh"	2026-09-30 02:50:40.449356600 +0300
++++ ./webbuild.sh	2026-09-30 04:57:06.282285900 +0300
+@@ -1,13 +1,13 @@
+ set -uo pipefail
+-exec > /var/tmp/cp-b8r-webbuild.log 2>&1
++exec > /var/tmp/cp-b9-webbuild.log 2>&1
+ date -u +%FT%TZ
+-cd /root/cp-b8r-src/web
++cd /root/cp-b9-src/web
+ test ! -e dist
+ node --version; npm --version
+ npm ci --no-audit --no-fund && npm run build
+ rc=$?
+ echo "web build rc=$rc"
+-if [ $rc -eq 0 ]; then ( cd dist && find . -type f ! -path './.vite/*' -print0 | sort -z | xargs -0 sha256sum ) > /var/tmp/cp-b8r-webdist.sha256; wc -l /var/tmp/cp-b8r-webdist.sha256; fi
++if [ $rc -eq 0 ]; then ( cd dist && find . -type f ! -path './.vite/*' -print0 | sort -z | xargs -0 sha256sum ) > /var/tmp/cp-b9-webdist.sha256; wc -l /var/tmp/cp-b9-webdist.sha256; fi
+ rm -rf node_modules
+ date -u +%FT%TZ
+ echo WEB-DONE rc=$rc
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/webdistsum.sh" ./webdistsum.sh
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/webdistsum.sh"	2026-09-30 02:50:40.482207100 +0300
++++ ./webdistsum.sh	2026-09-30 04:57:06.308191800 +0300
+@@ -1,4 +1,4 @@
+-( cd /root/cp-b8r-src/web/dist && find . -type f ! -path './.vite/*' -print0 | sort -z | xargs -0 sha256sum ) > /var/tmp/cp-b8r-webdist.sha256
+-echo "web dist hashed after bundle-budget exit 1 (dist produced; used as in batch 8)" >> /var/tmp/cp-b8r-webbuild.log
+-wc -l /var/tmp/cp-b8r-webdist.sha256
+-ls -la /root/cp-b8r-src/web | head -30
++( cd /root/cp-b9-src/web/dist && find . -type f ! -path './.vite/*' -print0 | sort -z | xargs -0 sha256sum ) > /var/tmp/cp-b9-webdist.sha256
++echo "web dist hashed after bundle-budget exit 1 (dist produced; used as in batch 8)" >> /var/tmp/cp-b9-webbuild.log
++wc -l /var/tmp/cp-b9-webdist.sha256
++ls -la /root/cp-b9-src/web | head -30
+Only in .: wenr.sh
+Only in .: wfile.sh
+Only in .: wweb.sh
+Only in .: z01.sh
+Only in .: z02.sh
+Only in .: z03.sh
+Only in .: z04post2.sh
+Only in .: z04post.sh
+Only in .: z04.sh
+Only in .: z05.sh
+Only in .: z06.sh
+diff -ru "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/zl.py" ./zl.py
+--- "/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-kill-matrix/evidence/batch8r-pdns-primary-20261001/build/fixture-tools/zl.py"	2026-09-30 02:50:41.389580400 +0300
++++ ./zl.py	2026-09-30 04:57:07.045924100 +0300
+@@ -1,6 +1,6 @@
+ # Read-only: zone lifecycle step details (catalog serials, answers, times). usage: zl.py SHORT
+ import json, sys, glob, os
+-E = f"/var/tmp/cp-b8r-1001/evidence/{sys.argv[1]}/fresh-primary-peer"
++E = f"/var/tmp/cp-b9-1001/evidence/{sys.argv[1]}/fresh-primary-peer"
+ for p in sorted(glob.glob(E + "/zone-lifecycle*.json")):
+     v = json.load(open(p)); print("==", os.path.basename(p), v.get("status"))
+     for s in v["steps"]:
+Only in .: zs.sh

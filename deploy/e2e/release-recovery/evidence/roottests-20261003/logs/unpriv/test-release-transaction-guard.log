@@ -1,0 +1,2 @@
+trusted release root cannot be resolved while sourcing release guard
+SKIP: release transaction guard fixture requires root metadata

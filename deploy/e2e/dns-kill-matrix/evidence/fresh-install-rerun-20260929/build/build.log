@@ -1,0 +1,25 @@
+2026-09-29T04:10:19Z
+1c336f6df02b10eff7749f68c474108a7aa18ac8
+go version go1.26.5 linux/amd64
+go1.26.5
+
+https://proxy.golang.org,direct
+/root/go/pkg/mod
+6a2c0b2bdffbacf1e76eb1c1d67a150997bd5953531f67e54a016e5954c2b536  /root/cp-d026b-artifacts/agent
+3a382741bf55362e7d49b535e73712e4fb44860661c3feac7e202f2859a14285  /root/cp-d026b-artifacts/agent.kill
+97aa0ce32546e9ba6ae56831e9f300b1f97133893449422811937e365bdfc274  /root/cp-d026b-artifacts/dns-kill-trigger
+793fb81b95fa96f438a216831a146e0869934ce31318881857d3352ffb92e472  /root/cp-d026b-artifacts/panel
+/root/cp-d026b-artifacts/agent: go1.26.5
+	path	github.com/alicelik/celikpanel/cmd/agent
+	mod	github.com/alicelik/celikpanel	(devel)	
+/root/cp-d026b-artifacts/agent.kill: go1.26.5
+	path	github.com/alicelik/celikpanel/cmd/agent
+	mod	github.com/alicelik/celikpanel	(devel)	
+/root/cp-d026b-artifacts/dns-kill-trigger: go1.26.5
+	path	github.com/alicelik/celikpanel/cmd/dns-kill-matrix-trigger
+	mod	github.com/alicelik/celikpanel	(devel)	
+/root/cp-d026b-artifacts/panel: go1.26.5
+	path	github.com/alicelik/celikpanel/cmd/panel
+	mod	github.com/alicelik/celikpanel	(devel)	
+2026-09-29T04:10:34Z
+BUILD-OK

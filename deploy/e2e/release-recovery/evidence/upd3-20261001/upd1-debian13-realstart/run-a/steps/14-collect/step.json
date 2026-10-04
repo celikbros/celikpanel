@@ -1,0 +1,74 @@
+{
+  "checks": {
+    "attempts": {
+      "automatic": [
+        {
+          "at": "2026-09-30T19:59:02.547101Z",
+          "attempt": "1",
+          "phase": "completion"
+        },
+        {
+          "at": "2026-09-30T20:00:42.236665Z",
+          "attempt": "2",
+          "phase": "completion"
+        },
+        {
+          "at": "2026-09-30T20:02:22.260516Z",
+          "attempt": "3",
+          "phase": "completion"
+        }
+      ],
+      "automatic_count": 3,
+      "journal_admissions": [
+        {
+          "at": "2026-09-30T19:59:02.606553+00:00",
+          "attempt": "1",
+          "snapshot": "20260930T195734Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-14d3b140f0e9ad7b3b44f254594d61ca"
+        },
+        {
+          "at": "2026-09-30T20:00:42.308664+00:00",
+          "attempt": "2",
+          "snapshot": "20260930T195734Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-14d3b140f0e9ad7b3b44f254594d61ca"
+        },
+        {
+          "at": "2026-09-30T20:02:22.343486+00:00",
+          "attempt": "3",
+          "snapshot": "20260930T195734Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-14d3b140f0e9ad7b3b44f254594d61ca"
+        }
+      ],
+      "owner": [],
+      "owner_count": 0
+    },
+    "guest_samples": 99,
+    "host_samples": 99,
+    "journals": [
+      "lab",
+      "product",
+      "setup-services"
+    ],
+    "observer": [
+      "armed",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "released"
+    ],
+    "stopped_after": [
+      "terminal"
+    ],
+    "unavailable": {}
+  },
+  "finished_at": "2026-09-30T20:04:16Z",
+  "name": "collect",
+  "started_at": "2026-09-30T20:04:15Z",
+  "verdict": "passed"
+}

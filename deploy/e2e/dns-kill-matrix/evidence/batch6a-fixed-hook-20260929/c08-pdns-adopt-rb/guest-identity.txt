@@ -1,0 +1,18 @@
+PRETTY_NAME="Debian GNU/Linux 13 (trixie)"
+NAME="Debian GNU/Linux"
+VERSION_ID="13"
+VERSION="13 (trixie)"
+VERSION_CODENAME=trixie
+DEBIAN_VERSION_FULL=13.6
+ID=debian
+HOME_URL="https://www.debian.org/"
+SUPPORT_URL="https://www.debian.org/support"
+BUG_REPORT_URL="https://bugs.debian.org/"
+Linux dns-debian13 6.12.105+deb13-cloud-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.12.105-1 (2026-08-24) x86_64 GNU/Linux
+boot_id=60e1b12c-ed60-46a8-b062-e88168d0ba22
+machine_id=c5b40a86d8455ab78326ec3ed8a1e5ad
+product_uuid=c5b40a86-d845-5ab7-8326-ec3ed8a1e5ad
+schema=celikpanel/dns-kill-fixture-plan/v1
+cell_id=pdns-adopt__rolled-back__after-write__standalone__peer-reachable
+node=debian13
+Tue Sep 29 15:17:24 UTC 2026

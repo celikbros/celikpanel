@@ -1,0 +1,43 @@
+--- /var/tmp/cp-upd3-run/harness/deploy/e2e/release-recovery/owner_update_trial.py	2026-09-30 20:38:14.000000000 +0300
++++ /var/tmp/cp-upd3-run/harness-h8/deploy/e2e/release-recovery/owner_update_trial.py	2026-09-30 21:09:46.547051453 +0300
+@@ -2372,6 +2372,11 @@
+         index = len(self.state.get("status_samples", []))
+         deadline = time.monotonic() + 5400
+         final = None
++        # H8 (upd3 run copy): a failure before any change (phase failed, proof none, no automatic
++        # recovery, no wait) that the product keeps unchanged has no terminal or paused state; the
++        # 90-minute deadline then only delays the same inconclusive verdict. Stop after 600 s of it.
++        settled_since = None
++        settled_samples = 0
+         while time.monotonic() < deadline:
+             with self.panel_client().polling() as view:
+                 sample = self.status_sample(view, index)
+@@ -2383,6 +2388,18 @@
+             if state in ("terminal", "paused"):
+                 final = observed
+                 break
++            if (isinstance(observed, dict) and observed.get("observation") == "known"
++                    and observed.get("phase") == "failed" and observed.get("terminal_proof") == "none"
++                    and not observed.get("automatic_recovery") and not observed.get("waiting_for")):
++                settled_since = settled_since or time.monotonic()
++                settled_samples += 1
++                if time.monotonic() - settled_since >= 600 and settled_samples >= 3:
++                    checks["h8_settled_failed"] = {"seconds": round(time.monotonic() - settled_since, 1),
++                                                   "samples": settled_samples, "observed": observed,
++                                                   "update_status": (sample.get("update_status") or {}).get("body")}
++                    break
++            else:
++                settled_since, settled_samples = None, 0
+             key = json.dumps([sample.get("update_status"), observed], sort_keys=True, default=str)
+             delay = next_delay_ms(delay, key != previous)
+             previous = key
+@@ -2393,6 +2410,9 @@
+         self.state["terminal_at"] = time.time() if final else None
+         checks.update(samples=index, final=final, agreement=agreement_verdict(
+             [s["agreement"] for s in self.state["status_samples"]]), reboot=self.state.get("reboot"))
++        if final is None and checks.get("h8_settled_failed"):
++            raise StepInconclusive("H8: the update failed before any change and its recovery status stayed "
++                                   "failed/none without automatic recovery for 600 s; no terminal or paused state")
+         if final is None:
+             raise StepInconclusive("no terminal or paused state was observed within 90 minutes")
+         if classify_status(final) == "paused":

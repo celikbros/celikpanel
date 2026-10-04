@@ -3,112 +3,149 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
+	"net/http"
 	"net/rpc"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
-// The panel cannot serve without the agent, so it must eventually give up and
-// let systemd restart it. What it must not do is give up on the FIRST attempt.
-//
-// systemd's After= orders execution, not readiness: the agent unit is started
-// before the panel, but its socket appears only after it has loaded its ledger
-// and reconciled interrupted work. An agent restarted by an update, or one
-// taking a few seconds to finish startup recovery, is a normal transient — and
-// exiting on it produced a second flapping unit beside the first, each restart
-// re-running the whole startup sequence for a socket that was seconds away.
-//
-// A bounded, backing-off wait turns that into a patient start. If the agent is
-// genuinely absent the panel still exits, with a message that says how long it
-// waited — but it no longer exits because it was thirty milliseconds early.
-//
-// Panel, agent olmadan hizmet veremez; dolayısıyla sonunda vazgeçip systemd'nin
-// kendisini yeniden başlatmasına izin vermelidir. Yapmaması gereken şey İLK
-// denemede vazgeçmektir.
-//
-// systemd'nin After= ayarı çalıştırmayı sıralar, hazır olmayı değil: agent
-// unit'i panelden önce başlatılır ama soketi ancak defterini yükleyip yarım
-// kalmış işleri uzlaştırdıktan sonra belirir. Bir güncellemenin yeniden
-// başlattığı ya da açılış kurtarmasını bitirmesi birkaç saniye süren bir agent
-// normal ve geçicidir — ve bunun üzerine çıkmak, birincinin yanına çırpınan
-// ikinci bir birim koyuyordu; her yeniden başlatma, saniyeler uzaktaki bir
-// soket için bütün açılış dizisini yeniden koşturuyordu.
-//
-// Sınırlı ve artan beklemeli bir deneme bunu sabırlı bir başlangıca çevirir.
-// Agent gerçekten yoksa panel yine çıkar — ama ne kadar beklediğini söyleyen bir
-// mesajla, ve artık otuz milisaniye erken davrandığı için çıkmaz.
 const (
-	agentDialTotalWait   = 90 * time.Second
 	agentDialFirstPause  = 500 * time.Millisecond
 	agentDialMaxPause    = 8 * time.Second
 	agentDialAttemptWait = 10 * time.Second
 )
 
-// connectAgentPatiently dials the agent socket until it answers or the total
-// wait elapses, whichever comes first. It reports the last error and how long
-// it waited so the journal line is diagnostic rather than a bare refusal.
-// connectAgentPatiently, agent soketini yanıt verene ya da toplam bekleme
-// dolana kadar dener. Son hatayı ve ne kadar beklediğini bildirir; böylece
-// günlük satırı çıplak bir ret değil, teşhis olur.
-func connectAgentPatiently(
+type recoveryAgentDialPolicy struct {
+	attemptWait time.Duration
+	firstPause  time.Duration
+	maxPause    time.Duration
+}
+
+var defaultRecoveryAgentDialPolicy = recoveryAgentDialPolicy{
+	attemptWait: agentDialAttemptWait,
+	firstPause:  agentDialFirstPause,
+	maxPause:    agentDialMaxPause,
+}
+
+type recoveryAgentDialResult struct {
+	client *rpc.Client
+	err    error
+}
+
+// Connect only after HTTPS and its restricted recovery handler are serving.
+// Every attempt is bounded; failure retries observation, never a host mutation.
+// A missing Agent does not restart the panel or discard authenticated access.
+// HTTPS hazırken sınırlı bağlantı denemeleri yapılır; Agent yokluğu paneli
+// yeniden başlatmaz ve bu döngü sunucuda bir değişiklik işlemi yapmaz.
+func connectAgentWithRecovery(running *runningPanelHTTPServer, dial func(context.Context) (*rpc.Client, error)) (*rpc.Client, error) {
+	if running == nil || running.server == nil || running.serveResult == nil {
+		return nil, errors.New("recovery listener is not running")
+	}
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	return connectAgentPreservingRecovery(ctx, running.serveResult, dial, defaultRecoveryAgentDialPolicy)
+}
+
+func startupListenerError(err error) error {
+	if err == nil || errors.Is(err, http.ErrServerClosed) {
+		return errors.New("recovery listener stopped during Agent connection")
+	}
+	return fmt.Errorf("recovery listener failed during Agent connection: %w", err)
+}
+
+// Dialers must honour their context, as the production Unix connector does.
+// Drain a cancelled attempt before returning so no late client is leaked and
+// normal startup can never proceed after cancellation or listener failure.
+func connectAgentPreservingRecovery(
 	ctx context.Context,
+	serveResult <-chan error,
 	dial func(context.Context) (*rpc.Client, error),
-	now func() time.Time,
-	sleep func(time.Duration),
-) (*rpc.Client, time.Duration, error) {
-	if dial == nil {
-		return nil, 0, errors.New("agent dial function is required")
+	policy recoveryAgentDialPolicy,
+) (*rpc.Client, error) {
+	if ctx == nil || dial == nil || policy.attemptWait <= 0 || policy.firstPause <= 0 || policy.maxPause < policy.firstPause {
+		return nil, errors.New("invalid recovery Agent connection configuration")
 	}
-	if now == nil {
-		now = time.Now
-	}
-	if sleep == nil {
-		sleep = time.Sleep
-	}
-
-	started := now()
-	pause := agentDialFirstPause
-	var lastErr error
+	pause := policy.firstPause
 	announced := false
-
 	for {
-		attemptCtx, cancel := context.WithTimeout(ctx, agentDialAttemptWait)
-		client, err := dial(attemptCtx)
-		cancel()
-		if err == nil {
-			return client, now().Sub(started), nil
+		if err := ctx.Err(); err != nil {
+			return nil, err
 		}
-		lastErr = err
-
-		waited := now().Sub(started)
-		if waited+pause >= agentDialTotalWait || ctx.Err() != nil {
-			return nil, waited, lastErr
+		attemptCtx, cancel := context.WithTimeout(ctx, policy.attemptWait)
+		result := make(chan recoveryAgentDialResult, 1)
+		go func() {
+			client, err := dial(attemptCtx)
+			result <- recoveryAgentDialResult{client, err}
+		}()
+		var attempt recoveryAgentDialResult
+		select {
+		case attempt = <-result:
+			cancel()
+		case <-ctx.Done():
+			cancel()
+			attempt = <-result
+			if attempt.client != nil {
+				_ = attempt.client.Close()
+			}
+			return nil, ctx.Err()
+		case err := <-serveResult:
+			cancel()
+			attempt = <-result
+			if attempt.client != nil {
+				_ = attempt.client.Close()
+			}
+			return nil, startupListenerError(err)
 		}
-		// One line, not one per attempt: a retry loop that narrates itself is
-		// noise, but a silent 90-second pause looks like a hang.
-		// Deneme başına değil, tek satır: kendini anlatan bir döngü gürültüdür
-		// ama sessiz 90 saniyelik bir duraklama takılma gibi görünür.
+		if err := ctx.Err(); err != nil {
+			if attempt.client != nil {
+				_ = attempt.client.Close()
+			}
+			return nil, err
+		}
+		select {
+		case err := <-serveResult:
+			if attempt.client != nil {
+				_ = attempt.client.Close()
+			}
+			return nil, startupListenerError(err)
+		default:
+		}
+		if attempt.err == nil && attempt.client != nil {
+			return attempt.client, nil
+		}
+		if attempt.client != nil {
+			_ = attempt.client.Close()
+		}
 		if !announced {
-			log.Printf(
-				"Agent socket is not answering yet; waiting up to %s for it: %v",
-				agentDialTotalWait, err,
-			)
+			log.Println("Agent is unavailable; authenticated read-only recovery remains available while connection is retried")
 			announced = true
 		}
-		sleep(pause)
-		if pause < agentDialMaxPause {
-			pause *= 2
-			if pause > agentDialMaxPause {
-				pause = agentDialMaxPause
+		timer := time.NewTimer(pause)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return nil, ctx.Err()
+		case err := <-serveResult:
+			timer.Stop()
+			return nil, startupListenerError(err)
+		case <-timer.C:
+		}
+		if pause < policy.maxPause {
+			if pause > policy.maxPause/2 {
+				pause = policy.maxPause
+			} else {
+				pause *= 2
 			}
 		}
 	}
 }
 
-// dialAgentOnce adapts the production connector to the injectable signature.
-// dialAgentOnce, üretim bağlayıcısını enjekte edilebilir imzaya uyarlar.
 func dialAgentOnce(ctx context.Context) (*rpc.Client, error) {
 	return transport.ConnectAgentContext(ctx)
 }

@@ -1,0 +1,80 @@
+{
+  "anonymous_http": 401,
+  "authenticated_http": 200,
+  "baseline": {
+    "agent_sha256": "c2724448c8724c111e0331d2c33cd202abbef7df4e284bff0f5a4acea0f88d54",
+    "commit": "45dfc265bfd7997e9a0e0d39b0ebf60a57f58c00",
+    "panel_sha256": "ee402c43e9809e6ad40c2b3e9778aa1f2e30729182ee1ab45433374d8ea84cfd",
+    "version": "v0.1.0-alpha.81"
+  },
+  "coordinators_restored_to_baseline": true,
+  "evidence_sha256": {
+    "boot-wait-a9d913db174173a92a92b0ede7ee03eb.json": "e03bddde1c89fa4adf3b2cb99d08b950521632f91ac7e3fd86d523c7cdb94fc0",
+    "boot-wait-a9d913db174173a92a92b0ede7ee03eb.jsonl": "3aea283ee4127da28a98bacb74273841f709a891193451796ff3bbb907603652",
+    "boot-wait-after-boot.json": "5f3a2571933e41ed460fb810c56d6c548aa688ddcc4f8c94872a21b1e6f7a259",
+    "boot-wait-before-boot.json": "9a98c02cc159582473a320e1b67883ab804051d62814a03100f50ea8fb64d176",
+    "boot-wait-floor-foundation.txt": "5b72ded8b176ef10f1ba8af5b165c4bc7c8b0e801034416a579cc97512a33ce2",
+    "boot-wait-native-journal.jsonl": "2eb56b52e582edf868eb5f00b33f50b4e2973b690d075274c26f3b1ba90b748c",
+    "boot-wait-terminal.json": "daecc0d6d960a6bea1639e0c70f97ee81747b37a7c9776690be32b4156a143a7",
+    "bound-reader-postboot.jsonl": "ebf28c9af60955b3c9a28429af039842cf6b2609d9446d03a00348817e83ec84",
+    "bound-worker-a9d913db174173a92a92b0ede7ee03eb.json": "30515c975dc231084163ac8a219a229d3a77b849d859b0b455aa35dcc90d23c7",
+    "bound-worker-reboot-cut-a9d913db174173a92a92b0ede7ee03eb.jsonl": "74153f5f69d3ac69628942162b464ea67722d050bf39b08755299819f30a2cb1",
+    "bound-worker-reboot-result-a9d913db174173a92a92b0ede7ee03eb.json": "9d3ad735bbf17d8288c439609dcbf76535672f2898bcaeb6f9e4fcd3a66d88dd",
+    "bound-worker-start-a9d913db174173a92a92b0ede7ee03eb.json": "29949524d493d0d57cfff3cc2d9099d585bd99c2525e1dea0aaf6b8a038126f1",
+    "bound-worker-start-a9d913db174173a92a92b0ede7ee03eb.stdout.jsonl": "0adeb2b6eb8b4c8f3a63c8769a491c515c75a44080509c4769bda3955e992f2d",
+    "recovery-fault-collection-1790016852724753191.json": "c697a142bd188473d1921591fe3ae5eb32647cd37a31d5a58ffafeeabaed5df3",
+    "recovery-fault-collection-1790016852724753191.jsonl": "8b25538c84c7e4060010f35e1e7d53fcb7aa44b79e3ed4cbba7107149ace7bec"
+  },
+  "faults": [
+    "exact genuine update-worker SIGKILL",
+    "QMP reset at native rollback payload_restored"
+  ],
+  "fixture_boot_job_max_seconds": 120,
+  "foundation_sequence_after_rollback": 82,
+  "helper_sha256": "3f87b7faba3b4e4f1ed16775599656e0d31e09caa58a4e21b096a7af8f251e96",
+  "limitations": [
+    "Fixture signing only; no production signing/distribution proof",
+    "CLI wait only; no HTTP/browser wait access during boot",
+    "No prior failure was recorded during this wait; it was recorded before terminal rollback",
+    "initializing and stopping waits remain unproved natively",
+    "No schema transition or hosted workload continuity acceptance in this case",
+    "Full P0 fault matrix remains open"
+  ],
+  "platform": "Debian 13 / amd64 / disposable QEMU",
+  "request_id": "a9d913db174173a92a92b0ede7ee03eb",
+  "result": "scoped-checks-passed",
+  "retry": {
+    "rollback_invocation": "d4767d5141a24994bb4a0187ca8caefe",
+    "wait_invocation": "72075f28764b48628d2fd791836b20fa"
+  },
+  "schema": "celikpanel/native-boot-wait-acceptance/v1",
+  "sequence_floor_after_rollback": 82,
+  "stale_wait_retained_but_not_exposed": true,
+  "target": {
+    "agent_sha256": "169e3230f5099c36bfd0e4d4ed86972847822095023b427297ccdd8088b6bc0d",
+    "commit": "9bdb27473f0341fc1ab47cb72d1269839ca0ddee",
+    "panel_sha256": "e1bbe2c4f0d9b5d6b28b533b06925f7c31a39d5d1391e9de0b45fbc7de3ebb57",
+    "version": "v0.1.0-alpha.82"
+  },
+  "terminal": {
+    "observation": "known",
+    "observed_at": "2026-09-21T18:55:09Z",
+    "phase": "recovered",
+    "previous_failure": "update_failed",
+    "reason": "rollback_verified",
+    "request_id": "a9d913db174173a92a92b0ede7ee03eb",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "rollback_verified"
+  },
+  "wait": {
+    "lock_released": true,
+    "observed_at": "2026-09-21T18:54:21Z",
+    "phase": "recovering",
+    "previous_failure": "none",
+    "readiness": "starting",
+    "readiness_exit": 1,
+    "terminal_proof": "none",
+    "transaction_binding_manifest_unchanged": true,
+    "waiting_for": "starting"
+  }
+}

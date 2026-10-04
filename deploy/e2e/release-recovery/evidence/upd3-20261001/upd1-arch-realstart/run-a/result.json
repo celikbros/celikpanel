@@ -1,0 +1,298 @@
+{
+  "artifacts": {
+    "baseline": {
+      "commit": "58813f1d0b903cbbc645a4fbab724b8a84406b86",
+      "sha256": "28f27f5d95b7cb2eb1239693020664bae57fbd780db9a46fd84bea3d5ca33546",
+      "version": "v0.1.0-alpha.81"
+    },
+    "defective": {
+      "commit": "7d11ff6535c86a865add390062311db2fb1d6e50",
+      "sha256": "d4f96c107f4ee98c0685a6509a815999dc797737020a897995a0c722fa082f97",
+      "version": "v0.1.0-alpha.82"
+    },
+    "good": {
+      "commit": "901593abf12c90c91222d2c61a8bd7c0040523c3",
+      "sha256": "36766be1eb37359658ebdb53ddb431660812f620c22639a2097e6f7762066542",
+      "version": "v0.1.0-alpha.82"
+    },
+    "realstart": {
+      "commit": "36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb",
+      "sha256": "4b95724bb8c84300ce0b600a86c6690461a2668158ffef7d63814ec00cc92c40",
+      "version": "v0.1.0-alpha.82"
+    }
+  },
+  "cell": {
+    "mail_required": false,
+    "name": "upd1-arch-realstart",
+    "node": "arch",
+    "recovery_fault": null,
+    "variant": "real-start"
+  },
+  "findings": [
+    "arch: web_mail setup plan was refused (['server_setup_service_unsupported:dovecot']); mail is recorded as not provided on this platform",
+    "arch: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['09-panel_certificate', '10-verify']",
+    "while the recovery budget was exhausted the Panel recovery-status API was unavailable; only the root CLI showed the exhausted state"
+  ],
+  "identity": {
+    "cell_id": "release-recovery__3305e4be4de07413",
+    "node": "arch",
+    "vm_uuid": "e726edcf-887a-5108-9361-c3f2c27eb88c"
+  },
+  "kind": {
+    "expected": "the start check passes; completion.pending exists; the stability wait fails with panel_start_unverified; forward completion is retried to its limit (N and timestamps recorded) and pauses (paused_retry_limit); no rollback; the owner retry is printed but not run; texts name the panel log command and say there is no supported return; site, mail and cron keep running while the Panel stays down",
+    "judged": {
+      "expected": [
+        "check-passed",
+        "update-failure-line",
+        "sidecar",
+        "completion-marker",
+        "forward-dispatch",
+        "paused",
+        "no-rollback",
+        "candidate-installed",
+        "owner-retry-not-run",
+        "retry-command-printed",
+        "cli-real-start-text",
+        "cli-panel-log-command",
+        "cli-paused-text",
+        "web-catalogue",
+        "workloads-kept-running",
+        "panel-down-until-end"
+      ],
+      "findings": [],
+      "kind": "real-start",
+      "native_evidence": false,
+      "unknown": [],
+      "verdict": "as-expected"
+    },
+    "printed_retry_command": "/usr/libexec/celikpanel/recovery recover --retry --snapshot 20260930T204431Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-45483c2cc4439aa4098f44a8977b2bef",
+    "variant": "real-start"
+  },
+  "native_evidence": false,
+  "note": "Observations for the owner's review; the P0 rows are judged separately.",
+  "outcome": {
+    "attempts": {
+      "automatic": [
+        {
+          "at": "2026-09-30T20:45:54.428709Z",
+          "attempt": "1",
+          "phase": "completion"
+        },
+        {
+          "at": "2026-09-30T20:47:32.664821Z",
+          "attempt": "2",
+          "phase": "completion"
+        },
+        {
+          "at": "2026-09-30T20:49:11.664707Z",
+          "attempt": "3",
+          "phase": "completion"
+        }
+      ],
+      "automatic_count": 3,
+      "journal_admissions": [
+        {
+          "at": "2026-09-30T20:45:54.485174+00:00",
+          "attempt": "1",
+          "snapshot": "20260930T204431Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-45483c2cc4439aa4098f44a8977b2bef"
+        },
+        {
+          "at": "2026-09-30T20:47:32.720830+00:00",
+          "attempt": "2",
+          "snapshot": "20260930T204431Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-45483c2cc4439aa4098f44a8977b2bef"
+        },
+        {
+          "at": "2026-09-30T20:49:11.720186+00:00",
+          "attempt": "3",
+          "snapshot": "20260930T204431Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-45483c2cc4439aa4098f44a8977b2bef"
+        }
+      ],
+      "owner": [],
+      "owner_count": 0
+    },
+    "classification": "paused-owner-action-required",
+    "final_status": {
+      "automatic_recovery": "paused_retry_limit",
+      "first_failure_code": "panel_start_unverified",
+      "observation": "known",
+      "observed_at": "2026-09-30T20:50:50Z",
+      "phase": "recovery_required",
+      "previous_failure": "recovery_failed",
+      "reason": "recovery_incomplete",
+      "request_id": "08ddb2f7396874f11eb0f344839b3365",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "none"
+    },
+    "owner_continuation": false,
+    "pin_changes": [],
+    "reboot": null
+  },
+  "overall": "complete-for-review",
+  "provenance": {
+    "baseline": "unpublished-local-fixture-commit-over-HEAD-labelled-v0.1.0-alpha.81; acceptance-license panel build (D-027 fixture); installed by the real installer; fixture trust root enrolled; not-production-release-admission",
+    "candidate": "unpublished-local-fixture-commit-labelled-v0.1.0-alpha.82; signed with the disposable fixture key; served by the guest-loopback celikpanel.net fixture origin; not a release",
+    "defect": "fixture source patch: cmd/panel main() exits (log.Fatalf) just before its listener starts; the read-only start check exits before flag parsing and never reaches that line, so the check passes and the real start fails after completion.pending (simulated by a committed fixture change)"
+  },
+  "request_id": "08ddb2f7396874f11eb0f344839b3365",
+  "schema": "celikpanel/upd1-owner-update-result/v1",
+  "scope": {
+    "cron": {
+      "crontab": "/usr/sbin/crontab",
+      "verdict": "available"
+    },
+    "dns": {
+      "mode": "external",
+      "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+      "verdict": "not-provided-external-dns"
+    },
+    "origin": {
+      "after-owner-restart": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      },
+      "after-provision": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      },
+      "before-arm": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      }
+    },
+    "setup": {
+      "code": "server_setup_access_dns_required",
+      "not_run": [
+        "09-panel_certificate",
+        "10-verify"
+      ],
+      "phase": "access_dns",
+      "verdict": "observed isolated-host wait",
+      "volatile_tables_added": [
+        "server_setup_executions"
+      ]
+    }
+  },
+  "steps": [
+    {
+      "finished_at": "2026-09-30T20:36:19Z",
+      "name": "preflight",
+      "reason": null,
+      "started_at": "2026-09-30T20:36:14Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-09-30T20:36:28Z",
+      "name": "origin",
+      "reason": null,
+      "started_at": "2026-09-30T20:36:19Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-09-30T20:39:56Z",
+      "name": "baseline-install",
+      "reason": null,
+      "started_at": "2026-09-30T20:36:28Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-09-30T20:39:57Z",
+      "name": "owner-login",
+      "reason": null,
+      "started_at": "2026-09-30T20:39:56Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-09-30T20:39:57Z",
+      "name": "license",
+      "reason": null,
+      "started_at": "2026-09-30T20:39:57Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-09-30T20:42:55Z",
+      "name": "setup",
+      "reason": null,
+      "started_at": "2026-09-30T20:39:57Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-09-30T20:42:56Z",
+      "name": "seed",
+      "reason": null,
+      "started_at": "2026-09-30T20:42:55Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-09-30T20:44:14Z",
+      "name": "pre-state",
+      "reason": null,
+      "started_at": "2026-09-30T20:42:56Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-09-30T20:44:15Z",
+      "name": "arm",
+      "reason": null,
+      "started_at": "2026-09-30T20:44:14Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-09-30T20:44:15Z",
+      "name": "owner-start",
+      "reason": null,
+      "started_at": "2026-09-30T20:44:15Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-09-30T20:51:05Z",
+      "name": "track",
+      "reason": null,
+      "started_at": "2026-09-30T20:44:15Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-09-30T20:51:05Z",
+      "name": "owner-continuation (required)",
+      "reason": null,
+      "started_at": "2026-09-30T20:51:05Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-09-30T20:51:10Z",
+      "name": "terminal",
+      "reason": null,
+      "started_at": "2026-09-30T20:51:05Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-09-30T20:51:12Z",
+      "name": "collect",
+      "reason": null,
+      "started_at": "2026-09-30T20:51:10Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-09-30T20:51:12Z",
+      "name": "verdicts",
+      "reason": null,
+      "started_at": "2026-09-30T20:51:12Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-09-30T20:51:12Z",
+      "name": "kind-expectation",
+      "reason": null,
+      "started_at": "2026-09-30T20:51:12Z",
+      "verdict": "passed"
+    }
+  ]
+}

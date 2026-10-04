@@ -1,0 +1,40 @@
+{
+  "authoritative_preflight": {
+    "address": "10.0.2.15",
+    "claimed": true,
+    "name": "www.owner.test",
+    "port": 53,
+    "tcp": true,
+    "type": "A",
+    "udp": true
+  },
+  "cell_id": "bind__rolling-back__after-write__standalone__peer-reachable",
+  "engine": "bind",
+  "engine_epoch": 0,
+  "engine_state_identity": null,
+  "engine_state_receipt_path": "",
+  "engine_state_receipt_sha256": "",
+  "external_pdns_preimage_path": "absent",
+  "external_pdns_preimage_sha256": "absent",
+  "identity_receipt_path": "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+  "identity_receipt_preexisting": false,
+  "receipt_origin": "harness-native-bind",
+  "scenario_sha256": "0ba060402215216b6608fcc318b79fed743c4b0621942f225df5e6bc3cc01545",
+  "schema": "celikpanel/dns-kill-source-proof/v1",
+  "serving_before_tagged_agent": true,
+  "source_adoption_proof_path": "absent",
+  "source_adoption_proof_sha256": "absent",
+  "source_fixture": "owner-bind",
+  "source_normalization_identity_receipt_path": "absent",
+  "source_normalization_identity_receipt_sha256": "absent",
+  "source_preinstall_proof_path": "absent",
+  "source_preinstall_proof_sha256": "absent",
+  "source_revision": 0,
+  "source_setup_identity_receipt_sha256": "absent",
+  "source_setup_scenario_sha256": "absent",
+  "uninitialized_global_port53": {
+    "authoritative_answer_observed": false,
+    "tcp_bindable": false,
+    "udp_bindable": false
+  }
+}

@@ -16,14 +16,22 @@ func installPDNSPackagesWithGuard(
 	ctx context.Context,
 	systemctl string,
 	install func() (string, error),
+	exactBefore ...dnsUnitSnapshot,
 ) (string, error) {
-	return installPDNSPackagesWithGuardOps(ctx, systemctl, install, bindInstallGuardOps{
+	if len(exactBefore) > 1 {
+		return "", errors.New("PowerDNS package guard accepts at most one exact preimage")
+	}
+	var expected *dnsUnitSnapshot
+	if len(exactBefore) == 1 {
+		expected = &exactBefore[0]
+	}
+	return installPDNSPackagesWithGuardOpsExact(ctx, systemctl, install, bindInstallGuardOps{
 		verifyMaskParent: verifyBINDMaskParentMetadata,
 		runSystemd:       runServiceMutationCombinedOutput,
 		recoveryContext: func(parent context.Context) (context.Context, context.CancelFunc, error) {
 			return serviceMutationCancellingRecoveryContext(parent, bindInstallRollbackTimeout)
 		},
-	})
+	}, expected)
 }
 
 func installPDNSPackagesWithGuardOps(
@@ -32,7 +40,17 @@ func installPDNSPackagesWithGuardOps(
 	install func() (string, error),
 	ops bindInstallGuardOps,
 ) (string, error) {
-	guard, err := beginDNSPackageInstallGuard(ctx, systemctl, pdnsInstallUnitNames, ops)
+	return installPDNSPackagesWithGuardOpsExact(ctx, systemctl, install, ops, nil)
+}
+
+func installPDNSPackagesWithGuardOpsExact(
+	ctx context.Context,
+	systemctl string,
+	install func() (string, error),
+	ops bindInstallGuardOps,
+	exactBefore *dnsUnitSnapshot,
+) (string, error) {
+	guard, err := beginDNSPackageInstallGuard(ctx, systemctl, pdnsInstallUnitNames, ops, exactBefore)
 	if err != nil {
 		return "", err
 	}
@@ -51,6 +69,7 @@ func beginDNSPackageInstallGuard(
 	systemctl string,
 	units []string,
 	ops bindInstallGuardOps,
+	exactBefore *dnsUnitSnapshot,
 ) (*bindPackageInstallGuard, error) {
 	if ctx == nil || systemctl == "" || len(units) == 0 ||
 		ops.verifyMaskParent == nil || ops.runSystemd == nil ||
@@ -69,6 +88,22 @@ func beginDNSPackageInstallGuard(
 			return guard, fmt.Errorf("%s has no deterministic pre-install state", unit)
 		}
 		guard.before = append(guard.before, state)
+	}
+	if exactBefore != nil {
+		if len(guard.before) != 1 {
+			return guard, errors.New("fresh PowerDNS package guard requires one target unit")
+		}
+		observed := guard.before[0]
+		actual := dnsUnitSnapshot{
+			Name: observed.name, LoadState: observed.loadState,
+			ActiveState: observed.activeState, UnitFileState: observed.unitFileState,
+		}
+		if err := validateFreshPDNSTargetBeforePackagesV3(actual); err != nil {
+			return guard, err
+		}
+		if actual != *exactBefore {
+			return guard, errors.New("fresh PowerDNS target changed before package guard ownership")
+		}
 	}
 	if err := guard.verifyMaskParentBeforeSystemdMutation(); err != nil {
 		return guard, err

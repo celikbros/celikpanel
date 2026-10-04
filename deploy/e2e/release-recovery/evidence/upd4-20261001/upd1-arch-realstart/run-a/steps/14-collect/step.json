@@ -1,0 +1,49 @@
+{
+  "checks": {
+    "attempts": {
+      "automatic": [
+        {
+          "at": "2026-10-01T00:49:33.877728Z",
+          "attempt": "1",
+          "direction": "rollback",
+          "operation": "update",
+          "phase": "active"
+        }
+      ],
+      "automatic_count": 1,
+      "journal_admissions": [
+        {
+          "at": "2026-10-01T00:49:33.932007+00:00",
+          "attempt": "1",
+          "snapshot": "20261001T004929Z-from-unknown-to-dd4adede7c24bd1ad92118612fd379beb7874b0b-fe2920b052e2bd380d1874d8c44974c0"
+        }
+      ],
+      "owner": [],
+      "owner_count": 0
+    },
+    "guest_samples": 31,
+    "host_samples": 32,
+    "journals": [
+      "lab",
+      "product",
+      "setup-services"
+    ],
+    "observer": [
+      "armed",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "timeline",
+      "released"
+    ],
+    "stopped_after": [],
+    "unavailable": {}
+  },
+  "finished_at": "2026-10-01T00:50:04Z",
+  "name": "collect",
+  "started_at": "2026-10-01T00:50:02Z",
+  "verdict": "passed"
+}

@@ -1,0 +1,78 @@
+# read-only side inspection lab=cp-release-drill-upd2-arch-def-b node=arch label=after-seed rc=0 took=0.3s
+== utc
+2026-09-30T16:18:58Z
+5a8cf2b4-5af2-40df-9cd7-415f222a2000
+== os
+arch 
+== crontab binary
+/usr/bin/crontab
+== cron packages
+cronie 1.7.2-2
+== cron units
+Id=cron.service
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+NRestarts=0
+
+Id=cronie.service
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Wed 2026-09-30 16:16:43 UTC
+NRestarts=0
+
+== cron spool
+total 4
+drwxr-xr-x 1 root            root       30 Sep 30 16:18 .
+drwxr-xr-x 1 root            root       30 Sep 30 16:16 ..
+-rw------- 1 upd1_owner_test celikpanel 81 Sep 30 16:18 upd1_owner_test
+-- /var/spool/cron/upd1_owner_test (owner upd1_owner_test)
+# upd1 owner cron
+* * * * * /bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt"
+== cron.d (panel must write none)
+total 4
+drwxr-xr-x 1 root root   14 Sep 30 16:16 .
+drwxr-xr-x 1 root root 2504 Sep 30 16:18 ..
+-rw-r--r-- 1 root root  128 Sep 22  2025 0hourly
+== stamp files
+== origin unit
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Wed 2026-09-30 16:14:41 UTC
+MainPID=398
+NRestarts=0
+== hosts celikpanel.net
+6:127.0.0.1 celikpanel.net # disposable CelikPanel worker fixture
+127.0.0.1       localhost
+== listeners 80/443/panel
+0.0.0.0:80 users:(("nginx",pid=2352,fd=4),("nginx",pid=866,fd=4))
+127.0.0.54:53 users:(("systemd-resolve",pid=259,fd=25))
+127.0.0.53%lo:53 users:(("systemd-resolve",pid=259,fd=23))
+127.0.0.1:443 users:(("python3",pid=398,fd=3))
+[::]:80 users:(("nginx",pid=2352,fd=10),("nginx",pid=866,fd=10))
+*:2083 users:(("panel",pid=420,fd=8))
+== all listeners
+*:2083 0.0.0.0:22 0.0.0.0:3306 0.0.0.0:5355 0.0.0.0:80 127.0.0.1:443 127.0.0.53%lo:53 127.0.0.54:53 [::]:22 [::]:3306 [::]:5355 [::]:80 
+== nginx
+ActiveState=active
+SubState=running
+NRestarts=0
+130:    listen 80;
+131:    listen [::]:80;
+44:        listen       80;
+== celikpanel units
+  celikpanel-agent.service            loaded active   running CelikPanel privileged agent
+  celikpanel-firewall-restore.service loaded inactive dead    Restore CelikPanel firewall policy before networking
+  celikpanel-panel.service            loaded active   running CelikPanel web panel
+  celikpanel-release-recovery.service loaded inactive dead    CelikPanel verified release transaction recovery
+  celikpanel-release-recovery.timer   loaded active   waiting CelikPanel release transaction recovery watchdog
+== timers
+Wed 2026-09-30 16:19:16 UTC          17s Wed 2026-09-30 16:18:45 UTC 12s ago celikpanel-release-recovery.timer celikpanel-release-recovery.service
+Wed 2026-09-30 16:29:30 UTC        10min -                                 - systemd-tmpfiles-clean.timer      systemd-tmpfiles-clean.service
+Thu 2026-10-01 00:00:00 UTC           7h Wed 2026-09-30 16:12:58 UTC       - shadow.timer                      shadow.service
+Fri 2026-10-09 05:15:22 UTC 1 week 1 day Wed 2026-09-30 16:12:58 UTC       - archlinux-keyring-wkd-sync.timer  archlinux-keyring-wkd-sync.service

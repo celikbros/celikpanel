@@ -1,0 +1,15 @@
+..............E........................................
+======================================================================
+ERROR: test_defect_applies_exactly_once_to_the_current_panel_main (deploy.e2e.release-recovery.test_owner_update_trial.FixtureSourceTests.test_defect_applies_exactly_once_to_the_current_panel_main)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/var/tmp/cp-upd1-build/20260930t152731z/repo/deploy/e2e/release-recovery/test_owner_update_trial.py", line 129, in test_defect_applies_exactly_once_to_the_current_panel_main
+    changed = t.apply_defect(text)
+  File "/var/tmp/cp-upd1-build/20260930t152731z/repo/deploy/e2e/release-recovery/owner_update_trial.py", line 173, in apply_defect
+    raise ValueError("cmd/panel/main.go migrate-only block differs; the fixture defect cannot be applied exactly")
+ValueError: cmd/panel/main.go migrate-only block differs; the fixture defect cannot be applied exactly
+
+----------------------------------------------------------------------
+Ran 55 tests in 0.509s
+
+FAILED (errors=1)

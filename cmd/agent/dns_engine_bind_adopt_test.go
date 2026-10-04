@@ -327,9 +327,9 @@ func TestRunningBINDAdoptionKeepsTheSwitchProofsOutOfItsPath(t *testing.T) {
 		}
 	}
 	for _, required := range []string{
-		"verifyOnlyBINDActive(",
+		"verifyOnlyAdoptedBINDActive(",
 		"verifyBINDConfigMutationPreimage(",
-		"assumeExistingDNSEnginePackageOwnership(",
+		"publishNewRunningBINDAdoptionInstall(",
 		"reloadAdoptedBIND(",
 		`"reload"`,
 	} {

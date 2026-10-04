@@ -1,0 +1,31 @@
+2026-09-29T14:19:06.113233+00:00 dns-debian13 systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-09-29T14:19:06.302020+00:00 dns-debian13 panel[1208]: 2026/09/29 14:19:06 Starting CelikPanel Backend...
+2026-09-29T14:19:06.306888+00:00 dns-debian13 panel[1208]: 2026/09/29 14:19:06 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-09-29T14:19:06.307513+00:00 dns-debian13 panel[1208]: 2026/09/29 14:19:06 Connected to Agent RPC; preparing normal management access
+2026-09-29T14:19:06.330050+00:00 dns-debian13 panel[1208]: 2026/09/29 14:19:06 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-debian13": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-09-29T14:19:06.332350+00:00 dns-debian13 panel[1208]: 2026/09/29 14:19:06 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-09-29T14:19:06.334103+00:00 dns-debian13 panel[1208]: 2026/09/29 14:19:06 Panel ready on :2083 (HTTPS)
+2026-09-29T14:19:06.423255+00:00 dns-debian13 panel[1208]: 2026/09/29 14:19:06 http: TLS handshake error from 127.0.0.1:50862: EOF
+2026-09-29T14:19:06.700746+00:00 dns-debian13 panel[1208]: 2026/09/29 14:19:06 http: TLS handshake error from 127.0.0.1:50872: EOF
+2026-09-29T14:19:06.977767+00:00 dns-debian13 panel[1208]: 2026/09/29 14:19:06 http: TLS handshake error from 127.0.0.1:50884: EOF
+2026-09-29T14:19:07.253660+00:00 dns-debian13 panel[1208]: 2026/09/29 14:19:07 http: TLS handshake error from 127.0.0.1:50896: EOF
+2026-09-29T14:19:07.529242+00:00 dns-debian13 panel[1208]: 2026/09/29 14:19:07 http: TLS handshake error from 127.0.0.1:50908: EOF
+2026-09-29T14:19:07.805852+00:00 dns-debian13 panel[1208]: 2026/09/29 14:19:07 http: TLS handshake error from 127.0.0.1:50910: EOF
+2026-09-29T14:19:08.083787+00:00 dns-debian13 panel[1208]: 2026/09/29 14:19:08 http: TLS handshake error from 127.0.0.1:50924: EOF
+2026-09-29T14:19:08.360216+00:00 dns-debian13 panel[1208]: 2026/09/29 14:19:08 http: TLS handshake error from 127.0.0.1:50928: EOF
+2026-09-29T14:19:08.639637+00:00 dns-debian13 panel[1208]: 2026/09/29 14:19:08 http: TLS handshake error from 127.0.0.1:50944: EOF
+2026-09-29T14:19:08.920792+00:00 dns-debian13 panel[1208]: 2026/09/29 14:19:08 http: TLS handshake error from 127.0.0.1:50960: EOF
+2026-09-29T14:19:09.202144+00:00 dns-debian13 panel[1208]: 2026/09/29 14:19:09 http: TLS handshake error from 127.0.0.1:50976: EOF
+2026-09-29T14:19:09.480038+00:00 dns-debian13 panel[1208]: 2026/09/29 14:19:09 http: TLS handshake error from 127.0.0.1:50986: EOF
+2026-09-29T14:19:09.757510+00:00 dns-debian13 panel[1208]: 2026/09/29 14:19:09 http: TLS handshake error from 127.0.0.1:50988: EOF
+2026-09-29T14:19:10.046244+00:00 dns-debian13 panel[1208]: 2026/09/29 14:19:10 http: TLS handshake error from 127.0.0.1:52968: EOF
+2026-09-29T14:19:10.324177+00:00 dns-debian13 panel[1208]: 2026/09/29 14:19:10 http: TLS handshake error from 127.0.0.1:52976: EOF
+2026-09-29T14:19:10.600848+00:00 dns-debian13 panel[1208]: 2026/09/29 14:19:10 http: TLS handshake error from 127.0.0.1:52978: EOF
+2026-09-29T14:19:10.888136+00:00 dns-debian13 panel[1208]: 2026/09/29 14:19:10 http: TLS handshake error from 127.0.0.1:52990: EOF
+2026-09-29T14:19:11.168884+00:00 dns-debian13 panel[1208]: 2026/09/29 14:19:11 http: TLS handshake error from 127.0.0.1:52998: EOF
+2026-09-29T14:19:11.452398+00:00 dns-debian13 panel[1208]: 2026/09/29 14:19:11 http: TLS handshake error from 127.0.0.1:53006: EOF
+2026-09-29T14:19:11.731430+00:00 dns-debian13 panel[1208]: 2026/09/29 14:19:11 http: TLS handshake error from 127.0.0.1:53008: EOF
+2026-09-29T14:19:33.898072+00:00 dns-debian13 systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-09-29T14:19:33.911977+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-09-29T14:19:33.912212+00:00 dns-debian13 systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-09-29T14:19:33.912434+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Consumed 335ms CPU time, 74.2M memory peak.

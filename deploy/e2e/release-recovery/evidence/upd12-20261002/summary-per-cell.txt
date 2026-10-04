@@ -1,0 +1,77 @@
+== upd1-debian13-defective: overall=complete-for-review outcome=recovered-automatically native_evidence=False request=1f6d972a828f78022474d9593867b01a
+   final={"observation": "known", "observed_at": "2026-10-02T14:31:08Z", "phase": "recovered", "previous_failure": "update_failed", "reason": "rollback_verified", "request_id": "1f6d972a828f78022474d9593867b01a", "schema": "celikpanel-recovery-status/v1", "terminal_proof": "rollback_verified"}
+   automatic attempts=2 [["1", "update", "active", "rollback", "2026-10-02T14:29:51.835256Z"], ["2", "rollback", "active", "rollback", "2026-10-02T14:30:49.991823Z"]] owner=0 []
+   second fault reset: {"after_boot_id": "a0876072-b68d-417d-a842-48b02c6a4c75", "before_boot_id": "8d548a98-21b0-47ba-8fe5-baef00bd2f39", "new_boot": true, "reset_at": 1790951407.0455875, "ssh_return_seconds": 8.272357564000004, "status": "reset-submitted-once"}
+   preflight                          passed       14:20:08-14:20:11 
+   origin                             passed       14:20:11-14:20:18 
+   baseline-install                   passed       14:20:18-14:20:52 
+   owner-login                        passed       14:20:52-14:20:53 
+   license                            passed       14:20:53-14:20:53 
+   setup                              observed     14:20:53-14:27:02 
+   seed                               passed       14:27:02-14:27:04 
+   pre-state                          passed       14:27:04-14:29:12 
+   arm                                passed       14:29:12-14:29:13 
+   owner-start                        passed       14:29:14-14:29:14 
+   track                              passed       14:29:14-14:31:10 
+   owner-continuation (required)      skipped      14:31:10-14:31:10 
+   terminal                           passed       14:31:10-14:31:16 
+   deferred-mail-watch                observed     14:31:16-14:32:33 
+   collect                            passed       14:32:33-14:32:35 
+   verdicts                           passed       14:32:35-14:32:35 
+   terminal: outcome=recovered-automatically login=True site_marker=True smtp=True mailbox=True seeded_rows={"cron": true, "domain": true, "mail": true} running=installed {"celikpanel-agent.service": true, "celikpanel-panel.service": true} database=equal-except-volatile differing=['metrics_samples', 'server_setup_executions'] unexpected=[] timers={"changed": {}, "compared": 2, "equal": true} firewall_equal=True
+   running agent: version=v0.1.0-alpha.81 commit=bc7799284aa10841f2155ede002368d56dac1aef 
+   running panel: version=v0.1.0-alpha.81 commit=bc7799284aa10841f2155ede002368d56dac1aef 
+   agreement(track)={"agreed_samples": 7, "lag_samples": 1, "samples": 26, "verdict": "passed"} agreement(verdicts)={"agreed_samples": 7, "lag_samples": 1, "samples": 26, "verdict": "passed"}
+   guest samples total=62 after-start=36 ok/fail web=(35, 1) smtp=(36, 0) panel=(20, 16) db=(0, 0) cron distinct stamps after start=4 first=['2026-10-02T14:29:01+00:00'] last=['2026-10-02T14:32:01+00:00']
+== upd1-debian13-good: overall=complete-for-review outcome=update-verified native_evidence=False request=16f420ec2a1e02750f9d693d81595a7f
+   final={"observation": "known", "observed_at": "2026-10-02T14:17:08Z", "phase": "succeeded", "reason": "update_verified", "request_id": "16f420ec2a1e02750f9d693d81595a7f", "schema": "celikpanel-recovery-status/v1", "terminal_proof": "update_verified"}
+   automatic attempts=0 [] owner=0 []
+   preflight                          passed       14:07:35-14:07:39 
+   origin                             passed       14:07:39-14:07:47 
+   baseline-install                   passed       14:07:47-14:08:51 
+   owner-login                        passed       14:08:51-14:08:52 
+   license                            passed       14:08:52-14:08:52 
+   setup                              observed     14:08:52-14:14:49 
+   seed                               passed       14:14:49-14:14:51 
+   pre-state                          passed       14:14:51-14:16:08 
+   arm                                passed       14:16:08-14:16:09 
+   owner-start                        passed       14:16:09-14:16:09 
+   track                              passed       14:16:09-14:17:10 
+   owner-continuation (required)      skipped      14:17:10-14:17:10 
+   terminal                           passed       14:17:10-14:17:16 
+   deferred-mail-watch                observed     14:17:16-14:18:23 
+   collect                            passed       14:18:23-14:18:24 
+   verdicts                           passed       14:18:24-14:18:24 
+   terminal: outcome=update-verified login=True site_marker=True smtp=True mailbox=True seeded_rows={"cron": true, "domain": true, "mail": true} running=installed {"celikpanel-agent.service": true, "celikpanel-panel.service": true} database=equal-except-volatile differing=['metrics_samples', 'server_setup_executions'] unexpected=[] timers={"changed": {}, "compared": 2, "equal": true} firewall_equal=True
+   running agent: version=v0.1.0-alpha.82 commit=6be145014be68a875eb178c39597d9c6e1beae6c 
+   running panel: version=v0.1.0-alpha.82 commit=6be145014be68a875eb178c39597d9c6e1beae6c 
+   agreement(track)={"agreed_samples": 9, "lag_samples": 0, "samples": 14, "verdict": "passed"} agreement(verdicts)={"agreed_samples": 9, "lag_samples": 0, "samples": 14, "verdict": "passed"}
+   guest samples total=41 after-start=26 ok/fail web=(26, 0) smtp=(26, 0) panel=(20, 6) db=(0, 0) cron distinct stamps after start=3 first=['2026-10-02T14:16:01+00:00'] last=['2026-10-02T14:18:01+00:00']
+== upd1-debian13-owner-continuation: overall=complete-for-review outcome=recovered-after-owner-continuation native_evidence=False request=31dd244775740c0fdb27c4a5449c9d63
+   final={"observation": "known", "observed_at": "2026-10-02T14:50:42Z", "phase": "succeeded", "previous_failure": "recovery_failed", "reason": "update_verified", "request_id": "31dd244775740c0fdb27c4a5449c9d63", "schema": "celikpanel-recovery-status/v1", "terminal_proof": "update_verified"}
+   automatic attempts=3 [["1", "update", "completion", "forward", "2026-10-02T14:44:53.454887Z"], ["2", "update", "completion", "forward", "2026-10-02T14:46:32.517867Z"], ["3", "update", "completion", "forward", "2026-10-02T14:48:12.392097Z"]] owner=1 [["update", "completion", "2026-10-02T14:50:21.857325Z"]]
+   port_hold: {"armed": true, "held": true, "held_at": "2026-10-02T14:43:29.422566+00:00", "held_at_pause": true, "held_seconds": 409.8, "phases_seen": ["active", "completion.pending"], "release_reason": "owner-released", "released": true, "released_at": "2026-10-02T14:50:19.219168+00:00", "released_before_retry": true}
+   kind owner-continuation: as-expected findings=0 unknown=[]
+   preflight                          passed       14:34:11-14:34:15 
+   origin                             passed       14:34:15-14:34:23 
+   baseline-install                   passed       14:34:23-14:34:56 
+   owner-login                        passed       14:34:56-14:34:57 
+   license                            passed       14:34:57-14:34:57 
+   setup                              observed     14:34:57-14:40:59 
+   seed                               passed       14:40:59-14:41:02 
+   pre-state                          passed       14:41:02-14:43:09 
+   arm                                passed       14:43:09-14:43:11 
+   owner-start                        passed       14:43:11-14:43:11 
+   track                              observed     14:43:11-14:49:59 
+   owner-continuation (required)      observed     14:49:59-14:50:42 
+   track-after-owner-continuation     passed       14:50:42-14:50:44 
+   terminal                           passed       14:50:44-14:50:50 
+   deferred-mail-watch                observed     14:50:50-14:51:56 
+   collect                            passed       14:51:56-14:51:57 
+   verdicts                           passed       14:51:57-14:51:57 
+   kind-expectation                   passed       14:51:57-14:51:57 
+   terminal: outcome=recovered-after-owner-continuation login=True site_marker=True smtp=True mailbox=True seeded_rows={"cron": true, "domain": true, "mail": true} running=installed {"celikpanel-agent.service": true, "celikpanel-panel.service": true} database=equal-except-volatile differing=['metrics_samples', 'server_setup_executions'] unexpected=[] timers={"changed": {}, "compared": 2, "equal": true} firewall_equal=True
+   running agent: version=v0.1.0-alpha.82 commit=6be145014be68a875eb178c39597d9c6e1beae6c 
+   running panel: version=v0.1.0-alpha.82 commit=6be145014be68a875eb178c39597d9c6e1beae6c 
+   agreement(track)={"agreed_samples": 4, "lag_samples": 1, "samples": 27, "verdict": "passed"} agreement(verdicts)={"agreed_samples": 5, "lag_samples": 1, "samples": 28, "verdict": "passed"}
+   guest samples total=104 after-start=79 ok/fail web=(79, 0) smtp=(79, 0) panel=(20, 59) db=(0, 0) cron distinct stamps after start=9 first=['2026-10-02T14:43:01+00:00'] last=['2026-10-02T14:51:01+00:00']

@@ -1,0 +1,7 @@
+2026-10-01 11:01:38Z C: free 174,5 GB (before anything; first reading, not written to this file at the time)
+﻿2026-10-01 11:14:46Z C: free 174,4 GB (build started)
+2026-10-01 11:17:31Z C: free 174,4 GB (before cell d13good)
+2026-10-01 11:30:20Z C: free 173,7 GB (after d13good, before d13oc)
+2026-10-01 11:49:49Z C: free 170,7 GB (after d13oc, before d13def)
+2026-10-01 12:04:45Z C: free 167,7 GB (after d13def, before archgood)
+2026-10-01 12:22:40Z C: free 162,5 GB (after all cells, before staging)

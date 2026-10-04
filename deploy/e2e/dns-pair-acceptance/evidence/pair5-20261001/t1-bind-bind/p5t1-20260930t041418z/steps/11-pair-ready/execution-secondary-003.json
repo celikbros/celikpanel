@@ -1,0 +1,77 @@
+{
+  "context": {
+    "access_dns_ip": "192.0.2.11",
+    "dns_engine": "bind",
+    "dns_hosting_management": "",
+    "dns_mode": "local",
+    "dns_role": "secondary",
+    "local_ip": "192.0.2.11",
+    "local_nameserver": "ns2.ns-accept.test",
+    "mail_hostname": "",
+    "panel_domain": "panel-arch.ns-accept.test",
+    "peer_ip": "192.0.2.10",
+    "peer_nameserver": "ns1.ns-accept.test"
+  },
+  "error": {
+    "code": "server_setup_access_dns_required",
+    "message": "Public DNS must resolve panel-arch.ns-accept.test to 192.0.2.11 before a certificate is requested. Check this hostname's A/AAAA records and its zone delegation. For DNS managed here, review the infrastructure DNS records in this wizard; otherwise correct them at the primary DNS server or provider. This check resumes automatically when DNS is verified."
+  },
+  "id": "3386948bc5c53184eb32722c224f2dfe",
+  "panel_url": "https://panel-arch.ns-accept.test:2083/",
+  "phase": "access_dns",
+  "plan_id": "5e76259cec3c927ae2ba37c4e26d18e6",
+  "request_id": "3386948bc5c53184eb32722c224f2dfe",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "01-dns",
+      "kind": "dns",
+      "owner_id": "2adddf1b28d37d7737dc94d7b499cafc",
+      "request_id": "a7f836f065d6a5cf50ec2e596dbe679c",
+      "status": "succeeded",
+      "target": "local"
+    },
+    {
+      "id": "02-service",
+      "kind": "service",
+      "operation_id": "0d86be3a8be78959691864cbfb21d523",
+      "owner_id": "d69158bba7166de9e375b2d11e54c25e",
+      "request_id": "7650a257a8e645f236c97e2bb1167be1",
+      "status": "succeeded",
+      "target": "certbot"
+    },
+    {
+      "id": "03-firewall",
+      "kind": "firewall",
+      "owner_id": "8b7c959ab447ef52b0bde1e3e9188c18",
+      "request_id": "02a291922ecaa02c0b63004096ac9d18",
+      "status": "succeeded",
+      "target": "enable_and_persist"
+    },
+    {
+      "id": "04-access_dns",
+      "kind": "access_dns",
+      "owner_id": "7a6844f53d2e7c2ff97b5f30d9a6b928",
+      "qualifier": "192.0.2.11",
+      "request_id": "03571f3f7d9edbedc219441225359930",
+      "status": "running",
+      "target": "panel-arch.ns-accept.test"
+    },
+    {
+      "id": "05-panel_certificate",
+      "kind": "panel_certificate",
+      "owner_id": "54464273f545931a13019d7d0dc28c2e",
+      "request_id": "99411d151a615f356c3cfc6b8a27d8bc",
+      "status": "pending",
+      "target": "panel-arch.ns-accept.test"
+    },
+    {
+      "id": "06-verify",
+      "kind": "verify",
+      "owner_id": "7cf9c1d79c16d52ea47a3f000844dec3",
+      "request_id": "16177332c30c4c3c910230f0201156e2",
+      "status": "pending",
+      "target": "dns"
+    }
+  ]
+}

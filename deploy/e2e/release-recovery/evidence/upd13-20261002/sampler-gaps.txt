@@ -1,0 +1,52 @@
+# sampler gaps over 12 s per run (5 s samplers; reboot/reset windows of the cell appear here too)
+upd1-arch-defective/run-a guest-samples.jsonl: samples=42 max_gap=5.0s gaps>12s=0
+upd1-arch-defective/run-a host-samples.jsonl: samples=43 max_gap=5.0s gaps>12s=0
+upd1-arch-good/run-a guest-samples.jsonl: samples=28 max_gap=5.0s gaps>12s=0
+upd1-arch-good/run-a host-samples.jsonl: samples=28 max_gap=5.0s gaps>12s=0
+upd1-arch-mgmt-off-reboot/run-a guest-samples.jsonl: samples=76 max_gap=21.3s gaps>12s=1
+    22:50:58-22:51:20 21.3s
+upd1-arch-mgmt-off-reboot/run-a host-samples.jsonl: samples=78 max_gap=11.0s gaps>12s=0
+upd1-arch-owner-continuation/run-a guest-samples.jsonl: samples=0 max_gap=0.0s gaps>12s=0
+upd1-arch-owner-continuation/run-a host-samples.jsonl: samples=0 max_gap=0.0s gaps>12s=0
+upd1-arch-owner-continuation/run-b guest-samples.jsonl: samples=84 max_gap=7.2s gaps>12s=0
+upd1-arch-owner-continuation/run-b host-samples.jsonl: samples=99 max_gap=6.0s gaps>12s=0
+upd1-arch-startcheck/run-a guest-samples.jsonl: samples=41 max_gap=5.0s gaps>12s=0
+upd1-arch-startcheck/run-a host-samples.jsonl: samples=42 max_gap=5.0s gaps>12s=0
+upd1-debian13-defective/run-a guest-samples.jsonl: samples=63 max_gap=16.0s gaps>12s=1
+    21:02:15-21:02:31 16.0s
+upd1-debian13-defective/run-a host-samples.jsonl: samples=65 max_gap=9.0s gaps>12s=0
+upd1-debian13-good/run-a guest-samples.jsonl: samples=40 max_gap=5.7s gaps>12s=0
+upd1-debian13-good/run-a host-samples.jsonl: samples=41 max_gap=5.0s gaps>12s=0
+upd1-debian13-mgmt-off-reboot/run-a guest-samples.jsonl: samples=81 max_gap=16.8s gaps>12s=1
+    22:06:23-22:06:40 16.8s
+upd1-debian13-mgmt-off-reboot/run-a host-samples.jsonl: samples=82 max_gap=11.0s gaps>12s=0
+upd1-debian13-owner-continuation/run-a guest-samples.jsonl: samples=105 max_gap=7.5s gaps>12s=0
+upd1-debian13-owner-continuation/run-a host-samples.jsonl: samples=122 max_gap=7.0s gaps>12s=0
+upd1-debian13-realstart/run-a guest-samples.jsonl: samples=100 max_gap=5.0s gaps>12s=0
+upd1-debian13-realstart/run-a host-samples.jsonl: samples=100 max_gap=5.0s gaps>12s=0
+upd1-debian13-startcheck/run-a guest-samples.jsonl: samples=59 max_gap=15.0s gaps>12s=1
+    21:16:12-21:16:27 15.0s
+upd1-debian13-startcheck/run-a host-samples.jsonl: samples=62 max_gap=6.0s gaps>12s=0
+upd1-ubuntu-defective/run-a guest-samples.jsonl: samples=59 max_gap=16.9s gaps>12s=1
+    23:30:56-23:31:13 16.9s
+upd1-ubuntu-defective/run-a host-samples.jsonl: samples=60 max_gap=14.0s gaps>12s=1
+    23:31:01-23:31:15 14.0s
+upd1-ubuntu-good/run-a guest-samples.jsonl: samples=42 max_gap=5.0s gaps>12s=0
+upd1-ubuntu-good/run-a host-samples.jsonl: samples=43 max_gap=5.0s gaps>12s=0
+upd1-ubuntu-mgmt-off-reboot/run-a guest-samples.jsonl: samples=71 max_gap=19.4s gaps>12s=1
+    00:36:13-00:36:32 19.4s
+upd1-ubuntu-mgmt-off-reboot/run-a host-samples.jsonl: samples=73 max_gap=10.0s gaps>12s=0
+upd1-ubuntu-owner-continuation/run-a guest-samples.jsonl: samples=99 max_gap=7.2s gaps>12s=0
+upd1-ubuntu-owner-continuation/run-a host-samples.jsonl: samples=115 max_gap=6.0s gaps>12s=0
+upd1-ubuntu-startcheck/run-a guest-samples.jsonl: samples=57 max_gap=17.7s gaps>12s=1
+    23:51:01-23:51:18 17.7s
+upd1-ubuntu-startcheck/run-a host-samples.jsonl: samples=59 max_gap=9.0s gaps>12s=0
+part2-alpha80/upd1-debian13-defective/run-a guest-samples.jsonl: samples=60 max_gap=12.8s gaps>12s=1
+    01:05:06-01:05:19 12.8s
+part2-alpha80/upd1-debian13-defective/run-a host-samples.jsonl: samples=61 max_gap=9.0s gaps>12s=0
+part2-alpha80/upd1-debian13-good/run-a guest-samples.jsonl: samples=63 max_gap=5.0s gaps>12s=0
+part2-alpha80/upd1-debian13-good/run-a host-samples.jsonl: samples=64 max_gap=5.0s gaps>12s=0
+part2-alpha80/upd1-debian13-owner-continuation/run-a guest-samples.jsonl: samples=118 max_gap=7.3s gaps>12s=0
+part2-alpha80/upd1-debian13-owner-continuation/run-a host-samples.jsonl: samples=135 max_gap=6.0s gaps>12s=0
+part2-alpha80/upd1-ubuntu-good/run-a guest-samples.jsonl: samples=45 max_gap=5.0s gaps>12s=0
+part2-alpha80/upd1-ubuntu-good/run-a host-samples.jsonl: samples=46 max_gap=5.0s gaps>12s=0

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -79,6 +80,12 @@ func checkBINDSignedUpdateCompatibleWithOps(ctx context.Context, ops bindSignedU
 	} else if exists {
 		if err := validateDNSEngineSwitchJournal(journal); err != nil {
 			return err
+		}
+		if journal.Schema == dnsengineartifact.SwitchJournalSchemaV4 {
+			return errors.New("active v4 PowerDNS target journal requires exact owner recovery before a signed update")
+		}
+		if journal.Schema == dnsengineartifact.SwitchJournalSchemaV2 {
+			return errors.New("active v2 BIND switch journal requires exact owner recovery before a signed update")
 		}
 		// Existing signed updates reconcile supported retained journals. This
 		// read-only probe covers settled BIND state; it must not forbid that

@@ -1,0 +1,738 @@
+######## /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-boot2/copies/085452.246-96e00dbe62d1.sqlite3
+== /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-boot2/copies/085452.246-96e00dbe62d1.sqlite3 size=98304 mtime_ns=1790758489000000000 sha256=96e00dbe62d14048b60c371e7a3c39feceed2e6f8f2df7407f3718feba81f5b6
+   sibling /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-boot2/copies/085452.246-96e00dbe62d1.sqlite3-wal size=0
+   with retained WAL /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-boot2/copies/085452.246-96e00dbe62d1.sqlite3-wal size=0
+tables: ['celikpanel_dns_engine_manifest_receipt', 'celikpanel_dns_zone_sync_receipts', 'celikpanel_dns_zone_sync_v3_receipts', 'comments', 'cryptokeys', 'domainmetadata', 'domains', 'records', 'supermasters', 'tsigkeys']
+-- table celikpanel_dns_engine_manifest_receipt rows=1 columns=['singleton', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'source_revision', 'zone_count', 'snapshot_bytes', 'schema']
+   celikpanel_dns_engine_manifest_receipt: {"singleton": 1, "engine": "pdns", "engine_epoch": 1, "request_id": "c59b537aac13c590e71b4682a88ed7b1", "owner_id": "2496117f5d511eeb130aeb15040de678", "qualifier": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "source_revision": 0, "zone_count": 0, "snapshot_bytes": 0, "schema": "dns-engine-switch/v1"}
+-- table celikpanel_dns_zone_sync_receipts rows=0 columns=['domain', 'request_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table celikpanel_dns_zone_sync_v3_receipts rows=1 columns=['domain', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+   celikpanel_dns_zone_sync_v3_receipts: {"domain": "s2.s1-kill.test", "engine": "pdns", "engine_epoch": 1, "request_id": "03bc01afa7ab7518855affd581094726", "owner_id": "5552dfe75d99ca5c5df5cc2ef25d8dce", "qualifier": "dns-zone-sync/v3:sha256:d5345b9d08e200db472fdb31fe7df853f048d1388af736291d98d6caf24092c7", "desired_generation": 4, "action": "sync", "zone_type": "MASTER", "schema": "dns-zone-sync/v3"}
+-- table comments rows=0 columns=['id', 'domain_id', 'name', 'type', 'modified_at', 'account', 'comment']
+-- table cryptokeys rows=0 columns=['id', 'domain_id', 'flags', 'active', 'published', 'content']
+-- table domainmetadata rows=1 columns=['id', 'domain_id', 'kind', 'content']
+   domainmetadata: {"id": 1, "domain_id": 1, "kind": "CATALOG-HASH", "content": "1Rf5KuuzsJMQRGXVLYxlmzvq+Z93Mwk4oSSCrR9KFCA="}
+-- table domains rows=2 columns=['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+   domains: {"id": 1, "name": "catalog-c000020a.celikpanel.invalid", "master": null, "last_check": null, "type": "PRODUCER", "notified_serial": 1790758341, "account": "celikpanel-bind-catalog-v1", "options": null, "catalog": null}
+   domains: {"id": 2, "name": "s2.s1-kill.test", "master": null, "last_check": null, "type": "MASTER", "notified_serial": 2026092803, "account": null, "options": null, "catalog": "catalog-c000020a.celikpanel.invalid"}
+-- table records rows=5 columns=['id', 'domain_id', 'name', 'type', 'content', 'ttl', 'prio', 'disabled', 'ordername', 'auth']
+   records per domain: ["catalog-c000020a.celikpanel.invalid", 2]
+   records per domain: ["s2.s1-kill.test", 3]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "NS", 1]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "SOA", 1]
+   records per domain/type: ["s2.s1-kill.test", "A", 1]
+   records per domain/type: ["s2.s1-kill.test", "NS", 1]
+   records per domain/type: ["s2.s1-kill.test", "SOA", 1]
+   records: {"id": 1, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "NS", "content": "invalid.", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 3, "domain_id": 2, "name": "s2.s1-kill.test", "type": "NS", "content": "ns1.s1-kill.test", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 4, "domain_id": 2, "name": "s2.s1-kill.test", "type": "SOA", "content": "ns1.s1-kill.test hostmaster.s1-kill.test 2026092803 10800 3600 604800 3600", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 5, "domain_id": 2, "name": "www.s2.s1-kill.test", "type": "A", "content": "192.0.2.10", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 6, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "SOA", "content": "invalid invalid 1790758460 60 30 3600 30", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+-- table supermasters rows=0 columns=['ip', 'nameserver', 'account']
+-- table tsigkeys rows=0 columns=['id', 'name', 'algorithm', 'secret']
+######## /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-boot2/pdns-at-at-kill-proof.sqlite3
+== /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-boot2/pdns-at-at-kill-proof.sqlite3 size=98304 mtime_ns=1790758489000000000 sha256=96e00dbe62d14048b60c371e7a3c39feceed2e6f8f2df7407f3718feba81f5b6
+   sibling /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-boot2/pdns-at-at-kill-proof.sqlite3-wal size=0
+   with retained WAL /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-boot2/pdns-at-at-kill-proof.sqlite3-wal size=0
+tables: ['celikpanel_dns_engine_manifest_receipt', 'celikpanel_dns_zone_sync_receipts', 'celikpanel_dns_zone_sync_v3_receipts', 'comments', 'cryptokeys', 'domainmetadata', 'domains', 'records', 'supermasters', 'tsigkeys']
+-- table celikpanel_dns_engine_manifest_receipt rows=1 columns=['singleton', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'source_revision', 'zone_count', 'snapshot_bytes', 'schema']
+   celikpanel_dns_engine_manifest_receipt: {"singleton": 1, "engine": "pdns", "engine_epoch": 1, "request_id": "c59b537aac13c590e71b4682a88ed7b1", "owner_id": "2496117f5d511eeb130aeb15040de678", "qualifier": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "source_revision": 0, "zone_count": 0, "snapshot_bytes": 0, "schema": "dns-engine-switch/v1"}
+-- table celikpanel_dns_zone_sync_receipts rows=0 columns=['domain', 'request_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table celikpanel_dns_zone_sync_v3_receipts rows=1 columns=['domain', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+   celikpanel_dns_zone_sync_v3_receipts: {"domain": "s2.s1-kill.test", "engine": "pdns", "engine_epoch": 1, "request_id": "03bc01afa7ab7518855affd581094726", "owner_id": "5552dfe75d99ca5c5df5cc2ef25d8dce", "qualifier": "dns-zone-sync/v3:sha256:d5345b9d08e200db472fdb31fe7df853f048d1388af736291d98d6caf24092c7", "desired_generation": 4, "action": "sync", "zone_type": "MASTER", "schema": "dns-zone-sync/v3"}
+-- table comments rows=0 columns=['id', 'domain_id', 'name', 'type', 'modified_at', 'account', 'comment']
+-- table cryptokeys rows=0 columns=['id', 'domain_id', 'flags', 'active', 'published', 'content']
+-- table domainmetadata rows=1 columns=['id', 'domain_id', 'kind', 'content']
+   domainmetadata: {"id": 1, "domain_id": 1, "kind": "CATALOG-HASH", "content": "1Rf5KuuzsJMQRGXVLYxlmzvq+Z93Mwk4oSSCrR9KFCA="}
+-- table domains rows=2 columns=['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+   domains: {"id": 1, "name": "catalog-c000020a.celikpanel.invalid", "master": null, "last_check": null, "type": "PRODUCER", "notified_serial": 1790758341, "account": "celikpanel-bind-catalog-v1", "options": null, "catalog": null}
+   domains: {"id": 2, "name": "s2.s1-kill.test", "master": null, "last_check": null, "type": "MASTER", "notified_serial": 2026092803, "account": null, "options": null, "catalog": "catalog-c000020a.celikpanel.invalid"}
+-- table records rows=5 columns=['id', 'domain_id', 'name', 'type', 'content', 'ttl', 'prio', 'disabled', 'ordername', 'auth']
+   records per domain: ["catalog-c000020a.celikpanel.invalid", 2]
+   records per domain: ["s2.s1-kill.test", 3]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "NS", 1]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "SOA", 1]
+   records per domain/type: ["s2.s1-kill.test", "A", 1]
+   records per domain/type: ["s2.s1-kill.test", "NS", 1]
+   records per domain/type: ["s2.s1-kill.test", "SOA", 1]
+   records: {"id": 1, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "NS", "content": "invalid.", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 3, "domain_id": 2, "name": "s2.s1-kill.test", "type": "NS", "content": "ns1.s1-kill.test", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 4, "domain_id": 2, "name": "s2.s1-kill.test", "type": "SOA", "content": "ns1.s1-kill.test hostmaster.s1-kill.test 2026092803 10800 3600 604800 3600", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 5, "domain_id": 2, "name": "www.s2.s1-kill.test", "type": "A", "content": "192.0.2.10", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 6, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "SOA", "content": "invalid invalid 1790758460 60 30 3600 30", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+-- table supermasters rows=0 columns=['ip', 'nameserver', 'account']
+-- table tsigkeys rows=0 columns=['id', 'name', 'algorithm', 'secret']
+######## /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-boot2/pdns-at-at-result.sqlite3
+== /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-boot2/pdns-at-at-result.sqlite3 size=98304 mtime_ns=1790758489000000000 sha256=96e00dbe62d14048b60c371e7a3c39feceed2e6f8f2df7407f3718feba81f5b6
+   sibling /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-boot2/pdns-at-at-result.sqlite3-wal size=0
+   with retained WAL /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-boot2/pdns-at-at-result.sqlite3-wal size=0
+tables: ['celikpanel_dns_engine_manifest_receipt', 'celikpanel_dns_zone_sync_receipts', 'celikpanel_dns_zone_sync_v3_receipts', 'comments', 'cryptokeys', 'domainmetadata', 'domains', 'records', 'supermasters', 'tsigkeys']
+-- table celikpanel_dns_engine_manifest_receipt rows=1 columns=['singleton', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'source_revision', 'zone_count', 'snapshot_bytes', 'schema']
+   celikpanel_dns_engine_manifest_receipt: {"singleton": 1, "engine": "pdns", "engine_epoch": 1, "request_id": "c59b537aac13c590e71b4682a88ed7b1", "owner_id": "2496117f5d511eeb130aeb15040de678", "qualifier": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "source_revision": 0, "zone_count": 0, "snapshot_bytes": 0, "schema": "dns-engine-switch/v1"}
+-- table celikpanel_dns_zone_sync_receipts rows=0 columns=['domain', 'request_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table celikpanel_dns_zone_sync_v3_receipts rows=1 columns=['domain', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+   celikpanel_dns_zone_sync_v3_receipts: {"domain": "s2.s1-kill.test", "engine": "pdns", "engine_epoch": 1, "request_id": "03bc01afa7ab7518855affd581094726", "owner_id": "5552dfe75d99ca5c5df5cc2ef25d8dce", "qualifier": "dns-zone-sync/v3:sha256:d5345b9d08e200db472fdb31fe7df853f048d1388af736291d98d6caf24092c7", "desired_generation": 4, "action": "sync", "zone_type": "MASTER", "schema": "dns-zone-sync/v3"}
+-- table comments rows=0 columns=['id', 'domain_id', 'name', 'type', 'modified_at', 'account', 'comment']
+-- table cryptokeys rows=0 columns=['id', 'domain_id', 'flags', 'active', 'published', 'content']
+-- table domainmetadata rows=1 columns=['id', 'domain_id', 'kind', 'content']
+   domainmetadata: {"id": 1, "domain_id": 1, "kind": "CATALOG-HASH", "content": "1Rf5KuuzsJMQRGXVLYxlmzvq+Z93Mwk4oSSCrR9KFCA="}
+-- table domains rows=2 columns=['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+   domains: {"id": 1, "name": "catalog-c000020a.celikpanel.invalid", "master": null, "last_check": null, "type": "PRODUCER", "notified_serial": 1790758341, "account": "celikpanel-bind-catalog-v1", "options": null, "catalog": null}
+   domains: {"id": 2, "name": "s2.s1-kill.test", "master": null, "last_check": null, "type": "MASTER", "notified_serial": 2026092803, "account": null, "options": null, "catalog": "catalog-c000020a.celikpanel.invalid"}
+-- table records rows=5 columns=['id', 'domain_id', 'name', 'type', 'content', 'ttl', 'prio', 'disabled', 'ordername', 'auth']
+   records per domain: ["catalog-c000020a.celikpanel.invalid", 2]
+   records per domain: ["s2.s1-kill.test", 3]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "NS", 1]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "SOA", 1]
+   records per domain/type: ["s2.s1-kill.test", "A", 1]
+   records per domain/type: ["s2.s1-kill.test", "NS", 1]
+   records per domain/type: ["s2.s1-kill.test", "SOA", 1]
+   records: {"id": 1, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "NS", "content": "invalid.", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 3, "domain_id": 2, "name": "s2.s1-kill.test", "type": "NS", "content": "ns1.s1-kill.test", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 4, "domain_id": 2, "name": "s2.s1-kill.test", "type": "SOA", "content": "ns1.s1-kill.test hostmaster.s1-kill.test 2026092803 10800 3600 604800 3600", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 5, "domain_id": 2, "name": "www.s2.s1-kill.test", "type": "A", "content": "192.0.2.10", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 6, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "SOA", "content": "invalid invalid 1790758460 60 30 3600 30", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+-- table supermasters rows=0 columns=['ip', 'nameserver', 'account']
+-- table tsigkeys rows=0 columns=['id', 'name', 'algorithm', 'secret']
+######## /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-boot2/pdns-at-start.sqlite3
+== /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-boot2/pdns-at-start.sqlite3 size=98304 mtime_ns=1790758489000000000 sha256=96e00dbe62d14048b60c371e7a3c39feceed2e6f8f2df7407f3718feba81f5b6
+   sibling /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-boot2/pdns-at-start.sqlite3-wal size=0
+   with retained WAL /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-boot2/pdns-at-start.sqlite3-wal size=0
+tables: ['celikpanel_dns_engine_manifest_receipt', 'celikpanel_dns_zone_sync_receipts', 'celikpanel_dns_zone_sync_v3_receipts', 'comments', 'cryptokeys', 'domainmetadata', 'domains', 'records', 'supermasters', 'tsigkeys']
+-- table celikpanel_dns_engine_manifest_receipt rows=1 columns=['singleton', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'source_revision', 'zone_count', 'snapshot_bytes', 'schema']
+   celikpanel_dns_engine_manifest_receipt: {"singleton": 1, "engine": "pdns", "engine_epoch": 1, "request_id": "c59b537aac13c590e71b4682a88ed7b1", "owner_id": "2496117f5d511eeb130aeb15040de678", "qualifier": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "source_revision": 0, "zone_count": 0, "snapshot_bytes": 0, "schema": "dns-engine-switch/v1"}
+-- table celikpanel_dns_zone_sync_receipts rows=0 columns=['domain', 'request_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table celikpanel_dns_zone_sync_v3_receipts rows=1 columns=['domain', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+   celikpanel_dns_zone_sync_v3_receipts: {"domain": "s2.s1-kill.test", "engine": "pdns", "engine_epoch": 1, "request_id": "03bc01afa7ab7518855affd581094726", "owner_id": "5552dfe75d99ca5c5df5cc2ef25d8dce", "qualifier": "dns-zone-sync/v3:sha256:d5345b9d08e200db472fdb31fe7df853f048d1388af736291d98d6caf24092c7", "desired_generation": 4, "action": "sync", "zone_type": "MASTER", "schema": "dns-zone-sync/v3"}
+-- table comments rows=0 columns=['id', 'domain_id', 'name', 'type', 'modified_at', 'account', 'comment']
+-- table cryptokeys rows=0 columns=['id', 'domain_id', 'flags', 'active', 'published', 'content']
+-- table domainmetadata rows=1 columns=['id', 'domain_id', 'kind', 'content']
+   domainmetadata: {"id": 1, "domain_id": 1, "kind": "CATALOG-HASH", "content": "1Rf5KuuzsJMQRGXVLYxlmzvq+Z93Mwk4oSSCrR9KFCA="}
+-- table domains rows=2 columns=['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+   domains: {"id": 1, "name": "catalog-c000020a.celikpanel.invalid", "master": null, "last_check": null, "type": "PRODUCER", "notified_serial": 1790758341, "account": "celikpanel-bind-catalog-v1", "options": null, "catalog": null}
+   domains: {"id": 2, "name": "s2.s1-kill.test", "master": null, "last_check": null, "type": "MASTER", "notified_serial": 2026092803, "account": null, "options": null, "catalog": "catalog-c000020a.celikpanel.invalid"}
+-- table records rows=5 columns=['id', 'domain_id', 'name', 'type', 'content', 'ttl', 'prio', 'disabled', 'ordername', 'auth']
+   records per domain: ["catalog-c000020a.celikpanel.invalid", 2]
+   records per domain: ["s2.s1-kill.test", 3]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "NS", 1]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "SOA", 1]
+   records per domain/type: ["s2.s1-kill.test", "A", 1]
+   records per domain/type: ["s2.s1-kill.test", "NS", 1]
+   records per domain/type: ["s2.s1-kill.test", "SOA", 1]
+   records: {"id": 1, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "NS", "content": "invalid.", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 3, "domain_id": 2, "name": "s2.s1-kill.test", "type": "NS", "content": "ns1.s1-kill.test", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 4, "domain_id": 2, "name": "s2.s1-kill.test", "type": "SOA", "content": "ns1.s1-kill.test hostmaster.s1-kill.test 2026092803 10800 3600 604800 3600", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 5, "domain_id": 2, "name": "www.s2.s1-kill.test", "type": "A", "content": "192.0.2.10", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 6, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "SOA", "content": "invalid invalid 1790758460 60 30 3600 30", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+-- table supermasters rows=0 columns=['ip', 'nameserver', 'account']
+-- table tsigkeys rows=0 columns=['id', 'name', 'algorithm', 'secret']
+######## /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085017.971-35cdac176bec.sqlite3
+== /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085017.971-35cdac176bec.sqlite3 size=98304 mtime_ns=1790758217000000000 sha256=35cdac176becb2d04628c971b5e5a7fea0c406daa97f4f841fffb5c170b17ece
+   no retained WAL copy
+tables: ['celikpanel_dns_engine_manifest_receipt', 'celikpanel_dns_zone_sync_receipts', 'celikpanel_dns_zone_sync_v3_receipts', 'comments', 'cryptokeys', 'domainmetadata', 'domains', 'records', 'supermasters', 'tsigkeys']
+-- table celikpanel_dns_engine_manifest_receipt rows=1 columns=['singleton', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'source_revision', 'zone_count', 'snapshot_bytes', 'schema']
+   celikpanel_dns_engine_manifest_receipt: {"singleton": 1, "engine": "pdns", "engine_epoch": 1, "request_id": "c59b537aac13c590e71b4682a88ed7b1", "owner_id": "2496117f5d511eeb130aeb15040de678", "qualifier": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "source_revision": 0, "zone_count": 0, "snapshot_bytes": 0, "schema": "dns-engine-switch/v1"}
+-- table celikpanel_dns_zone_sync_receipts rows=0 columns=['domain', 'request_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table celikpanel_dns_zone_sync_v3_receipts rows=0 columns=['domain', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table comments rows=0 columns=['id', 'domain_id', 'name', 'type', 'modified_at', 'account', 'comment']
+-- table cryptokeys rows=0 columns=['id', 'domain_id', 'flags', 'active', 'published', 'content']
+-- table domainmetadata rows=0 columns=['id', 'domain_id', 'kind', 'content']
+-- table domains rows=1 columns=['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+   domains: {"id": 1, "name": "catalog-c000020a.celikpanel.invalid", "master": null, "last_check": null, "type": "PRODUCER", "notified_serial": null, "account": "celikpanel-bind-catalog-v1", "options": null, "catalog": null}
+-- table records rows=2 columns=['id', 'domain_id', 'name', 'type', 'content', 'ttl', 'prio', 'disabled', 'ordername', 'auth']
+   records per domain: ["catalog-c000020a.celikpanel.invalid", 2]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "NS", 1]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "SOA", 1]
+   records: {"id": 1, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "NS", "content": "invalid.", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 2, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "SOA", "content": "invalid. invalid. 1 60 30 3600 30", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+-- table supermasters rows=0 columns=['ip', 'nameserver', 'account']
+-- table tsigkeys rows=0 columns=['id', 'name', 'algorithm', 'secret']
+######## /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085020.565-687ea661ee73.sqlite3
+== /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085020.565-687ea661ee73.sqlite3 size=98304 mtime_ns=1790758220000000000 sha256=9b1ca507c5c03056cd67a9451d5ef605bc0509c6932c2ff4cd46103920d5fbd0
+   sibling /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085020.565-687ea661ee73.sqlite3-wal size=8272
+   with retained WAL /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085020.565-687ea661ee73.sqlite3-wal size=8272
+tables: ['celikpanel_dns_engine_manifest_receipt', 'celikpanel_dns_zone_sync_receipts', 'celikpanel_dns_zone_sync_v3_receipts', 'comments', 'cryptokeys', 'domainmetadata', 'domains', 'records', 'supermasters', 'tsigkeys']
+-- table celikpanel_dns_engine_manifest_receipt rows=1 columns=['singleton', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'source_revision', 'zone_count', 'snapshot_bytes', 'schema']
+   celikpanel_dns_engine_manifest_receipt: {"singleton": 1, "engine": "pdns", "engine_epoch": 1, "request_id": "c59b537aac13c590e71b4682a88ed7b1", "owner_id": "2496117f5d511eeb130aeb15040de678", "qualifier": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "source_revision": 0, "zone_count": 0, "snapshot_bytes": 0, "schema": "dns-engine-switch/v1"}
+-- table celikpanel_dns_zone_sync_receipts rows=0 columns=['domain', 'request_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table celikpanel_dns_zone_sync_v3_receipts rows=0 columns=['domain', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table comments rows=0 columns=['id', 'domain_id', 'name', 'type', 'modified_at', 'account', 'comment']
+-- table cryptokeys rows=0 columns=['id', 'domain_id', 'flags', 'active', 'published', 'content']
+-- table domainmetadata rows=1 columns=['id', 'domain_id', 'kind', 'content']
+   domainmetadata: {"id": 1, "domain_id": 1, "kind": "CATALOG-HASH", "content": "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="}
+-- table domains rows=1 columns=['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+   domains: {"id": 1, "name": "catalog-c000020a.celikpanel.invalid", "master": null, "last_check": null, "type": "PRODUCER", "notified_serial": null, "account": "celikpanel-bind-catalog-v1", "options": null, "catalog": null}
+-- table records rows=2 columns=['id', 'domain_id', 'name', 'type', 'content', 'ttl', 'prio', 'disabled', 'ordername', 'auth']
+   records per domain: ["catalog-c000020a.celikpanel.invalid", 2]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "NS", 1]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "SOA", 1]
+   records: {"id": 1, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "NS", "content": "invalid.", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 2, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "SOA", "content": "invalid. invalid. 1 60 30 3600 30", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+-- table supermasters rows=0 columns=['ip', 'nameserver', 'account']
+-- table tsigkeys rows=0 columns=['id', 'name', 'algorithm', 'secret']
+######## /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085020.863-8cc6e813400c.sqlite3
+== /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085020.863-8cc6e813400c.sqlite3 size=98304 mtime_ns=1790758220000000000 sha256=9b1ca507c5c03056cd67a9451d5ef605bc0509c6932c2ff4cd46103920d5fbd0
+   sibling /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085020.863-8cc6e813400c.sqlite3-wal size=28872
+   with retained WAL /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085020.863-8cc6e813400c.sqlite3-wal size=28872
+tables: ['celikpanel_dns_engine_manifest_receipt', 'celikpanel_dns_zone_sync_receipts', 'celikpanel_dns_zone_sync_v3_receipts', 'comments', 'cryptokeys', 'domainmetadata', 'domains', 'records', 'supermasters', 'tsigkeys']
+-- table celikpanel_dns_engine_manifest_receipt rows=1 columns=['singleton', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'source_revision', 'zone_count', 'snapshot_bytes', 'schema']
+   celikpanel_dns_engine_manifest_receipt: {"singleton": 1, "engine": "pdns", "engine_epoch": 1, "request_id": "c59b537aac13c590e71b4682a88ed7b1", "owner_id": "2496117f5d511eeb130aeb15040de678", "qualifier": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "source_revision": 0, "zone_count": 0, "snapshot_bytes": 0, "schema": "dns-engine-switch/v1"}
+-- table celikpanel_dns_zone_sync_receipts rows=0 columns=['domain', 'request_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table celikpanel_dns_zone_sync_v3_receipts rows=0 columns=['domain', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table comments rows=0 columns=['id', 'domain_id', 'name', 'type', 'modified_at', 'account', 'comment']
+-- table cryptokeys rows=0 columns=['id', 'domain_id', 'flags', 'active', 'published', 'content']
+-- table domainmetadata rows=1 columns=['id', 'domain_id', 'kind', 'content']
+   domainmetadata: {"id": 1, "domain_id": 1, "kind": "CATALOG-HASH", "content": "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="}
+-- table domains rows=1 columns=['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+   domains: {"id": 1, "name": "catalog-c000020a.celikpanel.invalid", "master": null, "last_check": null, "type": "PRODUCER", "notified_serial": 1, "account": "celikpanel-bind-catalog-v1", "options": null, "catalog": null}
+-- table records rows=2 columns=['id', 'domain_id', 'name', 'type', 'content', 'ttl', 'prio', 'disabled', 'ordername', 'auth']
+   records per domain: ["catalog-c000020a.celikpanel.invalid", 2]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "NS", 1]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "SOA", 1]
+   records: {"id": 1, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "NS", "content": "invalid.", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 2, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "SOA", "content": "invalid invalid 1790758220 60 30 3600 30", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+-- table supermasters rows=0 columns=['ip', 'nameserver', 'account']
+-- table tsigkeys rows=0 columns=['id', 'name', 'algorithm', 'secret']
+######## /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085107.890-8f094b4eacfb.sqlite3
+== /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085107.890-8f094b4eacfb.sqlite3 size=98304 mtime_ns=1790758220000000000 sha256=9b1ca507c5c03056cd67a9451d5ef605bc0509c6932c2ff4cd46103920d5fbd0
+   sibling /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085107.890-8f094b4eacfb.sqlite3-wal size=61832
+   with retained WAL /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085107.890-8f094b4eacfb.sqlite3-wal size=61832
+tables: ['celikpanel_dns_engine_manifest_receipt', 'celikpanel_dns_zone_sync_receipts', 'celikpanel_dns_zone_sync_v3_receipts', 'comments', 'cryptokeys', 'domainmetadata', 'domains', 'records', 'supermasters', 'tsigkeys']
+-- table celikpanel_dns_engine_manifest_receipt rows=1 columns=['singleton', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'source_revision', 'zone_count', 'snapshot_bytes', 'schema']
+   celikpanel_dns_engine_manifest_receipt: {"singleton": 1, "engine": "pdns", "engine_epoch": 1, "request_id": "c59b537aac13c590e71b4682a88ed7b1", "owner_id": "2496117f5d511eeb130aeb15040de678", "qualifier": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "source_revision": 0, "zone_count": 0, "snapshot_bytes": 0, "schema": "dns-engine-switch/v1"}
+-- table celikpanel_dns_zone_sync_receipts rows=0 columns=['domain', 'request_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table celikpanel_dns_zone_sync_v3_receipts rows=1 columns=['domain', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+   celikpanel_dns_zone_sync_v3_receipts: {"domain": "s2.s1-kill.test", "engine": "pdns", "engine_epoch": 1, "request_id": "88a85ce293b371ea72de8cd9cb5d9cfd", "owner_id": "4cad572ea1af35637b3d2b44c4e6b520", "qualifier": "dns-zone-sync/v3:sha256:6ccf0b5599f9694e54f65d92a6d3550f13100491b834a76a160a9b74b05705b4", "desired_generation": 1, "action": "sync", "zone_type": "MASTER", "schema": "dns-zone-sync/v3"}
+-- table comments rows=0 columns=['id', 'domain_id', 'name', 'type', 'modified_at', 'account', 'comment']
+-- table cryptokeys rows=0 columns=['id', 'domain_id', 'flags', 'active', 'published', 'content']
+-- table domainmetadata rows=1 columns=['id', 'domain_id', 'kind', 'content']
+   domainmetadata: {"id": 1, "domain_id": 1, "kind": "CATALOG-HASH", "content": "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="}
+-- table domains rows=2 columns=['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+   domains: {"id": 1, "name": "catalog-c000020a.celikpanel.invalid", "master": null, "last_check": null, "type": "PRODUCER", "notified_serial": 1, "account": "celikpanel-bind-catalog-v1", "options": null, "catalog": null}
+   domains: {"id": 2, "name": "s2.s1-kill.test", "master": null, "last_check": null, "type": "MASTER", "notified_serial": null, "account": null, "options": null, "catalog": "catalog-c000020a.celikpanel.invalid"}
+-- table records rows=5 columns=['id', 'domain_id', 'name', 'type', 'content', 'ttl', 'prio', 'disabled', 'ordername', 'auth']
+   records per domain: ["catalog-c000020a.celikpanel.invalid", 2]
+   records per domain: ["s2.s1-kill.test", 3]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "NS", 1]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "SOA", 1]
+   records per domain/type: ["s2.s1-kill.test", "A", 1]
+   records per domain/type: ["s2.s1-kill.test", "NS", 1]
+   records per domain/type: ["s2.s1-kill.test", "SOA", 1]
+   records: {"id": 1, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "NS", "content": "invalid.", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 2, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "SOA", "content": "invalid invalid 1790758221 60 30 3600 30", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 3, "domain_id": 2, "name": "s2.s1-kill.test", "type": "NS", "content": "ns1.s1-kill.test", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 4, "domain_id": 2, "name": "s2.s1-kill.test", "type": "SOA", "content": "ns1.s1-kill.test hostmaster.s1-kill.test 2026092801 10800 3600 604800 3600", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 5, "domain_id": 2, "name": "www.s2.s1-kill.test", "type": "A", "content": "192.0.2.10", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+-- table supermasters rows=0 columns=['ip', 'nameserver', 'account']
+-- table tsigkeys rows=0 columns=['id', 'name', 'algorithm', 'secret']
+######## /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085115.415-41da2a06a460.sqlite3
+== /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085115.415-41da2a06a460.sqlite3 size=98304 mtime_ns=1790758220000000000 sha256=9b1ca507c5c03056cd67a9451d5ef605bc0509c6932c2ff4cd46103920d5fbd0
+   sibling /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085115.415-41da2a06a460.sqlite3-wal size=94792
+   with retained WAL /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085115.415-41da2a06a460.sqlite3-wal size=94792
+tables: ['celikpanel_dns_engine_manifest_receipt', 'celikpanel_dns_zone_sync_receipts', 'celikpanel_dns_zone_sync_v3_receipts', 'comments', 'cryptokeys', 'domainmetadata', 'domains', 'records', 'supermasters', 'tsigkeys']
+-- table celikpanel_dns_engine_manifest_receipt rows=1 columns=['singleton', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'source_revision', 'zone_count', 'snapshot_bytes', 'schema']
+   celikpanel_dns_engine_manifest_receipt: {"singleton": 1, "engine": "pdns", "engine_epoch": 1, "request_id": "c59b537aac13c590e71b4682a88ed7b1", "owner_id": "2496117f5d511eeb130aeb15040de678", "qualifier": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "source_revision": 0, "zone_count": 0, "snapshot_bytes": 0, "schema": "dns-engine-switch/v1"}
+-- table celikpanel_dns_zone_sync_receipts rows=0 columns=['domain', 'request_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table celikpanel_dns_zone_sync_v3_receipts rows=1 columns=['domain', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+   celikpanel_dns_zone_sync_v3_receipts: {"domain": "s2.s1-kill.test", "engine": "pdns", "engine_epoch": 1, "request_id": "bd76b7b04a3d905bb8f827ee479e09a7", "owner_id": "840fd435b898b84ef4c29600af9f2294", "qualifier": "dns-zone-sync/v3:sha256:98d9e99d187e86504a3c8e28d4054bc0506d2e447445e731c5ccf02ffba86c56", "desired_generation": 2, "action": "sync", "zone_type": "MASTER", "schema": "dns-zone-sync/v3"}
+-- table comments rows=0 columns=['id', 'domain_id', 'name', 'type', 'modified_at', 'account', 'comment']
+-- table cryptokeys rows=0 columns=['id', 'domain_id', 'flags', 'active', 'published', 'content']
+-- table domainmetadata rows=1 columns=['id', 'domain_id', 'kind', 'content']
+   domainmetadata: {"id": 1, "domain_id": 1, "kind": "CATALOG-HASH", "content": "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="}
+-- table domains rows=2 columns=['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+   domains: {"id": 1, "name": "catalog-c000020a.celikpanel.invalid", "master": null, "last_check": null, "type": "PRODUCER", "notified_serial": 1, "account": "celikpanel-bind-catalog-v1", "options": null, "catalog": null}
+   domains: {"id": 2, "name": "s2.s1-kill.test", "master": null, "last_check": null, "type": "MASTER", "notified_serial": null, "account": null, "options": null, "catalog": "catalog-c000020a.celikpanel.invalid"}
+-- table records rows=6 columns=['id', 'domain_id', 'name', 'type', 'content', 'ttl', 'prio', 'disabled', 'ordername', 'auth']
+   records per domain: ["catalog-c000020a.celikpanel.invalid", 2]
+   records per domain: ["s2.s1-kill.test", 4]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "NS", 1]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "SOA", 1]
+   records per domain/type: ["s2.s1-kill.test", "A", 2]
+   records per domain/type: ["s2.s1-kill.test", "NS", 1]
+   records per domain/type: ["s2.s1-kill.test", "SOA", 1]
+   records: {"id": 1, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "NS", "content": "invalid.", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 2, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "SOA", "content": "invalid invalid 1790758221 60 30 3600 30", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 3, "domain_id": 2, "name": "changed.s2.s1-kill.test", "type": "A", "content": "192.0.2.10", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 4, "domain_id": 2, "name": "s2.s1-kill.test", "type": "NS", "content": "ns1.s1-kill.test", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 5, "domain_id": 2, "name": "s2.s1-kill.test", "type": "SOA", "content": "ns1.s1-kill.test hostmaster.s1-kill.test 2026092802 10800 3600 604800 3600", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 6, "domain_id": 2, "name": "www.s2.s1-kill.test", "type": "A", "content": "192.0.2.10", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+-- table supermasters rows=0 columns=['ip', 'nameserver', 'account']
+-- table tsigkeys rows=0 columns=['id', 'name', 'algorithm', 'secret']
+######## /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085120.898-8a171458d4fd.sqlite3
+== /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085120.898-8a171458d4fd.sqlite3 size=98304 mtime_ns=1790758220000000000 sha256=9b1ca507c5c03056cd67a9451d5ef605bc0509c6932c2ff4cd46103920d5fbd0
+   sibling /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085120.898-8a171458d4fd.sqlite3-wal size=135992
+   with retained WAL /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085120.898-8a171458d4fd.sqlite3-wal size=135992
+tables: ['celikpanel_dns_engine_manifest_receipt', 'celikpanel_dns_zone_sync_receipts', 'celikpanel_dns_zone_sync_v3_receipts', 'comments', 'cryptokeys', 'domainmetadata', 'domains', 'records', 'supermasters', 'tsigkeys']
+-- table celikpanel_dns_engine_manifest_receipt rows=1 columns=['singleton', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'source_revision', 'zone_count', 'snapshot_bytes', 'schema']
+   celikpanel_dns_engine_manifest_receipt: {"singleton": 1, "engine": "pdns", "engine_epoch": 1, "request_id": "c59b537aac13c590e71b4682a88ed7b1", "owner_id": "2496117f5d511eeb130aeb15040de678", "qualifier": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "source_revision": 0, "zone_count": 0, "snapshot_bytes": 0, "schema": "dns-engine-switch/v1"}
+-- table celikpanel_dns_zone_sync_receipts rows=0 columns=['domain', 'request_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table celikpanel_dns_zone_sync_v3_receipts rows=1 columns=['domain', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+   celikpanel_dns_zone_sync_v3_receipts: {"domain": "s2.s1-kill.test", "engine": "pdns", "engine_epoch": 1, "request_id": "bd76b7b04a3d905bb8f827ee479e09a7", "owner_id": "840fd435b898b84ef4c29600af9f2294", "qualifier": "dns-zone-sync/v3:sha256:98d9e99d187e86504a3c8e28d4054bc0506d2e447445e731c5ccf02ffba86c56", "desired_generation": 2, "action": "sync", "zone_type": "MASTER", "schema": "dns-zone-sync/v3"}
+-- table comments rows=0 columns=['id', 'domain_id', 'name', 'type', 'modified_at', 'account', 'comment']
+-- table cryptokeys rows=0 columns=['id', 'domain_id', 'flags', 'active', 'published', 'content']
+-- table domainmetadata rows=1 columns=['id', 'domain_id', 'kind', 'content']
+   domainmetadata: {"id": 1, "domain_id": 1, "kind": "CATALOG-HASH", "content": "1Rf5KuuzsJMQRGXVLYxlmzvq+Z93Mwk4oSSCrR9KFCA="}
+-- table domains rows=2 columns=['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+   domains: {"id": 1, "name": "catalog-c000020a.celikpanel.invalid", "master": null, "last_check": null, "type": "PRODUCER", "notified_serial": 1790758221, "account": "celikpanel-bind-catalog-v1", "options": null, "catalog": null}
+   domains: {"id": 2, "name": "s2.s1-kill.test", "master": null, "last_check": null, "type": "MASTER", "notified_serial": 2026092802, "account": null, "options": null, "catalog": "catalog-c000020a.celikpanel.invalid"}
+-- table records rows=6 columns=['id', 'domain_id', 'name', 'type', 'content', 'ttl', 'prio', 'disabled', 'ordername', 'auth']
+   records per domain: ["catalog-c000020a.celikpanel.invalid", 2]
+   records per domain: ["s2.s1-kill.test", 4]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "NS", 1]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "SOA", 1]
+   records per domain/type: ["s2.s1-kill.test", "A", 2]
+   records per domain/type: ["s2.s1-kill.test", "NS", 1]
+   records per domain/type: ["s2.s1-kill.test", "SOA", 1]
+   records: {"id": 1, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "NS", "content": "invalid.", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 3, "domain_id": 2, "name": "changed.s2.s1-kill.test", "type": "A", "content": "192.0.2.10", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 4, "domain_id": 2, "name": "s2.s1-kill.test", "type": "NS", "content": "ns1.s1-kill.test", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 5, "domain_id": 2, "name": "s2.s1-kill.test", "type": "SOA", "content": "ns1.s1-kill.test hostmaster.s1-kill.test 2026092802 10800 3600 604800 3600", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 6, "domain_id": 2, "name": "www.s2.s1-kill.test", "type": "A", "content": "192.0.2.10", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 7, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "SOA", "content": "invalid invalid 1790758280 60 30 3600 30", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+-- table supermasters rows=0 columns=['ip', 'nameserver', 'account']
+-- table tsigkeys rows=0 columns=['id', 'name', 'algorithm', 'secret']
+######## /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085122.477-704e66637d08.sqlite3
+== /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085122.477-704e66637d08.sqlite3 size=98304 mtime_ns=1790758220000000000 sha256=9b1ca507c5c03056cd67a9451d5ef605bc0509c6932c2ff4cd46103920d5fbd0
+   sibling /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085122.477-704e66637d08.sqlite3-wal size=168952
+   with retained WAL /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085122.477-704e66637d08.sqlite3-wal size=168952
+tables: ['celikpanel_dns_engine_manifest_receipt', 'celikpanel_dns_zone_sync_receipts', 'celikpanel_dns_zone_sync_v3_receipts', 'comments', 'cryptokeys', 'domainmetadata', 'domains', 'records', 'supermasters', 'tsigkeys']
+-- table celikpanel_dns_engine_manifest_receipt rows=1 columns=['singleton', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'source_revision', 'zone_count', 'snapshot_bytes', 'schema']
+   celikpanel_dns_engine_manifest_receipt: {"singleton": 1, "engine": "pdns", "engine_epoch": 1, "request_id": "c59b537aac13c590e71b4682a88ed7b1", "owner_id": "2496117f5d511eeb130aeb15040de678", "qualifier": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "source_revision": 0, "zone_count": 0, "snapshot_bytes": 0, "schema": "dns-engine-switch/v1"}
+-- table celikpanel_dns_zone_sync_receipts rows=0 columns=['domain', 'request_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table celikpanel_dns_zone_sync_v3_receipts rows=1 columns=['domain', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+   celikpanel_dns_zone_sync_v3_receipts: {"domain": "s2.s1-kill.test", "engine": "pdns", "engine_epoch": 1, "request_id": "192554344c6206934b16138c9cca14ca", "owner_id": "49023ad113740f2b5da939b35c76c2f7", "qualifier": "dns-zone-sync/v3:sha256:e90fb9845e27429320ea2b358a36431de04f7585481c0e935b01623592b4d3f1", "desired_generation": 3, "action": "delete", "zone_type": "MASTER", "schema": "dns-zone-sync/v3"}
+-- table comments rows=0 columns=['id', 'domain_id', 'name', 'type', 'modified_at', 'account', 'comment']
+-- table cryptokeys rows=0 columns=['id', 'domain_id', 'flags', 'active', 'published', 'content']
+-- table domainmetadata rows=1 columns=['id', 'domain_id', 'kind', 'content']
+   domainmetadata: {"id": 1, "domain_id": 1, "kind": "CATALOG-HASH", "content": "1Rf5KuuzsJMQRGXVLYxlmzvq+Z93Mwk4oSSCrR9KFCA="}
+-- table domains rows=1 columns=['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+   domains: {"id": 1, "name": "catalog-c000020a.celikpanel.invalid", "master": null, "last_check": null, "type": "PRODUCER", "notified_serial": 1790758221, "account": "celikpanel-bind-catalog-v1", "options": null, "catalog": null}
+-- table records rows=2 columns=['id', 'domain_id', 'name', 'type', 'content', 'ttl', 'prio', 'disabled', 'ordername', 'auth']
+   records per domain: ["catalog-c000020a.celikpanel.invalid", 2]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "NS", 1]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "SOA", 1]
+   records: {"id": 1, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "NS", "content": "invalid.", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 7, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "SOA", "content": "invalid invalid 1790758281 60 30 3600 30", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+-- table supermasters rows=0 columns=['ip', 'nameserver', 'account']
+-- table tsigkeys rows=0 columns=['id', 'name', 'algorithm', 'secret']
+######## /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085220.736-008ca4eff7e3.sqlite3
+== /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085220.736-008ca4eff7e3.sqlite3 size=98304 mtime_ns=1790758220000000000 sha256=9b1ca507c5c03056cd67a9451d5ef605bc0509c6932c2ff4cd46103920d5fbd0
+   sibling /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085220.736-008ca4eff7e3.sqlite3-wal size=206032
+   with retained WAL /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085220.736-008ca4eff7e3.sqlite3-wal size=206032
+tables: ['celikpanel_dns_engine_manifest_receipt', 'celikpanel_dns_zone_sync_receipts', 'celikpanel_dns_zone_sync_v3_receipts', 'comments', 'cryptokeys', 'domainmetadata', 'domains', 'records', 'supermasters', 'tsigkeys']
+-- table celikpanel_dns_engine_manifest_receipt rows=1 columns=['singleton', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'source_revision', 'zone_count', 'snapshot_bytes', 'schema']
+   celikpanel_dns_engine_manifest_receipt: {"singleton": 1, "engine": "pdns", "engine_epoch": 1, "request_id": "c59b537aac13c590e71b4682a88ed7b1", "owner_id": "2496117f5d511eeb130aeb15040de678", "qualifier": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "source_revision": 0, "zone_count": 0, "snapshot_bytes": 0, "schema": "dns-engine-switch/v1"}
+-- table celikpanel_dns_zone_sync_receipts rows=0 columns=['domain', 'request_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table celikpanel_dns_zone_sync_v3_receipts rows=1 columns=['domain', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+   celikpanel_dns_zone_sync_v3_receipts: {"domain": "s2.s1-kill.test", "engine": "pdns", "engine_epoch": 1, "request_id": "192554344c6206934b16138c9cca14ca", "owner_id": "49023ad113740f2b5da939b35c76c2f7", "qualifier": "dns-zone-sync/v3:sha256:e90fb9845e27429320ea2b358a36431de04f7585481c0e935b01623592b4d3f1", "desired_generation": 3, "action": "delete", "zone_type": "MASTER", "schema": "dns-zone-sync/v3"}
+-- table comments rows=0 columns=['id', 'domain_id', 'name', 'type', 'modified_at', 'account', 'comment']
+-- table cryptokeys rows=0 columns=['id', 'domain_id', 'flags', 'active', 'published', 'content']
+-- table domainmetadata rows=1 columns=['id', 'domain_id', 'kind', 'content']
+   domainmetadata: {"id": 1, "domain_id": 1, "kind": "CATALOG-HASH", "content": "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="}
+-- table domains rows=1 columns=['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+   domains: {"id": 1, "name": "catalog-c000020a.celikpanel.invalid", "master": null, "last_check": null, "type": "PRODUCER", "notified_serial": 1790758281, "account": "celikpanel-bind-catalog-v1", "options": null, "catalog": null}
+-- table records rows=2 columns=['id', 'domain_id', 'name', 'type', 'content', 'ttl', 'prio', 'disabled', 'ordername', 'auth']
+   records per domain: ["catalog-c000020a.celikpanel.invalid", 2]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "NS", 1]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "SOA", 1]
+   records: {"id": 1, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "NS", "content": "invalid.", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 2, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "SOA", "content": "invalid invalid 1790758340 60 30 3600 30", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+-- table supermasters rows=0 columns=['ip', 'nameserver', 'account']
+-- table tsigkeys rows=0 columns=['id', 'name', 'algorithm', 'secret']
+######## /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085221.077-eed824d39ba8.sqlite3
+== /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085221.077-eed824d39ba8.sqlite3 size=98304 mtime_ns=1790758220000000000 sha256=9b1ca507c5c03056cd67a9451d5ef605bc0509c6932c2ff4cd46103920d5fbd0
+   sibling /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085221.077-eed824d39ba8.sqlite3-wal size=206032
+   with retained WAL /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085221.077-eed824d39ba8.sqlite3-wal size=206032
+tables: ['celikpanel_dns_engine_manifest_receipt', 'celikpanel_dns_zone_sync_receipts', 'celikpanel_dns_zone_sync_v3_receipts', 'comments', 'cryptokeys', 'domainmetadata', 'domains', 'records', 'supermasters', 'tsigkeys']
+-- table celikpanel_dns_engine_manifest_receipt rows=1 columns=['singleton', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'source_revision', 'zone_count', 'snapshot_bytes', 'schema']
+   celikpanel_dns_engine_manifest_receipt: {"singleton": 1, "engine": "pdns", "engine_epoch": 1, "request_id": "c59b537aac13c590e71b4682a88ed7b1", "owner_id": "2496117f5d511eeb130aeb15040de678", "qualifier": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "source_revision": 0, "zone_count": 0, "snapshot_bytes": 0, "schema": "dns-engine-switch/v1"}
+-- table celikpanel_dns_zone_sync_receipts rows=0 columns=['domain', 'request_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table celikpanel_dns_zone_sync_v3_receipts rows=1 columns=['domain', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+   celikpanel_dns_zone_sync_v3_receipts: {"domain": "s2.s1-kill.test", "engine": "pdns", "engine_epoch": 1, "request_id": "192554344c6206934b16138c9cca14ca", "owner_id": "49023ad113740f2b5da939b35c76c2f7", "qualifier": "dns-zone-sync/v3:sha256:e90fb9845e27429320ea2b358a36431de04f7585481c0e935b01623592b4d3f1", "desired_generation": 3, "action": "delete", "zone_type": "MASTER", "schema": "dns-zone-sync/v3"}
+-- table comments rows=0 columns=['id', 'domain_id', 'name', 'type', 'modified_at', 'account', 'comment']
+-- table cryptokeys rows=0 columns=['id', 'domain_id', 'flags', 'active', 'published', 'content']
+-- table domainmetadata rows=1 columns=['id', 'domain_id', 'kind', 'content']
+   domainmetadata: {"id": 1, "domain_id": 1, "kind": "CATALOG-HASH", "content": "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="}
+-- table domains rows=1 columns=['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+   domains: {"id": 1, "name": "catalog-c000020a.celikpanel.invalid", "master": null, "last_check": null, "type": "PRODUCER", "notified_serial": 1790758281, "account": "celikpanel-bind-catalog-v1", "options": null, "catalog": null}
+-- table records rows=2 columns=['id', 'domain_id', 'name', 'type', 'content', 'ttl', 'prio', 'disabled', 'ordername', 'auth']
+   records per domain: ["catalog-c000020a.celikpanel.invalid", 2]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "NS", 1]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "SOA", 1]
+   records: {"id": 1, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "NS", "content": "invalid.", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 2, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "SOA", "content": "invalid invalid 1790758340 60 30 3600 30", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+-- table supermasters rows=0 columns=['ip', 'nameserver', 'account']
+-- table tsigkeys rows=0 columns=['id', 'name', 'algorithm', 'secret']
+######## /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085339.371-b7b525c9bf47.sqlite3
+== /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085339.371-b7b525c9bf47.sqlite3 size=98304 mtime_ns=1790758220000000000 sha256=9b1ca507c5c03056cd67a9451d5ef605bc0509c6932c2ff4cd46103920d5fbd0
+   sibling /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085339.371-b7b525c9bf47.sqlite3-wal size=238992
+   with retained WAL /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085339.371-b7b525c9bf47.sqlite3-wal size=238992
+tables: ['celikpanel_dns_engine_manifest_receipt', 'celikpanel_dns_zone_sync_receipts', 'celikpanel_dns_zone_sync_v3_receipts', 'comments', 'cryptokeys', 'domainmetadata', 'domains', 'records', 'supermasters', 'tsigkeys']
+-- table celikpanel_dns_engine_manifest_receipt rows=1 columns=['singleton', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'source_revision', 'zone_count', 'snapshot_bytes', 'schema']
+   celikpanel_dns_engine_manifest_receipt: {"singleton": 1, "engine": "pdns", "engine_epoch": 1, "request_id": "c59b537aac13c590e71b4682a88ed7b1", "owner_id": "2496117f5d511eeb130aeb15040de678", "qualifier": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "source_revision": 0, "zone_count": 0, "snapshot_bytes": 0, "schema": "dns-engine-switch/v1"}
+-- table celikpanel_dns_zone_sync_receipts rows=0 columns=['domain', 'request_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table celikpanel_dns_zone_sync_v3_receipts rows=1 columns=['domain', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+   celikpanel_dns_zone_sync_v3_receipts: {"domain": "s2.s1-kill.test", "engine": "pdns", "engine_epoch": 1, "request_id": "03bc01afa7ab7518855affd581094726", "owner_id": "5552dfe75d99ca5c5df5cc2ef25d8dce", "qualifier": "dns-zone-sync/v3:sha256:d5345b9d08e200db472fdb31fe7df853f048d1388af736291d98d6caf24092c7", "desired_generation": 4, "action": "sync", "zone_type": "MASTER", "schema": "dns-zone-sync/v3"}
+-- table comments rows=0 columns=['id', 'domain_id', 'name', 'type', 'modified_at', 'account', 'comment']
+-- table cryptokeys rows=0 columns=['id', 'domain_id', 'flags', 'active', 'published', 'content']
+-- table domainmetadata rows=1 columns=['id', 'domain_id', 'kind', 'content']
+   domainmetadata: {"id": 1, "domain_id": 1, "kind": "CATALOG-HASH", "content": "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="}
+-- table domains rows=2 columns=['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+   domains: {"id": 1, "name": "catalog-c000020a.celikpanel.invalid", "master": null, "last_check": null, "type": "PRODUCER", "notified_serial": 1790758281, "account": "celikpanel-bind-catalog-v1", "options": null, "catalog": null}
+   domains: {"id": 2, "name": "s2.s1-kill.test", "master": null, "last_check": null, "type": "MASTER", "notified_serial": null, "account": null, "options": null, "catalog": "catalog-c000020a.celikpanel.invalid"}
+-- table records rows=5 columns=['id', 'domain_id', 'name', 'type', 'content', 'ttl', 'prio', 'disabled', 'ordername', 'auth']
+   records per domain: ["catalog-c000020a.celikpanel.invalid", 2]
+   records per domain: ["s2.s1-kill.test", 3]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "NS", 1]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "SOA", 1]
+   records per domain/type: ["s2.s1-kill.test", "A", 1]
+   records per domain/type: ["s2.s1-kill.test", "NS", 1]
+   records per domain/type: ["s2.s1-kill.test", "SOA", 1]
+   records: {"id": 1, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "NS", "content": "invalid.", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 2, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "SOA", "content": "invalid invalid 1790758341 60 30 3600 30", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 3, "domain_id": 2, "name": "s2.s1-kill.test", "type": "NS", "content": "ns1.s1-kill.test", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 4, "domain_id": 2, "name": "s2.s1-kill.test", "type": "SOA", "content": "ns1.s1-kill.test hostmaster.s1-kill.test 2026092803 10800 3600 604800 3600", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 5, "domain_id": 2, "name": "www.s2.s1-kill.test", "type": "A", "content": "192.0.2.10", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+-- table supermasters rows=0 columns=['ip', 'nameserver', 'account']
+-- table tsigkeys rows=0 columns=['id', 'name', 'algorithm', 'secret']
+######## /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085420.862-46fac957357c.sqlite3
+== /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085420.862-46fac957357c.sqlite3 size=98304 mtime_ns=1790758220000000000 sha256=9b1ca507c5c03056cd67a9451d5ef605bc0509c6932c2ff4cd46103920d5fbd0
+   sibling /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085420.862-46fac957357c.sqlite3-wal size=280192
+   with retained WAL /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/copies/085420.862-46fac957357c.sqlite3-wal size=280192
+tables: ['celikpanel_dns_engine_manifest_receipt', 'celikpanel_dns_zone_sync_receipts', 'celikpanel_dns_zone_sync_v3_receipts', 'comments', 'cryptokeys', 'domainmetadata', 'domains', 'records', 'supermasters', 'tsigkeys']
+-- table celikpanel_dns_engine_manifest_receipt rows=1 columns=['singleton', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'source_revision', 'zone_count', 'snapshot_bytes', 'schema']
+   celikpanel_dns_engine_manifest_receipt: {"singleton": 1, "engine": "pdns", "engine_epoch": 1, "request_id": "c59b537aac13c590e71b4682a88ed7b1", "owner_id": "2496117f5d511eeb130aeb15040de678", "qualifier": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "source_revision": 0, "zone_count": 0, "snapshot_bytes": 0, "schema": "dns-engine-switch/v1"}
+-- table celikpanel_dns_zone_sync_receipts rows=0 columns=['domain', 'request_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table celikpanel_dns_zone_sync_v3_receipts rows=1 columns=['domain', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+   celikpanel_dns_zone_sync_v3_receipts: {"domain": "s2.s1-kill.test", "engine": "pdns", "engine_epoch": 1, "request_id": "03bc01afa7ab7518855affd581094726", "owner_id": "5552dfe75d99ca5c5df5cc2ef25d8dce", "qualifier": "dns-zone-sync/v3:sha256:d5345b9d08e200db472fdb31fe7df853f048d1388af736291d98d6caf24092c7", "desired_generation": 4, "action": "sync", "zone_type": "MASTER", "schema": "dns-zone-sync/v3"}
+-- table comments rows=0 columns=['id', 'domain_id', 'name', 'type', 'modified_at', 'account', 'comment']
+-- table cryptokeys rows=0 columns=['id', 'domain_id', 'flags', 'active', 'published', 'content']
+-- table domainmetadata rows=1 columns=['id', 'domain_id', 'kind', 'content']
+   domainmetadata: {"id": 1, "domain_id": 1, "kind": "CATALOG-HASH", "content": "1Rf5KuuzsJMQRGXVLYxlmzvq+Z93Mwk4oSSCrR9KFCA="}
+-- table domains rows=2 columns=['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+   domains: {"id": 1, "name": "catalog-c000020a.celikpanel.invalid", "master": null, "last_check": null, "type": "PRODUCER", "notified_serial": 1790758341, "account": "celikpanel-bind-catalog-v1", "options": null, "catalog": null}
+   domains: {"id": 2, "name": "s2.s1-kill.test", "master": null, "last_check": null, "type": "MASTER", "notified_serial": 2026092803, "account": null, "options": null, "catalog": "catalog-c000020a.celikpanel.invalid"}
+-- table records rows=5 columns=['id', 'domain_id', 'name', 'type', 'content', 'ttl', 'prio', 'disabled', 'ordername', 'auth']
+   records per domain: ["catalog-c000020a.celikpanel.invalid", 2]
+   records per domain: ["s2.s1-kill.test", 3]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "NS", 1]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "SOA", 1]
+   records per domain/type: ["s2.s1-kill.test", "A", 1]
+   records per domain/type: ["s2.s1-kill.test", "NS", 1]
+   records per domain/type: ["s2.s1-kill.test", "SOA", 1]
+   records: {"id": 1, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "NS", "content": "invalid.", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 3, "domain_id": 2, "name": "s2.s1-kill.test", "type": "NS", "content": "ns1.s1-kill.test", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 4, "domain_id": 2, "name": "s2.s1-kill.test", "type": "SOA", "content": "ns1.s1-kill.test hostmaster.s1-kill.test 2026092803 10800 3600 604800 3600", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 5, "domain_id": 2, "name": "www.s2.s1-kill.test", "type": "A", "content": "192.0.2.10", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 6, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "SOA", "content": "invalid invalid 1790758460 60 30 3600 30", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+-- table supermasters rows=0 columns=['ip', 'nameserver', 'account']
+-- table tsigkeys rows=0 columns=['id', 'name', 'algorithm', 'secret']
+######## /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-dbboot2/copies/085452.339-96e00dbe62d1.sqlite3
+== /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-dbboot2/copies/085452.339-96e00dbe62d1.sqlite3 size=98304 mtime_ns=1790758489000000000 sha256=96e00dbe62d14048b60c371e7a3c39feceed2e6f8f2df7407f3718feba81f5b6
+   sibling /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-dbboot2/copies/085452.339-96e00dbe62d1.sqlite3-wal size=0
+   with retained WAL /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-dbboot2/copies/085452.339-96e00dbe62d1.sqlite3-wal size=0
+tables: ['celikpanel_dns_engine_manifest_receipt', 'celikpanel_dns_zone_sync_receipts', 'celikpanel_dns_zone_sync_v3_receipts', 'comments', 'cryptokeys', 'domainmetadata', 'domains', 'records', 'supermasters', 'tsigkeys']
+-- table celikpanel_dns_engine_manifest_receipt rows=1 columns=['singleton', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'source_revision', 'zone_count', 'snapshot_bytes', 'schema']
+   celikpanel_dns_engine_manifest_receipt: {"singleton": 1, "engine": "pdns", "engine_epoch": 1, "request_id": "c59b537aac13c590e71b4682a88ed7b1", "owner_id": "2496117f5d511eeb130aeb15040de678", "qualifier": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "source_revision": 0, "zone_count": 0, "snapshot_bytes": 0, "schema": "dns-engine-switch/v1"}
+-- table celikpanel_dns_zone_sync_receipts rows=0 columns=['domain', 'request_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table celikpanel_dns_zone_sync_v3_receipts rows=1 columns=['domain', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+   celikpanel_dns_zone_sync_v3_receipts: {"domain": "s2.s1-kill.test", "engine": "pdns", "engine_epoch": 1, "request_id": "03bc01afa7ab7518855affd581094726", "owner_id": "5552dfe75d99ca5c5df5cc2ef25d8dce", "qualifier": "dns-zone-sync/v3:sha256:d5345b9d08e200db472fdb31fe7df853f048d1388af736291d98d6caf24092c7", "desired_generation": 4, "action": "sync", "zone_type": "MASTER", "schema": "dns-zone-sync/v3"}
+-- table comments rows=0 columns=['id', 'domain_id', 'name', 'type', 'modified_at', 'account', 'comment']
+-- table cryptokeys rows=0 columns=['id', 'domain_id', 'flags', 'active', 'published', 'content']
+-- table domainmetadata rows=1 columns=['id', 'domain_id', 'kind', 'content']
+   domainmetadata: {"id": 1, "domain_id": 1, "kind": "CATALOG-HASH", "content": "1Rf5KuuzsJMQRGXVLYxlmzvq+Z93Mwk4oSSCrR9KFCA="}
+-- table domains rows=2 columns=['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+   domains: {"id": 1, "name": "catalog-c000020a.celikpanel.invalid", "master": null, "last_check": null, "type": "PRODUCER", "notified_serial": 1790758341, "account": "celikpanel-bind-catalog-v1", "options": null, "catalog": null}
+   domains: {"id": 2, "name": "s2.s1-kill.test", "master": null, "last_check": null, "type": "MASTER", "notified_serial": 2026092803, "account": null, "options": null, "catalog": "catalog-c000020a.celikpanel.invalid"}
+-- table records rows=5 columns=['id', 'domain_id', 'name', 'type', 'content', 'ttl', 'prio', 'disabled', 'ordername', 'auth']
+   records per domain: ["catalog-c000020a.celikpanel.invalid", 2]
+   records per domain: ["s2.s1-kill.test", 3]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "NS", 1]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "SOA", 1]
+   records per domain/type: ["s2.s1-kill.test", "A", 1]
+   records per domain/type: ["s2.s1-kill.test", "NS", 1]
+   records per domain/type: ["s2.s1-kill.test", "SOA", 1]
+   records: {"id": 1, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "NS", "content": "invalid.", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 3, "domain_id": 2, "name": "s2.s1-kill.test", "type": "NS", "content": "ns1.s1-kill.test", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 4, "domain_id": 2, "name": "s2.s1-kill.test", "type": "SOA", "content": "ns1.s1-kill.test hostmaster.s1-kill.test 2026092803 10800 3600 604800 3600", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 5, "domain_id": 2, "name": "www.s2.s1-kill.test", "type": "A", "content": "192.0.2.10", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 6, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "SOA", "content": "invalid invalid 1790758460 60 30 3600 30", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+-- table supermasters rows=0 columns=['ip', 'nameserver', 'account']
+-- table tsigkeys rows=0 columns=['id', 'name', 'algorithm', 'secret']
+######## /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085018.315-35cdac176bec.sqlite3
+== /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085018.315-35cdac176bec.sqlite3 size=98304 mtime_ns=1790758217000000000 sha256=35cdac176becb2d04628c971b5e5a7fea0c406daa97f4f841fffb5c170b17ece
+   no retained WAL copy
+tables: ['celikpanel_dns_engine_manifest_receipt', 'celikpanel_dns_zone_sync_receipts', 'celikpanel_dns_zone_sync_v3_receipts', 'comments', 'cryptokeys', 'domainmetadata', 'domains', 'records', 'supermasters', 'tsigkeys']
+-- table celikpanel_dns_engine_manifest_receipt rows=1 columns=['singleton', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'source_revision', 'zone_count', 'snapshot_bytes', 'schema']
+   celikpanel_dns_engine_manifest_receipt: {"singleton": 1, "engine": "pdns", "engine_epoch": 1, "request_id": "c59b537aac13c590e71b4682a88ed7b1", "owner_id": "2496117f5d511eeb130aeb15040de678", "qualifier": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "source_revision": 0, "zone_count": 0, "snapshot_bytes": 0, "schema": "dns-engine-switch/v1"}
+-- table celikpanel_dns_zone_sync_receipts rows=0 columns=['domain', 'request_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table celikpanel_dns_zone_sync_v3_receipts rows=0 columns=['domain', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table comments rows=0 columns=['id', 'domain_id', 'name', 'type', 'modified_at', 'account', 'comment']
+-- table cryptokeys rows=0 columns=['id', 'domain_id', 'flags', 'active', 'published', 'content']
+-- table domainmetadata rows=0 columns=['id', 'domain_id', 'kind', 'content']
+-- table domains rows=1 columns=['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+   domains: {"id": 1, "name": "catalog-c000020a.celikpanel.invalid", "master": null, "last_check": null, "type": "PRODUCER", "notified_serial": null, "account": "celikpanel-bind-catalog-v1", "options": null, "catalog": null}
+-- table records rows=2 columns=['id', 'domain_id', 'name', 'type', 'content', 'ttl', 'prio', 'disabled', 'ordername', 'auth']
+   records per domain: ["catalog-c000020a.celikpanel.invalid", 2]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "NS", 1]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "SOA", 1]
+   records: {"id": 1, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "NS", "content": "invalid.", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 2, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "SOA", "content": "invalid. invalid. 1 60 30 3600 30", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+-- table supermasters rows=0 columns=['ip', 'nameserver', 'account']
+-- table tsigkeys rows=0 columns=['id', 'name', 'algorithm', 'secret']
+######## /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085021.048-8cc6e813400c.sqlite3
+== /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085021.048-8cc6e813400c.sqlite3 size=98304 mtime_ns=1790758220000000000 sha256=9b1ca507c5c03056cd67a9451d5ef605bc0509c6932c2ff4cd46103920d5fbd0
+   sibling /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085021.048-8cc6e813400c.sqlite3-wal size=28872
+   with retained WAL /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085021.048-8cc6e813400c.sqlite3-wal size=28872
+tables: ['celikpanel_dns_engine_manifest_receipt', 'celikpanel_dns_zone_sync_receipts', 'celikpanel_dns_zone_sync_v3_receipts', 'comments', 'cryptokeys', 'domainmetadata', 'domains', 'records', 'supermasters', 'tsigkeys']
+-- table celikpanel_dns_engine_manifest_receipt rows=1 columns=['singleton', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'source_revision', 'zone_count', 'snapshot_bytes', 'schema']
+   celikpanel_dns_engine_manifest_receipt: {"singleton": 1, "engine": "pdns", "engine_epoch": 1, "request_id": "c59b537aac13c590e71b4682a88ed7b1", "owner_id": "2496117f5d511eeb130aeb15040de678", "qualifier": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "source_revision": 0, "zone_count": 0, "snapshot_bytes": 0, "schema": "dns-engine-switch/v1"}
+-- table celikpanel_dns_zone_sync_receipts rows=0 columns=['domain', 'request_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table celikpanel_dns_zone_sync_v3_receipts rows=0 columns=['domain', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table comments rows=0 columns=['id', 'domain_id', 'name', 'type', 'modified_at', 'account', 'comment']
+-- table cryptokeys rows=0 columns=['id', 'domain_id', 'flags', 'active', 'published', 'content']
+-- table domainmetadata rows=1 columns=['id', 'domain_id', 'kind', 'content']
+   domainmetadata: {"id": 1, "domain_id": 1, "kind": "CATALOG-HASH", "content": "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="}
+-- table domains rows=1 columns=['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+   domains: {"id": 1, "name": "catalog-c000020a.celikpanel.invalid", "master": null, "last_check": null, "type": "PRODUCER", "notified_serial": 1, "account": "celikpanel-bind-catalog-v1", "options": null, "catalog": null}
+-- table records rows=2 columns=['id', 'domain_id', 'name', 'type', 'content', 'ttl', 'prio', 'disabled', 'ordername', 'auth']
+   records per domain: ["catalog-c000020a.celikpanel.invalid", 2]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "NS", 1]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "SOA", 1]
+   records: {"id": 1, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "NS", "content": "invalid.", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 2, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "SOA", "content": "invalid invalid 1790758220 60 30 3600 30", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+-- table supermasters rows=0 columns=['ip', 'nameserver', 'account']
+-- table tsigkeys rows=0 columns=['id', 'name', 'algorithm', 'secret']
+######## /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085107.927-8f094b4eacfb.sqlite3
+== /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085107.927-8f094b4eacfb.sqlite3 size=98304 mtime_ns=1790758220000000000 sha256=9b1ca507c5c03056cd67a9451d5ef605bc0509c6932c2ff4cd46103920d5fbd0
+   sibling /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085107.927-8f094b4eacfb.sqlite3-wal size=61832
+   with retained WAL /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085107.927-8f094b4eacfb.sqlite3-wal size=61832
+tables: ['celikpanel_dns_engine_manifest_receipt', 'celikpanel_dns_zone_sync_receipts', 'celikpanel_dns_zone_sync_v3_receipts', 'comments', 'cryptokeys', 'domainmetadata', 'domains', 'records', 'supermasters', 'tsigkeys']
+-- table celikpanel_dns_engine_manifest_receipt rows=1 columns=['singleton', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'source_revision', 'zone_count', 'snapshot_bytes', 'schema']
+   celikpanel_dns_engine_manifest_receipt: {"singleton": 1, "engine": "pdns", "engine_epoch": 1, "request_id": "c59b537aac13c590e71b4682a88ed7b1", "owner_id": "2496117f5d511eeb130aeb15040de678", "qualifier": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "source_revision": 0, "zone_count": 0, "snapshot_bytes": 0, "schema": "dns-engine-switch/v1"}
+-- table celikpanel_dns_zone_sync_receipts rows=0 columns=['domain', 'request_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table celikpanel_dns_zone_sync_v3_receipts rows=1 columns=['domain', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+   celikpanel_dns_zone_sync_v3_receipts: {"domain": "s2.s1-kill.test", "engine": "pdns", "engine_epoch": 1, "request_id": "88a85ce293b371ea72de8cd9cb5d9cfd", "owner_id": "4cad572ea1af35637b3d2b44c4e6b520", "qualifier": "dns-zone-sync/v3:sha256:6ccf0b5599f9694e54f65d92a6d3550f13100491b834a76a160a9b74b05705b4", "desired_generation": 1, "action": "sync", "zone_type": "MASTER", "schema": "dns-zone-sync/v3"}
+-- table comments rows=0 columns=['id', 'domain_id', 'name', 'type', 'modified_at', 'account', 'comment']
+-- table cryptokeys rows=0 columns=['id', 'domain_id', 'flags', 'active', 'published', 'content']
+-- table domainmetadata rows=1 columns=['id', 'domain_id', 'kind', 'content']
+   domainmetadata: {"id": 1, "domain_id": 1, "kind": "CATALOG-HASH", "content": "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="}
+-- table domains rows=2 columns=['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+   domains: {"id": 1, "name": "catalog-c000020a.celikpanel.invalid", "master": null, "last_check": null, "type": "PRODUCER", "notified_serial": 1, "account": "celikpanel-bind-catalog-v1", "options": null, "catalog": null}
+   domains: {"id": 2, "name": "s2.s1-kill.test", "master": null, "last_check": null, "type": "MASTER", "notified_serial": null, "account": null, "options": null, "catalog": "catalog-c000020a.celikpanel.invalid"}
+-- table records rows=5 columns=['id', 'domain_id', 'name', 'type', 'content', 'ttl', 'prio', 'disabled', 'ordername', 'auth']
+   records per domain: ["catalog-c000020a.celikpanel.invalid", 2]
+   records per domain: ["s2.s1-kill.test", 3]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "NS", 1]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "SOA", 1]
+   records per domain/type: ["s2.s1-kill.test", "A", 1]
+   records per domain/type: ["s2.s1-kill.test", "NS", 1]
+   records per domain/type: ["s2.s1-kill.test", "SOA", 1]
+   records: {"id": 1, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "NS", "content": "invalid.", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 2, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "SOA", "content": "invalid invalid 1790758221 60 30 3600 30", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 3, "domain_id": 2, "name": "s2.s1-kill.test", "type": "NS", "content": "ns1.s1-kill.test", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 4, "domain_id": 2, "name": "s2.s1-kill.test", "type": "SOA", "content": "ns1.s1-kill.test hostmaster.s1-kill.test 2026092801 10800 3600 604800 3600", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 5, "domain_id": 2, "name": "www.s2.s1-kill.test", "type": "A", "content": "192.0.2.10", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+-- table supermasters rows=0 columns=['ip', 'nameserver', 'account']
+-- table tsigkeys rows=0 columns=['id', 'name', 'algorithm', 'secret']
+######## /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085115.609-41da2a06a460.sqlite3
+== /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085115.609-41da2a06a460.sqlite3 size=98304 mtime_ns=1790758220000000000 sha256=9b1ca507c5c03056cd67a9451d5ef605bc0509c6932c2ff4cd46103920d5fbd0
+   sibling /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085115.609-41da2a06a460.sqlite3-wal size=94792
+   with retained WAL /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085115.609-41da2a06a460.sqlite3-wal size=94792
+tables: ['celikpanel_dns_engine_manifest_receipt', 'celikpanel_dns_zone_sync_receipts', 'celikpanel_dns_zone_sync_v3_receipts', 'comments', 'cryptokeys', 'domainmetadata', 'domains', 'records', 'supermasters', 'tsigkeys']
+-- table celikpanel_dns_engine_manifest_receipt rows=1 columns=['singleton', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'source_revision', 'zone_count', 'snapshot_bytes', 'schema']
+   celikpanel_dns_engine_manifest_receipt: {"singleton": 1, "engine": "pdns", "engine_epoch": 1, "request_id": "c59b537aac13c590e71b4682a88ed7b1", "owner_id": "2496117f5d511eeb130aeb15040de678", "qualifier": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "source_revision": 0, "zone_count": 0, "snapshot_bytes": 0, "schema": "dns-engine-switch/v1"}
+-- table celikpanel_dns_zone_sync_receipts rows=0 columns=['domain', 'request_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table celikpanel_dns_zone_sync_v3_receipts rows=1 columns=['domain', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+   celikpanel_dns_zone_sync_v3_receipts: {"domain": "s2.s1-kill.test", "engine": "pdns", "engine_epoch": 1, "request_id": "bd76b7b04a3d905bb8f827ee479e09a7", "owner_id": "840fd435b898b84ef4c29600af9f2294", "qualifier": "dns-zone-sync/v3:sha256:98d9e99d187e86504a3c8e28d4054bc0506d2e447445e731c5ccf02ffba86c56", "desired_generation": 2, "action": "sync", "zone_type": "MASTER", "schema": "dns-zone-sync/v3"}
+-- table comments rows=0 columns=['id', 'domain_id', 'name', 'type', 'modified_at', 'account', 'comment']
+-- table cryptokeys rows=0 columns=['id', 'domain_id', 'flags', 'active', 'published', 'content']
+-- table domainmetadata rows=1 columns=['id', 'domain_id', 'kind', 'content']
+   domainmetadata: {"id": 1, "domain_id": 1, "kind": "CATALOG-HASH", "content": "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="}
+-- table domains rows=2 columns=['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+   domains: {"id": 1, "name": "catalog-c000020a.celikpanel.invalid", "master": null, "last_check": null, "type": "PRODUCER", "notified_serial": 1, "account": "celikpanel-bind-catalog-v1", "options": null, "catalog": null}
+   domains: {"id": 2, "name": "s2.s1-kill.test", "master": null, "last_check": null, "type": "MASTER", "notified_serial": null, "account": null, "options": null, "catalog": "catalog-c000020a.celikpanel.invalid"}
+-- table records rows=6 columns=['id', 'domain_id', 'name', 'type', 'content', 'ttl', 'prio', 'disabled', 'ordername', 'auth']
+   records per domain: ["catalog-c000020a.celikpanel.invalid", 2]
+   records per domain: ["s2.s1-kill.test", 4]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "NS", 1]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "SOA", 1]
+   records per domain/type: ["s2.s1-kill.test", "A", 2]
+   records per domain/type: ["s2.s1-kill.test", "NS", 1]
+   records per domain/type: ["s2.s1-kill.test", "SOA", 1]
+   records: {"id": 1, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "NS", "content": "invalid.", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 2, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "SOA", "content": "invalid invalid 1790758221 60 30 3600 30", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 3, "domain_id": 2, "name": "changed.s2.s1-kill.test", "type": "A", "content": "192.0.2.10", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 4, "domain_id": 2, "name": "s2.s1-kill.test", "type": "NS", "content": "ns1.s1-kill.test", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 5, "domain_id": 2, "name": "s2.s1-kill.test", "type": "SOA", "content": "ns1.s1-kill.test hostmaster.s1-kill.test 2026092802 10800 3600 604800 3600", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 6, "domain_id": 2, "name": "www.s2.s1-kill.test", "type": "A", "content": "192.0.2.10", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+-- table supermasters rows=0 columns=['ip', 'nameserver', 'account']
+-- table tsigkeys rows=0 columns=['id', 'name', 'algorithm', 'secret']
+######## /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085120.709-8a171458d4fd.sqlite3
+== /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085120.709-8a171458d4fd.sqlite3 size=98304 mtime_ns=1790758220000000000 sha256=9b1ca507c5c03056cd67a9451d5ef605bc0509c6932c2ff4cd46103920d5fbd0
+   sibling /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085120.709-8a171458d4fd.sqlite3-wal size=135992
+   with retained WAL /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085120.709-8a171458d4fd.sqlite3-wal size=135992
+tables: ['celikpanel_dns_engine_manifest_receipt', 'celikpanel_dns_zone_sync_receipts', 'celikpanel_dns_zone_sync_v3_receipts', 'comments', 'cryptokeys', 'domainmetadata', 'domains', 'records', 'supermasters', 'tsigkeys']
+-- table celikpanel_dns_engine_manifest_receipt rows=1 columns=['singleton', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'source_revision', 'zone_count', 'snapshot_bytes', 'schema']
+   celikpanel_dns_engine_manifest_receipt: {"singleton": 1, "engine": "pdns", "engine_epoch": 1, "request_id": "c59b537aac13c590e71b4682a88ed7b1", "owner_id": "2496117f5d511eeb130aeb15040de678", "qualifier": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "source_revision": 0, "zone_count": 0, "snapshot_bytes": 0, "schema": "dns-engine-switch/v1"}
+-- table celikpanel_dns_zone_sync_receipts rows=0 columns=['domain', 'request_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table celikpanel_dns_zone_sync_v3_receipts rows=1 columns=['domain', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+   celikpanel_dns_zone_sync_v3_receipts: {"domain": "s2.s1-kill.test", "engine": "pdns", "engine_epoch": 1, "request_id": "bd76b7b04a3d905bb8f827ee479e09a7", "owner_id": "840fd435b898b84ef4c29600af9f2294", "qualifier": "dns-zone-sync/v3:sha256:98d9e99d187e86504a3c8e28d4054bc0506d2e447445e731c5ccf02ffba86c56", "desired_generation": 2, "action": "sync", "zone_type": "MASTER", "schema": "dns-zone-sync/v3"}
+-- table comments rows=0 columns=['id', 'domain_id', 'name', 'type', 'modified_at', 'account', 'comment']
+-- table cryptokeys rows=0 columns=['id', 'domain_id', 'flags', 'active', 'published', 'content']
+-- table domainmetadata rows=1 columns=['id', 'domain_id', 'kind', 'content']
+   domainmetadata: {"id": 1, "domain_id": 1, "kind": "CATALOG-HASH", "content": "1Rf5KuuzsJMQRGXVLYxlmzvq+Z93Mwk4oSSCrR9KFCA="}
+-- table domains rows=2 columns=['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+   domains: {"id": 1, "name": "catalog-c000020a.celikpanel.invalid", "master": null, "last_check": null, "type": "PRODUCER", "notified_serial": 1790758221, "account": "celikpanel-bind-catalog-v1", "options": null, "catalog": null}
+   domains: {"id": 2, "name": "s2.s1-kill.test", "master": null, "last_check": null, "type": "MASTER", "notified_serial": 2026092802, "account": null, "options": null, "catalog": "catalog-c000020a.celikpanel.invalid"}
+-- table records rows=6 columns=['id', 'domain_id', 'name', 'type', 'content', 'ttl', 'prio', 'disabled', 'ordername', 'auth']
+   records per domain: ["catalog-c000020a.celikpanel.invalid", 2]
+   records per domain: ["s2.s1-kill.test", 4]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "NS", 1]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "SOA", 1]
+   records per domain/type: ["s2.s1-kill.test", "A", 2]
+   records per domain/type: ["s2.s1-kill.test", "NS", 1]
+   records per domain/type: ["s2.s1-kill.test", "SOA", 1]
+   records: {"id": 1, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "NS", "content": "invalid.", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 3, "domain_id": 2, "name": "changed.s2.s1-kill.test", "type": "A", "content": "192.0.2.10", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 4, "domain_id": 2, "name": "s2.s1-kill.test", "type": "NS", "content": "ns1.s1-kill.test", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 5, "domain_id": 2, "name": "s2.s1-kill.test", "type": "SOA", "content": "ns1.s1-kill.test hostmaster.s1-kill.test 2026092802 10800 3600 604800 3600", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 6, "domain_id": 2, "name": "www.s2.s1-kill.test", "type": "A", "content": "192.0.2.10", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 7, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "SOA", "content": "invalid invalid 1790758280 60 30 3600 30", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+-- table supermasters rows=0 columns=['ip', 'nameserver', 'account']
+-- table tsigkeys rows=0 columns=['id', 'name', 'algorithm', 'secret']
+######## /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085122.768-704e66637d08.sqlite3
+== /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085122.768-704e66637d08.sqlite3 size=98304 mtime_ns=1790758220000000000 sha256=9b1ca507c5c03056cd67a9451d5ef605bc0509c6932c2ff4cd46103920d5fbd0
+   sibling /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085122.768-704e66637d08.sqlite3-wal size=168952
+   with retained WAL /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085122.768-704e66637d08.sqlite3-wal size=168952
+tables: ['celikpanel_dns_engine_manifest_receipt', 'celikpanel_dns_zone_sync_receipts', 'celikpanel_dns_zone_sync_v3_receipts', 'comments', 'cryptokeys', 'domainmetadata', 'domains', 'records', 'supermasters', 'tsigkeys']
+-- table celikpanel_dns_engine_manifest_receipt rows=1 columns=['singleton', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'source_revision', 'zone_count', 'snapshot_bytes', 'schema']
+   celikpanel_dns_engine_manifest_receipt: {"singleton": 1, "engine": "pdns", "engine_epoch": 1, "request_id": "c59b537aac13c590e71b4682a88ed7b1", "owner_id": "2496117f5d511eeb130aeb15040de678", "qualifier": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "source_revision": 0, "zone_count": 0, "snapshot_bytes": 0, "schema": "dns-engine-switch/v1"}
+-- table celikpanel_dns_zone_sync_receipts rows=0 columns=['domain', 'request_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table celikpanel_dns_zone_sync_v3_receipts rows=1 columns=['domain', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+   celikpanel_dns_zone_sync_v3_receipts: {"domain": "s2.s1-kill.test", "engine": "pdns", "engine_epoch": 1, "request_id": "192554344c6206934b16138c9cca14ca", "owner_id": "49023ad113740f2b5da939b35c76c2f7", "qualifier": "dns-zone-sync/v3:sha256:e90fb9845e27429320ea2b358a36431de04f7585481c0e935b01623592b4d3f1", "desired_generation": 3, "action": "delete", "zone_type": "MASTER", "schema": "dns-zone-sync/v3"}
+-- table comments rows=0 columns=['id', 'domain_id', 'name', 'type', 'modified_at', 'account', 'comment']
+-- table cryptokeys rows=0 columns=['id', 'domain_id', 'flags', 'active', 'published', 'content']
+-- table domainmetadata rows=1 columns=['id', 'domain_id', 'kind', 'content']
+   domainmetadata: {"id": 1, "domain_id": 1, "kind": "CATALOG-HASH", "content": "1Rf5KuuzsJMQRGXVLYxlmzvq+Z93Mwk4oSSCrR9KFCA="}
+-- table domains rows=1 columns=['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+   domains: {"id": 1, "name": "catalog-c000020a.celikpanel.invalid", "master": null, "last_check": null, "type": "PRODUCER", "notified_serial": 1790758221, "account": "celikpanel-bind-catalog-v1", "options": null, "catalog": null}
+-- table records rows=2 columns=['id', 'domain_id', 'name', 'type', 'content', 'ttl', 'prio', 'disabled', 'ordername', 'auth']
+   records per domain: ["catalog-c000020a.celikpanel.invalid", 2]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "NS", 1]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "SOA", 1]
+   records: {"id": 1, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "NS", "content": "invalid.", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 7, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "SOA", "content": "invalid invalid 1790758281 60 30 3600 30", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+-- table supermasters rows=0 columns=['ip', 'nameserver', 'account']
+-- table tsigkeys rows=0 columns=['id', 'name', 'algorithm', 'secret']
+######## /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085220.761-eed824d39ba8.sqlite3
+== /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085220.761-eed824d39ba8.sqlite3 size=98304 mtime_ns=1790758220000000000 sha256=9b1ca507c5c03056cd67a9451d5ef605bc0509c6932c2ff4cd46103920d5fbd0
+   sibling /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085220.761-eed824d39ba8.sqlite3-wal size=206032
+   with retained WAL /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085220.761-eed824d39ba8.sqlite3-wal size=206032
+tables: ['celikpanel_dns_engine_manifest_receipt', 'celikpanel_dns_zone_sync_receipts', 'celikpanel_dns_zone_sync_v3_receipts', 'comments', 'cryptokeys', 'domainmetadata', 'domains', 'records', 'supermasters', 'tsigkeys']
+-- table celikpanel_dns_engine_manifest_receipt rows=1 columns=['singleton', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'source_revision', 'zone_count', 'snapshot_bytes', 'schema']
+   celikpanel_dns_engine_manifest_receipt: {"singleton": 1, "engine": "pdns", "engine_epoch": 1, "request_id": "c59b537aac13c590e71b4682a88ed7b1", "owner_id": "2496117f5d511eeb130aeb15040de678", "qualifier": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "source_revision": 0, "zone_count": 0, "snapshot_bytes": 0, "schema": "dns-engine-switch/v1"}
+-- table celikpanel_dns_zone_sync_receipts rows=0 columns=['domain', 'request_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table celikpanel_dns_zone_sync_v3_receipts rows=1 columns=['domain', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+   celikpanel_dns_zone_sync_v3_receipts: {"domain": "s2.s1-kill.test", "engine": "pdns", "engine_epoch": 1, "request_id": "192554344c6206934b16138c9cca14ca", "owner_id": "49023ad113740f2b5da939b35c76c2f7", "qualifier": "dns-zone-sync/v3:sha256:e90fb9845e27429320ea2b358a36431de04f7585481c0e935b01623592b4d3f1", "desired_generation": 3, "action": "delete", "zone_type": "MASTER", "schema": "dns-zone-sync/v3"}
+-- table comments rows=0 columns=['id', 'domain_id', 'name', 'type', 'modified_at', 'account', 'comment']
+-- table cryptokeys rows=0 columns=['id', 'domain_id', 'flags', 'active', 'published', 'content']
+-- table domainmetadata rows=1 columns=['id', 'domain_id', 'kind', 'content']
+   domainmetadata: {"id": 1, "domain_id": 1, "kind": "CATALOG-HASH", "content": "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="}
+-- table domains rows=1 columns=['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+   domains: {"id": 1, "name": "catalog-c000020a.celikpanel.invalid", "master": null, "last_check": null, "type": "PRODUCER", "notified_serial": 1790758281, "account": "celikpanel-bind-catalog-v1", "options": null, "catalog": null}
+-- table records rows=2 columns=['id', 'domain_id', 'name', 'type', 'content', 'ttl', 'prio', 'disabled', 'ordername', 'auth']
+   records per domain: ["catalog-c000020a.celikpanel.invalid", 2]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "NS", 1]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "SOA", 1]
+   records: {"id": 1, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "NS", "content": "invalid.", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 2, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "SOA", "content": "invalid invalid 1790758340 60 30 3600 30", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+-- table supermasters rows=0 columns=['ip', 'nameserver', 'account']
+-- table tsigkeys rows=0 columns=['id', 'name', 'algorithm', 'secret']
+######## /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085339.509-b7b525c9bf47.sqlite3
+== /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085339.509-b7b525c9bf47.sqlite3 size=98304 mtime_ns=1790758220000000000 sha256=9b1ca507c5c03056cd67a9451d5ef605bc0509c6932c2ff4cd46103920d5fbd0
+   sibling /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085339.509-b7b525c9bf47.sqlite3-wal size=238992
+   with retained WAL /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085339.509-b7b525c9bf47.sqlite3-wal size=238992
+tables: ['celikpanel_dns_engine_manifest_receipt', 'celikpanel_dns_zone_sync_receipts', 'celikpanel_dns_zone_sync_v3_receipts', 'comments', 'cryptokeys', 'domainmetadata', 'domains', 'records', 'supermasters', 'tsigkeys']
+-- table celikpanel_dns_engine_manifest_receipt rows=1 columns=['singleton', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'source_revision', 'zone_count', 'snapshot_bytes', 'schema']
+   celikpanel_dns_engine_manifest_receipt: {"singleton": 1, "engine": "pdns", "engine_epoch": 1, "request_id": "c59b537aac13c590e71b4682a88ed7b1", "owner_id": "2496117f5d511eeb130aeb15040de678", "qualifier": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "source_revision": 0, "zone_count": 0, "snapshot_bytes": 0, "schema": "dns-engine-switch/v1"}
+-- table celikpanel_dns_zone_sync_receipts rows=0 columns=['domain', 'request_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table celikpanel_dns_zone_sync_v3_receipts rows=1 columns=['domain', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+   celikpanel_dns_zone_sync_v3_receipts: {"domain": "s2.s1-kill.test", "engine": "pdns", "engine_epoch": 1, "request_id": "03bc01afa7ab7518855affd581094726", "owner_id": "5552dfe75d99ca5c5df5cc2ef25d8dce", "qualifier": "dns-zone-sync/v3:sha256:d5345b9d08e200db472fdb31fe7df853f048d1388af736291d98d6caf24092c7", "desired_generation": 4, "action": "sync", "zone_type": "MASTER", "schema": "dns-zone-sync/v3"}
+-- table comments rows=0 columns=['id', 'domain_id', 'name', 'type', 'modified_at', 'account', 'comment']
+-- table cryptokeys rows=0 columns=['id', 'domain_id', 'flags', 'active', 'published', 'content']
+-- table domainmetadata rows=1 columns=['id', 'domain_id', 'kind', 'content']
+   domainmetadata: {"id": 1, "domain_id": 1, "kind": "CATALOG-HASH", "content": "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="}
+-- table domains rows=2 columns=['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+   domains: {"id": 1, "name": "catalog-c000020a.celikpanel.invalid", "master": null, "last_check": null, "type": "PRODUCER", "notified_serial": 1790758281, "account": "celikpanel-bind-catalog-v1", "options": null, "catalog": null}
+   domains: {"id": 2, "name": "s2.s1-kill.test", "master": null, "last_check": null, "type": "MASTER", "notified_serial": null, "account": null, "options": null, "catalog": "catalog-c000020a.celikpanel.invalid"}
+-- table records rows=5 columns=['id', 'domain_id', 'name', 'type', 'content', 'ttl', 'prio', 'disabled', 'ordername', 'auth']
+   records per domain: ["catalog-c000020a.celikpanel.invalid", 2]
+   records per domain: ["s2.s1-kill.test", 3]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "NS", 1]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "SOA", 1]
+   records per domain/type: ["s2.s1-kill.test", "A", 1]
+   records per domain/type: ["s2.s1-kill.test", "NS", 1]
+   records per domain/type: ["s2.s1-kill.test", "SOA", 1]
+   records: {"id": 1, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "NS", "content": "invalid.", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 2, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "SOA", "content": "invalid invalid 1790758341 60 30 3600 30", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 3, "domain_id": 2, "name": "s2.s1-kill.test", "type": "NS", "content": "ns1.s1-kill.test", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 4, "domain_id": 2, "name": "s2.s1-kill.test", "type": "SOA", "content": "ns1.s1-kill.test hostmaster.s1-kill.test 2026092803 10800 3600 604800 3600", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 5, "domain_id": 2, "name": "www.s2.s1-kill.test", "type": "A", "content": "192.0.2.10", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+-- table supermasters rows=0 columns=['ip', 'nameserver', 'account']
+-- table tsigkeys rows=0 columns=['id', 'name', 'algorithm', 'secret']
+######## /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085421.286-46fac957357c.sqlite3
+== /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085421.286-46fac957357c.sqlite3 size=98304 mtime_ns=1790758220000000000 sha256=9b1ca507c5c03056cd67a9451d5ef605bc0509c6932c2ff4cd46103920d5fbd0
+   sibling /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085421.286-46fac957357c.sqlite3-wal size=280192
+   with retained WAL /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch-db/copies/085421.286-46fac957357c.sqlite3-wal size=280192
+tables: ['celikpanel_dns_engine_manifest_receipt', 'celikpanel_dns_zone_sync_receipts', 'celikpanel_dns_zone_sync_v3_receipts', 'comments', 'cryptokeys', 'domainmetadata', 'domains', 'records', 'supermasters', 'tsigkeys']
+-- table celikpanel_dns_engine_manifest_receipt rows=1 columns=['singleton', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'source_revision', 'zone_count', 'snapshot_bytes', 'schema']
+   celikpanel_dns_engine_manifest_receipt: {"singleton": 1, "engine": "pdns", "engine_epoch": 1, "request_id": "c59b537aac13c590e71b4682a88ed7b1", "owner_id": "2496117f5d511eeb130aeb15040de678", "qualifier": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "source_revision": 0, "zone_count": 0, "snapshot_bytes": 0, "schema": "dns-engine-switch/v1"}
+-- table celikpanel_dns_zone_sync_receipts rows=0 columns=['domain', 'request_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table celikpanel_dns_zone_sync_v3_receipts rows=1 columns=['domain', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+   celikpanel_dns_zone_sync_v3_receipts: {"domain": "s2.s1-kill.test", "engine": "pdns", "engine_epoch": 1, "request_id": "03bc01afa7ab7518855affd581094726", "owner_id": "5552dfe75d99ca5c5df5cc2ef25d8dce", "qualifier": "dns-zone-sync/v3:sha256:d5345b9d08e200db472fdb31fe7df853f048d1388af736291d98d6caf24092c7", "desired_generation": 4, "action": "sync", "zone_type": "MASTER", "schema": "dns-zone-sync/v3"}
+-- table comments rows=0 columns=['id', 'domain_id', 'name', 'type', 'modified_at', 'account', 'comment']
+-- table cryptokeys rows=0 columns=['id', 'domain_id', 'flags', 'active', 'published', 'content']
+-- table domainmetadata rows=1 columns=['id', 'domain_id', 'kind', 'content']
+   domainmetadata: {"id": 1, "domain_id": 1, "kind": "CATALOG-HASH", "content": "1Rf5KuuzsJMQRGXVLYxlmzvq+Z93Mwk4oSSCrR9KFCA="}
+-- table domains rows=2 columns=['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+   domains: {"id": 1, "name": "catalog-c000020a.celikpanel.invalid", "master": null, "last_check": null, "type": "PRODUCER", "notified_serial": 1790758341, "account": "celikpanel-bind-catalog-v1", "options": null, "catalog": null}
+   domains: {"id": 2, "name": "s2.s1-kill.test", "master": null, "last_check": null, "type": "MASTER", "notified_serial": 2026092803, "account": null, "options": null, "catalog": "catalog-c000020a.celikpanel.invalid"}
+-- table records rows=5 columns=['id', 'domain_id', 'name', 'type', 'content', 'ttl', 'prio', 'disabled', 'ordername', 'auth']
+   records per domain: ["catalog-c000020a.celikpanel.invalid", 2]
+   records per domain: ["s2.s1-kill.test", 3]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "NS", 1]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "SOA", 1]
+   records per domain/type: ["s2.s1-kill.test", "A", 1]
+   records per domain/type: ["s2.s1-kill.test", "NS", 1]
+   records per domain/type: ["s2.s1-kill.test", "SOA", 1]
+   records: {"id": 1, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "NS", "content": "invalid.", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 3, "domain_id": 2, "name": "s2.s1-kill.test", "type": "NS", "content": "ns1.s1-kill.test", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 4, "domain_id": 2, "name": "s2.s1-kill.test", "type": "SOA", "content": "ns1.s1-kill.test hostmaster.s1-kill.test 2026092803 10800 3600 604800 3600", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 5, "domain_id": 2, "name": "www.s2.s1-kill.test", "type": "A", "content": "192.0.2.10", "ttl": 300, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 6, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "SOA", "content": "invalid invalid 1790758460 60 30 3600 30", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+-- table supermasters rows=0 columns=['ip', 'nameserver', 'account']
+-- table tsigkeys rows=0 columns=['id', 'name', 'algorithm', 'secret']
+######## /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/pdns-at-at-kill-proof.sqlite3
+== /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/pdns-at-at-kill-proof.sqlite3 size=98304 mtime_ns=1790758220000000000 sha256=9b1ca507c5c03056cd67a9451d5ef605bc0509c6932c2ff4cd46103920d5fbd0
+   sibling /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/pdns-at-at-kill-proof.sqlite3-wal size=28872
+   with retained WAL /var/tmp/cp-b12-1001/evidence/z05-zero-started-zl-rb/raw/watch/cp-b12-watch/pdns-at-at-kill-proof.sqlite3-wal size=28872
+tables: ['celikpanel_dns_engine_manifest_receipt', 'celikpanel_dns_zone_sync_receipts', 'celikpanel_dns_zone_sync_v3_receipts', 'comments', 'cryptokeys', 'domainmetadata', 'domains', 'records', 'supermasters', 'tsigkeys']
+-- table celikpanel_dns_engine_manifest_receipt rows=1 columns=['singleton', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'source_revision', 'zone_count', 'snapshot_bytes', 'schema']
+   celikpanel_dns_engine_manifest_receipt: {"singleton": 1, "engine": "pdns", "engine_epoch": 1, "request_id": "c59b537aac13c590e71b4682a88ed7b1", "owner_id": "2496117f5d511eeb130aeb15040de678", "qualifier": "dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "source_revision": 0, "zone_count": 0, "snapshot_bytes": 0, "schema": "dns-engine-switch/v1"}
+-- table celikpanel_dns_zone_sync_receipts rows=0 columns=['domain', 'request_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table celikpanel_dns_zone_sync_v3_receipts rows=0 columns=['domain', 'engine', 'engine_epoch', 'request_id', 'owner_id', 'qualifier', 'desired_generation', 'action', 'zone_type', 'schema']
+-- table comments rows=0 columns=['id', 'domain_id', 'name', 'type', 'modified_at', 'account', 'comment']
+-- table cryptokeys rows=0 columns=['id', 'domain_id', 'flags', 'active', 'published', 'content']
+-- table domainmetadata rows=1 columns=['id', 'domain_id', 'kind', 'content']
+   domainmetadata: {"id": 1, "domain_id": 1, "kind": "CATALOG-HASH", "content": "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="}
+-- table domains rows=1 columns=['id', 'name', 'master', 'last_check', 'type', 'notified_serial', 'account', 'options', 'catalog']
+   domains: {"id": 1, "name": "catalog-c000020a.celikpanel.invalid", "master": null, "last_check": null, "type": "PRODUCER", "notified_serial": 1, "account": "celikpanel-bind-catalog-v1", "options": null, "catalog": null}
+-- table records rows=2 columns=['id', 'domain_id', 'name', 'type', 'content', 'ttl', 'prio', 'disabled', 'ordername', 'auth']
+   records per domain: ["catalog-c000020a.celikpanel.invalid", 2]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "NS", 1]
+   records per domain/type: ["catalog-c000020a.celikpanel.invalid", "SOA", 1]
+   records: {"id": 1, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "NS", "content": "invalid.", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+   records: {"id": 2, "domain_id": 1, "name": "catalog-c000020a.celikpanel.invalid", "type": "SOA", "content": "invalid invalid 1790758220 60 30 3600 30", "ttl": 60, "prio": 0, "disabled": 0, "ordername": null, "auth": 1}
+-- table supermasters rows=0 columns=['ip', 'nameserver', 'account']
+-- table tsigkeys rows=0 columns=['id', 'name', 'algorithm', 'secret']

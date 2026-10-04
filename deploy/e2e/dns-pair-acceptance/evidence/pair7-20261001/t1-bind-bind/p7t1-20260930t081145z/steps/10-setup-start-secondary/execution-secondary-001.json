@@ -1,0 +1,73 @@
+{
+  "context": {
+    "access_dns_ip": "192.0.2.11",
+    "dns_engine": "bind",
+    "dns_hosting_management": "",
+    "dns_mode": "local",
+    "dns_role": "secondary",
+    "local_ip": "192.0.2.11",
+    "local_nameserver": "ns2.ns-accept.test",
+    "mail_hostname": "",
+    "panel_domain": "panel-arch.ns-accept.test",
+    "peer_ip": "192.0.2.10",
+    "peer_nameserver": "ns1.ns-accept.test"
+  },
+  "id": "4a3649f6dcebee38fa5ac692e89f26e6",
+  "panel_url": "https://panel-arch.ns-accept.test:2083/",
+  "phase": "02-service",
+  "plan_id": "94dfc25e4172cb24f58b80a7ef4515f8",
+  "request_id": "4a3649f6dcebee38fa5ac692e89f26e6",
+  "status": "running",
+  "steps": [
+    {
+      "id": "01-dns",
+      "kind": "dns",
+      "owner_id": "fdf1c7e7b075aed16e9080973a442f43",
+      "request_id": "bb3070af21a1d75d0dcd40b6b3e09659",
+      "status": "succeeded",
+      "target": "local"
+    },
+    {
+      "id": "02-service",
+      "kind": "service",
+      "operation_id": "4422c0ac0485d94655b4e33393cf7c0e",
+      "owner_id": "335be3c8e475d3e84c8d0bfcd5dee452",
+      "request_id": "aab3caed283aaabf7d3573cf530988c4",
+      "status": "running",
+      "target": "certbot"
+    },
+    {
+      "id": "03-firewall",
+      "kind": "firewall",
+      "owner_id": "e84994d84faffbeadab7f5db47f7c843",
+      "request_id": "f872a5a4718c65ae8c7b43e3c748ed0d",
+      "status": "pending",
+      "target": "enable_and_persist"
+    },
+    {
+      "id": "04-access_dns",
+      "kind": "access_dns",
+      "owner_id": "3bd4f7c1b50463958ff4cbc9b6348b71",
+      "qualifier": "192.0.2.11",
+      "request_id": "ab058b189b9b6550d5dfde2c3d9ac120",
+      "status": "pending",
+      "target": "panel-arch.ns-accept.test"
+    },
+    {
+      "id": "05-panel_certificate",
+      "kind": "panel_certificate",
+      "owner_id": "44cdd44c5a486e225983c5f3206b51a7",
+      "request_id": "97bbf737b8782a4490c038d41d22c63d",
+      "status": "pending",
+      "target": "panel-arch.ns-accept.test"
+    },
+    {
+      "id": "06-verify",
+      "kind": "verify",
+      "owner_id": "d9bcbbc7001cfe8b5a0448a220a36d23",
+      "request_id": "0c9a61e6bf1f1573d47f20dc7e718c32",
+      "status": "pending",
+      "target": "dns"
+    }
+  ]
+}

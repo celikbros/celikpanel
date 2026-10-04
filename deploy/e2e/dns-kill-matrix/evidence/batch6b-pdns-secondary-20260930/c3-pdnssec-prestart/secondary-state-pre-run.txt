@@ -1,0 +1,50 @@
+wall=2026-09-29T16:25:20.987956518Z boot_id=d6532402-8091-404e-ac0d-c2ba0f794d0a
+== named.service
+MainPID=0
+ExecMainStartTimestamp=
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+== bind9.service
+MainPID=0
+ExecMainStartTimestamp=
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+== pdns.service
+MainPID=0
+ExecMainStartTimestamp=
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+== celikpanel-agent.service
+MainPID=0
+ExecMainStartTimestamp=Tue 2026-09-29 16:23:40 UTC
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+== celikpanel-panel.service
+MainPID=0
+ExecMainStartTimestamp=Tue 2026-09-29 16:23:41 UTC
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+== ss 53
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=369,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=369,fd=18))
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=369,fd=19))
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=369,fd=21))
+== rndc: not run (rndc absent or named inactive)
+== named-checkconf -l
+== managed BIND files (/var/cache/bind, no follow)
+find: ‘/var/cache/bind’: No such file or directory
+== secondary zone files (regular files under /var/cache/bind), metadata, hash, text
+== PowerDNS database absent
+== pdns journal (transfer/notify/catalog lines, all boots)
+== named journal (transfer/notify/catalog/zone lines, all boots)
+== agent journal: catalog/producer lines (all boots)

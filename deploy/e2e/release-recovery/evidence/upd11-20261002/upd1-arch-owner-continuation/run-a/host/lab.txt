@@ -1,0 +1,2 @@
+lab=/var/tmp/cp-release-drill-upd11-arch-oc-a
+upd1-arch-owner-continuation-20261002t002430z

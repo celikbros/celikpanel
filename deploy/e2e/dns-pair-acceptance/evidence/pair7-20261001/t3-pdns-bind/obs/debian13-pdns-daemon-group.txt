@@ -1,0 +1,41 @@
+## 2026-09-30T08:35:51Z role=primary pdns daemon identity (read-only)
+pdns.service MainPID=690
+Name:	pdns_server
+Uid:	103	103	103	103
+Gid:	104	104	104	104
+Groups:	104 
+group names: pdns
+/etc/powerdns:
+total 36
+drwxr-xr-x  3 root root  4096 2026-09-30 08:31:56.431460413 +0000 .
+drwxr-xr-x 69 root root  4096 2026-09-30 08:32:14.239525445 +0000 ..
+-rw-r-----  1 root pdns 20579 2026-08-06 19:04:06.000000000 +0000 pdns.conf
+drwxr-xr-x  2 root root  4096 2026-09-30 08:32:00.499476910 +0000 pdns.d
+
+/etc/powerdns/pdns.d:
+total 16
+drwxr-xr-x 2 root root 4096 2026-09-30 08:32:00.499476910 +0000 .
+drwxr-xr-x 3 root root 4096 2026-09-30 08:31:56.431460413 +0000 ..
+-rw-r--r-- 1 root root  310 2026-09-30 08:32:00.467476785 +0000 celikpanel-cluster.conf
+-rw-r--r-- 1 root root  216 2026-09-30 08:32:00.483476848 +0000 celikpanel.conf
+8b46927e48be83b2f0afc38efabdc2e2237daa5281b1a07ea44989ffa41f262a  /etc/powerdns/pdns.conf
+31ee619ba2589b241c484ed4081b329f22742b8a85ef76555c96352a60882a21  /etc/powerdns/pdns.d/celikpanel-cluster.conf
+0485300f3503e60e09a5ec29a43483c29faf4506c91dd3ee44935367307bde69  /etc/powerdns/pdns.d/celikpanel.conf
+### active (non-comment) pdns.conf lines (secret/key/password lines dropped)
+include-dir=/etc/powerdns/pdns.d
+launch=
+security-poll-suffix=
+### /etc/powerdns/pdns.d/celikpanel-cluster.conf
+primary=yes
+secondary=yes
+allow-axfr-ips=192.0.2.10,192.0.2.11
+also-notify=192.0.2.11
+### /etc/powerdns/pdns.d/celikpanel.conf
+launch=gsqlite3
+gsqlite3-dnssec=yes
+gsqlite3-database=/var/lib/powerdns/pdns.sqlite3
+local-address=10.0.2.15,192.0.2.10
+zone-cache-refresh-interval=0
+webserver=no
+api=no
+(end)

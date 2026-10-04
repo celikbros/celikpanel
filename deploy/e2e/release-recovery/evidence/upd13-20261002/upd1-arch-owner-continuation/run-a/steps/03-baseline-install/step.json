@@ -1,0 +1,18 @@
+{
+  "checks": {
+    "start": {
+      "action": "started",
+      "archive_sha256": "056c58dcbc5a3f0fbbb8291543bfd0bce7c3f2d6b7ed872cd67c9e29c5690e31",
+      "credentials": "[REDACTED]",
+      "node": "arch",
+      "source_commit": "4a379faed756b87070a7f621787e9cbe0eef7d04",
+      "unit": "celikpanel-lab-current-worker-baseline.service",
+      "version": "v0.1.0-alpha.81"
+    }
+  },
+  "finished_at": "2026-10-02T22:41:33Z",
+  "name": "baseline-install",
+  "reason": "CalledProcessError: Command '['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5', '-o', 'StrictHostKeyChecking=yes', '-o', 'HashKnownHosts=no', '-o', 'UserKnownHostsFile=/var/tmp/cp-release-drill-upd13-arch-oc-a/cells/30b325b60b41bceacb867866/ssh-known-hosts', '-i', '/var/tmp/cp-release-drill-upd13-arch-oc-a/key', '-p', '3802', 'celik@127.0.0.1', 'sudo /bin/bash -s']' returned non-zero exit status 1. | guest stderr: sudo: error in /etc/sudo.conf, line 0 while loading plugin \"sudoers_policy\"\nsudo: unable to load /usr/lib/sudo/sudoers.so: libpam.so.0: cannot open shared object file: No such file or directory\nsudo: fatal error, unable to load plugins\n",
+  "started_at": "2026-10-02T22:41:15Z",
+  "verdict": "inconclusive"
+}

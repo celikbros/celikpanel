@@ -1,0 +1,77 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "RecoveryStatus (management return readiness, read-only)",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/recovery/status?request_id=a75b13b42c29ad36405ce87c50b3e300"
+  },
+  "response": {
+    "elapsed_seconds": 0.004,
+    "headers": [
+      [
+        "Cache-Control",
+        "no-store"
+      ],
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 02 Oct 2026 02:55:18 GMT"
+      ],
+      [
+        "Content-Length",
+        "257"
+      ]
+    ],
+    "json": {
+      "observation": "known",
+      "observed_at": "2026-10-02T02:51:09Z",
+      "panel_state": "starting",
+      "phase": "succeeded",
+      "reason": "update_verified",
+      "request_id": "a75b13b42c29ad36405ce87c50b3e300",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "update_verified"
+    },
+    "status": 200,
+    "text": null
+  }
+}

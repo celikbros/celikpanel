@@ -1,0 +1,50 @@
+Oct 01 01:00:02 dns-arch systemd[1]: Finished CelikPanel verified release transaction recovery.
+Oct 01 01:00:32 dns-arch systemd[1]: Starting CelikPanel verified release transaction recovery...
+Oct 01 01:00:32 dns-arch systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+Oct 01 01:00:32 dns-arch systemd[1]: Finished CelikPanel verified release transaction recovery.
+Oct 01 01:00:56 dns-arch systemd[1]: Starting CelikPanel verified release transaction recovery...
+Oct 01 01:00:57 dns-arch release-recovery[21119]: Recovery dispatch admitted: attempt=1 snapshot=20261001T005932Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-c0330bbe5baad02c2df5efe451b8d128
+Oct 01 01:01:03 dns-arch release-recovery[21547]: CELIKPANEL_UPDATE_CHECKPOINT database_verified_before_start
+Oct 01 01:02:05 dns-arch release-recovery[21547]: !! pending update panel did not stay running and answer on its own address
+Oct 01 01:02:05 dns-arch release-recovery[21547]: !! Pending update finalization failed; marker preserved and both coordinators stopped.
+Oct 01 01:02:05 dns-arch release-recovery[21547]: !! Bekleyen güncelleme sonuçlandırması başarısız; marker korundu ve iki koordinatör durduruldu.
+Oct 01 01:02:05 dns-arch release-recovery[21119]: Automatic recovery attempt 1 of 3 did not finish; the native timer admits the next attempt for this same operation. No owner action is needed yet.
+Oct 01 01:02:05 dns-arch release-recovery[21119]: Otomatik kurtarma denemesi 1/3 tamamlanmadı; yerel zamanlayıcı aynı işlem için sonraki denemeyi başlatır. Henüz kullanıcı işlemi gerekmiyor.
+Oct 01 01:02:05 dns-arch release-recovery[21119]: !! release recovery child failed with status 1
+Oct 01 01:02:05 dns-arch systemd[1]: celikpanel-release-recovery.service: Main process exited, code=exited, status=1/FAILURE
+Oct 01 01:02:05 dns-arch systemd[1]: celikpanel-release-recovery.service: Failed with result 'exit-code'.
+Oct 01 01:02:05 dns-arch systemd[1]: Failed to start CelikPanel verified release transaction recovery.
+Oct 01 01:02:05 dns-arch systemd[1]: celikpanel-release-recovery.service: Consumed 8.812s CPU time over 1min 9.345s wall clock time, 20.3M memory peak.
+Oct 01 01:02:35 dns-arch systemd[1]: Starting CelikPanel verified release transaction recovery...
+Oct 01 01:02:36 dns-arch release-recovery[25041]: Recovery dispatch admitted: attempt=2 snapshot=20261001T005932Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-c0330bbe5baad02c2df5efe451b8d128
+Oct 01 01:02:42 dns-arch release-recovery[25419]: CELIKPANEL_UPDATE_CHECKPOINT database_verified_before_start
+Oct 01 01:03:45 dns-arch release-recovery[25419]: !! pending update panel did not stay running and answer on its own address
+Oct 01 01:03:45 dns-arch release-recovery[25419]: !! Pending update finalization failed; marker preserved and both coordinators stopped.
+Oct 01 01:03:45 dns-arch release-recovery[25419]: !! Bekleyen güncelleme sonuçlandırması başarısız; marker korundu ve iki koordinatör durduruldu.
+Oct 01 01:03:45 dns-arch release-recovery[25041]: Automatic recovery attempt 2 of 3 did not finish; the native timer admits the next attempt for this same operation. No owner action is needed yet.
+Oct 01 01:03:45 dns-arch release-recovery[25041]: Otomatik kurtarma denemesi 2/3 tamamlanmadı; yerel zamanlayıcı aynı işlem için sonraki denemeyi başlatır. Henüz kullanıcı işlemi gerekmiyor.
+Oct 01 01:03:45 dns-arch release-recovery[25041]: !! release recovery child failed with status 1
+Oct 01 01:03:45 dns-arch systemd[1]: celikpanel-release-recovery.service: Main process exited, code=exited, status=1/FAILURE
+Oct 01 01:03:45 dns-arch systemd[1]: celikpanel-release-recovery.service: Failed with result 'exit-code'.
+Oct 01 01:03:45 dns-arch systemd[1]: Failed to start CelikPanel verified release transaction recovery.
+Oct 01 01:03:45 dns-arch systemd[1]: celikpanel-release-recovery.service: Consumed 8.776s CPU time over 1min 9.858s wall clock time, 21.9M memory peak.
+Oct 01 01:04:15 dns-arch systemd[1]: Starting CelikPanel verified release transaction recovery...
+Oct 01 01:04:16 dns-arch release-recovery[28959]: Recovery dispatch admitted: attempt=3 snapshot=20261001T005932Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-c0330bbe5baad02c2df5efe451b8d128
+Oct 01 01:04:22 dns-arch release-recovery[29339]: CELIKPANEL_UPDATE_CHECKPOINT database_verified_before_start
+Oct 01 01:05:24 dns-arch release-recovery[29339]: !! pending update panel did not stay running and answer on its own address
+Oct 01 01:05:24 dns-arch release-recovery[29339]: !! Pending update finalization failed; marker preserved and both coordinators stopped.
+Oct 01 01:05:24 dns-arch release-recovery[29339]: !! Bekleyen güncelleme sonuçlandırması başarısız; marker korundu ve iki koordinatör durduruldu.
+Oct 01 01:05:24 dns-arch release-recovery[28959]: Automatic certificate renewal (Certbot) is already in its state from before the update.
+Oct 01 01:05:24 dns-arch release-recovery[28959]: Otomatik sertifika yenileme (Certbot) zaten güncellemeden önceki durumunda.
+Oct 01 01:05:24 dns-arch release-recovery[28959]: !! release recovery child failed with status 1
+Oct 01 01:05:24 dns-arch systemd[1]: celikpanel-release-recovery.service: Main process exited, code=exited, status=1/FAILURE
+Oct 01 01:05:24 dns-arch systemd[1]: celikpanel-release-recovery.service: Failed with result 'exit-code'.
+Oct 01 01:05:24 dns-arch systemd[1]: Failed to start CelikPanel verified release transaction recovery.
+Oct 01 01:05:24 dns-arch systemd[1]: celikpanel-release-recovery.service: Consumed 8.883s CPU time over 1min 8.925s wall clock time, 22M memory peak.
+Oct 01 01:05:54 dns-arch systemd[1]: Starting CelikPanel verified release transaction recovery...
+Oct 01 01:05:55 dns-arch release-recovery[32955]: Automatic recovery paused after three admitted attempts. No recovery child was started. Preserve evidence and inspect the recovery service journal.
+Oct 01 01:05:55 dns-arch release-recovery[32955]: Otomatik kurtarma, izin verilen üç denemeden sonra durdu. Kurtarma alt işlemi başlatılmadı. Kanıtları koruyun ve kurtarma servisi günlüğünü inceleyin.
+Oct 01 01:05:55 dns-arch release-recovery[32955]: After resolving the cause, the owner may authorize one same-snapshot retry: sudo /usr/libexec/celikpanel/recovery recover --retry --snapshot 20261001T005932Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-c0330bbe5baad02c2df5efe451b8d128
+Oct 01 01:05:55 dns-arch systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+Oct 01 01:05:55 dns-arch systemd[1]: Finished CelikPanel verified release transaction recovery.
+Oct 01 01:05:55 dns-arch systemd[1]: celikpanel-release-recovery.service: Consumed 1.093s CPU time over 1.124s wall clock time, 12.7M memory peak.

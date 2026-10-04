@@ -1,0 +1,14 @@
+﻿38180e13-3017-48a7-86cf-1228f2ebad63
+ActiveState=active
+MainPID=364
+name: catalog-c000020a.celikpanel.invalid
+type: secondary
+files: celikpanel-fixture-catalog.zone
+serial: 1790607757
+nodes: 2
+last loaded: Mon, 28 Sep 2026 15:06:49 GMT
+next refresh: Mon, 28 Sep 2026 15:13:07 GMT
+expires: Mon, 28 Sep 2026 16:06:49 GMT
+secure: no
+dynamic: no
+reconfigurable via modzone: no

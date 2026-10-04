@@ -1,0 +1,135 @@
+{
+  "agent_startup_rollback": null,
+  "boundary_marker": {
+    "cell_id": "pdns-switch__rolling-back__after-write__paired-secondary__peer-reachable",
+    "driver": "pdns-switch",
+    "marker": "/var/lib/celikpanel-dns-kill-matrix/results/pdns-switch__rolling-back__after-write__paired-secondary__peer-reachable/boundary-marker.json",
+    "nonce": "d236bb5e41e8967865f60f9de89d14d7d7df64a3ffbe469f0ffc36403ab16f0c",
+    "observed_driver": "pdns-switch",
+    "observed_journal": {
+      "manifest_qualifier": "dns-engine-switch/v1:sha256:5b4cce0a4c9c4a6b21dc2646f1f3356bf9af25fd65fc617b854ce6cce4b2481a",
+      "mode": "switch",
+      "mutation_owner_id": "c4c46eccf55ef7f011ae432da6b207b1",
+      "mutation_request_id": "628b787748c9ba1e6968093dd2e9e358",
+      "pair_role": "secondary",
+      "path": "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json",
+      "phase": "rolling-back",
+      "schema": "celikpanel-dns-engine-switch-journal/v1",
+      "source_epoch": 0,
+      "source_revision": 0,
+      "target_engine": "pdns",
+      "target_epoch": 1,
+      "topology": "paired"
+    },
+    "phase": "rolling-back",
+    "pid": 1777,
+    "point": "after_write",
+    "process_start_ticks": "13003",
+    "ready_fd": 5,
+    "recorded_at": "2026-09-29T16:52:42.812867478Z",
+    "request_id": "628b787748c9ba1e6968093dd2e9e358",
+    "rollback_precursor": {
+      "action": "returned-injected-error",
+      "driver": "pdns-switch",
+      "observed_driver": "pdns-switch",
+      "observed_journal": {
+        "manifest_qualifier": "dns-engine-switch/v1:sha256:5b4cce0a4c9c4a6b21dc2646f1f3356bf9af25fd65fc617b854ce6cce4b2481a",
+        "mode": "switch",
+        "mutation_owner_id": "c4c46eccf55ef7f011ae432da6b207b1",
+        "mutation_request_id": "628b787748c9ba1e6968093dd2e9e358",
+        "pair_role": "secondary",
+        "path": "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json",
+        "phase": "target-staged",
+        "schema": "celikpanel-dns-engine-switch-journal/v1",
+        "source_epoch": 0,
+        "source_revision": 0,
+        "target_engine": "pdns",
+        "target_epoch": 1,
+        "topology": "paired"
+      },
+      "phase": "target-staged",
+      "point": "after_write",
+      "request_id": "628b787748c9ba1e6968093dd2e9e358",
+      "schema": "celikpanel-dns-kill-matrix-rollback-precursor/v1"
+    },
+    "schema": "celikpanel-dns-kill-matrix-boundary/v1"
+  },
+  "complete_verdict": {
+    "passed": true,
+    "reasons": [],
+    "required_classification": [
+      "target_converged"
+    ],
+    "safety_status": "passed",
+    "status": "passed"
+  },
+  "diagnostic_failures": [],
+  "dns_outage": null,
+  "expectation": null,
+  "failures": [],
+  "flow_ambiguities": null,
+  "flow_failures": null,
+  "flow_status": null,
+  "journal_at_boundary": {
+    "device": 65025,
+    "exists": true,
+    "expected_phase": "rolling-back",
+    "inode": 131500,
+    "mode": "0600",
+    "observed_phase": "rolling-back",
+    "request_id": "628b787748c9ba1e6968093dd2e9e358",
+    "sha256": "be8b2996d69bdd1d3834b49179bb21673e884ba4f28379a9d3943ec6fec2113f"
+  },
+  "kill": {
+    "delivered_at": "2026-09-29T16:52:42.827237Z",
+    "exit_code": 137,
+    "pid": 1777,
+    "proc_entry_absent_after_reap": true,
+    "process_start_ticks": "13003",
+    "raw_returncode": -9,
+    "signal": "SIGKILL",
+    "signal_number": 9,
+    "state_before_signal": "T"
+  },
+  "kill_proven": true,
+  "management_disabled_before_reboot": null,
+  "owner_inverse_failures": null,
+  "owner_inverse_native_at_boundary": null,
+  "pre_reboot_verdict": null,
+  "provenance_boundary": null,
+  "reboot_after_recovery": null,
+  "recovery_outcome": {
+    "changed_or_racy": false,
+    "classification": "target_converged",
+    "dns_serving_after_restart": true,
+    "probe_pair_valid": true,
+    "repeated_nonconvergence": false,
+    "rolled_back_source_serving": false,
+    "same_fingerprint": true,
+    "target_converged": true
+  },
+  "recovery_status_read_failures": null,
+  "recovery_status_reads": {
+    "after-recovery": {
+      "available": false,
+      "judged": "made no mutation only",
+      "reason": "the recovery launcher is not enrolled; enroll it with guest_bootstrap.py enroll-recovery-runtime before prepare",
+      "stage": "after-recovery"
+    },
+    "before-recovery": {
+      "available": false,
+      "judged": "made no mutation only",
+      "reason": "the recovery launcher is not enrolled; enroll it with guest_bootstrap.py enroll-recovery-runtime before prepare",
+      "stage": "before-recovery"
+    }
+  },
+  "request_id": "628b787748c9ba1e6968093dd2e9e358",
+  "retry_switch_after_rollback": null,
+  "safety_failures": [],
+  "safety_status": "passed",
+  "source": "result.json (verbatim sub-objects)",
+  "status": "passed",
+  "step_records": {},
+  "variant": null,
+  "verification_failures": []
+}

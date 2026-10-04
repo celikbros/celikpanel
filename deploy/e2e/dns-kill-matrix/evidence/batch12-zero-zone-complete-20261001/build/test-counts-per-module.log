@@ -1,0 +1,26 @@
+== direct test_native_pdns_peer.py (tail)
+........
+----------------------------------------------------------------------
+Ran 8 tests in 0.011s
+
+OK
+{"action": "prepare-native-pdns-peer", "catalog": "catalog-c000020a.celikpanel.invalid", "cell_id": "pdns-switch__intent__after-write__paired-primary__peer-reachable", "execute": false, "management_installed_on_secondary": false, "primary_ip": "192.0.2.10", "secondary_ip": "192.0.2.11"}
+== per-module counts (python3 -m unittest -v MODULE)
+module test_fixture: 12
+module test_fresh_primary_batch8_fixes: 24
+module test_fresh_primary_serial_zero_zone: 37
+module test_fresh_primary_v3: 38
+module test_guest_bootstrap: 82
+module test_guest_recovery_probe: 17
+module test_manifest: 11
+module test_native_bind_inspector_channel: 7
+module test_native_bind_pdns_authority: 3
+module test_native_bind_peer: 2
+module test_native_pdns_bind_peer: 8
+module test_native_pdns_pdns_pair: 6
+module test_native_pdns_peer: 8
+module test_native_primary_peer: 30
+module test_paired_secondary_provenance: 42
+module test_run_cell: 132
+module test_zone_lifecycle_recover: 16
+module total=475

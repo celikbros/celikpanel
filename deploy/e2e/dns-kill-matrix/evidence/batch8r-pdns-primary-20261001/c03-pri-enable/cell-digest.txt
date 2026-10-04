@@ -1,0 +1,20 @@
+== c03-pri-enable pdns-switch__source-stopped__after-write__paired-primary__peer-reachable
+  status=passed safety=passed class=target_converged complete=True RUN_PREPARED_RC=0 kill_proven=True
+  request=4b3fdfacc972232747641c9d5b38ce1e controller 2026-09-29T23:07:23.557016Z -> 2026-09-29T23:08:17.677370Z gate=open agent_error='a valid durable service mutation lease is required'
+  boundary=target-enable-intent disk=target-enable-intent sha=a0c2d360ac59 marker=2026-09-29T23:07:36.982477384Z kill=2026-09-29T23:07:36.991689Z pid=1899 state=T exit=137 trigger_rc=75
+  failures v=[] s=[] d=[]
+  fp.failures=[] fp.unknown=[]
+  restart: variant=pre-start code=dns_engine_switch_rolled_back_after_restart status=failed attempt=1 retired=True msg='The interrupted DNS engine switch was rolled back to the verified previous state.'
+  pre_install failures=[] unknown=[] unit={'LoadState': 'masked', 'UnitFileState': 'masked', 'ActiveState': 'inactive', 'MainPID': '0'} db=[]
+  agent names owner command: False
+  pair primary={"catalog_soa": {"tcp": [1790723264], "udp": [1790723264]}, "member_soa": {"tcp": [2026083101], "udp": [2026083101]}, "www_a": {"tcp": ["192.0.2.10"], "udp": ["192.0.2.10"]}} secondary_equal=True state_serial=1790723264
+  cut: variant=pre-start pid=0 files={'candidate': True, 'database': False, 'state': False} sealed=True staged_serial=1 native_serial=None unit_before={'active_state': 'inactive', 'load_state': 'masked', 'name': 'pdns.service', 'unit_file_state': 'masked'}
+  status-read after-recovery avail=True rc=0 mutated=False :: 'No DNS switch journal was observed for request 4b3fdfacc972232747641c9d5b38ce1e. Its exact ledger job records status succeeded. This is a point-in-time ledger o'
+  status-read before-recovery avail=True rc=0 mutated=False :: 'DNS switch request 4b3fdfacc972232747641c9d5b38ce1e: accepted-active (journal phase target-enable-intent).\nIf PowerDNS never started for this fresh paired prima'
+  retry 1 rc=0 dur=6.456544
+  retry 2 rc=0 dur=0.00918
+  probe 1 target_converged 5584fe5722b7
+  probe 2 target_converged 5584fe5722b7
+  stability n=31
+  peer status=passed combined=0 guest_exit=0 error=None serial=1790723264 members=['s1-kill.test']
+  smstatus: status=succeeded code=None attempt=2 msg=None

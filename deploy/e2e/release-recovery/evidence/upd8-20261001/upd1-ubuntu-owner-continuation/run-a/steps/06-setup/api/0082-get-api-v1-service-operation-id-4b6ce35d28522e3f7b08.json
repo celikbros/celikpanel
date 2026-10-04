@@ -1,0 +1,106 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "ServerSetup failed step component operation",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/service/operation?id=4b6ce35d28522e3f7b08bacb6a695aa8"
+  },
+  "response": {
+    "elapsed_seconds": 0.003,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Thu, 01 Oct 2026 15:28:38 GMT"
+      ],
+      [
+        "Content-Length",
+        "777"
+      ]
+    ],
+    "json": {
+      "operation": {
+        "error": {
+          "code": "mail_profile_install_failed",
+          "message": "The mail profile could not be installed and verified."
+        },
+        "finished_at": "2026-10-01T15:28:32.643224795Z",
+        "id": "4b6ce35d28522e3f7b08bacb6a695aa8",
+        "kind": "mail_profile_install",
+        "phase": "profile/webmail/mail-tls",
+        "request_id": "7247b0ab42da97fcb0dc4d985654c7cf",
+        "result": {
+          "completed_services": [
+            "postfix",
+            "dovecot",
+            "nginx",
+            "php-fpm",
+            "roundcube"
+          ],
+          "mail_hostname": "mail-ubuntu.upd1-infra.test",
+          "mail_tls": {
+            "configured": false,
+            "fallback_only": false,
+            "sni_count": 0
+          },
+          "profile_id": "webmail",
+          "proof_version": 1,
+          "services": [
+            "postfix",
+            "dovecot",
+            "nginx",
+            "php-fpm",
+            "roundcube"
+          ],
+          "submission_configured": true,
+          "success": false,
+          "warnings": []
+        },
+        "service_id": "webmail",
+        "started_at": "2026-10-01T15:25:12.616242943Z",
+        "status": "failed"
+      }
+    },
+    "status": 200,
+    "text": null
+  }
+}

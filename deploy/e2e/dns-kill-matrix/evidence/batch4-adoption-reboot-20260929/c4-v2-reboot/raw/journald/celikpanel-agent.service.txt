@@ -1,0 +1,59 @@
+2026-09-29T13:14:32.255554+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T13:14:32.313730+00:00 dns-debian13 agent[1193]: 2026/09/29 13:14:32 Starting CelikPanel Agent...
+2026-09-29T13:14:32.317897+00:00 dns-debian13 agent[1193]: 2026/09/29 13:14:32 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-29T13:14:32.318157+00:00 dns-debian13 agent[1193]: 2026/09/29 13:14:32 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-09-29T13:14:42.319101+00:00 dns-debian13 agent[1193]: 2026/09/29 13:14:42 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:14:52.327779+00:00 dns-debian13 agent[1193]: 2026/09/29 13:14:52 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:15:02.319216+00:00 dns-debian13 agent[1193]: 2026/09/29 13:15:02 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:15:11.192463+00:00 dns-debian13 systemd[1]: Stopping celikpanel-agent.service - CelikPanel privileged agent...
+2026-09-29T13:15:11.195190+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-29T13:15:11.195515+00:00 dns-debian13 systemd[1]: Stopped celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T13:15:11.195593+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Consumed 4.052s CPU time, 29.4M memory peak.
+2026-09-29T13:15:11.197412+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T13:15:11.218733+00:00 dns-debian13 agent[2742]: 2026/09/29 13:15:11 Starting CelikPanel Agent...
+2026-09-29T13:15:11.221156+00:00 dns-debian13 agent[2742]: 2026/09/29 13:15:11 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-29T13:15:11.221307+00:00 dns-debian13 agent[2742]: 2026/09/29 13:15:11 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:15:17.795497+00:00 dns-debian13 systemd[1]: Stopping celikpanel-agent.service - CelikPanel privileged agent...
+2026-09-29T13:15:17.796606+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-29T13:15:17.796861+00:00 dns-debian13 systemd[1]: Stopped celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T13:15:17.797008+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Consumed 2.666s CPU time, 27.3M memory peak.
+2026-09-29T13:16:00.022150+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T13:16:00.052641+00:00 dns-debian13 agent[8194]: 2026/09/29 13:16:00 Starting CelikPanel Agent...
+2026-09-29T13:16:00.076775+00:00 dns-debian13 agent[8194]: 2026/09/29 13:16:00 Interrupted DNS switch native recovery is unknown; retain exact journal and release only its ledger lease (request 341e457da7b4b5e6fb7949e666307ef2): v2 BIND switch journal requires its independent inverse adapter; the owner recovery command for this PowerDNS-to-BIND rollback is /usr/libexec/celikpanel/recovery recover-dns-bind-switch --request-id 341e457da7b4b5e6fb7949e666307ef2, which the server owner runs when recovery dns-switch-status --quiesced --request-id 341e457da7b4b5e6fb7949e666307ef2 names it; preserve the journal, ledger and native DNS until that exact request is reconciled
+2026-09-29T13:16:00.083649+00:00 dns-debian13 agent[8194]: 2026/09/29 13:16:00 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-29T13:16:00.084008+00:00 dns-debian13 agent[8194]: 2026/09/29 13:16:00 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:16:02.104849+00:00 dns-debian13 systemd[1]: Stopping celikpanel-agent.service - CelikPanel privileged agent...
+2026-09-29T13:16:02.567764+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-29T13:16:02.568012+00:00 dns-debian13 systemd[1]: Stopped celikpanel-agent.service - CelikPanel privileged agent.
+-- Boot 5ecb9eece460490685d3c2c5b2af3524 --
+2026-09-29T13:16:13.199360+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T13:16:13.385802+00:00 dns-debian13 agent[642]: 2026/09/29 13:16:13 Starting CelikPanel Agent...
+2026-09-29T13:16:13.510512+00:00 dns-debian13 agent[642]: 2026/09/29 13:16:13 Startup recovery is waiting for this host to finish starting before it decides the interrupted mutation: detect host platform: systemd is not ready: systemd state "starting" exited with status 1
+2026-09-29T13:16:13.516727+00:00 dns-debian13 agent[642]: 2026/09/29 13:16:13 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-29T13:16:13.520471+00:00 dns-debian13 agent[642]: 2026/09/29 13:16:13 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:16:16.570936+00:00 dns-debian13 agent[642]: 2026/09/29 13:16:16 A DNS engine transaction released after an undecidable boot could not be reconciled yet; its reason is already recorded and the host stays usable: v2 BIND switch journal requires its independent inverse adapter; the owner recovery command for this PowerDNS-to-BIND rollback is /usr/libexec/celikpanel/recovery recover-dns-bind-switch --request-id 341e457da7b4b5e6fb7949e666307ef2, which the server owner runs when recovery dns-switch-status --quiesced --request-id 341e457da7b4b5e6fb7949e666307ef2 names it; preserve the journal, ledger and native DNS until that exact request is reconciled
+2026-09-29T13:16:16.570936+00:00 dns-debian13 agent[642]: 2026/09/29 13:16:16 Startup recovery decided the interrupted mutation after the host finished starting.
+2026-09-29T13:16:23.521408+00:00 dns-debian13 agent[642]: 2026/09/29 13:16:23 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:16:33.529647+00:00 dns-debian13 agent[642]: 2026/09/29 13:16:33 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:16:43.521439+00:00 dns-debian13 agent[642]: 2026/09/29 13:16:43 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:16:53.529515+00:00 dns-debian13 agent[642]: 2026/09/29 13:16:53 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:17:03.530946+00:00 dns-debian13 agent[642]: 2026/09/29 13:17:03 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:17:13.521640+00:00 dns-debian13 agent[642]: 2026/09/29 13:17:13 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:17:23.530492+00:00 dns-debian13 agent[642]: 2026/09/29 13:17:23 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:17:33.520787+00:00 dns-debian13 agent[642]: 2026/09/29 13:17:33 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:17:43.521669+00:00 dns-debian13 agent[642]: 2026/09/29 13:17:43 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:17:53.520773+00:00 dns-debian13 agent[642]: 2026/09/29 13:17:53 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:18:02.308324+00:00 dns-debian13 systemd[1]: Stopping celikpanel-agent.service - CelikPanel privileged agent...
+2026-09-29T13:18:02.318894+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-29T13:18:02.325846+00:00 dns-debian13 systemd[1]: Stopped celikpanel-agent.service - CelikPanel privileged agent.
+-- Boot be53c75607a14de987807cd0df87bc64 --
+2026-09-29T13:18:11.451016+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T13:18:11.609119+00:00 dns-debian13 agent[648]: 2026/09/29 13:18:11 Starting CelikPanel Agent...
+2026-09-29T13:18:11.639516+00:00 dns-debian13 agent[648]: 2026/09/29 13:18:11 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-29T13:18:11.643734+00:00 dns-debian13 agent[648]: 2026/09/29 13:18:11 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:18:21.645193+00:00 dns-debian13 agent[648]: 2026/09/29 13:18:21 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:18:31.643855+00:00 dns-debian13 agent[648]: 2026/09/29 13:18:31 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:18:41.643819+00:00 dns-debian13 agent[648]: 2026/09/29 13:18:41 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:18:52.402776+00:00 dns-debian13 agent[648]: 2026/09/29 13:18:52 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:19:02.402675+00:00 dns-debian13 agent[648]: 2026/09/29 13:19:02 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T13:19:12.403443+00:00 dns-debian13 agent[648]: 2026/09/29 13:19:12 Panel certificate activation remains pending: panel TLS directory is not root-authenticated

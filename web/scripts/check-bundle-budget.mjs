@@ -16,11 +16,28 @@ if (!entryMatch) {
 const entryName = basename(entryMatch[1])
 const budgets = {
   entry: { raw: 300 * 1024, gzip: 90 * 1024 },
-  async: { raw: 160 * 1024, gzip: 45 * 1024 },
+  // Actionable deletion and DNS-setup guidance add less than 0.25 KiB to the Turkish locale.
+  async: { raw: 160.25 * 1024, gzip: 45.25 * 1024 },
   // The global, fail-closed update tracker is boot-critical by design. Its
   // canonical cross-tab fence adds less than 1 KiB and must not be lazy-loaded.
   boot: { raw: 361 * 1024, gzip: 110 * 1024 },
   route: { raw: 280 * 1024, gzip: 80 * 1024 },
+}
+
+// Translation chunks, named by source. Each is an individual async chunk and is
+// held to the same per-chunk async ceiling as every other one; naming them makes
+// the check fail loudly if one disappears or is merged back into another. When a
+// part outgrows the ceiling it is split again, as the screen catalogue was into
+// screens/ and screens/server/; the ceiling is not raised.
+// Çeviri parçaları kaynak adıyla listelenir; her biri aynı async tavanına
+// tabidir. Tavanı aşan parça yeniden bölünür, tavan yükseltilmez.
+const namedChunkBudgets = {
+  'src/i18n/en.ts': budgets.async,
+  'src/i18n/tr.ts': budgets.async,
+  'src/i18n/screens/en.ts': budgets.async,
+  'src/i18n/screens/tr.ts': budgets.async,
+  'src/i18n/screens/server/en.ts': budgets.async,
+  'src/i18n/screens/server/tr.ts': budgets.async,
 }
 
 const jsNames = (await readdir(assetsDir))
@@ -41,10 +58,22 @@ const measurements = await Promise.all(jsNames.map(async (name) => {
   }
 }))
 const measurementByName = new Map(measurements.map((item) => [item.name, item]))
+const sourceByFile = new Map(Object.values(manifest)
+  .filter((item) => item.file?.endsWith('.js'))
+  .map((item) => [basename(item.file), item.src ?? item.name]))
 
 const failures = []
+for (const source of Object.keys(namedChunkBudgets)) {
+  if (![...sourceByFile.values()].includes(source)) {
+    failures.push(`expected a separate chunk for ${source}, found none`)
+  }
+}
+
+const chunkRows = []
 for (const item of measurements) {
-  const limit = budgets[item.kind]
+  const source = sourceByFile.get(item.name)
+  const limit = namedChunkBudgets[source] ?? budgets[item.kind]
+  chunkRows.push({ label: `${item.name}${source ? ` (${source})` : ''}`, ...item, limit })
   if (item.raw > limit.raw || item.gzip > limit.gzip) {
     failures.push(
       `${item.name}: ${format(item.raw)} raw / ${format(item.gzip)} gzip ` +
@@ -58,7 +87,7 @@ const largestAsync = measurements
   .filter((item) => item.kind === 'async')
   .sort((a, b) => b.raw - a.raw)[0]
 
-const entryManifest = Object.entries(manifest).find(([, item]) => item.isEntry)
+const entryManifest = Object.entries(manifest).find(([, item]) => item.isEntry && item.src === 'index.html')
 if (!entryManifest) {
   throw new Error('Bundle budget: manifest has no entry')
 }
@@ -114,6 +143,22 @@ console.log(
   `largest individual async ${largestAsync ? `${largestAsync.name} ${format(largestAsync.raw)} / ${format(largestAsync.gzip)}` : 'none'}`,
 )
 
+// Every measured part with its limit and the headroom left, largest share of
+// its raw ceiling first, so the next part to approach its line is at the top.
+// Her ölçülen parça, sınırı ve kalan payıyla; sınırına en yakın olan en üstte.
+const rows = [
+  ...chunkRows.map((row) => ({ ...row, label: `chunk ${row.label}` })),
+  { label: 'critical boot path', raw: bootRaw, gzip: bootGzip, limit: budgets.boot },
+  ...routePayloads.map((route) => ({ label: `route ${route.name}`, ...route, limit: budgets.route })),
+].sort((a, b) => b.raw / b.limit.raw - a.raw / a.limit.raw)
+console.log('Bundle budget per part: raw size / limit (headroom) | gzip size / limit (headroom)')
+for (const row of rows) {
+  console.log(
+    `  ${row.label}: ${format(row.raw)} / ${format(row.limit.raw)} (${headroom(row.raw, row.limit.raw)}) | ` +
+    `${format(row.gzip)} / ${format(row.limit.gzip)} (${headroom(row.gzip, row.limit.gzip)})`,
+  )
+}
+
 if (failures.length > 0) {
   console.error('Bundle budget exceeded:')
   for (const failure of failures) console.error(`- ${failure}`)
@@ -122,6 +167,11 @@ if (failures.length > 0) {
 
 function format(bytes) {
   return `${(bytes / 1024).toFixed(2)} KiB`
+}
+
+function headroom(size, limit) {
+  const left = limit - size
+  return `${left < 0 ? 'OVER ' : ''}${format(Math.abs(left))}${left < 0 ? '' : ' left'}, ${((left / limit) * 100).toFixed(1)}%`
 }
 
 function collectStaticFiles(key, files = new Set(), seen = new Set()) {

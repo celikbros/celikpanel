@@ -1,0 +1,101 @@
+{
+  "agreement": {
+    "known_sources": [
+      "cli"
+    ],
+    "phase": {
+      "cli": "recovering"
+    },
+    "reasons": [],
+    "sources": [
+      "cli",
+      "shell"
+    ],
+    "verdict": "single-source"
+  },
+  "cli": {
+    "boot_id": "72aa0715-615c-4592-891d-24c569a99892",
+    "captured_at": "2026-10-01T16:50:31.019021Z",
+    "en": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "The update did not finish normally, and automatic recovery is running: the server is either being returned to the previous version or the update is being completed safely. Nothing to do now: check this same request again in a minute and do not start another update.\nRequest: a4795fd7c17f70edaf8a920830de5a98\nRecorded at: 2026-10-01T16:50:11Z\nThis is a recorded observation; current service health was not checked.\nRecorded state (for support): phase=recovering reason=recovery_running proof=none previous_failure=update_failed\n"
+    },
+    "json": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "{\"schema\":\"celikpanel-recovery-status/v1\",\"request_id\":\"a4795fd7c17f70edaf8a920830de5a98\",\"observation\":\"known\",\"phase\":\"recovering\",\"terminal_proof\":\"none\",\"reason\":\"recovery_running\",\"observed_at\":\"2026-10-01T16:50:11Z\",\"previous_failure\":\"update_failed\"}\n"
+    },
+    "tr": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "Güncelleme normal biçimde tamamlanmadı ve otomatik kurtarma çalışıyor: sunucu ya önceki sürüme döndürülüyor ya da güncelleme güvenle tamamlanıyor. Şimdi yapmanız gereken bir şey yok: bir dakika sonra aynı işlemi yeniden sorgulayın ve başka güncelleme başlatmayın.\nİşlem: a4795fd7c17f70edaf8a920830de5a98\nKayıt zamanı: 2026-10-01T16:50:11Z\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\nKayıtlı durum (destek için): phase=recovering reason=recovery_running proof=none previous_failure=update_failed\n"
+    }
+  },
+  "guidance_api": null,
+  "guidance_cli": {
+    "actionable": null,
+    "keys": [],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "texts": {
+      "en": [],
+      "tr": []
+    },
+    "unavailable": "lib/systemUpdateOutcome.ts: FileNotFoundError"
+  },
+  "index": 24,
+  "observed": {
+    "observation": "known",
+    "observed_at": "2026-10-01T16:50:11Z",
+    "phase": "recovering",
+    "previous_failure": "update_failed",
+    "reason": "recovery_running",
+    "request_id": "a4795fd7c17f70edaf8a920830de5a98",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "none"
+  },
+  "recovery_api": {
+    "body": null,
+    "http": 404
+  },
+  "t": 1790873429.8243742,
+  "update_card": {
+    "keys": [],
+    "missing_keys": [],
+    "observation_error": null,
+    "role": "baseline",
+    "server_message": null,
+    "source": null,
+    "state": null,
+    "texts": {
+      "en": [],
+      "tr": []
+    },
+    "unavailable": "lib/systemUpdateOutcome.ts: FileNotFoundError"
+  },
+  "update_status": {
+    "body": {
+      "created_at": "2026-10-01T16:48:13.723162922Z",
+      "found": true,
+      "request_id": "a4795fd7c17f70edaf8a920830de5a98",
+      "status": "failed",
+      "summary": "reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason=offline panel database migration failed; its original database and work evidence are preserved detail=",
+      "target": {
+        "arch": "amd64",
+        "archive_sha256": "5b7bea0946796a82c7e4bb88d4cdfa862c48316067fde58068274687a51bc5d4",
+        "archive_size": "65626970",
+        "commit": "80d7a43fdd326d7155da9d671836ba1e054b07b3",
+        "os": "linux",
+        "sequence": "81",
+        "version": "v0.1.0-alpha.81"
+      },
+      "updated_at": "2026-10-01T16:49:00.038886242Z"
+    },
+    "http": 200
+  },
+  "utc": "2026-10-01T16:50:29Z"
+}

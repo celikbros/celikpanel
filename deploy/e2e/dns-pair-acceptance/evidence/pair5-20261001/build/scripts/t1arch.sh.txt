@@ -1,0 +1,6 @@
+#!/bin/bash
+W=/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/pair5
+C=pair-accept__bind-debian13__bind-arch__p5t1
+bash $W/coll-extra.sh $C p5t1 arch 2202 secondary bind > /dev/null
+sed -n '/generation receipts/,/named journal lines naming/p' /root/cp-pair5/obs/p5t1/arch-bind-catalog-stanzas.txt
+bash $W/ledgerjob.sh $C p5t1 arch 2202 | tail -3

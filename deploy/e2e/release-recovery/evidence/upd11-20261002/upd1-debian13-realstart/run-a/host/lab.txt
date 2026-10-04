@@ -1,0 +1,2 @@
+lab=/var/tmp/cp-release-drill-upd11-d13-rs-a
+upd1-debian13-realstart-20261001t225655z

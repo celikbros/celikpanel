@@ -1,0 +1,57 @@
+run /mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/release-recovery/evidence/upd13-20261002/upd1-debian13-realstart/run-a/
+overall complete-for-review outcome paused-owner-action-required
+steps [('preflight', 'passed', '21:19:51', '21:19:55'), ('origin', 'passed', '21:19:55', '21:20:04'), ('baseline-install', 'passed', '21:20:04', '21:20:38'), ('owner-login', 'passed', '21:20:38', '21:20:39'), ('license', 'passed', '21:20:39', '21:20:39'), ('setup', 'observed', '21:20:39', '21:26:53'), ('seed', 'passed', '21:26:53', '21:26:55'), ('pre-state', 'passed', '21:26:55', '21:28:13'), ('arm', 'passed', '21:28:13', '21:28:14'), ('owner-start', 'passed', '21:28:14', '21:28:14'), ('track', 'observed', '21:28:14', '21:35:14'), ('owner-continuation (required)', 'observed', '21:35:14', '21:35:14'), ('terminal', 'passed', '21:35:14', '21:35:20'), ('collect', 'passed', '21:35:20', '21:35:21'), ('verdicts', 'passed', '21:35:21', '21:35:21'), ('kind-expectation', 'passed', '21:35:21', '21:35:21')]
+
+== Panel processes (journal-product of collect)
+-- panel[5071] start 2026-10-02T21:20:26.142749+00:00
+   +   0.01s 21:20:26.153094 Connected to Agent RPC; preparing normal management access
+   +   0.03s 21:20:26.175851 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-debian13": a fully qualified DNS name is required; preserve pending outbox: <nil>
+   +   0.04s 21:20:26.177905 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   +   0.04s 21:20:26.179201 Panel ready on :2083 (HTTPS)
+-- panel[5136] start 2026-10-02T21:20:27.322630+00:00
+   +   0.01s 21:20:27.331867 Connected to Agent RPC; preparing normal management access
+   +   0.02s 21:20:27.344969 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-debian13": a fully qualified DNS name is required; preserve pending outbox: <nil>
+   +   0.03s 21:20:27.349309 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   +   0.03s 21:20:27.349309 Panel ready on :2083 (HTTPS)
+-- panel[37122] start 2026-10-02T21:29:02.159594+00:00
+-- panel[37336] start 2026-10-02T21:29:05.480428+00:00
+-- panel[37665] start 2026-10-02T21:29:11.320896+00:00
+-- panel[38209] start 2026-10-02T21:29:21.851324+00:00
+-- panel[39223] start 2026-10-02T21:29:41.161511+00:00
+-- panel[42266] start 2026-10-02T21:30:11.102502+00:00
+-- panel[42361] start 2026-10-02T21:30:14.479246+00:00
+-- panel[42484] start 2026-10-02T21:30:20.451805+00:00
+-- panel[42610] start 2026-10-02T21:30:31.261247+00:00
+-- panel[42822] start 2026-10-02T21:30:50.629036+00:00
+-- panel[45188] start 2026-10-02T21:31:51.069281+00:00
+-- panel[45285] start 2026-10-02T21:31:55.534772+00:00
+-- panel[45385] start 2026-10-02T21:32:01.482207+00:00
+-- panel[45529] start 2026-10-02T21:32:12.068275+00:00
+-- panel[45728] start 2026-10-02T21:32:31.438909+00:00
+-- panel[48073] start 2026-10-02T21:33:30.599362+00:00
+-- panel[48139] start 2026-10-02T21:33:33.983896+00:00
+-- panel[48240] start 2026-10-02T21:33:39.903625+00:00
+-- panel[48416] start 2026-10-02T21:33:50.450846+00:00
+-- panel[48638] start 2026-10-02T21:34:09.758975+00:00
+
+== update / recovery units and mail side effects from 2026-10-02T21:34:09.758975+00:00
+     -78.38s 21:32:51.378805 systemd[1] celikpanel-release-recovery.service: Main process exited, code=exited, status=1/FAILURE
+     -78.38s 21:32:51.378897 systemd[1] celikpanel-release-recovery.service: Failed with result 'exit-code'.
+     -78.38s 21:32:51.379162 systemd[1] Failed to start celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+     -78.38s 21:32:51.379322 systemd[1] celikpanel-release-recovery.service: Consumed 10.194s CPU time, 26.8M memory peak.
+     -48.20s 21:33:21.554832 systemd[1] Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+     +22.78s 21:34:32.535295 systemd[1] celikpanel-release-recovery.service: Main process exited, code=exited, status=1/FAILURE
+     +22.78s 21:34:32.535433 systemd[1] celikpanel-release-recovery.service: Failed with result 'exit-code'.
+     +22.78s 21:34:32.535723 systemd[1] Failed to start celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+     +22.78s 21:34:32.535856 systemd[1] celikpanel-release-recovery.service: Consumed 10.325s CPU time, 27.7M memory peak.
+     +53.45s 21:35:03.205703 systemd[1] Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+     +54.58s 21:35:04.335983 systemd[1] celikpanel-release-recovery.service: Deactivated successfully.
+     +54.58s 21:35:04.336265 systemd[1] Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+     +54.58s 21:35:04.336619 systemd[1] celikpanel-release-recovery.service: Consumed 1.145s CPU time, 14.2M memory peak.
+
+== status timeline (track samples, first time each CLI state was seen)
+   2026-10-02T21:28:14Z 11-track/samples/0001.json ('known', 'running', 'none', None) panel_api= queued
+   2026-10-02T21:30:09Z 11-track/samples/0016.json ('known', 'recovering', 'none', None) panel_api= None
+   2026-10-02T21:31:20Z 11-track/samples/0024.json ('known', 'recovery_required', 'none', 'retry_scheduled') panel_api= None
+   2026-10-02T21:34:33Z 11-track/samples/0050.json ('known', 'recovery_required', 'none', 'pause_pending') panel_api= None
+   2026-10-02T21:35:13Z 11-track/samples/0056.json ('known', 'recovery_required', 'none', 'paused_retry_limit') panel_api= None

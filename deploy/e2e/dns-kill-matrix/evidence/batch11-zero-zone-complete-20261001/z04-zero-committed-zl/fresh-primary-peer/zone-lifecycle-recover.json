@@ -1,0 +1,35 @@
+{
+  "cell_id": "pdns-switch__committed__after-write__paired-primary__peer-reachable",
+  "recover_delete": true,
+  "schema": "celikpanel/dns-kill-fresh-primary-zone-lifecycle/v1",
+  "status": "pending",
+  "steps": [
+    {
+      "next_step": "the Agent kept the deletion of s2.s1-kill.test pending (dns_peer_owner_edit_unknown): the harness has no owner step for dns_peer_owner_edit_unknown",
+      "observation": null,
+      "observation_error": null,
+      "recover": true,
+      "result": {
+        "cell_id": "pdns-switch__committed__after-write__paired-primary__peer-reachable",
+        "delete": true,
+        "domain": "s2.s1-kill.test",
+        "generation": 3,
+        "heartbeats": 0,
+        "job_error_code": "dns_peer_owner_edit_unknown",
+        "job_error_message": "The exact local DNS publication is waiting for paired propagation recovery.",
+        "job_phase": "commit/dns-zone-sync/v3/propagation-pending/7fb6a0df9a0df4c78fa75b362d0a2988/s2.s1-kill.test/dns-zone-sync/v3:sha256:e90fb9845e27429320ea2b358a36431de04f7585481c0e935b01623592b4d3f1",
+        "job_status": "pending",
+        "outcome": "pending_exact_operation",
+        "owner_id": "92088666fcbb11382a33c4bccad7796e",
+        "qualifier": "dns-zone-sync/v3:sha256:e90fb9845e27429320ea2b358a36431de04f7585481c0e935b01623592b4d3f1",
+        "request_id": "7fb6a0df9a0df4c78fa75b362d0a2988",
+        "schema": "celikpanel/dns-kill-matrix-pdns-primary-zone-v3/v1",
+        "step": "delete"
+      },
+      "returncode": 75,
+      "step": "delete",
+      "verdict": "pending"
+    }
+  ],
+  "zero_zones": true
+}

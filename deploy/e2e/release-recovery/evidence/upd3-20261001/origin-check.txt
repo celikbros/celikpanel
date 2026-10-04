@@ -1,0 +1,22 @@
+files containing 185.95.:
+origin-check.txt
+secret-scan.txt
+observer-tools/queries/scan.py
+installer logs naming celikpanel.net or 185.95.:
+  upd1-arch-defective/run-a/host/current-worker-baseline-arch-current-worker-baseline.log: celikpanel.net=0 185.95=0
+  upd1-arch-good/run-a/host/current-worker-baseline-arch-current-worker-baseline.log: celikpanel.net=0 185.95=0
+  upd1-arch-realstart/run-a/host/current-worker-baseline-arch-current-worker-baseline.log: celikpanel.net=0 185.95=0
+  upd1-arch-startcheck/run-a/host/current-worker-baseline-arch-current-worker-baseline.log: celikpanel.net=0 185.95=0
+  upd1-debian13-defective/run-a/host/current-worker-baseline-debian13-current-worker-baseline.log: celikpanel.net=0 185.95=0
+  upd1-debian13-good/run-a/host/current-worker-baseline-debian13-current-worker-baseline.log: celikpanel.net=0 185.95=0
+  upd1-debian13-realstart/run-a/host/current-worker-baseline-debian13-current-worker-baseline.log: celikpanel.net=0 185.95=0
+  upd1-debian13-startcheck/run-a/host/current-worker-baseline-debian13-current-worker-baseline.log: celikpanel.net=0 185.95=0
+origin checks recorded by the driver (result.json scope.origin):
+   upd1-arch-defective {"after-owner-restart": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "after-provision": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "before-arm": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}}
+   upd1-arch-good {"after-owner-restart": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "after-provision": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "before-arm": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}}
+   upd1-arch-realstart {"after-owner-restart": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "after-provision": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "before-arm": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}}
+   upd1-arch-startcheck {"after-owner-restart": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "after-provision": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "before-arm": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}}
+   upd1-debian13-defective {"after-provision": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "before-arm": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}}
+   upd1-debian13-good {"after-provision": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "before-arm": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}}
+   upd1-debian13-realstart {"after-provision": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "before-arm": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}}
+   upd1-debian13-startcheck {"after-provision": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "before-arm": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}}

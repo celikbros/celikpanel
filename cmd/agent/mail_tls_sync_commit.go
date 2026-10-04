@@ -1,32 +1,28 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/mailtlsartifact"
+	"github.com/alicelik/celikpanel/internal/mailtlsconfig"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 const (
-	mailTLSSyncCommitPhasePrefix = "commit/mail-tls-sync/v1/"
-	mailTLSSyncJournalFileName   = "mail-tls-sync-journal.json"
-	mailTLSCommittedFileName     = "mail-tls-committed.json"
-	mailTLSSyncJournalVersion    = 1
-	mailTLSSyncJournalMaxSize    = 2 << 20
+	mailTLSSyncJournalFileName   = mailtlsartifact.JournalFileName
+	mailTLSCommittedFileName     = mailtlsartifact.CommittedFileName
+	mailTLSSyncJournalVersion    = mailtlsartifact.Version
+	mailTLSSyncJournalMaxSize    = mailtlsartifact.MaxSize
 	mailTLSSyncJournalStageLimit = 8
 
-	mailTLSSyncCommitIntent    = "intent"
-	mailTLSSyncCommitPublished = "published"
 	mailTLSSyncConvergenceTime = 2 * time.Minute
 )
 
@@ -95,14 +91,7 @@ func mailTLSSyncCleanFailureText(
 	return mailTLSSyncFailureVoice.cleanFailureText(outcome, cause, afterRestart)
 }
 
-type mailTLSSyncJournal struct {
-	Version     int                      `json:"version"`
-	RequestID   string                   `json:"request_id"`
-	Qualifier   string                   `json:"qualifier"`
-	ManagedRoot string                   `json:"managed_root"`
-	Myhostname  string                   `json:"myhostname"`
-	SNI         []transport.MailSNIEntry `json:"sni,omitempty"`
-}
+type mailTLSSyncJournal = mailtlsartifact.Plan
 
 var recoverMailTLSSyncHost = func(
 	ctx context.Context,
@@ -113,104 +102,24 @@ var recoverMailTLSSyncHost = func(
 	return convergeMailTLSSyncPlan(ctx, journal)
 }
 
-func formatMailTLSSyncCommitPhase(state, requestID, qualifier string) (string, error) {
-	if (state != mailTLSSyncCommitIntent && state != mailTLSSyncCommitPublished) ||
-		!validMutationIdentity(requestID) ||
-		!mutationpayload.ValidMailTLSSyncQualifier(qualifier) {
-		return "", errors.New("invalid mail TLS sync commit phase identity")
-	}
-	return mailTLSSyncCommitPhasePrefix + state + "/" + requestID + "/" + qualifier, nil
-}
-
-func parseMailTLSSyncCommitPhase(value string) (state, requestID, qualifier string, err error) {
-	if !strings.HasPrefix(value, mailTLSSyncCommitPhasePrefix) {
-		return "", "", "", errors.New("not a mail TLS sync commit phase")
-	}
-	remainder := strings.TrimPrefix(value, mailTLSSyncCommitPhasePrefix)
-	state, remainder, found := strings.Cut(remainder, "/")
-	if !found {
-		return "", "", "", errors.New("invalid mail TLS sync commit phase")
-	}
-	requestID, qualifier, found = strings.Cut(remainder, "/")
-	if !found {
-		return "", "", "", errors.New("invalid mail TLS sync commit phase")
-	}
-	canonical, formatErr := formatMailTLSSyncCommitPhase(state, requestID, qualifier)
-	if formatErr != nil || canonical != value {
-		return "", "", "", errors.New("invalid mail TLS sync commit phase")
-	}
-	return state, requestID, qualifier, nil
-}
-
 func equalMailTLSSNI(left, right []transport.MailSNIEntry) bool {
-	leftRaw, leftErr := json.Marshal(left)
-	rightRaw, rightErr := json.Marshal(right)
-	return leftErr == nil && rightErr == nil && bytes.Equal(leftRaw, rightRaw)
+	return mailtlsartifact.EqualSNI(left, right)
 }
 
 func equalMailTLSSyncJournals(left, right *mailTLSSyncJournal) bool {
-	if left == nil || right == nil {
-		return left == right
-	}
-	leftRaw, leftErr := encodeMailTLSSyncJournal(left)
-	rightRaw, rightErr := encodeMailTLSSyncJournal(right)
-	return leftErr == nil && rightErr == nil && bytes.Equal(leftRaw, rightRaw)
+	return mailtlsartifact.Equal(left, right)
 }
 
 func validateMailTLSSyncJournal(journal *mailTLSSyncJournal) error {
-	if journal == nil || journal.Version != mailTLSSyncJournalVersion ||
-		!validMutationIdentity(journal.RequestID) ||
-		!mutationpayload.ValidMailTLSSyncQualifier(journal.Qualifier) {
-		return errors.New("mail TLS sync journal identity is invalid")
-	}
-	canonical, err := mutationpayload.CanonicalMailTLSSync(
-		journal.ManagedRoot, journal.Myhostname, journal.SNI,
-	)
-	if err != nil || canonical.Qualifier != journal.Qualifier ||
-		canonical.ManagedRoot != journal.ManagedRoot ||
-		canonical.Myhostname != journal.Myhostname ||
-		!equalMailTLSSNI(canonical.SNI, journal.SNI) {
-		return errors.New("mail TLS sync journal payload is not canonical")
-	}
-	return nil
+	return mailtlsartifact.Validate(journal)
 }
 
 func encodeMailTLSSyncJournal(journal *mailTLSSyncJournal) ([]byte, error) {
-	if err := validateMailTLSSyncJournal(journal); err != nil {
-		return nil, err
-	}
-	raw, err := json.Marshal(journal)
-	if err != nil {
-		return nil, err
-	}
-	if len(raw) > mailTLSSyncJournalMaxSize {
-		return nil, errors.New("mail TLS sync journal exceeds the size limit")
-	}
-	return raw, nil
+	return mailtlsartifact.Encode(journal)
 }
 
 func decodeMailTLSSyncJournal(raw []byte) (*mailTLSSyncJournal, error) {
-	if len(raw) == 0 || len(raw) > mailTLSSyncJournalMaxSize {
-		return nil, errors.New("mail TLS sync journal has invalid size")
-	}
-	var journal mailTLSSyncJournal
-	decoder := json.NewDecoder(bytes.NewReader(raw))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&journal); err != nil {
-		return nil, fmt.Errorf("decode mail TLS sync journal: %w", err)
-	}
-	var extra json.RawMessage
-	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
-		return nil, errors.New("mail TLS sync journal contains trailing JSON")
-	}
-	canonical, err := encodeMailTLSSyncJournal(&journal)
-	if err != nil {
-		return nil, err
-	}
-	if !bytes.Equal(raw, canonical) {
-		return nil, errors.New("mail TLS sync journal is not canonical")
-	}
-	return &journal, nil
+	return mailtlsartifact.Decode(raw)
 }
 
 func mailTLSSyncJournalPath(manager *serviceMutationManager) string {
@@ -635,14 +544,7 @@ func convergeMailTLSSyncPlan(
 }
 
 func expectedPostfixSNIMap(sni []transport.MailSNIEntry) []byte {
-	var builder strings.Builder
-	builder.WriteString("# Managed by CelikPanel — per-domain mail certificates (SNI).\n")
-	for _, entry := range sni {
-		for _, name := range entry.Names {
-			fmt.Fprintf(&builder, "%s %s %s\n", name, entry.KeyPath, entry.CertPath)
-		}
-	}
-	return []byte(builder.String())
+	return mailtlsconfig.PostfixSNI(sni)
 }
 
 func verifyMailTLSSyncPlan(journal *mailTLSSyncJournal, runner mailTLSCommandRunner) error {
@@ -670,64 +572,56 @@ func verifyMailTLSSyncPlan(journal *mailTLSSyncJournal, runner mailTLSCommandRun
 			return fmt.Errorf("verify committed immutable mail TLS snapshot: %w", err)
 		}
 	}
-	expectedSettings := map[string]string{
-		"smtpd_tls_cert_file":      certPath,
-		"smtpd_tls_key_file":       keyPath,
-		"smtpd_tls_security_level": "may",
-		"smtp_tls_security_level":  "may",
-		"smtpd_tls_protocols":      ">=TLSv1.2",
-		"smtp_tls_protocols":       ">=TLSv1.2",
-		"smtpd_tls_loglevel":       "1",
-		"myhostname":               journal.Myhostname,
+	if err := verifyMailTLSConfiguration(journal, certPath, keyPath, runner, secureReadConfig); err != nil {
+		return err
 	}
-	for setting, expected := range expectedSettings {
-		out, err := runner("postconf", "-h", setting)
-		if err != nil {
-			return mailTLSCommandError("read back postconf "+setting, out, err)
-		}
-		if strings.TrimSpace(string(out)) != expected {
-			return fmt.Errorf("Postfix setting %s does not match the committed snapshot", setting)
-		}
-	}
-	sniSettingOut, err := runner("postconf", "-h", "tls_server_sni_maps")
-	if err != nil {
-		return mailTLSCommandError("read back postconf tls_server_sni_maps", sniSettingOut, err)
-	}
-	sniSetting := strings.TrimSpace(string(sniSettingOut))
-	if len(journal.SNI) == 0 {
-		if sniSetting != "" {
-			return errors.New("Postfix SNI setting is not empty for the committed fallback-only snapshot")
-		}
-	} else {
-		validSNISetting := false
-		for _, mapType := range []string{"lmdb", "hash", "btree"} {
-			if sniSetting == mapType+":"+postfixSNIPath {
-				validSNISetting = true
-				break
-			}
-		}
-		if !validSNISetting {
-			return errors.New("Postfix SNI setting does not reference the committed managed map")
-		}
-		actualSNI, err := secureReadConfig(postfixSNIPath)
-		if err != nil {
-			return fmt.Errorf("read back Postfix SNI source: %w", err)
-		}
-		if !bytes.Equal(actualSNI, expectedPostfixSNIMap(journal.SNI)) {
-			return errors.New("Postfix SNI source does not match the committed snapshot")
-		}
-	}
-	expectedDovecot := buildDovecotTLSConf(
-		dovecotIs24WithRunner(runner), certPath, keyPath, journal.SNI,
-	)
-	actualDovecot, err := secureReadConfig(dovecotTLSConf)
-	if err != nil || string(actualDovecot) != expectedDovecot {
-		return errors.New("Dovecot TLS readback does not match the committed snapshot")
-	}
+
 	if err := validatePostfixTLSConfig(runner); err != nil {
 		return err
 	}
 	return validateDovecotTLSConfig(runner)
+}
+
+// Observe only the accepted TLS fields and managed fragments. Unlike native
+// post-publication validation, this boundary must not run postfix check (which
+// can create directories), map compilation, service commands or config writers.
+// It does not prove other includes/overrides, indexed SNI contents or listeners.
+func verifyMailTLSConfiguration(journal *mailTLSSyncJournal, certPath, keyPath string, runner mailTLSCommandRunner, readConfig func(string) ([]byte, error)) error {
+	if err := validateMailTLSSyncJournal(journal); err != nil {
+		return err
+	}
+	if readConfig == nil {
+		return errors.New("mail TLS configuration reader unavailable")
+	}
+	modern, err := dovecotIs24WithRunner(runner)
+	if err != nil {
+		return err
+	}
+	observed := mailtlsconfig.Observation{Postfix: make(map[string]string)}
+	settings := mailtlsconfig.PostfixSettings(journal.Myhostname, certPath, keyPath)
+	settings = append(settings, [2]string{"tls_server_sni_maps", ""})
+	for _, setting := range settings {
+		out, err := runner("postconf", "-h", setting[0])
+		if err != nil {
+			return mailTLSCommandError("read back postconf "+setting[0], out, err)
+		}
+		observed.Postfix[setting[0]] = string(out)
+	}
+	if len(journal.SNI) > 0 {
+		observed.PostfixSNI, err = readConfig(postfixSNIPath)
+		if err != nil {
+			return fmt.Errorf("read back Postfix SNI source: %w", err)
+		}
+	}
+	observed.Dovecot, err = readConfig(dovecotTLSConf)
+	if err != nil {
+		return errors.New("Dovecot TLS readback does not match the committed snapshot")
+	}
+	if err = mailtlsconfig.Verify(journal, certPath, keyPath, postfixSNIPath, modern, observed); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func mailTLSSyncJobMatchesJournal(job *ServiceMutationJob, journal *mailTLSSyncJournal) bool {

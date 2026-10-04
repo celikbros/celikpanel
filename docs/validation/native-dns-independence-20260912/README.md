@@ -18,8 +18,10 @@ Source validation, not an installed-panel update or release claim.
   fixture. BIND primary `192.0.2.10`, PowerDNS secondary `192.0.2.20`. Both panel
   and agent services stopped; standard management executable paths absent.
   Primary changed to owner-written `named.conf.local` and native zone/catalog
-  files. Addition, A record change, DNS daemon restarts and catalog member
-  removal propagated without either management service. See `native-proof.json`.
+  files. Addition, A record change, transfer and DNS daemon restarts were
+  observed without either management service. Catalog member removal remains unverified. See `native-proof.json`.
+
+**Correction, September 25, 2026:** The catalog-removal query in the retained [raw proof](native-proof.json) had `status: REFUSED`, `ANSWER: 0` and no authoritative flag. The [machine-readable assessment](native-proof-assessment.json) rejects removal acceptance. That does not establish that the secondary unloaded the member zone: an access policy could refuse the query while the zone remains loaded. Zone addition, A-record change, transfer and daemon restart remain the bounded observations; secondary zone removal is **unverified**. The historical probe's permissive success condition is now fail-closed. A new native catalog and secondary zone-state check is needed before claiming removal; the DNS response alone cannot prove it.
 
 `native-probe.py` preserves the fixture-specific probe. It targets only the
 named local QEMU fixture root, loopback SSH forwards and existing pinned host

@@ -1,0 +1,36 @@
+{
+  "dns_outage": null,
+  "expectation": {
+    "bind_active_after_restart": false,
+    "native_checks_after_owner_command": false,
+    "pdns_inactive_after_restart": false,
+    "pdns_pid_continuity_from_cut": true,
+    "source_serving_after_restart": true
+  },
+  "flow_ambiguities": [],
+  "flow_failures": [],
+  "flow_status": "passed",
+  "owner_inverse_failures": [],
+  "owner_inverse_native_at_boundary": null,
+  "recovery_outcome": {
+    "changed_or_racy": false,
+    "classification": "rolled_back_source_serving",
+    "dns_serving_after_restart": true,
+    "probe_pair_valid": true,
+    "repeated_nonconvergence": false,
+    "rolled_back_source_serving": true,
+    "same_fingerprint": true,
+    "target_converged": false
+  },
+  "request_id": "08378bbda67b25842020f2f18c3dc4aa",
+  "safety_status": "passed",
+  "source": "result.json (verbatim sub-objects)",
+  "status": "passed",
+  "step_records": {
+    "steps.after_owner_command.source.pdns_main_pid": 3077,
+    "steps.after_stability.source.pdns_main_pid": 3077,
+    "steps.agent_restarted.source.pdns_main_pid": 3077,
+    "steps.rerun.source.pdns_main_pid": 3077
+  },
+  "variant": "pre-start"
+}

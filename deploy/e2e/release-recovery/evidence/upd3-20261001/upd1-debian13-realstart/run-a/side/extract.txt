@@ -1,0 +1,205 @@
+# extraction of /var/tmp/cp-release-drill-upd3-d13-rs-a/evidence/debian13/upd1/upd1-debian13-realstart-20260930t194921z/
+native_evidence=False overall=failed outcome="paused-owner-action-required"
+## steps
+  preflight                          passed       2026-09-30T19:49:21Z -> 2026-09-30T19:49:25Z  
+  origin                             passed       2026-09-30T19:49:25Z -> 2026-09-30T19:49:32Z  
+  baseline-install                   passed       2026-09-30T19:49:32Z -> 2026-09-30T19:50:06Z  
+  owner-login                        passed       2026-09-30T19:50:06Z -> 2026-09-30T19:50:06Z  
+  license                            passed       2026-09-30T19:50:06Z -> 2026-09-30T19:50:07Z  
+  setup                              observed     2026-09-30T19:50:07Z -> 2026-09-30T19:55:54Z  
+  seed                               passed       2026-09-30T19:55:54Z -> 2026-09-30T19:55:56Z  
+  pre-state                          passed       2026-09-30T19:55:56Z -> 2026-09-30T19:57:13Z  
+  arm                                passed       2026-09-30T19:57:13Z -> 2026-09-30T19:57:14Z  
+  owner-start                        passed       2026-09-30T19:57:14Z -> 2026-09-30T19:57:14Z  
+  track                              observed     2026-09-30T19:57:14Z -> 2026-09-30T20:04:10Z  
+  owner-continuation (required)      observed     2026-09-30T20:04:10Z -> 2026-09-30T20:04:10Z  
+  terminal                           failed       2026-09-30T20:04:10Z -> 2026-09-30T20:04:15Z  timers changed: ['certbot.timer']
+  collect                            passed       2026-09-30T20:04:15Z -> 2026-09-30T20:04:16Z  
+  verdicts                           passed       2026-09-30T20:04:16Z -> 2026-09-30T20:04:16Z  
+  kind-expectation                   passed       2026-09-30T20:04:16Z -> 2026-09-30T20:04:17Z  
+## findings
+  - debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']
+  - while the recovery budget was exhausted the Panel recovery-status API was unavailable; only the root CLI showed the exhausted state
+## outcome.attempts / reboot
+  attempts {"automatic": [{"at": "2026-09-30T19:59:02.547101Z", "attempt": "1", "phase": "completion"}, {"at": "2026-09-30T20:00:42.236665Z", "attempt": "2", "phase": "completion"}, {"at": "2026-09-30T20:02:22.260516Z", "attempt": "3", "phase": "completion"}], "automatic_count": 3, "journal_admissions": [{"at": "2026-09-30T19:59:02.606553+00:00", "attempt": "1", "snapshot": "20260930T195734Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-14d3b140f0e9ad7b3b44f254594d61ca"}, {"at": "2026-09-30T20:00:42.308664+00:00", "attempt": "2", "snapshot": "20260930T195734Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-14d3b140f0e9ad7b3b44f254594d61ca"}, {"at": "2026-09-30T20:02:22.343486+00:00", "attempt": "3", "snapshot": "20260930T195734Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-14d3b140f0e9ad7b3b44f254594d61ca"}], "owner": [], "owner_count": 0}
+  reboot null
+  final_status {"automatic_recovery": "paused_retry_limit", "first_failure_code": "panel_start_unverified", "observation": "known", "observed_at": "2026-09-30T20:04:02Z", "phase": "recovery_required", "previous_failure": "recovery_failed", "reason": "recovery_incomplete", "request_id": "ded53ec59a2d64864e45c34d5a675bbd", "schema": "celikpanel-recovery-status/v1", "terminal_proof": "none"}
+## kind judged
+  {"expected": "the start check passes; completion.pending exists; the stability wait fails with panel_start_unverified; forward completion is retried to its limit (N and timestamps recorded) and pauses (paused_retry_limit); no rollback; the owner retry is printed but not run; texts name the panel log command and say there is no supported return; site, mail and cron keep running while the Panel stays down", "judged": {"expected": ["check-passed", "update-failure-line", "sidecar", "completion-marker", "forward-dispatch", "paused", "no-rollback", "candidate-installed", "owner-retry-not-run", "retry-command-printed", "cli-real-start-text", "cli-panel-log-command", "cli-paused-text", "web-catalogue", "workloads-kept-running", "panel-down-until-end"], "findings": [], "kind": "real-start", "native_evidence": false, "unknown": [], "verdict": "as-expected"}, "printed_retry_command": "/usr/libexec/celikpanel/recovery recover --retry --snapshot 20260930T195734Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-14d3b140f0e9ad7b3b44f254594d61ca", "variant": "real-start"}
+## scope
+  {"cron": {"crontab": "/usr/bin/crontab", "verdict": "available"}, "dns": {"mode": "external", "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2", "verdict": "not-provided-external-dns"}, "origin": {"after-provision": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "before-arm": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}}, "setup": {"code": "server_setup_access_dns_required", "not_run": ["11-panel_certificate", "12-access_dns", "13-mail_certificate", "14-mail_enrollment", "15-verify"], "phase": "access_dns", "verdict": "observed isolated-host wait", "volatile_tables_added": ["server_setup_executions"]}}
+## track samples (56)
+  19:57:14Z U 200 queued | R 200 running/none None fc=None | CLI running/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:57:16Z U 200 running | R 200 running/none None fc=None | CLI running/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:57:18Z U 200 running | R 200 running/none None fc=None | CLI running/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:57:21Z U 200 running | R 200 running/none None fc=None | CLI running/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:57:25Z U 200 running | R 200 running/none None fc=None | CLI running/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:57:31Z U 200 running | R 200 running/none None fc=None | CLI running/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:57:41Z U None None | R None None/None None fc=None | CLI running/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  19:57:43Z U None None | R None None/None None fc=None | CLI running/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  19:57:46Z U None None | R None None/None None fc=None | CLI running/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  19:57:50Z U None None | R None None/None None fc=None | CLI running/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  19:57:57Z U None None | R None None/None None fc=None | CLI running/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  19:58:07Z U None None | R None None/None None fc=None | CLI running/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  19:58:22Z U None None | R None None/None None fc=None | CLI running/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  19:58:37Z U None None | R None None/None None fc=None | CLI running/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  19:58:52Z U None None | R None None/None None fc=None | CLI running/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  19:59:08Z U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=panel_start_unverified ffc=None | perr=PanelError clierr=None | single-source 
+  19:59:09Z U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=panel_start_unverified ffc=None | perr=PanelError clierr=None | single-source 
+  19:59:12Z U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=panel_start_unverified ffc=None | perr=PanelError clierr=None | single-source 
+  19:59:16Z U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=panel_start_unverified ffc=None | perr=PanelError clierr=None | single-source 
+  19:59:23Z U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=panel_start_unverified ffc=None | perr=PanelError clierr=None | single-source 
+  19:59:33Z U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=panel_start_unverified ffc=None | perr=PanelError clierr=None | single-source 
+  19:59:48Z U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=panel_start_unverified ffc=None | perr=PanelError clierr=None | single-source 
+  20:00:03Z U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=panel_start_unverified ffc=None | perr=PanelError clierr=None | single-source 
+  20:00:18Z U None None | R None None/None None fc=None | CLI recovery_required/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:00:20Z U None None | R None None/None None fc=None | CLI recovery_required/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:00:23Z U None None | R None None/None None fc=None | CLI recovery_required/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:00:27Z U None None | R None None/None None fc=None | CLI recovery_required/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:00:33Z U None None | R None None/None None fc=None | CLI recovery_required/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:00:43Z U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:00:45Z U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:00:48Z U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:00:52Z U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:00:58Z U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:01:08Z U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:01:24Z U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:01:39Z U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:01:54Z U None None | R None None/None None fc=None | CLI recovery_required/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:01:56Z U None None | R None None/None None fc=None | CLI recovery_required/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:01:58Z U None None | R None None/None None fc=None | CLI recovery_required/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:02:03Z U None None | R None None/None None fc=None | CLI recovery_required/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:02:09Z U None None | R None None/None None fc=None | CLI recovery_required/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:02:19Z U None None | R None None/None None fc=None | CLI recovery_required/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:02:34Z U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:02:36Z U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:02:39Z U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:02:43Z U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:02:49Z U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:02:59Z U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:03:14Z U None None | R None None/None None fc=None | CLI recovering/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:03:30Z U None None | R None None/None None fc=None | CLI recovery_required/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:03:31Z U None None | R None None/None None fc=None | CLI recovery_required/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:03:34Z U None None | R None None/None None fc=None | CLI recovery_required/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:03:38Z U None None | R None None/None None fc=None | CLI recovery_required/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:03:45Z U None None | R None None/None None fc=None | CLI recovery_required/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:03:55Z U None None | R None None/None None fc=None | CLI recovery_required/none None wait=None fc=None ffc=None | perr=PanelError clierr=None | single-source 
+  20:04:10Z U None None | R None None/None None fc=None | CLI recovery_required/none paused_retry_limit wait=None fc=None ffc=panel_start_unverified | perr=PanelError clierr=None | single-source 
+## guidance texts seen (first time)
+[19:57:14] cli_raw.en:
+    The update is being applied; the panel may be unavailable for a short time. Nothing to do now: check this same request again in a minute. Checking does not restart the update.
+    This is a recorded observation; current service health was not checked.
+    Recorded state (for support): phase=running reason=update_running proof=none
+[19:59:08] cli_raw.en:
+    The update was applied, but the new version's panel did not come up. The server owner should read the panel log on the server: sudo journalctl -u celikpanel-panel -n 50. The update's completion is retried automatically up to its limit; after that, sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50 shows a one-time retry command for this operation. There is no supported return to the previous version from this point.
+    This is a recorded observation; current service health was not checked.
+    Recorded state (for support): phase=recovering reason=recovery_running proof=none previous_failure=update_failed failure_code=panel_start_unverified
+[20:00:18] cli_raw.en:
+    Automatic recovery could not finish this update, so the server may be between versions. The server owner must act: read the recorded reason and next step with sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50. Keep the server's files as they are and do not start another update.
+    This is a recorded observation; current service health was not checked.
+    Recorded state (for support): phase=recovery_required reason=recovery_failed proof=none previous_failure=recovery_failed
+[20:00:43] cli_raw.en:
+    The update did not finish normally, and automatic recovery is running: the server is either being returned to the previous version or the update is being completed safely. Nothing to do now: check this same request again in a minute and do not start another update.
+    This is a recorded observation; current service health was not checked.
+    Recorded state (for support): phase=recovering reason=recovery_running proof=none previous_failure=recovery_failed
+[20:04:10] cli_raw.en:
+    The update was applied, but the new version's panel did not come up, and completing the update was retried to its limit. Read the panel log on the server: sudo journalctl -u celikpanel-panel -n 50. Retrying repeats the same start until that cause is fixed. There is no supported return to the previous version from this point. Automatic recovery used all three attempts without finishing, so the server may be between versions. The server owner must act: read sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50, fix the cause it names, then run the one-time same-operation retry command shown there. Checking status does not retry recovery.
+    This is a recorded observation; current service health was not checked.
+    Recorded state (for support): phase=recovery_required reason=recovery_incomplete proof=none previous_failure=recovery_failed automatic_recovery=paused_retry_limit first_failure_code=panel_start_unverified
+[19:57:14] cli_raw.tr:
+    Güncelleme uygulanıyor; panel kısa bir süre erişilemeyebilir. Şimdi yapmanız gereken bir şey yok: bir dakika sonra aynı işlemi yeniden sorgulayın. Sorgulamak güncellemeyi yeniden başlatmaz.
+    Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.
+    Kayıtlı durum (destek için): phase=running reason=update_running proof=none
+[19:59:08] cli_raw.tr:
+    Güncelleme uygulandı, ancak yeni sürümün paneli açılmadı. Sunucu sahibi sunucudaki panel günlüğünü okumalı: sudo journalctl -u celikpanel-panel -n 50. Güncellemenin tamamlanması sınırına kadar otomatik olarak yeniden denenir; sonrasında sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50 bu işlem için tek seferlik yeniden deneme komutunu gösterir. Bu noktadan önceki sürüme desteklenen bir dönüş yok.
+    Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.
+    Kayıtlı durum (destek için): phase=recovering reason=recovery_running proof=none previous_failure=update_failed failure_code=panel_start_unverified
+[20:00:18] cli_raw.tr:
+    Otomatik kurtarma bu güncellemeyi tamamlayamadı; sunucu iki sürüm arasında kalmış olabilir. Sunucu sahibinin işlem yapması gerekiyor: kaydedilen nedeni ve sonraki adımı sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50 ile okuyun. Sunucudaki dosyalara dokunmayın ve başka güncelleme başlatmayın.
+    Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.
+    Kayıtlı durum (destek için): phase=recovery_required reason=recovery_failed proof=none previous_failure=recovery_failed
+[20:00:43] cli_raw.tr:
+    Güncelleme normal biçimde tamamlanmadı ve otomatik kurtarma çalışıyor: sunucu ya önceki sürüme döndürülüyor ya da güncelleme güvenle tamamlanıyor. Şimdi yapmanız gereken bir şey yok: bir dakika sonra aynı işlemi yeniden sorgulayın ve başka güncelleme başlatmayın.
+    Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.
+    Kayıtlı durum (destek için): phase=recovering reason=recovery_running proof=none previous_failure=recovery_failed
+[20:04:10] cli_raw.tr:
+    Güncelleme uygulandı, ancak yeni sürümün paneli açılmadı ve güncellemenin tamamlanması sınırına kadar yeniden denendi. Sunucudaki panel günlüğünü okuyun: sudo journalctl -u celikpanel-panel -n 50. Bu neden giderilene kadar yeniden deneme aynı başlatmayı tekrarlar. Bu noktadan önceki sürüme desteklenen bir dönüş yok. Otomatik kurtarma üç denemenin hepsini kullandı ve tamamlanamadı; sunucu iki sürüm arasında kalmış olabilir. Sunucu sahibinin işlem yapması gerekiyor: sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50 çıktısını okuyun, belirtilen nedeni giderin ve orada aynı işlem için gösterilen tek seferlik yeniden deneme komutunu çalıştırın. Durum sorgusu kurtarmayı yeniden başlatmaz.
+    Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.
+    Kayıtlı durum (destek için): phase=recovery_required reason=recovery_incomplete proof=none previous_failure=recovery_failed automatic_recovery=paused_retry_limit first_failure_code=panel_start_unverified
+[19:57:14] guidance_api.en:
+    Last recorded step: update in progress || The server last reported work on this update. Wait for the next recorded result; checking this page does not restart it.
+[19:57:14] guidance_api.tr:
+    Kaydedilmiş son adım: güncelleme sürüyor || Sunucu son olarak bu güncelleme üzerinde çalıştığını bildirdi. Sonraki kayıtlı sonucu bekleyin; bu sayfayı kontrol etmek işlemi yeniden başlatmaz.
+[19:57:14] guidance_cli.en:
+    Last recorded step: update in progress || The server last reported work on this update. Wait for the next recorded result; checking this page does not restart it.
+[19:59:08] guidance_cli.en:
+    Last recorded step: recovery in progress || The update was applied, but the new version's panel did not come up. The server owner should read the panel log on the server with sudo journalctl -u celikpanel-panel -n 50. Completion is retried automatically up to its limit; after that, the recovery log shows a one-time retry command. There is no supported return to the previous version from this point. || The new version's panel did not start after the update
+[20:00:18] guidance_cli.en:
+    Recovery needs attention || The server owner must inspect the recovery log for this operation. Keep the operation ID; do not start another update until recovery is verified. || Recovery failed
+[20:00:43] guidance_cli.en:
+    Last recorded step: recovery in progress || The server last reported automatic recovery. Wait for a verified recovery result before starting another operation. || Recovery failed
+[20:04:10] guidance_cli.en:
+    Last recorded state: automatic recovery paused || All three automatic recovery attempts were used without a verified result. Automatic recovery will not start another attempt. The server owner must act. || On this server, open a terminal and inspect the recovery log: || sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50 || Resolve the reported cause, then use the one-time retry command shown in that log for this operation. It continues the existing recovery. This page checks for its result; checking or reloading does not restart recovery. || Recovery failed
+[19:57:14] guidance_cli.tr:
+    Kaydedilmiş son adım: güncelleme sürüyor || Sunucu son olarak bu güncelleme üzerinde çalıştığını bildirdi. Sonraki kayıtlı sonucu bekleyin; bu sayfayı kontrol etmek işlemi yeniden başlatmaz.
+[19:59:08] guidance_cli.tr:
+    Kaydedilmiş son adım: kurtarma sürüyor || Güncelleme uygulandı, ancak yeni sürümün paneli açılmadı. Sunucu sahibi sunucudaki panel günlüğünü sudo journalctl -u celikpanel-panel -n 50 ile okumalıdır. Tamamlama sınırına kadar otomatik olarak yeniden denenir; sonrasında kurtarma günlüğü tek seferlik bir yeniden deneme komutu gösterir. Bu noktadan önceki sürüme desteklenen bir dönüş yok. || Yeni sürümün paneli güncellemeden sonra açılmadı
+[20:00:18] guidance_cli.tr:
+    Kurtarma için işlem gerekiyor || Sunucu sahibi bu işlemin kurtarma günlüğünü incelemelidir. İşlem kimliğini saklayın; kurtarma doğrulanana kadar başka güncelleme başlatmayın. || Kurtarma başarısız oldu
+[20:00:43] guidance_cli.tr:
+    Kaydedilmiş son adım: kurtarma sürüyor || Sunucu son olarak otomatik kurtarma bildirdi. Başka bir işlem başlatmadan önce doğrulanmış kurtarma sonucunu bekleyin. || Kurtarma başarısız oldu
+[20:04:10] guidance_cli.tr:
+    Son kayıt: otomatik kurtarma durdu || Üç otomatik kurtarma denemesi de doğrulanmış sonuç alınamadan kullanıldı. Otomatik kurtarma yeni deneme başlatmayacak. Sunucu sahibinin işlem yapması gerekiyor. || Bu sunucuda terminal açıp kurtarma günlüğünü inceleyin: || sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50 || Bildirilen nedeni giderdikten sonra günlükte bu işlem için gösterilen tek seferlik yeniden deneme komutunu kullanın. Komut mevcut kurtarmayı sürdürür. Bu sayfa sonucu kontrol eder; kontrol etmek veya sayfayı yenilemek kurtarmayı yeniden başlatmaz. || Kurtarma başarısız oldu
+[19:57:14] update_card.en:
+    The update is queued.
+[19:57:16] update_card.en:
+    The update is being applied; the panel may be unavailable briefly.
+[19:57:41] update_card.en:
+    
+[19:57:14] update_card.tr:
+    Güncelleme sırada.
+[19:57:16] update_card.tr:
+    Güncelleme uygulanıyor; panel kısa süre erişilemeyebilir.
+[19:57:41] update_card.tr:
+    
+## terminal: update card (harness model) and product-rendered card (systemUpdateOutcome.ts at the build commit)
+  harness model: null
+  status body: {}
+  recovery body: {}
+  check body: {}
+  previous_attempt: absent in check body
+## observer events
+  2026-09-30T19:57:14.963351+00:00 armed {"mode": "watch", "recovery_fault": null, "timeout_seconds": 3600.0}
+  2026-09-30T19:57:14.991406+00:00 timeline {"recovery": "inactive", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "inactive", "worker_freezer": "running"}
+  2026-09-30T19:57:15.250441+00:00 timeline {"recovery": "inactive", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "activating", "worker_freezer": "running"}
+  2026-09-30T19:57:15.315001+00:00 timeline {"recovery": "inactive", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "active", "worker_freezer": "running"}
+  2026-09-30T19:57:33.562862+00:00 timeline {"recovery": "activating", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "active", "worker_freezer": "running"}
+  2026-09-30T19:57:33.929682+00:00 timeline {"recovery": "inactive", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "active", "worker_freezer": "running"}
+  2026-09-30T19:57:36.759157+00:00 timeline {"recovery": "inactive", "snapshot": "20260930T195734Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-14d3b140f0e9ad7b3b44f254594d61ca", "transaction_operation": "update", "transaction_phase": "active", "worker": "active", "worker_freezer": "running"
+  2026-09-30T19:57:59.555632+00:00 timeline {"recovery": "inactive", "snapshot": "20260930T195734Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-14d3b140f0e9ad7b3b44f254594d61ca", "transaction_operation": "update", "transaction_phase": "completion.pending", "worker": "active", "worker_freezer
+  2026-09-30T19:58:03.967836+00:00 timeline {"recovery": "activating", "snapshot": "20260930T195734Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-14d3b140f0e9ad7b3b44f254594d61ca", "transaction_operation": "update", "transaction_phase": "completion.pending", "worker": "active", "worker_freez
+  2026-09-30T19:58:04.453888+00:00 timeline {"recovery": "inactive", "snapshot": "20260930T195734Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-14d3b140f0e9ad7b3b44f254594d61ca", "transaction_operation": "update", "transaction_phase": "completion.pending", "worker": "active", "worker_freezer
+  2026-09-30T19:58:34.469826+00:00 timeline {"recovery": "activating", "snapshot": "20260930T195734Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-14d3b140f0e9ad7b3b44f254594d61ca", "transaction_operation": "update", "transaction_phase": "completion.pending", "worker": "active", "worker_freez
+  2026-09-30T19:58:34.897779+00:00 timeline {"recovery": "inactive", "snapshot": "20260930T195734Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-14d3b140f0e9ad7b3b44f254594d61ca", "transaction_operation": "update", "transaction_phase": "completion.pending", "worker": "active", "worker_freezer
+  2026-09-30T19:59:01.380696+00:00 timeline {"recovery": "activating", "snapshot": "20260930T195734Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-14d3b140f0e9ad7b3b44f254594d61ca", "transaction_operation": "update", "transaction_phase": "completion.pending", "worker": "failed", "worker_freez
+  2026-09-30T19:59:01.386649+00:00 released {"checkpoint_verified": false, "kill_sent": false, "reason": "worker-exited", "recovery_fault_armed": false, "thaw_exit": null}
+## observation records
+  {"directory_present": true, "records": {"ded53ec59a2d64864e45c34d5a675bbd.automatic": "schema=celikpanel-recovery-automatic/v1\nrequest_id=ded53ec59a2d64864e45c34d5a675bbd\nobservation_identity=65025:263066:278:2026-09-30 20:04:02.157830032 +0000:2026-09-30 20:04:02.177830134 +0000\nobservation_sha256=9bd7c4f90d073cff314c6a24aa5263e5ed2a231ba0209de80ae3e2cac5d2a2f0\nautomatic_recovery=paused_retry_limit\n", "ded53ec59a2d64864e45c34d5a675bbd.failure": "schema=celikpanel-recovery-failure/v1\nrequest_id=ded53ec59a2d64864e45c34d5a675bbd\ntarget_commit=36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb\nfailure_code=panel_start_unverified\n", "ded53ec59a2d64864e45c34d5a675bbd.status": "schema=celikpanel-recovery-observation/v1\nrequest_id=ded53ec59a2d64864e45c34d5a675bbd\ntarget_commit=36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb\nphase=recovery_required\nterminal_proof=none\nreason=recovery_incomplete\nobserved_at=2026-09-30T20:04:02Z\nprevious_failure=recovery_failed\n"}}
+## budget receipts
+  {"mtime": 1790798342.5471015, "mtime_utc": "2026-09-30T19:59:02.547101Z", "name": "1", "sha256": "46652304aabb31a55f90e3a8341d3e3098cae97c4f28d3a3ff1d2860b46f25da", "snapshot": "20260930T195734Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-14d3b140f0e9ad7b3b44f254594d61ca", "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20260930T195734Z-from-unknown-to-36c5c252a5bdbd71f3cd0f
+  {"mtime": 1790798442.2366652, "mtime_utc": "2026-09-30T20:00:42.236665Z", "name": "2", "sha256": "475180293572096349994f4c3bf8ecda34b573fab00f65b813f1ecc0d00748e0", "snapshot": "20260930T195734Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-14d3b140f0e9ad7b3b44f254594d61ca", "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20260930T195734Z-from-unknown-to-36c5c252a5bdbd71f3cd0f
+  {"mtime": 1790798542.2605157, "mtime_utc": "2026-09-30T20:02:22.260516Z", "name": "3", "sha256": "eb73f786db832f83d9938a9ad860ef637cdd1a5662ac9b223dd55cced4eed369", "snapshot": "20260930T195734Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-14d3b140f0e9ad7b3b44f254594d61ca", "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20260930T195734Z-from-unknown-to-36c5c252a5bdbd71f3cd0f
+## product journal key lines
+  2026-09-30T19:55:55.907482+00:00 dns-debian13 agent[4935]: 2026/09/30 19:55:55 hosting root: created /var/www/celikpanel at 0755 0:0
+  2026-09-30T19:59:01.354069+00:00 dns-debian13 agent[26489]: 2026/09/30 19:59:01 System update worker failed: reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=panel_start_unverified state=recovery_required reason=the new panel did not stay running and answer on its own address after the update was applied detail=
+  2026-09-30T19:59:02.606553+00:00 dns-debian13 release-recovery[43401]: Recovery dispatch admitted: attempt=1 snapshot=20260930T195734Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-14d3b140f0e9ad7b3b44f254594d61ca
+  2026-09-30T19:59:07.891977+00:00 dns-debian13 release-recovery[43820]: CELIKPANEL_UPDATE_CHECKPOINT database_verified_before_start
+  2026-09-30T20:00:10.230145+00:00 dns-debian13 release-recovery[43820]: !! pending update panel did not stay running and answer on its own address
+  2026-09-30T20:00:42.308664+00:00 dns-debian13 release-recovery[46640]: Recovery dispatch admitted: attempt=2 snapshot=20260930T195734Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-14d3b140f0e9ad7b3b44f254594d61ca
+  2026-09-30T20:00:47.619153+00:00 dns-debian13 release-recovery[47008]: CELIKPANEL_UPDATE_CHECKPOINT database_verified_before_start
+  2026-09-30T20:01:50.263043+00:00 dns-debian13 release-recovery[47008]: !! pending update panel did not stay running and answer on its own address
+  2026-09-30T20:02:22.343486+00:00 dns-debian13 release-recovery[49392]: Recovery dispatch admitted: attempt=3 snapshot=20260930T195734Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-14d3b140f0e9ad7b3b44f254594d61ca
+  2026-09-30T20:02:27.685672+00:00 dns-debian13 release-recovery[49766]: CELIKPANEL_UPDATE_CHECKPOINT database_verified_before_start
+  2026-09-30T20:03:30.432551+00:00 dns-debian13 release-recovery[49766]: !! pending update panel did not stay running and answer on its own address
+  2026-09-30T20:04:02.209233+00:00 dns-debian13 release-recovery[52127]: Automatic recovery paused after three admitted attempts. No recovery child was started. Preserve evidence and inspect the recovery service journal.
+  2026-09-30T20:04:02.209233+00:00 dns-debian13 release-recovery[52127]: After resolving the cause, the owner may authorize one same-snapshot retry: sudo /usr/libexec/celikpanel/recovery recover --retry --snapshot 20260930T195734Z-from-unknown-to-36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb-14d3b140f0e9ad7b3b44f254594d61ca

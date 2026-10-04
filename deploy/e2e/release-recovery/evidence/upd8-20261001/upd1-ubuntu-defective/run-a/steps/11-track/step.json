@@ -1,0 +1,33 @@
+{
+  "checks": {
+    "agreement": {
+      "agreed_samples": 0,
+      "lag_samples": 0,
+      "samples": 26,
+      "verdict": "inconclusive"
+    },
+    "final": {
+      "observation": "known",
+      "observed_at": "2026-10-01T16:50:31Z",
+      "phase": "recovered",
+      "previous_failure": "update_failed",
+      "reason": "rollback_verified",
+      "request_id": "a4795fd7c17f70edaf8a920830de5a98",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "rollback_verified"
+    },
+    "reboot": {
+      "after_boot_id": "72aa0715-615c-4592-891d-24c569a99892",
+      "before_boot_id": "cb60ec8e-0b49-414a-a85c-df2c36448f01",
+      "new_boot": true,
+      "reset_at": 1790873362.0009034,
+      "ssh_return_seconds": 11.780144841000947,
+      "status": "reset-submitted-once"
+    },
+    "samples": 26
+  },
+  "finished_at": "2026-10-01T16:50:33Z",
+  "name": "track",
+  "started_at": "2026-10-01T16:48:12Z",
+  "verdict": "passed"
+}

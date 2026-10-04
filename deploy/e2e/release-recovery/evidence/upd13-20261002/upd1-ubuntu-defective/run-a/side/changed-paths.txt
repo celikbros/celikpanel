@@ -1,0 +1,31 @@
+evidence /var/tmp/cp-release-drill-upd13-ub-def-a/evidence/ubuntu/upd1/upd1-ubuntu-defective-20261002t231345z/
+## initial-record (updater wrote it): 0 hits (0 in .txt)
+## curl preflight refusal: 0 hits (0 in .txt)
+## no-marker after child failure: 0 hits (0 in .txt)
+## pause_pending journal: 0 hits (0 in .txt)
+## renewal restore at pause: 0 hits (0 in .txt)
+## pause recorded: 0 hits (0 in .txt)
+## start check failure: 0 hits (0 in .txt)
+## package-activity refusal (startup reconcile): 6 hits (4 in .txt)
+   steps/14-deferred-mail-watch/journal-panel.txt:216: 2026-10-02T23:32:00.027191+00:00 dns-ubuntu panel[6018]: 2026/10/02 23:32:00 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minutes
+   steps/14-deferred-mail-watch/journal-panel.txt:217: 2026-10-02T23:32:00.033224+00:00 dns-ubuntu panel[6018]: 2026/10/02 23:32:00 milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+## package_manager_active / HOST_MUTATION_BUSY: 42 hits (0 in .txt)
+## startup reconcile success: 2 hits (2 in .txt)
+   steps/14-deferred-mail-watch/journal-panel.txt:215: 2026-10-02T23:32:00.024348+00:00 dns-ubuntu panel[6018]: 2026/10/02 23:32:00 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload
+## milter chain/wiring: 9 hits (6 in .txt)
+   steps/14-deferred-mail-watch/journal-panel.txt:8: 2026-10-02T23:14:26.545389+00:00 dns-ubuntu panel[7205]: 2026/10/02 23:14:26 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-deferred-mail-watch/journal-panel.txt:20: 2026-10-02T23:14:27.684719+00:00 dns-ubuntu panel[7267]: 2026/10/02 23:14:27 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-deferred-mail-watch/journal-panel.txt:217: 2026-10-02T23:32:00.033224+00:00 dns-ubuntu panel[6018]: 2026/10/02 23:32:00 milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+## deferred retry note on a startup refusal: 6 hits (4 in .txt)
+   steps/14-deferred-mail-watch/journal-panel.txt:216: 2026-10-02T23:32:00.027191+00:00 dns-ubuntu panel[6018]: 2026/10/02 23:32:00 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minutes
+   steps/14-deferred-mail-watch/journal-panel.txt:217: 2026-10-02T23:32:00.033224+00:00 dns-ubuntu panel[6018]: 2026/10/02 23:32:00 milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+## deferred retry attempt line: 3 hits (2 in .txt)
+   steps/14-deferred-mail-watch/journal-panel.txt:250: 2026-10-02T23:32:38.444532+00:00 dns-ubuntu panel[6018]: 2026/10/02 23:32:38 startup mail work, attempt 1 of 20: mail certificate publication completed (mail SNI from 0 active secure-mail certificates); mail filter wiring completed (milters="inet:localhost:11332" maps=hash)
+## deferred retry: busy again (attempt > 1): 0 hits (0 in .txt)
+## deferred retry: verified failure: 0 hits (0 in .txt)
+## deferred retry: give-up: 0 hits (0 in .txt)
+## root CLI states (first seen)
+   2026-10-02T23:30:07Z ('running', 'update_running', None, None, None)
+   2026-10-02T23:30:48Z ('recovering', 'recovery_running', None, None, None)
+   2026-10-02T23:32:05Z ('recovered', 'rollback_verified', None, None, None)
+## CELIKPANEL_LISTEN mentions

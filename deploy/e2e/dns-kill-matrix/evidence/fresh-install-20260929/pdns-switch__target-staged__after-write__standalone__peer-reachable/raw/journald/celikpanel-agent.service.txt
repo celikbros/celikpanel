@@ -1,0 +1,17 @@
+2026-09-28T22:25:55.943215+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-28T22:25:55.957426+00:00 dns-debian13 agent[1188]: 2026/09/28 22:25:55 Starting CelikPanel Agent...
+2026-09-28T22:25:55.959353+00:00 dns-debian13 agent[1188]: 2026/09/28 22:25:55 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-28T22:25:55.959481+00:00 dns-debian13 agent[1188]: 2026/09/28 22:25:55 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-09-28T22:26:04.482402+00:00 dns-debian13 systemd[1]: Stopping celikpanel-agent.service - CelikPanel privileged agent...
+2026-09-28T22:26:04.483994+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-28T22:26:04.484361+00:00 dns-debian13 systemd[1]: Stopped celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-28T22:26:16.812393+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-28T22:26:16.837872+00:00 dns-debian13 agent[2577]: 2026/09/28 22:26:16 Starting CelikPanel Agent...
+2026-09-28T22:26:16.910600+00:00 dns-debian13 agent[2577]: 2026/09/28 22:26:16 Interrupted DNS switch native recovery is unknown; retain exact journal and release only its ledger lease (request c60a3d86859d1980ad1d13ce8b86a793): PowerDNS switch rollback verify target stopped: DNS target is not a loaded unit
+2026-09-28T22:26:16.921758+00:00 dns-debian13 agent[2577]: 2026/09/28 22:26:16 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-28T22:26:16.921923+00:00 dns-debian13 agent[2577]: 2026/09/28 22:26:16 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-28T22:26:26.922775+00:00 dns-debian13 agent[2577]: 2026/09/28 22:26:26 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-28T22:26:36.922485+00:00 dns-debian13 agent[2577]: 2026/09/28 22:26:36 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-28T22:26:46.922502+00:00 dns-debian13 agent[2577]: 2026/09/28 22:26:46 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-28T22:26:56.924242+00:00 dns-debian13 agent[2577]: 2026/09/28 22:26:56 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-28T22:27:06.932159+00:00 dns-debian13 agent[2577]: 2026/09/28 22:27:06 Panel certificate activation remains pending: panel TLS directory is not root-authenticated

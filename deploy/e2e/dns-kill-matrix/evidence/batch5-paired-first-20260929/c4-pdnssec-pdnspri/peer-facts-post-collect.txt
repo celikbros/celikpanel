@@ -1,0 +1,54 @@
+wall=2026-09-29T14:13:13.556943109Z boot_id=ff1f23b5-f344-4c81-a4e7-0ab526d4f250
+NAME="Arch Linux"
+PRETTY_NAME="Arch Linux"
+ID=arch
+BUILD_ID=rolling
+7.1.8-arch1-3
+== packages
+error: package 'bind' was not found
+powerdns 5.1.4-4
+python 3.14.7-1
+== named.service
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+FragmentPath=
+UnitFileState=
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+User=
+== pdns.service
+LoadState=loaded
+ActiveState=active
+SubState=running
+FragmentPath=/usr/lib/systemd/system/pdns.service
+UnitFileState=enabled
+MainPID=4971
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 14:11:07 UTC
+User=powerdns
+== ss 53
+udp UNCONN 0      0      192.0.2.11:53 0.0.0.0:* users:(("pdns_server",pid=4971,fd=6))
+udp UNCONN 0      0       127.0.0.1:53 0.0.0.0:* users:(("pdns_server",pid=4971,fd=5))
+udp UNCONN 0      0      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=1469,fd=26))
+udp UNCONN 0      0      127.0.0.53:53 0.0.0.0:* users:(("systemd-resolve",pid=1469,fd=24))
+tcp LISTEN 0      0       127.0.0.1:53 0.0.0.0:* users:(("pdns_server",pid=4971,fd=7))
+tcp LISTEN 0      0      192.0.2.11:53 0.0.0.0:* users:(("pdns_server",pid=4971,fd=8))
+tcp LISTEN 0      0      127.0.0.53:53 0.0.0.0:* users:(("systemd-resolve",pid=1469,fd=25))
+tcp LISTEN 0      0      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=1469,fd=27))
+== management binaries
+ls: cannot access '/opt/celikpanel/bin': No such file or directory
+== config and zone file hashes
+sha256sum: /etc/named.conf: No such file or directory
+sha256sum: /var/named/celikpanel-fixture-catalog.zone: No such file or directory
+sha256sum: /var/named/celikpanel-fixture-member.zone: No such file or directory
+b9e32d0b8af1297ec10603784b6699f0e736e5731bf615e4ca3b2c90b116e9aa  /etc/powerdns/pdns.conf
+f5c4fe44d3e99ef7767df2bfa0789f4ae53874634e3029ff26cf00290b7a9201  /var/lib/powerdns/pdns.sqlite3
+domain: {"id": 1, "name": "catalog-c000020b.celikpanel.invalid", "master": null, "last_check": null, "type": "MASTER", "notified_serial": 1, "account": "celikpanel-fixture-native-primary", "options": null, "catalog": null}
+domain: {"id": 2, "name": "s1-kill.test", "master": null, "last_check": null, "type": "MASTER", "notified_serial": 2026083101, "account": "celikpanel-fixture-native-primary", "options": null, "catalog": null}
+== peer DNS sampler state
+ActiveState=active
+SubState=running
+MainPID=5090
+23 /var/tmp/cp-b5-peerloop/samples.log

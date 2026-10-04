@@ -1,0 +1,14 @@
+### 2026-09-29T14:13:43.966Z start-cell c5-takeover bind__target-staged__after-write__standalone__peer-reachable debian13 fixture=unmanaged-bind-stopped prep=prepare-bind enroll=0 root=/var/tmp/cp-b5-0929 peer=none flags=
+### 2026-09-29T14:13:43.968Z prepare
+### 2026-09-29T14:13:44.859Z start
+### 2026-09-29T14:13:45.118Z wait-ssh
+### 2026-09-29T14:14:39.727Z guest-identity
+### 2026-09-29T14:14:40.443Z install
+### 2026-09-29T14:14:49.172Z prepare-bind
+### 2026-09-29T14:15:29.462Z pre-run-snapshot
+### 2026-09-29T14:16:30.464Z start-watcher
+Running as unit: cp-b5-watch.service; invocation ID: 7e1ae2d261654917bc15c1332fa80050
+### 2026-09-29T14:16:31.458Z run-prepared-dry-run
+### 2026-09-29T14:16:31.652Z run-prepared
+RUN_PREPARED_RC=0
+### 2026-09-29T14:17:21.992Z done-run rc=0

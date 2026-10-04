@@ -1,0 +1,15 @@
+2026-10-01T12:05:58.076791+00:00 dns-arch systemd[1]: Started Disposable upd1 celikpanel.net fixture origin (guest loopback only; lab, no product authority).
+2026-10-01T12:06:02.314770+00:00 dns-arch systemd[1]: Starting [systemd-run] /usr/bin/python3 -I /root/celikpanel-release-recovery-lab/current-worker-baseline-driver.py...
+2026-10-01T12:06:56.815233+00:00 dns-arch groupadd[5935]: group added to /etc/group: name=celikpanel, GID=969
+2026-10-01T12:06:56.827740+00:00 dns-arch groupadd[5935]: group added to /etc/gshadow: name=celikpanel
+2026-10-01T12:06:56.827828+00:00 dns-arch groupadd[5935]: new group: name=celikpanel, GID=969
+2026-10-01T12:06:56.857516+00:00 dns-arch useradd[5937]: new user: name=celikpanel, UID=969, GID=969, home=/var/lib/celikpanel, shell=/usr/sbin/nologin, from=none
+2026-10-01T12:07:05.652084+00:00 dns-arch systemd[1]: celikpanel-lab-current-worker-baseline.service: Deactivated successfully.
+2026-10-01T12:07:05.652368+00:00 dns-arch systemd[1]: Finished [systemd-run] /usr/bin/python3 -I /root/celikpanel-release-recovery-lab/current-worker-baseline-driver.py.
+2026-10-01T12:07:05.652789+00:00 dns-arch systemd[1]: celikpanel-lab-current-worker-baseline.service: Consumed 29.808s CPU time over 1min 3.337s wall clock time, 1G memory peak.
+2026-10-01T12:07:21.639759+00:00 dns-arch systemd[1]: Stopping Disposable upd1 celikpanel.net fixture origin (guest loopback only; lab, no product authority)...
+2026-10-01T12:07:22.058924+00:00 dns-arch systemd[1]: cp-lab-upd1-origin.service: Deactivated successfully.
+2026-10-01T12:07:22.059223+00:00 dns-arch systemd[1]: Stopped Disposable upd1 celikpanel.net fixture origin (guest loopback only; lab, no product authority).
+2026-10-01T12:07:22.061240+00:00 dns-arch systemd[1]: cp-lab-upd1-origin.service: Consumed 178ms CPU time over 1min 23.982s wall clock time, 76.6M memory peak.
+-- Boot 99bfb2272a2542d5beee33468871663b --
+2026-10-01T12:07:37.765720+00:00 dns-arch systemd[1]: Started Disposable upd1 celikpanel.net fixture origin (guest loopback only; lab, no product authority).

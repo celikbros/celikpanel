@@ -1,0 +1,52 @@
+### 2026-09-30T01:37:07.747Z read-only: owner tool hashes on the secondary (the enroll.log glob ran unprivileged and failed; installs had succeeded)
+total 13612
+drwx------ 1 root root      64 Sep 30 01:35 .
+drwxr-x--- 1 root root     130 Sep 30 01:35 ..
+-rwxr-xr-x 1 root root 4898978 Sep 30 01:35 bind-peer-inspect
+-rwxr-xr-x 1 root root 9031842 Sep 30 01:35 dns-peer-enroll
+7b8167022da534f16e7d7f8c97d2ef5b1771d56243e0f3b12a55ac74dd4c474a  /root/dns-owner-tools/bind-peer-inspect
+52add036ac2e75d9e22c00e5834c0247ef8c4b196605b791cfa162d08191bf88  /root/dns-owner-tools/dns-peer-enroll
+### 2026-09-30T01:37:08.186Z read-only: ledger jobs and agent journal on the primary after the refused recover
+wall=2026-09-30T01:37:08.721082183Z
+top-level keys: ['version', 'jobs']
+{"request_id": "076c692ac1346f2b9c6a0df468b0e9aa", "kind": "dns_engine_switch", "target": "pdns", "status": "succeeded", "phase": "commit/dns-engine-switch/v2/finalized/076c692ac1346f2b9c6a0df468b0e9aa/dns-engine-switch/v1:sha256:24e72fad87ee5300669fabe7cf7197c93587a224dfd566ce3b3cfbb14ff436f0", "started_at": "2026-09-30T01:26:43.226607232Z", "finished_at": "2026-09-30T01:27:05.074087582Z", "updated_at": "2026-09-30T01:27:05.074087582Z"}
+{"request_id": "7fb6a0df9a0df4c78fa75b362d0a2988", "kind": "dns_zone_sync", "target": "s2.s1-kill.test", "status": "pending", "phase": "commit/dns-zone-sync/v3/propagation-pending/7fb6a0df9a0df4c78fa75b362d0a2988/s2.s1-kill.test/dns-zone-sync/v3:sha256:e90fb9845e27429320ea2b358a36431de04f7585481c0e935b01623592b4d3f1", "error_code": "dns_peer_enrollment_required", "started_at": "2026-09-30T01:27:50.579429116Z", "finished_at": "2026-09-30T01:27:53.087066705Z", "updated_at": "2026-09-30T01:27:53.087066705Z"}
+{"request_id": "d8f6f5bc100f074257090175ba1ce139", "kind": "dns_zone_sync", "target": "s2.s1-kill.test", "status": "succeeded", "phase": "commit/dns-zone-sync/v3/published/d8f6f5bc100f074257090175ba1ce139/s2.s1-kill.test/dns-zone-sync/v3:sha256:98d9e99d187e86504a3c8e28d4054bc0506d2e447445e731c5ccf02ffba86c56", "started_at": "2026-09-30T01:27:44.413788003Z", "finished_at": "2026-09-30T01:27:47.058649595Z", "updated_at": "2026-09-30T01:27:47.058649595Z"}
+{"request_id": "fa261f2921ccb462f0ce8225b4987b33", "kind": "dns_zone_sync", "target": "s2.s1-kill.test", "status": "succeeded", "phase": "commit/dns-zone-sync/v3/published/fa261f2921ccb462f0ce8225b4987b33/s2.s1-kill.test/dns-zone-sync/v3:sha256:6ccf0b5599f9694e54f65d92a6d3550f13100491b834a76a160a9b74b05705b4", "started_at": "2026-09-30T01:27:38.003609439Z", "finished_at": "2026-09-30T01:27:40.946978936Z", "updated_at": "2026-09-30T01:27:40.946978936Z"}
+== agent journal since 01:27 (zone/delete/peer/enroll/inspect/propagation lines)
+2026-09-30T01:27:53.093265+00:00 dns-debian13 agent[4829]: 2026/09/30 01:27:53 pdns zone publication remains pending for s2.s1-kill.test at epoch 1: paired DNS deletion is unverified (check=peer_native_zone); the peer administrator must check native zone state and DNS access, then retry verification of the same operation
+2026-09-30T01:27:53.093265+00:00 dns-debian13 agent[4829]: dns_peer_enrollment_required
+== dns-engine-state files
+total 92
+drwx------  3 root celikpanel  4096 2026-09-30 01:35:12.317337676 +0000 .
+drwxr-xr-x 29 root root        4096 2026-09-30 01:26:53.162921939 +0000 ..
+-rw-------  1 root celikpanel   735 2026-09-30 01:27:04.467023548 +0000 dns-engine-ownership-pdns.json
+-rw-------  1 root celikpanel   731 2026-09-30 01:27:00.674992097 +0000 dns-engine-state.json
+-rw-------  1 root celikpanel 63923 2026-09-30 01:27:04.495023771 +0000 dns-engine-switch-v3-archive-076c692ac1346f2b9c6a0df468b0e9aa-11123dcfa872b2069def5eb644a9b665abefed583d03f7f2394f4a35004df4e1.json
+drwx------  2 root root        4096 2026-09-30 01:35:10.661328743 +0000 dns-peer-inspection-keys
+-rw-------  1 root root         487 2026-09-30 01:35:12.313337654 +0000 dns-peer-inspection-v1.json
+-rw-------  1 root celikpanel  3077 2026-09-30 01:27:53.083293523 +0000 service-mutations.json
+### 2026-09-30T01:37:08.592Z read-only: pending deletion job, full ledger entry
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    import json;d=json.load(open("/var/lib/celikpanel-agent-private/service-mutations.json"));[print(json.dumps(j,indent=1,sort_keys=True)) for j in d["jobs"] if j.get("request_id")=="7fb6a0df9a0df4c78fa75b362d0a2988"]
+                                                                                                                                                                  ^^^^^
+AttributeError: 'str' object has no attribute 'get'
+### 2026-09-30T01:37:19.665Z read-only: pending deletion job, full ledger entry (repeat: jobs is keyed by request id; the read above failed with the traceback)
+{
+ "attempt": 1,
+ "deadline_at": "2026-09-30T02:12:50.579429116Z",
+ "error_code": "dns_peer_enrollment_required",
+ "error_message": "The exact local DNS publication is waiting for paired propagation recovery.",
+ "finished_at": "2026-09-30T01:27:53.087066705Z",
+ "kind": "dns_zone_sync",
+ "lease_expires_at": "0001-01-01T00:00:00Z",
+ "owner_id": "92088666fcbb11382a33c4bccad7796e",
+ "package_name": "dns-zone-sync/v3:sha256:e90fb9845e27429320ea2b358a36431de04f7585481c0e935b01623592b4d3f1",
+ "phase": "commit/dns-zone-sync/v3/propagation-pending/7fb6a0df9a0df4c78fa75b362d0a2988/s2.s1-kill.test/dns-zone-sync/v3:sha256:e90fb9845e27429320ea2b358a36431de04f7585481c0e935b01623592b4d3f1",
+ "request_id": "7fb6a0df9a0df4c78fa75b362d0a2988",
+ "started_at": "2026-09-30T01:27:50.579429116Z",
+ "status": "pending",
+ "target": "s2.s1-kill.test",
+ "updated_at": "2026-09-30T01:27:53.087066705Z"
+}

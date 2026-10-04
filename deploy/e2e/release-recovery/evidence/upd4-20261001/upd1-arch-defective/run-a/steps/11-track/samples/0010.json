@@ -1,0 +1,80 @@
+{
+  "agreement": {
+    "known_sources": [
+      "cli"
+    ],
+    "phase": {
+      "cli": "recovering"
+    },
+    "reasons": [],
+    "sources": [
+      "cli",
+      "shell"
+    ],
+    "verdict": "single-source"
+  },
+  "cli": {
+    "boot_id": "080c78bf-1d46-4db6-847e-870a4009a727",
+    "captured_at": "2026-10-01T00:28:52.366173Z",
+    "en": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "The update did not finish normally, and automatic recovery is running: the server is either being returned to the previous version or the update is being completed safely. Nothing to do now: check this same request again in a minute and do not start another update.\nRequest: 459df5fb92fab16431b9f3e6353fd629\nRecorded at: 2026-10-01T00:28:50Z\nThis is a recorded observation; current service health was not checked.\nRecorded state (for support): phase=recovering reason=recovery_running proof=none previous_failure=update_failed\n"
+    },
+    "json": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "{\"schema\":\"celikpanel-recovery-status/v1\",\"request_id\":\"459df5fb92fab16431b9f3e6353fd629\",\"observation\":\"known\",\"phase\":\"recovering\",\"terminal_proof\":\"none\",\"reason\":\"recovery_running\",\"observed_at\":\"2026-10-01T00:28:50Z\",\"previous_failure\":\"update_failed\"}\n"
+    },
+    "tr": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "Güncelleme normal biçimde tamamlanmadı ve otomatik kurtarma çalışıyor: sunucu ya önceki sürüme döndürülüyor ya da güncelleme güvenle tamamlanıyor. Şimdi yapmanız gereken bir şey yok: bir dakika sonra aynı işlemi yeniden sorgulayın ve başka güncelleme başlatmayın.\nİşlem: 459df5fb92fab16431b9f3e6353fd629\nKayıt zamanı: 2026-10-01T00:28:50Z\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\nKayıtlı durum (destek için): phase=recovering reason=recovery_running proof=none previous_failure=update_failed\n"
+    }
+  },
+  "guidance_api": null,
+  "guidance_cli": {
+    "actionable": true,
+    "keys": [
+      "recovery.phase.recovering",
+      "recovery.next.recovering",
+      "recovery.reason.update_failed"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "texts": {
+      "en": [
+        "Last recorded step: recovery in progress",
+        "The server last reported automatic recovery. Wait for a verified recovery result before starting another operation.",
+        "Update failed"
+      ],
+      "tr": [
+        "Kaydedilmiş son adım: kurtarma sürüyor",
+        "Sunucu son olarak otomatik kurtarma bildirdi. Başka bir işlem başlatmadan önce doğrulanmış kurtarma sonucunu bekleyin.",
+        "Güncelleme başarısız oldu"
+      ]
+    }
+  },
+  "index": 9,
+  "observed": {
+    "observation": "known",
+    "observed_at": "2026-10-01T00:28:50Z",
+    "phase": "recovering",
+    "previous_failure": "update_failed",
+    "reason": "recovery_running",
+    "request_id": "459df5fb92fab16431b9f3e6353fd629",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "none"
+  },
+  "panel_error": "PanelError",
+  "shell_fetch": {
+    "error": "ConnectionResetError",
+    "note": "only a browser-saved copy of the shell can show while the Panel is down"
+  },
+  "t": 1790814531.5558653,
+  "update_card": null,
+  "utc": "2026-10-01T00:28:51Z"
+}

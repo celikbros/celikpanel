@@ -1,0 +1,89 @@
+{
+  "agreement": {
+    "known_sources": [
+      "cli"
+    ],
+    "phase": {
+      "cli": "recovering"
+    },
+    "reasons": [],
+    "sources": [
+      "cli",
+      "shell"
+    ],
+    "verdict": "single-source"
+  },
+  "cli": {
+    "boot_id": "74c975ca-f49d-4dd4-8d4f-424534ad52f6",
+    "captured_at": "2026-09-30T15:52:41.263932Z",
+    "en": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "The last recorded state is waiting for the operating system transition. No owner action is needed for this wait; the native timer will check the same operation again when ready. Recovery is not yet complete.\nRequest: 169fdd91d71ad361c9ffc5396e0ee572\nRecorded at: 2026-09-30T15:52:29Z\nTerminal proof: none\nPrevious failure: update_failed\nThis is a recorded observation; current service health was not checked.\n"
+    },
+    "json": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "{\"schema\":\"celikpanel-recovery-status/v1\",\"request_id\":\"169fdd91d71ad361c9ffc5396e0ee572\",\"observation\":\"known\",\"phase\":\"recovering\",\"terminal_proof\":\"none\",\"reason\":\"recovery_running\",\"observed_at\":\"2026-09-30T15:52:29Z\",\"previous_failure\":\"update_failed\",\"waiting_for\":\"starting\"}\n"
+    },
+    "tr": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "Son kayıtta işletim sistemi geçişi bekleniyor. Bu bekleme için kullanıcı işlemi gerekmiyor; yerel zamanlayıcı hazır olduğunda aynı işlemi yeniden kontrol edecek. Kurtarma henüz tamamlanmadı.\nİşlem: 169fdd91d71ad361c9ffc5396e0ee572\nKayıt zamanı: 2026-09-30T15:52:29Z\nNihai kanıt: none\nÖnceki hata: update_failed\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\n"
+    }
+  },
+  "guidance_api": null,
+  "guidance_cli": {
+    "actionable": true,
+    "keys": [
+      "recovery.wait.starting",
+      "recovery.wait.next",
+      "recovery.reason.update_failed"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "texts": {
+      "en": [
+        "Last recorded step: waiting for the server to finish starting",
+        "No action is needed for this wait. The server's recovery timer will check the same operation again when the operating system is ready. Recovery is not yet complete; this page checks for its result automatically.",
+        "Update failed"
+      ],
+      "tr": [
+        "Kaydedilmiş son adım: sunucunun açılması bekleniyor",
+        "Bu bekleme için işlem yapmanız gerekmiyor. Sunucunun kurtarma zamanlayıcısı, işletim sistemi hazır olduğunda aynı işlemi yeniden kontrol edecek. Kurtarma henüz tamamlanmadı; bu sayfa sonucunu otomatik kontrol eder.",
+        "Güncelleme başarısız oldu"
+      ]
+    }
+  },
+  "index": 17,
+  "observed": {
+    "observation": "known",
+    "observed_at": "2026-09-30T15:52:29Z",
+    "phase": "recovering",
+    "previous_failure": "update_failed",
+    "reason": "recovery_running",
+    "request_id": "169fdd91d71ad361c9ffc5396e0ee572",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "none",
+    "waiting_for": "starting"
+  },
+  "panel_error": "PanelError",
+  "shell_fetch": {
+    "error": "ConnectionResetError",
+    "note": "only a browser-saved copy of the shell can show while the Panel is down"
+  },
+  "t": 1790783561.1149414,
+  "update_card": {
+    "keys": [],
+    "summary": null,
+    "texts": {
+      "en": [],
+      "tr": []
+    },
+    "untranslated_summary": false
+  },
+  "utc": "2026-09-30T15:52:41Z"
+}

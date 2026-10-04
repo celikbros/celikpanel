@@ -120,10 +120,15 @@ type SyncDNSZoneV3Request struct {
 type SyncDNSZoneV3Response struct {
 	Synced            bool      `json:"synced"`
 	RecoveryPending   bool      `json:"recovery_pending,omitempty"`
+	PendingCode       string    `json:"pending_code,omitempty"`
 	Engine            DNSEngine `json:"engine"`
 	EngineEpoch       int64     `json:"engine_epoch"`
 	AppliedGeneration int64     `json:"applied_generation"`
 	Error             string    `json:"error,omitempty"`
+	// FailureReason accompanies Error only, and only with a reviewed
+	// ValidDNSPublicationFailureReason. Older Agents omit it; older Panels
+	// ignore it and keep their generic failure text.
+	FailureReason string `json:"failure_reason,omitempty"`
 }
 
 // RecoverDNSZoneV3 re-drives peer propagation from the immutable host receipt
@@ -138,6 +143,7 @@ type RecoverDNSZoneV3Request struct {
 type RecoverDNSZoneV3Response struct {
 	Recovered       bool   `json:"recovered"`
 	RecoveryPending bool   `json:"recovery_pending,omitempty"`
+	PendingCode     string `json:"pending_code,omitempty"`
 	Error           string `json:"error,omitempty"`
 }
 
@@ -244,6 +250,25 @@ type DNSBackendRuntimeState struct {
 	// Yapılandırma bütünüyle okundu ve hiçbir view bildirmiyorsa nil'dir
 	// (defter R-044).
 	ForeignViews *DNSForeignEngineViews `json:"foreign_views,omitempty"`
+	// RollbackStandby reports the packages a rolled-back FIRST install left
+	// on the host as rollback standby: no DNS engine state receipt exists,
+	// no engine ownership receipt for this engine exists, CelikPanel's
+	// install-ownership receipt names exactly this engine's packages and
+	// records that it installed them (non-empty missing-before, not an
+	// adoption of packages already present), and the engine's unit is
+	// inactive and either under the package guard's persistent mask or loaded
+	// and disabled. Retrying such an engine is still its first install. An
+	// owner-installed engine never reads true, so it keeps the takeover or
+	// adoption decision. Additive (2026-09-30): an older Agent omits it and
+	// the Panel keeps its earlier behaviour.
+	//
+	// RollbackStandby, geri alınmış bir İLK kurulumun sunucuda yedek olarak
+	// bıraktığı paketleri bildirir: motor durumu makbuzu yok, bu motorun
+	// sahiplik makbuzu yok, CelikPanel'in kurulum makbuzu bu paketleri
+	// kendisinin kurduğunu kaydediyor ve birim etkin değil, koruyucu maskeli ya
+	// da yüklü ve devre dışı. Yeniden denemek yine ilk kurulumdur. Sahibin
+	// kurduğu bir motor asla true okumaz. Eklemelidir; eski Agent onu göndermez.
+	RollbackStandby bool `json:"rollback_standby,omitempty"`
 }
 
 // The vocabulary of a takeover's difference list. The agent reads these

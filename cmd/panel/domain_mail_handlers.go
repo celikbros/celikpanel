@@ -307,6 +307,10 @@ func (p *Panel) handleUpdateEmailPassword(w http.ResponseWriter, r *http.Request
 			writeServerError(w, errAgentRPCPlatformCapabilityDenied)
 		case isPureWrappedError(err, errAgentRPCPlatformIdentityUnavailable):
 			writeServerError(w, errAgentRPCPlatformIdentityUnavailable)
+		case agentAnsweredExactly(err, transport.MailConfigurationBusy):
+			// A fixed Agent text that carries no mailbox data: another mail
+			// change holds the lock, nothing was changed, retry afterwards.
+			writeServerError(w, agentMutationBusy())
 		default:
 			writeServerError(w, errors.New("mail password rotation RPC failed"))
 		}

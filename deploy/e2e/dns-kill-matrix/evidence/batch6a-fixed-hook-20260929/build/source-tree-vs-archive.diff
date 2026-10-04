@@ -1,0 +1,2 @@
+Only in /root/cp-b6a-src/deploy/e2e/dns-kill-matrix: __pycache__
+Only difference: the Python bytecode cache deploy/e2e/dns-kill-matrix/__pycache__ that the host helpers gssh.py/scpcmd.py created by importing fixture.py and guest_bootstrap.py; no source file differs.

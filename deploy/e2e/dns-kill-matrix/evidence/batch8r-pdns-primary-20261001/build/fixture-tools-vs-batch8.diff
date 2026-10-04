@@ -1,0 +1,202 @@
+# Fixture tools of this run vs batch 8 (deploy/e2e/dns-kill-matrix/evidence/batch8-pdns-primary-20260930/build/fixture-tools), after the mechanical path renames
+# (cp-b8-0930 -> cp-b8r-1001, cp-b8- -> cp-b8r-, scratchpad/batch8 -> batch8r, evidence directory name). Harness files were not changed.
+--- batch8/build.sh
++++ batch8r/build.sh
+@@ -2,14 +2,15 @@
+ exec > /var/tmp/cp-b8r-build.log 2>&1
+ date -u +%FT%TZ
+ REPO='/mnt/c/CELIKBROS PROJECTS/celikpanel'
+-C=916e1577
++C=e3591875
+ SRC=/root/cp-b8r-src
+ A=/root/cp-b8r-artifacts
+ T=/root/cp-b8r-tools
+ test ! -e "$SRC"; test ! -e "$A"; test ! -e "$T"; test ! -e /var/tmp/cp-b8r-1001
+ echo "repository HEAD at build time (record only): $(git -c safe.directory='*' -C "$REPO" rev-parse HEAD)"
+ echo "tested commit: $(git -c safe.directory='*' -C "$REPO" rev-parse $C^{commit})"
+-echo "branch accept/pdns-primary-gate-open: $(git -c safe.directory='*' -C "$REPO" rev-parse accept/pdns-primary-gate-open)"
++echo "branch accept/pdns-primary-gate-open-2: $(git -c safe.directory='*' -C "$REPO" rev-parse accept/pdns-primary-gate-open-2)"
++echo "parent of tested commit: $(git -c safe.directory='*' -C "$REPO" rev-parse $C^)"
+ mkdir -p "$SRC"
+ git -c safe.directory='*' -C "$REPO" archive $C | tar -x -C "$SRC"
+ test ! -e "$SRC/web/dist" && echo "web/dist absent in the archive (untracked build output)"
+@@ -40,27 +41,28 @@
+ sha256sum "$A/agent" "$A/agent.kill" "$A/panel" "$A/dns-kill-trigger" "$A/recovery" "$A/agent-checker" "$A/panel-checker" "$A/schema17-bridge" "$A"/dns-owner-tools/*
+ echo "== recovery-runtime"
+ ( cd "$A/recovery-runtime" && find . -type f -print0 | sort -z | xargs -0 sha256sum )
+-cp /root/cp-b7-tools/smstatus.go "$T/smstatus.go"
++cp /root/cp-b8-tools/smstatus.go "$T/smstatus.go"
+ printf '{"Replace":{"%s/cmd/oi-smstatus/main.go":"%s/smstatus.go"}}' "$SRC" "$T" > "$T/overlay.json"
+ $GO build -trimpath -buildvcs=false -overlay "$T/overlay.json" -o "$T/oi-smstatus" ./cmd/oi-smstatus
+ test ! -e "$SRC/cmd/oi-smstatus"
+ sha256sum "$T/oi-smstatus" "$T/overlay.json" "$T/smstatus.go"
+ $GO version -m "$A/agent" | head -3
+-echo "== comparison with the dbd6a6b6 batch-7 build (/root/cp-b7-artifacts)"
++echo "== comparison with the 916e1577 batch-8 build (/root/cp-b8-artifacts)"
+ for b in agent agent.kill panel dns-kill-trigger recovery agent-checker panel-checker schema17-bridge recovery-runtime/runtime.manifest; do
+-  if cmp -s "$A/$b" "/root/cp-b7-artifacts/$b"; then echo "IDENTICAL $b"; else echo "DIFFERENT $b"; fi
++  if cmp -s "$A/$b" "/root/cp-b8-artifacts/$b"; then echo "IDENTICAL $b"; else echo "DIFFERENT $b"; fi
+ done
+-diff <(cd /root/cp-b7-artifacts/recovery-runtime && find . -type f -print0 | sort -z | xargs -0 sha256sum) <(cd "$A/recovery-runtime" && find . -type f -print0 | sort -z | xargs -0 sha256sum) && echo "recovery-runtime tree IDENTICAL" || echo "recovery-runtime tree DIFFERENT"
+-cmp -s "$T/oi-smstatus" /root/cp-b7-tools/oi-smstatus && echo "IDENTICAL oi-smstatus" || echo "DIFFERENT oi-smstatus"
++diff <(cd /root/cp-b8-artifacts/recovery-runtime && find . -type f -print0 | sort -z | xargs -0 sha256sum) <(cd "$A/recovery-runtime" && find . -type f -print0 | sort -z | xargs -0 sha256sum) && echo "recovery-runtime tree IDENTICAL" || echo "recovery-runtime tree DIFFERENT"
++cmp -s "$T/oi-smstatus" /root/cp-b8-tools/oi-smstatus && echo "IDENTICAL oi-smstatus" || echo "DIFFERENT oi-smstatus"
+ echo "== gate constants in the tested source"
+ grep -n 'freshPairedPDNSPrimaryAdmitted\s*=' -r cmd/agent --include='*.go' | grep -v _test || true
+ grep -n 'freshPairedPDNSPrimaryOffered\s*=' -r cmd/panel --include='*.go' | grep -v _test || true
+-echo "== changed paths 49a3f4b1..$C"
+-git -c safe.directory='*' -C "$REPO" diff --stat 49a3f4b1 $C | tail -15
++echo "== changed paths 1f1a7830..$C"
++git -c safe.directory='*' -C "$REPO" diff --stat 1f1a7830 $C | tail -15
+ echo "== harness file hashes"
+ ( cd "$SRC/deploy/e2e/dns-kill-matrix" && sha256sum fixture.py guest_bootstrap.py guest_bootstrap.sh run_cell.py guest_recovery_probe.py native_pdns_bind_peer.py native_pdns_peer_probe.py manifest.json )
+ echo "== offline harness tests of the fresh primary (from the archive)"
+ ( cd "$SRC" && python3 deploy/e2e/dns-kill-matrix/test_fresh_primary_v3.py 2>&1 | tail -5 ) || echo "offline test rc=$?"
++( cd "$SRC" && python3 deploy/e2e/dns-kill-matrix/test_fresh_primary_batch8_fixes.py 2>&1 | tail -5 ) || echo "offline batch8-fixes test rc=$?"
+ find "$SRC" -name __pycache__ -type d -prune -exec rm -rf {} +
+ date -u +%FT%TZ
+ echo BUILD-OK
+# not used in batch 8r: busy.sh
+# not used in batch 8r: c01-cont.sh
+--- batch8/c01.sh
++++ batch8r/c01.sh
+@@ -1 +1 @@
+-bash /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch8r/runcell.sh c01-pri-intent pdns-switch__intent__after-write__paired-primary__peer-reachable /var/tmp/cp-b8r-1001 1 --reboot-after-recovery --disable-management-before-reboot
++bash /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch8r/runcell.sh c01-pri-intent pdns-switch__intent__after-write__paired-primary__peer-reachable /var/tmp/cp-b8r-1001 0 --reboot-after-recovery --disable-management-before-reboot
+# not used in batch 8r: c04-fullcombo-dryrun.sh
+--- batch8/c04.sh
++++ batch8r/c04.sh
+@@ -1 +1 @@
+-bash /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch8r/runcell.sh c04-pri-started-zl pdns-switch__target-started__after-write__paired-primary__peer-reachable /var/tmp/cp-b8r-1001 0 --zone-lifecycle --reboot-after-recovery
++bash /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch8r/runcell.sh c04-pri-started-zl-rb pdns-switch__target-started__after-write__paired-primary__peer-reachable /var/tmp/cp-b8r-1001 0 --zone-lifecycle --reboot-after-recovery --disable-management-before-reboot
+--- batch8/c06.sh
++++ batch8r/c06.sh
+@@ -1 +1 @@
+-bash /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch8r/runcell.sh c06-pri-committed pdns-switch__committed__after-write__paired-primary__peer-reachable /var/tmp/cp-b8r-1001 0
++bash /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/batch8r/runcell.sh c06-pri-committed-zl pdns-switch__committed__after-write__paired-primary__peer-reachable /var/tmp/cp-b8r-1001 0 --zone-lifecycle
+--- batch8/cell.sh
++++ batch8r/cell.sh
+@@ -67,6 +67,9 @@
+ step start-watcher
+ $(python3 $SP/scpcmd.py $ROOT $CELL $NODE) $SP/watcher.sh celik@127.0.0.1:/tmp/cp-b8r-watcher.sh < /dev/null || fail scp-watcher
+ $G "sudo install -m 0700 /tmp/cp-b8r-watcher.sh /root/cp-b8r-watcher.sh && sudo systemd-run --unit=cp-b8r-watch --collect /bin/bash /root/cp-b8r-watcher.sh $CELL /var/tmp/cp-b8r-watch" < /dev/null || fail start-watcher
++step start-dbwatch
++$(python3 $SP/scpcmd.py $ROOT $CELL $NODE) $SP/dbwatch.sh celik@127.0.0.1:/tmp/cp-b8r-dbwatch.sh < /dev/null || fail scp-dbwatch
++$G "sudo install -m 0700 /tmp/cp-b8r-dbwatch.sh /root/cp-b8r-dbwatch.sh && sudo systemd-run --unit=cp-b8r-dbwatch --collect /bin/bash /root/cp-b8r-dbwatch.sh /var/tmp/cp-b8r-watch-db" < /dev/null || fail start-dbwatch
+ B0=$($G 'cat /proc/sys/kernel/random/boot_id' < /dev/null | tr -d '\r\n')
+ P0=$($O 'cat /proc/sys/kernel/random/boot_id' < /dev/null | tr -d '\r\n')
+ echo "$(date -u +%FT%T.%NZ) boot 1 $B0 (watcher /var/tmp/cp-b8r-watch)" > $LOG/boot-monitor.log
+--- batch8/cells.txt
++++ batch8r/cells.txt
+@@ -1,9 +1,9 @@
+ c01-pri-intent pdns-switch__intent__after-write__paired-primary__peer-reachable
+ c02-pri-staged pdns-switch__target-staged__after-write__paired-primary__peer-reachable
+ c03-pri-enable pdns-switch__source-stopped__after-write__paired-primary__peer-reachable
+-c04-pri-started-zl pdns-switch__target-started__after-write__paired-primary__peer-reachable
++c04-pri-started-zl-rb pdns-switch__target-started__after-write__paired-primary__peer-reachable
+ c05-pri-verified pdns-switch__target-verified__after-write__paired-primary__peer-reachable
+-c06-pri-committed pdns-switch__committed__after-write__paired-primary__peer-reachable
++c06-pri-committed-zl pdns-switch__committed__after-write__paired-primary__peer-reachable
+ c07-pri-prejournal pdns-switch__intent__before-write__paired-primary__peer-reachable
+ c08-pri-owner-config pdns-switch__target-staged__after-write__paired-primary__peer-reachable
+ c09-pri-owner-sql pdns-switch__target-started__after-write__paired-primary__peer-reachable
+--- batch8/collect.sh
++++ batch8r/collect.sh
+@@ -45,6 +45,7 @@
+ CD=$(python3 -c 'import sys;sys.path.insert(0,"/root/cp-b8r-src/deploy/e2e/dns-kill-matrix");import fixture;from pathlib import Path;print(fixture.load_cell_plan(Path(sys.argv[1]).resolve(),sys.argv[2])["cell_directory"])' $ROOT $CELL)
+ echo "cell directory: $CD"
+ if [ -d $CD/fresh-primary-peer ]; then mkdir -p $E/fresh-primary-peer && cp -a $CD/fresh-primary-peer/. $E/fresh-primary-peer/; ls -la $E/fresh-primary-peer; else echo "no fresh-primary-peer directory"; fi
++$G 'sudo touch /var/tmp/cp-b8r-dbwatch.stop; sleep 2; sudo tail -n 3 /var/tmp/cp-b8r-watch-db*/timeline.log' < /dev/null
+ $G 'sudo bash -s' < $SP/guesttar_remote.sh > $LOG/guest-evidence.tar 2> $LOG/guest-tar.stderr
+ echo "tar rc=$? size=$(stat -c %s $LOG/guest-evidence.tar)"
+ mkdir -p $E/raw && tar -C $E/raw -xf $LOG/guest-evidence.tar
+--- batch8/export.sh
++++ batch8r/export.sh
+@@ -21,6 +21,8 @@
+ cp /var/tmp/cp-b8r-setup.log "$D/build/work-root-setup.log"
+ cp /var/tmp/cp-b8r-webdist.sha256 "$D/build/web-dist.sha256"
+ cp $ROOT/logs/chain.log "$D/build/chain.log"
++cp /var/tmp/cp-b8r-1001/status-texts-all-cells.txt "$D/build/status-texts-all-cells.txt"
++cp $SP/repo-head-at-start.txt "$D/build/repo-head-at-start.txt"
+ /opt/celikpanel-test-toolchains/go1.26.5/go/bin/go version > "$D/build/go-version.txt"
+ (cd /root/cp-b8r-artifacts && sha256sum agent agent.kill panel dns-kill-trigger recovery agent-checker panel-checker schema17-bridge dns-owner-tools/* && find recovery-runtime -type f -print0 | sort -z | xargs -0 sha256sum) > "$D/build/artifacts.sha256"
+ for r in $(cat $SP/roots.txt); do
+@@ -32,7 +34,7 @@
+ (cd /root/cp-b8r-tools && sha256sum oi-smstatus overlay.json smstatus.go) > "$D/build/fixture-tools/oi-smstatus.sha256"
+ cp /root/cp-b8r-tools/overlay.json "$D/build/fixture-tools/overlay.json"
+ for f in $SP/*.sh $SP/*.py $SP/*.txt $SP/smstatus.go; do b=$(basename $f); [ "$b" = hostcheck.sh ] && continue; cp $f "$D/build/fixture-tools/$b"; done
+-mkdir -p /var/tmp/cp-b8r-verify && git -c safe.directory='*' -C "$REPO" archive 916e1577 | tar -x -C /var/tmp/cp-b8r-verify
++mkdir -p /var/tmp/cp-b8r-verify && git -c safe.directory='*' -C "$REPO" archive e3591875 | tar -x -C /var/tmp/cp-b8r-verify
+ set +e; diff -r --exclude=dist /var/tmp/cp-b8r-verify /root/cp-b8r-src > "$D/build/source-tree-vs-archive.diff" ; echo "diff rc=$? (web/dist excluded: built from the archive's web/ during this run, not tracked)" | tee -a "$D/build/source-tree-vs-archive.diff"; set -e
+ rm -rf /var/tmp/cp-b8r-verify
+ echo "repository HEAD at export (record only): $(git -c safe.directory='*' -C "$REPO" rev-parse HEAD) $(date -u +%FT%TZ)" | tee "$D/build/repo-head-at-end.txt"
+# not used in batch 8r: late.sh
+# regenerated by export.sh in batch 8r: oi-smstatus.sha256
+# regenerated by export.sh in batch 8r: overlay.json
+--- batch8/pairq.py
++++ batch8r/pairq.py
+@@ -2,6 +2,7 @@
+ # (catalog-c000020a), over UDP and TCP, to the PowerDNS primary (192.0.2.10), the native BIND secondary
+ # (192.0.2.11) and 127.0.0.1. With "loop OUTFILE SECONDS" it is a compact sampler (both pair addresses
+ # every ~2 s); default prints one JSON line per query.
++# Batch 8r: also the zone-lifecycle child s2.s1-kill.test (SOA, www A); an absent child answers NXDOMAIN (rc3).
+ import socket, struct, random, json, datetime, sys, time
+ CATALOG = "catalog-c000020a.celikpanel.invalid"
+ 
+@@ -61,7 +62,7 @@
+             "rcode": flags & 0xF, "answers": out}
+ 
+ 
+-QUERIES = [("s1-kill.test", 6), ("www.s1-kill.test", 1), (CATALOG, 6)]
++QUERIES = [("s1-kill.test", 6), ("www.s1-kill.test", 1), (CATALOG, 6), ("s2.s1-kill.test", 6), ("www.s2.s1-kill.test", 1)]
+ 
+ 
+ def one_round(servers, timeout=3):
+@@ -91,7 +92,7 @@
+                     v = "ERR(" + r["error"].split(":")[0] + ")"
+                 else:
+                     v = ("aa" if r["aa"] else "noaa") + "/rc" + str(r["rcode"]) + "/" + ",".join(map(str, r["answers"]))
+-                short = {"s1-kill.test": "soa", "www.s1-kill.test": "www", CATALOG: "cat"}[r["qname"]]
++                short = {"s1-kill.test": "soa", "www.s1-kill.test": "www", CATALOG: "cat", "s2.s1-kill.test": "s2soa", "www.s2.s1-kill.test": "s2www"}[r["qname"]]
+                 compact.append(f"{r['server'].split('.')[-1]}:{short}:{r['transport']}={v}")
+             f.write(ts + " " + " ".join(compact) + "\n")
+             time.sleep(2)
+--- batch8/runonly.sh
++++ batch8r/runonly.sh
+@@ -29,6 +29,8 @@
+       echo "$(date -u +%FT%T.%NZ) boot $n $b (watcher /var/tmp/cp-b8r-watch-boot$n)" >> $LOG/boot-monitor.log
+       timeout 30 $G "sudo systemd-run --unit=cp-b8r-watch-boot$n --collect /bin/bash /root/cp-b8r-watcher.sh $CELL /var/tmp/cp-b8r-watch-boot$n" < /dev/null >> $LOG/boot-monitor.log 2>&1
+       echo "watcher start rc=$?" >> $LOG/boot-monitor.log
++      timeout 30 $G "sudo systemd-run --unit=cp-b8r-dbwatch-boot$n --collect /bin/bash /root/cp-b8r-dbwatch.sh /var/tmp/cp-b8r-watch-dbboot$n" < /dev/null >> $LOG/boot-monitor.log 2>&1
++      echo "dbwatch start rc=$?" >> $LOG/boot-monitor.log
+     fi
+     p=$(timeout 15 $O 'cat /proc/sys/kernel/random/boot_id' < /dev/null 2>/dev/null | tr -d '\r\n')
+     if [ ${#p} -eq 36 ] && [[ " $pknown " != *" $p "* ]]; then
+--- batch8/setup.sh
++++ batch8r/setup.sh
+@@ -17,7 +17,7 @@
+ sha256sum $ROOT/artifacts/agent $ROOT/artifacts/agent.kill $ROOT/artifacts/panel $ROOT/artifacts/dns-kill-trigger $ROOT/artifacts/recovery
+ sha256sum $ROOT/artifacts/recovery-runtime/runtime.manifest
+ if [ ! -e /var/tmp/cp-b8r-1001/id_ed25519 ]; then
+-  ssh-keygen -q -t ed25519 -N '' -C cp-b8r-0930 -f /var/tmp/cp-b8r-1001/id_ed25519
++  ssh-keygen -q -t ed25519 -N '' -C cp-b8r-1001 -f /var/tmp/cp-b8r-1001/id_ed25519
+ fi
+ if [ "$ROOT" != /var/tmp/cp-b8r-1001 ]; then cp -p /var/tmp/cp-b8r-1001/id_ed25519 /var/tmp/cp-b8r-1001/id_ed25519.pub $ROOT/; fi
+ sha256sum $ROOT/id_ed25519.pub
+# new in batch 8r: dbwatch.sh
+# new in batch 8r: derive2.sh
+# new in batch 8r (read-only host check, not copied by export.sh): hostcheck.sh
+# new in batch 8r: k.sh
+# new in batch 8r: note.sh
+# new in batch 8r: restamp.sh
+# new in batch 8r: setupall.sh
+# new in batch 8r: showbuild.sh
+# new in batch 8r: showweb.sh
+# new in batch 8r: webdistsum.sh
+# new in batch 8r: keys8r.py
+# new in batch 8r: ledgerjobs.py
+# new in batch 8r: rb.py
+# new in batch 8r: stat8r.py
+# new in batch 8r: sum8r.py
+# new in batch 8r: zl.py
+# new in batch 8r: repo-head-at-start.txt

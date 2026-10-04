@@ -1,0 +1,15 @@
+### 2026-09-29T13:02:14.646Z start-cell c2-pdns-adopt-owner pdns-adopt__rolled-back__after-write__standalone__peer-reachable debian13 fixture=external-pdns-adoption prep=prepare-pdns-adopt enroll=1 flags=--owner-inverse-after-restart --reboot-after-recovery
+### 2026-09-29T13:02:14.648Z prepare
+### 2026-09-29T13:02:15.604Z start
+### 2026-09-29T13:02:15.816Z wait-ssh
+### 2026-09-29T13:03:12.483Z guest-identity
+### 2026-09-29T13:03:12.878Z install
+### 2026-09-29T13:03:21.633Z enroll-recovery-runtime
+### 2026-09-29T13:03:28.516Z prepare-pdns-adopt
+### 2026-09-29T13:03:47.841Z pre-run-snapshot
+### 2026-09-29T13:04:30.657Z start-watcher
+Running as unit: cp-b4-watch.service; invocation ID: 334ac6ed455e47b4b76d309686157d8a
+### 2026-09-29T13:04:31.532Z run-prepared-dry-run
+### 2026-09-29T13:04:31.639Z run-prepared
+RUN_PREPARED_RC=1
+### 2026-09-29T13:05:17.854Z done-run rc=1

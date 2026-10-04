@@ -41,6 +41,106 @@ Oluşturulan aktarım izni incelenen eş IP ile sınırlıdır. Bu değişiklik 
 katalog adı, genel bölge devralma, TSIG eşleştirmesi veya bölge başına karşılıklı
 birincil roller eklemez.
 
+### Katalog üreticisi ve motoru kendiniz kaldırmak (30 Eylül 2026)
+
+Kaynak durumudur; bileşen testleri ve gerçek sistem kesinti denemeleri
+[DNS kurtarma kabul kütüğünde](DNS-RECOVERY-ACCEPTANCE.tr.md) kayıtlıdır;
+henüz yayımlanmış bir sürümün parçası değildir.
+
+CelikPanel ikincil sunucusu artık birincilin kataloğunu bilinen iki üreticiden
+de kabul eder: yukarıda anlatılan BIND katalog biçimi ya da PowerDNS
+birincilin kendi yayımladığı katalog (kendi üye etiketleri ve TTL değerleriyle).
+Biçimi aktarımın kendisinden, her biri için aynı sıkı denetimlerle belirler;
+ikincil sunucunun sahibi birincilin hangi motoru çalıştırdığını bilmek ya da
+bildirmek zorunda değildir. Gerçek sistem denemelerinde BIND ikincil ve
+PowerDNS ikincil, panelsiz BIND birincilden ve panelsiz PowerDNS birincilden
+üye bölgeyi yükledi ve yönetim durdurulup devre dışı bırakılmışken yeniden
+açılıştan sonra hizmet verdi.
+
+Daha önceki bir CelikPanel sürümünün kurduğu sunucuda BIND'i kendiniz
+kaldırırsanız şu komutu da çalıştırın:
+`dpkg-statoverride --remove /var/cache/bind`. Önceki sürümler bu izin kuralını
+grup adıyla kaydediyordu; paket kaldırılırken `bind` grubu silinince dpkg, kural
+kaldırılana kadar o sunucudaki bütün paket işlemlerini reddeder. CelikPanel yeni
+kurulumlarda bu kuralı artık eklemez; var olan kuralı, önceki sürüme geri dönüş
+çalışmaya devam etsin diye yerinde bırakır; paket kurmadan önce kendi kaydını
+onarır. Kendisinin oluşturmadığı bir kuralı asla değiştirmez; bunun yerine kaydı
+ve çalıştırılacak komutu söyler.
+
+### BIND denetim anahtarı (rndc.key) (1 Ekim 2026)
+
+Kaynak durumudur; bileşen testleri var, gerçek sistem denemesi bekliyor; henüz
+yayımlanmış bir sürümün parçası değildir.
+
+CelikPanel BIND'i kurduğunda paket bir rndc anahtarı oluşturmadıysa (Arch
+`bind` paketi oluşturmaz; Debian `bind9` `/etc/bind/rndc.key` dosyasını
+oluşturur), named ilk kez başlamadan önce standart `rndc-confgen -a` ile
+`/etc/rndc.key` dosyasını `root:named` sahipli ve 0640 kipinde oluşturur. Sizin
+bir anahtarınız, `rndc.conf` dosyanız ya da `controls` ifadeniz zaten varsa
+hiçbir şey yapmaz. Anahtarı istediğiniz zaman değiştirebilirsiniz
+(`rndc-confgen -a` ve named'in yeniden başlatılması); CelikPanel onu asla
+yeniden yazmaz. Panelin kaldırılması onu yerinde bırakır. Silerseniz DNS hizmet
+vermeyi sürdürür; yalnız `rndc` çalışmaz, yani panel bölge durumunu artık
+kanıtlayamaz ve bölge silmeleri yeniden bir anahtar olana kadar bekler. Geri
+alınan bir kurulum anahtarı yalnız CelikPanel oluşturduysa ve değişmemişse
+siler.
+
+### BIND ikincil sunucuda katalog aktarımına yerel döngüden izin (1 Ekim 2026)
+
+Kaynak durumudur; bileşen testleri var, gerçek sistem denemesi bekliyor; henüz
+yayımlanmış bir sürümün parçası değildir.
+
+CelikPanel'in kurduğu bir BIND ikincil sunucu artık birincil sunucunun katalog
+bölgesinin birincilden olduğu gibi yerel döngü adresinden (loopback) de
+aktarılmasına izin verir: yalnız o bölgede
+`allow-transfer { <birincil>/32; 127.0.0.1; ::1; };`. İsteğe bağlı, salt-okur
+silme denetleyiciniz (`bind-peer-inspect`) tam olarak bu yerel aktarıma ihtiyaç
+duyar; başka hiçbir şey değişmez ve anahtar gerekmez. CelikPanel olmadan
+işlettiğiniz bir ikincil sunucuda bu ifadeyi katalog bölgesine kendiniz ekleyip
+named'i yeniden yükleyin.
+
+## Zamanlanmış görevler ve yerel cron (1 Ekim 2026)
+
+Kaynak durumudur; bileşen testleri var, gerçek sistem denemesi bekliyor; henüz
+yayımlanmış bir sürümün parçası değildir.
+
+Site zamanlanmış görevleri sıradan kullanıcı crontab'larıdır. Her barındırılan
+sitenin görevlerini o sitenin kendi sistem hesabı tutar (`crontab -u <site
+kullanıcısı>`). Görevleri cron uygulaması saklar; örneğin Debian/Ubuntu'da
+`/var/spool/cron/crontabs/<kullanıcı>`, Arch'ta `/var/spool/cron/<kullanıcı>`.
+Hesap adı, alan adındaki nokta ve tirelerin alt çizgiyle değiştirilmesiyle oluşur
+(`example.com` → `example_com`); bu görevleri böyle tanırsınız. Panelde devre dışı
+bırakılan bir görev o crontab'da `# DISABLED:` yorum satırı olarak kalır.
+CelikPanel `/etc/cron.d`, `/etc/cron.hourly` ve `/etc/cron.daily` içine hiçbir
+dosya yazmaz; yapılandırma düzenleyicisi de bu yolları reddeder.
+
+Site barındıran profillerde (Web, Web + posta, Uygulama ya da web sunucusunu
+içeren özel seçim) sunucu kurulumu artık platformun kendi cron'unu olağan bileşen
+adımıyla hazırlar: Debian/Ubuntu'da `cron`, Arch'ta `cronie` paketi kurulur,
+diğer bileşenler gibi etkinleştirilip başlatılır. Bunu yalnız sunucuda hiç cron
+yokken yapar. Bir cron birimi (`cron`, `cronie`, `crond`, `fcron`, `dcron`,
+`bcron`, `systemd-cron`) ya da bir `crontab` komutu zaten varsa kurulum onu korur
+ve hiçbir paketi, birim etkinliğini ya da yapılandırmayı değiştirmez. Durdurduğunuz
+ya da kapattığınız bir birim öyle kalır. Cron yapılandırmanız ve crontab'larınız
+asla yeniden yazılmaz. Yalnız DNS profili cron'a dokunmaz.
+
+CelikPanel cron'u kaldırmaz. Bileşenler sayfası bunu reddeder
+(`NATIVE_CRON_REMOVAL_REFUSED`), çünkü cron panel dışında oluşturulanlar dahil
+sunucudaki her görevi çalıştırır. Kaldırmak istiyorsanız paket yöneticisiyle
+kendiniz yapın.
+
+CelikPanel'i kaldırmak cron'u, etkinliğini ve bütün crontab'ları yerinde bırakır.
+Görevler site kullanıcıları olarak çalışmayı sürdürür. Bir görevin kendi komutu
+panel araçlarını çağırıyorsa bu, incelemeniz gereken kendi bağımlılığınızdır
+(aşağıdaki inceleme tablosuna bakın).
+
+Bu değişiklikten önce kurulmuş ya da cron'u sonradan kaldırılmış bir sunucuda cron
+yoksa, Zamanlanmış görevler ekranı artık iç hata yerine bunu söyler
+(`CRON_NOT_INSTALLED`). Bileşenler sayfasından "Scheduled tasks (cron)" bileşenini
+kurun ya da `sudo apt-get install cron` (Debian/Ubuntu) veya `sudo pacman -S
+cronie` ve ardından `sudo systemctl enable --now cronie` (Arch) çalıştırın. Sonra
+değişikliği yineleyin.
+
 ## Kanıt
 
 [Yerel doğrulama](validation/native-dns-independence-20260912/README.tr.md),
@@ -48,10 +148,12 @@ manuel/otomatik taslak yollarını ve BIND birincil–PowerDNS ikincil çiftini 
 İki geçici Debian 13 makinesinde yönetim hizmetleri durduruldu; standart konumdaki
 çalıştırılabilir dosyalar testin kanıt dizinine taşındı. Birincil, CelikPanel include
 satırı içermeyen normal bir BIND yapılandırmasına geçirildi. Katalogdan bölge ekleme,
-kayıt değiştirme, DNS hizmetlerini yeniden başlatma ve katalogdan bölge kaldırma,
-panel API'si olmadan PowerDNS'e yansıdı. Bu, test edilen çiftin DNS işletimini
+kayıt değiştirme ve DNS hizmetlerini yeniden başlatma,
+panel API'si olmadan PowerDNS'te gözlendi; katalogdan çıkarma doğrulanmadı. Bu, test edilen çiftin DNS işletimini
 kanıtlar; bütün hosting hizmetlerinin kaldırma veya makineyi yeniden başlatma
 bağımsızlığını kanıtlamaz.
+
+**Kanıt düzeltmesi (25 Eylül 2026):** İkincilde katalogdan çıkarma sonrası alınan eski yanıt `REFUSED` idi ve yetkili bir yanıt değildi. Bu, PowerDNS'in üye bölgeyi kaldırdığını kanıtlamaz. Yerel ekleme/değiştirme/aktarım/yeniden başlatma gözlemleri geçerlidir; bölge kaldırma ve çiftin yönetim olmadan yeniden açılması açık kalır. [Düzeltilmiş test kaydına](validation/native-dns-independence-20260912/README.tr.md) bakın.
 
 ## Bağımlılık incelemesi ve kalan işler
 
@@ -65,7 +167,7 @@ bağımsızlığını kanıtlamaz.
 | ACME doğrulama yolları | `/var/lib/celikpanel-agent/acme-http-01` ve site Certbot çalışma dizini `/var/lib/celikpanel/certbot` | Doğrulama ve sertifika dizinleri ile yerel yenileme görevleri korunmalı/taşınmalı; gerçek yenileme testi yapılmalı. Dizin adı tek başına çalışan ajan bağımlılığı anlamına gelmez. |
 | Panel HTTPS yenilemesi | Panel sertifikası için ajan çağrılıyor | Panel kancası/sertifikası, ortak site ve posta yenilemesinden ayrı temizlenmeli; Certbot genel olarak kapatılmamalı. |
 | Site, posta ve veritabanı | Yerel hizmetler mevcut; bütün üretilen yollar, posta eşlemeleri, kimlik doğrulama kaynakları ve zamanlanmış dağıtımlar kaldırma için doğrulanmadı | Kesin koruma envanteri; yönetim dosyaları yokken web, veritabanı, posta teslimi/girişi, cron ve yenileme kanıtı gerekiyor. |
-| Kullanıcı cron işleri | `cron_rpc.go` yerel kullanıcı crontab'larına yazıyor | Kullanıcılar, ev dizinleri ve işler korunmalı; iş komutlarındaki ek panel bağımlılıkları incelenmeli. Yerel cron çalışmalı. |
+| Kullanıcı cron işleri | `cron_rpc.go` yerel kullanıcı crontab'larına yazıyor. 1 Ekim 2026'dan beri kurulum yerel cron'u yalnız yokken kurar ve panel onu asla kaldırmaz | Kullanıcılar, ev dizinleri ve işler korunmalı; iş komutlarındaki ek panel bağımlılıkları incelenmeli. Yerel cron çalışmalı. Yönetim yokken görevlerin çalıştığı henüz gerçek sistemde kanıtlanmadı. |
 
 İlgili kaynaklar: `cmd/agent/mail_host_certificate_linux.go`,
 `cmd/agent/mail_host_certificate_renewal.go`,
@@ -78,3 +180,251 @@ hizmet testleri gerektiren ayrı bir geçiştir. Denetimsiz dosya kopyalayan bet
 D-022'yi karşılamaz. Bu değişiklik kaldırma komutu sunmaz veya onaylamaz. Kaldırma,
 sahibinin incelediği, bütün hizmet verilerini koruyan ve yerel yönetim yolunu
 belgeleyen bir işlem olarak tamamlanmalıdır.
+
+## Ortak firewall politika sözleşmesi (kaynak aşaması)
+
+D-025 ilkeleri 1, 3, 6 / P0.5. Kalıcı firewall üreticisi, okuyucusu ve açılış
+kuralları hazırlığı artık `internal/firewallpolicy` paketini paylaşıyor. Paket
+yalnız Go standart kütüphanesini kullanır; Agent, uygulama veritabanı, lisans,
+sunucu komutu veya dosya erişimi bağımlılığı yoktur. Agent aynı paketten v2
+yazar, eski/v2 dosyayı okur ve güncel doğrulanmış SSH portları ile kaydedilmiş
+SSH geçiş korumasını birleştirir.
+
+V2 JSON baytları, boş liste temsili, boyut sınırı ve eski nft biçimi korundu;
+şema geçişi veya disk normalizasyonu yok. Bilinmeyen sürüm, keyfi nft metni,
+yinelenen JSON alanı ve geçersiz SSH portu reddedilir. Yalnız `inet celikpanel_fw`
+tablosu hedeflenir. Yetki, güvenli dosya okuma, SSH keşfi, nft ön kontrolü,
+atomik uygulama ve geri alma mevcut çağıranda kalır; kural üretmek başarı kanıtı değildir.
+
+Paket ve mevcut Agent firewall testleri yarış algılayıcıyla geçti. Kurulu açılış
+uniti hâlâ Agent'ı çağırıyor. Bağımsız tüketicinin paketlenmesi, kalıcı
+politika/açılış geçişi, hata kurtarması ve Agent yokken gerçek yeniden başlatma
+kabulü açık. Kurulu sunucular değiştirilmedi.
+
+
+## Bağımsız firewall okuyucusu: sınırlı yerel kanıt
+
+Kaynak `cmd/firewall-restore`, ortak eski/v2 politikayı Agent, uygulama
+veritabanı veya lisans olmadan okur. [Debian AR kanıtı](../deploy/e2e/release-recovery/FIREWALL-BOOT.md),
+yönetim binary’leri yokken normal yeniden başlatma, yeni SSH bağlantısı ve
+bağımsız nft tablosunun korunmasını doğrular. Deneme, mevcut root sahipliğini
+ve yazma izni olmayan `celikpanel` grup düzenini kullanır. Kayıtlı şema değişmez.
+
+Kurulu unit hâlâ Agent kullanır. Paketleme, ortak değişiklik kilidi,
+güncelleme/geri alma sırasında okuyucu koruması, başarısız açılış kurtarması
+ve kalan yerel iş yükü matrisi açıktır; bu sonuç P0.5’i kapatmaz veya panelin
+kaldırılmasını onaylamaz.
+
+Sonraki [ortak kilit kaynağı ve yerel çakışma kanıtı](../deploy/e2e/release-recovery/FIREWALL-BOOT.md#shared-process-exclusion-next-source-stage),
+bağımsız okuyucu ve Agent girişlerini kapsar. Meşgul kilit, doğrulanmamış
+ve belirsiz sonucu korur; süreç ölünce kilidi çekirdek bırakır. Bu,
+kaynak düzeyindeki ortak kilit açığını kapatır; kurulu sistemde devreye alma
+ve bütün eşzamanlılık/güncelleme matrisi tamamlanmış değildir.
+
+
+## Sürümlü firewall paketi (henüz etkin değil)
+
+Derleme artık `firewall-runtime/` paketini uygulama binary dizininden ayrı hazırlar.
+`celikpanel-firewall-runtime/v1`; politika okuyucusu sürüm 2’yi, binary’yi ve
+sabit v1 şablonundan üretilen systemd birimini aynı generation’a bağlar.
+Birim `/usr/libexec/celikpanel/firewall/<generation>/restore` yolunu kullanır.
+Bilinmeyen sürüm, kanonik olmayan manifest, değiştirilmiş binary/birim reddedilir.
+Mevcut eski/v2 politika dosyasının biçimi değişmez.
+
+Çevrimdışı paketleyici tanınmayan çıktıyı ve önceki doğrulanmış derlemeyi
+korur. Normal arşiv ve kaynak bootstrap aynı bağımsız paketi taşır. Paket
+hazırlamak, kurulum yetkisi vermez. Kalıcı yayın, birim geçişi ve geri alma
+koruması uygulanıp kanıtlanana kadar mevcut installer/açılış birimi korunur.
+
+Sözleşme/paketleyici yarış testleri, bağlantılı girdi ve kullanıcının düzenlediği
+çıktının reddi geçti. Linux dosya sisteminde Go 1.26.5 ile 022/077 umask altında
+iki derleme aynı baytları ve 0755/0644 izinlerini üretti. Windows paylaşımının
+0777 gösterimi reddedildi; izin denetimi gevşetilmedi. Bu, tam sürüm veya yerel
+etkinleştirme kanıtı değildir.
+
+
+## Kalıcı güvenlik duvarı hazırlığı (birim etkinleştirme henüz açık)
+
+Aday kurtarma girişi, `prepare-firewall-runtime --source <mutlak incelenmiş
+firewall-runtime dizini> --transaction-fd 9` komutunu destekler. Root, devralınan
+tekil sürüm kilidi ve etkin işlem işaretçilerinin yokluğu gerekir. Çağıran
+önce dış sürüm paketini kabul etmelidir. Bu iç komut güncelleme başlatmaz,
+birim kurmaz, kural uygulamaz veya hizmet başlatmaz; eski seçili kurtarma
+çalıştırıcısına yönlendirilmez.
+
+Hazırlık, kurtarmanın açık dosya tanıtıcılarıyla kimlik ve root sahipliği
+doğrulamasını paylaşır. Yalnız tamamı doğrulanan nesil sabit bağımsız
+konuma yayımlanır. Dosyalar ve dizinleri diske eşitlenir; var olan hedefin
+üzerine yazılmaz. Sonuç bildirilmeden üst dizin de eşitlenir. Tekrar denemede
+mevcut nesil yeniden doğrulanır. Yarım dizinler, eski nesiller ve sahip
+değişiklikleri korunur. Politika veya kurulu birim biçimi değişmez.
+
+Kilit devri, etkin işlem reddi, güvensiz kaynak, sonradan kaynak/hedef değişikliği
+ve hedef çakışması testleri geçti. İlk dosya, kalıcı dizin, yayım ve üst
+dizin eşitleme sınırlarındaki gerçek SIGKILL sonrası tekrar hazırlık başarılı.
+Bunlar yerel Linux dosya sistemi/süreç testleridir; güç kaybı veya yerel
+hizmet etkinleştirme kabulü değildir. Otomatik kurucu/güncelleyici bağlantısı,
+tam birim geçişi, geri almada yardımcıların korunmasının kanıtı ve kalan
+P0.5 hizmet matrisi açıktır.
+
+
+Sonraki ön kontrol bağlantısı, paketi taşıyan sürümlerde hazırlığı
+çağırır: güncelleyicide kurtarma kiti geçişi ve hizmet duruşundan, ilk
+kurucuda kalıcı temel niyeti yayımından önce. Paketi olmayan tarihsel
+arşivlerin yolu korunur. Ret akışı durdurur; yarım hazırlık yanlış
+"değişmedi" yerine `firewall_runtime_preparation_unconfirmed` sonucu verir.
+Gerçek FD devri ve ilk kurucu fonksiyonu testleri başarılı hazırlığı ve bozuk
+paket reddini kapsar. Kurulu güvenlik duvarı birimi henüz bu yardımcıya geçmez.
+
+
+[Debian AR nesil kabulü](../deploy/e2e/release-recovery/FIREWALL-GENERATIONS.md),
+paketlenen gerçek birimin Panel/Agent dosyaları yokken üç A/B/A açılışını
+kanıtlar. İki yardımcı nesli, kayıtlı politika ve ayrı yerel tablo korunur.
+Eksik tablo deneyinin ilk sonucu da saklanır. Nesiller aynı okuyucunun iki
+derlemesidir; anlamsal sürüm geçişi veya normal uygulama güncelleme/geri alma
+kanıtı değildir. P0.5 açık kalır.
+
+
+## Paketlenen yerel birim geçişi (kaynak aşaması)
+
+D-025 ilkeleri 1, 3, 4 / P0.3, P0.5. Çevrimdışı dağıtım ve kaynak bootstrap
+sürümleri, paketteki güvenlik duvarı biriminin aynı baytlarını incelenen systemd
+içeriğine koyar. Kaynak ağacındaki eski birim uyumluluk için korunur; doğrudan
+kaynak ağacı kurulumu veya panel kaldırma desteği tamamlanmış sayılmaz. Yardımcı,
+koordinatörler durmadan hazırlanır; aday okuyucu hedef birimi korunan nesliyle
+doğrular. Yeni paket kurulumu aynı kanıtı temel kurulum niyetinden önce ister.
+
+Atomik eski/aday birim geçişi artık gidilecek birimin yardımcısını da doğrular.
+Bozuk aday, değişikliksiz tekrar dahil yayını durdurur; sağlam eski birime geri
+almayı engelleyemez. Eski bağımsız birim kendi korunan yardımcısını gerektirir.
+Bilinmeyen şablon, sahip düzenlemesi, okuma hatası veya eksik/değişmiş yardımcı
+kanıtları korur ve ilgili geçişi durdurur. Her iki yardımcı nesli uygulama
+dosyalarının değiştirilmesinden ayrı kalır. Eski/v2 politika, v1 yapıt ve v6
+tam snapshot biçimleri değişmez.
+
+Kanıt: tam runtime/CLI yarış testleri; salt-okur birim/yardımcı doğrulamasının
+bozuk, bağlı ve güvensiz dosyaları reddi; gerçek kurulum/güncelleme önkontrol
+fonksiyonları; hedef yardımcıya göre ret ve eski birime geri alma shell testleri.
+Bunlar kaynak/bileşen kanıtıdır. Önceki yerel A/B/A deneyi tam paket birimini
+kullanır fakat normal uygulama güncelleme gövdesini kanıtlamaz. Tam imzalı
+güncelleme/otomatik geri alma, hatalı boot konsol kurtarması, Arch ve kalan
+iş yükü/yenileme matrisi açıktır. Kurulu kullanıcı sunucusu değiştirilmez.
+
+
+Sonraki [Debian AS/AT yerel kabulü](../deploy/e2e/release-recovery/FIREWALL-UPDATE.md),
+yalıtılmış test imzasıyla gerçek Agent güncelleme yürütücüsünü kapsar:
+bağımsız birim yayımlanır; ikinci denemede aday birim/yardımcı yayınından
+sonra yürütücü öldürülür ve yerel kurtarma eski birimi otomatik geri getirir.
+İki yol da politika, ayrı tablo, yardımcı ve HTTPS erişimini yeniden açılışta korur.
+AS, eski kapalı boot durumunu koruduktan sonra test için açıkça etkinleştirildi;
+AT, baştan etkin olan durumu korudu. Üretim arayüzü/imzası, Arch, bozuk yardımcının
+boot/konsol kurtarması ve P0.5'in diğer kabul işleri açıktır.
+
+Arch AU, gerçek güncellemede yeni firewall unit’i yayımlandıktan sonraki kesintiyi, otomatik geri almayı ve yeni açılışı doğruladı. [Kanıt ve sınırlar](../deploy/e2e/release-recovery/FIREWALL-UPDATE.md#arch-automatic-rollback-and-boot-au). Arch başarılı ileri güncelleme deneyi ve P0.5 bütünü açıktır. Eski Agent’ın geçici platform tespit hatasını kalıcı güncelleme reddi olarak saklaması ayrı bir P0.2/P0.4 düzeltmesi gerektirir; test Agent’ını yeniden başlatmak bu kabul maddesini kapatmaz.
+
+[Ortak mail sertifika v1 sözleşmesi](MAIL-CERTIFICATE-ARTIFACT.md), kayıt/bekleyen yenileme/lineage ayrıştırmasını ve sertifika doğrulamasını Agent dışına taşır. Gerçek Alpha81 üreticisinin byte’ları yeni ortak ve Agent okuyucularında aynen korunur. Bu P0.4/P0.5 temel adımıdır; bağımsız yenileme tüketicisi, hook geçişi ve yönetim programları yokken gerçek yenileme kabulü açıktır.
+
+[Ortak dosya okuyucusu](MAIL-CERTIFICATE-ARTIFACT.md#shared-descriptor-reader), Agent’ın gerçek mail sertifika okumalarında kullanılır. Eski dosya güven kuralları korunur; okuma sırasında sahibin değiştirdiği seçim geri yazılmadan reddedilir. Bağımsız yayın/yeniden yükleme ve Agent yokken yenileme kabulü açıktır; yeni kalıcı şema veya kurulu sistem geçişi yoktur.
+
+[Arch AV ileri güncelleme ve açılış kanıtı](../deploy/e2e/release-recovery/PLATFORM-UPDATE-AV.md)
+aynı aday yardımcı/birim, sahip etkinleştirme durumu, politika, ilgisiz tablo ve
+HTTPS korunarak geçti. Yeni Agent, açılıştaki geçici ret sonrası aynı PID ve
+süreç kimliğiyle hazır kontrol sonucu verdi. Bu sınırlı kabul tamamlandı;
+P0.2/P0.3/P0.5 matrisi, üretim arayüzü/imza güveni ve bağımsız yenileme açık.
+
+[Ortak sertifika yayınlama kilidi](MAIL-CERTIFICATE-ARTIFACT.md#shared-publication-exclusion)
+eski sabit flock kimliğini korur; sınırlı beklemeyi destekler ve değiştirilmiş
+kilidi izinlerini düzeltmeden reddeder. Agent ortak kodu kullanıyor; ayrı süreçle
+kilitleme ve süreç kesintisi testleri geçti. Yerel yenileme, dış mutasyon kilidi,
+hook geçişi ve yönetim yokken kabul P0.4/P0.5 kapsamında açık kalıyor.
+
+[Ortak yerel Certbot okuyucusu](MAIL-CERTIFICATE-ARTIFACT.md#shared-native-certbot-source-reader)
+gerçek Agent panel/mail yollarında aynı sınırlı live/archive okumasını kullanır.
+Zincir, süre ve amaç denetimleri çağıranda korunur; mevcut olumsuz kaynak testleri
+geçti. Yerel yenileme hook'u ve yönetim yokken kabul henüz tamamlanmadı.
+
+
+[AX mail kabul deneyi](../deploy/e2e/release-recovery/MAIL-CONTRACT-AX.md), gerçek
+servislerle ortak sözleşme üzerinden yenilemeyi, Debian yeniden başlatmasından
+sonra TLS'nin korunmasını ve tamamlanmış yenileme tekrarında sahibin sertifika
+seçimiyle bekleyen işin korunmasını doğruladı. P0.4/P0.5 kısmen kanıtlıdır:
+yenileme hâlâ Agent kodunu kullanıyor; bağımsız yardımcının yetkilendirilmesi,
+tekrar denemesi, hook geçişi ve panel kaldırma kabulü açıktır. Kurulu kullanıcı
+panelinde değişiklik yapılmadı.
+
+
+[Kabul edilmiş mail TLS planı](MAIL-CERTIFICATE-ARTIFACT.md#shared-accepted-mail-tls-plan)
+Agent üreticisi ve kurtarma okuyucusunun kullandığı tek v1 sözleşmeye taşındı.
+Gerçek Alpha81 üreticisinin boş/SNI kayıtları aynen korunuyor. Kabul edilmiş
+planı okumak güncel sağlığı kanıtlamaz ve yeni yardımcıya değişiklik yetkisi
+vermez; bağımsız yenileme işlemi ve gerçek sistem kabulü açıktır.
+
+
+[Ortak mail sertifikası yayını](MAIL-CERTIFICATE-ARTIFACT.md#shared-immutable-publication)
+Agent üreticisi tarafından kullanılıyor; hazırlanan dosyalarda ve sertifika
+seçiminde gözlenen sahip değişikliklerini koruyor.
+[AY gerçek sistem deneyi](../deploy/e2e/release-recovery/MAIL-CONTRACT-AY.md), bu
+üretici ve ortak kabul edilmiş plan okuyucusuyla yenilemeyi, yeniden başlatmayı
+ve sahip değişikliği sonrası tekrarı doğruladı. Şema geçişi veya bağımsız
+yenileme yardımcısı iddiası yok; Agent işlem/kurtarma ve servis uyarlaması
+hâlâ gerekli.
+
+
+[Mail kurtarma temizliği](MAIL-CERTIFICATE-ARTIFACT.md#recovery-cleanup-shares-the-artifact-contract)
+artık yalnız makbuz eşleşmesine değil, ortak tam nesil doğrulamasına dayanıyor.
+Gözlenen sahip değişiklikleri, seçili nesiller ve ek dosyalar korunur. Bileşen
+ve yarış testleri P0.4'ü ilerletir; yeni gerçek sistem kesintili kurtarma veya
+bağımsız yenileme kabulü iddiası yoktur.
+
+
+[Korunan AY sahibin incelemesiyle temizlik deneyi](../deploy/e2e/release-recovery/MAIL-CLEANUP-AY.md)
+ortak temizliği gerçek dosya ve mail servisleriyle doğruladı: sahip dosyaları
+korunur; sahibi çatışmayı açıkça giderince aynı işlemin hazırlığı temizlenir;
+mail ve diğer bekleyen yenileme korunur. Kontrollü tamamlanmamış hazırlık deneyi,
+çökme/açılış kurtarmasını veya P0.4/P0.5'in tamamını kanıtlamaz.
+
+
+[Ortak sunucu kilidi](HOST-MUTATION-EXCLUSION.tr.md), gerçek Agent ve ayrı
+kurtarma denetleyicisinde kullanılır. FIFO'da beklemeden veya dosyayı düzeltmeden
+sahip değişikliklerini reddeder; mevcut dış flock kimliğini korur. Yerel süreç
+ve kurtarma denetleyicisi testleri geçti. Bağımsız yenileme yetkisi/geçici
+dizin kurulumu ve P0.3-P0.5'in tam kabul matrisi açıktır.
+
+
+[Yerel mail yapılandırma sözleşmesi](MAIL-CERTIFICATE-ARTIFACT.md#shared-native-mail-configuration-contract),
+gerçek Agent üreticileri ve kalıcı plan karşılaştırmasında paylaşılır. Alpha81
+çıktı uyumluluğu, sahip değişiklikleri ve eksik gözlem testleri geçti. Bu
+P0.4 ilerlemesidir; yapılandırma eşleşmesi yenileme yetkisi veya hizmet sağlığı
+değildir. Agent'tan bağımsız yenileme ve P0.5'in tam kabul matrisi açıktır.
+
+
+Dovecot lehçesi artık başarılı sürüm gözlemiyle doğrulanır; boş, bozuk
+ve başarısız gözlem 2.4 sayılmaz. Desteklenmeyen sürüm ayrı reddedilir.
+TLS önkoşulu dosya/snapshot değişikliğinden önce durur; sanal posta yazıcısı
+ve kalıcı plan doğrulaması da doğrulanmış lehçe gerektirir. Mail race testleri
+ve vet geçti; bu kaynak aşamasında native kabul ve bağımsız yenileme açıktır.
+
+
+[Sonraki AY yerel sürüm gözlemi kabulü](../deploy/e2e/release-recovery/MAIL-DIALECT-AY.md)
+paylaşılan ana makine kilidini ve yerel plan geri okumasını tam kaynak
+sürümüyle doğrular. Gerçek hata veren sürüm komutu yapılandırmayı
+değiştirmeden durur; yapılandırma, işlem kaydı, bekleyen yenileme ve
+güvenilir SMTP/IMAP sertifikası korunur. Bağımsız yenileme, tüm etkin
+yerel yapılandırma doğrulaması ve çökme kurtarması açık kalır.
+
+
+[Ortak hizmet işlem defteri](SERVICE-MUTATION-LEDGER.md), Agent üreticisini
+ve bağımsız kurtarma okuyucusunu aynı v1 sözleşmesine bağlar; yayın
+makbuzları ve aktif işaretçi kuralları birlikte korunur. Eski üretici
+baytları uyumluluk örneğidir; okunamayacak büyüklükte kayıt dosyaya
+hazırlanmadan reddedilir. P0.3/P0.4 ilerler; bu tek başına sunucunun boşta
+olduğunu veya bağımsız yenileme ve kesinti kabulünün bittiğini kanıtlamaz.
+
+### Posta yenilemesinde yayın öncesi gözlem (2026-09-22)
+
+[Mevcut yapılandırma kontrolü](MAIL-RENEWAL-OBSERVATION.md), ortak salt-okur
+gözlemi ilk sertifika yayınına ve kuyruktaki yenilemeye bağlar. Sahibin
+ayarlarıyla uyuşmazlık veya belirsiz gözlem sertifika hazırlanmadan durur;
+bekleyen kaynak ve mevcut ayarlar korunur. Kalıcı şema değişmez. Yayından
+sonraki sahip değişikliklerini koruyan kurtarma ve bağımsız yenileme açıktır;
+bu sınırlı değişiklik P0.4/P0.5'i tamamlamaz.

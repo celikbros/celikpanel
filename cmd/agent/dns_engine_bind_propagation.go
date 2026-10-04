@@ -3,9 +3,12 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 
 	"github.com/alicelik/celikpanel/internal/binddns"
+	"github.com/alicelik/celikpanel/internal/bindrndckey"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 type bindControlRunner func(context.Context, ...string) error
@@ -20,16 +23,26 @@ func trustedBINDControl(ctx context.Context, args ...string) error {
 	output, err := serviceMutationCommand(
 		ctx, control, args...,
 	).CombinedOutputLimited(64 << 10)
-	_ = output
 	if err != nil {
+		// A missing or refused control key is typed (bind_rndc_unavailable,
+		// first output line as detail); any other failure stays generic.
+		if unavailable := bindrndckey.ClassifyControlFailure(output, err); unavailable != nil {
+			return unavailable
+		}
 		return errors.New("BIND control command failed")
 	}
 	return nil
 }
 
+// bindV3PrimaryPropagationPlan builds the primary propagation plan of one
+// zone in the verified current BIND tree. source is the active engine state
+// receipt (the one the native peer proof rereads with readDNSEngineState);
+// the plan carries it exactly as the PowerDNS plan does, so the proof selects
+// the BIND catalog probes after the inspection (pair5 P5-1).
 func bindV3PrimaryPropagationPlan(
 	tree binddns.VerifiedTree,
 	domain string,
+	source dnsEngineStateReceipt,
 ) (dnsV3PrimaryPropagationPlan, bool, error) {
 	receipt := tree.CurrentReceipt()
 	zone, data, found := tree.Zone(domain)
@@ -42,11 +55,15 @@ func bindV3PrimaryPropagationPlan(
 		return dnsV3PrimaryPropagationPlan{}, false, err
 	}
 	if receipt.Pairing == nil {
-		return dnsV3PrimaryPropagationPlan{Changed: changed}, false, nil
+		return dnsV3PrimaryPropagationPlan{}, false, nil
 	}
 	if receipt.Pairing.Role != binddns.PairRolePrimary {
 		return dnsV3PrimaryPropagationPlan{}, false,
 			errors.New("BIND secondary cannot propagate a panel-owned V3 zone")
+	}
+	if source.Engine != transport.DNSEngineBIND {
+		return dnsV3PrimaryPropagationPlan{}, false,
+			errors.New("BIND primary propagation requires the active BIND engine state receipt")
 	}
 	evidence, primary, err := bindPrimaryCatalogEvidence(tree)
 	if err != nil || !primary {
@@ -55,8 +72,14 @@ func bindV3PrimaryPropagationPlan(
 		}
 		return dnsV3PrimaryPropagationPlan{}, false, err
 	}
-	plan := dnsV3PrimaryPropagationPlan{Evidence: evidence, Changed: changed}
-	if err := validateDNSV3PrimaryPropagationPlan(plan); err != nil {
+	plan, err := newDNSV3PrimaryPropagationPlan(source, evidence, changed, false,
+		dnsV3DeletionOperation{
+			RequestID:  zone.MutationRequestID,
+			OwnerID:    zone.MutationOwnerID,
+			Generation: zone.DesiredGeneration,
+			Qualifier:  zone.Qualifier,
+		})
+	if err != nil {
 		return dnsV3PrimaryPropagationPlan{}, false, err
 	}
 	return plan, true, nil
@@ -84,25 +107,23 @@ func prepareBINDV3PrimaryPropagationAt(
 		return run(commandCtx, "notify", domain)
 	}
 	if err := runBounded(plan.Evidence.Domain); err != nil {
-		return errors.New("BIND paired catalog notification failed")
+		return typedBINDNotificationFailure("BIND paired catalog notification failed", err)
 	}
 	if !plan.Changed.Delete {
 		if err := runBounded(plan.Changed.Domain); err != nil {
-			return errors.New("BIND paired member notification failed")
+			return typedBINDNotificationFailure("BIND paired member notification failed", err)
 		}
 	}
 	return nil
 }
 
-func completeManagedBINDV3Propagation(
-	ctx context.Context,
-	tree binddns.VerifiedTree,
-	domain string,
-) error {
-	return completeManagedBINDV3PropagationAt(
-		ctx, tree, domain, trustedBINDControl,
-		completeDNSV3PrimaryPropagation,
-	)
+// typedBINDNotificationFailure keeps only the reviewed rndc reason; other
+// control output is not carried further.
+func typedBINDNotificationFailure(text string, err error) error {
+	if unavailable, ok := bindrndckey.ReasonOf(err); ok {
+		return fmt.Errorf("%s: %w", text, unavailable)
+	}
+	return errors.New(text)
 }
 
 func completeManagedBINDV3PropagationForState(
@@ -119,8 +140,8 @@ func completeManagedBINDV3PropagationForState(
 		return err
 	}
 	return completeManagedBINDV3PropagationAtWithLegacy(
-		ctx, tree, domain, legacy, trustedBINDControl,
-		completeDNSV3PrimaryPropagation,
+		ctx, tree, domain, state, legacy, trustedBINDControl,
+		completeBINDDNSV3PrimaryPropagation,
 	)
 }
 
@@ -132,11 +153,12 @@ func completeManagedBINDV3PropagationAt(
 	ctx context.Context,
 	tree binddns.VerifiedTree,
 	domain string,
+	state dnsEngineStateReceipt,
 	run bindControlRunner,
 	complete bindPrimaryPropagationCompleter,
 ) error {
 	return completeManagedBINDV3PropagationAtWithLegacy(
-		ctx, tree, domain, false, run, complete,
+		ctx, tree, domain, state, false, run, complete,
 	)
 }
 
@@ -144,11 +166,12 @@ func completeManagedBINDV3PropagationAtWithLegacy(
 	ctx context.Context,
 	tree binddns.VerifiedTree,
 	domain string,
+	state dnsEngineStateReceipt,
 	legacy bool,
 	run bindControlRunner,
 	complete bindPrimaryPropagationCompleter,
 ) error {
-	plan, primary, err := bindV3PrimaryPropagationPlan(tree, domain)
+	plan, primary, err := bindV3PrimaryPropagationPlan(tree, domain, state)
 	if err != nil || !primary {
 		return err
 	}
@@ -156,14 +179,12 @@ func completeManagedBINDV3PropagationAtWithLegacy(
 	if complete == nil {
 		return errors.New("BIND peer propagation proof is unavailable")
 	}
-	if err := prepareBINDV3PrimaryPropagationAt(
-		ctx, plan, run,
-	); err != nil {
-		return dnsZoneV3RecoveryPending(err)
-	}
+	notifyErr := prepareBINDV3PrimaryPropagationAt(ctx, plan, run)
 	if err := complete(ctx, plan); err != nil {
-		return dnsZoneV3RecoveryPending(err)
+		return dnsZoneV3RecoveryPending(errors.Join(notifyErr, err))
 	}
+	// A native BIND NOTIFY (or peer refresh) can already have transferred the
+	// catalog. Exact peer proof is sufficient even when optional rndc failed.
 	return nil
 }
 
@@ -272,8 +293,11 @@ func verifyRestoredBINDV3GenerationAt(
 		return errors.New("BIND rollback pairing authority is invalid")
 	}
 	ready, err := verifyPrimary(ctx, tree)
-	if err != nil || !ready {
-		return errors.New("BIND rollback did not restore exact paired authority")
+	if err != nil {
+		return fmt.Errorf("%w: %v", binddns.ErrRollbackPeerUnverified, err)
+	}
+	if !ready {
+		return binddns.ErrRollbackPeerUnverified
 	}
 	return nil
 }
@@ -284,7 +308,7 @@ func verifyRestoredBINDV3Generation(
 	previous binddns.Receipt,
 ) error {
 	return verifyRestoredBINDV3GenerationAt(
-		ctx, tree, previous, verifyDNSZoneAuthorities, bindPrimaryPairReady,
+		ctx, tree, previous, verifyBINDV3Authorities, bindPrimaryPairReady,
 	)
 }
 
@@ -296,7 +320,10 @@ func verifyRestoredBINDV3GenerationForState(
 	state dnsEngineStateReceipt,
 ) error {
 	return verifyRestoredBINDV3GenerationAt(
-		ctx, tree, previous, verifyDNSZoneAuthorities,
+		ctx, tree, previous,
+		func(verifyCtx context.Context, expected []expectedDNSZoneAuthority) error {
+			return verifyBINDV3AuthoritiesForTree(verifyCtx, tree, expected)
+		},
 		func(verifyCtx context.Context, verified binddns.VerifiedTree) (bool, error) {
 			return bindPrimaryPairReadyForState(verifyCtx, root, verified, state)
 		},

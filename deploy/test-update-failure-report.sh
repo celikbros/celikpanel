@@ -6,7 +6,7 @@ candidate="$repo_root/update.sh"
 extract() {
     awk -v header="$1() {" '$0 == header { inside=1 } inside { print } inside && $0 == "}" { exit }' "$candidate"
 }
-for name in die run_update_idle_probe check_bind_update_compatibility preflight_bind_before_quiesce report_update_failure on_exit fail_before_active; do
+for name in die run_update_idle_probe update_probe_diagnostic fail_update_preflight check_bind_update_compatibility preflight_bind_before_quiesce report_update_failure on_exit fail_before_active; do
     source <(extract "$name")
 done
 fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
@@ -119,8 +119,9 @@ for mode in 0 1; do
     [[ $(cat "$bind_fixture/trace") == $'prepare\nacquire\nrelease' ]] ||
         fail 'failed BIND preflight did not release its lock before refusal'
     last=${output##*$'\n'}
-    [[ $last == *'state=unchanged'* &&
-       $last == *'reason=managed BIND compatibility check failed before stopping panel services'* &&
+    # upd4: a refused read-only check before the freeze is typed and unchanged.
+    [[ $last == *'code=update_preflight_refused state=unchanged'* &&
+       $last == *'reason=update preflight step=bind_compatibility class=check_failed: managed BIND compatibility check failed before stopping panel services'* &&
        $last == *'BIND state and ownership receipts disagree'* ]] ||
         fail "BIND cause or unchanged outcome lost: $last"
 
@@ -134,4 +135,116 @@ for mode in 0 1; do
         fail 'BIND preflight used wrong mode or reported a failure on success'
 done
 
-echo 'PASS: causal failure survives cleanup; legacy worker bound; busy/unsafe outcomes; no retry or host mutation'
+# F1 (upd3): the selected recovery runtime's read-only preflight fails before
+# the EXIT trap exists. The typed step and the checker's first diagnostic line
+# reach the one summary line older workers keep, the outcome is unchanged, and
+# the request's failure sidecar names the terminal preflight stop.
+for name in fail_recovery_runtime_preflight publish_update_failure_observation; do
+    source <(extract "$name")
+done
+preflight_fixture() (
+    set -euo pipefail
+    mutation_started=0 transaction_started=0 quiesce_abort_failed=0
+    transaction_completion_verified=0 scheduler_restore_verified=0
+    recovery_runtime_preparation_attempted=1 recovery_runtime_preparation_verified=1
+    firewall_runtime_preparation_attempted=1 firewall_runtime_preparation_verified=1
+    update_failure_reason= update_failure_detail= update_failure_code= snapshot_name=
+    trusted_release_commit=3333333333333333333333333333333333333333
+    release_observation_worker_request() { printf '%s\n' 44444444444444444444444444444444; }
+    release_observation_publish_failure() { printf 'sidecar %s %s %s\n' "$1" "$2" "$3" >> "$bind_fixture/sidecar"; }
+    compat_probe() { printf '%s\n' "$1" >&2; return 3; }
+    run_update_idle_probe compat_probe "$1" || fail_recovery_runtime_preflight "$2"
+    echo 'preflight admitted' >&2
+)
+compat_line='The selected recovery runtime cannot verify this installation. The update has not stopped the panel. step=panel_database_check: Recovery database check: service operations are not idle: SQLite sidecar -wal changed after pinning'
+: > "$bind_fixture/sidecar"
+status=0
+output=$(preflight_fixture "$compat_line" compatibility 2>&1) || status=$?
+[[ $status == 1 && $output != *'preflight admitted'* ]] || fail "preflight failure did not stop the update: $status"
+last=${output##*$'\n'}
+[[ $last == '!! CELIKPANEL_UPDATE_FAILURE code=recovery_runtime_preflight_failed state=unchanged reason=recovery runtime preflight step=panel_database_check: Recovery database check: service operations are not idle: SQLite sidecar -wal changed after pinning detail=' ]] ||
+    fail "typed preflight cause or unchanged outcome lost: $last"
+[[ $(cat "$bind_fixture/sidecar") == 'sidecar 44444444444444444444444444444444 3333333333333333333333333333333333333333 recovery_runtime_preflight_failed' ]] ||
+    fail 'preflight stop was not recorded for the exact request and target'
+[[ $output == *'!! recovery runtime preflight step=panel_database_check: '*'the installed release and its data were not changed'* &&
+   $output == *'kurulu sürüm ve verileri değiştirilmedi'* ]] ||
+    fail 'preflight die line does not say exactly what was not changed'
+
+# A host package-manager refusal keeps its reviewed retry guidance.
+: > "$bind_fixture/sidecar"
+output=$(preflight_fixture 'The selected recovery runtime cannot verify this installation. The update has not stopped the panel. step=agent_ledger_check: Service mutation idle check: service mutation state is not idle: the host package manager is active' compatibility 2>&1) || true
+last=${output##*$'\n'}
+[[ $last == '!! CELIKPANEL_UPDATE_FAILURE code=package_manager_busy state=unchanged reason=the host package manager is active detail=' ]] ||
+    fail "busy package manager in preflight lost its reviewed summary: $last"
+grep -Fq 'recovery_runtime_preflight_failed' "$bind_fixture/sidecar" || fail 'busy preflight stop was not recorded as terminal'
+
+# Steps without a typed checker line keep the updater's own step and the last
+# printable diagnostic, bounded and without control bytes.
+: > "$bind_fixture/sidecar"
+output=$(preflight_fixture $'first line\n\x1b[1mRecovery material support could not be verified.' material_support 2>&1) || true
+last=${output##*$'\n'}
+[[ $last == '!! CELIKPANEL_UPDATE_FAILURE code=recovery_runtime_preflight_failed state=unchanged reason=recovery runtime preflight step=material_support: [1mRecovery material support could not be verified. detail=' ]] ||
+    fail "untyped preflight step lost: $last"
+output=$(preflight_fixture '' database_metadata 2>&1) || true
+last=${output##*$'\n'}
+[[ $last == *'reason=recovery runtime preflight step=database_metadata: no diagnostic was recorded detail=' ]] ||
+    fail "empty preflight diagnostic not explained: $last"
+
+# Unverified kit preparation is never reported as unchanged or as a terminal
+# preflight stop, even with the preflight code set.
+: > "$bind_fixture/sidecar"
+output=$(update_failure_code=recovery_runtime_preflight_failed; recovery_runtime_preparation_attempted=1; recovery_runtime_preparation_verified=0; mutation_started=0; transaction_started=0; quiesce_abort_failed=0; transaction_completion_verified=0; scheduler_restore_verified=0; trusted_release_commit=3333333333333333333333333333333333333333; release_observation_worker_request() { echo 44444444444444444444444444444444; }; release_observation_publish_failure() { echo sidecar >> "$bind_fixture/sidecar"; }; report_update_failure 1 none 2>&1)
+[[ $output == *'code=recovery_runtime_preparation_unconfirmed state=recovery_required'* && ! -s "$bind_fixture/sidecar" ]] ||
+    fail "unverified kit preparation classified as a terminal preflight stop: $output"
+
+# Candidate review F1: a historical Agent's worker (v0.1.0-alpha.80) writes no
+# status record. The updater writes the initial running record only for its own
+# worker request and only when none exists (initial publisher status 0), and
+# then also records the failed transition that worker never writes.
+source <(extract publish_update_initial_observation)
+initial_case() (
+    set -euo pipefail
+    worker=$1 initial=$2 exit_status=$3
+    update_observation_self_produced=0 update_observation_request= update_observation_commit=
+    target_release_commit=3333333333333333333333333333333333333333
+    trusted_release_commit=$target_release_commit
+    release_observation_worker_request() { [[ $worker == yes ]] || return 1; printf '%s\n' 44444444444444444444444444444444; }
+    release_observation_publish_initial() { printf 'initial %s %s\n' "$1" "$2" >> "$bind_fixture/observed"; return "$initial"; }
+    release_observation_publish() { printf 'publish %s\n' "$*" >> "$bind_fixture/observed"; }
+    release_observation_publish_failure() { printf 'sidecar %s\n' "$*" >> "$bind_fixture/observed"; }
+    publish_update_initial_observation
+    mutation_started=0 transaction_started=0 quiesce_abort_failed=0
+    transaction_completion_verified=0 scheduler_restore_verified=0
+    update_failure_reason='fixture refusal' update_failure_detail= snapshot_name=
+    update_failure_code=update_preflight_refused
+    report_update_failure "$exit_status" none
+)
+: > "$bind_fixture/observed"
+output=$(initial_case yes 0 1 2>&1)
+[[ $(cat "$bind_fixture/observed") == $'initial 44444444444444444444444444444444 3333333333333333333333333333333333333333\npublish 44444444444444444444444444444444 3333333333333333333333333333333333333333 failed none update_failed\nsidecar 44444444444444444444444444444444 3333333333333333333333333333333333333333 update_preflight_refused' ]] ||
+    fail "self-produced record did not receive the failed transition and cause: $(cat "$bind_fixture/observed")"
+[[ $output == *'the updater recorded it for request 44444444444444444444444444444444'* &&
+   ${output##*$'\n'} == '!! CELIKPANEL_UPDATE_FAILURE code=update_preflight_refused state=unchanged '* ]] ||
+    fail "initial record not explained or summary not last: $output"
+: > "$bind_fixture/observed"
+initial_case yes 0 0 >/dev/null 2>&1
+[[ $(cat "$bind_fixture/observed") == 'initial 44444444444444444444444444444444 3333333333333333333333333333333333333333' ]] ||
+    fail 'a successful update recorded a failure'
+# The current Agent's record exists (status 3) or the publisher refused:
+# nothing more is written by the updater for the worker.
+for refused in 3 1; do
+    : > "$bind_fixture/observed"
+    initial_case yes "$refused" 1 >/dev/null 2>&1 || true
+    [[ $(cat "$bind_fixture/observed") == $'initial 44444444444444444444444444444444 3333333333333333333333333333333333333333\nsidecar 44444444444444444444444444444444 3333333333333333333333333333333333333333 update_preflight_refused' ]] ||
+        fail "existing or refused record received a failed transition ($refused): $(cat "$bind_fixture/observed")"
+done
+# Outside a worker (an owner's own run, an unsupported cgroup layout) no
+# identity exists and nothing is written.
+: > "$bind_fixture/observed"
+initial_case no 0 1 >/dev/null 2>&1 || true
+[[ $(cat "$bind_fixture/observed") != *initial* && $(cat "$bind_fixture/observed") != *publish* ]] ||
+    fail "a record was invented without a worker identity: $(cat "$bind_fixture/observed")"
+grep -Fq 'sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50' "$candidate" ||
+    fail 'unbound update does not name the recovery journal'
+
+echo 'PASS: causal failure survives cleanup; legacy worker bound; busy/unsafe outcomes; typed preflight stop; initial record for a historical worker; no retry or host mutation'

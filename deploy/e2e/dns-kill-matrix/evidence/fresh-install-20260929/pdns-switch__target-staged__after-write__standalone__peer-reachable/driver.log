@@ -1,0 +1,13 @@
+### 2026-09-28T22:24:53Z start-cell 1 pdns-switch__target-staged__after-write__standalone__peer-reachable debian13 prepare-pdns-switch
+### 2026-09-28T22:24:53Z prepare
+### 2026-09-28T22:24:54Z start
+### 2026-09-28T22:24:55Z wait-ssh
+### 2026-09-28T22:25:52Z guest-identity
+### 2026-09-28T22:25:52Z install
+### 2026-09-28T22:26:01Z prepare-pdns-switch
+### 2026-09-28T22:26:04Z pre-run-snapshot
+### 2026-09-28T22:26:04Z start-watcher
+Running as unit: cp-d026-watch.service; invocation ID: fc2b65071f1a45f0a9c16af0775d8131
+### 2026-09-28T22:26:05Z run-prepared
+RUN_PREPARED_RC=1
+### 2026-09-28T22:26:47Z done-run rc=1

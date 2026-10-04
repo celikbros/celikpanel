@@ -1,0 +1,32 @@
+2026-09-29T14:50:38.638497+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T14:50:38.676117+00:00 dns-debian13 agent[1197]: 2026/09/29 14:50:38 Starting CelikPanel Agent...
+2026-09-29T14:50:38.677527+00:00 dns-debian13 agent[1197]: 2026/09/29 14:50:38 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-29T14:50:38.677718+00:00 dns-debian13 agent[1197]: 2026/09/29 14:50:38 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-09-29T14:50:48.683544+00:00 dns-debian13 agent[1197]: 2026/09/29 14:50:48 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T14:50:52.031890+00:00 dns-debian13 systemd[1]: Stopping celikpanel-agent.service - CelikPanel privileged agent...
+2026-09-29T14:50:52.032442+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-29T14:50:52.032868+00:00 dns-debian13 systemd[1]: Stopped celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T14:52:06.328230+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T14:52:06.359433+00:00 dns-debian13 agent[3030]: 2026/09/29 14:52:06 Starting CelikPanel Agent...
+2026-09-29T14:52:06.458234+00:00 dns-debian13 agent[3030]: 2026/09/29 14:52:06 Local port-53 listeners accepted as the systemd-resolved stub resolver (unit cgroup and address proved; not DNS authority): tcp|127.0.0.53|systemd-resolve|366|systemd-resolved.service, tcp|127.0.0.54|systemd-resolve|366|systemd-resolved.service, udp|127.0.0.53|systemd-resolve|366|systemd-resolved.service, udp|127.0.0.54|systemd-resolve|366|systemd-resolved.service.
+2026-09-29T14:52:06.519977+00:00 dns-debian13 agent[3030]: 2026/09/29 14:52:06 Local port-53 listeners accepted as the systemd-resolved stub resolver (unit cgroup and address proved; not DNS authority): tcp|127.0.0.53|systemd-resolve|366|systemd-resolved.service, tcp|127.0.0.54|systemd-resolve|366|systemd-resolved.service, udp|127.0.0.53|systemd-resolve|366|systemd-resolved.service, udp|127.0.0.54|systemd-resolve|366|systemd-resolved.service.
+2026-09-29T14:52:07.087524+00:00 dns-debian13 agent[3030]: 2026/09/29 14:52:07 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-29T14:52:07.087654+00:00 dns-debian13 agent[3030]: 2026/09/29 14:52:07 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T14:52:17.087932+00:00 dns-debian13 agent[3030]: 2026/09/29 14:52:17 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T14:52:27.095735+00:00 dns-debian13 agent[3030]: 2026/09/29 14:52:27 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T14:52:37.088514+00:00 dns-debian13 agent[3030]: 2026/09/29 14:52:37 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T14:52:44.740677+00:00 dns-debian13 systemd[1]: Stopping celikpanel-agent.service - CelikPanel privileged agent...
+2026-09-29T14:52:44.756233+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-09-29T14:52:44.764310+00:00 dns-debian13 systemd[1]: Stopped celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T14:52:44.766730+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Consumed 2.550s CPU time, 28.2M memory peak.
+-- Boot a300fbb39d244869840f76aa84f1a9c3 --
+2026-09-29T14:52:55.029695+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-09-29T14:52:55.198774+00:00 dns-debian13 agent[641]: 2026/09/29 14:52:55 Starting CelikPanel Agent...
+2026-09-29T14:52:55.227516+00:00 dns-debian13 agent[641]: 2026/09/29 14:52:55 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-09-29T14:52:55.236979+00:00 dns-debian13 agent[641]: 2026/09/29 14:52:55 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T14:53:05.239546+00:00 dns-debian13 agent[641]: 2026/09/29 14:53:05 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T14:53:15.237849+00:00 dns-debian13 agent[641]: 2026/09/29 14:53:15 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T14:53:25.238015+00:00 dns-debian13 agent[641]: 2026/09/29 14:53:25 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T14:53:35.714553+00:00 dns-debian13 agent[641]: 2026/09/29 14:53:35 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T14:53:45.713978+00:00 dns-debian13 agent[641]: 2026/09/29 14:53:45 Panel certificate activation remains pending: panel TLS directory is not root-authenticated
+2026-09-29T14:53:55.714286+00:00 dns-debian13 agent[641]: 2026/09/29 14:53:55 Panel certificate activation remains pending: panel TLS directory is not root-authenticated

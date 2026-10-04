@@ -117,6 +117,13 @@ func renderTreeWithPrimaryTransferPolicy(
 	var pairing *Pairing
 	var catalog []byte
 	var pairingValue *PairingReceipt
+	secondaryVersion := CurrentSecondaryConfigVersion
+	if plan.secondaryConfigVersion != 0 {
+		if !acceptedSecondaryConfigVersion(plan.secondaryConfigVersion) {
+			return Generation{}, errors.New("BIND secondary rendering version is not accepted")
+		}
+		secondaryVersion = plan.secondaryConfigVersion
+	}
 	if plan.pairing != nil {
 		canonical, err := canonicalPairing(*plan.pairing)
 		if err != nil {
@@ -130,7 +137,7 @@ func renderTreeWithPrimaryTransferPolicy(
 		if err != nil {
 			return Generation{}, err
 		}
-		receipt := pairingReceipt(root, canonical, plan.catalogSerial, catalog)
+		receipt := pairingReceipt(root, canonical, plan.catalogSerial, catalog, secondaryVersion)
 		pairingValue = &receipt
 	}
 
@@ -202,7 +209,7 @@ func renderTreeWithPrimaryTransferPolicy(
 				RenderedSHA256: pairingValue.CatalogSHA256,
 			}
 		} else {
-			appendSecondaryCatalogConfig(&config, root, *pairing)
+			appendSecondaryCatalogConfig(&config, root, *pairing, secondaryVersion)
 		}
 	}
 	configBytes := []byte(config.String())
@@ -249,8 +256,26 @@ const (
 	PrimaryTransferACLDirectionalSelfPeer
 )
 
+// RenderPreviousSecondaryTree renders a secondary plan with the earlier
+// accepted peer-only catalog policy (SecondaryConfigVersion 1). It exists only
+// to recognise a generation, journal target or completed switch that an
+// earlier release of this product wrote; new generations always use
+// RenderTree and therefore the current policy.
+func RenderPreviousSecondaryTree(root string, plan TreePlan) (Generation, error) {
+	if plan.pairing == nil || plan.pairing.Role != PairRoleSecondary {
+		return Generation{}, errors.New("previous BIND secondary rendering requires a secondary pairing")
+	}
+	previous := plan
+	previous.secondaryConfigVersion = SecondaryConfigVersionPeerOnlyCatalog
+	return RenderTree(root, previous)
+}
+
 // VerifyCurrentConfig proves that the verified tree's content-addressed
-// configuration is byte-for-byte the output of the current renderer.
+// configuration is byte-for-byte the output of this product's renderer for
+// the tree's own recorded policy: the current one, or for a secondary the
+// earlier accepted peer-only catalog rendering (version 1), which is the
+// product's own earlier output rather than an owner change. Anything else,
+// including a self-consistent edited configuration, is refused.
 func VerifyCurrentConfig(root string, tree VerifiedTree) error {
 	receipt := tree.CurrentReceipt()
 	rendered, err := RenderTree(root, planFromVerifiedTree(tree))

@@ -1,0 +1,15 @@
+## zone-lifecycle-recover-2.json status= pending recover_delete= True zero_zones= True
+  step delete recover= True rc= 75 outcome= pending_exact_operation verdict= pending job= 7fb6a0df pending ['propagation-pending'] dns_peer_inspection_unknown heartbeats= 1 obs_err= None
+## zone-lifecycle-recover.json status= unverified recover_delete= True zero_zones= None
+  step delete recover= True rc= 75 outcome= refused_not_pending verdict= unverified job= 7fb6a0df None [] None heartbeats= 0 obs_err= None
+## zone-lifecycle.json status= pending recover_delete= False zero_zones= None
+  step add recover= False rc= 0 outcome= verified_published verdict= passed job= fa261f29 succeeded ['published'] None heartbeats= 0 obs_err= None
+  step edit recover= False rc= 0 outcome= verified_published verdict= passed job= d8f6f5bc succeeded ['published'] None heartbeats= 0 obs_err= None
+  step delete recover= False rc= 75 outcome= pending_exact_operation verdict= pending job= 7fb6a0df pending ['propagation-pending'] dns_peer_enrollment_required heartbeats= 0 obs_err= None
+## ledger (collected copy)
+   076c692a dns_engine_switch pdns succeeded finalized att= 1 code= None started= 2026-09-30T01:26:43.226607232Z finished= 2026-09-30T01:27:05.074087582Z dur= 21.85
+   fa261f29 dns_zone_sync s2.s1-kill.test succeeded published att= 1 code= None started= 2026-09-30T01:27:38.003609439Z finished= 2026-09-30T01:27:40.946978936Z dur= 2.94
+   d8f6f5bc dns_zone_sync s2.s1-kill.test succeeded published att= 1 code= None started= 2026-09-30T01:27:44.413788003Z finished= 2026-09-30T01:27:47.058649595Z dur= 2.64
+   7fb6a0df dns_zone_sync s2.s1-kill.test pending propagation-pending att= 2 code= dns_peer_inspection_unknown started= 2026-09-30T02:57:00.725253071Z finished= 2026-09-30T02:57:07.623462573Z dur= 6.9
+== pdns daemon CATALOG-HASH lines (all boots)
+2026-09-30T01:26:58.934389+00:00 dns-debian13 pdns_server[4116]: new CATALOG-HASH '47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' for zone 'catalog-c000020a.celikpanel.invalid'

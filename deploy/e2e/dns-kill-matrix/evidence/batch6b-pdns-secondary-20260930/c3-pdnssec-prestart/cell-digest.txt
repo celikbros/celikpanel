@@ -1,0 +1,13 @@
+request 10e89db02af20a520fae4c3d996b9376 controller 2026-09-29T16:25:24.254398Z -> 2026-09-29T16:26:23.066453Z
+status passed safety passed class target_converged fp 7a0a0f33
+kill pid 1785 state T at 2026-09-29T16:25:41.225802Z exit 137 reaped True
+marker 2026-09-29T16:25:41.204457385Z journal target-staged c1e16157
+trigger rc 75
+ retry 1 rc 0 dur 9.952775 err None
+ retry 2 rc 0 dur 0.008991 err None
+ probe 1 target_converged 7a0a0f33 pdns | 
+ probe 2 target_converged 7a0a0f33 pdns | 
+stability 31 ok 31 2026-09-29T16:25:52.826633Z 2026-09-29T16:26:22.826838Z
+ status-read after-recovery: available=False rc=None mutated=None :: 
+ status-read before-recovery: available=False rc=None mutated=None :: 
+fixture_pass_definition {"definition": "paired-secondary", "failures": [], "pdns_secondary_rows": {"domains": [["catalog-c000020b.celikpanel.invalid", "CONSUMER", "192.0.2.11", "celikpanel-peer-catalog-v1", "", ""], ["s1-kill.test", "SLAVE", "192.0.2.11", "", "catalog-c000020b.celikpanel.invalid", "{\"consumer\": {\"unique\": \"b076e9241974292fffe8ecc0209b7ace316d1d36063423d9ccb0849a.\"}}"]], "failures": [], "member_options": {"expected_label": "b076e9241974292fffe8ecc0209b7ace316d1d36063423d9ccb0849a", "shape": "consumer.unique", "unique": "b076e9241974292fffe8ecc0209b7ace316d1d36063423d9ccb0849a.", "value": "{\"consumer\": {\"unique\": \"b076e9241974292fffe8ecc0209b7ace316d1d36063423d9ccb0849a.\"}}"}, "member_soa_rows": 1, "unknown": []}, "peer_catalog_format_log": {"expected_agent_name": "BIND", "expected_format": "bind", "failures": [], "log": {"catalog": "catalog-c000020b.celikpanel.invalid", "formats": ["BIND", "BIND", "BIND"], "lines": ["2026/09/29 16:25:24 DNS engine change 10e89db02af20a520fae4c3d996b9376: the paired primary at 192.0.2.11 serves catalog catalog-c000020b.celikpanel.invalid in the BIND catalog format; this operation reads it in that format", "2026/09/29 16:25:42 DNS engine change 10e89db02af20a520fae4c3d996b9376: the paired primary at 192.0.2.11 serves catalog catalog-c000020b.celikpanel.invalid in the BIND catalog format; this operation reads it in that format", "2026/09/29 16:25:51 DNS engine change completion 10e89db02af20a520fae4c3d996b9376: the paired primary at 192.0.2.

@@ -65,6 +65,12 @@ install -m 0755 "$REPO_ROOT/deploy/release-recovery-runner.sh" \
     "$SOURCE_ROOT/deploy/release-recovery-runner.sh"
 install -m 0644 "$REPO_ROOT/deploy/release-recovery-foundation.sh" \
     "$SOURCE_ROOT/deploy/release-recovery-foundation.sh"
+install -m 0644 "$REPO_ROOT/deploy/release-recovery-observation.sh" \
+    "$SOURCE_ROOT/deploy/release-recovery-observation.sh"
+# Only account lookup is a fixture seam; no host account/group is created.
+# The actual observer parser, binding, lock and atomic publisher execute.
+printf '\n_release_observation_gid() { printf "0\\n"; }\n' \
+    >>"$SOURCE_ROOT/deploy/release-recovery-observation.sh"
 install -m 0755 "$REPO_ROOT/deploy/release-transaction-start-guard.sh" \
     "$SOURCE_ROOT/deploy/release-transaction-start-guard.sh"
 install -m 0755 "$REPO_ROOT/deploy/release-transaction-guard.sh" \
@@ -123,6 +129,14 @@ set -eu
 root='$TEST_ROOT'
 printf '%s\n' "\$*" >>"\$root/systemctl.trace"
 case \$1 in
+    is-system-running)
+        if [[ -f "\$root/readiness-delay" ]]; then sleep 10; fi
+        if [[ -f "\$root/readiness-state" ]]; then
+            cat "\$root/readiness-state"
+            exit "\$(cat "\$root/readiness-status")"
+        fi
+        printf '%s\n' running
+        exit 0 ;;
     show)
         case \$2 in
             --property=LoadState) printf '%s\n' loaded ;;
@@ -181,6 +195,57 @@ release_recovery_publish_manifest "$SOURCE_ROOT" "$RUNNER" "$SERVICE" "$TIMER" \
 release_recovery_verify_foundation "$SOURCE_ROOT" "$RUNNER" "$SERVICE" "$TIMER" \
     "$START_GUARD" "$AGENT_DROPIN" "$PANEL_DROPIN" "$MANIFEST" "$SYSTEMCTL"
 
+# Run the actual early-update branch against the committed foundation. The
+# recovery runtime promotion is a sentinel effect here; the sequence comparison
+# uses the real installed manifest and trusted candidate source parser.
+python3 - "$REPO_ROOT/update.sh" "$TEST_ROOT/update-early-preflight.sh" <<'PY'
+from pathlib import Path
+import sys
+source = Path(sys.argv[1]).read_text()
+start = source.index('if [[ $release_marker_count -eq 0 ]]; then', source.index('preflight_completion_material_admission\n'))
+end = source.index('release_txn_clear_stale_start_authorization', start)
+Path(sys.argv[2]).write_text(source[start:end])
+PY
+eval "$(extract_function_source "$REPO_ROOT/update.sh" preflight_release_recovery_foundation)"
+run_early_candidate_branch() (
+    set -Eeuo pipefail
+    TRUSTED_RELEASE_ROOT=$SOURCE_ROOT
+    RELEASE_RECOVERY_RUNNER=$RUNNER
+    RELEASE_RECOVERY_UNIT=$SERVICE
+    RELEASE_RECOVERY_TIMER=$TIMER
+    RELEASE_TRANSACTION_HELPER=$START_GUARD
+    RELEASE_RECOVERY_AGENT_DROPIN=$AGENT_DROPIN
+    RELEASE_RECOVERY_PANEL_DROPIN=$PANEL_DROPIN
+    RELEASE_RECOVERY_MANIFEST=$MANIFEST
+    SYSTEMCTL_BIN=$SYSTEMCTL
+    release_marker_count=0
+    RELEASE_TRANSACTION_ROOT=$TEST_ROOT/early-transaction
+    RELEASE_TRANSACTION_RUNTIME_ROOT=$TEST_ROOT/early-runtime
+    RELEASE_TRANSACTION_FD=9
+    UNIT_DIR=$TEST_ROOT/etc/systemd/system
+    RECOVERY_RUNTIME_ROOT=
+    prepare_independent_recovery_runtime() { : >"$TEST_ROOT/early-runtime-promoted"; }
+    publish_release_recovery_intent() { : >"$TEST_ROOT/early-intent-published"; }
+    release_txn_install_and_verify_unit_guards() { : >"$TEST_ROOT/early-guards-installed"; }
+    publish_release_recovery_foundation() { : >"$TEST_ROOT/early-foundation-published"; }
+    die() { printf 'early candidate rejected: %s\n' "$*" >&2; exit 93; }
+    source "$TEST_ROOT/update-early-preflight.sh"
+)
+cp -- "$SOURCE_ROOT/deploy/release-sequence-policy" "$TEST_ROOT/original-sequence-policy"
+sed -i -e 's/^current=51$/current=50/' -e 's/^previous=50$/previous=49/' \
+    "$SOURCE_ROOT/deploy/release-sequence-policy"
+expect_failure stale-early-candidate run_early_candidate_branch
+grep -F 'foundation downgrade is refused' "$TEST_ROOT/stale-early-candidate.stderr" >/dev/null ||
+    fail 'stale update candidate was rejected for the wrong reason'
+for effect in early-runtime-promoted early-intent-published early-guards-installed early-foundation-published; do
+    [[ ! -e $TEST_ROOT/$effect ]] || fail "stale candidate reached $effect"
+done
+cp -- "$TEST_ROOT/original-sequence-policy" "$SOURCE_ROOT/deploy/release-sequence-policy"
+run_early_candidate_branch
+for effect in early-runtime-promoted early-intent-published early-guards-installed early-foundation-published; do
+    [[ -e $TEST_ROOT/$effect ]] || fail "valid candidate did not reach $effect"
+done
+printf 'PASS: stale source sequence stops before recovery runtime promotion\n'
 # Exercise both production commit callers, not only the post-publication
 # verifier.  Effective service or timer overrides must abort immediately after
 # daemon-reload and before any recovery enable/start/status action.
@@ -350,8 +415,10 @@ write_active_marker() {
 }
 
 run_recovery() {
+    local -a owner_args=()
+    if [[ ${CONTRACT_OWNER_RETRY:-0} == 1 ]]; then owner_args=(--owner-retry --snapshot "$SNAPSHOT"); fi
     CELIKPANEL_RELEASE_RECOVERY_TESTING=1 \
-    CELIKPANEL_RELEASE_RECOVERY_TEST_ROOT="$TEST_ROOT" /bin/bash "$RUNNER"
+    CELIKPANEL_RELEASE_RECOVERY_TEST_ROOT="$TEST_ROOT" /bin/bash "$RUNNER" "${owner_args[@]}" "$@"
 }
 
 refresh_release_checksums() {
@@ -378,6 +445,8 @@ make_retained_release() {
         "$release/deploy/release-recovery-runner.sh"
     install -m 0644 "$REPO_ROOT/deploy/release-recovery-foundation.sh" \
         "$release/deploy/release-recovery-foundation.sh"
+    install -m 0644 "$SOURCE_ROOT/deploy/release-recovery-observation.sh" \
+        "$release/deploy/release-recovery-observation.sh"
     install -m 0644 "$REPO_ROOT/deploy/release-recovery.protocol" \
         "$release/deploy/release-recovery.protocol"
     install -m 0644 "$REPO_ROOT/deploy/systemd/celikpanel-release-recovery.service" \
@@ -393,10 +462,12 @@ make_retained_release() {
 #!/usr/bin/env bash
 set -Eeuo pipefail
 root=${CELIKPANEL_RELEASE_RECOVERY_TEST_ROOT:?}
+printf "dispatch\n" >>"$root/child-dispatches"
 case $(cat "$root/child-mode") in
     success) rm -f -- "$root/var/lib/celikpanel-release-transaction/active" ;;
     leave-active) : ;;
     fail) exit 23 ;;
+    kill-runner) kill -KILL "$PPID"; exit 23 ;;
     replace-lock-success)
         rm -f -- "$root/var/lib/celikpanel-release-transaction/transaction.lock"
         : >"$root/var/lib/celikpanel-release-transaction/transaction.lock"
@@ -425,9 +496,184 @@ write_active_marker
 expect_failure zero-release run_recovery
 RELEASE_ONE=$RELEASES_ROOT/${TARGET_COMMIT:0:12}-aaaaaaaaaaaaaaaaaaaaaaaa
 make_retained_release "$RELEASE_ONE"
-printf '%s\n' success >"$TEST_ROOT/child-mode"
+# Execute the whole production runner with its existing child/systemd fixtures.
+# This is observer glue coverage, not evidence of a native VM rollback body.
+TRUSTED_RELEASE_ROOT=$SOURCE_ROOT
+source "$SOURCE_ROOT/deploy/release-recovery-observation.sh"
+RELEASE_OBSERVATION_ROOT=$TEST_ROOT/var/lib/celikpanel-recovery-observations
+RELEASE_OBSERVATION_BINDINGS=$TEST_ROOT/var/lib/celikpanel-release-state/recovery-observation-bindings
+OBSERVATION_TEST_REQUEST=77777777777777777777777777777777
+release_observation_publish "$OBSERVATION_TEST_REQUEST" "$TARGET_COMMIT" running none update_running
+(
+    exec 9<>"$TRANSACTION_ROOT/transaction.lock"
+    flock -x 9
+    source "$SOURCE_ROOT/deploy/release-transaction-guard.sh"
+    release_observation_worker_request() { printf '%s\n' 77777777777777777777777777777777; }
+    release_observation_bind_update "$TRANSACTION_ROOT" 9 \
+        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+        "$SNAPSHOT" "$TARGET_COMMIT"
+)
+observation_binding_before=$(sha256sum "$RELEASE_OBSERVATION_BINDINGS/$SNAPSHOT.binding")
+printf 'starting\n' >"$TEST_ROOT/readiness-state"
+printf '1\n' >"$TEST_ROOT/readiness-status"
+run_recovery >"$TEST_ROOT/first-boot-wait.log" 2>&1 || fail 'first boot transition did not defer'
+_release_observation_read "$OBSERVATION_TEST_REQUEST" 0
+[[ $OBSERVATION_PHASE == recovering && $OBSERVATION_PROOF == none &&
+   $OBSERVATION_PREVIOUS == none ]] || fail 'first boot wait invented a recovery failure'
+[[ ! -e "$TEST_ROOT/child-dispatches" && -f "$TRANSACTION_ROOT/active" ]] || fail 'first boot wait dispatched or completed recovery'
+rm -f -- "$TEST_ROOT/readiness-state" "$TEST_ROOT/readiness-status"
+printf '%s\n' fail >"$TEST_ROOT/child-mode"
 write_active_marker
+expect_failure observed-child-failure run_recovery
+_release_observation_read "$OBSERVATION_TEST_REQUEST" 0
+[[ $OBSERVATION_PHASE == recovery_required && $OBSERVATION_PROOF == none &&
+   $OBSERVATION_REASON == recovery_failed ]] || fail 'runner failure did not publish exact recovery observation'
+# F3 (upd3): attempts remain, so the failure carries the scheduled-retry hint
+# bound to this exact status, and the journal says no owner action is needed yet.
+retry_hint=$RELEASE_OBSERVATION_ROOT/$OBSERVATION_TEST_REQUEST.automatic
+grep -Fx 'automatic_recovery=retry_scheduled' "$retry_hint" >/dev/null || fail 'failed attempt with attempts left has no scheduled-retry hint'
+grep -Fx "observation_identity=$(TZ=UTC0 stat -Lc '%d:%i:%s:%y:%z' "$RELEASE_OBSERVATION_ROOT/$OBSERVATION_TEST_REQUEST.status")" "$retry_hint" >/dev/null ||
+    fail 'scheduled-retry hint is not bound to the exact failure record'
+grep -F 'Automatic recovery attempt 1 of 3 did not finish' "$TEST_ROOT/observed-child-failure.stderr" >/dev/null ||
+    fail 'failed attempt with attempts left did not say the timer retries'
+# A boot transition is a pending prerequisite, not a failed rollback. Exercise
+# the real runner while the fixture child would succeed if wrongly dispatched.
+printf '%s\n' success >"$TEST_ROOT/child-mode"
+transition_marker_before=$(sha256sum "$TRANSACTION_ROOT/active")
+transition_dispatch_before=$(sha256sum "$TEST_ROOT/child-dispatches")
+for readiness in initializing starting stopping; do
+    printf '%s\n' "$readiness" >"$TEST_ROOT/readiness-state"
+    printf '1\n' >"$TEST_ROOT/readiness-status"
+    run_recovery >"$TEST_ROOT/deferred-$readiness.log" 2>&1 || fail "$readiness did not defer"
+    grep -F 'native recovery timer will retry this same operation' "$TEST_ROOT/deferred-$readiness.log" >/dev/null || fail 'deferred recovery has no resumption guidance'
+    [[ $(sha256sum "$TRANSACTION_ROOT/active") == "$transition_marker_before" ]] || fail 'deferral changed the transaction'
+    [[ $(sha256sum "$TEST_ROOT/child-dispatches") == "$transition_dispatch_before" ]] || fail 'deferral dispatched recovery'
+    [[ $(sha256sum "$RELEASE_OBSERVATION_BINDINGS/$SNAPSHOT.binding") == "$observation_binding_before" ]] || fail 'deferral changed the exact request binding'
+    _release_observation_read "$OBSERVATION_TEST_REQUEST" 0
+    [[ $OBSERVATION_PHASE == recovering && $OBSERVATION_PROOF == none &&
+       $OBSERVATION_REASON == recovery_running && $OBSERVATION_PREVIOUS == recovery_failed ]] || fail 'deferral lost prior failure or claimed terminal proof'
+    wait_path=$RELEASE_OBSERVATION_ROOT/$OBSERVATION_TEST_REQUEST.wait
+    grep -Fx "waiting_for=$readiness" "$wait_path" >/dev/null || fail 'wrong typed wait reason'
+    grep -Fx "observation_identity=$(TZ=UTC0 stat -Lc '%d:%i:%s:%y:%z' "$RELEASE_OBSERVATION_ROOT/$OBSERVATION_TEST_REQUEST.status")" "$wait_path" >/dev/null || fail 'wait is not bound to exact status file'
+    (exec 9<>"$TRANSACTION_ROOT/transaction.lock"; flock -xn 9) || fail 'deferred invocation retained the transaction lock'
+    observation_before=$(sha256sum "$RELEASE_OBSERVATION_ROOT/$OBSERVATION_TEST_REQUEST.status")
+    expect_failure "final-proof-$readiness" run_final_proof
+    grep -F 'final-state proof requires no pending transaction markers' "$TEST_ROOT/final-proof-$readiness.stderr" >/dev/null || fail 'final proof accepted deferral as completion'
+    [[ $(sha256sum "$RELEASE_OBSERVATION_ROOT/$OBSERVATION_TEST_REQUEST.status") == "$observation_before" ]] || fail 'final proof changed observation'
+    [[ $(sha256sum "$TEST_ROOT/child-dispatches") == "$transition_dispatch_before" ]] || fail 'final proof dispatched recovery'
+done
+# Optional guidance cannot block deferral or turn it into a failed rollback.
+wait_path=$RELEASE_OBSERVATION_ROOT/$OBSERVATION_TEST_REQUEST.wait
+chmod 0660 "$wait_path"
+run_recovery >"$TEST_ROOT/unsafe-wait.log" 2>&1 || fail 'unsafe hint blocked known transition'
+grep -F 'recovery waiting observation is unavailable' "$TEST_ROOT/unsafe-wait.log" >/dev/null || fail 'unsafe hint was silently accepted'
+_release_observation_read "$OBSERVATION_TEST_REQUEST" 0
+[[ $OBSERVATION_PHASE == recovering && $OBSERVATION_PROOF == none && $OBSERVATION_PREVIOUS == recovery_failed ]] || fail 'optional hint changed verified base'
+[[ $(sha256sum "$TRANSACTION_ROOT/active") == "$transition_marker_before" && $(sha256sum "$TEST_ROOT/child-dispatches") == "$transition_dispatch_before" ]] || fail 'optional hint caused mutation'
+(exec 9<>"$TRANSACTION_ROOT/transaction.lock"; flock -xn 9) || fail 'optional hint retained transaction lock'
+chmod 0640 "$wait_path"
+# A surprising status, malformed response or bounded probe failure is not a
+# known transition and must never reach the mutation child.
+for readiness in maintenance offline unknown empty multiline running-error starting-error timeout; do
+    printf '1\n' >"$TEST_ROOT/readiness-status"
+    case $readiness in
+        empty) : >"$TEST_ROOT/readiness-state" ;;
+        multiline) printf 'starting\nrunning\n' >"$TEST_ROOT/readiness-state" ;;
+        running-error) printf 'running\n' >"$TEST_ROOT/readiness-state" ;;
+        starting-error) printf 'starting\n' >"$TEST_ROOT/readiness-state"; printf '2\n' >"$TEST_ROOT/readiness-status" ;;
+        timeout) printf 'running\n' >"$TEST_ROOT/readiness-state"; printf '0\n' >"$TEST_ROOT/readiness-status"; : >"$TEST_ROOT/readiness-delay" ;;
+        *) printf '%s\n' "$readiness" >"$TEST_ROOT/readiness-state" ;;
+    esac
+    expect_failure "readiness-$readiness" run_recovery
+    grep -F 'Cannot verify operating system readiness' "$TEST_ROOT/readiness-$readiness.stderr" >/dev/null || fail 'readiness rejection was not explained'
+    [[ $(sha256sum "$TRANSACTION_ROOT/active") == "$transition_marker_before" ]] || fail 'unknown readiness changed the transaction'
+    [[ $(sha256sum "$TEST_ROOT/child-dispatches") == "$transition_dispatch_before" ]] || fail 'unknown readiness dispatched recovery'
+    rm -f -- "$TEST_ROOT/readiness-delay"
+done
+rm -f -- "$TEST_ROOT/readiness-state" "$TEST_ROOT/readiness-status"
+# Even a ready host must not use the read-only final-proof command to repair
+# an active transaction; only the subsequent recovery invocation may dispatch.
+expect_failure final-proof-ready-active run_final_proof
+[[ $(sha256sum "$TEST_ROOT/child-dispatches") == "$transition_dispatch_before" ]] || fail 'ready final proof dispatched recovery'
+# The first child failure consumed one durable slot; waiting and final proof
+# did not. Two more attempts reach the child, the fourth only reports guidance.
+budget=$TEST_ROOT/var/lib/celikpanel-release-state/recovery-dispatch/v1/$SNAPSHOT
+[[ -f $budget/1 && ! -e $budget/2 ]] || fail 'wait or proof consumed dispatch budget'
+printf '%s\n' fail >"$TEST_ROOT/child-mode"
+for attempt in 2 3; do
+    if [[ $attempt == 3 ]]; then printf 'kill-runner\n' >"$TEST_ROOT/child-mode"; fi
+    expect_failure "budget-failure-$attempt" run_recovery
+    [[ -f $budget/$attempt ]] || fail 'dispatch had no durable receipt'
+done
+budget_marker=$(sha256sum "$TRANSACTION_ROOT/active")
+budget_calls=$(sha256sum "$TEST_ROOT/child-dispatches")
+budget_receipts=$(sha256sum "$budget/1" "$budget/2" "$budget/3")
+for attempt in 4 5; do
+    run_recovery >"$TEST_ROOT/budget-paused-$attempt.log" 2>&1
+    grep -F 'Automatic recovery paused after three admitted attempts' "$TEST_ROOT/budget-paused-$attempt.log" >/dev/null || fail 'budget not explained'
+    [[ $(sha256sum "$TEST_ROOT/child-dispatches") == "$budget_calls" ]] || fail 'exhausted budget dispatched'
+    [[ $(sha256sum "$TRANSACTION_ROOT/active") == "$budget_marker" ]] || fail 'exhausted budget changed marker'
+    _release_observation_read "$OBSERVATION_TEST_REQUEST" 0
+    [[ $OBSERVATION_PHASE == recovery_required && $OBSERVATION_REASON == recovery_incomplete &&
+       $OBSERVATION_PREVIOUS == recovery_failed && $OBSERVATION_PROOF == none ]] || fail 'pause lost failure or claimed proof'
+    pause_hint=$RELEASE_OBSERVATION_ROOT/$OBSERVATION_TEST_REQUEST.automatic
+    _release_observation_file "$pause_hint" 640 0 2048 || fail 'unsafe automatic-pause observation'
+    grep -Fx 'automatic_recovery=paused_retry_limit' "$pause_hint" >/dev/null || fail 'missing automatic-pause guidance'
+    pause_identity=$(TZ=UTC0 stat -Lc '%d:%i:%s:%y:%z' "$RELEASE_OBSERVATION_ROOT/$OBSERVATION_TEST_REQUEST.status")
+    grep -Fx "observation_identity=$pause_identity" "$pause_hint" >/dev/null || fail 'pause guidance not bound to current status'
+    (exec 9<>"$TRANSACTION_ROOT/transaction.lock"; flock -xn 9) || fail 'paused budget retained lock'
+done
+# Wrong snapshot, broken receipts and metadata cannot authorize an owner retry.
+expect_failure foreign-owner-retry run_recovery --owner-retry --snapshot "${SNAPSHOT%?}e"
+chmod 0644 "$budget/2"
+expect_failure unsafe-budget run_recovery
+chmod 0600 "$budget/2"
+mv "$budget/2" "$budget/saved-2"
+expect_failure missing-budget-slot run_recovery
+mv "$budget/saved-2" "$budget/2"
+cp -p "$budget/2" "$budget/saved-2"
+for kind in symlink fifo hardlink truncated; do
+    rm -- "$budget/2"
+    case $kind in
+        symlink) ln -s saved-2 "$budget/2" ;;
+        fifo) mkfifo -m 0600 "$budget/2" ;;
+        hardlink) ln "$budget/saved-2" "$budget/2" ;;
+        truncated) printf 'schema=celikpanel-recovery-dispatch/v1' >"$budget/2"; chmod 0600 "$budget/2" ;;
+    esac
+    expect_failure "budget-$kind" run_recovery --owner-retry --snapshot "$SNAPSHOT"
+done
+rm -- "$budget/2"
+mv "$budget/saved-2" "$budget/2"
+[[ $(sha256sum "$TEST_ROOT/child-dispatches") == "$budget_calls" ]] || fail 'invalid retry reached child'
+# Explicit native owner retry is one dispatch, without replenishing auto slots.
+CONTRACT_OWNER_RETRY=1
+printf '%s\n' fail >"$TEST_ROOT/child-mode"
+expect_failure owner-retry-failed run_recovery
+# F2 (upd3): a failed owner retry of a rollback keeps renewal paused and says why;
+# no scheduled-retry hint follows an owner attempt.
+grep -F 'and stays paused until this operation is retried and finishes: its rollback restores the panel certificate files' \
+    "$TEST_ROOT/owner-retry-failed.stderr" >/dev/null || fail 'paused rollback did not explain the paused renewal'
+owner_status_identity=$(TZ=UTC0 stat -Lc '%d:%i:%s:%y:%z' "$RELEASE_OBSERVATION_ROOT/$OBSERVATION_TEST_REQUEST.status")
+if grep -Fx 'automatic_recovery=retry_scheduled' "$RELEASE_OBSERVATION_ROOT/$OBSERVATION_TEST_REQUEST.automatic" >/dev/null 2>&1 &&
+   grep -Fx "observation_identity=$owner_status_identity" \
+       "$RELEASE_OBSERVATION_ROOT/$OBSERVATION_TEST_REQUEST.automatic" >/dev/null; then
+    fail 'failed owner retry claimed another automatic attempt'
+fi
+[[ $(sha256sum "$budget/1" "$budget/2" "$budget/3") == "$budget_receipts" ]] || fail 'owner retry reset auto budget'
+CONTRACT_OWNER_RETRY=0
+owner_calls=$(sha256sum "$TEST_ROOT/child-dispatches")
+run_recovery >"$TEST_ROOT/budget-after-owner.log" 2>&1
+[[ $(sha256sum "$TEST_ROOT/child-dispatches") == "$owner_calls" ]] || fail 'owner retry replenished budget'
+# Later unrelated child/final-proof cases explicitly authorize one owner attempt.
+CONTRACT_OWNER_RETRY=1
+printf '%s\n' success >"$TEST_ROOT/child-mode"
+printf 'PASS: durable three-attempt budget, interrupted runner, preserved failure and explicit owner retry\n'
+# Ready dispatch resumes the same marker and request without a new mutation.
 run_recovery
+_release_observation_read "$OBSERVATION_TEST_REQUEST" 0
+[[ $OBSERVATION_PHASE == recovered && $OBSERVATION_PROOF == rollback_verified &&
+   $OBSERVATION_PREVIOUS == recovery_failed ]] || fail 'runner terminal proof or prior failure was lost'
+[[ $(sha256sum "$RELEASE_OBSERVATION_BINDINGS/$SNAPSHOT.binding") == "$observation_binding_before" ]] || fail 'runner altered immutable request binding'
 
 printf '%s\n' leave-active >"$TEST_ROOT/child-mode"
 write_active_marker
@@ -435,6 +681,16 @@ expect_failure child-exit0-marker-remains run_recovery
 grep -F 'release recovery child returned success while a verified marker remains' \
     "$TEST_ROOT/child-exit0-marker-remains.stderr" >/dev/null ||
     fail 'successful child bypassed final marker reproof'
+
+for readiness_status in 0 1; do
+    printf 'degraded\n' >"$TEST_ROOT/readiness-state"
+    printf '%s\n' "$readiness_status" >"$TEST_ROOT/readiness-status"
+    write_active_marker
+    expect_failure "degraded-$readiness_status" run_recovery
+    grep -F 'release recovery child returned success while a verified marker remains' \
+        "$TEST_ROOT/degraded-$readiness_status.stderr" >/dev/null || fail 'degraded readiness did not reach child reproof'
+done
+rm -f -- "$TEST_ROOT/readiness-state" "$TEST_ROOT/readiness-status"
 
 printf '%s\n' fail >"$TEST_ROOT/child-mode"
 write_active_marker

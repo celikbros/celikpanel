@@ -1,0 +1,34 @@
+evidence /var/tmp/cp-release-drill-upd13-ub-mr-a/evidence/ubuntu/upd1/upd1-ubuntu-mgmt-off-reboot-20261003t001921z/
+## initial-record (updater wrote it): 0 hits (0 in .txt)
+## curl preflight refusal: 0 hits (0 in .txt)
+## no-marker after child failure: 0 hits (0 in .txt)
+## pause_pending journal: 0 hits (0 in .txt)
+## renewal restore at pause: 0 hits (0 in .txt)
+## pause recorded: 0 hits (0 in .txt)
+## start check failure: 0 hits (0 in .txt)
+## package-activity refusal (startup reconcile): 4 hits (4 in .txt)
+   steps/14-management-off/journal-product-before-reboot.txt:514: 2026-10-03T00:35:46.514929+00:00 dns-ubuntu panel[53351]: 2026/10/03 00:35:46 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minute
+   steps/14-management-off/journal-product-before-reboot.txt:515: 2026-10-03T00:35:46.517946+00:00 dns-ubuntu panel[53351]: 2026/10/03 00:35:46 milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+## package_manager_active / HOST_MUTATION_BUSY: 42 hits (0 in .txt)
+## startup reconcile success: 4 hits (4 in .txt)
+   steps/14-management-off/journal-product-before-reboot.txt:513: 2026-10-03T00:35:46.513056+00:00 dns-ubuntu panel[53351]: 2026/10/03 00:35:46 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload
+   steps/18-collect/journal-product.txt:620: 2026-10-03T00:39:48.437978+00:00 dns-ubuntu panel[5135]: 2026/10/03 00:39:48 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload
+   steps/18-collect/journal-product.txt:624: 2026-10-03T00:39:52.361474+00:00 dns-ubuntu panel[5135]: 2026/10/03 00:39:52 certificate startup reconcile: mail SNI reconciled from 0 active secure-mail certificates; TLSA left unchanged: automatic DANE/TLSA updates are disabled: safe TTL-aware certificate rollover and explicit panel record ownership are not available in this r
+## milter chain/wiring: 7 hits (7 in .txt)
+   steps/14-management-off/journal-product-before-reboot.txt:16: 2026-10-03T00:20:04.472990+00:00 dns-ubuntu panel[7210]: 2026/10/03 00:20:04 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-management-off/journal-product-before-reboot.txt:28: 2026-10-03T00:20:05.591291+00:00 dns-ubuntu panel[7273]: 2026/10/03 00:20:05 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-management-off/journal-product-before-reboot.txt:515: 2026-10-03T00:35:46.517946+00:00 dns-ubuntu panel[53351]: 2026/10/03 00:35:46 milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+   steps/18-collect/journal-product.txt:629: 2026-10-03T00:39:57.460737+00:00 dns-ubuntu panel[5135]: 2026/10/03 00:39:57 milter chain: milters="inet:localhost:11332" maps=hash
+## deferred retry note on a startup refusal: 4 hits (4 in .txt)
+   steps/14-management-off/journal-product-before-reboot.txt:514: 2026-10-03T00:35:46.514929+00:00 dns-ubuntu panel[53351]: 2026/10/03 00:35:46 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minute
+   steps/14-management-off/journal-product-before-reboot.txt:515: 2026-10-03T00:35:46.517946+00:00 dns-ubuntu panel[53351]: 2026/10/03 00:35:46 milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+## deferred retry attempt line: 0 hits (0 in .txt)
+## deferred retry: busy again (attempt > 1): 0 hits (0 in .txt)
+## deferred retry: verified failure: 0 hits (0 in .txt)
+## deferred retry: give-up: 0 hits (0 in .txt)
+## root CLI states (first seen)
+   2026-10-03T00:35:08Z ('running', 'update_running', None, None, None)
+   2026-10-03T00:35:58Z ('succeeded', 'update_verified', None, None, None)
+## CELIKPANEL_LISTEN mentions
+   steps/14-management-off/journal-product-before-reboot.txt 2026-10-03T00:35:44.679801+00:00 dns-ubuntu sudo[52873]:     root : PWD=/var/backups/celikpanel/releases/47c0b4c2d68a-30867e5b5eae6bccb4dcb63b ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/loc
+   steps/18-collect/journal-product.txt 2026-10-03T00:35:44.679801+00:00 dns-ubuntu sudo[52873]:     root : PWD=/var/backups/celikpanel/releases/47c0b4c2d68a-30867e5b5eae6bccb4dcb63b ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/loc

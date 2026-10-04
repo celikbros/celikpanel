@@ -200,7 +200,7 @@ func (p *Panel) removeDomainMailRuntimeLocked(
 		return fmt.Errorf("remove mail domain runtime: %w", err)
 	}
 	if !response.Applied {
-		return fmt.Errorf("remove mail domain runtime: agent did not confirm convergence")
+		return errDomainMailCleanupNotConfirmed
 	}
 	return nil
 }
@@ -215,13 +215,31 @@ func (p *Panel) writeDomainDeletionPending(
 ) {
 	log.Printf("domain deletion pending for %s at %s: %v", domain, stage, cause)
 	p.audit(r, "domain.delete.pending:"+domain+":"+stage, "domain", domainID)
-	w.WriteHeader(http.StatusAccepted)
-	_ = json.NewEncoder(w).Encode(map[string]string{
+	response := map[string]string{
 		"status":  domainDeletionPendingStatus,
 		"domain":  domain,
 		"stage":   stage,
 		"message": "Deletion is incomplete but retryable. Retry this deletion.",
-	})
+	}
+	if stage == "dns_cleanup" {
+		if guidance, ok := dnsPublicationGuidanceAPIError(cause); ok {
+			response["reason"] = guidance.Reason
+			response["message"] = guidance.Error
+			if guidance.Detail != "" {
+				response["detail"] = guidance.Detail
+			}
+		}
+	}
+	var stageFailure *domainDeletionStageFailure
+	if errors.As(cause, &stageFailure) && stageFailure.Stage == stage {
+		// A verified stage failure: the deletion stays pending and retryable,
+		// and the reason names what failed on this server.
+		response["reason"] = stageFailure.Reason
+		response["error_line"] = stageFailure.ErrorLine
+		response["message"] = domainMailCleanupFailedEnglish
+	}
+	w.WriteHeader(http.StatusAccepted)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 // removeDomainDNSForDeletion first commits the local PowerDNS-zone removal.

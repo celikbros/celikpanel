@@ -44,6 +44,12 @@ jobs:
           }
       - run: go build ./...
       - run: go vet ./...
+      - name: Verify optional DNS owner tools archive
+        run: |
+          make dns-owner-tools
+          bash deploy/test-dns-owner-tools-package.sh
+      - name: Verify native recovery executable identity on real root-owned files
+        run: sudo env PATH="$PATH" GOTOOLCHAIN=local go test ./cmd/recovery -run TestFreshPDNSExecutableProofV3 -count=1
       # A helper is only advice; this step is the part that is not. The same
       # defect - a privileged command fails, its output is discarded, the
       # operator is handed "exit status 1" - was found on three real machines
@@ -59,7 +65,11 @@ jobs:
         run: >-
           go test ./internal/hostcmd -count=1 -v
           -run 'TestEveryPrivilegedLaunchIsNamedAndJustified|TestTheHiddenStderrIsReadInOnePlace|TestRepeatingACommandsOwnWordsAlwaysStatesWhy'
-      - run: go test ./... -count=1
+      # The full panel package has >1,200 tests with real password hashing.
+      # Hosted-runner evidence hit Go's aggregate 10-minute default while the
+      # current test was only 1 second old. Keep all tests and crypto parameters;
+      # use an explicit bounded package budget (race shards keep their own limits).
+      - run: go test ./... -count=1 -timeout=20m
       - name: Race-test security and persistence boundaries
         run: >-
           go test -race -count=1 -timeout=8m
@@ -82,6 +92,7 @@ jobs:
       # Keep the one-time pre-ledger release path fail-closed and ordered.
       # Tek seferlik pre-ledger sürüm yolunu fail-closed ve sıralı tut.
       - run: bash deploy/test-bootstrap-update-contract.sh
+      - run: bash deploy/test-isolated-database-migration.sh
       # Keep the RHEL preview probe blocked-only, default-dry-run and injection-safe.
       - run: bash deploy/e2e/rhel9/test-contract.sh
       - run: bash deploy/test-install-localization-contract.sh
@@ -116,8 +127,56 @@ jobs:
       # Keep persistent release markers and controlled systemd starts fail-closed.
       # Kalıcı sürüm işaretçilerini ve kontrollü systemd başlangıçlarını fail-closed tut.
       - run: sudo bash deploy/test-release-transaction-guard.sh
+      - run: sudo bash deploy/test-release-unit-transition.sh
       # Exercise durable recovery publication, strict final proof and crash retries.
       - run: sudo bash deploy/test-release-recovery-contract.sh
+      - run: sudo env PATH="$PATH" GOTOOLCHAIN=local bash deploy/test-recovery-runtime-shell-contract.sh
+      - run: sudo env PATH="$PATH" GOTOOLCHAIN=local bash deploy/test-rollback-ledger-preservation.sh
+      - run: sudo bash deploy/test-rollback-reboot-runtime.sh
+      - run: bash deploy/test-rollback-journal-commit.sh
+      - run: sudo bash deploy/test-recovery-resource-shell-contract.sh
+      - run: sudo bash deploy/test-rollback-material-admission.sh
+      - run: sudo bash deploy/test-release-recovery-observation.sh
+      - run: sudo env PATH="$PATH" GOTOOLCHAIN=local go test ./internal/recoveryobs -count=1
+      - name: Verify independent recovery runtime and offline checker boundaries
+        run: |
+          sudo env PATH="$PATH" GOTOOLCHAIN=local go test ./internal/recoveryruntime ./internal/recoverycheckpoint ./internal/recoverypublication ./cmd/recovery -count=1
+          sudo env PATH="$PATH" GOTOOLCHAIN=local go test ./cmd/agent ./cmd/panel -run 'TestRecovery(CheckStandalone|AgentCheckerStandalone)|TestPendingRollback' -count=1
+          sudo env PATH="$PATH" GOTOOLCHAIN=local go test ./cmd/panel -run '^TestRecoveryDatabaseMigration' -count=1
+
+      # These fixture contracts mock transport; they do not boot QEMU or prove native recovery.
+      # Bu testler iletişimi taklit eder; QEMU başlatmaz veya gerçek kurtarmayı kanıtlamaz.
+      # Full checkout history above retains the exact released Alpha75 bootstrap object.
+      # Yukarıdaki tam geçmiş, yayımlanan Alpha75 başlatıcısının tam Git nesnesini korur.
+      - name: Verify offline release-recovery fixture contracts (no VM)
+        run: |
+          git cat-file -e '5aa03fd5b6775b21834ff7b1ce0695d92f50ae93^{commit}'
+          git cat-file -e '3ee8dac009c7e3db1d940f9b8be078e186693a80^{commit}'
+          python3 -m unittest discover -s deploy/e2e/release-recovery -p 'test_*.py' -v
+      - name: Verify native tracer boundaries (mock kernel and owned child, no VM)
+        run: |
+          python3 -m unittest discover -s deploy/e2e/release-recovery/waltrace -p 'test_native_trace.py' -v
+          python3 -m unittest discover -s deploy/e2e/release-recovery/waltrace -p 'test_exchange_trace.py' -v
+      - name: Verify root-owned native recovery fixture filesystems (no VM)
+        run: |
+          sudo python3 -m unittest discover -s deploy/e2e/release-recovery -p 'test_guest_populated_baseline.py' -v
+          sudo python3 -m unittest discover -s deploy/e2e/release-recovery -p 'test_guest_wal_checkpoint.py' -v
+          sudo python3 -m unittest discover -s deploy/e2e/release-recovery -p 'test_guest_exchange_checkpoint.py' -v
+          sudo python3 -m unittest discover -s deploy/e2e/release-recovery -p 'test_guest_native_wal_trial.py' -v
+          sudo python3 -m unittest discover -s deploy/e2e/release-recovery -p 'test_worker_fixture_origin.py' -v
+          sudo python3 -m unittest discover -s deploy/e2e/release-recovery -p 'test_guest_bound_worker.py' -v
+      - name: Test and build disposable release-recovery drivers (no VM)
+        run: |
+          go test ./deploy/e2e/release-recovery/driver ./deploy/e2e/release-recovery/driver-update -count=1
+          go build -o "$RUNNER_TEMP/release-recovery-seed" ./deploy/e2e/release-recovery/driver
+          go build -o "$RUNNER_TEMP/release-recovery-update" ./deploy/e2e/release-recovery/driver-update
+      # This traces only its own disposable SQLite child; it is not native update acceptance.
+      - name: Verify controlled WAL interruption feasibility (no VM)
+        run: bash deploy/e2e/release-recovery/waltrace/run-local.sh
+      - name: Verify root-owned fixture marker checks on disposable local files
+        run: >-
+          sudo env PATH="$PATH" GOTOOLCHAIN=local go test ./deploy/e2e/release-recovery/driver
+          -run '^TestMarkerProtectedReadRejectsSymlinkAndWritableFile$' -count=1
       - run: bash deploy/test-finalize-pending-update-contract.sh
       - run: bash deploy/test-finalize-pending-rollback-contract.sh
       - run: sudo bash deploy/test-panel-tls-snapshot-contract.sh
@@ -142,6 +201,9 @@ jobs:
       # Tam koordinatör kimliğini ve çökme güvenli quiesce kurtarmasını kanıtla.
       - run: bash deploy/test-update-quiesce-exit-contract.sh update.sh
       - run: bash deploy/test-update-failure-report.sh
+      # upd4 F4/F5/O8: live-probe re-read only for a concurrent write, typed
+      # unchanged preflight refusal, snapshot cause, recorded renewal state.
+      - run: bash deploy/test-update-preflight-refusal-contract.sh
       # Keep a restored host firewalled: the unit is re-enabled only when a
       # snapshot was actually restored, and the restore arms the ruleset before
       # the installer returns instead of waiting for a reboot that has already
@@ -158,6 +220,11 @@ jobs:
     name: Download portal publisher - Windows PowerShell 5.1
     runs-on: windows-latest
     steps:
+      # Retained e2e evidence paths exceed the Windows 260-character limit
+      # under the runner workspace; this job only needs deploy/ scripts.
+      - name: Allow long paths in the Windows checkout
+        shell: powershell
+        run: git config --system core.longpaths true
       - uses: actions/checkout@v7
       - name: Verify bounded stdin and LF-only SSH wire input
         shell: powershell

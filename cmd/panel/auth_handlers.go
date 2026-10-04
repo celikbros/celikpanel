@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/rand"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/auth"
+	"github.com/alicelik/celikpanel/internal/repositories"
 )
 
 // loginRequest is the JSON body of a login attempt.
@@ -44,13 +46,22 @@ func (p *Panel) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if p.users == nil {
+		_, _ = auth.VerifyPassword(req.Password, dummyHash)
+		writeSignInStatusUnavailable(w)
+		return
+	}
 	user, err := p.users.GetByUsername(r.Context(), req.Username)
-	if err != nil {
+	if err != nil || user == nil {
 		// Run a verify against a dummy hash anyway to keep timing uniform,
 		// then fail. Kullanıcı yoksa da zamanlamayı eşit tutmak için sahte
 		// bir özete karşı doğrulama çalıştır, sonra başarısız ol.
 		_, _ = auth.VerifyPassword(req.Password, dummyHash)
-		writeClientError(w, http.StatusUnauthorized, "invalid username or password")
+		if errors.Is(err, repositories.ErrUserNotFound) {
+			writeClientError(w, http.StatusUnauthorized, "invalid username or password")
+		} else {
+			writeSignInStatusUnavailable(w)
+		}
 		return
 	}
 
@@ -71,7 +82,7 @@ func (p *Panel) handleLogin(w http.ResponseWriter, r *http.Request) {
 	// /auth/login/totp tarafından verilir.
 	state, err := p.userAuthState(r.Context(), user.ID)
 	if err != nil {
-		writeServerError(w, err)
+		writeSignInStateError(w, err)
 		return
 	}
 	if state.passwordHash != user.PasswordHash {
@@ -83,7 +94,11 @@ func (p *Panel) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	identity, err := p.canonicalAuthIdentity(r.Context(), user.ID)
-	if err != nil || !state.matchesCanonical(identity) {
+	if err != nil {
+		writeSignInStateError(w, err)
+		return
+	}
+	if !state.matchesCanonical(identity) {
 		writeClientError(w, http.StatusUnauthorized, "sign-in expired, start again")
 		return
 	}
@@ -101,13 +116,13 @@ func (p *Panel) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if p.sessions == nil {
+		writeSignInStatusUnavailable(w)
+		return
+	}
 	token, err := p.sessions.CreateForAuthEpoch(r.Context(), user.ID, state.authEpoch, false)
 	if err != nil {
-		if errors.Is(err, auth.ErrAuthStateChanged) {
-			writeClientError(w, http.StatusUnauthorized, "sign-in expired, start again")
-			return
-		}
-		writeServerError(w, err)
+		writeSignInStateError(w, err)
 		return
 	}
 
@@ -166,7 +181,11 @@ func (p *Panel) handleMe(w http.ResponseWriter, r *http.Request) {
 
 	identity, err := p.canonicalAuthIdentity(r.Context(), caller.ID)
 	if err != nil {
-		writeClientError(w, http.StatusUnauthorized, "authentication required")
+		if errors.Is(err, errInvalidCanonicalAuthIdentity) {
+			writeCodedError(w, http.StatusUnauthorized, errCodeAuthRequired, "authentication required", "")
+		} else {
+			writeAuthStatusUnavailable(w)
+		}
 		return
 	}
 	if identity.identity.UserID != caller.ID || identity.identity.Role != caller.Role ||
@@ -225,4 +244,21 @@ func mustDummyHash() string {
 		panic("failed to compute dummy password hash: " + err.Error())
 	}
 	return h
+}
+
+// A pending TOTP token is still single-use after an unavailable backend result.
+// Arka uç okunamasa da TOTP bekleme jetonu tek kullanımlık kalır.
+func writeSignInStatusUnavailable(w http.ResponseWriter) {
+	w.Header().Set("Cache-Control", "no-store")
+	writeCodedError(w, http.StatusServiceUnavailable, errCodeAuthStatusUnavailable,
+		"Sign-in could not be completed. Check again, then start sign-in again.", "")
+}
+
+func writeSignInStateError(w http.ResponseWriter, err error) {
+	if errors.Is(err, auth.ErrAuthStateChanged) || errors.Is(err, errInvalidCanonicalAuthIdentity) ||
+		errors.Is(err, repositories.ErrUserNotFound) || errors.Is(err, sql.ErrNoRows) {
+		writeCodedError(w, http.StatusUnauthorized, errCodeAuthRequired, "sign-in expired, start again", "")
+		return
+	}
+	writeSignInStatusUnavailable(w)
 }

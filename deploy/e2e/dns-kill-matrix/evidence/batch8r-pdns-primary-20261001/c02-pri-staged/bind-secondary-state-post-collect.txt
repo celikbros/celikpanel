@@ -1,0 +1,120 @@
+wall=2026-09-29T23:04:07.773615197Z boot_id=2691d16f-1ca9-419f-b835-432e3b68e7c5
+== named.service
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+MainPID=4961
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 23:01:55 UTC
+== ss 53
+udp UNCONN 0      0      192.0.2.11:53 0.0.0.0:* users:(("named",pid=4961,fd=24))
+udp UNCONN 0      0      192.0.2.11:53 0.0.0.0:* users:(("named",pid=4961,fd=23))
+udp UNCONN 0      0       127.0.0.1:53 0.0.0.0:* users:(("named",pid=4961,fd=18))
+udp UNCONN 0      0       127.0.0.1:53 0.0.0.0:* users:(("named",pid=4961,fd=17))
+udp UNCONN 0      0      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=1479,fd=26))
+udp UNCONN 0      0      127.0.0.53:53 0.0.0.0:* users:(("systemd-resolve",pid=1479,fd=24))
+tcp LISTEN 0      0      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=1479,fd=27))
+tcp LISTEN 0      0       127.0.0.1:53 0.0.0.0:* users:(("named",pid=4961,fd=21))
+tcp LISTEN 0      0       127.0.0.1:53 0.0.0.0:* users:(("named",pid=4961,fd=19))
+tcp LISTEN 0      0      127.0.0.53:53 0.0.0.0:* users:(("systemd-resolve",pid=1479,fd=25))
+tcp LISTEN 0      0      192.0.2.11:53 0.0.0.0:* users:(("named",pid=4961,fd=26))
+tcp LISTEN 0      0      192.0.2.11:53 0.0.0.0:* users:(("named",pid=4961,fd=25))
+== management binaries (must be absent)
+ls: cannot access '/opt/celikpanel': No such file or directory
+== /etc/named.conf
+-rw-r----- 1 root named 510 2026-09-29 23:01:55.530767312 +0000 /etc/named.conf
+b0cb30473a30e3ccf11ba43cb44ed92112ffb48648c80559ec1b9bcf1b86e6c0  /etc/named.conf
+== rndc status
+rndc: neither /etc/rndc.conf nor /etc/rndc.key was found
+== rndc zonestatus catalog-c000020a.celikpanel.invalid
+rndc: neither /etc/rndc.conf nor /etc/rndc.key was found
+== rndc showzone catalog-c000020a.celikpanel.invalid
+rndc: neither /etc/rndc.conf nor /etc/rndc.key was found
+== rndc zonestatus s1-kill.test
+rndc: neither /etc/rndc.conf nor /etc/rndc.key was found
+== rndc showzone s1-kill.test
+rndc: neither /etc/rndc.conf nor /etc/rndc.key was found
+== rndc zonestatus s2.s1-kill.test
+rndc: neither /etc/rndc.conf nor /etc/rndc.key was found
+== rndc showzone s2.s1-kill.test
+rndc: neither /etc/rndc.conf nor /etc/rndc.key was found
+== loaded catalog (AXFR from 127.0.0.1, read-only)
+catalog-c000020a.celikpanel.invalid. 60	IN SOA	invalid. invalid. 1790722986 60 30 3600 30
+catalog-c000020a.celikpanel.invalid. 60	IN NS	invalid.
+version.catalog-c000020a.celikpanel.invalid. 0 IN TXT "2"
+tlhnkturltuku63bhersj40lbi0vkdvt.zones.catalog-c000020a.celikpanel.invalid. 0 IN PTR s1-kill.test.
+catalog-c000020a.celikpanel.invalid. 60	IN SOA	invalid. invalid. 1790722986 60 30 3600 30
+== catalog members (PTR rdata under zones.catalog-c000020a.celikpanel.invalid)
+tlhnkturltuku63bhersj40lbi0vkdvt.zones.catalog-c000020a.celikpanel.invalid. s1-kill.test.
+== loaded s1-kill.test SOA (127.0.0.1)
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 57893
+;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 2, ADDITIONAL: 3
+; EDNS: version: 0, flags:; udp: 1232
+;s1-kill.test.			IN	SOA
+s1-kill.test.		3600	IN	SOA	ns1.s1-kill.test. hostmaster.s1-kill.test. 2026083101 10800 3600 604800 3600
+== loaded s2.s1-kill.test SOA (127.0.0.1)
+;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: 49233
+;; flags: qr aa; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+; EDNS: version: 0, flags:; udp: 1232
+;s2.s1-kill.test.		IN	SOA
+s1-kill.test.		0	IN	SOA	ns1.s1-kill.test. hostmaster.s1-kill.test. 2026083101 10800 3600 604800 3600
+== /var/named tree (no follow)
+drwxrwx--- root:named 250 2026-09-29T23:03:07.1989637940 /var/named -> 
+-rw-r----- root:named 466 2026-09-16T14:52:07.0000000000 /var/named/127.0.0.zone -> 
+-rw------- named:named 8192 2026-09-29T23:01:55.8334612440 /var/named/_default.nzd -> 
+-rw-r--r-- named:named 370 2026-09-29T23:03:07.1949640000 /var/named/celikpanel-fixture-catalog.zone -> 
+-rw-r----- root:named 506 2026-09-16T14:52:07.0000000000 /var/named/localhost.ip6.zone -> 
+-rw-r----- root:named 517 2026-09-16T14:52:07.0000000000 /var/named/localhost.zone -> 
+-rw-r--r-- named:named 1411 2026-09-29T23:02:20.1199948910 /var/named/managed-keys.bind -> 
+-rw-r--r-- named:named 1336 2026-09-29T23:01:56.1069990080 /var/named/managed-keys.bind.jnl -> 
+== transferred zone files (newer than /etc/named.conf): metadata, hash, content
+-- /var/named/_default.nzd
+size=8192 mode=600 owner=named:named mtime=2026-09-29 23:01:55.833461244 +0000
+e01847f8afdf44e574920f3f79a05dc514e5dc0627f6f27dddd0520bde4d6797  /var/named/_default.nzd
+-- /var/named/celikpanel-fixture-catalog.zone
+size=370 mode=644 owner=named:named mtime=2026-09-29 23:03:07.194964000 +0000
+490a0d048111f8bf00a8e8d6c261f3a803762627c2588f4f7d24aa2881883804  /var/named/celikpanel-fixture-catalog.zone
+(zone catalog-c000020a.celikpanel.invalid, format raw)
+catalog-c000020a.celikpanel.invalid.	      60 IN SOA		invalid. invalid. 1790722986 60 30 3600 30
+catalog-c000020a.celikpanel.invalid.	      60 IN NS		invalid.
+version.catalog-c000020a.celikpanel.invalid.  0	IN TXT		"2"
+tlhnkturltuku63bhersj40lbi0vkdvt.zones.catalog-c000020a.celikpanel.invalid. 0 IN PTR s1-kill.test.
+-- /var/named/managed-keys.bind
+size=1411 mode=644 owner=named:named mtime=2026-09-29 23:02:20.119994891 +0000
+509b4fa2fb1aae27517b9ba60838b22e87f3c6f361db9e1032b420b834d5616f  /var/named/managed-keys.bind
+-- /var/named/managed-keys.bind.jnl
+size=1336 mode=644 owner=named:named mtime=2026-09-29 23:01:56.106999008 +0000
+b2a27f646a4a8a07a9b1272278ad3e71d73813ab8ce554360171f0b92d101259  /var/named/managed-keys.bind.jnl
+== named journal (transfer/notify/catalog/zone lines, all boots)
+2026-09-29T23:01:55.834432+00:00 dns-arch named[4961]: set up managed keys zone for view _default, file 'managed-keys.bind'
+2026-09-29T23:01:55.836315+00:00 dns-arch named[4961]: managed-keys-zone: loaded serial 0
+2026-09-29T23:01:55.836535+00:00 dns-arch named[4961]: all zones loaded
+2026-09-29T23:01:55.863083+00:00 dns-arch named[4961]: zone catalog-c000020a.celikpanel.invalid/IN: refresh: failure trying primary 192.0.2.10#53 (source 0.0.0.0#0): connection refused
+2026-09-29T23:01:56.101684+00:00 dns-arch named[4961]: managed-keys-zone: Initializing automatic trust anchor management for zone '.'; DNSKEY ID 20326 is now trusted, waiving the normal 30-day waiting period.
+2026-09-29T23:01:56.101746+00:00 dns-arch named[4961]: managed-keys-zone: Initializing automatic trust anchor management for zone '.'; DNSKEY ID 38696 is now trusted, waiving the normal 30-day waiting period.
+2026-09-29T23:02:47.848837+00:00 dns-arch named[4961]: zone catalog-c000020a.celikpanel.invalid/IN: refresh: failure trying primary 192.0.2.10#53 (source 0.0.0.0#0): connection refused
+2026-09-29T23:03:07.148591+00:00 dns-arch named[4961]: client @0x7f57f0e6c000 192.0.2.10#16793: received notify for zone 's1-kill.test': NOTAUTH
+2026-09-29T23:03:07.148751+00:00 dns-arch named[4961]: client @0x7f57f0e6f800 192.0.2.10#16793: received notify for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-29T23:03:07.148765+00:00 dns-arch named[4961]: zone catalog-c000020a.celikpanel.invalid/IN: notify from 192.0.2.10#16793: no serial
+2026-09-29T23:03:07.153127+00:00 dns-arch named[4961]: zone catalog-c000020a.celikpanel.invalid/IN: Transfer started.
+2026-09-29T23:03:07.153980+00:00 dns-arch named[4961]: 0x7f57f0e23000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: connected using 192.0.2.10#53
+2026-09-29T23:03:07.195822+00:00 dns-arch named[4961]: zone catalog-c000020a.celikpanel.invalid/IN: transferred serial 1790722986
+2026-09-29T23:03:07.195884+00:00 dns-arch named[4961]: 0x7f57f0e23000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer status: success
+2026-09-29T23:03:07.195891+00:00 dns-arch named[4961]: 0x7f57f0e23000: transfer of 'catalog-c000020a.celikpanel.invalid/IN' from 192.0.2.10#53: Transfer completed: 3 messages, 5 records, 365 bytes, 0.041 secs (8902 bytes/sec) (serial 1790722986)
+2026-09-29T23:03:07.195898+00:00 dns-arch named[4961]: catz: catalog-c000020a.celikpanel.invalid: reload start
+2026-09-29T23:03:07.196099+00:00 dns-arch named[4961]: catz: updating catalog zone 'catalog-c000020a.celikpanel.invalid' with serial 1790722986
+2026-09-29T23:03:07.196190+00:00 dns-arch named[4961]: catz: adding zone 's1-kill.test' from catalog 'catalog-c000020a.celikpanel.invalid' - success
+2026-09-29T23:03:07.199838+00:00 dns-arch named[4961]: catz: catalog-c000020a.celikpanel.invalid: reload done: success
+2026-09-29T23:03:07.202612+00:00 dns-arch named[4961]: zone s1-kill.test/IN: Transfer started.
+2026-09-29T23:03:07.203290+00:00 dns-arch named[4961]: 0x7f57f0e23000: transfer of 's1-kill.test/IN' from 192.0.2.10#53: connected using 192.0.2.10#53
+2026-09-29T23:03:07.247462+00:00 dns-arch named[4961]: zone s1-kill.test/IN: transferred serial 2026083101
+2026-09-29T23:03:07.247476+00:00 dns-arch named[4961]: 0x7f57f0e23000: transfer of 's1-kill.test/IN' from 192.0.2.10#53: Transfer status: success
+2026-09-29T23:03:07.247482+00:00 dns-arch named[4961]: 0x7f57f0e23000: transfer of 's1-kill.test/IN' from 192.0.2.10#53: Transfer completed: 3 messages, 7 records, 313 bytes, 0.043 secs (7279 bytes/sec) (serial 2026083101)
+2026-09-29T23:03:07.247496+00:00 dns-arch named[4961]: zone s1-kill.test/IN: sending notifies (serial 2026083101)
+2026-09-29T23:03:41.527541+00:00 dns-arch named[4961]: client @0x7f57f0e7a000 127.0.0.1#58682 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790722986)
+2026-09-29T23:03:41.527805+00:00 dns-arch named[4961]: client @0x7f57f0e7a000 127.0.0.1#58682 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 265 bytes, 0.001 secs (265000 bytes/sec) (serial 1790722986)
+2026-09-29T23:04:07.895187+00:00 dns-arch named[4961]: client @0x7f57f0e7a000 127.0.0.1#56481 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790722986)
+2026-09-29T23:04:07.895455+00:00 dns-arch named[4961]: client @0x7f57f0e7a000 127.0.0.1#56481 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 265 bytes, 0.001 secs (265000 bytes/sec) (serial 1790722986)
+2026-09-29T23:04:07.909179+00:00 dns-arch named[4961]: client @0x7f57f3e9e800 127.0.0.1#56484 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR started (serial 1790722986)
+2026-09-29T23:04:07.909700+00:00 dns-arch named[4961]: client @0x7f57f3e9e800 127.0.0.1#56484 (catalog-c000020a.celikpanel.invalid): transfer of 'catalog-c000020a.celikpanel.invalid/IN': AXFR ended: 1 messages, 5 records, 265 bytes, 0.001 secs (265000 bytes/sec) (serial 1790722986)

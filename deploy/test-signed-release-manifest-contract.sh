@@ -29,8 +29,8 @@ command -v openssl >/dev/null 2>&1 || fail "openssl is required"
 tmp=$(mktemp -d)
 trap 'rm -rf -- "$tmp"' EXIT HUP INT TERM
 
-version=v0.1.0-alpha.80
-sequence=80
+version=v0.1.0-alpha.81
+sequence=81
 commit=0123456789abcdef0123456789abcdef01234567
 tree=89abcdef0123456789abcdef0123456789abcdef
 published_at=2026-08-03T08:55:11Z
@@ -62,6 +62,7 @@ openssl pkey -in "$tmp/wrong-key.pem" -passin pass: \
 test_repo="$tmp/test-repo"
 mkdir -p "$test_repo/deploy" "$test_repo/download-portal"
 cp -- "$writer_source" "$builder_source" "$test_repo/deploy/"
+cp -- "$repo_root/deploy/release-acceptance-license-guard.sh" "$repo_root/deploy/release-content-guard.sh" "$test_repo/deploy/"
 cp -a -- "$repo_root/download-portal/." "$test_repo/download-portal/"
 cp -- "$repo_root/deploy/build-membership.py" "$test_repo/deploy/"
 cp -a -- "$repo_root/portal-membership" "$test_repo/"
@@ -361,6 +362,21 @@ expect_rejected "an arm64 label on amd64 ELF binaries" env \
   CELIKPANEL_RELEASE_SIGNING_KEY_FILE="$tmp/key.pem" \
   bash "$writer" "$version" "$sequence" "$commit" "$published_at" linux arm64 \
   "$wrong_machine_archive" "$tmp/wrong-machine-out"
+
+# The acceptance_license test build (fixture license) is never signed: not as
+# panel/agent, and not as any other executable in the archive.
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOTOOLCHAIN=local GOENV=off GOWORK=off   go build -tags acceptance_license -trimpath -buildvcs=false     -o "$tmp/acceptance-tagged" "$tmp/main.go"
+for tagged_member in bin/panel recovery-runtime/bin/recovery; do
+  tagged_label=${tagged_member//\//-}
+  tagged_source="$tmp/acceptance-$tagged_label/celikpanel-$version"
+  mkdir -p "$tagged_source/bin" "$tagged_source/recovery-runtime/bin" "$tmp/acceptance-$tagged_label-out"
+  cp "$tmp/source/celikpanel-$version/bin/panel" "$tmp/source/celikpanel-$version/bin/agent" "$tagged_source/bin/"
+  cp "$tmp/acceptance-tagged" "$tagged_source/$tagged_member"
+  tagged_archive="$tmp/acceptance-$tagged_label/celikpanel-$version-linux-amd64.tar.gz"
+  tar -czf "$tagged_archive" -C "$tmp/acceptance-$tagged_label" "celikpanel-$version"
+  expect_rejected "an acceptance_license test build at $tagged_member" env     CELIKPANEL_RELEASE_SIGNING_KEY_FILE="$tmp/key.pem"     bash "$writer" "$version" "$sequence" "$commit" "$published_at" linux amd64     "$tagged_archive" "$tmp/acceptance-$tagged_label-out"
+  [[ ! -e "$tmp/acceptance-$tagged_label-out/release-manifest-v2" ]]     || fail "wrote a manifest for an acceptance_license test build"
+done
 
 mkdir -p "$tmp/symlink-source/celikpanel-$version/bin" "$tmp/symlink-out"
 ln -s /bin/false "$tmp/symlink-source/celikpanel-$version/bin/panel"
@@ -681,9 +697,9 @@ grep -Fq '[ "$requested_version" != latest ]' "$bootstrap" \
   || fail "signed updates do not require an exact version"
 grep -Fq 'release_public_key=/etc/celikpanel/release-signing-ed25519.pem' "$bootstrap" \
   || fail "bootstrap does not pin the installed public-key path"
-grep -Fxq 'bootstrap_release_sequence=80' "$bootstrap" \
+grep -Fxq 'bootstrap_release_sequence=81' "$bootstrap" \
   || fail "bootstrap does not pin the tracked release sequence"
-grep -Fxq 'bootstrap_release_version=v0.1.0-alpha.80' "$bootstrap" \
+grep -Fxq 'bootstrap_release_version=v0.1.0-alpha.81' "$bootstrap" \
   || fail "bootstrap does not pin the tracked release version"
 grep -Fxq 'bootstrap_release_public_key_sha256=7eadeb0b156f1a821575c4293fe664b44b8004bcdb5e9e770122cb5c144c68bb' "$bootstrap" \
   || fail "bootstrap does not pin the reviewed public-key digest"

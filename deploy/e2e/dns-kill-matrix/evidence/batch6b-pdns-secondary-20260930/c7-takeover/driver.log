@@ -1,0 +1,17 @@
+### 2026-09-29T16:44:49.237Z start-cell c7-takeover bind__target-staged__after-write__standalone__peer-reachable node=debian13 other=arch fixture=unmanaged-bind-stopped prep=prepare-bind enroll=1 root=/var/tmp/cp-b6b-0930/r2 peer=none format=none flags=
+### 2026-09-29T16:44:49.239Z prepare
+### 2026-09-29T16:44:50.189Z early-admission-dry-run
+### 2026-09-29T16:44:50.289Z start
+### 2026-09-29T16:44:50.532Z wait-ssh
+### 2026-09-29T16:45:47.191Z guest-identity
+### 2026-09-29T16:45:47.912Z install
+### 2026-09-29T16:45:57.103Z enroll-recovery-runtime
+### 2026-09-29T16:46:03.869Z prepare-bind
+### 2026-09-29T16:46:46.655Z pre-run-snapshot
+### 2026-09-29T16:47:50.346Z start-watcher
+Running as unit: cp-b6b-watch.service; invocation ID: 66aa35545185421f81d5b4c2ad368bb7
+### 2026-09-29T16:47:51.079Z prepared-ok
+### 2026-09-29T16:47:51.085Z run-prepared-dry-run flags=
+### 2026-09-29T16:47:51.192Z run-prepared
+RUN_PREPARED_RC=0
+### 2026-09-29T16:48:43.312Z done-run rc=0

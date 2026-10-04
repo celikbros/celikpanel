@@ -1,0 +1,172 @@
+{
+  "checks": {
+    "builds": {
+      "agent": {
+        "identity": "version=v0.1.0-alpha.82\ncommit=36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb\n",
+        "returncode": 0,
+        "sha256": "a1b96bf95acd5dc89e63b303f39415eafcf926299ce1041046ada34171cb05c9"
+      },
+      "panel": {
+        "identity": "version=v0.1.0-alpha.82\ncommit=36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb\n",
+        "returncode": 0,
+        "sha256": "a27c26b647fd7e441d6bae43bac4748bf0bea8a6ee3d5bc00dcb80dbb8df4546"
+      }
+    },
+    "cron": {
+      "content": "2026-09-30T20:51:00+00:00",
+      "mtime": 1790801460.6613932,
+      "ok": true,
+      "path": "/var/www/celikpanel/subscriptions/2/sites/1/upd1-cron-stamp.txt"
+    },
+    "database_note": "recorded only: the candidate database was published before completion.pending",
+    "database_vs_pre_update": {
+      "differing": [
+        "metrics_samples",
+        "server_setup_executions"
+      ],
+      "post_sha256": "94aa5615626b6b63d21d4d231ed50ab74c22bc0464e6b13c8327ec7135c92812",
+      "pre_sha256": "55d61b7a7e3945d522346bca19efd9d86c688b0dc862723c0d9a3e1cc88e8952",
+      "schema_equal": true,
+      "tables_compared": 65,
+      "unexpected": [],
+      "verdict": "equal-except-volatile",
+      "volatile_excluded": [
+        "audit_logs",
+        "metrics_samples",
+        "server_setup_executions",
+        "sessions",
+        "sqlite_sequence"
+      ],
+      "volatile_reasons": {
+        "audit_logs": "authentication or background writer (BOUND-WORKER AJ)",
+        "metrics_samples": "authentication or background writer (BOUND-WORKER AJ)",
+        "server_setup_executions": "the waiting setup runner rewrites its execution row on every retry (about every 25 s: cmd/panel/server_setup_dns_retry.go claimServerSetupDNSRetry and server_setup_operations.go execution update)",
+        "sessions": "authentication or background writer (BOUND-WORKER AJ)",
+        "sqlite_sequence": "authentication or background writer (BOUND-WORKER AJ)"
+      }
+    },
+    "final": {
+      "automatic_recovery": "paused_retry_limit",
+      "first_failure_code": "panel_start_unverified",
+      "observation": "known",
+      "observed_at": "2026-09-30T20:50:50Z",
+      "phase": "recovery_required",
+      "previous_failure": "recovery_failed",
+      "reason": "recovery_incomplete",
+      "request_id": "08ddb2f7396874f11eb0f344839b3365",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "none"
+    },
+    "firewall_equal": true,
+    "installed": "candidate",
+    "login": {
+      "attempted": true,
+      "error": "CalledProcessError",
+      "ok": false
+    },
+    "mailbox": {
+      "checked": false
+    },
+    "outcome": "paused-owner-action-required",
+    "panel_service": {
+      "installed_executable": {
+        "sha256": "a27c26b647fd7e441d6bae43bac4748bf0bea8a6ee3d5bc00dcb80dbb8df4546",
+        "size": 21553314,
+        "status": "ok"
+      },
+      "properties": {
+        "ActiveState": "inactive",
+        "ControlGroup": "",
+        "ExecMainCode": "1",
+        "ExecMainStatus": "1",
+        "Id": "celikpanel-panel.service",
+        "InvocationID": "1a9e1c15b5414d3ea3d064cb5b128c2b",
+        "LoadState": "loaded",
+        "MainPID": "0",
+        "Result": "exit-code",
+        "SubState": "dead"
+      },
+      "running_executable": {
+        "reason": "no running MainPID",
+        "status": "absent"
+      },
+      "status": "ok"
+    },
+    "site_marker": true,
+    "smtp": null,
+    "timers": {
+      "changed": {},
+      "compared": 2,
+      "equal": true
+    },
+    "transaction": {
+      "fields": {},
+      "present": false,
+      "status": "ok"
+    },
+    "views_at_pause": {
+      "api": {
+        "unavailable": "PanelError"
+      },
+      "cli": {
+        "automatic_recovery": "paused_retry_limit",
+        "names_journal_command": true,
+        "texts": {
+          "en": "The update was applied, but the new version's panel did not come up, and completing the update was retried to its limit. Read the panel log on the server: sudo journalctl -u celikpanel-panel -n 50. Retrying repeats the same start until that cause is fixed. There is no supported return to the previous version from this point. Automatic recovery used all three attempts without finishing, so the server may be between versions. The server owner must act: read sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50, fix the cause it names, then run the one-time same-operation retry command shown there. Checking status does not retry recovery.\nRequest: 08ddb2f7396874f11eb0f344839b3365\nRecorded at: 2026-09-30T20:50:50Z\nThis is a recorded observation; current service health was not checked.\nRecorded state (for support): phase=recovery_required reason=recovery_incomplete proof=none previous_failure=recovery_failed automatic_recovery=paused_retry_limit first_failure_code=panel_start_unverified\n",
+          "tr": "Güncelleme uygulandı, ancak yeni sürümün paneli açılmadı ve güncellemenin tamamlanması sınırına kadar yeniden denendi. Sunucudaki panel günlüğünü okuyun: sudo journalctl -u celikpanel-panel -n 50. Bu neden giderilene kadar yeniden deneme aynı başlatmayı tekrarlar. Bu noktadan önceki sürüme desteklenen bir dönüş yok. Otomatik kurtarma üç denemenin hepsini kullandı ve tamamlanamadı; sunucu iki sürüm arasında kalmış olabilir. Sunucu sahibinin işlem yapması gerekiyor: sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50 çıktısını okuyun, belirtilen nedeni giderin ve orada aynı işlem için gösterilen tek seferlik yeniden deneme komutunu çalıştırın. Durum sorgusu kurtarmayı yeniden başlatmaz.\nİşlem: 08ddb2f7396874f11eb0f344839b3365\nKayıt zamanı: 2026-09-30T20:50:50Z\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\nKayıtlı durum (destek için): phase=recovery_required reason=recovery_incomplete proof=none previous_failure=recovery_failed automatic_recovery=paused_retry_limit first_failure_code=panel_start_unverified\n"
+        }
+      },
+      "offline_shell": {
+        "note": "the saved page carries no exhaustion state by design; it names the read-only status command whose output does",
+        "status_command": {
+          "en": "sudo /usr/libexec/celikpanel/recovery status --request-id 08ddb2f7396874f11eb0f344839b3365 --lang en",
+          "tr": "sudo /usr/libexec/celikpanel/recovery status --request-id 08ddb2f7396874f11eb0f344839b3365 --lang tr"
+        },
+        "texts": {
+          "en": {
+            "check": "Check connection",
+            "checking": "Checking connection…",
+            "help": "This recovery page is saved in your browser. It cannot confirm the server’s current state. A lost connection does not prove that your update failed or your license expired.",
+            "journal": "Read the recovery journal",
+            "next": "Check your connection. This page checks again every 15 seconds while visible. When the panel responds, open it to continue tracking the same operation.",
+            "noReference": "No operation reference is saved in this browser. Ask the server administrator to inspect the recovery journal.",
+            "open": "Open panel",
+            "owner": "If the connection does not return",
+            "ownerHelp": "The server administrator can inspect recovery through an existing SSH connection. These commands only read status; they do not restart an update.",
+            "reachable": "The panel is responding. Open it to sign in or verify the existing operation.",
+            "reference": "Saved operation reference",
+            "referenceHelp": "This ID is a browser hint, not a verified result or permission to retry.",
+            "status": "Read this operation’s status",
+            "title": "The panel connection is unavailable",
+            "view": "Or view this operation in your browser. Run this on your own computer, replacing USER with your SSH account:",
+            "viewHelp": "Then open http://127.0.0.1:2084/ on that computer and enter the temporary code shown in the SSH terminal. The view only reads status. An older recovery tool refuses this command; use the status command above instead.",
+            "waiting": "No current panel response. This page has not started another operation."
+          },
+          "tr": {
+            "check": "Bağlantıyı kontrol et",
+            "checking": "Bağlantı kontrol ediliyor…",
+            "help": "Bu kurtarma sayfası tarayıcınızda kayıtlıdır. Sunucunun güncel durumunu doğrulayamaz. Bağlantının kesilmesi, güncellemenin başarısız olduğunu veya lisansın süresinin dolduğunu göstermez.",
+            "journal": "Kurtarma günlüğünü oku",
+            "next": "Bağlantınızı kontrol edin. Bu sayfa açıkken 15 saniyede bir yeniden kontrol eder. Panel yanıt verdiğinde aynı işlemi izlemek için paneli açın.",
+            "noReference": "Bu tarayıcıda kayıtlı işlem kimliği yok. Sunucu yöneticisinden kurtarma günlüğünü incelemesini isteyin.",
+            "open": "Paneli aç",
+            "owner": "Bağlantı geri gelmezse",
+            "ownerHelp": "Sunucu yöneticisi mevcut SSH bağlantısından kurtarma durumuna bakabilir. Bu komutlar yalnızca durumu okur; güncellemeyi yeniden başlatmaz.",
+            "reachable": "Panel yanıt veriyor. Giriş yapmak veya mevcut işlemi doğrulamak için paneli açın.",
+            "reference": "Kayıtlı işlem kimliği",
+            "referenceHelp": "Bu kimlik tarayıcıda kayıtlı bir ipucudur; doğrulanmış sonuç veya yeniden deneme yetkisi değildir.",
+            "status": "Bu işlemin durumunu oku",
+            "title": "Panel bağlantısına ulaşılamıyor",
+            "view": "Ya da bu işlemi tarayıcınızda görüntüleyin. Komutu kendi bilgisayarınızda çalıştırın; USER yerine SSH hesabınızı yazın:",
+            "viewHelp": "Sonra o bilgisayarda http://127.0.0.1:2084/ adresini açın ve SSH terminalinde gösterilen geçici kodu girin. Bu görünüm yalnızca durumu okur. Eski bir kurtarma aracı bu komutu reddeder; bu durumda yukarıdaki durum komutunu kullanın.",
+            "waiting": "Panelden güncel yanıt alınamadı. Bu sayfa yeni bir işlem başlatmadı."
+          }
+        }
+      }
+    }
+  },
+  "finished_at": "2026-09-30T20:51:10Z",
+  "name": "terminal",
+  "started_at": "2026-09-30T20:51:05Z",
+  "verdict": "passed"
+}

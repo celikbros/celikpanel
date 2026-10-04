@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/bindroot"
 	"golang.org/x/sys/unix"
 )
 
@@ -19,8 +20,8 @@ const (
 	bindManagedRootMode            = uint32(0o0755)
 	bindDirectoryModeMask          = uint32(0o7777)
 	aptBINDStatOverrideTimeout     = 15 * time.Second
-	aptBINDExactStatOverrideLine   = "root bind 1775 /var/cache/bind\n"
-	aptBINDExactPackageOwnerLine   = "bind9: /var/cache/bind\n"
+	aptBINDExactStatOverrideLine   = bindroot.APTExactStatOverrideLine
+	aptBINDExactPackageOwnerLine   = bindroot.APTExactPackageOwnerLine
 	aptBINDStatOverrideOutputLimit = 4 << 10
 )
 
@@ -28,15 +29,24 @@ var errBINDAbandonedGenerationRoot = errors.New(
 	"the unreleased APT BIND generation root is unsupported",
 )
 
-type bindDirectoryIdentity struct {
-	Device uint64
-	Inode  uint64
-}
+type bindDirectoryIdentity = bindroot.Identity
 
+// aptBINDStatOverrideOps are the only dpkg statoverride commands the BIND
+// root proof runs, and both are reads. The product no longer registers an
+// override (see bindroot.APTExactStatOverrideLine) and leaves an existing
+// legacy entry in place: releases before this one require it, and an owner
+// rollback to such a release must keep publishing BIND zones (update.sh treats
+// it as monotonic host hardening that rollback retains). Only the package
+// preflight removes the legacy entry, and only once the `bind` group it names
+// is gone, the state in which dpkg refuses every package change.
+//
+// aptBINDStatOverrideOps, BIND kök kanıtının çalıştırdığı iki dpkg komutudur
+// ve ikisi de okumadır. Ürün artık geçersiz kılma kaydetmez ve var olan eski
+// girdiyi yerinde bırakır: önceki sürümler onu ister. Eski girdiyi yalnız paket
+// ön denetimi, adlandırdığı `bind` grubu silinmişse kaldırır.
 type aptBINDStatOverrideOps struct {
 	owner func() ([]byte, error)
 	list  func() ([]byte, error)
-	add   func() ([]byte, error)
 }
 
 type aptBINDStatOverrideRunner func(
@@ -105,9 +115,7 @@ func accessHostBINDGenerationRootWithMode(
 		return fmt.Errorf("open BIND filesystem root: %w", err)
 	}
 	defer unix.Close(rootFD)
-	durability, cancelDurability, err := hostAPTBindStatOverrideProof(
-		ctx, allowParentHardening,
-	)
+	durability, cancelDurability, err := hostAPTBindStatOverrideProof(ctx)
 	if err != nil {
 		return err
 	}
@@ -122,7 +130,6 @@ func accessHostBINDGenerationRootWithMode(
 
 func hostAPTBindStatOverrideProof(
 	ctx context.Context,
-	create bool,
 ) (func(uint32) error, context.CancelFunc, error) {
 	executable, err := firstTrustedExecutable(
 		[]string{"/usr/sbin/dpkg-statoverride", "/usr/bin/dpkg-statoverride"},
@@ -152,12 +159,7 @@ func hostAPTBindStatOverrideProof(
 		return nil, nil, err
 	}
 	return func(mode uint32) error {
-		if err := verifyOrCreateExactAPTBindStatOverride(
-			create, mode, ops,
-		); err != nil {
-			return err
-		}
-		return nil
+		return verifyAPTBindStatOverride(mode, ops)
 	}, cancel, nil
 }
 
@@ -185,100 +187,49 @@ func aptBINDStatOverrideOperations(
 				ctx, executable, "--list", aptBINDCacheParentPath,
 			)
 		},
-		add: func() ([]byte, error) {
-			return runner(
-				ctx, executable,
-				"--no-force-statoverride-add",
-				"--add", "root", "bind", "1775", aptBINDCacheParentPath,
-			)
-		},
 	}, nil
 }
 
-type aptBINDStatOverrideListState uint8
+type aptBINDStatOverrideListState = bindroot.APTStatOverrideState
 
 const (
-	aptBINDStatOverrideAbsent aptBINDStatOverrideListState = iota
-	aptBINDStatOverrideExact
+	aptBINDStatOverrideAbsent = bindroot.APTStatOverrideAbsent
+	aptBINDStatOverrideExact  = bindroot.APTStatOverrideExact
 )
-
-type commandExitCoder interface {
-	ExitCode() int
-}
 
 func classifyExactAPTBindStatOverride(
 	output []byte,
 	commandErr error,
 ) (aptBINDStatOverrideListState, error) {
-	if commandErr == nil && string(output) == aptBINDExactStatOverrideLine {
-		return aptBINDStatOverrideExact, nil
-	}
-	var exitCoder commandExitCoder
-	if len(output) == 0 && errors.As(commandErr, &exitCoder) &&
-		exitCoder.ExitCode() == 1 {
-		return aptBINDStatOverrideAbsent, nil
-	}
-	return aptBINDStatOverrideAbsent, errors.New(
-		"dpkg-statoverride returned a conflicting, redirected, or non-canonical /var/cache/bind result",
-	)
+	return bindroot.ClassifyAPTStatOverride(output, commandErr)
 }
 
-func verifyOrCreateExactAPTBindStatOverride(
-	create bool,
+// verifyAPTBindStatOverride proves the package-owned parent and its dpkg
+// statoverride state, read-only, on every path (read-only and mutating).
+// Absent (every host installed by this release) and the product's exact
+// legacy entry (hosts installed earlier) are both accepted, and the legacy
+// entry is left in place. Any other entry for the path belongs to the owner
+// and is refused, never changed.
+//
+// verifyAPTBindStatOverride her yolda salt-okurdur: yokluk ve ürünün tam eski
+// girdisi kabul edilir, eski girdi yerinde bırakılır; başka her girdi
+// sahibindir, reddedilir ve değiştirilmez.
+func verifyAPTBindStatOverride(
 	parentMode uint32,
 	ops aptBINDStatOverrideOps,
 ) error {
-	if ops.owner == nil || ops.list == nil || (create && ops.add == nil) ||
+	if ops.owner == nil || ops.list == nil ||
 		(parentMode != aptBINDStockCacheParentMode &&
 			parentMode != aptBINDCacheParentMode) {
 		return errors.New("invalid APT BIND statoverride proof")
 	}
 	ownerOutput, ownerErr := ops.owner()
-	if ownerErr != nil {
-		return fmt.Errorf(
-			"verify /var/cache/bind package ownership: %w", ownerErr,
-		)
-	}
-	if string(ownerOutput) != aptBINDExactPackageOwnerLine {
-		return errors.New(
-			"/var/cache/bind is not the exact bind9 package-owned directory",
-		)
-	}
-	output, err := ops.list()
-	state, err := classifyExactAPTBindStatOverride(output, err)
-	if err != nil {
+	if err := bindroot.VerifyAPTPackageOwner(ownerOutput, ownerErr); err != nil {
 		return err
 	}
-	if state == aptBINDStatOverrideExact {
-		return nil
-	}
-	if !create {
-		return errors.New(
-			"/var/cache/bind lacks the exact durable dpkg-statoverride",
-		)
-	}
-	addOutput, addErr := ops.add()
-	unexpectedAddOutput := strings.TrimSpace(string(addOutput)) != ""
-	readback, readbackErr := ops.list()
-	readbackState, readbackParseErr := classifyExactAPTBindStatOverride(
-		readback, readbackErr,
-	)
-	if readbackParseErr != nil || readbackState != aptBINDStatOverrideExact {
-		if readbackParseErr == nil {
-			readbackParseErr = errors.New(
-				"dpkg-statoverride add did not publish the exact durable override",
-			)
-		}
-		return errors.Join(addErr, readbackParseErr)
-	}
-	if unexpectedAddOutput {
-		return errors.New(
-			"dpkg-statoverride --add returned unexpected output",
-		)
-	}
-	// A command can report failure after atomically committing its database
-	// update. Exact readback is authoritative and makes the retry idempotent.
-	return nil
+	output, err := ops.list()
+	_, err = classifyExactAPTBindStatOverride(output, err)
+	return err
 }
 
 type bindGroupLookupRunner func(context.Context, string, ...string) ([]byte, error)
@@ -623,158 +574,25 @@ func reverifyAPTBindGenerationRootAt(
 // validateExactBINDDirectoryFD kullanmayı sürdürür. Ayrım tam da budur:
 // kurduğumuz şeyi birebir doğrula, devraldığımız şeyde yalnız önemli olanı.
 func validateInheritedBINDAnchorFD(fd int, label string) (bindDirectoryIdentity, error) {
-	var stat unix.Stat_t
-	if err := unix.Fstat(fd, &stat); err != nil {
-		return bindDirectoryIdentity{}, fmt.Errorf("stat %s: %w", label, err)
-	}
-	if stat.Mode&unix.S_IFMT != unix.S_IFDIR {
-		return bindDirectoryIdentity{}, fmt.Errorf("%s is not a directory", label)
-	}
-	if stat.Uid != 0 || stat.Gid != 0 {
-		return bindDirectoryIdentity{}, fmt.Errorf(
-			"%s has uid:gid %d:%d, want 0:0", label, stat.Uid, stat.Gid,
-		)
-	}
-	permissions := stat.Mode & 0o7777
-	if permissions&0o022 != 0 {
-		return bindDirectoryIdentity{}, fmt.Errorf(
-			"%s has mode %04o and is group- or world-writable", label, permissions,
-		)
-	}
-	// These ancestors are shared system directories: the unprivileged services
-	// that live below them have to traverse them. A parent that is not
-	// world-traversable is not a stricter variant of a normal system path, it
-	// is an anomaly, and this policy deliberately keeps refusing it rather than
-	// widening into "anything root owns".
-	// Bu üst dizinler paylaşılan sistem dizinleridir: altlarında yaşayan
-	// yetkisiz servislerin onları geçmesi gerekir. Herkesçe geçilemeyen bir üst
-	// dizin, normal bir sistem yolunun daha katı bir çeşidi değil bir
-	// anormalliktir; bu politika "root neye sahipse kabul" noktasına genişlemek
-	// yerine onu reddetmeyi bilerek sürdürür.
-	if permissions&0o001 == 0 {
-		return bindDirectoryIdentity{}, fmt.Errorf(
-			"%s has mode %04o and is not world-traversable", label, permissions,
-		)
-	}
-	if special := stat.Mode & uint32(unix.S_ISUID|unix.S_ISGID|unix.S_ISVTX); special != 0 {
-		return bindDirectoryIdentity{}, fmt.Errorf(
-			"%s carries setuid, setgid or sticky bits", label,
-		)
-	}
-	if err := rejectBINDDirectoryACL(fd, label); err != nil {
-		return bindDirectoryIdentity{}, err
-	}
-	return bindDirectoryIdentity{
-		Device: uint64(stat.Dev),
-		Inode:  stat.Ino,
-	}, nil
+	return bindroot.ValidateInheritedAnchor(fd, label)
 }
 
-func openInheritedBINDAnchorAt(
-	parentFD int,
-	name string,
-	label string,
-) (int, bindDirectoryIdentity, error) {
-	fd, err := openBINDDirectoryAt(parentFD, name, label)
-	if err != nil {
-		return -1, bindDirectoryIdentity{}, err
-	}
-	identity, err := validateInheritedBINDAnchorFD(fd, label)
-	if err != nil {
-		unix.Close(fd)
-		return -1, bindDirectoryIdentity{}, err
-	}
-	return fd, identity, nil
+func openInheritedBINDAnchorAt(parentFD int, name, label string) (int, bindDirectoryIdentity, error) {
+	return bindroot.OpenInheritedAnchorAt(parentFD, name, label)
 }
 
-func openExactBINDDirectoryAt(
-	parentFD int,
-	name string,
-	uid, gid, mode uint32,
-	label string,
-) (int, bindDirectoryIdentity, error) {
-	fd, err := openBINDDirectoryAt(parentFD, name, label)
-	if err != nil {
-		return -1, bindDirectoryIdentity{}, err
-	}
-	identity, err := validateExactBINDDirectoryFD(fd, uid, gid, mode, label)
-	if err != nil {
-		unix.Close(fd)
-		return -1, bindDirectoryIdentity{}, err
-	}
-	return fd, identity, nil
+func openExactBINDDirectoryAt(parentFD int, name string, uid, gid, mode uint32, label string) (int, bindDirectoryIdentity, error) {
+	return bindroot.OpenExactDirectoryAt(parentFD, name, uid, gid, mode, label)
 }
 
 func openBINDDirectoryAt(parentFD int, name, label string) (int, error) {
-	if name == "" || name == "." || name == ".." {
-		return -1, fmt.Errorf("%s has an invalid path component", label)
-	}
-	fd, err := unix.Openat2(parentFD, name, &unix.OpenHow{
-		Flags: uint64(
-			unix.O_RDONLY | unix.O_DIRECTORY | unix.O_CLOEXEC | unix.O_NOFOLLOW,
-		),
-		Resolve: unix.RESOLVE_BENEATH |
-			unix.RESOLVE_NO_SYMLINKS |
-			unix.RESOLVE_NO_MAGICLINKS,
-	})
-	if errors.Is(err, unix.ENOSYS) {
-		return -1, fmt.Errorf("%s requires Linux openat2: %w", label, err)
-	}
-	if errors.Is(err, unix.ELOOP) || errors.Is(err, unix.EXDEV) {
-		return -1, fmt.Errorf("%s refused a symbolic link or path escape: %w", label, err)
-	}
-	if err != nil {
-		return -1, fmt.Errorf("open %s: %w", label, err)
-	}
-	return fd, nil
+	return bindroot.OpenDirectoryAt(parentFD, name, label)
 }
 
-func validateExactBINDDirectoryFD(
-	fd int,
-	uid, gid, mode uint32,
-	label string,
-) (bindDirectoryIdentity, error) {
-	var stat unix.Stat_t
-	if err := unix.Fstat(fd, &stat); err != nil {
-		return bindDirectoryIdentity{}, fmt.Errorf("stat %s: %w", label, err)
-	}
-	if stat.Mode&unix.S_IFMT != unix.S_IFDIR {
-		return bindDirectoryIdentity{}, fmt.Errorf("%s is not a directory", label)
-	}
-	if stat.Uid != uid || stat.Gid != gid {
-		return bindDirectoryIdentity{}, fmt.Errorf(
-			"%s has uid:gid %d:%d, want %d:%d",
-			label, stat.Uid, stat.Gid, uid, gid,
-		)
-	}
-	if stat.Mode&bindDirectoryModeMask != mode {
-		return bindDirectoryIdentity{}, fmt.Errorf(
-			"%s has mode %04o, want %04o",
-			label, stat.Mode&bindDirectoryModeMask, mode,
-		)
-	}
-	if err := rejectBINDDirectoryACL(fd, label); err != nil {
-		return bindDirectoryIdentity{}, err
-	}
-	return bindDirectoryIdentity{
-		Device: uint64(stat.Dev),
-		Inode:  stat.Ino,
-	}, nil
+func validateExactBINDDirectoryFD(fd int, uid, gid, mode uint32, label string) (bindDirectoryIdentity, error) {
+	return bindroot.ValidateExactDirectory(fd, uid, gid, mode, label)
 }
 
 func rejectBINDDirectoryACL(fd int, label string) error {
-	for _, name := range []string{
-		"system.posix_acl_access",
-		"system.posix_acl_default",
-	} {
-		size, err := unix.Fgetxattr(fd, name, nil)
-		if err == nil && size > 0 {
-			return fmt.Errorf("%s has an unsupported POSIX ACL", label)
-		}
-		if err != nil && !errors.Is(err, unix.ENODATA) &&
-			!errors.Is(err, unix.ENOTSUP) {
-			return fmt.Errorf("inspect %s ACL: %w", label, err)
-		}
-	}
-	return nil
+	return bindroot.RejectACL(fd, label)
 }

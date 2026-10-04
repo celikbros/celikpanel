@@ -1,0 +1,9 @@
+2026-10-03T20:27:55Z
+91b9e90eef45d71f2405d47efa21a1b3b482011992662dbb775fbeb4533dc954  /var/tmp/cp-roottests-20261003/src-48d264d5.tar
+7ff79274d9a391474e1478ca949ed83a40e3f9589bf83b0b7a260b7d9b3ffaa9  /var/tmp/cp-roottests-20261003/go1.26.5.tar.gz
+go version go1.26.5 linux/amd64
+Formatting '/var/tmp/cp-release-drill-roottests-20261003/cells/e197fda7425de2d4079df7d7/debian13/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=21474836480 backing_file=/var/tmp/cp-release-drill-roottests-20261003/images/debian-13-genericcloud-amd64-20260826-2582.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-roottests-20261003", "cell_id": "release-recovery__46b6f9fda2076a0f", "vm_uuid": "b47d7928-e14c-513d-a965-77d5e4377672"}
+verified-disposable-systemd-guest
+2026-10-03T20:28:37Z
+HOST-SETUP-DONE

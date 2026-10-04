@@ -1,0 +1,16 @@
+wall=2026-09-29T19:47:53.305923862Z boot_id=c3c42e4e-b780-49aa-bdac-154a37b9c89e
+os=Debian GNU/Linux 13 (trixie) kernel=6.12.105+deb13-cloud-amd64
+== dpkg-query
+dpkg-query: no packages found matching pdns*
+bind9-host 1:9.20.26-1~deb13u1 ii 
+bind9-libs 1:9.20.26-1~deb13u1 ii 
+python3 3.13.5-1 ii 
+systemd 257.13-1~deb13u1 ii 
+== named -v
+== pdns_server --version
+== management binaries
+cf4472afdb5ef30794f611f738e4b4380211b6fbbf1ae382a8084974293a472f  /opt/celikpanel/bin/agent
+55c19fffb0761ea804702a169cf50f25d6a104d2353e9e2a0cf28df1ef29255c  /opt/celikpanel/bin/agent.kill
+4f664ff3d78feac44ccf678279efc947346927e432ec3a9535856fd931e46798  /opt/celikpanel/bin/dns-kill-trigger
+2693917d4ef6922ca85820d0f1df8f06f1dab4bfdc6bee9a067b5a001a0d1f39  /opt/celikpanel/bin/panel
+sha256sum: /usr/libexec/celikpanel/recovery: No such file or directory

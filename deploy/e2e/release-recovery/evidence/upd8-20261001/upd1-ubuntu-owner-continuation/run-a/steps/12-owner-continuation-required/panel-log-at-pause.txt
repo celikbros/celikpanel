@@ -1,0 +1,50 @@
+2026-10-01T15:56:03.307911+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T15:56:22.372372+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 4.
+2026-10-01T15:56:22.384068+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-01T15:56:22.434965+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-01T15:56:22.633756+00:00 dns-ubuntu panel[86869]: 2026/10/01 15:56:22 Starting CelikPanel Backend...
+2026-10-01T15:56:22.641859+00:00 dns-ubuntu panel[86869]: 2026/10/01 15:56:22 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T15:56:22.642338+00:00 dns-ubuntu panel[86869]: 2026/10/01 15:56:22 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T15:56:22.647664+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T15:56:22.647849+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T15:56:44.115695+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-01T15:57:22.694253+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-01T15:57:22.740084+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-01T15:57:22.913757+00:00 dns-ubuntu panel[90459]: 2026/10/01 15:57:22 Starting CelikPanel Backend...
+2026-10-01T15:57:22.919370+00:00 dns-ubuntu panel[90459]: 2026/10/01 15:57:22 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T15:57:22.919931+00:00 dns-ubuntu panel[90459]: 2026/10/01 15:57:22 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T15:57:22.925987+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T15:57:22.926268+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T15:57:26.088037+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 1.
+2026-10-01T15:57:26.095204+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-01T15:57:26.155956+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-01T15:57:26.313289+00:00 dns-ubuntu panel[90550]: 2026/10/01 15:57:26 Starting CelikPanel Backend...
+2026-10-01T15:57:26.322806+00:00 dns-ubuntu panel[90550]: 2026/10/01 15:57:26 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T15:57:26.322806+00:00 dns-ubuntu panel[90550]: 2026/10/01 15:57:26 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T15:57:26.329375+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T15:57:26.329519+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T15:57:31.904055+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 2.
+2026-10-01T15:57:31.911065+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-01T15:57:31.958986+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-01T15:57:32.139334+00:00 dns-ubuntu panel[90835]: 2026/10/01 15:57:32 Starting CelikPanel Backend...
+2026-10-01T15:57:32.146870+00:00 dns-ubuntu panel[90835]: 2026/10/01 15:57:32 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T15:57:32.147244+00:00 dns-ubuntu panel[90835]: 2026/10/01 15:57:32 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T15:57:32.152503+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T15:57:32.152683+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T15:57:42.445890+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 3.
+2026-10-01T15:57:42.455160+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-01T15:57:42.507965+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-01T15:57:42.697509+00:00 dns-ubuntu panel[91106]: 2026/10/01 15:57:42 Starting CelikPanel Backend...
+2026-10-01T15:57:42.705522+00:00 dns-ubuntu panel[91106]: 2026/10/01 15:57:42 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T15:57:42.706262+00:00 dns-ubuntu panel[91106]: 2026/10/01 15:57:42 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T15:57:42.712425+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T15:57:42.712588+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T15:58:01.837713+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 4.
+2026-10-01T15:58:01.845171+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-01T15:58:01.903006+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-01T15:58:02.109370+00:00 dns-ubuntu panel[91811]: 2026/10/01 15:58:02 Starting CelikPanel Backend...
+2026-10-01T15:58:02.117172+00:00 dns-ubuntu panel[91811]: 2026/10/01 15:58:02 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-01T15:58:02.117769+00:00 dns-ubuntu panel[91811]: 2026/10/01 15:58:02 Failed to start panel listener: listen tcp :2083: bind: address already in use
+2026-10-01T15:58:02.123604+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-01T15:58:02.123842+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Failed with result 'exit-code'.
+2026-10-01T15:58:23.223437+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.

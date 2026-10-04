@@ -1,0 +1,27 @@
+### collect 2026-09-29T23:15:32.293573564Z
+last watcher dir: /var/tmp/cp-b8r-watch-boot2
+request id: c59b537aac13c590e71b4682a88ed7b1
+ownerpost rc=0
+smstatus rc=1
+probe rc=0
+pdnsdb rc=0
+bindsec rc=0
+peer journal rc=0
+peerloop rc=0 lines=69
+cell directory: /var/tmp/cp-b8r-1001/cells/e05b4787635364e83414f682
+total 28
+drwx------ 2 root root 4096 Sep 30 02:15 .
+drwxr-xr-x 3 root root 4096 Sep 30 02:15 ..
+-rw------- 1 root root 3751 Sep 30 02:15 peer-verdict-after-reboot.json
+-rw------- 1 root root 2240 Sep 30 02:13 peer-verdict.json
+-rw------- 1 root root 9497 Sep 30 02:13 zone-lifecycle.json
+==> /var/tmp/cp-b8r-watch-db/timeline.log <==
+23:13:25.469736220 CHANGE pdnsdb 3fd1307066c7e559b2210b9739cfe1d9eda1b42ba069654fb1a48d4474864bfb -> c3f71d036eca62ee8227bbfb305a5dda6557f8441f8c2306fd9b711492caf3b2 pdns=4125/active/
+23:13:33.071530332 CHANGE pdnsdb c3f71d036eca62ee8227bbfb305a5dda6557f8441f8c2306fd9b711492caf3b2 -> 3f2b0c3d51a425ad8c55c7c6d7ce892cac57682de4b4e24a6d46554901f078b1 pdns=4125/active/
+23:14:22.807485285 CHANGE pdnsdb 3f2b0c3d51a425ad8c55c7c6d7ce892cac57682de4b4e24a6d46554901f078b1 -> 25c19807cbe1a29770861cef3fb5c3d7359aade788be06a231604c1e887b56d4 pdns=4125/active/
+
+==> /var/tmp/cp-b8r-watch-dbboot2/timeline.log <==
+23:14:52.049582632 start boot_id=612ac048-995c-4cfe-90da-37daeae56990
+23:14:52.065807423 CHANGE pdnsdb none -> 3b096442c6f586370cc718f4a1d0606ca878d847454dbc54189c866eb3981ec9 pdns=640/active/
+done
+tar rc=0 size=5468160

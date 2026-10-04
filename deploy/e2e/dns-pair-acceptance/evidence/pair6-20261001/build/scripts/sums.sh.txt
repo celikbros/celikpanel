@@ -1,0 +1,16 @@
+#!/bin/bash
+set -uo pipefail
+DEST='/mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/dns-pair-acceptance/evidence/pair6-20261001'
+B=/root/cp-pair6
+cd "$DEST"
+[[ ! -e SHA256SUMS ]] || { echo "SHA256SUMS exists"; exit 1; }
+find . -type f ! -name SHA256SUMS -o -type f -path './t*/*/SHA256SUMS' | sed 's#^\./##' | LC_ALL=C sort | while IFS= read -r f; do sha256sum "$f"; done > /root/cp-pair6/sums.tmp
+mv /root/cp-pair6/sums.tmp SHA256SUMS
+wc -l SHA256SUMS
+sha256sum -c --quiet SHA256SUMS && echo "SHA256SUMS verified"
+echo "files: $(find . -type f | wc -l)"
+find . -type f | awk '{ print length($0)-2+55 }' | sort -n | tail -1
+python3 $B/secret-scan.py "$DEST" | tail -1
+python3 $B/rndc-scan.py "$DEST" $B/secret-hashes | tail -1
+cd $B/driver/deploy/e2e/dns-pair-acceptance
+for R in "$DEST"/t*/p6t*-*; do python3 -c 'import sys, evidence; from pathlib import Path; r=evidence.verify_sums(Path(sys.argv[1])); print(sys.argv[1].split("/")[-1], "verify_sums:", r)' "$R"; done

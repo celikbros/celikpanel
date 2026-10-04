@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/binddns"
+	"github.com/alicelik/celikpanel/internal/dnswire"
+	"github.com/alicelik/celikpanel/internal/hostname"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -30,8 +32,16 @@ const (
 	dnsRCodeRefused   = 5
 	dnsRCodeNotAuth   = 9
 	dnsProbeTimeout   = 4 * time.Second
+	// dnsPairProofLimit bounds one DNS pair proof made of DNS answer probes
+	// (SOA, catalog AXFR, zone AXFR) and their retries. Since 2026-10-01 it
+	// no longer bounds the native peer proof (SSH inspection, challenge
+	// journal), which has its own per-step budget (dnsPeerProofSteps).
 	dnsPairProofLimit = 15 * time.Second
 )
+
+// dnsPairProofWaveLimit is dnsPairProofLimit for the V3 completion wave's DNS
+// probes; a variable only so tests can scale the wave down.
+var dnsPairProofWaveLimit = dnsPairProofLimit
 
 type expectedDNSZoneAuthority struct {
 	Domain string
@@ -154,8 +164,14 @@ func verifyBINDPairingAuthority(
 	if err := requireHostOwnedDNSPairAddress(pairing.LocalIP); err != nil {
 		return err
 	}
+	// A primary reads its own BIND catalog; a secondary reads the catalog its
+	// primary produced, which may be BIND's or PowerDNS's format.
+	axfr := probeDNSCatalogAXFR
+	if pairing.Role == binddns.PairRoleSecondary {
+		axfr = queryDNSPeerCatalogAXFR
+	}
 	return verifyBINDPairingAuthorityAt(
-		ctx, receipt, pairing.LocalIP, probeDNSZoneSOA, probeDNSCatalogAXFR,
+		ctx, receipt, pairing.LocalIP, probeDNSZoneSOA, axfr,
 	)
 }
 
@@ -200,7 +216,7 @@ func verifyBINDPairingAuthorityAt(
 	}
 	peerCatalog, err := axfr(ctx, pairing.PeerIP, pairing.PeerCatalog)
 	if err != nil {
-		return errors.New("BIND peer catalog is not available")
+		return dnsPeerCatalogReadError("BIND peer catalog is not available", err)
 	}
 	proofCtx, cancel := context.WithTimeout(ctx, dnsPairProofLimit)
 	defer cancel()
@@ -273,7 +289,7 @@ func verifyPDNSPairingAuthority(
 		if err != nil {
 			return err
 		}
-		catalog, err := probeDNSCatalogAXFR(ctx, localAddress, domain)
+		catalog, err := probeDNSPDNSCatalogAXFR(ctx, localAddress, domain)
 		if err != nil {
 			return errors.New("PowerDNS primary catalog is unavailable")
 		}
@@ -319,8 +335,11 @@ func verifyPDNSPairingAuthority(
 }
 
 type dnsSOAProbeResult struct {
+	LocalIP            string // Local socket IPv4, observed outside the DNS packet.
 	Authoritative      bool
 	RCode              int
+	AnswerCount        int
+	ExactDeletedZone   bool // Set only after the shared full-packet negative SOA validator succeeds.
 	SOASerials         []uint32
 	AnswerSOAOwners    []string
 	AuthoritySOAOwners []string
@@ -457,7 +476,7 @@ func verifyDNSZoneAuthoritiesAt(
 			}
 			if zone.Delete {
 				if !validDeletedDNSZoneProof(zone.Domain, result) {
-					return fmt.Errorf("deleted zone %s remains authoritative over %s", zone.Domain, network)
+					return fmt.Errorf("deleted zone %s absence could not be verified over %s", zone.Domain, network)
 				}
 				continue
 			}
@@ -471,11 +490,9 @@ func verifyDNSZoneAuthoritiesAt(
 }
 
 func validDeletedDNSZoneProof(domain string, result dnsSOAProbeResult) bool {
-	if len(result.SOASerials) != 0 || len(result.AnswerSOAOwners) != 0 {
+	if !result.ExactDeletedZone || !result.Authoritative || result.AnswerCount != 0 ||
+		len(result.SOASerials) != 0 || len(result.AnswerSOAOwners) != 0 {
 		return false
-	}
-	if !result.Authoritative {
-		return result.RCode == dnsRCodeNameError || result.RCode == dnsRCodeRefused
 	}
 	if result.RCode != dnsRCodeNameError && result.RCode != dnsRCodeNoError {
 		return false
@@ -545,7 +562,18 @@ func queryDNSZoneSOA(
 	default:
 		return dnsSOAProbeResult{}, errors.New("unsupported DNS probe network")
 	}
-	return parseDNSZoneSOAResponse(response, id, domain)
+	result, err := parseDNSZoneSOAResponse(response, id, domain)
+	if err != nil {
+		return dnsSOAProbeResult{}, err
+	}
+	localHost, _, err := net.SplitHostPort(connection.LocalAddr().String())
+	if err != nil {
+		return dnsSOAProbeResult{}, errors.New("DNS probe local endpoint is invalid")
+	}
+	if local := net.ParseIP(localHost).To4(); local != nil {
+		result.LocalIP = local.String()
+	}
+	return result, nil
 }
 
 func buildDNSZoneSOAQuery(domain string) ([]byte, uint16, error) {
@@ -593,24 +621,32 @@ func parseDNSZoneSOAResponse(message []byte, id uint16, domain string) (dnsSOAPr
 		return dnsSOAProbeResult{}, errors.New("DNS response identity mismatch")
 	}
 	flags := binary.BigEndian.Uint16(message[2:4])
-	if flags&dnsResponseQR == 0 || flags&dnsResponseTC != 0 {
+	if flags&dnsResponseQR == 0 || flags&dnsResponseTC != 0 || flags&0x7800 != 0 {
 		return dnsSOAProbeResult{}, errors.New("DNS response is not a complete answer")
 	}
 	offset := 12
 	questions := int(binary.BigEndian.Uint16(message[4:6]))
+	if questions != 1 {
+		return dnsSOAProbeResult{}, errors.New("DNS response must contain the exact one SOA question")
+	}
 	answers := int(binary.BigEndian.Uint16(message[6:8]))
 	authorities := int(binary.BigEndian.Uint16(message[8:10]))
 	additionals := int(binary.BigEndian.Uint16(message[10:12]))
-	for range questions {
-		_, next, err := decodeDNSName(message, offset)
-		if err != nil || next+4 > len(message) {
-			return dnsSOAProbeResult{}, errors.New("DNS response has an invalid question")
-		}
-		offset = next + 4
+	question, next, err := decodeDNSName(message, offset)
+	if err != nil || next+4 > len(message) ||
+		strings.ToLower(strings.TrimSuffix(question, ".")) != domain ||
+		binary.BigEndian.Uint16(message[next:next+2]) != dnsTypeSOA ||
+		binary.BigEndian.Uint16(message[next+2:next+4]) != dnsClassIN {
+		return dnsSOAProbeResult{}, errors.New("DNS response question differs from the exact SOA request")
+	}
+	offset = next + 4
+	if answers+authorities+additionals > 256 {
+		return dnsSOAProbeResult{}, errors.New("DNS response contains too many resource records")
 	}
 	result := dnsSOAProbeResult{
 		Authoritative: flags&dnsResponseAA != 0,
 		RCode:         int(flags & dnsResponseRCode),
+		AnswerCount:   answers,
 	}
 	parseRecords := func(count, section int) error {
 		for range count {
@@ -628,7 +664,7 @@ func parseDNSZoneSOAResponse(message []byte, id uint16, domain string) (dnsSOAPr
 			}
 			if recordType == dnsTypeSOA && recordClass == dnsClassIN {
 				owner := strings.ToLower(strings.TrimSuffix(name, "."))
-				if !serviceMutationCanonicalFQDN(owner) {
+				if hostname.Validate(owner) != nil {
 					return errors.New("DNS SOA owner is not canonical")
 				}
 				_, serialOffset, err := decodeDNSName(message, rdataOffset)
@@ -665,9 +701,14 @@ func parseDNSZoneSOAResponse(message []byte, id uint16, domain string) (dnsSOAPr
 	if err := parseRecords(additionals, 2); err != nil {
 		return dnsSOAProbeResult{}, err
 	}
+	if len(result.SOASerials) != 0 &&
+		(answers != 1 || len(result.AnswerSOAOwners) != 1 || result.AnswerSOAOwners[0] != domain) {
+		return dnsSOAProbeResult{}, errors.New("DNS response includes an extra or foreign answer beside the exact SOA")
+	}
 	if offset != len(message) {
 		return dnsSOAProbeResult{}, errors.New("DNS response contains trailing bytes")
 	}
+	result.ExactDeletedZone = dnswire.ValidateDeletedZoneSOAResponse(message, id, domain) == nil
 	return result, nil
 }
 

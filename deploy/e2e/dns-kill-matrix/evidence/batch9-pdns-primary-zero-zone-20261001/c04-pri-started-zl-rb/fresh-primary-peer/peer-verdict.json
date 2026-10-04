@@ -1,0 +1,82 @@
+{
+  "cell_id": "pdns-switch__target-started__after-write__paired-primary__peer-reachable",
+  "child_step": null,
+  "combined_exit": 0,
+  "error": null,
+  "guest_controller_exit": 0,
+  "guest_controller_suspended_for_zone_lifecycle": true,
+  "note": "The native BIND secondary loaded this primary's PowerDNS PRODUCER catalog and member and answers them authoritatively over UDP and TCP exactly as the primary does.",
+  "observation": {
+    "action": "observe-native-pdns-bind-peer",
+    "address": "192.0.2.10",
+    "answers": {
+      "192.0.2.10/tcp/s1-kill.test/SOA": [
+        "ns1.s1-kill.test.",
+        "hostmaster.s1-kill.test.",
+        "2026083101",
+        "10800",
+        "3600",
+        "604800",
+        "3600"
+      ],
+      "192.0.2.10/tcp/www.s1-kill.test/A": [
+        "192.0.2.10"
+      ],
+      "192.0.2.10/udp/s1-kill.test/SOA": [
+        "ns1.s1-kill.test.",
+        "hostmaster.s1-kill.test.",
+        "2026083101",
+        "10800",
+        "3600",
+        "604800",
+        "3600"
+      ],
+      "192.0.2.10/udp/www.s1-kill.test/A": [
+        "192.0.2.10"
+      ],
+      "192.0.2.11/tcp/s1-kill.test/SOA": [
+        "ns1.s1-kill.test.",
+        "hostmaster.s1-kill.test.",
+        "2026083101",
+        "10800",
+        "3600",
+        "604800",
+        "3600"
+      ],
+      "192.0.2.11/tcp/www.s1-kill.test/A": [
+        "192.0.2.10"
+      ],
+      "192.0.2.11/udp/s1-kill.test/SOA": [
+        "ns1.s1-kill.test.",
+        "hostmaster.s1-kill.test.",
+        "2026083101",
+        "10800",
+        "3600",
+        "604800",
+        "3600"
+      ],
+      "192.0.2.11/udp/www.s1-kill.test/A": [
+        "192.0.2.10"
+      ]
+    },
+    "authoritative_udp_tcp": true,
+    "catalog": "catalog-c000020a.celikpanel.invalid",
+    "catalog_members": [
+      "s1-kill.test"
+    ],
+    "catalog_members_expected": [
+      "s1-kill.test"
+    ],
+    "catalog_serial": 1790729129,
+    "cell_id": "pdns-switch__target-started__after-write__paired-primary__peer-reachable",
+    "execute": true,
+    "management_installed_on_secondary": false,
+    "member": "s1-kill.test",
+    "primary_ip": "192.0.2.10",
+    "secondary_ip": "192.0.2.11",
+    "zero_zones": false
+  },
+  "schema": "celikpanel/dns-kill-fresh-primary-peer-verdict/v1",
+  "status": "passed",
+  "zero_zones": false
+}

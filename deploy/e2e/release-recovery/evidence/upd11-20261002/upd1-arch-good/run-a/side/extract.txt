@@ -1,0 +1,29 @@
+evidence /var/tmp/cp-release-drill-upd11-arch-good-a/evidence/arch/upd1/upd1-arch-good-20261001t235235z/
+== 11-track/samples
+2026-10-02T00:00:04Z panel= queued api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T00:00:06Z panel= running api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T00:00:08Z panel= running api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T00:00:12Z panel= running api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T00:00:16Z panel= running api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T00:00:23Z panel= running api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T00:00:33Z panel= PanelError api= None None None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T00:00:35Z panel= PanelError api= None None None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T00:00:38Z panel= PanelError api= None None None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T00:00:43Z panel= PanelError api= None None None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T00:00:49Z panel= PanelError api= None None None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T00:01:00Z panel= running api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T00:01:02Z panel= running api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T00:01:05Z panel= running api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T00:01:09Z panel= succeeded api= 200 succeeded None cli= known|succeeded|update_verified|update_verified|None|None|None cli_status= ok
+== distinct CLI texts
+# known|running|none|update_running|None|None|None first 2026-10-02T00:00:04Z
+  EN : The update is being applied; the panel may be unavailable for a short time. Nothing to do now: check this same request again in a minute. Checking does not restart the update. / Request: 76b10a3bd8b7acc288d4ba79c6f4bc7c / Recorded at: 2026-10-02T00:00:05Z / This is a recorded observation; current service health was not checked. / Recorded state (for support): phase=running reason=update_running proof=none
+  TR : Güncelleme uygulanıyor; panel kısa bir süre erişilemeyebilir. Şimdi yapmanız gereken bir şey yok: bir dakika sonra aynı işlemi yeniden sorgulayın. Sorgulamak güncellemeyi yeniden başlatmaz. / İşlem: 76b10a3bd8b7acc288d4ba79c6f4bc7c / Kayıt zamanı: 2026-10-02T00:00:05Z / Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi. / Kayıtlı durum (destek için): phase=running reason=update_running proof=none
+# known|succeeded|update_verified|update_verified|None|None|None first 2026-10-02T00:01:09Z
+  EN : The update completed and the new version was verified when it finished. Nothing else is needed on the server. Open the panel to check that everything works now. / Request: 76b10a3bd8b7acc288d4ba79c6f4bc7c / Recorded at: 2026-10-02T00:01:07Z / This is a recorded observation; current service health was not checked. / Recorded state (for support): phase=succeeded reason=update_verified proof=update_verified
+  TR : Güncelleme tamamlandı ve yeni sürüm bittiği anda doğrulandı. Sunucuda başka bir işlem gerekmiyor. Her şeyin şu an çalıştığını görmek için paneli açın. / İşlem: 76b10a3bd8b7acc288d4ba79c6f4bc7c / Kayıt zamanı: 2026-10-02T00:01:07Z / Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi. / Kayıtlı durum (destek için): phase=succeeded reason=update_verified proof=update_verified
+== journal lines
+-- steps/14-collect/journal-setup-services.txt 1
+    2026-10-01T23:56:17.929011+00:00 dns-arch mariadbd[1500]: 2026-10-01 23:56:17 0 [Note] InnoDB: 128 rollback segments in 3 undo tablespaces are active.
+== result {"overall": "complete-for-review", "native_evidence": false, "request_id": "76b10a3bd8b7acc288d4ba79c6f4bc7c"} {"attempts": {"automatic": [], "automatic_count": 0, "journal_admissions": [], "owner": [], "owner_count": 0}, "classification": "update-verified", "final_status": {"observation": "known", "observed_at": "2026-10-02T00:01:07Z", "phase": "succeeded", "reason": "update_verified", "request_id": "76b10a3bd8b7acc288d4ba79c6f4bc7c", "schema": "celikpanel-recovery-status/v1", "terminal_proof": "update_verified"}, "owner_continuation": false, "owner_reboot": null, "pin_changes": [], "port_hold": null, "reboot": null, "track_stop": null}
+findings ["arch: web_mail setup plan was refused (['server_setup_service_unsupported:dovecot']); mail is recorded as not provided on this platform", "arch: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['09-panel_certificate', '10-verify']"]

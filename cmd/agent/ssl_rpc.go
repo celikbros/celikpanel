@@ -424,7 +424,7 @@ func (a *Agent) IssueLetsEncryptCertificate(req IssueLetsEncryptRequest, resp *I
 	}
 	if !acquireSiteCertbot() {
 		resp.Success = false
-		resp.Error = "another site certificate operation is already running; retry shortly"
+		resp.Error = transport.SiteCertificateBusy
 		return nil
 	}
 	defer releaseSiteCertbot()
@@ -515,7 +515,7 @@ func (a *Agent) RenewLetsEncryptCertificate(req RenewCertRequest, resp *RenewCer
 	}
 	if !acquireSiteCertbot() {
 		resp.Success = false
-		resp.Error = "another site certificate operation is already running; retry shortly"
+		resp.Error = transport.SiteCertificateBusy
 		return nil
 	}
 	defer releaseSiteCertbot()

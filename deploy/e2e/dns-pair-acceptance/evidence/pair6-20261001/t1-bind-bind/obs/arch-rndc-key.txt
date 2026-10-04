@@ -1,0 +1,31 @@
+bash: line 2: hostname: command not found
+## collected 2026-09-30T06:03:14Z on  (Arch Linux)
+## key files: metadata only (ls -l; stat owner/group/mode/size/birth/modify). Content NOT read.
+-rw-r----- 1 root named 100 2026-09-30 05:56:12.784131222 +0000 /etc/rndc.key
+ls: cannot access '/etc/rndc.conf': No such file or directory
+ls: cannot access '/etc/bind/rndc.key': No such file or directory
+ls: cannot access '/etc/bind/rndc.conf': No such file or directory
+/etc/rndc.key owner=root:named mode=640 size=100 birth=2026-09-30 05:56:12.782845887 +0000 modify=2026-09-30 05:56:12.784131222 +0000 change=2026-09-30 05:56:12.841851180 +0000
+## owning package of the key path
+error: No package owns /etc/rndc.key
+bind 9.20.29-1
+## companion record(s) dns-engine-bind-rndc-key.json (path, provenance, hash only)
+### /var/lib/celikpanel-agent-private/dns-engine-bind-rndc-key.json
+-rw------- 1 root celikpanel 410 2026-09-30 05:56:12.796847143 +0000 /var/lib/celikpanel-agent-private/dns-engine-bind-rndc-key.json
+{"schema":"celikpanel-dns-engine-bind-rndc-key/v1","path":"/etc/rndc.key","provenance":"product_created","sha256":"c7d811f3d4e96e9bbfbcd3a5ac1c15dccf40305bbb78fc786534c00cb1449e51","manifest_qualifier":"dns-engine-switch/v1:sha256:3cdfb49e631af48de70e27606c5f1d718fe3bdcd37b8e867182b09bdc097a452","mutation_request_id":"ff930d9e4833a08c64d143882950d636","mutation_owner_id":"562c74ac9c1d6c57ba067dbe7c7ccff0"}
+
+## install-ownership files next to it (names only)
+## named first start in this journal (all boots) and command channel lines
+unit: named.service
+2026-09-30T05:56:17+00:00 dns-arch systemd[1]: Started Internet domain name server.
+2026-09-30T05:56:17+00:00 dns-arch named[2058]: starting BIND 9.20.29 (Stable Release) <id:c3d4465>
+2026-09-30T05:56:17+00:00 dns-arch named[2058]: configuring command channel from '/etc/rndc.key'
+2026-09-30T05:56:17+00:00 dns-arch named[2058]: command channel listening on 127.0.0.1#953
+2026-09-30T05:56:17+00:00 dns-arch named[2058]: configuring command channel from '/etc/rndc.key'
+2026-09-30T05:56:17+00:00 dns-arch named[2058]: command channel listening on ::1#953
+## rndc status (first two lines; uses the key, does not print it)
+version: BIND 9.20.29 (Stable Release) <id:c3d4465> (version.bind/txt/ch disabled)
+running on dns-arch: Linux x86_64 7.2.7-arch1-1 #1 SMP PREEMPT_DYNAMIC Mon, 21 Sep 2026 18:51:14 +0000 (Arch Linux)
+## Agent journal lines naming rndc (all boots)
+2026-09-30T05:56:12+00:00 dns-arch agent[408]: 2026/09/30 05:56:12 DNS switch (request ff930d9e4833a08c64d143882950d636): BIND rndc key /etc/rndc.key is product_created
+(end)

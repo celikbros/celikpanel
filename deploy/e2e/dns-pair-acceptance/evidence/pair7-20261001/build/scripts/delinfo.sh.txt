@@ -1,0 +1,20 @@
+#!/bin/bash
+# usage: delinfo.sh LABEL -- zone-delete step details from the run's evidence (read-only)
+R=$(ls -d /var/tmp/cp-pair7-evidence/$1-* | tail -1)
+python3 - "$R" <<'PY'
+import json,sys,glob,os
+R=sys.argv[1]
+r=json.load(open(R+"/result.json"))
+for s in r["steps"]:
+    if s["id"] in ("zone-delete","zone-readd","independence-reboot","management-return"):
+        ch=s.get("checks") or {}
+        print("==",s["id"],s["verdict"],s.get("started_at"),s.get("finished_at"))
+        for k in ("delete_first_outcome","delete_final_outcome","deletion_status_poll","dns_absent","boot_ids","owner_enrollment","host_key_review"):
+            if k in ch: print("  ",k,json.dumps(ch[k])[:900])
+        print("   check keys:",sorted(ch))
+for f in sorted(glob.glob(R+"/steps/15-zone-delete/api/*.json")):
+    d=json.load(open(f))
+    req=d.get("request") or {}; resp=d.get("response") or {}
+    date=[v for k,v in (resp.get("headers") or []) if k=="Date"]
+    print(os.path.basename(f), (date or [""])[0], req.get("method"), req.get("path"), "->", resp.get("status"), "elapsed", resp.get("elapsed_seconds"), json.dumps(resp.get("json"))[:900])
+PY

@@ -1,0 +1,12 @@
+#!/bin/bash
+# Read-only: the effective options block and catalog stanza (named-checkconf -p), key/secret lines dropped. usage: CELL LABEL NODE PORT
+CELL=$1; LABEL=$2; NODE=$3; PORT=$4
+H=$(printf %s "$CELL" | sha256sum | cut -c1-24)
+KH=/var/tmp/cp-pair4-work/cells/$H/ssh-known-hosts
+O=/root/cp-pair4/obs/$LABEL; mkdir -p $O
+timeout 120 ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$KH -i /var/tmp/cp-pair4-key/id_ed25519 -p $PORT celik@127.0.0.1 'bash -s' > $O/$NODE-named-effective-options.txt 2>&1 <<'R'
+C=/etc/named.conf; [ -f /etc/bind/named.conf ] && C=/etc/bind/named.conf
+echo "## $(date -u +%FT%TZ) named-checkconf -p $C, options block and every zone stanza except the three stock localhost zones; lines containing secret/algorithm/key dropped"
+sudo -n named-checkconf -p $C 2>&1 | grep -v -i -E 'secret|algorithm|^\s*key ' | awk '/^options \{/{p=1} /^zone "(localhost|0\.0\.127|1\.0\.0\.0)/{p=0} /^zone "/ && !/localhost|0\.0\.127|1\.0\.0\.0/{p=1} p{print} /^\};/{p=0}'
+R
+cat $O/$NODE-named-effective-options.txt

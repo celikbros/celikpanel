@@ -1,0 +1,53 @@
+evidence /var/tmp/cp-release-drill-upd13-d13-def-a/evidence/debian13/upd1/upd1-debian13-defective-20261002t205139z/
+== 11-track/samples
+2026-10-02T21:01:10Z panel= queued api= 200 accepted None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T21:01:12Z panel= running api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T21:01:14Z panel= running api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T21:01:17Z panel= running api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T21:01:22Z panel= running api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T21:01:29Z panel= running api= 200 running None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T21:01:42Z panel= PanelError api= None None None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T21:01:43Z panel= PanelError api= None None None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T21:01:46Z panel= PanelError api= None None None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T21:01:51Z panel= PanelError api= None None None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T21:01:57Z panel= PanelError api= None None None cli= known|running|none|update_running|None|None|None cli_status= ok
+2026-10-02T21:02:07Z panel= PanelError api= None None None cli= known|recovering|none|recovery_running|None|None|None cli_status= ok
+2026-10-02T21:02:09Z panel= PanelError api= None None None cli= known|recovering|none|recovery_running|None|None|None cli_status= ok
+2026-10-02T21:02:12Z panel= PanelError api= None None None cli= known|recovering|none|recovery_running|None|None|None cli_status= ok
+2026-10-02T21:02:16Z panel= PanelError api= None None None cli= known|recovering|none|recovery_running|None|None|None cli_status= ok
+2026-10-02T21:02:28Z panel= PanelError api= None None None cli= known|recovering|none|recovery_running|None|None|None cli_status= ok
+2026-10-02T21:02:35Z panel= PanelError api= None None None cli= known|recovering|none|recovery_running|None|None|None cli_status= ok
+2026-10-02T21:02:40Z panel= PanelError api= None None None cli= known|recovering|none|recovery_running|None|None|None cli_status= ok
+2026-10-02T21:02:44Z panel= PanelError api= None None None cli= known|recovering|none|recovery_running|None|None|None cli_status= ok
+2026-10-02T21:02:50Z panel= PanelError api= None None None cli= known|recovering|none|recovery_running|None|None|None cli_status= ok
+2026-10-02T21:03:00Z panel= PanelError api= None None None cli= known|recovering|none|recovery_running|None|None|None cli_status= ok
+2026-10-02T21:03:16Z panel= PanelError api= None None None cli= known|recovering|none|recovery_running|None|None|None cli_status= ok
+2026-10-02T21:03:17Z panel= failed api= 200 recovering None cli= known|recovering|none|recovery_running|None|None|None cli_status= ok
+2026-10-02T21:03:19Z panel= failed api= 200 recovering None cli= known|recovering|none|recovery_running|None|None|None cli_status= ok
+2026-10-02T21:03:22Z panel= failed api= 200 recovering None cli= known|recovering|none|recovery_running|None|None|None cli_status= ok
+2026-10-02T21:03:26Z panel= failed api= 200 recovered None cli= known|recovered|rollback_verified|rollback_verified|None|None|None cli_status= ok
+== distinct CLI texts
+# known|running|none|update_running|None|None|None first 2026-10-02T21:01:10Z
+  EN : The update is being applied; the panel may be unavailable for a short time. Nothing to do now: check this same request again in a minute. Checking does not restart the update. / Request: bdad11ee9d11619b064bca6d77049856 / Recorded at: 2026-10-02T21:01:10Z / This is a recorded observation; current service health was not checked. / Recorded state (for support): phase=running reason=update_running proof=none
+  TR : Güncelleme uygulanıyor; panel kısa bir süre erişilemeyebilir. Şimdi yapmanız gereken bir şey yok: bir dakika sonra aynı işlemi yeniden sorgulayın. Sorgulamak güncellemeyi yeniden başlatmaz. / İşlem: bdad11ee9d11619b064bca6d77049856 / Kayıt zamanı: 2026-10-02T21:01:10Z / Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi. / Kayıtlı durum (destek için): phase=running reason=update_running proof=none
+# known|recovering|none|recovery_running|None|None|None first 2026-10-02T21:02:07Z
+  EN : The update did not finish normally, and automatic recovery is running: the server is either being returned to the previous version or the update is being completed safely. Nothing to do now: check this same request again in a minute and do not start another update. / Request: bdad11ee9d11619b064bca6d77049856 / Recorded at: 2026-10-02T21:02:04Z / This is a recorded observation; current service health was not checked. / Recorded state (for support): phase=recovering reason=recovery_running proof=none previous_failure=update_failed
+  TR : Güncelleme normal biçimde tamamlanmadı ve otomatik kurtarma çalışıyor: sunucu ya önceki sürüme döndürülüyor ya da güncelleme güvenle tamamlanıyor. Şimdi yapmanız gereken bir şey yok: bir dakika sonra aynı işlemi yeniden sorgulayın ve başka güncelleme başlatmayın. / İşlem: bdad11ee9d11619b064bca6d77049856 / Kayıt zamanı: 2026-10-02T21:02:04Z / Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi. / Kayıtlı durum (destek için): phase=recovering reason=recovery_running proof=none previous_failure=update_failed
+# known|recovered|rollback_verified|rollback_verified|None|None|None first 2026-10-02T21:03:26Z
+  EN : The update did not complete, and the server was returned automatically to the version it ran before; that restoration was verified. Nothing needs to be done on the server. Do not start the same version again until a corrected version is published; the panel's update page shows what is known about the cause. / Request: bdad11ee9d11619b064bca6d77049856 / Recorded at: 2026-10-02T21:03:23Z / This is a recorded observation; current service health was not checked. / Recorded state (for support): phase=recovered reason=rollback_verified proof=rollback_verified previous_failure=update_failed
+  TR : Güncelleme tamamlanmadı ve sunucu otomatik olarak güncellemeden önce çalıştırdığı sürüme döndürüldü; bu geri dönüş doğrulandı. Sunucuda yapmanız gereken bir şey yok. Düzeltilmiş bir sürüm yayımlanana kadar aynı sürümü yeniden başlatmayın; nedenle ilgili bilinenler panelin güncelleme sayfasında gösterilir. / İşlem: bdad11ee9d11619b064bca6d77049856 / Kayıt zamanı: 2026-10-02T21:03:23Z / Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi. / Kayıtlı durum (destek için): phase=recovered reason=rollback_verified proof=rollback_verified previous_failure=update_failed
+== journal lines
+-- steps/15-collect/journal-product.txt 6
+    2026-10-02T21:02:03.549126+00:00 dns-debian13 agent[27229]: 2026/10/02 21:02:03 System update worker failed: reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason=offline panel database migration failed; its original database and work evidence are preserved detail=
+    2026-10-02T21:02:03.550510+00:00 dns-debian13 systemd[1]: celikpanel-self-update-bdad11ee9d11619b064bca6d77049856.service: Triggering OnFailure= dependencies.
+    2026-10-02T21:02:04.840873+00:00 dns-debian13 release-recovery[37997]: Recovery dispatch admitted: attempt=1 snapshot=20261002T210137Z-from-unknown-to-6acb22f6d5ce471d57131ed5ecff24c85b9d8844-bfcab1e903d37898575511458aef038e
+    2026-10-02T21:03:04.052551+00:00 dns-debian13 release-recovery[1516]: Recovery dispatch admitted: attempt=2 snapshot=20261002T210137Z-from-unknown-to-6acb22f6d5ce471d57131ed5ecff24c85b9d8844-bfcab1e903d37898575511458aef038e
+    2026-10-02T21:03:22.998922+00:00 dns-debian13 release-recovery[1848]: ==> Rollback complete / Geri alma tamamlandı
+    2026-10-02T21:03:22.998922+00:00 dns-debian13 release-recovery[1848]:     Restored release source commit / Geri yüklenen sürümün kaynak commit'i: 4a379faed756b87070a7f621787e9cbe0eef7d04 (from the restored Agent's build record / geri yüklenen Agent'ın yapı kaydından)
+-- steps/15-collect/journal-setup-services.txt 4
+    2026-10-02T20:54:07.146031+00:00 dns-debian13 mariadbd[13193]: 2026-10-02 20:54:07 0 [Note] InnoDB: 128 rollback segments in 3 undo tablespaces are active.
+    2026-10-02T20:54:07.772283+00:00 dns-debian13 /etc/mysql/debian-start[13227]: Triggering myisam-recover for all MyISAM tables and aria-recover for all Aria tables
+    2026-10-02T21:02:31.894036+00:00 dns-debian13 mariadbd[753]: 2026-10-02 21:02:31 0 [Note] InnoDB: 128 rollback segments in 3 undo tablespaces are active.
+    2026-10-02T21:02:32.624666+00:00 dns-debian13 /etc/mysql/debian-start[999]: Triggering myisam-recover for all MyISAM tables and aria-recover for all Aria tables
+== result {"overall": "complete-for-review", "native_evidence": false, "request_id": "bdad11ee9d11619b064bca6d77049856"} {"attempts": {"automatic": [{"at": "2026-10-02T21:02:04.773355Z", "attempt": "1", "direction": "rollback", "operation": "update", "phase": "active"}, {"at": "2026-10-02T21:03:03.986385Z", "attempt": "2", "direction": "rollback", "operation": "rollback", "phase": "active"}], "automatic_count": 2, "journal_admissions": [{"at": "2026-10-02T21:02:04.840873+00:00", "attempt": "1", "snapshot": "20261002T210137Z-from-unknown-to-6acb22f6d5ce471d57131ed5ecff24c85b9d8844-bfcab1e903d37898575511458aef038e"}, {"at": "2026-10-02T21:03:04.052551+00:00", "attempt": "2", "snapshot": "20261002T210137Z-from-unkn
+findings ["debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']"]

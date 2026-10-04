@@ -1,0 +1,88 @@
+diff --git a/deploy/e2e/release-recovery/owner_update_trial.py b/deploy/e2e/release-recovery/owner_update_trial.py
+index c85264e7..b37d0671 100644
+--- a/deploy/e2e/release-recovery/owner_update_trial.py
++++ b/deploy/e2e/release-recovery/owner_update_trial.py
+@@ -1061,6 +1061,9 @@ class Trial:
+     def setup(self, checks: dict) -> str:
+         state = self.api("GET", "/api/v1/setup", purpose="ServerSetupGate").json() or {}
+         checks["before"] = {k: state.get(k) for k in ("status", "revision", "guidance", "required")}
++        # upd1 run copy v5 (not committed): owner chose DNS hosted elsewhere (single isolated node).
++        self.state["dns_external"] = (self.setup_draft_override or {}).get("dns_mode") == "external"
++        checks["dns_external"] = self.state["dns_external"]
+         if state.get("guidance") not in ("guided", "manual"):
+             state = self.api("PUT", "/api/v1/setup/guidance", {"revision": state.get("revision"), "guidance": "guided"},
+                              purpose="ServerSetupChoice guided").json() or {}
+@@ -1096,6 +1099,7 @@ class Trial:
+             checks["start_outcome"] = f"unknown, reconciling by reads: {exc}"
+         deadline = time.monotonic() + 3600
+         execution = None
++        waiting_since = None
+         with self.panel_client().polling() as view:
+             while time.monotonic() < deadline:
+                 try:
+@@ -1104,9 +1108,26 @@ class Trial:
+                     execution = {"poll_error": str(exc)}
+                 if isinstance(execution, dict) and execution.get("status") in ("succeeded", "failed"):
+                     break
++                # upd1 run copy v4 (not committed): an isolated host cannot satisfy the product's
++                # fixed public-resolver check (cmd/panel/server_setup_access_dns.go). As in the DNS
++                # pair driver (NON_DNS_SETUP_PHASES), a stable wait there settles the step.
++                if (isinstance(execution, dict) and execution.get("status") == "waiting"
++                        and execution.get("phase") in ("access_dns", "panel_certificate", "verification", "verify")):
++                    waiting_since = waiting_since or time.monotonic()
++                    if time.monotonic() - waiting_since >= 120:
++                        break
+                 time.sleep(5)
+         checks["execution"] = {k: (execution or {}).get(k) for k in ("status", "phase", "error")}
+         self.record_json("setup-execution.json", execution)
++        if (isinstance(execution, dict) and execution.get("status") == "waiting" and waiting_since is not None):
++            steps = {s.get("id"): s.get("status") for s in execution.get("steps") or []}
++            checks["isolated_host_wait"] = {"phase": execution.get("phase"), "steps": steps,
++                                            "stable_wait_seconds": round(time.monotonic() - waiting_since, 1)}
++            self.state["setup_waiting"] = execution.get("phase")
++            self.finding(f"{self.node_name}: server setup waits at {execution.get('phase')} "
++                         f"({(execution.get('error') or {}).get('code')}) on an isolated host; later wizard steps "
++                         f"were not run: {sorted(k for k, v in steps.items() if v == 'pending')}")
++            return "observed"
+         if not isinstance(execution, dict) or execution.get("status") != "succeeded":
+             raise StepFailed(f"server setup did not succeed: {checks['execution']}")
+         return "passed"
+@@ -1145,7 +1166,8 @@ class Trial:
+             present = address in accounts.text
+             mail.update(setup_http=setup.status, create_http=created.status, address=address, listed=present)
+             if not present:
+-                if self.cell.mail_required:
++                # upd1 run copy v4: the wizard never reached its mail steps on this isolated host.
++                if self.cell.mail_required and not self.state.get("setup_waiting"):
+                     raise StepFailed(f"mailbox was not created: HTTP {created.status} {created.json()}")
+                 self.finding(f"{self.node_name}: mailbox creation did not succeed: HTTP {created.status}")
+         seeded["mail"] = mail
+@@ -1263,7 +1285,8 @@ class Trial:
+                                                                          if s.get("cron", {}).get("ok")}) >= 2,
+                       firewall_tables=pre["firewall"].get("tables"), timers=sorted(pre["timers"]),
+                       database=self.state["pre_observation"].get("database", {}).get("status"))
+-        failing = [k for k in ("web_ok", "dns_ok") if not checks[k]]
++        failing = [k for k in ("web_ok", "dns_ok") if not checks[k]
++                   and not (k == "dns_ok" and self.state.get("dns_external"))]  # upd1 run copy v5
+         if seed["mail"].get("listed") and not checks["smtp_ok"]:
+             failing.append("smtp_ok")
+         self.state["cron_precondition"] = checks["cron_advancing"]
+@@ -1638,7 +1661,7 @@ class Trial:
+             failures.append(f"timers changed: {sorted(timers['changed'])}")
+         if not firewall_equal:
+             failures.append("firewall ruleset changed")
+-        if not checks["site_marker"] or not checks["dns"]:
++        if not checks["site_marker"] or (not checks["dns"] and not self.state.get("dns_external")):  # upd1 run copy v5
+             failures.append("site marker or DNS SOA not served")
+         if self.state["seed"]["mail"].get("listed") and not (post_work.get("mailbox", {}).get("present") and checks["smtp"]):
+             failures.append("mailbox or submission service missing")
+@@ -1714,6 +1737,9 @@ class Trial:
+             if key == "smtp" and not self.state.get("seed", {}).get("mail", {}).get("listed"):
+                 per[key] = {"verdict": "not-seeded"}
+                 continue
++            if key == "dns" and self.state.get("dns_external"):  # upd1 run copy v5
++                per[key] = {"verdict": "not-provided-external-dns"}
++                continue
+             if key == "cron" and not self.state.get("cron_precondition"):
+                 per[key] = {"verdict": "not-running-before-update"}
+                 continue

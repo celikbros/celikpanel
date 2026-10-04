@@ -44,6 +44,9 @@ func (a *Agent) ListCronJobs(req *ListCronJobsRequest, resp *ListCronJobsRespons
 	if err != nil {
 		return err
 	}
+	if err := requireCronInstalled(); err != nil {
+		return err
+	}
 
 	// Read crontab for user
 	cmd := exec.Command("crontab", "-u", username, "-l")
@@ -66,6 +69,9 @@ func (a *Agent) ListCronJobs(req *ListCronJobsRequest, resp *ListCronJobsRespons
 func (a *Agent) AddCronJob(req *AddCronJobRequest, resp *bool) error {
 	username, err := cronTenantUser(req.CronTenant)
 	if err != nil {
+		return err
+	}
+	if err := requireCronInstalled(); err != nil {
 		return err
 	}
 	if err := rejectCrontabInjection(map[string]string{
@@ -112,6 +118,9 @@ func (a *Agent) AddCronJob(req *AddCronJobRequest, resp *bool) error {
 func (a *Agent) UpdateCronJob(req *UpdateCronJobRequest, resp *bool) error {
 	username, err := cronTenantUser(req.CronTenant)
 	if err != nil {
+		return err
+	}
+	if err := requireCronInstalled(); err != nil {
 		return err
 	}
 	if err := rejectCrontabInjection(map[string]string{
@@ -180,6 +189,9 @@ func (a *Agent) UpdateCronJob(req *UpdateCronJobRequest, resp *bool) error {
 func (a *Agent) DeleteCronJob(req *DeleteCronJobRequest, resp *bool) error {
 	username, err := cronTenantUser(req.CronTenant)
 	if err != nil {
+		return err
+	}
+	if err := requireCronInstalled(); err != nil {
 		return err
 	}
 
@@ -434,13 +446,40 @@ func getCrontab(username string) string {
 	return string(output)
 }
 
+// errCronNotInstalled carries the exact transport text so the Panel can
+// classify it; see transport.CronNotInstalled.
+// errCronNotInstalled, Panel'in sınıflandırabilmesi için tam taşıma metnini
+// taşır; bkz. transport.CronNotInstalled.
+var errCronNotInstalled = errors.New(transport.CronNotInstalled)
+
+// cronLookPath is swapped by tests; production resolves `crontab` on PATH,
+// which is the command every cron implementation (cron, cronie,
+// systemd-cron, …) provides and the one these RPCs run.
+// cronLookPath testlerde değiştirilir; üretimde `crontab` PATH'te çözülür.
+var cronLookPath = exec.LookPath
+
+// requireCronInstalled answers the one known host condition before any
+// crontab is read or written. Without it a missing cron made ListCronJobs
+// return an empty list (indistinguishable from "no jobs") and Update/Delete
+// report "cron job not found" — each hiding the real reason.
+// requireCronInstalled, herhangi bir crontab okunmadan ya da yazılmadan önce
+// bilinen tek makine koşulunu yanıtlar. Onsuz eksik cron, ListCronJobs'u boş
+// liste ("görev yok"tan ayırt edilemez) ve Update/Delete'i "cron job not
+// found" döndürmeye itiyordu — her biri gerçek nedeni gizliyordu.
+func requireCronInstalled() error {
+	if _, err := cronLookPath("crontab"); err != nil {
+		return errCronNotInstalled
+	}
+	return nil
+}
+
 func setCrontab(username, content string) error {
 	// Report a missing cron package honestly instead of a bare "operation
 	// failed" — scheduled tasks need the cron service installed first.
 	// Eksik cron paketini "operation failed" yerine dürüstçe bildir —
 	// zamanlanmış görevler önce cron servisinin kurulmasını ister.
-	if _, err := exec.LookPath("crontab"); err != nil {
-		return fmt.Errorf("cron is not installed on this server")
+	if err := requireCronInstalled(); err != nil {
+		return err
 	}
 	cmd := exec.Command("crontab", "-u", username, "-")
 	cmd.Stdin = strings.NewReader(content)

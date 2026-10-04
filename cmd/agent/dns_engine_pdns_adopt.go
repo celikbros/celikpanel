@@ -10,6 +10,8 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
+	"github.com/alicelik/celikpanel/internal/dnsenginerecovery"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
@@ -39,96 +41,7 @@ func verifyPDNSAdoptionDatabase(
 		return err
 	}
 	defer tx.Rollback()
-
-	expected := make(map[string]transport.DNSEngineSwitchZoneSnapshot, len(manifest.Zones))
-	for _, zone := range manifest.Zones {
-		expected[zone.Domain] = zone
-		zoneType, records, found, err := readPDNSV3ZoneTx(ctx, tx, zone.Domain)
-		if err != nil {
-			return err
-		}
-		if zone.Delete {
-			if found {
-				return errors.New("PowerDNS adoption found a ledger-deleted zone")
-			}
-			continue
-		}
-		if !found {
-			return errors.New("PowerDNS adoption is missing a ledger zone")
-		}
-		actual, err := mutationpayload.CanonicalDNSZoneSyncV3(
-			transport.DNSEnginePowerDNS, manifest.TargetEpoch,
-			zone.DesiredGeneration, zone.Domain, false, zoneType, records,
-		)
-		if err != nil || actual.Qualifier != zone.ZoneQualifier ||
-			actual.ZoneType != zone.ZoneType ||
-			!reflect.DeepEqual(actual.Records, zone.Records) {
-			return errors.New("PowerDNS adoption zone differs from the panel ledger")
-		}
-	}
-
-	rows, err := tx.QueryContext(ctx, `
-		SELECT name, type, COALESCE(master, ''), COALESCE(account, '') FROM domains
-		ORDER BY name COLLATE BINARY, type COLLATE BINARY, id
-	`)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-	seen := make(map[string]struct{})
-	for rows.Next() {
-		var name, zoneType, master, account string
-		if err := rows.Scan(&name, &zoneType, &master, &account); err != nil {
-			return err
-		}
-		if !serviceMutationCanonicalFQDN(name) {
-			return errors.New("PowerDNS adoption found a noncanonical zone name")
-		}
-		if _, duplicate := seen[name]; duplicate {
-			return errors.New("PowerDNS adoption found duplicate zone authority")
-		}
-		seen[name] = struct{}{}
-		if zone, listed := expected[name]; listed {
-			if zone.Delete || zoneType != zone.ZoneType {
-				return errors.New("PowerDNS adoption zone type differs from the panel ledger")
-			}
-			continue
-		}
-		if manifest.Topology != transport.DNSTopologyPaired ||
-			(strings.ToUpper(zoneType) != "SLAVE" &&
-				strings.ToUpper(zoneType) != "SECONDARY") ||
-			master != manifest.PeerIP || account != "celikpanel" {
-			return errors.New("PowerDNS adoption found an unowned extra zone")
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return err
-	}
-	var supermasters, exactSupermasters int
-	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM supermasters`).Scan(
-		&supermasters,
-	); err != nil {
-		return err
-	}
-	if manifest.Topology == transport.DNSTopologyPaired {
-		if err := tx.QueryRowContext(ctx, `
-			SELECT COUNT(*) FROM supermasters
-			WHERE ip = ? AND nameserver = ? AND account = 'celikpanel'
-		`, manifest.PeerIP, manifest.PeerNS).Scan(&exactSupermasters); err != nil {
-			return err
-		}
-		if supermasters != 1 || exactSupermasters != 1 {
-			return errors.New("PowerDNS adoption autoprimary peer differs from the manifest")
-		}
-	} else if supermasters != 0 {
-		return errors.New("PowerDNS standalone adoption found an autoprimary peer")
-	}
-	var integrity string
-	if err := tx.QueryRowContext(ctx, `PRAGMA quick_check`).Scan(&integrity); err != nil ||
-		integrity != "ok" {
-		if err == nil {
-			err = errors.New("PowerDNS adoption database failed quick_check")
-		}
+	if err := dnsenginerecovery.VerifyPDNSAdoptionDatabaseTx(ctx, tx, manifest); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -373,24 +286,7 @@ func mutatePDNSAdoptionAfterConfigProof(
 }
 
 func validatePDNSAdoptionUnitEvidence(units []dnsUnitSnapshot) error {
-	if !dnsUnitSnapshotNamesEqual(
-		units, []string{"bind9.service", "named.service", "pdns.service"},
-	) {
-		return errors.New("PowerDNS adoption unit evidence is incomplete")
-	}
-	for _, unit := range units {
-		active := unit.ActiveState == "active"
-		if unit.Name == "pdns.service" {
-			if !active {
-				return errors.New("PowerDNS adoption target is not running")
-			}
-			continue
-		}
-		if active {
-			return errors.New("PowerDNS adoption found another DNS engine running")
-		}
-	}
-	return nil
+	return dnsengineartifact.ValidatePDNSAdoptionUnits(units)
 }
 
 type pdnsAdoptionEvidenceStage uint8
@@ -399,6 +295,10 @@ const (
 	pdnsAdoptionEvidencePreflight pdnsAdoptionEvidenceStage = iota + 1
 	pdnsAdoptionEvidenceTarget
 	pdnsAdoptionEvidenceRollback
+	// pdnsAdoptionEvidenceRolledBack re-proves a V1 adoption whose inverse
+	// effects are already complete (journal at rolled-back). It performs no
+	// effect; only terminal publication and journal retirement remain.
+	pdnsAdoptionEvidenceRolledBack
 )
 
 func validatePDNSAdoptionTransactionBinding(
@@ -447,6 +347,20 @@ func validatePDNSAdoptionTransactionBinding(
 		if stateExists {
 			return errors.New("PowerDNS adoption rollback did not restore the empty source receipt")
 		}
+	case pdnsAdoptionEvidenceRolledBack:
+		// V2 journals never reach the Agent's adoption inverse; this stage is
+		// V1-only so a rolled-back V1 journal is re-proved with exactly the
+		// checks the rolling-back stage applies, and nothing is restored.
+		if expectedJournal.Schema != dnsengineartifact.SwitchJournalSchemaV1 ||
+			expectedJournal.Phase != dnsSwitchPhaseRolledBack {
+			return errors.New("PowerDNS adoption rolled-back journal is not an exact V1 checkpoint")
+		}
+		if !journalExists || !reflect.DeepEqual(actualJournal, expectedJournal) {
+			return errors.New("PowerDNS adoption rollback journal identity changed")
+		}
+		if stateExists {
+			return errors.New("PowerDNS adoption rolled-back journal has a DNS engine receipt; the empty source receipt was not kept")
+		}
 	default:
 		return errors.New("PowerDNS adoption evidence stage is unsupported")
 	}
@@ -470,33 +384,37 @@ func verifyPDNSAdoptionTransactionBinding(
 	)
 }
 
+// transitionPDNSAdoptionJournalToRollback records the adoption's rollback
+// decision before any inverse effect. The journal on disk decides, not the
+// phase last written: only this operation's journal at intent is moved to
+// rolling-back, an already durable rolling-back or rolled-back journal resumes,
+// and a durable target-verified or committed journal, an unreadable or foreign
+// journal, or a rolling-back write that cannot be proved durable returns a
+// *dnsSwitchInProcessHandoffError and admits no inverse.
 func transitionPDNSAdoptionJournalToRollback(
 	expected dnsEngineSwitchJournal,
 	read func() (dnsEngineSwitchJournal, bool, error),
 	write func(dnsEngineSwitchJournal) error,
+	cause error,
 ) (dnsEngineSwitchJournal, error) {
 	if read == nil || write == nil {
 		return dnsEngineSwitchJournal{},
 			errors.New("PowerDNS adoption rollback journal access is unavailable")
 	}
-	if expected.Phase != dnsSwitchPhaseIntent {
-		return dnsEngineSwitchJournal{},
-			errors.New("PowerDNS adoption rollback can start only from intent")
-	}
 	actual, exists, err := read()
-	if err != nil {
-		return dnsEngineSwitchJournal{}, err
+	if err == nil && exists {
+		switch actual.Phase {
+		case dnsSwitchPhaseIntent, dnsSwitchPhaseRollingBack, dnsSwitchPhaseRolledBack,
+			dnsSwitchPhaseTargetVerified, dnsSwitchPhaseCommitted:
+		default:
+			return dnsEngineSwitchJournal{}, &dnsSwitchInProcessHandoffError{cause: errors.Join(
+				cause, fmt.Errorf("PowerDNS adoption journal is at phase %s, which has no rollback decision", actual.Phase),
+			)}
+		}
 	}
-	if !exists || !reflect.DeepEqual(actual, expected) {
-		return dnsEngineSwitchJournal{},
-			errors.New("PowerDNS adoption rollback journal identity changed")
-	}
-	next := expected
-	next.Phase = dnsSwitchPhaseRollingBack
-	if err := write(next); err != nil {
-		return dnsEngineSwitchJournal{}, err
-	}
-	return next, nil
+	return decideDNSSwitchInProcessRollback(
+		expected, dnsSwitchInProcessJournalOps{read: read, write: write}, cause,
+	)
 }
 
 func handlePDNSAdoptionIntentJournalWriteError(
@@ -627,6 +545,30 @@ func rollbackPDNSAdoption(
 	)
 }
 
+// pdnsAdoptionRollbackStage selects the Agent's adoption rollback proof. At
+// rolling-back the Agent restores the empty source receipt and proves the
+// owner's PowerDNS. At rolled-back the inverse effects of this exact operation
+// are already durable: a restarted Agent re-proves the restored source with
+// the same checks and changes nothing, then its caller publishes the terminal
+// verdict (or keeps an already terminal one) and retires the journal. Only V1
+// journals reach this inverse; V2 stays with the owner recovery command.
+func pdnsAdoptionRollbackStage(
+	journal dnsEngineSwitchJournal,
+) (stage pdnsAdoptionEvidenceStage, restore bool, err error) {
+	switch journal.Phase {
+	case dnsSwitchPhaseRollingBack:
+		return pdnsAdoptionEvidenceRollback, true, nil
+	case dnsSwitchPhaseRolledBack:
+		if journal.Schema != dnsengineartifact.SwitchJournalSchemaV1 {
+			return 0, false, errors.New("PowerDNS adoption rolled-back journal is not V1; only the owner recovery command may finish it")
+		}
+		return pdnsAdoptionEvidenceRolledBack, false, nil
+	default:
+		// The rollback-stage binding refuses any other phase, as before.
+		return pdnsAdoptionEvidenceRollback, true, nil
+	}
+}
+
 func rollbackPDNSAdoptionOnCertifiedProfile(
 	ctx context.Context,
 	profile hostplatform.Profile,
@@ -635,53 +577,54 @@ func rollbackPDNSAdoptionOnCertifiedProfile(
 	journal dnsEngineSwitchJournal,
 	configs pdnsAdoptionConfigEvidence,
 ) error {
-	return rollbackPDNSAdoptionAfterConfigProof(
-		func() error {
-			return configs.verify(ctx, profile, manifest)
+	ops, err := pdnsAdoptionRollbackOps(
+		journal,
+		func(proofCtx context.Context) error {
+			return configs.verify(proofCtx, profile, manifest)
 		},
-		func() error {
-			return rollbackPDNSAdoptionWithOps(
-				ctx,
-				func() error {
-					return restoreDNSEngineStateSnapshot(journal.StateBefore)
-				},
-				func(verifyCtx context.Context) error {
-					return verifyPDNSAdoptionEvidenceOnCertifiedProfile(
-						verifyCtx, profile, systemctl, manifest, journal,
-						&configs, pdnsAdoptionEvidenceRollback,
-					)
-				},
+		func() error { return restoreDNSEngineStateSnapshot(journal.StateBefore) },
+		func(verifyCtx context.Context, stage pdnsAdoptionEvidenceStage) error {
+			return verifyPDNSAdoptionEvidenceOnCertifiedProfile(
+				verifyCtx, profile, systemctl, manifest, journal,
+				&configs, stage,
 			)
 		},
 	)
-}
-
-func rollbackPDNSAdoptionAfterConfigProof(
-	proveConfigs func() error,
-	rollback func() error,
-) error {
-	if proveConfigs == nil || rollback == nil {
-		return errors.New("PowerDNS adoption rollback requires config proof")
-	}
-	if err := proveConfigs(); err != nil {
+	if err != nil {
 		return err
 	}
-	return rollback()
+	return dnsenginerecovery.RollbackPDNSAdoption(ctx, ops)
 }
 
-func rollbackPDNSAdoptionWithOps(
-	ctx context.Context,
+// pdnsAdoptionRollbackOps binds the Agent's adoption rollback steps to the
+// journal's stage: the state receipt is restored only at rolling-back, and the
+// restored-source proof runs with the stage pdnsAdoptionRollbackStage selects.
+func pdnsAdoptionRollbackOps(
+	journal dnsEngineSwitchJournal,
+	proveConfigs func(context.Context) error,
 	restoreState func() error,
-	verifyRestored func(context.Context) error,
-) error {
-	if ctx == nil || restoreState == nil || verifyRestored == nil {
-		return errors.New("invalid PowerDNS adoption rollback operations")
+	verifyRestored func(context.Context, pdnsAdoptionEvidenceStage) error,
+) (dnsenginerecovery.PDNSAdoptionRollbackOps, error) {
+	if proveConfigs == nil || restoreState == nil || verifyRestored == nil {
+		return dnsenginerecovery.PDNSAdoptionRollbackOps{},
+			errors.New("PowerDNS adoption rollback operations are incomplete")
 	}
-	restoreErr := restoreState()
-	if restoreErr != nil {
-		return restoreErr
+	stage, restore, err := pdnsAdoptionRollbackStage(journal)
+	if err != nil {
+		return dnsenginerecovery.PDNSAdoptionRollbackOps{}, err
 	}
-	return verifyRestored(ctx)
+	return dnsenginerecovery.PDNSAdoptionRollbackOps{
+		ProveConfigs: proveConfigs,
+		RestoreState: func(context.Context) error {
+			if !restore {
+				return nil
+			}
+			return restoreState()
+		},
+		VerifyRestored: func(verifyCtx context.Context) error {
+			return verifyRestored(verifyCtx, stage)
+		},
+	}, nil
 }
 
 func adoptPDNS(
@@ -818,31 +761,26 @@ func adoptPDNSOnCertifiedProfile(
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	rollback := func(cause error) (transport.SwitchDNSEngineV1Response, error) {
-		rollingBack, transitionErr := transitionPDNSAdoptionJournalToRollback(
-			journal, readDNSEngineSwitchJournal, writeJournal,
+		return transport.SwitchDNSEngineV1Response{}, runGatedDNSSwitchRollback(
+			&journal, cause, gatedDNSSwitchRollbackOps{
+				decide: func(current dnsEngineSwitchJournal, cause error) (dnsEngineSwitchJournal, error) {
+					return transitionPDNSAdoptionJournalToRollback(
+						current, readDNSEngineSwitchJournal, writeJournal, cause,
+					)
+				},
+				inverse: func(decided dnsEngineSwitchJournal) error {
+					recoveryCtx, cancel, contextErr := newDNSEngineRollbackContext(ctx)
+					if contextErr != nil {
+						return contextErr
+					}
+					defer cancel()
+					return rollbackPDNSAdoptionOnCertifiedProfile(
+						recoveryCtx, profile, systemctl, manifest, decided, configs,
+					)
+				},
+				write: writeJournal,
+			},
 		)
-		if transitionErr != nil {
-			return transport.SwitchDNSEngineV1Response{}, errors.Join(cause, transitionErr)
-		}
-		journal = rollingBack
-		var journalErr error
-		recoveryCtx, cancel, contextErr := newDNSEngineRollbackContext(ctx)
-		if contextErr != nil {
-			return transport.SwitchDNSEngineV1Response{},
-				errors.Join(cause, journalErr, contextErr)
-		}
-		defer cancel()
-		rollbackErr := rollbackPDNSAdoptionOnCertifiedProfile(
-			recoveryCtx, profile, systemctl, manifest, journal, configs,
-		)
-		if rollbackErr == nil {
-			journal.Phase = dnsSwitchPhaseRolledBack
-			journalErr = writeJournal(journal)
-			if journalErr == nil {
-				journalErr = removeDNSEngineSwitchJournal()
-			}
-		}
-		return transport.SwitchDNSEngineV1Response{}, errors.Join(cause, journalErr, rollbackErr)
 	}
 	if err := mutatePDNSAdoptionAfterConfigProof(
 		ctx, profile, manifest, configs,
@@ -878,10 +816,20 @@ func adoptPDNSOnCertifiedProfile(
 		return rollback(err)
 	}
 	journal.Phase = dnsSwitchPhaseTargetVerified
+	var verifiedWriteErr error
 	if err := mutatePDNSAdoptionAfterConfigProof(
 		ctx, profile, manifest, configs,
-		func() error { return writeJournal(journal) },
+		func() error {
+			verifiedWriteErr = writeJournal(journal)
+			return verifiedWriteErr
+		},
 	); err != nil {
+		if verifiedWriteErr != nil {
+			// The write may be durable although it reported failure; the
+			// rollback gate reads the journal back and goes forward when it
+			// is, and takes the rollback decision only from intent.
+			return rollback(err)
+		}
 		return transport.SwitchDNSEngineV1Response{}, err
 	}
 	journal.Phase = dnsSwitchPhaseCommitted

@@ -5,19 +5,13 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"errors"
 	"fmt"
-	"io"
-	"os"
-	"path"
-	"strings"
 
+	"github.com/alicelik/celikpanel/internal/bindroot"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"golang.org/x/sys/unix"
 )
-
-const bindVendorFileMaxSize = 64 << 10
 
 type bindVendorFileContract struct {
 	unitPath         string
@@ -26,48 +20,19 @@ type bindVendorFileContract struct {
 	environmentBytes []byte
 }
 
-const certifiedAPTBINDVendorUnit = "[Unit]\n" +
-	"Description=BIND Domain Name Server\n" +
-	"Documentation=man:named(8)\n" +
-	"After=network.target\nWants=nss-lookup.target\nBefore=nss-lookup.target\n\n" +
-	"[Service]\nType=notify\nEnvironmentFile=-/etc/default/named\n" +
-	"ExecStart=/usr/sbin/named -f $OPTIONS\n" +
-	"ExecReload=/usr/sbin/rndc reload\nExecStop=/usr/sbin/rndc stop\n" +
-	"Restart=on-failure\n\n[Install]\nWantedBy=multi-user.target\nAlias=bind9.service\n"
-
-const certifiedAPTBINDVendorEnvironment = "#\n# run resolvconf?\n" +
-	"RESOLVCONF=no\n\n# startup options for the server\nOPTIONS=\"-u bind\"\n"
-
-const certifiedPacmanBINDVendorUnit = "[Unit]\n" +
-	"Description=Internet domain name server\nAfter=network.target\n\n" +
-	"[Service]\nExecStart=/usr/bin/named -f -u named\n" +
-	"ExecReload=/usr/bin/kill -HUP $MAINPID\n\n" +
-	"[Install]\nWantedBy=multi-user.target\n"
+const certifiedAPTBINDVendorUnit = bindroot.CertifiedAPTBINDVendorUnit
+const certifiedAPTBINDVendorEnvironment = bindroot.CertifiedAPTBINDVendorEnvironment
+const certifiedPacmanBINDVendorUnit = bindroot.CertifiedPacmanBINDVendorUnit
 
 func bindVendorContract(profile hostplatform.Profile) (bindVendorFileContract, error) {
-	switch profile.PackageManager {
-	case hostplatform.PackageManagerAPT:
-		if err := certifyAPTBINDCapabilities(profile); err != nil {
-			return bindVendorFileContract{}, err
-		}
-		return bindVendorFileContract{
-			unitPath:         "/usr/lib/systemd/system/named.service",
-			environmentPath:  "/etc/default/named",
-			unitBytes:        []byte(certifiedAPTBINDVendorUnit),
-			environmentBytes: []byte(certifiedAPTBINDVendorEnvironment),
-		}, nil
-	case hostplatform.PackageManagerPacman:
-		if err := certifyPacmanBINDCapabilities(profile); err != nil {
-			return bindVendorFileContract{}, err
-		}
-		return bindVendorFileContract{
-			unitPath:  "/usr/lib/systemd/system/named.service",
-			unitBytes: []byte(certifiedPacmanBINDVendorUnit),
-		}, nil
-	default:
-		return bindVendorFileContract{},
-			errors.New("BIND vendor unit proof is unsupported on this package manager")
+	shared, err := bindroot.CertifiedVendorContract(profile)
+	if err != nil {
+		return bindVendorFileContract{}, err
 	}
+	return bindVendorFileContract{
+		unitPath: shared.UnitPath, environmentPath: shared.EnvironmentPath,
+		unitBytes: shared.UnitBytes, environmentBytes: shared.EnvironmentBytes,
+	}, nil
 }
 
 func inspectHostBINDVendorFiles(
@@ -146,19 +111,10 @@ func verifyExactAPTBINDVendorPackageOwnership(
 	if ctx == nil || lookup == nil {
 		return errors.New("invalid APT BIND vendor package ownership proof")
 	}
-	for _, file := range []struct {
-		path string
-		want string
-	}{
-		{path: "/usr/lib/systemd/system/named.service", want: "bind9: /usr/lib/systemd/system/named.service\n"},
-		{path: "/etc/default/named", want: "bind9: /etc/default/named\n"},
-	} {
-		output, err := lookup(ctx, file.path)
-		if err != nil {
-			return fmt.Errorf("verify BIND vendor package ownership for %s: %w", file.path, err)
-		}
-		if string(output) != file.want {
-			return fmt.Errorf("%s is not owned by the exact bind9 package", file.path)
+	for _, path := range []string{"/usr/lib/systemd/system/named.service", "/etc/default/named"} {
+		output, err := lookup(ctx, path)
+		if err := bindroot.VerifyAPTVendorOwner(path, output, err); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -173,13 +129,7 @@ func verifyExactPacmanBINDVendorPackageOwnership(
 	}
 	const unit = "/usr/lib/systemd/system/named.service"
 	output, err := lookup(ctx, unit)
-	if err != nil {
-		return fmt.Errorf("verify BIND vendor package ownership for %s: %w", unit, err)
-	}
-	if string(output) != "bind\n" {
-		return errors.New("BIND vendor unit is not owned by the exact bind package")
-	}
-	return nil
+	return bindroot.VerifyPacmanVendorOwner(unit, output, err)
 }
 
 // inspectBINDVendorFilesAt reads the package unit and its effective APT
@@ -249,89 +199,12 @@ func readExactRootOwnedBINDFileAt(
 	absolutePath string,
 	label string,
 ) ([]byte, bindSecureFileIdentity, error) {
-	if !path.IsAbs(absolutePath) || path.Clean(absolutePath) != absolutePath ||
-		absolutePath == "/" {
-		return nil, bindSecureFileIdentity{}, fmt.Errorf("%s path is not canonical", label)
-	}
-	if _, err := validateInheritedBINDAnchorFD(
-		rootFD, "BIND vendor filesystem root",
-	); err != nil {
+	data, observed, err := bindroot.ReadExactRootOwnedFileAt(rootFD, absolutePath, label)
+	if err != nil {
 		return nil, bindSecureFileIdentity{}, err
-	}
-	components := strings.Split(strings.TrimPrefix(absolutePath, "/"), "/")
-	if len(components) < 2 {
-		return nil, bindSecureFileIdentity{}, fmt.Errorf("%s path is incomplete", label)
-	}
-	currentFD, err := unix.FcntlInt(uintptr(rootFD), unix.F_DUPFD_CLOEXEC, 3)
-	if err != nil {
-		return nil, bindSecureFileIdentity{}, fmt.Errorf("duplicate BIND vendor root: %w", err)
-	}
-	defer unix.Close(currentFD)
-	for _, component := range components[:len(components)-1] {
-		// Vendor unit directories (/lib, /usr/lib, /etc/systemd/...) are
-		// distribution-owned ancestors, not directories this product created.
-		// Satıcı unit dizinleri (/lib, /usr/lib, /etc/systemd/...) dağıtıma ait
-		// üst dizinlerdir; bu ürünün oluşturduğu dizinler değildir.
-		nextFD, _, openErr := openInheritedBINDAnchorAt(
-			currentFD, component,
-			path.Join("/", strings.Join(components[:len(components)-1], "/")),
-		)
-		if openErr != nil {
-			return nil, bindSecureFileIdentity{}, openErr
-		}
-		unix.Close(currentFD)
-		currentFD = nextFD
-	}
-	leaf := components[len(components)-1]
-	fd, err := unix.Openat2(currentFD, leaf, &unix.OpenHow{
-		Flags: uint64(unix.O_RDONLY | unix.O_CLOEXEC | unix.O_NOFOLLOW | unix.O_NONBLOCK),
-		Resolve: unix.RESOLVE_BENEATH |
-			unix.RESOLVE_NO_SYMLINKS |
-			unix.RESOLVE_NO_MAGICLINKS,
-	})
-	if errors.Is(err, unix.ENOSYS) {
-		return nil, bindSecureFileIdentity{}, fmt.Errorf("%s requires Linux openat2: %w", label, err)
-	}
-	if err != nil {
-		return nil, bindSecureFileIdentity{}, fmt.Errorf("open %s: %w", label, err)
-	}
-	file := os.NewFile(uintptr(fd), absolutePath)
-	if file == nil {
-		_ = unix.Close(fd)
-		return nil, bindSecureFileIdentity{}, fmt.Errorf("open %s handle", label)
-	}
-	defer file.Close()
-	var before unix.Stat_t
-	if err := unix.Fstat(fd, &before); err != nil {
-		return nil, bindSecureFileIdentity{}, fmt.Errorf("stat %s: %w", label, err)
-	}
-	if before.Mode&unix.S_IFMT != unix.S_IFREG || before.Uid != 0 || before.Gid != 0 ||
-		before.Mode&bindDirectoryModeMask != 0o0644 || before.Nlink != 1 ||
-		before.Size < 1 || before.Size > bindVendorFileMaxSize {
-		return nil, bindSecureFileIdentity{},
-			fmt.Errorf("%s is not an exact root:root 0644 single-link regular file", label)
-	}
-	if err := rejectBINDDirectoryACL(fd, label); err != nil {
-		return nil, bindSecureFileIdentity{}, err
-	}
-	data, err := io.ReadAll(io.LimitReader(file, bindVendorFileMaxSize+1))
-	if err != nil {
-		return nil, bindSecureFileIdentity{}, fmt.Errorf("read %s: %w", label, err)
-	}
-	if len(data) == 0 || len(data) > bindVendorFileMaxSize || int64(len(data)) != before.Size {
-		return nil, bindSecureFileIdentity{}, fmt.Errorf("%s size changed while reading", label)
-	}
-	var after unix.Stat_t
-	if err := unix.Fstat(fd, &after); err != nil {
-		return nil, bindSecureFileIdentity{}, fmt.Errorf("restat %s: %w", label, err)
-	}
-	if before.Dev != after.Dev || before.Ino != after.Ino || before.Size != after.Size ||
-		before.Uid != after.Uid || before.Gid != after.Gid || before.Mode != after.Mode ||
-		before.Nlink != after.Nlink || before.Mtim != after.Mtim || before.Ctim != after.Ctim {
-		return nil, bindSecureFileIdentity{}, fmt.Errorf("%s changed while reading", label)
 	}
 	return data, bindSecureFileIdentity{
-		Device: uint64(after.Dev), Inode: after.Ino, Size: after.Size,
-		Digest: sha256.Sum256(data),
+		Device: observed.Device, Inode: observed.Inode,
+		Size: observed.Size, Digest: observed.Digest,
 	}, nil
 }

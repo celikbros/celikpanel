@@ -1,0 +1,28 @@
+2026-09-30T06:11:23.392987+00:00 dns-debian13 systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-09-30T06:11:23.433174+00:00 dns-debian13 systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-09-30T06:11:23.644716+00:00 dns-debian13 panel[3953]: 2026/09/30 06:11:23 Starting CelikPanel Backend...
+2026-09-30T06:11:23.653938+00:00 dns-debian13 panel[3953]: 2026/09/30 06:11:23 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-09-30T06:11:23.655169+00:00 dns-debian13 panel[3953]: 2026/09/30 06:11:23 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-09-30T06:11:23.656130+00:00 dns-debian13 panel[3953]: 2026/09/30 06:11:23 Connected to Agent RPC; preparing normal management access
+2026-09-30T06:11:23.692756+00:00 dns-debian13 panel[3953]: 2026/09/30 06:11:23 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-debian13": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-09-30T06:11:23.695787+00:00 dns-debian13 panel[3953]: 2026/09/30 06:11:23 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-09-30T06:11:23.698508+00:00 dns-debian13 panel[3953]: 2026/09/30 06:11:23 Panel ready on :2083 (HTTPS)
+2026-09-30T06:11:24.459146+00:00 dns-debian13 systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-09-30T06:11:24.474361+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-09-30T06:11:24.474612+00:00 dns-debian13 systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-09-30T06:11:24.475208+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Consumed 428ms CPU time, 79.8M memory peak.
+2026-09-30T06:11:24.603734+00:00 dns-debian13 systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-09-30T06:11:24.640581+00:00 dns-debian13 systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-09-30T06:11:24.879644+00:00 dns-debian13 panel[4018]: 2026/09/30 06:11:24 Starting CelikPanel Backend...
+2026-09-30T06:11:24.886339+00:00 dns-debian13 panel[4018]: 2026/09/30 06:11:24 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-09-30T06:11:24.886968+00:00 dns-debian13 panel[4018]: 2026/09/30 06:11:24 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-09-30T06:11:24.887904+00:00 dns-debian13 panel[4018]: 2026/09/30 06:11:24 Connected to Agent RPC; preparing normal management access
+2026-09-30T06:11:24.902965+00:00 dns-debian13 panel[4018]: 2026/09/30 06:11:24 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-debian13": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-09-30T06:11:24.904988+00:00 dns-debian13 panel[4018]: 2026/09/30 06:11:24 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-09-30T06:11:24.906261+00:00 dns-debian13 panel[4018]: 2026/09/30 06:11:24 Panel ready on :2083 (HTTPS)
+2026-09-30T06:11:26.892723+00:00 dns-debian13 panel[4018]: 2026/09/30 06:11:26 http: TLS handshake error from 127.0.0.1:60986: EOF
+2026-09-30T06:11:27.761479+00:00 dns-debian13 panel[4018]: 2026/09/30 06:11:27 http: TLS handshake error from 127.0.0.1:32786: EOF
+2026-09-30T06:11:45.500466+00:00 dns-debian13 panel[4018]: 2026/09/30 06:11:45 http: TLS handshake error from 127.0.0.1:36646: EOF
+2026-09-30T06:11:46.523934+00:00 dns-debian13 panel[4018]: 2026/09/30 06:11:46 http: TLS handshake error from 127.0.0.1:36700: EOF
+2026-09-30T06:12:06.452013+00:00 dns-debian13 panel[4018]: 2026/09/30 06:12:06 http: TLS handshake error from 127.0.0.1:44748: EOF
+2026-09-30T06:12:24.765422+00:00 dns-debian13 panel[4018]: 2026/09/30 06:12:24 http: TLS handshake error from 127.0.0.1:45732: EOF

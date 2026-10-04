@@ -15,13 +15,8 @@ import (
 )
 
 const (
-	dnsZoneSyncCommitPhasePrefix = "commit/dns-zone-sync/v1/"
-	dnsZoneSyncReceiptTable      = "celikpanel_dns_zone_sync_receipts"
-	dnsZoneSyncReceiptSchema     = "dns-zone-sync/v1"
-
-	dnsZoneSyncCommitIntent    = "intent"
-	dnsZoneSyncCommitApplied   = "applied"
-	dnsZoneSyncCommitPublished = "published"
+	dnsZoneSyncReceiptTable  = "celikpanel_dns_zone_sync_receipts"
+	dnsZoneSyncReceiptSchema = "dns-zone-sync/v1"
 
 	dnsZoneSyncActionSync   = "sync"
 	dnsZoneSyncActionDelete = "delete"
@@ -62,50 +57,6 @@ type dnsZoneSyncAuthorityAmbiguityError struct{ err error }
 
 func (e *dnsZoneSyncAuthorityAmbiguityError) Error() string { return e.err.Error() }
 func (e *dnsZoneSyncAuthorityAmbiguityError) Unwrap() error { return e.err }
-
-func formatDNSZoneSyncCommitPhase(
-	state, requestID, domain, qualifier string,
-) (string, error) {
-	if (state != dnsZoneSyncCommitIntent &&
-		state != dnsZoneSyncCommitApplied &&
-		state != dnsZoneSyncCommitPublished) ||
-		!validMutationIdentity(requestID) ||
-		!serviceMutationCanonicalFQDN(domain) ||
-		!mutationpayload.ValidDNSZoneSyncQualifier(qualifier) {
-		return "", errors.New("invalid DNS zone sync commit phase identity")
-	}
-	return dnsZoneSyncCommitPhasePrefix + state + "/" + requestID + "/" +
-		domain + "/" + qualifier, nil
-}
-
-func parseDNSZoneSyncCommitPhase(value string) (
-	state, requestID, domain, qualifier string,
-	err error,
-) {
-	if !strings.HasPrefix(value, dnsZoneSyncCommitPhasePrefix) {
-		return "", "", "", "", errors.New("not a DNS zone sync commit phase")
-	}
-	remainder := strings.TrimPrefix(value, dnsZoneSyncCommitPhasePrefix)
-	state, remainder, found := strings.Cut(remainder, "/")
-	if !found {
-		return "", "", "", "", errors.New("invalid DNS zone sync commit phase")
-	}
-	requestID, remainder, found = strings.Cut(remainder, "/")
-	if !found {
-		return "", "", "", "", errors.New("invalid DNS zone sync commit phase")
-	}
-	domain, qualifier, found = strings.Cut(remainder, "/")
-	if !found {
-		return "", "", "", "", errors.New("invalid DNS zone sync commit phase")
-	}
-	canonical, formatErr := formatDNSZoneSyncCommitPhase(
-		state, requestID, domain, qualifier,
-	)
-	if formatErr != nil || canonical != value {
-		return "", "", "", "", errors.New("invalid DNS zone sync commit phase")
-	}
-	return state, requestID, domain, qualifier, nil
-}
 
 func activeDirectDNSZoneSyncJob(job *ServiceMutationJob) bool {
 	return job != nil && serviceMutationStatusActive(job.Status) &&

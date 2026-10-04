@@ -1,0 +1,102 @@
+{
+  "agreement": {
+    "known_sources": [],
+    "phase": {},
+    "reasons": [],
+    "sources": [
+      "shell"
+    ],
+    "verdict": "no-known-source"
+  },
+  "cli": {
+    "boot_id": "aebe847f-6251-4831-a34c-9f3b64df07bc",
+    "captured_at": "2026-10-01T11:28:08.489237Z",
+    "en": {
+      "returncode": null,
+      "status": "unavailable",
+      "stderr": null,
+      "stdout": null
+    },
+    "json": {
+      "returncode": null,
+      "status": "unavailable",
+      "stderr": null,
+      "stdout": null
+    },
+    "tr": {
+      "returncode": null,
+      "status": "unavailable",
+      "stderr": null,
+      "stdout": null
+    }
+  },
+  "guidance_api": null,
+  "guidance_cli": null,
+  "index": 2,
+  "observed": null,
+  "recovery_api": {
+    "body": null,
+    "http": 404
+  },
+  "t": 1790854087.4430754,
+  "update_card": {
+    "keys": [
+      "panelUpdate.title",
+      "panelUpdate.running"
+    ],
+    "missing_keys": [],
+    "observation_error": null,
+    "role": "good",
+    "server_message": null,
+    "source": {
+      "observation": {
+        "path": "lib/recoveryObservation.ts",
+        "sha256": "3b1c955fd04bdcfe754ca80da5f0a10d85a16caebc435d3e719d2e4e3fd57629"
+      },
+      "outcome": {
+        "path": "lib/systemUpdateOutcome.ts",
+        "sha256": "7329a488a436f12637f3c46a60521bbe22027de032044c4963f5686b0a83f67c"
+      },
+      "screen": {
+        "path": "components/RecoveryAccess.tsx",
+        "sha256": "4cc5136c5e24f522cd44c1a9e8cb698c0d7450a90670ffab19bbc03ee74311c0"
+      },
+      "typed": {
+        "path": "lib/systemUpdateFailure.ts",
+        "sha256": "b12d9a0d2989bd70670e02481159128ba716bb21f15db5084b9631475a610af4"
+      }
+    },
+    "state": "in-progress",
+    "texts": {
+      "en": [
+        "CelikPanel updates",
+        "The update is being applied; the panel may be unavailable briefly."
+      ],
+      "tr": [
+        "CelikPanel güncellemeleri",
+        "Güncelleme uygulanıyor; panel kısa süre erişilemeyebilir."
+      ]
+    },
+    "unavailable": null
+  },
+  "update_status": {
+    "body": {
+      "created_at": "2026-10-01T11:28:04.350906005Z",
+      "found": true,
+      "request_id": "103ae9abc2944440997ce03055540e1a",
+      "status": "running",
+      "target": {
+        "arch": "amd64",
+        "archive_sha256": "b82279714781d7e927be969921036e061c185eac8fce9f5da980a08cd03dd00d",
+        "archive_size": "65629833",
+        "commit": "622ddcb40568073d1407983bf78d0b8b8e24b0a5",
+        "os": "linux",
+        "sequence": "81",
+        "version": "v0.1.0-alpha.81"
+      },
+      "updated_at": "2026-10-01T11:28:04.446923852Z"
+    },
+    "http": 200
+  },
+  "utc": "2026-10-01T11:28:07Z"
+}

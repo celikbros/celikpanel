@@ -1,0 +1,8 @@
+cell pair-accept__bind-arch__pdns-debian13__p2t2
+{
+  "action": "stop",
+  "cell_id": "pair-accept__bind-arch__pdns-debian13__p2t2",
+  "dry_run": false,
+  "method": "QMP quit; no fallback signal"
+}
+2026-09-29T21:46:17Z

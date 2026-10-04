@@ -1,0 +1,13 @@
+#!/bin/bash
+# usage: waitstep.sh LABEL MAXSECONDS : returns when a new step dir appears, the run ends, or timeout
+label=$1; max=${2:-540}
+list() { for d in /var/tmp/cp-pair5-evidence/$label-*/steps; do [[ -d $d ]] && ls $d; done; grep -h 'end' /root/cp-pair5/logs/$label-runner.log 2>/dev/null; }
+start=$(list | wc -l); t0=$(date +%s)
+while (( $(date +%s) - t0 < max )); do
+  now=$(list | wc -l)
+  (( now != start )) && break
+  grep -q 'run end' /root/cp-pair5/logs/$label-runner.log 2>/dev/null && break
+  sleep 10
+done
+date -u +%FT%TZ; list | tail -4 | tr '\n' ' '; echo
+tail -2 /root/cp-pair5/logs/$label-catalog-watch.jsonl 2>/dev/null | cut -c1-600

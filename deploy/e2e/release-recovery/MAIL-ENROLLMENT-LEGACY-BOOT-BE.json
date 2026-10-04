@@ -1,0 +1,105 @@
+{
+  "schema": "celikpanel-native-mail-enrollment-evidence/v1",
+  "date": "2026-09-23",
+  "platform": "arch",
+  "disposable_vm_only": true,
+  "production_helper_source": "d3aab13bc22b085433c94b77fd47a2d56f182d3e",
+  "producer": {
+    "source": "/var/tmp/cp-mail-continue-h1rap81y",
+    "test_binary_sha256": "8e4965b969f1ebe2b28faad17e15b03464e565dc77f06abfc8851e9b8089bc30",
+    "test_source_sha256": "8a01f303835f391d8ee2bfe92ec33d30798830916d4af7b24ca5fbb44cfeabe3",
+    "production_helper_source": "d3aab13bc22b085433c94b77fd47a2d56f182d3e"
+  },
+  "trials": [
+    {
+      "direction": "inverse",
+      "request": "750a8f8cb4f80667d916e563df275839",
+      "owner": "f4b1489c936654de9a89b952b7a678f2",
+      "generation": "179a6301fa2aa64091f01ae1fe237e15dccdcdd84b3a2fb4a96f4cdfbe655935",
+      "legacy_sha256": "3040432e045deee31de16a60b583e7e38165d551ea0511678fb9e891ea18b287",
+      "cut": "native_timer_stop_returned",
+      "producer_exit": -9,
+      "before_boot": "99b275d3-87fd-419c-9cf9-06a4c77d6bf3",
+      "after_boot": "71f32b47-d61b-4275-9dec-5c6da3a19558",
+      "terminal": {
+        "attempt": 1,
+        "deadline_at": "2026-09-23T14:27:39.244773838Z",
+        "error_code": "mail_enrollment_restored",
+        "error_message": "Enrollment was not installed; the accepted native before-state was verified restored.",
+        "finished_at": "2026-09-23T14:47:06.242702994Z",
+        "kind": "mail_renewal_enrollment",
+        "lease_expires_at": "0001-01-01T00:00:00Z",
+        "owner_id": "f4b1489c936654de9a89b952b7a678f2",
+        "package_name": "mail-renewal-enrollment/v1:sha256:66fa9f038aeebead580be8d50a0d144af0b8629cf164b1d110da650b229cb83b",
+        "phase": "commit/mail-renewal-enrollment/v1/restored/750a8f8cb4f80667d916e563df275839/66fa9f038aeebead580be8d50a0d144af0b8629cf164b1d110da650b229cb83b",
+        "request_id": "750a8f8cb4f80667d916e563df275839",
+        "started_at": "2026-09-23T14:27:39.244773838Z",
+        "status": "failed",
+        "target": "mail-renewal",
+        "updated_at": "2026-09-23T14:47:06.242702994Z"
+      },
+      "one_automatic_attempt": true,
+      "prior_jobs_and_precut_receipts_unchanged": true,
+      "postboot_manual_continuation": false,
+      "legacy_bytes_and_inode_restored": true,
+      "independent_timer_enabled_active": false,
+      "journal": "Sep 23 14:47:01 dns-arch systemd[1]: Starting Continue recorded CelikPanel mail enrollment...\nSep 23 14:47:06 dns-arch systemd[1]: celikpanel-mail-enrollment-resume-750a8f8cb4f80667d916e563df275839.service: Deactivated successfully.\nSep 23 14:47:06 dns-arch systemd[1]: Finished Continue recorded CelikPanel mail enrollment.\nSep 23 14:47:06 dns-arch systemd[1]: celikpanel-mail-enrollment-resume-750a8f8cb4f80667d916e563df275839.service: Consumed 4.527s CPU time over 5.162s wall clock time, 269.5M memory peak.\n"
+    },
+    {
+      "direction": "forward",
+      "request": "af1c95bcc8f9e586aaf2305e70f7dac4",
+      "owner": "8fb6a90ce2e4e61d090578b227850451",
+      "generation": "179a6301fa2aa64091f01ae1fe237e15dccdcdd84b3a2fb4a96f4cdfbe655935",
+      "legacy_sha256": "3040432e045deee31de16a60b583e7e38165d551ea0511678fb9e891ea18b287",
+      "cut": "native_timer_start_returned",
+      "producer_exit": -9,
+      "before_boot": "71f32b47-d61b-4275-9dec-5c6da3a19558",
+      "after_boot": "6e88ef7f-73f3-4821-851a-18ac74864ffc",
+      "terminal": {
+        "attempt": 1,
+        "deadline_at": "2026-09-23T14:48:32.625352032Z",
+        "finished_at": "2026-09-23T14:49:32.383797086Z",
+        "kind": "mail_renewal_enrollment",
+        "lease_expires_at": "0001-01-01T00:00:00Z",
+        "owner_id": "8fb6a90ce2e4e61d090578b227850451",
+        "package_name": "mail-renewal-enrollment/v1:sha256:710ab29faf6ac6778d1dc4c4f48164add1931c64adb43ff05f59c083399e69b7",
+        "phase": "commit/mail-renewal-enrollment/v1/published/af1c95bcc8f9e586aaf2305e70f7dac4/710ab29faf6ac6778d1dc4c4f48164add1931c64adb43ff05f59c083399e69b7",
+        "request_id": "af1c95bcc8f9e586aaf2305e70f7dac4",
+        "started_at": "2026-09-23T14:48:32.625352032Z",
+        "status": "succeeded",
+        "target": "mail-renewal",
+        "updated_at": "2026-09-23T14:49:32.383797086Z"
+      },
+      "one_automatic_attempt": true,
+      "prior_jobs_and_precut_receipts_unchanged": true,
+      "postboot_manual_continuation": false,
+      "legacy_bytes_and_inode_restored": false,
+      "independent_timer_enabled_active": true,
+      "journal": "Sep 23 14:49:28 dns-arch systemd[1]: Starting Continue recorded CelikPanel mail enrollment...\nSep 23 14:49:33 dns-arch systemd[1]: celikpanel-mail-enrollment-resume-af1c95bcc8f9e586aaf2305e70f7dac4.service: Deactivated successfully.\nSep 23 14:49:33 dns-arch systemd[1]: Finished Continue recorded CelikPanel mail enrollment.\nSep 23 14:49:33 dns-arch systemd[1]: celikpanel-mail-enrollment-resume-af1c95bcc8f9e586aaf2305e70f7dac4.service: Consumed 3.774s CPU time over 4.237s wall clock time, 255.7M memory peak.\n"
+    }
+  ],
+  "limits": [
+    "Exact repository legacy hook is explicit fixture setup; not an actual previous release installation.",
+    "Arch enrollment transition only; no mail delivery or certificate renewal claimed.",
+    "Compatible Agent files remain; management daemons and Panel binary are absent.",
+    "Rollback direction is an explicit test-fixture decision; arbitrary automatic rollback selection is not claimed.",
+    "Production plan admission and complete P0 acceptance remain open."
+  ],
+  "nonacceptance": [
+    "Initial inverse postboot SSH read failed during boot; preserved log. Only subsequent same-result read succeeded."
+  ],
+  "evidence_root": "/var/tmp/cp-release-drill-20260922-be",
+  "evidence_sha256": {
+    "mail-legacy-inverse-boot-native.intent": "cc221e3ec1cade8efecf8a5d760fc0342bd800a19dd0f8eaa6aca92884d4b0ea",
+    "mail-legacy-inverse-boot-native-result.json": "d01ecd1bca0062457b6d0cc8286d7e2c2e82b7c7df6599cf3afb6ca504f547c5",
+    "mail-legacy-inverse-reset.intent": "5a21f49fbc456b9009d73cf9d2b8fffafd1445120f9f25dfd7aec9f863e5709a",
+    "mail-legacy-inverse-reset.result": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+    "mail-legacy-inverse-boot-observe.log": "c59cfdcb381dc6fa99becb8c55a16e58ffd1615fa07b098aac22540ba1c3cd37",
+    "mail-legacy-inverse-boot-observe-retry.json": "0bac39e455af74a0a6a6532e476fde92ffa743a86f0083d5300daae1c568dda2",
+    "mail-legacy-forward-boot-native.intent": "b0bb1c84219d08d1f96e17572119a4517bd6e6cdcf9bffba5a5d79be6a42c930",
+    "mail-legacy-forward-boot-native-result.json": "7ab34358bc050fd8b15b0c58f0d5ddf86c27addfb45ecdf49522848c89a4b495",
+    "mail-legacy-forward-reset.intent": "5a21f49fbc456b9009d73cf9d2b8fffafd1445120f9f25dfd7aec9f863e5709a",
+    "mail-legacy-forward-reset.result": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+    "mail-legacy-forward-boot-observe.json": "ceb44fc623d80b6015141bdb09d4d698f8ccaa0886d9695675d14aa43bd24844"
+  }
+}

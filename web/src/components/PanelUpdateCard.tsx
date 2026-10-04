@@ -18,6 +18,7 @@ import {
     type UpdateMarker,
     type UpdateTarget,
 } from './SystemUpdateOperation';
+import { decodePreviousUpdateAttempt, previousAttemptStopped, type PreviousUpdateAttempt } from '../lib/systemUpdateOutcome';
 
 type Translate = ReturnType<typeof useI18n>['t'];
 
@@ -27,6 +28,8 @@ type UpdateCheck = {
     current_version: string;
     current_commit: string;
     target?: UpdateTarget;
+    /** Additive: the last failed or rolled-back attempt to this exact target on this server. */
+    previous_attempt?: PreviousUpdateAttempt;
 };
 
 type PanelBuild = {
@@ -52,10 +55,12 @@ function decodeUpdateCheck(payload: unknown): UpdateCheck | null {
         || typeof value.current_commit !== 'string' || !commitPattern.test(value.current_commit)) return null;
     if (value.available) {
         if (!validUpdateTarget(value.target)) return null;
+        const previousAttempt = decodePreviousUpdateAttempt(value.previous_attempt);
         return {
             supported: true, available: true,
             current_version: value.current_version, current_commit: value.current_commit,
             target: value.target,
+            ...(previousAttempt ? { previous_attempt: previousAttempt } : {}),
         };
     }
     if (value.target !== undefined) return null;
@@ -110,7 +115,7 @@ export async function fetchPanelUpdateCheck(
 }
 
 export function PanelUpdateCard({ activation = false }: { activation?: boolean }) {
-    const { t } = useI18n();
+    const { t, locale } = useI18n();
     const systemUpdate = useSystemUpdateOperation();
     const [currentBuild, setCurrentBuild] = useState<PanelBuild | null>(null);
     const [check, setCheck] = useState<UpdateCheck | null>(null);
@@ -261,6 +266,9 @@ export function PanelUpdateCard({ activation = false }: { activation?: boolean }
     const readinessReason = readiness?.ready === false
         ? t(`services.mutationReadiness.${readiness.reason}`)
         : '';
+    const previousAttempt = target ? check?.previous_attempt : undefined;
+    // Either typed cause means it stopped before changing anything installed.
+    const previousStopped = previousAttemptStopped(previousAttempt);
     const readinessTitle = readinessChecking
         ? t('services.mutationReadiness.checking')
         : readiness?.ready === true
@@ -306,6 +314,30 @@ export function PanelUpdateCard({ activation = false }: { activation?: boolean }
 
             {target && check?.available && !active && (
                 <div className="mt-4 space-y-3">
+                    {previousAttempt && (
+                        <div className="rounded-lg border border-warning-mark/60 bg-warning-mark/20 p-3 text-sm text-fg" role="note">
+                            <div className="flex items-start gap-2">
+                                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
+                                <div>
+                                    <p className="font-semibold text-fg">{t(previousAttempt.phase === 'failed' && previousStopped ? 'panelUpdate.previousAttempt.stoppedTitle' : 'panelUpdate.previousAttempt.title')}</p>
+                                    <p className="mt-1 text-fg-muted">
+                                        {t(previousAttempt.phase === 'recovered' ? 'panelUpdate.previousAttempt.recovered'
+                                            : previousStopped ? 'panelUpdate.previousAttempt.stopped'
+                                                : 'panelUpdate.previousAttempt.failed', {
+                                            version: target.version,
+                                            current: currentVersion ?? '',
+                                            time: new Date(previousAttempt.finished_at).toLocaleString(locale === 'tr' ? 'tr-TR' : 'en-US'),
+                                        })}
+                                    </p>
+                                    {previousAttempt.failure_code && !previousStopped && (
+                                        <p className="mt-1 text-fg-muted">
+                                            {t('panelUpdate.previousAttempt.cause', { cause: t(`recovery.reason.${previousAttempt.failure_code}`) })}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
                     <div
                         className={`rounded-lg border p-3 text-sm ${readiness?.ready === true
                             ? 'border-success/40 bg-success/10'

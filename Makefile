@@ -18,11 +18,11 @@ SOURCE_DATE_EPOCH ?= $(shell git log -1 --format=%ct 2>/dev/null || echo 0)
 LDFLAGS := -s -w -X main.buildVersion=$(VERSION) -X main.buildCommit=$(COMMIT)
 DIST    := celikpanel-$(VERSION)
 
-.PHONY: all build check-go test vet panel agent schema17-bridge distro-matrix freebsd-cross web release-recovery-contract clean dist dist-sign
+.PHONY: all build check-go test vet dns-owner-tools panel agent agent-native-contract schema17-bridge firewall-restore firewall-runtime mail-renewal mail-renewal-runtime recovery recovery-agent-checker recovery-panel-checker recovery-runtime distro-matrix freebsd-cross web release-recovery-contract clean dist dist-sign
 
 all: build
 
-build: panel agent schema17-bridge web ## Build binaries and frontend
+build: panel agent-native-contract schema17-bridge recovery-runtime firewall-runtime mail-renewal-runtime dns-owner-tools web ## Build binaries and frontend
 
 check-go: ## Require the exact reviewed Go compiler without auto-download
 	@actual="$$(env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" env GOVERSION 2>/dev/null)" || { \
@@ -46,8 +46,42 @@ panel: check-go ## Build the panel binary
 agent: check-go ## Build the agent binary
 	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -ldflags "$(LDFLAGS)" -o bin/agent ./cmd/agent
 
+agent-native-contract: agent mail-renewal-runtime ## Bind this reviewed Agent to its native mail compatibility declaration
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" run ./deploy/agent-native-contract --agent bin/agent --commit "$(COMMIT)" --output bin/agent-native-contract.json --mail-runtime bin/mail-renewal-runtime
+
 schema17-bridge: check-go ## Build the audited legacy schema transition helper
 	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -o bin/schema17-bridge ./deploy/schema17bridge
+
+firewall-restore: check-go ## Build the independent native firewall consumer
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/firewall-restore ./cmd/firewall-restore
+
+firewall-runtime: firewall-restore ## Assemble the versioned independent firewall artifact
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" run ./deploy/firewall/bundle --binary bin/firewall-restore --output bin/firewall-runtime
+
+mail-renewal: check-go ## Build the independent one-shot mail renewal consumer
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -tags celikpanel_mail_renewal -trimpath -buildvcs=false -ldflags "$(LDFLAGS)" -o bin/mail-renewal ./cmd/agent
+
+mail-renewal-runtime: mail-renewal ## Assemble offline native renewal files; no enrollment
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" run ./deploy/mail-renewal/bundle --binary bin/mail-renewal --output bin/mail-renewal-runtime
+
+dns-owner-tools: check-go ## Build optional owner tools; no installation or enrollment
+	mkdir -p bin/dns-owner-tools
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/dns-owner-tools/dns-peer-enroll ./cmd/dns-peer-enroll
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/dns-owner-tools/bind-peer-inspect ./cmd/bind-peer-inspect
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/dns-owner-tools/pdns-peer-inspect ./cmd/pdns-peer-inspect
+	cp cmd/dns-peer-enroll/README.md bin/dns-owner-tools/README.md
+
+recovery: check-go ## Build the independent owner recovery CLI
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -ldflags "$(LDFLAGS)" -o bin/recovery ./cmd/recovery
+
+recovery-agent-checker: check-go ## Build only the shared Agent ledger/lock checker sources
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -o bin/agent-checker $$(cat deploy/recovery/agent-checker.sources)
+
+recovery-panel-checker: check-go ## Build only the shared panel database checker sources
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" build -trimpath -buildvcs=false -o bin/panel-checker $$(cat deploy/recovery/panel-checker.sources)
+
+recovery-runtime: recovery recovery-agent-checker recovery-panel-checker schema17-bridge ## Assemble the offline versioned recovery kit
+	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" run ./deploy/recovery/bundle --source-root . --binary-root bin --output bin/recovery-runtime
 
 distro-matrix: check-go ## Regenerate the distro support matrix with the exact reviewed compiler
 	env -i HOME="$$HOME" PATH="$$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "$(GO)" run ./tools/gen-distro-matrix
@@ -61,6 +95,8 @@ web: ## Build the frontend (web/dist)
 	cd web && PATH="$(NODEDIR):$$PATH" $(NPM) run build
 
 release-recovery-contract: ## Exercise persistent release recovery and crash boundaries
+	sudo bash deploy/test-release-transaction-guard.sh
+	sudo bash deploy/test-release-unit-transition.sh
 	sudo bash deploy/test-release-recovery-contract.sh
 
 dist: build ## Assemble an offline initial-install tarball with verified provenance
@@ -73,21 +109,37 @@ dist: build ## Assemble an offline initial-install tarball with verified provena
 	# yine değişmez sürümü yayımlayıp doğrulayan bootstrap-update.sh yolunu kullanır.
 	rm -rf dist/$(DIST)
 	mkdir -p dist/$(DIST)/bin dist/$(DIST)/web/dist dist/$(DIST)/deploy dist/$(DIST)/libexec
-	cp bin/panel bin/agent bin/schema17-bridge dist/$(DIST)/bin/
+	cp bin/panel bin/agent bin/agent-native-contract.json bin/schema17-bridge dist/$(DIST)/bin/
 	cp -r web/dist/. dist/$(DIST)/web/dist/
 	cp -r deploy/. dist/$(DIST)/deploy/
+	cp -r bin/recovery-runtime dist/$(DIST)/recovery-runtime
+	cp -r bin/firewall-runtime dist/$(DIST)/firewall-runtime
+	cp -r bin/mail-renewal-runtime dist/$(DIST)/mail-renewal-runtime
+	cp -r bin/dns-owner-tools dist/$(DIST)/dns-owner-tools
+	cp bin/firewall-runtime/celikpanel-firewall-restore.service dist/$(DIST)/deploy/systemd/celikpanel-firewall-restore.service
 	cp install.sh bootstrap-update.sh bootstrap-prebuilt-update.sh update.sh rollback.sh Makefile README.md SECURITY.md NOTICE dist/$(DIST)/
 	cp download-portal/get.sh dist/$(DIST)/libexec/get.sh
 	echo 1 > dist/$(DIST)/release.version
 	echo $(COMMIT) > dist/$(DIST)/release.commit
 	echo $(TREE) > dist/$(DIST)/release.tree
+	# The customer archive carries only run-time material. Development and test
+	# material (deploy/e2e, deploy/test-*, *_test.go, *_test.sh, test_*.py,
+	# *.test.mjs, __pycache__, evidence directories) is never read by an
+	# installed server; prune it from the complete staged tree before the
+	# manifest (whose content guard refuses it) and the archive.
+	bash deploy/prune-release-harness.sh dist/$(DIST)
 	find dist/$(DIST) -type d -exec chmod 0755 {} +
 	find dist/$(DIST) -type f -exec chmod 0644 {} +
 	chmod 0755 dist/$(DIST)/bin/panel dist/$(DIST)/bin/agent dist/$(DIST)/bin/schema17-bridge
 	chmod 0755 dist/$(DIST)/install.sh dist/$(DIST)/bootstrap-update.sh dist/$(DIST)/bootstrap-prebuilt-update.sh
 	chmod 0755 dist/$(DIST)/update.sh dist/$(DIST)/rollback.sh
 	chmod 0755 dist/$(DIST)/libexec/get.sh
+	chmod 0755 dist/$(DIST)/firewall-runtime/restore
+	chmod 0755 dist/$(DIST)/dns-owner-tools/dns-peer-enroll dist/$(DIST)/dns-owner-tools/bind-peer-inspect dist/$(DIST)/dns-owner-tools/pdns-peer-inspect
+	chmod 0755 dist/$(DIST)/mail-renewal-runtime/renew dist/$(DIST)/mail-renewal-runtime/celikpanel-mail-host-cert
 	chmod 0755 dist/$(DIST)/deploy/write-release-manifest.sh
+	chmod 0755 dist/$(DIST)/recovery-runtime/bin/recovery dist/$(DIST)/recovery-runtime/bin/agent-checker dist/$(DIST)/recovery-runtime/bin/panel-checker dist/$(DIST)/recovery-runtime/bin/schema17-bridge
+	chmod 0755 dist/$(DIST)/recovery-runtime/update.sh dist/$(DIST)/recovery-runtime/rollback.sh dist/$(DIST)/recovery-runtime/deploy/recovery/runtime-entry.sh
 	chmod 0755 dist/$(DIST)/deploy/release-recovery-runner.sh
 	chmod 0644 dist/$(DIST)/deploy/release-recovery-foundation.sh
 	chmod 0644 dist/$(DIST)/deploy/release-recovery.protocol

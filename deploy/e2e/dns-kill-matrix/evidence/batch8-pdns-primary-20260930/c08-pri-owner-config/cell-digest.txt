@@ -1,0 +1,8 @@
+== c08-pri-owner-config pdns-switch__target-staged__after-write__paired-primary__peer-reachable
+  status=unverified safety=unverified class=None complete=None RUN_PREPARED_RC=2 kill_proven=False
+  request=dbf9982f7d79645b1cc9ddfa99573f41 controller 2026-09-29T21:00:10.610339Z -> 2026-09-29T21:00:10.835079Z gate=open agent_error='a valid durable service mutation lease is required'
+  boundary=target-staged disk=None sha=None marker=None kill=None pid=None state=None exit=None trigger_rc=1
+  failures v=['scenario trigger exited before boundary notification with exit code 1 (raw 1)'] s=[] d=[]
+  stability n=0
+  peer verdict: none
+  smstatus: substring not found

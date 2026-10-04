@@ -1,0 +1,11 @@
+{
+  "catalog": "catalog-c000020a.celikpanel.invalid",
+  "command": "catalog",
+  "members": [
+    "pair-accept.test."
+  ],
+  "returncode": 0,
+  "serial": 4,
+  "server": "192.0.2.10",
+  "transferred": true
+}

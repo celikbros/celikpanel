@@ -14,6 +14,19 @@ through a scoped connection to the publishing primary. Its separate
 [acceptance record](validation/secondary-hosting-20260912/README.md) records the tested
 source and limitations; the historical evidence below remains dated 11 September.
 
+## Safe first-run DNS selection — 28 September 2026
+
+A new local-DNS setup draft now selects BIND primary, the supported paired
+primary path. Previously the default selected paired PowerDNS primary while
+the setup and engine-admission gates rejected that same selection. Omitting
+the engine on a new draft also selects BIND. An explicit saved PowerDNS choice
+is retained and remains blocked at review until its separate acceptance is
+complete; no accepted execution is rewritten. The fresh setup HTTP response,
+canonical draft, and saved explicit choice have a Panel regression test, and
+the full Panel package tests and frontend type check passed locally. This
+changes no durable schema or installed server. P0.4/P0.5 and the paired
+PowerDNS-primary gate remain open.
+
 ## Operation guidance extension — 13 September 2026
 
 The alpha.73 source candidate adds reviewed-plan progress context, role-specific

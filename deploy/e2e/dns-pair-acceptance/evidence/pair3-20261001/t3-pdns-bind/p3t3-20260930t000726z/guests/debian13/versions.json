@@ -1,0 +1,23 @@
+{
+  "binaries": {
+    "/opt/celikpanel/bin/agent": "d44b2cfd46341e0ce8ec00b7931282db1a2188eb794cdbd7b1e2b43787a2df0a",
+    "/opt/celikpanel/bin/panel": "83dcef5136bf1fb9b684a11c1cfcde7fef4c034871506283a10cf0fdcd3ca39d"
+  },
+  "command": "versions",
+  "daemons": {
+    "pdns_server": "Sep 30 00:11:01 PowerDNS Authoritative Server 4.9.17 (C) PowerDNS.COM BV\nSep 30 00:11:01 Using 64-bits mode. Built using gcc 14.2.0.\nSep 30 00:11:01 PowerDNS comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it according to the terms of the GPL version 2.\n"
+  },
+  "kernel": "6.12.105+deb13-cloud-amd64",
+  "os_release": {
+    "ID": "debian",
+    "PRETTY_NAME": "Debian GNU/Linux 13 (trixie)",
+    "VERSION_ID": "13"
+  },
+  "packages": {
+    "bind9": null,
+    "bind9-libs": "ii  1:9.20.26-1~deb13u1",
+    "pdns-backend-sqlite3": "ii  4.9.17-0+deb13u1",
+    "pdns-server": "ii  4.9.17-0+deb13u1"
+  },
+  "returncode": 0
+}

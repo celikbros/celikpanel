@@ -1,0 +1,65 @@
+## date
+2026-09-30T00:24:53Z
+NAME="Arch Linux"
+PRETTY_NAME="Arch Linux"
+## rndc key files (names, sizes only)
+ls: cannot access '/etc/rndc.key': No such file or directory
+ls: cannot access '/etc/rndc.conf': No such file or directory
+ls: cannot access '/etc/named/rndc.key': No such file or directory
+ls: cannot access '/var/named/rndc.key': No such file or directory
+ls: cannot access '/etc/bind/rndc.key': No such file or directory
+## named unit
+ActiveState=active
+SubState=running
+FragmentPath=/usr/lib/systemd/system/named.service
+UnitFileState=enabled
+ExecStart={ path=/usr/bin/named ; argv[]=/usr/bin/named -f -u named ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }
+## listeners 53/953
+udp   UNCONN 0      0                         192.0.2.11:53        0.0.0.0:*    users:(("named",pid=2026,fd=28))
+udp   UNCONN 0      0                         192.0.2.11:53        0.0.0.0:*    users:(("named",pid=2026,fd=27))
+udp   UNCONN 0      0                          10.0.2.15:53        0.0.0.0:*    users:(("named",pid=2026,fd=24))
+udp   UNCONN 0      0                          10.0.2.15:53        0.0.0.0:*    users:(("named",pid=2026,fd=23))
+udp   UNCONN 0      0                          127.0.0.1:53        0.0.0.0:*    users:(("named",pid=2026,fd=18))
+udp   UNCONN 0      0                          127.0.0.1:53        0.0.0.0:*    users:(("named",pid=2026,fd=17))
+udp   UNCONN 0      0                         127.0.0.54:53        0.0.0.0:*    users:(("systemd-resolve",pid=259,fd=24))
+udp   UNCONN 0      0                      127.0.0.53%lo:53        0.0.0.0:*    users:(("systemd-resolve",pid=259,fd=22))
+udp   UNCONN 0      0                              [::1]:53           [::]:*    users:(("named",pid=2026,fd=31))
+udp   UNCONN 0      0                              [::1]:53           [::]:*    users:(("named",pid=2026,fd=32))
+udp   UNCONN 0      0            [fec0::5054:ff:fe13:11]:53           [::]:*    users:(("named",pid=2026,fd=35))
+udp   UNCONN 0      0            [fec0::5054:ff:fe13:11]:53           [::]:*    users:(("named",pid=2026,fd=36))
+udp   UNCONN 0      0      [fe80::5054:ff:fe13:11]%mgmt0:53           [::]:*    users:(("named",pid=2026,fd=39))
+udp   UNCONN 0      0      [fe80::5054:ff:fe13:11]%mgmt0:53           [::]:*    users:(("named",pid=2026,fd=40))
+udp   UNCONN 0      0      [fe80::5054:ff:fe53:11]%peer0:53           [::]:*    users:(("named",pid=2026,fd=43))
+udp   UNCONN 0      0      [fe80::5054:ff:fe53:11]%peer0:53           [::]:*    users:(("named",pid=2026,fd=44))
+tcp   LISTEN 0      10                         127.0.0.1:53        0.0.0.0:*    users:(("named",pid=2026,fd=21))
+tcp   LISTEN 0      10                         127.0.0.1:53        0.0.0.0:*    users:(("named",pid=2026,fd=19))
+tcp   LISTEN 0      5                          127.0.0.1:953       0.0.0.0:*    users:(("named",pid=2026,fd=50))
+tcp   LISTEN 0      4096                      127.0.0.54:53        0.0.0.0:*    users:(("systemd-resolve",pid=259,fd=25))
+tcp   LISTEN 0      10                         10.0.2.15:53        0.0.0.0:*    users:(("named",pid=2026,fd=26))
+tcp   LISTEN 0      10                         10.0.2.15:53        0.0.0.0:*    users:(("named",pid=2026,fd=25))
+tcp   LISTEN 0      4096                   127.0.0.53%lo:53        0.0.0.0:*    users:(("systemd-resolve",pid=259,fd=23))
+tcp   LISTEN 0      10                        192.0.2.11:53        0.0.0.0:*    users:(("named",pid=2026,fd=30))
+tcp   LISTEN 0      10                        192.0.2.11:53        0.0.0.0:*    users:(("named",pid=2026,fd=29))
+tcp   LISTEN 0      10           [fec0::5054:ff:fe13:11]:53           [::]:*    users:(("named",pid=2026,fd=37))
+tcp   LISTEN 0      10           [fec0::5054:ff:fe13:11]:53           [::]:*    users:(("named",pid=2026,fd=38))
+tcp   LISTEN 0      10     [fe80::5054:ff:fe53:11]%peer0:53           [::]:*    users:(("named",pid=2026,fd=45))
+tcp   LISTEN 0      10     [fe80::5054:ff:fe53:11]%peer0:53           [::]:*    users:(("named",pid=2026,fd=46))
+tcp   LISTEN 0      10                             [::1]:53           [::]:*    users:(("named",pid=2026,fd=33))
+tcp   LISTEN 0      10                             [::1]:53           [::]:*    users:(("named",pid=2026,fd=34))
+tcp   LISTEN 0      5                              [::1]:953          [::]:*    users:(("named",pid=2026,fd=51))
+tcp   LISTEN 0      10     [fe80::5054:ff:fe13:11]%mgmt0:53           [::]:*    users:(("named",pid=2026,fd=41))
+tcp   LISTEN 0      10     [fe80::5054:ff:fe13:11]%mgmt0:53           [::]:*    users:(("named",pid=2026,fd=42))
+## named.conf controls/include lines
+68:include "/var/named/celikpanel/current/zones.conf";
+## named journal (command channel / rndc / key lines)
+2026-09-30T00:24:08+00:00 dns-arch named[2026]: configuring command channel from '/etc/rndc.key'
+2026-09-30T00:24:08+00:00 dns-arch named[2026]: command channel listening on ::1#953
+2026-09-30T00:24:08+00:00 dns-arch named[2026]: managed-keys-zone: loaded serial 0
+2026-09-30T00:24:08+00:00 dns-arch named[2026]: managed-keys-zone: Initializing automatic trust anchor management for zone '.'; DNSKEY ID 20326 is now trusted, waiving the normal 30-day waiting period.
+2026-09-30T00:24:08+00:00 dns-arch named[2026]: managed-keys-zone: Initializing automatic trust anchor management for zone '.'; DNSKEY ID 38696 is now trusted, waiving the normal 30-day waiting period.
+## rndc status
+rndc: neither /etc/rndc.conf nor /etc/rndc.key was found
+## package
+bind 9.20.29-1
+## agent journal lines naming rndc/control
+(end)

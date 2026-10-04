@@ -1,0 +1,26 @@
+{
+  "cron_listed": true,
+  "databases": [
+    "upd1_owner_test_upd1db"
+  ],
+  "domains": [
+    [
+      1,
+      "upd1-owner.test"
+    ]
+  ],
+  "mailbox_listed": true,
+  "recovery": {
+    "phase": "succeeded",
+    "previous_failure": null,
+    "terminal_proof": "update_verified"
+  },
+  "update_status": "succeeded",
+  "version": {
+    "agent_commit": "e1fdca3898d950a6408bb5161f5b25ac32440d28",
+    "agent_matches": true,
+    "commit": "e1fdca3898d950a6408bb5161f5b25ac32440d28",
+    "schema_version": 42,
+    "version": "v0.1.0-alpha.82"
+  }
+}

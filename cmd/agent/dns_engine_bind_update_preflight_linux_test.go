@@ -229,7 +229,6 @@ func TestBINDUpdatePreflightRootMigrationCandidateReadOnly(t *testing.T) {
 						}
 						return nil, testBINDExitError(1)
 					},
-					add: func() ([]byte, error) { t.Fatal("read-only preflight added statoverride"); return nil, nil },
 				}
 				before := preflightFileSnapshot(t, root)
 				verified := false
@@ -296,7 +295,6 @@ func TestBINDUpdatePreflightRootCandidateRejectsUnsafeOrChangingMetadata(t *test
 					}
 					return nil, testBINDExitError(1)
 				},
-				add: func() ([]byte, error) { t.Fatal("override changed"); return nil, nil },
 			}
 			before := preflightFileSnapshot(t, root)
 			err := verifyAPTBindRootMigrationCandidateAt(fd, testBINDGID, ops, func() error {
@@ -320,5 +318,22 @@ func TestBINDUpdatePreflightRootCandidateRejectsUnsafeOrChangingMetadata(t *test
 				}
 			}
 		})
+	}
+}
+
+func TestBINDUpdatePreflightPreservesActiveV2Journal(t *testing.T) {
+	ops := signedUpdateBINDPreflightOps(t)
+	journal := testCanonicalBINDSwitchJournalV2(t)
+	ops.readJournal = func() (dnsEngineSwitchJournal, bool, error) {
+		return journal, true, nil
+	}
+	ops.verifyExisting = func(context.Context, dnsEngineStateReceipt) error {
+		t.Fatal("v2 active journal must refuse before native inspection")
+		return nil
+	}
+	err := checkBINDSignedUpdateCompatibleWithOps(context.Background(), ops)
+	if err == nil || errors.Is(err, errBINDSignedUpdatePreflightDeferred) ||
+		!strings.Contains(err.Error(), "active v2 BIND switch journal") {
+		t.Fatalf("active v2 journal was not kept out of signed update: %v", err)
 	}
 }

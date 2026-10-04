@@ -1,0 +1,25 @@
+request defc7a1ec57b413e3bf1d7b0c4b09467 controller 2026-09-29T19:00:04.354956Z -> 2026-09-29T19:01:00.246593Z
+status passed safety passed class rolled_back_source_serving fp ff8f7a1b
+kill pid 4278 state T at 2026-09-29T19:00:20.503402Z exit 137 reaped True
+marker 2026-09-29T19:00:20.423499195Z journal target-staged 99efdb1d
+trigger rc 75
+ probe 1 rolled_back_source_active ff8f7a1b pdns | 
+ probe 2 rolled_back_source_active ff8f7a1b pdns | 
+stability 31 ok 31 2026-09-29T19:00:30.144169Z 2026-09-29T19:01:00.144262Z
+OI variant critical status passed failures [] ambig []
+ release {"status": "failed", "phase": "interrupted", "error_code": "dns_native_recovery_unknown_after_restart"} journal {"device": 65025, "exists": true, "expected_phase": "rolling-back", "inode": 131719, "mode": "0600", "observed_phase": "rolling-back", "request_id": "defc7a1ec57b413e3bf1d7b0c4b09467", "sha256": "2132
+ refusal: 2026/09/29 19:00:20 Interrupted DNS switch native recovery is unknown; retain exact journal and release only its ledger lease (request defc7a1ec57b413e3bf1d7b0c4b09467): v2 BIND switch journal requires its independent inverse adapter; the owner recovery command for this PowerDNS-to-BIND rollback is /usr/libexec/celikpanel/recovery recover-dns-bind-switch --request-id defc7a1ec57b413e3bf1d7b0c4b09467, which the server owner runs when recovery dns-switch-status --quiesced --request-id defc7a1ec57b413e3bf1d7b0c4b09467 names it; preserve the journal, ledger and native DNS until that exact request is reconciled
+ status rc 0 names True changed [] :: DNS switch request defc7a1ec57b413e3bf1d7b0c4b09467: released-undecided-with-journal (journal phase rolling-back). / This PowerDNS-to-BIND switch retains a rollback decision. The server owner can continue that exact inverse with: /usr/libexec/celikpanel/recovery recover-dns-bind-switch --request-id defc7a1ec57b413e3bf1d7b0c4b09467. The command rechecks locks, worker exclusion, the frozen PowerDNS source and owner changes; this status check does not start recovery.
+ owner cmd rc 0 dur 8.01392
+  The accepted BIND switch rollback reached its terminal verdict for request defc7a1ec57b413e3bf1d7b0c4b09467. Native PowerDNS was verified during recovery. Check current authoritative DNS health before another switch.
+  Restored: the PowerDNS service, its DNS state receipt, the BIND configuration files this switch changed and the managed BIND pointer.
+  BIND units: named.service and bind9.service are under the package guard's persistent mask, inactive and not enabled, so BIND cannot start by accident. A later switch lifts this mask itself.
+  Removed: the staged BIND generation dedb306c03f83f0d00fc35fd90a5d4d13740db23d52253485d178c3338989058 that this switch created.
+  Intentionally kept as rollback standby: the installed bind9 packages, the rndc key and the BIND install-ownership record. This command does not remove packages.
+  Local port-53 listeners accepted as the systemd-resolved stub resolver (unit cgroup and address proved; not DNS authority): tcp|127.0.0.53|systemd-resolve|365|systemd-resolved.service, tcp|127.0.0.54|systemd-resolve|365|systemd-resolved.service, udp|127.0.0.53|systemd-resolve|365|systemd-resolved.service, udp|127.0.0.54|systemd-resolve|365|systemd-resolved.service.
+  
+ after: ledger_unchanged True state_bytes_unchanged True owner_files_unchanged True pdns pid {"after_owner_command": 8626, "changed": true, "judged": false, "pre_cut": 3077, "reason": "the source was stopped before the cut; the inverse starts it again"}
+ rollback_end_state failures [] tree_after False masks {'bind9.service': 'masked', 'named.service': 'masked'} before [{'active_state': 'inactive', 'load_state': 'not-found', 'name': 'bind9.service', 'unit_file_state': ''}, {'active_state': 'inactive', 'load_state': 'not-found', 'name': 'named.service', 'unit_file_state': ''}]
+ rerun rc 0 changed [] :: Request defc7a1ec57b413e3bf1d7b0c4b09467 is already reconciled: the Agent released this interrupted DNS switch and its journal has since been retired, by this command or by a later Agent start; the evidence cannot tell which. Nothing was changed now. This request no longer blocks DNS changes. This c
+ status after cmd :: DNS switch request defc7a1ec57b413e3bf1d7b0c4b09467 was interrupted and the Agent could not recover it automatically when it restarted, so it released the lease. The switch has since been reconciled and its journal is retired, either by the owner recovery command or by a later Agent start; this evid
+dns_outage {"source_stopped_at": "2026-09-29T19:00:20.387753Z", "source_serving_again_at": "2026-09-29T19:00:29.235375Z", "seconds": 8.847622, "pdns_started_after_stop_at": "2026-09-29T19:00:24.048722Z"}

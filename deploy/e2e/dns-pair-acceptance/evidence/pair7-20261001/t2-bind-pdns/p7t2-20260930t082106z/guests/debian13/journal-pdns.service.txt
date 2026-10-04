@@ -1,0 +1,103 @@
+2026-09-30T08:24:25.631814+00:00 dns-debian13 systemd[1]: Starting pdns.service - PowerDNS Authoritative Server...
+2026-09-30T08:24:25.720480+00:00 dns-debian13 pdns_server[5047]: Loading '/usr/lib/x86_64-linux-gnu/pdns/libgsqlite3backend.so'
+2026-09-30T08:24:25.721045+00:00 dns-debian13 pdns_server[5047]: This is a standalone pdns
+2026-09-30T08:24:25.721045+00:00 dns-debian13 pdns_server[5047]: Listening on controlsocket in '/run/pdns/pdns.controlsocket'
+2026-09-30T08:24:25.721390+00:00 dns-debian13 pdns_server[5047]: UDP server bound to 10.0.2.15:53
+2026-09-30T08:24:25.721423+00:00 dns-debian13 pdns_server[5047]: UDP server bound to 192.0.2.10:53
+2026-09-30T08:24:25.721481+00:00 dns-debian13 pdns_server[5047]: TCP server bound to 10.0.2.15:53
+2026-09-30T08:24:25.721481+00:00 dns-debian13 pdns_server[5047]: TCP server bound to 192.0.2.10:53
+2026-09-30T08:24:25.721732+00:00 dns-debian13 pdns_server[5047]: PowerDNS Authoritative Server 4.9.17 (C) PowerDNS.COM BV
+2026-09-30T08:24:25.721732+00:00 dns-debian13 pdns_server[5047]: Using 64-bits mode. Built using gcc 14.2.0.
+2026-09-30T08:24:25.721732+00:00 dns-debian13 pdns_server[5047]: PowerDNS comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it according to the terms of the GPL version 2.
+2026-09-30T08:24:25.771895+00:00 dns-debian13 pdns_server[5047]: Creating backend connection for TCP
+2026-09-30T08:24:25.772148+00:00 dns-debian13 pdns_server[5047]: About to create 3 backend threads for UDP
+2026-09-30T08:24:25.772329+00:00 dns-debian13 systemd[1]: Started pdns.service - PowerDNS Authoritative Server.
+2026-09-30T08:24:25.772494+00:00 dns-debian13 pdns_server[5047]: Primary/secondary communicator launching
+2026-09-30T08:24:25.857007+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', zone committed with serial 1
+2026-09-30T08:24:25.879531+00:00 dns-debian13 pdns_server[5047]: Retrieval request for zone 'catalog-c000020b.celikpanel.invalid' from primary '192.0.2.11' received from operator
+2026-09-30T08:24:25.920693+00:00 dns-debian13 pdns_server[5047]: Cache clear request for 'catalog-c000020b.celikpanel.invalid$' received from operator
+2026-09-30T08:24:25.923362+00:00 dns-debian13 pdns_server[5047]: Done launching threads, ready to distribute questions
+2026-09-30T08:24:25.980787+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', zone committed with serial 1
+2026-09-30T08:24:33.506578+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:40757', transfer initiated
+2026-09-30T08:24:45.239118+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:50871', transfer initiated
+2026-09-30T08:24:45.780901+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:40465', transfer initiated
+2026-09-30T08:24:46.831144+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone backend transaction started
+2026-09-30T08:24:46.831144+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone create zone 'pair-accept.test'
+2026-09-30T08:24:46.849218+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone backend transaction committed
+2026-09-30T08:24:46.868107+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', zone committed with serial 2
+2026-09-30T08:24:46.944796+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'pair-accept.test', primary: '192.0.2.11', zone committed with serial 2026093001
+2026-09-30T08:24:48.021740+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:35707', transfer initiated
+2026-09-30T08:24:51.670303+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:47487', transfer initiated
+2026-09-30T08:24:53.676745+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:58115', transfer initiated
+2026-09-30T08:24:54.225953+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:52827', transfer initiated
+2026-09-30T08:24:55.920906+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'pair-accept.test', primary: '192.0.2.11', zone committed with serial 2026093002
+2026-09-30T08:24:56.546043+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:46049', transfer initiated
+2026-09-30T08:24:58.858239+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:53239', transfer initiated
+2026-09-30T08:24:59.448617+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:37069', transfer initiated
+2026-09-30T08:25:00.942703+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'pair-accept.test', primary: '192.0.2.11', zone committed with serial 2026093003
+2026-09-30T08:25:02.354695+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:53225', transfer initiated
+2026-09-30T08:25:03.133134+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:41597', transfer initiated
+2026-09-30T08:25:03.752521+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:48659', transfer initiated
+2026-09-30T08:25:04.949180+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'pair-accept.test', primary: '192.0.2.11', zone committed with serial 2026093004
+2026-09-30T08:25:06.327734+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:51101', transfer initiated
+2026-09-30T08:25:08.576393+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:35017', transfer initiated
+2026-09-30T08:25:09.150020+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:48439', transfer initiated
+2026-09-30T08:25:09.885985+00:00 dns-debian13 pdns_server[5047]: While checking domain freshness: Query to '192.0.2.11' for SOA of 'pair-accept.test' returned Rcode Query Refused
+2026-09-30T08:25:11.360198+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:54311', transfer initiated
+2026-09-30T08:25:11.655154+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:38989', transfer initiated
+2026-09-30T08:25:11.951278+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:49563', transfer initiated
+2026-09-30T08:25:12.247005+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:57693', transfer initiated
+2026-09-30T08:25:12.547672+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:52925', transfer initiated
+2026-09-30T08:25:12.843102+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:39823', transfer initiated
+2026-09-30T08:25:12.890602+00:00 dns-debian13 pdns_server[5047]: Received serial number updates for 1 zone, had 1 timeout
+2026-09-30T08:25:12.890771+00:00 dns-debian13 pdns_server[5047]: Unable to retrieve SOA for pair-accept.test, this was the first time. NOTE: For every subsequent failed SOA check the domain will be suspended from freshness checks for 'num-errors x 60 seconds', with a maximum of 3600 seconds. Skipping SOA checks until 1790756772
+2026-09-30T08:25:12.946857+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone backend transaction started
+2026-09-30T08:25:12.946857+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone delete zone 'pair-accept.test'
+2026-09-30T08:25:12.954935+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone backend transaction committed
+2026-09-30T08:25:12.973745+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', zone committed with serial 3
+2026-09-30T08:25:13.138957+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:36167', transfer initiated
+2026-09-30T08:25:13.227335+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:38751', transfer initiated
+2026-09-30T08:25:13.227447+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:38751', failed: not authoritative
+2026-09-30T08:25:15.078207+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:54871', transfer initiated
+2026-09-30T08:25:15.171107+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:34913', transfer initiated
+2026-09-30T08:25:15.171107+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:34913', failed: not authoritative
+2026-09-30T08:25:19.608324+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:41713', transfer initiated
+2026-09-30T08:25:21.334245+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:34121', transfer initiated
+2026-09-30T08:25:21.419340+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:37913', transfer initiated
+2026-09-30T08:25:21.419484+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:37913', failed: not authoritative
+2026-09-30T08:25:32.783569+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:42263', transfer initiated
+2026-09-30T08:25:32.879721+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:39285', transfer initiated
+2026-09-30T08:25:32.879819+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:39285', failed: not authoritative
+2026-09-30T08:25:47.541097+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:46141', transfer initiated
+2026-09-30T08:25:49.853599+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:33565', transfer initiated
+2026-09-30T08:25:50.429257+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:42145', transfer initiated
+2026-09-30T08:25:52.015844+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone backend transaction started
+2026-09-30T08:25:52.015844+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone create zone 'pair-accept.test'
+2026-09-30T08:25:52.036917+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone backend transaction committed
+2026-09-30T08:25:52.075737+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', zone committed with serial 4
+2026-09-30T08:25:52.155079+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'pair-accept.test', primary: '192.0.2.11', zone committed with serial 2026093001
+2026-09-30T08:25:53.262670+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:58923', transfer initiated
+2026-09-30T08:25:57.007830+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:56993', transfer initiated
+2026-09-30T08:25:59.519219+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:32847', transfer initiated
+2026-09-30T08:26:56.933974+00:00 dns-debian13 systemd[1]: Stopping pdns.service - PowerDNS Authoritative Server...
+2026-09-30T08:26:57.381055+00:00 dns-debian13 systemd[1]: pdns.service: Deactivated successfully.
+2026-09-30T08:26:57.381351+00:00 dns-debian13 systemd[1]: Stopped pdns.service - PowerDNS Authoritative Server.
+-- Boot e202838508104ad39f2f1502f127cd5f --
+2026-09-30T08:27:08.508664+00:00 dns-debian13 systemd[1]: Starting pdns.service - PowerDNS Authoritative Server...
+2026-09-30T08:27:08.766709+00:00 dns-debian13 pdns_server[690]: Loading '/usr/lib/x86_64-linux-gnu/pdns/libgsqlite3backend.so'
+2026-09-30T08:27:08.772489+00:00 dns-debian13 pdns_server[690]: This is a standalone pdns
+2026-09-30T08:27:08.773303+00:00 dns-debian13 pdns_server[690]: Listening on controlsocket in '/run/pdns/pdns.controlsocket'
+2026-09-30T08:27:08.773906+00:00 dns-debian13 pdns_server[690]: UDP server bound to 10.0.2.15:53
+2026-09-30T08:27:08.777766+00:00 dns-debian13 pdns_server[690]: UDP server bound to 192.0.2.10:53
+2026-09-30T08:27:08.777766+00:00 dns-debian13 pdns_server[690]: TCP server bound to 10.0.2.15:53
+2026-09-30T08:27:08.777766+00:00 dns-debian13 pdns_server[690]: TCP server bound to 192.0.2.10:53
+2026-09-30T08:27:08.777766+00:00 dns-debian13 pdns_server[690]: PowerDNS Authoritative Server 4.9.17 (C) PowerDNS.COM BV
+2026-09-30T08:27:08.777766+00:00 dns-debian13 pdns_server[690]: Using 64-bits mode. Built using gcc 14.2.0.
+2026-09-30T08:27:08.777766+00:00 dns-debian13 pdns_server[690]: PowerDNS comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it according to the terms of the GPL version 2.
+2026-09-30T08:27:08.842049+00:00 dns-debian13 pdns_server[690]: Primary/secondary communicator launching
+2026-09-30T08:27:08.842393+00:00 dns-debian13 pdns_server[690]: Creating backend connection for TCP
+2026-09-30T08:27:08.844584+00:00 dns-debian13 pdns_server[690]: About to create 3 backend threads for UDP
+2026-09-30T08:27:08.844754+00:00 dns-debian13 systemd[1]: Started pdns.service - PowerDNS Authoritative Server.
+2026-09-30T08:27:08.995429+00:00 dns-debian13 pdns_server[690]: Done launching threads, ready to distribute questions
+2026-09-30T08:27:19.574055+00:00 dns-debian13 pdns_server[690]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:54655', transfer initiated
+2026-09-30T08:27:22.083974+00:00 dns-debian13 pdns_server[690]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:46443', transfer initiated

@@ -1,0 +1,95 @@
+{
+  "cell_id": "pdns-switch__target-started__after-write__paired-primary__peer-reachable",
+  "child_step": "re-add",
+  "combined_exit": 0,
+  "error": null,
+  "guest_controller_exit": 0,
+  "guest_controller_suspended_for_zone_lifecycle": false,
+  "note": "The native BIND secondary loaded this zero-zone primary's PowerDNS PRODUCER catalog (no member) and serves its SOA over UDP and TCP exactly as the primary does. After the zone lifecycle (re-add) the catalogs also list the child zone and both servers answer it as that step published.",
+  "observation": {
+    "action": "observe-native-pdns-bind-peer",
+    "address": null,
+    "answers": {
+      "192.0.2.10/tcp/catalog-c000020a.celikpanel.invalid/SOA": "1790758460",
+      "192.0.2.10/udp/catalog-c000020a.celikpanel.invalid/SOA": "1790758460",
+      "192.0.2.11/tcp/catalog-c000020a.celikpanel.invalid/SOA": "1790758460",
+      "192.0.2.11/udp/catalog-c000020a.celikpanel.invalid/SOA": "1790758460"
+    },
+    "authoritative_udp_tcp": true,
+    "catalog": "catalog-c000020a.celikpanel.invalid",
+    "catalog_members": [
+      "s2.s1-kill.test"
+    ],
+    "catalog_members_expected": [
+      "s2.s1-kill.test"
+    ],
+    "catalog_serial": 1790758460,
+    "cell_id": "pdns-switch__target-started__after-write__paired-primary__peer-reachable",
+    "child": {
+      "action": "observe-child-native-pdns-bind-peer",
+      "answers": {
+        "192.0.2.10/tcp": {
+          "changed_a": null,
+          "soa_serial": "2026092803",
+          "www_a": [
+            "192.0.2.10"
+          ]
+        },
+        "192.0.2.10/udp": {
+          "changed_a": null,
+          "soa_serial": "2026092803",
+          "www_a": [
+            "192.0.2.10"
+          ]
+        },
+        "192.0.2.11/tcp": {
+          "changed_a": null,
+          "soa_serial": "2026092803",
+          "www_a": [
+            "192.0.2.10"
+          ]
+        },
+        "192.0.2.11/udp": {
+          "changed_a": null,
+          "soa_serial": "2026092803",
+          "www_a": [
+            "192.0.2.10"
+          ]
+        }
+      },
+      "catalog": {
+        "loaded_members": [
+          "s2.s1-kill.test"
+        ],
+        "loaded_serial": 1790758460,
+        "primary_members": [
+          "s2.s1-kill.test"
+        ],
+        "primary_serial": 1790758460
+      },
+      "catalog_members_expected": [
+        "s2.s1-kill.test"
+      ],
+      "cell_id": "pdns-switch__target-started__after-write__paired-primary__peer-reachable",
+      "child": "s2.s1-kill.test",
+      "execute": true,
+      "expected": {
+        "changed": false,
+        "present": true,
+        "serial": "2026092803"
+      },
+      "step": "re-add",
+      "zero_zones": true
+    },
+    "execute": true,
+    "management_installed_on_secondary": false,
+    "member": null,
+    "primary_ip": "192.0.2.10",
+    "rndc_status_ok": true,
+    "secondary_ip": "192.0.2.11",
+    "zero_zones": true
+  },
+  "schema": "celikpanel/dns-kill-fresh-primary-peer-verdict/v1",
+  "status": "passed",
+  "zero_zones": true
+}

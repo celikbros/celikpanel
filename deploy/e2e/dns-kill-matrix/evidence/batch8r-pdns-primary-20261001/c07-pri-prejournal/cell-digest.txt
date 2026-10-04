@@ -1,0 +1,19 @@
+== c07-pri-prejournal pdns-switch__intent__before-write__paired-primary__peer-reachable
+  status=passed safety=passed class=target_converged complete=True RUN_PREPARED_RC=0 kill_proven=True
+  request=a322ca772f40325331c859e2525344ce controller 2026-09-29T23:31:50.593081Z -> 2026-09-29T23:32:40.867452Z gate=open agent_error='a valid durable service mutation lease is required'
+  boundary=intent disk=None sha=None marker=2026-09-29T23:32:02.799067572Z kill=2026-09-29T23:32:02.808628Z pid=1891 state=T exit=137 trigger_rc=75
+  failures v=[] s=[] d=[]
+  fp.failures=[] fp.unknown=[]
+  restart: variant=pre-journal code=agent_restarted_before_dns_engine_switch_commit status=failed attempt=1 retired=True msg='The agent restarted before the DNS engine switch reached a verified target.'
+  pre_install failures=[] unknown=[] unit={'LoadState': 'masked', 'UnitFileState': 'masked', 'ActiveState': 'inactive', 'MainPID': '0'} db=[]
+  pair primary={"catalog_soa": {"tcp": [1790724727], "udp": [1790724727]}, "member_soa": {"tcp": [2026083101], "udp": [2026083101]}, "www_a": {"tcp": ["192.0.2.10"], "udp": ["192.0.2.10"]}} secondary_equal=True state_serial=1790724727
+  cut: variant=pre-journal pid=0 files={'database': False, 'state': False} sealed=None staged_serial=None native_serial=None unit_before=None
+  status-read after-recovery avail=True rc=0 mutated=False :: 'No DNS switch journal was observed for request a322ca772f40325331c859e2525344ce. Its exact ledger job records status succeeded. This is a point-in-time ledger o'
+  status-read before-recovery avail=True rc=0 mutated=False :: 'No DNS switch journal was observed for request a322ca772f40325331c859e2525344ce. Its exact ledger job records status running. This is a point-in-time ledger obs'
+  retry 1 rc=0 dur=6.760445
+  retry 2 rc=0 dur=0.009385
+  probe 1 target_converged ec6e51284f80
+  probe 2 target_converged ec6e51284f80
+  stability n=31
+  peer status=passed combined=0 guest_exit=0 error=None serial=1790724727 members=['s1-kill.test']
+  smstatus: status=succeeded code=None attempt=2 msg=None

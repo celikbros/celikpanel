@@ -1,0 +1,12 @@
+21:00:09.464135264 CHANGE journal none -> absent
+21:00:09.478921107 CHANGE ledger none -> 177f61d12ed0bb85e6ea535b807b376e26bbe0871405a13867c0b3cb6ea4b211
+21:00:09.485574409 CHANGE state none -> absent
+21:00:09.492129452 CHANGE pdnsdb none -> absent
+21:00:09.505339713 POINTER 
+21:00:09.507331822 pdns=0/0/inactive/dead/ named=0/inactive/dead/ agent=0/inactive/ jphase=absent killpid=
+21:00:09.801111242 pdns=0/0/inactive/dead/ named=0/inactive/dead/ agent=0/inactive/ jphase=absent killpid=
+21:00:10.088404009 pdns=0/0/inactive/dead/ named=0/inactive/dead/ agent=0/inactive/ jphase=absent killpid=
+21:00:10.379935770 pdns=0/0/inactive/dead/ named=0/inactive/dead/ agent=0/inactive/ jphase=absent killpid=
+21:00:10.684148737 pdns=0/0/inactive/dead/ named=0/inactive/dead/ agent=0/inactive/ jphase=absent killpid=2072,
+21:00:10.981968291 pdns=0/0/inactive/dead/ named=0/inactive/dead/ agent=0/inactive/ jphase=absent killpid=
+done

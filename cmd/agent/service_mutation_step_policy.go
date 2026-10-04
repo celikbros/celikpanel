@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/core"
-	"github.com/alicelik/celikpanel/internal/hostname"
+
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -137,11 +137,6 @@ func serviceMutationDNSEngineTarget(target string) bool {
 		service = core.ServiceForUnit(target)
 	}
 	return service != nil && service.ConflictGroup == "dns-server"
-}
-
-func serviceMutationCanonicalFQDN(value string) bool {
-	canonical, err := hostname.CanonicalFQDN(value)
-	return err == nil && canonical == value
 }
 
 func serviceMutationValidInstallJob(job *ServiceMutationJob) bool {

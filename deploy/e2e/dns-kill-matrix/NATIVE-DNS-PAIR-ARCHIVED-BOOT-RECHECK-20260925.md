@@ -1,0 +1,9 @@
+# Archived DNS pair reboot recheck — 2026-09-25
+
+This is a bounded **failed P0.5 acceptance attempt** under constitutional invariants 3 and 6. It reboots fresh child overlays of the September 12 disposable BIND-primary/PowerDNS-secondary fixture, with the management executable paths already absent in the parent image. It is not a test of an installed server or of the current release image.
+
+Both guests reached emergency mode before networking. Their serial logs show `celikpanel-firewall-restore.service` failed, `network-pre.target` then failed by dependency, and systemd entered emergency mode. SSH and DNS pair checks could not run. The exact cause of the firewall service failure was not available from serial output; this attempt establishes a boot blocker in the **archived fixture**, not the current product's firewall behavior. It does not establish paired DNS transfer, catalog removal or management-absent reboot success.
+
+The child overlays were created on top of the stopped historical overlays at `/var/tmp/cp-native-dns-20260912/{dnsprimary,dnssecondary}/overlay.qcow2`. Before/after SHA-256 comparison showed both historical parent overlays unchanged. Only the two newly named QEMU guests were stopped; their temporary child overlay images were deleted after confirming their processes had exited. No installed panel or hosted workload was changed.
+
+Compact evidence: `/var/tmp/cp-native-pair-recheck-20260925/evidence.tar.gz` (SHA-256 `3a8199c770ec8ac43bd743480557f015c8ef6f4c69a4d2fa8ab71120c446d057`, 33,171 bytes). It contains the exact temporary runner, QEMU plan, both serial logs and outcome classification. P0.5 remains open. A new pair fixture based on the current independent firewall path must pass native secondary zone-state checks after catalog removal and reboot; the historical `REFUSED` answer is not proof of removal.

@@ -1,0 +1,124 @@
+{
+  "authoritative_preflight": {
+    "address": "10.0.2.15",
+    "claimed": true,
+    "name": "www.s1-kill.test",
+    "port": 53,
+    "tcp": true,
+    "type": "A",
+    "udp": true
+  },
+  "cell_id": "pdns-adopt__rolled-back__after-write__standalone__peer-reachable",
+  "cluster_config": {
+    "path": "/etc/powerdns/pdns.d/celikpanel-cluster.conf",
+    "status": "absent"
+  },
+  "construction_origin": "harness-external-pdns",
+  "database": {
+    "auxiliary_authority_count": 0,
+    "domain_count": 1,
+    "journal_mode": "wal",
+    "mode": "0640",
+    "owner": "pdns:pdns",
+    "path": "/var/lib/powerdns/pdns.sqlite3",
+    "quick_check": "ok",
+    "record_count": 4,
+    "schema_path": "/usr/share/pdns-backend-sqlite3/schema/schema.sqlite3.sql",
+    "schema_sha256": "92a25cdb363597671f19a0206489ab34d74e77c86b3072713db2ce16110090c0",
+    "sha256": "b676542b861caf916bfb37e59af21a55f2f456a756d7ba1f365ad7fc9fd56cba",
+    "sidecars": {
+      "rollback_journal": {
+        "path": "/var/lib/powerdns/pdns.sqlite3-journal",
+        "status": "absent"
+      },
+      "shared_memory": {
+        "content_policy": "volatile-unhashed",
+        "device": 65025,
+        "file_type": "regular",
+        "inode": 131599,
+        "link_count": 1,
+        "mode": "0640",
+        "owner": "pdns:pdns",
+        "path": "/var/lib/powerdns/pdns.sqlite3-shm",
+        "size": 32768
+      },
+      "write_ahead_log": {
+        "content_policy": "empty",
+        "device": 65025,
+        "file_type": "regular",
+        "inode": 131598,
+        "link_count": 1,
+        "mode": "0640",
+        "owner": "pdns:pdns",
+        "path": "/var/lib/powerdns/pdns.sqlite3-wal",
+        "size": 0
+      }
+    },
+    "zone_snapshot_sha256": "c0e1ef0bce6567bec21f7a36b4c1bf91061e2aa26804ef6f71ea25055b4213b3"
+  },
+  "main_config": {
+    "mode": "0640",
+    "owner": "root:pdns",
+    "path": "/etc/powerdns/pdns.conf",
+    "sha256": "8b46927e48be83b2f0afc38efabdc2e2237daa5281b1a07ea44989ffa41f262a"
+  },
+  "managed_config": {
+    "mode": "0644",
+    "owner": "root:root",
+    "path": "/etc/powerdns/pdns.d/celikpanel.conf",
+    "sha256": "1d2fe25bde12a21bca513d8eefef617116601da8586e6a5ad2ffe4f3dd4914ca"
+  },
+  "production_adoption_driver": "pdns-adopt",
+  "production_adoption_pending": true,
+  "production_receipts_absent": {
+    "bind_engine_ownership": {
+      "path": "/var/lib/celikpanel-agent-private/dns-engine-ownership-bind.json",
+      "status": "absent"
+    },
+    "bind_install_ownership": {
+      "path": "/var/lib/celikpanel-agent-private/dns-engine-install-ownership-bind.json",
+      "status": "absent"
+    },
+    "dns_engine_state": {
+      "path": "/var/lib/celikpanel-agent-private/dns-engine-state.json",
+      "status": "absent"
+    },
+    "dns_engine_switch_journal": {
+      "path": "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json",
+      "status": "absent"
+    },
+    "pdns_engine_ownership": {
+      "path": "/var/lib/celikpanel-agent-private/dns-engine-ownership-pdns.json",
+      "status": "absent"
+    },
+    "pdns_install_ownership": {
+      "path": "/var/lib/celikpanel-agent-private/dns-engine-install-ownership-pdns.json",
+      "status": "absent"
+    }
+  },
+  "scenario_sha256": "254bf07e78085a6c9bc92785ad67e4f3759cb79e537aee08442da9a3ea0066a3",
+  "schema": "celikpanel/dns-kill-external-pdns-adoption-preimage/v1",
+  "scope": "external-pdns-measured-adoption-preimage",
+  "source_fixture": "external-pdns-adoption",
+  "source_packages": [
+    {
+      "name": "pdns-backend-sqlite3",
+      "status": "install ok installed",
+      "version": "4.9.17-0+deb13u1"
+    },
+    {
+      "name": "pdns-server",
+      "status": "install ok installed",
+      "version": "4.9.17-0+deb13u1"
+    }
+  ],
+  "source_preinstall_proof_path": "/var/lib/celikpanel-dns-kill-matrix/source-preinstall-pdns.json",
+  "source_preinstall_proof_sha256": "653e3eb2c13b9892ea54528ccb7d69203bf757efd02d5720229c72d9d3f340f4",
+  "source_unit_before_tagged_agent": {
+    "active_state": "active",
+    "load_state": "loaded",
+    "name": "pdns.service",
+    "sub_state": "running",
+    "unit_file_state": "enabled"
+  }
+}

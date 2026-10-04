@@ -1,0 +1,10 @@
+c01-pri-intent pdns-switch__intent__after-write__paired-primary__peer-reachable
+c02-pri-staged pdns-switch__target-staged__after-write__paired-primary__peer-reachable
+c03-pri-enable pdns-switch__source-stopped__after-write__paired-primary__peer-reachable
+c04-pri-started-zl pdns-switch__target-started__after-write__paired-primary__peer-reachable
+c05-pri-verified pdns-switch__target-verified__after-write__paired-primary__peer-reachable
+c06-pri-committed pdns-switch__committed__after-write__paired-primary__peer-reachable
+c07-pri-prejournal pdns-switch__intent__before-write__paired-primary__peer-reachable
+c08-pri-owner-config pdns-switch__target-staged__after-write__paired-primary__peer-reachable
+c09-pri-owner-sql pdns-switch__target-started__after-write__paired-primary__peer-reachable
+c10-pri-released pdns-switch__target-staged__after-write__paired-primary__peer-reachable

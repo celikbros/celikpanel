@@ -1,0 +1,40 @@
+{
+  "authoritative_preflight": {
+    "address": "10.0.2.15",
+    "claimed": true,
+    "name": "www.s1-kill.test",
+    "port": 53,
+    "tcp": true,
+    "type": "A",
+    "udp": true
+  },
+  "cell_id": "pdns-adopt__rolled-back__after-write__standalone__peer-reachable",
+  "engine": "pdns",
+  "engine_epoch": 0,
+  "engine_state_identity": null,
+  "engine_state_receipt_path": "",
+  "engine_state_receipt_sha256": "",
+  "external_pdns_preimage_path": "/var/lib/celikpanel-dns-kill-matrix/source-external-pdns-preimage.json",
+  "external_pdns_preimage_sha256": "5e9bcffeb45c48d9c961f4fc7a3302eba593302dab5571dea38ad3581fca8be6",
+  "identity_receipt_path": "/var/lib/celikpanel-dns-kill-matrix/measured/trigger-identity.json",
+  "identity_receipt_preexisting": false,
+  "receipt_origin": "harness-external-pdns-preimage",
+  "scenario_sha256": "254bf07e78085a6c9bc92785ad67e4f3759cb79e537aee08442da9a3ea0066a3",
+  "schema": "celikpanel/dns-kill-source-proof/v1",
+  "serving_before_tagged_agent": true,
+  "source_adoption_proof_path": "absent",
+  "source_adoption_proof_sha256": "absent",
+  "source_fixture": "external-pdns-adoption",
+  "source_normalization_identity_receipt_path": "absent",
+  "source_normalization_identity_receipt_sha256": "absent",
+  "source_preinstall_proof_path": "/var/lib/celikpanel-dns-kill-matrix/source-preinstall-pdns.json",
+  "source_preinstall_proof_sha256": "653e3eb2c13b9892ea54528ccb7d69203bf757efd02d5720229c72d9d3f340f4",
+  "source_revision": 0,
+  "source_setup_identity_receipt_sha256": "absent",
+  "source_setup_scenario_sha256": "absent",
+  "uninitialized_global_port53": {
+    "authoritative_answer_observed": false,
+    "tcp_bindable": false,
+    "udp_bindable": false
+  }
+}

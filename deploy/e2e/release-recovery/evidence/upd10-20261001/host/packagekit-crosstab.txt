@@ -1,0 +1,19 @@
+== upd10-ub-once-a (51 observations; files: ['06-setup/packagekit-observations.json', '07-packagekit-after-setup/packagekit-observations.json'])
+  nothing                                | ready                                         | 2
+  packagekitd + other package activity   | HOST_MUTATION_BUSY/panel_operation_active     | 16
+  packagekitd only                       | HOST_MUTATION_BUSY/panel_operation_active     | 9
+  packagekitd only                       | ready                                         | 24
+  packagekitd readings: 98; age range 39.5-667.6 s; grep -c aptcc values [0]; apt_backend values [True]; children seen []; lock lines held/waited by it 0
+  backend pathnames mapped: ['/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so']
+  context processes seen (outside the Agent list): ['apt-check', 'frontend', 'needrestart', 'unattended-upgr']
+== upd10-ub-busy-b (59 observations; files: ['06-setup/packagekit-observations.json', '09-busy-start/packagekit-observations.json'])
+  nothing                                | ready                                         | 2
+  other package activity only            | (no readiness read)                           | 1
+  other package activity only            | HOST_MUTATION_BUSY/package_manager_active     | 16
+  other package activity only            | HOST_MUTATION_BUSY/panel_operation_active     | 1
+  packagekitd + other package activity   | HOST_MUTATION_BUSY/panel_operation_active     | 13
+  packagekitd only                       | HOST_MUTATION_BUSY/panel_operation_active     | 9
+  packagekitd only                       | ready                                         | 17
+  packagekitd readings: 78; age range 1.7-437.2 s; grep -c aptcc values [0]; apt_backend values [True]; children seen []; lock lines held/waited by it 0
+  backend pathnames mapped: ['/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so']
+  context processes seen (outside the Agent list): ['apt-check', 'apt-key', 'frontend', 'gpgv', 'http', 'https', 'needrestart', 'unattended-upgr']

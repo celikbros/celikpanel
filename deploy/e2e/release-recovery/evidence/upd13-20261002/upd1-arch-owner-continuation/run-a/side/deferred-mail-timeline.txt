@@ -1,0 +1,7 @@
+run /mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/release-recovery/evidence/upd13-20261002/upd1-arch-owner-continuation/run-a/
+overall incomplete outcome not-terminal
+Traceback (most recent call last):
+  File "/mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/upd13/dml13.py", line 30, in <module>
+    print("steps", [(s["name"], s["verdict"], s.get("started_at", "")[11:19], s.get("finished_at", "")[11:19])
+                                                                              ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+TypeError: 'NoneType' object is not subscriptable

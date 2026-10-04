@@ -1,0 +1,40 @@
+{
+  "primary": {
+    "domains": [
+      "pair-accept.test"
+    ],
+    "engine": {
+      "active_engine": "pdns",
+      "pair_ready": true,
+      "pair_role": "primary",
+      "pending_zone_count": 0,
+      "secondary_ready": "<absent>",
+      "state": "ready",
+      "topology": "paired",
+      "zone_count": 1
+    },
+    "setup": {
+      "id": "4c4ea14b80c1122d9d71d46a6d39f4dd",
+      "phase": "access_dns",
+      "status": "waiting"
+    }
+  },
+  "secondary": {
+    "domains": [],
+    "engine": {
+      "active_engine": "bind",
+      "pair_ready": false,
+      "pair_role": "secondary",
+      "pending_zone_count": 0,
+      "secondary_ready": true,
+      "state": "ready",
+      "topology": "paired",
+      "zone_count": 0
+    },
+    "setup": {
+      "id": "29e98ea7192175b5bd569e18531d7309",
+      "phase": "access_dns",
+      "status": "waiting"
+    }
+  }
+}

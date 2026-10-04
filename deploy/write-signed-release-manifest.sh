@@ -148,9 +148,25 @@ for binary_name in panel agent; do
     || die "$member Go build metadata does not target linux"
   LC_ALL=C grep -Fqx $'\tbuild\tGOARCH='"$platform_arch" <<< "$go_metadata" \
     || die "$member Go build metadata does not target $platform_arch"
+  # The acceptance_license test build accepts a fixture license; never sign it.
+  if LC_ALL=C grep -Eq $'^\tbuild\t-tags="?([^[:space:]]*,)?acceptance_license(,|"|$)' <<< "$go_metadata"; then
+    die "$member was built with the acceptance_license test tag; acceptance builds are never signed releases"
+  fi
 done
 rm -rf -- "$elf_tmp"
 trap - EXIT HUP INT TERM
+
+# Every executable in the archive, not only panel and agent.
+acceptance_guard="$script_dir/release-acceptance-license-guard.sh"
+[[ -f "$acceptance_guard" && ! -L "$acceptance_guard" ]] \
+  || die "release acceptance-license guard is unavailable"
+bash "$acceptance_guard" "$archive" \
+  || die "release archive contains an acceptance_license test build; it was not signed"
+content_guard="$script_dir/release-content-guard.sh"
+[[ -f "$content_guard" && ! -L "$content_guard" ]] \
+  || die "release content guard is unavailable"
+bash "$content_guard" "$archive" \
+  || die "release archive contains development or test material; it was not signed"
 
 manifest=$output/release-manifest-v2
 signature=$output/release-manifest-v2.sig

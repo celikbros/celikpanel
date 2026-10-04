@@ -1,0 +1,11 @@
+#!/bin/bash
+# upd7: harness run copy from the pinned commit (never the working tree), then the overlay.
+set -euo pipefail
+R=/var/tmp/cp-upd7-run
+[ -e $R ] && { echo "refusing: $R exists"; exit 2; }
+mkdir -p $R/harness $R/logs $R/jobs $R/build
+REPO='/mnt/c/CELIKBROS PROJECTS/celikpanel'
+git -c safe.directory='*' -C "$REPO" rev-parse '48d21d58^{commit}' > $R/harness-commit.txt
+git -c safe.directory='*' -C "$REPO" archive 48d21d58 | tar -x -C $R/harness
+cd $R/harness && find . -type f -print0 | sort -z | xargs -0 sha256sum > $R/runcopy-48d21d58-files.sha256
+wc -l $R/runcopy-48d21d58-files.sha256; cat $R/harness-commit.txt

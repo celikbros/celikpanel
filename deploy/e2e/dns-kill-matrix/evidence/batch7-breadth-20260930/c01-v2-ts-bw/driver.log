@@ -1,0 +1,17 @@
+### 2026-09-29T18:52:37.304Z start-cell c01-v2-ts-bw bind__target-started__before-write__standalone__peer-reachable node=debian13 other=arch fixture=managed-pdns prep=prepare-bind enroll=1 root=/var/tmp/cp-b7-0930 peer=none format=none flags=--owner-inverse-after-restart
+### 2026-09-29T18:52:37.306Z prepare
+### 2026-09-29T18:52:38.831Z early-admission-dry-run
+### 2026-09-29T18:52:38.960Z start
+### 2026-09-29T18:52:39.252Z wait-ssh
+### 2026-09-29T18:53:36.232Z guest-identity
+### 2026-09-29T18:53:38.191Z install
+### 2026-09-29T18:53:51.743Z enroll-recovery-runtime
+### 2026-09-29T18:54:00.846Z prepare-bind
+### 2026-09-29T18:55:06.035Z pre-run-snapshot
+### 2026-09-29T18:55:28.946Z start-watcher
+Running as unit: cp-b7-watch.service; invocation ID: f85b940df6e5406bbfb213ef20147fb5
+### 2026-09-29T18:55:33.802Z prepared-ok
+### 2026-09-29T18:55:33.809Z run-prepared-dry-run flags=--owner-inverse-after-restart
+### 2026-09-29T18:55:33.970Z run-prepared
+RUN_PREPARED_RC=0
+### 2026-09-29T18:56:52.792Z done-run rc=0

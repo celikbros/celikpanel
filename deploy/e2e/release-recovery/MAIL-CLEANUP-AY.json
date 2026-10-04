@@ -1,0 +1,27 @@
+{
+  "schema": "celikpanel/native-mail-cleanup/v1",
+  "source_commit": "299d0a786ca5b4db9c787bc675d41ec4e84df99c",
+  "test_binary_sha256": "af4f4488273b3d4ee8d98a5a1f88ccc4675943692fe97b736b9c2b0a48b2efb8",
+  "lab": {
+    "cell_id": "release-recovery__33fdf23ab0fbe25f",
+    "node": "debian13"
+  },
+  "base_record_sha256": "d815d123afb93d0e3a55af3529f5eed3e1376f906b62fea54a1b6a96312c7ce7",
+  "scope": {
+    "controlled_uncommitted_stage": true,
+    "actual_agent_cleanup_path": true,
+    "owner_explicitly_resolved_conflict": true,
+    "automatic_crash_recovery": false,
+    "independent_renewal": false
+  },
+  "logs": {
+    "mail-cleanup-start.log": {
+      "sha256": "70f3e0fc49e6367b88dc4fe3f038afa799ef93cc96165cdb41039d9e18d0b06b",
+      "text": "af4f4488273b3d4ee8d98a5a1f88ccc4675943692fe97b736b9c2b0a48b2efb8  /root/celikpanel-release-recovery-lab/mail-cleanup.test\n49c16c3f-98f3-45ca-8af6-e6055c978deb\n"
+    },
+    "mail-recovery-cleanup.log": {
+      "sha256": "eed09c4b890e9ee5337a3939e0cacd2930bd39452b5a9afa63b4e307a461973b",
+      "text": "Sep 22 05:36:08 dns-debian13 systemd[1]: Starting celikpanel-lab-mail-recovery-cleanup.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-cleanup.test -test.v \"-test.run=^TestMailHostCertificateDisposableVMRecoveryCleanupOwnerEdit\\$\" -test.timeout=90s...\nSep 22 05:36:08 dns-debian13 mail-cleanup.test[915]: === RUN   TestMailHostCertificateDisposableVMRecoveryCleanupOwnerEdit\nSep 22 05:36:08 dns-debian13 mail-cleanup.test[915]:     mail_host_certificate_vm_resume_test.go:359: native cleanup refused owner files; same-operation owner-resolved cleanup retained failed status, queue and served leaf; request=6f3830cce931d52af7585e5bf7c19656 selected=7713abe26e69887a166cd5c6efc39bb96be0f19cf6ec55428af1673924466a11\nSep 22 05:36:08 dns-debian13 mail-cleanup.test[915]: --- PASS: TestMailHostCertificateDisposableVMRecoveryCleanupOwnerEdit (0.43s)\nSep 22 05:36:08 dns-debian13 mail-cleanup.test[915]: PASS\nSep 22 05:36:08 dns-debian13 systemd[1]: celikpanel-lab-mail-recovery-cleanup.service: Deactivated successfully.\nSep 22 05:36:08 dns-debian13 systemd[1]: Finished celikpanel-lab-mail-recovery-cleanup.service - [systemd-run] /root/celikpanel-release-recovery-lab/mail-cleanup.test -test.v \"-test.run=^TestMailHostCertificateDisposableVMRecoveryCleanupOwnerEdit\\$\" -test.timeout=90s.\nResult=success\nExecMainStatus=0\nActiveState=inactive\n49c16c3f-98f3-45ca-8af6-e6055c978deb\n"
+    }
+  }
+}

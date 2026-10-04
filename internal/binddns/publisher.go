@@ -23,6 +23,11 @@ const (
 	switchRecoveryTimeout  = 30 * time.Second
 )
 
+// ErrRollbackPeerUnverified is returned only after the exact prior pointer, daemon reload,
+// durable state and local authority have been restored. It preserves native
+// service availability while reporting that the paired peer is still divergent.
+var ErrRollbackPeerUnverified = errors.New("BIND rollback peer authority remains unverified")
+
 // Publisher stages immutable, root-owned BIND generations and atomically
 // changes the current symlink. Cross-process serialization remains the agent's
 // service-mutation lock responsibility; mu protects callers sharing an object.
@@ -400,6 +405,19 @@ func (publisher *Publisher) LoadCurrent() (VerifiedTree, error) {
 	return tree, err
 }
 
+// LoadGeneration verifies one immutable generation independently of the current
+// pointer. Recovery uses this when a failed switch has already restored that
+// pointer while the target daemon may still be serving the staged generation.
+func (publisher *Publisher) LoadGeneration(id string) (VerifiedTree, error) {
+	if !validDigest(id) {
+		return VerifiedTree{}, errors.New("invalid BIND generation identity")
+	}
+	publisher.mu.Lock()
+	defer publisher.mu.Unlock()
+	tree, _, _, err := publisher.readGeneration(path.Join(publisher.root, "generations", id), id)
+	return tree, err
+}
+
 // Current returns the verified generation ID selected by the current symlink.
 func (publisher *Publisher) Current() (string, bool, error) {
 	publisher.mu.Lock()
@@ -446,6 +464,39 @@ func (publisher *Publisher) RestorePointer(
 		return errors.New("BIND current pointer changed outside the recovery transaction")
 	}
 	return publisher.restoreSwitchPointerLocked(expectedTarget, previous, hadPrevious)
+}
+
+// ErrCurrentPointerSelectsOther reports that RestoreMissingPointer found the
+// current pointer selecting a different generation and left it unchanged.
+var ErrCurrentPointerSelectsOther = errors.New("BIND current pointer selects a different generation")
+
+// RestoreMissingPointer is the forward-recovery counterpart of Switch for a
+// transaction whose target was already verified and durably recorded while its
+// current pointer later disappeared. Under the same locks as Switch it selects
+// generationID with the ordinary activation primitive (the immutable tree is
+// verified first, then an atomic symlink rename and directory fsync), but only
+// while no current pointer exists. An exact existing pointer is accepted
+// unchanged; any other pointer is left alone and reported. It never reloads a
+// daemon; the caller must hold the operation's authority and re-verify.
+func (publisher *Publisher) RestoreMissingPointer(generationID string) error {
+	if !validDigest(generationID) {
+		return errors.New("invalid BIND generation identity")
+	}
+	publisher.transactionMu.Lock()
+	defer publisher.transactionMu.Unlock()
+	publisher.mu.Lock()
+	defer publisher.mu.Unlock()
+	current, exists, err := publisher.currentLocked()
+	if err != nil {
+		return err
+	}
+	if exists {
+		if current == generationID {
+			return nil
+		}
+		return fmt.Errorf("%w: %s", ErrCurrentPointerSelectsOther, current)
+	}
+	return publisher.activateLocked(generationID)
 }
 
 func (publisher *Publisher) activateLocked(generationID string) error {
@@ -555,7 +606,10 @@ func (publisher *Publisher) currentLocked() (string, bool, error) {
 // reapplies it under a detached, bounded recovery context. If no prior
 // generation existed, recoverEmpty is mandatory and must explicitly stop BIND
 // or apply a known-empty configuration; reloading with no current pointer is
-// deliberately never inferred as safe.
+// deliberately never inferred as safe. After a failed apply of a first
+// generation, recoverEmpty runs while the pointer still selects that generation
+// and must leave BIND unable to start from it (stopped and sealed, or its
+// configuration restored); only then is the pointer removed.
 func (publisher *Publisher) Switch(
 	ctx context.Context,
 	generationID string,
@@ -615,6 +669,11 @@ func (publisher *Publisher) Switch(
 		activationErr := fmt.Errorf("activate BIND generation %s: %w", generationID, err)
 		recoveryCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), switchRecoveryTimeout)
 		defer cancel()
+		if !hadPrevious {
+			return publisher.recoverFailedFirstSwitch(
+				recoveryCtx, generationID, activationErr, recoverEmpty,
+			)
+		}
 
 		publisher.mu.Lock()
 		pointerErr := publisher.restoreSwitchPointerLocked(generationID, previous, hadPrevious)
@@ -629,15 +688,11 @@ func (publisher *Publisher) Switch(
 				wrapOptionalError("stop or empty BIND after pointer recovery failure", emptyErr),
 			)
 		}
-		if !hadPrevious {
-			emptyErr := recoverEmpty(recoveryCtx)
-			if emptyErr != nil {
-				return errors.Join(activationErr, fmt.Errorf("stop or empty BIND after removing the first pointer: %w", emptyErr))
-			}
-			return errors.Join(activationErr, errors.New("first BIND generation pointer removed and explicit empty recovery applied"))
-		}
 		rollbackErr := apply(recoveryCtx)
 		if rollbackErr != nil {
+			if errors.Is(rollbackErr, ErrRollbackPeerUnverified) {
+				return errors.Join(activationErr, fmt.Errorf("prior BIND generation is locally restored but paired authority is unverified: %w", rollbackErr))
+			}
 			// A failed reapply leaves the daemon's in-memory view ambiguous even
 			// though the durable pointer is back on the prior generation. Give the
 			// explicit fail-closed action its own detached bounded window; the
@@ -661,6 +716,49 @@ func (publisher *Publisher) Switch(
 		}
 		return errors.Join(activationErr, errors.New("previous BIND generation restored and applied"))
 	}
+}
+
+// recoverFailedFirstSwitch is the failed-apply path of a first generation (no
+// prior pointer). The caller holds transactionMu but not mu. BIND's
+// configuration includes current/zones.conf, and apply may already have
+// enabled and started BIND. Removing the pointer first would leave an enabled
+// BIND with a missing include if the process died before recoverEmpty stopped
+// and sealed the unit: BIND would fail at the next boot (batch 4 cell c6,
+// 2026-09-29). recoverEmpty therefore runs first and must stop and seal BIND
+// and restore its configuration; the pointer is removed only after it succeeds.
+// If it fails, the pointer stays so BIND can still start from the verified
+// generation, and the caller's journal retains the rollback.
+func (publisher *Publisher) recoverFailedFirstSwitch(
+	recoveryCtx context.Context,
+	generationID string,
+	activationErr error,
+	recoverEmpty func(context.Context) error,
+) error {
+	if emptyErr := recoverEmpty(recoveryCtx); emptyErr != nil {
+		return errors.Join(
+			activationErr,
+			fmt.Errorf("stop or empty BIND before removing the first pointer: %w", emptyErr),
+			errors.New("first BIND generation pointer kept because empty recovery did not complete"),
+		)
+	}
+	publisher.mu.Lock()
+	// An already absent pointer is the exact empty prior state.
+	_, exists, err := publisher.currentLocked()
+	if err == nil && exists {
+		err = publisher.restoreSwitchPointerLocked(generationID, "", false)
+	}
+	publisher.mu.Unlock()
+	if err != nil {
+		return errors.Join(
+			activationErr,
+			errors.New("explicit empty recovery applied"),
+			fmt.Errorf("remove first BIND generation pointer after empty recovery: %w", err),
+		)
+	}
+	return errors.Join(
+		activationErr,
+		errors.New("explicit empty recovery applied and first BIND generation pointer removed"),
+	)
 }
 
 func (publisher *Publisher) restoreSwitchPointerLocked(target, previous string, hadPrevious bool) error {

@@ -1,0 +1,176 @@
+{
+  "outcome": "response",
+  "panel": "debian13",
+  "purpose": "DomainDNSManager records",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:28443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/domains/1/dns/records"
+  },
+  "response": {
+    "elapsed_seconds": 0.004,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Wed, 30 Sep 2026 08:32:53 GMT"
+      ],
+      [
+        "Content-Length",
+        "1588"
+      ]
+    ],
+    "json": {
+      "records": [
+        {
+          "content": "198.51.100.10",
+          "disabled": false,
+          "domain_id": 1,
+          "id": 12,
+          "name": "accept.pair-accept.test",
+          "ttl": 300,
+          "type": "A"
+        },
+        {
+          "content": "192.0.2.10",
+          "disabled": false,
+          "domain_id": 1,
+          "id": 9,
+          "name": "mail.pair-accept.test",
+          "ttl": 3600,
+          "type": "A"
+        },
+        {
+          "content": "192.0.2.10",
+          "disabled": false,
+          "domain_id": 1,
+          "id": 8,
+          "name": "pair-accept.test",
+          "ttl": 3600,
+          "type": "A"
+        },
+        {
+          "content": "fec0::5054:ff:fe13:10",
+          "disabled": false,
+          "domain_id": 1,
+          "id": 11,
+          "name": "mail.pair-accept.test",
+          "ttl": 3600,
+          "type": "AAAA"
+        },
+        {
+          "content": "fec0::5054:ff:fe13:10",
+          "disabled": false,
+          "domain_id": 1,
+          "id": 10,
+          "name": "pair-accept.test",
+          "ttl": 3600,
+          "type": "AAAA"
+        },
+        {
+          "content": "pair-accept.test",
+          "disabled": false,
+          "domain_id": 1,
+          "id": 5,
+          "name": "www.pair-accept.test",
+          "ttl": 3600,
+          "type": "CNAME"
+        },
+        {
+          "content": "mail.pair-accept.test",
+          "disabled": false,
+          "domain_id": 1,
+          "id": 4,
+          "name": "pair-accept.test",
+          "prio": 10,
+          "ttl": 3600,
+          "type": "MX"
+        },
+        {
+          "content": "ns1.ns-accept.test",
+          "disabled": false,
+          "domain_id": 1,
+          "id": 2,
+          "name": "pair-accept.test",
+          "ttl": 3600,
+          "type": "NS"
+        },
+        {
+          "content": "ns2.ns-accept.test",
+          "disabled": false,
+          "domain_id": 1,
+          "id": 3,
+          "name": "pair-accept.test",
+          "ttl": 3600,
+          "type": "NS"
+        },
+        {
+          "content": "ns1.ns-accept.test hostmaster.pair-accept.test 2026093002 10800 3600 604800 3600",
+          "disabled": false,
+          "domain_id": 1,
+          "id": 1,
+          "name": "pair-accept.test",
+          "ttl": 3600,
+          "type": "SOA"
+        },
+        {
+          "content": "\"v=DMARC1; p=none; rua=mailto:dmarc@pair-accept.test\"",
+          "disabled": false,
+          "domain_id": 1,
+          "id": 7,
+          "name": "_dmarc.pair-accept.test",
+          "ttl": 3600,
+          "type": "TXT"
+        },
+        {
+          "content": "\"v=spf1 a mx ~all\"",
+          "disabled": false,
+          "domain_id": 1,
+          "id": 6,
+          "name": "pair-accept.test",
+          "ttl": 3600,
+          "type": "TXT"
+        }
+      ]
+    },
+    "status": 200,
+    "text": null
+  }
+}

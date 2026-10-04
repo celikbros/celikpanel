@@ -1,0 +1,154 @@
+{
+  "schema": "celikpanel-mail-enrolled-boot-evidence/v1",
+  "actual_certificate_renewal": false,
+  "after_boot": "b601e7e1-3fb3-4145-a8d2-0c4550792917",
+  "before_boot": "1594d0d3-fbd1-4af7-aece-6e13a96c679f",
+  "enablement": "enabled",
+  "generation": "13146927a50653aef22c048027c170a0eebbed14b1f58321710d86a16c069093",
+  "interrupted_enrollment_recovery": false,
+  "journal": "Sep 23 09:57:41 dns-arch systemd[1]: Started Check retained mail certificate renewal work.\nSep 23 09:58:15 dns-arch systemd[1]: Starting Deploy an already renewed mail host certificate...\nSep 23 09:58:15 dns-arch systemd[1]: celikpanel-mail-renewal.service: Deactivated successfully.\nSep 23 09:58:15 dns-arch systemd[1]: Finished Deploy an already renewed mail host certificate.\n",
+  "management_bytes_absent": true,
+  "operation": "7df0fdc49040edabb95900570ebf31ac",
+  "retained_files_unchanged": true,
+  "scope": "completed enrollment timer boot and no-pending-work invocation only",
+  "service_properties": "ActiveState=inactive\nResult=success\nExecMainStartTimestamp=Wed 2026-09-23 09:58:15 UTC\nExecMainExitTimestamp=Wed 2026-09-23 09:58:15 UTC\nExecMainStatus=0\n",
+  "source_commit": "2fc9a5902ba5dcd2e5f89f9e635007b67635d2ed",
+  "timer": "active",
+  "volatile_runtime_absent": true,
+  "evidence": {
+    "mail-enrolled-boot-preparation.script": {
+      "sha256": "661454a285e8718416aff23203096941ca7992be1bbd24d7a019100ccaa5076a",
+      "bytes": 3169
+    },
+    "mail-enrolled-boot-before.json": {
+      "sha256": "82a78110f90f6b7499de9f00495e87858a515412838493234d1701f203c3f499",
+      "bytes": 3204
+    },
+    "mail-enrolled-boot-reset.intent": {
+      "sha256": "6358ee205f72a9a1a0a602a878a44839e0666bce647c419043e9dbfc2f9001c1",
+      "bytes": 313
+    },
+    "mail-enrolled-boot-reset.result": {
+      "sha256": "7d076be6c2c4549a7ab26d2216cb96939824a17184e13ed3ec0efa33c7c18c48",
+      "bytes": 24
+    },
+    "mail-enrolled-boot-observe.script": {
+      "sha256": "4c769d803d11f533a7dcbe843ab1811bd68810f19d4660590793e354339db195",
+      "bytes": 4905
+    },
+    "mail-enrolled-boot-result.json": {
+      "sha256": "72981c937e62d6e4163c1d01d6667150d1c5bfdd8aa868abc8064ddde2c4b9b6",
+      "bytes": 1188
+    }
+  },
+  "first_ssh_observation": "SSH not yet available (exit 255); no mutation retried; later guarded read succeeded",
+  "recorded_runtime_failed_trial": {
+    "source_commit": "f586e74a996c4888c1c52ad62b967e97490cd21d",
+    "operation": "5217e73f6d9dbfae6361a8f935870b44",
+    "result": "refused before volatile publication; durable ledger unchanged",
+    "cause": "worker-owned release descriptor was passed to inherited-fd9-only verifier",
+    "evidence": {
+      "mail-runtime-native.intent": {
+        "sha256": "35554bf32dd70d44aacba0892673806a267d3b0a1d27375d75f7794464e18bae",
+        "bytes": 1587
+      },
+      "mail-runtime-boot-before.json": {
+        "sha256": "b60bcacd7962facae9f9c4994523d9636e67c7099da800894eefa40bf156044d",
+        "bytes": 5111
+      },
+      "mail-runtime-boot-reset.intent": {
+        "sha256": "3779f47f37793c78480415c7f66e931288a6d0f0514c2f8ef1de1b232442715b",
+        "bytes": 297
+      },
+      "mail-runtime-boot-reset.result": {
+        "sha256": "7d076be6c2c4549a7ab26d2216cb96939824a17184e13ed3ec0efa33c7c18c48",
+        "bytes": 24
+      },
+      "mail-runtime-boot-continue.script": {
+        "sha256": "06331e4bccaa9737b0c924869f59a7c16ef5f86dfe03fce4a355fb6761b20d61",
+        "bytes": 8824
+      },
+      "mail-runtime-boot-continue.log": {
+        "sha256": "0c8cb799ea9d7014a28d68e25b62ad6a52fdf156c7a49b0a66c3e7f29983993a",
+        "bytes": 3172
+      }
+    }
+  },
+  "corrected_recorded_runtime_trial": {
+    "after_boot": "0449ff79-6715-4479-94bf-871cf79c8694",
+    "automatic_boot_dispatch": false,
+    "before_boot": "4f2dd9f5-9b75-47bd-95c7-97d7da0d672d",
+    "explicit_owner_continuation": true,
+    "generation": "189bfe5f9856b3eea04458fb30783fc56295c6680c0c224b3c1f7a9057de789e",
+    "handoff": "Mail enrollment worker accepted: 46740c8c196090c732a38428adcf7bf7. Completion is not yet verified. Observe celikpanel-mail-enrollment-46740c8c196090c732a38428adcf7bf7.service; after interruption, continue this same request.\n",
+    "journal": "Sep 23 10:16:56 dns-arch systemd[1]: Starting [systemd-run] /usr/libexec/celikpanel/mail-renewal/189bfe5f9856b3eea04458fb30783fc56295c6680c0c224b3c1f7a9057de789e/renew --enrollment-worker 46740c8c196090c732a38428adcf7bf7...\nSep 23 10:16:56 dns-arch systemd[1]: Started [systemd-run] /usr/libexec/celikpanel/mail-renewal/189bfe5f9856b3eea04458fb30783fc56295c6680c0c224b3c1f7a9057de789e/renew --enrollment-worker 46740c8c196090c732a38428adcf7bf7.\nSep 23 10:16:57 dns-arch renew[498]: Recorded mail renewal enrollment result verified: 46740c8c196090c732a38428adcf7bf7\nSep 23 10:16:57 dns-arch systemd[1]: celikpanel-mail-enrollment-46740c8c196090c732a38428adcf7bf7.service: Deactivated successfully.\nSep 23 10:16:57 dns-arch systemd[1]: celikpanel-mail-enrollment-46740c8c196090c732a38428adcf7bf7.service: Consumed 1.067s CPU time over 1.032s wall clock time, 181.5M memory peak.\n",
+    "ledger_unchanged": true,
+    "operation": "46740c8c196090c732a38428adcf7bf7",
+    "runtime": {
+      "/run/celikpanel": {
+        "gid": 969,
+        "links": 2,
+        "mode": 488,
+        "size": 80,
+        "uid": 0
+      },
+      "/run/celikpanel/service-mutation.lock": {
+        "gid": 969,
+        "links": 1,
+        "mode": 384,
+        "size": 0,
+        "uid": 0
+      },
+      "/run/celikpanel/service-mutation.lock.ledger-publication": {
+        "gid": 969,
+        "links": 1,
+        "mode": 384,
+        "size": 0,
+        "uid": 0
+      }
+    },
+    "runtime_absent_before": true,
+    "source_commit": "3af32e78675009b0ec76079dbef79eedd866d46a",
+    "scope": "explicit owner continuation of a terminal recorded enrollment after reboot, not unfinished-operation automatic recovery",
+    "native_files": {
+      "bin/agent": "23cbfdfbb3e0b608c9dc8d9209b27be215392e0a9c06e23fb73b27907fad5045",
+      "bin/agent-native-contract.json": "3ed820b85cd722f6e946ba768e5ddcac4be3cee5b320db32a3d8c45b71ac5184",
+      "bin/mail-renewal-runtime/celikpanel-mail-host-cert": "e61a2c52f152fec171483bba76932bf763eee844941a246c81b43620454a2282",
+      "bin/mail-renewal-runtime/celikpanel-mail-renewal.service": "f6b6eb9888f6a9b52366f941c6ee4563e029ca7d42a768ff8f5d324ee2e2b9a7",
+      "bin/mail-renewal-runtime/celikpanel-mail-renewal.timer": "8f4a40a06ace0a4ea845c214504fb5ee2e77e020e0b377828a59d78e948bf8df",
+      "bin/mail-renewal-runtime/renew": "a13aed526ce1eadc0c3930a4bbbec89bcd779da695d97fde0a8bf7bc25488c7a",
+      "bin/mail-renewal-runtime/runtime.manifest": "7ffc4f43f7203b78f13c645669aa0357369a142bc8232b030c69a97c742b9cfb",
+      "bin/recovery": "d3f15168513cac7b7f1273c6ce235a82993d180d17789ae0a1d7384ed86ae70c"
+    },
+    "evidence": {
+      "mail-runtime-v2-native.intent": {
+        "sha256": "479c8831011fc1edb6eb3cdca2a0357c3db17f084c49f1a52b349b38a0eff493",
+        "bytes": 1587
+      },
+      "mail-runtime-v2-native-result.json": {
+        "sha256": "e7c10da947f3ddceba5974f055d3cc49dfa2e2cf105af2ca7e406e0ab0c71c97",
+        "bytes": 5241
+      },
+      "mail-runtime-v2-boot-before.json": {
+        "sha256": "6a3f06bee9d8301761293377bdd6153e3a504d6f2f582014450dd96e6434e2ed",
+        "bytes": 5878
+      },
+      "mail-runtime-v2-boot-reset.intent": {
+        "sha256": "92f178ea72ef63d2b358eb4c37835128a949c2057ff74931ed3cc74562de0cfc",
+        "bytes": 297
+      },
+      "mail-runtime-v2-boot-reset.result": {
+        "sha256": "7d076be6c2c4549a7ab26d2216cb96939824a17184e13ed3ec0efa33c7c18c48",
+        "bytes": 24
+      },
+      "mail-runtime-v2-boot-continue.script": {
+        "sha256": "ddf3080bf6b2cd1b28fa116f19d70aca8e979be9e77caecf8daecffcae0cd769",
+        "bytes": 9539
+      },
+      "mail-runtime-v2-boot-continue.json": {
+        "sha256": "87ad72b191d785e1452ae211e5ec6e4f05807eb72d4c662d6c7311aafcb347de",
+        "bytes": 1881
+      }
+    }
+  }
+}

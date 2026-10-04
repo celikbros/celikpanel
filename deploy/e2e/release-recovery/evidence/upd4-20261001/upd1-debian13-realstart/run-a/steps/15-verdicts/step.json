@@ -1,0 +1,50 @@
+{
+  "checks": {
+    "agreement": {
+      "agreed_samples": 50,
+      "lag_samples": 0,
+      "samples": 50,
+      "verdict": "passed"
+    },
+    "attempts": {
+      "automatic": [],
+      "automatic_count": 0,
+      "journal_admissions": [],
+      "owner": [],
+      "owner_count": 0
+    },
+    "clock_skew_seconds": 0.537,
+    "host_panel_windows": [],
+    "host_ssh_windows": [],
+    "outcome": "not-terminal",
+    "workloads": {
+      "cron": {
+        "verdict": "never-interrupted",
+        "windows": []
+      },
+      "dns": {
+        "mode": "external",
+        "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+        "verdict": "not-provided-external-dns"
+      },
+      "panel": {
+        "outside": [],
+        "verdict": "never-down",
+        "windows": []
+      },
+      "smtp": {
+        "verdict": "never-interrupted",
+        "windows": []
+      },
+      "web": {
+        "verdict": "never-interrupted",
+        "windows": []
+      }
+    }
+  },
+  "finished_at": "2026-09-30T23:21:49Z",
+  "name": "verdicts",
+  "reason": "workload interruption outside the expected windows: panel",
+  "started_at": "2026-09-30T23:21:49Z",
+  "verdict": "failed"
+}

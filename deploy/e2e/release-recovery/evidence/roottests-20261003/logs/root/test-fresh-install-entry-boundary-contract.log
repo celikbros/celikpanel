@@ -1,0 +1,17 @@
+ADMISSION_REFUSAL_PASS label=signed-default-non-tty exit=1
+ADMISSION_REFUSAL_PASS label=signed-fresh-skip-admin exit=1
+ADMISSION_REFUSAL_PASS label=signed-relative-credentials exit=1
+ADMISSION_REFUSAL_PASS label=signed-public-credentials exit=1
+ADMISSION_REFUSAL_PASS label=signed-invalid-secure-credentials exit=1
+ADMISSION_REFUSAL_PASS label=signed-reordered-valid-credentials-narrowing exit=1
+ENTRY_PASS label=direct exit=86
+ADMISSION_REFUSAL_PASS label=signed-explicit-repair-zero-admin exit=1
+ADMISSION_REFUSAL_PASS label=signed-explicit-repair-usable-admin-narrowing exit=1
+ENTRY_PASS label=signed-public-narrow-credentials exit=86
+ENTRY_PASS label=signed-public-tty exit=86
+REFUSAL_PASS label=foreign-canonical-root exit=1 message=release transaction guard is outside the verified running release
+REFUSAL_PASS label=relative-root exit=1 message=trusted release root is missing while sourcing release guard
+REFUSAL_PASS label=symlink-root exit=1 message=release transaction guard is outside the verified running release
+REFUSAL_PASS label=trailing-slash-root exit=1 message=release transaction guard is outside the verified running release
+REFUSAL_PASS label=apply-only-missing-root exit=1 message=trusted release root is missing while sourcing release guard
+fresh-install entry-boundary contract passed

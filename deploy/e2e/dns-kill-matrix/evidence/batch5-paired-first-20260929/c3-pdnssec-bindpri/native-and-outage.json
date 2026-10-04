@@ -1,0 +1,16 @@
+{
+  "dns_outage": null,
+  "expectation": null,
+  "flow_ambiguities": null,
+  "flow_failures": null,
+  "flow_status": null,
+  "owner_inverse_failures": null,
+  "owner_inverse_native_at_boundary": null,
+  "recovery_outcome": null,
+  "request_id": "5bd1de7092240beea2027afc2a707c7d",
+  "safety_status": "unverified",
+  "source": "result.json (verbatim sub-objects)",
+  "status": "unverified",
+  "step_records": {},
+  "variant": null
+}

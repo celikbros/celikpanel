@@ -1,0 +1,86 @@
+=== f6cdd5a0c27ca865a2dc50239b106046e13739b7 .. baseline
+diff --git a/deploy/release-sequence-policy b/deploy/release-sequence-policy
+index 43ee6325..3066bb17 100644
+--- a/deploy/release-sequence-policy
++++ b/deploy/release-sequence-policy
+@@ -1,6 +1,6 @@
+ format=celikpanel-release-sequence-policy-v1
+-version=v0.1.0-alpha.80
+-current=80
+-previous=79
+-previous_version=v0.1.0-alpha.79
+-previous_commit=f3390addc85bbe92a0cc865448d9bb366e6b980a
++version=v0.1.0-alpha.81
++current=81
++previous=80
++previous_version=v0.1.0-alpha.80
++previous_commit=bd14d97efc5cfd19acd70ddf0edb9c6343317e2b
+=== baseline .. good
+diff --git a/deploy/release-sequence-policy b/deploy/release-sequence-policy
+index 3066bb17..bfd5bc0b 100644
+--- a/deploy/release-sequence-policy
++++ b/deploy/release-sequence-policy
+@@ -1,6 +1,6 @@
+ format=celikpanel-release-sequence-policy-v1
+-version=v0.1.0-alpha.81
+-current=81
+-previous=80
+-previous_version=v0.1.0-alpha.80
+-previous_commit=bd14d97efc5cfd19acd70ddf0edb9c6343317e2b
++version=v0.1.0-alpha.82
++current=82
++previous=81
++previous_version=v0.1.0-alpha.81
++previous_commit=4a379faed756b87070a7f621787e9cbe0eef7d04
+=== good .. defective
+diff --git a/cmd/panel/main.go b/cmd/panel/main.go
+index 65c353f1..c81bf79a 100644
+--- a/cmd/panel/main.go
++++ b/cmd/panel/main.go
+@@ -796,8 +796,10 @@ func main() {
+ 	// These bootstrap modes only touch the database, then exit — no agent.
+ 	// Bu önyükleme modları yalnızca veritabanına dokunup çıkar — agent yok.
+ 	if *migrateOnlyFlag {
+-		log.Println("Canonical panel database migrations completed")
+-		return
++		// upd1 disposable fixture defect: never a release. The isolated copy is
++		// migrated, then this candidate reports failure so the signed update fails
++		// after candidate-installed, while the transaction is still active.
++		log.Fatalf("upd1 fixture defect: this candidate cannot complete its offline database migration")
+ 	}
+ 	if *countUsersFlag {
+ 		p := &Panel{db: database}
+=== good .. real-start
+diff --git a/cmd/panel/main.go b/cmd/panel/main.go
+index 65c353f1..b8a6958e 100644
+--- a/cmd/panel/main.go
++++ b/cmd/panel/main.go
+@@ -897,6 +897,10 @@ func main() {
+ 		log.Fatal("refusing to serve over plain HTTP with secure cookies: enable TLS (CELIKPANEL_TLS=1 or CELIKPANEL_TLS_CERT/KEY) or pass --insecure-cookies for development")
+ 	}
+ 	startupGate.recovery = panel.startupRecoveryHandler(webDir(), certPath, keyPath)
++	// upd3 disposable fixture defect (real-start): never a release. The read-only
++	// start check exits before flag parsing and never reaches this line; the real
++	// start exits here, before its listener, so the unit never stays up.
++	log.Fatalf("upd3 fixture defect: this candidate exits before its panel listener starts")
+ 	runningServer, err := startPanelHTTP(server, certPath, keyPath)
+ 	if err != nil {
+ 		log.Fatalf("Failed to start panel listener: %v", err)
+=== good .. start-check
+diff --git a/cmd/panel/server_lifecycle.go b/cmd/panel/server_lifecycle.go
+index 27c9dc77..d4351788 100644
+--- a/cmd/panel/server_lifecycle.go
++++ b/cmd/panel/server_lifecycle.go
+@@ -98,6 +98,12 @@ func configurePanelHTTPTLS(server *http.Server, certPath, keyPath string) (bool,
+ 	if server == nil {
+ 		return false, errors.New("panel HTTP server is nil")
+ 	}
++	// upd3 disposable fixture defect (start-check): never a release. The TLS
++	// preparation shared by the read-only start check and the real start fails,
++	// so the update stops at the start check, before completion.pending.
++	if server != nil {
++		return false, errors.New("upd3 fixture defect: this candidate cannot prepare its panel TLS listener")
++	}
+ 	tlsOn := certPath != "" || keyPath != ""
+ 	if tlsOn {
+ 		if certPath == "" || keyPath == "" {

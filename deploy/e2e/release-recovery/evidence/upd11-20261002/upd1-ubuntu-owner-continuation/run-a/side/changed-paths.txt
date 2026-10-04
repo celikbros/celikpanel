@@ -1,0 +1,34 @@
+evidence /var/tmp/cp-release-drill-upd11-ub-oc-a/evidence/ubuntu/upd1/upd1-ubuntu-owner-continuation-20261002t014714z/
+## initial-record (updater wrote it): 0 hits (0 in .txt)
+## curl preflight refusal: 0 hits (0 in .txt)
+## no-marker after child failure: 0 hits (0 in .txt)
+## pause_pending journal: 2 hits (2 in .txt)
+   steps/12-owner-continuation-required/recovery-journal-at-pause.txt:37: Oct 02 02:09:50 dns-ubuntu release-recovery[69137]: The last admitted recovery attempt did not finish. The next run of the recovery timer records the pause and prints the one-time retry command for this operation.
+   steps/15-collect/journal-product.txt:742: 2026-10-02T02:09:50.507642+00:00 dns-ubuntu release-recovery[69137]: The last admitted recovery attempt did not finish. The next run of the recovery timer records the pause and prints the one-time retry command for this operation.
+## renewal restore at pause: 2 hits (2 in .txt)
+   steps/12-owner-continuation-required/recovery-journal-at-pause.txt:35: Oct 02 02:09:50 dns-ubuntu release-recovery[69137]: Automatic certificate renewal (Certbot) was returned to its state from before the update while this operation waits; the retry pauses it again before it continues.
+   steps/15-collect/journal-product.txt:740: 2026-10-02T02:09:50.507219+00:00 dns-ubuntu release-recovery[69137]: Automatic certificate renewal (Certbot) was returned to its state from before the update while this operation waits; the retry pauses it again before it continues.
+## pause recorded: 3 hits (3 in .txt)
+   steps/12-owner-continuation-required/recovery-journal-at-pause.txt:45: Oct 02 02:10:22 dns-ubuntu release-recovery[74569]: Automatic recovery paused after three admitted attempts. No recovery child was started. Preserve evidence and inspect the recovery service journal.
+   steps/15-collect/journal-product.txt:750: 2026-10-02T02:10:22.325487+00:00 dns-ubuntu release-recovery[74569]: Automatic recovery paused after three admitted attempts. No recovery child was started. Preserve evidence and inspect the recovery service journal.
+## start check failure: 0 hits (0 in .txt)
+## package-activity refusal (startup reconcile): 2 hits (2 in .txt)
+   steps/15-collect/journal-product.txt:774: 2026-10-02T02:11:06.359265+00:00 dns-ubuntu panel[78509]: 2026/10/02 02:11:06 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>
+   steps/15-collect/journal-product.txt:775: 2026-10-02T02:11:06.363765+00:00 dns-ubuntu panel[78509]: 2026/10/02 02:11:06 milter wiring at startup: another server change or package-manager task is still running
+## package_manager_active / HOST_MUTATION_BUSY: 42 hits (0 in .txt)
+## startup reconcile success: 1 hits (1 in .txt)
+   steps/15-collect/journal-product.txt:773: 2026-10-02T02:11:06.355190+00:00 dns-ubuntu panel[78509]: 2026/10/02 02:11:06 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload
+## milter chain/wiring: 3 hits (3 in .txt)
+   steps/15-collect/journal-product.txt:16: 2026-10-02T01:48:01.986972+00:00 dns-ubuntu panel[7403]: 2026/10/02 01:48:01 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/15-collect/journal-product.txt:28: 2026-10-02T01:48:03.139821+00:00 dns-ubuntu panel[7466]: 2026/10/02 01:48:03 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/15-collect/journal-product.txt:775: 2026-10-02T02:11:06.363765+00:00 dns-ubuntu panel[78509]: 2026/10/02 02:11:06 milter wiring at startup: another server change or package-manager task is still running
+## root CLI states (first seen)
+   2026-10-02T02:03:14Z ('running', 'update_running', None, None, None)
+   2026-10-02T02:04:56Z ('recovering', 'recovery_running', None, 'panel_start_unverified', None)
+   2026-10-02T02:06:13Z ('recovery_required', 'recovery_failed', 'retry_scheduled', None, 'panel_start_unverified')
+   2026-10-02T02:06:47Z ('recovering', 'recovery_running', None, None, 'panel_start_unverified')
+   2026-10-02T02:09:54Z ('recovery_required', 'recovery_failed', 'pause_pending', None, 'panel_start_unverified')
+   2026-10-02T02:10:11Z ('recovery_required', 'recovery_incomplete', 'paused_retry_limit', None, 'panel_start_unverified')
+   2026-10-02T02:11:22Z ('succeeded', 'update_verified', None, None, None)
+## CELIKPANEL_LISTEN mentions
+   steps/15-collect/journal-product.txt 2026-10-02T02:04:05.428899+00:00 dns-ubuntu sudo[54053]:     root : PWD=/var/backups/celikpanel/releases/73eef2862644-c749d4a92615d43731150ce0 ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/loc

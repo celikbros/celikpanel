@@ -1,0 +1,6 @@
+{
+  "action": "stop",
+  "cell_id": "bind__rolling-back__after-write__standalone__peer-reachable",
+  "dry_run": false,
+  "method": "QMP quit; no fallback signal"
+}

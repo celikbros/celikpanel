@@ -1,0 +1,28 @@
+{"raw": "{\"t\":\"2026-09-30T04:28:47Z\",\"catalog_axfr_from_secondary\":ssh: connect to host 127.0.0.1 port 2202: Connection refused"}
+{"raw": "}"}
+{"raw": "{\"t\":\"2026-09-30T04:29:03Z\",\"catalog_axfr_from_secondary\":Connection to 127.0.0.1 port 2202 timed out"}
+{"raw": "}"}
+{"raw": "{\"t\":\"2026-09-30T04:29:13Z\",\"catalog_axfr_from_secondary\":Connection reset by 127.0.0.1 port 2202"}
+{"raw": "}"}
+{"t":"2026-09-30T04:29:53Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020a.celikpanel.invalid", "command": "catalog", "error": "ConnectionRefusedError: [Errno 111] Connection refused", "server": "192.0.2.10", "transferred": false}}
+{"raw": "{\"t\":\"2026-09-30T04:31:10Z\",\"catalog_axfr_from_secondary\":Connection to 127.0.0.1 port 2202 timed out"}
+{"raw": "}"}
+{"raw": "{\"t\":\"2026-09-30T04:31:20Z\",\"catalog_axfr_from_secondary\":Connection reset by 127.0.0.1 port 2202"}
+{"raw": "}"}
+{"t":"2026-09-30T04:32:31Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020a.celikpanel.invalid", "command": "catalog", "error": "ConnectionRefusedError: [Errno 111] Connection refused", "server": "192.0.2.10", "transferred": false}}
+{"t":"2026-09-30T04:32:41Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020a.celikpanel.invalid", "command": "catalog", "members": [], "serial": 1790742759, "server": "192.0.2.10", "transferred": true}}
+{"t":"2026-09-30T04:32:41Z","primary_pdns_db":{"catalog_records": [["catalog-c000020a.celikpanel.invalid", "catalog-c000020a.celikpanel.invalid", "NS", "invalid."], ["catalog-c000020a.celikpanel.invalid", "catalog-c000020a.celikpanel.invalid", "SOA", "invalid invalid 1790742759 60 30 3600 30"]], "domains": [[1, "catalog-c000020a.celikpanel.invalid", "PRODUCER", 1, "", "celikpanel-bind-catalog-v1"]], "metadata": [[1, "CATALOG-HASH", "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="]], "t": "2026-09-30T04:32:41Z"}}
+{"t":"2026-09-30T04:33:13Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020a.celikpanel.invalid", "command": "catalog", "members": ["pair-accept.test."], "serial": 1790742760, "server": "192.0.2.10", "transferred": true}}
+{"t":"2026-09-30T04:33:13Z","primary_pdns_db":{"catalog_records": [["catalog-c000020a.celikpanel.invalid", "catalog-c000020a.celikpanel.invalid", "NS", "invalid."], ["catalog-c000020a.celikpanel.invalid", "catalog-c000020a.celikpanel.invalid", "SOA", "invalid invalid 1790742760 60 30 3600 30"]], "domains": [[1, "catalog-c000020a.celikpanel.invalid", "PRODUCER", 1, "", "celikpanel-bind-catalog-v1"], [2, "pair-accept.test", "MASTER", null, "catalog-c000020a.celikpanel.invalid", ""]], "metadata": [[1, "CATALOG-HASH", "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="]], "t": "2026-09-30T04:33:13Z"}}
+{"t":"2026-09-30T04:33:33Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020a.celikpanel.invalid", "command": "catalog", "members": [], "serial": 1790742761, "server": "192.0.2.10", "transferred": true}}
+{"t":"2026-09-30T04:33:34Z","primary_pdns_db":{"catalog_records": [["catalog-c000020a.celikpanel.invalid", "catalog-c000020a.celikpanel.invalid", "NS", "invalid."], ["catalog-c000020a.celikpanel.invalid", "catalog-c000020a.celikpanel.invalid", "SOA", "invalid invalid 1790742761 60 30 3600 30"]], "domains": [[1, "catalog-c000020a.celikpanel.invalid", "PRODUCER", 1, "", "celikpanel-bind-catalog-v1"]], "metadata": [[1, "CATALOG-HASH", "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="]], "t": "2026-09-30T04:33:34Z"}}
+{"t":"2026-09-30T04:34:04Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020a.celikpanel.invalid", "command": "catalog", "members": ["pair-accept.test."], "serial": 1790742762, "server": "192.0.2.10", "transferred": true}}
+{"t":"2026-09-30T04:34:05Z","primary_pdns_db":{"catalog_records": [["catalog-c000020a.celikpanel.invalid", "catalog-c000020a.celikpanel.invalid", "NS", "invalid."], ["catalog-c000020a.celikpanel.invalid", "catalog-c000020a.celikpanel.invalid", "SOA", "invalid invalid 1790742762 60 30 3600 30"]], "domains": [[1, "catalog-c000020a.celikpanel.invalid", "PRODUCER", 1, "", "celikpanel-bind-catalog-v1"], [2, "pair-accept.test", "MASTER", null, "catalog-c000020a.celikpanel.invalid", ""]], "metadata": [[1, "CATALOG-HASH", "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="]], "t": "2026-09-30T04:34:05Z"}}
+{"t":"2026-09-30T04:34:22Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020a.celikpanel.invalid", "command": "catalog", "error": "ConnectionRefusedError: [Errno 111] Connection refused", "server": "192.0.2.10", "transferred": false}}
+{"raw": "{\"t\":\"2026-09-30T04:34:37Z\",\"catalog_axfr_from_secondary\":Connection to 127.0.0.1 port 2202 timed out"}
+{"raw": "}"}
+{"raw": "{\"t\":\"2026-09-30T04:34:47Z\",\"catalog_axfr_from_secondary\":Connection reset by 127.0.0.1 port 2202"}
+{"raw": "}"}
+{"t":"2026-09-30T04:35:27Z","catalog_axfr_from_secondary":{"catalog": "catalog-c000020a.celikpanel.invalid", "command": "catalog", "members": ["pair-accept.test."], "serial": 1790742863, "server": "192.0.2.10", "transferred": true}}
+{"t":"2026-09-30T04:35:28Z","primary_pdns_db":{"catalog_records": [["catalog-c000020a.celikpanel.invalid", "catalog-c000020a.celikpanel.invalid", "NS", "invalid."], ["catalog-c000020a.celikpanel.invalid", "catalog-c000020a.celikpanel.invalid", "SOA", "invalid invalid 1790742863 60 30 3600 30"]], "domains": [[1, "catalog-c000020a.celikpanel.invalid", "PRODUCER", 1790742762, "", "celikpanel-bind-catalog-v1"], [2, "pair-accept.test", "MASTER", 2026093001, "catalog-c000020a.celikpanel.invalid", ""]], "metadata": [[1, "CATALOG-HASH", "n6L34LeIr9zlcH/7CcW04T4BhE5GuvXjRFRo31n4dKY="]], "t": "2026-09-30T04:35:28Z"}}
+{"t":"2026-09-30T04:35:38Z","watch":"run ended"}

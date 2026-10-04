@@ -1,0 +1,2 @@
+catalog catalog-c000020a.celikpanel.invalid: one line per retained database copy (watcher dir/copies/<UTC HHMMSS.mmm>-<hash12>.sqlite3)
+{"copy": "raw/watch/cp-b10-watch-db/copies/025629.778-eff470136b44.sqlite3", "catalog_domain(id,type,master,account,options,catalog,notified_serial,last_check)": [1, "PRODUCER", null, "celikpanel-bind-catalog-v1", null, null, 1, null], "catalog_soa_serial": "1790731620", "catalog_metadata": [["CATALOG-HASH", "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="]], "member_soa": []}  <- serial change

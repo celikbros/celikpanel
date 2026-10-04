@@ -1,0 +1,88 @@
+{
+  "checks": {
+    "agreement": {
+      "agreed_samples": 7,
+      "lag_samples": 0,
+      "samples": 11,
+      "verdict": "passed"
+    },
+    "attempts": {
+      "automatic": [
+        {
+          "at": "2026-10-01T00:49:33.877728Z",
+          "attempt": "1",
+          "direction": "rollback",
+          "operation": "update",
+          "phase": "active"
+        }
+      ],
+      "automatic_count": 1,
+      "journal_admissions": [
+        {
+          "at": "2026-10-01T00:49:33.932007+00:00",
+          "attempt": "1",
+          "snapshot": "20261001T004929Z-from-unknown-to-dd4adede7c24bd1ad92118612fd379beb7874b0b-fe2920b052e2bd380d1874d8c44974c0"
+        }
+      ],
+      "owner": [],
+      "owner_count": 0
+    },
+    "clock_skew_seconds": 0.598,
+    "host_panel_windows": [
+      {
+        "failed": true,
+        "first_bad": 1790815771.12143,
+        "from": 1790815766.1212857,
+        "kind": "failed",
+        "last_bad": 1790815786.1218946,
+        "lower_bound_s": 15.0,
+        "to": 1790815791.122067,
+        "unobserved": false,
+        "upper_bound_s": 25.001
+      }
+    ],
+    "host_ssh_windows": [],
+    "outcome": "real-start-candidate-rolled-back",
+    "workloads": {
+      "cron": {
+        "verdict": "never-interrupted",
+        "windows": []
+      },
+      "dns": {
+        "mode": "external",
+        "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+        "verdict": "not-provided-external-dns"
+      },
+      "panel": {
+        "outside": [],
+        "verdict": "came-back",
+        "windows": [
+          {
+            "cause": "unexplained",
+            "failed": true,
+            "first_bad": 1790815771.4764104,
+            "from": 1790815766.4763062,
+            "kind": "failed",
+            "last_bad": 1790815786.476854,
+            "lower_bound_s": 15.0,
+            "to": 1790815791.4769146,
+            "unobserved": false,
+            "upper_bound_s": 25.001
+          }
+        ]
+      },
+      "smtp": {
+        "verdict": "not-seeded"
+      },
+      "web": {
+        "verdict": "never-interrupted",
+        "windows": []
+      }
+    }
+  },
+  "finished_at": "2026-10-01T00:50:04Z",
+  "name": "verdicts",
+  "reason": "workload interruption outside the expected windows: panel",
+  "started_at": "2026-10-01T00:50:04Z",
+  "verdict": "failed"
+}

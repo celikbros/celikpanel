@@ -1,46 +1,154 @@
 # CelikPanel Yol Haritası
 
-*Son güncelleme: 29 Ağustos 2026 · [English](ROADMAP.md)*
+*Son güncelleme: 28 Eylül 2026 · [English](ROADMAP.md)*
 
 ---
 
 ## Anayasa — Her Kararın Süzgeci
 
-Her özellik, her commit, her tasarım kararı bu dört süzgeçten geçer.
-Birinden geçemeyen iş bitmiş sayılmaz, ertelenir ya da sadeleştirilir.
+Her özellik, commit ve tasarım kararı bu gereksinimleri karşılamalıdır.
+Bunlar mevcut uygulamanın karşıladığı iddiası değil, bağlayıcı yükümlülüklerdir.
+[Dayanıklı çalışma sözleşmesi ve kaynak incelemesi](docs/RESILIENCE-CONTRACT.tr.md),
+açık P0 işlerini, uygulama sırasını ve kapatılmaları için gereken kanıtı kaydeder (D-025).
 
-### 1. Güvenlik varsayılandır
-- Kimlik doğrulamasız hiçbir özellik yayına çıkmaz.
-- Varsayılan yapılandırma her zaman en güvenli olandır (localhost bağlama, token, en az yetki).
-- Parola/token yalnız `crypto/rand` üretir. SQL yalnız parametrelidir.
-- Root yetkili Agent'a yalnız Panel erişebilir — başka hiçbir şey.
+### 1. Güvenlik ve sunucu sahibinin yetkisi
+- Yönetim erişiminde kimlik doğrula; her eylemi ilgili kaynaklar için yetkilendir. En az yetki, yerel kimlik doğrulamalı IPC, parametreli SQL ve gizli değerler için `crypto/rand` kullan.
+- Root yetkisi olmayan Panel ile ayrıcalıklı Agent ayrı kalır. Normal ayrıcalıklı otomasyon yetkili Agent API'sini kullanır; desteklenen kullanıcı kurtarmasının ayrı ve dar bir sözleşmesi vardır. Yapay zekâ planlayıcısı veya kurtarma ekranı sınırsız root çalıştırma yetkisi kazanmaz.
+- Sunucu sahibi hizmetleri kendi araçlarıyla yönetebilir. Sahibinin değişikliklerini algıla ve açıkça uzlaştır; önbellekteki hedefe uydurmak için sessizce üzerlerine yazma (D-022).
+- Kanıt belirsizse ilgili güvensiz değişikliği engelle. Doğrulanmamış yetki vermeden, kimlik doğrulamalı tanı ve desteklenen kurtarma erişimini koru.
 
-### 2. Sadelik (Google ilkesi)
-AltaVista portal olmaya çalışırken Google tek arama kutusuyla kazandı.
-cPanel/Plesk bugünün AltaVista'sıdır: kalabalık, yavaş, ürkütücü.
-- Her işin **tek bariz yolu** olur. İki yol varsa biri silinir.
-- Özellik eklemeden önce sor: *"Eklemezsek ne kaybederiz?"* Cevap net değilse eklenmez.
-- Kurulu olmayan servis arayüzde **görünmezdir**. Boş ekran yok, pasif menü yok.
-- Akıllı varsayılanlar: sormadan doğrusunu yap; düğme isteyen %5 için "gelişmiş" bölümü.
+### 2. Süreklilik ve kurtarılabilirlik
+- Panel kesintisi, lisans kaybı veya panelin kaldırılması; barındırılan işleri ve hizmetlerin kendi yenileme, zamanlama ve açılış mekanizmalarını durdurmamalıdır. Bağımsızlık iddiasından önce kalan bağımlılıklar giderilip sınanmalıdır.
+- Her değişiklik; etkilenen kaynakları, salt-okur ön kontrolü, kalıcı kontrol noktalarını, sınırlı tekrar/kurtarmayı ve sonuç kanıtını tanımlar. İzin veya sahiplik normalleştirmesi de değişikliktir.
+- Aday sürüm, normal Agent, uygulama şema geçişi veya lisans doğrulayıcı çalışmadığında kurtarma kullanılabilir kalmalıdır. Karışık ya da doğrulanmamış uygulama durumu normal yönetimi engelleyebilir; bağımsız kurtarma yolunu ortadan kaldıramaz.
+- Aday sürüm ve kurtarma uyumluluğu doğrulanana kadar son doğrulanmış kullanılabilir durum ile kurtarma malzemesi korunur. Temizlik bu kanıttan sonra gelir.
+- Otomatik onarım, kabul edilen işlemin kuralları belli ve tekrarlandığında ek etki yaratmayan devamı veya telafisidir. Eksik kanıt uydurmaz, sahibinin sonraki değişikliklerini geri almaz, doğrulamayı atlamaz veya sonucu belirsiz ikinci bir değişiklik başlatmaz.
 
-### 3. Hız
-- Panel API yanıt hedefi: < 100 ms. Arayüz etkileşimleri: anında.
-- Kurulum hedefi: **60 saniye** (v0.1 `install.sh`'ı teslim etti; hedef korunuyor).
-- Tek statik binary; dış bağımlılık eklemek yasaktır (bu bir özelliktir — koruruz).
+### 3. Gerçeği yansıtan durum ve ortak sözleşmeler
+- Sahibin niyeti, yetki, yayımlanmış yapılandırma, gözlem, yürütme, doğrulama ve kurtarma ayrı tutulur. Bilinmeyen; yok, başarısız, süresi dolmuş veya tamamlanmış değildir.
+- Her kalıcı çıktının sürümlü tek bir üretim/okuma/geri yükleme sözleşmesi ve açık desteklenen geçişleri vardır. Kanıt rolüne göre karşılaştırılır; geçerli yayımlama kaydın yalnız bir bölümünü ilerletiyorsa bütün kayıt eşitliği aranmaz.
+- Tamamlanmış kurulum adımı geçmiş yürütmenin kanıtıdır; güncel sağlık kanıtı değildir. Mevcut neden, sorumlu kişi, sonraki eylem ve aynı işlemin nasıl süreceği açıklanır (D-024).
+- Tarayıcı yetkili işlem durumunu gözlemler. Yenileme, yeniden bağlanma ve zaman aşımı ikinci işi yetkilendirmez veya tamamlanma anlamına gelmez.
 
-### 4. Esneklik
-- Her şey önce API'dir; arayüz onun tüketicilerinden yalnızca biridir.
-- Servisler modülerdir: müşteri istediğini, istediği sürümde kurar.
-- Veri asla rehin tutulmaz: yedekler standart biçimde (tar.gz, SQL dump), dışa aktarım her zaman mümkün.
+### 4. Sadelik
+- Her olağan işin kullanıcı için tek ve açık yolu olur. Tarayıcı ile desteklenen kullanıcı kurtarması aynı işlem sözleşmesini paylaşır; tek ekran, kurtarmanın tek arıza noktası olamaz.
+- Özellik somut kullanıcı ihtiyacı için eklenir. Kabul edilen kapsam içinde güvenli varsayılanlar kullanılır; gelişmiş seçimler gerektiğinde gösterilir.
+- Kullanılmayan hizmetlerin özel menüleri arayüzü doldurmaz. Kullanıcının işi tamamlamasına yardımcı olan kurulum keşfi, gerçek çakışmalar ve kurtarma eylemleri görünür kalır.
+- Olağan işler panelden yapılabilmelidir. Sahibin kendi araçlarıyla yönetimi ve kurtarması desteklenir; elle kurtarma, kurtarmayı yasaklama gerekçesi değil otomasyon açığının kanıtıdır.
 
-### Dürüstlük kuralı
-Önceki dönemin hatası tekrarlanmayacak: **"çalışıyor" ≠ "bitti".**
-İş ancak üçü birdenle biter: test + güvenlik incelemesi + dokümantasyon.
-Her sürümün ölçülebilir çıkış ölçütü vardır; karşılanmadan sonrakine geçilmez.
+### 5. Kanıtla ölçülen hız
+- API yanıtında 100 ms altı, hızlı arayüz tepkisi ve asgari kurulumda 60 saniye hedefleri korunur. Bir hedefin karşılandığı söylenmeden ölçülen platform ve kapsam kaydedilir.
+- Çalışma ortamı küçük tutulur. Mevcut Panel/Agent yetki ayrımı, hizmetlerin kendi yaşam döngüsü ve bağımsız kurtarma mekanizması tek binary söyleminden önce gelir.
+- Hız; doğrulamayı, kurtarılabilir kontrol noktalarını veya arıza testlerini atlamayı haklı çıkarmaz.
+
+### 6. Esneklik ve bağımsızlık
+- Türleri belirli API'ler, modüler hizmetler ve standart protokoller kullanılır; isteğe bağlı otomasyon, hizmetin çalışmasından ayrıdır.
+- Yedekler ve dışa aktarımlar standart biçimdedir. Yönetim yazılımı sahibinin verisinin sahibi olamaz veya veriyi rehin tutamaz.
+- Standart DNS çoğaltması karşı tarafta panel veya lisans gerektirmez. Ayrı yetkilendirilen uzaktan kayıt yönetimi isteğe bağlıdır.
+- Kurulu panel güncellemelerini yalnız kullanıcı CelikPanel'in güncelleme ekranından başlatır. Yayınlama, tanı ve desteklenen geri alma asistana kurulum izni vermez.
+
+### Dürüstlük ve sürüm kabul kuralı
+
+Test, güvenlik incelemesi ve dokümantasyon gereklidir. Yaşam döngüsü desteği ayrıca
+geçici ve gerçek sistem hizmetleri kullanan ortamlarda eksiksiz arıza geçiş kanıtı
+ister: gerçek önceki sürüm durumu, başarısız güncelleme, fiilen otomatik geri yükleme,
+kurtarmanın kesilmesi/yeniden başlatma, sahibin değişikliklerinin korunması,
+yönetim kurtarması ve hizmet kontrolleri. Bileşen testleri, taklit servis yöneticisi
+ve tek başına başarılı kurulum bu sözleşmeyi kanıtlamaz.
+
+Her yaşam döngüsü değişikliği; etkilenen ilkeyi, şema/sürüm geçişini, kurtarma
+davranışını ve kabul kanıtını adlandırır. Ölçülmemiş veya sonucu belirsiz işler
+açık kalır. Dar kapsamlı bir olay düzeltmesi sınırları belirtilerek yayımlanabilir;
+bu, temel P0 işlerini kapatmaz veya ilgisiz özellik genişlemesini haklı çıkarmaz.
+Dayanıklı çalışma iddiasından önce D-025'in kabul matrisi uygulanıp geçmelidir.
+Sistemin mümkün olan her arızayı kendiliğinden gidereceği vaat edilmez.
+
+
+---
+
+## Neredeyiz — 26 Eylül 2026
+
+**Güncel öncelik: ürünü genişletmeden önce D-025 mimari dayanıklılık işini tamamlamak.**
+Bu inceleme, yerel kaynağın `f253d318` commit'ine kadarki durumunu ve saklanan kabul
+raporlarını kapsar. Frankfurt/Boston'un yeniden incelendiği, yeni sürüm yayımlandığı
+veya değişikliklerin kurulu olduğu anlamına gelmez. P0.1–P0.5'in tamamı **kısmi**;
+hiçbiri kapanmış değil. Anayasa gereksinimleri ve mevcut iş kimlikleri değişmedi.
+
+### Kanıtlanan kapsam ve kalan işler
+
+| Mevcut iş | Belirli kapsamda uygulanan veya doğrulanan | Kapatmak için gereken |
+|---|---|---|
+| P0.1 — Gerçek güncelleme/geri alma | Arch/Debian üzerinde gerçek eski sürüme dönüş; sonraki şema geçişi ve kurtarma deneylerinde gerçek Alpha64 schema38 verisi. [Kanıt](deploy/e2e/release-recovery/ISOLATED-DATABASE.md). | Desteklenen güncelleme/arıza/hizmet matrisi ve üretim imzalı aday kabulü tamamlanmalı; seçili aşamanın geçmesi bütün güncellemenin kabulü değildir. |
+| P0.2 — Erişim ve doğru durum | Bağımsız, kimlik doğrulamalı kurtarma/durum girişi; seçili CLI, HTTP ve tarayıcı sonuçları eşleşiyor. Gerçek açılış beklemesinde tekrarlar aynı işlemi koruyor. [Kanıt](deploy/e2e/release-recovery/BOUND-WORKER.md). | Gerçek bekleme/hata/yeniden bağlanma durumları, bilinen hatanın korunması, beklerken tarayıcı erişimi ve üretim güven zinciriyle kullanıcının başlattığı güncelleme yolu. |
+| P0.3 — Bağımsız kurtarma | Ayrı korunan kurtarma kodu/verisi, ayrı kopyada DB dönüşümü ve atomik yayın; geri alma sırasında seçili kesintiler ve yeniden açılış sonrasında kesinti anındaki satırlar korunarak otomatik kurtarma. [İki arızalı deney](deploy/e2e/release-recovery/NATIVE-EXCHANGE-RECOVERY.md). | Kalan kontrol noktaları, eksik yedek yakalama, dosya izin/sahiplik geçişleri, eski sürüm uyumu ve güvenli temizlik. Sonunda kurtulma, kesintisiz hizmet veya güç kaybı dayanıklılığı değildir. |
+| P0.4 — Ortak DNS/TLS sözleşmeleri | DNS sahiplenme/yayın rolleri ayrıldı; ortak TLS ve DNS okuyucuları, bağımsız DNS gözlemi ve seçili Agent aracılı arıza kurtarması mevcut. [Sözleşme](docs/DNS-ENGINE-ARTIFACT.md). | Desteklenen **Agent'tan bağımsız DNS geri alma yürütmesi**, gerçek kesinti/sahip değişikliği kabulü, bütün üretici/geri yükleme geçişleri ve yetkili üst bölge bulunmayan ikincilde silme kanıtı. Henüz kullanıma açılmayan ters işlem kodu ve salt-okur gözlem bu açığı kapatmaz. |
+| P0.5 — Hizmet bağımsızlığı | Sınırlı güvenlik duvarı/posta yenileme ve devreye alma kurtarması; raporda belirtilen yönetimsiz veya yönetim devre dışı açılışlarda tek PowerDNS ve BIND/BIND çiftinin hizmet vermesi. [Posta kanıtı](deploy/e2e/release-recovery/MAIL-ENROLLMENT-MANAGEMENT-ABSENT-BE.json); [DNS kanıtı](deploy/e2e/dns-kill-matrix/NATIVE-BIND-PAIR-TARGET-STAGED-20260926.md). | Farklı DNS motorlarının çiftleri, tam kurulum/devreye alma ve eski uygulama uyumu; desteklendiği söylenen her yönetimsiz/kaldırılmış durumda web/DB/posta/cron/yenileme/güvenlik duvarı kontrolleri. Yönetimi devre dışı bırakmak, tamamen kaldırmak değildir. |
+
+Ayrıntılı [kabul kaydı](docs/RESILIENCE-CONTRACT.tr.md), başarısız denemeleri ve
+kesin sınırları korur. Yeni kanıt mevcut P0 maddesini günceller;
+yeni bir mimari plan başlatmaz.
+
+### Son DNS sonuçları ve sınırları
+
+- [Güncel kaynakla BIND/PowerDNS gerçek sunucu denemesi](deploy/e2e/dns-kill-matrix/NATIVE-BIND-PDNS-CURRENT-SOURCE-SMOKE-20260927.md), Debian üzerinde yönetilen BIND'den Arch üzerinde panelsiz PowerDNS'e ilk aktarımı doğruladı. SOA, NS ve seçili A yanıtları UDP/TCP üzerinden iki konuk yeniden açılmadan önce ve sonra eşleşti; gerçek Panel ve Agent birimleri kapalı kaldı. Paket yerel ve imzasızdı. Sonraki kayıt değişiklikleri, ters topoloji, kurulu sunucular ve güncelleme kurtarması bu denemede doğrulanmadı; P0.4/P0.5 açık.
+- [Geçici PowerDNS birincil/BIND ikincil gerçek DNS denemesinde](deploy/e2e/dns-kill-matrix/evidence/pdns-master-bind-20260928/contract.json), Debian PowerDNS 4.9.17 üzerinde `MASTER` üye ve katalog, panelsiz Arch BIND'e aktarıldı; iki taraf UDP/TCP'de aynı SOA/A yanıtlarını verdi. Ayrı [yerel geçiş ölçümü](deploy/e2e/dns-kill-matrix/evidence/pdns-native-transform-20260927/contract.json), PowerDNS'in SOA/seri, `CATALOG-HASH`, WAL/SHM ve farklı katalog PTR adını ürettiğini gösterdi. Üreticiye göre AXFR ayrıştırıcısının odak testleri var; ürün geçişi, yeniden açılış ve bağımsız geri alma denenmedi. Eşlenik birincil kurulum kapısı kapalı.
+- DNS çiftinde PowerDNS birincil yolu, Agent değişikliği başlamadan kurulumda ve motor ön izlemesinde engelleniyor. [Başarısız yerel denemede](deploy/e2e/dns-kill-matrix/NATIVE-PDNS-BIND-PEER-STAGE2-20260927.md) PowerDNS üretici kataloğu değişmiş bulundu; [PowerDNS belgesi](https://doc.powerdns.com/authoritative/catalog.html) otomatik seri artışını açıklıyor. V1 bu canlı hedefi veya güvenli geri almayı kanıtlayamıyor. V3 durum/sahiplik ve işlem günlüğü kodu ile başlangıç öncesi korumalı geri alma eklendi. Kullanıcının onayladığı tamamlanmış günlük arşivleme kaynak kodda uygulandı; arşivin kalıcı yazılması ve etkin kaydın kaldırılması için kesinti testleri var. Aynı işleme bağlı Agent aracılı başlangıç sonrası ileri kurtarmanın kontrol noktası ve sahip değişikliği odaklı paket testleri var; ürünün gerçek kesinti ve yeniden açılış kabulü açık. V3 kanıtı için açık bir Agent/kurtarma uyumluluk sözleşmesi bulunana kadar uygulama değişimi de reddediliyor; eski kanıt politikası işareti yeterli sayılmıyor. Yeni şemalar yayımlanmadı veya kurulu sunuculara uygulanmadı; güvenlik kapısı kapalı ve P0.4/P0.5 açık.
+- [Yeni PowerDNS birincil V3 gerçek sistem kesinti denemesinde](deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/README.md) başlangıçta yapılandırılmamış Debian birincil ve panelsiz Arch BIND ikincil kullanıldı. `target-enable-intent` kesintisinden sonra ayrı sürecin aynı isteği ilk kurtarma girişiminde tamamladığı işlem defterinde `succeeded` olarak kaydedildi; V3 günlük arşivlendi ve yönetim devre dışıyken birincil yeniden açıldıktan sonra iki uç UDP/TCP üzerinden yetkili yanıt vermeyi sürdürdü. Önceki deneme, Debian PowerDNS SOA adlarını düzeltirken katalog NS içeriğini değiştirmediği için güvenle bilinmiyor durumunda kaldı; sonraki makine uzlaştırması geçmiş hata kaydını korudu. SSH ile başlatılan iki kesinti `255` bildirdi; üçüncü temiz denemede systemd bağımsız olarak `Result=signal`, `ExecMainStatus=9` (SIGKILL) kaydetti ve aynı istek yine ilk kurtarma girişiminde tamamlandı. Kabuk çıkışı `137` iddia edilmiyor. Var olan BIND birincilden PowerDNS geçişi, sahip düzenlemeleri, bağımsız geri alma, diğer kesinti noktaları ve çiftin tüm yaşam döngüsü açık; genel kurulum kapısı ve P0.4/P0.5 kapanmadı.
+- [Yeni PowerDNS V3 başlangıç öncesi bağımsız geri alma](deploy/e2e/dns-kill-matrix/evidence/pdns-v3-prestart-20260928/README.md), geçici Debian sunucuda gerçek SIGKILL sonrasında ayrı ve doğrulanmış sahip CLI ile bir kez tamamlandı. Önceki iki temiz deneme, etkiden önce güvenli ret vererek kapalı/maskeli birimin cgroup alanı ve yalnız yerel DNS dinleyicisi hakkındaki aşırı katı denetimleri ortaya çıkardı; odak testleriyle düzeltildi. Başarılı deneme PowerDNS'i önceki kapalı durumuna döndürdü, aday veritabanı ile etkin günlüğü kaldırdı ve geri alma kararını yönetim kapalıyken yeniden açılış boyunca korudu. Eski kurulum isteğinin kaydı doğru biçimde başarısız kaldı. Gerçek sistem denemesinde yeniden açılış sonrası tam istek sorgusu geçici kilit yokluğunda çalışmadı; günlük yokken yalnız kalıcı sonuç kaydını okuyan yeni yol, odak testlerini ve önceki gerçek geri almanın kanonik kaydıyla ayrı bir geçici Debian yeniden açılış denemesini geçti. Bu, üretici/ters işlemin veya kurulu kurtarma paketinin yeniden denenmesi değildir. Sonraki kesintiler, motor göçü ve genel kullanım izni açık. P0.4/P0.5 kısmi kalır.
+- İlerideki ayrı motor geçişi açığı: mevcut eşli yönetilen BIND birincilini PowerDNS birincile taşımak, yeni V3 veya tek sunuculu V4 yoluyla kanıtlanmış değildir. Bu geçiş için ayrı eşli kaynak/hedef kanıtı ve kurtarma denemeleri gerekir. Yeni PowerDNS birincil/BIND ikincil kurulumunun kabulünden ayrıdır.
+- İki topolojinin doğrudan kabul yolu: geçici BIND birincil/PowerDNS ikincil çiftinde ilk yetki, tamamlanmış düzenleme, sahibi tarafından kaydedilmiş SSH ile tamamlanmış silme/yeniden ekleme ve yönetim kapalıyken yeniden açılış kanıtı var; sıradan sahip kaydı ve kesinti hücreleri açık. [Yeni PowerDNS birincil/BIND ikincil V3 denemesinde](deploy/e2e/dns-kill-matrix/evidence/pdns-v3-zone-20260928/README.md) gerçek target-enable-intent SIGKILL sonrasında aynı isteğe bağlı ayrı süreç kurtarması, üst bölgesi yetkili bir alt alan için tamamlanmış ekleme/düzenleme/silme/yeniden ekleme ve yönetim kapalıyken iki yerel DNS hizmetinin yeniden açılış sonrası yanıtı kanıtlandı. Bu denemede üst bölgesiz silme, ikincinin yerel yokluk kanıtı için yetkili kayıt olmadan doğru biçimde beklemede kaldı. Genel kurulum/RPC izni, sıradan sahip kaydı, sonraki kesinti hücreleri, sahip düzenlemeleri ve bağımsız ters işlem açık; P0.4/P0.5 ile eşli birincil kapısı tamamlanmadı.
+- [Sahibin çalıştırdığı BIND inceleyici kaydı denemesi](deploy/e2e/dns-kill-matrix/evidence/owner-bind-enrollment-20260928/README.md), geçici Debian/Arch sunucularda yerel birincil/ikincil kaydı, sabit komutlu SSH kimlik doğrulaması, yeniden açılışta kalıcılık, açık yetki kaldırma ve yerel BIND hizmetinin devamını doğruladı. Son ikincil durumu yapılandırılmıştır; geçerli silme kanıtı değildir. Aktarılmış katalogla geçerli sorgu, ürünün sunucu anahtarı sabitlemesi, yarım kurulum temizliği/anahtar yenileme, Debian ikincil ve paketleme açık; P0.4/P0.5 kısmi kalır.
+- Daha sonraki [sahip kayıtlı PowerDNS birincil/BIND ikincil üst bölgesiz silme denemesi](deploy/e2e/dns-kill-matrix/evidence/pdns-bind-owner-proof-20260928/README.md), sabitlenmiş ürün SSH aktarımını ve aktarılan katalog/yerel BIND bölge gözlemini kullandı. Gerçek V3 Agent silmesi kalıcı tamamlanmış işlem kaydına ulaştı; ikincil yeniden açıldıktan sonra yönetim kapalıyken katalog boş ve bölge yüklenmemişti. Yalnız bu eski deneme açığı kapandı. Ürün paketleme/izin, diğer kesintiler ve bağımsız ters işlem açık; P0.4/P0.5 kısmi.
+- [Açık sahip kaydı devam yolu](deploy/e2e/dns-kill-matrix/evidence/owner-bind-resume-20260928/README.md), birebir hazırlanmış BIND inceleyici dosyalarını ve kısıtlı hesabı yeniden kullanıyor. Geçici Arch denemesinde hazırlanmış SSH kesinti durumları tamamlandı, bitmiş kayıt anahtarı değiştirmeden tekrarlandı, açık iptal sonrası yeniden yetki verildi ve sahip SSH düzenlemesi korunarak devam reddedildi. Yerel BIND çalıştı. Bu bir süreç sonlandırma/güç kaybı denemesi değildir; Debian, diğer kesintiler, temizlik/anahtar döndürme ve ürün paketleme açıktır.
+- [Debian sahip yetkilendirmesini sürdürme ve arşiv bütünleştirmesi](deploy/e2e/dns-kill-matrix/evidence/owner-bind-debian-20260928/README.md), güncel sıkı hesap denetimleriyle gerçek Debian BIND/OpenSSH üzerinde geçti. Normal CLI, sahibin SSH değişikliğini korudu; anahtar kapalı, BIND aktif kaldı. Kaynak paketleme artık yetkilendirme başlatmadan isteğe bağlı sahip araçlarını taşıyor. Gerçek dist tarifi, gerçek araçlar ve ilgisiz bileşenlerin etkisiz test dosyalarıyla izin, checksum/bozulma ve umask tekrarlanabilirlik kontrollerini geçti. Bu sonuç Debian devam noktalarını ve kaynak arşiv bütünleştirmesini kapatır; tam yetkilendirme, genel kullanım kapısı, imzalı sürüm ve bağımsız geri alma açık kalır.
+- Bağımsız yeni-PowerDNS V3 yürütücü denetimi, Linux üzerinde `syscall.Stat_t` döndüren `os.Lstat`/`File.Stat` çağrılarından yanlışlıkla `unix.Stat_t` bekliyordu. Gerçek root sahipli dosya testi, doğru dosyanın reddedildiğini yeniden üretti. Düzeltmeden sonra kurtarma paketinin bütün testleri geçti; değişmiş içerik, yanlış sahip/izin, özel izin bitleri ve sembolik/sabit bağlantılar reddediliyor. Yalnız geçici dosyalar kullanan root testi CI sistemine bağlandı. Şema ve kurtarma kararı değişmedi; bu dosya kanıtı düzeltmesidir, gerçek bağımsız kurtarmanın kabulü değildir.
+- [Yönetilen BIND V3 silme işlemi](deploy/e2e/dns-kill-matrix/NATIVE-BIND-V3-DELETION-TERMINAL-20260926.md), yetkili üst bölge sunan, panelsiz ikincille doğrulanmış sonuca ulaştı. Yerel bölge kaldırılması yeniden açılışta korundu. Üst bölge kanıtı yokken silme beklemede kalıyor; yalnız `REFUSED` yokluk kanıtı sayılmıyor.
+- [Çift sunucuda target-staged/after-write](deploy/e2e/dns-kill-matrix/NATIVE-BIND-PAIR-TARGET-STAGED-20260926.md), gerçek SIGKILL, aynı isteğin Agent aracılığıyla kurtarılması, ikincile aktarım ve yönetim devre dışıyken yeniden açılışı geçti. Yeniden açılış gözlemleri, özet değeri alınan arıza arşivinden ayrı belgelenmiştir.
+- [PowerDNS sahip değişikliği reddi](deploy/e2e/dns-kill-matrix/NATIVE-PDNS-OWNER-EDIT-20260925.md), sonlandırma sonrası sahibin düzenlemesini, günlüğü ve çalışan DNS hizmetini korudu. Bu sınırlı ret kanıtıdır; her değişiklik anındaki yarış güvenliği veya bağımsız geri alma değildir.
+- Tek sunucuda yönetilen BIND üzerinden başlangıçta kapalı ve devre dışı PowerDNS hedefine geçiş için V4 kanıtı ve korumalı sahip CLI geri alması kaynak kodda var. Tam aday dosya canlı veritabanı adına taşınmış fakat PowerDNS henüz başlamamış ve servisi kayıtlı devre dışı durumda kalmışsa, kaynak durduruldu aşamasında aynı dosya özel dizine geri alınabiliyor. Kaynak kod, servis etkin fakat henüz çalışmıyorsa bunu yalnız kalıcı V4 etkinleştirme niyetiyle kabul ediyor ve önce servisi kayıtlı devre dışı duruma getiriyor. Üretici henüz bağlı değil; gerçek sistem kesinti/yeniden açılış denemesi ve PowerDNS başladıktan sonraki geri alma kabulü yok. [Kesin kapsam](docs/DNS-ENGINE-ARTIFACT.md#standalone-bind-to-powerdns-v4-recovery-code-scope-2026-09-27). P0.4 açık.
+- [DNS envanterinde](deploy/e2e/dns-kill-matrix/README.md) 510 ham birleşim var: 268 uygulanabilir/çalıştırılabilir, 242 gerekçeli kapsam dışı. **268, geçen test veya hazır deney ortamı sayısı değildir.** Yönetilen BIND ve eski ikincil kaynak hazırlayıcıları, çift sunucunun sonraki aşamaları ve çalıştırılmamış hücreler açık. Aynı hücrenin tekrarı aşama kapsamını artırmaz.
+- 12 Eylül farklı motorlu çiftin silme iddiası düzeltildi: olumsuz DNS yanıtı yeterli kanıt değildi. Yeni BIND/BIND başarısı, geçmiş BIND/PowerDNS kabulünü kapatmıyor.
+
+- 29 Eylül 2026: `e9d1019d` kaynağının salt-okur denetimi [DNS kurtarma kabul kütüğünü](docs/DNS-RECOVERY-ACCEPTANCE.tr.md) üretti. Kurtarma sözleşmesi olmayan tek erişilebilir yol bulundu: tek sunucuda veya çiftin ikincilinde çalışan BIND'i PowerDNS'e çevirmek eski V1 günlüğünü yazıyor, yalnız Agent'ın kendi ters işlemine dayanıyor ve gerçek sistemde hiç denenmemişti. [D-026](docs/DECISIONS.tr.md) bunu bu sürümde desteklenmiyor ilan etti; Panel, kurulum ve Agent artık değişiklik başlamadan reddediyor (`bind_source_pdns_switch_unsupported`), ekranda neden ve sonraki adım yazıyor. Var olan günlüğün açılış kurtarması bu kapıdan geçmez. İlk kurulumlarda Agent'ın aynı işlemle kurtarması kabul edildi. Kill-matrix düzeneği boş tek sunucu PowerDNS ve boş tek sunucu BIND target-verified hücrelerini hazırlayacak biçimde genişletildi; bu hazırlıktır, kanıt değildir; 268 çalıştırılabilir sayısı değişmedi. `cmd/panel` ve yeni `cmd/agent` testleri yerelde geçti; `cmd/agent` paketinin tamamı yerel WSL konuğunda hiçbir kullanıcı/grup düzeninde temiz koşmuyor ve `e9d1019d`'de de aynı biçimde düşüyor; tam doğrulama itilmemiş dal için CI işi olarak açık.
+- 29 Eylül–1 Ekim 2026: kesinti matrisinin 4–12. grupları ve iki geçici CelikPanel sunucusunda yedi ürün akışı çift koşusu 2. maddeyi adı belli sınırlarla kapattı ([kütük](docs/DNS-RECOVERY-ACCEPTANCE.tr.md)). [7. çift](deploy/e2e/dns-pair-acceptance/evidence/pair7-20261001/README.md) BIND/BIND, BIND/PowerDNS ve PowerDNS/BIND düzenlerinde her adımı geçti: sahibin `dns-peer-enroll` kaydından sonra ikincilde kanıtlanan bölge silme, yeniden ekleme, panel ve Agent kapalıyken DNS yanıtlamaya devam ederken yeniden açılış ve yönetimin dönüşü dahil; [12. grup](deploy/e2e/dns-kill-matrix/evidence/batch12-zero-zone-complete-20261001/README.md) sıfır bölgeli boş PowerDNS birincil hücrelerini, kayıttan sonra sürdürülen ebeveynsiz silmeyle tamamladı. Yalnızca bu gerçek sistem koşularının bulduğu on bir ürün kusuru yol boyunca kaynakta kapatıldı; her biri kanıtıyla kütükte. Boş çift PowerDNS birincili kapısı ölçülen kapsam içinde ana hatta açık ([D-028](docs/DECISIONS.tr.md)). P0.4 ve P0.5 kısmi kalıyor: bölge eşitleme içinde SIGKILL yok, dizüstü ana makinede yalnızca test amaçlı lisansla hücre başına tek çalıştırma, damga kabulü ve kanıt süre aşımı gerçek sistemde görülmedi, kurulu sunucuya dokunulmadı.
+
+### Sıradaki işler ve bağımlılık sırası
+
+| Sıra | Mevcut plandaki iş | Bitiş kanıtı |
+|---|---|---|
+| 1 | P0.4: [DNS kurtarma kabul kütüğü](docs/DNS-RECOVERY-ACCEPTANCE.tr.md) (29 Eylül 2026), ürünün başlatabildiği her DNS motoru değişikliğini geçti / adı belli eksik / desteklenmiyor durumlarından birine bağlar. [D-026](docs/DECISIONS.tr.md) ile çalışan BIND→PowerDNS geçişi artık Panel, kurulum ve Agent'ta her topolojide reddediliyor (`bind_source_pdns_switch_unsupported`; bileşen testleri geçti); ilk kurulumlarda Agent'ın aynı işlemle kurtarması kabul edilen sözleşme. Debian'da korumalı sahip CLI kurtarması için dört sınırlı gerçek sistem kanıtı var: harici PowerDNS devralması, PowerDNS-BIND geçişi geri alması, çalışan-BIND devralması geri alması ve yeni PowerDNS V3 başlangıç öncesi ters işlemi. 29 Eylül 2026'da dört boş kurulum hücresi gerçek sistemde koştu ([kanıt](deploy/e2e/dns-kill-matrix/evidence/fresh-install-20260929/README.md)): boş PowerDNS hedef başladıktan sonra ve boş BIND hedef başladıktan sonra (Debian ve Arch) aynı istekle kurtarıldı; boş PowerDNS hedef başlamadan önce kesilince **düştü** — geri almanın durmuş hedef kanıtı hiç başlamamış, kurulumun maskelediği birimi reddediyordu. `1c336f6d` ile düzeltildi; `target-staged` ve `intent` hücrelerinin düzeltilmiş kaynakla [yeniden koşusu](deploy/e2e/dns-kill-matrix/evidence/fresh-install-rerun-20260929/README.md) açılışta geri aldı ve aynı isteğin yeniden denemesiyle tamamlandı. Sahip komutu yönlendirmesi (D-024) kaynakta kapandı: durum komutu ve Agent ret metinleri tam sahip komutunu ve istek kimliğini söylüyor ya da hiçbirinin uygulanmadığını açıkça belirtiyor. Bu iş açık bir kod eksiğini ortaya çıkardı: yeniden açılan Agent kirasını bıraktıktan sonra (`released-undecided`) `recover-dns-bind-switch`, `recover-dns-bind-adoption` ve `recover-dns-pdns-adoption` günlüğü reddediyor; yani Agent çalışırken yarıda kesilen PowerDNS→BIND geçişinin veya devralmanın kabul edilen sahip komutu yok. Önceki gerçek sistem kanıtları Agent kapalıyken alınmıştı. Kabul kuralı (yalnız Agent'ın bilerek bıraktığı iş; şema değişikliği yok, defter yeniden yazılmıyor; doğru metin okuma anında hesaplanıyor) ve denetleyicinin `--owner-inverse-after-restart` akışı kaynakta. Gerçek sistem sonucu: `7ad24282` üzerindeki ilk koşu güvenlik denetimleri geçerek düştü (sahip komutu hiç başlamamış, koruma maskeli BIND hedefini reddetti), `411398d9` ile düzeltildi ve `target-staged` ile `intent` hücrelerinin [yeniden koşusu](deploy/e2e/dns-kill-matrix/evidence/owner-inverse-after-restart-rerun-20260929/README.md) Agent yeniden başlamış ve çalışırken geçti — PowerDNS baştan sona aynı süreçle hizmet verdi, BIND hiç başlamadı. Ardından kaynak durdurulduktan sonraki kesintiler (`source-stopped`, `target-started`) akışın kritik çeşidinde [geçti](deploy/e2e/dns-kill-matrix/evidence/owner-inverse-critical-20260929/README.md): PowerDNS tek yetkili olarak yeniden hizmet verdi, bölge seri numarası değişmedi; ölçülen PowerDNS kesintisinin üst sınırı 21,6 sn ve 9,4 sn oldu, bu hücrelerde DNS yapısı gereği kesintisiz değildir. **1. madde 29 Eylül 2026 itibarıyla adı belli sınırlarla kapandı** (aynı günkü sahip kararı): tek sunucuda boş BIND, boş PowerDNS, PowerDNS→BIND ve harici PowerDNS devralması, hedef başlamadan önce ve sonra aynı işlemle kurtarma için gerçek sistem kanıtına sahip; kurtarma sözleşmesi olmayan yollar kodda reddediliyor. [Kütükte](docs/DNS-RECOVERY-ACCEPTANCE.tr.md) adlarıyla 2. maddeye taşınanlar: bütün çiftli topolojiler, Agent çalışırken BIND ve PowerDNS devralması (yalnız bileşen testi), durmuş BIND devralma ve BIND yeniden kurulumu (gerçek sistem denemesi yok), V2 before-write ve rolled-back hücreleri, yeniden açılış hücreleri, yeniden çalıştırma çıkış kodu ve diskte kalan artıklar. 1. maddenin kapanması P0.4'ü kapatmaz. Boş çift ikincil hücreleri, düzenekte olmayan panelsiz yerel birincil eşi gerektiriyor; 2. maddeye taşındı ve açık kalıyor. 1. madde/P0.4 tamamlanmamıştır. | [Kabul kütüğü](docs/DNS-RECOVERY-ACCEPTANCE.tr.md); [Çalışan-BIND devralması](deploy/e2e/dns-kill-matrix/NATIVE-BIND-ADOPTION-OWNER-CLI-20260927.md), [PowerDNS-BIND geçişi geri alması](deploy/e2e/dns-kill-matrix/NATIVE-BIND-PROTECTED-OWNER-CLI-20260927.md), [PowerDNS devralması](deploy/e2e/dns-kill-matrix/NATIVE-PDNS-PROTECTED-OWNER-CLI-20260926.md) ve [yeni PowerDNS V3 başlangıç öncesi ters işlem](deploy/e2e/dns-kill-matrix/evidence/pdns-v3-prestart-20260928/README.md). Deneme sınırları ilgili raporlarda yer alır. |
+| 2 | P0.4/P0.5: eksik kaynak/ikincil deney ortamlarını ve üst bölge ya da uzak panel gerektirmeyen uygulanabilir silme doğrulamasını tamamla. 1. maddeden taşınanlar (29 Eylül 2026, [kütükte](docs/DNS-RECOVERY-ACCEPTANCE.tr.md) adlarıyla): boş çift ikincil hücreleri için panelsiz yerel birincil eş, Agent çalışırken devralma geri almaları, durmuş BIND devralma ve BIND yeniden kurulum hücreleri, V2 before-write ve rolled-back hücreleri, yeniden açılış hücreleri. **2. madde 1 Ekim 2026 itibarıyla adı belli sınırlarla kapandı** ([kütük bölümü](docs/DNS-RECOVERY-ACCEPTANCE.tr.md)). Kesinti matrisi 4–12. grupları koştu (panelsiz BIND ve PowerDNS birincil eşler; başlamadan önce ve sonra kesilen boş BIND ve PowerDNS ikincilleri, yönetim kapalıyken yeniden açılışlar; durmuş BIND devralma; V2 before-write ve rolled-back hücreleri; genel RPC üzerinden tek bölgeli ve sıfır bölgeli boş çift PowerDNS birincili, tutulan sahip düzenlemeleri, Agent'ın bıraktığı işin sahip komutuyla bitirilmesi, sahip kaydından sonra sürdürülen ebeveynsiz silme) ve ürün akışı çift sürücüsü iki geçici CelikPanel sunucusunda yedi kez koştu; [7. çift](deploy/e2e/dns-pair-acceptance/evidence/pair7-20261001/README.md) BIND/BIND, BIND/PowerDNS ve PowerDNS/BIND düzenlerinde her adımı geçti: kurulum, bölge ekleme, kayıt düzenleme, sahip kaydından sonra ürünün kanıtıyla bölge silme (`dns-peer-enroll`, BIND ve PowerDNS ikincilleri), yeniden ekleme, panel ve Agent kapalıyken DNS yanıtlamaya devam ederken yeniden açılış ve yönetimin dönüşü. Yalnızca gerçek sistem koşularının bulduğu on bir ürün kusuru yol boyunca kaynakta kapatıldı (sıfır bölgeli katalog denetimi, sihirbaz durumları ve lisans yenileme, müşteri arşivindeki kanıt, Arch'ta rndc anahtarı, PowerDNS bildirim bağlantı noktası, yönetilen ikincilde yerel katalog aktarımı ve denetleyici nedenleri, yalnızca DNS'li alan adında posta aşaması, yönetilen PowerDNS ikincilinde sahip denetleyicisi, BIND birincil planının kaynak durumu, sahip değişikliği sanılan daemon damgası, dalga sınırında atılan olumlu kanıt). Bu kanıtla boş çift PowerDNS birincili kapısı ölçülen kapsam içinde ana hatta açık ([D-028](docs/DECISIONS.tr.md)). Kütük satırları 3, 5, 6, 12 ve 17 sınırlarıyla GEÇTİ; 8 ve 14 EKSİK kalıyor; adı belli sınırlar (hücre başına tek çalıştırma, dizüstü ana makine, yalnızca test amaçlı lisans, bölge eşitleme içinde SIGKILL yok, damga kabulü ve kanıt süre aşımı gerçek sistemde görülmedi, güncelleme tetikleyicisi olmayan sürüm-1 BIND ikincili, müşteri arşivindeki düzenek) kütükte. 2. maddenin kapanması P0.4 ya da P0.5'i kapatmaz ve kurulu panel güncellemesine yetki vermez. | Desteklenen gerçek birincil/ikincil birleşimleri ekleme/düzenleme/silme, yüklenen yerel bölge durumu ve yeniden açılışı kanıtlar; belirsizlikte aynı işleme yönelik uygulanabilir kurtarma yolu sunulur. Deney altyapısı açığı kapsam dışı sayılamaz. |
+| 3 | P0.1–P0.5: kalan uçtan uca güncelleme, erişim, şema, TLS/devreye alma ve hizmet matrisini kapat. **3. madde 1 Ekim 2026 itibarıyla adı belli sınırlarla kapandı** ([sözleşme bölümü](docs/RESILIENCE-CONTRACT.tr.md#yol-haritası-3-madde-durumu-2026-10-01-itibarıyla-adı-belli-sınırlarla-kapandı-p01p02p03p05)). Geçici Debian 13 ve Arch konuklarında sahibin başlattığı güncelleme koşuları upd2–upd6 (upd1 hiçbir güncellemeye ulaşmadı) şunları ölçtü: oturum açmış sahip olarak Panel'in güncelleme başlatma API'siyle kurulan iyi aday; tamamlanmadan önce başarısız olan adayın, ikinci bir arızadan sonra da (Debian'da VM sıfırlama, Arch'ta SIGKILL) otomatik olarak önceki sürüme dönmesi; tamamlandıktan sonra başarısız olan adayın üç kez yeniden denenmesi, nedeni korunarak duraklaması ve sahibin yazdırılmış yeniden denemesinden sonra bitmesi; cron'un hiç kesilmemesi ve sitenin yalnız enjekte edilen VM sıfırlaması çevresinde kesilmesi (en çok yaklaşık 22 sn); Panel ve Agent kapalıyken yeniden açılış boyunca site, veritabanı, cron ve güvenlik duvarının hizmet vermeye devam etmesi (SMTP Debian'da) ve yenileme zamanlayıcısının durumunu koruması. Bu koşuların bulduğu ürün kusurları kaynakta kapatıldı. 3. maddenin kapanması hiçbir P0 işini kapatmaz: deney imzası ve loopback kaynağı, az tekrar ve tarayıcı yok, Ubuntu yok, güç kaybı yok, tamamlandıktan sonra geri alma yok, Panel durmuşken Panel'in adresinde canlı durum yok ve gerçek sistemde tetiklenmeyen yollar sözleşme bölümünde adlarıyla kalır. | Kullanıcının arayüzden güncelleme başlatması, başarısız aday, otomatik geri alma, kurtarmadaki ikinci arıza, kimlik doğrulamalı yönlendirme ve korunan hizmetler tek işlemde doğrulanır. İddia edilen her platform/sürüm birleşiminin kanıtı saklanır. |
+| 4 | Kesin adayın sürüm incelemesi ve kısa kullanıcı test yolu. **Aday incelemesi tamamlandı; adayın kesin kodu (`f6cdd5a0`) 2–3 Ekim 2026'da güncelleme matrisinin bir tam koşusundan geçti ve yayımlama sahibi bekliyor** ([sürüm notları](docs/RELEASE-NOTES-v0.1.0-alpha.81.tr.md)). Müşteri arşivi artık düzeneği, test betiklerini ve kanıtı taşımıyor; imzalama adımı bunları taşıyan arşivi reddediyor. Güncelleme yolunun salt-okur incelemesi yedi kusur buldu, yedisi de kaynakta düzeltildi (bileşen testleri; kalan açıklar sözleşme bölümünde listelenir); en önemlisi, v0.1.0-alpha.80'in başlattığı işçinin durum kaydı yazmamasıydı, bu yüzden yeni yönlendirme ilk yükseltmede hiç görünmüyordu. Bu ilk yükseltme sonra, durum başına tek çalıştırmayla, test lisansıyla yeniden derlenen alpha.80 kaynağından (imzalı arşivden değil) Debian 13 ve Ubuntu 24.04'te ölçüldü (iyi aday, sahibin devam ettirmesi, alpha.80'e dönen kusurlu aday); Arch'ta alpha.80'den ölçülmedi. Ubuntu, boştaki bir paket yardımcısının kurulumu engellediğini ve güncelleme başlatmayı reddettirebildiğini ortaya çıkardı; ilk düzeltme gerçek sistemde tutmadı, düzeltilmişi ölçüldü. Sahip için açık olanlar: sürüm numarası; yalnız root ile çalışan paketleme testleri (18), geçici bir makinede veya CI'da; üretim imzalaması ve uyum denetimi; satıcıya ait yayımlama araçlarının arşivde kalıp kalmayacağı; sahip testi; kurulu panellerin her güncellemesi. İnceleme düzeltmelerinden sonra Panel'in posta başlangıç adımlarını ertelenmiş yeniden denemesi eklendi ve ölçüldü, ardından tüm matris son kodda bir kez daha koşuldu (upd13: 20 hücre, aday kusuru yok). Adı belli sınırlar sürüm notlarında; hiçbir P0 işi kapanmadı. | Gerekli kabul işleri kapanır veya bilinçli olarak dar kapsamlı sürümün açık sınırları belirtilir. İmzalı dosyalar ve kurtarma uyumu doğrulanır; kurulu panel güncellemesini yalnız kullanıcı başlatır. |
+
+Yeni test eklemeden önce hangi açık kabulün kapanacağı belirtilir.
+Geçen deney, ancak ilgili değişiklik veya adı konmuş belirsizlik nedeniyle tekrarlanır.
+Kanıt saklanıp kontrol edildikten sonra geçici konuklar durdurulur ve doğrulanmış
+geçici diskleri temizlenir; kurtarma malzemesi ve sahibin verisi korunur.
+
+**Bitiş tarihi:** mevcut kanıtla belirlenmiş değil. Kalan uygulama ve deney altyapısı
+açıkları varken güvenilir yüzde veya kesin tarih verilemiyor. Bağımsız DNS yolu ve
+eksik deney kapsamı doğrulandığında süre yeniden değerlendirilir; bitiş, küçük
+commit sayısına değil mevcut kabul koşullarının karşılanmasına bağlıdır.
+
+### Yapay zekâ asistanı aşaması — işlem/kurtarma temelinden sonra
+
+Kullanıcının istediği yapay zekâ asistanı planda: gözlenen durumu açıklayacak,
+kullanıcının yetkilendirdiği panel işlerini aynı türlenmiş ve kapsamı sınırlı
+işlem API'leriyle yapmasına yardımcı olacak. Planı gösterecek, izinleri koruyacak,
+işlem kimliğini kaybetmeyecek ve doğrulanmış sonucu bildirecek. Kabul deneyleri;
+izin reddini, kullanılamayan hizmeti, kesilen isteği ve ikinci değişiklik üretmeyen
+tekrarı kapsamalı. Sınırsız root, eksik kanıt uydurma, lisans atlama veya kurulu
+panel güncellemesi başlatma yetkisi almayacak. Yapay zekâ entegrasyonu kuralları
+belli kurtarmanın yerine geçmez; bu incelemede uygulanmış sayılmıyor.
 
 ---
 
 ## Sürüm Merdiveni
+
+Aşağıdaki sürüm merdiveni önceki aşamaların tarihsel kaydıdır. Geçmiş başarılı
+kurulum sonuçları ve mimari değerlendirmeler, 14 Eylül dayanıklılık sözleşmesinin
+karşılandığını göstermez; bu kabul çalışması açık kalmaktadır.
 
 Varış noktası: **v1.0 — bir yabancının temiz VPS'e dakikalar içinde kurabildiği,
 üzerinde gerçek hosting işi yürütebildiği ve güvenebildiği panel.** Aşağıdaki her şey o yolun taşı.
@@ -59,7 +167,7 @@ Varış noktası: **v1.0 — bir yabancının temiz VPS'e dakikalar içinde kura
 (açık TCP agent, SQL injection, kimlik doğrulama yok) ve arayüz sahte veriyle dolu.
 Karar verildi: devam, sıfırdan yazma yok.
 
-### ✅ v0.1 — Güvenli Çekirdek + Kanıtlı Golden Path *(3–10 Temmuz 2026 — mevcut sürüm, v0.1.0)*
+### ✅ v0.1 — Güvenli Çekirdek + Kanıtlı Golden Path *(3–10 Temmuz 2026 — tarihsel v0.1.0 aşaması)*
 Sekiz gün, dört cephe, hepsi push'lu:
 - **Güvenlik (Faz 0):** agent Unix socket + token arkasında · oturum kimliği (argon2id) + 2FA/TOTP ·
   SQL injection temizliği · CSRF/başlıklar/hız sınırı · gosec yüksekleri kapandı · sızmış parola etkisiz.
@@ -81,7 +189,7 @@ Sekiz gün, dört cephe, hepsi push'lu:
 
 **Çıkış ölçütü karşılandı:** golden path uçtan uca kanıtlı (Ubuntu) · panel kendi güncellemesini taşıyor · alfa modeli işliyor.
 
-### 🔶 v0.2 — Alfa Tamam: Debian Yeniden-Kanıtı *(← BURADAYIZ, sürüyor)*
+### 🔶 v0.2 — Alfa Tamam: Debian Yeniden-Kanıtı *(tarihsel aşama; güncel öncelik yukarıda)*
 Aynı golden path, üretim VPS'inde (Debian 13) **tamamen panel tıklamalarıyla** yeniden kanıtlanacak:
 - ✅ Yalnız-panel kurulum (sıfır ek paket) · ✅ PowerDNS panelden kuruldu ·
   ✅ yönetim sayfası dürüst (config görünürlüğü, çalışan onarım)
@@ -681,7 +789,7 @@ Sadelik hayır diyebilmektir. Bunlar **bilerek** yok — ve retlerin çoğu ür�
 
 ---
 
-## Neredeyiz — 29 Ağustos 2026
+## Tarihsel Durum — 29 Ağustos 2026
 
 **Sürüm:** artık tek kaynaklı — sürüm ve commit bağlama anında HER İKİ binary'ye gömülüyor,
 `/api/v1/panel/version` sunuyor, panelin alt bilgisi oradan okuyor ve panel ile agent farklı yapıdaysa

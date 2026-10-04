@@ -1,0 +1,163 @@
+2026-10-02T20:38:24Z before-cell-01 free_bytes=59526909952 free_GiB=55.4
+2026-10-02T20:38:24Z start cell-01 upd1-debian13-good cur upd13-d13-good-a 3711
+2026-10-02T20:50:30Z end cell-01 rc=0: UPD1 cell=upd1-debian13-good dns_mode=external lab=/var/tmp/cp-release-drill-upd13-d13-good-a driver_exit=0 evidence=/var/tmp/cp-release-drill-upd13-d13-good-a/evidence/*/upd1
+upd1-debian13-good/run-a driver SHA256SUMS ok=1 (204 entries)
+STAGED-OK /mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/release-recovery/evidence/upd13-20261002/upd1-debian13-good/run-a
+2026-10-02T20:50:34Z removed /var/tmp/cp-release-drill-upd13-d13-good-a/cells/c127e6982b5f416105a31f7f/arch/overlay.qcow2 bytes=135790592 (evidence staged at upd13-20261002/upd1-debian13-good/run-a, driver SHA256SUMS verified)
+2026-10-02T20:50:34Z removed /var/tmp/cp-release-drill-upd13-d13-good-a/cells/c127e6982b5f416105a31f7f/debian13/overlay.qcow2 bytes=1778515968 (evidence staged at upd13-20261002/upd1-debian13-good/run-a, driver SHA256SUMS verified)
+921M	/var/tmp/cp-release-drill-upd13-d13-good-a
+2026-10-02T20:50:35Z before-cell-02 free_bytes=68912447488 free_GiB=64.2
+2026-10-02T20:50:35Z start cell-02 upd1-debian13-defective cur upd13-d13-def-a 3721
+2026-10-02T21:04:52Z end cell-02 rc=0: UPD1 cell=upd1-debian13-defective dns_mode=external lab=/var/tmp/cp-release-drill-upd13-d13-def-a driver_exit=0 evidence=/var/tmp/cp-release-drill-upd13-d13-def-a/evidence/*/upd1
+upd1-debian13-defective/run-a driver SHA256SUMS ok=1 (230 entries)
+STAGED-OK /mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/release-recovery/evidence/upd13-20261002/upd1-debian13-defective/run-a
+2026-10-02T21:04:57Z removed /var/tmp/cp-release-drill-upd13-d13-def-a/cells/963534fc5fe38032ba64c2cf/arch/overlay.qcow2 bytes=171114496 (evidence staged at upd13-20261002/upd1-debian13-defective/run-a, driver SHA256SUMS verified)
+2026-10-02T21:04:57Z removed /var/tmp/cp-release-drill-upd13-d13-def-a/cells/963534fc5fe38032ba64c2cf/debian13/overlay.qcow2 bytes=1824784384 (evidence staged at upd13-20261002/upd1-debian13-defective/run-a, driver SHA256SUMS verified)
+921M	/var/tmp/cp-release-drill-upd13-d13-def-a
+2026-10-02T21:04:57Z before-cell-03 free_bytes=68853866496 free_GiB=64.1
+2026-10-02T21:04:57Z start cell-03 upd1-debian13-startcheck cur upd13-d13-sc-a 3731
+2026-10-02T21:18:45Z end cell-03 rc=0: UPD1 cell=upd1-debian13-startcheck dns_mode=external lab=/var/tmp/cp-release-drill-upd13-d13-sc-a driver_exit=0 evidence=/var/tmp/cp-release-drill-upd13-d13-sc-a/evidence/*/upd1
+upd1-debian13-startcheck/run-a driver SHA256SUMS ok=1 (231 entries)
+STAGED-OK /mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/release-recovery/evidence/upd13-20261002/upd1-debian13-startcheck/run-a
+2026-10-02T21:18:50Z removed /var/tmp/cp-release-drill-upd13-d13-sc-a/cells/62da964038e082cfc2614a0b/arch/overlay.qcow2 bytes=168755200 (evidence staged at upd13-20261002/upd1-debian13-startcheck/run-a, driver SHA256SUMS verified)
+2026-10-02T21:18:50Z removed /var/tmp/cp-release-drill-upd13-d13-sc-a/cells/62da964038e082cfc2614a0b/debian13/overlay.qcow2 bytes=1812267008 (evidence staged at upd13-20261002/upd1-debian13-startcheck/run-a, driver SHA256SUMS verified)
+921M	/var/tmp/cp-release-drill-upd13-d13-sc-a
+2026-10-02T21:18:51Z before-cell-04 free_bytes=68886048768 free_GiB=64.2
+2026-10-02T21:18:51Z start cell-04 upd1-debian13-realstart cur upd13-d13-rs-a 3741
+2026-10-02T21:35:22Z end cell-04 rc=0: UPD1 cell=upd1-debian13-realstart dns_mode=external lab=/var/tmp/cp-release-drill-upd13-d13-rs-a driver_exit=0 evidence=/var/tmp/cp-release-drill-upd13-d13-rs-a/evidence/*/upd1
+upd1-debian13-realstart/run-a driver SHA256SUMS ok=1 (270 entries)
+STAGED-OK /mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/release-recovery/evidence/upd13-20261002/upd1-debian13-realstart/run-a
+2026-10-02T21:35:27Z removed /var/tmp/cp-release-drill-upd13-d13-rs-a/cells/84b1815ff6397c16d7fd9d97/arch/overlay.qcow2 bytes=130351104 (evidence staged at upd13-20261002/upd1-debian13-realstart/run-a, driver SHA256SUMS verified)
+2026-10-02T21:35:27Z removed /var/tmp/cp-release-drill-upd13-d13-rs-a/cells/84b1815ff6397c16d7fd9d97/debian13/overlay.qcow2 bytes=1775239168 (evidence staged at upd13-20261002/upd1-debian13-realstart/run-a, driver SHA256SUMS verified)
+922M	/var/tmp/cp-release-drill-upd13-d13-rs-a
+2026-10-02T21:35:28Z before-cell-05 free_bytes=68520980480 free_GiB=63.8
+2026-10-02T21:35:28Z start cell-05 upd1-debian13-owner-continuation cur upd13-d13-oc-a 3751
+2026-10-02T21:55:25Z end cell-05 rc=0: UPD1 cell=upd1-debian13-owner-continuation dns_mode=external lab=/var/tmp/cp-release-drill-upd13-d13-oc-a driver_exit=0 evidence=/var/tmp/cp-release-drill-upd13-d13-oc-a/evidence/*/upd1
+upd1-debian13-owner-continuation/run-a driver SHA256SUMS ok=1 (242 entries)
+STAGED-OK /mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/release-recovery/evidence/upd13-20261002/upd1-debian13-owner-continuation/run-a
+2026-10-02T21:55:29Z removed /var/tmp/cp-release-drill-upd13-d13-oc-a/cells/9144c0c2dc8f8fd3e4c71283/arch/overlay.qcow2 bytes=170459136 (evidence staged at upd13-20261002/upd1-debian13-owner-continuation/run-a, driver SHA256SUMS verified)
+2026-10-02T21:55:29Z removed /var/tmp/cp-release-drill-upd13-d13-oc-a/cells/9144c0c2dc8f8fd3e4c71283/debian13/overlay.qcow2 bytes=1779630080 (evidence staged at upd13-20261002/upd1-debian13-owner-continuation/run-a, driver SHA256SUMS verified)
+921M	/var/tmp/cp-release-drill-upd13-d13-oc-a
+2026-10-02T21:55:30Z before-cell-06 free_bytes=69057773568 free_GiB=64.3
+2026-10-02T21:55:30Z start cell-06 upd1-debian13-mgmt-off-reboot cur upd13-d13-mr-a 3761
+2026-10-02T22:10:16Z end cell-06 rc=0: UPD1 cell=upd1-debian13-mgmt-off-reboot dns_mode=external lab=/var/tmp/cp-release-drill-upd13-d13-mr-a driver_exit=0 evidence=/var/tmp/cp-release-drill-upd13-d13-mr-a/evidence/*/upd1
+upd1-debian13-mgmt-off-reboot/run-a driver SHA256SUMS ok=1 (243 entries)
+STAGED-OK /mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/release-recovery/evidence/upd13-20261002/upd1-debian13-mgmt-off-reboot/run-a
+2026-10-02T22:10:19Z removed /var/tmp/cp-release-drill-upd13-d13-mr-a/cells/a9c2d738eb0e1c700eb8a507/arch/overlay.qcow2 bytes=166592512 (evidence staged at upd13-20261002/upd1-debian13-mgmt-off-reboot/run-a, driver SHA256SUMS verified)
+2026-10-02T22:10:19Z removed /var/tmp/cp-release-drill-upd13-d13-mr-a/cells/a9c2d738eb0e1c700eb8a507/debian13/overlay.qcow2 bytes=1775239168 (evidence staged at upd13-20261002/upd1-debian13-mgmt-off-reboot/run-a, driver SHA256SUMS verified)
+921M	/var/tmp/cp-release-drill-upd13-d13-mr-a
+2026-10-02T22:10:20Z before-cell-07 free_bytes=69031997440 free_GiB=64.3
+2026-10-02T22:10:20Z start cell-07 upd1-arch-good cur upd13-arch-good-a 3771
+2026-10-02T22:19:11Z end cell-07 rc=0: UPD1 cell=upd1-arch-good dns_mode=external lab=/var/tmp/cp-release-drill-upd13-arch-good-a driver_exit=0 evidence=/var/tmp/cp-release-drill-upd13-arch-good-a/evidence/*/upd1
+upd1-arch-good/run-a driver SHA256SUMS ok=1 (143 entries)
+STAGED-OK /mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/release-recovery/evidence/upd13-20261002/upd1-arch-good/run-a
+2026-10-02T22:19:14Z removed /var/tmp/cp-release-drill-upd13-arch-good-a/cells/01fc4351e18ba150fff95aef/arch/overlay.qcow2 bytes=1742798848 (evidence staged at upd13-20261002/upd1-arch-good/run-a, driver SHA256SUMS verified)
+2026-10-02T22:19:14Z removed /var/tmp/cp-release-drill-upd13-arch-good-a/cells/01fc4351e18ba150fff95aef/debian13/overlay.qcow2 bytes=29687808 (evidence staged at upd13-20261002/upd1-arch-good/run-a, driver SHA256SUMS verified)
+921M	/var/tmp/cp-release-drill-upd13-arch-good-a
+2026-10-02T22:19:14Z before-cell-08 free_bytes=67197259776 free_GiB=62.6
+2026-10-02T22:19:14Z start cell-08 upd1-arch-defective cur upd13-arch-def-a 3781
+2026-10-02T22:29:42Z end cell-08 rc=0: UPD1 cell=upd1-arch-defective dns_mode=external lab=/var/tmp/cp-release-drill-upd13-arch-def-a driver_exit=0 evidence=/var/tmp/cp-release-drill-upd13-arch-def-a/evidence/*/upd1
+upd1-arch-defective/run-a driver SHA256SUMS ok=1 (166 entries)
+STAGED-OK /mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/release-recovery/evidence/upd13-20261002/upd1-arch-defective/run-a
+2026-10-02T22:29:45Z removed /var/tmp/cp-release-drill-upd13-arch-def-a/cells/ebe553dc5907f58663bcd017/arch/overlay.qcow2 bytes=1796866048 (evidence staged at upd13-20261002/upd1-arch-defective/run-a, driver SHA256SUMS verified)
+2026-10-02T22:29:45Z removed /var/tmp/cp-release-drill-upd13-arch-def-a/cells/ebe553dc5907f58663bcd017/debian13/overlay.qcow2 bytes=28049408 (evidence staged at upd13-20261002/upd1-arch-defective/run-a, driver SHA256SUMS verified)
+921M	/var/tmp/cp-release-drill-upd13-arch-def-a
+2026-10-02T22:29:46Z before-cell-09 free_bytes=65784446976 free_GiB=61.3
+2026-10-02T22:29:46Z start cell-09 upd1-arch-startcheck cur upd13-arch-sc-a 3791
+2026-10-02T22:39:58Z end cell-09 rc=0: UPD1 cell=upd1-arch-startcheck dns_mode=external lab=/var/tmp/cp-release-drill-upd13-arch-sc-a driver_exit=0 evidence=/var/tmp/cp-release-drill-upd13-arch-sc-a/evidence/*/upd1
+upd1-arch-startcheck/run-a driver SHA256SUMS ok=1 (166 entries)
+STAGED-OK /mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/release-recovery/evidence/upd13-20261002/upd1-arch-startcheck/run-a
+2026-10-02T22:40:01Z removed /var/tmp/cp-release-drill-upd13-arch-sc-a/cells/0b70c06fb5dd72633b55c0de/arch/overlay.qcow2 bytes=1791295488 (evidence staged at upd13-20261002/upd1-arch-startcheck/run-a, driver SHA256SUMS verified)
+2026-10-02T22:40:01Z removed /var/tmp/cp-release-drill-upd13-arch-sc-a/cells/0b70c06fb5dd72633b55c0de/debian13/overlay.qcow2 bytes=29556736 (evidence staged at upd13-20261002/upd1-arch-startcheck/run-a, driver SHA256SUMS verified)
+921M	/var/tmp/cp-release-drill-upd13-arch-sc-a
+2026-10-02T22:40:02Z before-cell-10 free_bytes=62961369088 free_GiB=58.6
+2026-10-02T22:40:02Z start cell-10 upd1-arch-owner-continuation cur upd13-arch-oc-a 3801
+2026-10-02T22:41:37Z end cell-10 rc=0: UPD1 cell=upd1-arch-owner-continuation dns_mode=external lab=/var/tmp/cp-release-drill-upd13-arch-oc-a driver_exit=0 evidence=/var/tmp/cp-release-drill-upd13-arch-oc-a/evidence/*/upd1
+upd1-arch-owner-continuation/run-a driver SHA256SUMS ok=1 (14 entries)
+STAGED-OK /mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/release-recovery/evidence/upd13-20261002/upd1-arch-owner-continuation/run-a
+2026-10-02T22:41:37Z removed /var/tmp/cp-release-drill-upd13-arch-oc-a/cells/30b325b60b41bceacb867866/arch/overlay.qcow2 bytes=723582976 (evidence staged at upd13-20261002/upd1-arch-owner-continuation/run-a, driver SHA256SUMS verified)
+2026-10-02T22:41:37Z removed /var/tmp/cp-release-drill-upd13-arch-oc-a/cells/30b325b60b41bceacb867866/debian13/overlay.qcow2 bytes=27918336 (evidence staged at upd13-20261002/upd1-arch-owner-continuation/run-a, driver SHA256SUMS verified)
+920M	/var/tmp/cp-release-drill-upd13-arch-oc-a
+2026-10-02T22:41:38Z before-cell-11 free_bytes=69004271616 free_GiB=64.3
+2026-10-02T22:41:38Z start cell-11 upd1-arch-mgmt-off-reboot cur upd13-arch-mr-a 3811
+2026-10-02T22:54:45Z end cell-11 rc=0: UPD1 cell=upd1-arch-mgmt-off-reboot dns_mode=external lab=/var/tmp/cp-release-drill-upd13-arch-mr-a driver_exit=0 evidence=/var/tmp/cp-release-drill-upd13-arch-mr-a/evidence/*/upd1
+upd1-arch-mgmt-off-reboot/run-a driver SHA256SUMS ok=1 (186 entries)
+STAGED-OK /mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/release-recovery/evidence/upd13-20261002/upd1-arch-mgmt-off-reboot/run-a
+2026-10-02T22:54:48Z removed /var/tmp/cp-release-drill-upd13-arch-mr-a/cells/09e7447805167b949223c962/arch/overlay.qcow2 bytes=1775173632 (evidence staged at upd13-20261002/upd1-arch-mgmt-off-reboot/run-a, driver SHA256SUMS verified)
+2026-10-02T22:54:48Z removed /var/tmp/cp-release-drill-upd13-arch-mr-a/cells/09e7447805167b949223c962/debian13/overlay.qcow2 bytes=28114944 (evidence staged at upd13-20261002/upd1-arch-mgmt-off-reboot/run-a, driver SHA256SUMS verified)
+921M	/var/tmp/cp-release-drill-upd13-arch-mr-a
+2026-10-02T22:54:49Z before-cell-12 free_bytes=69009457152 free_GiB=64.3
+2026-10-02T22:54:49Z start cell-12 upd1-ubuntu-good cur upd13-ub-good-a 3821
+2026-10-02T23:13:20Z end cell-12 rc=0: UPD1 cell=upd1-ubuntu-good dns_mode=external lab=/var/tmp/cp-release-drill-upd13-ub-good-a driver_exit=0 evidence=/var/tmp/cp-release-drill-upd13-ub-good-a/evidence/*/upd1
+upd1-ubuntu-good/run-a driver SHA256SUMS ok=1 (222 entries)
+STAGED-OK /mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/release-recovery/evidence/upd13-20261002/upd1-ubuntu-good/run-a
+2026-10-02T23:13:24Z removed /var/tmp/cp-release-drill-upd13-ub-good-a/cells/6083c2497f7117302f884191/ubuntu/overlay.qcow2 bytes=1809580032 (evidence staged at upd13-20261002/upd1-ubuntu-good/run-a, driver SHA256SUMS verified)
+661M	/var/tmp/cp-release-drill-upd13-ub-good-a
+2026-10-02T23:13:24Z before-cell-13 free_bytes=68997517312 free_GiB=64.3
+2026-10-02T23:13:24Z start cell-13 upd1-ubuntu-defective cur upd13-ub-def-a 3831
+2026-10-02T23:33:32Z end cell-13 rc=0: UPD1 cell=upd1-ubuntu-defective dns_mode=external lab=/var/tmp/cp-release-drill-upd13-ub-def-a driver_exit=0 evidence=/var/tmp/cp-release-drill-upd13-ub-def-a/evidence/*/upd1
+upd1-ubuntu-defective/run-a driver SHA256SUMS ok=1 (243 entries)
+STAGED-OK /mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/release-recovery/evidence/upd13-20261002/upd1-ubuntu-defective/run-a
+2026-10-02T23:33:36Z removed /var/tmp/cp-release-drill-upd13-ub-def-a/cells/b8133c0eb6c1828eb0331ca6/ubuntu/overlay.qcow2 bytes=1814495232 (evidence staged at upd13-20261002/upd1-ubuntu-defective/run-a, driver SHA256SUMS verified)
+662M	/var/tmp/cp-release-drill-upd13-ub-def-a
+2026-10-02T23:33:36Z before-cell-14 free_bytes=68977979392 free_GiB=64.2
+2026-10-02T23:33:36Z start cell-14 upd1-ubuntu-startcheck cur upd13-ub-sc-a 3841
+2026-10-02T23:53:35Z end cell-14 rc=0: UPD1 cell=upd1-ubuntu-startcheck dns_mode=external lab=/var/tmp/cp-release-drill-upd13-ub-sc-a driver_exit=0 evidence=/var/tmp/cp-release-drill-upd13-ub-sc-a/evidence/*/upd1
+upd1-ubuntu-startcheck/run-a driver SHA256SUMS ok=1 (249 entries)
+STAGED-OK /mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/release-recovery/evidence/upd13-20261002/upd1-ubuntu-startcheck/run-a
+2026-10-02T23:53:40Z removed /var/tmp/cp-release-drill-upd13-ub-sc-a/cells/5fc91676a9d560598215fefc/ubuntu/overlay.qcow2 bytes=1824849920 (evidence staged at upd13-20261002/upd1-ubuntu-startcheck/run-a, driver SHA256SUMS verified)
+662M	/var/tmp/cp-release-drill-upd13-ub-sc-a
+2026-10-02T23:53:40Z before-cell-15 free_bytes=68960079872 free_GiB=64.2
+2026-10-02T23:53:40Z start cell-15 upd1-ubuntu-owner-continuation cur upd13-ub-oc-a 3851
+2026-10-03T00:18:55Z end cell-15 rc=0: UPD1 cell=upd1-ubuntu-owner-continuation dns_mode=external lab=/var/tmp/cp-release-drill-upd13-ub-oc-a driver_exit=0 evidence=/var/tmp/cp-release-drill-upd13-ub-oc-a/evidence/*/upd1
+upd1-ubuntu-owner-continuation/run-a driver SHA256SUMS ok=1 (259 entries)
+STAGED-OK /mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/release-recovery/evidence/upd13-20261002/upd1-ubuntu-owner-continuation/run-a
+2026-10-03T00:19:00Z removed /var/tmp/cp-release-drill-upd13-ub-oc-a/cells/d80c06afc61feb7a7bd8ebab/ubuntu/overlay.qcow2 bytes=1809711104 (evidence staged at upd13-20261002/upd1-ubuntu-owner-continuation/run-a, driver SHA256SUMS verified)
+662M	/var/tmp/cp-release-drill-upd13-ub-oc-a
+2026-10-03T00:19:00Z before-cell-16 free_bytes=68962299904 free_GiB=64.2
+2026-10-03T00:19:00Z start cell-16 upd1-ubuntu-mgmt-off-reboot cur upd13-ub-mr-a 3861
+2026-10-03T00:40:05Z end cell-16 rc=0: UPD1 cell=upd1-ubuntu-mgmt-off-reboot dns_mode=external lab=/var/tmp/cp-release-drill-upd13-ub-mr-a driver_exit=0 evidence=/var/tmp/cp-release-drill-upd13-ub-mr-a/evidence/*/upd1
+upd1-ubuntu-mgmt-off-reboot/run-a driver SHA256SUMS ok=1 (263 entries)
+STAGED-OK /mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/release-recovery/evidence/upd13-20261002/upd1-ubuntu-mgmt-off-reboot/run-a
+2026-10-03T00:40:09Z removed /var/tmp/cp-release-drill-upd13-ub-mr-a/cells/b3c0ab99ab35501583326fee/ubuntu/overlay.qcow2 bytes=1786314752 (evidence staged at upd13-20261002/upd1-ubuntu-mgmt-off-reboot/run-a, driver SHA256SUMS verified)
+662M	/var/tmp/cp-release-drill-upd13-ub-mr-a
+2026-10-03T00:40:09Z before-cell-17 free_bytes=68958822400 free_GiB=64.2
+2026-10-03T00:40:10Z start cell-17 upd1-debian13-good a80 upd13-a80-d13-good-a 3871
+2026-10-03T00:53:27Z end cell-17 rc=0: UPD1 cell=upd1-debian13-good dns_mode=external lab=/var/tmp/cp-release-drill-upd13-a80-d13-good-a driver_exit=0 evidence=/var/tmp/cp-release-drill-upd13-a80-d13-good-a/evidence/*/upd1
+part2-alpha80/upd1-debian13-good/run-a driver SHA256SUMS ok=1 (189 entries)
+STAGED-OK /mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/release-recovery/evidence/upd13-20261002/part2-alpha80/upd1-debian13-good/run-a
+2026-10-03T00:53:30Z removed /var/tmp/cp-release-drill-upd13-a80-d13-good-a/cells/57d3f39b508f216ca5cc7b99/arch/overlay.qcow2 bytes=166789120 (evidence staged at upd13-20261002/part2-alpha80/upd1-debian13-good/run-a, driver SHA256SUMS verified)
+2026-10-03T00:53:30Z removed /var/tmp/cp-release-drill-upd13-a80-d13-good-a/cells/57d3f39b508f216ca5cc7b99/debian13/overlay.qcow2 bytes=1566900224 (evidence staged at upd13-20261002/part2-alpha80/upd1-debian13-good/run-a, driver SHA256SUMS verified)
+921M	/var/tmp/cp-release-drill-upd13-a80-d13-good-a
+2026-10-03T00:53:31Z before-cell-18 free_bytes=70403424256 free_GiB=65.6
+2026-10-03T00:53:31Z start cell-18 upd1-debian13-defective a80 upd13-a80-d13-def-a 3881
+2026-10-03T01:06:22Z end cell-18 rc=0: UPD1 cell=upd1-debian13-defective dns_mode=external lab=/var/tmp/cp-release-drill-upd13-a80-d13-def-a driver_exit=0 evidence=/var/tmp/cp-release-drill-upd13-a80-d13-def-a/evidence/*/upd1
+part2-alpha80/upd1-debian13-defective/run-a driver SHA256SUMS ok=1 (221 entries)
+STAGED-OK /mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/release-recovery/evidence/upd13-20261002/part2-alpha80/upd1-debian13-defective/run-a
+2026-10-03T01:06:25Z removed /var/tmp/cp-release-drill-upd13-a80-d13-def-a/cells/556a52da6abacce45320ccd8/arch/overlay.qcow2 bytes=171704320 (evidence staged at upd13-20261002/part2-alpha80/upd1-debian13-defective/run-a, driver SHA256SUMS verified)
+2026-10-03T01:06:25Z removed /var/tmp/cp-release-drill-upd13-a80-d13-def-a/cells/556a52da6abacce45320ccd8/debian13/overlay.qcow2 bytes=1599733760 (evidence staged at upd13-20261002/part2-alpha80/upd1-debian13-defective/run-a, driver SHA256SUMS verified)
+921M	/var/tmp/cp-release-drill-upd13-a80-d13-def-a
+2026-10-03T01:06:26Z before-cell-19 free_bytes=70408650752 free_GiB=65.6
+2026-10-03T01:06:26Z start cell-19 upd1-debian13-owner-continuation a80 upd13-a80-d13-oc-a 3891
+2026-10-03T01:26:10Z end cell-19 rc=0: UPD1 cell=upd1-debian13-owner-continuation dns_mode=external lab=/var/tmp/cp-release-drill-upd13-a80-d13-oc-a driver_exit=0 evidence=/var/tmp/cp-release-drill-upd13-a80-d13-oc-a/evidence/*/upd1
+part2-alpha80/upd1-debian13-owner-continuation/run-a driver SHA256SUMS ok=1 (230 entries)
+STAGED-OK /mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/release-recovery/evidence/upd13-20261002/part2-alpha80/upd1-debian13-owner-continuation/run-a
+2026-10-03T01:26:14Z removed /var/tmp/cp-release-drill-upd13-a80-d13-oc-a/cells/91bfc4ec699f70d2fb1c931a/arch/overlay.qcow2 bytes=171180032 (evidence staged at upd13-20261002/part2-alpha80/upd1-debian13-owner-continuation/run-a, driver SHA256SUMS verified)
+2026-10-03T01:26:14Z removed /var/tmp/cp-release-drill-upd13-a80-d13-oc-a/cells/91bfc4ec699f70d2fb1c931a/debian13/overlay.qcow2 bytes=1563164672 (evidence staged at upd13-20261002/part2-alpha80/upd1-debian13-owner-continuation/run-a, driver SHA256SUMS verified)
+921M	/var/tmp/cp-release-drill-upd13-a80-d13-oc-a
+2026-10-03T01:26:14Z before-cell-20 free_bytes=70445621248 free_GiB=65.6
+2026-10-03T01:26:14Z start cell-20 upd1-ubuntu-good a80 upd13-a80-ub-good-a 3901
+2026-10-03T02:16:08Z end cell-20 rc=0: UPD1 cell=upd1-ubuntu-good dns_mode=external lab=/var/tmp/cp-release-drill-upd13-a80-ub-good-a driver_exit=0 evidence=/var/tmp/cp-release-drill-upd13-a80-ub-good-a/evidence/*/upd1
+part2-alpha80/upd1-ubuntu-good/run-a driver SHA256SUMS ok=1 (345 entries)
+STAGED-OK /mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/release-recovery/evidence/upd13-20261002/part2-alpha80/upd1-ubuntu-good/run-a
+2026-10-03T02:16:13Z removed /var/tmp/cp-release-drill-upd13-a80-ub-good-a/cells/ae705f7a1d5602b040d53083/ubuntu/overlay.qcow2 bytes=1602158592 (evidence staged at upd13-20261002/part2-alpha80/upd1-ubuntu-good/run-a, driver SHA256SUMS verified)
+662M	/var/tmp/cp-release-drill-upd13-a80-ub-good-a
+2026-10-03T02:16:14Z before-cell-10b free_bytes=70407512064 free_GiB=65.6
+2026-10-03T02:16:14Z start cell-10b upd1-arch-owner-continuation cur upd13-arch-oc-b 3921
+2026-10-03T02:31:41Z end cell-10b rc=0: UPD1 cell=upd1-arch-owner-continuation dns_mode=external lab=/var/tmp/cp-release-drill-upd13-arch-oc-b driver_exit=0 evidence=/var/tmp/cp-release-drill-upd13-arch-oc-b/evidence/*/upd1
+upd1-arch-owner-continuation/run-b driver SHA256SUMS ok=1 (182 entries)
+STAGED-OK /mnt/c/CELIKBROS PROJECTS/celikpanel/deploy/e2e/release-recovery/evidence/upd13-20261002/upd1-arch-owner-continuation/run-b
+2026-10-03T02:31:44Z removed /var/tmp/cp-release-drill-upd13-arch-oc-b/cells/cbb034fd62c3fc339605504d/arch/overlay.qcow2 bytes=1768161280 (evidence staged at upd13-20261002/upd1-arch-owner-continuation/run-b, driver SHA256SUMS verified)
+2026-10-03T02:31:44Z removed /var/tmp/cp-release-drill-upd13-arch-oc-b/cells/cbb034fd62c3fc339605504d/debian13/overlay.qcow2 bytes=28966912 (evidence staged at upd13-20261002/upd1-arch-owner-continuation/run-b, driver SHA256SUMS verified)
+921M	/var/tmp/cp-release-drill-upd13-arch-oc-b
+2026-10-03T02:31:44Z queue done

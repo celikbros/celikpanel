@@ -1,0 +1,6 @@
+{
+  "directory_present": true,
+  "records": {
+    "df01bec5190476fd66baf46177314f54.status": "schema=celikpanel-recovery-observation/v1\nrequest_id=df01bec5190476fd66baf46177314f54\ntarget_commit=901593abf12c90c91222d2c61a8bd7c0040523c3\nphase=failed\nterminal_proof=none\nreason=update_failed\nobserved_at=2026-09-30T17:54:30Z\nprevious_failure=update_failed\n"
+  }
+}

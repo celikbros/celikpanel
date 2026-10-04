@@ -1,0 +1,22 @@
+#!/bin/bash
+# Read-only: effective BIND transfer policy lines on one guest (no key/secret lines), inspector
+# sudo/named lines, and the enrolled inspector files' metadata. usage: CELL LABEL NODE PORT SINCE
+CELL=$1; LABEL=$2; NODE=$3; PORT=$4; SINCE=$5
+H=$(printf %s "$CELL" | sha256sum | cut -c1-24)
+KH=/var/tmp/cp-pair7-work/cells/$H/ssh-known-hosts
+O=/root/cp-pair7/obs/$LABEL; mkdir -p $O
+timeout 120 ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$KH -i /var/tmp/cp-pair7-key/id_ed25519 -p $PORT celik@127.0.0.1 "SINCE='$SINCE' bash -s" > $O/$NODE-bind-transfer-policy.txt 2>&1 <<'R'
+set +e
+echo "## collected $(date -u +%FT%TZ) on $(hostname)"
+C=/etc/named.conf; [ -f /etc/bind/named.conf ] && C=/etc/bind/named.conf
+echo "## named-checkconf -p $C : lines naming zone/type/primaries/allow-transfer/also-notify/catalog-zones/controls (key and secret lines dropped)"
+sudo -n named-checkconf -p $C 2>&1 | grep -v -i -E 'secret|algorithm' | grep -n -E '^\s*(zone |type |primaries|masters|allow-transfer|also-notify|catalog-zones|controls|inet |options|allow-query|notify )|zone-directory|default-primaries|default-masters' | head -60
+echo "## journal since $SINCE: named transfer/notify/denied lines and inspector sudo lines"
+sudo -n journalctl --no-pager -o short-iso --since "$SINCE" | grep -E 'named\[|sudo\[' | grep -i -E 'transfer|denied|notify|celikpeer|inspect' | grep -v -i 'secret "' | tail -60
+echo "## inspector identity and files (metadata only)"
+getent passwd celikpeer
+sudo -n ls -la --time-style=full-iso /usr/local/libexec/ 2>&1 | grep -i -E 'peer|inspect'
+sudo -n ls -la --time-style=full-iso /etc/sudoers.d 2>&1
+echo "(end)"
+R
+cat $O/$NODE-bind-transfer-policy.txt | cut -c1-400

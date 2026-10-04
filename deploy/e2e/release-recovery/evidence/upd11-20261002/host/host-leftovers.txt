@@ -1,0 +1,40 @@
+2026-10-02T13:06:43Z
+1.2G	/var/tmp/cp-upd11-run
+921M	/var/tmp/cp-release-drill-upd11-a80-d13-def-a
+921M	/var/tmp/cp-release-drill-upd11-a80-d13-good-a
+921M	/var/tmp/cp-release-drill-upd11-a80-d13-oc-a
+662M	/var/tmp/cp-release-drill-upd11-a80-ub-good-a
+921M	/var/tmp/cp-release-drill-upd11-arch-def-a
+921M	/var/tmp/cp-release-drill-upd11-arch-good-a
+921M	/var/tmp/cp-release-drill-upd11-arch-mr-a
+921M	/var/tmp/cp-release-drill-upd11-arch-mr-b
+921M	/var/tmp/cp-release-drill-upd11-arch-oc-a
+921M	/var/tmp/cp-release-drill-upd11-arch-sc-a
+921M	/var/tmp/cp-release-drill-upd11-d13-def-a
+921M	/var/tmp/cp-release-drill-upd11-d13-good-a
+921M	/var/tmp/cp-release-drill-upd11-d13-mr-a
+921M	/var/tmp/cp-release-drill-upd11-d13-oc-a
+920M	/var/tmp/cp-release-drill-upd11-d13-rs-a
+921M	/var/tmp/cp-release-drill-upd11-d13-rs-b
+921M	/var/tmp/cp-release-drill-upd11-d13-sc-a
+662M	/var/tmp/cp-release-drill-upd11-ub-def-a
+661M	/var/tmp/cp-release-drill-upd11-ub-good-a
+662M	/var/tmp/cp-release-drill-upd11-ub-mr-a
+662M	/var/tmp/cp-release-drill-upd11-ub-oc-a
+662M	/var/tmp/cp-release-drill-upd11-ub-sc-a
+662M	/var/tmp/cp-release-drill-upd11-ub-sc-b
+757M	/var/tmp/cp-upd1-build/20261001t221215z
+762M	/var/tmp/cp-upd1-build/20261001t221533z
+729M	/var/tmp/cp-pair-accept/dist/235198ff900dbb851a5fdcc966c94db7857f556d-acceptance-license
+729M	/var/tmp/cp-pair-accept/dist/73eef2862644ccf48290073d3eeeb6bb461c1330-acceptance-license
+729M	/var/tmp/cp-pair-accept/dist/9656dabad6d85b9a3b1a9360a7ff6e984fe4b4d3-acceptance-license
+133M	/var/tmp/cp-pair-accept/dist/b9fe1037c6b5580fed97fa0382ec576d5f041045-acceptance-license
+729M	/var/tmp/cp-pair-accept/dist/ca9c11d17a76b98aaccb3512ee87a94c80b44b04-acceptance-license
+729M	/var/tmp/cp-pair-accept/dist/df01e72f0a04767c7ceb0c07a148228cd71837c7-acceptance-license
+729M	/var/tmp/cp-pair-accept/dist/f37e1cccf6ba16bf2a648c343e6defc45dc8cefe-acceptance-license
+729M	/var/tmp/cp-pair-accept/dist/f91732bae9a03c42a0e63e2f166794e3d76bd6aa-acceptance-license
+overlay disks still present in upd11 labs:
+none
+no dry-run lab
+4363b888278fa3d86af32af8199c5bc0  -
+48e5465712c3ef94f10fa8f91cc952289902ec2d

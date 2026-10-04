@@ -1,0 +1,19 @@
+== upd9-ub-once-a (18 observations; files: ['06-setup/packagekit-observations.json', '07-packagekit-after-setup/packagekit-observations.json'])
+  nothing                                | ready                                         | 2
+  packagekitd only                       | HOST_MUTATION_BUSY/package_manager_active     | 16
+  packagekitd readings: 32; age range 29.5-286.1 s; grep -c aptcc values [0]; children seen []; lock lines held/waited by it 0
+== upd9-ub-busy-a (94 observations; files: ['06-setup/packagekit-observations.json', '09-busy-start/packagekit-observations.json'])
+  nothing                                | (no readiness read)                           | 2
+  nothing                                | HOST_MUTATION_BUSY/panel_operation_active     | 23
+  nothing                                | ready                                         | 22
+  other package activity only            | (no readiness read)                           | 1
+  other package activity only            | HOST_MUTATION_BUSY/package_manager_active     | 16
+  other package activity only            | HOST_MUTATION_BUSY/panel_operation_active     | 4
+  packagekitd + other package activity   | HOST_MUTATION_BUSY/package_manager_active     | 2
+  packagekitd + other package activity   | HOST_MUTATION_BUSY/panel_operation_active     | 8
+  packagekitd only                       | HOST_MUTATION_BUSY/package_manager_active     | 11
+  packagekitd only                       | HOST_MUTATION_BUSY/panel_operation_active     | 5
+  packagekitd readings: 51; age range 0.2-93.2 s; grep -c aptcc values [0]; children seen []; lock lines held/waited by it 0
+
+== probe-a (tools/probe-a.sh; host/packagekit-probe-a.out.txt): 5 readings of packagekitd pid 1719 at age 12, 33, 36, 40, 70 s; grep -c aptcc 0 in each; /usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so mapped in each; no child; no lock line
+== cell C (upd1-ubuntu-good with the alpha.80 baseline) records no PackageKit observations (existing cell, pk_observe off)

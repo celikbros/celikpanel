@@ -1,0 +1,105 @@
+tag=start wall=2026-09-29T15:12:40.499783744Z mono=90.30 140.42 boot_id=53efc75d-f29a-42ee-97e7-570985fd0e73
+== pdns.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainStartTimestampMonotonic=0
+ExecMainPID=0
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+InvocationID=
+== named.service
+MainPID=2042
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 15:12:37 UTC
+ExecMainStartTimestampMonotonic=87091986
+ExecMainPID=2042
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 15:12:37 UTC
+InactiveEnterTimestamp=
+InvocationID=300895cab1204c6799b57b15c1ae6e15
+== bind9.service
+MainPID=2042
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 15:12:37 UTC
+ExecMainStartTimestampMonotonic=87091986
+ExecMainPID=2042
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 15:12:37 UTC
+InactiveEnterTimestamp=
+InvocationID=300895cab1204c6799b57b15c1ae6e15
+== celikpanel-agent.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 15:12:10 UTC
+ExecMainStartTimestampMonotonic=60547656
+ExecMainPID=1196
+ExecMainCode=2
+ExecMainStatus=15
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 15:12:10 UTC
+InactiveEnterTimestamp=Tue 2026-09-29 15:12:37 UTC
+InvocationID=17e085da24bd48ac866a1730f303c554
+== celikpanel-panel.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 15:12:10 UTC
+ExecMainStartTimestampMonotonic=60695825
+ExecMainPID=1207
+ExecMainCode=1
+ExecMainStatus=0
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 15:12:10 UTC
+InactiveEnterTimestamp=Tue 2026-09-29 15:12:37 UTC
+InvocationID=baa413e12ecd4d2e879d1aa4c8462e9b
+== processes
+2042 /usr/sbin/named -f -u bind
+== journal file
+total 12
+drwx------  2 root celikpanel 4096 2026-09-29 15:12:07.054387110 +0000 .
+drwxr-xr-x 29 root root       4096 2026-09-29 15:12:33.066593780 +0000 ..
+-rw-------  1 root celikpanel   23 2026-09-29 15:12:07.046335492 +0000 service-mutations.json
+== ss 53
+udp UNCONN 0      0         192.0.2.10:53 0.0.0.0:* users:(("named",pid=2042,fd=29))         
+udp UNCONN 0      0         192.0.2.10:53 0.0.0.0:* users:(("named",pid=2042,fd=28))         
+udp UNCONN 0      0          10.0.2.15:53 0.0.0.0:* users:(("named",pid=2042,fd=25))         
+udp UNCONN 0      0          10.0.2.15:53 0.0.0.0:* users:(("named",pid=2042,fd=24))         
+udp UNCONN 0      0          127.0.0.1:53 0.0.0.0:* users:(("named",pid=2042,fd=19))         
+udp UNCONN 0      0          127.0.0.1:53 0.0.0.0:* users:(("named",pid=2042,fd=18))         
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=370,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=370,fd=18))
+tcp LISTEN 0      10         127.0.0.1:53 0.0.0.0:* users:(("named",pid=2042,fd=22))         
+tcp LISTEN 0      10         127.0.0.1:53 0.0.0.0:* users:(("named",pid=2042,fd=20))         
+tcp LISTEN 0      10        192.0.2.10:53 0.0.0.0:* users:(("named",pid=2042,fd=31))         
+tcp LISTEN 0      10        192.0.2.10:53 0.0.0.0:* users:(("named",pid=2042,fd=30))         
+tcp LISTEN 0      10         10.0.2.15:53 0.0.0.0:* users:(("named",pid=2042,fd=27))         
+tcp LISTEN 0      10         10.0.2.15:53 0.0.0.0:* users:(("named",pid=2042,fd=26))         
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=370,fd=21))
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=370,fd=19))
+== managed BIND roots (lstat, no follow)
+ls: cannot access '/var/cache/bind/celikpanel': No such file or directory
+ls: cannot access '/var/named/celikpanel': No such file or directory
+ls: cannot access '/var/cache/bind/celikpanel/generations': No such file or directory
+ls: cannot access '/var/named/celikpanel/generations': No such file or directory

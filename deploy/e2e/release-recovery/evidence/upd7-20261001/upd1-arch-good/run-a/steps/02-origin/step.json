@@ -1,0 +1,64 @@
+{
+  "checks": {
+    "origin_check": {
+      "addresses": [
+        "127.0.0.1"
+      ],
+      "boot_id": "20f6f45d-b13d-4efd-9be1-d3b1b92209ef",
+      "getent_outcome": "found",
+      "getent_returncode": 0,
+      "getent_status": "ok",
+      "getent_stdout": "127.0.0.1       localhost\n",
+      "http": "200",
+      "loopback_only": true,
+      "ok": true,
+      "unit": {
+        "ActiveState": "active",
+        "NRestarts": "0",
+        "UnitFileState": "enabled"
+      }
+    },
+    "origin_unit": {
+      "path": "/etc/systemd/system/cp-lab-upd1-origin.service",
+      "results": [
+        {
+          "returncode": 0,
+          "status": "ok"
+        },
+        {
+          "returncode": 0,
+          "status": "ok"
+        }
+      ],
+      "unit": "cp-lab-upd1-origin.service",
+      "unit_sha256": "b03c081a4d931181a18c597592979b201f0bb48cd495f782e84aba7beee5a162"
+    },
+    "provenance": "unpublished-local-artifact-with-disposable-fixture-trust",
+    "provision": {
+      "bind": "127.0.0.1:443",
+      "origin": "https://celikpanel.net",
+      "provenance": "unpublished-local-artifact-with-disposable-fixture-trust",
+      "release_key_enrolled": false
+    },
+    "staged": {
+      "helper": "/root/celikpanel-release-recovery-lab/worker-fixture-origin.py",
+      "intent": "/root/celikpanel-release-recovery-lab/worker-origin-intent.json"
+    },
+    "target": {
+      "arch": "amd64",
+      "archive": "celikpanel-v0.1.0-alpha.81-linux-amd64.tar.gz",
+      "archive_sha256": "b82279714781d7e927be969921036e061c185eac8fce9f5da980a08cd03dd00d",
+      "archive_size": "65629833",
+      "commit": "622ddcb40568073d1407983bf78d0b8b8e24b0a5",
+      "format": "celikpanel-release-manifest-v2",
+      "os": "linux",
+      "published_at": "2026-10-01T12:05:52Z",
+      "sequence": "81",
+      "version": "v0.1.0-alpha.81"
+    }
+  },
+  "finished_at": "2026-10-01T12:05:59Z",
+  "name": "origin",
+  "started_at": "2026-10-01T12:05:51Z",
+  "verdict": "passed"
+}

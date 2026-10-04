@@ -1,0 +1,122 @@
+{
+  "d025": [
+    "owner-native-DNS",
+    "durable-exact-evidence",
+    "fail-closed-recovery"
+  ],
+  "fixture_helpers": [
+    {
+      "file": "measure.py",
+      "sha256": "f36f34dcf51e141e698140d256165eb6ec13367028c260a39d9ee30ded243103"
+    },
+    {
+      "file": "stopped_view.py",
+      "sha256": "76afbb81758b53ce4039b17cee73cc9bb0dd2f9c9888e918152f9b74420d7cf2"
+    }
+  ],
+  "guests": {
+    "arch": {
+      "binary_sha256": "dbd98715a105c1b87c6016e390a6f9b77a7557c0ee239c83387a0585d4a41480",
+      "candidate_inode": 77182,
+      "candidate_sha256": "85ffded6ff1b0ca7f5e5591d6021077db229b09d548a4532b0b721008d96d58e",
+      "catalog_axfr_has_member": false,
+      "native_main_inode": 77182,
+      "native_main_sha256": "a6e08276facf7a8c21297094ce170da1d05006c96e94c6a9a20877b55b034f76",
+      "native_serial": 1790542195,
+      "package": "powerdns 5.1.4-4",
+      "package_schema_sha256": "92a25cdb363597671f19a0206489ab34d74e77c86b3072713db2ce16110090c0",
+      "raw_evidence": [
+        {
+          "file": "arch.json",
+          "sha256": "b74d936b4fab73b8e444f849c8e6e1ae3fd3a9e3a2753bfa63ee5fffce43408e"
+        },
+        {
+          "file": "arch-stopped-wal.json",
+          "sha256": "eed1589490bc3c5b4af721ea7a06044f0c71eb09361fb7da7f0303f9a0bfe1c3"
+        }
+      ],
+      "stopped_shm": {
+        "inode": 77206,
+        "sha256_after_ro": "bb4aab9442be5864c890f6ad712617becb89c32fd1825ab3d43a687cc3a1ab9d",
+        "sha256_before_ro": "13e34b3d362dc4314ff6152ca33180c1e6af8535e0d77730a3a78f1df95dd112",
+        "size": 32768
+      },
+      "stopped_wal": {
+        "inode": 77205,
+        "sha256": "1a757884670635197ef0850aa11d3f26fe4225ef606945f416edbe0bba51b1ce",
+        "size": 28872
+      },
+      "unit_before": "inactive/disabled",
+      "unit_started": "active",
+      "unit_stopped": "ActiveState=inactive\nSubState=dead\nMainPID=0\nControlGroup="
+    },
+    "debian13": {
+      "binary_sha256": "c11660ad7647fa3b42f0b0f1ace73cfde3765add380a4351889b6c6d86b46d84",
+      "candidate_inode": 131425,
+      "candidate_sha256": "f263112a26ad48122c4dd1a10a6558be0580c69f4cec15e283653b1521ae50da",
+      "catalog_axfr_has_member": false,
+      "native_main_inode": 131425,
+      "native_main_sha256": "e688e332539c622a0e8d5149e74e682b7907a633fd6ea13591bd2e284fe07897",
+      "native_serial": 1790542182,
+      "package": "pdns-backend-sqlite3\t4.9.17-0+deb13u1\npdns-server\t4.9.17-0+deb13u1",
+      "package_schema_sha256": "92a25cdb363597671f19a0206489ab34d74e77c86b3072713db2ce16110090c0",
+      "raw_evidence": [
+        {
+          "file": "debian13.json",
+          "sha256": "7a31a527028bc5d34b4608a2901ac3061c64973820a3ba9a07f344ae7621de94"
+        },
+        {
+          "file": "debian13-stopped-wal.json",
+          "sha256": "3590c8b0400364ab3d2a686bb18e2c7a14743a578525554d16012a6d453314c8"
+        }
+      ],
+      "stopped_shm": {
+        "inode": 131429,
+        "sha256_after_ro": "cfc8c476204c2266d4140d9bf63a1272d2c88a578e325631424f1e3251b6f142",
+        "sha256_before_ro": "f4cbbe9a6ae610342576c6395bdf3b0b23a92bb8cca1d6d154f17babba9dc8d2",
+        "size": 32768
+      },
+      "stopped_wal": {
+        "inode": 131428,
+        "sha256": "f397040bcc4b470d00d3a3bc47b9f1b08c7c0e4cbed06b82c5c879e5d29815a1",
+        "size": 28872
+      },
+      "unit_before": "inactive/disabled",
+      "unit_started": "active",
+      "unit_stopped": "MainPID=0\nControlGroup=\nActiveState=inactive\nSubState=dead"
+    }
+  },
+  "observed_common": {
+    "clean_stop_left_sidecars": true,
+    "database_prior": "absent",
+    "native_created": [
+      "-wal",
+      "-shm"
+    ],
+    "read_only_caveat": "Opening the stopped database with SQLite mode=ro preserved main/WAL bytes and inodes but changed SHM bytes; immutable=1 ignored WAL and showed stale main-file SQL.",
+    "rename_preserved_main_inode": true,
+    "sql_changes_after_native_start": [
+      "catalog SOA record row id 1 replaced with id 9; content invalid. invalid. 1 60 30 3600 30 -> invalid invalid <observed_epoch> 60 30 3600 30",
+      "producer domains.last_check NULL -> 1",
+      "domainmetadata CATALOG-HASH inserted with empty-members hash 47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="
+    ],
+    "sql_unchanged": [
+      "catalog NS row",
+      "member zone rows",
+      "member records",
+      "SQLite schema"
+    ],
+    "stage_journal_mode": "DELETE"
+  },
+  "reason": "Producer catalog AXFR contained no member despite a domains.catalog NATIVE member row; product candidate and peer convergence were not proven.",
+  "schema": "celikpanel/pdns-native-transform-contract/v1",
+  "scope": "fixture-only: fresh Debian 13 and Arch guests, package SQLite schema, BIND-derived NATIVE member, no CelikPanel binary or full product receipt tables",
+  "unknown_or_rejected": [
+    "NATIVE member was omitted from native producer catalog AXFR; do not accept this target as a successful pair.",
+    "Whether changing fixture member kind to PRIMARY/Master is sufficient is unmeasured.",
+    "No full CelikPanel candidate receipts or remote BIND peer were used in this isolated transformation measurement.",
+    "No sidecar checkpoint/unlink or owner edit was attempted; permitted rollback deletion remains unproved.",
+    "Generated serial is time-dependent; only the observed per-node values are evidence, not a fixed allowed range."
+  ],
+  "v3_admission": false
+}

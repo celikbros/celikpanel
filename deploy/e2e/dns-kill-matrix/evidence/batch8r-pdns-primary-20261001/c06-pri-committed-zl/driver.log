@@ -1,0 +1,23 @@
+### 2026-09-29T23:21:58.993Z start-cell c06-pri-committed-zl pdns-switch__committed__after-write__paired-primary__peer-reachable node=debian13 peer=arch fixture=uninitialized root=/var/tmp/cp-b8r-1001 gateprobe=0 flags=--zone-lifecycle
+### 2026-09-29T23:21:58.995Z prepare
+### 2026-09-29T23:22:00.273Z early-admission-dry-run
+### 2026-09-29T23:22:00.407Z start
+### 2026-09-29T23:22:00.623Z wait-ssh
+### 2026-09-29T23:23:01.660Z guest-identity
+### 2026-09-29T23:23:02.382Z install
+### 2026-09-29T23:23:15.819Z enroll-recovery-runtime
+### 2026-09-29T23:23:25.193Z native-bind-secondary-prepare
+### 2026-09-29T23:24:23.601Z prepare-pdns-switch
+### 2026-09-29T23:24:24.671Z pre-run-snapshot
+### 2026-09-29T23:25:14.973Z start-peer-dns-sampler
+Running as unit: cp-b8r-peerloop1.service; invocation ID: 1f41827cc30e4b19ae2a468f60466975
+peerloop1 start rc=0
+### 2026-09-29T23:25:15.576Z start-watcher
+Running as unit: cp-b8r-watch.service; invocation ID: ea54f327c64046199022f5323ddda2d5
+### 2026-09-29T23:25:16.244Z start-dbwatch
+Running as unit: cp-b8r-dbwatch.service; invocation ID: a699d6e4249b4eee9def2bf9b81628dc
+### 2026-09-29T23:25:17.299Z prepared-ok
+### 2026-09-29T23:25:17.304Z run-prepared-dry-run flags=--zone-lifecycle
+### 2026-09-29T23:25:17.419Z run-prepared
+RUN_PREPARED_RC=0
+### 2026-09-29T23:26:54.185Z done-run rc=0

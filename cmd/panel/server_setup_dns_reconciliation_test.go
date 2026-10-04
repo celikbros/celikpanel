@@ -44,7 +44,12 @@ func TestServerSetupDNSUnprovenChildKeepsOuterExecutionAndDraftLocked(t *testing
 	if _, err = f.panel.advanceServerSetupExecution(plan, &execution); err != nil {
 		t.Fatal(err)
 	}
-	if execution.Status != "running" || execution.Steps[0].Status != "running" || execution.Error == nil || execution.Error.Code != "server_setup_reconciling" {
+	// The Agent's job for the exact request is failed but its rollback is not
+	// proven: setup shows the verified failure and waits; it neither claims a
+	// rollback nor releases the plan (D-024, pair2 P-B).
+	if execution.Status != "waiting" || execution.Steps[0].Status != "running" || execution.Error == nil ||
+		execution.Error.Code != serverSetupDNSAgentFailedCode ||
+		!strings.Contains(execution.Error.Message, "recovery dns-switch-status --quiesced --request-id "+execution.Steps[0].RequestID) {
 		t.Fatalf("uncertain DNS child released outer execution: %+v", execution)
 	}
 	if _, err = f.panel.saveServerSetupDraft(context.Background(), state.Revision, draft); !errors.Is(err, errServerSetupConflict) {

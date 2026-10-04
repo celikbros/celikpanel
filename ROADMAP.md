@@ -1,46 +1,154 @@
 # CelikPanel Roadmap
 
-*Last updated: August 29, 2026 · [Türkçe](ROADMAP.tr.md)*
+*Last updated: September 28, 2026 · [Türkçe](ROADMAP.tr.md)*
 
 ---
 
 ## The Constitution — Every Decision's Filter
 
-Every feature, every commit, every design decision passes these four filters.
-Work that fails one is not done, is postponed, or is simplified.
+Every feature, commit and design decision must satisfy these requirements.
+They are obligations, not a claim that the present implementation meets them.
+The [resilience contract and source audit](docs/RESILIENCE-CONTRACT.md) records
+open P0 work, implementation order and the evidence required to close it (D-025).
 
-### 1. Security is the default
-- No feature ships without authentication.
-- The default configuration is always the most secure one (localhost bind, token, least privilege).
-- Passwords/tokens come from `crypto/rand` only. SQL is parameterized only.
-- Only the Panel can reach the root-privileged Agent — nothing else.
+### 1. Security and owner authority
+- Authenticate management access and authorize each action for its exact resources. Use least privilege, local authenticated IPC, parameterized SQL and `crypto/rand` for secrets.
+- The unprivileged Panel and privileged Agent remain separate. Normal privileged automation uses the authorized Agent API; supported owner recovery has a separate narrow contract. Neither an AI planner nor a recovery UI gains unrestricted root execution.
+- The server owner retains native service administration. Detect owner changes and reconcile explicitly; never silently overwrite them to match cached intent (D-022).
+- When evidence is uncertain, block the affected unsafe mutation. Preserve authenticated diagnostics and supported recovery without granting unverified privileges.
 
-### 2. Simplicity (the Google principle)
-While AltaVista tried to be a portal, Google won with a single search box.
-cPanel/Plesk are today's AltaVista: crowded, slow, intimidating.
-- Every job has **one obvious way**. If there are two, one gets deleted.
-- Before adding a feature, ask: *"What do we lose by not adding it?"* If the answer isn't clear, it isn't added.
-- A service that isn't installed is **invisible** in the UI. No empty screens, no disabled menus.
-- Smart defaults: do the right thing without asking; an "advanced" section for the 5% who want knobs.
+### 2. Continuity and recoverability
+- Panel outage, license loss or removal must not stop hosted workloads or their native renewal, scheduling and boot mechanisms. Remaining dependencies must be eliminated and tested before claiming independence.
+- Every mutation defines affected resources, read-only preflight, durable checkpoints, bounded retry/recovery and terminal proof. Permission or ownership normalization is also a mutation.
+- Recovery must remain usable when the candidate release, ordinary Agent, application migration or license verifier fails. Mixed or unverified application state may block normal management; it must not erase the independent recovery path.
+- Preserve the last verified usable state and recovery material until the candidate and its recovery compatibility are verified. Cleanup follows that proof.
+- Automatic repair is a deterministic, idempotent continuation or compensation of the accepted operation. It does not invent missing evidence, undo later owner changes, bypass validation or launch a second unknown mutation.
 
-### 3. Speed
-- Panel API response target: < 100 ms. UI interactions: instant.
-- Install target: **60 seconds** (v0.1's `install.sh` delivered it; the target stands).
-- One static binary; adding external dependencies is forbidden (this is a feature — we protect it).
+### 3. Truthful state and shared contracts
+- Separate owner intent, authority, published configuration, observation, execution, verification and recovery. Unknown is not absent, failed, expired or completed.
+- Each durable artifact has one versioned producer/reader/restore contract with explicit supported transitions. Compare evidence according to its role; do not use whole-record equality where legitimate publication advances only part of a record.
+- A completed installation step is historical execution evidence, not proof of present health. Report the current reason, responsible actor, next action and how the same operation resumes (D-024).
+- The browser observes authoritative operation state. Refresh, reconnect and timeout never authorize duplicate work or imply completion.
 
-### 4. Flexibility
-- Everything is API-first; the UI is just one of its consumers.
-- Services are modular: the customer installs what they want, at the version they want.
-- Data is never held hostage: backups in standard formats (tar.gz, SQL dump), export always possible.
+### 4. Simplicity
+- Give each routine task one clear user path. Share the underlying operation contract across the browser and supported owner recovery; a single screen is not a single point of recovery failure.
+- Add features only for a concrete user need. Use safe defaults within the accepted scope and reveal advanced choices when needed.
+- Keep unused service-specific navigation quiet. Keep installation discovery, actual conflicts and recovery actions visible when they help the user complete the task.
+- Normal operation should be possible through the panel. Native owner administration and recovery remain supported; a manual rescue is evidence of an automation gap, not a reason to prohibit rescue.
 
-### The honesty rule
-The previous era's mistake will not repeat: **"works" ≠ "done".**
-Work is finished only with all three: tests + security review + documentation.
-Every release has a measurable exit criterion; the next one doesn't start until it's met.
+### 5. Speed with evidence
+- Targets remain API response under 100 ms, responsive interaction and a 60-second minimal installation. Record the measured platform and scope before claiming any target achieved.
+- Keep the runtime small. The existing Panel/Agent privilege split, native workload services and an independent recovery mechanism take precedence over a one-binary slogan.
+- Speed does not justify skipping validation, recoverable checkpoints or fault testing.
+
+### 6. Flexibility and independence
+- Use typed APIs, modular services and standard protocols; optional automation is separate from service operation.
+- Backups and exports use standard formats. Management software does not own or hold the owner's data hostage.
+- Standard DNS replication does not require a remote panel or its license. Separately authorized remote record management is optional.
+- Installed-panel updates are initiated only by the owner in CelikPanel's update UI. Publication, diagnosis and supported rollback do not authorize assistant-side installation.
+
+### The honesty and release rule
+
+Tests, security review and documentation remain necessary. Lifecycle support
+also requires complete fault-transition evidence in disposable native environments:
+real previous-release state, failed update, actual automatic restoration, recovery
+interruption/reboot, preserved owner changes, management recovery and workload
+probes. Component tests, mocked service managers and a successful installation
+alone do not prove that contract.
+
+Every lifecycle change names its affected invariant, schema/version transition,
+recovery behavior and acceptance evidence. Unmeasured or inconclusive results stay
+open. A narrowly scoped incident correction may ship with its limits explicit;
+it does not close foundational P0 work or justify unrelated feature expansion.
+The exit matrix in D-025 must be implemented and passed before claiming resilient
+operation. No system is promised to recover autonomously from every possible fault.
+
+
+---
+
+## Where We Are — September 26, 2026
+
+**Current priority: finish D-025 architectural resilience before expanding the product.**
+This review covers the local source through `f253d318` and the retained acceptance
+reports. It is not a new inspection of Frankfurt/Boston, a published release, or
+proof that these changes are installed. P0.1–P0.5 are all **partial**; none is closed.
+The constitutional requirements and their identifiers remain unchanged.
+
+### Evidence and remaining work
+
+| Existing item | Implemented or demonstrated within a stated scope | Still required for closure |
+|---|---|---|
+| P0.1 — Native update/rollback | Real old-release restoration on Arch/Debian; genuine Alpha64 schema38 data used in later migration and recovery trials. [Evidence](deploy/e2e/release-recovery/ISOLATED-DATABASE.md). | Complete the supported update/fault/workload matrix and production-signed candidate admission; a successful selected checkpoint is not whole-update acceptance. |
+| P0.2 — Access and truthful status | Independent authenticated recovery/status entrypoint; selected CLI, HTTP and browser terminal results agree. Native boot-wait retries retain the same operation. [Evidence](deploy/e2e/release-recovery/BOUND-WORKER.md). | Native waiting/error/reconnect cases, preservation of known failures, browser access during waits and the owner-initiated update path with production trust. |
+| P0.3 — Independent recovery | Separately retained recovery code/data, isolated DB migration and atomic publication; selected cuts during rollback and reboot recover automatically with cut-time rows preserved. [Two-fault evidence](deploy/e2e/release-recovery/NATIVE-EXCHANGE-RECOVERY.md). | Remaining checkpoints, incomplete capture, metadata transitions, old-version compatibility and safe cleanup. Eventual recovery is not uninterrupted service or power-loss durability. |
+| P0.4 — Shared DNS/TLS contracts | DNS acquisition/publication roles separated; shared TLS and DNS readers; independent DNS observation and selected Agent-mediated fault recovery. [Contract](docs/DNS-ENGINE-ARTIFACT.md). | Supported **Agent-independent DNS inverse execution**, native interruption/owner-edit acceptance, complete producer/restore transitions, and peer deletion proof when no authoritative parent is available. Dormant inverse code and read-only observation do not close this gap. |
+| P0.5 — Native service independence | Scoped firewall/mail renewal and enrollment recovery; standalone PowerDNS and BIND/BIND pair serving after management-absent or management-disabled reboot, as specified in each report. [Mail evidence](deploy/e2e/release-recovery/MAIL-ENROLLMENT-MANAGEMENT-ABSENT-BE.json); [DNS evidence](deploy/e2e/dns-kill-matrix/NATIVE-BIND-PAIR-TARGET-STAGED-20260926.md). | Cross-engine DNS pair combinations, full setup/enrollment and old-application compatibility, and web/DB/mail/cron/renewal/firewall checks under every claimed management-absence/removal mode. Disabled management is not full removal. |
+
+The detailed [acceptance register](docs/RESILIENCE-CONTRACT.md) retains failed
+attempts and exact boundaries. New evidence updates an existing P0 item; it does
+not create a replacement architecture plan.
+
+### Latest DNS results and their limits
+
+- A [current-source BIND/PowerDNS native trial](deploy/e2e/dns-kill-matrix/NATIVE-BIND-PDNS-CURRENT-SOURCE-SMOKE-20260927.md) verified initial transfer from managed BIND on Debian to panel-free PowerDNS on Arch. SOA, NS and selected A answers matched over UDP/TCP before and after both guests rebooted; the actual Panel and Agent units stayed disabled. The bundle was local and unsigned. Later record changes, the reverse topology, installed servers and update recovery remain untested here; P0.4/P0.5 stay open.
+- A [disposable PowerDNS-primary/BIND-secondary native trial](deploy/e2e/dns-kill-matrix/evidence/pdns-master-bind-20260928/contract.json) transferred a `MASTER` member and its catalog from Debian PowerDNS 4.9.17 to panel-free Arch BIND. Both answered the same SOA/A over UDP/TCP. A separate [daemon-transition measurement](deploy/e2e/dns-kill-matrix/evidence/pdns-native-transform-20260927/contract.json) found PowerDNS-generated SOA/serial, `CATALOG-HASH`, WAL/SHM and a different catalog PTR owner. The producer-aware AXFR parser has focused tests, but the product switch, reboot and independent rollback were not exercised; the paired-primary gate remains closed.
+- The PowerDNS-primary path in a DNS pair remains blocked in setup and engine preview before an Agent mutation is claimed. The [failed native switch](deploy/e2e/dns-kill-matrix/NATIVE-PDNS-BIND-PEER-STAGE2-20260927.md) found a changed PowerDNS producer catalog; [PowerDNS documents](https://doc.powerdns.com/authoritative/catalog.html) automatic serial advances. V1 cannot prove that live target or safely roll it back. [V3 code](docs/PDNS-PRIMARY-SWITCH-V3-DESIGN.md) now separates the source and native serials, records exact target evidence, and supports a protected prestart owner rollback. An Agent-mediated, same-request poststart forward path now has checkpoint and drift package tests. Owner-approved committed-journal archiving is implemented in source; its durable publication and active-record retirement have focused interruption tests. Product fault/reboot acceptance remains open. V3 evidence also refuses application replacement until an explicit compatible Agent/recovery contract exists; the old evidence-policy marker is insufficient. These new schemas are not shipped or installed. The safety gate stays closed; P0.4/P0.5 remain open.
+- A [fresh paired PowerDNS-primary V3 native fault trial](deploy/e2e/dns-kill-matrix/evidence/pdns-v3-native-20260928/README.md) used an uninitialized Debian primary and panel-free Arch BIND secondary. After the `target-enable-intent` process cut, the first separate same-request recovery reached a terminal `succeeded` ledger receipt, archived its V3 journal, and preserved UDP/TCP authority across a management-disabled primary reboot. An earlier run safely retained an unknown result when Debian PowerDNS kept catalog NS RDATA unchanged while normalizing SOA; later host reconciliation preserved that historical failure. The two SSH-launched cuts returned `255`; a third fresh run independently recorded `Result=signal`, `ExecMainStatus=9` (SIGKILL) under systemd and again recovered the exact request on its first attempt. No shell exit `137` is claimed. Existing BIND-to-PowerDNS migration, owner edits, independent inverse, later cuts and full pair lifecycle remain untested; the public gate and P0.4/P0.5 remain open.
+- [Fresh PowerDNS V3 prestart inverse](deploy/e2e/dns-kill-matrix/evidence/pdns-v3-prestart-20260928/README.md) now has one independent, manifest-verified owner-CLI recovery after a real SIGKILL before target start on disposable Debian. Two earlier fresh attempts refused without effects and exposed overly strict masked-unit cgroup and loopback-stub listener checks; both were narrowed with focused regressions. The clean attempt restored the pre-switch inactive/masked PowerDNS state, removed the candidate database and active journal, retained a terminal rollback verdict across a management-disabled reboot, and left the original switch job correctly failed. The native exact-request status trial found a missing volatile lock after reboot; the journal-free terminal-ledger path now has focused tests and a separate disposable Debian reboot check using that same canonical historical ledger, without a producer/inverse replay or installed kit. Later cuts, migration and public admission remain open; P0.4/P0.5 stay partial.
+- Separate future engine-migration gap: moving an existing paired managed BIND primary to PowerDNS is not established by the fresh V3 path or standalone V4 adapter. It needs its own paired source/native target proof and recovery trials. This is distinct from accepting a fresh PowerDNS-primary/BIND-secondary setup.
+- Immediate two-topology acceptance path: the disposable BIND-primary/PowerDNS-secondary pair has initial authority, terminal edit, owner-enrolled terminal delete/re-add, and management-disabled reboot evidence, but ordinary owner enrollment and fault cells remain open. A [fresh PowerDNS-primary/BIND-secondary V3 trial](deploy/e2e/dns-kill-matrix/evidence/pdns-v3-zone-20260928/README.md) now has a real target-enable-intent SIGKILL with separate same-request recovery, terminal add/edit/delete/re-add for an authoritative child zone, and both native services answering after management-disabled reboots. In that trial, a parentless deletion correctly remained pending without authenticated peer-native absence proof. Public setup/RPC admission, ordinary owner enrollment, later fault cells, owner edits and independent inverse remain open; P0.4/P0.5 and the paired-primary gate are not complete.
+- An [owner-operated BIND inspector enrollment trial](deploy/e2e/dns-kill-matrix/evidence/owner-bind-enrollment-20260928/README.md) exercised local primary/secondary enrollment, fixed-command SSH authentication, reboot persistence, explicit revocation and native BIND survival on disposable Debian/Arch guests. The final secondary state is configured, not a proven deletion response. A valid transferred-catalog challenge, product host-key pin, interrupted-install cleanup/rotation, native Debian secondary and packaging remain open; P0.4/P0.5 stay partial.
+- A later [owner-enrolled PowerDNS-primary/BIND-secondary parentless deletion trial](deploy/e2e/dns-kill-matrix/evidence/pdns-bind-owner-proof-20260928/README.md) used the pinned product SSH transport and native transferred-catalog/BIND-zone observation. The actual V3 Agent deletion reached a terminal durable receipt; after secondary reboot the catalog was empty and the zone unloaded with management absent. This closes that earlier experiment only. Product packaging/admission, other cuts and independent inverse remain open; P0.4/P0.5 stay partial.
+- [Explicit owner enrollment resume](deploy/e2e/dns-kill-matrix/evidence/owner-bind-resume-20260928/README.md) now reuses exact staged BIND inspector files and the restricted account. A disposable Arch trial completed materialized SSH interruption states, repeated a completed enrollment without replacing its key, reauthorized after explicit revocation, and preserved an owner SSH edit while refusing continuation. Native BIND stayed active. This is not a process-kill/power-loss trial; Debian, remaining cuts, cleanup/rotation and product packaging remain open.
+- [Debian owner resume and archive integration](deploy/e2e/dns-kill-matrix/evidence/owner-bind-debian-20260928/README.md) passed the same materialized resume checkpoints with the current strict account checks on native Debian BIND/OpenSSH. The ordinary CLI preserved an owner SSH edit and kept the key revoked with BIND active. Source packaging now carries optional owner tools without running enrollment; the real dist recipe passed modes, checksum/tamper and umask reproducibility checks with actual tools and inert unrelated payloads. This closes these Debian checkpoints and source archive integration, not full enrollment, public admission, a signed release or independent inverse.
+- The independent fresh-PowerDNS V3 executable checker incorrectly expected `unix.Stat_t` from `os.Lstat`/`File.Stat`, which actually return `syscall.Stat_t` on Linux. A real root-owned-file regression reproduced rejection of valid metadata; the corrected checker now passes the complete recovery package tests and rejects changed content, wrong owner/mode, special permission bits and symlink/hardlink inputs. The root-only temporary-file regression is wired into CI. No schema or recovery decision changed; this is a file-proof correction, not native independent recovery acceptance.
+- [Managed BIND V3 deletion](deploy/e2e/dns-kill-matrix/NATIVE-BIND-V3-DELETION-TERMINAL-20260926.md) reached a verified terminal result with a parent-authoritative, panel-free secondary. Native removal survived reboot. Without that parent proof, deletion remains pending; `REFUSED` alone never proves absence.
+- [Paired target-staged/after-write](deploy/e2e/dns-kill-matrix/NATIVE-BIND-PAIR-TARGET-STAGED-20260926.md) passed a real SIGKILL, same-request Agent recovery, secondary transfer and subsequent management-disabled reboot. Reboot observations are documented separately from its sealed fault archive.
+- [PowerDNS owner-edit refusal](deploy/e2e/dns-kill-matrix/NATIVE-PDNS-OWNER-EDIT-20260925.md) preserved a post-kill owner edit, the journal and native serving. It proves bounded refusal, not concurrent-edit safety at every effect or an independent inverse.
+- Standalone managed BIND to initially inactive and disabled PowerDNS now has V4 frozen-candidate and protected owner-CLI rollback source code for pre-activation cuts. The owner command can first record an exact rollback decision for an interrupted intent, target-staged or source-stopped operation; it then replays the same request. Source code also handles an enabled but inactive pre-start target only with a durable V4 enable-intent checkpoint. The producer is not wired, and no native trial or post-start or committed recovery is accepted; see [the exact scope](docs/DNS-ENGINE-ARTIFACT.md#standalone-bind-to-powerdns-v4-recovery-code-scope-2026-09-27). P0.4 remains open.
+- The [DNS inventory](deploy/e2e/dns-kill-matrix/README.md) has 510 raw combinations: 268 applicable/runnable and 242 explicit N/A. **268 is not a passed-test count or a ready-fixture count.** Missing managed-BIND and legacy-secondary fixture producers, later paired phases and unexecuted cells remain open. Repeating a measured cell does not increase phase coverage.
+- The September 12 cross-engine removal claim was corrected: its negative reply was insufficient evidence. New BIND/BIND success does not retroactively close BIND/PowerDNS acceptance.
+
+- 2026-09-29: a read-only audit of `e9d1019d` produced the [DNS recovery acceptance register](docs/DNS-RECOVERY-ACCEPTANCE.md). It found one reachable path with no recovery contract: switching a serving BIND to PowerDNS on a standalone host or paired secondary wrote the legacy V1 journal, had only the Agent's own inverse, and had never been tried natively. [D-026](docs/DECISIONS.md#d-026--dns-engine-recovery-refuse-the-unrecoverable-switch-accept-same-operation-recovery-for-first-installs) declares it unsupported for this release; Panel, setup and Agent now refuse it before any mutation (`bind_source_pdns_switch_unsupported`) with the reason and next action on screen. Startup recovery of an existing journal does not pass through the gate. Same-operation Agent recovery is accepted for first installs. The kill-matrix fixture was extended to prepare fresh standalone PowerDNS and fresh standalone BIND target-verified cells; that is preparation, not evidence, and the 268 runnable count did not change. `cmd/panel` and the new `cmd/agent` tests pass locally; the full `cmd/agent` package cannot run cleanly on the local WSL guest under any user/group layout and fails identically at `e9d1019d`, so its full verification remains a CI matter for an unpushed branch.
+- 2026-09-29 to 2026-10-01: kill-matrix batches 4 to 12 and seven product-flow pair runs on two disposable CelikPanel servers closed item 2 with named limits ([register](docs/DNS-RECOVERY-ACCEPTANCE.md#item-2-status-closed-on-2026-10-01-with-named-limits)). [Pair 7](deploy/e2e/dns-pair-acceptance/evidence/pair7-20261001/README.md) passed every step on BIND/BIND, BIND/PowerDNS and PowerDNS/BIND, including zone deletion proven on the secondary after the owner's `dns-peer-enroll`, re-add, a reboot with the panel and Agent disabled while DNS kept answering, and management return; [batch 12](deploy/e2e/dns-kill-matrix/evidence/batch12-zero-zone-complete-20261001/README.md) completed the zero-zone fresh PowerDNS primary cells with a parentless deletion resumed after enrollment. Eleven product defects were found only by these native runs and closed in source on the way; each is in the register with its evidence. The fresh paired PowerDNS primary gate is open on the main line within the measured envelope ([D-028](docs/DECISIONS.md#d-028--the-fresh-paired-powerdns-primary-is-offered-within-the-measured-envelope)). P0.4 and P0.5 stay partial: no SIGKILL inside a zone-sync operation, one run per cell on a laptop host with the test-only license, the re-stamp admission and proof time-out not observed natively, no installed server touched.
+
+### Next work, in dependency order
+
+| Order | Work within the existing plan | Exit evidence |
+|---|---|---|
+| 1 | P0.4: the [DNS recovery acceptance register](docs/DNS-RECOVERY-ACCEPTANCE.md) (2026-09-29) binds every DNS engine mutation the product can start to passed / named gap / unsupported. Per [D-026](docs/DECISIONS.md#d-026--dns-engine-recovery-refuse-the-unrecoverable-switch-accept-same-operation-recovery-for-first-installs) the serving-BIND→PowerDNS switch is now refused in Panel, setup and Agent for every topology (`bind_source_pdns_switch_unsupported`; component tests pass) and same-operation Agent recovery is the accepted contract for first installs. Four bounded Debian protected owner-CLI paths have native evidence (external PowerDNS adoption, PowerDNS-to-BIND rollback, one running-BIND adoption rollback, one fresh PowerDNS V3 prestart inverse). Four fresh-install cells ran natively on 2026-09-29 ([evidence](deploy/e2e/dns-kill-matrix/evidence/fresh-install-20260929/README.md)): fresh PowerDNS after target start and fresh BIND after target start (Debian and Arch) recovered on the same request; fresh PowerDNS cut before target start **failed** — the rollback's stopped-target proof rejected the never-started, install-masked unit. Fixed in `1c336f6d`; the [re-run](deploy/e2e/dns-kill-matrix/evidence/fresh-install-rerun-20260929/README.md) of the `target-staged` and `intent` cells on the fixed source rolled back at startup and converged on the same-request retry. Owner-command guidance (D-024) is closed in source: the status command and Agent refusals name the exact owner command and request id, or say that none applies. That work found an open code gap: after a restarted Agent releases its lease (`released-undecided`), `recover-dns-bind-switch`, `recover-dns-bind-adoption` and `recover-dns-pdns-adoption` refuse the journal, so an interrupted PowerDNS→BIND switch or adoption has no admitted owner command while the Agent runs; earlier native passes were taken with the Agent inactive. The admission rule (exactly the Agent's deliberate release, no schema change, no ledger rewrite; truthful text computed at read time) and the controller flow `--owner-inverse-after-restart` are in source. Native result: the first run on `7ad24282` failed with safety passed (the owner inverse rejected the never-started, guard-masked BIND target), fixed in `411398d9`, and the [re-run](deploy/e2e/dns-kill-matrix/evidence/owner-inverse-after-restart-rerun-20260929/README.md) of the `target-staged` and `intent` cells passed with the Agent restarted and running — PowerDNS served on the same process throughout and BIND never started. The post-stop cuts (`source-stopped`, `target-started`) then [passed](deploy/e2e/dns-kill-matrix/evidence/owner-inverse-critical-20260929/README.md) on the critical variant of the flow: PowerDNS served again as the only authority with the zone serial unchanged; measured PowerDNS outage upper bounds were 21.6 s and 9.4 s and DNS is not continuous in those cells by construction. **Item 1 is closed as of 2026-09-29 with named limits** (owner decision the same day): fresh BIND, fresh PowerDNS, PowerDNS→BIND and external PowerDNS adoption on a standalone host have native same-operation recovery evidence before and after the target starts; paths without a recovery contract are refused in code. Carried to item 2 by name in the [register](docs/DNS-RECOVERY-ACCEPTANCE.md): all paired topologies, running-BIND and PowerDNS adoption with a running Agent (component tests only), stopped-BIND takeover and BIND reinstall (no native trial), V2 before-write and rolled-back cells, reboot cells, re-run exit status and on-disk residue. Closing item 1 does not close P0.4. Fresh paired-secondary cells need a panel-free native primary peer the fixture does not have; they move to item 2 and stay open. Item 1/P0.4 are not complete. | [Acceptance register](docs/DNS-RECOVERY-ACCEPTANCE.md); [Running-BIND adoption](deploy/e2e/dns-kill-matrix/NATIVE-BIND-ADOPTION-OWNER-CLI-20260927.md), [PowerDNS-to-BIND rollback](deploy/e2e/dns-kill-matrix/NATIVE-BIND-PROTECTED-OWNER-CLI-20260927.md), [PowerDNS adoption](deploy/e2e/dns-kill-matrix/NATIVE-PDNS-PROTECTED-OWNER-CLI-20260926.md), and [fresh PowerDNS V3 prestart inverse](deploy/e2e/dns-kill-matrix/evidence/pdns-v3-prestart-20260928/README.md). Detailed trial limits are in each report. |
+| 2 | P0.4/P0.5: complete missing source/peer fixtures and practical deletion verification without requiring a parent zone or a remote panel. Carried from item 1 (2026-09-29, named in the [register](docs/DNS-RECOVERY-ACCEPTANCE.md)): a panel-free native primary peer for fresh paired-secondary cells, adoption inverses with a running Agent, stopped-BIND takeover and BIND reinstall cells, V2 before-write and rolled-back cells, reboot cells. **Item 2 is closed as of 2026-10-01 with named limits** ([register section](docs/DNS-RECOVERY-ACCEPTANCE.md#item-2-status-closed-on-2026-10-01-with-named-limits)). The kill matrix ran batches 4 to 12 (panel-free BIND and PowerDNS primary peers; fresh BIND and PowerDNS secondaries cut before and after start with management-disabled reboots; stopped-BIND takeover; V2 before-write and rolled-back cells; the fresh paired PowerDNS primary through the public RPC with one zone and with zero zones, owner edits held, an Agent-released job finished by the owner command, a parentless deletion resumed after owner enrollment) and the product-flow pair driver ran seven times on two disposable CelikPanel servers; [pair 7](deploy/e2e/dns-pair-acceptance/evidence/pair7-20261001/README.md) passed every step on BIND/BIND, BIND/PowerDNS and PowerDNS/BIND: setup, zone add, record edit, zone delete with the product's proof after the owner enrollment (`dns-peer-enroll`, BIND and PowerDNS secondaries), re-add, a reboot with the panel and Agent disabled while DNS kept answering, and management return. Eleven product defects were found only by the native runs and closed in source on the way (zero-zone catalog check, wizard states and license refresh, evidence in the customer archive, rndc key on Arch, PowerDNS notify port, loopback catalog transfer and inspector reasons on the managed secondary, mail stage on a DNS-only domain, the owner's inspector on a managed PowerDNS secondary, the BIND primary plan's source state, the daemon re-stamp taken for an owner change, a positive proof discarded at the wave bound). On that evidence the fresh paired PowerDNS primary gate is open on the main line within the measured envelope ([D-028](docs/DECISIONS.md#d-028--the-fresh-paired-powerdns-primary-is-offered-within-the-measured-envelope)). Register rows 3, 5, 6, 12 and 17 are PASSED with limits; rows 8 and 14 stay GAP; the named limits (one run per cell, laptop host, test-only license, no SIGKILL inside zone-sync, the re-stamp admission and proof time-out not observed natively, a version-1 BIND secondary with no upgrade trigger, the e2e harness in the customer archive) are in the register. Closing item 2 does not close P0.4 or P0.5 and authorises no installed-panel update. | Real supported primary/secondary combinations prove add/edit/delete, native loaded-zone state and reboot; uncertainty gives an actionable same-operation recovery path. Do not reclassify fixture gaps as N/A. |
+| 3 | P0.1–P0.5: close the remaining end-to-end update, access, schema, TLS/enrollment and workload matrix. **Item 3 is closed as of 2026-10-01 with named limits** ([contract section](docs/RESILIENCE-CONTRACT.md#roadmap-item-3-status-closed-on-2026-10-01-with-named-limits-p01p02p03p05)). Owner-started update runs upd2 to upd6 on disposable Debian 13 and Arch guests (upd1 reached no update) measured: a good candidate installed through the Panel's update-start API as the logged-in owner; a candidate failing before completion returned to the previous release automatically, also after a second fault (VM reset on Debian, SIGKILL on Arch); a candidate failing after completion retried three times, paused with its cause kept, and finished after the owner's printed retry; cron never interrupted and the site interrupted only around the injected VM reset (about 22 s at most); with Panel and Agent disabled across a reboot, site, database, cron and firewall kept serving (SMTP on Debian) and the renewal timer kept its state. The product defects those runs found are closed in source. Closing item 3 closes no P0 item: fixture signing and loopback origin, few repetitions and no browser, no Ubuntu, no power loss, no rollback after completion, no live status at the Panel's address while it is stopped, and paths not triggered natively stay named in the contract section. | Owner UI update admission, failed candidate, automatic rollback, a second recovery fault, authenticated guidance and preserved native workloads agree on one operation. Each claimed platform/version combination has retained evidence. |
+| 4 | Release review of the exact candidate and a short owner test path. **Candidate review done; the candidate's exact code (`f6cdd5a0`) has one complete run of the update matrix on 2026-10-02/03 and publication waits for the owner** ([release notes](docs/RELEASE-NOTES-v0.1.0-alpha.81.md)). The customer archive no longer ships the harness, test scripts or evidence and the signing step refuses one that does. A read-only review of the update path found seven defects, all seven corrected in source (component tests; residuals are listed in the contract section); the most important was that a worker started by v0.1.0-alpha.80 wrote no status record, so the new guidance never appeared on the first upgrade. That first upgrade was then measured, one run per case, from the alpha.80 source rebuilt with a test license (not the signed archive) on Debian 13 and Ubuntu 24.04 (good candidate, owner continuation, defective candidate returning to alpha.80); Arch from alpha.80 was not measured. Ubuntu exposed that an idle package helper blocked setup and could refuse an update start; the first fix did not hold on a real system, the corrected one was measured. Open for the owner: the version number; the root-only packaging tests (18) on a disposable machine or CI; production signing and its compatibility check; whether the vendor publishing tools stay in the archive; the owner test; every installed-panel update. After the review corrections, the Panel's deferred retry of its mail startup steps was added and measured, and the whole matrix was run once more on the final code (upd13: 20 cells, no candidate defect). Named limits are in the release notes; no P0 item is closed. | All required acceptance items are closed, or a deliberately scoped release states its still-open limits. Verify signed artifacts and recovery compatibility; only the user starts installed-panel updates. |
+
+Each slice must identify the open acceptance it closes before more tests are added.
+Repeat a passing trial only after a relevant change or to resolve a named uncertainty.
+After retaining and checking evidence, stop disposable guests and remove their
+verified temporary overlays; preserve recovery material and owner data.
+
+**Completion date:** not established by current evidence. Remaining implementation
+and fixture gaps prevent an honest percentage or fixed finish date. Re-estimate
+after the independent DNS path and missing fixture scope are verified; completion
+requires the existing acceptance gates, not a growing count of small commits.
+
+### AI assistant milestone — after the operation/recovery foundation
+
+The user-requested AI assistant remains planned: explain observed state and help
+the user carry out authorized panel actions through the same typed, scoped
+operation APIs. It must show the plan, honor permissions, retain the operation ID
+and report verified results. Acceptance must include denied permissions, unavailable
+services, interrupted requests and retry without duplicate effects. It receives
+neither unrestricted root execution nor authority to invent missing evidence,
+bypass licensing or initiate installed-panel updates. AI integration is not a
+substitute for deterministic recovery and is not claimed implemented by this review.
 
 ---
 
 ## The Version Ladder
+
+The version ladder below is a historical record of earlier milestones. Its past
+golden-path results and architecture assessments do not establish compliance
+with the September 14 resilience contract; that acceptance remains open.
 
 Destination: **v1.0 — a panel a stranger can install on a clean VPS in minutes,
 run a real hosting business on, and trust.** Everything below is a stone on that road.
@@ -59,7 +167,7 @@ The July 17 update worked three new requirements into the ladder — not a vague
 (open TCP agent, SQL injection, no authentication) and a UI full of fake data.
 Decision made: continue, no rewrite.
 
-### ✅ v0.1 — Secure Core + Proven Golden Path *(July 3–10, 2026 — current release, v0.1.0)*
+### ✅ v0.1 — Secure Core + Proven Golden Path *(July 3–10, 2026 — historical v0.1.0 milestone)*
 Eight days, four fronts, all pushed:
 - **Security (Phase 0):** agent behind Unix socket + token · session identity (argon2id) + 2FA/TOTP ·
   SQL injection cleanup · CSRF/headers/rate limit · gosec highs closed · leaked passwords neutralized.
@@ -81,7 +189,7 @@ Eight days, four fronts, all pushed:
 
 **Exit criterion met:** golden path proven end-to-end (Ubuntu) · the panel carries its own updates · the alpha model works.
 
-### 🔶 v0.2 — Alpha Complete: The Debian Re-Proof *(← WE ARE HERE, in progress)*
+### 🔶 v0.2 — Alpha Complete: The Debian Re-Proof *(historical milestone; current priority above)*
 The same golden path, re-proven on the production VPS (Debian 13) **entirely with panel clicks**:
 - ✅ Panel-only install (zero extra packages) · ✅ PowerDNS installed from the panel ·
   ✅ honest management page (config visibility, working repair)
@@ -719,7 +827,7 @@ product itself:
 
 ---
 
-## Where We Are — August 29, 2026
+## Historical Snapshot — August 29, 2026
 
 **Version:** now single-sourced — version and commit are linked into BOTH binaries, served from
 `/api/v1/panel/version`, read back by the panel footer, and a panel/agent build mismatch raises a

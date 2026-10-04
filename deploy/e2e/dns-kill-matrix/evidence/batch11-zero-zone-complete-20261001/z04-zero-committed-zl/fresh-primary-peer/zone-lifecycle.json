@@ -1,0 +1,199 @@
+{
+  "cell_id": "pdns-switch__committed__after-write__paired-primary__peer-reachable",
+  "recover_delete": false,
+  "schema": "celikpanel/dns-kill-fresh-primary-zone-lifecycle/v1",
+  "status": "pending",
+  "steps": [
+    {
+      "observation": {
+        "action": "observe-child-native-pdns-bind-peer",
+        "answers": {
+          "192.0.2.10/tcp": {
+            "changed_a": null,
+            "soa_serial": "2026092801",
+            "www_a": [
+              "192.0.2.10"
+            ]
+          },
+          "192.0.2.10/udp": {
+            "changed_a": null,
+            "soa_serial": "2026092801",
+            "www_a": [
+              "192.0.2.10"
+            ]
+          },
+          "192.0.2.11/tcp": {
+            "changed_a": null,
+            "soa_serial": "2026092801",
+            "www_a": [
+              "192.0.2.10"
+            ]
+          },
+          "192.0.2.11/udp": {
+            "changed_a": null,
+            "soa_serial": "2026092801",
+            "www_a": [
+              "192.0.2.10"
+            ]
+          }
+        },
+        "catalog": {
+          "loaded_members": [
+            "s2.s1-kill.test"
+          ],
+          "loaded_serial": 1790745169,
+          "primary_members": [
+            "s2.s1-kill.test"
+          ],
+          "primary_serial": 1790745169
+        },
+        "catalog_members_expected": [
+          "s2.s1-kill.test"
+        ],
+        "cell_id": "pdns-switch__committed__after-write__paired-primary__peer-reachable",
+        "child": "s2.s1-kill.test",
+        "execute": true,
+        "expected": {
+          "changed": false,
+          "present": true,
+          "serial": "2026092801"
+        },
+        "step": "add",
+        "zero_zones": true
+      },
+      "observation_error": null,
+      "recover": false,
+      "result": {
+        "cell_id": "pdns-switch__committed__after-write__paired-primary__peer-reachable",
+        "delete": false,
+        "domain": "s2.s1-kill.test",
+        "generation": 1,
+        "heartbeats": 0,
+        "job_phase": "commit/dns-zone-sync/v3/published/fa261f2921ccb462f0ce8225b4987b33/s2.s1-kill.test/dns-zone-sync/v3:sha256:6ccf0b5599f9694e54f65d92a6d3550f13100491b834a76a160a9b74b05705b4",
+        "job_status": "succeeded",
+        "outcome": "verified_published",
+        "owner_id": "0d43688af5eedac59712ed51598edd38",
+        "qualifier": "dns-zone-sync/v3:sha256:6ccf0b5599f9694e54f65d92a6d3550f13100491b834a76a160a9b74b05705b4",
+        "request_id": "fa261f2921ccb462f0ce8225b4987b33",
+        "schema": "celikpanel/dns-kill-matrix-pdns-primary-zone-v3/v1",
+        "step": "add"
+      },
+      "returncode": 0,
+      "step": "add",
+      "verdict": "passed"
+    },
+    {
+      "observation": {
+        "action": "observe-child-native-pdns-bind-peer",
+        "answers": {
+          "192.0.2.10/tcp": {
+            "changed_a": [
+              "192.0.2.10"
+            ],
+            "soa_serial": "2026092802",
+            "www_a": [
+              "192.0.2.10"
+            ]
+          },
+          "192.0.2.10/udp": {
+            "changed_a": [
+              "192.0.2.10"
+            ],
+            "soa_serial": "2026092802",
+            "www_a": [
+              "192.0.2.10"
+            ]
+          },
+          "192.0.2.11/tcp": {
+            "changed_a": [
+              "192.0.2.10"
+            ],
+            "soa_serial": "2026092802",
+            "www_a": [
+              "192.0.2.10"
+            ]
+          },
+          "192.0.2.11/udp": {
+            "changed_a": [
+              "192.0.2.10"
+            ],
+            "soa_serial": "2026092802",
+            "www_a": [
+              "192.0.2.10"
+            ]
+          }
+        },
+        "catalog": {
+          "loaded_members": [
+            "s2.s1-kill.test"
+          ],
+          "loaded_serial": 1790745169,
+          "primary_members": [
+            "s2.s1-kill.test"
+          ],
+          "primary_serial": 1790745169
+        },
+        "catalog_members_expected": [
+          "s2.s1-kill.test"
+        ],
+        "cell_id": "pdns-switch__committed__after-write__paired-primary__peer-reachable",
+        "child": "s2.s1-kill.test",
+        "execute": true,
+        "expected": {
+          "changed": true,
+          "present": true,
+          "serial": "2026092802"
+        },
+        "step": "edit",
+        "zero_zones": true
+      },
+      "observation_error": null,
+      "recover": false,
+      "result": {
+        "cell_id": "pdns-switch__committed__after-write__paired-primary__peer-reachable",
+        "delete": false,
+        "domain": "s2.s1-kill.test",
+        "generation": 2,
+        "heartbeats": 0,
+        "job_phase": "commit/dns-zone-sync/v3/published/d8f6f5bc100f074257090175ba1ce139/s2.s1-kill.test/dns-zone-sync/v3:sha256:98d9e99d187e86504a3c8e28d4054bc0506d2e447445e731c5ccf02ffba86c56",
+        "job_status": "succeeded",
+        "outcome": "verified_published",
+        "owner_id": "5e2cba1f15087700e9192fa021be313b",
+        "qualifier": "dns-zone-sync/v3:sha256:98d9e99d187e86504a3c8e28d4054bc0506d2e447445e731c5ccf02ffba86c56",
+        "request_id": "d8f6f5bc100f074257090175ba1ce139",
+        "schema": "celikpanel/dns-kill-matrix-pdns-primary-zone-v3/v1",
+        "step": "edit"
+      },
+      "returncode": 0,
+      "step": "edit",
+      "verdict": "passed"
+    },
+    {
+      "next_step": "the Agent kept the deletion of s2.s1-kill.test pending (dns_peer_enrollment_required): the server owner enrolls the native BIND secondary for inspection (dns-peer-enroll --engine bind on both guests, as the Agent's error code names), then runs guest_bootstrap.py zone-lifecycle <same arguments> --zero-zones --recover-delete --execute; that resumes the same request (RecoverDNSZoneV3) and never requests a second deletion",
+      "observation": null,
+      "observation_error": null,
+      "recover": false,
+      "result": {
+        "cell_id": "pdns-switch__committed__after-write__paired-primary__peer-reachable",
+        "delete": true,
+        "domain": "s2.s1-kill.test",
+        "generation": 3,
+        "heartbeats": 1,
+        "job_error_code": "dns_peer_enrollment_required",
+        "job_error_message": "The exact local DNS publication is waiting for paired propagation recovery.",
+        "job_phase": "commit/dns-zone-sync/v3/propagation-pending/7fb6a0df9a0df4c78fa75b362d0a2988/s2.s1-kill.test/dns-zone-sync/v3:sha256:e90fb9845e27429320ea2b358a36431de04f7585481c0e935b01623592b4d3f1",
+        "job_status": "pending",
+        "outcome": "pending_exact_operation",
+        "owner_id": "92088666fcbb11382a33c4bccad7796e",
+        "qualifier": "dns-zone-sync/v3:sha256:e90fb9845e27429320ea2b358a36431de04f7585481c0e935b01623592b4d3f1",
+        "request_id": "7fb6a0df9a0df4c78fa75b362d0a2988",
+        "schema": "celikpanel/dns-kill-matrix-pdns-primary-zone-v3/v1",
+        "step": "delete"
+      },
+      "returncode": 75,
+      "step": "delete",
+      "verdict": "pending"
+    }
+  ],
+  "zero_zones": true
+}

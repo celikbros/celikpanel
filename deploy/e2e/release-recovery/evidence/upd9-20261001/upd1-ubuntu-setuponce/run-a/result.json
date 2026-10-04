@@ -1,0 +1,163 @@
+{
+  "artifacts": {
+    "baseline": {
+      "commit": "57cec4f6a51af35ab9ebf1a8c96ba29c60c8f185",
+      "sha256": "78a3659337028b9a76671e3fc3fc8e9137883c25af954f8ea4d09bee4e78a4bf",
+      "version": "v0.1.0-alpha.81"
+    }
+  },
+  "cell": {
+    "h19": false,
+    "mail_required": true,
+    "name": "upd1-ubuntu-setuponce",
+    "node": "ubuntu",
+    "pk_observe": true,
+    "recovery_fault": null,
+    "scenario": "setup-once",
+    "variant": "good"
+  },
+  "findings": [],
+  "identity": {
+    "cell_id": "release-recovery__1c0a01b4d2a57c2c",
+    "node": "ubuntu",
+    "vm_uuid": "ddc6b951-2368-5fee-a2fa-5470450e6579"
+  },
+  "native_evidence": false,
+  "note": "upd9 setuponce: no update is started; observations for the owner's review.",
+  "outcome": {
+    "classification": "setup-stopped",
+    "final_status": null,
+    "setup_attempts": [
+      {
+        "attempt": 1,
+        "component": null,
+        "error": {
+          "code": "HOST_MUTATION_BUSY",
+          "message": "This server's package manager is busy — something outside CelikPanel is installing or updating packages. Try again in a minute."
+        },
+        "owner_texts": {
+          "api_message": "This server's package manager is busy — something outside CelikPanel is installing or updating packages. Try again in a minute.",
+          "code": "HOST_MUTATION_BUSY",
+          "err.HOST_MUTATION_BUSY": {
+            "en": "Another server change or operating-system package task is still running. Wait for it to finish, then try again.",
+            "tr": "Başka bir sunucu değişikliği veya işletim sistemi paket işlemi hâlâ sürüyor. Tamamlanmasını bekleyip yeniden deneyin."
+          }
+        },
+        "phase": "02-service",
+        "status": "failed"
+      }
+    ]
+  },
+  "overall": "failed",
+  "packagekit": {
+    "children_seen": [],
+    "grep_c_aptcc": [
+      0
+    ],
+    "lock_lines_seen": [],
+    "observations": 18,
+    "other_processes_seen": [],
+    "pk_alive_rule_idle_bracketed": {
+      "agent_other": 0,
+      "agent_package_manager_active": 0,
+      "agent_ready": 0,
+      "panel_answered": 0
+    },
+    "readiness": {
+      "HOST_MUTATION_BUSY/package_manager_active": 16,
+      "ready": 2
+    },
+    "rule": {
+      "busy": 32,
+      "idle": 4
+    },
+    "with_packagekitd": 16
+  },
+  "provenance": {
+    "baseline": "unpublished-local-fixture-commit-over-HEAD-labelled-v0.1.0-alpha.81; acceptance-license panel build (D-027 fixture); installed by the real installer; fixture trust root enrolled; not-production-release-admission",
+    "candidate": "unpublished-local-fixture-commit-labelled-v0.1.0-alpha.82; signed with the disposable fixture key; served by the guest-loopback celikpanel.net fixture origin; not a release",
+    "defect": "fixture source patch: cmd/panel --migrate-only exits 1 after migrating the isolated copy (genuine candidate failure after candidate-installed, simulated by a committed fixture change)"
+  },
+  "request_id": null,
+  "schema": "celikpanel/upd1-owner-update-result/v1",
+  "scope": {
+    "cron": {
+      "verdict": "not checked (the cell stopped before seeding)"
+    },
+    "dns": {
+      "mode": "external",
+      "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+      "verdict": "not-provided-external-dns"
+    },
+    "origin": {
+      "after-provision": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      }
+    },
+    "setup": {
+      "verdict": "not waiting"
+    }
+  },
+  "steps": [
+    {
+      "finished_at": "2026-10-01T17:49:03Z",
+      "name": "preflight",
+      "reason": null,
+      "started_at": "2026-10-01T17:48:59Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T17:49:11Z",
+      "name": "origin",
+      "reason": null,
+      "started_at": "2026-10-01T17:49:03Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T17:50:01Z",
+      "name": "baseline-install",
+      "reason": null,
+      "started_at": "2026-10-01T17:49:11Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T17:50:02Z",
+      "name": "owner-login",
+      "reason": null,
+      "started_at": "2026-10-01T17:50:01Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T17:50:02Z",
+      "name": "license",
+      "reason": null,
+      "started_at": "2026-10-01T17:50:02Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-01T17:50:12Z",
+      "name": "setup",
+      "reason": "server setup did not succeed: {'status': 'failed', 'phase': '02-service', 'error': {'code': 'HOST_MUTATION_BUSY', 'message': \"This server's package manager is busy — something outside CelikPanel is installing or updating packages. Try again in a minute.\"}}",
+      "started_at": "2026-10-01T17:50:02Z",
+      "verdict": "failed"
+    },
+    {
+      "finished_at": "2026-10-01T17:54:40Z",
+      "name": "packagekit-after-setup",
+      "reason": null,
+      "started_at": "2026-10-01T17:50:12Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-01T17:54:42Z",
+      "name": "collect",
+      "reason": null,
+      "started_at": "2026-10-01T17:54:40Z",
+      "verdict": "passed"
+    }
+  ]
+}

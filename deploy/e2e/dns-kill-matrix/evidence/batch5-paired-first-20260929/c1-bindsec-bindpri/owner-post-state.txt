@@ -1,0 +1,220 @@
+wall=2026-09-29T13:57:49.520401990Z boot_id=36caec83-f4fe-400b-a922-cf3caea1c602 request_id=2228e0de67c2e95ae9675187f214d1b5
+== systemctl show pdns.service
+MainPID=0
+ControlPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainPID=0
+Id=pdns.service
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+FragmentPath=
+UnitFileState=
+UnitFilePreset=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+NeedDaemonReload=no
+LoadError=org.freedesktop.systemd1.NoSuchUnit "Unit pdns.service not found."
+InvocationID=
+== systemctl is-enabled pdns.service
+not-found
+rc=4
+== systemctl is-active pdns.service
+inactive
+rc=4
+== systemctl show named.service
+MainPID=4351
+ControlPID=0
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 13:57:10 UTC
+ExecMainPID=4351
+Id=named.service
+LoadState=loaded
+ActiveState=active
+SubState=running
+FragmentPath=/usr/lib/systemd/system/named.service
+UnitFileState=enabled
+UnitFilePreset=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 13:57:10 UTC
+InactiveEnterTimestamp=
+NeedDaemonReload=no
+LoadError=
+InvocationID=05d4dc34bd5c479d922726f4418b058b
+== systemctl is-enabled named.service
+enabled
+rc=0
+== systemctl is-active named.service
+active
+rc=0
+== systemctl show bind9.service
+MainPID=4351
+ControlPID=0
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 13:57:10 UTC
+ExecMainPID=4351
+Id=named.service
+LoadState=loaded
+ActiveState=active
+SubState=running
+FragmentPath=/usr/lib/systemd/system/named.service
+UnitFileState=enabled
+UnitFilePreset=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 13:57:10 UTC
+InactiveEnterTimestamp=
+NeedDaemonReload=no
+LoadError=
+InvocationID=05d4dc34bd5c479d922726f4418b058b
+== systemctl is-enabled bind9.service
+alias
+rc=0
+== systemctl is-active bind9.service
+active
+rc=0
+== mask symlinks (persistent and runtime)
+/etc/systemd/system/named.service absent
+'/etc/systemd/system/bind9.service' -> '/usr/lib/systemd/system/named.service' owner=root:root mode=777 mtime=2026-09-29 13:57:09.691468644 +0000
+/run/systemd/system/named.service absent
+/run/systemd/system/bind9.service absent
+== named processes
+4351 /usr/sbin/named -f -u bind
+== pdns_server processes
+no pdns_server process
+== journal entry counts
+named.service 109
+bind9.service 0
+== dpkg -l bind9*
+Desired=Unknown/Install/Remove/Purge/Hold
+| Status=Not/Inst/Conf-files/Unpacked/halF-conf/Half-inst/trig-aWait/Trig-pend
+|/ Err?=(none)/Reinst-required (Status,Err: uppercase=bad)
+||/ Name             Version             Architecture Description
++++-================-===================-============-=================================
+ii  bind9            1:9.20.29-1~deb13u1 amd64        Internet Domain Name Server
+un  bind9-dnsutils   <none>              <none>       (no description available)
+un  bind9-doc        <none>              <none>       (no description available)
+ii  bind9-host       1:9.20.29-1~deb13u1 amd64        DNS Lookup Utility
+ii  bind9-libs:amd64 1:9.20.29-1~deb13u1 amd64        Shared Libraries used by BIND 9
+ii  bind9-utils      1:9.20.29-1~deb13u1 amd64        Utilities for BIND 9
+un  bind9utils       <none>              <none>       (no description available)
+== dpkg -l pdns*
+dpkg-query: no packages found matching pdns*
+== dpkg --verify bind9 bind9-utils bind9-libs bind9-host bind9-dnsutils (read-only; no output = unchanged)
+??5?????? c /etc/bind/named.conf.local
+??5?????? c /etc/bind/named.conf.options
+dpkg: package 'bind9-dnsutils' is not installed
+rc=1
+== install-ownership receipt
+-rw------- 1 root celikpanel 372 2026-09-29 13:56:57.247497140 +0000 /var/lib/celikpanel-agent-private/dns-engine-install-ownership-bind.json
+== /var/cache/bind tree (managed BIND root parent)
+drwxrwxr-t root:bind 4096 2026-09-29T13:57:35.6967913560 /var/cache/bind
+-rw------- bind:bind 8192 2026-09-29T13:57:10.6755457120 /var/cache/bind/_default.nzd
+drwxr-xr-x root:root 4096 2026-09-29T13:57:13.2437344150 /var/cache/bind/celikpanel
+drwxr-xr-x root:root 4096 2026-09-29T13:57:07.3312722730 /var/cache/bind/celikpanel/generations
+dr-xr-xr-x root:root 4096 2026-09-29T13:57:07.3192712390 /var/cache/bind/celikpanel/generations/74c26315936f7313d3130d7a80a331fa18a426779477e4b49f6569c15b8d0e77
+-r--r--r-- root:root 652 2026-09-29T13:57:07.3192712390 /var/cache/bind/celikpanel/generations/74c26315936f7313d3130d7a80a331fa18a426779477e4b49f6569c15b8d0e77/receipt.json
+dr-xr-xr-x root:root 4096 2026-09-29T13:57:07.2872684790 /var/cache/bind/celikpanel/generations/74c26315936f7313d3130d7a80a331fa18a426779477e4b49f6569c15b8d0e77/zones
+-r--r--r-- root:root 239 2026-09-29T13:57:07.2912688240 /var/cache/bind/celikpanel/generations/74c26315936f7313d3130d7a80a331fa18a426779477e4b49f6569c15b8d0e77/zones.conf
+-rw-r--r-- bind:bind 1411 2026-09-29T13:57:35.6887911230 /var/cache/bind/managed-keys.bind
+-rw-r--r-- bind:bind 1336 2026-09-29T13:57:10.8515593370 /var/cache/bind/managed-keys.bind.jnl
+== /var/cache/bind file hashes
+e01847f8afdf44e574920f3f79a05dc514e5dc0627f6f27dddd0520bde4d6797  /var/cache/bind/_default.nzd
+acd4085dae6794516caa31704e0a3e3a7cfd5d73eeff3aa9bf41d39678d36d6e  /var/cache/bind/celikpanel/generations/74c26315936f7313d3130d7a80a331fa18a426779477e4b49f6569c15b8d0e77/receipt.json
+ab7ebfab43e8a52e8e5754622d21494e21f80fa9ddf4f8f6893480f38479cffd  /var/cache/bind/celikpanel/generations/74c26315936f7313d3130d7a80a331fa18a426779477e4b49f6569c15b8d0e77/zones.conf
+fae6911e800465720579aaab2b64b370a5e14fd8a04edd20d4c0d703454d7911  /var/cache/bind/managed-keys.bind
+26f1cce8d1cd6aa9ccc1a8a8d0d39be52df8c49e0705e5a19b52cd0af4e81dcb  /var/cache/bind/managed-keys.bind.jnl
+== /var/lib/bind tree
+drwxrwxr-x root:bind 4096 2026-09-29T13:57:03.1273360760 /var/lib/bind 
+== /etc/bind tree
+drwxr-sr-x root:bind 4096 2026-09-29T13:57:07.5192884840 /etc/bind 
+-rw-r--r-- root:bind 455 2026-09-16T13:42:29.0000000000 /etc/bind/named.conf 
+-rw-r--r-- root:bind 176 2026-09-29T13:57:07.5072874500 /etc/bind/named.conf.local 
+-rw-r--r-- root:bind 350 2026-09-29T13:57:07.5152881390 /etc/bind/named.conf.options 
+-rw-r--r-- root:bind 116 2026-09-16T13:42:29.0000000000 /etc/bind/named.conf.root-hints 
+-rw-r----- bind:bind 100 2026-09-29T13:57:03.1473355450 /etc/bind/rndc.key 
+== /etc/bind file hashes
+50c296bb3ae376b6fdde1f092ebf228056d38e525b53dc3415b7945136af14b7  /etc/bind/named.conf
+379603f9c5a40b777f68c697343697b8ad6a29f7cc9dbdd44f79469116524277  /etc/bind/named.conf.local
+b51109a5be3a4b9629d7f5c16d8eb9d169c504e1046d232372e96fbb1c8f4614  /etc/bind/named.conf.options
+7f4afbc7ea88cc94fe849d622a2d8e2a7b8863089cc7909e75cb77ba8e682d87  /etc/bind/named.conf.root-hints
+b493f32bc91b9ce92bcaf686558a372fdc26e42f36a8c31a12e59027529b01c1  /etc/bind/rndc.key
+== /etc/bind package ownership
+/etc/bind/named.conf bind9
+/etc/bind/named.conf.local bind9
+/etc/bind/named.conf.options bind9
+/etc/bind/named.conf.root-hints bind9
+/etc/bind/rndc.key not-owned-by-a-package
+== bind9 conffiles (package md5)
+ /etc/apparmor.d/usr.sbin.named 4f63a3becd1eac38cb4e7fa1c6f40a04
+ /etc/bind/named.conf 83ebcd317c7e2a655abdcd8f0ca04510
+ /etc/bind/named.conf.local b62a117a9a33936136d15ad779172b87
+ /etc/bind/named.conf.options c67cf0a5b3f35d68f375a3e1b0b56196
+ /etc/bind/named.conf.root-hints 3c81e33624b530d76e4fc21912a98ed6
+ /etc/default/named 0fcf4e70d1d3811d13a1f7b52fd5e384
+ /etc/init.d/named 902d90a167adda11df93db44f1fb3f3d
+ /etc/insserv.conf.d/bind9 2f36010c32cff9acc445bb9b577aecf7
+ /etc/network/if-down.d/bind9 dd11845d860cd2e30dce8556aa478eb2
+ /etc/network/if-up.d/bind9 dd11845d860cd2e30dce8556aa478eb2
+ /etc/ppp/ip-down.d/bind9 dd11845d860cd2e30dce8556aa478eb2
+ /etc/ppp/ip-up.d/bind9 dd11845d860cd2e30dce8556aa478eb2
+ /etc/ufw/applications.d/bind9 ac2316819866611a68b976db9125c9a7
+== md5 of /etc/bind files
+83ebcd317c7e2a655abdcd8f0ca04510  /etc/bind/named.conf
+f6a2d22aa763d7dcf73f23657aea77e8  /etc/bind/named.conf.local
+ead8dfbbb02ef6a26049f34b1a731894  /etc/bind/named.conf.options
+3c81e33624b530d76e4fc21912a98ed6  /etc/bind/named.conf.root-hints
+afc396db721537fd1f797c9fa9f1f6e9  /etc/bind/rndc.key
+== apt history (bind9 transactions)
+2-Start-Date: 2026-09-29  13:57:01
+3:Commandline: /usr/bin/apt-get install -y --no-install-recommends bind9
+4:Install: bind9:amd64 (1:9.20.29-1~deb13u1), bind9-utils:amd64 (1:9.20.29-1~deb13u1, automatic), dns-root-data:amd64 (2025080400~deb13u1, automatic)
+5:Upgrade: bind9-host:amd64 (1:9.20.26-1~deb13u1, 1:9.20.29-1~deb13u1), bind9-libs:amd64 (1:9.20.26-1~deb13u1, 1:9.20.29-1~deb13u1)
+6-End-Date: 2026-09-29  13:57:05
+== ss 53
+udp UNCONN 0      0                         192.0.2.10:53 0.0.0.0:* users:(("named",pid=4351,fd=29))         
+udp UNCONN 0      0                         192.0.2.10:53 0.0.0.0:* users:(("named",pid=4351,fd=28))         
+udp UNCONN 0      0                          10.0.2.15:53 0.0.0.0:* users:(("named",pid=4351,fd=25))         
+udp UNCONN 0      0                          10.0.2.15:53 0.0.0.0:* users:(("named",pid=4351,fd=24))         
+udp UNCONN 0      0                          127.0.0.1:53 0.0.0.0:* users:(("named",pid=4351,fd=19))         
+udp UNCONN 0      0                          127.0.0.1:53 0.0.0.0:* users:(("named",pid=4351,fd=18))         
+udp UNCONN 0      0                         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=20))
+udp UNCONN 0      0                      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=18))
+udp UNCONN 0      0                              [::1]:53    [::]:* users:(("named",pid=4351,fd=32))         
+udp UNCONN 0      0                              [::1]:53    [::]:* users:(("named",pid=4351,fd=33))         
+udp UNCONN 0      0            [fec0::5054:ff:fe13:10]:53    [::]:* users:(("named",pid=4351,fd=36))         
+udp UNCONN 0      0            [fec0::5054:ff:fe13:10]:53    [::]:* users:(("named",pid=4351,fd=37))         
+udp UNCONN 0      0      [fe80::5054:ff:fe13:10]%mgmt0:53    [::]:* users:(("named",pid=4351,fd=40))         
+udp UNCONN 0      0      [fe80::5054:ff:fe13:10]%mgmt0:53    [::]:* users:(("named",pid=4351,fd=41))         
+udp UNCONN 0      0      [fe80::5054:ff:fe53:10]%peer0:53    [::]:* users:(("named",pid=4351,fd=44))         
+udp UNCONN 0      0      [fe80::5054:ff:fe53:10]%peer0:53    [::]:* users:(("named",pid=4351,fd=45))         
+tcp LISTEN 0      4096                   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=19))
+tcp LISTEN 0      4096                      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=368,fd=21))
+tcp LISTEN 0      10                         127.0.0.1:53 0.0.0.0:* users:(("named",pid=4351,fd=22))         
+tcp LISTEN 0      10                         127.0.0.1:53 0.0.0.0:* users:(("named",pid=4351,fd=20))         
+tcp LISTEN 0      10                         10.0.2.15:53 0.0.0.0:* users:(("named",pid=4351,fd=27))         
+tcp LISTEN 0      10                         10.0.2.15:53 0.0.0.0:* users:(("named",pid=4351,fd=26))         
+tcp LISTEN 0      10                        192.0.2.10:53 0.0.0.0:* users:(("named",pid=4351,fd=31))         
+tcp LISTEN 0      10                        192.0.2.10:53 0.0.0.0:* users:(("named",pid=4351,fd=30))         
+tcp LISTEN 0      10     [fe80::5054:ff:fe53:10]%peer0:53    [::]:* users:(("named",pid=4351,fd=46))         
+tcp LISTEN 0      10     [fe80::5054:ff:fe53:10]%peer0:53    [::]:* users:(("named",pid=4351,fd=47))         
+tcp LISTEN 0      10                             [::1]:53    [::]:* users:(("named",pid=4351,fd=34))         
+tcp LISTEN 0      10                             [::1]:53    [::]:* users:(("named",pid=4351,fd=35))         
+tcp LISTEN 0      10     [fe80::5054:ff:fe13:10]%mgmt0:53    [::]:* users:(("named",pid=4351,fd=42))         
+tcp LISTEN 0      10     [fe80::5054:ff:fe13:10]%mgmt0:53    [::]:* users:(("named",pid=4351,fd=43))         
+tcp LISTEN 0      10           [fec0::5054:ff:fe13:10]:53    [::]:* users:(("named",pid=4351,fd=38))         
+tcp LISTEN 0      10           [fec0::5054:ff:fe13:10]:53    [::]:* users:(("named",pid=4351,fd=39))         
+== recovery dns-switch-status --quiesced (after owner command and re-run)
+env: ‘/usr/libexec/celikpanel/recovery’: No such file or directory
+STATUS_RC=127
+2f614065705342f030cabbf67cb88ec8a539198b4d665f92286b467c52ce9932  /tmp/b5-status.out
+== private evidence after status
+total 24
+drwx------  2 root celikpanel 4096 2026-09-29 13:57:13.387744409 +0000 .
+drwxr-xr-x 28 root root       4096 2026-09-29 13:57:03.127336076 +0000 ..
+-rw-------  1 root celikpanel  372 2026-09-29 13:56:57.247497140 +0000 dns-engine-install-ownership-bind.json
+-rw-------  1 root celikpanel  718 2026-09-29 13:57:13.211732194 +0000 dns-engine-state.json
+-rw-------  1 root celikpanel 1540 2026-09-29 13:57:13.219732749 +0000 dns-engine-switch-journal.json
+-rw-------  1 root celikpanel 1045 2026-09-29 13:57:13.379743853 +0000 service-mutations.json
+1b65fa35ebee845078b666e3250affd2a2f1e1ff13e40473c179d3716057a6ef  dns-engine-install-ownership-bind.json
+eae4ab1ed1a027dc98071dbebb3e75a21dc5da0a24f7739d039099c7905b0618  dns-engine-state.json
+d30ac9413b50a872623aa209fd308d5f3e24d9ff48a0a941c6e828ad62e472b3  dns-engine-switch-journal.json
+2dc2a8b51eab91137bffa78270084666c6b6b8dd482862a59c310721a77fd8e5  service-mutations.json

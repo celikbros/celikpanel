@@ -1,0 +1,2 @@
+cd /var/tmp/cp-b9-1001/evidence
+python3 /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057e7f/scratchpad/b9/sh.py $(for s in c04-pri-started-zl-rb z01-zero-staged z02-zero-started z03-zero-committed z04-zero-committed-zl/rec z05-zero-started-zl-rb z06-zero-owner-sql; do echo /var/tmp/cp-b9-1001/evidence/$s/catalog-serial-history.txt; done) | grep -E '####|CHANGE'

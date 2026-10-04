@@ -1,0 +1,27 @@
+## 2026-09-30T08:18:59Z Agent journal (all boots): lines matching the pair7 check strings
+journal lines total: 32
+boots: 3
+count[DNS peer proof could not run]=0
+count[dns_peer_proof_internal]=0
+count[dns_peer_owner_edit_unknown]=0
+count[dns_peer_enrollment_required]=2
+count[dns_peer_inspection_unknown]=0
+count[dns_peer_catalog_transfer_refused]=0
+count[dns_peer_journal_unknown]=0
+count[dns_peer_proof_timeout]=0
+count[dns_peer_native_unknown]=0
+count[step times]=1
+count[inspector answer]=1
+count[stopped at step]=0
+count[admitted the PowerDNS daemon]=0
+count[observed different evidence]=0
+## pair7 new Agent lines (all boots): step times / inspector answer / stopped at step / admitted re-stamp / observed different evidence
+2026-09-30T08:16:41+00:00 dns-debian13 agent[3518]: 2026/09/30 08:16:41 DNS peer inspector answer for pair-accept.test (BIND secondary): catalog_state=transferred member_state=absent native_state=unloaded; accepted
+2026-09-30T08:16:42+00:00 dns-debian13 agent[3518]: 2026/09/30 08:16:42 DNS peer proof for pair-accept.test (BIND secondary) step times: prepare=1.64s challenge_write=6.654s exchange=572ms post_inspection=3.767s consume=8.283s; total 20.916s; outcome verified
+## ledger file(s): code occurrences
+/var/lib/celikpanel-agent-private/service-mutations.json count[dns_peer_proof_internal]=0
+/var/lib/celikpanel-agent-private/service-mutations.json count[dns_peer_owner_edit_unknown]=0
+/var/lib/celikpanel-agent-private/service-mutations.json count[dns_peer_enrollment_required]=0
+/var/lib/celikpanel-agent-private/service-mutations.json count[dns_peer_journal_unknown]=0
+/var/lib/celikpanel-agent-private/service-mutations.json count[dns_peer_proof_timeout]=0
+(end)

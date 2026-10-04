@@ -1,0 +1,70 @@
+{
+  "agreement": {
+    "known_sources": [
+      "cli"
+    ],
+    "phase": {
+      "cli": "recovering"
+    },
+    "reasons": [],
+    "sources": [
+      "cli",
+      "shell"
+    ],
+    "verdict": "single-source"
+  },
+  "cli": {
+    "boot_id": "7a9757c9-38ec-4dcd-bcb8-2d32c3c79810",
+    "captured_at": "2026-10-01T12:03:18.281643Z",
+    "en": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "The update did not finish normally, and recovery is waiting for the server to finish starting or stopping. Nothing to do now: the server's recovery timer checks this same operation again by itself when the system is ready. Recovery is not yet complete.\nRequest: 6e1bec97621a3a13e0d70dbf959acf83\nRecorded at: 2026-10-01T12:03:04Z\nThis is a recorded observation; current service health was not checked.\nRecorded state (for support): phase=recovering reason=recovery_running proof=none previous_failure=update_failed waiting_for=starting\n"
+    },
+    "json": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "{\"schema\":\"celikpanel-recovery-status/v1\",\"request_id\":\"6e1bec97621a3a13e0d70dbf959acf83\",\"observation\":\"known\",\"phase\":\"recovering\",\"terminal_proof\":\"none\",\"reason\":\"recovery_running\",\"observed_at\":\"2026-10-01T12:03:04Z\",\"previous_failure\":\"update_failed\",\"waiting_for\":\"starting\"}\n"
+    },
+    "tr": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "Güncelleme normal biçimde tamamlanmadı ve kurtarma, sunucunun açılmasını ya da kapanmasını bitirmesini bekliyor. Şimdi yapmanız gereken bir şey yok: sunucunun kurtarma zamanlayıcısı, sistem hazır olduğunda aynı işlemi kendiliğinden yeniden kontrol eder. Kurtarma henüz tamamlanmadı.\nİşlem: 6e1bec97621a3a13e0d70dbf959acf83\nKayıt zamanı: 2026-10-01T12:03:04Z\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\nKayıtlı durum (destek için): phase=recovering reason=recovery_running proof=none previous_failure=update_failed waiting_for=starting\n"
+    }
+  },
+  "guidance_api": null,
+  "guidance_cli": {
+    "actionable": null,
+    "keys": [],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "texts": {
+      "en": [],
+      "tr": []
+    },
+    "unavailable": "lib/systemUpdateOutcome.ts: FileNotFoundError"
+  },
+  "index": 17,
+  "observed": {
+    "observation": "known",
+    "observed_at": "2026-10-01T12:03:04Z",
+    "phase": "recovering",
+    "previous_failure": "update_failed",
+    "reason": "recovery_running",
+    "request_id": "6e1bec97621a3a13e0d70dbf959acf83",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "none",
+    "waiting_for": "starting"
+  },
+  "panel_error": "PanelError",
+  "shell_fetch": {
+    "error": "ConnectionResetError",
+    "note": "only a browser-saved copy of the shell can show while the Panel is down"
+  },
+  "t": 1790856197.2645826,
+  "update_card": null,
+  "utc": "2026-10-01T12:03:17Z"
+}

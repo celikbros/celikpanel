@@ -1,0 +1,2 @@
+lab=/var/tmp/cp-release-drill-upd11-arch-def-a
+upd1-arch-defective-20261002t000257z

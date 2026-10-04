@@ -1,0 +1,10 @@
+2026-09-30T02:40:55Z
+{
+  "action": "stop",
+  "cell_id": "pair-accept__pdns-debian13__bind-arch__p4t3",
+  "dry_run": false,
+  "method": "QMP quit; no fallback signal"
+}
+no qemu
+               total        used        free      shared  buff/cache   available
+Mem:           15697         752       12348           3        2841       14945

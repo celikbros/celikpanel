@@ -1,0 +1,103 @@
+{
+  "anonymous_http": 401,
+  "authenticated_http": 200,
+  "automatic_receipts_preserved": {
+    "1": {
+      "bytes": 273,
+      "sha256": "692d0924a7c294109dc18a42a2923eb24aff033caa9c78dbfb941937f589a813"
+    },
+    "2": {
+      "bytes": 275,
+      "sha256": "fbd9037f56e0fdf13709dccfd3afbd5148c7e3dc564f7efcad4fc39e982e761f"
+    },
+    "3": {
+      "bytes": 275,
+      "sha256": "fc146c7f0f73d1a4d353255837487075a94dd51ac49c75c145ee582da084d992"
+    }
+  },
+  "automatic_retry_after_owner_cut": false,
+  "baseline": {
+    "agent_sha256": "c2724448c8724c111e0331d2c33cd202abbef7df4e284bff0f5a4acea0f88d54",
+    "commit": "45dfc265bfd7997e9a0e0d39b0ebf60a57f58c00",
+    "panel_sha256": "ee402c43e9809e6ad40c2b3e9778aa1f2e30729182ee1ab45433374d8ea84cfd",
+    "version": "v0.1.0-alpha.81"
+  },
+  "coordinators_restored_to_baseline": true,
+  "cut_invocations": [
+    "ecbe9956a2d34a659e135258b89256e5",
+    "07f59236d25e4ac09c872b2955e77af6"
+  ],
+  "evidence_sha256": {
+    "bound-worker-2cb6da8332448755c7b82bfa7c0aaee2.json": "a8cb03963b55c67a68182b89e68d345e780da9af2bdbbfc5eaa52417d2810d69",
+    "bound-worker-reboot-cut-2cb6da8332448755c7b82bfa7c0aaee2.jsonl": "41377148bd6aaddfefe93f08315959fe7012a4df0cab15cc0b347d04c9262741",
+    "bound-worker-reboot-result-2cb6da8332448755c7b82bfa7c0aaee2.json": "c634dcba153623a10da2c380da1e110004ab50f5b0f57a33992c76888a72662b",
+    "bound-worker-start-2cb6da8332448755c7b82bfa7c0aaee2.json": "a53cfaee889e5cb0e69c6f701b428f999195ba496797dbd197ec8a0ce5573ef0",
+    "bound-worker-start-2cb6da8332448755c7b82bfa7c0aaee2.stdout.jsonl": "6e77d5c5712de1dd14ffd0a437ae3732c299208421353d3238b45d0634b190bf",
+    "budget-candidate-build.json": "f91e653f5f13098d2d8a30c1fd55c5159a826cc13fcf72b8b07ca1dace915cb1",
+    "budget-candidate-files.json": "9deb1c3c9da6df55b3ea5acd4b9c63236c34c465de535b7972ec5db0eb335936",
+    "budget-collected/boot-wait-2cb6da8332448755c7b82bfa7c0aaee2.jsonl": "27b7ab0d6213bd35f6767e8e96d546831638c95b198abddd9f97e9cf7b6bddd9",
+    "budget-collected/bound-reader-after-owner.jsonl": "b33d2f979d73d62e76b82b063879d2d1c9f01eb07240366b570f0f7ad8e858e4",
+    "budget-collected/budget-cuts-2cb6da8332448755c7b82bfa7c0aaee2.json": "38f068e8d7cbf4bcad01cfbcdf74ec609f4869027d8721dbd0c031eef9f30fa2",
+    "budget-collected/budget-cuts-2cb6da8332448755c7b82bfa7c0aaee2.jsonl": "9223138abae624d9b1e8ef704ebe23cf10ec412eedfe133b8626c414f256c76f",
+    "budget-collected/budget-owner-retry-2cb6da8332448755c7b82bfa7c0aaee2.admitted.json": "4da3f453dd9fe67390f9a5653f339702d497befc13d4771f920df5dd1c0483ff",
+    "budget-collected/budget-owner-retry-2cb6da8332448755c7b82bfa7c0aaee2.result.json": "ae62ce1118a80b048dea123b25dbd59f56d6e865e83afb44dab963bef6175fdb",
+    "budget-collected/budget-owner-retry-2cb6da8332448755c7b82bfa7c0aaee2.stderr": "1568d40785fce2f111a7dae960c18e1695116a16dc11872f8ac3b96ddb5c05f8",
+    "budget-collected/budget-owner-retry-2cb6da8332448755c7b82bfa7c0aaee2.stdout": "a35213b19d22b24d616a764b4c00bfaaac991d5c292744ce424afaf98b9676ec",
+    "budget-collected/budget-terminal-2cb6da8332448755c7b82bfa7c0aaee2.json": "2c3df972dc546bd68c7fafe1c8d94fa9ca982d4b6b0a33a4679bf8725523ff11",
+    "budget-collected/owner-interrupt-2cb6da8332448755c7b82bfa7c0aaee2.json": "666595e4b921a339e526863c2d29aee8a483732c80a6abbe001194605102ce75",
+    "budget-final-native.json": "da69a099c39a25d375200a6f7d9168403d01eef2ca75e9e06d8cbb7ebabd4d82",
+    "budget-native-journal.jsonl": "a84dd524ad4e5291ec8eecad8486d4ec2ced37e105754429a2d61a320946c592",
+    "budget-selected-kit.json": "a40a758c12152f8305eb89708cace4244d1b05e1d150781b7fb78f94e4aeee14",
+    "recovery-fault-collection-1790032852947728083.json": "e387169fda4f03a18fc84815cbbff040fdddd69da8f84b18f777a855a28fdc13",
+    "recovery-fault-collection-1790032852947728083.jsonl": "5c979d52b4d1e704b5110db71b636f266bccb0429fa3471e020554275daa1a74"
+  },
+  "exhausted_status": {
+    "automatic_recovery": "paused_retry_limit",
+    "observation": "known",
+    "observed_at": "2026-09-21T23:23:32Z",
+    "phase": "recovery_required",
+    "previous_failure": "recovery_incomplete",
+    "reason": "recovery_incomplete",
+    "request_id": "2cb6da8332448755c7b82bfa7c0aaee2",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "none"
+  },
+  "floor_and_foundation_sequence": 82,
+  "interrupted_owner_admission_preserved": true,
+  "limitations": [
+    "Fixture signing; production signing/admission not proved",
+    "Only after-publication interruption; publication-edge power loss remains open",
+    "Interrupted attempts, not repeated deterministic child errors",
+    "No browser or HTTP access proof while exhausted",
+    "This single-platform case does not prove schema migration or workload continuity",
+    "Full P0.2/P0.3 remain open",
+    "Owner cut is after admission publication, not every rollback checkpoint or SSH disconnect mode"
+  ],
+  "native_pause_observations": 4,
+  "owner_cut_boundary": "owner_admission_published",
+  "owner_receipt_count": 2,
+  "platform": "systemd 257 (257.13-1~deb13u1) / Debian 13 / amd64 / disposable QEMU",
+  "request_id": "2cb6da8332448755c7b82bfa7c0aaee2",
+  "result": "scoped-checks-passed",
+  "retained_wait_republished": false,
+  "schema": "celikpanel/native-owner-interruption-acceptance/v1",
+  "second_explicit_owner_continuation": "rollback_verified",
+  "selected_runtime_sha256": "c138bb0e84d97375e5fd111388d22b0cbd796b6bf1acad26e88b4d935247dc7d",
+  "target": {
+    "agent_sha256": "60b9e72a8e8e56f6bafe6915284077482afa7518342789c7acc93b71e492f908",
+    "commit": "29b2b01ee391dc776f0b521344a73d241fa601ea",
+    "panel_sha256": "6435f94fe307418537917b303250268a01ab3d43c5ed030790023a7f767ff5ae",
+    "version": "v0.1.0-alpha.82"
+  },
+  "target_archive_sha256": "698eec7dc80813bcfcf1bd890dadbfc86d01195c8639c3937a42d7352cb6bb0a",
+  "terminal": {
+    "observation": "known",
+    "observed_at": "2026-09-21T23:24:53Z",
+    "phase": "recovered",
+    "previous_failure": "update_failed",
+    "reason": "rollback_verified",
+    "request_id": "2cb6da8332448755c7b82bfa7c0aaee2",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "rollback_verified"
+  }
+}

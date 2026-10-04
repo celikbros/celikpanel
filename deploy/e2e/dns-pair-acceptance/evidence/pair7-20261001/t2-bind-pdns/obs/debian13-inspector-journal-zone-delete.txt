@@ -1,0 +1,116 @@
+2026-09-30T08:25:00+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'pair-accept.test', primary: '192.0.2.11', zone committed with serial 2026093003
+2026-09-30T08:25:02+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:53225', transfer initiated
+2026-09-30T08:25:03+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:41597', transfer initiated
+2026-09-30T08:25:03+00:00 dns-debian13 sudo[6184]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:25:03+00:00 dns-debian13 sshd-session[6183]: Received disconnect from 10.0.2.2 port 53356:11: disconnected by user
+2026-09-30T08:25:03+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:48659', transfer initiated
+2026-09-30T08:25:04+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'pair-accept.test', primary: '192.0.2.11', zone committed with serial 2026093004
+2026-09-30T08:25:06+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:51101', transfer initiated
+2026-09-30T08:25:07+00:00 dns-debian13 sudo[6206]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:25:07+00:00 dns-debian13 sshd-session[6205]: Received disconnect from 10.0.2.2 port 53358:11: disconnected by user
+2026-09-30T08:25:07+00:00 dns-debian13 sudo[6219]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:25:07+00:00 dns-debian13 sshd-session[6218]: Received disconnect from 10.0.2.2 port 53370:11: disconnected by user
+2026-09-30T08:25:08+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:35017', transfer initiated
+2026-09-30T08:25:09+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:48439', transfer initiated
+2026-09-30T08:25:09+00:00 dns-debian13 pdns_server[5047]: While checking domain freshness: Query to '192.0.2.11' for SOA of 'pair-accept.test' returned Rcode Query Refused
+2026-09-30T08:25:11+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:54311', transfer initiated
+2026-09-30T08:25:11+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:38989', transfer initiated
+2026-09-30T08:25:11+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:49563', transfer initiated
+2026-09-30T08:25:12+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:57693', transfer initiated
+2026-09-30T08:25:12+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:52925', transfer initiated
+2026-09-30T08:25:12+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:39823', transfer initiated
+2026-09-30T08:25:12+00:00 dns-debian13 pdns_server[5047]: Received serial number updates for 1 zone, had 1 timeout
+2026-09-30T08:25:12+00:00 dns-debian13 pdns_server[5047]: Unable to retrieve SOA for pair-accept.test, this was the first time. NOTE: For every subsequent failed SOA check the domain will be suspended from freshness checks for 'num-errors x 60 seconds', with a maximum of 3600 seconds. Skipping SOA checks until 1790756772
+2026-09-30T08:25:12+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone backend transaction started
+2026-09-30T08:25:12+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone delete zone 'pair-accept.test'
+2026-09-30T08:25:12+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone backend transaction committed
+2026-09-30T08:25:12+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', zone committed with serial 3
+2026-09-30T08:25:13+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:36167', transfer initiated
+2026-09-30T08:25:13+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:38751', transfer initiated
+2026-09-30T08:25:13+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:38751', failed: not authoritative
+2026-09-30T08:25:13+00:00 dns-debian13 sudo[6251]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:25:13+00:00 dns-debian13 sshd-session[6250]: Received disconnect from 10.0.2.2 port 47924:11: disconnected by user
+2026-09-30T08:25:15+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:54871', transfer initiated
+2026-09-30T08:25:15+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:34913', transfer initiated
+2026-09-30T08:25:15+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:34913', failed: not authoritative
+2026-09-30T08:25:15+00:00 dns-debian13 sudo[6270]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:25:15+00:00 dns-debian13 sshd-session[6269]: Received disconnect from 10.0.2.2 port 47938:11: disconnected by user
+2026-09-30T08:25:16+00:00 dns-debian13 sudo[6284]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:25:16+00:00 dns-debian13 sshd-session[6283]: Received disconnect from 10.0.2.2 port 47954:11: disconnected by user
+2026-09-30T08:25:16+00:00 dns-debian13 sudo[6300]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:25:16+00:00 dns-debian13 sshd-session[6299]: Received disconnect from 10.0.2.2 port 47960:11: disconnected by user
+2026-09-30T08:25:16+00:00 dns-debian13 sudo[6315]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:25:16+00:00 dns-debian13 sshd-session[6314]: Received disconnect from 10.0.2.2 port 47968:11: disconnected by user
+2026-09-30T08:25:17+00:00 dns-debian13 useradd[6348]: new group: name=celikpeer, GID=987
+2026-09-30T08:25:17+00:00 dns-debian13 useradd[6348]: new user: name=celikpeer, UID=995, GID=987, home=/var/lib/pdns-peer-inspector, shell=/bin/sh, from=none
+2026-09-30T08:25:17+00:00 dns-debian13 sshd[804]: Received SIGHUP; restarting.
+2026-09-30T08:25:17+00:00 dns-debian13 sshd[804]: Server listening on 0.0.0.0 port 22.
+2026-09-30T08:25:17+00:00 dns-debian13 sshd[804]: Server listening on :: port 22.
+2026-09-30T08:25:17+00:00 dns-debian13 sudo[6331]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:25:17+00:00 dns-debian13 sshd-session[6330]: Received disconnect from 10.0.2.2 port 47974:11: disconnected by user
+2026-09-30T08:25:17+00:00 dns-debian13 sudo[6384]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:25:17+00:00 dns-debian13 sshd-session[6383]: Received disconnect from 10.0.2.2 port 47984:11: disconnected by user
+2026-09-30T08:25:17+00:00 dns-debian13 sudo[6400]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:25:17+00:00 dns-debian13 sshd-session[6399]: Received disconnect from 10.0.2.2 port 47994:11: disconnected by user
+2026-09-30T08:25:17+00:00 dns-debian13 sshd-session[6415]: Received disconnect from 10.0.2.2 port 47996:11: disconnected by user
+2026-09-30T08:25:18+00:00 dns-debian13 sudo[6432]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:25:18+00:00 dns-debian13 sshd-session[6431]: Received disconnect from 10.0.2.2 port 48004:11: disconnected by user
+2026-09-30T08:25:18+00:00 dns-debian13 sudo[6448]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:25:18+00:00 dns-debian13 sshd-session[6447]: Received disconnect from 10.0.2.2 port 48014:11: disconnected by user
+2026-09-30T08:25:19+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:41713', transfer initiated
+2026-09-30T08:25:21+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:34121', transfer initiated
+2026-09-30T08:25:21+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:37913', transfer initiated
+2026-09-30T08:25:21+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:37913', failed: not authoritative
+2026-09-30T08:25:24+00:00 dns-debian13 sudo[6509]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:25:24+00:00 dns-debian13 sshd-session[6508]: Received disconnect from 10.0.2.2 port 38726:11: disconnected by user
+2026-09-30T08:25:30+00:00 dns-debian13 sshd-session[6513]: Accepted publickey for celikpeer from 192.0.2.11 port 36956 ssh2: ED25519 SHA256:YZTc6DneuCm5pGq1dIPuwRf1g+AA1wpz6ahv2rP8v4c
+2026-09-30T08:25:30+00:00 dns-debian13 sshd-session[6513]: pam_unix(sshd:session): session opened for user celikpeer(uid=995) by celikpeer(uid=0)
+2026-09-30T08:25:30+00:00 dns-debian13 systemd-logind[762]: New session 69 of user celikpeer.
+2026-09-30T08:25:30+00:00 dns-debian13 (systemd)[6518]: pam_unix(systemd-user:session): session opened for user celikpeer(uid=995) by celikpeer(uid=0)
+2026-09-30T08:25:30+00:00 dns-debian13 systemd-logind[762]: New session 70 of user celikpeer.
+2026-09-30T08:25:30+00:00 dns-debian13 systemd[1]: Started session-69.scope - Session 69 of User celikpeer.
+2026-09-30T08:25:30+00:00 dns-debian13 sudo[6534]: celikpeer : PWD=/var/lib/pdns-peer-inspector ; USER=root ; COMMAND=/usr/local/libexec/celikpanel-pdns-peer-inspect
+2026-09-30T08:25:30+00:00 dns-debian13 sudo[6534]: pam_unix(sudo:session): session opened for user root(uid=0) by celikpeer(uid=995)
+2026-09-30T08:25:30+00:00 dns-debian13 sudo[6534]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:25:30+00:00 dns-debian13 sshd-session[6532]: Connection closed by 192.0.2.11 port 36956
+2026-09-30T08:25:30+00:00 dns-debian13 sshd-session[6513]: pam_unix(sshd:session): session closed for user celikpeer
+2026-09-30T08:25:32+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:42263', transfer initiated
+2026-09-30T08:25:32+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:39285', transfer initiated
+2026-09-30T08:25:32+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'pair-accept.test', client '192.0.2.11:39285', failed: not authoritative
+2026-09-30T08:25:34+00:00 dns-debian13 sudo[6559]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:25:34+00:00 dns-debian13 sshd-session[6558]: Received disconnect from 10.0.2.2 port 38496:11: disconnected by user
+2026-09-30T08:25:44+00:00 dns-debian13 sudo[6599]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:25:44+00:00 dns-debian13 sshd-session[6598]: Received disconnect from 10.0.2.2 port 59044:11: disconnected by user
+2026-09-30T08:25:45+00:00 dns-debian13 sudo[6613]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:25:45+00:00 dns-debian13 sshd-session[6612]: Received disconnect from 10.0.2.2 port 59054:11: disconnected by user
+2026-09-30T08:25:46+00:00 dns-debian13 sudo[6626]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:25:46+00:00 dns-debian13 sshd-session[6625]: Received disconnect from 10.0.2.2 port 59066:11: disconnected by user
+2026-09-30T08:25:46+00:00 dns-debian13 sudo[6640]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:25:46+00:00 dns-debian13 sshd-session[6639]: Received disconnect from 10.0.2.2 port 59078:11: disconnected by user
+2026-09-30T08:25:46+00:00 dns-debian13 sudo[6654]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:25:46+00:00 dns-debian13 sshd-session[6653]: Received disconnect from 10.0.2.2 port 59080:11: disconnected by user
+2026-09-30T08:25:47+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:46141', transfer initiated
+2026-09-30T08:25:48+00:00 dns-debian13 sshd-session[6668]: Received disconnect from 10.0.2.2 port 59094:11: disconnected by user
+2026-09-30T08:25:49+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:33565', transfer initiated
+2026-09-30T08:25:50+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:42145', transfer initiated
+2026-09-30T08:25:52+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone backend transaction started
+2026-09-30T08:25:52+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone create zone 'pair-accept.test'
+2026-09-30T08:25:52+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', Catalog-Zone backend transaction committed
+2026-09-30T08:25:52+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'catalog-c000020b.celikpanel.invalid', primary: '192.0.2.11', zone committed with serial 4
+2026-09-30T08:25:52+00:00 dns-debian13 pdns_server[5047]: AXFR-in zone: 'pair-accept.test', primary: '192.0.2.11', zone committed with serial 2026093001
+2026-09-30T08:25:53+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:58923', transfer initiated
+2026-09-30T08:25:55+00:00 dns-debian13 sudo[6791]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:25:55+00:00 dns-debian13 sshd-session[6790]: Received disconnect from 10.0.2.2 port 40850:11: disconnected by user
+2026-09-30T08:25:55+00:00 dns-debian13 sudo[6779]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:25:55+00:00 dns-debian13 sshd-session[6778]: Received disconnect from 10.0.2.2 port 40848:11: disconnected by user
+2026-09-30T08:25:55+00:00 dns-debian13 sudo[6805]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:25:55+00:00 dns-debian13 sshd-session[6804]: Received disconnect from 10.0.2.2 port 40860:11: disconnected by user
+2026-09-30T08:25:56+00:00 dns-debian13 sudo[6825]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:25:56+00:00 dns-debian13 sshd-session[6824]: Received disconnect from 10.0.2.2 port 40866:11: disconnected by user
+2026-09-30T08:25:56+00:00 dns-debian13 sudo[6839]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:25:56+00:00 dns-debian13 sshd-session[6838]: Received disconnect from 10.0.2.2 port 40868:11: disconnected by user
+2026-09-30T08:25:57+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:56993', transfer initiated
+2026-09-30T08:25:58+00:00 dns-debian13 sshd-session[6854]: Received disconnect from 10.0.2.2 port 40874:11: disconnected by user
+2026-09-30T08:25:58+00:00 dns-debian13 sudo[6919]: pam_unix(sudo:session): session closed for user root
+2026-09-30T08:25:58+00:00 dns-debian13 sshd-session[6918]: Received disconnect from 10.0.2.2 port 40878:11: disconnected by user
+2026-09-30T08:25:59+00:00 dns-debian13 pdns_server[5047]: AXFR-out zone 'catalog-c000020b.celikpanel.invalid', client '192.0.2.11:32847', transfer initiated

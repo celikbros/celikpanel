@@ -1,0 +1,666 @@
+# Independent mail renewal kit
+
+P0.5 owner independence; P0.3/P0.4 versioned code and evidence compatibility.
+This offline artifact is separate from installation authority. `make
+mail-renewal-runtime` uses the reviewed compiler, clean build environment, helper
+build tag and explicit build identity. Default build/dist and source/prebuilt
+release paths now carry this artifact and prepare it before service downtime.
+Installed Certbot hooks and native units remain unchanged until the separate
+enrollment/migration operation is verified.
+
+The v1 manifest binds the exact helper, service, timer and Certbot deploy hook.
+Its immutable generation is derived from the helper and original template bytes;
+rendered service/hook paths point to that exact generation under
+`/usr/libexec/celikpanel/mail-renewal/<generation>/renew`. The manifest declares
+ledger v1, accepted plan v1 and host receipt v1. Unknown versions, substitutions,
+noncanonical JSON, added files and unsupported unit templates are refused.
+A digest is identity, not a signing trust root; production admission still needs
+the authorized release/enrollment boundary.
+
+The hook only queues the selected managed source. A native oneshot processes
+pending work, with a 180-second invocation bound and whole-cgroup termination.
+The timer checks after boot and five minutes after each invocation, adding jitter.
+There is no Panel, licensing or management Agent service dependency, and the unit
+does not start native mail services. Filesystem protection permits certificate
+publication only inside the managed host directory under `/etc`; native Postfix
+and Dovecot configuration remains read-only. Retained group and durable evidence
+are still necessary. An unknown/interrupted operation remains pending instead of
+being treated as a new job or silently cleared by periodic polling.
+
+The offline builder checks real parents, bounded single-link regular files, exact
+inventory and modes. It verifies a staged artifact before an atomic publication;
+a changed recognized build is exchanged and its predecessor retained. Unknown
+owner content is preserved. Failed stages are retained rather than recursively
+removed. No installed unit or hook is edited or enabled by this build command.
+
+Contract and builder race tests and vet pass. Native service sandbox, hook,
+scheduled boot renewal and production enrollment/rollback evidence are separate
+acceptance items; artifact tests alone do not establish them. Independent recovery
+of interrupted renewal and the full P0.5 workload matrix remain open.
+
+[BE native scheduling evidence](../deploy/e2e/release-recovery/MAIL-KIT-BE.md)
+now proves the actual hook, service sandbox, timer-triggered new-leaf publication
+and automatic new-leaf deployment after reboot, with installed management absent.
+Production enrollment/rollback and independent interruption recovery remain open.
+
+## Selected-certificate interruption recovery (local implementation)
+
+P0.3/P0.5, constitutional invariants 1, 2 and 4. No schema is rewritten:
+the helper consumes the existing v1 pending source, certificate receipt and
+canonical service mutation ledger. No new job or acquisition identity is made.
+
+After a failed completion acknowledgement, a fresh independent helper may
+complete only the exact active commit-intent job whose receipt is already
+selected and whose leaf matches the queued source. It retains the common host,
+ledger-publication and certificate-publication exclusion. A live worker,
+unreadable worker identity, release transaction, retained foreign journal or
+write stage, changed selection or queued source prevents recovery. Known
+terminal failure is never promoted. The same poisoned process cannot abandon
+its manager and acquire a new lease.
+
+Before recording recovery it observes the accepted mail plan, actual native
+configuration and running Postfix/Dovecot services. It repeats identity checks
+under exclusion before using the shared durable recovery tracker to reload the
+two services. It neither starts a stopped service nor rewrites configuration,
+promotes a staged certificate or cleans other generations. The exact successful
+terminal receipt is required before queue acknowledgement. Another interruption
+retains the same operation and selected material for later reconciliation.
+
+Unit refusal tests include owner changes during preflight and preserve ledger,
+queue and foreign evidence. Native acceptance must additionally kill the actual
+process after durable selection and run a separate helper without installed
+management binaries. Such evidence is recorded separately; these unit tests do
+not close the native acceptance item. Pre-selection interruptions, bounded
+recovery retry policy, enrollment/migration/removal and power-loss acceptance
+remain open.
+
+## Bounded selected-operation retry
+
+The existing v1 job `attempt` is now reserved in the same durable recovery-intent
+write before an independent selected-certificate recovery may reload services.
+The recorded initial execution and up to two automatic recovery attempts exhaust
+the limit of three. Kills, reboot and a different helper build do not reset that
+same selected operation's counter. Historical attempts not recorded by older
+writers are not inferred or backfilled. No ledger version migration is made.
+
+At exhaustion the helper makes no further native change and emits the recorded
+request ID, preserved pending state, and a concrete root-owner continuation:
+`<installed immutable helper> --retry-selected <recorded-operation-id>`.
+The owner first resolves native Postfix/Dovecot problems. Each explicit command
+admits only one further attempt for that exact selected receipt and pending leaf;
+it does not clear or reset the counter, start a service, replace selection, grant
+a broad recovery capability or reopen a terminal failure. Overflow and another
+operation identity are refused. Read-only prerequisites may be checked repeatedly
+without spending a mutation attempt; their failure preserves the original job.
+
+This budget governs the independent helper's already-selected recovery only.
+Pre-selection failed-issuance retry and ordinary Agent recovery policy remain
+separate open work. Production enrollment must retain the selected helper's
+policy and its state through migration/rollback; an older helper is not evidence
+of this new retry guarantee. Native failure/reboot/exhaustion/explicit-owner
+acceptance is recorded separately from the component tests.
+
+[Debian BE budget acceptance](../deploy/e2e/release-recovery/MAIL-BUDGET-BE.md)
+now verifies actual failed reload, automatic retry after reboot, refusal at the
+third recorded execution, unchanged evidence for another request, and one
+explicit owner continuation to successful attempt four. This closes that narrow
+native budget item; the pre-selection and enrollment limitations above remain.
+
+## Immutable runtime preparation
+
+P0.3/P0.5, invariants 1, 2 and 4. The candidate recovery CLI accepts
+`prepare-mail-renewal-runtime --source /absolute/mail-renewal-runtime --transaction-fd 9`
+only as root under the inherited exclusive native release lock, before a release
+transaction or service downtime. The fixed v1 kit is validated using pinned,
+root-owned files, exact inventory and modes, bounded reads and digest identity.
+Outer signed release admission remains the caller's responsibility.
+
+Mail and firewall kits share the immutable publication writer. Each generation
+is staged, validated, synced and published without replacing an existing path.
+Repeated preparation preserves the existing generation's inode. Changed owner
+content, source drift, active transactions and path replacement are refused.
+A killed process leaves its partial stage as evidence; a new process prepares a
+fresh stage or repeats the durability check of the already-published generation.
+Older complete generations are retained. No schema migration occurs.
+
+This command only prepares an artifact. It does not publish native units or the
+Certbot hook, enable a timer, stop a service or install a panel update. Production
+enrollment, legacy hook migration, snapshot/rollback and removal remain open.
+Component tests cover inherited lock rejection, owner changes, restricted umask,
+retained predecessors and actual SIGKILL at five publication boundaries. Native
+CLI acceptance is recorded separately; these tests alone do not close P0.5.
+
+[Native Debian BE preparation evidence](../deploy/e2e/release-recovery/MAIL-PREPARATION-BE.md)
+now verifies the actual candidate CLI and process-kill boundaries with running
+mail workloads and management absent. Enrollment and power-loss remain open.
+
+## Release payload and pre-downtime preparation
+
+P0.3/P0.5, no evidence schema transition. Source builds, offline dist and prebuilt
+staging preserve the exact helper/hook executable modes; neither helper is added
+to the application bin resource. The complete outer release inventory covers all
+five artifact files. Native candidate preparation verifies them under inherited
+fd 9 before coordinator stop or application transaction creation. Historical
+archives without this additive artifact remain readable. Preparation refusal
+stops admission with its specific unconfirmed state and leaves existing native
+renewal selection and workload configuration unchanged.
+
+Shell behavior tests prove lock inheritance, ordering and refusal propagation.
+Clean-toolchain tests cover the independent build tag, and local candidate
+archive admission reconstructs every generated manifest/unit/hook from committed
+templates using a real Go-produced vector. These checks do not establish signing,
+installed native enrollment, legacy hook migration or whole-update rollback.
+
+The full local `make dist` archive from `defa2acfb2443c6e7c4f72233b6d3f91026777bf`
+was built with the reviewed Go compiler and frontend build, then read back through
+complete archive inventory and committed-source validation (365 static files).
+All five native mail files matched the v1 generated contract and exact archive
+modes, and no helper was added to the application bin tree. See
+[local artifact evidence](../deploy/e2e/release-recovery/MAIL-RELEASE-PAYLOAD.json).
+It is explicitly unpublished and unsigned, with no installed update performed.
+
+## Certificate writer compatibility with independent enrollment
+
+P0.4/P0.5, unchanged v1 kit/ledger/receipt. The legacy hook producer bytes now
+have one shared embedded contract. A pinned root-owned reader distinguishes
+verified absence, exact legacy hook and complete independent hook/unit/runtime
+material. Unsafe, unknown, altered or missing supporting files are errors, never
+absence. The reader retains descriptors for a final revalidation after probes.
+
+Certificate issuance preserves a recognized existing legacy or independent hook
+without replacing its inode or normalizing owner metadata. Unknown owner content
+stops that certificate action with guidance. Initial legacy publication remains
+a compatibility path only and now uses no-replace rename, so a concurrent owner
+file cannot be overwritten. This does not itself enroll independent renewal.
+
+Independent renewal readiness additionally observes the actually loaded service
+and timer: exact fragments, no loaded drop-ins or pending daemon reload, enabled
+active timer and a usable oneshot service state. Disk evidence is revalidated
+after these observations. The check never enables a timer, starts a service,
+changes a hook or grants certificate/operation authority.
+
+Race tests cover source/owner drift and concurrent absent-hook publication;
+loaded-unit tests cover missing, overridden, disabled and failed states. Native
+writer-preservation acceptance is recorded separately. Legacy enrollment,
+initial managed-unit publication, rollback and owner removal remain open.
+
+Native observation found an existing producer layout with root-owned mode-0700
+Certbot hook parents carrying the `celikpanel` group. The hook observer accepts
+protected root-owned directory parents without imposing a new group, pins their
+original group/mode for revalidation and never normalizes them. Immutable runtime
+kits and hook/unit files retain their exact root:root contract. Group-writable,
+non-root-owned parents and later group changes are refused. This compatibility
+rule applies only to the native file observer, not recovery kit enrollment.
+
+[BE native hook preservation](../deploy/e2e/release-recovery/MAIL-HOOK-BE.md)
+verifies these boundaries with the actual writer and loaded native schedule,
+including the retained first refusal and metadata-compatible correction.
+
+## Native enrollment before-image contract (2026-09-22)
+
+P0.3/P0.5, invariants 1, 2 and 4. The new
+`celikpanel-mail-renewal-transition/v1` describes exactly three native files,
+the verified previous/target immutable kits and the observed timer preference.
+It grants no execution permission. Initial enrollment accepts only verified
+absence or the byte-exact historical Agent hook, with no pre-existing renewal
+units. An upgrade requires the complete previous kit. A disabled or stopped
+native timer remains disabled or stopped; unknown states cannot imply consent.
+
+The private capture primitive writes
+`celikpanel-mail-renewal-before-image/v1` under the inherited exclusive release
+lock before any native mutation. It retains old file contents, inode and metadata
+identities and protected parent identities. Read-only capture neither normalizes
+metadata nor starts/stops services. The journal parent must already be admitted;
+the primitive does not create it. Root-owned protected legacy hook directories
+may retain their original group; files and immutable kits keep exact ownership.
+Extra file attributes are refused rather than silently dropped during recovery.
+
+The record is created through a pinned parent descriptor, synced, published with
+no-replace rename and parent-synced. Repeated capture requires exact agreement
+with the existing record, including inode identity. Owner changes, missing or
+altered kit support, changed parents, conflicting journals and pending release
+transactions preserve evidence and refuse capture. A process killed before
+publication leaves its staging evidence; a new invocation can capture unchanged
+native state. After publication, it reuses the identical durable record. This
+re-entry is for capture only, not recovery after native file publication.
+
+Component tests use a real inherited flock and actual SIGKILL at staged-file,
+publication and parent-sync boundaries for absent, legacy and independent
+fixtures. They also exercise same-byte owner inode replacement, directory/group
+drift, native file/source changes, conflicting journals, extra attributes and
+strict decoding. They do not prove power-loss durability or native enrollment.
+
+No production dispatcher invokes this component yet. Accepted owner authority,
+actual loaded-unit/schedule observation, after-image publication, interrupted
+native transition/rollback and owner removal remain required before enrollment
+can be enabled. Kit v1 and existing certificate/operation schemas are unchanged.
+
+[Debian BE capture evidence](../deploy/e2e/release-recovery/MAIL-CAPTURE-BE.md)
+records these process tests under the native kernel with unchanged running mail
+workloads. It does not establish native enrollment or power-loss recovery.
+
+## Native file transition and inverse exchange (2026-09-22)
+
+P0.3/P0.5, invariants 1, 2 and 4. The private
+`celikpanel-mail-renewal-files/v1` plan binds the before-image digest to exact new
+inodes in two random staging directories under the native hook/unit parents.
+The hook stage is a directory, so an incomplete executable cannot become an
+additional top-level Certbot deploy hook. Files and both staging directories are
+synced before the inode plan is published and parent-synced. A killed preparation
+leaves orphan stages intact; the next attempt never adopts an unrecorded inode.
+
+Only changed native files participate. Existing files are atomically exchanged
+with the exact staged inode; verified absence uses no-replace rename. The old
+inode remains available for inverse exchange. Each step rechecks the accepted
+capture, immutable kits, both sides' content/metadata, fixed parent identities,
+stage inventory and inherited release lock. Foreign contents, attributes, hard
+links, same-byte replacements and missing supporting evidence stop this operation.
+No existing parent metadata is normalized and no retained evidence is deleted.
+
+An interrupted forward transition can continue the same exact plan or be
+compensated. Rollback first persists a bound intent; once visible, forward action
+is refused. Inverse exchange/rename restores original inodes or original absence.
+Only rename-induced ctime differences on the recorded inode pairs are tolerated;
+content, owner, mode, inode, size and mtime remain exact. Both directories are
+synced again even when a killed predecessor already performed the move. Immutable
+forward/rollback receipts record file outcomes only and are verified against
+current file state; a historical receipt cannot establish current readiness.
+
+The component preserves unchanged timer files and does not reload systemd,
+operate a service/timer, enroll production renewal or complete an application
+update. Production dispatch still needs accepted owner authority, host/renewal
+exclusion, actual schedule observation/transition, rollback integration and
+native acceptance. No new installed-panel update path is exposed. Existing kit,
+certificate and ledger schemas remain unchanged; the two transition records are
+additive and private.
+
+Tests include forward/inverse inode preservation, explicit owner drift/refusal,
+all 76 process-kill boundaries across absent/legacy/independent layouts, and a
+second process kill during rollback of an interrupted forward operation. These
+component results do not establish reboot, power loss, complete native enrollment
+or whole-update rollback. Native execution evidence is recorded separately.
+
+[Debian BE native file compensation](../deploy/e2e/release-recovery/MAIL-FILES-BE.md)
+now verifies actual hook/service exchange, a second kill during inverse exchange,
+original inode restoration and unchanged trusted mail workloads. The initial
+test-driver refusal is retained. Loaded-unit activation and whole-update acceptance
+remain open.
+
+## Shared native schedule observation (2026-09-22)
+
+The immutable-kit module now owns the six-property native systemd observation
+parser and readiness policy used by the Agent. A complete disk kit is not proof
+of a loaded, enabled schedule. Missing/duplicate/unknown properties, changed
+fragment paths, overrides and pending reload remain unverified. This refactor
+does not change the existing public readiness policy or start a native action.
+
+The separate transition observation requires the current oneshot invocation to
+be idle and preserves all four supported enabled/disabled and active/inactive
+timer combinations. A running service is an explicit wait, not absence. An
+unverified timer is not hidden by that wait. Bootstrap absence requires both
+native units positively not found with empty fragment/override/enablement data;
+a failed query, failed service, masked unit or substituted fragment is not absent.
+
+These observations are not ownership, accepted intent, durable evidence or a
+mutation barrier. Callers must source them from the actual local service manager,
+retain native file proofs, establish host/renewal exclusion and re-observe at the
+mutation boundary. Production schedule activation and rollback remain open.
+
+## Existing loaded-unit transition (2026-09-22)
+
+P0.3/P0.5, invariants 1, 2 and 4. The private
+`celikpanel-mail-renewal-loaded/v1` intent and receipt bind native daemon-reload
+to the exact verified file-phase plan, direction, generation and retained timer
+preference. Both the file terminal record and current inode pairs must agree.
+A historical forward receipt cannot authorize action after rollback intent.
+
+Before the native reload, both fixed units are observed through the shared
+contract, the oneshot must be idle, and owner enablement/activity must match the
+accepted before-image. Intent is durable before the command. Current files,
+source kits and observations are checked again before and after execution and
+before terminal receipt publication. Re-entry after an interrupted reload may
+repeat the idempotent daemon-reload; it never starts a second workload mutation.
+A completed receipt requires fresh observation and causes no repeated reload.
+Unavailable observations retain intent and cannot become completed activation.
+Later owner preferences, overrides and file changes are preserved and refused.
+
+The command capability permits only fixed-unit observation and daemon-reload.
+There is no start/stop/enable/disable capability. This step supports an existing
+independent native schedule only; bootstrap enrollment is explicitly unsupported.
+The future dispatcher must supply accepted authority, host/renewal exclusion and
+a trusted bounded local command runner. No production dispatcher is enabled.
+Component tests cover native-command failure/unknown retry, same intent identity,
+owner changes before/after reload and after completion, busy states, and 14 actual
+process-kill boundaries with a simulated service-manager cache. Native systemd
+acceptance is recorded separately; simulation does not establish native loading.
+
+### Compatibility gate still required before production enrollment
+
+The actual hook producer immediately before source `3c268c2` unconditionally
+published the legacy Agent hook. Restoring such an older application producer and
+then issuing another mail certificate could replace independent enrollment.
+Current-source writer preservation and the file inverse protocol do not prove
+compatibility with every historical application rollback target. Production
+admission must resolve this old-producer/restore relationship explicitly before
+claiming independent renewal survives supported application rollback. Keep this
+P0.4/P0.5 acceptance item open; do not infer compatibility from a running timer.
+
+[Debian BE loaded-schedule acceptance](../deploy/e2e/release-recovery/MAIL-LOADED-BE.md)
+now proves actual daemon-reload in both directions, two process interruptions,
+same-operation recovery and matching native ExecStart generations. Native timer
+preferences and trusted mail workloads were preserved. Bootstrap, production
+dispatch, historical application rollback and power-loss acceptance remain open.
+
+## Failed-operation retry admission (2026-09-22)
+
+P0.3/P0.5, invariants 1, 2 and 4. The scoped renewal executor now checks the
+existing v1 ledger Attempt counter under the same host/publication locks and
+fresh ledger read as admission. An initial execution plus two failed-operation
+resumes consume three automatic attempts for that exact request. A stale manager
+or another polling process cannot reset the counter. Budget refusal leaves the
+failed result, selected certificate, pending queue and foreign history intact.
+
+The root-only independent helper accepts `--retry-failed <recorded-operation-id>`
+for one additional admission of the exact failed, unpublished pending operation.
+It cannot create a new operation, resume an active/selected operation, change
+owner identity or reset Attempt. The grant is consumed when admission is durable;
+another failure returns to the exhausted automatic budget. `--retry-selected`
+continues to handle the separate already-selected recovery boundary. Diagnostic
+budget messages identify the operation, owner action and precise continuation;
+raw native output remains redacted. No ledger schema migration is introduced.
+
+This closes automatic retries of terminal failed renewals, not interruption
+recovery before selection, cross-build request adoption, initial enrollment or
+general Agent recovery. Request identity still includes the producer build and
+exact source certificate; a different build must not silently adopt an old
+owner retry. Historical native selected-budget evidence remains separately
+scoped; this source change alone does not establish native execution acceptance.
+
+[Debian BE failed-budget acceptance](../deploy/e2e/release-recovery/MAIL-FAILED-BUDGET-BE.md)
+now proves three native failed executions across fresh processes, retained owner
+configuration, refusal after exhaustion/wrong owner, and explicit same-request
+attempt 4 with trusted SMTP/IMAP serving the new certificate. The regular timer
+was paused for deterministic commands; no automatic-dispatch/reboot claim is made.
+
+## Initial idle unit loading and compensation (2026-09-22)
+
+P0.3/P0.5, invariants 1, 2 and 4. The shared loaded-unit executor now handles
+verified initial absence as a separate phase. Its additive private
+`celikpanel-mail-renewal-bootstrap-loaded/v1` intent/receipt binds the exact
+file plan and direction. Forward completion proves the fixed units loaded with
+an inactive static service and disabled inactive timer. It does **not** claim
+renewal enabled, start a job or complete enrollment. The existing independent
+schedule schema and retained owner preferences remain unchanged.
+
+Before reload, each native cache entry may independently be absent or the exact
+idle target. This permits lazy discovery and restart after a killed reload;
+an enabled, running, masked, overridden or unknown entry is never adopted.
+After reload both entries must match the exact direction: loaded idle units for
+forward, positive native absence for inverse compensation. The file before-image,
+original inodes, source kit and monotonic rollback intent remain mandatory.
+Unknown observations preserve intent and cannot publish a completion receipt.
+
+Native `systemctl show` exit 4 is accepted only with all six bounded properties
+proving that the specific unit is absent. Any other failure, partial output or
+loaded unit with that status is unknown. Exit status alone cannot prove absence.
+Existing readiness and transition admission do not change.
+
+Tests exercise initial absence and legacy hooks, partial native caches, failed
+or interrupted reloads, owner edits before/after completion, 28 actual process
+kill/re-entry boundaries and original-inode compensation. The cache in component
+tests is simulated; native acceptance is separate. Production activation still
+requires durable timer enablement/activity transitions, accepted dispatch and
+historical application rollback compatibility. No production dispatcher or
+installed-panel update is enabled by this component.
+
+[BE Arch native initial-load evidence](../deploy/e2e/release-recovery/MAIL-BOOTSTRAP-LOADED-BE.md)
+now proves actual idle loading, two process interruptions and same-operation
+compensation to positive absence. Two preparation refusals are retained. No timer
+activation, mail workload or whole-update acceptance is claimed by this trial.
+
+## Initial native timer enablement and inverse (2026-09-22)
+
+P0.3/P0.5, invariants 1, 2 and 4. The private enablement phase now requires the
+exact completed initial file/load records and current native inodes. It stages
+one fixed systemd wants symlink, syncs it, and publishes an immutable
+`celikpanel-mail-renewal-enable/v1` plan binding the file-plan digest, protected
+parent/stage identities, symlink inode, metadata and exact target. Unrecorded
+staging directories are retained and never adopted after an interrupted prepare.
+
+Only that recorded link can move into `timers.target.wants`, using no-replace
+rename. Inverse compensation durably records its direction before moving the
+same link back. Current owner links, same-target replacements, parent changes,
+extra stage contents, hard links, attributes or unknown native observations are
+refused. Original files are not normalized. Only rename-induced ctime drift on
+the recorded inode is permitted. Both parents are synced again on re-entry.
+
+Actual daemon-reload must verify enabled/inactive after forward publication or
+disabled/inactive after inverse. A busy service or active/overridden timer blocks
+this phase; no timer/service start or stop capability exists here. A completed
+receipt is revalidated against current link identity and native state. File
+compensation cannot start until the exact enablement inverse receipt and link
+absence are proved, and its mutation barriers retain that pinned proof. A future
+composite dispatcher must also retain the native inactivity/exclusion boundary.
+
+The native wants parent must already exist and be protected; this primitive does
+not silently create or adopt a missing directory. Initial parent publication,
+timer activity transitions, accepted production dispatch and historical old-Agent
+hook-writer compatibility remain open. Existing certificate/ledger/kit schemas
+are unchanged. Enabling a timer makes it eligible for the native boot target;
+this phase alone does not prove current activity or a completed renewal.
+
+[BE Arch native enablement evidence](../deploy/e2e/release-recovery/MAIL-ENABLE-BE.md)
+proves actual enabled/inactive state, two process interruptions and ordered
+compensation through disabled/inactive to original native absence. The wants
+parent was fixture-prepared. Timer start, workloads and production dispatch are
+not established by this trial.
+
+## Initial timer activity and bounded compensation (2026-09-22)
+
+P0.3/P0.5, invariants 1, 2 and 4. The additive private
+`celikpanel-mail-renewal-activity/v1` records bind the completed enablement plan,
+immutable generation and direction. Durable intent and numbered admission precede
+each fixed timer start/stop. At most three commands per direction are admitted;
+known native failures remain as redacted immutable records. A lost response is
+reconciled from fresh native evidence before another admission. After exhaustion,
+the owner can resolve the native error and start/stop the exact timer, then resume
+the same operation for verification without resetting history.
+
+The executor requires current file/kit/link identities, native enabled state and
+an idle renewal service. Busy is a wait; unknown observations do not authorize a
+command. An unrecorded already-active timer cannot be adopted. Completed records
+require fresh native activity and valid attempt history. A later owner stop does
+not authorize a restart from an old receipt. Monotonic activity inverse precedes
+enablement inverse, which precedes file inverse. Hosted services are not stopped.
+
+Component race tests cover bounded start/stop failures, unknown results, retained
+owner edits, record corruption, ordering and twenty SIGKILL/re-entry boundaries.
+Native activity evidence is still required. This remains a private component:
+accepted production dispatch, host/renewal exclusion, missing-parent publication
+and historical old-Agent hook-writer compatibility remain open. Existing native
+renewal ledger and certificate schemas are unchanged.
+
+[BE Arch native activity evidence](../deploy/e2e/release-recovery/MAIL-ACTIVITY-BE.md)
+now proves actual timer start/stop, two process interruptions and ordered inverse.
+The first automatic no-work invocation failed on an absent private ledger parent;
+that result is retained. Fixture preparation and a manual successful no-work run
+preceded same-operation continuation. Automatic renewal success is not claimed.
+
+## Retained shared native wants parent (2026-09-22)
+
+P0.3/P0.5, invariants 1, 2 and 4. Before first enablement, the private component
+now prepares `timers.target.wants` as a separately recorded infrastructure
+prerequisite. `celikpanel-mail-renewal-parent/v1` binds the exact capture and
+existing or newly staged directory identity. Existing protected directories,
+permissions, group and other entries are preserved. A missing directory is staged
+with final root:root 0755 metadata, synced and recorded before no-replace rename;
+re-entry accepts only that recorded inode. Unrecorded stages remain evidence and
+are never adopted. Unknown, unsafe or replaced parents block that boundary.
+
+This shared directory is deliberately **retained** after compensation, including
+when it was initially absent. It is not a CelikPanel-owned workload: another
+native timer may use it after publication. Inverse removes only the recorded
+CelikPanel enablement link and files, and never recursively deletes shared owner
+content. The private parent plan and ready record are retained too. This is the
+explicit compensation policy, not an assertion that every original directory
+absence is restored. No native service is started by parent preparation.
+
+This supersedes the primitive's earlier requirement that an operator pre-create
+the wants parent. It does not prepare the private renewal ledger/group, admit a
+production operation, resolve historical Agent compatibility, or close enrollment
+acceptance. Interrupted mkdir/staging/publication and later owner edits are tested
+separately from native execution. Existing ledger/certificate schemas do not change.
+
+[BE native parent evidence](../deploy/e2e/release-recovery/MAIL-PARENT-BE.md)
+now proves creation of the missing shared wants directory, an automatic native
+no-work invocation and two process cuts followed by ordered compensation. The
+shared parent remains with its recorded inode. The private ledger/group remained
+fixture prerequisites; production initialization and actual renewal are separate.
+
+
+## Before-selection evidence (P0.3/P0.5, September 22)
+
+New renewal admission durably writes `celikpanel-mail-renewal-before/v1` before
+publishing its active ledger job. The immutable root/service-group 0600 record
+binds the exact pending leaf, build-qualified request/owner, prior publication
+receipt and `mail-host-selection-identity/v1` digest of the actual selected
+link/material/generation inodes. No private key bytes enter this record. Source
+and selection are re-observed under host, ledger and certificate publication
+exclusion; owner replacements, including equal-byte replacements, refuse retry.
+The existing request/owner derivation is unchanged and is tested against the
+public DER and identity produced by the actual earlier native BE trial.
+
+This adds evidence to new operations; it does not migrate an active historical
+operation or fabricate its missing before-image. Shared v1 ledger and publication
+receipt formats are unchanged. The writer uses fsynced exclusive staging,
+no-replace publication and parent synchronization; unknown stages remain retained
+and are not adopted as authority. Missing/invalid evidence prevents admission,
+while existing services, selection and owner files are preserved. Lower-level
+ledger and selected-publication fixtures explicitly bypass the new adapter and
+are not counted as before-selection acceptance.
+
+Validation: material/owner-change tests, real SIGKILL at three writer boundaries,
+actual prior-producer identity compatibility, admission-before-ledger ordering,
+race tests of mailhoststore/mailrenewalintent and relevant Agent tests, and vet.
+Native interrupted-before-selection continuation is now recorded in the bounded
+[BE acceptance](../deploy/e2e/release-recovery/MAIL-UNSELECTED-BE.md). Old-build
+adoption and complete production enrollment remain open; this does not close P0.
+
+
+## Unselected interrupted attempt reconciliation (P0.3/P0.5)
+
+The pending-work helper now distinguishes an already selected interrupted
+publication from a provably unselected one. The latter requires the immutable
+before-image, exact pending source and build, a matching active running job in
+`leased` or exact publication-intent phase, a proven absent worker, no release or
+foreign mutation evidence, and unchanged accepted native mail configuration and
+running services. It re-observes all evidence under host/ledger/certificate locks
+before recording that the attempt was interrupted without changing selection.
+
+This transition changes only the exact job to failed/interrupted. It does not
+reload services, select a stage, remove generations, clear the pending queue,
+reset Attempt, or replace a known failure. The next same-request admission uses
+the existing three-execution budget; exhaustion still needs the explicit owner
+retry. Missing historical before-images, cancelled/unknown phases, changed owner
+material, cross-build state and native uncertainty remain preserved for review.
+Terminal write uncertainty retains the poisoned manager and host exclusion.
+
+Local adversarial/race tests cover these distinctions and terminal write faults.
+Guarded native tests add actual SIGKILL cuts before the ledger, after admission,
+before stage selection and during interruption-result publication. These tests
+are opt-in; native evidence must be recorded separately before claiming that
+acceptance. They do not establish automatic production enrollment, historical
+application rollback compatibility, cross-build adoption or full P0 completion.
+
+Admission proof is also revalidated inside the durable publication callback,
+immediately before selection. Owner replacement after admission or during native
+preflight therefore cannot be overwritten using a stale before-image.
+
+
+The [BE unselected-renewal record](../deploy/e2e/release-recovery/MAIL-UNSELECTED-BE.md)
+now proves three source-bound native continuation cases and four actual SIGKILLs,
+including interrupted terminal-result publication, with management binaries
+absent. Trusted SMTP/IMAP listeners, native settings, prior ledger jobs and the
+unselected stage are verified. The timer was paused for these deterministic
+cuts; new-helper automatic dispatch, reboot and production enrollment are not
+claimed. Earlier preparation failures remain recorded separately.
+
+## Automatic continuation after normal reboot (2026-09-22)
+
+The separate [BE boot trial](../deploy/e2e/release-recovery/MAIL-UNSELECTED-BOOT-BE.md)
+now proves an actual before-selection process kill followed by a normal VM reboot.
+With management binaries absent, the installed native timer automatically invoked
+the source-bound helper and completed the same request at attempt 2. Trusted
+SMTP/IMAP, prior material, owner configuration and unrelated history were verified.
+This adds automatic-dispatch/normal-reboot proof to the earlier fresh-process
+trials; power-loss and production admission/old-application rollback stay open.
+
+
+## Agent compatibility admission (2026-09-22)
+
+P0.3/P0.4/P0.5 now have a [source-bound application contract](AGENT-NATIVE-CONTRACT.md)
+for independent mail renewal. Current releases bind a declaration to exact Agent
+bytes; read-only update/rollback gates refuse unverified historical writers before
+coordinator stop and repeat before mutation. The declaration travels in the same
+atomic bin exchange and exact inverse as Agent. This is not retroactive
+certification of old releases, production enrollment or full native rollback
+acceptance; those boundaries remain open.
+
+
+[BE native compatibility evidence](../deploy/e2e/release-recovery/AGENT-COMPATIBILITY-BE.md)
+now verifies read-only admission beside running independent Debian mail, absent
+native enrollment on Arch, and private atomic-resource SIGKILL/inverse cases on
+both kernels. This evidence preserves the stated production enrollment and whole
+application rollback limits.
+
+
+## Composite enrollment execution (2026-09-22)
+
+P0.3/P0.5, invariants 1, 2 and 4. A private composite executor now joins initial
+native file publication, idle unit loading, timer enablement/activity and their
+ordered inverse. `celikpanel-mail-renewal-enrollment/v1` binds the externally
+accepted operation to exact before-image, prepared inode-plan and target digests.
+An immutable inverse decision prevents forward resurrection after a cut. It does
+not derive owner consent from a certificate, runtime kit or historical receipt.
+
+Both actual inherited flocks are mandatory (release fd 9, then host fd 8). The
+outer authority callback is required again on every invocation and around every
+phase/native action. Accepted scope, pinned evidence and known record inventory
+are revalidated; another request, lost authority, changed lock, owner edits,
+unknown future attempt and malformed history refuse continuation. This private
+callback still needs a production durable fence/dispatcher and authenticated
+admission; it is not itself such a fence or an enabled production entrypoint.
+
+Historical phase receipts select the right current observer. In particular an
+already-enabled/active timer is not sent back to the bootstrap disabled/inactive
+observer. Terminal success rechecks actual files, link identity and loaded native
+state. Owner changes after success are preserved, not repaired. Compensation can
+start from a partially published forward chain and never starts a mail workload.
+Uncommitted stages, original native inodes and failures remain retained.
+
+Native daemon-reload has three durable attempts per direction and load/enable
+phase. A killed or uncertain command consumes its admitted attempt. A fresh
+native observation can acknowledge an already-completed action without another
+command; exhaustion retains actionable owner guidance and does not reset counts.
+Timer start/stop keeps the separately implemented activity budget.
+
+The independent helper now treats only wholly known host-exclusion waits as a
+handled scheduling invocation: it logs that work remains pending for the next
+timer check, without clearing the queue or completing a ledger job. Mixed busy
+and unknown/failure causes retain the failure exit. Existing v1 unit templates
+and native kit bytes remain readable; no template/schema rewrite is required.
+
+Local race checks include 88 actual process SIGKILLs across forward admission,
+publication, loading, enablement, activity, terminal acknowledgement and partial
+compensation, plus authority, owner-edit, budget and unknown-history cases. Related
+bootstrap/enable/activity tests and scoped Agent entry tests pass; vet passes.
+These are private process fixtures. Native combined enrollment, trusted bounded
+production dispatch, persistent cross-invocation exclusion, initial state/group
+preparation and application rollback integration remain required. P0 stays open.
+
+
+[BE composite native evidence](../deploy/e2e/release-recovery/MAIL-ENROLLMENT-BE.md)
+now proves real Arch systemd enrollment, two process kills and exact same-operation
+compensation with management absent. Preparation/inventory harness failures are
+retained separately. Production fencing/admission, real mail workload and reboot
+composition remain outside this bounded result.

@@ -1,0 +1,44 @@
+#!/bin/bash
+# Read-only collection on one guest. usage: ro-collect.sh CELL LABEL NODE PORT ENGINE ROLE
+# Output: /root/cp-pair5/obs/LABEL/NODE-*.txt ; the rndc secret is never printed (only a
+# SHA-256 of the secret string goes to a host-only file outside the evidence, for the scan).
+CELL=$1; LABEL=$2; NODE=$3; PORT=$4; ENG=$5; ROLE=$6
+H=$(printf %s "$CELL" | sha256sum | cut -c1-24)
+KH=/var/tmp/cp-pair5-work/cells/$H/ssh-known-hosts
+O=/root/cp-pair5/obs/$LABEL; mkdir -p $O /root/cp-pair5/secret-hashes
+sshn() { timeout 120 ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$KH -i /var/tmp/cp-pair5-key/id_ed25519 -p $PORT celik@127.0.0.1 "$@"; }
+sshn 'cat /etc/celikpanel-dns-kill-matrix 2>/dev/null | head -c 400; echo; cat /sys/class/dmi/id/product_uuid 2>/dev/null || sudo -n cat /sys/class/dmi/id/product_uuid' > $O/$NODE-identity.txt 2>&1
+if [[ $ENG == bind ]]; then
+sshn 'bash -s' > $O/$NODE-rndc-key.txt 2>&1 <<'R'
+set +e
+echo "## collected $(date -u +%FT%TZ) on $(hostname) ($(. /etc/os-release; echo $PRETTY_NAME))"
+echo "## key files: metadata only (ls -l; stat owner/group/mode/size/birth/modify). Content NOT read."
+for f in /etc/rndc.key /etc/rndc.conf /etc/bind/rndc.key /etc/bind/rndc.conf; do sudo -n ls -l --time-style=full-iso $f 2>&1; done
+for f in /etc/rndc.key /etc/bind/rndc.key; do [ -e $f ] && sudo -n stat -c '%n owner=%U:%G mode=%a size=%s birth=%w modify=%y change=%z' $f; done
+echo "## owning package of the key path"
+if command -v dpkg >/dev/null; then dpkg -S /etc/bind/rndc.key 2>&1; dpkg-query -W bind9 2>&1; else pacman -Qo /etc/rndc.key 2>&1; pacman -Q bind 2>&1; fi
+echo "## companion record(s) dns-engine-bind-rndc-key.json (path, provenance, hash only)"
+for p in $(sudo -n find / -xdev -name 'dns-engine-bind-rndc-key.json' 2>/dev/null); do echo "### $p"; sudo -n ls -l --time-style=full-iso $p; sudo -n cat $p; echo; done
+echo "## install-ownership files next to it (names only)"
+for p in $(sudo -n find / -xdev -name 'dns-engine-install-ownership-bind.json' 2>/dev/null); do sudo -n ls -l --time-style=full-iso $(dirname $p) | grep -i -E 'bind|rndc'; done
+echo "## named first start in this journal (all boots) and command channel lines"
+U=named.service; systemctl cat bind9.service >/dev/null 2>&1 && U=bind9.service; systemctl cat named.service >/dev/null 2>&1 && U=named.service
+echo "unit: $U"
+sudo -n journalctl -u $U --no-pager -o short-iso | grep -E 'starting BIND|Started|command channel|rndc' | grep -v -i secret | head -12
+echo "## rndc status (first two lines; uses the key, does not print it)"
+sudo -n rndc status 2>&1 | head -2
+echo "## Agent journal lines naming rndc (all boots)"
+sudo -n journalctl -u celikpanel-agent.service --no-pager -o short-iso | grep -i 'rndc' | grep -v -i 'secret "' | tail -40
+echo "(end)"
+R
+# host-only secret hash for the evidence scan (never in the evidence)
+sshn 'for f in /etc/rndc.key /etc/bind/rndc.key; do [ -e $f ] && sudo -n sed -n "s/.*secret \"\([^\"]*\)\".*/\1/p" $f | tr -d "\n" | sha256sum | cut -c1-64; done' > /root/cp-pair5/secret-hashes/$LABEL-$NODE.txt 2>/dev/null
+wc -l < /root/cp-pair5/secret-hashes/$LABEL-$NODE.txt
+fi
+# notify lines, all boots, with timestamps
+if [[ $ENG == pdns ]]; then
+  sshn 'sudo -n journalctl -u pdns.service --no-pager -o short-iso | grep -i -E "notif|spurious|failed after retries"' > $O/$NODE-pdns-notify-journal.txt 2>&1
+else
+  sshn 'U=named.service; systemctl cat named.service >/dev/null 2>&1 || U=bind9.service; sudo -n journalctl -u $U --no-pager -o short-iso | grep -i -E "notify|notif"' > $O/$NODE-bind-notify-journal.txt 2>&1
+fi
+ls -la $O

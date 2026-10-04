@@ -1,0 +1,2 @@
+2026-09-29T16:34:46.248657+00:00 dns-arch agent[7359]: 2026/09/29 16:34:46 DNS engine change d2f345432a323fbd9f5c5354f491a6cb: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format
+2026-09-29T16:34:56.229388+00:00 dns-arch agent[7359]: 2026/09/29 16:34:56 DNS engine change completion d2f345432a323fbd9f5c5354f491a6cb: the paired primary at 192.0.2.10 serves catalog catalog-c000020a.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format

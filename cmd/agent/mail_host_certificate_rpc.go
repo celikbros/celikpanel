@@ -2,13 +2,12 @@ package main
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"path/filepath"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/mailhostartifact"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -16,10 +15,7 @@ import (
 const managedMailHostTLSDir = mutationpayload.MailHostCertificateDirectory
 const mailHostCertificateCapability = transport.AgentCapabilityMailHostCertificateV1
 
-func mailHostCertLineageName(domain string) string {
-	digest := sha256.Sum256([]byte(domain))
-	return "celikpanel-mail-" + hex.EncodeToString(digest[:12])
-}
+func mailHostCertLineageName(domain string) string { return mailhostartifact.LineageName(domain) }
 
 // This endpoint issues only the explicitly reviewed host identity. It cannot
 // name customer certificate paths or replace customer SNI entries.
@@ -93,7 +89,13 @@ func (a *Agent) IssueMailHostCertificateV1(req *transport.IssueMailHostCertifica
 
 func publishMailHostCertificateSource(ctx context.Context, domain, requestID, qualifier, expectedLeaf string) (expires time.Time, err error) {
 	err = panelCertWithPublishLock(func() error {
-		if err := preflightMailHostCertificate(ctx, domain); err != nil {
+		preflight := preflightMailHostCertificate
+		activate := applyMailHostCertificateSelection
+		if mailHostCertificateUsesScopedRenewal(ctx) {
+			preflight = preflightMailHostCertificateReload
+			activate = reloadMailHostCertificateSelection
+		}
+		if err := preflight(ctx, domain); err != nil {
 			return err
 		}
 		cert, key, leaf, notAfter, readErr := readMailHostCertificateSource(domain)
@@ -112,8 +114,17 @@ func publishMailHostCertificateSource(ctx context.Context, domain, requestID, qu
 			return stageErr
 		}
 		defer stage.close()
-		_, commitErr := commitStandaloneMailHostCertificateStep(ctx, stage.publish, func(convergence context.Context) error {
-			return applyMailHostCertificateSelection(convergence, domain)
+		publish := stage.publish
+		if mailHostCertificateUsesScopedRenewal(ctx) {
+			publish = func() error {
+				if err := verifyMailRenewalBeforePublicationLocked(ctx); err != nil {
+					return err
+				}
+				return stage.publish()
+			}
+		}
+		_, commitErr := commitStandaloneMailHostCertificateStep(ctx, publish, func(convergence context.Context) error {
+			return activate(convergence, domain)
 		})
 		if commitErr != nil {
 			return commitErr
@@ -135,8 +146,30 @@ func preflightMailHostCertificate(ctx context.Context, domain string) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	return nil
+	certPath, keyPath, err := selectedMailHostCertificate(domain)
+	if err != nil {
+		return err
+	}
+	// Historical configuration success is not current permission to overwrite
+	// native owner changes. This is repeated under the publication lock before
+	// any source stage/selection, for initial issuance and queued renewal alike.
+	run := func(name string, args ...string) ([]byte, error) {
+		return runMailHostCertificateCommand(ctx, name, args...)
+	}
+	if err := verifyMailTLSConfiguration(journal, certPath, keyPath, run, secureReadConfig); err != nil {
+		return &mailHostConfigurationUnverified{cause: err}
+	}
+	return ctx.Err()
 }
+
+// Do not include command output or owner configuration values in public errors.
+// Unwrap retains typed unknown-dialect evidence for internal classification.
+type mailHostConfigurationUnverified struct{ cause error }
+
+func (e *mailHostConfigurationUnverified) Error() string {
+	return "mail certificate publication paused: current Postfix/Dovecot TLS settings could not be verified against the accepted configuration; the server owner must review the native settings and accepted mail configuration before retrying; existing settings and pending renewal are preserved"
+}
+func (e *mailHostConfigurationUnverified) Unwrap() error { return e.cause }
 
 func loadMailHostCertificatePlan() (*mailTLSSyncJournal, error) {
 	// Only publication of a successfully verified mail TLS configuration writes

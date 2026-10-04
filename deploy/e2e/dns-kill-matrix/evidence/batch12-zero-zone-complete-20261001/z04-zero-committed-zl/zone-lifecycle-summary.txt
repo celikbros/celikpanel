@@ -1,0 +1,16 @@
+## zone-lifecycle-recover.json status= passed recover_delete= True zero_zones= True
+  step delete recover= True rc= 0 outcome= verified_published verdict= passed job= 7fb6a0df succeeded ['published'] None heartbeats= 3 obs_err= None
+  step re-add recover= False rc= 0 outcome= verified_published verdict= passed job= f689f311 succeeded ['published'] None heartbeats= 0 obs_err= None
+## zone-lifecycle.json status= pending recover_delete= False zero_zones= True
+  step add recover= False rc= 0 outcome= verified_published verdict= passed job= fa261f29 succeeded ['published'] None heartbeats= 0 obs_err= None
+  step edit recover= False rc= 0 outcome= verified_published verdict= passed job= d8f6f5bc succeeded ['published'] None heartbeats= 0 obs_err= None
+  step delete recover= False rc= 75 outcome= pending_exact_operation verdict= pending job= 7fb6a0df pending ['propagation-pending'] dns_peer_enrollment_required heartbeats= 0 obs_err= None
+## ledger (collected copy)
+   076c692a dns_engine_switch pdns succeeded finalized att= 1 code= None started= 2026-09-30T08:40:52.403625335Z finished= 2026-09-30T08:41:11.83847908Z dur= 19.43
+   fa261f29 dns_zone_sync s2.s1-kill.test succeeded published att= 1 code= None started= 2026-09-30T08:41:44.867003065Z finished= 2026-09-30T08:41:48.730583018Z dur= 3.86
+   d8f6f5bc dns_zone_sync s2.s1-kill.test succeeded published att= 1 code= None started= 2026-09-30T08:41:54.575721277Z finished= 2026-09-30T08:41:57.844831369Z dur= 3.27
+   7fb6a0df dns_zone_sync s2.s1-kill.test succeeded published att= 2 code= None started= 2026-09-30T08:42:37.76785128Z finished= 2026-09-30T08:42:56.749055729Z dur= 18.98
+   f689f311 dns_zone_sync s2.s1-kill.test succeeded published att= 1 code= None started= 2026-09-30T08:42:58.800574496Z finished= 2026-09-30T08:43:01.659143423Z dur= 2.86
+== pdns daemon CATALOG-HASH lines (all boots)
+2026-09-30T08:41:06.437755+00:00 dns-debian13 pdns_server[5426]: new CATALOG-HASH '47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=' for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-30T08:43:06.554208+00:00 dns-debian13 pdns_server[5426]: new CATALOG-HASH '1Rf5KuuzsJMQRGXVLYxlmzvq+Z93Mwk4oSSCrR9KFCA=' for zone 'catalog-c000020a.celikpanel.invalid'

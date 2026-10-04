@@ -1,0 +1,3 @@
+622ddcb40568073d1407983bf78d0b8b8e24b0a5 tree=5e10aed16f8b944e7d5a55d2f21176560e3f69d9 parents=48d21d58605fe6b6a56d656dba566a2afc12f6b4 test(fixture): upd7 good candidate labelled v0.1.0-alpha.81 after the published v0.1.0-alpha.80 (unpublished, disposable)
+205abc6463d0bbc047a1c38765e102d2fcf3c05b tree=44585f688314296ef6ed1d553ec46e585b38abae parents=622ddcb40568073d1407983bf78d0b8b8e24b0a5 test(fixture): upd7 defective candidate - migrate-only fails (unpublished, disposable)
+f650e8c12d1d0c91764d201802008332f49b8d57 tree=ee6d75f688fac425179ee646a647a0ceb68283bc parents=bd14d97efc5cfd19acd70ddf0edb9c6343317e2b test(fixture): upd7 baseline = published v0.1.0-alpha.80 + the D-027 acceptance-license seam only (disposable)

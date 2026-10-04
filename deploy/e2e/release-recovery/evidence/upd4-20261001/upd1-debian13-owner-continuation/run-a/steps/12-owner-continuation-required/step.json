@@ -1,0 +1,269 @@
+{
+  "checks": {
+    "at_pause_snapshot": {
+      "cron": {
+        "content": "2026-09-30T23:39:01+00:00",
+        "mtime": 1790811541.8230357,
+        "ok": true,
+        "path": "/var/www/celikpanel/subscriptions/2/sites/1/upd1-cron-stamp.txt"
+      },
+      "services": {
+        "celikpanel-agent.service": {
+          "ActiveState": "inactive",
+          "LoadState": "loaded",
+          "SubState": "dead",
+          "UnitFileState": "enabled"
+        },
+        "celikpanel-firewall-restore.service": {
+          "ActiveState": "inactive",
+          "LoadState": "loaded",
+          "SubState": "dead",
+          "UnitFileState": "enabled"
+        },
+        "celikpanel-panel.service": {
+          "ActiveState": "inactive",
+          "LoadState": "loaded",
+          "SubState": "dead",
+          "UnitFileState": "enabled"
+        },
+        "cron.service": {
+          "ActiveState": "active",
+          "LoadState": "loaded",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        },
+        "dovecot.service": {
+          "ActiveState": "active",
+          "LoadState": "loaded",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        },
+        "nftables.service": {
+          "ActiveState": "inactive",
+          "LoadState": "loaded",
+          "SubState": "dead",
+          "UnitFileState": "disabled"
+        },
+        "nginx.service": {
+          "ActiveState": "active",
+          "LoadState": "loaded",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        },
+        "postfix.service": {
+          "ActiveState": "active",
+          "LoadState": "loaded",
+          "SubState": "running",
+          "UnitFileState": "enabled"
+        }
+      },
+      "smtp": {
+        "banner_code": "220",
+        "ok": true
+      },
+      "timers": {
+        "celikpanel-release-recovery.timer": {
+          "ActiveState": "active",
+          "LoadState": "loaded",
+          "SubState": "waiting",
+          "UnitFileState": "enabled"
+        },
+        "certbot.timer": {
+          "ActiveState": "active",
+          "LoadState": "loaded",
+          "SubState": "waiting",
+          "UnitFileState": "enabled"
+        }
+      },
+      "transaction": {
+        "fields": {},
+        "present": false,
+        "status": "ok"
+      },
+      "web": {
+        "marker": true,
+        "ms": 2,
+        "ok": true,
+        "status": 200
+      }
+    },
+    "hold_at_pause": {
+      "armed": true,
+      "held": true,
+      "held_at": "2026-09-30T23:32:35.521484+00:00",
+      "held_seconds": null,
+      "phases_seen": [
+        "active",
+        "completion.pending"
+      ],
+      "release_reason": null,
+      "released": false,
+      "released_at": null
+    },
+    "panel_log": {
+      "command": "sudo journalctl -u celikpanel-panel -n 50",
+      "lines": 50,
+      "matching_lines": [
+        "2026-09-30T23:37:31.701164+00:00 dns-debian13 panel[54563]: 2026/09/30 23:37:31 Failed to start panel listener: listen tcp :2083: bind: address already in use",
+        "2026-09-30T23:37:35.110020+00:00 dns-debian13 panel[54662]: 2026/09/30 23:37:35 Failed to start panel listener: listen tcp :2083: bind: address already in use",
+        "2026-09-30T23:37:41.115774+00:00 dns-debian13 panel[54802]: 2026/09/30 23:37:41 Failed to start panel listener: listen tcp :2083: bind: address already in use",
+        "2026-09-30T23:37:51.671504+00:00 dns-debian13 panel[55067]: 2026/09/30 23:37:51 Failed to start panel listener: listen tcp :2083: bind: address already in use",
+        "2026-09-30T23:38:10.979359+00:00 dns-debian13 panel[55491]: 2026/09/30 23:38:10 Failed to start panel listener: listen tcp :2083: bind: address already in use"
+      ],
+      "names_cause": true
+    },
+    "printed_retry": {
+      "action": "validated-not-executed",
+      "argv": [
+        "/usr/libexec/celikpanel/recovery",
+        "recover",
+        "--retry",
+        "--snapshot",
+        "20260930T233233Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-dcded64ee4c7e6f26b3133dd6213f9d8"
+      ],
+      "attempted_at": "2026-09-30T23:39:38.483419Z",
+      "journal_sha256": "8fe4c9c372597943ca6e3a78dba4e8d6920038295ce80e4fc6d3380fb2286f78",
+      "snapshot": "20260930T233233Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-dcded64ee4c7e6f26b3133dd6213f9d8"
+    },
+    "release": {
+      "command": "systemctl stop celikpanel-lab-owner-port-hold-f9f6ab21ddc6be3ca0f5c5564fea305f.service",
+      "hold": {
+        "armed": true,
+        "held": true,
+        "held_at": "2026-09-30T23:32:35.521484+00:00",
+        "held_at_pause": true,
+        "held_seconds": 423.3,
+        "phases_seen": [
+          "active",
+          "completion.pending"
+        ],
+        "release_reason": "owner-released",
+        "released": true,
+        "released_at": "2026-09-30T23:39:38.836013+00:00",
+        "released_before_retry": true
+      },
+      "note": null,
+      "requested_at": "2026-09-30T23:39:39Z",
+      "returncode": 0
+    },
+    "retry": {
+      "action": "executed-once",
+      "argv": [
+        "/usr/libexec/celikpanel/recovery",
+        "recover",
+        "--retry",
+        "--snapshot",
+        "20260930T233233Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-dcded64ee4c7e6f26b3133dd6213f9d8"
+      ],
+      "finished_at": "2026-09-30T23:40:04.199605Z",
+      "result": {
+        "returncode": 0,
+        "status": "ok",
+        "stderr": "",
+        "stdout": "Recovery dispatch admitted: attempt=owner snapshot=20260930T233233Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-dcded64ee4c7e6f26b3133dd6213f9d8\n\nCELIKPANEL_UPDATE_CHECKPOINT database_verified_before_start\n==> Previous pending update finalized from verified snapshot: /var/backups/celikpanel/update-snapshots/20260930T233233Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-dcded64ee4c7e6f26b3133dd6213f9d8\n==> Önceki bekleyen güncelleme doğrulanmış snapshot'tan tamamlandı: /var/backups/celikpanel/update-snapshots/20260930T233233Z-from-unknown-to-e1fdca3898d950a6408bb5161f5b25ac32440d28-dcded64ee4c7e6f26b3133dd6213f9d8\n"
+      },
+      "started_at": "2026-09-30T23:39:40.482089Z"
+    },
+    "views": {
+      "api": {
+        "unavailable": "PanelError"
+      },
+      "cli": {
+        "automatic_recovery": "paused_retry_limit",
+        "names_journal_command": true,
+        "texts": {
+          "en": "The update was applied, but the new version's panel did not come up, and completing the update was retried to its limit. Read the panel log on the server: sudo journalctl -u celikpanel-panel -n 50. Retrying repeats the same start until that cause is fixed. There is no supported return to the previous version from this point. Automatic recovery used all three attempts without finishing, so the server may be between versions. The server owner must act: read sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50, fix the cause it names, then run the one-time same-operation retry command shown there. Checking status does not retry recovery. Automatic certificate renewal (Certbot) was stopped for this update; the same recovery journal says whether it was returned to how it was before the update or stays stopped until this operation finishes.\nRequest: f9f6ab21ddc6be3ca0f5c5564fea305f\nRecorded at: 2026-09-30T23:39:10Z\nThis is a recorded observation; current service health was not checked.\nRecorded state (for support): phase=recovery_required reason=recovery_incomplete proof=none previous_failure=recovery_failed automatic_recovery=paused_retry_limit first_failure_code=panel_start_unverified\n",
+          "tr": "Güncelleme uygulandı, ancak yeni sürümün paneli açılmadı ve güncellemenin tamamlanması sınırına kadar yeniden denendi. Sunucudaki panel günlüğünü okuyun: sudo journalctl -u celikpanel-panel -n 50. Bu neden giderilene kadar yeniden deneme aynı başlatmayı tekrarlar. Bu noktadan önceki sürüme desteklenen bir dönüş yok. Otomatik kurtarma üç denemenin hepsini kullandı ve tamamlanamadı; sunucu iki sürüm arasında kalmış olabilir. Sunucu sahibinin işlem yapması gerekiyor: sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50 çıktısını okuyun, belirtilen nedeni giderin ve orada aynı işlem için gösterilen tek seferlik yeniden deneme komutunu çalıştırın. Durum sorgusu kurtarmayı yeniden başlatmaz. Otomatik sertifika yenileme (Certbot) bu güncelleme için durduruldu; aynı kurtarma günlüğü, güncellemeden önceki hâline döndürülüp döndürülmediğini ya da bu işlem bitene kadar durdurulmuş kalacağını söyler.\nİşlem: f9f6ab21ddc6be3ca0f5c5564fea305f\nKayıt zamanı: 2026-09-30T23:39:10Z\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\nKayıtlı durum (destek için): phase=recovery_required reason=recovery_incomplete proof=none previous_failure=recovery_failed automatic_recovery=paused_retry_limit first_failure_code=panel_start_unverified\n"
+        }
+      },
+      "offline_shell": {
+        "note": "the saved page carries no exhaustion state by design; it names the read-only status command whose output does",
+        "status_command": {
+          "en": "sudo /usr/libexec/celikpanel/recovery status --request-id f9f6ab21ddc6be3ca0f5c5564fea305f --lang en",
+          "tr": "sudo /usr/libexec/celikpanel/recovery status --request-id f9f6ab21ddc6be3ca0f5c5564fea305f --lang tr"
+        },
+        "texts": {
+          "en": {
+            "check": "Check connection",
+            "checking": "Checking connection…",
+            "help": "This recovery page is saved in your browser. It cannot confirm the server’s current state. A lost connection does not prove that your update failed or your license expired.",
+            "journal": "Read the recovery journal",
+            "next": "Check your connection. This page checks again every 15 seconds while visible. When the panel responds, open it to continue tracking the same operation.",
+            "noReference": "No operation reference is saved in this browser. Ask the server administrator to inspect the recovery journal.",
+            "open": "Open panel",
+            "owner": "If the connection does not return",
+            "ownerHelp": "The server administrator can inspect recovery through an existing SSH connection. These commands only read status; they do not restart an update.",
+            "reachable": "The panel is responding. Open it to sign in or verify the existing operation.",
+            "reference": "Saved operation reference",
+            "referenceHelp": "This ID is a browser hint, not a verified result or permission to retry.",
+            "status": "Read this operation’s status",
+            "title": "The panel connection is unavailable",
+            "view": "Or view this operation in your browser. Run this on your own computer, replacing USER with your SSH account:",
+            "viewHelp": "Then open http://127.0.0.1:2084/ on that computer and enter the temporary code shown in the SSH terminal. The view only reads status. An older recovery tool refuses this command; use the status command above instead.",
+            "waiting": "No current panel response. This page has not started another operation."
+          },
+          "tr": {
+            "check": "Bağlantıyı kontrol et",
+            "checking": "Bağlantı kontrol ediliyor…",
+            "help": "Bu kurtarma sayfası tarayıcınızda kayıtlıdır. Sunucunun güncel durumunu doğrulayamaz. Bağlantının kesilmesi, güncellemenin başarısız olduğunu veya lisansın süresinin dolduğunu göstermez.",
+            "journal": "Kurtarma günlüğünü oku",
+            "next": "Bağlantınızı kontrol edin. Bu sayfa açıkken 15 saniyede bir yeniden kontrol eder. Panel yanıt verdiğinde aynı işlemi izlemek için paneli açın.",
+            "noReference": "Bu tarayıcıda kayıtlı işlem kimliği yok. Sunucu yöneticisinden kurtarma günlüğünü incelemesini isteyin.",
+            "open": "Paneli aç",
+            "owner": "Bağlantı geri gelmezse",
+            "ownerHelp": "Sunucu yöneticisi mevcut SSH bağlantısından kurtarma durumuna bakabilir. Bu komutlar yalnızca durumu okur; güncellemeyi yeniden başlatmaz.",
+            "reachable": "Panel yanıt veriyor. Giriş yapmak veya mevcut işlemi doğrulamak için paneli açın.",
+            "reference": "Kayıtlı işlem kimliği",
+            "referenceHelp": "Bu kimlik tarayıcıda kayıtlı bir ipucudur; doğrulanmış sonuç veya yeniden deneme yetkisi değildir.",
+            "status": "Bu işlemin durumunu oku",
+            "title": "Panel bağlantısına ulaşılamıyor",
+            "view": "Ya da bu işlemi tarayıcınızda görüntüleyin. Komutu kendi bilgisayarınızda çalıştırın; USER yerine SSH hesabınızı yazın:",
+            "viewHelp": "Sonra o bilgisayarda http://127.0.0.1:2084/ adresini açın ve SSH terminalinde gösterilen geçici kodu girin. Bu görünüm yalnızca durumu okur. Eski bir kurtarma aracı bu komutu reddeder; bu durumda yukarıdaki durum komutunu kullanın.",
+            "waiting": "Panelden güncel yanıt alınamadı. Bu sayfa yeni bir işlem başlatmadı."
+          }
+        }
+      },
+      "recovery_screen_model": {
+        "actionable": true,
+        "keys": [
+          "recovery.automatic.pausedTitle",
+          "recovery.automatic.cause.panel_start_unverified",
+          "recovery.automatic.pausedHelp",
+          "recovery.automatic.inspect",
+          "recovery.automatic.resume",
+          "recovery.reason.recovery_failed"
+        ],
+        "missing_keys": [],
+        "no_actor_or_action": false,
+        "reachable": false,
+        "texts": {
+          "en": [
+            "Last recorded state: automatic recovery paused",
+            "The update was applied, but the new version's panel did not come up, and completing the update was retried to its limit. The server owner should read the panel log on the server with sudo journalctl -u celikpanel-panel -n 50. Retrying repeats the same start until that cause is fixed. There is no supported return to the previous version from this point.",
+            "All three automatic recovery attempts were used without a verified result. Automatic recovery will not start another attempt. The server owner must act.",
+            "On this server, open a terminal and inspect the recovery log:",
+            "sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50",
+            "Resolve the reported cause, then use the one-time retry command shown in that log for this operation. It continues the existing recovery. This page checks for its result; checking or reloading does not restart recovery.",
+            "Recovery failed"
+          ],
+          "tr": [
+            "Son kayıt: otomatik kurtarma durdu",
+            "Güncelleme uygulandı, ancak yeni sürümün paneli açılmadı ve güncellemenin tamamlanması sınırına kadar yeniden denendi. Sunucu sahibi sunucudaki panel günlüğünü sudo journalctl -u celikpanel-panel -n 50 ile okumalı. Bu neden giderilene kadar yeniden deneme aynı başlatmayı tekrarlar. Bu noktadan önceki sürüme desteklenen bir dönüş yok.",
+            "Üç otomatik kurtarma denemesi de doğrulanmış sonuç alınamadan kullanıldı. Otomatik kurtarma yeni deneme başlatmayacak. Sunucu sahibinin işlem yapması gerekiyor.",
+            "Bu sunucuda terminal açıp kurtarma günlüğünü inceleyin:",
+            "sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50",
+            "Bildirilen nedeni giderdikten sonra günlükte bu işlem için gösterilen tek seferlik yeniden deneme komutunu kullanın. Komut mevcut kurtarmayı sürdürür. Bu sayfa sonucu kontrol eder; kontrol etmek veya sayfayı yenilemek kurtarmayı yeniden başlatmaz.",
+            "Kurtarma başarısız oldu"
+          ]
+        }
+      },
+      "update_card": {
+        "unavailable": "the Panel did not answer; no browser can show the card"
+      }
+    }
+  },
+  "finished_at": "2026-09-30T23:40:03Z",
+  "name": "owner-continuation (required)",
+  "started_at": "2026-09-30T23:39:18Z",
+  "verdict": "observed"
+}

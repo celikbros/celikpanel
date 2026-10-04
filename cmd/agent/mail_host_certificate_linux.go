@@ -4,9 +4,7 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -14,6 +12,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/mailhostartifact"
+	"github.com/alicelik/celikpanel/internal/mailhoststore"
+	"github.com/alicelik/celikpanel/internal/mailrenewalkit"
+	"github.com/alicelik/celikpanel/internal/recoveryruntime"
 	"github.com/alicelik/celikpanel/internal/transport"
 	"golang.org/x/sys/unix"
 )
@@ -30,18 +32,7 @@ func openManagedMailHostTLSDirectory(path string) (int, int, error) {
 }
 
 func readMailHostCertificateDomainAt(fd, uid int) (string, error) {
-	if uid != 0 {
-		return "", errors.New("host certificate owner must be root")
-	}
-	raw, err := readMailHostCertificateRegularFileAt(fd, "mail.domain", 0600, 254)
-	if err != nil {
-		return "", err
-	}
-	domain := strings.TrimSuffix(string(raw), "\n")
-	if string(raw) != domain+"\n" || !serviceMutationCanonicalFQDN(domain) {
-		return "", errors.New("invalid host certificate identity")
-	}
-	return domain, nil
+	return mailhoststore.ReadDomainAt(fd, uid)
 }
 
 func readMailHostCertificateSource(domain string) ([]byte, []byte, []byte, time.Time, error) {
@@ -49,36 +40,11 @@ func readMailHostCertificateSource(domain string) ([]byte, []byte, []byte, time.
 }
 
 func validateMailHostCertificatePair(cert, key []byte, domain string) ([]byte, time.Time, error) {
-	pair, err := tls.X509KeyPair(cert, key)
-	if err != nil {
-		return nil, time.Time{}, err
-	}
-	if len(pair.Certificate) == 0 {
-		return nil, time.Time{}, errors.New("empty host certificate")
-	}
-	leaf, err := x509.ParseCertificate(pair.Certificate[0])
-	if err != nil {
-		return nil, time.Time{}, err
-	}
 	roots, err := panelCertificateSourceSystemRoots()
 	if err != nil {
 		return nil, time.Time{}, err
 	}
-	if roots == nil {
-		return nil, time.Time{}, errors.New("system trust roots unavailable")
-	}
-	intermediates := x509.NewCertPool()
-	for _, der := range pair.Certificate[1:] {
-		c, err := x509.ParseCertificate(der)
-		if err != nil {
-			return nil, time.Time{}, err
-		}
-		intermediates.AddCert(c)
-	}
-	if _, err = leaf.Verify(x509.VerifyOptions{DNSName: domain, Roots: roots, Intermediates: intermediates, CurrentTime: mailHostCertificateReceiptTime(leaf), KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}}); err != nil {
-		return nil, time.Time{}, err
-	}
-	return leaf.Raw, leaf.NotAfter, nil
+	return mailhostartifact.VerifyRetainedPair(cert, key, domain, roots, time.Now())
 }
 
 // Absence permits the existing self-signed bootstrap pair. A present but
@@ -110,6 +76,12 @@ func selectedMailHostCertificate(domain string) (cert, key string, err error) {
 }
 
 func runMailHostCertificateCommand(ctx context.Context, name string, args ...string) ([]byte, error) {
+	if mailRenewalOnlyBuild {
+		if err := validateIndependentMailCommand(name, args); err != nil {
+			return nil, err
+		}
+	}
+
 	// Both preflight and execution only use the existing fixed mail command
 	// inventory. No input supplies a program, directory, unit or shell text.
 	switch filepath.Base(name) {
@@ -121,19 +93,7 @@ func runMailHostCertificateCommand(ctx context.Context, name string, args ...str
 }
 
 func renderMailHostCertificateDeployHook() string {
-	return `#!/bin/sh
-set -eu
-# Managed by CelikPanel. Only the currently approved host lineage is queued.
-lineage=${RENEWED_LINEAGE:-}
-case "$lineage" in
- /etc/letsencrypt/live/celikpanel-mail-*)
-  lineage_name=${lineage#/etc/letsencrypt/live/}
-  case "$lineage_name" in ""|*/*) exit 0 ;; esac
-  exec /opt/celikpanel/bin/agent --deploy-mail-host-certificate "$lineage_name"
-  ;;
-esac
-exit 0
-`
+	return string(mailrenewalkit.LegacyHook())
 }
 
 func writeMailHostCertificateDeployHook() error {
@@ -141,10 +101,20 @@ func writeMailHostCertificateDeployHook() error {
 	if err := ensureRootOwnedPanelCertHookDirectory(dir); err != nil {
 		return err
 	}
-	if err := publishPanelCertDeployHook(dir, "celikpanel-mail-host-cert", []byte(renderMailHostCertificateDeployHook())); err != nil {
+	hook, err := recoveryruntime.InspectMailRenewalHook()
+	if err != nil {
+		return fmt.Errorf("mail renewal hook could not be verified; preserve the owner's hook and native units and review their configuration before retrying: %w", err)
+	}
+	defer hook.Close()
+	if err = hook.Revalidate(); err != nil {
 		return err
 	}
-	return protectPanelCertDeployHook(dir + "/celikpanel-mail-host-cert")
+	// Preserve verified independent enrollment and existing legacy bytes. Merely
+	// issuing another certificate grants no permission to downgrade either one.
+	if hook.Mode != recoveryruntime.MailRenewalHookAbsent {
+		return nil
+	}
+	return publishPanelCertDeployHookAbsent(dir, mailrenewalkit.HookName, mailrenewalkit.LegacyHook())
 }
 
 func (a *Agent) MailHostCertificateStatus(req *transport.MailHostCertificateStatusRequest, resp *transport.MailHostCertificateStatusResponse) error {
@@ -177,12 +147,13 @@ func (a *Agent) MailHostCertificateStatus(req *transport.MailHostCertificateStat
 	}
 	resp.Ready = true
 	resp.ExpiresAt = expires
-	hook, ok := setupProtectedFile("/etc/letsencrypt/renewal-hooks/deploy/celikpanel-mail-host-cert")
-	if !ok || string(hook) != renderMailHostCertificateDeployHook() {
+	hook, err := recoveryruntime.InspectMailRenewalHook()
+	if err != nil {
+		resp.Error = "Mail renewal hook or native runtime could not be verified; preserve its files and review the native renewal configuration."
 		return nil
 	}
-	info, err := os.Stat("/etc/letsencrypt/renewal-hooks/deploy/celikpanel-mail-host-cert")
-	if err != nil || info.Mode().Perm()&0100 == 0 {
+	defer hook.Close()
+	if hook.Mode == recoveryruntime.MailRenewalHookAbsent {
 		return nil
 	}
 	config, ok := setupProtectedFile(filepath.Join("/etc/letsencrypt/renewal", mailHostCertLineageName(req.Domain)+".conf"))
@@ -191,11 +162,19 @@ func (a *Agent) MailHostCertificateStatus(req *transport.MailHostCertificateStat
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel()
+	if hook.Mode == recoveryruntime.MailRenewalHookIndependent && !independentMailRenewalScheduleReady(ctx) {
+		resp.Error = "The independent mail renewal timer or loaded service does not match the installed configuration; the server owner must review its native unit status before verification."
+		return nil
+	}
 	if !setupPanelRenewalRouteReady(ctx, req.Domain, setupPanelRenewalAuthenticator(config)) {
 		return nil
 	}
 	for _, timer := range []string{"certbot.timer", "certbot-renew.timer"} {
 		if serviceMutationCommand(ctx, "systemctl", "is-active", "--quiet", timer).Run() == nil && serviceMutationCommand(ctx, "systemctl", "is-enabled", "--quiet", timer).Run() == nil {
+			if hook.Revalidate() != nil {
+				resp.Error = "Mail renewal configuration changed during verification; check again after the owner operation finishes."
+				return nil
+			}
 			resp.RenewalReady = true
 			return nil
 		}
@@ -228,7 +207,10 @@ func queueMailHostCertificateRenewal(lineage string) error {
 			return err
 		}
 		pending := mailHostRenewal{Lineage: lineage, LeafSHA256: panelCertificateLeafSHA256(leaf)}
-		raw, _ := json.Marshal(pending)
+		raw, err := mailhostartifact.CanonicalPending(pending)
+		if err != nil {
+			return err
+		}
 		if err := writeMailHostRenewalPending(mailHostRenewalPendingPath(), raw); err != nil {
 			return fmt.Errorf("queue mail host renewal: %w", err)
 		}
@@ -237,29 +219,49 @@ func queueMailHostCertificateRenewal(lineage string) error {
 }
 
 func clearMailHostCertificateRenewal(expected mailHostRenewal) error {
-	return panelCertWithPublishLock(func() error {
-		raw, found, err := readSecureServiceMutationLedger(mailHostRenewalPendingPath(), 512)
-		if err != nil || !found {
-			return err
-		}
-		actual, err := decodeMailHostRenewal(raw)
-		if err != nil {
-			return err
-		}
-		if actual != expected {
-			return errors.New("renewal queue identity changed")
-		}
+	return acknowledgeMailHostRenewal(expected, readSelectedMailHostReceipt, removeMailHostRenewalUnderPublicationLock)
+}
 
-		fd, err := openMailHostRenewalStateDirectory(filepath.Dir(mailHostRenewalPendingPath()))
-		if err != nil {
-			return err
-		}
-		defer unix.Close(fd)
-		if err = unix.Unlinkat(fd, filepath.Base(mailHostRenewalPendingPath()), 0); err != nil {
-			return err
-		}
-		return unix.Fsync(fd)
-	})
+func readSelectedMailHostReceipt() (mailHostCertificateReceipt, error) {
+	fd, err := openTrustedPanelTLSDirectoryOwned(managedMailHostTLSDir, 0)
+	if err != nil {
+		return mailHostCertificateReceipt{}, err
+	}
+	defer unix.Close(fd)
+	_, receipt, _, _, found, err := readCurrentMailHostCertificateVersionAt(fd)
+	if err != nil {
+		return mailHostCertificateReceipt{}, err
+	}
+	if !found {
+		return mailHostCertificateReceipt{}, errors.New("selected mail certificate evidence unavailable")
+	}
+	return receipt, nil
+}
+
+// Caller owns the common host, ledger publication and certificate publication
+// locks and has verified exact successful completion for the selected receipt.
+func removeMailHostRenewalUnderPublicationLock(expected mailHostRenewal) error {
+	raw, found, err := readSecureServiceMutationLedger(mailHostRenewalPendingPath(), 512)
+	if err != nil || !found {
+		return err
+	}
+	actual, err := decodeMailHostRenewal(raw)
+	if err != nil {
+		return err
+	}
+	if actual != expected {
+		return errors.New("renewal queue identity changed")
+	}
+
+	fd, err := openMailHostRenewalStateDirectory(filepath.Dir(mailHostRenewalPendingPath()))
+	if err != nil {
+		return err
+	}
+	defer unix.Close(fd)
+	if err = unix.Unlinkat(fd, filepath.Base(mailHostRenewalPendingPath()), 0); err != nil {
+		return err
+	}
+	return unix.Fsync(fd)
 }
 
 func currentMailHostCertificateIdentity() (string, string, error) {
@@ -276,17 +278,6 @@ func currentMailHostCertificateIdentity() (string, string, error) {
 		return "", "", errors.New("active mail host certificate not found")
 	}
 	return receipt.Domain, receipt.LeafSHA256, nil
-}
-
-func mailHostCertificateReceiptTime(leaf *x509.Certificate) time.Time {
-	now := time.Now()
-	if now.Before(leaf.NotBefore) {
-		return leaf.NotBefore
-	}
-	if !now.Before(leaf.NotAfter) {
-		return leaf.NotAfter.Add(-time.Second)
-	}
-	return now
 }
 
 // Queue metadata uses the same 0600 ownership contract as its ledger reader.

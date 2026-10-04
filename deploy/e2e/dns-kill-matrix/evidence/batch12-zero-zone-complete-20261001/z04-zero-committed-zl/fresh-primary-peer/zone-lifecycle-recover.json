@@ -1,0 +1,141 @@
+{
+  "cell_id": "pdns-switch__committed__after-write__paired-primary__peer-reachable",
+  "recover_delete": true,
+  "schema": "celikpanel/dns-kill-fresh-primary-zone-lifecycle/v1",
+  "status": "passed",
+  "steps": [
+    {
+      "observation": {
+        "action": "observe-child-native-pdns-bind-peer",
+        "answers": {
+          "192.0.2.10/tcp": {
+            "soa": "REFUSED"
+          },
+          "192.0.2.10/udp": {
+            "soa": "REFUSED"
+          },
+          "192.0.2.11/tcp": {
+            "soa": "REFUSED"
+          },
+          "192.0.2.11/udp": {
+            "soa": "REFUSED"
+          }
+        },
+        "catalog": {
+          "loaded_members": [],
+          "loaded_serial": 1790757668,
+          "primary_members": [],
+          "primary_serial": 1790757668
+        },
+        "catalog_members_expected": [],
+        "cell_id": "pdns-switch__committed__after-write__paired-primary__peer-reachable",
+        "child": "s2.s1-kill.test",
+        "execute": true,
+        "expected": {
+          "present": false
+        },
+        "step": "delete",
+        "zero_zones": true
+      },
+      "observation_error": null,
+      "recover": true,
+      "result": {
+        "cell_id": "pdns-switch__committed__after-write__paired-primary__peer-reachable",
+        "delete": true,
+        "domain": "s2.s1-kill.test",
+        "generation": 3,
+        "heartbeats": 3,
+        "job_phase": "commit/dns-zone-sync/v3/published/7fb6a0df9a0df4c78fa75b362d0a2988/s2.s1-kill.test/dns-zone-sync/v3:sha256:e90fb9845e27429320ea2b358a36431de04f7585481c0e935b01623592b4d3f1",
+        "job_status": "succeeded",
+        "outcome": "verified_published",
+        "owner_id": "92088666fcbb11382a33c4bccad7796e",
+        "qualifier": "dns-zone-sync/v3:sha256:e90fb9845e27429320ea2b358a36431de04f7585481c0e935b01623592b4d3f1",
+        "request_id": "7fb6a0df9a0df4c78fa75b362d0a2988",
+        "schema": "celikpanel/dns-kill-matrix-pdns-primary-zone-v3/v1",
+        "step": "delete"
+      },
+      "returncode": 0,
+      "step": "delete",
+      "verdict": "passed"
+    },
+    {
+      "observation": {
+        "action": "observe-child-native-pdns-bind-peer",
+        "answers": {
+          "192.0.2.10/tcp": {
+            "changed_a": null,
+            "soa_serial": "2026092803",
+            "www_a": [
+              "192.0.2.10"
+            ]
+          },
+          "192.0.2.10/udp": {
+            "changed_a": null,
+            "soa_serial": "2026092803",
+            "www_a": [
+              "192.0.2.10"
+            ]
+          },
+          "192.0.2.11/tcp": {
+            "changed_a": null,
+            "soa_serial": "2026092803",
+            "www_a": [
+              "192.0.2.10"
+            ]
+          },
+          "192.0.2.11/udp": {
+            "changed_a": null,
+            "soa_serial": "2026092803",
+            "www_a": [
+              "192.0.2.10"
+            ]
+          }
+        },
+        "catalog": {
+          "loaded_members": [
+            "s2.s1-kill.test"
+          ],
+          "loaded_serial": 1790757669,
+          "primary_members": [
+            "s2.s1-kill.test"
+          ],
+          "primary_serial": 1790757669
+        },
+        "catalog_members_expected": [
+          "s2.s1-kill.test"
+        ],
+        "cell_id": "pdns-switch__committed__after-write__paired-primary__peer-reachable",
+        "child": "s2.s1-kill.test",
+        "execute": true,
+        "expected": {
+          "changed": false,
+          "present": true,
+          "serial": "2026092803"
+        },
+        "step": "re-add",
+        "zero_zones": true
+      },
+      "observation_error": null,
+      "recover": false,
+      "result": {
+        "cell_id": "pdns-switch__committed__after-write__paired-primary__peer-reachable",
+        "delete": false,
+        "domain": "s2.s1-kill.test",
+        "generation": 4,
+        "heartbeats": 0,
+        "job_phase": "commit/dns-zone-sync/v3/published/f689f3112f6622456c6c0317cdd2653f/s2.s1-kill.test/dns-zone-sync/v3:sha256:d5345b9d08e200db472fdb31fe7df853f048d1388af736291d98d6caf24092c7",
+        "job_status": "succeeded",
+        "outcome": "verified_published",
+        "owner_id": "f710353863ab93901fd1e7fe773b8989",
+        "qualifier": "dns-zone-sync/v3:sha256:d5345b9d08e200db472fdb31fe7df853f048d1388af736291d98d6caf24092c7",
+        "request_id": "f689f3112f6622456c6c0317cdd2653f",
+        "schema": "celikpanel/dns-kill-matrix-pdns-primary-zone-v3/v1",
+        "step": "re-add"
+      },
+      "returncode": 0,
+      "step": "re-add",
+      "verdict": "passed"
+    }
+  ],
+  "zero_zones": true
+}

@@ -1,0 +1,91 @@
+{
+  "baseline": {
+    "commit": "57cec4f6a51af35ab9ebf1a8c96ba29c60c8f185",
+    "sha256": "78a3659337028b9a76671e3fc3fc8e9137883c25af954f8ea4d09bee4e78a4bf",
+    "version": "v0.1.0-alpha.81"
+  },
+  "candidate": {
+    "commit": "00030d16b1f912d104fce582a6b15c24b45f159d",
+    "sha256": "1f8025050698f158b8658f12539751ca55e6d9e5a9df00cf5b48c5c0800c9eb2",
+    "version": "v0.1.0-alpha.82"
+  },
+  "cell": {
+    "h19": false,
+    "mail_required": true,
+    "name": "upd1-ubuntu-setuponce",
+    "node": "ubuntu",
+    "pk_observe": true,
+    "recovery_fault": null,
+    "scenario": "setup-once",
+    "variant": "good"
+  },
+  "dns": {
+    "mode": "external",
+    "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+    "verdict": "not-provided-external-dns"
+  },
+  "draft_choices": {
+    "dns_mode": "external",
+    "peer_ip": "",
+    "peer_ns": ""
+  },
+  "expected_outcome": "the web_mail setup reaches the isolated host's access_dns wait in ONE owner attempt (no update is started)",
+  "inspections": {
+    "points": [
+      "before-site",
+      "after-setup",
+      "after-seed",
+      "before-check",
+      "after-track",
+      "at-pause",
+      "after-continuation",
+      "after-terminal",
+      "after-reboot",
+      "after-management-return"
+    ],
+    "rule": "read-only; before the update check, or after a terminal, paused or settled state; never inside the update preflight window (sidecar v2)"
+  },
+  "local_port": 18443,
+  "native_evidence": false,
+  "provenance": {
+    "baseline": "unpublished-local-fixture-commit-over-HEAD-labelled-v0.1.0-alpha.81; acceptance-license panel build (D-027 fixture); installed by the real installer; fixture trust root enrolled; not-production-release-admission",
+    "candidate": "unpublished-local-fixture-commit-labelled-v0.1.0-alpha.82; signed with the disposable fixture key; served by the guest-loopback celikpanel.net fixture origin; not a release",
+    "defect": "fixture source patch: cmd/panel --migrate-only exits 1 after migrating the isolated copy (genuine candidate failure after candidate-installed, simulated by a committed fixture change)"
+  },
+  "schema": "celikpanel/upd1-plan/v1",
+  "steps": [
+    {
+      "does": "registered lab identity, fresh guest (read-only; /etc/hosts is read, the resolver is never asked for celikpanel.net), host-side artifact and source proofs",
+      "name": "preflight"
+    },
+    {
+      "does": "fixture signing key; seal the candidate; guest-loopback celikpanel.net origin (provision + the enabled lab unit cp-lab-upd1-origin.service, which survives a restart) BEFORE the baseline; then celikpanel.net must resolve only to 127.0.0.1 and answer 200, so nothing reaches the real origin",
+      "name": "origin"
+    },
+    {
+      "does": "current_worker_baseline: real installer + unchanged trust enrollment (v0.1.0-alpha.81, commit 57cec4f6a51a); the owner restart the installer may demand, then the origin is proved again",
+      "name": "baseline-install"
+    },
+    {
+      "does": "owner credentials (guest root only, host memory only), SSH loopback tunnel, pinned TLS leaf, POST /api/v1/auth/login, GET /api/v1/auth/me, GET /api/v1/panel/availability",
+      "name": "owner-login"
+    },
+    {
+      "does": "GET /api/v1/panel/license, POST {action:activate, acceptance fixture key} once, GET /api/v1/license/access",
+      "name": "license"
+    },
+    {
+      "does": "GET /api/v1/setup, PUT /api/v1/setup/guidance, PUT /api/v1/setup (draft, dns_mode external), POST /api/v1/setup/plan, POST /api/v1/setup/start (once), poll GET /api/v1/setup/operation?request_id= until succeeded/failed or a stable 120 s wait at ['access_dns', 'panel_certificate', 'verification', 'verify'] (recorded as observed) [purpose web_mail]; started ONCE by an ordinary owner (no H19 wait or retry); upd9: every ~10 s PackageKit read from /proc (PK_PROBE: packagekitd, grep -c aptcc of its maps, its children, /proc/locks lines of the apt/dpkg locks) bracketing GET /api/v1/host-mutation-readiness",
+      "name": "setup"
+    },
+    {
+      "does": "read-only: PackageKit and the readiness answer every 20 s until packagekitd exits (<= 420 s), then once more",
+      "name": "packagekit-after-setup"
+    },
+    {
+      "does": "journals, observation records (no sampler in this cell)",
+      "name": "collect"
+    }
+  ],
+  "work_root": "/var/tmp/cp-release-drill-upd9-dry"
+}

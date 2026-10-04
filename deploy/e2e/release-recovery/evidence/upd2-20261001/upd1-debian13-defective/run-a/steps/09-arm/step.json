@@ -1,0 +1,70 @@
+{
+  "checks": {
+    "check": {
+      "body": {
+        "available": true,
+        "current_commit": "e3a569d527ec88c01e14c1df015fa3010ea7f803",
+        "current_version": "v0.1.0-alpha.81",
+        "supported": true,
+        "target": {
+          "arch": "amd64",
+          "archive_sha256": "b12c88ff2de700a0f187cb3ef6a33ab9a3417dcab53dec0a3ff8e8db38d5e1b2",
+          "archive_size": "66923141",
+          "commit": "ae713f912af8d8e9153a2053cc2ad6f7abe66851",
+          "os": "linux",
+          "published_at": "2026-09-30T15:31:52Z",
+          "sequence": "82",
+          "version": "v0.1.0-alpha.82"
+        }
+      },
+      "http": 200
+    },
+    "observer_intent": {
+      "baseline": {
+        "agent_sha256": "1e6584aac93a1e0652f8d2a8af6c920f8cd2708a0fd95ad46d356294b1ef6cda",
+        "commit": "e3a569d527ec88c01e14c1df015fa3010ea7f803",
+        "panel_sha256": "a49021edfc52de2a8b985225a857635fd86783c446f432c92d3b8d911874cd9f",
+        "version": "v0.1.0-alpha.81"
+      },
+      "identity": {
+        "cell_id": "release-recovery__d554040cc04a35e0",
+        "node": "debian13",
+        "nonce": "d554040cc04a35e007bc86c2852ff1e4096ebb66ef714a5d2dfc69ba4b1aa495",
+        "vm_uuid": "9dba1c75-426e-58f6-9a50-ff19573b667f"
+      },
+      "mode": "checkpoint",
+      "operation_id": "4a9f97a57acc04d4f8a641fe16a6b79d",
+      "recovery_fault": {
+        "action": "reboot",
+        "checkpoint": "payload_restored"
+      },
+      "schema": "celikpanel/owner-update-observer-intent/v1",
+      "target": {
+        "agent_sha256": "80f75bb960326fca9e644c45d40c61b383362a0d8b86bc783f5ceeda87934ef3",
+        "commit": "ae713f912af8d8e9153a2053cc2ad6f7abe66851",
+        "panel_sha256": "fe253d2ce0c86b2398a805ca0bc0aebbc15c98597cbd3608b0fe18e0d0e2c824",
+        "version": "v0.1.0-alpha.82"
+      }
+    },
+    "observer_unit": "celikpanel-lab-owner-update-observer-4a9f97a57acc04d4f8a641fe16a6b79d.service",
+    "origin_check": {
+      "addresses": [
+        "127.0.0.1"
+      ],
+      "boot_id": "424c5ef3-b3de-4e13-9bff-2964c01ccffc",
+      "http": "200",
+      "loopback_only": true,
+      "ok": true,
+      "unit": {
+        "ActiveState": "active",
+        "NRestarts": "0",
+        "UnitFileState": "enabled"
+      }
+    },
+    "request_id": "4a9f97a57acc04d4f8a641fe16a6b79d"
+  },
+  "finished_at": "2026-09-30T15:40:11Z",
+  "name": "arm",
+  "started_at": "2026-09-30T15:40:10Z",
+  "verdict": "passed"
+}

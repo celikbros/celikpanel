@@ -1,0 +1,23 @@
+evidence /var/tmp/cp-release-drill-upd11-ub-good-a/evidence/ubuntu/upd1/upd1-ubuntu-good-20261002t005500z/
+## initial-record (updater wrote it): 0 hits (0 in .txt)
+## curl preflight refusal: 0 hits (0 in .txt)
+## no-marker after child failure: 0 hits (0 in .txt)
+## pause_pending journal: 0 hits (0 in .txt)
+## renewal restore at pause: 0 hits (0 in .txt)
+## pause recorded: 0 hits (0 in .txt)
+## start check failure: 0 hits (0 in .txt)
+## package-activity refusal (startup reconcile): 2 hits (2 in .txt)
+   steps/14-collect/journal-product.txt:510: 2026-10-02T01:11:56.869640+00:00 dns-ubuntu panel[53653]: 2026/10/02 01:11:56 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>
+   steps/14-collect/journal-product.txt:511: 2026-10-02T01:11:56.871861+00:00 dns-ubuntu panel[53653]: 2026/10/02 01:11:56 milter wiring at startup: another server change or package-manager task is still running
+## package_manager_active / HOST_MUTATION_BUSY: 44 hits (0 in .txt)
+## startup reconcile success: 1 hits (1 in .txt)
+   steps/14-collect/journal-product.txt:509: 2026-10-02T01:11:56.866846+00:00 dns-ubuntu panel[53653]: 2026/10/02 01:11:56 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload
+## milter chain/wiring: 3 hits (3 in .txt)
+   steps/14-collect/journal-product.txt:16: 2026-10-02T00:56:02.804999+00:00 dns-ubuntu panel[7266]: 2026/10/02 00:56:02 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-collect/journal-product.txt:28: 2026-10-02T00:56:04.003182+00:00 dns-ubuntu panel[7327]: 2026/10/02 00:56:04 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+   steps/14-collect/journal-product.txt:511: 2026-10-02T01:11:56.871861+00:00 dns-ubuntu panel[53653]: 2026/10/02 01:11:56 milter wiring at startup: another server change or package-manager task is still running
+## root CLI states (first seen)
+   2026-10-02T01:11:14Z ('running', 'update_running', None, None, None)
+   2026-10-02T01:12:07Z ('succeeded', 'update_verified', None, None, None)
+## CELIKPANEL_LISTEN mentions
+   steps/14-collect/journal-product.txt 2026-10-02T01:11:54.878368+00:00 dns-ubuntu sudo[53068]:     root : PWD=/var/backups/celikpanel/releases/73eef2862644-b97302b2c2489053e8b06ac7 ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/loc

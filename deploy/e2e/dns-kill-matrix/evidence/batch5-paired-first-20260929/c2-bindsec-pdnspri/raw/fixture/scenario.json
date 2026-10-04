@@ -1,0 +1,18 @@
+{
+  "driver": "bind",
+  "local_ip": "192.0.2.10",
+  "local_ns": "ns2.s1-kill.test",
+  "mode": "switch",
+  "pair_role": "secondary",
+  "peer_ip": "192.0.2.11",
+  "peer_ns": "ns1.s1-kill.test",
+  "schema": "celikpanel-dns-kill-matrix-trigger/v1",
+  "source_engine": "",
+  "source_epoch": 0,
+  "source_fixture": "uninitialized",
+  "source_revision": 0,
+  "target_engine": "bind",
+  "target_epoch": 1,
+  "topology": "paired",
+  "zones": []
+}

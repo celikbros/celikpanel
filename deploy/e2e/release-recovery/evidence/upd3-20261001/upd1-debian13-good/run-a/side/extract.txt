@@ -1,0 +1,459 @@
+# extraction of /var/tmp/cp-release-drill-upd3-d13-good-a/evidence/debian13/upd1/upd1-debian13-good-20260930t174456z/
+native_evidence=False overall=failed outcome="not-terminal"
+## steps
+  preflight                          passed       2026-09-30T17:44:56Z -> 2026-09-30T17:44:59Z  
+  origin                             passed       2026-09-30T17:44:59Z -> 2026-09-30T17:45:07Z  
+  baseline-install                   passed       2026-09-30T17:45:07Z -> 2026-09-30T17:46:27Z  
+  owner-login                        passed       2026-09-30T17:46:27Z -> 2026-09-30T17:46:28Z  
+  license                            passed       2026-09-30T17:46:28Z -> 2026-09-30T17:46:28Z  
+  setup                              observed     2026-09-30T17:46:28Z -> 2026-09-30T17:52:35Z  
+  seed                               passed       2026-09-30T17:52:35Z -> 2026-09-30T17:52:37Z  
+  pre-state                          passed       2026-09-30T17:52:37Z -> 2026-09-30T17:54:14Z  
+  arm                                passed       2026-09-30T17:54:14Z -> 2026-09-30T17:54:15Z  
+  owner-start                        passed       2026-09-30T17:54:15Z -> 2026-09-30T17:54:15Z  
+  track                              inconclusive 2026-09-30T17:54:15Z -> 2026-09-30T19:24:28Z  no terminal or paused state was observed within 90 minutes
+  owner-continuation (required)      not-run      2026-09-30T19:24:28Z -> None  a required earlier step did not pass: track
+  terminal                           failed       2026-09-30T19:24:28Z -> 2026-09-30T19:24:33Z  installed build identity is not the expected release
+  collect                            passed       2026-09-30T19:24:33Z -> 2026-09-30T19:24:35Z  
+  verdicts                           passed       2026-09-30T19:24:35Z -> 2026-09-30T19:24:35Z  
+## findings
+  - debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']
+  - the update card shows the server summary verbatim in both languages: reviewed updater failed: exit status 1: !! selected recovery runtime cannot verify the current installation before update
+## outcome.attempts / reboot
+  attempts {"automatic": [], "automatic_count": 0, "journal_admissions": [], "owner": [], "owner_count": 0}
+  reboot null
+  final_status null
+## scope
+  {"cron": {"crontab": "/usr/bin/crontab", "verdict": "available"}, "dns": {"mode": "external", "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2", "verdict": "not-provided-external-dns"}, "origin": {"after-provision": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}, "before-arm": {"addresses": ["127.0.0.1"], "http": "200", "ok": true}}, "setup": {"code": "server_setup_access_dns_required", "not_run": ["11-panel_certificate", "12-access_dns", "13-mail_certificate", "14-mail_enrollment", "15-verify"], "phase": "access_dns", "verdict": "observed isolated-host wait", "volatile_tables_added": ["server_setup_executions"]}}
+## track samples (362)
+  17:54:15Z U 200 queued | R 200 accepted/none None fc=None | CLI running/none None wait=None fc=None ffc=None | perr=None clierr=None | start-instant-lag 
+  17:54:17Z U 200 running | R 200 running/none None fc=None | CLI running/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  17:54:19Z U 200 running | R 200 running/none None fc=None | CLI running/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  17:54:21Z U 200 running | R 200 running/none None fc=None | CLI running/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  17:54:26Z U 200 running | R 200 running/none None fc=None | CLI running/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  17:54:32Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  17:54:34Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  17:54:36Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  17:54:40Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  17:54:47Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  17:54:57Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  17:55:12Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  17:55:27Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  17:55:43Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  17:55:58Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  17:56:13Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  17:56:28Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  17:56:44Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  17:56:59Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  17:57:14Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  17:57:29Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  17:57:45Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  17:58:00Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  17:58:15Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  17:58:31Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  17:58:46Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  17:59:01Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  17:59:16Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  17:59:32Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  17:59:47Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:00:02Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:00:18Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:00:33Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:00:48Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:01:03Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:01:19Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:01:34Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:01:49Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:02:04Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:02:20Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:02:35Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:02:50Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:03:05Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:03:21Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:03:36Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:03:51Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:04:06Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:04:22Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:04:37Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:04:52Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:05:08Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:05:23Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:05:38Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:05:53Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:06:09Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:06:24Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:06:39Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:06:54Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:07:10Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:07:25Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:07:40Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:07:55Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:08:11Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:08:26Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:08:41Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:08:56Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:09:12Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:09:27Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:09:42Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:09:57Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:10:13Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:10:28Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:10:43Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:10:59Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:11:14Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:11:29Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:11:44Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:12:00Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:12:15Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:12:30Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:12:46Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:13:01Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:13:16Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:13:31Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:13:47Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:14:02Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:14:17Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:14:32Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:14:48Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:15:03Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:15:18Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:15:33Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:15:49Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:16:04Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:16:19Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:16:35Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:16:50Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:17:05Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:17:20Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:17:36Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:17:51Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:18:06Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:18:21Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:18:37Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:18:52Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:19:07Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:19:22Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:19:38Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:19:53Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:20:08Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:20:23Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:20:39Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:20:54Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:21:09Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:21:24Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:21:40Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:21:55Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:22:10Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:22:26Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:22:41Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:22:56Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:23:11Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:23:27Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:23:42Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:23:57Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:24:12Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:24:28Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:24:43Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:24:58Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:25:13Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:25:29Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:25:44Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:25:59Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:26:15Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:26:30Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:26:45Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:27:00Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:27:16Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:27:31Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:27:46Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:28:01Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:28:17Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:28:32Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:28:47Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:29:02Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:29:18Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:29:33Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:29:48Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:30:03Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:30:19Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:30:34Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:30:49Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:31:04Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:31:20Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:31:35Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:31:50Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:32:05Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:32:21Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:32:36Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:32:51Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:33:07Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:33:22Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:33:37Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:33:52Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:34:08Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:34:23Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:34:38Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:34:53Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:35:09Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:35:24Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:35:39Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:35:54Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:36:10Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:36:25Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:36:40Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:36:55Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:37:11Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:37:26Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:37:41Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:37:56Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:38:12Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:38:27Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:38:42Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:38:57Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:39:13Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:39:28Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:39:43Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:39:58Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:40:14Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:40:29Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:40:44Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:40:59Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:41:15Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:41:30Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:41:45Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:42:00Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:42:16Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:42:31Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:42:46Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:43:01Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:43:17Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:43:32Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:43:47Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:44:02Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:44:18Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:44:33Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:44:48Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:45:03Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:45:19Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:45:34Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:45:49Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:46:05Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:46:20Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:46:35Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:46:50Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:47:06Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:47:21Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:47:36Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:47:51Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:48:07Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:48:22Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:48:37Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:48:52Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:49:08Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:49:23Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:49:38Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:49:53Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:50:09Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:50:24Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:50:39Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:50:54Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:51:10Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:51:25Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:51:40Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:51:55Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:52:11Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:52:26Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:52:41Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:52:56Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:53:12Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:53:27Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:53:42Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:53:57Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:54:13Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:54:28Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:54:43Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:54:58Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:55:14Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:55:29Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:55:44Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:56:00Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:56:15Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:56:30Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:56:45Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:57:01Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:57:16Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:57:31Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:57:46Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:58:02Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:58:17Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:58:32Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:58:47Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:59:03Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:59:18Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:59:33Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  18:59:48Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:00:04Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:00:19Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:00:34Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:00:50Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:01:05Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:01:20Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:01:35Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:01:51Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:02:06Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:02:21Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:02:36Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:02:52Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:03:07Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:03:22Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:03:38Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:03:53Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:04:08Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:04:23Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:04:39Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:04:54Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:05:09Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:05:24Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:05:40Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:05:55Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:06:10Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:06:25Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:06:41Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:06:56Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:07:11Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:07:26Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:07:42Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:07:57Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:08:12Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:08:27Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:08:43Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:08:58Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:09:13Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:09:28Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:09:44Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:09:59Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:10:14Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:10:29Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:10:45Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:11:00Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:11:15Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:11:30Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:11:46Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:12:01Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:12:16Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:12:31Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:12:47Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:13:02Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:13:17Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:13:32Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:13:48Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:14:03Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:14:18Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:14:33Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:14:49Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:15:04Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:15:19Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:15:34Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:15:50Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:16:05Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:16:20Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:16:35Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:16:51Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:17:06Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:17:21Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:17:36Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:17:52Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:18:07Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:18:22Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:18:37Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:18:53Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:19:08Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:19:23Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:19:38Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:19:54Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:20:09Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:20:24Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:20:39Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:20:55Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:21:10Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:21:25Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:21:40Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:21:56Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:22:11Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:22:26Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:22:41Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:22:57Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:23:12Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:23:27Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:23:42Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:23:58Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+  19:24:13Z U 200 failed | R 200 failed/none None fc=None | CLI failed/none None wait=None fc=None ffc=None | perr=None clierr=None | agree 
+## guidance texts seen (first time)
+[17:54:15] cli_raw.en:
+    The update is being applied; the panel may be unavailable for a short time. Nothing to do now: check this same request again in a minute. Checking does not restart the update.
+    This is a recorded observation; current service health was not checked.
+    Recorded state (for support): phase=running reason=update_running proof=none
+[17:54:32] cli_raw.en:
+    The update failed. If it stopped before anything was changed, the server keeps running the version it had; otherwise automatic recovery takes over and this status changes to recovery. Nothing to do on the server now: check this same request again in a few minutes and do not start another update. The panel's update page shows the reason when the panel is reachable.
+    This is a recorded observation; current service health was not checked.
+    Recorded state (for support): phase=failed reason=update_failed proof=none previous_failure=update_failed
+[17:54:15] cli_raw.tr:
+    Güncelleme uygulanıyor; panel kısa bir süre erişilemeyebilir. Şimdi yapmanız gereken bir şey yok: bir dakika sonra aynı işlemi yeniden sorgulayın. Sorgulamak güncellemeyi yeniden başlatmaz.
+    Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.
+    Kayıtlı durum (destek için): phase=running reason=update_running proof=none
+[17:54:32] cli_raw.tr:
+    Güncelleme başarısız oldu. Hiçbir şey değişmeden durduysa sunucu önceki sürümünü çalıştırmaya devam eder; aksi hâlde otomatik kurtarma devreye girer ve bu durum kurtarmaya geçer. Şimdi sunucuda yapmanız gereken bir şey yok: birkaç dakika sonra aynı işlemi yeniden sorgulayın ve başka güncelleme başlatmayın. Panel erişilebilir olduğunda güncelleme sayfası nedeni gösterir.
+    Bu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.
+    Kayıtlı durum (destek için): phase=failed reason=update_failed proof=none previous_failure=update_failed
+[17:54:15] guidance_api.en:
+    Update request recorded || The server recorded this request. This page checks the same operation automatically; it does not submit it again.
+[17:54:17] guidance_api.en:
+    Last recorded step: update in progress || The server last reported work on this update. Wait for the next recorded result; checking this page does not restart it.
+[17:54:32] guidance_api.en:
+    The update failed || The server owner must inspect the update log using this operation ID. Keep the ID and check the recovery result before retrying an update. || Update failed
+[17:54:15] guidance_api.tr:
+    Güncelleme isteği kaydedildi || Sunucu bu isteği kaydetti. Bu sayfa aynı işlemi otomatik kontrol eder; yeniden göndermez.
+[17:54:17] guidance_api.tr:
+    Kaydedilmiş son adım: güncelleme sürüyor || Sunucu son olarak bu güncelleme üzerinde çalıştığını bildirdi. Sonraki kayıtlı sonucu bekleyin; bu sayfayı kontrol etmek işlemi yeniden başlatmaz.
+[17:54:32] guidance_api.tr:
+    Güncelleme başarısız oldu || Sunucu sahibi bu işlem kimliğiyle güncelleme günlüğünü incelemelidir. Kimliği saklayın ve güncellemeyi yeniden denemeden önce kurtarma sonucunu kontrol edin. || Güncelleme başarısız oldu
+[17:54:15] guidance_cli.en:
+    Last recorded step: update in progress || The server last reported work on this update. Wait for the next recorded result; checking this page does not restart it.
+[17:54:32] guidance_cli.en:
+    The update failed || The server owner must inspect the update log using this operation ID. Keep the ID and check the recovery result before retrying an update. || Update failed
+[17:54:15] guidance_cli.tr:
+    Kaydedilmiş son adım: güncelleme sürüyor || Sunucu son olarak bu güncelleme üzerinde çalıştığını bildirdi. Sonraki kayıtlı sonucu bekleyin; bu sayfayı kontrol etmek işlemi yeniden başlatmaz.
+[17:54:32] guidance_cli.tr:
+    Güncelleme başarısız oldu || Sunucu sahibi bu işlem kimliğiyle güncelleme günlüğünü incelemelidir. Kimliği saklayın ve güncellemeyi yeniden denemeden önce kurtarma sonucunu kontrol edin. || Güncelleme başarısız oldu
+[17:54:15] update_card.en:
+    The update is queued.
+[17:54:17] update_card.en:
+    The update is being applied; the panel may be unavailable briefly.
+[17:54:32] update_card.en:
+    reviewed updater failed: exit status 1: !! selected recovery runtime cannot verify the current installation before update
+[17:54:15] update_card.tr:
+    Güncelleme sırada.
+[17:54:17] update_card.tr:
+    Güncelleme uygulanıyor; panel kısa süre erişilemeyebilir.
+[17:54:32] update_card.tr:
+    reviewed updater failed: exit status 1: !! selected recovery runtime cannot verify the current installation before update
+## terminal: update card (harness model) and product-rendered card (systemUpdateOutcome.ts at the build commit)
+  harness model: {"keys": [], "missing_keys": [], "summary": "reviewed updater failed: exit status 1: !! selected recovery runtime cannot verify the current installation before update", "texts": {"en": ["reviewed updater failed: exit status 1: !! selected recovery runtime cannot verify the current installation before update"], "tr": ["reviewed updater failed: exit status 1: !! selected recovery runtime cannot verify the current installation before update"]}, "untranslated_summary": true}
+  status body: {"created_at": "2026-09-30T17:54:15.842765001Z", "found": true, "request_id": "df01bec5190476fd66baf46177314f54", "status": "failed", "summary": "reviewed updater failed: exit status 1: !! selected recovery runtime cannot verify the current installation before update", "target": {"arch": "amd64", "archive_sha256": "36766be1eb37359658ebdb53ddb431660812f620c22639a2097e6f7762066542", "archive_size": "67005596", "commit": "901593abf12c90c91222d2c61a8bd7c0040523c3", "os": "linux", "sequence": "82", "version": "v0.1.0-alpha.82"}, "updated_at": "2026-09-30T17:54:29.961469358Z"}
+  recovery body: {"observation": "known", "observed_at": "2026-09-30T17:54:30Z", "panel_state": "ready", "phase": "failed", "previous_failure": "update_failed", "reason": "update_failed", "request_id": "df01bec5190476fd66baf46177314f54", "schema": "celikpanel-recovery-status/v1", "terminal_proof": "none"}
+  check body: {"available": true, "current_commit": "58813f1d0b903cbbc645a4fbab724b8a84406b86", "current_version": "v0.1.0-alpha.81", "previous_attempt": {"finished_at": "2026-09-30T17:54:30Z", "phase": "failed", "request_id": "df01bec5190476fd66baf46177314f54"}, "supported": true, "target": {"arch": "amd64", "archive_sha256": "36766be1eb37359658ebdb53ddb431660812f620c22639a2097e6f7762066542", "archive_size": "67005596", "commit": "901593abf12c90c91222d2c61a8bd7c0040523c3", "os": "linux", "published_at": "2026-09-30T17:45:00Z", "sequence": "82", "version": "v0.1.0-alpha.82"}}
+  PREVIOUS-ATTEMPT[en] This version already failed on this server || v0.1.0-alpha.82 was tried on this server on 2026-09-30T17:54:30Z and did not complete; this server runs v0.1.0-alpha.81 now. Starting it again repeats the same update unless the cause has been fixed.
+  PREVIOUS-ATTEMPT[tr] Bu sürüm bu sunucuda daha önce başarısız oldu || v0.1.0-alpha.82 bu sunucuda 2026-09-30T17:54:30Z tarihinde denendi ve tamamlanmadı; bu sunucu şu an v0.1.0-alpha.81 sürümünü çalıştırıyor. Neden giderilmediyse yeniden başlatmak aynı güncellemeyi tekrarlar.
+## observer events
+  2026-09-30T17:54:15.650657+00:00 armed {"mode": "watch", "recovery_fault": null, "timeout_seconds": 3600.0}
+  2026-09-30T17:54:15.674976+00:00 timeline {"recovery": "inactive", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "inactive", "worker_freezer": "running"}
+  2026-09-30T17:54:15.933555+00:00 timeline {"recovery": "inactive", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "active", "worker_freezer": "running"}
+  2026-09-30T17:54:18.447900+00:00 timeline {"recovery": "activating", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "active", "worker_freezer": "running"}
+  2026-09-30T17:54:18.800473+00:00 timeline {"recovery": "inactive", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "active", "worker_freezer": "running"}
+  2026-09-30T17:54:30.043642+00:00 timeline {"recovery": "activating", "snapshot": null, "transaction_operation": null, "transaction_phase": null, "worker": "failed", "worker_freezer": "running"}
+  2026-09-30T17:54:30.049516+00:00 released {"checkpoint_verified": false, "kill_sent": false, "reason": "worker-exited", "recovery_fault_armed": false, "thaw_exit": null}
+## observation records
+  {"directory_present": true, "records": {"df01bec5190476fd66baf46177314f54.status": "schema=celikpanel-recovery-observation/v1\nrequest_id=df01bec5190476fd66baf46177314f54\ntarget_commit=901593abf12c90c91222d2c61a8bd7c0040523c3\nphase=failed\nterminal_proof=none\nreason=update_failed\nobserved_at=2026-09-30T17:54:30Z\nprevious_failure=update_failed\n"}}
+## budget receipts
+## product journal key lines
+  2026-09-30T17:52:37.306394+00:00 dns-debian13 agent[5018]: 2026/09/30 17:52:37 hosting root: created /var/www/celikpanel at 0755 0:0

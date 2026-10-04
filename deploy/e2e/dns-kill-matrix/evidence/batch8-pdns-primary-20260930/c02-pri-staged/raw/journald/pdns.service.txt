@@ -1,0 +1,28 @@
+2026-09-29T20:33:58.686799+00:00 dns-debian13 systemd[1]: Starting pdns.service - PowerDNS Authoritative Server...
+2026-09-29T20:33:58.804195+00:00 dns-debian13 pdns_server[4714]: Loading '/usr/lib/x86_64-linux-gnu/pdns/libgsqlite3backend.so'
+2026-09-29T20:33:58.806203+00:00 dns-debian13 pdns_server[4714]: This is a standalone pdns
+2026-09-29T20:33:58.806443+00:00 dns-debian13 pdns_server[4714]: Listening on controlsocket in '/run/pdns/pdns.controlsocket'
+2026-09-29T20:33:58.807134+00:00 dns-debian13 pdns_server[4714]: UDP server bound to 10.0.2.15:53
+2026-09-29T20:33:58.807281+00:00 dns-debian13 pdns_server[4714]: UDP server bound to 192.0.2.10:53
+2026-09-29T20:33:58.807411+00:00 dns-debian13 pdns_server[4714]: TCP server bound to 10.0.2.15:53
+2026-09-29T20:33:58.807538+00:00 dns-debian13 pdns_server[4714]: TCP server bound to 192.0.2.10:53
+2026-09-29T20:33:58.807858+00:00 dns-debian13 pdns_server[4714]: PowerDNS Authoritative Server 4.9.17 (C) PowerDNS.COM BV
+2026-09-29T20:33:58.807962+00:00 dns-debian13 pdns_server[4714]: Using 64-bits mode. Built using gcc 14.2.0.
+2026-09-29T20:33:58.808044+00:00 dns-debian13 pdns_server[4714]: PowerDNS comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it according to the terms of the GPL version 2.
+2026-09-29T20:33:58.863459+00:00 dns-debian13 pdns_server[4714]: Creating backend connection for TCP
+2026-09-29T20:33:58.863459+00:00 dns-debian13 pdns_server[4714]: Primary/secondary communicator launching
+2026-09-29T20:33:58.863459+00:00 dns-debian13 pdns_server[4714]: new CATALOG-HASH 'scQkAg7PR5gq1OskqFoNNpTm8t46f1dxSdRwIkj5RAI=' for zone 'catalog-c000020a.celikpanel.invalid'
+2026-09-29T20:33:58.864182+00:00 dns-debian13 systemd[1]: Started pdns.service - PowerDNS Authoritative Server.
+2026-09-29T20:33:58.864443+00:00 dns-debian13 pdns_server[4714]: About to create 3 backend threads for UDP
+2026-09-29T20:33:59.016652+00:00 dns-debian13 pdns_server[4714]: Done launching threads, ready to distribute questions
+2026-09-29T20:33:59.050707+00:00 dns-debian13 pdns_server[4714]: Unable to queue notification of domain 'catalog-c000020a.celikpanel.invalid' to nameserver 'invalid': nameserver does not resolve!
+2026-09-29T20:33:59.060535+00:00 dns-debian13 pdns_server[4714]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:51028', transfer initiated
+2026-09-29T20:33:59.122740+00:00 dns-debian13 pdns_server[4714]: AXFR-out zone 's1-kill.test', client '192.0.2.11:51035', transfer initiated
+2026-09-29T20:34:00.058992+00:00 dns-debian13 pdns_server[4714]: Received unsuccessful notification report for 's1-kill.test' from 192.0.2.11:53, error: Server Not Authoritative for zone / Not Authorized
+2026-09-29T20:34:00.683672+00:00 dns-debian13 pdns_server[4714]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:36066', transfer initiated
+2026-09-29T20:34:00.733268+00:00 dns-debian13 pdns_server[4714]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:36086', transfer initiated
+2026-09-29T20:34:01.498197+00:00 dns-debian13 pdns_server[4714]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:36100', transfer initiated
+2026-09-29T20:34:01.552978+00:00 dns-debian13 pdns_server[4714]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:36118', transfer initiated
+2026-09-29T20:34:03.024354+00:00 dns-debian13 pdns_server[4714]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:36128', transfer initiated
+2026-09-29T20:34:03.085301+00:00 dns-debian13 pdns_server[4714]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.10:36150', transfer initiated
+2026-09-29T20:34:36.755719+00:00 dns-debian13 pdns_server[4714]: AXFR-out zone 'catalog-c000020a.celikpanel.invalid', client '192.0.2.11:45283', transfer initiated

@@ -1,0 +1,7 @@
+c04-pri-started-zl-rb pdns-switch__target-started__after-write__paired-primary__peer-reachable
+z01-zero-staged pdns-switch__target-staged__after-write__paired-primary__peer-reachable
+z02-zero-started pdns-switch__target-started__after-write__paired-primary__peer-reachable
+z03-zero-committed pdns-switch__committed__after-write__paired-primary__peer-reachable
+z04-zero-committed-zl pdns-switch__committed__after-write__paired-primary__peer-reachable
+z05-zero-started-zl-rb pdns-switch__target-started__after-write__paired-primary__peer-reachable
+z06-zero-owner-sql pdns-switch__target-started__after-write__paired-primary__peer-reachable

@@ -1,0 +1,4 @@
+2026-10-01T21:00:41Z before anything: 107.7 GB free (Get-PSDrive C, GiB)
+2026-10-01T21:12:22Z before cell A: 98,8 GB free
+2026-10-01T21:26:45Z before cell B: 96.5 GB free
+2026-10-01T21:51:11Z after the last cell: 94.1 GB free

@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/alicelik/celikpanel/internal/servicemutationledger"
 	"golang.org/x/sys/unix"
 )
 
@@ -224,40 +225,10 @@ func ensureSecureServiceMutationStateDirectory(path string) error {
 }
 
 func readSecureServiceMutationLedger(path string, maxSize int64) ([]byte, bool, error) {
-	fd, err := unix.Open(path, unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
-	if errors.Is(err, unix.ENOENT) {
-		return nil, false, nil
-	}
-	if err != nil {
-		return nil, false, fmt.Errorf("open service mutation ledger: %w", err)
-	}
-	file := os.NewFile(uintptr(fd), path)
-	if file == nil {
-		_ = unix.Close(fd)
-		return nil, false, errors.New("open service mutation ledger file handle")
-	}
-	defer file.Close()
-	info, err := file.Stat()
-	if err != nil {
-		return nil, false, fmt.Errorf("inspect service mutation ledger: %w", err)
-	}
-	if err := secureServiceMutationStat(path, info, false); err != nil {
-		return nil, false, err
-	}
-	if info.Size() > maxSize {
-		return nil, false, fmt.Errorf("service mutation ledger exceeds %d bytes", maxSize)
-	}
-	raw, err := io.ReadAll(io.LimitReader(file, maxSize+1))
-	if err != nil {
-		return nil, false, fmt.Errorf("read service mutation ledger: %w", err)
-	}
-	if int64(len(raw)) > maxSize {
-		return nil, false, fmt.Errorf("service mutation ledger exceeds %d bytes", maxSize)
-	}
-	return raw, true, nil
+	return servicemutationledger.ReadFile(path, maxSize, servicemutationledger.FileOwner{UID: serviceMutationRequiredOwnerUID, GID: serviceMutationRequiredOwnerGID})
 }
 func readRecoverableInitialServiceMutationStage(path string, maxSize int64) ([]byte, bool, error) {
-	fd, err := unix.Open(path, unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
+	fd, err := unix.Open(path, unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NOFOLLOW|unix.O_NONBLOCK, 0)
 	if errors.Is(err, unix.ENOENT) {
 		return nil, false, nil
 	}
@@ -289,4 +260,11 @@ func readRecoverableInitialServiceMutationStage(path string, maxSize int64) ([]b
 		return nil, false, fmt.Errorf("recoverable initial service mutation stage exceeds %d bytes", maxSize)
 	}
 	return raw, true, nil
+}
+
+func verifyEmptyInitialServiceMutationDirectory(path string) error {
+	if serviceMutationRequiredOwnerUID != 0 {
+		return errors.New("root-owned initial directory proof requires the established root identity")
+	}
+	return servicemutationledger.VerifyEmptyDirectory(path, servicemutationledger.FileOwner{UID: 0, GID: 0})
 }

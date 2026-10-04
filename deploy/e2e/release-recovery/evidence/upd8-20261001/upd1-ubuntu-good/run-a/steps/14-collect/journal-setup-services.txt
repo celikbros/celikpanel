@@ -1,0 +1,4 @@
+2026-10-01T13:00:06.577615+00:00 dns-ubuntu systemd[1]: Started cron.service - Regular background program processing daemon.
+2026-10-01T13:00:06.589814+00:00 dns-ubuntu (cron)[796]: cron.service: Referenced but unset environment variable evaluates to an empty string: EXTRA_OPTS
+2026-10-01T13:00:06.596019+00:00 dns-ubuntu cron[796]: (CRON) INFO (pidfile fd = 3)
+2026-10-01T13:00:06.602432+00:00 dns-ubuntu cron[796]: (CRON) INFO (Running @reboot jobs)

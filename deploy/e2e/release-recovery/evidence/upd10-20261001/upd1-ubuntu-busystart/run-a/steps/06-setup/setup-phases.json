@@ -1,0 +1,189 @@
+[
+  {
+    "attempt": 1,
+    "error": null,
+    "phase": "02-service",
+    "status": "running",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-service": "running",
+      "03-service": "pending",
+      "04-service": "pending",
+      "05-mail_profile": "pending",
+      "06-mail_profile": "pending",
+      "07-service": "pending",
+      "08-firewall": "pending",
+      "09-access_dns": "pending",
+      "10-panel_certificate": "pending",
+      "11-access_dns": "pending",
+      "12-mail_certificate": "pending",
+      "13-mail_enrollment": "pending",
+      "14-verify": "pending"
+    },
+    "utc": "2026-10-01T21:33:01Z"
+  },
+  {
+    "attempt": 1,
+    "error": null,
+    "phase": "03-service",
+    "status": "running",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-service": "succeeded",
+      "03-service": "running",
+      "04-service": "pending",
+      "05-mail_profile": "pending",
+      "06-mail_profile": "pending",
+      "07-service": "pending",
+      "08-firewall": "pending",
+      "09-access_dns": "pending",
+      "10-panel_certificate": "pending",
+      "11-access_dns": "pending",
+      "12-mail_certificate": "pending",
+      "13-mail_enrollment": "pending",
+      "14-verify": "pending"
+    },
+    "utc": "2026-10-01T21:33:18Z"
+  },
+  {
+    "attempt": 1,
+    "error": null,
+    "phase": "04-service",
+    "status": "running",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-service": "succeeded",
+      "03-service": "succeeded",
+      "04-service": "running",
+      "05-mail_profile": "pending",
+      "06-mail_profile": "pending",
+      "07-service": "pending",
+      "08-firewall": "pending",
+      "09-access_dns": "pending",
+      "10-panel_certificate": "pending",
+      "11-access_dns": "pending",
+      "12-mail_certificate": "pending",
+      "13-mail_enrollment": "pending",
+      "14-verify": "pending"
+    },
+    "utc": "2026-10-01T21:33:46Z"
+  },
+  {
+    "attempt": 1,
+    "error": null,
+    "phase": "05-mail_profile",
+    "status": "running",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-service": "succeeded",
+      "03-service": "succeeded",
+      "04-service": "succeeded",
+      "05-mail_profile": "running",
+      "06-mail_profile": "pending",
+      "07-service": "pending",
+      "08-firewall": "pending",
+      "09-access_dns": "pending",
+      "10-panel_certificate": "pending",
+      "11-access_dns": "pending",
+      "12-mail_certificate": "pending",
+      "13-mail_enrollment": "pending",
+      "14-verify": "pending"
+    },
+    "utc": "2026-10-01T21:34:12Z"
+  },
+  {
+    "attempt": 1,
+    "error": null,
+    "phase": "06-mail_profile",
+    "status": "running",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-service": "succeeded",
+      "03-service": "succeeded",
+      "04-service": "succeeded",
+      "05-mail_profile": "succeeded",
+      "06-mail_profile": "running",
+      "07-service": "pending",
+      "08-firewall": "pending",
+      "09-access_dns": "pending",
+      "10-panel_certificate": "pending",
+      "11-access_dns": "pending",
+      "12-mail_certificate": "pending",
+      "13-mail_enrollment": "pending",
+      "14-verify": "pending"
+    },
+    "utc": "2026-10-01T21:36:31Z"
+  },
+  {
+    "attempt": 1,
+    "error": null,
+    "phase": "07-service",
+    "status": "running",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-service": "succeeded",
+      "03-service": "succeeded",
+      "04-service": "succeeded",
+      "05-mail_profile": "succeeded",
+      "06-mail_profile": "succeeded",
+      "07-service": "running",
+      "08-firewall": "pending",
+      "09-access_dns": "pending",
+      "10-panel_certificate": "pending",
+      "11-access_dns": "pending",
+      "12-mail_certificate": "pending",
+      "13-mail_enrollment": "pending",
+      "14-verify": "pending"
+    },
+    "utc": "2026-10-01T21:37:52Z"
+  },
+  {
+    "attempt": 1,
+    "error": null,
+    "phase": "08-firewall",
+    "status": "running",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-service": "succeeded",
+      "03-service": "succeeded",
+      "04-service": "succeeded",
+      "05-mail_profile": "succeeded",
+      "06-mail_profile": "succeeded",
+      "07-service": "succeeded",
+      "08-firewall": "running",
+      "09-access_dns": "pending",
+      "10-panel_certificate": "pending",
+      "11-access_dns": "pending",
+      "12-mail_certificate": "pending",
+      "13-mail_enrollment": "pending",
+      "14-verify": "pending"
+    },
+    "utc": "2026-10-01T21:38:09Z"
+  },
+  {
+    "attempt": 1,
+    "error": {
+      "code": "server_setup_access_dns_required",
+      "message": "Public DNS must resolve panel-ubuntu.upd1-infra.test to 192.0.2.12 before a certificate is requested. Check this hostname's A/AAAA records and its zone delegation. For DNS managed here, review the infrastructure DNS records in this wizard; otherwise correct them at the primary DNS server or provider. This check resumes automatically when DNS is verified."
+    },
+    "phase": "access_dns",
+    "status": "waiting",
+    "steps": {
+      "01-dns": "succeeded",
+      "02-service": "succeeded",
+      "03-service": "succeeded",
+      "04-service": "succeeded",
+      "05-mail_profile": "succeeded",
+      "06-mail_profile": "succeeded",
+      "07-service": "succeeded",
+      "08-firewall": "succeeded",
+      "09-access_dns": "running",
+      "10-panel_certificate": "pending",
+      "11-access_dns": "pending",
+      "12-mail_certificate": "pending",
+      "13-mail_enrollment": "pending",
+      "14-verify": "pending"
+    },
+    "utc": "2026-10-01T21:38:15Z"
+  }
+]

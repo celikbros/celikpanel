@@ -1,0 +1,28 @@
+{
+  "boot_id": "021a5083-9502-43ea-9a50-155c42e981e7",
+  "celikpanel_units": "celikpanel-agent.service            loaded active   running CelikPanel privileged agent\ncelikpanel-firewall-restore.service loaded inactive dead    Restore CelikPanel firewall policy before networking\ncelikpanel-panel.service            loaded active   running CelikPanel web panel\ncelikpanel-release-recovery.service loaded inactive dead    CelikPanel verified release transaction recovery\ncelikpanel-release-recovery.timer   loaded active   waiting CelikPanel release transaction recovery watchdog",
+  "command": "management",
+  "returncode": 0,
+  "units": {
+    "bind9.service": {
+      "active": "inactive",
+      "enabled": "not-found"
+    },
+    "celikpanel-agent.service": {
+      "active": "active",
+      "enabled": "enabled"
+    },
+    "celikpanel-panel.service": {
+      "active": "active",
+      "enabled": "enabled"
+    },
+    "named.service": {
+      "active": "active",
+      "enabled": "enabled"
+    },
+    "pdns.service": {
+      "active": "inactive",
+      "enabled": "not-found"
+    }
+  }
+}

@@ -1,0 +1,1 @@
+PASS: each Panel/Agent start resets only that unit first; a start-limit refusal names the unit and the owner command

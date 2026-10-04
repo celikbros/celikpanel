@@ -1,0 +1,106 @@
+tag=start wall=2026-09-29T18:55:33.624264930Z mono=171.36 265.20 boot_id=4a8d2c4a-b656-4f81-8a3d-60d3e6e5a4da
+== pdns.service
+MainPID=3084
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 18:55:02 UTC
+ExecMainStartTimestampMonotonic=140311869
+ExecMainPID=3084
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 18:55:02 UTC
+InactiveEnterTimestamp=Tue 2026-09-29 18:55:02 UTC
+InvocationID=6e55a78598eb4215ae80cf640732d67b
+== named.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainStartTimestampMonotonic=0
+ExecMainPID=0
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+InvocationID=
+== bind9.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainStartTimestampMonotonic=0
+ExecMainPID=0
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+InvocationID=
+== celikpanel-agent.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 18:54:57 UTC
+ExecMainStartTimestampMonotonic=135248722
+ExecMainPID=2752
+ExecMainCode=2
+ExecMainStatus=15
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 18:54:57 UTC
+InactiveEnterTimestamp=Tue 2026-09-29 18:55:05 UTC
+InvocationID=c2a0150b33174e228e2ca74f5fa6f249
+== celikpanel-panel.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 18:53:43 UTC
+ExecMainStartTimestampMonotonic=61402909
+ExecMainPID=1205
+ExecMainCode=1
+ExecMainStatus=0
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 18:53:43 UTC
+InactiveEnterTimestamp=Tue 2026-09-29 18:55:05 UTC
+InvocationID=bd1d23ac820b49cbb4f352ce2ebab626
+== processes
+3084 /usr/sbin/pdns_server --guardian=no --daemon=no --disable-syslog --log-timestamp=no --write-pid=no
+== journal file
+total 20
+drwx------  2 root celikpanel 4096 2026-09-29 18:55:05.445756754 +0000 .
+drwxr-xr-x 29 root root       4096 2026-09-29 18:54:41.571677094 +0000 ..
+-rw-------  1 root celikpanel  560 2026-09-29 18:54:57.371225541 +0000 dns-engine-ownership-pdns.json
+-rw-------  1 root celikpanel  556 2026-09-29 18:54:54.927289994 +0000 dns-engine-state.json
+-rw-------  1 root celikpanel 1911 2026-09-29 18:55:05.437753857 +0000 service-mutations.json
+== ss 53
+udp UNCONN 0      0         192.0.2.10:53 0.0.0.0:* users:(("pdns_server",pid=3084,fd=6))    
+udp UNCONN 0      0          10.0.2.15:53 0.0.0.0:* users:(("pdns_server",pid=3084,fd=5))    
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=366,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=366,fd=18))
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=366,fd=21))
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=366,fd=19))
+tcp LISTEN 0      128       192.0.2.10:53 0.0.0.0:* users:(("pdns_server",pid=3084,fd=8))    
+tcp LISTEN 0      128        10.0.2.15:53 0.0.0.0:* users:(("pdns_server",pid=3084,fd=7))    
+== managed BIND roots (lstat, no follow)
+== PowerDNS database (file copy, no lock)
+total 192
+drwxr-xr-x  2 pdns pdns  4096 2026-09-29 18:55:02.688715476 +0000 .
+drwxr-xr-x 29 root root  4096 2026-09-29 18:54:41.571677094 +0000 ..
+-rw-r-----  1 pdns pdns 94208 2026-09-29 18:55:02.680712311 +0000 pdns.sqlite3
+-rw-r-----  1 pdns pdns 32768 2026-09-29 18:55:04.017228965 +0000 pdns.sqlite3-shm
+-rw-r-----  1 pdns pdns 53592 2026-09-29 18:55:04.021230456 +0000 pdns.sqlite3-wal
+ls: cannot access '/var/cache/bind/celikpanel': No such file or directory
+ls: cannot access '/var/named/celikpanel': No such file or directory
+ls: cannot access '/var/cache/bind/celikpanel/generations': No such file or directory
+ls: cannot access '/var/named/celikpanel/generations': No such file or directory

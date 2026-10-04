@@ -1,0 +1,250 @@
+{
+  "agent_startup_rollback": {
+    "agent_journal_owner_command": {
+      "attempts": 1,
+      "command": {
+        "argv": [
+          "/usr/bin/journalctl",
+          "--no-pager",
+          "--quiet",
+          "--output=cat",
+          "--unit=celikpanel-agent.service",
+          "--since=@1790695418"
+        ],
+        "duration_seconds": 0.007921,
+        "output_bytes": 303,
+        "output_sha256": "21c8b6082b090742ca3aea4ec1793c2b2ff32bb46bebe1455cd4a54ed121ad6c",
+        "output_truncated": false,
+        "returncode": 0
+      },
+      "matching_lines": [],
+      "needle": "recover-dns-pdns-adoption --request-id 6db68749d7b24c88419ecbda31e11413",
+      "observed": false
+    },
+    "failures": [],
+    "journal_retired": true,
+    "release": {
+      "job": {
+        "attempt": 1,
+        "deadline_at": "2026-09-29T16:08:35.92902252Z",
+        "error_code": "dns_engine_switch_rolled_back_after_restart",
+        "error_message": "The interrupted DNS engine switch was rolled back to the verified previous state.",
+        "finished_at": "2026-09-29T15:23:40.991717451Z",
+        "kind": "dns_engine_switch",
+        "lease_expires_at": "0001-01-01T00:00:00Z",
+        "owner_id": "27ebe3f957c11f96fe757cd3c7330a4b",
+        "package_name": "dns-engine-switch/v1:sha256:98c8cf65c8e88de929b531ceb433b47b9ebd67b541110e1d78922bbdbce686fc",
+        "phase": "interrupted",
+        "request_id": "6db68749d7b24c88419ecbda31e11413",
+        "started_at": "2026-09-29T15:23:35.92902252Z",
+        "status": "failed",
+        "target": "pdns",
+        "updated_at": "2026-09-29T15:23:40.991717451Z"
+      },
+      "ledger": {
+        "active_request_id": "",
+        "sha256": "db06432143128fff9b5c3d17c8ed2b406f132cc23cf71b8ddad3c4125e2f55f6"
+      },
+      "reads": 1,
+      "released": true
+    },
+    "retry_allowed": true,
+    "source": {
+      "at": "2026-09-29T15:23:41.206634Z",
+      "dns": {
+        "tcp": {
+          "additional": 0,
+          "answers": 1,
+          "authority": 0,
+          "bytes": 50,
+          "flags": 33792,
+          "questions": 1,
+          "transport": "tcp"
+        },
+        "udp": {
+          "additional": 0,
+          "answers": 1,
+          "authority": 0,
+          "bytes": 50,
+          "flags": 33792,
+          "questions": 1,
+          "transport": "udp"
+        }
+      },
+      "dns_answered_at": "2026-09-29T15:23:41.254858Z",
+      "errors": [],
+      "ok": true,
+      "pdns_main_pid": 1766,
+      "pdns_main_pid_changed": false,
+      "pdns_main_pid_expected": 1766,
+      "port53_listeners": {
+        "tcp": [
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              1766
+            ],
+            "state": "LISTEN"
+          }
+        ],
+        "udp": [
+          {
+            "local": "10.0.2.15:53",
+            "pids": [
+              1766
+            ],
+            "state": "UNCONN"
+          }
+        ]
+      },
+      "units": {
+        "bind9.service": "inactive",
+        "named.service": "inactive",
+        "pdns.service": "active"
+      },
+      "unknown": []
+    },
+    "unknown": []
+  },
+  "boundary_marker": {
+    "cell_id": "pdns-adopt__intent__after-write__standalone__peer-reachable",
+    "driver": "pdns-adopt",
+    "marker": "/var/lib/celikpanel-dns-kill-matrix/results/pdns-adopt__intent__after-write__standalone__peer-reachable/boundary-marker.json",
+    "nonce": "65adacf34d48c555361af111a73eb0498346eb1679b47b3795bf0a5b28f4f365",
+    "observed_driver": "pdns-adopt",
+    "observed_journal": {
+      "manifest_qualifier": "dns-engine-switch/v1:sha256:98c8cf65c8e88de929b531ceb433b47b9ebd67b541110e1d78922bbdbce686fc",
+      "mode": "adopt",
+      "mutation_owner_id": "27ebe3f957c11f96fe757cd3c7330a4b",
+      "mutation_request_id": "6db68749d7b24c88419ecbda31e11413",
+      "path": "/var/lib/celikpanel-agent-private/dns-engine-switch-journal.json",
+      "phase": "intent",
+      "schema": "celikpanel-dns-engine-switch-journal/v1",
+      "source_epoch": 0,
+      "source_revision": 0,
+      "target_engine": "pdns",
+      "target_epoch": 1,
+      "topology": "standalone"
+    },
+    "phase": "intent",
+    "pid": 2156,
+    "point": "after_write",
+    "process_start_ticks": "13061",
+    "ready_fd": 5,
+    "recorded_at": "2026-09-29T15:23:38.679143098Z",
+    "request_id": "6db68749d7b24c88419ecbda31e11413",
+    "schema": "celikpanel-dns-kill-matrix-boundary/v1"
+  },
+  "complete_verdict": {
+    "passed": true,
+    "reasons": [],
+    "required_classification": [
+      "target_converged"
+    ],
+    "safety_status": "passed",
+    "status": "passed"
+  },
+  "diagnostic_failures": [],
+  "dns_outage": null,
+  "expectation": null,
+  "failures": [],
+  "flow_ambiguities": null,
+  "flow_failures": null,
+  "flow_status": null,
+  "journal_at_boundary": {
+    "device": 65025,
+    "exists": true,
+    "expected_phase": "intent",
+    "inode": 131614,
+    "mode": "0600",
+    "observed_phase": "intent",
+    "request_id": "6db68749d7b24c88419ecbda31e11413",
+    "sha256": "1bb120a68e756055e85ba043ae4b6b29bd0ee91bb36151de599d50b49da4ae47"
+  },
+  "kill": {
+    "delivered_at": "2026-09-29T15:23:38.689786Z",
+    "exit_code": 137,
+    "pid": 2156,
+    "proc_entry_absent_after_reap": true,
+    "process_start_ticks": "13061",
+    "raw_returncode": -9,
+    "signal": "SIGKILL",
+    "signal_number": 9,
+    "state_before_signal": "T"
+  },
+  "kill_proven": true,
+  "management_disabled_before_reboot": null,
+  "owner_inverse_failures": null,
+  "owner_inverse_native_at_boundary": null,
+  "pre_reboot_verdict": null,
+  "provenance_boundary": null,
+  "reboot_after_recovery": null,
+  "recovery_outcome": {
+    "changed_or_racy": false,
+    "classification": "target_converged",
+    "dns_serving_after_restart": true,
+    "probe_pair_valid": true,
+    "repeated_nonconvergence": false,
+    "rolled_back_source_serving": false,
+    "same_fingerprint": true,
+    "target_converged": true
+  },
+  "recovery_status_read_failures": null,
+  "recovery_status_reads": {
+    "after-recovery": {
+      "available": true,
+      "changed_evidence": [],
+      "command": {
+        "argv": [
+          "/usr/libexec/celikpanel/recovery",
+          "dns-switch-status",
+          "--quiesced",
+          "--request-id",
+          "6db68749d7b24c88419ecbda31e11413"
+        ],
+        "duration_seconds": 0.008157,
+        "output": "No DNS switch journal was observed for request 6db68749d7b24c88419ecbda31e11413. Its exact ledger job records status succeeded. This is a point-in-time ledger observation, not proof of DNS rollback, completion or current service health. Inspect the native DNS service and this same operation before any new switch.\n",
+        "output_bytes": 315,
+        "output_sha256": "b0b83eae4c5378859b8d3c15ded66a718840df1762750a77f1ada918577d5f8a",
+        "output_truncated": false,
+        "ran": true,
+        "returncode": 0
+      },
+      "judged": "made no mutation only",
+      "mutated": false,
+      "stage": "after-recovery"
+    },
+    "before-recovery": {
+      "available": true,
+      "changed_evidence": [],
+      "command": {
+        "argv": [
+          "/usr/libexec/celikpanel/recovery",
+          "dns-switch-status",
+          "--quiesced",
+          "--request-id",
+          "6db68749d7b24c88419ecbda31e11413"
+        ],
+        "duration_seconds": 1.123825,
+        "output": "DNS switch request 6db68749d7b24c88419ecbda31e11413: accepted-active (journal phase intent).\nNo owner recovery command applies to this journal's recorded shape and ledger status. Keep the journal and ledger. If this operation does not resume through CelikPanel or an Agent restart, contact support with request id 6db68749d7b24c88419ecbda31e11413. This status check does not start recovery.\nQuiesced worker observation: no-recorded-worker. This is only a point-in-time process check; it does not authorize a DNS inverse.\nThe accepted operation is recorded. The server owner should follow its CelikPanel status and check native DNS health if progress stops. This read-only observation does not prove worker liveness or authorize another switch; recovery must recheck the same operation under the host lock.\nThe installed PowerDNS config files, owners and paths, database bytes and read-only SQLite zone/peer/integrity transaction matched the frozen adoption manifest; the verified native process was the sole active DNS authority and owned local TCP/UDP port 53 between secured reads. At that endpoint, 1 active frozen zones returned exact authoritative SOA serials over TCP and UDP; 0/0 frozen deleted zones returned exact negative SOA answers over TCP and UDP. Other records, loaded config, later owner edits and inverse authority remain unproved.\nFrozen native inverse shape: pdns-adoption. This classification does not prove worker exclusion, owner authority or safe recovery execution.\nThe current DNS state receipt is absent. This alone does not prove that an inverse is safe; preserve the journal and inspect native DNS before recovery.\nThe journal and current state both have no source receipt. This is not proof that DNS was rolled back or is healthy; the server owner must inspect native DNS before resuming this operation.\nThe switch has no previous DNS engine, so no frozen source ownership receipt is required. Native DNS still needs verification before the operation resumes.\nNative unit bind9.service: load=not-found active=inactive unit-file=.\nNative unit named.service: load=not-found active=inactive unit-file=.\nNative unit pdns.service: load=loaded active=active unit-file=enabled.\nThese systemd properties were observed at one instant; they do not prove DNS answers, zone content, owner edits or recovery authority.\nRelease and host mutation locks were held; the same evidence bytes and native unit properties matched again after native checks, and the accepted worker was rechecked. Future worker liveness, unobserved DNS answers, owner edits and recovery authority remain unproved.\n",
+        "output_bytes": 2603,
+        "output_sha256": "6a9603628851bf5a56014ec200ab0dc96e6377a38e72eba80d8f5dbcb157726c",
+        "output_truncated": false,
+        "ran": true,
+        "returncode": 0
+      },
+      "judged": "made no mutation only",
+      "mutated": false,
+      "stage": "before-recovery"
+    }
+  },
+  "request_id": "6db68749d7b24c88419ecbda31e11413",
+  "retry_switch_after_rollback": null,
+  "safety_failures": [],
+  "safety_status": "passed",
+  "source": "result.json (verbatim sub-objects)",
+  "status": "passed",
+  "step_records": {},
+  "variant": null,
+  "verification_failures": []
+}

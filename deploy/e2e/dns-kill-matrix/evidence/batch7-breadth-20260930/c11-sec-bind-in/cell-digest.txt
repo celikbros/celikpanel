@@ -1,0 +1,17 @@
+request b440238eeb86627efdaf40eeda24b26b controller 2026-09-29T19:42:59.442468Z -> 2026-09-29T19:45:19.417071Z
+status passed safety passed class target_converged fp e850b097
+kill pid 1791 state T at 2026-09-29T19:43:45.329112Z exit 137 reaped True
+marker 2026-09-29T19:43:45.305038845Z journal intent b74b6cab
+trigger rc 75
+ retry 1 rc 0 dur 13.37749 err None
+ retry 2 rc 0 dur 0.00783 err None
+ probe 1 target_converged e850b097 bind | 
+ probe 2 target_converged e850b097 bind | 
+stability 31 ok 31 2026-09-29T19:44:01.331685Z 2026-09-29T19:44:31.333502Z
+ reboot {"ordinal": 1, "point": null, "boot_id_before": "bb1391b8-8480-4b5f-bf9e-54005ef18232", "boot_id_after": "527fc56e-d270-4192-9de6-00d409e83ecf", "product_uuid": "f120f313-73ee-5a2b-915f-23ce2e96326e"}
+reboot_after_recovery run True status passed failures [] unknown [] window 31 ok 31 dns_only True
+  authority_after_boot {"at": "2026-09-29T19:44:49.773176Z", "authority": {"answer_counts": {"tcp": 1, "udp": 1}, "answered": true, "engines": {"tcp": ["bind"], "udp": ["bind"]}}, "dns": {"answered": true, "at": "2026-09-29T19:44:49.809811Z", "result": {"tcp": {"additional": 2, "answers": 1, "authority": 2, "bytes": 118, "flags": 33792, "questions": 1, "transport": "tcp"}, "udp": {"additional": 2, "answers": 1, "authori
+  mgmt disabled true
+ status-read after-recovery: available=False rc=None mutated=None :: 
+ status-read before-recovery: available=False rc=None mutated=None :: 
+fixture_pass_definition {"definition": "paired-secondary", "failures": [], "peer_catalog_format_log": {"expected_agent_name": "PowerDNS", "expected_format": "pdns-native", "failures": [], "log": {"catalog": "catalog-c000020b.celikpanel.invalid", "formats": ["PowerDNS", "PowerDNS", "PowerDNS"], "lines": ["2026/09/29 19:43:00 DNS engine change b440238eeb86627efdaf40eeda24b26b: the paired primary at 192.0.2.11 serves catalog catalog-c000020b.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format", "2026/09/29 19:43:48 DNS engine change b440238eeb86627efdaf40eeda24b26b: the paired primary at 192.0.2.11 serves catalog catalog-c000020b.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format", "2026/09/29 19:44:00 DNS engine change completion b440238eeb86627efdaf40eeda24b26b: the paired primary at 192.0.2.11 serves catalog catalog-c000020b.celikpanel.invalid in the PowerDNS catalog format; this operation reads it in that format"], "peer_ip": "192.0.2.11", "producer_changed_lines": [], "sources": {"agent_journal": ["/usr/bin/journalctl", "--no-pager", "--quiet", "--output=cat", "--unit=celikpanel-agent.service", "--since=@1790710978"], "tagged_agent_transcript": "/var/lib/celikpanel-dns-kill-matrix/results/bind__intent__after-write__paired-secondary__peer-reachable/transcript.jsonl"}, "unknown": []}, "unknown": []}, "secondary_serving": {"failures": [], "primary": {"soa": {"tcp": [2026083101], "udp": [2026083101]}, "www_a": {"tcp": ["192.0

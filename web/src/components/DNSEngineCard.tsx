@@ -164,6 +164,8 @@ function clearDNSOperationMarker(requestID: string): void {
 const knownBlockerKeys = {
     dns_identity_required: 'dnsEngine.blocker.identityRequired',
     paired_topology_unsupported: 'dnsEngine.blocker.pairedTopology',
+    pdns_primary_switch_paused: 'dnsEngine.blocker.pdnsPrimarySwitchPaused',
+    bind_source_pdns_switch_unsupported: 'dnsEngine.blocker.bindSourcePdnsSwitchUnsupported',
     dnssec_unsupported: 'dnsEngine.blocker.dnssec',
     pending_zone_sync: 'dnsEngine.blocker.pendingZones',
     operation_running: 'dnsEngine.blocker.operationRunning',
@@ -974,15 +976,20 @@ export function DNSEngineCard({
                                 <span
                                     data-testid="dns-pair-readiness"
                                     className={`rounded-full border px-2.5 py-1 font-semibold ${
-                                        snapshot.pair_role === 'primary' && snapshot.pair_ready
+                                        (snapshot.pair_role === 'primary' && snapshot.pair_ready)
+                                        || (snapshot.pair_role === 'secondary' && snapshot.secondary_ready === true)
                                             ? 'border-success/30 bg-success/10 text-success'
-                                            : snapshot.pair_role === 'secondary'
+                                            : snapshot.pair_role === 'secondary' && snapshot.secondary_ready === undefined
                                               ? 'border-primary/25 bg-primary/5 text-primary'
                                               : 'border-warning-mark/60 bg-warning-mark/20 text-warning'
                                     }`}
                                 >
                                     {snapshot.pair_role === 'secondary'
-                                        ? et('dnsEngine.pair.secondaryReadOnly')
+                                        ? snapshot.secondary_ready === true
+                                            ? et('dnsEngine.pair.secondaryReady')
+                                            : snapshot.secondary_ready === false
+                                              ? et('dnsEngine.pair.secondaryWaiting')
+                                              : et('dnsEngine.pair.secondaryReadOnly')
                                         : snapshot.pair_role === 'primary' && snapshot.pair_ready
                                           ? et('dnsEngine.pair.primaryReady')
                                           : snapshot.pair_role === 'primary'

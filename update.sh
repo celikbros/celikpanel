@@ -49,6 +49,12 @@ KEEP_SNAPSHOTS=5
 BOOTSTRAP_PRE_LEDGER=0
 BOOTSTRAP_SCHEMA17=0
 TRUSTED_RELEASE_ROOT="${CELIKPANEL_TRUSTED_RELEASE_ROOT:-}"
+RECOVERY_RUNTIME_ROOT="${CELIKPANEL_RECOVERY_RUNTIME_ROOT:-}"
+RECOVERY_MATERIAL_ROOT="${CELIKPANEL_RECOVERY_MATERIAL_ROOT:-}"
+CODE_ROOT=
+RECOVERY_PANEL_CHECKER=
+RECOVERY_AGENT_CHECKER=
+isolated_database_work=
 RECOVER_EXISTING_TRANSACTION="${CELIKPANEL_RECOVER_EXISTING_TRANSACTION:-0}"
 RECOVERY_EXPECTED_TOKEN="${CELIKPANEL_RECOVERY_EXPECTED_TOKEN:-}"
 RECOVERY_EXPECTED_OPERATION="${CELIKPANEL_RECOVERY_EXPECTED_OPERATION:-}"
@@ -64,6 +70,12 @@ unset CELIKPANEL_RECOVER_EXISTING_TRANSACTION \
 panel_frozen=0
 agent_frozen=0
 mutation_started=0
+firewall_runtime_preparation_attempted=0
+firewall_runtime_preparation_verified=0
+mail_runtime_preparation_attempted=0
+mail_runtime_preparation_verified=0
+recovery_runtime_preparation_attempted=0
+recovery_runtime_preparation_verified=0
 transaction_started=0
 quiesce_abort_failed=0
 transaction_completion_verified=0
@@ -76,6 +88,31 @@ rescue_snapshot=
 # the final output line, so emit a bounded summary after recovery completes.
 update_failure_reason=
 update_failure_detail=
+# Exit status of the last failed run_update_idle_probe call (0 after success).
+update_idle_probe_status=0
+# Typed cause for the two candidate-panel start boundaries; empty otherwise.
+# Aday panel başlangıç sınırları için tipli neden; diğer durumlarda boş.
+update_failure_code=
+# Set only when this updater wrote the request's initial status record itself
+# because its worker (a historical Agent) wrote none; see
+# publish_update_initial_observation. Then it also records the worker's failed
+# transition, as the current Agent's worker does after a failed updater.
+update_observation_self_produced=0
+update_observation_request=
+update_observation_commit=
+# The panel unit restarts a failed process after RestartSec=3. Eleven samples
+# 0.5 s apart (at least 5 s) with one unchanged main PID and restart counter
+# therefore span more than one restart cycle. The whole wait is bounded.
+# Panel birimi çöken süreci RestartSec=3 sonra yeniden başlatır; 0,5 sn arayla
+# en az 5 sn boyunca aynı ana PID bir yeniden başlatma döngüsünden uzundur.
+PANEL_START_STABLE_SAMPLES=11
+PANEL_START_WAIT_SECONDS=60
+PANEL_START_MAX_SAMPLES=120
+CURL_BIN=/usr/bin/curl
+PANEL_ENV_FILE=/etc/celikpanel/panel.env
+panel_startup_listen=
+panel_startup_scheme=
+panel_startup_pins=
 die() {
     [[ -n "${update_failure_reason:-}" ]] || update_failure_reason=$*
     echo "!! $*" >&2
@@ -83,12 +120,15 @@ die() {
 }
 
 run_update_idle_probe() {
-    local output
+    local output status=0
     update_failure_detail=
-    if output=$("$@" 2>&1); then
+    update_idle_probe_status=0
+    output=$("$@" 2>&1) || status=$?
+    if [[ $status -eq 0 ]]; then
         printf '%s\n' "$output"
         return 0
     fi
+    update_idle_probe_status=$status
     update_failure_detail=$output
     if [[ ${#output} -gt 2048 ]]; then
         update_failure_detail=${output: -2048}
@@ -97,11 +137,53 @@ run_update_idle_probe() {
     return 1
 }
 
+# The preliminary live panel probe runs while the panel serves requests. Exit
+# 75 from the checker means its only reason was that the live database or its
+# -wal/-shm changed while it was read (a panel commit or checkpoint). Only then
+# is it read once more after a short pause. A busy operation queue and every
+# other refusal (exit 1) are never re-read; the frozen proofs are unchanged.
+# Canlı ön denetim yalnız çıkış 75'te (eşzamanlı panel yazımı) bir kez daha okunur.
+UPDATE_LIVE_PROBE_RETRY_DELAY=2
+run_update_live_panel_probe() {
+    run_update_idle_probe "$@" && return 0
+    [[ ${update_idle_probe_status:-1} -eq 75 ]] || return 1
+    echo "==> The panel database changed while the read-only check was reading it (a panel write, not a busy operation); reading it once more in ${UPDATE_LIVE_PROBE_RETRY_DELAY} s"
+    echo "==> Salt-okur denetim okurken panel veritabanı değişti (meşgul işlem değil, panel yazımı); ${UPDATE_LIVE_PROBE_RETRY_DELAY} sn sonra bir kez daha okunuyor"
+    sleep "$UPDATE_LIVE_PROBE_RETRY_DELAY"
+    run_update_idle_probe "$@"
+}
+
+# The checker's diagnostic line from captured output: the first line naming a
+# failure (the Go log timestamp removed), else the last non-empty line; printable
+# ASCII only, at most 240 bytes. Product-authored messages, never file contents.
+# Denetleyicinin tanı satırı: hata adlandıran ilk satır, yazdırılabilir ASCII, 240 bayt.
+update_probe_diagnostic() {
+    local output line last= first= stamp='^[0-9]{4}/[0-9]{2}/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)? (.*)$'
+    local -a lines=()
+    output=$(LC_ALL=C printf '%s' "${1//$'\r'/$'\n'}" | LC_ALL=C tr -cd '\012\040-\176')
+    mapfile -t lines <<< "$output"
+    for line in "${lines[@]}"; do
+        [[ ! $line =~ $stamp ]] || line=${BASH_REMATCH[2]}
+        line=${line#"${line%%[![:space:]]*}"}
+        # The panel binary's start banner is never a diagnostic.
+        [[ -n ${line//[[:space:]]/} && $line != 'Starting CelikPanel Backend...' ]] || continue
+        last=$line
+        if [[ -z $first && ( $line == *' failed: '* || $line == 'Recovery database check: '* ) ]]; then
+            first=$line
+        fi
+    done
+    [[ -n $first ]] || first=$last
+    printf '%s' "${first:0:240}"
+}
+
 # The signed target reads current BIND compatibility under the common mutation
 # lock. It cannot publish, repair, harden, or rewrite DNS configuration.
 # İmzalı hedef, mevcut BIND uyumluluğunu ortak mutasyon kilidi altında okur;
 # DNS yapılandırmasını yayımlayamaz, onaramaz veya yeniden yazamaz.
 check_bind_update_compatibility() {
+    # Independent recovery captures rollback material; it never installs this candidate.
+    # Its target-install BIND preflight is irrelevant; all mutation-idle proofs remain.
+    [[ -z ${RECOVERY_RUNTIME_ROOT:-} ]] || return 0
     local probe=--check-bind-signed-update-compatible-under-external-lock
     [[ $BOOTSTRAP_PRE_LEDGER -ne 1 ]] ||
         probe=--check-pre-ledger-bind-signed-update-compatible-under-external-lock
@@ -112,12 +194,61 @@ check_bind_update_compatibility() {
         "$PREFLIGHT_AGENT" "$probe"
 }
 
+# Read target/installed Agent bytes, never execute a historical capability flag.
+# Native renewal and DNS evidence are preserved; incompatibility is refused before stop.
+check_mail_application_compatibility() {
+    local inspector="$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery"
+    [[ -z ${RECOVERY_RUNTIME_ROOT:-} ]] || inspector="$CODE_ROOT/bin/recovery"
+    run_update_idle_probe "$inspector" verify-agent-native-contract --bin "$TRUSTED_RELEASE_ROOT/bin" &&
+    run_update_idle_probe "$inspector" verify-mail-application --bin "$BIN_DIR" &&
+        run_update_idle_probe "$inspector" verify-mail-application --bin "$TRUSTED_RELEASE_ROOT/bin" &&
+    run_update_idle_probe "$inspector" verify-dns-application --bin "$BIN_DIR" --state-root "$AGENT_STATE_DIR" &&
+        run_update_idle_probe "$inspector" verify-dns-application --bin "$TRUSTED_RELEASE_ROOT/bin" --state-root "$AGENT_STATE_DIR"
+}
+
+# A recovered active capture exists only to obtain complete rollback material.
+# Keep the persistent release flock, drop the transient Agent mutation flock,
+# then run the independent rollback adapter for the SAME accepted transaction.
+handoff_independent_capture_rollback() {
+    [[ -n ${RECOVERY_RUNTIME_ROOT:-} ]] || return 0
+    [[ $RECOVER_EXISTING_TRANSACTION == 1 && $resume_active_update -eq 1 ]] \
+        || die "independent snapshot capture has no accepted active transaction"
+    release_txn_validate_active_token "$RELEASE_TRANSACTION_ROOT" \
+        "$release_transaction_token" update "$snapshot_name" \
+        || die "active update identity changed before independent rollback"
+    release_release_mutation_lock \
+        || die "cannot hand off the transient mutation lock for independent rollback"
+    validate_recovery_code_root update.sh
+    exec env -i PATH="$PATH" HOME=/root LANG=C LC_ALL=C \
+        CELIKPANEL_TRUSTED_RELEASE_ROOT="$TRUSTED_RELEASE_ROOT" \
+        CELIKPANEL_RECOVERY_RUNTIME_ROOT="$RECOVERY_RUNTIME_ROOT" \
+        CELIKPANEL_RECOVER_EXISTING_TRANSACTION=1 \
+        CELIKPANEL_RECOVERY_EXPECTED_TOKEN="$release_transaction_token" \
+        CELIKPANEL_RECOVERY_EXPECTED_OPERATION=update \
+        CELIKPANEL_RECOVERY_EXPECTED_SNAPSHOT="$snapshot_name" \
+        CELIKPANEL_RECOVERY_EXPECTED_PHASE=active \
+        CELIKPANEL_RELEASE_TRANSACTION_FD="$RELEASE_TRANSACTION_FD" \
+        CELIKPANEL_RECOVERY_LOCK_IDENTITY="$RECOVERY_LOCK_IDENTITY" \
+        /bin/bash "$CODE_ROOT/rollback.sh" "$snap"
+    die "independent rollback handoff failed"
+}
+
+# Reject durable reservations while the management interface is still reachable.
+# Final idle proofs under exclusion remain mandatory after this early check.
+preflight_mutations_before_quiesce() {
+    [[ $BOOTSTRAP_PRE_LEDGER -eq 0 ]] || return 0
+    if ! CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
+        run_update_idle_probe "$PREFLIGHT_AGENT" --check-service-mutation-idle; then
+        fail_update_preflight agent_idle "an existing server operation requires completion or exact recovery before update; coordinators remain available"
+    fi
+}
+
 preflight_bind_before_quiesce() {
     prepare_runtime_mutation_lock_dir
     acquire_release_mutation_lock
     if ! check_bind_update_compatibility; then
         release_release_mutation_lock || die "cannot release mutation lock after BIND preflight"
-        die "managed BIND compatibility check failed before stopping panel services"
+        fail_update_preflight bind_compatibility "managed BIND compatibility check failed before stopping panel services"
     fi
     release_release_mutation_lock || die "cannot release mutation lock after BIND preflight"
 }
@@ -129,6 +260,33 @@ report_update_failure() {
           ${transaction_started:-0} -eq 0 && ${quiesce_abort_failed:-0} -eq 0 &&
           ${transaction_completion_verified:-0} -eq 0 && ${scheduler_restore_verified:-0} -eq 0 ]]; then
         state=unchanged
+    fi
+    # The candidate start boundaries report their own typed cause. Kit and
+    # runtime preparation uncertainty below still takes precedence.
+    # Aday başlangıç sınırları kendi tipli nedenini bildirir; kit belirsizliği önceliklidir.
+    case "${update_failure_code:-}" in
+        candidate_panel_startup_check_failed|panel_start_unverified|recovery_runtime_preflight_failed|unit_start_limit_hit) code=$update_failure_code ;;
+        # A refused read-only check is typed only when nothing changed: a quiesce
+        # whose abort failed, or a resumed active phase, keeps update_failed.
+        update_preflight_refused) [[ $state != unchanged ]] || code=$update_failure_code ;;
+    esac
+    # An interrupted kit preparation may have changed the independent launcher
+    # or selector even though no application transaction was created.
+    # Kit hazırlığı kesilirse ürün işlemi başlamadan başlatıcı/seçici değişmiş olabilir.
+    if [[ ${recovery_runtime_preparation_attempted:-0} -eq 1 &&
+          ${recovery_runtime_preparation_verified:-0} -ne 1 ]]; then
+        state=recovery_required
+        code=recovery_runtime_preparation_unconfirmed
+    fi
+    if [[ ${firewall_runtime_preparation_attempted:-0} -eq 1 &&
+          ${firewall_runtime_preparation_verified:-0} -ne 1 ]]; then
+        state=recovery_required
+        code=firewall_runtime_preparation_unconfirmed
+    fi
+    if [[ ${mail_runtime_preparation_attempted:-0} -eq 1 &&
+          ${mail_runtime_preparation_verified:-0} -ne 1 ]]; then
+        state=recovery_required
+        code=mail_runtime_preparation_unconfirmed
     fi
     if [[ "${update_failure_detail:-}" == *': the host package manager is active'* ]]; then
         code=package_manager_busy
@@ -143,10 +301,102 @@ report_update_failure() {
         reason='the host package manager is active'
         detail=
     fi
+    # A status record this updater produced itself receives the failed
+    # transition its historical worker never writes. Best effort; never the outcome.
+    # Güncelleyicinin kendi yazdığı kayda, eski işçinin yazmadığı failed geçişi eklenir.
+    if [[ ${update_observation_self_produced:-0} -eq 1 ]] &&
+       declare -F release_observation_publish >/dev/null; then
+        release_observation_publish "$update_observation_request" "$update_observation_commit" \
+            failed none update_failed >/dev/null 2>&1 || true
+    fi
+    # Best-effort, additive observation hint; never alters the outcome or the
+    # summary below, which must stay the last line for older installed workers.
+    # A preflight stop is recorded even when its summary names the host package
+    # manager: both mean the request ended before changing anything.
+    case "$code" in
+        candidate_panel_startup_check_failed|panel_start_unverified)
+            publish_update_failure_observation "$code" >/dev/null 2>&1 || true
+            ;;
+        recovery_runtime_preflight_failed|update_preflight_refused|package_manager_busy)
+            if [[ ( ${update_failure_code:-} == recovery_runtime_preflight_failed ||
+                    ${update_failure_code:-} == update_preflight_refused ) && $state == unchanged ]]; then
+                publish_update_failure_observation "$update_failure_code" >/dev/null 2>&1 || true
+            fi
+            ;;
+    esac
     # Preserve both cause and recovery state within the older agent's 1024-byte
     # error limit, even after its prefix. ASCII diagnostics remain compatible.
     LC_ALL=C printf '!! CELIKPANEL_UPDATE_FAILURE code=%s state=%s reason=%.300s detail=%.450s\n' \
         "$code" "$state" "$reason" "$detail" >&2
+}
+
+# Record the typed cause beside this worker's exact observation (sidecar
+# celikpanel-recovery-failure/v1). Historical releases without the helper, an
+# unbound worker or any validation failure simply leave generic guidance.
+# Tipli nedeni bu işçinin tam gözleminin yanına yazar; olmazsa genel metin kalır.
+publish_update_failure_observation() {
+    local code=$1 id commit
+    declare -F release_observation_publish_failure >/dev/null || return 0
+    declare -F release_observation_worker_request >/dev/null || return 0
+    if [[ ${snapshot_name:-} =~ -to-([0-9a-f]{40})-[0-9a-f]{32}$ ]]; then
+        commit=${BASH_REMATCH[1]}
+    elif [[ ( $code == recovery_runtime_preflight_failed || $code == update_preflight_refused ) &&
+            ${trusted_release_commit:-} =~ ^[0-9a-f]{40}$ ]]; then
+        # The preflight precedes the snapshot name; the verified target commit
+        # is the same identity the worker's status record names.
+        commit=$trusted_release_commit
+    else
+        return 0
+    fi
+    id=$(release_observation_worker_request) || return 0
+    release_observation_publish_failure "$id" "$commit" "$code"
+}
+
+# Record beside this worker's observation whether the Certbot scheduler was on
+# before the update paused it (a timer enabled or active) or off (neither), so
+# the pause text does not claim renewal was stopped when it was already off
+# (sidecar celikpanel-recovery-renewal/v1). Best effort; never a decision input.
+# Güncelleme öncesi Certbot zamanlayıcısının açık/kapalı olduğunu yalnız metin için kaydet.
+publish_update_renewal_observation() {
+    local ledger=$1 unit enabled active extra value=off id commit
+    declare -F release_observation_publish_renewal >/dev/null || return 0
+    declare -F release_observation_worker_request >/dev/null || return 0
+    [[ ${snapshot_name:-} =~ -to-([0-9a-f]{40})-[0-9a-f]{32}$ ]] || return 0
+    commit=${BASH_REMATCH[1]}
+    while IFS=$'\t' read -r unit enabled active extra; do
+        case "$unit" in certbot.timer|certbot-renew.timer) ;; *) continue ;; esac
+        case "$enabled:$active" in
+            enabled:*|enabled-runtime:*|*:active|*:activating|*:reloading|*:refreshing) value=on ;;
+        esac
+    done < "$ledger"
+    id=$(release_observation_worker_request) || return 0
+    release_observation_publish_renewal "$id" "$commit" "$value"
+}
+
+# The worker of a historical Agent (v0.1.0-alpha.80 and earlier) writes no
+# status record, so the binding, the typed cause, the renewal state and every
+# recovery state of this request would stay unrecorded. Its exact request is
+# still named by the worker unit's cgroup, the evidence the binding trusts, and
+# the commit is the verified target the worker requested. Only with both, and
+# only when no record of the request exists, write the initial running record;
+# an existing record (the current Agent's) is never touched. Without that
+# identity nothing is written and the binding below says where the owner reads
+# recovery instead.
+# Eski Agent işçisi durum kaydı yazmaz. Kimlik işçi biriminin cgroup'undan
+# kanıtlanır ve kayıt yoksa ilk running kaydı yazılır; var olan kayda dokunulmaz.
+publish_update_initial_observation() {
+    local id status=0
+    declare -F release_observation_publish_initial >/dev/null || return 0
+    declare -F release_observation_worker_request >/dev/null || return 0
+    [[ ${target_release_commit:-} =~ ^[0-9a-f]{40}$ ]] || return 0
+    id=$(release_observation_worker_request) || return 0
+    release_observation_publish_initial "$id" "$target_release_commit" || status=$?
+    [[ $status -eq 0 ]] || return 0
+    update_observation_request=$id
+    update_observation_commit=$target_release_commit
+    update_observation_self_produced=1
+    echo "==> The installed version that started this update records no update status; the updater recorded it for request $id"
+    echo "==> Bu güncellemeyi başlatan kurulu sürüm güncelleme durumu kaydetmiyor; güncelleyici $id işlemi için kaydetti"
 }
 
 validate_exact_systemctl() {
@@ -161,7 +411,36 @@ validate_exact_systemctl() {
         die "exact systemctl binary is group/other writable"
 }
 
+# A controlled start of the Panel or Agent first clears exactly that unit's
+# failed and start-limit state: a candidate that crash-looped during earlier
+# attempts must not make systemd refuse this start. Never a global reset.
+# If systemd still refuses on its start limit, name the unit and the owner's
+# command (code unit_start_limit_hit). Other units start unchanged.
+# Panel/Agent denetimli başlatması önce yalnız o birimin hata ve başlatma
+# sınırı durumunu temizler; sınır yine reddederse birimi ve komutu adlandırır.
+release_unit_controlled_start() {
+    local unit=$1 status=0 result
+    "$SYSTEMCTL_BIN" reset-failed "$unit" >/dev/null 2>&1 || true
+    "$SYSTEMCTL_BIN" start "$unit" || status=$?
+    [[ $status -ne 0 ]] || return 0
+    result=$("$SYSTEMCTL_BIN" show --property=Result --value "$unit" 2>/dev/null || true)
+    if [[ $result == start-limit-hit ]]; then
+        update_failure_code=unit_start_limit_hit
+        update_failure_reason="systemd refused to start $unit on its start limit; the server owner runs sudo systemctl reset-failed $unit, then retries"
+        printf '%s\n' \
+            "!! code=unit_start_limit_hit: systemd refused to start $unit because it was started too often in a short time (start limit). The server owner runs: sudo systemctl reset-failed $unit and then retries the same operation (for a paused recovery, the one-time retry command shown in the recovery journal)." \
+            "!! code=unit_start_limit_hit: systemd, $unit birimini kısa sürede çok sık başlatıldığı için başlatmayı reddetti (başlatma sınırı). Sunucu sahibi sudo systemctl reset-failed $unit komutunu çalıştırır, ardından aynı işlemi yeniden dener (duraklatılmış kurtarmada kurtarma günlüğünde gösterilen tek seferlik yeniden deneme komutu)." >&2
+    fi
+    return "$status"
+}
+
 systemctl() {
+    case "$#:${1:-}:${2:-}" in
+        2:start:celikpanel-panel.service|2:start:celikpanel-agent.service)
+            release_unit_controlled_start "$2"
+            return
+            ;;
+    esac
     "$SYSTEMCTL_BIN" "$@"
 }
 
@@ -251,6 +530,145 @@ verify_recovery_expected_tuple() {
 # trusting release-controlled code. The descriptor remains open for this process.
 # Modu ayrıştırmadan, state okumadan veya sürüm denetimli koda güvenmeden önce
 # sabit kalıcı sürüm kilidini al. Descriptor bu süreç boyunca açık kalır.
+# The shell allocates a dynamic descriptor; the standalone recovery ABI uses
+# descriptor 9. Duplicate the same open file description for each child without
+# reacquiring the native flock or changing the parent's descriptor.
+prepare_independent_recovery_runtime() {
+    [[ -x "$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery" &&
+       ! -L "$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery" ]] \
+        || die "candidate independent recovery runtime is missing"
+    local recovery_compatibility_mode=--normal
+    [[ $BOOTSTRAP_PRE_LEDGER -ne 1 ]] || recovery_compatibility_mode=--bootstrap-pre-ledger
+    [[ $BOOTSTRAP_SCHEMA17 -ne 1 ]] || recovery_compatibility_mode=--bootstrap-schema17
+    # Prepare and verify a retained replacement before stopping any coordinator.
+    # An interrupted kit promotion keeps its own evidence and predecessor.
+    # Koordinatörler durmadan korunan yeni kiti hazırla ve doğrula.
+    # Kesilen kit geçişi kendi kanıtını ve önceki kiti korur.
+    # New releases may carry the independent firewall payload. Prepare it under
+    # this same lock before any coordinator stops; historical releases omit it.
+    # This does not replace or start the installed firewall unit.
+    if [[ -e "$TRUSTED_RELEASE_ROOT/firewall-runtime" || -L "$TRUSTED_RELEASE_ROOT/firewall-runtime" ]]; then
+        firewall_runtime_preparation_attempted=1
+        firewall_runtime_preparation_verified=0
+        run_update_idle_probe "$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery" prepare-firewall-runtime \
+            --source "$TRUSTED_RELEASE_ROOT/firewall-runtime" \
+            --transaction-fd 9 9<&"$RELEASE_TRANSACTION_FD" \
+            || die "independent firewall preparation is unconfirmed; panel services have not been stopped; preserve its files and review this preflight failure before retrying the same release"
+        run_update_idle_probe "$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery" verify-firewall-unit \
+            --unit "$TRUSTED_RELEASE_ROOT/deploy/systemd/celikpanel-firewall-restore.service" \
+            || die "candidate firewall unit and prepared helper do not agree; panel services have not been stopped"
+        firewall_runtime_preparation_verified=1
+    fi
+    # Preparing the mail artifact is separate from publishing its native hook and units.
+    # Historical releases omit it; existing renewal stays selected during preparation.
+    if [[ -e "$TRUSTED_RELEASE_ROOT/mail-renewal-runtime" || -L "$TRUSTED_RELEASE_ROOT/mail-renewal-runtime" ]]; then
+        mail_runtime_preparation_attempted=1
+        mail_runtime_preparation_verified=0
+        run_update_idle_probe "$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery" prepare-mail-renewal-runtime \
+            --source "$TRUSTED_RELEASE_ROOT/mail-renewal-runtime" \
+            --transaction-fd 9 9<&"$RELEASE_TRANSACTION_FD" \
+            || die "independent mail renewal preparation is unconfirmed; panel services have not been stopped; preserve its files and review this preflight failure before retrying the same release"
+        mail_runtime_preparation_verified=1
+    fi
+    recovery_runtime_preparation_attempted=1
+    run_update_idle_probe "$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery" prepare-runtime \
+        --source "$TRUSTED_RELEASE_ROOT/recovery-runtime" \
+        --mode "$recovery_compatibility_mode" \
+        --transaction-fd 9 9<&"$RELEASE_TRANSACTION_FD" \
+        || die "independent recovery runtime preparation is unconfirmed; panel services have not been stopped; inspect the same update and retained recovery evidence"
+    recovery_runtime_preparation_verified=1
+    run_update_idle_probe "$TRUSTED_RELEASE_ROOT/recovery-runtime/bin/recovery" verify-compatibility \
+        --mode "$recovery_compatibility_mode" 9<&"$RELEASE_TRANSACTION_FD" \
+        || fail_recovery_runtime_preflight compatibility
+    # Ask the selected executable itself after verified enrollment/promotion.
+    # A writer cannot infer capability solely from its own source version.
+    run_update_idle_probe /usr/libexec/celikpanel/recovery verify-material-support --layout snapshot-name-sha256-v1 \
+        --schema celikpanel/recovery-material/v3 \
+        || fail_recovery_runtime_preflight material_support
+    run_update_idle_probe /usr/libexec/celikpanel/recovery verify-database-support --schema celikpanel/database-migration-admission/v1 \
+        || fail_recovery_runtime_preflight database_support
+    if [[ $BOOTSTRAP_PRE_LEDGER -eq 0 && $BOOTSTRAP_SCHEMA17 -eq 0 ]]; then
+        run_update_idle_probe /usr/libexec/celikpanel/recovery probe-update-database 9<&"$RELEASE_TRANSACTION_FD" \
+            || fail_recovery_runtime_preflight database_metadata
+    fi
+}
+
+# The selected recovery runtime's read-only preflight runs before any durable
+# release marker, coordinator stop or installed-byte change, and before the
+# EXIT trap exists. Report its typed, unchanged outcome here: the step, the
+# checker's first diagnostic line, and the one summary line older workers keep.
+# Seçili kurtarma ortamının salt-okur ön denetimi hiçbir işaretçi, durdurma veya
+# kurulu bayt değişikliğinden önce çalışır; tipli ve değişmemiş sonucu burada bildir.
+fail_recovery_runtime_preflight() {
+    local step=$1 output=${update_failure_detail:-} line index diagnostic= pattern='step=([a-z_]+): (.*)$'
+    local -a lines=()
+    mapfile -t lines <<< "${output//$'\r'/$'\n'}"
+    for (( index=${#lines[@]}-1; index>=0; index-- )); do
+        line=${lines[index]}
+        if [[ $line =~ $pattern ]]; then
+            step=${BASH_REMATCH[1]}
+            diagnostic=${BASH_REMATCH[2]}
+            break
+        fi
+        if [[ -z $diagnostic && -n ${line//[[:space:]]/} ]]; then
+            diagnostic=$line
+        fi
+    done
+    diagnostic=$(LC_ALL=C printf '%s' "$diagnostic" | LC_ALL=C tr -cd '\040-\176' | cut -c1-240)
+    diagnostic=${diagnostic#"${diagnostic%%[![:space:]]*}"}
+    [[ -n $diagnostic ]] || diagnostic='no diagnostic was recorded'
+    update_failure_code=recovery_runtime_preflight_failed
+    update_failure_reason="recovery runtime preflight step=$step: $diagnostic"
+    # Keep a host package-manager refusal recognisable as package_manager_busy.
+    update_failure_detail=
+    [[ $diagnostic != *': the host package manager is active'* ]] || update_failure_detail=$diagnostic
+    # The recovery kit may already have been promoted; the release and data were not touched.
+    echo "!! $update_failure_reason; panel services have not been stopped and the installed release and its data were not changed" >&2
+    echo "!! Kurtarma çalışma ortamı ön denetimi durdu; panel hizmetleri durdurulmadı, kurulu sürüm ve verileri değiştirilmedi" >&2
+    report_update_failure 1 none
+    exit 1
+}
+
+# A read-only check of the updater that refuses before the coordinators are
+# frozen (preliminary idle probes, BIND and application compatibility, the
+# bootstrap state) ends the request; a published quiesce is aborted first.
+# When that leaves state=unchanged the summary is typed update_preflight_refused
+# with the step, a closed reason class (concurrent_write, operation_active,
+# check_failed) and the checker's diagnostic line. Steps: idle_probe,
+# agent_idle, bind_compatibility, application_compatibility, bootstrap_state.
+# Dondurmadan önce reddeden salt-okur denetim tipli ve değişmemiş olarak biter.
+fail_update_preflight() {
+    local step=$1 reason=$2 class=check_failed diagnostic
+    diagnostic=$(update_probe_diagnostic "${update_failure_detail:-}")
+    if [[ $step == idle_probe && ${update_idle_probe_status:-0} -eq 75 ]]; then
+        class=concurrent_write
+    elif [[ $step == idle_probe && $diagnostic =~ :\ operation\ [^\ ]+\ is\ (queued|running)$ ]]; then
+        class=operation_active
+    fi
+    update_failure_code=update_preflight_refused
+    update_failure_reason="update preflight step=$step class=$class: $reason"
+    # A host package-manager refusal stays recognisable as package_manager_busy.
+    [[ ${update_failure_detail:-} == *': the host package manager is active'* ]] ||
+        update_failure_detail=$diagnostic
+    if [[ ${transaction_phase:-none} == none ]]; then
+        die "$reason"
+    fi
+    fail_before_active "$reason"
+}
+
+# A failed panel database snapshot keeps its cause: the snapshot tool's first
+# diagnostic line goes into the failure line (detail=), which the worker's
+# journal and the update status record keep. The step is not re-run here.
+# Başarısız veritabanı anlık görüntüsü nedenini hata satırında korur.
+fail_update_snapshot() {
+    local reason=$1 diagnostic
+    diagnostic=$(update_probe_diagnostic "${update_failure_detail:-}")
+    [[ -n $diagnostic ]] || diagnostic='the snapshot tool recorded no diagnostic'
+    update_failure_detail=$diagnostic
+    echo "!! $reason: $diagnostic" >&2
+    die "$reason"
+}
+
 prepare_and_acquire_release_transaction_lock() {
     local root=$RELEASE_TRANSACTION_ROOT parent lock owner group mode links size
     local path_identity fd_identity probe_fd probe_rc lock_count=0 line
@@ -528,6 +946,10 @@ preflight_staged_installer_runtime() {
         command -v "$required_command" >/dev/null 2>&1 \
             || die "required update tool is missing: $required_command; install it explicitly before retrying"
     done
+    # The post-start proof calls this exact path; a missing one would be found
+    # only after the switch, as a panel that never answered.
+    [[ -f $CURL_BIN && -x $CURL_BIN ]] \
+        || die "required update tool is missing: $CURL_BIN; install it explicitly before retrying"
     if ! command -v apt-get >/dev/null 2>&1 &&
        ! command -v pacman >/dev/null 2>&1; then
         die "supported package manager metadata is unavailable (apt-get or pacman); update will not install one"
@@ -545,8 +967,112 @@ preflight_staged_installer_runtime() {
 # Her güncelleme yalnız bootstrap-update.sh'nin ürettiği doğrudan, root-only
 # sürümü kabul eder. Bir girdi SHA256SUMS ile birlikte dosya alt kümesi
 # değiştirilerek gizlenemesin diye manifest yeniden hesaplanır.
+
+# In recovery mode the dispatcher has verified the independently selected kit.
+# Rebind its canonical root, self-entry and manifest identity before sourcing it.
+# Candidate release provenance remains DATA; it never chooses executable code.
+validate_recovery_code_root() {
+    local entry=$1 runtime=${RECOVERY_RUNTIME_ROOT:-} digest manifest
+    CODE_ROOT=$TRUSTED_RELEASE_ROOT
+    [[ -n $runtime ]] || return 0
+    [[ $RECOVER_EXISTING_TRANSACTION == 1 &&
+       $runtime =~ ^/usr/libexec/celikpanel/recovery-runtimes/v1/[0-9a-f]{64}$ ]] \
+        || die "independent runtime requires the exact existing recovery transaction"
+    [[ $(readlink -e -- "$runtime") == "$runtime" ]] \
+        || die "independent runtime root is not canonical"
+    validate_root_trusted_dir_chain "$runtime"
+    [[ $(stat -Lc '%u:%g:%a' -- "$runtime") == 0:0:700 ]] \
+        || die "independent runtime directory metadata changed"
+    manifest=$runtime/runtime.manifest
+    [[ -f $manifest && ! -L $manifest &&
+       $(stat -Lc '%u:%g:%a:%h' -- "$manifest") == 0:0:600:1 ]] \
+        || die "independent runtime manifest metadata changed"
+    digest=$(sha256sum -- "$manifest" | awk '{print $1}') \
+        || die "independent runtime manifest cannot be read"
+    [[ $digest == "${runtime##*/}" &&
+       $(readlink -e -- "$0") == "$runtime/$entry" &&
+       $(stat -Lc '%u:%g:%a:%h' -- "$runtime/$entry") == 0:0:755:1 ]] \
+        || die "independent runtime entry identity changed"
+    digest=$(sha256sum -- "$runtime/$entry" | awk '{print $1}') \
+        || die "independent runtime entry cannot be read"
+    grep -Fxq -- "$digest  $entry" "$manifest" \
+        || die "independent runtime entry differs from its selected manifest"
+    CODE_ROOT=$runtime
+}
+
+# Completion data is bound to the same durable update, never supplied as code.
+# Tamamlama verisi aynı kalıcı güncellemeye bağlıdır; çalıştırılabilir kod değildir.
+verify_independent_completion_material() {
+    [[ -n $RECOVERY_MATERIAL_ROOT ]] || return 0
+    local material_data_root
+    material_data_root=$("$CODE_ROOT/bin/recovery" completion-material-root \
+        --snapshot "$RECOVERY_EXPECTED_SNAPSHOT" 9<&"$RELEASE_TRANSACTION_FD") \
+        || die "completion recovery material changed; preserve this operation and its evidence"
+    [[ $material_data_root == "$RECOVERY_MATERIAL_ROOT" &&
+       $material_data_root == "$TRUSTED_RELEASE_ROOT" ]] \
+        || die "completion recovery data identity changed"
+}
+
+# A v2 completion proof still needs the exact durable transaction marker. Recheck
+# after controlled starts and scheduler restoration, before consuming that marker.
+# Saved runtime/enablement is checked without starting or repairing any service.
+verify_independent_completion_terminal() {
+    [[ -n $RECOVERY_MATERIAL_ROOT ]] || return 0
+    verify_saved_enablement
+    verify_saved_runtime_states
+    verify_installed_release_artifacts
+    verify_database_publication_if_required "$RECOVERY_EXPECTED_SNAPSHOT"
+}
+
+# A direct retained updater cannot bypass a material-backed completion failure.
+# Only proven absence or fully verified v1 data permits the legacy path.
+preflight_completion_material_admission() {
+    [[ $release_completion_present == 1 || $release_scheduler_present == 1 ]] || return 0
+    if [[ -n $RECOVERY_MATERIAL_ROOT ]]; then
+        verify_independent_completion_material
+        return 0
+    fi
+    local result status=0 reader=/usr/libexec/celikpanel/recovery
+    validate_root_trusted_dir_chain "${reader%/*}"
+    [[ -f $reader && ! -L $reader && $(readlink -e -- "$reader") == "$reader" &&
+       $(stat -Lc '%u:%g:%a:%h' -- "$reader") == 0:0:755:1 ]] \
+        || die "compatible completion recovery reader is unavailable; preserve the operation"
+    local snapshot
+    if [[ $release_completion_present == 1 ]]; then
+        IFS=$'\t' read -r _ _ snapshot < <(release_txn_read_pending_fields "$RELEASE_TRANSACTION_ROOT")
+    else
+        IFS=$'\t' read -r _ _ snapshot < <(release_txn_read_scheduler_restore_fields "$RELEASE_TRANSACTION_ROOT")
+    fi
+    result=$("$reader" completion-material-root --snapshot "$snapshot" 9<&"$RELEASE_TRANSACTION_FD") \
+        || status=$?
+    [[ ( $status == 3 || $status == 6 ) && -z $result ]] \
+        || die "this completion requires independent recovery; use sudo /usr/libexec/celikpanel/recovery recover"
+}
+
 validate_trusted_release() {
     local root canonical relative updater entry owner mode permissions version
+    if [[ -n $RECOVERY_MATERIAL_ROOT ]]; then
+        validate_recovery_code_root update.sh
+        [[ -n $RECOVERY_RUNTIME_ROOT && $RECOVER_EXISTING_TRANSACTION == 1 &&
+           $RECOVERY_EXPECTED_OPERATION == update &&
+           ( $RECOVERY_EXPECTED_PHASE == completion ||
+             $RECOVERY_EXPECTED_PHASE == completion-scheduler ||
+             $RECOVERY_EXPECTED_PHASE == scheduler ) &&
+           $RECOVERY_MATERIAL_ROOT =~ ^/var/lib/celikpanel-release-state/recovery-material/v1/[0-9a-f]{64}/data$ &&
+           $TRUSTED_RELEASE_ROOT == "$RECOVERY_MATERIAL_ROOT" ]] \
+            || die "completion data requires the exact independent late-update transaction"
+        verify_independent_completion_material
+        trusted_release_commit=$(cat -- "$TRUSTED_RELEASE_ROOT/release.commit")
+        trusted_release_tree=$(cat -- "$TRUSTED_RELEASE_ROOT/release.tree")
+        PREFLIGHT_PANEL=$CODE_ROOT/bin/panel-checker
+        PREFLIGHT_AGENT=$CODE_ROOT/bin/agent-checker
+        SCHEMA17_BRIDGE=$CODE_ROOT/bin/schema17-bridge
+        RECOVERY_PANEL_CHECKER=$PREFLIGHT_PANEL
+        RECOVERY_AGENT_CHECKER=$PREFLIGHT_AGENT
+        validate_preflight_binary "$SCHEMA17_BRIDGE" schema17-bridge
+        verify_independent_completion_material
+        return 0
+    fi
     [[ "$TRUSTED_RELEASE_ROOT" == /* ]] || die "trusted release root must be absolute"
     canonical=$(readlink -e -- "$TRUSTED_RELEASE_ROOT") || die "trusted release root is unavailable"
     [[ "$canonical" == "$TRUSTED_RELEASE_ROOT" ]] || die "trusted release root contains an alias"
@@ -589,9 +1115,18 @@ validate_trusted_release() {
     trusted_release_tree=$(tr -d '[:space:]' < "$root/release.tree")
     [[ "$trusted_release_commit" =~ ^[0-9a-f]{40,64}$ ]] || die "invalid trusted release commit"
     [[ "$trusted_release_tree" =~ ^[0-9a-f]{40,64}$ ]] || die "invalid trusted release tree"
-    [[ "$PREFLIGHT_PANEL" == "$root/bin/panel" ]] || die "panel preflight must come from the trusted release"
-    [[ "$PREFLIGHT_AGENT" == "$root/bin/agent" ]] || die "agent preflight must come from the trusted release"
-    SCHEMA17_BRIDGE="$root/bin/schema17-bridge"
+    validate_recovery_code_root update.sh
+    if [[ -n $RECOVERY_RUNTIME_ROOT ]]; then
+        PREFLIGHT_PANEL=$CODE_ROOT/bin/panel-checker
+        PREFLIGHT_AGENT=$CODE_ROOT/bin/agent-checker
+        SCHEMA17_BRIDGE=$CODE_ROOT/bin/schema17-bridge
+        RECOVERY_PANEL_CHECKER=$PREFLIGHT_PANEL
+        RECOVERY_AGENT_CHECKER=$PREFLIGHT_AGENT
+    else
+        [[ "$PREFLIGHT_PANEL" == "$root/bin/panel" ]] || die "panel preflight must come from the trusted release"
+        [[ "$PREFLIGHT_AGENT" == "$root/bin/agent" ]] || die "agent preflight must come from the trusted release"
+        SCHEMA17_BRIDGE="$root/bin/schema17-bridge"
+    fi
     validate_preflight_binary "$SCHEMA17_BRIDGE" schema17-bridge
     [[ -x "$root/install.sh" && -f "$root/install.sh" ]] || die "trusted release installer is missing"
     [[ -x "$root/rollback.sh" && -f "$root/rollback.sh" ]] || die "trusted release rollback is missing"
@@ -612,7 +1147,7 @@ validate_trusted_release() {
         || die "trusted release recovery protocol is unsupported or noncanonical"
     [[ -f "$root/web/dist/index.html" ]] || die "trusted release web artifact is missing"
     updater=$(readlink -e -- "$0") || die "cannot resolve running updater"
-    [[ "$updater" == "$root/update.sh" ]] || die "updater must execute from the trusted release"
+    [[ "$updater" == "$CODE_ROOT/update.sh" ]] || die "updater must execute from the trusted release"
 }
 
 # Read every process in a systemd service cgroup, including nested cgroups.
@@ -1335,29 +1870,36 @@ validate_pending_update_snapshot() {
 verify_installed_release_artifacts() {
     validate_preflight_binary "$BIN_DIR/panel" installed-panel
     validate_preflight_binary "$BIN_DIR/agent" installed-agent
-    cmp -s "$TRUSTED_RELEASE_ROOT/bin/panel" "$BIN_DIR/panel" \
-        || die "installed panel does not match the trusted release"
-    cmp -s "$TRUSTED_RELEASE_ROOT/bin/agent" "$BIN_DIR/agent" \
-        || die "installed agent does not match the trusted release"
-    validate_root_trusted_dir_chain "$WEB_DIR"
-    if find "$WEB_DIR" -type l -print -quit | grep -q .; then
-        die "installed web tree contains a symbolic link"
+    if [[ -n $RECOVERY_MATERIAL_ROOT ]]; then
+        verify_independent_completion_material
+        "$CODE_ROOT/bin/recovery" verify-installed-completion \
+            --snapshot "$RECOVERY_EXPECTED_SNAPSHOT" 9<&"$RELEASE_TRANSACTION_FD" \
+            || die "installed completion payload differs from its publication proof; preserve the operation"
+    else
+        cmp -s "$TRUSTED_RELEASE_ROOT/bin/panel" "$BIN_DIR/panel" \
+            || die "installed panel does not match the trusted release"
+        cmp -s "$TRUSTED_RELEASE_ROOT/bin/agent" "$BIN_DIR/agent" \
+            || die "installed agent does not match the trusted release"
+        validate_root_trusted_dir_chain "$WEB_DIR"
+        if find "$WEB_DIR" -type l -print -quit | grep -q .; then
+            die "installed web tree contains a symbolic link"
+        fi
+        if find "$WEB_DIR" ! -type d ! -type f -print -quit | grep -q .; then
+            die "installed web tree contains a special filesystem object"
+        fi
+        cmp -s \
+            <(cd "$TRUSTED_RELEASE_ROOT/web/dist" && \
+                LC_ALL=C find . -mindepth 1 -printf '%y\t%p\n' | LC_ALL=C sort) \
+            <(cd "$WEB_DIR" && \
+                LC_ALL=C find . -mindepth 1 -printf '%y\t%p\n' | LC_ALL=C sort) \
+            || die "installed web tree structure does not match the trusted release"
+        cmp -s \
+            <(cd "$TRUSTED_RELEASE_ROOT/web/dist" && \
+                LC_ALL=C find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum) \
+            <(cd "$WEB_DIR" && \
+                LC_ALL=C find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum) \
+            || die "installed web tree does not match the trusted release"
     fi
-    if find "$WEB_DIR" ! -type d ! -type f -print -quit | grep -q .; then
-        die "installed web tree contains a special filesystem object"
-    fi
-    cmp -s \
-        <(cd "$TRUSTED_RELEASE_ROOT/web/dist" && \
-            LC_ALL=C find . -mindepth 1 -printf '%y\t%p\n' | LC_ALL=C sort) \
-        <(cd "$WEB_DIR" && \
-            LC_ALL=C find . -mindepth 1 -printf '%y\t%p\n' | LC_ALL=C sort) \
-        || die "installed web tree structure does not match the trusted release"
-    cmp -s \
-        <(cd "$TRUSTED_RELEASE_ROOT/web/dist" && \
-            LC_ALL=C find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum) \
-        <(cd "$WEB_DIR" && \
-            LC_ALL=C find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum) \
-        || die "installed web tree does not match the trusted release"
     [[ -f "$RELEASE_UPDATER" && ! -L "$RELEASE_UPDATER" ]] \
         || die "installed reviewed release updater is missing or unsafe"
     [[ "$(stat -Lc '%u:%g:%a:%h' -- "$RELEASE_UPDATER")" == 0:0:755:1 ]] \
@@ -1678,7 +2220,7 @@ wait_for_post_apply_mutation_idle() {
         if CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" \
             CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
             CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
-            "$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock; then
+            "${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock; then
             return 0
         fi
         [[ "$attempt" -lt 60 ]] || break
@@ -1691,7 +2233,39 @@ wait_for_post_apply_mutation_idle() {
 # lock held. No HTTP process starts before this durable proof succeeds.
 # Gömülü migration'ları iki koordinatör kapalı ve tam mutation kilidi eldeyken
 # çalıştır. Bu kalıcı kanıt başarılı olmadan hiçbir HTTP süreci başlamaz.
+# Read policy from verified material, never from staging-directory absence.
+# Only explicit legacy evidence permits the historical database restore path.
+run_database_recovery_command() {
+    /usr/libexec/celikpanel/recovery "$@" 9<&"$RELEASE_TRANSACTION_FD"
+}
+
+read_database_migration_policy() {
+    local snapshot=$1 result status=0
+    result=$(run_database_recovery_command database-policy --snapshot "$snapshot") || status=$?
+    if [[ $status == 0 && $result == required ]]; then
+        printf '%s\n' required
+    elif [[ $status == 6 && -z $result ]]; then
+        printf '%s\n' legacy
+    else
+        die "database recovery policy is unverified; preserve this operation and use its independent recovery path"
+    fi
+}
+
+verify_database_publication_if_required() {
+    local snapshot=$1 policy
+    policy=$(read_database_migration_policy "$snapshot") || return 1
+    [[ $policy == required ]] || return 0
+    run_database_recovery_command verify-update-database --snapshot "$snapshot" \
+        || die "database publication is unverified; preserve the same operation and database evidence"
+}
+
 run_panel_migrations_offline() {
+    if [[ -n ${RECOVERY_RUNTIME_ROOT:-} ]]; then
+        CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
+            "$PREFLIGHT_PANEL" --check-completed-update-database-wal-aware \
+            || die "independent recovery cannot prove the completed panel database; candidate migration is not executed"
+        return 0
+    fi
     local unit state
     [[ -n "${MUTATION_LOCK_FD:-}" ]] \
         || die "offline panel migration requires the release mutation lock"
@@ -1706,23 +2280,241 @@ run_panel_migrations_offline() {
     done
     CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
         CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
-        "$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock \
+        "${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock \
         || die "agent ledger is not idle before offline panel migration"
+    local migration_directory
+    migration_directory=$(dirname "$PANEL_DB")
+    if [[ -n ${isolated_database_work:-} ]]; then
+        [[ $isolated_database_work =~ ^/var/lib/celikpanel/\.release-db-migrations/[0-9a-f]{64}/work$ ]] \
+            || die "isolated database workspace identity is invalid"
+        migration_directory=$isolated_database_work
+    fi
     sudo -u celikpanel -- env -i \
         PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
         HOME=/var/lib/celikpanel LC_ALL=C \
-        CELIKPANEL_DATA_DIR="$(dirname "$PANEL_DB")" \
+        CELIKPANEL_DATA_DIR="$migration_directory" \
         "$BIN_DIR/panel" --migrate-only \
-        || die "offline panel database migration failed"
+        || die "offline panel database migration failed; its original database and work evidence are preserved"
+    if [[ -n ${isolated_database_work:-} ]]; then
+        run_database_recovery_command publish-update-database --snapshot "$snapshot_name" \
+            || die "isolated database publication was not confirmed; preserve the same operation"
+    fi
     CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-        "$BIN_DIR/panel" --check-service-operations-idle \
+        "${RECOVERY_PANEL_CHECKER:-$BIN_DIR/panel}" --check-service-operations-idle \
         || die "panel ledger is not idle after offline migration"
     sync -f -- "$PANEL_DB" "$(dirname "$PANEL_DB")" \
         || die "offline migrated panel database could not be made durable"
     CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
         CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
-        "$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock \
+        "${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock \
         || die "agent ledger changed during offline panel migration"
+}
+
+panel_startup_env_key() {
+    case "$1" in
+        CELIKPANEL_DATA_DIR|CELIKPANEL_WEB_DIR|CELIKPANEL_LISTEN|CELIKPANEL_TLS|\
+        CELIKPANEL_TLS_CERT|CELIKPANEL_TLS_KEY|CELIKPANEL_TLS_DIR|\
+        CELIKPANEL_PANEL_INSECURE_COOKIES_FLAG|CELIKPANEL_PANEL_DEMO_FLAG) return 0 ;;
+    esac
+    return 1
+}
+
+# Rebuild the environment systemd gives the panel: the loaded unit's
+# Environment= (including drop-ins), then the owner's root-only panel.env,
+# which systemd applies afterwards. panel.env is data, never sourced.
+# systemd'nin panele verdiği ortamı yeniden kurar; panel.env kaynak olarak
+# çalıştırılmaz, yalnız veri olarak okunur.
+panel_startup_environment() {
+    local raw word key value line value_re='^[][A-Za-z0-9._/:@+,-]*$'
+    local -a words=()
+    local -A values=()
+    PANEL_STARTUP_ENV=()
+    raw=$(systemctl show --property=Environment --value celikpanel-panel.service) || return 1
+    [[ $raw != *[\"\'\\]* ]] || return 1
+    read -r -a words <<< "$raw"
+    for word in "${words[@]}"; do
+        [[ $word == *=* ]] || return 1
+        key=${word%%=*} value=${word#*=}
+        panel_startup_env_key "$key" || continue
+        values[$key]=$value
+    done
+    if [[ -e $PANEL_ENV_FILE || -L $PANEL_ENV_FILE ]]; then
+        [[ -f $PANEL_ENV_FILE && ! -L $PANEL_ENV_FILE &&
+           $(stat -Lc '%u:%g:%a' -- "$PANEL_ENV_FILE") == 0:0:600 ]] || return 1
+        while IFS= read -r line || [[ -n $line ]]; do
+            case "$line" in ''|'#'*) continue ;; esac
+            [[ $line == *=* ]] || return 1
+            key=${line%%=*} value=${line#*=}
+            panel_startup_env_key "$key" || return 1
+            values[$key]=$value
+        done < "$PANEL_ENV_FILE"
+    fi
+    for key in "${!values[@]}"; do
+        [[ ${values[$key]} =~ $value_re ]] || return 1
+        PANEL_STARTUP_ENV+=("$key=${values[$key]}")
+    done
+    PANEL_STARTUP_LISTEN=${values[CELIKPANEL_LISTEN]:-:2083}
+    PANEL_STARTUP_SCHEME=http
+    if [[ ${values[CELIKPANEL_TLS]:-} == 1 || -n ${values[CELIKPANEL_TLS_CERT]:-} ||
+          -n ${values[CELIKPANEL_TLS_KEY]:-} ]]; then
+        PANEL_STARTUP_SCHEME=https
+    fi
+}
+
+# Read-only start proof of the installed candidate panel, run as the panel
+# account while the active marker still selects automatic rollback. A failure
+# is a failure in phase active: on_exit stops both coordinators and the
+# recovery runner returns the server to the previous release.
+# Kurulu aday panelin salt-okur açılış kanıtı; active işaretçisi dururken
+# başarısızlık otomatik geri almaya gider.
+run_panel_startup_readiness_check() {
+    local output status=0 line reason= listen= scheme= pins= last=
+    # The environment comes from the panel unit (with every drop-in) and the
+    # owner's panel.env. A form this reader refuses is not a verdict on the new
+    # version's panel, which never ran: keep the generic code and say so.
+    # Okunamayan ortam aday panelin hatası sayılmaz; genel kod ve açık ayrıntı kalır.
+    if ! panel_startup_environment; then
+        update_failure_detail='the start check could not read the panel environment (the panel unit environment with its drop-ins, or panel.env): an entry has a quote, a backslash, an unknown key or an unsupported character; the new panel itself was not checked'
+        die "new panel start check could not read the panel unit environment or panel.env"
+    fi
+    update_failure_code=candidate_panel_startup_check_failed
+    output=$(sudo -u celikpanel -- env -i \
+        PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+        HOME=/var/lib/celikpanel LC_ALL=C "${PANEL_STARTUP_ENV[@]}" \
+        "$BIN_DIR/panel" --check-startup-readiness 2>&1) || status=$?
+    while IFS= read -r line; do
+        [[ -n $line ]] && last=$line
+        case "$line" in
+            'panel startup check failed: '*)
+                if [[ ${#line} -le 240 && $line =~ ^panel\ startup\ check\ failed:\ [a-z_]+:\ [[:print:]]+$ ]]; then
+                    reason=$line
+                fi
+                ;;
+            listen=*) listen=${line#listen=} ;;
+            scheme=*) scheme=${line#scheme=} ;;
+            pin=*)
+                [[ ${line#pin=} =~ ^sha256//[A-Za-z0-9+/]{43}=$ ]] || status=1
+                pins+=${pins:+;}${line#pin=}
+                ;;
+        esac
+    done <<< "$output"
+    if [[ $status -ne 0 ]]; then
+        update_failure_detail=
+        die "new panel start check failed before completion: ${reason:-no recognized reason line}"
+    fi
+    [[ $last == ready && $listen == "$PANEL_STARTUP_LISTEN" &&
+       ( $scheme == http || ( $scheme == https && -n $pins ) ) ]] \
+        || die "new panel start check returned no verifiable readiness report"
+    panel_startup_listen=$listen
+    panel_startup_scheme=$scheme
+    panel_startup_pins=$pins
+    update_failure_code=
+}
+
+# Loopback address for the panel's own listener. Wildcard binds are reached
+# through the matching loopback address; a specific address is used as is.
+panel_probe_target() {
+    local listen=$1 host port
+    if [[ $listen =~ ^\[([0-9A-Fa-f:.]+)\]:([0-9]{1,5})$ ]]; then
+        host="[${BASH_REMATCH[1]}]" port=${BASH_REMATCH[2]}
+    elif [[ $listen =~ ^([0-9A-Za-z._-]*):([0-9]{1,5})$ ]]; then
+        host=${BASH_REMATCH[1]} port=${BASH_REMATCH[2]}
+    else
+        return 1
+    fi
+    case "$host" in
+        ''|0.0.0.0|localhost) host=127.0.0.1 ;;
+        '[::]') host='[::1]' ;;
+    esac
+    (( 10#$port >= 1 && 10#$port <= 65535 )) || return 1
+    printf '%s:%s\n' "$host" "$((10#$port))"
+}
+
+# One anonymous request. Only the panel's own coded 401 counts: it proves the
+# listener, TLS and the startup handler. With known pins the server key must
+# match one of them; chain and name checks are replaced by that key pin.
+# Tek anonim istek; yalnız panelin kodlu 401 yanıtı sayılır.
+panel_http_probe() {
+    local scheme=$1 target=$2 pins=$3 response
+    local -a tls_args=()
+    if [[ $scheme == https ]]; then
+        tls_args=(--insecure)
+        [[ -z $pins ]] || tls_args+=(--pinnedpubkey "$pins")
+    fi
+    response=$("$CURL_BIN" --silent --max-time 3 --noproxy '*' --proto '=http,https' \
+        "${tls_args[@]}" --header 'Accept: application/json' \
+        --write-out '\n%{http_code}' "$scheme://$target/api/v1/panel/availability" 2>/dev/null) \
+        || return 1
+    [[ ${response##*$'\n'} == 401 && ${response%$'\n'*} == *'"code":"AUTH_REQUIRED"'* ]]
+}
+
+# After the real start: the unit must stay active with one unchanged main PID
+# and restart counter for PANEL_START_STABLE_SAMPLES samples 0.5 s apart, and
+# that same process must answer the loopback probe. Bounded by
+# PANEL_START_WAIT_SECONDS and PANEL_START_MAX_SAMPLES. The caller keeps the
+# completion phase: a failure here is completed forward, never rolled back.
+# Gerçek başlatmadan sonra: birim aynı PID ile kararlı kalmalı ve yanıt vermeli.
+wait_for_stable_panel_start() {
+    local pins=$1 scheme=${panel_startup_scheme:-} listen=${panel_startup_listen:-}
+    local target deadline sample=0 stable=0 answered=0 tracked= line state= pid= restarts=
+    if [[ -z $listen || -z $scheme ]]; then
+        panel_startup_environment || return 1
+        listen=$PANEL_STARTUP_LISTEN scheme=$PANEL_STARTUP_SCHEME
+    fi
+    target=$(panel_probe_target "$listen") || return 1
+    deadline=$((SECONDS + PANEL_START_WAIT_SECONDS))
+    while (( sample < PANEL_START_MAX_SAMPLES && SECONDS <= deadline )); do
+        sample=$((sample + 1))
+        state= pid= restarts=
+        while IFS= read -r line; do
+            case "$line" in
+                ActiveState=*) state=${line#ActiveState=} ;;
+                MainPID=*) pid=${line#MainPID=} ;;
+                NRestarts=*) restarts=${line#NRestarts=} ;;
+            esac
+        done < <(systemctl show --property=ActiveState --property=MainPID \
+            --property=NRestarts celikpanel-panel.service 2>/dev/null)
+        if [[ $state == active && $pid =~ ^[1-9][0-9]*$ && $restarts =~ ^[0-9]+$ ]]; then
+            if [[ $tracked != "$pid:$restarts" ]]; then
+                tracked=$pid:$restarts stable=0 answered=0
+            fi
+            stable=$((stable + 1))
+            if [[ $answered -eq 0 ]] && panel_http_probe "$scheme" "$target" "$pins"; then
+                answered=1
+            fi
+            if [[ $answered -eq 1 && $stable -ge $PANEL_START_STABLE_SAMPLES ]]; then
+                return 0
+            fi
+        else
+            tracked= stable=0 answered=0
+        fi
+        sleep 0.5
+    done
+    return 1
+}
+
+# Mirror rollback.sh: it refuses a new rollback whenever this snapshot's
+# recovery material exists, and it requires the canonical snapshot identity.
+# Only print a rollback command that rollback.sh would admit.
+# rollback.sh'nin reddettiği bir geri alma komutunu yazma.
+print_completed_update_snapshot_guidance() {
+    local snap_path=$1 name=$2 key material=present
+    if [[ $name =~ ^[0-9]{8}T[0-9]{6}Z-from-unknown-to-[0-9a-f]{40}-[0-9a-f]{32}$ ]]; then
+        key=$(printf '%s' "$name" | sha256sum) && key=${key%% *}
+        if [[ $key =~ ^[0-9a-f]{64}$ &&
+              ! -e $RELEASE_STATE_DIR/recovery-material/v1/$key &&
+              ! -L $RELEASE_STATE_DIR/recovery-material/v1/$key ]]; then
+            material=absent
+        fi
+    fi
+    if [[ $material == absent ]]; then
+        echo "    Verified rollback snapshot / Doğrulanmış geri alma snapshot'ı: $snap_path"
+        echo "    Roll back if needed / Gerekirse geri alın: sudo /bin/bash '$TRUSTED_RELEASE_ROOT/rollback.sh' '$snap_path'"
+        return 0
+    fi
+    echo "    Retained snapshot / Korunan snapshot: $snap_path"
+    echo "    It is kept for the independent recovery tool. A manual rollback of a completed update is not supported in this release."
+    echo "    Bağımsız kurtarma aracı için saklanıyor. Tamamlanmış bir güncellemenin elle geri alınması bu sürümde desteklenmiyor."
 }
 
 preflight_staged_installer_runtime
@@ -1736,11 +2528,16 @@ cd "$update_root"
 # İşlem işaretçisi ve systemd koruma mantığını yalnız tamamen doğrulanmış sürüm
 # sağlayabilir. Active işaretçisi yayımlanmadan önce iki drop-in'i de kur.
 # shellcheck source=deploy/release-transaction-guard.sh
-source "$TRUSTED_RELEASE_ROOT/deploy/release-transaction-guard.sh"
+source "$CODE_ROOT/deploy/release-transaction-guard.sh"
 # shellcheck source=deploy/panel-tls-snapshot.sh
-source "$TRUSTED_RELEASE_ROOT/deploy/panel-tls-snapshot.sh"
+source "$CODE_ROOT/deploy/panel-tls-snapshot.sh"
 # shellcheck source=deploy/release-recovery-foundation.sh
-source "$TRUSTED_RELEASE_ROOT/deploy/release-recovery-foundation.sh"
+source "$CODE_ROOT/deploy/release-recovery-foundation.sh"
+# Observation support is optional for historical releases and never participates
+# in update admission. Its bytes are covered by the complete release manifest.
+if [[ -f $CODE_ROOT/deploy/release-recovery-observation.sh ]]; then
+    source "$CODE_ROOT/deploy/release-recovery-observation.sh"
+fi
 
 classify_release_transaction_entries() {
     local entry name
@@ -1829,7 +2626,15 @@ publish_release_recovery_intent() {
 
 release_txn_verify_inherited_lock "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" || die "persistent release transaction lock verification failed"
 classify_release_transaction_entries
+preflight_completion_material_admission
 if [[ $release_marker_count -eq 0 ]]; then
+    [[ -z $RECOVERY_RUNTIME_ROOT ]] \
+        || die "independent recovery cannot initiate a new update"
+    # Reject a stale or conflicting source sequence before promotion of the
+    # separately retained recovery runtime can change host recovery bytes.
+    # The later check still re-proves the foundation immediately before intent.
+    preflight_release_recovery_foundation
+    prepare_independent_recovery_runtime
     # The candidate sequence/commit and every already-bound foundation byte
     # are proven before guard/drop-in publication can change the host.
     preflight_release_recovery_foundation
@@ -1879,7 +2684,11 @@ scheduler_recovery_exit() {
            release_txn_validate_scheduler_restore_token \
                "$RELEASE_TRANSACTION_ROOT" "$scheduler_recovery_token" \
                update "$scheduler_recovery_snapshot"; then
-            echo "!! Runtime completion remains durable; exact Certbot scheduler restoration is safely retryable." >&2
+            if [[ -n $RECOVERY_MATERIAL_ROOT ]]; then
+                echo "!! Update completion is unconfirmed; the exact scheduler marker and recovery evidence are retained. Resolve the reported check, then run sudo /usr/libexec/celikpanel/recovery recover to retry this operation." >&2
+            else
+                echo "!! Runtime completion remains durable; exact Certbot scheduler restoration is safely retryable." >&2
+            fi
             return "$status"
         fi
         if [[ "$scheduler_recovery_restored" -eq 1 &&
@@ -1913,10 +2722,10 @@ if [[ "$release_scheduler_present" -eq 1 && "$release_completion_present" -eq 0 
     verify_saved_enablement
     verify_saved_runtime_states
     CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-        "$BIN_DIR/panel" --check-service-operations-idle-wal-aware \
+        "${RECOVERY_PANEL_CHECKER:-$BIN_DIR/panel}" --check-service-operations-idle-wal-aware \
         || die "pending update panel service operations are not idle"
     CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
-        "$BIN_DIR/agent" --check-service-mutation-idle \
+        "${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle \
         || die "pending update agent/package mutations are not idle"
     scheduler_recovery_verified=1
     release_txn_validate_scheduler_restore_token \
@@ -1932,6 +2741,7 @@ if [[ "$release_scheduler_present" -eq 1 && "$release_completion_present" -eq 0 
     panel_tls_restore_certbot_scheduler "$pending_snapshot_path/panel-tls" \
         || die "pending update Certbot scheduler state could not be restored"
     scheduler_recovery_restored=1
+    verify_independent_completion_terminal
     release_txn_remove_scheduler_restore_pending \
         "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
         "$scheduler_recovery_token" update "$scheduler_recovery_snapshot" \
@@ -1977,7 +2787,11 @@ if [[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" || -L "$RELEASE_TRANSACT
                         || { stop_release_coordinators_fail_closed; return "$status"; }
                 fi
                 release_release_mutation_lock >/dev/null 2>&1 || true
-                echo "!! Runtime completion is exact and durable; Certbot scheduler restoration is safely retryable." >&2
+                if [[ -n $RECOVERY_MATERIAL_ROOT ]]; then
+                    echo "!! Update completion is unconfirmed; the exact scheduler marker and recovery evidence are retained. Resolve the reported check, then run sudo /usr/libexec/celikpanel/recovery recover to retry this operation." >&2
+                else
+                    echo "!! Runtime completion is exact and durable; Certbot scheduler restoration is safely retryable." >&2
+                fi
                 return "$status"
             fi
             if [[ $pending_scheduler_restored -eq 1 &&
@@ -2009,6 +2823,13 @@ if [[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" || -L "$RELEASE_TRANSACT
             || die "pending update scheduler marker does not match runtime completion"
     fi
     validate_pending_update_snapshot "$pending_snapshot"
+    # A paused completion returns renewal to its recorded state (the runner),
+    # so the same retry pauses it again before stopping or starting anything.
+    # The quiesce proof still refuses a later owner change of its enablement.
+    # Duraklatılan tamamlama yenilemeyi eski hâline döndürür; aynı yeniden
+    # deneme herhangi bir şeyi durdurmadan önce onu yeniden duraklatır.
+    panel_tls_quiesce_certbot_scheduler "$pending_snapshot_path/panel-tls" \
+        || die "pending update Certbot scheduler could not be paused again before the retry"
     verify_installed_release_artifacts
     verify_saved_enablement
     release_txn_validate_pending_token \
@@ -2017,12 +2838,12 @@ if [[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" || -L "$RELEASE_TRANSACT
 
     prepare_runtime_mutation_lock_dir
     CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
-        "$BIN_DIR/agent" --check-service-mutation-idle \
+        "${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle \
         || die "pending update agent/package mutations are not idle"
     acquire_release_mutation_lock
     CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
         CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
-        "$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock \
+        "${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock \
         || die "pending update agent/package state changed before the locked stop"
 
     systemctl stop celikpanel-panel.service \
@@ -2040,23 +2861,23 @@ if [[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" || -L "$RELEASE_TRANSACT
         || die "cannot release stale pending-finalization mutation lock"
     prepare_runtime_mutation_lock_dir
     CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
-        "$BIN_DIR/agent" --check-service-mutation-idle \
+        "${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle \
         || die "pending update agent ledger changed while stopping"
     acquire_release_mutation_lock
     CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
         CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
-        "$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock \
+        "${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock \
         || die "pending update agent ledger is not idle under the rebuilt lock"
 
     if [[ "$pending_snapshot_transition" == normal ]]; then
         CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-            run_update_idle_probe "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware \
+            run_update_idle_probe "$PREFLIGHT_PANEL" --check-service-operations-idle-wal-aware \
             || die "pending normal update panel ledger is not idle"
     elif CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-        run_update_idle_probe "$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware; then
+        run_update_idle_probe "$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle-wal-aware; then
         :
     elif CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-        run_update_idle_probe "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware; then
+        run_update_idle_probe "$PREFLIGHT_PANEL" --check-service-operations-idle-wal-aware; then
         :
     else
         die "pending pre-ledger update database is neither exact pre-ledger nor normal"
@@ -2068,6 +2889,8 @@ if [[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" || -L "$RELEASE_TRANSACT
         || die "pending update marker changed before offline migration"
     run_panel_migrations_offline
     verify_installed_release_artifacts
+    # An observation for operators; this line grants no recovery authority.
+    printf '%s\n' 'CELIKPANEL_UPDATE_CHECKPOINT database_verified_before_start'
     verify_saved_enablement
     release_txn_validate_pending_token \
         "$RELEASE_TRANSACTION_ROOT" "$pending_token" update "$pending_snapshot" \
@@ -2089,7 +2912,7 @@ if [[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" || -L "$RELEASE_TRANSACT
         acquire_release_mutation_lock handoff
         CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
             CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
-            "$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock \
+            "${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock \
             || die "pending update agent state is not idle after the startup lock handoff"
         verify_installed_release_artifacts
         verify_saved_enablement
@@ -2100,14 +2923,18 @@ if [[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" || -L "$RELEASE_TRANSACT
     if service_state_is_active_like "${saved_active_states[celikpanel-panel.service]}"; then
         systemctl start celikpanel-panel.service \
             || die "pending update panel could not be started"
-        systemctl is-active --quiet celikpanel-panel.service \
-            || die "pending update panel is not active"
+        # No candidate code runs here, so no key pin is known: the probe
+        # accepts only the panel's own coded 401 over TLS on its port.
+        # Burada aday kod çalışmaz; anahtar sabitlemesi yoktur.
+        wait_for_stable_panel_start "" \
+            || die "pending update panel did not stay running and answer on its own address"
     fi
 
+    verify_independent_completion_terminal
     verify_saved_runtime_states
     CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
         CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
-        "$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock \
+        "${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock \
         || die "pending update agent ledger changed during controlled starts"
     verify_saved_enablement
     release_txn_remove_start_authorization \
@@ -2117,12 +2944,13 @@ if [[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" || -L "$RELEASE_TRANSACT
     verify_saved_runtime_states
     CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
         CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
-        "$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock \
+        "${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock \
         || die "pending update agent durable ledger is not ready before completion"
     verify_saved_enablement
     release_txn_validate_pending_token \
         "$RELEASE_TRANSACTION_ROOT" "$pending_token" update "$pending_snapshot" \
         || die "pending update marker changed before durable completion"
+    verify_independent_completion_terminal
     pending_completion_verified=1
     release_txn_mark_scheduler_restore_pending \
         "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
@@ -2144,6 +2972,7 @@ if [[ -e "$RELEASE_TRANSACTION_ROOT/completion.pending" || -L "$RELEASE_TRANSACT
     panel_tls_restore_certbot_scheduler "$pending_snapshot_path/panel-tls" \
         || die "pending update Certbot scheduler state could not be restored"
     pending_scheduler_restored=1
+    verify_independent_completion_terminal
     release_txn_remove_scheduler_restore_pending \
         "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
         "$pending_token" update "$pending_snapshot" \
@@ -2525,6 +3354,9 @@ else
     # Uyumsuz DNS durumunu panel erişilebilirken, kalıcı başlangıç engelinden
     # önce reddet. Aşağıda son kilit altında tekrar doğrula.
     preflight_bind_before_quiesce
+    preflight_mutations_before_quiesce
+    check_mail_application_compatibility ||
+        fail_update_preflight application_compatibility "application compatibility with native mail/DNS evidence is unverified before coordinator downtime"
     mkdir -m 0700 -- "$stage_root"
     chown root:root -- "$stage_root"
     mkdir -m 0700 -- "$tmp_snap"
@@ -2584,6 +3416,19 @@ else
     preserve_staging=1
     transaction_started=1
     transaction_phase=quiesce-publishing
+    # Bind the real worker request before a durable transaction can interrupt it.
+    # A worker that wrote no record (a historical Agent) gets its initial one
+    # here. An unsupported kernel hierarchy or a run outside a worker is unknown;
+    # failure to publish this auxiliary record cannot change the update result.
+    publish_update_initial_observation
+    if declare -F release_observation_bind_update >/dev/null &&
+       ! release_observation_bind_update "$RELEASE_TRANSACTION_ROOT" \
+            "$RELEASE_TRANSACTION_FD" "$release_transaction_token" \
+            "$snapshot_name" "$target_release_commit"; then
+        printf '%s\n' \
+            'CelikPanel recovery observation is unavailable: the recovery status command will show this update as unknown. If the update does not finish, automatic recovery still runs; its attempts and, if it pauses, the one-time retry command are in: sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50' \
+            'CelikPanel kurtarma gözlemi kullanılamıyor: kurtarma durum komutu bu güncellemeyi bilinmiyor olarak gösterecek. Güncelleme tamamlanmazsa otomatik kurtarma yine çalışır; denemeleri ve duraklarsa tek seferlik yeniden deneme komutu şuradadır: sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50' >&2
+    fi
     release_txn_create_quiesce_marker \
         "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
         "$release_transaction_token" update "$snapshot_name" \
@@ -2618,25 +3463,27 @@ prepare_runtime_mutation_lock_dir
 if [[ $BOOTSTRAP_PRE_LEDGER -eq 1 ]]; then
     if [[ $BOOTSTRAP_SCHEMA17 -eq 1 ]]; then
         "$SCHEMA17_BRIDGE" check --db "$PANEL_DB" \
-            || fail_before_active "panel is not at the exact supported schema version 17; schema17 bootstrap refused"
+            || { update_failure_detail=; update_idle_probe_status=0
+                 fail_update_preflight bootstrap_state "panel is not at the exact supported schema version 17; schema17 bootstrap refused"; }
     elif ! CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-        run_update_idle_probe "$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware; then
-        fail_before_active "panel is not at exact pre-ledger schema version 20; bootstrap refused"
+        run_update_live_panel_probe "$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle-wal-aware; then
+        fail_update_preflight idle_probe "panel is not at exact pre-ledger schema version 20; bootstrap refused"
     fi
     [[ ! -e "$AGENT_LEDGER" && ! -L "$AGENT_LEDGER" ]] \
-        || fail_before_active "durable agent ledger already exists; pre-ledger bootstrap refused"
+        || { update_failure_detail=; update_idle_probe_status=0
+             fail_update_preflight bootstrap_state "durable agent ledger already exists; pre-ledger bootstrap refused"; }
     if ! CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
         run_update_idle_probe "$PREFLIGHT_AGENT" --check-pre-ledger-service-mutation-idle; then
-        fail_before_active "pre-ledger agent/package state is not idle; bootstrap refused"
+        fail_update_preflight agent_idle "pre-ledger agent/package state is not idle; bootstrap refused"
     fi
 else
     if ! CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-        run_update_idle_probe "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware; then
-        fail_before_active "panel service operations are not idle; update refused"
+        run_update_live_panel_probe "$PREFLIGHT_PANEL" --check-service-operations-idle-wal-aware; then
+        fail_update_preflight idle_probe "panel service operations are not idle; update refused"
     fi
     if ! CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
         run_update_idle_probe "$PREFLIGHT_AGENT" --check-service-mutation-idle; then
-        fail_before_active "agent/package mutations are not idle; update refused"
+        fail_update_preflight agent_idle "agent/package mutations are not idle; update refused"
     fi
 fi
 
@@ -2645,18 +3492,21 @@ if [[ $BOOTSTRAP_PRE_LEDGER -eq 1 ]]; then
     if ! CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
         CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
         run_update_idle_probe "$PREFLIGHT_AGENT" --check-pre-ledger-service-mutation-idle-under-external-lock; then
-        fail_before_active "pre-ledger agent/package state changed before freeze"
+        fail_update_preflight agent_idle "pre-ledger agent/package state changed before freeze"
     fi
 else
     if ! CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
         CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
         run_update_idle_probe "$PREFLIGHT_AGENT" --check-service-mutation-idle-under-external-lock; then
-        fail_before_active "agent/package state changed before freeze"
+        fail_update_preflight agent_idle "agent/package state changed before freeze"
     fi
 fi
 
 if ! check_bind_update_compatibility; then
-    fail_before_active "managed BIND state changed before coordinator freeze"
+    fail_update_preflight bind_compatibility "managed BIND state changed before coordinator freeze"
+fi
+if ! check_mail_application_compatibility; then
+    fail_update_preflight application_compatibility "application compatibility with native mail/DNS evidence changed before coordinator freeze"
 fi
 
 if [[ "$transaction_phase" == quiesce ]]; then
@@ -2674,7 +3524,7 @@ if [[ "$transaction_phase" == quiesce ]]; then
             "$SCHEMA17_BRIDGE" check --db "$PANEL_DB" \
                 || fail_before_active "final frozen panel exact schema17 proof failed"
         elif ! CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-            run_update_idle_probe "$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware; then
+            run_update_idle_probe "$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle-wal-aware; then
             fail_before_active "final frozen panel pre-ledger idle proof failed"
         fi
         [[ ! -e "$AGENT_LEDGER" && ! -L "$AGENT_LEDGER" ]] \
@@ -2686,7 +3536,7 @@ if [[ "$transaction_phase" == quiesce ]]; then
         fi
     else
         if ! CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-            run_update_idle_probe "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware; then
+            run_update_idle_probe "$PREFLIGHT_PANEL" --check-service-operations-idle-wal-aware; then
             fail_before_active "final frozen panel idle proof failed"
         fi
         if ! CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
@@ -2765,7 +3615,7 @@ if [[ $BOOTSTRAP_PRE_LEDGER -eq 1 ]]; then
             || die "stopped panel exact schema17 proof failed"
     else
         CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-            run_update_idle_probe "$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware \
+            run_update_idle_probe "$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle-wal-aware \
             || die "stopped panel pre-ledger idle proof failed"
     fi
     CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
@@ -2774,7 +3624,7 @@ if [[ $BOOTSTRAP_PRE_LEDGER -eq 1 ]]; then
         || die "stopped pre-ledger agent idle proof failed"
 else
     CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-        run_update_idle_probe "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware \
+        run_update_idle_probe "$PREFLIGHT_PANEL" --check-service-operations-idle-wal-aware \
         || die "stopped panel idle proof failed"
     CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
         CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
@@ -2806,14 +3656,14 @@ else
         rescue_active_marker_digest=$(sha256sum "$rescue_active_marker" | awk '{ print $1 }') \
             || die "cannot hash active marker before durable rescue snapshot"
         CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-            "$TRUSTED_RELEASE_ROOT/bin/panel" \
+            run_update_idle_probe "$PREFLIGHT_PANEL" \
             --ensure-service-operation-rescue-snapshot="$rescue_snapshot" \
             --snapshot-schema="$snapshot_schema" \
             --release-transaction-fd="$RELEASE_TRANSACTION_FD" \
             --release-transaction-token="$release_transaction_token" \
             --release-transaction-operation=update \
             --release-transaction-snapshot="$snapshot_name" \
-            || die "transaction-consistent durable recovery snapshot failed; recovery path was retained"
+            || fail_update_snapshot "transaction-consistent durable recovery snapshot failed; recovery path was retained"
         release_txn_verify_inherited_lock "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
             || die "persistent release lock changed during durable recovery snapshot"
         flock -n -x "$MUTATION_LOCK_FD" \
@@ -2837,7 +3687,7 @@ else
                 run_update_idle_probe "$PREFLIGHT_AGENT" --check-pre-ledger-service-mutation-idle-under-external-lock \
                 || die "pre-ledger agent/package state changed during durable recovery snapshot"
             CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-                run_update_idle_probe "$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware \
+                run_update_idle_probe "$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle-wal-aware \
                 || die "pre-ledger panel service-operation state changed during durable recovery snapshot"
         else
             CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
@@ -2845,7 +3695,7 @@ else
                 run_update_idle_probe "$PREFLIGHT_AGENT" --check-service-mutation-idle-under-external-lock \
                 || die "agent/package mutation state changed during durable recovery snapshot"
             CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-                run_update_idle_probe "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware \
+                run_update_idle_probe "$PREFLIGHT_PANEL" --check-service-operations-idle-wal-aware \
                 || die "panel service-operation state changed during durable recovery snapshot"
         fi
         verify_recovery_snapshot "$rescue_snapshot"
@@ -2853,14 +3703,14 @@ else
             || die "durable recovery snapshot could not be synchronized"
     fi
     CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-        "$TRUSTED_RELEASE_ROOT/bin/panel" \
+        run_update_idle_probe "$PREFLIGHT_PANEL" \
         --create-service-operation-snapshot="$tmp_snap/$(basename "$PANEL_DB")" \
         --snapshot-schema="$snapshot_schema" \
         --release-transaction-fd="$RELEASE_TRANSACTION_FD" \
         --release-transaction-token="$release_transaction_token" \
         --release-transaction-operation=update \
         --release-transaction-snapshot="$snapshot_name" \
-        || die "transaction-consistent panel database snapshot failed"
+        || fail_update_snapshot "transaction-consistent panel database snapshot failed"
 fi
 [[ -f "$tmp_snap/$(basename "$PANEL_DB")" && ! -L "$tmp_snap/$(basename "$PANEL_DB")" ]] \
     || die "online panel database snapshot is missing or unsafe"
@@ -2902,6 +3752,8 @@ if [[ ! -e "$tls_snapshot_root" && ! -L "$tls_snapshot_root" ]]; then
             || die "Certbot scheduler state could not be added to the service ledger"
         sync -f -- "$tmp_snap/service-states.tsv" "$tmp_snap" \
             || die "scheduler service-state ledger could not be made durable"
+        # Guidance only: lets the pause text say whether this update paused renewal.
+        publish_update_renewal_observation "$tmp_snap/service-states.tsv" >/dev/null 2>&1 || true
     elif [[ "$service_state_rows" -ne 5 ]]; then
         die "service state ledger must contain exactly three or five canonical rows before TLS capture"
     fi
@@ -3092,6 +3944,9 @@ if [[ $BOOTSTRAP_SCHEMA17 -eq 0 ]]; then
 fi
 echo "==> Verified rollback snapshot / Doğrulanmış geri alma snapshot'ı: $snap"
 
+
+handoff_independent_capture_rollback
+
 # Retain five complete v6 snapshots. Older snapshot formats remain untouched
 # for their matching immutable historical recovery release and for manual
 # recovery. The v6 rollback helper intentionally refuses v5, which lacks the
@@ -3141,6 +3996,31 @@ panel_tls_snapshot_assert_source_unchanged \
 panel_tls_snapshot_scheduler_matches_service_ledger \
     "$snap/panel-tls" "$snap/service-states.tsv" \
     || die "published TLS scheduler snapshot disagrees with the service ledger"
+
+# Bind the already sealed snapshot to the accepted target BEFORE schema/product
+# apply. The material retains only recovery data, never candidate executables.
+# v6 snapshot bytes stay unchanged; its exact manifest is part of this contract.
+recovery_snapshot_manifest_sha=$(sha256sum -- "$snap/SHA256SUMS") \
+    || die "sealed snapshot identity could not be read before recovery material capture"
+recovery_snapshot_manifest_sha=${recovery_snapshot_manifest_sha%% *}
+recovery_candidate_manifest_sha=$(sha256sum -- "$TRUSTED_RELEASE_ROOT/SHA256SUMS") \
+    || die "candidate identity could not be read before recovery material capture"
+recovery_candidate_manifest_sha=${recovery_candidate_manifest_sha%% *}
+/usr/libexec/celikpanel/recovery prepare-recovery-material \
+    --snapshot "$snapshot_name" \
+    --snapshot-manifest "$recovery_snapshot_manifest_sha" \
+    --candidate-root "$TRUSTED_RELEASE_ROOT" \
+    --candidate-manifest "$recovery_candidate_manifest_sha" \
+    9<&"$RELEASE_TRANSACTION_FD" \
+    || die "recovery material could not be committed before candidate apply; preserve the exact snapshot"
+isolated_database_policy=$(read_database_migration_policy "$snapshot_name") \
+    || die "database transition policy is unverified before apply"
+if [[ $isolated_database_policy == required ]]; then
+    isolated_database_work=$(run_database_recovery_command prepare-update-database --snapshot "$snapshot_name") \
+        || die "isolated database preparation was not confirmed; preserve the exact snapshot and work evidence"
+    [[ $isolated_database_work =~ ^/var/lib/celikpanel/\.release-db-migrations/[0-9a-f]{64}/work$ ]] \
+        || die "isolated database preparation returned an invalid workspace"
+fi
 if [[ $BOOTSTRAP_PRE_LEDGER -eq 1 ]]; then
     # Release the outer flock only for the trusted one-shot initializer. Prove
     # its exact empty ledger, recreate and reacquire the common lock, then run
@@ -3230,11 +4110,11 @@ verify_installed_release_artifacts
 
 if [[ $BOOTSTRAP_PRE_LEDGER -eq 1 ]]; then
     CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-        run_update_idle_probe "$TRUSTED_RELEASE_ROOT/bin/panel" --check-pre-ledger-service-operations-idle-wal-aware \
+        run_update_idle_probe "$PREFLIGHT_PANEL" --check-pre-ledger-service-operations-idle-wal-aware \
         || die "pre-ledger panel database changed before the controlled start"
 else
     CELIKPANEL_DATA_DIR=$(dirname "$PANEL_DB") \
-        run_update_idle_probe "$TRUSTED_RELEASE_ROOT/bin/panel" --check-service-operations-idle-wal-aware \
+        run_update_idle_probe "$PREFLIGHT_PANEL" --check-service-operations-idle-wal-aware \
         || die "installed panel durable ledger is not ready before controlled start"
 fi
 wait_for_post_apply_mutation_idle \
@@ -3259,16 +4139,27 @@ sync -f -- "$BIN_DIR" "$WEB_DIR" "$PANEL_DB" \
     "$UNIT_DIR/celikpanel-agent.service" "$UNIT_DIR/celikpanel-panel.service" "$UNIT_DIR" \
     || die "installed release directories could not be made durable"
 
-# Move active to completion.pending only after the stopped-state durable proof;
-# then publish process-bound authorization for the exact controlled starts.
-# Active işaretçisini yalnız kapalı-durum dayanıklılık kanıtından sonra
-# completion.pending'e taşı; sonra tam kontrollü başlangıçlar için süreç bağlı yetki yayımla.
+# New normal updates remain active through isolated migration and durable DB
+# publication. Historical schema17/pre-ledger retains its separate legacy path.
+# Yeni normal güncellemede migration ve DB yayını doğrulanana kadar active kalır.
+if [[ -n ${isolated_database_work:-} ]]; then
+    run_panel_migrations_offline
+    verify_installed_release_artifacts
+    verify_database_publication_if_required "$snapshot_name"
+    # Read-only candidate start proof while active still selects rollback.
+    # Aday açılış kanıtı; active işaretçisi geri almayı seçerken salt-okur.
+    run_panel_startup_readiness_check
+fi
 release_txn_mark_completion_pending \
     "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
     "$release_transaction_token" update "$snapshot_name" \
     || die "cannot mark update completion pending"
-run_panel_migrations_offline
+if [[ -z ${isolated_database_work:-} ]]; then
+    run_panel_migrations_offline
+fi
 verify_installed_release_artifacts
+# An observation for operators; this line grants no recovery authority.
+printf '%s\n' 'CELIKPANEL_UPDATE_CHECKPOINT database_verified_before_start'
 verify_saved_enablement
 release_txn_validate_pending_token \
     "$RELEASE_TRANSACTION_ROOT" "$release_transaction_token" update "$snapshot_name" \
@@ -3287,7 +4178,7 @@ if service_state_is_active_like "${saved_active_states[celikpanel-agent.service]
     acquire_release_mutation_lock handoff
     CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
         CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
-        "$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock \
+        "${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock \
         || die "verified agent state is not idle after the startup lock handoff"
     verify_installed_release_artifacts
     verify_saved_enablement
@@ -3296,13 +4187,18 @@ if service_state_is_active_like "${saved_active_states[celikpanel-agent.service]
         || die "update completion marker changed during the startup lock handoff"
 fi
 if service_state_is_active_like "${saved_active_states[celikpanel-panel.service]}"; then
+    # Completion is marked: a start failure is completed forward, not rolled back.
+    # Tamamlanma işaretli: başlatma hatası ileri tamamlanır, geri alınmaz.
+    update_failure_code=panel_start_unverified
     systemctl start celikpanel-panel.service || die "verified panel could not be started"
-    systemctl is-active --quiet celikpanel-panel.service || die "verified panel is not running"
+    wait_for_stable_panel_start "$panel_startup_pins" \
+        || die "the new panel did not stay running and answer on its own address after the update was applied"
+    update_failure_code=
 fi
 verify_saved_runtime_states
 CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
     CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
-    "$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock \
+    "${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock \
     || die "installed agent ledger changed during controlled starts"
 verify_saved_enablement
 release_txn_remove_start_authorization \
@@ -3312,12 +4208,13 @@ release_txn_remove_start_authorization \
 verify_saved_runtime_states
 CELIKPANEL_AGENT_STATE_DIR="$AGENT_STATE_DIR" CELIKPANEL_MUTATION_LOCK="$MUTATION_LOCK" \
     CELIKPANEL_MUTATION_LOCK_FD="$MUTATION_LOCK_FD" \
-    "$BIN_DIR/agent" --check-service-mutation-idle-under-external-lock \
+    "${RECOVERY_AGENT_CHECKER:-$BIN_DIR/agent}" --check-service-mutation-idle-under-external-lock \
     || die "installed agent durable ledger is not ready before completion"
 verify_saved_enablement
 release_txn_validate_pending_token \
     "$RELEASE_TRANSACTION_ROOT" "$release_transaction_token" update "$snapshot_name" \
     || die "update completion marker changed before durable removal"
+verify_database_publication_if_required "$snapshot_name"
 transaction_completion_verified=1
 transaction_phase=scheduler-publishing
 release_txn_mark_scheduler_restore_pending \
@@ -3344,6 +4241,7 @@ release_txn_validate_scheduler_restore_token \
 panel_tls_restore_certbot_scheduler "$snap/panel-tls" \
     || die "Certbot renewal scheduler state could not be restored"
 scheduler_restore_verified=1
+verify_database_publication_if_required "$snapshot_name"
 transaction_phase=scheduler-removing
 release_txn_remove_scheduler_restore_pending \
     "$RELEASE_TRANSACTION_ROOT" "$RELEASE_TRANSACTION_FD" \
@@ -3354,5 +4252,4 @@ trap - EXIT
 transaction_phase=none
 echo
 echo "==> Update complete / Güncelleme tamamlandı"
-echo "    Verified rollback snapshot / Doğrulanmış geri alma snapshot'ı: $snap"
-echo "    Roll back if needed / Gerekirse geri alın: sudo /bin/bash '$TRUSTED_RELEASE_ROOT/rollback.sh' '$snap'"
+print_completed_update_snapshot_guidance "$snap" "$snapshot_name"

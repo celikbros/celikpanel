@@ -8,14 +8,17 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
+	goruntime "runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"golang.org/x/sys/unix"
 )
 
@@ -24,14 +27,16 @@ const (
 	dnsKillMatrixRollbackPrecursorSchema = "celikpanel-dns-kill-matrix-rollback-precursor/v1"
 	dnsKillMatrixRollbackPrecursorAction = "returned-injected-error"
 
-	dnsKillMatrixEnvCellID    = "CELIKPANEL_DNS_KILL_MATRIX_CELL_ID"
-	dnsKillMatrixEnvDriver    = "CELIKPANEL_DNS_KILL_MATRIX_DRIVER"
-	dnsKillMatrixEnvPoint     = "CELIKPANEL_DNS_KILL_MATRIX_POINT"
-	dnsKillMatrixEnvPhase     = "CELIKPANEL_DNS_KILL_MATRIX_PHASE"
-	dnsKillMatrixEnvRequestID = "CELIKPANEL_DNS_KILL_MATRIX_REQUEST_ID"
-	dnsKillMatrixEnvNonce     = "CELIKPANEL_DNS_KILL_MATRIX_NONCE"
-	dnsKillMatrixEnvMarker    = "CELIKPANEL_DNS_KILL_MATRIX_MARKER"
-	dnsKillMatrixEnvReadyFD   = "CELIKPANEL_DNS_KILL_MATRIX_READY_FD"
+	dnsKillMatrixEnvCellID            = "CELIKPANEL_DNS_KILL_MATRIX_CELL_ID"
+	dnsKillMatrixEnvDriver            = "CELIKPANEL_DNS_KILL_MATRIX_DRIVER"
+	dnsKillMatrixEnvPoint             = "CELIKPANEL_DNS_KILL_MATRIX_POINT"
+	dnsKillMatrixEnvPhase             = "CELIKPANEL_DNS_KILL_MATRIX_PHASE"
+	dnsKillMatrixEnvRequestID         = "CELIKPANEL_DNS_KILL_MATRIX_REQUEST_ID"
+	dnsKillMatrixEnvNonce             = "CELIKPANEL_DNS_KILL_MATRIX_NONCE"
+	dnsKillMatrixEnvMarker            = "CELIKPANEL_DNS_KILL_MATRIX_MARKER"
+	dnsKillMatrixEnvReadyFD           = "CELIKPANEL_DNS_KILL_MATRIX_READY_FD"
+	dnsKillMatrixEnvRollbackPrecursor = "CELIKPANEL_DNS_KILL_MATRIX_ROLLBACK_PRECURSOR"
+	dnsKillMatrixBindHandoffCell      = "bind__rolling-back__after-write__standalone__peer-reachable"
 
 	dnsKillMatrixPreIntentPhase = "pre-intent"
 	dnsKillMatrixMaxCellID      = 192
@@ -49,20 +54,23 @@ var (
 		dnsKillMatrixEnvMarker,
 		dnsKillMatrixEnvReadyFD,
 	}
+	// Returned only when an injected park operation returns, which the default
+	// runtime never does. It is kept as the fail-closed result of a test park.
 	dnsKillMatrixResumedError = errors.New(
 		"DNS kill-matrix child resumed after SIGSTOP instead of being killed",
 	)
 )
 
 type dnsKillMatrixConfig struct {
-	CellID    string
-	Driver    string
-	Point     string
-	Phase     string
-	RequestID string
-	Nonce     string
-	Marker    string
-	ReadyFD   int
+	CellID            string
+	Driver            string
+	Point             string
+	Phase             string
+	RequestID         string
+	Nonce             string
+	Marker            string
+	ReadyFD           int
+	RollbackPrecursor string
 }
 
 type dnsKillMatrixObservedJournal struct {
@@ -123,6 +131,11 @@ type dnsKillMatrixRuntimeOps struct {
 	notifyReady func(int, string) error
 	stopProcess func(int) error
 	now         func() time.Time
+	// park holds the calling goroutine after the boundary has been published.
+	// The default never returns, so neither the rest of the journal writer nor
+	// any error path or deferred cleanup of the mutating operation runs in this
+	// process after the marker exists.
+	park func(error)
 }
 
 type dnsKillMatrixRuntime struct {
@@ -142,6 +155,9 @@ const (
 )
 
 func init() {
+	if mailRenewalOnlyBuild {
+		return
+	}
 	config, active, err := dnsKillMatrixConfigFromEnvironment(os.LookupEnv)
 	if !active {
 		return
@@ -171,10 +187,39 @@ func dnsKillMatrixDefaultRuntimeOps() dnsKillMatrixRuntimeOps {
 		startTicks:  serviceMutationProcessStartIdentity,
 		writeMarker: dnsKillMatrixWriteMarker,
 		notifyReady: dnsKillMatrixNotifyReady,
-		stopProcess: func(pid int) error {
-			return unix.Kill(pid, unix.SIGSTOP)
-		},
-		now: time.Now,
+		stopProcess: dnsKillMatrixStopCallingThread,
+		now:         time.Now,
+		park:        dnsKillMatrixParkForever,
+	}
+}
+
+// dnsKillMatrixStopCallingThread stops the whole process from the thread that
+// runs the hook. A process-directed kill(2) may be taken by another thread, so
+// the caller could run for milliseconds before its own thread stops (cell c6,
+// batch 4, 2026-09-29). tgkill(2) to the calling thread marks this thread's
+// pending stop, and the kernel handles it before the syscall returns to user
+// space; the group stop then stops every other thread. The OS thread stays
+// locked because the caller parks afterwards and never unlocks it.
+func dnsKillMatrixStopCallingThread(pid int) error {
+	goruntime.LockOSThread()
+	return unix.Tgkill(pid, unix.Gettid(), unix.SIGSTOP)
+}
+
+// dnsKillMatrixParkForever is reached only if the boundary could not be
+// published or stopped, or if something resumed the stopped process (SIGCONT)
+// instead of killing it. The operation must not continue in either case: its
+// error path would perform native effects outside the named boundary. The
+// controller then sees a sleeping, not stopped, process and refuses the cell.
+func dnsKillMatrixParkForever(reason error) {
+	log.Printf(
+		"DNS kill-matrix boundary holds the mutating operation instead of continuing it: %v",
+		reason,
+	)
+	// A sleeping goroutine keeps a timer pending, so the runtime's deadlock
+	// detector cannot turn the hold into a process exit when no other
+	// goroutine is runnable (as in a bare test binary); select{} would.
+	for {
+		time.Sleep(time.Hour)
 	}
 }
 
@@ -193,8 +238,13 @@ func dnsKillMatrixConfigFromEnvironment(
 		present[name] = ok
 		active = active || ok
 	}
+	precursor, precursorPresent := lookup(dnsKillMatrixEnvRollbackPrecursor)
+	active = active || precursorPresent
 	if !active {
 		return dnsKillMatrixConfig{}, false, nil
+	}
+	if precursorPresent && precursor == "" {
+		return dnsKillMatrixConfig{}, true, fmt.Errorf("%s must not be empty", dnsKillMatrixEnvRollbackPrecursor)
 	}
 	missing := make([]string, 0, len(dnsKillMatrixEnvironment))
 	for _, name := range dnsKillMatrixEnvironment {
@@ -213,14 +263,15 @@ func dnsKillMatrixConfigFromEnvironment(
 		return dnsKillMatrixConfig{}, true, err
 	}
 	config := dnsKillMatrixConfig{
-		CellID:    values[dnsKillMatrixEnvCellID],
-		Driver:    values[dnsKillMatrixEnvDriver],
-		Point:     values[dnsKillMatrixEnvPoint],
-		Phase:     values[dnsKillMatrixEnvPhase],
-		RequestID: values[dnsKillMatrixEnvRequestID],
-		Nonce:     values[dnsKillMatrixEnvNonce],
-		Marker:    values[dnsKillMatrixEnvMarker],
-		ReadyFD:   readyFD,
+		CellID:            values[dnsKillMatrixEnvCellID],
+		Driver:            values[dnsKillMatrixEnvDriver],
+		Point:             values[dnsKillMatrixEnvPoint],
+		Phase:             values[dnsKillMatrixEnvPhase],
+		RequestID:         values[dnsKillMatrixEnvRequestID],
+		Nonce:             values[dnsKillMatrixEnvNonce],
+		Marker:            values[dnsKillMatrixEnvMarker],
+		ReadyFD:           readyFD,
+		RollbackPrecursor: precursor,
 	}
 	if err := dnsKillMatrixValidateConfig(config); err != nil {
 		return dnsKillMatrixConfig{}, true, err
@@ -264,6 +315,13 @@ func dnsKillMatrixValidateConfig(config dnsKillMatrixConfig) error {
 	}
 	if config.ReadyFD < 3 {
 		return fmt.Errorf("%s must not name a standard file descriptor", dnsKillMatrixEnvReadyFD)
+	}
+	if config.RollbackPrecursor != "" && !(config.RollbackPrecursor == dnsSwitchPhaseTargetStarted &&
+		config.CellID == dnsKillMatrixBindHandoffCell &&
+		config.Driver == dnsEngineSwitchFaultDriverBIND &&
+		config.Point == dnsEngineSwitchJournalFaultAfterWrite &&
+		config.Phase == dnsSwitchPhaseRollingBack) {
+		return fmt.Errorf("%s is not valid for the exact BIND recovery handoff", dnsKillMatrixEnvRollbackPrecursor)
 	}
 	return nil
 }
@@ -357,6 +415,12 @@ func dnsKillMatrixRollbackPrecursorFor(
 		config.Phase != dnsSwitchPhaseRolledBack {
 		return dnsKillMatrixRollbackPrecursorSpec{}, false
 	}
+	if config.RollbackPrecursor == dnsSwitchPhaseTargetStarted {
+		return dnsKillMatrixRollbackPrecursorSpec{
+			Point: dnsEngineSwitchJournalFaultAfterWrite,
+			Phase: dnsSwitchPhaseTargetStarted,
+		}, true
+	}
 	switch config.Driver {
 	case dnsEngineSwitchFaultDriverBIND,
 		dnsEngineSwitchFaultDriverPDNSSwitch,
@@ -401,6 +465,85 @@ func dnsKillMatrixObservedJournalFor(
 	}
 }
 
+// The late BIND fault only arms after a complete V2 inverse-source envelope.
+// Full journal validation below binds every source byte and identity before the
+// fault is published; this gate preserves the earlier, specific refusal.
+func dnsKillMatrixLaterBINDFrozenSourceProof(journal dnsEngineSwitchJournal) bool {
+	if journal.Schema != dnsengineartifact.SwitchJournalSchemaV2 ||
+		journal.InversePlan == nil ||
+		len(journal.InversePlan.BINDUnchangedConfig) != 2 {
+		return false
+	}
+	plan := journal.InversePlan
+	if journal.SourceEngine == "pdns" {
+		return plan.SourcePDNS != nil && plan.SourceBIND == nil &&
+			len(plan.SourcePDNS.ConfigBefore) == 3
+	}
+	return journal.SourceEngine == "" && plan.SourcePDNS == nil &&
+		plan.SourceBIND != nil && len(plan.SourceBIND.Files) > 0 &&
+		len(plan.SourceBIND.Zones) > 0 && len(journal.ConfigBefore) == 2 &&
+		journal.Mode == "switch" && journal.TargetEngine == "bind" &&
+		journal.SourceEpoch == 0 && journal.TargetEpoch == 1 &&
+		journal.SourceRevision == 0 && journal.Topology == "standalone" &&
+		journal.PairRole == "" && journal.LocalIP == "" &&
+		journal.LocalNS == "" && journal.PeerIP == "" &&
+		journal.PeerNS == "" && !journal.StateBefore.Exists
+}
+
+// dnsKillMatrixFreshPairedPrimaryV3 reports the one V3 shape the hook admits:
+// the fresh paired PowerDNS primary produced by the pdns-switch driver (empty
+// source, target PowerDNS at epoch 1, paired topology, primary role, a V3
+// fresh-primary plan). Every other V3 journal, and any V3 journal under
+// another driver, keeps the schema refusal.
+//
+// Hook'un kabul ettiği tek V3 biçimi: pdns-switch sürücüsünün ürettiği boş
+// kaynaklı, eşli, birincil PowerDNS ilk kurulumu. Diğer her V3 günlüğü
+// reddedilmeye devam eder.
+func dnsKillMatrixFreshPairedPrimaryV3(driver string, journal dnsEngineSwitchJournal) bool {
+	return driver == dnsEngineSwitchFaultDriverPDNSSwitch &&
+		journal.Schema == dnsengineartifact.SwitchJournalSchemaV3 &&
+		journal.PDNSFreshPlan != nil &&
+		journal.Mode == "switch" &&
+		journal.SourceEngine == "" && journal.SourceEpoch == 0 &&
+		journal.TargetEngine == "pdns" && journal.TargetEpoch == 1 &&
+		journal.Topology == "paired" && journal.PairRole == "primary"
+}
+
+// dnsKillMatrixSelectsPhase decides whether journal is the selected write.
+//
+// V1/V2 journals are selected by their exact phase, unchanged.
+//
+// For the fresh paired PowerDNS primary (V3) two rules are added:
+//   - V3 has no source-stopped phase. The harness names the manifest
+//     coordinate source-stopped for the boundary where the V3 producer
+//     records target-enable-intent (the target unit is about to be enabled
+//     and started); only for this shape does a configured source-stopped
+//     select the target-enable-intent write. A configured target-enable-intent
+//     selects it directly.
+//   - target-started is written twice: once right after the start, and again
+//     with the native observation attached. The selected write is always the
+//     FIRST one (no native observation). The second write is never selected,
+//     so the cut is deterministic whether the point is before- or after-write.
+//
+// V3 fresh-primary günlüğünde source-stopped yoktur; yalnız bu biçim için
+// yapılandırılmış source-stopped, target-enable-intent yazımını seçer.
+// target-started iki kez yazılır; seçilen her zaman ilk yazımdır.
+func (runtime *dnsKillMatrixRuntime) selectsPhase(driver string, journal dnsEngineSwitchJournal) bool {
+	if !dnsKillMatrixFreshPairedPrimaryV3(driver, journal) {
+		return journal.Phase == runtime.config.Phase
+	}
+	switch {
+	case journal.Phase == dnsSwitchPhaseTargetStarted:
+		return runtime.config.Phase == dnsSwitchPhaseTargetStarted &&
+			journal.PDNSFreshPlan.Native == nil
+	case journal.Phase == dnsengineartifact.SwitchPhaseTargetEnableIntent:
+		return runtime.config.Phase == dnsengineartifact.SwitchPhaseTargetEnableIntent ||
+			runtime.config.Phase == dnsSwitchPhaseSourceStopped
+	default:
+		return journal.Phase == runtime.config.Phase
+	}
+}
+
 func (runtime *dnsKillMatrixRuntime) validateObservation(
 	driver string,
 	point string,
@@ -419,11 +562,17 @@ func (runtime *dnsKillMatrixRuntime) validateObservation(
 			label, driver,
 		)
 	}
-	if journal.Schema != dnsEngineSwitchJournalSchema {
+	if journal.Schema != dnsEngineSwitchJournalSchema &&
+		!(driver == dnsEngineSwitchFaultDriverBIND && journal.Schema == dnsengineartifact.SwitchJournalSchemaV2) &&
+		!dnsKillMatrixFreshPairedPrimaryV3(driver, journal) {
 		return fmt.Errorf(
 			"DNS kill-matrix journal schema mismatch at %s: observed %q",
 			label, journal.Schema,
 		)
+	}
+	if runtime.config.RollbackPrecursor == dnsSwitchPhaseTargetStarted &&
+		!dnsKillMatrixLaterBINDFrozenSourceProof(journal) {
+		return fmt.Errorf("DNS kill-matrix later BIND rollback requires V2 frozen PowerDNS or owner BIND source proof at %s", label)
 	}
 	if point == dnsEngineSwitchJournalFaultPreIntent {
 		if !validMutationIdentity(journal.MutationOwnerID) {
@@ -521,7 +670,7 @@ func (runtime *dnsKillMatrixRuntime) hook(
 			driver, point, journal, precursorSpec,
 		)
 	}
-	if point != runtime.config.Point || journal.Phase != runtime.config.Phase {
+	if point != runtime.config.Point || !runtime.selectsPhase(driver, journal) {
 		return nil
 	}
 	if err := runtime.validateObservation(
@@ -547,7 +696,8 @@ func (runtime *dnsKillMatrixRuntime) stopAtBoundary(
 ) error {
 	if runtime.ops.pid == nil || runtime.ops.startTicks == nil ||
 		runtime.ops.writeMarker == nil || runtime.ops.notifyReady == nil ||
-		runtime.ops.stopProcess == nil || runtime.ops.now == nil {
+		runtime.ops.stopProcess == nil || runtime.ops.now == nil ||
+		runtime.ops.park == nil {
 		return errors.New("DNS kill-matrix runtime operations are incomplete")
 	}
 	pid := runtime.ops.pid()
@@ -578,16 +728,21 @@ func (runtime *dnsKillMatrixRuntime) stopAtBoundary(
 		ObservedJournal:   dnsKillMatrixObservedJournalFor(point, journal),
 		RollbackPrecursor: precursor,
 	}
+	// From the first marker write on, this call never returns into the
+	// operation. The marker can be visible even when its publication reports a
+	// late error, so every outcome below ends in park: the caller's error path
+	// (for example a BIND pointer restore or unit rollback) and its deferred
+	// cleanups must not run after the boundary the controller will record.
+	reason := dnsKillMatrixResumedError
 	if err := runtime.ops.writeMarker(runtime.config.Marker, marker); err != nil {
-		return fmt.Errorf("publish DNS kill-matrix boundary marker: %w", err)
+		reason = fmt.Errorf("publish DNS kill-matrix boundary marker: %w", err)
+	} else if err := runtime.ops.notifyReady(runtime.config.ReadyFD, runtime.config.Nonce); err != nil {
+		reason = fmt.Errorf("notify DNS kill-matrix controller: %w", err)
+	} else if err := runtime.ops.stopProcess(pid); err != nil {
+		reason = fmt.Errorf("stop DNS kill-matrix child process: %w", err)
 	}
-	if err := runtime.ops.notifyReady(runtime.config.ReadyFD, runtime.config.Nonce); err != nil {
-		return fmt.Errorf("notify DNS kill-matrix controller: %w", err)
-	}
-	if err := runtime.ops.stopProcess(pid); err != nil {
-		return fmt.Errorf("stop DNS kill-matrix child process: %w", err)
-	}
-	return dnsKillMatrixResumedError
+	runtime.ops.park(reason)
+	return reason
 }
 
 func dnsKillMatrixWriteMarker(path string, marker dnsKillMatrixMarker) error {

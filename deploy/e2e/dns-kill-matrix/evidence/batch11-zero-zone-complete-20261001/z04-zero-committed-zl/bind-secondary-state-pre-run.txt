@@ -1,0 +1,109 @@
+wall=2026-09-30T05:12:19.195940612Z boot_id=dba7ccfa-37ca-425c-b224-c4a5a1930d9c
+== named.service
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+MainPID=4977
+NRestarts=0
+ExecMainStartTimestamp=Wed 2026-09-30 05:11:28 UTC
+== ss 53
+udp UNCONN 0      0      192.0.2.11:53 0.0.0.0:* users:(("named",pid=4977,fd=24))
+udp UNCONN 0      0      192.0.2.11:53 0.0.0.0:* users:(("named",pid=4977,fd=23))
+udp UNCONN 0      0       127.0.0.1:53 0.0.0.0:* users:(("named",pid=4977,fd=18))
+udp UNCONN 0      0       127.0.0.1:53 0.0.0.0:* users:(("named",pid=4977,fd=17))
+udp UNCONN 0      0      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=1479,fd=26))
+udp UNCONN 0      0      127.0.0.53:53 0.0.0.0:* users:(("systemd-resolve",pid=1479,fd=24))
+tcp LISTEN 0      0      127.0.0.53:53 0.0.0.0:* users:(("systemd-resolve",pid=1479,fd=25))
+tcp LISTEN 0      0      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=1479,fd=27))
+tcp LISTEN 0      0       127.0.0.1:53 0.0.0.0:* users:(("named",pid=4977,fd=21))
+tcp LISTEN 0      0       127.0.0.1:53 0.0.0.0:* users:(("named",pid=4977,fd=19))
+tcp LISTEN 0      0      192.0.2.11:53 0.0.0.0:* users:(("named",pid=4977,fd=26))
+tcp LISTEN 0      0      192.0.2.11:53 0.0.0.0:* users:(("named",pid=4977,fd=25))
+== management binaries (must be absent)
+ls: cannot access '/opt/celikpanel': No such file or directory
+== /etc/named.conf
+-rw-r----- 1 root named 510 2026-09-30 05:11:27.940535252 +0000 /etc/named.conf
+b0cb30473a30e3ccf11ba43cb44ed92112ffb48648c80559ec1b9bcf1b86e6c0  /etc/named.conf
+== rndc status
+version: BIND 9.20.29 (Stable Release) <id:c3d4465>
+running on dns-arch: Linux x86_64 7.1.8-arch1-3 #1 SMP PREEMPT_DYNAMIC Tue, 11 Aug 2026 09:16:08 +0000 (Arch Linux)
+boot time: Wed, 30 Sep 2026 05:11:28 GMT
+last configured: Wed, 30 Sep 2026 05:11:28 GMT
+configuration file: /etc/named.conf
+CPUs found: 2
+worker threads: 2
+number of zones: 2 (0 automatic)
+debug level: 0
+xfers running: 0
+xfers deferred: 0
+xfers first refresh: 1
+soa queries in progress: 0
+query logging is OFF
+response logging is OFF
+memory profiling is INACTIVE
+recursive clients: 0/900/1000
+recursive high-water: 0
+tcp clients: 0/150
+TCP high-water: 1
+server is up and running
+== rndc zonestatus catalog-c000020a.celikpanel.invalid
+rndc: 'zonestatus' failed: zone not loaded
+== rndc showzone catalog-c000020a.celikpanel.invalid
+zone "catalog-c000020a.celikpanel.invalid" { type secondary; file "celikpanel-fixture-catalog.zone"; primaries { 192.0.2.10; }; allow-transfer  { 192.0.2.10/32; 127.0.0.1/32; }; };
+== rndc zonestatus s1-kill.test
+rndc: 'zonestatus' failed: not found
+no matching zone 's1-kill.test' in any view
+== rndc showzone s1-kill.test
+rndc: 'showzone' failed: not found
+no matching zone 's1-kill.test' in any view
+== rndc zonestatus s2.s1-kill.test
+rndc: 'zonestatus' failed: not found
+no matching zone 's2.s1-kill.test' in any view
+== rndc showzone s2.s1-kill.test
+rndc: 'showzone' failed: not found
+no matching zone 's2.s1-kill.test' in any view
+== loaded catalog (AXFR from 127.0.0.1, read-only)
+== catalog members (PTR rdata under zones.catalog-c000020a.celikpanel.invalid)
+== loaded s1-kill.test SOA (127.0.0.1)
+;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 38370
+;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1
+; EDNS: version: 0, flags:; udp: 1232
+;s1-kill.test.			IN	SOA
+== loaded s2.s1-kill.test SOA (127.0.0.1)
+;; ->>HEADER<<- opcode: QUERY, status: REFUSED, id: 52249
+;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1
+; EDNS: version: 0, flags:; udp: 1232
+;s2.s1-kill.test.		IN	SOA
+== /var/named tree (no follow)
+drwxrwx--- root:named 188 2026-09-30T05:11:53.7918807130 /var/named -> 
+-rw-r----- root:named 466 2026-09-16T14:52:07.0000000000 /var/named/127.0.0.zone -> 
+-rw------- named:named 8192 2026-09-30T05:11:28.7533990980 /var/named/_default.nzd -> 
+-rw-r----- root:named 506 2026-09-16T14:52:07.0000000000 /var/named/localhost.ip6.zone -> 
+-rw-r----- root:named 517 2026-09-16T14:52:07.0000000000 /var/named/localhost.zone -> 
+-rw-r--r-- named:named 1411 2026-09-30T05:11:53.7779301490 /var/named/managed-keys.bind -> 
+-rw-r--r-- named:named 1336 2026-09-30T05:11:28.8588914280 /var/named/managed-keys.bind.jnl -> 
+== transferred zone files (newer than /etc/named.conf): metadata, hash, content
+-- /var/named/_default.nzd
+size=8192 mode=600 owner=named:named mtime=2026-09-30 05:11:28.753399098 +0000
+e01847f8afdf44e574920f3f79a05dc514e5dc0627f6f27dddd0520bde4d6797  /var/named/_default.nzd
+-- /var/named/managed-keys.bind
+size=1411 mode=644 owner=named:named mtime=2026-09-30 05:11:53.777930149 +0000
+189b300d6fdc079ecd3a125ee87f3c23d9b65a4fddb1270d6ad08819b543f8db  /var/named/managed-keys.bind
+-- /var/named/managed-keys.bind.jnl
+size=1336 mode=644 owner=named:named mtime=2026-09-30 05:11:28.858891428 +0000
+caa6389c2a7d66bd7b7dd74f0f14543fbe9fe4adeb8ab1f570a4b205509da1c0  /var/named/managed-keys.bind.jnl
+== named journal (transfer/notify/catalog/zone lines, all boots)
+2026-09-30T05:11:28.754484+00:00 dns-arch named[4977]: set up managed keys zone for view _default, file 'managed-keys.bind'
+2026-09-30T05:11:28.756619+00:00 dns-arch named[4977]: managed-keys-zone: loaded serial 0
+2026-09-30T05:11:28.756908+00:00 dns-arch named[4977]: all zones loaded
+2026-09-30T05:11:28.793954+00:00 dns-arch named[4977]: zone catalog-c000020a.celikpanel.invalid/IN: refresh: failure trying primary 192.0.2.10#53 (source 0.0.0.0#0): connection refused
+2026-09-30T05:11:28.852440+00:00 dns-arch named[4977]: managed-keys-zone: Initializing automatic trust anchor management for zone '.'; DNSKEY ID 20326 is now trusted, waiving the normal 30-day waiting period.
+2026-09-30T05:11:28.852539+00:00 dns-arch named[4977]: managed-keys-zone: Initializing automatic trust anchor management for zone '.'; DNSKEY ID 38696 is now trusted, waiving the normal 30-day waiting period.
+2026-09-30T05:12:15.763187+00:00 dns-arch named[4977]: zone catalog-c000020a.celikpanel.invalid/IN: refresh: failure trying primary 192.0.2.10#53 (source 0.0.0.0#0): connection refused
+2026-09-30T05:12:19.263639+00:00 dns-arch named[4977]: received control channel command 'zonestatus catalog-c000020a.celikpanel.invalid'
+2026-09-30T05:12:19.277744+00:00 dns-arch named[4977]: received control channel command 'showzone catalog-c000020a.celikpanel.invalid'
+2026-09-30T05:12:19.292350+00:00 dns-arch named[4977]: received control channel command 'zonestatus s1-kill.test'
+2026-09-30T05:12:19.306903+00:00 dns-arch named[4977]: received control channel command 'showzone s1-kill.test'
+2026-09-30T05:12:19.321078+00:00 dns-arch named[4977]: received control channel command 'zonestatus s2.s1-kill.test'
+2026-09-30T05:12:19.335540+00:00 dns-arch named[4977]: received control channel command 'showzone s2.s1-kill.test'

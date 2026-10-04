@@ -1,0 +1,52 @@
+{
+  "admitted": true,
+  "packagekitd_alive_after": true,
+  "packagekitd_alive_before": true,
+  "readiness": {
+    "answered_by": "agent",
+    "body": {
+      "ready": true
+    },
+    "http": 200,
+    "utc": "2026-10-01T21:49:19Z"
+  },
+  "request_id": "8754390060ba490c8c04ea800790ec21",
+  "start": {
+    "body": {
+      "accepted": true,
+      "request_id": "8754390060ba490c8c04ea800790ec21",
+      "status": "queued",
+      "target": {
+        "arch": "amd64",
+        "archive_sha256": "e2de75c2013ed6095676129765bf8249832d996c87e83d7f623b223141e96eff",
+        "archive_size": "65647230",
+        "commit": "962e6f242b2dbcb0d42edae9e741d3822a92c8cc",
+        "os": "linux",
+        "published_at": "2026-10-01T21:27:16Z",
+        "sequence": "82",
+        "version": "v0.1.0-alpha.82"
+      }
+    },
+    "http": 202,
+    "utc": "2026-10-01T21:49:19Z"
+  },
+  "status": {
+    "body": {
+      "created_at": "2026-10-01T21:49:20.422868419Z",
+      "found": true,
+      "request_id": "8754390060ba490c8c04ea800790ec21",
+      "status": "running",
+      "target": {
+        "arch": "amd64",
+        "archive_sha256": "e2de75c2013ed6095676129765bf8249832d996c87e83d7f623b223141e96eff",
+        "archive_size": "65647230",
+        "commit": "962e6f242b2dbcb0d42edae9e741d3822a92c8cc",
+        "os": "linux",
+        "sequence": "82",
+        "version": "v0.1.0-alpha.82"
+      },
+      "updated_at": "2026-10-01T21:49:20.503974634Z"
+    },
+    "http": 200
+  }
+}

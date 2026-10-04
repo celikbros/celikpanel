@@ -1,0 +1,130 @@
+[
+  {
+    "answers": [
+      {
+        "additional": [],
+        "answer": [],
+        "authoritative": false,
+        "authority": [],
+        "name": "pair-accept.test.",
+        "qtype": "SOA",
+        "rcode": "REFUSED",
+        "server": "192.0.2.11",
+        "transport": "udp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [],
+        "authoritative": false,
+        "authority": [],
+        "name": "pair-accept.test.",
+        "qtype": "SOA",
+        "rcode": "REFUSED",
+        "server": "192.0.2.11",
+        "transport": "tcp",
+        "truncated": false
+      }
+    ],
+    "command": "dns",
+    "observer": "arch",
+    "returncode": 0,
+    "server": "192.0.2.11"
+  },
+  {
+    "answers": [
+      {
+        "additional": [],
+        "answer": [],
+        "authoritative": false,
+        "authority": [],
+        "name": "pair-accept.test.",
+        "qtype": "SOA",
+        "rcode": "REFUSED",
+        "server": "192.0.2.10",
+        "transport": "udp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [],
+        "authoritative": false,
+        "authority": [],
+        "name": "pair-accept.test.",
+        "qtype": "SOA",
+        "rcode": "REFUSED",
+        "server": "192.0.2.10",
+        "transport": "tcp",
+        "truncated": false
+      }
+    ],
+    "command": "dns",
+    "observer": "arch",
+    "returncode": 0,
+    "server": "192.0.2.10"
+  },
+  {
+    "answers": [
+      {
+        "additional": [],
+        "answer": [],
+        "authoritative": false,
+        "authority": [],
+        "name": "pair-accept.test.",
+        "qtype": "SOA",
+        "rcode": "REFUSED",
+        "server": "192.0.2.11",
+        "transport": "udp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [],
+        "authoritative": false,
+        "authority": [],
+        "name": "pair-accept.test.",
+        "qtype": "SOA",
+        "rcode": "REFUSED",
+        "server": "192.0.2.11",
+        "transport": "tcp",
+        "truncated": false
+      }
+    ],
+    "command": "dns",
+    "observer": "debian13",
+    "returncode": 0,
+    "server": "192.0.2.11"
+  },
+  {
+    "answers": [
+      {
+        "additional": [],
+        "answer": [],
+        "authoritative": false,
+        "authority": [],
+        "name": "pair-accept.test.",
+        "qtype": "SOA",
+        "rcode": "REFUSED",
+        "server": "192.0.2.10",
+        "transport": "udp",
+        "truncated": false
+      },
+      {
+        "additional": [],
+        "answer": [],
+        "authoritative": false,
+        "authority": [],
+        "name": "pair-accept.test.",
+        "qtype": "SOA",
+        "rcode": "REFUSED",
+        "server": "192.0.2.10",
+        "transport": "tcp",
+        "truncated": false
+      }
+    ],
+    "command": "dns",
+    "observer": "debian13",
+    "returncode": 0,
+    "server": "192.0.2.10"
+  }
+]

@@ -1,0 +1,123 @@
+2026-09-30T00:41:59Z start c04 c04-pri-started-zl-rb pdns-switch__target-started__after-write__paired-primary__peer-reachable /var/tmp/cp-b9-1001
+2026-09-30T00:52:04Z done c04 RUN_PREPARED_RC=0
+stop rc=0
+teardown rc=0
+{
+  "action": "stop",
+  "cell_id": "pdns-switch__target-started__after-write__paired-primary__peer-reachable",
+  "dry_run": false,
+  "method": "QMP quit; no fallback signal"
+}
+{
+  "action": "teardown",
+  "cell_id": "pdns-switch__target-started__after-write__paired-primary__peer-reachable",
+  "dry_run": false,
+  "target": "/var/tmp/cp-b9-1001/cells/e05b4787635364e83414f682",
+  "warning": "recursive deletion is confined to this validated cell directory"
+}
+no qemu
+2026-09-30T00:52:04Z start z01 z01-zero-staged pdns-switch__target-staged__after-write__paired-primary__peer-reachable /var/tmp/cp-b9-1001/r1
+2026-09-30T00:58:58Z done z01 RUN_PREPARED_RC=0
+stop rc=0
+teardown rc=0
+{
+  "action": "stop",
+  "cell_id": "pdns-switch__target-staged__after-write__paired-primary__peer-reachable",
+  "dry_run": false,
+  "method": "QMP quit; no fallback signal"
+}
+{
+  "action": "teardown",
+  "cell_id": "pdns-switch__target-staged__after-write__paired-primary__peer-reachable",
+  "dry_run": false,
+  "target": "/var/tmp/cp-b9-1001/r1/cells/7fc4eccb599d2ce9b7d2a44c",
+  "warning": "recursive deletion is confined to this validated cell directory"
+}
+no qemu
+2026-09-30T00:58:58Z start z02 z02-zero-started pdns-switch__target-started__after-write__paired-primary__peer-reachable /var/tmp/cp-b9-1001/r1
+2026-09-30T01:06:23Z done z02 RUN_PREPARED_RC=0
+stop rc=0
+teardown rc=0
+{
+  "action": "stop",
+  "cell_id": "pdns-switch__target-started__after-write__paired-primary__peer-reachable",
+  "dry_run": false,
+  "method": "QMP quit; no fallback signal"
+}
+{
+  "action": "teardown",
+  "cell_id": "pdns-switch__target-started__after-write__paired-primary__peer-reachable",
+  "dry_run": false,
+  "target": "/var/tmp/cp-b9-1001/r1/cells/e05b4787635364e83414f682",
+  "warning": "recursive deletion is confined to this validated cell directory"
+}
+no qemu
+2026-09-30T01:06:24Z start z03 z03-zero-committed pdns-switch__committed__after-write__paired-primary__peer-reachable /var/tmp/cp-b9-1001/r1
+2026-09-30T01:13:14Z done z03 RUN_PREPARED_RC=0
+stop rc=0
+teardown rc=0
+{
+  "action": "stop",
+  "cell_id": "pdns-switch__committed__after-write__paired-primary__peer-reachable",
+  "dry_run": false,
+  "method": "QMP quit; no fallback signal"
+}
+{
+  "action": "teardown",
+  "cell_id": "pdns-switch__committed__after-write__paired-primary__peer-reachable",
+  "dry_run": false,
+  "target": "/var/tmp/cp-b9-1001/r1/cells/7392457812ac089a866de6ec",
+  "warning": "recursive deletion is confined to this validated cell directory"
+}
+no qemu
+2026-09-30T01:13:14Z CHAIN-DONE
+2026-09-30T01:23:53Z start z04-zero-committed-zl (direct runcell; stop/teardown decided after inspection)
+2026-09-30T01:30:52Z done z04-zero-committed-zl RUN_PREPARED_RC=2 (direct; guests left running for inspection)
+2026-09-30T01:37:35Z z04 RUN_PREPARED_RC=2: parentless delete pending (dns_peer_enrollment_required); owner enrollment done (enroll.log); zone-lifecycle --recover-delete exit 2, trigger refused_not_pending before any mutation (harness phase check uses s1-kill.test); second collect in evidence/z04-zero-committed-zl/rec; guests stopped, overlays kept
+stop rc=0
+{
+  "action": "stop",
+  "cell_id": "pdns-switch__committed__after-write__paired-primary__peer-reachable",
+  "dry_run": false,
+  "method": "QMP quit; no fallback signal"
+}
+no qemu
+total 12
+drwx------ 3 root root 4096 Sep 30 04:23 .
+drwx------ 5 root root 4096 Sep 30 03:41 ..
+drwx------ 5 root root 4096 Sep 30 04:27 7392457812ac089a866de6ec
+2026-09-30T01:37:44Z start z05-zero-started-zl-rb (direct runcell; stop/teardown decided after inspection)
+2026-09-30T01:45:09Z done z05-zero-started-zl-rb RUN_PREPARED_RC=2 (direct; guests left running for inspection)
+2026-09-30T01:47:30Z z05 RUN_PREPARED_RC=2: parentless delete pending (dns_peer_enrollment_required), lifecycle not-passed, reboot not run (as the README defines); no owner enrollment in z05 (the recover command is refused by the trigger's phase check, see z04); guests stopped, overlays kept
+stop rc=0
+{
+  "action": "stop",
+  "cell_id": "pdns-switch__target-started__after-write__paired-primary__peer-reachable",
+  "dry_run": false,
+  "method": "QMP quit; no fallback signal"
+}
+no qemu
+total 16
+drwx------ 4 root root 4096 Sep 30 04:37 .
+drwx------ 5 root root 4096 Sep 30 03:41 ..
+drwx------ 5 root root 4096 Sep 30 04:27 7392457812ac089a866de6ec
+drwx------ 5 root root 4096 Sep 30 04:41 e05b4787635364e83414f682
+2026-09-30T01:47:30Z start z06 z06-zero-owner-sql pdns-switch__target-started__after-write__paired-primary__peer-reachable /var/tmp/cp-b9-1001/r3
+2026-09-30T01:53:54Z done z06 RUN_PREPARED_RC=0
+stop rc=0
+teardown rc=0
+{
+  "action": "stop",
+  "cell_id": "pdns-switch__target-started__after-write__paired-primary__peer-reachable",
+  "dry_run": false,
+  "method": "QMP quit; no fallback signal"
+}
+{
+  "action": "teardown",
+  "cell_id": "pdns-switch__target-started__after-write__paired-primary__peer-reachable",
+  "dry_run": false,
+  "target": "/var/tmp/cp-b9-1001/r3/cells/e05b4787635364e83414f682",
+  "warning": "recursive deletion is confined to this validated cell directory"
+}
+no qemu
+2026-09-30T01:53:55Z CHAIN-DONE

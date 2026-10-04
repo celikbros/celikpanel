@@ -1,0 +1,8 @@
+{
+  "directory_present": true,
+  "records": {
+    "ded53ec59a2d64864e45c34d5a675bbd.automatic": "schema=celikpanel-recovery-automatic/v1\nrequest_id=ded53ec59a2d64864e45c34d5a675bbd\nobservation_identity=65025:263066:278:2026-09-30 20:04:02.157830032 +0000:2026-09-30 20:04:02.177830134 +0000\nobservation_sha256=9bd7c4f90d073cff314c6a24aa5263e5ed2a231ba0209de80ae3e2cac5d2a2f0\nautomatic_recovery=paused_retry_limit\n",
+    "ded53ec59a2d64864e45c34d5a675bbd.failure": "schema=celikpanel-recovery-failure/v1\nrequest_id=ded53ec59a2d64864e45c34d5a675bbd\ntarget_commit=36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb\nfailure_code=panel_start_unverified\n",
+    "ded53ec59a2d64864e45c34d5a675bbd.status": "schema=celikpanel-recovery-observation/v1\nrequest_id=ded53ec59a2d64864e45c34d5a675bbd\ntarget_commit=36c5c252a5bdbd71f3cd0f9af58e004dca1d47bb\nphase=recovery_required\nterminal_proof=none\nreason=recovery_incomplete\nobserved_at=2026-09-30T20:04:02Z\nprevious_failure=recovery_failed\n"
+  }
+}

@@ -1,0 +1,5 @@
+Batch 12 offline tests from git archive 2efc4de2 (/root/cp-b12-src), 2026-09-30T08:08-08:10Z, Python 3.14.7, go1.26.5
+Python, each test file run directly (build.log "direct" loop; test_native_pdns_peer.py's count read from tcount.log, its direct run prints a JSON line after the unittest summary): 466 + 8 = 474, all OK
+Python, python3 -m unittest discover: 475 OK; per module (tcount.log): 475. Difference: test_guest_recovery_probe 16 direct / 17 as module (as in batch 11).
+test_zone_lifecycle_recover.py: 16; test_native_pdns_bind_peer.py: 8
+Trigger: go test -count=1 -v ./cmd/dns-kill-matrix-trigger: 60 top-level PASS, 0 FAIL, 0 SKIP (trigger-tests.log)

@@ -1,14 +1,13 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
+	"log"
+
 	"os"
 	"path/filepath"
 	"sort"
@@ -16,38 +15,32 @@ import (
 	"sync"
 	"time"
 
-	"github.com/alicelik/celikpanel/internal/hostingpath"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
+	"github.com/alicelik/celikpanel/internal/servicemutationledger"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 const (
-	serviceMutationLedgerVersion = 1
-
-	serviceMutationStatusRunning    = "running"
-	serviceMutationStatusCancelling = "cancelling"
-	serviceMutationStatusOrphaned   = "orphaned"
-	serviceMutationStatusPending    = "pending"
-	serviceMutationStatusSucceeded  = "succeeded"
-	serviceMutationStatusFailed     = "failed"
-
-	serviceMutationPhaseCancellingExpiredLease = "cancelling_expired_lease"
-	serviceMutationErrorLeaseExpired           = "service_mutation_lease_expired"
-	serviceMutationMessageLeaseExpired         = "The panel stopped heartbeating before the service mutation completed."
+	serviceMutationPhaseCancellingExpiredLease = servicemutationledger.PhaseCancellingExpiredLease
+	serviceMutationErrorLeaseExpired           = servicemutationledger.ErrorLeaseExpired
+	serviceMutationMessageLeaseExpired         = servicemutationledger.MessageLeaseExpired
 
 	serviceMutationLeaseDuration = 20 * time.Second
 	serviceMutationOverallLimit  = 45 * time.Minute
 	serviceMutationHistoryLimit  = 128
-	serviceMutationLedgerMaxSize = 1 << 20
-	serviceMutationStageLimit    = 16
+
+	serviceMutationStageLimit = 16
 )
 
 var (
-	errServiceMutationBusy                     = errors.New("another service mutation owns the host lease")
-	errServiceMutationHostBusy                 = errors.New("the host package manager or mutation lock is busy")
+	errServiceMutationBusy = errors.New("another service mutation owns the host lease")
+
 	errServiceMutationLedgerAlreadyInitialized = errors.New("service mutation ledger is already initialized")
-	errServiceMutationManagerPoisoned          = errors.New("service mutation manager is fail-closed after an ambiguous ledger write")
+	// errServiceMutationManagerPoisoned is the identity every fail-closed
+	// hold matches with errors.Is. Its words are cause-neutral; the text a
+	// hold reports comes from serviceMutationHoldError, per cause.
+	errServiceMutationManagerPoisoned = errors.New("service mutation manager is fail-closed")
 
 	globalServiceMutationMu      sync.Mutex
 	globalServiceMutationManager *serviceMutationManager
@@ -81,14 +74,6 @@ func (e *serviceMutationLedgerWriteError) Error() string {
 
 func (e *serviceMutationLedgerWriteError) Unwrap() error {
 	return e.err
-}
-
-type ServiceMutationJob = transport.ServiceMutationJob
-
-type serviceMutationLedger struct {
-	Version         int                            `json:"version"`
-	ActiveRequestID string                         `json:"active_request_id,omitempty"`
-	Jobs            map[string]*ServiceMutationJob `json:"jobs"`
 }
 
 type ServiceMutationBeginRequest = transport.ServiceMutationBeginRequest
@@ -128,6 +113,7 @@ type serviceMutationRuntime struct {
 	dnsZoneSyncV3AppliedPhase           string
 	dnsZoneSyncV3Recovery               bool
 	dnsZoneSyncV3PendingPhase           string
+	dnsZoneSyncV3PreviousPendingCode    string
 	panelCertificateIssuePublishedPhase string
 	mailHostCertificatePublishedPhase   string
 	mailHostCertificateCommittedPhase   string
@@ -144,6 +130,15 @@ type serviceMutationManager struct {
 	poisonLock *serviceMutationFileLock
 	writeFault func(string) error
 
+	// Non-nil grants only this exact unattended renewal, never general recovery.
+	mailRenewalScope *ServiceMutationBeginRequest
+	// Required admission boundary, after exact ledger/budget checks under host exclusion.
+	mailRenewalBeforeAdmission func(*ServiceMutationBeginRequest) error
+	// Set only by the root-only exact selected-operation retry entry. Never resets Attempt.
+	mailRenewalRecoveryOwnerRequest string
+	// One explicit failed-operation retry; consumed when its admission is durable.
+	mailRenewalFailedOwnerRequest string
+
 	releaseTransactionPresent func() (bool, error)
 
 	// hostBootWait is the one in-flight bounded wait for a host that has not
@@ -153,23 +148,10 @@ type serviceMutationManager struct {
 	// beklemedir.
 	hostBootWait chan struct{}
 
-	now             func() time.Time
-	leaseDuration   time.Duration
-	overallDuration time.Duration
-}
-
-func serviceMutationStateDirectory() string {
-	if value := strings.TrimSpace(os.Getenv("CELIKPANEL_AGENT_STATE_DIR")); value != "" {
-		return value
-	}
-	return hostingpath.ServiceMutationStateRoot()
-}
-
-func serviceMutationLockFile() string {
-	if value := strings.TrimSpace(os.Getenv("CELIKPANEL_MUTATION_LOCK")); value != "" {
-		return value
-	}
-	return "/run/celikpanel/service-mutation.lock"
+	retainAllHistory bool // narrow native enrollment never discards another operation
+	now              func() time.Time
+	leaseDuration    time.Duration
+	overallDuration  time.Duration
 }
 
 func serviceMutationLedgerPublicationLockFile(hostLockPath string) string {
@@ -286,6 +268,10 @@ func newServiceMutationManagerWithWriteFault(
 	stateDir, lockPath string,
 	writeFault func(string) error,
 ) (*serviceMutationManager, error) {
+	return newServiceMutationManagerWithScope(stateDir, lockPath, writeFault, nil)
+}
+
+func newServiceMutationManagerWithScope(stateDir, lockPath string, writeFault func(string) error, scope *ServiceMutationBeginRequest) (*serviceMutationManager, error) {
 	if strings.TrimSpace(stateDir) == "" {
 		stateDir = serviceMutationStateDirectory()
 	}
@@ -303,6 +289,7 @@ func newServiceMutationManagerWithWriteFault(
 			Jobs:    map[string]*ServiceMutationJob{},
 		},
 		writeFault:                writeFault,
+		mailRenewalScope:          scope,
 		releaseTransactionPresent: productionReleaseTransactionPresent,
 	}
 	if err := manager.load(); err != nil {
@@ -404,353 +391,6 @@ func (m *serviceMutationManager) reloadLedgerUnderHostLockLocked() error {
 	return nil
 }
 
-func decodeServiceMutationLedger(raw []byte) (serviceMutationLedger, error) {
-	var ledger serviceMutationLedger
-	decoder := json.NewDecoder(bytes.NewReader(raw))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&ledger); err != nil {
-		return serviceMutationLedger{}, fmt.Errorf("decode service mutation ledger: %w", err)
-	}
-	var extra json.RawMessage
-	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
-		if err == nil {
-			return serviceMutationLedger{}, errors.New("service mutation ledger contains more than one JSON value")
-		}
-		return serviceMutationLedger{}, fmt.Errorf("decode service mutation ledger trailer: %w", err)
-	}
-	if ledger.Version != serviceMutationLedgerVersion || ledger.Jobs == nil {
-		return serviceMutationLedger{}, errors.New("service mutation ledger has an unsupported schema")
-	}
-	canonical, err := json.Marshal(&ledger)
-	if err != nil {
-		return serviceMutationLedger{}, fmt.Errorf("canonicalize service mutation ledger: %w", err)
-	}
-	if !bytes.Equal(raw, canonical) {
-		return serviceMutationLedger{}, errors.New("service mutation ledger is not canonical")
-	}
-	if err := validateServiceMutationLedger(&ledger); err != nil {
-		return serviceMutationLedger{}, err
-	}
-	return ledger, nil
-}
-
-func payloadBoundDirectMutationPublishedPhase(
-	job *ServiceMutationJob,
-) (string, bool, error) {
-	if job == nil {
-		return "", false, errors.New("payload-bound mutation job is required")
-	}
-	var phase string
-	var err error
-	switch job.Kind {
-	case "vpn_peer_sync":
-		if job.Target != "wireguard" ||
-			!mutationpayload.ValidVPNPeerSyncQualifier(job.PackageName) {
-			return "", true, errors.New("invalid VPN peer sync publication identity")
-		}
-		phase, err = formatVPNPeerSyncCommitPhase(
-			vpnPeerSyncCommitPublished, job.RequestID, job.PackageName,
-		)
-	case "firewall_apply", "firewall_sync":
-		if job.Target != "nftables" ||
-			!mutationpayload.ValidFirewallApplyQualifier(job.PackageName) {
-			return "", true, errors.New("invalid firewall publication identity")
-		}
-		phase, err = formatFirewallApplyCommitPhase(
-			firewallApplyCommitPublished, job.RequestID, job.PackageName,
-		)
-	case "mail_tls_sync":
-		if job.Target != "mail-tls" ||
-			!mutationpayload.ValidMailTLSSyncQualifier(job.PackageName) {
-			return "", true, errors.New("invalid mail TLS publication identity")
-		}
-		phase, err = formatMailTLSSyncCommitPhase(
-			mailTLSSyncCommitPublished, job.RequestID, job.PackageName,
-		)
-	case "dns_cluster_configure":
-		if job.Target != "pdns" ||
-			!mutationpayload.ValidDNSClusterConfigQualifier(job.PackageName) {
-			return "", true, errors.New("invalid DNS cluster publication identity")
-		}
-		phase, err = formatDNSClusterConfigCommitPhase(
-			dnsClusterConfigCommitPublished, job.RequestID, job.PackageName,
-		)
-	case "dns_zone_sync":
-		if !serviceMutationCanonicalFQDN(job.Target) {
-			return "", true, errors.New("invalid DNS zone publication identity")
-		}
-		switch {
-		case mutationpayload.ValidDNSZoneSyncQualifier(job.PackageName):
-			phase, err = formatDNSZoneSyncCommitPhase(
-				dnsZoneSyncCommitPublished, job.RequestID, job.Target, job.PackageName,
-			)
-		case mutationpayload.ValidDNSZoneSyncV3Qualifier(job.PackageName):
-			phase, err = formatDNSZoneSyncV3PublishedPhase(
-				job.RequestID, job.Target, job.PackageName,
-			)
-		default:
-			return "", true, errors.New("invalid DNS zone publication identity")
-		}
-	case "panel_certificate_issue":
-		if !serviceMutationCanonicalFQDN(job.Target) ||
-			!mutationpayload.ValidPanelCertificateIssueQualifier(job.PackageName) {
-			return "", true, errors.New("invalid panel certificate publication identity")
-		}
-		phase, err = formatPanelCertificateIssueCommitPhase(
-			panelCertificateIssueCommitPublished,
-			job.RequestID,
-			job.Target,
-			job.PackageName,
-		)
-	case "mail_host_certificate":
-		if !serviceMutationCanonicalFQDN(job.Target) ||
-			!mutationpayload.ValidMailHostCertificateQualifier(job.PackageName) {
-			return "", true, errors.New("invalid mail host certificate publication identity")
-		}
-		phase, err = formatMailHostCertificateCommitPhase(
-			mailHostCertificateCommitPublished,
-			job.RequestID,
-			job.Target,
-			job.PackageName,
-		)
-	default:
-		return "", false, nil
-	}
-	if err != nil {
-		return "", true, err
-	}
-	return phase, true, nil
-}
-
-func validatePayloadBoundDirectMutationSuccess(job *ServiceMutationJob) error {
-	if job == nil || job.Status != serviceMutationStatusSucceeded {
-		return nil
-	}
-	expected, direct, err := payloadBoundDirectMutationPublishedPhase(job)
-	if err != nil {
-		return err
-	}
-	if direct && job.Phase != expected {
-		return errors.New(
-			"payload-bound direct mutation success lacks its exact canonical published receipt",
-		)
-	}
-	return nil
-}
-
-// validateServiceMutationLedger enforces identity and bidirectional active-pointer invariants for the complete ledger.
-// validateServiceMutationLedger, ledger'ın tamamı için kimlik ve çift yönlü aktif işaretçi değişmezlerini uygular.
-func validateServiceMutationLedger(ledger *serviceMutationLedger) error {
-	activeRequestID := ""
-	for requestID, job := range ledger.Jobs {
-		if job == nil || job.RequestID != requestID {
-			return errors.New("service mutation ledger job identity is inconsistent")
-		}
-		if !validMutationIdentity(job.RequestID) || !validMutationIdentity(job.OwnerID) {
-			return errors.New("service mutation ledger job identity is invalid")
-		}
-		if strings.TrimSpace(job.Kind) == "" ||
-			strings.TrimSpace(job.Target) == "" ||
-			strings.TrimSpace(job.Phase) == "" ||
-			job.Attempt <= 0 {
-			return errors.New("service mutation ledger job metadata is incomplete")
-		}
-		if err := validatePayloadBoundDirectMutationSuccess(job); err != nil {
-			return fmt.Errorf("service mutation ledger job %s: %w", requestID, err)
-		}
-		if strings.HasPrefix(job.Phase, vpnPeerSyncCommitPhasePrefix) {
-			state, requestID, qualifier, err := parseVPNPeerSyncCommitPhase(job.Phase)
-			if err != nil || requestID != job.RequestID || qualifier != job.PackageName ||
-				job.Kind != "vpn_peer_sync" || job.Target != "wireguard" {
-				return errors.New("service mutation ledger has an invalid VPN peer commit receipt")
-			}
-			if (state == vpnPeerSyncCommitIntent &&
-				job.Status != serviceMutationStatusRunning &&
-				job.Status != serviceMutationStatusCancelling) ||
-				(state == vpnPeerSyncCommitPublished && job.Status != serviceMutationStatusSucceeded) {
-				return errors.New("service mutation ledger VPN peer commit receipt conflicts with job status")
-			}
-		}
-		if strings.HasPrefix(job.Phase, firewallApplyCommitPhasePrefix) {
-			state, requestID, qualifier, err := parseFirewallApplyCommitPhase(job.Phase)
-			if err != nil || requestID != job.RequestID || qualifier != job.PackageName ||
-				(job.Kind != "firewall_apply" && job.Kind != "firewall_sync") ||
-				job.Target != "nftables" {
-				return errors.New("service mutation ledger has an invalid firewall commit receipt")
-			}
-			if (state == firewallApplyCommitIntent &&
-				!serviceMutationStatusActive(job.Status)) ||
-				(state == firewallApplyCommitPublished &&
-					job.Status != serviceMutationStatusSucceeded) {
-				return errors.New("service mutation ledger firewall commit receipt conflicts with job status")
-			}
-		}
-		if strings.HasPrefix(job.Phase, mailTLSSyncCommitPhasePrefix) {
-			state, requestID, qualifier, err := parseMailTLSSyncCommitPhase(job.Phase)
-			if err != nil || requestID != job.RequestID ||
-				qualifier != job.PackageName ||
-				job.Kind != "mail_tls_sync" || job.Target != "mail-tls" {
-				return errors.New("service mutation ledger has an invalid mail TLS commit receipt")
-			}
-			if (state == mailTLSSyncCommitIntent &&
-				!serviceMutationStatusActive(job.Status)) ||
-				(state == mailTLSSyncCommitPublished &&
-					job.Status != serviceMutationStatusSucceeded) {
-				return errors.New("service mutation ledger mail TLS commit receipt conflicts with job status")
-			}
-		}
-		if strings.HasPrefix(job.Phase, dnsClusterConfigCommitPhasePrefix) {
-			state, requestID, qualifier, err :=
-				parseDNSClusterConfigCommitPhase(job.Phase)
-			if err != nil || requestID != job.RequestID ||
-				qualifier != job.PackageName ||
-				job.Kind != "dns_cluster_configure" || job.Target != "pdns" {
-				return errors.New("service mutation ledger has an invalid DNS cluster commit receipt")
-			}
-			if (state == dnsClusterConfigCommitIntent &&
-				!serviceMutationStatusActive(job.Status)) ||
-				(state == dnsClusterConfigCommitPublished &&
-					job.Status != serviceMutationStatusSucceeded) {
-				return errors.New("service mutation ledger DNS cluster commit receipt conflicts with job status")
-			}
-		}
-		if strings.HasPrefix(job.Phase, dnsZoneSyncCommitPhasePrefix) {
-			state, requestID, domain, qualifier, err :=
-				parseDNSZoneSyncCommitPhase(job.Phase)
-			if err != nil || requestID != job.RequestID ||
-				domain != job.Target || qualifier != job.PackageName ||
-				job.Kind != "dns_zone_sync" ||
-				!serviceMutationCanonicalFQDN(job.Target) {
-				return errors.New("service mutation ledger has an invalid DNS zone commit receipt")
-			}
-			if ((state == dnsZoneSyncCommitIntent ||
-				state == dnsZoneSyncCommitApplied) &&
-				!serviceMutationStatusActive(job.Status)) ||
-				(state == dnsZoneSyncCommitPublished &&
-					job.Status != serviceMutationStatusSucceeded) {
-				return errors.New("service mutation ledger DNS zone commit receipt conflicts with job status")
-			}
-		}
-		if strings.HasPrefix(job.Phase, dnsZoneSyncV3CommitPhasePrefix) {
-			state, requestID, domain, qualifier, err :=
-				parseDNSZoneSyncV3Phase(job.Phase)
-			if err != nil || requestID != job.RequestID || domain != job.Target ||
-				qualifier != job.PackageName || job.Kind != "dns_zone_sync" ||
-				!serviceMutationCanonicalFQDN(job.Target) {
-				return errors.New("service mutation ledger has an invalid DNS zone V3 receipt")
-			}
-			validStatus := false
-			switch state {
-			case dnsZoneSyncV3Applied:
-				validStatus = serviceMutationStatusActive(job.Status)
-			case dnsZoneSyncV3PropagationPending:
-				validStatus = job.Status == serviceMutationStatusPending
-			case dnsZoneSyncV3Recovering:
-				validStatus = serviceMutationStatusActive(job.Status)
-			case dnsZoneSyncV3Published:
-				validStatus = job.Status == serviceMutationStatusSucceeded
-			}
-			if !validStatus {
-				return errors.New("service mutation ledger DNS zone V3 receipt conflicts with job status")
-			}
-		}
-		if job.Status == serviceMutationStatusPending &&
-			!strings.HasPrefix(job.Phase, dnsZoneSyncV3CommitPhasePrefix) {
-			return errors.New("pending service mutation lacks an exact DNS zone V3 receipt")
-		}
-		if strings.HasPrefix(job.Phase, panelCertificateIssueCommitPhasePrefix) {
-			state, requestID, domain, qualifier, err :=
-				parsePanelCertificateIssueCommitPhase(job.Phase)
-			if err != nil || requestID != job.RequestID ||
-				domain != job.Target || qualifier != job.PackageName ||
-				job.Kind != "panel_certificate_issue" ||
-				!serviceMutationCanonicalFQDN(job.Target) {
-				return errors.New("service mutation ledger has an invalid panel certificate commit receipt")
-			}
-			if (state == panelCertificateIssueCommitIntent &&
-				job.Status != serviceMutationStatusRunning &&
-				job.Status != serviceMutationStatusCancelling) ||
-				(state == panelCertificateIssueCommitPublished &&
-					job.Status != serviceMutationStatusSucceeded) {
-				return errors.New("service mutation ledger panel certificate commit receipt conflicts with job status")
-			}
-		}
-		if strings.HasPrefix(job.Phase, mailHostCertificateCommitPhasePrefix) {
-			state, requestID, domain, qualifier, err :=
-				parseMailHostCertificateCommitPhase(job.Phase)
-			if err != nil || requestID != job.RequestID ||
-				domain != job.Target || qualifier != job.PackageName ||
-				job.Kind != "mail_host_certificate" ||
-				!serviceMutationCanonicalFQDN(job.Target) {
-				return errors.New("service mutation ledger has an invalid mail host certificate commit receipt")
-			}
-			if (state == mailHostCertificateCommitIntent &&
-				job.Status != serviceMutationStatusRunning &&
-				job.Status != serviceMutationStatusCancelling) ||
-				(state == mailHostCertificateCommitPublished &&
-					job.Status != serviceMutationStatusSucceeded) {
-				return errors.New("service mutation ledger mail host certificate commit receipt conflicts with job status")
-			}
-		}
-		hasWorkerPID := job.WorkerPID > 0
-		hasWorkerStarted := strings.TrimSpace(job.WorkerStarted) != ""
-		hasWorkerCommand := strings.TrimSpace(job.WorkerCommand) != ""
-		if job.WorkerPID < 0 ||
-			hasWorkerPID != hasWorkerStarted ||
-			hasWorkerPID != hasWorkerCommand {
-			return errors.New("service mutation ledger worker identity is inconsistent")
-		}
-
-		if job.StartedAt.IsZero() || job.UpdatedAt.IsZero() || job.DeadlineAt.IsZero() {
-			return errors.New("service mutation ledger lifecycle timestamps are incomplete")
-		}
-		if job.UpdatedAt.Before(job.StartedAt) || job.DeadlineAt.Before(job.StartedAt) {
-			return errors.New("service mutation ledger lifecycle timestamps are out of order")
-		}
-		if !job.LeaseExpiresAt.IsZero() &&
-			(job.LeaseExpiresAt.Before(job.StartedAt) ||
-				job.LeaseExpiresAt.After(job.DeadlineAt)) {
-			return errors.New("service mutation ledger lease timestamp is out of range")
-		}
-		switch job.Status {
-		case serviceMutationStatusRunning,
-			serviceMutationStatusCancelling,
-			serviceMutationStatusOrphaned:
-			if job.LeaseExpiresAt.IsZero() {
-				return errors.New("active service mutation ledger job has no lease timestamp")
-			}
-			if !job.FinishedAt.IsZero() {
-				return errors.New("active service mutation ledger job has a finish timestamp")
-			}
-			if activeRequestID != "" {
-				return errors.New("service mutation ledger contains multiple active jobs")
-			}
-			activeRequestID = requestID
-		case serviceMutationStatusPending,
-			serviceMutationStatusSucceeded, serviceMutationStatusFailed:
-			if hasWorkerPID {
-				return errors.New("terminal service mutation ledger job retains a worker")
-			}
-			if !job.LeaseExpiresAt.IsZero() {
-				return errors.New("terminal service mutation ledger job retains a lease")
-			}
-			if job.FinishedAt.IsZero() ||
-				job.FinishedAt.Before(job.StartedAt) ||
-				job.UpdatedAt.After(job.FinishedAt) {
-				return errors.New("terminal service mutation ledger timestamps are inconsistent")
-			}
-			// Terminal jobs remain as history and must not be selected by the active pointer.
-			// Sonlandırılmış işler geçmiş olarak kalır ve aktif işaretçi tarafından seçilmemelidir.
-		default:
-			return errors.New("service mutation ledger job has an unsupported status")
-		}
-	}
-	if ledger.ActiveRequestID != activeRequestID {
-		return errors.New("service mutation ledger active pointer is inconsistent")
-	}
-	return nil
-}
-
 func cloneServiceMutationLedger(ledger serviceMutationLedger) serviceMutationLedger {
 	copy := serviceMutationLedger{
 		Version:         ledger.Version,
@@ -774,7 +414,7 @@ func (m *serviceMutationManager) healthErrorLocked() error {
 	if m.poisoned == nil {
 		return nil
 	}
-	return errors.Join(errServiceMutationManagerPoisoned, m.poisoned)
+	return errors.Join(newServiceMutationHoldError(m.poisoned), m.poisoned)
 }
 
 // agentMutationHold reports, as a stable code, why durable mutations are being
@@ -824,7 +464,7 @@ func (m *serviceMutationManager) poisonLocked(cause error) error {
 			m.active.cancel()
 		}
 	}
-	return errors.Join(errServiceMutationManagerPoisoned, cause)
+	return errors.Join(newServiceMutationHoldError(cause), cause)
 }
 
 func serviceMutationWriteMayHavePublished(err error) bool {
@@ -877,6 +517,15 @@ func (m *serviceMutationManager) reconcilePersistedActive() error {
 			return errors.Join(err, closeErr)
 		}
 		return fmt.Errorf("reload service mutation ledger under reconciliation lock: %w", err)
+	}
+	if m.mailRenewalScope != nil {
+		return errors.Join(m.observeMailRenewalAdmissionLocked(), lock.Close())
+	}
+	// A native enrollment reservation is not a crashed RPC worker. Preserve its
+	// bytes before generic host readiness, orphan cleanup or lease expiry. Only
+	// the exact enrollment executor may prove its forward or inverse result.
+	if job := m.ledger.Jobs[m.ledger.ActiveRequestID]; job != nil && job.Kind == servicemutationledger.MailEnrollmentKind {
+		return lock.Close()
 	}
 	if err := cleanupAbandonedServiceMutationWriteStages(filepath.Dir(m.ledgerPath)); err != nil {
 		closeErr := lock.Close()
@@ -1060,6 +709,15 @@ func (m *serviceMutationManager) tryResolvePersistedOrphan() error {
 	if err := m.reloadLedgerUnderHostLockLocked(); err != nil {
 		return errors.Join(fmt.Errorf("reload service mutation ledger under orphan lock: %w", err), lock.Close())
 	}
+	if m.mailRenewalScope != nil {
+		return errors.Join(m.observeMailRenewalAdmissionLocked(), lock.Close())
+	}
+	// A native enrollment reservation is not a crashed RPC worker. Preserve its
+	// bytes before generic host readiness, orphan cleanup or lease expiry. Only
+	// the exact enrollment executor may prove its forward or inverse result.
+	if job := m.ledger.Jobs[m.ledger.ActiveRequestID]; job != nil && job.Kind == servicemutationledger.MailEnrollmentKind {
+		return lock.Close()
+	}
 	if err := cleanupAbandonedFirewallApplyJournalStages(filepath.Dir(m.ledgerPath)); err != nil {
 		m.poisonLock = lock
 		return m.poisonLocked(fmt.Errorf(
@@ -1168,6 +826,9 @@ func (m *serviceMutationManager) finishPersistedOrphanLocked(
 	job *ServiceMutationJob,
 	code, message string,
 ) error {
+	if job != nil && job.Kind == servicemutationledger.MailEnrollmentKind {
+		return servicemutationledger.ErrMailEnrollment
+	}
 	before := cloneServiceMutationLedger(m.ledger)
 	now := m.now()
 	job.Status = serviceMutationStatusFailed
@@ -1182,20 +843,6 @@ func (m *serviceMutationManager) finishPersistedOrphanLocked(
 	job.WorkerCommand = ""
 	m.ledger.ActiveRequestID = ""
 	return m.persistLedgerMutationLocked(before)
-}
-
-func serviceMutationStatusActive(status string) bool {
-	return status == serviceMutationStatusRunning ||
-		status == serviceMutationStatusCancelling ||
-		status == serviceMutationStatusOrphaned
-}
-
-func validMutationIdentity(value string) bool {
-	if len(value) != 32 || strings.ToLower(value) != value {
-		return false
-	}
-	_, err := hex.DecodeString(value)
-	return err == nil
 }
 
 func newMutationOwnerID() (string, error) {
@@ -1233,6 +880,13 @@ func (m *serviceMutationManager) releaseTransactionBlocksMutations() (bool, erro
 }
 
 func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*ServiceMutationJob, error) {
+	// Generic RPCs cannot create or resume the two-lock native enrollment.
+	if request != nil && request.Kind == servicemutationledger.MailEnrollmentKind {
+		return nil, servicemutationledger.ErrMailEnrollment
+	}
+	if m.mailRenewalScope != nil && !mailRenewalRequestMatches(m.mailRenewalScope, request) {
+		return nil, errors.New("mail renewal executor cannot admit another operation")
+	}
 	if request == nil || !validMutationIdentity(request.RequestID) ||
 		!validMutationIdentity(request.OwnerID) ||
 		strings.TrimSpace(request.Kind) == "" ||
@@ -1334,12 +988,23 @@ func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*S
 	if err := m.reloadLedgerUnderHostLockLocked(); err != nil {
 		return closeLock(nil, fmt.Errorf("reload service mutation ledger under begin lock: %w", err))
 	}
+	if m.mailRenewalScope != nil {
+		if err := m.observeMailRenewalAdmissionLocked(); err != nil {
+			return closeLock(nil, err)
+		}
+	}
 	if m.ledger.ActiveRequestID != "" {
 		return closeLock(m.ledger.Jobs[m.ledger.ActiveRequestID], errServiceMutationBusy)
 	}
 	previous := m.ledger.Jobs[request.RequestID]
+	if m.mailRenewalScope != nil {
+		if err := admitMailRenewalFailedRetry(previous, request, m.mailRenewalFailedOwnerRequest); err != nil {
+			return closeLock(previous, err)
+		}
+	}
 	pendingRecovery := false
 	pendingPhase := ""
+	pendingCode := ""
 	recoveringPhase := ""
 	if previous != nil {
 		if !serviceMutationIdentityMatches(previous, request) {
@@ -1363,6 +1028,7 @@ func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*S
 			}
 			pendingRecovery = true
 			pendingPhase = previous.Phase
+			pendingCode = dnsZoneV3PendingLedgerCode(previous.ErrorCode)
 			recoveringPhase, parseErr = formatDNSZoneSyncV3Phase(
 				dnsZoneSyncV3Recovering,
 				previous.RequestID,
@@ -1397,7 +1063,15 @@ func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*S
 		return closeLock(nil, fmt.Errorf("verify package manager lease: %w", err))
 	}
 	if busy {
-		return closeLock(nil, errServiceMutationHostBusy)
+		return closeLock(nil, serviceMutationPackageManagerHostBusyError())
+	}
+	if m.mailRenewalScope != nil {
+		if m.mailRenewalBeforeAdmission == nil {
+			return closeLock(nil, errMailRenewalRecoveryRequired)
+		}
+		if err := m.mailRenewalBeforeAdmission(request); err != nil {
+			return closeLock(nil, err)
+		}
 	}
 	now := m.now()
 	attempt := 1
@@ -1422,6 +1096,7 @@ func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*S
 		PackageName:    request.PackageName,
 		Status:         serviceMutationStatusRunning,
 		Phase:          phase,
+		ErrorCode:      pendingCode,
 		Attempt:        attempt,
 		StartedAt:      startedAt,
 		UpdatedAt:      now,
@@ -1429,12 +1104,13 @@ func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*S
 		DeadlineAt:     deadline,
 	}
 	runtime := &serviceMutationRuntime{
-		job:                       job,
-		lock:                      lock,
-		ctx:                       ctx,
-		cancel:                    cancel,
-		dnsZoneSyncV3Recovery:     pendingRecovery,
-		dnsZoneSyncV3PendingPhase: pendingPhase,
+		job:                              job,
+		lock:                             lock,
+		ctx:                              ctx,
+		cancel:                           cancel,
+		dnsZoneSyncV3Recovery:            pendingRecovery,
+		dnsZoneSyncV3PendingPhase:        pendingPhase,
+		dnsZoneSyncV3PreviousPendingCode: pendingCode,
 	}
 	before := cloneServiceMutationLedger(m.ledger)
 	m.ledger.ActiveRequestID = job.RequestID
@@ -1449,6 +1125,7 @@ func (m *serviceMutationManager) begin(request *ServiceMutationBeginRequest) (*S
 		_ = lock.Close()
 		return nil, err
 	}
+	m.mailRenewalFailedOwnerRequest = ""
 	go m.watch(runtime)
 	return cloneServiceMutationJob(job), nil
 }
@@ -2058,6 +1735,7 @@ func (m *serviceMutationManager) finishRuntimeAfterFailureLocked(
 func (m *serviceMutationManager) finishRuntimeDNSZoneV3PendingLocked(
 	runtime *serviceMutationRuntime,
 	phase string,
+	reasonCode ...string,
 ) error {
 	if runtime == nil || runtime.job == nil {
 		return errors.New("DNS zone V3 pending runtime is required")
@@ -2083,7 +1761,11 @@ func (m *serviceMutationManager) finishRuntimeDNSZoneV3PendingLocked(
 	now := m.now()
 	runtime.job.Status = serviceMutationStatusPending
 	runtime.job.Phase = phase
-	runtime.job.ErrorCode = "dns_zone_v3_propagation_pending"
+	code := runtime.dnsZoneSyncV3PreviousPendingCode
+	if len(reasonCode) == 1 {
+		code = reasonCode[0]
+	}
+	runtime.job.ErrorCode = dnsZoneV3PendingLedgerCode(code)
 	runtime.job.ErrorMessage =
 		"The exact local DNS publication is waiting for paired propagation recovery."
 	runtime.job.UpdatedAt = now
@@ -2150,6 +1832,14 @@ func (m *serviceMutationManager) finishRuntimeTerminalLocked(
 		before, runtime.job.RequestID,
 	); err != nil {
 		return err
+	}
+	if runtime.job.Kind == "dns_engine_switch" && !success {
+		if err := m.removeTerminalRolledBackDNSEngineSwitchJournalLocked(runtime.job.RequestID); err != nil {
+			// The failed verdict is already durable. Retain an uncertain DNS
+			// journal for exact-operation review, but do not strand the global
+			// host lock or unrelated mutations over DNS-only cleanup.
+			log.Printf("Terminal DNS switch rollback journal was retained for owner review (request %s): %v", runtime.job.RequestID, err)
+		}
 	}
 	runtime.cancel()
 	lockErr := runtime.lock.Close()
@@ -2232,6 +1922,13 @@ func (m *serviceMutationManager) acquireStep(
 func (m *serviceMutationManager) trimHistoryLocked(
 	protectedRequestIDs ...string,
 ) {
+	if m.retainAllHistory {
+		return
+	}
+
+	if m.mailRenewalScope != nil {
+		return // Renewal has no authority to discard other operations' evidence.
+	}
 	if len(m.ledger.Jobs) <= serviceMutationHistoryLimit {
 		return
 	}
@@ -2271,18 +1968,19 @@ func (m *serviceMutationManager) writeProtectedLocked(
 		return err
 	}
 	m.trimHistoryLocked(protectedRequestID)
-	if err := validateServiceMutationLedger(&m.ledger); err != nil {
+	raw, err := encodeServiceMutationLedger(&m.ledger)
+	if err != nil {
 		return fmt.Errorf("validate service mutation ledger before write: %w", err)
 	}
 	if err := ensureSecureServiceMutationStateDirectory(filepath.Dir(m.ledgerPath)); err != nil {
 		return fmt.Errorf("secure service mutation state directory: %w", err)
 	}
-	if err := cleanupAbandonedServiceMutationWriteStages(filepath.Dir(m.ledgerPath)); err != nil {
+	if m.mailRenewalScope != nil {
+		if err := observeMailRenewalStages(filepath.Dir(m.ledgerPath)); err != nil {
+			return err
+		}
+	} else if err := cleanupAbandonedServiceMutationWriteStages(filepath.Dir(m.ledgerPath)); err != nil {
 		return err
-	}
-	raw, err := json.Marshal(&m.ledger)
-	if err != nil {
-		return fmt.Errorf("encode service mutation ledger: %w", err)
 	}
 	dir := filepath.Dir(m.ledgerPath)
 	stage, err := os.CreateTemp(dir, ".service-mutations-*.json")
@@ -2495,7 +2193,11 @@ func (a *Agent) ServiceMutationStatus(
 	// hiç kalkamayan yönetici iş bildirmez ve ledger_unavailable tutulmasını
 	// döner.
 	if manager != nil {
-		response.Job = manager.status(strings.TrimSpace(request.RequestID))
+		// A released DNS switch whose journal is gone is reported as
+		// reconciled; the stored job is unchanged.
+		response.Job = manager.presentReleasedDNSSwitchJob(
+			manager.status(strings.TrimSpace(request.RequestID)),
+		)
 	}
 	// Report the hold with the job. status() deliberately does not fail on a
 	// held manager — a caller still deserves to see the job — but it must not

@@ -5,8 +5,8 @@ import { useNavigate, useSearchParams } from '../router';
 import { Button, inputClass } from './ui';
 import { apiErrorText, readApiError } from '../lib/apiError';
 
-type LicenseStatus = { state: 'active' | 'missing' | 'invalid' | 'expired' | 'verification_unavailable'; can_provision: boolean; expires_at?: number; license_id?: string };
-const states = ['active', 'missing', 'invalid', 'expired', 'verification_unavailable'] as const;
+type LicenseStatus = { state: 'active' | 'missing' | 'invalid' | 'expired' | 'verification_unavailable' | 'status_unavailable'; can_provision: boolean; expires_at?: number; license_id?: string };
+const states = ['active', 'missing', 'invalid', 'expired', 'verification_unavailable', 'status_unavailable'] as const;
 
 export function LicensePanel({ locked = false, onContinue }: { locked?: boolean; onContinue?: () => void }) {
     const { t, locale } = useI18n();
@@ -47,7 +47,7 @@ export function LicensePanel({ locked = false, onContinue }: { locked?: boolean;
             }
             const result = await response.json() as LicenseStatus;
             if (signal?.aborted) return;
-            if (!states.includes(result.state) || typeof result.can_provision !== 'boolean'
+            if (!states.includes(result.state) || typeof result.can_provision !== 'boolean' || (result.can_provision && result.state !== 'active')
                 || (result.expires_at !== undefined && (!Number.isSafeInteger(result.expires_at) || result.expires_at <= 0))) {
                 throw new Error(t('license.loadFailed'));
             }
@@ -65,17 +65,18 @@ export function LicensePanel({ locked = false, onContinue }: { locked?: boolean;
     }
     useEffect(() => { const controller = new AbortController(); void request(undefined, controller.signal); return () => controller.abort(); }, []);
     const Heading = locked ? 'h1' : 'h2';
+    const unavailable = status?.state === 'verification_unavailable' || status?.state === 'status_unavailable';
     return <section className="rounded-xl border border-border bg-surface p-5 sm:p-6" aria-labelledby="license-heading">
-        <Heading id="license-heading" className="mb-3 flex items-center gap-2 text-lg font-semibold text-fg"><BadgeCheck className="h-5 w-5 shrink-0" />{t(setup && status ? status.can_provision ? 'license.readyTitle' : status?.state === 'expired' ? 'license.state.expired' : 'license.setupTitle' : 'license.title')}</Heading>
-        {status && <p className="mb-5 max-w-prose text-sm text-fg-muted">{t(status?.state === 'expired' ? 'license.expiredHelp' : setup && !status?.can_provision ? 'license.setupIntro' : 'license.description')}</p>}
+        <Heading id="license-heading" className="mb-3 flex items-center gap-2 text-lg font-semibold text-fg"><BadgeCheck className="h-5 w-5 shrink-0" />{t(unavailable ? 'recovery.licenseTitle' : setup && status ? status.can_provision ? 'license.readyTitle' : status?.state === 'expired' ? 'license.state.expired' : 'license.setupTitle' : 'license.title')}</Heading>
+        {status && <p className="mb-5 max-w-prose text-sm text-fg-muted">{t(unavailable ? 'recovery.licenseHelp' : status?.state === 'expired' ? 'license.expiredHelp' : setup && !status?.can_provision ? 'license.setupIntro' : 'license.description')}</p>}
         {error && <p role="alert" className="mb-4 rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm text-danger">{error}</p>}
         {status ? <div className="mb-6 space-y-2 text-sm" role="status">
-            {(!setup || (!status.can_provision && status.state !== 'missing' && status.state !== 'expired')) && <p className="font-semibold">{t(`license.state.${status.state}`)}</p>}
+            {!unavailable && (!setup || (!status.can_provision && status.state !== 'missing' && status.state !== 'expired')) && <p className="font-semibold">{t(`license.state.${status.state as Exclude<LicenseStatus['state'], 'status_unavailable'>}`)}</p>}
             {status.expires_at && <p>{t('license.expires')}: {new Date(status.expires_at * 1000).toLocaleString(locale === 'tr' ? 'tr-TR' : 'en-US')}</p>}
-            {!status.can_provision && <p className="max-w-prose text-fg-muted">{t('license.restricted')}</p>}
+            {!status.can_provision && !unavailable && <p className="max-w-prose text-fg-muted">{t('license.restricted')}</p>}
             {setup && status.can_provision && <p>{t('license.setupSuccess')}</p>}
         </div> : <p role="status" className="mb-4 text-sm">{busy ? t('common.loading') : t('license.loadFailed')}</p>}
-        {status && !(setup && status.can_provision) && <form noValidate onSubmit={event => { event.preventDefault(); void request('activate'); }} className="space-y-3">
+        {status && !unavailable && !(setup && status.can_provision) && <form noValidate onSubmit={event => { event.preventDefault(); void request('activate'); }} className="space-y-3">
             <label htmlFor="license-key" className="block text-sm font-medium">{t('license.key')}</label>
             <div className="flex items-stretch gap-2">
                 <input id="license-key" name="license_key" type={showKey ? 'text' : 'password'} autoComplete="off" autoCapitalize="off" spellCheck={false} value={key} onChange={event => { setKey(event.target.value); setKeyError(''); }} className={`${inputClass} min-w-0 flex-1`} aria-invalid={!!keyError} aria-describedby={keyError ? 'license-key-help license-key-error' : 'license-key-help'} disabled={busy} />

@@ -47,6 +47,11 @@ func TestRequestForScenarioDriverRoutes(t *testing.T) {
 			},
 		},
 		{
+			name: "bind-owner-adoption", driver: "bind", target: transport.DNSEngineBIND,
+			mode:     transport.DNSEngineSwitchModeSwitch,
+			scenario: ownerBINDScenario(),
+		},
+		{
 			name: "pdns-switch", driver: "pdns-switch", target: transport.DNSEnginePowerDNS,
 			mode: transport.DNSEngineSwitchModeSwitch,
 			scenario: standaloneScenario(
@@ -90,6 +95,54 @@ func TestRequestForScenarioDriverRoutes(t *testing.T) {
 			}
 			if request.MutationRequestID != "" || request.MutationOwnerID != "" {
 				t.Fatal("scenario was allowed to select the durable mutation identity")
+			}
+		})
+	}
+}
+
+func ownerBINDScenario() scenario {
+	value := standaloneScenario("bind", "", transport.DNSEngineBIND, 0)
+	value.SourceFixture = "owner-bind"
+	value.Zones = []transport.DNSEngineSwitchZoneSnapshot{{
+		Domain: "s1-kill.test", DesiredGeneration: 1, ZoneType: "NATIVE",
+		Records: []transport.ZoneRecord{{
+			Name: "www.s1-kill.test", Type: "A", Content: "192.0.2.10", TTL: 300,
+		}},
+	}}
+	return value
+}
+
+func TestOwnerBINDTriggerRequiresExactStandaloneAdoptionManifest(t *testing.T) {
+	base := ownerBINDScenario()
+	if _, err := requestForScenario(base, "bind"); err != nil {
+		t.Fatalf("exact owner BIND scenario rejected: %v", err)
+	}
+	for _, tc := range []struct {
+		name string
+		edit func(*scenario)
+	}{
+		{"source-engine", func(v *scenario) { v.SourceEngine = transport.DNSEngineBIND }},
+		{"source-epoch", func(v *scenario) { v.SourceEpoch = 1 }},
+		{"target-epoch", func(v *scenario) { v.TargetEpoch = 2 }},
+		{"source-revision", func(v *scenario) { v.SourceRevision = 1 }},
+		{"mode", func(v *scenario) { v.Mode = transport.DNSEngineSwitchModeAdopt }},
+		{"empty-target", func(v *scenario) { v.Zones = nil }},
+		{"paired", func(v *scenario) {
+			v.Topology = transport.DNSTopologyPaired
+			v.PairRole = transport.DNSPairRolePrimary
+			v.LocalIP = "192.0.2.10"
+			v.LocalNS = "ns1.s1-kill.test"
+			v.PeerIP = "192.0.2.11"
+			v.PeerNS = "ns2.s1-kill.test"
+		}},
+		{"wrong-driver", func(v *scenario) { v.Driver = "pdns-switch" }},
+		{"wrong-target", func(v *scenario) { v.TargetEngine = transport.DNSEnginePowerDNS }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			value := base
+			tc.edit(&value)
+			if _, err := requestForScenario(value, value.Driver); err == nil {
+				t.Fatal("owner BIND provenance accepted a different manifest")
 			}
 		})
 	}

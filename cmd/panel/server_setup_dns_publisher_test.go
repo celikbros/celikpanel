@@ -74,6 +74,9 @@ func TestServerSetupPrimaryHostingPreparesHTTPSBeforeWaitingForSecondary(t *test
 	state.Draft = secondaryHostingDraft()
 	state.Draft.Purpose, state.Draft.DNSRole, state.Draft.PeerNS = "web", "primary", state.Draft.NS2
 	state.Draft.DNSPublisherEndpoint = ""
+	// PowerDNS as the paired primary is refused at review while its product
+	// gate is closed; this primary ordering is engine-neutral.
+	state.Draft.DNSEngine = "bind"
 	plan := saveSetupPlanForTest(t, f, state)
 	certificate, gate, hosting := -1, -1, -1
 	for index, step := range plan.Steps {

@@ -1,0 +1,21 @@
+Offline tests of the kill-matrix harness in /root/cp-b9-src (git archive 3cceb29a), 2026-09-30T01:56:12Z
+unittest = python3 -m unittest MODULE (from deploy/e2e/dns-kill-matrix); direct = python3 FILE (from the tree root)
+unittest=12 direct=12 OK deploy/e2e/dns-kill-matrix/test_fixture.py
+unittest=24 direct=24 OK deploy/e2e/dns-kill-matrix/test_fresh_primary_batch8_fixes.py
+unittest=37 direct=37 OK deploy/e2e/dns-kill-matrix/test_fresh_primary_serial_zero_zone.py
+unittest=38 direct=38 OK deploy/e2e/dns-kill-matrix/test_fresh_primary_v3.py
+unittest=82 direct=82 OK deploy/e2e/dns-kill-matrix/test_guest_bootstrap.py
+unittest=17 direct=16 OK deploy/e2e/dns-kill-matrix/test_guest_recovery_probe.py
+unittest=11 direct=11 OK deploy/e2e/dns-kill-matrix/test_manifest.py
+unittest=7 direct=7 OK deploy/e2e/dns-kill-matrix/test_native_bind_inspector_channel.py
+unittest=3 direct=3 OK deploy/e2e/dns-kill-matrix/test_native_bind_pdns_authority.py
+unittest=2 direct=2 OK deploy/e2e/dns-kill-matrix/test_native_bind_peer.py
+unittest=5 direct=5 OK deploy/e2e/dns-kill-matrix/test_native_pdns_bind_peer.py
+unittest=6 direct=6 OK deploy/e2e/dns-kill-matrix/test_native_pdns_pdns_pair.py
+unittest=8 direct=8 {"action": "prepare-native-pdns-peer", "catalog": "catalog-c000020a.celikpanel.invalid", "cell_id": "pdns-switch__intent__after-write__paired-primary__peer-reachable", "execute": false, "management_installed_on_secondary": false, "primary_ip": "192.0.2.10", "secondary_ip": "192.0.2.11"} deploy/e2e/dns-kill-matrix/test_native_pdns_peer.py
+unittest=30 direct=30 OK deploy/e2e/dns-kill-matrix/test_native_primary_peer.py
+unittest=42 direct=42 OK deploy/e2e/dns-kill-matrix/test_paired_secondary_provenance.py
+unittest=132 direct=132 OK deploy/e2e/dns-kill-matrix/test_run_cell.py
+sum per-file (python3 -m unittest MODULE): 456; sum (python3 FILE): 455
+python3 -m unittest discover -s deploy/e2e/dns-kill-matrix -p 'test_*.py' (build.log): Ran 456 tests, OK
+go test -count=1 -v ./cmd/dns-kill-matrix-trigger (trigger-tests.log): top-level PASS 58, FAIL 0, rc 0

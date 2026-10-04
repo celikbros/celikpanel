@@ -899,16 +899,25 @@ def ssh_command(node: dict[str, Any], identity_file: Path) -> list[str]:
     ]
 
 
-def wait_for_ssh(plan: dict[str, Any], identity_file: Path, timeout: int) -> None:
-    if timeout < 10:
-        raise FixtureError("SSH readiness timeout must be at least 10 seconds")
+def require_identity_file(identity_file: Path) -> None:
     try:
         info = identity_file.lstat()
     except FileNotFoundError as exc:
         raise FixtureError(f"SSH identity is missing: {identity_file}") from exc
     if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
         raise FixtureError("SSH identity must be a regular non-symlink file")
-    pending = set(plan["start_order"])
+
+
+def wait_for_ssh(
+    plan: dict[str, Any],
+    identity_file: Path,
+    timeout: int,
+    nodes: Sequence[str] | None = None,
+) -> None:
+    if timeout < 10:
+        raise FixtureError("SSH readiness timeout must be at least 10 seconds")
+    require_identity_file(identity_file)
+    pending = set(plan["start_order"] if nodes is None else nodes)
     deadline = time.monotonic() + timeout
     while pending and time.monotonic() < deadline:
         for node_name in tuple(pending):
@@ -924,6 +933,164 @@ def wait_for_ssh(plan: dict[str, Any], identity_file: Path, timeout: int) -> Non
             time.sleep(2)
     if pending:
         raise FixtureError(f"SSH readiness timed out for: {', '.join(sorted(pending))}")
+
+
+# Orderly guest reboot, as the 2026-09-26..28 native trials did by hand: guest
+# `systemctl reboot`, then the fixture's own SSH readiness. It is confined to
+# the cell's own disposable guest: the QEMU pidfile in the validated cell
+# directory must be alive, and the guest must report the plan's SMBIOS UUID
+# (uuid5 of cell and node, set by `-uuid`), the plan's cloud-init fixture
+# marker (schema, cell ID, node) and a boot ID. Anything else is refused
+# before the reboot command is sent.
+REBOOT_METHOD = "guest systemctl reboot (orderly), then fixture SSH readiness"
+GUEST_IDENTITY_COMMAND = (
+    "sudo -n /bin/sh -c 'printf \"product_uuid=%s\\n\" "
+    "\"$(cat /sys/class/dmi/id/product_uuid)\"; "
+    "cat /etc/celikpanel-dns-kill-matrix; "
+    "printf \"boot_id=%s\\n\" \"$(cat /proc/sys/kernel/random/boot_id)\"'"
+)
+GUEST_REBOOT_COMMAND = "sudo -n /usr/bin/systemctl reboot"
+UUID_TEXT_RE = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+
+
+def plan_vm_uuid(plan: dict[str, Any], node_name: str) -> str:
+    """The SMBIOS UUID the plan's QEMU command gave this node."""
+
+    command = plan["nodes"][node_name]["qemu_command"]
+    try:
+        value = command[command.index("-uuid") + 1]
+    except (ValueError, IndexError) as exc:
+        raise FixtureError("fixture plan QEMU command has no -uuid") from exc
+    expected = str(uuid.uuid5(NAMESPACE, f"{plan['cell_id']}\0{node_name}"))
+    if value != expected:
+        raise FixtureError("fixture plan QEMU UUID differs from its cell identity")
+    return expected
+
+
+def remote_command(node: dict[str, Any], identity_file: Path, command: str) -> list[str]:
+    """fixture.ssh_command with its readiness check replaced by one fixed command."""
+
+    return ssh_command(node, identity_file)[:-1] + [command]
+
+
+def parse_guest_identity(output: str) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for line in output.splitlines():
+        if not line.strip():
+            continue
+        key, separator, value = line.partition("=")
+        if not separator or key in values:
+            raise FixtureError("guest identity output is not exact key=value lines")
+        values[key] = value.strip()
+    if set(values) != {"product_uuid", "schema", "cell_id", "node", "boot_id"}:
+        raise FixtureError(f"guest identity fields differ: {sorted(values)}")
+    for key in ("product_uuid", "boot_id"):
+        values[key] = values[key].lower()
+        if UUID_TEXT_RE.fullmatch(values[key]) is None:
+            raise FixtureError(f"guest {key} is not a UUID")
+    return values
+
+
+def verify_guest_identity(
+    plan: dict[str, Any], node_name: str, observed: dict[str, str]
+) -> None:
+    expected = {
+        "product_uuid": plan_vm_uuid(plan, node_name),
+        "schema": PLAN_SCHEMA,
+        "cell_id": plan["cell_id"],
+        "node": node_name,
+    }
+    for key, value in expected.items():
+        if observed.get(key) != value:
+            raise FixtureError(
+                f"refusing reboot: guest {key}={observed.get(key)!r}, want {value!r}; "
+                "this is not the cell's own disposable guest"
+            )
+
+
+def observe_guest_identity(
+    plan: dict[str, Any],
+    node_name: str,
+    identity_file: Path,
+    runner: Any = subprocess.run,
+) -> dict[str, str]:
+    completed = runner(
+        remote_command(plan["nodes"][node_name], identity_file, GUEST_IDENTITY_COMMAND),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        check=False,
+        timeout=30,
+    )
+    if completed.returncode != 0:
+        raise FixtureError(f"guest identity command exited {completed.returncode}")
+    raw = completed.stdout
+    text = raw.decode("utf-8", errors="replace") if isinstance(raw, bytes) else str(raw)
+    return parse_guest_identity(text)
+
+
+def reboot_guest(
+    plan: dict[str, Any],
+    node_name: str,
+    identity_file: Path,
+    timeout: int,
+    *,
+    runner: Any = subprocess.run,
+    clock: Any = time.monotonic,
+    sleep: Any = time.sleep,
+    ready: Any = None,
+) -> dict[str, Any]:
+    """Reboot exactly this cell's guest and return boot IDs before and after."""
+
+    if timeout < 30:
+        raise FixtureError("guest reboot timeout must be at least 30 seconds")
+    if node_name not in plan.get("nodes", {}) or node_name not in plan.get("start_order", []):
+        raise FixtureError(f"fixture plan has no node {node_name!r}")
+    require_identity_file(identity_file)
+    if not _pid_alive(Path(plan["nodes"][node_name]["paths"]["pid"])):
+        raise FixtureError(f"refusing reboot: {node_name} QEMU process of this cell is not alive")
+    before = observe_guest_identity(plan, node_name, identity_file, runner)
+    verify_guest_identity(plan, node_name, before)
+    started = clock()
+    command = remote_command(plan["nodes"][node_name], identity_file, GUEST_REBOOT_COMMAND)
+    # The SSH session ends with the guest; its exit status is recorded only.
+    try:
+        sent = runner(
+            command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            check=False, timeout=60,
+        ).returncode
+    except subprocess.TimeoutExpired:
+        sent = None
+    deadline = started + timeout
+    after: dict[str, str] | None = None
+    last_error = "no post-reboot observation"
+    while clock() < deadline:
+        sleep(2)
+        try:
+            candidate = observe_guest_identity(plan, node_name, identity_file, runner)
+        except (FixtureError, OSError, subprocess.SubprocessError) as exc:
+            last_error = str(exc)
+            continue
+        verify_guest_identity(plan, node_name, candidate)
+        if candidate["boot_id"] != before["boot_id"]:
+            after = candidate
+            break
+        last_error = "boot ID has not changed yet"
+    if after is None:
+        raise FixtureError(f"guest did not come back with a new boot ID: {last_error}")
+    remaining = max(10, int(deadline - clock()))
+    (ready or wait_for_ssh)(plan, identity_file, remaining, [node_name])
+    return {
+        "action": "reboot",
+        "method": REBOOT_METHOD,
+        "cell_id": plan["cell_id"],
+        "node": node_name,
+        "product_uuid": before["product_uuid"],
+        "boot_id_before": before["boot_id"],
+        "boot_id_after": after["boot_id"],
+        "reboot_command": command,
+        "reboot_command_returncode": sent,
+        "elapsed_seconds": round(clock() - started, 3),
+    }
 
 
 def validate_kill_proof(path: Path, cell_id: str) -> dict[str, Any]:
@@ -1079,6 +1246,14 @@ def parse_args(arguments: Sequence[str] | None = None) -> argparse.Namespace:
     current.add_argument("--timeout", type=int, default=300)
     add_execute(current)
 
+    current = subparsers.add_parser("reboot")
+    add_common(current)
+    current.add_argument("--cell-id", required=True)
+    current.add_argument("--node", required=True, choices=EXPECTED_IMAGES)
+    current.add_argument("--identity-file", required=True, type=Path)
+    current.add_argument("--timeout", type=int, default=600)
+    add_execute(current)
+
     current = subparsers.add_parser("peer-link")
     add_common(current)
     current.add_argument("--cell-id", required=True)
@@ -1105,6 +1280,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
             "prepare",
             "start",
             "wait-ssh",
+            "reboot",
             "peer-link",
             "stop",
             "teardown",
@@ -1191,6 +1367,29 @@ def main(arguments: Sequence[str] | None = None) -> int:
                     "cell_id": args.cell_id,
                     "dry_run": not args.execute,
                     "commands": commands,
+                }
+            )
+            return 0
+        if args.action == "reboot":
+            plan = load_cell_plan(root, args.cell_id)
+            if args.execute:
+                emit(reboot_guest(plan, args.node, args.identity_file, args.timeout))
+                return 0
+            node = plan["nodes"][args.node]
+            emit(
+                {
+                    "action": "reboot",
+                    "cell_id": args.cell_id,
+                    "node": args.node,
+                    "dry_run": True,
+                    "method": REBOOT_METHOD,
+                    "expected_product_uuid": plan_vm_uuid(plan, args.node),
+                    "identity_command": remote_command(
+                        node, args.identity_file, GUEST_IDENTITY_COMMAND
+                    ),
+                    "reboot_command": remote_command(
+                        node, args.identity_file, GUEST_REBOOT_COMMAND
+                    ),
                 }
             )
             return 0

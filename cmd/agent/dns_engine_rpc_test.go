@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alicelik/celikpanel/internal/dnsengineartifact"
 	"github.com/alicelik/celikpanel/internal/hostplatform"
 	"github.com/alicelik/celikpanel/internal/mutationpayload"
 	"github.com/alicelik/celikpanel/internal/transport"
@@ -197,6 +198,136 @@ func pairedZeroZoneSwitchRequest(t *testing.T) SwitchDNSEngineV1Request {
 		Zones:                  commitment.Zones,
 		SnapshotBytes:          commitment.SnapshotBytes,
 		ManifestQualifier:      commitment.Qualifier,
+	}
+}
+
+// Closed paired-primary gate: every PowerDNS paired-primary switch is paused.
+// The open gate is covered by TestFreshPairedPDNSPrimaryOpenGateRPC.
+func TestPDNSPairedPrimarySwitchRefusedBeforeAgentMutationClaim(t *testing.T) {
+	closeFreshPairedPDNSPrimaryGate(t)
+	manifest := testPairedPDNSSwitchManifest(t, transport.DNSPairRolePrimary, nil)
+	request := SwitchDNSEngineV1Request{
+		ServiceMutationBinding: testPDNSEngineBinding(),
+		Mode:                   manifest.Mode, SourceEngine: manifest.SourceEngine,
+		TargetEngine: manifest.TargetEngine, SourceEpoch: manifest.SourceEpoch,
+		TargetEpoch: manifest.TargetEpoch, SourceRevision: manifest.SourceRevision,
+		Topology: manifest.Topology, PairRole: manifest.PairRole,
+		LocalIP: manifest.LocalIP, LocalNS: manifest.LocalNS,
+		PeerIP: manifest.PeerIP, PeerNS: manifest.PeerNS,
+		Zones: manifest.Zones, SnapshotBytes: manifest.SnapshotBytes,
+		ManifestQualifier: manifest.Qualifier,
+	}
+	backend := &fakeDNSEngineBackend{}
+	useFakeDNSEngineBackend(t, backend)
+	var response SwitchDNSEngineV1Response
+	if err := (&Agent{}).SwitchDNSEngineV1(&request, &response); err != nil {
+		t.Fatal(err)
+	}
+	if response.Error != pdnsPairedPrimarySwitchPausedReason || backend.switchCalls != 0 {
+		t.Fatalf("Agent accepted unsupported switch: response=%+v calls=%d", response, backend.switchCalls)
+	}
+	if _, err := (hostDNSEngineBackend{}).Switch(
+		context.Background(), manifest, request.ServiceMutationBinding,
+	); err == nil || err.Error() != pdnsPairedPrimarySwitchPausedReason {
+		t.Fatalf("host backend reached source or profile work: %v", err)
+	}
+	for _, change := range []struct {
+		name string
+		edit func(*mutationpayload.DNSEngineSwitchManifestCommitment)
+	}{
+		{"standalone", func(m *mutationpayload.DNSEngineSwitchManifestCommitment) {
+			m.Topology, m.PairRole = transport.DNSTopologyStandalone, ""
+		}},
+		{"secondary", func(m *mutationpayload.DNSEngineSwitchManifestCommitment) {
+			m.PairRole = transport.DNSPairRoleSecondary
+		}},
+		{"BIND target", func(m *mutationpayload.DNSEngineSwitchManifestCommitment) {
+			m.TargetEngine = transport.DNSEngineBIND
+		}},
+	} {
+		t.Run(change.name, func(t *testing.T) {
+			other := manifest
+			change.edit(&other)
+			if pdnsPairedPrimarySwitchPaused(other) {
+				t.Fatal("unrelated DNS transition was blocked")
+			}
+		})
+	}
+}
+
+// Run with the paired-primary gate closed, where the paired primary keeps its
+// own paused reason; with the gate open that manifest gets the BIND-source
+// reason (TestFreshPairedPDNSPrimaryOpenGateRPC).
+func TestBINDSourcePDNSSwitchRefusedBeforeAgentMutationClaim(t *testing.T) {
+	closeFreshPairedPDNSPrimaryGate(t)
+	manifest, err := mutationpayload.CanonicalDNSEngineSwitchManifest(
+		transport.DNSEngineSwitchModeSwitch,
+		transport.DNSEngineBIND, transport.DNSEnginePowerDNS, 3, 4, 9,
+		transport.DNSTopologyStandalone,
+		[]transport.DNSEngineSwitchZoneSnapshot{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := SwitchDNSEngineV1Request{
+		ServiceMutationBinding: testPDNSEngineBinding(),
+		Mode:                   manifest.Mode, SourceEngine: manifest.SourceEngine,
+		TargetEngine: manifest.TargetEngine, SourceEpoch: manifest.SourceEpoch,
+		TargetEpoch: manifest.TargetEpoch, SourceRevision: manifest.SourceRevision,
+		Topology: manifest.Topology,
+		Zones:    manifest.Zones, SnapshotBytes: manifest.SnapshotBytes,
+		ManifestQualifier: manifest.Qualifier,
+	}
+	backend := &fakeDNSEngineBackend{}
+	useFakeDNSEngineBackend(t, backend)
+	var response SwitchDNSEngineV1Response
+	if err := (&Agent{}).SwitchDNSEngineV1(&request, &response); err != nil {
+		t.Fatal(err)
+	}
+	if response.Error != bindSourcePDNSSwitchUnsupportedReason || backend.switchCalls != 0 {
+		t.Fatalf("Agent accepted unsupported switch: response=%+v calls=%d", response, backend.switchCalls)
+	}
+	if _, err := (hostDNSEngineBackend{}).Switch(
+		context.Background(), manifest, request.ServiceMutationBinding,
+	); err == nil || err.Error() != bindSourcePDNSSwitchUnsupportedReason {
+		t.Fatalf("host backend reached source or journal work: %v", err)
+	}
+	// Every topology is covered, and the paired primary keeps its own reason.
+	secondary := testPairedPDNSSwitchManifest(t, transport.DNSPairRoleSecondary, nil)
+	if !bindSourcePDNSSwitchUnsupported(secondary) {
+		t.Fatal("paired secondary BIND source switch was not refused")
+	}
+	primary := testPairedPDNSSwitchManifest(t, transport.DNSPairRolePrimary, nil)
+	if _, err := (hostDNSEngineBackend{}).Switch(
+		context.Background(), primary, request.ServiceMutationBinding,
+	); err == nil || err.Error() != pdnsPairedPrimarySwitchPausedReason {
+		t.Fatalf("paired primary lost its paused reason: %v", err)
+	}
+	for _, change := range []struct {
+		name string
+		edit func(*mutationpayload.DNSEngineSwitchManifestCommitment)
+	}{
+		{"BIND target", func(m *mutationpayload.DNSEngineSwitchManifestCommitment) {
+			m.SourceEngine, m.TargetEngine = transport.DNSEnginePowerDNS, transport.DNSEngineBIND
+		}},
+		{"empty source", func(m *mutationpayload.DNSEngineSwitchManifestCommitment) {
+			m.SourceEngine, m.SourceEpoch = "", 0
+		}},
+		{"adopt mode", func(m *mutationpayload.DNSEngineSwitchManifestCommitment) {
+			m.Mode = transport.DNSEngineSwitchModeAdopt
+		}},
+		{"reinstall mode", func(m *mutationpayload.DNSEngineSwitchManifestCommitment) {
+			m.Mode = transport.DNSEngineSwitchModeReinstall
+			m.TargetEngine = transport.DNSEngineBIND
+		}},
+	} {
+		t.Run(change.name, func(t *testing.T) {
+			other := manifest
+			change.edit(&other)
+			if bindSourcePDNSSwitchUnsupported(other) {
+				t.Fatal("unrelated DNS transition was blocked")
+			}
+		})
 	}
 }
 
@@ -720,7 +851,7 @@ func TestSwitchDNSEnginePreCommitFailureClearsGuardOnlyAfterExactAbortReproof(
 	}{
 		{name: "absent", outcome: dnsEngineSwitchRecoveryAbsent},
 		{name: "rolled back", outcome: dnsEngineSwitchRecoveryRolledBack},
-		{name: "committed is ambiguous", outcome: dnsEngineSwitchRecoveryCommitted, wantPoison: true},
+
 		{name: "finalized is ambiguous", outcome: dnsEngineSwitchRecoveryFinalized, wantPoison: true},
 		{name: "recovery error is ambiguous", outcome: dnsEngineSwitchRecoveryAbsent, recoverErr: errors.New("injected reproof failure"), wantPoison: true},
 	}
@@ -773,6 +904,169 @@ func TestSwitchDNSEnginePreCommitFailureClearsGuardOnlyAfterExactAbortReproof(
 			if finishErr != nil || finished == nil ||
 				finished.Status != serviceMutationStatusFailed {
 				t.Fatalf("finish job=%+v err=%v", finished, finishErr)
+			}
+		})
+	}
+}
+
+// A backend error after the journal durably recorded a verified target (for
+// example a target-verified write that reported failure after the rename) is
+// reconciled by same-request recovery. A committed outcome is finalized
+// forward under the critical guard, never ended as a failure or poisoned.
+func TestSwitchDNSEngineInProcessFailureAtVerifiedTargetFinalizesForward(t *testing.T) {
+	request := canonicalSwitchRequest(t)
+	manager, _ := newMutationTestManager(t)
+	installGlobalMutationTestManager(t, manager)
+	beginMutationTestJobWithIdentity(
+		t, manager, "dns_engine_switch", "bind", request.ManifestQualifier,
+	)
+	guardedDuringFinalize := false
+	backend := &fakeDNSEngineBackend{
+		switchErr: &dnsSwitchInProcessHandoffError{
+			forward: true, phase: dnsSwitchPhaseTargetVerified,
+			cause: errors.New("injected target-verified write reported failure after it was durable"),
+		},
+		recovery: dnsEngineSwitchRecoveryCommitted,
+		finalizeHook: func() error {
+			manager.mu.Lock()
+			guardedDuringFinalize = manager.active != nil && manager.active.dnsEngineSwitchFinalizing
+			manager.mu.Unlock()
+			return nil
+		},
+	}
+	useFakeDNSEngineBackend(t, backend)
+
+	var response SwitchDNSEngineV1Response
+	if err := (&Agent{}).SwitchDNSEngineV1(&request, &response); err != nil {
+		t.Fatal(err)
+	}
+	if backend.switchCalls != 1 || backend.recoverCalls != 1 || backend.finalizeCalls != 1 {
+		t.Fatalf("switch=%d recover=%d finalize=%d", backend.switchCalls, backend.recoverCalls, backend.finalizeCalls)
+	}
+	if response.Error != "" || !response.Applied ||
+		response.ActiveEngine != transport.DNSEngineBIND || response.ActiveEpoch != 1 {
+		t.Fatalf("response=%+v", response)
+	}
+	if !guardedDuringFinalize {
+		t.Fatal("forward finalization ran without the critical guard")
+	}
+	manager.mu.Lock()
+	poisoned := manager.poisoned
+	manager.mu.Unlock()
+	if poisoned != nil {
+		t.Fatalf("forward finalization poisoned the manager: %v", poisoned)
+	}
+	job := manager.status(testMutationRequestID)
+	wantPhase := dnsEngineSwitchFinalizedPhasePrefix + testMutationRequestID + "/" + request.ManifestQualifier
+	if job == nil || job.Status != serviceMutationStatusSucceeded || job.Phase != wantPhase {
+		t.Fatalf("terminal job=%+v want phase %q", job, wantPhase)
+	}
+}
+
+// The receipt-mismatch path keeps treating a committed reproof as ambiguous.
+func TestSwitchDNSEngineReceiptMismatchStillTreatsCommittedAsAmbiguous(t *testing.T) {
+	request := canonicalSwitchRequest(t)
+	manager, _ := newMutationTestManager(t)
+	installGlobalMutationTestManager(t, manager)
+	beginMutationTestJobWithIdentity(
+		t, manager, "dns_engine_switch", "bind", request.ManifestQualifier,
+	)
+	backend := &fakeDNSEngineBackend{
+		result:   transport.SwitchDNSEngineV1Response{Applied: true, ActiveEngine: transport.DNSEngineBIND, ActiveEpoch: 2},
+		recovery: dnsEngineSwitchRecoveryCommitted,
+	}
+	useFakeDNSEngineBackend(t, backend)
+
+	var response SwitchDNSEngineV1Response
+	if err := (&Agent{}).SwitchDNSEngineV1(&request, &response); err != nil {
+		t.Fatal(err)
+	}
+	defer releasePoisonedFirewallApplyTestManager(manager)
+	manager.mu.Lock()
+	poisoned := manager.poisoned
+	manager.mu.Unlock()
+	if poisoned == nil || backend.finalizeCalls != 0 ||
+		response.Error != "DNS engine switch outcome could not be verified; inspect the agent log" {
+		t.Fatalf("response=%+v poisoned=%v finalize=%d", response, poisoned, backend.finalizeCalls)
+	}
+}
+
+// Invariant 3, batch 5 cells c3/c4: an in-process switch failure whose
+// same-request recovery cannot verify the native DNS result holds only the DNS
+// operation. With the exact journal on disk the Agent records the same
+// terminal release a restarted Agent records, keeps the journal (which refuses
+// every later DNS mutation) and releases the host lock, so unrelated
+// mutations continue; no ledger write was ambiguous, so the manager is not
+// poisoned. Without the exact journal it stays fail-closed.
+func TestSwitchDNSEngineUnverifiableNativeResultHoldsOnlyDNS(t *testing.T) {
+	for _, withJournal := range []bool{true, false} {
+		t.Run(fmt.Sprintf("journal=%v", withJournal), func(t *testing.T) {
+			request := canonicalSwitchRequest(t)
+			manager, root := newMutationTestManager(t)
+			installGlobalMutationTestManager(t, manager)
+			beginMutationTestJobWithIdentity(
+				t, manager, "dns_engine_switch", "bind", request.ManifestQualifier,
+			)
+			journal := activeCommittedBINDStartupJournalFixture(t, manager, root, request)
+			journal.Phase = dnsSwitchPhaseRollingBack
+			if withJournal {
+				if err := writeDNSEngineSwitchJournal(journal); err != nil {
+					t.Fatal(err)
+				}
+			}
+			backend := &fakeDNSEngineBackend{
+				switchErr:  errors.New("paired PowerDNS catalog members were not provisioned"),
+				recoverErr: errors.New("PowerDNS switch rollback restore database: PowerDNS rollback kept the live database"),
+			}
+			useFakeDNSEngineBackend(t, backend)
+
+			var response SwitchDNSEngineV1Response
+			if err := (&Agent{}).SwitchDNSEngineV1(&request, &response); err != nil {
+				t.Fatal(err)
+			}
+			if response.Error != "DNS engine switch outcome could not be verified; inspect the agent log" {
+				t.Fatalf("response=%+v", response)
+			}
+			manager.mu.Lock()
+			poisoned, active := manager.poisoned, manager.active
+			manager.mu.Unlock()
+			if !withJournal {
+				defer releasePoisonedFirewallApplyTestManager(manager)
+				if poisoned == nil || active == nil {
+					t.Fatalf("missing journal released unverifiable DNS work: poisoned=%v active=%v", poisoned, active != nil)
+				}
+				return
+			}
+			if poisoned != nil || active != nil {
+				t.Fatalf("DNS-only uncertainty poisoned or held the manager: poisoned=%v active=%v", poisoned, active != nil)
+			}
+			raw, err := os.ReadFile(manager.ledgerPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			durable, err := decodeServiceMutationLedger(raw)
+			if err != nil {
+				t.Fatal(err)
+			}
+			id := dnsengineartifact.SwitchIdentity{RequestID: journal.MutationRequestID, OwnerID: journal.MutationOwnerID, Target: journal.TargetEngine, Qualifier: journal.ManifestQualifier}
+			job := durable.Jobs[id.RequestID]
+			if !id.ReleasedUndecidedJob(durable) || job.ErrorCode != dnsengineartifact.ReleasedNativeUnknownCode ||
+				strings.Contains(job.ErrorMessage, "restarted.") ||
+				!strings.Contains(job.ErrorMessage, "Unrelated host changes can continue") {
+				t.Fatalf("release is not the exact durable released verdict: %+v", job)
+			}
+			retained, exists, err := readDNSEngineSwitchJournal()
+			if err != nil || !exists || !reflect.DeepEqual(retained, journal) {
+				t.Fatalf("journal not retained exactly: exists=%v err=%v", exists, err)
+			}
+			if err := reconcileExistingDNSEngineSwitchJournal(context.Background()); err == nil {
+				t.Fatal("a new DNS mutation accepted the retained uncertain journal")
+			}
+			if unrelated, err := manager.begin(&ServiceMutationBeginRequest{
+				RequestID: strings.Repeat("d", 32), OwnerID: strings.Repeat("e", 32),
+				Kind: "service_install", Target: "nginx",
+			}); err != nil || unrelated == nil {
+				t.Fatalf("unrelated mutation was blocked: job=%+v err=%v", unrelated, err)
 			}
 		})
 	}
@@ -1358,9 +1652,9 @@ func TestDNSEngineSwitchStartupExpiredLeaseMismatchFailsClosed(
 				t.Fatalf("mismatched startup manager=%+v err=%v", reloaded, err)
 			}
 			defer releasePoisonedFirewallApplyTestManager(reloaded)
-			if backend.recoverCalls != 1 || backend.finalizeCalls != 0 {
+			if backend.recoverCalls != 0 || backend.finalizeCalls != 0 {
 				t.Fatalf(
-					"mismatch reached finalization: recover=%d finalize=%d",
+					"mismatched authority reached recovery: recover=%d finalize=%d",
 					backend.recoverCalls, backend.finalizeCalls,
 				)
 			}
@@ -2300,5 +2594,155 @@ func TestVerifyPDNSPublicListenersRequiresPDNSTCPAndUDP(t *testing.T) {
 	}
 	if err := verifyPDNSPublicListeners(strings.Split(valid, "\n")[0], 10); err == nil {
 		t.Fatal("UDP-only PowerDNS listener set was accepted")
+	}
+}
+
+// An unknown native result after the recorded worker has exited may release
+// the global lease only when an exact frozen DNS journal remains. Missing
+// evidence still retains the lock because a later DNS preflight could not
+// distinguish a half-applied switch from a clean host.
+func TestDNSEngineSwitchBootUnknownReleasesOnlyWithExactJournal(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		removeProof bool
+	}{
+		{name: "exact frozen journal"},
+		{name: "missing journal", removeProof: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			request := canonicalSwitchRequest(t)
+			manager, root := newMutationTestManager(t)
+			beginMutationTestJobWithIdentity(t, manager, "dns_engine_switch", "bind", request.ManifestQualifier)
+			journal := persistActiveCommittedBINDStartupJournal(t, manager, root, request)
+			persistActiveDNSEngineSwitchStartupLedger(t, manager, journal, false, nil)
+			if tc.removeProof {
+				if err := removeDNSEngineSwitchJournal(); err != nil {
+					t.Fatal(err)
+				}
+			}
+			abandonFirewallApplyTestRuntime(t, manager)
+			backend := &fakeDNSEngineBackend{recoverErr: errors.New("native DNS result unavailable")}
+			useFakeDNSEngineBackend(t, backend)
+			lock, err := acquireServiceMutationFileLock(manager.lockPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			manager.mu.Lock()
+			handled, recoverErr := manager.recoverPersistedDNSEngineSwitchLocked(manager.ledger.Jobs[request.MutationRequestID], lock)
+			poisoned := manager.poisoned
+			manager.mu.Unlock()
+			if !handled || backend.recoverCalls != 1 {
+				t.Fatalf("boot native recovery handled=%v calls=%d err=%v", handled, backend.recoverCalls, recoverErr)
+			}
+			if tc.removeProof {
+				t.Cleanup(func() { releasePoisonedFirewallApplyTestManager(manager) })
+				if recoverErr == nil || poisoned == nil || manager.poisonLock == nil {
+					t.Fatalf("missing journal released ambiguous DNS work: err=%v poisoned=%v", recoverErr, poisoned)
+				}
+				return
+			}
+			if recoverErr != nil || poisoned != nil {
+				t.Fatalf("exact journal stranded unrelated host work: err=%v poisoned=%v", recoverErr, poisoned)
+			}
+			if _, err := os.Stat(dnsEngineSwitchJournalPath()); err != nil {
+				t.Fatalf("unknown native result discarded exact journal: %v", err)
+			}
+			if err := reconcileExistingDNSEngineSwitchJournal(context.Background()); err == nil {
+				t.Fatal("a new DNS mutation accepted the retained uncertain journal")
+			}
+			raw, err := os.ReadFile(manager.ledgerPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			durable, err := decodeServiceMutationLedger(raw)
+			if err != nil {
+				t.Fatal(err)
+			}
+			id := dnsengineartifact.SwitchIdentity{RequestID: journal.MutationRequestID, OwnerID: journal.MutationOwnerID, Target: journal.TargetEngine, Qualifier: journal.ManifestQualifier}
+			if !id.ReleasedUndecidedJob(durable) || durable.Jobs[id.RequestID].ErrorCode != dnsengineartifact.ReleasedNativeUnknownCode {
+				t.Fatalf("unknown native result lacks exact durable release: %+v", durable)
+			}
+			probe, err := acquireServiceMutationFileLock(manager.lockPath)
+			if err != nil {
+				t.Fatalf("DNS-only uncertainty retained global host lock: %v", err)
+			}
+			if err := probe.Close(); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestDNSEngineSwitchRecoveryRetainsHostLockWhenRecordedWorkerIsUnverifiable(t *testing.T) {
+	request := canonicalSwitchRequest(t)
+	manager, _ := newMutationTestManager(t)
+	beginMutationTestJobWithIdentity(
+		t, manager, "dns_engine_switch", "bind", request.ManifestQualifier,
+	)
+	defer releasePoisonedFirewallApplyTestManager(manager)
+	backend := &fakeDNSEngineBackend{}
+	useFakeDNSEngineBackend(t, backend)
+
+	manager.mu.Lock()
+	job := manager.ledger.Jobs[testMutationRequestID]
+	if manager.active == nil || job == nil {
+		manager.mu.Unlock()
+		t.Fatal("accepted operation lost its runtime or job")
+	}
+	job.WorkerPID = os.Getpid()
+	job.WorkerStarted = "unreadable-token"
+	job.WorkerCommand = "agent"
+	handled, err := manager.recoverPersistedDNSEngineSwitchLocked(job, manager.active.lock)
+	poisoned, retained := manager.poisoned, manager.poisonLock
+	manager.mu.Unlock()
+	if !handled || err == nil || poisoned == nil || retained == nil {
+		t.Fatalf("unknown worker was not retained: handled=%v err=%v poisoned=%v lock=%v", handled, err, poisoned, retained)
+	}
+	if backend.recoverCalls != 0 {
+		t.Fatalf("native recovery ran after unknown worker: %d", backend.recoverCalls)
+	}
+	if lock, lockErr := acquireServiceMutationFileLock(manager.lockPath); !errors.Is(lockErr, errServiceMutationHostBusy) {
+		if lock != nil {
+			_ = lock.Close()
+		}
+		t.Fatalf("unknown worker released host exclusion: %v", lockErr)
+	}
+}
+
+func TestDNSEngineSwitchStartupFinalizesExactOrphanedWorkerAfterExit(t *testing.T) {
+	request := canonicalSwitchRequest(t)
+	manager, root := newMutationTestManager(t)
+	beginMutationTestJobWithIdentity(
+		t, manager, "dns_engine_switch", "bind", request.ManifestQualifier,
+	)
+	journal := persistActiveCommittedBINDStartupJournal(t, manager, root, request)
+	persistActiveDNSEngineSwitchStartupLedger(t, manager, journal, false, func(job *ServiceMutationJob) {
+		job.Status = serviceMutationStatusOrphaned
+		job.Phase = "waiting_for_orphaned_process"
+		job.ErrorCode = "agent_restart_worker_alive"
+		job.ErrorMessage = "The previous DNS engine switch worker is still alive."
+		job.WorkerPID = int(^uint(0) >> 1)
+		job.WorkerStarted = "123"
+		job.WorkerCommand = "agent"
+	})
+	abandonFirewallApplyTestRuntime(t, manager)
+	backend := &fakeDNSEngineBackend{
+		recovery:     dnsEngineSwitchRecoveryCommitted,
+		finalizeHook: removeDNSEngineSwitchJournal,
+	}
+	useFakeDNSEngineBackend(t, backend)
+
+	reloaded, err := newServiceMutationManager(
+		filepath.Join(root, "state"), filepath.Join(root, "service-mutation.lock"),
+	)
+	if err != nil || reloaded == nil {
+		t.Fatalf("exact orphan recovery: manager=%+v err=%v", reloaded, err)
+	}
+	job := reloaded.status(testMutationRequestID)
+	if backend.recoverCalls != 1 || backend.finalizeCalls != 1 ||
+		job == nil || job.Status != serviceMutationStatusSucceeded ||
+		reloaded.poisoned != nil {
+		t.Fatalf("orphaned worker did not finalize: recover=%d finalize=%d job=%+v poisoned=%v",
+			backend.recoverCalls, backend.finalizeCalls, job, reloaded.poisoned)
 	}
 }

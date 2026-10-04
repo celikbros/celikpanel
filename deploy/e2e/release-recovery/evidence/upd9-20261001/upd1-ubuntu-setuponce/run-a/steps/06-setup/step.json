@@ -1,0 +1,101 @@
+{
+  "checks": {
+    "before": {
+      "guidance": "undecided",
+      "required": true,
+      "revision": 0,
+      "status": "new"
+    },
+    "dns": {
+      "mode": "external",
+      "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+      "verdict": "not-provided-external-dns"
+    },
+    "draft_choices": {
+      "dns_mode": "external",
+      "peer_ip": "",
+      "peer_ns": ""
+    },
+    "execution": {
+      "error": {
+        "code": "HOST_MUTATION_BUSY",
+        "message": "This server's package manager is busy — something outside CelikPanel is installing or updating packages. Try again in a minute."
+      },
+      "phase": "02-service",
+      "status": "failed"
+    },
+    "owner_attempts": [
+      {
+        "attempt": 1,
+        "error": {
+          "code": "HOST_MUTATION_BUSY",
+          "message": "This server's package manager is busy — something outside CelikPanel is installing or updating packages. Try again in a minute."
+        },
+        "owner_texts": {
+          "api_message": "This server's package manager is busy — something outside CelikPanel is installing or updating packages. Try again in a minute.",
+          "code": "HOST_MUTATION_BUSY",
+          "err.HOST_MUTATION_BUSY": {
+            "en": "Another server change or operating-system package task is still running. Wait for it to finish, then try again.",
+            "tr": "Başka bir sunucu değişikliği veya işletim sistemi paket işlemi hâlâ sürüyor. Tamamlanmasını bekleyip yeniden deneyin."
+          }
+        },
+        "phase": "02-service",
+        "purpose": "web_mail",
+        "request_id": "8e9a5cf5b108848910a6af560cd4f621",
+        "status": "failed",
+        "steps": {
+          "01-dns": "succeeded",
+          "02-service": "failed",
+          "03-service": "pending",
+          "04-service": "pending",
+          "05-mail_profile": "pending",
+          "06-mail_profile": "pending",
+          "07-service": "pending",
+          "08-firewall": "pending",
+          "09-access_dns": "pending",
+          "10-panel_certificate": "pending",
+          "11-access_dns": "pending",
+          "12-mail_certificate": "pending",
+          "13-mail_enrollment": "pending",
+          "14-verify": "pending"
+        }
+      }
+    ],
+    "owner_model": "ordinary owner: the reviewed setup plan is started once; no wait for the package manager and no newly reviewed plan after a stop (H19 off)",
+    "packagekit": {
+      "children_seen": [],
+      "grep_c_aptcc": [
+        0
+      ],
+      "lock_lines_seen": [],
+      "observations": 3,
+      "other_processes_seen": [],
+      "pk_alive_rule_idle_bracketed": {
+        "agent_other": 0,
+        "agent_package_manager_active": 0,
+        "agent_ready": 0,
+        "panel_answered": 0
+      },
+      "readiness": {
+        "HOST_MUTATION_BUSY/package_manager_active": 3
+      },
+      "rule": {
+        "busy": 6,
+        "idle": 0
+      },
+      "with_packagekitd": 3
+    },
+    "plan_web_mail": {
+      "blockers": [],
+      "can_start": true,
+      "http": 200,
+      "id": "fa116141d5ec14ebd7cf12ba059b6dcd"
+    },
+    "start_http": 202
+  },
+  "finished_at": "2026-10-01T17:50:12Z",
+  "name": "setup",
+  "reason": "server setup did not succeed: {'status': 'failed', 'phase': '02-service', 'error': {'code': 'HOST_MUTATION_BUSY', 'message': \"This server's package manager is busy — something outside CelikPanel is installing or updating packages. Try again in a minute.\"}}",
+  "started_at": "2026-10-01T17:50:02Z",
+  "verdict": "failed"
+}

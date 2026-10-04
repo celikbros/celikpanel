@@ -1,0 +1,16 @@
+2026-09-30T08:33:04+00:00 dns-debian13 panel[3711]: 2026/09/30 08:33:04 http: TLS handshake error from 127.0.0.1:37306: EOF
+2026-09-30T08:33:05+00:00 dns-debian13 panel[3711]: 2026/09/30 08:33:05 domain deletion for pair-accept.test: mail runtime cleanup skipped: no mail runtime for this domain on this server
+2026-09-30T08:33:11+00:00 dns-debian13 panel[3711]: 2026/09/30 08:33:11 domain deletion pending for pair-accept.test at dns_cleanup: publish DNS zone deletion: DNS zone V3 paired propagation recovery is deferred: DNS zone publication is waiting for exact paired propagation recovery
+2026-09-30T08:33:11+00:00 dns-debian13 panel[3711]: DNS zone publication is waiting for exact paired propagation recovery
+2026-09-30T08:33:11+00:00 dns-debian13 panel[3711]: DNS zone publication is waiting for exact paired propagation recovery
+2026-09-30T08:33:16+00:00 dns-debian13 panel[3711]: 2026/09/30 08:33:16 http: TLS handshake error from 127.0.0.1:36852: EOF
+2026-09-30T08:33:16+00:00 dns-debian13 panel[3711]: 2026/09/30 08:33:16 domain deletion for pair-accept.test: mail runtime cleanup skipped: no mail runtime for this domain on this server
+2026-09-30T08:33:36+00:00 dns-debian13 panel[3711]: 2026/09/30 08:33:36 http: TLS handshake error from 127.0.0.1:54414: EOF
+2026-09-30T08:33:38+00:00 dns-debian13 panel[3711]: 2026/09/30 08:33:38 http: TLS handshake error from 127.0.0.1:58572: EOF
+2026-09-30T08:33:40+00:00 dns-debian13 panel[3711]: 2026/09/30 08:33:40 http: TLS handshake error from 127.0.0.1:58584: EOF
+2026-09-30T08:33:48+00:00 dns-debian13 panel[3711]: 2026/09/30 08:33:48 http: TLS handshake error from 127.0.0.1:43114: EOF
+2026-09-30T08:33:51+00:00 dns-debian13 panel[3711]: 2026/09/30 08:33:51 http: TLS handshake error from 127.0.0.1:43134: EOF
+2026-09-30T08:33:54+00:00 dns-debian13 systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-09-30T08:33:54+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-09-30T08:33:54+00:00 dns-debian13 systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-09-30T08:33:54+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Consumed 1.145s CPU time, 149.2M memory peak.

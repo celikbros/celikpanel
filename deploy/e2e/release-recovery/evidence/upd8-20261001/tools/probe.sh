@@ -1,0 +1,33 @@
+#!/bin/bash
+# upd8 feasibility probe (disposable guest only): PackageKit lifetime on a fresh Ubuntu 24.04 lab.
+set -u
+export PYTHONDONTWRITEBYTECODE=1
+H=/var/tmp/cp-upd8-run/harness/deploy/e2e/release-recovery
+root=/var/tmp/cp-release-drill-upd8-probe-a
+python3 $H/lab.py prepare --work-root $root --image-cache /var/tmp/cp-v3n28/images --ssh-port 2891 --platform ubuntu --execute
+python3 $H/lab.py start --work-root $root --execute
+python3 $H/lab.py status --work-root $root
+python3 - $root <<'PY'
+import sys, importlib.util, time, json
+from pathlib import Path
+spec = importlib.util.spec_from_file_location("lab", "/var/tmp/cp-upd8-run/harness/deploy/e2e/release-recovery/lab.py")
+lab = importlib.util.module_from_spec(spec); sys.modules["lab"] = lab; spec.loader.exec_module(lab)
+root = lab.checked_root(sys.argv[1]); record, plan = lab.load(root)
+def g(body, t=600):
+    r = lab.guarded_script(root, record, plan, "ubuntu", body, timeout=t, capture=True)
+    return r.stdout
+print(g("""date -u +%T; uptime; dpkg -l packagekit needrestart unattended-upgrades cron certbot 2>&1 | tail -6
+grep -v '^#' /etc/PackageKit/PackageKit.conf | grep -v '^$'
+systemctl show packagekit.service -p ActiveState -p SubState -p ExecMainStartTimestamp
+ps -eo pid,etimes,comm | grep -E 'packagekit|apt|dpkg|unattended' || true
+systemctl list-timers --all --no-pager | head -20
+cat /etc/apt/apt.conf.d/20packagekit 2>/dev/null | head -12"""))
+print(g("""date -u +%T; DEBIAN_FRONTEND=noninteractive apt-get install -y nftables >/tmp/apt.log 2>&1; echo apt rc=$?; tail -12 /tmp/apt.log; date -u +%T
+ps -eo pid,etimes,comm | grep -E 'packagekit|apt|dpkg' || true"""))
+for i in range(40):
+    out = g("date -u +%T; ps -eo pid,etimes,comm | grep -E 'packagekit|apt|dpkg|unattended' || echo none")
+    print(out.strip().replace("\n"," | "), flush=True)
+    if "none" in out: break
+    time.sleep(30)
+PY
+python3 $H/lab.py stop --work-root $root --execute

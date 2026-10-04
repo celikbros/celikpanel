@@ -35,6 +35,15 @@ import (
 // yollarını bildirir. TLS istenmiş ama açık çift verilmemişse config dizini
 // altında kendinden-imzalı üretir ve o yolları döndürür.
 func tlsSettings() (enabled bool, certPath, keyPath string, err error) {
+	return tlsSettingsWith(generateSelfSigned)
+}
+
+// tlsSettingsWith is the single resolution path. The normal start passes the
+// real generator; the read-only startup readiness check passes one that
+// refuses, so both agree on which pair the listener would serve.
+// tlsSettingsWith tek çözümleme yoludur; salt-okur hazırlık denetimi üretmeyi
+// reddeden bir üretici verir, böylece iki yol da aynı çifti seçer.
+func tlsSettingsWith(generate func(certPath, keyPath string) error) (enabled bool, certPath, keyPath string, err error) {
 	certPath = os.Getenv("CELIKPANEL_TLS_CERT")
 	keyPath = os.Getenv("CELIKPANEL_TLS_KEY")
 
@@ -73,7 +82,7 @@ func tlsSettings() (enabled bool, certPath, keyPath string, err error) {
 		}
 		return true, certPath, keyPath, nil
 	}
-	if err := generateSelfSigned(certPath, keyPath); err != nil {
+	if err := generate(certPath, keyPath); err != nil {
 		return false, "", "", err
 	}
 	return true, certPath, keyPath, nil

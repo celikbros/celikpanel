@@ -1,6 +1,8 @@
-// DNS setup copy loads with the wizard route, outside the global screen catalogue.
+// Server setup copy loads with the wizard route, outside the global screen catalogue.
 import type { SetupDNSKey } from './en';
 export const trSetupDNS: Record<SetupDNSKey, string> = {
+    "setup.blocker.mailEnrollmentBusy": "Posta sertifikası yenileniyor. Tamamlanmasını bekleyip bu kurulum planını yeniden inceleyin.",
+    "setup.blocker.mailEnrollment": "Bağımsız posta yenilemesi doğrulanamadı. Yönetici yenileme servisini, timer ayarlarını ve panel/ajan sürüm uyumunu kontrol edip planı yeniden incelemeli.",
     "setup.infrastructure.title": "Sunucu adreslerinin DNS kayıtları",
     "setup.infrastructure.prepare": "Bu sunucu adreslerinin DNS kayıtlarını burada hazırla",
     "setup.infrastructure.help": "Panel, seçilen posta ve nameserver DNS kayıtlarını hazırlayın. Kurulum başlamadan önce yapılacak değişiklikleri inceleyeceksiniz.",

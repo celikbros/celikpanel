@@ -1,0 +1,17 @@
+request 039d92b294da4f0b62d9fdfd3b0acd87 controller 2026-09-29T19:48:25.513485Z -> 2026-09-29T19:50:34.264480Z
+status passed safety passed class target_converged fp 1c3ba1e0
+kill pid 1785 state T at 2026-09-29T19:49:06.657806Z exit 137 reaped True
+marker 2026-09-29T19:49:06.618316415Z journal intent d9c52282
+trigger rc 75
+ retry 1 rc 0 dur 7.698647 err None
+ retry 2 rc 0 dur 0.008045 err None
+ probe 1 target_converged 1c3ba1e0 pdns | 
+ probe 2 target_converged 1c3ba1e0 pdns | 
+stability 31 ok 31 2026-09-29T19:49:15.770047Z 2026-09-29T19:49:45.770196Z
+ reboot {"ordinal": 1, "point": null, "boot_id_before": "c3c42e4e-b780-49aa-bdac-154a37b9c89e", "boot_id_after": "97436fdd-24fc-4ac5-a25f-b830eecc7b31", "product_uuid": "9422fa80-a857-5750-b2f0-1ccf54df8346"}
+reboot_after_recovery run True status passed failures [] unknown [] window 31 ok 31 dns_only True
+  authority_after_boot {"at": "2026-09-29T19:50:04.874939Z", "authority": {"answer_counts": {"tcp": 1, "udp": 1}, "answered": true, "engines": {"tcp": ["pdns"], "udp": ["pdns"]}}, "dns": {"answered": true, "at": "2026-09-29T19:50:04.909679Z", "result": {"tcp": {"additional": 0, "answers": 1, "authority": 0, "bytes": 50, "flags": 33792, "questions": 1, "transport": "tcp"}, "udp": {"additional": 0, "answers": 1, "authorit
+  mgmt disabled true
+ status-read after-recovery: available=False rc=None mutated=None :: 
+ status-read before-recovery: available=False rc=None mutated=None :: 
+fixture_pass_definition {"definition": "paired-secondary", "failures": [], "pdns_secondary_rows": {"domains": [["catalog-c000020b.celikpanel.invalid", "CONSUMER", "192.0.2.11", "celikpanel-peer-catalog-v1", "", ""], ["s1-kill.test", "SLAVE", "192.0.2.11", "", "catalog-c000020b.celikpanel.invalid", "{\"consumer\": {\"unique\": \"b076e9241974292fffe8ecc0209b7ace316d1d36063423d9ccb0849a.\"}}"]], "failures": [], "member_options": {"expected_label": "b076e9241974292fffe8ecc0209b7ace316d1d36063423d9ccb0849a", "shape": "consumer.unique", "unique": "b076e9241974292fffe8ecc0209b7ace316d1d36063423d9ccb0849a.", "value": "{\"consumer\": {\"unique\": \"b076e9241974292fffe8ecc0209b7ace316d1d36063423d9ccb0849a.\"}}"}, "member_soa_rows": 1, "unknown": []}, "peer_catalog_format_log": {"expected_agent_name": "BIND", "expected_format": "bind", "failures": [], "log": {"catalog": "catalog-c000020b.celikpanel.invalid", "formats": ["BIND", "BIND", "BIND"], "lines": ["2026/09/29 19:48:26 DNS engine change 039d92b294da4f0b62d9fdfd3b0acd87: the paired primary at 192.0.2.11 serves catalog catalog-c000020b.celikpanel.invalid in the BIND catalog format; this operation reads it in that format", "2026/09/29 19:49:07 DNS engine change 039d92b294da4f0b62d9fdfd3b0acd87: the paired primary at 192.0.2.11 serves catalog catalog-c000020b.celikpanel.invalid in the BIND catalog format; this operation reads it in that format", "2026/09/29 19:49:14 DNS engine change completion 039d92b294da4f0b62d9fdfd3b0acd87: the paired primary at 192.0.2.

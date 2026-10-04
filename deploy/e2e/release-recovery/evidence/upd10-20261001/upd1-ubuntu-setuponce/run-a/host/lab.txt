@@ -1,0 +1,2 @@
+lab=/var/tmp/cp-release-drill-upd10-ub-once-a
+upd1-ubuntu-setuponce-20261001t211312z

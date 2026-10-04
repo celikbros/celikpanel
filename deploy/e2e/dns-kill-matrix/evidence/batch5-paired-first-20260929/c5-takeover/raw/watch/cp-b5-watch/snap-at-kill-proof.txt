@@ -1,0 +1,93 @@
+tag=at-kill-proof wall=2026-09-29T14:16:38.405850716Z mono=170.99 301.99 boot_id=5813ff01-2d67-42fa-8a04-f5e362d686ed
+== pdns.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainStartTimestampMonotonic=0
+ExecMainPID=0
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+InvocationID=
+== named.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainStartTimestampMonotonic=0
+ExecMainPID=0
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=masked
+ActiveState=inactive
+SubState=dead
+UnitFileState=masked
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+InvocationID=
+== bind9.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=
+ExecMainStartTimestampMonotonic=0
+ExecMainPID=0
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=not-found
+ActiveState=inactive
+SubState=dead
+UnitFileState=
+ActiveEnterTimestamp=
+InactiveEnterTimestamp=
+InvocationID=
+== celikpanel-agent.service
+MainPID=3290
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 14:16:38 UTC
+ExecMainStartTimestampMonotonic=170839882
+ExecMainPID=3290
+ExecMainCode=0
+ExecMainStatus=0
+LoadState=loaded
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 14:16:38 UTC
+InactiveEnterTimestamp=Tue 2026-09-29 14:15:29 UTC
+InvocationID=1ffcb5af4e384a99a837afdabd3203c3
+== celikpanel-panel.service
+MainPID=0
+NRestarts=0
+ExecMainStartTimestamp=Tue 2026-09-29 14:14:43 UTC
+ExecMainStartTimestampMonotonic=55919506
+ExecMainPID=1202
+ExecMainCode=1
+ExecMainStatus=0
+LoadState=loaded
+ActiveState=inactive
+SubState=dead
+UnitFileState=enabled
+ActiveEnterTimestamp=Tue 2026-09-29 14:14:43 UTC
+InactiveEnterTimestamp=Tue 2026-09-29 14:15:29 UTC
+InvocationID=5c1edfa271d643c582f2a85928b9298a
+== processes
+3290 /opt/celikpanel/bin/agent
+== journal file
+total 20
+drwx------  2 root celikpanel 4096 2026-09-29 14:16:38.287597689 +0000 .
+drwxr-xr-x 28 root root       4096 2026-09-29 14:15:25.147696600 +0000 ..
+-rw-------  1 root celikpanel  388 2026-09-29 14:16:33.127660926 +0000 dns-engine-install-ownership-bind.json
+-rw-------  1 root celikpanel 2093 2026-09-29 14:16:38.283597732 +0000 dns-engine-switch-journal.json
+-rw-------  1 root celikpanel  635 2026-09-29 14:16:38.207598546 +0000 service-mutations.json
+== journal content
+{"schema":"celikpanel-dns-engine-switch-journal/v1","phase":"rolling-back","mode":"switch","mutation_request_id":"b66cbdc5c51b25639364f76a7113a214","mutation_owner_id":"9e83eec8b6a4a0b03f5b3f5f0859a4b9","manifest_qualifier":"dns-engine-switch/v1:sha256:59e76ab0efd1ad52eaa5e17b2448a8a022172f2b13f54a4bc3b787463092e965","target_engine":"bind","source_epoch":0,"target_epoch":1,"source_revision":0,"topology":"standalone","snapshot_bytes":460,"zones":[{"ordinal":0,"domain":"s1-kill.test","desired_generation":1,"delete":false,"zone_type":"NATIVE","records":[{"name":"ns1.s1-kill.test","type":"A","content":"192.0.2.10","ttl":300,"prio":0,"disabled":false},{"name":"s1-kill.test","type":"NS","content":"ns1.s1-kill.test","ttl":3600,"prio":0,"disabled":false},{"name":"s1-kill.test","type":"SOA","content":"ns1.s1-kill.test hostmaster.s1-kill.test 2026083101 10800 3600 604800 3600","ttl":3600,"prio":0,"disabled":false},{"name":"www.s1-kill.test","type":"A","content":"192.0.2.10","ttl":300,"prio":0,"disabled":false}],"zone_qualifier":"dns-zone-sync/v3:sha256:27bc36519b4cb1f58c3b7100ae72f2e026a789327e6b687777193614e06aa63a"}],"target_generation":"895b81c7731b93aa00d5883bc78be70b2fbe0449895f9db8157f05592e01222f","had_previous_generation":false,"state_before":{"path":"/var/lib/celikpanel-agent-private/dns-engine-state.json","exists":false,"mode":0},"config_before":[{"path":"/etc/bind/named.conf.local","exists":true,"mode":420,"owner_known":true,"gid":104,"sha256":"63963de797ff06ede5645c4169084128f1a6a11e1aa43ec9b4971751ceedc18e","data":"Ly8KLy8gRG8gYW55IGxvY2FsIGNvbmZpZ3VyYXRpb24gaGVyZQovLwoK"},{"path":"/etc/bind/named.conf.options","exists":true,"mode":420,"owner_known":true,"gid":104,"sha256":"f1c37414f29088ef439527a855356c888e83fec06dcc762f878a4c24d45c59e4","data":"b3B0aW9ucyB7CglkaXJlY3RvcnkgIi92YXIvY2FjaGUvYmluZCI7Cn07Cg=="}],"target_units_before":[{"name":"bind9.service","load_state":"not-found","active_state":"inactive","unit_file_state":""},{"name":"named.service","load_state":"loaded","active_state":"inactive","unit_file_state":"disabled"}],"source_units_before":[]}
+
+== ss 53
+udp UNCONN 0      0         127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=367,fd=20))
+udp UNCONN 0      0      127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=367,fd=18))
+tcp LISTEN 0      4096   127.0.0.53%lo:53 0.0.0.0:* users:(("systemd-resolve",pid=367,fd=19))
+tcp LISTEN 0      4096      127.0.0.54:53 0.0.0.0:* users:(("systemd-resolve",pid=367,fd=21))
