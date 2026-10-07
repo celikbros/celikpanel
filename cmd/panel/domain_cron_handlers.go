@@ -95,8 +95,26 @@ func (p *Panel) handleListCronJobs(w http.ResponseWriter, tenant transport.CronT
 		writeCronAgentError(w, err, cronReasonRead)
 		return
 	}
+	// The list and the version of the crontab it was read from travel
+	// together; every change carries that version back.
+	// Liste ile okunduğu crontab'ın sürümü birlikte gider.
+	if resp.Jobs == nil {
+		resp.Jobs = []transport.CronJob{}
+	}
 
 	json.NewEncoder(w).Encode(resp)
+}
+
+// requireCronVersion refuses a change that does not say which crontab it was
+// built from, before the Agent is asked. The Agent refuses it too.
+// requireCronVersion, hangi crontab'dan kurulduğunu söylemeyen değişikliği
+// Agent'a sormadan reddeder. Agent da reddeder.
+func requireCronVersion(w http.ResponseWriter, version string) bool {
+	if version == "" {
+		writeSettingsVersionRequired(w, settingsResourceScheduledTasks)
+		return false
+	}
+	return true
 }
 
 func (p *Panel) handleAddCronJob(w http.ResponseWriter, r *http.Request, tenant transport.CronTenant) {
@@ -104,10 +122,14 @@ func (p *Panel) handleAddCronJob(w http.ResponseWriter, r *http.Request, tenant 
 		Schedule string `json:"schedule"`
 		Command  string `json:"command"`
 		Comment  string `json:"comment,omitempty"`
+		Version  string `json:"version"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	if !requireCronVersion(w, req.Version) {
 		return
 	}
 
@@ -117,6 +139,7 @@ func (p *Panel) handleAddCronJob(w http.ResponseWriter, r *http.Request, tenant 
 		Schedule:   req.Schedule,
 		Command:    req.Command,
 		Comment:    req.Comment,
+		Version:    req.Version,
 	}, &success)
 
 	if err != nil {
@@ -138,10 +161,14 @@ func (p *Panel) handleUpdateCronJob(w http.ResponseWriter, r *http.Request, tena
 		Command  string `json:"command"`
 		Enabled  bool   `json:"enabled"`
 		Comment  string `json:"comment,omitempty"`
+		Version  string `json:"version"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	if !requireCronVersion(w, req.Version) {
 		return
 	}
 
@@ -153,6 +180,7 @@ func (p *Panel) handleUpdateCronJob(w http.ResponseWriter, r *http.Request, tena
 		Command:    req.Command,
 		Enabled:    req.Enabled,
 		Comment:    req.Comment,
+		Version:    req.Version,
 	}, &success)
 
 	if err != nil {
@@ -173,11 +201,16 @@ func (p *Panel) handleDeleteCronJob(w http.ResponseWriter, r *http.Request, tena
 		http.Error(w, "Job ID required", http.StatusBadRequest)
 		return
 	}
+	version := r.URL.Query().Get("version")
+	if !requireCronVersion(w, version) {
+		return
+	}
 
 	var success bool
 	err := p.callAgentContext(r.Context(), "Agent.DeleteCronJob", &transport.DeleteCronJobRequest{
 		CronTenant: tenant,
 		ID:         jobID,
+		Version:    version,
 	}, &success)
 
 	if err != nil {

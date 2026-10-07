@@ -1720,3 +1720,138 @@ değişen dosyalarda bulgu bildirmiyor.
 - Gönderilmemiş girdi gerçek bir yeniden girişte korunmaz.
 - Her sekme kendi başına bekletir; sekmeler arasında hiçbir şey paylaşılmaz.
 - Sahibin sunucusunda neden saptanmadı; mekanizma koddan okundu.
+
+### Başarısız bir okuma artık üç ayar ekranının sahibin durumunu ezmesine yol açmaz (ilkeler 1-4 ve 6, 2026-10-08)
+
+D-025 ilkeleri 1 (sahibin değişikliklerini algıla; onları tercih edilen bir
+yapılandırmayla asla değiştirme), 2 (bilinmeyen, yok demek değildir), 3 (güvensiz
+yazıyı kendi sınırında durdur), 4 (bir değişiklik önce ön görüntüsünü okur) ve 6
+(ekran varsayılanı değil, yetkili durumu gösterir); D-022, D-024. Hiçbir P0 işi
+kapanmadı ya da ilerlemedi. `v0.1.0-alpha.81` kaynağının salt okunur
+doğrulamasında bulundu; kurulu bir sunucuda gözlenmedi.
+
+- **alpha.81'de doğrulanan.** Bunun dışında sağlıklı bir sunucuda tek bir
+  başarısız okuma üç yerde yeterliydi.
+  - *Sunucu posta politikası.* Başarısız bir `GET /mail/policy`, formu 25 MB,
+    DNSBL kapalı ve hız sınırı yok hâlinde, Kaydet etkin olarak bırakıyordu.
+    Kaydet, `smtpd_recipient_restrictions` değerini üç sabit girdi ve bölgelerle
+    yeniden yazıyor, `message_size_limit` ile `smtpd_client_message_rate_limit`
+    değerlerini ayarlıyor ve Postfix'i yeniden yüklüyordu. Agent ayrıca başarısız
+    bir `postconf` okumasını başarıyla birlikte sıfır olarak yanıtlıyordu ve her
+    kayıt, iyi bir okumadan sonra bile, sahibin eklediği kısıtları düşürüyordu;
+    çünkü okuma onları hiç döndürmüyordu.
+  - *Otomatik yedek zamanlaması.* Başarısız bir zamanlama okuması "kapalı /
+    günlük / dosyalar / 7" formunu düzenlenebilir bırakıyordu. Aç, bunu gerçek
+    zamanlamanın üstüne yazıyordu: tam yedek yalnız dosya yedeğine dönüyor ve
+    sonraki çalışma 7'yi aşan zamanlanmış kopyaları buduyordu.
+  - *Zamanlanmış görevler.* `crontab -l` komutunun herhangi bir nedenle başarısız
+    olması boş crontab diye okunuyordu. Liste "Zamanlanmış görev yok" diyor ve
+    eklenen tek görev bütün crontab'ın yerine geçiyordu.
+- **Değişen.**
+  - *Bilinmeyen bir hatadır.* Posta politikası okuması, crontab okuması ve cron
+    listesi, geçerli durum okunamadığında hata yanıtlar; onun yerine sıfır,
+    varsayılan ya da boş liste konmaz. `crontab -l` yalnız çıkış durumu 1, çıktı
+    yok ve standart hatada tam olarak `no crontab for <kullanıcı>` olduğunda
+    (komut `LC_ALL=C` ile çalışır) "crontab yok" sayılır; diğer her başarısızlık
+    bilinmeyendir. Bir `postconf` değeri, yalnız komut başarılı olup bir değer
+    satırı yazdığında bilinir.
+  - *Sürümlü yazılar.* Her okuma yerel durumun bir sürümünü döndürür: dört
+    Postfix değerinin (`message_size_limit`, `smtpd_recipient_restrictions`,
+    `smtpd_client_message_rate_limit`, `anvil_rate_time_unit`), crontab
+    baytlarının ya da zamanlama ayarlarının özeti (çalışma durumu dışarıda kalır;
+    böylece bir arka plan çalışması bir kaydı eskitmez). Her yazı onu taşımak
+    zorundadır. Sürüm yoksa: `409 SETTINGS_VERSION_REQUIRED`. Geçerli durum
+    farklıysa: `409 SETTINGS_CHANGED`. Ön görüntü okunamıyorsa:
+    `502 CURRENT_SETTINGS_UNREADABLE`. Üçünde de hiçbir şey yazılmaz. Posta ve
+    cron için kararı Agent, kaynak başına tek kilit altında verir (Panel de eksik
+    sürümü Agent'ı çağırmadan reddeder); zamanlama yazısı, satır hâlâ okunan
+    ayarları tutuyorsa geçerli olan tek bir deyimdir.
+  - *Alıcı kısıtları korunur.* Yazıcı listeyi artık baştan kurmaz. Postfix
+    listeyi virgül ve boşlukta aynı biçimde böler ve bir argümanı sonraki öge
+    olarak okur; bu yüzden her ögeyi sırasıyla korumak sahibin anlamını korur.
+    Panel yalnız `reject_rbl_client <düz bölge>` girdilerini çıkarır ya da ekler
+    (var olanların yanına, yoksa sona), sahibin ayraç biçimini korur ve istenen
+    bölgeler zaten oradaysa hiçbir şey yazmaz. Boş bir değer yine `permit_mynetworks,
+    permit_sasl_authenticated, reject_unauth_destination` tabanını alır. Yanıt
+    süzgeçli ya da `warn_if_reject` arkasındaki bir DNSBL girdisi sahibindir ve
+    ona dokunulmaz.
+  - *Tahmin yerine ret.* Değer başka bir ayara başvuruyorsa (`variable`),
+    kapanmamış bir süslü ayraç ya da bölgesiz bir `reject_rbl_client` içeriyorsa
+    (`malformed`), iki permit girdisini birden içermeyen elle yazılmış bir
+    listeyse (`no_baseline`) ya da `permit`, `reject` veya `defer` ile bitiyor ve
+    yenisinin yanına konacağı bir DNSBL girdisi taşımıyorsa (`terminal`), DNSBL
+    değişikliği `409 MAIL_POLICY_RESTRICTIONS_UNMANAGED` ile reddedilir. İleti
+    boyutu ve hız yine kaydedilir. Okuma aynı gerekçeyi bildirir ve ekran o
+    durumda DNSBL denetimi sunmaz.
+  - *Yalnız değişen yazılır*, tek bir `postconf -e` ile; Postfix de yalnız o
+    zaman yeniden yüklenir. 9 MB olarak gösterilen 10240000 baytlık bir sınır,
+    ona dokunmayan bir kayıtla yuvarlanmaz. Panel'in aralığı dışındaki bir değer
+    25 MB ile değiştirilmek yerine `400 MAIL_POLICY_INVALID` ile reddedilir; düz
+    alan adı olmayan bir bölge de sessizce düşürülmek yerine reddedilir.
+  - *Yinelenen cron görevleri.* Aynı zamanlama ve komutun yeniden eklenmesi
+    `409 CRON_JOB_DUPLICATE` ile reddedilir (devre dışı bir kopya da sayılır; iki
+    satır tek kimliği paylaşırdı). Yazılan crontab her zaman satır sonuyla biter.
+  - *Ekranlar.* Üç ekran `loading | known | unknown` durumunu tutar. Yüklenirken
+    bir okuma satırı, bilinmeyende Tekrar dene ile "yüklenemedi" gösterilir;
+    ikisinde de form, "kapalı" durumu ya da boş liste gösterilmez. Eskimiş bir
+    kayıt yazılanı korur, Kaydet'i devre dışı bırakır ve yeniden yüklemeyi sunar.
+- **Şema veya sürüm geçişi.** Kalıcı şema ve geçiş yok: `main.cf`, crontab'lar ve
+  `backup_schedules` biçimlerini korur. Eklemeli iletişim alanları: posta
+  politikasında `version` ve `dnsbl_locked`, cron listesinde ve üç cron isteğinde
+  `version`, Agent'ın posta politikası yanıtında `code` ve `reason`, zamanlama
+  okuma ve yazma yanıtlarında `version`. **Artık zorunlu:**
+  `PUT /api/v1/mail/policy`, `PUT …/backups/schedule`, `POST` ve `PUT …/cron`
+  gövdesinde, `DELETE …/backups/schedule` ve `DELETE …/cron` isteklerinde sorgu
+  değeri olarak `version`. Yeni ret kodları: `CURRENT_SETTINGS_UNREADABLE`,
+  `SETTINGS_VERSION_REQUIRED`, `SETTINGS_CHANGED`, `CRON_JOB_DUPLICATE`,
+  `MAIL_POLICY_RESTRICTIONS_UNMANAGED`, `MAIL_POLICY_INVALID`. Farklı sürümlerdeki
+  Panel ve Agent bu üçünü yazamaz: yeni Panel, eski Agent'ın sürümsüz listesini
+  reddeder; yeni Agent de eski Panel'i reddeder.
+- **Kurtarma davranışı.** Her ret herhangi bir yazıdan önce gelir; telafi edilecek
+  bir şey yoktur. Sahip sayfayı yeniden yükler ve geçerli duruma göre yeniden
+  karar verir; hiçbir okuma bir yazıya dönüşecek biçimde yeniden denenmez.
+  Reddedilen bir DNSBL değişikliği için sahip `/etc/postfix/main.cf` içindeki
+  `smtpd_recipient_restrictions` değerini düzenler ve Postfix'i yeniden yükler.
+  Postfix, cron ve zamanlanmış yedekler Panel olmadan eskisi gibi çalışmayı
+  sürdürür.
+- **Kanıt.** Yalnız bileşen testleri; gerçek sistem denemesi yok. Agent:
+  `TestPlanRecipientRestrictionsPreservesWhatThePanelDoesNotManage`,
+  `TestPlanRecipientRestrictionsRefusesWhatItCannotPlaceWithCertainty`,
+  `TestGetMailPolicyReportsAFailedReadAsAnErrorNotAsZeros`,
+  `TestSetMailPolicyRefusesWithoutACurrentVersion`,
+  `TestSetMailPolicyWritesOnlyTheValuesThatChanged`,
+  `TestSetMailPolicyKeepsOwnerAddedRestrictions`,
+  `TestSetMailPolicyRefusesToRewriteRestrictionsItCannotPlace`,
+  `TestSetMailPolicyRefusesInvalidValuesInsteadOfSubstitutingDefaults`,
+  `TestReadCrontabTellsNoCrontabFromAFailedRead`,
+  `TestListCronJobsReportsAFailedReadAsAnError`,
+  `TestCronChangesNeverInstallACrontabBuiltFromAFailedRead`,
+  `TestCronChangesRequireTheVersionOfTheCrontabTheyWereBuiltFrom`,
+  `TestAddCronJobRefusesAnExactDuplicate`. Panel:
+  `TestCronChangesWithoutAVersionAreRefusedBeforeTheAgent`,
+  `TestCronHandlersAnswerCrontabProtectionRefusals`,
+  `TestMailPolicyGetReportsAnUnreadablePolicyAndCarriesTheVersion`,
+  `TestMailPolicyPutWithoutAVersionIsRefusedBeforeTheAgent`,
+  `TestMailPolicyPutAnswersEachAgentRefusalWithItsTypedGuidance`,
+  `TestBackupSchedulePutFromAFormThatNeverLoadedIsRefused`,
+  `TestBackupScheduleWritesNeedTheVersionOfTheScheduleTheyReplace`. Web:
+  `web/tests/current-settings-runtime.test.mjs`. Bir Debian geliştirme konuğunda
+  salt okunur gözlem (Postfix 3.10): crontab'ı olmayan kullanıcı için
+  `crontab -u <kullanıcı> -l`, çıkış durumu 1 ile ve çıktı vermeden
+  `no crontab for <kullanıcı>` yazar; `postconf -h` her değer için bir satır,
+  boş değer için boş bir satır yazar ve çok satırlı bir değeri tek satıra katlar.
+
+Açık: gerçek bir sunucuda hiçbir şey koşulmadı. cronie'nin Arch'taki "crontab
+yok" yanıtı kaynağından alındı, gözlenmedi; bunu farklı sözcüklerle söyleyen
+başka bir cron uygulaması artık boş değil bilinmeyen olarak okunur. Posta
+politikası yazısından sonra başarısız olan bir Postfix yeniden yüklemesi günlüğe
+yazılır, bildirilmez. Agent'ın sürüm denetimi ile yazısı arasındaki bir sahip
+düzenlemesi dışlanmış değildir (Panel'in kendi istekleri dışlanmıştır). Elle
+yazılmış bir kısıt listesi, sahip onu değiştirene dek DNSBL'i Panel'in dışında
+tutar. Yedek zamanlaması okuması Panel'in kendi veritabanıdır; tek bilinmeyen
+durumu başarısız bir sorgudur. Bunun yanında bulunan ve değiştirilmeyen: devre
+dışı bir zamanlanmış görev etkinleştirilemez, düzenlenemez ya da silinemez
+(yazıcılar yorum satırlarını atlar); bir görevi silmek, üstündeki satırda duran
+yorumu ya da devre dışı görevi de kaldırır; posta kuyruğu listesi başarısız bir
+okumadan sonra "kuyruk boş" gösterir. Uygulama geneli `loading | known | unknown`
+katmanı sonraki bir iştir; diğer ekranlar incelenmedi.

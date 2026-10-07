@@ -40,6 +40,9 @@ const cronNotInstalledReadMessage = "Scheduled tasks cannot be shown because thi
 	"or on the server run sudo apt-get install cron (Debian/Ubuntu), or sudo pacman -S cronie and then sudo systemctl enable --now cronie (Arch). " +
 	"Then open this page again."
 
+const cronJobDuplicateMessage = "A scheduled task with the same schedule and command already exists, so nothing was added. " +
+	"Change the existing task instead, or enable it if it is disabled."
+
 // agentReportedCronNotInstalled matches the Agent's exact answer. Older Agents
 // returned the same text from AddCronJob, so they are classified too.
 // agentReportedCronNotInstalled, Agent'ın tam yanıtını eşler.
@@ -75,6 +78,26 @@ func agentMutationBusy() error {
 // path.
 // writeCronAgentError, başarısız bir cron RPC'sini yanıtlar.
 func writeCronAgentError(w http.ResponseWriter, err error, reason string) {
+	// The Agent's refusals that protect the owner's crontab (8 Oct 2026): an
+	// unreadable crontab is unknown, not empty; a change must say which
+	// crontab it was built from and that must still be the one on the server;
+	// the same task is not added twice.
+	// Sahibin crontab'ını koruyan Agent retleri.
+	switch {
+	case agentAnsweredExactly(err, transport.CronStateUnreadable):
+		writeCurrentSettingsUnreadable(w, settingsResourceScheduledTasks)
+		return
+	case agentAnsweredExactly(err, transport.CronVersionRequired):
+		writeSettingsVersionRequired(w, settingsResourceScheduledTasks)
+		return
+	case agentAnsweredExactly(err, transport.CronStateChanged):
+		writeSettingsChanged(w, settingsResourceScheduledTasks)
+		return
+	case agentAnsweredExactly(err, transport.CronJobDuplicate):
+		log.Printf("[409][cron] duplicate task refused")
+		writeCodedError(w, http.StatusConflict, errCodeCronJobDuplicate, cronJobDuplicateMessage, "")
+		return
+	}
 	if !agentReportedCronNotInstalled(err) {
 		writeServerError(w, err)
 		return

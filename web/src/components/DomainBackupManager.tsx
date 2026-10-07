@@ -8,6 +8,7 @@ import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
 import { apiErrorText, readApiError } from '../lib/apiError';
 import { Button, EmptyState, Spinner, inputClass } from './ui';
+import { CurrentGate, StaleNotice, isStaleWrite, readCurrent, type Current } from './CurrentSettings';
 
 interface BackupItem {
     name: string;
@@ -463,6 +464,20 @@ function fmtDate(dateStr: string): string {
     }
 }
 
+interface BackupSchedule {
+    enabled?: boolean;
+    frequency?: 'daily' | 'weekly';
+    backup_type?: 'files' | 'full';
+    retention?: number;
+    last_run?: string | null;
+    last_attempt?: string | null;
+    last_status?: string | null;
+    last_error?: string | null;
+    // Identifies the settings this schedule was read at; writes carry it back.
+    // Bu zamanlamanın okunduğu ayarları tanımlar; yazılar onu geri taşır.
+    version: string;
+}
+
 // Automatic backups: turn a daily/weekly schedule on for this domain and pick
 // how many copies to keep. The panel runs it in the background; older copies
 // beyond the retention are pruned. Reads and writes the schedule endpoint.
@@ -479,81 +494,68 @@ function AutoBackupSection({
     readOnly?: boolean;
 }) {
     const { t } = useI18n();
-    const [enabled, setEnabled] = useState(false);
+    // The schedule as the server holds it. Until it is known the section shows
+    // no form: "off / daily / files / 7" on screen after a failed read was one
+    // click away from replacing the real schedule.
+    // Sunucunun tuttuğu zamanlama. Bilinene kadar bölüm form göstermez.
+    const [current, setCurrent] = useState<Current<BackupSchedule>>({ state: 'loading' });
     const [frequency, setFrequency] = useState<'daily' | 'weekly'>('daily');
     const [backupType, setBackupType] = useState<'files' | 'full'>('files');
     const [retention, setRetention] = useState(7);
-    const [lastRun, setLastRun] = useState<string | null>(null);
-    const [lastAttempt, setLastAttempt] = useState<string | null>(null);
-    const [lastStatus, setLastStatus] = useState<string | null>(null);
-    const [lastError, setLastError] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const busy = loading || saving;
+    const [stale, setStale] = useState(false);
+    const url = `/api/v1/domains/${domainId}/backups/schedule`;
+    const schedule = current.state === 'known' ? current.value : null;
+    const enabled = Boolean(schedule?.enabled);
+    const lastStatus = schedule?.last_status;
+    const lastAttempt = schedule?.last_attempt;
+    const lastRun = schedule?.last_run;
+    const busy = saving || readOnly;
+
+    const load = async () => {
+        setCurrent({ state: 'loading' });
+        const next = await readCurrent<BackupSchedule>(url);
+        if (next.state === 'known') {
+            setFrequency(next.value.frequency || 'daily');
+            setBackupType(next.value.backup_type || 'files');
+            setRetention(next.value.retention || 7);
+            setStale(false);
+        }
+        setCurrent(next);
+    };
 
     useEffect(() => {
-        const load = async () => {
-            setLoading(true);
-            try {
-                const response = await fetch(`/api/v1/domains/${domainId}/backups/schedule`);
-                const data = await readJSONResponse<{
-                    enabled?: boolean;
-                    frequency?: 'daily' | 'weekly';
-                    backup_type?: 'files' | 'full';
-                    retention?: number;
-                    last_run?: string | null;
-                    last_attempt?: string | null;
-                    last_status?: string | null;
-                    last_error?: string | null;
-                }>(response, t);
-                setEnabled(Boolean(data.enabled));
-                if (data.frequency) setFrequency(data.frequency);
-                if (data.backup_type) setBackupType(data.backup_type);
-                if (data.retention) setRetention(data.retention);
-                setLastRun(data.last_run || null);
-                setLastAttempt(data.last_attempt || null);
-                setLastStatus(data.last_status || null);
-                setLastError(data.last_error || null);
-            } catch (error) {
-                showToast('error', errorText(error, t));
-            } finally {
-                setLoading(false);
-            }
-        };
         void load();
     }, [domainId]);
 
-    const save = async () => {
-        if (readOnly) return;
+    // Both writes carry the version the schedule was read at; the server
+    // refuses them when the schedule is no longer that one.
+    // İki yazı da zamanlamanın okunduğu sürümü taşır.
+    const write = async (off: boolean) => {
+        if (readOnly || !schedule) return;
         setSaving(true);
         try {
-            const r = await fetch(`/api/v1/domains/${domainId}/backups/schedule`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ frequency, backup_type: backupType, retention }),
+            const r = off
+                ? await fetch(`${url}?version=${encodeURIComponent(schedule.version)}`, { method: 'DELETE' })
+                : await fetch(url, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ frequency, backup_type: backupType, retention, version: schedule.version }),
+                });
+            if (!r.ok) {
+                const error = await readApiError(r);
+                if (isStaleWrite(error)) setStale(true);
+                else showToast('error', apiErrorText(error, t));
+                return;
+            }
+            const { version } = await r.json();
+            setCurrent({
+                state: 'known',
+                value: off
+                    ? { enabled: false, version }
+                    : { ...schedule, enabled: true, frequency, backup_type: backupType, retention, version },
             });
-            await readJSONResponse<{ success?: boolean; error?: string }>(r, t);
-            setEnabled(true);
-            showToast('success', t('backup.auto.saved'));
-        } catch (error) {
-            showToast('error', errorText(error, t));
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const turnOff = async () => {
-        if (readOnly) return;
-        setSaving(true);
-        try {
-            const r = await fetch(`/api/v1/domains/${domainId}/backups/schedule`, { method: 'DELETE' });
-            await readJSONResponse<{ success?: boolean; error?: string }>(r, t);
-            setEnabled(false);
-            setLastRun(null);
-            setLastAttempt(null);
-            setLastStatus(null);
-            setLastError(null);
-            showToast('success', t('backup.auto.off'));
+            showToast('success', t(off ? 'backup.auto.off' : 'backup.auto.saved'));
         } catch (error) {
             showToast('error', errorText(error, t));
         } finally {
@@ -562,7 +564,7 @@ function AutoBackupSection({
     };
 
     return (
-        <section className="rounded-xl border border-border bg-surface p-5" aria-busy={busy}>
+        <section className="rounded-xl border border-border bg-surface p-5" aria-busy={current.state === 'loading' || saving}>
             <div className="mb-1 flex items-center gap-2">
                 <Clock className="h-4 w-4 text-primary" aria-hidden="true" />
                 <h3 className="text-sm font-semibold text-fg">{t('backup.auto.title')}</h3>
@@ -574,24 +576,28 @@ function AutoBackupSection({
             </div>
             <p className="mb-4 text-sm text-fg-muted">{t('backup.auto.desc')}</p>
 
+            <CurrentGate state={current.state} unknownKey="backup.auto.unknown" onRetry={load} />
+            {schedule && <>
+            {stale && <StaleNotice textKey="backup.auto.stale" onReload={load} />}
+
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <label className="text-sm">
                     <span className="mb-1 block text-xs text-fg-muted">{t('backup.auto.frequency')}</span>
-                    <select disabled={busy || readOnly} value={frequency} onChange={(e) => setFrequency(e.target.value as 'daily' | 'weekly')} className={inputClass}>
+                    <select disabled={busy} value={frequency} onChange={(e) => setFrequency(e.target.value as 'daily' | 'weekly')} className={inputClass}>
                         <option value="daily">{t('backup.auto.daily')}</option>
                         <option value="weekly">{t('backup.auto.weekly')}</option>
                     </select>
                 </label>
                 <label className="text-sm">
                     <span className="mb-1 block text-xs text-fg-muted">{t('backup.auto.type')}</span>
-                    <select disabled={busy || readOnly} value={backupType} onChange={(e) => setBackupType(e.target.value as 'files' | 'full')} className={inputClass}>
+                    <select disabled={busy} value={backupType} onChange={(e) => setBackupType(e.target.value as 'files' | 'full')} className={inputClass}>
                         <option value="files">{t('backup.type.files')}</option>
                         <option value="full">{t('backup.type.full')}</option>
                     </select>
                 </label>
                 <label className="text-sm">
                     <span className="mb-1 block text-xs text-fg-muted">{t('backup.auto.retention')}</span>
-                    <input disabled={busy || readOnly} type="number" min={1} max={60} value={retention} onChange={(e) => setRetention(Math.max(1, Math.min(60, parseInt(e.target.value) || 1)))} className={inputClass} />
+                    <input disabled={busy} type="number" min={1} max={60} value={retention} onChange={(e) => setRetention(Math.max(1, Math.min(60, parseInt(e.target.value) || 1)))} className={inputClass} />
                 </label>
             </div>
 
@@ -610,7 +616,7 @@ function AutoBackupSection({
             {enabled && lastStatus === 'failed' && (
                 <p className="mt-2 rounded-lg bg-danger/10 px-3 py-2 text-xs text-danger" role="alert">
                     {t(
-                        lastError === 'BACKUP_JOB_TIMED_OUT'
+                        schedule.last_error === 'BACKUP_JOB_TIMED_OUT'
                             ? 'backup.auto.timedOut'
                             : 'backup.auto.failed',
                         { time: lastAttempt ? new Date(lastAttempt.replace(' ', 'T')).toLocaleString() : '—' },
@@ -626,16 +632,17 @@ function AutoBackupSection({
 
             {!readOnly && (
                 <div className="mt-3 flex gap-2">
-                    <Button type="button" variant="primary" disabled={busy} onClick={() => void save()}>
+                    <Button type="button" variant="primary" disabled={saving || stale} onClick={() => void write(false)}>
                         {enabled ? t('backup.auto.update') : t('backup.auto.enable')}
                     </Button>
                     {enabled && (
-                        <Button type="button" variant="secondary" disabled={busy} onClick={() => void turnOff()}>
+                        <Button type="button" variant="secondary" disabled={saving || stale} onClick={() => void write(true)}>
                             {t('backup.auto.turnOff')}
                         </Button>
                     )}
                 </div>
             )}
+            </>}
             {saving && <span className="sr-only" role="status" aria-live="polite">{t('common.loading')}</span>}
         </section>
     );

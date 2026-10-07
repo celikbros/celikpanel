@@ -24,9 +24,16 @@ type cronMutationTestAgent struct {
 	// Agent'in gerçekte ne aldığı; böylece bir test, işleyicinin elinde tuttuğu
 	// kimliği değil, yolculuk eden kimliği sabitleyebilir.
 	received transport.AddCronJobRequest
+
+	// calls counts every cron RPC; receivedVersion is the version an update
+	// or delete carried; listVersion is what the list answers.
+	calls           int
+	receivedVersion string
+	listVersion     string
 }
 
 func (a *cronMutationTestAgent) AddCronJob(req *transport.AddCronJobRequest, reply *bool) error {
+	a.calls++
 	a.received = *req
 	*reply = a.success
 	return a.err
@@ -75,7 +82,7 @@ func TestAddCronJobSendsTheTenantIdentityNotAUsername(t *testing.T) {
 	agent := &cronMutationTestAgent{success: true}
 	panel := newCronMutationTestPanel(t, agent)
 	recorder := httptest.NewRecorder()
-	request := httptest.NewRequest(http.MethodPost, "/api/v1/domains/34/cron", strings.NewReader(`{"schedule":"0 3 * * *","command":"true"}`))
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/domains/34/cron", strings.NewReader(`{"schedule":"0 3 * * *","command":"true","version":"ct1-test"}`))
 
 	panel.handleAddCronJob(recorder, request, testCronTenant)
 
@@ -90,7 +97,7 @@ func TestAddCronJobSendsTheTenantIdentityNotAUsername(t *testing.T) {
 func TestAddCronJobDoesNotReportFailedMutationAsSuccess(t *testing.T) {
 	panel := newCronMutationTestPanel(t, &cronMutationTestAgent{success: false})
 	recorder := httptest.NewRecorder()
-	request := httptest.NewRequest(http.MethodPost, "/api/v1/domains/1/cron", strings.NewReader(`{"schedule":"0 3 * * *","command":"true"}`))
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/domains/1/cron", strings.NewReader(`{"schedule":"0 3 * * *","command":"true","version":"ct1-test"}`))
 
 	panel.handleAddCronJob(recorder, request, testCronTenant)
 
@@ -102,7 +109,7 @@ func TestAddCronJobDoesNotReportFailedMutationAsSuccess(t *testing.T) {
 func TestAddCronJobDoesNotLeakRPCFailure(t *testing.T) {
 	panel := newCronMutationTestPanel(t, &cronMutationTestAgent{err: errors.New("secret agent detail")})
 	recorder := httptest.NewRecorder()
-	request := httptest.NewRequest(http.MethodPost, "/api/v1/domains/1/cron", strings.NewReader(`{"schedule":"0 3 * * *","command":"true"}`))
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/domains/1/cron", strings.NewReader(`{"schedule":"0 3 * * *","command":"true","version":"ct1-test"}`))
 
 	panel.handleAddCronJob(recorder, request, testCronTenant)
 

@@ -1,15 +1,21 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
+	"os"
 	"os/exec"
 	"os/user"
 	"path"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
+	"github.com/alicelik/celikpanel/internal/hostcmd"
 	"github.com/alicelik/celikpanel/internal/hostingpath"
 	"github.com/alicelik/celikpanel/internal/services"
 	"github.com/alicelik/celikpanel/internal/transport"
@@ -47,21 +53,25 @@ func (a *Agent) ListCronJobs(req *ListCronJobsRequest, resp *ListCronJobsRespons
 	if err := requireCronInstalled(); err != nil {
 		return err
 	}
+	return listCronJobsFor(username, resp)
+}
 
-	// Read crontab for user
-	cmd := exec.Command("crontab", "-u", username, "-l")
-	output, err := cmd.Output()
+// listCronJobsFor reads the proven user's crontab into resp.
+// listCronJobsFor, kanıtlanmış kullanıcının crontab'ını resp'e okur.
+func listCronJobsFor(username string, resp *ListCronJobsResponse) error {
+	// A crontab that cannot be read is an unknown state, not an empty list:
+	// answering "no jobs" here is what let the next added job replace the
+	// owner's whole crontab.
+	// Okunamayan crontab boş liste değil bilinmeyen durumdur.
+	content, err := readCrontab(username)
 	if err != nil {
-		// No crontab for user is not an error
-		if strings.Contains(err.Error(), "no crontab") {
-			resp.Jobs = []CronJob{}
-			return nil
-		}
-		resp.Jobs = []CronJob{}
-		return nil
+		return err
 	}
-
-	resp.Jobs = parseCrontab(string(output))
+	resp.Jobs = parseCrontab(content)
+	if resp.Jobs == nil {
+		resp.Jobs = []CronJob{}
+	}
+	resp.Version = cronVersion(content)
 	return nil
 }
 
@@ -74,6 +84,16 @@ func (a *Agent) AddCronJob(req *AddCronJobRequest, resp *bool) error {
 	if err := requireCronInstalled(); err != nil {
 		return err
 	}
+	if err := addCronJobFor(username, req); err != nil {
+		return err
+	}
+	*resp = true
+	return nil
+}
+
+// addCronJobFor appends one job to the proven user's crontab.
+// addCronJobFor, kanıtlanmış kullanıcının crontab'ına bir görev ekler.
+func addCronJobFor(username string, req *AddCronJobRequest) error {
 	if err := rejectCrontabInjection(map[string]string{
 		"schedule": req.Schedule,
 		"command":  req.Command,
@@ -87,8 +107,27 @@ func (a *Agent) AddCronJob(req *AddCronJobRequest, resp *bool) error {
 		return fmt.Errorf("invalid cron schedule: %s", req.Schedule)
 	}
 
-	// Get existing crontab
-	existing := getCrontab(username)
+	cronMu.Lock()
+	defer cronMu.Unlock()
+
+	// The pre-image: never append to a crontab that was not read.
+	// Ön görüntü: okunmamış bir crontab'a asla ekleme yapılmaz.
+	existing, err := readCrontabForChange(username, req.Version)
+	if err != nil {
+		return err
+	}
+
+	// The same schedule and command twice is refused: it runs the command
+	// twice, and the two lines share one ID, so a later change or delete could
+	// not tell them apart.
+	// Aynı zamanlama ve komut ikinci kez eklenmez: komutu iki kez çalıştırır ve
+	// iki satır tek kimliği paylaşır.
+	wanted := strings.Join(strings.Fields(req.Schedule+" "+req.Command), " ")
+	for _, job := range parseCrontab(existing) {
+		if job.Schedule+" "+job.Command == wanted {
+			return errors.New(transport.CronJobDuplicate)
+		}
+	}
 
 	// Build new entry
 	var newEntry string
@@ -105,13 +144,7 @@ func (a *Agent) AddCronJob(req *AddCronJobRequest, resp *bool) error {
 	}
 	newCrontab += newEntry + "\n"
 
-	// Write new crontab
-	if err := setCrontab(username, newCrontab); err != nil {
-		return err
-	}
-
-	*resp = true
-	return nil
+	return setCrontab(username, newCrontab)
 }
 
 // UpdateCronJob updates an existing cron job
@@ -123,6 +156,16 @@ func (a *Agent) UpdateCronJob(req *UpdateCronJobRequest, resp *bool) error {
 	if err := requireCronInstalled(); err != nil {
 		return err
 	}
+	if err := updateCronJobFor(username, req); err != nil {
+		return err
+	}
+	*resp = true
+	return nil
+}
+
+// updateCronJobFor rewrites one job in the proven user's crontab.
+// updateCronJobFor, kanıtlanmış kullanıcının crontab'ında bir görevi yeniden yazar.
+func updateCronJobFor(username string, req *UpdateCronJobRequest) error {
 	if err := rejectCrontabInjection(map[string]string{
 		"schedule": req.Schedule,
 		"command":  req.Command,
@@ -136,8 +179,13 @@ func (a *Agent) UpdateCronJob(req *UpdateCronJobRequest, resp *bool) error {
 		return fmt.Errorf("invalid cron schedule: %s", req.Schedule)
 	}
 
-	// Get existing crontab
-	existing := getCrontab(username)
+	cronMu.Lock()
+	defer cronMu.Unlock()
+
+	existing, err := readCrontabForChange(username, req.Version)
+	if err != nil {
+		return err
+	}
 	lines := strings.Split(existing, "\n")
 
 	// Find and update the job
@@ -176,13 +224,7 @@ func (a *Agent) UpdateCronJob(req *UpdateCronJobRequest, resp *bool) error {
 		return fmt.Errorf("cron job not found: %s", req.ID)
 	}
 
-	// Write new crontab
-	if err := setCrontab(username, strings.Join(newLines, "\n")); err != nil {
-		return err
-	}
-
-	*resp = true
-	return nil
+	return setCrontab(username, strings.Join(newLines, "\n"))
 }
 
 // DeleteCronJob deletes a cron job
@@ -194,9 +236,23 @@ func (a *Agent) DeleteCronJob(req *DeleteCronJobRequest, resp *bool) error {
 	if err := requireCronInstalled(); err != nil {
 		return err
 	}
+	if err := deleteCronJobFor(username, req); err != nil {
+		return err
+	}
+	*resp = true
+	return nil
+}
 
-	// Get existing crontab
-	existing := getCrontab(username)
+// deleteCronJobFor removes one job from the proven user's crontab.
+// deleteCronJobFor, kanıtlanmış kullanıcının crontab'ından bir görevi çıkarır.
+func deleteCronJobFor(username string, req *DeleteCronJobRequest) error {
+	cronMu.Lock()
+	defer cronMu.Unlock()
+
+	existing, err := readCrontabForChange(username, req.Version)
+	if err != nil {
+		return err
+	}
 	lines := strings.Split(existing, "\n")
 
 	// Filter out the job to delete
@@ -236,13 +292,7 @@ func (a *Agent) DeleteCronJob(req *DeleteCronJobRequest, resp *bool) error {
 		return fmt.Errorf("cron job not found: %s", req.ID)
 	}
 
-	// Write new crontab
-	if err := setCrontab(username, strings.Join(newLines, "\n")); err != nil {
-		return err
-	}
-
-	*resp = true
-	return nil
+	return setCrontab(username, strings.Join(newLines, "\n"))
 }
 
 // Helper functions
@@ -437,13 +487,91 @@ func isValidCronSchedule(schedule string) bool {
 	return true
 }
 
-func getCrontab(username string) string {
+// cronMu makes read, compare and write one step for the Panel's own requests,
+// so two changes built from the same list cannot both be written.
+// cronMu, Panel'in kendi istekleri için oku-karşılaştır-yaz adımını tek adım
+// yapar.
+var cronMu sync.Mutex
+
+var (
+	errCronStateUnreadable = errors.New(transport.CronStateUnreadable)
+	errCronVersionRequired = errors.New(transport.CronVersionRequired)
+	errCronStateChanged    = errors.New(transport.CronStateChanged)
+)
+
+// cronListCrontab runs `crontab -u <user> -l` and returns what it printed, what
+// it said on standard error and its exit status (-1 when it did not exit).
+// Swapped by tests.
+// cronListCrontab, `crontab -u <kullanıcı> -l` çalıştırır. Testlerde değiştirilir.
+var cronListCrontab = func(username string) (output []byte, stderr string, exitCode int, err error) {
 	cmd := exec.Command("crontab", "-u", username, "-l")
-	output, err := cmd.Output()
-	if err != nil {
-		return ""
+	// The one answer that is read as text below must not arrive translated.
+	// Aşağıda metin olarak okunan tek yanıt çevrilmiş gelmemelidir.
+	cmd.Env = append(os.Environ(), "LC_ALL=C", "LANGUAGE=C")
+	output, err = cmd.Output()
+	if err == nil {
+		return output, "", 0, nil
 	}
-	return string(output)
+	exitCode = -1
+	var exited *exec.ExitError
+	if errors.As(err, &exited) {
+		exitCode = exited.ExitCode()
+	}
+	return output, hostcmd.Stderr(err), exitCode, err
+}
+
+// readCrontab returns the user's crontab. "This user has no crontab" is the one
+// legitimate empty answer, and it is recognised narrowly: exit status 1, no
+// output, and exactly `no crontab for <user>` on standard error — the line
+// Debian/Ubuntu cron and cronie both print. Every other failure (the spool
+// cannot be opened, the user is refused, the command was killed, an
+// implementation that words it differently) leaves the state unknown, and an
+// unknown crontab is never listed as empty and never written over.
+//
+// readCrontab kullanıcının crontab'ını döndürür. "Bu kullanıcının crontab'ı
+// yok" tek meşru boş yanıttır ve dar tanınır: çıkış durumu 1, çıktı yok ve
+// standart hatada tam olarak `no crontab for <kullanıcı>`. Diğer her hata
+// durumu bilinmez bırakır; bilinmeyen crontab boş diye listelenmez ve üstüne
+// yazılmaz.
+func readCrontab(username string) (string, error) {
+	output, stderr, exitCode, err := cronListCrontab(username)
+	if err == nil {
+		return string(output), nil
+	}
+	said := strings.TrimSpace(stderr)
+	if exitCode == 1 && strings.TrimSpace(string(output)) == "" && said == "no crontab for "+username {
+		return "", nil
+	}
+	log.Printf("cron: the crontab of %s could not be read (exit status %d): %s",
+		username, exitCode, hostcmd.Bounded(strings.Join(strings.Fields(said), " "), 300))
+	return "", errCronStateUnreadable
+}
+
+// cronVersion identifies the exact crontab bytes a list was read from.
+// cronVersion, bir listenin okunduğu crontab baytlarını tanımlar.
+func cronVersion(content string) string {
+	sum := sha256.Sum256([]byte(content))
+	return "ct1-" + hex.EncodeToString(sum[:])
+}
+
+// readCrontabForChange is the pre-image of every cron write. It refuses when
+// the crontab cannot be read, when the request does not say which crontab it
+// was built from, and when that is no longer the crontab on the server.
+// readCrontabForChange her cron yazısının ön görüntüsüdür. Crontab okunamazsa,
+// istek hangi crontab'dan kurulduğunu söylemezse ya da o artık sunucudaki
+// crontab değilse reddeder.
+func readCrontabForChange(username, version string) (string, error) {
+	existing, err := readCrontab(username)
+	if err != nil {
+		return "", err
+	}
+	if version == "" {
+		return "", errCronVersionRequired
+	}
+	if version != cronVersion(existing) {
+		return "", errCronStateChanged
+	}
+	return existing, nil
 }
 
 // errCronNotInstalled carries the exact transport text so the Panel can
@@ -481,6 +609,18 @@ func setCrontab(username, content string) error {
 	if err := requireCronInstalled(); err != nil {
 		return err
 	}
+	// A crontab ends with a newline; Debian's crontab refuses a file that does
+	// not. Delete joins the remaining lines without one.
+	// Crontab satır sonuyla biter; Debian'ın crontab'ı bitmeyeni reddeder.
+	if content != "" && !strings.HasSuffix(content, "\n") {
+		content += "\n"
+	}
+	return cronInstallCrontab(username, content)
+}
+
+// cronInstallCrontab replaces the user's crontab. Swapped by tests.
+// cronInstallCrontab kullanıcının crontab'ını değiştirir. Testlerde değiştirilir.
+var cronInstallCrontab = func(username, content string) error {
 	cmd := exec.Command("crontab", "-u", username, "-")
 	cmd.Stdin = strings.NewReader(content)
 	if out, err := cmd.CombinedOutput(); err != nil {

@@ -4101,8 +4101,15 @@ class Trial:
             self.finding(f"{self.node_name}: cron: {CRON_NOT_AVAILABLE} (crontab absent before seeding); the owner "
                          "cron job was not created and cron continuity is not measured")
         else:
-            cron = self.api("POST", f"/api/v1/domains/{domain_id}/cron",
-                            {"schedule": "* * * * *", "command": command, "comment": "upd1 owner cron"},
+            # As the screen does: read the list first and send the version it answered. A release that
+            # requires it refuses a cron change without one (409 SETTINGS_VERSION_REQUIRED); an earlier
+            # release answers no version and ignores the field.
+            job = {"schedule": "* * * * *", "command": command, "comment": "upd1 owner cron"}
+            before = self.api("GET", f"/api/v1/domains/{domain_id}/cron", purpose="DomainCronManager list before create")
+            current = before.json() if before.status == 200 else None
+            if isinstance(current, dict) and current.get("version"):
+                job["version"] = current["version"]
+            cron = self.api("POST", f"/api/v1/domains/{domain_id}/cron", job,
                             purpose="DomainCronManager create")
             listed = self.api("GET", f"/api/v1/domains/{domain_id}/cron", purpose="DomainCronManager list")
             seeded["cron"] = dict(availability, seeded=True, create_http=cron.status, command=command,

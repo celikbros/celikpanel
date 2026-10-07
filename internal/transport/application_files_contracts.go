@@ -86,6 +86,31 @@ const (
 	SiteCertificateBusy   = "another site certificate operation is already running; retry shortly"
 )
 
+// The four fixed answers below are the cron RPC refusals that protect the
+// owner's crontab (D-022, D-024; 8 Oct 2026). The Panel matches each exactly
+// and never shows the raw line. Before them a crontab that could not be read
+// was treated as empty: the list said "no tasks" and the next added task
+// replaced the whole file.
+//
+//   - CronStateUnreadable: `crontab -l` failed for a reason other than "this
+//     user has no crontab". The state is unknown; nothing is listed or written.
+//   - CronVersionRequired: a change arrived without the version of the crontab
+//     it was built from. A page that never loaded the list cannot write.
+//   - CronStateChanged: the crontab is no longer the one the change was built
+//     from. Nothing is written; the screen reloads.
+//   - CronJobDuplicate: the same schedule and command already exist.
+//
+// Aşağıdaki dört sabit yanıt, sahibin crontab'ını koruyan cron RPC retleridir.
+// Panel her birini tam metinle eşler ve ham satırı göstermez. Bunlardan önce
+// okunamayan crontab boş sayılıyordu: liste "görev yok" diyor, eklenen ilk
+// görev bütün dosyanın yerine geçiyordu.
+const (
+	CronStateUnreadable = "the current crontab could not be read; nothing was changed"
+	CronVersionRequired = "the cron request carried no version of the crontab it was built from; nothing was changed"
+	CronStateChanged    = "the crontab is not the one the cron request was built from; nothing was changed"
+	CronJobDuplicate    = "a cron job with the same schedule and command already exists; nothing was changed"
+)
+
 // Cron RPC contracts.
 type CronJob struct {
 	ID       string `json:"id"`
@@ -101,6 +126,11 @@ type ListCronJobsRequest struct {
 
 type ListCronJobsResponse struct {
 	Jobs []CronJob `json:"jobs"`
+	// Version identifies the exact crontab bytes Jobs was read from. Every
+	// change carries it back. Additive on the wire.
+	// Version, Jobs'un okunduğu crontab baytlarını tanımlar. Her değişiklik
+	// onu geri taşır. Tel üzerinde eklemelidir.
+	Version string `json:"version,omitempty"`
 }
 
 // CronTenant identifies WHOSE crontab an operation targets. It carries the
@@ -139,6 +169,7 @@ type AddCronJobRequest struct {
 	Schedule string `json:"schedule"`
 	Command  string `json:"command"`
 	Comment  string `json:"comment,omitempty"`
+	Version  string `json:"version,omitempty"`
 }
 
 type UpdateCronJobRequest struct {
@@ -148,11 +179,13 @@ type UpdateCronJobRequest struct {
 	Command  string `json:"command"`
 	Enabled  bool   `json:"enabled"`
 	Comment  string `json:"comment,omitempty"`
+	Version  string `json:"version,omitempty"`
 }
 
 type DeleteCronJobRequest struct {
 	CronTenant
-	ID string `json:"id"`
+	ID      string `json:"id"`
+	Version string `json:"version,omitempty"`
 }
 
 // File manager RPC contracts.

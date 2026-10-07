@@ -391,7 +391,10 @@ func TestHandleBackupScheduleDeleteReportsDatabaseFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	req := httptest.NewRequest(http.MethodDelete, "/backup-schedule", nil)
+	// The request carries the version of the schedule it turns off, as the
+	// screen does; without it the delete is refused before the database.
+	seeded := backupScheduleSettings{exists: true, frequency: "daily", backupType: "files", retention: 7, enabled: 1}
+	req := httptest.NewRequest(http.MethodDelete, "/backup-schedule?version="+seeded.version(), nil)
 	rec := httptest.NewRecorder()
 	f.panel.handleBackupSchedule(rec, req, f.domainID)
 	if rec.Code != http.StatusInternalServerError {

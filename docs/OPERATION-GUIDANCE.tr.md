@@ -842,3 +842,142 @@ başvurma iletisini (diğer roller) gösterir.
 - Gönderilmemiş girdi gerçek bir yeniden girişte korunmaz.
 - Tarayıcıda ya da gerçek sunucuda doğrulanmadı: metinlerin yerinde görünümü,
   1,5 sn ve 30 sn adımları, odağın dönüşü ve gizli sekmenin zamanlayıcıları.
+
+### Okunamayan ya da sayfa yüklendikten sonra değişen geçerli ayarlar (2026-10-08)
+
+Bileşen testleriyle kaynak durumu; gerçek sistem denemesi yok. Aynı tarihli
+dayanıklılık sözleşmesi girdisine bakın. Üç ekran: sunucu posta politikası
+(Postfix sayfası), bir alan adının otomatik yedekleri ve bir alan adının
+zamanlanmış görevleri. Bundan önce başarısız bir okuma varsayılanları ya da
+"Zamanlanmış görev yok" yazısını gösteriyor, tek bir Kaydet ya da eklenen tek bir
+görev sahibin gerçekte sahip olduğunun yerine geçiyordu.
+
+Bu ekranlardaki kural: sunucunun geçerli durumu bilinene kadar hiçbir şey ayar,
+"kapalı" durumu ya da boş liste olarak gösterilmez ve hiçbir kayıt
+varsayılanlardan kurulmaz. Aşağıdaki her ret herhangi bir değişiklikten önce
+gelir.
+
+- **Okunuyor (bekleme; kimse işlem yapmaz).** Formun ya da listenin yerinde:
+  - EN: "Reading the current settings from the server…"
+  - TR: "Geçerli ayarlar sunucudan okunuyor…"
+- **Okunamadı (bilinmeyen sonuç).** Form yok, liste yok, Kaydet yok. Bildirim
+  ekranı adlandırır, hiçbir şeyin değiştirilmediğini söyler ve yeniden okuyan,
+  hiçbir şeyi değiştirmeyen **Retry** / **Tekrar dene** eylemini sunar.
+  - Posta politikası, EN: "The current mail policy could not be read from the
+    server, so no settings are shown and nothing can be saved here. Nothing was
+    changed. Try again; if it keeps failing, check on the server that Postfix is
+    running (sudo systemctl status postfix)."
+  - Posta politikası, TR: "Geçerli posta politikası sunucudan okunamadı; bu
+    yüzden ayarlar gösterilmiyor ve buradan kayıt yapılamıyor. Hiçbir şey
+    değiştirilmedi. Tekrar deneyin; sorun sürerse sunucuda Postfix’in çalıştığını
+    denetleyin (sudo systemctl status postfix)."
+  - Otomatik yedekler, EN: "The automatic backup settings for this domain could
+    not be loaded, so they are not shown and cannot be changed here. Nothing was
+    changed; an existing schedule stays as it is. Try again."
+  - Otomatik yedekler, TR: "Bu domain'in otomatik yedek ayarları yüklenemedi; bu
+    yüzden gösterilmiyor ve buradan değiştirilemiyor. Hiçbir şey değiştirilmedi;
+    var olan bir zamanlama olduğu gibi duruyor. Tekrar deneyin."
+  - Zamanlanmış görevler, EN: "The scheduled tasks of this domain could not be
+    read from the server, so the list is not shown and tasks cannot be added or
+    changed here. Nothing was changed; the tasks already on the server are
+    untouched. Try again."
+  - Zamanlanmış görevler, TR: "Bu domain'in zamanlanmış görevleri sunucudan
+    okunamadı; bu yüzden liste gösterilmiyor ve buradan görev eklenemiyor ya da
+    değiştirilemiyor. Hiçbir şey değiştirilmedi; sunucudaki görevlere dokunulmadı.
+    Tekrar deneyin."
+  - Cron eksikse bu bildirim değil, kendi doğrulanmış yanıtı gösterilir
+    (`CRON_NOT_INSTALLED`, 2026-10-01 girdisi).
+- **Sayfa yüklendikten sonra sunucuda değişti (doğrulanmış ret,
+  `409 SETTINGS_CHANGED`; sürümsüz bir kayıt, `409 SETTINGS_VERSION_REQUIRED`,
+  aynı biçimde gösterilir).** Bildirim formun üstünde ekranda kalır, yazılan
+  görünür kalır, Kaydet devre dışıdır ve tek eylem yeniden yükler: **Reload
+  current settings** / **Geçerli ayarları yeniden yükle** (zamanlanmış görevlerde
+  **Reload the list** / **Listeyi yeniden yükle**). Kim işlem yapar: ekranın
+  başındaki kişi. Hiçbir şey kendiliğinden yeniden denenmez.
+  - Posta politikası, EN: "The mail policy changed on the server after this page
+    loaded, so nothing was saved. What you entered is still shown below. Reload
+    the current settings, then make your change again."
+  - Posta politikası, TR: "Posta politikası bu sayfa yüklendikten sonra sunucuda
+    değişti; bu yüzden hiçbir şey kaydedilmedi. Girdikleriniz aşağıda duruyor.
+    Geçerli ayarları yeniden yükleyin, sonra değişikliğinizi tekrar yapın."
+  - Otomatik yedekler, EN: "The automatic backup settings changed on the server
+    after this page loaded, so nothing was saved. What you chose is still shown
+    below. Reload the current settings, then make your change again."
+  - Otomatik yedekler, TR: "Otomatik yedek ayarları bu sayfa yüklendikten sonra
+    sunucuda değişti; bu yüzden hiçbir şey kaydedilmedi. Seçtikleriniz aşağıda
+    duruyor. Geçerli ayarları yeniden yükleyin, sonra değişikliğinizi tekrar
+    yapın."
+  - Zamanlanmış görevler, EN: "The scheduled tasks changed on the server after
+    this list loaded, so nothing was changed. Reload the list, then try again; a
+    task you were typing stays in the form."
+  - Zamanlanmış görevler, TR: "Zamanlanmış görevler bu liste yüklendikten sonra
+    sunucuda değişti; bu yüzden hiçbir şey değiştirilmedi. Listeyi yeniden
+    yükleyin, sonra tekrar deneyin; yazmakta olduğunuz görev formda kalır."
+- **Panel'in yeniden yazmayacağı DNSBL (eksik önkoşul; yüklemede gösterilir).**
+  DNSBL denetimlerinin yerini gerekçe ve sahibin eylemi alır; ileti boyutu ve hız
+  sınırı düzenlenebilir kalır. Kim işlem yapar: sunucu sahibi, `main.cf` içinde.
+  - Başka bir ayara başvuruyor, EN: "DNSBL cannot be changed from this page: the
+    recipient restrictions in Postfix refer to another setting ($name), so
+    CelikPanel cannot tell which checks they contain and will not rewrite them."
+    TR: "DNSBL bu sayfadan değiştirilemiyor: Postfix’teki alıcı kısıtları başka
+    bir ayara ($ad) başvuruyor; CelikPanel hangi denetimleri içerdiklerini
+    bilemediği için onları yeniden yazmaz."
+  - Kesin olarak okunamıyor, EN: "DNSBL cannot be changed from this page:
+    CelikPanel could not read the recipient restrictions in Postfix with
+    certainty (an unclosed brace, or reject_rbl_client without a zone) and will
+    not rewrite them." TR: "DNSBL bu sayfadan değiştirilemiyor: CelikPanel,
+    Postfix’teki alıcı kısıtlarını kesin olarak okuyamadı (kapanmamış bir süslü
+    ayraç ya da bölgesi olmayan bir reject_rbl_client) ve onları yeniden yazmaz."
+  - İki permit girdisi olmadan elle yazılmış, EN: "DNSBL cannot be changed from
+    this page: the recipient restrictions in Postfix were written by hand
+    without both permit_mynetworks and permit_sasl_authenticated, so a DNSBL
+    check placed by CelikPanel could reject this server’s own users." TR: "DNSBL
+    bu sayfadan değiştirilemiyor: Postfix’teki alıcı kısıtları elle yazılmış ve
+    permit_mynetworks ile permit_sasl_authenticated girdilerinin ikisini birden
+    içermiyor; CelikPanel’in koyacağı bir DNSBL denetimi bu sunucunun kendi
+    kullanıcılarını reddedebilir."
+  - Son bir eylemle bitiyor, EN: "DNSBL cannot be changed from this page: the
+    recipient restrictions in Postfix end with permit, reject or defer, so a
+    DNSBL check added after them would never run, and where it belongs is your
+    decision." TR: "DNSBL bu sayfadan değiştirilemiyor: Postfix’teki alıcı
+    kısıtları permit, reject ya da defer ile bitiyor; arkasına eklenen bir DNSBL
+    denetimi hiç çalışmaz ve nereye konacağı sizin kararınızdır."
+  - Bu ekranın sözü olmayan bir gerekçe, EN: "DNSBL cannot be changed from this
+    page: CelikPanel will not rewrite the recipient restrictions it found in
+    Postfix." TR: "DNSBL bu sayfadan değiştirilemiyor: CelikPanel, Postfix’te
+    bulduğu alıcı kısıtlarını yeniden yazmaz."
+  - Eylem, EN: "To change it, edit the reject_rbl_client entries of
+    smtpd_recipient_restrictions in /etc/postfix/main.cf, run sudo systemctl
+    reload postfix, then reload this page. Message size and the rate limit can
+    still be saved here."
+  - Eylem, TR: "Değiştirmek için /etc/postfix/main.cf içindeki
+    smtpd_recipient_restrictions değerinin reject_rbl_client girdilerini
+    düzenleyin, sudo systemctl reload postfix komutunu çalıştırın, sonra bu
+    sayfayı yenileyin. İleti boyutu ve hız sınırı buradan kaydedilebilir."
+- **Diğer retler (doğrulanmış; hata iletisi olarak gösterilir, form kalır).**
+  - Yinelenen görev (`409 CRON_JOB_DUPLICATE`), EN: "A task with the same
+    schedule and command already exists, so nothing was added. Change the
+    existing task instead, or enable it if it is disabled." TR: "Aynı zamanlama
+    ve komutla bir görev zaten var; bu yüzden hiçbir şey eklenmedi. Var olan
+    görevi değiştirin ya da devre dışıysa etkinleştirin."
+  - Düz alan adı olmayan bir bölge (`400 MAIL_POLICY_INVALID`, `dnsbl_zone`),
+    EN: "Nothing was saved: a DNSBL zone must be a plain host name such as
+    zen.spamhaus.org, with zones separated by commas. Correct the zones and save
+    again." TR: "Hiçbir şey kaydedilmedi: DNSBL bölgesi zen.spamhaus.org gibi düz
+    bir alan adı olmalı ve bölgeler virgülle ayrılmalıdır. Bölgeleri düzeltip
+    yeniden kaydedin."
+  - Kayıt anında durum okunamadı (`502 CURRENT_SETTINGS_UNREADABLE`), EN:
+    "CelikPanel could not read what is currently set on the server, so nothing
+    was changed. Reload the page and try again." TR: "CelikPanel sunucuda şu an
+    neyin ayarlı olduğunu okuyamadı; bu yüzden hiçbir şey değiştirilmedi. Sayfayı
+    yenileyip tekrar deneyin."
+
+API yanıtları, API'yi doğrudan okuyanlar için aynı durumların İngilizce cümlesini
+taşır; Agent'ın ve `postconf`'un kendi satırları günlüklerde kalır.
+
+Yapılmayan: kaydedilen bir politikadan sonra başarısız olan Postfix yeniden
+yüklemesi ve başarısız bir `postconf` yazısı sınıflandırılmadı (ikincisi
+`INTERNAL` yedeğidir); bilinmeyen bildirimi okumanın neden başarısız olduğunu
+söylemez; API'den gelen DNSBL reddinin (`MAIL_POLICY_RESTRICTIONS_UNMANAGED`)
+yalnız İngilizce cümlesi vardır, çünkü ekran bu retle karşılaşmak yerine denetimi
+geri çeker; diğer ekranlar hâlâ eski kalıbı izler ve burada incelenmedi.

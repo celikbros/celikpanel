@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
@@ -391,33 +392,110 @@ func (p *Panel) auditBackupSystem(ctx context.Context, action string, domainID i
 // handleBackupSchedule handles GET/PUT/DELETE for a domain's backup schedule.
 // handleBackupSchedule, bir domain'in yedek zamanlaması için GET/PUT/DELETE'i
 // karşılar.
+// backupScheduleSettings is what the owner set for one domain: whether a
+// schedule exists and its four settings. Run status (last run, last attempt,
+// the active job) is not part of it, so a background run never makes a save
+// look stale.
+// backupScheduleSettings, sahibin bir alan adı için ayarladığıdır. Koşu durumu
+// buna dahil değildir; arka plan koşusu bir kaydı eskimiş göstermez.
+type backupScheduleSettings struct {
+	exists     bool
+	frequency  string
+	backupType string
+	retention  int
+	enabled    int
+}
+
+// version identifies these exact settings. The schedule GET returns it and the
+// PUT and DELETE must carry it back (8 Oct 2026): a form that never loaded the
+// schedule, or loaded an older one, cannot replace it. Before this a failed GET
+// left the form on "daily / files / 7" and Turn on wrote those over the real
+// schedule — a full backup became files-only and the next run pruned copies
+// beyond 7.
+// version tam bu ayarları tanımlar. Zamanlama GET'i onu döndürür; PUT ve DELETE
+// geri taşımak zorundadır.
+func (s backupScheduleSettings) version() string {
+	sum := sha256.Sum256([]byte(fmt.Sprintf("%t\x00%s\x00%s\x00%d\x00%d",
+		s.exists, s.frequency, s.backupType, s.retention, s.enabled)))
+	return "bs1-" + hex.EncodeToString(sum[:])
+}
+
+type backupScheduleRunStatus struct {
+	lastRun, lastAttempt, lastStatus, lastError *string
+}
+
+func (p *Panel) readBackupSchedule(ctx context.Context, domainID int) (backupScheduleSettings, backupScheduleRunStatus, error) {
+	var settings backupScheduleSettings
+	var status backupScheduleRunStatus
+	err := p.db.GetDB().QueryRowContext(ctx, `
+		SELECT frequency, backup_type, retention, enabled, last_run,
+		       last_attempt, last_status, last_error
+		FROM backup_schedules WHERE domain_id = ?`, domainID).Scan(
+		&settings.frequency, &settings.backupType, &settings.retention, &settings.enabled,
+		&status.lastRun, &status.lastAttempt, &status.lastStatus, &status.lastError,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return backupScheduleSettings{}, backupScheduleRunStatus{}, nil
+	}
+	if err != nil {
+		return backupScheduleSettings{}, backupScheduleRunStatus{}, err
+	}
+	settings.exists = true
+	return settings, status, nil
+}
+
+// backupScheduleWriteAdmitted reads the schedule a write would replace and
+// refuses the write when the request does not carry its version. The caller
+// then writes only where the row still holds these exact settings.
+// backupScheduleWriteAdmitted, bir yazının değiştireceği zamanlamayı okur ve
+// istek onun sürümünü taşımıyorsa yazıyı reddeder.
+func (p *Panel) backupScheduleWriteAdmitted(w http.ResponseWriter, r *http.Request, domainID int, version string) (backupScheduleSettings, bool) {
+	if version == "" {
+		writeSettingsVersionRequired(w, settingsResourceBackupSchedule)
+		return backupScheduleSettings{}, false
+	}
+	current, _, err := p.readBackupSchedule(r.Context(), domainID)
+	if err != nil {
+		writeServerError(w, err)
+		return backupScheduleSettings{}, false
+	}
+	if version != current.version() {
+		writeSettingsChanged(w, settingsResourceBackupSchedule)
+		return backupScheduleSettings{}, false
+	}
+	return current, true
+}
+
+func backupScheduleWriteChangedOneRow(result sql.Result, execErr error) (bool, error) {
+	if execErr != nil {
+		return false, execErr
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	return rows == 1, nil
+}
+
 func (p *Panel) handleBackupSchedule(w http.ResponseWriter, r *http.Request, domainID int) {
 	w.Header().Set("Content-Type", "application/json")
 	switch r.Method {
 	case http.MethodGet:
-		var freq, btype string
-		var retention, enabled int
-		var lastRun, lastAttempt, lastStatus, lastError *string
-		err := p.db.GetDB().QueryRowContext(r.Context(), `
-			SELECT frequency, backup_type, retention, enabled, last_run,
-			       last_attempt, last_status, last_error
-			FROM backup_schedules WHERE domain_id = ?`, domainID).Scan(
-			&freq, &btype, &retention, &enabled, &lastRun,
-			&lastAttempt, &lastStatus, &lastError,
-		)
-		if errors.Is(err, sql.ErrNoRows) {
-			json.NewEncoder(w).Encode(map[string]any{"enabled": false})
-			return
-		}
+		settings, status, err := p.readBackupSchedule(r.Context(), domainID)
 		if err != nil {
 			writeServerError(w, err)
 			return
 		}
+		if !settings.exists {
+			json.NewEncoder(w).Encode(map[string]any{"enabled": false, "version": settings.version()})
+			return
+		}
 		json.NewEncoder(w).Encode(map[string]any{
-			"enabled": enabled == 1, "frequency": freq, "backup_type": btype,
-			"retention": retention, "last_run": lastRun,
-			"last_attempt": lastAttempt, "last_status": lastStatus,
-			"last_error": lastError,
+			"enabled": settings.enabled == 1, "frequency": settings.frequency,
+			"backup_type": settings.backupType, "retention": settings.retention,
+			"last_run": status.lastRun, "last_attempt": status.lastAttempt,
+			"last_status": status.lastStatus, "last_error": status.lastError,
+			"version": settings.version(),
 		})
 
 	case http.MethodPut:
@@ -425,6 +503,7 @@ func (p *Panel) handleBackupSchedule(w http.ResponseWriter, r *http.Request, dom
 			Frequency  string `json:"frequency"`
 			BackupType string `json:"backup_type"`
 			Retention  int    `json:"retention"`
+			Version    string `json:"version"`
 		}
 		if err := decodeBackupJSON(w, r, &req); err != nil {
 			writeClientError(w, http.StatusBadRequest, "invalid request body")
@@ -442,32 +521,70 @@ func (p *Panel) handleBackupSchedule(w http.ResponseWriter, r *http.Request, dom
 			writeClientError(w, http.StatusBadRequest, "retention must be between 1 and 60")
 			return
 		}
-		if _, err := p.db.GetDB().ExecContext(r.Context(), `
-			INSERT INTO backup_schedules (domain_id, frequency, backup_type, retention, enabled)
-			VALUES (?, ?, ?, ?, 1)
-			ON CONFLICT(domain_id) DO UPDATE SET
-			  frequency = excluded.frequency, backup_type = excluded.backup_type,
-			  retention = excluded.retention, enabled = 1,
-			  active_job_key = CASE
-			    WHEN backup_schedules.backup_type = excluded.backup_type
-			    THEN backup_schedules.active_job_key
-			    ELSE NULL
-			  END`,
-			domainID, req.Frequency, req.BackupType, req.Retention); err != nil {
+		current, admitted := p.backupScheduleWriteAdmitted(w, r, domainID, req.Version)
+		if !admitted {
+			return
+		}
+		// The write is conditional on the settings just read, so a schedule
+		// that changed between the read and the write is not replaced either.
+		// Yazı, az önce okunan ayarlara koşulludur.
+		var written bool
+		var err error
+		if current.exists {
+			written, err = backupScheduleWriteChangedOneRow(p.db.GetDB().ExecContext(r.Context(), `
+				UPDATE backup_schedules SET
+				  active_job_key = CASE WHEN backup_type = ? THEN active_job_key ELSE NULL END,
+				  frequency = ?, backup_type = ?, retention = ?, enabled = 1
+				WHERE domain_id = ? AND frequency = ? AND backup_type = ?
+				  AND retention = ? AND enabled = ?`,
+				req.BackupType, req.Frequency, req.BackupType, req.Retention,
+				domainID, current.frequency, current.backupType, current.retention, current.enabled))
+		} else {
+			written, err = backupScheduleWriteChangedOneRow(p.db.GetDB().ExecContext(r.Context(), `
+				INSERT INTO backup_schedules (domain_id, frequency, backup_type, retention, enabled)
+				VALUES (?, ?, ?, ?, 1)
+				ON CONFLICT(domain_id) DO NOTHING`,
+				domainID, req.Frequency, req.BackupType, req.Retention))
+		}
+		if err != nil {
 			writeServerError(w, err)
+			return
+		}
+		if !written {
+			writeSettingsChanged(w, settingsResourceBackupSchedule)
 			return
 		}
 		p.audit(r, "backup.schedule:"+req.Frequency, "domain", domainID)
-		json.NewEncoder(w).Encode(map[string]any{"success": true})
+		saved := backupScheduleSettings{
+			exists: true, frequency: req.Frequency, backupType: req.BackupType,
+			retention: req.Retention, enabled: 1,
+		}
+		json.NewEncoder(w).Encode(map[string]any{"success": true, "version": saved.version()})
 
 	case http.MethodDelete:
-		if _, err := p.db.GetDB().ExecContext(r.Context(),
-			`DELETE FROM backup_schedules WHERE domain_id = ?`, domainID); err != nil {
-			writeServerError(w, err)
+		current, admitted := p.backupScheduleWriteAdmitted(w, r, domainID, r.URL.Query().Get("version"))
+		if !admitted {
 			return
 		}
+		if current.exists {
+			deleted, err := backupScheduleWriteChangedOneRow(p.db.GetDB().ExecContext(r.Context(), `
+				DELETE FROM backup_schedules
+				WHERE domain_id = ? AND frequency = ? AND backup_type = ?
+				  AND retention = ? AND enabled = ?`,
+				domainID, current.frequency, current.backupType, current.retention, current.enabled))
+			if err != nil {
+				writeServerError(w, err)
+				return
+			}
+			if !deleted {
+				writeSettingsChanged(w, settingsResourceBackupSchedule)
+				return
+			}
+		}
 		p.audit(r, "backup.schedule.off", "domain", domainID)
-		json.NewEncoder(w).Encode(map[string]any{"success": true})
+		json.NewEncoder(w).Encode(map[string]any{
+			"success": true, "version": backupScheduleSettings{}.version(),
+		})
 
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)

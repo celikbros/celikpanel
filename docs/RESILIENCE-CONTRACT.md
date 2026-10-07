@@ -2477,3 +2477,134 @@ design detector reports no finding on the changed files.
 - Unsent input is not kept across a real sign-in.
 - Each tab holds on its own; nothing is shared between tabs.
 - Cause not established on the owner's server; the mechanism is read from code.
+
+### A failed read no longer lets three settings screens overwrite the owner's state (invariants 1-4 and 6, 2026-10-08)
+
+D-025 invariants 1 (detect owner changes; never replace them with a preferred
+configuration), 2 (unknown is not absent), 3 (stop the unsafe write at its own
+boundary), 4 (a mutation reads its pre-image first) and 6 (the screen renders
+the authoritative state, not a default); D-022, D-024. No P0 item is closed or
+advanced. Found by a read-only source verification of `v0.1.0-alpha.81`; not
+observed on an installed server.
+
+- **Confirmed in alpha.81.** One failed read on an otherwise healthy server was
+  enough in three places.
+  - *Server mail policy.* A failed `GET /mail/policy` left the form on 25 MB,
+    DNSBL off and no rate limit, with Save enabled. Save rewrote
+    `smtpd_recipient_restrictions` to three fixed entries plus the zones, set
+    `message_size_limit` and `smtpd_client_message_rate_limit` and reloaded
+    Postfix. The Agent also answered a failed `postconf` read as zeros with
+    success, and every save, even after a good read, dropped the restrictions
+    the owner had added, because the read never returned them.
+  - *Automatic backup schedule.* A failed schedule read left "off / daily /
+    files / 7" editable. Turn on wrote it over the real schedule: a full backup
+    became files-only and the next run pruned scheduled copies beyond 7.
+  - *Scheduled tasks.* `crontab -l` failing for any reason was read as an empty
+    crontab. The list said "No scheduled tasks" and one added task replaced the
+    whole crontab.
+- **Changed.**
+  - *Unknown is an error.* The mail policy read, the crontab read and the cron
+    list answer an error when the current state cannot be read; no zero, default
+    or empty list stands in for it. `crontab -l` is accepted as "no crontab" only
+    with exit status 1, no output and exactly `no crontab for <user>` on standard
+    error (run with `LC_ALL=C`); every other failure is unknown. A `postconf`
+    value is known only when the command succeeded and printed a value line.
+  - *Versioned writes.* Each read returns a version of the native state: a hash
+    of the four Postfix values (`message_size_limit`,
+    `smtpd_recipient_restrictions`, `smtpd_client_message_rate_limit`,
+    `anvil_rate_time_unit`), of the crontab bytes, or of the schedule's settings
+    (run status excluded, so a background run does not make a save stale). Every
+    write must carry it. No version: `409 SETTINGS_VERSION_REQUIRED`. A
+    different current state: `409 SETTINGS_CHANGED`. An unreadable pre-image:
+    `502 CURRENT_SETTINGS_UNREADABLE`. Nothing is written in any of the three.
+    For mail and cron the Agent decides under one lock per resource (the Panel
+    also refuses a missing version before calling it); the schedule write is a
+    single statement conditional on the row still holding the settings read.
+  - *Recipient restrictions are preserved.* The writer no longer rebuilds the
+    list. Postfix splits it on commas and whitespace alike and reads an argument
+    as the next element, so keeping every element in order keeps the owner's
+    meaning. The Panel removes or adds only `reject_rbl_client <plain zone>`
+    entries (next to the existing ones, else at the end), keeps the owner's
+    separator style, and writes nothing when the wanted zones are already there.
+    An empty value still receives the baseline `permit_mynetworks,
+    permit_sasl_authenticated, reject_unauth_destination`. A DNSBL entry with a
+    reply filter or behind `warn_if_reject` is the owner's and is left alone.
+  - *Refused instead of guessed.* A DNSBL change is refused with
+    `409 MAIL_POLICY_RESTRICTIONS_UNMANAGED` when the value refers to another
+    setting (`variable`), has an unclosed brace or a `reject_rbl_client` without
+    a zone (`malformed`), is a hand-written list without both permits
+    (`no_baseline`) or ends with `permit`, `reject` or `defer` and has no DNSBL
+    entry to place the new one beside (`terminal`). Message size and rate still
+    save. The read reports the same reason, and the screen then offers no DNSBL
+    control.
+  - *Only what changed is written*, in one `postconf -e`, and Postfix is reloaded
+    only then. A 10240000-byte limit shown as 9 MB is not rounded by a save that
+    did not touch it. A value outside the Panel's range is refused with
+    `400 MAIL_POLICY_INVALID` instead of replaced by 25 MB, and a zone that is
+    not a plain host name is refused instead of silently dropped.
+  - *Cron duplicates.* Adding the same schedule and command again is refused
+    with `409 CRON_JOB_DUPLICATE` (a disabled copy counts; both lines would share
+    one ID). A written crontab always ends with a newline.
+  - *Screens.* The three screens hold `loading | known | unknown`. Loading shows
+    a reading line; unknown shows "could not load" with Retry; neither shows a
+    form, an "off" state or an empty list. A stale save keeps what was typed,
+    disables Save and offers a reload.
+- **Schema or version transition.** No persisted schema and no migration:
+  `main.cf`, crontabs and `backup_schedules` keep their formats. Additive wire
+  fields: `version` and `dnsbl_locked` on the mail policy, `version` on the cron
+  list and on the three cron requests, `code` and `reason` on the Agent's mail
+  policy answer, `version` on the schedule read and write answers. **Now
+  required:** `version` in the body of `PUT /api/v1/mail/policy`,
+  `PUT …/backups/schedule`, `POST` and `PUT …/cron`, and as a query value on
+  `DELETE …/backups/schedule` and `DELETE …/cron`. New refusal codes:
+  `CURRENT_SETTINGS_UNREADABLE`, `SETTINGS_VERSION_REQUIRED`,
+  `SETTINGS_CHANGED`, `CRON_JOB_DUPLICATE`,
+  `MAIL_POLICY_RESTRICTIONS_UNMANAGED`, `MAIL_POLICY_INVALID`. Panel and Agent
+  of different releases cannot write these three: a new Panel refuses the
+  version-less list of an older Agent, and a new Agent refuses an older Panel.
+- **Recovery behaviour.** Every refusal comes before any write, so there is
+  nothing to compensate. The owner reloads the page and decides again against
+  the current state; no read is retried into a write. For a refused DNSBL change
+  the owner edits `smtpd_recipient_restrictions` in `/etc/postfix/main.cf` and
+  reloads Postfix. Postfix, cron and scheduled backups keep running without the
+  Panel exactly as before.
+- **Evidence.** Component tests only; no native run. Agent:
+  `TestPlanRecipientRestrictionsPreservesWhatThePanelDoesNotManage`,
+  `TestPlanRecipientRestrictionsRefusesWhatItCannotPlaceWithCertainty`,
+  `TestGetMailPolicyReportsAFailedReadAsAnErrorNotAsZeros`,
+  `TestSetMailPolicyRefusesWithoutACurrentVersion`,
+  `TestSetMailPolicyWritesOnlyTheValuesThatChanged`,
+  `TestSetMailPolicyKeepsOwnerAddedRestrictions`,
+  `TestSetMailPolicyRefusesToRewriteRestrictionsItCannotPlace`,
+  `TestSetMailPolicyRefusesInvalidValuesInsteadOfSubstitutingDefaults`,
+  `TestReadCrontabTellsNoCrontabFromAFailedRead`,
+  `TestListCronJobsReportsAFailedReadAsAnError`,
+  `TestCronChangesNeverInstallACrontabBuiltFromAFailedRead`,
+  `TestCronChangesRequireTheVersionOfTheCrontabTheyWereBuiltFrom`,
+  `TestAddCronJobRefusesAnExactDuplicate`. Panel:
+  `TestCronChangesWithoutAVersionAreRefusedBeforeTheAgent`,
+  `TestCronHandlersAnswerCrontabProtectionRefusals`,
+  `TestMailPolicyGetReportsAnUnreadablePolicyAndCarriesTheVersion`,
+  `TestMailPolicyPutWithoutAVersionIsRefusedBeforeTheAgent`,
+  `TestMailPolicyPutAnswersEachAgentRefusalWithItsTypedGuidance`,
+  `TestBackupSchedulePutFromAFormThatNeverLoadedIsRefused`,
+  `TestBackupScheduleWritesNeedTheVersionOfTheScheduleTheyReplace`. Web:
+  `web/tests/current-settings-runtime.test.mjs`. Read-only observation on a
+  Debian development guest (Postfix 3.10): `crontab -u <user> -l` without a
+  crontab prints `no crontab for <user>` with exit status 1 and no output;
+  `postconf -h` prints one line per value, an empty line for an empty value and
+  a multi-line value folded to one line.
+
+Open: nothing was run on a real server. cronie's "no crontab" answer on Arch is
+taken from its source, not observed; another cron implementation that words it
+differently now reads as unknown instead of empty. A failed Postfix reload
+after a mail policy write is logged and not reported. An owner edit between the
+Agent's version check and its write is not excluded (the Panel's own requests
+are). A hand-written restriction list keeps DNSBL out of the Panel until the
+owner changes it. The backup schedule read is the Panel's own database, so its
+only unknown state is a failed query. Found beside this and not changed: a
+disabled scheduled task cannot be enabled, edited or deleted (the writers skip
+comment lines), deleting a task also removes a comment or disabled task on the
+line above it, and the mail queue list shows "queue empty" after a failed read.
+The app-wide `loading | known | unknown` layer is a later task; other screens
+are not audited.

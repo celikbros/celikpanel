@@ -131,6 +131,25 @@ const (
 	// Yerel cron, sahibinkiler dahil sunucudaki her görevi çalıştırır; panel
 	// onu asla kaldırmaz (D-022).
 	errCodeNativeCronRemovalRefused = "NATIVE_CRON_REMOVAL_REFUSED"
+	// The owner's current settings are not overwritten from a page that did
+	// not read them: the state could not be read, the write did not say which
+	// state it was built from, or that state has changed since. See
+	// current_settings_errors.go (8 Oct 2026; D-022, D-024).
+	// Sahibin geçerli ayarları, onları okumamış bir sayfadan ezilmez.
+	errCodeCurrentSettingsUnreadable = "CURRENT_SETTINGS_UNREADABLE"
+	errCodeSettingsVersionRequired   = "SETTINGS_VERSION_REQUIRED"
+	errCodeSettingsChanged           = "SETTINGS_CHANGED"
+	// The same schedule and command already exist in the crontab.
+	// Aynı zamanlama ve komut crontab'da zaten var.
+	errCodeCronJobDuplicate = "CRON_JOB_DUPLICATE"
+	// The DNSBL change needs a rewrite of the owner's
+	// smtpd_recipient_restrictions that the Panel will not make; Reason says
+	// why. MAIL_POLICY_INVALID: a requested value is outside what the Panel
+	// writes; Reason names it.
+	// DNSBL değişikliği, sahibin smtpd_recipient_restrictions değerinin Panel'in
+	// yapmayacağı bir yeniden yazımını gerektiriyor.
+	errCodeMailPolicyRestrictionsUnmanaged = "MAIL_POLICY_RESTRICTIONS_UNMANAGED"
+	errCodeMailPolicyInvalid               = "MAIL_POLICY_INVALID"
 	// A directory above the hosting base that CelikPanel did not create keeps
 	// the web server or the site users from reaching site files; the site was
 	// refused before any change (native finding P3; D-022, D-024).
