@@ -5,8 +5,33 @@ import { BrandMark } from './BrandMark';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { Button, Spinner } from './ui';
 import { parseRecoveryObservation, reconcileRecoveryObservation, recoveryFailureGuidanceKey, retryingCauseKey, savedRecoveryRequestId, UPDATE_MARKER_KEY, type RecoveryObservation } from '../lib/recoveryObservation';
+import { handoverAddress, recoveryHandover, savedSetupHandoverHost, setupStartMarkerKey } from '../lib/panelHandover';
 
-export function RecoveryStatus({ username, onUnauthorized }: { username: string; onUnauthorized?: () => void }) {
+// Planned certificate handover during setup (2026-10-08). The page names it
+// only when the server reports a managed certificate for the host that the
+// setup started in this browser was securing. One public, read-only request
+// per access check; a failed read leaves the ordinary unknown wording.
+// Sunucu, bu tarayicida baslatilan kurulumun guvenceye aldigi ad icin yonetilen
+// sertifika bildirdiginde planli devir anlatilir; okuma basarisizsa metin degismez.
+function usePanelHandover(username: string | undefined, enabled: boolean, checking: boolean) {
+    const [handover, setHandover] = useState<{ host: string; elsewhere: boolean } | null>(null);
+    useEffect(() => {
+        if (!enabled || !username) { setHandover(null); return; }
+        let saved: string | null = null;
+        try { saved = savedSetupHandoverHost(localStorage.getItem(setupStartMarkerKey(username))); } catch { saved = null; }
+        if (!saved) { setHandover(null); return; }
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), 5000);
+        void fetch('/api/v1/panel/access-address', { cache: 'no-store', signal: controller.signal })
+            .then(async response => (response.ok ? response.json() : null))
+            .then(body => { if (body && !controller.signal.aborted) setHandover(recoveryHandover(saved, body.hostname, window.location.hostname)); })
+            .catch(() => {}).finally(() => window.clearTimeout(timeout));
+        return () => { controller.abort(); window.clearTimeout(timeout); };
+    }, [username, enabled, checking]);
+    return enabled ? handover : null;
+}
+
+export function RecoveryStatus({ username, onUnauthorized, embedded = false }: { username: string; onUnauthorized?: () => void; embedded?: boolean }) {
     const { t, locale } = useI18n();
     const [requestId, setRequestId] = useState<string | null>(() => { try { return savedRecoveryRequestId(localStorage.getItem(UPDATE_MARKER_KEY)); } catch { return null; } });
     const [last, setLast] = useState<RecoveryObservation | null>(null);
@@ -40,8 +65,8 @@ export function RecoveryStatus({ username, onUnauthorized }: { username: string;
         const changed = (event: StorageEvent) => { if (event.key === UPDATE_MARKER_KEY) setRequestId(current => current ?? savedRecoveryRequestId(event.newValue)); };
         window.addEventListener('storage', changed); return () => window.removeEventListener('storage', changed);
     }, []);
-    return <section className="mt-8 border-t border-border pt-6" aria-labelledby="recovery-operation-heading">
-        <h2 id="recovery-operation-heading" className="text-lg font-semibold">{t('recovery.operationTitle')}</h2>
+    return <section className={embedded ? 'mt-2' : 'mt-8 border-t border-border pt-6'} aria-labelledby="recovery-operation-heading">
+        <h2 id="recovery-operation-heading" className={embedded ? 'sr-only' : 'text-lg font-semibold'}>{t('recovery.operationTitle')}</h2>
         {!requestId ? <p className="mt-3 max-w-prose text-sm text-fg-muted">{t('recovery.noOperation')}</p> : <>
             <p className="mt-3 break-all text-sm text-fg-muted">{t('recovery.operationId')}: <span className="font-mono">{requestId}</span></p>
             <div className="mt-4 space-y-3 text-sm" role="status" aria-live="polite">
@@ -72,14 +97,20 @@ export function RecoveryAccess({ user, cause, checking = false, onRetry, onUnaut
     checking?: boolean; onRetry: () => void; onUnauthorized?: () => void;
 }) {
     const { t } = useI18n();
+    const handover = usePanelHandover(user?.username, cause === 'availability' || cause === 'starting', checking);
+    const address = handover?.elsewhere ? handoverAddress(handover.host, window.location.port) : '';
     return <div className="min-h-screen bg-bg text-fg">
         <header className="border-b border-border bg-surface px-4 py-5 sm:px-8"><div className="mx-auto flex max-w-3xl items-center justify-between gap-4"><div className="flex items-center gap-3 font-semibold"><BrandMark className="h-7 w-7 text-primary" />CelikPanel</div><LanguageSwitcher /></div></header>
         <main className="mx-auto max-w-3xl px-4 py-10 sm:px-8 sm:py-16">
             {user && <p className="mb-5 break-words text-sm text-fg-muted">{user.username}</p>}
-            <h1 className="text-2xl font-semibold">{t(checking && !user ? 'recovery.checkingTitle' : `recovery.${cause}Title`)}</h1>
-            <p className="mt-4 max-w-prose text-sm leading-relaxed text-fg-muted" role="status">{t(checking && !user ? 'recovery.checkingHelp' : `recovery.${cause}Help`)}</p>
+            <h1 className="text-2xl font-semibold">{t(checking && !user ? 'recovery.checkingTitle' : handover ? 'recovery.handoverTitle' : `recovery.${cause}Title`)}</h1>
+            <p className="mt-4 max-w-prose break-words text-sm leading-relaxed text-fg-muted" role="status">{handover ? t('recovery.handoverHelp', { host: handover.host }) : t(checking && !user ? 'recovery.checkingHelp' : `recovery.${cause}Help`)}</p>
+            {address && <p className="mt-4 max-w-prose text-sm leading-relaxed text-fg-muted">{t('recovery.handoverAddress')} <a href={`${address}/setup`} className="break-all font-semibold text-primary underline underline-offset-4">{address}</a></p>}
             <div className="mt-6 flex flex-wrap items-center gap-3"><Button disabled={checking} onClick={onRetry}>{checking && <Spinner />}{t(checking ? 'recovery.checking' : 'recovery.retry')}</Button><Button variant="secondary" onClick={() => window.location.reload()}>{t('app.reload')}</Button></div>
-            {user?.effective_role === 'admin' && <RecoveryStatus key={user.username} username={user.username} onUnauthorized={onUnauthorized} />}
+            {/* During the planned handover the saved update result is not the reason for this page: it stays one step away. */}
+            {user?.effective_role === 'admin' && (handover
+                ? <details className="mt-8 border-t border-border pt-6 text-sm"><summary className="cursor-pointer font-semibold text-primary">{t('recovery.operationTitle')}</summary><RecoveryStatus key={user.username} username={user.username} onUnauthorized={onUnauthorized} embedded /></details>
+                : <RecoveryStatus key={user.username} username={user.username} onUnauthorized={onUnauthorized} />)}
         </main>
     </div>;
 }

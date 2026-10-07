@@ -16,6 +16,7 @@ import { Button, inputClass, Spinner } from './ui';
 import { ServerSetupComponents, useSetupComponentCatalog } from './ServerSetupComponents';
 import { setupComponentName, setupExecutionGuidance, setupHostBusyKey, setupHostingRootBlockerValues } from '../lib/serverSetupGuidance';
 import { setupEffectiveComponents, setupPresetComponents } from '../lib/serverSetupComponents';
+import { handoverAddress, handoverSettled, plannedHandoverDrop, setupHandover, setupStartMarkerKey } from '../lib/panelHandover';
 
 function useSetupI18n() {
     const i18n = useI18n();
@@ -31,7 +32,7 @@ async function setupFetch(url: string, options?: RequestInit) {
     finally { window.clearTimeout(timeout); }
 }
 const editorKey = (username: string) => `celikpanel.setup.editor.${username}`;
-const markerKey = (username: string) => `celikpanel.setup.start.${username}`;
+const markerKey = setupStartMarkerKey;
 // A mail component this distribution cannot install gets the mail-specific
 // refusal: what is missing, who acts and the two ways forward (upd1 P2).
 const mailServiceUnsupported = (code: string) => /^server_setup_service_unsupported:(postfix|dovecot|rspamd|roundcube)$/.test(code);
@@ -197,10 +198,10 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
     const markerRef = useRef(marker);
     markerRef.current = marker;
     const accept = useCallback((value: ServerSetupSnapshot) => { setSnapshot(value); setup.accept(value); }, [setup.accept]);
-    const failureText = (code: string, message?: string) => {
+    const failureText = (code: string, message?: string, reason?: string) => {
         const hostingRoot = setupHostingRootBlockerValues(code);
         if (hostingRoot) return t('setup.blocker.hostingRoot', hostingRoot);
-        if (code === 'HOST_MUTATION_BUSY') return t(setupHostBusyKey(message));
+        if (code === 'HOST_MUTATION_BUSY') return t(setupHostBusyKey(message, reason));
         return t(code === 'mail_enrollment_restored' ? 'setup.guide.mailEnrollmentFailed' : mailServiceUnsupported(code) ? 'setup.blocker.mailUnsupported' : codeKey[code.split(':')[0]] || 'setup.blocker.unknown');
     };
     // One localized name per component, shared by the step list and the
@@ -298,6 +299,15 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
         const timer = window.setInterval(() => void reconcile(), 3000);
         return () => window.clearInterval(timer);
     }, [execution, marker, reconnecting, resolving, reconcile, snapshot.status]);
+    // Once the certificate handover is behind this setup, drop its flag from
+    // the saved marker: a later restart is then not explained as the handover.
+    // Devir geride kalinca isaret kaldirilir; sonraki yeniden baslatma devir sayilmaz.
+    useEffect(() => {
+        if (!marker?.handover || !handoverSettled(execution)) return;
+        const { handover: _handover, ...kept } = marker;
+        try { localStorage.setItem(markerKey(user.username), JSON.stringify(kept)); } catch { /* the flag only selects recovery wording */ }
+        setMarker(kept);
+    }, [execution, marker, user.username]);
 
     function change<K extends keyof ServerSetupDraft>(key: K, value: ServerSetupDraft[K]) {
         if (key === 'local_ip') localIPTouched.current = true;
@@ -340,7 +350,7 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
         pendingRef.current = true; setBusy(true); setError('');
         let started: SetupStartMarker;
         try {
-            started = { request_id: newSetupRequestID(), plan_id: plan.id, panel_domain: draft.panel_domain };
+            started = { request_id: newSetupRequestID(), plan_id: plan.id, panel_domain: draft.panel_domain, ...(plan.steps.some(item => item.kind === 'panel_certificate') ? { handover: true } : {}) };
             localStorage.setItem(markerKey(user.username), JSON.stringify(started));
         } catch { setError(t('setup.storageFailed')); pendingRef.current = false; setBusy(false); return; }
         markerRef.current = started; setMarker(started); setStep('progress');
@@ -440,6 +450,15 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
     const hasOperation = resolving || !!execution || !!marker || reconnecting;
     const certificateReady = execution?.steps.some(item => item.kind === 'panel_certificate' && item.status === 'succeeded') || execution?.status === 'succeeded';
     const panelURL = certificateReady ? safeSetupPanelURL(execution?.panel_url, marker?.panel_domain || draft.panel_domain) : null;
+    // Planned certificate handover (lib/panelHandover.ts): said in advance on
+    // another address, and named when the connection drops at that step.
+    const currentHost = window.location.hostname;
+    const handoverDrop = reconnecting ? plannedHandoverDrop(execution, currentHost) : null;
+    const handoverAhead = reconnecting || completed || execution?.status === 'failed' ? null
+        : setupHandover(execution ? execution.steps : step === 'review' ? plan?.steps : undefined, currentHost);
+    const handoverNotice = handoverAhead?.elsewhere && handoverAhead.phase !== 'done' ? handoverAhead : null;
+    const handoverLink = handoverNotice || (handoverDrop?.elsewhere ? handoverDrop : null);
+    const handoverURL = handoverLink ? handoverAddress(handoverLink.host, window.location.port, execution?.panel_url) : '';
     const customized = !!draft.customization || draft.purpose === 'custom';
     const steps: Step[] = ['purpose', ...(customized ? ['components' as const] : []), 'access', 'review', 'progress'];
     const selectedComponents = setupEffectiveComponents(draft, catalog);
@@ -490,8 +509,9 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
             {error && <p role="alert" className="mb-5 rounded-lg border border-danger/40 bg-danger/5 p-4 text-sm text-danger">{error}</p>}
             {resolving ? <div className="flex items-center gap-3"><Spinner label={t('setup.resuming')} /><p>{t('setup.resuming')}</p></div>
                 : step === 'progress' || hasOperation ? <section aria-labelledby="setup-progress-title">
-                    <h2 id="setup-progress-title" className="text-xl font-semibold">{t(reconnecting ? 'setup.reconnecting' : execution?.status === 'failed' ? 'setup.operationFailed' : waitingLicense ? 'setup.licenseWaiting' : execution?.status === 'waiting' ? 'setup.waiting' : execution?.status === 'succeeded' ? 'setup.verifying' : 'setup.installing')}</h2>
-                    {reconnecting && <p className="mt-3 text-sm leading-6 text-fg-muted">{t('setup.uncertain')}</p>}
+                    <h2 id="setup-progress-title" className="text-xl font-semibold">{t(handoverDrop ? 'setup.handover.dropTitle' : reconnecting ? 'setup.reconnecting' : execution?.status === 'failed' ? 'setup.operationFailed' : waitingLicense ? 'setup.licenseWaiting' : execution?.status === 'waiting' ? 'setup.waiting' : execution?.status === 'succeeded' ? 'setup.verifying' : 'setup.installing')}</h2>
+                    {handoverDrop ? <div role="status" className="mt-3 max-w-2xl"><p className="break-words text-sm leading-6 text-fg-muted">{t('setup.handover.drop', { host: handoverDrop.host })}</p>{handoverDrop.elsewhere && <SetupHandoverAddress lead={t('setup.handover.dropAddress')} url={handoverURL} />}</div>
+                        : reconnecting && <p className="mt-3 text-sm leading-6 text-fg-muted">{t('setup.uncertain')}</p>}
                     {execution?.status === 'waiting' && execution.phase === 'dns_publisher' && <SetupDNSPublisher key={execution.id} execution={execution} onBound={reconcile} />}
                     {guidance && <aside aria-labelledby="setup-guidance-title" className="mt-5 rounded-lg border border-border bg-surface p-4 sm:p-5">
                         <h3 id="setup-guidance-title" className="font-semibold">{t(guidance.title)}</h3>
@@ -504,7 +524,8 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
                         {execution?.context?.infrastructure_dns && ['infrastructure_dns', 'access_dns'].includes(progressCurrentStep?.kind || execution?.phase || '') && <details className="mt-3 text-sm"><summary className="cursor-pointer font-medium text-primary">{t('setup.infrastructure.reviewTitle')}</summary><SetupInfrastructureDNSReview value={execution.context.infrastructure_dns} compact /></details>}
                         {guidance.details.length > 0 && <details className="mt-3 text-sm leading-6"><summary className="cursor-pointer font-medium text-primary">{t('setup.guide.more')}</summary><ul className="mt-2 list-disc space-y-2 pl-5 text-fg-muted">{guidance.details.map((message, index) => <li key={index}>{t(message.key, message.values)}</li>)}</ul></details>}
                     </aside>}
-                    {execution?.error && !['dns_publisher', 'dns_readiness'].includes(execution.phase) && <div role={confirmingPrevious || waitingDNSPrerequisite || observingMailEnrollment ? 'status' : 'alert'} className="mt-5 space-y-2 text-sm">{(!(confirmingPrevious || observingMailEnrollment) || !guidance) && <p className={confirmingPrevious || waitingDNSPrerequisite ? 'text-fg-muted' : 'text-danger'}>{failureText(execution.error.code, execution.error.message)}</p>}<details><summary className="cursor-pointer text-primary">{t('setup.details')}</summary><p className="mt-2 break-words text-fg-muted">{execution.error.message}</p></details></div>}
+                    {handoverNotice && <SetupHandoverNotice host={handoverNotice.host} url={handoverURL} />}
+                    {execution?.error && !['dns_publisher', 'dns_readiness'].includes(execution.phase) && <div role={confirmingPrevious || waitingDNSPrerequisite || observingMailEnrollment ? 'status' : 'alert'} className="mt-5 space-y-2 text-sm">{(!(confirmingPrevious || observingMailEnrollment) || !guidance) && <p className={confirmingPrevious || waitingDNSPrerequisite ? 'text-fg-muted' : 'text-danger'}>{failureText(execution.error.code, execution.error.message, execution.error.reason)}</p>}<details><summary className="cursor-pointer text-primary">{t('setup.details')}</summary><p className="mt-2 break-words text-fg-muted">{execution.error.message}</p></details></div>}
                     {progressChecks.length > 0 && waitingVerification && <ul className="mt-5 list-disc space-y-2 pl-5 text-sm text-fg-muted">{progressChecks.map(check => <li key={check.id}>{failureText(check.code)}</li>)}</ul>}
                     <ol className="mt-6 divide-y divide-border" aria-live="polite">
                         {execution?.steps.map(item => {
@@ -522,7 +543,7 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
                         {canReviseWaiting && !guidance && <Button variant="secondary" disabled={busy} onClick={() => void reviseWaiting()}>{t('setup.editPlan')}</Button>}
                         {execution?.status === 'failed' ? <Button variant="primary" onClick={editPlan}>{t('setup.revise')}</Button>
                             : waitingVerification ? <Button variant="primary" disabled={busy} onClick={() => void verifyManual()}>{t(verifyingRequirements ? 'setup.verifyChecking' : 'setup.verify')}</Button>
-                                : (reconnecting || completionFailed) && <Button variant="primary" disabled={busy} onClick={() => void (marker && !execution ? resumeUnconfirmed() : reconcile())}>{t(marker && !execution ? 'setup.resumeConfirmed' : 'setup.reconnect')}</Button>}
+                                : (reconnecting || completionFailed) && <Button variant={handoverDrop ? 'secondary' : 'primary'} disabled={busy} onClick={() => void (marker && !execution ? resumeUnconfirmed() : reconcile())}>{t(marker && !execution ? 'setup.resumeConfirmed' : 'setup.reconnect')}</Button>}
                     </div>
                     {waitingVerification && <div role="status" aria-live="polite" aria-atomic="true" className="mt-4 text-sm">
                         {verificationMessage && <div className="rounded-lg border border-border bg-surface p-4">
@@ -610,6 +631,7 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
                         {plan.infrastructure_dns && <SetupInfrastructureDNSReview value={plan.infrastructure_dns} />}
                         {plan.components && <div className="mt-5"><h3 className="font-semibold">{t('setup.components.reviewTitle')}</h3><ul className="mt-2 divide-y divide-border">{plan.components.map(item => <li key={item.id} className="flex flex-wrap items-baseline justify-between gap-2 py-2 text-sm"><span>{catalog?.components.find(row => row.id === item.id)?.name || stepTarget('service', item.id)}</span><span className="text-fg-muted">{t(item.installed ? 'setup.components.keep' : item.required ? 'setup.components.dependency' : 'setup.components.toInstall')}</span></li>)}</ul><p className="mt-3 text-sm text-fg-muted">{t('setup.components.preserve')}</p></div>}
                         <ol className="mt-5 divide-y divide-border">{plan.steps.map(item => <li key={item.id} className="py-4"><p className="font-medium">{t(`setup.kind.${item.kind}`, { target: stepTarget(item.kind, item.target) })}</p>{item.qualifier && item.kind !== 'mail_enrollment' && <p className="mt-1 text-sm text-fg-muted">{item.qualifier}</p>}</li>)}</ol>
+                        {handoverNotice && <SetupHandoverNotice host={handoverNotice.host} url={handoverURL} />}
                         <dl className="mt-5 space-y-3 rounded-lg bg-surface-2 p-4 text-sm"><div><dt className="font-semibold">{t('setup.firewallReview')}</dt><dd className="mt-1 leading-6 text-fg-muted">{t('setup.firewallHelp')}</dd></div><div><dt className="font-semibold">TCP</dt><dd className="mt-1 break-words tabular-nums">{plan.tcp_ports.join(', ') || t('setup.noPorts')}</dd></div><div><dt className="font-semibold">UDP</dt><dd className="mt-1 break-words tabular-nums">{plan.udp_ports.join(', ') || t('setup.noPorts')}</dd></div><div><dt className="font-semibold">{t('setup.certificateContact')}</dt><dd className="mt-1 break-all">{plan.contact_email}</dd></div>{plan.hostname_change && <div><dt className="font-semibold">{t('setup.hostnameChange')}</dt><dd className="mt-1 break-all">{plan.hostname_change}</dd></div>}</dl>
                         {automaticPublisher && publisherEndpoint && <div className="mt-5 space-y-2 border-t border-border pt-4 text-sm"><p className="font-semibold">{t('setup.publisher.reviewTitle')}</p><p className="break-all">{publisherEndpoint}</p><p className="leading-6 text-fg-muted">{t('setup.publisher.setupHelp')}</p></div>}
                         {plan.remote_dns_connection && <div className="mt-5 rounded-lg border border-border p-4 text-sm"><p className="font-semibold">{t('setup.remote.reviewTitle')}</p><p className="mt-2 break-all">{plan.remote_dns_connection.endpoint}</p><p className="mt-1 break-words text-fg-muted">{plan.remote_dns_connection.nameservers.join(', ')}</p><p className="mt-2 leading-6 text-fg-muted">{t('setup.remote.reviewHelp')}</p></div>}
@@ -630,6 +652,27 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
             </div>
         </div>}
     </ServerSetupShell>;
+}
+
+// The Panel's secure address as a real link, with what to expect there.
+function SetupHandoverAddress({ lead, url }: { lead: string; url: string }) {
+    const { t } = useSetupI18n();
+    return <div className="mt-3 text-sm leading-6">
+        <p className="text-fg-muted">{lead}</p>
+        <p className="mt-1"><a href={`${url}/setup`} className="break-all font-semibold text-primary underline underline-offset-4">{url}</a></p>
+        <p className="mt-2 text-fg-muted">{t('setup.handover.addressHelp')}</p>
+    </div>;
+}
+
+// Advance notice of the one planned Panel restart, in the wizard's own quiet
+// guidance surface: what happens, that nobody needs to act, where to continue.
+function SetupHandoverNotice({ host, url }: { host: string; url: string }) {
+    const { t } = useSetupI18n();
+    return <aside aria-labelledby="setup-handover-title" className="mt-5 rounded-lg border border-border bg-surface p-4 sm:p-5">
+        <h3 id="setup-handover-title" className="font-semibold">{t('setup.handover.title')}</h3>
+        <p className="mt-2 break-words text-sm leading-6 text-fg-muted">{t('setup.handover.notice', { host })}</p>
+        <SetupHandoverAddress lead={t('setup.handover.address')} url={url} />
+    </aside>;
 }
 
 function SetupInfrastructureDNSReview({ value, compact = false }: { value: SetupInfrastructureDNSPlan; compact?: boolean }) {

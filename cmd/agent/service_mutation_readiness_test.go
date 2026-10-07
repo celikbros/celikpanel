@@ -126,6 +126,12 @@ func TestBeginServiceMutationReturnsStructuredBusyRefusal(t *testing.T) {
 	if response.Job == nil {
 		t.Fatalf("busy response lost active job: %+v", response.Job)
 	}
+	// Another Agent job owning the lease is a known cause (2026-10-08): the
+	// Panel shows "another CelikPanel change is still running", not the
+	// generic sentence.
+	if response.Reason != transport.HostMutationReasonAgentMutation {
+		t.Fatalf("active-job refusal reason = %q", response.Reason)
+	}
 }
 
 func TestBeginServiceMutationReturnsStructuredBusyDuringManagerInitialization(t *testing.T) {
@@ -159,5 +165,9 @@ func TestBeginServiceMutationReturnsStructuredBusyDuringManagerInitialization(t 
 	}
 	if response.Job != nil {
 		t.Fatalf("host-lock response unexpectedly granted a job: %+v", response.Job)
+	}
+	// Who holds the lock is not known here, so no reason is invented.
+	if response.Reason != "" {
+		t.Fatalf("host-lock refusal named a reason it cannot know: %q", response.Reason)
 	}
 }

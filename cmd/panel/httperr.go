@@ -328,6 +328,21 @@ var hostMutationBusyMessages = map[string]string{
 
 const hostMutationBusyGenericMessage = "another server change or package-manager task is still running; wait and try again"
 
+// hostMutationBusyReasonForMessage gives a stored busy refusal its typed
+// reason back. A failed operation row keeps only the code and the sentence
+// above, so the reason is read from that sentence here, next to the map that
+// wrote it; the wizard then selects its headline by reason and no longer
+// parses English text. The generic sentence and any other text have no reason.
+// Kayitli mesgul reddinin tipli nedenini, cumleyi yazan eslemeden geri okur.
+func hostMutationBusyReasonForMessage(message string) string {
+	for reason, sentence := range hostMutationBusyMessages {
+		if message == sentence {
+			return reason
+		}
+	}
+	return ""
+}
+
 func classifyHostMutationError(err error) (agentRPCPlatformErrorClassification, bool) {
 	if !isPureWrappedError(err, errHostMutationBusy) {
 		return agentRPCPlatformErrorClassification{}, false

@@ -13,6 +13,7 @@ const dataModule = source => 'data:text/javascript;base64,' + Buffer.from(source
 const compile = path => ts.transpileModule(readFileSync(new URL(path,import.meta.url),'utf8'), {compilerOptions:{jsx:ts.JsxEmit.React,module:ts.ModuleKind.ES2022,target:ts.ScriptTarget.ES2020}}).outputText;
 const accessURL = dataModule(compile('../src/lib/accessObservation.ts'));
 const recoveryURL = dataModule(compile('../src/lib/recoveryObservation.ts'));
+const handoverURL = dataModule(compile('../src/lib/panelHandover.ts'));
 const {parseAccessObservation} = await import(accessURL);
 const {parseRecoveryObservation,savedRecoveryRequestId,reconcileRecoveryObservation,recoveryFailureGuidanceKey} = await import(recoveryURL);
 const stub = dataModule(`import React from '${reactURL}';
@@ -21,7 +22,7 @@ const stub = dataModule(`import React from '${reactURL}';
  export const BrandMark=()=>null,LanguageSwitcher=()=>null,Spinner=()=>null;
  export const Button=props=>React.createElement('button',props);
 `);
-function rewritten(path) { return dataModule(`import React from '${reactURL}';\n`+compile(path).replace(/from ['"]([^'"]+)['"]/g,(_,specifier)=>`from '${specifier==='react'?reactURL:specifier.endsWith('/recoveryObservation')?recoveryURL:stub}'`)); }
+function rewritten(path) { return dataModule(`import React from '${reactURL}';\n`+compile(path).replace(/from ['"]([^'"]+)['"]/g,(_,specifier)=>`from '${specifier==='react'?reactURL:specifier.endsWith('/recoveryObservation')?recoveryURL:specifier.endsWith('/panelHandover')?handoverURL:stub}'`)); }
 const {usePanelSession}=await import(rewritten('../src/auth/usePanelSession.ts'));
 const {RecoveryAccess,RecoveryStatus}=await import(rewritten('../src/components/RecoveryAccess.tsx'));
 const originalFetch=globalThis.fetch;
@@ -337,4 +338,44 @@ test('finishing the last attempt, renewal already off, verified after a failure 
  const locale=name=>readFileSync(new URL(`../src/i18n/${name}.ts`,import.meta.url),'utf8');
  for(const key of ['recovery.automatic.pausingTitle','recovery.automatic.pausingHelp','recovery.automatic.renewalOff','recovery.reason.update_preflight_refused'])
   for(const name of ['en','tr'])assert.ok(locale(name).includes(`'${key}':`),`${name} lacks ${key}`);
+});
+
+// 2026-10-08: during setup the Panel restarts once to serve its new certificate.
+// The page names that only when the server reports a managed certificate for the
+// host the setup started in this browser was securing; the saved update result
+// stays available but is not presented as the reason.
+test('planned certificate handover is named on server evidence only, with reads only',async()=>{
+ const host='boston.example.com';
+ const marker=JSON.stringify({request_id:'c'.repeat(32),plan_id:'d'.repeat(32),panel_domain:host,handover:true});
+ const update=JSON.stringify({state_version:1,phase:'active',marker:{marker_version:1,request_id:id}});
+ const storage=setupMarker=>({getItem:key=>key==='celikpanel.setup.start.admin'?setupMarker:update});
+ const server=served=>async url=>String(url).includes('/panel/access-address')?Response.json({hostname:served}):Response.json(known('succeeded'));
+ const render=async cause=>{await act(async()=>{tree=Renderer.create(React.createElement(RecoveryAccess,{user:admin,cause,onRetry(){}}))});await act(async()=>{});return JSON.stringify(tree.toJSON());};
+ for(const cause of ['availability','starting']){
+  setup(async()=>admin,server(host));globalThis.localStorage=storage(marker);
+  try{
+   const content=await render(cause);
+   assert.ok(content.includes('recovery.handoverTitle')&&content.includes('recovery.handoverHelp'),content);
+   assert.ok(!content.includes(`recovery.${cause}Title`)&&!content.includes(`recovery.${cause}Help`),content);
+   const link=tree.root.findAllByType('a').find(node=>node.props.href===`https://${host}/setup`);
+   assert.ok(link,'the secure address is a real link');
+   // The update result is one step away, inside a closed disclosure.
+   const details=tree.root.findByType('details');
+   assert.equal(details.props.open,undefined);
+   assert.equal(details.findAllByType(RecoveryStatus).length,1);
+   assert.ok(calls.every(([,options])=>!options?.method||options.method==='GET'));
+  }finally{await clean()}
+ }
+ // No server report, another host, a setup without the step, or another cause: the page cannot know.
+ for(const [served,saved,cause] of [['',marker,'availability'],['other.example.com',marker,'availability'],[host,JSON.stringify({request_id:'c'.repeat(32),plan_id:'d'.repeat(32),panel_domain:host}),'availability'],[host,marker,'license']]){
+  setup(async()=>admin,server(served));globalThis.localStorage=storage(saved);
+  try{
+   const content=await render(cause);
+   assert.ok(content.includes(`recovery.${cause}Title`)&&!content.includes('recovery.handover'),content);
+   assert.equal(tree.root.findAllByType('details').length,0);
+  }finally{await clean()}
+ }
+ // The address read failing leaves the ordinary wording.
+ setup(async()=>admin,async url=>{if(String(url).includes('/panel/access-address'))throw new Error('offline');return Response.json(known('succeeded'));});globalThis.localStorage=storage(marker);
+ try{assert.ok((await render('availability')).includes('recovery.availabilityTitle'));}finally{await clean()}
 });

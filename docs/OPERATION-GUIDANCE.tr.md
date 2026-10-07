@@ -585,3 +585,145 @@ gibi İngilizce); hiçbir ekran değişmedi.
 Yapılmayan: hiçbir ekran ertelemeyi göstermez; Panel başlangıcında kendi posta
 adımı reddedilen bir sertifika yenilemesi hâlâ alan adının "Etkinleştirmeyi
 yeniden dene" işlemini ya da bir sonraki Panel başlangıcını bekler.
+
+### Kurulum sırasında planlı sertifika devri: bilinmeyen sonuç ekranları yerine yönlendirme (2026-10-08)
+
+Birim, sözleşme ve bağlanmış bileşen testleriyle kaynak durumu; gerçek sistem
+denemesi ve tarayıcı geçişi yapılmadı. v0.1.0-alpha.81 çalıştıran kurulu bir
+Ubuntu sunucusunda, `https://<sunucu-IP>:2083` adresinden oturum açmış bir sahip
+tarafından bulundu. Etkilenen sözleşme maddeleri: dayanıklılık ilkeleri 2 ve 6
+(P0.2 kapsamı); hiçbir kabul maddesi kapanmadı.
+
+**Sahibin gördüğü.**
+
+1. İlk deneme: "Bileşeni hazırla: Nginx" adımı genel başlıkla durdu: "Kurulum
+   durdu, çünkü başka bir sunucu değişikliği veya paket işlemi hâlâ sürüyor…".
+   Neyin meşgul olduğu söylenmedi. Dakikalar sonraki ikinci deneme çalıştı.
+2. İkinci denemede "certbot kuruluyor" başlıklı bir katman "Bağlantı kesildi.
+   Panel kilidi açılmadan yeniden bağlanılıyor…" ve "Sunucunun son durumu
+   doğrulanamadı…" dedi; ardından tam sayfa "Panelin hazır olma durumu kontrol
+   edilemedi" ekranı, ilgisiz bir "Güncelleme ve kurtarma durumu: Güncelleme
+   doğrulandı" bölümünün üstünde göründü. Sayfa sonra kendiliğinden düzeldi ve
+   "Sunucunuz hazır" gösterdi. Sunucuda hiçbir sorun yoktu.
+
+**Sunucuda olan (koddan okundu, o sunucuda gözlenmedi).** "Panel erişimini
+güvenceye al" adımı sertifikayı alır; Agent ardından paneli, sertifikayı sunması
+için bir kez yeniden başlatır (`systemctl restart celikpanel-panel`); bu, adımın
+kendi Agent işleri arasındaki bir boşlukta ya da adımın hemen ardından olur.
+Panel çalışırken sertifika değiştirmez. Yeniden başlatmadan sonra alan adıyla
+gelen bağlantı yeni sertifikayı alır; IP adresiyle gelen bağlantı başlangıçtaki
+kendinden imzalı sertifikayı almayı sürdürür, bu yüzden IP adresinde açık sayfa
+kendiliğinden yeniden bağlanır. Katman başta bir bağlantı kaybı değildi:
+tarayıcı biten certbot adımını üstlenmişti ve ardından gelen katalog taraması,
+kurulum sürdüğü sürece `server_setup_busy` ile reddedildi; katman bunu "bağlantı
+kesildi" diye bildirdi. Tam sayfa, yeniden başlatmadan (`PANEL_STARTING`) geldi;
+güncelleme bölümü tarayıcıda kayıtlı bir güncelleme kimliğini okur ve her
+yöneticiye gösterilir.
+
+**Ürünün artık söylediği.** Anahtarlar `web/src/i18n` altındadır; `{host}`
+incelenen panel alan adıdır.
+
+- *Adımdan önce ve adım sırasında, tarayıcı o alan adında değilken* (inceleme ve
+  ilerleme sayfası, sakin yönlendirme yüzeyi, uyarı biçimi yok):
+  - `setup.handover.title` — TR "Bu kurulum sırasında panel bir kez yeniden
+    başlar" · EN "The Panel restarts once during this setup"
+  - `setup.handover.notice` — TR "“Panel erişimini güvenceye al: {host}” adımında
+    panel sertifikasını alır ve onu kullanmaya başlamak için bir kez yeniden
+    başlar. Bu sayfanın bağlantısı o sırada kısa süreliğine kesilir. Bu planlı
+    bir durumdur: kurulum sunucuda devam eder ve bu sayfa kendiliğinden yeniden
+    bağlanır. Sizin bir şey yapmanız gerekmez." · EN "At the step “Secure panel
+    access: {host}”, the Panel gets its certificate and restarts once to start
+    using it. This page then loses its connection for a short time. That is
+    planned: setup continues on the server and this page reconnects by itself.
+    You do not need to do anything."
+  - `setup.handover.address` — TR "O adımdan sonra paneli güvenli adresinden
+    açın:" · EN "After that step, open the Panel at its secure address:";
+    ardından oradaki sihirbaza giden bağlantı olarak `https://{host}:<port>`.
+  - `setup.handover.addressHelp` — TR "Orada yeniden giriş yaparsınız; kurulum
+    aynı ilerlemeyi gösterir. Tarayıcı o adreste sertifika uyarısı verirse adım
+    henüz bitmemiştir; bu sayfaya dönüp bekleyin." · EN "You sign in again
+    there, and setup shows the same progress. If the browser warns about the
+    certificate at that address, the step has not finished yet; return to this
+    page and wait."
+- *Bağlantı koptuğunda ve okunan son durum sertifika adımını en öne koyuyorsa*
+  (çalışıyor; önceki bütün adımlar bitmiş ve sırada; ya da bitmiş ve sonraki
+  hiçbir adım bitmemiş). "Kuruluma yeniden bağlanılıyor / Sonuç henüz
+  doğrulanmadı…" metninin yerini alır:
+  - `setup.handover.dropTitle` — TR "Panel bu adımda yeniden başlar" · EN "The
+    Panel restarts at this step"
+  - `setup.handover.drop` — TR "Kurulum {host} için panel erişimini güvenceye
+    alırken bu sayfanın bağlantısı kesildi. Bu beklenen bir durumdur: panel,
+    yeni sertifikasını kullanmaya başlamak için bu adımda bir kez yeniden
+    başlar. Kurulum sunucuda devam eder ve bu sayfa kendiliğinden yeniden
+    bağlanır. Kurulumu yeniden başlatmayın." · EN "This page lost its connection
+    while setup was securing panel access for {host}. That is expected: the
+    Panel restarts once at this step to start using its new certificate. Setup
+    continues on the server and this page reconnects by itself. Do not start
+    setup again."
+  - `setup.handover.dropAddress` (yalnız başka adreste) — TR "Bu sayfa birkaç
+    dakika içinde yeniden bağlanmazsa panelin güvenli adresinden devam edin:" ·
+    EN "If this page has not reconnected after a few minutes, continue at the
+    Panel’s secure address:"; aynı bağlantı ve yardım satırıyla. "Bu işleme
+    yeniden bağlan" ikincil eylem olarak kalır; yalnızca okur.
+  - Kim işlem yapar: kimse. Nasıl devam eder: kendiliğinden. Başka bir adımdaki
+    kopma bilinmeyen sonuç metnini korur.
+- *Panel başlarken tam sayfa*, yalnız bu tarayıcı planında bu adım bulunan bir
+  kurulum başlatmışsa ve panelin kendisi o alan adı için yönetilen bir sertifika
+  bildiriyorsa (`GET /api/v1/panel/access-address`):
+  - `recovery.handoverTitle` — TR "Panel kurulum sırasında bir kez yeniden
+    başlar" · EN "The Panel restarts once during setup"
+  - `recovery.handoverHelp` — TR "Kurulum {host} için panel erişimini güvenceye
+    aldı; panel yeni sertifikasını kullanmaya başlamak için bir kez yeniden
+    başlar. Kurulum sunucuda devam eder. Bu sayfa kendiliğinden kontrol eder ve
+    panel hazır olduğunda açılır; sizin bir şey yapmanız gerekmez." · EN "Setup
+    secured panel access for {host}, and the Panel restarts once to start using
+    its new certificate. Setup continues on the server. This page checks by
+    itself and opens when the Panel is ready; you do not need to do anything."
+  - `recovery.handoverAddress` (yalnız başka adreste) — TR "Dilerseniz panelin
+    güvenli adresinden de devam edebilirsiniz:" · EN "You can also continue at
+    the Panel’s secure address:"; bağlantıyla birlikte.
+  - Güncelleme ve kurtarma durumu sayfada kalır, kendi başlığı altında kapalı
+    durur; neden buymuş gibi gösterilmez. O sunucu bildirimi yoksa sayfa mevcut
+    metnini korur.
+- *Katman.* Biten bir kurulum adımı artık katmanı tutmaz: ardından gelen tarama
+  `server_setup_busy` ile reddedildiğinde katman, kurulumun geri kalanı boyunca
+  "certbot kuruluyor / Bağlantı kesildi" göstermek yerine bırakılır. Yeni katman
+  metni yok.
+- *Sunucu meşgul olduğu için reddedilen kurulum adımı.* Başarısız adım artık
+  tipli nedeni (`error.reason`) taşır ve başlık ondan seçilir; eski kayıtlar için
+  Panel cümlesi yedek olarak kalır. Agent artık "kirayı başka bir Agent işi
+  tutuyor" durumunu adlandırır (`agent_mutation_active`) — panelin başlangıçtan
+  sonraki kısa işleri, bir sertifika etkinleştirmesi ya da bir yenileme böyle
+  işler olarak çalışır — böylece sahip genel metin yerine mevcut
+  `setup.blocker.changeBusy` metnini okur ("Kurulum durdu, çünkü bu sunucuda
+  başka bir CelikPanel değişikliği hâlâ sürüyor. Tamamlanmasını bekleyin,
+  ardından Düzeltilmiş planı incele’yi seçip kurulumu yeniden başlatın.
+  Tamamlanan adımlar korunur." / "Setup stopped because another CelikPanel
+  change is still running on this server. Wait for it to finish, then choose
+  Review a revised plan and start setup again. Steps that already finished are
+  kept.").
+
+**Kayıt biçimi.** `error.reason`, kurulum yürütme kaydında ve API'de isteğe bağlı
+bir alandır; eski kayıtlar ve yeni kaydı okuyan eski bir Panel etkilenmez. Alt
+işlem satırı hâlâ yalnız kod ve cümle saklar; nedeni Panel'de cümleden geri
+okunur. Tarayıcının kurulum başlangıç işaretine isteğe bağlı bir `handover`
+alanı eklenir. Geçiş (migration) yok.
+
+**Ele alınmayan.**
+
+- 2026-10-08'de neyin meşgul olduğu saptanmadı; o sunucunun Agent günlüğü
+  gerekir. Agent'ın sahibini belirleyemediği bir kilit ya da bir güncellemenin
+  sürüm kapısı hâlâ genel başlığı verir.
+- Reddedilen adım kurulumu hâlâ durdurur; kendiliğinden bekleyip devam etmez.
+- Engelleyen iş yalnız türüyle adlandırılır ("başka bir CelikPanel değişikliği"),
+  ne yaptığıyla değil.
+- Bir kurulum adımı kurulurken sekme yeniden odak alırsa katman sihirbazı hâlâ
+  örtebilir.
+- Başlangıçtaki kendinden imzalı sertifika yoksa, süresi dolmuşsa ya da IP adresi
+  içermiyorsa IP adresindeki sayfa yeniden başlatmadan sonra yeniden bağlanamaz;
+  bildirim o durumda güvenli adres bağlantısına dayanır. Denenmedi.
+- Tam sayfada, aynı kurulumda sonraki bir adım bitmeden gerçekleşen ikinci bir
+  panel yeniden başlatması da bu yeniden başlatma olarak açıklanır.
+- Gerçek sunucuda ya da tarayıcıda doğrulanmadı: metinlerin yerinde görünümü,
+  yeniden başlatmanın adım listesine göre zamanlaması ve tam sayfanın on
+  saniyelik yeniden denetimi.

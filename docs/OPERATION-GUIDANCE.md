@@ -662,3 +662,143 @@ line); no screen changes.
 Not done: no screen shows the deferral; a certificate renewal at Panel start
 whose own mail step is refused still waits for the domain's "Retry activation"
 or the next Panel start.
+
+### Planned certificate handover during setup: guidance instead of unknown-result screens (2026-10-08)
+
+Source state with unit, contract and mounted-component tests; no native run and
+no browser pass. Found by an owner on an installed Ubuntu server running
+v0.1.0-alpha.81, signed in at `https://<server-IP>:2083`. Affected contract
+items: resilience invariants 2 and 6 (P0.2 scope); no acceptance item is closed.
+
+**What the owner saw.**
+
+1. First attempt: "Prepare component: Nginx" stopped with the generic headline
+   "Setup stopped because another server change or package task is still
+   running…". What was busy was not named. A second attempt minutes later ran.
+2. During the second run an overlay titled "certbot kuruluyor" (Installing
+   certbot) said "Bağlantı kesildi. Panel kilidi açılmadan yeniden
+   bağlanılıyor…" and "Sunucunun son durumu doğrulanamadı…", then a full page
+   "Panelin hazır olma durumu kontrol edilemedi" above an unrelated
+   "Güncelleme ve kurtarma durumu: Güncelleme doğrulandı" block. The page then
+   recovered by itself and showed "Sunucunuz hazır". Nothing was wrong on the
+   server.
+
+**What happens on the server (read from the code, not observed on that server).**
+The step "Secure panel access" obtains the certificate; the Agent then restarts
+the Panel once (`systemctl restart celikpanel-panel`) so it serves it, in a gap
+between the step's own Agent jobs or right after the step. The Panel does not
+swap certificates while running. After the restart a connection by host name
+gets the new certificate; a connection by IP address keeps the original
+self-signed certificate, so a page opened on the IP address reconnects by
+itself. The overlay was not a lost connection at first: the browser had adopted
+the finished certbot step and its follow-up catalogue scan was refused with
+`server_setup_busy` for as long as setup ran, which the overlay reported as
+"connection interrupted". The full page came from the restart
+(`PANEL_STARTING`); its update block reads a saved update ID from the browser
+and is shown to every administrator.
+
+**What the product says now.** Keys are in `web/src/i18n`; `{host}` is the
+reviewed panel host name.
+
+- *Before and during the step, when the browser is not on that host name*
+  (review page and progress page, quiet guidance surface, no alarm styling):
+  - `setup.handover.title` — EN "The Panel restarts once during this setup" ·
+    TR "Bu kurulum sırasında panel bir kez yeniden başlar"
+  - `setup.handover.notice` — EN "At the step “Secure panel access: {host}”,
+    the Panel gets its certificate and restarts once to start using it. This
+    page then loses its connection for a short time. That is planned: setup
+    continues on the server and this page reconnects by itself. You do not need
+    to do anything." · TR "“Panel erişimini güvenceye al: {host}” adımında panel
+    sertifikasını alır ve onu kullanmaya başlamak için bir kez yeniden başlar.
+    Bu sayfanın bağlantısı o sırada kısa süreliğine kesilir. Bu planlı bir
+    durumdur: kurulum sunucuda devam eder ve bu sayfa kendiliğinden yeniden
+    bağlanır. Sizin bir şey yapmanız gerekmez."
+  - `setup.handover.address` — EN "After that step, open the Panel at its
+    secure address:" · TR "O adımdan sonra paneli güvenli adresinden açın:",
+    followed by `https://{host}:<port>` as a link to the wizard there.
+  - `setup.handover.addressHelp` — EN "You sign in again there, and setup shows
+    the same progress. If the browser warns about the certificate at that
+    address, the step has not finished yet; return to this page and wait." ·
+    TR "Orada yeniden giriş yaparsınız; kurulum aynı ilerlemeyi gösterir.
+    Tarayıcı o adreste sertifika uyarısı verirse adım henüz bitmemiştir; bu
+    sayfaya dönüp bekleyin."
+- *When the connection drops and the last state read puts the certificate step
+  at the front* (running; next to run with every earlier step finished; or
+  finished with no later step finished). Replaces "Reconnecting to setup / The
+  result has not been confirmed yet…":
+  - `setup.handover.dropTitle` — EN "The Panel restarts at this step" · TR
+    "Panel bu adımda yeniden başlar"
+  - `setup.handover.drop` — EN "This page lost its connection while setup was
+    securing panel access for {host}. That is expected: the Panel restarts once
+    at this step to start using its new certificate. Setup continues on the
+    server and this page reconnects by itself. Do not start setup again." · TR
+    "Kurulum {host} için panel erişimini güvenceye alırken bu sayfanın
+    bağlantısı kesildi. Bu beklenen bir durumdur: panel, yeni sertifikasını
+    kullanmaya başlamak için bu adımda bir kez yeniden başlar. Kurulum sunucuda
+    devam eder ve bu sayfa kendiliğinden yeniden bağlanır. Kurulumu yeniden
+    başlatmayın."
+  - `setup.handover.dropAddress` (other address only) — EN "If this page has not
+    reconnected after a few minutes, continue at the Panel’s secure address:" ·
+    TR "Bu sayfa birkaç dakika içinde yeniden bağlanmazsa panelin güvenli
+    adresinden devam edin:", with the same link and help line. "Reconnect to
+    this operation" stays as the secondary action; it only reads.
+  - Who acts: nobody. Resume: automatic. A drop at any other step keeps the
+    unknown-result text.
+- *The full page while the Panel starts*, only when this browser started a setup
+  whose plan had the step and the Panel itself reports a managed certificate for
+  that host (`GET /api/v1/panel/access-address`):
+  - `recovery.handoverTitle` — EN "The Panel restarts once during setup" · TR
+    "Panel kurulum sırasında bir kez yeniden başlar"
+  - `recovery.handoverHelp` — EN "Setup secured panel access for {host}, and the
+    Panel restarts once to start using its new certificate. Setup continues on
+    the server. This page checks by itself and opens when the Panel is ready;
+    you do not need to do anything." · TR "Kurulum {host} için panel erişimini
+    güvenceye aldı; panel yeni sertifikasını kullanmaya başlamak için bir kez
+    yeniden başlar. Kurulum sunucuda devam eder. Bu sayfa kendiliğinden kontrol
+    eder ve panel hazır olduğunda açılır; sizin bir şey yapmanız gerekmez."
+  - `recovery.handoverAddress` (other address only) — EN "You can also continue
+    at the Panel’s secure address:" · TR "Dilerseniz panelin güvenli adresinden
+    de devam edebilirsiniz:", with the link.
+  - The update and recovery status stays on the page, closed under its own
+    title, instead of being shown as if it were the reason. Without that server
+    report the page keeps its existing wording.
+- *The overlay.* A setup step that has finished no longer holds the overlay:
+  when its follow-up scan is refused with `server_setup_busy`, the overlay is
+  released instead of showing "Installing certbot / Connection interrupted" for
+  the rest of the setup. No new overlay text.
+- *A setup step refused because the server is busy.* The failed step now carries
+  the typed reason (`error.reason`), and the headline is selected from it; the
+  Panel's sentence stays the fallback for older records. The Agent now names the
+  case "another Agent job owns the lease" (`agent_mutation_active`) — the Panel's
+  own short work after a start, a certificate activation or a renewal run as
+  such jobs — so the owner reads the existing `setup.blocker.changeBusy` text
+  ("Setup stopped because another CelikPanel change is still running on this
+  server. Wait for it to finish, then choose Review a revised plan and start
+  setup again. Steps that already finished are kept." / "Kurulum durdu, çünkü bu
+  sunucuda başka bir CelikPanel değişikliği hâlâ sürüyor. Tamamlanmasını
+  bekleyin, ardından Düzeltilmiş planı incele’yi seçip kurulumu yeniden
+  başlatın. Tamamlanan adımlar korunur.") instead of the generic one.
+
+**Stored shape.** `error.reason` is an optional field in the setup execution
+record and API; older records and an older Panel reading a newer record are
+unaffected. A child operation row still stores only code and sentence; its reason
+is read back from the sentence on the Panel. The browser's setup start marker
+gains an optional `handover` flag. No migration.
+
+**Not handled.**
+
+- What was busy on 2026-10-08 is not established; it needs that server's Agent
+  journal. A lock held by something the Agent cannot identify, or an update's
+  release gate, still gives the generic headline.
+- A refused step still stops setup; it does not wait and resume by itself.
+- The blocking job is named by kind only ("another CelikPanel change"), not by
+  what it is doing.
+- The overlay can still cover the wizard while a setup step is installing, if
+  the tab regains focus during that step.
+- If the original self-signed certificate is missing, expired or has no IP
+  address, a page on the IP address cannot reconnect after the restart; the
+  notice then relies on its secure-address link. Not exercised.
+- On the full page, a second Panel restart in the same setup before a later step
+  finishes is also explained as this restart.
+- Not verified on a real server or in a browser: the texts in place, the timing
+  of the restart against the step list, and the full page's ten-second recheck.

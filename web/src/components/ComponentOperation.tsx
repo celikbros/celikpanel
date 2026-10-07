@@ -12,6 +12,7 @@ import {
 import { createPortal } from 'react-dom';
 import { useI18n } from '../i18n';
 import { readApiError, type ApiError } from '../lib/apiError';
+import { scanRefusedBySetup } from '../lib/panelHandover';
 import { useNavigationBlocker } from '../router';
 import { showToast } from './Toast';
 
@@ -1684,6 +1685,28 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
                 }
                 if (!scanResponse.ok) {
                     if (scanResponse.status === 401) {
+                        return;
+                    }
+                    // 2026-10-08: this operation was a step of a running server
+                    // setup, which owns the host until it ends and refuses the
+                    // scan. The step's own success was read above. Holding the
+                    // overlay would name a finished step as "installing" and
+                    // call a reachable Panel a lost connection for the rest of
+                    // the setup, so release it; the wizard shows the setup and
+                    // the Panel keeps refusing every other change meanwhile.
+                    // Bu işlem süren kurulumun bir adımıydı; kurulum makineyi
+                    // tutarken tarama reddedilir. Adım başarıyla bitti; katman
+                    // bırakılır, kurulumu sihirbaz gösterir.
+                    if (await scanRefusedBySetup(scanResponse)) {
+                        if (cancelled) return;
+                        clearStoredOperation();
+                        recoveryMarkerRef.current = null;
+                        adoptedOperationIDRef.current = '';
+                        lockedRef.current = false;
+                        setOperation(null);
+                        setRefreshingCatalog(false);
+                        setConnectionInterrupted(false);
+                        setFailure(null);
                         return;
                     }
                     setConnectionInterrupted(true);

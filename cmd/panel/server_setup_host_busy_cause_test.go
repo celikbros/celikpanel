@@ -51,3 +51,41 @@ func TestSetupFailuresKeepTheHostBusyCause(t *testing.T) {
 		t.Fatalf("plain firewall failure = %+v", got)
 	}
 }
+
+// 2026-10-08: the failed setup step carries the typed reason, so the wizard
+// selects its headline from the reason and not from the English sentence. A
+// child operation row stores only the code and the sentence; the reason is
+// read back from that sentence when the row is loaded.
+func TestSetupBusyFailureCarriesItsTypedReason(t *testing.T) {
+	firewall := serverSetupExecutionStep{serverSetupPlanStep: serverSetupPlanStep{Kind: "firewall"}}
+	for reason, sentence := range hostMutationBusyMessages {
+		direct := serverSetupFailureForStep(firewall, fmt.Errorf("apply: %w", &hostMutationBusyError{reason: reason}))
+		if direct.Code != transport.HostMutationBusy || direct.Reason != reason || direct.Message != sentence {
+			t.Fatalf("%s direct failure = %+v", reason, direct)
+		}
+		if got := hostMutationBusyReasonForMessage(sentence); got != reason {
+			t.Fatalf("sentence for %s reads back as %q", reason, got)
+		}
+		// The child path: an install operation refused at its Agent lease.
+		start := operationStartFailure(&hostMutationBusyError{reason: reason})
+		child := &serverSetupChildFailure{Code: start.Code, Message: start.Message,
+			Reason: hostMutationBusyReasonForMessage(start.Message)}
+		service := serverSetupExecutionStep{serverSetupPlanStep: serverSetupPlanStep{Kind: "service", Target: "nginx"}}
+		if got := serverSetupFailureForStep(service, child); got.Code != transport.HostMutationBusy || got.Reason != reason {
+			t.Fatalf("%s child failure = %+v", reason, got)
+		}
+	}
+	// The Panel's own short work runs as an Agent job; the Agent now names it.
+	if hostMutationBusyReasonForMessage(hostMutationBusyMessages[transport.HostMutationReasonAgentMutation]) != transport.HostMutationReasonAgentMutation {
+		t.Fatal("the Agent-job sentence lost its reason")
+	}
+	for _, message := range []string{hostMutationBusyGenericMessage, "", "something else"} {
+		if got := hostMutationBusyReasonForMessage(message); got != "" {
+			t.Fatalf("%q reads back as reason %q", message, got)
+		}
+	}
+	unnamed := serverSetupFailureForStep(firewall, &hostMutationBusyError{})
+	if unnamed.Reason != "" {
+		t.Fatalf("unnamed busy failure invented reason %q", unnamed.Reason)
+	}
+}

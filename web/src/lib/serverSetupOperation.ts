@@ -23,8 +23,8 @@ export interface ServerSetupExecution {
     context?: SetupExecutionContext;
 }
 // component/step/detail are optional install-failure guidance; detail is one
-// bounded, redacted host line.
-export interface SetupExecutionError { code: string; message: string; component?: string; step?: string; detail?: string }
+// bounded, redacted host line. reason is the typed cause of HOST_MUTATION_BUSY.
+export interface SetupExecutionError { code: string; message: string; component?: string; step?: string; detail?: string; reason?: string }
 export interface SetupExecutionContext {
     dns_mode: 'local' | 'external' | 'existing'; dns_role: 'primary' | 'secondary' | '';
     dns_engine: string; local_nameserver: string; local_ip: string; peer_nameserver: string; peer_ip: string;
@@ -81,8 +81,8 @@ export function decodeSetupExecution(value: unknown, marker?: SetupStartMarker |
     if (isRecord(value.error)) {
         const error = value.error;
         const optional = (key: string, limit: number) => error[key] === undefined || (typeof error[key] === 'string' && (error[key] as string).length <= limit);
-        if (!optional('component', 64) || !optional('step', 32) || !optional('detail', 400)) {
-            const { component: _component, step: _step, detail: _detail, ...kept } = error;
+        if (!optional('component', 64) || !optional('step', 32) || !optional('detail', 400) || !optional('reason', 64)) {
+            const { component: _component, step: _step, detail: _detail, reason: _reason, ...kept } = error;
             value = { ...value, error: kept };
         }
     }
@@ -100,7 +100,9 @@ export function decodeSetupExecution(value: unknown, marker?: SetupStartMarker |
     }
     return value as unknown as ServerSetupExecution;
 }
-export interface SetupStartMarker { request_id: string; plan_id: string; panel_domain: string }
+// handover: the reviewed plan contained the panel certificate step, so the
+// Panel restarts once during this setup (lib/panelHandover.ts).
+export interface SetupStartMarker { request_id: string; plan_id: string; panel_domain: string; handover?: boolean }
 export function decodeSetupMarker(raw: string | null): SetupStartMarker | null {
     try {
         const value: unknown = JSON.parse(raw || 'null');

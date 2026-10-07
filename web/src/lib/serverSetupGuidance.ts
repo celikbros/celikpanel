@@ -26,21 +26,29 @@ export function setupHostingRootBlockerValues(code: string): Record<string, stri
     if (!/^[0-7]{4}$/.test(mode) || !owner || !group || !directory.startsWith('/')) return null;
     return { directory, mode, owner: `${owner}:${group}`, command: `sudo chmod 755 ${directory}` };
 }
-// A setup step refused with HOST_MUTATION_BUSY carries the Panel's reason
-// sentence (cmd/panel/httperr.go hostMutationBusyMessages) but no reason field,
-// so the sentence's opening selects the headline. A sentence this list does not
-// know, including the Panel's generic one, gets the text that covers every
-// reason. tests/server-setup-host-busy.test.mjs pins the openings to the Panel.
-// HOST_MUTATION_BUSY ile reddedilen adim gerekce alanini tasimaz; Panel'in
-// gerekce cumlesinin basi basligi secer, taninmayan cumle genel metni alir.
+// A setup step refused with HOST_MUTATION_BUSY carries the Panel's typed reason
+// (internal/transport HostMutationReason*), and the reason selects the headline.
+// A record written before the reason existed has only the Panel's sentence
+// (cmd/panel/httperr.go hostMutationBusyMessages); its opening is the fallback.
+// Neither known: the text that covers every reason.
+// tests/server-setup-host-busy.test.mjs pins both to the Panel.
+// HOST_MUTATION_BUSY ile reddedilen adim tipli nedenini tasir; basligi neden
+// secer. Eski kayitta yalniz cumle vardir; cumlenin basi yedek secicidir.
+const hostBusyReasons: Record<string, TranslationKey> = {
+    package_manager_active: 'setup.blocker.packageBusy',
+    agent_mutation_active: 'setup.blocker.changeBusy',
+    panel_operation_active: 'setup.blocker.changeBusy',
+    host_lock_busy: 'setup.blocker.hostHeld',
+};
 const hostBusyOpenings: [string, TranslationKey][] = [
     ["This server's package manager is busy", 'setup.blocker.packageBusy'],
     ['Another CelikPanel change is still running', 'setup.blocker.changeBusy'],
     ['Another CelikPanel operation is still running', 'setup.blocker.changeBusy'],
     ['A change that did not finish is still holding this server', 'setup.blocker.hostHeld'],
 ];
-export const setupHostBusyKey = (message = ''): TranslationKey =>
-    hostBusyOpenings.find(([opening]) => message.startsWith(opening))?.[1] || 'setup.blocker.hostBusy';
+export const setupHostBusyKey = (message = '', reason = ''): TranslationKey =>
+    (Object.prototype.hasOwnProperty.call(hostBusyReasons, reason) ? hostBusyReasons[reason] : undefined)
+    || hostBusyOpenings.find(([opening]) => message.startsWith(opening))?.[1] || 'setup.blocker.hostBusy';
 
 // A screen passes its localized names (mail profiles, cron) so the guidance
 // sentence names the component exactly as the step list above it does.

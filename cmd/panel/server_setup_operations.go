@@ -1016,7 +1016,8 @@ func (p *Panel) runServerSetupStep(ctx context.Context, plan serverSetupPlan, st
 		case serviceOperationFailed:
 			if op.Error != nil {
 				return false, &serverSetupChildFailure{Code: op.Error.Code, Message: op.Error.Message,
-					Component: op.Error.Component, Step: op.Error.Step, Detail: op.Error.Detail}
+					Component: op.Error.Component, Step: op.Error.Step, Detail: op.Error.Detail,
+					Reason: op.Error.Reason}
 			}
 			return false, errors.New("setup child failed")
 		default:
@@ -1298,8 +1299,9 @@ func validateServerSetupExecution(plan serverSetupPlan, execution serverSetupExe
 
 // serverSetupChildFailure carries a child's code and message and, for an
 // install failure, the component, install step and bounded host line that the
-// wizard shows as the cause and next action (D-024).
-type serverSetupChildFailure struct{ Code, Message, Component, Step, Detail string }
+// wizard shows as the cause and next action (D-024). Reason is the typed
+// cause of a HOST_MUTATION_BUSY refusal, when known.
+type serverSetupChildFailure struct{ Code, Message, Component, Step, Detail, Reason string }
 
 func (e *serverSetupChildFailure) Error() string { return e.Code + ": " + e.Message }
 
@@ -1307,7 +1309,8 @@ func serverSetupFailureForStep(step serverSetupExecutionStep, cause error) *serv
 	var child *serverSetupChildFailure
 	if errors.As(cause, &child) {
 		return &serviceOperationError{Code: child.Code, Message: child.Message,
-			Component: child.Component, Step: child.Step, Detail: child.Detail}
+			Component: child.Component, Step: child.Step, Detail: child.Detail,
+			Reason: child.Reason}
 	}
 	switch {
 	case errors.Is(cause, errServerSetupHostRestartRequired):
@@ -1336,7 +1339,8 @@ func serverSetupFailureForStep(step serverSetupExecutionStep, cause error) *serv
 	// code (upd8 F1: 05-firewall showed only server_setup_firewall_failed).
 	// Ajan ana makine meşgul olduğu için reddettiyse tipli neden korunur.
 	if classification, ok := classifyHostMutationError(cause); ok {
-		return &serviceOperationError{Code: classification.Code, Message: classification.Message}
+		return &serviceOperationError{Code: classification.Code, Message: classification.Message,
+			Reason: classification.Reason}
 	}
 	switch step.Kind {
 	case "infrastructure_dns":
