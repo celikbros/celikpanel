@@ -1587,3 +1587,136 @@ kusuru yok.
   Ubuntu'da gerçek başlatma; güvenli posta sertifikaları; imzalı alpha.80
   arşivi; üretim imzalaması, gerçek sürüm kaynağı, lisans hizmeti, DNS,
   yenilemenin kendisi, bir tarayıcı, güç kaybı; panel kaldırma.
+
+### Açık sayfayı yalnızca bilinen olumsuz erişim sonucu değiştirir (P0.2, 2026-10-08)
+
+D-025 ilkeleri 2, 3 ve 6; D-024. P0.2 kısmi kalır, hiçbir kabul işi kapanmaz.
+Kaynak durumu, yalnızca bileşen testleriyle: tarayıcı denemesi yok, gerçek
+sistem koşusu yok, kurulu panele dokunulmadı, lisans hizmetine bağlanılmadı.
+
+**Bildirilen.** v0.1.0-alpha.81 çalışan kurulu bir sunucunun sahibi: bir sayfadan
+bir süre ayrılınca ekranın tamamı "Lisans durumu kontrol edilemedi" oldu, eylem
+"Panel erişimini kontrol et" idi; dönünce panel geri geldi, ama bırakıldığı
+yerde değildi. Açık pencere, yazılanlar ve seçili sekme gitmişti. Aynı ekran,
+günler önce bitmiş bir güncelleme için "Güncelleme ve kurtarma durumu:
+Güncelleme doğrulandı" gösteriyordu. Lisans baştan sona geçerliydi.
+
+**Mekanizma (`0f9e1067` kaynağından okundu, o sunucuda gözlenmedi).** Sunucunun
+erişim kararı en çok 60 sn geçerlidir (`internal/licensing/license.go:28,197`,
+`cmd/panel/license.go:225`). `web/src/components/LicenseOnboarding.tsx` içinde
+hem 60 sn'lik aralık (`:55`) hem de süre dolmadan 15 sn önceki yenileme
+(`:81-83`) gizli sekmeyi atlıyordu; süre zamanlayıcısı (`:84-88`) ardından
+`allowed: null, failed: true` yazıyor, `:115` uygulamanın yerine tam kurtarma
+sayfasını döndürüyor ve bütün sayfalar kaldırılıyordu. Odak (`:56,65`) yeniden
+okuyor ve uygulama sıfırdan kuruluyordu. Okumaları süre dolduktan sonra yavaş
+kalan ya da başarısız olan görünür bir sekme de aynı yola giriyordu.
+`web/src/App.tsx` içindeki ilgili yollar: `PANEL_STARTING` ya da
+`AUTH_STATUS_UNAVAILABLE` taşıyan her API yanıtı açık uygulamanın yerini
+alıyordu (`:492-501`, `:509-513`); girişten sonraki ya da yüklemedeki hazır olma
+okuması henüz sürerken "Panelin hazır olma durumu kontrol edilemedi" olarak
+çiziliyordu (`:509-513`, `RecoveryAccess.tsx:106-107`); 401, giriş formunu
+nedensiz gösteriyordu (`:486-491`, `:508`); `main.tsx:19-27`, arayüzün bir
+parçası yüklenemediğinde tek söz etmeden yeniden yüklüyordu. Kurtarma sayfası,
+kayıtlı güncelleme kaydını sonucu ne olursa olsun her yöneticiye çiziyordu.
+
+**Değişen (yalnızca tarayıcı).** Bir kapı ekranı yalnızca BİLİNEN olumsuz sonuçta
+değiştirir: eksik, süresi dolmuş ya da geçersiz olduğu bildirilen lisans,
+doğrulanmış 401 ya da çıkış. Bilinmeyen ya da yalnızca henüz yenilenmemiş durum
+açık sayfaları yerinde bırakır.
+
+- `AccessHold` (yeni), erişim doğrulanmamışken sayfaları bağlı tutar ve
+  erişilmez yapar: alt ağaç `inert` olur ve yardımcı teknolojiden gizlenir, ona
+  yönelen olaylar yakalama aşamasında durdurulur, içine düşen odak dışarı
+  alınır. Sunucu erişimi doğrulayana kadar içindeki hiçbir şey kullanılamaz;
+  sunucu, güncel karar olmadan yönetim isteklerini eskisi gibi kendisi reddeder.
+  Bırakıldığında odak, bulunduğu alana döner.
+- 1,5 sn içinde yanıtlanan okuma hiçbir şey çizmez. Daha yavaş olan, erişimin
+  kontrol edildiğini söyleyen kipli bir katman çizer. Erişimi doğrulamadan
+  yanıtlanan okuma nedeni, kimsenin işlem yapması gerekmediğini ve sayfanın
+  kaldığı yerden devam edeceğini çizer. Katman, kapatma yolu olmayan ortak
+  diyalogdur; etkisiz alt ağacın dışında ve işlem katmanının üstündedir.
+- Gizli sekme: süre dolduğunda karar kullanılmaz olur; bu başarısız okuma olarak
+  kaydedilmez ve hiçbir şey okunmaz. Dönüş (görünürlük ya da odak) süreyi saate
+  göre uygular; böylece geciktirilmiş bir zamanlayıcı süresi dolmuş kararı
+  kullanımda bırakamaz. Dönüş tek bir okuma başlatır.
+- Bilinmeyen durumda lisans yanıtı görünür sekmede 5 sn'de bir okunur (önce: 60
+  sn'de bir ve odakta); oturum ve hazır olma 10 sn'de bir, artık okunamayan
+  oturum için de (önce: yalnızca odakta). 30 sn sonra katman, bedeliyle birlikte
+  "CelikPanel’i yeniden yükle" eylemini ekler.
+- Açık bir sayfanın isteğinden gelen `PANEL_STARTING` ve
+  `AUTH_STATUS_UNAVAILABLE` aynı bekletmeyi kullanır. Oturum durumunu yalnızca
+  ilk bildirim değiştirir ve tek bir okuma başlatır; reddedilmeyi sürdüren
+  sayfalar onu yeniden başlatamaz. Yinelenen lisans retleri için de aynısı
+  geçerlidir.
+- İlk yükleme ve giriş: süren oturum ve hazır olma okumaları "kontrol ediliyor"
+  durumudur. "Kontrol edilemedi" için başarısız olmuş ya da zaman aşımına
+  uğramış bir okuma gerekir. Tam kurtarma sayfası, henüz hiçbir şeyin bağlı
+  olmadığı yükleme için kalır.
+- Kayıtlı güncelleme kaydı, erişim ya da hazır olma kapısında yalnızca süren,
+  başarısız olan, başarısızlıktan sonra geri alınan ya da sonucu okunamayan
+  işlem için çizilir. Doğrulanmış güncelleme ya da kayıtlı işlem yokluğu hiçbir
+  şey çizmez ve okunmaz. Yüklenemeyen arayüzün sayfası tam okuyucuyu korur.
+- Açık sayfanın altında doğrulanan 401, giriş formunu nedeniyle gösterir. Adres
+  korunur; giriş yapmak aynı sayfayı açar.
+- Güncellemeden sonra yüklenemeyen arayüz parçası: 4 sn boyunca tek satır
+  gösterilir, sonra sayfa yeniden yüklenir; eskisi gibi 30 sn'de bir kez. Hiçbir
+  şey çizilmeden önce eskisi gibi hemen yeniden yüklenir.
+
+**Değişmeyen.** Sunucu tarafındaki karar, 60 sn'lik geçerliliği, sunucunun karar
+olmadan reddettikleri ve bilinen olumsuz sonucun ekranda yaptığı (etkinleştirme
+sayfası, `/activate` yönlendirmesi, kiracı iletisi). Karar süresinden sonra
+kullanılmaz ve uzatılmaz. Güncelleme izleyicisi, bekletme açıklanırken tam
+olarak kurtarma sayfası gösterilirken olduğu gibi duraklatılır.
+
+**Katmanın altındaki istekler duraklatılmaz.** Sunucu, güncel kararı yokken her
+yönetim isteğini reddeder; bu yüzden katmanın altındaki bir sorgu hiçbir şeyi
+değiştiremez. İstekleri tarayıcıda bekletmek, sunucuyla eşgüdümlü tutulan muaf
+kurtarma ve güncelleme yolları listesi gerektirirdi; bekletilen istek de daha
+sonra, kimsenin seçmediği bir anda çalışırdı. Sorgu yapan altı ekran için
+kaynaktan okunan: pano değerleri ve uygulama durumu reddedilen sorguyu yok
+sayar; panodaki ve bileşenler sayfasındaki sunucu değişikliği hazırlığı bir
+sonraki okumaya kadar "doğrulanmadı" olur; izleme, grafiğini bir sonraki okumaya
+kadar boşaltır; otomatik yenilemesi açık alan adı günlük görüntüleyicisi,
+reddedilen her sorguda genel hata bildirimini katmanın arkasında gösterir;
+kurulum kendi yeniden bağlanma yönlendirmesini gösterir. Hiçbiri yazılanı silmez.
+
+**Şema veya sürüm geçişi.** Yok. Sunucu kodu, API alanı, saklanan kayıt ya da
+tarayıcı depolama biçimi değişmez. Ekran kataloğuna on bir metin eklenir (EN ve
+TR); `recovery.startingHelp` metninden bir cümle çıkarılır. Önceki arayüzü
+çalıştıran sekme, yeniden yüklenene kadar önceki davranışı sürdürür.
+
+**Kurtarma davranışı.** Erişim yeniden doğrulandı: bekletme biter, aynı sayfa
+devam eder. Bekletme sırasında bilinen olumsuz sonuç: sayfalar kaldırılır ve
+mevcut kapı gösterilir. Oturum sona erdi: nedeniyle giriş formu, aynı adres,
+yazılanlar olmadan. Hâlâ bilinmiyor: katman kalır, okumalar sürer; sahip kontrol
+edebilir ya da belirtilen bedelle yeniden yükleyebilir. Metin parçası gelmemişse
+katman yine engeller ve yalnızca erişimin kontrol edildiğini söyler.
+
+**Kanıt.** Yalnızca bileşen testleri: `web/tests/access-hold-runtime.test.mjs`
+(yeni) ile `license-onboarding-runtime`, `recovery-access-runtime` ve
+`panel-handover` içindeki güncellenen durumlar. Kapsanan: gizli sekmede süresi
+dolan karar (sayfa kaldırılmaz, gizliyken okuma yok, dönüşte tek okuma, hiçbir
+şey çizilmez), geciktirilmiş zamanlayıcı, yazılanı, seçili sekmeyi ve açık
+pencereyi koruyan sayfanın üzerinde açıklanan bekletme, durdurulan olaylar ve
+odak, bekletmeden her bilinen olumsuz sonuç, ilk yüklemede ve girişten sonra
+kontrol durumu, gerçek fetch yakalaması üzerinden reddedilen arka plan
+istekleri, kapıda bitmiş güncelleme, adresi değişmeyen sona ermiş oturum ve
+yeniden yükleme satırı. 576 web testi geçer. Üretim derlemesi: kritik açılış
+302,29 KiB ham / 93,46 KiB gzip (sınırlar 361 / 110), Ayarlar sayfası 272,99 /
+79,77 KiB (sınırlar 280 / 80); hiçbir sınır yükseltilmedi. Tasarım denetleyicisi
+değişen dosyalarda bulgu bildirmiyor.
+
+**Açık.**
+
+- Tarayıcıda doğrulanmadı: gizli sekmede zamanlayıcı geciktirmesi, görünürlük ve
+  odak olaylarının sırası, `display: contents` öğesinde `inert`, odak döndükten
+  sonra imleç, işlem katmanına ve güncelleme kilidine göre katman sırası, ekran
+  okuyucu duyurusu, masaüstü ve telefon genişliğinde EN ve TR.
+- Her sayfanın, katmanın altında kendi isteği reddedildiğinde ne yaptığı yalnızca
+  sorgu yapan altı ekran için okundu; sayfa sayfa incelenmedi ve gözlenmedi.
+  Günlük görüntüleyicisinin yinelenen hata bildirimi ve boşalan izleme grafiği
+  olduğu gibi bırakıldı. Yanıtı kaybolan işlem, eskisi gibi kendi sözleşmesiyle
+  uzlaştırılır.
+- Gönderilmemiş girdi gerçek bir yeniden girişte korunmaz.
+- Her sekme kendi başına bekletir; sekmeler arasında hiçbir şey paylaşılmaz.
+- Sahibin sunucusunda neden saptanmadı; mekanizma koddan okundu.

@@ -10,6 +10,8 @@ export function usePanelSession() {
     const [checking, setChecking] = useState(true);
     const generation = useRef(0);
     const pending = useRef<AbortController | null>(null);
+    const current = useRef<PanelSessionState>(state);
+    current.current = state;
     const availability = useCallback(async (identity: CurrentUser, request: AbortController, sequence: number) => {
         try {
             const response = await fetch('/api/v1/panel/availability', { signal: request.signal, cache: 'no-store' });
@@ -67,18 +69,31 @@ export function usePanelSession() {
             }
         });
     }, [availability]);
+    // A refused background request reports one condition, and mounted pages
+    // repeat it with every poll. Only the first report of a ready session changes
+    // the state, and it starts the read that decides what is true now. Later
+    // reports cannot restart that read. A read, never a retry of the refused request.
+    // Reddedilen arka plan istegi tek bir durumu bildirir ve acik sayfalar bunu
+    // her sorguda yineler. Yalnizca ilk bildirim durumu degistirir ve guncel
+    // durumu belirleyen okumayi baslatir.
     const markUnavailable = useCallback((authentication = false) => {
+        if (current.current !== 'ready') return;
+        current.current = authentication ? 'auth_unavailable' : 'availability_unavailable';
         pending.current?.abort(); pending.current = null; generation.current++;
-        setChecking(false);
+        // State first, and the read is marked in flight at once: no render in
+        // between may look like a ready session without an identity, or like a
+        // read that has already answered.
+        setState(current.current);
         if (authentication) setUser(null);
-        setState(authentication ? 'auth_unavailable' : 'availability_unavailable');
-    }, []);
+        void retry();
+    }, [retry]);
     useEffect(() => { void retry(); return () => { generation.current++; pending.current?.abort(); pending.current = null; }; }, [retry]);
     useEffect(() => {
         if (state === 'ready' || state === 'unauthenticated' || state === 'checking') return;
         const refresh = () => { if (document.visibilityState === 'visible') void retry(); };
         window.addEventListener('focus', refresh);
-        const interval = state === 'auth_unavailable' ? undefined : window.setInterval(refresh, 10000);
+        // Every unknown state is read again by itself, so "checks again by itself" is true for each of them.
+        const interval = window.setInterval(refresh, 10000);
         return () => { window.removeEventListener('focus', refresh); window.clearInterval(interval); };
     }, [state, retry]);
     return { user, state, checking, generation, retry, transitionAuthentication, markUnavailable };

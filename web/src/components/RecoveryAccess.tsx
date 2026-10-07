@@ -4,7 +4,7 @@ import { useI18n } from '../i18n';
 import { BrandMark } from './BrandMark';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { Button, Spinner } from './ui';
-import { parseRecoveryObservation, reconcileRecoveryObservation, recoveryFailureGuidanceKey, retryingCauseKey, savedRecoveryRequestId, UPDATE_MARKER_KEY, type RecoveryObservation } from '../lib/recoveryObservation';
+import { parseRecoveryObservation, reconcileRecoveryObservation, recoveryFailureGuidanceKey, retryingCauseKey, savedRecoveryFinished, savedRecoveryRequestId, UPDATE_MARKER_KEY, type RecoveryObservation } from '../lib/recoveryObservation';
 import { handoverAddress, recoveryHandover, savedSetupHandoverHost, setupStartMarkerKey } from '../lib/panelHandover';
 
 // Planned certificate handover during setup (2026-10-08). The page names it
@@ -13,7 +13,7 @@ import { handoverAddress, recoveryHandover, savedSetupHandoverHost, setupStartMa
 // per access check; a failed read leaves the ordinary unknown wording.
 // Sunucu, bu tarayicida baslatilan kurulumun guvenceye aldigi ad icin yonetilen
 // sertifika bildirdiginde planli devir anlatilir; okuma basarisizsa metin degismez.
-function usePanelHandover(username: string | undefined, enabled: boolean, checking: boolean) {
+export function usePanelHandover(username: string | undefined, enabled: boolean, checking: boolean) {
     const [handover, setHandover] = useState<{ host: string; elsewhere: boolean } | null>(null);
     useEffect(() => {
         if (!enabled || !username) { setHandover(null); return; }
@@ -31,16 +31,30 @@ function usePanelHandover(username: string | undefined, enabled: boolean, checki
     return enabled ? handover : null;
 }
 
-export function RecoveryStatus({ username, onUnauthorized, embedded = false }: { username: string; onUnauthorized?: () => void; embedded?: boolean }) {
+// An access or readiness check is not explained by an update that finished long
+// ago (owner report, 2026-10-08). With unfinishedOnly the block is drawn only for
+// a saved operation that is still running, failed or waiting for the owner, or
+// whose result cannot be read. A verified update, or no saved operation, draws
+// nothing and reads nothing. The saved browser record only decides whether to
+// read; it is never shown as a server result.
+// Erisim kontrolu, gunler once biten bir guncellemeyle aciklanmaz. unfinishedOnly
+// ile blok yalnizca suren, basarisiz olan, sahibini bekleyen ya da sonucu
+// okunamayan kayitli islem icin cizilir.
+export function RecoveryStatus({ username, onUnauthorized, embedded = false, unfinishedOnly = false, disclosed = false, heading: Heading = 'h2' }: {
+    username: string; onUnauthorized?: () => void; embedded?: boolean; unfinishedOnly?: boolean;
+    /** Closed under its own title: available, but not presented as the reason for the page. */
+    disclosed?: boolean; heading?: 'h2' | 'h4';
+}) {
     const { t, locale } = useI18n();
     const [requestId, setRequestId] = useState<string | null>(() => { try { return savedRecoveryRequestId(localStorage.getItem(UPDATE_MARKER_KEY)); } catch { return null; } });
+    const [savedFinished] = useState(() => { try { return unfinishedOnly && savedRecoveryFinished(localStorage.getItem(UPDATE_MARKER_KEY)); } catch { return false; } });
     const [last, setLast] = useState<RecoveryObservation | null>(null);
     const lastRef = useRef<RecoveryObservation | null>(null);
     const [unavailable, setUnavailable] = useState(false);
     const [busy, setBusy] = useState(false);
     const pending = useRef<AbortController | null>(null);
     const check = useCallback(async () => {
-        if (!requestId || pending.current) return;
+        if (!requestId || savedFinished || pending.current) return;
         const request = new AbortController(); pending.current = request; setBusy(true);
         const timeout = window.setTimeout(() => request.abort(), 15000);
         try {
@@ -54,7 +68,7 @@ export function RecoveryStatus({ username, onUnauthorized, embedded = false }: {
             }
         } catch { if (pending.current === request) setUnavailable(true); }
         finally { window.clearTimeout(timeout); if (pending.current === request) { pending.current = null; setBusy(false); } }
-    }, [requestId, username, onUnauthorized]);
+    }, [requestId, savedFinished, username, onUnauthorized]);
     useEffect(() => {
         lastRef.current = null; setLast(null); setUnavailable(false); void check();
         const refresh = () => { if (document.visibilityState === 'visible') void check(); };
@@ -65,8 +79,9 @@ export function RecoveryStatus({ username, onUnauthorized, embedded = false }: {
         const changed = (event: StorageEvent) => { if (event.key === UPDATE_MARKER_KEY) setRequestId(current => current ?? savedRecoveryRequestId(event.newValue)); };
         window.addEventListener('storage', changed); return () => window.removeEventListener('storage', changed);
     }, []);
-    return <section className={embedded ? 'mt-2' : 'mt-8 border-t border-border pt-6'} aria-labelledby="recovery-operation-heading">
-        <h2 id="recovery-operation-heading" className={embedded ? 'sr-only' : 'text-lg font-semibold'}>{t('recovery.operationTitle')}</h2>
+    if (unfinishedOnly && (!requestId || (last ? last.terminal_proof === 'update_verified' : savedFinished))) return null;
+    const status = <section className={embedded || disclosed ? 'mt-2' : 'mt-8 border-t border-border pt-6'} aria-labelledby="recovery-operation-heading">
+        <Heading id="recovery-operation-heading" className={embedded || disclosed ? 'sr-only' : 'text-lg font-semibold'}>{t('recovery.operationTitle')}</Heading>
         {!requestId ? <p className="mt-3 max-w-prose text-sm text-fg-muted">{t('recovery.noOperation')}</p> : <>
             <p className="mt-3 break-all text-sm text-fg-muted">{t('recovery.operationId')}: <span className="font-mono">{requestId}</span></p>
             <div className="mt-4 space-y-3 text-sm" role="status" aria-live="polite">
@@ -89,28 +104,31 @@ export function RecoveryStatus({ username, onUnauthorized, embedded = false }: {
             <Button className="mt-4" variant="secondary" disabled={busy} onClick={() => void check()}>{t(busy ? 'recovery.checking' : 'recovery.checkStatus')}</Button>
         </>}
     </section>;
+    return disclosed ? <details className="mt-8 border-t border-border pt-6 text-sm"><summary className="cursor-pointer font-semibold text-primary">{t('recovery.operationTitle')}</summary>{status}</details> : status;
 }
 
 /** Eager shell: no lazy screen catalogue, router, update provider, or mutation API. */
 export function RecoveryAccess({ user, cause, checking = false, onRetry, onUnauthorized }: {
-    user?: CurrentUser | null; cause: 'auth' | 'starting' | 'availability' | 'license' | 'bundle';
+    /** checking: the first read is still in flight. Nothing has failed, so nothing is reported as failed. */
+    user?: CurrentUser | null; cause: 'checking' | 'auth' | 'starting' | 'availability' | 'license' | 'bundle';
     checking?: boolean; onRetry: () => void; onUnauthorized?: () => void;
 }) {
     const { t } = useI18n();
+    const waiting = cause === 'checking' || (checking && !user);
     const handover = usePanelHandover(user?.username, cause === 'availability' || cause === 'starting', checking);
     const address = handover?.elsewhere ? handoverAddress(handover.host, window.location.port) : '';
     return <div className="min-h-screen bg-bg text-fg">
         <header className="border-b border-border bg-surface px-4 py-5 sm:px-8"><div className="mx-auto flex max-w-3xl items-center justify-between gap-4"><div className="flex items-center gap-3 font-semibold"><BrandMark className="h-7 w-7 text-primary" />CelikPanel</div><LanguageSwitcher /></div></header>
         <main className="mx-auto max-w-3xl px-4 py-10 sm:px-8 sm:py-16">
             {user && <p className="mb-5 break-words text-sm text-fg-muted">{user.username}</p>}
-            <h1 className="text-2xl font-semibold">{t(checking && !user ? 'recovery.checkingTitle' : handover ? 'recovery.handoverTitle' : `recovery.${cause}Title`)}</h1>
-            <p className="mt-4 max-w-prose break-words text-sm leading-relaxed text-fg-muted" role="status">{handover ? t('recovery.handoverHelp', { host: handover.host }) : t(checking && !user ? 'recovery.checkingHelp' : `recovery.${cause}Help`)}</p>
+            <h1 className="text-2xl font-semibold">{t(waiting ? 'recovery.checkingTitle' : handover ? 'recovery.handoverTitle' : `recovery.${cause}Title`)}</h1>
+            <p className="mt-4 max-w-prose break-words text-sm leading-relaxed text-fg-muted" role="status">{waiting ? t('recovery.checkingHelp') : handover ? t('recovery.handoverHelp', { host: handover.host }) : t(`recovery.${cause}Help`)}</p>
             {address && <p className="mt-4 max-w-prose text-sm leading-relaxed text-fg-muted">{t('recovery.handoverAddress')} <a href={`${address}/setup`} className="break-all font-semibold text-primary underline underline-offset-4">{address}</a></p>}
             <div className="mt-6 flex flex-wrap items-center gap-3"><Button disabled={checking} onClick={onRetry}>{checking && <Spinner />}{t(checking ? 'recovery.checking' : 'recovery.retry')}</Button><Button variant="secondary" onClick={() => window.location.reload()}>{t('app.reload')}</Button></div>
-            {/* During the planned handover the saved update result is not the reason for this page: it stays one step away. */}
-            {user?.effective_role === 'admin' && (handover
-                ? <details className="mt-8 border-t border-border pt-6 text-sm"><summary className="cursor-pointer font-semibold text-primary">{t('recovery.operationTitle')}</summary><RecoveryStatus key={user.username} username={user.username} onUnauthorized={onUnauthorized} embedded /></details>
-                : <RecoveryStatus key={user.username} username={user.username} onUnauthorized={onUnauthorized} />)}
+            {/* A finished update is not the reason for an access check, so only an unfinished operation is drawn here.
+                During the planned handover even that stays one step away. A page that failed to load keeps the full reader. */}
+            {user?.effective_role === 'admin' && cause !== 'checking' && <RecoveryStatus key={user.username} username={user.username}
+                onUnauthorized={onUnauthorized} unfinishedOnly={cause !== 'bundle'} disclosed={!!handover} />}
         </main>
     </div>;
 }

@@ -155,6 +155,7 @@ test('every dialogue in the product is the shared one', () => {
   }
 
   assert.deepEqual(Object.fromEntries([...users].sort()), {
+    'AccessHold.tsx': 1,
     'AddDatabaseModalV2.tsx': 1,
     'AddDomainModal.tsx': 1,
     'AddUserModalV2.tsx': 1,

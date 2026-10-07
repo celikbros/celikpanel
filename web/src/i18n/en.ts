@@ -31,7 +31,7 @@ export const en = {
     'recovery.authTitle': "Your session could not be checked",
     'recovery.authHelp': "CelikPanel cannot confirm your session right now. Check again when the connection is available. Management stays closed until your session and panel access are verified.",
     'recovery.startingTitle': "The panel is starting",
-    'recovery.startingHelp': "The server is preparing panel access. This page checks readiness automatically. You can inspect the last recorded result of your update below.",
+    'recovery.startingHelp': "The server is preparing panel access. This page checks readiness automatically.",
     'recovery.availabilityTitle': "Panel readiness could not be checked",
     'recovery.availabilityHelp': "Your session was verified, but panel readiness is unknown. Check again or reload the page. Management opens only after the server confirms readiness and access.",
     'recovery.handoverTitle': "The Panel restarts once during setup",

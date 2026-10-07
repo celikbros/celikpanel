@@ -167,7 +167,9 @@ test('the recovery page explains the restart and keeps the update result one ste
   const page = read('../src/components/RecoveryAccess.tsx');
   assert.match(page, /usePanelHandover\(user\?\.username, cause === 'availability' \|\| cause === 'starting', checking\)/);
   assert.match(page, /handover \? 'recovery\.handoverTitle' : `recovery\.\$\{cause\}Title`/);
-  assert.match(page, /handover\s*\? <details[^>]*><summary[^>]*>\{t\('recovery\.operationTitle'\)\}<\/summary><RecoveryStatus [^>]*embedded \/><\/details>\s*: <RecoveryStatus /);
+  // Only an unfinished operation is drawn, and during the handover it is closed under its own title.
+  assert.match(page, /<RecoveryStatus [^>]*unfinishedOnly=\{cause !== 'bundle'\} disclosed=\{!!handover\} \/>/);
+  assert.match(page, /return disclosed \? <details[^>]*><summary[^>]*>\{t\('recovery\.operationTitle'\)\}<\/summary>\{status\}<\/details> : status;/);
   // Reads only: the public address metadata and this browser's own marker.
   const hook = page.slice(page.indexOf('function usePanelHandover('), page.indexOf('export function RecoveryStatus('));
   assert.match(hook, /fetch\('\/api\/v1\/panel\/access-address', \{ cache: 'no-store', signal: controller\.signal \}\)/);

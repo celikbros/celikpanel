@@ -38,6 +38,19 @@ export function savedRecoveryRequestId(raw: string | null): string | null {
     } catch { return null; }
 }
 
+/**
+ * Presentation hint only: this browser's own note that the saved operation ended
+ * as a verified update. It never asserts a server outcome. It only keeps a
+ * finished update from being shown as if it explained an unrelated access check.
+ */
+export function savedRecoveryFinished(raw: string | null): boolean {
+    if (!raw || raw.length > 8192) return false;
+    try {
+        const value = JSON.parse(raw);
+        return value?.state_version === 1 && value.phase === 'terminal' && value.outcome === 'succeeded';
+    } catch { return false; }
+}
+
 export function parseRecoveryObservation(raw: unknown, requestId: string): RecoveryObservation {
     if (!/^[a-f0-9]{32}$/.test(requestId) || !raw || typeof raw !== 'object') throw new Error('invalid recovery observation');
     const value = raw as Record<string, unknown>;

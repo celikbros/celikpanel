@@ -79,9 +79,42 @@ test('late auth or availability responses cannot restore an old identity after l
  try{await act(async()=>{tree=Renderer.create(React.createElement(Fixture))});await act(async()=>session.transitionAuthentication(null));await act(async()=>resolve(Response.json({schema:'celikpanel-panel-availability/v1',state:'ready'})));assert.equal(session.state,'unauthenticated');assert.equal(session.user,null);}finally{await clean()}
 });
 
-test('startup transitions to ready through read-only checks; a failed authenticated read stays unavailable',async()=>{
- let ready=false;setup(undefined,async()=>Response.json({schema:'celikpanel-panel-availability/v1',state:ready?'ready':'starting'}));
- try{await act(async()=>{tree=Renderer.create(React.createElement(Fixture))});assert.equal(session.state,'starting');ready=true;await act(async()=>session.retry());assert.equal(session.state,'ready');await act(async()=>session.markUnavailable(true));assert.equal(session.state,'auth_unavailable');assert.equal(session.user,null);assert.ok(calls.every(([,options])=>!options.method));}finally{await clean()}
+test('startup transitions to ready through read-only checks; a refused background request starts one read and stays unknown while that read fails',async()=>{
+ let ready=false,reads=0,me=async()=>admin;
+ setup(()=>{reads++;return me()},async()=>Response.json({schema:'celikpanel-panel-availability/v1',state:ready?'ready':'starting'}));
+ try{
+  await act(async()=>{tree=Renderer.create(React.createElement(Fixture))});assert.equal(session.state,'starting');
+  ready=true;await act(async()=>session.retry());assert.equal(session.state,'ready');
+  // The server cannot read the session: unknown, never signed out.
+  me=async()=>{throw new Error('503 AUTH_STATUS_UNAVAILABLE')};
+  await act(async()=>session.markUnavailable(true));
+  assert.equal(session.state,'auth_unavailable');assert.equal(session.user,null);
+  // Pages that stay mounted report the same refusal with every poll: no further read is started.
+  const before=reads;
+  await act(async()=>{session.markUnavailable(true);session.markUnavailable();session.markUnavailable(true)});
+  assert.equal(reads,before);assert.equal(session.state,'auth_unavailable');
+  // The read that follows decides: the session is ready again once the server answers.
+  me=async()=>admin;await act(async()=>session.retry());assert.equal(session.state,'ready');assert.equal(session.user,admin);
+  // PANEL_STARTING from a background request: one read reports what the Panel says now.
+  ready=false;const starting=reads;
+  await act(async()=>session.markUnavailable());
+  assert.equal(session.state,'starting');assert.equal(session.user,admin);assert.equal(reads,starting+1);
+  // A report that the server no longer stands by is corrected by that same read.
+  ready=true;await act(async()=>session.retry());assert.equal(session.state,'ready');
+  await act(async()=>session.markUnavailable());assert.equal(session.state,'ready');
+  assert.ok(calls.every(([,options])=>!options.method));
+ }finally{await clean()}
+});
+
+test('every unknown session state is read again by itself, also an unreadable session',async()=>{
+ const previous=window.setInterval;const intervals=[];
+ window.setInterval=(fn,ms)=>{intervals.push(ms);return 0};
+ try{
+  for(const [me,fetcher,expected] of [[async()=>{throw new Error('offline')},undefined,'auth_unavailable'],[async()=>admin,async()=>Response.json({}, {status:503}),'availability_unavailable'],[async()=>admin,async()=>Response.json({schema:'celikpanel-panel-availability/v1',state:'starting'}),'starting']]){
+   intervals.length=0;setup(me,fetcher);
+   try{await act(async()=>{tree=Renderer.create(React.createElement(Fixture))});assert.equal(session.state,expected);assert.deepEqual(intervals,[10000],expected);}finally{await clean()}
+  }
+ }finally{window.setInterval=previous}
 });
 
 test('recovery polling keeps verified failure when observation is unavailable and never starts a mutation',async()=>{
@@ -349,7 +382,8 @@ test('planned certificate handover is named on server evidence only, with reads 
  const marker=JSON.stringify({request_id:'c'.repeat(32),plan_id:'d'.repeat(32),panel_domain:host,handover:true});
  const update=JSON.stringify({state_version:1,phase:'active',marker:{marker_version:1,request_id:id}});
  const storage=setupMarker=>({getItem:key=>key==='celikpanel.setup.start.admin'?setupMarker:update});
- const server=served=>async url=>String(url).includes('/panel/access-address')?Response.json({hostname:served}):Response.json(known('succeeded'));
+ let operation='running';
+ const server=served=>async url=>String(url).includes('/panel/access-address')?Response.json({hostname:served}):Response.json(known(operation));
  const render=async cause=>{await act(async()=>{tree=Renderer.create(React.createElement(RecoveryAccess,{user:admin,cause,onRetry(){}}))});await act(async()=>{});return JSON.stringify(tree.toJSON());};
  for(const cause of ['availability','starting']){
   setup(async()=>admin,server(host));globalThis.localStorage=storage(marker);
@@ -359,13 +393,21 @@ test('planned certificate handover is named on server evidence only, with reads 
    assert.ok(!content.includes(`recovery.${cause}Title`)&&!content.includes(`recovery.${cause}Help`),content);
    const link=tree.root.findAllByType('a').find(node=>node.props.href===`https://${host}/setup`);
    assert.ok(link,'the secure address is a real link');
-   // The update result is one step away, inside a closed disclosure.
-   const details=tree.root.findByType('details');
+   // An update that is still running is one step away, inside a closed disclosure.
+   const details=tree.root.findByType(RecoveryStatus).findByType('details');
    assert.equal(details.props.open,undefined);
-   assert.equal(details.findAllByType(RecoveryStatus).length,1);
+   assert.equal(details.findByType('summary').props.children,'recovery.operationTitle');
    assert.ok(calls.every(([,options])=>!options?.method||options.method==='GET'));
   }finally{await clean()}
  }
+ // A verified update is not part of the restart at all.
+ operation='succeeded';setup(async()=>admin,server(host));globalThis.localStorage=storage(marker);
+ try{
+  const content=await render('starting');
+  assert.ok(content.includes('recovery.handoverTitle'),content);
+  assert.equal(tree.root.findAllByType('details').length,0);
+  assert.ok(!content.includes('recovery.operationTitle')&&!content.includes('recovery.phase.succeeded'),content);
+ }finally{operation='running';await clean()}
  // No server report, another host, a setup without the step, or another cause: the page cannot know.
  for(const [served,saved,cause] of [['',marker,'availability'],['other.example.com',marker,'availability'],[host,JSON.stringify({request_id:'c'.repeat(32),plan_id:'d'.repeat(32),panel_domain:host}),'availability'],[host,marker,'license']]){
   setup(async()=>admin,server(served));globalThis.localStorage=storage(saved);
@@ -378,4 +420,65 @@ test('planned certificate handover is named on server evidence only, with reads 
  // The address read failing leaves the ordinary wording.
  setup(async()=>admin,async url=>{if(String(url).includes('/panel/access-address'))throw new Error('offline');return Response.json(known('succeeded'));});globalThis.localStorage=storage(marker);
  try{assert.ok((await render('availability')).includes('recovery.availabilityTitle'));}finally{await clean()}
+});
+
+// Owner report, 2026-10-08: an access check showed "Update and recovery status:
+// Update verified" for an update that had finished days earlier. A gate draws
+// the block only for an operation that is still running, failed or waiting for
+// the owner, or whose result cannot be read; it never starts anything.
+test('a finished update is not drawn as part of an access or readiness gate',async()=>{
+ const saved=(phase,outcome)=>JSON.stringify({state_version:1,phase,marker:{marker_version:1,request_id:id},...(outcome?{outcome}:{})});
+ const page=async(cause,record,reply)=>{
+  setup(async()=>admin,async()=>reply());globalThis.localStorage={getItem:()=>record};
+  await act(async()=>{tree=Renderer.create(React.createElement(RecoveryAccess,{user:admin,cause,onRetry(){}}))});await act(async()=>{});
+  return JSON.stringify(tree.toJSON());
+ };
+ try{
+  for(const cause of ['license','availability','starting']){
+   // This browser saw the update verified: nothing is drawn and nothing is read.
+   let content=await page(cause,saved('terminal','succeeded'),()=>Response.json(known('succeeded')));
+   assert.ok(!content.includes('recovery.operationTitle')&&!content.includes(id),content);assert.equal(calls.length,0);await clean();
+   // The server reports it verified: read once, then not drawn.
+   content=await page(cause,saved('active'),()=>Response.json(known('succeeded')));
+   assert.ok(!content.includes('recovery.operationTitle')&&!content.includes('recovery.phase.succeeded'),content);await clean();
+   // No saved operation: no block and no "no operation" text.
+   content=await page(cause,null,()=>Response.json(known('succeeded')));
+   assert.ok(!content.includes('recovery.operationTitle')&&!content.includes('recovery.noOperation'),content);assert.equal(calls.length,0);await clean();
+   // Still running, failed, rolled back after a failure, or unreadable: drawn, because it may be the reason or needs the owner.
+   for(const [record,reply,text] of [[saved('active'),()=>Response.json(known('running')),'recovery.phase.running'],[saved('active'),()=>Response.json(known('failed')),'recovery.phase.failed'],[saved('terminal','failed'),()=>Response.json(known('recovered')),'recovery.phase.recovered'],[saved('active'),()=>Response.json({}, {status:503}),'recovery.observationUnavailable']]){
+    content=await page(cause,record,reply);
+    assert.ok(content.includes('recovery.operationTitle')&&content.includes(text)&&content.includes(id),`${cause}: ${text}: ${content}`);
+    assert.ok(calls.every(([,options])=>!options?.method||options.method==='GET'));await clean();
+   }
+  }
+  // A page that could not load keeps the full reader, as before.
+  const content=await page('bundle',saved('terminal','succeeded'),()=>Response.json(known('succeeded')));
+  assert.ok(content.includes('recovery.operationTitle')&&content.includes('recovery.phase.succeeded'),content);
+ }finally{await clean()}
+});
+
+// The first read being in flight is not a failure: the page says "checking" and
+// shows no saved operation. "Could not be checked" needs a read that failed.
+test('a first read in flight says checking; could not be checked needs a failed read',async()=>{
+ const text=async props=>{await act(async()=>{tree=Renderer.create(React.createElement(RecoveryAccess,{onRetry(){},...props}))});await act(async()=>{});return JSON.stringify(tree.toJSON());};
+ setup();
+ try{
+  // After sign-in or on load: the identity is known and readiness is still being read.
+  let content=await text({user:admin,cause:'checking',checking:true});
+  assert.ok(content.includes('recovery.checkingTitle')&&content.includes('recovery.checkingHelp'),content);
+  for(const absent of ['recovery.availabilityTitle','recovery.licenseTitle','recovery.authTitle','recovery.bundleTitle','recovery.operationTitle',id])assert.ok(!content.includes(absent),`${absent}: ${content}`);
+  assert.equal(calls.length,0,'no operation is read while nothing is known');
+  assert.equal(tree.root.findAllByType('button').find(node=>node.props.disabled).props.children.includes('recovery.checking'),true);
+  await clean();setup();
+  // A read that failed is reported as such, with the check available again.
+  content=await text({user:admin,cause:'availability'});
+  assert.ok(content.includes('recovery.availabilityTitle')&&!content.includes('recovery.checkingTitle'),content);
+ }finally{await clean()}
+ const app=readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8');
+ const gate=app.slice(app.indexOf('function AuthGate()'),app.indexOf('function StandaloneRecovery('));
+ assert.match(gate,/const cause = state === 'checking' \? 'checking' : state === 'auth_unavailable' \|\| !user \? 'auth' : state === 'starting' \? 'starting' : 'availability';/);
+ // The interface still being fetched is a wait as well.
+ assert.match(app,/<Suspense fallback=\{<StandaloneRecovery loading \/>\}>/);
+ const lock=readFileSync(new URL('../src/components/LicenseLockScreen.tsx',import.meta.url),'utf8');
+ assert.match(lock,/role === 'admin' && !checking && <RecoveryStatus username=\{user\.username\} \/>/);
 });

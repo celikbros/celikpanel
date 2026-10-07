@@ -31,12 +31,18 @@ const stub = dataModule(`
   export const BadgeCheck = () => null, Eye = () => null, EyeOff = () => null;
   export const readApiError = async response => { const data = await response.json(); return { message: data.error, code: data.code }; };
   export const apiErrorText = error => error.message;
+  export const createPortal = node => node;
+  export const Dialog = props => React.createElement('dialog', { id: props.id }, props.title, props.description, props.children, props.actions);
+  export const usePanelHandover = () => null, handoverAddress = () => '', useAccessGuidance = () => null;
 `);
+const holdURL = dataModule(`import React from '${reactURL}';\n` + ts.transpileModule(readFileSync(new URL('../src/components/AccessHold.tsx', import.meta.url), 'utf8'), { compilerOptions: {
+  jsx: ts.JsxEmit.React, module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2020,
+}}).outputText.replace(/from ['"]([^'"]+)['"]/g, (_, specifier) => `from '${specifier === 'react' ? reactURL : stub}'`));
 async function component(name) {
   const source = readFileSync(new URL(`../src/components/${name}.tsx`, import.meta.url), 'utf8');
   const compiled = ts.transpileModule(source, { compilerOptions: {
     jsx: ts.JsxEmit.React, module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2020,
-  }}).outputText.replace(/import\('\.\/LicenseLockScreen'\)/g, `import('${stub}')`).replace(/from ['"]([^'"]+)['"]/g, (_, specifier) => `from '${specifier === 'react' ? reactURL : specifier.endsWith('/accessObservation') ? accessURL : stub}'`);
+  }}).outputText.replace(/import\('\.\/LicenseLockScreen'\)/g, `import('${stub}')`).replace(/from ['"]([^'"]+)['"]/g, (_, specifier) => `from '${specifier === 'react' ? reactURL : specifier.endsWith('/accessObservation') ? accessURL : specifier.endsWith('/AccessHold') ? holdURL : stub}'`);
   return (await import(dataModule(`import React from '${reactURL}';\n${compiled}`)))[name];
 }
 const LicenseOnboarding = await component('LicenseOnboarding');
@@ -45,8 +51,12 @@ const LicenseLockScreen = await component('LicenseLockScreen');
 const originalFetch = globalThis.fetch;
 const events = new EventTarget();
 globalThis.window = Object.assign(events, { setTimeout, clearTimeout, setInterval, clearInterval });
-globalThis.document = { visibilityState: 'visible' };
+globalThis.document = Object.assign(new EventTarget(), { visibilityState: 'visible' });
 let calls, navigations, tree;
+// Management stays mounted behind a hold: the pages are inert and the layer explains the state.
+const heldPages = () => tree.root.findAllByProps({ 'data-access-hold': 'blocked' }).filter(node => typeof node.type === 'string');
+const holdLayer = () => tree.root.findAllByType('dialog');
+async function showTab(state) { document.visibilityState = state; await act(async () => document.dispatchEvent(new Event('visibilitychange'))); }
 function fixture(role = 'admin', state = 'missing') {
   calls = []; navigations = []; tree = undefined;
   globalThis.licenseTest = {
@@ -84,7 +94,7 @@ test('all roles are locked for missing, expired, invalid and unverifiable licens
   }
  }
 });
-test('network errors, malformed status, and a license rejection close management; retry restores valid access',async()=>{
+test('network errors and malformed status keep management closed; a refused request holds mounted pages and retry releases them',async()=>{
  for(const reply of [()=>{throw new Error('offline')},()=>Response.json({can_use_panel:true}),()=>Response.json({}, {status:503})]) {
   fixture();
   globalThis.fetch=async()=>reply();
@@ -92,13 +102,22 @@ test('network errors, malformed status, and a license rejection close management
  }
  fixture('admin','active');
  try {
-  await act(async()=>{tree=Renderer.create(React.createElement(LicenseOnboarding,null,React.createElement('main',null,'management')))});
+  let mounts=0;
+  function Management(){React.useEffect(()=>{mounts++},[]);return React.createElement('main',null,'management')}
+  await act(async()=>{tree=Renderer.create(React.createElement(LicenseOnboarding,null,React.createElement(Management)))});
+  assert.equal(heldPages().length,0);
   globalThis.fetch=async()=>Response.json({}, {status:503});
   await act(async()=>window.dispatchEvent(new Event('celikpanel:license-locked')));
-  assert.equal(tree.root.findAllByType('main').length,0);
+  assert.equal(tree.root.findAllByType('main').length,1,'unknown access keeps the page mounted');
+  assert.equal(heldPages().length,1,'and unreachable');
+  assert.equal(holdLayer().length,1,'a failed read is explained');
+  assert.equal(tree.root.findAllByType('aside').length,0,'the full-screen gate is for a known negative or a first load');
+  assert.equal(navigations.length,0);
   globalThis.fetch=async()=>Response.json({can_use_panel:true,valid_until:Math.floor(Date.now()/1000)+60});
-  await act(async()=>tree.root.findByType('aside').props.onCheck());
+  await act(async()=>button('recovery.retry').props.onClick());
   assert.equal(tree.root.findAllByType('main').length,1);
+  assert.equal(heldPages().length,0);assert.equal(holdLayer().length,0);
+  assert.equal(mounts,1,'the page was never rebuilt');
  } finally {await cleanup()}
 });
 test('late access after logout cannot mount management',async()=>{
@@ -148,7 +167,7 @@ test('activation rejection preserves the key and offers no exploration bypass', 
   } finally { await cleanup(); }
 });
 
-test('an open session locks at the signed deadline and browser history cannot escape',async()=>{
+test('an open session is held at the signed deadline and browser history cannot escape',async()=>{
  fixture('admin','active');
  const timers=[];const previous=window.setTimeout;
  window.setTimeout=(fn,ms)=>{if(ms>15000){timers.push(fn);return 0}return previous(fn,ms)};
@@ -156,12 +175,13 @@ test('an open session locks at the signed deadline and browser history cannot es
   await act(async()=>{tree=Renderer.create(React.createElement(LicenseOnboarding,null,React.createElement('main',null,'management')))});
   globalThis.fetch=async()=>Response.json({can_use_panel:false,valid_until:0});
   await act(async()=>timers.at(-1)());
-  assert.equal(tree.root.findAllByType('main').length,0);
+  assert.equal(heldPages().length,1,'no management control is reachable past the deadline');
+  assert.equal(holdLayer().length,1);
   assert.equal(navigations.length,0,'legacy false has no activation diagnosis');
   globalThis.licenseTest.pathname='/services';
   await act(async()=>tree.update(React.createElement(LicenseOnboarding,null,React.createElement('main',null,'management'))));
   assert.equal(navigations.length,0);
-  assert.equal(tree.root.findAllByType('main').length,0);
+  assert.equal(heldPages().length,1,'another address is held the same way');
  }finally{window.setTimeout=previous;await cleanup()}
 });
 
@@ -184,7 +204,7 @@ test('only administrators can open signed updates while activation remains mount
  }
 });
 
-test('short verification renews before expiry without remounting management; hidden pages do not poll',async()=>{
+test('short verification renews before expiry without remounting management; a hidden page does not poll, is held unseen and reads once on return',async()=>{
  fixture('admin','active');
  const previousTimer=window.setTimeout,previousNow=Date.now;
  const timers=[];let now=Date.now(),mounts=0;
@@ -201,14 +221,23 @@ test('short verification renews before expiry without remounting management; hid
   assert.equal(calls.length,2);
   assert.equal(mounts,1,'successful renewal preserves page state');
   assert.equal(navigations.length,0);
-  document.visibilityState='hidden';
+  await showTab('hidden');
   const lastEarly=timers.filter(timer=>timer.ms>40000&&timer.ms<=45000).at(-1);
   await act(async()=>lastEarly.fn());
   assert.equal(calls.length,2,'hidden page does not renew');
-  const deadline=timers.at(-1);
+  const deadline=timers.filter(timer=>timer.ms>45000&&timer.ms<=60000).at(-1);
+  now+=15000;
   await act(async()=>deadline.fn());
   assert.equal(calls.length,2,'expiry itself does not poll while hidden');
-  assert.equal(tree.root.findAllByType('main').length,0,'hidden expiry still locks management');
+  assert.equal(heldPages().length,1,'hidden expiry still closes management');
+  assert.equal(tree.root.findAllByType('main').length,1,'without removing the page');
+  assert.equal(holdLayer().length,0,'a decision that only ran out in a hidden tab is not reported as a failure');
+  assert.equal(tree.root.findAllByType('aside').length,0);
+  await showTab('visible');
+  assert.equal(calls.length,3,'returning reads once');
+  assert.equal(heldPages().length,0);assert.equal(holdLayer().length,0);
+  assert.equal(mounts,1,'the page the owner left is the page they return to');
+  assert.equal(navigations.length,0);
  }finally{Date.now=previousNow;window.setTimeout=previousTimer;document.visibilityState='visible';await cleanup()}
 });
 
@@ -247,7 +276,7 @@ test('an already active activation page automatically rechecks access', async ()
 });
 
 
-test('transient access failures preserve the current route and mounted form until the signed deadline', async () => {
+test('transient access failures preserve the current route and mounted form, also past the signed deadline', async () => {
  fixture('admin','active');
  const originalTimer=window.setTimeout;
  const timers=[];let mounts=0;
@@ -264,13 +293,16 @@ test('transient access failures preserve the current route and mounted form unti
    assert.ok(button('common.reloadPage'),'a full page reload is available for TLS recovery');
   }
   await act(async()=>timers.at(-1)());
-  assert.equal(tree.root.findAllByType('main').length,0,'cached access cannot outlive the server deadline');
-  assert.equal(tree.root.findByType('aside').props.failed,true);
+  assert.equal(heldPages().length,1,'cached access cannot outlive the server deadline');
+  assert.equal(holdLayer().length,1,'the failed read is explained over the page');
+  assert.equal(tree.root.findAllByType('main').length,1);
+  assert.equal(mounts,1,'the form is not rebuilt');
+  assert.equal(button('common.reloadPage'),undefined,'the banner of a still valid decision is gone');
   assert.equal(navigations.length,0,'unknown state retains the setup URL');
  } finally {window.setTimeout=originalTimer;await cleanup()}
 });
 
-test('focus checks share an in-flight access request and explicit rejection still locks immediately',async()=>{
+test('focus checks share an in-flight access request; a refusal holds at once and a known rejection still locks',async()=>{
  fixture('admin','active');let resolve;let requests=0;
  try {
   await act(async()=>{tree=Renderer.create(React.createElement(LicenseOnboarding,null,React.createElement('main')))});
@@ -279,12 +311,18 @@ test('focus checks share an in-flight access request and explicit rejection stil
   assert.equal(requests,1);
   const staleResolve=resolve;
   await act(async()=>window.dispatchEvent(new Event('celikpanel:license-locked')));
-  assert.equal(tree.root.findAllByType('main').length,0);
+  assert.equal(heldPages().length,1);
+  assert.equal(requests,2,'the refusal starts its own read');
+  await act(async()=>{window.dispatchEvent(new Event('celikpanel:license-locked'));window.dispatchEvent(new Event('celikpanel:license-locked'))});
+  assert.equal(requests,2,'pages that keep reporting the refusal cannot restart the read');
   await act(async()=>staleResolve(Response.json({can_use_panel:true,valid_until:Math.floor(Date.now()/1000)+3600})));
-  assert.equal(tree.root.findAllByType('main').length,0,'superseded response cannot undo the gate');
-  assert.equal(navigations.length,0,'generic gate does not diagnose missing license');
+  assert.equal(heldPages().length,1,'superseded response cannot undo the hold');
+  assert.equal(navigations.length,0,'an unknown state does not diagnose a missing license');
   await act(async()=>resolve(Response.json({can_use_panel:false,valid_until:0,state:'expired',observation:'known'})));
   assert.equal(navigations.at(-1)[0],'/activate');
+  assert.equal(tree.root.findAllByType('main').length,0,'a known rejection removes management as before');
+  assert.equal(heldPages().length,0);
+  assert.equal(tree.root.findAllByType('aside').length,1);
  }finally{await cleanup()}
 });
 

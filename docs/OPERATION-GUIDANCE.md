@@ -802,3 +802,115 @@ gains an optional `handover` flag. No migration.
   finishes is also explained as this restart.
 - Not verified on a real server or in a browser: the texts in place, the timing
   of the restart against the step list, and the full page's ten-second recheck.
+
+### Access and readiness checks keep the page: explained hold, checking state, ended session (2026-10-08)
+
+Source state with component tests; no browser pass and no native run. Found by an
+owner on an installed server running v0.1.0-alpha.81. Affected contract items:
+resilience invariants 2, 3 and 6 (P0.2 scope); no acceptance item is closed. The
+mechanism and the full change are in the
+[resilience contract](RESILIENCE-CONTRACT.md#a-mounted-page-is-replaced-only-by-a-known-negative-access-result-p02-2026-10-08).
+
+**What the owner saw.** After leaving a page for a while: a full screen "Lisans
+durumu kontrol edilemedi" with "Panel erişimini kontrol et", above "Güncelleme ve
+kurtarma durumu: Güncelleme doğrulandı" for an update finished days earlier. On
+return the panel opened again, without the open dialogue, the typed input and the
+selected tab. The license was valid the whole time.
+
+**What the product says now.** Keys are in `web/src/i18n/screens`; they are shown
+only over or after a mounted page.
+
+- *A decision that ran out while the tab was hidden, or a read that answers within
+  1.5 s:* nothing is shown. The page cannot be used until the read has answered.
+- *The read has not answered after 1.5 s* (layer over the page, nothing has
+  failed): title `recovery.checkingTitle`, EN "Checking panel access" · TR "Panel
+  erişimi kontrol ediliyor"; `accessHold.waitingHelp`, EN "The Panel has not
+  answered yet. This page continues where it was as soon as it does." · TR "Panel
+  henüz yanıt vermedi. Yanıt verir vermez bu sayfa kaldığı yerden devam eder."
+- *A read answered without confirming access* (reason first):
+  - License result unreadable: `accessHold.licenseTitle`, EN "Panel access could
+    not be confirmed just now" · TR "Panel erişimi az önce doğrulanamadı";
+    `accessHold.licenseHelp`, EN "CelikPanel could not read the license result
+    for this server a moment ago. This does not mean your license is missing or
+    expired." · TR "CelikPanel az önce bu sunucunun lisans sonucunu okuyamadı. Bu,
+    lisansınızın eksik veya süresinin dolmuş olduğu anlamına gelmez."
+  - Readiness unreadable: `accessHold.availabilityTitle`, EN "The Panel did not
+    answer just now" · TR "Panel az önce yanıt vermedi";
+    `accessHold.availabilityHelp`, EN "CelikPanel could not confirm that the Panel
+    is ready. It may be restarting." · TR "CelikPanel panelin hazır olduğunu
+    doğrulayamadı. Panel yeniden başlıyor olabilir."
+  - Session unreadable: `accessHold.authTitle`, EN "Your session could not be
+    confirmed just now" · TR "Oturumunuz az önce doğrulanamadı";
+    `accessHold.authHelp`, EN "CelikPanel could not read your session a moment
+    ago. This does not mean you were signed out." · TR "CelikPanel az önce
+    oturumunuzu okuyamadı. Bu, oturumunuzun kapatıldığı anlamına gelmez."
+  - The Panel reports that it is starting: the existing `recovery.startingTitle`,
+    EN "The panel is starting" · TR "Panel başlatılıyor", with
+    `recovery.startingHelp`, now EN "The server is preparing panel access. This
+    page checks readiness automatically." · TR "Sunucu panel erişimini hazırlıyor.
+    Bu sayfa hazır olma durumunu otomatik kontrol eder." (the sentence "You can
+    inspect the last recorded result of your update below." / "Güncellemenizin
+    kaydedilmiş son sonucunu aşağıda inceleyebilirsiniz." is removed, because the
+    block is no longer always there).
+  - During the planned certificate restart of setup, the existing
+    `recovery.handoverTitle`, `recovery.handoverHelp` and
+    `recovery.handoverAddress` are used over the wizard.
+- *Who acts and how work resumes* (below the reason, except during the planned
+  restart): `accessHold.resume`, EN "You do not need to do anything yet.
+  CelikPanel checks again by itself every few seconds. When access is confirmed,
+  this page continues where it was, with what you typed. Until then nothing on
+  this page can be changed." · TR "Şimdilik bir şey yapmanız gerekmiyor.
+  CelikPanel birkaç saniyede bir kendiliğinden yeniden kontrol eder. Erişim
+  doğrulandığında bu sayfa, yazdıklarınızla birlikte kaldığı yerden devam eder. O
+  zamana kadar bu sayfada değişiklik yapılamaz." Action: the existing
+  `recovery.retry`, EN "Check panel access" · TR "Panel erişimini kontrol et"
+  (`recovery.checking`, "Checking…" / "Kontrol ediliyor…", while a read the
+  owner asked for is in flight). It reads; it starts nothing.
+- *Still unknown after 30 s:* `accessHold.prolonged`, EN "This has taken longer
+  than half a minute. You can keep waiting, and the automatic check continues, or
+  you can reload CelikPanel. Reloading discards anything you typed on this page
+  and did not save." · TR "Bu durum yarım dakikadan uzun sürdü. Beklemeyi
+  sürdürebilirsiniz, otomatik kontrol devam eder; dilerseniz CelikPanel’i yeniden
+  yükleyebilirsiniz. Yeniden yüklemek, bu sayfada yazıp kaydetmediğiniz her şeyi
+  siler." with the existing `app.reload`, EN "Reload CelikPanel" · TR
+  "CelikPanel’i yeniden yükle", beside the check.
+- *Update and recovery status* (`recovery.operationTitle`) appears in the layer
+  and on the access and readiness pages only for a saved operation that is still
+  running, failed, rolled back after a failure, or unreadable. A verified update
+  and a browser without a saved operation show nothing there.
+- *First load and after sign-in:* while the session and readiness reads are in
+  flight the page shows `recovery.checkingTitle` with `recovery.checkingHelp`
+  (EN "Confirming your session and panel readiness. This check does not start a
+  server operation." · TR "Oturumunuz ve panelin hazır olma durumu doğrulanıyor.
+  Bu kontrol sunucuda bir işlem başlatmaz."). `recovery.availabilityTitle`
+  ("Panel readiness could not be checked" / "Panelin hazır olma durumu kontrol
+  edilemedi") needs a read that failed.
+- *The session ended under a page in use* (confirmed 401), above the sign-in
+  form: `accessHold.sessionEnded`, EN "Your session ended. Sign in to return to
+  the page you were on. Anything you had typed there and not saved was not
+  kept." · TR "Oturumunuz sona erdi. Bulunduğunuz sayfaya dönmek için giriş
+  yapın. Orada yazıp kaydetmediğiniz bilgiler korunmadı." Who acts: the owner.
+  Resume: the same address after sign-in. A sign-out shows no reason.
+- *A part of the interface failed to load after an update*, for 4 s before the
+  page reloads: `accessHold.updateReload`, EN "A part of CelikPanel could not be
+  loaded, most likely because CelikPanel was updated while this tab was open.
+  This page reloads in a moment to load the current version." · TR "CelikPanel’in
+  bir bölümü yüklenemedi; büyük olasılıkla bu sekme açıkken CelikPanel
+  güncellendi. Güncel sürümü yüklemek için bu sayfa birazdan yeniden yüklenir."
+  The cause is stated as likely, not as known.
+
+**Known negative results are unchanged:** a license reported missing, expired or
+invalid still shows the activation page (administrator) or the message to contact
+the administrator (other roles).
+
+**Not handled.**
+
+- If the wording part has not arrived, the layer says only "Checking panel
+  access" with the shell's help line and the check; the ended-session reason and
+  the reload line are then not shown.
+- The reload after a failed part is not offered as a choice; it is announced.
+- A page whose own request is refused under the layer handles that itself; not
+  audited page by page.
+- Unsent input is not kept across a real sign-in.
+- Not verified in a browser or on a real server: the texts in place, the 1.5 s
+  and 30 s steps, focus return, and a hidden tab's timers.

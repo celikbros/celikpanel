@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import { RootErrorBoundary } from './components/RootErrorBoundary'
 import { ToastContainer } from './components/Toast'
+import { UPDATE_RELOAD_EVENT, UpdateReloadNotice } from './components/UpdateReloadNotice'
 import { ThemeProvider } from './theme/ThemeProvider'
 import { I18nProvider } from './i18n'
 import './index.css'
@@ -23,7 +24,10 @@ window.addEventListener('vite:preloadError', (event) => {
     if (!Number.isFinite(lastReload) || now - lastReload > CHUNK_RELOAD_WINDOW_MS) {
       window.sessionStorage.setItem(CHUNK_RELOAD_KEY, String(now))
       event.preventDefault()
-      window.location.reload()
+      // A mounted interface says why before it reloads (UpdateReloadNotice
+      // cancels this event and reloads after its line has been shown). With
+      // nothing drawn yet there is nothing typed to lose: reload at once.
+      if (window.dispatchEvent(new Event(UPDATE_RELOAD_EVENT, { cancelable: true }))) window.location.reload()
     }
   } catch {
     // Storage can be unavailable in hardened browser modes. In that case the
@@ -36,6 +40,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <ThemeProvider>
       <I18nProvider>
         <ToastContainer />
+        <UpdateReloadNotice />
         <App />
       </I18nProvider>
     </ThemeProvider>

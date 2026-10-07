@@ -2344,3 +2344,136 @@ all five runs. No candidate product defect.
   Ubuntu; secure-mail certificates; the signed alpha.80 archive; production
   signing, the real origin, the license service, DNS, renewal itself, a
   browser, power loss; panel removal.
+
+### A mounted page is replaced only by a known negative access result (P0.2, 2026-10-08)
+
+D-025 invariants 2, 3 and 6; D-024. P0.2 stays partial and no acceptance item is
+closed. Source state with component tests only: no browser pass, no native run,
+no installed panel touched, no license service contacted.
+
+**Reported.** An owner on an installed server running v0.1.0-alpha.81: after
+leaving a page for a while the whole screen became "Lisans durumu kontrol
+edilemedi" with the action "Panel erişimini kontrol et"; on return the panel came
+back, but not where it had been left. An open dialogue, typed input and the
+selected tab were gone. The same screen showed "Güncelleme ve kurtarma durumu:
+Güncelleme doğrulandı" for an update that had finished days earlier. The license
+was valid throughout.
+
+**Mechanism (read from the source at `0f9e1067`, not observed on that server).**
+The server's access decision is valid for at most 60 s
+(`internal/licensing/license.go:28,197`, `cmd/panel/license.go:225`). In
+`web/src/components/LicenseOnboarding.tsx` both the 60 s interval (`:55`) and the
+refresh 15 s before the deadline (`:81-83`) skipped a hidden tab; the deadline
+timer (`:84-88`) then set `allowed: null, failed: true`, and `:115` returned the
+full recovery page in place of the application, which unmounted every page. Focus
+(`:56,65`) read again and the application was built from nothing. A visible tab
+whose reads were slow or failed past the deadline took the same path. Related
+paths in `web/src/App.tsx`: any API reply with `PANEL_STARTING` or
+`AUTH_STATUS_UNAVAILABLE` replaced a mounted application (`:492-501`,
+`:509-513`); the readiness read after sign-in or on load was drawn as "Panel
+readiness could not be checked" while it was only in flight (`:509-513` with
+`RecoveryAccess.tsx:106-107`); a 401 showed the sign-in form with no reason
+(`:486-491`, `:508`); `main.tsx:19-27` reloaded without a word when a part of the
+interface failed to load. The recovery page drew the saved update record for
+every administrator, whatever its result.
+
+**Changed (browser only).** A gate replaces the screen only on a KNOWN negative:
+a license reported missing, expired or invalid, a confirmed 401, or a sign-out.
+An unknown or merely not yet refreshed state keeps the mounted pages.
+
+- `AccessHold` (new) keeps the pages mounted and makes them unreachable while
+  access is not confirmed: the subtree is `inert` and hidden from assistive
+  technology, events aimed at it are stopped in the capture phase, and focus that
+  lands in it is taken out. Nothing in it can be used until the server confirms
+  access; the server refuses management requests without a current decision on
+  its own, as before. On release, focus returns to the field it was in.
+- A read that answers within 1.5 s draws nothing. A slower one draws a modal
+  layer that says access is being checked. A read that answered without
+  confirming access draws the reason, that nobody needs to act, and that the page
+  continues where it was. The layer is the shared dialogue with no dismissal,
+  outside the inert subtree and above the operation overlay.
+- Hidden tab: at the deadline the decision stops being used; that is not recorded
+  as a failed read and nothing is read. Returning (visibility or focus) applies
+  the deadline by the clock, so a throttled timer cannot leave an expired decision
+  in use, and starts one read.
+- While unknown, the license answer is read every 5 s in a visible tab (before:
+  every 60 s and on focus); session and readiness every 10 s, now also for an
+  unreadable session (before: on focus only). After 30 s the layer adds "Reload
+  CelikPanel" with its cost.
+- `PANEL_STARTING` and `AUTH_STATUS_UNAVAILABLE` from a request of a mounted page
+  use the same hold. Only the first report changes the session state and it
+  starts one read; pages that keep being refused cannot restart it. The same
+  applies to repeated license refusals.
+- First load and sign-in: the session and readiness reads in flight are a
+  "checking" state. "Could not be checked" needs a read that failed or timed out.
+  The full recovery page remains for a load on which nothing is mounted yet.
+- The saved update record is drawn in an access or readiness gate only for an
+  operation that is still running, failed, rolled back after a failure, or whose
+  result cannot be read. A verified update, or no saved operation, draws nothing
+  and is not read. The page for an interface that failed to load keeps the full
+  reader.
+- A confirmed 401 under a mounted page shows the sign-in form with the reason.
+  The address is kept, so signing in opens the same route.
+- A part of the interface that fails to load after an update: one line is shown
+  for 4 s, then the page reloads, once per 30 s as before. Before anything is
+  drawn it reloads at once, as before.
+
+**Not changed.** The server-side decision, its 60 s validity, what the server
+refuses without it, and what a known negative does on screen (activation page,
+redirect to `/activate`, tenant message). A decision is never used past its
+deadline and never extended. The update tracker is paused while a hold is
+explained exactly as it was while the recovery page was shown.
+
+**Requests under the layer are not paused.** The server refuses each management
+request while it has no current decision, so a poll under the layer cannot change
+anything. Holding requests in the browser would need a list of exempt recovery
+and update routes kept in step with the server, and a held request would run
+later, at a time nobody chose. Read in the source for the six polling screens:
+the dashboard figures and application status ignore a refused poll; the
+host-change readiness on the dashboard and components page becomes "unverified"
+until the next read; monitoring empties its chart until the next read; the
+domain log viewer with automatic refresh raises its generic error toast on each
+refused poll, behind the layer; setup shows its own reconnect guidance. None of
+them discards typed input.
+
+**Schema or version transition.** None. No server code, API field, stored record
+or browser storage format changes. Eleven strings are added to the screen
+catalogue (EN and TR); one sentence is removed from `recovery.startingHelp`. A
+tab still running the previous interface keeps the previous behaviour until it
+is reloaded.
+
+**Recovery behaviour.** Access confirmed again: the hold ends and the same page
+continues. Known negative while held: the pages are removed and the existing gate
+is shown. Session ended: sign-in with the reason, same address, without what had
+been typed. Still unknown: the layer stays, reads continue, and the owner can
+check, or reload at the stated cost. If the wording part has not arrived, the
+layer still blocks and says only that access is being checked.
+
+**Evidence.** Component tests only: `web/tests/access-hold-runtime.test.mjs`
+(new) and updated cases in `license-onboarding-runtime`, `recovery-access-runtime`
+and `panel-handover`. They cover a decision that ran out in a hidden tab (no
+unmount, no read while hidden, one read on return, nothing drawn), a throttled
+timer, an explained hold over a page that keeps typed input, selected tab and an
+open dialogue, stopped events and focus, each known negative from a hold, the
+checking state on first load and after sign-in, refused background requests
+through the real fetch interception, a finished update in a gate, the ended
+session with an unchanged address, and the reload line. 576 web tests pass.
+Production build: critical boot 302.29 KiB raw / 93.46 KiB gzip (limits 361 /
+110), Settings route 272.99 / 79.77 KiB (limits 280 / 80); no limit raised. The
+design detector reports no finding on the changed files.
+
+**Open.**
+
+- Not confirmed in a browser: timer throttling in a hidden tab, the order of
+  visibility and focus events, `inert` on a `display: contents` element, the
+  caret after focus returns, stacking against the operation overlay and the
+  update lock, the screen-reader announcement, EN and TR at desktop and phone
+  width.
+- What each page does when its own request is refused under the layer is read
+  for the six polling screens only, not audited page by page and not observed.
+  The log viewer's repeated error toast and the emptied monitoring chart are
+  left as they are. An operation whose reply is lost is reconciled by its own
+  contract, as before.
+- Unsent input is not kept across a real sign-in.
+- Each tab holds on its own; nothing is shared between tabs.
+- Cause not established on the owner's server; the mechanism is read from code.

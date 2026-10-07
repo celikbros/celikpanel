@@ -17,7 +17,9 @@ import { Login } from './components/Login';
 import { LicenseOnboarding } from './components/LicenseOnboarding';
 import { usePanelSession } from './auth/usePanelSession';
 import { RecoveryAccess } from './components/RecoveryAccess';
+import { AccessHold } from './components/AccessHold';
 import { AuthProvider, useAuth } from './auth/AuthContext';
+import type { CurrentUser } from './lib/api';
 import { navItems, canAccessPath, type NavAccessContext } from './nav';
 import { Layout } from './components/Layout';
 import { ComponentOperationProvider } from './components/ComponentOperation';
@@ -462,10 +464,40 @@ function AppRoutes() {
 // AuthGate ön kapıdır: herhangi bir sayfa render edilmeden önce mevcut
 // oturumu çözer, oturum yoksa giriş ekranını gösterir ve kullanım
 // sırasında oturum düşerse (herhangi bir API 401) girişe geri döner.
+//
+// A page that is already mounted is replaced only by a KNOWN negative: a
+// confirmed 401, or a sign-out. A session or readiness answer that is merely
+// unknown (PANEL_STARTING, AUTH_STATUS_UNAVAILABLE, a failed read) keeps the
+// pages mounted and unreachable behind AccessHold until the server answers. The
+// full recovery page is for a load on which the application cannot start at all.
+//
+// Açık bir sayfayı yalnızca BİLİNEN olumsuz sonuç değiştirir: doğrulanmış 401 ya
+// da çıkış. Yalnızca bilinmeyen oturum ya da hazır olma yanıtı sayfaları bağlı ve
+// erişilmez tutar; tam kurtarma sayfası uygulamanın hiç başlayamadığı yükleme içindir.
 function AuthGate() {
   const { user, state, checking, generation: authGenerationRef, retry, transitionAuthentication, markUnavailable } = usePanelSession();
   const [observationRecovery, setObservationRecovery] = useState(false);
   const endSession = useCallback(() => transitionAuthentication(null), [transitionAuthentication]);
+  // The identity whose pages are mounted, whether the owner signed out, and
+  // whether the session ended under a mounted page. Derived while rendering so
+  // that the pages and their hold never disagree for a frame.
+  const mounted = useRef<CurrentUser | null>(null);
+  const signingOut = useRef(false);
+  const sessionEnded = useRef(false);
+  if (state === 'ready' && user) {
+    mounted.current = user;
+    sessionEnded.current = false;
+  } else if (state === 'unauthenticated') {
+    if (mounted.current) sessionEnded.current = !signingOut.current;
+    mounted.current = null;
+    signingOut.current = false;
+  } else if (user && mounted.current && user.username !== mounted.current.username) {
+    mounted.current = null;
+  }
+  const signOut = useCallback(() => {
+    signingOut.current = true;
+    transitionAuthentication(null);
+  }, [transitionAuthentication]);
   useLayoutEffect(() => {
     // Pause the optional tracker while the independent status surface owns access.
     // This preserves the exact saved operation; it does not end the session.
@@ -505,16 +537,22 @@ function AuthGate() {
     return () => { window.fetch = originalFetch; };
   }, [transitionAuthentication, markUnavailable, authGenerationRef]);
 
-  if (state === 'unauthenticated') return <Login onSuccess={transitionAuthentication} />;
-  if (state !== 'ready' || !user) return <RecoveryAccess
-    user={state === 'auth_unavailable' ? null : user}
-    cause={state === 'auth_unavailable' || !user ? 'auth' : state === 'starting' ? 'starting' : 'availability'}
-    checking={checking} onRetry={() => void retry()} onUnauthorized={endSession}
-  />;
+  // The router keeps the address while the sign-in form is shown, so signing in
+  // again opens the same route. What was typed on that page is not kept.
+  if (state === 'unauthenticated') return <Login onSuccess={transitionAuthentication} sessionEnded={sessionEnded.current} />;
+  const known = state === 'auth_unavailable' ? null : user;
+  // Never depends on two state updates landing in one render: without a verified
+  // identity in hand, the pages that are mounted stay the ones that are shown.
+  const shown = state === 'ready' && user ? user : mounted.current;
+  // First read still in flight: nothing has failed yet, so nothing is reported as failed.
+  const cause = state === 'checking' ? 'checking' : state === 'auth_unavailable' || !user ? 'auth' : state === 'starting' ? 'starting' : 'availability';
+  if (!shown) return <RecoveryAccess user={known} cause={cause} checking={checking} onRetry={() => void retry()} onUnauthorized={endSession} />;
 
   return (
-    <AuthProvider user={user} onLogout={() => transitionAuthentication(null)}>
-        <LicenseOnboarding onRecoveryChange={setObservationRecovery}>
+    <AccessHold active={state !== 'ready'} cause={cause === 'checking' ? 'availability' : cause} checking={checking}
+      user={known} onRetry={() => void retry()} onUnauthorized={endSession}>
+    <AuthProvider key={shown.username} user={shown} onLogout={signOut}>
+        <LicenseOnboarding onRecoveryChange={setObservationRecovery} suspended={state !== 'ready'}>
         <Suspense fallback={<PageLoading />}>
           <ComponentOperationProvider>
             <ServerSetupGate><AppRoutes /></ServerSetupGate>
@@ -522,15 +560,19 @@ function AuthGate() {
         </Suspense>
         </LicenseOnboarding>
     </AuthProvider>
+    </AccessHold>
   );
 }
 
-function StandaloneRecovery() {
+// loading: the interface is still being fetched. That is a wait, not a failure,
+// so the page says "checking" until a read or the fetch has actually failed.
+function StandaloneRecovery({ loading = false }: { loading?: boolean }) {
   const { user, state, checking, retry, transitionAuthentication } = usePanelSession();
   const endSession = useCallback(() => transitionAuthentication(null), [transitionAuthentication]);
   if (state === 'unauthenticated') return <Login onSuccess={transitionAuthentication} />;
-  return <RecoveryAccess user={state === 'auth_unavailable' ? null : user}
-    cause={state === 'auth_unavailable' || !user ? 'auth' : 'bundle'} checking={checking}
+  const cause = state === 'auth_unavailable' ? 'auth' : state === 'checking' ? 'checking' : !user ? 'auth'
+    : !loading ? 'bundle' : state === 'starting' ? 'starting' : state === 'availability_unavailable' ? 'availability' : 'checking';
+  return <RecoveryAccess user={state === 'auth_unavailable' ? null : user} cause={cause} checking={checking}
     onRetry={() => void retry()} onUnauthorized={endSession} />;
 }
 
@@ -543,7 +585,7 @@ class RecoveryBoundary extends Component<{ children: ReactNode }, { failed: bool
 function App() {
   return (
     <RecoveryBoundary>
-      <Suspense fallback={<StandaloneRecovery />}>
+      <Suspense fallback={<StandaloneRecovery loading />}>
         <SystemUpdateOperationProvider>
           <BrowserRouter>
             <AuthGate />

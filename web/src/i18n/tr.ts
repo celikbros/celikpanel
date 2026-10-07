@@ -13,7 +13,7 @@ export const tr: Record<ShellKey, string> = {
     'recovery.authTitle': "Oturumunuz kontrol edilemedi",
     'recovery.authHelp': "CelikPanel şu anda oturumunuzu doğrulayamıyor. Bağlantı kullanılabilir olduğunda tekrar kontrol edin. Oturumunuz ve panel erişimi doğrulanana kadar yönetim kapalı kalır.",
     'recovery.startingTitle': "Panel başlatılıyor",
-    'recovery.startingHelp': "Sunucu panel erişimini hazırlıyor. Bu sayfa hazır olma durumunu otomatik kontrol eder. Güncellemenizin kaydedilmiş son sonucunu aşağıda inceleyebilirsiniz.",
+    'recovery.startingHelp': "Sunucu panel erişimini hazırlıyor. Bu sayfa hazır olma durumunu otomatik kontrol eder.",
     'recovery.availabilityTitle': "Panelin hazır olma durumu kontrol edilemedi",
     'recovery.availabilityHelp': "Oturumunuz doğrulandı ancak panelin hazır olup olmadığı bilinmiyor. Tekrar kontrol edin veya sayfayı yenileyin. Yönetim, sunucu hazır olduğunu ve erişimi doğruladıktan sonra açılır.",
     'recovery.handoverTitle': "Panel kurulum sırasında bir kez yeniden başlar",

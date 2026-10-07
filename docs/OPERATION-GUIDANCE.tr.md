@@ -727,3 +727,118 @@ alanı eklenir. Geçiş (migration) yok.
 - Gerçek sunucuda ya da tarayıcıda doğrulanmadı: metinlerin yerinde görünümü,
   yeniden başlatmanın adım listesine göre zamanlaması ve tam sayfanın on
   saniyelik yeniden denetimi.
+
+### Erişim ve hazır olma kontrolleri sayfayı korur: açıklanan bekletme, kontrol durumu, sona eren oturum (2026-10-08)
+
+Kaynak durumu, bileşen testleriyle; tarayıcı denemesi ve gerçek sistem koşusu
+yok. v0.1.0-alpha.81 çalışan kurulu bir sunucunun sahibi tarafından bulundu.
+Etkilenen sözleşme maddeleri: dayanıklılık ilkeleri 2, 3 ve 6 (P0.2 kapsamı);
+hiçbir kabul işi kapanmaz. Mekanizma ve değişikliğin tamamı
+[dayanıklılık sözleşmesinde](RESILIENCE-CONTRACT.tr.md#açık-sayfayı-yalnızca-bilinen-olumsuz-erişim-sonucu-değiştirir-p02-2026-10-08).
+
+**Sahibin gördüğü.** Bir sayfadan bir süre ayrıldıktan sonra: tam ekran "Lisans
+durumu kontrol edilemedi" ve "Panel erişimini kontrol et"; altında, günler önce
+bitmiş bir güncelleme için "Güncelleme ve kurtarma durumu: Güncelleme
+doğrulandı". Dönünce panel yeniden açıldı; açık pencere, yazılanlar ve seçili
+sekme yoktu. Lisans baştan sona geçerliydi.
+
+**Ürün şimdi ne diyor.** Anahtarlar `web/src/i18n/screens` içindedir; yalnızca
+açık bir sayfanın üzerinde ya da ardından gösterilir.
+
+- *Sekme gizliyken süresi dolan karar ya da 1,5 sn içinde yanıtlanan okuma:*
+  hiçbir şey gösterilmez. Okuma yanıtlanana kadar sayfa kullanılamaz.
+- *Okuma 1,5 sn sonra yanıtlanmadı* (sayfanın üzerinde katman, hiçbir şey
+  başarısız olmadı): başlık `recovery.checkingTitle`, TR "Panel erişimi kontrol
+  ediliyor" · EN "Checking panel access"; `accessHold.waitingHelp`, TR "Panel
+  henüz yanıt vermedi. Yanıt verir vermez bu sayfa kaldığı yerden devam eder." ·
+  EN "The Panel has not answered yet. This page continues where it was as soon as
+  it does."
+- *Okuma erişimi doğrulamadan yanıtlandı* (önce neden):
+  - Lisans sonucu okunamadı: `accessHold.licenseTitle`, TR "Panel erişimi az önce
+    doğrulanamadı" · EN "Panel access could not be confirmed just now";
+    `accessHold.licenseHelp`, TR "CelikPanel az önce bu sunucunun lisans sonucunu
+    okuyamadı. Bu, lisansınızın eksik veya süresinin dolmuş olduğu anlamına
+    gelmez." · EN "CelikPanel could not read the license result for this server a
+    moment ago. This does not mean your license is missing or expired."
+  - Hazır olma durumu okunamadı: `accessHold.availabilityTitle`, TR "Panel az
+    önce yanıt vermedi" · EN "The Panel did not answer just now";
+    `accessHold.availabilityHelp`, TR "CelikPanel panelin hazır olduğunu
+    doğrulayamadı. Panel yeniden başlıyor olabilir." · EN "CelikPanel could not
+    confirm that the Panel is ready. It may be restarting."
+  - Oturum okunamadı: `accessHold.authTitle`, TR "Oturumunuz az önce
+    doğrulanamadı" · EN "Your session could not be confirmed just now";
+    `accessHold.authHelp`, TR "CelikPanel az önce oturumunuzu okuyamadı. Bu,
+    oturumunuzun kapatıldığı anlamına gelmez." · EN "CelikPanel could not read
+    your session a moment ago. This does not mean you were signed out."
+  - Panel başlatıldığını bildiriyor: mevcut `recovery.startingTitle`, TR "Panel
+    başlatılıyor" · EN "The panel is starting"; `recovery.startingHelp` ile,
+    artık TR "Sunucu panel erişimini hazırlıyor. Bu sayfa hazır olma durumunu
+    otomatik kontrol eder." · EN "The server is preparing panel access. This page
+    checks readiness automatically." ("Güncellemenizin kaydedilmiş son sonucunu
+    aşağıda inceleyebilirsiniz." / "You can inspect the last recorded result of
+    your update below." cümlesi çıkarıldı; çünkü blok artık her zaman orada
+    değil).
+  - Kurulumun planlı sertifika yeniden başlatması sırasında mevcut
+    `recovery.handoverTitle`, `recovery.handoverHelp` ve
+    `recovery.handoverAddress` sihirbazın üzerinde kullanılır.
+- *Kim işlem yapar ve iş nasıl sürer* (nedenin altında, planlı yeniden başlatma
+  dışında): `accessHold.resume`, TR "Şimdilik bir şey yapmanız gerekmiyor.
+  CelikPanel birkaç saniyede bir kendiliğinden yeniden kontrol eder. Erişim
+  doğrulandığında bu sayfa, yazdıklarınızla birlikte kaldığı yerden devam eder. O
+  zamana kadar bu sayfada değişiklik yapılamaz." · EN "You do not need to do
+  anything yet. CelikPanel checks again by itself every few seconds. When access
+  is confirmed, this page continues where it was, with what you typed. Until then
+  nothing on this page can be changed." Eylem: mevcut `recovery.retry`, TR "Panel
+  erişimini kontrol et" · EN "Check panel access" (sahibin istediği okuma
+  sürerken `recovery.checking`, "Kontrol ediliyor…" / "Checking…"). Yalnızca
+  okur; hiçbir şey başlatmaz.
+- *30 sn sonra hâlâ bilinmiyor:* `accessHold.prolonged`, TR "Bu durum yarım
+  dakikadan uzun sürdü. Beklemeyi sürdürebilirsiniz, otomatik kontrol devam eder;
+  dilerseniz CelikPanel’i yeniden yükleyebilirsiniz. Yeniden yüklemek, bu sayfada
+  yazıp kaydetmediğiniz her şeyi siler." · EN "This has taken longer than half a
+  minute. You can keep waiting, and the automatic check continues, or you can
+  reload CelikPanel. Reloading discards anything you typed on this page and did
+  not save."; kontrolün yanında mevcut `app.reload`, TR "CelikPanel’i yeniden
+  yükle" · EN "Reload CelikPanel".
+- *Güncelleme ve kurtarma durumu* (`recovery.operationTitle`), katmanda ve erişim
+  ile hazır olma sayfalarında yalnızca süren, başarısız olan, başarısızlıktan
+  sonra geri alınan ya da okunamayan kayıtlı işlem için görünür. Doğrulanmış
+  güncelleme ve kayıtlı işlemi olmayan tarayıcı orada hiçbir şey göstermez.
+- *İlk yükleme ve girişten sonra:* oturum ve hazır olma okumaları sürerken sayfa
+  `recovery.checkingTitle` ile `recovery.checkingHelp` gösterir (TR "Oturumunuz
+  ve panelin hazır olma durumu doğrulanıyor. Bu kontrol sunucuda bir işlem
+  başlatmaz." · EN "Confirming your session and panel readiness. This check does
+  not start a server operation."). `recovery.availabilityTitle` ("Panelin hazır
+  olma durumu kontrol edilemedi" / "Panel readiness could not be checked") için
+  başarısız olmuş bir okuma gerekir.
+- *Kullanılan sayfanın altında oturum sona erdi* (doğrulanmış 401), giriş
+  formunun üstünde: `accessHold.sessionEnded`, TR "Oturumunuz sona erdi.
+  Bulunduğunuz sayfaya dönmek için giriş yapın. Orada yazıp kaydetmediğiniz
+  bilgiler korunmadı." · EN "Your session ended. Sign in to return to the page
+  you were on. Anything you had typed there and not saved was not kept." Kim
+  işlem yapar: sahip. Devam: girişten sonra aynı adres. Çıkış yapıldığında neden
+  gösterilmez.
+- *Güncellemeden sonra arayüzün bir parçası yüklenemedi*, sayfa yeniden
+  yüklenmeden önce 4 sn boyunca: `accessHold.updateReload`, TR "CelikPanel’in bir
+  bölümü yüklenemedi; büyük olasılıkla bu sekme açıkken CelikPanel güncellendi.
+  Güncel sürümü yüklemek için bu sayfa birazdan yeniden yüklenir." · EN "A part
+  of CelikPanel could not be loaded, most likely because CelikPanel was updated
+  while this tab was open. This page reloads in a moment to load the current
+  version." Neden, bilinen olarak değil olası olarak belirtilir.
+
+**Bilinen olumsuz sonuçlar değişmedi:** eksik, süresi dolmuş ya da geçersiz
+olduğu bildirilen lisans yine etkinleştirme sayfasını (yönetici) ya da yöneticiye
+başvurma iletisini (diğer roller) gösterir.
+
+**Ele alınmayan.**
+
+- Metin parçası gelmemişse katman yalnızca "Panel erişimi kontrol ediliyor"
+  başlığını, kabuğun yardım satırını ve kontrolü gösterir; sona eren oturumun
+  nedeni ve yeniden yükleme satırı o durumda gösterilmez.
+- Yüklenemeyen parçadan sonraki yeniden yükleme bir seçenek olarak sunulmaz;
+  duyurulur.
+- Katmanın altında kendi isteği reddedilen sayfa bunu kendisi ele alır; sayfa
+  sayfa incelenmedi.
+- Gönderilmemiş girdi gerçek bir yeniden girişte korunmaz.
+- Tarayıcıda ya da gerçek sunucuda doğrulanmadı: metinlerin yerinde görünümü,
+  1,5 sn ve 30 sn adımları, odağın dönüşü ve gizli sekmenin zamanlayıcıları.
