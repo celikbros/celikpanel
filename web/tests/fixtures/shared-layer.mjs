@@ -1,0 +1,70 @@
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { pathToFileURL } from 'node:url';
+import ts from 'typescript';
+
+// The shared remote-state layer, compiled from source for a mounted test:
+// lib/remote.ts, lib/hostingCapabilities.ts, lib/apiError.ts and the REAL
+// components/ui.tsx. A screen under test imports these exactly as it does in
+// the application, so "checking", "could not check" and the gate around an
+// empty state are the shipped ones and not a stand-in that could agree with a
+// broken screen.
+//
+// Everything else a screen imports (icons, the router, the catalogue, toasts)
+// comes from the stub the test supplies. That stub must export `useI18n`,
+// `useNavigate` and `AlertTriangle`, which ui.tsx itself needs.
+//
+// Paylaşılan uzak-durum katmanı, bağlanan bir test için kaynaktan derlenir.
+// Test edilen ekran bunları uygulamadaki gibi içe aktarır; böylece "kontrol
+// ediliyor", "kontrol edilemedi" ve boş durumun çevresindeki kapı, bozuk bir
+// ekranla anlaşabilecek bir vekil değil, gönderilen kodun kendisidir.
+const require = createRequire(import.meta.url);
+export const reactURL = pathToFileURL(require.resolve('react')).href;
+export const dataModule = (text) => 'data:text/javascript;base64,' + Buffer.from(text).toString('base64');
+
+const compilerOptions = { jsx: ts.JsxEmit.React, module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2020 };
+const read = (path) => readFileSync(new URL('../../src/' + path, import.meta.url), 'utf8');
+
+// compileSource turns one file under web/src into an importable module.
+// `resolve` maps each of its import specifiers to a module URL.
+export function compileSource(path, resolve) {
+  const compiled = ts.transpileModule(read(path), { compilerOptions }).outputText
+    .replace(/from ['"]([^'"]+)['"]/g, (_, specifier) => `from '${specifier === 'react' ? reactURL : resolve(specifier)}'`);
+  return dataModule(`import React from '${reactURL}';\n${compiled}`);
+}
+
+const unexpected = (file) => (specifier) => {
+  throw new Error(`${file} imports ${specifier}, which the shared-layer fixture does not provide`);
+};
+
+export const apiErrorURL = compileSource('lib/apiError.ts', unexpected('lib/apiError.ts'));
+export const remoteURL = compileSource('lib/remote.ts', (specifier) => (
+  specifier.endsWith('/apiError') ? apiErrorURL : unexpected('lib/remote.ts')(specifier)
+));
+export const capabilitiesURL = compileSource('lib/hostingCapabilities.ts', (specifier) => (
+  specifier.endsWith('/remote') ? remoteURL : unexpected('lib/hostingCapabilities.ts')(specifier)
+));
+
+// sharedLayer returns the resolver a screen is compiled with: the real shared
+// modules by their import suffix, `extra` for a test's own real modules, and
+// the stub for the rest.
+export function sharedLayer(stubURL, extra = {}) {
+  const uiURL = compileSource('components/ui.tsx', (specifier) => (
+    specifier.endsWith('/apiError') ? apiErrorURL : stubURL
+  ));
+  const table = {
+    '/lib/apiError': apiErrorURL,
+    '/lib/remote': remoteURL,
+    '/lib/hostingCapabilities': capabilitiesURL,
+    '/ui': uiURL,
+    ...extra,
+  };
+  const resolve = (specifier) => {
+    for (const [suffix, url] of Object.entries(table)) if (specifier.endsWith(suffix)) return url;
+    return stubURL;
+  };
+  return { uiURL, resolve, compile: (path, more = {}) => compileSource(path, (specifier) => {
+    for (const [suffix, url] of Object.entries(more)) if (specifier.endsWith(suffix)) return url;
+    return resolve(specifier);
+  }) };
+}

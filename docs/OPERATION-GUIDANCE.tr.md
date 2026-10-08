@@ -1132,3 +1132,296 @@ yüklemesi ve başarısız bir `postconf` yazısı sınıflandırılmadı (ikinc
 söylemez; API'den gelen DNSBL reddinin (`MAIL_POLICY_RESTRICTIONS_UNMANAGED`)
 yalnız İngilizce cümlesi vardır, çünkü ekran bu retle karşılaşmak yerine denetimi
 geri çeker; diğer ekranlar hâlâ eski kalıbı izler ve burada incelenmedi.
+
+### Bilinmeden olumsuz durum yok: kontrol ediliyor, kontrol edilemedi, biliniyor (2026-10-09)
+
+Bileşen testleriyle ve yerel bir sahte sunucuya karşı tarayıcı incelemesiyle
+(bu girdinin sonuna bakın) kaynak durumu; gerçek sistem denemesi ve kurulu
+sunucu yok. 2026-10-08'de kurulu bir sunucuda bir sahip bildirdi. Yukarıdaki
+"Doğruluk ve işlem kimliği" kuralını (bilinmeyen sonuç, eksik önkoşul değildir)
+sunucuyu okuyan her ekrana uygular. Okumaların nasıl gösterildiğini değiştirir;
+yaşam döngüsü, erişim kapısı, saklanan kayıt ya da API değişmez ve hiçbir kabul
+işi kapanmaz.
+
+**Sahibin gördüğü.** DNS'i olan bir sunucuda "Alan adı ekle" açıldığında,
+sunucunun yeteneklerinin okunması süren saniyeler boyunca "Alan adı eklemeden
+önce panel tarafından yönetilen etkin bir DNS sunucusu gerekir… [DNS motoru seç]"
+yazısı ve kapalı bir form göründü. Altındaki Alan Adları sayfası da aynı
+saniyelerde "Alan adı ekle" düğmesini kapattı. Eksik bir şey yoktu; yanıt henüz
+gelmemişti.
+
+**Neden.** Sunucuyu okumanın ortak bir yolu yoktu. 68 dosya onu ham `fetch` ile
+bileşen durumuna okuyor, çoğu "okuma başarısız oldu" ya da "okuma henüz yanıt
+vermedi" durumunu ekranın sonra olgu diye gösterdiği bir değere (`null`, boş
+liste, `false`) çeviriyordu. Aynı adres, `GET /api/v1/hosting/capabilities`,
+sekiz yerde ve "henüz yanıt yok" için sekiz ayrı anlamla okunuyordu.
+
+**Bundan sonra her ekran için kural: bilinmeden olumsuz arayüz yok.** Bir ekranın
+sunucudan okuduğu şey her zaman üç durumdan birindedir ve bunlar birbirine
+benzemez:
+
+1. **Kontrol ediliyor** (henüz bilinmiyor; kimsenin bir şey yapması gerekmez).
+   Olağan metin renginde, yanıt geldiğinde ekranın geri kalanını yerinden
+   oynatmayan bir yerde, sakin tek satır. "Eksik", "hazır değil", "yok", "kapalı"
+   ve boş liste yok.
+2. **Kontrol edilemedi** (bilinmeyen sonuç; ekranın başındaki kişi işlem yapar).
+   Ekranın kendi cümlesi neyin okunamadığını, bunun o şeyin eksik olduğu anlamına
+   gelmediğini ve hiçbir şeyin değiştirilmediğini söyler; **Tekrar dene** /
+   **Retry** yeniden okur ve hiçbir şeyi değiştirmez. Önceki bir yanıt varsa,
+   bunun önceki yanıt olduğunu ve ne zaman okunduğunu söyleyen bir bildirimin
+   altında ekranda kalır.
+3. **Biliniyor.** Ancak o zaman "eksik", "hazır değil", "boş" ya da "kapalı", o
+   durumun zaten sahip olduğu yönlendirmeyle.
+
+Bir şey gönderen ya da kaldıran denetim, yalnız üzerinde işlem yaptığı şey
+bilinirken etkindir. Hiçbir form varsayılanlardan kurulmaz ya da kaydedilmez.
+Okuma hiçbir zaman değişiklik olarak yinelenmez: Tekrar dene, "Tekrar kontrol et"
+ve yenileme yalnız okur.
+
+**Metinler.** Aksi belirtilmedikçe anahtarlar `web/src/i18n/screens` içindedir.
+
+- *Başarısız bir yenilemeden sonra önceki yanıt hâlâ gösteriliyor* (kabuk,
+  `common.staleNotice`; `{time}` okunduğu saat ve dakikadır):
+  - TR: "Bu, az önce sunucudan yeniden okunamadı; aşağıda gösterilen, saat {time}
+    itibarıyla olan hâlidir. Hiçbir şey değiştirilmedi. Bir şeyi kaldıran ya da
+    değiştiren denetimler, yeniden okunana dek kapalıdır."
+  - EN: "This could not be read again from the server just now, so what is shown
+    below is as it was at {time}. Nothing was changed. Controls that remove or
+    change something are off until it has been read again."
+- *Alan adı ekle penceresi ve bir alan adının DNS kayıtları sekmesi* — kontrol
+  ediliyor (`dns.checkingServer`): TR "Bu sunucunun DNS durumu kontrol ediliyor…"
+  · EN "Checking this server’s DNS…". Pencerede form gösterilir ve
+  doldurulabilir, "Alan adı oluştur" kapalıdır ve hiçbir engel çizilmez.
+- *Alan adı ekle penceresi* — kontrol edilemedi (`domains.add.dnsUnknown`),
+  Tekrar dene ile ve "DNS motoru seç" olmadan:
+  - TR: "CelikPanel bu sunucunun DNS durumunu kontrol edemedi; bu yüzden şimdilik
+    alan adı eklenemiyor. Bu, DNS’in eksik olduğu anlamına gelmez. Hiçbir şey
+    değiştirilmedi ve yazdıklarınız duruyor. Tekrar deneyin."
+  - EN: "CelikPanel could not check DNS on this server, so a domain cannot be
+    added yet. This does not mean DNS is missing. Nothing was changed and what
+    you typed is kept. Try again."
+- *Alan adı ekle penceresi ve Alan Adları sayfası* — bilinen olumsuz: değişmedi.
+  Etkin motor yok: `err.DNS_SERVER_REQUIRED.action` ile `domains.add.needsDns`;
+  kimliği olmayan motor: eylemiyle `err.DNS_SETTINGS_REQUIRED`. DNS hazırlığı
+  kontrol edilirken ya da edilemediğinde Alan Adları sayfası DNS hakkında hiçbir
+  şey söylemez ve "Alan adı ekle" kullanılabilir kalır; açtığı pencere yukarıdaki
+  kontrol satırını ya da bildirimi gösterir.
+- *Alan Adları sayfası, liste* — kontrol ediliyor (`domains.checking`): TR "Alan
+  adı listesi okunuyor…" · EN "Reading the domain list…". Okunamadı
+  (`domains.unknown`):
+  - TR: "Alan adı listesi sunucudan okunamadı; bu yüzden gösterilmiyor. Bu, alan
+    adı olmadığı anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+  - EN: "The domain list could not be read from the server, so it is not shown.
+    This does not mean there are no domains. Nothing was changed. Try again."
+  - "Henüz alan adı yok" / "No domains yet" (`domains.empty`) yalnız sunucunun
+    satırsız yanıtladığı liste için.
+- *Alan Adları sayfası, beklemede listelenen ve kayıtlı silmesi okunamayan satır*
+  (`domains.pendingUnknown`; bundan önce satır sessizce bildirimsiz kalıyordu):
+  - TR: "{name} beklemede görünüyor, ancak CelikPanel onun için bekleyen bir silme
+    olup olmadığını okuyamadı. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+  - EN: "{name} is listed as pending, but CelikPanel could not read whether a
+    deletion is waiting for it. Nothing was changed. Try again."
+- *Alan Adları sayfası, abonelik kullanımı* (`quota.unknown`): TR "Abonelik
+  kullanımı sunucudan okunamadı; bu yüzden gösterilmiyor. Hiçbir şey
+  değiştirilmedi. Tekrar deneyin." · EN "Subscription usage could not be read
+  from the server, so it is not shown. Nothing was changed. Try again."
+- *Veritabanları sayfası, motorlar* — kontrol ediliyor
+  (`databases.checkingServers`): TR "Bu sunucudaki veritabanı motorları
+  okunuyor…" · EN "Reading the database engines on this server…". Okunamadı
+  (`databases.serversUnknown`):
+  - TR: "Bu sunucudaki veritabanı motorları okunamadı; bu yüzden hiçbir şey
+    listelenmiyor. Bu, kurulu motor olmadığı anlamına gelmez. Hiçbir şey
+    değiştirilmedi. Tekrar deneyin."
+  - EN: "The database engines on this server could not be read, so nothing is
+    listed. This does not mean no engine is installed. Nothing was changed. Try
+    again."
+  - "Kurulu veritabanı motoru yok" ve "Servisler sayfasına git" yalnız bilinen
+    boş yanıt için.
+- *Veritabanları sayfası, bir motorun veritabanları ve kullanıcıları* — kontrol
+  ediliyor (`databases.checkingDatabases`, `databases.checkingUsers`): TR "Bu
+  motordaki veritabanları okunuyor…", "Bu motordaki veritabanı kullanıcıları
+  okunuyor…" · EN "Reading the databases on this engine…", "Reading the database
+  users on this engine…". Okunamadı (`databases.databasesUnknown`,
+  `databases.usersUnknown`):
+  - TR: "Bu motordaki veritabanları okunamadı; bu yüzden liste gösterilmiyor. Bu,
+    veritabanı olmadığı anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar
+    deneyin." / "Bu motordaki veritabanı kullanıcıları okunamadı; bu yüzden liste
+    gösterilmiyor. Bu, kullanıcı olmadığı anlamına gelmez. Hiçbir şey
+    değiştirilmedi. Tekrar deneyin."
+  - EN: "The databases on this engine could not be read, so the list is not
+    shown. This does not mean there are none. Nothing was changed. Try again." /
+    "The database users on this engine could not be read, so the list is not
+    shown. This does not mean there are none. Nothing was changed. Try again."
+  - Her sekmenin yanındaki sayı, liste bilindiğinde sayıdır; okunurken "…",
+    okunamadığında "–". "Veritabanı oluştur" iki listenin de bilinmesini ister,
+    çünkü penceresi var olan kullanıcıları sunar.
+- *Bir alan adının Veritabanları sekmesi* — kontrol ediliyor (`db.checking`): TR
+  "Bu alan adının veritabanları okunuyor…" · EN "Reading this domain’s
+  databases…". Okunamadı (`db.unknown`):
+  - TR: "Bu alan adının veritabanları sunucudan okunamadı; bu yüzden liste
+    gösterilmiyor. Bu, veritabanı olmadığı anlamına gelmez. Hiçbir şey
+    değiştirilmedi. Tekrar deneyin."
+  - EN: "The databases of this domain could not be read from the server, so the
+    list is not shown. This does not mean there are none. Nothing was changed.
+    Try again."
+  - Motorlar — kontrol ediliyor (`db.checkingEngines`): TR "Kurulu veritabanı
+    motorları kontrol ediliyor…" · EN "Checking which database engines are
+    installed…". Kontrol edilemedi (`db.enginesUnknown`): TR "CelikPanel bu
+    sunucuda hangi veritabanı motorlarının kurulu olduğunu kontrol edemedi; bu
+    yüzden şimdilik burada veritabanı oluşturulamıyor. Hiçbir şey değiştirilmedi.
+    Tekrar deneyin." · EN "CelikPanel could not check which database engines are
+    installed on this server, so a database cannot be created here yet. Nothing
+    was changed. Try again." Varsayılan motor yoktur: oluşturma formu yalnız
+    sunucunun adını verdiği bir motor için vardır.
+- *Bir alan adının bağlantı kartı* — kontrol ediliyor (`conn.checking`): TR "Bu
+  alan adının nereyi gösterdiği kontrol ediliyor…" · EN "Checking where this
+  domain points…". Kartın kendi okuması başarısız (`conn.readFailed`; bundan önce
+  kart kayboluyordu):
+  - TR: "Bu alan adının bağlantısı kontrol edilemedi: CelikPanel bu sunucudan
+    yanıt alamadı. Bu, alan adının bağlı olmadığı anlamına gelmez. Tekrar
+    deneyin."
+  - EN: "The connection of this domain could not be checked: CelikPanel did not
+    get an answer from this server. This does not mean the domain is not
+    connected. Try again."
+  - Okuma başarılı ve sunucu genel çözümleyicilere soramadığını söylüyor
+    (`status: unknown`): durum satırı, olağan metin renginde, var olan
+    `conn.status.unknown` ("Genel DNS kontrol edilemedi" / "Public DNS could not
+    be checked"); iki "şu an" kutusu "henüz yok" yerine `conn.notChecked` der, TR
+    "kontrol edilemedi" · EN "could not be checked"; "Bu alan adı henüz bu
+    sunucuyu göstermiyor…" yerine de `conn.unknownHelp`: TR "Bu sunucu az önce
+    genel DNS çözümleyicilerine ulaşamadı; bu yüzden CelikPanel bu alan adının
+    nereyi gösterdiğini bilmiyor. Bu, alan adının bağlı olmadığı anlamına gelmez.
+    Biraz sonra tekrar kontrol edin. Alan adı henüz bağlı değilse, alan adını
+    aldığınız firmada girilecek değerler aşağıdadır." · EN "This server could not
+    reach the public DNS resolvers just now, so CelikPanel does not know where
+    this domain points. This does not mean it is not connected. Check again in a
+    moment. If the domain is not connected yet, the values to enter at the
+    company you bought it from are below."
+  - Aynı yanıtta ad sunucusu adları da doğrulanamadıysa, bozuk denmez ve onlara
+    devir sunulmaz: `conn.routeAUnknown`, TR "Bu sunucunun ad sunucusu adlarının
+    yanıt verip vermediği de kontrol edilemedi; bu yüzden DNS’i onlara devretmek
+    şu anda sunulmuyor. Tekrar kontrol edin." · EN "Whether this server’s
+    nameserver names answer could not be checked either, so handing DNS to them
+    is not offered right now. Check again."
+  - Sertifika satırı: `conn.sslUnknown`, TR "Sertifika alınıp alınamayacağı, genel
+    DNS kontrol edilene dek bilinmiyor." · EN "Whether a certificate can be
+    issued is not known until public DNS can be checked." Üç durumda da eylem:
+    var olan "Tekrar kontrol et" / "Check again"; okur.
+- *Bir alan adının PHP ayarları, kurulu sürümler* — kontrol ediliyor
+  (`php.checkingVersions`): TR "Kurulu PHP sürümleri kontrol ediliyor…" · EN
+  "Checking which PHP versions are installed…". Kontrol edilemedi
+  (`php.versionsUnknown`): TR "Kurulu PHP sürümleri kontrol edilemedi; bu yüzden
+  yalnız geçerli sürüm listeleniyor ve sürüm şimdilik buradan değiştirilemiyor.
+  Hiçbir şey değiştirilmedi. Tekrar deneyin." · EN "The installed PHP versions
+  could not be checked, so only the current version is listed and the version
+  cannot be changed here yet. Nothing was changed. Try again."
+- *Bir alan adının barındırma türü* — "PHP-FPM kurulu değil" yalnız bilinen yanıt
+  için; kontrol edilemedi (`hosting.phpUnknown`): TR "CelikPanel bu sunucuda
+  PHP-FPM’in kurulu olup olmadığını kontrol edemedi; bu yüzden PHP türü
+  kullanılabilir ya da kullanılamaz diye işaretlenmedi. Hiçbir şey
+  değiştirilmedi. PHP-FPM kurulu değilse PHP türünü uygulamak reddedilir. Tekrar
+  deneyin." · EN "CelikPanel could not check whether PHP-FPM is installed on this
+  server, so the PHP type is not marked either way. Nothing was changed. If
+  PHP-FPM is not installed, applying the PHP type is refused. Try again."
+- *Bir alan adının sekmeleri*: Posta ve Veritabanları yalnız sunucuda o hizmetin
+  olmadığı bilindiğinde kaldırılır; bu kontrol edilirken ya da edilemediğinde
+  kalırlar ve her birinin altındaki bölüm kendi durumunu söyler.
+- 2026-10-08'in üç ayar ekranı (posta politikası, otomatik yedekler, zamanlanmış
+  görevler) metinlerini korur; artık aynı katmanın üzerinde dururlar.
+
+**Aynı ekranlarda düzeltilen iki kusur.**
+
+- *Veritabanları sayfası.* "Hesabı kaldır"dan (ya da CelikPanel'in bir motordaki
+  kendi hesabında yapılan herhangi bir değişiklikten) sonra şerit, sayfanın ilk
+  yüklendiği satırı göstermeyi sürdürüyordu: kaldırılan hesap hâlâ "var"
+  görünüyor, "Yeni parola" da onu yeniden oluşturuyordu. Şerit artık her zaman
+  sunucunun son yanıtını gösterir; bu yanıt yeniden okunurken ya da okunamadığında
+  denetimleri kapalıdır.
+- *Bağlantı kartı.* `status: unknown` yanıtı `null` listeler taşır; bunları okumak
+  alan adının bütün sayfasını düşürüyordu. Artık liste olarak okunurlar ve
+  `unknown` artık "henüz burayı göstermiyor" diye okunmaz (yukarıda).
+
+**Geri gelmesi nasıl engelleniyor.**
+
+- `web/src/lib/remote.ts` okumanın tek yoludur: `useRemote(url, decode)`
+  `loading | known(value, observedAt) | unknown(reason, previous?)` verir, aynı
+  adresi okuyan ekrandaki her şey arasında tek isteği paylaşır ve hiçbir zaman
+  varsayılan üretmez. `web/src/lib/hostingCapabilities.ts` yeteneklerin tek
+  okuyucusudur. `Checking`, `CouldNotCheck`, `RemoteGate` ve `KnownEmpty`
+  `web/src/components/ui.tsx` içindedir.
+- *Mandal* (`web/tests/remote-state-ratchet.test.mjs`) dosya başına eski kalıpları
+  sayar: değere çevrilen başarısız okuma (`x.ok ? … : null`), yutulan hata (bir
+  okumanın çevresinde boş `catch {}`, `.catch(() => {})`), yok sayılan hata
+  (else'siz `if (res.ok) {…}`, `if (!res.ok) return;`), `src/lib` dışında ham
+  okuma `fetch(` ve kanıtlayan yanıt olmadan kullanılan `<EmptyState>`. Sayılar
+  `web/tests/remote-state-ratchet.json` içindedir; yalnız azalabilirler, listede
+  olmayan dosyada hiçbiri bulunamaz ve toplamlar testte sabitlenmiştir. Bu
+  girdiden önce: 68 dosyada 46 / 68 / 16 / 126 / 32. Sonra: 62 dosyada
+  37 / 58 / 14 / 109 / 29.
+- *Bağlanan test* (`web/tests/remote-state-mounted.test.mjs`) taşınan her ekranı,
+  her okuması alıkonmuş hâlde çizer — hâlâ yolda, kopmuş, reddedilmiş, sözleşme
+  dışı — ve olumsuz metinlerden hiçbirinin çizilmemesini, gönderen ya da kaldıran
+  hiçbir denetimin etkin olmamasını ister.
+
+**Bir ekran nasıl taşınır.** `useRemote(url, decode)` ile okuyun; çözücü,
+sözleşme olmayan yanıtta varsayılan doldurmak yerine hata fırlatır.
+`<RemoteGate remote checking failed onRetry>` (çocukları yalnız sunucunun
+gönderdiği değeri alır) ya da `remote.state` üzerinde açık bir ayrımla çizin.
+Kontrol satırına, yanıt geldiğinde yüksekliği değişmeyen bir yer verin. "Boş"u
+`<KnownEmpty of={…}>` ile çizin; bir gereksinimi, yalnız bilinen yanıt için
+"engelli" diyebilen `gateOn` ile hesaplayın. Durum `known` değilken her kaydı ve
+silmeyi kapatın. Ekranın kendi değişikliğinden sonra `retry()` çağırın. Kontrol
+ve kontrol-edilemedi cümlelerini iki dilde ekleyin; ikincisi neyin okunamadığını,
+bunun eksik olduğu anlamına gelmediğini ve hiçbir şeyin değiştirilmediğini
+söyler. Sonra `web/` içinde `node tests/remote-state-ratchet.mjs --tighten`
+çalıştırın ve ekranı bağlanan testin tablosuna ekleyin.
+
+**Yapılmayan.**
+
+- 62 dosya hâlâ eski yolla okuyor; izin listesi onlardır. Bir ekran taşınana dek
+  bilinmeyen bir durum için olumsuz durum gösterebilir.
+- Aynı adreslerin başka okuyucularına dokunulmadı: gezinti rayı ve tek bir alan
+  adının sayfası alan adı listesini kendi başlarına okur.
+- Alan Adları sayfası, DNS hazırlığı kontrol edilemediğinde kendisi bir şey
+  göstermez; bildirim ve Tekrar dene penceredir.
+- Kontrol-edilemedi bildirimi okumanın neden başarısız olduğunu söylemez.
+- Gerçek bir sunucuda doğrulanmadı; sahte sunucuya karşı tek bir Chrome.
+
+**Tarayıcı incelemesi (2026-10-09).** Gerçek, kurulu bir Chrome'da, yerel sahte
+sunucuya karşı (`web/tools/browser-inspect`, `adddomain`, `domainslist`,
+`databases`, `connection` senaryoları): masaüstü 1440×900 ve telefon 390×844,
+Türkçe ve İngilizce, açık ve koyu. Kapsanan: yetenekler yavaşken (okuma sırasında
+dört kare), başarısızken ve sonra Tekrar dene ile, bilinen olumsuzken (motor yok,
+kimlik yok ve pencerenin kendi engeli) ve bilinen olumluyken Alan Adları sayfası
+ile Alan adı ekle penceresi, ayrıca yanıtı zaten olan bir sayfanın üstünde açılan
+pencere; yavaş, başarısız sonra Tekrar dene ve bilinen boş alan adı listesi;
+motorlar ve bir motorun listeleri yavaş, başarısız, boş ve doluyken Veritabanları
+sayfası, bir silmeden sonra yeniden okunamayan liste ve kaldırıldıktan sonra panel
+hesabı; yavaş, başarısız, her listesi `null` olan `status: unknown`, bilinen
+olumsuz ve bilinen olumlu bağlantı kartı; yavaş, başarısız, boş ve dolu alan adı
+veritabanı listesi.
+
+- *Sekiz yapılandırmanın hepsinde ölçülen.* Yetenekler yoldayken alınan dört
+  karenin her birinde pencere formu, kontrol satırını ve kapalı bir "Alan adı
+  oluştur" düğmesini gösterdi; ad yazılabiliyor, iki amaç da seçilebiliyordu;
+  hiçbir karede engel görünmedi. Yanıt geldiğinde pencerede hiçbir şey yer ya da
+  boyut değiştirmedi. Sayfa ile pencere birlikte tek istek yaptı; yanıtı olan bir
+  sayfanın üstünde açılan pencere hiç istek yapmadı ve "Alan adı oluştur" etkin
+  hâlde başladı. Yazılan, Tekrar dene boyunca korundu. Bir liste yeniden
+  okunamadıktan sonra iki silme denetimi de kapalıydı.
+- *Bakarak bulunan ve düzeltilen.* Bağlantı kartı kontrol ederken tek satırlık
+  bir şeritti ve sonra Genel Bakış'ın geri kalanını 186 px (telefonda 83 px)
+  aşağı itiyordu; artık her durumda tek bir en az yüksekliği korur ve hiçbir
+  yapılandırmada altındaki hiçbir şey yerinden oynamadı. "kontrol edilemedi"
+  harfi değerlerin yazı yüzüyle duruyordu; sözdür ve metin yazı yüzüyle dizilir.
+  Bir alan adının Veritabanları sekmesindeki "Create Database", koyu temanın açık
+  birincil rengi üstünde beyazdı; artık ortak birincil düğmedir.
+- *Görülen ve burada değiştirilmeyen.* Telefonda Alan Adları ve Veritabanları
+  tabloları yana kayar; bu yüzden silme denetimi, tablo kaydırılana dek ekran
+  dışındadır. Alan adı listesinin başarısız bir okuması, gezinti rayının kendi
+  isteğini açık bırakır (ray taşınmadı). Kapalı birincil düğme koyu temada etkin
+  olana yakındır.
+- *Kapsanmayan.* Herhangi bir gerçek sunucu; Safari, Firefox, ekran okuyucu,
+  dokunmatik aygıt; taklit görünümler; yönetici dışındaki roller. DNS kayıtları
+  sekmesi, PHP ayarları ve barındırma türü tarayıcı çalıştırmasında yoktu; üç
+  durumlarını yalnız bağlanan test kapsar.

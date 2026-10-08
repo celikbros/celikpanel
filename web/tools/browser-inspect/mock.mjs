@@ -47,7 +47,15 @@ const state = {
     host: '',              // another panel host name for the certificate step (default panel.example.com)
     componentOperation: null, // a running component operation, as /service/operation reports it
     update: null,          // a running panel update, as /panel/update/status reports it
-    capabilities: { dns_server: 'bind', dns_identity_ready: true, dns_management_mode: 'local', dns_management_ready: true, web_server: 'nginx', php_versions: ['8.3'] },
+    // The whole contract of GET /hosting/capabilities: the interface treats an
+    // answer with a field missing as unknown, not as "nothing installed".
+    capabilities: { dns_server: 'bind', dns_identity_ready: true, dns_management_mode: 'local', dns_management_ready: true, web_server: 'nginx', php_versions: ['8.3'], mail_server: true, database_servers: ['mariadb'], db_tools: [] },
+    subscriptions: [],
+    dbServers: [],         // GET /database-servers
+    dbDatabases: [],       // GET /database-servers/:id/databases
+    dbUsers: [],           // GET /database-servers/:id/users
+    domainDatabases: { databases: [], available_types: ['mysql'] }, // GET /domains/:id/databases
+    connection: null,      // GET /domains/:id/connection (null: the mock has none, 404)
 };
 const log = [];
 const snapshot = () => ({ version: 1, revision: state.revision, origin: 'fresh', status: state.setupStatus, required: state.setupStatus !== 'ready', guidance: 'guided', draft, checks: [], server_ip: '203.0.113.10' });
@@ -106,7 +114,25 @@ async function api(req, res, path, query) {
     }
     if (key === 'GET /api/v1/domains') { send(res, 200, state.domains); return; }
     if (key === 'GET /api/v1/hosting/capabilities') { send(res, 200, state.capabilities); return; }
-    if (key === 'GET /api/v1/subscriptions') { send(res, 200, []); return; }
+    if (key === 'GET /api/v1/subscriptions') { send(res, 200, { subscriptions: state.subscriptions }); return; }
+    if (key === 'GET /api/v1/database-servers') { send(res, 200, state.dbServers); return; }
+    const engine = path.match(/^\/api\/v1\/database-servers\/(\d+)\/(databases|users|admin-account)$/);
+    if (engine && req.method === 'GET' && engine[2] !== 'admin-account') { send(res, 200, engine[2] === 'databases' ? state.dbDatabases : state.dbUsers); return; }
+    // The two changes the Databases page can make to the panel's own account,
+    // so the page can be seen to follow the server's next answer.
+    if (engine && engine[2] === 'admin-account' && ['POST', 'DELETE'].includes(req.method)) {
+        state.dbServers = state.dbServers.map(item => (String(item.id) === engine[1] ? { ...item, admin_username: req.method === 'DELETE' ? '' : 'celikpanel' } : item));
+        send(res, 200, { success: true }); return;
+    }
+    const removed = path.match(/^\/api\/v1\/databases\/(\d+)$/);
+    if (removed && req.method === 'DELETE') { state.dbDatabases = state.dbDatabases.filter(item => String(item.id) !== removed[1]); send(res, 200, { success: true }); return; }
+    const ofDomain = path.match(/^\/api\/v1\/domains\/(\d+)\/(connection|databases|usage|deletion-status)$/);
+    if (ofDomain && req.method === 'GET') {
+        if (ofDomain[2] === 'connection') { if (state.connection) send(res, 200, state.connection); else coded(res, 404, 'not_found', 'the mock has no connection answer set'); return; }
+        if (ofDomain[2] === 'databases') { send(res, 200, state.domainDatabases); return; }
+        if (ofDomain[2] === 'usage') { send(res, 200, { disk_usage: 4096, bandwidth: 0 }); return; }
+        res.writeHead(204); res.end(); return;
+    }
     if (key === 'GET /api/v1/managed-services') { send(res, 200, { scanned_at: new Date().toISOString(), services: [] }); return; }
     if (key === 'GET /api/v1/service/operation') { send(res, 200, state.componentOperation ? { operation: state.componentOperation } : null); return; }
     coded(res, 404, 'not_found', `mock has no route for ${key}`);

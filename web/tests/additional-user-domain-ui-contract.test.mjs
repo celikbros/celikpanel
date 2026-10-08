@@ -8,6 +8,8 @@ const filesSource = readFileSync(new URL('../src/components/DomainFileManager.ts
 const databasesSource = readFileSync(new URL('../src/components/DomainDatabaseManager.tsx', import.meta.url), 'utf8');
 const phpSource = readFileSync(new URL('../src/components/DomainPHPSettings.tsx', import.meta.url), 'utf8');
 const dnsSource = readFileSync(new URL('../src/components/DomainDNSManager.tsx', import.meta.url), 'utf8');
+const capabilitiesSource = readFileSync(new URL('../src/lib/hostingCapabilities.ts', import.meta.url), 'utf8');
+const remoteSource = readFileSync(new URL('../src/lib/remote.ts', import.meta.url), 'utf8');
 
 test('additional-user domain surfaces stay fail-closed without disabling the accessible view tree', () => {
   assert.doesNotMatch(detailSource, /<fieldset/);
@@ -26,23 +28,44 @@ test('additional-user domain surfaces stay fail-closed without disabling the acc
   assert.match(filesSource, /aria-label=\{title\}/);
 });
 
+// The server-wide capability inventory is read in one place
+// (lib/hostingCapabilities.ts). A team member is never given that read:
+// `enabled: false` makes the address null, and a null address requests nothing.
 test('team-member DB, PHP and DNS panels avoid server-global capability calls', () => {
-  const dbEngineEffect = databasesSource.slice(
-    databasesSource.indexOf('const [engines'),
-    databasesSource.indexOf('// Form state'),
+  assert.match(capabilitiesSource, /options\.enabled === false \? null : HOSTING_CAPABILITIES_URL/);
+  assert.match(remoteSource, /if \(url === null\) return;/);
+  for (const [name, source] of [['databases', databasesSource], ['PHP', phpSource], ['DNS', dnsSource], ['detail', detailSource]]) {
+    assert.doesNotMatch(source, /hosting\/capabilities/, `${name} reads the capability address itself`);
+  }
+
+  assert.match(databasesSource, /const capabilities = useHostingCapabilities\(\{ enabled: !isAdditionalUser \}\);/);
+  // A team member's engines are the tenant-safe available_types of this
+  // domain's own answer; an administrator's are the server's capabilities.
+  assert.match(
+    databasesSource,
+    /const engineSource: Remote<DatabaseEngine\[\]> = isAdditionalUser\s*\? mapRemote\(list\.remote, \(value\) => value\.availableTypes\)\s*: mapRemote\(capabilities\.remote,/,
   );
-  assert.match(dbEngineEffect, /if \(isAdditionalUser\)[\s\S]*return;[\s\S]*fetch\('\/api\/v1\/hosting\/capabilities'\)/);
-  assert.match(databasesSource, /!isAdditionalUser && <DBToolsCard \/>/);
-  assert.match(databasesSource, /fetch\(`\/api\/v1\/domains\/\$\{domainId\}\/databases`\)/);
+  assert.match(databasesSource, /!isAdditionalUser && <DBToolsCard capabilities=\{capabilities\.remote\} \/>/);
+  assert.match(databasesSource, /useRemote\(`\/api\/v1\/domains\/\$\{domainId\}\/databases`, decodeDomainDatabases\)/);
   assert.match(databasesSource, /function parseAvailableDatabaseTypes\(value: unknown\)/);
   assert.match(databasesSource, /if \(!Array\.isArray\(value\)\) return \[\];/);
   assert.match(databasesSource, /item !== 'mysql' && item !== 'postgresql'\) return \[\];/);
-  assert.match(databasesSource, /parseAvailableDatabaseTypes\(payload\.available_types\)/);
-  assert.match(databasesSource, /const loadDatabases[\s\S]*if \(isAdditionalUser\) \{[\s\S]*setEngines\(\[\]\);[\s\S]*setDatabases\(\[\]\);/);
+  assert.match(databasesSource, /availableTypes: parseAvailableDatabaseTypes\(payload\.available_types\)/);
+  // Nothing is created on an engine the server did not name, and nothing of
+  // another domain's answer is carried over: engines exist only for a known
+  // answer of this domain's own address.
+  assert.match(databasesSource, /const engines = engineSource\.state === 'known' \? engineSource\.value : \[\];/);
+  assert.match(databasesSource, /const canCreate = !readOnly && engineSource\.state === 'known' && engines\.length > 0;/);
+  assert.match(databasesSource, /if \(!canCreate \|\| dbType === null\) return;/);
+  assert.match(databasesSource, /\{showCreateForm && canCreate && \(/);
+  assert.doesNotMatch(databasesSource, /useState<DatabaseType>\('mysql'\)/, 'a default engine is back');
   assert.doesNotMatch(databasesSource, /database\.type\.toLowerCase\(\)/);
 
-  const phpLoadEffect = phpSource.slice(phpSource.indexOf('useEffect(() =>'), phpSource.indexOf('const loadVersions'));
-  assert.match(phpLoadEffect, /if \(!isAdditionalUser\) \{[\s\S]*loadVersions\(\)/);
+  assert.match(phpSource, /const capabilities = useHostingCapabilities\(\{ enabled: !isAdditionalUser \}\);/);
+  assert.match(
+    phpSource,
+    /const versions = isAdditionalUser\s*\? teamVersions\s*: capabilities\.remote\.state === 'known' \? capabilities\.remote\.value\.php_versions : \[\];/,
+  );
   assert.match(phpSource, /function parseAvailablePHPVersions\(value: unknown\)/);
   assert.match(phpSource, /typeof item !== 'string' \|\| !phpVersionPattern\.test\(item\)\) return \[\];/);
   assert.match(phpSource, /parseAvailablePHPVersions\(nextSettings\.available_versions\)/);
@@ -52,12 +75,18 @@ test('team-member DB, PHP and DNS panels avoid server-global capability calls', 
   assert.match(phpSource, /disabled=\{readOnly \|\| \(isAdditionalUser && versions\.length === 0\)\}/);
   assert.match(phpSource, /fetch\(`\/api\/v1\/domains\/\$\{domainId\}\/php`/);
 
-  const dnsLoadEffect = dnsSource.slice(dnsSource.indexOf('useEffect(() =>'), dnsSource.indexOf('const checkZone'));
-  assert.match(dnsLoadEffect, /if \(isAdditionalUser\)[\s\S]*return;[\s\S]*fetch\('\/api\/v1\/hosting\/capabilities'\)/);
+  assert.match(dnsSource, /const capabilities = useHostingCapabilities\(\{ enabled: !isAdditionalUser \}\);/);
+  assert.match(
+    dnsSource,
+    /const dnsServer = !isAdditionalUser && capabilities\.remote\.state === 'known' \? capabilities\.remote\.value\.dns_server : null;/,
+  );
   assert.match(dnsSource, /isAdditionalUser \|\| \(dnsServer !== null/);
   assert.match(dnsSource, /DNSSECSection[^>]+readOnly=\{readOnly\}/s);
   assert.match(dnsSource, /readOnly \|\| externalDNS \? \([\s\S]*loadRecords\(\)[\s\S]*\) : \(/);
   assert.match(dnsSource, /!readOnly && !externalDNS && showAddForm/);
+
+  assert.match(detailSource, /const capabilities = useHostingCapabilities\(\{ enabled: !isTeamMember \}\);/);
+  assert.match(detailSource, /const caps = !isTeamMember && capabilities\.remote\.state === 'known' \? capabilities\.remote\.value : null;/);
 });
 
 test('redacted domain metadata stays optional and fails closed in the UI', () => {

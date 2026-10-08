@@ -396,6 +396,16 @@ License access uses the existing navy and white panel controls in a focused page
 
 UsageBar stays navy until the recorded danger threshold, with no yellow range; print the value beside it. SecurityAuditCard gives a tinted field to failure while pass and warning share neutral surfaces and distinct symbols. Dashboard attention items rank failures above warnings with a divider and gap at the severity boundary. These panel-specific implementations retain the No-Adjacency Rule without imposing the public site's composition on operating screens.
 
+### Remote state in the panel: checking, could not check, known
+
+Rule of 2026-10-09: **no negative UI unless known.** Anything a panel screen reads from the server is drawn in one of three states, and the three never look alike. The components are `Checking`, `CouldNotCheck`, `RemoteGate` and `KnownEmpty` in `web/src/components/ui.tsx`; the reads go through `web/src/lib/remote.ts`. The sentences and the migration steps are in [the operation guidance](docs/OPERATION-GUIDANCE.md#no-negative-state-unless-it-is-known-checking-could-not-check-known-2026-10-09).
+
+**Checking** is one quiet line: the 16px navy arc and one sentence in muted ink, with no surface, no border and no signal colour, because nothing has failed. The sentence names the one thing being read and ends with an ellipsis. It sits where the answer will sit, in a place whose height does not change when the answer arrives: a reserved line in a form, the least height of a card. A control that depends on the answer is already in its place, disabled, instead of appearing later. A page-sized spinner is not a checking state for a read that decides what the screen may say.
+
+**Could not check** uses the attention surface, not the failure one: the Signal Yellow mark tint with an Amber Ink triangle, ink text and one outlined Retry. A read that failed is not a failure of the thing read, so it is never red. Its sentence says what could not be read, that this does not mean the thing is missing, and that nothing was changed. One notice per read. If an earlier answer exists it stays below the notice, which says when it was read; everything that removes or changes is disabled until the read succeeds.
+
+**Known** is the only state that may show an empty state, a blocker, a disabled control with its reason, "off", "none" or a count. A count beside a tab is "…" while it is read and "–" when it could not be read. Literal values keep the mono face; "could not be checked" and "nothing yet" are words and stay in the sans face (The Mono Means Measured Rule).
+
 ## Do's and Don'ts
 
 ### Do:
@@ -408,6 +418,7 @@ UsageBar stays navy until the recorded danger threshold, with no yellow range; p
 - **Do** pair status colours and usage meters with readable words or numbers.
 - **Do** keep panel tokens and competitor-skin exceptions scoped to the application.
 - **Do** self-host fonts and keep their licences and Turkish glyph coverage.
+- **Do** draw "checking", "could not check" and "known" as three different things for anything a panel screen reads from the server.
 
 ### Don't:
 
@@ -419,6 +430,7 @@ UsageBar stays navy until the recorded danger threshold, with no yellow range; p
 - **Don't** invent testimonials, customers, metrics or a production-readiness claim.
 - **Don't** add shadows to the current homepage's command or release surfaces.
 - **Don't** import competitor-skin fonts or colours into CelikPanel's own identity.
+- **Don't** draw an empty state, a blocker, "off", "none" or a zero before the server has answered or after a read failed, and don't colour a failed read as a failure of the thing it read.
 
 
 ### Recovery access during unavailable observations

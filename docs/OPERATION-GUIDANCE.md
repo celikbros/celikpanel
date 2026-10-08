@@ -1202,3 +1202,290 @@ notice does not say why the read failed; the DNSBL refusal from the API
 (`MAIL_POLICY_RESTRICTIONS_UNMANAGED`) has an English sentence only, because the
 screen withdraws the control instead of meeting it; other screens still follow
 the old pattern and are not audited here.
+
+### No negative state unless it is known: checking, could not check, known (2026-10-09)
+
+Source state with component tests and a browser inspection against a loopback
+mock (see the end of this entry); no native run and no installed server. Reported
+by an owner on an installed server on 2026-10-08. It applies the rule of "Truth
+and operation identity" above (an unknown result is not an unmet prerequisite) to
+every screen that reads the server. It changes how reads are shown; no lifecycle,
+access gate, stored record or API changes, and no acceptance item is closed.
+
+**What the owner saw.** Opening "Add domain" on a server that has DNS showed "An
+active, panel-managed DNS server is required before adding domains… [Choose a DNS
+engine]" with the form disabled, for the seconds the read of the server's
+capabilities took. The Domains page under it disabled "Add domain" for the same
+seconds. Nothing was missing; the answer had not arrived yet.
+
+**Cause.** There was no shared way to read the server. 68 files read it with a
+raw `fetch` into component state, and most of them turned "the read failed" or
+"the read has not answered" into a value (`null`, an empty list, `false`) that the
+screen then showed as a fact. The same address, `GET /api/v1/hosting/capabilities`,
+was read in eight places with eight meanings for "no answer yet".
+
+**The rule, for every screen from now on: no negative UI unless known.** What a
+screen reads from the server is always in one of three states, and they never
+look alike:
+
+1. **Checking** (not known yet; nobody acts). One quiet line in the colour of
+   ordinary text, in a place that does not move the rest of the screen when the
+   answer arrives. No "missing", "not ready", "none", "off", no empty list.
+2. **Could not check** (unknown result; the person at the screen acts). The
+   screen's own sentence says what could not be read, that this does not mean the
+   thing is missing, and that nothing was changed; **Retry** / **Tekrar dene**
+   reads again and changes nothing. If an earlier answer exists it stays on
+   screen under a notice that says it is the earlier answer and when it was read.
+3. **Known.** Then, and only then, "missing", "not ready", "empty" or "off", with
+   the guidance that state already had.
+
+A control that submits or removes something is enabled only while what it acts on
+is known. No form is built or saved from defaults. A read is never repeated as a
+change: Retry, "Check again" and a refresh only read.
+
+**The texts.** Keys are in `web/src/i18n/screens` unless noted.
+
+- *An earlier answer is still shown after a failed refresh* (shell,
+  `common.staleNotice`; `{time}` is the hour and minute it was read):
+  - EN: "This could not be read again from the server just now, so what is shown
+    below is as it was at {time}. Nothing was changed. Controls that remove or
+    change something are off until it has been read again."
+  - TR: "Bu, az önce sunucudan yeniden okunamadı; aşağıda gösterilen, saat {time}
+    itibarıyla olan hâlidir. Hiçbir şey değiştirilmedi. Bir şeyi kaldıran ya da
+    değiştiren denetimler, yeniden okunana dek kapalıdır."
+- *Add domain dialogue, and the DNS records tab of a domain* — checking
+  (`dns.checkingServer`): EN "Checking this server’s DNS…" · TR "Bu sunucunun DNS
+  durumu kontrol ediliyor…". In the dialogue the form is shown and can be filled
+  in, "Create domain" is disabled, and no blocker is drawn.
+- *Add domain dialogue* — could not check (`domains.add.dnsUnknown`), with Retry
+  and without "Choose a DNS engine":
+  - EN: "CelikPanel could not check DNS on this server, so a domain cannot be
+    added yet. This does not mean DNS is missing. Nothing was changed and what
+    you typed is kept. Try again."
+  - TR: "CelikPanel bu sunucunun DNS durumunu kontrol edemedi; bu yüzden şimdilik
+    alan adı eklenemiyor. Bu, DNS’in eksik olduğu anlamına gelmez. Hiçbir şey
+    değiştirilmedi ve yazdıklarınız duruyor. Tekrar deneyin."
+- *Add domain dialogue and Domains page* — known negative: unchanged. No active
+  engine: `domains.add.needsDns` with `err.DNS_SERVER_REQUIRED.action`; an engine
+  without its identity: `err.DNS_SETTINGS_REQUIRED` with its action. While DNS
+  readiness is being checked or could not be checked, the Domains page says
+  nothing about DNS and "Add domain" stays available; the dialogue it opens shows
+  the checking line or the notice above.
+- *Domains page, the list* — checking (`domains.checking`): EN "Reading the
+  domain list…" · TR "Alan adı listesi okunuyor…". Could not read
+  (`domains.unknown`):
+  - EN: "The domain list could not be read from the server, so it is not shown.
+    This does not mean there are no domains. Nothing was changed. Try again."
+  - TR: "Alan adı listesi sunucudan okunamadı; bu yüzden gösterilmiyor. Bu, alan
+    adı olmadığı anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+  - "No domains yet" / "Henüz alan adı yok" (`domains.empty`) only for a list the
+    server answered with no rows.
+- *Domains page, a row listed as pending whose saved deletion could not be read*
+  (`domains.pendingUnknown`; before this the row silently had no notice):
+  - EN: "{name} is listed as pending, but CelikPanel could not read whether a
+    deletion is waiting for it. Nothing was changed. Try again."
+  - TR: "{name} beklemede görünüyor, ancak CelikPanel onun için bekleyen bir silme
+    olup olmadığını okuyamadı. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+- *Domains page, subscription usage* (`quota.unknown`): EN "Subscription usage
+  could not be read from the server, so it is not shown. Nothing was changed. Try
+  again." · TR "Abonelik kullanımı sunucudan okunamadı; bu yüzden gösterilmiyor.
+  Hiçbir şey değiştirilmedi. Tekrar deneyin."
+- *Databases page, engines* — checking (`databases.checkingServers`): EN "Reading
+  the database engines on this server…" · TR "Bu sunucudaki veritabanı motorları
+  okunuyor…". Could not read (`databases.serversUnknown`):
+  - EN: "The database engines on this server could not be read, so nothing is
+    listed. This does not mean no engine is installed. Nothing was changed. Try
+    again."
+  - TR: "Bu sunucudaki veritabanı motorları okunamadı; bu yüzden hiçbir şey
+    listelenmiyor. Bu, kurulu motor olmadığı anlamına gelmez. Hiçbir şey
+    değiştirilmedi. Tekrar deneyin."
+  - "No database engine installed" with "Go to Services" only for a known empty
+    answer.
+- *Databases page, the databases and the users of one engine* — checking
+  (`databases.checkingDatabases`, `databases.checkingUsers`): EN "Reading the
+  databases on this engine…", "Reading the database users on this engine…" · TR
+  "Bu motordaki veritabanları okunuyor…", "Bu motordaki veritabanı kullanıcıları
+  okunuyor…". Could not read (`databases.databasesUnknown`,
+  `databases.usersUnknown`):
+  - EN: "The databases on this engine could not be read, so the list is not
+    shown. This does not mean there are none. Nothing was changed. Try again." /
+    "The database users on this engine could not be read, so the list is not
+    shown. This does not mean there are none. Nothing was changed. Try again."
+  - TR: "Bu motordaki veritabanları okunamadı; bu yüzden liste gösterilmiyor. Bu,
+    veritabanı olmadığı anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar
+    deneyin." / "Bu motordaki veritabanı kullanıcıları okunamadı; bu yüzden liste
+    gösterilmiyor. Bu, kullanıcı olmadığı anlamına gelmez. Hiçbir şey
+    değiştirilmedi. Tekrar deneyin."
+  - The count beside each tab is the number once the list is known, "…" while it
+    is read and "–" when it could not be read. "Create database" needs both lists
+    known, because its dialogue offers the existing users.
+- *A domain's Databases tab* — checking (`db.checking`): EN "Reading this
+  domain’s databases…" · TR "Bu alan adının veritabanları okunuyor…". Could not
+  read (`db.unknown`):
+  - EN: "The databases of this domain could not be read from the server, so the
+    list is not shown. This does not mean there are none. Nothing was changed.
+    Try again."
+  - TR: "Bu alan adının veritabanları sunucudan okunamadı; bu yüzden liste
+    gösterilmiyor. Bu, veritabanı olmadığı anlamına gelmez. Hiçbir şey
+    değiştirilmedi. Tekrar deneyin."
+  - Engines — checking (`db.checkingEngines`): EN "Checking which database
+    engines are installed…" · TR "Kurulu veritabanı motorları kontrol ediliyor…".
+    Could not check (`db.enginesUnknown`): EN "CelikPanel could not check which
+    database engines are installed on this server, so a database cannot be
+    created here yet. Nothing was changed. Try again." · TR "CelikPanel bu
+    sunucuda hangi veritabanı motorlarının kurulu olduğunu kontrol edemedi; bu
+    yüzden şimdilik burada veritabanı oluşturulamıyor. Hiçbir şey değiştirilmedi.
+    Tekrar deneyin." There is no default engine: the create form exists only for
+    an engine the server named.
+- *A domain's connection card* — checking (`conn.checking`): EN "Checking where
+  this domain points…" · TR "Bu alan adının nereyi gösterdiği kontrol ediliyor…".
+  The card's own read failed (`conn.readFailed`; before this the card vanished):
+  - EN: "The connection of this domain could not be checked: CelikPanel did not
+    get an answer from this server. This does not mean the domain is not
+    connected. Try again."
+  - TR: "Bu alan adının bağlantısı kontrol edilemedi: CelikPanel bu sunucudan
+    yanıt alamadı. Bu, alan adının bağlı olmadığı anlamına gelmez. Tekrar
+    deneyin."
+  - The read succeeded and the server says it could not ask the public resolvers
+    (`status: unknown`): the status line is the existing `conn.status.unknown`
+    ("Public DNS could not be checked" / "Genel DNS kontrol edilemedi") in the
+    colour of ordinary text; the two "right now" boxes say `conn.notChecked`, EN
+    "could not be checked" · TR "kontrol edilemedi", instead of "nothing yet";
+    and in place of "This domain does not point at this server yet…":
+    `conn.unknownHelp`, EN "This server could not reach the public DNS resolvers
+    just now, so CelikPanel does not know where this domain points. This does not
+    mean it is not connected. Check again in a moment. If the domain is not
+    connected yet, the values to enter at the company you bought it from are
+    below." · TR "Bu sunucu az önce genel DNS çözümleyicilerine ulaşamadı; bu
+    yüzden CelikPanel bu alan adının nereyi gösterdiğini bilmiyor. Bu, alan
+    adının bağlı olmadığı anlamına gelmez. Biraz sonra tekrar kontrol edin. Alan
+    adı henüz bağlı değilse, alan adını aldığınız firmada girilecek değerler
+    aşağıdadır."
+  - If the nameserver names could not be verified in the same answer, they are
+    not called broken and delegating to them is not offered: `conn.routeAUnknown`,
+    EN "Whether this server’s nameserver names answer could not be checked
+    either, so handing DNS to them is not offered right now. Check again." · TR
+    "Bu sunucunun ad sunucusu adlarının yanıt verip vermediği de kontrol
+    edilemedi; bu yüzden DNS’i onlara devretmek şu anda sunulmuyor. Tekrar
+    kontrol edin."
+  - The certificate line: `conn.sslUnknown`, EN "Whether a certificate can be
+    issued is not known until public DNS can be checked." · TR "Sertifika alınıp
+    alınamayacağı, genel DNS kontrol edilene dek bilinmiyor." Action in all three
+    cases: the existing "Check again" / "Tekrar kontrol et", which reads.
+- *A domain's PHP settings, installed versions* — checking
+  (`php.checkingVersions`): EN "Checking which PHP versions are installed…" · TR
+  "Kurulu PHP sürümleri kontrol ediliyor…". Could not check
+  (`php.versionsUnknown`): EN "The installed PHP versions could not be checked,
+  so only the current version is listed and the version cannot be changed here
+  yet. Nothing was changed. Try again." · TR "Kurulu PHP sürümleri kontrol
+  edilemedi; bu yüzden yalnız geçerli sürüm listeleniyor ve sürüm şimdilik
+  buradan değiştirilemiyor. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+- *A domain's hosting type* — "PHP-FPM is not installed" only for a known answer;
+  could not check (`hosting.phpUnknown`): EN "CelikPanel could not check whether
+  PHP-FPM is installed on this server, so the PHP type is not marked either way.
+  Nothing was changed. If PHP-FPM is not installed, applying the PHP type is
+  refused. Try again." · TR "CelikPanel bu sunucuda PHP-FPM’in kurulu olup
+  olmadığını kontrol edemedi; bu yüzden PHP türü kullanılabilir ya da
+  kullanılamaz diye işaretlenmedi. Hiçbir şey değiştirilmedi. PHP-FPM kurulu
+  değilse PHP türünü uygulamak reddedilir. Tekrar deneyin."
+- *A domain's tabs*: Mail and Databases are removed only when the server is known
+  not to have the service; while that is checked or could not be checked they
+  stay, and the panel under each says its own state.
+- The three settings screens of 2026-10-08 (mail policy, automatic backups,
+  scheduled tasks) keep their texts; they now stand on the same layer.
+
+**Two defects corrected in the same screens.**
+
+- *Databases page.* After "Remove account" (or any change to CelikPanel's own
+  account on an engine) the strip went on showing the row the page was first
+  loaded with: the removed account still "present", and "New password" created it
+  again. The strip now always shows the server's latest answer, and its controls
+  are off while that answer is being read again or could not be.
+- *Connection card.* An answer with `status: unknown` carries `null` lists;
+  reading them took the whole page of the domain down. They are read as lists
+  now, and `unknown` no longer reads as "does not point here yet" (above).
+
+**How it is kept from coming back.**
+
+- `web/src/lib/remote.ts` is the one way to read: `useRemote(url, decode)` gives
+  `loading | known(value, observedAt) | unknown(reason, previous?)`, shares one
+  request among everything on screen that reads the same address, and never
+  produces a default. `web/src/lib/hostingCapabilities.ts` is the one reader of
+  the capabilities. `Checking`, `CouldNotCheck`, `RemoteGate` and `KnownEmpty`
+  are in `web/src/components/ui.tsx`.
+- *The ratchet* (`web/tests/remote-state-ratchet.test.mjs`) counts, per file, the
+  old patterns: a failed read turned into a value (`x.ok ? … : null`), a
+  swallowed failure (an empty `catch {}` around a read, `.catch(() => {})`), an
+  ignored failure (`if (res.ok) {…}` with no else, `if (!res.ok) return;`), a raw
+  read `fetch(` outside `src/lib`, and `<EmptyState>` used without the answer
+  that proves it. The numbers are in `web/tests/remote-state-ratchet.json`; they
+  may only go down, a file not on the list must have none, and the totals are
+  pinned in the test. Before this entry: 46 / 68 / 16 / 126 / 32 in 68 files.
+  After it: 37 / 58 / 14 / 109 / 29 in 62 files.
+- *The mounted test* (`web/tests/remote-state-mounted.test.mjs`) renders each
+  migrated screen with each read withheld — still on its way, dropped, refused,
+  not the contract — and requires that none of the negative texts is drawn and no
+  control that submits or removes is enabled.
+
+**How to migrate a screen.** Read with `useRemote(url, decode)`; the decoder
+throws on an answer that is not the contract instead of filling in a default.
+Draw through `<RemoteGate remote checking failed onRetry>` (its children receive
+only a value the server sent) or an explicit switch on `remote.state`. Give the
+checking line a place whose height does not change when the answer arrives. Draw
+"empty" with `<KnownEmpty of={…}>` and compute a requirement with `gateOn`, which
+can say "blocked" only for a known answer. Disable every save and delete unless
+the state is `known`. After the screen's own change call `retry()`. Add the
+checking and could-not-check sentences in both languages; the second says what
+could not be read, that this does not mean it is missing, and that nothing was
+changed. Then run `node tests/remote-state-ratchet.mjs --tighten` in `web/` and
+add the screen to the table of the mounted test.
+
+**Not done.**
+
+- 62 files still read the old way; they are the allow-list. Until a screen is
+  migrated it can still show a negative state for an unknown one.
+- Other readers of the same addresses are untouched: the navigation rail and the
+  page of one domain read the domain list on their own.
+- The Domains page shows nothing of its own when DNS readiness could not be
+  checked; the notice and Retry are in the dialogue.
+- A could-not-check notice does not say why the read failed.
+- Not verified on a real server; one Chrome against a mock.
+
+**Browser inspection (2026-10-09).** In a real, installed Chrome against the
+loopback mock (`web/tools/browser-inspect`, scenarios `adddomain`, `domainslist`,
+`databases`, `connection`): desktop 1440×900 and phone 390×844, Turkish and
+English, light and dark. Covered: the Domains page and the Add domain dialogue
+with the capabilities slow (four frames during the read), failing then Retry,
+known negative (no engine, no identity, and the dialogue's own blocker) and known
+positive, and the dialogue opened over a page that already has the answer; the
+domain list slow, failing then Retry, and known empty; the Databases page with
+engines and one engine's lists slow, failing, empty and populated, a list that
+could not be read again after a delete, and the panel's account after removal; a
+domain's connection card slow, failing, `status: unknown` with every list `null`,
+known negative and known positive; a domain's database list slow, failing, empty
+and populated.
+
+- *Measured in all eight configurations.* In each of the four frames taken while
+  the capabilities were on their way, the dialogue showed the form, the checking
+  line and a disabled "Create domain"; the name could be typed and both purposes
+  could be chosen; no frame showed the blocker. When the answer arrived nothing
+  in the dialogue changed place or size. The page and the dialogue together made
+  one request; the dialogue opened over a page that had the answer made none and
+  started with "Create domain" enabled. What was typed was kept across Retry.
+  After a list could not be read again, both delete controls were disabled.
+- *Found by looking and corrected.* The connection card was a strip of one line
+  while it was checking and then pushed the rest of the Overview down by 186 px
+  (83 px on a phone); it now keeps one least height in every state, and nothing
+  below it moved in any configuration. "could not be checked" stood in the face
+  for literal values; it is words and is set in the text face. "Create Database"
+  on a domain's Databases tab was white on the dark theme's light primary; it is
+  the shared primary button now.
+- *Seen and not changed here.* On a phone the Domains and Databases tables
+  scroll sideways, so the delete control is off screen until the table is
+  scrolled. A failed read of the domain list leaves the navigation rail's own
+  request for it open (the rail is not migrated). A disabled primary button is
+  close to an enabled one in the dark theme.
+- *Not covered.* Any real server; Safari, Firefox, a screen reader, a touch
+  device; the imitation skins; roles other than the administrator. The DNS
+  records tab, the PHP settings and the hosting type were not in the browser
+  run; their three states are covered by the mounted test only.

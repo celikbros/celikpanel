@@ -1,8 +1,8 @@
-import { AlertTriangle } from 'lucide-react';
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
-import { readApiError, type ApiError } from '../lib/apiError';
-import { Button, Spinner } from './ui';
+import type { ApiError } from '../lib/apiError';
+import { readRemote } from '../lib/remote';
+import { Checking, CouldNotCheck } from './ui';
 
 // What a settings screen knows about the server's current state. The rule the
 // three screens that use this follow (8 Oct 2026; D-022, D-024):
@@ -14,13 +14,17 @@ import { Button, Spinner } from './ui';
 //              no editable form and no empty list, because a default on screen
 //              is one Save away from replacing what the owner really has.
 //
-// Kept small and local to those screens; the shape is the one an app-wide
-// helper would take.
+// Since 9 Oct 2026 this is the settings-form face of the app-wide rule in
+// lib/remote.ts: the read is readRemote, the reading line is Checking and the
+// notice is CouldNotCheck. What stays here is what only a form needs: the
+// refusal of a stale write, and the notice that keeps what was typed.
 //
 // Bir ayar ekranının sunucunun geçerli durumu hakkında bildiği şey: okunuyor
 // (form yok, "kapalı" yok), biliniyor (ancak şimdi ayar diye gösterilir ve
 // okunduğu sürümle kaydedilebilir), bilinmiyor (okuma başarısız; ekran bunu
 // söyler ve Yeniden dene sunar, düzenlenebilir form ya da boş liste göstermez).
+// 9 Eki 2026'dan beri bu, lib/remote.ts'teki uygulama geneli kuralın ayar
+// formu yüzüdür.
 export type Current<T> =
     | { state: 'loading' }
     | { state: 'known'; value: T }
@@ -29,13 +33,8 @@ export type Current<T> =
 // readCurrent never throws: a refused, failed or unreadable answer is unknown.
 // readCurrent hata fırlatmaz: reddedilen ya da okunamayan yanıt bilinmeyendir.
 export async function readCurrent<T>(url: string): Promise<Current<T>> {
-    try {
-        const res = await fetch(url);
-        if (!res.ok) return { state: 'unknown', error: await readApiError(res) };
-        return { state: 'known', value: (await res.json()) as T };
-    } catch {
-        return { state: 'unknown', error: { message: '' } };
-    }
+    const next = await readRemote(url, (raw) => raw as T);
+    return next.state === 'known' ? { state: 'known', value: next.value } : { state: 'unknown', error: next.reason };
 }
 
 // The server refused a write because the settings are no longer the ones this
@@ -43,17 +42,6 @@ export async function readCurrent<T>(url: string): Promise<Current<T>> {
 // Sunucu yazıyı reddetti: ayarlar artık bu sayfanın yüklediği ayarlar değil.
 export function isStaleWrite(error: ApiError): boolean {
     return error.code === 'SETTINGS_CHANGED' || error.code === 'SETTINGS_VERSION_REQUIRED';
-}
-
-function CurrentChecking() {
-    const { t } = useI18n();
-    const text = t('current.checking');
-    return (
-        <div className="flex items-center gap-2 py-1 text-sm text-fg-muted">
-            <Spinner size="xs" label={text} />
-            <span aria-hidden="true">{text}</span>
-        </div>
-    );
 }
 
 // CurrentGate is what a screen shows in place of its form or list until the
@@ -68,8 +56,9 @@ export function CurrentGate({
     unknownKey: TranslationKey;
     onRetry: () => void;
 }) {
-    if (state === 'loading') return <CurrentChecking />;
-    if (state === 'unknown') return <CurrentNotice textKey={unknownKey} actionKey="common.retry" onAction={onRetry} />;
+    const { t } = useI18n();
+    if (state === 'loading') return <Checking label={t('current.checking')} className="py-1" />;
+    if (state === 'unknown') return <CouldNotCheck text={t(unknownKey)} onRetry={onRetry} />;
     return null;
 }
 
@@ -88,41 +77,6 @@ export function StaleNotice({
     onReload: () => void;
     busy?: boolean;
 }) {
-    return (
-        <div className="mb-4">
-            <CurrentNotice textKey={textKey} actionKey={actionKey} onAction={onReload} busy={busy} />
-        </div>
-    );
-}
-
-// One notice for both refusals: what happened, that nothing changed, and the
-// one action that resumes work. The text is the screen's own sentence.
-// İki ret için tek bildirim: ne oldu, hiçbir şeyin değişmediği ve işi sürdüren
-// tek eylem.
-function CurrentNotice({
-    textKey,
-    actionKey,
-    onAction,
-    busy,
-}: {
-    textKey: TranslationKey;
-    actionKey: TranslationKey;
-    onAction: () => void;
-    busy?: boolean;
-}) {
     const { t } = useI18n();
-    return (
-        <div
-            role="alert"
-            className="flex items-start gap-2 rounded-lg border border-warning-mark/50 bg-warning-mark/20 p-3 text-sm leading-relaxed text-fg"
-        >
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
-            <div className="min-w-0">
-                <p className="max-w-[75ch] break-words">{t(textKey)}</p>
-                <Button type="button" className="mt-2" loading={busy} onClick={onAction}>
-                    {t(actionKey)}
-                </Button>
-            </div>
-        </div>
-    );
+    return <CouldNotCheck className="mb-4" text={t(textKey)} actionLabel={t(actionKey)} onRetry={onReload} busy={busy} />;
 }

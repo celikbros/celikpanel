@@ -149,6 +149,97 @@ async function clickByText(page, texts, scope = 'button') {
 const marker = (handover = true) => ({ [`celikpanel.setup.start.admin`]: JSON.stringify({ request_id: REQ_ID, plan_id: PLAN_ID, panel_domain: HOST, ...(handover ? { handover: true } : {}) }) });
 const waitFor = (page, fn, timeout = 15000, ...args) => page.waitForFunction(fn, { timeout, polling: 100 }, ...args);
 
+// --- Scenarios that withhold one read at a time (9 Oct 2026) -------------------
+// "No negative UI unless known": for each read these scenarios make slow,
+// failing, known negative and known positive, the record says which negative
+// sentences were on screen, which checking lines and notices were, and what
+// moved when the answer arrived.
+const CAPS = '/api/v1/hosting/capabilities';
+const LIST = '/api/v1/domains';
+const ENGINES = '/api/v1/database-servers';
+const ENGINE_DATABASES = '/api/v1/database-servers/1/databases';
+const ENGINE_USERS = '/api/v1/database-servers/1/users';
+const CONN = '/api/v1/domains/1/connection';
+const DOMAIN_DATABASES = '/api/v1/domains/1/databases';
+const DIALOG = '[aria-labelledby="add-domain-title"]';
+const ADD_DOMAIN = ['Add domain', 'Alan adı ekle'];
+const RETRY = ['Retry', 'Tekrar dene'];
+const USERS_TAB = ['Users', 'Kullanıcılar'];
+const DATABASES_TAB = ['Databases', 'Veritabanları'];
+const REMOVE_ACCOUNT = ['Remove account', 'Hesabı kaldır'];
+const CAPABILITIES = { dns_server: 'bind', dns_identity_ready: true, dns_management_mode: 'local', dns_management_ready: true, web_server: 'nginx', php_versions: ['8.3'], mail_server: true, database_servers: ['mariadb'], db_tools: [] };
+const DOMAINS = [
+    { id: 1, domain_name: 'example.com', status: 'active', project_type: 'php', php_version: '8.3', ssl_enabled: true, created_at: '2026-09-01T10:00:00Z', disk_usage: 48234496, bandwidth: 0 },
+    { id: 2, domain_name: 'shop.example.org', status: 'active', project_type: 'static', ssl_enabled: false, created_at: '2026-09-14T08:30:00Z', disk_usage: 627, bandwidth: 0 },
+];
+const DB = {
+    dbServers: [{ id: 1, type_id: 1, type_name: 'mariadb', type_icon: 'M', name: 'MariaDB', version: '11.4', host: 'localhost', port: 3306, is_default: true, status: 'active', created_at: '2026-09-01T10:00:00Z', admin_username: 'celikpanel_admin', is_local: true }],
+    dbDatabases: [{ id: 5, name: 'example_com_shop', users: ['example_com_shop'], created_at: '2026-09-02T10:00:00Z' }, { id: 6, name: 'example_com_blog', users: ['example_com_blog', 'reporting'], created_at: '2026-09-03T10:00:00Z' }],
+    dbUsers: [{ id: 7, username: 'example_com_shop', databases: ['example_com_shop'], created_at: '2026-09-02T10:00:00Z' }, { id: 8, username: 'reporting', databases: ['example_com_blog'], created_at: '2026-09-03T10:00:00Z' }],
+};
+const CONNECTION = { domain: 'example.com', server_ip: '192.0.2.4', nameservers: ['ns1.example.net', 'ns2.example.net'], live_nameservers: ['ns1.example.net', 'ns2.example.net'], live_ips: ['192.0.2.4'], status: 'delegated', ssl_ready: true, glue_needed: false, nameservers_usable: true, propagation_pending: false, checked_at: '2026-10-09T09:00:00Z', dns_management_mode: 'local' };
+const remoteReset = async () => {
+    await reset();
+    await ctl({ domains: [], capabilities: CAPABILITIES, subscriptions: [], dbServers: [], dbDatabases: [], dbUsers: [], domainDatabases: { databases: [], available_types: ['mysql'] }, connection: null, clear: [CAPS, LIST, ENGINES, ENGINE_DATABASES, ENGINE_USERS, CONN, DOMAIN_DATABASES] });
+    await drainLog();
+};
+const capabilityReads = async () => (await drainLog()).filter(line => line.includes(`GET ${CAPS}`)).length;
+// Sentences that claim something about the server. Each may be on screen only
+// when the server has said so.
+const NEGATIVE = [
+    'DNS server is required', 'Choose a DNS engine', 'DNS identity is not ready', 'Configure the DNS pair', 'No domains yet',
+    'No database engine installed', 'Go to Services', 'No databases yet', 'No database users yet', 'does not point at this server yet',
+    'cannot be issued yet', 'nothing yet', 'Does not resolve yet', 'nameserver setup is not ready',
+    'DNS sunucusu gerekir', 'DNS motoru seç', 'DNS kimliği henüz hazır değil', 'DNS çiftini yapılandır', 'Henüz alan adı yok',
+    'Kurulu veritabanı motoru yok', 'Servisler sayfasına git', 'Henüz veritabanı yok', 'Henüz veritabanı kullanıcısı yok', 'henüz bu sunucuyu göstermiyor',
+    'Sertifika henüz alınamaz', 'henüz yok', 'Henüz çözülmüyor', 'ad sunucusu kurulumu henüz hazır değil',
+];
+const negatives = page => page.evaluate((phrases) => {
+    const scope = document.querySelector('[role="dialog"]') || document.querySelector('main') || document.body;
+    const text = scope.innerText || '';
+    return {
+        negativeText: phrases.filter(phrase => text.includes(phrase)),
+        checkingLines: Array.from(scope.querySelectorAll('[role="status"][aria-label]')).filter(node => node.getClientRects().length > 0).map(node => node.getAttribute('aria-label')),
+        notices: Array.from(scope.querySelectorAll('[role="alert"]')).map(node => node.innerText.trim()),
+        disabledButtons: Array.from(scope.querySelectorAll('button:disabled')).map(node => (node.innerText || node.getAttribute('aria-label') || node.title || '').trim()).filter(Boolean),
+    };
+}, NEGATIVE);
+const dialogFacts = page => page.evaluate((sel, phrases) => {
+    const dialog = document.querySelector(sel);
+    const rect = node => { if (!node) return null; const r = node.getBoundingClientRect(); return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) }; };
+    const text = dialog?.innerText || '';
+    const submit = dialog?.querySelector('button[type="submit"]');
+    const name = dialog?.querySelector('input[type="text"]');
+    return {
+        blocker: phrases.filter(phrase => text.includes(phrase)),
+        checkingLine: dialog?.querySelector('[role="status"][aria-label]')?.getAttribute('aria-label') || null,
+        notice: dialog?.querySelector('[role="alert"]')?.innerText.trim() || null,
+        submitDisabled: submit?.disabled ?? null,
+        nameDisabled: name?.disabled ?? null,
+        radios: Array.from(dialog?.querySelectorAll('input[type="radio"]') || []).map(node => ({ checked: node.checked, disabled: node.disabled })),
+        rects: { panel: rect(dialog), name: rect(name), purpose: rect(dialog?.querySelector('input[type="radio"]')?.closest('.grid')), ssl: rect(dialog?.querySelector('#ssl')), submit: rect(submit) },
+    };
+}, DIALOG, NEGATIVE);
+const pageFacts = page => page.evaluate(() => {
+    const rect = node => { const r = node.getBoundingClientRect(); return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) }; };
+    const rects = {};
+    for (const node of document.querySelectorAll('main h1, main h3, main h4, main button, main [role="tab"]')) {
+        if (node.getClientRects().length === 0) continue;
+        const key = `${node.tagName.toLowerCase()}:${(node.innerText || node.getAttribute('aria-label') || node.title || '').trim().replace(/\s+/g, ' ').replace(/\s*[\d…–]+$/, '').slice(0, 40)}`;
+        if (!(key in rects)) rects[key] = rect(node);
+    }
+    return { rects };
+});
+// Opens a page of the panel and waits for it to settle. A read that fails can
+// leave another reader's request open (the navigation rail reads the domain
+// list as well), so quiet is waited for with a limit instead of required.
+const quiet = page => page.waitForNetworkIdle({ idleTime: 600, timeout: 7000 }).catch(() => {});
+const go = async (page, path) => { await page.goto(`${base}${path}`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector('main h1'); await quiet(page); };
+// What changed place or size between two records of the same elements.
+const moved = (before, after) => Object.keys(before || {}).filter(key => before[key] && after?.[key])
+    .filter(key => ['x', 'y', 'w', 'h'].some(side => Math.abs(before[key][side] - after[key][side]) > 1))
+    .map(key => `${key}: ${JSON.stringify(before[key])} -> ${JSON.stringify(after[key])}`);
+
 const scenarios = {
     // 1 + 2: review notice, progress notice, planned restart, continuation.
     async setup() {
@@ -640,6 +731,285 @@ const scenarios = {
         await shot(second, '09c-dialog-capabilities-arrived', { dialog: await second.$eval('[aria-labelledby="add-domain-title"]', node => node.innerText) });
         await closePage(second);
     },
+    // 20-24: Add domain and the Domains page while this server's capabilities
+    // are slow, failing, known negative and known positive (9 Oct 2026). The
+    // report an owner made: the dialogue showed "choose a DNS engine" and a
+    // disabled form for the seconds the read took, on a server that had DNS.
+    async adddomain() {
+        // Slow: frames of the page and of the dialogue while the read is on its way.
+        await remoteReset(); await ctl({ domains: DOMAINS, override: { [CAPS]: { delay: 9000 } } });
+        let page = await newPage();
+        await page.goto(`${base}/domains`, { waitUntil: 'domcontentloaded' });
+        await page.waitForSelector('h1');
+        await pause(900);
+        await shot(page, '20a-domains-capabilities-checking', await negatives(page));
+        await clickByText(page, ADD_DOMAIN);
+        await page.waitForSelector(`${DIALOG} input[type="text"]`);
+        await page.type(`${DIALOG} input[type="text"]`, 'typed.example');
+        const frames = [];
+        for (const at of [1, 2, 3, 4]) {
+            await shot(page, `20b-dialog-checking-frame${at}`);
+            frames.push({ at: Date.now(), ...(await dialogFacts(page)) });
+            await pause(700);
+        }
+        await waitFor(page, sel => !document.querySelector(sel)?.querySelector('[role="status"]'), 12000, DIALOG);
+        await pause(300);
+        const arrived = await dialogFacts(page);
+        await shot(page, '20c-dialog-known-positive', {
+            frames, arrived,
+            blockerSeenWhileChecking: frames.some(frame => frame.blocker.length > 0),
+            framesStillChecking: frames.filter(frame => frame.checkingLine).length,
+            // What moved between the last checking frame and the known answer.
+            moved: moved(frames[frames.length - 1].rects, arrived.rects),
+            typedKept: await page.$eval(`${DIALOG} input[type="text"]`, node => node.value),
+            capabilityReads: await capabilityReads(),
+        });
+        await closePage(page);
+
+        // Failing: the page stays quiet, the dialogue says it could not check, Retry reads again.
+        await remoteReset(); await ctl({ domains: DOMAINS, override: { [CAPS]: { status: 502, body: { error: 'agent unavailable', code: 'AGENT_UNAVAILABLE' } } } });
+        page = await newPage();
+        await go(page, '/domains');
+        await shot(page, '21a-domains-capabilities-failed', await negatives(page));
+        await clickByText(page, ADD_DOMAIN);
+        await page.waitForSelector(`${DIALOG} input[type="text"]`);
+        await page.type(`${DIALOG} input[type="text"]`, 'typed.example');
+        await shot(page, '21b-dialog-could-not-check', await dialogFacts(page));
+        await ctl({ clear: [CAPS] });
+        await clickByText(page, RETRY, `${DIALOG} button`);
+        await waitFor(page, sel => !document.querySelector(sel)?.querySelector('[role="alert"]'), 8000, DIALOG);
+        await pause(300);
+        await shot(page, '21c-dialog-after-retry', { ...(await dialogFacts(page)), typedKept: await page.$eval(`${DIALOG} input[type="text"]`, node => node.value) });
+        await closePage(page);
+
+        // Known negative: no engine (empty list, then with domains), then an engine without its identity.
+        await remoteReset(); await ctl({ capabilities: { ...CAPABILITIES, dns_server: '', dns_identity_ready: false, dns_management_ready: false } });
+        page = await newPage();
+        await go(page, '/domains');
+        await shot(page, '22a-domains-known-no-engine-empty', await negatives(page));
+        await ctl({ domains: DOMAINS });
+        await page.reload({ waitUntil: 'domcontentloaded' }); await quiet(page);
+        await shot(page, '22b-domains-known-no-engine-with-domains', await negatives(page));
+        await ctl({ capabilities: { ...CAPABILITIES, dns_identity_ready: false, dns_management_ready: false } });
+        await page.reload({ waitUntil: 'domcontentloaded' }); await quiet(page);
+        await shot(page, '22c-domains-known-no-identity', await negatives(page));
+        await closePage(page);
+        // The dialogue's own blocker: external DNS serves websites, there is no
+        // web server, and a DNS-only domain needs a local engine that is known
+        // to be missing.
+        await remoteReset(); await ctl({ capabilities: { ...CAPABILITIES, web_server: '', dns_server: '', dns_identity_ready: false, dns_management_mode: 'external', dns_management_ready: true } });
+        page = await newPage();
+        await go(page, '/domains');
+        await clickByText(page, ADD_DOMAIN);
+        await page.waitForSelector(`${DIALOG} input[type="text"]`);
+        await pause(300);
+        await shot(page, '22d-dialog-known-negative', await dialogFacts(page));
+        await closePage(page);
+
+        // Known positive, and the dialogue opened over a page that already has the answer.
+        await remoteReset(); await ctl({ domains: DOMAINS });
+        page = await newPage();
+        await go(page, '/domains');
+        await shot(page, '23a-domains-known-positive', await negatives(page));
+        await drainLog();
+        await clickByText(page, ADD_DOMAIN);
+        await page.waitForSelector(`${DIALOG} input[type="text"]`);
+        const first = await dialogFacts(page);
+        await pause(600);
+        await shot(page, '23b-dialog-over-a-page-that-knows', { first, ...(await dialogFacts(page)), capabilityReadsAfterOpening: await capabilityReads() });
+        await closePage(page);
+    },
+    // 25: the domain list itself: slow, failing (then Retry), empty, populated.
+    async domainslist() {
+        await remoteReset(); await ctl({ domains: DOMAINS, override: { [LIST]: { delay: 5000 } } });
+        let page = await newPage();
+        await page.goto(`${base}/domains`, { waitUntil: 'domcontentloaded' });
+        await page.waitForSelector('h1');
+        await pause(900);
+        const checking = await pageFacts(page);
+        await shot(page, '25a-domains-list-checking', { ...(await negatives(page)), ...checking });
+        await waitFor(page, () => !!document.querySelector('main table'), 12000);
+        await pause(300);
+        const known = await pageFacts(page);
+        await shot(page, '25b-domains-list-arrived', { ...known, moved: moved(checking.rects, known.rects) });
+        await closePage(page);
+
+        await remoteReset(); await ctl({ domains: DOMAINS, override: { [LIST]: { status: 500, body: { error: 'database is locked', code: 'INTERNAL' } } } });
+        page = await newPage();
+        // The page of one domain needs the list too; the list page is what is inspected here.
+        await go(page, '/domains');
+        await shot(page, '25c-domains-list-could-not-read', await negatives(page));
+        await ctl({ clear: [LIST] });
+        await clickByText(page, RETRY, 'main button');
+        await waitFor(page, () => !!document.querySelector('main table'), 8000);
+        await shot(page, '25d-domains-list-after-retry', await negatives(page));
+        await closePage(page);
+
+        await remoteReset();
+        page = await newPage();
+        await go(page, '/domains');
+        await shot(page, '25e-domains-list-known-empty', await negatives(page));
+        await closePage(page);
+    },
+    // 30-33: the Databases page: engines and their lists slow, failing, empty,
+    // populated; a list that could not be read again; the panel's own account
+    // after it was removed.
+    async databases() {
+        await remoteReset(); await ctl({ ...DB, override: { [ENGINES]: { delay: 5000 } } });
+        let page = await newPage();
+        await page.goto(`${base}/databases`, { waitUntil: 'domcontentloaded' });
+        await page.waitForSelector('h1');
+        await pause(900);
+        const checking = await pageFacts(page);
+        await shot(page, '30a-engines-checking', { ...(await negatives(page)), ...checking });
+        await waitFor(page, () => !!document.querySelector('main table'), 12000);
+        await pause(300);
+        await shot(page, '30b-engines-arrived-populated', await pageFacts(page));
+        await closePage(page);
+
+        await remoteReset(); await ctl({ ...DB, override: { [ENGINES]: { status: 502, body: { error: 'agent unavailable', code: 'AGENT_UNAVAILABLE' } } } });
+        page = await newPage();
+        await go(page, '/databases');
+        await shot(page, '30c-engines-could-not-read', await negatives(page));
+        await ctl({ clear: [ENGINES] });
+        await clickByText(page, RETRY, 'main button');
+        await waitFor(page, () => !!document.querySelector('main table'), 8000);
+        await shot(page, '30d-engines-after-retry', await negatives(page));
+        await closePage(page);
+
+        await remoteReset();
+        page = await newPage();
+        await go(page, '/databases');
+        await shot(page, '30e-engines-known-none', await negatives(page));
+        await closePage(page);
+
+        // The lists of one engine.
+        await remoteReset(); await ctl({ ...DB, override: { [ENGINE_DATABASES]: { delay: 5000 }, [ENGINE_USERS]: { delay: 5000 } } });
+        page = await newPage();
+        await page.goto(`${base}/databases`, { waitUntil: 'domcontentloaded' });
+        await waitFor(page, () => /MariaDB/.test(document.querySelector('main')?.innerText || ''), 8000);
+        await pause(600);
+        const listChecking = await pageFacts(page);
+        await shot(page, '31a-engine-lists-checking', { ...(await negatives(page)), ...listChecking });
+        await waitFor(page, () => !!document.querySelector('main table'), 12000);
+        await pause(300);
+        const listKnown = await pageFacts(page);
+        await shot(page, '31b-engine-lists-arrived', { ...listKnown, moved: moved(listChecking.rects, listKnown.rects) });
+        await closePage(page);
+
+        await remoteReset(); await ctl({ ...DB, override: { [ENGINE_DATABASES]: { drop: true }, [ENGINE_USERS]: { status: 500, body: { error: 'connection refused' } } } });
+        page = await newPage();
+        await go(page, '/databases');
+        await shot(page, '31c-engine-databases-could-not-read', await negatives(page));
+        await clickByText(page, USERS_TAB, 'main button');
+        await pause(300);
+        await shot(page, '31d-engine-users-could-not-read', await negatives(page));
+        await closePage(page);
+
+        await remoteReset(); await ctl({ ...DB, dbDatabases: [], dbUsers: [] });
+        page = await newPage();
+        await go(page, '/databases');
+        await shot(page, '31e-engine-databases-known-empty', await negatives(page));
+        await closePage(page);
+
+        // A list that was known and could not be read again after a delete.
+        await remoteReset(); await ctl(DB);
+        page = await newPage();
+        page.on('dialog', dialog => dialog.accept());
+        await go(page, '/databases');
+        await ctl({ override: { [ENGINE_DATABASES]: { status: 502, body: { error: 'agent unavailable' } } } });
+        await page.click('main table tbody tr:first-child button');
+        await waitFor(page, () => !!document.querySelector('main [role="alert"]'), 8000);
+        await pause(300);
+        await shot(page, '32-engine-list-could-not-be-read-again', {
+            ...(await negatives(page)),
+            deleteDisabled: await page.$$eval('main table tbody button', nodes => nodes.map(node => node.disabled)),
+        });
+        await closePage(page);
+
+        // The panel's own account: removed, then what the strip shows.
+        await remoteReset(); await ctl(DB);
+        page = await newPage();
+        page.on('dialog', dialog => dialog.accept());
+        await go(page, '/databases');
+        await shot(page, '33a-account-present', await negatives(page));
+        await clickByText(page, REMOVE_ACCOUNT, 'main button');
+        await page.waitForNetworkIdle({ idleTime: 500, timeout: 8000 }).catch(() => {});
+        await pause(300);
+        await shot(page, '33b-account-after-removal', {
+            ...(await negatives(page)),
+            buttons: await page.$$eval('main button', nodes => nodes.map(node => node.innerText.trim()).filter(Boolean)),
+        });
+        await closePage(page);
+    },
+    // 40-41: one domain's page: the connection card slow, failing, not checked
+    // by the server (status unknown, every list null), known negative and
+    // known positive; and the domain's own database list.
+    async connection() {
+        const open = async (settled = true) => {
+            const page = await newPage();
+            await page.goto(`${base}/domains/example.com`, { waitUntil: 'domcontentloaded' });
+            await page.waitForSelector('main h1, main h2');
+            if (settled) await quiet(page);
+            return page;
+        };
+        await remoteReset(); await ctl({ domains: DOMAINS, connection: CONNECTION, override: { [CONN]: { delay: 5000 } } });
+        let page = await open(false);
+        await pause(1500);
+        const checking = await pageFacts(page);
+        await shot(page, '40a-connection-checking', { ...(await negatives(page)), ...checking });
+        await waitFor(page, () => /192\.0\.2\.4/.test(document.querySelector('main')?.innerText || ''), 12000);
+        await pause(300);
+        const known = await pageFacts(page);
+        await shot(page, '40b-connection-known-positive', { ...known, moved: moved(checking.rects, known.rects) });
+        await closePage(page);
+
+        await remoteReset(); await ctl({ domains: DOMAINS, connection: CONNECTION, override: { [CONN]: { status: 502, body: { error: 'agent unavailable' } } } });
+        page = await open();
+        await shot(page, '40c-connection-could-not-read', await negatives(page));
+        await closePage(page);
+
+        // What the server sends when it could not ask the public resolvers.
+        await remoteReset(); await ctl({ domains: DOMAINS, connection: { ...CONNECTION, status: 'unknown', ssl_ready: false, nameservers_usable: false, live_nameservers: null, live_ips: null, resolver_observations: null, nameserver_facts: null } });
+        page = await open();
+        await shot(page, '40d-connection-status-unknown-top', await negatives(page));
+        await page.evaluate(() => document.querySelector('main section')?.scrollIntoView({ block: 'end' }));
+        await pause(200);
+        await shot(page, '40d-connection-status-unknown-bottom', await negatives(page));
+        await closePage(page);
+
+        await remoteReset(); await ctl({ domains: DOMAINS, connection: { ...CONNECTION, status: 'unresolved', ssl_ready: false, live_nameservers: [], live_ips: [] } });
+        page = await open();
+        await shot(page, '40e-connection-known-negative', await negatives(page));
+        await closePage(page);
+
+        // The domain's databases tab.
+        const tab = async page => { await clickByText(page, DATABASES_TAB, 'main button'); await pause(400); };
+        await remoteReset(); await ctl({ domains: DOMAINS, connection: CONNECTION, override: { [DOMAIN_DATABASES]: { delay: 5000 } } });
+        page = await open();
+        await tab(page);
+        const dbChecking = await pageFacts(page);
+        await shot(page, '41a-domain-databases-checking', { ...(await negatives(page)), ...dbChecking });
+        await closePage(page);
+
+        await remoteReset(); await ctl({ domains: DOMAINS, connection: CONNECTION, override: { [DOMAIN_DATABASES]: { status: 500, body: { error: 'Failed to load databases' } }, [CAPS]: { status: 502, body: { error: 'agent unavailable' }, after: 1 } } });
+        page = await open();
+        await tab(page);
+        await shot(page, '41b-domain-databases-could-not-read', await negatives(page));
+        await closePage(page);
+
+        await remoteReset(); await ctl({ domains: DOMAINS, connection: CONNECTION });
+        page = await open();
+        await tab(page);
+        await shot(page, '41c-domain-databases-known-empty', await negatives(page));
+        await closePage(page);
+
+        await remoteReset(); await ctl({ domains: DOMAINS, connection: CONNECTION, domainDatabases: { databases: [{ id: 3, name: 'example_com_shop', type: 'mysql', user: 'example_com_shop', created_at: '2026-10-01T09:00:00Z' }], available_types: ['mysql'] } });
+        page = await open();
+        await tab(page);
+        await shot(page, '41d-domain-databases-populated', await negatives(page));
+        await closePage(page);
+    },
 };
 
 for (const [name, run] of Object.entries(scenarios)) {
@@ -649,5 +1019,11 @@ for (const [name, run] of Object.entries(scenarios)) {
     console.log(`${vp}-${theme}-${locale} ${name} ${Math.round((Date.now() - started) / 1000)}s`);
 }
 await writeFile(`${out}report${wanted ? '-' + wanted.join('-') : ''}.json`, JSON.stringify(report, null, 2));
-await browser.close(); mock.kill();
+// The record is written. Closing the browser can wait for a page that still
+// has a request open (a read that was made to hang or fail on purpose), so it
+// gets a few seconds and is then stopped; nothing is lost with it.
+await Promise.race([browser.close().catch(() => {}), pause(5000)]);
+try { browser.process()?.kill(); } catch { /* already gone */ }
+mock.kill();
 console.log('errors', JSON.stringify(report.errors));
+process.exit(0);

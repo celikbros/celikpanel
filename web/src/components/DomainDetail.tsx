@@ -9,11 +9,8 @@ import { DomainGeneralSettings } from './DomainGeneralSettings';
 import { DomainSSLSettings, type SSLRuntimeSummary } from './DomainSSLSettings';
 import { DomainSSLOverviewCard } from './DomainSSLOverviewCard';
 import { DomainConnection } from './DomainConnection';
-import { DomainLogsViewer } from './DomainLogsViewer';
 import { DomainDatabaseManager } from './DomainDatabaseManager';
 import { DomainFileManager } from './DomainFileManager';
-import { DomainBackupManager } from './DomainBackupManager';
-import { DomainCronManager } from './DomainCronManager';
 import { DomainMailManager } from './DomainMailManager';
 import { DomainDNSManager } from './DomainDNSManager';
 import { HostingTypePanel } from './HostingTypePanel';
@@ -21,6 +18,7 @@ import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
 import { Spinner, StatusDot } from './ui';
 import { useAuth } from '../auth/AuthContext';
+import { useHostingCapabilities } from '../lib/hostingCapabilities';
 import {
     hasAnyDomainAccess,
     hasDomainAccess,
@@ -34,6 +32,25 @@ const DomainAppsPanel = lazy(() => import('./DomainAppsPanel').then((module) => 
     default: module.DomainAppsPanel,
 })));
 
+// The three panels of the Advanced tab are fetched when one of them is opened,
+// like the Applications panel above. They are the least visited part of a
+// domain's page and were a quarter of its bundle; the page had 0.72 KiB left
+// under its size limit, and the limit is not raised (9 Oct 2026). The tab
+// content already waits inside one Suspense boundary.
+// Gelişmiş sekmesinin üç bölümü, yukarıdaki Uygulamalar bölümü gibi, biri
+// açıldığında getirilir. Alan adı sayfasının en az ziyaret edilen kısmıdır ve
+// paketinin dörtte biriydi; sayfanın boyut sınırına 0,72 KiB payı kalmıştı ve
+// sınır yükseltilmez. Sekme içeriği zaten tek bir Suspense sınırında bekler.
+const DomainBackupManager = lazy(() => import('./DomainBackupManager').then((module) => ({
+    default: module.DomainBackupManager,
+})));
+const DomainCronManager = lazy(() => import('./DomainCronManager').then((module) => ({
+    default: module.DomainCronManager,
+})));
+const DomainLogsViewer = lazy(() => import('./DomainLogsViewer').then((module) => ({
+    default: module.DomainLogsViewer,
+})));
+
 interface Domain {
     id: number;
     domain_name: string;
@@ -45,18 +62,6 @@ interface Domain {
     disk_usage?: number;
     bandwidth?: number;
     access?: DomainAccess;
-}
-
-// What the server can actually do — tabs for services that are not installed
-// would be settings pages for ghosts. Fetched once per visit.
-// Sunucunun gerçekten yapabildiği — kurulu olmayan servislerin sekmeleri,
-// hayaletlerin ayar sayfaları olurdu. Ziyaret başına bir kez çekilir.
-interface Caps {
-    web_server: string;
-    php_versions: string[];
-    dns_server: string;
-    mail_server: boolean;
-    database_servers: string[] | null;
 }
 
 interface DomainDetailProps {
@@ -161,17 +166,23 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
             .catch(() => {});
     }, [canViewStatistics, domainId, domainLoaded]);
 
-    const [caps, setCaps] = useState<Caps | null>(null);
-    useEffect(() => {
-        if (isTeamMember) {
-            setCaps(null);
-            return;
-        }
-        fetch('/api/v1/hosting/capabilities')
-            .then((r) => (r.ok ? r.json() : null))
-            .then(setCaps)
-            .catch(() => setCaps(null));
-    }, [isTeamMember]);
+    // What the server can actually do — tabs for services that are not
+    // installed would be settings pages for ghosts. One shared read
+    // (lib/hostingCapabilities.ts); the panels under the tabs use the same
+    // answer. `caps` is the KNOWN answer or null, and the three states mean:
+    //   - being checked:      every tab stays; nothing is hidden on a guess;
+    //   - could not be checked: every tab stays; the panel that needs the
+    //                         answer says so itself and offers the read again;
+    //   - known:              only now is a tab for a missing service removed.
+    // A team member is never asked: the server-wide inventory is not theirs.
+    // Sunucunun gerçekten yapabildiği — kurulu olmayan servislerin sekmeleri,
+    // hayaletlerin ayar sayfaları olurdu. Tek ortak okuma; sekmelerin altındaki
+    // bölümler aynı yanıtı kullanır. `caps` BİLİNEN yanıttır ya da null:
+    // kontrol edilirken ve kontrol edilemediğinde her sekme kalır (yanıta
+    // ihtiyacı olan bölüm bunu kendisi söyler); ancak bilindiğinde eksik
+    // servisin sekmesi kaldırılır. Ekip üyesi için hiç sorulmaz.
+    const capabilities = useHostingCapabilities({ enabled: !isTeamMember });
+    const caps = !isTeamMember && capabilities.remote.state === 'known' ? capabilities.remote.value : null;
 
     // Capabilities arrive after the first paint. If they remove the selected
     // tab, synchronise the stored selection as well as the rendered fallback;
@@ -181,7 +192,7 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
         const projectType = domain.project_type || 'php';
         const unavailable =
             (activeTab === 'mail' && !caps.mail_server) ||
-            (activeTab === 'databases' && (caps.database_servers?.length ?? 0) === 0) ||
+            (activeTab === 'databases' && caps.database_servers.length === 0) ||
             (activeTab === 'apps' && projectType !== 'php') ||
             ((activeTab === 'files' || activeTab === 'advanced') && projectType === 'dnsonly');
         if (unavailable) setActiveTab('overview');
@@ -264,7 +275,7 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
         } satisfies TabDef] : []),
         ...(canView('dns') ? [{ id: 'dns', labelKey: 'domain.tab.dns', icon: Network, capabilities: ['dns'], render: (readOnly) => <DomainDNSManager domainId={domain.id} domainName={domain.domain_name} readOnly={readOnly} isAdditionalUser={isTeamMember} /> } satisfies TabDef] : []),
         ...(canView('mail') && (isTeamMember || !caps || caps.mail_server) ? [{ id: 'mail', labelKey: 'domain.tab.mail', icon: Mail, capabilities: ['mail'], render: (readOnly) => <DomainMailManager domainId={domain.id} domainName={domain.domain_name} readOnly={readOnly} /> } satisfies TabDef] : []),
-        ...(canView('databases') && (isTeamMember || !caps || (caps.database_servers?.length ?? 0) > 0) ? [{ id: 'databases', labelKey: 'domain.tab.databases', icon: Database, capabilities: ['databases'], render: (readOnly) => <DomainDatabaseManager domainId={domain.id} domainName={domain.domain_name} readOnly={readOnly} isAdditionalUser={isTeamMember} /> } satisfies TabDef] : []),
+        ...(canView('databases') && (isTeamMember || !caps || caps.database_servers.length > 0) ? [{ id: 'databases', labelKey: 'domain.tab.databases', icon: Database, capabilities: ['databases'], render: (readOnly) => <DomainDatabaseManager domainId={domain.id} domainName={domain.domain_name} readOnly={readOnly} isAdditionalUser={isTeamMember} /> } satisfies TabDef] : []),
         ...(!isTeamMember && projectType === 'php' && canView('files') && canView('php') ? [{ id: 'apps', labelKey: 'domain.tab.apps', icon: AppWindow, capabilities: ['files', 'php'], render: () => <DomainAppsPanel domainId={domain.id} domainName={domain.domain_name} /> } satisfies TabDef] : []),
         ...(!isDnsOnly && canView('files') ? [{ id: 'files', labelKey: 'domain.tab.files', icon: Folder, capabilities: ['files'], render: (readOnly) => <DomainFileManager domainId={domain.id} domainName={domain.domain_name} readOnly={readOnly} /> } satisfies TabDef] : []),
         ...(!isDnsOnly && advancedSubs.length > 0 ? [{

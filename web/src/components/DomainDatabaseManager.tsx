@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Database, Plus, Trash2, RefreshCw, ExternalLink } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { readApiError } from '../lib/apiError';
-import { Spinner } from './ui';
+import { Button, Checking, CouldNotCheck, RemoteGate } from './ui';
+import { decodeList, lastKnown, mapRemote, useRemote, type Remote } from '../lib/remote';
+import { useHostingCapabilities, type CapabilitiesRemote } from '../lib/hostingCapabilities';
 
 interface DomainDatabaseManagerProps {
     domainId: number;
@@ -35,27 +37,23 @@ function parseAvailableDatabaseTypes(value: unknown): DatabaseEngine[] {
 // The database web tools (phpMyAdmin / phpPgAdmin). Installed → a launch
 // button opening the panel-proxied tool. Parent engine present but the tool
 // not → a hint pointing to Services. Neither → nothing (the parent-engine
-// requirement means this whole page would be hidden anyway).
+// requirement means this whole page would be hidden anyway). The card is
+// drawn only for a known answer; while the capabilities are being read, or
+// could not be read, the manager above says so once, for both of them.
 // Veritabanı web araçları (phpMyAdmin / phpPgAdmin). Kurulu → panel-vekilli
 // aracı açan bir düğme. Üst motor var ama araç yok → Servisler'e yönlendiren
-// bir ipucu. Hiçbiri → hiçbir şey.
-function DBToolsCard() {
+// bir ipucu. Hiçbiri → hiçbir şey. Kart yalnız bilinen yanıt için çizilir.
+function DBToolsCard({ capabilities }: { capabilities: CapabilitiesRemote }) {
     const { t } = useI18n();
-    const [caps, setCaps] = useState<{ database_servers?: string[]; db_tools?: string[] } | null>(null);
-    useEffect(() => {
-        fetch('/api/v1/hosting/capabilities')
-            .then((r) => (r.ok ? r.json() : null))
-            .then(setCaps)
-            .catch(() => setCaps(null));
-    }, []);
-    if (!caps) return null;
+    if (capabilities.state !== 'known') return null;
+    const caps = capabilities.value;
 
     const tools = [
         { id: 'phpmyadmin', label: 'phpMyAdmin', engine: 'mariadb' },
         { id: 'phppgadmin', label: 'phpPgAdmin', engine: 'postgresql' },
     ];
-    const installed = new Set(caps.db_tools ?? []);
-    const engines = new Set(caps.database_servers ?? []);
+    const installed = new Set(caps.db_tools);
+    const engines = new Set(caps.database_servers);
     // Only tools whose parent engine is installed are relevant here.
     // Yalnız üst motoru kurulu olan araçlar burada anlamlıdır.
     const relevant = tools.filter((tl) => engines.has(tl.engine));
@@ -100,6 +98,29 @@ interface DatabaseInfo {
     created_at: string;
 }
 
+// One answer carries this domain's databases and, for a team member, the
+// engines that member may create on. A body that is not this shape is unknown.
+// Tek yanıt bu alan adının veritabanlarını ve ekip üyesi için oluşturabileceği
+// motorları taşır. Bu biçimde olmayan gövde bilinmeyendir.
+interface DomainDatabases {
+    databases: DatabaseInfo[];
+    availableTypes: DatabaseEngine[];
+}
+
+function decodeDomainDatabases(raw: unknown): DomainDatabases {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('shape');
+    const payload = raw as Record<string, unknown>;
+    return {
+        databases: decodeList<DatabaseInfo>(payload.databases),
+        availableTypes: parseAvailableDatabaseTypes(payload.available_types),
+    };
+}
+
+const engineLabels: Record<string, DatabaseEngine> = {
+    mariadb: { value: 'mysql', label: 'MySQL / MariaDB' },
+    postgresql: { value: 'postgresql', label: 'PostgreSQL' },
+};
+
 export function DomainDatabaseManager({
     domainId,
     domainName,
@@ -107,82 +128,52 @@ export function DomainDatabaseManager({
     isAdditionalUser = false,
 }: DomainDatabaseManagerProps) {
     const { t } = useI18n();
-    const [databases, setDatabases] = useState<DatabaseInfo[]>([]);
-    const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
     const [showCreateForm, setShowCreateForm] = useState(false);
+
+    // The list is read through lib/remote.ts: being read, read, or not
+    // readable. "No databases yet" is drawn only for an answer the server gave.
+    // A new domain is a new address, so nothing of the previous domain's
+    // answer is ever shown for this one.
+    // Liste lib/remote.ts üzerinden okunur: okunuyor, okundu ya da okunamadı.
+    // "Henüz veritabanı yok" yalnız sunucunun verdiği yanıt için çizilir. Yeni
+    // alan adı yeni adrestir; önceki alan adının yanıtı bunun için gösterilmez.
+    const list = useRemote(`/api/v1/domains/${domainId}/databases`, decodeDomainDatabases);
+    const listed = lastKnown(list.remote);
 
     // Only engines that are actually installed may be offered — a dropdown
     // with MySQL and PostgreSQL on a server that runs neither is a settings
     // page for ghosts. The engine ids map to the panel's db types.
-    // Yalnız gerçekten kurulu motorlar sunulabilir — ikisi de koşmayan bir
-    // sunucuda MySQL+PostgreSQL açılır listesi, hayaletlere ayar sayfasıdır.
-    const [engines, setEngines] = useState<DatabaseEngine[]>([]);
-    useEffect(() => {
-        if (isAdditionalUser) {
-            // Server-wide capability inventory is admin-only. For a team
-            // member, loadDatabases consumes only the tenant-safe
-            // available_types field returned with this domain's databases.
-            setEngines([]);
-            return;
-        }
-        fetch('/api/v1/hosting/capabilities')
-            .then((r) => (r.ok ? r.json() : null))
-            .then((c: { database_servers?: string[] } | null) => {
-                const list: { value: 'mysql' | 'postgresql'; label: string }[] = [];
-                for (const id of c?.database_servers ?? []) {
-                    if (id === 'mariadb') list.push({ value: 'mysql', label: 'MySQL / MariaDB' });
-                    if (id === 'postgresql') list.push({ value: 'postgresql', label: 'PostgreSQL' });
-                }
-                setEngines(list);
-                if (list.length > 0) setDbType(list[0].value);
-            })
-            .catch(() => setEngines([]));
-    }, [isAdditionalUser]);
+    //
+    // Server-wide capability inventory is admin-only. A team member is given
+    // only the tenant-safe available_types returned with this domain's
+    // databases, so their engines come from the list's own answer and no
+    // server-wide read is made for them.
+    //
+    // Either way the engines are known, being checked, or could not be
+    // checked. A database is created only on an engine the server named: there
+    // is no default engine.
+    // Yalnız gerçekten kurulu motorlar sunulabilir. Sunucu geneli envanter
+    // yalnız yöneticiye aittir; ekip üyesine yalnız bu alan adının
+    // veritabanlarıyla dönen available_types verilir. Her iki durumda motorlar
+    // ya bilinir, ya kontrol ediliyordur, ya da kontrol edilememiştir;
+    // varsayılan motor yoktur.
+    const capabilities = useHostingCapabilities({ enabled: !isAdditionalUser });
+    const engineSource: Remote<DatabaseEngine[]> = isAdditionalUser
+        ? mapRemote(list.remote, (value) => value.availableTypes)
+        : mapRemote(capabilities.remote, (value) => value.database_servers.flatMap((id) => engineLabels[id] ?? []));
+    const engines = engineSource.state === 'known' ? engineSource.value : [];
+    const canCreate = !readOnly && engineSource.state === 'known' && engines.length > 0;
 
     // Form state
     const [dbName, setDbName] = useState('');
-    const [dbType, setDbType] = useState<DatabaseType>('mysql');
+    const [chosenType, setDbType] = useState<DatabaseType | null>(null);
+    const dbType = engines.some((engine) => engine.value === chosenType) ? chosenType : engines[0]?.value ?? null;
     const [dbPassword, setDbPassword] = useState('');
-
-    useEffect(() => {
-        loadDatabases();
-    }, [domainId, isAdditionalUser]);
-
-    const loadDatabases = async () => {
-        setLoading(true);
-        if (isAdditionalUser) {
-            setEngines([]);
-            setDatabases([]);
-        }
-        try {
-            const res = await fetch(`/api/v1/domains/${domainId}/databases`);
-            if (res.ok) {
-                const data: unknown = await res.json();
-                const payload = data && typeof data === 'object' && !Array.isArray(data)
-                    ? data as Record<string, unknown>
-                    : {};
-                const nextDatabases: DatabaseInfo[] = Array.isArray(payload.databases) ? payload.databases as DatabaseInfo[] : [];
-                setDatabases(nextDatabases);
-                if (isAdditionalUser) {
-                    const list = parseAvailableDatabaseTypes(payload.available_types);
-                    setEngines(list);
-                    if (list.length > 0) setDbType(list[0].value);
-                }
-            } else {
-                showToast('error', 'Failed to load databases');
-            }
-        } catch (err) {
-            console.error(err);
-            showToast('error', 'Failed to load databases');
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const handleCreateDatabase = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (readOnly || (isAdditionalUser && !engines.some((engine) => engine.value === dbType))) return;
+        if (!canCreate || dbType === null) return;
 
         if (!dbName || !dbPassword) {
             showToast('error', 'Name and password are required');
@@ -207,7 +198,7 @@ export function DomainDatabaseManager({
                 setShowCreateForm(false);
                 setDbName('');
                 setDbPassword('');
-                loadDatabases();
+                void list.retry();
             } else {
                 showToast('error', (await readApiError(res)).message || 'Failed to create database');
             }
@@ -220,7 +211,7 @@ export function DomainDatabaseManager({
     };
 
     const handleDeleteDatabase = async (db: DatabaseInfo) => {
-        if (readOnly) return;
+        if (readOnly || list.remote.state !== 'known') return;
         if (!confirm(`Delete database "${db.name}"?\n\nThis action cannot be undone. All data will be lost.`)) {
             return;
         }
@@ -232,7 +223,7 @@ export function DomainDatabaseManager({
 
             if (res.ok) {
                 showToast('success', `Database "${db.name}" deleted`);
-                loadDatabases();
+                void list.retry();
             } else {
                 showToast('error', 'Failed to delete database');
             }
@@ -251,25 +242,47 @@ export function DomainDatabaseManager({
                 </p>
             </div>
 
-            {/* Create Database Button */}
-            {!readOnly && !showCreateForm && (!isAdditionalUser || engines.length > 0) && (
-                <button
-                    onClick={() => setShowCreateForm(true)}
-                    className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-hover flex items-center gap-2"
-                >
-                    <Plus className="w-4 h-4" />
-                    Create Database
-                </button>
+            {/* Create Database Button. It is in its place from the start and
+                becomes usable when the engines are known; the line beside it
+                says why it is not usable yet.
+                Veritabanı Oluştur düğmesi. Baştan yerindedir ve motorlar
+                bilindiğinde kullanılabilir olur; yanındaki satır henüz neden
+                kullanılamadığını söyler. */}
+            {!readOnly && !showCreateForm && !(engineSource.state === 'known' && engines.length === 0) && (
+                <div className="flex flex-wrap items-center gap-3">
+                    {/* The shared primary button: its face is readable in both
+                        themes, enabled and disabled. The hand-written one drew
+                        white on the dark theme's light primary.
+                        Ortak birincil düğme: yüzü iki temada da, etkin ve
+                        kapalıyken okunur. Elle yazılanı, koyu temanın açık
+                        birincil rengi üstüne beyaz çiziyordu. */}
+                    <Button variant="primary" icon={Plus} disabled={!canCreate} onClick={() => setShowCreateForm(true)}>
+                        Create Database
+                    </Button>
+                    {engineSource.state === 'loading' && <Checking label={t('db.checkingEngines')} />}
+                </div>
             )}
 
-            {!readOnly && isAdditionalUser && !loading && engines.length === 0 && (
+            {/* The engines could not be checked. For a team member that is the
+                list's own read, and the list says so below.
+                Motorlar kontrol edilemedi. Ekip üyesinde bu listenin kendi
+                okumasıdır ve liste bunu aşağıda söyler. */}
+            {!readOnly && !isAdditionalUser && engineSource.state === 'unknown' && (
+                <CouldNotCheck
+                    text={t('db.enginesUnknown')}
+                    onRetry={() => void capabilities.retry()}
+                    busy={capabilities.reading}
+                />
+            )}
+
+            {!readOnly && engineSource.state === 'known' && engines.length === 0 && (
                 <div className="rounded-lg border border-info/30 bg-info/10 px-4 py-3 text-sm text-fg">
-                    {t('db.teamEngineUnavailable')}
+                    {isAdditionalUser ? t('db.teamEngineUnavailable') : t('databases.noServersHint')}
                 </div>
             )}
 
             {/* Create Database Form */}
-            {!readOnly && showCreateForm && (!isAdditionalUser || engines.length > 0) && (
+            {showCreateForm && canCreate && (
                 <div className="bg-surface-2/50 rounded-lg p-6 border border-border">
                     <h4 className="text-md font-semibold text-fg mb-4">Create New Database</h4>
                     <form onSubmit={handleCreateDatabase} className="space-y-4">
@@ -291,7 +304,7 @@ export function DomainDatabaseManager({
                         <div>
                             <label className="block text-sm text-fg-muted mb-2">Database Type</label>
                             <select
-                                value={dbType}
+                                value={dbType ?? ''}
                                 onChange={(e) => setDbType(e.target.value as DatabaseType)}
                                 className="w-full bg-surface border border-border rounded px-4 py-2 text-fg focus:border-primary"
                             >
@@ -316,7 +329,7 @@ export function DomainDatabaseManager({
                         <div className="flex gap-2">
                             <button
                                 type="submit"
-                                disabled={creating || (isAdditionalUser && !engines.some((engine) => engine.value === dbType))}
+                                disabled={creating || dbType === null}
                                 className="px-6 py-2 bg-success text-white rounded hover:bg-success disabled:opacity-50 flex items-center gap-2"
                             >
                                 <Database className="w-4 h-4" />
@@ -344,36 +357,42 @@ export function DomainDatabaseManager({
                     <div className="flex items-center gap-2">
                         <Database className="w-5 h-5 text-primary" />
                         <h4 className="text-md font-semibold text-fg">Databases</h4>
-                        <span className="text-sm text-fg-muted">
-                            ({databases.length})
-                        </span>
+                        {listed && (
+                            <span className="text-sm text-fg-muted">
+                                ({listed.value.databases.length})
+                            </span>
+                        )}
                     </div>
                     <button
-                        onClick={loadDatabases}
-                        disabled={loading}
+                        onClick={() => void list.retry()}
+                        disabled={list.reading}
                         className="p-2 text-fg-muted hover:text-fg transition-colors"
                         title="Refresh"
+                        aria-label="Refresh"
                     >
-                        <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                        <RefreshCw className={`w-4 h-4 ${list.reading ? 'animate-spin' : ''}`} />
                     </button>
                 </div>
 
                 <div className="p-4">
-                    {loading ? (
-                        <div className="flex items-center justify-center h-32">
-                            <Spinner />
-                        </div>
-                    ) : databases.length === 0 ? (
+                    <RemoteGate
+                        remote={list.remote}
+                        checking={t('db.checking')}
+                        failed={t('db.unknown')}
+                        onRetry={() => void list.retry()}
+                        busy={list.reading}
+                    >
+                        {(shown) => (shown.value.databases.length === 0 ? (
                         <div className="text-center text-fg-subtle py-12">
                             <Database className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                            <p>No databases created yet</p>
-                            {!readOnly && (!isAdditionalUser || engines.length > 0) && (
-                                <p className="text-sm mt-1">Click "Create Database" to get started</p>
+                            <p>{t('databases.empty.databases')}</p>
+                            {canCreate && (
+                                <p className="text-sm mt-1">{t('databases.empty.databasesHint')}</p>
                             )}
                         </div>
                     ) : (
                         <div className="space-y-3">
-                            {databases.map((db) => (
+                            {shown.value.databases.map((db) => (
                                 <div
                                     key={db.id}
                                     className="bg-surface border border-border rounded p-4 hover:border-border-strong transition-colors"
@@ -407,7 +426,8 @@ export function DomainDatabaseManager({
                                             <div className="flex gap-2">
                                                 <button
                                                     onClick={() => handleDeleteDatabase(db)}
-                                                    className="p-2 text-danger hover:bg-danger/30 rounded transition-colors"
+                                                    disabled={shown.stale}
+                                                    className="p-2 text-danger hover:bg-danger/30 rounded transition-colors disabled:pointer-events-none disabled:opacity-40"
                                                     title="Delete database"
                                                     aria-label="Delete database"
                                                 >
@@ -419,11 +439,12 @@ export function DomainDatabaseManager({
                                 </div>
                             ))}
                         </div>
-                    )}
+                        ))}
+                    </RemoteGate>
                 </div>
             </div>
 
-            {!isAdditionalUser && <DBToolsCard />}
+            {!isAdditionalUser && <DBToolsCard capabilities={capabilities.remote} />}
         </div>
     );
 }

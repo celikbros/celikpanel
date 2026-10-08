@@ -32,12 +32,26 @@ export interface DatabaseAccountServer {
 export function DatabaseAccountStrip({
     server,
     onChanged,
+    current,
 }: {
     server: DatabaseAccountServer;
     onChanged: () => void;
+    /**
+     * The row shown is the server's current answer. While the list is being
+     * read again after a change here, or after that read failed, the row may
+     * describe an account that no longer exists, and every control below acts
+     * on what the row says - so none of them is offered until it is current.
+     * Gösterilen satır sunucunun güncel yanıtıdır. Buradaki bir değişiklikten
+     * sonra liste yeniden okunurken ya da o okuma başarısız olduktan sonra
+     * satır artık var olmayan bir hesabı anlatıyor olabilir; aşağıdaki her
+     * denetim satırın söylediğine göre işlem yapar, bu yüzden satır güncel
+     * olana dek hiçbiri sunulmaz.
+     */
+    current: boolean;
 }) {
     const { t } = useI18n();
-    const [busy, setBusy] = useState(false);
+    const [working, setBusy] = useState(false);
+    const busy = working || !current;
     const [password, setPassword] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
 
@@ -138,7 +152,7 @@ export function DatabaseAccountStrip({
                             disabled={busy}
                             onClick={() => provision(false)}
                         >
-                            {busy ? t('databases.account.opening') : t('databases.account.open')}
+                            {working ? t('databases.account.opening') : t('databases.account.open')}
                         </Button>
                     )}
                 </div>

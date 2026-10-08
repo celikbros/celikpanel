@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Globe, Plus, Trash2, ShieldCheck, Copy, AlertTriangle, RefreshCw } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
-import { Button, EmptyState, inputClass } from './ui';
+import { Button, Checking, CouldNotCheck, EmptyState, inputClass } from './ui';
+import { useHostingCapabilities } from '../lib/hostingCapabilities';
 import { apiErrorText, readApiError } from '../lib/apiError';
 
 interface DNSRecord {
@@ -59,40 +60,25 @@ export function DomainDNSManager({
     const [publishing, setPublishing] = useState(false);
     const [mutatingRecord, setMutatingRecord] = useState(false);
 
-    // Whether anything actually serves this zone: '' = no DNS server installed
-    // (records are saved but not published), otherwise "pdns"/"bind". null
-    // while loading — the banner only appears once we know for sure.
-    // Bu zone'u fiilen bir şeyin sunup sunmadığı: '' = DNS sunucusu kurulu
-    // değil (kayıtlar kayıtlı ama yayınlanmıyor), aksi halde "pdns"/"bind".
-    // Yüklenirken null — bant ancak kesin bilince görünür.
-    const [dnsServer, setDnsServer] = useState<string | null>(null);
-	const [dnsServerError, setDnsServerError] = useState('');
+    // Whether anything actually serves this zone, from the one shared read of
+    // the server's capabilities (lib/hostingCapabilities.ts). `dnsServer` is
+    // '' when the server is KNOWN to have no active DNS engine (records are
+    // saved but not published), "pdns"/"bind" when it has one, and null while
+    // that is being checked or could not be checked - the "not served" banner
+    // appears only once we know for sure. Team members deliberately cannot
+    // inspect server-global service inventory, so nothing is read for them;
+    // domain records, zone state and DNSSEC remain available through their
+    // tenant-scoped endpoints below.
+    // Bu zone'u fiilen bir şeyin sunup sunmadığı; sunucu yeteneklerinin tek
+    // ortak okumasından. `dnsServer`, sunucuda etkin DNS motoru olmadığı
+    // BİLİNİYORSA '' (kayıtlar kayıtlı ama yayınlanmıyor), varsa "pdns"/"bind",
+    // kontrol edilirken ya da edilemediğinde null'dır — "yayınlanmıyor" bandı
+    // ancak kesin bilince görünür. Ekip üyeleri için hiçbir şey okunmaz.
+    const capabilities = useHostingCapabilities({ enabled: !isAdditionalUser });
+    const dnsServer = !isAdditionalUser && capabilities.remote.state === 'known' ? capabilities.remote.value.dns_server : null;
 
     useEffect(() => {
 		void checkZone();
-		setDnsServer(null);
-		setDnsServerError('');
-        if (isAdditionalUser) {
-            // Team members deliberately cannot inspect server-global service
-            // inventory. Domain records, zone state and DNSSEC remain available
-            // through their tenant-scoped endpoints below.
-            return;
-        }
-        fetch('/api/v1/hosting/capabilities')
-			.then(async (response) => {
-				if (!response.ok) {
-					throw new Error(apiErrorText(await readApiError(response), t, 'dns.statusUnavailable'));
-				}
-				return response.json();
-			})
-			.then((capabilities) => {
-				setDnsServer(capabilities.dns_server ?? '');
-				setDnsServerError('');
-			})
-			.catch((error) => {
-				setDnsServer(null);
-				setDnsServerError(error instanceof Error && error.message ? error.message : t('dns.statusUnavailable'));
-			});
     }, [domainId, isAdditionalUser, t]);
 
     const checkZone = async () => {
@@ -262,11 +248,20 @@ export function DomainDNSManager({
 					<span>{t('dns.teamServerStatusUnavailable')}</span>
 				</div>
 			)}
-			{!externalDNS && !remoteDNS && dnsServerError && (
-				<div className="mb-4 flex items-start gap-2 rounded-lg border border-warning-mark/50 bg-warning-mark/20 p-3 text-sm text-fg">
-					<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-					<span>{dnsServerError}</span>
-				</div>
+			{/* Being checked: one quiet line. Could not be checked: that, and the
+			    read again. Neither says the zone is not served.
+			    Kontrol ediliyor: sakin tek satır. Kontrol edilemedi: bu ve
+			    okumanın yeniden sunulması. Hiçbiri zone yayınlanmıyor demez. */}
+			{!externalDNS && !remoteDNS && !isAdditionalUser && capabilities.remote.state === 'loading' && (
+				<Checking className="mb-4" label={t('dns.checkingServer')} />
+			)}
+			{!externalDNS && !remoteDNS && !isAdditionalUser && capabilities.remote.state === 'unknown' && (
+				<CouldNotCheck
+					className="mb-4"
+					text={apiErrorText(capabilities.remote.reason, t, 'dns.statusUnavailable')}
+					onRetry={() => void capabilities.retry()}
+					busy={capabilities.reading}
+				/>
 			)}
             {!externalDNS && !remoteDNS && (isAdditionalUser || (dnsServer !== null && dnsServer !== '')) && (
                 <DNSSECSection domainId={domainId} domainName={domainName} readOnly={readOnly} />

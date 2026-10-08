@@ -63,7 +63,10 @@ with, for every state, the visible text, the open dialogues, what has focus,
 horizontal overflow and clipped text, plus the measurements a scenario adds
 (where the notice is relative to the fold, which text is drawn in the failure
 colour, which layer is on top, how many scrims darken the page, where the
-browser broke an address).
+browser broke an address). The scenarios from `adddomain` on add, for every
+state, which negative sentences were on screen (`negativeText`), which checking
+lines and notices were, which buttons were disabled, and what changed place or
+size when the answer arrived (`moved`).
 
 ## Scenarios
 
@@ -80,6 +83,10 @@ browser broke an address).
 | `firstload` | first load with a slow, failed or dropped session, readiness and license read (07) |
 | `session` | the session ended under a page in use (08) |
 | `capabilities` | reference: a dialogue opened while its data is slow (09) |
+| `adddomain` | the Domains page and the Add domain dialogue while this server's capabilities are slow (frames during the read), failing (then Retry), known negative and known positive; the dialogue over a page that already has the answer (20–23) |
+| `domainslist` | the domain list slow, failing (then Retry) and known empty (25) |
+| `databases` | the Databases page: engines and one engine's lists slow, failing, empty and populated; a list that could not be read again after a delete; the panel's own account after it was removed (30–33) |
+| `connection` | one domain's page: the connection card slow, failing, not checked by the server (`status: unknown`, every list `null`), known negative and known positive; the domain's own database list (40–41) |
 
 ## Limits
 

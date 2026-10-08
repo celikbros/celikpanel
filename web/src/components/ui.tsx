@@ -1,8 +1,9 @@
 import { useEffect, useRef, type FormEvent, type ReactNode } from 'react';
-import type { LucideIcon } from 'lucide-react';
+import { AlertTriangle, type LucideIcon } from 'lucide-react';
 import { useNavigate } from '../router';
 import { useI18n } from '../i18n';
 import { apiErrorActionLabel, apiErrorText, type ApiError } from '../lib/apiError';
+import type { Observed, Remote } from '../lib/remote';
 // Shared UI primitives so every page speaks one visual language: a page
 // header with breadcrumb, raised cards with an icon+title, and a labelled
 // usage bar. Reused across the panel to keep density consistent.
@@ -521,6 +522,130 @@ export function EmptyState({
             {action && <div className="mt-5">{action}</div>}
         </div>
     );
+}
+
+// --- No negative UI unless known (9 Oct 2026, D-024) -------------------------
+//
+// A screen that reads the server is in one of three states, and they never
+// look alike (see lib/remote.ts):
+//
+//   Checking       not known yet: one quiet line, the colour of ordinary text.
+//                  Nothing has failed, so nothing here looks like a problem.
+//   CouldNotCheck  the read failed: the screen's own sentence and Retry.
+//   known          only now "missing", "not ready", "none" or an empty list.
+//
+// RemoteGate is the three of them in order. Its children receive a value the
+// server really sent and nothing else, so whatever they draw - an empty state,
+// a blocker, a disabled control with its reason - cannot be drawn before the
+// answer exists. KnownEmpty is EmptyState with that proof as a required prop.
+//
+// Sunucuyu okuyan ekran üç durumdan birindedir ve bunlar birbirine benzemez:
+// Checking (henüz bilinmiyor; sakin tek satır, hiçbir şey başarısız değil),
+// CouldNotCheck (okuma başarısız; ekranın kendi cümlesi ve Tekrar dene) ve
+// biliniyor (ancak şimdi "eksik", "hazır değil", "yok" ya da boş liste).
+// RemoteGate üçünü sırayla çizer; çocukları yalnız sunucunun gerçekten
+// gönderdiği değeri alır.
+export function Checking({ label, className }: { label: string; className?: string }) {
+    return (
+        <div className={`flex items-center gap-2 text-sm text-fg-muted ${className ?? ''}`}>
+            <Spinner size="xs" label={label} />
+            <span aria-hidden="true">{label}</span>
+        </div>
+    );
+}
+
+export function CouldNotCheck({
+    text,
+    onRetry,
+    busy,
+    actionLabel,
+    className,
+}: {
+    /** The screen's own sentence: what could not be read, and that nothing changed. */
+    text: ReactNode;
+    /** Reads again. It must not change anything on the server. */
+    onRetry: () => void;
+    busy?: boolean;
+    actionLabel?: string;
+    className?: string;
+}) {
+    const { t } = useI18n();
+    return (
+        <div
+            role="alert"
+            className={`flex items-start gap-2 rounded-lg border border-warning-mark/50 bg-warning-mark/20 p-3 text-sm leading-relaxed text-fg ${className ?? ''}`}
+        >
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
+            <div className="min-w-0">
+                <p className="max-w-[75ch] break-words">{text}</p>
+                <Button type="button" className="mt-2" loading={busy} onClick={onRetry}>
+                    {actionLabel ?? t('common.retry')}
+                </Button>
+            </div>
+        </div>
+    );
+}
+
+/** A value the server really sent, and whether a later read of it failed. */
+export interface Shown<T> extends Observed<T> {
+    stale: boolean;
+}
+
+export function RemoteGate<T>({
+    remote,
+    checking,
+    failed,
+    onRetry,
+    busy,
+    className,
+    children,
+}: {
+    remote: Remote<T>;
+    /** The checking line, about this one thing: "Reading the domains…". */
+    checking: string;
+    /** The screen's own "could not check" sentence. */
+    failed: string;
+    onRetry: () => void;
+    busy?: boolean;
+    /** Spacing for the checking line and the notice, where the content has its own. */
+    className?: string;
+    children: (shown: Shown<T>) => ReactNode;
+}) {
+    const { t, locale } = useI18n();
+    if (remote.state === 'loading') return <Checking label={checking} className={className} />;
+    if (remote.state === 'known') return <>{children({ value: remote.value, observedAt: remote.observedAt, stale: false })}</>;
+    if (!remote.previous) return <CouldNotCheck text={failed} onRetry={onRetry} busy={busy} className={className} />;
+    // The earlier answer stays on screen, under a notice that says it is the
+    // earlier answer and when it was read.
+    // Önceki yanıt ekranda kalır; üstündeki bildirim bunun önceki yanıt
+    // olduğunu ve ne zaman okunduğunu söyler.
+    const at = new Date(remote.previous.observedAt).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+    return (
+        <>
+            <CouldNotCheck
+                text={t('common.staleNotice', { time: at })}
+                onRetry={onRetry}
+                busy={busy}
+                className={`mb-4 ${className ?? ''}`}
+            />
+            {children({ ...remote.previous, stale: true })}
+        </>
+    );
+}
+
+export function KnownEmpty({
+    of,
+    ...props
+}: {
+    /** The answer that proves there is nothing: an empty state is a claim. */
+    of: Observed<unknown>;
+    icon: LucideIcon;
+    title: string;
+    hint?: string;
+    action?: ReactNode;
+}) {
+    void of;
+    return <EmptyState {...props} />;
 }
 
 // ErrorBanner: the ONE renderer of the API error contract. Shows the

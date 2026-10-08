@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Save } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
-import { Button, Field, FormActions, FormSection, Spinner, inputClass } from './ui';
+import { Button, Checking, CouldNotCheck, Field, FormActions, FormSection, Spinner, inputClass } from './ui';
+import { useHostingCapabilities } from '../lib/hostingCapabilities';
 
 interface DomainPHPSettingsProps {
     domainId: number;
@@ -53,28 +54,28 @@ export function DomainPHPSettings({
     // Only versions that actually exist on this host — a hard-coded "8.3" on
     // a server without PHP was a settings page for a ghost. The current
     // version stays selectable even if its tree vanished (honest state).
+    //
+    // An administrator's list is the server's capabilities, read once and
+    // shared (lib/hostingCapabilities.ts): while it is being checked, or could
+    // not be checked, only the current version is listed and the screen says
+    // which of the two it is. A team member's list is the tenant-safe
+    // available_versions that arrive with this domain's own settings; the
+    // server-wide inventory is never read for them.
     // Yalnız bu makinede gerçekten var olan sürümler — PHP'siz sunucuda sabit
     // "8.3", hayalete ayar sayfasıydı. Mevcut sürüm, ağacı kaybolsa bile
-    // seçilebilir kalır (dürüst durum).
-    const [versions, setVersions] = useState<string[]>(currentVersion ? [currentVersion] : []);
+    // seçilebilir kalır (dürüst durum). Yöneticinin listesi sunucunun
+    // yetenekleridir; kontrol edilirken ya da edilemediğinde yalnız geçerli
+    // sürüm listelenir ve ekran hangisi olduğunu söyler. Ekip üyesinin listesi
+    // bu alan adının kendi ayarlarıyla gelen available_versions'tır.
+    const capabilities = useHostingCapabilities({ enabled: !isAdditionalUser });
+    const [teamVersions, setVersions] = useState<string[]>([]);
+    const versions = isAdditionalUser
+        ? teamVersions
+        : capabilities.remote.state === 'known' ? capabilities.remote.value.php_versions : [];
 
     useEffect(() => {
         loadSettings();
-        if (!isAdditionalUser) {
-            loadVersions();
-        }
     }, [domainId, currentVersion, isAdditionalUser]);
-
-    const loadVersions = async () => {
-        try {
-            const res = await fetch('/api/v1/hosting/capabilities');
-            if (!res.ok) return;
-            const caps = await res.json();
-            if (caps?.php_versions?.length) setVersions(caps.php_versions);
-        } catch {
-            /* keep default */
-        }
-    };
 
     const loadSettings = async () => {
         setLoading(true);
@@ -192,6 +193,22 @@ export function DomainPHPSettings({
                         {saving ? t('php.applying') : t('php.apply')}
                     </Button>
                 </div>
+                {/* A line of its own height under the picker, so the form
+                    below does not move when the versions arrive.
+                    Seçicinin altında kendi yüksekliği olan satır; sürümler
+                    gelince alttaki form yerinden oynamaz. */}
+                {!isAdditionalUser && (
+                    <div className="min-h-5">
+                        {capabilities.remote.state === 'loading' && <Checking label={t('php.checkingVersions')} />}
+                        {capabilities.remote.state === 'unknown' && (
+                            <CouldNotCheck
+                                text={t('php.versionsUnknown')}
+                                onRetry={() => void capabilities.retry()}
+                                busy={capabilities.reading}
+                            />
+                        )}
+                    </div>
+                )}
             </FormSection>
 
             <FormSection title={t('php.pool')} description={`${t('php.poolName')}: ${settings.pool_name}`}>

@@ -3,7 +3,8 @@ import { FileCode, Files, Hexagon, ArrowLeftRight, ExternalLink, Play, Square, R
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
-import { Button, Spinner, StatusDot, inputClass } from './ui';
+import { Button, CouldNotCheck, Spinner, StatusDot, inputClass } from './ui';
+import { useHostingCapabilities } from '../lib/hostingCapabilities';
 import { readApiError, apiErrorText } from '../lib/apiError';
 
 // Hosting type for a domain (roadmap 3A): pick what the site IS, fill the
@@ -42,18 +43,17 @@ export function HostingTypePanel({ domainId }: { domainId: number; domainName: s
     const [versions, setVersions] = useState<string[]>([]);
 
     // A type whose requirement is missing on this server must say so instead
-    // of failing at Apply: switching to PHP needs PHP-FPM installed.
+    // of failing at Apply: switching to PHP needs PHP-FPM installed. PHP is
+    // marked unavailable only when the server is KNOWN to have none. While
+    // that is being checked nothing is marked; when it could not be checked
+    // the panel says so below the picker and offers the read again.
     // Gereksinimi bu sunucuda eksik olan bir tip, Uygula'da patlamak yerine
-    // bunu söylemeli: PHP'ye geçmek kurulu PHP-FPM ister.
-    const [phpInstalled, setPhpInstalled] = useState(true);
-    useEffect(() => {
-        fetch('/api/v1/hosting/capabilities')
-            .then((r) => (r.ok ? r.json() : null))
-            .then((c: { php_versions?: string[] } | null) => {
-                if (c) setPhpInstalled((c.php_versions?.length ?? 0) > 0);
-            })
-            .catch(() => {});
-    }, []);
+    // bunu söylemeli: PHP'ye geçmek kurulu PHP-FPM ister. PHP, ancak sunucuda
+    // hiç olmadığı BİLİNİYORSA kullanılamaz gösterilir. Kontrol edilirken
+    // hiçbir şey işaretlenmez; kontrol edilemediğinde bölüm bunu seçicinin
+    // altında söyler ve okumayı yeniden sunar.
+    const capabilities = useHostingCapabilities();
+    const phpKnownMissing = capabilities.remote.state === 'known' && capabilities.remote.value.php_versions.length === 0;
 
     const load = useCallback(async () => {
         try {
@@ -109,7 +109,7 @@ export function HostingTypePanel({ domainId }: { domainId: number; domainName: s
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
                     {typeDefs.map(({ id, icon: Icon, labelKey, descKey }) => {
                         const active = state.project_type === id;
-                        const unavailable = id === 'php' && !phpInstalled;
+                        const unavailable = id === 'php' && phpKnownMissing;
                         return (
                             <button
                                 key={id}
@@ -134,6 +134,14 @@ export function HostingTypePanel({ domainId }: { domainId: number; domainName: s
                 <p className="mt-2 text-xs text-fg-subtle">
                     {t(typeDefs.find((d) => d.id === state.project_type)?.descKey ?? 'hosting.desc.php')}
                 </p>
+                {capabilities.remote.state === 'unknown' && (
+                    <CouldNotCheck
+                        className="mt-3"
+                        text={t('hosting.phpUnknown')}
+                        onRetry={() => void capabilities.retry()}
+                        busy={capabilities.reading}
+                    />
+                )}
             </div>
 
             {/* Type-specific fields */}

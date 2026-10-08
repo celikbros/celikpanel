@@ -7,6 +7,7 @@ import React from 'react';
 import Renderer, { act } from 'react-test-renderer';
 import ts from 'typescript';
 import { englishCatalogue, turkishCatalogue } from './locale-catalogue.mjs';
+import { sharedLayer } from './fixtures/shared-layer.mjs';
 
 // The rule these three screens follow (8 Oct 2026): nothing is shown as a
 // setting, an empty list or an editable form until the server's current state
@@ -26,28 +27,16 @@ const stub = dataModule(`
   import React from '${reactURL}';
   ${icons.map((name) => `export const ${name} = () => null;`).join('\n')}
   export const useI18n = () => ({ t: (key) => key });
+  export const useNavigate = () => () => true;
   export const showToast = (...args) => globalThis.currentTest.toasts.push(args);
-  export const inputClass = '';
-  export const StatusDot = () => null;
-  export const Spinner = (props) => React.createElement('i', { 'data-reading': props.label || 'loading' });
-  export const EmptyState = (props) => React.createElement('aside', null, props.title);
   export const ServiceShell = (props) => React.createElement('main', null, props.children);
-  export const Button = ({ variant, icon, loading, ...props }) =>
-    React.createElement('button', { ...props, disabled: Boolean(props.disabled || loading) });
 `);
-const apiErrorURL = dataModule(ts.transpileModule(source('../src/lib/apiError.ts'), { compilerOptions }).outputText);
-function compile(path, extra = {}) {
-  const compiled = ts.transpileModule(source(path), { compilerOptions }).outputText
-    .replace(/from ['"]([^'"]+)['"]/g, (_, specifier) => {
-      if (specifier === 'react') return `from '${reactURL}'`;
-      if (specifier.endsWith('/apiError')) return `from '${apiErrorURL}'`;
-      for (const [suffix, url] of Object.entries(extra)) if (specifier.endsWith(suffix)) return `from '${url}'`;
-      return `from '${stub}'`;
-    });
-  return dataModule(`import React from '${reactURL}';\n${compiled}`);
-}
-const currentURL = compile('../src/components/CurrentSettings.tsx');
-const load = async (name) => (await import(compile(`../src/components/${name}.tsx`, { '/CurrentSettings': currentURL })))[name];
+// Since 9 Oct 2026 these three screens stand on the shared remote-state layer,
+// so they are mounted with the real one: lib/remote.ts for the read and the
+// real Checking and CouldNotCheck of components/ui.tsx for what is drawn.
+const shared = sharedLayer(stub);
+const currentURL = shared.compile('components/CurrentSettings.tsx');
+const load = async (name) => (await import(shared.compile(`components/${name}.tsx`, { '/CurrentSettings': currentURL })))[name];
 const PostfixManagement = await load('PostfixManagement');
 const DomainBackupManager = await load('DomainBackupManager');
 const DomainCronManager = await load('DomainCronManager');
