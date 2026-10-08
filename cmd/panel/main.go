@@ -1657,6 +1657,20 @@ func (p *Panel) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(reply)
 }
 
+// handleConfig reads (GET ?path=) and writes (POST {path, content, version}) a
+// managed configuration file through the Agent.
+//
+// A read answers the file's content with the version of the exact bytes read,
+// or an error: a file that could not be read is never answered as empty. A
+// write must carry that version back and is refused, before anything is
+// written, when it carries none or when the file changed since (9 Oct 2026).
+// The audit entry names the path and the refusal's code, never the content or
+// the line a service said about it.
+//
+// handleConfig, yönetilen bir yapılandırma dosyasını Agent üzerinden okur ve
+// yazar. Okuma, dosyanın içeriğini okunan baytların sürümüyle ya da bir hatayla
+// yanıtlar; okunamayan dosya asla boş diye yanıtlanmaz. Yazı o sürümü geri
+// taşımak zorundadır.
 func (p *Panel) handleConfig(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -1668,9 +1682,22 @@ func (p *Panel) handleConfig(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			Path    string `json:"path"`
 			Content string `json:"content"`
+			Version string `json:"version"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeClientError(w, http.StatusBadRequest, "invalid request")
+			return
+		}
+		if req.Path == "" {
+			writeClientError(w, http.StatusBadRequest, "path required")
+			return
+		}
+		// A page that never loaded the file cannot replace it. The Agent
+		// refuses it too.
+		// Dosyayı hiç yüklememiş bir sayfa onu değiştiremez.
+		if req.Version == "" {
+			p.audit(r, "config.write.refused:"+req.Path+" — "+errCodeSettingsVersionRequired, "config", 0)
+			writeSettingsVersionRequired(w, settingsResourceConfigFile)
 			return
 		}
 
@@ -1678,6 +1705,7 @@ func (p *Panel) handleConfig(w http.ResponseWriter, r *http.Request) {
 		err := p.callAgent("Agent.UpdateConfig", &transport.UpdateConfigArgs{
 			Path:    req.Path,
 			Content: req.Content,
+			Version: req.Version,
 		}, &reply)
 
 		if err != nil {
@@ -1689,11 +1717,15 @@ func (p *Panel) handleConfig(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if reply.Error != nil {
-			p.audit(r, "config.write.failed:"+req.Path+" — "+auditReason(reply.Error.Message), "config", 0)
+			p.audit(r, "config.write.failed:"+req.Path+" — "+auditReason(string(reply.Error.Code)+" "+reply.Error.Reason), "config", 0)
 			writeConfigRPCError(w, reply.Error)
 			return
 		}
-		if !reply.Success {
+		// An Agent that does not answer with the version of what is on disk
+		// now is an older one that wrote without checking; the result cannot
+		// be confirmed.
+		// Diskteki dosyanın sürümüyle yanıt vermeyen Agent eski bir Agent'tır.
+		if !reply.Success || reply.Version == "" {
 			err := errors.New("agent did not confirm configuration update")
 			p.audit(r, "config.write.failed:"+req.Path+" — "+auditReason(err.Error()), "config", 0)
 			writeServerError(w, err)
@@ -1704,8 +1736,24 @@ func (p *Panel) handleConfig(w http.ResponseWriter, r *http.Request) {
 		// than a service restart, which has always been audited.
 		// Root'a ait bir dosyayı yazmak, her zaman denetlenen servis yeniden
 		// başlatmasından daha sessiz olmaması gereken son şeydir.
-		p.audit(r, "config.write:"+req.Path, "config", 0)
-		json.NewEncoder(w).Encode(map[string]bool{"success": reply.Success})
+		if reply.Unchanged {
+			p.audit(r, "config.write.unchanged:"+req.Path, "config", 0)
+		} else {
+			p.audit(r, "config.write:"+req.Path+" — "+auditReason(reply.Applied+" backup "+reply.Backup), "config", 0)
+		}
+		restart := reply.RestartRequired
+		if restart == nil {
+			restart = []string{}
+		}
+		json.NewEncoder(w).Encode(map[string]any{
+			"success":          true,
+			"version":          reply.Version,
+			"unchanged":        reply.Unchanged,
+			"backup":           reply.Backup,
+			"applied":          reply.Applied,
+			"daemon_check":     reply.DaemonCheck,
+			"restart_required": restart,
+		})
 		return
 	}
 
@@ -1724,8 +1772,18 @@ func (p *Panel) handleConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if reply.Error != nil {
-		p.audit(r, `config.read.failed:`+path+` — `+auditReason(reply.Error.Message), `config`, 0)
+		p.audit(r, `config.read.failed:`+path+` — `+auditReason(string(reply.Error.Code)), `config`, 0)
 		writeConfigRPCError(w, reply.Error)
+		return
+	}
+	// No version means the Agent is an older one whose writes are not
+	// protected; its answer is not offered as something a save can be built
+	// from.
+	// Sürüm yoksa Agent eskidir; yanıtı bir kaydın kurulabileceği şey diye
+	// sunulmaz.
+	if reply.Version == "" {
+		p.audit(r, `config.read.failed:`+path+` — no version`, `config`, 0)
+		writeCurrentSettingsUnreadable(w, settingsResourceConfigFile)
 		return
 	}
 

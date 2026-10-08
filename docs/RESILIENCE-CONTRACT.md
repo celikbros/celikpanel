@@ -2654,3 +2654,239 @@ comment lines), deleting a task also removes a comment or disabled task on the
 line above it, and the mail queue list shows "queue empty" after a failed read.
 The app-wide `loading | known | unknown` layer is a later task; other screens
 are not audited.
+
+### Database and mail configuration: a file that could not be read is never an editor, and a save names what it replaces (invariants 1-4 and 6, 2026-10-09)
+
+D-025 invariants 1 (the owner's native configuration is detected, not replaced),
+2 (unknown is not absent or empty), 3 (the unsafe write is stopped at its own
+boundary), 4 (a mutation reads its pre-image, validates, keeps what it replaces
+and has a tested inverse) and 6 (the screen renders the authoritative state);
+D-022, D-024. No P0 item is closed or advanced. Found by a read-only source
+verification of `v0.1.0-alpha.81`; not observed on an installed server.
+
+- **Confirmed in alpha.81.**
+  - *The PostgreSQL and MariaDB configuration editors did not work, and were one
+    repair from destroying the file.* `saveConfig` posted the file as
+    `text/plain`; `POST /api/v1/config` reads JSON, so every Save answered 400.
+    Behind that accident: after a failed read the three editors showed no
+    settings (or "No access rules") with Save enabled, and the access-rule
+    editor always wrote `pg_hba.conf` from scratch, without its comments. A
+    repaired Save after one failed read would have written a comment-only
+    `pg_hba.conf` (PostgreSQL then refuses every connection, the Panel's own
+    included) or an empty `postgresql.conf` or option file. The Agent had no
+    check for these paths: no validator, no refusal of empty content, no
+    comparison with the file that was read, and it would have changed the file's
+    owner and mode. The setting editors also rewrote every line they could
+    parse, including all commented defaults, and gave two lines with the same
+    name one value.
+  - *"postgresql.conf not found" on an installed server* for as long as the
+    component scan took, and for good when it failed.
+  - *The catch-all field could be typed into before the address was read*, and
+    what was typed replaced the unseen address by upsert; after a failed read
+    "Disable" was hidden.
+  - *A failed read was shown as a fact* in three more places: an empty mailbox
+    list without a word, "Webmail is not available on this server", "The mail
+    queue is empty". The Agent itself answered any failure of `postqueue -j` as
+    "not installed, no items", and a queue action was announced as done whatever
+    the server answered.
+  - *Scheduled tasks.* A task the Panel had disabled could not be enabled,
+    changed or deleted: the writers skipped every line that begins with `#`.
+    Deleting a task also removed the line above it whenever that line began with
+    `#` (the owner's header, or a disabled task) and every blank line of the
+    crontab. The task ID was a 32-bit string sum that is the same for
+    `…/Aa.sh` and `…/BB.sh`.
+  - *A Postfix reload that failed after the policy was written* was logged and
+    answered as a successful save.
+- **Changed.**
+  - *Unknown is an error.* `GET /api/v1/config` answers the file's text with the
+    version of the exact bytes read, or `502 CURRENT_SETTINGS_UNREADABLE`; an
+    empty file is a known answer with a version, a file that cannot be read is
+    never one. The mail queue read answers `502 MAIL_QUEUE_UNREADABLE` when
+    `postqueue -j` fails, prints a line that is not a queue entry or cannot be
+    read to its end; "Postfix is not on this server" stays a known answer.
+  - *Versioned writes.* `POST /api/v1/config` must carry `version`. Before
+    anything is written the Agent reads the file with its owner and mode
+    (unreadable: nothing is written), compares the version (`409
+    SETTINGS_VERSION_REQUIRED`, `409 SETTINGS_CHANGED`), refuses empty content, a
+    NUL byte and more than 1 MiB (`422 CONFIG_INVALID`, reasons `empty`,
+    `shape`), and answers identical content without touching the file or the
+    service. The replacement itself is conditional on the bytes that were read,
+    so an owner edit made during the validation is not overwritten either. The
+    catch-all `PUT` and `DELETE` carry `version` and are written by a statement
+    conditional on the row that was read.
+  - *Validated before it replaces the live file.*
+    - `postgresql.conf`: the installed `postgres` reads a copy placed next to
+      the file: `postgres -C config_file -D <dir> -c config_file=<copy> -c
+      lc_messages=C`. It parses the file and every file it includes with the
+      server's own parser and value checks, prints one setting and exits; it
+      starts nothing and takes no lock. `-C` first is the form PostgreSQL allows
+      root to run. On Debian and Ubuntu the cluster's own binary
+      (`/usr/lib/postgresql/<major>/bin/postgres`) is used, else the one on
+      `PATH`.
+    - A MariaDB option file: the installed `mariadbd` reads the copy:
+      `mariadbd --defaults-file=<copy> --datadir=<private empty directory>
+      --help --verbose`. It refuses an unknown variable, an unusable value, a
+      broken group header and an option before any group. The private data
+      directory, given after the file, keeps it away from the real one.
+    - `pg_hba.conf` cannot be shown to PostgreSQL before it is installed (the
+      server reads only the file `hba_file` names). So the Agent itself refuses
+      a changed or added line PostgreSQL's parser does not accept (the rules of
+      `parse_hba_line`; lines carried over unchanged are the owner's and are not
+      judged), and refuses a file that takes away the local administrator
+      access: if the current file lets the operating system account `postgres`
+      connect as `postgres` over the local socket by `peer` or `trust`, the new
+      one must still do so, in a way that can be read from the file with
+      certainty (`422 CONFIG_INVALID`, reason `lockout`). After the file is
+      installed and before the reload, the running server is asked about it
+      (`pg_hba_file_rules` parses the file on disk at the moment of the query);
+      a file it refuses is put back before it was ever loaded.
+    - Where the validating program cannot be run, nothing is installed (`422
+      CONFIG_INVALID`, reason `no_validator`).
+  - *Installed with its inverse.* The previous file is kept next to the file as
+    `<name>.celikpanel-backup-<UTC time>` with its owner and mode (a name no
+    `include_dir` or `!includedir` reads; the ten newest are kept). The new file
+    replaces it atomically with the same owner and mode. PostgreSQL is reloaded,
+    never restarted; if the unit is known to be stopped nothing is reloaded. If
+    the reload fails, the previous file is put back (only while the file still
+    is the one this write installed), reloaded, and the answer is `502
+    CONFIG_RELOAD_FAILED` (`restored`, or `not_restored` with the name of the
+    kept copy) carrying the first line of the unit's journal that names a
+    failure, with password assignments blanked and 300 characters at most. After
+    a reload the server is asked which settings it could not take and which wait
+    for a restart. MariaDB re-reads its option files only when it starts and has
+    no reload that does, so it is left alone and the answer says the change
+    waits for the next restart, which is the owner's decision.
+  - *Only the changed lines.* The three editors send the file that was read with
+    only the changed lines replaced: a setting keeps its indent, spacing,
+    quoting and trailing comment; a rule that was opened and left alone is not
+    reformatted; rules with options, quoted names, a netmask, a continuation or
+    a trailing comment, and include directives, are shown as written and are
+    never rewritten or removed; new rules are added at the end.
+  - *Scheduled tasks.* A task is the one line whose own text is its ID, enabled
+    or disabled; a change replaces that line and a delete removes that line and
+    nothing else. The ID is derived from the whole text. The same task on two
+    lines is refused (`409 CRON_JOB_AMBIGUOUS`), and changing a task into a copy
+    of another is refused (`409 CRON_JOB_DUPLICATE`).
+  - *Mail policy.* A reload that fails after `postconf -e` succeeded is answered
+    `502 MAIL_POLICY_NOT_RELOADED` with `mutation_applied: true`; nothing is
+    rolled back, and the screen shows the saved values under the notice.
+  - *Screens.* The PostgreSQL and MariaDB pages, the three editors, the raw file
+    editor, a domain's mail tabs, the webmail card, the catch-all, the
+    deliverability card and the mail queue hold `loading | known | unknown`
+    through `lib/remote.ts`. Unknown shows "could not be read" with Retry and no
+    editor; Save exists only for a known file; a stale save keeps what was
+    typed, turns Save off and offers the reload; the service's own line is shown
+    next to the field or rule it names.
+- **Schema or version transition.** No persisted schema and no migration:
+  `postgresql.conf`, `pg_hba.conf`, option files, crontabs and `mail_catch_all`
+  keep their formats. A scheduled task's ID changes form (16 hexadecimal
+  characters instead of 8); it was never stored and is read again with every
+  list. **Now required:** `version` in the body of `POST /api/v1/config` and of
+  `PUT …/mail/catch-all`, and as a query value on `DELETE …/mail/catch-all`.
+  Additive wire fields: `Version` on the configuration read; `version`,
+  `unchanged`, `backup`, `applied`, `daemon_check`, `restart_required` on the
+  configuration write; `version` on the catch-all answers; `Version` and the
+  result fields on the Agent's `UpdateConfig`, `Reason`, `Detail`, `Line`, `Name`
+  on its typed error. New refusal codes: `CONFIG_RELOAD_FAILED`,
+  `MAIL_QUEUE_UNREADABLE`, `MAIL_POLICY_NOT_RELOADED`, `CRON_JOB_AMBIGUOUS`;
+  `CONFIG_INVALID` gains `reason` and `vars` (`detail`, `line`, `name`). A Panel
+  and an Agent of different releases cannot write a configuration file: a new
+  Panel refuses the version-less read of an older Agent, and a new Agent refuses
+  the version-less write of an older Panel.
+- **Recovery behaviour.** Every refusal except two comes before the live file is
+  touched, so there is nothing to compensate. The two that follow a change: a
+  `pg_hba.conf` the running server refuses and a failed reload both put the
+  previous file back, conditional on the file still being the one this write
+  installed; when that cannot be done the previous version stays in the named
+  backup and the owner checks the file and reloads the service on the server.
+  A mail policy that was written and not reloaded is not rolled back; the owner
+  runs `sudo postfix check`, corrects what it names and runs `sudo systemctl
+  reload postfix`. PostgreSQL, MariaDB, Postfix and cron keep running without
+  the Panel exactly as before; the backups are ordinary files the owner can copy
+  back.
+- **Evidence.** Component tests, plus the validating programs run for real.
+  - Agent: `TestGetConfigAnswersAnUnreadableFileAsAnErrorNotAsEmpty`,
+    `TestUpdateConfigRequiresTheVersionOfTheFileItReplaces`,
+    `TestUpdateConfigRefusesEmptyAndMalformedContent`,
+    `TestUpdateConfigWithTheSameContentWritesNothing`,
+    `TestDatabaseConfigTargets`,
+    `TestPostgreSQLConfIsValidatedInstalledBackedUpAndReloaded`,
+    `TestPostgreSQLConfRefusedByPostgresChangesNothing`,
+    `TestDatabaseConfigIsNotInstalledWithoutItsValidator`,
+    `TestFailedReloadPutsThePreviousFileBack`,
+    `TestFailedReloadThatCannotBeUndoneSaysSoAndKeepsTheOtherVersion`,
+    `TestStoppedServiceIsNotReloaded`,
+    `TestPostgresReportingAnErrorAfterTheReloadPutsTheFileBack`,
+    `TestDatabaseConfigIsNotInstalledOverAFileThatChangedMeanwhile`,
+    `TestMariaDBOptionFileIsValidatedInstalledAndNotReloaded`,
+    `TestMariaDBOptionFileRefusedByMariaDBChangesNothing`,
+    `TestHBAIsRefusedBeforeAnythingIsWritten`,
+    `TestHBAIsShownToTheRunningServerBeforeItIsLoaded`,
+    `TestOnlyTheNewestBackupsOfAFileAreKept`,
+    `TestHBALineVerdictsAgreeWithPostgreSQL`,
+    `TestValidateHBAJudgesOnlyTheLinesTheWriteChanges`,
+    `TestHBALocalAdminAccess`, `TestHBALockoutRefusal`,
+    `TestADisabledCronJobCanBeEnabledChangedAndDeleted`,
+    `TestDeletingACronJobRemovesOnlyItsOwnLine`,
+    `TestUpdatingACronJobRewritesOnlyItsOwnLine`,
+    `TestCronJobsAreIdentifiedByTheirWholeText`,
+    `TestACronJobThatStandsTwiceIsNotChanged`,
+    `TestChangingACronJobIntoACopyOfAnotherIsRefused`,
+    `TestPostfixQueueTellsAFailedReadFromAnEmptyQueue`,
+    `TestSetMailPolicyReportsAFailedReloadAsWrittenNotReloaded`.
+  - Panel: `TestConfigReadCarriesTheVersionAndAnUnreadableFileIsAnError`,
+    `TestConfigWriteWithoutAVersionIsRefusedBeforeTheAgent`,
+    `TestConfigWriteAnswersEachAgentRefusalWithItsTypedGuidance`,
+    `TestConfigWriteAnswersWhatHappenedToTheService`,
+    `TestCatchAllWritesNeedTheVersionOfTheCatchAllTheyReplace`,
+    `TestMailQueueThatCouldNotBeReadIsNotAnEmptyQueue`,
+    `TestMailPolicyWrittenButNotReloadedIsAVerifiedFailureAfterAChange`,
+    `TestCronJobThatStandsTwiceIsATypedRefusal`.
+  - Web: `web/tests/remote-state-mounted-batch2b.test.mjs`,
+    `web/tests/db-config-text.test.mjs`, the rewritten
+    `web/tests/webmail-cta-ui-contract.test.mjs`.
+  - With the real programs, on a Debian 13 development guest, from the
+    distribution's packages unpacked into a private directory (not installed):
+    `TestRealPostgresValidatesACandidateFile` against PostgreSQL 17.11 and
+    `TestRealMariaDBValidatesACandidateFile` against MariaDB 11.8.6 (both skip
+    where the program is absent). Observed by hand on the same guest, with a
+    private, temporary PostgreSQL cluster and MariaDB data directory under
+    `/tmp`, without a TCP listener, removed afterwards: `postgres -C` runs as
+    root only with `-C` first, beside a running server and without changing it,
+    and leaves no file behind; an empty `postgresql.conf` passes it (so the
+    Agent's own refusal of empty content is what stops that); a `pg_hba.conf`
+    the server refuses leaves `pg_ctl reload` at exit status 0 and the old rules
+    in force, and `pg_hba_file_rules` names the line; the 44 lines of
+    `TestHBALineVerdictsAgreeWithPostgreSQL` are what that server answered;
+    after a reload `pg_file_settings` and `pending_restart` name
+    `shared_buffers`; `mariadbd --help --verbose` with a private data directory
+    touches no file of the real one, with the server stopped or running, writes
+    nothing to the configured `log_error`, exits 7 for an unknown variable, 9
+    for an unusable value and 1 for a broken group, and exits 0 for a missing
+    `!include`, an out-of-range value it adjusts, and anything in a group the
+    server does not read; a SIGHUP does not make MariaDB re-read the file.
+
+Open: nothing was run on a real server, and no real `systemctl reload` of a
+packaged PostgreSQL unit was exercised: the unit names (`postgresql@<major>-
+<cluster>` on Debian and Ubuntu, `postgresql` elsewhere), the journal line picked
+after a failed reload and `sudo -u postgres psql` reaching the edited cluster are
+from source and component tests. PostgreSQL 15 and 16 and MariaDB 10.11 were not
+run; `postgres -C` and `mariadbd --help --verbose` are long-standing, but a
+different message wording would only cost the line and setting shown next to the
+field, not the refusal. Oracle MySQL (`mysqld --validate-config`) is not handled:
+`mysqld` is run the MariaDB way. Not validated by any program: what
+`postgres -C` does not check (a `shared_buffers` the host cannot provide, a
+certificate file that cannot be loaded) is caught only after the reload or at
+the next start; option-file groups the server does not read; a missing
+`!include`. The `pg_hba.conf` check without a reachable server (stopped, or
+another cluster than the one `psql` reaches) is the Agent's line rules alone,
+which accept every method and option name any PostgreSQL release has had. An
+owner edit between the Agent's read and its conditional replacement is refused;
+one made in the instant between the replacement and a restore is not overwritten
+and leaves the restore undone. Deleting a scheduled task no longer removes the
+comment above it, so a description the Panel wrote for a task stays in the
+crontab after the task is deleted and is then listed with the task below it; the
+Panel cannot tell its own descriptions from the owner's comments. A webmail
+probe that times out is still answered as "not available" by the server. Not
+migrated: the other 47 files of the remote-state allow-list (56 before the
+first part of this batch stood in the same tree).

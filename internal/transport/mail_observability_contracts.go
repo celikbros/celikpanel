@@ -60,6 +60,12 @@ const (
 	MailPolicyRestrictionsUnmanaged = "mail_policy_restrictions_unmanaged"
 	// postconf refused the write; this request left main.cf as it was.
 	MailPolicyWriteFailed = "mail_policy_write_failed"
+	// The values were written to main.cf, but Postfix could not be reloaded and
+	// still runs with the previous ones. Policy is what main.cf holds now, with
+	// its version; Reason is the first line the reload said, bounded.
+	// Değerler main.cf'e yazıldı ancak Postfix yeniden yüklenemedi ve önceki
+	// değerlerle çalışıyor. Policy, main.cf'in şimdi tuttuğudur.
+	MailPolicyNotReloaded = "mail_policy_not_reloaded"
 )
 
 // Why the Panel will not rewrite smtpd_recipient_restrictions.
@@ -86,6 +92,11 @@ const (
 	MailPolicyInvalidZone = "dnsbl_zone"
 	MailPolicyInvalidRate = "outbound_rate_limit"
 )
+
+// PostfixQueueUnreadable is the Agent's exact answer when the mail queue could
+// not be read. The queue is then unknown; it is not an empty queue.
+// PostfixQueueUnreadable, posta kuyruğu okunamadığında Agent'ın tam yanıtıdır.
+const PostfixQueueUnreadable = "the mail queue could not be read; what it holds is unknown"
 
 type MailPolicyResponse struct {
 	Policy MailPolicy `json:"policy"`

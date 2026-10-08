@@ -1905,3 +1905,245 @@ dışı bir zamanlanmış görev etkinleştirilemez, düzenlenemez ya da silinem
 yorumu ya da devre dışı görevi de kaldırır; posta kuyruğu listesi başarısız bir
 okumadan sonra "kuyruk boş" gösterir. Uygulama geneli `loading | known | unknown`
 katmanı sonraki bir iştir; diğer ekranlar incelenmedi.
+
+### Veritabanı ve posta yapılandırması: okunamayan dosya asla düzenleyici olmaz, kayıt neyin yerine geçtiğini söyler (ilkeler 1-4 ve 6, 2026-10-09)
+
+D-025 ilkeleri 1 (sahibin yerel yapılandırması saptanır, yerine başkası konmaz),
+2 (bilinmeyen; yok ya da boş değildir), 3 (güvensiz yazı kendi sınırında
+durdurulur), 4 (bir değişiklik ön görüntüsünü okur, doğrular, yerine geçtiğini
+saklar ve sınanmış bir tersi vardır) ve 6 (ekran yetkili durumu çizer); D-022,
+D-024. Hiçbir P0 işi kapanmadı ya da ilerlemedi. `v0.1.0-alpha.81` kaynağının
+salt-okur doğrulamasıyla bulundu; kurulu bir sunucuda gözlenmedi.
+
+- **alpha.81'de doğrulanan.**
+  - *PostgreSQL ve MariaDB yapılandırma düzenleyicileri çalışmıyordu ve dosyayı
+    yok etmeye tek bir onarım uzaklığındaydı.* `saveConfig` dosyayı `text/plain`
+    olarak gönderiyordu; `POST /api/v1/config` JSON okur, bu yüzden her Kaydet
+    400 yanıtı alıyordu. Bu tesadüfün arkasında: başarısız bir okumadan sonra üç
+    düzenleyici Kaydet açıkken hiç ayar (ya da "No access rules") gösteriyordu ve
+    erişim kuralı düzenleyicisi `pg_hba.conf` dosyasını her zaman yorumları
+    olmadan baştan yazıyordu. Tek bir başarısız okumadan sonra onarılmış bir
+    Kaydet, yalnız yorumdan oluşan bir `pg_hba.conf` (PostgreSQL o zaman Panel'in
+    kendi bağlantısı dahil her bağlantıyı reddeder) ya da boş bir
+    `postgresql.conf` ya da seçenek dosyası yazardı. Agent'ın bu yollar için hiç
+    denetimi yoktu: doğrulayıcı yok, boş içerik reddi yok, okunan dosyayla
+    karşılaştırma yok; üstelik dosyanın sahibini ve kipini değiştirirdi. Ayar
+    düzenleyicileri ayrıca ayrıştırabildikleri her satırı, yorum satırı hâlindeki
+    bütün varsayılanlar dahil, yeniden yazıyor ve aynı adlı iki satıra tek değer
+    veriyordu.
+  - *Kurulu bir sunucuda "postgresql.conf bulunamadı"*: bileşen taraması sürdüğü
+    sürece, tarama başarısız olunca da kalıcı olarak.
+  - *Catch-all alanına adres okunmadan yazılabiliyordu* ve yazılan, görülmemiş
+    adresin yerine upsert ile geçiyordu; başarısız bir okumadan sonra "Kapat"
+    gizleniyordu.
+  - *Başarısız bir okuma üç yerde daha olgu diye gösteriliyordu:* tek söz
+    etmeyen boş bir posta kutusu listesi, "Web posta bu sunucuda kullanılamıyor",
+    "Mail kuyruğu boş". Agent'ın kendisi `postqueue -j` komutunun her hatasını
+    "kurulu değil, ileti yok" diye yanıtlıyordu ve bir kuyruk işlemi, sunucu ne
+    yanıt verirse versin yapıldı diye duyuruluyordu.
+  - *Zamanlanmış görevler.* Panel'in devre dışı bıraktığı bir görev
+    etkinleştirilemiyor, değiştirilemiyor ya da silinemiyordu: yazıcılar `#` ile
+    başlayan her satırı atlıyordu. Bir görevi silmek, üstündeki satır `#` ile
+    başlıyorsa onu da (sahibin başlığını ya da devre dışı bir görevi) ve
+    crontab'ın bütün boş satırlarını kaldırıyordu. Görev kimliği, `…/Aa.sh` ile
+    `…/BB.sh` için aynı çıkan 32 bitlik bir dize toplamıydı.
+  - *Politika yazıldıktan sonra başarısız olan bir Postfix yeniden yüklemesi*
+    günlüğe yazılıyor ve başarılı bir kayıt diye yanıtlanıyordu.
+- **Değişen.**
+  - *Bilinmeyen bir hatadır.* `GET /api/v1/config`, dosyanın metnini okunan
+    baytların sürümüyle ya da `502 CURRENT_SETTINGS_UNREADABLE` ile yanıtlar; boş
+    bir dosya sürümü olan bilinen bir yanıttır, okunamayan dosya asla öyle
+    değildir. Posta kuyruğu okuması, `postqueue -j` başarısız olduğunda, kuyruk
+    girdisi olmayan bir satır yazdığında ya da sonuna dek okunamadığında `502
+    MAIL_QUEUE_UNREADABLE` yanıtı verir; "Postfix bu sunucuda yok" bilinen bir
+    yanıt olarak kalır.
+  - *Sürümlü yazılar.* `POST /api/v1/config` `version` taşımak zorundadır.
+    Herhangi bir şey yazılmadan önce Agent dosyayı sahibi ve kipiyle okur
+    (okunamazsa hiçbir şey yazılmaz), sürümü karşılaştırır (`409
+    SETTINGS_VERSION_REQUIRED`, `409 SETTINGS_CHANGED`), boş içeriği, NUL baytını
+    ve 1 MiB'tan fazlasını reddeder (`422 CONFIG_INVALID`, gerekçeler `empty`,
+    `shape`) ve aynı içeriği dosyaya ya da hizmete dokunmadan yanıtlar. Yerine
+    koymanın kendisi okunan baytlara koşulludur; böylece doğrulama sırasında
+    yapılmış bir sahip düzenlemesi de ezilmez. Catch-all `PUT` ve `DELETE`
+    istekleri `version` taşır ve okunan satıra koşullu bir ifadeyle yazılır.
+  - *Canlı dosyanın yerine geçmeden önce doğrulanır.*
+    - `postgresql.conf`: kurulu `postgres`, dosyanın yanına konan bir kopyayı
+      okur: `postgres -C config_file -D <dizin> -c config_file=<kopya> -c
+      lc_messages=C`. Dosyayı ve içerdiği her dosyayı sunucunun kendi
+      ayrıştırıcısı ve değer denetimleriyle okur, tek bir ayarı yazdırır ve
+      çıkar; hiçbir şey başlatmaz ve kilit almaz. `-C` seçeneğinin başta olması,
+      PostgreSQL'in root'a izin verdiği biçimdir. Debian ve Ubuntu'da kümenin
+      kendi ikilisi (`/usr/lib/postgresql/<ana sürüm>/bin/postgres`), aksi hâlde
+      `PATH` üzerindeki kullanılır.
+    - MariaDB seçenek dosyası: kurulu `mariadbd` kopyayı okur: `mariadbd
+      --defaults-file=<kopya> --datadir=<özel boş dizin> --help --verbose`.
+      Bilinmeyen bir değişkeni, kullanılamayan bir değeri, bozuk bir grup
+      başlığını ve herhangi bir gruptan önce gelen seçeneği reddeder. Dosyadan
+      sonra verilen özel veri dizini, onu gerçek dizinden uzak tutar.
+    - `pg_hba.conf`, kurulmadan önce PostgreSQL'e gösterilemez (sunucu yalnız
+      `hba_file` ayarının adlandırdığı dosyayı okur). Bu yüzden Agent,
+      PostgreSQL'in ayrıştırıcısının kabul etmediği değişmiş ya da eklenmiş bir
+      satırı kendisi reddeder (`parse_hba_line` kuralları; değişmeden taşınan
+      satırlar sahibindir ve yargılanmaz) ve yerel yönetici erişimini kaldıran
+      bir dosyayı reddeder: geçerli dosya işletim sistemi hesabı `postgres`'in
+      yerel soket üzerinden `peer` ya da `trust` ile `postgres` olarak
+      bağlanmasına izin veriyorsa, yenisi de buna, dosyadan kesin olarak
+      okunabilecek biçimde izin vermelidir (`422 CONFIG_INVALID`, gerekçe
+      `lockout`). Dosya kurulduktan sonra ve yeniden yüklemeden önce çalışan
+      sunucuya onun hakkında sorulur (`pg_hba_file_rules`, sorgu anında diskteki
+      dosyayı ayrıştırır); sunucunun reddettiği dosya, hiç yüklenmeden geri
+      konur.
+    - Doğrulayan program çalıştırılamıyorsa hiçbir şey kurulmaz (`422
+      CONFIG_INVALID`, gerekçe `no_validator`).
+  - *Tersiyle birlikte kurulur.* Önceki dosya, dosyanın yanında
+    `<ad>.celikpanel-backup-<UTC zamanı>` adıyla, sahibi ve kipiyle saklanır
+    (hiçbir `include_dir` ya da `!includedir` yönergesinin okumadığı bir ad; en
+    yeni on tanesi tutulur). Yeni dosya aynı sahip ve kiple atomik olarak yerine
+    geçer. PostgreSQL yeniden yüklenir, asla yeniden başlatılmaz; birimin durmuş
+    olduğu biliniyorsa hiçbir şey yeniden yüklenmez. Yeniden yükleme başarısız
+    olursa önceki dosya geri konur (yalnız dosya hâlâ bu yazının kurduğu dosya
+    iken), yeniden yüklenir ve yanıt, birimin günlüğünde bir hatayı adlandıran
+    ilk satırı (parola atamaları silinmiş, en çok 300 karakter) taşıyan `502
+    CONFIG_RELOAD_FAILED` olur (`restored`, ya da saklanan kopyanın adıyla
+    `not_restored`). Yeniden yüklemeden sonra sunucuya hangi ayarları alamadığı
+    ve hangilerinin yeniden başlatmayı beklediği sorulur. MariaDB seçenek
+    dosyalarını yalnız başlarken okur ve onları yeniden okutan bir yeniden
+    yüklemesi yoktur; bu yüzden ona dokunulmaz ve yanıt, değişikliğin sahibin
+    kararı olan bir sonraki yeniden başlatmayı beklediğini söyler.
+  - *Yalnız değişen satırlar.* Üç düzenleyici, okunan dosyayı yalnız değişen
+    satırları değiştirilmiş olarak gönderir: bir ayar girintisini, boşluklarını,
+    tırnaklamasını ve sondaki yorumunu korur; açılıp olduğu gibi bırakılan bir
+    kural yeniden biçimlendirilmez; seçenekli, tırnaklı adlı, ağ maskeli, devam
+    satırlı ya da sonunda yorum olan kurallar ile include yönergeleri yazıldığı
+    gibi gösterilir ve asla yeniden yazılmaz ya da kaldırılmaz; yeni kurallar
+    sona eklenir.
+  - *Zamanlanmış görevler.* Görev, kendi metni kimliği olan tek satırdır; etkin
+    ya da devre dışı. Bir değişiklik o satırı değiştirir, bir silme o satırı
+    kaldırır ve başka hiçbir şeyi kaldırmaz. Kimlik bütün metinden türetilir.
+    İki satırda duran aynı görev reddedilir (`409 CRON_JOB_AMBIGUOUS`); bir
+    görevi bir başkasının kopyasına çevirmek reddedilir (`409
+    CRON_JOB_DUPLICATE`).
+  - *Posta politikası.* `postconf -e` başarılı olduktan sonra başarısız olan bir
+    yeniden yükleme `mutation_applied: true` ile `502 MAIL_POLICY_NOT_RELOADED`
+    olarak yanıtlanır; hiçbir şey geri alınmaz ve ekran, bildirimin altında
+    kaydedilen değerleri gösterir.
+  - *Ekranlar.* PostgreSQL ve MariaDB sayfaları, üç düzenleyici, ham dosya
+    düzenleyicisi, bir alan adının posta sekmeleri, web posta kartı, catch-all,
+    teslim edilebilirlik kartı ve posta kuyruğu, `lib/remote.ts` üzerinden
+    `loading | known | unknown` tutar. Bilinmeyen, Tekrar dene ile "okunamadı"
+    gösterir ve düzenleyici göstermez; Kaydet yalnız bilinen bir dosya için
+    vardır; eskimiş bir kayıt yazılanı tutar, Kaydet'i kapatır ve yeniden
+    yüklemeyi sunar; hizmetin kendi satırı, adlandırdığı alanın ya da kuralın
+    yanında gösterilir.
+- **Şema ya da sürüm geçişi.** Kalıcı şema ve geçiş yok: `postgresql.conf`,
+  `pg_hba.conf`, seçenek dosyaları, crontab'lar ve `mail_catch_all` biçimlerini
+  korur. Zamanlanmış görevin kimliği biçim değiştirir (8 yerine 16 onaltılık
+  karakter); hiçbir zaman saklanmadı ve her listeyle yeniden okunur. **Artık
+  zorunlu:** `POST /api/v1/config` ve `PUT …/mail/catch-all` gövdesinde, ayrıca
+  `DELETE …/mail/catch-all` isteğinde sorgu değeri olarak `version`. Eklenen tel
+  alanları: yapılandırma okumasında `Version`; yapılandırma yazısında `version`,
+  `unchanged`, `backup`, `applied`, `daemon_check`, `restart_required`; catch-all
+  yanıtlarında `version`; Agent'ın `UpdateConfig` yanıtında `Version` ve sonuç
+  alanları, tipli hatasında `Reason`, `Detail`, `Line`, `Name`. Yeni ret kodları:
+  `CONFIG_RELOAD_FAILED`, `MAIL_QUEUE_UNREADABLE`, `MAIL_POLICY_NOT_RELOADED`,
+  `CRON_JOB_AMBIGUOUS`; `CONFIG_INVALID`, `reason` ve `vars` (`detail`, `line`,
+  `name`) kazanır. Farklı sürümlerdeki bir Panel ile Agent yapılandırma dosyası
+  yazamaz: yeni Panel eski Agent'ın sürümsüz okumasını, yeni Agent eski Panel'in
+  sürümsüz yazısını reddeder.
+- **Kurtarma davranışı.** İkisi dışında her ret canlı dosyaya dokunulmadan önce
+  gelir; telafi edilecek bir şey yoktur. Bir değişikliği izleyen ikisi: çalışan
+  sunucunun reddettiği bir `pg_hba.conf` ve başarısız bir yeniden yükleme, dosya
+  hâlâ bu yazının kurduğu dosya ise önceki dosyayı geri koyar; bu yapılamadığında
+  önceki sürüm adı verilen yedekte kalır ve sahip dosyayı sunucuda denetleyip
+  hizmeti orada yeniden yükler. Yazılmış ve yeniden yüklenmemiş bir posta
+  politikası geri alınmaz; sahip `sudo postfix check` çalıştırır, adlandırılanı
+  düzeltir ve `sudo systemctl reload postfix` çalıştırır. PostgreSQL, MariaDB,
+  Postfix ve cron, Panel olmadan tam olarak eskisi gibi çalışmayı sürdürür;
+  yedekler, sahibin geri kopyalayabileceği sıradan dosyalardır.
+- **Kanıt.** Bileşen testleri ve gerçekten çalıştırılan doğrulama programları.
+  - Agent: `TestGetConfigAnswersAnUnreadableFileAsAnErrorNotAsEmpty`,
+    `TestUpdateConfigRequiresTheVersionOfTheFileItReplaces`,
+    `TestUpdateConfigRefusesEmptyAndMalformedContent`,
+    `TestUpdateConfigWithTheSameContentWritesNothing`,
+    `TestDatabaseConfigTargets`,
+    `TestPostgreSQLConfIsValidatedInstalledBackedUpAndReloaded`,
+    `TestPostgreSQLConfRefusedByPostgresChangesNothing`,
+    `TestDatabaseConfigIsNotInstalledWithoutItsValidator`,
+    `TestFailedReloadPutsThePreviousFileBack`,
+    `TestFailedReloadThatCannotBeUndoneSaysSoAndKeepsTheOtherVersion`,
+    `TestStoppedServiceIsNotReloaded`,
+    `TestPostgresReportingAnErrorAfterTheReloadPutsTheFileBack`,
+    `TestDatabaseConfigIsNotInstalledOverAFileThatChangedMeanwhile`,
+    `TestMariaDBOptionFileIsValidatedInstalledAndNotReloaded`,
+    `TestMariaDBOptionFileRefusedByMariaDBChangesNothing`,
+    `TestHBAIsRefusedBeforeAnythingIsWritten`,
+    `TestHBAIsShownToTheRunningServerBeforeItIsLoaded`,
+    `TestOnlyTheNewestBackupsOfAFileAreKept`,
+    `TestHBALineVerdictsAgreeWithPostgreSQL`,
+    `TestValidateHBAJudgesOnlyTheLinesTheWriteChanges`,
+    `TestHBALocalAdminAccess`, `TestHBALockoutRefusal`,
+    `TestADisabledCronJobCanBeEnabledChangedAndDeleted`,
+    `TestDeletingACronJobRemovesOnlyItsOwnLine`,
+    `TestUpdatingACronJobRewritesOnlyItsOwnLine`,
+    `TestCronJobsAreIdentifiedByTheirWholeText`,
+    `TestACronJobThatStandsTwiceIsNotChanged`,
+    `TestChangingACronJobIntoACopyOfAnotherIsRefused`,
+    `TestPostfixQueueTellsAFailedReadFromAnEmptyQueue`,
+    `TestSetMailPolicyReportsAFailedReloadAsWrittenNotReloaded`.
+  - Panel: `TestConfigReadCarriesTheVersionAndAnUnreadableFileIsAnError`,
+    `TestConfigWriteWithoutAVersionIsRefusedBeforeTheAgent`,
+    `TestConfigWriteAnswersEachAgentRefusalWithItsTypedGuidance`,
+    `TestConfigWriteAnswersWhatHappenedToTheService`,
+    `TestCatchAllWritesNeedTheVersionOfTheCatchAllTheyReplace`,
+    `TestMailQueueThatCouldNotBeReadIsNotAnEmptyQueue`,
+    `TestMailPolicyWrittenButNotReloadedIsAVerifiedFailureAfterAChange`,
+    `TestCronJobThatStandsTwiceIsATypedRefusal`.
+  - Web: `web/tests/remote-state-mounted-batch2b.test.mjs`,
+    `web/tests/db-config-text.test.mjs`, yeniden yazılan
+    `web/tests/webmail-cta-ui-contract.test.mjs`.
+  - Gerçek programlarla, bir Debian 13 geliştirme konuğunda, dağıtımın özel bir
+    dizine açılmış (kurulmamış) paketlerinden: PostgreSQL 17.11'e karşı
+    `TestRealPostgresValidatesACandidateFile` ve MariaDB 11.8.6'ya karşı
+    `TestRealMariaDBValidatesACandidateFile` (program yoksa ikisi de atlanır).
+    Aynı konukta, `/tmp` altında TCP dinleyicisi olmayan, sonra kaldırılan özel
+    ve geçici bir PostgreSQL kümesi ve MariaDB veri diziniyle elle gözlenen:
+    `postgres -C` root olarak yalnız `-C` başta iken, çalışan bir sunucunun
+    yanında ve onu değiştirmeden çalışır, arkasında dosya bırakmaz; boş bir
+    `postgresql.conf` ondan geçer (bunu durduran, Agent'ın kendi boş içerik
+    reddidir); sunucunun reddettiği bir `pg_hba.conf`, `pg_ctl reload` çıkış
+    durumunu 0 ve eski kuralları yürürlükte bırakır, `pg_hba_file_rules` satırı
+    adlandırır; `TestHBALineVerdictsAgreeWithPostgreSQL` testinin 44 satırı o
+    sunucunun verdiği yanıtlardır; yeniden yüklemeden sonra `pg_file_settings`
+    ve `pending_restart`, `shared_buffers` ayarını adlandırır; özel veri diziniyle
+    `mariadbd --help --verbose`, sunucu durmuşken de çalışırken de gerçek
+    dizinin hiçbir dosyasına dokunmaz, yapılandırılmış `log_error` dosyasına bir
+    şey yazmaz, bilinmeyen bir değişken için 7, kullanılamayan bir değer için 9,
+    bozuk bir grup için 1 ile; eksik bir `!include`, düzelttiği aralık dışı bir
+    değer ve sunucunun okumadığı bir gruptaki her şey için 0 ile çıkar; SIGHUP,
+    MariaDB'ye dosyayı yeniden okutmaz.
+
+Açık: gerçek bir sunucuda hiçbir şey çalıştırılmadı ve paketlenmiş bir PostgreSQL
+biriminin gerçek `systemctl reload` işlemi denenmedi: birim adları (Debian ve
+Ubuntu'da `postgresql@<ana sürüm>-<küme>`, başka yerde `postgresql`), başarısız
+bir yeniden yüklemeden sonra seçilen günlük satırı ve `sudo -u postgres psql`
+komutunun düzenlenen kümeye ulaşması kaynaktan ve bileşen testlerinden gelir.
+PostgreSQL 15 ve 16 ile MariaDB 10.11 çalıştırılmadı; `postgres -C` ve `mariadbd
+--help --verbose` uzun süredir vardır, ancak farklı bir ileti sözü yalnız alanın
+yanında gösterilen satırı ve ayarı etkiler, reddi değil. Oracle MySQL (`mysqld
+--validate-config`) ele alınmadı: `mysqld` MariaDB gibi çalıştırılır. Hiçbir
+programın doğrulamadığı: `postgres -C` komutunun denetlemedikleri (makinenin
+sağlayamadığı bir `shared_buffers`, yüklenemeyen bir sertifika dosyası) ancak
+yeniden yüklemeden sonra ya da bir sonraki başlatmada yakalanır; sunucunun
+okumadığı seçenek dosyası grupları; eksik bir `!include`. Ulaşılabilir bir
+sunucu olmadan (durmuş, ya da `psql` komutunun ulaştığından başka bir küme)
+`pg_hba.conf` denetimi yalnız Agent'ın satır kurallarıdır; bunlar herhangi bir
+PostgreSQL sürümünün sahip olduğu her yöntem ve seçenek adını kabul eder.
+Agent'ın okuması ile koşullu yerine koyması arasındaki bir sahip düzenlemesi
+reddedilir; yerine koyma ile bir geri koyma arasındaki anda yapılanın üstüne
+yazılmaz ve geri koyma yapılmamış kalır. Zamanlanmış bir görevi silmek artık
+üstündeki yorumu kaldırmaz; bu yüzden Panel'in bir görev için yazdığı açıklama,
+görev silindikten sonra crontab'da kalır ve altındaki görevle birlikte
+listelenir; Panel kendi açıklamalarını sahibin yorumlarından ayırt edemez. Zaman
+aşımına uğrayan bir web posta yoklaması sunucu tarafından hâlâ "kullanılamıyor"
+diye yanıtlanır. Taşınmayan: uzak-durum izin listesinin diğer 47 dosyası (bu
+partinin ilk parçası aynı ağaçta durmadan önce 56).

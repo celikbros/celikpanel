@@ -67,13 +67,6 @@
       "rawRead": 1,
       "unprovenEmptyState": 1
     },
-    "src/components/DomainMailManager.tsx": {
-      "valueFromFailure": 2,
-      "swallowedFailure": 2,
-      "ignoredFailure": 2,
-      "rawRead": 4,
-      "unprovenEmptyState": 2
-    },
     "src/components/DomainPHPSettings.tsx": {
       "rawRead": 1
     },
@@ -111,15 +104,6 @@
       "swallowedFailure": 1,
       "rawRead": 1
     },
-    "src/components/MailSettingsPanel.tsx": {
-      "valueFromFailure": 2,
-      "swallowedFailure": 2,
-      "rawRead": 3
-    },
-    "src/components/MariaDBManagement.tsx": {
-      "swallowedFailure": 1,
-      "rawRead": 1
-    },
     "src/components/NginxManagement.tsx": {
       "valueFromFailure": 3,
       "swallowedFailure": 1,
@@ -144,15 +128,6 @@
       "valueFromFailure": 1,
       "swallowedFailure": 1,
       "rawRead": 2
-    },
-    "src/components/PostfixManagement.tsx": {
-      "valueFromFailure": 2,
-      "swallowedFailure": 1,
-      "rawRead": 2
-    },
-    "src/components/PostgreSQLManagement.tsx": {
-      "swallowedFailure": 1,
-      "rawRead": 1
     },
     "src/components/PowerDNSManagement.tsx": {
       "valueFromFailure": 1,
@@ -214,10 +189,6 @@
     },
     "src/components/VPNPage.tsx": {
       "unprovenEmptyState": 1
-    },
-    "src/components/WebmailAccess.tsx": {
-      "valueFromFailure": 1,
-      "rawRead": 1
     },
     "src/lib/api.ts": {
       "ignoredFailure": 1

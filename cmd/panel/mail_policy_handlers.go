@@ -31,6 +31,16 @@ var mailPolicyRestrictionsMessages = map[string]string{
 		"so a DNSBL check added after them would never run, and where it belongs is the owner's decision." + mailPolicyRestrictionsOwnerAction,
 }
 
+// Written, not loaded: what state the configuration is in, who acts, the
+// action and how work resumes (D-024). Nothing is rolled back: the values in
+// main.cf are the ones the owner asked for, and Postfix takes them up at its
+// next successful reload.
+// Yazıldı, yüklenmedi: yapılandırmanın hangi durumda olduğu, kimin işlem
+// yapacağı, eylem ve işin nasıl süreceği.
+const mailPolicyNotReloadedMessage = "The mail policy was saved to /etc/postfix/main.cf, but Postfix could not be reloaded, so Postfix is still running with the previous settings. " +
+	"Nothing was rolled back. The server owner runs sudo postfix check to see what Postfix objects to, corrects it, and then runs sudo systemctl reload postfix. " +
+	"Reload this page afterwards; the saved values are the ones shown."
+
 const mailPolicyRestrictionsGenericMessage = "The DNSBL setting was not changed: CelikPanel will not rewrite the recipient restrictions found on this server." +
 	mailPolicyRestrictionsOwnerAction
 
@@ -67,6 +77,21 @@ func writeMailPolicyAgentAnswer(w http.ResponseWriter, resp transport.MailPolicy
 			message, reason = "Nothing was changed: a mail policy value is outside what CelikPanel sets.", ""
 		}
 		writeSettingsRefusalWithReason(w, http.StatusBadRequest, errCodeMailPolicyInvalid, message, reason)
+	case transport.MailPolicyNotReloaded:
+		// The one answer here that follows a change: main.cf holds the new
+		// values, Postfix runs with the previous ones.
+		// Buradaki, bir değişikliği izleyen tek yanıt.
+		log.Printf("[502][mail policy] written, not reloaded: %s", boundedAgentDiagnostic(resp.Reason))
+		var vars map[string]string
+		if detail := boundedAgentDiagnostic(resp.Reason); detail != "" {
+			vars = map[string]string{"detail": detail}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadGateway)
+		_ = json.NewEncoder(w).Encode(apiErrorBody{
+			Error: mailPolicyNotReloadedMessage, Code: errCodeMailPolicyNotReloaded,
+			PartialSuccess: true, MutationApplied: true, Vars: vars,
+		})
 	default:
 		if resp.Code == "" && resp.Error == "postfix is not installed" {
 			writeClientError(w, http.StatusConflict, resp.Error)
@@ -130,6 +155,11 @@ func (p *Panel) handleMailPolicy(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if resp.Error != "" || resp.Code != "" {
+			if resp.Code == transport.MailPolicyNotReloaded {
+				// main.cf was changed; the ledger says so.
+				// main.cf değişti; defter bunu söyler.
+				p.audit(r, "mail.policy.written-not-reloaded", "", 0)
+			}
 			writeMailPolicyAgentAnswer(w, resp)
 			return
 		}

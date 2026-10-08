@@ -66,7 +66,14 @@ var (
 		return exec.Command("postconf", args...).Output()
 	}
 	mailPolicyReload = func() error {
-		return exec.Command("systemctl", "reload-or-restart", "postfix").Run()
+		out, err := exec.Command("systemctl", "reload-or-restart", "postfix").CombinedOutput()
+		if err != nil {
+			// What systemctl said is the only line there is about why; it is
+			// bounded before it leaves the Agent.
+			// systemctl'in söylediği, nedene dair eldeki tek satırdır.
+			return errors.New(hostcmd.Diagnostic(out, err))
+		}
+		return nil
 	}
 )
 
@@ -238,7 +245,25 @@ func (a *Agent) SetMailPolicy(req *MailPolicy, resp *MailPolicyResponse) error {
 				"the Postfix mail policy could not be written")
 		}
 		if err := mailPolicyReload(); err != nil {
+			// main.cf holds the new values and Postfix does not run with them.
+			// That is a verified failure after a change, not something to log
+			// and call saved (9 Oct 2026; D-024): the answer carries what is
+			// written now, so the screen shows it, and says it is not loaded.
+			// main.cf yeni değerleri tutuyor, Postfix onlarla çalışmıyor. Bu,
+			// günlüğe yazıp "kaydedildi" denecek bir şey değil, bir değişiklik
+			// sonrası doğrulanmış hatadır.
 			log.Printf("mail policy: postfix reload after a policy write failed: %v", err)
+			said := hostcmd.Bounded(strings.Join(strings.Fields(err.Error()), " "), 300)
+			answer := MailPolicyResponse{
+				Error:  "the mail policy was written to main.cf, but Postfix could not be reloaded",
+				Code:   transport.MailPolicyNotReloaded,
+				Reason: said,
+			}
+			if fresh, readErr := readMailPolicyNative(); readErr == nil {
+				answer.Policy = fresh.policy()
+			}
+			*resp = answer
+			return nil
 		}
 	}
 

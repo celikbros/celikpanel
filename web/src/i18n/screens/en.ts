@@ -1607,6 +1607,29 @@ export const enScreens = {
     "mailauth.remoteConflict": "Existing DNS records conflict with the required mail routing. Review MX and mail address records before trying again; existing records were preserved.",
     "mailauth.remoteAddressRequired": "The server address could not be verified. Restore the server’s public address before publishing mail records.",
     "mailauth.remoteUnavailable": "The assigned DNS connection is unavailable. Restore its authorization and DNS service, then try again.",
+    // --- batch 2b (9 Oct 2026): database and mail configuration screens: checking,
+    // could not be read, known; saves that carry the version of what was read ---
+    'mail.setup.checking': "Reading the connection settings…",
+    'mail.setup.unknown': "The connection settings of this domain could not be read from the server, so they are not shown. Nothing was changed. Try again.",
+    'mail.webmail.unknown': "CelikPanel could not check whether webmail is available on this server. This does not mean it is not. Nothing was changed. Try again.",
+    'mail.catchAll.checking': "Reading the catch-all address of this domain…",
+    'mail.catchAll.unknown': "The catch-all address of this domain could not be read from the server, so it is not shown and cannot be changed here. This does not mean none is set. Nothing was changed. Try again.",
+    'mail.catchAll.none': "No catch-all address is set for this domain.",
+    'mail.catchAll.stale': "The catch-all address changed on the server after this page read it, so nothing was saved. What you typed is still in the field. Reload the current address, then make your change again.",
+    'mail.catchAll.reload': "Reload the current address",
+    'mail.catchAll.notSaved': "The catch-all address was not saved. Nothing was changed. Try again.",
+    'mail.rbl.unknown': "The blocklist check did not complete, so no result is shown. This does not mean the address is listed, and it does not mean it is clean. Try again.",
+    'mail.accounts.checking': "Reading the email accounts of this domain…",
+    'mail.accounts.unknown': "The email accounts of this domain could not be read from the server, so the list is not shown. This does not mean there are none. Nothing was changed. Try again.",
+    'mail.forwarders.checking': "Reading the forwarders of this domain…",
+    'mail.forwarders.unknown': "The forwarders of this domain could not be read from the server, so the list is not shown. This does not mean there are none. Nothing was changed. Try again.",
+    'mail.quota.unknown': "How much each email account uses could not be read from the server, so the usage column says so. The accounts themselves are listed. Try again.",
+    'mail.usageUnknown': "could not be read",
+    'mail.deleteAccountNamed': "Delete the email account {name}",
+    'mail.deleteForwarderNamed': "Delete the forwarder {name}",
+    'mail.healthChecking': "Checking deliverability…",
+    'mail.healthUnknown': "The deliverability checks of this domain could not be read from the server, so no result is shown. This does not mean a check failed. Nothing was changed. Try again.",
+    // --- end of batch 2b ---
 } as const;
 
 export type ScreenKey = keyof typeof enScreens;

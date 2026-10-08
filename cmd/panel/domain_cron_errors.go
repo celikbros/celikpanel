@@ -43,6 +43,14 @@ const cronNotInstalledReadMessage = "Scheduled tasks cannot be shown because thi
 const cronJobDuplicateMessage = "A scheduled task with the same schedule and command already exists, so nothing was added. " +
 	"Change the existing task instead, or enable it if it is disabled."
 
+// The same task stands on two lines of the crontab (written there by hand: the
+// Panel refuses to add a copy). A change or a delete cannot say which of the
+// two it means, so nothing is changed (9 Oct 2026).
+// Aynı görev crontab'da iki satırda duruyor. Bir değişiklik hangisini
+// kastettiğini söyleyemez; hiçbir şey değiştirilmez.
+const cronJobAmbiguousMessage = "This task stands twice in the crontab, so CelikPanel cannot tell which line to change and changed nothing. " +
+	"The server owner removes one of the two lines on the server (sudo crontab -u <site user> -e), then reloads this list."
+
 // agentReportedCronNotInstalled matches the Agent's exact answer. Older Agents
 // returned the same text from AddCronJob, so they are classified too.
 // agentReportedCronNotInstalled, Agent'ın tam yanıtını eşler.
@@ -96,6 +104,10 @@ func writeCronAgentError(w http.ResponseWriter, err error, reason string) {
 	case agentAnsweredExactly(err, transport.CronJobDuplicate):
 		log.Printf("[409][cron] duplicate task refused")
 		writeCodedError(w, http.StatusConflict, errCodeCronJobDuplicate, cronJobDuplicateMessage, "")
+		return
+	case agentAnsweredExactly(err, transport.CronJobAmbiguous):
+		log.Printf("[409][cron] a task that stands twice in the crontab was not changed")
+		writeCodedError(w, http.StatusConflict, errCodeCronJobAmbiguous, cronJobAmbiguousMessage, "")
 		return
 	}
 	if !agentReportedCronNotInstalled(err) {

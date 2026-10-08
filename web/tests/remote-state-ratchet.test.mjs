@@ -35,20 +35,23 @@ const webDir = fileURLToPath(new URL('../', import.meta.url));
 const allowList = readAllowList();
 const actual = scanTree(webDir);
 
-// The totals of the tree after the second batch (Settings, accounts, a domain's
-// files, certificate and page, import, monitoring, a component's page, the
-// license notice; and in part the components list, the dashboard and the
-// navigation rail).
-// Before the first batch: 46 / 68 / 16 / 126 / 32 in 68 files.
-// After the first batch:  37 / 58 / 14 / 109 / 29 in 62 files.
+// The totals of the tree after the second batch: its first part (Settings,
+// accounts, a domain's files, certificate and page, import, monitoring, a
+// component's page, the license notice; and in part the components list, the
+// dashboard and the navigation rail) and its second part (the PostgreSQL,
+// MariaDB and Postfix pages, a domain's mail tabs, the mail settings and the
+// webmail card).
+// Before the first batch:        46 / 68 / 16 / 126 / 32 in 68 files.
+// After the first batch:         37 / 58 / 14 / 109 / 29 in 62 files.
+// After the second, first part:  27 / 43 / 12 /  83 / 25 in 53 files.
 const ceilings = {
-  valueFromFailure: 27,
-  swallowedFailure: 43,
-  ignoredFailure: 12,
-  rawRead: 83,
-  unprovenEmptyState: 25,
+  valueFromFailure: 20,
+  swallowedFailure: 36,
+  ignoredFailure: 10,
+  rawRead: 71,
+  unprovenEmptyState: 23,
 };
-const fileCeiling = 53;
+const fileCeiling = 47;
 
 const advice = 'Read through useRemote/readRemote (src/lib/remote.ts) and draw the three states; '
   + 'see docs/OPERATION-GUIDANCE.md, entry of 2026-10-09.';
@@ -181,6 +184,9 @@ test('the screens of the first two batches are off the list for good', () => {
     // The second batch.
     'Settings', 'UsersPage', 'DomainFileManager', 'DomainSSLSettings', 'DomainDetail', 'ImportPage', 'LicenseNotice',
     'MonitoringPage', 'ComponentDetail', 'ServiceRecordLookup', 'HelpDrawer',
+    // The second batch, database and mail configuration.
+    'PostgreSQLManagement', 'MariaDBManagement', 'PostfixManagement', 'DomainMailManager', 'MailSettingsPanel', 'WebmailAccess',
+    'PostgreSQLSettings', 'MariaDBSettings', 'PostgreSQLAccessRules', 'ConfigEditor', 'ConfigSettingsEditor', 'ConfigFileNotices',
   ]) {
     const path = `src/components/${name}.tsx`;
     assert.equal(actual[path], undefined, `${path} reads the old way again: ${JSON.stringify(actual[path])}. ${advice}`);

@@ -3,9 +3,10 @@ import { Mail, Activity, Trash2, RefreshCw, RotateCw } from 'lucide-react';
 import { ServiceShell } from './ServiceShell';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
-import { Button, StatusDot, inputClass } from './ui';
+import { Button, ErrorBanner, RemoteGate, StatusDot, inputClass } from './ui';
 import type { TranslationKey } from '../i18n/en';
-import { apiErrorText, readApiError } from '../lib/apiError';
+import { apiErrorText, readApiError, type ApiError } from '../lib/apiError';
+import { decodeList, useRemote } from '../lib/remote';
 import { CurrentGate, StaleNotice, isStaleWrite, readCurrent, type Current } from './CurrentSettings';
 
 interface PostfixManagementProps {
@@ -20,52 +21,51 @@ interface PostfixQueueItem {
     status: string;
 }
 
-interface PostfixSummary {
-    active: number;
-    deferred: number;
-    hold: number;
-    corrupt: number;
-}
+const decodeQueue = (raw: unknown) => decodeList<PostfixQueueItem>(raw);
 
+// The mail queue of this server.
+//
+// The queue is read from Postfix and is one of three things (9 Oct 2026): being
+// read, could not be read, or known. "The mail queue is empty" and the counts
+// are said only for a queue the server answered; a read that failed used to
+// say "empty" too. Flush and delete act on the queue that is shown, so they
+// are off until it is known, and their answer is read instead of assumed.
+//
+// Bu sunucunun posta kuyruğu. Kuyruk Postfix'ten okunur ve üç şeyden biridir:
+// okunuyor, okunamadı ya da biliniyor. "Posta kuyruğu boş" ve sayılar yalnız
+// sunucunun yanıtladığı bir kuyruk için söylenir.
 export function PostfixManagement({ onBack }: PostfixManagementProps) {
     const { t } = useI18n();
     const [activeTab, setActiveTab] = useState<'queue' | 'logs'>('queue');
-    const [queue, setQueue] = useState<PostfixQueueItem[]>([]);
-    const [summary, setSummary] = useState<PostfixSummary | null>(null);
-
-    const loadQueue = async () => {
-        try {
-            const [q, s] = await Promise.all([
-                fetch('/api/v1/postfix/queue').then((r) => (r.ok ? r.json() : [])),
-                fetch('/api/v1/postfix/summary').then((r) => (r.ok ? r.json() : null)),
-            ]);
-            setQueue(q || []);
-            setSummary(s);
-        } catch {
-            /* silent */
-        }
-    };
-
-    useEffect(() => {
-        loadQueue();
-    }, []);
+    const queue = useRemote('/api/v1/postfix/queue', decodeQueue);
+    const [acting, setActing] = useState(false);
+    const known = queue.remote.state === 'known' ? queue.remote.value : null;
 
     const queueAction = async (action: string, id?: string) => {
+        if (!known) return;
         const msg =
             action === 'flush' ? t('postfix.confirmFlush') : action === 'delete_all' ? t('postfix.confirmDeleteAll') : t('postfix.confirmDelete', { id: id ?? '' });
         if (!confirm(msg)) return;
+        setActing(true);
         try {
-            await fetch('/api/v1/postfix/queue', {
+            const res = await fetch('/api/v1/postfix/queue', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action, id }),
             });
-            showToast('success', t('postfix.done'));
-            loadQueue();
+            // The action is done only when the server says so.
+            // Eylem, ancak sunucu söylediğinde yapılmıştır.
+            if (!res.ok) showToast('error', apiErrorText(await readApiError(res), t, 'postfix.actionFailed'));
+            else showToast('success', t('postfix.done'));
         } catch {
-            showToast('error', t('common.error'));
+            showToast('error', t('postfix.actionFailed'));
+        } finally {
+            setActing(false);
+            void queue.retry();
         }
     };
+
+    const count = (status: string) => (known ?? []).filter((item) => item.status === status).length;
 
     return (
         <ServiceShell serviceId="postfix" name="Postfix" icon={Mail} onBack={onBack}>
@@ -75,78 +75,93 @@ export function PostfixManagement({ onBack }: PostfixManagementProps) {
             </div>
 
             {activeTab === 'logs' ? (
-                <div className="rounded-xl border border-border bg-surface p-10 text-center text-fg-subtle">
-                    <Activity className="mx-auto mb-3 h-10 w-10 opacity-40" />
+                <div className="rounded-xl border border-border bg-surface p-10 text-center text-fg-muted">
+                    <Activity className="mx-auto mb-3 h-10 w-10 opacity-40" aria-hidden="true" />
                     <p>{t('postfix.logsSoon')}</p>
                 </div>
             ) : (
-                <div>
-                    {summary && (
+                <div aria-busy={queue.reading || acting}>
+                    {/* The counts are the queue's own: they exist once it has
+                        been read, in the place they keep.
+                        Sayılar kuyruğun kendisinindir; okunduğunda vardır. */}
+                    {known && (
                         <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-                            <Stat labelKey="postfix.active" value={summary.active} />
-                            <Stat labelKey="postfix.deferred" value={summary.deferred} accent={summary.deferred > 0} />
-                            <Stat labelKey="postfix.hold" value={summary.hold} />
-                            <Stat labelKey="postfix.corrupt" value={summary.corrupt} danger={summary.corrupt > 0} />
+                            <Stat labelKey="postfix.active" value={count('active')} />
+                            <Stat labelKey="postfix.deferred" value={count('deferred')} accent={count('deferred') > 0} />
+                            <Stat labelKey="postfix.hold" value={count('hold')} />
+                            <Stat labelKey="postfix.corrupt" value={count('corrupt')} danger={count('corrupt') > 0} />
                         </div>
                     )}
 
-                    <div className="mb-3 flex items-center justify-end gap-2">
-                        <Button variant="secondary" icon={RefreshCw} onClick={loadQueue}>
+                    <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
+                        <Button variant="secondary" icon={RefreshCw} loading={queue.reading && !!known} onClick={() => void queue.retry()}>
                             {t('postfix.refresh')}
                         </Button>
-                        <Button variant="secondary" icon={RotateCw} onClick={() => queueAction('flush')}>
+                        <Button variant="secondary" icon={RotateCw} onClick={() => queueAction('flush')} disabled={!known || acting}>
                             {t('postfix.flush')}
                         </Button>
-                        <Button variant="danger" icon={Trash2} onClick={() => queueAction('delete_all')} disabled={queue.length === 0}>
+                        <Button variant="danger" icon={Trash2} onClick={() => queueAction('delete_all')} disabled={!known || known.length === 0 || acting}>
                             {t('postfix.deleteAll')}
                         </Button>
                     </div>
 
-                    {queue.length === 0 ? (
-                        <div className="rounded-xl border border-border bg-surface p-12 text-center">
-                            <Mail className="mx-auto mb-3 h-10 w-10 text-fg-subtle" />
-                            <p className="text-fg-muted">{t('postfix.empty')}</p>
-                        </div>
-                    ) : (
-                        <div className="overflow-x-auto rounded-xl border border-border-strong bg-surface">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="border-b border-border text-left text-xs font-semibold text-fg-muted">
-                                        <th className="px-4 py-2.5">ID</th>
-                                        <th className="px-4 py-2.5">{t('postfix.col.sender')}</th>
-                                        <th className="px-4 py-2.5">{t('postfix.col.size')}</th>
-                                        <th className="px-4 py-2.5">{t('postfix.col.arrival')}</th>
-                                        <th className="px-4 py-2.5">{t('domains.col.status')}</th>
-                                        <th className="px-4 py-2.5" />
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {queue.map((item) => (
-                                        <tr key={item.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
-                                            <td className="px-4 py-2.5 font-mono text-fg">{item.id}</td>
-                                            <td className="px-4 py-2.5 text-fg-muted">{item.sender}</td>
-                                            <td className="px-4 py-2.5 text-fg-muted">{item.size}</td>
-                                            <td className="px-4 py-2.5 text-fg-subtle">{item.arrival}</td>
-                                            <td className="px-4 py-2.5">
-                                                <span className="inline-flex items-center gap-1.5 text-fg-muted">
-                                                    <StatusDot ok={item.status === 'active'} />
-                                                    {item.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-2.5 text-right">
-                                                <button
-                                                    onClick={() => queueAction('delete_id', item.id)}
-                                                    className="rounded-md p-1.5 text-fg-subtle transition-colors hover:bg-surface-2 hover:text-danger"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
-                                            </td>
+                    <RemoteGate
+                        remote={queue.remote}
+                        checking={t('postfix.queue.checking')}
+                        failed={t('postfix.queue.unknown')}
+                        onRetry={() => void queue.retry()}
+                        busy={queue.reading}
+                        className="min-h-[2.75rem]"
+                    >
+                        {({ value: items, stale }) => (items.length === 0 ? (
+                            <div className="rounded-xl border border-border bg-surface p-12 text-center">
+                                <Mail className="mx-auto mb-3 h-10 w-10 text-fg-subtle" aria-hidden="true" />
+                                <p className="text-fg-muted">{t('postfix.empty')}</p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto rounded-xl border border-border-strong bg-surface">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b border-border text-left text-xs font-semibold text-fg-muted">
+                                            <th className="px-4 py-2.5">ID</th>
+                                            <th className="px-4 py-2.5">{t('postfix.col.sender')}</th>
+                                            <th className="px-4 py-2.5">{t('postfix.col.size')}</th>
+                                            <th className="px-4 py-2.5">{t('postfix.col.arrival')}</th>
+                                            <th className="px-4 py-2.5">{t('domains.col.status')}</th>
+                                            <th className="px-4 py-2.5" />
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
+                                    </thead>
+                                    <tbody>
+                                        {items.map((item) => (
+                                            <tr key={item.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+                                                <td className="px-4 py-2.5 font-mono text-fg">{item.id}</td>
+                                                <td className="break-all px-4 py-2.5 text-fg-muted">{item.sender}</td>
+                                                <td className="whitespace-nowrap px-4 py-2.5 text-fg-muted">{item.size}</td>
+                                                <td className="whitespace-nowrap px-4 py-2.5 text-fg-muted">{item.arrival}</td>
+                                                <td className="px-4 py-2.5">
+                                                    <span className="inline-flex items-center gap-1.5 text-fg-muted">
+                                                        <StatusDot ok={item.status === 'active'} />
+                                                        {item.status}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-2.5 text-right">
+                                                    <button
+                                                        onClick={() => queueAction('delete_id', item.id)}
+                                                        disabled={stale || acting}
+                                                        aria-label={t('postfix.deleteMessage', { id: item.id })}
+                                                        title={t('postfix.deleteMessage', { id: item.id })}
+                                                        className="rounded-md p-1.5 text-fg-subtle transition-colors hover:bg-surface-2 hover:text-danger disabled:pointer-events-none disabled:opacity-50"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ))}
+                    </RemoteGate>
                 </div>
             )}
             <MailPolicySection />
@@ -213,6 +228,12 @@ function MailPolicySection() {
     const [rate, setRate] = useState(30);
     const [busy, setBusy] = useState(false);
     const [stale, setStale] = useState(false);
+    // The policy was written to main.cf and Postfix could not be reloaded: a
+    // verified failure after a change (9 Oct 2026). It stays on screen above
+    // the saved values until a save succeeds or the policy is read again.
+    // Politika main.cf'e yazıldı ve Postfix yeniden yüklenemedi: bir değişiklik
+    // sonrası doğrulanmış hata. Ekranda, kaydedilen değerlerin üstünde kalır.
+    const [notReloaded, setNotReloaded] = useState<ApiError | null>(null);
 
     const show = (policy: MailPolicy) => {
         const z = policy.dnsbl_zones || [];
@@ -226,6 +247,7 @@ function MailPolicySection() {
     };
 
     const load = async () => {
+        setNotReloaded(null);
         setCurrent({ state: 'loading' });
         const next = await readCurrent<MailPolicy>('/api/v1/mail/policy');
         if (next.state === 'known') show(next.value);
@@ -261,9 +283,18 @@ function MailPolicySection() {
                 // Eskimiş kayıt, yazılanı ekranda tutar ve nasıl sürüleceğini söyler.
                 const error = await readApiError(r);
                 if (isStaleWrite(error)) setStale(true);
-                else showToast('error', apiErrorText(error, t));
+                else if (error.code === 'MAIL_POLICY_NOT_RELOADED') {
+                    // main.cf holds the new values: read them, so the form
+                    // shows what is written and the next save carries its
+                    // version, and say Postfix does not run with them yet.
+                    // main.cf yeni değerleri tutuyor: oku ve Postfix'in henüz
+                    // onlarla çalışmadığını söyle.
+                    await load();
+                    setNotReloaded(error);
+                } else showToast('error', apiErrorText(error, t));
                 return;
             }
+            setNotReloaded(null);
             const saved = (await r.json()).policy as MailPolicy | undefined;
             showToast('success', t('mailpolicy.saved'));
             if (saved?.version) show(saved);
@@ -288,6 +319,16 @@ function MailPolicySection() {
             <CurrentGate state={current.state} unknownKey="mailpolicy.unknown" onRetry={load} />
             {policy && (
                 <>
+                    {notReloaded && (
+                        <div role="alert" className="mb-4">
+                            <ErrorBanner error={notReloaded} />
+                            {notReloaded.vars?.detail && (
+                                <p className="mt-1.5 max-w-[75ch] break-words text-xs text-fg-muted">
+                                    {t('mailpolicy.reloadSaid')} <span className="font-mono text-fg">{notReloaded.vars.detail}</span>
+                                </p>
+                            )}
+                        </div>
+                    )}
                     {stale && <StaleNotice textKey="mailpolicy.stale" onReload={load} />}
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <label className="text-sm">
@@ -315,7 +356,7 @@ function MailPolicySection() {
                         </div>
                     ) : (
                         <>
-                            <label className="mt-3 flex items-center gap-2 text-sm text-fg">
+                            <label className="mt-3 flex min-h-[1.75rem] items-center gap-2 text-sm text-fg">
                                 <input type="checkbox" checked={dnsblOn} onChange={(e) => setDnsblOn(e.target.checked)} className="h-4 w-4" />
                                 {t('mailpolicy.dnsbl')}
                             </label>
@@ -323,7 +364,7 @@ function MailPolicySection() {
                         </>
                     )}
 
-                    <label className="mt-4 flex items-center gap-2 text-sm text-fg">
+                    <label className="mt-4 flex min-h-[1.75rem] items-center gap-2 text-sm text-fg">
                         <input type="checkbox" checked={rateOn} onChange={(e) => setRateOn(e.target.checked)} className="h-4 w-4" />
                         {t('mailpolicy.rate')}
                     </label>

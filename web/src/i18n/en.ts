@@ -401,6 +401,11 @@ export const en = {
     'profile.wrongCurrent': 'Current password is incorrect.',
 
     'nav.import': 'Import',
+    // --- batch 2b (9 Oct 2026): database and mail configuration screens: checking,
+    // could not be read, known; saves that carry the version of what was read ---
+    'err.MAIL_POLICY_NOT_RELOADED': "The mail policy was saved to /etc/postfix/main.cf, but Postfix could not be reloaded, so Postfix is still running with the previous settings. Nothing was rolled back. On the server, run sudo postfix check to see what Postfix objects to, correct it, then run sudo systemctl reload postfix. The values shown below are the saved ones.",
+    'err.CRON_JOB_AMBIGUOUS': "This task stands twice in the crontab, so CelikPanel cannot tell which line to change and changed nothing. Remove one of the two lines on the server (sudo crontab -u <site user> -e), then reload this list.",
+    // --- end of batch 2b ---
 } as const;
 
 export type ShellKey = keyof typeof en;

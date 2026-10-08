@@ -188,43 +188,42 @@ func updateCronJobFor(username string, req *UpdateCronJobRequest) error {
 	}
 	lines := strings.Split(existing, "\n")
 
-	// Find and update the job
-	var newLines []string
-	found := false
+	// The job is the one line whose own text is this ID, enabled or disabled.
+	// Nothing else in the crontab is rewritten.
+	// Görev, kendi metni bu kimlik olan tek satırdır; etkin ya da devre dışı.
+	index, err := cronJobLine(lines, req.ID)
+	if err != nil {
+		return err
+	}
+	wanted := strings.Join(strings.Fields(req.Schedule+" "+req.Command), " ")
 	for i, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
-			newLines = append(newLines, line)
-			continue
-		}
-
-		// Generate ID for this line
-		lineID := generateCronID(trimmed)
-		if lineID == req.ID {
-			found = true
-			// Replace with updated job
-			var newLine string
-			if !req.Enabled {
-				newLine = "# DISABLED: " + req.Schedule + " " + req.Command
-			} else {
-				newLine = req.Schedule + " " + req.Command
-			}
-
-			// Add comment if provided
-			if req.Comment != "" && (i == 0 || !strings.HasPrefix(strings.TrimSpace(lines[i-1]), "#")) {
-				newLines = append(newLines, "# "+req.Comment)
-			}
-			newLines = append(newLines, newLine)
-		} else {
-			newLines = append(newLines, line)
+		if text, _, ok := cronJobText(line); ok && i != index && strings.Join(strings.Fields(text), " ") == wanted {
+			// Changing this job into a copy of another would leave two lines
+			// nothing could tell apart afterwards.
+			// Bu görevi bir başkasının kopyasına çevirmek, sonradan ayırt
+			// edilemeyen iki satır bırakır.
+			return errors.New(transport.CronJobDuplicate)
 		}
 	}
-
-	if !found {
-		return fmt.Errorf("cron job not found: %s", req.ID)
+	newLine := req.Schedule + " " + req.Command
+	if !req.Enabled {
+		newLine = "# DISABLED: " + newLine
 	}
 
-	return setCrontab(username, strings.Join(newLines, "\n"))
+	// A description is written above the job only where no comment stands
+	// there already. A comment that is there may be the owner's and is left as
+	// it is; a disabled job above is a job, not a comment.
+	// Açıklama, görevin üstüne yalnız orada bir yorum yoksa yazılır.
+	describe := req.Comment != "" && !cronPlainCommentAt(lines, index-1)
+	if lines[index] == newLine && !describe {
+		return nil
+	}
+	lines[index] = newLine
+	if describe {
+		lines = append(lines[:index], append([]string{"# " + req.Comment}, lines[index:]...)...)
+	}
+
+	return setCrontab(username, strings.Join(lines, "\n"))
 }
 
 // DeleteCronJob deletes a cron job
@@ -255,44 +254,83 @@ func deleteCronJobFor(username string, req *DeleteCronJobRequest) error {
 	}
 	lines := strings.Split(existing, "\n")
 
-	// Filter out the job to delete
-	var newLines []string
-	found := false
-	skipNextComment := false
+	// Exactly the job's own line goes, enabled or disabled. The line above it
+	// stays whatever it is: it may be the owner's comment or another, disabled
+	// job, and the Panel cannot prove it wrote it. Before 9 Oct 2026 the line
+	// above was removed whenever it began with `#`, and every blank line of
+	// the crontab went with it.
+	// Yalnız görevin kendi satırı gider. Üstündeki satır ne ise kalır: sahibin
+	// yorumu ya da başka, devre dışı bir görev olabilir.
+	index, err := cronJobLine(lines, req.ID)
+	if err != nil {
+		return err
+	}
+	lines = append(lines[:index], lines[index+1:]...)
 
-	for i := len(lines) - 1; i >= 0; i-- {
-		line := lines[i]
-		trimmed := strings.TrimSpace(line)
+	return setCrontab(username, strings.Join(lines, "\n"))
+}
 
-		if trimmed == "" {
+// cronJobText returns the job a crontab line holds: the line itself, or for a
+// job the Panel disabled the text after `# DISABLED:`. A blank line, an
+// environment assignment and an ordinary comment are not jobs.
+// cronJobText, bir crontab satırının tuttuğu görevi döndürür: satırın kendisi
+// ya da Panel'in devre dışı bıraktığı görevde `# DISABLED:` sonrasındaki metin.
+func cronJobText(line string) (text string, disabled, ok bool) {
+	trimmed := strings.TrimSpace(line)
+	if trimmed == "" {
+		return "", false, false
+	}
+	if strings.HasPrefix(trimmed, "#") {
+		rest, isDisabled := strings.CutPrefix(trimmed, "# DISABLED:")
+		if !isDisabled {
+			return "", false, false
+		}
+		trimmed, disabled = strings.TrimSpace(rest), true
+	}
+	if parseCronLine(trimmed) == nil {
+		return "", false, false
+	}
+	return trimmed, disabled, true
+}
+
+// cronJobLine finds the one line that is the job with this ID. A job is
+// identified by its whole text, never by where it stands. Two lines with the
+// same text are the same job twice; which of them a request means cannot be
+// known, so nothing is changed.
+// cronJobLine, bu kimlikteki görev olan tek satırı bulur. Görev konumuyla
+// değil bütün metniyle tanınır. Aynı metinli iki satır aynı görevin iki
+// kopyasıdır; isteğin hangisini kastettiği bilinemez, hiçbir şey değiştirilmez.
+func cronJobLine(lines []string, id string) (int, error) {
+	found := -1
+	for i, line := range lines {
+		text, _, ok := cronJobText(line)
+		if !ok || generateCronID(text) != id {
 			continue
 		}
-
-		// Check if this is the job to delete
-		if !strings.HasPrefix(trimmed, "#") {
-			lineID := generateCronID(trimmed)
-			if lineID == req.ID {
-				found = true
-				skipNextComment = true
-				continue
-			}
+		if found >= 0 {
+			return -1, errors.New(transport.CronJobAmbiguous)
 		}
-
-		// Skip comment line before deleted job
-		if skipNextComment && strings.HasPrefix(trimmed, "#") {
-			skipNextComment = false
-			continue
-		}
-
-		skipNextComment = false
-		newLines = append([]string{line}, newLines...)
+		found = i
 	}
-
-	if !found {
-		return fmt.Errorf("cron job not found: %s", req.ID)
+	if found < 0 {
+		return -1, fmt.Errorf("cron job not found: %s", id)
 	}
+	return found, nil
+}
 
-	return setCrontab(username, strings.Join(newLines, "\n"))
+// cronPlainCommentAt reports whether the line is an ordinary comment: not a
+// blank line, not a job and not a job the Panel disabled.
+// cronPlainCommentAt, satırın sıradan bir yorum olup olmadığını bildirir.
+func cronPlainCommentAt(lines []string, index int) bool {
+	if index < 0 || index >= len(lines) {
+		return false
+	}
+	trimmed := strings.TrimSpace(lines[index])
+	if !strings.HasPrefix(trimmed, "#") {
+		return false
+	}
+	_, _, job := cronJobText(lines[index])
+	return !job
 }
 
 // Helper functions
@@ -310,20 +348,19 @@ func parseCrontab(content string) []CronJob {
 
 		// Check for comment
 		if strings.HasPrefix(trimmed, "#") {
-			// Check if it's a disabled job
-			if strings.HasPrefix(trimmed, "# DISABLED:") {
-				// Parse disabled job
-				disabled := strings.TrimPrefix(trimmed, "# DISABLED:")
-				parts := parseCronLine(strings.TrimSpace(disabled))
-				if parts != nil {
-					jobs = append(jobs, CronJob{
-						ID:       generateCronID(strings.TrimSpace(disabled)),
-						Schedule: parts[0],
-						Command:  parts[1],
-						Enabled:  false,
-						Comment:  currentComment,
-					})
-				}
+			// A job the Panel disabled is listed with the same ID it has when
+			// enabled, so it can be enabled, changed and deleted again.
+			// Panel'in devre dışı bıraktığı görev, etkinken taşıdığı kimlikle
+			// listelenir.
+			if text, _, ok := cronJobText(line); ok {
+				parts := parseCronLine(text)
+				jobs = append(jobs, CronJob{
+					ID:       generateCronID(text),
+					Schedule: parts[0],
+					Command:  parts[1],
+					Enabled:  false,
+					Comment:  currentComment,
+				})
 				currentComment = ""
 			} else {
 				currentComment = strings.TrimPrefix(trimmed, "# ")
@@ -363,15 +400,15 @@ func parseCronLine(line string) []string {
 }
 
 func generateCronID(line string) string {
-	// Simple content hash over bytes; iterating bytes keeps the uint32
-	// conversion in range (a rune could exceed it in theory).
-	// Baytlar üzerinden basit içerik özeti; baytları dolaşmak uint32
-	// dönüşümünü aralıkta tutar (bir rune teoride bunu aşabilir).
-	var hash uint32
-	for _, c := range []byte(line) {
-		hash = hash*31 + uint32(c)
-	}
-	return fmt.Sprintf("%08x", hash)
+	// The whole text of the job, hashed so that two different jobs cannot
+	// share an ID. The earlier 32-bit sum (the Java string hash) gave the same
+	// ID to commands as close as "…/Aa.sh" and "…/BB.sh", and a change or
+	// delete then reached the first of them.
+	// Görevin bütün metni; iki farklı görev aynı kimliği paylaşamasın diye
+	// özetlenir. Önceki 32 bitlik toplam, "…/Aa.sh" ile "…/BB.sh" kadar yakın
+	// komutlara aynı kimliği veriyordu.
+	sum := sha256.Sum256([]byte(line))
+	return hex.EncodeToString(sum[:8])
 }
 
 var cronUsernameRe = regexp.MustCompile(`^[a-z_][a-z0-9_-]{0,31}$`)

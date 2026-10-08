@@ -120,3 +120,28 @@ screenshots is the inspection; the script only makes them.
 
 The customer archive is assembled by `make dist`, which copies `web/dist` and
 never `web/` itself, so nothing in this directory can reach an installed server.
+
+## Scenarios of the second batch (2026-10-09)
+
+These live in `scenarios-batch2b.mjs`, with their mock routes in
+`mock-batch2b.mjs`, so two batches of scenarios can be merged without touching
+each other's lines; `run.mjs` and `mock.mjs` each load them in one marked block.
+A scenario can also set the whole component scan the mock answers
+(`managedScan`, cleared by every reset), because a component page treats a scan
+with a part missing as one it could not read. An override can carry `times`
+beside `after` (apply to that many requests, then let the rest through), and
+`clearAll` removes every override, whichever batch set it.
+
+| Name | States |
+| --- | --- |
+| `dbconfig` | the Components list as the scan of this batch draws it (50-0); the PostgreSQL page, opened from that list with Manage, while the one read shared by the file list and the sections under it is slow and failing (then the one Retry), and known without the file; `postgresql.conf` slow, failing, changed, saved, refused because the file changed (409), refused by PostgreSQL next to the field, reload failed and restored, answer lost; `pg_hba.conf` loaded, failing, a rule marked for removal, the lockout refusal, a new rule incomplete and refused next to the rule; a MariaDB option file failing, loaded, refused next to the field, saved and waiting for a restart; the raw file loaded and failing (50–54) |
+| `mailscreens` | one domain's Mail tab: the mailbox list and the webmail card slow, failing (then one Retry), known empty and known unavailable, usage that could not be read; the catch-all address slow, failing, known none, known set, refused because it changed (60–62) |
+| `mailqueue` | the Postfix page: the queue slow, failing, known empty and populated; a mail policy that was written and not reloaded (70) |
+| `cron` | a domain's scheduled tasks with a disabled task, and that task enabled again (80) |
+
+Each state's record adds which negative sentences were on screen, the checking
+lines and notices, how many fields existed and were enabled, the enabled and
+disabled buttons, the fields marked invalid with the message tied to them, and
+targets smaller than 24 px. The per-row column names of the access rules are
+hidden on a wide screen on purpose (the first row names them) and are recorded
+as "truncated"; that is the record, not a defect.

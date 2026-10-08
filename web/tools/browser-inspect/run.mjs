@@ -38,7 +38,7 @@ const mock = spawn(process.execPath, [fileURLToPath(new URL('./mock.mjs', import
 await pause(700);
 const ctl = body => fetch(`${base}/__ctl`, { method: 'POST', body: JSON.stringify(body) });
 const drainLog = async () => (await fetch(`${base}/__log`)).json();
-const reset = () => ctl({ mode: 'ok', session: true, setupStatus: 'ready', execution: null, license: 'active', served: '', validity: 60, componentOperation: null, update: null, host: '', clear: ['/api/v1/domains', '/api/v1/auth/me', '/api/v1/panel/availability', '/api/v1/license/access', '/api/v1/hosting/capabilities'] }).then(() => { /* execution null handled below */ });
+const reset = () => ctl({ mode: 'ok', session: true, setupStatus: 'ready', execution: null, license: 'active', served: '', validity: 60, componentOperation: null, update: null, host: '', managedScan: null, clear: ['/api/v1/domains', '/api/v1/auth/me', '/api/v1/panel/availability', '/api/v1/license/access', '/api/v1/hosting/capabilities'] }).then(() => { /* execution null handled below */ });
 
 const browser = await puppeteer.launch({
     executablePath: chrome, headless: true,
@@ -152,6 +152,11 @@ async function clickByText(page, texts, scope = 'button') {
 }
 const marker = (handover = true) => ({ [`celikpanel.setup.start.admin`]: JSON.stringify({ request_id: REQ_ID, plan_id: PLAN_ID, panel_domain: HOST, ...(handover ? { handover: true } : {}) }) });
 const waitFor = (page, fn, timeout = 15000, ...args) => page.waitForFunction(fn, { timeout, polling: 100 }, ...args);
+// The title of a page. On a wide screen a page's header is drawn in the top bar
+// and not in <main>; waiting for 'main h1' alone there caught only the frame
+// before the header moved, and missed it now and then (seen 9 Oct 2026 in
+// `twofactor`, desktop, English).
+const PAGE_TITLE = 'main h1, [data-shell-page-header-target] h1';
 
 // --- Scenarios that withhold one read at a time (9 Oct 2026) -------------------
 // "No negative UI unless known": for each read these scenarios make slow,
@@ -238,7 +243,7 @@ const pageFacts = page => page.evaluate(() => {
 // leave another reader's request open (the navigation rail reads the domain
 // list as well), so quiet is waited for with a limit instead of required.
 const quiet = page => page.waitForNetworkIdle({ idleTime: 600, timeout: 7000 }).catch(() => {});
-const go = async (page, path) => { await page.goto(`${base}${path}`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector('main h1'); await quiet(page); };
+const go = async (page, path) => { await page.goto(`${base}${path}`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector(PAGE_TITLE); await quiet(page); };
 // What changed place or size between two records of the same elements.
 const moved = (before, after) => Object.keys(before || {}).filter(key => before[key] && after?.[key])
     .filter(key => ['x', 'y', 'w', 'h'].some(side => Math.abs(before[key][side] - after[key][side]) > 1))
@@ -1097,7 +1102,7 @@ const scenarios = {
     // 50: Settings, two-factor sign-in: the status slow, failing, known off
     // and known on. Before this a failed read showed "off" with the setup form.
     async twofactor() {
-        const open = async (settled = true) => { const page = await newPage(); await page.goto(`${base}/settings?section=account`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector('main h1'); if (settled) await quiet(page); return page; };
+        const open = async (settled = true) => { const page = await newPage(); await page.goto(`${base}/settings?section=account`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector(PAGE_TITLE); if (settled) await quiet(page); return page; };
         await b2Reset({ override: { [TWO_FACTOR]: { delay: 5000 } } });
         let page = await open(false);
         await pause(1500);
@@ -1142,7 +1147,7 @@ const scenarios = {
                 request.abort().catch(() => {});
             });
             await page.goto(`${base}${path}`, { waitUntil: 'domcontentloaded' });
-            await page.waitForSelector('main h1');
+            await page.waitForSelector(PAGE_TITLE);
             return page;
         };
         const panel = '/settings?section=panel';
@@ -1255,7 +1260,7 @@ const scenarios = {
     },
     // 52: Accounts: the list and the plans slow, failing, known empty, known.
     async accounts() {
-        const open = async (settled = true) => { const page = await newPage(); await page.goto(`${base}/users`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector('main h1'); if (settled) await quiet(page); return page; };
+        const open = async (settled = true) => { const page = await newPage(); await page.goto(`${base}/users`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector(PAGE_TITLE); if (settled) await quiet(page); return page; };
         await b2Reset({ users: USERS, plans: PLANS, override: { [USERS_URL]: { delay: 5000 } } });
         let page = await open(false);
         await pause(1500);
@@ -1299,7 +1304,7 @@ const scenarios = {
     // 53: a domain's files: a folder slow, failing, known empty, populated; and
     // another folder opened while it is slow (never the rows of the one left).
     async files() {
-        const open = async () => { const page = await newPage(); await page.goto(`${base}/domains/example.com`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector('main h1'); await quiet(page); await clickByText(page, ['Files', 'Dosyalar'], 'main button'); return page; };
+        const open = async () => { const page = await newPage(); await page.goto(`${base}/domains/example.com`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector(PAGE_TITLE); await quiet(page); await clickByText(page, ['Files', 'Dosyalar'], 'main button'); return page; };
         await b2Reset({ files: FILES, override: { [FILES_URL]: { delay: 5000 } } });
         let page = await open();
         await pause(1200);
@@ -1331,7 +1336,7 @@ const scenarios = {
         const open = async () => {
             const page = await newPage();
             page.on('dialog', dialog => dialog.accept());
-            await page.goto(`${base}/domains/example.com`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector('main h1'); await quiet(page);
+            await page.goto(`${base}/domains/example.com`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector(PAGE_TITLE); await quiet(page);
             await clickByText(page, ['Hosting', 'Barındırma'], 'main button'); await pause(300);
             await clickByText(page, ['SSL/TLS'], 'main button');
             return page;
@@ -1435,7 +1440,7 @@ const scenarios = {
     // "required"), the four counts and the navigation badge slow, failing and
     // known.
     async dashboard() {
-        const open = async (settled = true) => { const page = await newPage(); await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector('main h1'); if (settled) await quiet(page); return page; };
+        const open = async (settled = true) => { const page = await newPage(); await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector(PAGE_TITLE); if (settled) await quiet(page); return page; };
         const counts = page => page.evaluate(() => ({
             cards: Array.from(document.querySelectorAll('main button p.text-2xl')).map(node => `${node.nextElementSibling?.innerText}: ${node.innerText.trim()}`),
             badge: Array.from(document.querySelectorAll('aside nav a, aside nav button')).map(node => node.innerText.replace(/\s+/g, ' ').trim()).filter(text => /^(Domains|Alan Adları|Alan adları)/.test(text)),
@@ -1470,7 +1475,7 @@ const scenarios = {
     },
     // 57: monitoring: slow, failing, known, and a poll that fails a minute later.
     async monitoring() {
-        const open = async (settled = true) => { const page = await newPage(); await page.goto(`${base}/monitoring`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector('main h1'); if (settled) await quiet(page); return page; };
+        const open = async (settled = true) => { const page = await newPage(); await page.goto(`${base}/monitoring`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector(PAGE_TITLE); if (settled) await quiet(page); return page; };
         await b2Reset({ samples: SAMPLES, override: { [HISTORY_URL]: { delay: 5000 } } });
         let page = await open(false);
         await pause(1500);
@@ -1585,7 +1590,7 @@ const scenarios = {
     async installdialog() {
         const open = async () => {
             const page = await newPage();
-            await page.goto(`${base}/services`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector('main h1'); await quiet(page); await pause(600);
+            await page.goto(`${base}/services`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector(PAGE_TITLE); await quiet(page); await pause(600);
             await page.evaluate(() => { const row = Array.from(document.querySelectorAll('main li, main tr, main article, main div')).find(node => /Netdata/.test(node.innerText || '') && node.querySelector('button') && (node.innerText || '').length < 400); (Array.from(row?.querySelectorAll('button') || []).find(button => /^(Install|Kur)$/.test(button.innerText.trim())))?.click(); });
             await page.waitForSelector('[aria-labelledby="service-install-title"]', { timeout: 6000 });
             return page;
@@ -1627,6 +1632,12 @@ const scenarios = {
         await closePage(page);
     },
 };
+
+// --- batch 2b (9 Oct 2026): database and mail configuration screens ---
+// `dbconfig`, `mailscreens`, `mailqueue` and `cron` live in their own file, so
+// two batches of scenarios can be merged without touching each other's lines.
+(await import('./scenarios-batch2b.mjs')).default(scenarios, { base, vp, locale, ctl, reset, drainLog, newPage, closePage, shot, into, clickByText, waitFor, pause, quiet });
+// --- end of batch 2b ---
 
 for (const [name, run] of Object.entries(scenarios)) {
     if (wanted && !wanted.includes(name)) continue;

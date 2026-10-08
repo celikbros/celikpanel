@@ -42,7 +42,7 @@ const state = {
     execution: null,       // set by /setup/start or by ctl
     license: 'active',     // active | missing | expired | invalid | unavailable | error | drop | hang
     served: '',            // hostname reported by /panel/access-address
-    overrides: {},         // path -> { status, body, delay, drop, hang }
+    overrides: {},         // path -> { status, body, delay, drop, hang, after, times }
     domains: [],
     host: '',              // another panel host name for the certificate step (default panel.example.com)
     componentOperation: null, // a running component operation, as /service/operation reports it
@@ -70,6 +70,7 @@ const state = {
     noticeLicense: null,   // GET /panel/license, when it should differ from the access decision
     samples: [],           // GET /metrics/history
     services: [],          // GET /managed-services
+    managedScan: null,     // GET /managed-services, whole, when a scenario of batch 2b sets it
     logs: [],              // GET /service/logs
     repo: { available: false, enabled: false }, // GET /repo
     candidate: '7.2.4',    // GET /service/candidate
@@ -99,7 +100,8 @@ async function api(req, res, path, query) {
     if (state.mode === 'down') { req.socket.destroy(); return; }
     const override = state.overrides[path];
     // after: let the first N requests through untouched, then apply.
-    if (override && (override.hits = (override.hits || 0) + 1) > (override.after || 0)) {
+    // times: apply to that many requests only, then let the rest through.
+    if (override && (override.hits = (override.hits || 0) + 1) > (override.after || 0) && (!override.times || override.hits <= (override.after || 0) + override.times)) {
         if (override.delay) await pause(override.delay);
         if (override.drop) { req.socket.destroy(); return; }
         if (override.hang) return;
@@ -165,7 +167,9 @@ async function api(req, res, path, query) {
         // The whole contract of the component records: the interface treats an
         // answer with a field missing as unknown.
         const services = [...state.services, ...MAIL_SERVICES.filter(item => !state.services.some(service => service.id === item.id))];
-        send(res, 200, { scanned_at: new Date().toISOString(), services, profiles: MAIL_PROFILES, dns_identity_ready: true, mail_hostname: { current: 'server1', current_usable: false, hostname: '', source: '', will_set_hostname: false } }); return;
+        // A scenario of batch 2b sets the whole scan (state.managedScan); it
+        // is the whole contract too, and it is cleared by every reset.
+        send(res, 200, state.managedScan || { scanned_at: new Date().toISOString(), services, profiles: MAIL_PROFILES, dns_identity_ready: true, mail_hostname: { current: 'server1', current_usable: false, hostname: '', source: '', will_set_hostname: false } }); return;
     }
     // One exact request, as the panel-certificate poll asks for it. A request
     // the mock never recorded is "no such operation", as on the Panel.
@@ -200,6 +204,11 @@ async function api(req, res, path, query) {
     if (key === 'GET /api/v1/host-mutation-readiness') { send(res, 200, { ready: true }); return; }
     if (key === 'POST /api/v1/import/cpanel/inspect') { send(res, 200, state.importPreview); return; }
     if (key === 'POST /api/v1/import/cpanel/apply') { send(res, 200, { steps: [{ step: 'domain', ok: true, detail: 'created' }] }); return; }
+    // --- batch 2b (9 Oct 2026): database and mail configuration screens ---
+    // Routes these screens read, in their own file so two batches of scenarios
+    // can be merged without touching each other's lines.
+    if (await (await import('./mock-batch2b.mjs')).batch2b(req, res, path, query, { state, send, coded, readBody })) return;
+    // --- end of batch 2b ---
     coded(res, 404, 'not_found', `mock has no route for ${key}`);
 }
 
@@ -212,6 +221,8 @@ const server = createServer(async (req, res) => {
             if (name === 'execution' && value) state.execution = execution(value.request_id || 'adopt', value.statuses || [], value.extra || {});
             else if (name === 'override') Object.assign(state.overrides, value);
             else if (name === 'clear') for (const item of value) delete state.overrides[item];
+            // Every override at once: a scenario that follows another batch's starts from none.
+            else if (name === 'clearAll') for (const item of Object.keys(state.overrides)) delete state.overrides[item];
             else state[name] = value;
         }
         send(res, 200, { ok: true }); return;

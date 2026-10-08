@@ -1965,7 +1965,9 @@ kataloğunda, kalanı `screens` ve `screens/server` içinde).
 **Geri gelmesi nasıl engelleniyor.**
 
 - *Mandal.* Bu partiden sonra: 53 dosyada 27 / 43 / 12 / 83 / 25 (ilkinden
-  sonra: 62 dosyada 37 / 58 / 14 / 109 / 29). Listeden kalıcı olarak çıkanlar:
+  sonra: 62 dosyada 37 / 58 / 14 / 109 / 29). Sonraki kaydın veritabanı ve
+  posta yapılandırma ekranlarıyla aynı ağaçta: 47 dosyada 20 / 36 / 10 / 71 /
+  23; testin sabitlediği budur. Listeden kalıcı olarak çıkanlar:
   `Settings`, `UsersPage`, `DomainFileManager`, `DomainSSLSettings`,
   `DomainDetail`, `ImportPage`, `LicenseNotice`, `MonitoringPage`,
   `ComponentDetail` ve yeni `ServiceRecordLookup`. Azalan ama hâlâ listede
@@ -1979,7 +1981,14 @@ kataloğunda, kalanı `screens` ve `screens/server` içinde).
   kayıtları, işlem izleyicinin güvenli taraf çözücüsüyle),
   `lib/subscriptions.ts`, `lib/accounts.ts`; alan adı listesini Alan Adları
   sayfası, bir alan adının sayfası, ada göre araması, pano ve gezinme rayı tek
-  adres ve tek çözücüyle okur, böylece tek isteği paylaşırlar. `Remote` bir
+  adres ve tek çözücüyle okur, böylece tek isteği paylaşırlar. Kayıtlı bileşen
+  kayıtlarının, sonraki kaydın PostgreSQL ve MariaDB sayfaları dahil her
+  okuyucu için tek çözücüsü vardır (`useComponentConfigFiles`, içinden tek olgu
+  alınmış `useManagedServices`tir): liste olmayan bir yapılandırma dosyası
+  listesini de reddeder. Sayfanın kendi okumasından sonraki 30 saniye içinde
+  açılan bölüm o yanıtı kullanır ve istek göndermez; barındırma yetenekleri
+  zaten böyleydi. Böylece bir bileşen sayfası, başlığının kendi isteğinin
+  yanında paylaşılan tek istek yapar. `Remote` bir
   reddin HTTP durumunu taşır; böylece "böyle bir kayıt yok", "yanıt yok"tan
   ayrılabilir; `countText` bir sayıyı yazar; `CouldNotCheck`, Tekrar dene'nin
   yanında ikinci bir bakma yolu alır.
@@ -2017,7 +2026,8 @@ kataloğunda, kalanı `screens` ve `screens/server` içinde).
 
 **Yapılmayan.**
 
-- 53 dosya hâlâ eski yolla okuyor. Bu partinin ekranlarından: kurulum penceresi
+- 47 dosya hâlâ eski yolla okuyor (sonraki kaydın veritabanı ve posta
+  yapılandırma ekranlarından önce 53). Bu partinin ekranlarından: kurulum penceresi
   dışındaki bileşenler listesi, sayıları dışındaki pano (sistem rakamları,
   güvenlik duvarı, denetim kaydı, bileşen özeti), gezinme rayının sürüm ve
   bileşen okumaları ve `ServiceShell`'in okuyucusu.
@@ -2081,3 +2091,431 @@ yapılandırmanın her birinde 69 durum.
   Firefox, ekran okuyucu, dokunmatik aygıt; taklit görünümler; yönetici
   dışındaki roller. Hesap ya da plan oluşturan formlar gönderilmedi. Kurulum
   rehberi cümlesi katalogda değiştirildi, ekranda görülmedi.
+
+### Veritabanı ve posta yapılandırma ekranları: dosya düzenleyici olmadan önce okunur, kayıt hizmetin onunla ne yaptığını söyler (2026-10-09)
+
+Bileşen testleri, bir geliştirme konuğunda gerçekten çalıştırılan iki doğrulama
+programı ve yerel bir sahte sunucuya karşı tarayıcı incelemesi (bu kaydın
+sonunda) bulunan kaynak durumu; kurulu sunucu yok. Aynı tarihli dayanıklılık
+sözleşmesi kaydına bakın. Yukarıdaki kaydın kuralını ("bilinmeden olumsuz durum
+yok") PostgreSQL ve MariaDB sayfalarına, bir alan adının posta sekmelerine ve
+Postfix sayfasına uygular ve bir yapılandırma kaydının söylemesi gerekeni ekler:
+her kaydın sonucu şunlardan biridir: kaydedildi (çalışan hizmete ne olduğuyla
+birlikte), herhangi bir değişiklikten önce reddedildi, bir değişiklikten sonra
+başarısız oldu ve önceki dosya geri kondu, ya da bilinmiyor.
+
+**Aşağıdaki her durumda kim işlem yapar.** Ekrandaki kişi; bir metin "sunucuda"
+diyorsa sunucu sahibi, metindeki komutla. Hiçbir şey kendiliğinden yeniden
+denenmez. Tekrar dene, "Dosyayı yeniden yükle" ve "Geçerli adresi yeniden yükle"
+yalnız okur.
+
+**Metinler.** Anahtarlar `web/src/i18n/screens/server` (veritabanı, kuyruk) ve
+`web/src/i18n/screens` (posta) içindedir; `{file}` dosyanın kendi adıdır
+(`postgresql.conf`), `{service}` hizmetin adıdır (`PostgreSQL`, `MariaDB`).
+
+- *Bir yapılandırma dosyası: okunuyor, okunamadı (bilinmeyen sonuç; düzenleyici yok, Kaydet yok).*
+  - `dbconf.files.checking` (bileşenin hangi dosyaları olduğu):
+    - EN: "Reading which configuration files {service} has on this server…"
+    - TR: "{service} hizmetinin bu sunucudaki yapılandırma dosyaları okunuyor…"
+  - `dbconf.files.unknown` (aynı okuma başarısız):
+    - EN: "The configuration files of {service} could not be read from the
+      server, so none is shown. This does not mean a file is missing. Nothing
+      was changed. Try again."
+    - TR: "{service} hizmetinin yapılandırma dosyaları sunucudan okunamadı; bu
+      yüzden hiçbiri gösterilmiyor. Bu, bir dosyanın eksik olduğu anlamına
+      gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+  - `dbconf.checking` (dosyanın kendisi):
+    - EN: "Reading {file} from the server…"
+    - TR: "{file} sunucudan okunuyor…"
+  - `dbconf.unknown` (dosya okunamadı):
+    - EN: "{file} could not be read from the server, so its settings are not
+      shown and nothing can be saved here. This does not mean the file is empty
+      or missing. Nothing was changed. Try again."
+    - TR: "{file} sunucudan okunamadı; bu yüzden ayarları gösterilmiyor ve
+      buradan kayıt yapılamıyor. Bu, dosyanın boş ya da eksik olduğu anlamına
+      gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+- *Bir yapılandırma dosyası: biliniyor. Düzenleyicinin kendisi hakkında söyledikleri.*
+  - `dbconf.note`:
+    - EN: "Only the lines you change are rewritten. Comments, includes and
+      everything this screen does not show stay in the file exactly as they
+      are."
+    - TR: "Yalnız değiştirdiğiniz satırlar yeniden yazılır. Yorumlar, include
+      satırları ve bu ekranın göstermediği her şey dosyada olduğu gibi kalır."
+  - `dbconf.noSettings`:
+    - EN: "CelikPanel found no setting it can show in {file}. The whole file can
+      be read and edited under “Advanced: raw files”."
+    - TR: "CelikPanel, {file} içinde gösterebileceği bir ayar bulamadı. Dosyanın
+      tamamı “Gelişmiş: ham dosyalar” altında okunabilir ve düzenlenebilir."
+  - `dbconf.hba.none`:
+    - EN: "This file holds no access rule. PostgreSQL then refuses every
+      connection."
+    - TR: "Bu dosyada hiç erişim kuralı yok. PostgreSQL bu durumda her
+      bağlantıyı reddeder."
+  - `dbconf.hba.order`:
+    - EN: "PostgreSQL uses the first rule that matches a connection, so the
+      order matters. New rules are added at the end; to place a rule elsewhere,
+      edit the file under “Advanced: raw files”."
+    - TR: "PostgreSQL bir bağlantıyla eşleşen ilk kuralı kullanır; bu yüzden
+      sıra önemlidir. Yeni kurallar sona eklenir; bir kuralı başka bir yere
+      koymak için dosyayı “Gelişmiş: ham dosyalar” altında düzenleyin."
+  - `dbconf.hba.asWritten`:
+    - EN: "Shown as written in the file. This screen does not change or remove
+      it; edit it under “Advanced: raw files”."
+    - TR: "Dosyada yazıldığı gibi gösteriliyor. Bu ekran onu değiştirmez ya da
+      kaldırmaz; “Gelişmiş: ham dosyalar” altında düzenleyin."
+  - `dbconf.hba.incomplete`:
+    - EN: "Fill in every field of the changed or new rule before saving."
+    - TR: "Kaydetmeden önce değişen ya da yeni kuralın her alanını doldurun."
+- *Dosya okunduktan sonra değiştiği için reddedilen kayıt (doğrulanmış ret, `409 SETTINGS_CHANGED` ya da `SETTINGS_VERSION_REQUIRED`; yazılan durur, Kaydet kapalıdır, tek eylem yeniden yükler).*
+  - `dbconf.stale`:
+    - EN: "{file} changed on the server after this page read it, so nothing was
+      saved. What you changed is still shown below. Reload the file, then make
+      your change again."
+    - TR: "{file}, bu sayfa onu okuduktan sonra sunucuda değişti; bu yüzden
+      hiçbir şey kaydedilmedi. Değiştirdikleriniz aşağıda duruyor. Dosyayı
+      yeniden yükleyin, sonra değişikliğinizi tekrar yapın."
+  - `dbconf.reload` (eylem):
+    - EN: "Reload the file"
+    - TR: "Dosyayı yeniden yükle"
+- *Herhangi bir şey yazılmadan reddedilen kayıt (`422 CONFIG_INVALID`; doğrulanmış ret, ekrandaki kişi düzeltir ve yeniden kaydeder). Hizmetin söylediği satır, adlandırdığı alanın ya da kuralın yanında, "{service} yanıtı:" ya da "Kabul edilmedi:" sözünden sonra gösterilir.*
+  - `dbconf.refused.daemon` (gerekçe `daemon`):
+    - EN: "Nothing is changed: {service} read the new file and does not accept
+      it. Correct what it names and save again."
+    - TR: "Hiçbir şey değişmedi: {service} yeni dosyayı okudu ve kabul etmiyor.
+      Adını verdiği yeri düzeltip yeniden kaydedin."
+  - `dbconf.refused.syntax` (gerekçe `syntax`):
+    - EN: "Nothing was saved: a rule you changed or added is not one {service}
+      accepts. Correct the rule marked below and save again."
+    - TR: "Hiçbir şey kaydedilmedi: değiştirdiğiniz ya da eklediğiniz bir kural
+      {service} tarafından kabul edilen bir kural değil. Aşağıda işaretlenen
+      kuralı düzeltip yeniden kaydedin."
+  - `dbconf.refused.lockout` (gerekçe `lockout`):
+    - EN: "Nothing was saved: this change would take away the local
+      administrator access to PostgreSQL, the rule that lets the server’s own
+      postgres account connect over the local socket. CelikPanel and your own
+      console both use it. Keep a “local all postgres peer” rule above any rule
+      that would refuse it, then save again."
+    - TR: "Hiçbir şey kaydedilmedi: bu değişiklik PostgreSQL’e yerel yönetici
+      erişimini, yani sunucunun kendi postgres hesabının yerel soket üzerinden
+      bağlanmasını sağlayan kuralı kaldırırdı. Onu hem CelikPanel hem de sizin
+      konsolunuz kullanır. Onu reddedecek her kuralın üstünde bir “local all
+      postgres peer” kuralı bırakın, sonra yeniden kaydedin."
+  - `dbconf.refused.empty` (gerekçe `empty`):
+    - EN: "Nothing was saved: the new content is empty, and CelikPanel does not
+      replace a configuration file with nothing. Reload the file, then make the
+      change again."
+    - TR: "Hiçbir şey kaydedilmedi: yeni içerik boş ve CelikPanel bir
+      yapılandırma dosyasını boş içerikle değiştirmez. Dosyayı yeniden yükleyin,
+      sonra değişikliği tekrar yapın."
+  - `dbconf.refused.shape` (gerekçe `shape`):
+    - EN: "Nothing was saved: the new content is not a configuration file
+      CelikPanel writes (it is larger than 1 MB or holds a NUL byte)."
+    - TR: "Hiçbir şey kaydedilmedi: yeni içerik CelikPanel’in yazdığı bir
+      yapılandırma dosyası değil (1 MB’tan büyük ya da NUL baytı içeriyor)."
+  - `dbconf.refused.no_validator` (gerekçe `no_validator`; sunucuda eksik bir önkoşul):
+    - EN: "Nothing was saved: the program that checks this file before it
+      replaces the current one ({name}) could not be run on this server, and
+      CelikPanel does not install a database configuration it could not check.
+      The file can still be edited on the server itself."
+    - TR: "Hiçbir şey kaydedilmedi: bu dosyayı geçerli dosyanın yerine konmadan
+      önce denetleyen program ({name}) bu sunucuda çalıştırılamadı ve CelikPanel
+      denetleyemediği bir veritabanı yapılandırmasını kurmaz. Dosya sunucunun
+      kendisinde yine düzenlenebilir."
+  - `dbconf.refused.other` (bu ekranın sözü olmayan bir gerekçe):
+    - EN: "Nothing is changed: the new file was refused. Correct it and save
+      again."
+    - TR: "Hiçbir şey değişmedi: yeni dosya reddedildi. Düzeltip yeniden
+      kaydedin."
+  - `dbconf.says`:
+    - EN: "{service} says:"
+    - TR: "{service} yanıtı:"
+  - `dbconf.notAccepted`:
+    - EN: "Not accepted:"
+    - TR: "Kabul edilmedi:"
+  - `dbconf.atLine`:
+    - EN: "Line {line}:"
+    - TR: "{line}. satır:"
+- *Dosya kurulduktan sonra yeniden yükleme başarısız oldu (`502 CONFIG_RELOAD_FAILED`; doğrulanmış hata, hizmetin satırıyla birlikte hata yüzeyinde çizilir).*
+  - `dbconf.reloadFailed.restored` (gerekçe `restored`: şu an hiçbir şey değişmiş değil):
+    - EN: "The change was not kept: {service} could not reload with the new
+      file, so CelikPanel put the previous file back and {service} is running
+      with it. Correct the setting and save again."
+    - TR: "Değişiklik tutulmadı: {service} yeni dosyayla yeniden yüklenemedi; bu
+      yüzden CelikPanel önceki dosyayı geri koydu ve {service} onunla çalışıyor.
+      Ayarı düzeltip yeniden kaydedin."
+  - `dbconf.reloadFailed.notRestored` (gerekçe `not_restored`: sunucu sahibi, sunucuda işlem yapar):
+    - EN: "{service} could not reload with the new file, and CelikPanel could
+      not put the previous file back with certainty. What the server holds now
+      is shown below. Check the file on the server, reload {service} there, then
+      reload this page. The other version is kept on the server as:"
+    - TR: "{service} yeni dosyayla yeniden yüklenemedi ve CelikPanel önceki
+      dosyayı kesin olarak geri koyamadı. Sunucunun şu an tuttuğu dosya aşağıda
+      gösteriliyor. Dosyayı sunucuda denetleyin, {service} hizmetini orada
+      yeniden yükleyin, sonra bu sayfayı yenileyin. Diğer sürüm sunucuda şu adla
+      duruyor:"
+- *Bir kaydın yanıtı hiç gelmedi (bilinmeyen sonuç; her şeyden önce dosya yeniden okunur).*
+  - `dbconf.saveUnknown`:
+    - EN: "The answer to this save did not arrive, so CelikPanel does not know
+      whether the file was changed. Reload the file to see what the server holds
+      before saving again."
+    - TR: "Bu kaydın yanıtı gelmedi; bu yüzden CelikPanel dosyanın değişip
+      değişmediğini bilmiyor. Yeniden kaydetmeden önce sunucunun ne tuttuğunu
+      görmek için dosyayı yeniden yükleyin."
+- *Kaydedildi. Çalışan hizmete ne olduğu söylenir, asla varsayılmaz.*
+  - `dbconf.saved.reloaded` (PostgreSQL):
+    - EN: "Saved. {service} read the file again."
+    - TR: "Kaydedildi. {service} dosyayı yeniden okudu."
+  - `dbconf.saved.waitsForRestart` (PostgreSQL: bekleyen ayarlar):
+    - EN: "These settings take effect only after {service} restarts: {names}.
+      Restart it from the top of this page when it suits you."
+    - TR: "Şu ayarlar ancak {service} yeniden başlatıldıktan sonra geçerli olur:
+      {names}. Size uygun olduğunda bu sayfanın üstünden yeniden başlatın."
+  - `dbconf.saved.notChecked` (sunucuya sorulamadı):
+    - EN: "CelikPanel could not ask {service} whether it accepts every line of
+      the file. The reload itself reported no error."
+    - TR: "CelikPanel, {service} hizmetine dosyanın her satırını kabul edip
+      etmediğini soramadı. Yeniden yüklemenin kendisi hata bildirmedi."
+  - `dbconf.saved.restartRequired` (MariaDB):
+    - EN: "Saved. {service} checked the file and accepts it. {service} reads
+      this file only when it starts, so the change takes effect after its next
+      restart. Restart it from the top of this page when it suits you."
+    - TR: "Kaydedildi. {service} dosyayı denetledi ve kabul ediyor. {service} bu
+      dosyayı yalnız başlarken okur; bu yüzden değişiklik bir sonraki yeniden
+      başlatmadan sonra geçerli olur. Size uygun olduğunda bu sayfanın üstünden
+      yeniden başlatın."
+  - `dbconf.saved.notRunning` (hizmet durmuş):
+    - EN: "Saved. {service} is not running, so it will read the file when it
+      starts."
+    - TR: "Kaydedildi. {service} çalışmıyor; dosyayı başladığında okuyacak."
+  - `dbconf.saved.unchanged`:
+    - EN: "Nothing to save: the file on the server already holds exactly this."
+    - TR: "Kaydedilecek bir şey yok: sunucudaki dosya zaten tam olarak bunu
+      tutuyor."
+  - `dbconf.saved.backup`:
+    - EN: "The previous file is kept on the server as"
+    - TR: "Önceki dosya sunucuda şu adla duruyor:"
+- *Bir alan adının postası: okunuyor, okunamadı.*
+  - `mail.accounts.checking`:
+    - EN: "Reading the email accounts of this domain…"
+    - TR: "Bu alan adının e-posta hesapları okunuyor…"
+  - `mail.accounts.unknown`:
+    - EN: "The email accounts of this domain could not be read from the server,
+      so the list is not shown. This does not mean there are none. Nothing was
+      changed. Try again."
+    - TR: "Bu alan adının e-posta hesapları sunucudan okunamadı; bu yüzden liste
+      gösterilmiyor. Bu, e-posta hesabı olmadığı anlamına gelmez. Hiçbir şey
+      değiştirilmedi. Tekrar deneyin."
+  - `mail.forwarders.checking`:
+    - EN: "Reading the forwarders of this domain…"
+    - TR: "Bu alan adının yönlendiricileri okunuyor…"
+  - `mail.forwarders.unknown`:
+    - EN: "The forwarders of this domain could not be read from the server, so
+      the list is not shown. This does not mean there are none. Nothing was
+      changed. Try again."
+    - TR: "Bu alan adının yönlendiricileri sunucudan okunamadı; bu yüzden liste
+      gösterilmiyor. Bu, yönlendirici olmadığı anlamına gelmez. Hiçbir şey
+      değiştirilmedi. Tekrar deneyin."
+  - `mail.quota.unknown`:
+    - EN: "How much each email account uses could not be read from the server,
+      so the usage column says so. The accounts themselves are listed. Try
+      again."
+    - TR: "Her e-posta hesabının ne kadar yer kullandığı sunucudan okunamadı;
+      kullanım sütunu bunu belirtiyor. E-posta hesaplarının kendisi
+      listeleniyor. Tekrar deneyin."
+  - `mail.setup.checking`:
+    - EN: "Reading the connection settings…"
+    - TR: "Bağlantı ayarları okunuyor…"
+  - `mail.setup.unknown`:
+    - EN: "The connection settings of this domain could not be read from the
+      server, so they are not shown. Nothing was changed. Try again."
+    - TR: "Bu alan adının bağlantı ayarları sunucudan okunamadı; bu yüzden
+      gösterilmiyor. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+  - `mail.webmail.unknown`:
+    - EN: "CelikPanel could not check whether webmail is available on this
+      server. This does not mean it is not. Nothing was changed. Try again."
+    - TR: "CelikPanel bu sunucuda web postanın kullanılabilir olup olmadığını
+      kontrol edemedi. Bu, kullanılamadığı anlamına gelmez. Hiçbir şey
+      değiştirilmedi. Tekrar deneyin."
+  - `mail.healthChecking`:
+    - EN: "Checking deliverability…"
+    - TR: "Teslim edilebilirlik kontrol ediliyor…"
+  - `mail.healthUnknown`:
+    - EN: "The deliverability checks of this domain could not be read from the
+      server, so no result is shown. This does not mean a check failed. Nothing
+      was changed. Try again."
+    - TR: "Bu alan adının teslim edilebilirlik denetimleri sunucudan okunamadı;
+      bu yüzden sonuç gösterilmiyor. Bu, bir denetimin başarısız olduğu anlamına
+      gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+  - `mail.rbl.unknown`:
+    - EN: "The blocklist check did not complete, so no result is shown. This
+      does not mean the address is listed, and it does not mean it is clean. Try
+      again."
+    - TR: "Kara liste kontrolü tamamlanmadı; bu yüzden sonuç gösterilmiyor. Bu,
+      adresin listede olduğu anlamına da temiz olduğu anlamına da gelmez. Tekrar
+      deneyin."
+- *Catch-all adresi: değiştirilebilmeden önce gösterilir.*
+  - `mail.catchAll.checking`:
+    - EN: "Reading the catch-all address of this domain…"
+    - TR: "Bu alan adının catch-all adresi okunuyor…"
+  - `mail.catchAll.unknown`:
+    - EN: "The catch-all address of this domain could not be read from the
+      server, so it is not shown and cannot be changed here. This does not mean
+      none is set. Nothing was changed. Try again."
+    - TR: "Bu alan adının catch-all adresi sunucudan okunamadı; bu yüzden
+      gösterilmiyor ve buradan değiştirilemiyor. Bu, bir adres ayarlı olmadığı
+      anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+  - `mail.catchAll.none` (biliniyor: ayarlı değil):
+    - EN: "No catch-all address is set for this domain."
+    - TR: "Bu alan adı için catch-all adresi ayarlı değil."
+  - `mail.catchAll.stale` (`409 SETTINGS_CHANGED`):
+    - EN: "The catch-all address changed on the server after this page read it,
+      so nothing was saved. What you typed is still in the field. Reload the
+      current address, then make your change again."
+    - TR: "Catch-all adresi, bu sayfa onu okuduktan sonra sunucuda değişti; bu
+      yüzden hiçbir şey kaydedilmedi. Yazdığınız adres alanda duruyor. Geçerli
+      adresi yeniden yükleyin, sonra değişikliğinizi tekrar yapın."
+  - `mail.catchAll.reload` (eylem):
+    - EN: "Reload the current address"
+    - TR: "Geçerli adresi yeniden yükle"
+  - `mail.catchAll.notSaved`:
+    - EN: "The catch-all address was not saved. Nothing was changed. Try again."
+    - TR: "Catch-all adresi kaydedilmedi. Hiçbir şey değiştirilmedi. Tekrar
+      deneyin."
+- *Posta kuyruğu.*
+  - `postfix.queue.checking`:
+    - EN: "Reading the mail queue…"
+    - TR: "Mail kuyruğu okunuyor…"
+  - `postfix.queue.unknown`:
+    - EN: "The mail queue could not be read from Postfix, so it is not shown.
+      This does not mean the queue is empty. Nothing was changed. Try again; if
+      it keeps failing, check on the server that Postfix is running (sudo
+      systemctl status postfix)."
+    - TR: "Mail kuyruğu Postfix’ten okunamadı; bu yüzden gösterilmiyor. Bu,
+      kuyruğun boş olduğu anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar
+      deneyin; sorun sürerse sunucuda Postfix’in çalıştığını denetleyin (sudo
+      systemctl status postfix)."
+  - `postfix.actionFailed`:
+    - EN: "The queue action was not confirmed by the server. The queue is read
+      again below."
+    - TR: "Kuyruk işlemi sunucu tarafından doğrulanmadı. Kuyruk aşağıda yeniden
+      okunuyor."
+- *Her ekrandan kodla okunan iki ret* (kabuk, `err.<CODE>`):
+  - `err.MAIL_POLICY_NOT_RELOADED` (`502`, `mutation_applied: true`; kaydedilen değerlerin üstünde, "Yeniden yükleme yanıtı:" sözü ve satırıyla çizilir):
+    - EN: "The mail policy was saved to /etc/postfix/main.cf, but Postfix could
+      not be reloaded, so Postfix is still running with the previous settings.
+      Nothing was rolled back. On the server, run sudo postfix check to see what
+      Postfix objects to, correct it, then run sudo systemctl reload postfix.
+      The values shown below are the saved ones."
+    - TR: "Posta politikası /etc/postfix/main.cf dosyasına kaydedildi ancak
+      Postfix yeniden yüklenemedi; bu yüzden Postfix hâlâ önceki ayarlarla
+      çalışıyor. Hiçbir şey geri alınmadı. Sunucuda sudo postfix check komutuyla
+      Postfix’in neye itiraz ettiğini görün, düzeltin, sonra sudo systemctl
+      reload postfix komutunu çalıştırın. Aşağıda gösterilen değerler kaydedilen
+      değerlerdir."
+  - `err.CRON_JOB_AMBIGUOUS` (`409`):
+    - EN: "This task stands twice in the crontab, so CelikPanel cannot tell
+      which line to change and changed nothing. Remove one of the two lines on
+      the server (sudo crontab -u <site user> -e), then reload this list."
+    - TR: "Bu görev crontab’da iki kez duruyor; bu yüzden CelikPanel hangi
+      satırı değiştireceğini bilemedi ve hiçbir şeyi değiştirmedi. Sunucuda iki
+      satırdan birini kaldırın (sudo crontab -u <site kullanıcısı> -e), sonra bu
+      listeyi yeniden yükleyin."
+
+API yanıtları aynı durumlar için İngilizce bir cümle taşır (Panel:
+`config_rpc_error.go`, `mail_policy_handlers.go`, `email_handlers.go`,
+`domain_cron_errors.go`); hizmetin söylediği satır onun yanında `vars.detail`
+içinde, sınırlı olarak, doğrulama kopyasının adı dosyanınkiyle değiştirilmiş ve
+parola atamasına benzeyen her şey silinmiş hâlde taşınır.
+
+**Ekrandaki kişi için ne değişti.**
+
+- *PostgreSQL ve MariaDB sayfaları.* Bileşenin dosya listesi okunurken: sakin
+  tek satır. Okunamadığında: bildirim ve Tekrar dene; "… bulunamadı." yalnız
+  okunmuş ve öyle bir dosyayı adlandırmayan bir tarama için. Düzenleyici yalnız
+  okunmuş bir dosya için vardır; her ayarı etkin ya da yorum satırı olarak
+  gösterir, değişeni işaretler ve Kaydet yalnız bilinen, değişmiş, eskimemiş bir
+  dosya için açıktır. `pg_hba.conf` dosyasının tablonun tutamadığı kuralları
+  (seçenekler, tırnaklı adlar, ağ maskesi, include'lar) yazıldığı gibi
+  gösterilir.
+- *Bir alan adının postası.* "Hesaplar" ve "Yönlendirme" yanındaki sayı, liste
+  bilinince sayıdır, okunurken "…", okunamayınca "–". "Adres oluştur" listeyi
+  gerektirir. Okunamayan kullanım, sütununda bunu söyler ve posta kutuları
+  listelenmeye devam eder. Web posta kartı "bu sunucuda kullanılamıyor" sözünü
+  yalnız sunucunun verdiği bir yanıt için söyler.
+- *Catch-all.* Önce geçerli adres okunur ve gösterilir; o zamana dek alan ve iki
+  düğme kapalıdır. Bir adres ayarlıyken "Kapat" her zaman sunulur.
+- *Posta kuyruğu.* Sayılar ve "Mail kuyruğu boş" yalnız okunmuş bir kuyruk için
+  vardır. Boşaltma ve silme o zamana dek kapalıdır ve yanıtları okunur: sunucunun
+  doğrulamadığı bir işlem yapıldı diye duyurulmaz.
+- *Zamanlanmış görevler.* Devre dışı bir görev etkinleştirilebilir,
+  değiştirilebilir ve silinebilir (sunucu önceden üçünü de reddediyordu). Hiçbir
+  metin değişmedi.
+
+**Yapılmayan.** Okunamadı bildirimi okumanın neden başarısız olduğunu söylemez.
+Posta yöneticisinin sekmeleri telefonda kaymak yerine alt satıra geçer.
+Telefonda posta kutusu ve kuyruk tabloları yana kayar. Panel'in zamanlanmış bir
+görevin üstüne yazdığı açıklama, görev silindikten sonra kalır. Taşınmayan: izin
+listesinin diğer 47 dosyası (bu partinin iki parçası tek ağaçta durmadan önce
+56); posta kimlik doğrulama paneli bunlardan biridir.
+
+**Bu partinin ilk parçasıyla tek ağaçta (aynı tarih).** İki parça yan yana
+yazıldı ve her biri kayıtlı bileşen kayıtlarını kendi yoluyla okuyordu. Artık
+tek çözücü ve tek istek var (yukarıda "Adres başına tek okuyucu"); bu,
+PostgreSQL ve MariaDB sayfalarında üç şeyi değiştirir.
+
+1. *Çözücünün reddettiği tarama "okunamadı"dır.* Bu kaydın daha gevşek
+   okuyucusu, hizmet listesi taşıyan her yanıtı tarama sayıyordu; bu yüzden hiç
+   taranmamış bir sunucu ya da katalog alanlarını taşımayan bir yanıt
+   "postgresql.conf bulunamadı" diye okunuyordu. İkisi de artık Tekrar dene ile
+   `dbconf.files.unknown`dır; "bulunamadı", öyle bir dosyayı adlandırmayan
+   eksiksiz bir tarama ister.
+2. *Tek okuma bir kez duyurulur.* Düzenleyicinin altındaki genel bakış ve
+   günlük, dosya listesiyle aynı okumadan çizilir. Yanıtla birlikte gelirler; o
+   okuma sürerken ya da başarısız olduğunda bunu dosya kartı, tek Tekrar dene
+   ile söyler. Bu düzeltilmeden önce başarısız bir okuma iki bildirim ve iki
+   Tekrar dene gösteriyor, geç açılan bölümün yaptığı ikinci istek başarısız
+   olup ilk yanıtın az önce gösterdiği düzenleyiciyi geri alabiliyordu.
+3. *Adresiyle açılan sayfa kayıtlarla başlar.* Bir bileşen sayfasının üstündeki
+   arama (ilk parça) kayıtları sayfa çizilmeden önce okur; bu yüzden orada
+   yavaş ya da başarısız bir okuma, aramanın "okunuyor" ya da "okunamadı"
+   durumudur. Dosya kartının kendi iki durumu, sayfa Bileşenler listesinden
+   açıldığında görülür. Tarayıcı senaryosu `dbconfig` sayfaya bu yoldan ulaşır.
+
+Bir bileşen sayfasının başlık düğmeleri artık Türkçede 390 px'lik ekranın dışına
+taşmaz: ilk parçanın kabuğu onları ikinci satıra indirir.
+
+**Tarayıcı incelemesi (2026-10-09).** Gerçek, kurulu bir Chrome'da yerel sahte
+sunucuya karşı (`web/tools/browser-inspect`, `dbconfig`, `mailscreens`,
+`mailqueue`, `cron` senaryoları): masaüstü 1440×900 ve telefon 390×844, Türkçe ve
+İngilizce, açık ve koyu; sekiz yapılandırmanın her birinde 45 durum.
+
+- *Sekizinde de ölçülen.* Bir okumanın yolda olduğu ya da başarısız olduğu her
+  durumda olumsuz cümlelerin hiçbiri ekranda değildi ("bulunamadı.", "hiç erişim
+  kuralı yok", "Henüz e-posta hesabı yok", "bu sunucuda kullanılamıyor", "Mail
+  kuyruğu boş", "catch-all adresi ayarlı değil" ve İngilizce biçimleri) ve
+  bilinmeyen bir yapılandırma dosyası için hiçbir düzenleyici alanı ve Kaydet
+  yoktu. Başarısız her okuma, Tekrar dene ile birlikte tam olarak kendi
+  bildirimini gösterdi. Hiçbir durumda yatay sayfa taşması yoktu. Reddedilen bir
+  kayıttan sonra yazılan değer alanında duruyordu ve hizmetin satırı onun
+  yanındaydı (`aria-describedby` ile `aria-invalid`). 409'dan sonra alanlar ve
+  Kaydet kapalıydı ve tek eylem yeniden yüklemeydi. Devre dışı zamanlanmış görev
+  tek bir PUT ve tek bir yeniden okumayla etkin oldu.
+- *Bakılarak bulunan ve düzeltilen.* Posta yöneticisinin dört sekmesi telefon
+  ekranının dışına taşıyordu; "Ayarlar" sekmesine (catch-all oradadır)
+  ulaşılamıyordu ve bir alanı görünür kılmak bütün sayfayı yana kaydırıyordu:
+  artık alt satıra geçiyorlar. Telefonda bir erişim kuralının kaldırma denetimi
+  her kuralın altında kendi satırında duruyordu ve kayıt satırı üç satır
+  tutuyordu: kuralın numarası ve kaldırma denetimi aynı satırı paylaşıyor, durum
+  satırı iki kısa eylemin üstünde duruyor. Erişim kurallarının satır başına
+  yinelenen sütun adları geniş ekranda tekrar ediyordu: orada sütunları ilk satır
+  adlandırıyor. Hizmetin bir alanın yanındaki satırı aynı ret için ikinci bir
+  uyarıydı: tek duyuru formun üstündeki bildirimdir. İki simge denetimi (kota
+  düzenle, kopyala) 22 px idi: artık 26 px.
+- *Görülen ve burada değiştirilmeyen.* Bileşen sayfasının geri bağlantısı (başka
+  bir ekranın dosyası; başlık düğmeleri bu partinin ilk parçasından beri alt
+  satıra geçer). Kapalı birincil düğme koyu
+  temada etkin olana yakındır (ortak düğme). Düzenleyici kartı, dosya gelince
+  tek satırdan bütün düzenleyiciye büyür; altında duranlar yer değiştirir.
+- *Kapsanmayan.* Herhangi bir gerçek sunucu; Safari, Firefox, ekran okuyucu,
+  dokunmatik aygıt; taklit görünümler; yönetici dışındaki roller; ham dosya
+  düzenleyicisinin ret durumları (yalnız bağlanan test).

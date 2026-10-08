@@ -2033,7 +2033,9 @@ the rest in `screens` and `screens/server`).
 **How it is kept from coming back.**
 
 - *The ratchet.* After this batch: 27 / 43 / 12 / 83 / 25 in 53 files (after the
-  first: 37 / 58 / 14 / 109 / 29 in 62). Off the list for good: `Settings`,
+  first: 37 / 58 / 14 / 109 / 29 in 62). With the database and mail
+  configuration screens of the next entry in the same tree: 20 / 36 / 10 / 71 /
+  23 in 47 files, which is what the test pins. Off the list for good: `Settings`,
   `UsersPage`, `DomainFileManager`, `DomainSSLSettings`, `DomainDetail`,
   `ImportPage`, `LicenseNotice`, `MonitoringPage`, `ComponentDetail`, and the
   new `ServiceRecordLookup`. Lower but still listed: `App` (one response
@@ -2047,6 +2049,13 @@ the rest in `screens` and `screens/server`).
   `lib/subscriptions.ts`, `lib/accounts.ts`; the domain list is read by the
   Domains page, a domain's page, its lookup by name, the dashboard and the
   navigation rail through one address and one decoder, so they share a request.
+  The stored component records have one decoder for every reader, the
+  PostgreSQL and MariaDB pages of the next entry among them
+  (`useComponentConfigFiles` is `useManagedServices` with one fact taken out):
+  it also refuses a list of configuration files that is not a list. A section
+  that mounts within 30 seconds of the page's own read uses that answer and
+  sends nothing, as the hosting capabilities already did, so a component's page
+  makes one shared request beside its header's own.
   `Remote` carries the HTTP status of a refusal, so "no such record" can be told
   from "no answer"; `countText` writes a count; `CouldNotCheck` takes a second
   way to look beside Retry.
@@ -2084,7 +2093,8 @@ the rest in `screens` and `screens/server`).
 
 **Not done.**
 
-- 53 files still read the old way. Of this batch's screens: the components list
+- 47 files still read the old way (53 before the database and mail
+  configuration screens of the next entry). Of this batch's screens: the components list
   outside its install dialogue, the dashboard outside its counts (system
   figures, firewall, audit trail, component summary), the navigation rail's
   version and component reads, and `ServiceShell`'s reader.
@@ -2149,3 +2159,426 @@ eight configurations.
   reader, a touch device; the imitation skins; roles other than the
   administrator. The forms that create an account or a plan were not submitted.
   The setup-guide sentence was changed in the catalogue and not seen on screen.
+
+### Database and mail configuration screens: a file is read before it is an editor, and a save says what the service did with it (2026-10-09)
+
+Source state with component tests, the two validating programs run for real on a
+development guest, and a browser inspection against a loopback mock (at the end
+of this entry); no installed server. See the resilience contract entry of the
+same date. It applies the rule of the entry above ("no negative state unless it
+is known") to the PostgreSQL and MariaDB pages, a domain's mail tabs and the
+Postfix page, and adds what a configuration save must say: the result of every
+save is one of saved (with what happened to the running service), refused before
+any change, failed after a change with the previous file back, or unknown.
+
+**Who acts, in every case below.** The person at the screen, unless a text says
+"on the server": then the server owner, with the command in the text. Nothing
+retries by itself. Retry, "Reload the file" and "Reload the current address"
+only read.
+
+**The texts.** Keys are in `web/src/i18n/screens/server` (database, queue) and
+`web/src/i18n/screens` (mail); `{file}` is the file's own name
+(`postgresql.conf`), `{service}` the service's (`PostgreSQL`, `MariaDB`).
+
+- *A configuration file: being read, could not be read (unknown result; no editor, no Save).*
+  - `dbconf.files.checking` (which files the component has):
+    - EN: "Reading which configuration files {service} has on this server…"
+    - TR: "{service} hizmetinin bu sunucudaki yapılandırma dosyaları okunuyor…"
+  - `dbconf.files.unknown` (the same read failed):
+    - EN: "The configuration files of {service} could not be read from the
+      server, so none is shown. This does not mean a file is missing. Nothing
+      was changed. Try again."
+    - TR: "{service} hizmetinin yapılandırma dosyaları sunucudan okunamadı; bu
+      yüzden hiçbiri gösterilmiyor. Bu, bir dosyanın eksik olduğu anlamına
+      gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+  - `dbconf.checking` (the file itself):
+    - EN: "Reading {file} from the server…"
+    - TR: "{file} sunucudan okunuyor…"
+  - `dbconf.unknown` (the file could not be read):
+    - EN: "{file} could not be read from the server, so its settings are not
+      shown and nothing can be saved here. This does not mean the file is empty
+      or missing. Nothing was changed. Try again."
+    - TR: "{file} sunucudan okunamadı; bu yüzden ayarları gösterilmiyor ve
+      buradan kayıt yapılamıyor. Bu, dosyanın boş ya da eksik olduğu anlamına
+      gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+- *A configuration file: known. What the editor says about itself.*
+  - `dbconf.note`:
+    - EN: "Only the lines you change are rewritten. Comments, includes and
+      everything this screen does not show stay in the file exactly as they
+      are."
+    - TR: "Yalnız değiştirdiğiniz satırlar yeniden yazılır. Yorumlar, include
+      satırları ve bu ekranın göstermediği her şey dosyada olduğu gibi kalır."
+  - `dbconf.noSettings`:
+    - EN: "CelikPanel found no setting it can show in {file}. The whole file can
+      be read and edited under “Advanced: raw files”."
+    - TR: "CelikPanel, {file} içinde gösterebileceği bir ayar bulamadı. Dosyanın
+      tamamı “Gelişmiş: ham dosyalar” altında okunabilir ve düzenlenebilir."
+  - `dbconf.hba.none`:
+    - EN: "This file holds no access rule. PostgreSQL then refuses every
+      connection."
+    - TR: "Bu dosyada hiç erişim kuralı yok. PostgreSQL bu durumda her
+      bağlantıyı reddeder."
+  - `dbconf.hba.order`:
+    - EN: "PostgreSQL uses the first rule that matches a connection, so the
+      order matters. New rules are added at the end; to place a rule elsewhere,
+      edit the file under “Advanced: raw files”."
+    - TR: "PostgreSQL bir bağlantıyla eşleşen ilk kuralı kullanır; bu yüzden
+      sıra önemlidir. Yeni kurallar sona eklenir; bir kuralı başka bir yere
+      koymak için dosyayı “Gelişmiş: ham dosyalar” altında düzenleyin."
+  - `dbconf.hba.asWritten`:
+    - EN: "Shown as written in the file. This screen does not change or remove
+      it; edit it under “Advanced: raw files”."
+    - TR: "Dosyada yazıldığı gibi gösteriliyor. Bu ekran onu değiştirmez ya da
+      kaldırmaz; “Gelişmiş: ham dosyalar” altında düzenleyin."
+  - `dbconf.hba.incomplete`:
+    - EN: "Fill in every field of the changed or new rule before saving."
+    - TR: "Kaydetmeden önce değişen ya da yeni kuralın her alanını doldurun."
+- *Save refused because the file changed after it was read (verified refusal, `409 SETTINGS_CHANGED` or `SETTINGS_VERSION_REQUIRED`; what was typed stays, Save is off, the one action reloads).*
+  - `dbconf.stale`:
+    - EN: "{file} changed on the server after this page read it, so nothing was
+      saved. What you changed is still shown below. Reload the file, then make
+      your change again."
+    - TR: "{file}, bu sayfa onu okuduktan sonra sunucuda değişti; bu yüzden
+      hiçbir şey kaydedilmedi. Değiştirdikleriniz aşağıda duruyor. Dosyayı
+      yeniden yükleyin, sonra değişikliğinizi tekrar yapın."
+  - `dbconf.reload` (the action):
+    - EN: "Reload the file"
+    - TR: "Dosyayı yeniden yükle"
+- *Save refused before anything was written (`422 CONFIG_INVALID`; verified refusal, the person at the screen corrects and saves again). The line the service said is shown next to the field or rule it names, after "{service} says:" or "Not accepted:".*
+  - `dbconf.refused.daemon` (reason `daemon`):
+    - EN: "Nothing is changed: {service} read the new file and does not accept
+      it. Correct what it names and save again."
+    - TR: "Hiçbir şey değişmedi: {service} yeni dosyayı okudu ve kabul etmiyor.
+      Adını verdiği yeri düzeltip yeniden kaydedin."
+  - `dbconf.refused.syntax` (reason `syntax`):
+    - EN: "Nothing was saved: a rule you changed or added is not one {service}
+      accepts. Correct the rule marked below and save again."
+    - TR: "Hiçbir şey kaydedilmedi: değiştirdiğiniz ya da eklediğiniz bir kural
+      {service} tarafından kabul edilen bir kural değil. Aşağıda işaretlenen
+      kuralı düzeltip yeniden kaydedin."
+  - `dbconf.refused.lockout` (reason `lockout`):
+    - EN: "Nothing was saved: this change would take away the local
+      administrator access to PostgreSQL, the rule that lets the server’s own
+      postgres account connect over the local socket. CelikPanel and your own
+      console both use it. Keep a “local all postgres peer” rule above any rule
+      that would refuse it, then save again."
+    - TR: "Hiçbir şey kaydedilmedi: bu değişiklik PostgreSQL’e yerel yönetici
+      erişimini, yani sunucunun kendi postgres hesabının yerel soket üzerinden
+      bağlanmasını sağlayan kuralı kaldırırdı. Onu hem CelikPanel hem de sizin
+      konsolunuz kullanır. Onu reddedecek her kuralın üstünde bir “local all
+      postgres peer” kuralı bırakın, sonra yeniden kaydedin."
+  - `dbconf.refused.empty` (reason `empty`):
+    - EN: "Nothing was saved: the new content is empty, and CelikPanel does not
+      replace a configuration file with nothing. Reload the file, then make the
+      change again."
+    - TR: "Hiçbir şey kaydedilmedi: yeni içerik boş ve CelikPanel bir
+      yapılandırma dosyasını boş içerikle değiştirmez. Dosyayı yeniden yükleyin,
+      sonra değişikliği tekrar yapın."
+  - `dbconf.refused.shape` (reason `shape`):
+    - EN: "Nothing was saved: the new content is not a configuration file
+      CelikPanel writes (it is larger than 1 MB or holds a NUL byte)."
+    - TR: "Hiçbir şey kaydedilmedi: yeni içerik CelikPanel’in yazdığı bir
+      yapılandırma dosyası değil (1 MB’tan büyük ya da NUL baytı içeriyor)."
+  - `dbconf.refused.no_validator` (reason `no_validator`; an unmet prerequisite on the server):
+    - EN: "Nothing was saved: the program that checks this file before it
+      replaces the current one ({name}) could not be run on this server, and
+      CelikPanel does not install a database configuration it could not check.
+      The file can still be edited on the server itself."
+    - TR: "Hiçbir şey kaydedilmedi: bu dosyayı geçerli dosyanın yerine konmadan
+      önce denetleyen program ({name}) bu sunucuda çalıştırılamadı ve CelikPanel
+      denetleyemediği bir veritabanı yapılandırmasını kurmaz. Dosya sunucunun
+      kendisinde yine düzenlenebilir."
+  - `dbconf.refused.other` (a reason this screen has no words for):
+    - EN: "Nothing is changed: the new file was refused. Correct it and save
+      again."
+    - TR: "Hiçbir şey değişmedi: yeni dosya reddedildi. Düzeltip yeniden
+      kaydedin."
+  - `dbconf.says`:
+    - EN: "{service} says:"
+    - TR: "{service} yanıtı:"
+  - `dbconf.notAccepted`:
+    - EN: "Not accepted:"
+    - TR: "Kabul edilmedi:"
+  - `dbconf.atLine`:
+    - EN: "Line {line}:"
+    - TR: "{line}. satır:"
+- *The reload failed after the file was installed (`502 CONFIG_RELOAD_FAILED`; a verified failure, drawn on the failure surface with the service's line).*
+  - `dbconf.reloadFailed.restored` (reason `restored`: nothing is changed now):
+    - EN: "The change was not kept: {service} could not reload with the new
+      file, so CelikPanel put the previous file back and {service} is running
+      with it. Correct the setting and save again."
+    - TR: "Değişiklik tutulmadı: {service} yeni dosyayla yeniden yüklenemedi; bu
+      yüzden CelikPanel önceki dosyayı geri koydu ve {service} onunla çalışıyor.
+      Ayarı düzeltip yeniden kaydedin."
+  - `dbconf.reloadFailed.notRestored` (reason `not_restored`: the server owner acts, on the server):
+    - EN: "{service} could not reload with the new file, and CelikPanel could
+      not put the previous file back with certainty. What the server holds now
+      is shown below. Check the file on the server, reload {service} there, then
+      reload this page. The other version is kept on the server as:"
+    - TR: "{service} yeni dosyayla yeniden yüklenemedi ve CelikPanel önceki
+      dosyayı kesin olarak geri koyamadı. Sunucunun şu an tuttuğu dosya aşağıda
+      gösteriliyor. Dosyayı sunucuda denetleyin, {service} hizmetini orada
+      yeniden yükleyin, sonra bu sayfayı yenileyin. Diğer sürüm sunucuda şu adla
+      duruyor:"
+- *The answer to a save never arrived (unknown result; the file is read again before anything else).*
+  - `dbconf.saveUnknown`:
+    - EN: "The answer to this save did not arrive, so CelikPanel does not know
+      whether the file was changed. Reload the file to see what the server holds
+      before saving again."
+    - TR: "Bu kaydın yanıtı gelmedi; bu yüzden CelikPanel dosyanın değişip
+      değişmediğini bilmiyor. Yeniden kaydetmeden önce sunucunun ne tuttuğunu
+      görmek için dosyayı yeniden yükleyin."
+- *Saved. What happened to the running service is said, never assumed.*
+  - `dbconf.saved.reloaded` (PostgreSQL):
+    - EN: "Saved. {service} read the file again."
+    - TR: "Kaydedildi. {service} dosyayı yeniden okudu."
+  - `dbconf.saved.waitsForRestart` (PostgreSQL: settings that wait):
+    - EN: "These settings take effect only after {service} restarts: {names}.
+      Restart it from the top of this page when it suits you."
+    - TR: "Şu ayarlar ancak {service} yeniden başlatıldıktan sonra geçerli olur:
+      {names}. Size uygun olduğunda bu sayfanın üstünden yeniden başlatın."
+  - `dbconf.saved.notChecked` (the server could not be asked):
+    - EN: "CelikPanel could not ask {service} whether it accepts every line of
+      the file. The reload itself reported no error."
+    - TR: "CelikPanel, {service} hizmetine dosyanın her satırını kabul edip
+      etmediğini soramadı. Yeniden yüklemenin kendisi hata bildirmedi."
+  - `dbconf.saved.restartRequired` (MariaDB):
+    - EN: "Saved. {service} checked the file and accepts it. {service} reads
+      this file only when it starts, so the change takes effect after its next
+      restart. Restart it from the top of this page when it suits you."
+    - TR: "Kaydedildi. {service} dosyayı denetledi ve kabul ediyor. {service} bu
+      dosyayı yalnız başlarken okur; bu yüzden değişiklik bir sonraki yeniden
+      başlatmadan sonra geçerli olur. Size uygun olduğunda bu sayfanın üstünden
+      yeniden başlatın."
+  - `dbconf.saved.notRunning` (the service is stopped):
+    - EN: "Saved. {service} is not running, so it will read the file when it
+      starts."
+    - TR: "Kaydedildi. {service} çalışmıyor; dosyayı başladığında okuyacak."
+  - `dbconf.saved.unchanged`:
+    - EN: "Nothing to save: the file on the server already holds exactly this."
+    - TR: "Kaydedilecek bir şey yok: sunucudaki dosya zaten tam olarak bunu
+      tutuyor."
+  - `dbconf.saved.backup`:
+    - EN: "The previous file is kept on the server as"
+    - TR: "Önceki dosya sunucuda şu adla duruyor:"
+- *A domain's mail: being read, could not be read.*
+  - `mail.accounts.checking`:
+    - EN: "Reading the email accounts of this domain…"
+    - TR: "Bu alan adının e-posta hesapları okunuyor…"
+  - `mail.accounts.unknown`:
+    - EN: "The email accounts of this domain could not be read from the server,
+      so the list is not shown. This does not mean there are none. Nothing was
+      changed. Try again."
+    - TR: "Bu alan adının e-posta hesapları sunucudan okunamadı; bu yüzden liste
+      gösterilmiyor. Bu, e-posta hesabı olmadığı anlamına gelmez. Hiçbir şey
+      değiştirilmedi. Tekrar deneyin."
+  - `mail.forwarders.checking`:
+    - EN: "Reading the forwarders of this domain…"
+    - TR: "Bu alan adının yönlendiricileri okunuyor…"
+  - `mail.forwarders.unknown`:
+    - EN: "The forwarders of this domain could not be read from the server, so
+      the list is not shown. This does not mean there are none. Nothing was
+      changed. Try again."
+    - TR: "Bu alan adının yönlendiricileri sunucudan okunamadı; bu yüzden liste
+      gösterilmiyor. Bu, yönlendirici olmadığı anlamına gelmez. Hiçbir şey
+      değiştirilmedi. Tekrar deneyin."
+  - `mail.quota.unknown`:
+    - EN: "How much each email account uses could not be read from the server,
+      so the usage column says so. The accounts themselves are listed. Try
+      again."
+    - TR: "Her e-posta hesabının ne kadar yer kullandığı sunucudan okunamadı;
+      kullanım sütunu bunu belirtiyor. E-posta hesaplarının kendisi
+      listeleniyor. Tekrar deneyin."
+  - `mail.setup.checking`:
+    - EN: "Reading the connection settings…"
+    - TR: "Bağlantı ayarları okunuyor…"
+  - `mail.setup.unknown`:
+    - EN: "The connection settings of this domain could not be read from the
+      server, so they are not shown. Nothing was changed. Try again."
+    - TR: "Bu alan adının bağlantı ayarları sunucudan okunamadı; bu yüzden
+      gösterilmiyor. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+  - `mail.webmail.unknown`:
+    - EN: "CelikPanel could not check whether webmail is available on this
+      server. This does not mean it is not. Nothing was changed. Try again."
+    - TR: "CelikPanel bu sunucuda web postanın kullanılabilir olup olmadığını
+      kontrol edemedi. Bu, kullanılamadığı anlamına gelmez. Hiçbir şey
+      değiştirilmedi. Tekrar deneyin."
+  - `mail.healthChecking`:
+    - EN: "Checking deliverability…"
+    - TR: "Teslim edilebilirlik kontrol ediliyor…"
+  - `mail.healthUnknown`:
+    - EN: "The deliverability checks of this domain could not be read from the
+      server, so no result is shown. This does not mean a check failed. Nothing
+      was changed. Try again."
+    - TR: "Bu alan adının teslim edilebilirlik denetimleri sunucudan okunamadı;
+      bu yüzden sonuç gösterilmiyor. Bu, bir denetimin başarısız olduğu anlamına
+      gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+  - `mail.rbl.unknown`:
+    - EN: "The blocklist check did not complete, so no result is shown. This
+      does not mean the address is listed, and it does not mean it is clean. Try
+      again."
+    - TR: "Kara liste kontrolü tamamlanmadı; bu yüzden sonuç gösterilmiyor. Bu,
+      adresin listede olduğu anlamına da temiz olduğu anlamına da gelmez. Tekrar
+      deneyin."
+- *The catch-all address: shown before it can be changed.*
+  - `mail.catchAll.checking`:
+    - EN: "Reading the catch-all address of this domain…"
+    - TR: "Bu alan adının catch-all adresi okunuyor…"
+  - `mail.catchAll.unknown`:
+    - EN: "The catch-all address of this domain could not be read from the
+      server, so it is not shown and cannot be changed here. This does not mean
+      none is set. Nothing was changed. Try again."
+    - TR: "Bu alan adının catch-all adresi sunucudan okunamadı; bu yüzden
+      gösterilmiyor ve buradan değiştirilemiyor. Bu, bir adres ayarlı olmadığı
+      anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+  - `mail.catchAll.none` (known: none set):
+    - EN: "No catch-all address is set for this domain."
+    - TR: "Bu alan adı için catch-all adresi ayarlı değil."
+  - `mail.catchAll.stale` (`409 SETTINGS_CHANGED`):
+    - EN: "The catch-all address changed on the server after this page read it,
+      so nothing was saved. What you typed is still in the field. Reload the
+      current address, then make your change again."
+    - TR: "Catch-all adresi, bu sayfa onu okuduktan sonra sunucuda değişti; bu
+      yüzden hiçbir şey kaydedilmedi. Yazdığınız adres alanda duruyor. Geçerli
+      adresi yeniden yükleyin, sonra değişikliğinizi tekrar yapın."
+  - `mail.catchAll.reload` (the action):
+    - EN: "Reload the current address"
+    - TR: "Geçerli adresi yeniden yükle"
+  - `mail.catchAll.notSaved`:
+    - EN: "The catch-all address was not saved. Nothing was changed. Try again."
+    - TR: "Catch-all adresi kaydedilmedi. Hiçbir şey değiştirilmedi. Tekrar
+      deneyin."
+- *The mail queue.*
+  - `postfix.queue.checking`:
+    - EN: "Reading the mail queue…"
+    - TR: "Mail kuyruğu okunuyor…"
+  - `postfix.queue.unknown`:
+    - EN: "The mail queue could not be read from Postfix, so it is not shown.
+      This does not mean the queue is empty. Nothing was changed. Try again; if
+      it keeps failing, check on the server that Postfix is running (sudo
+      systemctl status postfix)."
+    - TR: "Mail kuyruğu Postfix’ten okunamadı; bu yüzden gösterilmiyor. Bu,
+      kuyruğun boş olduğu anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar
+      deneyin; sorun sürerse sunucuda Postfix’in çalıştığını denetleyin (sudo
+      systemctl status postfix)."
+  - `postfix.actionFailed`:
+    - EN: "The queue action was not confirmed by the server. The queue is read
+      again below."
+    - TR: "Kuyruk işlemi sunucu tarafından doğrulanmadı. Kuyruk aşağıda yeniden
+      okunuyor."
+- *Two refusals that are read by code from any screen* (shell, `err.<CODE>`):
+  - `err.MAIL_POLICY_NOT_RELOADED` (`502`, `mutation_applied: true`; drawn above the saved values, with "The reload said:" and its line):
+    - EN: "The mail policy was saved to /etc/postfix/main.cf, but Postfix could
+      not be reloaded, so Postfix is still running with the previous settings.
+      Nothing was rolled back. On the server, run sudo postfix check to see what
+      Postfix objects to, correct it, then run sudo systemctl reload postfix.
+      The values shown below are the saved ones."
+    - TR: "Posta politikası /etc/postfix/main.cf dosyasına kaydedildi ancak
+      Postfix yeniden yüklenemedi; bu yüzden Postfix hâlâ önceki ayarlarla
+      çalışıyor. Hiçbir şey geri alınmadı. Sunucuda sudo postfix check komutuyla
+      Postfix’in neye itiraz ettiğini görün, düzeltin, sonra sudo systemctl
+      reload postfix komutunu çalıştırın. Aşağıda gösterilen değerler kaydedilen
+      değerlerdir."
+  - `err.CRON_JOB_AMBIGUOUS` (`409`):
+    - EN: "This task stands twice in the crontab, so CelikPanel cannot tell
+      which line to change and changed nothing. Remove one of the two lines on
+      the server (sudo crontab -u <site user> -e), then reload this list."
+    - TR: "Bu görev crontab’da iki kez duruyor; bu yüzden CelikPanel hangi
+      satırı değiştireceğini bilemedi ve hiçbir şeyi değiştirmedi. Sunucuda iki
+      satırdan birini kaldırın (sudo crontab -u <site kullanıcısı> -e), sonra bu
+      listeyi yeniden yükleyin."
+
+The API answers carry an English sentence for the same states (Panel:
+`config_rpc_error.go`, `mail_policy_handlers.go`, `email_handlers.go`,
+`domain_cron_errors.go`); the line a service said travels beside it in
+`vars.detail`, bounded, with the validation copy's name replaced by the file's
+and anything that looks like a password assignment blanked.
+
+**What changed for the person at the screen.**
+
+- *PostgreSQL and MariaDB pages.* While the list of the component's files is
+  read: one quiet line. When it could not be read: the notice and Retry; "…
+  not found." only for a scan that was read and names no such file. The editor
+  exists only for a file that was read; it shows each setting with whether it is
+  set or commented out, marks what was changed, and Save is on only for a known,
+  changed, not stale file. Rules of `pg_hba.conf` the grid cannot hold (options,
+  quoted names, a netmask, includes) are shown as written.
+- *A domain's mail.* The number beside "Accounts" and "Forwarding" is a count
+  once the list is known, "…" while it is read and "–" when it could not be
+  read. "Create address" needs the list. Usage that could not be read says so in
+  its column, and the mailboxes stay listed. The webmail card says "not
+  available on this server" only for an answer the server gave.
+- *Catch-all.* The current address is read and shown first; the field and both
+  buttons are off until then. "Disable" is offered whenever an address is set.
+- *Mail queue.* The counts and "The mail queue is empty" exist only for a queue
+  that was read. Flush and delete are off until then and their answer is read:
+  an action the server did not confirm is not announced as done.
+- *Scheduled tasks.* A disabled task can be enabled, changed and deleted (the
+  server refused all three before). No text changed.
+
+**Not done.** A could-not-read notice does not say why the read failed. The
+tabs of the mail manager wrap on a phone instead of scrolling. On a phone the
+mailbox and queue tables scroll sideways. A description the Panel wrote above a
+scheduled task stays after the task is deleted. Not migrated: the other 47
+files of the allow-list (56 before the two parts of this batch stood in one
+tree), the mail authentication panel among them.
+
+**In one tree with the first part of this batch (same date).** The two parts
+were written side by side and each read the stored component records its own
+way. Now there is one decoder and one request (see "One reader per address"
+above), and that changes three things on the PostgreSQL and MariaDB pages.
+
+1. *A scan the decoder refuses is "could not be read".* The looser reader of
+   this entry took any answer with a list of services for a scan, so a server
+   that was never scanned, or an answer without the catalogue fields, read as
+   "postgresql.conf not found". Both are now `dbconf.files.unknown` with Retry;
+   "not found" needs a whole scan that names no such file.
+2. *One read is announced once.* The overview and the log under the editor are
+   drawn from the same read as the file list. They come with its answer; while
+   it is on its way or has failed, the file card says so, with the one Retry.
+   Before this was corrected a failed read showed two notices and two Retry
+   controls, and a second request made by the late section could fail and take
+   away an editor the first answer had just shown.
+3. *Opened by its address, the page starts with the records.* The lookup above
+   a component's page (first part) reads them before the page is drawn, so a
+   slow or failed read there is the lookup's "reading" or "could not be read";
+   the file card's own two states are seen when the page is opened from the
+   Components list. The browser scenario `dbconfig` reaches the page that way.
+
+The header buttons of a component page no longer run past a 390 px screen in
+Turkish: the shell of the first part wraps them onto a second row.
+
+**Browser inspection (2026-10-09).** In a real, installed Chrome against the
+loopback mock (`web/tools/browser-inspect`, scenarios `dbconfig`, `mailscreens`,
+`mailqueue`, `cron`): desktop 1440×900 and phone 390×844, Turkish and English,
+light and dark; 45 states in each of the eight configurations.
+
+- *Measured in all eight.* In every state where a read was on its way or had
+  failed, none of the negative sentences was on screen ("not found.", "holds no
+  access rule", "No email accounts yet", "is not available on this server", "The
+  mail queue is empty", "No catch-all address is set" and their Turkish forms),
+  and no editor field and no Save existed for a configuration file that was not
+  known. Every failed read showed exactly its own notice with Retry. No state
+  had horizontal page overflow. After a refused save the typed value was still
+  in its field and the service's line stood next to it (`aria-invalid` with
+  `aria-describedby`). After a 409 the fields and Save were off and the reload
+  was the one action. The disabled scheduled task became enabled with one PUT
+  and one re-read.
+- *Found by looking and corrected.* The four tabs of the mail manager ran off a
+  phone screen, so "Settings" (where the catch-all is) could not be reached, and
+  scrolling a field into view moved the whole page sideways: they wrap now. On a
+  phone the remove control of an access rule stood on a line of its own under
+  each rule and the save row took three lines: the rule's number and its remove
+  control share a line, and the state line stands above two shorter actions. The
+  per-row column names of the access rules repeated on a wide screen: the first
+  row names the columns there. The service's line next to a field was a second
+  alert for the same refusal: the notice above the form is the one announcement.
+  Two icon controls (edit quota, copy) were 22 px: 26 px now.
+- *Seen and not changed here.* The component page's back link (another screen's
+  file; its header buttons wrap since the first part of this batch). A disabled
+  primary button is close to an enabled
+  one in the dark theme (shared button). The editor card grows from one line to
+  the whole editor when the file arrives; what stands under it moves.
+- *Not covered.* Any real server; Safari, Firefox, a screen reader, a touch
+  device; the imitation skins; roles other than the administrator; the raw file
+  editor's refusal states (mounted test only).

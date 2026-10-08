@@ -150,6 +150,21 @@ const (
 	// yapmayacağı bir yeniden yazımını gerektiriyor.
 	errCodeMailPolicyRestrictionsUnmanaged = "MAIL_POLICY_RESTRICTIONS_UNMANAGED"
 	errCodeMailPolicyInvalid               = "MAIL_POLICY_INVALID"
+	// The same task stands on two lines of the crontab; a change cannot say
+	// which one it means (9 Oct 2026).
+	// Aynı görev crontab'da iki satırda duruyor.
+	errCodeCronJobAmbiguous = "CRON_JOB_AMBIGUOUS"
+	// The mail policy was written to main.cf, but Postfix could not be
+	// reloaded, so it still runs with the previous values. A verified failure
+	// after a change: `mutation_applied` is true (9 Oct 2026).
+	// Posta politikası main.cf'e yazıldı ancak Postfix yeniden yüklenemedi;
+	// önceki değerlerle çalışmayı sürdürüyor.
+	errCodeMailPolicyNotReloaded = "MAIL_POLICY_NOT_RELOADED"
+	// The mail queue could not be read, so what it holds is unknown. It is
+	// never answered as an empty queue (9 Oct 2026).
+	// Posta kuyruğu okunamadı; ne tuttuğu bilinmiyor. Asla boş kuyruk diye
+	// yanıtlanmaz.
+	errCodeMailQueueUnreadable = "MAIL_QUEUE_UNREADABLE"
 	// A directory above the hosting base that CelikPanel did not create keeps
 	// the web server or the site users from reaching site files; the site was
 	// refused before any change (native finding P3; D-022, D-024).
@@ -258,6 +273,13 @@ const (
 	// gizlemek, operatörü sessizce kaydetmeyi reddeden bir editöre bakar
 	// hâlde bırakır.
 	errCodeConfigInvalid = "CONFIG_INVALID"
+	// The new configuration file was installed, the service could not reload
+	// with it, and the previous file was put back (reason `restored`) or could
+	// not be (reason `not_restored`). A verified failure, with the first line
+	// the service's side said in `vars.detail` (9 Oct 2026).
+	// Yeni yapılandırma dosyası kuruldu, hizmet onunla yeniden yüklenemedi ve
+	// önceki dosya geri kondu (`restored`) ya da konamadı (`not_restored`).
+	errCodeConfigReloadFailed = "CONFIG_RELOAD_FAILED"
 )
 
 type agentRPCPlatformErrorClassification struct {

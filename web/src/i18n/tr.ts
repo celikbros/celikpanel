@@ -373,4 +373,9 @@ export const tr: Record<ShellKey, string> = {
     'panelUpdate.outcome.preflightStep.generic': "Neden: salt-okur bir denetim mevcut kurulumu doğrulayamadı.",
     'panelUpdate.outcome.stoppedNext': "Sunucunun aşağıdaki iletisi bu sunucudaki bir durumu (örneğin hâlâ süren başka bir işlemi ya da meşgul paket yöneticisini) belirtmiyorsa sunucuda yapmanız gereken bir şey yok; belirtiyorsa önce bitmesini bekleyin ya da sorunu giderin.",
     'panelUpdate.outcome.stoppedResume': "Hiçbir işlem kendiliğinden sürmez. {target} güncellemesini yeniden başlatmak güvenlidir.",
+    // --- batch 2b (9 Oct 2026): database and mail configuration screens: checking,
+    // could not be read, known; saves that carry the version of what was read ---
+    'err.MAIL_POLICY_NOT_RELOADED': "Posta politikası /etc/postfix/main.cf dosyasına kaydedildi ancak Postfix yeniden yüklenemedi; bu yüzden Postfix hâlâ önceki ayarlarla çalışıyor. Hiçbir şey geri alınmadı. Sunucuda sudo postfix check komutuyla Postfix’in neye itiraz ettiğini görün, düzeltin, sonra sudo systemctl reload postfix komutunu çalıştırın. Aşağıda gösterilen değerler kaydedilen değerlerdir.",
+    'err.CRON_JOB_AMBIGUOUS': "Bu görev crontab’da iki kez duruyor; bu yüzden CelikPanel hangi satırı değiştireceğini bilemedi ve hiçbir şeyi değiştirmedi. Sunucuda iki satırdan birini kaldırın (sudo crontab -u <site kullanıcısı> -e), sonra bu listeyi yeniden yükleyin.",
+    // --- end of batch 2b ---
 };

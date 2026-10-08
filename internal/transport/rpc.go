@@ -164,27 +164,122 @@ type ConfigErrorCode string
 const (
 	ConfigErrorPathRefused    ConfigErrorCode = "path_refused"
 	ConfigErrorValidationFail ConfigErrorCode = "validation_failed"
+	// The file could not be read, so what it holds is unknown. It is never
+	// answered as an empty file (9 Oct 2026).
+	// Dosya okunamadı; içeriği bilinmiyor. Asla boş dosya diye yanıtlanmaz.
+	ConfigErrorUnreadable ConfigErrorCode = "unreadable"
+	// A write that does not say which bytes it was built from.
+	// Hangi baytlardan kurulduğunu söylemeyen yazı.
+	ConfigErrorVersionRequired ConfigErrorCode = "version_required"
+	// The file is no longer the one the write was built from.
+	// Dosya artık yazının kurulduğu dosya değil.
+	ConfigErrorChanged ConfigErrorCode = "changed"
+	// The new file was installed, the service refused it or its reload failed,
+	// and the previous file was put back. Reason says whether that succeeded.
+	// Yeni dosya kuruldu, hizmet reddetti ya da yeniden yükleme başarısız oldu
+	// ve önceki dosya geri kondu. Reason bunun başarılı olup olmadığını söyler.
+	ConfigErrorReloadFailed ConfigErrorCode = "reload_failed"
+)
+
+// Reasons that refine ConfigErrorValidationFail. Nothing was written for any
+// of them.
+// ConfigErrorValidationFail'i incelten gerekçeler. Hiçbirinde yazı yoktur.
+const (
+	// The content is empty, or holds nothing but blank space.
+	ConfigInvalidEmpty = "empty"
+	// The content is larger than a configuration file the Panel will write, or
+	// holds a NUL byte.
+	ConfigInvalidShape = "shape"
+	// A line the Panel's own reading of the file format does not accept.
+	ConfigInvalidSyntax = "syntax"
+	// The service's own program refused the file. Detail is its first line.
+	ConfigInvalidDaemon = "daemon"
+	// pg_hba.conf: the change would take away the local administrator access
+	// PostgreSQL's own account, and with it the Panel, connects through.
+	ConfigInvalidLockout = "lockout"
+	// The program that validates this kind of file is not on the server, so the
+	// file cannot be checked before it replaces the current one.
+	ConfigInvalidNoValidator = "no_validator"
+)
+
+// Reasons that refine ConfigErrorReloadFailed.
+const (
+	// The previous file is back in place and the service runs with it.
+	ConfigReloadRestored = "restored"
+	// The previous file could not be put back, or the service did not accept it
+	// again. The backup named in Detail holds it.
+	ConfigReloadNotRestored = "not_restored"
+)
+
+// What happened to the running service after a file was written.
+// Dosya yazıldıktan sonra çalışan hizmete ne olduğu.
+const (
+	// The service re-read the file.
+	ConfigAppliedReloaded = "reloaded"
+	// The service reads this file only when it starts; it was not restarted.
+	ConfigAppliedRestartRequired = "restart_required"
+	// The service is not running; it will read the file when it starts.
+	ConfigAppliedNotRunning = "not_running"
+)
+
+// Whether the service itself was asked about the file that is now installed.
+// Kurulan dosya hakkında hizmetin kendisine sorulup sorulmadığı.
+const (
+	ConfigDaemonAccepted   = "accepted"
+	ConfigDaemonNotChecked = "not_checked"
 )
 
 type ConfigRPCError struct {
 	Code    ConfigErrorCode `json:"code"`
 	Message string          `json:"message"`
+	// Reason refines Code. Detail is one bounded line from the service's own
+	// program (or the path of a kept backup). Line is the line of the file a
+	// refusal is about, 0 when it names none. Name is the setting it names.
+	// Reason, Code'u inceltir. Detail hizmetin kendi programından tek, sınırlı
+	// bir satırdır. Line reddin ilgili olduğu dosya satırıdır; Name ayardır.
+	Reason string `json:"reason,omitempty"`
+	Detail string `json:"detail,omitempty"`
+	Line   int    `json:"line,omitempty"`
+	Name   string `json:"name,omitempty"`
 }
 
 type ConfigResponse struct {
-	Content string          `json:"Content"`
-	Parsed  string          `json:"Parsed"` // JSON string
+	Content string `json:"Content"`
+	Parsed  string `json:"Parsed"` // JSON string
+	// Version identifies the exact bytes that were read. A write must carry it
+	// back.
+	// Version okunan baytları tanımlar. Yazı onu geri taşımak zorundadır.
+	Version string          `json:"Version,omitempty"`
 	Error   *ConfigRPCError `json:"Error,omitempty"`
 }
 
 type UpdateConfigArgs struct {
 	Path    string
 	Content string
+	// Version is the Version of the read this content was built from.
+	// Version, bu içeriğin kurulduğu okumanın Version değeridir.
+	Version string
 }
 
 type UpdateConfigResponse struct {
 	Success bool            `json:"success"`
 	Error   *ConfigRPCError `json:"error,omitempty"`
+	// Version of the file as it is on the server now.
+	// Dosyanın sunucudaki şimdiki hâlinin sürümü.
+	Version string `json:"version,omitempty"`
+	// Unchanged: the content was already what the server holds; nothing was
+	// written and nothing was reloaded.
+	// Unchanged: içerik zaten sunucudakiydi; hiçbir şey yazılmadı.
+	Unchanged bool `json:"unchanged,omitempty"`
+	// Backup is the copy of the previous file kept next to it.
+	// Backup, önceki dosyanın yanında tutulan kopyasıdır.
+	Backup string `json:"backup,omitempty"`
+	// Applied and DaemonCheck: see the ConfigApplied* and ConfigDaemon*
+	// constants. RestartRequired names settings the service will only take up
+	// when it is restarted.
+	Applied         string   `json:"applied,omitempty"`
+	DaemonCheck     string   `json:"daemon_check,omitempty"`
+	RestartRequired []string `json:"restart_required,omitempty"`
 }
 
 type ServiceArgs struct {

@@ -1,71 +1,79 @@
 import { useEffect, useState } from 'react';
-import { api } from '../lib/api';
-import { Save, ArrowLeft, FileCode } from 'lucide-react';
+import { ArrowLeft, FileCode } from 'lucide-react';
+import { useI18n } from '../i18n';
+import { useConfigFile, type ConfigFile, type ConfigFileHandle } from '../lib/configFile';
+import { ConfigFileGate, ConfigSaveNotices } from './ConfigFileNotices';
+import { Button } from './ui';
 
 interface ConfigEditorProps {
     path: string;
     onBack: () => void;
 }
 
+// The whole text of one managed configuration file. It follows the same rule
+// as the visual editors (9 Oct 2026): the text area exists only for a file
+// that was read, the save carries the version of that read, and a refused save
+// keeps what was typed with the reason beside it.
+//
+// Yönetilen bir yapılandırma dosyasının bütün metni. Görsel düzenleyicilerle
+// aynı kurala uyar: metin alanı yalnız okunmuş bir dosya için vardır, kayıt o
+// okumanın sürümünü taşır ve reddedilen kayıt, yazılanı gerekçesiyle birlikte
+// ekranda tutar.
 export function ConfigEditor({ path, onBack }: ConfigEditorProps) {
-    const [content, setContent] = useState('');
-    const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        api.getConfig(path)
-            .then(res => setContent(res.Content))
-            .catch(err => setError(err.message))
-            .finally(() => setLoading(false));
-    }, [path]);
-
-    const handleSave = async () => {
-        setSaving(true);
-        try {
-            await api.saveConfig(path, content);
-            alert('Kaydedildi!');
-        } catch (err: any) {
-            alert('Hata: ' + err.message);
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    if (loading) return <div className="text-fg-muted">Yükleniyor...</div>;
-    if (error) return <div className="text-danger">Hata: {error}</div>;
-
+    const { t } = useI18n();
+    const handle = useConfigFile(path);
+    const file = path.split('/').pop() || path;
     return (
-        <div className="bg-surface border border-border rounded-xl overflow-hidden flex flex-col h-[calc(100vh-12rem)]">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-surface/50">
-                <div className="flex items-center gap-3">
-                    <button onClick={onBack} className="p-2 hover:bg-surface-2 rounded-lg transition-colors">
-                        <ArrowLeft size={20} className="text-fg-muted" />
-                    </button>
-                    <div className="flex items-center gap-2 text-fg">
-                        <FileCode size={20} className="text-primary" />
-                        <span className="font-mono text-sm">{path}</span>
-                    </div>
-                </div>
-
+        <div className="rounded-xl border border-border bg-surface" aria-busy={handle.remote.state === 'loading' || handle.saving}>
+            <div className="flex flex-wrap items-center gap-3 border-b border-border px-5 py-3">
                 <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                    type="button"
+                    onClick={onBack}
+                    aria-label={t('common.back')}
+                    title={t('common.back')}
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
                 >
-                    <Save size={18} />
-                    {saving ? 'Kaydediliyor...' : 'Kaydet'}
+                    <ArrowLeft className="h-5 w-5" aria-hidden="true" />
                 </button>
+                <FileCode className="h-5 w-5 shrink-0 text-fg-muted" aria-hidden="true" />
+                <h3 className="min-w-0 break-all font-mono text-sm text-fg">{path}</h3>
             </div>
-
-            <div className="flex-1 relative">
-                <textarea
-                    value={content}
-                    onChange={e => setContent(e.target.value)}
-                    className="w-full h-full bg-bg text-fg-muted font-mono text-sm p-6 resize-none"
-                    spellCheck={false}
-                />
+            <div className="p-5">
+                <ConfigFileGate handle={handle} file={file}>
+                    {(value) => <RawText key={value.version} handle={handle} value={value} file={file} />}
+                </ConfigFileGate>
             </div>
         </div>
+    );
+}
+
+function RawText({ handle, value, file }: { handle: ConfigFileHandle; value: ConfigFile; file: string }) {
+    const { t } = useI18n();
+    const [text, setText] = useState(value.content);
+    useEffect(() => setText(value.content), [value.content]);
+    const changed = text !== value.content;
+    return (
+        <>
+            <ConfigSaveNotices handle={handle} file={file} service={t('dbconf.theService')} placed={false} />
+            <textarea
+                value={text}
+                onChange={(event) => { handle.clearRefusal(); setText(event.target.value); }}
+                disabled={handle.saving || handle.stale}
+                aria-label={t('dbconf.raw.text', { file })}
+                spellCheck={false}
+                className="block h-[calc(100dvh-24rem)] min-h-[18rem] w-full resize-y rounded-lg border border-border-strong bg-bg p-4 font-mono text-sm leading-relaxed text-fg outline-none focus:border-primary disabled:text-fg-muted"
+            />
+            <div className="mt-4 flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
+                <p className="min-w-0 basis-full text-xs text-fg-muted sm:mr-auto sm:basis-auto" aria-live="polite">
+                    {changed ? t('dbconf.raw.changed') : t('dbconf.noChanges')}
+                </p>
+                <Button type="button" onClick={() => { handle.clearRefusal(); setText(value.content); }} disabled={!changed || handle.saving}>
+                    {t('dbconf.discard')}
+                </Button>
+                <Button type="button" variant="primary" onClick={() => void handle.save(text)} disabled={!changed || handle.stale} loading={handle.saving}>
+                    {handle.saving ? t('dbconf.saving') : t('dbconf.save')}
+                </Button>
+            </div>
+        </>
     );
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/alicelik/celikpanel/internal/core"
@@ -40,10 +41,33 @@ func (p *Panel) handlePostfixQueue(w http.ResponseWriter, r *http.Request) {
 
 	var result core.PostfixQueueResult
 	if err := p.callAgentContext(r.Context(), "Agent.PostfixQueue", &transport.Empty{}, &result); err != nil {
+		writeMailQueueReadError(w, err)
+		return
+	}
+	if result.Items == nil {
+		result.Items = []core.PostfixQueueItem{}
+	}
+	json.NewEncoder(w).Encode(result.Items)
+}
+
+// The queue could not be read: what happened, that nothing was changed, who
+// acts and the action (D-024). The Agent's own line stays in its log.
+// Kuyruk okunamadı: ne oldu, hiçbir şeyin değişmediği, kim işlem yapar ve eylem.
+const mailQueueUnreadableMessage = "The mail queue could not be read from Postfix, so it is not shown. This does not mean the queue is empty. Nothing was changed. " +
+	"Try again; if it keeps failing, the server owner checks that Postfix is running (sudo systemctl status postfix)."
+
+// writeMailQueueReadError answers a failed queue read. The Agent's known
+// "could not be read" becomes 502 MAIL_QUEUE_UNREADABLE; anything else keeps
+// the ordinary classified path. Neither is ever an empty list.
+// writeMailQueueReadError, başarısız bir kuyruk okumasını yanıtlar; hiçbiri boş
+// liste değildir.
+func writeMailQueueReadError(w http.ResponseWriter, err error) {
+	if !agentAnsweredExactly(err, transport.PostfixQueueUnreadable) {
 		writeServerError(w, err)
 		return
 	}
-	json.NewEncoder(w).Encode(result.Items)
+	log.Printf("[502][mail queue] could not be read")
+	writeCodedError(w, http.StatusBadGateway, errCodeMailQueueUnreadable, mailQueueUnreadableMessage, "")
 }
 
 // handlePostfixSummary returns the real queue counts by status.
@@ -53,7 +77,7 @@ func (p *Panel) handlePostfixSummary(w http.ResponseWriter, r *http.Request) {
 
 	var result core.PostfixQueueResult
 	if err := p.callAgentContext(r.Context(), "Agent.PostfixQueue", &transport.Empty{}, &result); err != nil {
-		writeServerError(w, err)
+		writeMailQueueReadError(w, err)
 		return
 	}
 	json.NewEncoder(w).Encode(result.Summary)

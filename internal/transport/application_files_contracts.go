@@ -109,6 +109,11 @@ const (
 	CronVersionRequired = "the cron request carried no version of the crontab it was built from; nothing was changed"
 	CronStateChanged    = "the crontab is not the one the cron request was built from; nothing was changed"
 	CronJobDuplicate    = "a cron job with the same schedule and command already exists; nothing was changed"
+	// Two lines of the crontab are the same job; which of them a change or a
+	// delete means cannot be known.
+	// Crontab'ın iki satırı aynı görevdir; bir değişikliğin hangisini
+	// kastettiği bilinemez.
+	CronJobAmbiguous = "two lines of the crontab are the same cron job; nothing was changed"
 )
 
 // Cron RPC contracts.
