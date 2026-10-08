@@ -72,7 +72,10 @@ commit_fixture() {
     local kind=$1 message=$2 previous=${3:-} commit
     python3 "$DRIVER" fixture-source --repo "$clone" --kind "$kind" ${previous:+--previous-commit "$previous"} \
         ${BASELINE_REF:+--baseline-ref "$BASELINE_REF"} >&2
-    git -C "$clone" commit --quiet -am "$message"
+    # set1 H23: once the source carries the baseline label itself (the release policy of a source after the
+    # v0.1.0-alpha.81 release already is "v0.1.0-alpha.81 / 81"), the baseline fixture edit changes nothing;
+    # the fixture commit is then an empty one over the source (same tree), instead of a failed commit.
+    git -C "$clone" commit --quiet --allow-empty -am "$message"
     commit=$(git -C "$clone" rev-parse HEAD)
     # Sibling fixture commits leave HEAD; a ref keeps each one reachable in this clone.
     git -C "$clone" update-ref "refs/upd1/$kind" "$commit"
