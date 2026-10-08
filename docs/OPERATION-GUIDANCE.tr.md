@@ -1379,9 +1379,11 @@ söyler. Sonra `web/` içinde `node tests/remote-state-ratchet.mjs --tighten`
 **Yapılmayan.**
 
 - 62 dosya hâlâ eski yolla okuyor; izin listesi onlardır. Bir ekran taşınana dek
-  bilinmeyen bir durum için olumsuz durum gösterebilir.
+  bilinmeyen bir durum için olumsuz durum gösterebilir. (Aşağıdaki ikinci
+  partiden sonra 53.)
 - Aynı adreslerin başka okuyucularına dokunulmadı: gezinti rayı ve tek bir alan
-  adının sayfası alan adı listesini kendi başlarına okur.
+  adının sayfası alan adı listesini kendi başlarına okur. (İkisi de aşağıdaki
+  ikinci partide ortak okumaya taşındı.)
 - Alan Adları sayfası, DNS hazırlığı kontrol edilemediğinde kendisi bir şey
   göstermez; bildirim ve Tekrar dene penceredir.
 - Kontrol-edilemedi bildirimi okumanın neden başarısız olduğunu söylemez.
@@ -1425,3 +1427,657 @@ veritabanı listesi.
   dokunmatik aygıt; taklit görünümler; yönetici dışındaki roller. DNS kayıtları
   sekmesi, PHP ayarları ve barındırma türü tarayıcı çalıştırmasında yoktu; üç
   durumlarını yalnız bağlanan test kapsar.
+
+#### İkinci parti: Ayarlar, hesaplar, bir alan adının dosyaları, sertifikası ve sayfası, içe aktarım, izleme, bileşenler (2026-10-09)
+
+Bileşen testleri ve yerel sahte sunucuya karşı tarayıcı incelemesiyle kaynak
+durumu; gerçek sistem çalıştırması ve kurulu sunucu yok. Aynı kural, incelemenin
+sıradaki ekranlarına uygulandı. Okumaların ve kaybolan yanıtların arayüzde nasıl
+gösterildiğini değiştirir; API, saklanan kayıt, erişim kapısı ya da yaşam
+döngüsü değişmez ve hiçbir kabul işi kapanmaz. İçindeki üç şey sunucu tarafını
+gerektirir; aşağıda "Sunucu tarafını gerektiren" başlığında listelenmiştir.
+
+**Bu ekranlar önceden ne gösteriyordu.**
+
+- *Ayarlar, iki faktörlü giriş.* Başarısız durum okuması, kurulum formuyla
+  birlikte "kapalı" diye çiziliyordu. (Sunucu ikinci bir kurulumu reddeder; yani
+  bu tehlikeli değil, yanıltıcıydı.)
+- *Ayarlar, Panelin sunduğu sertifika.* Başarısız okuma durum satırını kaldırıp
+  yalnız "Sertifika al"ı bırakıyordu. Panelin okuyabildiği bir sertifika
+  bulamadığı yanıt "güvenilir bir sertifika ()" diye çiziliyordu. Yanıt alamayan
+  sorgu sonsuza dek "Sertifika alınıyor…" diyor, sunucunun on dakika sonra
+  kaydını tutmadığı istek ise başarısız sayılıyordu. Sertifika alındıktan sonra,
+  Ayarlar'ı hangi bölümde olursa olsun açık tutan her sekme altı saniye sonra
+  yeni adrese taşınıyordu; tek bildirim bir bildirim balonuydu.
+- *Hesaplar.* Başarısız okumada bildirim olmadan "Henüz hesap yok" ve boş plan
+  listesi. Yanıtı kaybolan değişiklik, ele alınmamış bir hata bırakıyor ve
+  ekranda hiçbir şey göstermiyordu.
+- *Bir alan adının dosyaları.* Başarısız okumada "Bu klasör boş"; yeni klasör
+  okunurken az önce çıkılan klasörün satırları yeni yolun altında kalıyordu.
+- *Bir alan adının sertifikası.* Başarılı bir isteğin ardından gelen okuma
+  başarısız olursa ekran, işaretsiz biçimde "Sertifika yok"u ve istek formunu
+  göstermeyi sürdürüyordu. Bağlantısı kopan istek başarısız sayılıyordu.
+- *İçe aktarım.* Bağlantısı kopan uygulama hiçbir şey göstermiyor ve "İçe
+  aktarmayı başlat"ı yeniden sunuyordu.
+- *Pano.* Lisans yalnızca doğrulanamadığında lisans bildirimi "aktif lisans
+  gerekiyor" diyordu. Başarısız okuma "0 alan adı, 0 veritabanı, 0 kullanıcı, 0
+  posta hesabı" oluyor, hiçbir şey kurulu değilken barındırma bölümünün tamamı
+  sayfadan çıkıyordu. Gezinme rozeti başarısız okumada yok oluyordu.
+- *İzleme.* Başarısız sorgu grafikleri "Henüz örnek yok" ile değiştiriyordu.
+- *Adresiyle açılan alan adı ya da bileşen.* Başarısız arama ya da sunucunun
+  listelemediği ad, tek söz etmeden listeye dönüyordu.
+- *Bir bileşenin sayfası.* Okunamayan kayıt, tarama sunularak "Bu sunucuya henüz
+  bakılmadı" diye çiziliyordu. Sayfa yalnızca bir işlemin sürüp sürmediğini
+  sorarken Kur düğmesi "Kuruluyor…" diyordu. Başlat ve durdur, sayfanın ikinci
+  kayıt kopyası yüklenene dek bileşenin kimliğini gönderiyordu (BIND'in kimliği
+  `bind`, birimi `named`). Servisi olmayan bir araç "Durdu" görünüyordu.
+  Bölümleri "ayar dosyası bulunamadı" diyor ve henüz kimsenin adlandırmadığı bir
+  birimin günlüğünü okuyordu.
+- *Bileşenler listesinin kurulum penceresi.* Bileşenin ek bir depoya ihtiyacı
+  olup olmadığını söyleyen okuma başarısız olduğunda depo bölümü gizleniyor ve
+  Kur etkin kalıyordu; sürüm "dağıtım varsayılanı" diye okunuyordu.
+
+**Üç durumun ötesinde şimdi ne yapıyorlar.**
+
+- *Sertifika isteği.* İsteğin sonucu şunlardan biridir: hâlâ soruluyor;
+  **doğrulanamadı** (sorgular dokuz saniyedir yanıt almıyor; tam istek akılda
+  tutulur, sayfa beş saniyede bir sormayı sürdürür, "Tekrar kontrol et" hemen
+  sorar, ikinci bir istek sunulmaz ve güvenli adres bağlantı olarak verilir);
+  **başarısız** (yalnız sunucu isteği başarısız bildirdiğinde; sunucunun nedeni
+  gösterilir ve kartta kalır); **kaydedilmedi** (sunucu, gönderilmesinden on
+  dakika sonra hâlâ böyle bir isteği olmadığını söylüyor: hiçbir şey
+  başlatılmadı ve istek yeniden yapılabilir); **alındı**.
+- *Güvenli adrese taşınma.* Yalnız isteği gönderen sayfa kendini taşır; yalnız
+  Panel HTTPS bölümü açıkken ve sekme görünürken; ve ancak nerede, neden yeniden
+  açılacağını on saniye boyunca **Burada kal** seçeneğiyle söyledikten sonra.
+  Başka bir bölümü açmak kalmak sayılır. İsteği yalnızca tarayıcının deposunda
+  bulan sekme onu izler ve asla taşınmaz. Her durumda kart sonrasında güvenli
+  adresi bağlantı olarak verir.
+- *Yanıtı gelmeyen değişiklik* (hesaplar, planlar, dosyalar, bir alan adının
+  sertifikası ve ayarları, iki faktörlü giriş, başlat ve durdur, bir bileşenin
+  deposu): ekran değişikliğin yapılıp yapılmadığının bilinmediğini söyler,
+  hiçbir şeyi ikinci kez göndermez ve kişi yinelemeden önce bakabilsin diye
+  durumu yeniden okur. Sunucunun reddi, sunucunun kendi nedeniyle gösterilir.
+- *İçe aktarım.* Bağlantısını kaybeden (ya da Panelin yanıtı yerine bir geçidin
+  yanıtını alan: 408, 429, 502, 503, 504) uygulama sayfada bir bildirim bırakır.
+  İsteği oluşturan seçimler dondurulur ve "İçe aktarmayı başlat" kalkar.
+  "{domain} alan adını kontrol et" yalnız alan adı listesini okur. Alan adı
+  oradaysa içe aktarım onu oluşturmuştur; sayfa ona bağlantı verir ve içe
+  aktarımı yeniden başlatmaz. Orada değilse sayfa bunu söyler, kontrolü yeniden
+  sunar ve ancak o zaman "İçe aktarımı yeniden başlat"ı sunar.
+- *Bir bileşenin sayfası.* Başlat, durdur ve yeniden başlat yalnız bir birim
+  adlandıran kayıt için vardır ve o birimi gönderir. Birim adlandırmayan kayıtta
+  böyle bir denetim yoktur; araç ya da birimi olmayan çalışma ortamı "Kurulu"
+  diye okunur.
+- *Bir alan adının sekmeleri.* Hangi sekmelerin var olduğu, sunucunun verdiği
+  son yanıtı izler. Yeteneklerin sonraki başarısız bir okuması, sunucunun elediği
+  sekmeyi geri getirmez, var olanı da almaz; kişi yalnız artık var olmayan
+  sekmeden alınır.
+- *Sayılar.* Panodaki dört sayı, hesap ve plan listelerinin üstündeki toplamlar
+  ve gezinme rozeti yalnız bir yanıt için sayıdır: okunurken "…", okunamadığında
+  "–" (gezinmede rozet yok).
+- *Sertifika kartındaki sıra.* Önce sertifikanın durumu ya da isteğin sonucu
+  gelir; sonra üç hazırlık adımı; sonra da sonuçlanmamış istek, gönderildiği
+  formun yanında. Kişinin baktığı yerden uzakta beliren bildirim görünür alana
+  kaydırılır (içe aktarım sayfasında da).
+
+**Metinler.** Anahtarlar `web/src/i18n` altındadır (`common.*` kabuk
+kataloğunda, kalanı `screens` ve `screens/server` içinde).
+
+- *Bu ekranların herhangi birinde, yanıtı gelmeyen değişiklik (kabuk)*
+  - `common.resultUnknown`
+    - EN: "The connection dropped before the answer arrived, so it is not known
+      whether the change was made. Nothing is sent a second time. What is shown
+      is being read again; check it before repeating the action."
+    - TR: "Yanıt gelmeden bağlantı koptu; bu yüzden değişikliğin yapılıp
+      yapılmadığı bilinmiyor. Hiçbir şey ikinci kez gönderilmez. Gösterilen
+      yeniden okunuyor; işlemi yinelemeden önce ona bakın."
+- *Ayarlar, iki faktörlü giriş: kontrol ediliyor, kontrol edilemedi, yanıtı
+  kaybolan değişiklik*
+  - `settings.2fa.checking`
+    - EN: "Checking whether two-factor authentication is on for this account…"
+    - TR: "Bu hesapta iki faktörlü doğrulamanın açık olup olmadığı kontrol
+      ediliyor…"
+  - `settings.2fa.unknown`
+    - EN: "CelikPanel could not check whether two-factor authentication is on
+      for this account, so neither turning it on nor turning it off is offered.
+      This does not mean it is off. Nothing was changed. Try again."
+    - TR: "CelikPanel bu hesapta iki faktörlü doğrulamanın açık olup olmadığını
+      kontrol edemedi; bu yüzden açma da kapatma da sunulmuyor. Bu, kapalı
+      olduğu anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+  - `settings.2fa.resultUnknown`
+    - EN: "The connection dropped before the answer arrived, so it is not known
+      whether the change was made. CelikPanel is reading the current state
+      again; nothing is sent a second time."
+    - TR: "Yanıt gelmeden bağlantı koptu; bu yüzden değişikliğin yapılıp
+      yapılmadığı bilinmiyor. CelikPanel güncel durumu yeniden okuyor; hiçbir
+      şey ikinci kez gönderilmez."
+- *Ayarlar, Panelin sunduğu sertifika: okunuyor, okunamadı, Panel okuyabildiği
+  bir sertifika bulamadı*
+  - `panelCert.checking`
+    - EN: "Reading the certificate the Panel serves…"
+    - TR: "Panelin sunduğu sertifika okunuyor…"
+  - `panelCert.unknown`
+    - EN: "The certificate the Panel serves could not be read from the server,
+      so its state is not shown and a new one cannot be requested yet. This does
+      not mean the certificate is missing or invalid. Nothing was changed. Try
+      again."
+    - TR: "Panelin sunduğu sertifika sunucudan okunamadı; bu yüzden durumu
+      gösterilmiyor ve şimdilik yenisi istenemiyor. Bu, sertifikanın eksik ya da
+      geçersiz olduğu anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar
+      deneyin."
+  - `panelCert.notReadable`
+    - EN: "The Panel answered, but it found no certificate it could read in its
+      certificate folder, so it cannot say which one it serves. Nothing was
+      changed."
+    - TR: "Panel yanıt verdi, ancak sertifika klasöründe okuyabildiği bir
+      sertifika bulamadı; bu yüzden hangisini sunduğunu söyleyemiyor. Hiçbir şey
+      değiştirilmedi."
+- *Aynı kart, sonucu doğrulanamayan istek ("Tekrar kontrol et" ve güvenli adres
+  bağlantısıyla)*
+  - `panelCert.unconfirmed`
+    - EN: "CelikPanel could not confirm the result of the certificate request
+      for {domain}: this page is not getting an answer about it. The request may
+      still be running, may have finished or may have failed. Nothing else was
+      started, and a second request is not offered until this one is known. If
+      the Panel has restarted with the new certificate, it now answers at
+      {address}."
+    - TR: "CelikPanel, {domain} için sertifika isteğinin sonucunu doğrulayamadı:
+      bu sayfa onunla ilgili yanıt alamıyor. İstek hâlâ sürüyor, tamamlanmış ya
+      da başarısız olmuş olabilir. Başka hiçbir şey başlatılmadı; bu isteğin
+      sonucu bilinene dek ikinci bir istek sunulmaz. Panel yeni sertifikayla
+      yeniden başladıysa artık {address} adresinde yanıt verir."
+  - `panelCert.checkAgain`
+    - EN: "Check again"
+    - TR: "Tekrar kontrol et"
+  - `panelCert.openSecure`
+    - EN: "Open the secure address"
+    - TR: "Güvenli adresi aç"
+- *Aynı kart, sunucunun başarısız bildirdiği istek (nedenli ve nedensiz);
+  sunucunun hiç kaydetmediği istek*
+  - `panelCert.failedDetail`
+    - EN: "The certificate for {domain} was not issued. The server reported:
+      {reason} The Panel keeps serving its current certificate. Correct the
+      cause, then request the certificate again."
+    - TR: "{domain} için sertifika alınamadı. Sunucunun bildirdiği: {reason}
+      Panel mevcut sertifikasını sunmayı sürdürüyor. Nedeni giderin, sonra
+      sertifikayı yeniden isteyin."
+  - `panelCert.failedPlain`
+    - EN: "The certificate for {domain} was not issued, and the server gave no
+      reason. The Panel keeps serving its current certificate. Check the three
+      steps above, then request the certificate again."
+    - TR: "{domain} için sertifika alınamadı ve sunucu bir neden bildirmedi.
+      Panel mevcut sertifikasını sunmayı sürdürüyor. Yukarıdaki üç adımı kontrol
+      edin, sonra sertifikayı yeniden isteyin."
+  - `panelCert.notRecorded`
+    - EN: "The server has no record of the certificate request for {domain}, so
+      it was not started and nothing was changed. The certificate state above
+      was read again; you can request the certificate again."
+    - TR: "Sunucuda {domain} için sertifika isteğinin kaydı yok; yani istek
+      başlatılmadı ve hiçbir şey değiştirilmedi. Yukarıdaki sertifika durumu
+      yeniden okundu; sertifikayı yeniden isteyebilirsiniz."
+- *Aynı kart, sertifika alındıktan sonra: isteği gönderen sayfa, taşınmadan önce
+  ({seconds} geri sayar)*
+  - `panelCert.reopen.title`
+    - EN: "Certificate issued for {domain}"
+    - TR: "{domain} için sertifika alındı"
+  - `panelCert.reopen.body`
+    - EN: "The Panel is restarting to serve the new certificate. The certificate
+      is valid for {domain} only, so this page will reopen at the Panel’s secure
+      address, {address}, in {seconds} s. Because that is a different address,
+      you may be asked to sign in again there."
+    - TR: "Panel yeni sertifikayı sunmak için yeniden başlıyor. Sertifika yalnız
+      {domain} için geçerli olduğundan bu sayfa {seconds} sn içinde Panelin
+      güvenli adresinde, {address} adresinde yeniden açılacak. Bu farklı bir
+      adres olduğu için orada yeniden oturum açmanız istenebilir."
+  - `panelCert.reopen.reload`
+    - EN: "The Panel is restarting to serve the new certificate. This page will
+      reload in {seconds} s so that the browser uses it."
+    - TR: "Panel yeni sertifikayı sunmak için yeniden başlıyor. Tarayıcının onu
+      kullanması için bu sayfa {seconds} sn içinde yeniden yüklenecek."
+  - `panelCert.reopen.stay`
+    - EN: "Stay here"
+    - TR: "Burada kal"
+- *Aynı kart, "Burada kal"dan sonra, başka bir bölümde ya da başka bir sekmede*
+  - `panelCert.reopen.stayed`
+    - EN: "The Panel restarted to serve the new certificate, which is valid for
+      {domain} only. This page was left where it is; the browser may warn about
+      the certificate at this address. The Panel’s secure address is {address}."
+    - TR: "Panel yeni sertifikayı sunmak için yeniden başladı; sertifika yalnız
+      {domain} için geçerlidir. Bu sayfa olduğu yerde bırakıldı; tarayıcı bu
+      adreste sertifika uyarısı gösterebilir. Panelin güvenli adresi: {address}"
+- *Hesaplar: liste ve planlar*
+  - `users.checking`
+    - EN: "Reading the accounts…"
+    - TR: "Hesaplar okunuyor…"
+  - `users.unknown`
+    - EN: "The accounts could not be read from the server, so the list is not
+      shown. This does not mean there are no accounts. Nothing was changed. Try
+      again."
+    - TR: "Hesaplar sunucudan okunamadı; bu yüzden liste gösterilmiyor. Bu,
+      hesap olmadığı anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar
+      deneyin."
+  - `users.plansUnknown`
+    - EN: "The plans could not be read from the server, so an account cannot be
+      created here yet. This does not mean there are no plans. Nothing was
+      changed. Try again."
+    - TR: "Planlar sunucudan okunamadı; bu yüzden şimdilik burada hesap
+      oluşturulamıyor. Bu, plan olmadığı anlamına gelmez. Hiçbir şey
+      değiştirilmedi. Tekrar deneyin."
+  - `plans.checking`
+    - EN: "Reading the plans…"
+    - TR: "Planlar okunuyor…"
+  - `plans.unknown`
+    - EN: "The plans could not be read from the server, so the list is not
+      shown. This does not mean there are no plans. Nothing was changed. Try
+      again."
+    - TR: "Planlar sunucudan okunamadı; bu yüzden liste gösterilmiyor. Bu, plan
+      olmadığı anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+- *Adresiyle açılan alan adı sayfası*
+  - `domain.checking`
+    - EN: "Reading this domain…"
+    - TR: "Bu alan adı okunuyor…"
+  - `domain.unknown`
+    - EN: "This domain could not be read from the server, so its page is not
+      shown. This does not mean the domain is gone. Nothing was changed. Try
+      again."
+    - TR: "Bu alan adı sunucudan okunamadı; bu yüzden sayfası gösterilmiyor. Bu,
+      alan adının kaldırıldığı anlamına gelmez. Hiçbir şey değiştirilmedi.
+      Tekrar deneyin."
+  - `domain.absent`
+    - EN: "This domain is not on this server"
+    - TR: "Bu alan adı bu sunucuda değil"
+  - `domain.absentHint`
+    - EN: "The server answered, and its list has no such domain. It may have
+      been removed, or the address may be mistyped. Nothing was changed."
+    - TR: "Sunucu yanıt verdi ve listesinde böyle bir alan adı yok. Kaldırılmış
+      ya da adres yanlış yazılmış olabilir. Hiçbir şey değiştirilmedi."
+  - `domain.noAccess`
+    - EN: "This account has no access to this domain"
+    - TR: "Bu hesabın bu alan adına erişimi yok"
+  - `domain.noAccessHint`
+    - EN: "The domain is on this server, but no part of it is shared with this
+      account. The account owner can grant access under Team members."
+    - TR: "Alan adı bu sunucuda, ancak hiçbir bölümü bu hesapla paylaşılmamış.
+      Hesap sahibi, Ekip üyeleri altından erişim verebilir."
+- *Bir alan adının dosyaları*
+  - `files.checking`
+    - EN: "Reading this folder…"
+    - TR: "Bu klasör okunuyor…"
+  - `files.unknown`
+    - EN: "This folder could not be read from the server, so its contents are
+      not shown. This does not mean the folder is empty. Nothing was changed.
+      Try again."
+    - TR: "Bu klasör sunucudan okunamadı; bu yüzden içeriği gösterilmiyor. Bu,
+      klasörün boş olduğu anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar
+      deneyin."
+  - `files.contentUnknown`
+    - EN: "The contents of this file could not be read from the server, so it
+      was not opened for editing. Nothing was changed. Try again."
+    - TR: "Bu dosyanın içeriği sunucudan okunamadı; bu yüzden düzenlemek için
+      açılmadı. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+  - `files.uploadUnreadable`
+    - EN: "The browser could not read {name} from this device, so nothing was
+      uploaded. Choose the file again."
+    - TR: "Tarayıcı {name} dosyasını bu cihazdan okuyamadı; bu yüzden hiçbir şey
+      yüklenmedi. Dosyayı yeniden seçin."
+- *Bir alan adının sertifikası*
+  - `ssl.checking`
+    - EN: "Reading this domain’s certificate…"
+    - TR: "Bu alan adının sertifikası okunuyor…"
+  - `ssl.unknown`
+    - EN: "The certificate of this domain could not be read from the server, so
+      its state is not shown and a certificate cannot be requested or removed
+      here yet. This does not mean the domain has no certificate. Nothing was
+      changed. Try again."
+    - TR: "Bu alan adının sertifikası sunucudan okunamadı; bu yüzden durumu
+      gösterilmiyor ve şimdilik buradan sertifika istenemiyor ya da
+      kaldırılamıyor. Bu, alan adının sertifikası olmadığı anlamına gelmez.
+      Hiçbir şey değiştirilmedi. Tekrar deneyin."
+  - `ssl.rereading`
+    - EN: "Reading the certificate again. What is shown below is the earlier
+      answer; the controls are off until the server has answered…"
+    - TR: "Sertifika yeniden okunuyor. Aşağıda gösterilen önceki yanıttır;
+      sunucu yanıt verene dek denetimler kapalı…"
+  - `ssl.checkingProviders`
+    - EN: "Reading the certificate authorities this server offers…"
+    - TR: "Bu sunucunun sunduğu sertifika yetkilileri okunuyor…"
+  - `ssl.providersUnknown`
+    - EN: "The certificate authorities this server offers could not be read, so
+      a certificate cannot be requested here yet. Nothing was changed. Try
+      again."
+    - TR: "Bu sunucunun sunduğu sertifika yetkilileri okunamadı; bu yüzden
+      şimdilik buradan sertifika istenemiyor. Hiçbir şey değiştirilmedi. Tekrar
+      deneyin."
+- *İçe aktarım: abonelikler ve arşiv*
+  - `import.checkingSubs`
+    - EN: "Reading the subscriptions…"
+    - TR: "Abonelikler okunuyor…"
+  - `import.subsUnknown`
+    - EN: "The subscriptions could not be read from the server, so a target
+      cannot be chosen and the import cannot be started yet. This does not mean
+      there are no subscriptions. Nothing was changed. Try again."
+    - TR: "Abonelikler sunucudan okunamadı; bu yüzden şimdilik hedef seçilemiyor
+      ve içe aktarım başlatılamıyor. Bu, abonelik olmadığı anlamına gelmez.
+      Hiçbir şey değiştirilmedi. Tekrar deneyin."
+  - `import.noSubs`
+    - EN: "There is no subscription to import into yet. Create an account with a
+      plan under Accounts first."
+    - TR: "İçe aktarılacak bir abonelik henüz yok. Önce Hesaplar altında planlı
+      bir hesap oluşturun."
+  - `import.inspectUnanswered`
+    - EN: "The server did not answer, so the archive was not inspected.
+      Inspecting only reads the archive; nothing was changed. Try again."
+    - TR: "Sunucu yanıt vermedi; bu yüzden arşiv incelenmedi. İnceleme arşivi
+      yalnız okur; hiçbir şey değiştirilmedi. Tekrar deneyin."
+- *İçe aktarım: yanıtı kaybolan uygulama*
+  - `import.unknown.title`
+    - EN: "The result of this import is not known"
+    - TR: "Bu içe aktarımın sonucu bilinmiyor"
+  - `import.unknown.body`
+    - EN: "The connection dropped before the server answered. The import may
+      have run completely, in part, or not at all. Nothing is sent again by
+      itself, and starting it again is not offered until you have checked. Check
+      whether {domain} is on this server now; checking only reads."
+    - TR: "Sunucu yanıt vermeden bağlantı koptu. İçe aktarım tamamen, kısmen
+      çalışmış ya da hiç çalışmamış olabilir. Hiçbir şey kendiliğinden yeniden
+      gönderilmez; siz kontrol edene dek yeniden başlatma sunulmaz. {domain}
+      alan adının şu an bu sunucuda olup olmadığını kontrol edin; kontrol yalnız
+      okur."
+  - `import.unknown.check`
+    - EN: "Check {domain}"
+    - TR: "{domain} alan adını kontrol et"
+  - `import.unknown.checkAgain`
+    - EN: "Check {domain} again"
+    - TR: "{domain} alan adını yeniden kontrol et"
+  - `import.unknown.unreadable`
+    - EN: "The domain list could not be read, so it is still not known whether
+      the import ran. Nothing was changed. Check again."
+    - TR: "Alan adı listesi okunamadı; bu yüzden içe aktarımın çalışıp
+      çalışmadığı hâlâ bilinmiyor. Hiçbir şey değiştirilmedi. Yeniden kontrol
+      edin."
+  - `import.unknown.present`
+    - EN: "{domain} is on this server now, so the import created it. Which of
+      its files, mail, DNS records and databases were imported is not known
+      here, and the import is not started again from this page. Open the domain
+      and look at each of them."
+    - TR: "{domain} şu an bu sunucuda; yani içe aktarım onu oluşturdu.
+      Dosyalarından, postasından, DNS kayıtlarından ve veritabanlarından
+      hangilerinin aktarıldığı burada bilinmiyor ve içe aktarım bu sayfadan
+      yeniden başlatılmaz. Alan adını açıp her birine bakın."
+  - `import.unknown.open`
+    - EN: "Open {domain}"
+    - TR: "{domain} alan adını aç"
+  - `import.unknown.absent`
+    - EN: "{domain} is not on this server at this moment, so the import has not
+      created it. If the server is still working on the archive it can appear
+      later: check again in a moment. If it is still absent, you can start the
+      import again."
+    - TR: "{domain} şu an bu sunucuda değil; yani içe aktarım onu oluşturmadı.
+      Sunucu hâlâ arşiv üzerinde çalışıyorsa sonradan görünebilir: biraz sonra
+      yeniden kontrol edin. Hâlâ yoksa içe aktarımı yeniden başlatabilirsiniz."
+  - `import.runAgain`
+    - EN: "Start import again"
+    - TR: "İçe aktarımı yeniden başlat"
+- *Pano: lisans doğrulanamadığında lisans bildirimi; okunamayan sayı*
+  - `license.noticeUnverified`
+    - EN: "CelikPanel could not verify the license just now. This does not mean
+      your license is missing or expired, and nothing was changed. Existing
+      sites, mail, databases and scheduled tasks keep running. You can check
+      again under License."
+    - TR: "CelikPanel lisansı şu an doğrulayamadı. Bu, lisansınızın eksik ya da
+      süresinin dolmuş olduğu anlamına gelmez ve hiçbir şey değiştirilmedi.
+      Mevcut siteler, e-posta, veritabanları ve zamanlanmış görevler çalışmaya
+      devam eder. Lisans bölümünden yeniden kontrol edebilirsiniz."
+  - `license.noticeOpen`
+    - EN: "Open License"
+    - TR: "Lisans bölümünü aç"
+  - `dashboard.countUnread`
+    - EN: "could not be read"
+    - TR: "okunamadı"
+- *İzleme*
+  - `monitoring.checking`
+    - EN: "Reading the recorded measurements…"
+    - TR: "Kaydedilen ölçümler okunuyor…"
+  - `monitoring.unknown`
+    - EN: "The recorded measurements could not be read from the server, so no
+      charts are shown. This does not mean nothing was recorded. Nothing was
+      changed. Try again."
+    - TR: "Kaydedilen ölçümler sunucudan okunamadı; bu yüzden grafik
+      gösterilmiyor. Bu, hiçbir şey kaydedilmediği anlamına gelmez. Hiçbir şey
+      değiştirilmedi. Tekrar deneyin."
+- *Bir bileşenin sayfası: kaydı*
+  - `svc.checkingRecord`
+    - EN: "Reading what is known about {name} on this server…"
+    - TR: "Bu sunucuda {name} hakkında bilinen okunuyor…"
+  - `svc.recordUnread`
+    - EN: "Could not be read"
+    - TR: "Okunamadı"
+  - `svc.recordUnknown`
+    - EN: "CelikPanel could not read what is known about {name} on this server,
+      so its state is not shown and nothing is offered for it. This does not
+      mean {name} is missing, stopped or unchecked. Nothing was changed. Try
+      again."
+    - TR: "CelikPanel bu sunucuda {name} hakkında bilineni okuyamadı; bu yüzden
+      durumu gösterilmiyor ve onun için hiçbir işlem sunulmuyor. Bu, {name}
+      bileşeninin eksik, durmuş ya da bakılmamış olduğu anlamına gelmez. Hiçbir
+      şey değiştirilmedi. Tekrar deneyin."
+  - `svc.recordStale`
+    - EN: "The state of {name} could not be read again just now, so what is
+      shown is the earlier answer. Nothing was changed. Start, stop and restart
+      are off until it has been read again."
+    - TR: "{name} durumu az önce yeniden okunamadı; bu yüzden gösterilen önceki
+      yanıttır. Hiçbir şey değiştirilmedi. Başlat, durdur ve yeniden başlat,
+      yeniden okunana dek kapalıdır."
+  - `svc.installChecking`
+    - EN: "Checking for a running operation…"
+    - TR: "Süren bir işlem var mı, kontrol ediliyor…"
+  - `component.checking`
+    - EN: "Reading this component’s record…"
+    - TR: "Bu bileşenin kaydı okunuyor…"
+  - `component.unknown`
+    - EN: "This component’s record could not be read from the server, so its
+      unit, versions, ports, configuration files and log are not shown. This
+      does not mean it has none. Nothing was changed. Try again."
+    - TR: "Bu bileşenin kaydı sunucudan okunamadı; bu yüzden birimi, sürümleri,
+      portları, ayar dosyaları ve günlüğü gösterilmiyor. Bu, bunların olmadığı
+      anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+  - `component.absent`
+    - EN: "This server’s catalogue has no component “{id}”"
+    - TR: "Bu sunucunun kataloğunda “{id}” bileşeni yok"
+  - `component.absentHint`
+    - EN: "The server answered, and its list has no such component. The address
+      may be mistyped, or the component is not offered on this server. Nothing
+      was changed."
+    - TR: "Sunucu yanıt verdi ve listesinde böyle bir bileşen yok. Adres yanlış
+      yazılmış olabilir ya da bileşen bu sunucuda sunulmuyor. Hiçbir şey
+      değiştirilmedi."
+- *Bir bileşenin sayfası: günlüğü*
+  - `component.logsChecking`
+    - EN: "Reading the log of {unit}…"
+    - TR: "{unit} günlüğü okunuyor…"
+  - `component.logsUnknown`
+    - EN: "The log of {unit} could not be read from the server, so no lines are
+      shown. This does not mean the log is empty. Nothing was changed. Try
+      again."
+    - TR: "{unit} günlüğü sunucudan okunamadı; bu yüzden hiçbir satır
+      gösterilmiyor. Bu, günlüğün boş olduğu anlamına gelmez. Hiçbir şey
+      değiştirilmedi. Tekrar deneyin."
+  - `component.logsNoMatch`
+    - EN: "No line in the log contains “{filter}”."
+    - TR: "Günlükte “{filter}” içeren satır yok."
+- *Bileşenler listesinin kurulum penceresi*
+  - `services.repo.checking`
+    - EN: "Checking whether this component needs an additional package
+      repository…"
+    - TR: "Bu bileşenin ek bir paket deposuna ihtiyacı var mı, kontrol
+      ediliyor…"
+  - `services.repo.unknown`
+    - EN: "CelikPanel could not check whether {name} needs an additional package
+      repository on this server, so installing is not offered yet. This does not
+      mean a repository is missing. Nothing was changed. Try again."
+    - TR: "CelikPanel, {name} bileşeninin bu sunucuda ek bir paket deposuna
+      ihtiyacı olup olmadığını kontrol edemedi; bu yüzden şimdilik kurulum
+      sunulmuyor. Bu, deponun eksik olduğu anlamına gelmez. Hiçbir şey
+      değiştirilmedi. Tekrar deneyin."
+  - `services.repo.stale`
+    - EN: "The package repository of {name} could not be read again just now, so
+      what is shown below is the earlier answer. Nothing was changed. Installing
+      and changing the repository are off until it has been read again."
+    - TR: "{name} bileşeninin paket deposu az önce yeniden okunamadı; bu yüzden
+      aşağıda gösterilen önceki yanıttır. Hiçbir şey değiştirilmedi. Kurulum ve
+      depo değişikliği, yeniden okunana dek kapalıdır."
+  - `services.versionUnknown`
+    - EN: "could not be checked"
+    - TR: "kontrol edilemedi"
+- *Yardım çekmecesi*
+  - `help.loading`
+    - EN: "Fetching the help text…"
+    - TR: "Yardım metni getiriliyor…"
+  - `help.unknown`
+    - EN: "The help text could not be fetched from the panel. Nothing was
+      changed. Try again."
+    - TR: "Yardım metni panelden getirilemedi. Hiçbir şey değiştirilmedi. Tekrar
+      deneyin."
+- *Kurulum rehberi, düğmeyi adlandıran cümle (düğmede "Edit plan" / "Planı
+  düzenle" yazar)*
+  - `setup.guide.accessDNSResume`
+    - EN: "This prerequisite is checked automatically. After it passes, the same
+      setup continues. To change the reviewed names or addresses, use Edit plan
+      below."
+    - TR: "Bu gereksinim otomatik kontrol edilir. Doğrulanınca aynı kurulum
+      devam eder. İncelenen adları veya adresleri değiştirmek için aşağıdaki
+      Planı düzenle düğmesini kullanın."
+
+**Aynı ekranlarda düzeltilenler.**
+
+- Kurulum rehberindeki cümle düğmeyi "Edit setup plan" / "Kurulum planını
+  düzenle" diye adlandırıyordu; düğmede "Edit plan" / "Planı düzenle" yazar.
+  Cümle artık düğmeyi yazıldığı gibi adlandırır.
+- Koyu temada erişim bekletmesinin ve yeniden yükleme bildiriminin karartması
+  yarı güçte çizilir. Sayfa zaten laciverttir; açık temanın gerektirdiği güçte
+  bu katmanların altındaki küçük soluk metin yaklaşık 1,5:1'e iniyordu.
+- Telefonda bir bileşenin başlat, durdur ve yeniden başlat denetimleri sağ
+  kenardan taşıyordu; artık alt satıra geçer.
+- Hiçbir satırla eşleşmeyen günlük süzgeci "Günlük kaydı yok" diyordu; artık
+  hiçbir satırın süzgeci içermediğini söyler.
+
+**Geri gelmesi nasıl engelleniyor.**
+
+- *Mandal.* Bu partiden sonra: 53 dosyada 27 / 43 / 12 / 83 / 25 (ilkinden
+  sonra: 62 dosyada 37 / 58 / 14 / 109 / 29). Listeden kalıcı olarak çıkanlar:
+  `Settings`, `UsersPage`, `DomainFileManager`, `DomainSSLSettings`,
+  `DomainDetail`, `ImportPage`, `LicenseNotice`, `MonitoringPage`,
+  `ComponentDetail` ve yeni `ServiceRecordLookup`. Azalan ama hâlâ listede
+  olanlar: `App` (tek bir yanıt gözlemcisi), `ServiceList` (kurulum penceresi
+  taşındı; listenin kendisi taşınmadı), `Dashboard` (üç sayı okuması taşındı),
+  `Layout` (alan adı rozeti taşındı), `ServiceShell` (hiçbir sayı değişmedi:
+  okuması, kontrolü ve kurulumu üç güvenlik sözleşmesiyle satır satır
+  sabitlenmiştir; bu yüzden yeni bir okuyucu yerine o yapının içinde bir
+  "okunamadı" durumu kazandı).
+- *Adres başına tek okuyucu.* `lib/managedServices.ts` (kayıtlı bileşen
+  kayıtları, işlem izleyicinin güvenli taraf çözücüsüyle),
+  `lib/subscriptions.ts`, `lib/accounts.ts`; alan adı listesini Alan Adları
+  sayfası, bir alan adının sayfası, ada göre araması, pano ve gezinme rayı tek
+  adres ve tek çözücüyle okur, böylece tek isteği paylaşırlar. `Remote` bir
+  reddin HTTP durumunu taşır; böylece "böyle bir kayıt yok", "yanıt yok"tan
+  ayrılabilir; `countText` bir sayıyı yazar; `CouldNotCheck`, Tekrar dene'nin
+  yanında ikinci bir bakma yolu alır.
+- *Bağlanan test* yukarıdaki her ekranı kazandı: tablonun 12 yeni satırı (her
+  okuma dört biçimde esirgenir, sonra olumsuz yanıtlanır), ekranların kendi
+  değişikliklerinin çevresinde ne yaptığına dair 14 test: isteği gönderen
+  sayfadan ve başka bir sekmeden görülen sertifika isteği; yanıtsız sorgu;
+  Hesaplar'da kaybolan yanıt; klasör değişimi; yeniden okuması yanıtlanan ve
+  yanıtlanmayan sertifika isteği; alan adı varken ve yokken içe aktarımın
+  kaybolan uygulaması; lisans bildirimi; başarısız izleme sorgusu; adıyla açılan
+  alan adı; bir bileşenin kaydı, birimi ve Kur etiketi; ve bu dosyanın
+  bağlayamadığı dört ekranın kaynağını okuyan bir test.
+- *Yer.* Yardım metinleri (iki dil için yaklaşık 100 KiB), Yardım düğmesini
+  taşıyan her sayfanın sabit bir parçasıydı ve Ayarlar sayfasını sınırına 0,29
+  KiB kalacak kadar yaklaştırmıştı. Artık bir yardım çekmecesi açıldığında
+  getirilir; çekmece getirdiğini ya da getiremediğini Tekrar dene ile söyler.
+  Paket denetimi o parçayı adıyla arar; geri birleştirilirse derleme düşer.
+  Hiçbir sınır yükseltilmedi: Ayarlar 272,90 → 180,67 KiB (gzip 79,71 → 48,35),
+  bir alan adının sayfası 236,45 → 139,31 KiB.
+
+**Sunucu tarafını gerektiren; burada değiştirilmedi.**
+
+- `GET /api/v1/panel/certificate`, hem sertifika dosyası olmadığında hem de
+  dosya okunamadığında ya da çözümlenemediğinde `https_enabled: false,
+  self_signed: false` yanıtlar. Arayüz artık Panelin okuyabildiği bir sertifika
+  bulamadığını söyler; ikisinden hangisi olduğunu söyleyemez.
+- İçe aktarımın uygulamasının istek kimliği ve işlem kaydı yoktur ve isteğin
+  kendi bağlamında çalışır. Kaybolan yanıttan sonra sonucu yalnız alan adı
+  listesinden çıkarsanabilir. Tarayıcı çalıştırmasında sayfanın tek gönderimi
+  sahte sunucuya altı ya da yedi bağlantıyla ulaştı (tarayıcı, altında kapanan
+  bağlantıdaki isteği yineler); bu sahte sunucuya karşı zararsızdır ve tam da
+  yinelenmezlik anahtarının var olma nedenidir.
+- Yanıtı kaybolan değişikliğin (hesaplar, planlar, dosyalar) de kimliği yoktur;
+  ekran yalnız durumu yeniden okuyabilir.
+
+**Yapılmayan.**
+
+- 53 dosya hâlâ eski yolla okuyor. Bu partinin ekranlarından: kurulum penceresi
+  dışındaki bileşenler listesi, sayıları dışındaki pano (sistem rakamları,
+  güvenlik duvarı, denetim kaydı, bileşen özeti), gezinme rayının sürüm ve
+  bileşen okumaları ve `ServiceShell`'in okuyucusu.
+- Panodaki "Dikkat gerekenler" listesi alan adı listesine bağlıdır ve o
+  geldiğinde belirir; liste bilerek yavaşlatıldığında altındaki her şey 118 px
+  (telefonda 158 px) aşağı kaydı. Kullanımda, pano açıldığında ray listeyi
+  zaten okumuştur.
+- Panoda okunamayan bir sayının kendi Tekrar dene düğmesi yoktur; kartın açtığı
+  sayfada vardır.
+- Lisans bildirimi kendi okuması başarısız olduğunda hiçbir şey söylemez.
+- Bu ekranlar için yönetici dışındaki roller denenmedi.
+
+**Bu partinin tarayıcı incelemesi (2026-10-09).** Gerçek, kurulu bir Chrome'da,
+yerel sahte sunucuya karşı (`web/tools/browser-inspect`, `twofactor`,
+`panelcert`, `accounts`, `files`, `domainssl`, `importer`, `dashboard`,
+`monitoring`, `lookup`, `component`, `installdialog`, `scrim` senaryoları):
+masaüstü 1440×900 ve telefon 390×844, Türkçe ve İngilizce, açık ve koyu; sekiz
+yapılandırmanın her birinde 69 durum.
+
+- *Sekiz yapılandırmanın hepsinde ölçülen.* Hiçbir durum, sunucu söylemeden
+  olumsuz bir cümle çizmedi; hiçbir kontrol durumu bildirim çizmedi; hiçbir
+  başarısız okuma hâlâ kontrol ettiğini söylemedi. Sertifika alındıktan sonra
+  isteği gönderen sayfa, kendi bölümündeki on saniyenin ardından bir kez,
+  `https://panel.example.com:<port>/` adresine taşındı; "Burada kal"dan sonra,
+  başka bir bölümden ve başka bir sekmede hiçbir şey taşınmadı. Bir isteğin
+  sonucu doğrulanamazken "Sertifika al" kapalıydı. İçe aktarım sayfası
+  uygulamayı bir kez gönderdi; kontrol yalnız `GET /api/v1/domains` istedi; "İçe
+  aktarımı yeniden başlat" ancak alan adının olmadığı görüldükten sonra
+  sunuldu. Pano sayıları önce "…", sonra sayı; başarısız okumalarda "–" okundu;
+  gezinme rozeti önce yoktu, sonra "2" oldu. Bir dakika sonraki başarısız
+  sorgudan sonra her izleme grafiği bildirimin altında hâlâ çiziliydi. Okuması
+  yavaşken açılan klasör, az önce çıkılan klasörün hiçbir satırını göstermedi.
+  Adresiyle açılan dört sayfa adresinde kaldı. Kaydı okunamayan bileşen
+  "Okunamadı" ve yalnız Yardım'ı; birimi olmayan bileşen "Kurulu" ve yalnız
+  Yardım'ı gösterdi. Kurulum penceresinde Kur; depo kontrol edilirken, kontrol
+  edilemediğinde ve etkin olmayan zorunlu depo için kapalıydı. Yardım metni bir
+  kez, çekmece açıldığında istendi. Bir alan adının sekmeleri, başarısız bir
+  yetenek okumasından önce ve sonra aynıydı. Her kontrol durumu ile onu izleyen
+  bilinen durum arasında, pano dışında (aşağıda), ölçülen hiçbir şey yer ya da
+  boyut değiştirmedi.
+- *Bakarak bulunan ve düzeltilen.* Telefonda sertifika kartı üç hazırlık
+  adımıyla başlıyordu; bu yüzden durum ve "doğrulanamadı" görünür alanın
+  altındaydı; artık önce durum gelir ve beliren bildirim görünür alana
+  kaydırılır. Sertifikanın durum satırı telefonda yanıt gelince 34 px, iki
+  faktör kartı 12 px büyüyordu; ikisi de genişliklerine göre bir en az
+  yüksekliği korur. "Tekrar kontrol et" ile güvenli adres bağlantısı üst üste
+  iki ayrı bloktu; artık aynı satırı paylaşır. Bir istekten sonra alan adının
+  sertifikası yeniden okunurken "Sertifika yok", yalnızca okuduğunu söyleyen bir
+  satırla başarı bildiriminin altında duruyordu; satır artık gösterilenin önceki
+  yanıt olduğunu söyler. Servisi olmayan bir araç, sayfasının başında "Durdu"
+  okunuyordu. Telefonda başlat, durdur ve yeniden başlat denetimleri sağ
+  kenardan taşıyordu. İçe aktarım bildirimi uzun bir sütunun sonunda, telefonda
+  görünür alanın dışında beliriyordu.
+- *Görülen ve burada değiştirilmeyen.* Panonun dikkat listesi (yukarıda,
+  "Yapılmayan"). Telefonda hesap ve dosya tabloları yana kayar; satır
+  denetimleri tablo kaydırılana dek ekran dışındadır. Kapalı birincil düğme koyu
+  temada etkin olana yakındır (kurulum penceresi). Başarı bildirimi birkaç
+  saniyeliğine tema ve hesap denetimlerinin üstünü örter.
+- *Kapsanmayan.* Herhangi bir gerçek sunucu, sertifika ya da yeniden başlatma:
+  güvenli adrese taşınma kaydedildi ve durduruldu, hiç izlenmedi. Safari,
+  Firefox, ekran okuyucu, dokunmatik aygıt; taklit görünümler; yönetici
+  dışındaki roller. Hesap ya da plan oluşturan formlar gönderilmedi. Kurulum
+  rehberi cümlesi katalogda değiştirildi, ekranda görülmedi.

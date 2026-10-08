@@ -40,7 +40,7 @@ export const trSetupDNS: Record<SetupDNSKey, string> = {
     "setup.guide.accessDNSPrepared": "Kurulumda {zone} için incelenmiş bir kayıt planı var. Kayıt kuruluşunun bölgeyi eşleşen host (glue) adresleriyle {primary} ve {secondary} sunucularına yönlendirdiğini ve iki DNS sunucusunun da bölge için yanıt verdiğini kontrol edin.",
     "setup.guide.accessDNSProvider": "Kaydı onu yöneten DNS sağlayıcısında veya birincil sunucuda oluşturun ya da düzeltin. Alan Adları bölümünde web sitesi oluşturmanız gerekmez.",
     "setup.guide.accessDNSChecks": "Her iki yetkili sunucuda TCP/UDP 53 üzerinden DNS erişimini, yönlendirmeyi, eşleşen A/AAAA kayıtlarını ve aktarılan bölge içeriğini kontrol edin. Mevcut kayıtlar korunmalıdır; AAAA kaydının olmaması IPv6 eklemenizi gerektirmez.",
-    "setup.guide.accessDNSResume": "Bu gereksinim otomatik kontrol edilir. Doğrulanınca aynı kurulum devam eder. İncelenen adları veya adresleri değiştirmek için aşağıdaki Kurulum planını düzenle düğmesini kullanın.",
+    "setup.guide.accessDNSResume": "Bu gereksinim otomatik kontrol edilir. Doğrulanınca aynı kurulum devam eder. İncelenen adları veya adresleri değiştirmek için aşağıdaki Planı düzenle düğmesini kullanın.",
     "setup.guide.infrastructureDNS": "{zone} içinde incelenen altyapı kayıtları hazırlanıyor. Eşleşen mevcut kayıtlar korunur; müşteri web sitesi veya posta kutusu oluşturulmaz.",
     "setup.guide.infrastructureDNSWaiting": "DNS yayını gerekli DNS servisini veya eş doğrulamasını bekliyor. Mevcut kayıtları değiştirmeden önce bildirilen gereksinimi kontrol edin.",
     "setup.guide.infrastructureDNSPeer": "İkincil {peer} ({peerIP}) henüz yapılandırılmadıysa DNS kurulumunu şimdi başlatın. Zaten yapılandırıldıysa aktarım ilişkisini ve DNS bağlantısını kontrol edin.",

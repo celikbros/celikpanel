@@ -2,9 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { Shield, CheckCircle, AlertTriangle, XCircle, Lock, Upload, Unlink, RefreshCw } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
-import { Button, Field, FormActions, FormSection, Spinner, inputClass } from './ui';
+import { Button, Checking, CouldNotCheck, Field, FormActions, FormSection, inputClass } from './ui';
 import type { TranslationKey } from '../i18n/en';
 import { apiErrorText, readApiError } from '../lib/apiError';
+import { decodeListIn, lastKnown, useRemote } from '../lib/remote';
 import { sslTier, sslTierLabel } from '../lib/sslTier';
 
 interface DomainSSLSettingsProps {
@@ -75,6 +76,40 @@ const HSTS_PRESETS = [
 
 const INITIAL_HSTS_MAX_AGE = 300;
 
+// What this screen reads. Each answer is the contract or it is unknown: a
+// missing `has_certificate` is not "no certificate", a missing `secure_mail`
+// is not "mail is not secured", and an unreadable authority list is not "only
+// Let's Encrypt".
+// Bu ekranın okudukları. Her yanıt ya sözleşmedir ya da bilinmeyendir: eksik
+// `has_certificate` "sertifika yok" değildir.
+function decodeSSLData(raw: unknown): SSLData {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('shape');
+    const body = raw as Record<string, unknown>;
+    const settings = body.settings as Record<string, unknown> | null | undefined;
+    if (
+        typeof body.has_certificate !== 'boolean' ||
+        !settings || typeof settings !== 'object' ||
+        typeof settings.force_https !== 'boolean' ||
+        typeof settings.hsts_enabled !== 'boolean' ||
+        typeof settings.hsts_max_age !== 'number'
+    ) {
+        throw new Error('field');
+    }
+    if (body.has_certificate && (!body.certificate || typeof body.certificate !== 'object')) throw new Error('certificate');
+    return raw as SSLData;
+}
+
+function decodeSecureMail(raw: unknown): boolean {
+    if (!raw || typeof raw !== 'object' || typeof (raw as { secure_mail?: unknown }).secure_mail !== 'boolean') {
+        throw new Error('shape');
+    }
+    return (raw as { secure_mail: boolean }).secure_mail;
+}
+
+const SSL_PROVIDERS_URL = '/api/v1/ssl/providers';
+const decodeProviders = (raw: unknown) => decodeListIn<SSLProvider>(raw, 'providers');
+const NO_PROVIDERS: SSLProvider[] = [];
+
 export function DomainSSLSettings({
     domainId,
     domainName,
@@ -83,8 +118,12 @@ export function DomainSSLSettings({
     onCertificateChange,
 }: DomainSSLSettingsProps) {
     const { t, locale } = useI18n();
-    const [data, setData] = useState<SSLData | null>(null);
-    const [loading, setLoading] = useState(true);
+    // Another domain is another address: its answer never appears under this
+    // one, and an answer for the domain just left is dropped.
+    // Başka alan adı başka adrestir: yanıtı bunun altında görünmez.
+    const ssl = useRemote(`/api/v1/domains/${domainId}/ssl`, decodeSSLData);
+    const mailState = useRemote(mailAvailable === true ? `/api/v1/domains/${domainId}/ssl/mail` : null, decodeSecureMail);
+    const providersRead = useRemote(SSL_PROVIDERS_URL, decodeProviders);
     const [clockMs, setClockMs] = useState(() => Date.now());
     const [issuing, setIssuing] = useState(false);
     const [email, setEmail] = useState('');
@@ -95,7 +134,7 @@ export function DomainSSLSettings({
     // The list comes from the server registry — the UI never hardcodes a CA.
     // Sertifikanın alındığı CA (operatör, 23 Tem: "birkaç çeşit SSL"). Liste
     // sunucu kayıt defterinden gelir — UI asla bir CA'yı sabitlemez.
-    const [providers, setProviders] = useState<SSLProvider[]>([]);
+    const providers = providersRead.remote.state === 'known' ? providersRead.remote.value : NO_PROVIDERS;
     const [provider, setProvider] = useState('letsencrypt');
     const [eabKid, setEabKid] = useState('');
     const [eabHmac, setEabHmac] = useState('');
@@ -103,15 +142,13 @@ export function DomainSSLSettings({
     const [keyFile, setKeyFile] = useState<File | null>(null);
     const [chainFile, setChainFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
-    const [secureMail, setSecureMail] = useState<boolean | null>(null);
     const [showReissue, setShowReissue] = useState(false);
     const [retrying, setRetrying] = useState(false);
+    const [removing, setRemoving] = useState(false);
     const [settingsBusy, setSettingsBusy] = useState(false);
     const [secureMailBusy, setSecureMailBusy] = useState(false);
     const [renewalBusy, setRenewalBusy] = useState(false);
     const currentDomainIdRef = useRef(domainId);
-    const nextLoadRequestIdRef = useRef(0);
-    const activeLoadRef = useRef<{ domainId: number; requestId: number; controller: AbortController } | null>(null);
     const settingsMutationBusyRef = useRef(false);
     const secureMailMutationBusyRef = useRef(false);
     const renewalMutationBusyRef = useRef(false);
@@ -121,34 +158,59 @@ export function DomainSSLSettings({
     // newly selected domain before its effect has run.
     currentDomainIdRef.current = domainId;
 
+    // What the server last said about this domain's certificate, if anything,
+    // and whether that is still the latest read.
+    // Sunucunun bu alan adının sertifikası hakkında en son söylediği ve bunun
+    // hâlâ son okuma olup olmadığı.
+    const observed = lastKnown(ssl.remote);
+    const data = observed?.value ?? null;
+    const observedAt = observed?.observedAt ?? 0;
+    // Whether mail uses the certificate: `false` only where the server has no
+    // mail or said so, `null` whenever it is not known.
+    // Postanın sertifikayı kullanıp kullanmadığı: yalnız sunucu söylediğinde
+    // `false`, bilinmediğinde `null`.
+    const secureMail: boolean | null =
+        mailAvailable === false ? false : mailState.remote.state === 'known' ? mailState.remote.value : null;
+    // Nothing that changes the certificate or its settings is offered on an
+    // earlier answer, or while the answer is being read again.
+    // Sertifikayı ya da ayarlarını değiştiren hiçbir şey, önceki bir yanıt
+    // üzerinde ya da yanıt yeniden okunurken sunulmaz.
+    const locked = ssl.remote.state !== 'known' || ssl.reading;
+
     useEffect(() => {
         setShowReissue(false);
-        setData(null);
         setIncludeMail(false);
-        setSecureMail(null);
         setCertSource('letsencrypt');
         setSettingsBusy(settingsMutationBusyRef.current);
         setSecureMailBusy(secureMailMutationBusyRef.current);
         setRenewalBusy(renewalMutationBusyRef.current);
     }, [domainId]);
 
+    // The issue form starts from what the server said, each time it says it.
+    // Verme formu, sunucunun her söyleyişinde onun söylediğinden başlar.
     useEffect(() => {
-        void loadSSLData(domainId);
-
-        return () => {
-            const activeLoad = activeLoadRef.current;
-            if (activeLoad?.domainId !== domainId) return;
-            activeLoad.controller.abort();
-            if (activeLoadRef.current === activeLoad) activeLoadRef.current = null;
-        };
-    }, [domainId, mailAvailable]);
-
-    useEffect(() => {
-        fetch('/api/v1/ssl/providers')
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => setProviders(d?.providers ?? []))
-            .catch(() => {});
-    }, []);
+        if (ssl.remote.state !== 'known') return;
+        const next = ssl.remote.value;
+        onCertificateChange?.({
+            activated: next.certificate?.activated === true,
+            usable: next.certificate?.usable === true,
+        });
+        if (next.certificate?.type === 'letsencrypt') {
+            setAutoRenew(next.certificate.auto_renew);
+        } else if (!next.has_certificate) {
+            setAutoRenew(true);
+        }
+        const loadedMailName = `mail.${normaliseDNSName(next.domain_name || domainName)}`;
+        const loadedDNSNames = Array.isArray(next.certificate?.dns_names)
+            ? uniqueDNSNames(next.certificate.dns_names)
+            : [];
+        setIncludeMail(
+            mailAvailable === true &&
+                next.has_certificate &&
+                loadedDNSNames.some((name) => normaliseDNSName(name) === loadedMailName),
+        );
+        // Keyed on the answer itself: a new read, or another domain's.
+    }, [observedAt, ssl.remote.state, domainId, mailAvailable]);
 
     useEffect(() => {
         const now = Date.now();
@@ -180,90 +242,27 @@ export function DomainSSLSettings({
         setEabHmac('');
     }, [data?.certificate?.id, data?.certificate?.issuer, data?.certificate?.provider_id, data?.certificate?.type, providers]);
 
-    const loadSSLData = async (targetDomainId: number = domainId) => {
-        if (currentDomainIdRef.current !== targetDomainId) return;
+    // Reads the certificate and the mail state again. It only reads. The
+    // handles belong to the domain they were made for, so a change that
+    // finishes after the person moved to another domain re-reads nothing there.
+    // Sertifikayı ve posta durumunu yeniden okur; yalnız okur.
+    const retrySSL = ssl.retry;
+    const retryMailState = mailState.retry;
+    const loadSSLData = async () => {
+        await Promise.all([retrySSL(), retryMailState()]);
+    };
 
-        activeLoadRef.current?.controller.abort();
-        const loadRequest = {
-            domainId: targetDomainId,
-            requestId: ++nextLoadRequestIdRef.current,
-            controller: new AbortController(),
-        };
-        activeLoadRef.current = loadRequest;
-        setLoading(true);
-        try {
-            const mailRequest: Promise<Response | null> =
-                mailAvailable === true
-                    ? fetch(`/api/v1/domains/${targetDomainId}/ssl/mail`, {
-                          signal: loadRequest.controller.signal,
-                      }).catch((error) => {
-                          if (loadRequest.controller.signal.aborted) throw error;
-                          return null;
-                      })
-                    : Promise.resolve(null);
-            const [res, mailRes] = await Promise.all([
-                fetch(`/api/v1/domains/${targetDomainId}/ssl`, { signal: loadRequest.controller.signal }),
-                mailRequest,
-            ]);
-            if (!res.ok) throw new Error();
-            const nextData: SSLData = await res.json();
-            let nextSecureMail: boolean | null = mailAvailable === false ? false : null;
-            if (mailRes?.ok) {
-                try {
-                    const mailData = await mailRes.json();
-                    if (typeof mailData?.secure_mail === 'boolean') {
-                        nextSecureMail = mailData.secure_mail;
-                    }
-                } catch {
-                    nextSecureMail = null;
-                }
-            }
-            if (
-                loadRequest.controller.signal.aborted ||
-                activeLoadRef.current !== loadRequest ||
-                currentDomainIdRef.current !== targetDomainId
-            ) {
-                return;
-            }
-            setData(nextData);
-            onCertificateChange?.({
-                activated: nextData.certificate?.activated === true,
-                usable: nextData.certificate?.usable === true,
-            });
-            if (nextData.certificate?.type === 'letsencrypt') {
-                setAutoRenew(nextData.certificate.auto_renew);
-            } else if (!nextData.has_certificate) {
-                setAutoRenew(true);
-            }
-            const loadedMailName = `mail.${normaliseDNSName(nextData.domain_name || domainName)}`;
-            const loadedDNSNames = Array.isArray(nextData.certificate?.dns_names)
-                ? uniqueDNSNames(nextData.certificate.dns_names)
-                : [];
-            setIncludeMail(
-                mailAvailable === true &&
-                    nextData.has_certificate &&
-                    loadedDNSNames.some((name) => normaliseDNSName(name) === loadedMailName),
-            );
-            setSecureMail(nextSecureMail);
-        } catch {
-            if (
-                loadRequest.controller.signal.aborted ||
-                activeLoadRef.current !== loadRequest ||
-                currentDomainIdRef.current !== targetDomainId
-            ) {
-                return;
-            }
-            showToast('error', t('ssl.loadFailed'));
-        } finally {
-            if (activeLoadRef.current === loadRequest) {
-                activeLoadRef.current = null;
-                if (currentDomainIdRef.current === targetDomainId) setLoading(false);
-            }
-        }
+    // The answer to a change did not arrive: whether it was made is not known.
+    // Nothing is sent again; the state is read so the person can look first.
+    // Değişikliğin yanıtı gelmedi: yapılıp yapılmadığı bilinmiyor. Hiçbir şey
+    // yeniden gönderilmez; kişi önce bakabilsin diye durum okunur.
+    const resultUnknown = (targetDomainId: number) => {
+        if (currentDomainIdRef.current === targetDomainId) showToast('error', t('common.resultUnknown'));
+        return loadSSLData();
     };
 
     const handleIssue = async () => {
-        if (readOnly) return;
+        if (readOnly || locked || providersRead.remote.state !== 'known') return;
         if (!email) return showToast('error', t('ssl.emailRequired'));
         const isReissue = data?.has_certificate === true;
         if (isReissue && mailAvailable !== false && secureMail === null) {
@@ -282,6 +281,7 @@ export function DomainSSLSettings({
                       : 'ssl.issueConfirm';
         const authority = providers.find((candidate) => candidate.id === provider)?.name ?? provider;
         if (!confirm(t(confirmationKey, { name: domainName, mailName: `mail.${normaliseDNSName(domainName)}`, authority }))) return;
+        const targetDomainId = domainId;
         setIssuing(true);
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/ssl/letsencrypt`, {
@@ -320,9 +320,11 @@ export function DomainSSLSettings({
             }
             showToast('success', t(isReissue ? 'ssl.reissued' : 'ssl.issued'));
             setShowReissue(false);
-            loadSSLData();
+            // The screen keeps what it showed, with its controls off, until
+            // the server has said what the certificate is now.
+            await loadSSLData();
         } catch {
-            showToast('error', t(isReissue ? 'ssl.reissueFailed' : 'ssl.issueFailed'));
+            await resultUnknown(targetDomainId);
         } finally {
             setEabKid('');
             setEabHmac('');
@@ -332,7 +334,7 @@ export function DomainSSLSettings({
 
     const handleUpload = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (readOnly) return;
+        if (readOnly || locked) return;
         if (!certFile || !keyFile) return showToast('error', t('ssl.certKeyRequired'));
         const isReplacement = data?.has_certificate === true;
         if (isReplacement && mailAvailable !== false && secureMail === null) {
@@ -340,6 +342,7 @@ export function DomainSSLSettings({
             return;
         }
         if (!confirm(t(isReplacement ? 'ssl.replaceCertificateConfirm' : 'ssl.uploadConfirm', { name: domainName }))) return;
+        const targetDomainId = domainId;
         setUploading(true);
         try {
             const fd = new FormData();
@@ -376,16 +379,16 @@ export function DomainSSLSettings({
             setKeyFile(null);
             setChainFile(null);
             setShowReissue(false);
-            loadSSLData();
+            await loadSSLData();
         } catch {
-            showToast('error', t('ssl.uploadFailed'));
+            await resultUnknown(targetDomainId);
         } finally {
             setUploading(false);
         }
     };
 
     const handleUpdateSettings = async (updates: Partial<SSLSettings>) => {
-        if (readOnly || !data || settingsMutationBusyRef.current) return;
+        if (readOnly || locked || !data || settingsMutationBusyRef.current) return;
         const targetDomainId = domainId;
         const nextSettings = { ...data.settings, ...updates };
         const settingsRequest = {
@@ -411,11 +414,9 @@ export function DomainSSLSettings({
             if (currentDomainIdRef.current === targetDomainId) {
                 showToast('success', t('ssl.settingsSaved'));
             }
-            await loadSSLData(targetDomainId);
+            await loadSSLData();
         } catch {
-            if (currentDomainIdRef.current === targetDomainId) {
-                showToast('error', t('ssl.settingsFailed'));
-            }
+            await resultUnknown(targetDomainId);
         } finally {
             settingsMutationBusyRef.current = false;
             setSettingsBusy(false);
@@ -423,7 +424,7 @@ export function DomainSSLSettings({
     };
 
     const handleSecureMailChange = async (nextSecureMail: boolean) => {
-        if (readOnly || secureMailMutationBusyRef.current || secureMail === null || mailAvailable !== true) return;
+        if (readOnly || locked || secureMailMutationBusyRef.current || secureMail === null || mailAvailable !== true) return;
         const targetDomainId = domainId;
         secureMailMutationBusyRef.current = true;
         setSecureMailBusy(true);
@@ -441,14 +442,11 @@ export function DomainSSLSettings({
                 return;
             }
             if (currentDomainIdRef.current === targetDomainId) {
-                setSecureMail(nextSecureMail);
                 showToast('success', nextSecureMail ? t('ssl.mailSecured') : t('ssl.mailUnsecured'));
             }
-            await loadSSLData(targetDomainId);
+            await loadSSLData();
         } catch {
-            if (currentDomainIdRef.current === targetDomainId) {
-                showToast('error', t('common.error'));
-            }
+            await resultUnknown(targetDomainId);
         } finally {
             secureMailMutationBusyRef.current = false;
             setSecureMailBusy(false);
@@ -456,7 +454,7 @@ export function DomainSSLSettings({
     };
 
     const handleAutoRenewChange = async (nextAutoRenew: boolean) => {
-        if (readOnly || renewalMutationBusyRef.current) return;
+        if (readOnly || locked || renewalMutationBusyRef.current) return;
         const targetDomainId = domainId;
         renewalMutationBusyRef.current = true;
         setRenewalBusy(true);
@@ -474,14 +472,11 @@ export function DomainSSLSettings({
                 return;
             }
             if (currentDomainIdRef.current === targetDomainId) {
-                setAutoRenew(nextAutoRenew);
                 showToast('success', t('ssl.autoRenewSaved'));
             }
-            await loadSSLData(targetDomainId);
+            await loadSSLData();
         } catch {
-            if (currentDomainIdRef.current === targetDomainId) {
-                showToast('error', t('ssl.autoRenewFailed'));
-            }
+            await resultUnknown(targetDomainId);
         } finally {
             renewalMutationBusyRef.current = false;
             setRenewalBusy(false);
@@ -489,7 +484,8 @@ export function DomainSSLSettings({
     };
 
     const handleRetryActivation = async () => {
-        if (readOnly) return;
+        if (readOnly || locked) return;
+        const targetDomainId = domainId;
         setRetrying(true);
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/ssl/retry`, { method: 'POST' });
@@ -501,14 +497,14 @@ export function DomainSSLSettings({
             showToast('success', t('ssl.retrySucceeded'));
             await loadSSLData();
         } catch {
-            showToast('error', t('ssl.retryFailed'));
+            await resultUnknown(targetDomainId);
         } finally {
             setRetrying(false);
         }
     };
 
     const handleDelete = async () => {
-        if (readOnly) return;
+        if (readOnly || locked) return;
         if (data?.settings.hsts_enabled) {
             showToast('warning', t('ssl.removeBlockedByHsts'));
             return;
@@ -525,6 +521,8 @@ export function DomainSSLSettings({
             return;
         }
         if (!confirm(t('ssl.confirmRemove', { name: domainName }))) return;
+        const targetDomainId = domainId;
+        setRemoving(true);
         try {
             const res = await fetch(`/api/v1/domains/${domainId}/ssl`, { method: 'DELETE' });
             if (!res.ok) {
@@ -533,20 +531,19 @@ export function DomainSSLSettings({
                 return;
             }
             showToast('success', t('ssl.removed'));
-            loadSSLData();
+            await loadSSLData();
         } catch {
-            showToast('error', t('common.error'));
+            await resultUnknown(targetDomainId);
+        } finally {
+            setRemoving(false);
         }
     };
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center py-16">
-                <Spinner />
-            </div>
-        );
+    if (ssl.remote.state === 'loading') return <Checking label={t('ssl.checking')} className="py-3" />;
+    if (!data) {
+        return <CouldNotCheck text={t('ssl.unknown')} onRetry={() => void loadSSLData()} busy={ssl.reading} />;
     }
-    if (!data) return <p className="text-danger">{t('ssl.loadFailed')}</p>;
+    const stale = ssl.remote.state === 'unknown';
 
     // The backend may retain historical certificate details after the active
     // assignment is removed. has_certificate is authoritative; stale details
@@ -592,6 +589,24 @@ export function DomainSSLSettings({
 
     return (
         <div>
+            {/* An earlier answer is said to be one, with when it was read; a
+                re-read after this screen's own change says that it is reading.
+                In both cases every control below that changes something is off.
+                Önceki yanıtın önceki olduğu ve ne zaman okunduğu söylenir; bu
+                ekranın kendi değişikliğinden sonraki okuma da okuduğunu söyler.
+                İki durumda da aşağıdaki değiştiren her denetim kapalıdır. */}
+            {stale ? (
+                <CouldNotCheck
+                    className="mb-4"
+                    text={t('common.staleNotice', {
+                        time: new Date(observedAt).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }),
+                    })}
+                    onRetry={() => void loadSSLData()}
+                    busy={ssl.reading}
+                />
+            ) : ssl.reading ? (
+                <Checking label={t('ssl.rereading')} className="mb-4" />
+            ) : null}
             {/* Certificate status */}
             <FormSection title="SSL/TLS">
                 <div className="flex items-start gap-3">
@@ -650,7 +665,7 @@ export function DomainSSLSettings({
                                                 variant="secondary"
                                                 icon={RefreshCw}
                                                 onClick={handleRetryActivation}
-                                                disabled={readOnly || retrying}
+                                                disabled={readOnly || locked || retrying}
                                                 className="shrink-0"
                                             >
                                                 {t(retrying ? 'ssl.retrying' : 'ssl.retryActivation')}
@@ -676,7 +691,7 @@ export function DomainSSLSettings({
                                             onChange={handleAutoRenewChange}
                                             label={t('ssl.autoRenewOn')}
                                             hint={t('ssl.autoRenewHint')}
-                                            disabled={readOnly || renewalBusy}
+                                            disabled={readOnly || locked || renewalBusy}
                                         />
                                     </div>
                                 )}
@@ -689,7 +704,7 @@ export function DomainSSLSettings({
                                                 setCertSource('letsencrypt');
                                                 setShowReissue((current) => !current);
                                             }}
-                                            disabled={readOnly || issuing}
+                                            disabled={readOnly || locked || issuing}
                                         >
                                             {showReissue ? t('common.cancel') : t('ssl.reissue')}
                                         </Button>
@@ -701,7 +716,7 @@ export function DomainSSLSettings({
                                                 setCertSource('custom');
                                                 setShowReissue((current) => !current);
                                             }}
-                                            disabled={readOnly || uploading}
+                                            disabled={readOnly || locked || uploading}
                                         >
                                             {showReissue ? t('common.cancel') : t('ssl.replaceCustom')}
                                         </Button>
@@ -710,7 +725,7 @@ export function DomainSSLSettings({
                                         variant="danger"
                                         icon={Unlink}
                                         onClick={handleDelete}
-                                        disabled={readOnly || issuing || data.settings.hsts_enabled || hstsRetirementUntil !== null}
+                                        disabled={readOnly || locked || issuing || removing || data.settings.hsts_enabled || hstsRetirementUntil !== null}
                                     >
                                         {t('ssl.remove')}
                                     </Button>
@@ -770,6 +785,19 @@ export function DomainSSLSettings({
                                 names={plannedCertificateNames}
                                 inventoryComplete={managedNamesFromServer !== null}
                             />
+                            {/* The authority is one the server named. Until
+                                the list is known the request is not offered;
+                                there is no assumed authority.
+                                Yetkili, sunucunun adlandırdığı biridir. Liste
+                                bilinene dek istek sunulmaz. */}
+                            {providersRead.remote.state === 'loading' && <Checking label={t('ssl.checkingProviders')} />}
+                            {providersRead.remote.state === 'unknown' && (
+                                <CouldNotCheck
+                                    text={t('ssl.providersUnknown')}
+                                    onRetry={() => void providersRead.retry()}
+                                    busy={providersRead.reading}
+                                />
+                            )}
                             {providers.length > 1 && (
                                 <Field label={t('ssl.provider')} hint={providers.find((p) => p.id === provider)?.note}>
                                     <select
@@ -851,7 +879,7 @@ export function DomainSSLSettings({
                                 variant="primary"
                                 icon={Lock}
                                 onClick={handleIssue}
-                                disabled={issuing || !email || replacementBlockedByMailState}
+                                disabled={locked || providersRead.remote.state !== 'known' || issuing || !email || replacementBlockedByMailState}
                             >
                                 {issuing
                                     ? t(data.has_certificate ? 'ssl.reissuing' : 'ssl.issuing')
@@ -875,7 +903,7 @@ export function DomainSSLSettings({
                                     type="submit"
                                     variant="primary"
                                     icon={Upload}
-                                    disabled={uploading || !certFile || !keyFile || replacementBlockedByMailState}
+                                    disabled={locked || uploading || !certFile || !keyFile || replacementBlockedByMailState}
                                 >
                                     {uploading ? t('ssl.uploading') : t('ssl.upload')}
                                 </Button>
@@ -908,6 +936,7 @@ export function DomainSSLSettings({
                     }
                     disabled={
                         readOnly ||
+                        locked ||
                         settingsBusy ||
                         (!certificateReady && !data.settings.force_https) ||
                         (data.settings.hsts_enabled && data.settings.force_https)
@@ -935,7 +964,7 @@ export function DomainSSLSettings({
                                   })
                               : t('ssl.hstsHint')
                     }
-                    disabled={readOnly || settingsBusy || (!certificateReady && !data.settings.hsts_enabled)}
+                    disabled={readOnly || locked || settingsBusy || (!certificateReady && !data.settings.hsts_enabled)}
                 />
                 {data.has_certificate && data.settings.hsts_enabled && (
                     <div className="ml-7 space-y-2">
@@ -944,7 +973,7 @@ export function DomainSSLSettings({
                                 value={data.settings.hsts_max_age}
                                 onChange={(event) => handleUpdateSettings({ hsts_max_age: Number(event.target.value) })}
                                 className={inputClass}
-                                disabled={readOnly || settingsBusy}
+                                disabled={readOnly || locked || settingsBusy}
                             >
                                 {!HSTS_PRESETS.some((preset) => preset.seconds === data.settings.hsts_max_age) && (
                                     <option value={data.settings.hsts_max_age}>
@@ -982,6 +1011,7 @@ export function DomainSSLSettings({
                         }
                         disabled={
                             readOnly ||
+                            locked ||
                             secureMailBusy ||
                             secureMail === null ||
                             (secureMail !== true && (!certificateReady || !mailCovered))

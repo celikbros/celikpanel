@@ -6,6 +6,7 @@ import test from 'node:test';
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 import ts from 'typescript';
+import { remoteURL } from './fixtures/shared-layer.mjs';
 
 const require = createRequire(import.meta.url);
 const reactURL = pathToFileURL(require.resolve('react')).href;
@@ -65,7 +66,8 @@ const layoutURL = compileURL('../src/components/Layout.tsx', Object.fromEntries(
     './BrandMark', 'lucide-react', '../lib/api', '../auth/AuthContext', '../i18n',
     '../nav', '../lib/componentCensus', './ThemeSwitcher', './SkinSwitcher',
     './LanguageSwitcher', './ChangePasswordModal', './pageHeaderSlot',
-].map(path => [path, stubURL])));
+// The shell reads the domain list through the real shared layer.
+].map(path => [path, stubURL]).concat([['../lib/remote', remoteURL]])));
 const setupModelURL = compileURL('../src/lib/serverSetup.ts', {});
 const setupGateURL = compileURL('../src/components/ServerSetupGate.tsx', {
     '../auth/AuthContext': stubURL,

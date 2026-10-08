@@ -328,6 +328,7 @@ export const en = {
     'common.agentMismatchHint': 'The background service is running a different build ({commit}) from the panel. Re-run the update so both sides match — until then they may disagree about what is allowed.',
     'common.retry': 'Retry',
     'common.staleNotice': 'This could not be read again from the server just now, so what is shown below is as it was at {time}. Nothing was changed. Controls that remove or change something are off until it has been read again.',
+    'common.resultUnknown': 'The connection dropped before the answer arrived, so it is not known whether the change was made. Nothing is sent a second time. What is shown is being read again; check it before repeating the action.',
     'common.cancel': 'Cancel',
     'common.close': 'Close',
     'common.back': 'Back',

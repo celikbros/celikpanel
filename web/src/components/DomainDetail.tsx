@@ -16,9 +16,10 @@ import { DomainDNSManager } from './DomainDNSManager';
 import { HostingTypePanel } from './HostingTypePanel';
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
-import { Spinner, StatusDot } from './ui';
+import { Button, Checking, CouldNotCheck, KnownEmpty, Spinner, StatusDot } from './ui';
 import { useAuth } from '../auth/AuthContext';
 import { useHostingCapabilities } from '../lib/hostingCapabilities';
+import { decodeList, lastKnown, useRemote } from '../lib/remote';
 import {
     hasAnyDomainAccess,
     hasDomainAccess,
@@ -64,6 +65,95 @@ interface Domain {
     access?: DomainAccess;
 }
 
+// The measured usage of one domain. An answer without the numbers is not
+// "0 B used".
+// Bir alan adının ölçülen kullanımı. Sayıları taşımayan yanıt "0 B" değildir.
+interface DomainUsage {
+    disk_usage: number;
+    bandwidth: number;
+}
+function decodeUsage(raw: unknown): DomainUsage {
+    const body = raw as { disk_usage?: unknown; bandwidth?: unknown } | null;
+    if (!body || typeof body.disk_usage !== 'number' || typeof body.bandwidth !== 'number') throw new Error('shape');
+    return { disk_usage: body.disk_usage, bandwidth: body.bandwidth };
+}
+
+// What became of looking this domain up in the list the server gave.
+// `absent` and `noAccess` are answers; a list that could not be read is
+// neither, and none of the three sends the person back to the list unasked.
+// Bu alan adının, sunucunun verdiği listede aranmasının sonucu. `absent` ve
+// `noAccess` yanıttır; okunamayan liste ikisi de değildir ve hiçbiri kişiyi
+// sormadan listeye geri göndermez.
+const LIST_FRESH_FOR_MS = 30_000;
+
+type Lookup =
+    | { state: 'found'; domain: Domain }
+    | { state: 'absent' }
+    | { state: 'noAccess'; name: string };
+
+function lookUp(rows: unknown[], domainId: number, isTeamMember: boolean): Lookup {
+    const found = rows.find((item) => (
+        item !== null
+        && typeof item === 'object'
+        && !Array.isArray(item)
+        && Number((item as { id?: unknown }).id) === domainId
+    ));
+    if (!found || typeof found !== 'object' || Array.isArray(found)) return { state: 'absent' };
+    if (!isTeamMember) return { state: 'found', domain: found as Domain };
+
+    const row = found as Domain & { access?: unknown };
+    const access = normalizeDomainAccess(row.access);
+    if (!access || !hasAnyDomainAccess(access)) return { state: 'noAccess', name: String(row.domain_name ?? '') };
+    return { state: 'found', domain: { ...row, access } };
+}
+
+// The page of one domain as the address names it. The name is looked up in the
+// list the server gives; that is the address the page below, the Domains page
+// and the navigation read too, so one request serves all of them. A list that
+// could not be read is said so with Retry, a name the server does not list is
+// said so with the way back, and neither moves the person off this address.
+//
+// Adresin adlandırdığı alan adının sayfası. Ad, sunucunun verdiği listede
+// aranır; aşağıdaki sayfa, Alan Adları sayfası ve gezinme de aynı adresi okur,
+// tek istek hepsine yeter. Okunamayan liste Tekrar dene ile, sunucunun
+// listelemediği ad geri dönüş yoluyla söylenir; ikisi de kişiyi bu adresten
+// almaz.
+export function DomainDetailByName({ domainName, onBack }: { domainName: string; onBack: () => void }) {
+    const { t } = useI18n();
+    const list = useRemote('/api/v1/domains', decodeList<unknown>);
+    const listed = lastKnown(list.remote);
+    const back = <Button type="button" icon={ArrowLeft} onClick={onBack}>{t('nav.domains')}</Button>;
+
+    if (!listed) {
+        return (
+            <div className="p-6 md:p-8">
+                {list.remote.state === 'loading' ? (
+                    <Checking label={t('domain.checking')} />
+                ) : (
+                    <>
+                        <CouldNotCheck text={t('domain.unknown')} onRetry={() => void list.retry()} busy={list.reading} />
+                        <div className="mt-3">{back}</div>
+                    </>
+                )}
+            </div>
+        );
+    }
+
+    const row = listed.value.find((item) => (
+        !!item && typeof item === 'object' && (item as { domain_name?: unknown }).domain_name === domainName
+    )) as { id?: unknown } | undefined;
+    const domainId = Number(row?.id);
+    if (!row || !Number.isFinite(domainId)) {
+        return (
+            <div className="p-6 md:p-8">
+                <KnownEmpty of={listed} icon={Globe} title={t('domain.absent')} hint={t('domain.absentHint')} action={back} />
+            </div>
+        );
+    }
+
+    return <DomainDetail key={domainId} domainId={domainId} onBack={onBack} />;
+}
+
 interface DomainDetailProps {
     domainId: number;
     onBack: () => void;
@@ -83,22 +173,31 @@ interface DomainDetailProps {
 // tek sekme altında toplanır (Barındırma → Genel/PHP/SSL; Gelişmiş →
 // Yedekler/Cron/Loglar); böylece üst çubuk kısa kalır.
 export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
-    const { t } = useI18n();
+    const { t, locale } = useI18n();
     const { role } = useAuth();
     const isTeamMember = role === 'additional_user';
     const [searchParams] = useSearchParams();
     const requestedTab = searchParams.get('tab');
-    const [domain, setDomain] = useState<Domain | null>(null);
-    const [loading, setLoading] = useState(true);
+    // The list is the same address the Domains page and the navigation read,
+    // so this page shares their request. What this page changed itself (the
+    // PHP version, whether a certificate is active) lies over the row until
+    // the list is read again.
+    // Liste, Alan Adları sayfasının ve gezinmenin okuduğu adrestir; bu sayfa
+    // onların isteğini paylaşır. Sayfanın kendi değiştirdiği (PHP sürümü,
+    // sertifikanın etkinliği), liste yeniden okunana dek satırın üzerinde durur.
+    // The lookup by name just above has read it a moment ago; that answer is
+    // used as it is and nothing is requested a second time.
+    // Hemen üstteki ada göre arama onu az önce okudu; o yanıt olduğu gibi
+    // kullanılır ve ikinci kez istek gönderilmez.
+    const list = useRemote('/api/v1/domains', decodeList<unknown>, { freshFor: LIST_FRESH_FOR_MS });
+    const [changed, setChanged] = useState<Partial<Domain>>({});
     const [activeTab, setActiveTab] = useState(requestedTab === 'dns' ? 'dns' : 'overview');
     const [activeSub, setActiveSub] = useState<Record<string, string>>({});
     const [sslRuntime, setSSLRuntime] = useState<SSLRuntimeSummary | null>(null);
 
     const handleCertificateChange = useCallback((status: SSLRuntimeSummary) => {
         setSSLRuntime(status);
-        setDomain((currentDomain) => (
-            currentDomain ? { ...currentDomain, ssl_enabled: status.activated } : currentDomain
-        ));
+        setChanged((current) => ({ ...current, ssl_enabled: status.activated }));
     }, []);
 
     useEffect(() => {
@@ -106,65 +205,20 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
         if (requestedTab === 'dns') setActiveTab('dns');
     }, [domainId, requestedTab]);
 
-    useEffect(() => {
-        let cancelled = false;
-        setLoading(true);
-        setDomain(null);
-        fetch('/api/v1/domains')
-            .then(async (response) => {
-                if (!response.ok) throw new Error();
-                const payload: unknown = await response.json();
-                if (!Array.isArray(payload)) throw new Error();
-                const found = payload.find((item) => (
-                    item !== null
-                    && typeof item === 'object'
-                    && !Array.isArray(item)
-                    && Number((item as { id?: unknown }).id) === domainId
-                ));
-                if (!found || typeof found !== 'object' || Array.isArray(found)) {
-                    throw new Error();
-                }
-                if (!isTeamMember) return found as Domain;
+    const listed = lastKnown(list.remote);
+    const lookup = listed ? lookUp(listed.value, domainId, isTeamMember) : null;
+    const domain: Domain | null = lookup?.state === 'found' ? { ...lookup.domain, ...changed } : null;
 
-                const row = found as Domain & { access?: unknown };
-                const access = normalizeDomainAccess(row.access);
-                if (!access || !hasAnyDomainAccess(access)) {
-                    throw new Error();
-                }
-                return { ...row, access };
-            })
-            .then((found) => {
-                if (!cancelled) setDomain(found);
-            })
-            .catch(() => {
-                if (!cancelled) onBack();
-            })
-            .finally(() => {
-                if (!cancelled) setLoading(false);
-            });
-        return () => {
-            cancelled = true;
-        };
-    }, [domainId, isTeamMember]);
-
-    // Refresh the real usage numbers in the background after render: one
-    // domain, one measurement. The page shows cached values instantly and
-    // updates when the fresh ones land — it never blocks on a probe.
-    // Render'dan sonra gerçek kullanım sayılarını arka planda tazele: bir
-    // domain, bir ölçüm. Sayfa önbellekli değerleri anında gösterir, tazeler
-    // gelince güncellenir — asla bir yoklamayı beklemez.
+    // The measured usage is read after the page is drawn: one domain, one
+    // measurement. Until it answers, and if it cannot be read, the figures the
+    // list carried stay; they are the server's own, only older.
+    // Ölçülen kullanım sayfa çizildikten sonra okunur. Yanıt gelene dek ve
+    // okunamazsa listenin taşıdığı rakamlar kalır; onlar da sunucunundur.
     const domainLoaded = domain !== null;
     const canViewStatistics = !isTeamMember
         || Boolean(domain?.access && hasDomainAccess(domain.access, 'statistics'));
-    useEffect(() => {
-        if (!domainLoaded || !canViewStatistics) return;
-        fetch(`/api/v1/domains/${domainId}/usage`)
-            .then((r) => (r.ok ? r.json() : null))
-            .then((u) => {
-                if (u) setDomain((d) => (d ? { ...d, disk_usage: u.disk_usage, bandwidth: u.bandwidth } : d));
-            })
-            .catch(() => {});
-    }, [canViewStatistics, domainId, domainLoaded]);
+    const usage = useRemote(domainLoaded && canViewStatistics ? `/api/v1/domains/${domainId}/usage` : null, decodeUsage);
+    const measured = domainLoaded && canViewStatistics && usage.remote.state === 'known' ? usage.remote.value : null;
 
     // What the server can actually do — tabs for services that are not
     // installed would be settings pages for ghosts. One shared read
@@ -183,29 +237,43 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
     // servisin sekmesi kaldırılır. Ekip üyesi için hiç sorulmaz.
     const capabilities = useHostingCapabilities({ enabled: !isTeamMember });
     const caps = !isTeamMember && capabilities.remote.state === 'known' ? capabilities.remote.value : null;
+    // Which tabs exist follows the last answer the server gave. A refresh that
+    // failed is not a reason to bring back a tab the server ruled out, nor to
+    // take one away.
+    // Hangi sekmelerin var olduğu, sunucunun verdiği son yanıtı izler. Başarısız
+    // bir yenileme, sunucunun elediği sekmeyi geri getirmez; var olanı da almaz.
+    const tabCaps = isTeamMember ? null : lastKnown(capabilities.remote)?.value ?? null;
 
-    // Capabilities arrive after the first paint. If they remove the selected
-    // tab, synchronise the stored selection as well as the rendered fallback;
-    // otherwise a later capability refresh could resurrect a stale tab.
-    useEffect(() => {
-        if (isTeamMember || !domain || !caps) return;
-        const projectType = domain.project_type || 'php';
-        const unavailable =
-            (activeTab === 'mail' && !caps.mail_server) ||
-            (activeTab === 'databases' && caps.database_servers.length === 0) ||
-            (activeTab === 'apps' && projectType !== 'php') ||
-            ((activeTab === 'files' || activeTab === 'advanced') && projectType === 'dnsonly');
-        if (unavailable) setActiveTab('overview');
-    }, [activeTab, caps, domain, isTeamMember]);
-
-    if (loading) {
+    if (list.remote.state === 'loading') {
         return (
-            <div className="flex h-full items-center justify-center">
-                <Spinner />
+            <div className="p-6 md:p-8">
+                <Checking label={t('domain.checking')} />
             </div>
         );
     }
-    if (!domain) return null;
+    if (!domain) {
+        // Not shown, and said why, with the way back as a choice.
+        // Gösterilmez, nedeni söylenir ve geri dönüş bir seçenek olarak sunulur.
+        const back = <Button type="button" icon={ArrowLeft} onClick={onBack}>{t('nav.domains')}</Button>;
+        return (
+            <div className="p-6 md:p-8">
+                {!listed || !lookup ? (
+                    <>
+                        <CouldNotCheck text={t('domain.unknown')} onRetry={() => void list.retry()} busy={list.reading} />
+                        <div className="mt-3">{back}</div>
+                    </>
+                ) : (
+                    <KnownEmpty
+                        of={listed}
+                        icon={Globe}
+                        title={t(lookup.state === 'noAccess' ? 'domain.noAccess' : 'domain.absent')}
+                        hint={t(lookup.state === 'noAccess' ? 'domain.noAccessHint' : 'domain.absentHint')}
+                        action={back}
+                    />
+                )}
+            </div>
+        );
+    }
 
     // Tab tree — honest to the domain's role and the server's capabilities.
     // A DNS-only domain has no files, no PHP, no vhost: showing those tabs
@@ -237,7 +305,7 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
             { id: 'type', labelKey: 'domain.sub.hostingType', capabilities: ['files'], render: () => <HostingTypePanel domainId={domain.id} domainName={domain.domain_name} /> } satisfies SubDef,
         ] : []),
         ...(projectType === 'php' && canView('php') ? [
-            { id: 'php', labelKey: 'domain.sub.php', capabilities: ['php'], render: (readOnly) => <DomainPHPSettings domainId={domain.id} domainName={domain.domain_name} currentVersion={domain.php_version ?? ''} onVersionChange={(v) => setDomain({ ...domain, php_version: v })} readOnly={readOnly} isAdditionalUser={isTeamMember} /> } satisfies SubDef,
+            { id: 'php', labelKey: 'domain.sub.php', capabilities: ['php'], render: (readOnly) => <DomainPHPSettings domainId={domain.id} domainName={domain.domain_name} currentVersion={domain.php_version ?? ''} onVersionChange={(v) => setChanged((current) => ({ ...current, php_version: v }))} readOnly={readOnly} isAdditionalUser={isTeamMember} /> } satisfies SubDef,
         ] : []),
         ...(canView('ssl') ? [{
             id: 'ssl',
@@ -274,8 +342,8 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
             subs: hostingSubs,
         } satisfies TabDef] : []),
         ...(canView('dns') ? [{ id: 'dns', labelKey: 'domain.tab.dns', icon: Network, capabilities: ['dns'], render: (readOnly) => <DomainDNSManager domainId={domain.id} domainName={domain.domain_name} readOnly={readOnly} isAdditionalUser={isTeamMember} /> } satisfies TabDef] : []),
-        ...(canView('mail') && (isTeamMember || !caps || caps.mail_server) ? [{ id: 'mail', labelKey: 'domain.tab.mail', icon: Mail, capabilities: ['mail'], render: (readOnly) => <DomainMailManager domainId={domain.id} domainName={domain.domain_name} readOnly={readOnly} /> } satisfies TabDef] : []),
-        ...(canView('databases') && (isTeamMember || !caps || caps.database_servers.length > 0) ? [{ id: 'databases', labelKey: 'domain.tab.databases', icon: Database, capabilities: ['databases'], render: (readOnly) => <DomainDatabaseManager domainId={domain.id} domainName={domain.domain_name} readOnly={readOnly} isAdditionalUser={isTeamMember} /> } satisfies TabDef] : []),
+        ...(canView('mail') && (isTeamMember || !tabCaps || tabCaps.mail_server) ? [{ id: 'mail', labelKey: 'domain.tab.mail', icon: Mail, capabilities: ['mail'], render: (readOnly) => <DomainMailManager domainId={domain.id} domainName={domain.domain_name} readOnly={readOnly} /> } satisfies TabDef] : []),
+        ...(canView('databases') && (isTeamMember || !tabCaps || tabCaps.database_servers.length > 0) ? [{ id: 'databases', labelKey: 'domain.tab.databases', icon: Database, capabilities: ['databases'], render: (readOnly) => <DomainDatabaseManager domainId={domain.id} domainName={domain.domain_name} readOnly={readOnly} isAdditionalUser={isTeamMember} /> } satisfies TabDef] : []),
         ...(!isTeamMember && projectType === 'php' && canView('files') && canView('php') ? [{ id: 'apps', labelKey: 'domain.tab.apps', icon: AppWindow, capabilities: ['files', 'php'], render: () => <DomainAppsPanel domainId={domain.id} domainName={domain.domain_name} /> } satisfies TabDef] : []),
         ...(!isDnsOnly && canView('files') ? [{ id: 'files', labelKey: 'domain.tab.files', icon: Folder, capabilities: ['files'], render: (readOnly) => <DomainFileManager domainId={domain.id} domainName={domain.domain_name} readOnly={readOnly} /> } satisfies TabDef] : []),
         ...(!isDnsOnly && advancedSubs.length > 0 ? [{
@@ -290,6 +358,14 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
     // bayat seçimde asla çökme, genel bakışa düş.
     const current = tabs.find((tb) => tb.id === activeTab) ?? tabs[0];
     if (!current) return null;
+    // The person is moved only off a tab that is not there any more, and the
+    // stored choice follows at once, so a tab that comes back later (a service
+    // installed since) does not pull them to it. A tab that exists is never
+    // left on their behalf: the list above is the one place that decides.
+    // Kişi yalnız artık var olmayan sekmeden alınır ve saklanan seçim hemen
+    // onu izler; sonradan geri gelen sekme kişiyi kendine çekmez. Var olan
+    // sekme onun adına terk edilmez: buna yalnız yukarıdaki liste karar verir.
+    if (current.id !== activeTab && (isTeamMember || tabCaps)) setActiveTab(current.id);
     const requestedSubId = current.subs ? activeSub[current.id] : undefined;
     const currentSub = current.subs
         ? current.subs.find((sub) => sub.id === requestedSubId) ?? current.subs[0]
@@ -331,16 +407,30 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
     if (!isDnsOnly && canView('statistics')) {
         facts.push({
             key: 'disk',
-            content: <Fact label={t('domain.info.disk')}>{fmtBytes(domain.disk_usage)}</Fact>,
+            content: <Fact label={t('domain.info.disk')}>{fmtBytes(measured ? measured.disk_usage : domain.disk_usage)}</Fact>,
         });
         facts.push({
             key: 'traffic',
-            content: <Fact label={t('domain.info.traffic')}>{fmtBytes(domain.bandwidth)}/mo</Fact>,
+            content: <Fact label={t('domain.info.traffic')}>{fmtBytes(measured ? measured.bandwidth : domain.bandwidth)}/mo</Fact>,
         });
     }
 
     return (
         <div className="p-6 md:p-8">
+            {/* The list could not be read again: the page stays, and says that
+                what it shows about this domain is the earlier answer.
+                Liste yeniden okunamadı: sayfa kalır ve bu alan adı hakkında
+                gösterdiğinin önceki yanıt olduğunu söyler. */}
+            {list.remote.state === 'unknown' && listed && (
+                <CouldNotCheck
+                    className="mb-4"
+                    text={t('common.staleNotice', {
+                        time: new Date(listed.observedAt).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }),
+                    })}
+                    onRetry={() => void list.retry()}
+                    busy={list.reading}
+                />
+            )}
             {/* Header */}
             <div className="mb-5">
                 <button onClick={onBack} className="mb-3 inline-flex items-center gap-1.5 text-sm text-fg-muted hover:text-fg">

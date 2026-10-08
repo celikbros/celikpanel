@@ -17,6 +17,8 @@ import { PageHeader } from './PageHeader';
 import { showToast } from './Toast';
 import { FirewallNoSSHAcknowledgement, readFirewallSSHReason } from './FirewallSSHNotice';
 import { apiErrorText, readApiError } from '../lib/apiError';
+import { countText, decodeList, lastKnown, mapRemote, useRemote, type Remote } from '../lib/remote';
+import { USERS_URL, decodeUsers } from '../lib/accounts';
 import { summarizeDashboardMailTruth } from '../lib/dashboardMailTruth';
 import { publishComponentCensus } from '../lib/componentCensus';
 import {
@@ -83,6 +85,20 @@ interface Extras {
     mail_accounts: number;
     expiring_certs: { domain_name: string; days_left: number }[];
 }
+
+// An answer without the two counts is not "0 databases, 0 mailboxes".
+// İki sayıyı taşımayan yanıt "0 veritabanı, 0 posta kutusu" değildir.
+function decodeExtras(raw: unknown): Extras {
+    const body = raw as Partial<Extras> | null;
+    if (!body || typeof body.databases !== 'number' || typeof body.mail_accounts !== 'number') throw new Error('shape');
+    return {
+        databases: body.databases,
+        mail_accounts: body.mail_accounts,
+        expiring_certs: decodeList(body.expiring_certs ?? null),
+    };
+}
+
+const NO_DOMAINS: DomainLite[] = [];
 
 type Translate = ReturnType<typeof useI18n>['t'];
 
@@ -243,13 +259,22 @@ function AdminDashboard() {
     const [services, setServices] = useState<SvcLite[]>([]);
     const [mailProfiles, setMailProfiles] = useState<ManagedMailProfile[] | null>(null);
     const [fw, setFw] = useState<FwState | null>(null);
-    const [domains, setDomains] = useState<DomainLite[]>([]);
+    // The four counts under "Hosting" and the list of recent domains are drawn
+    // from three reads. Each count is a number only for an answer the server
+    // gave: "…" while it is read, "–" when it could not be read. A failed read
+    // is not "0 domains", and it does not take the section off the page.
+    // "Barındırma" altındaki dört sayı ve son alan adları üç okumadan çizilir.
+    // Her sayı yalnız sunucunun verdiği yanıt için sayıdır: okunurken "…",
+    // okunamayınca "–". Başarısız okuma "0 alan adı" değildir ve bölümü
+    // sayfadan almaz.
+    const domainList = useRemote('/api/v1/domains', decodeList<DomainLite>);
+    const usersRead = useRemote(USERS_URL, decodeUsers);
+    const extrasRead = useRemote('/api/v1/dashboard', decodeExtras);
+    const domains = lastKnown(domainList.remote)?.value ?? NO_DOMAINS;
+    const extras = lastKnown(extrasRead.remote)?.value ?? null;
     const [audit, setAudit] = useState<AuditLite[]>([]);
-    const [usersCount, setUsersCount] = useState(0);
     const [serviceScannedAt, setServiceScannedAt] = useState<string | null>(null);
     const [freshnessNow, setFreshnessNow] = useState(() => Date.now());
-    // Panel certificate evidence is independent of every hosted domain.
-    const [extras, setExtras] = useState<Extras | null>(null);
     const [fwBusy, setFwBusy] = useState(false);
     const [firewallConfirmationOpen, setFirewallConfirmationOpen] = useState(false);
     const [noSSHAcknowledged, setNoSSHAcknowledged] = useState(false);
@@ -274,10 +299,7 @@ function AdminDashboard() {
             })
             .catch(() => {});
         fetch('/api/v1/firewall').then((r) => (r.ok ? r.json() : null)).then(setFw).catch(() => {});
-        fetch('/api/v1/domains').then((r) => (r.ok ? r.json() : [])).then((d) => setDomains(d || [])).catch(() => {});
         fetch('/api/v1/audit-logs?limit=28').then((r) => (r.ok ? r.json() : null)).then((d) => setAudit(d?.entries || [])).catch(() => {});
-        fetch('/api/v1/users').then((r) => (r.ok ? r.json() : null)).then((d) => setUsersCount((d?.users || []).length)).catch(() => {});
-        fetch('/api/v1/dashboard').then((r) => (r.ok ? r.json() : null)).then(setExtras).catch(() => {});
 
         return () => clearInterval(timer);
     }, []);
@@ -559,7 +581,12 @@ function AdminDashboard() {
         });
     }
 
-    const hasContent = installed.length > 0 || domains.length > 0;
+    // The section leaves the page only when the server has said there is
+    // nothing for it: no component installed and no domain. While the domain
+    // list is read, or could not be read, it stays, with its counts saying so.
+    // Bölüm sayfadan yalnız sunucu ona ait bir şey olmadığını söylediğinde
+    // çıkar. Alan adı listesi okunurken ya da okunamadığında kalır.
+    const hasContent = installed.length > 0 || domains.length > 0 || domainList.remote.state !== 'known';
 
     const recentDomains = [...domains]
         .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
@@ -781,10 +808,10 @@ function AdminDashboard() {
                     <section>
                         <SectionTitle icon={Globe} tint="bg-surface-2 text-fg-muted" title={t('dashboard.hosting')} />
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                            <CountCard icon={Globe} n={domains.length} label={t('dashboard.domains')} to="/domains" />
-                            <CountCard icon={Database} n={extras?.databases ?? 0} label={t('dashboard.databases')} to="/databases" />
-                            <CountCard icon={Users} n={usersCount} label={t('nav.users')} to="/users" />
-                            <CountCard icon={Mail} n={extras?.mail_accounts ?? 0} label={t('dashboard.mailAccounts')} to="/domains" />
+                            <CountCard icon={Globe} n={mapRemote(domainList.remote, (rows) => rows.length)} label={t('dashboard.domains')} to="/domains" />
+                            <CountCard icon={Database} n={mapRemote(extrasRead.remote, (value) => value.databases)} label={t('dashboard.databases')} to="/databases" />
+                            <CountCard icon={Users} n={mapRemote(usersRead.remote, (rows) => rows.length)} label={t('nav.users')} to="/users" />
+                            <CountCard icon={Mail} n={mapRemote(extrasRead.remote, (value) => value.mail_accounts)} label={t('dashboard.mailAccounts')} to="/domains" />
                         </div>
                         {recentDomains.length > 0 && (
                             <>
@@ -1304,8 +1331,14 @@ function GaugeCard({
     );
 }
 
-function CountCard({ icon: Icon, n, label, to }: { icon: typeof Cpu; n: number; label: string; to: string }) {
+function CountCard({ icon: Icon, n, label, to }: { icon: typeof Cpu; n: Remote<number>; label: string; to: string }) {
     const navigate = useNavigate();
+    const { t } = useI18n();
+    // "–" is drawn for the eye; in words it is "could not be read", and the
+    // page the card opens says so in full, with Retry.
+    // "–" göz içindir; sözle "okunamadı"dır ve kartın açtığı sayfa bunu Tekrar
+    // dene ile tam olarak söyler.
+    const unread = n.state === 'unknown' && !n.previous;
     return (
         <button
             onClick={() => navigate(to)}
@@ -1314,7 +1347,11 @@ function CountCard({ icon: Icon, n, label, to }: { icon: typeof Cpu; n: number; 
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <Icon className="h-4 w-4" />
             </span>
-            <p className="mt-2 text-2xl font-bold tracking-tight text-fg">{n}</p>
+            <p className="mt-2 text-2xl font-bold tracking-tight text-fg" title={unread ? t('dashboard.countUnread') : undefined}>
+                <span aria-hidden={unread || n.state === 'loading' ? true : undefined}>{countText(n)}</span>
+                {unread && <span className="sr-only">{t('dashboard.countUnread')}</span>}
+                {n.state === 'loading' && <span className="sr-only">{t('common.loading')}</span>}
+            </p>
             <p className="text-xs text-fg-muted">{label}</p>
         </button>
     );

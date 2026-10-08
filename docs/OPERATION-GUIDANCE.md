@@ -1443,9 +1443,11 @@ add the screen to the table of the mounted test.
 **Not done.**
 
 - 62 files still read the old way; they are the allow-list. Until a screen is
-  migrated it can still show a negative state for an unknown one.
+  migrated it can still show a negative state for an unknown one. (53 after the
+  second batch, below.)
 - Other readers of the same addresses are untouched: the navigation rail and the
-  page of one domain read the domain list on their own.
+  page of one domain read the domain list on their own. (Both were moved onto
+  the shared read in the second batch, below.)
 - The Domains page shows nothing of its own when DNS readiness could not be
   checked; the notice and Retry are in the dialogue.
 - A could-not-check notice does not say why the read failed.
@@ -1489,3 +1491,661 @@ and populated.
   device; the imitation skins; roles other than the administrator. The DNS
   records tab, the PHP settings and the hosting type were not in the browser
   run; their three states are covered by the mounted test only.
+
+#### Second batch: Settings, accounts, a domain's files, certificate and page, import, monitoring, components (2026-10-09)
+
+Source state with component tests and a browser inspection against a loopback
+mock; no native run and no installed server. The same rule, applied to the next
+screens of the audit. It changes how reads and lost answers are shown in the
+interface; no API, stored record, access gate or lifecycle changes, and no
+acceptance item is closed. Three things in it need the server and are listed
+under "Needs the server" below.
+
+**What these screens showed before.**
+
+- *Settings, two-factor sign-in.* A status read that failed was drawn as "off",
+  with the form that sets it up. (The server refuses a second setup, so this was
+  misleading, not dangerous.)
+- *Settings, the certificate the Panel serves.* A failed read removed the state
+  line and left only "Get certificate". An answer in which the Panel had found
+  no certificate it could read was drawn as "a trusted certificate ()". A poll
+  that got no answer said "Getting certificate…" without end, and a request the
+  server had no record of after ten minutes was called failed. After a
+  certificate was issued, any tab that had Settings open, on any section, was
+  moved to the new address six seconds later, with a toast as the only notice.
+- *Accounts.* "No accounts yet" and an empty plan list for a failed read, with
+  no notice. A change whose answer was lost left an unhandled error and nothing
+  on screen.
+- *A domain's files.* "This folder is empty" for a failed read; the rows of the
+  folder just left stayed under the new path while the new folder was read.
+- *A domain's certificate.* After a successful request, if the read that follows
+  it failed, the screen went on showing "No certificate" and the request form,
+  unmarked. A request whose connection dropped was called failed.
+- *Import.* An apply whose connection dropped showed nothing and offered "Start
+  import" again.
+- *Dashboard.* The license notice said "An active license is required" when the
+  license could only not be verified. A failed read was "0 domains, 0
+  databases, 0 users, 0 mail accounts", and with nothing installed the whole
+  hosting section left the page. The navigation badge fell to none on a failed
+  read.
+- *Monitoring.* A poll that failed replaced the charts with "No samples yet".
+- *A domain or a component opened by its address.* A lookup that failed, or a
+  name the server does not list, returned to the list without a word.
+- *A component's page.* A record that could not be read was drawn as "This
+  server has not been checked yet", with the scan offered. Install said
+  "Installing…" while the page was only asking whether an operation was
+  running. Start and stop sent the component's id until the page's second copy
+  of the record had loaded (BIND's id is `bind`, its unit `named`). A tool with
+  no daemon was "Stopped". Its panels said "No configuration file was found" and
+  read the log of a unit nobody had named yet.
+- *The install dialogue of the components list.* When the read that says whether
+  a component needs an additional repository failed, the repository block was
+  hidden and Install was enabled; the version read as "distribution default".
+
+**What they do now, beyond the three states.**
+
+- *The certificate request.* What became of a request is one of: still asked
+  about; **could not be confirmed** (polls have had no answer for nine seconds;
+  the exact request stays remembered, the page goes on asking every five
+  seconds, "Check again" asks at once, a second request is not offered, and the
+  secure address is given as a link); **failed** (only when the server reports
+  the request as failed; the server's reason is shown and stays on the card);
+  **not recorded** (the server answers that it has no such request, still, ten
+  minutes after it was sent: nothing was started, and the request can be made
+  again); **issued**.
+- *The move to the secure address.* Only the page that sent the request moves
+  itself, only while its Panel HTTPS section is the one open and the tab is
+  visible, and only after it has said where it will reopen and why, for ten
+  seconds, with **Stay here**. Opening another section counts as staying. A tab
+  that only found the request in the browser's storage follows it and is never
+  moved. In every case the card then gives the secure address as a link.
+- *A change whose answer did not arrive* (accounts, plans, files, a domain's
+  certificate and its settings, two-factor sign-in, start and stop, the
+  repository of a component): the screen says that it is not known whether the
+  change was made, sends nothing a second time, and reads the state again so the
+  person can look before repeating it. A refusal by the server is shown as the
+  server's own reason.
+- *Import.* An apply that loses its connection (or gets a gateway's answer in
+  place of the Panel's: 408, 429, 502, 503, 504) leaves a notice on the page.
+  The choices that made the request are frozen and "Start import" is gone.
+  "Check {domain}" reads the domain list and nothing else. If the domain is
+  there, the import created it; the page links to it and does not start the
+  import again. If it is not there, the page says so, offers the check again,
+  and only then offers "Start import again".
+- *A component's page.* Start, stop and restart exist only for a record that
+  names a unit, and send that unit. A record that names none shows no such
+  control; a tool, or a runtime without a unit, reads "Installed".
+- *A domain's tabs.* Which tabs exist follows the last answer the server gave. A
+  later read of the capabilities that fails neither brings back a tab the
+  server ruled out nor takes one away, and the person is moved only off a tab
+  that is no longer there.
+- *Counts.* The four dashboard counts, the totals above the account and plan
+  lists and the navigation badge are a number only for an answer: "…" while it
+  is read, "–" when it could not be read (no badge in the navigation).
+- *The order on the certificate card.* The state of the certificate, or what
+  became of the request, comes first; then the three preparation steps; then a
+  request that is not settled, beside the form it was sent from. A notice that
+  appears away from where the person is looking is scrolled into view (also on
+  the import page).
+
+**The texts.** Keys are in `web/src/i18n` (`common.*` in the shell catalogue,
+the rest in `screens` and `screens/server`).
+
+- *A change whose answer did not arrive, on any of these screens (shell)*
+  - `common.resultUnknown`
+    - EN: "The connection dropped before the answer arrived, so it is not known
+      whether the change was made. Nothing is sent a second time. What is shown
+      is being read again; check it before repeating the action."
+    - TR: "Yanıt gelmeden bağlantı koptu; bu yüzden değişikliğin yapılıp
+      yapılmadığı bilinmiyor. Hiçbir şey ikinci kez gönderilmez. Gösterilen
+      yeniden okunuyor; işlemi yinelemeden önce ona bakın."
+- *Settings, two-factor sign-in: checking, could not check, a change whose
+  answer was lost*
+  - `settings.2fa.checking`
+    - EN: "Checking whether two-factor authentication is on for this account…"
+    - TR: "Bu hesapta iki faktörlü doğrulamanın açık olup olmadığı kontrol
+      ediliyor…"
+  - `settings.2fa.unknown`
+    - EN: "CelikPanel could not check whether two-factor authentication is on
+      for this account, so neither turning it on nor turning it off is offered.
+      This does not mean it is off. Nothing was changed. Try again."
+    - TR: "CelikPanel bu hesapta iki faktörlü doğrulamanın açık olup olmadığını
+      kontrol edemedi; bu yüzden açma da kapatma da sunulmuyor. Bu, kapalı
+      olduğu anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+  - `settings.2fa.resultUnknown`
+    - EN: "The connection dropped before the answer arrived, so it is not known
+      whether the change was made. CelikPanel is reading the current state
+      again; nothing is sent a second time."
+    - TR: "Yanıt gelmeden bağlantı koptu; bu yüzden değişikliğin yapılıp
+      yapılmadığı bilinmiyor. CelikPanel güncel durumu yeniden okuyor; hiçbir
+      şey ikinci kez gönderilmez."
+- *Settings, the certificate the Panel serves: checking, could not read, the
+  Panel found none it could read*
+  - `panelCert.checking`
+    - EN: "Reading the certificate the Panel serves…"
+    - TR: "Panelin sunduğu sertifika okunuyor…"
+  - `panelCert.unknown`
+    - EN: "The certificate the Panel serves could not be read from the server,
+      so its state is not shown and a new one cannot be requested yet. This does
+      not mean the certificate is missing or invalid. Nothing was changed. Try
+      again."
+    - TR: "Panelin sunduğu sertifika sunucudan okunamadı; bu yüzden durumu
+      gösterilmiyor ve şimdilik yenisi istenemiyor. Bu, sertifikanın eksik ya da
+      geçersiz olduğu anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar
+      deneyin."
+  - `panelCert.notReadable`
+    - EN: "The Panel answered, but it found no certificate it could read in its
+      certificate folder, so it cannot say which one it serves. Nothing was
+      changed."
+    - TR: "Panel yanıt verdi, ancak sertifika klasöründe okuyabildiği bir
+      sertifika bulamadı; bu yüzden hangisini sunduğunu söyleyemiyor. Hiçbir şey
+      değiştirilmedi."
+- *The same card, a request whose result could not be confirmed (with "Check
+  again" and a link to the secure address)*
+  - `panelCert.unconfirmed`
+    - EN: "CelikPanel could not confirm the result of the certificate request
+      for {domain}: this page is not getting an answer about it. The request may
+      still be running, may have finished or may have failed. Nothing else was
+      started, and a second request is not offered until this one is known. If
+      the Panel has restarted with the new certificate, it now answers at
+      {address}."
+    - TR: "CelikPanel, {domain} için sertifika isteğinin sonucunu doğrulayamadı:
+      bu sayfa onunla ilgili yanıt alamıyor. İstek hâlâ sürüyor, tamamlanmış ya
+      da başarısız olmuş olabilir. Başka hiçbir şey başlatılmadı; bu isteğin
+      sonucu bilinene dek ikinci bir istek sunulmaz. Panel yeni sertifikayla
+      yeniden başladıysa artık {address} adresinde yanıt verir."
+  - `panelCert.checkAgain`
+    - EN: "Check again"
+    - TR: "Tekrar kontrol et"
+  - `panelCert.openSecure`
+    - EN: "Open the secure address"
+    - TR: "Güvenli adresi aç"
+- *The same card, a request the server reports as failed, with and without a
+  reason; a request the server never recorded*
+  - `panelCert.failedDetail`
+    - EN: "The certificate for {domain} was not issued. The server reported:
+      {reason} The Panel keeps serving its current certificate. Correct the
+      cause, then request the certificate again."
+    - TR: "{domain} için sertifika alınamadı. Sunucunun bildirdiği: {reason}
+      Panel mevcut sertifikasını sunmayı sürdürüyor. Nedeni giderin, sonra
+      sertifikayı yeniden isteyin."
+  - `panelCert.failedPlain`
+    - EN: "The certificate for {domain} was not issued, and the server gave no
+      reason. The Panel keeps serving its current certificate. Check the three
+      steps above, then request the certificate again."
+    - TR: "{domain} için sertifika alınamadı ve sunucu bir neden bildirmedi.
+      Panel mevcut sertifikasını sunmayı sürdürüyor. Yukarıdaki üç adımı kontrol
+      edin, sonra sertifikayı yeniden isteyin."
+  - `panelCert.notRecorded`
+    - EN: "The server has no record of the certificate request for {domain}, so
+      it was not started and nothing was changed. The certificate state above
+      was read again; you can request the certificate again."
+    - TR: "Sunucuda {domain} için sertifika isteğinin kaydı yok; yani istek
+      başlatılmadı ve hiçbir şey değiştirilmedi. Yukarıdaki sertifika durumu
+      yeniden okundu; sertifikayı yeniden isteyebilirsiniz."
+- *The same card after the certificate was issued: the page that asked, before
+  it moves ({seconds} counts down)*
+  - `panelCert.reopen.title`
+    - EN: "Certificate issued for {domain}"
+    - TR: "{domain} için sertifika alındı"
+  - `panelCert.reopen.body`
+    - EN: "The Panel is restarting to serve the new certificate. The certificate
+      is valid for {domain} only, so this page will reopen at the Panel’s secure
+      address, {address}, in {seconds} s. Because that is a different address,
+      you may be asked to sign in again there."
+    - TR: "Panel yeni sertifikayı sunmak için yeniden başlıyor. Sertifika yalnız
+      {domain} için geçerli olduğundan bu sayfa {seconds} sn içinde Panelin
+      güvenli adresinde, {address} adresinde yeniden açılacak. Bu farklı bir
+      adres olduğu için orada yeniden oturum açmanız istenebilir."
+  - `panelCert.reopen.reload`
+    - EN: "The Panel is restarting to serve the new certificate. This page will
+      reload in {seconds} s so that the browser uses it."
+    - TR: "Panel yeni sertifikayı sunmak için yeniden başlıyor. Tarayıcının onu
+      kullanması için bu sayfa {seconds} sn içinde yeniden yüklenecek."
+  - `panelCert.reopen.stay`
+    - EN: "Stay here"
+    - TR: "Burada kal"
+- *The same card after "Stay here", in another section, or in another tab*
+  - `panelCert.reopen.stayed`
+    - EN: "The Panel restarted to serve the new certificate, which is valid for
+      {domain} only. This page was left where it is; the browser may warn about
+      the certificate at this address. The Panel’s secure address is {address}."
+    - TR: "Panel yeni sertifikayı sunmak için yeniden başladı; sertifika yalnız
+      {domain} için geçerlidir. Bu sayfa olduğu yerde bırakıldı; tarayıcı bu
+      adreste sertifika uyarısı gösterebilir. Panelin güvenli adresi: {address}"
+- *Accounts: the list and the plans*
+  - `users.checking`
+    - EN: "Reading the accounts…"
+    - TR: "Hesaplar okunuyor…"
+  - `users.unknown`
+    - EN: "The accounts could not be read from the server, so the list is not
+      shown. This does not mean there are no accounts. Nothing was changed. Try
+      again."
+    - TR: "Hesaplar sunucudan okunamadı; bu yüzden liste gösterilmiyor. Bu,
+      hesap olmadığı anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar
+      deneyin."
+  - `users.plansUnknown`
+    - EN: "The plans could not be read from the server, so an account cannot be
+      created here yet. This does not mean there are no plans. Nothing was
+      changed. Try again."
+    - TR: "Planlar sunucudan okunamadı; bu yüzden şimdilik burada hesap
+      oluşturulamıyor. Bu, plan olmadığı anlamına gelmez. Hiçbir şey
+      değiştirilmedi. Tekrar deneyin."
+  - `plans.checking`
+    - EN: "Reading the plans…"
+    - TR: "Planlar okunuyor…"
+  - `plans.unknown`
+    - EN: "The plans could not be read from the server, so the list is not
+      shown. This does not mean there are no plans. Nothing was changed. Try
+      again."
+    - TR: "Planlar sunucudan okunamadı; bu yüzden liste gösterilmiyor. Bu, plan
+      olmadığı anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+- *A domain page opened by its address*
+  - `domain.checking`
+    - EN: "Reading this domain…"
+    - TR: "Bu alan adı okunuyor…"
+  - `domain.unknown`
+    - EN: "This domain could not be read from the server, so its page is not
+      shown. This does not mean the domain is gone. Nothing was changed. Try
+      again."
+    - TR: "Bu alan adı sunucudan okunamadı; bu yüzden sayfası gösterilmiyor. Bu,
+      alan adının kaldırıldığı anlamına gelmez. Hiçbir şey değiştirilmedi.
+      Tekrar deneyin."
+  - `domain.absent`
+    - EN: "This domain is not on this server"
+    - TR: "Bu alan adı bu sunucuda değil"
+  - `domain.absentHint`
+    - EN: "The server answered, and its list has no such domain. It may have
+      been removed, or the address may be mistyped. Nothing was changed."
+    - TR: "Sunucu yanıt verdi ve listesinde böyle bir alan adı yok. Kaldırılmış
+      ya da adres yanlış yazılmış olabilir. Hiçbir şey değiştirilmedi."
+  - `domain.noAccess`
+    - EN: "This account has no access to this domain"
+    - TR: "Bu hesabın bu alan adına erişimi yok"
+  - `domain.noAccessHint`
+    - EN: "The domain is on this server, but no part of it is shared with this
+      account. The account owner can grant access under Team members."
+    - TR: "Alan adı bu sunucuda, ancak hiçbir bölümü bu hesapla paylaşılmamış.
+      Hesap sahibi, Ekip üyeleri altından erişim verebilir."
+- *A domain’s files*
+  - `files.checking`
+    - EN: "Reading this folder…"
+    - TR: "Bu klasör okunuyor…"
+  - `files.unknown`
+    - EN: "This folder could not be read from the server, so its contents are
+      not shown. This does not mean the folder is empty. Nothing was changed.
+      Try again."
+    - TR: "Bu klasör sunucudan okunamadı; bu yüzden içeriği gösterilmiyor. Bu,
+      klasörün boş olduğu anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar
+      deneyin."
+  - `files.contentUnknown`
+    - EN: "The contents of this file could not be read from the server, so it
+      was not opened for editing. Nothing was changed. Try again."
+    - TR: "Bu dosyanın içeriği sunucudan okunamadı; bu yüzden düzenlemek için
+      açılmadı. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+  - `files.uploadUnreadable`
+    - EN: "The browser could not read {name} from this device, so nothing was
+      uploaded. Choose the file again."
+    - TR: "Tarayıcı {name} dosyasını bu cihazdan okuyamadı; bu yüzden hiçbir şey
+      yüklenmedi. Dosyayı yeniden seçin."
+- *A domain’s certificate*
+  - `ssl.checking`
+    - EN: "Reading this domain’s certificate…"
+    - TR: "Bu alan adının sertifikası okunuyor…"
+  - `ssl.unknown`
+    - EN: "The certificate of this domain could not be read from the server, so
+      its state is not shown and a certificate cannot be requested or removed
+      here yet. This does not mean the domain has no certificate. Nothing was
+      changed. Try again."
+    - TR: "Bu alan adının sertifikası sunucudan okunamadı; bu yüzden durumu
+      gösterilmiyor ve şimdilik buradan sertifika istenemiyor ya da
+      kaldırılamıyor. Bu, alan adının sertifikası olmadığı anlamına gelmez.
+      Hiçbir şey değiştirilmedi. Tekrar deneyin."
+  - `ssl.rereading`
+    - EN: "Reading the certificate again. What is shown below is the earlier
+      answer; the controls are off until the server has answered…"
+    - TR: "Sertifika yeniden okunuyor. Aşağıda gösterilen önceki yanıttır;
+      sunucu yanıt verene dek denetimler kapalı…"
+  - `ssl.checkingProviders`
+    - EN: "Reading the certificate authorities this server offers…"
+    - TR: "Bu sunucunun sunduğu sertifika yetkilileri okunuyor…"
+  - `ssl.providersUnknown`
+    - EN: "The certificate authorities this server offers could not be read, so
+      a certificate cannot be requested here yet. Nothing was changed. Try
+      again."
+    - TR: "Bu sunucunun sunduğu sertifika yetkilileri okunamadı; bu yüzden
+      şimdilik buradan sertifika istenemiyor. Hiçbir şey değiştirilmedi. Tekrar
+      deneyin."
+- *Import: the subscriptions and the archive*
+  - `import.checkingSubs`
+    - EN: "Reading the subscriptions…"
+    - TR: "Abonelikler okunuyor…"
+  - `import.subsUnknown`
+    - EN: "The subscriptions could not be read from the server, so a target
+      cannot be chosen and the import cannot be started yet. This does not mean
+      there are no subscriptions. Nothing was changed. Try again."
+    - TR: "Abonelikler sunucudan okunamadı; bu yüzden şimdilik hedef seçilemiyor
+      ve içe aktarım başlatılamıyor. Bu, abonelik olmadığı anlamına gelmez.
+      Hiçbir şey değiştirilmedi. Tekrar deneyin."
+  - `import.noSubs`
+    - EN: "There is no subscription to import into yet. Create an account with a
+      plan under Accounts first."
+    - TR: "İçe aktarılacak bir abonelik henüz yok. Önce Hesaplar altında planlı
+      bir hesap oluşturun."
+  - `import.inspectUnanswered`
+    - EN: "The server did not answer, so the archive was not inspected.
+      Inspecting only reads the archive; nothing was changed. Try again."
+    - TR: "Sunucu yanıt vermedi; bu yüzden arşiv incelenmedi. İnceleme arşivi
+      yalnız okur; hiçbir şey değiştirilmedi. Tekrar deneyin."
+- *Import: an apply whose answer was lost*
+  - `import.unknown.title`
+    - EN: "The result of this import is not known"
+    - TR: "Bu içe aktarımın sonucu bilinmiyor"
+  - `import.unknown.body`
+    - EN: "The connection dropped before the server answered. The import may
+      have run completely, in part, or not at all. Nothing is sent again by
+      itself, and starting it again is not offered until you have checked. Check
+      whether {domain} is on this server now; checking only reads."
+    - TR: "Sunucu yanıt vermeden bağlantı koptu. İçe aktarım tamamen, kısmen
+      çalışmış ya da hiç çalışmamış olabilir. Hiçbir şey kendiliğinden yeniden
+      gönderilmez; siz kontrol edene dek yeniden başlatma sunulmaz. {domain}
+      alan adının şu an bu sunucuda olup olmadığını kontrol edin; kontrol yalnız
+      okur."
+  - `import.unknown.check`
+    - EN: "Check {domain}"
+    - TR: "{domain} alan adını kontrol et"
+  - `import.unknown.checkAgain`
+    - EN: "Check {domain} again"
+    - TR: "{domain} alan adını yeniden kontrol et"
+  - `import.unknown.unreadable`
+    - EN: "The domain list could not be read, so it is still not known whether
+      the import ran. Nothing was changed. Check again."
+    - TR: "Alan adı listesi okunamadı; bu yüzden içe aktarımın çalışıp
+      çalışmadığı hâlâ bilinmiyor. Hiçbir şey değiştirilmedi. Yeniden kontrol
+      edin."
+  - `import.unknown.present`
+    - EN: "{domain} is on this server now, so the import created it. Which of
+      its files, mail, DNS records and databases were imported is not known
+      here, and the import is not started again from this page. Open the domain
+      and look at each of them."
+    - TR: "{domain} şu an bu sunucuda; yani içe aktarım onu oluşturdu.
+      Dosyalarından, postasından, DNS kayıtlarından ve veritabanlarından
+      hangilerinin aktarıldığı burada bilinmiyor ve içe aktarım bu sayfadan
+      yeniden başlatılmaz. Alan adını açıp her birine bakın."
+  - `import.unknown.open`
+    - EN: "Open {domain}"
+    - TR: "{domain} alan adını aç"
+  - `import.unknown.absent`
+    - EN: "{domain} is not on this server at this moment, so the import has not
+      created it. If the server is still working on the archive it can appear
+      later: check again in a moment. If it is still absent, you can start the
+      import again."
+    - TR: "{domain} şu an bu sunucuda değil; yani içe aktarım onu oluşturmadı.
+      Sunucu hâlâ arşiv üzerinde çalışıyorsa sonradan görünebilir: biraz sonra
+      yeniden kontrol edin. Hâlâ yoksa içe aktarımı yeniden başlatabilirsiniz."
+  - `import.runAgain`
+    - EN: "Start import again"
+    - TR: "İçe aktarımı yeniden başlat"
+- *Dashboard: the license notice when the license could not be verified; a count
+  that could not be read*
+  - `license.noticeUnverified`
+    - EN: "CelikPanel could not verify the license just now. This does not mean
+      your license is missing or expired, and nothing was changed. Existing
+      sites, mail, databases and scheduled tasks keep running. You can check
+      again under License."
+    - TR: "CelikPanel lisansı şu an doğrulayamadı. Bu, lisansınızın eksik ya da
+      süresinin dolmuş olduğu anlamına gelmez ve hiçbir şey değiştirilmedi.
+      Mevcut siteler, e-posta, veritabanları ve zamanlanmış görevler çalışmaya
+      devam eder. Lisans bölümünden yeniden kontrol edebilirsiniz."
+  - `license.noticeOpen`
+    - EN: "Open License"
+    - TR: "Lisans bölümünü aç"
+  - `dashboard.countUnread`
+    - EN: "could not be read"
+    - TR: "okunamadı"
+- *Monitoring*
+  - `monitoring.checking`
+    - EN: "Reading the recorded measurements…"
+    - TR: "Kaydedilen ölçümler okunuyor…"
+  - `monitoring.unknown`
+    - EN: "The recorded measurements could not be read from the server, so no
+      charts are shown. This does not mean nothing was recorded. Nothing was
+      changed. Try again."
+    - TR: "Kaydedilen ölçümler sunucudan okunamadı; bu yüzden grafik
+      gösterilmiyor. Bu, hiçbir şey kaydedilmediği anlamına gelmez. Hiçbir şey
+      değiştirilmedi. Tekrar deneyin."
+- *A component’s page: its record*
+  - `svc.checkingRecord`
+    - EN: "Reading what is known about {name} on this server…"
+    - TR: "Bu sunucuda {name} hakkında bilinen okunuyor…"
+  - `svc.recordUnread`
+    - EN: "Could not be read"
+    - TR: "Okunamadı"
+  - `svc.recordUnknown`
+    - EN: "CelikPanel could not read what is known about {name} on this server,
+      so its state is not shown and nothing is offered for it. This does not
+      mean {name} is missing, stopped or unchecked. Nothing was changed. Try
+      again."
+    - TR: "CelikPanel bu sunucuda {name} hakkında bilineni okuyamadı; bu yüzden
+      durumu gösterilmiyor ve onun için hiçbir işlem sunulmuyor. Bu, {name}
+      bileşeninin eksik, durmuş ya da bakılmamış olduğu anlamına gelmez. Hiçbir
+      şey değiştirilmedi. Tekrar deneyin."
+  - `svc.recordStale`
+    - EN: "The state of {name} could not be read again just now, so what is
+      shown is the earlier answer. Nothing was changed. Start, stop and restart
+      are off until it has been read again."
+    - TR: "{name} durumu az önce yeniden okunamadı; bu yüzden gösterilen önceki
+      yanıttır. Hiçbir şey değiştirilmedi. Başlat, durdur ve yeniden başlat,
+      yeniden okunana dek kapalıdır."
+  - `svc.installChecking`
+    - EN: "Checking for a running operation…"
+    - TR: "Süren bir işlem var mı, kontrol ediliyor…"
+  - `component.checking`
+    - EN: "Reading this component’s record…"
+    - TR: "Bu bileşenin kaydı okunuyor…"
+  - `component.unknown`
+    - EN: "This component’s record could not be read from the server, so its
+      unit, versions, ports, configuration files and log are not shown. This
+      does not mean it has none. Nothing was changed. Try again."
+    - TR: "Bu bileşenin kaydı sunucudan okunamadı; bu yüzden birimi, sürümleri,
+      portları, ayar dosyaları ve günlüğü gösterilmiyor. Bu, bunların olmadığı
+      anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+  - `component.absent`
+    - EN: "This server’s catalogue has no component “{id}”"
+    - TR: "Bu sunucunun kataloğunda “{id}” bileşeni yok"
+  - `component.absentHint`
+    - EN: "The server answered, and its list has no such component. The address
+      may be mistyped, or the component is not offered on this server. Nothing
+      was changed."
+    - TR: "Sunucu yanıt verdi ve listesinde böyle bir bileşen yok. Adres yanlış
+      yazılmış olabilir ya da bileşen bu sunucuda sunulmuyor. Hiçbir şey
+      değiştirilmedi."
+- *A component’s page: its log*
+  - `component.logsChecking`
+    - EN: "Reading the log of {unit}…"
+    - TR: "{unit} günlüğü okunuyor…"
+  - `component.logsUnknown`
+    - EN: "The log of {unit} could not be read from the server, so no lines are
+      shown. This does not mean the log is empty. Nothing was changed. Try
+      again."
+    - TR: "{unit} günlüğü sunucudan okunamadı; bu yüzden hiçbir satır
+      gösterilmiyor. Bu, günlüğün boş olduğu anlamına gelmez. Hiçbir şey
+      değiştirilmedi. Tekrar deneyin."
+  - `component.logsNoMatch`
+    - EN: "No line in the log contains “{filter}”."
+    - TR: "Günlükte “{filter}” içeren satır yok."
+- *The install dialogue of the components list*
+  - `services.repo.checking`
+    - EN: "Checking whether this component needs an additional package
+      repository…"
+    - TR: "Bu bileşenin ek bir paket deposuna ihtiyacı var mı, kontrol
+      ediliyor…"
+  - `services.repo.unknown`
+    - EN: "CelikPanel could not check whether {name} needs an additional package
+      repository on this server, so installing is not offered yet. This does not
+      mean a repository is missing. Nothing was changed. Try again."
+    - TR: "CelikPanel, {name} bileşeninin bu sunucuda ek bir paket deposuna
+      ihtiyacı olup olmadığını kontrol edemedi; bu yüzden şimdilik kurulum
+      sunulmuyor. Bu, deponun eksik olduğu anlamına gelmez. Hiçbir şey
+      değiştirilmedi. Tekrar deneyin."
+  - `services.repo.stale`
+    - EN: "The package repository of {name} could not be read again just now, so
+      what is shown below is the earlier answer. Nothing was changed. Installing
+      and changing the repository are off until it has been read again."
+    - TR: "{name} bileşeninin paket deposu az önce yeniden okunamadı; bu yüzden
+      aşağıda gösterilen önceki yanıttır. Hiçbir şey değiştirilmedi. Kurulum ve
+      depo değişikliği, yeniden okunana dek kapalıdır."
+  - `services.versionUnknown`
+    - EN: "could not be checked"
+    - TR: "kontrol edilemedi"
+- *The help drawer*
+  - `help.loading`
+    - EN: "Fetching the help text…"
+    - TR: "Yardım metni getiriliyor…"
+  - `help.unknown`
+    - EN: "The help text could not be fetched from the panel. Nothing was
+      changed. Try again."
+    - TR: "Yardım metni panelden getirilemedi. Hiçbir şey değiştirilmedi. Tekrar
+      deneyin."
+- *Setup guide, the sentence that names the button (the button reads "Edit plan"
+  / "Planı düzenle")*
+  - `setup.guide.accessDNSResume`
+    - EN: "This prerequisite is checked automatically. After it passes, the same
+      setup continues. To change the reviewed names or addresses, use Edit plan
+      below."
+    - TR: "Bu gereksinim otomatik kontrol edilir. Doğrulanınca aynı kurulum
+      devam eder. İncelenen adları veya adresleri değiştirmek için aşağıdaki
+      Planı düzenle düğmesini kullanın."
+
+**Corrected in the same screens.**
+
+- The sentence in the setup guide named a button "Edit setup plan" /
+  "Kurulum planını düzenle"; the button reads "Edit plan" / "Planı düzenle". The
+  sentence now names it as it is written.
+- In the dark theme the scrim of the access hold and of the reload notice is
+  drawn at half strength. The page was already navy, and at the strength the
+  light theme needs, small muted text under those layers was near 1.5:1.
+- On a phone the start, stop and restart controls of a component ran off the
+  right edge; they wrap now.
+- A log filter that matched no line said "No log entries"; it now says that no
+  line contains the filter.
+
+**How it is kept from coming back.**
+
+- *The ratchet.* After this batch: 27 / 43 / 12 / 83 / 25 in 53 files (after the
+  first: 37 / 58 / 14 / 109 / 29 in 62). Off the list for good: `Settings`,
+  `UsersPage`, `DomainFileManager`, `DomainSSLSettings`, `DomainDetail`,
+  `ImportPage`, `LicenseNotice`, `MonitoringPage`, `ComponentDetail`, and the
+  new `ServiceRecordLookup`. Lower but still listed: `App` (one response
+  observer), `ServiceList` (the install dialogue moved; the list itself did
+  not), `Dashboard` (the three count reads moved), `Layout` (the domain badge
+  moved), `ServiceShell` (no count changed: its read, its check and its install
+  are pinned line by line by three safety contracts, so it got a "could not be
+  read" state inside that structure instead of a new reader).
+- *One reader per address.* `lib/managedServices.ts` (the stored component
+  records, through the operation tracker's fail-closed decoder),
+  `lib/subscriptions.ts`, `lib/accounts.ts`; the domain list is read by the
+  Domains page, a domain's page, its lookup by name, the dashboard and the
+  navigation rail through one address and one decoder, so they share a request.
+  `Remote` carries the HTTP status of a refusal, so "no such record" can be told
+  from "no answer"; `countText` writes a count; `CouldNotCheck` takes a second
+  way to look beside Retry.
+- *The mounted test* gained every screen above: 12 more rows of the table (each
+  read withheld four ways, then answered negatively) and 14 tests of what the
+  screens do around their own change: the certificate request seen from the page
+  that asked and from another tab; a poll with no answer; a lost answer in
+  Accounts; a folder change; a certificate request whose re-read answers and one
+  whose re-read fails; the import's lost apply with the domain present and
+  absent; the license notice; a failed monitoring poll; a domain opened by
+  name; a component's record, its unit and its Install label; and one test that
+  reads the source of the four screens this file cannot mount.
+- *Room.* The help texts (about 100 KiB for both languages) were a static part
+  of every page that carries the Help button and had brought the Settings route
+  to 0.29 KiB of its limit. They are fetched when a help drawer is opened; the
+  drawer says that it is fetching, or that it could not, with Retry. The bundle
+  check names that chunk, so merging it back fails the build. No limit was
+  raised: Settings 272.90 → 180.67 KiB (79.71 → 48.35 gzip), a domain's page
+  236.45 → 139.31 KiB.
+
+**Needs the server; not changed here.**
+
+- `GET /api/v1/panel/certificate` answers `https_enabled: false, self_signed:
+  false` both when there is no certificate file and when the file could not be
+  read or parsed. The interface now says that the Panel found no certificate it
+  could read; it cannot say which of the two it is.
+- The import's apply has no request identity and no operation record, and it
+  runs on the request's own context. After a lost answer its result can only be
+  inferred from the domain list. In the browser run, one send by the page
+  reached the mock on six or seven connections (the browser repeats a request on
+  a connection that is closed under it), which is harmless against a mock and
+  is exactly what an idempotency key exists for.
+- A change whose answer was lost (accounts, plans, files) has no identity
+  either; the screen can only read the state again.
+
+**Not done.**
+
+- 53 files still read the old way. Of this batch's screens: the components list
+  outside its install dialogue, the dashboard outside its counts (system
+  figures, firewall, audit trail, component summary), the navigation rail's
+  version and component reads, and `ServiceShell`'s reader.
+- The dashboard's "Needs attention" list depends on the domain list and appears
+  when that arrives; with the list made slow on purpose, everything under it
+  moved down by 118 px (158 px on a phone). In use the rail has already read the
+  list when the dashboard opens.
+- A count on the dashboard that could not be read has no Retry of its own; the
+  page the card opens has it.
+- The license notice says nothing when its own read fails.
+- Roles other than the administrator were not exercised for these screens.
+
+**Browser inspection of this batch (2026-10-09).** In a real, installed Chrome
+against the loopback mock (`web/tools/browser-inspect`, scenarios `twofactor`,
+`panelcert`, `accounts`, `files`, `domainssl`, `importer`, `dashboard`,
+`monitoring`, `lookup`, `component`, `installdialog`, `scrim`): desktop 1440×900
+and phone 390×844, Turkish and English, light and dark; 69 states in each of the
+eight configurations.
+
+- *Measured in all eight configurations.* No state drew a negative sentence
+  before the server had said so, no checking state drew a notice, and no failed
+  read still said that it was checking. After the certificate was issued, the
+  page that asked moved once, to `https://panel.example.com:<port>/`, after its
+  ten seconds on its own section; after "Stay here", from another section and
+  in another tab nothing moved. While the result of a request could not be
+  confirmed, "Get certificate" was disabled. The import page sent the apply
+  once; the check requested `GET /api/v1/domains` and nothing else; "Start
+  import again" was offered only after the domain was found absent. The
+  dashboard counts read "…" and then numbers, and "–" for failed reads; the
+  navigation badge was absent and then "2". After the poll that failed a minute
+  later, every monitoring chart was still drawn under the notice. A folder
+  opened while its read was slow showed none of the rows of the folder just
+  left. The four pages opened by their address stayed on it. A component whose
+  record could not be read showed "Could not be read" and only Help; one
+  without a unit showed "Installed" and only Help. In the install dialogue
+  Install was disabled while the repository was checked, when it could not be
+  checked, and for a required repository that is not enabled. The help text was
+  requested once, when the drawer was opened. A domain's tabs were the same
+  before and after a capability read that failed. Between each checking state
+  and the known one that followed it, nothing that was measured changed place
+  or size, except on the dashboard (below).
+- *Found by looking and corrected.* On a phone the certificate card began with
+  its three preparation steps, so the state and "could not be confirmed" were
+  below the fold; the state now comes first and a notice that appears is
+  scrolled into view. The certificate's state line grew by 34 px on a phone
+  when the answer arrived, and the two-factor card by 12 px; both keep a least
+  height for their width. "Check again" and the link to the secure address were
+  two stacked blocks; they share a row. While a domain's certificate was read
+  again after a request, "No certificate" stood under a success toast with a
+  line that only said it was reading; the line now says that what is shown is
+  the earlier answer. A tool with no daemon read "Stopped" at the top of its
+  page. On a phone the start, stop and restart controls ran off the right edge.
+  The import's notice appeared at the end of a long column, out of view on a
+  phone.
+- *Seen and not changed here.* The dashboard's attention list (above, "Not
+  done"). On a phone the account and file tables scroll sideways, so their row
+  controls are off screen until the table is scrolled. A disabled primary
+  button is close to an enabled one in the dark theme (the install dialogue).
+  The success toast covers the theme and account controls for its few seconds.
+- *Not covered.* Any real server, certificate or restart: the move to the secure
+  address was recorded and stopped, never followed. Safari, Firefox, a screen
+  reader, a touch device; the imitation skins; roles other than the
+  administrator. The forms that create an account or a plan were not submitted.
+  The setup-guide sentence was changed in the catalogue and not seen on screen.

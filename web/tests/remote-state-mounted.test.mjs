@@ -24,8 +24,16 @@ const source = (path) => readFileSync(new URL('../src/' + path, import.meta.url)
 const screenFiles = [
   'AddDomainModal', 'Domains', 'DatabaseManagementV2', 'DatabaseAccountStrip', 'DomainDatabaseManager',
   'DomainConnection', 'DomainDNSManager', 'DomainPHPSettings', 'HostingTypePanel',
+  // The second batch.
+  'Settings', 'UsersPage', 'DomainFileManager', 'DomainSSLSettings', 'ImportPage', 'LicenseNotice', 'MonitoringPage',
+  'ComponentDetail', 'ServiceRecordLookup', 'ServiceShell', 'DomainDetail',
 ];
 const icons = new Set(['AlertTriangle']);
+// Children of the screens under test that are not under test themselves.
+const stubbedComponents = [
+  'Link', 'TeamMembersPage', 'DNSServerSettings', 'SecurityAuditCard', 'ServerSetupSettings',
+  'DomainGeneralSettings', 'DomainSSLOverviewCard', 'DomainMailManager',
+];
 for (const name of screenFiles) {
   for (const match of source(`components/${name}.tsx`).matchAll(/import\s*\{([^}]+)\}\s*from 'lucide-react'/g)) {
     for (const item of match[1].split(',')) {
@@ -47,11 +55,27 @@ const stub = dataModule(`
   export const HelpButton = () => null;
   export const AddDatabaseModalV2 = () => React.createElement('aside', null, 'add-database-dialog');
   export const AddUserModalV2 = () => React.createElement('aside', null, 'add-user-dialog');
+  export const useSearchParams = () => [new URLSearchParams('section=' + (globalThis.currentTest.section ?? 'account')), () => {}];
+  // The fail-closed decoder is ComponentOperation's; here it is the same test
+  // on the one field these screens read. The operation tracker is not mounted.
+  export const decodeManagedServicesSnapshot = (value) => (value && typeof value === 'object' && Array.isArray(value.services) ? value : null);
+  export const useComponentOperation = () => globalThis.currentTest.operation ?? { startInstall: async () => true, locked: false, checking: false, catalogSnapshot: null };
+  export const publishComponentCensus = () => {};
+  ${stubbedComponents.filter((name) => !icons.has(name)).map((name) => `export const ${name} = (props) => props.children ?? null;`).join('\n')}
 `);
 const shared = sharedLayer(stub);
 const domainAccessURL = compileSource('auth/domainAccess.ts', () => stub);
 const deletionURL = compileSource('lib/domainDeletionPending.ts', () => stub);
-const own = { '/auth/domainAccess': domainAccessURL, '/lib/domainDeletionPending': deletionURL };
+// The small readers beside lib/remote.ts are the real ones too.
+const besideRemote = (specifier) => (specifier.endsWith('/remote') ? remoteURL : shared.resolve(specifier));
+const subscriptionsURL = compileSource('lib/subscriptions.ts', besideRemote);
+const accountsURL = compileSource('lib/accounts.ts', besideRemote);
+const managedServicesURL = compileSource('lib/managedServices.ts', besideRemote);
+const sslTierURL = compileSource('lib/sslTier.ts', () => stub);
+const own = {
+  '/auth/domainAccess': domainAccessURL, '/lib/domainDeletionPending': deletionURL, '/lib/subscriptions': subscriptionsURL,
+  '/lib/accounts': accountsURL, '/lib/managedServices': managedServicesURL, '/lib/sslTier': sslTierURL,
+};
 const modalURL = shared.compile('components/AddDomainModal.tsx', own);
 const stripURL = shared.compile('components/DatabaseAccountStrip.tsx', own);
 const load = async (name, more = {}) => (await import(shared.compile(`components/${name}.tsx`, { ...own, ...more })))[name];
@@ -63,6 +87,30 @@ const DomainConnection = await load('DomainConnection');
 const DomainDNSManager = await load('DomainDNSManager');
 const DomainPHPSettings = await load('DomainPHPSettings');
 const HostingTypePanel = await load('HostingTypePanel');
+// The second batch. A screen that mounts another screen under test gets the
+// real one; everything else it mounts is the stub.
+const Settings = await load('Settings');
+const UsersPage = await load('UsersPage');
+const fileManagerURL = shared.compile('components/DomainFileManager.tsx', own);
+const DomainFileManager = (await import(fileManagerURL)).DomainFileManager;
+const sslSettingsURL = shared.compile('components/DomainSSLSettings.tsx', own);
+const DomainSSLSettings = (await import(sslSettingsURL)).DomainSSLSettings;
+const ImportPage = await load('ImportPage');
+const LicenseNotice = await load('LicenseNotice');
+const MonitoringPage = await load('MonitoringPage');
+const ServiceShell = await load('ServiceShell');
+const ComponentDetail = await load('ComponentDetail', { '/ServiceShell': dataModule(`export const ServiceShell = (props) => props.children;`) });
+const ServiceRecordLookup = await load('ServiceRecordLookup');
+const DomainDetailByName = (await import(shared.compile('components/DomainDetail.tsx', {
+  ...own,
+  '/DomainFileManager': fileManagerURL,
+  '/DomainSSLSettings': sslSettingsURL,
+  '/DomainConnection': shared.compile('components/DomainConnection.tsx', own),
+  '/DomainDatabaseManager': shared.compile('components/DomainDatabaseManager.tsx', own),
+  '/DomainDNSManager': shared.compile('components/DomainDNSManager.tsx', own),
+  '/DomainPHPSettings': shared.compile('components/DomainPHPSettings.tsx', own),
+  '/HostingTypePanel': shared.compile('components/HostingTypePanel.tsx', own),
+}))).DomainDetailByName;
 
 // --- What the server answers when nothing is wrong ----------------------------
 const caps = (overrides = {}) => ({
@@ -96,6 +144,28 @@ const healthy = {
   '/api/v1/domains/1/php': json({ domain_id: 1, domain_name: 'example.com', php_version: '8.3', pool_name: 'example', pool_config: { pm: 'dynamic' } }),
   '/api/v1/domains/1/hosting': json({ project_type: 'static' }),
   '/api/v1/runtimes/node': json({ installed: [] }),
+  // The second batch.
+  '/api/v1/auth/2fa/status': json({ enabled: true }),
+  '/api/v1/panel/certificate': json({ https_enabled: true, self_signed: false, issuer: 'R11', expires_at: '2027-01-01T00:00:00Z' }),
+  '/api/v1/users': json({ users: [{ id: 7, username: 'ada', email: 'ada@example.com', role: 'customer', status: 'active', subscriptions: 1, domains: 1, created_at: '' }] }),
+  '/api/v1/plans': json({ plans: [{ id: 2, name: 'Basic', max_domains: 5, max_databases: 5, max_email_accounts: 5, disk_quota_mb: 1024, bandwidth_quota_mb: 1024 }] }),
+  '/api/v1/domains/1/files': json({ files: [{ name: 'index.php', path: '/index.php', is_dir: false, size: 12, permissions: '-rw-r--r--', mod_time: '2026-10-01T00:00:00Z' }] }),
+  '/api/v1/domains/1/ssl': json({
+    domain_id: 1, domain_name: 'example.com', has_certificate: true, managed_names: ['example.com'],
+    settings: { force_https: true, hsts_enabled: false, hsts_max_age: 300 },
+    certificate: {
+      id: 4, type: 'letsencrypt', provider_id: 'letsencrypt', issuer: 'R11', subject: 'example.com', issued_at: '2026-09-01T00:00:00Z',
+      expires_at: '2026-12-01T00:00:00Z', days_until_expiry: 60, auto_renew: true, renewal_status: 'ok', status: 'active',
+      dns_names: ['example.com'], activated: true, usable: true, trust_status: 'trusted', activation_pending: false, dependents_pending: false,
+    },
+  }),
+  '/api/v1/domains/1/ssl/mail': json({ secure_mail: false }),
+  '/api/v1/domains/1/usage': json({ disk_usage: 1024, bandwidth: 2048 }),
+  '/api/v1/ssl/providers': json({ providers: [{ id: 'letsencrypt', name: 'Let’s Encrypt', note: '', needs_eab: false }] }),
+  '/api/v1/metrics/history': json({ samples: [1, 2, 3].map((n) => ({ ts: `2026-10-09T00:0${n}:00Z`, cpu: 10 * n, mem_used: n, mem_total: 8, disk_used: n, disk_total: 80, load1: n / 10 })) }),
+  '/api/v1/managed-services': json({ services: [{ id: 'redis', name: 'Redis', kind: 'service', is_installed: true, status: 'active (running)', unit: 'redis-server', versions: [], ports: ['6379/tcp'], config_files: [{ path: '/etc/redis/redis.conf', is_managed: false }] }] }),
+  '/api/v1/service/logs': json({ lines: ['Ready to accept connections'] }),
+  '/api/v1/panel/license': json({ state: 'active', can_provision: true }),
 };
 
 // --- The ways a read can fail to produce a known answer -----------------------
@@ -108,16 +178,38 @@ const failures = {
 
 const originalFetch = globalThis.fetch;
 let tree, calls;
-function serve(overrides = {}, role = 'admin') {
+// `changes` answers what a screen sends (anything but GET), by path; a change
+// with no entry is accepted. The browser's own objects a screen touches are
+// the least that lets it run: an address, and a storage that keeps what is put
+// in it. An attempt to move the page is recorded, never followed.
+function serve(overrides = {}, role = 'admin', changes = {}) {
   calls = [];
-  globalThis.currentTest = { toasts: [], navigated: [], role };
+  globalThis.currentTest = { toasts: [], navigated: [], navigatedTo: [], role };
   globalThis.confirm = () => true;
   globalThis.document = { addEventListener() {}, removeEventListener() {} };
+  const stored = new Map();
+  globalThis.localStorage = {
+    getItem: (key) => (stored.has(key) ? stored.get(key) : null),
+    setItem: (key, value) => { stored.set(key, String(value)); },
+    removeItem: (key) => { stored.delete(key); },
+  };
+  const moved = globalThis.currentTest.navigatedTo;
+  globalThis.window = {
+    location: {
+      hostname: 'panel.example.com', port: '2083', origin: 'http://panel.example.com:2083',
+      set href(address) { moved.push(address); },
+      assign(address) { moved.push(address); },
+    },
+    open() {},
+  };
   const table = { ...healthy, ...overrides };
   globalThis.fetch = (url, options = {}) => {
     const method = options.method || 'GET';
-    calls.push({ method, url });
-    if (method !== 'GET') return Promise.resolve(Response.json({ success: true }));
+    calls.push({ method, url, body: options.body });
+    if (method !== 'GET') {
+      const change = changes[url.split('?')[0]];
+      return Promise.resolve().then(() => (change ? change(options) : Response.json({ success: true })));
+    }
     const answer = table[url.split('?')[0]];
     if (!answer) return Promise.resolve(Response.json({ error: 'no such route in this test' }, { status: 404 }));
     return Promise.resolve().then(() => answer({ url }));
@@ -137,6 +229,8 @@ async function cleanup() {
   globalThis.fetch = originalFetch;
   delete globalThis.currentTest;
   delete globalThis.document;
+  delete globalThis.localStorage;
+  delete globalThis.window;
 }
 const text = () => JSON.stringify(tree.toJSON());
 const has = (key) => text().includes(`"${key}"`) || text().includes(key);
@@ -281,6 +375,98 @@ const table = [
     negative: ['hosting.phpMissing'],
     checking: '', unknown: 'hosting.phpUnknown',
     known: [json(caps({ php_versions: [] })), 'hosting.phpMissing'],
+  },
+  // --- The second batch ------------------------------------------------------
+  {
+    screen: 'Settings (two-factor sign-in)', Component: Settings,
+    read: '/api/v1/auth/2fa/status',
+    // "Off" is the setup form; before this it was offered on a failed read.
+    negative: ['settings.2fa.reauthHint', 'settings.2fa.setup'],
+    checking: 'settings.2fa.checking', unknown: 'settings.2fa.unknown',
+    known: [json({ enabled: false }), 'settings.2fa.setup'],
+  },
+  {
+    screen: 'Settings (the certificate the Panel serves)', Component: Settings,
+    read: '/api/v1/panel/certificate',
+    negative: ['panelCert.selfSigned', 'panelCert.notReadable'],
+    checking: 'panelCert.checking', unknown: 'panelCert.unknown',
+    known: [json({ https_enabled: true, self_signed: true }), 'panelCert.selfSigned'],
+    alsoDisabled: 'panelCert.issue',
+  },
+  {
+    screen: 'Accounts (the list)', Component: UsersPage,
+    read: '/api/v1/users',
+    negative: ['users.empty', 'users.emptyHint'],
+    checking: 'users.checking', unknown: 'users.unknown',
+    known: [json({ users: [] }), 'users.empty'],
+    alsoDisabled: 'users.add',
+  },
+  {
+    screen: 'Accounts (the plans an account is created with)', Component: UsersPage,
+    read: '/api/v1/plans',
+    negative: ['users.form.noPlan'],
+    checking: '', unknown: 'users.plansUnknown',
+    known: null,
+    alsoDisabled: 'users.add',
+  },
+  {
+    screen: 'Domain files (a folder)', Component: DomainFileManager, props: domain,
+    read: '/api/v1/domains/1/files',
+    negative: ['files.empty'],
+    checking: 'files.checking', unknown: 'files.unknown',
+    known: [json({ files: [] }), 'files.empty'],
+    alsoDisabled: 'files.newFolder',
+  },
+  {
+    screen: 'Domain certificate', Component: DomainSSLSettings, props: { ...domain, mailAvailable: true },
+    read: '/api/v1/domains/1/ssl',
+    negative: ['ssl.noCert', 'ssl.status.none', 'ssl.httpsCertificateRequired'],
+    checking: 'ssl.checking', unknown: 'ssl.unknown',
+    known: [json({ domain_id: 1, domain_name: 'example.com', has_certificate: false, settings: { force_https: false, hsts_enabled: false, hsts_max_age: 300 } }), 'ssl.noCert'],
+  },
+  {
+    screen: 'Domain certificate (the authorities a certificate can be requested from)', Component: DomainSSLSettings, props: { ...domain, mailAvailable: true },
+    with: { '/api/v1/domains/1/ssl': json({ domain_id: 1, domain_name: 'example.com', has_certificate: false, settings: { force_https: false, hsts_enabled: false, hsts_max_age: 300 } }) },
+    read: '/api/v1/ssl/providers',
+    negative: [],
+    checking: 'ssl.checkingProviders', unknown: 'ssl.providersUnknown',
+    known: null,
+    alsoDisabled: 'ssl.issue',
+  },
+  {
+    screen: 'Monitoring', Component: MonitoringPage,
+    read: '/api/v1/metrics/history',
+    negative: ['monitoring.empty'],
+    checking: 'monitoring.checking', unknown: 'monitoring.unknown',
+    known: [json({ samples: [] }), 'monitoring.empty'],
+  },
+  {
+    screen: 'A component (its record)', Component: ComponentDetail, props: { serviceId: 'redis', onBack() {} },
+    read: '/api/v1/managed-services',
+    negative: ['component.configNone', 'component.portsNone', 'component.logsEmpty'],
+    checking: 'component.checking', unknown: 'component.unknown',
+    known: [json({ services: [{ id: 'redis', name: 'Redis', kind: 'service', is_installed: true, status: 'active (running)', unit: 'redis-server', versions: [] }] }), 'component.configNone'],
+  },
+  {
+    screen: 'A component (its log)', Component: ComponentDetail, props: { serviceId: 'redis', onBack() {} },
+    read: '/api/v1/service/logs',
+    negative: ['component.logsEmpty'],
+    checking: 'component.logsChecking', unknown: 'component.logsUnknown',
+    known: [json({ lines: [] }), 'component.logsEmpty'],
+  },
+  {
+    screen: 'A component page after a reload', Component: ServiceRecordLookup, props: { serviceId: 'redis', onBack() {}, children: () => 'component-page' },
+    read: '/api/v1/managed-services',
+    negative: ['component.absent'],
+    checking: 'component.checking', unknown: 'component.unknown',
+    known: [json({ services: [] }), 'component.absent'],
+  },
+  {
+    screen: 'A domain page (looked up by name)', Component: DomainDetailByName, props: { domainName: 'example.com', onBack() {} },
+    read: '/api/v1/domains',
+    negative: ['domain.absent', 'domain.noAccess'],
+    checking: 'domain.checking', unknown: 'domain.unknown',
+    known: [json([]), 'domain.absent'],
   },
 ];
 
@@ -704,6 +890,352 @@ test('Domain connection: "Check again" keeps the card and reads once; a failed r
   }
 });
 
+// --- The second batch (9 Oct 2026): what each screen does around its own change ---
+
+test('Settings: a certificate request from another tab is followed here, and this page is never moved for it', async () => {
+  const requestID = 'c'.repeat(32);
+  serve({
+    '/api/v1/service/operation': json({ operation: { id: 'd'.repeat(32), request_id: requestID, kind: 'panel_certificate_issue', service_id: 'panel.example.com', status: 'succeeded' } }),
+  });
+  // The marker another tab left in storage.
+  globalThis.localStorage.setItem('celikpanel.panel-certificate-operation.v1', JSON.stringify({ version: 1, request_id: requestID, domain: 'panel.example.com', created_at: Date.now() }));
+  try {
+    await mount(Settings);
+    await act(async () => { await settled(); await settled(); });
+    assert.ok(has('panelCert.reopen.title'), 'the issued certificate is not announced');
+    assert.ok(has('panelCert.reopen.stayed') && has('panelCert.openSecure'), 'the secure address is not offered as a link');
+    assert.ok(!has('panelCert.reopen.body') && buttons('panelCert.reopen.stay').length === 0, 'a countdown runs in a tab that did not ask');
+    assert.deepEqual(globalThis.currentTest.navigatedTo, [], 'the page was moved');
+    assert.equal(calls.filter((call) => call.method !== 'GET').length, 0);
+  } finally {
+    await cleanup();
+  }
+});
+
+test('Settings: the page that asked says where it will reopen and why, and "Stay here" keeps it', async () => {
+  let requestID = '';
+  serve({
+    '/api/v1/panel/certificate': json({ https_enabled: true, self_signed: true }),
+    // The poll names the exact request; the answer is about that request.
+    '/api/v1/service/operation': ({ url }) => Response.json({ operation: { id: 'd'.repeat(32), request_id: new URL(url, 'http://panel.test').searchParams.get('request_id'), kind: 'panel_certificate_issue', service_id: 'panel.example.com', status: 'succeeded' } }),
+  }, 'admin', {
+    '/api/v1/panel/certificate': (options) => {
+      requestID = JSON.parse(options.body).request_id;
+      return Response.json({ operation: { id: 'd'.repeat(32), request_id: requestID, kind: 'panel_certificate_issue', service_id: 'panel.example.com', status: 'queued' } });
+    },
+  });
+  globalThis.currentTest.section = 'panel';
+  try {
+    await mount(Settings);
+    await press(buttons('panelCert.issue')[0]);
+    await act(async () => { await settled(); await settled(); });
+    assert.equal(calls.filter((call) => call.method === 'POST').length, 1);
+    assert.ok(has('panelCert.reopen.body'), 'the reason and the address are not said before the page moves');
+    assert.equal(buttons('panelCert.reopen.stay').length, 1, '"Stay here" is not offered');
+    await press(buttons('panelCert.reopen.stay')[0]);
+    assert.ok(has('panelCert.reopen.stayed') && !has('panelCert.reopen.body'));
+    assert.deepEqual(globalThis.currentTest.navigatedTo, [], 'the page was moved after "Stay here"');
+  } finally {
+    await cleanup();
+  }
+});
+
+test('Settings: a certificate request whose poll gets no answer is never called failed, and no second request is offered', async () => {
+  const requestID = 'c'.repeat(32);
+  serve({ '/api/v1/service/operation': failures['dropped connection'] });
+  globalThis.localStorage.setItem('celikpanel.panel-certificate-operation.v1', JSON.stringify({ version: 1, request_id: requestID, domain: 'panel.example.com', created_at: Date.now() }));
+  try {
+    await mount(Settings);
+    await act(async () => { await settled(); await settled(); });
+    assert.ok(!has('panelCert.failed') && !has('panelCert.failedDetail') && !has('panelCert.failedPlain'));
+    assert.deepEqual(globalThis.currentTest.toasts.filter(([kind]) => kind === 'error'), []);
+    assert.ok(buttons('panelCert.issu').every((node) => node.props.disabled), 'a second request is offered while the first is not known');
+    assert.ok(globalThis.localStorage.getItem('celikpanel.panel-certificate-operation.v1'), 'the exact request was forgotten');
+  } finally {
+    await cleanup();
+  }
+});
+
+test('Accounts: the plans tab has its own three states', async () => {
+  for (const [failure, answer] of Object.entries(failures)) {
+    serve({ '/api/v1/plans': answer });
+    try {
+      await mount(UsersPage);
+      await press(buttons('users.tab.plans')[0]);
+      assert.ok(!has('plans.empty'), `"no plans" is drawn (${failure})`);
+      assert.ok(buttons('plans.add').every((node) => node.props.disabled), `a plan can be added (${failure})`);
+      assert.ok(has(failure === 'still on its way' ? 'plans.checking' : 'plans.unknown'));
+    } finally {
+      await cleanup();
+    }
+  }
+  serve({ '/api/v1/plans': json({ plans: [] }) });
+  try {
+    await mount(UsersPage);
+    await press(buttons('users.tab.plans')[0]);
+    assert.ok(has('plans.empty'));
+  } finally {
+    await cleanup();
+  }
+});
+
+test('Accounts: a change whose answer is lost is not repeated; the list is read again', async () => {
+  serve({}, 'admin', { '/api/v1/users/7': () => Promise.reject(new TypeError('fetch failed')) });
+  try {
+    await mount(UsersPage);
+    const before = reads('/api/v1/users');
+    await press(buttons('users.delete')[0]);
+    assert.equal(calls.filter((call) => call.method === 'DELETE').length, 1, 'the change was sent again');
+    assert.equal(reads('/api/v1/users'), before + 1, 'the list was not read again');
+    assert.ok(globalThis.currentTest.toasts.some(([, text]) => text === 'common.resultUnknown'));
+  } finally {
+    await cleanup();
+  }
+});
+
+test('Files: the rows of the folder just left are never shown under the new path', async () => {
+  let release;
+  serve({
+    '/api/v1/domains/1/files': ({ url }) => (url.includes(encodeURIComponent('/logs'))
+      ? new Promise((resolve) => { release = () => resolve(Response.json({ files: [] })); })
+      : Response.json({ files: [{ name: 'logs', path: '/logs', is_dir: true, size: 0, permissions: 'drwxr-xr-x', mod_time: '2026-10-01T00:00:00Z' }, { name: 'index.php', path: '/index.php', is_dir: false, size: 12, permissions: '-rw-r--r--', mod_time: '2026-10-01T00:00:00Z' }] })),
+  });
+  try {
+    await mount(DomainFileManager, domain);
+    assert.ok(has('index.php'));
+    await press(tree.root.findAll((node) => node.type === 'button' && [].concat(node.props.children ?? []).some((child) => child?.props?.children === 'logs'))[0]);
+    assert.ok(!has('index.php'), 'the rows of / are drawn under /logs');
+    assert.ok(has('files.checking') && !has('files.empty'));
+    assert.ok(buttons('files.newFolder').every((node) => node.props.disabled));
+    await act(async () => { release(); await settled(); await settled(); });
+    assert.ok(has('files.empty'), 'an answered empty folder is not said to be empty');
+  } finally {
+    await cleanup();
+  }
+});
+
+test('Domain certificate: after a successful request the screen shows the new answer; if that could not be read, the earlier one is marked and nothing is offered', async () => {
+  const none = { domain_id: 1, domain_name: 'example.com', has_certificate: false, settings: { force_https: false, hsts_enabled: false, hsts_max_age: 300 } };
+  for (const reread of ['answers', 'fails']) {
+    let issued = false;
+    serve({
+      '/api/v1/domains/1/ssl': () => {
+        if (!issued) return Response.json(none);
+        return reread === 'answers' ? healthy['/api/v1/domains/1/ssl']() : failures['refused by the server']();
+      },
+    }, 'admin', { '/api/v1/domains/1/ssl/letsencrypt': () => { issued = true; return Response.json({ success: true }); } });
+    try {
+      await mount(DomainSSLSettings, { ...domain, mailAvailable: true });
+      assert.ok(has('ssl.noCert'));
+      await act(async () => { tree.root.findAllByProps({ type: 'email' })[0].props.onChange({ target: { value: 'owner@example.com' } }); await settled(); });
+      await press(buttons('ssl.issue').find((node) => !node.props.disabled));
+      assert.equal(calls.filter((call) => call.method === 'POST').length, 1);
+      if (reread === 'answers') {
+        assert.ok(!has('ssl.noCert'), '"No certificate" is still drawn after the certificate was issued');
+        assert.ok(has('ssl.status.valid'));
+      } else {
+        assert.ok(has('common.staleNotice'), 'the earlier answer is not marked as the earlier answer');
+        assert.deepEqual(enabledDangerousControls(), []);
+        assert.ok(buttons('ssl.issue').every((node) => node.props.disabled), 'the request is offered again on an answer that is not the latest');
+      }
+    } finally {
+      await cleanup();
+    }
+  }
+});
+
+test('Import: an apply whose answer is lost says the result is unknown, starts nothing again and offers a check that only reads', async () => {
+  const preview = { username: 'old', main_domain: 'old.example', domains: ['old.example'], public_html: true, site_bytes: 10, mail_accounts: [], forwarders: [], dns_zones: {}, databases: [] };
+  for (const [listed, expected] of [[[{ id: 9, domain_name: 'old.example' }], 'import.unknown.present'], [[], 'import.unknown.absent']]) {
+    serve({ '/api/v1/domains': json(listed), '/api/v1/subscriptions': json({ subscriptions: [{ id: 3, name: 'Main', owner: 'admin' }] }) }, 'admin', {
+      '/api/v1/import/cpanel/inspect': () => Response.json(preview),
+      '/api/v1/import/cpanel/apply': () => Promise.reject(new TypeError('fetch failed')),
+    });
+    try {
+      await mount(ImportPage);
+      await act(async () => { tree.root.findAllByProps({ placeholder: '/var/lib/celikpanel-imports/cpmove-user.tar.gz' })[0].props.onChange({ target: { value: '/var/lib/celikpanel-imports/a.tar.gz' } }); await settled(); });
+      await press(buttons('import.inspect')[0]);
+      await act(async () => { tree.root.findAll((node) => node.type === 'select')[1].props.onChange({ target: { value: '3' } }); await settled(); });
+      await press(buttons('import.run')[0]);
+      const applies = () => calls.filter((call) => call.url === '/api/v1/import/cpanel/apply').length;
+      assert.equal(applies(), 1);
+      assert.ok(has('import.unknown.title') && has('import.unknown.body'), 'a lost answer shows nothing');
+      assert.equal(buttons('import.run').length, 0, '"Start import" came back by itself');
+      assert.ok(tree.root.findAll((node) => node.type === 'select').every((node) => node.props.disabled), 'the choices that made the request can be changed');
+      const before = calls.length;
+      await press(buttons('import.unknown.check')[0]);
+      assert.deepEqual(calls.slice(before).map((call) => [call.method, call.url.split('?')[0]]), [['GET', '/api/v1/domains']], 'the check did more than read the domain list');
+      assert.ok(has(expected));
+      assert.equal(applies(), 1, 'the import was sent again');
+      assert.equal(buttons('import.runAgain').filter((node) => !node.props.disabled).length, expected === 'import.unknown.absent' ? 1 : 0);
+    } finally {
+      await cleanup();
+    }
+  }
+});
+
+test('Dashboard license notice: it speaks only about an answer, and "could not be verified" is not "a license is required"', async () => {
+  for (const answer of Object.values(failures)) {
+    serve({ '/api/v1/panel/license': answer });
+    try {
+      await mount(LicenseNotice);
+      assert.equal(tree.toJSON(), null, 'something is drawn about a license that is not known');
+    } finally {
+      await cleanup();
+    }
+  }
+  for (const [state, drawn, absent] of [
+    ['verification_unavailable', 'license.noticeUnverified', 'license.restricted'],
+    ['status_unavailable', 'license.noticeUnverified', 'license.restricted'],
+    ['missing', 'license.restricted', 'license.noticeUnverified'],
+    ['expired', 'license.restricted', 'license.noticeUnverified'],
+  ]) {
+    serve({ '/api/v1/panel/license': json({ state, can_provision: false }) });
+    try {
+      await mount(LicenseNotice);
+      assert.ok(has(drawn) && !has(absent), `${state} is drawn as ${absent}`);
+    } finally {
+      await cleanup();
+    }
+  }
+  serve();
+  try {
+    await mount(LicenseNotice);
+    assert.equal(tree.toJSON(), null);
+  } finally {
+    await cleanup();
+  }
+});
+
+test('Monitoring: a poll that fails keeps the charts, marked, instead of "no samples yet"', async (t) => {
+  t.mock.timers.enable({ apis: ['setInterval'] });
+  let polls = 0;
+  serve({ '/api/v1/metrics/history': () => (polls++ === 0 ? healthy['/api/v1/metrics/history']() : failures['dropped connection']()) });
+  try {
+    await mount(MonitoringPage);
+    assert.ok(has('monitoring.cpu') && !has('monitoring.empty'));
+    await act(async () => { t.mock.timers.tick(60_000); await settled(); await settled(); });
+    assert.equal(reads('/api/v1/metrics/history'), 2, 'the page did not read again after a minute');
+    assert.ok(has('monitoring.cpu'), 'a failed poll wiped the charts');
+    assert.ok(has('common.staleNotice') && !has('monitoring.empty'));
+  } finally {
+    await cleanup();
+    t.mock.timers.reset();
+  }
+});
+
+test('A domain page: neither a failed lookup nor an unknown name sends the person back to the list', async () => {
+  for (const answer of [failures['refused by the server'], json([])]) {
+    const back = [];
+    serve({ '/api/v1/domains': answer });
+    try {
+      await mount(DomainDetailByName, { domainName: 'example.com', onBack: () => back.push(1) });
+      assert.deepEqual([back, globalThis.currentTest.navigated], [[], []], 'the page left its address');
+      assert.ok(buttons('nav.domains').length >= 1, 'the way back is not offered as a choice');
+    } finally {
+      await cleanup();
+    }
+  }
+});
+
+// --- A component's page (ServiceShell) ---------------------------------------------
+const record = (overrides = {}) => ({ id: 'redis', name: 'Redis', is_installed: true, status: 'active (running)', unit: 'redis-server', ...overrides });
+const shell = { serviceId: 'redis', name: 'Redis', icon: () => null, onBack() {}, children: 'component-panels' };
+
+test('A component page: a record that could not be read is not "not checked yet" and not "not installed"', async () => {
+  for (const [failure, answer] of Object.entries(failures)) {
+    serve({ '/api/v1/managed-services': answer });
+    try {
+      await mount(ServiceShell, shell);
+      for (const key of ['services.notCheckedTitle', 'services.notChecked', 'svc.notInstalled', 'services.scanNow', 'services.running', 'services.stopped']) {
+        assert.ok(!has(key), `${key} is drawn although the record is not known (${failure})`);
+      }
+      assert.ok(!has('component-panels'));
+      assert.equal(buttons('services.st').length + buttons('services.restart').length, 0, 'start or stop is offered');
+      if (failure === 'still on its way') {
+        assert.ok(has('svc.checkingRecord'));
+      } else {
+        assert.ok(has('svc.recordUnknown') && has('svc.recordUnread'));
+        const before = reads('/api/v1/managed-services');
+        await press(buttons('common.retry')[0]);
+        assert.equal(reads('/api/v1/managed-services'), before + 1);
+        assert.equal(calls.filter((call) => call.method !== 'GET').length, 0, 'Retry probed or changed the host');
+      }
+    } finally {
+      await cleanup();
+    }
+  }
+});
+
+test('A component page: start and stop go to the unit the record names, and to nothing when it names none', async () => {
+  serve({ '/api/v1/managed-services': json({ services: [record({ id: 'bind', unit: 'named' })] }) }, 'admin', { '/api/v1/service/action': () => Response.json({ success: true }) });
+  try {
+    await mount(ServiceShell, { ...shell, serviceId: 'bind' });
+    await press(buttons('services.stop')[0]);
+    const sent = calls.find((call) => call.url === '/api/v1/service/action');
+    assert.deepEqual(JSON.parse(sent.body), { name: 'named', action: 'stop' });
+  } finally {
+    await cleanup();
+  }
+  serve({ '/api/v1/managed-services': json({ services: [record({ unit: undefined })] }) });
+  try {
+    await mount(ServiceShell, shell);
+    assert.ok(has('component-panels'));
+    assert.equal(buttons('services.start').length + buttons('services.stop').length + buttons('services.restart').length, 0, 'start or stop is offered without a unit');
+  } finally {
+    await cleanup();
+  }
+});
+
+test('A component page: while the page only checks for a running operation, Install does not say "installing"', async () => {
+  serve({ '/api/v1/managed-services': json({ services: [record({ is_installed: false, status: '', unit: undefined })] }) });
+  globalThis.currentTest.operation = { startInstall: async () => true, locked: true, checking: true, catalogSnapshot: null };
+  try {
+    await mount(ServiceShell, shell);
+    assert.ok(has('svc.installChecking') && !has('svc.installing'));
+    assert.ok(buttons('svc.installChecking').every((node) => node.props.disabled));
+  } finally {
+    await cleanup();
+  }
+  serve({ '/api/v1/managed-services': json({ services: [record({ is_installed: false, status: '', unit: undefined })] }) });
+  globalThis.currentTest.operation = { startInstall: async () => true, locked: true, checking: false, catalogSnapshot: null };
+  try {
+    await mount(ServiceShell, shell);
+    assert.ok(has('svc.installing') && !has('svc.installChecking'));
+  } finally {
+    await cleanup();
+  }
+});
+
+// --- Screens this file cannot mount: the same rule, read from their source -------------
+test('the install dialogue, the navigation badge, the dashboard counts and the help drawer keep the rule', () => {
+  const serviceList = source('components/ServiceList.tsx');
+  const dialogue = serviceList.slice(serviceList.indexOf('function InstallServiceDialog({'), serviceList.indexOf('function ActionIcon({'));
+  // Install is off until the server has said whether a repository is required.
+  assert.match(dialogue, /disabled=\{busy \|\| repoBusy \|\| !repoKnown \|\| Boolean\(repo\?\.required/);
+  assert.match(dialogue, /const repoKnown = repoRead\.remote\.state === 'known' && !repoRead\.reading;/);
+  assert.doesNotMatch(dialogue, /fetch\(`\/api\/v1\/repo\?|\.ok \? r\.json\(\) : null/);
+  assert.match(dialogue, /t\(repoObserved \? 'services\.repo\.stale' : 'services\.repo\.unknown'/);
+
+  // The domain badge is a number only for an answer, and keeps the earlier one.
+  const layout = source('components/Layout.tsx');
+  assert.match(layout, /const domainCount = setupMode \? undefined : lastKnown\(domainList\.remote\)\?\.value\.length;/);
+  assert.doesNotMatch(layout, /domains: Array\.isArray\(d\) \? d\.length : 0/);
+
+  // A count on the dashboard is "…" or "–" until it is a number.
+  const dashboard = source('components/Dashboard.tsx');
+  assert.match(dashboard, /n: Remote<number>;/);
+  assert.match(dashboard, /\{countText\(n\)\}/);
+  assert.doesNotMatch(dashboard, /extras\?\.databases \?\? 0|setUsersCount/);
+  assert.match(dashboard, /\|\| domainList\.remote\.state !== 'known';/);
+
+  // The help texts are fetched when the drawer opens, not with the page.
+  const help = source('components/HelpDrawer.tsx');
+  assert.match(help, /import type \{ HelpContent \} from '\.\.\/help\/serviceHelp';/);
+  assert.match(help, /import\('\.\.\/help\/serviceHelp'\)/);
+  assert.doesNotMatch(help, /^import \{[^}]*\} from '\.\.\/help\/serviceHelp';/m);
+});
+
 // --- The layer itself ------------------------------------------------------------
 
 test('readRemote never throws and never invents a value', async () => {
@@ -738,12 +1270,24 @@ test('readRemote never throws and never invents a value', async () => {
 test('every text of the three states exists in both languages, and the could-not-check ones say nothing was changed', () => {
   const failed = new Set(['common.staleNotice', 'domains.pendingUnknown', 'databases.usersUnknown']);
   const other = new Set(['common.retry', 'conn.notChecked', 'conn.unknownHelp', 'conn.routeAUnknown', 'conn.sslUnknown',
-    'databases.checkingUsers', 'databases.deleteDatabase', 'databases.deleteUser']);
+    'databases.checkingUsers', 'databases.deleteDatabase', 'databases.deleteUser',
+    // The second batch: sentences that are not a row's checking or could-not-check line.
+    'common.resultUnknown', 'settings.2fa.resultUnknown', 'panelCert.notReadable', 'panelCert.unconfirmed', 'panelCert.notRecorded',
+    'panelCert.failedDetail', 'panelCert.failedPlain', 'panelCert.checkAgain', 'panelCert.openSecure', 'panelCert.reopen.title',
+    'panelCert.reopen.body', 'panelCert.reopen.reload', 'panelCert.reopen.stay', 'panelCert.reopen.stayed', 'plans.checking',
+    'files.contentUnknown', 'files.uploadUnreadable', 'ssl.rereading', 'import.checkingSubs', 'import.noSubs', 'import.inspectUnanswered',
+    'import.runAgain', 'import.unknown.title', 'import.unknown.body', 'import.unknown.check', 'import.unknown.checkAgain',
+    'import.unknown.present', 'import.unknown.open', 'import.unknown.absent', 'license.noticeUnverified', 'license.noticeOpen',
+    'domain.absent', 'domain.absentHint', 'domain.noAccess', 'domain.noAccessHint', 'component.absent', 'component.absentHint',
+    'component.logsNoMatch', 'svc.checkingRecord', 'svc.recordUnread', 'svc.installChecking', 'services.versionUnknown',
+    'services.repo.checking', 'dashboard.countUnread', 'help.loading']);
+  for (const key of ['plans.unknown', 'import.subsUnknown', 'import.unknown.unreadable', 'svc.recordUnknown', 'svc.recordStale',
+    'services.repo.unknown', 'services.repo.stale', 'help.unknown']) failed.add(key);
   for (const row of table) {
     if (row.checking) other.add(row.checking);
     for (const key of row.unknown.split('|')) if (key.includes('.') && !key.includes(' ')) failed.add(key);
   }
-  const line = (catalogue, key) => catalogue.split('\n').find((candidate) => candidate.trimStart().startsWith(`'${key}'`));
+  const line = (catalogue, key) => catalogue.split('\n').find((candidate) => /^\s*(['"])/.test(candidate) && candidate.trimStart().slice(1).startsWith(`${key}${candidate.trimStart()[0]}`));
   for (const key of [...failed, ...other]) {
     const en = line(englishCatalogue, key);
     const tr = line(turkishCatalogue, key);

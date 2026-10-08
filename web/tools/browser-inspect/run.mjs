@@ -54,8 +54,12 @@ async function newPage(storage = {}) {
     await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: theme }]);
     page.on('pageerror', error => report.errors.push(`pageerror: ${error.message}`.slice(0, 300)));
     await page.evaluateOnNewDocument((lang, mode, extra) => {
-        localStorage.setItem('celikpanel.lang', lang); localStorage.setItem('celikpanel.theme', mode);
-        if (!sessionStorage.getItem('__seeded')) { for (const [key, value] of Object.entries(extra)) localStorage.setItem(key, value); sessionStorage.setItem('__seeded', '1'); }
+        // A document the browser draws itself (a move that was stopped ends on
+        // one) has no storage; there is nothing to seed there.
+        try {
+            localStorage.setItem('celikpanel.lang', lang); localStorage.setItem('celikpanel.theme', mode);
+            if (!sessionStorage.getItem('__seeded')) { for (const [key, value] of Object.entries(extra)) localStorage.setItem(key, value); sessionStorage.setItem('__seeded', '1'); }
+        } catch { /* no storage in this document */ }
     }, locale, theme, storage);
     page.__context = context;
     return page;
@@ -239,6 +243,85 @@ const go = async (page, path) => { await page.goto(`${base}${path}`, { waitUntil
 const moved = (before, after) => Object.keys(before || {}).filter(key => before[key] && after?.[key])
     .filter(key => ['x', 'y', 'w', 'h'].some(side => Math.abs(before[key][side] - after[key][side]) > 1))
     .map(key => `${key}: ${JSON.stringify(before[key])} -> ${JSON.stringify(after[key])}`);
+
+// --- The second batch (9 Oct 2026): what its scenarios switch and measure ---------
+const TWO_FACTOR = '/api/v1/auth/2fa/status';
+const PANEL_CERT = '/api/v1/panel/certificate';
+const OPERATION = '/api/v1/service/operation';
+const USERS_URL = '/api/v1/users';
+const PLANS_URL = '/api/v1/plans';
+const FILES_URL = '/api/v1/domains/1/files';
+const SSL_URL = '/api/v1/domains/1/ssl';
+const SUBS_URL = '/api/v1/subscriptions';
+const APPLY_URL = '/api/v1/import/cpanel/apply';
+const DASHBOARD_URL = '/api/v1/dashboard';
+const LICENSE_URL = '/api/v1/panel/license';
+const HISTORY_URL = '/api/v1/metrics/history';
+const SERVICES_URL = '/api/v1/managed-services';
+const LOGS_URL = '/api/v1/service/logs';
+const REPO_URL = '/api/v1/repo';
+const CANDIDATE_URL = '/api/v1/service/candidate';
+const USERS = [
+    { id: 1, username: 'admin', email: 'owner@example.com', role: 'admin', status: 'active', subscriptions: 1, domains: 2, created_at: '2026-09-01T10:00:00Z' },
+    { id: 7, username: 'ada', email: 'ada@example.org', role: 'customer', status: 'active', parent_name: 'admin', subscriptions: 1, domains: 1, created_at: '2026-09-10T10:00:00Z' },
+    { id: 8, username: 'studio-north', email: 'hello@studio-north.example', role: 'reseller', status: 'suspended', parent_name: 'admin', subscriptions: 3, domains: 6, created_at: '2026-09-12T10:00:00Z' },
+];
+const PLANS = [{ id: 2, name: 'Basic', max_domains: 5, max_databases: 10, max_email_accounts: 50, disk_quota_mb: 10240, bandwidth_quota_mb: 102400, subscribers: 2 }];
+const FILES = {
+    '/': [
+        { name: 'logs', path: '/logs', is_dir: true, size: 0, permissions: 'drwxr-x---', mod_time: '2026-10-01T09:00:00Z' },
+        { name: 'public_html', path: '/public_html', is_dir: true, size: 0, permissions: 'drwxr-xr-x', mod_time: '2026-10-02T09:00:00Z' },
+        { name: 'index.php', path: '/index.php', is_dir: false, size: 1834, permissions: '-rw-r--r--', mod_time: '2026-10-03T09:00:00Z' },
+    ],
+    '/logs': [],
+};
+const CERTIFICATE = {
+    domain_id: 1, domain_name: 'example.com', has_certificate: true, managed_names: ['example.com', 'www.example.com'],
+    settings: { force_https: true, hsts_enabled: false, hsts_max_age: 300 },
+    certificate: {
+        id: 4, type: 'letsencrypt', provider_id: 'letsencrypt', issuer: 'R11', subject: 'example.com', issued_at: '2026-10-09T08:00:00Z', expires_at: '2027-01-07T08:00:00Z',
+        days_until_expiry: 90, auto_renew: true, renewal_status: 'ok', status: 'active', dns_names: ['example.com', 'www.example.com'],
+        activated: true, usable: true, trust_status: 'trusted', activation_pending: false, dependents_pending: false,
+    },
+};
+const PREVIEW = { username: 'olduser', main_domain: 'old.example', domains: ['old.example'], public_html: true, site_bytes: 48234496, mail_accounts: [{ domain: 'old.example', user: 'info', quota_mb: 1024 }], forwarders: [], dns_zones: { 'old.example': [{}, {}, {}] }, databases: [{ name: 'olduser_shop', dump_bytes: 2048 }] };
+const SUBS = [{ id: 3, name: 'Main', owner: 'admin' }];
+const SAMPLES = Array.from({ length: 40 }, (_, index) => ({ ts: new Date(Date.UTC(2026, 9, 9, 6, index)).toISOString(), cpu: 12 + (index % 7) * 6, mem_used: (3 + (index % 5) / 4) * 1024 ** 3, mem_total: 8 * 1024 ** 3, disk_used: 41 * 1024 ** 3, disk_total: 80 * 1024 ** 3, load1: 0.2 + (index % 9) / 10 }));
+const SERVICES = [{ id: 'redis', name: 'Redis', description: 'In-memory data store', icon: 'R', category: 'cache', status: 'active (running)', is_installed: true, versions: [], kind: 'service', unit: 'redis-server', packages: ['redis-server'], ports: [], config_files: [{ path: '/etc/redis/redis.conf', is_managed: false }] }];
+const LOGS = ['Oct 09 08:00:01 server1 redis-server[812]: Ready to accept connections tcp', 'Oct 09 08:05:00 server1 redis-server[812]: 1 changes in 300 seconds. Saving...', 'Oct 09 08:05:00 server1 redis-server[812]: Background saving terminated with success'];
+const REQUIRED_REPO = { available: true, enabled: false, id: 'netdata', name: 'Netdata repository', detail: 'Packages published by Netdata for this distribution', required: true, packages: [] };
+const B2_CLEAR = [TWO_FACTOR, PANEL_CERT, OPERATION, USERS_URL, PLANS_URL, FILES_URL, SSL_URL, SUBS_URL, APPLY_URL, DASHBOARD_URL, LICENSE_URL, HISTORY_URL, SERVICES_URL, LOGS_URL, REPO_URL, CANDIDATE_URL];
+// A known server with two domains, and every read of the second batch answered.
+const b2Reset = async (extra = {}) => {
+    await remoteReset();
+    await ctl({
+        domains: DOMAINS, connection: CONNECTION, twoFactor: false, panelCertificate: { https_enabled: true, self_signed: true, subject: 'server1', issuer: 'server1', expires_at: '2027-10-01T00:00:00Z' },
+        certificateOperation: null, certificateStatus: 'running', certificateError: null, users: [], plans: [], files: { '/': [] }, ssl: null, sslAfterIssue: null,
+        noticeLicense: null, samples: [], services: [], logs: [], repo: { available: false, enabled: false }, candidate: '7.2.4',
+        dashboard: { databases: 0, mail_accounts: 0, expiring_certs: [] }, importPreview: null, assetDown: '', clear: B2_CLEAR, ...extra,
+    });
+    await drainLog();
+};
+NEGATIVE.push(
+    'Set up two-factor', 'self-signed certificate', 'found no certificate', 'No accounts yet', 'No service plans yet', 'This folder is empty', 'No certificate',
+    'No samples yet', 'An active license is required', 'Not installed', 'has not been checked yet', 'Not checked yet', 'No configuration file was found', 'No log entries',
+    'There is no subscription', 'is not on this server', 'has no component', 'was not issued',
+    'İki faktörü kur', 'kendinden imzalı sertifika', 'bir sertifika bulamadı', 'Henüz hesap yok', 'Henüz servis planı yok', 'Bu klasör boş', 'Sertifika yok', 'sertifika yok',
+    'Henüz örnek yok', 'aktif lisans gerekiyor', 'Kurulu değil', 'henüz bakılmadı', 'Henüz bakılmadı', 'ayar dosyası bulunamadı', 'Günlük kaydı yok',
+    'abonelik henüz yok', 'bu sunucuda değil', 'bileşeni yok', 'sertifika alınamadı',
+);
+// Where the visible headings, fields and controls of the page are, to compare
+// a checking state with the known one that follows it.
+const sizes = page => page.evaluate(() => {
+    const rect = node => { const r = node.getBoundingClientRect(); return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) }; };
+    const rects = {};
+    for (const node of document.querySelectorAll('main h1, main h2, main h3, main h4, main button, main label, main section, main select')) {
+        if (node.getClientRects().length === 0) continue;
+        const key = `${node.tagName.toLowerCase()}:${(node.innerText || node.getAttribute('aria-label') || node.title || '').trim().replace(/\s+/g, ' ').replace(/\s*[\d…–]+$/, '').slice(0, 40)}`;
+        if (key.length > node.tagName.length + 1 && !(key in rects)) rects[key] = rect(node);
+    }
+    return { rects };
+});
 
 const scenarios = {
     // 1 + 2: review notice, progress notice, planned restart, continuation.
@@ -1008,6 +1091,539 @@ const scenarios = {
         page = await open();
         await tab(page);
         await shot(page, '41d-domain-databases-populated', await negatives(page));
+        await closePage(page);
+    },
+    // --- The second batch (9 Oct 2026) --------------------------------------
+    // 50: Settings, two-factor sign-in: the status slow, failing, known off
+    // and known on. Before this a failed read showed "off" with the setup form.
+    async twofactor() {
+        const open = async (settled = true) => { const page = await newPage(); await page.goto(`${base}/settings?section=account`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector('main h1'); if (settled) await quiet(page); return page; };
+        await b2Reset({ override: { [TWO_FACTOR]: { delay: 5000 } } });
+        let page = await open(false);
+        await pause(1500);
+        const checking = await sizes(page);
+        await shot(page, '50a-two-factor-checking', { ...(await negatives(page)), ...checking });
+        await waitFor(page, () => !!document.querySelector('main input[type="password"]'), 12000);
+        await pause(300);
+        const known = await sizes(page);
+        await shot(page, '50b-two-factor-known-off', { ...(await negatives(page)), moved: moved(checking.rects, known.rects) });
+        await closePage(page);
+
+        await b2Reset({ override: { [TWO_FACTOR]: { status: 502, body: { error: 'agent unavailable' } } } });
+        page = await open();
+        await shot(page, '50c-two-factor-could-not-check', { ...(await negatives(page)), passwordFields: await page.$$eval('main input[type="password"]', nodes => nodes.filter(node => node.getClientRects().length > 0).length) });
+        await ctl({ clear: [TWO_FACTOR] });
+        await clickByText(page, RETRY, 'main button');
+        await waitFor(page, () => !!document.querySelector('main input[type="password"]'), 8000);
+        await shot(page, '50d-two-factor-after-retry', await negatives(page));
+        await closePage(page);
+
+        await b2Reset({ twoFactor: true });
+        page = await open();
+        await shot(page, '50e-two-factor-known-on', await negatives(page));
+        await closePage(page);
+    },
+    // 51: Settings, the certificate the Panel serves: its state slow, failing,
+    // known; a request that succeeds here (the page says where it will reopen
+    // and why, "Stay here" keeps it, and without that it moves once); the same
+    // request seen from another section and from another tab (neither moves);
+    // a poll that gets no answer; a request the server reports as failed.
+    async panelcert() {
+        const moves = [];
+        // Nothing but the loopback mock is ever contacted: a move to the secure
+        // address is recorded here and stopped.
+        const guarded = async (path, storage = {}, context = null) => {
+            const page = context ? await context.newPage() : await newPage(storage);
+            if (context) { await page.setViewport(viewport); await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: theme }]); page.__context = context; }
+            await page.setRequestInterception(true);
+            page.on('request', request => {
+                if (request.url().startsWith(base) || request.url().startsWith('data:')) { request.continue().catch(() => {}); return; }
+                moves.push({ page: path, to: request.url(), navigation: request.isNavigationRequest() });
+                request.abort().catch(() => {});
+            });
+            await page.goto(`${base}${path}`, { waitUntil: 'domcontentloaded' });
+            await page.waitForSelector('main h1');
+            return page;
+        };
+        const panel = '/settings?section=panel';
+        const request = async page => {
+            await page.waitForSelector('#panel-certificate-domain');
+            await waitFor(page, () => { const button = document.querySelector('#panel-certificate-domain')?.parentElement?.querySelector('button'); return !!button; }, 8000);
+            await page.click('#panel-certificate-domain', { clickCount: 3 });
+            await page.type('#panel-certificate-domain', HOST);
+            await waitFor(page, () => !document.querySelector('#panel-certificate-domain').parentElement.querySelector('button').disabled, 8000);
+            await page.evaluate(() => document.querySelector('#panel-certificate-domain').parentElement.querySelector('button').click());
+        };
+        const card = page => page.evaluate(() => {
+            const section = document.querySelector('#settings-panel-panel section');
+            const button = document.querySelector('#panel-certificate-domain')?.parentElement?.querySelector('button');
+            return { text: (section?.innerText || '').trim(), issue: button ? { label: button.innerText.trim(), disabled: button.disabled } : null, address: location.href };
+        });
+
+        await b2Reset({ override: { [PANEL_CERT]: { delay: 5000 } } });
+        let page = await guarded(panel);
+        await pause(1500);
+        const checking = await sizes(page);
+        await shot(page, '51a-panel-certificate-checking', { ...(await negatives(page)), ...(await card(page)), ...checking });
+        await waitFor(page, () => !document.querySelector('#settings-panel-panel [role="status"][aria-label]'), 12000);
+        await pause(300);
+        const known = await sizes(page);
+        await shot(page, '51b-panel-certificate-known-self-signed', { ...(await card(page)), moved: moved(checking.rects, known.rects) });
+        await closePage(page);
+
+        await b2Reset({ override: { [PANEL_CERT]: { status: 502, body: { error: 'agent unavailable' } } } });
+        page = await guarded(panel);
+        await quiet(page);
+        await shot(page, '51c-panel-certificate-could-not-read', { ...(await negatives(page)), ...(await card(page)) });
+        await closePage(page);
+
+        await b2Reset({ panelCertificate: { https_enabled: false, self_signed: false } });
+        page = await guarded(panel);
+        await quiet(page);
+        await shot(page, '51d-panel-certificate-not-readable', await card(page));
+        await closePage(page);
+
+        // Issued here: the page says what will happen; "Stay here" keeps it.
+        await b2Reset();
+        page = await guarded(panel);
+        await request(page);
+        await pause(1200);
+        await shot(page, '51e-request-running', await card(page));
+        await ctl({ certificateStatus: 'succeeded' });
+        await waitFor(page, () => !document.querySelector('#panel-certificate-domain'), 8000);
+        await pause(400);
+        await shot(page, '51f-issued-says-where-and-why', await card(page));
+        await clickByText(page, ['Stay here', 'Burada kal'], 'main button');
+        await pause(11500);
+        await shot(page, '51g-stayed', { ...(await card(page)), movesAfterStay: moves.length });
+        await closePage(page);
+
+        // Issued here and left alone: the page moves once, to the secure address.
+        await b2Reset(); moves.length = 0;
+        page = await guarded(panel);
+        await request(page);
+        await ctl({ certificateStatus: 'succeeded' });
+        await waitFor(page, () => !document.querySelector('#panel-certificate-domain'), 8000);
+        await pause(12500);
+        report.states['51h-moved-once'] = { moves: moves.slice() };
+        await closePage(page);
+
+        // Issued here, but the person went to another section: nothing moves.
+        await b2Reset(); moves.length = 0;
+        page = await guarded(panel);
+        await request(page);
+        await pause(600);
+        await page.click('#settings-account-tab');
+        await ctl({ certificateStatus: 'succeeded' });
+        await pause(13000);
+        await shot(page, '51i-other-section-not-moved', { address: await page.evaluate(() => location.href), moves: moves.slice() });
+        await page.click('#settings-panel-tab');
+        await pause(400);
+        await shot(page, '51j-back-on-the-section', { ...(await card(page)), moves: moves.slice() });
+        await closePage(page);
+
+        // Another tab that only finds the request in storage: it follows the
+        // request and is never moved.
+        await b2Reset(); moves.length = 0;
+        page = await guarded(panel);
+        await request(page);
+        await pause(600);
+        const other = await guarded('/settings?section=account', {}, page.__context);
+        await ctl({ certificateStatus: 'succeeded' });
+        await pause(13000);
+        await other.bringToFront();
+        await shot(other, '51k-other-tab-not-moved', { address: await other.evaluate(() => location.href), moves: moves.slice() });
+        await other.click('#settings-panel-tab');
+        await pause(400);
+        await shot(other, '51l-other-tab-panel-section', { ...(await card(other)), moves: moves.slice() });
+        await closePage(page);
+
+        // The poll gets no answer: not "failed", and no second request.
+        await b2Reset(); moves.length = 0;
+        page = await guarded(panel);
+        await request(page);
+        await pause(800);
+        await ctl({ override: { [OPERATION]: { drop: true } } });
+        await pause(12500);
+        await shot(page, '51m-result-could-not-be-confirmed', { ...(await negatives(page)), ...(await card(page)) });
+        await ctl({ clear: [OPERATION], certificateStatus: 'failed' });
+        await clickByText(page, ['Check again', 'Tekrar kontrol et'], 'main button');
+        await waitFor(page, () => !document.querySelector('#panel-certificate-domain').readOnly, 8000);
+        await pause(500);
+        await shot(page, '51n-known-failed', await card(page));
+        await closePage(page);
+    },
+    // 52: Accounts: the list and the plans slow, failing, known empty, known.
+    async accounts() {
+        const open = async (settled = true) => { const page = await newPage(); await page.goto(`${base}/users`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector('main h1'); if (settled) await quiet(page); return page; };
+        await b2Reset({ users: USERS, plans: PLANS, override: { [USERS_URL]: { delay: 5000 } } });
+        let page = await open(false);
+        await pause(1500);
+        const checking = await sizes(page);
+        await shot(page, '52a-accounts-checking', { ...(await negatives(page)), ...checking });
+        await waitFor(page, () => !!document.querySelector('main table'), 12000);
+        await pause(300);
+        const known = await sizes(page);
+        await shot(page, '52b-accounts-known', { ...(await negatives(page)), moved: moved(checking.rects, known.rects) });
+        await closePage(page);
+
+        await b2Reset({ users: USERS, plans: PLANS, override: { [USERS_URL]: { status: 502, body: { error: 'agent unavailable' } } } });
+        page = await open();
+        await shot(page, '52c-accounts-could-not-read', await negatives(page));
+        await closePage(page);
+
+        await b2Reset({ users: [], plans: PLANS });
+        page = await open();
+        await shot(page, '52d-accounts-known-empty', await negatives(page));
+        await closePage(page);
+
+        await b2Reset({ users: USERS, plans: PLANS, override: { [PLANS_URL]: { status: 502, body: { error: 'agent unavailable' } } } });
+        page = await open();
+        await shot(page, '52e-plans-could-not-read-on-accounts', await negatives(page));
+        await clickByText(page, ['Service plans', 'Servis planları'], 'main button');
+        await pause(500);
+        await shot(page, '52f-plans-tab-could-not-read', await negatives(page));
+        await closePage(page);
+
+        // The list could not be read again after a change: rows stay, marked.
+        await b2Reset({ users: USERS, plans: PLANS });
+        page = await open();
+        page.on('dialog', dialog => dialog.accept());
+        await ctl({ override: { [USERS_URL]: { status: 502, body: { error: 'agent unavailable' }, after: 0 } } });
+        await page.evaluate(() => document.querySelector('main table tbody tr button:last-child').click());
+        await waitFor(page, () => !!document.querySelector('main [role="alert"]'), 8000);
+        await pause(300);
+        await shot(page, '52g-accounts-could-not-be-read-again', { ...(await negatives(page)), rowButtonsDisabled: await page.$$eval('main table tbody button', nodes => nodes.map(node => node.disabled)) });
+        await closePage(page);
+    },
+    // 53: a domain's files: a folder slow, failing, known empty, populated; and
+    // another folder opened while it is slow (never the rows of the one left).
+    async files() {
+        const open = async () => { const page = await newPage(); await page.goto(`${base}/domains/example.com`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector('main h1'); await quiet(page); await clickByText(page, ['Files', 'Dosyalar'], 'main button'); return page; };
+        await b2Reset({ files: FILES, override: { [FILES_URL]: { delay: 5000 } } });
+        let page = await open();
+        await pause(1200);
+        const checking = await sizes(page);
+        await shot(page, '53a-folder-checking', { ...(await negatives(page)), ...checking });
+        await waitFor(page, () => !!document.querySelector('main table'), 12000);
+        await pause(300);
+        const known = await sizes(page);
+        await shot(page, '53b-folder-known', { ...(await negatives(page)), moved: moved(checking.rects, known.rects) });
+        // Into a folder whose read is slow.
+        await ctl({ override: { [FILES_URL]: { delay: 5000, after: 0 } } });
+        await clickByText(page, ['logs'], 'main table button');
+        await pause(1200);
+        await shot(page, '53c-other-folder-checking', { ...(await negatives(page)), rowsOfTheFolderLeft: await page.evaluate(() => /index\.php/.test(document.querySelector('main').innerText)) });
+        await waitFor(page, () => !document.querySelector('main [role="status"][aria-label]'), 12000);
+        await pause(300);
+        await shot(page, '53d-other-folder-known-empty', await negatives(page));
+        await closePage(page);
+
+        await b2Reset({ files: FILES, override: { [FILES_URL]: { status: 502, body: { error: 'agent unavailable' } } } });
+        page = await open();
+        await quiet(page);
+        await shot(page, '53e-folder-could-not-read', await negatives(page));
+        await closePage(page);
+    },
+    // 54: a domain's certificate: slow, failing, known none; a successful
+    // request whose re-read is slow, and one whose re-read fails.
+    async domainssl() {
+        const open = async () => {
+            const page = await newPage();
+            page.on('dialog', dialog => dialog.accept());
+            await page.goto(`${base}/domains/example.com`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector('main h1'); await quiet(page);
+            await clickByText(page, ['Hosting', 'Barındırma'], 'main button'); await pause(300);
+            await clickByText(page, ['SSL/TLS'], 'main button');
+            return page;
+        };
+        await b2Reset({ override: { [SSL_URL]: { delay: 5000 } } });
+        let page = await open();
+        await pause(1200);
+        const checking = await sizes(page);
+        await shot(page, '54a-certificate-checking', { ...(await negatives(page)), ...checking });
+        await waitFor(page, () => !!document.querySelector('main input[type="email"]'), 12000);
+        await pause(300);
+        await shot(page, '54b-certificate-known-none', { ...(await negatives(page)), moved: moved(checking.rects, (await sizes(page)).rects) });
+        // A request that succeeds; the server's next answer is slow.
+        await ctl({ sslAfterIssue: CERTIFICATE, override: { [SSL_URL]: { delay: 5000, after: 0 } } });
+        await page.type('main input[type="email"]', 'owner@example.com');
+        await clickByText(page, ['Get certificate', 'Sertifika al'], 'main button');
+        await pause(1500);
+        await shot(page, '54c-reading-again-after-issue', { ...(await negatives(page)), enabledButtons: await page.$$eval('main .rounded-xl button:not(:disabled)', nodes => nodes.map(node => node.innerText.trim()).filter(Boolean)) });
+        await waitFor(page, () => !document.querySelector('main input[type="email"]'), 12000);
+        await pause(400);
+        await shot(page, '54d-after-issue-known', await negatives(page));
+        await closePage(page);
+
+        await b2Reset({ override: { [SSL_URL]: { status: 502, body: { error: 'agent unavailable' } } } });
+        page = await open();
+        await quiet(page);
+        await shot(page, '54e-certificate-could-not-read', await negatives(page));
+        await closePage(page);
+
+        // A request that succeeds; the re-read fails.
+        await b2Reset();
+        page = await open();
+        await page.waitForSelector('main input[type="email"]');
+        await ctl({ sslAfterIssue: CERTIFICATE, override: { [SSL_URL]: { status: 502, body: { error: 'agent unavailable' }, after: 0 } } });
+        await page.type('main input[type="email"]', 'owner@example.com');
+        await clickByText(page, ['Get certificate', 'Sertifika al'], 'main button');
+        await waitFor(page, () => !!document.querySelector('main [role="alert"]'), 8000);
+        await pause(400);
+        await page.evaluate(() => document.querySelector('main [role="alert"]').scrollIntoView({ block: 'start' }));
+        await shot(page, '54f-could-not-be-read-again-after-issue', { ...(await negatives(page)), enabledButtons: await page.$$eval('main .rounded-xl button:not(:disabled)', nodes => nodes.map(node => node.innerText.trim()).filter(Boolean)) });
+        await closePage(page);
+    },
+    // 55: import: the subscriptions slow and failing; an apply that loses its
+    // connection, then the check that only reads (domain present, absent).
+    async importer() {
+        const open = async () => {
+            const page = await newPage();
+            await page.goto(`${base}/import`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector('main input');
+            await page.type('main input', '/var/lib/celikpanel-imports/cpmove-old.tar.gz');
+            await clickByText(page, ['Inspect archive', 'Arşivi incele'], 'main button');
+            await page.waitForSelector('main select');
+            return page;
+        };
+        await b2Reset({ importPreview: PREVIEW, subscriptions: SUBS, override: { [SUBS_URL]: { delay: 5000 } } });
+        let page = await open();
+        await pause(800);
+        const checking = await sizes(page);
+        await shot(page, '55a-subscriptions-checking', { ...(await negatives(page)), ...checking });
+        await waitFor(page, () => document.querySelectorAll('main select')[1]?.options.length > 1, 12000);
+        await pause(300);
+        await shot(page, '55b-subscriptions-known', { moved: moved(checking.rects, (await sizes(page)).rects) });
+        await closePage(page);
+
+        await b2Reset({ importPreview: PREVIEW, subscriptions: SUBS, override: { [SUBS_URL]: { status: 502, body: { error: 'agent unavailable' } } } });
+        page = await open();
+        await quiet(page);
+        await shot(page, '55c-subscriptions-could-not-read', await negatives(page));
+        await closePage(page);
+
+        for (const [name, domains] of [['present', [...DOMAINS, { id: 9, domain_name: 'old.example', status: 'active', project_type: 'php', created_at: '2026-10-09T08:00:00Z' }]], ['absent', DOMAINS]]) {
+            await b2Reset({ importPreview: PREVIEW, subscriptions: SUBS });
+            page = await open();
+            await waitFor(page, () => document.querySelectorAll('main select')[1]?.options.length > 1, 8000);
+            await page.evaluate(() => { const select = document.querySelectorAll('main select')[1]; select.value = '3'; select.dispatchEvent(new Event('change', { bubbles: true })); });
+            await ctl({ override: { [APPLY_URL]: { drop: true } } });
+            await drainLog();
+            // How often the page itself sends the import. (The browser can
+            // repeat one request on a connection that was closed under it;
+            // that is counted apart, from the mock's own record.)
+            await page.evaluate(() => { window.__applies = 0; const send = window.fetch; window.fetch = (...args) => { if (String(args[0]).includes('/import/cpanel/apply')) window.__applies++; return send(...args); }; });
+            await clickByText(page, ['Start import', 'İçe aktarmayı başlat'], 'main button');
+            await waitFor(page, () => !!document.querySelector('main [role="alert"]'), 8000);
+            await pause(400);
+            const afterDrop = (await drainLog()).filter(line => line.includes('/import/cpanel/apply')).length;
+            if (name === 'present') await shot(page, '55d-apply-result-unknown', { ...(await negatives(page)), appliesSentByThePage: await page.evaluate(() => window.__applies), connectionsTheBrowserOpenedForIt: afterDrop, buttons: await page.$$eval('main button', nodes => nodes.map(node => `${node.innerText.trim()}${node.disabled ? ' (disabled)' : ''}`).filter(Boolean)) });
+            await ctl({ domains });
+            await page.evaluate(() => document.querySelector('main [role="alert"] button').click());
+            await waitFor(page, () => !document.querySelector('main [role="alert"] [role="status"][aria-label]'), 8000);
+            await pause(500);
+            const log = await drainLog();
+            await shot(page, `55${name === 'present' ? 'e' : 'f'}-checked-domain-${name}`, {
+                ...(await negatives(page)),
+                requestsOfTheCheck: log.map(line => line.split(' ').slice(1, 3).join(' ')),
+                appliesSentByThePage: await page.evaluate(() => window.__applies),
+                buttons: await page.$$eval('main button', nodes => nodes.map(node => `${node.innerText.trim()}${node.disabled ? ' (disabled)' : ''}`).filter(Boolean)),
+            });
+            await closePage(page);
+        }
+    },
+    // 56: the dashboard: the license notice (could not be verified is not
+    // "required"), the four counts and the navigation badge slow, failing and
+    // known.
+    async dashboard() {
+        const open = async (settled = true) => { const page = await newPage(); await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector('main h1'); if (settled) await quiet(page); return page; };
+        const counts = page => page.evaluate(() => ({
+            cards: Array.from(document.querySelectorAll('main button p.text-2xl')).map(node => `${node.nextElementSibling?.innerText}: ${node.innerText.trim()}`),
+            badge: Array.from(document.querySelectorAll('aside nav a, aside nav button')).map(node => node.innerText.replace(/\s+/g, ' ').trim()).filter(text => /^(Domains|Alan Adları|Alan adları)/.test(text)),
+        }));
+        await b2Reset({ users: USERS, dashboard: { databases: 3, mail_accounts: 5, expiring_certs: [] }, services: SERVICES, override: { [LIST]: { delay: 5000 }, [DASHBOARD_URL]: { delay: 5000 }, [USERS_URL]: { delay: 5000 } } });
+        let page = await open(false);
+        await pause(1800);
+        const checking = await sizes(page);
+        await shot(page, '56a-counts-checking', { ...(await negatives(page)), ...(await counts(page)), ...checking });
+        await waitFor(page, () => !/…/.test(Array.from(document.querySelectorAll('main button p.text-2xl')).map(node => node.innerText).join('')), 12000);
+        await pause(400);
+        await shot(page, '56b-counts-known', { ...(await counts(page)), moved: moved(checking.rects, (await sizes(page)).rects) });
+        await closePage(page);
+
+        await b2Reset({ users: USERS, services: SERVICES, override: { [LIST]: { status: 502, body: { error: 'x' } }, [DASHBOARD_URL]: { status: 502, body: { error: 'x' } }, [USERS_URL]: { status: 502, body: { error: 'x' } } } });
+        page = await open();
+        await shot(page, '56c-counts-could-not-read', { ...(await negatives(page)), ...(await counts(page)) });
+        await closePage(page);
+
+        await b2Reset({ noticeLicense: { state: 'verification_unavailable', can_provision: false } });
+        page = await open();
+        await shot(page, '56d-license-could-not-be-verified', await negatives(page));
+        await closePage(page);
+        await b2Reset({ noticeLicense: { state: 'expired', can_provision: false } });
+        page = await open();
+        await shot(page, '56e-license-known-expired', await negatives(page));
+        await closePage(page);
+        await b2Reset({ override: { [LICENSE_URL]: { status: 502, body: { error: 'x' } } } });
+        page = await open();
+        await shot(page, '56f-license-read-failed-says-nothing', await negatives(page));
+        await closePage(page);
+    },
+    // 57: monitoring: slow, failing, known, and a poll that fails a minute later.
+    async monitoring() {
+        const open = async (settled = true) => { const page = await newPage(); await page.goto(`${base}/monitoring`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector('main h1'); if (settled) await quiet(page); return page; };
+        await b2Reset({ samples: SAMPLES, override: { [HISTORY_URL]: { delay: 5000 } } });
+        let page = await open(false);
+        await pause(1500);
+        await shot(page, '57a-monitoring-checking', await negatives(page));
+        await waitFor(page, () => !!document.querySelector('main svg path'), 12000);
+        await pause(300);
+        await shot(page, '57b-monitoring-known', await negatives(page));
+        // The next poll fails: the charts stay, marked.
+        await ctl({ override: { [HISTORY_URL]: { status: 502, body: { error: 'agent unavailable' }, after: 0 } } });
+        await waitFor(page, () => !!document.querySelector('main [role="alert"]'), 75000);
+        await pause(300);
+        await shot(page, '57c-poll-failed-charts-kept', { ...(await negatives(page)), charts: await page.$$eval('main svg path', nodes => nodes.length) });
+        await closePage(page);
+
+        await b2Reset({ samples: SAMPLES, override: { [HISTORY_URL]: { status: 502, body: { error: 'agent unavailable' } } } });
+        page = await open();
+        await shot(page, '57d-monitoring-could-not-read', await negatives(page));
+        await closePage(page);
+    },
+    // 58: pages opened by their address: a domain whose list could not be read
+    // or that the server does not list, and a component after a reload. None
+    // of them returns to the list by itself.
+    async lookup() {
+        const visit = async path => { const page = await newPage(); await page.goto(`${base}${path}`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector('main'); await quiet(page); await pause(600); return page; };
+        const where = page => page.evaluate(() => location.pathname);
+        await b2Reset({ override: { [LIST]: { status: 502, body: { error: 'agent unavailable' } } } });
+        let page = await visit('/domains/example.com');
+        await shot(page, '58a-domain-list-could-not-read', { ...(await negatives(page)), path: await where(page) });
+        await ctl({ clear: [LIST] });
+        await clickByText(page, RETRY, 'main button');
+        await waitFor(page, () => /example\.com/.test(document.querySelector('main h1')?.innerText || ''), 8000);
+        await shot(page, '58b-domain-after-retry', { path: await where(page) });
+        await closePage(page);
+
+        await b2Reset();
+        page = await visit('/domains/nowhere.example');
+        await shot(page, '58c-domain-not-on-this-server', { ...(await negatives(page)), path: await where(page) });
+        await closePage(page);
+
+        await b2Reset({ services: SERVICES, logs: LOGS, override: { [SERVICES_URL]: { status: 502, body: { error: 'agent unavailable' } } } });
+        page = await visit('/services/redis');
+        await shot(page, '58d-component-could-not-read', { ...(await negatives(page)), path: await where(page) });
+        await closePage(page);
+
+        await b2Reset({ services: SERVICES, logs: LOGS });
+        page = await visit('/services/unheard-of');
+        await shot(page, '58e-component-not-in-the-catalogue', { ...(await negatives(page)), path: await where(page) });
+        await closePage(page);
+
+        // A tab the server ruled out does not come back because a later read of
+        // the capabilities failed, and the tab in use stays the one in use.
+        await b2Reset({ files: FILES, capabilities: { ...CAPABILITIES, mail_server: false } });
+        page = await visit('/domains/example.com');
+        const tabs = () => page.$$eval('main .border-b button', nodes => nodes.map(node => `${node.innerText.trim()}${/text-primary/.test(node.className) ? ' (selected)' : ''}`));
+        await clickByText(page, ['Files', 'Dosyalar'], 'main button');
+        const before = await tabs();
+        await pause(31000);
+        await ctl({ override: { [CAPS]: { status: 502, body: { error: 'x' }, after: 0 } } });
+        await clickByText(page, ['Hosting', 'Barındırma'], 'main button'); await pause(1500);
+        await clickByText(page, ['Files', 'Dosyalar'], 'main button'); await pause(900);
+        await shot(page, '58f-tabs-after-a-failed-capability-read', { before, after: await tabs(), capabilityReads: (await drainLog()).filter(line => line.includes(CAPS)).length });
+        await closePage(page);
+    },
+    // 59: one component's page: its record slow, failing (not "not checked
+    // yet"), known; start and stop only for a named unit; the help drawer.
+    async component() {
+        const visit = async (path, settled = true) => { const page = await newPage(); await page.goto(`${base}${path}`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector('main'); if (settled) { await quiet(page); await pause(500); } return page; };
+        const header = page => page.evaluate(() => ({
+            status: document.querySelector('main h1')?.parentElement?.querySelector('p')?.innerText.trim() || null,
+            controls: Array.from(document.querySelectorAll('main h1')).length ? Array.from(document.querySelector('main h1').closest('.flex').querySelectorAll('button')).map(node => `${node.innerText.trim()}${node.disabled ? ' (disabled)' : ''}`) : [],
+        }));
+        const openShell = () => visit('/services/redis');
+        await b2Reset({ services: SERVICES, logs: LOGS });
+        let page = await openShell();
+        await shot(page, '59a-component-known', { ...(await negatives(page)), ...(await header(page)) });
+        // The help texts are fetched when the drawer opens.
+        await clickByText(page, ['Help', 'Yardım'], 'main button');
+        await waitFor(page, () => (document.querySelector('aside.max-w-md')?.innerText || '').length > 300, 8000);
+        await pause(300);
+        await shot(page, '59b-help-drawer', { helpRequests: (await page.evaluate(() => performance.getEntriesByType('resource').map(entry => entry.name).filter(name => /serviceHelp/.test(name)))).length });
+        await closePage(page);
+
+        await b2Reset({ services: SERVICES, logs: LOGS, assetDown: 'serviceHelp' });
+        page = await openShell();
+        await clickByText(page, ['Help', 'Yardım'], 'main button');
+        await waitFor(page, () => !!document.querySelector('aside.max-w-md [role="alert"]'), 8000);
+        await pause(300);
+        await shot(page, '59c-help-could-not-be-fetched', { notice: await page.$eval('aside.max-w-md [role="alert"]', node => node.innerText.trim()) });
+        await closePage(page);
+
+        // The navigation rail and the lookup read the records first; those two
+        // are answered and the shell's own read after them is withheld.
+        await b2Reset({ services: SERVICES, logs: LOGS, override: { [SERVICES_URL]: { status: 502, body: { error: 'agent unavailable' }, after: 2 } } });
+        page = await openShell();
+        await shot(page, '59d-record-could-not-read', { ...(await negatives(page)), ...(await header(page)) });
+        await closePage(page);
+
+        await b2Reset({ services: [{ ...SERVICES[0], unit: undefined, kind: 'tool', status: 'installed' }], logs: [] });
+        page = await openShell();
+        await shot(page, '59e-installed-without-a-unit', { ...(await negatives(page)), ...(await header(page)) });
+        await closePage(page);
+
+        await b2Reset({ services: SERVICES, logs: LOGS, override: { [LOGS_URL]: { status: 502, body: { error: 'journal unavailable' } } } });
+        page = await openShell();
+        await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+        await into(page, 'main [role="alert"]');
+        await shot(page, '59f-log-could-not-read', await negatives(page));
+        await closePage(page);
+    },
+    // 60: the install dialogue of the components list: whether the component
+    // needs a repository, slow, failing and known required.
+    async installdialog() {
+        const open = async () => {
+            const page = await newPage();
+            await page.goto(`${base}/services`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector('main h1'); await quiet(page); await pause(600);
+            await page.evaluate(() => { const row = Array.from(document.querySelectorAll('main li, main tr, main article, main div')).find(node => /Netdata/.test(node.innerText || '') && node.querySelector('button') && (node.innerText || '').length < 400); (Array.from(row?.querySelectorAll('button') || []).find(button => /^(Install|Kur)$/.test(button.innerText.trim())))?.click(); });
+            await page.waitForSelector('[aria-labelledby="service-install-title"]', { timeout: 6000 });
+            return page;
+        };
+        const dialogue = page => page.evaluate(() => {
+            const node = document.querySelector('[aria-labelledby="service-install-title"]');
+            return { text: (node?.innerText || '').trim(), buttons: Array.from(node?.querySelectorAll('button') || []).map(button => `${button.innerText.trim()}${button.disabled ? ' (disabled)' : ''}`).filter(Boolean) };
+        });
+        const absent = [...SERVICES, { id: 'netdata', name: 'Netdata', description: 'Real-time monitoring', icon: 'N', category: 'monitoring', status: '', is_installed: false, versions: [], kind: 'service', packages: ['netdata'] }];
+        await b2Reset({ services: absent, repo: REQUIRED_REPO, override: { [REPO_URL]: { delay: 5000 } } });
+        let page = await open();
+        await pause(800);
+        await shot(page, '60a-install-repository-checking', await dialogue(page));
+        await waitFor(page, () => !document.querySelector('[aria-labelledby="service-install-title"] [role="status"][aria-label]'), 12000);
+        await pause(300);
+        await shot(page, '60b-install-repository-known-required', await dialogue(page));
+        await closePage(page);
+
+        await b2Reset({ services: absent, repo: REQUIRED_REPO, override: { [REPO_URL]: { status: 502, body: { error: 'agent unavailable' } }, [CANDIDATE_URL]: { status: 502, body: { error: 'agent unavailable' } } } });
+        page = await open();
+        await quiet(page);
+        await shot(page, '60c-install-repository-could-not-check', await dialogue(page));
+        await closePage(page);
+    },
+    // 61: the page under the hold layer in the dark theme (small muted text was
+    // near 1.5:1 under the scrim).
+    async scrim() {
+        await b2Reset({ validity: 6 });
+        const page = await newPage();
+        await page.goto(`${base}/domains`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector('main table'); await quiet(page);
+        await ctl({ license: 'error' });
+        await waitFor(page, () => !!document.querySelector('[data-top-layer="hold"]'), 90000);
+        await pause(1200);
+        await shot(page, '61-page-under-the-hold', await page.evaluate(() => {
+            const scrim = Array.from(document.querySelectorAll('[data-top-layer="hold"] [class*="bg-scrim"]')).map(node => getComputedStyle(node).backgroundColor);
+            const sample = document.querySelector('main table tbody td .text-fg-subtle, main table tbody td.text-fg-muted, main .text-fg-muted');
+            return { scrim, mutedText: sample ? { text: sample.innerText.slice(0, 40), color: getComputedStyle(sample).color } : null };
+        }));
         await closePage(page);
     },
 };

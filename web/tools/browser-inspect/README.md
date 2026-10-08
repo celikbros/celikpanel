@@ -58,6 +58,14 @@ tab.
 
 `BROWSER_INSPECT_DIST` serves another build than `web/dist`.
 
+The scenarios from `twofactor` on never let the browser leave the loopback
+address: `panelcert` watches for the one move the product makes on purpose (to
+the Panel's secure address after its certificate was issued), records where it
+was going and stops it before anything is contacted. `monitoring` waits a
+minute for the page's own poll, and `lookup` half a minute for a capability
+answer to age, so the whole second set takes about six minutes per
+configuration.
+
 Output: `<out>/<viewport>-<theme>-<language>/<state>.png` and a `report*.json`
 with, for every state, the visible text, the open dialogues, what has focus,
 horizontal overflow and clipped text, plus the measurements a scenario adds
@@ -87,6 +95,18 @@ size when the answer arrived (`moved`).
 | `domainslist` | the domain list slow, failing (then Retry) and known empty (25) |
 | `databases` | the Databases page: engines and one engine's lists slow, failing, empty and populated; a list that could not be read again after a delete; the panel's own account after it was removed (30–33) |
 | `connection` | one domain's page: the connection card slow, failing, not checked by the server (`status: unknown`, every list `null`), known negative and known positive; the domain's own database list (40–41) |
+| `twofactor` | Settings, two-factor sign-in: the status slow, failing (then Retry), known off and known on (50) |
+| `panelcert` | Settings, the certificate the Panel serves: its state slow, failing, known, and not readable by the Panel; a request that succeeds on the page that asked (what it says before it moves, "Stay here", and the one move when left alone), in another section and in another tab (neither is moved); a poll that gets no answer; a request reported as failed (51) |
+| `accounts` | Accounts: the list slow, failing, known empty and populated; the plans failing on both tabs; a list that could not be read again after a change (52) |
+| `files` | a domain's files: a folder slow, failing, populated; another folder opened while it is slow (53) |
+| `domainssl` | a domain's certificate: slow, failing, known none; a successful request whose re-read is slow, and one whose re-read fails (54) |
+| `importer` | import: the subscriptions slow and failing; an apply that loses its connection, then the check that only reads, with the domain present and absent (55) |
+| `dashboard` | the dashboard: the four counts and the navigation badge slow, failing and known; the license notice for "could not be verified", for a known expired license and for a failed read (56) |
+| `monitoring` | monitoring: slow, known, a poll that fails a minute later, failing (57) |
+| `lookup` | pages opened by their address: a domain whose list could not be read or that the server does not list, a component after a reload, and a domain's tabs after a later capability read failed (58) |
+| `component` | one component's page: its record known, could not be read, installed without a unit; its log failing; the help drawer and a help text that cannot be fetched (59) |
+| `installdialog` | the install dialogue of the components list: whether a repository is required, slow, known required and failing (60) |
+| `scrim` | the page under the access hold, with the colour of the scrim and of a muted text under it (61) |
 
 ## Limits
 

@@ -206,6 +206,14 @@ export interface InteractionBlockLease {
 interface ComponentOperationContextValue {
     operation: ComponentOperation | null;
     locked: boolean;
+    /**
+     * Locked only because the page is still asking the server whether an
+     * operation is running. Nothing is being installed; a control that says
+     * "installing" for this state says something that is not known.
+     * Yalnız, sayfa sunucuya bir işlemin sürüp sürmediğini hâlâ sorduğu için
+     * kilitli. Hiçbir şey kurulmuyor.
+     */
+    checking: boolean;
     failure: ApiError | null;
     catalogSnapshot: ManagedServicesSnapshot | null;
     startInstall: (request: InstallOperationRequest) => Promise<boolean>;
@@ -1800,6 +1808,7 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
             value={{
                 operation,
                 locked,
+                checking: discoveringActive && !interactionBlocked,
                 failure,
                 catalogSnapshot,
                 startInstall,

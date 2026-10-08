@@ -35,17 +35,20 @@ const webDir = fileURLToPath(new URL('../', import.meta.url));
 const allowList = readAllowList();
 const actual = scanTree(webDir);
 
-// The totals of the tree this ratchet was introduced on, after its first batch
-// (hosting capabilities, Add domain, Domains, Databases, domain connection).
-// Before that batch: 46 / 68 / 16 / 126 / 32 in 68 files.
+// The totals of the tree after the second batch (Settings, accounts, a domain's
+// files, certificate and page, import, monitoring, a component's page, the
+// license notice; and in part the components list, the dashboard and the
+// navigation rail).
+// Before the first batch: 46 / 68 / 16 / 126 / 32 in 68 files.
+// After the first batch:  37 / 58 / 14 / 109 / 29 in 62 files.
 const ceilings = {
-  valueFromFailure: 37,
-  swallowedFailure: 58,
-  ignoredFailure: 14,
-  rawRead: 109,
-  unprovenEmptyState: 29,
+  valueFromFailure: 27,
+  swallowedFailure: 43,
+  ignoredFailure: 12,
+  rawRead: 83,
+  unprovenEmptyState: 25,
 };
-const fileCeiling = 62;
+const fileCeiling = 53;
 
 const advice = 'Read through useRemote/readRemote (src/lib/remote.ts) and draw the three states; '
   + 'see docs/OPERATION-GUIDANCE.md, entry of 2026-10-09.';
@@ -172,9 +175,12 @@ test('the totals never exceed the pinned ceilings', () => {
   assert.deepEqual(totals(allowList.files), now, 'the allow-list and the tree disagree; run --tighten');
 });
 
-test('the screens of the first batch are off the list for good', () => {
+test('the screens of the first two batches are off the list for good', () => {
   for (const name of [
     'AddDomainModal', 'Domains', 'DatabaseManagementV2', 'DomainDatabaseManager', 'DomainConnection', 'CurrentSettings',
+    // The second batch.
+    'Settings', 'UsersPage', 'DomainFileManager', 'DomainSSLSettings', 'DomainDetail', 'ImportPage', 'LicenseNotice',
+    'MonitoringPage', 'ComponentDetail', 'ServiceRecordLookup', 'HelpDrawer',
   ]) {
     const path = `src/components/${name}.tsx`;
     assert.equal(actual[path], undefined, `${path} reads the old way again: ${JSON.stringify(actual[path])}. ${advice}`);

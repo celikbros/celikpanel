@@ -406,6 +406,20 @@ body:has([data-top-layer="reload"]) [data-top-layer="hold"] [class*="bg-scrim"] 
     background-color: transparent;
 }
 
+/* After dark the page is already navy, and a navy scrim at the strength the
+   light theme needs took the small muted text under these two layers down to
+   about 1.5:1 (inspection, 2026-10-08): the hold says that what is on the page
+   is kept, and the page could not be read. Here the scrim is drawn at half
+   strength, which leaves that text near 3.5:1 while the dialogue still stands
+   clear of the page. :where() keeps this below the rule above, so a hold under
+   the reload line is still cleared.
+   Karanlikta sayfa zaten laciverttir; acik temanin gerektirdigi guçteki
+   karartma, bu iki katmanin altindaki kucuk soluk metni yaklasik 1,5:1'e
+   indiriyordu. Burada karartma yari guçte cizilir. */
+:where(.dark) [data-top-layer] [class*="bg-scrim"] {
+    background-color: rgb(var(--scrim) / 0.5);
+}
+
 /* The focus ring is a drawn part of this system, not a browser default.
    Odak halkasi bu sistemin cizdigi bir parcadir, tarayici varsayilani degil. */
 :focus-visible {

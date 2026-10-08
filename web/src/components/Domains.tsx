@@ -9,6 +9,7 @@ import { PageHeader } from './PageHeader';
 import { apiErrorText, readApiError } from '../lib/apiError';
 import { domainDeletionDetailKey, domainDeletionReasonKey, readDomainDeletionOutcome, readSavedDomainDeletion } from '../lib/domainDeletionPending';
 import { decodeList, gateOn, lastKnown, useRemote } from '../lib/remote';
+import { SUBSCRIPTIONS_URL, decodeSubscriptions } from '../lib/subscriptions';
 import { dnsBlocker, useHostingCapabilities } from '../lib/hostingCapabilities';
 import type { TranslationKey } from '../i18n/en';
 import { useAuth } from '../auth/AuthContext';
@@ -521,31 +522,9 @@ function fmtBytes(bytes: number = 0): string {
 // Kompakt kullanım şeridi: çağıranın aboneliği/leri, plan limitine karşı
 // ölçülen disk ve kaynak sayıları. Oluşturmayı kapılayan kota sisteminden
 // gelen gerçek sayılar — gördüğün, uygulanandır.
-interface SubUsage {
-    disk_used_bytes: number;
-    disk_limit_bytes: number;
-    domains: number;
-    domains_limit: number;
-    databases: number;
-    databases_limit: number;
-    mail_accounts: number;
-    mail_limit: number;
-}
-interface SubRow {
-    id: number;
-    name: string;
-    owner: string;
-    usage?: SubUsage;
-}
-
-function decodeSubscriptions(raw: unknown): SubRow[] {
-    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('shape');
-    return decodeList<SubRow>((raw as { subscriptions?: unknown }).subscriptions ?? null);
-}
-
 function SubscriptionUsage() {
     const { t } = useI18n();
-    const usage = useRemote('/api/v1/subscriptions', decodeSubscriptions);
+    const usage = useRemote(SUBSCRIPTIONS_URL, decodeSubscriptions);
 
     // The strip exists only for subscriptions that carry measured usage, so
     // while that is being read there is nothing to announce. A failed read is

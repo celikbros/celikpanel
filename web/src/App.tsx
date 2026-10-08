@@ -44,7 +44,7 @@ const ServerSetupGate = lazyNamed(() => import('./components/ServerSetupGate'), 
 const ServerSetup = lazyNamed(() => import('./components/ServerSetup'), 'ServerSetup');
 const Dashboard = lazyNamed(() => import('./components/Dashboard'), 'Dashboard');
 const Domains = lazyNamed(() => import('./components/Domains'), 'Domains');
-const DomainDetail = lazyNamed(() => import('./components/DomainDetail'), 'DomainDetail');
+const DomainDetailByName = lazyNamed(() => import('./components/DomainDetail'), 'DomainDetailByName');
 const DatabaseManagementV2 = lazyNamed(() => import('./components/DatabaseManagementV2'), 'DatabaseManagementV2');
 const ServiceList = lazyNamed(() => import('./components/ServiceList'), 'ServiceList');
 const MonitoringPage = lazyNamed(() => import('./components/MonitoringPage'), 'MonitoringPage');
@@ -65,85 +65,23 @@ const VsftpdManagement = lazyNamed(() => import('./components/VsftpdManagement')
 const PostgreSQLManagement = lazyNamed(() => import('./components/PostgreSQLManagement'), 'PostgreSQLManagement');
 const MariaDBManagement = lazyNamed(() => import('./components/MariaDBManagement'), 'MariaDBManagement');
 const ComponentDetail = lazyNamed(() => import('./components/ComponentDetail'), 'ComponentDetail');
+const ServiceRecordLookup = lazyNamed(() => import('./components/ServiceRecordLookup'), 'ServiceRecordLookup');
 
-// Domain Detail Wrapper - fetches domain ID from domain name
+// The page of one domain, addressed by its name. Looking the name up, and
+// saying what came of it, belongs to the page's own bundle (DomainDetailByName):
+// the person stays on this address whether the list could not be read or has
+// no such name. Before 9 Oct 2026 both were a silent return to the list.
+//
+// Bir alan adının, adıyla adreslenen sayfası. Adın aranması ve sonucunun
+// söylenmesi sayfanın kendi paketine aittir: liste okunamasa da, öyle bir ad
+// olmasa da kişi bu adreste kalır. 9 Eki 2026'dan önce ikisi de listeye sessiz
+// bir dönüştü.
 function DomainDetailPage() {
   const { domainName } = useParams();
   const navigate = useNavigate();
-  const [domainId, setDomainId] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
-  const requestIdRef = useRef(0);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    const requestId = ++requestIdRef.current;
-    setDomainId(null);
-    setLoading(true);
-
-    const fetchDomain = async () => {
-      try {
-        if (!domainName) {
-          navigate('/domains');
-          return;
-        }
-
-        const res = await fetch('/api/v1/domains', {
-          signal: controller.signal,
-          cache: 'no-store',
-        });
-        if (!res.ok) {
-          throw new Error(`Failed to fetch domains: ${res.status}`);
-        }
-
-        const domains: Array<{ id: number; domain_name: string }> = await res.json();
-        if (controller.signal.aborted || requestIdRef.current !== requestId) {
-          return;
-        }
-
-        const domain = domains.find((item) => item.domain_name === domainName);
-        if (domain) {
-          setDomainId(domain.id);
-        } else {
-          navigate('/domains');
-        }
-      } catch (err) {
-        if (controller.signal.aborted || requestIdRef.current !== requestId) {
-          return;
-        }
-        console.error('Failed to fetch domain:', err);
-        navigate('/domains');
-      } finally {
-        if (!controller.signal.aborted && requestIdRef.current === requestId) {
-          setLoading(false);
-        }
-      }
-    };
-    fetchDomain();
-
-    return () => {
-      controller.abort();
-    };
-  }, [domainName, navigate]);
-
-  if (loading) {
-    return (
-      <PageWithLayout>
-        <div className="flex items-center justify-center h-full">
-          <Spinner />
-        </div>
-      </PageWithLayout>
-    );
-  }
-
-  if (!domainId) return null;
-
   return (
     <PageWithLayout>
-      <DomainDetail
-        key={domainId}
-        domainId={domainId}
-        onBack={() => navigate('/domains')}
-      />
+      <DomainDetailByName domainName={domainName ?? ''} onBack={() => navigate('/domains')} />
     </PageWithLayout>
   );
 }
@@ -202,44 +140,11 @@ function ServiceManagementPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const navigationState = location.state as { versions?: string[] } | null;
-  const [versions, setVersions] = useState<string[]>(navigationState?.versions || []);
-  const [loading, setLoading] = useState(!navigationState?.versions);
   // Config files listed on the generic page open in the same editor the
   // Components page uses — one editor, not a second copy.
   // Genel sayfada listelenen ayar dosyaları, Bileşenler sayfasının kullandığı
   // editörde açılır — tek editör, ikinci bir kopya değil.
   const [configPath, setConfigPath] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!serviceId) return;
-
-    // If versions are not in state (e.g. refresh), fetch them
-    if (versions.length === 0) {
-      setLoading(true);
-      fetch('/api/v1/managed-services')
-        .then(res => res.json())
-        .then((data: any) => {
-          const services: any[] = data?.services || [];
-          const service = services.find(s => s.id === serviceId);
-          if (service) {
-            setVersions(service.versions);
-          } else {
-            // Service not found
-            navigate('/services');
-          }
-        })
-        .catch(() => navigate('/services'))
-        .finally(() => setLoading(false));
-    }
-  }, [serviceId, versions.length, navigate]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <Spinner />
-      </div>
-    );
-  }
 
   // No empty-versions bailout: with the "default" sentinel dead (B3b), an
   // installed nginx/postfix legitimately has versions: [] — bailing out here
@@ -247,11 +152,22 @@ function ServiceManagementPage() {
   // Boş-sürüm kaçışı yok: "default" sentinel'i öldüğünden (B3b) kurulu bir
   // nginx/postfix meşru olarak versions: [] taşır — burada kaçmak, böyle her
   // Yönet tıklamasının arkasında BOŞ sayfa çiziyordu.
-  if (configPath) {
-    return <ConfigEditor path={configPath} onBack={() => setConfigPath(null)} />;
-  }
-
-  return <ServiceManagement serviceId={serviceId!} versions={versions} onSelectConfig={setConfigPath} />;
+  //
+  // After a reload the versions are not in the navigation any more; the lookup
+  // reads them and stays on this address whatever that read says.
+  // Yeniden yüklemeden sonra sürümler gezinmede yoktur; arama onları okur ve
+  // okuma ne derse desin bu adreste kalır.
+  return (
+    <ServiceRecordLookup
+      serviceId={serviceId ?? ''}
+      carriedVersions={navigationState?.versions}
+      onBack={() => navigate('/services')}
+    >
+      {(versions) => (configPath
+        ? <ConfigEditor path={configPath} onBack={() => setConfigPath(null)} />
+        : <ServiceManagement serviceId={serviceId!} versions={versions} onSelectConfig={setConfigPath} />)}
+    </ServiceRecordLookup>
+  );
 }
 
 

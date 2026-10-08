@@ -3,7 +3,7 @@ import { ArrowLeft, Play, Square, RotateCw, Download, ScanSearch, type LucideIco
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { useAuth } from '../auth/AuthContext';
-import { Button, Dialog, EmptyState, Spinner, StatusDot } from './ui';
+import { Button, Checking, CouldNotCheck, Dialog, EmptyState, StatusDot } from './ui';
 import { HelpButton } from './HelpDrawer';
 import { readApiError, apiErrorText } from '../lib/apiError';
 import { decodeManagedServicesSnapshot, useComponentOperation } from './ComponentOperation';
@@ -16,7 +16,24 @@ interface ManagedService {
     /** null = bu makinede hiç gözlenmedi; bu, yok demek değildir. */
     is_installed: boolean | null;
     status: string;
+    /**
+     * The systemd unit the scan found for this component ("named" for BIND).
+     * Start, stop and restart target this and nothing else; a record without
+     * it names nothing to start.
+     * Taramanın bu bileşen için bulduğu systemd birimi. Başlat, durdur ve
+     * yeniden başlat yalnız bunu hedefler.
+     */
+    unit?: string;
+    kind?: string;
 }
+
+/**
+ * What became of reading the stored record. `failed` is not `known` with
+ * nothing in it: a record this page could not read says nothing about the
+ * component, so it is neither "not checked yet" nor "not installed".
+ * Kayıtlı kaydın okunmasının sonucu. `failed`, içi boş bir `known` değildir.
+ */
+type RecordRead = 'reading' | 'known' | 'failed';
 
 /**
  * Three answers, not two. `present` and `absent` are things this panel has
@@ -97,7 +114,6 @@ function unverifiedHostMutationReadiness(): HostMutationReadiness {
 // bakılmamışsa BUNU söyler ve kurulum yerine kontrolü sunar.
 export function ServiceShell({
     serviceId,
-    unitName,
     name,
     icon: Icon,
     onBack,
@@ -105,7 +121,6 @@ export function ServiceShell({
     children,
 }: {
     serviceId: string;
-    unitName?: string;
     name: string;
     icon: LucideIcon;
     onBack: () => void;
@@ -121,9 +136,11 @@ export function ServiceShell({
 }) {
     const { t } = useI18n();
     const { role } = useAuth();
-    const { startInstall, locked: installLocked, catalogSnapshot } = useComponentOperation();
+    const { startInstall, locked: installLocked, checking: installChecking, catalogSnapshot } = useComponentOperation();
     const [svc, setSvc] = useState<ManagedService | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [recordRead, setRecordRead] = useState<RecordRead>('reading');
+    const [rereading, setRereading] = useState(false);
+    const loading = recordRead === 'reading';
     const [busy, setBusy] = useState(false);
     const [checking, setChecking] = useState(false);
     const [installConfirmationOpen, setInstallConfirmationOpen] = useState(false);
@@ -143,7 +160,16 @@ export function ServiceShell({
     // sayfasını açmak da yoklamamalıdır. Çözülemeyen yük kaydı olduğu gibi
     // bırakır; okunamayan yanıt uydurma bir yokluğa değil, "henüz bakılmadı"
     // durumunda kalır.
+    //
+    // What a failed read is, is said too: `failed` keeps the last record this
+    // page read (if any) and draws neither "not checked yet" nor "not
+    // installed" from the lack of an answer.
+    // Başarısız okumanın ne olduğu da söylenir: `failed`, sayfanın okuduğu son
+    // kaydı (varsa) korur; yanıt yokluğundan "henüz bakılmadı" ya da "kurulu
+    // değil" çizilmez.
     const load = async () => {
+        let answered = false;
+        setRereading(true);
         try {
             const response = await fetch('/api/v1/managed-services');
             if (!response.ok) return;
@@ -151,10 +177,12 @@ export function ServiceShell({
             if (!snapshot) return;
             publishComponentCensus(snapshot.services);
             setSvc(findService(snapshot.services, serviceId));
+            answered = true;
         } catch {
             // Fail closed: no answer is not an answer about this host.
         } finally {
-            setLoading(false);
+            setRecordRead(answered ? 'known' : 'failed');
+            setRereading(false);
         }
     };
 
@@ -166,7 +194,7 @@ export function ServiceShell({
         if (!catalogSnapshot) return;
         publishComponentCensus(catalogSnapshot.services);
         setSvc(findService(catalogSnapshot.services, serviceId));
-        setLoading(false);
+        setRecordRead('known');
         refreshedRef.current?.();
     }, [catalogSnapshot, serviceId]);
 
@@ -203,6 +231,26 @@ export function ServiceShell({
     const observed = observedStateOf(svc);
     const installed = observed === 'present';
     const running = installed && (svc?.status?.includes('running') ?? false);
+    // The record could not be read and there is no earlier one: nothing is
+    // known about this component here. With an earlier one, that record stays
+    // on screen as the earlier answer and nothing that changes it is offered.
+    // Kayıt okunamadı ve önceki bir kayıt yok: burada bu bileşen hakkında
+    // hiçbir şey bilinmiyor. Önceki kayıt varsa ekranda önceki yanıt olarak
+    // kalır ve onu değiştiren hiçbir şey sunulmaz.
+    const unread = recordRead === 'failed' && svc === null;
+    const stale = recordRead === 'failed' && svc !== null;
+    // One record names the unit: this one. No unit, no start or stop; the
+    // component's id is never sent in its place.
+    // Birimi tek kayıt adlandırır: bu kayıt. Birim yoksa başlat ya da durdur
+    // da yoktur; onun yerine bileşenin kimliği asla gönderilmez.
+    const unit = installed && typeof svc?.unit === 'string' ? svc.unit : '';
+    // A tool, or a runtime with no unit, has no daemon to be running or
+    // stopped: "installed" is all the record says, as on the components list
+    // (D-010). "Stopped" here would be a state nobody observed.
+    // Bir aracın ya da birimi olmayan çalışma ortamının çalışacak ya da duracak
+    // bir servisi yoktur: kayıt yalnız "kurulu" der. Burada "Durdu" demek,
+    // kimsenin gözlemlemediği bir durum olurdu.
+    const daemonless = installed && (svc?.kind === 'tool' || svc?.status === 'installed');
 
     // The operator's check, never the page's. A page visit must not probe the
     // host by itself, so nothing here runs on mount: the scan runs when it is
@@ -238,6 +286,7 @@ export function ServiceShell({
             // kenar çubuğu rozeti de aynı yükü hak eder.
             publishComponentCensus(snapshot.services);
             setSvc(findService(snapshot.services, serviceId));
+            setRecordRead('known');
             refreshedRef.current?.();
         } catch {
             showToast('error', t('services.scanFailed'));
@@ -275,20 +324,33 @@ export function ServiceShell({
     };
 
     const act = async (action: 'start' | 'stop' | 'restart') => {
+        if (!unit || stale) return;
         const key = action === 'start' ? 'svc.confirmStart' : action === 'stop' ? 'svc.confirmStop' : 'svc.confirmRestart';
         if (!confirm(t(key, { name }))) return;
         setBusy(true);
         try {
-            const r = await fetch('/api/v1/service/action', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: unitName ?? serviceId, action }),
-            });
-            if (!r.ok) throw new Error();
+            let r: Response;
+            try {
+                r = await fetch('/api/v1/service/action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: unit, action }),
+                });
+            } catch {
+                // No answer: whether the unit was started or stopped is not
+                // known. The state is read again; nothing is sent twice.
+                // Yanıt yok: birimin başlatılıp durdurulduğu bilinmiyor. Durum
+                // yeniden okunur; hiçbir şey iki kez gönderilmez.
+                showToast('error', t('common.resultUnknown'));
+                await load();
+                return;
+            }
+            if (!r.ok) {
+                showToast('error', apiErrorText(await readApiError(r), t, 'svc.actionFailed'));
+                return;
+            }
             await new Promise((res) => setTimeout(res, 1500));
             await load();
-        } catch {
-            showToast('error', t('svc.actionFailed'));
         } finally {
             setBusy(false);
         }
@@ -311,6 +373,12 @@ export function ServiceShell({
                     <p className="flex items-center gap-1.5 text-sm text-fg-muted">
                         {loading ? (
                             t('common.loading')
+                        ) : unread ? (
+                            /* Words, in the colour of ordinary text: the read
+                               failed, the component did not.
+                               Sözcükler, olağan metin renginde: başarısız olan
+                               okumadır, bileşen değil. */
+                            <span className="text-fg-muted">{t('svc.recordUnread')}</span>
                         ) : observed === 'unknown' ? (
                             /* "Not checked yet" is information the operator
                                acts on, so it takes fg-muted; fg-subtle is for
@@ -322,6 +390,8 @@ export function ServiceShell({
                             <span className="text-fg-muted">{t('services.notChecked')}</span>
                         ) : observed === 'absent' ? (
                             <span className="text-fg-subtle">{t('svc.notInstalled')}</span>
+                        ) : daemonless ? (
+                            <span className="text-fg-muted">{t('services.installedLabel')}</span>
                         ) : (
                             <>
                                 <StatusDot ok={running} />
@@ -340,22 +410,34 @@ export function ServiceShell({
                     ya da değil, çalışıyor ya da düşmüş. Sayfanın okuyucusunu
                     korkuttuğu an, düğmenin orada olması gereken andır
                     (operatör, 25 Tem: "Korkutmasın yardımcı olsun"). */}
-                <div className="ml-auto flex items-center gap-2">
+                <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
                     <HelpButton serviceId={serviceId} name={name} />
-                    {installed && (
+                    {installed && unit && (
                         <>
-                            <CtrlButton icon={Play} label={t('services.start')} tone="success" solid disabled={busy || running} onClick={() => act('start')} />
-                            <CtrlButton icon={Square} label={t('services.stop')} tone="danger" solid disabled={busy || !running} onClick={() => act('stop')} />
-                            <CtrlButton icon={RotateCw} label={t('services.restart')} tone="warning" disabled={busy} onClick={() => act('restart')} />
+                            <CtrlButton icon={Play} label={t('services.start')} tone="success" solid disabled={busy || stale || rereading || running} onClick={() => act('start')} />
+                            <CtrlButton icon={Square} label={t('services.stop')} tone="danger" solid disabled={busy || stale || rereading || !running} onClick={() => act('stop')} />
+                            <CtrlButton icon={RotateCw} label={t('services.restart')} tone="warning" disabled={busy || stale || rereading} onClick={() => act('restart')} />
                         </>
                     )}
                 </div>
             </div>
 
+            {stale && (
+                <CouldNotCheck
+                    className="mb-4"
+                    text={t('svc.recordStale', { name })}
+                    onRetry={() => void load()}
+                    busy={rereading}
+                />
+            )}
             {loading ? (
-                <div className="flex items-center justify-center py-16">
-                    <Spinner />
-                </div>
+                <Checking label={t('svc.checkingRecord', { name })} className="py-3" />
+            ) : unread ? (
+                /* Not "not checked yet": that is an answer, and offers a scan
+                   of the host. This is no answer, so it offers only the read.
+                   "Henüz bakılmadı" değil: o bir yanıttır ve makinenin
+                   taranmasını sunar. Bu yanıt değildir; yalnız okumayı sunar. */
+                <CouldNotCheck text={t('svc.recordUnknown', { name })} onRetry={() => void load()} busy={rereading} />
             ) : observed === 'unknown' ? (
                 /* The honest first state of a component on a host this panel
                    has never looked at: it says so, and offers the check —
@@ -393,7 +475,7 @@ export function ServiceShell({
                         role === 'admin' ? (
                             <CtrlButton
                                 icon={Download}
-                                label={installLocked ? t('svc.installing') : t('svc.install', { name })}
+                                label={installChecking ? t('svc.installChecking') : installLocked ? t('svc.installing') : t('svc.install', { name })}
                                 tone="success"
                                 disabled={installLocked}
                                 onClick={requestInstall}

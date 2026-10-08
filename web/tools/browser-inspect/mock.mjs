@@ -56,7 +56,34 @@ const state = {
     dbUsers: [],           // GET /database-servers/:id/users
     domainDatabases: { databases: [], available_types: ['mysql'] }, // GET /domains/:id/databases
     connection: null,      // GET /domains/:id/connection (null: the mock has none, 404)
+    // --- The second batch (2026-10-09) ---
+    twoFactor: false,      // GET /auth/2fa/status
+    panelCertificate: { https_enabled: true, self_signed: true, subject: 'server1', issuer: 'server1', expires_at: '2027-10-01T00:00:00Z' },
+    certificateOperation: null, // the request POST /panel/certificate recorded, as /service/operation?request_id= reports it
+    certificateStatus: 'running', // what that request is reported as: queued | running | succeeded | failed
+    certificateError: null,
+    users: [],             // GET /users
+    plans: [],             // GET /plans
+    files: { '/': [] },    // GET /domains/:id/files?path=
+    ssl: null,             // GET /domains/:id/ssl (null: no certificate)
+    sslAfterIssue: null,   // what /ssl answers after POST /ssl/letsencrypt
+    noticeLicense: null,   // GET /panel/license, when it should differ from the access decision
+    samples: [],           // GET /metrics/history
+    services: [],          // GET /managed-services
+    logs: [],              // GET /service/logs
+    repo: { available: false, enabled: false }, // GET /repo
+    candidate: '7.2.4',    // GET /service/candidate
+    dashboard: { databases: 0, mail_accounts: 0, expiring_certs: [] }, // GET /dashboard
+    importPreview: null,   // POST /import/cpanel/inspect
+    assetDown: '',         // an asset whose name contains this is not served (a chunk that cannot be fetched)
 };
+// The component records always carry the three mail stacks and the services
+// they are made of: the interface refuses a payload without them.
+const component = (id, name, category, extra = {}) => ({ id, name, description: `${name} on this server`, icon: '■', category, status: '', is_installed: false, versions: [], kind: 'service', ...extra });
+const MAIL_SERVICES = [component('postfix', 'Postfix', 'mail'), component('dovecot', 'Dovecot', 'mail'), component('roundcube', 'Roundcube', 'mail', { kind: 'tool' }), component('rspamd', 'Rspamd', 'mail')];
+const MAIL_PROFILES = [['core-mail', 'Core mail', ['postfix', 'dovecot']], ['webmail', 'Webmail', ['roundcube']], ['protected-mail', 'Protected mail', ['rspamd']]]
+    .map(([id, name, services]) => ({ id, name, description: `${name} stack`, status: 'available', available: true, verified: false, latest_attempt_status: 'none', services }));
+const NO_CERTIFICATE = { domain_id: 1, domain_name: 'example.com', has_certificate: false, managed_names: ['example.com'], settings: { force_https: false, hsts_enabled: false, hsts_max_age: 300 } };
 const log = [];
 const snapshot = () => ({ version: 1, revision: state.revision, origin: 'fresh', status: state.setupStatus, required: state.setupStatus !== 'ready', guidance: 'guided', draft, checks: [], server_ip: '203.0.113.10' });
 const execution = (requestId, statuses, extra = {}) => ({ id: EXEC_ID, request_id: requestId, plan_id: PLAN_ID, status: 'running', phase: 'service', steps: planSteps.map((step, index) => ({ ...step, ...(step.kind === 'panel_certificate' ? { target: state.host || HOST } : {}), status: statuses[index] || 'pending' })), context: { dns_mode: 'external', dns_role: '', dns_engine: 'bind', local_nameserver: '', local_ip: '', peer_nameserver: '', peer_ip: '', panel_domain: state.host || HOST, mail_hostname: '', dns_hosting_management: '' }, ...extra });
@@ -97,6 +124,7 @@ async function api(req, res, path, query) {
         if (state.license === 'hang') return;
         coded(res, 503, 'LICENSE_STATUS_UNAVAILABLE', 'license status unavailable'); return;
     }
+    if (key === 'GET /api/v1/panel/license' && state.noticeLicense) { send(res, 200, state.noticeLicense); return; }
     if (key === 'GET /api/v1/panel/license') { send(res, 200, { state: ['missing', 'expired', 'invalid'].includes(state.license) ? state.license : 'active', can_provision: state.license === 'active', ...(state.license === 'expired' ? { expires_at: Math.floor(Date.now() / 1000) - 86400 * 3, license_id: 'CP-EXAMPLE-0001' } : {}) }); return; }
     if (key === 'GET /api/v1/panel/version') { send(res, 200, { version: 'v0.1.0-alpha.81', commit: '0000000', agent_commit: '0000000', agent_matches: true, hostname: 'server1', ipv4: '203.0.113.10' }); return; }
     if (key === 'GET /api/v1/panel/update/status') { const id = query.get('request_id') || ''; send(res, 200, state.update && state.update.request_id === id ? { found: true, ...state.update } : { found: false, request_id: id }); return; }
@@ -133,8 +161,45 @@ async function api(req, res, path, query) {
         if (ofDomain[2] === 'usage') { send(res, 200, { disk_usage: 4096, bandwidth: 0 }); return; }
         res.writeHead(204); res.end(); return;
     }
-    if (key === 'GET /api/v1/managed-services') { send(res, 200, { scanned_at: new Date().toISOString(), services: [] }); return; }
+    if (key === 'GET /api/v1/managed-services') {
+        // The whole contract of the component records: the interface treats an
+        // answer with a field missing as unknown.
+        const services = [...state.services, ...MAIL_SERVICES.filter(item => !state.services.some(service => service.id === item.id))];
+        send(res, 200, { scanned_at: new Date().toISOString(), services, profiles: MAIL_PROFILES, dns_identity_ready: true, mail_hostname: { current: 'server1', current_usable: false, hostname: '', source: '', will_set_hostname: false } }); return;
+    }
+    // One exact request, as the panel-certificate poll asks for it. A request
+    // the mock never recorded is "no such operation", as on the Panel.
+    if (key === 'GET /api/v1/service/operation' && query.get('request_id')) {
+        const op = state.certificateOperation;
+        if (!op || op.request_id !== query.get('request_id')) { coded(res, 404, 'not_found', 'service operation not found'); return; }
+        send(res, 200, { operation: { ...op, status: state.certificateStatus, ...(state.certificateStatus === 'failed' ? { error: state.certificateError || { code: 'certificate_issue_failed', message: 'The certificate authority could not reach panel.example.com on port 80.' } } : {}) } }); return;
+    }
     if (key === 'GET /api/v1/service/operation') { send(res, 200, state.componentOperation ? { operation: state.componentOperation } : null); return; }
+    // --- The second batch (2026-10-09) ---
+    if (key === 'GET /api/v1/auth/2fa/status') { send(res, 200, { enabled: state.twoFactor }); return; }
+    if (key === 'GET /api/v1/panel/certificate') { send(res, 200, state.panelCertificate); return; }
+    if (key === 'POST /api/v1/panel/certificate') {
+        const body = await readBody(req);
+        state.certificateOperation = { id: 'e'.repeat(32), request_id: body.request_id, kind: 'panel_certificate_issue', service_id: String(body.domain || '').toLowerCase(), status: 'queued' };
+        send(res, 202, { operation: state.certificateOperation }); return;
+    }
+    if (key === 'GET /api/v1/users') { send(res, 200, { users: state.users }); return; }
+    if (key === 'GET /api/v1/plans') { send(res, 200, { plans: state.plans }); return; }
+    if (/^\/api\/v1\/(users|plans)(\/\d+)?$/.test(path) && req.method !== 'GET') { send(res, 200, { success: true }); return; }
+    const files = path.match(/^\/api\/v1\/domains\/(\d+)\/files$/);
+    if (files && req.method === 'GET') { send(res, 200, { files: state.files[query.get('path') || '/'] ?? [] }); return; }
+    const certificate = path.match(/^\/api\/v1\/domains\/(\d+)\/ssl(\/mail|\/letsencrypt)?$/);
+    if (certificate && req.method === 'GET') { send(res, 200, certificate[2] === '/mail' ? { secure_mail: false } : (state.ssl || NO_CERTIFICATE)); return; }
+    if (certificate && certificate[2] === '/letsencrypt' && req.method === 'POST') { if (state.sslAfterIssue) state.ssl = state.sslAfterIssue; send(res, 200, { success: true }); return; }
+    if (key === 'GET /api/v1/ssl/providers') { send(res, 200, { providers: [{ id: 'letsencrypt', name: 'Let\u2019s Encrypt', note: '', needs_eab: false }] }); return; }
+    if (key === 'GET /api/v1/metrics/history') { send(res, 200, { samples: state.samples }); return; }
+    if (key === 'GET /api/v1/service/logs') { send(res, 200, { lines: state.logs }); return; }
+    if (key === 'GET /api/v1/service/candidate') { send(res, 200, { version: state.candidate }); return; }
+    if (key === 'GET /api/v1/repo') { send(res, 200, state.repo); return; }
+    if (key === 'GET /api/v1/dashboard') { send(res, 200, state.dashboard); return; }
+    if (key === 'GET /api/v1/host-mutation-readiness') { send(res, 200, { ready: true }); return; }
+    if (key === 'POST /api/v1/import/cpanel/inspect') { send(res, 200, state.importPreview); return; }
+    if (key === 'POST /api/v1/import/cpanel/apply') { send(res, 200, { steps: [{ step: 'domain', ok: true, detail: 'created' }] }); return; }
     coded(res, 404, 'not_found', `mock has no route for ${key}`);
 }
 
@@ -161,6 +226,7 @@ const server = createServer(async (req, res) => {
     try {
         const name = path.startsWith('/assets/') || ['/recovery-worker.js', '/recovery-offline.html', '/vite.svg'].includes(path) ? path.slice(1) : 'index.html';
         if (!/^(index\.html|recovery-offline\.html|recovery-worker\.js|vite\.svg|assets\/[A-Za-z0-9_.-]+)$/.test(name)) throw Error('unknown asset');
+        if (state.assetDown && name.includes(state.assetDown)) throw Error('this asset is withheld');
         const bytes = await readFile(join(dist, name));
         res.writeHead(200, { 'Content-Type': mime[extname(name)] || 'application/octet-stream', 'Cache-Control': 'no-cache' }); res.end(bytes);
     } catch { res.writeHead(404); res.end(); }

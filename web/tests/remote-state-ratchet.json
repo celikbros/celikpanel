@@ -9,8 +9,7 @@
   },
   "files": {
     "src/App.tsx": {
-      "swallowedFailure": 1,
-      "rawRead": 2
+      "swallowedFailure": 1
     },
     "src/auth/usePanelSession.ts": {
       "rawRead": 1
@@ -27,11 +26,6 @@
       "rawRead": 1,
       "unprovenEmptyState": 1
     },
-    "src/components/ComponentDetail.tsx": {
-      "swallowedFailure": 2,
-      "rawRead": 3,
-      "unprovenEmptyState": 1
-    },
     "src/components/ComponentOperation.tsx": {
       "rawRead": 6
     },
@@ -42,9 +36,9 @@
       "rawRead": 2
     },
     "src/components/Dashboard.tsx": {
-      "valueFromFailure": 7,
-      "swallowedFailure": 9,
-      "rawRead": 9
+      "valueFromFailure": 4,
+      "swallowedFailure": 6,
+      "rawRead": 6
     },
     "src/components/DatabaseAccountStrip.tsx": {
       "swallowedFailure": 1,
@@ -66,15 +60,6 @@
       "rawRead": 3,
       "unprovenEmptyState": 3
     },
-    "src/components/DomainDetail.tsx": {
-      "valueFromFailure": 1,
-      "swallowedFailure": 1,
-      "rawRead": 2
-    },
-    "src/components/DomainFileManager.tsx": {
-      "rawRead": 1,
-      "unprovenEmptyState": 1
-    },
     "src/components/DomainGeneralSettings.tsx": {
       "rawRead": 1
     },
@@ -95,12 +80,6 @@
     "src/components/DomainSSLOverviewCard.tsx": {
       "rawRead": 1
     },
-    "src/components/DomainSSLSettings.tsx": {
-      "valueFromFailure": 1,
-      "swallowedFailure": 1,
-      "ignoredFailure": 1,
-      "rawRead": 3
-    },
     "src/components/DovecotManagement.tsx": {
       "valueFromFailure": 1,
       "swallowedFailure": 1,
@@ -117,18 +96,9 @@
       "ignoredFailure": 4,
       "rawRead": 4
     },
-    "src/components/ImportPage.tsx": {
-      "swallowedFailure": 1,
-      "rawRead": 1
-    },
     "src/components/Layout.tsx": {
-      "valueFromFailure": 2,
-      "swallowedFailure": 3,
-      "rawRead": 2
-    },
-    "src/components/LicenseNotice.tsx": {
-      "swallowedFailure": 1,
-      "ignoredFailure": 1,
+      "valueFromFailure": 1,
+      "swallowedFailure": 2,
       "rawRead": 1
     },
     "src/components/LicenseOnboarding.tsx": {
@@ -147,11 +117,6 @@
       "rawRead": 3
     },
     "src/components/MariaDBManagement.tsx": {
-      "swallowedFailure": 1,
-      "rawRead": 1
-    },
-    "src/components/MonitoringPage.tsx": {
-      "valueFromFailure": 1,
       "swallowedFailure": 1,
       "rawRead": 1
     },
@@ -219,9 +184,9 @@
       "rawRead": 1
     },
     "src/components/ServiceList.tsx": {
-      "valueFromFailure": 3,
-      "swallowedFailure": 3,
-      "rawRead": 8,
+      "valueFromFailure": 1,
+      "swallowedFailure": 1,
+      "rawRead": 6,
       "unprovenEmptyState": 1
     },
     "src/components/ServiceShell.tsx": {
@@ -229,11 +194,6 @@
       "ignoredFailure": 2,
       "rawRead": 2,
       "unprovenEmptyState": 2
-    },
-    "src/components/Settings.tsx": {
-      "valueFromFailure": 1,
-      "swallowedFailure": 2,
-      "rawRead": 3
     },
     "src/components/StoreCatalogAdmin.tsx": {
       "rawRead": 1,
@@ -251,10 +211,6 @@
     },
     "src/components/TeamMembersPage.tsx": {
       "unprovenEmptyState": 1
-    },
-    "src/components/UsersPage.tsx": {
-      "rawRead": 3,
-      "unprovenEmptyState": 2
     },
     "src/components/VPNPage.tsx": {
       "unprovenEmptyState": 1

@@ -3,9 +3,10 @@ import { Settings, Play, Square, RotateCw, RefreshCw, ScanSearch, DownloadCloud,
 import type { LucideIcon } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
-import { Button, Dialog, EmptyState, ErrorBanner, SearchInput, Spinner, StatusDot } from './ui';
+import { Button, Checking, CouldNotCheck, Dialog, EmptyState, ErrorBanner, SearchInput, Spinner, StatusDot } from './ui';
 import { PageHeader } from './PageHeader';
 import { readApiError, apiErrorText, type ApiError } from '../lib/apiError';
+import { lastKnown, useRemote } from '../lib/remote';
 import {
     canonicalMailHostname,
     decodeMailHostnameIdentity,
@@ -318,6 +319,25 @@ interface RepoInfo {
     required?: boolean;
     packages?: string[];
     error_code?: string;
+}
+
+// The two reads of the install dialogue. An answer that does not say whether a
+// repository exists for the component is not "no repository": that reading is
+// what hid a required repository and left Install enabled.
+// Kurulum diyaloğunun iki okuması. Bileşen için depo olup olmadığını söylemeyen
+// yanıt "depo yok" değildir: zorunlu depoyu gizleyip Kur'u açık bırakan buydu.
+function decodeRepoInfo(raw: unknown): RepoInfo {
+    const body = raw as Partial<RepoInfo> | null;
+    if (!body || typeof body !== 'object' || typeof body.available !== 'boolean' || typeof body.enabled !== 'boolean') {
+        throw new Error('shape');
+    }
+    return body as RepoInfo;
+}
+
+function decodeCandidateVersion(raw: unknown): string {
+    const version = (raw as { version?: unknown } | null)?.version;
+    if (typeof version !== 'string') throw new Error('shape');
+    return version;
 }
 
 // unknownCategories returns a card definition for every category present in
@@ -2188,8 +2208,14 @@ function InstallServiceDialog({
     onConfirm: (pkg?: string) => void;
 }) {
     const { t } = useI18n();
-    const [version, setVersion] = useState<string | null>(null);
-    const [verLoading, setVerLoading] = useState(true);
+    // What the package manager would install right now, as the server reports
+    // it: '' is the server saying it names no version; a read that failed is
+    // neither a version nor "the distribution default".
+    // Paket yöneticisinin şu an kuracağı, sunucunun bildirdiği hâliyle: ''
+    // sunucunun sürüm adlandırmadığını söylemesidir; başarısız okuma ne sürümdür
+    // ne de "dağıtım varsayılanı".
+    const candidate = useRemote(`/api/v1/service/candidate?id=${encodeURIComponent(service.id)}`, decodeCandidateVersion);
+    const version = candidate.remote.state === 'known' ? candidate.remote.value : '';
 
     // Managed vendor repo (e.g. PGDG): most services have none, so this whole
     // section simply does not render. When present, the admin can enable it and
@@ -2199,28 +2225,20 @@ function InstallServiceDialog({
     // hiç render edilmez. Varsa, yönetici açıp dağıtımın dondurduğu tek sürüm
     // yerine belirli bir major seçebilir. selectedPkg === '' → "dağıtım
     // varsayılanı" (OS deposundan kur).
-    const [repo, setRepo] = useState<RepoInfo | null>(null);
+    const repoRead = useRemote(`/api/v1/repo?service_id=${encodeURIComponent(service.id)}`, decodeRepoInfo);
+    // The repository block is drawn from the last answer; installing is offered
+    // only on the answer as it is now. Until the server has said whether this
+    // component needs a repository, and what state it is in, Install is off.
+    // Depo bölümü son yanıttan çizilir; kurulum yalnız şimdiki yanıt üzerinde
+    // sunulur. Sunucu bu bileşenin depoya ihtiyacı olup olmadığını ve deponun
+    // durumunu söyleyene dek Kur kapalıdır.
+    const repoObserved = lastKnown(repoRead.remote)?.value ?? null;
+    const repo = repoObserved?.available ? repoObserved : null;
+    const repoKnown = repoRead.remote.state === 'known' && !repoRead.reading;
     const [repoBusy, setRepoBusy] = useState(false);
     const [repoAction, setRepoAction] = useState<'enable' | 'disable' | null>(null);
     const [selectedPkg, setSelectedPkg] = useState<string>('');
     const repoError = repo?.error_code ? apiErrorText({ message: '', code: repo.error_code }, t, 'services.actionFailed') : '';
-
-    // Ask the server what apt would actually install right now — honest
-    // "what will land", not a made-up version picker (the distro offers one).
-    // Sunucuya apt'ın şu an gerçekten ne kuracağını sor — uydurma bir sürüm
-    // seçici değil, dürüst "ne inecek" (dağıtım tek sürüm sunar).
-    useEffect(() => {
-        setVerLoading(true);
-        fetch(`/api/v1/service/candidate?id=${encodeURIComponent(service.id)}`)
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => setVersion(d?.version || ''))
-            .catch(() => setVersion(''))
-            .finally(() => setVerLoading(false));
-        fetch(`/api/v1/repo?service_id=${encodeURIComponent(service.id)}`)
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d: RepoInfo | null) => setRepo(d && d.available ? d : null))
-            .catch(() => setRepo(null));
-    }, [service.id]);
 
     // Enable/disable the vendor repo, then reflect the new state (and the
     // versions it now exposes) straight from the server's reply.
@@ -2238,11 +2256,16 @@ function InstallServiceDialog({
                 showToast('error', apiErrorText(await readApiError(res), t, 'services.actionFailed'));
                 return;
             }
-            const data: RepoInfo = await res.json();
-            setRepo(data.available ? data : null);
             if (action === 'disable') setSelectedPkg('');
+            // The state shown is the one the server reports after the change.
+            await repoRead.retry();
         } catch {
-            showToast('error', t('services.actionFailed'));
+            // No answer: whether the repository was changed is not known. It is
+            // read again and nothing is sent a second time.
+            // Yanıt yok: deponun değişip değişmediği bilinmiyor. Yeniden okunur;
+            // hiçbir şey ikinci kez gönderilmez.
+            showToast('error', t('common.resultUnknown'));
+            await repoRead.retry();
         } finally {
             setRepoBusy(false);
         }
@@ -2269,7 +2292,7 @@ function InstallServiceDialog({
                         <Button
                             variant="primary"
                             onClick={() => onConfirm(selectedPkg || undefined)}
-                            disabled={busy || repoBusy || Boolean(repo?.required && (repo.error_code || !repo.enabled))}
+                            disabled={busy || repoBusy || !repoKnown || Boolean(repo?.required && (repo.error_code || !repo.enabled))}
                             icon={DownloadCloud}
                         >
                             {busy ? t('services.installing') : t('services.install')}
@@ -2280,9 +2303,19 @@ function InstallServiceDialog({
                 <div className="mb-4 rounded-lg border border-border bg-surface-2/50 p-3">
                     <div className="mb-2 flex items-center justify-between">
                         <span className="text-xs font-medium text-fg-subtle">{t('services.versionToInstall')}</span>
-                        <span className="font-mono text-sm font-semibold text-fg">
-                            {selectedPkg ? selectedPkg : verLoading ? '…' : version ? version : t('services.versionDefault')}
-                        </span>
+                        {/* A version is a literal and keeps the mono face; "could
+                            not be checked" and "distribution default" are words.
+                            Sürüm bir değerdir ve tek aralıklı yazılır; "kontrol
+                            edilemedi" ve "dağıtım varsayılanı" sözcüktür. */}
+                        {selectedPkg || candidate.remote.state === 'loading' || version ? (
+                            <span className="font-mono text-sm font-semibold text-fg">
+                                {selectedPkg || (candidate.remote.state === 'loading' ? '…' : version)}
+                            </span>
+                        ) : (
+                            <span className="text-sm font-semibold text-fg">
+                                {t(candidate.remote.state === 'known' ? 'services.versionDefault' : 'services.versionUnknown')}
+                            </span>
+                        )}
                     </div>
                     <p className="mb-1 text-xs font-medium text-fg-subtle">{t('services.willInstall')}</p>
                     <div className="flex flex-wrap gap-1.5">
@@ -2295,6 +2328,15 @@ function InstallServiceDialog({
                     )}
                 </div>
 
+                {repoRead.remote.state === 'loading' && <Checking label={t('services.repo.checking')} className="mb-4" />}
+                {repoRead.remote.state === 'unknown' && (
+                    <CouldNotCheck
+                        className="mb-4"
+                        text={t(repoObserved ? 'services.repo.stale' : 'services.repo.unknown', { name: service.name })}
+                        onRetry={() => void repoRead.retry()}
+                        busy={repoRead.reading}
+                    />
+                )}
                 {repo && (
                     <div className="mb-4 rounded-lg border border-border bg-surface-2/50 p-3">
                         <div className="mb-2 flex items-start gap-2">
@@ -2323,7 +2365,7 @@ function InstallServiceDialog({
                                 <Button
                                     variant="secondary"
                                     onClick={() => setRepoAction('enable')}
-                                    disabled={repoBusy || busy || Boolean(repo.error_code && !repo.repairable)}
+                                    disabled={repoBusy || busy || !repoKnown || Boolean(repo.error_code && !repo.repairable)}
                                     icon={Layers}
                                 >
                                     {repoBusy ? t('services.repo.enabling') : t('services.repo.enable')}
@@ -2363,7 +2405,7 @@ function InstallServiceDialog({
                                 </div>
                                 <button
                                     onClick={() => setRepoAction('disable')}
-                                    disabled={repoBusy || busy}
+                                    disabled={repoBusy || busy || !repoKnown}
                                     className="mt-2 text-xs text-fg-subtle underline decoration-dotted underline-offset-2 hover:text-fg disabled:opacity-40"
                                 >
                                     {repoBusy ? '…' : t('services.repo.disable')}

@@ -38,6 +38,11 @@ const namedChunkBudgets = {
   'src/i18n/screens/tr.ts': budgets.async,
   'src/i18n/screens/server/en.ts': budgets.async,
   'src/i18n/screens/server/tr.ts': budgets.async,
+  // The help texts are fetched when a help drawer is opened. As a static part
+  // of every page that carries the Help button they had brought the Settings
+  // route to 0.29 KiB of its limit (2026-10-09).
+  // Yardım metinleri, yardım çekmecesi açıldığında getirilir.
+  'src/help/serviceHelp.ts': budgets.async,
 }
 
 const jsNames = (await readdir(assetsDir))

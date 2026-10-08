@@ -406,6 +406,8 @@ Rule of 2026-10-09: **no negative UI unless known.** Anything a panel screen rea
 
 **Known** is the only state that may show an empty state, a blocker, a disabled control with its reason, "off", "none" or a count. A count beside a tab is "…" while it is read and "–" when it could not be read. Literal values keep the mono face; "could not be checked" and "nothing yet" are words and stay in the sans face (The Mono Means Measured Rule).
 
+**A change whose answer did not arrive** is none of the three. The screen says that it is not known whether the change was made, sends nothing a second time and reads the state again; a control that would repeat the change comes back only after a read that shows what happened. What became of something the person asked for is drawn where they are looking, or scrolled into view; on a card it stands before the steps that prepare the request. A count on a card or a navigation badge follows the same rule as a count beside a tab, except that a badge is simply absent until there is a number. In the dark theme the scrim of the access hold and of the reload notice is drawn at half strength: the page under it is already navy, and it has to stay readable.
+
 ## Do's and Don'ts
 
 ### Do:

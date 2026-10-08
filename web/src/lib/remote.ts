@@ -16,6 +16,11 @@ import { readApiError, type ApiError } from './apiError';
 // A failed read is never turned into a value. There is no default here: not an
 // empty list, not `null`, not `false`.
 //
+// `status` is the HTTP status of a refusal the server really sent. It is absent
+// when no answer arrived or the answer was not the contract. A screen may read
+// one meaning from it and only where the server defines one: "no such record"
+// (404) for a record addressed by its exact identity.
+//
 // Bir ekranın sunucudan okuduğu şey hakkında bildiği. 9 Eki 2026'dan beri her
 // ekranın uyduğu kural (D-024): BİLİNMEDEN OLUMSUZ ARAYÜZ YOK. Yükleniyor:
 // henüz bilinmiyor, ekran kontrol ettiğini söyler. Biliniyor: ancak şimdi
@@ -25,7 +30,7 @@ import { readApiError, type ApiError } from './apiError';
 export type Remote<T> =
     | { state: 'loading' }
     | { state: 'known'; value: T; observedAt: number }
-    | { state: 'unknown'; reason: ApiError; previous?: Observed<T> };
+    | { state: 'unknown'; reason: ApiError; status?: number; previous?: Observed<T> };
 
 /** A value the server really sent, and when it was read. */
 export interface Observed<T> {
@@ -63,11 +68,15 @@ export async function readRemote<T>(
     init?: RequestInit,
 ): Promise<Settled<T>> {
     const previous = earlier && lastKnown(earlier);
-    const failed = (reason: ApiError): Settled<T> =>
-        previous ? { state: 'unknown', reason, previous } : { state: 'unknown', reason };
+    const failed = (reason: ApiError, status?: number): Settled<T> => ({
+        state: 'unknown',
+        reason,
+        ...(status === undefined ? {} : { status }),
+        ...(previous ? { previous } : {}),
+    });
     try {
         const res = init ? await fetch(url, init) : await fetch(url);
-        if (!res.ok) return failed(await readApiError(res));
+        if (!res.ok) return failed(await readApiError(res), res.status);
         return { state: 'known', value: decode(await res.json()), observedAt: Date.now() };
     } catch {
         return failed({ message: '' });
@@ -81,10 +90,10 @@ export async function readRemote<T>(
 export function mapRemote<T, U>(remote: Remote<T>, pick: (value: T) => U): Remote<U> {
     if (remote.state === 'loading') return remote;
     if (remote.state === 'known') return { state: 'known', value: pick(remote.value), observedAt: remote.observedAt };
-    const { reason, previous } = remote;
+    const { previous, ...rest } = remote;
     return previous
-        ? { state: 'unknown', reason, previous: { value: pick(previous.value), observedAt: previous.observedAt } }
-        : { state: 'unknown', reason };
+        ? { ...rest, previous: { value: pick(previous.value), observedAt: previous.observedAt } }
+        : rest;
 }
 
 // decodeList is the decoder of an endpoint that answers with a list. A Go
@@ -98,6 +107,27 @@ export function decodeList<T>(raw: unknown): T[] {
     if (raw === null) return [];
     if (!Array.isArray(raw)) throw new Error('list');
     return raw as T[];
+}
+
+// decodeListIn is decodeList for an endpoint that answers `{field: [...]}`. An
+// answer without the field is not "none": it is not the contract.
+// decodeListIn, `{alan: [...]}` yanıtlayan uç nokta içindir. Alanı taşımayan
+// yanıt "yok" değildir; sözleşme değildir.
+export function decodeListIn<T>(raw: unknown, field: string): T[] {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !(field in raw)) throw new Error('shape');
+    return decodeList<T>((raw as Record<string, unknown>)[field]);
+}
+
+// countText is how a count beside a tab, a title or a card is written: the
+// number once it is known, "…" while it is read and "–" when it could not be
+// read. An earlier answer, when there is one, is still the number: a badge is
+// not where a failed refresh is announced.
+// countText, bir sekmenin, başlığın ya da kartın yanındaki sayının yazılışıdır:
+// bilinince sayı, okunurken "…", okunamayınca "–".
+export function countText(remote: Remote<number>): string {
+    if (remote.state === 'known') return String(remote.value);
+    if (remote.state === 'loading') return '…';
+    return remote.previous ? String(remote.previous.value) : '–';
 }
 
 // What a control that depends on a server fact may do. `blocked` carries the

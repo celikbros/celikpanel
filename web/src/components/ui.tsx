@@ -559,6 +559,7 @@ export function CouldNotCheck({
     onRetry,
     busy,
     actionLabel,
+    beside,
     className,
 }: {
     /** The screen's own sentence: what could not be read, and that nothing changed. */
@@ -567,6 +568,8 @@ export function CouldNotCheck({
     onRetry: () => void;
     busy?: boolean;
     actionLabel?: string;
+    /** A second way to look, beside the read: a link that only opens something. */
+    beside?: ReactNode;
     className?: string;
 }) {
     const { t } = useI18n();
@@ -578,9 +581,12 @@ export function CouldNotCheck({
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
             <div className="min-w-0">
                 <p className="max-w-[75ch] break-words">{text}</p>
-                <Button type="button" className="mt-2" loading={busy} onClick={onRetry}>
-                    {actionLabel ?? t('common.retry')}
-                </Button>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Button type="button" loading={busy} onClick={onRetry}>
+                        {actionLabel ?? t('common.retry')}
+                    </Button>
+                    {beside}
+                </div>
             </div>
         </div>
     );

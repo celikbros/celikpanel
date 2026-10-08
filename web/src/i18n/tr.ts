@@ -243,6 +243,7 @@ export const tr: Record<ShellKey, string> = {
     'common.agentMismatchHint': 'Arka plan servisi panelden farklı bir yapı ({commit}) koşuyor. İki taraf eşleşsin diye güncellemeyi yeniden çalıştırın — o zamana dek neye izin verildiği konusunda ayrışabilirler.',
     'common.retry': 'Tekrar dene',
     'common.staleNotice': 'Bu, az önce sunucudan yeniden okunamadı; aşağıda gösterilen, saat {time} itibarıyla olan hâlidir. Hiçbir şey değiştirilmedi. Bir şeyi kaldıran ya da değiştiren denetimler, yeniden okunana dek kapalıdır.',
+    'common.resultUnknown': 'Yanıt gelmeden bağlantı koptu; bu yüzden değişikliğin yapılıp yapılmadığı bilinmiyor. Hiçbir şey ikinci kez gönderilmez. Gösterilen yeniden okunuyor; işlemi yinelemeden önce ona bakın.',
     'common.cancel': 'İptal',
     'common.close': 'Kapat',
     'common.back': 'Geri',
